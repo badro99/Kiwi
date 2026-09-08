@@ -43,6 +43,21 @@ function makeDB() {
     return st;
   };
   facade.prepare = prepare;
+  /* D1's batch is the production atomicity contract. This adapter deliberately
+     runs the same prepared statements under SQLite BEGIN IMMEDIATE so a pair
+     of requests with one frozen revision cannot leave half a transfer behind. */
+  facade.batch = async (statements) => {
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const out = [];
+      for (const statement of statements) out.push(await statement.run());
+      db.exec('COMMIT');
+      return out;
+    } catch (error) {
+      try { db.exec('ROLLBACK'); } catch (_) {}
+      throw error;
+    }
+  };
   return facade;
 }
 
@@ -172,8 +187,11 @@ doc('floorplan', {
     { id: 'T5', num: '5', covers: 2, servers: [STAFF_ID] },
     { id: 'T6', num: '6', covers: 2, servers: [STAFF_ID] },
     { id: 'T7', num: '7', covers: 2, servers: [STAFF_ID] },
-    { id: 'T8', num: '8', covers: 2, servers: [STAFF_ID] },
-    { id: 'T9', num: '9', covers: 2, servers: [STAFF_ID] },
+      { id: 'T8', num: '8', covers: 2, servers: [STAFF_ID] },
+      { id: 'T9', num: '9', covers: 2, servers: [STAFF_ID] },
+      { id: 'T10', num: '10', covers: 2, servers: [STAFF_ID] },
+      { id: 'T11', num: '11', covers: 2, servers: [STAFF_ID] },
+      { id: 'T12', num: '12', covers: 2, servers: [STAFF_ID] },
   ],
 });
 
@@ -239,7 +257,36 @@ const mergedStale = db._db.prepare('SELECT table_no, session_id FROM orders WHER
 check('merged line carries the target visit', mergedStale && mergedStale.table_no === '5' && mergedStale.session_id === 'ses-b');
 check('merged paid line stays and is reported', db._db.prepare('SELECT table_no FROM orders WHERE id = ?').get('ord-ep').table_no === '4' && mergeStale.data.paidLeftBehind === 1);
 
-// F. The caisse announces real counts, never a blanket success.
+// F. Two transfers observe the same frozen visit revision. The first immutable
+// claim wins; the loser must not move lines or create an audit row of its own.
+const raceTs = Date.now();
+exec(`INSERT INTO table_sessions (id, merchant, table_no, mode, status, opened_ts, seen_ts)
+      VALUES ('ses-race', ?, '10', 'table', 'open', ?, ?)`, MERCHANT, raceTs, raceTs);
+exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
+      VALUES ('ord-race', ?, 110, 'table', '10', 35, '[]', 'accepted', 'ses-race', ?, ?)`, MERCHANT, raceTs, raceTs);
+const raceExpected = raceTs;
+const [raceA, raceB] = await Promise.all([
+  postQueue({ merchant: MERCHANT, transferTable: {
+    from: '10', to: '11', covers: 2, operationId: 'same-clock-a',
+    expectedSession: 'ses-race', expectedRevision: raceExpected,
+  } }, employeeCookie),
+  postQueue({ merchant: MERCHANT, transferTable: {
+    from: '10', to: '12', covers: 2, operationId: 'same-clock-b',
+    expectedSession: 'ses-race', expectedRevision: raceExpected,
+  } }, employeeCookie),
+]);
+const raceStatuses = [raceA.status, raceB.status].sort((a, b) => a - b);
+check('same-revision concurrent transfers authorize exactly one winner', raceStatuses[0] === 200 && raceStatuses[1] === 409,
+  JSON.stringify([raceA.data, raceB.data]));
+const raceSession = db._db.prepare('SELECT table_no, seen_ts FROM table_sessions WHERE id = ?').get('ses-race');
+const raceAudit = db._db.prepare('SELECT COUNT(*) AS n FROM table_transfers WHERE merchant = ? AND from_table = ?').get(MERCHANT, '10');
+const raceOrder = db._db.prepare('SELECT table_no, session_id FROM orders WHERE id = ?').get('ord-race');
+const raceWinner = [raceA, raceB].find((result) => result.status === 200);
+check('concurrent loser leaves no second transfer side effect', Number(raceAudit.n) === 1 && ['11', '12'].includes(raceSession.table_no)
+  && raceWinner && raceOrder.table_no === raceWinner.data.toTable && raceOrder.session_id === 'ses-race',
+  JSON.stringify({ raceSession, raceAudit, raceOrder }));
+
+// G. The caisse announces real counts, never a blanket success.
 check('caisse transfer toast reports moved lines',
   /ordersMoved/.test(caisseSource) && /paidLeftBehind/.test(caisseSource));
 check('caisse merge toast reports moved lines',

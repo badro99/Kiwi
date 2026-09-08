@@ -151,7 +151,8 @@ check('iOS uses interactive keyboard dismissal in the embedded workspaces',
 check('native login requests the right mobile keyboard actions',
   appShell.includes('autocapitalize="none"') && appShell.includes('enterkeyhint="next"') && appShell.includes('enterkeyhint="go"'));
 check('the automatic launcher keeps the branded boot stage mounted through redirect',
-  /if \(role && !manual && !forceSetup\) \{ location\.replace\(ROLES\[role\]\); return; \}\s*clearBoot\(\)/.test(nativeShell));
+  /if \(role && !manual && !forceSetup && ls\('kiwi:native:identity-revoked:v1'\) !== '1'\) \{ location\.replace\(ROLES\[role\]\); return; \}\s*clearBoot\(\)/.test(nativeShell) &&
+  nativeShell.includes("localStorage.removeItem('kiwi:native:identity-revoked:v1')"));
 check('the system splash hands off to the native host while the web fallback remains bounded',
   appPackage.dependencies['@capacitor/splash-screen'] === '8.0.2' &&
   capacitorConfig.includes('launchAutoHide: true') && capacitorConfig.includes('launchShowDuration: 350') &&

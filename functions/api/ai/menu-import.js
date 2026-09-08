@@ -17,6 +17,7 @@ import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { quotaOk } from './_quota.js';
 import { runWithFallback, runAiWithGateway } from './_run.js';
+import { runWithPayloadFallback } from './_payload-fallback.js';
 // Une seule lecture des réponses Workers AI pour toutes les routes : la forme
 // varie (objet déjà parsé, chaîne, clôture ```json, choices[0].message) et
 // invoice.js a déjà payé pour l'apprendre.
@@ -47,7 +48,7 @@ const MIN_URL_TEXT = 180;
 export function urlAllowed(raw) {
   let u;
   try { u = new URL(String(raw || '')); } catch (_) { return false; }
-  if (u.protocol !== 'https:') return false;
+  if (u.protocol !== 'https:' || u.username || u.password || (u.port && u.port !== '443')) return false;
   const h = u.hostname.toLowerCase();
   if (!h || h === 'localhost' || h.endsWith('.local') || h.endsWith('.internal')) return false;
   if (h.startsWith('[')) return false; // littéral IPv6
@@ -123,15 +124,24 @@ async function readCapped(res, maxBytes) {
   return outBuf;
 }
 
-async function fetchUrlText(url) {
+export async function fetchUrlText(url) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), URL_TIMEOUT_MS);
   try {
-    const res = await fetch(url, {
-      redirect: 'follow',
-      signal: ctrl.signal,
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; KiwiMenuImport/1.0)', 'Accept': 'text/html,*/*' },
-    });
+    let res, current = url;
+    for (let hop = 0; hop <= 5; hop++) {
+      if (!urlAllowed(current)) return { error: 'url-forbidden' };
+      res = await fetch(current, {
+        redirect: 'manual',
+        signal: ctrl.signal,
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; KiwiMenuImport/1.0)', 'Accept': 'text/html,*/*' },
+      });
+      if (![301, 302, 303, 307, 308].includes(res.status)) break;
+      const location = res.headers.get('Location');
+      try { await res.body?.cancel(); } catch (_) {}
+      if (!location || hop === 5) return { error: 'url-redirect' };
+      current = new URL(location, current).href;
+    }
     if (!res.ok) return { error: 'url-status' };
     /* arrayBuffer() lisait la réponse EN ENTIER avant que MAX_HTML_BYTES ne la
      * tronque : la borne ne bornait rien, seul le délai de 8 s limitait ce
@@ -265,16 +275,12 @@ async function runVisionOnce(env, dataUrl, targetLang = 'fr') {
     max_tokens: MAX_TOKENS,
     temperature: TEMPERATURE,
   };
-  try {
-    return { result: await runAiWithGateway(env, VISION_MODEL, openaiShape), model: VISION_MODEL };
-  } catch (_) {
-    const b64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
-    const bin = atob(b64);
-    const bytes = new Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const nativeShape = { prompt: prompt + '\n\nVoici la photo de la carte. Extrais tous les articles.', image: bytes, max_tokens: MAX_TOKENS };
-    return { result: await runAiWithGateway(env, VISION_MODEL, nativeShape), model: VISION_MODEL };
-  }
+  const b64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+  const bin = atob(b64);
+  const bytes = new Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const nativeShape = { prompt: prompt + '\n\nVoici la photo de la carte. Extrais tous les articles.', image: bytes, max_tokens: MAX_TOKENS };
+  return runWithPayloadFallback(env, VISION_MODEL, openaiShape, VISION_MODEL, nativeShape);
 }
 
 export async function onRequestPost(context) {

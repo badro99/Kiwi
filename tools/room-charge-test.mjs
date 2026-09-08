@@ -157,6 +157,7 @@ function makeDb({ missingEvents = false } = {}) {
           if (query.includes('SELECT till_epoch FROM merchant_config')) return { till_epoch: 0 };
           if (query.includes('SELECT account_id FROM merchant_config')) return { account_id: 'owner-1' };
           if (query.includes('SELECT business FROM accounts')) return { business: 'Hotel Atlas' };
+          if (query.includes('SELECT status, session_epoch FROM accounts')) return { status: 'active', session_epoch: 0 };
           if (query.includes('SELECT type FROM merchant_config')) return { type: 'hotel' };
           if (query.includes("feature = 'hotel-units'")) return { data: JSON.stringify(registry) };
           if (query.includes('FROM sales') && query.includes('merchant = ?')) {

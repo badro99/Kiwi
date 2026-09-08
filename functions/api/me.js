@@ -24,7 +24,7 @@
 // For a signed-in merchant the answer also carries `onboarded` + `stores` — the
 // question the setup wizard has to ask and could not (see establishments below).
 
-import { json, readSession, readCookie, SESS_COOKIE, isOperator, slugMerchant } from '../auth/_lib.js';
+import { json, activeAccountSession, isOperator, slugMerchant } from '../auth/_lib.js';
 
 /* One store row, on a database that may not have run the registry ALTERs.
  * `name` and `account_id` were added to merchant_config later (see schema.sql);
@@ -158,7 +158,7 @@ export async function onRequestGet(context) {
   }
 
   // 2) Real merchant session — can only ever read itself.
-  const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+  const sess = await activeAccountSession(request, env);
   if (sess && sess.aid) {
     let acc = null;
     try {

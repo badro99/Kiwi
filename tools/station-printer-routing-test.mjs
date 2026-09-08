@@ -60,7 +60,11 @@ function createHarness(merchantName = 'amira-resto') {
       const body = opts && opts.body ? JSON.parse(opts.body) : {};
       dispatchedToBridge.push({ url, body });
       if (url.includes('/kiwi/ping')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, version: '1.3.0' }) });
+        // The bridge capability is now part of the legitimate local command
+        // contract. Keep this fixture on the current protocol so the routing
+        // assertions exercise printer selection, not a deliberately retired
+        // unauthenticated bridge.
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, version: '1.3.0', capability: 'kbc_' + 'a'.repeat(64) }) });
       }
       if (url.includes('/kiwi/print')) {
         if (body.printerIp === '192.168.1.99') {
@@ -207,10 +211,11 @@ ok('Same printer profile can be bound to both cuisson and bar stations',
 dispatchedToBridge.length = 0;
 await KP1.printKitchen({ title: 'CUISSON #42', items: [] }, { station: 'cuisson' });
 await KP1.printKitchen({ title: 'BAR #42', items: [] }, { station: 'bar' });
+const multiStationPrints = dispatchedToBridge.filter((r) => r.url.includes('/kiwi/print'));
 ok('Same printer bound to two stations receives two separate print requests',
-  dispatchedToBridge.length === 2 &&
-  dispatchedToBridge[0].body.printerIp === '192.168.1.88' &&
-  dispatchedToBridge[1].body.printerIp === '192.168.1.88');
+  multiStationPrints.length === 2 &&
+  multiStationPrints[0].body.printerIp === '192.168.1.88' &&
+  multiStationPrints[1].body.printerIp === '192.168.1.88');
 
 // ── Test 6: Fail-Soft Fallback When Station Printer is Unreachable ─────────
 const brokenStationConfig = {

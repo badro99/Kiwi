@@ -47,6 +47,12 @@ const TOKEN_RE = /^kwc\.([A-Za-z0-9-]{6,64})\.([A-Za-z0-9_-]{20,120})$/;
 const CHANNELS = { glovo: 1, yassir: 1, shopify: 1, generic: 1, kiwi: 1 };
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
+const money = (value) => {
+  if (value == null || value === '') return 0;
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return NaN;
+  return Math.round(amount * 100) / 100;
+};
 
 async function sha256Hex(s) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
@@ -113,8 +119,8 @@ export async function onRequestPost(context) {
   const merchant = String(link.merchant || '').toLowerCase();
   const channel = CHANNELS[link.channel] ? link.channel : 'generic';
 
-  const total = Math.round(Number(b && b.total) || 0);
-  if (total <= 0 || total > MAX_TOTAL) {
+  const total = Math.round(Number(b && b.total) * 100) / 100;
+  if (!Number.isFinite(total) || total <= 0 || total > MAX_TOTAL) {
     await mark(env, link.id, false, 'total absent ou hors bornes');
     return json({ error: 'bad-total' }, 400);
   }
@@ -134,7 +140,7 @@ export async function onRequestPost(context) {
       id: str(l && l.id, 40),
       name: str(l && l.name, 80),
       qty: Math.min(99, Math.max(1, Math.round(Number(l && l.qty) || 1))),
-      unitPrice: Math.max(0, Math.round(Number(l && l.unitPrice) || 0)),
+      unitPrice: Math.max(0, money(l && l.unitPrice)),
       options: str(l && l.options, 200),
       note: str(l && l.note, 200),
     };
@@ -147,6 +153,10 @@ export async function onRequestPost(context) {
     }
     return item;
   });
+  if (lines.some((line) => !Number.isFinite(line.unitPrice))) {
+    await mark(env, link.id, false, 'prix de ligne invalide');
+    return json({ error: 'bad-line-price' }, 400);
+  }
 
   /* Le coursier n'est pas le client. Un ticket de livraison sans adresse ni
    * téléphone renvoie le comptoir vers la tablette du prestataire, ce qui

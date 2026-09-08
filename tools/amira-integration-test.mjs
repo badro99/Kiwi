@@ -48,6 +48,18 @@ function makeDB() {
     return st;
   };
   facade.prepare = prepare;
+  facade.batch = async (statements) => {
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const result = [];
+      for (const statement of statements) result.push(await statement.run());
+      db.exec('COMMIT');
+      return result;
+    } catch (error) {
+      try { db.exec('ROLLBACK'); } catch (_) {}
+      throw error;
+    }
+  };
   return facade;
 }
 
@@ -199,7 +211,11 @@ console.log('■ 2. Waiter tablet table transfer & kitchen void (verifying 200 O
 // Transfer Table 4 to Table 6 from waiter tablet
 const transferRes = await postQueue({
   merchant: MERCHANT,
-  transferTable: { from: '4', to: '6', covers: 2, server: 'Karim Serveur' },
+  transferTable: {
+    from: '4', to: '6', covers: 2, server: 'Karim Serveur', operationId: 'amira-transfer-1',
+    expectedSession: orderSendRes.data.session,
+    expectedRevision: orderSendRes.data.revision,
+  },
 }, karimCookie);
 
 check('Waiter tablet transfers Table 4 to Table 6 (200 OK — NOT 403)', transferRes.status === 200 && transferRes.data.ok === true);

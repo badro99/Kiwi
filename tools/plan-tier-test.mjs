@@ -77,6 +77,7 @@ function makeMockDB() {
           return { success: true };
         },
         async first() {
+          if (q.startsWith('SELECT status, session_epoch FROM accounts')) return state.accounts[binds[0]] ? { status: 'active', session_epoch: 0 } : null;
           if (q.startsWith('SELECT business, created_ts FROM accounts WHERE id = ?') || q.startsWith('SELECT business, email FROM accounts WHERE id = ?')) {
             return state.accounts[binds[0]] || null;
           }

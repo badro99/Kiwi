@@ -18,6 +18,7 @@ import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { quotaOk } from './_quota.js';
 import { runAiWithGateway, runWithFallback } from './_run.js';
+import { runWithPayloadFallback } from './_payload-fallback.js';
 import { parseModelResponse } from './invoice.js';
 
 /* Le même modèle vision que le scan de cartes — vérifié sur photos réelles. */
@@ -139,16 +140,12 @@ async function runVisionOnce(env, dataUrl) {
     max_tokens: MAX_TOKENS,
     temperature: TEMPERATURE,
   };
-  try {
-    return { result: await runAiWithGateway(env, VISION_MODEL, openaiShape), model: VISION_MODEL };
-  } catch (_) {
-    const b64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
-    const bin = atob(b64);
-    const bytes = new Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const nativeShape = { prompt: SYSTEM_PROMPT + '\n\nVoici la photo de la salle. Extrais les faits.', image: bytes, max_tokens: MAX_TOKENS };
-    return { result: await runAiWithGateway(env, VISION_MODEL, nativeShape), model: VISION_MODEL };
-  }
+  const b64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+  const bin = atob(b64);
+  const bytes = new Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const nativeShape = { prompt: SYSTEM_PROMPT + '\n\nVoici la photo de la salle. Extrais les faits.', image: bytes, max_tokens: MAX_TOKENS };
+  return runWithPayloadFallback(env, VISION_MODEL, openaiShape, VISION_MODEL, nativeShape);
 }
 
 export async function onRequestPost(context) {

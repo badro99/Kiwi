@@ -57,6 +57,13 @@ function fakeD1(db) {
 function applyMigration(db) {
   db.exec(read('migrations/2026-08-21-print-relay.sql'));
   db.exec(`CREATE TABLE IF NOT EXISTS pair_attempts (ip TEXT PRIMARY KEY, fails INTEGER NOT NULL, first_ts INTEGER NOT NULL, blocked_until INTEGER);`);
+  // The till cookie is now epoch-bound. This relay fixture is intentionally
+  // schema-light, so provide the one auth table needed to represent an
+  // unrevoked (epoch 0) merchant instead of turning a valid fixture into a
+  // false 401.
+  db.exec(`CREATE TABLE IF NOT EXISTS merchant_config (merchant TEXT PRIMARY KEY, till_epoch INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'active');`);
+  db.prepare('INSERT OR IGNORE INTO merchant_config (merchant, till_epoch, status) VALUES (?, 0, ?)').run('browse', 'active');
+  db.prepare('INSERT OR IGNORE INTO merchant_config (merchant, till_epoch, status) VALUES (?, 0, ?)').run('santos-store', 'active');
 }
 
 const AUTH_SECRET = 'test-secret-relay';
@@ -85,6 +92,8 @@ if (DatabaseSync) {
   // A0 · tables absentes → 503 relay-not-provisioned, jamais 500
   {
     const db = new DatabaseSync(':memory:');
+    db.exec(`CREATE TABLE merchant_config (merchant TEXT PRIMARY KEY, till_epoch INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'active');`);
+    db.prepare('INSERT INTO merchant_config (merchant, till_epoch, status) VALUES (?, 0, ?)').run('browse', 'active');
     const env = { DB: fakeD1(db), AUTH_SECRET };
     const till = await tillCookieFor('browse');
     const r = await call(bridgesRoute, 'POST', '/api/print/bridges?merchant=browse', { body: { action: 'pair-code' }, cookie: till }, env);
@@ -288,8 +297,14 @@ if (DatabaseSync) {
   child.stdout.on('data', (d) => { log += d; });
   child.stderr.on('data', (d) => { log += d; });
 
-  const bget = (p) => fetch('http://127.0.0.1:' + BPORT + p).then((r) => r.text().then((t) => ({ status: r.status, text: t, j: (() => { try { return JSON.parse(t); } catch (_) { return null; } })() })));
-  const bpost = (p, o) => fetch('http://127.0.0.1:' + BPORT + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(o || {}) }).then((r) => r.json().then((j) => ({ status: r.status, j })));
+  let capability = '';
+  const bridgeHeaders = (extra = {}) => Object.assign({ Origin: 'http://localhost:8000' }, capability ? { 'X-Kiwi-Bridge-Capability': capability } : {}, extra);
+  const bget = (p) => fetch('http://127.0.0.1:' + BPORT + p, { headers: bridgeHeaders() }).then((r) => r.text().then((t) => {
+    const j = (() => { try { return JSON.parse(t); } catch (_) { return null; } })();
+    if (j && j.capability) capability = j.capability;
+    return { status: r.status, text: t, j };
+  }));
+  const bpost = (p, o) => fetch('http://127.0.0.1:' + BPORT + p, { method: 'POST', headers: bridgeHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(o || {}) }).then((r) => r.json().then((j) => ({ status: r.status, j })));
 
   let up = false;
   for (let i = 0; i < 40 && !up; i++) { try { const r = await bget('/kiwi/ping'); up = r.j && r.j.ok; } catch (_) { await sleep(100); } }
@@ -307,6 +322,8 @@ if (DatabaseSync) {
     const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
     ok(cfg.relay && cfg.relay.token === TOKEN && cfg.relay.merchant === 'browse', 'B2 · le jeton est écrit dans le fichier de config du pont');
     if (process.platform !== 'win32') ok((fs.statSync(cfgPath).mode & 0o777) === 0o600, 'B2 · …en mode 0600');
+    const enrolled = await bpost('/kiwi/targets', { action: 'save', target: { ip: '127.0.0.1', port: printerPort } });
+    ok(enrolled.status === 200 && enrolled.j && enrolled.j.ok, 'B2 · la cible locale du relais est explicitement enregistrée avant impression');
     // le poll doit récupérer le ticket et l'imprimer
     for (let i = 0; i < 60 && !seen.acks.length; i++) await sleep(100);
     ok(seen.polls >= 1, 'B3 · le pont a interrogé /api/print/jobs (' + seen.polls + ' fois)');
@@ -328,7 +345,12 @@ if (DatabaseSync) {
   } else {
     console.error(log.slice(-800));
   }
-  child.kill();
+  await new Promise((resolve) => {
+    if (child.exitCode !== null || child.signalCode) return resolve();
+    child.once('exit', resolve);
+    child.kill('SIGTERM');
+  });
+  for (const socket of printerSockets) socket.destroy();
   await new Promise((r) => fake.close(r));
   await new Promise((r) => printer.close(r));
   try { fs.unlinkSync(cfgPath); } catch (_) {}
@@ -362,7 +384,7 @@ if (DatabaseSync) {
   const schema = read('schema.sql');
   ok(/CREATE TABLE IF NOT EXISTS print_bridges/.test(schema) && /CREATE TABLE IF NOT EXISTS print_bridge_codes/.test(schema) && /CREATE TABLE IF NOT EXISTS print_jobs/.test(schema), 'C4 · schema.sql porte les trois tables du relais');
   const jobs = read('functions/api/print/jobs.js');
-  ok(/claimed_ts IS NULL OR claimed_ts <= \?/.test(jobs) && /RETRY_DELAY_MS = 10000/.test(jobs), 'C4 · le relais durable diffère puis reprend les écritures imprimante échouées');
+  ok(/claimed_ts IS NULL OR claimed_ts <= \?/.test(jobs) && /CLAIM_LEASE_MS = 30000/.test(jobs) && /RETRY_DELAY_MS = 10000/.test(jobs), 'C4 · le relais diffère les claims ambigus et reprend seulement les échecs connus');
   const srv = read('bridge/server.js');
   ok(BRIDGE_VERSION !== '' && read('bridge/package.json').includes('"version": "' + BRIDGE_VERSION + '"'), 'C5 · bridge ' + BRIDGE_VERSION + ' (server.js et package.json d’accord)');
   ok(/const HOST = '127\.0\.0\.1'/.test(srv) && !/0\.0\.0\.0/.test(srv), 'C5 · le pont écoute toujours sur loopback uniquement — le relais est sortant');

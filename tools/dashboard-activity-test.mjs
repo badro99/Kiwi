@@ -17,11 +17,26 @@ const env = { AUTH_SECRET: 'activity-memory-only-fixture', DB: { prepare(sql) {
     async first() { return db.prepare(sql).get(...args) || null; },
     async all() { return { results: db.prepare(sql).all(...args) }; },
     async run() { return { meta: { changes: db.prepare(sql).run(...args).changes } }; } };
-} } };
+  },
+  async batch(statements) {
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const result = [];
+      for (const statement of statements) result.push(await statement.run());
+      db.exec('COMMIT');
+      return result;
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+  },
+} };
 let checks = 0;
 const check = (name, fn) => { fn(); checks++; console.log('✓ ' + name); };
 const merchant = 'activity-fixture', now = Date.now(), from = now - 86400000, to = now + 86400000;
 db.prepare(`INSERT INTO accounts(id,email,business,salt,hash,created_ts) VALUES ('account','memory@example.test',?,'x','x',?)`).run(merchant, now);
+db.prepare(`INSERT INTO merchant_config(merchant,features,plan,type,account_id,name,status,updated_ts) VALUES (?,?,?,?,?,?,?,?)`)
+  .run(merchant, '{}', 'pro', 'restaurant', 'account', 'Activity Fixture', 'active', now);
 const owner = `${SESS_COOKIE}=${await makeSession('account', env.AUTH_SECRET)}`;
 const till = `${TILL_COOKIE}=${await tillToken(env.AUTH_SECRET, merchant)}`;
 const get = (params = {}, cookie = owner, environment = env) => onRequestGet({ env: environment, request: new Request(

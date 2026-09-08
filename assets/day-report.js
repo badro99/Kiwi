@@ -102,6 +102,57 @@
   function round2(n) { return Math.round(num(n) * 100) / 100; }
   function pad2(n) { return String(n).padStart(2, '0'); }
   function ymd(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  var DEFAULT_TIMEZONE = 'Africa/Casablanca';
+
+  /* A browser may be in Berlin while the merchant's books are in Casablanca.
+     Never let Date's host-local calendar decide which business day a sale
+     belongs to.  The venue metadata is optional for old accounts; Morocco is
+     the safe historical default for Kiwi. */
+  function merchantTimezone(slug) {
+    var candidates = [];
+    try {
+      var vd = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
+      if (vd && (!slug || vd.slug === slug || vd.merchant === slug || vd.id === slug)) candidates.push(vd.timezone, vd.timeZone, vd.tz);
+    } catch (_) {}
+    try { candidates.push(window.KiwiConfig && (window.KiwiConfig.timezone || window.KiwiConfig.timeZone)); } catch (_) {}
+    try {
+      var pv = window.KiwiPlatform && window.KiwiPlatform.pairedVenue && window.KiwiPlatform.pairedVenue();
+      candidates.push(pv && (pv.timezone || pv.timeZone || pv.tz));
+    } catch (_) {}
+    for (var i = 0; i < candidates.length; i++) {
+      var zone = String(candidates[i] || '').trim();
+      if (!zone) continue;
+      try { new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(); return zone; } catch (_) {}
+    }
+    return DEFAULT_TIMEZONE;
+  }
+  function civilParts(epoch, timezone) {
+    var f = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone || DEFAULT_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+    });
+    var out = {};
+    f.formatToParts(new Date(epoch)).forEach(function (p) { if (p.type !== 'literal') out[p.type] = p.value; });
+    return out;
+  }
+  function addCivilDays(day, delta) {
+    var p = String(day || '').split('-');
+    var n = Date.UTC(+p[0], (+p[1] || 1) - 1, +p[2] || 1) + num(delta) * 86400000;
+    return new Date(n).toISOString().slice(0, 10);
+  }
+  function zonedBoundary(day, hour, timezone) {
+    /* Convert a merchant wall-clock timestamp to an epoch without ever
+       constructing the intermediate Date in the operator's timezone. */
+    var target = Date.parse(String(day) + 'T00:00:00Z') + hour * 3600000;
+    var guess = target;
+    for (var i = 0; i < 6; i++) {
+      var p = civilParts(guess, timezone);
+      var observed = Date.parse(String(p.year) + '-' + p.month + '-' + p.day + 'T' + p.hour + ':' + p.minute + ':' + p.second + 'Z');
+      if (observed === target) return guess;
+      guess += target - observed;
+    }
+    return guess;
+  }
 
   /* Le slug du magasin — la seule clé sur laquelle la caisse et le tableau de
      bord tombent d'accord. Même cascade que clients-store.js bookId(), pour
@@ -203,13 +254,16 @@
      patron entend par « la recette d'hier soir ». */
   function businessDay(ts, slug) {
     var t = (ts instanceof Date) ? ts.getTime() : num(ts || Date.now());
-    return ymd(new Date(t - cutoff(slug) * 3600000));
+    var zone = merchantTimezone(slug);
+    var p = civilParts(t, zone);
+    var day = p.year + '-' + p.month + '-' + p.day;
+    return +p.hour < cutoff(slug) ? addCivilDays(day, -1) : day;
   }
   /* Les bornes réelles d'une journée commerciale, en millisecondes. */
   function dayBounds(day, slug) {
-    var p = String(day || '').split('-');
-    var d = new Date(+p[0], (+p[1] || 1) - 1, +p[2] || 1, cutoff(slug), 0, 0, 0);
-    return { from: d.getTime(), to: d.getTime() + 24 * 3600000 };
+    var zone = merchantTimezone(slug);
+    var h = cutoff(slug);
+    return { from: zonedBoundary(day, h, zone), to: zonedBoundary(addCivilDays(day, 1), h, zone) };
   }
   function today(slug) { return businessDay(Date.now(), slug); }
   /* La dernière journée TERMINÉE — celle que le patron regarde le matin. */
@@ -218,8 +272,7 @@
     return businessDay(b.from - 1000, slug);
   }
   function shiftDay(day, delta, slug) {
-    var b = dayBounds(day, slug);
-    return businessDay(b.from + num(delta) * 24 * 3600000 + 3600000, slug);
+    return addCivilDays(day, delta);
   }
 
   /* ──────────────────── le vocabulaire du métier ──────────────────── */
@@ -768,6 +821,7 @@
     businessDay: businessDay, dayBounds: dayBounds, today: today,
     lastClosedDay: lastClosedDay, shiftDay: shiftDay,
     cutoff: cutoff, setCutoff: setCutoff,
+    timezone: merchantTimezone,
     /* langue du métier */
     vocab: vocab, businessType: businessType,
     /* calcul */

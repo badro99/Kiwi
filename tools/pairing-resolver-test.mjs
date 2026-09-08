@@ -882,6 +882,15 @@ function auditPairingKeyUsage() {
         continue;
       }
 
+      // auth-guard.js owns the revoked-identity cleanup list. These are
+      // deliberate removal targets, not reads; keep this exception narrow to
+      // the literal list so a new pairing writer cannot hide behind it.
+      if (rel === 'assets/auth-guard.js') {
+        const ownerStart = content.lastIndexOf('var REVOKED_KEYS = [', idx);
+        const ownerEnd = ownerStart === -1 ? -1 : content.indexOf('];', ownerStart);
+        if (ownerStart !== -1 && ownerEnd !== -1 && idx < ownerEnd) continue;
+      }
+
       // 4. All other production files: MUST be an allow-listed read
       const prefix = content.slice(0, idx);
       if (!READ_ALLOW_LIST.test(prefix)) {
@@ -902,5 +911,4 @@ ok(auditResult.violations.length === 0,
 
 if (process.exitCode) process.exit(process.exitCode);
 console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant, direct module tests with/without platform across 21 modules + cycle safety + 2 HTML shell resolvers + single writer invariant)`);
-
 

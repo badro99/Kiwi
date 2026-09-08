@@ -68,7 +68,7 @@ ok(caisseCss.includes('@media (max-width: 1366px)') && caisseCss.includes('minma
 ok(caisseCss.includes('body.is-pos-pressing .px-view { padding: 0; }') && caisseCss.includes('html:not([data-caisse-theme="dark"]) body.is-pos-pressing .px-ticket') && caisseCss.includes('background: #fff;'), 'pressing resets landing-page section spacing and uses a pure-white light workspace');
 ok(caisseJs.includes("PRESSING_STORE_PREFIX = 'kiwi:pressing-store:v1:'") && caisseJs.includes("feature: 'pressing-orders'"), 'full garment tickets persist locally and through the tenant cloud document');
 ok(caisseJs.indexOf('ticketSeq++;\n        syncOwnerOps();') > 0, 'the next ticket number is persisted before a pay-at-pickup reload');
-ok(storeApi.includes("'pressing-orders': { keys: ['customers', 'orders', 'seq']"), 'the store API accepts the bounded pressing ticket document');
+ok(storeApi.includes("'pressing-orders': { keys: ['customers', 'orders', 'cancellations', 'rackConflicts', 'seq']"), 'the store API accepts bounded pressing tickets, cancellation tombstones and rack conflict evidence');
 ok(storeApi.includes("'pressing-catalog': { keys: ['categories', 'services', 'items']"), 'the store API accepts the bounded pressing catalogue document');
 ok(pressingJs.includes('data-pce-host') && !caisseJs.includes('data-px-view="tarifs"'), 'names and prices are managed from the dashboard, caisse catalog is locked');
 ok(catalogJs.includes('data-pce-search') && catalogJs.includes('data-pce-filter') && catalogJs.includes('var pageSize = 8') && catalogJs.includes('class="pce-summary"'), 'the catalogue is searchable, filterable, paged and collapsed by default');

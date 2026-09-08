@@ -49,14 +49,15 @@ const now = Date.now();
 
 const db = new DatabaseSync(':memory:');
 db.exec(`
-CREATE TABLE accounts (id TEXT PRIMARY KEY, email TEXT, business TEXT, salt TEXT, hash TEXT, created_ts INTEGER, status TEXT);
-CREATE TABLE merchant_config (merchant TEXT PRIMARY KEY, features TEXT, plan TEXT, type TEXT, account_id TEXT, name TEXT, status TEXT, updated_ts INTEGER);
+CREATE TABLE accounts (id TEXT PRIMARY KEY, email TEXT, business TEXT, salt TEXT, hash TEXT, created_ts INTEGER, status TEXT, session_epoch INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE merchant_config (merchant TEXT PRIMARY KEY, features TEXT, plan TEXT, type TEXT, account_id TEXT, name TEXT, status TEXT, till_epoch INTEGER NOT NULL DEFAULT 0, updated_ts INTEGER);
 CREATE TABLE store_docs (merchant TEXT, feature TEXT, data TEXT, rev INTEGER, updated_ts INTEGER, PRIMARY KEY (merchant, feature));
 CREATE TABLE staff_pins (id TEXT PRIMARY KEY, merchant TEXT, pin TEXT, name TEXT, role TEXT, created_ts INTEGER);
+CREATE TABLE employee_auth_versions (merchant TEXT NOT NULL, member_id TEXT NOT NULL, auth_version INTEGER NOT NULL DEFAULT 0, pin_digest TEXT NOT NULL, updated_ts INTEGER NOT NULL, PRIMARY KEY (merchant, member_id));
 CREATE TABLE pair_attempts (ip TEXT PRIMARY KEY, fails INTEGER, first_ts INTEGER, blocked_until INTEGER);
 `);
-db.prepare(`INSERT INTO accounts VALUES ('acc-1','o@amira.ma','Amira Boutique','s','h',?,'active')`).run(now);
-db.prepare(`INSERT INTO merchant_config VALUES (?, '{}','pro','boutique','acc-1','Amira Boutique','active',?)`).run(SHOP, now);
+db.prepare(`INSERT INTO accounts (id,email,business,salt,hash,created_ts,status,session_epoch) VALUES ('acc-1','o@amira.ma','Amira Boutique','s','h',?,'active',0)`).run(now);
+db.prepare(`INSERT INTO merchant_config (merchant,features,plan,type,account_id,name,status,till_epoch,updated_ts) VALUES (?, '{}','pro','boutique','acc-1','Amira Boutique','active',0,?)`).run(SHOP, now);
 
 const TEAM = { members: [
   { id: 'm1', firstName: 'Samira', lastName: 'L.', email: 'samira@amira.ma', function: 'Caissier',      department: 'Salle',     pinCode: '2580', password: '2580' },
@@ -69,11 +70,28 @@ db.prepare(`INSERT INTO store_docs VALUES (?,'attendance',?,1,?)`).run(SHOP, JSO
 const AGENT_ACTIONS = { items: [{ id: 'a1', action: 'customer-message-draft', args: { phone: '+212600000000' }, status: 'pending' }], versions: [{ id: 'v1', itemId: 'a1', status: 'pending', at: now }] };
 db.prepare(`INSERT INTO store_docs VALUES (?,'agentactions',?,1,?)`).run(SHOP, JSON.stringify(AGENT_ACTIONS), now);
 
-const env = { AUTH_SECRET, DB: { prepare(q) { const st = db.prepare(q); return { bind(...p) { return {
-  async first() { return st.get(...p); },
-  async all() { return { results: st.all(...p) }; },
-  async run() { const r = st.run(...p); return { meta: { changes: r.changes }, success: true }; },
-}; } }; }, async batch(stmts) { return Promise.all(stmts); } } };
+const env = { AUTH_SECRET, DB: {
+  prepare(q) {
+    const st = db.prepare(q);
+    return { bind(...p) { return {
+      async first() { const row = st.get(...p); return row === undefined ? null : row; },
+      async all() { return { results: st.all(...p) }; },
+      async run() { const r = st.run(...p); return { meta: { changes: r.changes }, success: true }; },
+    }; } };
+  },
+  async batch(stmts) {
+    db.exec('BEGIN');
+    try {
+      const results = [];
+      for (const stmt of stmts) results.push(await stmt.run());
+      db.exec('COMMIT');
+      return results;
+    } catch (error) {
+      try { db.exec('ROLLBACK'); } catch (_) {}
+      throw error;
+    }
+  },
+} };
 
 const till  = `kiwi_till=${await tillToken(AUTH_SECRET, SHOP)}`;
 const owner = sessionCookie(await makeSession('acc-1', AUTH_SECRET));

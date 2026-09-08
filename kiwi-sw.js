@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v547';
+var CACHE = 'kiwi-app-v548';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -96,7 +96,7 @@ var SHELL = [
   '/assets/trade-workspace-schema.js?v=4',
   '/assets/trade-workspaces.js?v=4',
   '/assets/reservations.js?v=16',
-  '/assets/pressing-ops.js?v=7',
+  '/assets/pressing-ops.js?v=8',
   '/assets/pressing-garment-icons.js?v=2',
   '/assets/pressing-catalog.js?v=7',
   '/assets/pressing-dashboard.js?v=14',
@@ -129,7 +129,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=1',
-  '/assets/dateRange.js?v=18',
+  '/assets/dateRange.js?v=19',
   '/assets/mobile-nav.js?v=2',
   '/assets/liquid-lens.js?v=1',
   '/assets/pages.js?v=5',
@@ -141,28 +141,28 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
   '/assets/oppo-cards.js?v=2',
-  '/assets/dashboard-pwa.js?v=490',
+  '/assets/dashboard-pwa.js?v=491',
   '/assets/dashboard-native.js?v=1',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js?v=1',
-  '/assets/caisse-pwa.js?v=495',
+  '/assets/caisse-pwa.js?v=496',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=5',
   '/assets/platform-kernel.js?v=5',
   '/assets/platform-ops.js?v=5',
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=10',
-  '/assets/operations-ui.js?v=12',
-  '/assets/live-link.js?v=33',
+  '/assets/operations-ui.js?v=13',
+  '/assets/live-link.js?v=34',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=7',
-  '/assets/report.js?v=2',
+  '/assets/day-report.js?v=8',
+  '/assets/report.js?v=3',
   '/assets/day-report-dash.js?v=10',
   '/assets/day-report-export.js?v=6',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
@@ -194,12 +194,12 @@ var SHELL = [
   '/assets/identity.js?v=2',
   '/assets/caisse-link.js?v=10',
   '/assets/operator-access.js?v=1',
-  '/assets/auth-guard.js?v=1',
+  '/assets/auth-guard.js?v=2',
   '/assets/idle-lock.js?v=2',
   '/assets/caisse-hardware.js?v=2',
   '/assets/live-socket.js?v=4',
   '/assets/escpos.js?v=8',
-  '/assets/printer-bridge.js?v=11',
+  '/assets/printer-bridge.js?v=14',
   '/assets/barcode.js?v=1',
   '/assets/color-palette.js?v=5',
   '/assets/boutique-catalog.js?v=7',
@@ -224,14 +224,14 @@ var SHELL = [
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=4',
-  '/assets/clients-store.js?v=4',
+  '/assets/clients-store.js?v=5',
   '/assets/clients-book.js?v=10',
   '/assets/clients-directory.js?v=2',
   '/assets/menu-catalog.js?v=23',
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=489',
+  '/assets/employee-live.js?v=490',
   '/assets/employee-planning.js?v=8',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=2',
@@ -248,7 +248,7 @@ var SHELL = [
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=6',
   '/assets/orderpro-panel.js?v=1',
-  '/assets/orderpro-inbox.js?v=14',
+  '/assets/orderpro-inbox.js?v=15',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */
@@ -256,7 +256,7 @@ var SHELL = [
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
-  '/assets/kitchen-print-queue.js?v=9',
+  '/assets/kitchen-print-queue.js?v=10',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=6',
   '/assets/pos-dispatch.js?v=36',
@@ -312,8 +312,8 @@ var SHELL = [
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js?v=1',
-  '/assets/pressing-caisse.js?v=39',
-  '/assets/pressing-caisse.css?v=39',
+  '/assets/pressing-caisse.js?v=40',
+  '/assets/pressing-caisse.css?v=40',
   '/assets/lucide.min.js?v=4',
   '/assets/kiwi-favicon-new.svg',
   '/assets/kiwi-newlogo.svg',

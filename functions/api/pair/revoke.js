@@ -45,14 +45,16 @@ export async function onRequestPost({ request, env }) {
       RETURNING till_epoch`
     ).bind(Date.now(), merchant).first();
     epoch = row && Number(row.till_epoch);
-  } catch (_) { epoch = null; }
+  } catch (_) {
+    return json({ error: 'auth-verification-unavailable' }, 503);
+  }
 
   /* Pas de ligne au registre : la boutique n'a jamais été configurée, donc il
    * n'y a rien à périmer — mais le dire franchement vaut mieux qu'un faux « ok »
    * après lequel le commerçant croirait ses caisses coupées. */
   if (!Number.isFinite(epoch)) return json({ error: 'store-not-registered' }, 409);
 
-  forgetTillEpoch(merchant);
+  forgetTillEpoch(merchant, env.DB);
   return json({ ok: true, epoch, note: 'toutes les caisses doivent réappairer' });
 }
 

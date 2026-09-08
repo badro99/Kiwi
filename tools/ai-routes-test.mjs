@@ -126,12 +126,13 @@ function createMockDb() {
       }
       if (sql.startsWith('INSERT INTO ai_usage_kind')) {
         return {
-          bind: (merchant, day, kind) => ({
-            run: async () => {
+          bind: (merchant, day, kind, cap) => ({
+            first: async () => {
               const k = `${merchant}:${day}:${kind}`;
               const cur = store.get(k) || 0;
+              if (cur >= cap) return null;
               store.set(k, cur + 1);
-              return {};
+              return { calls: cur + 1 };
             }
           })
         };
@@ -148,7 +149,7 @@ const envWithDb = { DB: mockDb };
 
 // Fail-soft with null env / null DB
 const noDbResult = await quotaOk({}, 'test-m', 'ask', 200);
-ok(noDbResult === true, 'quotaOk returns true when DB is unbound (fail-soft)');
+ok(noDbResult === false, 'quotaOk refuses paid calls when DB is unbound');
 
 // Normal increments
 const q1 = await quotaOk(envWithDb, 'm1', 'ask', 2);
@@ -203,10 +204,12 @@ const mockEnvFailingGateway = {
 };
 
 aiCalls = [];
-const resNoGateway = await runAiWithGateway(mockEnvFailingGateway, MODEL, { test: 2 });
-ok(resNoGateway === 'stream-raw-ok', 'runAiWithGateway recovers without gateway option');
-ok(aiCalls.length === 2 && aiCalls[0].opts?.gateway && !aiCalls[1].opts,
-   'runAiWithGateway retried immediately without gateway option');
+let gatewayRejected = false;
+try { await runAiWithGateway(mockEnvFailingGateway, MODEL, { test: 2 }); }
+catch (_) { gatewayRejected = true; }
+ok(gatewayRejected, 'an unavailable gateway is not bypassed');
+ok(aiCalls.length === 1 && aiCalls[0].opts?.gateway,
+   'no direct unmetered retry is made');
 
 let primaryModelCalls = 0;
 let fallbackModelCalls = 0;
@@ -220,7 +223,7 @@ const mockEnvCounting = {
       }
       if (model === FALLBACK_MODEL) {
         fallbackModelCalls++;
-        if (opts?.gateway) throw new Error('Gateway failed');
+        if (!opts?.gateway) throw new Error('Missing gateway');
         return 'fallback-stream-ok';
       }
       throw new Error('Unknown model');
@@ -236,8 +239,8 @@ const resCounting = await (async () => {
   }
 })();
 ok(resCounting === 'fallback-stream-ok', 'Fallback succeeds when primary fails');
-ok(primaryModelCalls === 2, 'Primary model attempted with gateway then without gateway (2 calls)');
-ok(fallbackModelCalls === 2, 'Fallback model attempted with gateway then without gateway (2 calls)');
+ok(primaryModelCalls === 1, 'Primary attempted once through gateway');
+ok(fallbackModelCalls === 1, 'Fallback attempted once through gateway');
 
 
 // ── 7. Function calling on /api/ai/ask (pure functions + route shape) ─────────

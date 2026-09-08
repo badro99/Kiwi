@@ -11,7 +11,7 @@
   var COPY = {
     fr: {
       title: 'Rapport d’activité', generated: 'Généré le', period: 'Période',
-      collected: 'Encaissé', previous: 'Période précédente', difference: 'Écart',
+      collected: 'Encaissé', netSales: 'Ventes nettes', receivable: 'Créances', refunds: 'Remboursements', previous: 'Période précédente', difference: 'Écart',
       indicators: 'Indicateurs', indicator: 'Indicateur', value: 'Valeur', change: 'Écart',
       transactions: 'Transactions', basket: 'Panier moyen', cardShare: 'Part carte', cashShare: 'Part espèces', otherShare: 'Part autre',
       revenueChart: 'Chiffre d’affaires', payments: 'Répartition des encaissements', card: 'Carte', cash: 'Espèces', other: 'Autre',
@@ -20,11 +20,11 @@
       from: 'Du', to: 'au', noPopup: 'La fenêtre du rapport a été bloquée par le navigateur.',
       csvReady: 'CSV téléchargé', reportError: 'Le rapport n’a pas pu être généré.',
       csvHeaders: ['date_debut', 'date_fin', 'indicateur', 'valeur_mad', 'valeur_nombre', 'valeur_pourcent', 'ecart_pourcent'],
-      txHeaders: ['date', 'heure', 'moyen_paiement', 'montant_mad', 'libelle']
+      txHeaders: ['date', 'heure', 'type_transaction', 'moyen_paiement', 'montant_mad', 'reference', 'libelle']
     },
     en: {
       title: 'Business report', generated: 'Generated on', period: 'Period',
-      collected: 'Collected', previous: 'Previous period', difference: 'Change',
+      collected: 'Collected', netSales: 'Net sales', receivable: 'Receivable', refunds: 'Refunds', previous: 'Previous period', difference: 'Change',
       indicators: 'Indicators', indicator: 'Indicator', value: 'Value', change: 'Change',
       transactions: 'Transactions', basket: 'Average basket', cardShare: 'Card share', cashShare: 'Cash share', otherShare: 'Other share',
       revenueChart: 'Revenue', payments: 'Payment breakdown', card: 'Card', cash: 'Cash', other: 'Other',
@@ -33,11 +33,11 @@
       from: 'From', to: 'to', noPopup: 'The report window was blocked by the browser.',
       csvReady: 'CSV downloaded', reportError: 'The report could not be generated.',
       csvHeaders: ['start_date', 'end_date', 'indicator', 'value_mad', 'value_count', 'value_percent', 'change_percent'],
-      txHeaders: ['date', 'time', 'payment_method', 'amount_mad', 'label']
+      txHeaders: ['date', 'time', 'transaction_type', 'payment_method', 'amount_mad', 'reference', 'label']
     },
     ar: {
       title: 'تقرير النشاط', generated: 'تم إنشاؤه في', period: 'الفترة',
-      collected: 'المقبوض', previous: 'الفترة السابقة', difference: 'الفارق',
+      collected: 'المقبوض', netSales: 'صافي المبيعات', receivable: 'المستحق', refunds: 'المبالغ المستردة', previous: 'الفترة السابقة', difference: 'الفارق',
       indicators: 'المؤشرات', indicator: 'المؤشر', value: 'القيمة', change: 'الفارق',
       transactions: 'المعاملات', basket: 'متوسط السلة', cardShare: 'حصة البطاقة', cashShare: 'حصة النقد', otherShare: 'حصة أخرى',
       revenueChart: 'رقم المعاملات', payments: 'توزيع المقبوضات', card: 'بطاقة', cash: 'نقدًا', other: 'أخرى',
@@ -46,7 +46,7 @@
       from: 'من', to: 'إلى', noPopup: 'حظر المتصفح نافذة التقرير.',
       csvReady: 'تم تنزيل CSV', reportError: 'تعذر إنشاء التقرير.',
       csvHeaders: ['تاريخ_البداية', 'تاريخ_النهاية', 'المؤشر', 'القيمة_MAD', 'القيمة_العددية', 'القيمة_بالمئة', 'الفارق_بالمئة'],
-      txHeaders: ['التاريخ', 'الوقت', 'طريقة_الدفع', 'المبلغ_MAD', 'البيان']
+      txHeaders: ['التاريخ', 'الوقت', 'نوع_المعاملة', 'طريقة_الدفع', 'المبلغ_MAD', 'المرجع', 'البيان']
     }
   };
 
@@ -109,6 +109,24 @@
 
   function pad2(n) { return String(n).padStart(2, '0'); }
   function isoDate(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function merchantTimezone() {
+    try {
+      if (window.KiwiDayReport && window.KiwiDayReport.timezone) return window.KiwiDayReport.timezone();
+      var vd = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
+      var zone = vd && (vd.timezone || vd.timeZone || vd.tz);
+      if (zone) { new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(); return zone; }
+    } catch (_) {}
+    return 'Africa/Casablanca';
+  }
+  function merchantParts(epoch) {
+    var out = {};
+    new Intl.DateTimeFormat('en-CA', { timeZone: merchantTimezone(), year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+      .formatToParts(new Date(epoch)).forEach(function (p) { if (p.type !== 'literal') out[p.type] = p.value; });
+    return out;
+  }
+  function merchantIsoDate(epoch) {
+    var p = merchantParts(epoch); return p.year + '-' + p.month + '-' + p.day;
+  }
   function validDate(d) { return d instanceof Date && !isNaN(d.getTime()); }
   function parseIso(s) {
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ''));
@@ -142,13 +160,14 @@
     var from = +bounds[0];
     var open = bounds[1] === Infinity;
     var to = open ? nowMs : +bounds[1];
-    var endForDate = new Date(Math.max(from, to - 1));
-    var a = new Date(from), b = endForDate;
-    var df = new Intl.DateTimeFormat(locale(lang), { day: 'numeric', month: 'long', year: 'numeric' });
-    var dateText = isoDate(a) === isoDate(b) ? df.format(a) : (COPY[lang].from + ' ' + df.format(a) + ' ' + COPY[lang].to + ' ' + df.format(b));
+    var endForDate = Math.max(from, to - 1);
+    var a = new Date(from), b = new Date(endForDate);
+    var df = new Intl.DateTimeFormat(locale(lang), { timeZone: merchantTimezone(), day: 'numeric', month: 'long', year: 'numeric' });
+    var startIso = merchantIsoDate(from), endIso = merchantIsoDate(endForDate);
+    var dateText = startIso === endIso ? df.format(a) : (COPY[lang].from + ' ' + df.format(a) + ' ' + COPY[lang].to + ' ' + df.format(b));
     return {
       id: id, from: from, to: to, open: open,
-      startIso: isoDate(a), endIso: isoDate(b),
+      startIso: startIso, endIso: endIso,
       label: (RANGE[lang] || RANGE.fr)[id] || RANGE.fr.aujourdhui,
       text: dateText
     };
@@ -204,17 +223,26 @@
     });
   }
 
+  function isReceivableMethod(method) {
+    return ['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].indexOf(String(method || '').toLowerCase()) >= 0;
+  }
+
   function aggregate(rows) {
-    var out = { revenue: 0, gross: 0, count: 0, methods: { card: 0, cash: 0, other: 0 } };
+    var out = { revenue: 0, gross: 0, refunds: 0, collected: 0, receivable: 0, count: 0, methods: { card: 0, cash: 0, other: 0 } };
     rows.forEach(function (row) {
       var amount = +(row && row.amount) || 0;
       if (!amount) return;
       out.revenue += amount;
       if (amount > 0) { out.gross += amount; out.count++; }
+      else out.refunds += -amount;
       var method = String(row && row.method || 'card').toLowerCase();
-      if (method === 'cash') out.methods.cash += amount;
-      else if (method === 'card' || method === 'tap') out.methods.card += amount;
-      else out.methods.other += amount;
+      if (isReceivableMethod(method)) out.receivable += amount;
+      else {
+        out.collected += amount;
+        if (method === 'cash') out.methods.cash += amount;
+        else if (method === 'card' || method === 'tap') out.methods.card += amount;
+        else out.methods.other += amount;
+      }
     });
     out.basket = out.count ? out.gross / out.count : null;
     return out;
@@ -241,9 +269,9 @@
       values = values.map(function (v) { running += v; return running; });
     }
     var labels = values.map(function (_, i) {
-      if (hourly) return pad2(new Date(period.from + i * 3600000).getHours()) + ':00';
+      if (hourly) return pad2(+merchantParts(period.from + i * 3600000).hour) + ':00';
       var d = new Date(period.from + i * DAY);
-      return new Intl.DateTimeFormat(locale(language()), { day: '2-digit', month: '2-digit' }).format(d);
+      return new Intl.DateTimeFormat(locale(language()), { timeZone: merchantTimezone(), day: '2-digit', month: '2-digit' }).format(d);
     });
     return { values: values, labels: labels };
   }
@@ -277,18 +305,18 @@
       var span = Math.max(1, period.to - period.from);
       previous = aggregate(rowsIn(all, period.from - span, period.from));
       chart = chartFromSales(sourceRows, period);
-      if (current.revenue > 0) {
+      if (current.collected > 0) {
         paymentRows = [
-          { label: copy.card, amount: current.methods.card, pct: current.methods.card / current.revenue * 100 },
-          { label: copy.cash, amount: current.methods.cash, pct: current.methods.cash / current.revenue * 100 },
-          { label: copy.other, amount: current.methods.other, pct: current.methods.other / current.revenue * 100 }
+          { label: copy.card, amount: current.methods.card, pct: current.methods.card / current.collected * 100 },
+          { label: copy.cash, amount: current.methods.cash, pct: current.methods.cash / current.collected * 100 },
+          { label: copy.other, amount: current.methods.other, pct: current.methods.other / current.collected * 100 }
         ];
       }
     } else if (period.id === 'aujourdhui') {
       var sim = null;
       try { sim = window.KiwiDemoClock && window.KiwiDemoClock.getSimState && window.KiwiDemoClock.getSimState(); } catch (_) {}
       if (sim) {
-        current = { revenue: sim.cumRevenue, count: sim.cumTx, basket: sim.cumTx ? sim.cumRevenue / sim.cumTx : null };
+        current = { revenue: sim.cumRevenue, gross: sim.cumRevenue, refunds: 0, collected: sim.cumRevenue, receivable: 0, count: sim.cumTx, basket: sim.cumTx ? sim.cumRevenue / sim.cumTx : null };
         chart = chartFromDemo(sim);
         var ratio = sim.target && isFinite(+sim.target.ratioCard) ? +sim.target.ratioCard : null;
         if (ratio != null) paymentRows = [
@@ -301,7 +329,7 @@
 
     var revenue = current ? current.revenue : null;
     var prevRevenue = previous && previous.count ? previous.revenue : null;
-    var totalPay = current && current.revenue || 0;
+    var totalPay = current && current.collected || 0;
     var shares = { card: null, cash: null, other: null };
     if (paymentRows.length) {
       shares.card = paymentRows[0].pct;
@@ -309,7 +337,10 @@
       shares.other = paymentRows[2].pct;
     }
     var metrics = [
-      { label: copy.collected, kind: 'money', value: revenue, delta: delta(revenue, prevRevenue) },
+      { label: copy.netSales, kind: 'money', value: revenue, delta: delta(revenue, prevRevenue) },
+      { label: copy.collected, kind: 'money', value: current ? current.collected : null, delta: null },
+      { label: copy.receivable, kind: 'money', value: current ? current.receivable : null, delta: null },
+      { label: copy.refunds, kind: 'money', value: current ? current.refunds : null, delta: null },
       { label: copy.transactions, kind: 'count', value: current ? current.count : null, delta: previous && previous.count ? delta(current.count, previous.count) : null },
       { label: copy.basket, kind: 'money', value: current ? current.basket : null, delta: previous && previous.basket ? delta(current.basket, previous.basket) : null },
       { label: copy.cardShare, kind: 'percent', value: shares.card, delta: null },
@@ -320,6 +351,10 @@
       lang: lang, copy: copy, period: period, real: real,
       business: venueName(real), generatedAt: new Date(),
       revenue: revenue, previousRevenue: prevRevenue,
+      grossSales: current ? current.gross : null,
+      refunds: current ? current.refunds : null,
+      collected: current ? current.collected : null,
+      receivable: current ? current.receivable : null,
       revenueDelta: delta(revenue, prevRevenue), metrics: metrics,
       chart: chart, payments: totalPay || paymentRows.length ? paymentRows : [],
       sourceRows: sourceRows
@@ -415,7 +450,7 @@
       '@page{size:A4;margin:16mm 14mm 18mm}@media print{html,body{color-scheme:light!important;background:#fff!important;color:#0A0F0D}.toolbar{display:none}main{width:auto;margin:0}.report-head{padding-bottom:16px}.brand{background:#fff}.headline{margin:18px 0;background:rgba(11,110,79,.22);break-inside:avoid}.head-stat{background:#fff;min-height:105px;padding:14px}.head-stat .amount{font-size:27px;margin-top:16px}section,table,.payments,.chart{break-inside:avoid}.section-head{margin-top:20px}.chart{height:210px;background:#fff}.screen-foot{display:none}.print-foot{display:flex;position:fixed;bottom:-11mm;left:0;right:0;justify-content:space-between;border-top:1px solid #0B6E4F;padding-top:4mm;font-size:9px;color:#0A0F0D}.page-no:after{content:" · " counter(page) " / " counter(pages)}thead{display:table-header-group}thead th{background:#0B6E4F!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.change{color:#0B6E4F}.payment-value{color:#0A0F0D}}' +
       '</style></head><body><nav class="toolbar" aria-label="Actions"><button type="button" onclick="window.print()" class="primary">' + esc(c.print) + '</button><a href="' + esc(csvLink.url) + '" download="' + esc(csvLink.filename) + '">' + esc(c.csv) + '</a><button type="button" onclick="window.close()">' + esc(c.close) + '</button></nav><main>' +
       '<header class="report-head"><div class="brand"><img src="' + esc(logo) + '" width="142" height="54" alt="Kiwi"></div><div class="identity"><h1>' + esc(c.title) + '</h1><div class="business">' + esc(snapshot.business || 'Kiwi') + '</div><div class="meta"><div>' + esc(c.period) + ' · ' + esc(snapshot.period.label) + ' · ' + esc(snapshot.period.text) + '</div><div>' + esc(c.generated) + ' · ' + esc(generated) + '</div></div></div></header>' +
-      '<section class="headline"><div class="head-stat"><div class="label">' + esc(c.collected) + '</div><div class="amount">' + esc(formatNumber(snapshot.revenue, { kind: 'money', digits: 2, lang: l })) + '</div></div><div class="head-stat"><div class="label">' + esc(c.previous) + '</div><div class="amount">' + esc(formatNumber(snapshot.previousRevenue, { kind: 'money', digits: 2, lang: l })) + '</div><div class="sub">' + esc(c.difference) + ' · ' + esc(formatNumber(snapshot.revenueDelta, { kind: 'percent', digits: 1, lang: l })) + '</div></div></section>' +
+      '<section class="headline"><div class="head-stat"><div class="label">' + esc(c.netSales) + '</div><div class="amount">' + esc(formatNumber(snapshot.revenue, { kind: 'money', digits: 2, lang: l })) + '</div><div class="sub">' + esc(c.difference) + ' · ' + esc(formatNumber(snapshot.revenueDelta, { kind: 'percent', digits: 1, lang: l })) + '</div></div><div class="head-stat"><div class="label">' + esc(c.collected) + '</div><div class="amount">' + esc(formatNumber(snapshot.collected, { kind: 'money', digits: 2, lang: l })) + '</div></div><div class="head-stat"><div class="label">' + esc(c.receivable) + '</div><div class="amount">' + esc(formatNumber(snapshot.receivable, { kind: 'money', digits: 2, lang: l })) + '</div></div></section>' +
       '<section><div class="section-head"><h2>' + esc(c.indicators) + '</h2><span>' + esc(snapshot.period.text) + '</span></div><table><thead><tr><th>' + esc(c.indicator) + '</th><th class="num">' + esc(c.value) + '</th><th class="num">' + esc(c.change) + '</th></tr></thead><tbody>' + metricRows + '</tbody></table></section>' + chart + payments +
       '<footer class="screen-foot"><span>' + esc(c.madeBy) + '</span><span>' + esc(snapshot.period.label + ' · ' + snapshot.period.startIso + ' · ' + snapshot.period.endIso) + '</span></footer><footer class="print-foot"><span>' + esc(c.madeBy + ' · ' + snapshot.period.startIso + ' · ' + snapshot.period.endIso) + '</span><span class="page-no">' + esc(c.title) + '</span></footer>' +
       '</main></body></html>';
@@ -451,11 +486,15 @@
     var lines = [snapshot.copy.txHeaders.map(csvText).join(d)];
     snapshot.sourceRows.slice().sort(function (a, b) { return (+a.ts || 0) - (+b.ts || 0); }).forEach(function (row) {
       var dt = new Date(+row.ts || 0);
+      var parts = merchantParts(+row.ts || 0);
       var method = String(row.method || '');
       var label = (PAYMENT[lang] || PAYMENT.fr)[method] || method;
+      var isRefund = row.kind === 'refund' || +row.amount < 0;
+      var type = isRefund ? (lang === 'en' ? 'Refund' : (lang === 'ar' ? 'استرداد' : 'Remboursement')) : (lang === 'en' ? 'Sale' : (lang === 'ar' ? 'بيع' : 'Vente'));
+      var reference = row.ref || row.receiptRef || row.id || '';
       lines.push([
-        csvText(isoDate(dt)), csvText(pad2(dt.getHours()) + ':' + pad2(dt.getMinutes())), csvText(label),
-        csvDecimal(Math.max(0, +row.amount || 0), lang), csvText(row.label || '')
+        csvText(parts.year + '-' + parts.month + '-' + parts.day), csvText(parts.hour + ':' + parts.minute), csvText(type), csvText(label),
+        csvDecimal(+row.amount || 0, lang), csvText(reference), csvText(row.label || '')
       ].join(d));
     });
     var filename = 'kiwi-transactions-' + snapshot.period.endIso + '.csv';

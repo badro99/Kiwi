@@ -11,6 +11,7 @@
  *   4. ADMIN         gating opérateur, consultation et filtrage
  * ═══════════════════════════════════════════════════════════════════════════ */
 
+import { DatabaseSync } from 'node:sqlite';
 import {
   tillToken,
   operatorToken,
@@ -90,6 +91,8 @@ function testClientRedaction() {
 
 // ── 2. Mock D1 Database ─────────────────────────────────────────────────────
 function makeMockDB() {
+  const limiter = new DatabaseSync(':memory:');
+  limiter.exec('CREATE TABLE pair_attempts(ip TEXT PRIMARY KEY, fails INTEGER, first_ts INTEGER, blocked_until INTEGER)');
   const errors = [];
   const operators = [];
   const attempts = new Map();
@@ -99,6 +102,15 @@ function makeMockDB() {
     _operators: operators,
     _attempts: attempts,
     prepare(sql) {
+      if (sql.includes('pair_attempts')) {
+        let values = [];
+        return {
+          bind(...args) { values = args; return this; },
+          async run() { const r = limiter.prepare(sql).run(...values); return { meta: { changes: Number(r.changes) } }; },
+          async first() { return limiter.prepare(sql).get(...values) || null; },
+          async all() { return { results: limiter.prepare(sql).all(...values) }; },
+        };
+      }
       const q = sql.replace(/\s+/g, ' ').trim();
       let binds = [];
       const stmt = {
@@ -156,6 +168,7 @@ function makeMockDB() {
           return { success: true };
         },
         async first() {
+          if (q.startsWith('SELECT till_epoch FROM merchant_config')) return { till_epoch: 0 };
           if (q.startsWith('SELECT blocked_until FROM pair_attempts WHERE ip = ?')) {
             const a = attempts.get(binds[0]);
             return a ? { blocked_until: a.blocked_until } : null;

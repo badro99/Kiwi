@@ -57,7 +57,7 @@ const sw = fs.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
 ok(/seed \? 'pending' : null/.test(config), 'newly onboarded stores start pending while legacy stores do not');
 ok(/subscription: \{ state: subscription, active: subscription === 'active' \}/.test(config),
   'the dashboard receives authoritative subscription state');
-ok(/storeSubscriptionPending\(env, who\)/.test(privateApi), 'shared strict writes enforce subscription state');
+ok(/(?:storeSubscriptionPending\(env, who\)|storeOperationalState\(env, who\))/.test(privateApi), 'shared strict writes enforce subscription state');
 for (const [name, source] of [['sales', sale], ['orders', order], ['bookings', booking], ['menu publishing', menu], ['team actions', team]]) {
   ok(source.includes('subscription-required'), name + ' refuse pending-store writes server-side');
 }
@@ -71,7 +71,7 @@ ok(entitlement.includes('lecture seule') && entitlement.includes('kiwi-private-v
   'confidential mode is visibly read-only and masks values without replacing data');
 ok(liveLink.includes("identity.ready.then(function (state)") && liveLink.includes('initPump(true)'),
   'God Mode client data starts only after the server confirms the operator');
-ok(liveLink.includes('{ oneShot: !!snapshot }') && liveLink.includes('else if (oneShot) stop()'),
+ok(/oneShot:\s*!!snapshot/.test(liveLink) && liveLink.includes('else if (oneShot) stop()'),
   'God Mode consumes a complete one-time snapshot instead of the merchant polling loop');
 const stamps = JSON.parse(fs.readFileSync(new URL('./asset-stamps.json', import.meta.url), 'utf8'));
 const entJsVer = stamps['assets/entitlements.js']?.v || '6';

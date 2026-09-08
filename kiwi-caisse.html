@@ -89,7 +89,7 @@
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
   <script src="assets/escpos.js?v=8" defer></script>
-  <script src="assets/printer-bridge.js?v=11" defer></script>
+  <script src="assets/printer-bridge.js?v=14" defer></script>
   <script src="assets/caisse-hardware.js?v=2" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
@@ -101,7 +101,7 @@
   <script src="assets/pos-sale.js?v=6" defer></script>
   <!-- Garment workflow snapshot shared with the pressing owner dashboard. -->
   <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
-  <script src="assets/pressing-ops.js?v=7" defer></script>
+  <script src="assets/pressing-ops.js?v=8" defer></script>
   <script src="assets/pressing-garment-icons.js?v=2" defer></script>
   <script src="assets/pressing-catalog.js?v=7" defer></script>
   <!-- Boutique shared database + real barcode engine (EAN-13 / Code 128).
@@ -5503,8 +5503,8 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=495" defer></script>
-  <script src="assets/live-link.js?v=33" defer></script>
+  <script src="assets/caisse-pwa.js?v=496" defer></script>
+  <script src="assets/live-link.js?v=34" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js?v=1" defer></script>
@@ -5518,7 +5518,7 @@
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
   <script src="assets/caisse-pairing.js?v=18" defer></script>
   <script src="assets/kiwi-select.js?v=2" defer></script>
-  <script src="assets/cash-sessions.js?v=2" defer></script>
+  <script src="assets/cash-sessions.js?v=3" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
        caisse neuve doit retrouver le magasin, pas repartir vide. AVANT
        venue-store.js, qui s'y branche. -->
@@ -5531,7 +5531,7 @@
        avec le tableau de bord. Après cloud-doc.js, dont il tient sa copie
        serveur · c'est ce qui fait qu'un Z clôturé sur l'iPad du comptoir
        s'ouvre le lendemain sur le téléphone du patron. -->
-  <script src="assets/day-report.js?v=7" defer></script>
+  <script src="assets/day-report.js?v=8" defer></script>
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js?v=3" defer></script>
@@ -5566,7 +5566,7 @@
   <!-- Tenant-scoped operational outbox: receipt delivery and device health are
        server-confirmed or explicitly blocked, never presentation-only. -->
   <script src="assets/operations.js?v=10" defer></script>
-  <script src="assets/clients-store.js?v=4" defer></script>
+  <script src="assets/clients-store.js?v=5" defer></script>
   <script src="assets/clients-book.js?v=10" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
        de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
@@ -5575,11 +5575,11 @@
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
   <script src="assets/kitchen-relay.js?v=4" defer></script>
-  <script src="assets/kitchen-print-queue.js?v=9" defer></script>
+  <script src="assets/kitchen-print-queue.js?v=10" defer></script>
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=14" defer></script>
+  <script src="assets/orderpro-inbox.js?v=15" defer></script>
   <script src="assets/caisse-menu-availability.js?v=4" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=270" defer></script>
@@ -5600,7 +5600,7 @@
   <!-- Auth guard: redirects to the auth page the moment the server signals
        the account has been deleted / suspended, so a revoked merchant never
        gets stranded in a half-broken shell (see assets/auth-guard.js). -->
-  <script src="assets/auth-guard.js?v=1" defer></script>
+  <script src="assets/auth-guard.js?v=2" defer></script>
 </head>
 
 <body>
@@ -13067,12 +13067,23 @@
      *  3. Les pourboires d'une vente annulée sont également exclus.
      *  4. Mouvements d'espèces (cashMovements) ventilés en centimes entiers.
      * ─────────────────────────────────────────────────────────────────────────── */
+    function isReportableJournalEntry(entry) {
+      if (!entry || entry.voided) return false;
+      /* A rejected server refund remains a receipt/audit fact, but it must not
+         reduce the canonical Z unless cash was actually handed out. That
+         physical exception stays visible for reconciliation. */
+      if (entry.kind === 'refund' && entry.refundSyncStatus === 'rejected'
+        && !refundHasCashException(entry)) return false;
+      return true;
+    }
     function rollupLedger(sinceMs) {
       const hasSince = typeof sinceMs === 'number' && Number.isFinite(sinceMs);
       let revenueC = 0, cardC = 0, cashC = 0, tipsC = 0, cashTipsC = 0, txns = 0;
       for (const e of journal) {
-        if (!e) continue;
-        if (e.voided) continue;               // sortie des livres par le support
+        if (!e || e.voided) continue;
+        if (e.kind === 'refund' && e.refundSyncStatus === 'rejected'
+          && !(e.cashHandedOut === true || Number(e.cashHandedOutAt) > 0
+            || e.refundReconciliation === 'cash-handed-out')) continue;
         if (hasSince) {
           const t = (e.time instanceof Date ? e.time : new Date(e.time)).getTime();
           if (t < sinceMs) continue;
@@ -13765,20 +13776,42 @@
     /* Reconcile this OPEN SERVICE before listening for deltas. Dashboard owns
        the complete commercial-day ledger; the till owns only its current Z. */
     function syncSettledBusinessDay() {
-      if (!(shiftOpenedAt instanceof Date) || isNaN(shiftOpenedAt.getTime())) return Promise.resolve(false);
+      const opts = arguments[0] || {};
+      const timeoutMs = Math.max(250, Number(opts.timeoutMs) || 8000);
+      if (!(shiftOpenedAt instanceof Date) || isNaN(shiftOpenedAt.getTime())) {
+        return Promise.resolve({ ok: false, complete: false, count: 0, reason: 'service-not-open' });
+      }
       const merchant = currentMerchantSlug();
-      if (!merchant) return Promise.resolve(false);
+      if (!merchant) return Promise.resolve({ ok: false, complete: false, count: 0, reason: 'merchant-unresolved' });
       const from = shiftOpenedAt.getTime();
       const requestTime = Date.now();
-      return fetch('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + from, {
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      let timeoutId = null;
+      const read = fetch('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + from, {
         credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
+        signal: controller ? controller.signal : undefined,
       }).then((r) => r.ok ? r.json() : null)
         .then((data) => {
-          if (!data || !Array.isArray(data.sales)) return false;
+          if (!data || !Array.isArray(data.sales)) return { ok: false, complete: false, count: 0, reason: 'feed-unavailable' };
           ingestSettledCloudSales(data.sales, { requestTime, responseTime: Date.now() });
           refreshOpenReconciliationModals();
-          return true;
-        }).catch(() => false);
+          /* /api/feed?from= is bounded at 2,000 rows. Exactly that many rows
+             means the remote aggregate may still be truncated; never certify
+             such a Z as complete without an explicit continuation signal. */
+          return { ok: true, complete: data.sales.length < 2000, count: data.sales.length,
+            reason: data.sales.length < 2000 ? '' : 'feed-limit' };
+        }).catch((error) => ({ ok: false, complete: false, count: 0,
+          reason: error && error.name === 'AbortError' ? 'feed-timeout' : 'feed-error' }));
+      const timeout = new Promise((resolve) => {
+        timeoutId = setTimeout(() => {
+          try { if (controller) controller.abort(); } catch (_) {}
+          resolve({ ok: false, complete: false, count: 0, reason: 'feed-timeout' });
+        }, timeoutMs);
+      });
+      return Promise.race([read, timeout]).then((result) => {
+        if (timeoutId) clearTimeout(timeoutId);
+        return result;
+      });
     }
 
     function startEmployeeSaleJournalSync() {
@@ -14750,7 +14783,7 @@
       const pv = storePaired() || {};
       return DR.build({
         day: currentBusinessDay(),
-        sales: journal.filter(e => e && !e.voided),
+        sales: journal.filter(isReportableJournalEntry),
         session: sess,
         store: { slug: DR.storeSlug(), name: storeName(), location: storeCity(), type: pv.type || '' },
         source: 'caisse',
@@ -14828,6 +14861,7 @@
           entry.refundSynced = true;
           entry.refundSyncNeedsApproval = false;
           entry.refundSyncStatus = 'accepted';
+          applyAcceptedRefund(entry);
           /* The server has consumed the exact capability. Retain the named
              approver for the local audit, not the bearer token. */
           if (entry.refundActor) entry.refundActor.approval = '';
@@ -14835,6 +14869,9 @@
         } else if (Number(detail.status) === 403) {
           entry.refundSyncNeedsApproval = true;
           entry.refundSyncStatus = 'manager-required';
+          changed = true;
+        } else if (detail.state === 'blocked' && Number(detail.status) >= 400) {
+          markRejectedRefund(entry, detail.status);
           changed = true;
         }
       });
@@ -14928,6 +14965,9 @@
       $('#zs-total').textContent = fmtMAD(report.net);
       const bits = [`${report.txns} transaction${report.txns > 1 ? 's' : ''}`];
       if (nCat) bits.push(`${nItems} ${V.items} · ${nCat} ${nCat > 1 ? V.cats : V.cat}`);
+      if (report.reconciliation && report.reconciliation.status !== 'complete') {
+        bits.push('Z provisoire · rapprochement distant incomplet');
+      }
       if (report.cash && report.cash.ecart != null && Math.abs(report.cash.ecart) > 0.5) {
         bits.push(`écart ${fmtEcart(report.cash.ecart)}`);
       }
@@ -14942,7 +14982,8 @@
       setTimeout(() => location.reload(), 640);
     }
 
-    function closeRegister() {
+    async function closeRegister() {
+      if (registerClosing) return;
       $('#cloture-modal').classList.remove('is-open');
       registerClosing = true;
 
@@ -14954,12 +14995,22 @@
       const countedRaw = $('#clo-count') ? $('#clo-count').value : '';
       const counted = (countedRaw === '' || countedRaw == null) ? null : parseFloat(countedRaw);
       let report = null;
+      let reconciliation = { ok: false, complete: false, count: 0, reason: 'feed-not-read' };
       try {
         /* Reconcile BEFORE freezing the Z. The synchronous write-ahead copy in
            Live Link survives the reload below, while flush starts delivery now. */
         reconcileJournalSales();
+        reconciliation = await syncSettledBusinessDay({ timeoutMs: 8000 });
+      } catch (_) {}
+      try {
         report = buildDayReport(counted, Date.now());
         if (report && window.KiwiDayReport) {
+          report.reconciliation = {
+            status: reconciliation.complete ? 'complete' : 'provisional',
+            remoteFeed: reconciliation.ok ? 'read' : 'unavailable',
+            remoteRows: Number(reconciliation.count) || 0,
+            reason: String(reconciliation.reason || '').slice(0, 32),
+          };
           report.closed = true;
           window.KiwiDayReport.save(report, { by: (currentCashier && currentCashier.name) || '' });
           /* La remontée serveur est débattue et la page se recharge dans une
@@ -16607,10 +16658,48 @@
         return Number(payload && payload.exp) || 0;
       } catch (_) { return 0; }
     }
+    function refundHasCashException(entry) {
+      return !!(entry && (entry.cashHandedOut === true || Number(entry.cashHandedOutAt) > 0
+        || entry.refundReconciliation === 'cash-handed-out'));
+    }
+    function applyAcceptedRefund(entry) {
+      if (!entry || entry.refundSyncStatus !== 'accepted' || !entry.refundLedgerReversed) return;
+      const amount = money(Math.abs(Number(entry.amount) || 0));
+      const original = journal.find((sale) => sale && sale.kind !== 'refund' && sale.ref === entry.refundOf);
+      if (original) {
+        original.refundedAmount = money(refundedSoFar(original) + amount);
+        original.refunded = refundableLeft(original) <= 0;
+      }
+      shift.refunds = money((shift.refunds || 0) + amount);
+      delete entry.refundLedgerReversed;
+    }
+    function markRejectedRefund(entry, status) {
+      if (!entry || entry.kind !== 'refund') return;
+      entry.refundSyncStatus = 'rejected';
+      entry.refundRejectedStatus = Number(status) || 0;
+      entry.refundRejectedAt = Date.now();
+      entry.refundSyncNeedsApproval = false;
+      /* Keep the rejected negative receipt as evidence. If cash really left the
+         drawer, retain that exception instead of rewriting the physical fact. */
+      if (refundHasCashException(entry)) {
+        entry.refundReconciliation = 'cash-handed-out';
+        entry.refundLedgerReversed = false;
+        return;
+      }
+      if (entry.refundLedgerReversed) return;
+      const amount = money(Math.abs(Number(entry.amount) || 0));
+      const original = journal.find((sale) => sale && sale.kind !== 'refund' && sale.ref === entry.refundOf);
+      if (original) {
+        original.refundedAmount = money(Math.max(0, refundedSoFar(original) - amount));
+        original.refunded = refundableLeft(original) <= 0;
+      }
+      shift.refunds = money(Math.max(0, (shift.refunds || 0) - amount));
+      entry.refundLedgerReversed = true;
+    }
     function refundRecoveryCandidates() {
       if (!storeIsReal()) return [];
       return journal.filter((entry) => entry && entry.kind === 'refund' && Number(entry.amount) < 0
-        && !entry.voided && !entry.refundSynced
+        && !entry.voided && !entry.refundSynced && entry.refundSyncStatus !== 'rejected'
         && (entry.refundSyncNeedsApproval || refundApprovalExpiry(entry) <= Date.now() + 30000));
     }
     function renderRefundRecovery() {
@@ -16672,7 +16761,7 @@
     function refundableJournal() {
       // Newest first · only real sales (positive, not already refunded).
       return journal.slice().reverse()
-        .filter(e => e.kind !== 'refund' && e.amount > 0);
+        .filter(e => !e.voided && e.kind !== 'refund' && e.amount > 0);
     }
     function renderRefundList() {
       const q    = refundState.search.trim().toLowerCase();
@@ -16795,6 +16884,8 @@
           kind: 'refund',
           refundOf: orig.ref,
           reason: refundState.reason,
+          refundSyncStatus: 'pending',
+          refundLedgerReversed: false,
           cashier: (currentCashier && currentCashier.name) || '',
           refundActor: {
             id: String(manager.id || '').slice(0, 96),
@@ -18831,6 +18922,11 @@
         if (window.KiwiKitchenPrint && KiwiKitchenPrint.enqueue) {
           return KiwiKitchenPrint.enqueue(plan, { remote: options && options.remote });
         }
+        // Without the hub's durable dispatcher, remote tickets must wait for
+        // recovery. A direct fallback on every connected till duplicates food.
+        if (options && (options.remote === true || options.remote === 'connected')) {
+          return { accepted: 0, skipped: 'print-hub-unavailable' };
+        }
         if (!KP || !KP.printKitchen || (KP.isConnected && !KP.isConnected())) return;
         return plan.reduce((chain, job) => chain.then(() => Promise.resolve(KP.printKitchen(job.payload, { station: job.station || sid })).then((result) => {
           if (!result || !result.ok) toast('Ticket cuisine non imprimé', 5200, 'warn', 'Vérifiez l’imprimante puis réimprimez le bon.');
@@ -19740,6 +19836,22 @@
     /* Une commande du serveur → un ticket d'ici. Idempotent : le sondage repasse
        toutes les six secondes sur les mêmes lignes, et il ne doit jamais en
        naître un deuxième ticket. */
+    function retireRejectedKitchenTicket(ticket) {
+      if (!ticket || !ticket.opId) return false;
+      const index = kdsOrders.indexOf(ticket);
+      if (index < 0) return false;
+      // This is a live-work projection, not the financial ledger. The server's
+      // rejected record and cancellation history remain the durable evidence.
+      kdsOrders.splice(index, 1);
+      opTickets.delete(String(ticket.opId));
+      if (vrapEditingNum === ticket.num) {
+        vrapEditingNum = null;
+        clearCart();
+        setVrapView('board');
+      }
+      try { persistShift(); } catch (_) {}
+      return true;
+    }
     function opIngest(o) {
       if (!o || !o.id) return;
       opRepairFormulaParents(o);
@@ -19790,8 +19902,11 @@
          annoncer pour payer. D'où l'état local `held` : le tableau À emporter
          l'affiche, l'écran cuisine l'ignore (kdsGroup ne connaît que
          new/cooking/ready), et le paiement le promeut. */
+      if (o.status === 'rejected') {
+        if (known) retireRejectedKitchenTicket(known);
+        return;
+      }
       if (!known) {
-        if (o.status === 'rejected') return;
         if (o.mode === 'table' && o.status === 'pending') return;   // la pastille suffit
         const isTakeaway = o.mode !== 'table';
         const t = {
@@ -19979,18 +20094,17 @@
          * restait payable : on encaissait une commande que le serveur
          * refuserait (409), après avoir imprimé la cuisine en local. On
          * l'enterre donc ici, en le DISANT (numéro + reprise possible), et
-         * jamais en silence. Seuls les `held` : un ticket déjà validé a fait
-         * partir la cuisine, sa mort se règle au comptoir, pas ici. */
+         * jamais en silence. Un refus autoritaire retire aussi une commande
+         * déjà connue en préparation ; il ne réécrit jamais son paiement. */
         try {
           const dead = new Set((expired || []).map(e => e && String(e.id || '')));
           if (dead.size) {
             for (let i = kdsOrders.length - 1; i >= 0; i--) {
               const t = kdsOrders[i];
-              if (!t || t.status !== 'held' || !t.opId || !dead.has(String(t.opId))) continue;
+              if (!t || !t.opId || !dead.has(String(t.opId))) continue;
               const gone = (expired || []).find(e => e && String(e.id || '') === String(t.opId));
-              kdsOrders.splice(i, 1);
-              try { opTickets.delete(String(t.opId)); } catch (_) {}
-              try { toast(`${ticketNo(t)} expirée sans validation · voir Expirées pour la reprendre`); } catch (_) {}
+              retireRejectedKitchenTicket(t);
+              try { toast(`${ticketNo(t)} refusée ou annulée · retirée de la cuisine`); } catch (_) {}
               void gone;
               touched = true;
             }
@@ -20572,6 +20686,12 @@
         if (e.refundSynced) entry.refundSynced = true;
         if (e.refundSyncNeedsApproval) entry.refundSyncNeedsApproval = true;
         if (e.refundSyncStatus) entry.refundSyncStatus = String(e.refundSyncStatus).slice(0, 24);
+        if (e.refundLedgerReversed) entry.refundLedgerReversed = true;
+        if (e.refundRejectedStatus != null) entry.refundRejectedStatus = Number(e.refundRejectedStatus) || 0;
+        if (e.refundRejectedAt) entry.refundRejectedAt = Number(e.refundRejectedAt) || 0;
+        if (e.refundReconciliation) entry.refundReconciliation = String(e.refundReconciliation).slice(0, 32);
+        if (e.cashHandedOut) entry.cashHandedOut = true;
+        if (e.cashHandedOutAt) entry.cashHandedOutAt = Number(e.cashHandedOutAt) || 0;
         if (e.refundRecoveryRequestedAt) entry.refundRecoveryRequestedAt = Number(e.refundRecoveryRequestedAt) || 0;
         if (e.channel)         entry.channel  = e.channel;   // dining / takeaway / OrderPro
         if (e.origin)          entry.origin   = e.origin;    // caisse / employee / OrderPro

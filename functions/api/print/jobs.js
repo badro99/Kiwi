@@ -26,6 +26,9 @@ import {
 
 const KINDS = ['receipt', 'kitchen', 'label', 'test', 'drawer', 'report', 'wake', 'other'];
 const RETRY_DELAY_MS = 10000;
+const CLAIM_LEASE_MS = 30000;
+const UNCERTAIN_OUTPUT = 'output-unknown-ack-timeout';
+const PERMANENT_BRIDGE_ERRORS = new Set(['printer-target-not-local', 'printer-target-not-saved']);
 
 function cleanTarget(t) {
   if (!t || typeof t !== 'object') return null;
@@ -62,6 +65,12 @@ export async function onRequestGet(context) {
         env.DB.prepare('UPDATE print_bridges SET last_seen_ts = ? WHERE id = ?').bind(t, bridge.id),
         env.DB.prepare(`UPDATE print_jobs SET status = 'expired', done_ts = ? WHERE merchant = ? AND status = 'queued' AND expires_ts <= ?`)
           .bind(t, bridge.merchant, t),
+        /* A claimed ticket whose lease elapsed may have reached paper before
+         * the bridge lost its ACK. Quarantine it as evidence, never as safe
+         * work: a bridge restart must not print an ambiguous ticket twice. */
+        env.DB.prepare(`UPDATE print_jobs SET status = 'uncertain', error = ?
+          WHERE merchant = ? AND status = 'claimed' AND claimed_ts <= ?`)
+          .bind(UNCERTAIN_OUTPUT, bridge.merchant, t - CLAIM_LEASE_MS),
       ]);
       const rs = await env.DB.prepare(
         `UPDATE print_jobs SET status = 'claimed', claimed_ts = ?, bridge_id = ?
@@ -116,8 +125,10 @@ export async function onRequestPost(context) {
     const id = String(body.id || '').slice(0, 40);
     if (!id) return relayJson({ ok: false, error: 'id-required' }, 400, request);
     const ok = !!body.ok;
+    const outcome = String(body.outcome || (ok ? 'printed' : 'failed')).toLowerCase();
+    if (['printed', 'failed', 'uncertain'].indexOf(outcome) === -1) return relayJson({ ok: false, error: 'invalid-outcome' }, 422, request);
     const bytes = Number(body.bytes) || 0;
-    const error = ok ? null : String(body.error || 'print-failed').replace(/[\x00-\x1f]/g, ' ').slice(0, 300);
+    const error = outcome === 'printed' ? null : String(body.error || (outcome === 'uncertain' ? UNCERTAIN_OUTPUT : 'print-failed')).replace(/[\x00-\x1f]/g, ' ').slice(0, 300);
     try {
       /* Once a caisse has deposited a job, the durable relay owns retries.
        * A failed printer write is re-queued with the same id after the same
@@ -126,19 +137,24 @@ export async function onRequestPost(context) {
        * weakening delivery or losing retries on navigation/reload. Keep the
        * claimant bridge id: it both preserves an explicitly targeted bridge
        * and lets that same bridge reclaim an untargeted job safely. */
-      const r = ok
+      const r = outcome === 'printed'
         ? await env.DB.prepare(
           `UPDATE print_jobs SET status = 'done', done_ts = ?, bytes = ?, error = NULL
-            WHERE id = ? AND merchant = ? AND bridge_id = ? AND status = 'claimed'`
+            WHERE id = ? AND merchant = ? AND bridge_id = ? AND status IN ('claimed', 'uncertain')`
         ).bind(t, bytes, id, bridge.merchant, bridge.id).run()
+        : outcome === 'uncertain'
+        ? await env.DB.prepare(
+          `UPDATE print_jobs SET status = 'uncertain', error = ?, bytes = 0
+            WHERE id = ? AND merchant = ? AND bridge_id = ? AND status = 'claimed'`
+        ).bind(error, id, bridge.merchant, bridge.id).run()
         : await env.DB.prepare(
           `UPDATE print_jobs
-              SET status = CASE WHEN expires_ts <= ? THEN 'failed' ELSE 'queued' END,
+              SET status = CASE WHEN expires_ts <= ? OR ? = 1 THEN 'failed' ELSE 'queued' END,
                   done_ts = CASE WHEN expires_ts <= ? THEN ? ELSE NULL END,
-                  claimed_ts = CASE WHEN expires_ts <= ? THEN claimed_ts ELSE ? END,
+                  claimed_ts = CASE WHEN expires_ts <= ? OR ? = 1 THEN claimed_ts ELSE ? END,
                   bytes = 0, error = ?
             WHERE id = ? AND merchant = ? AND bridge_id = ? AND status = 'claimed'`
-        ).bind(t, t, t, t, t + RETRY_DELAY_MS, error, id, bridge.merchant, bridge.id).run();
+        ).bind(t, PERMANENT_BRIDGE_ERRORS.has(error) ? 1 : 0, t, t, t, PERMANENT_BRIDGE_ERRORS.has(error) ? 1 : 0, t + RETRY_DELAY_MS, error, id, bridge.merchant, bridge.id).run();
       return relayJson({ ok: true, updated: !!(r && r.meta && r.meta.changes) }, 200, request);
     } catch (e) {
       if (isMissingTable(e)) return relayJson({ ok: false, error: 'relay-not-provisioned' }, 503, request);
@@ -151,6 +167,22 @@ export async function onRequestPost(context) {
   const asked = String(body.merchant || url.searchParams.get('merchant') || '');
   const merchant = await tenantFor(request, env, asked, { strict: true });
   if (!merchant) return relayJson({ error: 'unauthorized' }, 401, request);
+
+  if (String(body.action || '') === 'requeue-uncertain') {
+    const id = String(body.id || '').slice(0, 40);
+    if (!id) return relayJson({ ok: false, error: 'id-required' }, 400, request);
+    try {
+      const r = await env.DB.prepare(
+        `UPDATE print_jobs SET status = 'queued', error = NULL, claimed_ts = NULL,
+          done_ts = NULL, bridge_id = NULL
+         WHERE id = ? AND merchant = ? AND status = 'uncertain' AND expires_ts > ?`
+      ).bind(id, merchant, t).run();
+      return relayJson({ ok: true, requeued: !!(r && r.meta && r.meta.changes) }, 200, request);
+    } catch (e) {
+      if (isMissingTable(e)) return relayJson({ ok: false, error: 'relay-not-provisioned' }, 503, request);
+      return relayJson({ ok: false, error: 'write-failed' }, 500, request);
+    }
+  }
 
   const target = cleanTarget(body.target);
   if (!target) return relayJson({ ok: false, error: 'target-required' }, 400, request);

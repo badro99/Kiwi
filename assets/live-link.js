@@ -446,7 +446,12 @@
              pairing/session repair can make the exact same sale valid later.
              409 conflicts (open-service-session-required, etc.) are reconcilable
              after table/session synchronization and must remain retryable. */
+          /* A refund conflict is canonical rejection (the original is already
+             fully refunded, voided, or the id is bound elsewhere), not a
+             transient sale-session race. Sales retain their existing 409
+             retry behavior for session synchronization. */
           var BLOCK = { 400: 1, 422: 1 };
+          if (body && body.kind === 'refund') BLOCK[409] = 1;
           return paymentCompletion(r).then(function (result) {
             if (timeoutId) clearTimeout(timeoutId);
             done(result.complete, !!(r && BLOCK[r.status]), r && r.status, result.pending);
@@ -511,6 +516,7 @@
         signal: controller ? controller.signal : undefined,
       }).then(function (response) {
         var BLOCK = { 400: 1, 422: 1 };
+        if (body && body.kind === 'refund') BLOCK[409] = 1;
         return paymentCompletion(response).then(function (result) {
           if (timeoutId) clearTimeout(timeoutId);
           return settle(result.complete, !!BLOCK[response.status], response.status,

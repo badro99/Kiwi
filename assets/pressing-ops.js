@@ -59,6 +59,7 @@
   function number(n) { return Math.max(0, Number(n) || 0); }
   function text(s, max) { return String(s == null ? '' : s).trim().slice(0, max || 100); }
   function iso(d) {
+    if (d == null || d === '') return '';
     var x = d instanceof Date ? d : new Date(d || 0);
     return Number.isFinite(x.getTime()) ? x.toISOString() : '';
   }
@@ -72,7 +73,8 @@
     return p.status || 'recu';
   }
 
-  function orderStatus(pieces, readyAt, now) {
+  function orderStatus(pieces, readyAt, now, cancelledAt) {
+    if (cancelledAt) return 'annule';
     var t = now || Date.now();
     var st = (pieces || []).map(function (p) { return effectiveStatus(p, readyAt, t); });
     if (st.length && st.every(function (s) { return s === 'livre'; })) return 'livre';
@@ -97,7 +99,10 @@
       id: text(o.id, 40),
       customer: { name: text(customer && customer.name, 100), phone: text(customer && customer.phone, 40), b2b: !!(customer && customer.b2b) },
       droppedAt: iso(o.droppedAt), readyAt: iso(o.readyAt), collectedAt: iso(o.collectedAt),
-      status: orderStatus(pieces, o.readyAt), pieces: pieces, rack: text(o.rack, 20),
+      status: o.cancelledAt ? 'annule' : orderStatus(pieces, o.readyAt), pieces: pieces, rack: text(o.rack, 20),
+      cancelledAt: iso(o.cancelledAt), cancelledBy: o.cancelledBy ? {
+        id: text(o.cancelledBy.id, 80), name: text(o.cancelledBy.name, 100), role: text(o.cancelledBy.role, 40)
+      } : null,
       notified: !!o.notified, total: amount, paid: Math.min(amount, paid),
       due: o.pay && o.pay.mode === 'compte' ? 0 : Math.max(0, amount - paid),
       channel: text(o.channel || 'counter', 24)
@@ -124,6 +129,7 @@
     var now = Date.now();
     var out = { orders: rows, active: 0, received: 0, treating: 0, ready: 0, delivered: 0, late: 0, due: 0, pieces: 0, attention: 0, racks: 0, unnotified: 0, services: {} };
     rows.forEach(function (o) {
+      if (o.cancelledAt || o.status === 'annule') return;
       var st = orderStatus(o.pieces, o.readyAt, now);
       var live = st !== 'livre';
       if (live) out.active++;
@@ -160,9 +166,20 @@
   }
 
   function mergeDocuments(mine, theirs) {
+    var cancellations = mergeRows(mine && mine.cancellations, theirs && theirs.cancellations);
+    var orders = mergeRows(mine && mine.orders, theirs && theirs.orders).map(function (row) {
+      var tombstone = cancellations.find(function (c) { return c.id === row.id; });
+      if (!tombstone) return row;
+      return Object.assign({}, row, {
+        cancelledAt: tombstone.cancelledAt,
+        cancelledBy: tombstone.cancelledBy || null,
+        updatedAt: Math.max(+row.updatedAt || 0, Date.parse(tombstone.cancelledAt || '') || 0)
+      });
+    });
     return {
       customers: mergeRows(mine && mine.customers, theirs && theirs.customers),
-      orders: mergeRows(mine && mine.orders, theirs && theirs.orders),
+      orders: orders,
+      cancellations: cancellations,
       seq: Math.max(+(mine && mine.seq) || 0, +(theirs && theirs.seq) || 0),
       updatedAt: Math.max(+(mine && mine.updatedAt) || 0, +(theirs && theirs.updatedAt) || 0)
     };
@@ -170,19 +187,30 @@
 
   function readFull() {
     var k = storeKey();
-    if (!k) return { customers: [], orders: [], seq: 0, updatedAt: 0 };
+    if (!k) return { customers: [], orders: [], cancellations: [], seq: 0, updatedAt: 0 };
     try {
       var doc = JSON.parse(localStorage.getItem(k) || 'null');
       return doc && Array.isArray(doc.customers) && Array.isArray(doc.orders)
-        ? doc : { customers: [], orders: [], seq: 0, updatedAt: 0 };
-    } catch (_) { return { customers: [], orders: [], seq: 0, updatedAt: 0 }; }
+        ? Object.assign({ cancellations: [] }, doc) : { customers: [], orders: [], cancellations: [], seq: 0, updatedAt: 0 };
+    } catch (_) { return { customers: [], orders: [], cancellations: [], seq: 0, updatedAt: 0 }; }
   }
 
   function projectFull(doc) {
     if (!doc || !Array.isArray(doc.orders)) return;
     var customers = Object.create(null);
     (doc.customers || []).forEach(function (c) { if (c && c.id) customers[c.id] = c; });
-    replace(doc.orders, {
+    var cancellations = Object.create(null);
+    (doc.cancellations || []).forEach(function (c) {
+      if (c && c.id) cancellations[c.id] = c;
+    });
+    var orders = doc.orders.map(function (o) {
+      var tombstone = o && cancellations[o.id];
+      return tombstone ? Object.assign({}, o, {
+        cancelledAt: tombstone.cancelledAt,
+        cancelledBy: tombstone.cancelledBy || null
+      }) : o;
+    });
+    replace(orders, {
       customer: function (o) { return customers[o.custId] || o.guest || {}; },
       total: function (o) { return number(o.total); }
     });
@@ -205,7 +233,7 @@
     cloudHandle = KiwiCloudDoc.attach({
       feature: 'pressing-orders', slug: scope, localKey: storeKey,
       read: readFull, write: writeFull, merge: mergeDocuments,
-      isEmpty: function (doc) { return !doc || (!(doc.orders || []).length && !(doc.customers || []).length); },
+      isEmpty: function (doc) { return !doc || (!(doc.orders || []).length && !(doc.customers || []).length && !(doc.cancellations || []).length); },
       onPulled: projectFull
     });
     projectFull(readFull());
@@ -213,17 +241,29 @@
     return cloudHandle;
   }
 
-  function cancelOrder(id) {
+  function cancelOrder(id, actor, at) {
     if (!id) return false;
+    var cancelledAt = iso(at) || new Date().toISOString();
     var full = readFull();
     if (full && Array.isArray(full.orders)) {
-      full.orders = full.orders.filter(function (o) { return o.id !== id; });
+      var found = false;
+      var safeActor = actor ? { id: text(actor.id, 80), name: text(actor.name, 100), role: text(actor.role, 40) } : null;
+      full.orders = full.orders.map(function (o) {
+        if (!o || o.id !== id) return o;
+        found = true;
+        return Object.assign({}, o, { cancelledAt: cancelledAt, cancelledBy: safeActor, updatedAt: Date.parse(cancelledAt) });
+      });
+      if (!found) return false;
+      full.cancellations = Array.isArray(full.cancellations) ? full.cancellations.filter(function (c) { return c && c.id !== id; }) : [];
+      full.cancellations.push({ id: text(id, 40), cancelledAt: cancelledAt, cancelledBy: safeActor });
       full.updatedAt = Date.now();
       writeFull(full);
       if (cloudHandle && cloudHandle.push) cloudHandle.push();
     }
     var rows = read();
-    var filtered = rows.filter(function (o) { return o.id !== id; });
+    var filtered = rows.map(function (o) {
+      return o && o.id === id ? Object.assign({}, o, { status: 'annule', cancelledAt: cancelledAt, cancelledBy: actor || null }) : o;
+    });
     var k = key();
     if (k) {
       try { localStorage.setItem(k, JSON.stringify(filtered)); } catch (_) {}

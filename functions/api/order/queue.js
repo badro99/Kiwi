@@ -67,6 +67,32 @@ const FROM = {
 };
 const ORDER_ID = /^ord-[a-z0-9-]{6,48}$/;
 
+function storedOrderLines(row) {
+  try {
+    const lines = JSON.parse(row && row.lines);
+    return Array.isArray(lines) ? lines : [];
+  } catch (_) { return []; }
+}
+
+function displayMoney(value) {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? Math.max(0, Math.round(amount * 100) / 100) : 0;
+}
+
+function operationId(raw, prefix) {
+  const clean = String(raw || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 72);
+  return clean ? `${prefix}-${clean}` : `${prefix}-${crypto.randomUUID()}`;
+}
+
+async function atomicStatements(env, statements) {
+  if (!env.DB || typeof env.DB.batch !== 'function') throw new Error('atomic-batch-required');
+  return env.DB.batch(statements);
+}
+
+function statement(env, sql, ...args) {
+  return env.DB.prepare(sql).bind(...args);
+}
+
 /* ── QUI PEUT AUTORISER UNE COMMANDE ORDERPRO ──────────────────────────────
  * Sortie en fonction pure pour qu'un test puisse l'exécuter telle quelle, et
  * pour qu'une seule expression décide. Trois verrous, dans cet ordre :
@@ -112,7 +138,7 @@ function employeeName(member) {
 async function ensureServiceTableSession(env, merchant, table, now) {
   try {
     let row = await env.DB.prepare(
-      `SELECT id, opened_ts FROM table_sessions
+      `SELECT id, opened_ts, seen_ts FROM table_sessions
         WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open'
         ORDER BY opened_ts DESC LIMIT 1`
     ).bind(merchant, table).first();
@@ -127,6 +153,7 @@ async function ensureServiceTableSession(env, merchant, table, now) {
         await env.DB.prepare('UPDATE table_sessions SET seen_ts = ? WHERE id = ?')
           .bind(now, row.id).run();
       } catch (_) {}
+      row.seen_ts = now;
       return row;
     }
     const id = newSessionId();
@@ -135,7 +162,7 @@ async function ensureServiceTableSession(env, merchant, table, now) {
        VALUES (?, ?, 'table', ?, 'open', ?, ?)`
     ).bind(id, merchant, table, now, now).run();
     row = await env.DB.prepare(
-      `SELECT id, opened_ts FROM table_sessions
+      `SELECT id, opened_ts, seen_ts FROM table_sessions
         WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open'
         ORDER BY opened_ts DESC LIMIT 1`
     ).bind(merchant, table).first();
@@ -469,7 +496,7 @@ export async function onRequestGet(context) {
           lines = parsed.slice(0, MAX_LINES).map((l) => ({
             name: String((l && l.name) || '').slice(0, 80),
             qty: Math.min(99, Math.max(1, Math.round(Number((l && l.qty) || 1)))),
-            unitPrice: Math.max(0, Math.round(Number((l && l.unitPrice) || 0))),
+            unitPrice: displayMoney(l && l.unitPrice),
             note: String((l && l.note) || '').slice(0, 200),
             station: String((l && l.station) || '').slice(0, 40),
           })).filter((l) => l.name);
@@ -535,6 +562,9 @@ export async function onRequestGet(context) {
     /* Refus récents (TTL ou comptoir), lecture seule : invalider les fantômes
        locaux et proposer la reprise. Absent = rien n'a été refusé récemment. */
     expired: expired.length ? expired : undefined,
+    /* The KDS needs the same terminal signal even when the rejected row is no
+       longer in the normal order stream. Keep this additive for older clients. */
+    cancelledTickets: expired.length ? expired : undefined,
     /* Colonnes absentes de la base déployée. Vide = tout est là.
        `node tools/d1-schema.mjs` les pose. */
     degraded: degraded.length ? degraded : undefined,
@@ -563,6 +593,7 @@ export async function onRequestPost(context) {
    * only ever required knowing its slug. */
   const merchant = await entitledMerchant(request, env, asked, { allowTill: true, allowEmployee: true });
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
+  const now = Date.now();
 
   /* Permettre au caissier de congédier une commande expirée ou annulée pour qu'elle
    * ne pollue plus l'écran "Expirées · à reprendre". */
@@ -570,11 +601,21 @@ export async function onRequestPost(context) {
     const orderId = String(b.id).trim();
     if (!ORDER_ID.test(orderId)) return json({ error: 'bad-request' }, 400);
     try {
-      await env.DB.prepare(
+      const changed = await env.DB.prepare(
         `UPDATE orders SET server_name = 'dismissed', updated_ts = ?
-          WHERE id = ? AND merchant = ?`
+          WHERE id = ? AND merchant = ? AND status = 'rejected'
+            AND (server_name IS NULL OR server_name <> 'dismissed')`
       ).bind(now, orderId, merchant).run();
-      return json({ ok: true, id: orderId, dismissed: true });
+      const count = Number((changed && changed.meta && changed.meta.changes) || changed?.changes || 0);
+      if (count) return json({ ok: true, id: orderId, dismissed: true });
+      const current = await env.DB.prepare(
+        'SELECT status, server_name FROM orders WHERE id = ? AND merchant = ?'
+      ).bind(orderId, merchant).first();
+      if (!current) return json({ error: 'not-found' }, 404);
+      if (current.status === 'rejected' && current.server_name === 'dismissed') {
+        return json({ ok: true, id: orderId, dismissed: true, replayed: true });
+      }
+      return json({ error: 'dismissal-not-eligible', status: current.status }, 409);
     } catch (e) {
       return json({ error: 'write-failed', detail: String((e && e.message) || e) }, 500);
     }
@@ -677,8 +718,6 @@ export async function onRequestPost(context) {
     }
   }
 
-  const now = Date.now();
-
   const pinActor = b.actorProof ? await readTillActorProof(b.actorProof, env.AUTH_SECRET, merchant) : null;
   if (b.actorProof && !pinActor) return json({ error: 'invalid-action-identity' }, 403);
 
@@ -689,7 +728,8 @@ export async function onRequestPost(context) {
   if (openTable) {
     const session = await ensureServiceTableSession(env, merchant, openTable, now);
     if (!session) return json({ error: 'service-session-unavailable' }, 503);
-    return json({ ok: true, table: openTable, session: session.id, opened_ts: session.opened_ts });
+    return json({ ok: true, table: openTable, session: session.id, opened_ts: session.opened_ts,
+      revision: Number(session.seen_ts) || 0 });
   }
 
   /* ── La commande prise EN SALLE ────────────────────────────────────────────
@@ -774,11 +814,11 @@ export async function onRequestPost(context) {
     if (clientRef) {
       try {
         const dup = await env.DB.prepare(
-          `SELECT id, number, total, session_id FROM orders WHERE merchant = ? AND client_ref = ?`
+          `SELECT id, number, total, lines, session_id FROM orders WHERE merchant = ? AND client_ref = ?`
         ).bind(merchant, clientRef).first();
         if (dup) {
           return json({ ok: true, id: dup.id, number: dup.number, total: dup.total,
-                        session: dup.session_id || null, lines: priced.lines, replayed: true });
+                        session: dup.session_id || null, lines: storedOrderLines(dup), replayed: true });
         }
       } catch (_) { /* colonne pas encore migrée → pas d'idempotence, comme avant */ }
     }
@@ -786,7 +826,24 @@ export async function onRequestPost(context) {
        to the current visit/session so a later party at table 3 never inherits
        yesterday's or the previous test's unpaid tickets. */
     const serviceSession = mode === 'table'
-      ? await ensureServiceTableSession(env, merchant, table, now) : null;
+      ? await (async () => {
+          const expectedSession = String((b && (b.expectedSession || b.expectedSessionId)) || '').trim();
+          if (expectedSession) {
+            const currentSession = await env.DB.prepare(
+              `SELECT id, seen_ts FROM table_sessions
+                 WHERE id = ? AND merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open'`
+            ).bind(expectedSession, merchant, table).first();
+            if (!currentSession) return { stale: true };
+            if (b.expectedRevision != null && Number(currentSession.seen_ts) !== Number(b.expectedRevision)) {
+              return { stale: true, id: currentSession.id, revision: Number(currentSession.seen_ts) || 0 };
+            }
+          }
+          return ensureServiceTableSession(env, merchant, table, now);
+        })() : null;
+    if (serviceSession && serviceSession.stale) {
+      return json({ error: 'stale-table-visit', retry: true, sessionId: serviceSession.id || undefined,
+        revision: serviceSession.revision }, 409);
+    }
     if (mode === 'table' && !serviceSession) return json({ error: 'service-session-unavailable' }, 503);
 
     /* Idempotence. Le double-envoi est PLUS probable en salle que sur le
@@ -822,11 +879,11 @@ export async function onRequestPost(context) {
       if (clientRef) {
         try {
           const raced = await env.DB.prepare(
-            `SELECT id, number, total FROM orders WHERE merchant = ? AND client_ref = ?`
+            `SELECT id, number, total, lines FROM orders WHERE merchant = ? AND client_ref = ?`
           ).bind(merchant, clientRef).first();
           if (raced) {
             return json({ ok: true, id: raced.id, number: raced.number, total: raced.total,
-                          lines: priced.lines, replayed: true });
+                          lines: storedOrderLines(raced), replayed: true });
           }
         } catch (_) { /* colonne absente → c'était bien une base non migrée */ }
       }
@@ -868,9 +925,33 @@ export async function onRequestPost(context) {
 
     const server = String((b.transferTable && b.transferTable.server) || (employee && employeeName(employee.member)) || '').trim().slice(0, 40);
     const covers = Math.max(1, Number(b.transferTable.covers) || 1);
+    const transferId = operationId(b.transferTable.operationId || b.transferTable.opId, 'trf');
 
     try {
-      // 1. Vérifier si la table destination a déjà une session ouverte
+      const replay = await env.DB.prepare(
+        'SELECT id, from_table, to_table, session_id, orders_count FROM table_transfers WHERE id = ? AND merchant = ?'
+      ).bind(transferId, merchant).first();
+      if (replay) {
+        return json({ ok: true, transferId: replay.id, fromTable: replay.from_table,
+          toTable: replay.to_table, sessionId: replay.session_id || null,
+          ordersMoved: Number(replay.orders_count) || 0, replayed: true, now });
+      }
+
+      const sourceSession = await env.DB.prepare(
+        `SELECT id, opened_ts, seen_ts FROM table_sessions
+          WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open'
+          ORDER BY opened_ts DESC LIMIT 1`
+      ).bind(merchant, fromTable).first();
+      if (!sourceSession || !sourceSession.id) return json({ error: 'source-session-required' }, 409);
+      const expectedSession = String(b.transferTable.expectedSession || sourceSession.id);
+      const expectedRevision = b.transferTable.expectedRevision == null
+        ? Number(sourceSession.seen_ts) || 0 : Number(b.transferTable.expectedRevision);
+      if (expectedSession !== String(sourceSession.id)
+          || expectedRevision !== (Number(sourceSession.seen_ts) || 0)) {
+        return json({ error: 'stale-table-visit', retry: true, sessionId: sourceSession.id,
+          revision: Number(sourceSession.seen_ts) || 0 }, 409);
+      }
+
       const targetBusy = await env.DB.prepare(
         `SELECT id FROM table_sessions WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open' LIMIT 1`
       ).bind(merchant, toTable).first();
@@ -878,56 +959,64 @@ export async function onRequestPost(context) {
         return json({ error: 'target-table-occupied', targetTable: toTable }, 409);
       }
 
-      // 2. Trouver la session active de la table d'origine
-      const sourceSession = await env.DB.prepare(
-        `SELECT id, opened_ts FROM table_sessions WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open' ORDER BY opened_ts DESC LIMIT 1`
-      ).bind(merchant, fromTable).first();
+      const sessionId = String(sourceSession.id);
 
-      const sessionId = sourceSession ? String(sourceSession.id) : null;
-
-      // 3. Déplacer la session
-      if (sessionId) {
-        await env.DB.prepare(
-          `UPDATE table_sessions SET table_no = ?, seen_ts = ? WHERE id = ? AND merchant = ? AND status = 'open'`
-        ).bind(toTable, now, sessionId, merchant).run();
+      const nextRevision = Math.max(now, (Number(sourceSession.seen_ts) || 0) + 1);
+      const batch = await atomicStatements(env, [
+        statement(env,
+          `INSERT INTO table_transfers
+             (id, merchant, from_table, to_table, session_id, server, covers, orders_count, is_merge, created_ts)
+           SELECT ?, ?, ?, ?, ?, ?, ?,
+             (SELECT COUNT(*) FROM orders WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL),
+             0, ?
+           WHERE EXISTS (SELECT 1 FROM table_sessions
+                           WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open' AND seen_ts = ?)
+             AND NOT EXISTS (SELECT 1 FROM table_sessions
+                               WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open')
+             AND NOT EXISTS (SELECT 1 FROM table_transfers WHERE id = ?)`,
+          transferId, merchant, fromTable, toTable, sessionId, server || null, covers,
+          merchant, fromTable, now, sessionId, merchant, fromTable, expectedRevision,
+          merchant, toTable, transferId),
+        statement(env,
+          `UPDATE table_sessions SET table_no = ?, seen_ts = ?
+             WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open' AND seen_ts = ?
+               AND EXISTS (SELECT 1 FROM table_transfers WHERE id = ? AND merchant = ?)
+               AND NOT EXISTS (SELECT 1 FROM table_sessions
+                                 WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open')`,
+          toTable, nextRevision, sessionId, merchant, fromTable, expectedRevision,
+          transferId, merchant, merchant, toTable),
+        statement(env,
+          `UPDATE orders SET table_no = ?, session_id = ?, updated_ts = ?
+             WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL
+               AND EXISTS (SELECT 1 FROM table_transfers WHERE id = ? AND merchant = ?)
+               AND EXISTS (SELECT 1 FROM table_sessions
+                             WHERE id = ? AND merchant = ? AND table_no = ?
+                               AND status = 'open' AND seen_ts = ?)`,
+          toTable, sessionId, now, merchant, fromTable, transferId, merchant,
+          sessionId, merchant, toTable, nextRevision),
+      ]);
+      const claimChanged = Number(batch && batch[0] && batch[0].meta && batch[0].meta.changes) || 0;
+      const sessionChanged = Number(batch && batch[1] && batch[1].meta && batch[1].meta.changes) || 0;
+      if (!claimChanged || !sessionChanged) {
+        const raced = await env.DB.prepare(
+          'SELECT id, from_table, to_table, session_id, orders_count FROM table_transfers WHERE id = ? AND merchant = ?'
+        ).bind(transferId, merchant).first();
+        if (raced) return json({ ok: true, transferId: raced.id, fromTable: raced.from_table,
+          toTable: raced.to_table, sessionId: raced.session_id || null,
+          ordersMoved: Number(raced.orders_count) || 0, replayed: true, now });
+        return json({ error: 'table-operation-conflict', retry: true }, 409);
       }
-
-      // 4. Déplacer TOUTES les commandes impayées de la table d'origine,
-      //    quelle que soit la session qu'elles portent (courante, éventée ou
-      //    absente). Ne déplacer que la session ouverte laissait le reste sur
-      //    place en silence pendant que la caisse migrait tout en local et
-      //    annonçait un succès : après rechargement, l'addition était vide
-      //    des deux côtés (les lignes rattachées refusent les sessions
-      //    étrangères) alors que les lignes dormaient encore en base.
-      //    Les lignes déjà réglées restent : déplacer un règlement réécrirait
-      //    l'histoire de l'encaissement — on les COMPTE pour l'affichage.
-      //    Les lignes déplacées sont rattachées à la visite déplacée quand il
-      //    y en a une, pour qu'elles se rattachent à destination au prochain
-      //    sondage au lieu de rester invisibles.
-      let orderCount = 0;
       const moved = await env.DB.prepare(
-        `UPDATE orders SET table_no = ?, session_id = COALESCE(?, session_id), updated_ts = ?
-          WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL`
-      ).bind(toTable, sessionId, now, merchant, fromTable).run();
-      orderCount = (moved && moved.meta && moved.meta.changes) || 0;
+        `SELECT COUNT(*) AS n FROM orders WHERE merchant = ? AND table_no = ? AND session_id = ? AND paid_ts IS NULL`
+      ).bind(merchant, toTable, sessionId).first();
+      const orderCount = Number((moved && moved.n) || 0);
       let paidLeftBehind = 0;
       try {
-        if (sessionId) {
-          const paid = await env.DB.prepare(
-            `SELECT COUNT(*) AS n FROM orders WHERE merchant = ? AND table_no = ? AND paid_ts IS NOT NULL AND session_id = ?`
-          ).bind(merchant, fromTable, sessionId).first();
-          paidLeftBehind = Number((paid && paid.n) || 0);
-        }
+        const paid = await env.DB.prepare(
+          `SELECT COUNT(*) AS n FROM orders WHERE merchant = ? AND table_no = ? AND paid_ts IS NOT NULL AND session_id = ?`
+        ).bind(merchant, fromTable, sessionId).first();
+        paidLeftBehind = Number((paid && paid.n) || 0);
       } catch (_) { paidLeftBehind = 0; }
-
-      // 5. Enregistrer le déplacement dans le registre d'audit table_transfers
-      const transferId = 'trf-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
-      try {
-        await env.DB.prepare(
-          `INSERT INTO table_transfers (id, merchant, from_table, to_table, session_id, server, covers, orders_count, is_merge, created_ts)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`
-        ).bind(transferId, merchant, fromTable, toTable, sessionId, server || null, covers, orderCount, now).run();
-      } catch (_) { /* table pas encore migrée */ }
 
       return json({
         ok: true,
@@ -938,9 +1027,21 @@ export async function onRequestPost(context) {
         ordersMoved: orderCount,
         paidLeftBehind,
         movedSession: sessionId,
+        revision: nextRevision,
         now,
       });
     } catch (e) {
+      if (String((e && e.message) || e) === 'atomic-batch-required') {
+        return json({ error: 'atomic-batch-required' }, 503);
+      }
+      try {
+        const replay = await env.DB.prepare(
+          'SELECT id, from_table, to_table, session_id, orders_count FROM table_transfers WHERE id = ? AND merchant = ?'
+        ).bind(transferId, merchant).first();
+        if (replay) return json({ ok: true, transferId: replay.id, fromTable: replay.from_table,
+          toTable: replay.to_table, sessionId: replay.session_id || null,
+          ordersMoved: Number(replay.orders_count) || 0, replayed: true, now });
+      } catch (_) {}
       return json({ error: 'transfer-failed', detail: String((e && e.message) || e) }, 500);
     }
   }
@@ -956,65 +1057,100 @@ export async function onRequestPost(context) {
     if (targetTable === sourceTable) return json({ ok: true, same: true, table: targetTable });
 
     const server = String((b.mergeTables && b.mergeTables.server) || (employee && employeeName(employee.member)) || '').trim().slice(0, 40);
+    const mergeId = operationId(b.mergeTables.operationId || b.mergeTables.opId, 'mrg');
 
     try {
+      const replay = await env.DB.prepare(
+        'SELECT id, from_table, to_table, session_id, orders_count FROM table_transfers WHERE id = ? AND merchant = ?'
+      ).bind(mergeId, merchant).first();
+      if (replay) {
+        return json({ ok: true, mergeId: replay.id, sourceTable: replay.from_table,
+          targetTable: replay.to_table, targetSessionId: replay.session_id || null,
+          ordersMerged: Number(replay.orders_count) || 0, replayed: true, now });
+      }
+
       // 1. Session cible
       let targetSession = await env.DB.prepare(
-        `SELECT id FROM table_sessions WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open' ORDER BY opened_ts DESC LIMIT 1`
+        `SELECT id, seen_ts FROM table_sessions WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open' ORDER BY opened_ts DESC LIMIT 1`
       ).bind(merchant, targetTable).first();
       if (!targetSession) {
         targetSession = await ensureServiceTableSession(env, merchant, targetTable, now);
+        if (targetSession) targetSession = await env.DB.prepare(
+          'SELECT id, seen_ts FROM table_sessions WHERE id = ? AND merchant = ?'
+        ).bind(targetSession.id, merchant).first();
       }
       const targetSessionId = targetSession ? String(targetSession.id) : null;
+      if (!targetSessionId) return json({ error: 'target-session-unavailable' }, 503);
 
       // 2. Session source
       const sourceSession = await env.DB.prepare(
-        `SELECT id FROM table_sessions WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open' ORDER BY opened_ts DESC LIMIT 1`
+        `SELECT id, seen_ts FROM table_sessions WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open' ORDER BY opened_ts DESC LIMIT 1`
       ).bind(merchant, sourceTable).first();
       const sourceSessionId = sourceSession ? String(sourceSession.id) : null;
+      if (!sourceSessionId) return json({ error: 'source-session-required' }, 409);
+      const expectedSession = String(b.mergeTables.expectedSession || sourceSessionId);
+      const expectedRevision = b.mergeTables.expectedRevision == null
+        ? Number(sourceSession.seen_ts) || 0 : Number(b.mergeTables.expectedRevision);
+      if (expectedSession !== sourceSessionId
+          || expectedRevision !== (Number(sourceSession.seen_ts) || 0)) {
+        return json({ error: 'stale-table-visit', retry: true, sessionId: sourceSessionId,
+          revision: Number(sourceSession.seen_ts) || 0 }, 409);
+      }
 
-      // 3. Déplacer les commandes de source vers target. Comme pour le
-      //    transfert : toutes les impayées de la table source, pas seulement
-      //    celles de la visite ouverte — sinon elles restent sur une session
-      //    qu'on clôt juste après, invisibles à l'addition fusionnée.
-      let movedOrders = 0;
-      let mergePaidLeft = 0;
-      if (sourceSessionId && targetSessionId) {
-        const res = await env.DB.prepare(
+      /* Merge is one state transition, not three awaited writes. The source
+       * visit is closed only if its immutable revision still matches; the
+       * order move and audit row are committed in the same SQLite/D1 batch. */
+      const nextRevision = Math.max(now, (Number(sourceSession.seen_ts) || 0) + 1);
+      const batch = await atomicStatements(env, [
+        statement(env,
+          `INSERT INTO table_transfers
+             (id, merchant, from_table, to_table, session_id, server, covers, orders_count, is_merge, created_ts)
+           SELECT ?, ?, ?, ?, ?, ?, 0,
+             (SELECT COUNT(*) FROM orders WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL),
+             1, ?
+           WHERE EXISTS (SELECT 1 FROM table_sessions
+                           WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open' AND seen_ts = ?)
+             AND EXISTS (SELECT 1 FROM table_sessions
+                           WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open')
+             AND NOT EXISTS (SELECT 1 FROM table_transfers WHERE id = ?)`,
+          mergeId, merchant, sourceTable, targetTable, targetSessionId, server || null,
+          merchant, sourceTable, now, sourceSessionId, merchant, sourceTable, expectedRevision,
+          targetSessionId, merchant, targetTable, mergeId),
+        statement(env,
+          `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = ?, seen_ts = ?
+             WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open' AND seen_ts = ?
+               AND EXISTS (SELECT 1 FROM table_transfers WHERE id = ? AND merchant = ?)`,
+          now, 'merged-into-' + targetTable, nextRevision, sourceSessionId, merchant,
+          sourceTable, expectedRevision, mergeId, merchant),
+        statement(env,
           `UPDATE orders SET table_no = ?, session_id = ?, updated_ts = ?
-            WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL`
-        ).bind(targetTable, targetSessionId, now, merchant, sourceTable).run();
-        movedOrders = (res && res.meta && res.meta.changes) || 0;
-        try {
-          const paid = await env.DB.prepare(
-            `SELECT COUNT(*) AS n FROM orders WHERE merchant = ? AND table_no = ? AND paid_ts IS NOT NULL AND session_id = ?`
-          ).bind(merchant, sourceTable, sourceSessionId).first();
-          mergePaidLeft = Number((paid && paid.n) || 0);
-        } catch (_) { mergePaidLeft = 0; }
-      } else {
-        const res = await env.DB.prepare(
-          `UPDATE orders SET table_no = ?, session_id = COALESCE(?, session_id), updated_ts = ?
-            WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL`
-        ).bind(targetTable, targetSessionId, now, merchant, sourceTable).run();
-        movedOrders = (res && res.meta && res.meta.changes) || 0;
+             WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL
+               AND EXISTS (SELECT 1 FROM table_transfers WHERE id = ? AND merchant = ?)
+               AND EXISTS (SELECT 1 FROM table_sessions
+                             WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open')`,
+          targetTable, targetSessionId, now, merchant, sourceTable,
+          mergeId, merchant, targetSessionId, merchant, targetTable),
+      ]);
+      const claimChanged = Number(batch && batch[0] && batch[0].meta && batch[0].meta.changes) || 0;
+      const sourceChanged = Number(batch && batch[1] && batch[1].meta && batch[1].meta.changes) || 0;
+      const movedOrders = Number(batch && batch[2] && batch[2].meta && batch[2].meta.changes) || 0;
+      if (!claimChanged || !sourceChanged) {
+        const raced = await env.DB.prepare(
+          'SELECT id, from_table, to_table, session_id, orders_count FROM table_transfers WHERE id = ? AND merchant = ?'
+        ).bind(mergeId, merchant).first();
+        if (raced) return json({ ok: true, mergeId: raced.id, sourceTable: raced.from_table,
+          targetTable: raced.to_table, targetSessionId: raced.session_id || null,
+          ordersMerged: Number(raced.orders_count) || 0, replayed: true, now });
+        return json({ error: 'table-operation-conflict', retry: true }, 409);
       }
 
-      // 4. Clore la session source
-      if (sourceSessionId) {
-        await env.DB.prepare(
-          `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = ?
-            WHERE id = ? AND merchant = ? AND status = 'open'`
-        ).bind(now, 'merged-into-' + targetTable, sourceSessionId, merchant).run();
-      }
-
-      // 5. Enregistrer la fusion dans table_transfers
-      const mergeId = 'trf-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
+      let mergePaidLeft = 0;
       try {
-        await env.DB.prepare(
-          `INSERT INTO table_transfers (id, merchant, from_table, to_table, session_id, server, covers, orders_count, is_merge, created_ts)
-           VALUES (?, ?, ?, ?, ?, ?, 0, ?, 1, ?)`
-        ).bind(mergeId, merchant, sourceTable, targetTable, targetSessionId, server || null, movedOrders, now).run();
-      } catch (_) {}
+        const paid = await env.DB.prepare(
+          `SELECT COUNT(*) AS n FROM orders WHERE merchant = ? AND table_no = ? AND paid_ts IS NOT NULL AND session_id = ?`
+        ).bind(merchant, sourceTable, sourceSessionId).first();
+        mergePaidLeft = Number((paid && paid.n) || 0);
+      } catch (_) { mergePaidLeft = 0; }
 
       return json({
         ok: true,
@@ -1027,6 +1163,17 @@ export async function onRequestPost(context) {
         now,
       });
     } catch (e) {
+      if (String((e && e.message) || e) === 'atomic-batch-required') {
+        return json({ error: 'atomic-batch-required' }, 503);
+      }
+      try {
+        const replay = await env.DB.prepare(
+          'SELECT id, from_table, to_table, session_id, orders_count FROM table_transfers WHERE id = ? AND merchant = ?'
+        ).bind(mergeId, merchant).first();
+        if (replay) return json({ ok: true, mergeId: replay.id, sourceTable: replay.from_table,
+          targetTable: replay.to_table, targetSessionId: replay.session_id || null,
+          ordersMerged: Number(replay.orders_count) || 0, replayed: true, now });
+      } catch (_) {}
       return json({ error: 'merge-failed', detail: String((e && e.message) || e) }, 500);
     }
   }
@@ -1454,6 +1601,12 @@ export async function onRequestPost(context) {
   const closeTable = (b && b.closeTable) != null ? normTable(b.closeTable) : '';
   if (closeSession || closeTable) {
     if (closeSession && !SESSION_ID.test(closeSession)) return json({ error: 'bad-session' }, 400);
+    const expectedSession = closeTable ? String((b && (b.expectedSession || b.expectedSessionId)) || '').trim() : '';
+    const expectedRevision = closeTable && b && b.expectedRevision != null
+      ? Number(b.expectedRevision) : null;
+    if (closeTable && !SESSION_ID.test(expectedSession)) {
+      return json({ error: 'session-required', retry: true }, 409);
+    }
     /* ── QUI A FERMÉ, ET CE QUI RESTAIT DÛ ─────────────────────────────────
      * N'importe quel serveur en service peut fermer n'importe quelle table de
      * la salle, et c'est VOULU : la couverture entre collègues est le
@@ -1474,18 +1627,28 @@ export async function onRequestPost(context) {
     /* Compté AVANT la fermeture : après, les sessions ne sont plus ouvertes et
      * la question ne peut plus être posée. */
     let unpaid = 0;
+    let targetSession = null;
     try {
+      if (closeTable) {
+        targetSession = await env.DB.prepare(
+          `SELECT id, seen_ts FROM table_sessions
+             WHERE id = ? AND merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open'`
+        ).bind(expectedSession, merchant, closeTable).first();
+        if (!targetSession) return json({ error: 'stale-table-visit', retry: true }, 409);
+        if (expectedRevision != null && Number(targetSession.seen_ts) !== expectedRevision) {
+          return json({ error: 'stale-table-visit', retry: true, sessionId: targetSession.id,
+            revision: Number(targetSession.seen_ts) || 0 }, 409);
+        }
+      }
       const pending = closeSession
         ? await env.DB.prepare(
             `SELECT COUNT(*) AS n FROM orders
               WHERE merchant = ? AND session_id = ? AND paid_ts IS NULL`
           ).bind(merchant, closeSession).first()
         : await env.DB.prepare(
-            `SELECT COUNT(*) AS n FROM orders o
-               JOIN table_sessions s ON s.id = o.session_id
-              WHERE o.merchant = ? AND s.table_no = ? AND s.status = 'open'
-                AND o.paid_ts IS NULL`
-          ).bind(merchant, closeTable).first();
+            `SELECT COUNT(*) AS n FROM orders
+              WHERE merchant = ? AND session_id = ? AND paid_ts IS NULL`
+          ).bind(merchant, expectedSession).first();
       unpaid = Number((pending && pending.n) || 0);
     } catch (_) { unpaid = 0; }   // colonnes absentes ⇒ on ne prétend pas savoir
     try {
@@ -1496,10 +1659,12 @@ export async function onRequestPost(context) {
           ).bind(now, why, pinActor?.id || '', pinActor?.name || '', closeSession, merchant).run()
         : await env.DB.prepare(
             `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = ?, closed_actor_id = ?, closed_actor_name = ?
-              WHERE merchant = ? AND table_no = ? AND status = 'open'`
-          ).bind(now, why, pinActor?.id || employee?.member?.id || '', pinActor?.name || (employee ? employeeName(employee.member) : ''), merchant, closeTable).run();
+              WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open'${expectedRevision != null ? ' AND seen_ts = ?' : ''}`
+          ).bind(now, why, pinActor?.id || employee?.member?.id || '', pinActor?.name || (employee ? employeeName(employee.member) : ''),
+            expectedSession, merchant, closeTable, ...(expectedRevision != null ? [expectedRevision] : [])).run();
       closed = (res && res.meta && res.meta.changes) || 0;
     } catch (_) { return json({ error: 'closure-write-failed' }, 503); }
+    if (!closeSession && !closed) return json({ error: 'stale-table-visit', retry: true }, 409);
 
     /* Les commandes de cette session sont soldées avec elle. `paid_ts` n'est pas
      * un état : une commande peut être servie et payée, ou payée puis servie
@@ -1530,7 +1695,9 @@ export async function onRequestPost(context) {
     deferCourse(context, closeOrderCourses(env, {
       merchant, sessionId: closeSession, table: closeTable, closedAt: now,
     }));
-    return json({ ok: true, closed, unpaid: unpaid || undefined });
+    return json({ ok: true, closed, sessionId: closeSession || expectedSession,
+      revision: targetSession ? Number(targetSession.seen_ts) || 0 : undefined,
+      unpaid: unpaid || undefined });
   }
 
   /* ── Déposer un bon venu de la caisse ─────────────────────────────────────
@@ -1684,6 +1851,55 @@ export async function onRequestPost(context) {
   const paid = b && b.paid === true;
 
   const marks = from.map(() => '?').join(',');
+  if (status === 'rejected') {
+    let current = null;
+    try {
+      current = await env.DB.prepare(
+        'SELECT id, status, number, table_no, session_id, lines, paid_ts FROM orders WHERE id = ? AND merchant = ?'
+      ).bind(id, merchant).first();
+    } catch (_) { return json({ error: 'cancellation-read-failed' }, 503); }
+    if (!current) return json({ error: 'not-found' }, 404);
+    if (current.status === 'rejected') {
+      return json({ ok: true, id, status: 'rejected', number: current.number, replayed: true });
+    }
+    if (!from.includes(current.status) || current.paid_ts != null) {
+      return json({ error: 'bad-transition', status: current.status, number: current.number }, 409);
+    }
+    let currentLines = [];
+    try { currentLines = JSON.parse(current.lines) || []; } catch (_) {}
+    const actor = String(pinActor?.name || (employee ? employeeName(employee.member) : '') || server || 'caisse').slice(0, 80);
+    const kitchenVoidIds = [];
+    const voidStatements = [];
+    if (current.status === 'accepted' || current.status === 'ready') {
+      for (const [index, line] of currentLines.entries()) {
+        if (!line || !line.name) continue;
+        const voidId = 'kvoid-' + crypto.randomUUID();
+        kitchenVoidIds.push(voidId);
+        voidStatements.push(statement(env,
+          `INSERT INTO kitchen_voids
+             (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'order_rejected', ?, ?, 'pending', ?)`,
+          voidId, merchant, id, current.table_no || null, String(line.id || `line-${index}`).slice(0, 80),
+          String(line.name).slice(0, 120), Math.max(1, Math.round(Number(line.qty) || 1)),
+          Math.max(0, Math.round(Number(line.unitPrice) || 0)), current.status === 'ready' ? 1 : 0, actor, now));
+      }
+    }
+    try {
+      const update = statement(env,
+        `UPDATE orders SET status = 'rejected', updated_ts = ?,
+            cancel_actor_id = ?, cancel_actor_name = ?, cancel_ts = ?
+          WHERE id = ? AND merchant = ? AND status IN (${marks}) AND paid_ts IS NULL`,
+        now, pinActor?.id || employee?.member?.id || '', actor, now, id, merchant, ...from);
+      const batch = await atomicStatements(env, [update, ...voidStatements]);
+      const changed = Number(batch && batch[0] && batch[0].meta && batch[0].meta.changes) || 0;
+      if (!changed) return json({ error: 'concurrent-update', retry: true }, 409);
+    } catch (_) {
+      return json({ error: 'cancellation-write-failed' }, 503);
+    }
+    deferCourse(context, closeOrderCourses(env, { merchant, sessionId: current.session_id, table: current.table_no, closedAt: now }));
+    return json({ ok: true, id, status: 'rejected', number: current.number,
+      kitchenCancellation: true, kitchenVoidIds, lines: currentLines });
+  }
   let row;
   try {
     /* Un seul énoncé, donc deux caisses qui acceptent la même commande au même

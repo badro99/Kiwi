@@ -43,7 +43,7 @@ async function ensureSchema(env) {
       currency TEXT NOT NULL DEFAULT 'MAD', ref_type TEXT NOT NULL DEFAULT '',
       ref_id TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', actor TEXT NOT NULL DEFAULT '',
       occurred_ts INTEGER NOT NULL, srv_ts INTEGER NOT NULL, reversal_of TEXT NOT NULL DEFAULT '',
-      meta TEXT, created_ts INTEGER NOT NULL
+      meta TEXT, payload_hash TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL
     )`
   ).run();
   /* Prod D1 lags schema.sql : CREATE TABLE IF NOT EXISTS n'ajoute pas la
@@ -52,6 +52,11 @@ async function ensureSchema(env) {
   try {
     await env.DB.prepare(
       'ALTER TABLE inventory_movements ADD COLUMN unit_cost_rate INTEGER'
+    ).run();
+  } catch (_) {}
+  try {
+    await env.DB.prepare(
+      "ALTER TABLE inventory_movements ADD COLUMN payload_hash TEXT NOT NULL DEFAULT ''"
     ).run();
   } catch (_) {}
   await env.DB.prepare(
@@ -127,6 +132,61 @@ function valid(m) {
 function rateOf(r) {
   if (r.unit_cost_rate != null) return Number(r.unit_cost_rate) / 10000;
   return r.unit_cost_cents == null ? null : Number(r.unit_cost_cents) / 100;
+}
+
+function stableValue(value) {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (value && typeof value === 'object') {
+    return Object.keys(value).sort().reduce((out, key) => {
+      out[key] = stableValue(value[key]);
+      return out;
+    }, {});
+  }
+  return value;
+}
+
+function movementPayload(m) {
+  let meta = null;
+  try { meta = m.meta ? JSON.parse(m.meta) : null; } catch (_) { meta = null; }
+  return JSON.stringify(stableValue({
+    id: m.id,
+    itemId: m.itemId ?? m.item_id,
+    variantId: m.variantId ?? m.variant_id ?? '',
+    locationId: m.locationId ?? m.location_id ?? 'principal',
+    qtyMilli: Number(m.qtyMilli ?? m.qty_milli),
+    reason: m.reason,
+    unitCostCents: m.unitCostCents ?? m.unit_cost_cents ?? null,
+    unitCostRate: m.unitCostRate ?? m.unit_cost_rate ?? null,
+    currency: m.currency || 'MAD',
+    refType: m.refType ?? m.ref_type ?? '',
+    refId: m.refId ?? m.ref_id ?? '',
+    note: m.note || '',
+    actor: m.actor || '',
+    occurredTs: Number(m.occurredTs ?? m.occurred_ts),
+    reversalOf: m.reversalOf ?? m.reversal_of ?? '',
+    meta,
+  }));
+}
+
+async function movementHash(m) {
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(movementPayload(m)));
+  return [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function storedMovementPayload(row) {
+  return movementPayload({
+    ...row,
+    itemId: row.item_id,
+    variantId: row.variant_id,
+    locationId: row.location_id,
+    qtyMilli: row.qty_milli,
+    unitCostCents: row.unit_cost_cents,
+    unitCostRate: row.unit_cost_rate,
+    refType: row.ref_type,
+    refId: row.ref_id,
+    occurredTs: row.occurred_ts,
+    reversalOf: row.reversal_of,
+  });
 }
 
 export async function onRequestGet({ request, env }) {
@@ -247,6 +307,18 @@ export async function onRequestPost({ request, env }) {
   const now = Date.now();
   const movements = raw.map((m) => sanitize(m, now));
   if (movements.some((m) => !valid(m))) return json({ error: 'bad-movement' }, 400);
+  try {
+    await Promise.all(movements.map(async (movement) => { movement.payloadHash = await movementHash(movement); }));
+  } catch (_) { return json({ error: 'hash-unavailable' }, 503); }
+  const byId = new Map();
+  for (const movement of movements) {
+    const previous = byId.get(movement.id);
+    if (previous && previous !== movement.payloadHash) {
+      return json({ error: 'id-conflict', ids: [movement.id] }, 409);
+    }
+    byId.set(movement.id, movement.payloadHash);
+  }
+  const legacyIds = new Set();
   for (let index = 0; index < movements.length; index += 1) {
     const source = raw[index] || {};
     const explicit = str(source.locationId ?? source.location_id, 80);
@@ -281,6 +353,53 @@ export async function onRequestPost({ request, env }) {
     if (taken.length) return json({ error: 'id-conflict', ids: taken.slice(0, 20) }, 409);
   } catch (_) { return json({ error: 'db' }, 503); }
 
+  /* Older rows predate payload_hash. They are upgraded lazily, but only after
+   * their complete immutable payload has been compared. A legacy UUID is not
+   * allowed to become a different movement merely because its first replay had
+   * no hash column yet. */
+  try {
+    let rows = [];
+    try {
+      const existing = await env.DB.prepare(
+        `SELECT id, item_id, variant_id, location_id, qty_milli, reason,
+                unit_cost_cents, unit_cost_rate, currency, ref_type, ref_id,
+                note, actor, occurred_ts, reversal_of, meta, payload_hash
+           FROM inventory_movements
+          WHERE merchant = ? AND id IN (${movements.map(() => '?').join(',')})`
+      ).bind(merchant, ...movements.map((m) => m.id)).all();
+      rows = (existing && existing.results) || [];
+    } catch (_) {
+      /* A rolling deployment may still expose the pre-hash schema. Real D1 is
+       * upgraded by ensureSchema; this fallback keeps old read-only fixtures
+       * able to accept a new id while retaining the cross-tenant guard above. */
+      try {
+        const legacy = await env.DB.prepare(
+          `SELECT id, item_id, variant_id, location_id, qty_milli, reason,
+                  unit_cost_cents, currency, ref_type, ref_id, note, actor,
+                  occurred_ts, reversal_of, meta
+             FROM inventory_movements
+            WHERE merchant = ? AND id IN (${movements.map(() => '?').join(',')})`
+        ).bind(merchant, ...movements.map((m) => m.id)).all();
+        rows = (legacy && legacy.results) || [];
+      } catch (_) { rows = []; }
+    }
+    for (const row of rows) {
+      const wanted = byId.get(row.id);
+      let actual = String(row.payload_hash || '');
+      if (!actual) {
+        legacyIds.add(row.id);
+        const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(storedMovementPayload(row)));
+        actual = [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+      }
+      if (actual !== wanted) return json({ error: 'id-conflict', ids: [row.id] }, 409);
+    }
+  } catch (_) { return json({ error: 'db' }, 503); }
+
+  const conflictGuard = movements
+    .map(() => "(id = ? AND payload_hash <> ? AND payload_hash <> '')")
+    .join(' OR ');
+  const conflictArgs = movements.flatMap((movement) => [movement.id, movement.payloadHash]);
+
   const accepted = [];
   try {
     for (const m of movements) {
@@ -289,12 +408,18 @@ export async function onRequestPost({ request, env }) {
         `INSERT OR IGNORE INTO inventory_movements
           (id, merchant, item_id, variant_id, location_id, qty_milli, reason,
            unit_cost_cents, unit_cost_rate, currency, ref_type, ref_id, note, actor, occurred_ts,
-           srv_ts, reversal_of, meta, created_ts)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+           srv_ts, reversal_of, meta, payload_hash, created_ts)
+         SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+          WHERE NOT EXISTS (
+            SELECT 1 FROM inventory_movements
+             WHERE merchant = ? AND (${conflictGuard})
+          )
+         `
       ).bind(
         m.id, merchant, m.itemId, m.variantId, m.locationId, m.qtyMilli, m.reason,
         m.unitCostCents, m.unitCostRate, m.currency, m.refType, m.refId, m.note, m.actor,
-        m.occurredTs, cursor, m.reversalOf, m.meta, now
+        m.occurredTs, cursor, m.reversalOf, m.meta, m.payloadHash, now,
+        merchant, ...conflictArgs,
       ).run();
       // INSERT OR IGNORE is deliberately idempotent. When another device has
       // already sent this UUID, return the cursor of the existing row rather
@@ -302,6 +427,17 @@ export async function onRequestPost({ request, env }) {
       const stored = await env.DB.prepare(
         'SELECT srv_ts AS cursor FROM inventory_movements WHERE id = ? AND merchant = ?'
       ).bind(m.id, merchant).first();
+      let storedHash = null;
+      try {
+        const hashRow = await env.DB.prepare(
+          'SELECT payload_hash FROM inventory_movements WHERE id = ? AND merchant = ?'
+        ).bind(m.id, merchant).first();
+        storedHash = hashRow ? String(hashRow.payload_hash || '') : null;
+      } catch (_) {}
+      if (!stored || (storedHash !== null && storedHash && storedHash !== m.payloadHash)
+        || (storedHash === '' && !legacyIds.has(m.id))) {
+        return json({ error: 'id-conflict', ids: [m.id] }, 409);
+      }
       accepted.push({ id: m.id, cursor: Number(stored && stored.cursor) || cursor });
     }
   } catch (_) { return json({ error: 'db' }, 503); }

@@ -70,6 +70,7 @@ function ok(condition, message) {
 }
 
 function makeD1Adapter(db) {
+  let transactionQueue = Promise.resolve();
   return {
     prepare(sql) {
       let bound = [];
@@ -102,6 +103,23 @@ function makeD1Adapter(db) {
           return results[0];
         },
       };
+    },
+    batch(statements) {
+      const execute = async () => {
+        db.exec('BEGIN IMMEDIATE');
+        try {
+          const results = [];
+          for (const statement of statements) results.push(await statement.run());
+          db.exec('COMMIT');
+          return results;
+        } catch (error) {
+          db.exec('ROLLBACK');
+          throw error;
+        }
+      };
+      const result = transactionQueue.then(execute, execute);
+      transactionQueue = result.catch(() => {});
+      return result;
     },
   };
 }
@@ -531,6 +549,24 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
       status TEXT NOT NULL
     );
 
+    CREATE TABLE accounts (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      business TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      session_epoch INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE merchant_config (
+      merchant TEXT PRIMARY KEY,
+      features TEXT NOT NULL DEFAULT '{}',
+      type TEXT,
+      account_id TEXT,
+      name TEXT,
+      status TEXT,
+      till_epoch INTEGER NOT NULL DEFAULT 0
+    );
+
     CREATE TABLE store_docs (
       merchant TEXT NOT NULL,
       feature TEXT NOT NULL,
@@ -548,6 +584,10 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
     AUTH_SECRET,
   };
 
+  db.prepare("INSERT INTO accounts (id, email, business, status, session_epoch) VALUES (?, ?, ?, 'active', 0)")
+    .run('acc-pasta-corner-fixture', 'fixture-pasta@example.test', merchant);
+  db.prepare("INSERT INTO merchant_config (merchant, features, type, account_id, name, status, till_epoch) VALUES (?, '{}', 'restaurant', ?, ?, 'active', 7)")
+    .run(merchant, 'acc-pasta-corner-fixture', 'Pasta Corner Fixture');
   db.prepare("INSERT INTO store_subscriptions VALUES (?, 'pro', 'active')").run(merchant);
   db.prepare("INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, 'floorplan', ?, 1, ?)").run(
     merchant,
@@ -584,7 +624,7 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
   db.prepare("INSERT INTO table_sessions VALUES (?, ?, 'table', ?, 'open', ?, NULL, NULL, NULL)").run('sess-table-5', merchant, '5', Date.now());
   db.prepare("INSERT INTO orders VALUES (?, ?, ?, ?, 'kiwi', 'Hafid', NULL, ?, ?)").run('ord-table-5', merchant, 'sess-table-5', '5', Date.now(), Date.now());
 
-  const tillCookie = await tillToken(AUTH_SECRET, merchant, 0);
+  const tillCookie = await tillToken(AUTH_SECRET, merchant, 7);
 
   async function postSale(body) {
     const req = new Request('https://kiwi.test/api/sale', {
@@ -694,6 +734,8 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
     let preflightCount = 0;
     let releaseInserts = null;
     const insertBarrier = new Promise((resolve) => { releaseInserts = resolve; });
+    let releaseSmallInsert = null;
+    const smallInsertDone = new Promise((resolve) => { releaseSmallInsert = resolve; });
 
     const barrierDb = {
       prepare(sql) {
@@ -705,7 +747,14 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
                 if (sql.includes('INSERT OR IGNORE INTO sales') && !barrierTriggered) {
                   await insertBarrier;
                 }
-                return stmt.run(...args);
+                if (sql.includes('INSERT OR IGNORE INTO sales') && Number(args[9]) === 4000) {
+                  await smallInsertDone;
+                }
+                const result = await stmt.run(...args);
+                if (sql.includes('INSERT OR IGNORE INTO sales') && Number(args[9]) === 3500) {
+                  releaseSmallInsert();
+                }
+                return result;
               },
               async all() {
                 const results = stmt.all(...args);
@@ -1410,6 +1459,8 @@ console.log('\n--- Section 4: Feed Split Label Consistency ---');
     CREATE TABLE accounts (
       id TEXT PRIMARY KEY,
       business TEXT
+      ,status TEXT NOT NULL DEFAULT 'active'
+      ,session_epoch INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE merchant_config (
@@ -1426,7 +1477,11 @@ console.log('\n--- Section 4: Feed Split Label Consistency ---');
     AUTH_SECRET,
   };
 
-  const tillCookie = await tillToken(AUTH_SECRET, merchant, 0);
+  db.prepare("INSERT INTO accounts (id, business, status, session_epoch) VALUES (?, ?, 'active', 0)")
+    .run('acc-restaurant-mixmax-fixture', merchant);
+  db.prepare("INSERT INTO merchant_config (merchant, account_id, till_epoch) VALUES (?, ?, 7)")
+    .run(merchant, 'acc-restaurant-mixmax-fixture');
+  const epochTillCookie = await tillToken(AUTH_SECRET, merchant, 7);
 
   // Insert non-visit split receipt
   db.prepare(`
@@ -1448,7 +1503,7 @@ console.log('\n--- Section 4: Feed Split Label Consistency ---');
 
   const req = new Request(`https://kiwi.test/api/feed?merchant=${merchant}&since=0`, {
     headers: {
-      'Cookie': `kiwi_till=${tillCookie}`,
+      'Cookie': `kiwi_till=${epochTillCookie}`,
     },
   });
 

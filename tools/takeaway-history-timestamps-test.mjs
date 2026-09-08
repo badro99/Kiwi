@@ -41,6 +41,10 @@ const nativeNow = Date.now;
 let now = new Date('2026-09-07T13:00:00Z').getTime();
 Date.now = () => now;
 try {
+  // The queue is tenant-gated even for the in-memory kitchen fixture. Seed the
+  // explicit feature row instead of weakening production entitlement checks.
+  db.prepare('INSERT INTO merchant_config (merchant, features, type, updated_ts) VALUES (?, ?, ?, ?)')
+    .run(merchant, JSON.stringify({ orderpro: true }), 'restaurant', now);
   const cookie = `${TILL_COOKIE}=${await tillToken(env.AUTH_SECRET, merchant)}`;
   const insert = (id, status, paid, created = now - 3600000) => db.prepare(
     `INSERT INTO orders (id, merchant, number, mode, total, lines, status, created_ts, updated_ts, paid_ts)

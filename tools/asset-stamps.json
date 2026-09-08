@@ -68,8 +68,8 @@
     "sha": "ef69bf89a691a261"
   },
   "assets/auth-guard.js": {
-    "v": "1",
-    "sha": "7bfa02e1a7f71f89"
+    "v": "2",
+    "sha": "1deb8f9c43a6ed44"
   },
   "assets/barcode.js": {
     "v": "1",
@@ -132,8 +132,8 @@
     "sha": "18979319d717bb43"
   },
   "assets/caisse-pwa.js": {
-    "v": "495",
-    "sha": "82f9bf4da3d0b253"
+    "v": "496",
+    "sha": "cc43149379fc351c"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -152,8 +152,8 @@
     "sha": "66f56a67823580af"
   },
   "assets/cash-sessions.js": {
-    "v": "2",
-    "sha": "a967d6a5f692f0fa"
+    "v": "3",
+    "sha": "66cc58e3ba8fbd9f"
   },
   "assets/catalog-import.js": {
     "v": "3",
@@ -176,8 +176,8 @@
     "sha": "1fc1471a49a36689"
   },
   "assets/clients-store.js": {
-    "v": "4",
-    "sha": "15e453bcc915c598"
+    "v": "5",
+    "sha": "2e367fbc0e624a0a"
   },
   "assets/cloud-doc.js": {
     "v": "1",
@@ -208,16 +208,16 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "490",
-    "sha": "5467a745fbf3fd16"
+    "v": "491",
+    "sha": "eee42144daad4cc4"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "18",
-    "sha": "e2206630eac7e58b"
+    "v": "19",
+    "sha": "106de73d3d04a60d"
   },
   "assets/day-report-dash.js": {
     "v": "10",
@@ -228,8 +228,8 @@
     "sha": "44dd6ba2de061983"
   },
   "assets/day-report.js": {
-    "v": "7",
-    "sha": "ecc9ecff0b7cc233"
+    "v": "8",
+    "sha": "aca1ba22ccbcaa2d"
   },
   "assets/demoClock.js": {
     "v": "1",
@@ -264,8 +264,8 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/employee-live.js": {
-    "v": "489",
-    "sha": "c1e2e5ec081c01ea"
+    "v": "490",
+    "sha": "38bb1d306f1c983a"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -400,8 +400,8 @@
     "sha": "a5fc283813e8f180"
   },
   "assets/kitchen-print-queue.js": {
-    "v": "9",
-    "sha": "92d7dc78a43a1110"
+    "v": "10",
+    "sha": "55f16003c25bcba9"
   },
   "assets/kitchen-relay.js": {
     "v": "4",
@@ -432,8 +432,8 @@
     "sha": "c9d6036ca657c76e"
   },
   "assets/live-link.js": {
-    "v": "33",
-    "sha": "f01407aa412b15f2"
+    "v": "34",
+    "sha": "7c67c2be9f9dc832"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -492,8 +492,8 @@
     "sha": "b24347182d9bcf25"
   },
   "assets/operations-ui.js": {
-    "v": "12",
-    "sha": "18e397964e44ff64"
+    "v": "13",
+    "sha": "6884489d7631e914"
   },
   "assets/operations.js": {
     "v": "10",
@@ -520,8 +520,8 @@
     "sha": "47b1d8a268c10551"
   },
   "assets/orderpro-inbox.js": {
-    "v": "14",
-    "sha": "e5a4a990ed49aedf"
+    "v": "15",
+    "sha": "9b2ecc54e5a68634"
   },
   "assets/orderpro-panel.js": {
     "v": "1",
@@ -532,8 +532,8 @@
     "sha": "57b562b061dc24d0"
   },
   "assets/pages-pro.js": {
-    "v": "2096",
-    "sha": "c5ce08cc465840bc"
+    "v": "2097",
+    "sha": "7d2c9bdbef000c6f"
   },
   "assets/pages.js": {
     "v": "5",
@@ -605,7 +605,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "36",
-    "sha": "5d514cad44dd7d8b"
+    "sha": "4965d15ee2f2ca56"
   },
   "assets/pos-epicerie.css": {
     "v": "5",
@@ -732,12 +732,12 @@
     "sha": "db013f562c2367ef"
   },
   "assets/pressing-caisse.css": {
-    "v": "39",
+    "v": "40",
     "sha": "8ce1d04a07359a11"
   },
   "assets/pressing-caisse.js": {
-    "v": "39",
-    "sha": "ca06de737b770645"
+    "v": "40",
+    "sha": "b0a5fdabd1098d13"
   },
   "assets/pressing-catalog.css": {
     "v": "4",
@@ -760,16 +760,16 @@
     "sha": "aecf3f8d0801f109"
   },
   "assets/pressing-ops.js": {
-    "v": "7",
-    "sha": "24d5ba8848422715"
+    "v": "8",
+    "sha": "f76f7d1d6b1ac739"
   },
   "assets/print-paper.css": {
     "v": "1",
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "11",
-    "sha": "cc7476df33fa2ff8"
+    "v": "14",
+    "sha": "ea196f65904ce256"
   },
   "assets/procurement.js": {
     "v": "2",
@@ -800,8 +800,8 @@
     "sha": "8b88c63cd11d7bc8"
   },
   "assets/report.js": {
-    "v": "2",
-    "sha": "93ded8eec9d79bb3"
+    "v": "3",
+    "sha": "e9d79f5d019e38dc"
   },
   "assets/reservations.css": {
     "v": "5",

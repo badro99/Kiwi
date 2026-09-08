@@ -29,9 +29,10 @@
 // fails the build if a code finds its way back in.
 
 import {
-  json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator, isTillFor,
+  json, activeAccountSession, slugMerchant, isOperator, isTillFor,
   employeeRoleOpensTill,
 } from '../auth/_lib.js';
+import { employeeAuthVersion } from './_private.js';
 
 const VALID_PIN = /^\d{4}$/;
 
@@ -101,26 +102,31 @@ async function storeOwner(env, slug) {
 /* Stamp the store's identity — owner + display name — without touching its
  * features, plan or type. First write wins on account_id: once a store belongs to
  * an account it is locked to it, so a second merchant can never take over a slug
- * that is already someone's shop. (Two merchants who pick the identical store
- * name still race for the free slug, exactly as they already race for it in
- * `sales`; the loser's sync is refused with 403 rather than silently merged.)
- * Fail-soft: pre-migration this throws and is swallowed — the config write that
- * follows still works, we just cannot group the store under its owner yet. */
+ * that is already someone's shop. The result is read back after the atomic
+ * upsert; dependent PIN/document writes are allowed only if the winning owner is
+ * this account. A registry write that cannot be verified is a 503, never a
+ * cross-tenant fallback. */
 async function claimStore(env, merchant, accountId, name, seed) {
   try {
     await env.DB.prepare(
       `INSERT INTO merchant_config (merchant, features, plan, type, account_id, name, status, updated_ts)
        VALUES (?, ?, NULL, NULL, ?, ?, ?, ?)
        ON CONFLICT(merchant) DO UPDATE SET
-         account_id = COALESCE(merchant_config.account_id, excluded.account_id),
+         account_id = CASE
+           WHEN merchant_config.account_id IS NULL OR merchant_config.account_id = excluded.account_id
+           THEN excluded.account_id ELSE merchant_config.account_id END,
          name       = COALESCE(NULLIF(excluded.name, ''), merchant_config.name),
-         updated_ts = excluded.updated_ts`
+         updated_ts = excluded.updated_ts
+       WHERE merchant_config.account_id IS NULL OR merchant_config.account_id = excluded.account_id`
     ).bind(merchant, seed ? JSON.stringify(NEW_STORE_FEATURES) : '{}',
            accountId, String(name || ''), seed ? 'pending' : null, Date.now()).run();
-    return true;
+    const row = await env.DB.prepare('SELECT account_id FROM merchant_config WHERE merchant = ?')
+      .bind(merchant).first();
+    const owner = row && row.account_id ? String(row.account_id) : '';
+    return owner === String(accountId) ? { ok: true } : { ok: false, owner };
   } catch (_) {
-    /* Pre-status databases keep working. They cannot enforce the subscription
-       boundary until the migration lands, but account creation must not fail. */
+    /* The registry is an authorization boundary. Do not write into a requested
+       tenant when its ownership cannot be read or claimed. */
     try {
       await env.DB.prepare(
         `INSERT INTO merchant_config (merchant, features, plan, type, account_id, name, updated_ts)
@@ -128,11 +134,15 @@ async function claimStore(env, merchant, accountId, name, seed) {
          ON CONFLICT(merchant) DO UPDATE SET
            account_id = COALESCE(merchant_config.account_id, excluded.account_id),
            name       = COALESCE(NULLIF(excluded.name, ''), merchant_config.name),
-           updated_ts = excluded.updated_ts`
+           updated_ts = excluded.updated_ts
+         WHERE merchant_config.account_id IS NULL OR merchant_config.account_id = excluded.account_id`
       ).bind(merchant, seed ? JSON.stringify(NEW_STORE_FEATURES) : '{}',
              accountId, String(name || ''), Date.now()).run();
-      return true;
-    } catch (__) { return false; }
+      const row = await env.DB.prepare('SELECT account_id FROM merchant_config WHERE merchant = ?')
+        .bind(merchant).first();
+      const owner = row && row.account_id ? String(row.account_id) : '';
+      return owner === String(accountId) ? { ok: true } : { ok: false, owner };
+    } catch (__) { return { ok: false, unavailable: true }; }
   }
 }
 
@@ -187,7 +197,7 @@ export async function onRequestGet(context) {
   let sessionAid = '';
   if (env.AUTH_SECRET) {
     try {
-      const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+      const sess = await activeAccountSession(request, env);
       if (sess && sess.aid) {
         const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
         if (acc && acc.business) { sessionMerchant = slugMerchant(acc.business); sessionAid = sess.aid; }
@@ -342,7 +352,7 @@ export async function onRequestPost(context) {
   const { request, env } = context;
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
 
-  const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+  const sess = await activeAccountSession(request, env);
   if (!sess || !sess.aid) return json({ error: 'unauthorized' }, 401);
 
   const acc = await env.DB.prepare('SELECT business, created_ts FROM accounts WHERE id = ?').bind(sess.aid).first();
@@ -480,8 +490,11 @@ export async function onRequestPost(context) {
     || Number(acc.created_ts || 0) >= NEW_ACCOUNT_FROM;
 
   const claimed = await claimStore(env, merchant, sess.aid, storeName, wantSeed);
-  if (!claimed && merchant !== accSlug) merchant = accSlug;
-  if (wantSeed && claimed) await seedBlankFeatures(env, merchant);
+  if (!claimed.ok) {
+    if (claimed.owner && claimed.owner !== sess.aid) return json({ error: 'merchant-not-yours' }, 409);
+    return json({ error: 'merchant-ownership-unavailable' }, 503);
+  }
+  if (wantSeed) await seedBlankFeatures(env, merchant);
 
   const result = { ok: true, merchant };
 
@@ -557,19 +570,44 @@ export async function onRequestPost(context) {
     // Replacing it in the same D1 batch means a deleted employee loses access
     // immediately and an employee can log in even when the larger Team document
     // is still waiting to sync from the dashboard device.
-    const access = {
-      members: clean.filter((p) => p.email).map((p) => ({
-        id: p.memberId || `employee-${p.code}`,
+    let previousAccess = { members: [] };
+    try {
+      const previousRow = await env.DB.prepare(
+        "SELECT data FROM store_docs WHERE merchant = ? AND feature = 'employee-access'"
+      ).bind(merchant).first();
+      if (previousRow && previousRow.data) {
+        const parsed = JSON.parse(previousRow.data);
+        if (parsed && Array.isArray(parsed.members)) previousAccess = parsed;
+      }
+    } catch (_) {
+      return json({ error: 'employee-access-unavailable' }, 503);
+    }
+    const previousById = new Map(previousAccess.members.map((member) => [
+      String(member && member.id || ''), member,
+    ]));
+    const accessMembers = [];
+    for (const p of clean.filter((item) => item.email)) {
+      const id = p.memberId || `employee-${p.code}`;
+      const previous = previousById.get(id);
+      const previousPin = String(previous && (previous.pinCode || previous.password) || '');
+      const previousVersion = Math.max(0, Math.round(Number(previous && previous.authVersion) || 0));
+      const seedVersion = previousVersion + (previous && previousPin !== p.code ? 1 : 0);
+      const revision = await employeeAuthVersion(env, merchant, id, p.code, seedVersion);
+      if (!revision.ok) return json({ error: 'employee-access-unavailable' }, 503);
+      accessMembers.push({
+        id,
         firstName: p.firstName,
         lastName: p.lastName,
         email: p.email,
         pinCode: p.code,
         password: p.code,
+        authVersion: revision.version,
         function: p.role,
         department: p.department,
         venueSlug: merchant,
-      })),
-    };
+      });
+    }
+    const access = { members: accessMembers };
     stmts.push(env.DB.prepare(
       `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
        VALUES (?, 'employee-access', ?, 1, ?)

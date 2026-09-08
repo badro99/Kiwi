@@ -61,9 +61,12 @@ ok(ctx2.window.KiwiDayReport.storeSlug() === 'merchant-slug-canonical',
 // 4. Moroccan late service: midnight is not the accounting boundary. With the
 // default 05:00 cutoff, closing and reopening at 03:00 remains on the previous
 // evening's dashboard day even though the new caisse service itself starts at 0.
-const evening = new Date(2026, 8, 2, 18, 0).getTime();
-const afterMidnight = new Date(2026, 8, 3, 3, 0).getTime();
-const boundary = new Date(2026, 8, 3, 5, 0).getTime();
+// Use UTC literals so the fixture does not accidentally test the host's
+// Europe/Berlin timezone. Casablanca is UTC+1 on this date: the commercial
+// 05:00 boundary is therefore 04:00Z.
+const evening = Date.parse('2026-09-02T18:00:00.000Z');
+const afterMidnight = Date.parse('2026-09-03T02:00:00.000Z');
+const boundary = Date.parse('2026-09-03T04:00:00.000Z');
 ok(ctx2.window.KiwiDayReport.businessDay(evening) === '2026-09-02',
   'an evening service belongs to its opening calendar day');
 ok(ctx2.window.KiwiDayReport.businessDay(afterMidnight) === '2026-09-02',

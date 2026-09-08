@@ -50,7 +50,9 @@ export function allocateTransferAllocation(rowsValue, requestedMilli) {
       lots.push({
         movementId: String(row.id || ''),
         remaining: qty,
-        cost: row.unit_cost_cents == null ? null : Number(row.unit_cost_cents) / 100,
+        cost: row.unit_cost_rate != null
+          ? Number(row.unit_cost_rate) / 10000
+          : (row.unit_cost_cents == null ? null : Number(row.unit_cost_cents) / 100),
         expiresAt: Number.isFinite(expiresAt) ? expiresAt : null,
         batchNum: String(meta.batchNum || ''),
         supplierName: String(meta.supplierName || ''),
@@ -136,6 +138,20 @@ async function ensureSchema(env) {
   ).run();
   await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_hotel_requests_unit ON ${REQUEST_TABLE} (merchant, unit_id, updated_ts)`).run();
   await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_hotel_request_events ON ${EVENT_TABLE} (merchant, request_id, revision)`).run();
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS inventory_request_reservations (
+    merchant TEXT NOT NULL,
+    request_id TEXT NOT NULL,
+    line_no INTEGER NOT NULL,
+    item_id TEXT NOT NULL,
+    location_id TEXT NOT NULL,
+    qty_milli INTEGER NOT NULL,
+    review_revision INTEGER NOT NULL,
+    created_ts INTEGER NOT NULL,
+    PRIMARY KEY (merchant, request_id, line_no)
+  )`).run();
+  await env.DB.prepare(
+    'CREATE INDEX IF NOT EXISTS idx_inventory_request_reservations_stock ON inventory_request_reservations (merchant, item_id, location_id)'
+  ).run();
 }
 
 function parse(raw, fallback) {
@@ -304,17 +320,13 @@ export function buildReviewAtpGuard(current, next, merchant, sourceLocations) {
     clauses.push(`? <=
       (SELECT COALESCE(SUM(qty_milli), 0) FROM inventory_movements
         WHERE merchant = ? AND item_id = ? AND location_id IN (${marks}))
-      - (SELECT COALESCE(SUM(CAST(ROUND(MAX(0, l.qty_approved - l.qty_received)
-          * l.qty_requested_base_milli / l.qty_requested) AS INTEGER)), 0)
-           FROM ${LINE_TABLE} l JOIN ${REQUEST_TABLE} r
-             ON r.merchant = l.merchant AND r.id = l.request_id
-          WHERE r.merchant = ? AND r.id <> ? AND r.state = 'open' AND r.cancelled = 0
-            AND (CASE WHEN l.resolution = 'substituted' THEN l.substitute_for ELSE l.item_id END) = ?
-            AND r.review_revision > 0
-            AND (r.accepted_revision >= r.review_revision
-              OR ABS(l.qty_approved - l.qty_requested) < 0.000000001))`);
+      - (SELECT COALESCE(SUM(qty_milli), 0)
+           FROM inventory_request_reservations
+          WHERE merchant = ? AND item_id = ? AND location_id IN (${marks})
+            AND request_id <> ?)`);
     const fulfilmentItem = fulfilmentItemId(line);
-    args.push(proposedMilli, merchant, fulfilmentItem, ...locations, merchant, next.request.id, fulfilmentItem);
+    args.push(proposedMilli, merchant, fulfilmentItem, ...locations,
+      merchant, fulfilmentItem, ...locations, next.request.id);
   });
   return { sql: clauses.length ? ` AND ${clauses.map((clause) => `(${clause})`).join(' AND ')}` : '', args };
 }
@@ -322,13 +334,33 @@ export function buildReviewAtpGuard(current, next, merchant, sourceLocations) {
 async function sourceRows(env, merchant, itemId, locations) {
   const ids = [...new Set((locations || []).filter(Boolean))];
   if (!ids.length) return [];
-  const result = await env.DB.prepare(
-    `SELECT id, qty_milli, reason, unit_cost_cents, occurred_ts, srv_ts, meta
-       FROM inventory_movements
+  const query = `FROM inventory_movements
       WHERE merchant = ? AND item_id = ? AND location_id IN (${ids.map(() => '?').join(',')})
-      ORDER BY occurred_ts, srv_ts`
-  ).bind(merchant, itemId, ...ids).all();
-  return (result && result.results) || [];
+      ORDER BY occurred_ts, srv_ts`;
+  try {
+    const result = await env.DB.prepare(
+      `SELECT id, qty_milli, reason, unit_cost_cents, unit_cost_rate, occurred_ts, srv_ts, meta ${query}`
+    ).bind(merchant, itemId, ...ids).all();
+    return (result && result.results) || [];
+  } catch (_) {
+    /* Pre-rate fixtures and an unrolled deployment remain readable. The
+     * migration is still required for precise lots; old rows use cents. */
+    const result = await env.DB.prepare(
+      `SELECT id, qty_milli, reason, unit_cost_cents, occurred_ts, srv_ts, meta ${query}`
+    ).bind(merchant, itemId, ...ids).all();
+    return (result && result.results) || [];
+  }
+}
+
+async function inventoryHasColumn(env, column) {
+  try {
+    const result = await env.DB.prepare('PRAGMA table_info(inventory_movements)').all();
+    const rows = (result && result.results) || [];
+    // An adapter that cannot expose PRAGMA is assumed to be the current D1
+    // schema. Real SQLite/D1 reports its columns and selects the legacy path
+    // below when an older deployment is still serving traffic.
+    return rows.length ? rows.some((row) => String(row.name || '') === column) : true;
+  } catch (_) { return true; }
 }
 
 async function reserveCursors(env, merchant, count, now) {
@@ -388,12 +420,42 @@ async function confirmCommand(env, body, merchant, id, idempotencyKey, current, 
     });
   }
   if (!transfers.length) return json({ error: 'nothing-to-confirm' }, 409);
+  /* Requests reviewed before the hold table existed have no reservation row.
+   * They may be adopted at confirmation, but only by the same guarded UPDATE
+   * that wins the command token and only when SQL still sees enough unreserved
+   * stock. This is an inline, serialized legacy adoption — never a blind
+   * backfill — so two old requests cannot both consume the last unit. */
+  const legacyLocations = [...new Set(sourceLocations.filter(Boolean))];
+  const legacyMarks = legacyLocations.map(() => '?').join(',');
+  const reservationGuard = transfers.map(() => `AND (
+    EXISTS (
+      SELECT 1 FROM inventory_request_reservations
+       WHERE merchant = ? AND request_id = ? AND line_no = ? AND item_id = ?
+         AND location_id = ? AND qty_milli >= ?
+    )
+    OR (
+      NOT EXISTS (
+        SELECT 1 FROM inventory_request_reservations
+         WHERE merchant = ? AND request_id = ? AND line_no = ? AND item_id = ?
+           AND location_id = ?
+      )
+      AND ? <= (
+        (SELECT COALESCE(SUM(qty_milli), 0) FROM inventory_movements
+          WHERE merchant = ? AND item_id = ? AND location_id IN (${legacyMarks}))
+        - (SELECT COALESCE(SUM(qty_milli), 0)
+             FROM inventory_request_reservations
+            WHERE merchant = ? AND item_id = ? AND location_id IN (${legacyMarks})
+              AND request_id <> ?)
+      )
+    )
+  )`).join('\n');
   const movementCount = transfers.length * 2;
   let cursor;
   try { cursor = await reserveCursors(env, merchant, movementCount, now); }
   catch (_) { return json({ error: 'cursor-failed' }, 503); }
   const movements = [];
   const movementStatements = [];
+  const hasCostRate = await inventoryHasColumn(env, 'unit_cost_rate');
   for (const transfer of transfers) {
     for (const direction of ['out', 'in']) {
       const isOut = direction === 'out';
@@ -419,18 +481,30 @@ async function confirmCommand(env, body, merchant, id, idempotencyKey, current, 
         },
       };
       movements.push(movement);
+      const columns = hasCostRate
+        ? `(id, merchant, item_id, variant_id, location_id, qty_milli, reason,
+             unit_cost_cents, unit_cost_rate, currency, ref_type, ref_id, note, actor, occurred_ts,
+             srv_ts, reversal_of, meta, created_ts)`
+        : `(id, merchant, item_id, variant_id, location_id, qty_milli, reason,
+             unit_cost_cents, currency, ref_type, ref_id, note, actor, occurred_ts,
+             srv_ts, reversal_of, meta, created_ts)`;
+      const values = hasCostRate
+        ? [movement.id, merchant, movement.itemId, movement.variantId, movement.locationId,
+          Math.round(movement.qty * 1000), movement.reason, Math.round(movement.unitCost * 100),
+          Math.round(movement.unitCost * 10000), movement.currency, movement.refType, movement.refId, movement.note,
+          movement.actor, movement.occurredTs, movement.cursor, movement.reversalOf, JSON.stringify(movement.meta), now]
+        : [movement.id, merchant, movement.itemId, movement.variantId, movement.locationId,
+          Math.round(movement.qty * 1000), movement.reason, Math.round(movement.unitCost * 100), movement.currency,
+          movement.refType, movement.refId, movement.note, movement.actor, movement.occurredTs, movement.cursor,
+          movement.reversalOf, JSON.stringify(movement.meta), now];
       movementStatements.push(env.DB.prepare(
-        `INSERT OR IGNORE INTO inventory_movements
-          (id, merchant, item_id, variant_id, location_id, qty_milli, reason,
-           unit_cost_cents, currency, ref_type, ref_id, note, actor, occurred_ts,
-           srv_ts, reversal_of, meta, created_ts)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      ).bind(
-        movement.id, merchant, movement.itemId, movement.variantId, movement.locationId,
-        Math.round(movement.qty * 1000), movement.reason, Math.round(movement.unitCost * 100),
-        movement.currency, movement.refType, movement.refId, movement.note, movement.actor,
-        movement.occurredTs, movement.cursor, movement.reversalOf, JSON.stringify(movement.meta), now,
-      ));
+        `INSERT OR IGNORE INTO inventory_movements ${columns}
+         SELECT ${values.map(() => '?').join(', ')}
+          WHERE EXISTS (
+            SELECT 1 FROM ${REQUEST_TABLE}
+             WHERE merchant = ? AND id = ? AND last_command_key = ?
+          )`
+      ).bind(...values, merchant, id, idempotencyKey));
     }
   }
   const updateRequest = env.DB.prepare(
@@ -438,21 +512,67 @@ async function confirmCommand(env, body, merchant, id, idempotencyKey, current, 
         SET state = ?, cancelled = ?, revision = ?, last_command_key = ?,
             review_revision = ?, accepted_revision = ?, fulfilment_method = ?, delivery_started_ts = ?,
             disputed = ?, updated_ts = ?, submitted_ts = ?, closed_ts = ?
-      WHERE merchant = ? AND id = ? AND revision = ?`
+      WHERE merchant = ? AND id = ? AND revision = ?
+        ${reservationGuard}`
   ).bind(
     next.request.state, next.request.cancelled ? 1 : 0, next.request.revision, idempotencyKey,
     next.request.reviewRevision || 0, next.request.acceptedRevision || 0,
     next.request.fulfilmentMethod || 'pickup', next.request.deliveryStartedTs || null,
     next.request.disputed ? 1 : 0, now, next.request.submittedTs || null,
     next.request.closedTs || null, merchant, id, expectedRevision,
+    ...transfers.flatMap((transfer) => [
+      merchant, id, transfer.index, transfer.itemId, sourceLocation, transfer.deltaMilli,
+      merchant, id, transfer.index, transfer.itemId, sourceLocation,
+      transfer.deltaMilli, merchant, transfer.itemId, ...legacyLocations,
+      merchant, transfer.itemId, ...legacyLocations, id,
+    ]),
   );
-  const statements = [...movementStatements, updateRequest];
+  const statements = [updateRequest, ...movementStatements];
   next.lines.forEach((line, index) => statements.push(env.DB.prepare(
     `UPDATE ${LINE_TABLE} SET qty_received = ?
       WHERE merchant = ? AND request_id = ? AND line_no = ?
         AND EXISTS (SELECT 1 FROM ${REQUEST_TABLE}
                     WHERE merchant = ? AND id = ? AND last_command_key = ?)`
   ).bind(line.qtyReceived, merchant, id, index, merchant, id, idempotencyKey)));
+  for (const transfer of transfers) {
+    /* Materialise a legacy hold only after the request CAS has won. The
+     * following decrement/delete consumes it in this same atomic batch; it is
+     * never a free-standing reservation that can overbook stock. */
+    statements.push(env.DB.prepare(
+      `INSERT OR IGNORE INTO inventory_request_reservations
+        (merchant, request_id, line_no, item_id, location_id, qty_milli, review_revision, created_ts)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?
+        WHERE EXISTS (SELECT 1 FROM ${REQUEST_TABLE}
+                      WHERE merchant = ? AND id = ? AND last_command_key = ?)
+          AND NOT EXISTS (
+            SELECT 1 FROM inventory_request_reservations
+             WHERE merchant = ? AND request_id = ? AND line_no = ? AND item_id = ?
+               AND location_id = ?
+          )`
+    ).bind(
+      merchant, id, transfer.index, transfer.itemId, sourceLocation, transfer.deltaMilli,
+      current.request.reviewRevision, now, merchant, id, idempotencyKey,
+      merchant, id, transfer.index, transfer.itemId, sourceLocation,
+    ));
+    statements.push(env.DB.prepare(
+      `UPDATE inventory_request_reservations
+          SET qty_milli = qty_milli - ?, review_revision = ?, created_ts = ?
+        WHERE merchant = ? AND request_id = ? AND line_no = ? AND item_id = ?
+          AND location_id = ? AND qty_milli >= ?
+          AND EXISTS (SELECT 1 FROM ${REQUEST_TABLE}
+                      WHERE merchant = ? AND id = ? AND last_command_key = ?)`
+    ).bind(
+      transfer.deltaMilli, current.request.reviewRevision, now,
+      merchant, id, transfer.index, transfer.itemId, sourceLocation, transfer.deltaMilli,
+      merchant, id, idempotencyKey,
+    ));
+  }
+  statements.push(env.DB.prepare(
+    `DELETE FROM inventory_request_reservations
+      WHERE merchant = ? AND request_id = ? AND qty_milli <= 0
+        AND EXISTS (SELECT 1 FROM ${REQUEST_TABLE}
+                   WHERE merchant = ? AND id = ? AND last_command_key = ?)`
+  ).bind(merchant, id, merchant, id, idempotencyKey));
   statements.push(env.DB.prepare(
     `INSERT OR IGNORE INTO ${EVENT_TABLE}
       (merchant, id, request_id, revision, event, idempotency_key, actor_id, actor_name, payload, ts)
@@ -465,10 +585,15 @@ async function confirmCommand(env, body, merchant, id, idempotencyKey, current, 
   let results;
   try { results = await env.DB.batch(statements); }
   catch (_) { return json({ error: 'write-failed' }, 503); }
-  const requestResult = results[movementStatements.length];
+  const requestResult = results[0];
   if (!(Number(requestResult && requestResult.meta && requestResult.meta.changes) > 0)) {
     const replay = await replayFor(env, merchant, idempotencyKey);
-    return replay ? json({ ok: true, replayed: true, ...replay }) : json({ error: 'stale' }, 409);
+    if (replay) return json({ ok: true, replayed: true, ...replay });
+    const latest = await loadRequest(env, merchant, id);
+    if (latest && latest.request.revision === expectedRevision) {
+      return json({ error: 'reservation-required', action: 'review', revision: expectedRevision }, 409);
+    }
+    return json({ error: 'stale' }, 409);
   }
   const stored = await loadRequest(env, merchant, id);
   return json({ ok: true, transferRef, movements, ...stored });
@@ -555,6 +680,33 @@ async function command(request, env, body, merchant, action, idempotencyKey) {
     line.substituteFor, line.substituteUnit, JSON.stringify(line.substituteConversionSnapshot || {}),
     line.substituteReason, line.note, merchant, id, index, merchant, id, idempotencyKey,
   )));
+  if (action === 'review' || action === 'cancel') {
+    /* The ATP check and this replacement are one D1 batch. Holds are therefore
+     * visible to the next request before it can pass its own guarded UPDATE. */
+    statements.push(env.DB.prepare(
+      `DELETE FROM inventory_request_reservations
+        WHERE merchant = ? AND request_id = ?
+          AND EXISTS (SELECT 1 FROM ${REQUEST_TABLE}
+                      WHERE merchant = ? AND id = ? AND last_command_key = ?)`
+    ).bind(merchant, id, merchant, id, idempotencyKey));
+    if (action === 'review') {
+      const sourceLocation = context.economat && context.economat.locationId;
+      next.lines.forEach((line, index) => {
+        const qtyMilli = Math.max(0,
+          (approvedBaseMilli(line) || 0) - (approvedBaseMilli(line, 'qtyReceived') || 0));
+        const itemId = fulfilmentItemId(line);
+        if (!sourceLocation || !qtyMilli || !itemId) return;
+        statements.push(env.DB.prepare(
+          `INSERT INTO inventory_request_reservations
+            (merchant, request_id, line_no, item_id, location_id, qty_milli, review_revision, created_ts)
+           SELECT ?, ?, ?, ?, ?, ?, ?, ?
+            WHERE EXISTS (SELECT 1 FROM ${REQUEST_TABLE}
+                          WHERE merchant = ? AND id = ? AND last_command_key = ?)`
+        ).bind(merchant, id, index, itemId, sourceLocation, qtyMilli, next.request.reviewRevision, now,
+          merchant, id, idempotencyKey));
+      });
+    }
+  }
   statements.push(env.DB.prepare(
     `INSERT OR IGNORE INTO ${EVENT_TABLE}
       (merchant, id, request_id, revision, event, idempotency_key, actor_id, actor_name, payload, ts)

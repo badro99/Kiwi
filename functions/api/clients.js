@@ -44,7 +44,44 @@ import { tenantFor } from './_private.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const int = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
+const money = (v, max = 1e9) => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(max, Math.round(n * 100) / 100));
+};
 const PAGE = 500;
+
+async function ensurePurchaseEvents(env) {
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS client_purchase_events (
+    merchant TEXT NOT NULL,
+    ref TEXT NOT NULL,
+    client_id TEXT NOT NULL,
+    amount INTEGER NOT NULL DEFAULT 0,
+    points INTEGER NOT NULL DEFAULT 0,
+    stamps INTEGER NOT NULL DEFAULT 0,
+    visits INTEGER NOT NULL DEFAULT 1,
+    created_ts INTEGER NOT NULL,
+    srv_ts INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (merchant, ref)
+  )`).run();
+  try { await env.DB.prepare('ALTER TABLE client_purchase_events ADD COLUMN srv_ts INTEGER NOT NULL DEFAULT 0').run(); }
+  catch (_) {}
+}
+
+async function ensureRewardEvents(env) {
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS client_reward_events (
+    merchant TEXT NOT NULL,
+    ref TEXT NOT NULL,
+    client_id TEXT NOT NULL,
+    points_delta INTEGER NOT NULL DEFAULT 0,
+    stamps_delta INTEGER NOT NULL DEFAULT 0,
+    created_ts INTEGER NOT NULL,
+    srv_ts INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (merchant, ref)
+  )`).run();
+  try { await env.DB.prepare('ALTER TABLE client_reward_events ADD COLUMN srv_ts INTEGER NOT NULL DEFAULT 0').run(); }
+  catch (_) {}
+}
 
 function hospitalityJson(value) {
   const h = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -79,7 +116,10 @@ function sanitize(raw) {
     points: int(raw && raw.points, 1e9),
     stamps: int(raw && raw.stamps, 1e6),
     visits: int(raw && raw.visits, 1e6),
-    spend: int(raw && raw.spend, 1e10),
+    // SQLite's INTEGER affinity stores a fractional JS number as REAL when it
+    // cannot represent it as an integer. Keep the legacy column for migration
+    // compatibility, but never round a legitimate centime away at the edge.
+    spend: money(raw && raw.spend, 1e10),
     consent: (raw && raw.consent) ? 1 : 0,
     consent_email: (raw && raw.consentEmail) ? 1 : 0,
     source: str(raw && raw.source, 24) || 'caisse',
@@ -121,6 +161,39 @@ export async function nextSrvTs(env, merchant) {
   return now;
 }
 
+async function ensureClientSyncSequence(env) {
+  await env.DB.prepare(
+    'CREATE TABLE IF NOT EXISTS client_sync_sequences (merchant TEXT PRIMARY KEY, last_ts INTEGER NOT NULL)'
+  ).run();
+}
+
+/* Event writes must allocate the cursor INSIDE their balance/event batch. A
+ * cursor reserved before that batch can be overtaken by another till, then an
+ * older delayed write can move the client row backwards. The two statements
+ * below are deliberately first in the batch; later statements read their
+ * committed-in-batch value through a scalar subquery. */
+function clientCursorStatements(env, merchant, now) {
+  return [
+    env.DB.prepare(
+      `INSERT OR IGNORE INTO client_sync_sequences (merchant, last_ts)
+       SELECT ?, COALESCE(MAX(srv_ts), 0) FROM clients WHERE merchant = ?`
+    ).bind(merchant, merchant),
+    env.DB.prepare(
+      `UPDATE client_sync_sequences
+          SET last_ts = CASE
+            WHEN last_ts >= MAX(?, COALESCE((SELECT MAX(srv_ts) FROM clients WHERE merchant = ?), 0))
+              THEN last_ts + 1
+            ELSE MAX(?, COALESCE((SELECT MAX(srv_ts) FROM clients WHERE merchant = ?), 0)) + 1
+          END
+        WHERE merchant = ?`
+    ).bind(now, merchant, now, merchant, merchant),
+  ];
+}
+
+function clientCursorSql() {
+  return '(SELECT last_ts FROM client_sync_sequences WHERE merchant = ?)';
+}
+
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -148,18 +221,185 @@ export async function onRequestGet(context) {
     let cursor = since;
     rows.forEach((r) => { if (r.srv_ts > cursor) cursor = r.srv_ts; });
 
+    const pageEventRefs = async (table) => {
+      if (!rows.length) return [];
+      /* D1 caps bound parameters at 100. Bind the whole page map once as JSON
+       * and join against it, so a 500-row page cannot turn a read failure into
+       * an empty acknowledgement set. The upper bound is the row cursor that
+       * was actually returned, not the moving merchant-wide event stream. */
+      const page = JSON.stringify(rows.map((row) => ({
+        id: String(row.id), srvTs: Number(row.srv_ts) || 0,
+      })));
+      const eventRows = await env.DB.prepare(
+        `WITH page AS (
+           SELECT json_extract(value, '$.id') AS client_id,
+                  CAST(json_extract(value, '$.srvTs') AS INTEGER) AS row_srv_ts
+             FROM json_each(?)
+         )
+         SELECT event.client_id, event.ref
+           FROM ${table} AS event
+           JOIN page ON page.client_id = event.client_id
+          WHERE event.merchant = ?
+            AND event.srv_ts > ?
+            AND event.srv_ts <= page.row_srv_ts`
+      ).bind(page, merchant, since).all();
+      return (eventRows && eventRows.results) || [];
+    };
+
+    const refs = await pageEventRefs('client_purchase_events');
+    const refsByClient = new Map();
+    refs.forEach((row) => {
+      const list = refsByClient.get(row.client_id) || [];
+      list.push(row.ref); refsByClient.set(row.client_id, list);
+    });
+
+    const rewardRefs = await pageEventRefs('client_reward_events');
+    const rewardRefsByClient = new Map();
+    rewardRefs.forEach((row) => {
+      const list = rewardRefsByClient.get(row.client_id) || [];
+      list.push(row.ref); rewardRefsByClient.set(row.client_id, list);
+    });
+
     return json({
       merchant,
-      clients: rows,
+      clients: rows.map((row) => ({ ...row,
+        purchase_refs: refsByClient.get(row.id) || [],
+        reward_refs: rewardRefsByClient.get(row.id) || [],
+      })),
       cursor,
       // Le client rappelle tant que `more` est vrai : un carnet de 2 000 fiches
       // sur un navigateur neuf ne doit pas s'arrêter à la première page.
       more: rows.length === PAGE,
     });
   } catch (_) {
-    // Table absente (migration pas passée) → neutre. Le carnet local suffit.
-    return json({ merchant, clients: [], cursor: since, unmigrated: true });
+    /* A row page without its event acknowledgements is not a valid sync
+     * response: advancing the client cursor would strand pending purchases or
+     * redemptions. Missing legacy tables and reference-query failures therefore
+     * stay explicit and retryable; the client must not merge a partial page. */
+    return json({ error: 'sync-unavailable', merchant, cursor: since }, 503);
   }
+}
+
+async function applyPurchase(env, merchant, raw) {
+  const purchase = raw && typeof raw === 'object' ? raw : {};
+  const clientId = str(purchase.clientId || purchase.client_id, 64);
+  const ref = str(purchase.ref, 120).replace(/[^A-Za-z0-9:_-]/g, '');
+  const amount = money(purchase.amount, 1e9);
+  if (!clientId || !ref) return json({ error: 'client-and-ref-required' }, 400);
+  await ensurePurchaseEvents(env);
+  const previous = await env.DB.prepare(
+    'SELECT client_id, points, stamps, amount FROM client_purchase_events WHERE merchant = ? AND ref = ?'
+  ).bind(merchant, ref).first();
+  if (previous) {
+    if (previous.client_id !== clientId) return json({ error: 'ref-conflict' }, 409);
+    if (Math.round(Number(previous.amount || 0) * 100) !== Math.round(amount * 100)) {
+      return json({ error: 'ref-conflict' }, 409);
+    }
+    return json({ ok: true, replayed: true, points: Number(previous.points || 0), stamps: Number(previous.stamps || 0) });
+  }
+  const client = await env.DB.prepare(
+    'SELECT id FROM clients WHERE merchant = ? AND id = ? AND deleted = 0'
+  ).bind(merchant, clientId).first();
+  if (!client) return json({ error: 'client-not-found' }, 404);
+  const cfgRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'fidelity'")
+    .bind(merchant).first();
+  const cfg = (() => { try { return JSON.parse(cfgRow && cfgRow.data || '{}') || {}; } catch (_) { return {}; } })();
+  const points = cfg.model === 'amount' || !cfg.model
+    ? Math.round(amount * Math.max(0, Number(cfg.amount && cfg.amount.perMad) || 1)) : 0;
+  const stamps = cfg.model === 'visit' || cfg.model === 'product' ? 1 : 0;
+  const now = Date.now();
+  if (!env.DB || typeof env.DB.batch !== 'function') return json({ error: 'atomic-write-required' }, 503);
+  try { await ensureClientSyncSequence(env); } catch (_) { return json({ error: 'atomic-write-required' }, 503); }
+  const cursor = clientCursorSql();
+  const results = await env.DB.batch([
+    ...clientCursorStatements(env, merchant, now),
+    env.DB.prepare(`UPDATE clients SET points = points + ?, stamps = stamps + ?,
+      visits = visits + 1, spend = spend + ?, first_seen = CASE WHEN first_seen > 0 THEN first_seen ELSE ? END,
+      last_seen = ?, updated_ts = ?, srv_ts = ${cursor}
+      WHERE merchant = ? AND id = ? AND deleted = 0
+        AND NOT EXISTS (SELECT 1 FROM client_purchase_events WHERE merchant = ? AND ref = ?)`)
+      .bind(points, stamps, amount, now, now, now, merchant, merchant, clientId, merchant, ref),
+    env.DB.prepare(`INSERT OR IGNORE INTO client_purchase_events
+      (merchant, ref, client_id, amount, points, stamps, visits, created_ts, srv_ts)
+      SELECT ?, ?, ?, ?, ?, ?, 1, ?, ${cursor} WHERE changes() > 0`)
+      .bind(merchant, ref, clientId, amount, points, stamps, now, merchant),
+  ]);
+  if (!Number(results[2] && results[2].meta && results[2].meta.changes)) {
+    const replay = await env.DB.prepare(
+      'SELECT client_id, points, stamps FROM client_purchase_events WHERE merchant = ? AND ref = ?'
+    ).bind(merchant, ref).first();
+    if (replay && replay.client_id === clientId) {
+      return json({ ok: true, replayed: true, points: Number(replay.points || 0), stamps: Number(replay.stamps || 0) });
+    }
+    return json({ error: 'purchase-write-failed' }, 503);
+  }
+  if (!Number(results[3] && results[3].meta && results[3].meta.changes)) {
+    return json({ error: 'purchase-write-failed' }, 503);
+  }
+  return json({ ok: true, points, stamps, visits: 1, spend: amount });
+}
+
+async function applyRedemption(env, merchant, raw) {
+  const redemption = raw && typeof raw === 'object' ? raw : {};
+  const clientId = str(redemption.clientId || redemption.client_id, 64);
+  const ref = str(redemption.ref, 120).replace(/[^A-Za-z0-9:_-]/g, '');
+  if (!clientId || !ref) return json({ error: 'client-and-ref-required' }, 400);
+  await ensureRewardEvents(env);
+  const previous = await env.DB.prepare(
+    'SELECT client_id, points_delta, stamps_delta FROM client_reward_events WHERE merchant = ? AND ref = ?'
+  ).bind(merchant, ref).first();
+  if (previous) {
+    if (previous.client_id !== clientId) return json({ error: 'ref-conflict' }, 409);
+    return json({ ok: true, replayed: true, pointsDelta: Number(previous.points_delta || 0), stampsDelta: Number(previous.stamps_delta || 0) });
+  }
+  const client = await env.DB.prepare(
+    'SELECT points, stamps FROM clients WHERE merchant = ? AND id = ? AND deleted = 0'
+  ).bind(merchant, clientId).first();
+  if (!client) return json({ error: 'client-not-found' }, 404);
+  const cfgRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'fidelity'")
+    .bind(merchant).first();
+  const cfg = (() => { try { return JSON.parse(cfgRow && cfgRow.data || '{}') || {}; } catch (_) { return {}; } })();
+  let pointsDelta = 0;
+  let stampsDelta = 0;
+  if (cfg.model === 'amount' || !cfg.model) {
+    pointsDelta = Math.max(1, Math.round(Number(cfg.amount && cfg.amount.threshold) || 100));
+  } else {
+    stampsDelta = Math.max(1, Math.round(Number(
+      cfg.model === 'product' ? cfg.product && cfg.product.target : cfg.visit && cfg.visit.target
+    ) || 10));
+  }
+  if (Number(client.points || 0) < pointsDelta || Number(client.stamps || 0) < stampsDelta) {
+    return json({ error: 'reward-not-ready' }, 409);
+  }
+  const now = Date.now();
+  if (!env.DB || typeof env.DB.batch !== 'function') return json({ error: 'atomic-write-required' }, 503);
+  try { await ensureClientSyncSequence(env); } catch (_) { return json({ error: 'atomic-write-required' }, 503); }
+  const cursor = clientCursorSql();
+  const results = await env.DB.batch([
+    ...clientCursorStatements(env, merchant, now),
+    env.DB.prepare(`UPDATE clients SET points = points - ?, stamps = stamps - ?, updated_ts = ?, srv_ts = ${cursor}
+      WHERE merchant = ? AND id = ? AND deleted = 0
+        AND points >= ? AND stamps >= ?
+        AND NOT EXISTS (SELECT 1 FROM client_reward_events WHERE merchant = ? AND ref = ?)`)
+      .bind(pointsDelta, stampsDelta, now, merchant, merchant, clientId, pointsDelta, stampsDelta, merchant, ref),
+    env.DB.prepare(`INSERT OR IGNORE INTO client_reward_events
+      (merchant, ref, client_id, points_delta, stamps_delta, created_ts, srv_ts)
+      SELECT ?, ?, ?, ?, ?, ?, ${cursor} WHERE changes() > 0`)
+      .bind(merchant, ref, clientId, pointsDelta, stampsDelta, now, merchant),
+  ]);
+  if (!Number(results[2] && results[2].meta && results[2].meta.changes)) {
+    const replay = await env.DB.prepare(
+      'SELECT client_id, points_delta, stamps_delta FROM client_reward_events WHERE merchant = ? AND ref = ?'
+    ).bind(merchant, ref).first();
+    if (replay && replay.client_id === clientId) {
+      return json({ ok: true, replayed: true, pointsDelta: Number(replay.points_delta || 0), stampsDelta: Number(replay.stamps_delta || 0) });
+    }
+    return json({ error: 'reward-write-failed' }, 503);
+  }
+  if (!Number(results[3] && results[3].meta && results[3].meta.changes)) {
+    return json({ error: 'reward-write-failed' }, 503);
+  }
+  return json({ ok: true, pointsDelta, stampsDelta });
 }
 
 export async function onRequestPost(context) {
@@ -172,8 +412,30 @@ export async function onRequestPost(context) {
   const merchant = await tenantFor(request, env, body && body.merchant, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
+  if (body && body.redemption) {
+    try { return await applyRedemption(env, merchant, body.redemption); }
+    catch (_) { return json({ error: 'reward-write-failed' }, 503); }
+  }
+  if (body && body.purchase) {
+    try { return await applyPurchase(env, merchant, body.purchase); }
+    catch (_) { return json({ error: 'purchase-write-failed' }, 503); }
+  }
+
   const c = sanitize(body);
   if (!c.id) return json({ error: 'no-id' }, 400);
+
+  /* A normal caisse snapshot is a profile transport, not a loyalty write.
+   * An offline browser can have already applied a purchase locally before its
+   * initial client-create request reaches D1; accepting those optimistic
+   * totals and then applying the additive purchase event would count it twice.
+   * Deliberate data imports retain their supplied opening totals through the
+   * explicit `financialImport` flag (or the existing `source: 'import'` label),
+   * while every ordinary sync-created row starts from ledger-derived zeroes. */
+  const preserveImportedTotals = body && body.financialImport === true || c.source === 'import';
+  const initialPoints = preserveImportedTotals ? c.points : 0;
+  const initialStamps = preserveImportedTotals ? c.stamps : 0;
+  const initialVisits = preserveImportedTotals ? c.visits : 0;
+  const initialSpend = preserveImportedTotals ? c.spend : 0;
 
   const srv = await nextSrvTs(env, merchant);
 
@@ -188,8 +450,6 @@ export async function onRequestPost(context) {
          name = excluded.name, phone = excluded.phone, email = excluded.email,
          birthday = excluded.birthday, gender = excluded.gender, city = excluded.city,
          address = excluded.address, notes = excluded.notes, hospitality = excluded.hospitality,
-         points = excluded.points,
-         stamps = excluded.stamps, visits = excluded.visits, spend = excluded.spend,
          consent = excluded.consent, consent_email = excluded.consent_email,
          source = excluded.source, first_seen = excluded.first_seen,
          last_seen = excluded.last_seen, updated_ts = excluded.updated_ts,
@@ -197,7 +457,7 @@ export async function onRequestPost(context) {
        WHERE excluded.updated_ts >= clients.updated_ts`
     ).bind(
       merchant, c.id, c.name, c.phone, c.email, c.birthday, c.gender, c.city,
-      c.address, c.notes, c.hospitality, c.points, c.stamps, c.visits, c.spend, c.consent,
+      c.address, c.notes, c.hospitality, initialPoints, initialStamps, initialVisits, initialSpend, c.consent,
       c.consent_email, c.source, c.first_seen, c.last_seen, c.updated_ts, srv
     ).run();
   } catch (_) {

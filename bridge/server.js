@@ -42,13 +42,14 @@
 
 const http = require('http');
 const net = require('net');
+const crypto = require('crypto');
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const { execFile, spawn } = require('child_process');
 
 const NAME = 'kiwi-printer-bridge';
-const VERSION = '1.4.4';
+const VERSION = '1.4.5';
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.KIWI_BRIDGE_PORT) || 9110; // bridge's own port
 const DEFAULT_PRINTER_PORT = 9100;                          // RAW/JetDirect
@@ -74,6 +75,121 @@ function readConfig() {
 function writeConfig(cfg) {
   try { fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), { mode: 0o600 }); return true; }
   catch (e) { console.error('Impossible d\'écrire la configuration du pont :', (e && e.message) || e); return false; }
+}
+
+/* The loopback listener is not an authorization boundary by itself: any local
+ * process, a DNS-rebinding page, or a browser page with a forged/missing CORS
+ * response could otherwise ask it to open an arbitrary TCP connection.  The
+ * capability is generated once per install and is only handed to a trusted
+ * Kiwi origin (or the bridge's own same-origin management page). */
+function bridgeCapability() {
+  const cfg = readConfig();
+  if (typeof cfg.capability === 'string' && /^kbc_[0-9a-f]{64}$/.test(cfg.capability)) return cfg.capability;
+  const capability = 'kbc_' + crypto.randomBytes(32).toString('hex');
+  cfg.capability = capability;
+  if (!writeConfig(cfg)) return '';
+  return capability;
+}
+
+function localOrigin(origin, host) {
+  if (!origin || !host) return false;
+  try {
+    const u = new URL(origin);
+    return (u.protocol === 'http:' && (u.hostname === '127.0.0.1' || u.hostname === 'localhost')
+      && u.port && Number(u.port) >= 9110 && Number(u.port) <= 9114
+      && String(host).replace(/^\[/, '').split(']')[0].split(':')[0] === u.hostname);
+  } catch (_) { return false; }
+}
+
+function trustedOrigin(origin, host, req) {
+  if (ALLOW_ORIGINS.indexOf(origin) !== -1 || localOrigin(origin, host)) return true;
+  /* Same-origin fetches from the bridge's local page normally omit Origin but
+   * carry Fetch Metadata. Do not treat an arbitrary no-Origin CLI request as a
+   * browser page: command routes still require the capability below. */
+  if (!origin && req && (req.headers['sec-fetch-site'] === 'same-origin' || req.headers.referer)) {
+    const ref = String(req.headers.referer || '');
+    return localOrigin(ref, host);
+  }
+  return false;
+}
+
+function localHost(host, port) {
+  const h = String(host || '').replace(/^\[/, '').replace(/\](:\d+)?$/, '').split(':')[0].toLowerCase();
+  if (h !== '127.0.0.1' && h !== 'localhost') return false;
+  const p = String(host || '').match(/:(\d+)$/);
+  return !p || Number(p[1]) === Number(port);
+}
+
+function requestCapability(req) {
+  const value = String(req.headers['x-kiwi-bridge-capability'] || '').trim();
+  return /^kbc_[0-9a-f]{64}$/.test(value) ? value : '';
+}
+
+function hasCapability(req) {
+  const expected = bridgeCapability();
+  return !!expected && requestCapability(req) === expected;
+}
+
+function rejectRequest(res, status, error, origin) {
+  sendJson(res, status, { ok: false, error }, origin);
+}
+
+function isPrivatePrinterHost(host) {
+  const h = String(host || '').trim().toLowerCase();
+  const p = h.split('.').map(Number);
+  if (p.length === 4 && p.every((n) => Number.isInteger(n) && n >= 0 && n <= 255)) {
+    return p[0] === 10 || p[0] === 127 || (p[0] === 169 && p[1] === 254)
+      || (p[0] === 172 && p[1] >= 16 && p[1] <= 31)
+      || (p[0] === 192 && p[1] === 168);
+  }
+  return /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:local|lan)$/i.test(h);
+}
+
+function cleanBridgeTarget(input) {
+  const t = input && typeof input === 'object' ? input : {};
+  if (t.osPrinter) {
+    const name = String(t.osPrinter).replace(/[\x00-\x1f]/g, '').trim().slice(0, 120);
+    return name ? { osPrinter: name } : null;
+  }
+  const ip = String(t.ip || '').trim().slice(0, 253);
+  const port = Number(t.port) || DEFAULT_PRINTER_PORT;
+  if (!isPrivatePrinterHost(ip) || !Number.isInteger(port) || port < 1 || port > 65535) return null;
+  return { ip, port };
+}
+
+function targetKey(target) {
+  return target && target.osPrinter ? 'os:' + target.osPrinter : target && target.ip ? 'tcp:' + target.ip + ':' + target.port : '';
+}
+
+function configuredTargets() {
+  const cfg = readConfig();
+  const raw = Array.isArray(cfg.allowedTargets) ? cfg.allowedTargets : [];
+  const targets = raw.map(cleanBridgeTarget).filter(Boolean);
+  /* Existing bridge installs have a remembered warm target but no allowlist.
+   * Treat only that exact, previously used target as the one-time migration
+   * path; never turn a new request into an implicit allow. */
+  if (!targets.length && cfg.warmPrinter) {
+    const legacy = cleanBridgeTarget(cfg.warmPrinter);
+    if (legacy) targets.push(legacy);
+  }
+  return targets;
+}
+
+function targetAllowed(target) {
+  const key = targetKey(target);
+  return !!key && configuredTargets().some((saved) => targetKey(saved) === key);
+}
+
+function saveConfiguredTarget(input) {
+  const target = cleanBridgeTarget(input);
+  if (!target) return { ok: false, error: 'printer-target-not-local' };
+  const cfg = readConfig();
+  const targets = (Array.isArray(cfg.allowedTargets) ? cfg.allowedTargets : [])
+    .map(cleanBridgeTarget).filter(Boolean);
+  if (!targets.some((saved) => targetKey(saved) === targetKey(target))) targets.push(target);
+  cfg.allowedTargets = targets.slice(-32);
+  if (!writeConfig(cfg)) return { ok: false, error: 'bridge-config-unwritable' };
+  return { ok: true, target };
 }
 
 /* Une requête JSON minimale, http ou https selon l'URL (les tests pointent
@@ -117,6 +233,63 @@ const relay = {
   failed: 0,
 };
 function relayPaired() { return !!(relay.cfg && relay.cfg.relay && relay.cfg.relay.token); }
+function relayStateWrite(mutator) {
+  const cfg = readConfig();
+  if (!cfg.relay || typeof cfg.relay !== 'object') return false;
+  mutator(cfg.relay);
+  if (!writeConfig(cfg)) return false;
+  relay.cfg = cfg;
+  return true;
+}
+function relayPendingAcks() {
+  const r = (relay.cfg && relay.cfg.relay) || {};
+  return Array.isArray(r.pendingAcks) ? r.pendingAcks : [];
+}
+function relayInFlight() {
+  const r = (relay.cfg && relay.cfg.relay) || {};
+  return Array.isArray(r.inFlight) ? r.inFlight : [];
+}
+function rememberRelayInFlight(job) {
+  const current = relayInFlight().filter((item) => item && item.id !== job.id);
+  current.push({ id: String(job.id), at: Date.now() });
+  return relayStateWrite((r) => { r.inFlight = current.slice(-16); });
+}
+function rememberRelayAck(ack) {
+  const current = relayPendingAcks().filter((item) => item && item.id !== ack.id);
+  current.push(ack);
+  return relayStateWrite((r) => { r.pendingAcks = current.slice(-32); });
+}
+function forgetRelayAck(id) {
+  const current = relayPendingAcks().filter((item) => item && item.id !== id);
+  return relayStateWrite((r) => { r.pendingAcks = current; });
+}
+function forgetRelayInFlight(id) {
+  const current = relayInFlight().filter((item) => item && item.id !== id);
+  return relayStateWrite((r) => { r.inFlight = current; });
+}
+function recoverRelayInFlight() {
+  const flights = relayInFlight();
+  if (!flights.length || !relayPaired()) return;
+  const pending = relayPendingAcks();
+  const merged = pending.slice();
+  flights.forEach((flight) => {
+    if (!flight || !flight.id || merged.some((ack) => ack.id === flight.id)) return;
+    /* A process restart after the printer write but before the ACK has no way
+     * to know whether paper came out. Mark it uncertain at the server; never
+     * turn a sent-but-unacknowledged ticket into a blind duplicate. */
+    merged.push({ action: 'ack', id: flight.id, ok: false, outcome: 'uncertain', error: 'output-unknown-after-bridge-restart' });
+  });
+  relayStateWrite((r) => { r.pendingAcks = merged.slice(-32); r.inFlight = []; });
+}
+async function flushRelayAcks(auth) {
+  for (const ack of relayPendingAcks().slice()) {
+    const r = await httpJson('POST', RELAY_URL + '/api/print/jobs', auth, ack);
+    if (r.status === 200) {
+      forgetRelayAck(ack.id);
+      forgetRelayInFlight(ack.id);
+    }
+  }
+}
 function relayStatus() {
   const r = (relay.cfg && relay.cfg.relay) || {};
   return {
@@ -163,15 +336,21 @@ function relayUnpair() {
 async function relayPrintJob(job) {
   const t = job.target || {};
   if (job.kind === 'wake') {
-    if (t.ip) {
-      warmPrinterNow(String(t.ip), Number(t.port) || DEFAULT_PRINTER_PORT).catch(() => {});
+    const wakeTarget = cleanBridgeTarget(t);
+    if (!wakeTarget || !wakeTarget.ip) throw new Error(!wakeTarget ? 'printer-target-not-local' : 'printer-target-not-saved');
+    if (!targetAllowed(wakeTarget)) throw new Error('printer-target-not-saved');
+    if (wakeTarget.ip) {
+      warmPrinterNow(wakeTarget.ip, wakeTarget.port).catch(() => {});
     }
     return 0;
   }
   const buf = Buffer.from(String(job.dataB64 || ''), 'base64');
   if (!buf.length) throw new Error('ticket vide');
-  if (t.osPrinter) return sendToOsPrinter(String(t.osPrinter), buf);
-  if (t.ip) return sendToPrinter(String(t.ip), Number(t.port) || DEFAULT_PRINTER_PORT, buf);
+  const target = cleanBridgeTarget(t);
+  if (!target) throw new Error('printer-target-not-local');
+  if (!targetAllowed(target)) throw new Error('printer-target-not-saved');
+  if (target.osPrinter) return sendToOsPrinter(target.osPrinter, buf);
+  if (target.ip) return sendToPrinter(target.ip, target.port, buf);
   throw new Error('cible inconnue');
 }
 
@@ -214,20 +393,30 @@ async function relayTick() {
     } else {
       if (!relay.online) relayLog('connecté à ' + RELAY_URL + (relay.lastError ? ' (rétabli)' : ''));
       relay.online = true; relay.lastError = ''; relayBackoff = RELAY_POLL_MS;
+      await flushRelayAcks(auth);
       const jobs = Array.isArray(r.json.jobs) ? r.json.jobs : [];
       for (const job of jobs) {
+        if (!rememberRelayInFlight(job)) {
+          relay.lastError = 'impossible de persister l’état du ticket · impression suspendue';
+          break;
+        }
         let ack;
         try {
           const bytes = await relayPrintJob(job);
           relay.printed++; relay.lastJobTs = Date.now();
-          ack = Object.assign({ action: 'ack', id: job.id, ok: true, bytes }, lastPrintTiming ? { timing: lastPrintTiming } : {});
+          ack = Object.assign({ action: 'ack', id: job.id, ok: true, outcome: 'printed', bytes }, lastPrintTiming ? { timing: lastPrintTiming } : {});
           relayLog('imprimé ' + (job.kind || 'ticket') + ' (' + bytes + ' o) → ' + (job.target && (job.target.ip || job.target.osPrinter)));
         } catch (e) {
           relay.failed++;
-          ack = Object.assign({ action: 'ack', id: job.id, ok: false, error: String((e && e.message) || e).slice(0, 300) }, lastPrintTiming ? { timing: lastPrintTiming } : {});
+          ack = Object.assign({ action: 'ack', id: job.id, ok: false, outcome: 'failed', error: String((e && e.message) || e).slice(0, 300) }, lastPrintTiming ? { timing: lastPrintTiming } : {});
+          relay.lastError = ack.error;
           relayLog('échec ' + (job.kind || 'ticket') + ' : ' + ack.error);
         }
-        await httpJson('POST', RELAY_URL + '/api/print/jobs', auth, ack);
+        if (!rememberRelayAck(ack)) {
+          relay.lastError = 'impossible de persister l’acquittement · ticket conservé en état incertain';
+          break;
+        }
+        await flushRelayAcks(auth);
       }
       next = Number(r.json.poll) > 0 ? Math.max(200, Math.min(5000, Number(r.json.poll))) : RELAY_POLL_MS;
     }
@@ -284,6 +473,8 @@ code{background:#efece5;padding:1px 6px;border-radius:6px}
 <script>
 (function(){
  var $=function(id){return document.getElementById(id)};
+ var capability='';
+ function headers(extra){var h=extra||{};if(capability)h['X-Kiwi-Bridge-Capability']=capability;return h}
  function ago(ts){if(!ts)return'·';var s=Math.round((Date.now()-ts)/1000);return s<2?'à l’instant':s<60?'il y a '+s+' s':'il y a '+Math.round(s/60)+' min'}
  function paint(j){
   $('v-ver').textContent=j.version||'';$('v-url').textContent=j.url||'';
@@ -296,16 +487,16 @@ code{background:#efece5;padding:1px 6px;border-radius:6px}
   $('f').querySelector('button.p').hidden=!!j.paired;
   $('st').className='card'+(j.paired&&j.online?' on':'');
  }
- function refresh(){fetch('/kiwi/relay',{cache:'no-store'}).then(function(r){return r.json()}).then(paint).catch(function(){})}
+ function refresh(){fetch('/kiwi/ping',{cache:'no-store'}).then(function(r){return r.json()}).then(function(p){capability=p.capability||'';return fetch('/kiwi/relay',{cache:'no-store',headers:headers({})}).then(function(r){return r.json()})}).then(paint).catch(function(){})}
  $('f').addEventListener('submit',function(e){e.preventDefault();var c=$('code').value.replace(/\\D/g,'');if(c.length!==6){$('msg').textContent='Le code fait 6 chiffres.';return}
   $('msg').className='note';$('msg').textContent='Vérification…';
-  fetch('/kiwi/relay/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c})}).then(function(r){return r.json()}).then(function(j){
+  fetch('/kiwi/relay/pair',{method:'POST',headers:headers({'Content-Type':'application/json'}),body:JSON.stringify({code:c})}).then(function(r){return r.json()}).then(function(j){
    if(j.ok){$('msg').className='note ok';$('msg').textContent='Pont associé au commerce « '+(j.merchant||'')+' ». Les tickets de l’iPad sortiront ici.';$('code').value=''}
    else{$('msg').className='note err';$('msg').textContent=j.error==='invalid_or_expired'?'Code invalide ou expiré · regénérez-le dans Kiwi.':j.error==='too_many_attempts'?'Trop d’essais · patientez quelques minutes.':j.error==='relay-not-provisioned'?'Le relais n’est pas encore activé côté Kiwi.':'Échec : '+(j.error||'inconnu')}
    refresh();
   }).catch(function(){$('msg').className='note err';$('msg').textContent='Le pont ne répond pas.'});
  });
- $('unpair').addEventListener('click',function(){if(!confirm('Dissocier ce pont du relais Kiwi ?'))return;fetch('/kiwi/relay/unpair',{method:'POST'}).then(refresh)});
+ $('unpair').addEventListener('click',function(){if(!confirm('Dissocier ce pont du relais Kiwi ?'))return;fetch('/kiwi/relay/unpair',{method:'POST',headers:headers({})}).then(refresh)});
  refresh();setInterval(refresh,2000);
 })();
 </script></html>`;
@@ -320,11 +511,11 @@ const ALLOW_ORIGINS = [
 ];
 
 function corsHeaders(origin) {
-  const allow = ALLOW_ORIGINS.indexOf(origin) !== -1 ? origin : ALLOW_ORIGINS[0];
+  if (ALLOW_ORIGINS.indexOf(origin) === -1 && !localOrigin(origin, '127.0.0.1:9110')) return {};
   return {
-    'Access-Control-Allow-Origin': allow,
+    'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Kiwi-Bridge-Capability',
     // Chrome Private Network Access: a public HTTPS page → loopback needs this.
     'Access-Control-Allow-Private-Network': 'true',
     Vary: 'Origin',
@@ -854,7 +1045,18 @@ const server = http.createServer(async (req, res) => {
   const origin = req.headers.origin || '';
   const url = (req.url || '').split('?')[0];
 
+  if (!localHost(req.headers.host, req.socket && req.socket.localPort)) {
+    rejectRequest(res, 400, 'invalid-host', origin);
+    return;
+  }
+  const trusted = trustedOrigin(origin, req.headers.host, req);
+  if (origin && !trusted) {
+    rejectRequest(res, 403, 'origin-not-allowed', origin);
+    return;
+  }
+
   if (req.method === 'OPTIONS') {
+    if (!trusted) { rejectRequest(res, 403, 'origin-not-allowed', origin); return; }
     res.writeHead(204, corsHeaders(origin));
     res.end();
     return;
@@ -863,6 +1065,8 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && url === '/kiwi/ping') {
     const rs = relayStatus();
     sendJson(res, 200, { ok: true, name: NAME, version: VERSION,
+      capabilityRequired: true,
+      capability: trusted ? bridgeCapability() : '',
       lastTiming: lastPrintTiming,
       relay: { paired: rs.paired, online: rs.online, merchant: rs.merchant, name: rs.name, bridgeId: rs.bridgeId } }, origin);
     return;
@@ -872,6 +1076,26 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && (url === '/' || url === '/index.html')) {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
     res.end(LOCAL_PAGE);
+    return;
+  }
+
+  /* Every command/management route after detection needs the per-install
+   * capability. This is intentionally a hard migration boundary: old clients
+   * receive a precise error and can refresh/reinstall the bridge rather than
+   * silently getting an unauthenticated printer socket. */
+  const protectedRoute = /^\/kiwi\/(?:relay(?:\/|$)|printers$|scan$|print$|wake$|targets$)/.test(url);
+  if (protectedRoute && !hasCapability(req)) {
+    rejectRequest(res, 401, 'bridge-capability-required', origin);
+    return;
+  }
+
+  if (req.method === 'POST' && url === '/kiwi/targets') {
+    let body;
+    try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}'); }
+    catch (_) { return rejectRequest(res, 400, 'bad-json', origin); }
+    if (String(body.action || 'save') !== 'save') return rejectRequest(res, 400, 'unknown-action', origin);
+    const saved = saveConfiguredTarget(body.target);
+    sendJson(res, saved.ok ? 200 : 422, saved, origin);
     return;
   }
   if (req.method === 'GET' && url === '/kiwi/relay') {
@@ -939,6 +1163,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (!dataB64) return sendJson(res, 400, { ok: false, error: 'data-required' }, origin);
 
+    const target = cleanBridgeTarget(printerName ? { osPrinter: printerName } : { ip: printerIp, port });
+    if (!target) return sendJson(res, 422, { ok: false, error: 'printer-target-not-local' }, origin);
+    if (!targetAllowed(target)) return sendJson(res, 409, { ok: false, error: 'printer-target-not-saved' }, origin);
+
     let buf;
     try { buf = Buffer.from(dataB64, 'base64'); }
     catch (_) { return sendJson(res, 400, { ok: false, error: 'bad-base64' }, origin); }
@@ -964,6 +1192,9 @@ const server = http.createServer(async (req, res) => {
     if (!printerIp) {
       return sendJson(res, 400, { ok: false, error: 'printer-ip-required' }, origin);
     }
+    const target = cleanBridgeTarget({ ip: printerIp, port });
+    if (!target) return sendJson(res, 422, { ok: false, error: 'printer-target-not-local' }, origin);
+    if (!targetAllowed(target)) return sendJson(res, 409, { ok: false, error: 'printer-target-not-saved' }, origin);
     warmPrinterNow(printerIp, port).catch(() => {});
     sendJson(res, 200, { ok: true, warm: true, waking: true, timing: lastPrintTiming }, origin);
     return;
@@ -1033,6 +1264,7 @@ function tryListen() {
     console.log(`Page du pont : http://${HOST}:${port}/`);
     resumePrinterWarm();
     if (relayPaired()) {
+      recoverRelayInFlight();
       relayLog('appairé au commerce « ' + relay.cfg.relay.merchant + ' » · connexion à ' + RELAY_URL + '…');
       relayStart();
     } else {

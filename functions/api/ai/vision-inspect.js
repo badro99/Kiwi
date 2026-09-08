@@ -8,6 +8,7 @@ import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { quotaOk, DAILY_CAPS } from './_quota.js';
 import { GATEWAY_OPTS, runAiWithGateway } from './_run.js';
+import { runWithPayloadFallback } from './_payload-fallback.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
 export const MODEL = '@cf/zai-org/glm-5.3-flash';
@@ -88,13 +89,7 @@ async function runVisionInspect(env, dataUrl, promptText) {
     top_p: TOP_P,
   };
 
-  try {
-    const res = await runAiWithGateway(env, MODEL, payload);
-    return { result: res, model: MODEL };
-  } catch (_) {
-    const res = await runAiWithGateway(env, FALLBACK_MODEL, payload);
-    return { result: res, model: FALLBACK_MODEL };
-  }
+  return runWithPayloadFallback(env, MODEL, payload, FALLBACK_MODEL);
 }
 
 export function validateVisionData(raw) {

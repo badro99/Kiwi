@@ -62,6 +62,10 @@ function makeDb(state) {
             const acc = (rows.accounts || {})[stmt.args[0]];
             return acc ? { business: acc } : null;
           }
+          if (q.startsWith('SELECT status, session_epoch FROM accounts')) {
+            const acc = (rows.accounts || {})[stmt.args[0]];
+            return acc ? { status: 'active', session_epoch: 0 } : null;
+          }
           return null;
         },
       };
@@ -194,6 +198,7 @@ function invoiceEnv(sale) {
           async run() { if (q.startsWith('INSERT OR IGNORE INTO cash_session_events')) written.push(stmt.args); return { success: true }; },
           async all() { return { results: chain }; },
           async first() {
+            if (q.startsWith('SELECT till_epoch FROM merchant_config')) return { till_epoch: 0 };
             if (q.includes("event_type = 'open'")) return { id: 'evt-open' };
             if (q.startsWith('SELECT id FROM cash_session_events')) return { id: 'evt-open' };
             return null;
@@ -431,6 +436,7 @@ function invoiceEnv(sale) {
               return { till_epoch: store[m] };
             }
             if (q.startsWith('SELECT business FROM accounts')) return { business: 'Café Amira' };
+            if (q.startsWith('SELECT status, session_epoch FROM accounts')) return { status: 'active', session_epoch: 0 };
             if (q.startsWith('SELECT account_id FROM merchant_config')) return { account_id: 'acc-1' };
             return null;
           },

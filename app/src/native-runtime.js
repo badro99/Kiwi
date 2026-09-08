@@ -8,6 +8,8 @@
   var haptics = plugins.Haptics, statusBar = plugins.StatusBar, keepAwake = plugins.KeepAwake, splashScreen = plugins.SplashScreen;
   var appearance = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
   var pairingKeys = ['kiwiPaired', 'kiwiPairedVenue', 'kiwiLiveMerchant', 'kiwiLive'];
+  var nativeIdentityKeys = pairingKeys.concat(['kiwiPairings']);
+  var NATIVE_REVOKED_FLAG = 'kiwi:native:identity-revoked:v1';
   root.classList.add('kiwi-native');
 
   /* Les rapports d'erreur (assets/err-reporter.js → POST /api/error) portent la
@@ -80,7 +82,26 @@
     return out.kiwiPaired === '1' && out.kiwiPairedVenue ? JSON.stringify(out) : '';
   }
   function savePairing() { var value = pairingSnapshot(); return secureSet('pairing-v1', value || null); }
+  function clearLocalPairingIdentity() {
+    try { nativeIdentityKeys.forEach(function (key) { localStorage.removeItem(key); }); } catch (_) {}
+    try { sessionStorage.removeItem('kiwiNativePairingRestored'); } catch (_) {}
+  }
+  function clearRevocationFence() {
+    try { localStorage.removeItem(NATIVE_REVOKED_FLAG); } catch (_) {}
+    try { window.__kiwiAccountRevoked = false; } catch (_) {}
+  }
+  function revokeIdentity() {
+    try { window.__kiwiAccountRevoked = true; } catch (_) {}
+    try { localStorage.setItem(NATIVE_REVOKED_FLAG, '1'); } catch (_) {}
+    clearLocalPairingIdentity();
+    /* This is intentionally only the secure pairing blob. Sales, queues and
+     * other offline evidence stay on-device for later recovery/export. */
+    return secureSet('pairing-v1', null);
+  }
   function restorePairing() {
+    var fenced = false;
+    try { fenced = window.__kiwiAccountRevoked === true || localStorage.getItem(NATIVE_REVOKED_FLAG) === '1'; } catch (_) {}
+    if (fenced) return revokeIdentity().then(function () { return false; });
     return secureGet('pairing-v1').then(function (raw) {
       if (!raw || pairingSnapshot()) return false;
       try {
@@ -91,6 +112,25 @@
         location.reload();
         return true;
       } catch (_) { return false; }
+    });
+  }
+  function commitPairingFromSurface(event) {
+    var snapshot = pairingSnapshot();
+    if (!snapshot) return Promise.resolve(false);
+    /* The shared pairing commit is the only production writer of these keys.
+     * Match its event to the freshly written venue before releasing a native
+     * revocation fence, then persist that exact snapshot first. A synthetic
+     * event cannot resurrect the old secure blob because revokeIdentity removed
+     * it and this path only clears the fence after secureSet succeeds. */
+    try {
+      var saved = JSON.parse(snapshot);
+      var detail = event && event.detail;
+      var venue = JSON.parse(saved.kiwiPairedVenue || 'null');
+      if (detail && detail.merchant && (!venue || venue.merchant !== detail.merchant)) return Promise.resolve(false);
+    } catch (_) { return Promise.resolve(false); }
+    return savePairing().then(function () {
+      clearRevocationFence();
+      return true;
     });
   }
   function hapticLight() { return call(haptics, 'impact', { style: 'LIGHT' }); }
@@ -504,6 +544,7 @@
     secureGet: secureGet,
     secureSet: secureSet,
     savePairing: savePairing,
+    revokeIdentity: revokeIdentity,
     hapticLight: hapticLight,
     checkBiometrics: checkBiometrics,
     authenticateBiometric: authenticateBiometric,
@@ -521,7 +562,8 @@
   });
   window.addEventListener('kiwi:native-haptic', function (event) { if (!event.detail || event.detail.kind === 'light') hapticLight(); else hapticNotice(event.detail.kind); });
   window.addEventListener('kiwi:toast', function (event) { if (event.detail && event.detail.type === 'danger') hapticNotice('danger'); });
-  document.addEventListener('kiwi-paired', savePairing);
+  document.addEventListener('kiwi-paired', commitPairingFromSurface);
+  window.addEventListener('kiwi:account-revoked', revokeIdentity);
   document.addEventListener('focusin', revealFocused, true);
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', keyboardInsets);

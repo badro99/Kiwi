@@ -954,6 +954,19 @@ section('Whole-project regressions');
 {
   const { spawnSync } = require('child_process');
   const suites = [
+    'audit-remediation-peripheral-test.mjs',
+    'audit-remediation-ai-channel-surfaces-test.mjs',
+    'audit-remediation-connectors-test.mjs',
+    'audit-remediation-refund-recovery-test.mjs',
+    'audit-remediation-caisse-integration-test.mjs',
+    'audit-remediation-orders-test.mjs',
+    'audit-remediation-serveur-test.mjs',
+    'audit-remediation-pressing-test.mjs',
+    'audit-remediation-auth-test.mjs',
+    'audit-remediation-money-test.mjs',
+    'audit-remediation-inventory-loyalty-test.mjs',
+    'audit-remediation-dashboard-test.mjs',
+    'audit-remediation-devices-test.mjs',
     'dashboard-analytics-toggle-test.mjs',
     'vexel-startup-test.mjs',
     'channel-percentage-test.mjs',

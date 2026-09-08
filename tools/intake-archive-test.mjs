@@ -76,6 +76,7 @@ function makeWorld() {
         .slice(0, n);
       const exec = (args) => {
         if (q.startsWith('SELECT business FROM accounts')) return accounts.get(String(args[0])) || null;
+        if (q.startsWith('SELECT status, session_epoch FROM accounts')) return accounts.has(String(args[0])) ? { status: 'active', session_epoch: 0 } : null;
         if (q.startsWith('SELECT account_id FROM merchant_config')) {
           const row = merchants.get(String(args[0]));
           return row ? { account_id: row.account_id } : null;

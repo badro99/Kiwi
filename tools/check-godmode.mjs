@@ -32,7 +32,14 @@ const DAY = 86400000;
 /* ── D1 → node:sqlite ─────────────────────────────────────────────────────── */
 function makeDB() {
   const db = new DatabaseSync(':memory:');
-  db.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+  const schema = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
+  db.exec(schema);
+  const migration = fs.readFileSync(path.join(ROOT, 'migrations/2026-09-08-auth-session-revocation.sql'), 'utf8');
+  for (const statement of migration.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) {
+    if (/^ALTER TABLE accounts ADD COLUMN session_epoch\b/i.test(statement)
+        && /\bsession_epoch\b/i.test(schema)) continue;
+    db.exec(statement);
+  }
   const prepare = (query) => {
     let args = [];
     const st = {
@@ -698,6 +705,15 @@ G('10 · Mot de passe — envoyer, renvoyer, une seule fois, expirer');
   const login = await call(R.login, 'POST', '/auth/login',
     { as: 'none', body: { email: 'amira@kiwi.test', password: 'nouveau-mot-de-passe' } });
   ok(login.status === 200, 'le client se connecte avec son nouveau mot de passe');
+  /* The reset above deliberately advances the account session epoch. Refresh
+     this fixture's browser cookie from the real login response before the
+     later feed/till assertions; continuing with SESS_A would test a revoked
+     browser, not the post-reset product flow. */
+  const freshSession = (login.res.headers.get('Set-Cookie') || '').match(/kiwi_sess=[^;]+/);
+  if (freshSession) {
+    AS.merchant = freshSession[0];
+    AS.merchantWithGate = `${freshSession[0]}; kiwi_gate=${STAFF}`;
+  }
 
   const oldPw = await call(R.login, 'POST', '/auth/login',
     { as: 'none', body: { email: 'amira@kiwi.test', password: 'ancien' } });
@@ -759,14 +775,14 @@ G('11 · Le retrait atteint tous les appareils');
 
   const dash = await feedFor('amira-boutique');
   ok(!dash.sales.some((s) => s.id === 's-plain'), 'tableau de bord : la vente a disparu du flux');
-  ok(dash.voided.some((v) => v.r === 'T-044-A7' && v.c),
-    'tableau de bord : la liste de retrait porte curseur + référence');
+  ok(dash && Array.isArray(dash.voided) && dash.voided.some((v) => v.r === 'T-044-A7' && v.c),
+    'tableau de bord : la liste de retrait porte curseur + référence', JSON.stringify(dash));
 
   /* La caisse ne demande QUE les retraits — requête minuscule, pas de rejeu. */
   const till = (await call(R.feed, 'GET', '/api/feed?voids=1&merchant=amira-boutique', { as: 'merchant' })).json;
   ok(till.sales.length === 0, 'caisse : le sondage « retraits seuls » ne rejoue aucune vente');
-  ok(till.voided.some((v) => v.r === 'T-044-A7'),
-    'caisse : elle reçoit la référence de ticket, la seule clé qu’elle connaît');
+  ok(till && Array.isArray(till.voided) && till.voided.some((v) => v.r === 'T-044-A7'),
+    'caisse : elle reçoit la référence de ticket, la seule clé qu’elle connaît', JSON.stringify(till));
 
   /* Une caisse qui rejoue sa file hors-ligne ne doit pas ressusciter la vente. */
   const saleMod = await import(path.join(ROOT, 'functions/api/sale.js'));

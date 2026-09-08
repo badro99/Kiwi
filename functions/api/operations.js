@@ -333,6 +333,7 @@ async function event(env, command, name, status, detail) {
      même milliseconde, et le suffixe aléatoire de l'identifiant n'est pas un
      départage : trier là-dessus revient à tirer au sort le maillon précédent,
      et la chaîne se fend à l'écriture même. */
+  for (let retry = 0; retry < 12; retry += 1) {
   const last = await env.DB.prepare(
     `SELECT hash, seq FROM operational_events WHERE merchant = ? AND command_id = ?
       ORDER BY seq DESC LIMIT 1`
@@ -341,10 +342,15 @@ async function event(env, command, name, status, detail) {
   const seq = Number((last && last.seq) || 0) + 1;
   const id = `${command.id}:${at}:${seq}`;
   const hash = await seal([prev, id, command.id, command.merchant, kind, state, body, String(at), String(seq)]);
-  await env.DB.prepare(
+  const inserted = await env.DB.prepare(
     `INSERT INTO operational_events (id, command_id, merchant, event, status, detail, created_ts, seq, prev_hash, hash)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(id, command.id, command.merchant, kind, state, body, at, seq, prev, hash).run();
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+       WHERE COALESCE((SELECT MAX(seq) FROM operational_events WHERE merchant = ? AND command_id = ?), 0) = ?`
+  ).bind(id, command.id, command.merchant, kind, state, body, at, seq, prev, hash,
+    command.merchant, command.id, seq - 1).run();
+  if (Number(inserted && inserted.meta && inserted.meta.changes) === 1) return;
+  }
+  throw new Error('event-chain-contention');
 }
 
 async function update(env, command, status, provider, result, error, limit) {
@@ -352,11 +358,18 @@ async function update(env, command, status, provider, result, error, limit) {
   /* `limit` existe pour une seule raison : un export de journal rend des lignes,
      pas un accusé de réception.  Les autres domaines gardent le plafond serré. */
   const stored = safeJson(result || {}, limit || 12000);
-  await env.DB.prepare(
+  const terminalRefund = command.domain === 'payment' && command.action === 'refund-link';
+  const changed = await env.DB.prepare(
     `UPDATE operational_commands SET status = ?, provider = ?, result = ?,
        last_error = ?, attempt_count = attempt_count + 1, updated_ts = ?
-     WHERE id = ? AND merchant = ?`
+     WHERE id = ? AND merchant = ?${terminalRefund ? " AND status != 'completed'" : ''}`
   ).bind(status, provider || '', stored, clean(error, 240), at, command.id, command.merchant).run();
+  if (terminalRefund && Number(changed && changed.meta && changed.meta.changes) === 0) {
+    const current = await env.DB.prepare('SELECT * FROM operational_commands WHERE id = ? AND merchant = ?')
+      .bind(command.id, command.merchant).first();
+    if (current) return current;
+    throw new Error('refund-command-missing');
+  }
   await event(env, command, 'state', status, { provider: provider || '', reason: error || '' });
   return Object.assign({}, command, { status, provider: provider || '', result: stored, last_error: clean(error, 240), updated_ts: at, attempt_count: Number(command.attempt_count || 0) + 1 });
 }
@@ -365,8 +378,10 @@ async function postWebhook(url, body) {
   if (!url) return { ok: false, reason: 'provider-unconfigured' };
   try {
     const response = await fetch(url, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json',
+        ...(body.commandId ? { 'Idempotency-Key': String(body.commandId) } : {}) },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(12000),
     });
     let data = {}; try { data = await response.json(); } catch (_) {}
     return response.ok ? { ok: true, data } : { ok: false, reason: `provider-http-${response.status}` };
@@ -1425,6 +1440,31 @@ async function ensurePayments(env) {
   ).run();
   await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_pay_refund_number ON payment_refunds (merchant, number)').run();
   await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_pay_refund_ref ON payment_refunds (merchant, reference, created_ts)').run();
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS payment_refund_reservations (
+    merchant TEXT NOT NULL, command_id TEXT NOT NULL, reference TEXT NOT NULL,
+    amount_cents INTEGER NOT NULL CHECK(amount_cents > 0), status TEXT NOT NULL,
+    provider_ref TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL,
+    PRIMARY KEY (merchant, command_id)
+  )`).run();
+}
+
+async function reserveRefund(env, merchant, reference, commandId, amountCents) {
+  // One SQL statement checks committed refunds AND all uncertain/in-flight
+  // external calls. Do not release a reservation merely because HTTP timed out.
+  return env.DB.prepare(`INSERT INTO payment_refund_reservations
+    (merchant, command_id, reference, amount_cents, status, created_ts, updated_ts)
+    SELECT ?, ?, ?, ?, 'reserved', ?, ? FROM payment_links p
+      WHERE p.merchant = ? AND p.reference = ?
+        AND ? <= p.paid_cents
+          - COALESCE((SELECT SUM(amount_cents) FROM payment_refunds f
+             WHERE f.merchant = p.merchant AND f.reference = p.reference), 0)
+          - COALESCE((SELECT SUM(amount_cents) FROM payment_refund_reservations r
+             WHERE r.merchant = p.merchant AND r.reference = p.reference
+               AND r.status IN ('reserved', 'unknown')
+               AND NOT EXISTS (SELECT 1 FROM payment_refunds f
+                 WHERE f.merchant = r.merchant AND f.command_id = r.command_id)), 0)
+    ON CONFLICT(merchant, command_id) DO NOTHING RETURNING command_id`)
+    .bind(merchant, commandId, reference, amountCents, now(), now(), merchant, reference, amountCents).first();
 }
 
 async function refundedFor(env, merchant, reference) {
@@ -1443,13 +1483,14 @@ function linkState(base, paidCents, refundedCents) {
   return base;
 }
 
-function linkView(link, paidCents, refundedCents) {
+function linkView(link, paidCents, refundedCents, reservedCents = 0) {
   return {
     reference: clean(link.reference, 40),
     status: linkState(clean(link.status, 24), paidCents, refundedCents),
     amountCents: Number(link.amount_cents || 0),
     paidCents, refundedCents,
-    refundableCents: Math.max(0, paidCents - refundedCents),
+    reservedCents, reconciliationRequired: reservedCents > 0,
+    refundableCents: Math.max(0, paidCents - refundedCents - reservedCents),
     currency: clean(link.currency, 3), url: clean(link.url, 800),
     customer: clean(link.customer, 160), description: clean(link.description, 240),
     providerRef: clean(link.provider_ref, 160),
@@ -1479,6 +1520,9 @@ async function writeLink(env, wish) {
 
 async function writeRefund(env, wish) {
   for (let attempt = 0; attempt < 6; attempt += 1) {
+    const existing = await env.DB.prepare('SELECT number FROM payment_refunds WHERE merchant = ? AND command_id = ?')
+      .bind(wish.merchant, wish.commandId).first();
+    if (existing) return { ok: true, number: existing.number, refundedCents: (await refundedFor(env, wish.merchant, wish.reference)).total };
     const seen = await refundedFor(env, wish.merchant, wish.reference);
     if (wish.amountCents > wish.paidCents - seen.total) return { ok: false, reason: 'refund-exceeds-paid' };
     const number = `${wish.reference}/R${seen.lines + 1}`;
@@ -1486,16 +1530,97 @@ async function writeRefund(env, wish) {
       await env.DB.prepare(
         `INSERT INTO payment_refunds (id, merchant, reference, number, amount_cents, reason,
            command_id, provider_ref, created_ts)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         SELECT ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE NOT EXISTS
+           (SELECT 1 FROM payment_refunds WHERE merchant = ? AND command_id = ?)`
       ).bind(`${wish.merchant}:${number}`, wish.merchant, wish.reference, number, wish.amountCents,
-        wish.reason, wish.commandId, wish.providerRef, now()).run();
-      return { ok: true, number, refundedCents: seen.total + wish.amountCents };
+        wish.reason, wish.commandId, wish.providerRef, now(), wish.merchant, wish.commandId).run();
+      const stored = await env.DB.prepare('SELECT number FROM payment_refunds WHERE merchant = ? AND command_id = ?')
+        .bind(wish.merchant, wish.commandId).first();
+      if (stored) return { ok: true, number: stored.number, refundedCents: (await refundedFor(env, wish.merchant, wish.reference)).total };
     } catch (_) { /* numéro pris — on relit le total et on re-vérifie le plafond */ }
   }
   return { ok: false, reason: 'refund-number-taken' };
 }
 
 const SETTLED = new Set(['pending', 'active', 'paid', 'expired', 'cancelled']);
+
+function refundEvidence(data, row, amountCents, requireStatus = false) {
+  if (!data || !clean(data.reference, 160)) return '';
+  if (data.commandId != null && data.commandId !== row.id) return '';
+  if (data.amount != null && cents(data.amount) !== amountCents) return '';
+  const status = clean(data.status, 24).toLowerCase();
+  if ((requireStatus || status) && !['refunded', 'completed', 'succeeded'].includes(status)) return '';
+  if (requireStatus && (data.commandId !== row.id || cents(data.amount) !== amountCents)) return '';
+  return clean(data.reference, 160);
+}
+
+async function finishRefund(env, row, link, reservation, providerRef) {
+  // Persist provider evidence before the ledger write, allowing a local-only
+  // retry after a DB interruption. The balance remains held until recorded.
+  await env.DB.prepare(`UPDATE payment_refund_reservations SET status = 'unknown', provider_ref = ?, updated_ts = ?
+    WHERE merchant = ? AND command_id = ?`).bind(providerRef, now(), row.merchant, row.id).run();
+  const payload = parseJson(row.payload) || {};
+  const written = await writeRefund(env, {
+    merchant: row.merchant, reference: reservation.reference, amountCents: Number(reservation.amount_cents),
+    paidCents: Number(link.paid_cents), reason: clean(payload.reason, 240), commandId: row.id, providerRef,
+  });
+  if (!written.ok) return update(env, row, 'blocked', 'payment-link', {
+    reference: reservation.reference, reservedCents: Number(reservation.amount_cents), reconciliationRequired: true,
+  }, 'refund-provider-accepted-ledger-pending');
+  await env.DB.prepare(`UPDATE payment_refund_reservations SET status = 'confirmed', updated_ts = ?
+    WHERE merchant = ? AND command_id = ?`).bind(now(), row.merchant, row.id).run();
+  const status = linkState(clean(link.status, 24), Number(link.paid_cents), written.refundedCents);
+  await env.DB.prepare('UPDATE payment_links SET status = ?, updated_ts = ? WHERE merchant = ? AND reference = ?')
+    .bind(status, now(), row.merchant, reservation.reference).run();
+  return update(env, row, 'completed', 'payment-link', Object.assign(
+    linkView(link, Number(link.paid_cents), written.refundedCents),
+    { status, number: written.number, refundCents: Number(reservation.amount_cents) }), '');
+}
+
+async function reconcileRefund(env, row) {
+  await ensurePayments(env);
+  const reservation = await env.DB.prepare('SELECT * FROM payment_refund_reservations WHERE merchant = ? AND command_id = ?')
+    .bind(row.merchant, row.id).first();
+  // No reservation means no external refund was attempted by this flow.
+  if (!reservation) {
+    // A queued command may still be between creation and reservation in another
+    // request. Do not start a competing external execution in that window.
+    if ((row.status === 'queued' || row.status === 'processing') && now() - Number(row.updated_ts || row.created_ts || 0) < 60000) return {
+      ...row, result: JSON.stringify({ pending: true, reconciliationRequired: true }),
+    };
+    return payments(env, row, parseJson(row.payload) || {});
+  }
+  const link = await env.DB.prepare('SELECT * FROM payment_links WHERE merchant = ? AND reference = ?')
+    .bind(row.merchant, reservation.reference).first();
+  if (!link) return update(env, row, 'blocked', 'payment-link', { reconciliationRequired: true }, 'link-not-found');
+  let providerRef = clean(reservation.provider_ref, 160);
+  if (!providerRef) {
+    // This is a status inquiry, NEVER a repeat of payment-refund. Unsupported,
+    // pending, empty or mismatched responses leave the balance safely held.
+    const answer = await postWebhook(env.PAYMENT_LINK_WEBHOOK, {
+      kind: 'payment-refund-status', merchant: row.merchant, commandId: row.id,
+      reference: reservation.reference, providerRef: clean(link.provider_ref, 160),
+    });
+    providerRef = answer.ok ? refundEvidence(answer.data, row, Number(reservation.amount_cents), true) : '';
+  }
+  if (!providerRef) return update(env, row, 'blocked', 'payment-link', {
+    reference: reservation.reference, reservedCents: Number(reservation.amount_cents), reconciliationRequired: true,
+  }, 'refund-provider-outcome-unknown');
+  return finishRefund(env, row, link, reservation, providerRef);
+}
+
+async function duplicateView(env, row) {
+  const view = publicRow(row);
+  if (row.domain !== 'payment' || row.action !== 'refund-link' || row.status === 'completed') return view;
+  try {
+    const reservation = await env.DB.prepare('SELECT * FROM payment_refund_reservations WHERE merchant = ? AND command_id = ?')
+      .bind(row.merchant, row.id).first();
+    if (reservation) view.result = Object.assign({}, view.result || {}, {
+      reference: reservation.reference, reservedCents: Number(reservation.amount_cents), reconciliationRequired: true,
+    });
+  } catch (_) { view.result = Object.assign({}, view.result || {}, { reconciliationRequired: true }); }
+  return view;
+}
 
 async function payments(env, row, payload) {
   await ensurePayments(env);
@@ -1589,25 +1714,34 @@ async function payments(env, row, payload) {
     const askedCents = payload.amount == null ? paidCents - refundedCents : cents(payload.amount);
     if (!Number.isFinite(askedCents) || askedCents <= 0) return fail('invalid-amount');
     if (askedCents > paidCents - refundedCents) return fail('refund-exceeds-paid');
+    if (!env.PAYMENT_LINK_WEBHOOK) return held('provider-unconfigured');
+    const reservation = await reserveRefund(env, merchant, reference, row.id, askedCents);
+    if (!reservation) {
+      const own = await env.DB.prepare('SELECT * FROM payment_refund_reservations WHERE merchant = ? AND command_id = ?')
+        .bind(merchant, row.id).first();
+      if (own) {
+        const current = await env.DB.prepare('SELECT * FROM operational_commands WHERE id = ? AND merchant = ?')
+          .bind(row.id, merchant).first();
+        return current && current.status === 'completed' ? current : {
+          ...(current || row), result: JSON.stringify({ reference, pending: true, reservedCents: Number(own.amount_cents), reconciliationRequired: true }),
+        };
+      }
+      return fail('refund-balance-reserved-or-exceeded');
+    }
     const answer = await postWebhook(env.PAYMENT_LINK_WEBHOOK, {
       kind: 'payment-refund', merchant, commandId: row.id, reference,
       providerRef: clean(link.provider_ref, 160), amount: askedCents / 100,
       currency: clean(link.currency, 3), reason: clean(payload.reason, 240),
     });
-    if (!answer.ok) return held(answer.reason || 'provider-failed');
-    const written = await writeRefund(env, {
-      merchant, reference, amountCents: askedCents, paidCents,
-      reason: clean(payload.reason, 240), commandId: row.id,
-      providerRef: clean(answer.data && answer.data.reference, 160),
-    });
-    if (!written.ok) return fail(written.reason);
-    const status = linkState(clean(link.status, 24), paidCents, written.refundedCents);
-    await env.DB.prepare(
-      'UPDATE payment_links SET status = ?, updated_ts = ? WHERE merchant = ? AND reference = ?'
-    ).bind(status, now(), merchant, reference).run();
-    return update(env, row, 'completed', 'payment-link', Object.assign(
-      linkView(link, paidCents, written.refundedCents),
-      { status, number: written.number, refundCents: askedCents }), '');
+    const refundRef = answer.ok ? refundEvidence(answer.data, row, askedCents) : '';
+    if (!refundRef) {
+      await env.DB.prepare(`UPDATE payment_refund_reservations SET status = 'unknown', updated_ts = ?
+        WHERE merchant = ? AND command_id = ?`).bind(now(), merchant, row.id).run();
+      return update(env, row, 'blocked', 'payment-link', {
+        reference, reservedCents: askedCents, reconciliationRequired: true,
+      }, 'refund-provider-outcome-unknown');
+    }
+    return finishRefund(env, row, link, { reference, amount_cents: askedCents }, refundRef);
   }
 
   return fail('unsupported-action');
@@ -2092,10 +2226,16 @@ export async function onRequestGet({ request, env }) {
            FROM payment_refunds WHERE merchant = ? GROUP BY reference`
       ).bind(merchant).all();
       const back = new Map(((paid && paid.results) || []).map((r) => [String(r.reference), r]));
+      const reservations = await env.DB.prepare(`SELECT reference, SUM(amount_cents) AS total
+        FROM payment_refund_reservations r WHERE merchant = ? AND status IN ('reserved', 'unknown')
+          AND NOT EXISTS (SELECT 1 FROM payment_refunds f
+            WHERE f.merchant = r.merchant AND f.command_id = r.command_id)
+        GROUP BY reference`).bind(merchant).all();
+      const held = new Map((reservations.results || []).map(r => [String(r.reference), Number(r.total || 0)]));
       return json({ merchant, providers: providers(env), links: rows.map((link) => {
         const seen = back.get(String(link.reference));
         const refundedCents = Number((seen && seen.total) || 0);
-        return Object.assign(linkView(link, Number(link.paid_cents || 0), refundedCents), {
+        return Object.assign(linkView(link, Number(link.paid_cents || 0), refundedCents, held.get(String(link.reference)) || 0), {
           refunds: Number((seen && seen.lines) || 0),
           createdAt: Number(link.created_ts || 0), updatedAt: Number(link.updated_ts || 0),
         });
@@ -2216,6 +2356,14 @@ export async function onRequestPost({ request, env }) {
     if (!(await mayCommand(request, env, merchant, row.domain, row.action))) {
       return json({ error: 'permission-denied', domain: row.domain, action: row.action }, 403);
     }
+    if (row.domain === 'payment' && row.action === 'refund-link') {
+      if (row.status === 'completed') return json({ ok: true, command: publicRow(row) });
+      if (wanted !== 'processing' || body.confirmed !== true) return json({ error: 'refund-reconciliation-required' }, 409);
+      const moved = await spend(env, merchant, row.domain, rateCeiling(env, row.domain));
+      if (!moved.ok) return json({ error: 'rate-limited', limit: moved.ceiling, retryAfter: moved.retryAfter }, 429);
+      try { return json({ ok: true, command: publicRow(await reconcileRefund(env, row)) }); }
+      catch (_) { return json({ error: 'refund-reconciliation-unavailable', reconciliationRequired: true }, 503); }
+    }
     if (!(TRANSITIONS[row.status] && TRANSITIONS[row.status].has(wanted))) return json({ error: 'invalid-transition', status: row.status }, 409);
     if (['approved', 'cancelled', 'completed'].includes(wanted) && body.confirmed !== true) return json({ error: 'confirmation-required' }, 409);
     /* Une commande relancée sans fin n'est pas une commande résiliente, c'est
@@ -2266,7 +2414,7 @@ export async function onRequestPost({ request, env }) {
      puni pour ça.  Le plafond se paie après le contrôle de permission, sinon
      une session autorisée mais sans droit sur ce domaine pourrait épuiser le
      budget du commerçant à sa place. */
-  if (duplicate) return json({ ok: true, duplicate: true, command: publicRow(duplicate), providers: providers(env) });
+  if (duplicate) return json({ ok: true, duplicate: true, command: await duplicateView(env, duplicate), providers: providers(env) });
   const spent = await spend(env, merchant, domain, rateCeiling(env, domain));
   if (!spent.ok) return json({ error: 'rate-limited', limit: spent.ceiling, retryAfter: spent.retryAfter }, 429);
 
@@ -2294,7 +2442,7 @@ export async function onRequestPost({ request, env }) {
     return json({ ok: true, duplicate: false, command: publicRow(finished), providers: providers(env) });
   } catch (_) {
     const race = await env.DB.prepare('SELECT * FROM operational_commands WHERE merchant = ? AND idempotency_key = ?').bind(merchant, idem).first();
-    if (race) return json({ ok: true, duplicate: true, command: publicRow(race), providers: providers(env) });
+    if (race) return json({ ok: true, duplicate: true, command: await duplicateView(env, race), providers: providers(env) });
     return json({ error: 'db' }, 503);
   }
 }

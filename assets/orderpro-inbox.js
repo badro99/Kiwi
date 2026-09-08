@@ -130,6 +130,10 @@
         state.since = j.now || state.since;
         var fresh = 0;
         var delta = j.orders || [];
+        var cancelled = Array.isArray(j.cancelledTickets) ? j.cancelledTickets : [];
+        cancelled.forEach(function (ticket) {
+          if (ticket && ticket.id) delete state.orders[ticket.id];
+        });
         delta.forEach(function (o) {
           if (!state.seen[o.id] && o.status === 'pending') { fresh++; state.seen[o.id] = 1; }
           state.orders[o.id] = o;
@@ -138,6 +142,7 @@
         state.closedSessions = j.closedSessions || [];
         state.expired = j.expired || [];
         bridge(delta);
+        if (cancelled.length) bridge(cancelled);
         if (fresh) announce(fresh);
         warnExpiring();
         warnDegraded(j.degraded);
@@ -266,7 +271,12 @@
     if (detail.actorProof) body.actorProof = detail.actorProof;
     var key = '';
     if (detail.session) { body.closeSession = detail.session; key = 's:' + detail.session; }
-    else if (detail.table) { body.closeTable = String(detail.table); key = 't:' + normCloseTable(detail.table); }
+    else if (detail.table && detail.expectedSession) {
+      body.closeTable = String(detail.table);
+      body.expectedSession = String(detail.expectedSession);
+      if (detail.expectedRevision != null) body.expectedRevision = Number(detail.expectedRevision);
+      key = 's:' + body.expectedSession;
+    }
     else return;
     var known = null;
     pendingCloses.forEach(function (p) { if (p.key === key) known = p; });

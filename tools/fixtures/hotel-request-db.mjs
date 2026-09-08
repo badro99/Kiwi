@@ -62,7 +62,12 @@ const members = [
 
 function setup(db) {
   db.exec(`
-    CREATE TABLE accounts (id TEXT PRIMARY KEY, business TEXT);
+    CREATE TABLE accounts (
+      id TEXT PRIMARY KEY,
+      business TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      session_epoch INTEGER NOT NULL DEFAULT 0
+    );
     CREATE TABLE merchant_config (merchant TEXT PRIMARY KEY, account_id TEXT, type TEXT);
     CREATE TABLE store_docs (merchant TEXT, feature TEXT, data TEXT, rev INTEGER, updated_ts INTEGER,
       PRIMARY KEY (merchant, feature));
@@ -95,9 +100,22 @@ function setup(db) {
   movement.run('seed-verrerie', MERCHANT, 'verrerie', 40000, null, 13, 13, '{}', 13);
 }
 
+/* Keep this shared SQLite fixture usable while the auth/session migration is
+ * rolling through older test schemas.  The live schema may already contain
+ * these columns (as this fixture does); older callers get an additive change,
+ * and a rerun never trips over a duplicate-column ALTER. */
+function ensureAccountColumn(db, name, definition) {
+  const columns = db.prepare('PRAGMA table_info(accounts)').all();
+  if (!columns.some((column) => String(column.name) === name)) {
+    db.exec(`ALTER TABLE accounts ADD COLUMN ${name} ${definition}`);
+  }
+}
+
 export async function createHotelRequestHarness() {
   const raw = new DatabaseSync(':memory:');
   setup(raw);
+  ensureAccountColumn(raw, 'status', "TEXT NOT NULL DEFAULT 'active'");
+  ensureAccountColumn(raw, 'session_epoch', 'INTEGER NOT NULL DEFAULT 0');
   const DB = new D1Sqlite(raw);
   let clock = 2000000;
   const env = { AUTH_SECRET: SECRET, DB, NOW: () => ++clock };
@@ -152,4 +170,3 @@ export async function createHotelRequestHarness() {
   ).qty) / 1000;
   return { raw, DB, env, ownerCookie, employeeCookie, post, get, rows, one, addMovement, createSubmitted, ready, balance };
 }
-

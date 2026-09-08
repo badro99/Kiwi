@@ -15731,18 +15731,48 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const merchant = auditMerchant() || String(vd.id || vd.name || 'venue');
     const dayOffset = Math.max(0, Math.min(6, Number(salesDayByMerchant[merchant]) || 0));
     const selectedMethods = (salesMethodsByMerchant[merchant] || []).filter((m) => ['cash', 'card', 'delivery'].includes(m));
-    const cutoffH = (() => {
-      try {
-        const h = window.KiwiDayReport?.cutoff?.(merchant) ?? window.KiwiDayReport?.cutoff?.();
-        return (typeof h === 'number' && isFinite(h) && h >= 0 && h <= 12) ? h : 5;
-      } catch (_) { return 5; }
-    })();
     const now = Date.now();
-    const currentBizDate = new Date(now - cutoffH * 3600000);
-    currentBizDate.setHours(0, 0, 0, 0);
-    const todayLo = currentBizDate.getTime() + cutoffH * 3600000;
-    const lo = todayLo - dayOffset * 864e5;
-    const hi = todayLo - (dayOffset - 1) * 864e5;
+    const R = window.KiwiDayReport;
+    const addDay = (day, delta) => {
+      const p = String(day || '').split('-');
+      return new Date(Date.UTC(+p[0], (+p[1] || 1) - 1, +p[2] || 1) + delta * 864e5).toISOString().slice(0, 10);
+    };
+    const zone = (() => {
+      const candidate = vd.timezone || vd.timeZone || vd.tz || window.KiwiConfig?.timezone || window.KiwiConfig?.timeZone || 'Africa/Casablanca';
+      try { new Intl.DateTimeFormat('en-CA', { timeZone: candidate }).format(); return candidate; } catch (_) { return 'Africa/Casablanca'; }
+    })();
+    const partsAt = (ts) => {
+      const out = {};
+      new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' })
+        .formatToParts(new Date(ts)).forEach((p) => { if (p.type !== 'literal') out[p.type] = p.value; });
+      return out;
+    };
+    const fallbackDay = (ts) => {
+      const p = partsAt(ts);
+      const day = `${p.year}-${p.month}-${p.day}`;
+      const cutoff = Number(window.KiwiConfig?.dayCutoff ?? 5);
+      return +p.hour < cutoff ? addDay(day, -1) : day;
+    };
+    const fallbackBounds = (day) => {
+      const cutoff = Number(window.KiwiConfig?.dayCutoff ?? 5);
+      const boundary = (d) => {
+        const target = Date.parse(`${d}T00:00:00Z`) + cutoff * 3600000;
+        let guess = target;
+        for (let i = 0; i < 6; i++) {
+          const p = partsAt(guess);
+          const observed = Date.parse(`${p.year}-${p.month}-${p.day}T${p.hour}:00:00Z`);
+          if (observed === target) return guess;
+          guess += target - observed;
+        }
+        return guess;
+      };
+      return { from: boundary(day), to: boundary(addDay(day, 1)) };
+    };
+    const todayKey = R?.businessDay ? R.businessDay(now, merchant) : fallbackDay(now);
+    const selectedKey = R?.shiftDay ? R.shiftDay(todayKey, -dayOffset, merchant) : addDay(todayKey, -dayOffset);
+    const selectedWindow = R?.dayBounds ? R.dayBounds(selectedKey, merchant) : fallbackBounds(selectedKey);
+    const lo = selectedWindow.from;
+    const hi = selectedWindow.to;
     cancelAuditWindow = { merchant: auditMerchant(), from: lo, to: hi };
     loadCancelAudit();
     const activity = cancelAuditMerchant === `${auditMerchant()}:${lo}:${hi}` ? cancelAudit : [];
@@ -15756,7 +15786,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         reason: a.reason, actor: a.actor, actorId: a.actorId, originalRef: a.originalRef || a.saleId,
         lines: old.lines || [], origin: 'caisse' });
     });
-    const selectedDay = new Date(currentBizDate.getTime() - dayOffset * 864e5);
+    const selectedDay = new Date(`${selectedKey}T12:00:00Z`);
     const daySales = sales.concat([...refundById.values()]).filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; });
     const financialWindow = selectedMethods.length
       ? daySales.filter((s) => selectedMethods.includes(salesMethodKey(s)))
@@ -15772,12 +15802,12 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     ].map(([kind, label]) => `<button class="rtx-method${selectedKind === kind ? ' on' : ''}" type="button" data-action="sales-kind" data-arg="${kind}" aria-pressed="${selectedKind === kind}">${escS(label)}</button>`).join('');
     const dayLabel = dayOffset === 0 ? T({ fr: "aujourd'hui", en: 'today', ar: 'اليوم' })
       : dayOffset === 1 ? T({ fr: 'hier', en: 'yesterday', ar: 'أمس' })
-      : selectedDay.toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang, { weekday: 'long', day: 'numeric', month: 'short' });
+      : new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA' : lang, { timeZone: zone, weekday: 'long', day: 'numeric', month: 'short' }).format(selectedDay);
     const dayButtons = Array.from({ length: 7 }, (_, offset) => {
-      const d = new Date(currentBizDate.getTime() - offset * 864e5);
+      const d = new Date(`${(R?.shiftDay ? R.shiftDay(todayKey, -offset, merchant) : addDay(todayKey, -offset))}T12:00:00Z`);
       const label = offset === 0 ? T({ fr: "Aujourd'hui", en: 'Today', ar: 'اليوم' })
         : offset === 1 ? T({ fr: 'Hier', en: 'Yesterday', ar: 'أمس' })
-        : d.toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang, { weekday: 'short', day: 'numeric', month: 'short' });
+        : new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA' : lang, { timeZone: zone, weekday: 'short', day: 'numeric', month: 'short' }).format(d);
       return `<button class="rtx-day${offset === dayOffset ? ' on' : ''}" type="button" data-action="sales-day" data-arg="${offset}" aria-pressed="${offset === dayOffset}">${escS(label)}</button>`;
     }).join('');
     const methodLabels = {
@@ -15795,7 +15825,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const rows = inWindow.slice().sort((a, b) => (+b.ts || 0) - (+a.ts || 0)).map((s, i) => {
       const isRefund = s.kind === 'refund' || Number(s.amount) < 0;
       const d = new Date(s.ts || Date.now());
-      const hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      const hh = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA-u-nu-latn' : lang, { timeZone: zone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
       const when = hh;
       const m = isRefund ? T({ fr: 'Remboursement', en: 'Refund', ar: 'استرداد' }) : (L[salesMethodKey(s)] || L.unknown);
       const ref = String(s.ref || s.label || '').trim();

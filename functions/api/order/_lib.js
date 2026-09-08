@@ -271,6 +271,13 @@ export async function priceOrder(env, merchant, rawLines) {
           optionIndex.set(String(group.id), {
             name: String(group.name || '').trim(),
             kind: group.kind === 'many' ? 'many' : 'one',
+            required: group.required === true,
+            /* Older published menus only carried `required` and `kind`. Keep
+             * those menus valid while enforcing richer min/max contracts when
+             * the publisher has preserved them. */
+            min: Math.max(0, Math.min(40, Math.round(Number(group.min) || (group.required === true ? 1 : 0)))),
+            max: Math.max(1, Math.min(40, Math.round(Number(group.max) ||
+              (group.kind === 'many' ? Math.max(1, (Array.isArray(group.choices) ? group.choices.length : 1)) : 1)))),
             choices,
             choicesById,
           });
@@ -443,11 +450,22 @@ export async function priceOrder(env, merchant, rawLines) {
     if (!ref.avail) { unavailable.push(ref.name || id); continue; }
     let optionExtra = 0;
     let canonicalVisuals = visuals;
-    const selected = Array.isArray(l && l.optionChoices) ? l.optionChoices.slice(0, 40) : null;
-    if (selected) {
+    const selected = Array.isArray(l && l.optionChoices) ? l.optionChoices.slice(0, 40) : [];
+    /* Formula parents are a legacy composite contract: their required choices
+     * are represented by formula-part lines/slots, not by the regular `opts`
+     * array. Enforcing the regular group here would reject existing published
+     * formulas before their slot children are priced. Explicit optionChoices on
+     * a formula parent still go through the normal identity/count validation. */
+    const hasRequiredOption = kind !== 'formula' && !!(ref.opts && Array.from(ref.opts).some((groupId) => {
+      const group = optionIndex.get(groupId);
+      return group && group.min > 0;
+    }));
+    if (selected.length || hasRequiredOption) {
       const labels = [];
       canonicalVisuals = [];
       const oneSeen = new Set();
+      const groupCounts = new Map();
+      const groupChoices = new Map();
       let valid = true;
       for (const picked of selected) {
         if (!picked) continue;
@@ -466,9 +484,28 @@ export async function priceOrder(env, merchant, rawLines) {
           break;
         }
         if (group.kind === 'one') oneSeen.add(groupId);
+        const pickedChoices = groupChoices.get(groupId) || new Set();
+        if (pickedChoices.has(choice.id)) {
+          valid = false;
+          break;
+        }
+        pickedChoices.add(choice.id);
+        groupChoices.set(groupId, pickedChoices);
+        groupCounts.set(groupId, (groupCounts.get(groupId) || 0) + 1);
         labels.push(`${group.name}: ${choice.name}`);
         optionExtra += choice.price;
         canonicalVisuals.push({ emoji: choice.emoji || '', name: choice.name });
+      }
+      if (valid) {
+        for (const groupId of ref.opts) {
+          const group = optionIndex.get(groupId);
+          if (!group) { valid = false; break; }
+          const count = groupCounts.get(groupId) || 0;
+          if (count < group.min || count > group.max) {
+            valid = false;
+            break;
+          }
+        }
       }
       if (!valid) { invalidOptions.push(ref.name || id || '?'); continue; }
       options = labels.join(' · ').slice(0, 200);
@@ -477,6 +514,7 @@ export async function priceOrder(env, merchant, rawLines) {
     const unitPrice = kind === 'formula-part' ? 0 : ref.price + optionExtra + formulaExtra;
     const line = { id, name: ref.name, qty, unitPrice, options, note, visuals: canonicalVisuals,
                    station: ref.station || '' };
+    if (l && l.uid) line.uid = String(l.uid).slice(0, 60);
     if (kind) line.kind = kind;
     if (formulaUid) line.formulaUid = formulaUid;
     if (l && l.formulaName) line.formulaName = String(l.formulaName).slice(0, 80);

@@ -7,6 +7,7 @@ import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { quotaOk } from './_quota.js';
 import { GATEWAY_OPTS, runAiWithGateway } from './_run.js';
+import { runWithPayloadFallback } from './_payload-fallback.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
 export const MODEL = '@cf/zai-org/glm-5.3-flash';
@@ -47,8 +48,7 @@ async function runExpenseVision(env, dataUrl) {
     ],
     max_tokens: MAX_TOKENS, temperature: TEMPERATURE, top_p: TOP_P,
   };
-  try { return { result: await runAiWithGateway(env, VISION_MODEL, payload), model: VISION_MODEL }; }
-  catch (_) { return { result: await runAiWithGateway(env, VISION_FALLBACK_MODEL, payload), model: VISION_FALLBACK_MODEL }; }
+  return runWithPayloadFallback(env, VISION_MODEL, payload, VISION_FALLBACK_MODEL);
 }
 
 export function validateExpenseData(raw) {

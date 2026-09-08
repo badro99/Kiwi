@@ -14,6 +14,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sqlite = new DatabaseSync(':memory:');
 sqlite.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
 
+let batchQueue = Promise.resolve();
 const DB = {
   prepare(sql) {
     let args = [];
@@ -27,21 +28,36 @@ const DB = {
     return statement;
   },
   batch(statements) {
-    sqlite.exec('BEGIN IMMEDIATE');
-    try {
-      const out = statements.map((statement) => statement.run());
-      sqlite.exec('COMMIT');
-      return out;
-    } catch (error) {
-      sqlite.exec('ROLLBACK');
-      throw error;
-    }
+    const execute = () => {
+      sqlite.exec('BEGIN IMMEDIATE');
+      try {
+        const out = statements.map((statement) => statement.run());
+        sqlite.exec('COMMIT');
+        return out;
+      } catch (error) {
+        sqlite.exec('ROLLBACK');
+        throw error;
+      }
+    };
+    const result = batchQueue.then(execute, execute);
+    batchQueue = result.catch(() => {});
+    return result;
   },
 };
 
 const secret = 'refund-reporting-secret';
 const merchant = 'pasta-corner';
-const cookie = `kiwi_till=${await tillToken(secret, merchant)}`;
+const accountId = 'acc-pasta-corner-fixture';
+sqlite.prepare(`INSERT INTO accounts
+  (id, email, name, business, salt, hash, created_ts, status, session_epoch)
+  VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 0)`).run(
+  accountId, 'fixture-pasta@example.test', 'Fixture Owner', merchant,
+  '00'.repeat(16), '11'.repeat(32), Date.now());
+sqlite.prepare(`INSERT INTO merchant_config
+  (merchant, features, type, account_id, name, status, till_epoch, updated_ts)
+  VALUES (?, '{}', 'restaurant', ?, 'Pasta Corner Fixture', 'active', 7, ?)`)
+  .run(merchant, accountId, Date.now());
+const cookie = `kiwi_till=${await tillToken(secret, merchant, 7)}`;
 sqlite.prepare(`INSERT INTO sales
   (id, merchant, amount, amount_cents, method, label, ref, ts, lines, channel)
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)

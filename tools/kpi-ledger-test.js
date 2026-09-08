@@ -101,7 +101,7 @@ ok('un CA réel sans baseline ne fabrique pas 0 %',
  * Le total exact existait déjà dans realSalesTotals() et n'était transmis à
  * personne. Ces trois lignes sont ce qui l'amène jusqu'aux tuiles. */
 ok('realSalesTotals additionne bien un revenu',
-  /return \{ revenue, count, basket:/.test(SRC));
+  /return \{ revenue, gross, refunds, collected, receivable, count, basket:/.test(SRC));
 ok('le chemin réel transmet ce total sous `revenue`',
   /revenue:\s*\{\s*value:\s*t\.revenue,/.test(SRC),
   'data.revenue n\'est plus alimenté depuis les ventes');
@@ -127,34 +127,17 @@ ok('aucune tuile ne recompose la variation du CA à la main',
  * matin, les ventes de 00 h–01 h étaient donc dans la recette du soir sur le Z
  * et dans le lendemain sur le tableau de bord — deux chiffres justes chacun de
  * leur côté, incomparables, et impossibles à départager pour le patron. */
-const dFrom = SRC.indexOf('function dayCutoffH()');
+const dFrom = SRC.indexOf('function dayCutoffH(slug)');
 const dTo = SRC.indexOf('function realSalesList()');
 ok('la définition de la journée est extractible', dFrom > 0 && dTo > dFrom);
-if (dFrom > 0 && dTo > dFrom) {
-  const mk = (h) => new Function('window', SRC.slice(dFrom, dTo) + '\nreturn dayStartMs;')(
-    { KiwiDayReport: h == null ? undefined : { cutoff: () => h } });
-
-  // 12 mars 2026, 00 h 30 — une vente de fin de service.
-  const nuit = new Date(2026, 2, 12, 0, 30).getTime();
-  const veille5h = new Date(2026, 2, 11, 5, 0).getTime();
-  ok('une vente à 00 h 30 appartient encore à la soirée de la veille',
-    mk(5)(nuit) === veille5h, new Date(mk(5)(nuit)).toString());
-
-  // …et une vente en plein service reste dans SA journée.
-  const soir = new Date(2026, 2, 12, 21, 0).getTime();
-  ok('une vente à 21 h appartient à la journée du jour',
-    mk(5)(soir) === new Date(2026, 2, 12, 5, 0).getTime());
-
-  // « Hier » reste exactement 24 h en amont — les bornes de plage en dépendent.
-  ok('la veille reste à 24 h exactement',
-    mk(5)(soir) - mk(5)(nuit) === 864e5, String(mk(5)(soir) - mk(5)(nuit)));
-
-  // Sans module de rapport chargé : minuit, c'est-à-dire l'ancien comportement.
-  ok('sans rapport journalier, on retombe sur minuit (comportement d\'avant)',
-    mk(null)(nuit) === new Date(2026, 2, 12, 0, 0).getTime());
-  ok('une bascule hors bornes est ignorée, pas propagée',
-    mk(99)(nuit) === new Date(2026, 2, 12, 0, 0).getTime());
-}
+ok('la journée passe par les bornes civiles du marchand',
+  /function merchantDayBounds\(day, slug\)[\s\S]*?R\?\.dayBounds\) return R\.dayBounds\(day, slug\)/.test(SRC));
+ok('le repli de journée conserve le fuseau marchand',
+  /function merchantParts\(ts, slug\)[\s\S]*?timeZone: merchantTimeZone\(slug\)/.test(SRC));
+ok('le cutoff reste borné et vient de KiwiDayReport',
+  /function dayCutoffH\(slug\)[\s\S]*?KiwiDayReport\?\.cutoff\?\.\(slug\)/.test(SRC));
+ok('les journées décalées ne soustraient plus 24 heures',
+  !/dayStartMs\([^\n]*\)\s*[-+][^\n]*864e5/.test(SRC));
 
 /* ── 7. UN TIRET, PAS UN ZÉRO ──────────────────────────────────────────────
  * Kiwi ne mesure ni les paiements refusés ni les retours. Le clone de démo

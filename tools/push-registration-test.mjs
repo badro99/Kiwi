@@ -86,6 +86,7 @@ function createMockDb({ hasTable = true } = {}) {
             return row ? { account_id: row.account_id } : null;
           }
           if (q.startsWith('SELECT business FROM accounts')) return accounts.get(String(stmt.args[0])) || null;
+          if (q.startsWith('SELECT status, session_epoch FROM accounts')) return accounts.has(String(stmt.args[0])) ? { status: 'active', session_epoch: 0 } : null;
           if (q.startsWith('SELECT status FROM merchant_config')) {
             const row = merchants.get(String(stmt.args[0]));
             return row ? { status: row.status } : null;

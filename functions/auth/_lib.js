@@ -247,26 +247,45 @@ async function legacyTillToken(authSecret, merchant) {
  * chaque requête de caisse. On le garde donc en mémoire d'isolat une minute :
  * une révocation met au pire soixante secondes à se propager, ce qui est le bon
  * compromis pour un geste qui vise un appareil perdu, pas une intrusion en
- * cours. Colonne absente (base non migrée) ⇒ 0, c'est-à-dire l'ancien monde. */
+ * cours. Une lecture absente/échouée reste indisponible : elle ne doit jamais
+ * être convertie en epoch 0, qui rendrait un ancien jeton valide pendant une
+ * panne de révocation. */
 const TILL_EPOCH_TTL_MS = 60 * 1000;
-const tillEpochCache = new Map();
+const tillEpochCaches = new WeakMap();
+const tillEpochCacheRefs = new Set();
+function tillEpochCacheFor(db) {
+  let cache = tillEpochCaches.get(db);
+  if (!cache) {
+    cache = new Map();
+    tillEpochCaches.set(db, cache);
+    tillEpochCacheRefs.add(cache);
+  }
+  return cache;
+}
 export async function tillEpoch(env, merchant) {
   const key = String(merchant || '');
-  if (!key || !env || !env.DB) return 0;
-  const hit = tillEpochCache.get(key);
+  if (!key || !env || !env.DB) return null;
+  const cache = tillEpochCacheFor(env.DB);
+  const hit = cache.get(key);
   if (hit && hit.until > Date.now()) return hit.value;
-  let value = 0;
   try {
     const row = await env.DB.prepare(
       'SELECT till_epoch FROM merchant_config WHERE merchant = ?'
     ).bind(key).first();
-    value = Math.max(0, Math.round(Number(row && row.till_epoch) || 0));
-  } catch (_) { value = 0; }
-  tillEpochCache.set(key, { value, until: Date.now() + TILL_EPOCH_TTL_MS });
-  return value;
+    if (!row) return null;
+    const value = Math.max(0, Math.round(Number(row.till_epoch) || 0));
+    cache.set(key, { value, until: Date.now() + TILL_EPOCH_TTL_MS });
+    return value;
+  } catch (_) { return null; }
 }
-export function forgetTillEpoch(merchant) {
-  tillEpochCache.delete(String(merchant || ''));
+export function forgetTillEpoch(merchant, db = null) {
+  const key = String(merchant || '');
+  if (db && typeof db === 'object') {
+    const cache = tillEpochCaches.get(db);
+    if (cache) cache.delete(key);
+    return;
+  }
+  for (const cache of tillEpochCacheRefs) cache.delete(key);
 }
 
 export async function terminalToken(authSecret, merchant, terminalId) {
@@ -291,15 +310,20 @@ export function terminalCookie(value) {
 }
 // True when the request proves it is the till of `merchant`.
 export async function isTillFor(request, env, merchant) {
+  const result = await tillVerification(request, env, merchant);
+  return result.ok;
+}
+export async function tillVerification(request, env, merchant) {
   const secret = env && env.AUTH_SECRET;
-  if (!secret || !merchant) return false;
+  if (!secret || !merchant) return { ok: false };
   const got = readCookie(request, TILL_COOKIE);
-  if (!got) return false;
+  if (!got) return { ok: false };
   const epoch = await tillEpoch(env, merchant);
-  if (timingSafeEqualHex(got, await tillToken(secret, merchant, epoch))) return true;
+  if (!Number.isFinite(epoch)) return { ok: false, unavailable: true };
+  if (timingSafeEqualHex(got, await tillToken(secret, merchant, epoch))) return { ok: true };
   /* L'ancienne forme n'est reconnue que tant que personne n'a dépairé. */
-  if (epoch === 0) return timingSafeEqualHex(got, await legacyTillToken(secret, merchant));
-  return false;
+  if (epoch === 0) return { ok: timingSafeEqualHex(got, await legacyTillToken(secret, merchant)) };
+  return { ok: false };
 }
 export async function isTerminalFor(request, env, merchant, terminalId) {
   const secret = env && env.AUTH_SECRET;
@@ -326,6 +350,7 @@ export async function employeeToken(authSecret, employee) {
   const payload = {
     merchant: String(employee && employee.merchant || '').slice(0, 64),
     staffId: String(employee && employee.staffId || '').slice(0, 96),
+    av: Math.max(0, Math.round(Number(employee && employee.authVersion) || 0)),
     exp: Date.now() + EMPLOYEE_SESSION_MS,
   };
   const body = bytesToB64url(encoder.encode(JSON.stringify(payload)));
@@ -358,6 +383,35 @@ export function employeeCookie(value) {
 export function employeeNeedsRefresh(payload) {
   if (!payload || typeof payload.exp !== 'number') return false;
   return payload.exp - Date.now() < EMPLOYEE_SESSION_MS / 2;
+}
+
+/* Team and employee-access are replaceable sync payloads. They may therefore
+ * lag a successful PIN write. The durable revision is the authorization
+ * source; a document is usable only when it agrees with it.
+ *
+ * A row-less revision is tolerated only for an explicitly zero-version
+ * document, preserving old never-rotated rosters during migration. A missing
+ * table, failed read, or malformed row is unavailable — never implicit zero. */
+export async function employeeAuthRevision(env, merchant, memberId, documentVersion = 0) {
+  const docVersion = Math.max(0, Math.round(Number(documentVersion) || 0));
+  const store = String(merchant || '').trim();
+  const member = String(memberId || '').trim();
+  if (!env || !env.DB || !store || !member) return { ok: false, unavailable: true };
+  try {
+    const row = await env.DB.prepare(
+      'SELECT auth_version FROM employee_auth_versions WHERE merchant = ? AND member_id = ?'
+    ).bind(store, member).first();
+    if (!row) return docVersion === 0
+      ? { ok: true, version: 0, legacy: true }
+      : { ok: false, unavailable: true };
+    const durable = Number(row.auth_version);
+    if (!Number.isInteger(durable) || durable < 0 || durable !== docVersion) {
+      return { ok: false, unavailable: false, version: Number.isInteger(durable) ? durable : null };
+    }
+    return { ok: true, version: durable, legacy: false };
+  } catch (_) {
+    return { ok: false, unavailable: true };
+  }
 }
 
 // Resolve the credentials the owner records on Dashboard → Équipe. Email is
@@ -439,6 +493,9 @@ export async function findEmployeeCredential(env, emailValue, pinValue) {
       'SELECT * FROM merchant_config WHERE merchant = ? LIMIT 1'
     ).bind(match.merchant).first();
     if (!cfg) return null;
+    const documentVersion = Math.max(0, Math.round(Number(match.member.authVersion) || 0));
+    const revision = await employeeAuthRevision(env, match.merchant, memberId, documentVersion);
+    if (!revision.ok) return null;
     return {
       id: memberId,
       merchant: match.merchant,
@@ -447,6 +504,7 @@ export async function findEmployeeCredential(env, emailValue, pinValue) {
       role: String(match.member.function || match.member.department || 'staff'),
       status: cfg.status || 'active',
       type: cfg.type,
+      authVersion: revision.version,
       member: match.member,
     };
   } catch (_) { return null; }
@@ -633,9 +691,10 @@ export async function sendMail(env, msg) {
 }
 
 // Session token = base64url(JSON{aid,exp}) + "." + HMAC(secret, payload).
-export async function makeSession(accountId, secret) {
+export async function makeSession(accountId, secret, sessionVersion = 0) {
   const exp = Date.now() + SESS_DAYS * 86400 * 1000;
-  const payload = bytesToB64url(encoder.encode(JSON.stringify({ aid: accountId, exp })));
+  const sv = Math.max(0, Math.round(Number(sessionVersion) || 0));
+  const payload = bytesToB64url(encoder.encode(JSON.stringify({ aid: accountId, sv, exp })));
   const sig = await hmacHex(secret, payload);
   return payload + '.' + sig;
 }
@@ -651,6 +710,27 @@ export async function readSession(token, secret) {
   try { obj = JSON.parse(new TextDecoder().decode(b64urlToBytes(payload))); } catch (_) { return null; }
   if (!obj || typeof obj.exp !== 'number' || obj.exp < Date.now()) return null;
   return obj;
+}
+
+/* A signed cookie proves integrity, not that the account is still active. Any
+ * owner-only route that is called directly (or is reached through a valid till
+ * cookie) must use this database-backed check before treating the session as
+ * an account identity. Missing/failed revocation reads deny the identity. */
+export async function activeAccountSession(request, env) {
+  if (!env || !env.DB || !env.AUTH_SECRET) return null;
+  const session = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+  if (!session || !session.aid) return null;
+  try {
+    const row = await env.DB.prepare(
+      'SELECT status, session_epoch FROM accounts WHERE id = ?'
+    ).bind(session.aid).first();
+    if (!row || String(row.status || 'active').trim().toLowerCase() === 'suspended') return null;
+    const expected = Math.max(0, Math.round(Number(row.session_epoch) || 0));
+    const presented = Math.max(0, Math.round(Number(session.sv) || 0));
+    return expected === presented ? session : null;
+  } catch (_) {
+    return null;
+  }
 }
 
 export function sessionCookie(value) {
@@ -852,7 +932,7 @@ export async function entitledMerchant(request, env, asked, opts) {
     try { if (await isOperator(request, env)) return asked; } catch (_) {}
   }
   try {
-    const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+    const sess = await activeAccountSession(request, env);
     if (sess && sess.aid && env.DB) {
       const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
       if (!(acc && acc.business)) return '';
@@ -903,6 +983,12 @@ export async function activeEmployee(request, env, asked) {
     const member = accessMember
       ? { ...(teamMember || {}), ...accessMember }
       : (teamIsNewer ? teamMember : null);
+    if (member) {
+      const expected = Math.max(0, Math.round(Number(member.authVersion) || 0));
+      const presented = Math.max(0, Math.round(Number(session.av) || 0));
+      const revision = await employeeAuthRevision(env, session.merchant, session.staffId, expected);
+      if (!revision.ok || presented !== revision.version) return null;
+    }
     return member ? { session, member, merchant: session.merchant } : null;
   } catch (_) { return null; }
 }
@@ -979,9 +1065,9 @@ export async function activeServiceEmployee(request, env, asked) {
  * appairage raté bloquerait une connexion, et l'opérateur partagerait son
  * quota avec les caisses.
  *
- * Toujours « fail open » : si la table manque ou que D1 tousse, on laisse
- * passer. Un limiteur cassé ne doit jamais empêcher un commerçant d'entrer
- * chez lui.
+ * Le compteur est une dépendance d'autorisation : si la table manque ou que
+ * D1 tousse, l'appelant reçoit un 503 récupérable. Un limiteur cassé ne doit
+ * jamais être confondu avec une absence d'échec enregistré.
  * ───────────────────────────────────────────────────────────────────────── */
 const LIMIT_WINDOW_MS = 15 * 60 * 1000;   // fenêtre d'observation
 const LIMIT_BLOCK_MS  = 15 * 60 * 1000;   // durée du blocage
@@ -1011,7 +1097,8 @@ function limiterKey(request, scope, identity = '') {
    retourner telle quelle, ou null si la voie est libre. */
 export async function limitCheck(request, env, scope, identity = '') {
   const k = limiterKey(request, scope, identity);
-  if (!k || !env.DB) return null;
+  if (!k) return null;
+  if (!env || !env.DB) return rateLimitUnavailable();
   try {
     const a = await env.DB.prepare(
       'SELECT blocked_until FROM pair_attempts WHERE ip = ?'
@@ -1020,7 +1107,7 @@ export async function limitCheck(request, env, scope, identity = '') {
     if (a && a.blocked_until && a.blocked_until > now) {
       return json({ error: 'too_many_attempts', retry_after: Math.ceil((a.blocked_until - now) / 1000) }, 429);
     }
-  } catch (_) { /* pas de table → pas de limiteur */ }
+  } catch (_) { return rateLimitUnavailable(); }
   return null;
 }
 
@@ -1028,33 +1115,39 @@ export async function limitCheck(request, env, scope, identity = '') {
    LIMIT_WINDOW_MS la ligne repart à 1, donc elle expire d'elle-même. */
 export async function limitFail(request, env, scope, identity = '') {
   const k = limiterKey(request, scope, identity);
-  if (!k || !env.DB) return;
+  if (!k) return true;
+  if (!env || !env.DB) return false;
   const now = Date.now();
   try {
-    const a = await env.DB.prepare(
-      'SELECT fails, first_ts FROM pair_attempts WHERE ip = ?'
-    ).bind(k).first();
-    if (!a || (now - a.first_ts) > LIMIT_WINDOW_MS) {
-      await env.DB.prepare(
-        `INSERT INTO pair_attempts (ip, fails, first_ts, blocked_until) VALUES (?, 1, ?, NULL)
-         ON CONFLICT(ip) DO UPDATE SET fails = 1, first_ts = excluded.first_ts, blocked_until = NULL`
-      ).bind(k, now).run();
-      return;
-    }
-    const fails = (a.fails || 0) + 1;
-    const blocked = fails >= LIMIT_MAX_FAILS ? (now + LIMIT_BLOCK_MS) : null;
-    await env.DB.prepare(
-      'UPDATE pair_attempts SET fails = ?, blocked_until = ? WHERE ip = ?'
-    ).bind(fails, blocked, k).run();
-  } catch (_) { /* limiteur indisponible → on laisse passer */ }
+    /* One SQLite statement owns the increment. A read followed by an UPDATE
+     * lets concurrent failed guesses overwrite one another and undercount. */
+    const result = await env.DB.prepare(
+      `INSERT INTO pair_attempts (ip, fails, first_ts, blocked_until) VALUES (?, 1, ?, NULL)
+       ON CONFLICT(ip) DO UPDATE SET
+         fails = CASE WHEN ? - pair_attempts.first_ts > ? THEN 1 ELSE pair_attempts.fails + 1 END,
+         first_ts = CASE WHEN ? - pair_attempts.first_ts > ? THEN ? ELSE pair_attempts.first_ts END,
+         blocked_until = CASE
+           WHEN ? - pair_attempts.first_ts > ? THEN NULL
+           WHEN pair_attempts.fails + 1 >= ? THEN ?
+           ELSE pair_attempts.blocked_until END`
+    ).bind(k, now, now, LIMIT_WINDOW_MS, now, LIMIT_WINDOW_MS, now,
+           now, LIMIT_WINDOW_MS, LIMIT_MAX_FAILS, now + LIMIT_BLOCK_MS).run();
+    const changes = Number(result && result.meta && result.meta.changes);
+    return Number.isFinite(changes) ? changes > 0 : true;
+  } catch (_) { return false; }
 }
 
 /* Entrée réussie : on efface l'ardoise, pour qu'un commerçant qui s'est
    trompé deux fois avant de réussir ne traîne pas son compteur. */
 export async function limitClear(request, env, scope, identity = '') {
   const k = limiterKey(request, scope, identity);
-  if (!k || !env.DB) return;
-  try { await env.DB.prepare('DELETE FROM pair_attempts WHERE ip = ?').bind(k).run(); } catch (_) {}
+  if (!k) return true;
+  if (!env || !env.DB) return false;
+  try { await env.DB.prepare('DELETE FROM pair_attempts WHERE ip = ?').bind(k).run(); return true; } catch (_) { return false; }
+}
+
+export function rateLimitUnavailable() {
+  return json({ error: 'rate-limit-unavailable' }, 503);
 }
 
 /* ─────────────────────── VÉRIFICATION DU CODE PERSONNEL ───────────────────────
@@ -1085,12 +1178,15 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
   let identity = '';
   let authorized = false;
 
-  const isTill = await isTillFor(request, env, merchant);
-  if (isTill) {
+  const till = await tillVerification(request, env, merchant);
+  if (till.unavailable && requireTill) {
+    return { ok: false, response: json({ error: 'auth-verification-unavailable' }, 503) };
+  }
+  if (till.ok) {
     authorized = true;
     identity = `till:${merchant}`;
   } else {
-    const sess = await readSession(readCookie(request, SESS_COOKIE), env && env.AUTH_SECRET);
+    const sess = await activeAccountSession(request, env);
     if (sess && sess.aid) {
       const entitled = await entitledMerchant(request, env, merchant);
       if (entitled === merchant) {
@@ -1172,7 +1268,9 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
   }
 
   if (!staff) {
-    await limitFail(request, env, `pin:${merchant}`, identity);
+    if (!await limitFail(request, env, `pin:${merchant}`, identity)) {
+      return { ok: false, response: rateLimitUnavailable() };
+    }
     return { ok: false, error: 'bad-pin', status: 401 };
   }
 
@@ -1205,7 +1303,7 @@ export async function verifyAccountPin(request, env, pin) {
   if (!/^\d{4}$/.test(pin)) return { ok: false, error: 'bad-pin', status: 401 };
 
   let sess = null;
-  try { sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET); } catch (_) {}
+  try { sess = await activeAccountSession(request, env); } catch (_) {}
   if (!sess || !sess.aid) return { ok: false, error: 'unauthorized', status: 401 };
 
   let accSlug = '';
@@ -1247,7 +1345,9 @@ export async function verifyAccountPin(request, env, pin) {
   const staff = rows.find((row) => employeeRoleOpensDashboard(row.role)) || null;
 
   if (!staff) {
-    await limitFail(request, env, 'pin:account', identity);
+    if (!await limitFail(request, env, 'pin:account', identity)) {
+      return { ok: false, response: rateLimitUnavailable() };
+    }
     return { ok: false, error: 'bad-pin', status: 401 };
   }
 

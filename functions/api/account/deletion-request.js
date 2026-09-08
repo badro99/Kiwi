@@ -1,9 +1,9 @@
 // Owner-initiated account deletion, not a till/store deletion API. A durable
 // request enters the existing operator queue; it never erases books on submit.
-import { json, readSession, readCookie, SESS_COOKIE, PASSWORD_MAX, verifyPassword, limitCheck, limitFail } from '../../auth/_lib.js';
+import { json, activeAccountSession, PASSWORD_MAX, verifyPassword, limitCheck, limitFail, rateLimitUnavailable } from '../../auth/_lib.js';
 
 async function identity(request, env) {
-  const session = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+  const session = await activeAccountSession(request, env);
   if (!session || !session.aid) return null;
   return env.DB.prepare('SELECT id,email,business,salt,hash FROM accounts WHERE id = ?').bind(session.aid).first();
 }
@@ -42,7 +42,7 @@ export async function onRequestPost({ request, env }) {
     if (!body || body.confirm !== true) return json({ error: 'confirmation-required' }, 400);
     const password = typeof body.password === 'string' ? body.password : '';
     if (!password || password.length > PASSWORD_MAX || !await verifyPassword(password, account.salt, account.hash)) {
-      await limitFail(request, env, 'account-deletion', id);
+      if (!await limitFail(request, env, 'account-deletion', id)) return rateLimitUnavailable();
       return json({ error: 'bad-creds' }, 401);
     }
     const prior = await existing(env, id);

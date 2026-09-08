@@ -57,6 +57,7 @@ class FakeDb {
     const stmt = {
       args: [], bind(...args) { stmt.args = args; return stmt; },
       async first() {
+        if (query.startsWith('SELECT status, session_epoch FROM accounts')) return { status: 'active', session_epoch: 0 };
         if (query.startsWith('SELECT account_id FROM merchant_config')) return { account_id: 'owner-1' };
         if (query.startsWith('SELECT business FROM accounts')) return { business: MERCHANT };
         if (query.startsWith('SELECT data FROM store_docs')) return db.docs.get(stmt.args[1]) || null;

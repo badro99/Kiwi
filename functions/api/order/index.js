@@ -144,11 +144,11 @@ export async function onRequestPost(context) {
   if (clientRef) {
     try {
       const dup = await env.DB.prepare(
-        `SELECT id, number, total FROM orders WHERE merchant = ? AND client_ref = ?`
+        `SELECT id, number, total, lines FROM orders WHERE merchant = ? AND client_ref = ?`
       ).bind(merchant, clientRef).first();
       if (dup) {
         return json({ ok: true, id: dup.id, number: dup.number, total: dup.total,
-                      lines: priced.lines, replayed: true });
+                      lines: (() => { try { const v = JSON.parse(dup.lines); return Array.isArray(v) ? v : []; } catch (_) { return []; } })(), replayed: true });
       }
     } catch (_) { /* colonne pas encore migrée → pas d'idempotence, comme avant */ }
   }
@@ -248,11 +248,11 @@ export async function onRequestPost(context) {
     if (clientRef) {
       try {
         const raced = await env.DB.prepare(
-          `SELECT id, number, total FROM orders WHERE merchant = ? AND client_ref = ?`
+          `SELECT id, number, total, lines FROM orders WHERE merchant = ? AND client_ref = ?`
         ).bind(merchant, clientRef).first();
         if (raced) {
           return json({ ok: true, id: raced.id, number: raced.number, total: raced.total,
-                        lines: priced.lines, replayed: true });
+                        lines: (() => { try { const v = JSON.parse(raced.lines); return Array.isArray(v) ? v : []; } catch (_) { return []; } })(), replayed: true });
         }
       } catch (_) { /* colonne absente → c'était bien une base non migrée */ }
     }

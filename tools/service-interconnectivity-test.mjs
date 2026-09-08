@@ -20,6 +20,18 @@ const DB = { prepare(sql) { let args = []; return {
   async all() { return { results: db.prepare(sql).all(...args) }; },
   async run() { const r = db.prepare(sql).run(...args); return { success: true, meta: { changes: Number(r.changes) } }; },
 }; } };
+DB.batch = async (statements) => {
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const results = [];
+    for (const statement of statements) results.push(await statement.run());
+    db.exec('COMMIT');
+    return results;
+  } catch (error) {
+    try { db.exec('ROLLBACK'); } catch (_) {}
+    throw error;
+  }
+};
 const SECRET = 'service-interconnectivity-secret';
 const env = { DB, AUTH_SECRET: SECRET, SITE_PASSWORD: 'staff-gate' };
 const merchant = 'test-restaurant';
@@ -347,7 +359,13 @@ ok(closeAfterStaleHeartbeat.states['1'].status === 'khawya'
   && closeAfterStaleHeartbeat.states['1'].source === 'employee'
   && closeAfterStaleHeartbeat.states['1'].lines === undefined,
   'la caisse reçoit immédiatement la fermeture et aucune ancienne ligne ne survit');
-result = await qpost(saraCookie, { merchant, closeTable: '1', closedBy: 'service' });
+const closeVisit = db.prepare(
+  "SELECT id, seen_ts FROM table_sessions WHERE merchant=? AND table_no='1' AND mode='table' AND status='open' ORDER BY opened_ts DESC LIMIT 1"
+).get(merchant);
+result = await qpost(saraCookie, {
+  merchant, closeTable: '1', expectedSession: closeVisit && closeVisit.id,
+  expectedRevision: closeVisit && closeVisit.seen_ts, closedBy: 'service',
+});
 ok(result.response.status === 200 && result.body.ok && result.body.closed === 1,
   'fermer côté serveur coupe aussi la session OrderPro qui rouvrait la table');
 request = new Request('https://kiwi.test/api/service/events', { method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'application/json' }, body: JSON.stringify({

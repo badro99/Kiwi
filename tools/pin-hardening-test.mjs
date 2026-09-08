@@ -28,7 +28,8 @@ sqlite.exec(`
     salt TEXT NOT NULL,
     hash TEXT NOT NULL,
     created_ts INTEGER NOT NULL,
-    status TEXT NOT NULL DEFAULT 'active'
+    status TEXT NOT NULL DEFAULT 'active',
+    session_epoch INTEGER NOT NULL DEFAULT 0
   );
 
   CREATE TABLE staff_pins (
@@ -91,8 +92,8 @@ const now = Date.now();
 // 1. Account fixture
 const accCreds = await hashPassword('OwnerPassword123');
 sqlite.prepare(`
-  INSERT INTO accounts (id, email, business, salt, hash, created_ts, status)
-  VALUES ('acc-1', 'owner@cafe-atlas.ma', 'Café Atlas', ?, ?, ?, 'active')
+  INSERT INTO accounts (id, email, business, salt, hash, created_ts, status, session_epoch)
+  VALUES ('acc-1', 'owner@cafe-atlas.ma', 'Café Atlas', ?, ?, ?, 'active', 0)
 `).run(accCreds.salt, accCreds.hash, now);
 
 // 2. Staff PIN fixtures
@@ -116,7 +117,8 @@ sqlite.exec(`
     account_id TEXT,
     name TEXT,
     status TEXT,
-    updated_ts INTEGER
+    updated_ts INTEGER,
+    till_epoch INTEGER NOT NULL DEFAULT 0
   );
 `);
 sqlite.prepare(`
@@ -162,6 +164,18 @@ const env = {
           };
         },
       };
+    },
+    async batch(statements) {
+      sqlite.exec('BEGIN');
+      try {
+        const results = [];
+        for (const statement of statements) results.push(await statement.run());
+        sqlite.exec('COMMIT');
+        return results;
+      } catch (error) {
+        try { sqlite.exec('ROLLBACK'); } catch (_) {}
+        throw error;
+      }
     },
   },
 };

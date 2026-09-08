@@ -2,7 +2,7 @@
 // lead. Body JSON: { email, name, business, password }.
 import {
   PASSWORD_MAX, hashPassword, makeSession, sessionCookie, json, normEmail, mirrorLead,
-  limitCheck, limitFail, passwordProblem, slugMerchant,
+  limitCheck, limitFail, passwordProblem, slugMerchant, rateLimitUnavailable,
 } from './_lib.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -12,14 +12,13 @@ export async function onRequestPost(context) {
   const secret = env.AUTH_SECRET;
   if (!env.DB || !secret) return json({ error: 'not-configured' }, 503);
 
+  let body;
+  try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
+  if (String(body && body.email || '').length > 254) return json({ error: 'email' }, 400);
+  if (String(body && body.password || '').length > PASSWORD_MAX) return json({ error: 'weak', reason: 'long' }, 400);
+
   const blocked = await limitCheck(request, env, 'signup');
   if (blocked) return blocked;
-
-  let body;
-  try { body = await request.json(); } catch (_) {
-    await limitFail(request, env, 'signup');
-    return json({ error: 'bad-json' }, 400);
-  }
 
   const email = normEmail(body.email);
   const name = String(body.name || '').trim().slice(0, 120);
@@ -27,22 +26,22 @@ export async function onRequestPost(context) {
   const password = String(body.password || '');
 
   if (email.length > 254 || !EMAIL_RE.test(email)) {
-    await limitFail(request, env, 'signup');
+    if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
     return json({ error: 'email' }, 400);
   }
   if (!name) {
-    await limitFail(request, env, 'signup');
+    if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
     return json({ error: 'name' }, 400);
   }
   const problem = passwordProblem(password, { email, business });
   if (problem) {
-    await limitFail(request, env, 'signup');
+    if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
     return json({ error: 'weak', reason: problem }, 400);
   }
 
   const existing = await env.DB.prepare('SELECT id FROM accounts WHERE email = ?').bind(email).first();
   if (existing) {
-    await limitFail(request, env, 'signup');
+    if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
     return json({ error: 'exists' }, 409);
   }
 
@@ -74,7 +73,7 @@ export async function onRequestPost(context) {
       } catch (_) { /* illisible → ne bloque pas une inscription légitime */ }
     }
     if (taken) {
-      await limitFail(request, env, 'signup');
+      if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
       return json({ error: 'business-taken' }, 409);
     }
   }
@@ -89,14 +88,14 @@ export async function onRequestPost(context) {
     ).bind(id, email, name, business, salt, hash, ts).run();
   } catch (e) {
     // UNIQUE(email) race → treat as already-registered.
-    await limitFail(request, env, 'signup');
+    if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
     return json({ error: 'exists' }, 409);
   }
 
   /* Effacer le compteur à chaque succès rendait la création de comptes
    * illimitée : un script alternait les inscriptions réussies et n'était jamais
    * freiné. Un compte créé compte donc comme une tentative. */
-  await limitFail(request, env, 'signup');
+  if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
 
   // Best-effort lead mirror to the Google Sheet — never blocks the response.
   context.waitUntil(mirrorLead(env, { email, name, business, ts }));

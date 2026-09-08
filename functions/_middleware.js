@@ -25,7 +25,7 @@ import {
   makeSession, sessionCookie, sessionNeedsRefresh,
   operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE, namedOperatorId, verifyPassword,
   findEmployeeCredential, employeeToken, employeeCookie, activeServiceEmployee,
-  limitCheck, limitFail, limitClear,
+  limitCheck, limitFail, limitClear, rateLimitUnavailable,
 } from './auth/_lib.js';
 
 const GATE_COOKIE = 'kiwi_gate';
@@ -151,18 +151,19 @@ async function expectedToken(password) {
 //   · row missing  → the account was deleted   → revoke (return false)
 //   · status suspended → the client is frozen   → revoke (return false)
 //   · active       → allow
-// FAIL OPEN on any infrastructure problem (no DB binding, query throws, or the
-// `status` column not migrated yet): we return true so a transient database
-// blip can never lock out every paying client at once. Only a definitive
-// "row is gone" or "status = suspended" result revokes access.
-async function accountActive(env, aid) {
-  if (!env.DB || !aid) return true;
+// A revocation read is an authorization dependency. If it is unavailable, the
+// private request is denied; treating the error as active would keep a revoked
+// token alive during the exact outage in which the check cannot be trusted.
+async function accountActive(env, aid, sessionVersion = 0) {
+  if (!env || !env.DB || !aid) return { ok: false, unavailable: true };
   try {
-    const row = await env.DB.prepare('SELECT status FROM accounts WHERE id = ?').bind(aid).first();
-    if (!row) return false;                // deleted
-    return row.status !== 'suspended';     // frozen for non-payment, etc.
+    const row = await env.DB.prepare('SELECT status, session_epoch FROM accounts WHERE id = ?').bind(aid).first();
+    if (!row) return { ok: false };        // deleted
+    const expected = Math.max(0, Math.round(Number(row.session_epoch) || 0));
+    const presented = Math.max(0, Math.round(Number(sessionVersion) || 0));
+    return { ok: String(row.status || 'active').trim().toLowerCase() !== 'suspended' && expected === presented };
   } catch (_) {
-    return true;                           // can't verify → don't lock anyone out
+    return { ok: false, unavailable: true };
   }
 }
 
@@ -333,7 +334,8 @@ async function routeRequest(context) {
    * `entitledMerchant(..., { allowTill: true })` ou `verifyStaffPin(..., { requireTill: true })`
    * et rejettent tout accès illégitime en 403. POST seulement — les lectures
    * d'audit (GET /api/sale/cancel) restent gardées derrière la session propriétaire. */
-  if (method === 'POST' && (path === '/api/sale' || path === '/api/sale/refund' || path === '/api/sale/cancel')) return next();
+  if (method === 'POST' && (path === '/api/sale' || path === '/api/sale/refund' || path === '/api/sale/cancel'
+    || path === '/api/pressing/cancel')) return next();
   // La page de réinitialisation de mot de passe. Quelqu'un qui a perdu son mot
   // de passe n'a par définition AUCUNE session : la porte du site la lui
   // refuserait, et le lien qu'on vient de lui envoyer tomberait sur l'écran de
@@ -430,6 +432,7 @@ async function routeRequest(context) {
   // cookie can still be honoured, then land on the lockout screen with the dead
   // session cookie cleared.
   let sessionRevoked = false;
+  let sessionVerificationUnavailable = false;
   if (authSecret) {
     const token = readCookie(request, SESS_COOKIE);
     const sess = token ? await readSession(token, authSecret) : null;
@@ -438,7 +441,8 @@ async function routeRequest(context) {
       const wantsDoc = dest === 'document' ||
         (!dest && (request.headers.get('Accept') || '').indexOf('text/html') !== -1);
       if (!(wantsDoc || isApi)) return next();         // asset → trust the token
-      if (await accountActive(env, sess.aid)) {
+      const accountState = await accountActive(env, sess.aid, sess.sv);
+      if (accountState.ok) {
         /* Fenêtre glissante — voir sessionNeedsRefresh(). Uniquement sur un
          * CHARGEMENT DE PAGE arrivé à mi-vie : jamais sur un asset (le cookie
          * repartirait sur chaque fichier), jamais sur une réponse 101, parce
@@ -447,12 +451,13 @@ async function routeRequest(context) {
           const res = await next();
           if (res.status === 101) return res;
           const out = new Response(res.body, res);
-          out.headers.append('Set-Cookie', sessionCookie(await makeSession(sess.aid, authSecret)));
+          out.headers.append('Set-Cookie', sessionCookie(await makeSession(sess.aid, authSecret, sess.sv)));
           return out;
         }
         return next();
       }
-      sessionRevoked = true;                           // deleted/suspended → lock out below
+      sessionVerificationUnavailable = !!accountState.unavailable;
+      sessionRevoked = !sessionVerificationUnavailable; // only a confirmed revoke purges identity
     }
   }
 
@@ -483,7 +488,7 @@ async function routeRequest(context) {
     const employee = await findEmployeeCredential(env, email, pin);
     if (employee && !employee.ambiguous && String(employee.status || 'active') !== 'suspended') {
       await limitClear(request, env, 'employee');
-      const token = await employeeToken(authSecret, { merchant: employee.merchant, staffId: employee.id });
+      const token = await employeeToken(authSecret, { merchant: employee.merchant, staffId: employee.id, authVersion: employee.authVersion });
       return new Response(null, {
         status: 303,
         headers: {
@@ -492,7 +497,7 @@ async function routeRequest(context) {
         },
       });
     }
-    await limitFail(request, env, 'employee');
+    if (!await limitFail(request, env, 'employee')) return rateLimitUnavailable();
     return htmlResponse(authPage({ staffError: true, allowStaff: true, lang: requestedLanguage(request) }));
   }
 
@@ -528,7 +533,7 @@ async function routeRequest(context) {
       }
       return new Response(null, { status: 303, headers });
     }
-    await limitFail(request, env, 'op');
+    if (!await limitFail(request, env, 'op')) return rateLimitUnavailable();
     return htmlResponse(authPage({ allowStaff: !!(authSecret && env.DB), operatorError: true, lang: requestedLanguage(request) }));
   }
 
@@ -541,6 +546,18 @@ async function routeRequest(context) {
     return new Response(JSON.stringify({ error: 'account-revoked' }), {
       status: 401,
       headers: { ...lockHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  if (sessionVerificationUnavailable && isApi) {
+    return new Response(JSON.stringify({ error: 'auth-verification-unavailable' }), {
+      status: 503,
+      headers: { ...lockHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  if (sessionVerificationUnavailable) {
+    return new Response(authPage({ allowStaff: !!(authSecret && env.DB), revoked: false, lang: requestedLanguage(request) }), {
+      status: 503,
+      headers: { ...lockHeaders, 'Content-Type': 'text/html; charset=utf-8' },
     });
   }
   return new Response(authPage({ allowStaff: !!(authSecret && env.DB), revoked: sessionRevoked, lang: requestedLanguage(request) }), {

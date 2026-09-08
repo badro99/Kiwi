@@ -125,7 +125,8 @@ CREATE TABLE IF NOT EXISTS accounts (
   -- migration — une copie ne saurait plus dire si le client a choisi cette
   -- adresse pour sa facturation ou si personne n'a jamais posé la question.
   contact_email TEXT,                -- l'adresse à laquelle Kiwi écrit au commerce
-  billing_email TEXT                 -- facturation / comptabilité, quand elle diffère
+  billing_email TEXT,                -- facturation / comptabilité, quand elle diffère
+  session_epoch INTEGER NOT NULL DEFAULT 0 -- password recovery revokes older signed sessions
 );
 -- Base déjà déployée : `node tools/d1-schema.mjs` dit ce qui manque.
 -- The site gate (functions/_middleware.js → accountActive) revokes a live
@@ -669,6 +670,7 @@ CREATE TABLE IF NOT EXISTS inventory_movements (
   reason          TEXT NOT NULL,                 -- opening|receipt|sale|count|loss|transfer-*|production-*|return
   unit_cost_cents INTEGER,                       -- coût d'entrée gelé ; NULL si inconnu (lecteurs historiques)
   unit_cost_rate  INTEGER,                       -- TAUX ×1e-4 ; prime sur les centimes (0,0045 MAD/g survivra)
+  payload_hash    TEXT NOT NULL DEFAULT '',       -- immutable movement identity binding
   currency        TEXT NOT NULL DEFAULT 'MAD',
   ref_type        TEXT NOT NULL DEFAULT '',       -- sale|receipt|count|transfer|production|manual
   ref_id          TEXT NOT NULL DEFAULT '',
@@ -1528,3 +1530,54 @@ CREATE TABLE IF NOT EXISTS operator_notes (
   actor_id TEXT NOT NULL, actor TEXT NOT NULL, ts INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_operator_notes ON operator_notes(merchant,ts DESC);
+
+-- Durable external effects, migration 2026-09-08-audit-payment-shopify-outboxes.sql.
+CREATE TABLE IF NOT EXISTS payment_refund_reservations (
+  merchant TEXT NOT NULL, command_id TEXT NOT NULL, reference TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL CHECK (amount_cents > 0), status TEXT NOT NULL,
+  provider_ref TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, command_id)
+);
+CREATE INDEX IF NOT EXISTS idx_refund_reservation_reference
+  ON payment_refund_reservations(merchant, reference, status);
+CREATE TABLE IF NOT EXISTS shopify_inbound_stock (
+  merchant TEXT NOT NULL, order_ref TEXT NOT NULL, payload TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0,
+  next_ts INTEGER NOT NULL DEFAULT 0, last_error TEXT NOT NULL DEFAULT '',
+  created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, order_ref)
+);
+CREATE INDEX IF NOT EXISTS idx_shopify_inbound_due ON shopify_inbound_stock(status, next_ts);
+
+-- Inventory/loyalty audit remediation, migration 2026-09-08-audit-remediation-inventory-loyalty.sql.
+CREATE TABLE IF NOT EXISTS inventory_request_reservations (
+  merchant TEXT NOT NULL, request_id TEXT NOT NULL, line_no INTEGER NOT NULL,
+  item_id TEXT NOT NULL, location_id TEXT NOT NULL, qty_milli INTEGER NOT NULL,
+  review_revision INTEGER NOT NULL, created_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, request_id, line_no)
+);
+CREATE INDEX IF NOT EXISTS idx_inventory_request_reservations_stock
+  ON inventory_request_reservations(merchant, item_id, location_id);
+CREATE TABLE IF NOT EXISTS client_purchase_events (
+  merchant TEXT NOT NULL, ref TEXT NOT NULL, client_id TEXT NOT NULL,
+  amount INTEGER NOT NULL DEFAULT 0, points INTEGER NOT NULL DEFAULT 0,
+  stamps INTEGER NOT NULL DEFAULT 0, visits INTEGER NOT NULL DEFAULT 1,
+  created_ts INTEGER NOT NULL, srv_ts INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (merchant, ref)
+);
+CREATE INDEX IF NOT EXISTS idx_client_purchase_events_sync ON client_purchase_events(merchant, srv_ts);
+
+CREATE TABLE IF NOT EXISTS client_reward_events (
+  merchant TEXT NOT NULL, ref TEXT NOT NULL, client_id TEXT NOT NULL,
+  points_delta INTEGER NOT NULL DEFAULT 0, stamps_delta INTEGER NOT NULL DEFAULT 0,
+  created_ts INTEGER NOT NULL, srv_ts INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (merchant, ref)
+);
+CREATE INDEX IF NOT EXISTS idx_client_reward_events_sync ON client_reward_events(merchant, srv_ts);
+
+CREATE TABLE IF NOT EXISTS employee_auth_versions (
+  merchant TEXT NOT NULL, member_id TEXT NOT NULL,
+  auth_version INTEGER NOT NULL DEFAULT 0, pin_digest TEXT NOT NULL,
+  updated_ts INTEGER NOT NULL, PRIMARY KEY (merchant, member_id)
+);
+CREATE INDEX IF NOT EXISTS idx_employee_auth_versions_merchant ON employee_auth_versions(merchant);

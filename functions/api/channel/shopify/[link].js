@@ -39,6 +39,7 @@
 import { json } from '../../../auth/_lib.js';
 import { startOfWeek } from '../../order/_lib.js';
 import { __test as catalogFns } from '../../catalog.js';
+import { enqueueInboundStock, flushInboundStock } from '../../shopify/_inbound-stock.js';
 
 const MAX_LINES = 60;
 const MAX_TOTAL = 200000;          // 200 000 MAD — garde-fou, pas une règle
@@ -57,6 +58,12 @@ const TOPICS = {
 };
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
+const money = (value) => {
+  if (value == null || value === '') return 0;
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return NaN;
+  return Math.round(amount * 100) / 100;
+};
 
 /* Comparaison à temps constant — même raison que dans order.js : comparer avec
  * === laisse fuir, par le temps de réponse, combien de tête est juste. */
@@ -110,7 +117,7 @@ function translate(o) {
       id: str(l && l.id, 40),
       name: str((l && (l.title || l.name)) || '', 80),
       qty: Math.min(99, Math.max(1, Math.round(Number(l && l.quantity) || 1))),
-      unitPrice: Math.max(0, Math.round(Number(l && l.price) || 0)),
+      unitPrice: Math.max(0, money(l && l.price)),
       options: str(optionsText, 200),
       note: '',
     };
@@ -132,20 +139,12 @@ function translate(o) {
     bill.name || '', 80
   );
 
-  /* Kiwi range les commandes en dirhams entiers (schema.sql : `total INTEGER
-   * -- MAD, whole dirhams`). Shopify, lui, envoie des centimes. Arrondir sans
-   * le dire serait grave ici : au Maroc le paiement à la livraison domine, et
-   * le coursier encaisse le chiffre imprimé sur le ticket. On arrondit donc
-   * pour la base, mais le montant EXACT part sur le ticket dès qu'il diffère —
-   * mieux vaut une ligne en plus qu'un dirham de travers dans la poche. */
-  const exact = Number(o && o.total_price) || 0;
-  const total = Math.round(exact);
-  const cents = Math.abs(exact - total) > 0.004
-    ? exact.toFixed(2).replace('.', ',') + ' MAD'
-    : '';
+  /* SQLite's legacy INTEGER affinity accepts fractional MAD; do not round to
+   * whole dirhams. Normalize using centimes, then retain the existing API unit. */
+  const total = money(o && o.total_price);
 
   const shopNote = str(o && o.note, 180);
-  const note = [cents ? 'Total exact : ' + cents : '', shopNote].filter(Boolean).join(' · ');
+  const note = shopNote;
 
   return {
     total,
@@ -271,6 +270,13 @@ async function applyShopifyOrderStock(env, merchant, order) {
   return { applied: 0, unmatched: lines.length };
 }
 
+async function persistStockWork(env, merchant, order) {
+  // The order is already durable. A 2xx now requires durable retry ownership,
+  // not successful inventory I/O in this one request's lifetime.
+  await enqueueInboundStock(env, merchant, order);
+  await flushInboundStock(env, applyShopifyOrderStock, merchant, String(order.id || order.name || ''), 1);
+}
+
 export async function onRequestPost(context) {
   const { request, env, params } = context;
   if (!env.DB) return json({ error: 'not-configured' }, 503);
@@ -377,9 +383,13 @@ export async function onRequestPost(context) {
   const t = translate(o);
   const merchant = String(link.merchant || '').toLowerCase();
 
-  if (t.total <= 0 || t.total > MAX_TOTAL) {
+  if (!Number.isFinite(t.total) || t.total <= 0 || t.total > MAX_TOTAL) {
     await mark(env, link.id, false, 'total absent ou hors bornes');
     return json({ error: 'bad-total' }, 400);
+  }
+  if (t.lines.some((line) => !Number.isFinite(line.unitPrice))) {
+    await mark(env, link.id, false, 'prix de ligne invalide');
+    return json({ error: 'bad-line-price' }, 400);
   }
   if (!t.lines.length) {
     await mark(env, link.id, false, 'commande sans ligne');
@@ -395,7 +405,7 @@ export async function onRequestPost(context) {
         'SELECT id, number FROM orders WHERE merchant = ? AND channel = ? AND ext_ref = ?'
       ).bind(merchant, CHANNEL, t.ref).first();
       if (dup) {
-        await applyShopifyOrderStock(env, merchant, o);
+        await persistStockWork(env, merchant, o);
         await mark(env, link.id, true);
         return json({ ok: true, id: dup.id, number: dup.number, duplicate: true });
       }
@@ -440,7 +450,7 @@ export async function onRequestPost(context) {
           'SELECT id, number FROM orders WHERE merchant = ? AND channel = ? AND ext_ref = ?'
         ).bind(merchant, CHANNEL, t.ref).first();
         if (raced) {
-          await applyShopifyOrderStock(env, merchant, o);
+          await persistStockWork(env, merchant, o);
           await mark(env, link.id, true);
           return json({ ok: true, id: raced.id, number: raced.number, duplicate: true });
         }
@@ -451,13 +461,8 @@ export async function onRequestPost(context) {
     return json({ error: 'write-failed', detail }, 500);
   }
 
-  const stock = await applyShopifyOrderStock(env, merchant, o);
-  if (stock.unmatched) {
-    try {
-      await env.DB.prepare('UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?')
-        .bind(`${stock.unmatched} ligne(s) Shopify sans variante Kiwi liée`, Date.now(), merchant).run();
-    } catch (_) {}
-  }
+  try { await persistStockWork(env, merchant, o); }
+  catch (_) { return json({ error: 'stock-retry-not-persisted' }, 503); }
   await mark(env, link.id, true);
   return json({ ok: true, id, number: (row && row.number) || 1 });
 }

@@ -22,6 +22,7 @@
 
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
 import { makeSession, sessionCookie } from '../functions/auth/_lib.js';
 import { onRequestPost as postHook } from '../functions/api/channel/shopify/[link].js';
 import { onRequestPost as postKeys, onRequestGet as getKeys } from '../functions/api/channel/keys.js';
@@ -38,6 +39,7 @@ const ok = (l, c, d) => { if (c) pass++; else fails.push(l + (d ? ' — ' + d : 
 
 /* ── D1 de poche ─────────────────────────────────────────────────────────── */
 function makeDB() {
+  const retryDB = new DatabaseSync(':memory:');
   const T = { channel_links: [], orders: [], merchant_config: [], accounts: {}, catalogs: [], shopify_variant_links: [], hideDuplicateOnce: false };
   T.accounts[ACC_A] = { business: 'Atlas Casa' };
   T.accounts[ACC_B] = { business: 'Chez Rival' };
@@ -45,6 +47,15 @@ function makeDB() {
   const db = {
     _t: T,
     prepare(sql) {
+      if (sql.includes('shopify_inbound_stock')) {
+        let values = [];
+        return {
+          bind(...args) { values = args; return this; },
+          async run() { const r = retryDB.prepare(sql).run(...values); return { meta: { changes: Number(r.changes) } }; },
+          async first() { return retryDB.prepare(sql).get(...values) || null; },
+          async all() { return { results: retryDB.prepare(sql).all(...values) }; },
+        };
+      }
       const q = sql.replace(/\s+/g, ' ').trim();
       let a = [];
       const api = {
@@ -64,6 +75,11 @@ function makeDB() {
             return T.channel_links.find((r) => r.id === a[0]) || null;
           }
           if (q.startsWith('SELECT business FROM accounts')) return T.accounts[a[0]] || null;
+          if (q.startsWith('SELECT status, session_epoch FROM accounts')) return T.accounts[a[0]] ? { status: 'active', session_epoch: 0 } : null;
+          if (q.startsWith('SELECT status FROM merchant_config')) {
+            const r = T.merchant_config.find((x) => x.merchant === a[0]);
+            return r ? { status: r.status || 'active' } : null;
+          }
           if (q.startsWith('SELECT account_id FROM merchant_config')) {
             const r = T.merchant_config.find((x) => x.merchant === a[0]);
             return r ? { account_id: r.account_id } : null;
@@ -185,8 +201,8 @@ const ORDER = (over) => JSON.stringify(Object.assign({
 (async function run() {
   const sessA = sessionCookie(await makeSession(ACC_A, SECRET)).split(';')[0];
   const sessB = sessionCookie(await makeSession(ACC_B, SECRET)).split(';')[0];
-  DB._t.merchant_config.push({ merchant: 'atlas-casa', account_id: ACC_A });
-  DB._t.merchant_config.push({ merchant: 'chez-rival', account_id: ACC_B });
+  DB._t.merchant_config.push({ merchant: 'atlas-casa', account_id: ACC_A, status: 'active' });
+  DB._t.merchant_config.push({ merchant: 'chez-rival', account_id: ACC_B, status: 'active' });
   DB._t.shopify_variant_links.push({ merchant: 'atlas-casa', kiwi_variant_id: 'kv-1', shopify_variant_id: 'gid://shopify/ProductVariant/901', status: 'active' });
   DB._t.catalogs.push({
     merchant: 'atlas-casa', rev: 1, updated_ts: Date.now(),
@@ -296,9 +312,9 @@ const ORDER = (over) => JSON.stringify(Object.assign({
   r = await signed(linkId, cents);
   ok('une commande à centimes est acceptée', r.status === 200 && r.body.ok === true, JSON.stringify(r.body));
   const t2 = DB._t.orders[1];
-  ok('…arrondie au dirham pour la base', t2.total === 130, String(t2.total));
-  ok('…mais le montant exact part sur le ticket',
-    /129,90 MAD/.test(JSON.parse(t2.customer).note), JSON.parse(t2.customer).note);
+  ok('…les centimes sont conservés dans la base', t2.total === 129.90, String(t2.total));
+  ok('…aucune note ne masque un montant différent',
+    JSON.parse(t2.customer).note === '', JSON.parse(t2.customer).note);
 
   const round = ORDER({ id: 778, total_price: '240.00', note: '' });
   r = await signed(linkId, round);

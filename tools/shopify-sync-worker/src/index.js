@@ -3,9 +3,12 @@
 // outages, expired requests and devices that went offline after checkout.
 
 import { flushShopifyOutbox } from '../../../functions/api/shopify/_lib.js';
+import { flushInboundStock } from '../../../functions/api/shopify/_inbound-stock.js';
+import { __test as inbound } from '../../../functions/api/channel/shopify/[link].js';
 
 export default {
   async scheduled(_controller, env, ctx) {
+    ctx.waitUntil(flushInboundStock(env, inbound.applyShopifyOrderStock));
     ctx.waitUntil(flushShopifyOutbox(env, '', 50).then((result) => {
       if (result.processed || result.failed) console.log(JSON.stringify({ event: 'shopify-sync', ...result }));
     }));

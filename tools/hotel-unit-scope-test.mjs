@@ -45,6 +45,9 @@ function makeDb(type = 'hotel', doc = registry) {
           }
           if (query.startsWith('SELECT account_id FROM merchant_config')) return { account_id: 'owner-1' };
           if (query.startsWith('SELECT business FROM accounts')) return { business: MERCHANT };
+          if (query.startsWith('SELECT status, session_epoch FROM accounts')) return { status: 'active', session_epoch: 0 };
+          if (query.startsWith('SELECT till_epoch FROM merchant_config')) return { till_epoch: 0 };
+          if (query.startsWith('SELECT status FROM merchant_config')) return { status: 'active' };
           return null;
         },
         async run() { return { success: true, meta: { changes: 1 } }; },

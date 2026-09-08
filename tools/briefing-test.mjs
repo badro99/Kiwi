@@ -77,7 +77,9 @@ CREATE TABLE staff_pins (id TEXT PRIMARY KEY, merchant TEXT, pin TEXT, name TEXT
 CREATE TABLE pair_attempts (ip TEXT PRIMARY KEY, fails INTEGER, first_ts INTEGER, blocked_until INTEGER);
 `);
 db.prepare(`INSERT INTO accounts VALUES ('acc-1','owner@example.test','Briefing Fixture','s','h',?,'active')`).run(now);
+db.exec('ALTER TABLE accounts ADD COLUMN session_epoch INTEGER NOT NULL DEFAULT 0');
 db.prepare(`INSERT INTO merchant_config VALUES (?, '{}','pro','restaurant','acc-1','Briefing Fixture','active',?)`).run(SHOP, now);
+db.exec('ALTER TABLE merchant_config ADD COLUMN till_epoch INTEGER NOT NULL DEFAULT 0');
 const privateDoc = { days: [{ id: 'acc-1:' + SHOP + ':2026-08-20', day: '2026-08-20', lines: [{ id: 'sales', amount: 12000 }] }] };
 db.prepare(`INSERT INTO store_docs VALUES (?,'briefing',?,1,?)`).run(SHOP, JSON.stringify(privateDoc), now);
 const DB = { prepare(q) { const st = db.prepare(q); return { bind(...p) { return { async first() { return st.get(...p); }, async all() { return { results: st.all(...p) }; }, async run() { const r = st.run(...p); return { meta: { changes: r.changes }, success: true }; } }; } }; }, async batch(stmts) { return Promise.all(stmts); } };

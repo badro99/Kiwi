@@ -78,10 +78,11 @@ let result = app.KiwiKitchenPrint.enqueue([
 ok('un poste non désigné ne vole pas les bons des autres caisses', result.skipped === 'not-print-hub');
 ok('aucun papier distant ne sort sans hub explicite', printed.length === 0);
 
+app.KiwiKitchenPrint.setHub(true);
 result = app.KiwiKitchenPrint.enqueue([
   { id: 'ord-employee-connected:cuisson', createdAt: Date.now(), payload: { title: 'CUISSON', items: [{ name: 'Tajine serveur' }] } },
 ], { remote: 'connected' });
-ok('Lancer la commande imprime sur la caisse dont la cuisine est connectée', result.accepted === 1);
+ok('Lancer la commande imprime sur la caisse désignée comme hub dont la cuisine est connectée', result.accepted === 1);
 await wait(90);
 ok('le bon employé sort sans confirmation caisse ni hub manuel',
   printed.length === 1 && printed[0].items[0].name === 'Tajine serveur');
@@ -91,7 +92,6 @@ app.KiwiKitchenPrint.enqueue([
 await wait();
 ok('le polling du même bon employé ne le réimprime pas', printed.length === 1);
 
-app.KiwiKitchenPrint.setHub(true);
 result = app.KiwiKitchenPrint.enqueue([
   { id: 'ord-before-hub:cuisson', createdAt: Date.now() - 60_000, payload: { title: 'ANCIEN', items: [] } },
 ], { remote: true });
@@ -214,8 +214,9 @@ ok('la caisse charge la file durable après le relais canonique',
   /kitchen-relay\.js[^]*kitchen-print-queue\.js/.test(caisse));
 ok('les commandes distantes acceptées appellent bien le papier',
   /o\.status === 'accepted'\) printKitchenTickets\(t, t\.items, \{[^]*?o\.mode === 'table' && o\.session && o\.server \? 'connected' : true/.test(caisse));
-ok('une commande lancée ou acceptée par un serveur imprime sans second geste caisse',
-  /options\.remote === 'connected' && !isHub\(\) && !printerReady\(\)/.test(source)
+ok('une commande serveur distante reste réservée au hub exclusif',
+  /\(options\.remote === true \|\| options\.remote === 'connected'\) && !isHub\(\)/.test(source)
+  && /skipped: 'not-print-hub'/.test(source)
   && /remote: options\.remote === true \|\| options\.remote === 'connected'/.test(source));
 ok('la caisse qui accepte imprime localement sans exiger le bail du hub',
   /confirmAccepted\(order\)[^]*?localKitchenAction: true/.test(caisse));

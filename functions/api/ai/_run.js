@@ -1,26 +1,27 @@
 // functions/api/ai/_run.js — l'appel Workers AI partagé par toutes les routes AI.
 //
 // Passerelle Cloudflare AI Gateway « kiwi » (journal, coût par modèle, limites),
-// cacheTtl 0 : une réponse sur l'argent d'un commerçant ne se sert jamais depuis
-// un cache. Tant que la passerelle n'est pas créée dans le tableau de bord,
-// l'appel avec l'option lève — on réessaie aussitôt SANS l'option, pour que la
-// fonctionnalité ne dépende jamais d'un clic d'administration.
+// cacheTtl 0 : aucune réponse financière en cache. Une panne ou un refus de la
+// passerelle ne doit jamais contourner ses limites via un appel direct.
 export const GATEWAY_OPTS = { gateway: { id: 'kiwi', cacheTtl: 0 } };
 
 export async function runAiWithGateway(env, model, payload) {
-  try {
-    return await env.AI.run(model, payload, GATEWAY_OPTS);
-  } catch (_) {
-    return await env.AI.run(model, payload);
-  }
+  return env.AI.run(model, payload, GATEWAY_OPTS);
+}
+
+function policyFailure(error) {
+  const status = Number(error && (error.status || error.statusCode || error.response?.status));
+  return [401, 403, 429].includes(status)
+    || /quota|rate.?limit|unauthori[sz]ed|forbidden|policy|access.?denied/i.test(String(error && error.message || error));
 }
 
 /* Modèle principal puis modèle de secours, chacun via runAiWithGateway : au
- * plus quatre tentatives, jamais de boucle. Renvoie { result, model } ou lève. */
+ * plus deux tentatives, toujours via la passerelle. Renvoie { result, model } ou lève. */
 export async function runWithFallback(env, primary, fallback, payload) {
   try {
     return { result: await runAiWithGateway(env, primary, payload), model: primary };
-  } catch (_) {
+  } catch (error) {
+    if (policyFailure(error)) throw error;
     return { result: await runAiWithGateway(env, fallback, payload), model: fallback };
   }
 }

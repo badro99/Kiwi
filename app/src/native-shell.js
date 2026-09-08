@@ -47,6 +47,10 @@
   function all(sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); }
   function ls(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }
   function setLs(key, value) { try { localStorage.setItem(key, value); } catch (_) {} }
+  function clearRevocationFence() {
+    try { localStorage.removeItem('kiwi:native:identity-revoked:v1'); } catch (_) {}
+    try { window.__kiwiAccountRevoked = false; } catch (_) {}
+  }
   function plugin() { try { return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.KiwiPrinterSocket; } catch (_) { return null; } }
   function dynamicTypePlugin() {
     try {
@@ -246,7 +250,7 @@
     }
     fetch('/auth/login', { method:'POST', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({email:email,password:password}) })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (body) {
-        if (r.ok && body && body.ok) { login.password.value = ''; clearLoginErrors(); restoreBtn(); return refreshAccount(); }
+        if (r.ok && body && body.ok) { login.password.value = ''; clearLoginErrors(); clearRevocationFence(); restoreBtn(); return refreshAccount(); }
         var isCreds = !!(body && body.error === 'bad-creds');
         var errCode = (body && body.error) || (r.status === 429 ? 'too-many' : '');
         var msg = ERRORS[errCode] || tr('unknown');
@@ -371,6 +375,7 @@
         var commit = window.KiwiPairingCommit && window.KiwiPairingCommit.commit;
         if (!commit) throw new Error('pairUnavailable');
         var result = commit(pairing.code, pairing.body); setLs(TERMINAL_KEY, device);
+        clearRevocationFence();
         if (state.selectedStore && !state.selectedStore.merchant) state.selectedStore.merchant = result.venue.merchant;
         state.paired = true; state.venue = result.venue;
         setStatus(status, tr('paired') + ' · ' + (result.venue.name || result.venue.merchant), 'ok');
@@ -708,7 +713,7 @@
     /* Keep the branded boot stage mounted through an automatic redirect. If we
        remove it first, WKWebView can paint one bare frame between index.html
        and the remembered workspace — the dark launch "void" seen on device. */
-    if (role && !manual && !forceSetup) { location.replace(ROLES[role]); return; }
+    if (role && !manual && !forceSetup && ls('kiwi:native:identity-revoked:v1') !== '1') { location.replace(ROLES[role]); return; }
     clearBoot();
     shell.hidden = false;
     if (manual) enterManual(); else { $('#setup-progress').hidden = false; showStep('account'); }

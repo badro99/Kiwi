@@ -10,8 +10,9 @@
 
 import {
   json, employeeToken, employeeCookie, clearEmployeeCookie, readEmployee, employeeNeedsRefresh,
-  findEmployeeCredential, limitCheck, limitFail, limitClear, targetKey,
+  findEmployeeCredential, employeeAuthRevision, limitCheck, limitFail, limitClear, targetKey, rateLimitUnavailable,
 } from '../auth/_lib.js';
+import { storeOperationalState } from './_private.js';
 
 const ATTENDANCE_FEATURE = 'attendance';
 const ATTENDANCE_CODE_FEATURE = 'attendance-code';
@@ -109,6 +110,10 @@ async function liveEmployee(request, env) {
       ? { ...(teamMember || {}), ...accessMember }
       : (teamIsNewer ? teamMember : null);
     if (member) {
+      const expected = Math.max(0, Math.round(Number(member.authVersion) || 0));
+      const presented = Math.max(0, Math.round(Number(session.av) || 0));
+      const revision = await employeeAuthRevision(env, session.merchant, session.staffId, expected);
+      if (!revision.ok || presented !== revision.version) return null;
       return {
         session,
         pin: {
@@ -118,8 +123,13 @@ async function liveEmployee(request, env) {
       };
     }
     // Compatibility for sessions issued before employee IDs became canonical.
-    const pin = await env.DB.prepare('SELECT id, merchant, pin, name, role FROM staff_pins WHERE id = ? AND merchant = ?')
+    const pin = await env.DB.prepare('SELECT * FROM staff_pins WHERE id = ? AND merchant = ?')
       .bind(session.staffId, session.merchant).first();
+    if (pin) {
+      const expected = Math.max(0, Math.round(Number(pin.auth_version) || 0));
+      const revision = await employeeAuthRevision(env, session.merchant, session.staffId, expected);
+      if (!revision.ok || Math.max(0, Math.round(Number(session.av) || 0)) !== revision.version) return null;
+    }
     return pin ? { session, pin } : null;
   } catch (_) { return null; }
 }
@@ -284,7 +294,7 @@ export async function onRequestGet({ request, env }) {
   const session = await readEmployee(request, env);
   if (employeeNeedsRefresh(session)) {
     res.headers.append('Set-Cookie', employeeCookie(
-      await employeeToken(env.AUTH_SECRET, { merchant: session.merchant, staffId: session.staffId })));
+      await employeeToken(env.AUTH_SECRET, { merchant: session.merchant, staffId: session.staffId, authVersion: session.av })));
   }
   return res;
 }
@@ -310,25 +320,26 @@ export async function onRequestPost({ request, env }) {
     const limitedTarget = target ? await limitCheck(request, env, 'employee', target) : null;
     if (limitedTarget) return limitedTarget;
     const failBoth = async () => {
-      await limitFail(request, env, 'employee');
-      if (target) await limitFail(request, env, 'employee', target);
+      const sourceOk = await limitFail(request, env, 'employee');
+      const targetOk = !target || await limitFail(request, env, 'employee', target);
+      return sourceOk && targetOk;
     };
     const pin = String(body.pin || '').replace(/\D/g, '').slice(0, 4);
-    if (!email || pin.length !== 4) { await failBoth(); return json({ error: 'bad-employee-code' }, 401); }
+    if (!email || pin.length !== 4) { if (!await failBoth()) return rateLimitUnavailable(); return json({ error: 'bad-employee-code' }, 401); }
     const row = await findEmployeeCredential(env, email, pin);
     if (row && row.ambiguous) {
-      await failBoth();
+      if (!await failBoth()) return rateLimitUnavailable();
       return json({ error: 'employee-access-ambiguous' }, 409);
     }
     if (!row || String(row.status || 'active') === 'suspended') {
-      await failBoth();
+      if (!await failBoth()) return rateLimitUnavailable();
       return json({ error: row && row.status === 'suspended' ? 'store-suspended' : 'bad-employee-code' }, row && row.status === 'suspended' ? 403 : 401);
     }
     // Seul le compteur de la CIBLE s'efface ; celui de la source garde sa mémoire.
     if (target) await limitClear(request, env, 'employee', target);
     const merchant = row.merchant;
     const res = json({ ok: true, merchant, role: row.role || 'staff', name: row.name || 'Employé' });
-    res.headers.append('Set-Cookie', employeeCookie(await employeeToken(env.AUTH_SECRET, { merchant, staffId: row.id })));
+    res.headers.append('Set-Cookie', employeeCookie(await employeeToken(env.AUTH_SECRET, { merchant, staffId: row.id, authVersion: row.authVersion })));
     return res;
   }
 
@@ -344,6 +355,9 @@ export async function onRequestPost({ request, env }) {
   // owned by the paired caisse through /api/team/live; an employee cannot grant
   // or end their own pause by crafting this request.
   const merchant = auth.session.merchant;
+  const storeState = await storeOperationalState(env, merchant);
+  if (!storeState.ok) return json({ error: 'auth-verification-unavailable' }, 503);
+  if (storeState.suspended) return json({ error: 'store-suspended' }, 403);
   if (action === 'planning-request' || action === 'planning-request-cancel') {
     const teamRow = await readDoc(env, merchant, TEAM_FEATURE, { members:[], hours:{}, shifts:{}, planning:{} });
     const member = memberFor(teamRow.data, auth.pin);

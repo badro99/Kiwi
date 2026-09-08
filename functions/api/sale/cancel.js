@@ -122,6 +122,11 @@ export async function onRequestGet({ request, env }) {
 
 export async function onRequestPost({ request, env }) {
   if (!env || !env.DB) return json({ error: 'no-db' }, 503);
+  if (typeof env.DB.batch !== 'function') {
+    /* A void is a money mutation plus an audit mutation. Do not run either
+       statement through an adapter that cannot provide one transaction. */
+    return json({ error: 'atomic-cancel-unavailable' }, 503);
+  }
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
@@ -201,37 +206,45 @@ export async function onRequestPost({ request, env }) {
     lines: cleanLines(sale.lines), role: actorRole,
   });
   try {
-    // Claim the sale first and inspect the affected-row count. A read-then-
-    // batch-write lets two manager clicks both append an audit row; the
-    // conditional UPDATE is the single-writer gate for cancellation.
-    const updated = await env.DB.prepare(
+    /* Money and its audit trail are one state transition. D1 batch() is the
+       production transaction boundary: if either statement fails, neither the
+       void nor the audit row commits. The legacy statement shape is retained
+       for stores that have not applied amount_cents yet; it is still inside
+       the same atomic batch. `changes()` is evaluated by the following
+       statement on the same SQLite transaction, so a losing concurrent UPDATE
+       cannot satisfy an EXISTS check merely because it has the same actor and
+       clock. */
+    const update = env.DB.prepare(
       `UPDATE sales SET void_ts = ?, void_reason = ?, void_note = '', void_actor = ?, void_actor_id = ?
         WHERE id = ? AND merchant = ? AND void_ts IS NULL`
-    ).bind(ts, reason, actor, actorId, id, merchant).run();
-    const changes = Number(updated?.meta?.changes ?? updated?.changes ?? 0);
+    ).bind(ts, reason, actor, actorId, id, merchant);
+    const auditWithCents = env.DB.prepare(
+      `INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id,
+                               amount, amount_cents, method, ref, sale_ts, impact, ts)
+       SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?
+        WHERE changes() = 1`
+    ).bind(merchant, id, 'void', reason, '', actor, actorId, legacyAmount,
+           saleAmountCents, sale.method || '', sale.ref || '', Number(sale.ts) || 0, impact, ts);
+    const auditLegacy = env.DB.prepare(
+      `INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id,
+                               amount, method, ref, sale_ts, impact, ts)
+       SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?
+        WHERE changes() = 1`
+    ).bind(merchant, id, 'void', reason, '', actor, actorId, legacyAmount,
+           sale.method || '', sale.ref || '', Number(sale.ts) || 0, impact, ts);
+
+    let result;
+    try { result = await env.DB.batch([update, auditWithCents]); }
+    catch (_) { result = await env.DB.batch([update, auditLegacy]); }
+    const changes = Number(result?.[0]?.meta?.changes ?? result?.[0]?.changes ?? 0);
     if (!changes) return json({ error: 'already-cancelled' }, 409);
-    try {
-      await env.DB.prepare(
-        `INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id,
-                                 amount, amount_cents, method, ref, sale_ts, impact, ts)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-      ).bind(merchant, id, 'void', reason, '', actor, actorId, legacyAmount,
-             saleAmountCents, sale.method || '', sale.ref || '', Number(sale.ts) || 0, impact, ts).run();
-    } catch (_) {
-      await env.DB.prepare(
-        `INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id,
-                                 amount, method, ref, sale_ts, impact, ts)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
-      ).bind(merchant, id, 'void', reason, '', actor, actorId, legacyAmount,
-             sale.method || '', sale.ref || '', Number(sale.ts) || 0, impact, ts).run();
-    }
   } catch (e) {
     return json({ error: 'cancel-failed', detail: String((e && e.message) || e) }, 500);
   }
 
-  /* Analytics is deliberately fail-soft. `sales.void_*` above is the canonical
-     reconciliation state; a missing migration or temporary D1 error must not
-     undo a manager's accepted cancellation or interfere with later sales. */
+  /* The canonical void and its required audit row are committed above. This
+     secondary index is analytics only; a missing migration must not turn an
+     already-atomic money transition into an unexplained UI failure. */
   if (actorId) {
     try {
       await env.DB.prepare(

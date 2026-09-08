@@ -331,7 +331,7 @@ eq(runVoids(J, ['AB-1'], { real: false }).touched, 0, 'la démo ne réconcilie r
 
 /* Les totaux et la liste doivent EXCLURE le retiré — c'est là qu'un caissier
    rembourserait une vente qui n'existe plus. */
-ok(/if \(e\.voided\) continue;/.test(caisse), 'journalTotals() saute les ventes retirées');
+ok(/if \((?:!e \|\| )?e\.voided\) continue;/.test(caisse), 'journalTotals() saute les ventes retirées');
 ok(/journal\.filter\(e => !e\.voided\)\.reverse\(\)/.test(caisse), 'le journal affiché les cache');
 
 /* ── 6. les boutons d'impression impriment ─────────────────────────────────── */

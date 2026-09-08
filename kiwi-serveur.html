@@ -4852,7 +4852,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/platform-kernel.js?v=5" defer></script>
   <script src="assets/platform-ops.js?v=5" defer></script>
   <script src="assets/operations.js?v=10" defer></script>
-<script src="assets/live-link.js?v=33" defer></script>
+<script src="assets/live-link.js?v=34" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=270" defer></script>
   <!-- The staff-role catalogue the operator console files PINs against — it says
@@ -4860,7 +4860,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/staff-roles.js?v=1" defer></script>
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/employee-live.js?v=489" defer></script>
+  <script src="assets/employee-live.js?v=490" defer></script>
   <script src="assets/employee-planning.js?v=8" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=2">
   <script src="assets/employee-trade-shell.js?v=2" defer></script>
@@ -4873,7 +4873,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/menu-i18n.js?v=5" defer></script>
   <!-- Auth guard: redirects to the auth page the moment the server signals
        the account has been deleted / suspended (see assets/auth-guard.js). -->
-  <script src="assets/auth-guard.js?v=1" defer></script>
+  <script src="assets/auth-guard.js?v=2" defer></script>
 
   <script>
     /* =========================================================
@@ -5741,7 +5741,35 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
      * donc nul) : le plat est déjà en cuisine, l'annuler est un geste de caisse,
      * pas un renvoi. */
     const svPendingRef = new Map();
+    const svPendingBatches = new Map();
+    const svSendFlights = new Map();
+    function svPendingKey(id) {
+      const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug() || 'store';
+      const operator = (liveEmployeeState && (liveEmployeeState.staffId || liveEmployeeState.employeeId)) || currentUser || 'employee';
+      return 'kiwi:service-pending-v1:' + merchant + ':' + operator + ':' + String(id);
+    }
+    function svReadPending(id) {
+      if (svPendingBatches.has(id)) return svPendingBatches.get(id);
+      let pending = null;
+      try { pending = JSON.parse(localStorage.getItem(svPendingKey(id)) || 'null'); } catch (_) {}
+      if (!pending || !pending.ref || !Array.isArray(pending.lines) || !pending.lines.length) return null;
+      svPendingBatches.set(id, pending);
+      svPendingRef.set(id, pending.ref);
+      return pending;
+    }
+    function svWritePending(id, pending) {
+      svPendingBatches.set(id, pending);
+      svPendingRef.set(id, pending.ref);
+      try { localStorage.setItem(svPendingKey(id), JSON.stringify(pending)); } catch (_) {}
+    }
+    function svForgetPending(id) {
+      svPendingBatches.delete(id);
+      svPendingRef.delete(id);
+      try { localStorage.removeItem(svPendingKey(id)); } catch (_) {}
+    }
     function svRefFor(id) {
+      const pending = svReadPending(id);
+      if (pending) return pending.ref;
       let r = svPendingRef.get(id);
       if (!r) {
         r = 'sv-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
@@ -5786,12 +5814,14 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       if (ref && table) table.orderNo = ref;
       return ref || 'Commande';
     }
-    function svSendOrder(tableId) {
+    function svSendOrderBatch(tableId) {
       const order = tableOrders[tableId] || [];
+      let pending = svReadPending(tableId);
       const delta = [];
-      order.forEach((l) => {
+      order.forEach((l, lineIndex) => {
         const dq = Math.max(0, (+l.qty || 0) - (+l.sentQty || 0));
         if (!dq || !l.id) return;
+        if (!l.uid) l.uid = 'svl-' + String(l.id) + '-' + lineIndex + '-' + Math.random().toString(36).slice(2, 9);
         const opts = Array.isArray(l.opts)
           ? l.opts.map(o => o && o.label).filter(Boolean).join(', ')
           : '';
@@ -5803,6 +5833,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           : [];
         const linePayload = {
           id: l.id,
+          uid: l.uid,
           name: l.name || '',
           qty: dq,
           unitPrice: Math.max(0, +l.price || +l.unitPrice || 0),
@@ -5822,7 +5853,17 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         if (l.lineId) linePayload.lineId = l.lineId;
         delta.push(linePayload);
       });
-      if (!delta.length) return Promise.resolve({ ok: true, nothing: true });
+      if (!pending && delta.length) {
+        pending = {
+          ref: 'sv-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10),
+          lines: delta.map((line) => ({ ...line })),
+          baseSentQty: Object.fromEntries(delta.map((line) => [line.uid, Math.max(0, Number(
+            (order.find((local) => local && local.uid === line.uid) || {}).sentQty || 0))])),
+          createdAt: Date.now(),
+        };
+        svWritePending(tableId, pending);
+      }
+      if (!pending) return Promise.resolve({ ok: true, nothing: true });
       const slug = svSlug();
       if (!slug) return Promise.resolve({ ok: false, error: 'no-merchant' });
       return fetch('/api/order/queue', {
@@ -5831,15 +5872,37 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         credentials: 'same-origin',
         body: JSON.stringify({
           merchant: slug, create: true, mode: 'table', table: tableId,
-          lines: delta, ref: svRefFor(tableId), server: activeRole.fullName || activeRole.name || '',
+          lines: pending.lines, ref: pending.ref, server: activeRole.fullName || activeRole.name || '',
+          expectedSession: serviceTableSessions.get(tableId) || '',
+          expectedRevision: serviceTableSessionRevisions.get(tableId) || undefined,
         }),
       })
         .then(r => r.json().catch(() => null).then(j => ({ status: r.status, j })))
         .then(({ status, j }) => {
           if (status === 200 && j && j.ok) {
-            // Ce qui est parti est parti : on ne le renverra pas au prochain
-            // « Lancer » de cette même table.
-            order.forEach((l) => { l.sentQty = +l.qty || 0; });
+            /* Acknowledgement is per immutable line batch. A retry must not
+               mark a newly-added line as sent merely because the ticket ref
+               already exists. */
+            const acknowledged = Array.isArray(j.lines) && j.lines.length ? j.lines : pending.lines;
+            const currentPending = svReadPending(tableId);
+            if (!currentPending || currentPending.ref !== pending.ref) {
+              return { ok: false, error: 'pending-conflict' };
+            }
+            const currentOrder = tableOrders[tableId] || [];
+            pending.lines.forEach((sentLine) => {
+              const ack = acknowledged.find((line) => line && line.uid && line.uid === sentLine.uid)
+                || acknowledged.find((line) => line && line.id === sentLine.id && line.lineId === sentLine.lineId);
+              if (!ack) return;
+              const qty = Math.max(0, Math.round(Number(ack.qty) || Number(sentLine.qty) || 0));
+              const local = currentOrder.find((line) => line && line.uid === sentLine.uid)
+                || currentOrder.find((line) => line && line.id === sentLine.id && line.lineId === sentLine.lineId);
+              if (!local) return;
+              const baseSentQty = pending.baseSentQty && Object.prototype.hasOwnProperty.call(pending.baseSentQty, sentLine.uid)
+                ? Number(pending.baseSentQty[sentLine.uid]) || 0
+                : Math.max(0, (Number(local.sentQty) || 0) - (Number(sentLine.qty) || 0));
+              local.sentQty = Math.max(Number(local.sentQty) || 0,
+                Math.min(Number(local.qty) || 0, baseSentQty + qty));
+            });
             const knownState = serviceStateVersion.get(tableId);
             serviceBillAwaiting.set(tableId, {
               after: Number(knownState && knownState.ts) || 0,
@@ -5851,8 +5914,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
                 server: activeRole.fullName || activeRole.name || '',
               });
             }
-            svPendingRef.delete(tableId);
-            return {
+            if (svReadPending(tableId)?.ref === pending.ref) svForgetPending(tableId);
+            const result = {
               ok: true, number: j.number,
               reference: serviceOrderRef({
                 number: j.number, mode: 'table', channel: 'kiwi',
@@ -5860,10 +5923,26 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
               }),
               replayed: !!j.replayed,
             };
+            const remaining = currentOrder.some((line) => Math.max(0, (+line.qty || 0) - (+line.sentQty || 0)) > 0);
+            if (!remaining) return result;
+            return svSendOrderBatch(tableId).then((nextResult) => nextResult.ok ? result : nextResult);
           }
           return { ok: false, error: (j && j.error) || ('http-' + status) };
         })
         .catch(() => ({ ok: false, error: 'offline' }));
+    }
+    /* Serialize sends per table. A second tap shares the first promise; the
+       first request drains any line added while its ACK was in flight, and no
+       ACK can mutate a later pending batch. */
+    function svSendOrder(tableId) {
+      if (svSendFlights.has(tableId)) return svSendFlights.get(tableId);
+      const previous = svSendFlights.get(tableId) || Promise.resolve();
+      const run = previous.catch(() => {}).then(() => svSendOrderBatch(tableId));
+      const tracked = run.finally(() => {
+        if (svSendFlights.get(tableId) === tracked) svSendFlights.delete(tableId);
+      });
+      svSendFlights.set(tableId, tracked);
+      return tracked;
     }
 
     /* ---------- Generated orders for occupied tables ---------- */
@@ -6346,6 +6425,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
        a sent item that does not exist in /api/order/queue. */
     const serviceCanonicalOrders = new Map();
     const serviceTableSessions = new Map();
+    const serviceTableSessionRevisions = new Map();
     let serviceCanonicalReady = false;
     const serviceEventSeen = new Set();
     const serviceStateVersion = new Map();
@@ -6404,7 +6484,9 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           const response = await fetch('/api/order/queue', {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ merchant, closeTable: id, closedBy: 'service' }),
+            body: JSON.stringify({ merchant, closeTable: id, closedBy: 'service',
+              expectedSession: serviceTableSessions.get(id) || '',
+              expectedRevision: serviceTableSessionRevisions.get(id) || undefined }),
           });
           closeData = await response.json().catch(() => null);
           if (!response.ok || !closeData || !closeData.ok) {
@@ -6489,10 +6571,14 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       ((data.service && data.service.mineTables) || []).forEach((id) => serviceMineTables.add(serviceTableId(id) || String(id)));
       ((data.service && data.service.pausedTables) || []).forEach((id) => servicePausedTables.add(serviceTableId(id) || String(id)));
       serviceTableSessions.clear();
+      serviceTableSessionRevisions.clear();
       (data.sessions || []).forEach((session) => {
         if (!session || session.mode !== 'table') return;
         const id = serviceTableId(session.table);
-        if (id && session.id) serviceTableSessions.set(id, String(session.id));
+        if (id && session.id) {
+          serviceTableSessions.set(id, String(session.id));
+          serviceTableSessionRevisions.set(id, Number(session.seen_ts) || 0);
+        }
         const canonical = serviceStateVersion.get(id);
         if (id && tables[id] && tables[id].status === 'khawya' && !(canonical && canonical.status === 'khawya')) {
           tables[id].status = 'ka-yaklo';
@@ -6758,6 +6844,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       serviceDraftTimers.clear();
       dirtyOrders.clear();
       svPendingRef.clear();
+      svPendingBatches.clear();
+      serviceTableSessionRevisions.clear();
       Object.keys(tableOrders).forEach((id) => delete tableOrders[id]);
       tableClients.clear();
       /* Effacé AUSSI du stockage : un identifiant de paiement laissé derrière
@@ -8191,6 +8279,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           const saved = await response.json().catch(() => null);
           if (!response.ok || !saved || !saved.ok || !saved.session) throw new Error('open-failed');
           serviceTableSessions.set(id, String(saved.session));
+          serviceTableSessionRevisions.set(id, Number(saved.revision) || 0);
         } catch (_) {
           if (confirm) confirm.disabled = false;
           toast(`Table ${id} · ouverture non enregistrée, réessayez`, 4800);
@@ -8280,11 +8369,15 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               merchant: svSlug(),
-              transferTable: { from, to, covers: fromT.covers, server: activeRole.fullName || activeRole.name || '' }
+              transferTable: { from, to, covers: fromT.covers, server: activeRole.fullName || activeRole.name || '',
+                operationId: 'ui-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8),
+                expectedSession: serviceTableSessions.get(from) || '',
+                expectedRevision: serviceTableSessionRevisions.get(from) || 0 }
             })
           });
           const data = await res.json().catch(() => null);
           if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'transfer-failed');
+          serviceTableSessionRevisions.set(to, Number(data.revision) || (serviceTableSessionRevisions.get(from) || 0));
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
           toast(`Déplacement impossible : ${err.message || 'erreur réseau'}`, 4800);
@@ -8307,8 +8400,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         tableSplits.delete(from);
       }
       if (serviceTableSessions.has(from)) {
+        const movedRevision = serviceTableSessionRevisions.get(to) || serviceTableSessionRevisions.get(from) || 0;
         serviceTableSessions.set(to, serviceTableSessions.get(from));
+        serviceTableSessionRevisions.set(to, movedRevision);
         serviceTableSessions.delete(from);
+        serviceTableSessionRevisions.delete(from);
       }
 
       // Reset Source Table
@@ -8407,7 +8503,10 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               merchant: svSlug(),
-              mergeTables: { targetTable: target, sourceTable: source, server: activeRole.fullName || activeRole.name || '' }
+              mergeTables: { targetTable: target, sourceTable: source, server: activeRole.fullName || activeRole.name || '',
+                operationId: 'ui-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8),
+                expectedSession: serviceTableSessions.get(source) || '',
+                expectedRevision: serviceTableSessionRevisions.get(source) || 0 }
             })
           });
           const data = await res.json().catch(() => null);
@@ -8437,6 +8536,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       delete sourceT.orderNo;
       delete tableOrders[source];
       serviceTableSessions.delete(source);
+      serviceTableSessionRevisions.delete(source);
 
       // Update Canonical Orders cached on this device
       Array.from(serviceCanonicalOrders.values()).forEach(order => {

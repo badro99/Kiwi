@@ -29,9 +29,9 @@ import { json, tillToken, tillCookie, terminalToken, terminalCookie, tillEpoch,
  *
  * Counting is per client IP (CF-Connecting-IP, set by the edge and not
  * spoofable by the client). A SUCCESSFUL redeem clears the counter, so a shop
- * fumbling its own code is never locked out for long. Counter failures are
- * swallowed: if the table is missing the endpoint keeps working exactly as it
- * did — pairing a real store must not depend on the rate limiter being healthy.
+ * fumbling its own code is never locked out for long. Counter failures deny the
+ * attempt: pairing must not become an unlimited six-digit oracle while its only
+ * brute-force control is unavailable.
  */
 const WINDOW_MS = 10 * 60 * 1000;   // rolling window a burst is measured over
 const MAX_FAILS = 10;               // wrong codes tolerated in that window
@@ -43,31 +43,42 @@ function clientIp(request) {
       || '';
 }
 
-/* Record one wrong guess. The window is rolling by restart, not sliding: once
- * first_ts is older than WINDOW_MS the row is reset to a fresh single failure,
- * so old rows expire themselves and no sweeper is needed. Best-effort — any
- * error here is swallowed so a limiter problem can never block a real pairing. */
-async function noteFail(env, ip, now) {
-  if (!ip || !env.DB) return;
+function limiterUnavailable() { return json({ error: 'rate-limit-unavailable' }, 503); }
+
+async function pairLimitCheck(env, ip, now) {
+  if (!ip) return null;
   try {
     const a = await env.DB.prepare(
-      'SELECT fails, first_ts FROM pair_attempts WHERE ip = ?'
+      'SELECT blocked_until FROM pair_attempts WHERE ip = ?'
     ).bind(ip).first();
-
-    if (!a || (now - a.first_ts) > WINDOW_MS) {
-      await env.DB.prepare(
-        `INSERT INTO pair_attempts (ip, fails, first_ts, blocked_until) VALUES (?, 1, ?, NULL)
-         ON CONFLICT(ip) DO UPDATE SET fails = 1, first_ts = excluded.first_ts, blocked_until = NULL`
-      ).bind(ip, now).run();
-      return;
+    if (a && a.blocked_until && a.blocked_until > now) {
+      return json({ error: 'too_many_attempts', retry_after: Math.ceil((a.blocked_until - now) / 1000) }, 429);
     }
+    return null;
+  } catch (_) { return limiterUnavailable(); }
+}
 
-    const fails = (a.fails || 0) + 1;
-    const blocked = fails >= MAX_FAILS ? (now + BLOCK_MS) : null;
-    await env.DB.prepare(
-      'UPDATE pair_attempts SET fails = ?, blocked_until = ? WHERE ip = ?'
-    ).bind(fails, blocked, ip).run();
-  } catch (_) { /* limiter unavailable → fail open, pairing still works */ }
+/* Record one wrong guess atomically. Concurrent failures must each advance the
+ * same SQLite row; a read-then-write pair loses increments under a wave of
+ * guesses. */
+async function noteFail(env, ip, now) {
+  if (!ip) return true;
+  if (!env || !env.DB) return false;
+  try {
+    const result = await env.DB.prepare(
+      `INSERT INTO pair_attempts (ip, fails, first_ts, blocked_until) VALUES (?, 1, ?, NULL)
+       ON CONFLICT(ip) DO UPDATE SET
+         fails = CASE WHEN ? - pair_attempts.first_ts > ? THEN 1 ELSE pair_attempts.fails + 1 END,
+         first_ts = CASE WHEN ? - pair_attempts.first_ts > ? THEN ? ELSE pair_attempts.first_ts END,
+         blocked_until = CASE
+           WHEN ? - pair_attempts.first_ts > ? THEN NULL
+           WHEN pair_attempts.fails + 1 >= ? THEN ?
+           ELSE pair_attempts.blocked_until END`
+    ).bind(ip, now, now, WINDOW_MS, now, WINDOW_MS, now,
+           now, WINDOW_MS, MAX_FAILS, now + BLOCK_MS).run();
+    const changes = Number(result && result.meta && result.meta.changes);
+    return Number.isFinite(changes) ? changes > 0 : true;
+  } catch (_) { return false; }
 }
 
 export async function onRequestPost(context) {
@@ -86,17 +97,32 @@ export async function onRequestPost(context) {
   // Are we already locked out? Checked BEFORE the code is even shaped, so a
   // blocked source cannot use malformed input as a free probe.
   if (ip) {
-    try {
-      const a = await env.DB.prepare(
-        'SELECT fails, first_ts, blocked_until FROM pair_attempts WHERE ip = ?'
-      ).bind(ip).first();
-      if (a && a.blocked_until && a.blocked_until > now) {
-        return json({ error: 'too_many_attempts', retry_after: Math.ceil((a.blocked_until - now) / 1000) }, 429);
-      }
-    } catch (_) { /* no table → no limiter, pairing still works */ }
+    const limited = await pairLimitCheck(env, ip, now);
+    if (limited) return limited;
   }
 
-  if (code.length !== 6) { await noteFail(env, ip, now); return json({ error: 'invalid_or_expired' }, 422); }
+  if (code.length !== 6) {
+    if (!await noteFail(env, ip, now)) return limiterUnavailable();
+    return json({ error: 'invalid_or_expired' }, 422);
+  }
+
+  /* A paired till needs a current epoch-bound proof. Resolve the merchant before
+   * consuming the one-time code so a revocation-read outage neither issues a v0
+   * token nor destroys the merchant's only usable pairing attempt. The final
+   * UPDATE remains the single-use race arbiter. */
+  let pending = null;
+  try {
+    pending = await env.DB.prepare(
+      'SELECT merchant FROM pairings WHERE code = ? AND used_ts IS NULL AND expires_ts > ?'
+    ).bind(code, now).first();
+  } catch (_) {
+    return json({ error: 'auth-verification-unavailable' }, 503);
+  }
+  let currentEpoch = 0;
+  if (env.AUTH_SECRET) {
+    currentEpoch = pending ? await tillEpoch(env, pending.merchant) : 0;
+    if (pending && !Number.isFinite(currentEpoch)) return json({ error: 'auth-unavailable' }, 503);
+  }
 
   let row = null;
   try {
@@ -111,7 +137,10 @@ export async function onRequestPost(context) {
     return json({ error: 'invalid_or_expired' }, 422);
   }
 
-  if (!row) { await noteFail(env, ip, now); return json({ error: 'invalid_or_expired' }, 422); }
+  if (!row) {
+    if (!await noteFail(env, ip, now)) return limiterUnavailable();
+    return json({ error: 'invalid_or_expired' }, 422);
+  }
 
   // Genuine pairing — wipe the counter so an honest shop that mistyped twice
   // starts clean again.
@@ -133,9 +162,9 @@ export async function onRequestPost(context) {
     /* Émis au millésime COURANT du commerçant : un dépairage ultérieur le
      * périmera, comme tous les autres. */
     try {
-      const epoch = await tillEpoch(env, row.merchant);
-      res.headers.append('Set-Cookie', tillCookie(await tillToken(env.AUTH_SECRET, row.merchant, epoch)));
-    } catch (_) {}
+      if (!Number.isFinite(currentEpoch)) return json({ error: 'auth-unavailable' }, 503);
+      res.headers.append('Set-Cookie', tillCookie(await tillToken(env.AUTH_SECRET, row.merchant, currentEpoch)));
+    } catch (_) { return json({ error: 'auth-unavailable' }, 503); }
     if (terminalId) {
       try { res.headers.append('Set-Cookie', terminalCookie(await terminalToken(env.AUTH_SECRET, row.merchant, terminalId))); } catch (_) {}
     }

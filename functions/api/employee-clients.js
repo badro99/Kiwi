@@ -1,4 +1,5 @@
 import { json, activeServiceEmployee } from '../auth/_lib.js';
+import { nextSrvTs } from './clients.js';
 
 function text(value, max) { return String(value == null ? '' : value).trim().slice(0, max); }
 function parse(raw) { try { return JSON.parse(raw || '{}') || {}; } catch (_) { return {}; } }
@@ -44,10 +45,13 @@ export async function onRequestPost({ request, env }) {
     const client = await env.DB.prepare('SELECT id FROM clients WHERE merchant = ? AND id = ? AND deleted = 0')
       .bind(employee.merchant, id).first();
     if (!client) return json({ error: 'client-not-found' }, 404);
-    const inserted = await env.DB.prepare(`INSERT OR IGNORE INTO employee_loyalty_events
-      (merchant, ref, client_id, amount, created_ts) VALUES (?, ?, ?, ?, ?)`)
-      .bind(employee.merchant, ref, id, amount, Date.now()).run();
-    if (!Number(inserted && inserted.meta && inserted.meta.changes)) return json({ ok: true, replayed: true });
+    const previous = await env.DB.prepare(
+      'SELECT client_id FROM employee_loyalty_events WHERE merchant = ? AND ref = ?'
+    ).bind(employee.merchant, ref).first();
+    if (previous) {
+      if (previous.client_id !== id) return json({ error: 'ref-conflict' }, 409);
+      return json({ ok: true, replayed: true });
+    }
     const cfgRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'fidelity'")
       .bind(employee.merchant).first();
     const cfg = parse(cfgRow && cfgRow.data);
@@ -55,10 +59,28 @@ export async function onRequestPost({ request, env }) {
       ? Math.round(amount * Math.max(0, Number(cfg.amount && cfg.amount.perMad) || 1)) : 0;
     const stamps = cfg.model === 'visit' || cfg.model === 'product' ? 1 : 0;
     const now = Date.now();
-    await env.DB.prepare(`UPDATE clients SET points = points + ?, stamps = stamps + ?,
+    const srv = await nextSrvTs(env, employee.merchant);
+    const statements = [env.DB.prepare(`UPDATE clients SET points = points + ?, stamps = stamps + ?,
       visits = visits + 1, spend = spend + ?, last_seen = ?, updated_ts = ?, srv_ts = ?
-      WHERE merchant = ? AND id = ? AND deleted = 0`)
-      .bind(points, stamps, amount, now, now, now, employee.merchant, id).run();
+      WHERE merchant = ? AND id = ? AND deleted = 0
+        AND NOT EXISTS (SELECT 1 FROM employee_loyalty_events WHERE merchant = ? AND ref = ?)`)
+      .bind(points, stamps, amount, now, now, srv, employee.merchant, id, employee.merchant, ref),
+    env.DB.prepare(`INSERT OR IGNORE INTO employee_loyalty_events
+      (merchant, ref, client_id, amount, created_ts)
+      SELECT ?, ?, ?, ?, ?
+       WHERE changes() > 0`)
+      .bind(employee.merchant, ref, id, amount, now)];
+    const results = await env.DB.batch(statements);
+    if (!Number(results[0] && results[0].meta && results[0].meta.changes)) {
+      const replay = await env.DB.prepare(
+        'SELECT client_id FROM employee_loyalty_events WHERE merchant = ? AND ref = ?'
+      ).bind(employee.merchant, ref).first();
+      if (replay && replay.client_id === id) return json({ ok: true, replayed: true });
+      return json({ error: 'loyalty-write-failed' }, 503);
+    }
+    if (!Number(results[1] && results[1].meta && results[1].meta.changes)) {
+      return json({ error: 'loyalty-write-failed' }, 503);
+    }
     return json({ ok: true, points, stamps });
   } catch (_) { return json({ error: 'loyalty-write-failed' }, 503); }
 }

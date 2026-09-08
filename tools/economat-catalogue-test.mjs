@@ -57,6 +57,8 @@ function makeDb() {
       const stmt = {
         args: [], bind(...args) { stmt.args = args; return stmt; },
         async first() {
+          if (query.startsWith('SELECT status, session_epoch FROM accounts')) return { status: 'active', session_epoch: 0 };
+          if (query.startsWith('SELECT status FROM merchant_config')) return { status: 'active' };
           if (query.startsWith('SELECT type FROM merchant_config')) return { type: 'hotel' };
           if (query.includes("feature = 'hotel-units'")) return { data: JSON.stringify(registry) };
           if (query.startsWith('SELECT account_id FROM merchant_config')) return { account_id: 'owner-1' };

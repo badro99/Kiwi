@@ -64,7 +64,20 @@ function makeDB() {
     };
     return st;
   };
-  return { prepare, _db: db };
+  const facade = { prepare, _db: db };
+  facade.batch = async (statements) => {
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const result = [];
+      for (const statement of statements) result.push(await statement.run());
+      db.exec('COMMIT');
+      return result;
+    } catch (error) {
+      try { db.exec('ROLLBACK'); } catch (_) {}
+      throw error;
+    }
+  };
+  return facade;
 }
 
 const DB = makeDB();
@@ -207,7 +220,9 @@ async function get(fn, qs, headers = {}) {
   ok('…mais jamais sur une commande refusée',
     /o\.status !== 'rejected'[\s\S]{0,280}paid:\s*true/.test(caissePage));
   ok('la caisse enterre ses tickets en attente quand le serveur les dit refusés',
-    /t\.status !== 'held'/.test(caissePage) && /expirée sans validation/.test(caissePage));
+    /retireRejectedKitchenTicket/.test(caissePage)
+      && /o\.status === 'rejected'/.test(caissePage)
+      && /opTickets\.delete/.test(caissePage));
   ok('…et propose la reprise en un geste, comme une vente neuve',
     /data-exp-reprendre/.test(caissePage) && /function reprendreExpired\(id\)/.test(caissePage));
   /* ── LE BOUTON ROUGE EST GARDÉ PAR UN CODE, ET LE CODE EST JUGÉ AILLEURS ──
@@ -597,7 +612,7 @@ async function get(fn, qs, headers = {}) {
 
   /* fermer par numéro de table — c'est ce que markPaid() a sous la main */
   const sess2 = r.body.session;
-  r = await post(queuePost, { merchant: SLUG, closeTable: 'T7' }, asStaff);
+  r = await post(queuePost, { merchant: SLUG, closeTable: 'T7', expectedSession: sess2 }, asStaff);
   ok('on peut aussi fermer par table', r.status === 200 && r.body.closed === 1);
   r = await get(readSession, 'merchant=' + SLUG + '&session=' + sess2);
   ok('…même effet', r.body.status === 'closed');
@@ -923,7 +938,7 @@ async function get(fn, qs, headers = {}) {
     JSON.stringify(again.body));
   ok('…et la cuisine n\'a qu\'un ticket',
     DB._db.prepare("SELECT COUNT(*) n FROM orders WHERE merchant=? AND table_no='T10'").get(SALLE).n === 1);
-  await post(queuePost, { merchant: SALLE, closeTable: 'T10', closedBy: 'service' }, asSalle);
+  await post(queuePost, { merchant: SALLE, closeTable: 'T10', expectedSession: svFirst.body.session, closedBy: 'service' }, asSalle);
   const lateReplay = await post(queuePost, {
     merchant: SALLE, create: true, mode: 'table', table: 'T10', ref: REF,
     lines: [{ id: 'i1', qty: 1 }],

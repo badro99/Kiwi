@@ -55,6 +55,7 @@
           lkNoProvider:'Aucun fournisseur de paiement n’est branché sur ce compte. La demande sera conservée, mais aucun lien ne sera créé.',
           lkLoading:'Lecture du livre des paiements…', lkNone:'Aucun lien de paiement émis.',
           lkAmountK:'Montant', lkPaid:'Encaissé', lkRefunded:'Remboursé', lkRefundable:'Remboursable', lkRefundCount:'Remboursements',
+          lkReserved:'Remboursement à vérifier', lkReconcile:'Ce montant reste réservé pour éviter un double remboursement. Dans le journal des commandes, relancez la vérification du remboursement. Si le prestataire ne confirme pas, contactez le support.', lkVerifyRefund:'Vérifier le remboursement',
           lkCopy:'Copier le lien', lkCopied:'Lien copié',
           lkSettleTitle:'Relever l’état', lkSettleHint:'Kiwi interroge le fournisseur et recopie ce qu’il annonce · jamais plus que le montant du lien.',
           lkCancelTitle:'Annuler le lien', lkCancelHint:'Un lien déjà encaissé ne s’annule pas : il se rembourse.',
@@ -225,6 +226,7 @@
           lkNoProvider:'No payment provider is wired to this account. The request will be kept, but no link will be created.',
           lkLoading:'Reading the payment book…', lkNone:'No payment link issued.',
           lkAmountK:'Amount', lkPaid:'Collected', lkRefunded:'Refunded', lkRefundable:'Refundable', lkRefundCount:'Refunds',
+          lkReserved:'Refund to verify', lkReconcile:'This amount remains reserved to prevent a duplicate refund. Retry verification from the command journal. If the provider cannot confirm it, contact support.', lkVerifyRefund:'Verify refund',
           lkCopy:'Copy the link', lkCopied:'Link copied',
           lkSettleTitle:'Read the state', lkSettleHint:'Kiwi asks the provider and copies what it announces · never more than the link amount.',
           lkCancelTitle:'Cancel the link', lkCancelHint:'A link already collected is not cancelled · it is refunded.',
@@ -392,6 +394,7 @@
           lkNoProvider:'لا يوجد مزوّد أداء موصول بهذا الحساب. سيُحتفظ بالطلب، لكن لن يُنشأ أي رابط.',
           lkLoading:'جارٍ قراءة دفتر المدفوعات…', lkNone:'لم يصدر أي رابط أداء.',
           lkAmountK:'المبلغ', lkPaid:'المحصَّل', lkRefunded:'المسترجَع', lkRefundable:'القابل للاسترجاع', lkRefundCount:'الاسترجاعات',
+          lkReserved:'استرجاع قيد التحقق', lkReconcile:'يبقى المبلغ محجوزاً لمنع تكرار الاسترجاع. أعد التحقق من سجل الأوامر. إذا لم يؤكد مزود الدفع النتيجة فتواصل مع الدعم.', lkVerifyRefund:'التحقق من الاسترجاع',
           lkCopy:'نسخ الرابط', lkCopied:'تم نسخ الرابط',
           lkSettleTitle:'قراءة الحالة', lkSettleHint:'يسأل Kiwi المزوّد وينقل ما يعلنه · ولا يتجاوز أبدًا مبلغ الرابط.',
           lkCancelTitle:'إلغاء الرابط', lkCancelHint:'الرابط المحصَّل لا يُلغى، بل يُسترجع.',
@@ -1545,7 +1548,9 @@
             kpi(c.lkRefunded, money(l.refundedCents)) +
             kpi(c.lkRefundable, money(refundable)) +
             kpi(c.lkRefundCount, String(l.refunds || 0)) +
+            (Number(l.reservedCents) > 0 ? kpi(c.lkReserved, money(l.reservedCents)) : '') +
           '</div>' +
+          (l.reconciliationRequired ? '<p class="ops-lk-hint" role="status">' + esc(c.lkReconcile) + '</p>' : '') +
           (l.url ? '<a class="ops-lk-url" href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(l.url) + '</a>' +
             '<div class="ops-lk-btns"><button class="kb ghost xs" type="button" data-lk-copy>' + esc(c.lkCopy) + '</button></div>' : '') +
           /* Copier un lien oblige encore à ouvrir WhatsApp soi-même.  Ici la
@@ -2043,12 +2048,14 @@
         /* Le serveur revérifie le droit sur le domaine de la commande : un
            bouton qu'il refuserait n'est pas peint. */
         if (O.allowed && !O.allowed(row.domain, row.action)) return [];
+        if (row.domain === 'payment' && row.action === 'refund-link') return row.status === 'completed' ? [] : ['processing'];
         return offered;
       }
 
       function commandCard(row) {
         var offered = moves(row);
-        var needsConfirm = offered.some(function (m) { return CM_CONFIRM[m]; });
+        var refundReconcile = row.domain === 'payment' && row.action === 'refund-link';
+        var needsConfirm = offered.some(function (m) { return CM_CONFIRM[m]; }) || (refundReconcile && offered.length > 0);
         var needsWhy = offered.indexOf('failed') >= 0;
         return '<div class="p-card ops-cm-card" data-cm-row data-cm-id="' + esc(row.id) + '">' +
           '<div class="ops-cm-head">' +
@@ -2067,7 +2074,7 @@
           (needsConfirm ? '<label class="ops-cm-confirm"><input type="checkbox" data-cm-ok><span>' + esc(c.cmConfirm) + '</span></label>' : '') +
           (offered.length
             ? '<div class="ops-cm-btns">' + offered.map(function (m) {
-                return '<button class="kb ghost xs" type="button" data-cm-move="' + m + '">' + esc((c.cmT && c.cmT[m]) || m) + '</button>';
+                return '<button class="kb ghost xs" type="button" data-cm-move="' + m + '"' + (refundReconcile ? ' data-cm-refund-verify' : '') + '>' + esc(refundReconcile ? c.lkVerifyRefund : ((c.cmT && c.cmT[m]) || m)) + '</button>';
               }).join('') + '</div>'
             : '') +
           '<div data-cm-row-out></div>' +
@@ -2113,7 +2120,7 @@
         var box = row.querySelector('[data-cm-ok]');
         var why = row.querySelector('[data-cm-input]');
         out.innerHTML = '';
-        if (CM_CONFIRM[wanted] && !(box && box.checked)) return card(out, 'confirmation-required');
+        if ((CM_CONFIRM[wanted] || button.hasAttribute('data-cm-refund-verify')) && !(box && box.checked)) return card(out, 'confirmation-required');
         if ((wanted === 'failed' || wanted === 'blocked') && !(why && why.value.trim())) return card(out, 'reason-required');
         button.disabled = true;
         try {

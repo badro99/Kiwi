@@ -62,9 +62,33 @@ const DB = {
     };
     return st;
   },
+  batch(statements) {
+    const execute = () => {
+      sqlite.exec('BEGIN IMMEDIATE');
+      try {
+        const out = statements.map((statement) => statement.run());
+        sqlite.exec('COMMIT');
+        return out;
+      } catch (error) {
+        sqlite.exec('ROLLBACK');
+        throw error;
+      }
+    };
+    return execute();
+  },
 };
 
 const env = { DB, AUTH_SECRET: 'test-secret-42' };
+
+sqlite.prepare(`INSERT INTO accounts
+  (id, email, name, business, salt, hash, created_ts, status, session_epoch)
+  VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 0)`).run(
+  'acc-cafe-atlas-fixture', 'fixture-cafe@example.test', 'Fixture Owner', 'cafe-atlas',
+  '00'.repeat(16), '11'.repeat(32), Date.now());
+sqlite.prepare(`INSERT INTO merchant_config
+  (merchant, features, type, account_id, name, status, till_epoch, updated_ts)
+  VALUES ('cafe-atlas', '{}', 'cafe', ?, 'Cafe Atlas Fixture', 'active', 7, ?)`)
+  .run('acc-cafe-atlas-fixture', Date.now());
 
 /* ── 2. Client-side KiwiLive.postSale test in VM ── */
 console.log('\n1 · Client-side Live Link (assets/live-link.js)');
@@ -342,7 +366,7 @@ console.log('\n5 · Void & sale_audit Centime Precision');
   // Insert staff PIN for manager void
   sqlite.prepare("INSERT OR REPLACE INTO staff_pins (id, merchant, pin, name, role, created_ts) VALUES ('pin-1', 'cafe-atlas', '1234', 'Directeur', 'gerant', 1785000000000)").run();
 
-  const token = await tillToken(env.AUTH_SECRET, 'cafe-atlas');
+  const token = await tillToken(env.AUTH_SECRET, 'cafe-atlas', 7);
   const cancelReq = new Request('https://kiwi.test/api/sale/cancel', {
     method: 'POST',
     headers: {

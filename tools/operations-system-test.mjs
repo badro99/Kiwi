@@ -35,7 +35,7 @@ const D1 = (db) => ({
     const params = [];
     const stmt = {
       bind(...args) { params.push(...args); return stmt; },
-      async run() { db.prepare(sql).run(...params); return { success: true }; },
+      async run() { const result = db.prepare(sql).run(...params); return { success: true, meta: { changes: Number(result.changes) } }; },
       async first() { const row = db.prepare(sql).get(...params); return row === undefined ? null : row; },
       async all() { return { results: db.prepare(sql).all(...params) }; },
     };
@@ -45,10 +45,12 @@ const D1 = (db) => ({
 
 const db = new DatabaseSync(':memory:');
 db.exec(`
-  CREATE TABLE accounts (id TEXT PRIMARY KEY, business TEXT);
-  CREATE TABLE merchant_config (merchant TEXT PRIMARY KEY, account_id TEXT, status TEXT);
+  CREATE TABLE accounts (id TEXT PRIMARY KEY, business TEXT, status TEXT DEFAULT 'active', session_epoch INTEGER NOT NULL DEFAULT 0);
+  CREATE TABLE merchant_config (merchant TEXT PRIMARY KEY, account_id TEXT, status TEXT,
+    till_epoch INTEGER NOT NULL DEFAULT 0);
   CREATE TABLE store_docs (merchant TEXT, feature TEXT, data TEXT, updated_ts INTEGER);
   CREATE TABLE operators (id TEXT PRIMARY KEY);
+  CREATE TABLE employee_auth_versions (merchant TEXT, member_id TEXT, auth_version INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(merchant, member_id));
 `);
 
 const SECRET = 'operations-suite-secret';
@@ -957,8 +959,9 @@ ok(marked.status === 200 && marked.data.command.status === 'failed' && marked.da
 function freshEnv(extra) {
   const other = new DatabaseSync(':memory:');
   other.exec(`
-    CREATE TABLE accounts (id TEXT PRIMARY KEY, business TEXT);
-    CREATE TABLE merchant_config (merchant TEXT PRIMARY KEY, account_id TEXT, status TEXT);
+    CREATE TABLE accounts (id TEXT PRIMARY KEY, business TEXT, status TEXT DEFAULT 'active', session_epoch INTEGER NOT NULL DEFAULT 0);
+    CREATE TABLE merchant_config (merchant TEXT PRIMARY KEY, account_id TEXT, status TEXT,
+      till_epoch INTEGER NOT NULL DEFAULT 0);
     CREATE TABLE store_docs (merchant TEXT, feature TEXT, data TEXT, updated_ts INTEGER);
     CREATE TABLE operators (id TEXT PRIMARY KEY);
   `);
@@ -1235,14 +1238,16 @@ ok(uiSource.includes('openCommands:openCommands') && uiSource.includes("H['opera
   'the decision register is exported and takes over the read-only history drawer');
 ok(uiSource.includes('data-cm-move=') && uiSource.includes('O.transition(row.getAttribute'),
   'the product can actually move a command, not only list it');
-ok(uiSource.includes('data-cm-ok') && uiSource.includes("CM_CONFIRM[wanted] && !(box && box.checked)"),
-  'the console demands the same explicit confirmation the server does');
+ok(uiSource.includes('data-cm-ok') && uiSource.includes("(CM_CONFIRM[wanted] || button.hasAttribute('data-cm-refund-verify')) && !(box && box.checked)"),
+  'the console demands explicit confirmation for lifecycle actions and refund verification');
 ok(uiSource.includes('data-cm-input') && uiSource.includes("!(why && why.value.trim())"),
   'marking a command failed requires a written motif before it is sent');
 /* blocked → processing existe côté serveur ; l'offrir ici annoncerait une
    reprise automatique que rien n'exécute. */
 ok(/blocked: \['cancelled'\],\s*\n\s*failed: \['cancelled'\],/.test(uiSource),
   'a stopped command can only be closed by hand — the console never promises an automatic retry');
+ok(uiSource.includes("row.domain === 'payment' && row.action === 'refund-link'") && uiSource.includes('lkVerifyRefund'),
+  'refunds expose a distinct provider-verification action instead of manual financial completion');
 ok(uiSource.includes("O.allowed('payroll', 'export')") && uiSource.includes('cmDenied'),
   'the register is gated client-side on a permission only the owner holds, mirroring the server');
 

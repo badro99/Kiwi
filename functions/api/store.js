@@ -34,7 +34,7 @@
 // locale et retentera. Un serveur qui tousse ne doit jamais coûter une donnée.
 
 import { json, entitledMerchant } from '../auth/_lib.js';
-import { tenantFor } from './_private.js';
+import { employeeAuthVersion, tenantFor } from './_private.js';
 import { poke } from './_live.js';
 import {
   HOTEL_UNITS_FEATURE,
@@ -159,7 +159,7 @@ const FEATURES = {
   workspaces:   { keys: ['trade', 'records'],                       max: 600000 },
   /* Garment tickets are the pressing's operational source of truth: customer,
    * care instructions, per-piece status, rack and outstanding balance. */
-  'pressing-orders': { keys: ['customers', 'orders', 'seq'],       max: 1500000 },
+  'pressing-orders': { keys: ['customers', 'orders', 'cancellations', 'rackConflicts', 'seq'], max: 1500000 },
   /* Editable garment/service catalogue shared by the owner dashboard and the
    * paired pressing till. Historical tickets keep their own price snapshot. */
   'pressing-catalog': { keys: ['categories', 'services', 'items'], max: 600000 },
@@ -278,6 +278,132 @@ function isEmptyDoc(d) {
   return true;
 }
 
+/* A pressing cancellation is custody evidence, not an optional field in a
+ * last-writer-wins snapshot. Older clients do not know `cancellations`, and a
+ * full document from one of them must therefore never erase a tombstone that
+ * another terminal already recorded. There is deliberately no implicit
+ * restoration path here: an authorized restore would be a separate action. */
+function preservePressingCancellations(current, incoming) {
+  if (!current || !incoming || typeof current !== 'object' || typeof incoming !== 'object') return incoming;
+  const oldCancellations = Array.isArray(current.cancellations) ? current.cancellations : [];
+  const oldOrders = Array.isArray(current.orders) ? current.orders : [];
+  const oldConflicts = Array.isArray(current.rackConflicts) ? current.rackConflicts : [];
+  if (!oldCancellations.length && !oldConflicts.length && !oldOrders.some((o) => o && o.cancelledAt)) return incoming;
+  const cancellations = Array.isArray(incoming.cancellations) ? incoming.cancellations.slice() : [];
+  const byId = new Map(cancellations.filter((c) => c && c.id).map((c) => [String(c.id), c]));
+  oldCancellations.forEach((c) => {
+    if (c && c.id && !byId.has(String(c.id))) { byId.set(String(c.id), c); cancellations.push(c); }
+  });
+  oldOrders.filter((o) => o && o.id && o.cancelledAt).forEach((o) => {
+    const id = String(o.id);
+    if (!byId.has(id)) {
+      const tombstone = { id, cancelledAt: o.cancelledAt, cancelledBy: o.cancelledBy || null };
+      byId.set(id, tombstone);
+      cancellations.push(tombstone);
+    }
+  });
+  const orders = Array.isArray(incoming.orders) ? incoming.orders.slice() : [];
+  const orderById = new Map(orders.filter((o) => o && o.id).map((o) => [String(o.id), o]));
+  oldOrders.filter((o) => o && o.id && o.cancelledAt).forEach((old) => {
+    const id = String(old.id);
+    const row = orderById.get(id);
+    if (!row) orders.push(old);
+    else Object.assign(row, {
+      cancelledAt: old.cancelledAt,
+      cancelledBy: old.cancelledBy || null,
+      rack: null,
+      updatedAt: Math.max(Number(row.updatedAt) || 0, Number(old.updatedAt) || 0),
+    });
+  });
+  const conflicts = Array.isArray(incoming.rackConflicts) ? incoming.rackConflicts.slice() : [];
+  const conflictKeys = new Set(conflicts.map((c) => `${c && c.slot}|${c && c.loserId}`));
+  oldConflicts.forEach((c) => {
+    const key = `${c && c.slot}|${c && c.loserId}`;
+    if (c && !conflictKeys.has(key)) { conflictKeys.add(key); conflicts.push(c); }
+  });
+  return { ...incoming, orders, cancellations, rackConflicts: conflicts.slice(-100) };
+}
+
+function pressingCancellationActor(actor) {
+  if (!actor || typeof actor !== 'object') return null;
+  return {
+    id: String(actor.id || '').slice(0, 80),
+    name: String(actor.name || '').slice(0, 100),
+    role: String(actor.role || '').slice(0, 40),
+  };
+}
+
+function samePressingCancellation(a, b) {
+  if (!a || !b) return false;
+  return String(a.cancelledAt || '') === String(b.cancelledAt || '')
+    && JSON.stringify(pressingCancellationActor(a.cancelledBy)) === JSON.stringify(pressingCancellationActor(b.cancelledBy));
+}
+
+/* Generic document sync is not an authorization boundary. In particular, a
+ * till must not be able to invent a cancelledAt/cancelledBy pair merely by
+ * posting a full snapshot. Only /api/pressing/cancel may create that evidence;
+ * this check accepts an already-known tombstone exactly as recorded and rejects
+ * both forged/re-written tombstones and removal of live orders. */
+function validatePressingSnapshot(current, incoming) {
+  if (!incoming || typeof incoming !== 'object') return null;
+  if (!current || typeof current !== 'object' || Array.isArray(current)) {
+    const forged = (Array.isArray(incoming.cancellations) && incoming.cancellations.find((c) => c && c.id))
+      || (Array.isArray(incoming.orders) && incoming.orders.find((o) => o && o.id && o.cancelledAt));
+    return forged ? { error: 'pressing-cancellation-route-required', id: String(forged.id) } : null;
+  }
+  const oldOrders = Array.isArray(current.orders) ? current.orders : [];
+  const oldTombstones = new Map();
+  (Array.isArray(current.cancellations) ? current.cancellations : []).forEach((c) => {
+    if (c && c.id) oldTombstones.set(String(c.id), c);
+  });
+  oldOrders.forEach((o) => {
+    if (o && o.id && o.cancelledAt && !oldTombstones.has(String(o.id))) {
+      oldTombstones.set(String(o.id), { id: String(o.id), cancelledAt: o.cancelledAt, cancelledBy: o.cancelledBy || null });
+    }
+  });
+  const incomingOrders = Array.isArray(incoming.orders) ? incoming.orders : [];
+  const incomingById = new Map(incomingOrders.filter((o) => o && o.id).map((o) => [String(o.id), o]));
+  const incomingCancellations = Array.isArray(incoming.cancellations) ? incoming.cancellations : [];
+
+  for (const old of oldOrders) {
+    if (!old || !old.id || old.cancelledAt) continue;
+    if (!incomingById.has(String(old.id))) return { error: 'pressing-order-retention-conflict', id: String(old.id) };
+  }
+  for (const cancellation of incomingCancellations) {
+    if (!cancellation || !cancellation.id) continue;
+    const id = String(cancellation.id);
+    const old = oldTombstones.get(id);
+    if (!old) return { error: 'pressing-cancellation-route-required', id };
+    if (!samePressingCancellation(old, cancellation)) return { error: 'pressing-cancellation-immutable', id };
+  }
+  for (const [id, incomingOrder] of incomingById) {
+    if (!incomingOrder || !incomingOrder.cancelledAt) continue;
+    const old = oldTombstones.get(id);
+    if (!old) return { error: 'pressing-cancellation-route-required', id };
+    if (!samePressingCancellation(old, incomingOrder)) return { error: 'pressing-cancellation-immutable', id };
+  }
+  for (const [id, old] of oldTombstones) {
+    const incomingOrder = incomingById.get(id);
+    if (incomingOrder && (!incomingOrder.cancelledAt || !samePressingCancellation(old, incomingOrder))) {
+      return { error: 'pressing-cancellation-immutable', id };
+    }
+  }
+  return null;
+}
+
+function pressingRackConflict(doc) {
+  const owners = new Map();
+  for (const order of (doc && doc.orders) || []) {
+    if (!order || order.cancelledAt || !order.rack) continue;
+    const rack = String(order.rack).trim().slice(0, 20);
+    if (!rack) continue;
+    const previous = owners.get(rack);
+    if (previous && previous !== String(order.id || '')) return { slot: rack, orderId: String(order.id || '') };
+    owners.set(rack, String(order.id || ''));
+  }
+  return null;
+}
+
 /* Le document ressemble-t-il à CETTE fonctionnalité ? Voir FEATURES.keys. */
 function shapeOk(feature, raw) {
   if (!raw || typeof raw !== 'object') return false;
@@ -359,8 +485,19 @@ async function isHotelMerchant(env, merchant) {
   }
 }
 
-function employeeAccessFromTeam(team, merchant) {
+async function employeeAccessFromTeam(env, team, merchant) {
   const members = Array.isArray(team && team.members) ? team.members : [];
+  let previous = { members: [] };
+  try {
+    const row = await env.DB.prepare(
+      "SELECT data FROM store_docs WHERE merchant = ? AND feature = 'employee-access'"
+    ).bind(merchant).first();
+    if (row && row.data) {
+      const parsed = JSON.parse(row.data);
+      if (parsed && Array.isArray(parsed.members)) previous = parsed;
+    }
+  } catch (_) { return null; }
+  const previousById = new Map(previous.members.map((member) => [String(member && member.id || ''), member]));
   const seen = new Set();
   const access = [];
   for (const member of members) {
@@ -372,6 +509,13 @@ function employeeAccessFromTeam(team, merchant) {
     const key = `${email}:${id}`;
     if (seen.has(key)) continue;
     seen.add(key);
+    const prior = previousById.get(id);
+    const priorPin = String(prior && (prior.pinCode || prior.password) || '');
+    const priorVersion = Math.max(0, Math.round(Number(prior && prior.authVersion) || 0));
+    const revision = await employeeAuthVersion(
+      env, merchant, id, pin, priorVersion + (prior && priorPin !== pin ? 1 : 0)
+    );
+    if (!revision.ok) return null;
     access.push({
       id,
       firstName: String(member.firstName || '').trim().slice(0, 60),
@@ -379,6 +523,7 @@ function employeeAccessFromTeam(team, merchant) {
       email,
       pinCode: pin,
       password: pin,
+      authVersion: revision.version,
       function: String(member.function || '').trim().slice(0, 60),
       department: String(member.department || '').trim().slice(0, 60),
       venueSlug: merchant,
@@ -495,6 +640,21 @@ export async function onRequestPost(context) {
     return json({ error: 'stale', feature, rev: serverRev, data: mine }, 409);
   }
 
+  if (feature === 'pressing-orders') {
+    if (serverRev && (!mine || typeof mine !== 'object' || Array.isArray(mine) || !Array.isArray(mine.orders))) {
+      return json({ error: 'corrupt-document', feature }, 503);
+    }
+    const snapshotError = validatePressingSnapshot(mine, clean.value);
+    if (snapshotError) return json({ error: snapshotError.error, feature, id: snapshotError.id }, 409);
+    clean.value = preservePressingCancellations(mine, clean.value);
+    const conflict = pressingRackConflict(clean.value);
+    if (conflict) return json({ error: 'rack-conflict', feature, ...conflict }, 409);
+    text = JSON.stringify(clean.value);
+    if (text.length > FEATURES[feature].max) {
+      return json({ error: 'too-large', why: 'byte-size', max: FEATURES[feature].max }, 413);
+    }
+  }
+
   if (feature === 'reservations') {
     try { await validateCommercialSync(env, merchant, mine, clean.value); }
     catch (e) { return json({ error: e?.code || 'commercial-unavailable', feature }, e?.code === 'commercial-stays-use-api' ? 409 : 503); }
@@ -537,13 +697,21 @@ export async function onRequestPost(context) {
     const writeDoc = feature === 'reservations' ? (serverRev
       ? env.DB.prepare('UPDATE store_docs SET data=?,rev=?,updated_ts=? WHERE merchant=? AND feature=? AND rev=?').bind(text, rev, now, merchant, feature, serverRev)
       : env.DB.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?) ON CONFLICT(merchant,feature) DO NOTHING').bind(merchant, feature, text, rev, now)) : env.DB.prepare(
-      `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
-       VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(merchant, feature) DO UPDATE SET
-         data = excluded.data, rev = excluded.rev, updated_ts = excluded.updated_ts`
-    ).bind(merchant, feature, text, rev, now);
+      feature === 'pressing-orders'
+        ? (serverRev
+          ? 'UPDATE store_docs SET data=?,rev=?,updated_ts=? WHERE merchant=? AND feature=? AND rev=?'
+          : 'INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?) ON CONFLICT(merchant,feature) DO NOTHING')
+        : `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(merchant, feature) DO UPDATE SET
+             data = excluded.data, rev = excluded.rev, updated_ts = excluded.updated_ts`
+    ).bind(...(feature === 'pressing-orders' && serverRev
+      ? [text, rev, now, merchant, feature, serverRev]
+      : [merchant, feature, text, rev, now]));
     if (feature === 'team') {
-      const accessText = JSON.stringify(employeeAccessFromTeam(clean.value, merchant));
+      const access = await employeeAccessFromTeam(env, clean.value, merchant);
+      if (!access) return json({ error: 'employee-access-unavailable' }, 503);
+      const accessText = JSON.stringify(access);
       const writeAccess = env.DB.prepare(
         `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
          VALUES (?, 'employee-access', ?, 1, ?)
@@ -554,6 +722,16 @@ export async function onRequestPost(context) {
     } else {
       const written = await writeDoc.run();
       if (feature === 'reservations' && Number(written.meta?.changes) !== 1) return json({ error: 'stale', feature }, 409);
+      if (feature === 'pressing-orders' && Number(written.meta?.changes) !== 1) {
+        let latest = null;
+        try {
+          latest = await env.DB.prepare('SELECT data, rev FROM store_docs WHERE merchant=? AND feature=?')
+            .bind(merchant, feature).first();
+        } catch (_) {}
+        let latestData = mine;
+        try { latestData = latest && latest.data ? JSON.parse(latest.data) : latestData; } catch (_) {}
+        return json({ error: 'stale', feature, rev: latest?.rev || serverRev, data: latestData }, 409);
+      }
     }
   } catch (_) { return json({ error: 'write-failed' }, 500); }
 

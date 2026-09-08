@@ -1650,19 +1650,73 @@
    *
    * Repli à minuit quand le module de rapport n'est pas chargé : c'est
    * exactement le comportement d'avant, donc rien ne peut se dégrader. */
-  function dayCutoffH() {
+  const DEFAULT_MERCHANT_TZ = 'Africa/Casablanca';
+  function activeMerchantSlug() {
+    try { return getCurrentVenue(); } catch (_) { return ''; }
+  }
+  function merchantTimeZone(slug) {
     try {
-      const h = window.KiwiDayReport?.cutoff?.();
+      const R = window.KiwiDayReport;
+      if (R?.timezone) return R.timezone(slug);
+    } catch (_) {}
+    try {
+      const vd = window.KiwiVenue?.getCurrentVenueData?.();
+      const zone = vd?.timezone || vd?.timeZone || vd?.tz || window.KiwiConfig?.timezone || window.KiwiConfig?.timeZone;
+      if (zone) { new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(); return zone; }
+    } catch (_) {}
+    return DEFAULT_MERCHANT_TZ;
+  }
+  function merchantParts(ts, slug) {
+    const f = new Intl.DateTimeFormat('en-CA', {
+      timeZone: merchantTimeZone(slug), year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+    });
+    const out = {};
+    f.formatToParts(new Date(ts)).forEach(p => { if (p.type !== 'literal') out[p.type] = p.value; });
+    return out;
+  }
+  function addMerchantDays(day, delta) {
+    const p = String(day || '').split('-');
+    return new Date(Date.UTC(+p[0], (+p[1] || 1) - 1, +p[2] || 1) + delta * 864e5).toISOString().slice(0, 10);
+  }
+  function merchantBoundary(day, hour, slug) {
+    const zone = merchantTimeZone(slug);
+    const target = Date.parse(String(day) + 'T00:00:00Z') + hour * 3600000;
+    let guess = target;
+    for (let i = 0; i < 6; i++) {
+      const p = merchantParts(guess, slug);
+      const observed = Date.parse(`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}Z`);
+      if (observed === target) return guess;
+      guess += target - observed;
+    }
+    return guess;
+  }
+  function merchantDayKey(ts, slug) {
+    try {
+      const R = window.KiwiDayReport;
+      if (R?.businessDay) return R.businessDay(ts, slug);
+    } catch (_) {}
+    const p = merchantParts(ts, slug);
+    const day = `${p.year}-${p.month}-${p.day}`;
+    return +p.hour < dayCutoffH(slug) ? addMerchantDays(day, -1) : day;
+  }
+  function merchantDayBounds(day, slug) {
+    try {
+      const R = window.KiwiDayReport;
+      if (R?.dayBounds) return R.dayBounds(day, slug);
+    } catch (_) {}
+    const h = dayCutoffH(slug);
+    return { from: merchantBoundary(day, h, slug), to: merchantBoundary(addMerchantDays(day, 1), h, slug) };
+  }
+  function dayCutoffH(slug) {
+    try {
+      const h = window.KiwiDayReport?.cutoff?.(slug);
       return (typeof h === 'number' && isFinite(h) && h >= 0 && h <= 12) ? h : 0;
     } catch (_) { return 0; }
   }
   function dayStartMs(t) {
-    const h = dayCutoffH();
-    // Reculer de la bascule avant de prendre la date, puis la remettre : une
-    // vente à 00 h 30 avec une bascule à 5 h retombe sur la veille 05 h 00.
-    const d = new Date(t - h * 3600000);
-    d.setHours(0, 0, 0, 0);
-    return d.getTime() + h * 3600000;
+    const slug = activeMerchantSlug();
+    return merchantDayBounds(merchantDayKey(t, slug), slug).from;
   }
   function realSalesList() {
     try { return (window.KiwiSales?.list?.(getCurrentVenue()) || []); } catch (_) { return []; }
@@ -1679,32 +1733,43 @@
      * bucket, but live ledgers must never turn "3–5 August" into "last 7
      * days" while keeping the precise dates on screen. */
     if ((range === 'personnalise' || (range == null && currentRange === 'personnalise')) && customRange) {
-      const h = dayCutoffH();
-      const start = new Date(customRange.start);
-      const end = new Date(customRange.end);
-      start.setHours(h, 0, 0, 0);
-      end.setHours(h, 0, 0, 0);
-      return [start.getTime(), end.getTime() + 864e5];
+      const slug = activeMerchantSlug();
+      const start = merchantDayBounds(dateToIso(customRange.start), slug).from;
+      const end = merchantDayBounds(dateToIso(customRange.end), slug).to;
+      return [start, end];
     }
-    const today = dayStartMs(Date.now());
+    const slug = activeMerchantSlug();
+    const todayDay = merchantDayKey(Date.now(), slug);
+    const today = merchantDayBounds(todayDay, slug).from;
     if (range === 'aujourdhui') return [today, Infinity];
-    if (range === 'hier')       return [today - 864e5, today];
+    if (range === 'hier') {
+      const yesterday = merchantDayBounds(addMerchantDays(todayDay, -1), slug);
+      return [yesterday.from, yesterday.to];
+    }
     const days = RANGE_DAYS[range] || 1;
-    return [today - (days - 1) * 864e5, Infinity];
+    return [merchantDayBounds(addMerchantDays(todayDay, -(days - 1)), slug).from, Infinity];
   }
   // Windowed revenue / count / basket from the merchant's real sales.
   function realSalesTotals(range) {
     const [from, to] = rangeBounds(range == null ? currentRange : range);
-    let revenue = 0, gross = 0, count = 0;
+    let revenue = 0, gross = 0, refunds = 0, collected = 0, receivable = 0, count = 0;
     realSalesList().forEach(e => {
       const ts = +e.ts || 0;
-      if (ts >= from && ts < to) { const amt = Math.max(0, +e.amount || 0); revenue += amt; gross += amt; count++; }
+      if (ts < from || ts >= to) return;
+      const amt = Math.max(0, +e.amount || 0);
+      revenue += amt; gross += amt; count++;
+      if (tenderBucket(e.method)) collected += amt;
+      else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e.method || '').trim().toLowerCase())) receivable += amt;
     });
     realRefundList().forEach(e => {
       const ts = +e.ts || 0;
-      if (ts >= from && ts < to) revenue -= Math.abs(+e.amount || 0);
+      if (ts < from || ts >= to) return;
+      const amt = Math.abs(+e.amount || 0);
+      revenue -= Math.abs(+e.amount || 0); refunds += amt;
+      if (tenderBucket(e.method)) collected -= amt;
+      else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e.method || '').trim().toLowerCase())) receivable -= amt;
     });
-    return { revenue, count, basket: count ? gross / count : 0 };
+    return { revenue, gross, refunds, collected, receivable, count, basket: count ? gross / count : 0 };
   }
   /* Keep tender attribution deliberately conservative. A value the ledger does
    * not identify is "other", never a bank card; customer credit and delivery
@@ -1726,13 +1791,15 @@
    * real-venue comparison below is built on this one primitive so the KPI
    * band, the hero deltas and the card/cash tile can never disagree. */
   function realWindowStats(from, to) {
-    let revenue = 0, gross = 0, count = 0, card = 0, cash = 0;
+    let revenue = 0, gross = 0, refunds = 0, collected = 0, receivable = 0, count = 0, card = 0, cash = 0;
     realSalesList().forEach((e) => {
       const ts = +e.ts || 0;
       if (ts < from || ts >= to) return;
       const amt = Math.max(0, +e.amount || 0);
       revenue += amt; gross += amt; count++;
       const tender = tenderBucket(e.method);
+      if (tender) collected += amt;
+      else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e.method || '').trim().toLowerCase())) receivable += amt;
       if (tender === 'cash') cash += amt;
       if (tender === 'card' || tender === 'tap') card += amt;
     });
@@ -1740,12 +1807,14 @@
       const ts = +e.ts || 0;
       if (ts < from || ts >= to) return;
       const amt = Math.abs(+e.amount || 0);
-      revenue -= amt;
+      revenue -= Math.abs(+e.amount || 0); refunds += amt;
       const tender = tenderBucket(e.method);
+      if (tender) collected -= amt;
+      else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e.method || '').trim().toLowerCase())) receivable -= amt;
       if (tender === 'cash') cash -= amt;
       if (tender === 'card' || tender === 'tap') card -= amt;
     });
-    return { revenue, count, basket: count ? gross / count : 0, card, cash };
+    return { revenue, gross, refunds, collected, receivable, count, basket: count ? gross / count : 0, card, cash };
   }
 
   /* One read model for every headline and insight sentence. Nothing falls back
@@ -1757,7 +1826,7 @@
       const ts = +e.ts || 0;
       return ts >= from && ts < to;
     });
-    let revenue = 0, gross = 0, collected = 0;
+    let revenue = 0, gross = 0, refunds = 0, collected = 0, receivable = 0;
     const byHour = {}, byTender = {};
     rows.forEach((e) => {
       const amount = Math.max(0, +e.amount || 0);
@@ -1770,24 +1839,27 @@
       if (tender && amount) {
         byTender[tender] = (byTender[tender] || 0) + amount;
         collected += amount;
+      } else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e && e.method || '').trim().toLowerCase())) {
+        receivable += amount;
       }
     });
     realRefundList().forEach((e) => {
       const ts = +e.ts || 0;
       if (ts < from || ts >= to) return;
       const amount = Math.abs(+e.amount || 0);
-      revenue -= amount;
+      revenue -= Math.abs(+e.amount || 0); refunds += amount;
       const hour = new Date(ts).getHours();
       byHour[hour] = (byHour[hour] || 0) - amount;
       const tender = tenderBucket(e && e.method);
       if (tender) { byTender[tender] = (byTender[tender] || 0) - amount; collected -= amount; }
+      else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e && e.method || '').trim().toLowerCase())) receivable -= amount;
     });
     const topKey = (obj) => Object.keys(obj).reduce((best, key) =>
       best == null || obj[key] > obj[best] ? key : best, null);
     const peakHour = topKey(byHour);
     const topTender = topKey(byTender);
     return {
-      from, to, count: rows.length, revenue,
+      from, to, count: rows.length, revenue, gross, refunds, collected, receivable,
       basket: rows.length ? gross / rows.length : 0,
       peakHour: peakHour == null ? null : +peakHour,
       peakRevenue: peakHour == null ? 0 : byHour[peakHour],
@@ -1831,9 +1903,9 @@
     const share = Math.round((s.peakRevenue / s.revenue) * 100);
     const num = (n) => frInt(Math.round(n));
     const W = {
-      fr: { title: `Votre pic : ${s.peakHour}h`, obs: `${num(s.peakRevenue)} MAD encaissés à ${s.peakHour}h, soit ${share} % de la période, répartie sur ${s.activeHours} heure${s.activeHours > 1 ? 's' : ''} d’activité.`, cta: '' },
-      en: { title: `Your peak: ${s.peakHour}:00`, obs: `${num(s.peakRevenue)} MAD taken at ${s.peakHour}:00, ${share}% of the period across ${s.activeHours} active hour${s.activeHours > 1 ? 's' : ''}.`, cta: '' },
-      ar: { title: `ذروتك: ${s.peakHour}`, obs: `${num(s.peakRevenue)} درهم عند الساعة ${s.peakHour}، أي ${share}٪ من الفترة موزعة على ${s.activeHours} ساعة نشاط.`, cta: '' },
+      fr: { title: `Votre pic : ${s.peakHour}h`, obs: `${num(s.peakRevenue)} MAD de ventes nettes à ${s.peakHour}h, soit ${share} % de la période, réparties sur ${s.activeHours} heure${s.activeHours > 1 ? 's' : ''} d’activité.`, cta: '' },
+      en: { title: `Your peak: ${s.peakHour}:00`, obs: `${num(s.peakRevenue)} MAD in net sales at ${s.peakHour}:00, ${share}% of the period across ${s.activeHours} active hour${s.activeHours > 1 ? 's' : ''}.`, cta: '' },
+      ar: { title: `ذروتك: ${s.peakHour}`, obs: `${num(s.peakRevenue)} درهم من صافي المبيعات عند الساعة ${s.peakHour}، أي ${share}٪ من الفترة موزعة على ${s.activeHours} ساعة نشاط.`, cta: '' },
     };
     return W[lang] || W.fr;
   }
@@ -1877,6 +1949,14 @@
     const [from, to] = rangeBounds(range == null ? currentRange : range);
     return [from, to === Infinity ? Date.now() + 1 : to];
   }
+  function shiftedBusinessBounds(from, to, deltaDays) {
+    const slug = activeMerchantSlug();
+    const startDay = merchantDayKey(from + 1, slug);
+    const endDay = merchantDayKey((to === Infinity ? Date.now() : to - 1), slug);
+    const shiftedStart = addMerchantDays(startDay, -deltaDays);
+    const shiftedEnd = addMerchantDays(endDay, -deltaDays);
+    return [merchantDayBounds(shiftedStart, slug).from, merchantDayBounds(shiftedEnd, slug).to];
+  }
   /* A percentage change needs something to change FROM. A merchant on their
    * first day has no yesterday, and printing « 0 % vs hier » beside their
    * opening sales claims the day was flat when it was in fact their first.
@@ -1887,9 +1967,11 @@
    * full day it hasn't finished yet. */
   function realDeltaPct(range, pick, backDays) {
     const [from, to] = closedBounds(range);
-    const span = Math.max(1, to - from);
-    const off = backDays ? backDays * 864e5 : span;
-    const base = pick(realWindowStats(from - off, to - off));
+    const startDay = merchantDayKey(from + 1, activeMerchantSlug());
+    const endDay = merchantDayKey(to - 1, activeMerchantSlug());
+    const spanDays = Math.max(1, Math.round((Date.parse(endDay + 'T00:00:00Z') - Date.parse(startDay + 'T00:00:00Z')) / 864e5) + 1);
+    const baseBounds = shiftedBusinessBounds(from, to, backDays || spanDays);
+    const base = pick(realWindowStats(baseBounds[0], baseBounds[1]));
     if (!base) return null;
     const cur = pick(realWindowStats(from, to));
     return Math.round(((cur - base) / base) * 1000) / 10;
@@ -1908,9 +1990,9 @@
    * built by the same code and are readable point-for-point.
    * Bucketing is relative to `base` (the business day start, e.g. 5:00 AM)
    * so late-night sales after midnight are attributed to their service. */
-  function hourlyCumul(list, base) {
-    const end = base + 864e5;
-    const per = new Array(24).fill(0);
+  function hourlyCumul(list, base, end) {
+    const hours = Math.max(1, Math.ceil((end - base) / 3600000));
+    const per = new Array(hours).fill(0);
     list.forEach(e => {
       const ts = +e.ts || 0;
       if (ts >= base && ts < end) {
@@ -1920,15 +2002,20 @@
     });
     const out = [];
     let acc = 0;
-    for (let h = 0; h < 24; h++) { acc += per[h]; out.push(acc); }
+    for (let h = 0; h < hours; h++) { acc += per[h]; out.push(acc); }
     return out;
   }
   // Same idea over N whole days: one total per day from `start`.
   function dailyTotals(list, start, days) {
     const out = new Array(days).fill(0);
+    const startDay = merchantDayKey(start, activeMerchantSlug());
     list.forEach(e => {
       const ts = +e.ts || 0;
-      if (ts >= start) { const idx = Math.floor((dayStartMs(ts) - start) / 864e5); if (idx >= 0 && idx < days) out[idx] += (+e.amount || 0); }
+      if (ts >= start) {
+        const day = merchantDayKey(ts, activeMerchantSlug());
+        const idx = Math.round((Date.parse(day + 'T00:00:00Z') - Date.parse(startDay + 'T00:00:00Z')) / 864e5);
+        if (idx >= 0 && idx < days) out[idx] += (+e.amount || 0);
+      }
     });
     return out;
   }
@@ -1950,30 +2037,39 @@
     let rev = [], prev = [], xLabels = [], visibleXIdx = [], sub = '', rangeBadge = '', cmpPrefix = '', total = 0, prevTotal = 0;
 
     if (hourly) {
-      const base = (range === 'hier') ? dayStartMs(Date.now()) - 864e5 : dayStartMs(Date.now());
-      rev = hourlyCumul(list, base);
-      prev = hourlyCumul(list, base - 864e5);
-      total = rev[23];
-      prevTotal = prev[23];
-      for (let h = 0; h < 24; h++) {
-        const hr = new Date(base + h * 3600000).getHours();
+      const slug = activeMerchantSlug();
+      const todayDay = merchantDayKey(Date.now(), slug);
+      const day = addMerchantDays(todayDay, range === 'hier' ? -1 : 0);
+      const previousDay = addMerchantDays(day, -1);
+      const currentWindow = merchantDayBounds(day, slug);
+      const previousWindow = merchantDayBounds(previousDay, slug);
+      const base = currentWindow.from;
+      rev = hourlyCumul(list, currentWindow.from, currentWindow.to);
+      prev = hourlyCumul(list, previousWindow.from, previousWindow.to);
+      total = rev[rev.length - 1];
+      prevTotal = prev[prev.length - 1];
+      for (let h = 0; h < rev.length; h++) {
+        const hr = +merchantParts(base + h * 3600000, slug).hour;
         xLabels.push((hr < 10 ? '0' : '') + hr + 'h');
       }
-      visibleXIdx = [0, 3, 6, 9, 12, 15, 18, 21];
+      visibleXIdx = Array.from({ length: rev.length }, (_, i) => i).filter(i => i % Math.max(1, Math.floor(rev.length / 8)) === 0);
       // Today is unfinished. Truncate at current hour elapsed in this business window.
       if (range === 'aujourdhui') {
-        const nowIdx = Math.min(23, Math.max(0, Math.floor((Date.now() - base) / 3600000)));
-        for (let i = nowIdx + 1; i < 24; i++) rev[i] = null;
+        const nowIdx = Math.min(rev.length - 1, Math.max(0, Math.floor((Date.now() - base) / 3600000)));
+        for (let i = nowIdx + 1; i < rev.length; i++) rev[i] = null;
       }
       rangeBadge = (range === 'hier') ? 'HIER' : "AUJOURD'HUI";
       sub = (range === 'hier') ? 'Cumul horaire · hier' : 'Cumul horaire · aujourd\'hui';
       cmpPrefix = (range === 'hier') ? 'Cumul avant-hier' : 'Cumul hier';
     } else {
       const [start, end] = closedBounds(range);
-      const days = Math.max(1, Math.ceil((end - start) / 864e5));
+      const startDay = merchantDayKey(start + 1, activeMerchantSlug());
+      const endDay = merchantDayKey(end - 1, activeMerchantSlug());
+      const days = Math.max(1, Math.round((Date.parse(endDay + 'T00:00:00Z') - Date.parse(startDay + 'T00:00:00Z')) / 864e5) + 1);
       rev = dailyTotals(list, start, days);
-      prev = dailyTotals(list, start - days * 864e5, days);
-      for (let i = 0; i < days; i++) { const d = new Date(start + i * 864e5); xLabels.push(DAY_ABBR[d.getDay()] + ' ' + d.getDate()); }
+      const previousStart = merchantDayBounds(addMerchantDays(startDay, -days), activeMerchantSlug()).from;
+      prev = dailyTotals(list, previousStart, days);
+      for (let i = 0; i < days; i++) { const d = new Date(Date.parse(addMerchantDays(startDay, i) + 'T12:00:00Z')); xLabels.push(DAY_ABBR[d.getUTCDay()] + ' ' + d.getUTCDate()); }
       const step = Math.max(1, Math.round(days / 6));
       for (let i = 0; i < days; i += step) visibleXIdx.push(i);
       if (visibleXIdx[visibleXIdx.length - 1] !== days - 1) visibleXIdx.push(days - 1);
@@ -2543,8 +2639,12 @@
                   desc: 'Nombre de ventes sur la période', derive: (d) => d.tx || null },
     panier:     { labels: { default: 'Panier moyen' }, i18n: 'dash.kpi.basket',
                   desc: 'Montant moyen dépensé par vente', derive: (d) => d.panier || null },
-    revenue:    { labels: { default: 'Chiffre d’affaires' }, i18n: 'dash.kpi.revenue',
-                  desc: 'Total encaissé sur la période', derive: (d) => { const r = revOf(d); return r == null ? null : { value: r, unit: 'MAD', fmt: 'int', delta: revDelta(d) }; } },
+    revenue:    { labels: { default: 'Ventes nettes', en: 'Net sales', ar: 'صافي المبيعات' }, i18n: '',
+                  desc: 'Ventes enregistrées moins remboursements; le paiement est ventilé séparément', derive: (d) => { const r = revOf(d); return r == null ? null : { value: r, unit: 'MAD', fmt: 'int', delta: revDelta(d) }; } },
+    collected:  { labels: { default: 'Encaissé', en: 'Collected', ar: 'المقبوض' }, i18n: '',
+                  desc: 'Paiements identifiés comme encaissés, après remboursements', derive: (d) => d.collected ? { value: d.collected.value, unit: 'MAD', fmt: 'int', delta: d.collected.delta } : null },
+    receivable: { labels: { default: 'Créances', en: 'Receivable', ar: 'المستحق' }, i18n: '',
+                  desc: 'Ventes à crédit ou livraison non encore encaissées', derive: (d) => d.receivable ? { value: d.receivable.value, unit: 'MAD', fmt: 'int', delta: d.receivable.delta } : null },
     revPerDay:  { labels: { default: 'CA par jour' }, i18n: 'dash.kpi.revPerDay',
                   desc: 'Chiffre d’affaires moyen par jour', derive: (d, ctx) => { const r = revOf(d); return r == null ? null : { value: r / ctx.nbDays, unit: 'MAD', fmt: 'int', delta: revDelta(d) }; } },
     marge:      { labels: { default: 'Marge brute' }, i18n: 'dash.kpi.margin',
@@ -2611,7 +2711,7 @@
   function kpiLabel(key, venueType, lang) {
     const c = KPI_CATALOG[key]; if (!c) return key;
     const T = window.KiwiI18n?.T?.[lang] || {};
-    return T[c.i18n] || c.labels[venueType] || c.labels.default;
+    return T[c.i18n] || c.labels[lang] || c.labels[venueType] || c.labels.default;
   }
 
   function renderKpiBand() {
@@ -2666,6 +2766,8 @@
          * ci-dessus et que le tableau de bord ne tombait jamais juste face au
          * rouleau de caisse (voir revOf). */
         revenue: { value: t.revenue, unit: 'MAD', fmt: 'int', delta: realDeltaPct(rng, (s) => s.revenue) },
+        collected: { value: t.collected, unit: 'MAD', fmt: 'int', delta: realDeltaPct(rng, (s) => s.collected) },
+        receivable: { value: t.receivable, unit: 'MAD', fmt: 'int', delta: realDeltaPct(rng, (s) => s.receivable) },
         ratio:    data.ratio    ? { ...data.ratio,    text: tender ? `${cardPct} / ${100 - cardPct}` : '·', unit: tender ? '%' : '', delta: realDeltaPct(rng, (s) => (s.card + s.cash ? (s.card / (s.card + s.cash)) * 100 : 0)) } : data.ratio,
         regulars: data.regulars ? { ...data.regulars, value: 0, unit: '', delta: null } : data.regulars,
         /* ── Un tiret, pas un zéro ──────────────────────────────────────────
@@ -4162,11 +4264,13 @@
          * printed "98 commandes aujourd'hui" on a store that had rung 2. */
         let cumTx;
         if (ownData() && window.KiwiSales) {
-          const start = new Date(); start.setHours(0, 0, 0, 0);
-          const t0 = start.getTime();
+          const [t0, t1] = rangeBounds('aujourdhui');
           let sales = [];
           try { sales = window.KiwiSales.list(getCurrentVenue()) || []; } catch (_) { sales = []; }
-          cumTx = sales.filter((s) => (s && s.ts) >= t0).length;
+          cumTx = sales.filter((s) => {
+            const ts = +(s && s.ts) || 0;
+            return ts >= t0 && ts < t1 && String(s.kind || '') !== 'refund' && Number(s.amount) > 0;
+          }).length;
         } else {
           const sim = window.KiwiDemoClock?.getSimState?.();
           cumTx = sim?.cumTx ?? 0;
@@ -4474,7 +4578,7 @@
       const t = tradeStr('eveningEmpty', EVENING_EMPTY[lang] || EVENING_EMPTY.fr);
       let doc = null;
       try { doc = window.KiwiReservations?.get?.(); } catch (_) {}
-      const now = Date.now(), start = dayStartMs(now), end = start + 864e5;
+      const now = Date.now(), currentDay = merchantDayKey(now, activeMerchantSlug()), currentWindow = merchantDayBounds(currentDay, activeMerchantSlug()), start = currentWindow.from, end = currentWindow.to;
       const active = doc && Array.isArray(doc.bookings) ? doc.bookings.filter((b) =>
         ['requested', 'confirmed', 'checked_in'].includes(b.status) && +b.startAt >= start && +b.startAt < end && +b.endAt >= now
       ).sort((a, b) => +a.startAt - +b.startAt) : [];

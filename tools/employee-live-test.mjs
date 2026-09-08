@@ -7,7 +7,14 @@ import { DatabaseSync } from 'node:sqlite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sqlite = new DatabaseSync(':memory:');
-sqlite.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+const schema = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
+sqlite.exec(schema);
+const authMigration = fs.readFileSync(path.join(ROOT, 'migrations/2026-09-08-auth-session-revocation.sql'), 'utf8');
+for (const statement of authMigration.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) {
+  if (/^ALTER TABLE accounts ADD COLUMN session_epoch\b/i.test(statement)
+      && /\bsession_epoch\b/i.test(schema)) continue;
+  sqlite.exec(statement);
+}
 const DB = {
   prepare(sql) {
     let args = [];

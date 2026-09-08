@@ -17,6 +17,20 @@ const NOT_FOUND = () => new Response('Not found', {
   headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
 });
 
+// This bucket also contains private invoices and support attachments. Only
+// public product/room media shapes may cross this unauthenticated boundary.
+export function publicMediaKey(key) {
+  if (typeof key !== 'string' || key.length > 200 || key.includes('..')) return false;
+  const parts = key.split('/');
+  if (parts[0] === 'media') parts.shift();
+  if (parts.length !== 2 && parts.length !== 3) return false;
+  const merchant = parts.shift();
+  if (!/^[a-z0-9][a-z0-9_-]{0,79}$/.test(merchant || '')
+      || ['intake', 'support', 'private', 'archives'].includes(merchant)) return false;
+  if (parts.length === 2 && parts.shift() !== 'hotel-room') return false;
+  return /^[a-zA-Z0-9][a-zA-Z0-9_-]*\.(?:jpe?g|png|webp|gif|avif|mp4|webm|mov)$/i.test(parts[0] || '');
+}
+
 export async function onRequestGet(context) {
   const { params, env, request } = context;
 
@@ -38,7 +52,7 @@ export async function onRequestGet(context) {
   try { key = decodeURIComponent(raw); } catch (_) { return NOT_FOUND(); }
   // Defence in depth: no traversal, no absolute paths, nothing but the shape we
   // write in index.js (merchant-slug / optional safe scope / file).
-  if (!key || key.includes('..') || key.startsWith('/') || key.length > 200) return NOT_FOUND();
+  if (!publicMediaKey(key)) return NOT_FOUND();
 
   const object = await env.MEDIA.get(key);
   if (!object) return NOT_FOUND();

@@ -21,7 +21,7 @@
 // sur CE magasin.
 
 import {
-  readSession, readCookie, SESS_COOKIE,
+  activeAccountSession,
   slugMerchant, isTillFor, isOperator, slugClaimedByOther,
 } from '../auth/_lib.js';
 
@@ -80,7 +80,7 @@ export async function ownedStores(request, env, from) {
   // 2) La session du compte — elle EST le propriétaire, rien à remonter.
   if (!aid && env.AUTH_SECRET) {
     try {
-      const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+      const sess = await activeAccountSession(request, env);
       if (sess && sess.aid) aid = sess.aid;
     } catch (_) { /* ni caisse ni session → opérateur, sinon rien */ }
   }
@@ -158,6 +158,24 @@ export async function storeSuspended(env, slug) {
   } catch (_) { return false; }
 }
 
+/* Writes need a three-way answer. A failed status read is not evidence that a
+ * store is active: returning `false` here would let an outage turn into a
+ * successful employee/team mutation. Keep the older boolean helper above for
+ * read paths, and make write paths use this explicit state. */
+export async function storeOperationalState(env, slug) {
+  slug = String(slug == null ? '' : slug).trim();
+  if (!slug || !env || !env.DB) return { ok: false, unavailable: true };
+  try {
+    const row = await env.DB.prepare('SELECT status FROM merchant_config WHERE merchant = ?')
+      .bind(slug).first();
+    if (!row) return { ok: false, unavailable: true };
+    const status = String(row.status || '').trim().toLowerCase();
+    return { ok: true, suspended: status === 'suspended', pending: status === 'pending' };
+  } catch (_) {
+    return { ok: false, unavailable: true };
+  }
+}
+
 /* New stores finish onboarding before a human accepts their subscription.
  * They may read every screen, but no operational write may cross this boundary.
  * NULL and a missing column mean active so no existing client is retroactively
@@ -170,6 +188,34 @@ export async function storeSubscriptionPending(env, slug) {
       .bind(slug).first();
     return !!(r && String(r.status || '') === 'pending');
   } catch (_) { return false; }
+}
+
+/* Persist the employee credential revision outside the replaceable Team and
+ * employee-access JSON documents. The upsert compares a digest in SQLite and
+ * increments in the same statement, so two concurrent different PIN changes
+ * cannot both publish revision 1. A missing auth-revision table is an explicit
+ * release prerequisite, not a reason to silently reset a credential to zero. */
+export async function employeeAuthVersion(env, merchant, memberId, pin, fallbackVersion = 0) {
+  const fallback = Math.max(0, Math.round(Number(fallbackVersion) || 0));
+  const text = `${String(merchant || '')}\u0000${String(memberId || '')}\u0000${String(pin || '')}`;
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  const digest = Array.from(new Uint8Array(bytes), (value) => value.toString(16).padStart(2, '0')).join('');
+  try {
+    const row = await env.DB.prepare(
+      `INSERT INTO employee_auth_versions (merchant, member_id, auth_version, pin_digest, updated_ts)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(merchant, member_id) DO UPDATE SET
+         auth_version = employee_auth_versions.auth_version
+           + CASE WHEN employee_auth_versions.pin_digest = excluded.pin_digest THEN 0 ELSE 1 END,
+         pin_digest = excluded.pin_digest,
+         updated_ts = excluded.updated_ts
+       RETURNING auth_version`
+    ).bind(String(merchant || ''), String(memberId || ''), fallback, digest, Date.now()).first();
+    if (!row || !Number.isFinite(Number(row.auth_version))) return { ok: false };
+    return { ok: true, version: Math.max(0, Math.round(Number(row.auth_version))) };
+  } catch (_) {
+    return { ok: false };
+  }
 }
 
 export async function tenantFor(request, env, asked, opts) {
@@ -185,7 +231,10 @@ export async function tenantFor(request, env, asked, opts) {
    * demandé : c'est le seul point par lequel toutes les branches repassent. */
   const strict = !!(opts && opts.strict);
   const who = await resolveTenant(request, env, asked, strict);
-  if (strict && who && (await storeSuspended(env, who) || await storeSubscriptionPending(env, who))) return '';
+  if (strict && who) {
+    const state = await storeOperationalState(env, who);
+    if (!state.ok || state.suspended || state.pending) return '';
+  }
   return who;
 }
 
@@ -200,7 +249,7 @@ async function resolveTenant(request, env, asked, strict) {
   let sessionAid = '';
   if (env.AUTH_SECRET) {
     try {
-      const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+      const sess = await activeAccountSession(request, env);
       if (sess && sess.aid) {
         const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?')
           .bind(sess.aid).first();
@@ -258,7 +307,7 @@ export async function ownerMerchant(request, env, asked, opts) {
   if (!env || !env.DB || !env.AUTH_SECRET) return '';
   let aid = '';
   try {
-    const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+    const sess = await activeAccountSession(request, env);
     if (sess && sess.aid) aid = sess.aid;
   } catch (_) { return ''; }
   if (!aid) return '';
@@ -275,9 +324,8 @@ export async function ownerMerchant(request, env, asked, opts) {
   }
   if (!owned) return '';
   if (opts && opts.strict) {
-    try {
-      if (await storeSuspended(env, asked) || await storeSubscriptionPending(env, asked)) return '';
-    } catch (_) { /* erreur de lecture ne ferme jamais un magasin qui paie */ }
+    const state = await storeOperationalState(env, asked);
+    if (!state.ok || state.suspended || state.pending) return '';
   }
   return asked;
 }

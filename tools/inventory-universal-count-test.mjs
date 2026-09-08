@@ -52,6 +52,7 @@ try {
 }
 
 function fakeD1(db) {
+  let transactionQueue = Promise.resolve();
   const stmt = (sql, args) => ({
     bind: (...a) => stmt(sql, a),
     first: async () => {
@@ -69,10 +70,22 @@ function fakeD1(db) {
   });
   return {
     prepare: (sql) => stmt(sql, []),
-    batch: async (stmts) => {
-      const out = [];
-      for (const s of stmts) out.push(await s.run());
-      return out;
+    batch: (stmts) => {
+      const execute = async () => {
+        db.exec('BEGIN IMMEDIATE');
+        try {
+          const out = [];
+          for (const s of stmts) out.push(await s.run());
+          db.exec('COMMIT');
+          return out;
+        } catch (error) {
+          db.exec('ROLLBACK');
+          throw error;
+        }
+      };
+      const result = transactionQueue.then(execute, execute);
+      transactionQueue = result.catch(() => {});
+      return result;
     },
   };
 }
@@ -158,10 +171,27 @@ function initDb(db) {
     CREATE TABLE IF NOT EXISTS accounts (
       id TEXT PRIMARY KEY,
       email TEXT NOT NULL,
-      business TEXT NOT NULL
+      business TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      session_epoch INTEGER NOT NULL DEFAULT 0
     );
-    INSERT OR REPLACE INTO accounts (id, email, business) VALUES ('restaurant-atlas', 'atlas@kiwi-os.com', 'restaurant-atlas');
-    INSERT OR REPLACE INTO accounts (id, email, business) VALUES ('boutique-sahara', 'sahara@kiwi-os.com', 'boutique-sahara');
+    CREATE TABLE IF NOT EXISTS merchant_config (
+      merchant TEXT PRIMARY KEY,
+      features TEXT NOT NULL DEFAULT '{}',
+      type TEXT,
+      account_id TEXT,
+      name TEXT,
+      status TEXT,
+      till_epoch INTEGER NOT NULL DEFAULT 0
+    );
+    INSERT OR REPLACE INTO accounts (id, email, business, status, session_epoch)
+      VALUES ('restaurant-atlas', 'atlas@kiwi-os.com', 'restaurant-atlas', 'active', 0);
+    INSERT OR REPLACE INTO accounts (id, email, business, status, session_epoch)
+      VALUES ('boutique-sahara', 'sahara@kiwi-os.com', 'boutique-sahara', 'active', 0);
+    INSERT OR REPLACE INTO merchant_config (merchant, features, type, account_id, name, status, till_epoch)
+      VALUES ('restaurant-atlas', '{}', 'restaurant', 'restaurant-atlas', 'Restaurant Atlas', 'active', 7);
+    INSERT OR REPLACE INTO merchant_config (merchant, features, type, account_id, name, status, till_epoch)
+      VALUES ('boutique-sahara', '{}', 'boutique', 'boutique-sahara', 'Boutique Sahara', 'active', 7);
   `);
 }
 
@@ -170,7 +200,7 @@ const lib = await import(pathToFileURL(path.join(root, 'functions/auth/_lib.js')
 const countsRoute = await import(pathToFileURL(path.join(root, 'functions/api/inventory/counts.js')).href);
 
 async function tillCookieFor(merchant) {
-  return 'kiwi_till=' + (await lib.tillToken(AUTH_SECRET, merchant));
+  return 'kiwi_till=' + (await lib.tillToken(AUTH_SECRET, merchant, 7));
 }
 
 async function ownerCookieFor(merchant) {

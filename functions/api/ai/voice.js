@@ -22,6 +22,7 @@ import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { quotaOk, DAILY_CAPS } from './_quota.js';
 import { runAiWithGateway } from './_run.js';
+import { runWithPayloadFallback } from './_payload-fallback.js';
 
 /* Turbo d'abord : ~8× plus rapide que le grand modèle pour une qualité
  * multilingue équivalente sur de la dictée courte. Le whisper historique en
@@ -77,16 +78,13 @@ export async function onRequestPost(context) {
  * turbo veut { audio: <base64> }, l'historique veut { audio: [octets…] }.
  * On ne décode le base64 que si le turbo a échoué. */
 async function transcribe(env, b64, language) {
-  try {
-    const payload = { audio: b64 };
-    if (language) payload.language = language;
-    const r = await runAiWithGateway(env, MODEL, payload);
-    return r && r.text;
-  } catch (_) {
+  const payload = { audio: b64 };
+  if (language) payload.language = language;
+  const result = await runWithPayloadFallback(env, MODEL, payload, FALLBACK_MODEL, () => {
     const bin = atob(b64);
     const bytes = new Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const r = await runAiWithGateway(env, FALLBACK_MODEL, { audio: bytes });
-    return r && r.text;
-  }
+    return { audio: bytes };
+  });
+  return result.result && result.result.text;
 }

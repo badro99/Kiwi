@@ -132,7 +132,9 @@ async function stop(child) {
 const supportSchema = `
 CREATE TABLE accounts (
   id TEXT PRIMARY KEY,
-  business TEXT NOT NULL
+  business TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  session_epoch INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE store_docs (
   merchant TEXT NOT NULL,

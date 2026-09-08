@@ -243,18 +243,15 @@
     return flush();
   }
 
-  /* plan = [{id, payload, station}]. Generic remote jobs are accepted only by
-     the selected hub. Authenticated floor-service jobs use `remote: 'connected'`:
-     the employee has already made the kitchen decision by tapping “Lancer la
-     commande”, so a caisse with the kitchen printer physically ready must not
-     wait for a second human confirmation or a hidden hub preference. Devices
-     without a printer skip the job instead of accumulating a phantom queue.
+  /* plan = [{id, payload, station}]. Every remote job is accepted only by the
+     selected exclusive hub. `remote: 'connected'` remains a compatibility
+     spelling for older callers, but it does not authorize a direct local print:
+     otherwise two connected caisses can both emit the same kitchen ticket.
      Every path still uses the same stable job id + done ledger. */
   function enqueue(plan, options) {
     options = options || {};
-    if (options.remote === true && !isHub()) return { accepted: 0, skipped: 'not-print-hub' };
-    if (options.remote === 'connected' && !isHub() && !printerReady()) {
-      return { accepted: 0, skipped: 'printer-not-connected' };
+    if ((options.remote === true || options.remote === 'connected') && !isHub()) {
+      return { accepted: 0, skipped: 'not-print-hub' };
     }
     /* Turning a till into the hub during service must not empty the last half
        hour of the server queue onto paper.  The polling API intentionally

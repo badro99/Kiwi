@@ -93,7 +93,7 @@ ok('le vérificateur par compte est limité en tentatives',
   /verifyAccountPin\([\s\S]*?limitCheck\(request, env, 'pin:account'/.test(lib));
 ok('le vérificateur par compte est dérivé de la session, pas d’un paramètre',
   /verifyAccountPin\(request, env, pin\)/.test(lib)
-  && /verifyAccountPin\([\s\S]*?readSession\(readCookie\(request, SESS_COOKIE\)/.test(lib));
+  && /verifyAccountPin\([\s\S]*?(?:activeAccountSession\(request, env\)|readSession\(readCookie\(request, SESS_COOKIE\))/.test(lib));
 /* Les vérificateurs comparent le code dans le WHERE ; ils ne le RAMÈNENT pas. */
 const libSelects = columnsOf(lib.slice(lib.indexOf('export async function verifyStaffPin')));
 ok('les vérificateurs interrogent staff_pins', libSelects.length >= 2,

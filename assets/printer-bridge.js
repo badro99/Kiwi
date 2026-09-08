@@ -38,6 +38,10 @@
   var BRIDGE_PORTS = [9110, 9111, 9112, 9113, 9114];
   var PORT_KEY = 'kiwiBridgePort';
   var bridgePort = 0;
+  var bridgeCapability = '';
+  var bridgeMode = 'unknown';
+  var secureBridgeSeen = false;
+  var SECURE_BRIDGE_KEY = 'kiwiBridgeCapabilityRequired';
   function bridgeBase(p) { return 'http://127.0.0.1:' + (p || bridgePort || BRIDGE_PORTS[0]); }
   var BRIDGE_URL = bridgeBase();   // kept for compatibility; prefer bridgeBase()
   var BRIDGE_DOWNLOAD = '/printer';
@@ -303,6 +307,54 @@
     return { signal: ctrl.signal, done: function () { clearTimeout(t); } };
   }
 
+  function bridgeHeaders(extra) {
+    var headers = Object.assign({}, extra || {});
+    if (bridgeCapability) headers['X-Kiwi-Bridge-Capability'] = bridgeCapability;
+    return headers;
+  }
+
+  function bridgeTarget(target) {
+    var cfg = getConfig();
+    if (target && target.osPrinter) return { osPrinter: String(target.osPrinter) };
+    if (target && target.ip) return { ip: String(target.ip), port: Number(target.port) || 9100 };
+    if (cfg.osPrinter) return { osPrinter: cfg.osPrinter };
+    return cfg.ip ? { ip: cfg.ip, port: Number(cfg.port) || 9100 } : null;
+  }
+
+  function saveBridgeTarget(target) {
+    var t = bridgeTarget(target);
+    // Transition release: keep known, pre-capability installations printing.
+    // This does not secure those old servers: upgrade them after these clients
+    // are loaded. Never downgrade a bridge that advertised secure commands.
+    if (t && bridgePort && bridgeMode === 'legacy') return Promise.resolve({ ok: true, legacy: true });
+    if (!t || !bridgeCapability || !bridgePort) return Promise.resolve({ ok: false, error: 'bridge-capability-required' });
+    var to = withTimeout(null, 6000);
+    return fetch(bridgeBase() + '/kiwi/targets', {
+      method: 'POST', headers: bridgeHeaders({ 'Content-Type': 'application/json' }), signal: to.signal,
+      body: JSON.stringify({ action: 'save', target: t }),
+    }).then(function (r) {
+      to.done();
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        return r.ok && j && j.ok ? j : { ok: false, error: j && j.error || 'bridge-capability-required' };
+      });
+    }).catch(function () { to.done(); return { ok: false, error: 'bridge-unreachable' }; });
+  }
+
+  function pairLocalBridge(code) {
+    return ping().then(function (j) {
+      if (!j) return { ok: false, error: 'bridge-unreachable' };
+      if (bridgeMode !== 'legacy' && !bridgeCapability) return { ok: false, error: 'bridge-capability-required' };
+      var to = withTimeout(null, 15000);
+      return fetch(bridgeBase() + '/kiwi/relay/pair', {
+        method: 'POST', headers: bridgeHeaders({ 'Content-Type': 'application/json' }),
+        signal: to.signal, body: JSON.stringify({ code: code }),
+      }).then(function (r) {
+        to.done();
+        return r.json().then(function (body) { return r.ok ? body : { ok: false, error: body && body.error || 'bridge-capability-required' }; });
+      }).catch(function () { to.done(); return { ok: false, error: 'bridge-unreachable' }; });
+    });
+  }
+
   function pingPort(p, ms) {
     var to = withTimeout(null, ms || 1400);
     return fetch(bridgeBase(p) + '/kiwi/ping', { signal: to.signal, cache: 'no-store' })
@@ -327,10 +379,21 @@
     }
     var i = 0;
     function step() {
-      if (i >= order.length) { bridgePort = 0; return null; }
+      if (i >= order.length) { bridgePort = 0; bridgeCapability = ''; bridgeMode = 'unknown'; return null; }
       var p = order[i++];
       return pingPort(p, i === 1 ? 1400 : 600).then(function (j) {
         if (!j) return step();
+        // Bind the handshake to the selected bridge, never a previous port.
+        bridgeCapability = /^kbc_[0-9a-f]{64}$/.test(j.capability || '') ? String(j.capability) : '';
+        secureBridgeSeen = secureBridgeSeen || ls(SECURE_BRIDGE_KEY) === '1';
+        var knownLegacy = j.name === 'kiwi-printer-bridge'
+          && /^1\.(?:[0-3]\.\d+|4\.[0-4])$/.test(String(j.version || ''))
+          && !Object.prototype.hasOwnProperty.call(j, 'capability') && !j.capabilityRequired;
+        if (bridgeCapability || j.capabilityRequired) {
+          secureBridgeSeen = true;
+          set(SECURE_BRIDGE_KEY, '1');
+        }
+        bridgeMode = knownLegacy && !secureBridgeSeen ? 'legacy' : 'secure';
         bridgePort = p;
         BRIDGE_URL = bridgeBase(p);
         try { set(PORT_KEY, String(p)); } catch (_) {}
@@ -614,7 +677,7 @@
     if (!(target && (target.ip || target.osPrinter)) && !cfg.ip && !cfg.osPrinter) return Promise.resolve({ ok: false, reason: 'not-configured' });
     // Locate the bridge before the first job if we haven't yet (or if it moved
     // ports since · a restart on a busy 9110 lands somewhere else).
-    if (!bridgePort) {
+    if (!bridgePort || bridgeMode !== 'secure' || !bridgeCapability) {
       return ping().then(function (j) {
         return j ? bridgePrintNow(bytes, target) : viaRelayOrFail(bytes, target);
       });
@@ -636,23 +699,25 @@
   function bridgePrintNow(bytes, target) {
     var cfg = getConfig();
     var to = withTimeout(null, 9000);
-    return fetch(bridgeBase() + '/kiwi/print', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: to.signal,
-      body: JSON.stringify((target && target.ip)
-        ? { printerIp: target.ip, port: Number(target.port) || 9100, dataB64: window.KiwiEscPos.toB64(bytes) }
-        : (target && target.osPrinter)
-        ? { printerName: target.osPrinter, dataB64: window.KiwiEscPos.toB64(bytes) }
-        : cfg.osPrinter
-        ? { printerName: cfg.osPrinter, dataB64: window.KiwiEscPos.toB64(bytes) }
-        : { printerIp: cfg.ip, port: Number(cfg.port) || 9100, dataB64: window.KiwiEscPos.toB64(bytes) }),
+    var t = bridgeTarget(target);
+    if (!t) return Promise.resolve({ ok: false, reason: 'not-configured' });
+    return saveBridgeTarget(t).then(function (saved) {
+      if (!saved || !saved.ok) return { ok: false, reason: saved && saved.error || 'bridge-capability-required' };
+      return fetch(bridgeBase() + '/kiwi/print', {
+        method: 'POST', headers: bridgeHeaders({ 'Content-Type': 'application/json' }), signal: to.signal,
+        body: JSON.stringify(t.osPrinter
+          ? { printerName: t.osPrinter, dataB64: window.KiwiEscPos.toB64(bytes) }
+          : { printerIp: t.ip, port: t.port, dataB64: window.KiwiEscPos.toB64(bytes) }),
+      });
     }).then(function (r) {
+      if (!r || typeof r.json !== 'function') { to.done(); return { ok: false, reason: r && r.reason || 'print-failed' }; }
       to.done();
       return r.json().then(function (j) {
         if (j && j.timing) lastTiming = j.timing;
         return (r.ok && j && j.ok) ? { ok: true, via: 'bridge', bytes: j.bytes, timing: j.timing } : { ok: false, reason: (j && j.error) || 'print-failed' };
       },
         function () { return { ok: false, reason: 'bad-response' }; });
-    }).catch(function () { to.done(); return { ok: false, reason: 'bridge-unreachable' }; });
+      }).catch(function () { to.done(); return { ok: false, reason: 'bridge-unreachable' }; });
   }
 
   // ── transport D: le relais cloud (l'iPad, la tablette, tout appareil sans pont) ──
@@ -725,6 +790,12 @@
           fallbackNotice('Impression distante échouée · ' + frReason(reason));
           return;
         }
+        if (job && job.status === 'uncertain') {
+          var uncertainReason = job.error || 'output-unknown-ack-timeout';
+          try { window.dispatchEvent(new CustomEvent('kiwi:printer-relay-status', { detail: { ok: false, uncertain: true, id: id, reason: uncertainReason } })); } catch (_) {}
+          fallbackNotice('Impression distante incertaine · ' + frReason(uncertainReason));
+          return;
+        }
         if (Date.now() - started <= 12000) setTimeout(tick, 700);
       });
     })();
@@ -783,14 +854,18 @@
     lastWakeAt = now;
     var t = relayTargetOf(target);
     if (!t || !t.ip) return Promise.resolve({ ok: false, reason: 'not-configured' });
-    if (bridgePort) {
-      return fetch(bridgeBase() + '/kiwi/wake', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ printerIp: t.ip, port: t.port || 9100 }),
+    if (bridgePort && bridgeMode === 'secure') {
+      return saveBridgeTarget(t).then(function (saved) {
+        if (!saved || !saved.ok) return { ok: false, reason: saved && saved.error || 'bridge-capability-required' };
+        return fetch(bridgeBase() + '/kiwi/wake', {
+          method: 'POST', headers: bridgeHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ printerIp: t.ip, port: t.port || 9100 }),
+        });
       }).then(function (r) {
+        if (!r || typeof r.json !== 'function') return r;
         return r.json().then(function (j) {
           if (j && j.timing) lastTiming = j.timing;
-          return { ok: true, via: 'bridge', waking: true };
+          return (j && j.ok) ? { ok: true, via: 'bridge', waking: true } : { ok: false, reason: (j && j.error) || 'wake-failed' };
         }).catch(function () { return { ok: false, reason: 'bad-response' }; });
       }).catch(function () {
         bridgePort = 0;
@@ -799,13 +874,17 @@
     }
     return ping().then(function (j) {
       if (j) {
-        return fetch(bridgeBase() + '/kiwi/wake', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ printerIp: t.ip, port: t.port || 9100 }),
+        return saveBridgeTarget(t).then(function (saved) {
+          if (!saved || !saved.ok) return { ok: false, reason: saved && saved.error || 'bridge-capability-required' };
+          return fetch(bridgeBase() + '/kiwi/wake', {
+            method: 'POST', headers: bridgeHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ printerIp: t.ip, port: t.port || 9100 }),
+          });
         }).then(function (r) {
+          if (!r || typeof r.json !== 'function') return r;
           return r.json().then(function (res) {
             if (res && res.timing) lastTiming = res.timing;
-            return { ok: true, via: 'bridge', waking: true };
+            return (res && res.ok) ? { ok: true, via: 'bridge', waking: true } : { ok: false, reason: (res && res.error) || 'wake-failed' };
           }).catch(function () { return { ok: false, reason: 'bad-response' }; });
         }).catch(function () { return wakeViaRelay(t); });
       }
@@ -1461,6 +1540,10 @@
     function frReason(reason) {
       var r = String(reason || '');
       if (r === 'bridge-unreachable') return 'Pont introuvable · lancez Kiwi Printer Bridge sur cet ordinateur, ou associez un pont au relais Kiwi pour imprimer depuis une tablette';
+      if (r === 'bridge-capability-required') return 'Ce pont doit être mis à jour · installez la dernière version de Kiwi Printer Bridge puis revérifiez';
+      if (r === 'printer-target-not-saved') return 'Cette imprimante doit être enregistrée dans le pont · relancez le test depuis ce poste';
+      if (r === 'printer-target-not-local') return 'Le pont refuse cette cible réseau · utilisez une imprimante locale au poste du comptoir';
+      if (r === 'output-unknown-ack-timeout' || r === 'output-unknown-after-bridge-restart') return 'Le ticket a peut-être déjà été imprimé · vérifiez le papier avant toute reprise manuelle';
       if (r === 'relay-offline') return 'Aucun pont en ligne pour le relais Kiwi · vérifiez que Kiwi Printer Bridge tourne sur l’ordinateur du comptoir';
       if (r === 'relay-not-provisioned') return 'Relais d’impression pas encore activé côté serveur';
       if (r === 'unauthorized') return 'Caisse non reconnue · appairez-la ou reconnectez-vous';
@@ -1725,7 +1808,7 @@
       var box = $('#kpr-os'), sel = $('#kpr-os-sel'), profSel = $('#kpr-prof-os-sel');
       if (!box || !sel) return Promise.resolve();
       var to = withTimeout(null, 6000);
-      return fetch(bridgeBase() + '/kiwi/printers', { signal: to.signal })
+      return fetch(bridgeBase() + '/kiwi/printers', { headers: bridgeHeaders(), signal: to.signal })
         .then(function (r) { to.done(); return r.ok ? r.json() : null; })
         .catch(function () { to.done(); return null; })
         .then(function (j) {
@@ -1760,8 +1843,16 @@
         bridgeUp = !!j;
         if (scan) scan.disabled = !j;
         if (j) {
+          if (!bridgeCapability && bridgeMode !== 'legacy') {
+            st.className = 'kpr-status off';
+            t.textContent = 'Pont détecté · mettez à jour Kiwi Printer Bridge pour sécuriser cette caisse.';
+            test.disabled = true;
+            if (scan) scan.disabled = true;
+            return { ok: false, reason: 'bridge-capability-required' };
+          }
           st.className = 'kpr-status on';
-          t.textContent = 'Pont connecté · v' + (j.version || '?');
+          t.textContent = 'Pont connecté · v' + (j.version || '?')
+            + (bridgeMode === 'legacy' ? ' · impression maintenue, mise à jour de sécurité recommandée' : '');
           test.disabled = false;
           loadOsPrinters();
           paintRelay();
@@ -1836,9 +1927,7 @@
       var b = this; b.disabled = true; var orig = b.textContent; b.textContent = 'Association…';
       relayPairCode().then(function (j) {
         if (!j.ok) { b.disabled = false; b.textContent = orig; toast('Impossible de générer le code : ' + frReason(j.reason)); return null; }
-        var to = withTimeout(null, 15000);
-        return fetch(bridgeBase() + '/kiwi/relay/pair', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: to.signal, body: JSON.stringify({ code: j.code }) })
-          .then(function (r) { to.done(); return r.json(); }).catch(function () { to.done(); return null; });
+        return pairLocalBridge(j.code);
       }).then(function (r) {
         b.disabled = false; b.textContent = orig;
         if (r === null) return;
@@ -1875,11 +1964,14 @@
       btn.disabled = true; btn.textContent = 'Impression…';
       var cfg2 = getConfig();
       var to = withTimeout(null, 12000);
-      fetch(bridgeBase() + '/kiwi/print', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: to.signal,
-        body: JSON.stringify({ printerName: sel.value,
-          dataB64: window.KiwiEscPos.toB64(window.KiwiEscPos.testSlip({ paper: cfg2.paper })) }),
-      }).then(function (r) { to.done(); return r.json().catch(function () { return null; }); })
+      saveBridgeTarget({ osPrinter: sel.value }).then(function (saved) {
+        if (!saved || !saved.ok) return { ok: false, error: saved && saved.error || 'bridge-capability-required' };
+        return fetch(bridgeBase() + '/kiwi/print', {
+          method: 'POST', headers: bridgeHeaders({ 'Content-Type': 'application/json' }), signal: to.signal,
+          body: JSON.stringify({ printerName: sel.value,
+            dataB64: window.KiwiEscPos.toB64(window.KiwiEscPos.testSlip({ paper: cfg2.paper })) }),
+        }).then(function (r) { to.done(); return r.json().catch(function () { return null; }); });
+      })
         .then(function (j) {
           btn.textContent = orig; btn.disabled = false;
           toast(j && j.ok ? 'Ticket test envoyé' : ('Échec : ' + ((j && j.error) || 'inconnu')));
@@ -2001,7 +2093,7 @@
         }, function () { return null; });
       } else {
         var to = withTimeout(null, 30000);
-        scanAttempt = fetch(bridgeBase() + '/kiwi/scan', { signal: to.signal })
+        scanAttempt = fetch(bridgeBase() + '/kiwi/scan', { headers: bridgeHeaders(), signal: to.signal })
           .then(function (r) { to.done(); return r.status === 404 ? { legacy: true } : r.json(); })
           .catch(function () { to.done(); return null; });
       }
@@ -2091,6 +2183,7 @@
     openSetup: openSetup, bridgeUrl: function () { return bridgeBase(); }, bridgePorts: BRIDGE_PORTS,
     // Le relais cloud · ce que l'iPad utilise à la place du pont local.
     relayProbe: relayProbe, relayEnqueue: relayEnqueue, relayPairCode: relayPairCode, relayRevoke: relayRevoke,
+    relayPairLocal: pairLocalBridge,
     wake: wakePrinter, getLastTiming: function () { return lastTiming; },
   };
 })();

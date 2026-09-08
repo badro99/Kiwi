@@ -61,8 +61,15 @@
     'kiwiOwnerName', 'kiwiBizName',
     'kiwiSet:ownerName', 'kiwiSet:ownerEmail', 'kiwiOwnerEmail',
     'kiwiBizType', 'kiwiCity',
-    'kiwiLiveMerchant', 'kiwiLive', 'kiwiPairings'
+    'kiwiLiveMerchant', 'kiwiLive', 'kiwiPairings',
+    /* These native keys are the device's venue identity. Leaving either
+     * flag or venue behind lets the native secure restore repopulate a revoked
+     * merchant on the next launch. Business queues/sales are deliberately not
+     * in this list: unsynced evidence must survive for recovery. */
+    'kiwiPaired', 'kiwiPairedVenue'
   ];
+
+  var NATIVE_REVOKED_FLAG = 'kiwi:native:identity-revoked:v1';
 
   function purgeLocalIdentity() {
     try {
@@ -72,6 +79,16 @@
     } catch (_) {}
   }
 
+  function notifyNativeRevocation() {
+    try { window.__kiwiAccountRevoked = true; } catch (_) {}
+    try { localStorage.setItem(NATIVE_REVOKED_FLAG, '1'); } catch (_) {}
+    try {
+      var native = window.KiwiNative;
+      if (native && typeof native.revokeIdentity === 'function') native.revokeIdentity();
+    } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('kiwi:account-revoked')); } catch (_) {}
+  }
+
   function purgeAndRedirect() {
     if (redirecting) return;
     redirecting = true;
@@ -79,6 +96,7 @@
     // the navigation can't leave the auth page reading stale kiwiBizName /
     // kiwiVenue and re-painting the dead account.
     purgeLocalIdentity();
+    notifyNativeRevocation();
     var done = false;
     var finish = function () {
       if (done) return;

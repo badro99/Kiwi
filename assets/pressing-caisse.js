@@ -379,6 +379,7 @@
        back to the customer. "Remis" is accurate for a pickup and does not
        pretend that Kiwi ran a home-delivery route. */
     livre: { label: 'Remis',         dot: 'livre' },
+    annule: { label: 'Annulée',       dot: 'annule' },
   };
   const STATUS_FLOW = ['recu', 'trait', 'pret', 'livre'];
 
@@ -463,6 +464,7 @@
   }
   function orderStatus(o, now) {
     if (!o || !Array.isArray(o.pieces)) return 'recu';
+    if (o.cancelledAt) return 'annule';
     const t = now || Date.now();
     const st = o.pieces.map((p) => effectiveStatus(o, p, t));
     if (st.length && st.every((s) => s === 'livre')) return 'livre';
@@ -470,11 +472,15 @@
     if (st.some((s) => s === 'trait' || s === 'pret')) return 'trait';
     return 'recu';
   }
+  function isLiveOrder(o) {
+    const st = orderStatus(o);
+    return st !== 'livre' && st !== 'annule';
+  }
   function isLate(o, now) {
     if (!o) return false;
     const t = now || Date.now();
     const rTs = o.readyAt instanceof Date ? o.readyAt.getTime() : (o.readyAt ? new Date(o.readyAt).getTime() : 0);
-    return orderStatus(o, t) !== 'livre' && rTs > 0 && rTs < t;
+    return isLiveOrder(o) && rTs > 0 && rTs < t;
   }
 
   const NOW = Date.now();
@@ -548,6 +554,7 @@
   const RAILS = ['A', 'B', 'C'];
   const RAIL_SIZE = 12;
   const rackSlots = {};                  /* 'B-07' → orderId */
+  let rackConflicts = [];
   ORDERS.forEach((o) => { if (o.rack) rackSlots[o.rack] = o.id; });
 
   /* ───────────────────────── state ───────────────────────── */
@@ -642,6 +649,10 @@
       total: orderTotals(o).total,
       notified: !!o.notified,
       collectedAt: o.collectedAt instanceof Date ? o.collectedAt.toISOString() : (o.collectedAt || null),
+      cancelledAt: o.cancelledAt instanceof Date ? o.cancelledAt.toISOString() : (o.cancelledAt || null),
+      cancelledBy: o.cancelledBy ? {
+        id: String(o.cancelledBy.id || '').slice(0, 80), name: String(o.cancelledBy.name || '').slice(0, 100), role: String(o.cancelledBy.role || '').slice(0, 40),
+      } : null,
       updatedAt: +o.updatedAt || 0,
     };
   }
@@ -659,7 +670,7 @@
       persistedCustomerHashes[row.id] = h;
       return row;
     });
-    const ordered = ORDERS.filter((o) => orderStatus(o) !== 'livre').concat(ORDERS.filter((o) => orderStatus(o) === 'livre'));
+    const ordered = ORDERS.filter(isLiveOrder).concat(ORDERS.filter((o) => orderStatus(o) === 'annule')).concat(ORDERS.filter((o) => orderStatus(o) === 'livre'));
     const orders = ordered.slice(0, 500).map((o) => {
       const row = orderPayload(o);
       const h = payloadHash(row);
@@ -667,7 +678,8 @@
       persistedOrderHashes[row.id] = h;
       return row;
     });
-    return { customers, orders, seq: ticketSeq, updatedAt: now };
+    const cancellations = orders.filter((o) => o.cancelledAt).map((o) => ({ id: o.id, cancelledAt: o.cancelledAt, cancelledBy: o.cancelledBy || null }));
+    return { customers, orders, cancellations, rackConflicts: rackConflicts.slice(0, 100), seq: ticketSeq, updatedAt: now };
   }
   function readPressingDocument() {
     const k = pressingStoreKey();
@@ -707,7 +719,10 @@
         b2b: !!raw.b2b, lines, droppedAt: new Date(raw.droppedAt), readyAt: new Date(raw.readyAt),
         pay: raw.pay && { mode: raw.pay.mode, method: raw.pay.method || null, paid: Math.max(0, +raw.pay.paid || 0) },
         rack: raw.rack ? String(raw.rack).slice(0, 20) : null, notified: !!raw.notified,
-        collectedAt: raw.collectedAt ? new Date(raw.collectedAt) : null, updatedAt: +raw.updatedAt || 0,
+        collectedAt: raw.collectedAt ? new Date(raw.collectedAt) : null,
+        cancelledAt: raw.cancelledAt ? new Date(raw.cancelledAt) : null,
+        cancelledBy: raw.cancelledBy && { id: String(raw.cancelledBy.id || '').slice(0, 80), name: String(raw.cancelledBy.name || '').slice(0, 100), role: String(raw.cancelledBy.role || '').slice(0, 40) },
+        updatedAt: +raw.updatedAt || 0,
       };
       if (!Number.isFinite(o.droppedAt.getTime())) o.droppedAt = new Date();
       if (!Number.isFinite(o.readyAt.getTime())) o.readyAt = suggestReady();
@@ -723,7 +738,12 @@
     ensurePublicOrderNumbers(ORDERS);
     ticketSeq = Math.max(ticketSeq, +doc.seq || 0, 1);
     Object.keys(rackSlots).forEach((k) => { delete rackSlots[k]; });
-    ORDERS.forEach((o) => { if (o.rack && !rackSlots[o.rack]) rackSlots[o.rack] = o.id; });
+    rackConflicts = Array.isArray(doc.rackConflicts) ? doc.rackConflicts.slice(0, 100) : [];
+    ORDERS.forEach((o) => {
+      if (!isLiveOrder(o) || !o.rack) { o.rack = null; return; }
+      if (!rackSlots[o.rack]) rackSlots[o.rack] = o.id;
+      else o.rack = null;
+    });
     return true;
   }
   function mergePressingDocuments(mine, theirs) {
@@ -736,9 +756,26 @@
       });
       return Object.values(byId);
     };
+    const cancellations = mergeRows(mine && mine.cancellations, theirs && theirs.cancellations);
+    const rackConflicts = [];
+    const orders = mergeRows(mine && mine.orders, theirs && theirs.orders).map((o) => {
+      const tombstone = cancellations.find((c) => c.id === o.id);
+      return tombstone ? { ...o, cancelledAt: tombstone.cancelledAt, cancelledBy: tombstone.cancelledBy || null, rack: null, updatedAt: Math.max(+o.updatedAt || 0, Date.parse(tombstone.cancelledAt || '') || 0) } : o;
+    });
+    const rackOwners = new Map();
+    orders.sort((a, b) => (+b.updatedAt || 0) - (+a.updatedAt || 0) || String(a.id).localeCompare(String(b.id)));
+    orders.forEach((o) => {
+      if (!isLiveOrder(o) || !o.rack) { if (!isLiveOrder(o)) o.rack = null; return; }
+      if (rackOwners.has(o.rack)) {
+        rackConflicts.push({ slot: o.rack, winnerId: rackOwners.get(o.rack), loserId: o.id, detectedAt: Date.now() });
+        o.rack = null;
+      } else rackOwners.set(o.rack, o.id);
+    });
     return {
       customers: mergeRows(mine && mine.customers, theirs && theirs.customers),
-      orders: mergeRows(mine && mine.orders, theirs && theirs.orders),
+      orders,
+      cancellations,
+      rackConflicts,
       seq: Math.max(+(mine && mine.seq) || 0, +(theirs && theirs.seq) || 0),
       updatedAt: Math.max(+(mine && mine.updatedAt) || 0, +(theirs && theirs.updatedAt) || 0),
     };
@@ -757,7 +794,7 @@
       feature: 'pressing-orders', slug: () => pressingScope(), localKey: pressingStoreKey,
       read: () => readPressingDocument() || { customers: [], orders: [], seq: ticketSeq, updatedAt: 0 },
       write: (doc) => writePressingDocument(doc, true), merge: mergePressingDocuments,
-      isEmpty: (doc) => !doc || (!doc.orders?.length && !doc.customers?.length),
+      isEmpty: (doc) => !doc || (!doc.orders?.length && !doc.customers?.length && !doc.cancellations?.length),
       onPulled: () => { if (root) { renderBadges(); refreshOps(); } },
     });
     return pressingCloudHandle;
@@ -1025,7 +1062,7 @@
     icons();
   }
   function renderBadges() {
-    const active = ORDERS.filter((o) => orderStatus(o) !== 'livre').length;
+    const active = ORDERS.filter(isLiveOrder).length;
     const prets  = ORDERS.filter((o) => orderStatus(o) === 'pret').length;
     const toRack = ORDERS.filter((o) => orderStatus(o) === 'pret' && !o.rack).length;
     $('#px-badge-cmd', root).textContent = active || '';
@@ -1512,7 +1549,7 @@
     return name.split(/\s+/).map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
   }
   function dueOf(c) {
-    return ORDERS.filter((o) => o.custId === c.id && orderStatus(o) !== 'livre' && o.pay.mode !== 'compte')
+    return ORDERS.filter((o) => o.custId === c.id && isLiveOrder(o) && o.pay.mode !== 'compte')
       .reduce((s, o) => s + Math.max(0, orderTotals(o).total - o.pay.paid), 0);
   }
   function recoPanel(c) {
@@ -2137,7 +2174,7 @@
 
   function boardBucket(o) {
     const st = orderStatus(o);
-    if (st === 'livre') return 'history';
+    if (st === 'livre' || st === 'annule') return 'history';
     if (st === 'pret') return 'ready';
     return 'todo';
   }
@@ -2151,7 +2188,7 @@
   }
 
   function setWholeOrderStatus(o, target, label) {
-    if (!o || orderStatus(o) === 'livre') return;
+    if (!o || !isLiveOrder(o)) return;
     const wasPret = orderStatus(o) === 'pret';
     o.pieces.forEach((p) => { if (p.status !== 'livre') p.status = target; });
     queueIfOffline(label || 'Statut commande');
@@ -2174,8 +2211,10 @@
     const late = isLate(o);
     const st = orderStatus(o);
     const selected = state.boardSelected.includes(o.id);
-    const when = st === 'livre'
-      ? `remis ${fmtDay(o.collectedAt || o.readyAt)}`
+    const when = st === 'annule'
+      ? `annulée ${fmtDay(o.cancelledAt || o.updatedAt || o.readyAt)}`
+      : st === 'livre'
+        ? `remis ${fmtDay(o.collectedAt || o.readyAt)}`
       : `prêt ${fmtDT(o.readyAt)}`;
     const mainAction = st === 'recu' || st === 'trait'
       ? `<button class="px-work-primary" data-px-ready="${o.id}"><i data-lucide="check-check"></i>Prête</button>`
@@ -2399,20 +2438,43 @@
       openDetail(o.id); refreshOps();
     };
     const cancelB = $('#px-dt-cancel', el);
-    if (cancelB) cancelB.onclick = () => {
-      const pin = prompt('Entrez le code manager à 4 chiffres pour annuler cette commande :');
+    if (cancelB) cancelB.onclick = async () => {
+      const pin = prompt('Entrez le code manager pour annuler cette commande :');
       if (pin === null) return;
       if (!/^\d{4}$/.test(pin)) {
         toast('Code manager à 4 chiffres requis.');
         return;
       }
+      let actor = null;
+      let cancellation = null;
+      try {
+        const merchant = pressingScope();
+        const response = merchant ? await fetch('/api/pressing/cancel', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ merchant, orderId: String(o.id), pin }),
+        }) : null;
+        const result = response && response.ok ? await response.json() : null;
+        cancellation = result && result.ok ? result : null;
+        actor = cancellation && cancellation.actor;
+      } catch (_) { actor = null; }
+      if (!actor || !(actor.id || actor.name)) {
+        toast('Code manager refusé ou vérification indisponible.');
+        return;
+      }
+      const cancelledAt = new Date(cancellation && cancellation.cancelledAt);
+      if (!Number.isFinite(cancelledAt.getTime())) {
+        toast('Annulation confirmée sans horodatage serveur. Réessayez.');
+        return;
+      }
       const idx = ORDERS.findIndex((x) => x.id === o.id);
-      if (idx !== -1) {
+      if (idx !== -1 && isLiveOrder(o)) {
         releaseSlot(o);
-        ORDERS.splice(idx, 1);
+        o.cancelledAt = cancelledAt;
+        o.cancelledBy = { id: String(actor.id || '').slice(0, 80), name: String(actor.name || '').slice(0, 100), role: String(actor.role || '').slice(0, 40) };
+        o.updatedAt = cancelledAt.getTime();
         syncOwnerOps();
         queueIfOffline('Annulation commande');
-        if (window.KiwiPressingOps && KiwiPressingOps.cancelOrder) KiwiPressingOps.cancelOrder(o.id);
+        if (window.KiwiPressingOps && KiwiPressingOps.cancelOrder) KiwiPressingOps.cancelOrder(o.id, o.cancelledBy, cancelledAt.toISOString());
         closeVeil('#px-detail-veil');
         toast(`Commande ${publicOrderNo(o)} annulée`);
         refreshOps();
@@ -2534,7 +2596,7 @@
   function renderRetrait() {
     const panel = $('[data-px-panel="retrait"]', root);
     const q = state.rtQuery;
-    const active = ORDERS.filter((o) => orderStatus(o) !== 'livre');
+    const active = ORDERS.filter(isLiveOrder);
     /* Retrait is an operational queue, not an empty search page. With no query
        it shows every ready order; typing or scanning narrows the same truth. */
     const hits = q ? active.filter((o) => matchesQuery(o, q)) : active.filter((o) => orderStatus(o) === 'pret');
@@ -2651,6 +2713,7 @@
   function acceptScan(raw) {
     const target = findScannedOrder(raw);
     if (!target) { toast('Code inconnu · vérifiez le ticket ou l’étiquette'); return false; }
+    if (orderStatus(target) === 'annule') { toast(`${publicOrderNo(target)} a été annulée`); return false; }
     if (orderStatus(target) === 'livre' && state.scanMode !== 'workflow') { toast(`${publicOrderNo(target)} a déjà été remis au client`); return false; }
     stopScanner();
     closeVeil('#px-scan-veil');
@@ -2741,10 +2804,17 @@
     if (o.rack) { delete rackSlots[o.rack]; o.rack = null; syncOwnerOps(); }
   }
   function assignSlot(o, slot) {
-    releaseSlot(o);
+    if (!o || !slot) return false;
+    const occupant = rackSlots[slot];
+    if (occupant && occupant !== o.id) {
+      toast(`Emplacement ${slot} déjà occupé.`);
+      return false;
+    }
+    if (o.rack && o.rack !== slot) delete rackSlots[o.rack];
     rackSlots[slot] = o.id;
     o.rack = slot;
     syncOwnerOps();
+    return true;
   }
 
   function renderRack() {
@@ -2789,7 +2859,7 @@
       const slot = e.target.closest('[data-px-slot]');
       if (slot && state.rackSelect) {
         const o = findOrder(state.rackSelect);
-        assignSlot(o, slot.dataset.pxSlot);
+        if (!assignSlot(o, slot.dataset.pxSlot)) return;
         state.rackSelect = null;
         queueIfOffline('Rangement');
         toast(`${publicOrderNo(o)} → cintre ${o.rack}, retrouvable en un scan`);

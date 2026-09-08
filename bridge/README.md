@@ -88,7 +88,27 @@ cd bridge
 node server.js
 ```
 
-You should see `kiwi-printer-bridge v1.4.4 listening on http://127.0.0.1:9110`.
+You should see `kiwi-printer-bridge v1.4.5 listening on http://127.0.0.1:9110`.
+
+### Security upgrade order (1.4.5)
+
+Release and reload the compatible Kiwi web client first, then upgrade/restart
+each Node bridge during a supervised window. Keep its existing configuration
+file: the bridge adds an install capability without removing pairing credentials
+or saved printer targets. Verify both a till receipt and a kitchen ticket on
+paper before considering that merchant upgraded. Do not mass-repair pairings.
+
+Version 1.4.5 advertises `capabilityRequired: true` on `/kiwi/ping`; every command
+requires `X-Kiwi-Bridge-Capability`, a trusted origin/host and an enrolled local
+destination (`POST /kiwi/targets`). The web client keeps explicitly recognized
+pre-1.4.5 bridges working during this transition and recommends an upgrade in
+printer settings. That compatibility path does **not** fix the old server's
+security issue. Once a browser sees a secure bridge, it remembers that boundary
+and will not downgrade to the legacy protocol, including after a reload or port
+change. Missing capabilities and authorization errors never trigger a legacy retry.
+
+Cloud relay/Android APK/native app delivery are separate transports/releases;
+pushing this source does not update physical merchant installations.
 In the Kiwi app, open **Connecter une imprimante** → the status flips to
 **Bridge connecté**.
 
