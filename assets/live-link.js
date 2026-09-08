@@ -350,6 +350,14 @@
     return 'sale-ref-' + (h >>> 0).toString(16) + '-' + source.replace(/[^a-zA-Z0-9_-]/g, '').slice(-32);
   }
 
+  /* `flow-*` is a local split UI correlation token, not a D1 table visit.
+     Keep every other session opaque: a genuine server session must still be
+     checked by /api/sale and must never be silently invented or discarded. */
+  function serverSession(entry) {
+    var value = String((entry && entry.session) || '').trim();
+    return /^flow-[a-z0-9-]+$/i.test(value) ? '' : value;
+  }
+
   var flushing = false, queueStorageError = false;
   var flushStartedAt = 0;
   var lastSyncStatus = 0, lastSyncError = '';
@@ -697,7 +705,8 @@
     };
     if (entry.channel) body.channel = String(entry.channel).slice(0, 24);
     if (entry.orderId) body.orderId = String(entry.orderId).slice(0, 64);
-    if (entry.session) body.session = String(entry.session).slice(0, 64);
+    var session = serverSession(entry);
+    if (session) body.session = session.slice(0, 64);
     if (entry.table) body.table = String(entry.table).slice(0, 32);
     if (entry.split && Number.isInteger(Number(entry.split.index)) && Number.isInteger(Number(entry.split.count))) {
       body.split = { index: Number(entry.split.index), count: Number(entry.split.count) };

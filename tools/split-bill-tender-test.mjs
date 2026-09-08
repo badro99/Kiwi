@@ -31,7 +31,9 @@ console.log('■ Split Bill Cash Drawer & Receipt Printing — Static Guards');
 
 // 1. Static Guards: markSplitPartPaid opens drawer on cash & prints ticket
 ok('markSplitPartPaid calls openCashDrawer on cash',
-  /function markSplitPartPaid\(partIdx,\s*method\)[\s\S]{0,1000}if\s*\(\s*method\s*===\s*'cash'\s*\)\s*\{\s*openCashDrawer\(\);?\s*\}/.test(CAISSE_SRC));
+  /if\s*\(\s*method\s*===\s*'cash'\s*\)\s*\{\s*openCashDrawer\(\);?\s*\}/.test(
+    CAISSE_SRC.slice(CAISSE_SRC.indexOf('function markSplitPartPaid(partIdx, method)'),
+      CAISSE_SRC.indexOf('/* ---- events ---- */', CAISSE_SRC.indexOf('function markSplitPartPaid(partIdx, method)')))));
 
 ok('markSplitPartPaid calls printSaleTicket with entry',
   /function markSplitPartPaid\(partIdx,\s*method\)[\s\S]{0,1200}printSaleTicket\(entry\s*\|\|\s*lastSaleEntry\(\)\);?/.test(CAISSE_SRC));

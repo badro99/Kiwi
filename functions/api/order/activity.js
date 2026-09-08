@@ -40,7 +40,10 @@ export async function onRequestGet({ request, env }) {
         FROM sale_audit a LEFT JOIN sales s ON s.id = a.sale_id AND s.merchant = a.merchant
         WHERE a.merchant = ? AND a.action IN ('void', 'restore', 'refund') AND a.ts >= ? AND a.ts < ?
         UNION ALL
-        SELECT 'session:' || s.id, 'closure', s.closed_ts, '', '', s.closed_actor_name, s.closed_actor_id,
+        SELECT 'session:' || s.id,
+          CASE WHEN s.mode = 'takeout' AND s.closed_by IN ('served', 'takeout-handover')
+            THEN 'takeout-handover' ELSE 'closure' END,
+          s.closed_ts, '', '', s.closed_actor_name, s.closed_actor_id,
           s.closed_by, '', '', '', '', 0, NULL, s.id, s.table_no, s.closed_by
         FROM table_sessions s
         WHERE s.merchant = ? AND s.status = 'closed' AND s.closed_ts >= ? AND s.closed_ts < ?
@@ -54,7 +57,7 @@ export async function onRequestGet({ request, env }) {
     `).bind(merchant, from, to, merchant, from, to, merchant, from, to, before, before, beforeId).all();
     const rows = rs.results || [];
     const page = rows.slice(0, 100);
-    const sessions = page.filter(r => r.kind === 'closure').map(r => r.sessionId);
+    const sessions = page.filter(r => r.kind === 'closure' || r.kind === 'takeout-handover').map(r => r.sessionId);
     const bySession = new Map();
     for (let i = 0; i < sessions.length; i += 80) {
       const ids = sessions.slice(i, i + 80);
@@ -71,7 +74,7 @@ export async function onRequestGet({ request, env }) {
     const events = [];
     for (const row of page) {
       const event = { ...row, lines: lines(row.lines), amountCents: Number(row.amountCents) || 0 };
-      if (row.kind === 'closure') {
+      if (row.kind === 'closure' || row.kind === 'takeout-handover') {
         const detail = bySession.get(row.sessionId) || [];
         event.detailsTruncated = detail.length > 250;
         event.orders = detail.slice(0, 250).map(o => ({ id: o.id, number: o.number, total: o.total, lines: lines(o.lines) }));

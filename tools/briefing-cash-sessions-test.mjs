@@ -72,9 +72,12 @@ const pairClient = source('assets/caisse-pairing.js');
 ok(pairClient.includes('terminalId: terminalId()'), 'caisse supplies stable terminal id');
 
 const transport = source('assets/cash-sessions.js');
-ok(transport.includes('writeOutbox(rows); flush(); return true'), 'emit queues before transport');
+// Execute the shipped client to prove ordering and failure retention; a literal
+// comment matching the old synchronous implementation is not durability proof.
+await import('./cash-sessions-auth-test.mjs');
+ok(transport.includes('if (saved) flush();'), 'transport starts only after saved persistence');
 ok(transport.includes(".catch(function () {})"), 'transport fails soft');
-ok(transport.includes('slice(-200)'), 'outbox bounded');
+ok(!/return\s+[^;]*slice\(-200\)/.test(transport), 'unacknowledged outbox is not truncated');
 ok(transport.includes("credentials: 'same-origin'"), 'signed cookies sent');
 const caisse = source('kiwi-caisse.html');
 for (const type of ['open', 'movement', 'handover', 'close']) ok(caisse.includes("eventType: '" + type + "'"), type + ' emitted');

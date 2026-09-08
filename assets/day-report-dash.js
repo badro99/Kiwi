@@ -432,6 +432,7 @@
          historique, pas un calcul. */
       built.closedCount = snap.closedCount || 0;
       built.revisions = snap.revisions || [];
+      if (d.inheritDrawers) d.inheritDrawers(built, snap);
     } else {
       built.live = true;   /* aucun instantané : le tiroir est inconnu */
     }
@@ -466,7 +467,7 @@
      s'afficherait « non clôturée » à jamais. */
   function isClosed(r) {
     if (!r || r.live) return false;
-    return !!(r.closed || r.closedAt || (r.closedCount || 0) > 0);
+    return r.closed === false ? false : !!(r.closedAt || r.closed);
   }
 
   /* Le dernier jour qui contient quelque chose, à partir de `before` inclus.
@@ -731,7 +732,7 @@
     if (r.closedAt) push(T(L.closedAt), hm(r.closedAt));
     else if (r.lastSaleAt) push(T(L.lastSale), hm(r.lastSaleAt));
     push(T(L.openedBy), r.openedBy);
-    push(T(L.closedBy), r.closedBy);
+    if (r.closedAt) push(T(L.closedBy), r.closedBy);
     var idBlock = idCells.length ? '<div class="kdr-id">' + idCells.join('') + '</div>' : '';
 
     /* ── les quatre chiffres, chacun avec sa référence ── */
@@ -744,7 +745,7 @@
       + kpi(T(L.txns), String(r.txns), null, '', delta(r.txns, base.txns, baseDay, base.has))
       + kpi(T(L.basket), money(r.basket), null, 'MAD', delta(r.basket, baseBasket, baseDay, base.has && base.txns > 0))
       + (r.cash && r.cash.counted != null
-        ? kpi(T(L.ecart), (ec > 0 ? '+' : ec < 0 ? '−' : '') + money(Math.abs(ec)), Math.abs(ec) <= 5 ? 'ok' : 'off', 'MAD')
+        ? kpi((r.drawerSessions || []).length > 1 ? T({fr:'Écart du dernier service',en:'Latest service variance',ar:'فرق آخر وردية'}) : T(L.ecart), (ec > 0 ? '+' : ec < 0 ? '−' : '') + money(Math.abs(ec)), Math.abs(ec) <= 5 ? 'ok' : 'off', 'MAD')
         : kpi(T(L.gross), money(r.gross), null, 'MAD'))
       + '</div>';
 
@@ -762,6 +763,10 @@
       cashBlock = '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.drawer)) + '</span></div>'
         + '<div class="kdr-note">' + esc(T(L.noDrawer)) + '</div></div>';
     } else {
+      var drawers = d.drawerSessions ? d.drawerSessions(r) : [];
+      if (!drawers.length) drawers = [{ cash: cash, openedAt: r.openedAt, closedAt: r.closedAt }];
+      cashBlock = drawers.map(function (drawer) {
+      var cash = drawer.cash || {};
       var cr = row(T(L.opening), money(cash.opening) + ' MAD');
       cr += row(T(L.cashIn), '+ ' + money(cash.sales) + ' MAD');
       if (cash.tips) cr += row(T(L.cashTips), '+ ' + money(cash.tips) + ' MAD');
@@ -776,7 +781,9 @@
       /* Les mouvements hors ventes se disent même quand il n'y en a pas : « rien
          n'est sorti du tiroir » est une information, une section absente non. */
       if (!(cash.movements || []).length) cr += '<div class="kdr-note">' + esc(T(L.movesNone)) + '</div>';
-      cashBlock = '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.drawer)) + '</span></div>' + cr + '</div>';
+      return '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.drawer)) + '</span><em>'
+        + esc(hm(drawer.openedAt) + (drawer.closedAt ? ' · ' + hm(drawer.closedAt) : '')) + '</em></div>' + cr + '</div>';
+      }).join('');
     }
 
     /* ── le détail par catégorie ── */
@@ -837,8 +844,9 @@
 
     /* ── la trace des réouvertures ── */
     var revBlock = '';
-    if ((r.closedCount || 0) > 1 && (r.revisions || []).length) {
-      var revs = r.revisions.slice().reverse().map(function (v) {
+    var closures = d.closureRevisions ? d.closureRevisions(r) : (r.revisions || []).filter(function (v) { return v.note !== 'en cours'; });
+    if ((r.closedCount || 0) > 1 && closures.length) {
+      var revs = closures.slice().reverse().map(function (v) {
         return row(hm(v.at) + (v.by ? ' · ' + v.by : ''), money(v.gross) + ' MAD · ' + v.txns + ' tx', 'sub');
       }).join('');
       revBlock = '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.revision)) + '</span><em>'
@@ -924,7 +932,7 @@
       openedLabel: hm(r.openedAt || r.firstSaleAt),
       closedLabel: r.closedAt ? hm(r.closedAt) : '',
       detailTitle: String(V.cats || 'catégories').toUpperCase(),
-      drawerTitle: T(L.drawer).toUpperCase(),
+      drawerTitle: (T(L.drawer) + ' · ' + hm(r.openedAt) + (r.closedAt ? ' · ' + hm(r.closedAt) : '')).toUpperCase(),
       netLabel: T(L.net).toUpperCase(),
       unitWord: V.items,
       unitWordOne: V.item,
@@ -966,16 +974,21 @@
       if (r.methods[k]) out.push(q([methodLabel(k), raw2(r.methods[k])]));
     });
     if (!r.live && r.cash) {
+      var drawers = DR() && DR().drawerSessions ? DR().drawerSessions(r) : [];
+      if (!drawers.length) drawers = [{cash:r.cash,openedAt:r.openedAt,closedAt:r.closedAt}];
+      drawers.forEach(function (drawer) {
+      var cash = drawer.cash;
       out.push('');
-      out.push(q([T(L.drawer), 'MAD']));
-      out.push(q([T(L.opening), raw2(r.cash.opening)]));
-      out.push(q([T(L.cashIn), raw2(r.cash.sales)]));
-      (r.cash.movements || []).forEach(function (m) {
+      out.push(q([T(L.drawer), 'MAD', hm(drawer.openedAt), hm(drawer.closedAt)]));
+      out.push(q([T(L.opening), raw2(cash.opening)]));
+      out.push(q([T(L.cashIn), raw2(cash.sales)]));
+      (cash.movements || []).forEach(function (m) {
         out.push(q([m.reason || m.type, (m.type === 'out' ? '-' : '') + raw2(m.amount)]));
       });
-      out.push(q([T(L.expected), raw2(r.cash.expected)]));
-      out.push(q([T(L.counted), r.cash.counted == null ? T(L.notCount) : raw2(r.cash.counted)]));
-      if (r.cash.counted != null) out.push(q([T(L.ecart), raw2(r.cash.ecart)]));
+      out.push(q([T(L.expected), raw2(cash.expected)]));
+      out.push(q([T(L.counted), cash.counted == null ? T(L.notCount) : raw2(cash.counted)]));
+      if (cash.counted != null) out.push(q([T(L.ecart), raw2(cash.ecart)]));
+      });
     }
     if ((r.hours || []).length) {
       out.push('');

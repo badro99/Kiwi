@@ -18,6 +18,37 @@
   var listeners = new Set();
   var ledgerUnsub = null;
 
+  function operationId(meta) {
+    if (!meta || typeof meta !== 'object' || !Object.prototype.hasOwnProperty.call(meta, 'operationId')) return '';
+    var op = String(meta.operationId || '').trim();
+    /* Only an explicit intent UUID is an idempotency key. Human receipt
+       references are searchable business data and may legitimately recur. */
+    /* `inv-caisse-` is 11 chars; the ledger/server ID limit is 80. */
+    if (!op || op.length > 69 || !/^[A-Za-z0-9:_-]+$/.test(op)) return null;
+    return 'inv-caisse-' + op;
+  }
+  function sameStableMeta(a, b) {
+    var keys = ['supplierId', 'supplierName', 'rank', 'lotId', 'wasteReason',
+      'receiptRef', 'externalRef', 'purchaseQty', 'purchaseUnit', 'factor',
+      'expiresAt', 'actorId', 'note', 'countTarget'];
+    a = a && typeof a === 'object' ? a : {};
+    b = b && typeof b === 'object' ? b : {};
+    return keys.every(function (key) {
+      var av = a[key] == null ? '' : String(a[key]);
+      var bv = b[key] == null ? '' : String(b[key]);
+      return av === bv;
+    });
+  }
+  function sameOperation(existing, next) {
+    return existing && existing.itemId === next.itemId
+      && existing.qty === next.qty
+      && existing.reason === next.reason
+      && existing.refId === next.refId
+      && existing.unitCost === next.unitCost
+      && existing.actor === next.actor
+      && sameStableMeta(existing.meta, next.meta);
+  }
+
   function slug() {
     try {
       var s = window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug && window.KiwiCloudDoc.currentSlug();
@@ -353,6 +384,8 @@
     qty = Math.round((+qty || 0) * 1000) / 1000;
     if (!id || !qty || !window.KiwiInventory) return null;
     var it = materialize().find(function (row) { return row.id === String(id); });
+    var operationRef = String(refId || '').trim();
+    if (!operationRef) operationRef = 'caisse-' + Date.now().toString(36);
     meta = (meta && typeof meta === 'object') ? Object.assign({}, meta) : {};
     var resolvedActor = '';
     if (typeof actor === 'string' && actor.trim()) {
@@ -371,20 +404,54 @@
     if (meta.actorId == null && typeof window !== 'undefined' && window.currentCashier && window.currentCashier.id) {
       meta.actorId = String(window.currentCashier.id);
     }
-    return window.KiwiInventory.add({
+    var movementId = operationId(meta);
+    if (movementId === null) {
+      try { console.error('Kiwi invalid stock operation ID'); } catch (_) {}
+      return null;
+    }
+    var next = {
+      id: movementId || undefined,
       itemId: String(id), qty: qty, reason: reason || 'manual', refType: reason || 'manual',
-      refId: String(refId || ('caisse-' + Date.now().toString(36))),
+      refId: operationRef,
       note: 'Mouvement saisi depuis la caisse',
       unitCost: unitCost == null ? (it ? it.cost || null : null) : unitCost,
       meta: Object.keys(meta).length ? meta : null,
       actor: resolvedActor,
-    });
+    };
+    if (movementId && window.KiwiInventory.history) {
+      var existing = (window.KiwiInventory.history() || []).find(function (row) { return row.id === movementId; });
+      if (existing) {
+        if (!sameOperation(existing, next)) {
+          try { console.error('Kiwi stock operation conflict', movementId); } catch (_) {}
+          return null;
+        }
+        return existing;
+      }
+    }
+    return window.KiwiInventory.add(next);
   }
-  function count(id, value, refId, actor) {
+  function count(id, value, refId, actor, meta) {
     var it = materialize().find(function (row) { return row.id === String(id); });
     if (!it) return 0;
-    var diff = Math.round((Math.max(0, +value || 0) - it.stock) * 1000) / 1000;
-    if (diff) move(id, diff, 'count', refId || ('caisse-count-' + Date.now().toString(36)), null, null, actor);
+    var target = Math.max(0, +value || 0);
+    var operationRef = refId || ('caisse-count-' + Date.now().toString(36));
+    var countMeta = (meta && typeof meta === 'object') ? Object.assign({}, meta) : {};
+    var operation = countMeta.operationId ? String(countMeta.operationId) : '';
+    if (operation && window.KiwiInventory.history) {
+      var prior = (window.KiwiInventory.history() || []).find(function (row) {
+        return row.meta && String(row.meta.operationId || '') === operation && row.reason === 'count' && row.itemId === String(id);
+      });
+      if (prior) {
+        if (prior.meta.countTarget != null && +prior.meta.countTarget !== target) return null;
+        return prior.meta.countDiff != null ? +prior.meta.countDiff : prior.qty;
+      }
+    }
+    var diff = Math.round((target - it.stock) * 1000) / 1000;
+    if (diff) {
+      countMeta.countTarget = target;
+      countMeta.countDiff = diff;
+      if (!move(id, diff, 'count', operationRef, null, countMeta, actor)) return null;
+    }
     return diff;
   }
 

@@ -30,6 +30,8 @@ function cashFixture() {
   const window = {
     KiwiEnv: { isReal: () => true },
     KiwiCloudDoc: { currentSlug: () => 'audit-money' },
+    KiwiCaissePairing: { isPaired: () => true },
+    addEventListener() {},
     dispatchEvent() {},
   };
   const context = {
@@ -309,10 +311,11 @@ const reportWindow = {
   },
 };
 const buildReport = new Function('journal', 'window', 'shiftOpenedAt', 'dayReportSession',
-  'currentBusinessDay', 'storeName', 'storeCity', 'storePaired',
+  'currentBusinessDay', 'storeName', 'storeCity', 'storePaired', 'currentCashier',
   `${refundExceptionFn}\n${reportableFn}\n${buildFn}\nreturn buildDayReport;`)(
     journalFixture, reportWindow, new Date('2026-09-08T10:00:00Z'), () => ({}),
     () => '2026-09-08', () => 'Audit Money', () => 'Test', () => ({ type: 'restaurant' }),
+    { id: 'audit-manager', name: 'Sara' },
   );
 buildReport(null, Date.now());
 audit('buildDayReport excludes the rejected refund but retains the cash-handed-out exception',

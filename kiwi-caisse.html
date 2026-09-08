@@ -89,7 +89,7 @@
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
   <script src="assets/escpos.js?v=8" defer></script>
-  <script src="assets/printer-bridge.js?v=14" defer></script>
+  <script src="assets/printer-bridge.js?v=15" defer></script>
   <script src="assets/caisse-hardware.js?v=2" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
@@ -5503,8 +5503,8 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=496" defer></script>
-  <script src="assets/live-link.js?v=34" defer></script>
+  <script src="assets/caisse-pwa.js?v=498" defer></script>
+  <script src="assets/live-link.js?v=35" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js?v=1" defer></script>
@@ -5518,7 +5518,7 @@
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
   <script src="assets/caisse-pairing.js?v=18" defer></script>
   <script src="assets/kiwi-select.js?v=2" defer></script>
-  <script src="assets/cash-sessions.js?v=3" defer></script>
+  <script src="assets/cash-sessions.js?v=5" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
        caisse neuve doit retrouver le magasin, pas repartir vide. AVANT
        venue-store.js, qui s'y branche. -->
@@ -5531,7 +5531,7 @@
        avec le tableau de bord. Après cloud-doc.js, dont il tient sa copie
        serveur · c'est ce qui fait qu'un Z clôturé sur l'iPad du comptoir
        s'ouvre le lendemain sur le téléphone du patron. -->
-  <script src="assets/day-report.js?v=8" defer></script>
+  <script src="assets/day-report.js?v=10" defer></script>
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js?v=3" defer></script>
@@ -5542,8 +5542,8 @@
   <!-- Catalogue, seuils, coûts et quantités : exactement le même stock que le
        tableau de bord. Les quantités passent par le registre append-only ; ce
        pont ne maintient jamais un second snapshot propre à la caisse. -->
-  <script src="assets/caisse-stock-sync.js?v=9" defer></script>
-  <script src="assets/pos-inventory-count.js?v=6" defer></script>
+  <script src="assets/caisse-stock-sync.js?v=10" defer></script>
+  <script src="assets/pos-inventory-count.js?v=7" defer></script>
   <!-- Les horaires de l'établissement, réglés une seule fois côté tableau de
        bord. La caisse les LIT : ouvrir un service hors horaires demande une
        dérogation nommée, et la journée commerciale du Z suit l'heure de
@@ -5579,7 +5579,7 @@
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=15" defer></script>
+  <script src="assets/orderpro-inbox.js?v=16" defer></script>
   <script src="assets/service-requests.js?v=1" defer></script>
   <script src="assets/caisse-menu-availability.js?v=4" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
@@ -8649,6 +8649,8 @@
       // Remise · recompute the discount amount against the current gross
       const discAmt = discountAmountFor(id, total);
       const net = Math.max(0, total - discAmt);
+      const savedSplit = tableSplits.get(id);
+      const splitRemaining = savedSplit ? splitRemainingTotal(savedSplit) : null;
 
       let itemsHTML = lines.map(l => `
         <div class="rp-item">
@@ -8701,7 +8703,7 @@
       $('#rp-items').innerHTML = lockBanner + itemsHTML;
 
       $('#rp-subtotal').textContent = fmtMAD(total);
-      $('#rp-total').textContent = fmtMAD(net);
+      $('#rp-total').textContent = fmtMAD(splitRemaining != null ? splitRemaining : net);
       window.CaisseFx && window.CaisseFx.countTotal();
 
       // Sync modal labels too
@@ -8712,6 +8714,17 @@
       $('#cash-received').value = net;
       updateRendu();
       showPayButtons(false);
+      /* A resumed split is the only valid payment route. Leaving the ordinary
+         button visible here charged the full 60 MAD again after a 35 MAD part
+         had already been recorded, even though the split card showed 25 MAD
+         remaining. */
+      if (savedSplit && splitPaidCount(savedSplit) < savedSplit.parts.length) {
+        const normal = $('#rp-pay-normal');
+        if (normal) {
+          normal.hidden = true;
+          normal.style.display = 'none';
+        }
+      }
       /* Une commande OrderPro à table est rattachée à l'addition avant d'être
          acceptée. Elle doit pouvoir partir depuis CETTE fiche, sans obliger le
          caissier à découvrir le panneau secondaire « Commandes ». Le bouton
@@ -12705,6 +12718,7 @@
 
     function markSplitPartPaid(partIdx, method) {
       const p = splitState.flow.parts[partIdx];
+      if (!p || p.paid) return;
       const tip = money(p.tip || 0);
       const base = money(p.base != null ? p.base : (p.amount - tip));
       const splitInfo = { index: partIdx, count: splitState.flow.parts.length };
@@ -12712,7 +12726,12 @@
         (splitState.sourceLabel || 'Table') + ' · part ' + (partIdx + 1), tip, p.lines,
         splitState.tableId || '', null, splitInfo);
       if (entry) {
-        if (splitState.flow && splitState.flow.session && !entry.session) entry.session = String(splitState.flow.session);
+        /* `flow-*` is only the local split modal's resume key. A takeaway has
+           no table visit; never send that UI token as a server session. Table
+           splits still carry their real phone/table visit above. */
+        if (!splitState.isVrap && splitState.flow && splitState.flow.session && !entry.session) {
+          entry.session = String(splitState.flow.session);
+        }
         p.saleId = entry.id;
       }
       p.paid = true; p.payMethod = method;
@@ -13023,6 +13042,14 @@
     function cashSessionId() {
       if (!cashSessionKey) cashSessionKey = 'shift-' + String((shiftOpenedAt && shiftOpenedAt.getTime()) || Date.now());
       return cashSessionKey;
+    }
+    function cashTerminalId() {
+      try {
+        const sessions = window.KiwiCashSessions;
+        return sessions && typeof sessions.terminalId === 'function'
+          ? String(sessions.terminalId() || '').trim().slice(0, 96)
+          : '';
+      } catch (_) { return ''; }
     }
     function cashActorId(fallback) {
       try { return String((window.KiwiStaff && window.KiwiStaff.id) || fallback || (currentCashier && currentCashier.id) || 'till').replace(/[^A-Za-z0-9._:-]/g, '').slice(0, 96) || 'till'; }
@@ -14771,9 +14798,10 @@
     */
     function dayReportSession(counted) {
       return {
+        sessionId: cashSessionId(),
+        terminalId: cashTerminalId(),
         openedAt: shiftOpenedAt ? shiftOpenedAt.getTime() : 0,
         openedBy: shiftOpenedBy || (currentCashier && currentCashier.name) || '',
-        closedBy: (currentCashier && currentCashier.name) || '',
         openingFloat: openingFloat,
         cashMovements: cashMovements,
         handovers: handovers,
@@ -14795,7 +14823,10 @@
       const DR = window.KiwiDayReport;
       if (!DR) return null;
       const sess = dayReportSession(counted);
-      if (closedAt) sess.closedAt = closedAt;
+      if (closedAt) {
+        sess.closedAt = closedAt;
+        sess.closedBy = (currentCashier && currentCashier.name) || '';
+      }
       const pv = storePaired() || {};
       return DR.build({
         day: currentBusinessDay(),
@@ -16313,6 +16344,23 @@
     const tableSplits = new Map(); // tableId → { mode, total, parts, paidCount }
     let vrapSplit = null;          // same shape for the single working counter cart
 
+    function splitPaidCount(saved) {
+      if (!saved || !Array.isArray(saved.parts)) return 0;
+      return saved.parts.filter((part) => part && part.paid === true).length;
+    }
+
+    function splitRemainingTotal(saved) {
+      if (!saved || !Array.isArray(saved.parts)) return 0;
+      return money(saved.parts.reduce((sum, part) => sum + (part && !part.paid ? Number(part.amount) || 0 : 0), 0));
+    }
+
+    function savedTakeawaySplitFor(order) {
+      if (!vrapSplit || !order) return null;
+      const orderNum = Number(vrapSplit.orderNum);
+      if (Number.isFinite(orderNum) && orderNum === Number(order.num)) return vrapSplit;
+      return String(vrapSplit.sourceLabel || '') === `À emporter #${order.num}` ? vrapSplit : null;
+    }
+
     function saveSplitFlow() {
       if (!splitState.flow) return;
       const saved = {
@@ -16322,7 +16370,9 @@
           ...p,
           lines: Array.isArray(p.lines) ? p.lines.map(l => ({ ...l })) : [],
         })),
-        paidCount: splitState.flow.paidCount,
+        paidCount: splitPaidCount(splitState.flow),
+        sourceLabel: splitState.sourceLabel || '',
+        orderNum: splitState.isVrap && vrapEditingNum != null ? Number(vrapEditingNum) : null,
       };
       if (splitState.isVrap) vrapSplit = saved;
       else if (splitState.tableId) tableSplits.set(splitState.tableId, saved);
@@ -16353,7 +16403,7 @@
             ...p,
             lines: Array.isArray(p.lines) ? p.lines.map(l => ({ ...l })) : [],
           })),
-          paidCount: saved.paidCount,
+          paidCount: splitPaidCount(saved),
         },
       });
       return true;
@@ -16364,9 +16414,11 @@
       if (!card) return;
       const saved = tableSplits.get(id);
       if (!saved) { card.hidden = true; return; }
-      const pct = Math.round((saved.paidCount / saved.parts.length) * 100);
+      const paidCount = splitPaidCount(saved);
+      const remaining = splitRemainingTotal(saved);
+      const pct = Math.round((paidCount / saved.parts.length) * 100);
       $('#rp-split-card-sub').textContent =
-        `${saved.paidCount} / ${saved.parts.length} parts réglées · ${pct}%`;
+        `${paidCount} / ${saved.parts.length} parts réglées · ${pct}% · reste ${fmtMAD(remaining)}`;
       $('#rp-split-bar-fill').style.width = pct + '%';
       card.hidden = false;
     }
@@ -16391,6 +16443,10 @@
       if (splitState.flow.paidCount >= splitState.flow.parts.length) {
         if (splitState.isVrap) vrapSplit = null;
         else tableSplits.delete(splitState.tableId);
+        /* The payment journal was persisted before the final part changed the
+           flow. Persist the deletion too, otherwise F5 restores a completed
+           split and presents an already-paid note as still due. */
+        try { persistShift(); } catch (_) {}
       } else {
         saveSplitFlow();
         if (selectedId === splitState.tableId) renderRpSplitCard(selectedId);
@@ -18410,10 +18466,9 @@
     function confirmOrder(id){ const o = supplyOrders.find(x=>x.id===id); if (!o) return; o.status = 'confirmee'; renderStock(); toast(`Commande #${id} confirmée`); }
     function receiveOrder(id){
       const o = supplyOrders.find(x=>x.id===id); if (!o) return;
-      o.status = 'recue'; o.when = 'Reçue';
-      let added = 0;
+      let added = 0, failed = false;
       const receiptRef = 'purchase-' + id;
-      o.items.forEach(li=>{ const it = stockItems.find(i => i.name === li.name); if (it){
+      o.items.forEach((li, lineIndex)=>{ const it = stockItems.find(i => i.name === li.name); if (it){
         if (storeIsReal() && window.KiwiCaisseStock) {
           const card = window.KiwiCaisseStock.resolveSupplierCard ? window.KiwiCaisseStock.resolveSupplierCard(it.id, o.supplier) : null;
           const supRank = card && card.rank != null ? card.rank : 999;
@@ -18426,16 +18481,20 @@
             supplierName: o.supplier || '',
             rank: supRank,
             receiptRef: receiptRef,
+            operationId: 'order:' + id + ':line:' + lineIndex,
             receivedAt: Date.now(),
             purchaseQty: li.qty,
             purchaseUnit: card?.purchaseUnit || it.unit || 'unité',
             factor: factor,
           };
-          window.KiwiCaisseStock.move(it.id, stockQty, 'receipt', receiptRef, unitCost, meta);
+          const movement = window.KiwiCaisseStock.move(it.id, stockQty, 'receipt', 'order:' + id + ':line:' + lineIndex, unitCost, meta);
+          if (!movement) { failed = true; return; }
         }
         else it.stock += li.qty;
         added++;
       } });
+      if (failed) { toast(added ? 'Réception partielle · relance la même réception pour reprendre les lignes acceptées' : 'Réception refusée · vérifie la référence et la quantité'); return; }
+      o.status = 'recue'; o.when = 'Reçue';
       syncSharedStock(false);
       renderStock(); toast(`Commande #${id} reçue · ${added} article${added>1?'s':''} réapprovisionné${added>1?'s':''}`);
     }
@@ -18454,7 +18513,13 @@
     let skReceptPhoto = null;
     let skReceptSupplier = '';
     let skReceptRef = '';
-    function openRecept(){ skReceptMode = 'photo'; skReceptState = 'idle'; skReceptLines = []; skReceptPhoto = null; skReceptSupplier = ''; skReceptRef = ''; openSkModal(renderReceptModal()); }
+    let skReceptIntentId = '';
+    let skWasteIntentId = '';
+    function stockIntentId(prefix){
+      try { if (window.crypto && window.crypto.randomUUID) return prefix + ':' + window.crypto.randomUUID(); } catch (_) {}
+      return prefix + ':' + Date.now().toString(36) + ':' + Math.random().toString(36).slice(2, 14);
+    }
+    function openRecept(){ skReceptMode = 'photo'; skReceptState = 'idle'; skReceptLines = []; skReceptPhoto = null; skReceptSupplier = ''; skReceptRef = ''; skReceptIntentId = stockIntentId('receipt'); openSkModal(renderReceptModal()); }
     function renderReceptModal(){
       const sups = storeIsReal() && window.KiwiCaisseStock?.suppliers ? window.KiwiCaisseStock.suppliers() : [];
       const supOptions = (Array.isArray(sups) ? sups : []).map(s => `<option value="${kdsEsc(s.name || s)}">`).join('');
@@ -18544,9 +18609,9 @@
           skReceptLines[idx].dlc = dl ? dl.value : '';
         }
       });
-      let added = 0, unknown = 0;
-      const receiptRef = 'delivery-' + Date.now().toString(36);
-      skReceptLines.forEach(l=>{
+      let added = 0, unknown = 0, failed = false;
+      const receiptIntentId = skReceptIntentId || (skReceptIntentId = stockIntentId('receipt'));
+      skReceptLines.forEach((l, lineIndex)=>{
         const qty = parseFloat(l.qty) || 0; const name = (l.name || '').trim();
         if (!name || qty <= 0) return;
         const it = stockItems.find(i => i.name.toLowerCase() === name.toLowerCase());
@@ -18566,7 +18631,8 @@
               supplierName: supplier,
               rank: supRank,
               externalRef: externalRef,
-              receiptRef: receiptRef,
+              receiptRef: externalRef || receiptIntentId,
+              operationId: receiptIntentId + ':line:' + lineIndex,
               receivedAt: Date.now(),
               purchaseQty: qty,
               purchaseUnit: card?.purchaseUnit || it.unit || 'unité',
@@ -18574,7 +18640,8 @@
               // DLC / DDM du lot reçu · lue par KiwiInventoryConsumption.expiring()
               expiresAt: l.dlc ? new Date(l.dlc + 'T23:59:59').getTime() : null,
             };
-            window.KiwiCaisseStock.move(it.id, stockQty, 'receipt', receiptRef, unitCost, meta);
+            const movement = window.KiwiCaisseStock.move(it.id, stockQty, 'receipt', receiptIntentId + ':line:' + lineIndex, unitCost, meta);
+            if (!movement) { failed = true; return; }
             if (unitCost != null && unitCost > 0 && window.KiwiCaisseStock.updateSupplierPrice) {
               window.KiwiCaisseStock.updateSupplierPrice(it.id, supplier, unitCost);
             }
@@ -18586,6 +18653,10 @@
         }
         else unknown++;
       });
+      if (failed){
+        toast(added ? 'Réception partielle · relance la même réception pour reprendre les lignes acceptées' : 'Réception refusée · vérifie la référence et la quantité');
+        return;
+      }
       if (!added){
         toast(unknown ? 'Article inconnu · créez-le dans le tableau de bord avant la réception.' : 'Aucune ligne valide');
         return;
@@ -18596,6 +18667,7 @@
 
     /* ---- Pertes de stock (Waste Management) ---- */
     function openWasteModal(prefillItemId, prefillLotId, prefillQty, prefillReason){
+      skWasteIntentId = stockIntentId('waste');
       const items = stockItems.slice();
       const selItem = prefillItemId ? items.find(i => i.id === prefillItemId) : items[0];
       const selId = selItem ? selItem.id : (items[0] ? items[0].id : '');
@@ -18719,8 +18791,9 @@
         if (lots.length && lots[0].unitCost != null) unitCost = lots[0].unitCost;
       }
 
-      const wasteRef = 'waste-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+      const wasteRef = skWasteIntentId || (skWasteIntentId = stockIntentId('waste'));
       const meta = {
+        operationId: wasteRef,
         wasteReason: fineReason,
         lotId: lotId || undefined,
         actorId: (currentCashier && currentCashier.id) || '',
@@ -18728,7 +18801,8 @@
       };
       
       if (storeIsReal() && window.KiwiCaisseStock) {
-        window.KiwiCaisseStock.move(it.id, -qty, ledgerReason, wasteRef, unitCost, meta, currentCashier);
+        const movement = window.KiwiCaisseStock.move(it.id, -qty, ledgerReason, wasteRef, unitCost, meta, currentCashier);
+        if (!movement) { toast('Perte refusée · la quantité ou le lot a changé'); return; }
       } else if (window.KiwiInventory && window.KiwiInventory.add) {
         window.KiwiInventory.add({
           itemId: it.id,
@@ -19075,6 +19149,8 @@
 
     function vrapOrderCard(o) {
       const ready = o.status === 'ready';
+      const savedSplit = savedTakeawaySplitFor(o);
+      const splitRemaining = savedSplit ? splitRemainingTotal(savedSplit) : null;
       /* Readiness is an ORDER state, not a merchant or printer capability.
          The counter must be able to mark every accepted takeaway ready even
          when a KDS is configured: some restaurants run the pass from the
@@ -19090,7 +19166,7 @@
         : '';
       let action = '';
       if (!o.paid) {
-        action = `<div class="vrap-order-acts">${cancelBtn}${sendBtn}${readyBtn}<button class="vrap-act vrap-act-pay">Encaisser · ${fmtMAD(o.total)}</button></div>`;
+        action = `<div class="vrap-order-acts">${cancelBtn}${sendBtn}${readyBtn}<button class="vrap-act vrap-act-pay">${savedSplit ? 'Reprendre le split · ' : 'Encaisser · '}${fmtMAD(splitRemaining != null ? splitRemaining : o.total)}</button></div>`;
       } else if (!o.pickedUp) {
         /* Do not offer handover while the card still says "En préparation".
            That shortcut silently marked the order ready and served in one
@@ -19115,7 +19191,7 @@
                laissé croire au comptoir que le travail était lancé. */
             : o.status === 'held' ? 'En attente de paiement'
             : 'En préparation'}</span>
-          <span class="vrap-badge ${o.paid ? 'p-paid' : 'p-unpaid'}">${o.paid ? 'Payé' : 'Non payé'}</span>
+          <span class="vrap-badge ${o.paid ? 'p-paid' : 'p-unpaid'}">${o.paid ? 'Payé' : savedSplit ? `Partiel · reste ${fmtMAD(splitRemaining)}` : 'Non payé'}</span>
         </div>
         <div class="vrap-order-items">${vrapItemsLine(o)}</div>
         ${notes}
@@ -19339,7 +19415,13 @@
         const o = kdsOrders.find(x => x.num === vrapEditingNum);
         if (o) {
           o.paid  = true;
-          o.total = currentTotal();         // net of any réduction
+          /* Split parts are tenders against the original order. The working
+             cart can reflect the last resumed slice, so currentTotal() is not
+             authoritative at finalisation; keep the saved gross/net order
+             amount for the board and history. */
+          o.total = splitState.flow && Number.isFinite(Number(splitState.total))
+            ? money(splitState.total)
+            : currentTotal();
           if (cart.length) saveVrapBillItems(o, vrapCartItems(o));
           /* Une commande client à emporter attendait le paiement (`held`) : le
              client vient d'annoncer son numéro et de payer, donc elle part en
@@ -19396,6 +19478,7 @@
       }
       renderMenu();
       renderCart();
+      if (savedTakeawaySplitFor(o)) openSplitModal(null);
       // Re-trigger the panel slide-in so the order visibly lands.
       const active = $('#rp-active');
       if (active) { active.style.animation = 'none'; void active.offsetWidth; active.style.animation = ''; }

@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { DatabaseSync } from 'node:sqlite';
 import { tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
+import { onRequestPost as verifyPin } from '../functions/api/pin/verify.js';
 import { onRequestGet, onRequestPost } from '../functions/api/order/queue.js';
 import { recordOrderCourse } from '../functions/api/order/_course.js';
 
@@ -45,7 +46,16 @@ try {
   // explicit feature row instead of weakening production entitlement checks.
   db.prepare('INSERT INTO merchant_config (merchant, features, type, updated_ts) VALUES (?, ?, ?, ?)')
     .run(merchant, JSON.stringify({ orderpro: true }), 'restaurant', now);
+  db.prepare('INSERT INTO staff_pins (id,merchant,pin,name,role,created_ts) VALUES (?,?,?,?,?,?)')
+    .run('pin-history', merchant, '4826', 'History Operator', 'Caisse', now);
   const cookie = `${TILL_COOKIE}=${await tillToken(env.AUTH_SECRET, merchant)}`;
+  const pinResponse = await verifyPin({ env, request: new Request('https://kiwi.test/api/pin/verify', {
+    method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ merchant, pin: '4826' }),
+  }) });
+  assert.equal(pinResponse.status, 200);
+  const actorProof = (await pinResponse.json()).actorProof;
+  assert.ok(actorProof);
   const insert = (id, status, paid, created = now - 3600000) => db.prepare(
     `INSERT INTO orders (id, merchant, number, mode, total, lines, status, created_ts, updated_ts, paid_ts)
      VALUES (?, ?, ?, 'takeout', 30, ?, ?, ?, ?, ?)`
@@ -82,7 +92,7 @@ try {
   const deferred = [];
   const response = await onRequestPost({ env, waitUntil: (p) => deferred.push(p), request: new Request(
     'https://kiwi.test/api/order/queue', { method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ merchant, id: 'ord-handover', status: 'served' }) }) });
+      body: JSON.stringify({ merchant, id: 'ord-handover', status: 'served', actorProof }) }) });
   assert.equal(response.status, 200);
   await Promise.all(deferred);
   await recordOrderCourse(env, { merchant, orderId: 'ord-handover', servedAt: now + 60000 });

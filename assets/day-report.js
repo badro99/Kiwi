@@ -596,6 +596,8 @@
         type: (opts.store && opts.store.type) || businessType(),
       },
       openedAt: num(sess.openedAt) || first || 0,
+      sessionId: String(sess.sessionId || ''),
+      terminalId: String(sess.terminalId || ''),
       closedAt: num(sess.closedAt) || 0,
       /* La journée est close quand la caisse a posé une heure de fermeture, et
          à ce moment-là seulement. Le drapeau existait déjà côté lecteurs —
@@ -606,7 +608,7 @@
       firstSaleAt: first || 0,
       lastSaleAt: last || 0,
       openedBy: String(sess.openedBy || ''),
-      closedBy: String(sess.closedBy || ''),
+      closedBy: num(sess.closedAt) ? String(sess.closedBy || '') : '',
       txns: txns,
       gross: round2(gross),
       receivable: receivable,
@@ -669,6 +671,7 @@
     n += (r.cash && r.cash.movements ? r.cash.movements.length : 0) * 5;
     n += (r.handovers || []).length * 5;
     n += (r.revisions || []).length * 7;
+    (r.drawerSessions || []).forEach(function (s) { n += 45 + (s.cash && s.cash.movements || []).length * 8; });
     n += (r.hours || []).length * 4;        /* au plus 24 — une par heure ouverte */
     n += (r.cashiers || []).length * 4;
     (r.categories || []).forEach(function (c) {
@@ -708,6 +711,154 @@
   }
   function days(slug) { return Object.keys(readAll(slug).days || {}).sort().reverse(); }
 
+  /* Daily sales and a counted drawer have different scopes. Preserve the
+     caisse's session evidence when rebuilding daily sales from the feed. */
+  function drawerKey(r) {
+    return (r && r.terminalId || '') + ':' + (r && r.sessionId || 'legacy:' + (r && r.openedAt || ''));
+  }
+  function preferDrawer(a, b) {
+    if (!a) return b;
+    if (!b) return a;
+    if (!a.closedAt && b.closedAt) return b;
+    if (a.closedAt && !b.closedAt) return a;
+    if (num(a.closedAt) !== num(b.closedAt)) return num(a.closedAt) > num(b.closedAt) ? a : b;
+    /* A closure actor is evidence that this is the completed state. Do not
+       let a clock-skewed snapshot with a later builtAt erase it. */
+    if (!a.closedBy && b.closedBy) return b;
+    if (a.closedBy && !b.closedBy) return a;
+    return num(b.builtAt) >= num(a.builtAt) ? b : a;
+  }
+  function drawerSessions(report) {
+    if (!report) return [];
+    var rows = (report.drawerSessions || []).slice();
+    if (report.cash && report.openedAt && !report.live && !report.drawerRebuilt) rows.push({
+      sessionId: report.sessionId || '', terminalId: report.terminalId || '', openedAt: report.openedAt,
+      closedAt: report.closedAt || 0, openedBy: report.openedBy || '',
+      closedBy: report.closedAt ? report.closedBy || '' : '', cash: report.cash,
+      gross: report.gross, net: report.net, txns: report.txns, builtAt: report.builtAt || 0,
+    });
+    var byId = Object.create(null);
+    rows.forEach(function (r) {
+      if (!r || !r.cash || !r.openedAt) return;
+      var key = drawerKey(r);
+      var old = byId[key];
+      byId[key] = preferDrawer(old, r);
+    });
+    return Object.keys(byId).map(function (key) { return byId[key]; })
+      .sort(function (a, b) { return a.openedAt - b.openedAt; });
+  }
+  function closureRevisions(report) {
+    var seen = Object.create(null);
+    return (report && report.revisions || []).filter(function (r) {
+      if (!r || r.note === 'en cours' || r.closed === false) return false;
+      if (!(r.closedAt || r.closed === true || r.note === 'clôture' || r.note === 'réouverture')) return false;
+      var key = r.sessionId && r.closedAt ? (r.terminalId || '') + ':' + r.sessionId + ':' + r.closedAt : r.at;
+      if (!key || seen[key]) return false;
+      seen[key] = true; return true;
+    });
+  }
+  function inheritDrawers(built, snap) {
+    if (!built || !snap) return built;
+    built.sessionId = snap.sessionId || '';
+    built.terminalId = snap.terminalId || '';
+    built.cash = snap.cash;
+    built.drawerSessions = drawerSessions(snap);
+    built.drawerRebuilt = true;
+    built.closedCount = snap.closedCount || 0;
+    built.revisions = snap.revisions || [];
+    built.closedBy = snap.closedAt ? snap.closedBy || '' : '';
+    return built;
+  }
+
+  function revisionKey(r) {
+    return r && (r.sessionId && r.closedAt ? (r.terminalId || '') + ':' + r.sessionId + ':' + r.closedAt : r.at);
+  }
+  function mergedRevisions(m, t) {
+    var seen = Object.create(null);
+    return ((m && m.revisions || []).concat(t && t.revisions || [])).filter(function (r) {
+      var key = revisionKey(r);
+      if (!key || seen[key]) return false;
+      seen[key] = 1; return true;
+    }).sort(function (x, y) { return num(x.at) - num(y.at); });
+  }
+  function snapshotEvidence(r) {
+    var rows = drawerSessions(r), revs = closureRevisions(r), latest = 0, opened = 0;
+    rows.forEach(function (s) {
+      latest = Math.max(latest, num(s.closedAt));
+      opened = Math.max(opened, num(s.openedAt));
+    });
+    return {
+      revisions: revs.length,
+      closedRows: rows.filter(function (s) { return !!s.closedAt; }).length,
+      latestClosedAt: latest,
+      latestOpenedAt: opened,
+      builtAt: num(r && r.builtAt),
+    };
+  }
+  function preferSnapshot(a, b) {
+    var x = snapshotEvidence(a), y = snapshotEvidence(b);
+    if (y.revisions !== x.revisions) return y.revisions > x.revisions ? b : a;
+    if (y.closedRows !== x.closedRows) return y.closedRows > x.closedRows ? b : a;
+    if (y.latestClosedAt !== x.latestClosedAt) return y.latestClosedAt > x.latestClosedAt ? b : a;
+    if (y.latestOpenedAt !== x.latestOpenedAt) return y.latestOpenedAt > x.latestOpenedAt ? b : a;
+    return y.builtAt > x.builtAt ? b : a;
+  }
+  function cashMetric(row, key) {
+    return row && row.cash && row.cash[key] != null ? num(row.cash[key]) : null;
+  }
+  function snapshotConflicts(m, t) {
+    var left = Object.create(null), out = [];
+    drawerSessions(m).forEach(function (r) { left[drawerKey(r)] = r; });
+    drawerSessions(t).forEach(function (r) {
+      var old = left[drawerKey(r)];
+      /* Two open snapshots are normal progress, not an irreconcilable
+         closure. Their expected/count values will be replaced by the more
+         recent row selected by preferDrawer(). */
+      if (!old || (!old.closedAt && !r.closedAt)) return;
+      if (num(old.closedAt) === num(r.closedAt) && String(old.closedBy || '') === String(r.closedBy || '') &&
+          cashMetric(old, 'expected') === cashMetric(r, 'expected') &&
+          cashMetric(old, 'counted') === cashMetric(r, 'counted') &&
+          cashMetric(old, 'ecart') === cashMetric(r, 'ecart')) return;
+      out.push({
+        key: drawerKey(r),
+        left: {
+          closedAt: num(old.closedAt), closedBy: String(old.closedBy || ''),
+          expected: cashMetric(old, 'expected'), counted: cashMetric(old, 'counted'), ecart: cashMetric(old, 'ecart'),
+        },
+        right: {
+          closedAt: num(r.closedAt), closedBy: String(r.closedBy || ''),
+          expected: cashMetric(r, 'expected'), counted: cashMetric(r, 'counted'), ecart: cashMetric(r, 'ecart'),
+        },
+      });
+    });
+    return out;
+  }
+  function mergeDaySnapshots(m, t) {
+    if (!m) return t;
+    if (!t) return m;
+    var keep = preferSnapshot(m, t), revs = mergedRevisions(m, t);
+    var conflicts = (m.snapshotConflicts || []).concat(t.snapshotConflicts || [], snapshotConflicts(m, t)).slice(-12);
+    keep = Object.assign({}, keep, {
+      drawerSessions: drawerSessions({ drawerSessions: drawerSessions(m).concat(drawerSessions(t)) }),
+      revisions: revs,
+      closedCount: Math.max(num(m.closedCount), num(t.closedCount), closureRevisions({ revisions: revs }).length),
+      snapshotConflicts: conflicts,
+    });
+    /* If the chosen aggregate is old but the matching drawer row has the
+       surviving closure evidence, retain its actor rather than showing an
+       anonymous final drawer. */
+    if (keep.closedAt && !keep.closedBy) {
+      var row = drawerSessions(keep).filter(function (s) {
+        return drawerKey(s) === drawerKey(keep) && num(s.closedAt) === num(keep.closedAt);
+      })[0];
+      var rev = revs.filter(function (r) {
+        return drawerKey(r) === drawerKey(keep) && num(r.closedAt) === num(keep.closedAt);
+      })[0];
+      keep.closedBy = String((row && row.closedBy) || (rev && rev.by) || '');
+    }
+    return keep;
+  }
+
   /* save(report, {by, note, reopen}) — LA règle de la double clôture.
    *
    * Le rapport entrant a été RECALCULÉ depuis le journal : il est déjà juste.
@@ -725,10 +876,16 @@
     if (!doc.days) doc.days = {};
     var prev = doc.days[report.day] || null;
 
-    report.closedCount = (prev ? num(prev.closedCount) : 0) + (meta.reopen === false ? 0 : 1);
-    report.revisions = (prev && Array.isArray(prev.revisions) ? prev.revisions.slice(-19) : []);
-    report.revisions.push({
-      at: Date.now(),
+    report.drawerSessions = drawerSessions({ drawerSessions: drawerSessions(prev).concat(drawerSessions(report)) });
+    var closedEvent = !!report.closedAt && meta.reopen !== false;
+    var sameClose = prev && closureRevisions(prev).some(function (r) {
+      return r.closedAt === report.closedAt && (r.sessionId || '') === (report.sessionId || '') && (r.terminalId || '') === (report.terminalId || '');
+    });
+    report.closedCount = (prev ? num(prev.closedCount) : 0) + (closedEvent && !sameClose ? 1 : 0);
+    report.revisions = (prev && Array.isArray(prev.revisions) ? prev.revisions.slice() : []);
+    if (closedEvent && !sameClose) report.revisions.push({
+      at: report.closedAt,
+      closed: true, closedAt: report.closedAt, sessionId: report.sessionId || '', terminalId: report.terminalId || '',
       by: String(meta.by || report.closedBy || ''),
       gross: report.gross,
       txns: report.txns,
@@ -777,19 +934,7 @@
         Object.keys(c).forEach(function (k) {
           var m = out.days[k], t = c[k];
           if (!m) { out.days[k] = t; return; }
-          var keep = (num(t.builtAt) > num(m.builtAt)) ? t : m;
-          var other = keep === t ? m : t;
-          var revs = (other.revisions || []).concat(keep.revisions || []);
-          /* Dédoublonnage sur l'horodatage : la même clôture remontée deux fois
-             ne doit pas apparaître deux fois dans l'historique. */
-          var seenR = Object.create(null);
-          keep = Object.assign({}, keep, {
-            revisions: revs.filter(function (r) {
-              var kk = r && r.at; if (!kk || seenR[kk]) return false; seenR[kk] = 1; return true;
-            }).sort(function (x, y) { return x.at - y.at; }).slice(-20),
-            closedCount: Math.max(num(m.closedCount), num(t.closedCount)),
-          });
-          out.days[k] = keep;
+          out.days[k] = mergeDaySnapshots(m, t);
         });
         /* La fusion de deux classeurs peut dépasser le budget que chacun
            respectait séparément — c'est le résultat de la fusion qui repart au
@@ -826,6 +971,8 @@
     vocab: vocab, businessType: businessType,
     /* calcul */
     build: build, categoryIndex: categoryIndex, normSale: normSale,
+    drawerSessions: drawerSessions, closureRevisions: closureRevisions, inheritDrawers: inheritDrawers,
+    mergeDaySnapshots: mergeDaySnapshots,
     /* classeur */
     save: save, load: load, list: list, days: days,
     storeSlug: storeSlug, isReal: isReal,

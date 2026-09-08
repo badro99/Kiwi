@@ -132,13 +132,21 @@ export async function onRequestPost({ request, env }) {
   /* A restaurant payment settles a VISIT, never a reusable table number.
    * Both caisse and employee surfaces pass the same session id; deriving the
    * ledger id from it makes a cross-device retry hit the same primary key. */
-  const requestedSession = String((b && b.session) || '').trim().slice(0, 64);
+  const rawSession = String((b && b.session) || '').trim().slice(0, 64);
+  /* Older local split flows wrote `flow-*` into the queued sale as if it were
+     a server table visit. Recover only that unmistakable client token when the
+     payload is explicitly a takeaway split. Any real-looking server session
+     remains strict and still returns table-session-missing when absent. */
+  const localSplitSession = b && b.channel === 'takeaway' && b.split
+    && /^flow-[a-z0-9-]+$/i.test(rawSession);
+  const requestedSession = localSplitSession ? '' : rawSession;
   const split = b && b.split;
   if (split != null && (!split
     || !Number.isInteger(split.index) || !Number.isInteger(split.count)
     || split.count < 1 || split.count > 50 || split.index < 0 || split.index >= split.count)) {
     return json({ error: 'bad-split' }, 400);
   }
+
   let serviceSession = null;
   if (requestedSession || employeeTable) {
     try {

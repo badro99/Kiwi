@@ -273,6 +273,48 @@ const submitRes = await call('POST', `/api/inventory/counts?merchant=${merchantA
 ok(submitRes.status === 200 && submitRes.j.success, '1. La caisse soumet l\'inventaire aveugle (reçu 200)');
 ok(submitRes.j.count.totalDiff === -3, '1b. L\'écart gelé calculé est exactement de -3 kg');
 
+// ── 2. Same intent replay: intervening stock cannot rewrite the frozen count ──
+sqliteDb.exec(`
+  INSERT INTO inventory_movements (id, merchant, item_id, variant_id, location_id, qty_milli, reason, unit_cost_cents, occurred_ts, srv_ts, created_ts)
+  VALUES ('retry-intervening-1', '${merchantA}', 'viande-hachee', '', 'principal', -2000, 'sale', 9500, 1500, 1500, 1500);
+`);
+const retrySame = await call('POST', `/api/inventory/counts?merchant=${merchantA}`, {
+  body: {
+    id: 'cnt_atlas_001', engine: 'ledger', storeName: 'Atlas Grill', employeeName: 'Yassine', employeeRole: 'Caissier',
+    note: 'Inventaire de fin de service',
+    lines: [{ itemId: 'viande-hachee', productName: 'Viande hachée 15% MG', unit: 'kg', cost: 95, countedQty: 12, explanation: 'Fond de bac pesé en fin de journée' }]
+  }, cookie: tillA
+}, env);
+ok(retrySame.status === 200 && retrySame.j.replayed && retrySame.j.count.totalSystem === 15 && retrySame.j.count.totalDiff === -3, '2. Same count intent replays its frozen system quantity after an intervening movement');
+const retryChanged = await call('POST', `/api/inventory/counts?merchant=${merchantA}`, {
+  body: {
+    id: 'cnt_atlas_001', engine: 'ledger', storeName: 'Atlas Grill', employeeName: 'Yassine', employeeRole: 'Caissier',
+    lines: [{ itemId: 'viande-hachee', productName: 'Viande hachée 15% MG', unit: 'kg', cost: 95, countedQty: 11, explanation: 'Changed retry' }]
+  }, cookie: tillA
+}, env);
+ok(retryChanged.status === 409 && retryChanged.j.error === 'count_retry_conflict', '2b. Changed same-intent payload is rejected');
+
+// ── 3. Concurrent same/different retries: one canonical row and one event ──
+sqliteDb.exec(`
+  INSERT INTO inventory_movements (id, merchant, item_id, variant_id, location_id, qty_milli, reason, unit_cost_cents, occurred_ts, srv_ts, created_ts)
+  VALUES ('retry-concurrent-1', '${merchantA}', 'concurrent-item', '', 'principal', 10000, 'opening', 1000, 1000, 1000, 1000);
+`);
+const concurrentBody = {
+  id: 'cnt-concurrent-001', engine: 'ledger', storeName: 'Atlas Grill', employeeName: 'Yassine', employeeRole: 'Caissier',
+  lines: [{ itemId: 'concurrent-item', productName: 'Concurrent', unit: 'kg', cost: 10, countedQty: 8 }]
+};
+const concurrentResponses = await Promise.all([
+  call('POST', `/api/inventory/counts?merchant=${merchantA}`, { body: concurrentBody, cookie: tillA }, env),
+  call('POST', `/api/inventory/counts?merchant=${merchantA}`, { body: concurrentBody, cookie: tillA }, env),
+]);
+ok(concurrentResponses.every((r) => r.status === 200), '3. Concurrent same-intent submissions both return success');
+ok(concurrentResponses.every((r) => r.j.count.totalDiff === -2), '3a. Concurrent responses quote the canonical stored calculation');
+ok(sqliteDb.prepare(`SELECT count(*) AS c FROM inventory_count_events WHERE count_id = 'cnt-concurrent-001' AND event = 'submitted'`).get().c === 1, '3b. Concurrent same-intent submissions create one audit event');
+const concurrentChanged = await call('POST', `/api/inventory/counts?merchant=${merchantA}`, {
+  body: { ...concurrentBody, lines: [{ ...concurrentBody.lines[0], countedQty: 7 }] }, cookie: tillA
+}, env);
+ok(concurrentChanged.status === 409, '3c. Concurrent/different retry cannot overwrite the canonical count');
+
 // ── 3. Vérification de sécurité : La caisse reçoit 403 sur toute action de revue ──
 const tillApproveRes = await call('POST', `/api/inventory/counts?merchant=${merchantA}`, {
   body: {
@@ -342,7 +384,7 @@ const resubmitRes = await call('POST', `/api/inventory/counts?merchant=${merchan
   },
   cookie: tillA
 }, env);
-ok(resubmitRes.status === 200 && resubmitRes.j.count.totalDiff === -0.5, '5. Re-soumission réussie avec écart gelé corrigé à -0.5 kg');
+ok(resubmitRes.status === 200 && resubmitRes.j.count.totalDiff === 1.5, '5. Re-soumission réussie avec l\'écart recalculé sur le stock courant (1.5 kg)');
 
 const oldRow = sqliteDb.prepare(`SELECT status FROM inventory_counts WHERE id = 'cnt_atlas_001'`).get();
 ok(oldRow && oldRow.status === 'superseded', '5b. L\'ancien inventaire est marqué "superseded"');
@@ -361,7 +403,7 @@ ok(approveRes.status === 200 && approveRes.j.count.status === 'applied', '6. L\'
 
 // Vérification du mouvement écrit dans inventory_movements
 const appliedMv = sqliteDb.prepare(`SELECT * FROM inventory_movements WHERE ref_id = 'cnt_atlas_002'`).get();
-ok(appliedMv && appliedMv.qty_milli === -500 && appliedMv.id === 'cnt-cnt_atlas_002-viande-hachee--principal', '6b. Mouvement déterministe écrit avec qty_milli = -500 (-0.5 kg)');
+ok(appliedMv && appliedMv.qty_milli === 1500 && appliedMv.id === 'cnt-cnt_atlas_002-viande-hachee--principal', '6b. Mouvement déterministe écrit avec qty_milli = +1500 (+1.5 kg)');
 
 const countEvents = sqliteDb.prepare(`SELECT * FROM inventory_count_events WHERE count_id = 'cnt_atlas_002' ORDER BY ts ASC`).all();
 ok(countEvents.length >= 2, '6c. Les événements submitted et approved sont tracés dans inventory_count_events');
@@ -385,7 +427,7 @@ sqliteDb.exec(`
   VALUES ('sale-later-1', '${merchantA}', 'viande-hachee', '', 'principal', -2000, 'sale', 9500, 2000, 2000, 2000);
 `);
 const countDetailRes = await call('GET', `/api/inventory/counts?merchant=${merchantA}&id=cnt_atlas_002`, { cookie: ownerA }, env);
-ok(countDetailRes.j.count.totalDiff === -0.5 && countDetailRes.j.count.lines[0].diff === -0.5, '8. L\'écart gelé (-0.5 kg) et les lignes restent intacts après une vente ultérieure');
+ok(countDetailRes.j.count.totalDiff === 1.5 && countDetailRes.j.count.lines[0].diff === 1.5, '8. L\'écart gelé (+1.5 kg) et les lignes restent intacts après une vente ultérieure');
 
 // ── 10. Approbation Boutique / Maison sur la table `catalogs` ──
 sqliteDb.exec(`

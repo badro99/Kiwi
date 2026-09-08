@@ -173,9 +173,13 @@
   function setStatus(id, status, extra) {
     var m = merchant();
     if (!m) return Promise.resolve(null);
-    if (status === 'rejected' && !(extra && (extra.actorProof || extra.pinAuthorized)) && window.KiwiAuthorizeTillAction) {
+    var needsTillActor = (status === 'rejected' || (status === 'served' && state.orders[id] && state.orders[id].mode === 'takeout'))
+      && !(extra && (extra.actorProof || extra.pinAuthorized));
+    if (needsTillActor && !window.KiwiAuthorizeTillAction) return Promise.resolve(null);
+    if (needsTillActor && window.KiwiAuthorizeTillAction) {
       return new Promise(function (resolve) {
-        window.KiwiAuthorizeTillAction('Annuler la commande', function (who) {
+        var action = status === 'served' ? 'Remise de la commande au client' : 'Annuler la commande';
+        window.KiwiAuthorizeTillAction(action, function (who) {
           resolve(setStatus(id, status, Object.assign({}, extra, { actorProof: who && who.actorProof || '', pinAuthorized: true })));
         });
       });

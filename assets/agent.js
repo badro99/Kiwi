@@ -68,6 +68,70 @@
    * Principle (KIWI_AI_ROADMAP.md): never emit a number we don't have. */
   let B = ATLAS;
 
+  const ROLLING_SALES_DAYS = 30;
+  const ROLLING_DAY_MS = 864e5;
+
+  function salesPeriod(vid) {
+    const now = Date.now();
+    const R = window.KiwiDayReport;
+    const venueData = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {};
+    let merchantKey = '';
+    try { merchantKey = R && typeof R.storeSlug === 'function' ? R.storeSlug() : ''; } catch (_) {}
+    merchantKey = merchantKey || venueData.slug || venueData.merchant || venueData.id || vid || undefined;
+    try {
+      if (R && typeof R.businessDay === 'function' && typeof R.dayBounds === 'function') {
+        const endDay = R.businessDay(now, merchantKey);
+        const startDay = R.shiftDay
+          ? R.shiftDay(endDay, -(ROLLING_SALES_DAYS - 1), merchantKey)
+          : new Date(Date.parse(endDay + 'T12:00:00Z') - (ROLLING_SALES_DAYS - 1) * ROLLING_DAY_MS).toISOString().slice(0, 10);
+        const first = R.dayBounds(startDay, merchantKey);
+        const last = R.dayBounds(endDay, merchantKey);
+        if (first && last && isFinite(first.from) && isFinite(last.to)) {
+          return {
+            from: first.from, to: last.to, days: ROLLING_SALES_DAYS,
+            timezone: typeof R.timezone === 'function' ? R.timezone(merchantKey) : undefined,
+            cutoff: typeof R.cutoff === 'function' ? R.cutoff(merchantKey) : undefined,
+            startDay, endDay,
+          };
+        }
+      }
+    } catch (_) {}
+    /* This is only a compatibility fallback for pages that do not load the
+     * shared day-report module. Keep the same 30-day denominator, but never
+     * pretend this host-local fallback is the merchant's business calendar. */
+    const to = now;
+    return { from: to - ROLLING_SALES_DAYS * ROLLING_DAY_MS, to, days: ROLLING_SALES_DAYS, startDay: null, endDay: null };
+  }
+
+  function rollingSales(vid) {
+    const period = salesPeriod(vid);
+    let totals = { revenue: 0, count: 0, basket: 0 };
+    try {
+      const S = window.KiwiSales;
+      if (S && typeof S.totals === 'function') {
+        totals = S.totals(vid, period.from, period.to) || totals;
+      }
+    } catch (_) {}
+    let asOf = null;
+    const note = (rows) => (Array.isArray(rows) ? rows : []).forEach((row) => {
+      const ts = +(row && row.ts) || 0;
+      if (ts >= period.from && ts < period.to && (!asOf || ts > asOf)) asOf = ts;
+    });
+    try { note(window.KiwiSales && window.KiwiSales.list && window.KiwiSales.list(vid)); } catch (_) {}
+    try { note(window.KiwiRefunds && window.KiwiRefunds.list && window.KiwiRefunds.list(vid)); } catch (_) {}
+    const revenue = Number(totals.revenue) || 0;
+    const count = Number(totals.count) || 0;
+    return {
+      ...period,
+      revenue,
+      count,
+      /* KiwiSales.totals is the authoritative sales API: its revenue is net
+       * of refunds, while its ticket count remains the sale denominator. */
+      basket: Number(totals.basket) || (count ? revenue / count : 0),
+      asOf,
+    };
+  }
+
   function buildProfile() {
     const KV = window.KiwiVenue;
     const real = !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal());
@@ -77,8 +141,7 @@
     if (!real && !custom) return ATLAS;
     const vd = (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
     const vid = KV && KV.getVenue ? KV.getVenue() : null;
-    const tot = (window.KiwiSales && window.KiwiSales.totals)
-      ? window.KiwiSales.totals(vid) : { revenue: 0, count: 0, basket: 0 };
+    const period = rollingSales(vid);
     let nm = vd.fullDisplay || [vd.name, vd.location].filter(Boolean).join(' · ');
     // Real-but-not-custom (defensive): vd may still be a demo venue — never quote
     // "Café Atlas"; prefer the real session name, else neutral.
@@ -102,12 +165,20 @@
       name: nm,
       trade,
       tradeLabel,
-      revenue: tot.revenue,
-      ordersPerMonth: tot.count,
-      ordersPerDay: 0,
-      avgBasket: tot.basket,
-      daysOpen: 30,
-      dailyRev: tot.revenue / 30,
+      revenue: period.revenue,
+      ordersPerMonth: period.count,
+      ordersPerDay: period.count / period.days,
+      avgBasket: period.basket,
+      daysOpen: period.days,
+      dailyRev: period.revenue / period.days,
+      salesWindowDays: period.days,
+      salesWindowFrom: period.from,
+      salesWindowTo: period.to,
+      salesWindowStart: period.startDay,
+      salesWindowEnd: period.endDay,
+      salesTimezone: period.timezone,
+      salesCutoff: period.cutoff,
+      salesAsOf: period.asOf,
       /* cost structure unknown until the merchant records it */
       cogs: null, grossProfit: null, grossMargin: null,
       opex: {}, totalOpex: null, netProfit: null, netMargin: null,
@@ -138,6 +209,15 @@
     return { mtdRevenue: revenue, mtdDays: now.getDate(), daysInMonth };
   }
   function syncProfile() { B = buildProfile(); return B; }
+  function salesWindowEvidence(profile) {
+    if (!profile || !profile.partial || !profile.salesWindowStart || !profile.salesWindowEnd) return '';
+    const freshness = profile.salesAsOf
+      ? new Date(profile.salesAsOf).toISOString()
+      : 'aucun événement horodaté dans la fenêtre';
+    const zone = profile.salesTimezone ? ` · ${profile.salesTimezone}` : '';
+    const cutoff = profile.salesCutoff == null ? '' : ` · bascule ${profile.salesCutoff}h`;
+    return `Fenêtre ventes : ${profile.salesWindowStart} → ${profile.salesWindowEnd} inclus${zone}${cutoff} · dernière vente/remboursement : ${freshness}`;
+  }
 
   /* ─────────────── PERMISSIONS ───────────────
    * dashboard.html hides Marges & budget, Dépenses and Paie & planning from a
@@ -4423,6 +4503,7 @@
         dir, '',
         `Tu es l'assistant financier de "${B.name}", un établissement qui vient de démarrer sur Kiwi, au Maroc.`,
         `Type d'activité : ${B.tradeLabel || B.trade || 'non renseigné'}.`,
+        salesWindowEvidence(B),
         B.revenue > 0
           ? `Seules données réelles disponibles : ${fmt(B.revenue)} MAD de ventes sur ${fmt(B.ordersPerMonth)} vente(s), panier moyen ${fmt(B.avgBasket)} MAD.`
           : `Aucune vente n'a encore été enregistrée pour cet établissement.`,
@@ -4859,6 +4940,7 @@
           ? `<div class="fa-ctx-kpis">${rows.map(([k, v]) =>
               `<button class="fa-ctx-kpi" type="button" data-fa-fact="${escAttr(k + ' : ' + v)}"><span class="k">${k}</span><span class="v">${v}</span></button>`).join('')}</div>`
           : '') +
+        (salesWindowEvidence(B) ? `<div class="fa-ctx-detail" style="display:block;font-size:12.5px;color:var(--n-500);line-height:1.55;">${escHtml(salesWindowEvidence(B))}</div>` : '') +
         `<div class="fa-ctx-detail" style="display:block;font-size:12.5px;color:var(--n-500);line-height:1.55;">${p.railEmpty}</div>` +
         `<div class="fa-ctx-trust" data-fa-trust>${ICON.lock}<span data-fa-trust-text>${dynamicUi.privacy}</span></div>` +
         `<button type="button" class="fa-ctx-mode" data-fa-mode-toggle>${dynamicUi.modeToggle}</button>` +

@@ -24,8 +24,8 @@
     "sha": "16b009fb839f239f"
   },
   "assets/admin-workspace.js": {
-    "v": "5",
-    "sha": "e3a9121609dd3a6a"
+    "v": "8",
+    "sha": "b3a3ac53634d37c3"
   },
   "assets/agent-action-center.js": {
     "v": "2",
@@ -60,8 +60,8 @@
     "sha": "13799bff68c6aaec"
   },
   "assets/agent.js": {
-    "v": "22",
-    "sha": "cbde5a06734a8047"
+    "v": "23",
+    "sha": "17f2ae899e54d747"
   },
   "assets/ai-telemetry.js": {
     "v": "1",
@@ -132,8 +132,8 @@
     "sha": "18979319d717bb43"
   },
   "assets/caisse-pwa.js": {
-    "v": "496",
-    "sha": "cc43149379fc351c"
+    "v": "498",
+    "sha": "1611a92e192cc60c"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -144,16 +144,16 @@
     "sha": "509b94e540471caf"
   },
   "assets/caisse-stock-sync.js": {
-    "v": "9",
-    "sha": "30f9a9b0b13c9efc"
+    "v": "10",
+    "sha": "d4ce3014e68334fc"
   },
   "assets/cancellation-history.js": {
     "v": "2",
     "sha": "66f56a67823580af"
   },
   "assets/cash-sessions.js": {
-    "v": "3",
-    "sha": "66cc58e3ba8fbd9f"
+    "v": "5",
+    "sha": "34cd851dee77ae3a"
   },
   "assets/catalog-import.js": {
     "v": "3",
@@ -208,8 +208,8 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "491",
-    "sha": "eee42144daad4cc4"
+    "v": "492",
+    "sha": "72d8bf5e5692052e"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -220,16 +220,16 @@
     "sha": "106de73d3d04a60d"
   },
   "assets/day-report-dash.js": {
-    "v": "10",
-    "sha": "b59b98c778596610"
+    "v": "11",
+    "sha": "3030994fa434c421"
   },
   "assets/day-report-export.js": {
-    "v": "6",
-    "sha": "44dd6ba2de061983"
+    "v": "7",
+    "sha": "bda0df7618b3eaa4"
   },
   "assets/day-report.js": {
-    "v": "8",
-    "sha": "aca1ba22ccbcaa2d"
+    "v": "10",
+    "sha": "ffac4e86a1af16da"
   },
   "assets/demoClock.js": {
     "v": "1",
@@ -264,8 +264,8 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/employee-live.js": {
-    "v": "490",
-    "sha": "38bb1d306f1c983a"
+    "v": "491",
+    "sha": "c05d777bdbd3aa05"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -360,8 +360,8 @@
     "sha": "4c15205549dae860"
   },
   "assets/identity.js": {
-    "v": "2",
-    "sha": "5f0a4000cc13db93"
+    "v": "3",
+    "sha": "f701650e300c6b89"
   },
   "assets/idle-lock.js": {
     "v": "2",
@@ -432,8 +432,8 @@
     "sha": "c9d6036ca657c76e"
   },
   "assets/live-link.js": {
-    "v": "34",
-    "sha": "7c67c2be9f9dc832"
+    "v": "35",
+    "sha": "6371911ba1c4c897"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -520,12 +520,8 @@
     "sha": "47b1d8a268c10551"
   },
   "assets/orderpro-inbox.js": {
-    "v": "15",
-    "sha": "9b2ecc54e5a68634"
-  },
-  "assets/service-requests.js": {
-    "v": "1",
-    "sha": "acfbe70ced4b8e86"
+    "v": "16",
+    "sha": "d3132e10af8dabde"
   },
   "assets/orderpro-panel.js": {
     "v": "1",
@@ -536,8 +532,8 @@
     "sha": "57b562b061dc24d0"
   },
   "assets/pages-pro.js": {
-    "v": "2097",
-    "sha": "7d2c9bdbef000c6f"
+    "v": "2098",
+    "sha": "e86fd21c50c73dd0"
   },
   "assets/pages.js": {
     "v": "5",
@@ -660,8 +656,8 @@
     "sha": "7ac81391d3454891"
   },
   "assets/pos-inventory-count.js": {
-    "v": "6",
-    "sha": "9e1f1b33b0f0c02c"
+    "v": "7",
+    "sha": "26cab7acf330fbf6"
   },
   "assets/pos-librairie.css": {
     "v": "5",
@@ -772,7 +768,7 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "14",
+    "v": "15",
     "sha": "ea196f65904ce256"
   },
   "assets/procurement.js": {
@@ -843,6 +839,10 @@
     "v": "2",
     "sha": "bb01565261188f6e"
   },
+  "assets/service-requests.js": {
+    "v": "1",
+    "sha": "acfbe70ced4b8e86"
+  },
   "assets/simple.js": {
     "v": "3",
     "sha": "62be3e474c954d17"
@@ -860,8 +860,8 @@
     "sha": "d49ee85d276e22d4"
   },
   "assets/stock.js": {
-    "v": "49",
-    "sha": "21088a1808c9ffc8"
+    "v": "50",
+    "sha": "a4d9b5e08d7b0b08"
   },
   "assets/store-templates.js": {
     "v": "2",

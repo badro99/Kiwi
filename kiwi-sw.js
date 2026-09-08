@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v548';
+var CACHE = 'kiwi-app-v549';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -141,13 +141,13 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
   '/assets/oppo-cards.js?v=2',
-  '/assets/dashboard-pwa.js?v=491',
+  '/assets/dashboard-pwa.js?v=492',
   '/assets/dashboard-native.js?v=1',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js?v=1',
-  '/assets/caisse-pwa.js?v=496',
+  '/assets/caisse-pwa.js?v=498',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=5',
   '/assets/platform-kernel.js?v=5',
@@ -155,16 +155,16 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=10',
   '/assets/operations-ui.js?v=13',
-  '/assets/live-link.js?v=34',
+  '/assets/live-link.js?v=35',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=8',
+  '/assets/day-report.js?v=10',
   '/assets/report.js?v=3',
-  '/assets/day-report-dash.js?v=10',
-  '/assets/day-report-export.js?v=6',
+  '/assets/day-report-dash.js?v=11',
+  '/assets/day-report-export.js?v=7',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.
      Sans eux le contrôle « ouvre-t-on maintenant ? » ne peut pas se faire, et
@@ -191,7 +191,7 @@ var SHELL = [
      caisse ET l'écran cuisine passent par lui : absent, l'un des deux lierait un
      nouveau commerçant par-dessus les données de l'ancien. */
   '/assets/pairing-commit.js?v=2',
-  '/assets/identity.js?v=2',
+  '/assets/identity.js?v=3',
   '/assets/caisse-link.js?v=10',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
@@ -199,7 +199,7 @@ var SHELL = [
   '/assets/caisse-hardware.js?v=2',
   '/assets/live-socket.js?v=4',
   '/assets/escpos.js?v=8',
-  '/assets/printer-bridge.js?v=14',
+  '/assets/printer-bridge.js?v=15',
   '/assets/barcode.js?v=1',
   '/assets/color-palette.js?v=5',
   '/assets/boutique-catalog.js?v=7',
@@ -216,9 +216,9 @@ var SHELL = [
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
   '/assets/inventory-ledger.js?v=10',
-  '/assets/caisse-stock-sync.js?v=9',
-  '/assets/pos-inventory-count.js?v=6',
-  '/assets/stock.js?v=49',
+  '/assets/caisse-stock-sync.js?v=10',
+  '/assets/pos-inventory-count.js?v=7',
+  '/assets/stock.js?v=50',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
@@ -231,7 +231,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=490',
+  '/assets/employee-live.js?v=491',
   '/assets/employee-planning.js?v=8',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=2',
@@ -248,7 +248,7 @@ var SHELL = [
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=6',
   '/assets/orderpro-panel.js?v=1',
-  '/assets/orderpro-inbox.js?v=15',
+  '/assets/orderpro-inbox.js?v=16',
   '/assets/service-requests.js?v=1',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de

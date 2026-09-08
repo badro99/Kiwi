@@ -2,7 +2,7 @@
   'use strict';
   var P=window.KiwiAdminPolicy, bridge=window.KiwiOperator;
   if(!P||!bridge)return;
-  var state={clients:[],now:0,live:null,overview:null,data:null,merchant:'',tab:'summary',route:'today',filter:'all',operators:[],loading:false};
+  var state={clients:[],now:0,live:null,overview:null,data:null,loadError:null,merchant:'',tab:'summary',route:'today',filter:'all',operators:[],loading:false};
   var root=document.getElementById('op-workspace'), dossier=document.getElementById('op-dossier-summary');
   var labels={active:'Accès ouvert',pending:'Accès en attente',suspended:'Suspendu',trial:'Essai',expired:'Échu',scheduled:'À venir',unpriced:'Sans tarif',open:'À faire',in_progress:'En cours',snoozed:'Reporté',resolved:'Résolu'};
   var sources={bridges:'Relais d’impression',print:'Travaux d’impression · 24 h',errors:'Erreurs applicatives · 7 j',support:'Support',integrations:'Commandes connectées',shopify:'Synchronisation Shopify',tasks:'Suivis',notes:'Notes',events:'Historique des suivis'};
@@ -22,14 +22,18 @@
   function card(title,body,subtitle){return '<section class="op-card"><div class="op-card-head"><div><h3>'+esc(title)+'</h3>'+(subtitle?'<p>'+esc(subtitle)+'</p>':'')+'</div></div>'+body+'</section>';}
   function notice(){
     if(state.live===false)return '<div class="op-notice">Démonstration locale · les dossiers sont fictifs. Les nouveaux suivis et notes nécessitent le service authentifié ; aucune écriture réelle n’est simulée.</div>';
-    if(!state.data)return '<div class="op-notice">'+(state.loading?'Chargement des sources opérationnelles…':'Sources opérationnelles indisponibles. Les suivis et diagnostics ne peuvent pas être confirmés.')+'</div>';
-    var missing=Object.keys(sources).filter(function(k){return !available(k);}), limited=Object.keys(sources).filter(function(k){return state.data.sources[k]&&state.data.sources[k].truncated;});
-    return (missing.length?'<div class="op-notice">Sources indisponibles : '+esc(missing.map(function(k){return sources[k];}).join(', '))+'. Un résultat absent n’est pas un résultat sain.</div>':'')+(limited.length?'<div class="op-notice">Vue partielle : '+esc(limited.map(function(k){return sources[k];}).join(', '))+'. Ouvrez un dossier pour réduire le périmètre ; les compteurs ci-dessous concernent les lignes chargées.</div>':'');
+    if(!state.data){
+      if(state.loading)return '<div class="op-notice">Chargement des sources opérationnelles…</div>';
+      var failure=state.loadError||{};
+      return '<div class="op-notice">Lecture opérationnelle indisponible'+(failure.code?' · '+esc(failure.code):'')+'. Aucun zéro n’est déduit de cet échec. '+esc(failure.action||'Réessayez ; si le problème persiste, vérifiez l’authentification, le déploiement et le réseau.')+'</div>';
+    }
+    var missing=Object.keys(sources).filter(function(k){return !available(k);}), limited=Object.keys(sources).filter(function(k){return state.data.sources[k]&&state.data.sources[k].truncated;}), failures=missing.map(function(k){return {name:sources[k],failure:state.data.sources[k]&&state.data.sources[k].failure};});
+    return (missing.length?'<div class="op-notice">Sources indisponibles : '+esc(missing.map(function(k){return sources[k];}).join(', '))+'. Un résultat absent n’est pas un résultat sain.'+(failures.some(function(x){return x.failure;})?' Causes à vérifier : '+esc(failures.filter(function(x){return x.failure;}).map(function(x){return x.name+' · '+(x.failure.action||x.failure.code);}).join(' ')):'')+'</div>':'')+(limited.length?'<div class="op-notice">Vue partielle : '+esc(limited.map(function(k){return sources[k];}).join(', '))+'. Ouvrez un dossier pour réduire le périmètre ; les compteurs ci-dessous concernent les lignes chargées.</div>':'');
   }
   function toast(s){var old=document.querySelector('.op-toast');if(old)old.remove();var el=document.createElement('div');el.className='op-toast';el.setAttribute('role','status');el.textContent=s;document.body.appendChild(el);setTimeout(function(){el.remove();},5000);}
   async function request(path,opts){
     if(state.live!==true)throw new Error('Service authentifié requis.');
-    try{return await bridge.api(path,opts);}catch(e){var code=e.body&&e.body.error;throw new Error(code==='version-conflict'?'Ce suivi a changé. Fermez puis rouvrez-le pour charger sa nouvelle version.':code==='outcome-required'?'Un résultat est requis pour clôturer.':code==='assignee-not-found'?'Cet opérateur n’est plus disponible.':code==='task-storage-unavailable'||code==='notes-storage-unavailable'?'Stockage indisponible. Rien n’est confirmé ; vous pouvez réessayer.':code||'Service indisponible.');}
+    try{return await bridge.api(path,opts);}catch(e){var code=e.body&&e.body.error,err=new Error(code==='version-conflict'?'Ce suivi a changé. Fermez puis rouvrez-le pour charger sa nouvelle version.':code==='outcome-required'?'Un résultat est requis pour clôturer.':code==='assignee-not-found'?'Cet opérateur n’est plus disponible.':code==='task-storage-unavailable'||code==='notes-storage-unavailable'?'Stockage indisponible. Rien n’est confirmé ; vous pouvez réessayer.':code||'Service indisponible.');err.code=code||'request-failed';err.status=e.status||0;throw err;}
   }
   function allSignals(){
     var list=P.signals(state.clients,Date.now());
@@ -78,7 +82,7 @@
   }
   function freshness(){var el=document.getElementById('op-freshness'), times=[state.now,state.data&&state.data.now].filter(Boolean), at=times.length?Math.min.apply(Math,times):0, stale=!at||Date.now()-at>90000;el.classList.toggle('stale',stale);el.textContent=state.live===false?'Démonstration locale · aucune donnée opérationnelle en direct':(at?'Dernière lecture : '+date(at)+(stale?' · données anciennes':state.route==='merchant'?' · dossier à rafraîchir manuellement':' · actualisation automatique hors saisie'):'En attente d’une lecture confirmée')+' · Journée métier : Afrique/Casablanca, 05 h';var badge=document.getElementById('mode-badge');if(badge&&state.live===true)badge.textContent=stale?'D1 · ancien':'D1 · instantané';}
   var generation=0;
-  async function load(force){if(state.live!==true){render();return;}var g=++generation,m=state.route==='merchant'?state.merchant:'';if(state.data&&state.data.merchant!==m)state.data=null;state.loading=true;try{var result=await request('/workspace'+(m?'?merchant='+encodeURIComponent(m):''));if(g!==generation)return;state.data=result;}catch(_){if(g!==generation)return;state.data=null;}finally{if(g===generation){state.loading=false;if(force||!dossier.contains(document.activeElement))render();}}}
+  async function load(force){if(state.live!==true){render();return;}var g=++generation,m=state.route==='merchant'?state.merchant:'';if(state.data&&state.data.merchant!==m)state.data=null;state.loadError=null;state.loading=true;try{var result=await request('/workspace'+(m?'?merchant='+encodeURIComponent(m):''));if(g!==generation)return;state.data=result;}catch(err){if(g!==generation)return;state.data=null;state.loadError={code:err.code||'request-failed',status:err.status||0,action:err.status===403?'Accès opérateur refusé ou session expirée. Réauthentifiez-vous puis réessayez.':err.status===503?'Service ou base indisponible. Vérifiez le déploiement puis réessayez.':'Réessayez ; si le problème persiste, vérifiez l’authentification, le déploiement et le réseau.'};}finally{if(g===generation){state.loading=false;if(force||!dossier.contains(document.activeElement))render();}}}
   async function owners(){try{state.operators=(await request('/operators')).operators||[];render();}catch(_){state.operators=[];}}
   function navigate(){var parts=location.hash.slice(1).split('/'),route=parts[0];if(route==='merchant'){var m;try{m=decodeURIComponent(parts[1]||'');}catch(_){m='';}if(!client(m)){if(state.clients.length)toast('Établissement introuvable.');return;}state.route='merchant';state.tab=tabs[parts[2]]?parts[2]:'summary';var changed=state.merchant!==m;state.merchant=m;render();if(changed)bridge.open(m);load();return;}
     state.route=routes[route]?route:'today';state.merchant='';state.filter=state.route==='fleet'?'incidents':'all';bridge.close();render();load();

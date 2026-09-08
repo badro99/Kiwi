@@ -76,6 +76,37 @@ async function ensureSchema(env) {
   ).run();
 }
 
+function canonicalCountValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalCountValue);
+  if (!value || typeof value !== 'object') return value;
+  return Object.keys(value).sort().reduce((out, key) => {
+    out[key] = canonicalCountValue(value[key]);
+    return out;
+  }, {});
+}
+
+async function countIntentFingerprint(input) {
+  const canonical = JSON.stringify(canonicalCountValue(input));
+  const bytes = new TextEncoder().encode(canonical);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function countResponse(row, extra = {}) {
+  return Object.assign({
+    id: row.id,
+    status: row.status,
+    engine: row.engine,
+    totalLines: row.total_lines,
+    totalCounted: row.total_counted,
+    totalSystem: row.total_system,
+    totalDiff: row.total_diff,
+    totalVarianceCostMAD: row.total_variance_cost_mad,
+    absVarianceCostMAD: row.abs_variance_cost_mad,
+    submittedAt: row.submitted_at,
+  }, extra);
+}
+
 async function nextCursor(env, merchant) {
   const now = Date.now();
   try {
@@ -573,6 +604,32 @@ export async function onRequestPost({ request, env }) {
   const employeeRole = str(body.employeeRole || 'Caissier', 50);
   const rawLines = Array.isArray(body.lines) ? body.lines : [];
   const nowMs = Date.now();
+  const intentFingerprint = await countIntentFingerprint({
+    engine, storeId, storeName, employeeId, employeeRole,
+    lines: rawLines.map((line) => ({
+      key: line && line.key, itemId: line && (line.itemId || line.id),
+      variantId: line && line.variantId, locationId: line && line.locationId,
+      productName: line && (line.productName || line.name), color: line && line.color,
+      size: line && line.size, sku: line && (line.sku || line.barcode),
+      barcode: line && line.barcode, unit: line && line.unit,
+      unitCost: line && (line.unitCost != null ? line.unitCost : line.cost),
+      countedQty: line && (line.countedQty != null ? line.countedQty : line.counted),
+      explanation: line && line.explanation, note: line && line.note,
+    })),
+  });
+  if (!supersedesId && countId) {
+    const existing = await env.DB.prepare(
+      'SELECT id, engine, status, total_lines, total_counted, total_system, total_diff, total_variance_cost_mad, abs_variance_cost_mad, submitted_at, meta_json FROM inventory_counts WHERE merchant = ? AND id = ?'
+    ).bind(merchant, countId).first();
+    if (existing && existing.status === 'submitted') {
+      let existingMeta = {};
+      try { existingMeta = JSON.parse(existing.meta_json || '{}'); } catch (_) {}
+      if (existingMeta.intentFingerprint !== intentFingerprint) {
+        return json({ error: 'count_retry_conflict', message: 'Cette intention de comptage a déjà été transmise avec des données différentes.' }, 409);
+      }
+      return json({ success: true, replayed: true, count: countResponse(existing) });
+    }
+  }
 
   let ledgerBalances = new Map();
   if (engine === 'ledger') {
@@ -649,6 +706,7 @@ export async function onRequestPost({ request, env }) {
 
   const linesJson = JSON.stringify(processedLines);
   const metaObj = body.meta && typeof body.meta === 'object' ? body.meta : {};
+  metaObj.intentFingerprint = intentFingerprint;
   if (supersedesId) metaObj.supersedes = supersedesId;
   const metaJson = JSON.stringify(metaObj);
 
@@ -685,7 +743,7 @@ export async function onRequestPost({ request, env }) {
         abs_variance_cost_mad = excluded.abs_variance_cost_mad, lines_json = excluded.lines_json,
         meta_json = excluded.meta_json, updated_ts = excluded.updated_ts
       WHERE inventory_counts.merchant = excluded.merchant
-        AND inventory_counts.status IN ('submitted', 'superseded', 'rejected')`
+        AND inventory_counts.status IN ('superseded', 'rejected')`
     ).bind(
       countId, merchant, engine, storeId, storeName,
       employeeId, employeeName, employeeRole, nowMs,
@@ -698,28 +756,31 @@ export async function onRequestPost({ request, env }) {
   submitBatch.push(
     env.DB.prepare(
       `INSERT INTO inventory_count_events (count_id, merchant, event, actor_id, actor_name, via, note, ts)
-       VALUES (?, ?, ?, ?, ?, 'till', ?, ?)`
+       SELECT ?, ?, ?, ?, ?, 'till', ?, ?
+        WHERE NOT EXISTS (
+          SELECT 1 FROM inventory_count_events
+           WHERE count_id = ? AND merchant = ? AND event = ?
+        )`
     ).bind(
       countId, merchant, supersedesId ? 'resubmitted' : 'submitted',
-      employeeId, employeeName, str(body.note, 500), nowMs
+      employeeId, employeeName, str(body.note, 500), nowMs,
+      countId, merchant, supersedesId ? 'resubmitted' : 'submitted'
     )
   );
 
   await env.DB.batch(submitBatch);
 
+  const canonical = await env.DB.prepare(
+    'SELECT id, engine, status, total_lines, total_counted, total_system, total_diff, total_variance_cost_mad, abs_variance_cost_mad, submitted_at, meta_json FROM inventory_counts WHERE merchant = ? AND id = ?'
+  ).bind(merchant, countId).first();
+  let canonicalMeta = {};
+  try { canonicalMeta = JSON.parse((canonical && canonical.meta_json) || '{}'); } catch (_) {}
+  if (!canonical || canonicalMeta.intentFingerprint !== intentFingerprint) {
+    return json({ error: 'count_retry_conflict', message: 'Cette intention de comptage a déjà été transmise avec des données différentes.' }, 409);
+  }
+
   return json({
     success: true,
-    count: {
-      id: countId,
-      status: 'submitted',
-      engine,
-      totalLines,
-      totalCounted,
-      totalSystem,
-      totalDiff,
-      totalVarianceCostMAD,
-      absVarianceCostMAD,
-      submittedAt: nowMs
-    }
+    count: countResponse(canonical),
   });
 }

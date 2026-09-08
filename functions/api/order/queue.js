@@ -1874,6 +1874,27 @@ export async function onRequestPost(context) {
   const server = String((b && b.server) || '').trim().slice(0, 40);
   const paid = b && b.paid === true;
 
+  /* A takeaway handover is an auditable staff action, not a table close. The
+   * actor must be the short-lived PIN proof minted by /api/pin/verify; a name
+   * in the request body (or the order's display server) is never sufficient. */
+  let takeoutHandover = null;
+  if (status === 'served') {
+    try {
+      takeoutHandover = await env.DB.prepare(
+        `SELECT id, status, number, mode, session_id FROM orders
+          WHERE id = ? AND merchant = ?`
+      ).bind(id, merchant).first();
+    } catch (_) { return json({ error: 'handover-read-failed' }, 503); }
+    if (takeoutHandover && takeoutHandover.mode === 'takeout'
+        && takeoutHandover.status === 'served') {
+      return json({ ok: true, id, status: 'served', number: takeoutHandover.number, replayed: true });
+    }
+    if (takeoutHandover && takeoutHandover.mode === 'takeout'
+        && !pinActor) {
+      return json({ error: 'handover-identity-required' }, 403);
+    }
+  }
+
   const marks = from.map(() => '?').join(',');
   if (status === 'rejected') {
     let current = null;
@@ -1932,7 +1953,7 @@ export async function onRequestPost(context) {
      *
      * merchant dans le WHERE garde un magasin d'agir sur les tickets d'un autre
      * — ce qui n'est vrai que depuis que `merchant` est dérivé du serveur. */
-    row = await env.DB.prepare(
+    const orderUpdate = statement(env,
       `UPDATE orders
           SET status = ?, updated_ts = ?,
               server_name = COALESCE(NULLIF(?, ''), server_name),
@@ -1942,16 +1963,40 @@ export async function onRequestPost(context) {
               paid_ts = CASE WHEN ? = 1 AND paid_ts IS NULL THEN ? ELSE paid_ts END
         WHERE id = ? AND merchant = ? AND status IN (${marks})
           AND (? <> 'rejected' OR paid_ts IS NULL)
-        RETURNING id, status, number`
-    ).bind(status, now, server, status, pinActor?.id || '', status, pinActor?.name || '', status, now, paid ? 1 : 0, now, id, merchant, ...from, status).first();
+          ${takeoutHandover && takeoutHandover.mode === 'takeout' && takeoutHandover.session_id
+            ? `AND EXISTS (SELECT 1 FROM table_sessions WHERE id = ? AND merchant = ? AND mode = 'takeout' AND status = 'open')`
+            : ''}
+        RETURNING id, status, number, mode, session_id`,
+      status, now, server, status, pinActor?.id || '', status, pinActor?.name || '', status, now,
+      paid ? 1 : 0, now, id, merchant, ...from, status,
+      ...(takeoutHandover && takeoutHandover.mode === 'takeout' && takeoutHandover.session_id
+        ? [takeoutHandover.session_id, merchant] : []));
+    if (takeoutHandover && takeoutHandover.mode === 'takeout' && takeoutHandover.session_id) {
+      const handoverUpdate = statement(env,
+          `UPDATE table_sessions SET status = 'closed', closed_ts = ?,
+            closed_by = 'takeout-handover', closed_actor_id = ?, closed_actor_name = ?
+          WHERE id = ? AND merchant = ? AND mode = 'takeout' AND status = 'open'
+            AND EXISTS (SELECT 1 FROM orders WHERE id = ? AND merchant = ? AND status = 'served' AND updated_ts = ?)`,
+        now, pinActor.id, pinActor.name, takeoutHandover.session_id, merchant, id, merchant, now);
+      const batch = await atomicStatements(env, [orderUpdate, handoverUpdate]);
+      const changes = Number(batch && batch[0] && batch[0].meta && batch[0].meta.changes) || 0;
+      if (changes) row = await env.DB.prepare(
+        'SELECT id, status, number, mode, session_id FROM orders WHERE id = ? AND merchant = ?'
+      ).bind(id, merchant).first();
+    } else {
+      row = await orderUpdate.first();
+    }
   } catch (_) {
     if (status === 'rejected') return json({ error: 'cancellation-write-failed' }, 503);
+    if (takeoutHandover && takeoutHandover.mode === 'takeout' && takeoutHandover.session_id) {
+      return json({ error: 'handover-write-failed' }, 503);
+    }
     // Colonnes de session pas encore migrées : on fait avancer l'état seul.
     try {
       row = await env.DB.prepare(
-        `UPDATE orders SET status = ?, updated_ts = ?
-          WHERE id = ? AND merchant = ? AND status IN (${marks})
-          RETURNING id, status, number`
+          `UPDATE orders SET status = ?, updated_ts = ?
+            WHERE id = ? AND merchant = ? AND status IN (${marks})
+            RETURNING id, status, number, mode, session_id`
       ).bind(status, now, id, merchant, ...from).first();
     } catch (e) {
       return json({ error: 'write-failed', detail: String((e && e.message) || e) }, 500);
@@ -2010,7 +2055,7 @@ export async function onRequestPost(context) {
    * table : les convives mangent, ils commanderont peut-être un dessert. Leur
    * session ne se ferme qu'à l'addition (closeSession, plus haut). D'où le
    * test sur le mode, et non sur le seul statut. */
-  if (status === 'served') {
+  if (status === 'served' && !(row.mode === 'takeout' && takeoutHandover?.session_id)) {
     try {
       const own = await env.DB.prepare(
         `SELECT s.id AS sid FROM orders o

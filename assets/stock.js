@@ -1458,6 +1458,38 @@
   function currentVenueId() {
     return window.KiwiVenue?.getVenue?.() || 'cafeAtlas';
   }
+  function stockBusinessSlug() {
+    try {
+      const slug = window.KiwiDayReport?.storeSlug;
+      if (typeof slug === 'function') return slug() || currentVenueId();
+    } catch (_) {}
+    return currentVenueId();
+  }
+  /* Operational dates belong to the merchant day, not the developer's last
+   * demo snapshot. KiwiDayReport owns the cutoff/timezone rules; the local
+   * calendar date is only a fail-soft fallback while that module is loading. */
+  function stockBusinessDate(ts) {
+    const slug = stockBusinessSlug();
+    try {
+      const d = window.KiwiDayReport?.businessDay;
+      if (typeof d === 'function') return d(ts == null ? Date.now() : ts, slug);
+    } catch (_) {}
+    const now = new Date(ts == null ? Date.now() : ts);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  }
+  function stockBusinessDateDate(ts) {
+    // Noon avoids a timezone conversion moving a YYYY-MM-DD key to its eve.
+    return new Date(`${stockBusinessDate(ts)}T12:00:00`);
+  }
+  function stockCalendarDates(ts, count = 7) {
+    const today = stockBusinessDateDate(ts);
+    return Array.from({ length: count }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      return d;
+    });
+  }
   // The "Kiwi AI" insight cards are hardcoded demo prose naming demo suppliers
   // (Coopérative Taliouine, Marché Central…) and demo dishes. For a REAL session
   // (hosted / signed-in / operator-scoped / custom venue) they must not render.
@@ -1606,17 +1638,44 @@
     } catch (_) {} finally { stTheoUsageBusy = false; }
     return Number(it.theoreticalUsage) || 0;
   };
-  const statusOf = (it) => {
-    const s = currentStockFor(it);
-    if (s <= 0) return 'out';
-    // If demo state has overridden the stock (invoice scan / physical count),
-    // compute status dynamically against reorder level. Otherwise the spec's
-    // pre-marked `status` field is the source of truth (richer than a simple
-    // reorderLevel threshold — accounts for run-rate & lead-time).
-    if (stStockOverrides[it.id] != null) {
-      return s < it.reorderLevel ? 'low' : 'ok';
-    }
-    return it.status || 'ok';
+  function stockConfiguredSupplierName(value) {
+    const name = String(value || '').trim();
+    if (!name) return '';
+    if (/^(?:fournisseur principal|primary supplier|supplier|nosupplier|no supplier|none|null|n\/a|-)$/i.test(name)) return '';
+    return name;
+  }
+  function stockSupplierEvidence(it) {
+    const supplier = stockConfiguredSupplierName(it?.supplier);
+    if (supplier) return { kind: 'supplier', name: supplier };
+    try {
+      const lots = it?.id && window.KiwiInventoryConsumption?.deriveLots?.(it.id);
+      const lot = (lots || []).find(l => Number(l?.remainingQty) > 0 && Number(l?.rank) < 999);
+      if (lot) return { kind: 'lot', name: stockConfiguredSupplierName(lot.supplierName) };
+    } catch (_) {}
+    return null;
+  }
+  function stockAlertState(it, stock) {
+    const s = Number(stock);
+    const threshold = Number(it?.reorderLevel);
+    const hasThreshold = Number.isFinite(threshold) && threshold > 0;
+    const status = !Number.isFinite(s) || s <= 0
+      ? 'out'
+      : (hasThreshold && s < threshold ? 'low' : 'ok');
+    return {
+      status,
+      threshold: hasThreshold ? threshold : null,
+      supplierEvidence: status === 'low' ? stockSupplierEvidence(it) : null,
+    };
+  }
+  const statusOf = (it) => stockAlertState(it, currentStockFor(it)).status;
+  window.KiwiStockOperatingDay = {
+    businessDate: stockBusinessDate,
+    businessSlug: stockBusinessSlug,
+    calendarDates: (ts, count) => stockCalendarDates(ts, count),
+    alertState: stockAlertState,
+    catalogue: () => { stEnsureOverlay(); return getInv(); },
+    overviewAlerts: (items) => overviewAlertRows(items),
+    lastDelivery: actualLastDelivery,
   };
   const variance = (it) => {
     const theoretical = theoreticalUsageFor(it);
@@ -1624,8 +1683,19 @@
   };
   const daysOfStock = (it) => {
     const rate = it.usageThisWeek / 7;
-    return rate > 0 ? currentStockFor(it) / rate : 999;
+    return rate > 0 ? Math.max(0, Math.round(currentStockFor(it) / rate)) : null;
   };
+  function actualLastDelivery(it) {
+    if (!stShowReal()) return it.lastDelivery || null;
+    try {
+      const rows = itemHistory(it).filter((r) =>
+        (+r.qty || 0) > 0 && ['receipt', 'transfer-in'].includes(String(r.reason || ''))
+      );
+      if (!rows.length) return null;
+      const latest = rows.reduce((a, b) => (+a.occurredTs || 0) >= (+b.occurredTs || 0) ? a : b);
+      return latest.occurredTs ? stockBusinessDate(latest.occurredTs) : null;
+    } catch (_) { return null; }
+  }
   const totalValue = (items) => items.reduce((s, it) => s + (currentStockFor(it) * it.costPerUnit), 0);
   const foodCostMonth = (items) => items.reduce((s, it) => s + (theoreticalUsageFor(it) * it.costPerUnit * 4.33), 0);
   /* Le dénominateur du ratio « coût matière / chiffre d'affaires ».
@@ -1817,18 +1887,25 @@
       const lots = window.KiwiInventoryConsumption.deriveLots(it.id) || [];
       if (!lots.length) return;
       const r1Lots = lots.filter(l => l.rank === 1 && l.remainingQty > 0);
+      // Opening stock is rank 999 and is not a supplier tier. Without a real
+      // rank-1 lot/card this path fabricated a "principal vs next lot"
+      // alert for every newly-created item.
       const r1Qty = Math.round(r1Lots.reduce((sum, l) => sum + l.remainingQty, 0) * 1000) / 1000;
       const sub = subMap.get(it.id);
       const cards = sub && Array.isArray(sub.suppliers) ? sub.suppliers : [];
       const primaryCard = cards.find(c => c.rank === 1);
       const secondaryCard = cards.find(c => c.rank === 2);
-      const secondaryLot = lots.find(l => l.rank > 1 && l.remainingQty > 0);
+      const secondaryLot = lots.find(l => l.rank > 1 && l.rank < 999 && l.remainingQty > 0);
+      const primarySupplier = stockConfiguredSupplierName(primaryCard?.supplierName);
+      const hasRankedSupplierLot = r1Lots.some(l => stockConfiguredSupplierName(l.supplierName));
+      const secondarySupplier = stockConfiguredSupplierName(secondaryCard?.supplierName);
+      if (!primarySupplier && !hasRankedSupplierLot) return;
       
       const threshold = (primaryCard && primaryCard.lowBuffer > 0)
         ? primaryCard.lowBuffer
         : Math.max(1, Math.round(((it.usageThisWeek || 0) / 7) * 3 * 10) / 10);
       
-      if (r1Qty <= threshold && (secondaryLot || (secondaryCard && secondaryCard.defaultPrice > (primaryCard ? primaryCard.defaultPrice : it.costPerUnit)))) {
+      if (r1Qty <= threshold && (secondaryLot || (secondarySupplier && secondaryCard.defaultPrice > (primaryCard ? primaryCard.defaultPrice : it.costPerUnit)))) {
         list.push(Object.assign({}, it, {
           alertKind: 'tierLow',
           r1Qty: r1Qty,
@@ -1842,11 +1919,22 @@
     return list;
   }
 
+  function overviewAlertRows(items) {
+    const rows = items || [];
+    const out = rows.filter(it => statusOf(it) === 'out');
+    const low = rows.filter(it => statusOf(it) === 'low');
+    const tierLow = computeTier1LowAlerts(rows);
+    const alerts = [
+      ...out,
+      ...low.sort((a, b) => (daysOfStock(a) ?? Number.MAX_SAFE_INTEGER) - (daysOfStock(b) ?? Number.MAX_SAFE_INTEGER)),
+      ...tierLow,
+    ].slice(0, 12);
+    return { out, low, tierLow, alerts, totalAlertCount: out.length + low.length + tierLow.length };
+  }
+
   function renderOverview() {
     const items = getInv();
-    const out = items.filter(it => statusOf(it) === 'out');
-    const low = items.filter(it => statusOf(it) === 'low');
-    const tierLow = computeTier1LowAlerts(items);
+    const { out, low, tierLow, alerts, totalAlertCount } = overviewAlertRows(items);
     const ok  = items.filter(it => statusOf(it) === 'ok');
     const totalVal = totalValue(items);
     const costMonth = foodCostMonth(items);
@@ -1862,13 +1950,6 @@
     const trendBars = [62, 70, 66, 74].map(h => `<i style="height:${h}%;"></i>`).join('');
 
     // Alerts sorted: out first, then low (by daysOfStock asc), then tierLow
-    const alerts = [
-      ...out,
-      ...low.sort((a, b) => daysOfStock(a) - daysOfStock(b)),
-      ...tierLow,
-    ].slice(0, 12);
-    const totalAlertCount = out.length + low.length + tierLow.length;
-
     return `
       ${renderKpiCards({ totalVal, items, out, low, tierLow, costWeek, ratio, ratioClass, nextDelivery, trendBars })}
 
@@ -2006,10 +2087,18 @@
     }
     const st = statusOf(it);
     const isOut = st === 'out';
-    const days = isOut ? 0 : Math.max(0, Math.round(daysOfStock(it)));
+    const days = isOut ? 0 : daysOfStock(it);
     const cur = currentStockFor(it);
     const dailyMissed = (it.usageThisWeek / 7) * it.costPerUnit * 3.2;
     const parPct = it.parLevel > 0 ? (cur / it.parLevel) * 100 : 0;
+    const state = stockAlertState(it, cur);
+    const supplierMeta = state.supplierEvidence
+      ? `${esc(t('supplier'))} : ${esc(state.supplierEvidence.name || 'Lot enregistré')}`
+      : '';
+    const deliveryDate = actualLastDelivery(it);
+    const deliveryMeta = deliveryDate ? `${esc(t('lastDeliv'))} : ${esc(fmtDateShort(deliveryDate))}` : '';
+    const alertMeta = [deliveryMeta, supplierMeta].filter(Boolean).join('<span class="sep">·</span>');
+    const lowLabel = days == null ? t('statusLow') : `${t('statusLow')} · ${t('daysLeft', days)}`;
 
     return `
       <div class="st-alert ${isOut ? 'out' : ''}">
@@ -2018,12 +2107,9 @@
           <div class="st-alert-top">
             <span class="st-alert-name">${esc(it.name)}</span>
             <span class="st-alert-cat">${esc(catLabel(it.category))}</span>
-            <span class="st-alert-status ${isOut ? 'out' : 'low'}">${esc(isOut ? t('statusOut') : `${t('statusLow')} · ${t('daysLeft', days)}`)}</span>
+            <span class="st-alert-status ${isOut ? 'out' : 'low'}">${esc(isOut ? t('statusOut') : lowLabel)}</span>
           </div>
-          <div class="st-alert-meta">
-            ${esc(t('lastDeliv'))} : ${esc(fmtDateShort(it.lastDelivery))}<span class="sep">·</span>
-            ${esc(t('supplier'))} : ${esc(it.supplier)}
-          </div>
+          ${alertMeta ? `<div class="st-alert-meta">${alertMeta}</div>` : ''}
           ${isOut
             ? `<div class="st-alert-impact">${esc(t('impactCost'))} : <b>${esc(fmtMad(dailyMissed))}</b>${esc(t('perDayMissed'))}</div>`
             : `<div class="st-alert-impact">${esc(t('level'))} : <b>${esc(fmtUnit(cur, it.unit))}</b> · ${esc(t('par'))} : <b>${esc(fmtUnit(it.parLevel, it.unit))}</b></div>
@@ -2051,16 +2137,14 @@
     `;
   }
 
-  /* 7-day delivery strip — current date is 2026-05-23 (Saturday), but we
-   * generate from "today" relative to system date for realism. Calendar
-   * shows static demo deliveries per day-of-week. */
+  /* 7-day delivery strip — the weekday supplier pattern is demo data, but the
+   * displayed dates follow the merchant's current operating day. */
   function renderDeliveryStrip() {
-    const today = new Date('2026-05-23T08:00:00'); // brief stub — see currentDate ref
     const items = [];
     const dayNames = [t('daySun'), t('dayMon'), t('dayTue'), t('dayWed'), t('dayThu'), t('dayFri'), t('daySat')];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
+    const dates = stockCalendarDates();
+    for (let i = 0; i < dates.length; i++) {
+      const d = dates[i];
       const dow = d.getDay();
       const monthLabel = fmtDateShort(d.toISOString().slice(0, 10));
       const isToday = i === 0;
@@ -2096,7 +2180,7 @@
   }
 
   function computeNextDelivery() {
-    const today = new Date('2026-05-23T08:00:00');
+    const today = stockBusinessDateDate();
     for (let i = 1; i <= 7; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
@@ -3234,7 +3318,7 @@
         <td class="r"><span class="st-cell-value">${esc(valueCell)}</span></td>
         <td>
           <div class="st-cell-sup">${esc(it.supplier.split(' · ')[0])}</div>
-          <div class="st-cell-sup-sub">${esc(fmtDateShort(it.lastDelivery))}</div>
+          <div class="st-cell-sup-sub">${esc(actualLastDelivery(it) ? fmtDateShort(actualLastDelivery(it)) : '·')}</div>
         </td>
         <td class="c"><span class="st-cell-days ${daysCls}">${esc(daysShown === '·' ? '·' : `${daysShown} j`)}</span></td>
         <td><span class="st-cell-status ${st}"><span class="sd"></span>${esc(stLabel)}</span></td>
@@ -6636,7 +6720,6 @@
 
         // Add path: build a real item that matches the venues.js shape so
         // currentStockFor / statusOf / variance / daysOfStock all behave.
-        const today = new Date('2026-05-23').toISOString().slice(0, 10);
         const status = currentStock <= 0 ? 'out' : (currentStock < reorderLevel ? 'low' : 'ok');
         const item = {
           id: 'usr-' + Date.now().toString(36),
@@ -6644,7 +6727,9 @@
           currentStock,
           parLevel, reorderLevel, costPerUnit,
           ...nutritionPatch,
-          lastDelivery: today,
+          // An opening balance is not a supplier delivery. Keep delivery
+          // history unknown until a real receipt movement exists.
+          lastDelivery: null,
           deliveryFrequency: '·',
           usageThisWeek: 0,
           theoreticalUsage: 0,

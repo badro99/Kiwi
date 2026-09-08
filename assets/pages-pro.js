@@ -15799,6 +15799,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       ['sale', T({ fr: 'Ventes', en: 'Sales', ar: 'المبيعات' })],
       ['refund', T({ fr: 'Remboursements', en: 'Refunds', ar: 'المبالغ المستردة' })],
       ['cancel', T({ fr: 'Annulations', en: 'Cancellations', ar: 'الإلغاءات' })],
+      ['handover', T({ fr: 'Remises au client', en: 'Handovers', ar: 'التسليمات' })],
     ].map(([kind, label]) => `<button class="rtx-method${selectedKind === kind ? ' on' : ''}" type="button" data-action="sales-kind" data-arg="${kind}" aria-pressed="${selectedKind === kind}">${escS(label)}</button>`).join('');
     const dayLabel = dayOffset === 0 ? T({ fr: "aujourd'hui", en: 'today', ar: 'اليوم' })
       : dayOffset === 1 ? T({ fr: 'hier', en: 'yesterday', ar: 'أمس' })
@@ -15873,22 +15874,30 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     }).join('');
     const voids = activity.filter((v) => {
       const ts = +(v && v.ts) || 0;
-      return v.kind !== 'refund' && ts >= lo && ts < hi && (!selectedMethods.length || selectedMethods.includes(salesMethodKey(v)));
+      const kindMatches = selectedKind === 'all'
+        || (selectedKind === 'cancel' && v.kind !== 'takeout-handover')
+        || (selectedKind === 'handover' && v.kind === 'takeout-handover');
+      return v.kind !== 'refund' && kindMatches && ts >= lo && ts < hi && (!selectedMethods.length || selectedMethods.includes(salesMethodKey(v)));
     });
-    const voidRows = voids.map((v) => {
+    const renderActivityRows = (sourceRows) => sourceRows.map((v) => {
       const d = new Date(v.ts || Date.now());
       const when = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
       const detail = (v.lines || []).map(l => `${Number(l.qty) || 1} × ${l.name || 'Article'}`).join(' · ') || v.label || 'Vente';
-      const label = v.kind === 'closure' ? T({ fr: 'Table fermée / remise à zéro', en: 'Table closed / reset', ar: 'إغلاق / إعادة ضبط الطاولة' })
+      const label = v.kind === 'takeout-handover' ? T({ fr: 'Commande remise au client', en: 'Order handed to customer', ar: 'سُلِّم الطلب إلى العميل' })
+        : v.kind === 'closure' ? T({ fr: 'Table fermée / remise à zéro', en: 'Table closed / reset', ar: 'إغلاق / إعادة ضبط الطاولة' })
         : v.kind === 'order-cancel' ? T({ fr: 'Commande annulée', en: 'Order cancelled', ar: 'طلب ملغى' })
         : v.kind === 'restore' ? T({ fr: 'Vente rétablie', en: 'Sale restored', ar: 'استعادة البيع' }) : T({ fr: 'Vente annulée', en: 'Sale voided', ar: 'بيع ملغى' });
       const who = v.actor || v.actorId || T({ fr: 'Identité non enregistrée', en: 'Identity not recorded', ar: 'الهوية غير مسجلة' });
-      const cashNote = ['closure', 'order-cancel'].includes(v.kind) ? T({ fr: 'Sans mouvement d’argent', en: 'No cash movement', ar: 'بدون حركة مالية' }) : T({ fr: 'Correction de vente, pas un remboursement', en: 'Sale correction, not a refund', ar: 'تصحيح بيع، وليس استردادًا' });
+      const cashNote = ['closure', 'takeout-handover', 'order-cancel'].includes(v.kind) ? T({ fr: 'Sans mouvement d’argent', en: 'No cash movement', ar: 'بدون حركة مالية' }) : T({ fr: 'Correction de vente, pas un remboursement', en: 'Sale correction, not a refund', ar: 'تصحيح بيع، وليس استردادًا' });
       const source = v.source === 'caisse' ? T({ fr: 'Caisse', en: 'Till', ar: 'الصندوق' }) : v.source || '';
-      const orderValue = v.kind === 'closure' ? v.orderAmountCents : v.amountCents;
-      const refs = v.kind === 'closure' ? `${T({ fr: 'Table', en: 'Table', ar: 'طاولة' })} ${v.tableNo || '?'} · ${(v.orders || []).map(o => '#' + o.number).join(', ')}` : v.ref || v.originalRef || v.saleId;
+      const orderValue = ['closure', 'takeout-handover'].includes(v.kind) ? v.orderAmountCents : v.amountCents;
+      const refs = ['closure', 'takeout-handover'].includes(v.kind)
+        ? (v.kind === 'takeout-handover' ? `${T({ fr: 'Commande', en: 'Order', ar: 'الطلب' })} ${(v.orders || []).map(o => '#' + o.number).join(', ')}` : `${T({ fr: 'Table', en: 'Table', ar: 'طاولة' })} ${v.tableNo || '?'} · ${(v.orders || []).map(o => '#' + o.number).join(', ')}`)
+        : v.ref || v.originalRef || v.saleId;
       return `<div class="rtx-activity-row"><span class="rtx-t">${escS(when)}</span><div><div class="rtx-identity"><span class="rtx-activity-tag">${escS(label)}</span><strong>${escS(refs)}</strong></div><div class="rtx-source">${escS(who)}${source ? ' · ' + escS(source) : ''}</div><details class="rtx-detail"><summary>${escS(T({ fr: 'Voir les détails', en: 'View details', ar: 'عرض التفاصيل' }))}</summary><p>${escS(detail)}</p><p>${escS(v.reason || '')} · ${escS(d.toLocaleString(lang))}</p><p>${escS(v.sessionId || v.saleId || '')}</p>${v.detailsTruncated ? `<p>${escS(T({ fr: 'Détail partiel (250 commandes maximum)', en: 'Partial detail (250 orders maximum)', ar: 'تفاصيل جزئية (250 طلبًا كحد أقصى)' }))}</p>` : ''}</details></div><div class="rtx-activity-value">${fmt(orderValue / 100)} MAD<small>${escS(cashNote)}</small></div></div>`;
     }).join('');
+    const voidRows = renderActivityRows(voids.filter(v => v.kind !== 'takeout-handover'));
+    const handoverRows = renderActivityRows(voids.filter(v => v.kind === 'takeout-handover'));
     const startingUp = T({ fr: 'Historique des opérations', en: 'Operations history', ar: 'سجل العمليات' });
     window.Kiwi.appPage('transactions', {
       title: T({ fr: 'Ventes & activité', en: 'Sales & activity', ar: 'المبيعات والنشاط' }),
@@ -15897,7 +15906,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         <div data-real-tx class="rtx">
           <div class="rtx-head">
             <div class="rtx-count">${count} ${escS(count === 1 ? SUM.one : SUM.n)} · ${escS(dayLabel)}</div>
-            <div class="rtx-total">${voids.filter(v => v.kind !== 'restore').length} ${escS(T({ fr: 'annulations / fermetures', en: 'cancellations / closures', ar: 'إلغاءات / إغلاقات' }))}</div>
+            <div class="rtx-total">${voids.filter(v => v.kind !== 'restore' && v.kind !== 'takeout-handover').length} ${escS(T({ fr: 'annulations / fermetures', en: 'cancellations / closures', ar: 'إلغاءات / إغلاقات' }))}</div>
           </div>
           <div class="rtx-summary">${[
             [T({ fr: 'Encaissements', en: 'Collected', ar: 'المقبوضات' }), collected, ''],
@@ -15909,12 +15918,13 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
           <div class="rtx-methods" role="group" aria-label="${escS(T({ fr: 'Type de vente', en: 'Sale type', ar: 'نوع البيع' }))}">${methodButtons}</div>
           ${cancelAuditLoading ? `<p class="rtx-notice" role="status">${escS(T({ fr: 'Chargement du journal…', en: 'Loading activity…', ar: 'جارٍ تحميل السجل…' }))}</p>` : ''}
           ${cancelAuditError ? `<p class="rtx-notice" role="alert">${escS(T({ fr: 'Journal indisponible. Les remboursements et annulations peuvent être incomplets.', en: 'Activity unavailable. Refunds and cancellations may be incomplete.', ar: 'السجل غير متاح. قد تكون المبالغ المستردة والإلغاءات غير مكتملة.' }))} <button type="button" class="rtx-method" data-action="sales-activity-retry">${escS(T({ fr: 'Réessayer', en: 'Retry', ar: 'إعادة المحاولة' }))}</button></p>` : ''}
-          <div class="rtx-list">${rows || (voids.length && ['all', 'cancel'].includes(selectedKind)) || cancelAuditLoading || cancelAuditError ? rows : `<div class="rtx-row"><span class="rtx-products-missing">${escS(T({
+          <div class="rtx-list">${rows || (voids.length && ['all', 'cancel', 'handover'].includes(selectedKind)) || cancelAuditLoading || cancelAuditError ? rows : `<div class="rtx-row"><span class="rtx-products-missing">${escS(T({
             fr: 'Aucune activité pour ces filtres.',
             en: 'No activity for these filters.',
             ar: 'لا يوجد نشاط لهذه الفلاتر.',
           }))}</span></div>`}</div>
-          ${voids.length && ['all', 'cancel'].includes(selectedKind) ? `<section class="rtx-voids"><h3 class="rtx-void-title">${escS(T({ fr:'Annulations & fermetures', en:'Cancellations & closures', ar:'الإلغاءات والإغلاقات' }))}</h3><p class="rtx-void-sub">${escS(T({ fr:'Valeurs des commandes à titre informatif. Ces actions ne sont pas déduites une seconde fois du net encaissé.', en:'Order values are informational. These actions are not deducted again from net collected.', ar:'قيم الطلبات للمعلومات فقط. لا تُخصم هذه الإجراءات مرة أخرى من صافي المقبوضات.' }))}</p>${voidRows}</section>` : ''}
+          ${voids.some(v => v.kind !== 'takeout-handover') && ['all', 'cancel'].includes(selectedKind) ? `<section class="rtx-voids"><h3 class="rtx-void-title">${escS(T({ fr:'Annulations & fermetures', en:'Cancellations & closures', ar:'الإلغاءات والإغلاقات' }))}</h3><p class="rtx-void-sub">${escS(T({ fr:'Valeurs des commandes à titre informatif. Ces actions ne sont pas déduites une seconde fois du net encaissé.', en:'Order values are informational. These actions are not deducted again from net collected.', ar:'قيم الطلبات للمعلومات فقط. لا تُخصم هذه الإجراءات مرة أخرى من صافي المقبوضات.' }))}</p>${voidRows}</section>` : ''}
+          ${handoverRows && ['all', 'handover'].includes(selectedKind) ? `<section class="rtx-voids"><h3 class="rtx-void-title">${escS(T({ fr:'Remises au client', en:'Customer handovers', ar:'تسليمات العملاء' }))}</h3>${handoverRows}</section>` : ''}
         </div>
       `,
     });

@@ -6,7 +6,7 @@
   if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) return;
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/kiwi-sw.js?v=548').then(function (reg) {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=549').then(function (reg) {
         try { reg.update(); } catch (_) {}
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
       }).catch(function () {});
@@ -79,6 +79,10 @@
 
   // Offline/online + real server queue reflection — visible enough to act on.
   var refreshingStatus = false;
+  function cashJournalStatus() {
+    try { if (window.KiwiCashSessions && window.KiwiCashSessions.status) return window.KiwiCashSessions.status(); } catch (_) {}
+    return { pendingCount: 0, pendingPairing: false, storageError: false };
+  }
   function status() {
     try {
       if (!refreshingStatus && window.KiwiLive?.refreshQueue) {
@@ -110,11 +114,16 @@
     if (d.dataset.syncing === '1') return;
     var q = { pending: 0, blocked: 0, storageError: false };
     try { if (window.KiwiLive?.queueStatus) q = window.KiwiLive.queueStatus(); } catch (_) {}
+    var cashJournal = cashJournalStatus();
     var tone, label, detail;
-    if (q.storageError || q.blocked) {
+    if (q.storageError || cashJournal.storageError || q.blocked) {
       tone = '#9F3028';
-      label = q.storageError ? 'Protection locale à vérifier' : q.blocked + ' opération' + (q.blocked > 1 ? 's' : '') + ' conservée' + (q.blocked > 1 ? 's' : '');
+      label = q.storageError || cashJournal.storageError ? 'Protection locale à vérifier' : q.blocked + ' opération' + (q.blocked > 1 ? 's' : '') + ' conservée' + (q.blocked > 1 ? 's' : '');
       detail = 'À vérifier avec le support · rien n’est supprimé';
+    } else if (cashJournal.pendingPairing) {
+      tone = '#9F3028';
+      label = 'Journal caisse · appairage requis';
+      detail = cashJournal.pendingCount + ' événement(s) conservé(s)' + (q.pending ? ' · ' + q.pending + ' vente(s) à synchroniser' : ' · ventes synchronisées');
     } else if (!navigator.onLine) {
       tone = '#B85245';
       label = 'Hors ligne' + (q.pending ? ' · ' + q.pending + ' en attente' : '');
@@ -127,6 +136,10 @@
       tone = '#A56A16';
       label = q.pending + ' opération' + (q.pending > 1 ? 's' : '') + ' à synchroniser';
       detail = q.sending ? 'Envoi sécurisé en cours' : 'Reprise automatique · toucher pour réessayer';
+    } else if (cashJournal.pendingCount) {
+      tone = '#A56A16';
+      label = 'Journal caisse · synchronisation en attente';
+      detail = cashJournal.pendingCount + ' événement(s) conservé(s) · reprise automatique';
     } else {
       tone = '#287B55';
       label = 'Synchronisé';
@@ -153,7 +166,11 @@
       if (d.dataset.syncing === '1') return;
       var qNow = { pending: 0, blocked: 0, storageError: false };
       try { if (window.KiwiLive && window.KiwiLive.queueStatus) qNow = window.KiwiLive.queueStatus(); } catch (_) {}
+      var journalNow = cashJournalStatus();
       if (!qNow.pending && !qNow.blocked && !qNow.storageError) {
+        if (journalNow.storageError) toast('Journal caisse non enregistré · stockage local à vérifier, gardez cette page ouverte', 'danger');
+        else if (journalNow.pendingPairing) toast('Appairez cette caisse pour transmettre son journal · événements conservés', 'warn');
+        else if (journalNow.pendingCount) toast('Journal caisse en attente · reprise automatique, événements conservés', 'warn');
         status();
         return;
       }
@@ -180,7 +197,12 @@
         delete d.dataset.syncing;
         var after = { pending: 0, blocked: 0, storageError: false };
         try { if (window.KiwiLive && window.KiwiLive.queueStatus) after = window.KiwiLive.queueStatus(); } catch (_) {}
-        if (!after.pending && !after.blocked && !after.storageError) {
+        var journalAfter = cashJournalStatus();
+        if (!after.pending && !after.blocked && !after.storageError && journalAfter.storageError) {
+          toast('Ventes transmises · protection du journal caisse à vérifier', 'danger');
+        } else if (!after.pending && !after.blocked && !after.storageError && journalAfter.pendingCount) {
+          toast(journalAfter.pendingPairing ? 'Ventes transmises · journal caisse en attente d’appairage' : 'Ventes transmises · journal caisse encore en attente', 'warn');
+        } else if (!after.pending && !after.blocked && !after.storageError) {
           toast('Synchronisation réussie · opérations transmises');
         } else if (after.lastStatus === 401 || after.lastStatus === 403) {
           toast('Erreur d’authentification (' + after.lastStatus + ') · vérifiez l’appairage', 'danger');
@@ -201,6 +223,8 @@
   window.addEventListener('offline', status);
   window.addEventListener('kiwi:sale-queue', status);
   window.addEventListener('kiwi:outbox', status);
+  window.addEventListener('kiwi:cash-sessions', status);
+  window.addEventListener('kiwi:cash-sessions-ready', status);
   window.setInterval(status, 5000);
 
   /* The 14 vertical POS screens originally shipped a clickable "simulate

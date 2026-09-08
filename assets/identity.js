@@ -329,7 +329,7 @@
     if (scoped && scopeSlug) {
       loadScopeSiblings(scopeSlug, function () {
         if (scopeExtra.name) {
-          if (!id.name || id.name === label) id.name = scopeExtra.name;
+          id.name = scopeExtra.name;
           id.business = scopeExtra.name;
           label = scopeExtra.name;
           try { window.KiwiMe = id; } catch (_) {}
@@ -395,10 +395,17 @@
       // localStorage keys account.js reads: that store belongs to THIS browser's
       // owner, and polluting it would leak the client into the operator's own view.
       if (me.operator) {
-        var label = (me.business || '').trim() || (me.name || '').trim() || prettifySlug(me.slug || slug);
+        // In a scoped operator view the selected store owns the first paint,
+        // not the account's primary business. A multi-store account can answer
+        // with another business here, which previously left Pasta Corner above
+        // the selected Cafe Atlas context until a refresh.
+        var accountBusiness = (me.business || '').trim();
+        var requestedStore = (me.slug || slug || '').trim();
+        var accountStore = accountBusiness && slugish(accountBusiness) === slugish(requestedStore);
+        var label = accountStore ? accountBusiness : prettifySlug(requestedStore);
         var opId = {
-          name: (me.name || '').trim() || label,
-          business: (me.business || '').trim() || label,
+          name: label,
+          business: label,
           email: (me.email || '').trim(),
           type: (me.type || '').trim(),
         };

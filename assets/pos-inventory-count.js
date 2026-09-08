@@ -144,8 +144,14 @@
     search: '',
     blindMode: true,
     step: 'counting', // 'counting' | 'review' | 'submitted'
-    submittedCountId: null
+    submittedCountId: null,
+    intentId: null
   };
+
+  function newCountIntentId() {
+    try { if (window.crypto && window.crypto.randomUUID) return 'count:' + window.crypto.randomUUID(); } catch (_) {}
+    return 'count:' + Date.now().toString(36) + ':' + Math.random().toString(36).slice(2, 14);
+  }
 
   function renderModal() {
     const cashier = getCashier();
@@ -187,6 +193,7 @@
     } else if (countState.step === 'review') {
       bodyHtml = `
         <div style="padding:4px 0;">
+          ${countState.submitError ? `<div style="margin-bottom:12px;padding:10px 12px;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:10px;font-size:13px;">${esc(countState.submitError)}</div>` : ''}
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
             <div>
               <h3 style="margin:0 0 4px;font-size:18px;">Récapitulatif avant transmission</h3>
@@ -431,6 +438,7 @@
     const items = countState.items.filter(i => i.counted);
 
     const payload = {
+      id: countState.intentId,
       engine: engine,
       terminalId: (window.KiwiInventory && window.KiwiInventory.terminalId)
         ? window.KiwiInventory.terminalId()
@@ -468,6 +476,7 @@
       });
       const data = await resp.json();
       if (data && data.success) {
+        countState.submitError = '';
         countState.submittedCountId = data.count.id;
         countState.step = 'submitted';
         renderModal();
@@ -476,12 +485,10 @@
       }
     } catch (_) {}
 
-    // Fallback offline / démo
-    const fallbackId = 'cnt_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
-    countState.submittedCountId = fallbackId;
-    countState.step = 'submitted';
+    // Keep the frozen review and intent for a retry; no durable submission was made.
+    countState.submitError = 'Envoi impossible · le comptage reste en revue et n’est pas enregistré. Réessaie quand la connexion est rétablie.';
     renderModal();
-    if (window.toast) toast('Inventaire enregistré en local (attente validation)');
+    if (window.toast) toast('Inventaire non transmis · réessaie');
   }
 
   function open(opts) {
@@ -494,7 +501,9 @@
       search: '',
       blindMode: true,
       step: 'counting',
-      submittedCountId: null
+      submittedCountId: null,
+      submitError: '',
+      intentId: newCountIntentId()
     };
     renderModal();
   }

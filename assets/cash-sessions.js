@@ -8,8 +8,17 @@
   var events = [];
   var ready = false;
   var flushing = false;
+  var drainingPending = false;
+  var pendingPairingCount = 0;
+  var storageError = false;
 
   function real() { try { return !!window.KiwiEnv.isReal(); } catch (_) { return false; } }
+  function paired() {
+    try {
+      return !!(window.KiwiCaissePairing && window.KiwiCaissePairing.isPaired
+        && window.KiwiCaissePairing.isPaired());
+    } catch (_) { return false; }
+  }
   function merchant() {
     try {
       if (window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug) return String(window.KiwiCloudDoc.currentSlug() || '');
@@ -40,8 +49,39 @@
       return Array.isArray(x) ? stableRows(x) : [];
     } catch (_) { return []; }
   }
+  function activeOutboxRows() {
+    var slug = merchant();
+    return readOutbox().filter(function (event) { return event && event.merchant === slug; });
+  }
+  function pendingBuffer() {
+    if (!Array.isArray(window.__kiwiCashSessionPending)) window.__kiwiCashSessionPending = [];
+    return window.__kiwiCashSessionPending;
+  }
+  function removePending(id) {
+    var pending = pendingBuffer();
+    for (var i = pending.length - 1; i >= 0; i--) {
+      if (pending[i] && pending[i].id === id) pending.splice(i, 1);
+    }
+  }
+  function retainPending(row) {
+    var pending = pendingBuffer();
+    if (!pending.some(function (event) { return event && event.id === row.id; })) pending.push(row);
+  }
+  function activePendingRows() {
+    var slug = merchant();
+    return pendingBuffer().filter(function (event) { return event && event.merchant === slug; });
+  }
+  function activePendingCount() {
+    var ids = {};
+    activeOutboxRows().concat(activePendingRows()).forEach(function (event) { if (event && event.id) ids[event.id] = true; });
+    return Object.keys(ids).length;
+  }
   function writeOutbox(rows) {
-    try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(stableRows(rows))); return true; } catch (_) { return false; }
+    try {
+      localStorage.setItem(OUTBOX_KEY, JSON.stringify(stableRows(rows)));
+      storageError = false;
+      return true;
+    } catch (_) { storageError = true; return false; }
   }
   function readRejected() {
     try {
@@ -61,9 +101,12 @@
       return true;
     } catch (_) { return false; }
   }
+  function hasOutboxLock() {
+    try { return typeof navigator !== 'undefined' && navigator.locks && navigator.locks.request; } catch (_) { return false; }
+  }
   function outboxLock(action) {
     try {
-      if (navigator.locks && navigator.locks.request) {
+      if (hasOutboxLock()) {
         return navigator.locks.request('kiwi-cash-session-outbox-v1', action);
       }
     } catch (_) {}
@@ -72,37 +115,62 @@
   function uid(event) {
     return ['cash', terminalId(), event.sessionId, event.eventType, event.occurredAt, Math.random().toString(36).slice(2, 8)].join('-').replace(/[^A-Za-z0-9._:-]/g, '');
   }
-  function emit(event) {
+  function emit(event, onSaved) {
     var slug = merchant();
+    /* Persistence and transport are separate. An operator/demo caisse may be
+     * unable to prove a till write, but a real merchant event must still land
+     * in the durable outbox so a later pairing can deliver it. */
     if (!real() || !slug || !event || !event.sessionId) return false;
-    var row = Object.assign({}, event, { id: event.id || uid(event), merchant: slug, terminalId: terminalId() });
-    var saved = false;
-    var write = function () {
-      var rows = readOutbox(); rows.push(row);
-      saved = writeOutbox(rows);
+    var row = Object.assign({}, event, { id: event.id || uid(event) });
+    if (!row.merchant) row.merchant = slug;
+    if (!row.terminalId) row.terminalId = terminalId();
+    var persist = function () {
+      var rows = readOutbox();
+      if (!rows.some(function (old) { return old && old.id === row.id; })) rows.push(row);
+      var saved = writeOutbox(rows);
+      if (saved) {
+        if (typeof onSaved === 'function') onSaved();
+        else removePending(row.id);
+      } else retainPending(row);
       return saved;
     };
-    /* Web Locks serializes emit/ack across caisse tabs. Browsers without it
-       retain the synchronous legacy path; the durable ID-based acknowledgement
-       still prevents stale-response deletion within that tab. */
-    if (typeof navigator !== 'undefined' && navigator.locks && navigator.locks.request) {
-      outboxLock(write).then(function (ok) { if (ok) flush(); });
-      return true;
+    if (hasOutboxLock()) {
+      return outboxLock(persist).then(function (saved) {
+        if (saved) flush();
+        return saved;
+      });
     }
-    write();
-    if (!saved) return false;
-    /* Legacy contract: writeOutbox(rows); flush(); return true */
-    flush(); return true;
+    var saved = persist();
+    if (saved) flush();
+    return saved;
+  }
+  function announcePendingPairing() {
+    var slug = merchant(), count = activePendingCount();
+    if (!slug || !count || pendingPairingCount === count) return;
+    pendingPairingCount = count;
+    var detail = { merchant: slug, pendingCount: count, pendingPairing: true };
+    try {
+      window.dispatchEvent(new CustomEvent('kiwi:cash-sessions-pending-pairing', { detail: detail }));
+      /* Keep the state on the public cash-session channel as well. A page
+       * which has not installed the specialised listener can still render or
+       * inspect the durable pairing backlog. */
+      window.dispatchEvent(new CustomEvent('kiwi:cash-sessions', {
+        detail: { merchant: slug, ready: ready, pendingPairing: true, pendingCount: count }
+      }));
+    } catch (_) {}
   }
   function flush() {
     if (flushing) return;
-    var rows = readOutbox(); if (!rows.length) return;
-    var acknowledgedId = rows[0].id;
+    if (!paired()) { announcePendingPairing(); return; }
+    var activeRows = activeOutboxRows();
+    if (!activeRows.length) return;
+    pendingPairingCount = 0;
+    var acknowledgedId = activeRows[0].id;
     flushing = true;
     fetch('/api/cash-sessions', {
       method: 'POST', credentials: 'same-origin', cache: 'no-store',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(rows[0])
+      body: JSON.stringify(activeRows[0])
     }).then(function (response) {
       /* 403 means the till/session proof needs recovery and 409 means the
          session open is not visible yet. Both events remain retryable. Only
@@ -117,11 +185,26 @@
         writeOutbox(current);
       });
       if (response.status === 422) return outboxLock(function () {
-        if (!recordRejected(rows[0], 422, 'schema-rejection')) return false;
+        if (!recordRejected(activeRows[0], 422, 'schema-rejection')) return false;
         var current = readOutbox().filter(function (event) { return event && event.id !== acknowledgedId; });
         return writeOutbox(current);
       });
-    }).catch(function () {}).finally(function () { flushing = false; if (readOutbox().length) setTimeout(flush, 1500); });
+    }).catch(function () {}).finally(function () { flushing = false; if (activeOutboxRows().length) setTimeout(flush, 1500); });
+  }
+  function drainPending() {
+    if (drainingPending) return Promise.resolve(false);
+    drainingPending = true;
+    var drain = function () {
+      var pending = pendingBuffer();
+      if (!pending.length) { flush(); return Promise.resolve(true); }
+      var event = pending[0];
+      /* Freeze legacy boot-buffer identity before persistence. If storage
+       * fails, retrying the same event must not generate a second UUID. */
+      if (event && !event.id) event.id = uid(event);
+      var saved = emit(event, function () { removePending(event.id); });
+      return Promise.resolve(saved).then(function (ok) { return ok ? drain() : false; });
+    };
+    return Promise.resolve().then(drain).finally(function () { drainingPending = false; });
   }
   function refresh() {
     var slug = merchant();
@@ -137,15 +220,24 @@
     }).catch(function () { ready = false; return []; });
   }
   function boot() {
-    var pending = Array.isArray(window.__kiwiCashSessionPending) ? window.__kiwiCashSessionPending.splice(0) : [];
-    pending.forEach(emit); flush();
-    var paired = false; try { paired = !!(window.KiwiCaissePairing && window.KiwiCaissePairing.isPaired && window.KiwiCaissePairing.isPaired()); } catch (_) {}
-    if (!paired) refresh();
+    var isPaired = paired();
+    drainPending();
+    if (!isPaired) refresh();
     window.dispatchEvent(new CustomEvent('kiwi:cash-sessions-ready'));
   }
+  /* An unpaired flush deliberately returns without a retry timer. Pairing and
+   * network restoration are the authoritative transport wake-ups, so a queue
+   * held before either event is retried immediately without hiding the debt. */
+  window.addEventListener('online', function () { pendingPairingCount = 0; drainPending(); });
+  document.addEventListener('kiwi-paired', function () { pendingPairingCount = 0; drainPending(); });
   window.KiwiCashSessions = {
     emit: emit, refresh: refresh, list: function () { return events.slice(); },
     ready: function () { return ready; }, terminalId: terminalId,
+    status: function () {
+      var slug = merchant();
+      var count = activePendingCount();
+      return { merchant: slug, paired: paired(), pendingPairing: !paired() && count > 0, pendingCount: count, storageError: storageError };
+    },
     _test: { merchant: merchant, readOutbox: readOutbox, readRejected: readRejected, flush: flush }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();

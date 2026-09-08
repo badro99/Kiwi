@@ -698,7 +698,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
 </style>
 <link rel="stylesheet" href="assets/admin-workspace.css?v=3" />
 <script src="assets/admin-policy.js?v=2"></script>
-<script src="assets/admin-workspace.js?v=5" defer></script>
+<script src="assets/admin-workspace.js?v=8" defer></script>
 </head>
 <body class="operator-workspace" data-workspace="today">
   <aside class="op-sidebar" aria-label="Espace opérateur">
@@ -2648,15 +2648,18 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     sel.value = (ids.indexOf(keep) >= 0) ? keep : ids[0];
   }
 
+  var pinsRenderGeneration = 0;
   async function renderPins(){
+    var generation = ++pinsRenderGeneration;
     renderPinRoles();
     document.getElementById('pin-add').disabled = SENIOR === false;
     var wrap = document.getElementById('pin-list'); clear(wrap);
     var target = selected;
+    if (!target) return;
     var pins;
     try { pins = await store.pins(target.merchant); }
-    catch(_){if(selected===target)wrap.appendChild(h('p',{class:'empty'},'Accès du personnel indisponibles. Réessayez.'));return;}
-    if (selected !== target) return;
+    catch(_){if(selected===target && generation===pinsRenderGeneration)wrap.appendChild(h('p',{class:'empty'},'Accès du personnel indisponibles. Réessayez.'));return;}
+    if (selected !== target || generation !== pinsRenderGeneration) return;
     if (!pins.length) { wrap.appendChild(h('p', { class:'empty' }, 'Aucun PIN, l’app utilise ses codes par défaut.')); return; }
     pins.forEach(function(p){
       wrap.appendChild(h('div', { class:'pin' },
@@ -2887,15 +2890,17 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     return { on:on, explicit:explicit };
   }
 
+  var featuresRenderGeneration = 0;
   async function renderFeatures(){
     var target = selected;
+    var generation = ++featuresRenderGeneration;
     renderTypeRow();
     var wrap = document.getElementById('feat-list'); clear(wrap);
     if(!target)return;
     var feats;
     try { feats = await store.config(target.merchant); }
-    catch(_){if(selected===target)wrap.appendChild(h('p',{class:'empty'},'Configuration indisponible. Aucune modification possible.'));return;}
-    if (selected !== target) return;
+    catch(_){if(selected===target && generation===featuresRenderGeneration)wrap.appendChild(h('p',{class:'empty'},'Configuration indisponible. Aucune modification possible.'));return;}
+    if (selected !== target || generation !== featuresRenderGeneration) return;
     modulesForType(selected.type).forEach(function(grp){
       if (!grp.items.length) return;
       wrap.appendChild(h('p', { class:'sub featgrp' }, grp.title));

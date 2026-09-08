@@ -14,11 +14,27 @@ export async function merchantExists(env, merchant) {
   const accounts = await env.DB.prepare('SELECT business,email FROM accounts').all();
   return (accounts.results || []).some(a => slugMerchant(a.business || a.email) === merchant);
 }
+function readFailure(name, error) {
+  // Do not expose SQL text or bindings, but preserve the distinction the
+  // operator needs: schema/deployment versus a retryable read failure.
+  const message = String(error && (error.message || error) || '').toLowerCase();
+  const schema = /no such table|no such column|unknown column|does not exist|syntax error/.test(message);
+  return {
+    available: false, rows: [], truncated: false,
+    reason: name + '-' + (schema ? 'schema' : 'read') + '-unavailable',
+    failure: {
+      kind: schema ? 'schema' : 'read',
+      code: schema ? 'schema-mismatch' : 'read-failed',
+      retryable: !schema,
+      action: schema ? 'Vérifier le déploiement et les migrations de cette source.' : 'Réessayer la lecture ; si l’échec persiste, vérifier l’accès et le réseau.',
+    },
+  };
+}
 export async function source(env, name, sql, binds = [], limit = 200) {
   try {
     const r = await env.DB.prepare(sql).bind(...binds).all();
     return {available:true, rows:(r.results || []).slice(0,limit), truncated:(r.results || []).length > limit};
-  } catch (_) { return {available:false, rows:[], truncated:false, reason:name+'-unavailable'}; }
+  } catch (error) { return readFailure(name, error); }
 }
 
 export async function workspace(env, merchant = '') {

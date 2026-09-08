@@ -32,7 +32,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
-import { makeSession, sessionCookie, SESS_COOKIE } from '../functions/auth/_lib.js';
+import { makeSession, sessionCookie, SESS_COOKIE, tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
+import { onRequestPost as verifyPin } from '../functions/api/pin/verify.js';
 import { onRequestPost as placeOrder, onRequestGet as readOrder } from '../functions/api/order/index.js';
 import { onRequestPost as openSession, onRequestGet as readSession } from '../functions/api/order/session.js';
 import { onRequestPost as queuePost, onRequestGet as queueGet } from '../functions/api/order/queue.js';
@@ -115,6 +116,8 @@ function seed() {
     .run(SLUG, 'Chez Nadia', 'restaurant', JSON.stringify(CARTE), now);
   DB._db.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)')
     .run(SLUG, 'floorplan', JSON.stringify({ tables: [{ id: 'T7', num: 'T7' }] }), 1, now);
+  DB._db.prepare('INSERT INTO staff_pins (id,merchant,pin,name,role,created_ts) VALUES (?,?,?,?,?,?)')
+    .run('pin-orderpro-relay', SLUG, '4826', 'Nadia', 'Caisse', now);
 }
 const deskAt = (ts) => DB._db.prepare(
   'INSERT INTO order_desk (merchant,seen_ts) VALUES (?,?) ON CONFLICT(merchant) DO UPDATE SET seen_ts=excluded.seen_ts'
@@ -140,6 +143,10 @@ async function get(fn, qs, headers = {}) {
   seed();
   const staff = sessionCookie(await makeSession(ACC, SECRET)).split(';')[0];
   const asStaff = { Cookie: staff };
+  const asTill = { Cookie: `${TILL_COOKIE}=${await tillToken(SECRET, SLUG)}` };
+  const pinResponse = await post(verifyPin, { merchant: SLUG, pin: '4826' }, asTill);
+  const actorProof = pinResponse.body && pinResponse.body.actorProof;
+  ok('le vérificateur PIN fournit une preuve d’acteur pour la remise comptoir', pinResponse.status === 200 && !!actorProof);
   const line = (id, qty = 1) => ({ id, qty });
 
   const orderProPage = fs.readFileSync(path.join(ROOT, 'OrderPro.html'), 'utf8');
@@ -534,10 +541,12 @@ async function get(fn, qs, headers = {}) {
     r.status === 200 && r.body.paid === true && r.body.replayed === true
       && !!DB._db.prepare('SELECT paid_ts FROM orders WHERE id=?').get(tkId).paid_ts);
   await post(queuePost, { merchant: SLUG, id: tkId, status: 'ready' }, asStaff);
-  r = await post(queuePost, { merchant: SLUG, id: tkId, status: 'served' }, asStaff);
+  r = await post(queuePost, { merchant: SLUG, id: tkId, status: 'served', actorProof }, asStaff);
   ok('la commande à emporter est remise', r.status === 200);
   r = await get(readSession, 'merchant=' + SLUG + '&session=' + tkSess);
-  ok('…et sa session se ferme avec elle', r.body.status === 'closed' && r.body.closedBy === 'served');
+  const handoverSession = DB._db.prepare('SELECT closed_actor_id, closed_actor_name FROM table_sessions WHERE id=?').get(tkSess);
+  ok('…et sa session se ferme avec elle', r.body.status === 'closed' && r.body.closedBy === 'takeout-handover'
+    && handoverSession.closed_actor_id === 'pin-orderpro-relay' && handoverSession.closed_actor_name === 'Nadia');
   r = await post(placeOrder, { merchant: SLUG, mode: 'takeout', session: tkSess, lines: [line('i1')] });
   ok('…donc on ne commande plus depuis le trottoir', r.status === 409 && r.body.error === 'session-closed');
 

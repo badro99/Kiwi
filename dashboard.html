@@ -6233,7 +6233,7 @@
 <script src="assets/dateRange.js?v=19" defer></script>
 <script src="assets/mobile-nav.js?v=2" defer></script>
 <script defer src="assets/pwa-update.js?v=359"></script>
-<script defer src="assets/dashboard-pwa.js?v=491"></script>
+<script defer src="assets/dashboard-pwa.js?v=492"></script>
 <script defer src="assets/dashboard-native.js?v=1"></script>
 <!-- Same durable outbox as the tills. It also lets this surface report the
      real device sync state instead of inferring it from navigator.onLine. -->
@@ -6245,8 +6245,8 @@
      data module starts. God Mode must never infer authority from ?op=1, and
      its one-shot snapshot must not miss the identity promise at boot. -->
 <script defer src="assets/tenant-purge.js?v=2"></script>
-<script defer src="assets/identity.js?v=2"></script>
-<script defer src="assets/live-link.js?v=34"></script>
+<script defer src="assets/identity.js?v=3"></script>
+<script defer src="assets/live-link.js?v=35"></script>
 <script defer src="assets/channel-sales.js?v=3"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
@@ -6282,7 +6282,7 @@
      loaded before the assistant router; the probed modules may load later and
      are resolved lazily at question time. -->
 <script src="assets/agent-truth.js?v=6" defer fetchpriority="low"></script>
-<script src="assets/agent.js?v=22" defer fetchpriority="low"></script>
+<script src="assets/agent.js?v=23" defer fetchpriority="low"></script>
 <script src="assets/agent-voice.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/agent-vision.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/agent-skin.js?v=4" defer fetchpriority="low"></script>
@@ -6300,7 +6300,7 @@
 <!-- Real thermal printing (shared with the caisse): ESC/POS encoder + bridge
      client, so inventory can print barcode étiquettes to a thermal printer. -->
 <script src="assets/escpos.js?v=8" defer fetchpriority="low"></script>
-<script src="assets/printer-bridge.js?v=14" defer fetchpriority="low"></script>
+<script src="assets/printer-bridge.js?v=15" defer fetchpriority="low"></script>
 <script src="assets/boutique-catalog.js?v=7" defer fetchpriority="low"></script>
 <!-- Les rayons tout prêts proposés à un magasin qui démarre (Maison / arts de
      la table). APRÈS boutique-catalog.js, dont il écrit les catégories et les
@@ -6366,7 +6366,7 @@
 <!-- Floor-plan vocabulary shared with the caisse. MUST load before pages-pro.js,
      which reads its top-level declarations as globals. -->
 <script src="assets/floorplan-core.js?v=2050" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2097" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2098" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js?v=1" defer fetchpriority="low"></script>
@@ -6380,17 +6380,17 @@
 <script src="assets/boutique-promos-dashboard.js?v=4" defer fetchpriority="low"></script>
 <!-- Rapport journalier : le calcul (partagé avec la caisse) puis la page.
      Après pages-pro.js, dont il emprunte la coquille Kiwi.appPage. -->
-<script src="assets/day-report.js?v=8" defer fetchpriority="low"></script>
-<script src="assets/day-report-export.js?v=6" defer fetchpriority="low"></script>
-<script src="assets/day-report-dash.js?v=10" defer fetchpriority="low"></script>
-<script src="assets/stock.js?v=49" defer fetchpriority="low"></script>
+<script src="assets/day-report.js?v=10" defer fetchpriority="low"></script>
+<script src="assets/day-report-export.js?v=7" defer fetchpriority="low"></script>
+<script src="assets/day-report-dash.js?v=11" defer fetchpriority="low"></script>
+<script src="assets/stock.js?v=50" defer fetchpriority="low"></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=10">
 <script src="assets/team.js?v=282" defer fetchpriority="low"></script>
 <!-- Deterministic, tenant-scoped morning briefing. Loaded after the ledgers it
      will inspect; Phase 1b deliberately ships with no active signal rules. -->
 <script src="assets/cancellation-history.js?v=2" defer fetchpriority="low"></script>
-<script src="assets/cash-sessions.js?v=3" defer fetchpriority="low"></script>
+<script src="assets/cash-sessions.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/order-course.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/briefing.js?v=17" defer fetchpriority="low"></script>
 <script src="assets/finance.js?v=1" defer fetchpriority="low"></script>
