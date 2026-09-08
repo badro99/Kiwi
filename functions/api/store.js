@@ -47,6 +47,7 @@ import {
 } from './inventory/_economat-catalogue.js';
 import { hotelUnitDeactivationBlockers } from './inventory/_hotel-unit-deactivation.js';
 import { validateCommercialSync } from './hotel/_commercial.js';
+import { validateRoomsDocument } from './hotel/_rooms.js';
 
 /* Les fonctionnalités qui ont le droit d'exister ici, et ce qu'on sait de leur
  * forme. La liste est FERMÉE : sans elle, n'importe quel client authentifié
@@ -633,6 +634,17 @@ export async function onRequestPost(context) {
   let mine = null;
   try { mine = current ? JSON.parse(current.data) : null; } catch (_) { mine = null; }
 
+  if (feature === 'rooms' && current) {
+    const currentCheck = validateRoomsDocument(mine, mine);
+    if (!currentCheck.ok) return json({ error: currentCheck.error, feature }, 503);
+    // Room audit history is server-owned. A generic document save may update
+    // room metadata, but it cannot forge, edit, or remove historical entries.
+    clean.value.roomAudits = Array.isArray(mine.roomAudits)
+      ? JSON.parse(JSON.stringify(mine.roomAudits)) : [];
+  } else if (feature === 'rooms') {
+    clean.value.roomAudits = [];
+  }
+
   // Écriture basée sur une révision périmée : on ne l'applique PAS. On renvoie la
   // copie serveur pour que le client fusionne et repropose. Sans ça, deux
   // appareils ouverts en même temps se recouvrent l'un l'autre.
@@ -683,7 +695,13 @@ export async function onRequestPost(context) {
     clean.value = checked.value;
     text = JSON.stringify(clean.value);
   }
-
+  if (feature === 'rooms') {
+    const checked = validateRoomsDocument(clean.value, mine, { checkDuplicateNumbers: true });
+    if (!checked.ok) return json({ error: checked.error, detail: checked.detail, roomId: checked.roomId }, checked.status || 422);
+    clean.value = checked.value;
+    text = JSON.stringify(clean.value);
+    if (text.length > FEATURES[feature].max) return json({ error: 'too-large', why: 'byte-size', max: FEATURES[feature].max }, 413);
+  }
   // Un premier envoi VIDE ne doit pas effacer un document déjà en ligne : c'est
   // la signature d'un navigateur neuf qui pousse avant d'avoir hydraté.
   if (serverRev && isEmptyDoc(clean.value)) {
@@ -694,6 +712,23 @@ export async function onRequestPost(context) {
 
   const rev = serverRev + 1;
   try {
+    if (feature === 'rooms') {
+      const writeDoc = serverRev
+        ? env.DB.prepare('UPDATE store_docs SET data=?,rev=?,updated_ts=? WHERE merchant=? AND feature=? AND rev=?')
+          .bind(text, rev, now, merchant, feature, serverRev)
+        : env.DB.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?) ON CONFLICT(merchant,feature) DO NOTHING')
+          .bind(merchant, feature, text, rev, now);
+      const written = await writeDoc.run();
+      if (Number(written.meta?.changes) !== 1) {
+        let latest = null;
+        try { latest = await env.DB.prepare('SELECT data, rev FROM store_docs WHERE merchant=? AND feature=?').bind(merchant, feature).first(); } catch (_) {}
+        let latestData = null;
+        try { latestData = latest?.data ? JSON.parse(latest.data) : null; } catch (_) {}
+        return json({ error: 'stale', feature, rev: latest?.rev || serverRev, data: latestData }, 409);
+      }
+      await poke(env, merchant, feature);
+      return json({ ok: true, feature, merchant, rev, updated_ts: now, bytes: text.length, data: clean.value });
+    }
     const writeDoc = feature === 'reservations' ? (serverRev
       ? env.DB.prepare('UPDATE store_docs SET data=?,rev=?,updated_ts=? WHERE merchant=? AND feature=? AND rev=?').bind(text, rev, now, merchant, feature, serverRev)
       : env.DB.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?) ON CONFLICT(merchant,feature) DO NOTHING').bind(merchant, feature, text, rev, now)) : env.DB.prepare(

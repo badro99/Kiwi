@@ -1232,3 +1232,58 @@
   .hx-billing .hx-room-form-actions { flex-wrap:wrap; }
   .hx-billing .hx-room-form-actions button { width:100%; }
 }
+
+/* Room plan combinable filters, selection and bulk operations */
+.hx-filter-chips-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 10px; }
+.hx-filter-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.hx-filter-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--surface,#fff); border: 1px solid var(--n-200); border-radius: 999px; font-size: 11.5px; color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+.hx-filter-chip button { border: 0; background: transparent; color: var(--n-500); cursor: pointer; font-size: 13px; line-height: 1; padding: 0 2px; }
+.hx-filter-chip button:hover { color: var(--danger, #b91c1c); }
+.hx-filter-reset-btn { font-size: 11.5px; color: var(--atlas); text-decoration: underline; background: transparent; border: 0; cursor: pointer; padding: 4px 6px; }
+.hx-room-matching-count { font-size: 11.5px; color: var(--n-500); margin-left: auto; }
+
+.hx-room-view-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 6px; background: var(--paper-soft, #f2f4f2); color: var(--atlas); }
+.hx-room-conn-badge { display: inline-block; font-size: 11px; font-weight: 700; color: var(--atlas); margin-left: 4px; }
+
+.hx-floor-empty-section { border: 1.5px dashed var(--n-200); border-radius: 14px; padding: 14px; background: var(--surface,#fff); }
+.hx-room-empty-section-hint { display: flex; align-items: center; justify-content: space-between; padding: 12px 6px 4px; color: var(--n-500); font-size: 12.5px; }
+
+.hx-room-bulk-bar { position: sticky; top: 12px; z-index: 100; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 18px; background: var(--surface,#fff); border: 1.5px solid var(--atlas); border-radius: 16px; box-shadow: 0 12px 32px -8px rgba(5,57,43,.25); margin: 14px 0; }
+.hx-room-bulk-info { display: flex; align-items: baseline; gap: 8px; font-size: 13px; color: var(--ink); }
+.hx-room-bulk-info small { color: var(--n-500); font-size: 11px; }
+.hx-room-bulk-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.hx-room.selection-mode { padding-right: 54px; }
+.hx-room-select-cb { position: absolute; top: 4px; right: 4px; z-index: 2; display: grid; place-items: center; width: 44px; height: 44px; margin: 0; cursor: pointer; }
+.hx-room-select-cb input { width: 20px; height: 20px; margin: 0; cursor: pointer; accent-color: var(--atlas); }
+.hx-room.selected { border-color: var(--atlas) !important; box-shadow: 0 0 0 2px var(--atlas); }
+
+.hx-char-checkboxes { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-top: 6px; }
+.hx-char-label { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink); cursor: pointer; }
+.hx-filter-checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+.hx-filter-check-label { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink); cursor: pointer; }
+.hx-filter-group { border: 1px solid var(--n-200); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+.hx-filter-group legend { font-size: 12px; font-weight: 650; color: var(--ink); padding: 0 6px; }
+
+.hx-views-config-list { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.hx-view-config-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--paper-soft, #f2f4f2); border: 1px solid var(--n-200); border-radius: 999px; font-size: 12px; color: var(--ink); }
+.hx-view-config-chip button { border: 0; background: transparent; color: var(--n-500); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; }
+.hx-view-config-chip button:hover { color: var(--danger, #b91c1c); }
+.hx-config-char-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border-radius: 8px; background: var(--surface, #fff); border: 1px solid var(--n-200); font-size: 12.5px; }
+
+/* RTL layout adjustments */
+[dir="rtl"] .hx-room-bulk-bar { flex-direction: row-reverse; }
+[dir="rtl"] .hx-room.selection-mode { padding-right: 13px; padding-left: 54px; }
+[dir="rtl"] .hx-room-select-cb { right: auto; left: 4px; }
+[dir="rtl"] .hx-room-matching-count { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .hx-room-conn-badge { margin-left: 0; margin-right: 4px; }
+[dir="rtl"] .hx-filter-chips-wrap { direction: rtl; }
+
+/* Responsive tablet adjustments */
+@media (max-width: 900px) {
+  .hx-room-bulk-bar { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 14px; }
+  .hx-room-bulk-actions { justify-content: flex-end; width: 100%; }
+  .hx-room-bulk-actions button { min-height: 42px; touch-action: manipulation; }
+  .hx-filter-checkbox-grid { grid-template-columns: 1fr; }
+  .hx-char-checkboxes { grid-template-columns: 1fr; }
+}

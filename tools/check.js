@@ -432,7 +432,7 @@ for (const test of [
   'platform-kernel-test.mjs', 'platform-ops-test.mjs', 'media-upload-test.mjs', 'hotel-media-cleanup-test.mjs', 'operations-system-test.mjs',
   'vertical-feature-parity-test.mjs', 'pos-sale-cloud-sync-test.mjs',
   'caisse-opening-gate-test.mjs',
-  'hotel-rooms-test.mjs', 'hotel-stays-test.mjs', 'hotel-reservations-d1-test.mjs', 'hotel-channel-sync-test.mjs', 'hotel-sync-worker-test.mjs', 'hotel-caisse-catalog-test.mjs',
+  'hotel-rooms-test.mjs', 'hotel-room-plan-test.mjs', 'hotel-room-bulk-api-test.mjs', 'hotel-cloud-save-test.mjs', 'hotel-room-plan-ui-test.mjs', 'hotel-stays-test.mjs', 'hotel-reservations-d1-test.mjs', 'hotel-channel-sync-test.mjs', 'hotel-sync-worker-test.mjs', 'hotel-caisse-catalog-test.mjs',
   'sw-immutable-revalidation-test.mjs', 'load-test-suite-test.mjs',
 ]) {
   const { spawnSync } = require('child_process');

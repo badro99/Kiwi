@@ -58,6 +58,7 @@
   var STORE_PREFIX = 'kiwi:';          // le préfixe de venue-store.js
   var COOLDOWN = 20000;                // relecture au retour d'onglet
   var DEBOUNCE = 900;
+  var SAVE_TIMEOUT = 10000;
 
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function lset(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
@@ -70,6 +71,9 @@
    * qui diffèrent, donc taire une modification) est impossible ici. */
   function identical(a, b) {
     try { return JSON.stringify(a) === JSON.stringify(b); } catch (_) { return false; }
+  }
+  function snapshot(value) {
+    try { return value == null ? value : JSON.parse(JSON.stringify(value)); } catch (_) { return value; }
   }
 
   /* Jumeau de slugMerchant (functions/auth/_lib.js). Le nom d'un magasin doit
@@ -495,83 +499,142 @@
     function push(delay, alreadyDirty) {
       if (!on()) return;
       if (!alreadyDirty) markDirty(slugOf());
+      schedulePush(delay, slugOf());
+    }
+
+    function schedulePush(delay, originSlug) {
       if (st.timer) clearTimeout(st.timer);
-      st.timer = setTimeout(function () { pushNow(); }, delay == null ? DEBOUNCE : delay);
+      var scheduledSlug = originSlug || slugOf();
+      var timer = setTimeout(function () {
+        if (st.timer === timer) st.timer = null;
+        if (scheduledSlug !== slugOf()) return;
+        pushNow();
+      }, delay == null ? DEBOUNCE : delay);
+      st.timer = timer;
     }
 
     function pushNow(o) {
-      st.timer = null;
-      if (!on()) return;
+      o = o || {};
+      var explicit = !!o.explicit;
+      if (!on()) return Promise.resolve({ ok: false, status: 403, error: 'disabled', rev: st.rev });
       var slug = slugOf();
-      var sentDirty = dirtyToken(slug) || markDirty(slug);
+      var sentDirty = explicit ? null : (dirtyToken(slug) || markDirty(slug));
+      var hasExplicitData = Object.prototype.hasOwnProperty.call(o, 'data');
+      var requestedData = explicit && hasExplicitData ? snapshot(o.data) : null;
+      var payloadData = hasExplicitData ? (explicit ? snapshot(o.data) : o.data) : opts.read();
+      if (o && o.expectedRevisions && payloadData && typeof payloadData === 'object') {
+        payloadData = Object.assign({}, payloadData, { _expectedRevisions: o.expectedRevisions });
+      }
       // Règle 3 : jamais pousser avant d'avoir lu, sinon un navigateur neuf efface.
-      if (!st.read[slug]) { pull(true); return; }
+      if (!st.read[slug]) {
+        if (!explicit) pull(true);
+        return Promise.resolve({ ok: false, status: 409, error: 'unread', rev: st.rev });
+      }
       /* Rien à dire au serveur : le document est vide ET il n'y a encore aucune
        * ligne en face. Sans ce garde, la simple ouverture d'une page suffisait à
        * créer une ligne — celle de la valeur par défaut que le module vient de
        * matérialiser, que le commerçant n'a jamais choisie. Le prochain appareil
        * l'aurait alors reçue comme un vrai réglage. Un document vidé APRÈS coup
        * (rev > 0) passe, lui : c'est une suppression, pas un silence. */
-      if (!st.rev && empty(opts.read())) {
+      /* Explicit saves carry an intentional payload. A feature may define
+       * isEmpty() around one primary collection (for example rooms), while a
+       * section-only settings edit is still meaningful and must be posted. */
+      if (!explicit && !st.rev && empty(opts.read())) {
         clearDirty(slug, sentDirty);
-        return;
+        return Promise.resolve({ ok: true, status: 204, error: 'empty', rev: st.rev });
       }
-      if (st.busy) { st.again = true; return; }
+      if (st.busy) {
+        if (!explicit) st.again = true;
+        return Promise.resolve({ ok: false, status: 409, error: 'busy', rev: st.rev });
+      }
       st.busy = true;
-      fetch('/api/store', {
+      var controller = typeof AbortController === 'function' ? new AbortController() : null;
+      var timeout;
+      var request = Promise.resolve().then(function () { return fetch('/api/store', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          feature: feature, merchant: slug, baseRev: st.rev, data: opts.read(),
+          feature: feature, merchant: slug, baseRev: (o && o.baseRev != null) ? o.baseRev : st.rev, data: payloadData,
         }),
         // L'onglet peut se fermer juste après une saisie : keepalive laisse la
         // requête partir quand même.
         keepalive: !!(o && o.keepalive),
-      })
+        signal: controller ? controller.signal : undefined,
+      }); })
         .then(function (r) {
           return r.json().then(function (j) { return { status: r.status, j: j }; })
             .catch(function () { return { status: r.status, j: null }; });
         })
+        ;
+      var timeoutResult = new Promise(function (resolve) {
+        timeout = setTimeout(function () {
+          if (controller) controller.abort();
+          resolve({ timeout: true });
+        }, SAVE_TIMEOUT);
+      });
+      return Promise.race([request, timeoutResult])
         .then(function (res) {
-          if (slug !== slugOf()) return;
+          if (res && res.timeout) {
+            return { ok: false, status: 408, error: 'timeout', rev: st.rev };
+          }
+          if (slug !== slugOf()) {
+            return { ok: false, status: 409, error: 'tenant-switched', rev: st.rev };
+          }
           if (res.status === 200 && res.j && res.j.ok) {
             st.rev = +res.j.rev || 0;
             writeRev(slug, st.rev);
             clearRefused(slug);
-            clearDirty(slug, sentDirty);
+            if (!explicit || identical(requestedData, opts.read())) clearDirty(slug, sentDirty || dirtyToken(slug));
+            if (explicit && identical(requestedData, opts.read())) {
+              if (st.timer) clearTimeout(st.timer);
+              st.timer = null;
+              st.again = false;
+            }
             st.tries = 0;
-            return;
+            return { ok: true, status: 200, rev: st.rev, data: (res.j && res.j.data != null) ? res.j.data : payloadData };
           }
           /* 413 : le document dépasse une borne du serveur. La copie locale est
              intacte, mais elle ne quittera JAMAIS cet appareil tant que rien ne
-             change — un silence qui se lit comme « c'est enregistré ». On le
+             change -- un silence qui se lit comme « c'est enregistré ». On le
              marque, on le retentera, et la surface qui sait parler au commerçant
              peut le lui dire. */
           if (res.status === 413) {
-            markRefused(slug, (res.j && res.j.why) || 'too-large');
+            var tooLarge = (res.j && res.j.why) || 'too-large';
+            if (!explicit) markRefused(slug, tooLarge);
             if (opts.onRefused) {
-              try { opts.onRefused((res.j && res.j.why) || 'too-large'); } catch (_) {}
+              try { opts.onRefused(tooLarge); } catch (_) {}
             }
-            return;
+            return { ok: false, status: 413, error: tooLarge, rev: st.rev };
           }
           // 409 : le serveur a bougé (ou a refusé un envoi vide). Il rend sa
-          // copie — on fusionne et on repropose, quelques fois au plus pour ne
+          // copie -- on fusionne et on repropose, quelques fois au plus pour ne
           // jamais tourner en rond si l'autre appareil écrit en continu.
-          if (res.status === 409 && res.j && res.j.data && st.tries < 3) {
-            st.tries++;
-            var next = merge(opts.read(), res.j.data);
-            opts.write(next);
-            st.rev = +res.j.rev || 0;
-            writeRev(slug, st.rev);
-            if (opts.onPulled) { try { opts.onPulled(next); } catch (_) {} }
-            st.again = true;
+          if (res.status === 409) {
+            if (!explicit && (!o || !o.noAutoMerge) && (!res.j || res.j.error !== 'room-conflict') && res.j && res.j.data && st.tries < 3) {
+              st.tries++;
+              var next = merge(opts.read(), res.j.data);
+              opts.write(next);
+              st.rev = +res.j.rev || 0;
+              writeRev(slug, st.rev);
+              if (opts.onPulled) { try { opts.onPulled(next); } catch (_) {} }
+              st.again = true;
+            }
+            return { ok: false, status: 409, error: (res.j && res.j.error) || 'stale', rev: res.j && res.j.rev, data: res.j && res.j.data };
           }
-          // 401 / 413 / 503 / 500 → on garde tout en local et on retentera.
+          return { ok: false, status: res.status, error: (res.j && res.j.error) || 'save-failed', rev: st.rev };
         })
-        .catch(function () { /* hors ligne : la saisie reste, la remontée attendra */ })
-        .then(function () {
+        .catch(function (err) {
+          /* hors ligne : la saisie reste, la remontée attendra */
+          return { ok: false, status: 0, offline: true, error: String(err), rev: st.rev };
+        })
+        .then(function (result) {
+          clearTimeout(timeout);
           st.busy = false;
-          if (st.again) { st.again = false; push(400); }
+          if (st.again) {
+            st.again = false;
+            schedulePush(400, slug);
+          }
+          return result;
         });
     }
 
@@ -616,7 +679,10 @@
       bind: bind,
       pull: pull,
       push: push,
-      flush: function () { if (st.timer) clearTimeout(st.timer); st.timer = null; pushNow({ keepalive: true }); },
+      pushNow: pushNow,
+      rev: function () { return st.rev; },
+      save: function (data) { return pushNow({ explicit: true, noAutoMerge: true, data: snapshot(data) }); },
+      flush: function () { if (st.timer) clearTimeout(st.timer); st.timer = null; return pushNow({ keepalive: true }); },
     };
     live.push(handle);
     return handle;

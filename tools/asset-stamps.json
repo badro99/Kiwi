@@ -132,8 +132,8 @@
     "sha": "18979319d717bb43"
   },
   "assets/caisse-pwa.js": {
-    "v": "499",
-    "sha": "3413c745a8fc435c"
+    "v": "500",
+    "sha": "4f14a9f4b0a31383"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -180,8 +180,8 @@
     "sha": "2e367fbc0e624a0a"
   },
   "assets/cloud-doc.js": {
-    "v": "1",
-    "sha": "d0c5823f8ffdcf26"
+    "v": "5",
+    "sha": "3666efefc1cea738"
   },
   "assets/color-palette.js": {
     "v": "5",
@@ -208,8 +208,8 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "493",
-    "sha": "f47d2610976bcfb5"
+    "v": "494",
+    "sha": "d23c49b91c82d063"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -264,8 +264,8 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/employee-live.js": {
-    "v": "492",
-    "sha": "1ac49a6f4dc75ec9"
+    "v": "493",
+    "sha": "a9a9797496d27a8e"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -340,12 +340,12 @@
     "sha": "d597ba5cac11de01"
   },
   "assets/hotel.css": {
-    "v": "23",
-    "sha": "93bb54e7aa37b88f"
+    "v": "27",
+    "sha": "d550a1968a925247"
   },
   "assets/hotel.js": {
-    "v": "34",
-    "sha": "69d83dcd3178c692"
+    "v": "40",
+    "sha": "eaae56ac8f831d02"
   },
   "assets/hours-ui.js": {
     "v": "1",

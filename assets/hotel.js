@@ -319,7 +319,124 @@
   let openModal = null;
   let cuTapeOffset = 0;
   let cuReservationEventsBound = false;
-  const cuRackFilter = { floor: 'all', status: 'all', q: '' };
+  const cuRackFilter = {
+    floor: 'all',
+    floors: new Set(),
+    categories: new Set(),
+    status: 'all',
+    hasView: false,
+    views: new Set(),
+    characteristics: new Set(),
+    connectingOnly: false,
+    minCapacity: 0,
+    q: '',
+  };
+  let cuSelectionMode = false;
+  const cuSelectedRooms = new Set();
+  const cuSelectedRows = () => Object.values(R()).filter((r) => !r.deletedAt && cuSelectedRooms.has(String(r.id)));
+  const cuSelectedNumbers = () => cuSelectedRows().map((r) => r.n).sort((a, b) => a - b);
+  let cuFloorSaving = false;
+  let cuBulkSaving = false;
+  let cuBulkPlan = null;
+  function cuPendingBulk() {
+    try {
+      const plan = JSON.parse(localStorage.getItem('kiwi:hotel-bulk-draft:v1:' + cuStateId()) || 'null');
+      return plan?.operationId && plan.merchant === cuMerchantSlug() && plan.stateId === cuStateId() && Array.isArray(plan.targets) && plan.targets.length ? plan : null;
+    } catch (_) { return null; }
+  }
+  let cuCurrentFilterVenue = null;
+  const DEFAULT_VIEWS = ['Mer', 'Jardin', 'Piscine', 'Ville', 'Patio'];
+  const VIEW_LABELS = {
+    Mer: { fr: 'Mer', en: 'Sea', ar: 'بحر' },
+    Jardin: { fr: 'Jardin', en: 'Garden', ar: 'حديقة' },
+    Piscine: { fr: 'Piscine', en: 'Pool', ar: 'مسبح' },
+    Ville: { fr: 'Ville', en: 'City', ar: 'مدينة' },
+    Patio: { fr: 'Patio', en: 'Patio', ar: 'فناء' },
+  };
+  const HOTEL_CHARACTERISTICS = [
+    { id: 'balcony', label: 'Balcon', labels: { fr: 'Balcon', en: 'Balcony', ar: 'شرفة' } },
+    { id: 'terrace', label: 'Terrasse', labels: { fr: 'Terrasse', en: 'Terrace', ar: 'تراس' } },
+    { id: 'pmr', label: 'Accessible PMR', labels: { fr: 'Accessible PMR', en: 'Accessible (PRM)', ar: 'ولوج لذوي الاحتياجات' } },
+    { id: 'bathtub', label: 'Baignoire', labels: { fr: 'Baignoire', en: 'Bathtub', ar: 'حوض استحمام' } },
+    { id: 'shower_walkin', label: 'Douche à l’italienne', labels: { fr: 'Douche à l’italienne', en: 'Walk-in shower', ar: 'دش إيطالي' } },
+    { id: 'quiet', label: 'Calme / insonorisée', labels: { fr: 'Calme / insonorisée', en: 'Quiet / soundproof', ar: 'هادئة / عازلة للصوت' } },
+    { id: 'desk', label: 'Espace bureau', labels: { fr: 'Espace bureau', en: 'Desk space', ar: 'مكتب عمل' } },
+    { id: 'ac', label: 'Climatisation', labels: { fr: 'Climatisation', en: 'Air conditioning', ar: 'مكيف هواء' } },
+  ];
+
+  function trL(o) {
+    const l = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
+    return o == null ? '' : (o[l] ?? o.fr ?? o);
+  }
+  function cuAuthorizer() {
+    const auth = window.KiwiPinAuthorizer || window.KiwiAuthorizer;
+    if (auth && typeof auth === 'object') {
+      return {
+        id: String(auth.id || 'supervisor'),
+        name: String(auth.name || 'Superviseur').trim(),
+        role: String(auth.role || 'manager').trim(),
+      };
+    }
+    return null;
+  }
+
+  function cuAllViews() {
+    const st = cuState();
+    const views = Array.isArray(st.views) ? st.views : DEFAULT_VIEWS;
+    return Array.from(new Set(views));
+  }
+  function cuViewLabel(v, l) {
+    if (!v) return '';
+    const lang = l || (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
+    if (VIEW_LABELS[v] && VIEW_LABELS[v][lang]) return VIEW_LABELS[v][lang];
+    return v;
+  }
+  function cuAllCharacteristics() {
+    const st = cuState();
+    const customs = Array.isArray(st.customCharacteristics) ? st.customCharacteristics : [];
+    return HOTEL_CHARACTERISTICS.concat(customs);
+  }
+  function cuCharLabel(c, l) {
+    if (!c) return '';
+    const lang = l || (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
+    if (typeof c === 'string') {
+      const found = cuAllCharacteristics().find((h) => h.id === c);
+      if (found) return cuCharLabel(found, lang);
+      return c;
+    }
+    if (c.labels && typeof c.labels === 'object') {
+      return c.labels[lang] || c.labels.fr || c.label || c.id;
+    }
+    return c.label || c.name || c.id;
+  }
+  function cuActiveActor() {
+    if (window.KiwiMe && typeof window.KiwiMe === 'object') {
+      return {
+        id: String(window.KiwiMe.id || window.KiwiMe.email || 'me'),
+        name: String(window.KiwiMe.name || window.KiwiMe.business || 'Propriétaire').trim(),
+        role: String(window.KiwiMe.role || (window.KiwiMe.operator ? 'operator' : 'owner')).trim(),
+      };
+    }
+    if (window.KiwiCurrentStaff && typeof window.KiwiCurrentStaff === 'object') {
+      return {
+        id: String(window.KiwiCurrentStaff.id || 'staff'),
+        name: String(window.KiwiCurrentStaff.name || 'Personnel').trim(),
+        role: String(window.KiwiCurrentStaff.role || 'staff').trim(),
+      };
+    }
+    if (window.KiwiIdentity?.state?.authenticated) {
+      return {
+        id: 'authenticated-user',
+        name: 'Utilisateur connecté',
+        role: window.KiwiIdentity.state.operator ? 'operator' : 'owner',
+      };
+    }
+    return {
+      id: 'local-operator',
+      name: 'Opérateur local',
+      role: 'operator',
+    };
+  }
   const K = () => window.Kiwi;
 
   /* ═══════════════ CUSTOM HOTELS · DURABLE ROOM REGISTER ═══════════════
@@ -453,6 +570,9 @@
       floorRecords: Object.values(floors),
       typeRecords: Object.values(roomTypes), folios: {}, baseRate: null,
       rateUpdatedAt: 0, sold: 0, updatedAt: now,
+      views: DEFAULT_VIEWS.slice(),
+      customCharacteristics: [],
+      roomAudits: [],
     };
   }
   function cuHydrate(raw) {
@@ -477,6 +597,7 @@
       if (!x || x.deletedAt) return;
       const id = String(x.id || cuTypeId(x.name, x.updatedAt));
       roomTypes[id] = {
+        ...x,
         id, name: String(x.name || 'Chambre').trim().slice(0, 60) || 'Chambre',
         rate: x.rate != null && Number.isFinite(+x.rate) && +x.rate >= 0 ? +x.rate : null,
         description: String(x.description || '').trim().slice(0, 300),
@@ -511,7 +632,7 @@
     floorRecords.forEach((x, index) => {
       if (!x || x.deletedAt) return;
       const id = String(x.id || cuFloorId(x.name, x.updatedAt));
-      floors[id] = { id, name: String(x.name || 'Vos chambres').trim().slice(0, 60) || 'Vos chambres', order: Number.isFinite(+x.order) ? +x.order : index, updatedAt: +x.updatedAt || 0 };
+      floors[id] = { ...x, id, name: String(x.name || 'Vos chambres').trim().slice(0, 60) || 'Vos chambres', order: Number.isFinite(+x.order) ? +x.order : index, updatedAt: +x.updatedAt || 0 };
     });
     const findFloor = (x) => {
       if (x.floorId && floors[x.floorId]) return x.floorId;
@@ -524,6 +645,7 @@
       const n = parseInt(x.n, 10);
       if (!Number.isFinite(n) || n < 1 || n > 9999 || rooms[n]) return;
       rooms[n] = {
+        ...x,
         id: String(x.id || ('room:' + n)), n,
         typeId: findType(x),
         typeName: String(x.typeName || x.type || 'Chambre').slice(0, 60),
@@ -535,18 +657,27 @@
         guest: x.guest ? String(x.guest).slice(0, 120) : null,
         meta: String(x.meta || (x.status === 'sale' ? 'À remettre à blanc' : 'Libre · propre')).slice(0, 180),
         updatedAt: +x.updatedAt || 0,
+        view: x.view ? String(x.view).trim().slice(0, 60) : null,
+        characteristics: Array.isArray(x.characteristics) ? x.characteristics.map(String) : [],
+        connectingRoomIds: Array.isArray(x.connectingRoomIds) ? x.connectingRoomIds.map(String) : [],
+        connectingMeta: (x.connectingMeta && typeof x.connectingMeta === 'object') ? x.connectingMeta : {},
       };
     });
     const folios = {};
     const folioRows = Array.isArray(raw.folios) ? raw.folios : Object.values(raw.folios || {});
     folioRows.forEach((f) => { if (f && !f.closedAt && rooms[+f.room]) folios[+f.room] = f; });
     return {
+      documentExtras: { ...raw },
+      configUpdatedAt: +raw.configUpdatedAt || 0,
       v: 4, rooms, roomRecords: roomRecords.slice(), roomTypes, typeRecords: typeRecords.slice(), floors,
       floorRecords: floorRecords.slice(), folios, closedFolios: folioRows.filter((f) => f?.closedAt),
       baseRate: raw.baseRate != null && Number.isFinite(+raw.baseRate) && +raw.baseRate >= 0 ? +raw.baseRate : null,
       rateUpdatedAt: +raw.rateUpdatedAt || 0,
       sold: Math.max(0, +raw.sold || 0), updatedAt: +raw.updatedAt || 0,
       count: Object.keys(rooms).length,
+      views: Array.isArray(raw.views) ? raw.views.map(String).slice(0, 50) : DEFAULT_VIEWS.slice(),
+      customCharacteristics: Array.isArray(raw.customCharacteristics) ? raw.customCharacteristics.slice(0, 50) : [],
+      roomAudits: Array.isArray(raw.roomAudits) ? raw.roomAudits.slice() : [],
     };
   }
   function cuDocument(st) {
@@ -561,13 +692,24 @@
     (st.floorRecords || []).forEach((f) => { if (f && f.id) floorById[f.id] = f; });
     Object.values(st.floors || {}).forEach((f) => { floorById[f.id] = f; });
     return {
+      ...(st.documentExtras || {}),
       v: 4, rooms: Object.values(byId), roomTypes: Object.values(typeById), floors: Object.values(floorById), folios: (st.closedFolios || []).concat(Object.values(st.folios || {})),
+      configUpdatedAt: st.configUpdatedAt || 0,
       baseRate: st.baseRate, rateUpdatedAt: st.rateUpdatedAt || 0,
       sold: st.sold || 0, updatedAt: st.updatedAt || 0,
+      views: Array.isArray(st.views) ? st.views.slice(0, 50) : DEFAULT_VIEWS.slice(),
+      customCharacteristics: Array.isArray(st.customCharacteristics) ? st.customCharacteristics.slice(0, 50) : [],
+      roomAudits: Array.isArray(st.roomAudits) ? st.roomAudits.slice() : [],
     };
   }
   function cuWriteLocal(st, id) {
-    try { localStorage.setItem(cuStoreKey(id), JSON.stringify(cuDocument(st))); } catch (_) {}
+    try {
+      localStorage.setItem(cuStoreKey(id), JSON.stringify(cuDocument(st)));
+      return true;
+    } catch (err) {
+      console.warn('cuWriteLocal storage failed', err);
+      return false;
+    }
   }
   function cuReadLocal(id) {
     try {
@@ -585,10 +727,78 @@
       const old = rows[id];
       const xt = Math.max(+x.updatedAt || 0, +x.deletedAt || 0);
       const ot = old ? Math.max(+old.updatedAt || 0, +old.deletedAt || 0) : -1;
-      if (!old || xt >= ot) rows[id] = x;
+      if (!old || xt >= ot) rows[id] = { ...x, id };
     };
     (Array.isArray(b.rooms) ? b.rooms : []).forEach(take);
     (Array.isArray(a.rooms) ? a.rooms : []).forEach(take);
+
+    // Connecting-room reciprocity reconciliation
+    const activeRooms = Object.values(rows).filter((r) => r && !r.deletedAt);
+    const activeMap = new Map();
+    activeRooms.forEach((r) => activeMap.set(String(r.id), r));
+
+    const linkDecisions = new Map();
+    const pairKeyOf = (id1, id2) => JSON.stringify([String(id1), String(id2)].sort());
+    const recordDecision = (id1, id2, at, linked, explicit = true) => {
+      if (!id1 || !id2 || id1 === id2) return;
+      const pairKey = pairKeyOf(id1, id2);
+      const prev = linkDecisions.get(pairKey);
+      if (!prev || (explicit && !prev.explicit) || (explicit === prev.explicit && (at > prev.at || (at === prev.at && !linked)))) linkDecisions.set(pairKey, { at, linked, explicit });
+    };
+
+    const allSources = (Array.isArray(a.rooms) ? a.rooms : []).concat(Array.isArray(b.rooms) ? b.rooms : []);
+    allSources.forEach((r) => {
+      if (!r || !r.id) return;
+      const rid = String(r.id);
+      const meta = (r.connectingMeta && typeof r.connectingMeta === 'object') ? r.connectingMeta : {};
+      for (const [targetId, entry] of Object.entries(meta)) {
+        if (entry && typeof entry === 'object' && entry.at != null) {
+          recordDecision(rid, String(targetId), +entry.at || 0, !!entry.linked);
+        }
+      }
+      if (Array.isArray(r.connectingRoomIds)) {
+        const rTime = Math.max(+r.updatedAt || 0, 1);
+        r.connectingRoomIds.forEach((cid) => {
+          if (cid && cid !== rid) {
+            const pairKey = pairKeyOf(rid, cid);
+            if (!linkDecisions.has(pairKey)) {
+              recordDecision(rid, String(cid), rTime, true, false);
+            }
+          }
+        });
+      }
+    });
+
+    activeRooms.forEach((r) => {
+      const rid = String(r.id);
+      const newConnecting = new Set();
+      const newMeta = { ...(r.connectingMeta || {}) };
+
+      for (const other of activeRooms) {
+        const oid = String(other.id);
+        if (rid === oid) continue;
+        const pairKey = pairKeyOf(rid, oid);
+        const decision = linkDecisions.get(pairKey);
+        if (decision) {
+          newMeta[oid] = { at: decision.at, linked: decision.linked };
+          if (decision.linked) newConnecting.add(oid);
+        } else if (Array.isArray(r.connectingRoomIds) && r.connectingRoomIds.includes(oid)) {
+          newConnecting.add(oid);
+        }
+      }
+      r.connectingRoomIds = Array.from(newConnecting);
+      r.connectingMeta = newMeta;
+    });
+
+    // Enforce strict mutual reciprocity and remove dead references
+    activeRooms.forEach((r) => {
+      const rid = String(r.id);
+      r.connectingRoomIds = (r.connectingRoomIds || []).filter((cid) => {
+        const other = activeMap.get(String(cid));
+        return other && Array.isArray(other.connectingRoomIds) && other.connectingRoomIds.map(String).includes(rid);
+      });
+    });
+
     const types = {};
     const takeType = (x) => {
       if (!x) return;
@@ -620,14 +830,39 @@
     (Array.isArray(b.folios) ? b.folios : []).forEach(takeFolio);
     (Array.isArray(a.folios) ? a.folios : []).forEach(takeFolio);
     const rateOwner = (+a.rateUpdatedAt || 0) >= (+b.rateUpdatedAt || 0) ? a : b;
+
+    // Deduplicate audit events by id
+    const auditMap = new Map();
+    const takeAudit = (item) => {
+      if (!item || typeof item !== 'object') return;
+      const id = String(item.operationId || item.id || ('audit_' + item.at + '_' + (item.actor?.id || '')));
+      if (!auditMap.has(id)) {
+        auditMap.set(id, item);
+      } else {
+        const prev = auditMap.get(id);
+        if ((+item.at || 0) >= (+prev.at || 0)) auditMap.set(id, item);
+      }
+    };
+    (Array.isArray(a.roomAudits) ? a.roomAudits : []).forEach(takeAudit);
+    (Array.isArray(b.roomAudits) ? b.roomAudits : []).forEach(takeAudit);
+
+    const configOwner = (+a.configUpdatedAt || 0) > (+b.configUpdatedAt || 0) ? a : b;
+    const mergedViews = Array.isArray(configOwner.views) ? configOwner.views.slice() : DEFAULT_VIEWS.slice();
+
     return {
+      ...a, ...b,
       v: 4, rooms: Object.values(rows), roomTypes: Object.values(types), floors: Object.values(floors), folios: Object.values(folios),
       baseRate: rateOwner.baseRate == null ? null : +rateOwner.baseRate,
       rateUpdatedAt: +rateOwner.rateUpdatedAt || 0,
       sold: Math.max(+a.sold || 0, +b.sold || 0), updatedAt: Math.max(+a.updatedAt || 0, +b.updatedAt || 0),
+      views: mergedViews,
+      configUpdatedAt: +configOwner.configUpdatedAt || 0,
+      customCharacteristics: (configOwner.customCharacteristics || []).slice(),
+      roomAudits: Array.from(auditMap.values()).sort((x, y) => (+x.at || 0) - (+y.at || 0)),
     };
   }
   function cuState() {
+    cuEnsureFilterVenue();
     const id = cuStateId();
     if (!CUSTOM_HX[id]) {
       CUSTOM_HX[id] = cuReadLocal(id) || cuSeed();
@@ -640,8 +875,31 @@
     st = st || cuState();
     st.count = Object.keys(st.rooms || {}).length;
     st.updatedAt = cuStamp();
-    cuWriteLocal(st, cuStateId());
+    const localOk = cuWriteLocal(st, cuStateId());
     if (hotelCloud) hotelCloud.push();
+    return localOk;
+  }
+  async function cuSaveCloud(st) {
+    if (!hotelCloud || typeof hotelCloud.save !== 'function') return { ok: false, status: 503, error: 'cloud-unavailable' };
+    const scope = cuStateId();
+    const payload = cuDocument(st || cuState());
+    const result = await hotelCloud.save(payload);
+    if (scope !== cuStateId()) return { ok: false, status: 409, error: 'tenant-switched' };
+    return result || { ok: false, status: 503, error: 'unconfirmed' };
+  }
+  async function cuCommitDraft(st) {
+    const scope = cuStateId();
+    st.updatedAt = cuStamp();
+    const result = await cuSaveCloud(st);
+    if (!result.ok) throw new Error(result.status === 409
+      ? trL({fr:'Actualisez le plan puis réessayez. Aucune modification confirmée.',en:'Refresh the room plan and retry. No change confirmed.',ar:'حدّث مخطط الغرف وأعد المحاولة. لم يتم تأكيد أي تعديل.'})
+      : trL({fr:'Enregistrement non confirmé. Vérifiez la connexion et réessayez.',en:'Save not confirmed. Check your connection and retry.',ar:'لم يتم تأكيد الحفظ. تحقق من الاتصال وأعد المحاولة.'}));
+    if (scope !== cuStateId()) throw new Error('Établissement changé');
+    const next = result.data ? cuHydrate(result.data) : st;
+    CUSTOM_HX[scope] = next;
+    const cached = cuWriteLocal(next, scope);
+    if (!cached) toast(trL({fr:'Confirmé au serveur, cache local indisponible',en:'Saved on server; local cache unavailable',ar:'حُفظ في الخادم؛ التخزين المحلي غير متاح'}), {type:'warn'});
+    return next;
   }
   function cuCloudWrite(doc) {
     const id = cuStateId();
@@ -659,7 +917,7 @@
       read: () => cuDocument(cuState()),
       write: cuCloudWrite,
       merge: cuMerge,
-      isEmpty: (d) => !d || !Array.isArray(d.rooms) || !d.rooms.some((r) => r && !r.deletedAt),
+      isEmpty: (d) => !d || (!d.rooms?.length && !d.floors?.length && !d.roomTypes?.length),
       onPulled: () => { if (openDrawer && isCustomHotel()) rerender(); },
     });
     hotelCloud.bind();
@@ -675,6 +933,7 @@
     const type = st.roomTypes?.[r.typeId];
     return {
       name: type?.name || r.typeName || 'Chambre',
+      maxGuests: type?.maxGuests || 2,
       base: type ? (type.rate == null ? st.baseRate : type.rate) : (r.rate == null ? st.baseRate : r.rate),
     };
   };
@@ -910,10 +1169,35 @@
       ${floors}
     </div>`;
   }
-  function roomModal(n) {
+  function cuConnectingAvail(cr, dates) {
+    if (!cr) return '';
+    const crStatus = cuRoomStatus(cr);
+    if (!dates || !dates.startAt || !dates.endAt) {
+      return 'Disponibilité non vérifiée (dates requises)';
+    }
+    const doc = window.KiwiReservations?.get?.();
+    if (!doc || !Array.isArray(doc.bookings)) {
+      return 'Disponibilité non vérifiée (réservations non chargées)';
+    }
+    if (typeof window.KiwiReservations.resourceFree !== 'function') {
+      return 'Disponibilité non vérifiée';
+    }
+    const parseTime = (v) => typeof v === 'number' ? v : Date.parse(v);
+    const start = parseTime(dates.startAt), end = parseTime(dates.endAt);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 'Disponibilité non vérifiée (dates invalides)';
+    let isFree;
+    try { isFree = window.KiwiReservations.resourceFree(doc, cr.id, start, end); }
+    catch (_) { return 'Disponibilité non vérifiée'; }
+    if (!isFree) {
+      return 'Occupée / réservée sur ces dates';
+    }
+    return cr.status === 'libre' ? 'Disponible pour ces dates' : crStatus.label;
+  }
+  function roomModal(n, opts) {
     const r = R()[n];
     if ((r.status === 'occ' || r.status === 'depart') && F()[n]) return openFolio(n);
     if (r.status === 'arrivee' && F()[n]) return openFolio(n);
+    const dates = (opts && opts.startAt && opts.endAt) ? { startAt: +opts.startAt, endAt: +opts.endAt } : null;
     const stLbl = { arrivee: 'Arrivée attendue', libre: 'Libre · propre', sale: 'Libre · sale, en remise', hs: 'Hors-service' };
     const m = K().modal({
       tag: 'CH. ' + n + ' · ' + roomTypeOf(n).name.toUpperCase(),
@@ -924,6 +1208,21 @@
         <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;">
           <div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Statut</span><b>${stLbl[r.status] || r.status}</b></div>
           <div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Tarif de base</span><b style="font-family:var(--mono);">${MAD(roomTypeOf(n).base)} / nuit</b></div>
+          ${r.view ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Vue</span><b>Vue ${esc(cuViewLabel(r.view))}</b></div>` : ''}
+          ${(r.characteristics && r.characteristics.length) ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Équipements</span><b>${esc(r.characteristics.map((c) => cuCharLabel(c)).join(', '))}</b></div>` : ''}
+          ${(r.connectingRoomIds && r.connectingRoomIds.length) ? `
+          <div style="display:flex;flex-direction:column;gap:4px;padding:8px 10px;border-radius:8px;background:var(--n-50,#f7f8f7);margin-top:4px;">
+            <span style="color:var(--n-500);font-size:11.5px;font-weight:600;">Portes communicantes</span>
+            <div style="display:flex;flex-direction:column;gap:3px;font-size:12px;">
+              ${r.connectingRoomIds.map((cid) => {
+                const cr = Object.values(R()).find((x) => x.id === cid);
+                if (!cr) return '';
+                const availLabel = cuConnectingAvail(cr, dates);
+                return `<span><b>Ch. ${cr.n}</b> (${esc(roomTypeOf(cr.n).name)}) · ${esc(availLabel)}</span>`;
+              }).filter(Boolean).join('')}
+            </div>
+            <small style="color:var(--n-500);font-size:10.5px;">Chambre communicante vendue séparément. Non réservée automatiquement.</small>
+          </div>` : ''}
           ${r.status === 'sale' ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Ménage</span><b>${isCustomHotel() ? 'à remettre à blanc' : ((HK_QUEUE.find((q) => q.room === n) || {}).who || 'à assigner')}</b></div>` : ''}
         </div>
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap;">
@@ -1621,12 +1920,31 @@
         <label><span>Numéro</span><input data-hx-room-number type="number" inputmode="numeric" min="1" max="9999" value="${room.n}"></label>
         <label><span>Type</span><select data-hx-room-type-id>${cuTypeOptions(room.typeId)}</select></label>
         <label><span>Étage / aile</span><select data-hx-room-floor-id>${cuFloorRows().map((f) => `<option value="${esc(f.id)}" ${f.id === room.floorId ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}</select></label>
+        <label><span>Vue</span><select data-hx-room-view>
+          <option value="">Non spécifiée</option>
+          ${cuAllViews().map((v) => `<option value="${esc(v)}" ${room.view === v ? 'selected' : ''}>Vue ${esc(cuViewLabel(v))}</option>`).join('')}
+        </select></label>
         <label><span>État</span><select data-hx-room-status ${locked ? 'disabled' : ''}>
           <option value="libre" ${status === 'libre' ? 'selected' : ''}>Libre · propre</option>
           <option value="sale" ${status === 'sale' ? 'selected' : ''}>Libre · à nettoyer</option>
           <option value="hs" ${status === 'hs' ? 'selected' : ''}>Hors-service</option>
           ${locked ? `<option value="${status}" selected>${status === 'occ' ? 'Occupée' : status === 'depart' ? 'Départ du jour' : 'Arrivée attendue'}</option>` : ''}
         </select>${locked ? '<small>Le statut du séjour se gère depuis le folio.</small>' : ''}</label>
+        <div class="hx-room-form-wide">
+          <label><span>Caractéristiques & équipements</span>
+            <div class="hx-char-checkboxes">
+              ${cuAllCharacteristics().map((c) => `<label class="hx-char-label"><input type="checkbox" data-hx-room-char="${c.id}" ${(room.characteristics || []).includes(c.id) ? 'checked' : ''}> ${esc(cuCharLabel(c))}</label>`).join('')}
+            </div>
+          </label>
+        </div>
+        <div class="hx-room-form-wide">
+          <label><span>Portes communicantes <small>· liaison réciproque directe</small></span>
+            <select data-hx-room-connecting multiple size="3">
+              ${Object.values(cuState().rooms || {}).filter((r) => r.n !== room.n).sort((a, b) => a.n - b.n).map((o) => `<option value="${esc(o.id)}" ${(room.connectingRoomIds || []).includes(o.id) ? 'selected' : ''}>Ch. ${o.n} · ${esc(roomTypeOf(o.n).name)} (${esc(o.floor)})</option>`).join('')}
+            </select>
+            <small>Maintenu automatiquement dans les deux sens.</small>
+          </label>
+        </div>
       </div>
       <div class="hx-room-form-actions">
         <button class="hx-btn warn" data-action="hx-room-delete-open" data-arg="${room.n}">Supprimer</button>
@@ -1754,10 +2072,96 @@
       tag: 'ORGANISATION', title: 'Étages, ailes & sections',
       desc: 'Renommez, réordonnez ou supprimez vos sections sans perdre les chambres.', width: 620,
       body: `<div class="hx-floor-manager-list">${rows || '<p>Aucune section.</p>'}</div>
-        <button class="hx-type-add" type="button" data-action="hx-floor-new">+ Créer une section</button>`,
+        <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
+          <button class="hx-type-add" type="button" data-action="hx-floor-new">+ ${trL({ fr: 'Créer une section', en: 'Create section', ar: 'إنشاء قسم' })}</button>
+          <button class="hx-btn ghost" type="button" data-action="hx-views-manage-open">${trL({ fr: 'Vues & caractéristiques', en: 'Views & amenities', ar: 'الإطلالات والمميزات' })}</button>
+        </div>`,
     });
     m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal', 'hx-floors-modal');
     openModal = { el: m.el, close: m.close };
+  }
+  function cuViewsAndCharsManager() {
+    const st = cuState();
+    const views = cuAllViews();
+    const customs = Array.isArray(st.customCharacteristics) ? st.customCharacteristics : [];
+
+    const m = K().modal({
+      tag: 'CONFIGURATION',
+      title: trL({ fr: 'Vues & caractéristiques', en: 'Views & amenities', ar: 'الإطلالات والمميزات' }),
+      desc: trL({
+        fr: 'Personnalisez les types de vues et les équipements proposés pour vos chambres.',
+        en: 'Customize view types and amenities offered for your rooms.',
+        ar: 'تخصيص أنواع الإطلالات والمميزات المتوفرة لغرفك.',
+      }),
+      width: 580,
+      body: `<div style="display:flex;flex-direction:column;gap:18px;font-size:13px;color:var(--ink);">
+        <section>
+          <b style="display:block;margin-bottom:6px;">${trL({ fr: 'Types de vues', en: 'View types', ar: 'أنواع الإطلالات' })}</b>
+          <div class="hx-views-config-list" style="margin-bottom:10px;">
+            ${views.map((v) => `
+              <span class="hx-view-config-chip">
+                Vue ${esc(cuViewLabel(v))}
+                <button type="button" data-action="hx-view-remove" data-arg="${esc(v)}" aria-label="${trL({ fr: 'Supprimer', en: 'Delete', ar: 'حذف' })}">×</button>
+              </span>`).join('')}
+          </div>
+          <div style="display:flex;gap:8px;">
+            <input data-hx-view-input type="text" maxlength="40" placeholder="${trL({ fr: 'Ex. Piscine intérieure, Montagne…', en: 'e.g. Mountain, Courtyard…', ar: 'مثال: جبل، فناء…' })}" style="flex:1;">
+            <button class="hx-btn atlas" type="button" data-action="hx-view-add">${trL({ fr: '+ Ajouter une vue', en: '+ Add view', ar: '+ إضافة إطلالة' })}</button>
+          </div>
+        </section>
+        <section>
+          <b style="display:block;margin-bottom:6px;">${trL({ fr: 'Équipements & caractéristiques personnalisés', en: 'Custom amenities & characteristics', ar: 'تجهيزات ومميزات مخصصة' })}</b>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+            ${customs.length ? customs.map((c) => `
+              <div class="hx-config-char-row">
+                <span><b>${esc(cuCharLabel(c))}</b></span>
+                <button class="hx-btn ghost" type="button" data-action="hx-char-remove" data-arg="${esc(c.id)}" style="color:var(--danger,#b91c1c);padding:2px 8px;font-size:12px;">${trL({ fr: 'Supprimer', en: 'Delete', ar: 'حذف' })}</button>
+              </div>`).join('') : `<p style="margin:0;font-size:12px;color:var(--n-500);">${trL({ fr: 'Aucun équipement personnalisé. Les 8 équipements standards sont toujours disponibles.', en: 'No custom amenities. The 8 standard amenities are always available.', ar: 'لا توجد تجهيزات مخصصة. التجهيزات الـ 8 الأساسية متوفرة دائماً.' })}</p>`}
+          </div>
+          <div style="display:flex;gap:8px;">
+            <input data-hx-char-input type="text" maxlength="50" placeholder="${trL({ fr: 'Ex. Jacuzzi privatif, Machine Nespresso…', en: 'e.g. Private hot tub, Espresso machine…', ar: 'مثال: جاكوزي خاص، آلة قهوة…' })}" style="flex:1;">
+            <button class="hx-btn atlas" type="button" data-action="hx-char-add">${trL({ fr: '+ Ajouter un équipement', en: '+ Add amenity', ar: '+ إضافة ميزة' })}</button>
+          </div>
+        </section>
+      </div>
+      <div class="hx-room-form-actions">
+        <button class="hx-btn ghost" data-action="hx-views-manage-close">${trL({ fr: 'Fermer', en: 'Close', ar: 'إغلاق' })}</button>
+      </div>`,
+    });
+    m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
+    openModal = { el: m.el, close: m.close };
+  }
+  function cuUpdateFloorsManagerModal() {
+    if (typeof document === 'undefined' || !document.querySelector) return;
+    const listEl = document.querySelector('.hx-floors-modal .hx-floor-manager-list');
+    if (!listEl) return;
+    const st = cuState();
+    const rows = cuFloorRows().map((f, index, list) => {
+      const count = Object.values(st.rooms).filter((r) => r.floorId === f.id).length;
+      return `<div class="hx-floor-manager-row">
+        <span class="hx-floor-manager-grip">⋮⋮</span>
+        <span class="hx-floor-manager-copy"><b>${esc(f.name)}</b><small>${count} chambre${count === 1 ? '' : 's'}</small></span>
+        <span class="hx-floor-manager-order">
+          <button data-action="hx-floor-move" data-arg="${esc(f.id)}:-1" ${index === 0 ? 'disabled' : ''} aria-label="Monter">↑</button>
+          <button data-action="hx-floor-move" data-arg="${esc(f.id)}:1" ${index === list.length - 1 ? 'disabled' : ''} aria-label="Descendre">↓</button>
+        </span>
+        <button class="hx-floor-manager-edit" data-action="hx-floor-edit" data-arg="${esc(f.id)}">Modifier</button>
+      </div>`;
+    }).join('');
+    listEl.innerHTML = rows || '<p>Aucune section.</p>';
+  }
+  function cuRefreshFloorSelectors() {
+    if (typeof document === 'undefined' || !document.querySelectorAll) return;
+    const floors = cuFloorRows();
+    document.querySelectorAll('select[data-hx-room-floor-id], select[data-hx-bulk-floor-id]').forEach((sel) => {
+      const currentVal = sel.value;
+      const isBulk = sel.hasAttribute('data-hx-bulk-floor-id');
+      const prefix = isBulk ? '<option value="">Ne pas modifier</option>' : '';
+      sel.innerHTML = prefix + floors.map((f) => `<option value="${esc(f.id)}" ${f.id === currentVal ? 'selected' : ''}>${esc(f.name)}</option>`).join('');
+      if (currentVal && floors.some((f) => f.id === currentVal)) {
+        sel.value = currentVal;
+      }
+    });
   }
   function cuFloorEditor(id) {
     const st = cuState();
@@ -1768,6 +2172,7 @@
       tag: floor ? 'SECTION' : 'NOUVELLE SECTION', title: floor ? 'Modifier « ' + esc(floor.name) + ' »' : 'Créer une section',
       desc: floor ? count + ' chambre' + (count === 1 ? '' : 's') + ' dans cette section.' : 'Ex. 1er étage, Patio, Aile Atlas…', width: 500,
       body: `<div class="hx-room-form"><label class="hx-room-form-wide"><span>Nom affiché</span><input data-hx-floor-name maxlength="60" value="${esc(floor?.name || '')}" placeholder="Ex. 1er étage"></label></div>
+        <p class="hx-floor-error" data-hx-floor-error style="color:var(--danger,#b91c1c);font-size:12px;margin:8px 0 0;" hidden></p>
         ${floor && count && others.length ? `<label class="hx-floor-delete-target"><span>En cas de suppression, déplacer les chambres vers</span><select data-hx-floor-target>${others.map((f) => `<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('')}</select></label>` : ''}
         <div class="hx-room-form-actions">
           ${floor ? `<button class="hx-btn warn" data-action="hx-floor-delete" data-arg="${esc(floor.id)}" ${count && !others.length ? 'disabled title="Créez une autre section avant de supprimer celle-ci"' : ''}>Supprimer</button>` : '<span></span>'}
@@ -1789,7 +2194,235 @@
     if (room.status === 'hs') return { key: 'hs', label: 'Hors-service' };
     return { key: 'libre', label: 'Libre · propre' };
   }
+  function cuResetRackFilter() {
+    cuRackFilter.floor = 'all';
+    cuRackFilter.floors.clear();
+    cuRackFilter.categories.clear();
+    cuRackFilter.status = 'all';
+    cuRackFilter.hasView = false;
+    cuRackFilter.views.clear();
+    cuRackFilter.characteristics.clear();
+    cuRackFilter.connectingOnly = false;
+    cuRackFilter.minCapacity = 0;
+    cuRackFilter.q = '';
+  }
+  function cuEnsureFilterVenue() {
+    const v = cuStateId();
+    if (cuCurrentFilterVenue !== v) {
+      cuCurrentFilterVenue = v;
+      cuResetRackFilter();
+      cuSelectedRooms.clear();
+      cuSelectionMode = false;
+      cuBulkPlan = null;
+      cuBulkStaged = null;
+    }
+  }
+  function cuLinkConnectingRooms(st, roomA, roomB) {
+    if (!roomA || !roomB || roomA.id === roomB.id) return;
+    const now = cuStamp();
+    if (!Array.isArray(roomA.connectingRoomIds)) roomA.connectingRoomIds = [];
+    if (!Array.isArray(roomB.connectingRoomIds)) roomB.connectingRoomIds = [];
+    if (!roomA.connectingRoomIds.includes(roomB.id)) roomA.connectingRoomIds.push(roomB.id);
+    if (!roomB.connectingRoomIds.includes(roomA.id)) roomB.connectingRoomIds.push(roomA.id);
+    roomA.connectingMeta = { ...(roomA.connectingMeta || {}) };
+    roomB.connectingMeta = { ...(roomB.connectingMeta || {}) };
+    roomA.connectingMeta[roomB.id] = { at: now, linked: true };
+    roomB.connectingMeta[roomA.id] = { at: now, linked: true };
+    roomA.updatedAt = now;
+    roomB.updatedAt = now;
+  }
+  function cuUnlinkConnectingRooms(st, roomA, roomB) {
+    if (!roomA || !roomB) return;
+    const now = cuStamp();
+    if (Array.isArray(roomA.connectingRoomIds)) {
+      roomA.connectingRoomIds = roomA.connectingRoomIds.filter((id) => id !== roomB.id);
+    }
+    if (Array.isArray(roomB.connectingRoomIds)) {
+      roomB.connectingRoomIds = roomB.connectingRoomIds.filter((id) => id !== roomA.id);
+    }
+    roomA.connectingMeta = { ...(roomA.connectingMeta || {}) };
+    roomB.connectingMeta = { ...(roomB.connectingMeta || {}) };
+    roomA.connectingMeta[roomB.id] = { at: now, linked: false };
+    roomB.connectingMeta[roomA.id] = { at: now, linked: false };
+    roomA.updatedAt = now;
+    roomB.updatedAt = now;
+  }
+  function cuSetConnectingRooms(st, targetRoom, targetConnectingIds) {
+    if (!targetRoom) return;
+    const now = cuStamp();
+    const targetId = String(targetRoom.id);
+    const newSet = new Set((targetConnectingIds || []).map(String).filter((id) => id && id !== targetId));
+    const currentSet = new Set((targetRoom.connectingRoomIds || []).map(String));
+    const allRooms = Object.values(st.rooms || {});
+
+    targetRoom.connectingMeta = { ...(targetRoom.connectingMeta || {}) };
+
+    for (const cid of currentSet) {
+      if (!newSet.has(cid)) {
+        targetRoom.connectingMeta[cid] = { at: now, linked: false };
+        const other = allRooms.find((r) => String(r.id) === cid);
+        if (other) {
+          if (Array.isArray(other.connectingRoomIds)) {
+            other.connectingRoomIds = other.connectingRoomIds.filter((id) => String(id) !== targetId);
+          }
+          other.connectingMeta = { ...(other.connectingMeta || {}) };
+          other.connectingMeta[targetId] = { at: now, linked: false };
+          other.updatedAt = now;
+        }
+      }
+    }
+    for (const cid of newSet) {
+      if (!currentSet.has(cid)) {
+        targetRoom.connectingMeta[cid] = { at: now, linked: true };
+        const other = allRooms.find((r) => String(r.id) === cid);
+        if (other) {
+          if (!Array.isArray(other.connectingRoomIds)) other.connectingRoomIds = [];
+          if (!other.connectingRoomIds.map(String).includes(targetId)) other.connectingRoomIds.push(targetId);
+          other.connectingMeta = { ...(other.connectingMeta || {}) };
+          other.connectingMeta[targetId] = { at: now, linked: true };
+          other.updatedAt = now;
+        }
+      }
+    }
+    targetRoom.connectingRoomIds = Array.from(newSet);
+    targetRoom.updatedAt = now;
+  }
+  function cuHasActiveFilters() {
+    return (
+      (cuRackFilter.floor && cuRackFilter.floor !== 'all') ||
+      cuRackFilter.floors.size > 0 ||
+      cuRackFilter.categories.size > 0 ||
+      cuRackFilter.status !== 'all' ||
+      cuRackFilter.hasView ||
+      cuRackFilter.views.size > 0 ||
+      cuRackFilter.characteristics.size > 0 ||
+      cuRackFilter.connectingOnly ||
+      (cuRackFilter.minCapacity || 0) > 0 ||
+      Boolean(cuRackFilter.q)
+    );
+  }
+  function cuActiveFilterCount() {
+    let cnt = 0;
+    if (cuRackFilter.floor && cuRackFilter.floor !== 'all') cnt++;
+    cnt += cuRackFilter.floors.size;
+    cnt += cuRackFilter.categories.size;
+    if (cuRackFilter.status !== 'all') cnt++;
+    if (cuRackFilter.hasView) cnt++;
+    cnt += cuRackFilter.views.size;
+    cnt += cuRackFilter.characteristics.size;
+    if (cuRackFilter.connectingOnly) cnt++;
+    if (cuRackFilter.minCapacity > 0) cnt++;
+    if (cuRackFilter.q) cnt++;
+    return cnt;
+  }
+  function cuFloorMatchesFilter(floor) {
+    if (cuRackFilter.floor && cuRackFilter.floor !== 'all') {
+      if (floor.lbl !== cuRackFilter.floor && floor.id !== cuRackFilter.floor) return false;
+    }
+    if (cuRackFilter.floors.size > 0) {
+      return cuRackFilter.floors.has(floor.id) || cuRackFilter.floors.has(floor.lbl);
+    }
+    return true;
+  }
+  function cuRoomMatchesFilter(r) {
+    if (!r) return false;
+    if (cuRackFilter.floor && cuRackFilter.floor !== 'all') {
+      if (r.floor !== cuRackFilter.floor && r.floorId !== cuRackFilter.floor) return false;
+    }
+    if (cuRackFilter.floors.size > 0) {
+      if (!cuRackFilter.floors.has(r.floorId) && !cuRackFilter.floors.has(r.floor)) return false;
+    }
+    if (cuRackFilter.categories.size > 0) {
+      if (!cuRackFilter.categories.has(r.typeId)) return false;
+    }
+    if (cuRackFilter.status !== 'all') {
+      if (cuRoomStatus(r).key !== cuRackFilter.status) return false;
+    }
+    if (cuRackFilter.hasView) {
+      if (!r.view) return false;
+    }
+    if (cuRackFilter.views.size > 0) {
+      if (!r.view || !cuRackFilter.views.has(r.view)) return false;
+    }
+    if (cuRackFilter.characteristics.size > 0) {
+      const chars = Array.isArray(r.characteristics) ? r.characteristics : [];
+      for (const c of cuRackFilter.characteristics) {
+        if (!chars.includes(c)) return false;
+      }
+    }
+    if (cuRackFilter.connectingOnly) {
+      if (!Array.isArray(r.connectingRoomIds) || r.connectingRoomIds.length === 0) return false;
+    }
+    if ((cuRackFilter.minCapacity || 0) > 0) {
+      const type = roomTypeOf(r.n);
+      const cap = type?.maxGuests || 2;
+      if (cap < cuRackFilter.minCapacity) return false;
+    }
+    if (cuRackFilter.q) {
+      const q = cuRackFilter.q.toLocaleLowerCase('fr');
+      const type = roomTypeOf(r.n);
+      const chars = (r.characteristics || []).map((cid) => cuCharLabel(cid));
+      const haystack = [
+        r.n,
+        type?.name,
+        r.guest,
+        r.meta,
+        r.floor,
+        r.view ? ('vue ' + r.view + ' ' + cuViewLabel(r.view)) : '',
+        ...chars,
+      ].map((x) => String(x || '').toLocaleLowerCase('fr'));
+      if (!haystack.some((x) => x.includes(q))) return false;
+    }
+    return true;
+  }
+  function cuFilterChipsMarkup(matchingCount, totalCount) {
+    if (!cuHasActiveFilters()) return '';
+    const st = cuState();
+    const chips = [];
+
+    if (cuRackFilter.floor && cuRackFilter.floor !== 'all') {
+      chips.push(`<span class="hx-filter-chip"><span>Section : ${esc(cuRackFilter.floor)}</span><button type="button" data-action="hx-filter-remove" data-arg="floor:${esc(cuRackFilter.floor)}" aria-label="Retirer ce filtre">×</button></span>`);
+    }
+    for (const fid of cuRackFilter.floors) {
+      const name = st.floors[fid]?.name || fid;
+      chips.push(`<span class="hx-filter-chip"><span>Section : ${esc(name)}</span><button type="button" data-action="hx-filter-remove" data-arg="floors:${esc(fid)}" aria-label="Retirer ce filtre">×</button></span>`);
+    }
+    for (const cid of cuRackFilter.categories) {
+      const name = st.roomTypes[cid]?.name || cid;
+      chips.push(`<span class="hx-filter-chip"><span>Type : ${esc(name)}</span><button type="button" data-action="hx-filter-remove" data-arg="categories:${esc(cid)}" aria-label="Retirer ce filtre">×</button></span>`);
+    }
+    if (cuRackFilter.status !== 'all') {
+      const statusLabels = { libre: 'Libre · propre', occ: 'Occupée / Départ', arrivee: 'Arrivée attendue', sale: 'À nettoyer', hs: 'Hors-service' };
+      const lbl = statusLabels[cuRackFilter.status] || cuRackFilter.status;
+      chips.push(`<span class="hx-filter-chip"><span>État : ${esc(lbl)}</span><button type="button" data-action="hx-filter-remove" data-arg="status:${esc(cuRackFilter.status)}" aria-label="Retirer ce filtre">×</button></span>`);
+    }
+    if (cuRackFilter.hasView) {
+      chips.push(`<span class="hx-filter-chip"><span>Avec vue</span><button type="button" data-action="hx-filter-remove" data-arg="hasView" aria-label="Retirer ce filtre">×</button></span>`);
+    }
+    for (const v of cuRackFilter.views) {
+      chips.push(`<span class="hx-filter-chip"><span>Vue ${esc(v)}</span><button type="button" data-action="hx-filter-remove" data-arg="views:${esc(v)}" aria-label="Retirer ce filtre">×</button></span>`);
+    }
+    for (const c of cuRackFilter.characteristics) {
+      const lbl = cuCharLabel(c);
+      chips.push(`<span class="hx-filter-chip"><span>${esc(lbl)}</span><button type="button" data-action="hx-filter-remove" data-arg="characteristics:${esc(c)}" aria-label="Retirer ce filtre">×</button></span>`);
+    }
+    if (cuRackFilter.connectingOnly) {
+      chips.push(`<span class="hx-filter-chip"><span>Communicantes</span><button type="button" data-action="hx-filter-remove" data-arg="connectingOnly" aria-label="Retirer ce filtre">×</button></span>`);
+    }
+    if (cuRackFilter.minCapacity > 0) chips.push(`<span class="hx-filter-chip"><span>≥ ${cuRackFilter.minCapacity} ${trL({fr:'voyageurs',en:'guests',ar:'ضيوف'})}</span><button type="button" data-action="hx-filter-remove" data-arg="minCapacity" aria-label="Retirer ce filtre">×</button></span>`);
+    if (cuRackFilter.q) {
+      chips.push(`<span class="hx-filter-chip"><span>« ${esc(cuRackFilter.q)} »</span><button type="button" data-action="hx-filter-remove" data-arg="q" aria-label="Retirer ce filtre">×</button></span>`);
+    }
+
+    return `<div class="hx-filter-chips-wrap">
+      <div class="hx-filter-chips">${chips.join('')}</div>
+      <button type="button" class="hx-filter-reset-btn" data-action="hx-room-filter-reset">Effacer les filtres</button>
+      <span class="hx-room-matching-count">${matchingCount} chambre${matchingCount > 1 ? 's' : ''} affichée${matchingCount > 1 ? 's' : ''} sur ${totalCount}</span>
+    </div>`;
+  }
   function cuRackBody() {
+    cuEnsureFilterVenue();
+    const pendingBulk = cuPendingBulk();
     const all = Object.values(R());
     const counts = {
       all: all.length,
@@ -1801,34 +2434,87 @@
     };
     const compactProperty = all.length <= 20;
     const floorRows = cuFloors();
-    const floorTabs = [`<button class="${cuRackFilter.floor === 'all' ? 'on' : ''}" data-action="hx-room-floor" data-arg="all">Tous les étages <b>${counts.all}</b></button>`]
-      .concat(floorRows.map((f) => `<button class="${cuRackFilter.floor === f.lbl ? 'on' : ''}" data-action="hx-room-floor" data-arg="${esc(f.lbl)}">${esc(f.lbl)} <b>${f.rooms.length}</b></button>`)).join('');
-    const floorSections = floorRows.filter((f) => cuRackFilter.floor === 'all' || cuRackFilter.floor === f.lbl).map((f) => {
-      const rooms = f.rooms.map((n) => R()[n]).filter((r) => {
-        if (cuRackFilter.status !== 'all' && cuRoomStatus(r).key !== cuRackFilter.status) return false;
-        const q = cuRackFilter.q.toLocaleLowerCase('fr');
-        return !q || [r.n, roomTypeOf(r.n).name, r.guest, r.meta].some((x) => String(x || '').toLocaleLowerCase('fr').includes(q));
-      });
-      if (!rooms.length) return '';
-      return `<section class="hx-floor-section" data-hx-floor-section>
-        <div class="hx-floor-head"><div><b>${esc(f.lbl)}</b><span>${rooms.length} affichée${rooms.length === 1 ? '' : 's'}</span></div><div class="hx-floor-head-actions"><button data-action="hx-floor-edit" data-arg="${esc(f.id)}">Gérer</button><button data-action="hx-room-add-floor" data-arg="${esc(f.id)}">+ Ajouter ici</button></div></div>
-        <div class="hx-rack">${rooms.map((r) => {
-          const status = cuRoomStatus(r);
-          const type = roomTypeOf(r.n);
-          const doc = window.KiwiReservations?.get?.() || { bookings: [] };
-          const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-          const roomStay = (doc.bookings || []).find((b) => b.resourceId === r.id && b.status === 'checked_in');
-          const roomErrs = roomStay ? cuEvaluateStayExceptions(roomStay, today) : [];
-          const exChip = roomErrs.length ? `<span class="hx-exc-chip" title="${esc(roomErrs.map((e) => e.label).join(' · '))}">Incomplet</span>` : '';
-          return `<div class="hx-room st-${r.status}" data-action="hx-room" data-arg="${r.n}" data-hx-room-card>
-            <button class="hx-room-edit" type="button" data-action="hx-room-edit" data-arg="${r.n}" aria-label="Modifier la chambre ${r.n}" title="Modifier">✎</button>
-            <div class="hx-room-top"><span class="no">${r.n}</span><span class="hx-room-state ${status.key}">${esc(status.label)}</span>${exChip}</div>
-            <div class="ty">${esc(type.name)}</div>
-            <div class="hx-room-bottom"><span class="gu">${esc(r.guest || (r.status === 'libre' ? 'Prête à vendre' : r.meta || status.label))}</span><span class="hx-room-price">${type.base == null ? '—' : fmt(type.base)}<small>${type.base == null ? '' : ' MAD'}</small></span></div>
-          </div>`;
-        }).join('')}</div>
-      </section>`;
-    }).join('');
+
+    const floorTabs = [`<button class="${(!cuRackFilter.floor || cuRackFilter.floor === 'all') && cuRackFilter.floors.size === 0 ? 'on' : ''}" data-action="hx-room-floor" data-arg="all">Tous les étages <b>${counts.all}</b></button>`]
+      .concat(floorRows.map((f) => `<button class="${(cuRackFilter.floor === f.lbl || cuRackFilter.floors.has(f.id) || cuRackFilter.floors.has(f.lbl)) ? 'on' : ''}" data-action="hx-room-floor" data-arg="${esc(f.lbl)}">${esc(f.lbl)} <b>${f.rooms.length}</b></button>`)).join('');
+
+    let matchingTotal = 0;
+    const renderedSections = [];
+
+    floorRows.forEach((f) => {
+      if (!cuFloorMatchesFilter(f)) return;
+
+      const matchedRooms = f.rooms.map((n) => R()[n]).filter((r) => cuRoomMatchesFilter(r));
+      matchingTotal += matchedRooms.length;
+
+      if (f.rooms.length === 0) {
+        renderedSections.push(`<section class="hx-floor-section hx-floor-empty-section" data-hx-floor-section>
+          <div class="hx-floor-head">
+            <div><b>${esc(f.lbl)}</b><span>0 chambre</span></div>
+            <div class="hx-floor-head-actions">
+              <button data-action="hx-floor-edit" data-arg="${esc(f.id)}">Gérer</button>
+              <button data-action="hx-room-add-floor" data-arg="${esc(f.id)}">+ Ajouter des chambres</button>
+            </div>
+          </div>
+          <div class="hx-room-empty-section-hint">Cette section ne contient encore aucune chambre.</div>
+        </section>`);
+        return;
+      }
+
+      if (matchedRooms.length === 0) {
+        if (cuRackFilter.floor !== 'all' || cuRackFilter.floors.size > 0) {
+          renderedSections.push(`<section class="hx-floor-section" data-hx-floor-section>
+            <div class="hx-floor-head">
+              <div><b>${esc(f.lbl)}</b><span>0 affichée</span></div>
+              <div class="hx-floor-head-actions">
+                <button data-action="hx-floor-edit" data-arg="${esc(f.id)}">Gérer</button>
+                <button data-action="hx-room-add-floor" data-arg="${esc(f.id)}">+ Ajouter ici</button>
+              </div>
+            </div>
+            <div class="hx-room-empty-section-hint">Aucune chambre ne correspond aux filtres dans cette section.</div>
+          </section>`);
+        }
+        return;
+      }
+
+      const roomCards = matchedRooms.map((r) => {
+        const status = cuRoomStatus(r);
+        const type = roomTypeOf(r.n);
+        const doc = window.KiwiReservations?.get?.() || { bookings: [] };
+        const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+        const roomStay = (doc.bookings || []).find((b) => b.resourceId === r.id && b.status === 'checked_in');
+        const roomErrs = roomStay ? cuEvaluateStayExceptions(roomStay, today) : [];
+        const exChip = roomErrs.length ? `<span class="hx-exc-chip" title="${esc(roomErrs.map((e) => e.label).join(' · '))}">Incomplet</span>` : '';
+        const isSelected = cuSelectedRooms.has(String(r.id));
+
+        const viewBadge = r.view ? `<span class="hx-room-view-badge" title="Vue ${esc(r.view)}">Vue ${esc(r.view)}</span>` : '';
+        const connBadge = (r.connectingRoomIds && r.connectingRoomIds.length) ? `<span class="hx-room-conn-badge" title="Portes communicantes (${r.connectingRoomIds.length})">⇌</span>` : '';
+
+        const selectCb = cuSelectionMode ? `<label class="hx-room-select-cb"><input type="checkbox" data-action="hx-room-check" data-arg="${r.n}" ${isSelected ? 'checked' : ''} aria-label="Sélectionner la chambre ${r.n}"></label>` : '';
+
+        return `<div class="hx-room st-${r.status} ${isSelected ? 'selected' : ''} ${cuSelectionMode ? 'selection-mode' : ''}" role="button" tabindex="0" aria-label="Chambre ${r.n}" data-action="hx-room" data-arg="${r.n}" data-hx-room-card>
+          ${selectCb}
+          ${cuSelectionMode ? '' : `<button class="hx-room-edit" type="button" data-action="hx-room-edit" data-arg="${r.n}" aria-label="Modifier la chambre ${r.n}" title="Modifier">✎</button>`}
+          <div class="hx-room-top"><span class="no">${r.n}</span><span class="hx-room-state ${status.key}">${esc(status.label)}</span>${exChip}${connBadge}</div>
+          <div class="ty" style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><span>${esc(type.name)}</span>${viewBadge}</div>
+          <div class="hx-room-bottom"><span class="gu">${esc(r.guest || (r.status === 'libre' ? 'Prête à vendre' : r.meta || status.label))}</span><span class="hx-room-price">${type.base == null ? '·' : fmt(type.base)}<small>${type.base == null ? '' : ' MAD'}</small></span></div>
+        </div>`;
+      }).join('');
+
+      renderedSections.push(`<section class="hx-floor-section" data-hx-floor-section>
+        <div class="hx-floor-head">
+          <div><b>${esc(f.lbl)}</b><span>${matchedRooms.length} affichée${matchedRooms.length === 1 ? '' : 's'}</span></div>
+          <div class="hx-floor-head-actions">
+            <button data-action="hx-floor-edit" data-arg="${esc(f.id)}">Gérer</button>
+            <button data-action="hx-room-add-floor" data-arg="${esc(f.id)}">+ Ajouter ici</button>
+          </div>
+        </div>
+        <div class="hx-rack">${roomCards}</div>
+      </section>`);
+    });
+
+    const floorSections = renderedSections.join('');
+
     if (!totalRooms()) return `<div class="hx-page hx-room-workspace">
       <div class="hx-room-empty">
         <div class="hx-room-empty-art"><span>101</span><span>102</span><span>103</span></div>
@@ -1839,12 +2525,38 @@
         </div>
       </div>
     </div>`;
-    const noMatch = !floorSections ? `<div class="hx-room-no-match"><b>Aucune chambre ne correspond.</b><span>Changez l’étage, le statut ou la recherche.</span><button class="hx-link-btn" data-action="hx-room-filter-reset">Réinitialiser les filtres</button></div>` : '';
+
+    const noMatch = !floorSections ? `<div class="hx-room-no-match"><b>Aucune chambre ne correspond.</b><span>Changez l’étage, le statut, les caractéristiques ou la recherche.</span><button class="hx-link-btn" data-action="hx-room-filter-reset">Réinitialiser les filtres</button></div>` : '';
+
     const kpis = [
       ['all', '', 'Total', 'inventaire'], ['libre', 'ready', 'Prêtes', 'à vendre'],
       ['occ', 'occupied', 'Occupées', 'en maison'], ['arrivee', 'arrival', 'Arrivées', 'attendues'],
       ['sale', 'dirty', 'À nettoyer', 'ménage'], ['hs', 'offline', 'Hors-service', 'maintenance'],
     ].filter(([key]) => !compactProperty || ['all', 'libre', 'occ', 'sale'].includes(key) || counts[key] > 0);
+
+    const filterCount = cuActiveFilterCount();
+    const chipsHtml = cuFilterChipsMarkup(matchingTotal, all.length);
+
+    const selectedList = cuSelectedNumbers();
+    const visibleSelected = selectedList.filter((n) => cuRoomMatchesFilter(R()[n])).length;
+    const hiddenSelected = selectedList.length - visibleSelected;
+
+    let bulkBar = '';
+    if (cuSelectionMode || selectedList.length > 0) {
+      bulkBar = `<div class="hx-room-bulk-bar" role="region" aria-label="Sélection groupée">
+        <div class="hx-room-bulk-info">
+          <b>${selectedList.length} chambre${selectedList.length > 1 ? 's' : ''} sélectionnée${selectedList.length > 1 ? 's' : ''}</b>
+          ${hiddenSelected > 0 ? `<small>(${hiddenSelected} masquée${hiddenSelected > 1 ? 's' : ''} par les filtres)</small>` : ''}
+        </div>
+        <div class="hx-room-bulk-actions">
+          <button class="hx-btn ghost" data-action="hx-room-select-filtered">Sélectionner les résultats filtrés</button>
+          <button class="hx-btn ghost" data-action="hx-room-select-none" ${selectedList.length === 0 ? 'disabled' : ''}>Tout désélectionner</button>
+          <button class="hx-btn atlas" data-action="hx-room-bulk-edit-open" ${selectedList.length === 0 ? 'disabled' : ''}>Modifier</button>
+          <button class="hx-btn ghost" data-action="hx-room-select-cancel">Annuler</button>
+        </div>
+      </div>`;
+    }
+
     return `<div class="hx-page hx-room-workspace ${compactProperty ? 'hx-room-compact-property' : ''}">
       <div class="hx-room-section-tabs" role="tablist" aria-label="Espaces hôtel">
         <button class="on" role="tab" aria-selected="true" data-action="nav-chambres"><span>Plan</span><small>${counts.all} chambres</small></button>
@@ -1853,12 +2565,197 @@
       </div>
       <div class="hx-room-kpis" style="--hx-kpi-count:${kpis.length}">${kpis.map(([key, cls, label, note]) => `<button class="${cls} ${cuRackFilter.status === key ? 'on' : ''}" data-action="hx-room-status" data-arg="${key}"><span>${label}</span><b>${counts[key]}</b><small>${note}</small></button>`).join('')}</div>
       <div class="hx-room-toolbar">
-        ${compactProperty ? '<div class="hx-room-compact-hint">Touchez une chambre pour la vendre ou ouvrir son folio.</div>' : `<label class="hx-room-search"><span>⌕</span><input data-hx-room-search value="${esc(cuRackFilter.q)}" placeholder="Rechercher une chambre, un client…"><button data-action="hx-room-search">Rechercher</button></label>`}
-        <div class="hx-room-toolbar-actions"><button class="hx-btn ghost" data-action="hx-floors">Gérer les sections</button><button class="hx-btn ghost" data-action="hx-room-types">Gérer les catégories</button><button class="hx-btn atlas" data-action="hx-room-add">+ Ajouter des chambres</button></div>
+        ${compactProperty ? '<div class="hx-room-compact-hint">Touchez une chambre pour la vendre ou ouvrir son folio.</div>' : `<label class="hx-room-search"><span>⌕</span><input data-hx-room-search value="${esc(cuRackFilter.q)}" placeholder="Rechercher une chambre, un client, vue…"><button data-action="hx-room-search">Rechercher</button></label>`}
+        <div class="hx-room-toolbar-actions">
+          <button class="hx-btn ghost" data-action="hx-room-filters-open">Filtres ${filterCount ? `<b>(${filterCount})</b>` : ''}</button>
+          <button class="hx-btn ${cuSelectionMode ? 'atlas' : 'ghost'}" data-action="hx-room-select-toggle">${cuSelectionMode ? 'Quitter la sélection' : 'Sélectionner'}</button>
+          <button class="hx-btn ghost" data-action="hx-floors">Gérer les sections</button>
+          <button class="hx-btn ghost" data-action="hx-room-types">Gérer les catégories</button>
+          <button class="hx-btn atlas" data-action="hx-room-add">+ Ajouter des chambres</button>
+        </div>
       </div>
+      ${chipsHtml}
+      ${pendingBulk ? `<div class="hx-room-pending" role="status"><span>${trL({fr:'Une modification groupée attend une confirmation.',en:'A bulk change is awaiting confirmation.',ar:'تعديل جماعي بانتظار التأكيد.'})}</span> <button class="hx-btn ghost" data-action="hx-bulk-resume">${trL({fr:'Vérifier / reprendre',en:'Check / resume',ar:'تحقق / استئناف'})}</button></div>` : ''}
       ${floorRows.length > 1 ? `<div class="hx-floor-tabs">${floorTabs}</div>` : ''}
+      ${bulkBar}
       ${floorSections}${noMatch}
     </div>`;
+  }
+  function cuFiltersModal() {
+    const st = cuState();
+    const floors = cuFloorRows();
+    const types = cuTypes();
+    const views = cuAllViews();
+
+    const m = K().modal({
+      tag: 'FILTRES',
+      title: 'Filtrer le plan des chambres',
+      desc: trL({fr:'Combinez les critères : plusieurs étages ou vues, et tous les équipements cochés.',en:'Combine criteria: any selected floor or view, and all selected amenities.',ar:'اجمع المعايير: أي طابق أو إطلالة محددة، وجميع الميزات المحددة.'}),
+      width: 580,
+      body: `<div class="hx-room-form">
+        <fieldset class="hx-filter-group hx-room-form-wide">
+          <legend>Sections & étages</legend>
+          <div class="hx-filter-checkbox-grid">
+            ${floors.map((f) => `<label class="hx-filter-check-label"><input type="checkbox" data-hx-filter-floor="${esc(f.id)}" ${cuRackFilter.floors.has(f.id) || cuRackFilter.floor === f.lbl ? 'checked' : ''}> ${esc(f.name)}</label>`).join('')}
+          </div>
+        </fieldset>
+        <fieldset class="hx-filter-group hx-room-form-wide">
+          <legend>Catégories & types</legend>
+          <div class="hx-filter-checkbox-grid">
+            ${types.map((t) => `<label class="hx-filter-check-label"><input type="checkbox" data-hx-filter-cat="${esc(t.id)}" ${cuRackFilter.categories.has(t.id) ? 'checked' : ''}> ${esc(t.name)}</label>`).join('')}
+          </div>
+        </fieldset>
+        <fieldset class="hx-filter-group hx-room-form-wide">
+          <legend>Vues</legend>
+          <div style="margin-bottom:8px;">
+            <label class="hx-filter-check-label"><input type="checkbox" data-hx-filter-hasview ${cuRackFilter.hasView ? 'checked' : ''}> <b>Toutes les chambres avec vue</b></label>
+          </div>
+          <div class="hx-filter-checkbox-grid">
+            ${views.map((v) => `<label class="hx-filter-check-label"><input type="checkbox" data-hx-filter-view="${esc(v)}" ${cuRackFilter.views.has(v) ? 'checked' : ''}> Vue ${esc(cuViewLabel(v))}</label>`).join('')}
+          </div>
+        </fieldset>
+        <fieldset class="hx-filter-group hx-room-form-wide">
+          <legend>Caractéristiques & équipements (tous requis)</legend>
+          <div class="hx-filter-checkbox-grid">
+            ${cuAllCharacteristics().map((c) => `<label class="hx-filter-check-label"><input type="checkbox" data-hx-filter-char="${esc(c.id)}" ${cuRackFilter.characteristics.has(c.id) ? 'checked' : ''}> ${esc(cuCharLabel(c))}</label>`).join('')}
+          </div>
+        </fieldset>
+        <fieldset class="hx-filter-group hx-room-form-wide">
+          <legend>Agencement & portes</legend>
+          <label class="hx-filter-check-label"><input type="checkbox" data-hx-filter-connecting ${cuRackFilter.connectingOnly ? 'checked' : ''}> <b>Uniquement chambres communicantes</b></label>
+        </fieldset>
+      </div>
+      <label class="hx-room-form-field">${trL({fr:'Capacité minimale',en:'Minimum capacity',ar:'الحد الأدنى للسعة'})}<input type="number" min="0" max="12" step="1" data-hx-filter-capacity value="${cuRackFilter.minCapacity || 0}"></label>
+      <div class="hx-room-form-actions">
+        <button class="hx-btn ghost" data-action="hx-filter-modal-reset">Effacer tout</button>
+        <button class="hx-btn atlas" data-action="hx-filter-modal-apply">Appliquer les filtres</button>
+      </div>`,
+    });
+    m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
+    openModal = { el: m.el, close: m.close };
+  }
+  let cuBulkStaged = null;
+  function cuBulkEditModal(draft) {
+    const selectedNumbers = cuSelectedNumbers();
+    if (selectedNumbers.length > 200) {
+      toast(trL({fr:'Sélectionnez au maximum 200 chambres par modification.',en:'Select up to 200 rooms per bulk change.',ar:'حدد 200 غرفة كحد أقصى لكل تعديل جماعي.'}), {type:'warn'});
+      return;
+    }
+    if (!selectedNumbers.length) {
+      K().toast('Aucune chambre sélectionnée', { type: 'warn' });
+      return;
+    }
+    draft = draft || cuBulkStaged || {};
+    const st = cuState();
+    const floors = cuFloorRows();
+    const types = cuTypes();
+    const views = cuAllViews();
+    const characteristics = cuAllCharacteristics();
+
+    const m = K().modal({
+      tag: 'MODIFICATION EN BLOC',
+      title: 'Modifier ' + selectedNumbers.length + ' chambres',
+      desc: 'Seuls les champs avec une modification sélectionnée seront mis à jour.',
+      width: 580,
+      body: `<div class="hx-room-form">
+        <label><span>Section / Étage</span>
+          <select data-hx-bulk-floor-id>
+            <option value="">Ne pas modifier</option>
+            ${floors.map((f) => `<option value="${esc(f.id)}" ${draft.floorId === f.id ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}
+          </select>
+        </label>
+        <label><span>Catégorie / Type</span>
+          <select data-hx-bulk-type-id>
+            <option value="">Ne pas modifier</option>
+            ${types.map((t) => `<option value="${esc(t.id)}" ${draft.typeId === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}
+          </select>
+        </label>
+        <label><span>Vue</span>
+          <select data-hx-bulk-view>
+            <option value="">Ne pas modifier</option>
+            <option value="__CLEAR__" ${draft.view === '' ? 'selected' : ''}>Retirer la vue</option>
+            ${views.map((v) => `<option value="${esc(v)}" ${draft.view === v ? 'selected' : ''}>Vue ${esc(cuViewLabel(v))}</option>`).join('')}
+          </select>
+        </label>
+        <label><span>Action sur les équipements</span>
+          <select data-hx-bulk-char-mode>
+            <option value="none" ${(!draft.charMode || draft.charMode === 'none') ? 'selected' : ''}>Ne pas modifier</option>
+            <option value="add" ${draft.charMode === 'add' ? 'selected' : ''}>Ajouter les équipements cochés</option>
+            <option value="remove" ${draft.charMode === 'remove' ? 'selected' : ''}>Retirer les équipements cochés</option>
+            <option value="replace" ${draft.charMode === 'replace' ? 'selected' : ''}>Remplacer par les équipements cochés</option>
+          </select>
+        </label>
+        <div class="hx-room-form-wide">
+          <label><span>Équipements concernés</span>
+            <div class="hx-char-checkboxes">
+              ${characteristics.map((c) => `<label class="hx-char-label"><input type="checkbox" data-hx-bulk-char="${c.id}" ${(draft.characteristics || []).includes(c.id) ? 'checked' : ''}> ${esc(cuCharLabel(c))}</label>`).join('')}
+            </div>
+          </label>
+        </div>
+        <p style="font-size:11.5px;color:var(--n-500);margin:8px 0 0;" class="hx-room-form-wide">
+          Note : Les portes communicantes se configurent chambre par chambre pour garantir la réciprocité physique des accès.
+        </p>
+      </div>
+      <div class="hx-room-form-actions">
+        <button class="hx-btn ghost" data-action="hx-bulk-cancel">Annuler</button>
+        <button class="hx-btn atlas" data-action="hx-bulk-review">Vérifier avant d’appliquer…</button>
+      </div>`,
+    });
+    m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
+    openModal = { el: m.el, close: m.close };
+  }
+  function cuBulkReviewModal(plan) {
+    plan = plan || cuBulkPlan;
+    const selectedNumbers = (plan && plan.targets) ? plan.targets.map((t) => t.n) : cuSelectedNumbers();
+    const changes = (plan && plan.changes) ? plan.changes : (cuBulkStaged || {});
+    const st = cuState();
+    const summaryItems = [];
+
+    if (changes.floorId) {
+      summaryItems.push(`<li>Déplacer vers la section <b>${esc(st.floors[changes.floorId]?.name || changes.floorId)}</b></li>`);
+    }
+    if (changes.typeId) {
+      summaryItems.push(`<li>Changer de type vers <b>${esc(st.roomTypes[changes.typeId]?.name || changes.typeId)}</b></li>`);
+    }
+    if (changes.view != null) {
+      summaryItems.push(changes.view === '' ? `<li>Retirer la vue</li>` : `<li>Définir la vue à <b>Vue ${esc(cuViewLabel(changes.view))}</b></li>`);
+    }
+    if (changes.charMode && changes.charMode !== 'none') {
+      const labels = (changes.characteristics || []).map((cid) => cuCharLabel(cid)).join(', ');
+      const modeLabel = changes.charMode === 'add' ? 'Ajouter' : changes.charMode === 'remove' ? 'Retirer' : 'Remplacer par';
+      summaryItems.push(`<li>Équipements : <b>${modeLabel}</b> ${labels ? `(${esc(labels)})` : '(aucun)'}</li>`);
+    }
+
+    const m = K().modal({
+      tag: 'CONFIRMATION',
+      title: 'Confirmer la modification de ' + selectedNumbers.length + ' chambres',
+      desc: 'Vérifiez attentivement les modifications avant enregistrement.',
+      width: 540,
+      body: `<div style="display:flex;flex-direction:column;gap:14px;font-size:13px;color:var(--ink);">
+        <div style="padding:12px 14px;background:var(--n-50,#f7f8f7);border-radius:10px;">
+          <b>${selectedNumbers.length} chambres concernées :</b>
+          <p style="margin:4px 0 0;color:var(--n-600);font-family:var(--mono);font-size:12px;line-height:1.5;">
+            ${selectedNumbers.map((n) => 'Ch. ' + n).join(', ')}
+          </p>
+        </div>
+        <div>
+          <b>Modifications qui seront appliquées :</b>
+          <ul style="margin:6px 0 0 18px;padding:0;line-height:1.6;">
+            ${summaryItems.join('')}
+          </ul>
+        </div>
+        <p style="margin:0;font-size:11.5px;color:var(--n-500);line-height:1.5;padding:10px 12px;background:var(--surface,#fff);border:1px solid var(--n-200);border-radius:8px;">
+          Cette modification corrige l’organisation des chambres. Elle ne déplace aucun client et ne modifie aucun folio, séjour ou tarif existant.
+        </p>
+      </div>
+      <div class="hx-room-form-actions">
+        <p data-hx-bulk-error role="alert" hidden></p>
+        <button class="hx-btn ghost" data-action="hx-bulk-back" ${plan?.submitted ? 'disabled' : ''}>Retour</button>
+        <button class="hx-btn atlas" data-action="hx-bulk-confirm" ${plan?.needsReview ? 'disabled' : ''}>Confirmer et appliquer</button>
+      </div>`,
+    });
+    m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
+    openModal = { el: m.el, close: m.close };
   }
   function cuMenageBody() {
     const dirty = Object.values(R()).filter((r) => r.status === 'sale');
@@ -3310,10 +4207,14 @@
         st.rooms[n] = {
           id: 'room:' + now.toString(36) + ':' + n, n, typeId,
           typeName: st.roomTypes[typeId].name, floorId, floor: floor.name, rate: null,
-          status: 'libre', hk: 'clean', guest: null, meta: 'Libre · propre', updatedAt: now + i,
+          status: 'libre', hk: 'clean', guest: null, meta: 'Libre · propre',
+          view: null, characteristics: [], connectingRoomIds: [],
+          updatedAt: now + i,
         };
       });
       cuSave(st);
+      cuUpdateFloorsManagerModal();
+      cuRefreshFloorSelectors();
       openModal?.close?.();
       toast(numbers.length + ' chambre' + (numbers.length === 1 ? '' : 's') + ' ajoutée' + (numbers.length === 1 ? '' : 's'), {
         type: 'success', desc: st.roomTypes[typeId].name + ' · ' + floor.name + ' · ' + numbers[0] + (numbers.length > 1 ? ' à ' + numbers[numbers.length - 1] : ''),
@@ -3333,6 +4234,7 @@
       const statusEl = root?.querySelector('[data-hx-room-status]');
       const status = statusEl ? statusEl.value : 'libre';
       const st = cuState();
+      const prior = st.rooms[oldN];
       if (!Number.isFinite(n) || n < 1 || n > 9999) {
         toast('Numéro de chambre invalide', { type: 'warn', desc: 'Utilisez un numéro entre 1 et 9999.' });
         root?.querySelector('[data-hx-room-number]')?.focus();
@@ -3351,14 +4253,23 @@
         toast('Choisissez une section', { type: 'warn' });
         return;
       }
-      const prior = st.rooms[oldN];
       if (!prior) return;
+      const viewVal = root?.querySelector('[data-hx-room-view]')?.value;
+      const view = viewVal !== undefined ? (String(viewVal).trim() || null) : (prior?.view || null);
+      const characteristics = typeof root?.querySelectorAll === 'function'
+        ? Array.from(root.querySelectorAll('[data-hx-room-char]:checked') || []).map((cb) => cb.getAttribute?.('data-hx-room-char') || cb.dataset?.hxRoomChar).filter(Boolean)
+        : (prior?.characteristics || []);
+      const connSelect = root?.querySelector('[data-hx-room-connecting]');
+      const connectingRoomIds = connSelect
+        ? Array.from(connSelect.selectedOptions || []).map((o) => o.value).filter(Boolean)
+        : (prior?.connectingRoomIds || []);
       const active = prior && ['occ', 'depart', 'arrivee'].includes(prior.status);
       const savedStatus = active ? prior.status : (['libre', 'sale', 'hs'].includes(status) ? status : 'libre');
       const now = cuStamp();
       const room = {
         ...prior, n, typeId, typeName: st.roomTypes[typeId].name,
         floorId, floor: st.floors[floorId].name, rate: null, status: savedStatus,
+        view, characteristics,
         hk: savedStatus === 'sale' ? 'dirty' : savedStatus === 'libre' ? 'clean' : (prior?.hk || 'clean'),
         guest: prior?.guest || null,
         meta: active ? prior.meta : savedStatus === 'libre' ? 'Libre · propre' : savedStatus === 'sale' ? 'À remettre à blanc' : 'Hors-service',
@@ -3372,7 +4283,10 @@
         }
       }
       st.rooms[n] = room;
+      cuSetConnectingRooms(st, room, connectingRoomIds);
       cuSave(st);
+      cuUpdateFloorsManagerModal();
+      cuRefreshFloorSelectors();
       openModal?.close?.();
       toast('Chambre ' + n + ' enregistrée', { type: 'success', desc: st.roomTypes[typeId].name + ' · ' + st.floors[floorId].name });
       rerender();
@@ -3381,31 +4295,39 @@
     handlers['hx-floors'] = () => { if (isCustomHotel()) cuFloorsManager(); };
     handlers['hx-floor-new'] = () => { if (isCustomHotel()) cuFloorEditor(null); };
     handlers['hx-floor-edit'] = (el, arg) => { if (isCustomHotel()) cuFloorEditor(String(arg || '')); };
-    handlers['hx-floor-save'] = (el, arg) => {
-      if (!isCustomHotel()) return;
+    handlers['hx-floor-save'] = async (el, arg) => {
+      if (!isCustomHotel() || cuFloorSaving) return;
       const root = el.closest('.kiwi-modal');
-      const name = String(root?.querySelector('[data-hx-floor-name]')?.value || '').trim();
-      const st = cuState();
-      if (!name) {
-        toast('Donnez un nom à cette section', { type: 'warn', desc: 'Ex. 1er étage, Patio, Aile Atlas.' });
-        root?.querySelector('[data-hx-floor-name]')?.focus();
-        return;
-      }
+      const name = String(root?.querySelector('[data-hx-floor-name]')?.value || '').trim().slice(0, 60);
+      const errEl = root?.querySelector('[data-hx-floor-error]');
+      const fail = (message) => {
+        if (errEl) { errEl.textContent = message; errEl.hidden = false; }
+        toast(message, { type: 'error' });
+      };
+      if (!name) { fail(trL({fr:'Donnez un nom à cette section.',en:'Enter a section name.',ar:'أدخل اسم القسم.'})); return; }
+      const scope = cuStateId();
+      const st = cuHydrate(cuDocument(cuState()));
       const duplicate = Object.values(st.floors).find((f) => f.name.toLocaleLowerCase('fr') === name.toLocaleLowerCase('fr') && f.id !== arg);
-      if (duplicate) {
-        toast('Cette section existe déjà', { type: 'warn' });
-        return;
-      }
-      const now = cuStamp();
-      const id = arg === 'new' ? cuFloorId(name, now) : String(arg);
-      const order = arg === 'new' ? cuFloorRows().length : (st.floors[id]?.order || 0);
-      st.floors[id] = { ...(st.floors[id] || {}), id, name: name.slice(0, 60), order, updatedAt: now };
-      Object.values(st.rooms).filter((r) => r.floorId === id).forEach((r) => { r.floor = name.slice(0, 60); r.updatedAt = now; });
-      cuRackFilter.floor = 'all';
-      cuSave(st);
-      openModal?.close?.();
-      toast('Section « ' + name + ' » enregistrée', { type: 'success' });
-      rerender();
+      if (duplicate) { fail(trL({fr:'Cette section existe déjà.',en:'This section already exists.',ar:'هذا القسم موجود بالفعل.'})); return; }
+      cuFloorSaving = true;
+      el.disabled = true;
+      try {
+        const now = cuStamp();
+        // Keep the same identity on retries, including an uncertain network reply.
+        const id = arg === 'new' ? (el.__floorIntentId || (el.__floorIntentId = cuFloorId(name, now))) : String(arg);
+        const order = arg === 'new' ? cuFloorRows().length : (st.floors[id]?.order || 0);
+        st.floors[id] = { ...(st.floors[id] || {}), id, name, order, updatedAt: now };
+        Object.values(st.rooms).filter((r) => r.floorId === id).forEach((r) => { r.floor = name; r.updatedAt = now; });
+        await cuCommitDraft(st);
+        if (scope !== cuStateId()) return;
+        cuRackFilter.floor = 'all';
+        cuUpdateFloorsManagerModal();
+        cuRefreshFloorSelectors();
+        openModal?.close?.();
+        toast('Section « ' + name + ' » enregistrée', {type:'success', desc:trL({fr:'Enregistrement serveur confirmé.',en:'Server save confirmed.',ar:'تم تأكيد الحفظ بالخادم.'})});
+        rerender();
+      } catch (error) { if (scope === cuStateId()) fail(error.message); }
+      finally { el.disabled = false; cuFloorSaving = false; }
     };
     handlers['hx-floor-move'] = (el, arg) => {
       if (!isCustomHotel()) return;
@@ -3423,8 +4345,8 @@
       const a = list[index], b = list[target], old = a.order;
       a.order = b.order; b.order = old; a.updatedAt = now; b.updatedAt = now + 1;
       cuSave(st);
-      openModal?.close?.();
-      if (el) cuFloorsManager();
+      cuUpdateFloorsManagerModal();
+      cuRefreshFloorSelectors();
       rerender();
     };
     handlers['hx-floor-delete'] = (el, arg) => {
@@ -3448,6 +4370,8 @@
       delete st.floors[arg];
       cuRackFilter.floor = 'all';
       cuSave(st);
+      cuUpdateFloorsManagerModal();
+      cuRefreshFloorSelectors();
       openModal?.close?.();
       toast('Section supprimée', { type: 'success', desc: rooms.length ? rooms.length + ' chambre' + (rooms.length === 1 ? '' : 's') + ' déplacée' + (rooms.length === 1 ? '' : 's') + ' vers « ' + st.floors[targetId].name + ' ».' : 'La section était vide.' });
       rerender();
@@ -3548,21 +4472,363 @@
       toast('Type supprimé', { type: 'success' });
       rerender();
     };
-    handlers['hx-room-floor'] = (el, arg) => { cuRackFilter.floor = String(arg || 'all'); rerender(); };
-    handlers['hx-room-status'] = (el, arg) => { cuRackFilter.status = String(arg || 'all'); rerender(); };
+    handlers['hx-room-filters-open'] = () => { if (isCustomHotel()) cuFiltersModal(); };
+    handlers['hx-filter-modal-apply'] = (el) => {
+      const root = el.closest('.kiwi-modal');
+      if (!root) return;
+      cuRackFilter.floors.clear();
+      if (typeof root.querySelectorAll === 'function') {
+        root.querySelectorAll('[data-hx-filter-floor]:checked').forEach((cb) => {
+          cuRackFilter.floors.add(cb.getAttribute('data-hx-filter-floor'));
+        });
+      }
+      if (cuRackFilter.floors.size > 0) cuRackFilter.floor = 'all';
+
+      cuRackFilter.categories.clear();
+      if (typeof root.querySelectorAll === 'function') {
+        root.querySelectorAll('[data-hx-filter-cat]:checked').forEach((cb) => {
+          cuRackFilter.categories.add(cb.getAttribute('data-hx-filter-cat'));
+        });
+      }
+
+      const hasViewCb = root.querySelector('[data-hx-filter-hasview]');
+      cuRackFilter.hasView = Boolean(hasViewCb && hasViewCb.checked);
+      cuRackFilter.views.clear();
+      if (typeof root.querySelectorAll === 'function') {
+        root.querySelectorAll('[data-hx-filter-view]:checked').forEach((cb) => {
+          cuRackFilter.views.add(cb.getAttribute('data-hx-filter-view'));
+        });
+      }
+
+      cuRackFilter.characteristics.clear();
+      if (typeof root.querySelectorAll === 'function') {
+        root.querySelectorAll('[data-hx-filter-char]:checked').forEach((cb) => {
+          cuRackFilter.characteristics.add(cb.getAttribute('data-hx-filter-char'));
+        });
+      }
+
+      const connCb = root.querySelector('[data-hx-filter-connecting]');
+      cuRackFilter.connectingOnly = Boolean(connCb && connCb.checked);
+      cuRackFilter.minCapacity = Math.max(0, Math.min(12, parseInt(root.querySelector('[data-hx-filter-capacity]')?.value, 10) || 0));
+
+      openModal?.close?.();
+      rerender();
+    };
+    handlers['hx-filter-modal-reset'] = () => {
+      cuResetRackFilter();
+      openModal?.close?.();
+      rerender();
+    };
+    handlers['hx-filter-remove'] = (el, arg) => {
+      const parts = String(arg || '').split(':');
+      const type = parts[0];
+      const val = parts.slice(1).join(':');
+      if (type === 'floor') cuRackFilter.floor = 'all';
+      else if (type === 'floors') cuRackFilter.floors.delete(val);
+      else if (type === 'categories') cuRackFilter.categories.delete(val);
+      else if (type === 'status') cuRackFilter.status = 'all';
+      else if (type === 'hasView') cuRackFilter.hasView = false;
+      else if (type === 'views') cuRackFilter.views.delete(val);
+      else if (type === 'characteristics') cuRackFilter.characteristics.delete(val);
+      else if (type === 'connectingOnly') cuRackFilter.connectingOnly = false;
+      else if (type === 'minCapacity') cuRackFilter.minCapacity = 0;
+      else if (type === 'q') cuRackFilter.q = '';
+      rerender();
+    };
+    handlers['hx-room-floor'] = (el, arg) => {
+      const val = String(arg || 'all');
+      cuRackFilter.floor = val;
+      cuRackFilter.floors.clear();
+      rerender();
+    };
+    handlers['hx-room-status'] = (el, arg) => {
+      cuRackFilter.status = String(arg || 'all');
+      rerender();
+    };
     handlers['hx-room-search'] = (el) => {
       cuRackFilter.q = String(el.closest('.hx-room-search')?.querySelector('[data-hx-room-search]')?.value || '').trim();
       rerender();
     };
-    handlers['hx-room-filter-reset'] = () => { cuRackFilter.floor = 'all'; cuRackFilter.status = 'all'; cuRackFilter.q = ''; rerender(); };
+    handlers['hx-room-filter-reset'] = () => {
+      cuResetRackFilter();
+      rerender();
+    };
     if (!window.__kiwiHotelRoomSearchWired) {
       window.__kiwiHotelRoomSearchWired = true;
+      document.addEventListener('keydown', (event) => {
+        if (!['Enter', ' ', 'Spacebar'].includes(event.key) || !event.target?.matches?.('[data-hx-room-card]')) return;
+        // The shared shell has legacy keyboard routers. Handle this composite
+        // card once, without routing a key from its nested native controls.
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        event.target.click();
+      }, true);
       document.addEventListener('keydown', (event) => {
         if (event.key !== 'Enter' || !event.target?.matches?.('[data-hx-room-search]')) return;
         event.preventDefault();
         handlers['hx-room-search'](event.target);
       });
     }
+    handlers['hx-room-select-toggle'] = () => {
+      cuSelectionMode = !cuSelectionMode;
+      if (!cuSelectionMode) cuSelectedRooms.clear();
+      rerender();
+    };
+    handlers['hx-room-check'] = (el, arg) => {
+      const n = parseInt(arg, 10);
+      const id = R()[n]?.id;
+      if (!id) return;
+      if (el.checked) cuSelectedRooms.add(String(id));
+      else cuSelectedRooms.delete(String(id));
+      rerender();
+    };
+    handlers['hx-room-select-filtered'] = () => {
+      Object.values(R()).forEach((r) => {
+        if (cuRoomMatchesFilter(r)) cuSelectedRooms.add(String(r.id));
+      });
+      cuSelectionMode = true;
+      rerender();
+    };
+    handlers['hx-room-select-none'] = () => {
+      cuSelectedRooms.clear();
+      rerender();
+    };
+    handlers['hx-room-select-cancel'] = () => {
+      cuSelectedRooms.clear();
+      cuSelectionMode = false;
+      rerender();
+    };
+    handlers['hx-room-bulk-edit-open'] = () => {
+      if (!isCustomHotel()) return;
+      if (cuPendingBulk()) { handlers['hx-bulk-resume'](); return; }
+      cuBulkEditModal();
+    };
+    handlers['hx-bulk-resume'] = () => {
+      const plan = cuPendingBulk();
+      if (!plan) return;
+      cuBulkPlan = plan;
+      cuBulkStaged = plan.changes;
+      cuSelectionMode = true;
+      cuSelectedRooms.clear();
+      plan.targets.forEach((target) => cuSelectedRooms.add(String(target.id)));
+      openModal?.close?.();
+      cuBulkReviewModal(plan);
+    };
+    handlers['hx-bulk-cancel'] = () => {
+      openModal?.close?.();
+      cuBulkStaged = null;
+    };
+    handlers['hx-bulk-review'] = (el) => {
+      const root = el.closest('.kiwi-modal');
+      if (!root) return;
+      const floorId = String(root.querySelector('[data-hx-bulk-floor-id]')?.value || '');
+      const typeId = String(root.querySelector('[data-hx-bulk-type-id]')?.value || '');
+      const viewVal = String(root.querySelector('[data-hx-bulk-view]')?.value || '');
+      const charMode = String(root.querySelector('[data-hx-bulk-char-mode]')?.value || 'none');
+      const checkedChars = typeof root.querySelectorAll === 'function'
+        ? Array.from(root.querySelectorAll('[data-hx-bulk-char]:checked') || []).map((cb) => cb.getAttribute?.('data-hx-bulk-char') || cb.dataset?.hxBulkChar).filter(Boolean)
+        : [];
+
+      const hasChange = Boolean(floorId || typeId || viewVal || (charMode !== 'none'));
+      if (!hasChange) {
+        toast(trL({ fr: 'Aucune modification choisie', en: 'No changes selected', ar: 'لم يتم اختيار أي تعديل' }), {
+          type: 'warn',
+          desc: trL({ fr: 'Choisissez au moins un paramètre à modifier.', en: 'Select at least one parameter to change.', ar: 'اختر معياراً واحداً على الأقل للتعديل.' }),
+        });
+        return;
+      }
+
+      cuBulkStaged = {
+        floorId: floorId || null,
+        typeId: typeId || null,
+        view: viewVal === '__CLEAR__' ? '' : (viewVal || null),
+        charMode,
+        characteristics: checkedChars,
+      };
+
+      const st = cuState();
+      const venueId = cuVenueId();
+      const merchant = cuMerchantSlug();
+      const operationId = 'bulk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+      const targets = [];
+      for (const r of cuSelectedRows()) {
+        if (r && !r.deletedAt) {
+          targets.push({
+            id: String(r.id),
+            n: r.n,
+            expectedUpdatedAt: +r.updatedAt || 0,
+            before: {
+              floorId: r.floorId,
+              floor: r.floor,
+              typeId: r.typeId,
+              typeName: r.typeName,
+              view: r.view || null,
+              characteristics: Array.isArray(r.characteristics) ? [...r.characteristics] : [],
+            },
+          });
+        }
+      }
+      if (!targets.length) {
+        toast(trL({ fr: 'Aucune chambre valide sélectionnée', en: 'No valid rooms selected', ar: 'لم يتم تحديد أي غرف صالحة' }), { type: 'warn' });
+        return;
+      }
+      targets.sort((a, b) => a.n - b.n);
+
+      cuBulkPlan = {
+        operationId,
+        venueId,
+        stateId: cuStateId(),
+        merchant,
+        baseRev: st.rev != null ? st.rev : 0,
+        createdAt: cuStamp(),
+        changes: { ...cuBulkStaged },
+        targets,
+      };
+
+      openModal?.close?.();
+      cuBulkReviewModal(cuBulkPlan);
+    };
+    handlers['hx-bulk-back'] = () => {
+      if (cuBulkPlan?.submitted) return;
+      openModal?.close?.();
+      cuBulkEditModal(cuBulkStaged);
+    };
+    handlers['hx-bulk-confirm'] = async (el) => {
+      const plan = cuBulkPlan;
+      if (!isCustomHotel() || !plan || !plan.targets?.length || cuBulkSaving || plan.needsReview) return;
+      if (plan.venueId !== cuVenueId() || plan.merchant !== cuMerchantSlug()) {
+        toast(trL({fr:'Établissement changé · vérifiez à nouveau la sélection',en:'Property changed · review the selection again',ar:'تغيرت المنشأة · راجع التحديد مجدداً'}), { type: 'warn' });
+        return;
+      }
+      cuBulkSaving = true;
+      if (el) el.disabled = true;
+      const stateId = plan.stateId || cuStateId();
+      const draftKey = 'kiwi:hotel-bulk-draft:v1:' + stateId;
+      try {
+        // Preserve the intent, not an unconfirmed mutation of the room register.
+        plan.submitted = true;
+        localStorage.setItem(draftKey, JSON.stringify(plan));
+        const back = openModal?.el?.querySelector('[data-action="hx-bulk-back"]');
+        if (back) back.disabled = true;
+        if (typeof fetch !== 'function') throw new Error('Connexion serveur indisponible');
+        const controller = typeof AbortController === 'function' ? new AbortController() : null;
+        const timer = controller ? setTimeout(() => controller.abort(), 20000) : null;
+        let response, result;
+        try {
+          response = await fetch('/api/hotel/rooms-bulk', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            ...(controller ? { signal: controller.signal } : {}),
+            body: JSON.stringify({
+              merchant: plan.merchant, operationId: plan.operationId,
+              targets: plan.targets.map(({id,n,expectedUpdatedAt}) => ({id,n,expectedUpdatedAt})),
+              changes: plan.changes,
+            }),
+          });
+          result = await response.json();
+        } finally { if (timer) clearTimeout(timer); }
+        if (!response.ok || !result?.ok || !result.data) {
+          const conflict = response.status === 409;
+          // A rejected stale revision is safe to review afresh. Unknown outcomes
+          // retain the original operation ID and can only be retried.
+          if (conflict && result?.error !== 'operation-conflict') {
+            plan.submitted = false;
+            plan.needsReview = true;
+            localStorage.setItem(draftKey, JSON.stringify(plan));
+            const back = openModal?.el?.querySelector('[data-action="hx-bulk-back"]');
+            if (back) back.disabled = false;
+            if (hotelCloud?.pull) Promise.resolve(hotelCloud.pull(true)).catch(() => {});
+          }
+          throw new Error(conflict
+            ? trL({fr:'Conflit serveur · actualisez les chambres et vérifiez à nouveau les modifications.',en:'Server conflict · refresh rooms and review the changes again.',ar:'تعارض بالخادم · حدّث الغرف وراجع التعديلات.'})
+            : response.status === 401 || response.status === 403
+              ? trL({fr:'Session expirée ou droits insuffisants.',en:'Session expired or insufficient permissions.',ar:'انتهت الجلسة أو الصلاحيات غير كافية.'})
+              : trL({fr:'Enregistrement non confirmé · réessayez sans recréer cette opération.',en:'Save not confirmed · retry this operation without recreating it.',ar:'لم يتم تأكيد الحفظ · أعد محاولة العملية نفسها.'}));
+        }
+        // The reply belongs to its original property even if navigation changed.
+        const acknowledged = cuHydrate(result.data);
+        CUSTOM_HX[stateId] = acknowledged;
+        const cached = cuWriteLocal(acknowledged, stateId);
+        if (cached) localStorage.removeItem(draftKey);
+        if (stateId !== cuStateId() || plan.merchant !== cuMerchantSlug()) return;
+        if (hotelCloud?.pull) hotelCloud.pull(true);
+        cuSelectedRooms.clear();
+        cuSelectionMode = false;
+        cuBulkStaged = null;
+        cuBulkPlan = null;
+        openModal?.close?.();
+        cuUpdateFloorsManagerModal();
+        cuRefreshFloorSelectors();
+        toast(plan.targets.length + ' ' + trL({fr:'chambres mises à jour',en:'rooms updated',ar:'غرف تم تحديثها'}), {
+          type: cached ? 'success' : 'warn',
+          desc: cached
+            ? trL({fr:'Modification confirmée par le serveur.',en:'Change confirmed by the server.',ar:'تم تأكيد التغيير من الخادم.'})
+            : trL({fr:'Confirmé sur le serveur · cache local indisponible, gardez cette page ouverte.',en:'Saved on server · local cache unavailable; keep this page open.',ar:'حُفظ بالخادم · التخزين المحلي غير متاح؛ أبقِ الصفحة مفتوحة.'}),
+        });
+        rerender();
+      } catch (error) {
+        if (plan.venueId === cuVenueId()) {
+          const message = trL({fr:'Enregistrement non confirmé',en:'Save not confirmed',ar:'لم يتم تأكيد الحفظ'});
+          const detail = error?.message || String(error);
+          const node = openModal?.el?.querySelector('[data-hx-bulk-error]');
+          if (node) { node.hidden = false; node.textContent = detail; }
+          toast(message, { type: 'error', desc: detail });
+        }
+      } finally {
+        if (el) el.disabled = !!plan.needsReview;
+        cuBulkSaving = false;
+      }
+    };
+    handlers['hx-views-manage-open'] = () => { if (isCustomHotel()) cuViewsAndCharsManager(); };
+    handlers['hx-views-manage-close'] = () => { openModal?.close?.(); };
+    const saveRoomConfig = async (el, mutate, message) => {
+      if (!isCustomHotel() || el?.disabled) return;
+      const scope = cuStateId();
+      const st = cuHydrate(cuDocument(cuState()));
+      if (el) el.disabled = true;
+      try {
+        mutate(st);
+        st.configUpdatedAt = cuStamp();
+        await cuCommitDraft(st);
+        if (scope !== cuStateId()) return;
+        toast(message, { type: 'success' });
+        openModal?.close?.();
+        cuViewsAndCharsManager();
+        rerender();
+      } catch (error) {
+        if (scope === cuStateId()) toast(error.message, { type:'error' });
+      } finally { if (el) el.disabled = false; }
+    };
+    handlers['hx-view-add'] = async (el) => {
+      const raw = String(el.closest('.kiwi-modal')?.querySelector('[data-hx-view-input]')?.value || '').trim().slice(0, 40);
+      return saveRoomConfig(el, (st) => {
+        if (!raw) throw new Error(trL({fr:'Indiquez un nom de vue',en:'Enter a view name',ar:'أدخل اسم الإطلالة'}));
+        st.views = Array.isArray(st.views) ? st.views.slice() : DEFAULT_VIEWS.slice();
+        if (st.views.some((v) => v.toLocaleLowerCase('fr') === raw.toLocaleLowerCase('fr'))) throw new Error(trL({fr:'Cette vue existe déjà',en:'This view already exists',ar:'هذه الإطلالة موجودة بالفعل'}));
+        if (st.views.length >= 50) throw new Error(trL({fr:'Limite de 50 vues atteinte.',en:'Maximum of 50 views reached.',ar:'تم بلوغ الحد الأقصى البالغ 50 إطلالة.'}));
+        st.views.push(raw);
+      }, trL({fr:'Vue ajoutée',en:'View added',ar:'تمت إضافة الإطلالة'}));
+    };
+    handlers['hx-view-remove'] = async (el, arg) => saveRoomConfig(el, (st) => {
+      const value = String(arg || '');
+      if (Object.values(st.rooms).some((r) => r.view === value)) throw new Error(trL({fr:'Vue utilisée par des chambres. Modifiez ces chambres avant de la retirer.',en:'This view is used by rooms. Update those rooms before removing it.',ar:'تستخدم غرف هذه الإطلالة. عدّل الغرف قبل حذفها.'}));
+      st.views = (st.views || []).filter((v) => v !== value);
+    }, trL({fr:'Vue retirée',en:'View removed',ar:'تم حذف الإطلالة'}));
+    handlers['hx-char-add'] = async (el) => {
+      const raw = String(el.closest('.kiwi-modal')?.querySelector('[data-hx-char-input]')?.value || '').trim().slice(0, 50);
+      return saveRoomConfig(el, (st) => {
+        if (!raw) throw new Error(trL({fr:'Indiquez un nom d’équipement',en:'Enter an amenity name',ar:'أدخل اسم الميزة'}));
+        if (cuAllCharacteristics().some((c) => cuCharLabel(c).toLocaleLowerCase('fr') === raw.toLocaleLowerCase('fr'))) throw new Error(trL({fr:'Cet équipement existe déjà',en:'This amenity already exists',ar:'هذه الميزة موجودة بالفعل'}));
+        if ((st.customCharacteristics || []).length >= 50) throw new Error(trL({fr:'Limite de 50 équipements personnalisés atteinte.',en:'Maximum of 50 custom amenities reached.',ar:'تم بلوغ الحد الأقصى البالغ 50 ميزة مخصصة.'}));
+        const id = el.__charIntentId || (el.__charIntentId = 'custom_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6));
+        st.customCharacteristics = [...(st.customCharacteristics || []), {id, label:raw, labels:{fr:raw,en:raw,ar:raw}}];
+      }, trL({fr:'Équipement ajouté',en:'Amenity added',ar:'تمت إضافة الميزة'}));
+    };
+    handlers['hx-char-remove'] = async (el, arg) => saveRoomConfig(el, (st) => {
+      const id = String(arg || '');
+      if (Object.values(st.rooms).some((r) => (r.characteristics || []).includes(id))) throw new Error(trL({fr:'Équipement utilisé par des chambres. Modifiez ces chambres avant de le retirer.',en:'This amenity is used by rooms. Update those rooms before removing it.',ar:'تستخدم غرف هذه الميزة. عدّل الغرف قبل حذفها.'}));
+      st.customCharacteristics = (st.customCharacteristics || []).filter((c) => c.id !== id);
+    }, trL({fr:'Équipement retiré',en:'Amenity removed',ar:'تم حذف الميزة'}));
     handlers['hx-room-delete-open'] = (el, arg) => {
       if (!isCustomHotel()) return;
       const n = parseInt(arg, 10);
@@ -3588,12 +4854,25 @@
       const st = cuState();
       const room = st.rooms[n];
       if (!room || st.folios[n]) return;
-      const tombstone = { ...room, updatedAt: cuStamp(), deletedAt: cuStamp() };
+      const roomId = room.id;
+      const now = cuStamp();
+      Object.values(st.rooms).forEach((r) => {
+        if (Array.isArray(r.connectingRoomIds) && r.connectingRoomIds.includes(roomId)) {
+          r.connectingRoomIds = r.connectingRoomIds.filter((id) => id !== roomId);
+          r.connectingMeta = { ...(r.connectingMeta || {}) };
+          r.connectingMeta[roomId] = { at: now, linked: false };
+          r.updatedAt = now;
+        }
+      });
+      const tombstone = { ...room, updatedAt: now, deletedAt: now };
       const records = st.roomRecords || (st.roomRecords = []);
       const i = records.findIndex((r) => r && r.id === room.id);
       if (i >= 0) records[i] = tombstone; else records.push(tombstone);
       delete st.rooms[n];
+      cuSelectedRooms.delete(String(room.id));
       cuSave(st);
+      cuUpdateFloorsManagerModal();
+      cuRefreshFloorSelectors();
       openModal?.close?.();
       toast('Chambre ' + n + ' supprimée', { type: 'success', desc: 'Le plan et les disponibilités ont été mis à jour.' });
       rerender();
@@ -3623,7 +4902,21 @@
 
     /* — folio — */
     handlers['hx-folio'] = (el, arg) => openFolio(parseInt(arg, 10));
-    handlers['hx-room'] = (el, arg) => roomModal(parseInt(arg, 10));
+    handlers['hx-room'] = (el, arg) => {
+      const n = parseInt(arg, 10);
+      if (cuSelectionMode) {
+        const id = R()[n]?.id;
+        if (!id) return;
+        if (cuSelectedRooms.has(String(id))) {
+          cuSelectedRooms.delete(String(id));
+        } else {
+          cuSelectedRooms.add(String(id));
+        }
+        rerender();
+        return;
+      }
+      roomModal(n);
+    };
     handlers['hx-add-charge'] = (el, arg) => {
       const body = el.closest('.kiwi-modal')?.querySelector('.kiwi-modal-body');
       if (body) body.innerHTML = addChargeHtml(parseInt(arg, 10));
@@ -3858,7 +5151,49 @@
   window.KiwiHotelRooms = Object.freeze({
     current: () => cuDocument(cuState()),
     merge: (mine, theirs) => cuMerge(mine, theirs),
-    hydrate: (doc) => cuHydrate(doc),
+    hydrate: (doc) => {
+      const id = cuStateId();
+      if (id) {
+        CUSTOM_HX[id] = cuHydrate(doc);
+        cuWriteLocal(CUSTOM_HX[id], id);
+        return CUSTOM_HX[id];
+      }
+      return cuHydrate(doc);
+    },
+    filter: cuRackFilter,
+    characteristics: () => HOTEL_CHARACTERISTICS.slice(),
+    selection: {
+      get selected() { return cuSelectedNumbers(); },
+      get mode() { return cuSelectionMode; },
+      setMode: (m) => { cuSelectionMode = Boolean(m); },
+      select: (n) => { if (R()[Number(n)]?.id) cuSelectedRooms.add(String(R()[Number(n)].id)); },
+      deselect: (n) => { if (R()[Number(n)]?.id) cuSelectedRooms.delete(String(R()[Number(n)].id)); },
+      clear: () => { cuSelectedRooms.clear(); },
+    },
+    resetFilter: cuResetRackFilter,
+    matchesFilter: cuRoomMatchesFilter,
+    allViews: cuAllViews,
+    allCharacteristics: cuAllCharacteristics,
+    connectingAvail: cuConnectingAvail,
+    bulkPlan: () => cuBulkPlan,
+    linkConnecting: (a, b) => {
+      const st = cuState();
+      const rA = Object.values(st.rooms).find((r) => r.n === a || r.id === a);
+      const rB = Object.values(st.rooms).find((r) => r.n === b || r.id === b);
+      if (rA && rB) {
+        cuLinkConnectingRooms(st, rA, rB);
+        cuSave(st);
+      }
+    },
+    unlinkConnecting: (a, b) => {
+      const st = cuState();
+      const rA = Object.values(st.rooms).find((r) => r.n === a || r.id === a);
+      const rB = Object.values(st.rooms).find((r) => r.n === b || r.id === b);
+      if (rA && rB) {
+        cuUnlinkConnectingRooms(st, rA, rB);
+        cuSave(st);
+      }
+    },
   });
 
   register();

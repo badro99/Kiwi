@@ -23,6 +23,7 @@ function boot(saved) {
     removeItem: (key) => data.delete(key),
   };
   const handlers = {};
+  let cloudRevision = 1;
   const window = {
     localStorage,
     addEventListener() {},
@@ -38,9 +39,21 @@ function boot(saved) {
       isCustom: () => true,
       subscribe() { return () => {}; },
     },
+    KiwiCloudDoc: {
+      attach() {
+        return {
+          bind() {},
+          push() {},
+          save: async (doc) => ({ ok: true, status: 200, rev: cloudRevision++, data: doc, operation: { status: 'applied' } }),
+          pushNow: async () => ({ ok: true, status: 200, rev: cloudRevision++, operation: { status: 'applied' } }),
+        };
+      },
+      slugFor: (id) => 'slug-' + id,
+    },
   };
   const context = {
     window, localStorage, console, document: { addEventListener() {} },
+    fetch: async () => ({ ok: true, status: 200, json: async () => ({ ok: true, rev: cloudRevision++, operation: { status: 'applied' } }) }),
     setTimeout() { return 0; }, clearTimeout() {},
     Date, Math, JSON, Object, Array, String, Number, Map, Set,
   };
@@ -54,6 +67,7 @@ function editor(fields, rootData) {
   return { closest: () => root };
 }
 
+async function run() {
 console.log('\n■ Hotel room register');
 const first = boot();
 const empty = first.window.KiwiHotelRooms.current();
@@ -64,7 +78,7 @@ ok(Array.isArray(empty.roomTypes) && empty.roomTypes.length >= 2, 'editable room
 
 const roomTypeId = empty.roomTypes.find((t) => t.name === 'Chambre').id;
 const firstFloorId = empty.floors.find((f) => !f.deletedAt).id;
-first.handlers['hx-floor-save'](editor({ '[data-hx-floor-name]': '1er étage' }), firstFloorId);
+await first.handlers['hx-floor-save'](editor({ '[data-hx-floor-name]': '1er étage' }), firstFloorId);
 first.handlers['hx-room-batch-save'](editor({
   '[data-hx-room-numbers]': '101-105, 110',
   '[data-hx-room-type-id]': roomTypeId,
@@ -136,8 +150,8 @@ for (const [numbers, floor] of [
   ['401-425', '4e étage'],
 ]) {
   const floorId = floor === '1er étage' ? initialLargeFloorId : 'new';
-  if (floorId === 'new') large.handlers['hx-floor-save'](editor({ '[data-hx-floor-name]': floor }), 'new');
-  else large.handlers['hx-floor-save'](editor({ '[data-hx-floor-name]': floor }), floorId);
+  if (floorId === 'new') await large.handlers['hx-floor-save'](editor({ '[data-hx-floor-name]': floor }), 'new');
+  else await large.handlers['hx-floor-save'](editor({ '[data-hx-floor-name]': floor }), floorId);
   const savedFloorId = large.window.KiwiHotelRooms.current().floors.find((f) => !f.deletedAt && f.name === floor).id;
   large.handlers['hx-room-batch-save'](editor({
     '[data-hx-room-numbers]': numbers,
@@ -149,7 +163,7 @@ let largeDoc = JSON.parse(large.data.get('kiwi:hotel-rooms:v2:vhotel'));
 ok(largeDoc.rooms.filter((r) => !r.deletedAt).length === 100 && new Set(largeDoc.rooms.map((r) => r.floor)).size === 4,
   'batch setup scales to 100 rooms across multiple floors without changing the data model');
 const secondFloor = largeDoc.floors.filter((f) => !f.deletedAt).find((f) => f.name === '2e étage');
-large.handlers['hx-floor-save'](editor({ '[data-hx-floor-name]': 'Aile Atlas' }), secondFloor.id);
+await large.handlers['hx-floor-save'](editor({ '[data-hx-floor-name]': 'Aile Atlas' }), secondFloor.id);
 largeDoc = JSON.parse(large.data.get('kiwi:hotel-rooms:v2:vhotel'));
 ok(largeDoc.rooms.filter((r) => !r.deletedAt && r.floorId === secondFloor.id).every((r) => r.floor === 'Aile Atlas'),
   'renaming a section updates every room in that section');
@@ -189,3 +203,9 @@ if (failures) {
   process.exit(1);
 }
 console.log('\nHotel room register checks passed.');
+}
+
+run().catch((error) => {
+  console.error('Hotel room test runner fatal error:', error);
+  process.exit(1);
+});
