@@ -1091,6 +1091,80 @@ await withCtx({}, async (ctx) => {
   ok(agreedBox.cbW <= 32, `agreed checkbox stays a control (${agreedBox.cbW}px, not full width)`);
 });
 
+/* ── T10 · account-mode switching never strands the editor ── */
+console.log('\n■ T10 · switching account modes keeps the visible UI honest');
+await withCtx({}, async (ctx) => {
+  const { page } = ctx;
+  await unlock(page);
+  await gotoHotel(ctx, 'nav-reception');
+  await openStayEditor(ctx);
+  await fillStay(page, { ...GUEST(ymd(7), ymd(9)), roomTypeId: 'type:t1', resourceId: 'room:101', partySize: 1, board: 'bb' });
+  const vis = () => page.evaluate(() => {
+    const disp = (sel) => { const el = document.querySelector(sel); return el ? getComputedStyle(el).display : 'absent'; };
+    return {
+      quote: disp('[data-hx-commercial-stay] [data-hx-quote]'),
+      result: (document.querySelector('[data-hx-commercial-stay] [data-hx-quote-result]')?.textContent || ''),
+      help: (document.querySelector('[data-hx-commercial-stay] [data-hx-commercial-help]')?.textContent || ''),
+      submit: (document.querySelector('[data-hx-stay-form] [type="submit"]')?.textContent || ''),
+    };
+  });
+  let v = await vis();
+  ok(v.quote === 'none', 'no-account mode hides contract simulation');
+  ok(/2100\.00/.test(await directBreakdown(page)), 'no-account mode shows the direct price');
+  ok(v.submit === 'Confirmer la réservation', 'no-account mode offers the normal reservation action');
+  step('attach an account: simulation appears with account guidance');
+  await setField(page, '[data-hx-commercial-stay] select[name="accountId"]', 'acc-agency-01');
+  v = await vis();
+  ok(v.quote !== 'none', 'account mode shows contract simulation');
+  ok(v.help.startsWith('Avec compte'), 'guidance switches to the account path');
+  step('simulate the matching contract, then detach: stale output clears');
+  await setField(page, '[data-hx-commercial-stay] select[name="board"]', 'hb_dinner');
+  await page.click('[data-hx-commercial-stay] [data-hx-quote]');
+  await page.waitForSelector('[data-hx-commercial-stay] [data-hx-accept-quote]', { timeout: 15000 });
+  ok(/850\.00/.test(await page.$eval('[data-hx-commercial-stay] [data-hx-quote-result]', (el) => el.textContent || '')), 'contract simulation prices the stay');
+  await setField(page, '[data-hx-commercial-stay] select[name="accountId"]', '');
+  await setField(page, '[data-hx-commercial-stay] select[name="board"]', 'bb');
+  v = await vis();
+  ok(v.quote === 'none', 'detaching hides simulation again');
+  ok(v.result === '', 'stale contract output cleared on detach');
+  ok(/2100\.00/.test(await directBreakdown(page)), 'direct price back after detach');
+  const done = await submitStay(page);
+  ok(done.outcome === 'closed', 'ordinary booking completes after the switching dance');
+  const b = await ctx.stayByClientRef(done.ref);
+  ok(b && b.hotel.total === 2100 && (!b.commercial || b.commercial.accountId === ''), 'booked direct, no account attached');
+});
+
+/* ── T11 · legitimate repricing confirmation appears and gates ── */
+console.log('\n■ T11 · moved dates surface an explicit reprice confirmation');
+await withCtx({}, async (ctx) => {
+  const { page } = ctx;
+  await unlock(page);
+  await gotoHotel(ctx, 'nav-reception');
+  await openStayEditor(ctx);
+  await fillStay(page, { ...GUEST(ymd(7), ymd(9)), roomTypeId: 'type:t1', resourceId: 'room:101', partySize: 1, board: 'bb' });
+  const done = await submitStay(page);
+  ok(done.outcome === 'closed', 'baseline booking confirms');
+  let b = await ctx.stayByClientRef(done.ref);
+  await openStayForEdit(ctx, b.id);
+  const wrapDisp = () => page.evaluate(() => {
+    const el = document.querySelector('[data-hx-commercial-stay] [data-hx-reprice-wrap]');
+    return el ? getComputedStyle(el).display : 'absent';
+  });
+  ok(await wrapDisp() === 'none', 'pristine edit shows no reprice row');
+  step('extend by a night: confirmation appears with the new total');
+  await setField(page, '[data-hx-stay-form] input[name="checkOut"]', ymd(10));
+  ok(await wrapDisp() !== 'none', 'reprice row becomes visible on moved dates');
+  const label = await page.$eval('[data-hx-commercial-stay] [data-hx-reprice-label]', (el) => el.textContent || '');
+  ok(/3150\.00/.test(label), 'reprice confirmation names the new total');
+  const unconfirmed = await submitStay(page);
+  ok(String(unconfirmed.outcome).startsWith('settled:') && /vérifiez le nouveau total/.test(String(unconfirmed.outcome)), 'unchecked reprice blocks the save with guidance');
+  await page.click('[data-hx-commercial-stay] [data-hx-reprice-confirm]');
+  const done2 = await submitStay(page);
+  ok(done2.outcome === 'closed', 'confirmed reprice saves');
+  b = await ctx.stayByClientRef(done.ref);
+  ok(b && b.hotel.total === 3150 && b.pricing && b.pricing.totalCents === 315000 && b.pricing.rows.length === 3, 'extension repriced to three nights');
+});
+
 /* ── summary ───────────────────────────────────────────────────────── */
 console.log(`\n✓ All ${controls} direct-booking browser controls passed.`);
 console.log(`  navigation paths used: ${NAV_PATHS.join(' | ')}`);
