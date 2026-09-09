@@ -19,6 +19,10 @@
  *  · T6  direct-guest group with meals + reload recovery
  *  · T7  agency/company contract booking still works, totals match
  *  · T8  dropped submit response + retry books exactly once
+ *  · T12 outlet menu reaches the shared catalogue editor
+ *  · T13 delayed tariff save blocks booking until server acknowledgment
+ *  · T14 failed tariff save stays blocked and manual retry recovers
+ *  · T15 offline tariff save auto-retries when connectivity returns
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -1241,7 +1245,14 @@ await withCtx({}, async (ctx) => {
   const menu = await page.$eval('[data-hx-outlet-menu]', (el) => el.textContent || '');
   ok(/Thé à la menthe/.test(menu) && /25\s*MAD/.test(menu), 'menu shows the selling price');
   ok(/Tagine du jour/.test(menu) && /120\s*MAD/.test(menu), 'second article priced too');
-  await uclick('.kiwi-modal-close');
+  ok(/Prix partagés par tout l’hôtel/.test(menu), 'menu explains that selling prices are shared hotel-wide');
+  await uclick('[data-action="hx-outlet-edit-menu"]');
+  await page.waitForFunction(() => window.Kiwi?.activePage === 'inventory' && /Inventaire produits/.test(document.querySelector('.dash-genpage h1')?.textContent || ''), { timeout: 15000 });
+  await page.waitForFunction(() => !document.querySelector('[data-hx-outlet-menu]'), { timeout: 5000 });
+  ok(true, 'catalogue action closes the outlet modal');
+  ok(await page.evaluate(() => window.Kiwi?.activePage === 'inventory'), 'catalogue action reaches the authorized shared inventory editor');
+  await page.evaluate(() => window.Kiwi?.handlers?.['nav-points-vente']?.());
+  await page.waitForSelector('[data-hx-economat]', { timeout: 15000 });
   step('reload keeps the outlet, the mapping and the name');
   await reloadAndUnlock(page);
   await page.evaluate(() => window.Kiwi?.handlers?.['nav-points-vente']?.());
@@ -1278,34 +1289,128 @@ await withCtx({}, async (ctx) => {
   ok(stacked.stayPresent && stacked.nameKept === nameBefore, 'reservation draft untouched underneath');
   ok(stacked.focused, 'missing supplement field focused for the right category');
   await setField(page, '[data-hx-type-board-hb_lunch]', '220');
+  await page.setRequestInterception(true);
+  let heldRoomsPost = null;
+  const holdRoomsPost = (req) => {
+    let payload = null;
+    try { payload = JSON.parse(req.postData() || 'null'); } catch (_) {}
+    if (!heldRoomsPost && req.method() === 'POST' && new URL(req.url()).pathname === '/api/store' && payload?.feature === 'rooms') {
+      heldRoomsPost = req;
+      return;
+    }
+    req.continue().catch(() => {});
+  };
+  page.on('request', holdRoomsPost);
   await page.click('[data-action="hx-room-type-save"]');
   await page.waitForFunction(() => !document.querySelector('[data-hx-type-board-hb_lunch]'), { timeout: 15000 });
-  const rateOnServer = await (async () => {
-    for (let i = 0; i < 30; i++) {
-      const s = await ctx.api('/api/store?merchant=' + MERCHANT + '&feature=rooms');
-      const data = typeof s.json.data === 'string' ? JSON.parse(s.json.data) : s.json.data;
-      const t = (data.roomTypes || []).find((x) => x.id === 'type:t1');
-      if (t && t.boardRates && Number(t.boardRates.hb_lunch) === 220) return true;
-      await new Promise((r2) => setTimeout(r2, 500));
-    }
-    return false;
-  })();
-  ok(rateOnServer, 'supplement reached the server rooms document before submit');
+  await page.waitForFunction(() => !!document.querySelector('[data-hx-stay-form]')?.__hxTariffSyncState && /Synchronisation du tarif/.test(document.querySelector('[data-hx-tariff-sync]')?.textContent || ''), { timeout: 15000 });
+  await page.waitForFunction(() => !!document.querySelector('[data-hx-stay-form] [type="submit"]')?.disabled, { timeout: 5000 });
+  ok(!!heldRoomsPost, 'rooms-document acknowledgment is genuinely still in flight');
+  ok(await page.$eval('[data-hx-stay-form] [type="submit"]', (el) => el.disabled), 'reservation submit is disabled while tariff acknowledgment is pending');
+  await page.$eval('[data-hx-stay-form]', (form) => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  await page.waitForFunction(() => /confirmation du tarif par le serveur/.test(document.querySelector('[data-hx-stay-error]')?.textContent || ''), { timeout: 5000 });
+  ok(!ctx.log.some((x) => x.type === 'stay-post' && x.via === 'browser'), 'defense-in-depth sends no booking request while the tariff is pending');
+  await heldRoomsPost.continue();
+  page.off('request', holdRoomsPost);
+  await page.setRequestInterception(false);
   const after = await page.evaluate(() => ({
     backdrops: document.querySelectorAll('.kiwi-backdrop').length,
     nameKept: (document.querySelector('[data-hx-stay-form] input[name="name"]') || {}).value,
   }));
   ok(after.backdrops === 1 && after.nameKept === nameBefore, 'type editor closes back onto the same draft');
   await page.waitForFunction(() => /2240\.00/.test(document.querySelector('[data-hx-direct-breakdown]')?.textContent || ''), { timeout: 15000 });
-  ok(true, 'quote reprices in place once the rate exists');
+  await page.waitForFunction(() => !document.querySelector('[data-hx-stay-form] [type="submit"]')?.disabled, { timeout: 15000 });
+  ok(true, 'server acknowledgment reprices in place and re-enables the same draft');
   const done = await submitStay(page);
   ok(done.outcome === 'closed', 'booking completes without reopening or refilling (got ' + done.outcome + ')');
   const b = await ctx.stayByClientRef(done.ref);
   ok(b && b.hotel.total === 2240, 'server total matches the configured rate');
 });
 
+/* ── T14 · failed tariff save remains blocked until manual retry ── */
+console.log('\n■ T14 · failed tariff acknowledgment blocks booking and manual retry recovers');
+await withCtx({}, async (ctx) => {
+  const { page } = ctx;
+  await unlock(page);
+  await gotoHotel(ctx, 'nav-reception');
+  await openStayEditor(ctx);
+  await fillStay(page, { ...GUEST(ymd(7), ymd(9)), roomTypeId: 'type:t1', resourceId: 'room:101', partySize: 1, board: 'hb_lunch' });
+  await page.click('[data-action="hx-configure-rate"]');
+  await page.waitForSelector('[data-hx-type-board-hb_lunch]', { timeout: 15000 });
+  await setField(page, '[data-hx-type-board-hb_lunch]', '220');
+  let rejectRooms = true;
+  await page.setRequestInterception(true);
+  const failRoomsPost = (req) => {
+    let payload = null;
+    try { payload = JSON.parse(req.postData() || 'null'); } catch (_) {}
+    if (rejectRooms && req.method() === 'POST' && new URL(req.url()).pathname === '/api/store' && payload?.feature === 'rooms') {
+      req.respond({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'qa-sync-failed' }) }).catch(() => {});
+      return;
+    }
+    req.continue().catch(() => {});
+  };
+  page.on('request', failRoomsPost);
+  await page.click('[data-action="hx-room-type-save"]');
+  await page.waitForFunction(() => /pas confirmé par le serveur/.test(document.querySelector('[data-hx-tariff-sync]')?.textContent || ''), { timeout: 20000 });
+  ok(await page.$eval('[data-hx-stay-form] [type="submit"]', (el) => el.disabled), 'failed save keeps reservation submission disabled');
+  ok(!!(await page.$('[data-action="hx-tariff-retry"]')), 'failed save offers an emergency retry action');
+  await page.$eval('[data-hx-stay-form]', (form) => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  await page.waitForFunction(() => /n’est pas encore confirmé/.test(document.querySelector('[data-hx-stay-error]')?.textContent || ''), { timeout: 5000 });
+  ok(!ctx.log.some((x) => x.type === 'stay-post' && x.via === 'browser'), 'failed tariff cannot leak into a booking request');
+  rejectRooms = false;
+  await page.click('[data-action="hx-tariff-retry"]');
+  await page.waitForFunction(() => /2240\.00/.test(document.querySelector('[data-hx-direct-breakdown]')?.textContent || ''), { timeout: 20000 });
+  await page.waitForFunction(() => !document.querySelector('[data-hx-stay-form] [type="submit"]')?.disabled, { timeout: 15000 });
+  ok(true, 'manual retry receives acknowledgment and re-enables the draft');
+  page.off('request', failRoomsPost);
+  await page.setRequestInterception(false);
+  const done = await submitStay(page);
+  ok(done.outcome === 'closed', 'recovered tariff books normally');
+  const b = await ctx.stayByClientRef(done.ref);
+  ok(b && b.hotel.total === 2240, 'recovered booking uses the server-confirmed total');
+});
+
+/* ── T15 · offline save automatically retries on reconnect ── */
+console.log('\n■ T15 · offline tariff save auto-retries when connectivity returns');
+await withCtx({}, async (ctx) => {
+  const { page } = ctx;
+  await unlock(page);
+  await gotoHotel(ctx, 'nav-reception');
+  await openStayEditor(ctx);
+  await fillStay(page, { ...GUEST(ymd(7), ymd(9)), roomTypeId: 'type:t1', resourceId: 'room:101', partySize: 1, board: 'hb_lunch' });
+  await page.click('[data-action="hx-configure-rate"]');
+  await page.waitForSelector('[data-hx-type-board-hb_lunch]', { timeout: 15000 });
+  await setField(page, '[data-hx-type-board-hb_lunch]', '220');
+  let disconnectRooms = true;
+  await page.setRequestInterception(true);
+  const disconnectRoomsPost = (req) => {
+    let payload = null;
+    try { payload = JSON.parse(req.postData() || 'null'); } catch (_) {}
+    if (disconnectRooms && req.method() === 'POST' && new URL(req.url()).pathname === '/api/store' && payload?.feature === 'rooms') {
+      req.abort('internetdisconnected').catch(() => {});
+      return;
+    }
+    req.continue().catch(() => {});
+  };
+  page.on('request', disconnectRoomsPost);
+  await page.click('[data-action="hx-room-type-save"]');
+  await page.waitForFunction(() => /Connexion perdue/.test(document.querySelector('[data-hx-tariff-sync]')?.textContent || ''), { timeout: 20000 });
+  ok(await page.$eval('[data-hx-stay-form] [type="submit"]', (el) => el.disabled), 'offline save cannot be booked prematurely');
+  ok(!!(await page.$('[data-action="hx-tariff-retry"]')), 'offline state keeps an emergency retry button available');
+  disconnectRooms = false;
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await page.waitForFunction(() => /2240\.00/.test(document.querySelector('[data-hx-direct-breakdown]')?.textContent || ''), { timeout: 25000 });
+  await page.waitForFunction(() => !document.querySelector('[data-hx-stay-form] [type="submit"]')?.disabled, { timeout: 15000 });
+  ok(true, 'browser online event automatically synchronizes and unlocks the draft');
+  page.off('request', disconnectRoomsPost);
+  await page.setRequestInterception(false);
+  const done = await submitStay(page);
+  ok(done.outcome === 'closed', 'auto-recovered offline tariff books normally');
+  const b = await ctx.stayByClientRef(done.ref);
+  ok(b && b.hotel.total === 2240, 'offline recovery books the acknowledged total');
+});
+
 /* ── summary ───────────────────────────────────────────────────────── */
 console.log(`\n✓ All ${controls} direct-booking browser controls passed.`);
 console.log(`  navigation paths used: ${NAV_PATHS.join(' | ')}`);
 if (browser) { try { await browser.close(); } catch (_) {} }
-

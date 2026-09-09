@@ -5364,6 +5364,12 @@
     if (form.__hxSubmitting) return;
     const fd = new FormData(form), submit = form.querySelector('[type="submit"]'), error = form.querySelector('[data-hx-stay-error]');
     if (form.__hxStayScope !== cuStayScope()) { error.textContent = 'L’hôtel actif a changé. Fermez ce dossier et rouvrez-le dans le bon établissement.'; return; }
+    if (form.__hxTariffSyncState && form.__hxTariffSyncState !== 'ready') {
+      error.textContent = form.__hxTariffSyncState === 'pending'
+        ? 'Attendez la confirmation du tarif par le serveur avant d’enregistrer la réservation.'
+        : 'Le nouveau tarif n’est pas encore confirmé par le serveur. Réessayez la synchronisation sans fermer ce brouillon.';
+      return;
+    }
     // The board selector lives in the commercial box: submitting before it
     // wires would silently fall back to room_only. Wait for it when the box
     // exists but is still loading; callers without the box (or with a failed
@@ -5520,7 +5526,10 @@
       toast('Séjour enregistré · ch. ' + (cuState().rooms && Object.values(cuState().rooms).find((r) => r.id === body.booking.resourceId)?.n || ''), { type: 'success', desc: body.booking.hotel.checkIn + ' → ' + body.booking.hotel.checkOut + ' · ' + (body.booking.hotel.channel || 'direct') });
       rerender();
     } catch (_) { error.textContent = 'Réponse serveur non reçue. Vérifiez le dossier ou réessayez : la même référence sera conservée pour éviter un doublon.'; }
-    finally { form.__hxSubmitting = false; submit.disabled = false; }
+    finally {
+      form.__hxSubmitting = false;
+      submit.disabled = !!(form.__hxTariffSyncState && form.__hxTariffSyncState !== 'ready');
+    }
   }
 
   async function cuCancelStay(id, button, modal) {
@@ -5594,7 +5603,19 @@
     offline: 'Connexion perdue : tarif enregistré sur cet appareil uniquement. Votre brouillon est intact.',
     retry: 'Réessayer la synchronisation',
   };
-  function cuSetTariffSync(form, state) {
+  function cuSetTariffSync(form, state, render = true) {
+    if (!form) return;
+    const blocked = state === 'pending' || state === 'failed' || state === 'offline';
+    form.__hxTariffSyncState = state || 'ready';
+    const submit = form.querySelector('[type="submit"]');
+    if (submit && blocked) {
+      submit.setAttribute('data-hx-tariff-disabled', '');
+      submit.disabled = true;
+    } else if (submit && submit.hasAttribute('data-hx-tariff-disabled')) {
+      submit.removeAttribute('data-hx-tariff-disabled');
+      if (!form.__hxSubmitting) submit.disabled = false;
+    }
+    if (!render) return;
     const host = form.querySelector('[data-hx-tariff-sync]');
     if (!host) return;
     if (state === 'ready' || !state) { host.innerHTML = ''; return; }
@@ -5602,32 +5623,59 @@
     const text = state === 'offline' ? HX_TARIFF_SYNC_COPY.offline : HX_TARIFF_SYNC_COPY.failed;
     host.innerHTML = `<div class="hx-tariff-sync-fail"><p class="hx-warn-note" style="color:var(--warn-ink);background:var(--warn-soft);padding:8px 12px;border-radius:8px;font-size:12px;">${text}</p><button type="button" class="hx-btn ghost" data-action="hx-tariff-retry">${HX_TARIFF_SYNC_COPY.retry}</button></div>`;
   }
-  async function cuAwaitTariffAck(form, tries = 0) {
-    let ack = null;
-    try { ack = await hotelCloud?.flush?.(); } catch (_) { ack = null; }
-    if (ack && ack.ok) return { ok: true };
-    if (ack && ack.error === 'busy' && tries < 4) {
-      await new Promise((r) => setTimeout(r, 700));
-      if (!form.isConnected) return { ok: false };
-      return cuAwaitTariffAck(form, tries + 1);
+  async function cuAwaitTariffAck(form) {
+    // A scheduled save can already own the cloud writer when this flow starts.
+    // Busy means "still pending", not "failed". Wait beyond cloud-doc's 10 s
+    // request timeout, then keep the gate pending and retry in the background.
+    const deadline = Date.now() + 14000;
+    while (form && form.isConnected) {
+      let ack = null;
+      try { ack = await hotelCloud?.flush?.(); } catch (_) { ack = null; }
+      if (ack && ack.ok) return { ok: true };
+      if (!ack || ack.error !== 'busy') return { ok: false, offline: !!(ack && ack.offline), error: ack && ack.error };
+      if (Date.now() >= deadline) return { ok: false, pending: true };
+      await new Promise((r) => setTimeout(r, 500));
     }
-    return { ok: false, offline: !!(ack && ack.offline) };
+    return { ok: false, cancelled: true };
   }
   async function cuTariffSyncCycle(form, pendingDelayMs) {
     if (!form || !form.isConnected) return;
+    const run = (form.__hxTariffSyncRun || 0) + 1;
+    form.__hxTariffSyncRun = run;
+    if (form.__hxTariffRetryTimer) clearTimeout(form.__hxTariffRetryTimer);
+    form.__hxTariffRetryTimer = 0;
+    if (form.__hxTariffOnlineHandler) {
+      window.removeEventListener('online', form.__hxTariffOnlineHandler);
+      form.__hxTariffOnlineHandler = null;
+    }
     let done = false, timer = 0;
-    if (pendingDelayMs) timer = setTimeout(() => { if (!done && form.isConnected) cuSetTariffSync(form, 'pending'); }, pendingDelayMs);
-    else cuSetTariffSync(form, 'pending');
+    // Block immediately. Only the cosmetic pending line may wait briefly, so
+    // the stacked type editor can close without a flash on very fast saves.
+    cuSetTariffSync(form, 'pending', !pendingDelayMs);
+    if (pendingDelayMs) timer = setTimeout(() => {
+      if (!done && form.isConnected && form.__hxTariffSyncRun === run) cuSetTariffSync(form, 'pending');
+    }, pendingDelayMs);
     const res = await cuAwaitTariffAck(form);
     done = true;
     if (timer) clearTimeout(timer);
-    if (!form.isConnected) return;
+    if (!form.isConnected || form.__hxTariffSyncRun !== run || res.cancelled) return;
     if (res.ok) {
       cuSetTariffSync(form, 'ready');
       form.dispatchEvent(new Event('hx-refresh-direct'));
+    } else if (res.pending) {
+      cuSetTariffSync(form, 'pending');
+      form.__hxTariffRetryTimer = setTimeout(() => {
+        if (form.isConnected && form.__hxTariffSyncState === 'pending') cuTariffSyncCycle(form, 0);
+      }, 800);
     } else {
       cuSetTariffSync(form, res.offline ? 'offline' : 'failed');
-      if (res.offline) window.addEventListener('online', () => cuTariffRetry(form), { once: true });
+      if (res.offline) {
+        form.__hxTariffOnlineHandler = () => {
+          form.__hxTariffOnlineHandler = null;
+          cuTariffRetry(form);
+        };
+        window.addEventListener('online', form.__hxTariffOnlineHandler, { once: true });
+      }
     }
   }
   async function cuTariffRetry(form) {
