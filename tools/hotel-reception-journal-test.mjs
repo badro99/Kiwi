@@ -576,7 +576,7 @@ test('guest identity, birth date and accompanying minors survive editor submissi
   f.handlers['hx-stay-edit'](null, booking.id);
   const html = f.modals[0].options.body;
   assert.match(html, /data-hx-guest-id="synthetic-guest-1"/);
-  assert.match(html, /data-hx-guest-birth[^>]*value="1990-02-12"/);
+  assert.match(html, /data-hx-guest-birth[^>]*value="12\/02\/1990"/);
   assert.match(html, /data-hx-guest-minors[^>]*value="2"/);
   const fields = { name: guest.name, sex: guest.sex, nationality: guest.nationality, birth: guest.birthDate, minors: '2', residence: guest.residenceCountry, 'id-type': guest.idDocType, 'id-num': guest.idDocNumber };
   form.querySelectorAll = () => [{

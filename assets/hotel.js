@@ -3487,7 +3487,7 @@
             <option value="F" ${g.sex === 'F' ? 'selected' : ''}>Féminin (F)</option>
           </select></label>
           <label><span>Nationalité</span>${cuNationalitySelectorHtml(g, idx)}</label>
-          <label><span>Date de naissance</span><input type="date" data-hx-guest-birth value="${esc(g.birthDate || '')}"></label>
+          <label><span>Date de naissance</span><input data-hx-guest-birth inputmode="numeric" autocomplete="off" maxlength="10" placeholder="JJ/MM/AAAA" value="${esc(cuBirthDisplay(g.birthDate))}"></label>
           <label><span>Mineurs accompagnants</span><input type="number" min="0" max="10" step="1" data-hx-guest-minors value="${esc(g.minorsUnder18 || 0)}"></label>
           <label><span>Pays de résidence</span><input data-hx-guest-residence placeholder="Ex. Maroc, France" value="${esc(g.residenceCountry || '')}"></label>
           <label><span>Type de pièce</span><select data-hx-guest-id-type>
@@ -3531,7 +3531,7 @@
               ${existingGuests.map(guestRowHtml).join('')}
             </div>
           </div>
-          <label class="hx-room-form-wide"><span>Note interne</span><textarea name="note" maxlength="600" rows="2">${esc(booking?.note || '')}</textarea></label>
+          <label class="hx-room-form-wide"><span>Note interne</span><textarea name="note" maxlength="600" rows="3">${esc(booking?.note || '')}</textarea></label>
         </div><p class="hx-stay-error" data-hx-stay-error role="status"></p><div class="hx-room-form-actions">${booking && ['requested', 'confirmed'].includes(booking.status) ? `<button type="button" class="hx-btn warn" data-action="hx-stay-cancel" data-arg="${esc(booking.id)}">Annuler le séjour</button>` : '<span></span>'}<button class="hx-btn atlas" type="submit">${booking ? 'Enregistrer les modifications' : (booking?.status === 'requested' ? 'Poser une option (bloquer la chambre)' : 'Confirmer la réservation')}</button></div>
       </form>` });
     const form = m.el.querySelector('[data-hx-stay-form]');
@@ -3590,7 +3590,7 @@
       if (day && form.elements.priceMode) { form.elements.priceMode.value = 'catalogue'; form.elements.board.value = 'room_only'; }
       if (form.elements.priceMode) form.elements.priceMode.disabled = day;
       if (form.elements.board) form.elements.board.disabled = day;
-      const quoteButton = form.querySelector('[data-hx-quote]'); if (quoteButton) quoteButton.hidden = day;
+      const quoteButton = form.querySelector('[data-hx-quote]'); if (quoteButton) quoteButton.hidden = day || !form.elements.accountId?.value;
     };
     form.elements.stayMode.addEventListener('change', toggleDayUse);
     form.elements.checkIn.addEventListener('change', toggleDayUse); toggleDayUse();
@@ -5369,17 +5369,29 @@
     // directory, where no meal choice exists) keep the legacy room-only path.
     if (form.querySelector('[data-hx-commercial-stay]') && !form.__commercialReady && !form.__commercialFailed) { error.textContent = 'Tarifs en cours de chargement. Patientez quelques secondes puis réessayez.'; return; }
     const slug = cuMerchantSlug();
-    const guestRows = Array.from(form.querySelectorAll('[data-hx-guest-row]')).map((row) => ({
-      id: row.getAttribute('data-hx-guest-id') || '',
-      name: String(row.querySelector('[data-hx-guest-name]')?.value || '').trim(),
-      sex: String(row.querySelector('[data-hx-guest-sex]')?.value || '').trim(),
-      nationality: String(row.querySelector('[data-hx-guest-nationality]')?.value || '').trim(),
-      birthDate: String(row.querySelector('[data-hx-guest-birth]')?.value || '').trim(),
-      minorsUnder18: Number(row.querySelector('[data-hx-guest-minors]')?.value || 0),
-      residenceCountry: String(row.querySelector('[data-hx-guest-residence]')?.value || '').trim(),
-      idDocType: String(row.querySelector('[data-hx-guest-id-type]')?.value || '').trim(),
-      idDocNumber: String(row.querySelector('[data-hx-guest-id-num]')?.value || '').trim(),
-    })).filter((g) => g.name || g.nationality || g.idDocNumber);
+    const guestRows = [];
+    const guestEls = Array.from(form.querySelectorAll('[data-hx-guest-row]'));
+    for (let gi = 0; gi < guestEls.length; gi++) {
+      const row = guestEls[gi];
+      const birth = cuBirthIso(row.querySelector('[data-hx-guest-birth]')?.value);
+      if (!birth.ok) {
+        error.textContent = `Date de naissance invalide (voyageur ${gi + 1}). Utilisez le format JJ/MM/AAAA.`;
+        row.querySelector('[data-hx-guest-birth]')?.focus?.();
+        return;
+      }
+      guestRows.push({
+        id: row.getAttribute('data-hx-guest-id') || '',
+        name: String(row.querySelector('[data-hx-guest-name]')?.value || '').trim(),
+        sex: String(row.querySelector('[data-hx-guest-sex]')?.value || '').trim(),
+        nationality: String(row.querySelector('[data-hx-guest-nationality]')?.value || '').trim(),
+        birthDate: birth.iso,
+        minorsUnder18: Number(row.querySelector('[data-hx-guest-minors]')?.value || 0),
+        residenceCountry: String(row.querySelector('[data-hx-guest-residence]')?.value || '').trim(),
+        idDocType: String(row.querySelector('[data-hx-guest-id-type]')?.value || '').trim(),
+        idDocNumber: String(row.querySelector('[data-hx-guest-id-num]')?.value || '').trim(),
+      });
+    }
+    const guests = guestRows.filter((g) => g.name || g.nationality || g.idDocNumber);
 
     const partySize = Number(fd.get('partySize')) || 1;
     const roomTypeId = fd.get('roomTypeId');
@@ -5389,7 +5401,7 @@
       return;
     }
 
-    const payload = { action: 'save', merchant: slug, id: booking?.id || '', clientRef: form.__hxClientRef, roomTypeId, resourceId: fd.get('resourceId'), checkIn: fd.get('checkIn'), checkOut: fd.get('checkOut'), partySize, channel: fd.get('channel'), status: fd.get('status'), externalRef: fd.get('externalRef'), note: fd.get('note'), guests: guestRows, customer: { name: fd.get('name'), phone: fd.get('phone'), email: fd.get('email') } };
+    const payload = { action: 'save', merchant: slug, id: booking?.id || '', clientRef: form.__hxClientRef, roomTypeId, resourceId: fd.get('resourceId'), checkIn: fd.get('checkIn'), checkOut: fd.get('checkOut'), partySize, channel: fd.get('channel'), status: fd.get('status'), externalRef: fd.get('externalRef'), note: fd.get('note'), guests, customer: { name: fd.get('name'), phone: fd.get('phone'), email: fd.get('email') } };
     payload.linkedStayId = form.__hxLinkedStayId || '';
     payload.dayUse = form.elements.stayMode?.value === 'day_use';
     if (payload.dayUse) {
@@ -5547,6 +5559,29 @@
    * divergence fails closed at save with price-mismatch.
    * Returns { ok, rows, totalCents, nights, roomCents, mealCents } or
    * { ok:false, missing:['room'|'meal'|'dates'] }. */
+  /* Birth dates are typed, not picked: native date inputs render in the
+   * browser UI locale (mm/dd/yyyy on an English browser) no matter the page
+   * language, while receptionists type JJ/MM/AAAA. Stored ISO stays the
+   * single persisted shape; these convert at the editor edges. */
+  function cuBirthDisplay(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || '').trim());
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : String(iso || '');
+  }
+  function cuBirthIso(raw) {
+    const s = String(raw || '').trim().replace(/-/g, '/');
+    if (!s) return { ok: true, iso: '' };
+    const iso = /^(\d{4})\/(\d{2})\/(\d{2})$/.exec(s);
+    const fr = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
+    let y = 0, m = 0, d = 0;
+    if (iso) { y = +iso[1]; m = +iso[2]; d = +iso[3]; }
+    else if (fr) { d = +fr[1]; m = +fr[2]; y = +fr[3]; }
+    else return { ok: false, iso: '' };
+    if (y < 1900 || y > 2100 || m < 1 || m > 12 || d < 1 || d > 31) return { ok: false, iso: '' };
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return { ok: false, iso: '' };
+    const p = (n) => String(n).padStart(2, '0');
+    return { ok: true, iso: `${y}-${p(m)}-${p(d)}` };
+  }
   function cuDirectQuote(input) {
     const { typeRate = null, baseRate = null, boardRates = null, board = 'room_only', checkIn = '', checkOut = '', occupancy = 1 } = input || {};
     const roomRate = typeRate == null ? baseRate : typeRate;
@@ -5575,7 +5610,7 @@
     const occupancyLabel = ['', 'Single · 1 personne', 'Double · 2 personnes', 'Triple · 3 personnes'][q.contract?.occupancy] || (q.contract?.occupancy ? `${q.contract.occupancy} pers.` : '');
     const accountName = q.account?.name || '';
     const boardLabel = cuBoards[q.contract?.board] || q.contract?.board || '';
-    return `<div class="hx-simulation-notice"><strong>Simulation contractuelle informative</strong> · Aucune réservation ni blocage créé à cette étape.${accountName ? `<div>Compte : <b>${esc(accountName)}</b>${q.account?.paymentDays ? ` · Échéance ${q.account.paymentDays} j` : ''}</div>` : ''}${occupancyLabel ? `<div>Formule : ${esc(occupancyLabel)} · ${esc(boardLabel)}${period ? ` (${period})` : ''}</div>` : ''}</div><div class="hx-quote-lines">${q.rows.map(r => `<div><span>${esc(r.date)} · ${esc(r.label)}</span><span>${r.quantity} × ${(r.unitCents / 100).toFixed(2)} = <b>${(r.amountCents / 100).toFixed(2)} MAD</b></span></div>`).join('')}</div><p><b>Total formule : ${(q.totalCents / 100).toFixed(2)} MAD ${q.taxBasis === 'exclusive' ? 'HT' : 'TTC'}</b></p><small>Simulation de séjour, pas une facture. Taxes locales, extras et réductions enfants non calculés ici.</small>`;
+    return `<div class="hx-simulation-notice"><strong>Simulation contractuelle informative</strong> · Aucune réservation ni blocage créé à cette étape.${accountName ? `<div>Compte : <b>${esc(accountName)}</b>${q.account?.paymentDays ? ` · Échéance ${q.account.paymentDays} j` : ''}</div>` : ''}${occupancyLabel ? `<div>Formule : ${esc(occupancyLabel)} · ${esc(boardLabel)}${period ? ` (${period})` : ''}</div>` : ''}</div><div class="hx-quote-lines">${q.rows.map(r => `<div><span>${esc(r.date)} · ${esc(r.label)}</span><span>${r.quantity} × ${(r.unitCents / 100).toFixed(2)} = <b>${(r.amountCents / 100).toFixed(2)} MAD</b></span></div>`).join('')}</div><p class="hx-total-band"><span>Total formule : </span><b>${(q.totalCents / 100).toFixed(2)} MAD ${q.taxBasis === 'exclusive' ? 'HT' : 'TTC'}</b></p><small>Simulation de séjour, pas une facture. Taxes locales, extras et réductions enfants non calculés ici.</small>`;
   }
   async function cuWireStayCommercial(form, booking) {
     const box = form.querySelector('[data-hx-commercial-stay]');
@@ -5599,9 +5634,9 @@
         <div data-hx-agreed-by style="font-size:11.5px;color:var(--n-600);"></div>
         <label><span>Montant total TTC convenu · MAD</span><input data-hx-agreed-amount inputmode="decimal" placeholder="Ex. 950"></label>
         <label><span>Motif</span><input data-hx-agreed-reason maxlength="280" placeholder="Ex. geste commercial, dernière chambre"></label>
-        <label style="font-size:12px;display:flex;gap:6px;align-items:center;cursor:pointer;"><input type="checkbox" data-hx-agreed-confirm> <span>Je confirme ce prix convenu pour ce séjour.</span></label>
+        <label class="hx-check-row"><input type="checkbox" data-hx-agreed-confirm> <span>Je confirme ce prix convenu pour ce séjour.</span></label>
       </div>
-      <label data-hx-reprice-wrap hidden style="font-size:12px;display:flex;gap:6px;align-items:center;cursor:pointer;margin-top:8px;"><input type="checkbox" data-hx-reprice-confirm> <span data-hx-reprice-label></span></label>
+        <label class="hx-check-row" data-hx-reprice-wrap hidden><input type="checkbox" data-hx-reprice-confirm> <span data-hx-reprice-label></span></label>
     </div>`;
     if (booking && ['completed', 'cancelled', 'no_show'].includes(booking.status)) { box.disabled = true; return; }
     form.__commercialReady = true;
@@ -5672,7 +5707,7 @@
         if (area) {
           const when = Number(sp.acceptedAt) > 0 ? new Date(sp.acceptedAt).toLocaleDateString('fr-FR') : '';
           const rows = (sp.rows || []).map(r => `<div><span>${esc(r.date)} · Logement ${(Number(r.roomCents || 0) / 100).toFixed(2)}${Number(r.mealCents || 0) ? ` + repas ${((Number(r.mealCents || 0) * Number(r.quantity || 1)) / 100).toFixed(2)} (${Number(r.quantity || 1)} pers.)` : ''}</span><span><b>${(Number(r.amountCents || 0) / 100).toFixed(2)} MAD</b></span></div>`).join('');
-          area.innerHTML = `<div class="hx-quote-lines">${rows}</div><p><b>Total séjour : ${(Number(sp.totalCents || 0) / 100).toFixed(2)} MAD TTC</b></p>`
+          area.innerHTML = `<div class="hx-quote-lines">${rows}</div><p class="hx-total-band"><span>Total séjour : </span><b>${(Number(sp.totalCents || 0) / 100).toFixed(2)} MAD TTC</b></p>`
             + (sp.agreed
               ? `<small>Prix convenu accepté${when ? ' le ' + esc(when) : ''} · motif : ${esc(sp.reason || '—')}${sp.agreedBy ? ` · par ${esc(sp.agreedBy.role || '')} ${esc(sp.agreedBy.id || '')}` : ''} · conservé tant que le séjour ne change pas.</small>`
               : `<small>Tarif accepté${when ? ' le ' + esc(when) : ''} · conservé tant que les dates, la chambre, la formule ou le compte ne changent pas.</small>`);
@@ -5693,7 +5728,7 @@
       if (q.ok) {
         form.__directQuote = { rows: q.rows, totalCents: q.totalCents, nights: q.nights };
         if (area) {
-          area.innerHTML = `<div class="hx-quote-lines">${q.rows.map(r => `<div><span>${esc(r.date)} · Logement ${(r.roomCents / 100).toFixed(2)}${r.mealCents ? ` + repas ${esc(String((r.mealCents * r.quantity / 100).toFixed(2)))} (${r.quantity} pers.)` : ''}</span><span><b>${(r.amountCents / 100).toFixed(2)} MAD</b></span></div>`).join('')}</div><p><b>Total séjour : ${(q.totalCents / 100).toFixed(2)} MAD TTC</b></p><small>Tarifs maison · TVA incluse. Vérifié à nouveau côté serveur avant enregistrement.</small>`;
+          area.innerHTML = `<div class="hx-quote-lines">${q.rows.map(r => `<div><span>${esc(r.date)} · Logement ${(r.roomCents / 100).toFixed(2)}${r.mealCents ? ` + repas ${esc(String((r.mealCents * r.quantity / 100).toFixed(2)))} (${r.quantity} pers.)` : ''}</span><span><b>${(r.amountCents / 100).toFixed(2)} MAD</b></span></div>`).join('')}</div><p class="hx-total-band"><span>Total séjour : </span><b>${(q.totalCents / 100).toFixed(2)} MAD TTC</b></p><small>Tarifs maison · TVA incluse. Vérifié à nouveau côté serveur avant enregistrement.</small>`;
         }
         if (agreedBox) { agreedBox.hidden = true; const cb = agreedBox.querySelector('[data-hx-agreed-confirm]'); if (cb) cb.checked = false; }
         // Explicit reviewed repricing (defect 1): on an edit whose inputs
@@ -5774,7 +5809,7 @@
         if (!res.ok) { result.textContent = cuCommercialError(b.error); return; }
         form.elements.priceMode.value = 'contract';
         form.__commercialQuote = { rev: b.rev, signature: cuStayQuoteSignature(form) };
-        result.innerHTML = cuQuoteRows(b.quote) + (b.quote.taxBasis === 'inclusive' ? '<div class="hx-quote-accept-wrap"><label class="hx-quote-accept"><input type="checkbox" data-hx-accept-quote> J’accepte ce prix pour la formule et les dates affichées.</label></div>' : '<p class="hx-warn-note" style="color:var(--warn-ink);margin-top:6px;">HT : configuration fiscale nécessaire avant confirmation du séjour.</p>');
+        result.innerHTML = cuQuoteRows(b.quote) + (b.quote.taxBasis === 'inclusive' ? '<div class="hx-quote-accept-wrap"><label class="hx-check-row hx-quote-accept"><input type="checkbox" data-hx-accept-quote> <span>J’accepte ce prix pour la formule et les dates affichées.</span></label></div>' : '<p class="hx-warn-note" style="color:var(--warn-ink);margin-top:6px;">HT : configuration fiscale nécessaire avant confirmation du séjour.</p>');
       } catch (_) { result.textContent = 'Simulation indisponible. Aucun nouveau tarif accepté.'; }
       finally { previewButton.disabled = false; }
     });
@@ -7778,6 +7813,8 @@
     nationalitySelectorHtml: (guest, index) => cuNationalitySelectorHtml(guest, index),
     parseDelimitedLine: (line) => cuParseDelimitedLine(line),
     directQuote: (input) => cuDirectQuote(input),
+    birthDisplay: (iso) => cuBirthDisplay(iso),
+    birthIso: (raw) => cuBirthIso(raw),
   });
 
   register();

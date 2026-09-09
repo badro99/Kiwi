@@ -96,8 +96,8 @@
 .hx-room-form { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 .hx-room-form label { display:flex; flex-direction:column; gap:6px; color:var(--n-600); font-size:12px; font-weight:600; }
 .hx-room-form label > span small,.hx-room-form label > small { color:var(--n-500); font-weight:400; }
-.hx-room-form input,.hx-room-form select { width:100%; box-sizing:border-box; border:1px solid var(--n-200); border-radius:10px; background:var(--surface,#fff); color:var(--ink); padding:11px 12px; font:500 14px var(--sans); outline:none; }
-.hx-room-form input:focus,.hx-room-form select:focus { border-color:var(--atlas); box-shadow:0 0 0 3px rgba(11,110,79,.08); }
+.hx-room-form input:not([type="checkbox"]):not([type="radio"]),.hx-room-form select { width:100%; box-sizing:border-box; border:1px solid var(--n-200); border-radius:10px; background:var(--surface,#fff); color:var(--ink); padding:11px 12px; font:500 14px var(--sans); outline:none; }
+.hx-room-form input:not([type="checkbox"]):not([type="radio"]):focus,.hx-room-form select:focus,.hx-room-form textarea:focus { border-color:var(--atlas); box-shadow:0 0 0 3px rgba(11,110,79,.08); }
 .hx-room-form-wide { grid-column:1/-1; }
 .hx-room-form-actions { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:20px; }
 
@@ -196,7 +196,7 @@
 /* Batch room setup and reusable categories. */
 .kiwi-modal .hx-room-form { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; }
 .kiwi-modal .hx-room-form label { display:flex; min-width:0; flex-direction:column; gap:7px; }
-.kiwi-modal .hx-room-form input,.kiwi-modal .hx-room-form select { min-height:48px; padding:12px 13px; border-radius:12px; }
+.kiwi-modal .hx-room-form input:not([type="checkbox"]):not([type="radio"]),.kiwi-modal .hx-room-form select { min-height:48px; padding:12px 13px; border-radius:12px; }
 .hx-batch-intro { display:flex; align-items:center; gap:13px; margin-bottom:18px; padding:14px; border:1px solid rgba(11,110,79,.14); border-radius:14px; background:var(--mint-soft); }
 .hx-batch-mark { width:38px; height:38px; flex:none; display:grid; place-items:center; border-radius:12px; background:var(--atlas); color:#fff; }
 .hx-batch-intro b,.hx-batch-intro span { display:block; }
@@ -1062,7 +1062,7 @@
 .hx-guest-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:11px; font-weight:700; color:var(--n-600); }
 .hx-guest-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
 .hx-guest-grid label { margin:0; }
-.hx-guest-grid input, .hx-guest-grid select { width:100%; box-sizing:border-box; font-size:12px; padding:4px 6px; border:1px solid var(--n-200); border-radius:6px; background:var(--surface,var(--paper)); color:var(--ink); }
+.hx-guest-grid input, .hx-guest-grid select { width:100%; box-sizing:border-box; font-size:14px; font-weight:500; padding:12px 13px; min-height:48px; border:1px solid var(--n-200); border-radius:12px; background:var(--surface,var(--paper)); color:var(--ink); }
 .hx-close-loading { min-height:260px; display:flex; align-items:center; justify-content:center; font-size:13px; color:var(--n-600); }
 .hx-close-bar { display:flex; justify-content:space-between; align-items:center; gap:10px; padding-bottom:12px; border-bottom:1px solid var(--n-100); }
 .hx-close-bar label { display:block; margin-bottom:4px; font-size:12px; font-weight:600; color:var(--ink); }
@@ -1114,6 +1114,35 @@
 .hx-commercial-stay p { line-height:1.6; }
 .hx-commercial .hx-btn, .hx-commercial-stay .hx-btn { min-height:44px; }
 .hx-quote-lines { max-height:260px; overflow:auto; margin-top:14px; }
+
+/* Stay editor · commercial + traveler sheet.
+ * Hard fixes first: hidden must beat layout display (a focusable phantom row
+ * drew a full-width outline), and checkboxes are controls, never stretched
+ * full-width fields. The rest is hierarchy: one pricing card, a real total
+ * band, traveler cards on surface, modal-standard inputs everywhere. */
+.kiwi-modal [hidden]{display:none!important}
+.hx-room-form label.hx-check-row{display:flex;flex-direction:row;align-items:center;gap:10px;min-height:44px;margin-top:10px;font-size:13px;font-weight:500;color:var(--ink);cursor:pointer}
+.hx-check-row > span{line-height:1.45}
+.hx-check-row input[type="checkbox"]{width:20px;height:20px;min-width:20px;min-height:0;margin:0;padding:0;flex:none;accent-color:var(--atlas);cursor:pointer}
+.hx-commercial-stay{min-width:0;border:1px solid var(--n-200);border-radius:16px;padding:20px;background:var(--surface,#fff)}
+.hx-commercial-stay legend{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--n-500);padding:0 8px}
+.hx-commercial-stay > p{font-size:12.5px;color:var(--n-600);max-width:62ch}
+[data-hx-direct-breakdown] > small,[data-hx-quote-result] > small{display:block;font-size:12px;line-height:1.6;color:var(--n-600);margin-top:6px}
+.hx-simulation-notice{font-size:12.5px;line-height:1.65;color:var(--n-600);margin:12px 0 4px}
+.hx-simulation-notice strong{color:var(--ink)}
+.hx-simulation-notice > div{margin-top:2px}
+.hx-total-band{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;margin:12px 0 4px;padding:13px 15px;border-radius:12px;background:color-mix(in srgb,var(--mint-soft) 55%,var(--surface,#fff));font-size:14px;color:var(--n-700)}
+.hx-total-band b{font-size:17px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.hx-quote-lines span:last-child{font-variant-numeric:tabular-nums}
+.hx-guest-block-head b{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--n-500)}
+.hx-guest-item{padding:16px;margin-bottom:12px;background:var(--surface,#fff);border:1px solid var(--n-200);border-radius:14px}
+.hx-guest-head{margin-bottom:10px;font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--n-500)}
+.hx-guest-grid{gap:12px}
+.hx-guest-grid label > span{font-size:12px;font-weight:600;color:var(--n-600)}
+.hx-guest-grid input:focus,.hx-guest-grid select:focus{border-color:var(--atlas);box-shadow:0 0 0 3px rgba(11,110,79,.08);outline:none}
+.hx-nat-search{font-size:14px;min-height:48px;padding:12px 36px 12px 13px;border-radius:12px}
+.hx-nat-clear{width:28px;height:28px}
+.hx-room-form textarea{width:100%;box-sizing:border-box;border:1px solid var(--n-200);border-radius:12px;background:var(--surface,#fff);color:var(--ink);padding:12px 13px;font:500 14px var(--sans);outline:none;min-height:88px;resize:vertical}
 .hx-quote-lines > div { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; padding:10px 0; border-bottom:1px solid var(--n-200); }
 .hx-quote-lines b { font-variant-numeric:tabular-nums; }
 .hx-quote-accept { display:flex; align-items:center; gap:10px; min-height:48px; margin-top:12px; }

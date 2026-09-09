@@ -484,6 +484,12 @@ console.log('\n■ 6. Client pricer matches the server cent for cent');
   ok(dq({ typeRate: null, baseRate: null, boardRates: null, board: 'room_only', checkIn: CHECKIN, checkOut: CHECKOUT, occupancy: 1 }).missing.includes('room'), 'missing room rate reported');
   ok(dq({ typeRate: 900, baseRate: null, boardRates: null, board: 'bb', checkIn: CHECKIN, checkOut: CHECKOUT, occupancy: 1 }).missing.includes('meal'), 'missing meal rate reported');
   ok(dq({ typeRate: 900, baseRate: null, boardRates: { bb: 150 }, board: 'bb', checkIn: CHECKOUT, checkOut: CHECKIN, occupancy: 1 }).missing.includes('dates'), 'inverted dates reported');
+  const bd = ctx.window.KiwiHotelRooms.birthDisplay, bi = ctx.window.KiwiHotelRooms.birthIso;
+  ok(typeof bd === 'function' && typeof bi === 'function', 'birth converters exported for tests');
+  ok(bd('1990-05-17') === '17/05/1990' && bd('') === '' && bd(null) === '', 'ISO displays French, empty stays empty');
+  ok(bi('17/05/1990').iso === '1990-05-17' && bi('17-05-1990').iso === '1990-05-17', 'French typed dates normalize to ISO');
+  ok(bi('1990-05-17').iso === '1990-05-17' && bi('').iso === '', 'ISO passes through, empty stays empty');
+  ok(!bi('31/02/2020').ok && !bi('17/13/1990').ok && !bi('n’importe quoi').ok && !bi('17/05/90').ok, 'impossible and partial dates refused');
 }
 
 console.log(`\n✓ All ${controls} direct-pricing controls passed.`);

@@ -1045,6 +1045,52 @@ await withCtx({}, async (ctx) => {
   ok(b.pricing.agreedBy.at === at0 && b.pricing.reason === 'geste commercial', 'original authorization intact');
 });
 
+/* ── T9 · editor hides what must stay hidden, birth dates type French ── */
+console.log('\n■ T9 · no phantom rows, birth dates in JJ/MM/AAAA');
+await withCtx({}, async (ctx) => {
+  const { page } = ctx;
+  await unlock(page);
+  await gotoHotel(ctx, 'nav-reception');
+  await openStayEditor(ctx);
+  await fillStay(page, { ...GUEST(ymd(7), ymd(9)), roomTypeId: 'type:t1', resourceId: 'room:101', partySize: 1, board: 'bb' });
+  const hiddenState = await page.evaluate(() => {
+    const disp = (sel) => { const el = document.querySelector(sel); return el ? getComputedStyle(el).display : 'absent'; };
+    return {
+      quote: disp('[data-hx-commercial-stay] [data-hx-quote]'),
+      reprice: disp('[data-hx-commercial-stay] [data-hx-reprice-wrap]'),
+      agreed: disp('[data-hx-commercial-stay] [data-hx-agreed-box]'),
+    };
+  });
+  ok(hiddenState.quote === 'none', 'no contract simulation offered without an account');
+  ok(hiddenState.reprice === 'none', 'no empty reprice row rendered');
+  ok(hiddenState.agreed === 'none', 'no agreed-price box while configured rates cover the stay');
+  step('birth date types French, persists ISO');
+  await setField(page, '[data-hx-stay-form] [data-hx-guest-birth]', '17/05/1990');
+  const done = await submitStay(page);
+  ok(done.outcome === 'closed', 'booking with a typed birth date confirms');
+  let b = await ctx.stayByClientRef(done.ref);
+  ok(b && b.guests && b.guests[0] && b.guests[0].birthDate === '1990-05-17', 'birth date stored ISO');
+  await openStayForEdit(ctx, b.id);
+  const birthBack = await page.$eval('[data-hx-stay-form] [data-hx-guest-birth]', (el) => el.value);
+  ok(birthBack === '17/05/1990', 'reopened editor shows JJ/MM/AAAA, never mm/dd/yyyy');
+  step('invalid birth blocks the save with guidance, creates nothing');
+  await setField(page, '[data-hx-stay-form] [data-hx-guest-birth]', 'n’importe quoi');
+  const bad = await submitStay(page);
+  ok(String(bad.outcome).startsWith('settled:') && /JJ\/MM\/AAAA/.test(String(bad.outcome)), 'invalid birth date refused with guidance');
+  step('agreed checkbox keeps control size on the fallback path');
+  await gotoHotel(ctx, 'nav-reception');
+  await openStayEditor(ctx);
+  await fillStay(page, { ...GUEST(ymd(11), ymd(13)), roomTypeId: 'type:t1', resourceId: 'room:102', partySize: 1, board: 'hb_lunch' });
+  const agreedBox = await page.evaluate(() => {
+    const el = document.querySelector('[data-hx-commercial-stay] [data-hx-agreed-box]');
+    const cb = document.querySelector('[data-hx-commercial-stay] [data-hx-agreed-confirm]');
+    const r = cb ? cb.getBoundingClientRect() : { width: 0 };
+    return { box: el ? getComputedStyle(el).display : 'absent', cbW: Math.round(r.width) };
+  });
+  ok(agreedBox.box !== 'none', 'missing meal rate offers the agreed-price path');
+  ok(agreedBox.cbW <= 32, `agreed checkbox stays a control (${agreedBox.cbW}px, not full width)`);
+});
+
 /* ── summary ───────────────────────────────────────────────────────── */
 console.log(`\n✓ All ${controls} direct-booking browser controls passed.`);
 console.log(`  navigation paths used: ${NAV_PATHS.join(' | ')}`);
