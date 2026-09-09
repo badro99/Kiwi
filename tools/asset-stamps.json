@@ -340,12 +340,12 @@
     "sha": "d597ba5cac11de01"
   },
   "assets/hotel.css": {
-    "v": "32",
-    "sha": "b789cb022c224d65"
+    "v": "33",
+    "sha": "68420f3bab376018"
   },
   "assets/hotel.js": {
-    "v": "52",
-    "sha": "0997d9706bde83d5"
+    "v": "53",
+    "sha": "edab604fe3f43044"
   },
   "assets/hours-ui.js": {
     "v": "1",
@@ -912,8 +912,8 @@
     "sha": "dfa3b4d5ebb25d51"
   },
   "assets/venues.js": {
-    "v": "27",
-    "sha": "948f94f1c1c11676"
+    "v": "28",
+    "sha": "9874772fc3dce739"
   },
   "assets/vertical-state.js": {
     "v": "1",

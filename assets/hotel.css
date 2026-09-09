@@ -1143,6 +1143,18 @@
 .hx-nat-search{font-size:14px;min-height:48px;padding:12px 36px 12px 13px;border-radius:12px}
 .hx-nat-clear{width:28px;height:28px}
 .hx-room-form textarea{width:100%;box-sizing:border-box;border:1px solid var(--n-200);border-radius:12px;background:var(--surface,#fff);color:var(--ink);padding:12px 13px;font:500 14px var(--sans);outline:none;min-height:88px;resize:vertical}
+/* Points de vente: outlet cards over the shared registry, menu viewer. */
+.hx-pdv-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
+.hx-pdv-card{display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid var(--n-200);border-radius:14px;background:var(--surface,#fff)}
+.hx-pdv-card .kind{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--n-500)}
+.hx-pdv-card b{font-size:16px;font-weight:650;color:var(--ink)}
+.hx-pdv-card small{display:block;margin-top:2px;font-size:12px;color:var(--n-600)}
+.hx-pdv-card code{font-family:var(--mono);font-size:11px;color:var(--n-600);background:var(--n-100);border-radius:4px;padding:1px 5px}
+.hx-pdv-card > div:last-child{margin-top:auto}
+.hx-outlet-menu{max-height:320px;overflow:auto;margin:12px 0 6px}
+.hx-outlet-menu > div{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--n-200);font-size:13px}
+.hx-outlet-menu b{font-variant-numeric:tabular-nums;white-space:nowrap}
+[data-hx-outlet-menu] > small{display:block;margin-top:6px;font-size:12px;color:var(--n-600)}
 .hx-quote-lines > div { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; padding:10px 0; border-bottom:1px solid var(--n-200); }
 .hx-quote-lines b { font-variant-numeric:tabular-nums; }
 .hx-quote-accept { display:flex; align-items:center; gap:10px; min-height:48px; margin-top:12px; }

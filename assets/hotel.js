@@ -5753,7 +5753,9 @@
           const what = q.missing.includes('room')
             ? `Aucun tarif logement configuré pour « ${esc(typeName)} ».`
             : (q.missing.includes('dates') ? 'Dates du séjour invalides.' : `Aucun tarif « ${esc(cuBoards[form.elements.board?.value] || form.elements.board?.value || '')} » configuré pour « ${esc(typeName)} ».`);
-          area.innerHTML = `<p class="hx-warn-note" style="color:var(--warn-ink);background:var(--warn-soft);padding:8px 12px;border-radius:8px;font-size:12px;">${what} Renseignez-le dans Types de chambres, ou convenez un prix ci-dessous.</p>`;
+          const cfgArg = (type && type.id && !q.missing.includes('dates'))
+            ? `${type.id}:${form.elements.board?.value || 'room_only'}:${q.missing.includes('room') ? 'room' : 'meal'}` : '';
+          area.innerHTML = `<p class="hx-warn-note" style="color:var(--warn-ink);background:var(--warn-soft);padding:8px 12px;border-radius:8px;font-size:12px;">${what} ${cfgArg ? `<button type="button" class="hx-link-btn" data-action="hx-configure-rate" data-arg="${esc(cfgArg)}">Configurer ce tarif dans Types de chambres</button>, ou convenez un prix ci-dessous.` : 'Renseignez-le dans Types de chambres, ou convenez un prix ci-dessous.'}</p>`;
         }
         if (agreedBox) {
           agreedBox.hidden = false;
@@ -6073,7 +6075,7 @@
   }
   function cuMoney(cents) { return new Intl.NumberFormat('fr-FR').format((Number(cents) || 0) / 100) + ' MAD'; }
   function cuCaptureEconomatDraft() {
-    if (!openDrawer || openDrawer.page !== 'hotelintel' || !cuEconomatState.draft) return;
+    if (!openDrawer || !['hotelintel', 'points-vente'].includes(openDrawer.page) || !cuEconomatState.draft) return;
     const host = openDrawer.el.querySelector('[data-hx-economat]');
     if (!host) return;
     cuEconomatState.draft.units.forEach((unit) => {
@@ -6092,10 +6094,7 @@
     const s = cuEconomatState;
     if (!s.loaded && s.loading) return '<div class="hx-econ-loading"><i></i>Lecture de la configuration et des migrations…</div>';
     const d = s.draft || cuEconomatDraft(s.registry);
-    const outlets = d.units.filter((unit) => unit.kind === 'outlet' && unit.active);
-    const mapped = new Set(d.terminals.filter((row) => row.terminalId && row.unitId).map((row) => row.unitId));
-    const allOutletsMapped = outlets.length > 0 && outlets.every((unit) => mapped.has(unit.id));
-    const registryReady = s.registry.units.length > 0 && allOutletsMapped;
+    const registryReady = s.registry.units.length > 0 && cuOutletsMapped(d);
     const inventory = s.report ? `<div class="hx-econ-kpis">
       <div><span>Stock hôtel consolidé</span><b>${cuQty(s.report.consolidated?.closingMilli)}</b><small>${s.report.consolidated?.items?.length || 0} références</small></div>
       <div><span>Unités suivies</span><b>${s.report.units?.length || 0}</b><small>${s.report.units?.every((u) => u.reconciliation?.balanced) ? 'réconciliées' : 'écart à examiner'}</small></div>
@@ -6104,6 +6103,30 @@
       : `<div class="hx-econ-empty">${esc(s.reportError || (s.registry.units.length ? 'Le rapport sera disponible après les migrations de production.' : 'Configurez les unités pour ouvrir le rapport consolidé.'))}</div>`;
     const shiftRows = s.shifts.length ? s.shifts.map((shift) => `<button data-action="hx-econ-shift" data-arg="${esc(shift.shiftId)}" class="${s.selectedShift === shift.shiftId ? 'on' : ''}"><span><b>${new Date(shift.lastTs).toLocaleString('fr-FR')}</b><small>${shift.chargeCount} charges · ${shift.reversalCount} annulations</small></span><strong>${cuMoney(shift.netCents)}</strong></button>`).join('') : '<div class="hx-econ-empty">Aucune charge chambre enregistrée sur les 30 derniers jours.</div>';
     const cashiers = s.shiftReport ? `<div class="hx-econ-cashiers">${(s.shiftReport.cashiers || []).map((row) => `<div><span><b>${esc(row.cashierName || row.cashierId)}</b><small>${row.chargeCount} charges · ${row.reversalCount} annulations</small></span><strong>${cuMoney(row.netCents)}</strong></div>`).join('')}</div>` : '';
+    return `<div class="hx-econ-shell" data-hx-economat>
+      <div class="hx-econ-head"><div><span>ÉCONOMAT · PILOTE</span><h3>La vérité opérationnelle de l’hôtel</h3><p>Configuration des unités, stock consolidé et charges chambre, sans données client.</p></div><button class="hx-btn ghost" data-action="hx-econ-refresh">Actualiser</button></div>
+      ${s.error ? `<div class="hx-econ-alert bad">${esc(s.error)}</div>` : ''}
+      <div class="hx-econ-readiness"><div class="${registryReady ? 'ok' : 'wait'}"><b>${registryReady ? 'Registre prêt' : 'Registre incomplet'}</b><span>${s.registry.units.length ? `${s.registry.units.length} unités · ${Object.keys(s.registry.terminalUnits || {}).length} caisses` : 'aucune écriture en production'}</span></div><div class="${s.report ? 'ok' : 'wait'}"><b>${s.report ? 'Rapports disponibles' : 'Migration à confirmer'}</b><span>${s.report ? 'stock et comptages lisibles' : esc(s.reportError || 'aucune donnée fabriquée')}</span></div><div class="wait"><b>Discovery D</b><span>visite terrain requise · jamais validée par logiciel</span></div></div>
+      <div class="hx-econ-section"><div class="hx-h"><span class="t">Stock consolidé</span><span class="s">équation par unité et vue hôtel</span></div>${inventory}</div>
+      <div class="hx-econ-section"><div class="hx-h"><span class="t">Charges chambre par poste</span><span class="s">aucun nom de client ni numéro de chambre</span></div><div class="hx-econ-shifts">${shiftRows}</div>${cashiers}</div>
+      ${cuUnitsEditorHtml(d)}
+    </div>`;
+  }
+  /* Every active outlet mapped to at least one till: the single readiness
+   * rule for the shared registry, read by both host pages. */
+  function cuOutletsMapped(d) {
+    const outlets = d.units.filter((unit) => unit.kind === 'outlet' && unit.active);
+    const mapped = new Set(d.terminals.filter((row) => row.terminalId && row.unitId).map((row) => row.unitId));
+    return outlets.length > 0 && outlets.every((unit) => mapped.has(unit.id));
+  }
+  /* Units + tills editor, shared by Intelligence hôtel and Points de vente:
+   * one draft, one registry, one save. Editing here never duplicates an
+   * establishment: names, kinds and till assignments all land in the same
+   * hotel-units document, and locationId stays immutable server-side, so
+   * stock history and room-charge scoping keep pointing at the same units. */
+  function cuUnitsEditorHtml(d) {
+    const outlets = d.units.filter((unit) => unit.kind === 'outlet' && unit.active);
+    const allOutletsMapped = cuOutletsMapped(d);
     const unitRows = d.units.map((unit) => `<div class="hx-econ-unit" data-hx-econ-unit="${esc(unit.id)}">
       <span class="kind">${unit.kind === 'economat' ? 'ÉCONOMAT' : unit.kind === 'department' ? 'DÉPARTEMENT' : 'POINT DE VENTE'}</span>
       <input data-hx-econ-name value="${esc(unit.name)}" maxlength="120" aria-label="Nom de l’unité">
@@ -6116,17 +6139,34 @@
       <select data-hx-econ-terminal-unit><option value="">Choisir le point de vente</option>${outlets.map((unit) => `<option value="${esc(unit.id)}" ${row.unitId === unit.id ? 'selected' : ''}>${esc(unit.name)}</option>`).join('')}</select>
       <button data-action="hx-econ-remove-terminal" data-arg="${index}" aria-label="Retirer">×</button>
     </div>`).join('');
-    return `<div class="hx-econ-shell" data-hx-economat>
-      <div class="hx-econ-head"><div><span>ÉCONOMAT · PILOTE</span><h3>La vérité opérationnelle de l’hôtel</h3><p>Configuration des unités, stock consolidé et charges chambre, sans données client.</p></div><button class="hx-btn ghost" data-action="hx-econ-refresh">Actualiser</button></div>
-      ${s.error ? `<div class="hx-econ-alert bad">${esc(s.error)}</div>` : ''}
-      <div class="hx-econ-readiness"><div class="${registryReady ? 'ok' : 'wait'}"><b>${registryReady ? 'Registre prêt' : 'Registre incomplet'}</b><span>${s.registry.units.length ? `${s.registry.units.length} unités · ${Object.keys(s.registry.terminalUnits || {}).length} caisses` : 'aucune écriture en production'}</span></div><div class="${s.report ? 'ok' : 'wait'}"><b>${s.report ? 'Rapports disponibles' : 'Migration à confirmer'}</b><span>${s.report ? 'stock et comptages lisibles' : esc(s.reportError || 'aucune donnée fabriquée')}</span></div><div class="wait"><b>Discovery D</b><span>visite terrain requise · jamais validée par logiciel</span></div></div>
-      <div class="hx-econ-section"><div class="hx-h"><span class="t">Stock consolidé</span><span class="s">équation par unité et vue hôtel</span></div>${inventory}</div>
-      <div class="hx-econ-section"><div class="hx-h"><span class="t">Charges chambre par poste</span><span class="s">aucun nom de client ni numéro de chambre</span></div><div class="hx-econ-shifts">${shiftRows}</div>${cashiers}</div>
-      <div class="hx-econ-section"><div class="hx-h"><span class="t">Unités et caisses</span><span class="s">un seul enregistrement atomique</span></div><div class="hx-econ-units">${unitRows}</div><div class="hx-econ-add"><button class="hx-btn ghost" data-action="hx-econ-add-unit" data-arg="outlet">+ Point de vente</button><button class="hx-btn ghost" data-action="hx-econ-add-unit" data-arg="department">+ Département</button></div>
+    return `<div class="hx-econ-section"><div class="hx-h"><span class="t">Unités et caisses</span><span class="s">un seul enregistrement atomique</span></div><div class="hx-econ-units">${unitRows}</div><div class="hx-econ-add"><button class="hx-btn ghost" data-action="hx-econ-add-unit" data-arg="outlet">+ Point de vente</button><button class="hx-btn ghost" data-action="hx-econ-add-unit" data-arg="department">+ Département</button></div>
         <div class="hx-econ-terminal-head"><b>Assignation des caisses</b><span>Copiez l’identifiant depuis chaque caisse physique.</span><button class="hx-btn ghost" data-action="hx-econ-add-terminal">+ Caisse</button></div><div>${terminalRows || '<div class="hx-econ-empty">Aucune caisse assignée. Le premier registre ne peut pas être activé ainsi.</div>'}</div>
         <label class="hx-econ-confirm"><input type="checkbox" data-hx-econ-confirm> J’ai relevé toutes les caisses physiques et vérifié leur point de vente.</label>
-        <div class="hx-econ-save"><span>${allOutletsMapped ? 'Chaque point de vente actif a au moins une caisse.' : 'Chaque point de vente actif doit avoir une caisse.'}</span><button class="hx-btn atlas" data-action="hx-econ-save" ${s.saving ? 'disabled' : ''}>${s.saving ? 'Enregistrement…' : 'Enregistrer unités + caisses'}</button></div>
-      </div>
+        <div class="hx-econ-save"><span>${allOutletsMapped ? 'Chaque point de vente actif a au moins une caisse.' : 'Chaque point de vente actif doit avoir une caisse.'}</span><button class="hx-btn atlas" data-action="hx-econ-save" ${cuEconomatState.saving ? 'disabled' : ''}>${cuEconomatState.saving ? 'Enregistrement…' : 'Enregistrer unités + caisses'}</button></div>
+      </div>`;
+  }
+  /* Points de vente: the outlet-facing host for the same shared draft.
+   * Rename a restaurant here and the Économat page shows it, because both
+   * read cuEconomatState — never a second establishment list. */
+  const HX_PDV_KINDS = { restaurant: 'Restaurant', bar: 'Bar', cafe: 'Café', spa: 'Spa' };
+  function cuPdvBody() {
+    const s = cuEconomatState;
+    if (!s.loaded && s.loading) return '<div class="hx-econ-loading"><i></i>Lecture de la configuration…</div>';
+    const d = s.draft || cuEconomatDraft(s.registry);
+    const outlets = d.units.filter((unit) => unit.kind === 'outlet');
+    const cards = outlets.length ? outlets.map((unit) => {
+      const terms = d.terminals.filter((row) => row.unitId === unit.id && row.terminalId).map((row) => row.terminalId);
+      return `<article class="hx-pdv-card" data-hx-pdv-card="${esc(unit.id)}">
+        <div><span class="kind">POINT DE VENTE${unit.active ? '' : ' · INACTIF'}</span><b>${esc(unit.name)}</b><small>${esc(HX_PDV_KINDS[unit.storeType] || 'Genre à choisir')} · <code>${esc(unit.locationId)}</code></small></div>
+        <div><span>${terms.length ? terms.map((t) => `<code>${esc(t)}</code>`).join(' ') : 'aucune caisse assignée'}</span></div>
+        <div><button class="hx-btn ghost" data-action="hx-outlet-menu" data-arg="${esc(unit.id)}">Menu & prix</button></div>
+      </article>`;
+    }).join('') : '<div class="hx-econ-empty">Aucun point de vente. Ajoutez-en un ci-dessous : il partagera le registre de l’économat, sans doublon.</div>';
+    return `<div class="hx-econ-shell" data-hx-economat>
+      <div class="hx-econ-head"><div><span>POINTS DE VENTE</span><h3>Restaurants, bars et caisses</h3><p>Nommez chaque point de vente, assignez ses caisses physiques, consultez ce qu’elles vendent. Un seul registre partagé avec l’économat : renommer ici, c’est renommer partout.</p></div><button class="hx-btn ghost" data-action="hx-econ-refresh">Actualiser</button></div>
+      ${s.error ? `<div class="hx-econ-alert bad">${esc(s.error)}</div>` : ''}
+      <div class="hx-econ-section"><div class="hx-h"><span class="t">Vos points de vente</span><span class="s">${outlets.filter((unit) => unit.active).length} actifs · ${d.terminals.filter((row) => row.terminalId && row.unitId).length} caisses assignées</span></div><div class="hx-pdv-cards">${cards}</div></div>
+      ${cuUnitsEditorHtml(d)}
     </div>`;
   }
   async function cuLoadEconomat(force) {
@@ -6482,11 +6522,41 @@
     handlers['nav-hotelintel'] = () => cu()
       ? (page('hotelintel', 'Intelligence hôtel', 'Prévisions, Économat et contrôle opérationnel', cuIntelBody), setTimeout(() => cuLoadEconomat(false), 0))
       : page('hotelintel', 'Intelligence hôtel', 'Prévision d\'occupation · tarification · no-shows · où part l\'argent', intelBody);
+    /* Points de vente: the clear entry for outlet configuration. Same shared
+     * draft and registry as the Économat section — naming and till mapping
+     * here is naming and till mapping there. nav-economat was a dead sidebar
+     * entry (no handler); it now lands on the page that hosts the registry. */
+    handlers['nav-points-vente'] = () => cu()
+      ? (page('points-vente', 'Points de vente', 'Restaurants, bars et caisses · un seul registre partagé', cuPdvBody), setTimeout(() => cuLoadEconomat(false), 0))
+      : null;
+    handlers['nav-economat'] = () => { if (cu()) handlers['nav-hotelintel'](); };
+    /* Per-outlet menu: what this outlet's tills actually sell, read-only.
+     * Prices come from the merchant catalogue — the same document every
+     * till sells from — so there is nothing outlet-specific to drift. */
+    handlers['hx-outlet-menu'] = async (el, arg) => {
+      if (!isCustomHotel()) return;
+      const unit = (cuEconomatState.draft?.units || cuEconomatState.registry.units || []).find((u) => u && u.id === String(arg));
+      const name = unit?.name || 'Point de vente';
+      const m = K().modal({ tag: 'POINT DE VENTE', title: 'Menu · ' + name, desc: 'Articles et prix de vente pratiqués par les caisses de ce point de vente.', width: 620,
+        body: '<div data-hx-outlet-menu role="status">Chargement du catalogue…</div>' });
+      m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
+      const host = m.el.querySelector('[data-hx-outlet-menu]');
+      try {
+        const res = await fetch('/api/catalog?merchant=' + encodeURIComponent(cuMerchantSlug()), { credentials: 'same-origin' });
+        const body = await res.json().catch(() => ({}));
+        const products = res.ok && body && body.data && Array.isArray(body.data.products)
+          ? body.data.products.filter((p) => p && p.id && p.name && !p.archived) : null;
+        if (!res.ok || !products) { if (host) host.innerHTML = '<p class="hx-econ-empty">Catalogue indisponible pour le moment.</p>'; return; }
+        if (host) host.innerHTML = products.length
+          ? `<div class="hx-outlet-menu">${products.slice(0, 200).map((p) => `<div><span>${esc(p.name)}</span><b>${fmt(Number(p.priceMAD) || 0)} MAD</b></div>`).join('')}</div><small>${products.length} article${products.length === 1 ? '' : 's'} au catalogue de l’établissement.</small>`
+          : '<p class="hx-econ-empty">Aucun article au catalogue pour le moment.</p>';
+      } catch (_) { if (host) host.innerHTML = '<p class="hx-econ-empty">Catalogue indisponible pour le moment.</p>'; }
+    };
 
     handlers['hx-econ-refresh'] = () => { cuEconomatState.loaded = false; cuLoadEconomat(true); };
-    handlers['hx-econ-add-unit'] = (el, arg) => { cuCaptureEconomatDraft(); cuEconomatState.draft.units.push(cuNewUnit(arg === 'department' ? 'department' : 'outlet')); rerender(); };
-    handlers['hx-econ-add-terminal'] = () => { cuCaptureEconomatDraft(); cuEconomatState.draft.terminals.push({ terminalId: '', unitId: '' }); rerender(); };
-    handlers['hx-econ-remove-terminal'] = (el, arg) => { cuCaptureEconomatDraft(); cuEconomatState.draft.terminals.splice(Math.max(0, parseInt(arg, 10) || 0), 1); rerender(); };
+    handlers['hx-econ-add-unit'] = (el, arg) => { if (!cuEconomatState.draft) cuEconomatState.draft = cuEconomatDraft(cuEconomatState.registry); cuCaptureEconomatDraft(); cuEconomatState.draft.units.push(cuNewUnit(arg === 'department' ? 'department' : 'outlet')); rerender(); };
+    handlers['hx-econ-add-terminal'] = () => { if (!cuEconomatState.draft) cuEconomatState.draft = cuEconomatDraft(cuEconomatState.registry); cuCaptureEconomatDraft(); cuEconomatState.draft.terminals.push({ terminalId: '', unitId: '' }); rerender(); };
+    handlers['hx-econ-remove-terminal'] = (el, arg) => { if (!cuEconomatState.draft) return; cuCaptureEconomatDraft(); cuEconomatState.draft.terminals.splice(Math.max(0, parseInt(arg, 10) || 0), 1); rerender(); };
     handlers['hx-econ-save'] = (el) => cuSaveEconomat(el);
     handlers['hx-econ-shift'] = (el, arg) => cuLoadRoomShift(String(arg || ''));
 
@@ -6746,7 +6816,43 @@
   handlers['hx-tape-today'] = () => { cuTapeOffset = 0; rerender(); };
   handlers['hx-stay-new'] = () => { if (isCustomHotel()) cuStayEditor(null); };
   handlers['hx-group-new'] = () => { if (isCustomHotel()) cuGroupReservationModal(); };
-  handlers['hx-dossier'] = (el,arg) => { const booking=cuAllStays().get(String(arg));if(booking?.hotel)cuOpenDossier(booking); };
+    /* "Configurer ce tarif" beside a missing-rate warning: open the room-type
+     * editor stacked above the stay editor. The stay form DOM is untouched,
+     * so the reservation draft survives; when the type editor closes, the
+     * modal tracker is restored and the stay quote recomputes in place. */
+    handlers['hx-configure-rate'] = (el, arg) => {
+      if (!isCustomHotel()) return;
+      // typeIds themselves contain colons (type:t1): split from the right.
+      const parts = String(arg || '').split(':');
+      const kind = parts.pop(), board = parts.pop(), typeId = parts.join(':');
+      const form = el.closest('[data-hx-stay-form]');
+      if (!form || !typeId) return;
+      const prevModal = openModal;
+      cuTypeEditor(typeId);
+      const root = openModal?.el;
+      const focusSel = kind === 'room' ? '[data-hx-type-rate]' : (board ? `[data-hx-type-board-${board}]` : '');
+      const target = (focusSel && root?.querySelector(focusSel)) || root?.querySelector('[data-hx-type-name]');
+      // After the modal's own focus trap settles, land on the missing field.
+      setTimeout(() => { try { target?.focus?.(); } catch (_) {} }, 60);
+      if (openModal && openModal !== prevModal) {
+        const typeNode = openModal.el, stayForm = form;
+        const obs = new MutationObserver(() => {
+          if (typeNode.isConnected) return;
+          obs.disconnect();
+          openModal = prevModal;
+          if (!stayForm.isConnected) return;
+          // The type save returns after the local write; its server push is
+          // still in flight. Flush it before recomputing, or an immediate
+          // submit would meet the old rates server-side and fail closed.
+          (async () => {
+            try { await hotelCloud?.flush?.(); } catch (_) {}
+            if (stayForm.isConnected) stayForm.dispatchEvent(new Event('hx-refresh-direct'));
+          })();
+        });
+        obs.observe(document.body, { childList: true });
+      }
+    };
+    handlers['hx-dossier'] = (el,arg) => { const booking=cuAllStays().get(String(arg));if(booking?.hotel)cuOpenDossier(booking); };
   handlers['hx-stay-edit'] = (el, arg) => {
     if (!isCustomHotel() || String(arg).startsWith('folio:')) return;
     const booking = cuAllStays().get(String(arg));

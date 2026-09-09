@@ -37,6 +37,7 @@ import { onRequestGet as operationsGet, onRequestPost as operationsPost } from '
 import { onRequestGet as saleCancelGet } from '../functions/api/sale/cancel.js';
 import { onRequestPost as saveStay, onRequestGet as getStays } from '../functions/api/hotel/stays.js';
 import { onRequestGet as getCommercial, onRequestPost as postCommercial } from '../functions/api/hotel/commercial.js';
+import { onRequestGet as catalogGet, onRequestPost as catalogPost } from '../functions/api/catalog.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -531,6 +532,8 @@ async function startOrigin(env, hooks = {}) {
       if (u.pathname === '/api/config' && req.method === 'POST') return route(configPost);
       if (u.pathname === '/api/store' && req.method === 'GET') return route(storeGet);
       if (u.pathname === '/api/store' && req.method === 'POST') return route(storePost);
+      if (u.pathname === '/api/catalog' && req.method === 'GET') return route(catalogGet);
+      if (u.pathname === '/api/catalog' && req.method === 'POST') return route(catalogPost);
       if (u.pathname === '/api/operations' && req.method === 'GET') return route(operationsGet);
       if (u.pathname === '/api/operations' && req.method === 'POST') return route(operationsPost);
       if (u.pathname === '/api/sale/cancel' && req.method === 'GET') return route(saleCancelGet);
@@ -1163,6 +1166,142 @@ await withCtx({}, async (ctx) => {
   ok(done2.outcome === 'closed', 'confirmed reprice saves');
   b = await ctx.stayByClientRef(done.ref);
   ok(b && b.hotel.total === 3150 && b.pricing && b.pricing.totalCents === 315000 && b.pricing.rows.length === 3, 'extension repriced to three nights');
+});
+
+/* ── T12 · Points de vente manages outlets on the shared registry ── */
+console.log('\n■ T12 · sidebar Points de vente names a bar and maps its till');
+await withCtx({}, async (ctx) => {
+  const { page } = ctx;
+  await unlock(page);
+  // Drive nothing until the post-unlock UI settles: late dashboard renders
+  // can hide a freshly opened page mid-flow. Returns on 1.5s of stability.
+  await page.waitForFunction(() => new Promise((res) => {
+    let last = document.body.className, since = Date.now();
+    const iv = setInterval(() => {
+      const cur = document.body.className;
+      if (cur !== last) { last = cur; since = Date.now(); }
+      if (Date.now() - since > 1500) { clearInterval(iv); res(true); }
+    }, 100);
+    setTimeout(() => { clearInterval(iv); res(true); }, 12000);
+  }), { timeout: 20000 });
+  step('sidebar exposes the entry');
+  const entry = await page.$('.sidebar nav a[data-nav="points-vente"]');
+  ok(!!entry, 'Points de vente entry present in the hotel sidebar');
+  ok(await entry.isVisible(), 'entry visible, not a dead link');
+  // Dashboard boot can still be settling right after unlock (late renders
+  // clear the page shell); re-issue the navigation until the page is truly
+  // visible. Navigating twice is idempotent.
+  await page.waitForFunction(() => {
+    const shell = document.querySelector('[data-hx-economat]');
+    const vis = shell && shell.getBoundingClientRect().height > 0;
+    if (!vis) document.querySelector('.sidebar nav a[data-nav="points-vente"]')?.click();
+    return !!vis;
+  }, { timeout: 20000 });
+  await page.waitForFunction(() => /Points de vente/.test(document.body.textContent || ''), { timeout: 15000 });
+  ok(/Aucun point de vente/.test(await page.$eval('[data-hx-economat]', (el) => el.textContent || '')), 'empty registry states itself honestly');
+  step('name a bar, type it, map its physical till');
+  const uclick = (sel) => page.evaluate((s) => document.querySelector(s)?.click(), sel);
+  await uclick('[data-action="hx-econ-add-unit"][data-arg="outlet"]');
+  const outletId = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('[data-hx-econ-unit]')];
+    const row = rows[rows.length - 1];
+    return row ? row.getAttribute('data-hx-econ-unit') : '';
+  });
+  ok(outletId && outletId !== 'economat-central', 'new outlet row appears with its own id');
+  await setField(page, `[data-hx-econ-unit="${outletId}"] [data-hx-econ-name]`, 'Bar Atlas');
+  await setField(page, `[data-hx-econ-unit="${outletId}"] [data-hx-econ-store]`, 'bar');
+  await uclick('[data-action="hx-econ-add-terminal"]');
+  await setField(page, '[data-hx-econ-terminal-row]:last-of-type [data-hx-econ-terminal]', 'term-bar-1');
+  await setField(page, '[data-hx-econ-terminal-row]:last-of-type [data-hx-econ-terminal-unit]', outletId);
+  await uclick('[data-hx-econ-confirm]');
+  await uclick('[data-action="hx-econ-save"]');
+  const doc = await (async () => {
+    for (let i = 0; i < 30; i++) {
+      const s = await ctx.api('/api/store?merchant=' + MERCHANT + '&feature=hotel-units');
+      const data = typeof s.json.data === 'string' ? JSON.parse(s.json.data) : s.json.data;
+      if (data && Array.isArray(data.units) && data.units.length === 2) return data;
+      await new Promise((r2) => setTimeout(r2, 500));
+    }
+    return null;
+  })();
+  ok(!!doc, 'registry saved to the server document');
+  ok(doc.units.filter((u) => u.kind === 'economat').length === 1, 'still exactly one economat, no duplicate establishments');
+  const bar = doc.units.find((u) => u.id === outletId);
+  ok(bar && bar.name === 'Bar Atlas' && bar.storeType === 'bar' && bar.kind === 'outlet', 'bar named and typed on the shared registry');
+  ok(doc.terminalUnits && doc.terminalUnits['term-bar-1'] === outletId, 'physical till assigned to the bar');
+  step('outlet card reaches the menu and its selling prices');
+  await ctx.api('/api/catalog', 'POST', { merchant: MERCHANT, data: { v: 1, categories: [], products: [
+    { id: 'the-menthe', name: 'Thé à la menthe', priceMAD: 25 },
+    { id: 'tagine', name: 'Tagine du jour', priceMAD: 120 },
+  ] } });
+  await page.evaluate(() => window.Kiwi?.handlers?.['nav-points-vente']?.());
+  await page.waitForSelector(`[data-hx-pdv-card="${outletId}"]`, { timeout: 15000 });
+  await uclick(`[data-hx-pdv-card="${outletId}"] [data-action="hx-outlet-menu"]`);
+  await page.waitForSelector('[data-hx-outlet-menu] .hx-outlet-menu', { timeout: 15000 });
+  const menu = await page.$eval('[data-hx-outlet-menu]', (el) => el.textContent || '');
+  ok(/Thé à la menthe/.test(menu) && /25\s*MAD/.test(menu), 'menu shows the selling price');
+  ok(/Tagine du jour/.test(menu) && /120\s*MAD/.test(menu), 'second article priced too');
+  await uclick('.kiwi-modal-close');
+  step('reload keeps the outlet, the mapping and the name');
+  await reloadAndUnlock(page);
+  await page.evaluate(() => window.Kiwi?.handlers?.['nav-points-vente']?.());
+  await page.waitForSelector('[data-hx-economat]', { timeout: 15000 });
+  await page.waitForFunction(() => /Bar Atlas/.test(document.body.textContent || ''), { timeout: 15000 });
+  ok(true, 'bar survives reload on the same registry');
+});
+
+/* ── T13 · missing rate links straight to its configuration ── */
+console.log('\n■ T13 · Configurer ce tarif keeps the reservation draft');
+await withCtx({}, async (ctx) => {
+  const { page } = ctx;
+  await unlock(page);
+  await gotoHotel(ctx, 'nav-reception');
+  await openStayEditor(ctx);
+  await fillStay(page, { ...GUEST(ymd(7), ymd(9)), roomTypeId: 'type:t1', resourceId: 'room:101', partySize: 1, board: 'hb_lunch' });
+  await page.waitForSelector('[data-action="hx-configure-rate"]', { timeout: 15000 });
+  const linkVisible = await page.$eval('[data-action="hx-configure-rate"]', (el) => getComputedStyle(el).display !== 'none');
+  ok(linkVisible, 'configure link sits beside the missing-rate warning');
+  const nameBefore = await page.$eval('[data-hx-stay-form] input[name="name"]', (el) => el.value);
+  await page.click('[data-action="hx-configure-rate"]');
+  await page.waitForSelector('[data-hx-type-board-hb_lunch]', { timeout: 15000 });
+  await page.waitForFunction(() => {
+    const a = document.activeElement;
+    return !!(a && a.hasAttribute && a.hasAttribute('data-hx-type-board-hb_lunch'));
+  }, { timeout: 8000 });
+  const stacked = await page.evaluate(() => ({
+    backdrops: document.querySelectorAll('.kiwi-backdrop').length,
+    stayPresent: !!document.querySelector('[data-hx-stay-form]'),
+    nameKept: (document.querySelector('[data-hx-stay-form] input[name="name"]') || {}).value,
+    focused: (document.activeElement || {}).getAttribute?.('data-hx-type-board-hb_lunch') !== undefined && document.activeElement?.hasAttribute?.('data-hx-type-board-hb_lunch'),
+  }));
+  ok(stacked.backdrops === 2, 'type editor stacks above the stay editor');
+  ok(stacked.stayPresent && stacked.nameKept === nameBefore, 'reservation draft untouched underneath');
+  ok(stacked.focused, 'missing supplement field focused for the right category');
+  await setField(page, '[data-hx-type-board-hb_lunch]', '220');
+  await page.click('[data-action="hx-room-type-save"]');
+  await page.waitForFunction(() => !document.querySelector('[data-hx-type-board-hb_lunch]'), { timeout: 15000 });
+  const rateOnServer = await (async () => {
+    for (let i = 0; i < 30; i++) {
+      const s = await ctx.api('/api/store?merchant=' + MERCHANT + '&feature=rooms');
+      const data = typeof s.json.data === 'string' ? JSON.parse(s.json.data) : s.json.data;
+      const t = (data.roomTypes || []).find((x) => x.id === 'type:t1');
+      if (t && t.boardRates && Number(t.boardRates.hb_lunch) === 220) return true;
+      await new Promise((r2) => setTimeout(r2, 500));
+    }
+    return false;
+  })();
+  ok(rateOnServer, 'supplement reached the server rooms document before submit');
+  const after = await page.evaluate(() => ({
+    backdrops: document.querySelectorAll('.kiwi-backdrop').length,
+    nameKept: (document.querySelector('[data-hx-stay-form] input[name="name"]') || {}).value,
+  }));
+  ok(after.backdrops === 1 && after.nameKept === nameBefore, 'type editor closes back onto the same draft');
+  await page.waitForFunction(() => /2240\.00/.test(document.querySelector('[data-hx-direct-breakdown]')?.textContent || ''), { timeout: 15000 });
+  ok(true, 'quote reprices in place once the rate exists');
+  const done = await submitStay(page);
+  ok(done.outcome === 'closed', 'booking completes without reopening or refilling (got ' + done.outcome + ')');
+  const b = await ctx.stayByClientRef(done.ref);
+  ok(b && b.hotel.total === 2240, 'server total matches the configured rate');
 });
 
 /* ── summary ───────────────────────────────────────────────────────── */

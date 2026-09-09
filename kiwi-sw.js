@@ -49,7 +49,7 @@ var SHELL = [
   '/assets/pressing-dashboard.css?v=10',
   '/assets/trade-workspaces.css?v=3',
   '/assets/reservations.css?v=5',
-  '/assets/hotel.css?v=32',
+  '/assets/hotel.css?v=33',
   '/assets/hotel-economat.js?v=2',
   '/assets/genpage.css?v=2',
   '/assets/mobile.css?v=4',
@@ -91,7 +91,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=27',
+  '/assets/venues.js?v=28',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=4',
   '/assets/trade-workspaces.js?v=4',
