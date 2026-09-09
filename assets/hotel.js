@@ -5583,6 +5583,56 @@
     const p = (n) => String(n).padStart(2, '0');
     return { ok: true, iso: `${y}-${p(m)}-${p(d)}` };
   }
+  /* Tariff-save acknowledgment for the stay editor. The type editor returns
+   * after the LOCAL write; its server push is still in flight. A new total
+   * is ready to book only once the rooms document is acknowledged — never
+   * before. Pending, busy, offline and failed saves each get a visible
+   * state; the reservation draft is never touched and retry is offered. */
+  const HX_TARIFF_SYNC_COPY = {
+    pending: 'Synchronisation du tarif avec le serveur…',
+    failed: 'Tarif enregistré sur cet appareil, mais pas confirmé par le serveur. Votre brouillon est intact.',
+    offline: 'Connexion perdue : tarif enregistré sur cet appareil uniquement. Votre brouillon est intact.',
+    retry: 'Réessayer la synchronisation',
+  };
+  function cuSetTariffSync(form, state) {
+    const host = form.querySelector('[data-hx-tariff-sync]');
+    if (!host) return;
+    if (state === 'ready' || !state) { host.innerHTML = ''; return; }
+    if (state === 'pending') { host.innerHTML = `<p class="hx-tariff-pending">${HX_TARIFF_SYNC_COPY.pending}</p>`; return; }
+    const text = state === 'offline' ? HX_TARIFF_SYNC_COPY.offline : HX_TARIFF_SYNC_COPY.failed;
+    host.innerHTML = `<div class="hx-tariff-sync-fail"><p class="hx-warn-note" style="color:var(--warn-ink);background:var(--warn-soft);padding:8px 12px;border-radius:8px;font-size:12px;">${text}</p><button type="button" class="hx-btn ghost" data-action="hx-tariff-retry">${HX_TARIFF_SYNC_COPY.retry}</button></div>`;
+  }
+  async function cuAwaitTariffAck(form, tries = 0) {
+    let ack = null;
+    try { ack = await hotelCloud?.flush?.(); } catch (_) { ack = null; }
+    if (ack && ack.ok) return { ok: true };
+    if (ack && ack.error === 'busy' && tries < 4) {
+      await new Promise((r) => setTimeout(r, 700));
+      if (!form.isConnected) return { ok: false };
+      return cuAwaitTariffAck(form, tries + 1);
+    }
+    return { ok: false, offline: !!(ack && ack.offline) };
+  }
+  async function cuTariffSyncCycle(form, pendingDelayMs) {
+    if (!form || !form.isConnected) return;
+    let done = false, timer = 0;
+    if (pendingDelayMs) timer = setTimeout(() => { if (!done && form.isConnected) cuSetTariffSync(form, 'pending'); }, pendingDelayMs);
+    else cuSetTariffSync(form, 'pending');
+    const res = await cuAwaitTariffAck(form);
+    done = true;
+    if (timer) clearTimeout(timer);
+    if (!form.isConnected) return;
+    if (res.ok) {
+      cuSetTariffSync(form, 'ready');
+      form.dispatchEvent(new Event('hx-refresh-direct'));
+    } else {
+      cuSetTariffSync(form, res.offline ? 'offline' : 'failed');
+      if (res.offline) window.addEventListener('online', () => cuTariffRetry(form), { once: true });
+    }
+  }
+  async function cuTariffRetry(form) {
+    cuTariffSyncCycle(form, 0);
+  }
   function cuDirectQuote(input) {
     const { typeRate = null, baseRate = null, boardRates = null, board = 'room_only', checkIn = '', checkOut = '', occupancy = 1 } = input || {};
     const roomRate = typeRate == null ? baseRate : typeRate;
@@ -5638,6 +5688,7 @@
         <label class="hx-check-row"><input type="checkbox" data-hx-agreed-confirm> <span>Je confirme ce prix convenu pour ce séjour.</span></label>
       </div>
         <label class="hx-check-row" data-hx-reprice-wrap hidden><input type="checkbox" data-hx-reprice-confirm> <span data-hx-reprice-label></span></label>
+        <div data-hx-tariff-sync role="status"></div>
     </div>`;
     if (booking && ['completed', 'cancelled', 'no_show'].includes(booking.status)) { box.disabled = true; return; }
     form.__commercialReady = true;
@@ -6163,7 +6214,7 @@
       </article>`;
     }).join('') : '<div class="hx-econ-empty">Aucun point de vente. Ajoutez-en un ci-dessous : il partagera le registre de l’économat, sans doublon.</div>';
     return `<div class="hx-econ-shell" data-hx-economat>
-      <div class="hx-econ-head"><div><span>POINTS DE VENTE</span><h3>Restaurants, bars et caisses</h3><p>Nommez chaque point de vente, assignez ses caisses physiques, consultez ce qu’elles vendent. Un seul registre partagé avec l’économat : renommer ici, c’est renommer partout.</p></div><button class="hx-btn ghost" data-action="hx-econ-refresh">Actualiser</button></div>
+      <div class="hx-econ-head"><div><span>POINTS DE VENTE</span><h3>Restaurants, bars et caisses</h3><p>Nommez chaque point de vente, assignez ses caisses physiques, consultez ce qu’elles vendent. Un seul registre partagé avec l’économat : renommer ici, c’est renommer partout.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="hx-btn ghost" data-action="nav-economat">Économat · stock central</button><button class="hx-btn ghost" data-action="hx-econ-refresh">Actualiser</button></div></div>
       ${s.error ? `<div class="hx-econ-alert bad">${esc(s.error)}</div>` : ''}
       <div class="hx-econ-section"><div class="hx-h"><span class="t">Vos points de vente</span><span class="s">${outlets.filter((unit) => unit.active).length} actifs · ${d.terminals.filter((row) => row.terminalId && row.unitId).length} caisses assignées</span></div><div class="hx-pdv-cards">${cards}</div></div>
       ${cuUnitsEditorHtml(d)}
@@ -6524,12 +6575,12 @@
       : page('hotelintel', 'Intelligence hôtel', 'Prévision d\'occupation · tarification · no-shows · où part l\'argent', intelBody);
     /* Points de vente: the clear entry for outlet configuration. Same shared
      * draft and registry as the Économat section — naming and till mapping
-     * here is naming and till mapping there. nav-economat was a dead sidebar
-     * entry (no handler); it now lands on the page that hosts the registry. */
+     * here is naming and till mapping there. nav-economat stays owned by
+     * hotel-economat.js (stock/receiving workspace); this page links there
+     * instead of duplicating it. */
     handlers['nav-points-vente'] = () => cu()
       ? (page('points-vente', 'Points de vente', 'Restaurants, bars et caisses · un seul registre partagé', cuPdvBody), setTimeout(() => cuLoadEconomat(false), 0))
       : null;
-    handlers['nav-economat'] = () => { if (cu()) handlers['nav-hotelintel'](); };
     /* Per-outlet menu: what this outlet's tills actually sell, read-only.
      * Prices come from the merchant catalogue — the same document every
      * till sells from — so there is nothing outlet-specific to drift. */
@@ -6540,17 +6591,32 @@
       const m = K().modal({ tag: 'POINT DE VENTE', title: 'Menu · ' + name, desc: 'Articles et prix de vente pratiqués par les caisses de ce point de vente.', width: 620,
         body: '<div data-hx-outlet-menu role="status">Chargement du catalogue…</div>' });
       m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
+      m.el.__hxClose = m.close;
       const host = m.el.querySelector('[data-hx-outlet-menu]');
+      // One catalogue for the whole hotel: editing a price here changes what
+      // every till sells. Linked, never duplicated.
+      const foot = `<p class="hx-outlet-shared">Prix partagés par tout l’hôtel : le catalogue est commun à tous les points de vente. Modifier un prix change ce que toutes les caisses vendent.</p><button type="button" class="hx-btn ghost" data-action="hx-outlet-edit-menu">Modifier dans le catalogue</button>`;
       try {
         const res = await fetch('/api/catalog?merchant=' + encodeURIComponent(cuMerchantSlug()), { credentials: 'same-origin' });
         const body = await res.json().catch(() => ({}));
         const products = res.ok && body && body.data && Array.isArray(body.data.products)
           ? body.data.products.filter((p) => p && p.id && p.name && !p.archived) : null;
-        if (!res.ok || !products) { if (host) host.innerHTML = '<p class="hx-econ-empty">Catalogue indisponible pour le moment.</p>'; return; }
+        if (!res.ok || !products) { if (host) host.innerHTML = '<p class="hx-econ-empty">Catalogue indisponible pour le moment.</p>' + foot; return; }
         if (host) host.innerHTML = products.length
-          ? `<div class="hx-outlet-menu">${products.slice(0, 200).map((p) => `<div><span>${esc(p.name)}</span><b>${fmt(Number(p.priceMAD) || 0)} MAD</b></div>`).join('')}</div><small>${products.length} article${products.length === 1 ? '' : 's'} au catalogue de l’établissement.</small>`
-          : '<p class="hx-econ-empty">Aucun article au catalogue pour le moment.</p>';
-      } catch (_) { if (host) host.innerHTML = '<p class="hx-econ-empty">Catalogue indisponible pour le moment.</p>'; }
+          ? `<div class="hx-outlet-menu">${products.slice(0, 200).map((p) => `<div><span>${esc(p.name)}</span><b>${fmt(Number(p.priceMAD) || 0)} MAD</b></div>`).join('')}</div><small>${products.length} article${products.length === 1 ? '' : 's'} au catalogue de l’établissement.</small>` + foot
+          : '<p class="hx-econ-empty">Aucun article au catalogue pour le moment.</p>' + foot;
+      } catch (_) { if (host) host.innerHTML = '<p class="hx-econ-empty">Catalogue indisponible pour le moment.</p>' + foot; }
+    };
+    /* From an outlet's menu into the existing authorized catalogue editor.
+     * The modal closes first so the editor opens onto a clean page. */
+    handlers['hx-outlet-edit-menu'] = (el) => {
+      const back = el.closest('.kiwi-backdrop');
+      const close = back && back.__hxClose;
+      if (typeof close === 'function') { try { close(); } catch (_) {} }
+      else if (back) back.remove();
+      const nav = window.Kiwi && window.Kiwi.handlers && window.Kiwi.handlers['nav-inventory'];
+      if (typeof nav === 'function') nav();
+      else if (typeof toast === 'function') toast('Catalogue indisponible', { type: 'warn', desc: 'Ouvrez l’inventaire depuis le tableau de bord.' });
     };
 
     handlers['hx-econ-refresh'] = () => { cuEconomatState.loaded = false; cuLoadEconomat(true); };
@@ -6840,18 +6906,15 @@
           if (typeNode.isConnected) return;
           obs.disconnect();
           openModal = prevModal;
-          if (!stayForm.isConnected) return;
-          // The type save returns after the local write; its server push is
-          // still in flight. Flush it before recomputing, or an immediate
-          // submit would meet the old rates server-side and fail closed.
-          (async () => {
-            try { await hotelCloud?.flush?.(); } catch (_) {}
-            if (stayForm.isConnected) stayForm.dispatchEvent(new Event('hx-refresh-direct'));
-          })();
+          // Gate the refresh on the server acknowledgment: the pending state
+          // appears only if the push takes longer than a beat, and the new
+          // total is never shown as ready before the rooms document is out.
+          cuTariffSyncCycle(stayForm, 400);
         });
         obs.observe(document.body, { childList: true });
       }
     };
+    handlers['hx-tariff-retry'] = (el) => { const form = el.closest('[data-hx-stay-form]'); if (form) cuTariffRetry(form); };
     handlers['hx-dossier'] = (el,arg) => { const booking=cuAllStays().get(String(arg));if(booking?.hotel)cuOpenDossier(booking); };
   handlers['hx-stay-edit'] = (el, arg) => {
     if (!isCustomHotel() || String(arg).startsWith('folio:')) return;

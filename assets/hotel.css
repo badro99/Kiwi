@@ -1155,6 +1155,11 @@
 .hx-outlet-menu > div{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--n-200);font-size:13px}
 .hx-outlet-menu b{font-variant-numeric:tabular-nums;white-space:nowrap}
 [data-hx-outlet-menu] > small{display:block;margin-top:6px;font-size:12px;color:var(--n-600)}
+.hx-outlet-shared{font-size:12px;line-height:1.6;color:var(--n-600);margin:12px 0 0;max-width:62ch}
+[data-hx-outlet-menu] .hx-btn{margin-top:10px}
+.hx-tariff-pending{font-size:12px;color:var(--n-600);margin:8px 0 0}
+.hx-tariff-sync-fail{margin:8px 0 0}
+.hx-tariff-sync-fail .hx-btn{margin-top:8px}
 .hx-quote-lines > div { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; padding:10px 0; border-bottom:1px solid var(--n-200); }
 .hx-quote-lines b { font-variant-numeric:tabular-nums; }
 .hx-quote-accept { display:flex; align-items:center; gap:10px; min-height:48px; margin-top:12px; }
