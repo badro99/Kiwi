@@ -309,6 +309,74 @@ console.log('\n■ 5b. Edit lifecycle: preservation, explicit reprice, transitio
     && r.body.booking.pricingHistory[0].reason === 'geste commercial', 'old authorization archived, not lost');
 }
 
+console.log('\n■ 5c. Omitted pricing fields: unchanged keeps, changed reprices or refuses');
+{
+  const getById = async (id) => {
+    const r = await getStays({ env, request: new Request(`https://kiwi.test/api/hotel/stays?merchant=${MERCHANT}&id=${id}`, { headers: { Cookie: cookie } }) });
+    const b = await r.json().catch(() => ({}));
+    return (b.stays || [])[0] || null;
+  };
+  const addDay = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const CIN3 = day(14), COUT3 = day(16);
+  const bbRows = (ci, co) => {
+    const rows = [];
+    for (let d = ci; d < co; d = addDay(d, 1)) rows.push({ date: d, roomCents: 90000, mealCents: 15000, quantity: 1, amountCents: 105000 });
+    return rows;
+  };
+  // two-night direct B&B at 2,100 MAD, as the browser posts it
+  let r = await J(await post({
+    action: 'save', merchant: MERCHANT, clientRef: 'staff-omit-0001', roomTypeId: 'type:dbl',
+    resourceId: 'room:102', checkIn: CIN3, checkOut: COUT3, partySize: 1, status: 'confirmed',
+    channel: 'direct', customer: { name: 'Yasmine El Fassi', phone: '+212661000009', email: '' },
+    guests: [{ name: 'Yasmine El Fassi' }],
+    commercial: { accountId: '', booker: 'Yasmine El Fassi', board: 'bb', quoted: false },
+    directPricing: { board: 'bb', occupancy: 1, rows: bbRows(CIN3, COUT3), totalCents: 210000 },
+  }));
+  ok(r.status === 200 && r.body.booking.hotel.total === 2100, 'two-night B&B books at 2,100');
+  const omitId = r.body.booking.id;
+  const omitRef = r.body.booking.publicRef;
+  const snapshotBefore = JSON.stringify(await getById(omitId));
+  // edit payload with NEITHER commercial NOR directPricing
+  const bareEdit = (patch) => ({
+    action: 'save', merchant: MERCHANT, id: omitId, clientRef: omitRef, roomTypeId: 'type:dbl',
+    resourceId: 'room:102', checkIn: CIN3, checkOut: COUT3, partySize: 1, status: 'confirmed',
+    channel: 'direct', customer: { name: 'Yasmine El Fassi', phone: '+212661000009', email: '' },
+    guests: [{ name: 'Yasmine El Fassi' }],
+    ...patch,
+  });
+  // THE REPRO: add a night while omitting both pricing fields
+  r = await J(await post(bareEdit({ checkOut: addDay(COUT3, 1), customer: { name: 'Yasmine El Fassi', phone: '+212663000003', email: '' }, note: 'extended' })));
+  ok(r.status === 409 && r.body.error === 'reprice-required', 'three nights on a two-night snapshot are refused');
+  ok(JSON.stringify(await getById(omitId)) === snapshotBefore, 'rejected extension leaves storage untouched');
+  // occupancy change, same omission
+  r = await J(await post(bareEdit({ partySize: 2, guests: [{ name: 'Yasmine El Fassi' }, { name: 'Mehdi El Fassi' }] })));
+  ok(r.status === 409 && r.body.error === 'reprice-required', 'extra guest without pricing is refused');
+  ok(JSON.stringify(await getById(omitId)) === snapshotBefore, 'rejected occupancy change leaves storage untouched');
+  // room-category change, same omission
+  r = await J(await post(bareEdit({ roomTypeId: 'type:eco', resourceId: 'room:201' })));
+  ok(r.status === 409 && r.body.error === 'reprice-required', 'category move without pricing is refused');
+  ok(JSON.stringify(await getById(omitId)) === snapshotBefore, 'rejected category move leaves storage untouched');
+  // contact/note-only edit, same omission: accepted, snapshot and authorization kept
+  const atOmit = (await getById(omitId)).pricing.acceptedAt;
+  r = await J(await post(bareEdit({ customer: { name: 'Yasmine El Fassi', phone: '+212664000004', email: '' }, note: 'late arrival' })));
+  ok(r.status === 200, 'contact-only edit without pricing fields is accepted');
+  ok(r.body.booking.hotel.total === 2100 && r.body.booking.pricing.totalCents === 210000, 'accepted prices preserved');
+  ok(r.body.booking.pricing.acceptedAt === atOmit, 'original authorization timestamp preserved');
+  ok(!r.body.booking.pricingHistory || r.body.booking.pricingHistory.length === 0, 'no history fabricated');
+  // tampered standalone snapshot, still no commercial: rejected, storage untouched
+  const snapshotKept = JSON.stringify(await getById(omitId));
+  r = await J(await post(bareEdit({ checkOut: addDay(COUT3, 1),
+    directPricing: { board: 'bb', occupancy: 1, rows: bbRows(CIN3, addDay(COUT3, 1)), totalCents: 100 } })));
+  ok(r.status === 409 && r.body.error === 'price-mismatch', 'tampered standalone snapshot rejected');
+  ok(JSON.stringify(await getById(omitId)) === snapshotKept, 'rejected standalone snapshot leaves storage untouched');
+  // valid standalone snapshot, still no commercial: explicit material reprices
+  const COUT4 = addDay(COUT3, 1);
+  r = await J(await post(bareEdit({ checkOut: COUT4,
+    directPricing: { board: 'bb', occupancy: 1, rows: bbRows(CIN3, COUT4), totalCents: 315000 } })));
+  ok(r.status === 200 && r.body.booking.hotel.total === 3150, 'standalone snapshot reprices the extension');
+  ok(r.body.booking.pricing.rows.length === 3 && r.body.booking.pricing.totalCents === 315000, 'snapshot now covers three nights');
+}
+
 console.log('\n■ 5. Pure helpers: roles, bounds, key stability');
 {
   const base = { type: { rate: 900, boardRates: { bb: 150 } }, hotel: { baseRate: 700 }, nights: 2, partySize: 1, checkIn: CHECKIN, board: 'bb', actor: { id: ACC, role: 'owner' }, now };

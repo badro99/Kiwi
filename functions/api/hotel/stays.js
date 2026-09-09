@@ -589,20 +589,48 @@ export async function onRequestPost({ request, env }) {
     // stored commercial block, so the old board/account must also be read
     // from the accepted pricing snapshot — otherwise every meal-plan edit
     // reads as a board change against a room_only default.
-    const oldBoard = commercial?.board || (old && old.pricing && old.pricing.board) || 'room_only';
+    const oldBoardRaw = commercial?.board || (old && old.pricing && old.pricing.board) || 'room_only';
+    const oldBoard = BOARDS.includes(oldBoardRaw) ? oldBoardRaw : 'room_only';
     const oldAccount = commercial?.accountId || '';
     const oldQuoted = !!commercial?.quoted;
+    // Fresh pricing material, independent of commercial: either a direct
+    // snapshot or a freshly accepted contract quote. Anything else is "no
+    // material" and may only ride along on an untouched priced stay.
+    const direct = (b && b.directPricing && typeof b.directPricing === 'object') ? b.directPricing : null;
+    // Effective newly asserted terms (omitted-field bypass fix): a request
+    // that carries no commercial block asserts nothing, so its new terms
+    // equal the old ones — except a standalone direct snapshot, which
+    // carries its own board and must be validated on its own merits.
+    const newAccount = spec !== undefined ? str(spec?.accountId, 80) : oldAccount;
+    const newBoard = spec !== undefined
+      ? (BOARDS.includes(spec?.board) ? spec.board : 'room_only')
+      : (direct ? String(direct.board || '') : oldBoard);
+    const newQuoted = spec !== undefined ? (spec?.quoted === true) : oldQuoted;
     const pricingInputsChanged = changedStay
-      || (spec !== undefined && (
-        str(spec?.accountId, 80) !== oldAccount
-        || (BOARDS.includes(spec?.board) ? spec.board : 'room_only') !== (BOARDS.includes(oldBoard) ? oldBoard : 'room_only')
-        || (spec?.quoted === true) !== oldQuoted));
+      || newAccount !== oldAccount
+      || newBoard !== oldBoard
+      || newQuoted !== oldQuoted;
+    // A priced stay keeps its snapshot (and its total) only while every
+    // price-affecting input is untouched; otherwise the caller must bring
+    // fresh, validated material. Without a commercial block the new terms
+    // equal the old ones, so any stay change is a price-affecting change —
+    // enforce before any write (spec-carrying requests keep their existing
+    // in-block guard and its ordering further below).
+    if (spec === undefined && old && old.pricing && pricingInputsChanged && !direct) {
+      return json({ error: 'reprice-required' }, 409);
+    }
     let pricing = (old && old.pricing && typeof old.pricing === 'object') ? old.pricing : null;
+    if (spec === undefined && direct) {
+      if (old && ['completed', 'cancelled', 'no_show'].includes(old.status)) return json({ error: 'closed-commercial' }, 409);
+      if (commercial?.accountId) return json({ error: 'mixed-pricing' }, 409);
+      try {
+        pricing = priceDirectStay({ type, hotel, nights, partySize, checkIn, checkOut, board: newBoard, direct, actor, now });
+      } catch (e) { return json({ error: e?.code || 'commercial-invalid' }, e?.code ? 409 : 503); }
+    }
     if (spec !== undefined) {
       if ((await entitledMerchant(request, env, merchant)) !== merchant) return json({ error: 'commercial-forbidden' }, 403);
       const accountId = str(spec?.accountId, 80), board = BOARDS.includes(spec?.board) ? spec.board : 'room_only';
       const quoted = spec?.quoted === true;
-      const direct = (b && b.directPricing && typeof b.directPricing === 'object') ? b.directPricing : null;
       if (accountId && direct) return json({ error: 'mixed-pricing' }, 409);
       const directChanged = direct ? directKey(direct) !== directKey(old && old.pricing) : false;
       const changedPricing = pricingInputsChanged || directChanged;
