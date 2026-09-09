@@ -122,6 +122,15 @@ export async function onRequest(context) {
    * quinzième script ajouté à kiwi-order.html ne doit pas re-casser la commande
    * client en silence (tools/public-assets-test.js tient cette promesse). */
   if (isRead && path.startsWith('/assets/')) return next();
+  // Kiwi Tickets is deliberately link-only: the owner and partner asked for no
+  // account, password or staff gate. Keep the carve-out exact to this one page,
+  // its API, and its non-cacheable image reader. The handlers still cap text,
+  // file type, file count and upload size independently.
+  if (isRead && (path === '/tickets.html' || path === '/tickets')) return next();
+  if (isRead && path.startsWith('/api/ticket-images/')) return next();
+  if (path === '/api/tickets' && (method === 'GET' || method === 'POST')) return next();
+  if (/^\/api\/tickets\/\d+$/.test(path) && method === 'PATCH') return next();
+  if (path === '/api/tickets/cleanup' && method === 'POST') return next();
   if (isRead && (path === '/kiwi-order.html' || path === '/kiwi-order' || path === '/api/menu')) return next();
   // La page de réinitialisation de mot de passe. Quelqu'un qui a perdu son mot
   // de passe n'a par définition AUCUNE session : la porte du site la lui

@@ -703,3 +703,34 @@ CREATE INDEX IF NOT EXISTS idx_orders_session ON orders (session_id);
 -- entrent pas et ne peuvent donc pas se gêner entre elles.
 CREATE UNIQUE INDEX IF NOT EXISTS orders_client_ref
   ON orders (merchant, client_ref) WHERE client_ref IS NOT NULL;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- KIWI TICKETS · problème → à tester → corrigé et testé
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Outil interne accessible par son lien. Le numéro est un AUTOINCREMENT afin
+-- qu'un ticket supprimé après sa rétention ne rende jamais son numéro au ticket
+-- suivant. Les photos vivent dans R2 ; cette table ne garde que leurs clés.
+CREATE TABLE IF NOT EXISTS kiwi_tickets (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  body         TEXT NOT NULL CHECK (length(body) BETWEEN 1 AND 4000),
+  status       TEXT NOT NULL DEFAULT 'problem'
+               CHECK (status IN ('problem', 'testing', 'done')),
+  created_ts   INTEGER NOT NULL,
+  updated_ts   INTEGER NOT NULL,
+  completed_ts INTEGER,
+  expires_ts   INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_kiwi_tickets_status_expiry
+  ON kiwi_tickets (status, expires_ts);
+
+CREATE TABLE IF NOT EXISTS kiwi_ticket_images (
+  id           TEXT PRIMARY KEY,
+  ticket_id    INTEGER NOT NULL REFERENCES kiwi_tickets(id) ON DELETE CASCADE,
+  object_key   TEXT NOT NULL UNIQUE,
+  filename     TEXT NOT NULL DEFAULT '',
+  content_type TEXT NOT NULL,
+  byte_size    INTEGER NOT NULL DEFAULT 0,
+  created_ts   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_kiwi_ticket_images_ticket
+  ON kiwi_ticket_images (ticket_id, created_ts);
