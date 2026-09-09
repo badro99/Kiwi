@@ -2,7 +2,7 @@
 // into the same revisioned reservations document used by /api/booking, so a
 // room accepted here disappears from public availability in the same write.
 import { json, entitledMerchant } from '../../auth/_lib.js';
-import { commercialSnapshot, readCommercial, quote, BOARDS } from './_commercial.js';
+import { commercialSnapshot, readCommercial, quote, BOARDS, problem } from './_commercial.js';
 import { stayOptions } from './_stay-options.js';
 import { tenantFor } from '../_private.js';
 import { poke } from '../_live.js';
@@ -32,6 +32,34 @@ const num = (v, min, max, fallback) => Number.isFinite(+v) ? Math.max(min, Math.
 
 function blank() {
   return { v: 1, settings: { published: false, confirmation: 'instant', minNoticeMinutes: 60, windowDays: 60, cancellationHours: 12, slotStep: 15, staffingEnabled: false, tablesPerStaff: 4 }, services: [], resources: [], blocked: [], bookings: [] };
+}
+/* Accepted direct-guest pricing survives document reads (server copy of the
+ * client normalizePricing): without it a doc-mode replay would differ from
+ * the fresh save response, and the boot sync would silently unprice direct
+ * bookings. Shape-checked, never trusted blindly. */
+function safePricing(raw) {
+  if (!raw || typeof raw !== 'object' || raw.kind !== 'direct') return null;
+  if (raw.agreed === true) {
+    if (!Number.isSafeInteger(raw.amountCents) || raw.amountCents <= 0) return null;
+    const by = (raw.agreedBy && typeof raw.agreedBy === 'object') ? raw.agreedBy : null;
+    return {
+      kind: 'direct', agreed: true, board: String(raw.board || ''), occupancy: Number(raw.occupancy) || 0,
+      amountCents: raw.amountCents, totalCents: raw.amountCents, rows: [], taxBasis: 'inclusive',
+      reason: String(raw.reason || ''),
+      agreedBy: by ? { id: String(by.id || ''), role: String(by.role || ''), at: Number(by.at) || 0 } : null,
+      acceptedAt: Number(raw.acceptedAt) || 0,
+    };
+  }
+  if (!Array.isArray(raw.rows) || !raw.rows.length || !Number.isSafeInteger(raw.totalCents)) return null;
+  return {
+    kind: 'direct', board: String(raw.board || ''), occupancy: Number(raw.occupancy) || 0,
+    rows: raw.rows.map((r) => ({
+      date: String((r && r.date) || ''), roomCents: Number(r && r.roomCents) || 0,
+      mealCents: Number(r && r.mealCents) || 0, quantity: Number(r && r.quantity) || 0,
+      amountCents: Number(r && r.amountCents) || 0,
+    })),
+    totalCents: raw.totalCents, taxBasis: 'inclusive', acceptedAt: Number(raw.acceptedAt) || 0,
+  };
 }
 function safeDoc(raw) {
   let d = raw;
@@ -76,6 +104,7 @@ function safeDoc(raw) {
       source: ['public', 'staff', 'import'].includes(x?.source) ? x.source : 'staff', note: str(x?.note, 600),
       manageToken: str(x?.manageToken, 80), publicRef: str(x?.publicRef, 80), hotel: h,
       guests, roomSegments, commercial: commercialSnapshot(x?.commercial),
+      ...(safePricing(x?.pricing) ? { pricing: safePricing(x?.pricing) } : {}),
       createdAt: +x?.createdAt || 0, updatedAt: +x?.updatedAt || 0,
     };
   }).filter((x) => x.id && x.customer.name && x.serviceId && x.startAt && x.endAt > x.startAt);
@@ -85,9 +114,27 @@ function safeRooms(raw) {
   let d = raw;
   if (typeof d === 'string') { try { d = JSON.parse(d); } catch (_) { d = null; } }
   d = d && typeof d === 'object' ? d : {};
-  const types = (Array.isArray(d.roomTypes) ? d.roomTypes : []).slice(0, 200).map((x) => ({
-    id: str(x?.id, 64), name: str(x?.name, 100), rate: x?.rate == null ? null : num(x.rate, 0, 1000000, null), maxGuests: num(x?.maxGuests, 1, 12, 2),
-  })).filter((x) => x.id && x.name);
+  const types = (Array.isArray(d.roomTypes) ? d.roomTypes : []).slice(0, 200).map((x) => {
+    const type = {
+      id: str(x?.id, 64), name: str(x?.name, 100), rate: x?.rate == null ? null : num(x.rate, 0, 1000000, null), maxGuests: num(x?.maxGuests, 1, 12, 2),
+    };
+    // Direct-guest meal supplements (MAD per person per night), configured on
+    // the room type. Sanitized like any other rate: garbage reads as missing,
+    // and pricing time reports the gap instead of inventing a price.
+    const rawBoards = (x && typeof x.boardRates === 'object' && !Array.isArray(x.boardRates)) ? x.boardRates : null;
+    if (rawBoards) {
+      const boards = {};
+      let any = false;
+      for (const key of ['bb', 'hb_lunch', 'hb_dinner', 'full_board']) {
+        const value = rawBoards[key];
+        const rate = (value == null || value === '') ? null : num(value, 0, 100000, null);
+        boards[key] = rate;
+        if (rate != null) any = true;
+      }
+      if (any) type.boardRates = boards;
+    }
+    return type;
+  }).filter((x) => x.id && x.name);
   const ids = new Set(types.map((x) => x.id));
   const rooms = (Array.isArray(d.rooms) ? d.rooms : []).slice(0, 1000).map((x) => ({
     id: str(x?.id, 64), n: num(x?.n, 1, 9999, 0), typeId: str(x?.typeId, 64), status: ['libre', 'sale', 'hs', 'occ', 'depart', 'arrivee'].includes(x?.status) ? x.status : 'libre', updatedAt: +x?.updatedAt || 0,
@@ -112,6 +159,73 @@ function zonedEpoch(date, time) {
   return guess;
 }
 function addDays(date, count) { const d = new Date(date + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + count); return d.toISOString().slice(0, 10); }
+
+/* Direct-guest pricing (no commercial account): the hotel's own configured
+ * rates, recomputed here so the client can never invent a price. Per night:
+ * room rate (type, else house base) plus the meal supplement for the board
+ * per person. Returns the snapshot to persist; throws problem() codes
+ * (→ 409) on any gap or disagreement. */
+const DIRECT_BOARDS = ['bb', 'hb_lunch', 'hb_dinner', 'full_board'];
+const MAX_DIRECT_CENTS = 10000000000;
+function directRoomRateCents(type, hotel) {
+  const rate = type.rate == null ? hotel.baseRate : type.rate;
+  if (rate == null || !Number.isFinite(+rate) || +rate < 0) return null;
+  return Math.round(+rate * 100);
+}
+function directMealCents(type, board) {
+  if (board === 'room_only') return 0;
+  const sup = type.boardRates && typeof type.boardRates === 'object' ? type.boardRates[board] : null;
+  if (sup == null || sup === '' || !Number.isFinite(+sup) || +sup < 0) return null;
+  return Math.round(+sup * 100);
+}
+export function directKey(d) {
+  if (!d || typeof d !== 'object') return '';
+  const agreed = d.agreed === true;
+  return JSON.stringify({
+    board: String(d.board || ''), occupancy: Number(d.occupancy) || 0,
+    rows: Array.isArray(d.rows) ? d.rows.map((r) => [String((r && r.date) || ''), Number(r && r.roomCents) || 0, Number(r && r.mealCents) || 0, Number(r && r.quantity) || 0, Number(r && r.amountCents) || 0]) : [],
+    totalCents: Number(d.totalCents) || 0, agreed,
+    amountCents: agreed ? (Number(d.amountCents) || 0) : 0,
+    reason: agreed ? String(d.reason || '') : '',
+  });
+}
+export function priceDirectStay({ type, hotel, nights, partySize, checkIn, board, direct, actor, now }) {
+  if (!DIRECT_BOARDS.includes(board) && board !== 'room_only') problem('invalid-formula');
+  if (!Number.isSafeInteger(partySize) || partySize < 1) problem('invalid');
+  if (direct.agreed === true) {
+    const amountCents = direct.amountCents;
+    const reason = String(direct.reason || '').trim();
+    if (!Number.isSafeInteger(amountCents) || amountCents <= 0 || amountCents > 100000000) problem('agreed-invalid');
+    if (reason.length < 3 || reason.length > 280) problem('agreed-invalid');
+    if (!actor || !['owner', 'operator'].includes(actor.role)) problem('agreed-forbidden');
+    return {
+      kind: 'direct', agreed: true, board, occupancy: partySize,
+      amountCents, totalCents: amountCents, rows: [], taxBasis: 'inclusive',
+      reason: reason.slice(0, 280),
+      agreedBy: { id: String(actor.id || '').slice(0, 96), role: actor.role, at: now },
+      acceptedAt: now,
+    };
+  }
+  if (String(direct.board || '') !== board || Number(direct.occupancy) !== partySize) problem('price-mismatch');
+  const roomCents = directRoomRateCents(type, hotel);
+  if (roomCents == null) problem('rate-missing');
+  const rows = [];
+  for (let i = 0; i < nights; i++) {
+    const date = addDays(checkIn, i);
+    const mealCents = directMealCents(type, board);
+    if (mealCents == null) problem('rate-missing');
+    rows.push({ date, roomCents, mealCents, quantity: partySize, amountCents: roomCents + mealCents * partySize });
+  }
+  const totalCents = rows.reduce((s, r) => s + r.amountCents, 0);
+  if (totalCents > MAX_DIRECT_CENTS) problem('price-overflow');
+  const same = Array.isArray(direct.rows) && direct.rows.length === rows.length && rows.every((r, i) => {
+    const c = direct.rows[i] || {};
+    return String(c.date || '') === r.date && Number(c.roomCents) === r.roomCents && Number(c.mealCents) === r.mealCents
+      && Number(c.quantity) === r.quantity && Number(c.amountCents) === r.amountCents;
+  });
+  if (!same || Number(direct.totalCents) !== totalCents) problem('price-mismatch');
+  return { kind: 'direct', board, occupancy: partySize, rows, totalCents, taxBasis: 'inclusive', acceptedAt: now };
+}
 function overlaps(a0, a1, b0, b1) { return a0 < b1 && b0 < a1; }
 function canTransition(from, to) {
   return from === to || !!STATUS_TRANSITIONS.get(from)?.has(to);
@@ -477,11 +591,14 @@ export async function onRequestPost({ request, env }) {
     if (dayUse && (spec?.quoted || commercial?.quoted)) return json({ error: 'day-use-contract-unsupported' }, 409);
     const changedStay = old && (old.serviceId !== typeId || old.hotel.checkIn !== checkIn || old.hotel.checkOut !== checkOut || old.partySize !== partySize);
     if (commercial?.quoted && changedStay && (!spec || !b.acceptQuote)) return json({ error: 'quote-required' }, 409);
+    let pricing = (old && old.pricing && typeof old.pricing === 'object') ? old.pricing : null;
     if (spec !== undefined) {
       if ((await entitledMerchant(request, env, merchant)) !== merchant) return json({ error: 'commercial-forbidden' }, 403);
       const accountId = str(spec?.accountId, 80), board = BOARDS.includes(spec?.board) ? spec.board : 'room_only';
       const quoted = spec?.quoted === true;
-      const changedPricing = changedStay || accountId !== (commercial?.accountId || '') || board !== (commercial?.board || 'room_only') || quoted !== !!commercial?.quoted;
+      const direct = (b && b.directPricing && typeof b.directPricing === 'object') ? b.directPricing : null;
+      if (accountId && direct) return json({ error: 'mixed-pricing' }, 409);
+      const changedPricing = changedStay || accountId !== (commercial?.accountId || '') || board !== (commercial?.board || 'room_only') || quoted !== !!commercial?.quoted || directKey(direct) !== directKey(old && old.pricing);
       if (old && ['completed', 'cancelled', 'no_show'].includes(old.status) && (b.acceptQuote || changedPricing || str(spec?.voucher, 100) !== (commercial?.voucher || '') || str(spec?.booker, 160) !== (commercial?.booker || ''))) return json({ error: 'closed-commercial' }, 409);
       try {
         const directory = await readCommercial(env, merchant);
@@ -496,11 +613,14 @@ export async function onRequestPost({ request, env }) {
           // HT can be simulated but not booked as TTC until hotel taxes are configured.
           if (accepted.taxBasis !== 'inclusive') return json({ error: 'tax-configuration-required' }, 409);
         }
-        if (!quoted && board !== 'room_only') return json({ error: 'quote-required' }, 409);
+        if (!quoted && board !== 'room_only' && !direct) return json({ error: 'direct-pricing-required' }, 409);
+        if (direct) {
+          pricing = priceDirectStay({ type, hotel, nights, partySize, checkIn, checkOut, board, direct, actor, now });
+        }
         commercial = { accountId, billTo: accountId === commercial?.accountId ? commercial.billTo : selected,
           booker: str(spec?.booker, 160), voucher: str(spec?.voucher, 100), board, occupancy: partySize,
           quoted, acceptedAt: quoted && b.acceptQuote ? now : (commercial?.acceptedAt || 0), quote: quoted ? accepted : null };
-        if (!quoted && old?.commercial?.quoted) {
+        if (!quoted && old?.commercial?.quoted && !direct) {
           if (!b.acceptQuote) return json({ error: 'quote-required' }, 409);
           rate = type.rate == null ? hotel.baseRate : type.rate;
           total = Math.round((rate || 0) * nights * 100) / 100;
@@ -509,6 +629,10 @@ export async function onRequestPost({ request, env }) {
       } catch (e) { return json({ error: e?.code || 'commercial-unavailable' }, e?.code ? 409 : 503); }
     }
     if (commercial?.quoted && commercial.quote) { total = commercial.quote.totalCents / 100; rate = Math.round(total / nights * 100) / 100; }
+    if (pricing && pricing.kind === 'direct' && Number.isSafeInteger(pricing.totalCents)) {
+      total = pricing.totalCents / 100;
+      rate = nights > 0 ? Math.round(total / nights * 100) / 100 : total;
+    }
     const saveGuests = (Array.isArray(b?.guests) ? b.guests : (old?.guests || [])).slice(0, 20).map((g) => ({
       id: str(g?.id, 64) || ('gst_' + crypto.randomUUID().slice(0, 12)),
       name: str(g?.name, 100),
@@ -531,6 +655,7 @@ export async function onRequestPost({ request, env }) {
       source: old?.source || (channel === 'direct' || channel === 'walkin' ? 'staff' : 'import'), note,
       manageToken: old?.manageToken || '', publicRef: old?.publicRef || clientRef,
       guests: saveGuests, commercial,
+      ...(pricing && pricing.kind === 'direct' ? { pricing } : (old && old.pricing && typeof old.pricing === 'object' ? { pricing: old.pricing } : {})),
       roomSegments: saveRoomSegments,
       hotel: {
         dossierId, dayUse, arrivalTime, departureTime,

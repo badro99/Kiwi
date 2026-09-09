@@ -596,10 +596,26 @@
     typeRecords.forEach((x) => {
       if (!x || x.deletedAt) return;
       const id = String(x.id || cuTypeId(x.name, x.updatedAt));
+      // Direct-guest meal supplements (MAD per person per night), same
+      // sanitize-as-missing rule as the server: garbage reads as unset.
+      let boardRates;
+      if (x.boardRates && typeof x.boardRates === 'object' && !Array.isArray(x.boardRates)) {
+        boardRates = {};
+        let any = false;
+        for (const key of ['bb', 'hb_lunch', 'hb_dinner', 'full_board']) {
+          const value = x.boardRates[key];
+          const rate = (value == null || value === '') ? null
+            : (Number.isFinite(+value) && +value >= 0 ? Math.round(+value * 100) / 100 : null);
+          boardRates[key] = rate;
+          if (rate != null) any = true;
+        }
+        if (!any) boardRates = undefined;
+      }
       roomTypes[id] = {
         ...x,
         id, name: String(x.name || 'Chambre').trim().slice(0, 60) || 'Chambre',
         rate: x.rate != null && Number.isFinite(+x.rate) && +x.rate >= 0 ? +x.rate : null,
+        boardRates,
         description: String(x.description || '').trim().slice(0, 300),
         maxGuests: Number.isFinite(+x.maxGuests) ? Math.max(1, Math.min(12, Math.round(+x.maxGuests))) : 2,
         beds: String(x.beds || '').trim().slice(0, 80),
@@ -2044,6 +2060,14 @@
       body: `<div class="hx-room-form hx-type-form">
         <label class="hx-room-form-wide"><span>Nom affiché</span><input data-hx-type-name maxlength="60" value="${esc(type?.name || '')}" placeholder="Ex. Suite Atlas"></label>
         <label class="hx-room-form-wide"><span>Tarif par nuit <small>· MAD · optionnel</small></span><input data-hx-type-rate type="number" inputmode="decimal" min="0" step="1" value="${type?.rate == null ? '' : type.rate}" placeholder="Utiliser le tarif général"></label>
+        <div class="hx-room-form-wide"><span style="font-size:12px;font-weight:600;">Suppléments repas <small style="font-weight:400;">· MAD par personne et par nuit · optionnel · servent aux voyageurs sans compte commercial</small></span>
+          <div class="hx-room-form hx-type-form" style="margin-top:6px;">
+            <label><span>Petit-déjeuner</span><input data-hx-type-board-bb type="number" inputmode="decimal" min="0" step="1" value="${type?.boardRates?.bb ?? ''}" placeholder="—"></label>
+            <label><span>Demi-pension · déjeuner</span><input data-hx-type-board-hb_lunch type="number" inputmode="decimal" min="0" step="1" value="${type?.boardRates?.hb_lunch ?? ''}" placeholder="—"></label>
+            <label><span>Demi-pension · dîner</span><input data-hx-type-board-hb_dinner type="number" inputmode="decimal" min="0" step="1" value="${type?.boardRates?.hb_dinner ?? ''}" placeholder="—"></label>
+            <label><span>Pension complète</span><input data-hx-type-board-full_board type="number" inputmode="decimal" min="0" step="1" value="${type?.boardRates?.full_board ?? ''}" placeholder="—"></label>
+          </div>
+        </div>
         <label class="hx-room-form-wide"><span>Description publique</span><textarea data-hx-type-description maxlength="300" rows="3" placeholder="Une chambre calme et lumineuse, idéale pour…">${esc(type?.description || '')}</textarea></label>
         <label><span>Voyageurs maximum</span><input data-hx-type-guests type="number" inputmode="numeric" min="1" max="12" value="${type?.maxGuests || 2}"></label>
         <label><span>Couchage</span><input data-hx-type-beds maxlength="80" value="${esc(type?.beds || '')}" placeholder="1 grand lit"></label>
@@ -3591,7 +3615,7 @@
       }
     });
     form.addEventListener('submit', (e) => { e.preventDefault(); cuSubmitStay(form, booking, m); });
-    cuWireStayCommercial(form, booking).then(toggleDayUse);
+    cuWireStayCommercial(form, booking).then(() => { toggleDayUse(); if (typeof Event === 'function' && typeof form.dispatchEvent === 'function') form.dispatchEvent(new Event('hx-refresh-direct')); });
     cuWireNationalitySelectors(form);
     openModal = { el: m.el, close: m.close };
   }
@@ -4251,15 +4275,65 @@
       return lines.join('');
     };
 
+    // Direct-guest group pricing (defect: no account needed). Pure recompute
+    // from the hotel's own type configuration; agreed prices are not offered
+    // here — a room without a configured rate names exactly what is missing.
+    const groupDirectQuotes = () => {
+      const board = form.elements.board?.value || 'room_only';
+      const checkIn = form.elements.checkIn?.value || '';
+      const checkOut = form.elements.checkOut?.value || '';
+      const perRoom = {};
+      let totalCents = 0, allOk = true;
+      const missing = [];
+      for (const r of allRooms.filter(x => selectedRoomIds.has(x.id))) {
+        const type = cuTypes().find(t => t.id === r.typeId);
+        const occ = Math.max(1, travelers.filter(t => t.roomId === r.id).length);
+        const q = cuDirectQuote({
+          typeRate: type ? type.rate : null, baseRate: cuState().baseRate, boardRates: type ? type.boardRates : null,
+          board, checkIn, checkOut, occupancy: occ,
+        });
+        if (q.ok) {
+          perRoom[r.id] = { rows: q.rows, totalCents: q.totalCents, nights: q.nights };
+          totalCents += q.totalCents;
+        } else {
+          perRoom[r.id] = { missing: q.missing };
+          allOk = false;
+          missing.push({ room: r, missing: q.missing });
+        }
+      }
+      return { perRoom, totalCents, allOk, missing };
+    };
+
     const renderQuoteBox = () => {
       const board = form.elements.board?.value || 'room_only';
       const accountId = form.elements.accountId?.value || '';
       const selected = allRooms.filter(r => selectedRoomIds.has(r.id));
-      const isCommercial = (board !== 'room_only' || !!accountId);
-      if (!isCommercial) {
-        quoteSlot.innerHTML = '';
+      const contractMode = !!accountId;
+      if (!contractMode) {
+        if (!selected.length) { quoteSlot.innerHTML = ''; return; }
+        const dq = groupDirectQuotes();
+        const lines = selected.map(r => {
+          const q = dq.perRoom[r.id];
+          if (!q || !q.rows) {
+            const what = (q && q.missing && q.missing.includes('room'))
+              ? `sans tarif logement pour « ${esc(roomTypeOf(r.n).name)} »`
+              : `sans tarif « ${esc(cuBoards[board] || board)} » pour « ${esc(roomTypeOf(r.n).name)} »`;
+            return `<div>Ch. ${r.n} : <span style="color:var(--warn-ink);">En attente de tarif — ${what}. Renseignez-le dans Types de chambres, ou réservez cette chambre en prix convenu depuis sa fiche individuelle.</span></div>`;
+          }
+          return `<div>Ch. ${r.n} (${esc(roomTypeOf(r.n).name)}) : <b>${(q.totalCents / 100).toFixed(2)} MAD TTC</b> (${q.nights} nuit${q.nights > 1 ? 's' : ''})</div>`;
+        });
+        if (dq.allOk && selected.length > 0) {
+          lines.push(`<div style="margin-top:4px;font-weight:700;color:var(--ink);border-top:1px dashed var(--n-200);padding-top:4px;">Total groupe (tarifs maison) : ${(dq.totalCents / 100).toFixed(2)} MAD TTC</div>`);
+        }
+        quoteSlot.innerHTML = `
+          <div class="hx-quote-group-card">
+            <div class="hx-quote-group-title">Tarifs maison · Formule : ${esc(cuBoards[board] || board)}</div>
+            <p style="font-size:11.5px;color:var(--n-600);margin:0 0 8px;">Sans compte : chaque chambre est chiffrée au tarif configuré de sa catégorie. Vérifié côté serveur avant enregistrement.</p>
+            <div class="hx-quote-group-breakdown">${lines.join('')}</div>
+          </div>`;
         return;
       }
+
 
       const allQuoted = selected.length > 0 && selected.every(r => quoteBreakdown[r.id] && Number.isSafeInteger(quoteBreakdown[r.id].totalCents));
       const hasTaxExclusive = selected.some(r => quoteBreakdown[r.id]?.taxBasis === 'exclusive');
@@ -4801,7 +4875,6 @@
       const accountId = terms.accountId || null;
       const channel = terms.channel;
       const board = terms.board;
-      const isCommercial = (board !== 'room_only' || !!accountId);
 
       if (!groupName) { errorEl.textContent = 'Indiquez le nom du groupe.'; return; }
       if (!contactName) { errorEl.textContent = 'Indiquez le contact principal.'; return; }
@@ -4837,11 +4910,30 @@
       // that has not moved since. Anything else restarts the simulation —
       // the operator reviews one total and the server books exactly it
       // (the save endpoint re-checks the revision and 409s otherwise).
-      if (isCommercial && !quoteAccepted) {
+      // Two genuinely separate pricing paths (defect: ordinary groups need
+      // no account). Contract groups simulate and accept; direct groups are
+      // priced live from the hotel configuration, no simulation to accept.
+      const contractMode = !!accountId;
+      let groupDirect = null;
+      if (contractMode && !quoteAccepted) {
         errorEl.textContent = 'Veuillez simuler et accepter le devis commercial pour cette formule de séjour avant de confirmer le groupe.';
         return;
       }
-      if (isCommercial) {
+      if (!contractMode) {
+        groupDirect = groupDirectQuotes();
+        const missingRoom = allRooms
+          .filter(r => selectedRoomIds.has(r.id) && !savedRooms[r.id])
+          .find(r => !groupDirect.perRoom[r.id] || !groupDirect.perRoom[r.id].rows);
+        if (missingRoom) {
+          const miss = (groupDirect.perRoom[missingRoom.id] && groupDirect.perRoom[missingRoom.id].missing) || ['meal'];
+          const what = miss.includes('room')
+            ? `sans tarif logement pour « ${roomTypeOf(missingRoom.n).name} »`
+            : (miss.includes('dates') ? 'dates du séjour invalides' : `sans tarif « ${cuBoards[board] || board} » pour « ${roomTypeOf(missingRoom.n).name} »`);
+          errorEl.textContent = `Chambre ${missingRoom.n} ${what}. Renseignez le tarif dans Types de chambres, ou réservez cette chambre en prix convenu depuis sa fiche individuelle.`;
+          return;
+        }
+      }
+      if (contractMode) {
         if (!activeQuoteSignature || activeQuoteSignature !== cuGroupQuoteSignature() || quoteRevision == null) {
           errorEl.textContent = 'Le devis accepté ne correspond plus au dossier (dates, chambres, voyageurs ou formule ont changé). Relancez la simulation.';
           return;
@@ -4883,6 +4975,9 @@
             idDocType: g.idDocType || '',
             idDocNumber: g.idDocNumber || '',
           }));
+          const roomDirect = (!accountId && groupDirect && groupDirect.perRoom[room.id] && groupDirect.perRoom[room.id].rows)
+            ? { board, occupancy: Math.max(1, roomGuests.length), rows: groupDirect.perRoom[room.id].rows, totalCents: groupDirect.perRoom[room.id].totalCents }
+            : null;
           return {
             room, clientRef,
             payload: {
@@ -4912,6 +5007,7 @@
               },
               quoteRevision: quoteRevision != null ? quoteRevision : undefined,
               acceptQuote: !!quoteAccepted,
+              ...(roomDirect ? { directPricing: roomDirect } : {}),
             },
           };
         });
@@ -5267,6 +5363,11 @@
     if (form.__hxSubmitting) return;
     const fd = new FormData(form), submit = form.querySelector('[type="submit"]'), error = form.querySelector('[data-hx-stay-error]');
     if (form.__hxStayScope !== cuStayScope()) { error.textContent = 'L’hôtel actif a changé. Fermez ce dossier et rouvrez-le dans le bon établissement.'; return; }
+    // The board selector lives in the commercial box: submitting before it
+    // wires would silently fall back to room_only. Wait for it when the box
+    // exists but is still loading; callers without the box (or with a failed
+    // directory, where no meal choice exists) keep the legacy room-only path.
+    if (form.querySelector('[data-hx-commercial-stay]') && !form.__commercialReady && !form.__commercialFailed) { error.textContent = 'Tarifs en cours de chargement. Patientez quelques secondes puis réessayez.'; return; }
     const slug = cuMerchantSlug();
     const guestRows = Array.from(form.querySelectorAll('[data-hx-guest-row]')).map((row) => ({
       id: row.getAttribute('data-hx-guest-id') || '',
@@ -5300,7 +5401,47 @@
     }
     const board = fd.get('board') || 'room_only';
     const priceMode = fd.get('priceMode') || 'catalogue';
-    if (form.__commercialReady) {
+    const accountIdNow = form.__commercialReady ? String(fd.get('accountId') || '') : '';
+    if (form.__commercialReady && !accountIdNow) {
+      // Direct-guest path: the stay is priced from the hotel's own type
+      // configuration — no account, no contract, no simulation. Ordinary
+      // travelers were previously forced into creating a commercial account
+      // for any meal plan; that gate is gone, replaced by configured rates.
+      payload.commercial = { accountId: '', booker: fd.get('booker'), voucher: fd.get('voucher'), board, quoted: false };
+      if (!payload.dayUse) {
+        const typeNow = cuTypes().find((t) => t.id === fd.get('roomTypeId'));
+        const dq = cuDirectQuote({
+          typeRate: typeNow ? typeNow.rate : null, baseRate: cuState().baseRate, boardRates: typeNow ? typeNow.boardRates : null,
+          board, checkIn: fd.get('checkIn'), checkOut: fd.get('checkOut'), occupancy: partySize,
+        });
+        const agreedBox = form.querySelector('[data-hx-agreed-box]');
+        const agreedOn = !!agreedBox && !agreedBox.hidden && !!form.querySelector('[data-hx-agreed-confirm]')?.checked;
+        if (agreedOn) {
+          const amountRaw = String(form.querySelector('[data-hx-agreed-amount]')?.value || '').trim().replace(',', '.');
+          const reason = String(form.querySelector('[data-hx-agreed-reason]')?.value || '').trim();
+          if (!/^\d{1,7}(\.\d{1,2})?$/.test(amountRaw) || !(Number(amountRaw) > 0)) { error.textContent = 'Montant convenu invalide : un total TTC en MAD, supérieur à zéro.'; return; }
+          if (reason.length < 3) { error.textContent = 'Indiquez le motif du prix convenu (3 caractères minimum). Il sera enregistré sur la réservation avec votre identité.'; return; }
+          payload.directPricing = { agreed: true, amountCents: Math.round(Number(amountRaw) * 100), reason: reason.slice(0, 280), board, occupancy: partySize };
+        } else if (!dq.ok) {
+          if (booking && board === 'room_only') {
+            // Legacy room-only edit without a configured rate: keep the
+            // previous behavior (server-side rate × nights) rather than
+            // bricking the edit. New bookings never take this path.
+          } else {
+            const typeName = typeNow ? typeNow.name : 'cette catégorie';
+            const what = dq.missing.includes('dates')
+              ? 'Dates du séjour invalides.'
+              : (dq.missing.includes('room')
+                ? `Aucun tarif logement configuré pour « ${typeName} ».`
+                : `Aucun tarif « ${cuBoards[board] || board} » configuré pour « ${typeName} ».`);
+            error.textContent = what + (dq.missing.includes('dates') ? '' : ' Renseignez-le dans Types de chambres, ou convenez un prix ci-dessous.');
+            return;
+          }
+        } else {
+          payload.directPricing = { board, occupancy: partySize, rows: dq.rows, totalCents: dq.totalCents };
+        }
+      }
+    } else if (form.__commercialReady) {
       payload.commercial = { accountId: fd.get('accountId'), booker: fd.get('booker'), voucher: fd.get('voucher'), board, quoted: priceMode === 'contract' };
       const preview = form.__commercialQuote;
       if (preview && preview.signature === cuStayQuoteSignature(form) && form.querySelector('[data-hx-accept-quote]')?.checked) {
@@ -5377,6 +5518,36 @@
   function cuStayQuoteSignature(form) {
     return JSON.stringify(['accountId', 'roomTypeId', 'checkIn', 'checkOut', 'partySize', 'board', 'priceMode'].map(k => form.elements[k]?.value || ''));
   }
+  /* Direct-guest pricing, pure and shared (single editor + group modal +
+   * unit tests): room nightly rate plus the meal supplement per person per
+   * night, from the hotel's own type configuration — never a contract, never
+   * an account. Mirrors priceDirectStay() server-side cent for cent; any
+   * divergence fails closed at save with price-mismatch.
+   * Returns { ok, rows, totalCents, nights, roomCents, mealCents } or
+   * { ok:false, missing:['room'|'meal'|'dates'] }. */
+  function cuDirectQuote(input) {
+    const { typeRate = null, baseRate = null, boardRates = null, board = 'room_only', checkIn = '', checkOut = '', occupancy = 1 } = input || {};
+    const roomRate = typeRate == null ? baseRate : typeRate;
+    if (roomRate == null || !Number.isFinite(+roomRate) || +roomRate < 0) return { ok: false, missing: ['room'] };
+    const start = Date.parse(checkIn + 'T12:00:00Z'), end = Date.parse(checkOut + 'T12:00:00Z');
+    const nights = Math.round((end - start) / 86400000);
+    if (!Number.isFinite(nights) || nights < 1 || nights > 365) return { ok: false, missing: ['dates'] };
+    let meal = 0;
+    if (board !== 'room_only') {
+      const sup = boardRates && typeof boardRates === 'object' ? boardRates[board] : null;
+      if (sup == null || sup === '' || !Number.isFinite(+sup) || +sup < 0) return { ok: false, missing: ['meal'] };
+      meal = +sup;
+    }
+    const roomCents = Math.round(+roomRate * 100);
+    const mealCents = Math.round(meal * 100);
+    const qty = Math.max(1, Math.round(Number(occupancy) || 1));
+    const rows = [];
+    for (let i = 0; i < nights; i++) {
+      const d = new Date(start + i * 86400000).toISOString().slice(0, 10);
+      rows.push({ date: d, roomCents, mealCents, quantity: qty, amountCents: roomCents + mealCents * qty });
+    }
+    return { ok: true, rows, totalCents: rows.reduce((s, r) => s + r.amountCents, 0), nights, roomCents, mealCents };
+  }
   function cuQuoteRows(q) {
     const period = q.contract?.from && q.contract?.to ? `${esc(q.contract.from)} → ${esc(q.contract.to)}` : '';
     const occupancyLabel = ['', 'Single · 1 personne', 'Double · 2 personnes', 'Triple · 3 personnes'][q.contract?.occupancy] || (q.contract?.occupancy ? `${q.contract.occupancy} pers.` : '');
@@ -5391,18 +5562,95 @@
     await cuLoadCommercial();
     if (scope !== cuStayScope() || form.isConnected === false) return;
     const st = cuCommercialState();
-    if (!st.loaded || st.error) { box.innerHTML = `<legend>Compte & formule</legend><p>${esc(st.error || 'Répertoire indisponible. Les informations existantes sont conservées.')}</p>`; return; }
-    const c = booking?.commercial || {};
-    box.innerHTML = `<legend>Compte & formule de réservation</legend><div class="hx-room-form hx-type-form"><label><span>Compte à facturer</span><select name="accountId"><option value="">Voyageur · sans compte commercial</option>${st.accounts.filter(a => !a.archived || a.id === c.accountId).map(a => `<option value="${esc(a.id)}" ${a.id === c.accountId ? 'selected' : ''}>${esc(cuKinds[a.kind] + ' · ' + a.name)}${a.archived ? ' (archivé)' : ''}</option>`).join('')}</select></label><label><span>Mode tarifaire</span><select name="priceMode"><option value="catalogue" ${c.quoted ? 'disabled' : ''}>Tarif de chambre · logement seul</option><option value="contract" ${c.quoted ? 'selected' : ''}>Contrat du compte</option></select></label><label><span>Réservant / interlocuteur</span><input name="booker" maxlength="160" value="${esc(c.booker || '')}"></label><label><span>Voucher / bon de commande</span><input name="voucher" maxlength="100" value="${esc(c.voucher || '')}"></label><label><span>Formule</span><select name="board">${Object.entries(cuBoards).map(([v,l]) => `<option value="${v}" ${v === c.board ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div><p>Créez les comptes et leurs tarifs dans Clients, agences & sociétés. Occupation totale de 1 à 3 personnes, sans calcul enfant automatique.</p><button type="button" class="hx-btn ghost" data-hx-quote>Simuler le contrat</button><div data-hx-quote-result role="status">${c.quote ? '<p>Tarif précédemment accepté et conservé :</p>' + cuQuoteRows(c.quote) : ''}</div>`;
+    if (!st.loaded || st.error) { box.innerHTML = `<legend>Compte & formule</legend><p>${esc(st.error || 'Répertoire indisponible. Les informations existantes sont conservées.')}</p>`; form.__commercialFailed = true; return; }
+    // A direct-priced booking without a commercial block (empty booker at
+    // save time nulls it) still owns its formula via the pricing snapshot:
+    // reopening must show it, never silently fall back to room-only.
+    const c = { ...(booking?.commercial || {}) };
+    if (!c.board && booking?.pricing?.board) c.board = booking.pricing.board;
+    const hasAccount = !!c.accountId;
+    box.innerHTML = `<legend>Compte & formule de réservation</legend><div class="hx-room-form hx-type-form"><label><span>Compte à facturer</span><select name="accountId"><option value="">Voyageur · sans compte commercial</option>${st.accounts.filter(a => !a.archived || a.id === c.accountId).map(a => `<option value="${esc(a.id)}" ${a.id === c.accountId ? 'selected' : ''}>${esc(cuKinds[a.kind] + ' · ' + a.name)}${a.archived ? ' (archivé)' : ''}</option>`).join('')}</select></label><label><span>Mode tarifaire</span><select name="priceMode"><option value="catalogue" ${c.quoted ? 'disabled' : ''}>Tarif maison · sans compte</option><option value="contract" ${c.quoted ? 'selected' : ''} ${!hasAccount ? 'disabled' : ''}>Contrat du compte</option></select></label><label><span>Réservant / interlocuteur</span><input name="booker" maxlength="160" value="${esc(c.booker || '')}"></label><label><span>Voucher / bon de commande</span><input name="voucher" maxlength="100" value="${esc(c.voucher || '')}"></label><label><span>Formule</span><select name="board">${Object.entries(cuBoards).map(([v,l]) => `<option value="${v}" ${v === c.board ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div><p data-hx-commercial-help></p><button type="button" class="hx-btn ghost" data-hx-quote>Simuler le contrat</button><div data-hx-quote-result role="status">${c.quote ? '<p>Tarif précédemment accepté et conservé :</p>' + cuQuoteRows(c.quote) : ''}</div>
+    <div data-hx-direct-panel hidden><div data-hx-direct-breakdown role="status"></div>
+      <div data-hx-agreed-box hidden style="margin-top:8px;padding:10px;border:1px dashed var(--n-200);border-radius:8px;">
+        <b style="font-size:12px;">Prix convenu avec le client</b>
+        <p style="font-size:11.5px;color:var(--n-600);margin:4px 0;">Uniquement parce qu’aucun tarif configuré ne couvre cette demande. Le montant, le motif et votre identité seront enregistrés sur la réservation.</p>
+        <label><span>Montant total TTC convenu · MAD</span><input data-hx-agreed-amount inputmode="decimal" placeholder="Ex. 950"></label>
+        <label><span>Motif</span><input data-hx-agreed-reason maxlength="280" placeholder="Ex. geste commercial, dernière chambre"></label>
+        <label style="font-size:12px;display:flex;gap:6px;align-items:center;cursor:pointer;"><input type="checkbox" data-hx-agreed-confirm> <span>Je confirme ce prix convenu pour ce séjour.</span></label>
+      </div>
+    </div>`;
     if (booking && ['completed', 'cancelled', 'no_show'].includes(booking.status)) { box.disabled = true; return; }
     form.__commercialReady = true;
     const previewButton = box.querySelector('[data-hx-quote]'), result = box.querySelector('[data-hx-quote-result]');
+    // Mode switch (defect: ordinary travelers need no account). Contract UI
+    // only makes sense with an account; without one the stay is priced from
+    // the hotel's own type configuration, shown live below.
+    const syncCommercialMode = () => {
+      const noAccount = !form.elements.accountId?.value;
+      const priceModeEl = form.elements.priceMode;
+      const contractOpt = (priceModeEl && typeof priceModeEl.querySelector === 'function')
+        ? priceModeEl.querySelector('option[value="contract"]')
+        : null;
+      if (contractOpt) contractOpt.disabled = noAccount;
+      if (noAccount && form.elements.priceMode) form.elements.priceMode.value = 'catalogue';
+      if (previewButton) previewButton.hidden = noAccount;
+      const help = box.querySelector('[data-hx-commercial-help]');
+      if (help) {
+        help.textContent = noAccount
+          ? 'Sans compte : séjour chiffré au tarif maison (logement + formule, configurés dans Types de chambres). Aucun contrat requis.'
+          : 'Avec compte : simulez le contrat et acceptez le prix avant confirmation. Occupation totale de 1 à 3 personnes, sans calcul enfant automatique.';
+      }
+      updateDirectQuote();
+    };
+    const updateDirectQuote = () => {
+      const panel = box.querySelector('[data-hx-direct-panel]');
+      if (!panel) return;
+      const noAccount = !form.elements.accountId?.value;
+      const day = form.elements.stayMode?.value === 'day_use';
+      if (!noAccount || day) { panel.hidden = true; form.__directQuote = null; return; }
+      panel.hidden = false;
+      const type = cuTypes().find(t => t.id === form.elements.roomTypeId?.value);
+      const q = cuDirectQuote({
+        typeRate: type ? type.rate : null, baseRate: cuState().baseRate, boardRates: type ? type.boardRates : null,
+        board: form.elements.board?.value || 'room_only',
+        checkIn: form.elements.checkIn?.value || '', checkOut: form.elements.checkOut?.value || '',
+        occupancy: Number(form.elements.partySize?.value) || 1,
+      });
+      const area = box.querySelector('[data-hx-direct-breakdown]');
+      const agreedBox = box.querySelector('[data-hx-agreed-box]');
+      if (q.ok) {
+        form.__directQuote = { rows: q.rows, totalCents: q.totalCents, nights: q.nights };
+        if (area) {
+          area.innerHTML = `<div class="hx-quote-lines">${q.rows.map(r => `<div><span>${esc(r.date)} · Logement ${(r.roomCents / 100).toFixed(2)}${r.mealCents ? ` + repas ${esc(String((r.mealCents * r.quantity / 100).toFixed(2)))} (${r.quantity} pers.)` : ''}</span><span><b>${(r.amountCents / 100).toFixed(2)} MAD</b></span></div>`).join('')}</div><p><b>Total séjour : ${(q.totalCents / 100).toFixed(2)} MAD TTC</b></p><small>Tarifs maison · TVA incluse. Vérifié à nouveau côté serveur avant enregistrement.</small>`;
+        }
+        if (agreedBox) { agreedBox.hidden = true; const cb = agreedBox.querySelector('[data-hx-agreed-confirm]'); if (cb) cb.checked = false; }
+      } else {
+        form.__directQuote = null;
+        if (area) {
+          const typeName = type ? type.name : 'cette catégorie';
+          const what = q.missing.includes('room')
+            ? `Aucun tarif logement configuré pour « ${esc(typeName)} ».`
+            : (q.missing.includes('dates') ? 'Dates du séjour invalides.' : `Aucun tarif « ${esc(cuBoards[form.elements.board?.value] || form.elements.board?.value || '')} » configuré pour « ${esc(typeName)} ».`);
+          area.innerHTML = `<p class="hx-warn-note" style="color:var(--warn-ink);background:var(--warn-soft);padding:8px 12px;border-radius:8px;font-size:12px;">${what} Renseignez-le dans Types de chambres, ou convenez un prix ci-dessous.</p>`;
+        }
+        if (agreedBox) agreedBox.hidden = false;
+      }
+    };
     const reset = e => {
       if (!['accountId', 'roomTypeId', 'checkIn', 'checkOut', 'partySize', 'board', 'priceMode'].includes(e.target?.name)) return;
+      if (e.target?.name === 'accountId') syncCommercialMode();
       form.__commercialQuote = null;
-      result.textContent = 'Paramètres modifiés. Simulez le contrat avant confirmation.';
+      if (form.elements.accountId?.value) {
+        result.textContent = 'Paramètres modifiés. Simulez le contrat avant confirmation.';
+      } else {
+        result.textContent = '';
+      }
+      updateDirectQuote();
     };
     form.addEventListener('input', reset); form.addEventListener('change', reset);
+    form.elements.stayMode?.addEventListener('change', () => updateDirectQuote());
+    form.addEventListener('hx-refresh-direct', () => updateDirectQuote());
+    syncCommercialMode();
     previewButton.addEventListener('click', async () => {
       if (scope !== cuStayScope()) return;
       const signature = cuStayQuoteSignature(form), fd = new FormData(form);
@@ -5442,6 +5690,13 @@
       'room-unavailable': 'Cette chambre vient d’être prise sur ces dates. Choisissez-en une autre.',
       'invalid-price': 'Saisissez un montant positif ou nul, avec deux décimales maximum.',
       'quote-required': 'Simulez puis acceptez le tarif pour les dates et voyageurs sélectionnés.',
+      'direct-pricing-required': 'Formule sans tarif : affichez le prix maison ci-dessus, ou convenez un prix avec le client.',
+      'rate-missing': 'Aucun tarif configuré pour cette formule. Renseignez-le dans Types de chambres, ou convenez un prix.',
+      'price-mismatch': 'Le tarif affiché ne correspond plus à la configuration. Recommencez la réservation.',
+      'price-overflow': 'Montant trop élevé pour être enregistré. Vérifiez le tarif.',
+      'mixed-pricing': 'Un séjour ne peut pas combiner compte commercial et tarif maison. Choisissez un seul mode.',
+      'agreed-invalid': 'Prix convenu invalide : montant positif et motif de 3 caractères minimum.',
+      'agreed-forbidden': 'Un prix convenu exige un responsable (propriétaire ou gérant).',
       'tax-configuration-required': 'Un tarif HT ne peut pas être confirmé avant configuration de la fiscalité hôtelière.',
       'feed-contract-unsupported': 'Un séjour importé par iCal ne peut pas encore recevoir un contrat tarifaire.',
       'closed-commercial': 'Les informations commerciales d’un dossier clôturé sont verrouillées.',
@@ -6623,6 +6878,19 @@
         root?.querySelector('[data-hx-type-rate]')?.focus();
         return;
       }
+      const boardRates = {};
+      let boardRateBad = null;
+      for (const key of ['bb', 'hb_lunch', 'hb_dinner', 'full_board']) {
+        const raw = String(root?.querySelector(`[data-hx-type-board-${key}]`)?.value ?? '').trim();
+        if (!raw) { boardRates[key] = null; continue; }
+        if (!Number.isFinite(+raw) || +raw < 0 || +raw > 100000) { boardRateBad = key; break; }
+        boardRates[key] = Math.round(+raw * 100) / 100;
+      }
+      if (boardRateBad) {
+        toast('Supplément repas invalide', { type: 'warn', desc: 'Montant MAD par personne et par nuit, zéro ou plus.' });
+        root?.querySelector(`[data-hx-type-board-${boardRateBad}]`)?.focus();
+        return;
+      }
       if (!Number.isFinite(+guestsRaw) || +guestsRaw < 1 || +guestsRaw > 12) {
         toast('Capacité invalide', { type: 'warn', desc: 'Indiquez entre 1 et 12 voyageurs.' });
         root?.querySelector('[data-hx-type-guests]')?.focus();
@@ -6643,6 +6911,7 @@
       st.roomTypes[id] = {
         ...(st.roomTypes[id] || {}), id, name: name.slice(0, 60),
         rate: rateRaw === '' ? null : Math.round(+rateRaw),
+        boardRates: Object.values(boardRates).some((v) => v != null) ? boardRates : undefined,
         description: description.slice(0, 300), maxGuests: Math.round(+guestsRaw),
         beds: beds.slice(0, 80), sizeM2: sizeRaw === '' ? null : Math.round(+sizeRaw),
         view: view.slice(0, 80), amenities, photos, public: isPublic, updatedAt: now,
@@ -7400,6 +7669,7 @@
     nationalityLabel: (val, lang) => cuNationalityLabel(val, lang),
     nationalitySelectorHtml: (guest, index) => cuNationalitySelectorHtml(guest, index),
     parseDelimitedLine: (line) => cuParseDelimitedLine(line),
+    directQuote: (input) => cuDirectQuote(input),
   });
 
   register();

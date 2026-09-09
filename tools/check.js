@@ -432,7 +432,7 @@ for (const test of [
   'platform-kernel-test.mjs', 'platform-ops-test.mjs', 'media-upload-test.mjs', 'hotel-media-cleanup-test.mjs', 'operations-system-test.mjs',
   'vertical-feature-parity-test.mjs', 'pos-sale-cloud-sync-test.mjs',
   'caisse-opening-gate-test.mjs',
-  'hotel-rooms-test.mjs', 'hotel-room-plan-test.mjs', 'hotel-room-bulk-api-test.mjs', 'hotel-cloud-save-test.mjs', 'hotel-room-plan-ui-test.mjs', 'hotel-stays-test.mjs', 'hotel-stays-group-test.mjs', 'hotel-stays-group-guards-test.mjs', 'hotel-reservations-d1-test.mjs', 'hotel-channel-sync-test.mjs', 'hotel-sync-worker-test.mjs', 'hotel-caisse-catalog-test.mjs',
+  'hotel-rooms-test.mjs', 'hotel-room-plan-test.mjs', 'hotel-room-bulk-api-test.mjs', 'hotel-cloud-save-test.mjs', 'hotel-room-plan-ui-test.mjs', 'hotel-stays-test.mjs', 'hotel-stays-group-test.mjs', 'hotel-stays-group-guards-test.mjs', 'hotel-direct-pricing-test.mjs', 'hotel-reservations-d1-test.mjs', 'hotel-channel-sync-test.mjs', 'hotel-sync-worker-test.mjs', 'hotel-caisse-catalog-test.mjs',
   'sw-immutable-revalidation-test.mjs', 'load-test-suite-test.mjs',
 ]) {
   const { spawnSync } = require('child_process');
@@ -461,6 +461,25 @@ section('Groupe hôtel · workflow navigateur (tools/hotel-stays-group-browser-t
   else {
     out.split('\n').filter((line) => line.includes('✗')).forEach((line) => fail(line.replace(/^\s*✗\s*/, '')));
     if (!out.includes('✗')) fail(`hotel-stays-group-browser-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
+/* ── 4f-bis · voyageur ordinaire, conduit pour de vrai dans Chromium ────
+ * hotel-direct-booking-browser-test.mjs réserve depuis le vrai tableau de
+ * bord (boot, code PIN, pages hôtel, écran individuel, groupe) : chaque
+ * formule sans compte, prix convenu audité, hold, famille nombreuse, groupe
+ * direct, contrat agence intact, reprise anti-doublon. Même règle de skip
+ * explicite sans navigateur. */
+section('Hôtel voyageur ordinaire · workflow navigateur (tools/hotel-direct-booking-browser-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'hotel-direct-booking-browser-test.mjs')], { encoding: 'utf8', timeout: 420000 });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && out.includes('○ skip')) warn('direct booking suite skipped (no Chromium — browser assertions not executed)');
+  else if (r.status === 0) ok(`direct booking workflow green (${(out.match(/✓/g) || []).length} controls)`);
+  else {
+    out.split('\n').filter((line) => line.includes('✗')).forEach((line) => fail(line.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`hotel-direct-booking-browser-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
   }
 }
 

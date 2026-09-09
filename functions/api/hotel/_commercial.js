@@ -84,7 +84,7 @@ export async function validateCommercialSync(env, merchant, previous, next) {
   const ids = new Set([...before.keys(), ...[...after.values()].filter(protectedStay).map(b => b.id)]);
   if (!ids.size) return false;
   const table = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='hotel_reservations'").first();
-  const protectedValue = b => JSON.stringify({ commercial: commercialSnapshot(b?.commercial), options: stayOptions(b?.hotel),
+  const protectedValue = b => JSON.stringify({ commercial: commercialSnapshot(b?.commercial), pricing: b?.pricing && typeof b.pricing === 'object' ? b.pricing : null, options: stayOptions(b?.hotel),
     serviceId: b?.serviceId, resourceId: b?.resourceId, startAt: b?.startAt, endAt: b?.endAt,
     partySize: b?.partySize, status: b?.status, checkIn:b?.hotel?.checkIn, checkOut:b?.hotel?.checkOut,nights:b?.hotel?.nights,rate: b?.hotel?.rate, total: b?.hotel?.total });
   for (const id of ids) {
