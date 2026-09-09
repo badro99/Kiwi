@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0B6E4F" />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <title>Kiwi Tickets</title>
+  <meta name="description" content="Kiwi's private-by-link problem tracker." />
+  <link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/tokens.css" />
+  <link rel="stylesheet" href="assets/tickets.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/tickets" aria-label="Kiwi Tickets home">
+      <img class="brand-logo" src="assets/kiwi-newlogo.svg" alt="Kiwi" />
+      <span class="brand-divider" aria-hidden="true"></span>
+      <span class="brand-product">tickets</span>
+    </a>
+    <button class="add-button" id="openComposer" type="button">
+      <span class="button-plus" aria-hidden="true">+</span>
+      Add problem
+    </button>
+  </header>
+
+  <main class="workspace">
+    <section class="workspace-head" aria-labelledby="pageTitle">
+      <div>
+        <p class="eyebrow">Kiwi operations</p>
+        <h1 id="pageTitle">Problems, clearly handled.</h1>
+      </div>
+      <p class="workspace-note">Photos disappear after testing. Completed tickets disappear after 20 days.</p>
+    </section>
+
+    <nav class="mobile-tabs" id="mobileTabs" aria-label="Ticket status">
+      <button type="button" class="mobile-tab is-active" data-status="problem" aria-pressed="true">Problems <span id="tabCountProblem">1</span></button>
+      <button type="button" class="mobile-tab" data-status="testing" aria-pressed="false">Testing <span id="tabCountTesting">1</span></button>
+      <button type="button" class="mobile-tab" data-status="done" aria-pressed="false">Done <span id="tabCountDone">1</span></button>
+    </nav>
+
+    <div class="board" id="ticketBoard" data-mobile-status="problem" aria-live="polite">
+      <section class="lane" data-lane="problem" aria-labelledby="laneProblemTitle">
+        <header class="lane-head">
+          <span class="lane-signal signal-problem" aria-hidden="true"></span>
+          <h2 id="laneProblemTitle">Problems</h2>
+          <span class="lane-count" id="countProblem">1</span>
+        </header>
+        <div class="ticket-list" id="listProblem">
+          <article class="ticket-card preview-card">
+            <div class="ticket-meta"><span class="ticket-number">#0012</span><span>Today, 10:42</span></div>
+            <div class="copy-row"><p>The takeaway receipt prints without the customer name.</p><button type="button" class="copy-button" disabled>Copy text</button></div>
+            <div class="photo-placeholder"><span>Screenshot</span><button type="button" class="copy-button" disabled>Copy image</button></div>
+            <button type="button" class="move-button" disabled>Fixed</button>
+          </article>
+        </div>
+      </section>
+
+      <section class="lane" data-lane="testing" aria-labelledby="laneTestingTitle">
+        <header class="lane-head">
+          <span class="lane-signal signal-testing" aria-hidden="true"></span>
+          <h2 id="laneTestingTitle">Requiring testing</h2>
+          <span class="lane-count" id="countTesting">1</span>
+        </header>
+        <div class="ticket-list" id="listTesting">
+          <article class="ticket-card preview-card">
+            <div class="ticket-meta"><span class="ticket-number">#0011</span><span>Yesterday</span></div>
+            <div class="copy-row"><p>Confirm the stock warning stays visible after reopening the till.</p><button type="button" class="copy-button" disabled>Copy text</button></div>
+            <button type="button" class="move-button move-testing" disabled>Tested</button>
+          </article>
+        </div>
+      </section>
+
+      <section class="lane" data-lane="done" aria-labelledby="laneDoneTitle">
+        <header class="lane-head">
+          <span class="lane-signal signal-done" aria-hidden="true"></span>
+          <h2 id="laneDoneTitle">Fixed and tested</h2>
+          <span class="lane-count" id="countDone">1</span>
+        </header>
+        <div class="ticket-list" id="listDone">
+          <article class="ticket-card preview-card ticket-done">
+            <div class="ticket-meta"><span class="ticket-number">#0010</span><span>2 days ago</span></div>
+            <p>Order totals now stay aligned on smaller iPhone screens.</p>
+            <div class="expiry"><img class="material-icon" src="assets/icons/material/schedule.svg" alt="" aria-hidden="true" />Deletes in 18 days</div>
+          </article>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <dialog class="composer" id="composer" aria-labelledby="composerTitle">
+    <form class="composer-panel" id="ticketForm" method="dialog">
+      <header class="composer-head">
+        <div><p class="eyebrow">New ticket</p><h2 id="composerTitle">Add a problem</h2></div>
+        <button class="icon-button" id="closeComposer" type="button" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </header>
+      <label class="field-label" for="ticketBody">What is the problem?</label>
+      <textarea id="ticketBody" name="body" rows="7" maxlength="4000" placeholder="Describe what happened, where you saw it, and what you expected…" required></textarea>
+      <div class="upload-block">
+        <div class="upload-heading"><span>Images</span><span id="imageCounter">0 / 6</span></div>
+        <label class="upload-target" for="ticketImages">
+          <img class="material-icon upload-icon" src="assets/icons/material/photo_frame.svg" alt="" aria-hidden="true" />
+          <span><strong>Add photos</strong><small>Choose from your library or take a photo</small></span>
+        </label>
+        <input id="ticketImages" name="images" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple />
+        <div class="selected-images" id="selectedImages"></div>
+      </div>
+      <p class="form-error" id="formError" role="alert"></p>
+      <footer class="composer-actions">
+        <button class="cancel-button" id="cancelComposer" type="button">Cancel</button>
+        <button class="publish-button" id="publishTicket" type="submit">Publish problem</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog class="image-copy-fallback" id="imageCopyFallback" aria-labelledby="copyFallbackTitle">
+    <div class="image-copy-panel">
+      <h2 id="copyFallbackTitle">Touch and hold to copy</h2>
+      <p>Your browser blocked automatic image copying.</p>
+      <img id="copyFallbackImage" alt="Ticket attachment to copy" />
+      <button type="button" id="closeImageFallback">Done</button>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="assets/tickets.js" defer></script>
+</body>
+</html>

@@ -284,6 +284,15 @@ async function routeRequest(context) {
    * quinzième script ajouté à kiwi-order.html ne doit pas re-casser la commande
    * client en silence (tools/public-assets-test.js tient cette promesse). */
   if (isRead && path.startsWith('/assets/')) return next();
+  // The owner and partner deliberately use this board by link, without the
+  // account or staff gate. Keep the exception exact, method-scoped, and limited
+  // to the board, its API, and its no-store image reader.
+  if (isRead && (path === '/tickets.html' || path === '/tickets')) return next();
+  if (isRead && path.startsWith('/api/ticket-images/')) return next();
+  if (path === '/api/tickets' && (method === 'GET' || method === 'POST')) return next();
+  if (/^\/api\/tickets\/\d+$/.test(path) && method === 'PATCH') return next();
+  if (path === '/api/tickets/cleanup' && method === 'POST') return next();
+
   /* Même raisonnement, pour les quatre fichiers que le navigateur va chercher
    * TOUT SEUL et qui, eux, ne peuvent pas vivre sous /assets.
    *

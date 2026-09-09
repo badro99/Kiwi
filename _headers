@@ -50,3 +50,15 @@
 #    Une estampille qui bouge reste servie tout de suite, puisque l'URL change.
 /assets/*
   Cache-Control: public, max-age=3600, stale-while-revalidate=604800
+
+# 4. Link-only internal ticket board.
+#
+# The board is intentionally reachable without the account gate, but it must
+# not be indexed or retained by browsers/proxies. Ticket JSON and images also
+# send no-store from their Functions handlers.
+/tickets
+  Cache-Control: private, no-store
+  X-Robots-Tag: noindex, nofollow, noarchive
+/tickets.html
+  Cache-Control: private, no-store
+  X-Robots-Tag: noindex, nofollow, noarchive
