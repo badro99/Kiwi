@@ -5409,44 +5409,66 @@
       // for any meal plan; that gate is gone, replaced by configured rates.
       payload.commercial = { accountId: '', booker: fd.get('booker'), voucher: fd.get('voucher'), board, quoted: false };
       if (!payload.dayUse) {
-        const typeNow = cuTypes().find((t) => t.id === fd.get('roomTypeId'));
-        const dq = cuDirectQuote({
-          typeRate: typeNow ? typeNow.rate : null, baseRate: cuState().baseRate, boardRates: typeNow ? typeNow.boardRates : null,
-          board, checkIn: fd.get('checkIn'), checkOut: fd.get('checkOut'), occupancy: partySize,
-        });
-        const agreedBox = form.querySelector('[data-hx-agreed-box]');
-        const agreedOn = !!agreedBox && !agreedBox.hidden && !!form.querySelector('[data-hx-agreed-confirm]')?.checked;
-        if (agreedOn) {
-          const amountRaw = String(form.querySelector('[data-hx-agreed-amount]')?.value || '').trim().replace(',', '.');
-          const reason = String(form.querySelector('[data-hx-agreed-reason]')?.value || '').trim();
-          if (!/^\d{1,7}(\.\d{1,2})?$/.test(amountRaw) || !(Number(amountRaw) > 0)) { error.textContent = 'Montant convenu invalide : un total TTC en MAD, supérieur à zéro.'; return; }
-          if (reason.length < 3) { error.textContent = 'Indiquez le motif du prix convenu (3 caractères minimum). Il sera enregistré sur la réservation avec votre identité.'; return; }
-          payload.directPricing = { agreed: true, amountCents: Math.round(Number(amountRaw) * 100), reason: reason.slice(0, 280), board, occupancy: partySize };
-        } else if (!dq.ok) {
-          if (booking && board === 'room_only') {
-            // Legacy room-only edit without a configured rate: keep the
-            // previous behavior (server-side rate × nights) rather than
-            // bricking the edit. New bookings never take this path.
-          } else {
-            const typeName = typeNow ? typeNow.name : 'cette catégorie';
-            const what = dq.missing.includes('dates')
-              ? 'Dates du séjour invalides.'
-              : (dq.missing.includes('room')
-                ? `Aucun tarif logement configuré pour « ${typeName} ».`
-                : `Aucun tarif « ${cuBoards[board] || board} » configuré pour « ${typeName} ».`);
-            error.textContent = what + (dq.missing.includes('dates') ? '' : ' Renseignez-le dans Types de chambres, ou convenez un prix ci-dessous.');
-            return;
-          }
+        // Preservation first (defects 1+3): guest, contact, note, status and
+        // traveler edits resend no pricing material at all, so the accepted
+        // snapshot — including the original agreed authorization — survives
+        // untouched. Only moved pricing inputs (or edited agreed terms)
+        // attach fresh material, and configured changes need their own
+        // confirmation click below.
+        const storedNow = (booking && booking.pricing && booking.pricing.kind === 'direct') ? booking.pricing : null;
+        const inputsMoved = !booking ? true : (typeof form.__pricingChanged === 'function' ? form.__pricingChanged() : true);
+        const agreedNow = {
+          amount: String(form.querySelector('[data-hx-agreed-amount]')?.value || '').trim().replace(',', '.'),
+          reason: String(form.querySelector('[data-hx-agreed-reason]')?.value || '').trim(),
+          checked: !!form.querySelector('[data-hx-agreed-confirm]')?.checked,
+          visible: (() => { const bx = form.querySelector('[data-hx-agreed-box]'); return !!bx && !bx.hidden; })(),
+        };
+        const agreedDeviates = !!(storedNow && storedNow.agreed && agreedNow.amount !== '' && (
+          Math.round(Number(agreedNow.amount) * 100) !== Number(storedNow.totalCents || 0) ||
+          agreedNow.reason !== String(storedNow.reason || '')));
+        if (!inputsMoved && !agreedDeviates) {
+          // Nothing priced moved: keep the accepted snapshot server-side.
         } else {
-          payload.directPricing = { board, occupancy: partySize, rows: dq.rows, totalCents: dq.totalCents };
+          const typeNow = cuTypes().find((t) => t.id === fd.get('roomTypeId'));
+          const dq = cuDirectQuote({
+            typeRate: typeNow ? typeNow.rate : null, baseRate: cuState().baseRate, boardRates: typeNow ? typeNow.boardRates : null,
+            board, checkIn: fd.get('checkIn'), checkOut: fd.get('checkOut'), occupancy: partySize,
+          });
+          if (agreedNow.visible && agreedNow.checked) {
+            if (!/^\d{1,7}(\.\d{1,2})?$/.test(agreedNow.amount) || !(Number(agreedNow.amount) > 0)) { error.textContent = 'Montant convenu invalide : un total TTC en MAD, supérieur à zéro.'; return; }
+            if (agreedNow.reason.length < 3) { error.textContent = 'Indiquez le motif du prix convenu (3 caractères minimum). Il sera enregistré sur la réservation avec votre identité.'; return; }
+            payload.directPricing = { agreed: true, amountCents: Math.round(Number(agreedNow.amount) * 100), reason: agreedNow.reason.slice(0, 280), board, occupancy: partySize };
+          } else if (!dq.ok) {
+            if (booking && board === 'room_only' && !storedNow) {
+              // Legacy room-only edit without a configured rate: keep the
+              // previous behavior (server-side rate × nights) rather than
+              // bricking the edit. New bookings never take this path.
+            } else {
+              const typeName = typeNow ? typeNow.name : 'cette catégorie';
+              const what = dq.missing.includes('dates')
+                ? 'Dates du séjour invalides.'
+                : (dq.missing.includes('room')
+                  ? `Aucun tarif logement configuré pour « ${typeName} ».`
+                  : `Aucun tarif « ${cuBoards[board] || board} » configuré pour « ${typeName} ».`);
+              error.textContent = what + (dq.missing.includes('dates') ? '' : ' Renseignez-le dans Types de chambres, ou convenez un prix ci-dessous.');
+              return;
+            }
+          } else {
+            if (booking && storedNow && inputsMoved) {
+              const rw = form.querySelector('[data-hx-reprice-confirm]');
+              if (!rw || !rw.checked) { error.textContent = 'Le tarif a changé : vérifiez le nouveau total affiché puis confirmez la revalorisation.'; return; }
+            }
+            payload.directPricing = { board, occupancy: partySize, rows: dq.rows, totalCents: dq.totalCents };
+          }
         }
       }
     } else if (form.__commercialReady) {
       payload.commercial = { accountId: fd.get('accountId'), booker: fd.get('booker'), voucher: fd.get('voucher'), board, quoted: priceMode === 'contract' };
       const preview = form.__commercialQuote;
+      const changed = !booking ? true : (typeof form.__pricingChanged === 'function' ? form.__pricingChanged() : true);
       if (preview && preview.signature === cuStayQuoteSignature(form) && form.querySelector('[data-hx-accept-quote]')?.checked) {
         payload.acceptQuote = true; payload.quoteRevision = preview.rev;
-      } else if (board !== 'room_only' || priceMode === 'contract') {
+      } else if (changed && (board !== 'room_only' || priceMode === 'contract')) {
         error.textContent = 'Formule repas ou tarif contractuel : simulez le contrat et cochez l’acceptation du prix avant de valider.';
         return;
       }
@@ -5574,10 +5596,12 @@
       <div data-hx-agreed-box hidden style="margin-top:8px;padding:10px;border:1px dashed var(--n-200);border-radius:8px;">
         <b style="font-size:12px;">Prix convenu avec le client</b>
         <p style="font-size:11.5px;color:var(--n-600);margin:4px 0;">Uniquement parce qu’aucun tarif configuré ne couvre cette demande. Le montant, le motif et votre identité seront enregistrés sur la réservation.</p>
+        <div data-hx-agreed-by style="font-size:11.5px;color:var(--n-600);"></div>
         <label><span>Montant total TTC convenu · MAD</span><input data-hx-agreed-amount inputmode="decimal" placeholder="Ex. 950"></label>
         <label><span>Motif</span><input data-hx-agreed-reason maxlength="280" placeholder="Ex. geste commercial, dernière chambre"></label>
         <label style="font-size:12px;display:flex;gap:6px;align-items:center;cursor:pointer;"><input type="checkbox" data-hx-agreed-confirm> <span>Je confirme ce prix convenu pour ce séjour.</span></label>
       </div>
+      <label data-hx-reprice-wrap hidden style="font-size:12px;display:flex;gap:6px;align-items:center;cursor:pointer;margin-top:8px;"><input type="checkbox" data-hx-reprice-confirm> <span data-hx-reprice-label></span></label>
     </div>`;
     if (booking && ['completed', 'cancelled', 'no_show'].includes(booking.status)) { box.disabled = true; return; }
     form.__commercialReady = true;
@@ -5602,6 +5626,35 @@
       }
       updateDirectQuote();
     };
+    // Pricing inputs captured at open (defects 1+3): guest, contact, note,
+    // status and traveler-detail edits must preserve the accepted snapshot
+    // without renegotiation. Only these seven can move money.
+    const PRICE_INPUTS = ['roomTypeId', 'checkIn', 'checkOut', 'partySize', 'board', 'accountId', 'priceMode'];
+    const readPriceInputs = () => {
+      const o = {};
+      PRICE_INPUTS.forEach(k => { o[k] = String(form.elements[k]?.value ?? ''); });
+      return o;
+    };
+    const pricingBaseline = booking ? readPriceInputs() : null;
+    const storedDirect = (booking && booking.pricing && booking.pricing.kind === 'direct') ? booking.pricing : null;
+    const storedQuoted = !!(booking && booking.commercial && booking.commercial.quoted);
+    const hasStoredPricing = !!(storedDirect || storedQuoted);
+    const pricingInputsChanged = () => {
+      if (!booking || !pricingBaseline) return true;
+      return PRICE_INPUTS.some(k => String(form.elements[k]?.value ?? '') !== String(pricingBaseline[k] ?? ''));
+    };
+    const storedAgreed = (storedDirect && storedDirect.agreed) ? storedDirect : null;
+    const agreedInputsNow = () => ({
+      amount: String(box.querySelector('[data-hx-agreed-amount]')?.value || '').trim().replace(',', '.'),
+      reason: String(box.querySelector('[data-hx-agreed-reason]')?.value || '').trim(),
+      checked: !!box.querySelector('[data-hx-agreed-confirm]')?.checked,
+    });
+    const agreedFieldsDiffer = () => {
+      if (!storedAgreed) return false;
+      const cur = agreedInputsNow();
+      const sameAmount = Math.round(Number(cur.amount) * 100) === Number(storedAgreed.totalCents || 0);
+      return !(cur.amount !== '' && sameAmount && cur.reason === String(storedAgreed.reason || ''));
+    };
     const updateDirectQuote = () => {
       const panel = box.querySelector('[data-hx-direct-panel]');
       if (!panel) return;
@@ -5609,6 +5662,25 @@
       const day = form.elements.stayMode?.value === 'day_use';
       if (!noAccount || day) { panel.hidden = true; form.__directQuote = null; return; }
       panel.hidden = false;
+      const changed = pricingInputsChanged();
+      // Pristine edit on accepted direct pricing: show the SAVED snapshot,
+      // never a live recompute that a catalogue change could have moved.
+      if (booking && storedDirect && !changed && !agreedFieldsDiffer()) {
+        const sp = storedDirect;
+        form.__directQuote = null;
+        const area = box.querySelector('[data-hx-direct-breakdown]');
+        if (area) {
+          const when = Number(sp.acceptedAt) > 0 ? new Date(sp.acceptedAt).toLocaleDateString('fr-FR') : '';
+          const rows = (sp.rows || []).map(r => `<div><span>${esc(r.date)} · Logement ${(Number(r.roomCents || 0) / 100).toFixed(2)}${Number(r.mealCents || 0) ? ` + repas ${((Number(r.mealCents || 0) * Number(r.quantity || 1)) / 100).toFixed(2)} (${Number(r.quantity || 1)} pers.)` : ''}</span><span><b>${(Number(r.amountCents || 0) / 100).toFixed(2)} MAD</b></span></div>`).join('');
+          area.innerHTML = `<div class="hx-quote-lines">${rows}</div><p><b>Total séjour : ${(Number(sp.totalCents || 0) / 100).toFixed(2)} MAD TTC</b></p>`
+            + (sp.agreed
+              ? `<small>Prix convenu accepté${when ? ' le ' + esc(when) : ''} · motif : ${esc(sp.reason || '—')}${sp.agreedBy ? ` · par ${esc(sp.agreedBy.role || '')} ${esc(sp.agreedBy.id || '')}` : ''} · conservé tant que le séjour ne change pas.</small>`
+              : `<small>Tarif accepté${when ? ' le ' + esc(when) : ''} · conservé tant que les dates, la chambre, la formule ou le compte ne changent pas.</small>`);
+        }
+        const rw = box.querySelector('[data-hx-reprice-wrap]');
+        if (rw) rw.hidden = true;
+        return;
+      }
       const type = cuTypes().find(t => t.id === form.elements.roomTypeId?.value);
       const q = cuDirectQuote({
         typeRate: type ? type.rate : null, baseRate: cuState().baseRate, boardRates: type ? type.boardRates : null,
@@ -5624,6 +5696,20 @@
           area.innerHTML = `<div class="hx-quote-lines">${q.rows.map(r => `<div><span>${esc(r.date)} · Logement ${(r.roomCents / 100).toFixed(2)}${r.mealCents ? ` + repas ${esc(String((r.mealCents * r.quantity / 100).toFixed(2)))} (${r.quantity} pers.)` : ''}</span><span><b>${(r.amountCents / 100).toFixed(2)} MAD</b></span></div>`).join('')}</div><p><b>Total séjour : ${(q.totalCents / 100).toFixed(2)} MAD TTC</b></p><small>Tarifs maison · TVA incluse. Vérifié à nouveau côté serveur avant enregistrement.</small>`;
         }
         if (agreedBox) { agreedBox.hidden = true; const cb = agreedBox.querySelector('[data-hx-agreed-confirm]'); if (cb) cb.checked = false; }
+        // Explicit reviewed repricing (defect 1): on an edit whose inputs
+        // moved money, the new total needs its own confirmation click.
+        const rw = box.querySelector('[data-hx-reprice-wrap]');
+        if (rw) {
+          const needReprice = !!(booking && storedDirect && pricingInputsChanged());
+          rw.hidden = !needReprice;
+          if (needReprice) {
+            const label = rw.querySelector('[data-hx-reprice-label]');
+            if (label) label.textContent = `Le nouveau total est de ${(q.totalCents / 100).toFixed(2)} MAD TTC — je l’ai vérifié.`;
+          } else {
+            const cb = rw.querySelector('[data-hx-reprice-confirm]');
+            if (cb) cb.checked = false;
+          }
+        }
       } else {
         form.__directQuote = null;
         if (area) {
@@ -5633,7 +5719,24 @@
             : (q.missing.includes('dates') ? 'Dates du séjour invalides.' : `Aucun tarif « ${esc(cuBoards[form.elements.board?.value] || form.elements.board?.value || '')} » configuré pour « ${esc(typeName)} ».`);
           area.innerHTML = `<p class="hx-warn-note" style="color:var(--warn-ink);background:var(--warn-soft);padding:8px 12px;border-radius:8px;font-size:12px;">${what} Renseignez-le dans Types de chambres, ou convenez un prix ci-dessous.</p>`;
         }
-        if (agreedBox) agreedBox.hidden = false;
+        if (agreedBox) {
+          agreedBox.hidden = false;
+          // Prefill once from the stored agreement so a deliberate change
+          // starts from the authorized values; never overwrite typing.
+          if (storedAgreed) {
+            const amt = agreedBox.querySelector('[data-hx-agreed-amount]');
+            const rsn = agreedBox.querySelector('[data-hx-agreed-reason]');
+            const by = agreedBox.querySelector('[data-hx-agreed-by]');
+            if (amt && !amt.value) amt.value = (Number(storedAgreed.totalCents || 0) / 100).toFixed(2);
+            if (rsn && !rsn.value) rsn.value = storedAgreed.reason || '';
+            if (by && !by.textContent) {
+              const who = storedAgreed.agreedBy;
+              by.textContent = 'Précédent prix convenu' + (who ? ` par ${who.role || ''} ${who.id || ''}`.trimEnd() : '') + '. Le modifier exige une nouvelle confirmation ci-dessous.';
+            }
+          }
+        }
+        const rw2 = box.querySelector('[data-hx-reprice-wrap]');
+        if (rw2) rw2.hidden = true;
       }
     };
     const reset = e => {
@@ -5650,6 +5753,10 @@
     form.addEventListener('input', reset); form.addEventListener('change', reset);
     form.elements.stayMode?.addEventListener('change', () => updateDirectQuote());
     form.addEventListener('hx-refresh-direct', () => updateDirectQuote());
+    // Pricing-change detector for the submit gate (defects 1+3 live in
+    // cuSubmitStay, a sibling scope): true on creates, or when any of the
+    // seven money-moving inputs drifted since the editor opened.
+    form.__pricingChanged = () => pricingInputsChanged();
     syncCommercialMode();
     previewButton.addEventListener('click', async () => {
       if (scope !== cuStayScope()) return;
@@ -5690,6 +5797,7 @@
       'room-unavailable': 'Cette chambre vient d’être prise sur ces dates. Choisissez-en une autre.',
       'invalid-price': 'Saisissez un montant positif ou nul, avec deux décimales maximum.',
       'quote-required': 'Simulez puis acceptez le tarif pour les dates et voyageurs sélectionnés.',
+      'reprice-required': 'Les dates, la chambre, la formule ou le compte ont changé : vérifiez le nouveau tarif affiché puis confirmez.',
       'direct-pricing-required': 'Formule sans tarif : affichez le prix maison ci-dessus, ou convenez un prix avec le client.',
       'rate-missing': 'Aucun tarif configuré pour cette formule. Renseignez-le dans Types de chambres, ou convenez un prix.',
       'price-mismatch': 'Le tarif affiché ne correspond plus à la configuration. Recommencez la réservation.',

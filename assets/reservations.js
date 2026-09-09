@@ -213,6 +213,26 @@
     }) };
     return { accountId: cleanText(raw.accountId, 80), billTo: billTo, booker: cleanText(raw.booker, 160), voucher: cleanText(raw.voucher, 100), board: ['room_only','bb','hb_lunch','hb_dinner','full_board'].indexOf(raw.board) >= 0 ? raw.board : 'room_only', occupancy: number(raw.occupancy, 1, 12, 1), quoted: raw.quoted === true, acceptedAt: +raw.acceptedAt || 0, quote: quote };
   }
+  /* Superseded snapshots travel with the booking like pricing itself:
+   * dropping them here would make every later sync look like tampering. */
+  /* Same canonical shape as canonPricingHistory server-side (field order
+   * included: the sync guard compares JSON strings). Superseded snapshots
+   * stay readable audit, never active pricing. */
+  function normalizeHistory(raw) {
+    if (!Array.isArray(raw)) return [];
+    return raw.filter((h) => h && typeof h === 'object' && typeof h.kind === 'string').slice(-10).map((h) => {
+      if (h.kind === 'contract') {
+        return {
+          kind: 'contract', accountId: cleanText(h.accountId, 80), board: String(h.board || ''),
+          totalCents: number(h.totalCents, 0, 10000000000, 0), acceptedAt: +h.acceptedAt || 0,
+          supersededAt: +h.supersededAt || 0,
+        };
+      }
+      const p = normalizePricing(h);
+      if (!p) return null;
+      return { ...p, supersededAt: +h.supersededAt || 0 };
+    }).filter(Boolean);
+  }
   /* Accepted direct-guest pricing must survive the boot sync like contract
    * quotes do: without it a reload silently unprices every direct booking
    * (the editor fell back to room-only). Sanitized, never trusted blindly. */
@@ -230,7 +250,7 @@
         acceptedAt: +raw.acceptedAt || 0 };
     }
     var rows = (Array.isArray(raw.rows) ? raw.rows : []).slice(0, 365).map(function (r) {
-      return { date: cleanText(r && r.date, 10), roomCents: number(r && r.roomCents, 0, 100000000, 0), mealCents: number(r && r.mealCents, 0, 100000000, 0), quantity: number(r && r.quantity, 1, 12, 1), amountCents: number(r && r.amountCents, 0, 100000000, 0) };
+      return { date: cleanText(r && r.date, 10), roomCents: number(r && r.roomCents, 0, 10000000000, 0), mealCents: number(r && r.mealCents, 0, 10000000000, 0), quantity: number(r && r.quantity, 1, 12, 1), amountCents: number(r && r.amountCents, 0, 10000000000, 0) };
     });
     if (!rows.length) return null;
     return { kind: 'direct', board: board, occupancy: number(raw.occupancy, 1, 12, 1),
@@ -257,7 +277,7 @@
         guestSegments: normalizeGuestSegments(x.hotel.guestSegments),
         roomSegments: normalizeRoomSegments(x.hotel.roomSegments, 40)
       } : null;
-      return { id: cleanText(x && x.id, 64) || id('bk'), code: cleanText(x && x.code, 24), customer: { name: cleanText(x && x.customer && x.customer.name, 100), phone: cleanText(x && x.customer && x.customer.phone, 32), email: cleanText(x && x.customer && x.customer.email, 160) }, serviceId: cleanText(x && x.serviceId, 64), resourceId: cleanText(x && x.resourceId, 64), startAt: +x.startAt || 0, endAt: +x.endAt || 0, partySize: number(x && x.partySize, 1, 999, 1), status: status, source: ['public','staff','import'].indexOf(x && x.source) >= 0 ? x.source : 'staff', note: cleanText(x && x.note, 600), manageToken: cleanText(x && x.manageToken, 80), publicRef: cleanText(x && x.publicRef, 80), hotel: hotel, guests: normalizeGuests(x && x.guests), pricing: normalizePricing(x && x.pricing), roomSegments: normalizeRoomSegments(x && x.roomSegments, 20), createdAt: +x.createdAt || 0, updatedAt: +x.updatedAt || 0 };
+      return { id: cleanText(x && x.id, 64) || id('bk'), code: cleanText(x && x.code, 24), customer: { name: cleanText(x && x.customer && x.customer.name, 100), phone: cleanText(x && x.customer && x.customer.phone, 32), email: cleanText(x && x.customer && x.customer.email, 160) }, serviceId: cleanText(x && x.serviceId, 64), resourceId: cleanText(x && x.resourceId, 64), startAt: +x.startAt || 0, endAt: +x.endAt || 0, partySize: number(x && x.partySize, 1, 999, 1), status: status, source: ['public','staff','import'].indexOf(x && x.source) >= 0 ? x.source : 'staff', note: cleanText(x && x.note, 600), manageToken: cleanText(x && x.manageToken, 80), publicRef: cleanText(x && x.publicRef, 80), hotel: hotel, guests: normalizeGuests(x && x.guests), pricing: normalizePricing(x && x.pricing), pricingHistory: normalizeHistory(x && x.pricingHistory), roomSegments: normalizeRoomSegments(x && x.roomSegments, 20), createdAt: +x.createdAt || 0, updatedAt: +x.updatedAt || 0 };
     }).filter(function (x) { return x.id && x.customer.name && x.serviceId && x.startAt && x.endAt > x.startAt; });
     var originalBookings = byId(r.bookings);
     out.bookings.forEach(function (b) { b.commercial = normalizeCommercial(originalBookings[b.id] && originalBookings[b.id].commercial); });

@@ -13,7 +13,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { makeSession, sessionCookie } from '../functions/auth/_lib.js';
-import { onRequestPost as saveStay, priceDirectStay, directKey } from '../functions/api/hotel/stays.js';
+import { onRequestPost as saveStay, onRequestGet as getStays, priceDirectStay } from '../functions/api/hotel/stays.js';
+import { directKey } from '../functions/api/hotel/_commercial.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SECRET = 'hotel-direct-pricing-secret-0123456789abcdef';
@@ -55,8 +56,12 @@ sql.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUE
   .run(MERCHANT, 'reservations', JSON.stringify(reservations), 1, now);
 sql.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)')
   .run(MERCHANT, 'rooms', JSON.stringify(roomsDoc), 1, now);
-sql.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)')
-  .run(MERCHANT, 'hotel-commercial', JSON.stringify({ v: 1, accounts: [], contracts: [] }), 1, now);
+  sql.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)')
+    .run(MERCHANT, 'hotel-commercial', JSON.stringify({
+      v: 1,
+      accounts: [{ id: 'acc-agency-01', kind: 'agency', name: 'Atlas Voyages', legalName: '', address: '', city: '', country: '', ice: '', taxId: '', rc: '', contact: '', email: '', phone: '', paymentDays: 30, notes: '', archived: false }],
+      contracts: [{ id: 'ctr-000001', name: 'Seminaire', accountId: 'acc-agency-01', roomTypeId: 'type:dbl', from: day(1), to: day(30), occupancy: 1, board: 'hb_dinner', unit: 'room', amountCents: 85000, taxBasis: 'inclusive', currency: 'MAD', archived: false }],
+    }), 1, now);
 
 class Statement {
   constructor(text) { this.text = text; this.args = []; }
@@ -185,6 +190,123 @@ console.log('\n■ 4. Mixed pricing and legacy paths');
   const r2 = await J(await post(legacy));
   ok(r2.status === 200 && r2.body.booking.hotel.total === 1800, 'legacy room-only unchanged, no snapshot required');
   ok(!r2.body.booking.pricing, 'legacy path stores no direct snapshot');
+}
+
+console.log('\n■ 5b. Edit lifecycle: preservation, explicit reprice, transitions');
+{
+  const getById = async (id) => {
+    const r = await getStays({ env, request: new Request(`https://kiwi.test/api/hotel/stays?merchant=${MERCHANT}&id=${id}`, { headers: { Cookie: cookie } }) });
+    const b = await r.json().catch(() => ({}));
+    return (b.stays || [])[0] || null;
+  };
+  const addDay = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const hbRows = (ci, co) => {
+    const rows = [];
+    for (let d = ci; d < co; d = addDay(d, 1)) rows.push({ date: d, roomCents: 90000, mealCents: 28000, quantity: 1, amountCents: 118000 });
+    return rows;
+  };
+  const CIN2 = day(10), COUT2 = day(12);
+  const mkDirect = (ref, room, extra = {}) => ({
+    action: 'save', merchant: MERCHANT, clientRef: ref, roomTypeId: 'type:dbl',
+    resourceId: room, checkIn: CIN2, checkOut: COUT2, partySize: 1, status: 'confirmed',
+    channel: 'direct', customer: { name: 'Karim Benchekroun', phone: '+212661000001', email: '' },
+    guests: [{ name: 'Karim Benchekroun' }],
+    commercial: { accountId: '', booker: 'Karim Benchekroun', board: 'hb_dinner', quoted: false },
+    directPricing: { board: 'hb_dinner', occupancy: 1, rows: hbRows(CIN2, COUT2), totalCents: 236000 },
+    ...extra,
+  });
+  // create + contact-only edit keeps snapshot and total
+  let r = await J(await post(mkDirect('staff-life-0001', 'room:101')));
+  ok(r.status === 200, 'direct booking created');
+  const at0 = r.body.booking.pricing.acceptedAt;
+  const editBody = (b, patch) => ({
+    merchant: MERCHANT, id: b.id, clientRef: b.publicRef, roomTypeId: b.serviceId, resourceId: b.resourceId,
+    checkIn: b.hotel.checkIn, checkOut: b.hotel.checkOut, partySize: b.partySize, status: b.status, channel: b.hotel.channel,
+    customer: { ...b.customer }, guests: b.guests.map((g) => ({ ...g })),
+    commercial: { accountId: '', booker: (b.commercial && b.commercial.booker) || b.customer.name, board: (b.commercial && b.commercial.board) || 'hb_dinner', quoted: false },
+    ...patch,
+  });
+  r = await J(await post(editBody(r.body.booking, { customer: { name: 'Karim Benchekroun', phone: '+212662000002', email: '' } })));
+  ok(r.status === 200, 'contact-only edit accepted without fresh pricing');
+  ok(r.body.booking.hotel.total === 2360 && r.body.booking.pricing.totalCents === 236000, 'total and snapshot preserved');
+  ok(r.body.booking.pricing.acceptedAt === at0, 'original acceptance timestamp untouched');
+  ok(!r.body.booking.pricingHistory || r.body.booking.pricingHistory.length === 0, 'no history fabricated');
+  // dates moved without fresh pricing: explicit reprice required
+  const lifeId = r.body.booking.id;
+  r = await J(await post(editBody(r.body.booking, { checkIn: day(14), checkOut: day(16) })));
+  ok(r.status === 409 && r.body.error === 'reprice-required', 'moved dates without fresh pricing are refused');
+  // same move with fresh pricing: repriced
+  const fresh = {
+    board: 'hb_dinner', occupancy: 1,
+    rows: [
+      { date: day(14), roomCents: 90000, mealCents: 28000, quantity: 1, amountCents: 118000 },
+      { date: day(15), roomCents: 90000, mealCents: 28000, quantity: 1, amountCents: 118000 },
+    ],
+    totalCents: 236000,
+  };
+  r = await J(await post({ ...editBody(await getById(lifeId), { checkIn: day(14), checkOut: day(16) }), directPricing: fresh }));
+  ok(r.status === 200 && r.body.booking.hotel.total === 2360, 'explicit reprice reprices to the fresh snapshot');
+  // direct -> contract transition: single source, history kept
+  r = await J(await post({
+    ...editBody(await getById(lifeId), {}),
+    commercial: { accountId: 'acc-agency-01', booker: 'Karim Benchekroun', board: 'hb_dinner', quoted: true },
+    acceptQuote: true, quoteRevision: 1,
+  }));
+  ok(r.status === 200, 'contract transition accepted');
+  ok(r.body.booking.hotel.total === 1700, 'contract total wins outright');
+  ok(r.body.booking.commercial.quote.totalCents === 170000, 'accepted quote stored');
+  ok(!r.body.booking.pricing, 'stale direct snapshot cleared, not competing');
+  ok(Array.isArray(r.body.booking.pricingHistory) && r.body.booking.pricingHistory.length === 1
+    && r.body.booking.pricingHistory[0].totalCents === 236000 && r.body.booking.pricingHistory[0].supersededAt > 0,
+    'superseded direct snapshot preserved in history');
+  // contract -> direct transition back
+  const back = {
+    board: 'hb_dinner', occupancy: 1,
+    rows: [
+      { date: day(14), roomCents: 90000, mealCents: 28000, quantity: 1, amountCents: 118000 },
+      { date: day(15), roomCents: 90000, mealCents: 28000, quantity: 1, amountCents: 118000 },
+    ],
+    totalCents: 236000,
+  };
+  r = await J(await post({
+    ...editBody(await getById(lifeId), {}),
+    commercial: { accountId: '', booker: 'Karim Benchekroun', board: 'hb_dinner', quoted: false },
+    directPricing: back,
+  }));
+  ok(r.status === 200 && r.body.booking.hotel.total === 2360, 'direct total wins back');
+  ok(r.body.booking.commercial.quote === null, 'stale contract quote cleared');
+  ok(r.body.booking.pricingHistory.length === 2 && r.body.booking.pricingHistory[1].kind === 'contract'
+    && r.body.booking.pricingHistory[1].totalCents === 170000, 'contract snapshot archived too');
+  // completed stay: note edit allowed, pricing frozen
+  const doneId = r.body.booking.id;
+  for (const st of ['checked_in', 'completed']) {
+    const rs = await J(await post(editBody(await getById(doneId), { status: st })));
+    assert.equal(rs.status, 200, `transition to ${st} works`);
+  }
+  r = await J(await post(editBody(await getById(doneId), { note: 'late checkout asked' })));
+  ok(r.status === 200, 'note edit on a completed stay is not a pricing change');
+  ok(r.body.booking.hotel.total === 2360 && r.body.booking.pricing.totalCents === 236000, 'completed stay keeps money');
+  // agreed -> agreed with a new amount archives the old authorization
+  r = await J(await post({
+    action: 'save', merchant: MERCHANT, clientRef: 'staff-life-agreed', roomTypeId: 'type:eco',
+    resourceId: 'room:201', checkIn: CHECKIN, checkOut: CHECKOUT, partySize: 1, status: 'confirmed',
+    channel: 'direct', customer: { name: 'Nadia' }, guests: [{ name: 'Nadia' }],
+    commercial: { accountId: '', booker: 'Nadia', board: 'bb', quoted: false },
+    directPricing: { agreed: true, amountCents: 95000, reason: 'geste commercial', board: 'bb', occupancy: 1 },
+  }));
+  ok(r.status === 200, 'agreed booking created');
+  const atAgreed = r.body.booking.pricing.acceptedAt;
+  r = await J(await post({
+    merchant: MERCHANT, id: r.body.booking.id, clientRef: r.body.booking.publicRef, roomTypeId: 'type:eco',
+    resourceId: 'room:201', checkIn: CHECKIN, checkOut: CHECKOUT, partySize: 1, status: 'confirmed',
+    channel: 'direct', customer: { name: 'Nadia' }, guests: [{ name: 'Nadia' }],
+    commercial: { accountId: '', booker: 'Nadia', board: 'bb', quoted: false },
+    directPricing: { agreed: true, amountCents: 100000, reason: 'geste revu', board: 'bb', occupancy: 1 },
+  }));
+  ok(r.status === 200 && r.body.booking.hotel.total === 1000, 'deliberate agreed change reprices');
+  ok(r.body.booking.pricing.acceptedAt >= atAgreed, 'new authorization timestamped');
+  ok(r.body.booking.pricingHistory.length === 1 && r.body.booking.pricingHistory[0].amountCents === 95000
+    && r.body.booking.pricingHistory[0].reason === 'geste commercial', 'old authorization archived, not lost');
 }
 
 console.log('\n■ 5. Pure helpers: roles, bounds, key stability');

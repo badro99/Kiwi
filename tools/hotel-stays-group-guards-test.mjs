@@ -73,6 +73,19 @@ console.log('\n■ 3c. Reconciliation entries validated, replays gated (follow-u
   ok(hotelJs.includes('La réservation retournée'), 'POST-path messages preserved');
 }
 
+console.log('\n■ 3d. Pricing lifecycle: preserve, reprice explicitly, one total');
+{
+  const staysJs = fs.readFileSync(path.join(ROOT, 'functions/api/hotel/stays.js'), 'utf8');
+  ok(staysJs.includes("error: 'reprice-required'"), 'server demands explicit repricing on moved pricing inputs');
+  ok(staysJs.includes('} else if (directActive) {'), 'contract total wins outright, direct only otherwise');
+  ok(staysJs.includes('pricingHistory.push({ ...prevSnap, supersededAt: now })'), 'superseded snapshots archived with timestamp');
+  ok(staysJs.includes('pricing = null;'), 'contract win clears the competing direct snapshot');
+  ok(hotelJs.includes('form.__pricingChanged'), 'edit change detection travels on the form');
+  ok(hotelJs.includes('data-hx-reprice-confirm'), 'configured reprices need their own confirmation click');
+  ok(hotelJs.includes('Précédent prix convenu'), 'agreed box starts deliberate changes from authorized values');
+  ok(hotelJs.includes("'reprice-required': 'Les dates"), 'reprice refusal explains itself in the UI language');
+}
+
 console.log('\n■ 3. Saved rooms reconcile against the server (defect 3)');
 {
   ok(hotelJs.includes('const bookingMatchesPayload = (existing, payload, room)'), 'material comparison helper exists');

@@ -2,7 +2,7 @@
 // into the same revisioned reservations document used by /api/booking, so a
 // room accepted here disappears from public availability in the same write.
 import { json, entitledMerchant } from '../../auth/_lib.js';
-import { commercialSnapshot, readCommercial, quote, BOARDS, problem } from './_commercial.js';
+import { commercialSnapshot, readCommercial, quote, BOARDS, problem, directKey } from './_commercial.js';
 import { stayOptions } from './_stay-options.js';
 import { tenantFor } from '../_private.js';
 import { poke } from '../_live.js';
@@ -177,17 +177,6 @@ function directMealCents(type, board) {
   const sup = type.boardRates && typeof type.boardRates === 'object' ? type.boardRates[board] : null;
   if (sup == null || sup === '' || !Number.isFinite(+sup) || +sup < 0) return null;
   return Math.round(+sup * 100);
-}
-export function directKey(d) {
-  if (!d || typeof d !== 'object') return '';
-  const agreed = d.agreed === true;
-  return JSON.stringify({
-    board: String(d.board || ''), occupancy: Number(d.occupancy) || 0,
-    rows: Array.isArray(d.rows) ? d.rows.map((r) => [String((r && r.date) || ''), Number(r && r.roomCents) || 0, Number(r && r.mealCents) || 0, Number(r && r.quantity) || 0, Number(r && r.amountCents) || 0]) : [],
-    totalCents: Number(d.totalCents) || 0, agreed,
-    amountCents: agreed ? (Number(d.amountCents) || 0) : 0,
-    reason: agreed ? String(d.reason || '') : '',
-  });
 }
 export function priceDirectStay({ type, hotel, nights, partySize, checkIn, board, direct, actor, now }) {
   if (!DIRECT_BOARDS.includes(board) && board !== 'room_only') problem('invalid-formula');
@@ -591,6 +580,23 @@ export async function onRequestPost({ request, env }) {
     if (dayUse && (spec?.quoted || commercial?.quoted)) return json({ error: 'day-use-contract-unsupported' }, 409);
     const changedStay = old && (old.serviceId !== typeId || old.hotel.checkIn !== checkIn || old.hotel.checkOut !== checkOut || old.partySize !== partySize);
     if (commercial?.quoted && changedStay && (!spec || !b.acceptQuote)) return json({ error: 'quote-required' }, 409);
+    // Pricing inputs vs pricing material (defects 1+3): a stay that already
+    // owns accepted pricing keeps it — with its total — unless the caller
+    // brings fresh material (a validated direct snapshot or a freshly
+    // accepted contract quote). Resending nothing must never count as a
+    // pricing change, otherwise no priced stay could ever be edited.
+    // Effective previous terms (defect 1 fix): an empty booker nulls the
+    // stored commercial block, so the old board/account must also be read
+    // from the accepted pricing snapshot — otherwise every meal-plan edit
+    // reads as a board change against a room_only default.
+    const oldBoard = commercial?.board || (old && old.pricing && old.pricing.board) || 'room_only';
+    const oldAccount = commercial?.accountId || '';
+    const oldQuoted = !!commercial?.quoted;
+    const pricingInputsChanged = changedStay
+      || (spec !== undefined && (
+        str(spec?.accountId, 80) !== oldAccount
+        || (BOARDS.includes(spec?.board) ? spec.board : 'room_only') !== (BOARDS.includes(oldBoard) ? oldBoard : 'room_only')
+        || (spec?.quoted === true) !== oldQuoted));
     let pricing = (old && old.pricing && typeof old.pricing === 'object') ? old.pricing : null;
     if (spec !== undefined) {
       if ((await entitledMerchant(request, env, merchant)) !== merchant) return json({ error: 'commercial-forbidden' }, 403);
@@ -598,8 +604,12 @@ export async function onRequestPost({ request, env }) {
       const quoted = spec?.quoted === true;
       const direct = (b && b.directPricing && typeof b.directPricing === 'object') ? b.directPricing : null;
       if (accountId && direct) return json({ error: 'mixed-pricing' }, 409);
-      const changedPricing = changedStay || accountId !== (commercial?.accountId || '') || board !== (commercial?.board || 'room_only') || quoted !== !!commercial?.quoted || directKey(direct) !== directKey(old && old.pricing);
+      const directChanged = direct ? directKey(direct) !== directKey(old && old.pricing) : false;
+      const changedPricing = pricingInputsChanged || directChanged;
       if (old && ['completed', 'cancelled', 'no_show'].includes(old.status) && (b.acceptQuote || changedPricing || str(spec?.voucher, 100) !== (commercial?.voucher || '') || str(spec?.booker, 160) !== (commercial?.booker || ''))) return json({ error: 'closed-commercial' }, 409);
+      if (old && old.pricing && pricingInputsChanged && !direct && !(quoted && b.acceptQuote === true)) {
+        return json({ error: 'reprice-required' }, 409);
+      }
       try {
         const directory = await readCommercial(env, merchant);
         const selected = accountId ? directory.accounts.find(a => a.id === accountId) : null;
@@ -613,7 +623,12 @@ export async function onRequestPost({ request, env }) {
           // HT can be simulated but not booked as TTC until hotel taxes are configured.
           if (accepted.taxBasis !== 'inclusive') return json({ error: 'tax-configuration-required' }, 409);
         }
-        if (!quoted && board !== 'room_only' && !direct) return json({ error: 'direct-pricing-required' }, 409);
+        // New meal-plan stays (and any stay that moves its pricing inputs)
+        // must arrive with explicit pricing; an untouched priced stay keeps
+        // its snapshot without resending it (defects 1+3).
+        if (!quoted && board !== 'room_only' && !direct && (!old || !old.pricing || pricingInputsChanged)) {
+          return json({ error: 'direct-pricing-required' }, 409);
+        }
         if (direct) {
           pricing = priceDirectStay({ type, hotel, nights, partySize, checkIn, checkOut, board, direct, actor, now });
         }
@@ -628,8 +643,30 @@ export async function onRequestPost({ request, env }) {
         if (!commercial.accountId && !commercial.booker && !commercial.voucher && !commercial.quoted) commercial = null;
       } catch (e) { return json({ error: e?.code || 'commercial-unavailable' }, e?.code ? 409 : 503); }
     }
-    if (commercial?.quoted && commercial.quote) { total = commercial.quote.totalCents / 100; rate = Math.round(total / nights * 100) / 100; }
-    if (pricing && pricing.kind === 'direct' && Number.isSafeInteger(pricing.totalCents)) {
+    // Exactly one source sets the payable total (defect 2): an accepted
+    // contract quote wins outright and retires any direct snapshot; otherwise
+    // the validated direct snapshot rules. Superseded snapshots move to
+    // pricingHistory — history, never a competing active source.
+    const contractActive = !!(commercial && commercial.quoted && commercial.quote);
+    const directActive = !contractActive && !!(pricing && pricing.kind === 'direct');
+    let pricingHistory = Array.isArray(old && old.pricingHistory) ? old.pricingHistory.slice(-9) : [];
+    const prevSnap = (old && old.commercial && old.commercial.quoted && old.commercial.quote)
+      ? { kind: 'contract', accountId: old.commercial.accountId || '', board: old.commercial.board || '', totalCents: old.commercial.quote.totalCents || 0, acceptedAt: old.commercial.acceptedAt || 0 }
+      : (old && old.pricing && old.pricing.kind === 'direct' ? old.pricing : null);
+    const nextSnap = contractActive
+      ? { kind: 'contract', accountId: commercial.accountId || '', board: commercial.board || '', totalCents: commercial.quote.totalCents || 0, acceptedAt: commercial.acceptedAt || 0 }
+      : (directActive ? pricing : null);
+    const snapMode = (s) => !s ? '' : (s.kind === 'contract' ? 'contract' : (s.agreed ? 'direct-agreed' : 'direct-configured'));
+    const agreedMoved = !!(prevSnap && nextSnap && prevSnap.agreed && nextSnap.agreed
+      && (prevSnap.amountCents !== nextSnap.amountCents || prevSnap.reason !== nextSnap.reason));
+    if (prevSnap && nextSnap && (snapMode(prevSnap) !== snapMode(nextSnap) || agreedMoved)) {
+      pricingHistory.push({ ...prevSnap, supersededAt: now });
+    }
+    if (contractActive) {
+      total = commercial.quote.totalCents / 100;
+      rate = nights > 0 ? Math.round(total / nights * 100) / 100 : total;
+      pricing = null;
+    } else if (directActive) {
       total = pricing.totalCents / 100;
       rate = nights > 0 ? Math.round(total / nights * 100) / 100 : total;
     }
@@ -655,7 +692,8 @@ export async function onRequestPost({ request, env }) {
       source: old?.source || (channel === 'direct' || channel === 'walkin' ? 'staff' : 'import'), note,
       manageToken: old?.manageToken || '', publicRef: old?.publicRef || clientRef,
       guests: saveGuests, commercial,
-      ...(pricing && pricing.kind === 'direct' ? { pricing } : (old && old.pricing && typeof old.pricing === 'object' ? { pricing: old.pricing } : {})),
+      ...(pricing && pricing.kind === 'direct' ? { pricing } : {}),
+      ...(pricingHistory.length ? { pricingHistory } : (old && Array.isArray(old.pricingHistory) && old.pricingHistory.length ? { pricingHistory: old.pricingHistory.slice(-10) } : {})),
       roomSegments: saveRoomSegments,
       hotel: {
         dossierId, dayUse, arrivalTime, departureTime,

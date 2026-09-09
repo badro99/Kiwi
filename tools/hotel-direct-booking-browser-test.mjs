@@ -828,6 +828,223 @@ await withCtx({
   ok(posts.length === 2, 'two attempts, one booking: idempotency absorbs the retry');
 });
 
+async function setTypeBoardRate(ctx, typeId, board, amount) {
+  const { page } = ctx;
+  await gotoHotel(ctx, 'nav-tarifs');
+  await page.click(`[data-action="hx-room-type-edit"][data-arg="${typeId}"]`);
+  await page.waitForSelector(`[data-hx-type-board-${board}]`, { timeout: 10000 });
+  await setField(page, `[data-hx-type-board-${board}]`, String(amount));
+  await page.click('[data-action="hx-room-type-save"]');
+  await page.waitForFunction(() => !document.querySelector('[data-hx-type-board-bb]'), { timeout: 10000 });
+  const t = await (async () => {
+    for (let i = 0; i < 30; i++) {
+      const s = await ctx.api('/api/store?merchant=' + MERCHANT + '&feature=rooms');
+      const data = typeof s.json.data === 'string' ? JSON.parse(s.json.data) : s.json.data;
+      const hit = (data.roomTypes || []).find((x) => x.id === typeId);
+      if (hit && hit.boardRates && Number(hit.boardRates[board]) === amount) return hit;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    return null;
+  })();
+  assert.ok(t && Number(t.boardRates[board]) === amount, `supplement ${board}=${amount} reached the server rooms document`);
+}
+
+/* ── E1 · catalogue change cannot reprice a saved stay ─────────────── */
+console.log('\n■ E1 · saved snapshot survives catalogue moves and contact edits');
+await withCtx({}, async (ctx) => {
+  const { page } = ctx;
+  await unlock(page);
+  await gotoHotel(ctx, 'nav-reception');
+  await openStayEditor(ctx);
+  await fillStay(page, { ...GUEST(ymd(7), ymd(9)), roomTypeId: 'type:t1', resourceId: 'room:101', partySize: 1, board: 'bb' });
+  const done = await submitStay(page);
+  ok(done.outcome === 'closed', 'B&B books at 2100');
+  let b = await ctx.stayByClientRef(done.ref);
+  const at0 = b.pricing.acceptedAt;
+  ok(b.hotel.total === 2100 && at0 > 0, 'snapshot accepted with timestamp');
+  step('breakfast supplement rises 150 → 300 in Types');
+  await setTypeBoardRate(ctx, 'type:t1', 'bb', 300);
+  step('reopen: the display still shows the accepted 2100');
+  await gotoHotel(ctx, 'nav-reception');
+  await openStayForEdit(ctx, b.id);
+  const shown = await directBreakdown(page);
+  ok(/2100\.00/.test(shown) && !/2400/.test(shown), 'reopened editor shows the saved snapshot, not new catalogue math');
+  step('phone, note and traveler edits preserve it');
+  await setField(page, '[data-hx-stay-form] input[name="phone"]', '+212662000002');
+  await setField(page, '[data-hx-stay-form] textarea[name="note"]', 'Arrivée tardive');
+  await page.$eval('[data-hx-stay-form] [data-hx-guest-name]', (el, v) => {
+    el.value = v;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }, 'Karim Benali');
+  const done2 = await submitStay(page);
+  ok(done2.outcome === 'closed', 'contact edit saves');
+  b = await ctx.stayByClientRef(done.ref);
+  ok(b.hotel.total === 2100, 'total untouched by non-pricing edits');
+  ok(b.pricing.totalCents === 210000 && b.pricing.acceptedAt === at0, 'snapshot and original timestamp intact');
+  ok(b.customer.phone === '+212662000002' && (b.note || '').includes('tardive'), 'edits applied');
+  ok(b.guests.some((g) => g.name === 'Karim Benali'), 'renamed traveler kept');
+});
+
+/* ── E2 · moved dates require an explicit, reviewed reprice ────────── */
+console.log('\n■ E2 · date moves need a confirmed reprice, then apply it');
+await withCtx({}, async (ctx) => {
+  const { page } = ctx;
+  await unlock(page);
+  await gotoHotel(ctx, 'nav-reception');
+  await openStayEditor(ctx);
+  await fillStay(page, { ...GUEST(ymd(7), ymd(9)), roomTypeId: 'type:t1', resourceId: 'room:101', partySize: 1, board: 'bb' });
+  const done = await submitStay(page);
+  ok(done.outcome === 'closed', 'B&B books');
+  await setTypeBoardRate(ctx, 'type:t1', 'bb', 300);
+  await gotoHotel(ctx, 'nav-reception');
+  await openStayForEdit(ctx, (await ctx.stayByClientRef(done.ref)).id);
+  await setField(page, '[data-hx-stay-form] input[name="checkIn"]', ymd(10));
+  await setField(page, '[data-hx-stay-form] input[name="checkOut"]', ymd(12));
+  const wrapVisible = await page.$eval('[data-hx-reprice-wrap]', (el) => !el.hidden).catch(() => false);
+  ok(wrapVisible, 'reprice confirmation appears with the new total');
+  const wrapText = await page.$eval('[data-hx-reprice-label]', (el) => el.textContent || '');
+  ok(/2400\.00/.test(wrapText), 'reprice total reflects the moved catalogue (900+300)×2');
+  const blocked = await submitStay(page);
+  ok(String(blocked.outcome).startsWith('settled:'), 'unconfirmed reprice is blocked');
+  ok(/revalorisation|tarif a changé/.test(await readError(page)), 'block message demands review');
+  await page.click('[data-hx-reprice-confirm]');
+  const done2 = await submitStay(page);
+  ok(done2.outcome === 'closed', 'confirmed reprice saves');
+  const b = await ctx.stayByClientRef(done.ref);
+  ok(b.hotel.total === 2400 && b.pricing.totalCents === 240000, 'fresh snapshot and total applied');
+  ok(b.pricing.acceptedAt > 0 && b.hotel.checkIn === ymd(10), 'new dates with new acceptance');
+});
+
+/* ── E3 · direct → contract: one total, history kept ───────────────── */
+console.log('\n■ E3 · direct to contract keeps a single payable total');
+await withCtx({}, async (ctx) => {
+  const { page } = ctx;
+  await unlock(page);
+  await gotoHotel(ctx, 'nav-reception');
+  await openStayEditor(ctx);
+  await fillStay(page, { ...GUEST(ymd(7), ymd(9)), roomTypeId: 'type:t1', resourceId: 'room:101', partySize: 1, board: 'hb_dinner' });
+  const done = await submitStay(page);
+  ok(done.outcome === 'closed', 'direct dinner books at 2360');
+  await openStayForEdit(ctx, (await ctx.stayByClientRef(done.ref)).id);
+  await setField(page, '[data-hx-commercial-stay] select[name="accountId"]', 'acc-agency-01');
+  await page.click('[data-hx-commercial-stay] [data-hx-quote]');
+  await page.waitForSelector('[data-hx-commercial-stay] [data-hx-accept-quote]', { timeout: 15000 });
+  const card = await page.$eval('[data-hx-quote-result]', (el) => el.textContent || '');
+  ok(/1700\.00/.test(card), 'contract total displayed before acceptance (1700)');
+  await page.click('[data-hx-commercial-stay] [data-hx-accept-quote]');
+  const done2 = await submitStay(page);
+  ok(done2.outcome === 'closed', 'contract transition saves');
+  const b = await ctx.stayByClientRef(done.ref);
+  ok(b.hotel.total === 1700, 'persisted total is the contract total, not the stale 2360');
+  ok(b.commercial && b.commercial.quote && b.commercial.quote.totalCents === 170000, 'accepted quote stored');
+  ok(!b.pricing, 'stale direct snapshot cleared, not competing');
+  ok(Array.isArray(b.pricingHistory) && b.pricingHistory.length === 1
+    && b.pricingHistory[0].totalCents === 236000 && b.pricingHistory[0].supersededAt > 0,
+    'superseded direct snapshot preserved in history');
+  step('reload: single source still agrees');
+  await reloadAndUnlock(page);
+  const r = await ctx.stayByClientRef(done.ref);
+  ok(r.hotel.total === 1700 && !r.pricing && r.pricingHistory.length === 1, 'reload keeps one total plus history');
+});
+
+/* ── E4 · contract → direct: reverse transition ────────────────────── */
+console.log('\n■ E4 · contract back to direct clears the quote');
+await withCtx({}, async (ctx) => {
+  const { page } = ctx;
+  await unlock(page);
+  await gotoHotel(ctx, 'nav-reception');
+  await openStayEditor(ctx);
+  await fillStay(page, { ...GUEST(ymd(7), ymd(9)), roomTypeId: 'type:t1', resourceId: 'room:101', partySize: 1, board: 'hb_dinner' });
+  await setField(page, '[data-hx-commercial-stay] select[name="accountId"]', 'acc-agency-01');
+  await page.click('[data-hx-commercial-stay] [data-hx-quote]');
+  await page.waitForSelector('[data-hx-commercial-stay] [data-hx-accept-quote]', { timeout: 15000 });
+  await page.click('[data-hx-commercial-stay] [data-hx-accept-quote]');
+  const done = await submitStay(page);
+  ok(done.outcome === 'closed', 'contract books at 1700');
+  await openStayForEdit(ctx, (await ctx.stayByClientRef(done.ref)).id);
+  await setField(page, '[data-hx-commercial-stay] select[name="accountId"]', '');
+  const shown = await directBreakdown(page);
+  ok(/2360\.00/.test(shown), 'direct total recomputed on account removal');
+  const done2 = await submitStay(page);
+  ok(done2.outcome === 'closed', 'direct transition saves');
+  const b = await ctx.stayByClientRef(done.ref);
+  ok(b.hotel.total === 2360, 'direct total wins back');
+  ok(!b.commercial || b.commercial.quote == null, 'stale contract quote cleared');
+  ok(b.pricing && b.pricing.totalCents === 236000, 'fresh direct snapshot stored');
+  ok(Array.isArray(b.pricingHistory) && b.pricingHistory.length === 1 && b.pricingHistory[0].kind === 'contract'
+    && b.pricingHistory[0].totalCents === 170000, 'contract snapshot archived');
+});
+
+/* ── E5+E6 · agreed reopening preserves; deliberate change re-audits ─ */
+console.log('\n■ E5+E6 · agreed price reopens intact, deliberate changes re-authorize');
+await withCtx({}, async (ctx) => {
+  const { page } = ctx;
+  await unlock(page);
+  await gotoHotel(ctx, 'nav-reception');
+  await openStayEditor(ctx);
+  await fillStay(page, { ...GUEST(ymd(7), ymd(9)), roomTypeId: 'type:t3', resourceId: 'room:301', partySize: 1, board: 'bb' });
+  await setField(page, '[data-hx-commercial-stay] [data-hx-agreed-amount]', '950');
+  await setField(page, '[data-hx-commercial-stay] [data-hx-agreed-reason]', 'geste commercial');
+  await page.click('[data-hx-commercial-stay] [data-hx-agreed-confirm]');
+  const done = await submitStay(page);
+  ok(done.outcome === 'closed', 'agreed booking saves');
+  let b = await ctx.stayByClientRef(done.ref);
+  const at0 = b.pricing.acceptedAt;
+  ok(b.hotel.total === 950 && b.pricing.agreedBy.role === 'owner', 'agreed snapshot with owner stamp');
+  step('reopen: amount, reason and authorizer loaded, confirm unset');
+  await openStayForEdit(ctx, b.id);
+  const agreedShown = await page.$eval('[data-hx-direct-breakdown]', (el) => el.textContent || '');
+  ok(/950\.00/.test(agreedShown) && /geste commercial/.test(agreedShown), 'stored agreement displayed with amount and reason');
+  const confirmChecked = await page.$eval('[data-hx-commercial-stay] [data-hx-agreed-confirm]', (el) => el.checked).catch(() => 'absent');
+  ok(confirmChecked === false || confirmChecked === 'absent', 'no pre-checked acceptance that would re-stamp');
+  step('phone-only edit preserves authorization verbatim');
+  await setField(page, '[data-hx-stay-form] input[name="phone"]', '+212662000002');
+  const done2 = await submitStay(page);
+  ok(done2.outcome === 'closed', 'ordinary edit saves');
+  b = await ctx.stayByClientRef(done.ref);
+  ok(b.hotel.total === 950, 'total untouched');
+  ok(b.pricing.agreedBy.at === at0 && b.pricing.reason === 'geste commercial', 'original authorization timestamp and reason intact');
+  step('deliberate amount change re-authorizes and archives the old one');
+  await openStayForEdit(ctx, b.id);
+  await setField(page, '[data-hx-commercial-stay] [data-hx-agreed-amount]', '1000');
+  await setField(page, '[data-hx-commercial-stay] [data-hx-agreed-reason]', 'geste revu');
+  await page.click('[data-hx-commercial-stay] [data-hx-agreed-confirm]');
+  const done3 = await submitStay(page);
+  ok(done3.outcome === 'closed', 're-authorized change saves');
+  b = await ctx.stayByClientRef(done.ref);
+  ok(b.hotel.total === 1000 && b.pricing.totalCents === 100000, 'new agreed total applied');
+  ok(b.pricing.acceptedAt >= at0, 'new authorization timestamped');
+  ok(Array.isArray(b.pricingHistory) && b.pricingHistory.length === 1 && b.pricingHistory[0].amountCents === 95000, 'old authorization archived');
+});
+
+/* ── E7 · later catalogue rates never overwrite an agreement ───────── */
+console.log('\n■ E7 · catalogue gains do not touch agreed bookings');
+await withCtx({}, async (ctx) => {
+  const { page } = ctx;
+  await unlock(page);
+  await gotoHotel(ctx, 'nav-reception');
+  await openStayEditor(ctx);
+  await fillStay(page, { ...GUEST(ymd(7), ymd(9)), roomTypeId: 'type:t3', resourceId: 'room:301', partySize: 1, board: 'bb' });
+  await setField(page, '[data-hx-commercial-stay] [data-hx-agreed-amount]', '950');
+  await setField(page, '[data-hx-commercial-stay] [data-hx-agreed-reason]', 'geste commercial');
+  await page.click('[data-hx-commercial-stay] [data-hx-agreed-confirm]');
+  const done = await submitStay(page);
+  ok(done.outcome === 'closed', 'agreed booking saves');
+  let b = await ctx.stayByClientRef(done.ref);
+  const at0 = b.pricing.acceptedAt;
+  step('hotel now configures a bb rate for that category');
+  await setTypeBoardRate(ctx, 'type:t3', 'bb', 150);
+  await gotoHotel(ctx, 'nav-reception');
+  await openStayForEdit(ctx, b.id);
+  await setField(page, '[data-hx-stay-form] input[name="phone"]', '+212662000002');
+  const done2 = await submitStay(page);
+  ok(done2.outcome === 'closed', 'edit saves');
+  b = await ctx.stayByClientRef(done.ref);
+  ok(b.hotel.total === 950, 'agreed total stands, catalogue 2100 math ignored');
+  ok(b.pricing.agreedBy.at === at0 && b.pricing.reason === 'geste commercial', 'original authorization intact');
+});
+
 /* ── summary ───────────────────────────────────────────────────────── */
 console.log(`\n✓ All ${controls} direct-booking browser controls passed.`);
 console.log(`  navigation paths used: ${NAV_PATHS.join(' | ')}`);

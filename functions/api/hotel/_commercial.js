@@ -37,6 +37,61 @@ export async function readCommercial(env, merchant) {
   if (!d || !Array.isArray(d.accounts) || !Array.isArray(d.contracts)) problem('commercial-data-invalid');
   return { rev: Number(row.rev), accounts: d.accounts.map(account), contracts: d.contracts.map(contract) };
 }
+/* Canonical direct-pricing shapes for sync protection (validateCommercialSync
+ * below): both the server-raw and the client-normalized copies reduce to
+ * these, so a sync that would silently drop or rewrite accepted pricing is
+ * refused instead. Mirrors normalizePricing/normalizeHistory in
+ * assets/reservations.js field for field — keep them in lockstep. */
+export function directKey(d) {
+  if (!d || typeof d !== 'object') return '';
+  const agreed = d.agreed === true;
+  return JSON.stringify({
+    board: String(d.board || ''), occupancy: Number(d.occupancy) || 0,
+    rows: Array.isArray(d.rows) ? d.rows.map((r) => [String((r && r.date) || ''), Number(r && r.roomCents) || 0, Number(r && r.mealCents) || 0, Number(r && r.quantity) || 0, Number(r && r.amountCents) || 0]) : [],
+    totalCents: Number(d.totalCents) || 0, agreed,
+    amountCents: agreed ? (Number(d.amountCents) || 0) : 0,
+    reason: agreed ? String(d.reason || '') : '',
+  });
+}
+export function canonDirectPricing(p) {
+  if (!p || typeof p !== 'object' || p.kind !== 'direct') return null;
+  if (p.agreed === true) {
+    if (!Number.isSafeInteger(p.amountCents) || p.amountCents <= 0) return null;
+    const by = (p.agreedBy && typeof p.agreedBy === 'object') ? p.agreedBy : null;
+    return {
+      kind: 'direct', agreed: true, board: String(p.board || ''), occupancy: Number(p.occupancy) || 0,
+      amountCents: p.amountCents, totalCents: p.amountCents, rows: [], taxBasis: 'inclusive',
+      reason: String(p.reason || ''),
+      agreedBy: by ? { id: String(by.id || ''), role: String(by.role || ''), at: Number(by.at) || 0 } : null,
+      acceptedAt: Number(p.acceptedAt) || 0,
+    };
+  }
+  if (!Array.isArray(p.rows) || !p.rows.length || !Number.isSafeInteger(p.totalCents)) return null;
+  return {
+    kind: 'direct', board: String(p.board || ''), occupancy: Number(p.occupancy) || 0,
+    rows: p.rows.map((r) => ({
+      date: String((r && r.date) || ''), roomCents: Number(r && r.roomCents) || 0,
+      mealCents: Number(r && r.mealCents) || 0, quantity: Number(r && r.quantity) || 0,
+      amountCents: Number(r && r.amountCents) || 0,
+    })),
+    totalCents: p.totalCents, taxBasis: 'inclusive', acceptedAt: Number(p.acceptedAt) || 0,
+  };
+}
+export function canonPricingHistory(h) {
+  if (!Array.isArray(h)) return [];
+  return h.filter((x) => x && typeof x === 'object' && typeof x.kind === 'string').slice(-10).map((x) => {
+    if (x.kind === 'contract') {
+      return {
+        kind: 'contract', accountId: String(x.accountId || ''), board: String(x.board || ''),
+        totalCents: Number(x.totalCents) || 0, acceptedAt: Number(x.acceptedAt) || 0,
+        supersededAt: Number(x.supersededAt) || 0,
+      };
+    }
+    const p = canonDirectPricing(x);
+    if (!p) return null;
+    return { ...p, supersededAt: Number(x.supersededAt) || 0 };
+  }).filter(Boolean);
+}
 export function quote(doc, input) {
   const { accountId, roomTypeId, checkIn, checkOut, occupancy, board } = input;
   if (!accountId || !String(accountId).trim()) problem('account-required');
@@ -84,7 +139,7 @@ export async function validateCommercialSync(env, merchant, previous, next) {
   const ids = new Set([...before.keys(), ...[...after.values()].filter(protectedStay).map(b => b.id)]);
   if (!ids.size) return false;
   const table = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='hotel_reservations'").first();
-  const protectedValue = b => JSON.stringify({ commercial: commercialSnapshot(b?.commercial), pricing: b?.pricing && typeof b.pricing === 'object' ? b.pricing : null, options: stayOptions(b?.hotel),
+  const protectedValue = b => JSON.stringify({ commercial: commercialSnapshot(b?.commercial), pricing: canonDirectPricing(b?.pricing), pricingHistory: canonPricingHistory(b?.pricingHistory), options: stayOptions(b?.hotel),
     serviceId: b?.serviceId, resourceId: b?.resourceId, startAt: b?.startAt, endAt: b?.endAt,
     partySize: b?.partySize, status: b?.status, checkIn:b?.hotel?.checkIn, checkOut:b?.hotel?.checkOut,nights:b?.hotel?.nights,rate: b?.hotel?.rate, total: b?.hotel?.total });
   for (const id of ids) {
