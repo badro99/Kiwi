@@ -620,12 +620,14 @@ export async function onRequestPost({ request, env }) {
       return json({ error: 'reprice-required' }, 409);
     }
     let pricing = (old && old.pricing && typeof old.pricing === 'object') ? old.pricing : null;
+    let standaloneDirect = false;
     if (spec === undefined && direct) {
       if (old && ['completed', 'cancelled', 'no_show'].includes(old.status)) return json({ error: 'closed-commercial' }, 409);
       if (commercial?.accountId) return json({ error: 'mixed-pricing' }, 409);
       try {
         pricing = priceDirectStay({ type, hotel, nights, partySize, checkIn, checkOut, board: newBoard, direct, actor, now });
       } catch (e) { return json({ error: e?.code || 'commercial-invalid' }, e?.code ? 409 : 503); }
+      standaloneDirect = true;
     }
     if (spec !== undefined) {
       if ((await entitledMerchant(request, env, merchant)) !== merchant) return json({ error: 'commercial-forbidden' }, 403);
@@ -677,6 +679,19 @@ export async function onRequestPost({ request, env }) {
     // pricingHistory — history, never a competing active source.
     const contractActive = !!(commercial && commercial.quoted && commercial.quote);
     const directActive = !contractActive && !!(pricing && pricing.kind === 'direct');
+    if (standaloneDirect && directActive && pricing) {
+      // The validated snapshot is the terms now: carry its meal plan and
+      // occupancy onto the stored commercial block so POST, GET, the editor
+      // and later contact-only saves all read the same formula. Booker,
+      // voucher and unrelated metadata are preserved; a block with nothing
+      // but terms stays null so legacy reads keep falling back to the
+      // snapshot. A live contract keeps winning and is never synced over.
+      const synced = { accountId: '', billTo: (commercial && commercial.billTo) || null,
+        booker: str(commercial && commercial.booker, 160), voucher: str(commercial && commercial.voucher, 100),
+        board: pricing.board, occupancy: partySize, quoted: false,
+        acceptedAt: (commercial && commercial.acceptedAt) || 0, quote: null };
+      commercial = (!synced.booker && !synced.voucher) ? null : synced;
+    }
     let pricingHistory = Array.isArray(old && old.pricingHistory) ? old.pricingHistory.slice(-9) : [];
     const prevSnap = (old && old.commercial && old.commercial.quoted && old.commercial.quote)
       ? { kind: 'contract', accountId: old.commercial.accountId || '', board: old.commercial.board || '', totalCents: old.commercial.quote.totalCents || 0, acceptedAt: old.commercial.acceptedAt || 0 }

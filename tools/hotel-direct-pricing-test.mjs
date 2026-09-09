@@ -377,6 +377,67 @@ console.log('\n■ 5c. Omitted pricing fields: unchanged keeps, changed reprices
   ok(r.body.booking.pricing.rows.length === 3 && r.body.booking.pricing.totalCents === 315000, 'snapshot now covers three nights');
 }
 
+console.log('\n■ 5d. Standalone repricing keeps every stored formula in agreement');
+{
+  const getById = async (id) => {
+    const r = await getStays({ env, request: new Request(`https://kiwi.test/api/hotel/stays?merchant=${MERCHANT}&id=${id}`, { headers: { Cookie: cookie } }) });
+    const b = await r.json().catch(() => ({}));
+    return (b.stays || [])[0] || null;
+  };
+  const addDay = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const CIN4 = day(20), COUT4 = day(22);
+  const mealRows = (ci, co, meal, occ) => {
+    const rows = [];
+    for (let d = ci; d < co; d = addDay(d, 1)) rows.push({ date: d, roomCents: 90000, mealCents: meal, quantity: occ, amountCents: 90000 + meal * occ });
+    return rows;
+  };
+  const sum = (rows) => rows.reduce((s, x) => s + x.amountCents, 0);
+  // B&B baseline posted the way the browser posts it: commercial plus snapshot
+  let r = await J(await post({
+    action: 'save', merchant: MERCHANT, clientRef: 'staff-sync-0001', roomTypeId: 'type:dbl',
+    resourceId: 'room:101', checkIn: CIN4, checkOut: COUT4, partySize: 1, status: 'confirmed',
+    channel: 'direct', customer: { name: 'Salma Idrissi', phone: '+212661000021', email: '' },
+    guests: [{ name: 'Salma Idrissi' }],
+    commercial: { accountId: '', booker: 'Salma Idrissi', board: 'bb', quoted: false },
+    directPricing: { board: 'bb', occupancy: 1, rows: mealRows(CIN4, COUT4, 15000, 1), totalCents: 210000 },
+  }));
+  ok(r.status === 200 && r.body.booking.hotel.total === 2100, 'B&B baseline books at 2,100');
+  const syncId = r.body.booking.id, syncRef = r.body.booking.publicRef;
+  const bareBase = {
+    action: 'save', merchant: MERCHANT, id: syncId, clientRef: syncRef, roomTypeId: 'type:dbl',
+    resourceId: 'room:101', checkIn: CIN4, checkOut: COUT4, partySize: 1, status: 'confirmed',
+    channel: 'direct', customer: { name: 'Salma Idrissi', phone: '+212661000021', email: '' },
+    guests: [{ name: 'Salma Idrissi' }],
+  };
+  // B&B -> half-board with directPricing alone: price moves, formula must follow everywhere
+  const hb1 = mealRows(CIN4, COUT4, 28000, 1);
+  r = await J(await post({ ...bareBase, directPricing: { board: 'hb_dinner', occupancy: 1, rows: hb1, totalCents: sum(hb1) } }));
+  ok(r.status === 200 && r.body.booking.hotel.total === 2360, 'half-board reprices to 2,360');
+  ok(r.body.booking.pricing.board === 'hb_dinner', 'snapshot carries half-board');
+  ok(r.body.booking.commercial && r.body.booking.commercial.board === 'hb_dinner', 'stored commercial follows the accepted formula');
+  ok(r.body.booking.commercial.occupancy === 1, 'stored occupancy follows the stay');
+  ok(r.body.booking.commercial.booker === 'Salma Idrissi', 'booker preserved across the sync');
+  const atSync = r.body.booking.pricing.acceptedAt;
+  // subsequent GET agrees on formula, occupancy, total and snapshot
+  const seen = await getById(syncId);
+  ok(seen.commercial.board === 'hb_dinner' && seen.pricing.board === 'hb_dinner', 'GET agrees on the formula');
+  ok(seen.partySize === 1 && seen.commercial.occupancy === 1, 'GET agrees on occupancy');
+  ok(seen.hotel.total === 2360 && seen.pricing.totalCents === 236000, 'GET agrees on money');
+  // contact-only save omitting both fields preserves the synced agreement
+  r = await J(await post({ ...bareBase, customer: { name: 'Salma Idrissi', phone: '+212665000005', email: '' }, note: 'prefers quiet floor' }));
+  ok(r.status === 200, 'contact-only save after the sync is accepted');
+  ok(r.body.booking.commercial.board === 'hb_dinner' && r.body.booking.pricing.board === 'hb_dinner', 'formula still agrees after a bare edit');
+  ok(r.body.booking.hotel.total === 2360 && r.body.booking.pricing.acceptedAt === atSync, 'money and authorization untouched by the bare edit');
+  // standalone occupancy change without commercial: heads, money and formula move together
+  const hb2 = mealRows(CIN4, COUT4, 28000, 2);
+  r = await J(await post({ ...bareBase, partySize: 2,
+    guests: [{ name: 'Salma Idrissi' }, { name: 'Omar Idrissi' }],
+    directPricing: { board: 'hb_dinner', occupancy: 2, rows: hb2, totalCents: sum(hb2) } }));
+  ok(r.status === 200 && r.body.booking.hotel.total === 2920, 'second guest reprices to 2,920');
+  ok(r.body.booking.partySize === 2 && r.body.booking.commercial.occupancy === 2, 'occupancy agrees on stay and commercial');
+  ok(r.body.booking.commercial.board === 'hb_dinner' && r.body.booking.pricing.board === 'hb_dinner', 'formula still agrees after the occupancy move');
+}
+
 console.log('\n■ 5. Pure helpers: roles, bounds, key stability');
 {
   const base = { type: { rate: 900, boardRates: { bb: 150 } }, hotel: { baseRate: 700 }, nights: 2, partySize: 1, checkIn: CHECKIN, board: 'bb', actor: { id: ACC, role: 'owner' }, now };
