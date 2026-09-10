@@ -54,4 +54,12 @@ audit=sql.prepare("SELECT event_type FROM hotel_stay_events WHERE merchant='riad
 ok(audit.length===2&&audit[1].event_type==='cancelled','confirmed OTA removal appends a cancellation event instead of rewriting history');
 response=await onRequestGet({env,request:new Request('https://kiwi.test/api/hotel/channels?merchant=riad-sync',{headers:{Cookie:cookie}})});body=await response.json();
 ok(response.status===200&&body.channels[0].health==='healthy'&&body.channels[0].syncMode==='ical-import'&&!body.channels[0].capabilities.pushesRates&&!('feedUrl' in body.channels[0]),'connection status exposes truthful one-way capability and health metadata only');
+// Ticket #0009: Expedia + Agoda ride the same one-way importer.
+ok(normalizeFeedUrl('https://www.expedia.com/calendar/ical/123.ics?s=secret','expedia').startsWith('https://www.expedia.com/')&&normalizeFeedUrl('https://euro.expedia.net/ical/abc.ics','expedia').startsWith('https://euro.expedia.net/')&&normalizeFeedUrl('https://www.expediapartnercentral.com/x.ics','expedia').startsWith('https://www.expediapartnercentral.com/'),'expedia export hosts accepted (incl. euro.expedia.net)');
+ok(normalizeFeedUrl('https://www.agoda.com/ical/x.ics','agoda').startsWith('https://www.agoda.com/')&&normalizeFeedUrl('https://ycs.agoda.com/ical/x.ics','agoda').startsWith('https://ycs.agoda.com/'),'agoda export hosts accepted (incl. YCS)');
+ok(!normalizeFeedUrl('https://www.expedia.com/x.ics','agoda')&&!normalizeFeedUrl('https://www.agoda.com/x.ics','expedia')&&!normalizeFeedUrl('https://evil.test/x.ics','expedia')&&!normalizeFeedUrl('https://www.jumbotours.com/x.ics','expedia'),'provider/host mismatch, foreign hosts and non-iCal bed banks refused');
+response=await onRequestPost({env,request:request({action:'save',merchant:'riad-sync',channel:'expedia',label:'Expedia 101',roomId:'room:101',feedUrl:'https://euro.expedia.net/ical/abc.ics?s=secret'})});
+body=await response.json();ok(response.status===201&&body.channels.some((c)=>c.channel==='expedia'&&c.hasFeed),'expedia channel saves through the same importer (201)');
+response=await onRequestPost({env,request:request({action:'save',merchant:'riad-sync',channel:'agoda',label:'Agoda 101',roomId:'room:101',feedUrl:'https://www.agoda.com/ical/x.ics'})});
+body=await response.json();ok(response.status===201&&body.channels.some((c)=>c.channel==='agoda'),'agoda channel saves through the same importer (201)');
 console.log(`hotel-channel-sync-test: ${controls} controls passed`);

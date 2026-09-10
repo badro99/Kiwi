@@ -6378,7 +6378,7 @@
     return room ? 'Chambre ' + room.n : 'Chambre supprimée';
   }
   function cuChannelEditor(provider) {
-    const name = provider === 'airbnb' ? 'Airbnb' : 'Booking.com';
+    const name = ({ airbnb: 'Airbnb', expedia: 'Expedia', agoda: 'Agoda' })[provider] || 'Booking.com';
     const rooms = Object.values(cuState().rooms || {}).sort((a,b) => a.n-b.n);
     if (!rooms.length) { toast('Ajoutez d’abord vos chambres', {type:'warn'}); return; }
     const m = K().modal({ tag:'CALENDRIER OTA', title:'Connecter ' + name,
@@ -6391,14 +6391,33 @@
       </div><div class="hx-room-form-actions"><button class="hx-btn ghost" data-action="hx-channel-close">Annuler</button><button class="hx-btn atlas" data-action="hx-channel-save" data-arg="${provider}">Connecter et vérifier</button></div>` });
     m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal'); openModal={el:m.el,close:m.close};
   }
+  /* Ticket #0009 · where each extranet hides its iCal export. Generic on
+   * purpose: extranet menus move, but every platform below ships an iCal
+   * export per listing — except B2B allotment (JumboTours), which stays
+   * manual entry via + Réservation. */
+  function cuChannelGuide() {
+    const rows = [
+      ['Booking.com', 'Extranet → Calendrier & tarifs → synchronisation des calendriers → copiez le lien d’exportation iCal de l’annonce.'],
+      ['Expedia', 'Expedia Partner Central → calendrier de l’établissement → exportation ou partage iCal (certaines propriétés le reçoivent via euro.expedia.net).'],
+      ['Agoda', 'YCS (Yield Control System) → calendrier de l’établissement → export iCal.'],
+      ['Airbnb', 'Annonces → Calendrier → paramètres de disponibilité → exporter / synchroniser le calendrier (lien iCal).'],
+      ['JumboTours & centrales B2B', 'Pas d’export iCal : allotement géré au contrat. Saisissez chaque dossier à la main via + Réservation (canal Agence).'],
+    ];
+    const m = K().modal({ tag: 'CANAUX OTA', title: 'Où trouver le lien iCal ?',
+      desc: 'Un lien par chambre. Seules les dates bloquées sont importées : ni prix, ni clients, ni commissions.', width: 620,
+      body: `<div class="hx-list">${rows.map(([name, how]) => `<div class="hx-arr"><span class="tm">ICAL</span><div class="who"><b>${esc(name)}</b><div class="sub">${esc(how)}</div></div></div>`).join('')}</div>
+      <div class="hx-room-form-actions"><button class="hx-btn atlas" data-action="hx-channel-close">Compris</button></div>` });
+    m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
+    openModal = { el: m.el, close: m.close };
+  }
   function cuCanauxBody() {
     const connected = cuChannelState.rows.map((c) => `<div class="hx-arr">
-      <span class="tm ${c.lastError ? 'red' : ''}">${c.channel === 'airbnb' ? 'AIRBNB' : 'BOOKING'}</span>
+      <span class="tm ${c.lastError ? 'red' : ''}">${({ airbnb: 'AIRBNB', expedia: 'EXPEDIA', agoda: 'AGODA' })[c.channel] || 'BOOKING'}</span>
       <div class="who"><b>${esc(c.label)}</b><div class="sub">${esc(cuChannelRoomLabel(c.roomId))} · ${c.lastError ? 'erreur : ' + esc(c.lastError) : c.lastSyncAt ? 'actualisé ' + new Date(c.lastSyncAt).toLocaleString('fr-FR') : 'première synchronisation en attente'}</div></div>
       <button class="hx-btn ghost" data-action="hx-channel-status" data-arg="${esc(c.id)}:${c.status === 'paused' ? 'active' : 'paused'}">${c.status === 'paused' ? 'Réactiver' : 'Pause'}</button>
       <button class="hx-btn ghost" data-action="hx-channel-delete" data-arg="${esc(c.id)}">Retirer</button>
     </div>`).join('');
-    const choices = [{id:'booking',name:'Booking.com'},{id:'airbnb',name:'Airbnb'}].map((c)=>`<div class="hx-arr"><span class="tm">ICAL</span><div class="who"><b>${c.name}</b><div class="sub">Import des dates bloquées, chambre par chambre, si le fournisseur propose un lien iCal</div></div><button class="hx-btn ghost" data-action="hx-cb-connect" data-arg="${c.id}">Importer un calendrier</button></div>`).join('');
+    const choices = [{id:'booking',name:'Booking.com'},{id:'airbnb',name:'Airbnb'},{id:'expedia',name:'Expedia'},{id:'agoda',name:'Agoda'}].map((c)=>`<div class="hx-arr"><span class="tm">ICAL</span><div class="who"><b>${c.name}</b><div class="sub">Import des dates bloquées, chambre par chambre, si le fournisseur propose un lien iCal</div></div><button class="hx-btn ghost" data-action="hx-cb-connect" data-arg="${c.id}">Importer un calendrier</button></div>`).join('');
     return `<div class="hx-page">
       <div class="hx-strip">
         <div class="hx-kpi"><div class="l">Réservation directe</div><div class="v">·</div><div class="d">source de réservations non connectée</div></div>
@@ -6406,13 +6425,13 @@
       </div>
       <div class="hx-h"><span class="t">Calendriers connectés</span><span class="s">les liens privés ne sont jamais renvoyés au navigateur</span><button class="hx-btn ghost" data-action="hx-channel-sync" ${cuChannelState.loading?'disabled':''}>${cuChannelState.loading?'Actualisation…':'Actualiser maintenant'}</button></div>
       <div class="block" style="padding:8px 14px;"><div class="hx-list">${cuChannelState.error?`<div class="hx-empty">${esc(cuChannelState.error)}</div>`:connected||'<div class="hx-empty">Aucun calendrier connecté.</div>'}</div></div>
-      <div class="hx-h"><span class="t">Connecter un canal</span><span class="s">Kiwi bloque les dates OTA dans la disponibilité directe</span></div>
+      <div class="hx-h"><span class="t">Connecter un canal</span><span class="s">Kiwi bloque les dates OTA dans la disponibilité directe</span><button class="hx-btn ghost" data-action="hx-channel-guide">Où trouver le lien ?</button></div>
       <div class="block" style="padding:8px 14px;"><div class="hx-list">${choices}</div></div>
       <div class="block" style="padding:8px 14px;margin-top:14px;">
         ${cuStarter(
           'Import iCal, pas de synchronisation bidirectionnelle.',
           'Les calendriers importent des périodes bloquées. Ils ne transmettent pas vos prix, vos stocks ou vos annulations de Kiwi vers les plateformes.',
-          ['Les détails clients, prestations et montants sont à vérifier sur la réservation d’origine', 'Expedia et les agences : saisie manuelle tant qu’une intégration dédiée n’est pas connectée', 'Les commissions réelles ne sont pas fournies par ces calendriers']
+          ['Les détails clients, prestations et montants sont à vérifier sur la réservation d’origine', 'JumboTours et centrales B2B sans iCal : saisie manuelle via + Réservation', 'Les commissions réelles ne sont pas fournies par ces calendriers']
         )}
       </div>
     </div>`;
@@ -8052,16 +8071,17 @@
       rerender();
     };
     handlers['hx-cb-connect'] = (el, arg) => {
-      if (arg === 'booking' || arg === 'airbnb') cuChannelEditor(String(arg));
+      if (arg === 'booking' || arg === 'airbnb' || arg === 'expedia' || arg === 'agoda') cuChannelEditor(String(arg));
     };
     handlers['hx-channel-close'] = () => { openModal?.close?.(); openModal=null; };
+    handlers['hx-channel-guide'] = () => { if (isCustomHotel()) cuChannelGuide(); };
     handlers['hx-channel-sync'] = () => cuLoadChannels(true);
     handlers['hx-channel-save'] = async (el,arg) => {
       const root=el.closest('.kiwi-modal'), status=root?.querySelector('[data-hx-channel-status]');
       const label=String(root?.querySelector('[data-hx-channel-label]')?.value||'').trim(), roomId=String(root?.querySelector('[data-hx-channel-room]')?.value||''), feedUrl=String(root?.querySelector('[data-hx-channel-url]')?.value||'').trim();
       if(!label||!roomId||!feedUrl){if(status)status.textContent='Complétez les trois champs.';return;}
       el.disabled=true;if(status)status.textContent='Connexion et première vérification…';
-      try{const res=await fetch('/api/hotel/channels',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'save',merchant:cuChannelMerchant(),channel:String(arg),label,roomId,feedUrl})}),body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||'unavailable');cuChannelState.rows=body.channels||[];cuChannelState.loaded=true;openModal?.close?.();openModal=null;toast('Calendrier connecté',{type:'success',desc:'Les dates OTA sont maintenant dans le tape chart.'});rerender();}catch(error){if(status)status.textContent=error.message==='invalid-feed-url'?'Utilisez le lien iCal officiel fourni par Booking.com ou Airbnb.':'Connexion impossible : '+error.message;}finally{el.disabled=false;}
+      try{const res=await fetch('/api/hotel/channels',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'save',merchant:cuChannelMerchant(),channel:String(arg),label,roomId,feedUrl})}),body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||'unavailable');cuChannelState.rows=body.channels||[];cuChannelState.loaded=true;openModal?.close?.();openModal=null;toast('Calendrier connecté',{type:'success',desc:'Les dates OTA sont maintenant dans le tape chart.'});rerender();}catch(error){if(status)status.textContent=error.message==='invalid-feed-url'?'Utilisez le lien iCal officiel fourni par la plateforme (voir « Où trouver le lien ? »).':'Connexion impossible : '+error.message;}finally{el.disabled=false;}
     };
     handlers['hx-channel-status'] = async (el,arg) => { const cut=String(arg).lastIndexOf(':'),id=String(arg).slice(0,cut),status=String(arg).slice(cut+1);el.disabled=true;try{const res=await fetch('/api/hotel/channels',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'status',merchant:cuChannelMerchant(),id,status})}),body=await res.json();if(res.ok){cuChannelState.rows=body.channels||[];rerender();}}finally{el.disabled=false;} };
     handlers['hx-channel-delete'] = async (el,id) => { if(!confirm('Retirer ce calendrier ? Les séjours déjà importés restent dans l’historique.'))return;el.disabled=true;try{const res=await fetch('/api/hotel/channels',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({merchant:cuChannelMerchant(),id:String(id)})}),body=await res.json();if(res.ok){cuChannelState.rows=body.channels||[];rerender();}}finally{el.disabled=false;} };

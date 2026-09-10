@@ -10,7 +10,7 @@ const dec = new TextDecoder();
 const ACTIVE = new Set(['requested', 'confirmed', 'checked_in']);
 const AUTO_CANCELLABLE = new Set(['requested', 'confirmed']);
 const PRESERVED_STATES = new Set(['checked_in', 'completed', 'no_show']);
-const PROVIDERS = new Set(['booking', 'airbnb']);
+const PROVIDERS = new Set(['booking', 'airbnb', 'expedia', 'agoda']);
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_FEED_BYTES = 1024 * 1024;
 const MAX_MISSING_EVENTS = 1000;
@@ -50,11 +50,23 @@ export function normalizeFeedUrl(value, provider) {
   let url; try { url = new URL(raw); } catch (_) { return ''; }
   if (url.protocol !== 'https:' || url.username || url.password || url.port) return '';
   const host = url.hostname.toLowerCase();
+  /* Ticket #0009 · same one-way iCal import for Expedia + Agoda. The URLs
+   * stay owner-supplied bearer secrets (encrypted at rest, never to the
+   * browser); the allowlist only keeps merchants from pasting the wrong
+   * extranet link. euro.expedia.net is named explicitly: it is the Expedia
+   * TAAP-style host some properties receive. JumboTours has no iCal export
+   * (B2B allotment) and stays manual entry. */
   const allowed = provider === 'airbnb'
     ? (host === 'airbnb.com' || host.endsWith('.airbnb.com'))
     : provider === 'booking'
       ? (host === 'booking.com' || host.endsWith('.booking.com'))
-      : false;
+      : provider === 'expedia'
+        ? (host === 'expedia.com' || host.endsWith('.expedia.com')
+          || host === 'expediapartnercentral.com' || host.endsWith('.expediapartnercentral.com')
+          || host === 'euro.expedia.net' || host.endsWith('.euro.expedia.net'))
+        : provider === 'agoda'
+          ? (host === 'agoda.com' || host.endsWith('.agoda.com'))
+          : false;
   if (!allowed) return '';
   url.hash = '';
   return url.toString();
@@ -183,7 +195,7 @@ export async function syncHotelChannel(env, row) {
       const rate = rec && Number.isFinite(bookedRate) && bookedRate >= 0 ? bookedRate : (Number.isFinite(currentRate) && currentRate >= 0 ? currentRate : 0);
       const customer = rec?.customer && str(rec.customer.name, 100)
         ? { name:str(rec.customer.name,100), phone:str(rec.customer.phone,32), email:str(rec.customer.email,160) }
-        : { name: (provider === 'airbnb' ? 'Airbnb' : 'Booking.com') + ' · Réservation', phone:'', email:'' };
+        : { name: ((({ airbnb: 'Airbnb', expedia: 'Expedia', agoda: 'Agoda' })[provider]) || 'Booking.com') + ' · Réservation', phone:'', email:'' };
       const next = {
         id: rec?.id || 'bk-' + crypto.randomUUID(), code: rec?.code || 'OTA-' + digest.slice(0, 8).toUpperCase(),
         customer, serviceId: String(type.id), resourceId: String(room.id), startAt, endAt,
@@ -225,7 +237,7 @@ export async function syncHotelChannel(env, row) {
 
 export async function syncHotelChannels(env, options = {}) {
   const merchant = str(options.merchant, 64), limit = Math.max(1, Math.min(100, +options.limit || 25));
-  let sql = "SELECT id,merchant,channel,config FROM channel_links WHERE status='active' AND channel IN ('booking','airbnb')";
+  let sql = "SELECT id,merchant,channel,config FROM channel_links WHERE status='active' AND channel IN ('booking','airbnb','expedia','agoda')";
   const statement = merchant ? env.DB.prepare(sql + ' AND merchant=? ORDER BY created_ts LIMIT ?').bind(merchant, limit) : env.DB.prepare(sql + ' ORDER BY COALESCE(last_ts,0),created_ts LIMIT ?').bind(limit);
   const rows = await statement.all(), results = [];
   for (const row of rows.results || []) {

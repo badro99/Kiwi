@@ -1384,8 +1384,13 @@
   function createVenue(cfg) {
     cfg = cfg || {};
     const plan = (isRealMerchant() ? (window.KiwiConfig?.plan || '') : currentPlan).toLowerCase();
+    /* Ticket #0010 · the one-venue gate fires only on an explicitly stored
+     * basic/pro tier. Legacy rows (plan unset server-side) read as Basic for
+     * display, but the server lets them create — the client must agree, or
+     * every second store is refused with "Création impossible". */
+    const planExplicit = !!window.KiwiConfig?.planExplicit;
     const customCount = Object.keys(VENUES).filter(id => VENUES[id] && VENUES[id].custom && TRANSIENT_IDS.indexOf(id) < 0).length;
-    if (isRealMerchant() && (plan === 'basic' || plan === 'pro') && customCount >= 1) {
+    if (isRealMerchant() && planExplicit && (plan === 'basic' || plan === 'pro') && customCount >= 1) {
       if (window.Kiwi && window.Kiwi.toast) {
         window.Kiwi.toast("Votre forfait couvre un établissement. Kiwi Ultra en gère un nombre illimité.", 6000);
       }

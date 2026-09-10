@@ -267,6 +267,11 @@ export async function onRequestGet(context) {
    * unlock a paid operation for a real merchant.  Empty means "not resolved"
    * (not Ultra), while an existing legacy row with no explicit plan is Basic. */
   let plan = '';
+  /* Whether the row states its tier outright. A legacy row with no explicit
+   * plan reads as Basic for feature display, but venue-count enforcement
+   * (POST below, and the client's pre-check) must only fire on an explicit
+   * basic/pro — otherwise every legacy second store is refused. Ticket #0010. */
+  let planExplicit = false;
   /* Cet établissement est-il suspendu ? On le DIT au client plutôt que de le
    * laisser deviner à partir d'une suite de refus. Un écran qui explique vaut
    * mieux qu'un écran qui bugue. */
@@ -290,7 +295,8 @@ export async function onRequestGet(context) {
     if (cfg && cfg.type) type = cfg.type;
     if (cfg) {
       const rawPlan = String(cfg.plan || '').trim().toLowerCase();
-      plan = ['basic', 'pro', 'ultra', 'ultimate'].includes(rawPlan)
+      planExplicit = ['basic', 'pro', 'ultra', 'ultimate'].includes(rawPlan);
+      plan = planExplicit
         ? rawPlan
         : 'basic';
     }
@@ -314,7 +320,7 @@ export async function onRequestGet(context) {
     }
   } catch (_) { /* table missing / db error → neutral config */ }
 
-  return json({ features, pins, pinGateConfigured, type, plan, suspended,
+  return json({ features, pins, pinGateConfigured, type, plan, planExplicit, suspended,
     subscription: { state: subscription, active: subscription === 'active' } });
 }
 

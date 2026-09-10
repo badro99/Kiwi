@@ -3,7 +3,7 @@ import { json, readSession, readCookie, SESS_COOKIE } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { encryptFeed, normalizeFeedUrl, syncHotelChannels } from './_channels.js';
 
-const PROVIDERS = new Set(['booking', 'airbnb']);
+const PROVIDERS = new Set(['booking', 'airbnb', 'expedia', 'agoda']);
 const str = (v, n=200) => String(v == null ? '' : v).trim().slice(0,n);
 async function merchantFor(request, env, asked) {
   const session = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET).catch(() => null);
@@ -16,7 +16,7 @@ async function roomExists(env, merchant, roomId) {
   return (Array.isArray(doc.rooms) ? doc.rooms : []).some((x) => x && !x.deletedAt && String(x.id) === roomId);
 }
 async function rows(env, merchant) {
-  const result = await env.DB.prepare("SELECT id,channel,label,status,config,created_ts,last_ts,last_err FROM channel_links WHERE merchant=? AND channel IN ('booking','airbnb') ORDER BY created_ts DESC").bind(merchant).all();
+  const result = await env.DB.prepare("SELECT id,channel,label,status,config,created_ts,last_ts,last_err FROM channel_links WHERE merchant=? AND channel IN ('booking','airbnb','expedia','agoda') ORDER BY created_ts DESC").bind(merchant).all();
   return (result.results || []).map((x) => {
     let cfg; try { cfg = JSON.parse(x.config || '{}'); } catch (_) { cfg = {}; }
     const lastSyncAt=+x.last_ts||0, lastError=str(x.last_err,180);
@@ -46,7 +46,7 @@ export async function onRequestPost({ request, env }) {
   }
   if(action==='status') {
     const id=str(body?.id,64), status=body?.status==='paused'?'paused':'active';
-    await env.DB.prepare("UPDATE channel_links SET status=? WHERE id=? AND merchant=? AND channel IN ('booking','airbnb')").bind(status,id,merchant).run();
+    await env.DB.prepare("UPDATE channel_links SET status=? WHERE id=? AND merchant=? AND channel IN ('booking','airbnb','expedia','agoda')").bind(status,id,merchant).run();
     return json({ok:true,channels:await rows(env,merchant)});
   }
   if(action!=='save')return json({error:'bad-action'},400);
@@ -64,6 +64,6 @@ export async function onRequestDelete({ request, env }) {
   if(!env.DB||!env.AUTH_SECRET)return json({error:'not-configured'},503);
   let body;try{body=await request.json();}catch(_){return json({error:'bad-json'},400);}
   const merchant=await merchantFor(request,env,body?.merchant);if(!merchant)return json({error:'unauthorized'},401);
-  const id=str(body?.id,64);await env.DB.prepare("DELETE FROM channel_links WHERE id=? AND merchant=? AND channel IN ('booking','airbnb')").bind(id,merchant).run();
+  const id=str(body?.id,64);await env.DB.prepare("DELETE FROM channel_links WHERE id=? AND merchant=? AND channel IN ('booking','airbnb','expedia','agoda')").bind(id,merchant).run();
   return json({ok:true,channels:await rows(env,merchant)});
 }

@@ -85,7 +85,7 @@
    * configured anyone at all?", which is what decides whether its pad may refuse
    * a code. Which code is correct is settled by /api/pin/verify — neither list
    * carries one any more. */
-  var cfg = { features: {}, pins: [], seenPins: [], type: '', plan: '', loaded: false,
+  var cfg = { features: {}, pins: [], seenPins: [], type: '', plan: '', planExplicit: false, loaded: false,
     subscription: { state: 'unknown', active: true },
     accountPinsReady: false,
     apply: applyFeatures, syncPins: syncPins, syncType: syncType,
@@ -505,10 +505,13 @@
         rememberPins(cfg.pins);
         cfg.type = data.type || '';
         /* Server-authoritative entitlement. Empty means unresolved/offline and
-           must never be interpreted as a paid tier. */
+           must never be interpreted as a paid tier. planExplicit mirrors the
+           row: only an explicitly stored tier counts for venue-count gates
+           (ticket #0010) — legacy rows read as Basic for display only. */
         cfg.plan = /^(basic|pro|ultra|ultimate)$/.test(String(data.plan || '').toLowerCase())
           ? String(data.plan).toLowerCase()
           : '';
+        cfg.planExplicit = data.planExplicit === true;
         cfg.subscription = (data.subscription && typeof data.subscription === 'object')
           ? { state: String(data.subscription.state || 'active'), active: data.subscription.active !== false }
           : { state: 'active', active: true };

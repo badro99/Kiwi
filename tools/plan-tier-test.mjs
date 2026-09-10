@@ -14,7 +14,8 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 import { makeSession, sessionCookie } from '../functions/auth/_lib.js';
-import { onRequestPost as postConfig } from '../functions/api/config.js';
+import { onRequestPost as postConfig, onRequestGet as getConfig } from '../functions/api/config.js';
+import { slugMerchant } from '../functions/auth/_lib.js';
 
 const SECRET = 'test-secret-for-plan-tier-tests-32b';
 let pass = 0;
@@ -78,8 +79,12 @@ function makeMockDB() {
         },
         async first() {
           if (q.startsWith('SELECT status, session_epoch FROM accounts')) return state.accounts[binds[0]] ? { status: 'active', session_epoch: 0 } : null;
-          if (q.startsWith('SELECT business, created_ts FROM accounts WHERE id = ?') || q.startsWith('SELECT business, email FROM accounts WHERE id = ?')) {
+          if (q.startsWith('SELECT business, created_ts FROM accounts WHERE id = ?') || q.startsWith('SELECT business, email FROM accounts WHERE id = ?') || q.startsWith('SELECT business FROM accounts WHERE id = ?')) {
             return state.accounts[binds[0]] || null;
+          }
+          if (q.startsWith('SELECT features, plan, type, status FROM merchant_config WHERE merchant = ?')) {
+            const r = state.merchant_config.find(m => m.merchant === binds[0]);
+            return r ? { features: r.features || null, plan: r.plan, type: r.type || null, status: r.status || null } : null;
           }
           if (q.startsWith('SELECT account_id FROM merchant_config WHERE merchant = ?')) {
             const r = state.merchant_config.find(m => m.merchant === binds[0]);
@@ -299,6 +304,47 @@ async function runTests() {
       env: { DB: db, AUTH_SECRET: SECRET }
     });
     assert('Basic with 1 suspended store -> 1st active store creation allowed', res.status === 200);
+  }
+
+  // 7. Ticket #0010: GET reports planExplicit so the client only gates venues
+  // on explicitly stored basic/pro tiers. Legacy NULL rows keep reading as
+  // Basic for display but must NOT trip the one-venue gate.
+  {
+    const db = makeMockDB();
+    const cases = [
+      { aid: 'acc-get-legacy', business: 'Legacy House', plan: null, wantPlan: 'basic', wantExplicit: false },
+      { aid: 'acc-get-empty', business: 'Empty Plan House', plan: '', wantPlan: 'basic', wantExplicit: false },
+      { aid: 'acc-get-basic', business: 'Basic House', plan: 'basic', wantPlan: 'basic', wantExplicit: true },
+      { aid: 'acc-get-pro', business: 'Pro House', plan: 'pro', wantPlan: 'pro', wantExplicit: true },
+      { aid: 'acc-get-ultra', business: 'Ultra House', plan: 'ultra', wantPlan: 'ultra', wantExplicit: true },
+    ];
+    for (const c of cases) {
+      db._state.accounts[c.aid] = { business: c.business, email: c.aid + '@test.ma', created_ts: Date.now() };
+      db._state.merchant_config.push({ merchant: slugMerchant(c.business), account_id: c.aid, plan: c.plan, status: 'active' });
+      const sess = await makeSession(c.aid, SECRET);
+      const res = await getConfig({
+        request: new Request('https://kiwi-os.com/api/config?merchant=' + slugMerchant(c.business), {
+          headers: { Cookie: sessionCookie(sess).split(';')[0] },
+        }),
+        env: { DB: db, AUTH_SECRET: SECRET },
+      });
+      const d = await res.json();
+      assert(`GET plan=${JSON.stringify(c.plan)} -> plan ${c.wantPlan}, explicit=${c.wantExplicit}`,
+        res.status === 200 && d.plan === c.wantPlan && d.planExplicit === c.wantExplicit,
+        `got plan=${d.plan} explicit=${d.planExplicit}`);
+    }
+    // No config row at all: unresolved, never a paid tier.
+    const aid = 'acc-get-missing';
+    db._state.accounts[aid] = { business: 'Ghost House', email: 'ghost@test.ma', created_ts: Date.now() };
+    const sess = await makeSession(aid, SECRET);
+    const res = await getConfig({
+      request: new Request('https://kiwi-os.com/api/config', {
+        headers: { Cookie: sessionCookie(sess).split(';')[0] },
+      }),
+      env: { DB: db, AUTH_SECRET: SECRET },
+    });
+    const d = await res.json();
+    assert('GET missing row -> plan empty, explicit=false', d.plan === '' && d.planExplicit === false, `got plan=${d.plan} explicit=${d.planExplicit}`);
   }
 
   // Report
