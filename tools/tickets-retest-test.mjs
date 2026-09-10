@@ -22,6 +22,8 @@ function check(label, condition) {
 
 check('the testing card offers a distinct failed-test action',
   client.includes("failed.dataset.action = 'test-failed'") && client.includes("'Test failed'"));
+check('the ticket board cache-busts the updated interface assets',
+  html.includes('assets/tickets.css?v=2') && html.includes('assets/tickets.js?v=2'));
 check('the failed-test action opens a linked follow-up panel',
   html.includes('id="followupComposer"') && html.includes('id="followupTicketNumber"') && client.includes('openFollowup(ticket)'));
 check('the follow-up requires notes and accepts optional images',
