@@ -23,7 +23,15 @@ downscaling, macOS `sips` (already present on this Mac).
 | `get_ticket({id})` | One ticket's full text + screenshot list. |
 | `view_ticket_image({id, index?, maxSize?, full?})` | See screenshot(s). Omit `index` for all. |
 | `create_ticket({body, imagePaths?})` | File a new problem (attach up to 6 local images). |
-| `advance_ticket({id, action})` | `fixed` (problem→testing) or `tested` (testing→done, **deletes screenshots**). |
+| `submit_for_testing({id})` | Move a **solved** ticket to "Requiring testing" for a human to verify. |
+
+### Agents never close a ticket
+
+An agent that fixed something moves it to **Requiring testing** — nothing more.
+Marking a ticket *tested* is a human judgement, and it also permanently deletes
+the ticket's screenshots, so it stays on the board where the person who verified
+the fix clicks it. `submit_for_testing` is deliberately the only status move this
+server exposes; the API's `action:'tested'` is not wired to any tool.
 
 ## Register it
 

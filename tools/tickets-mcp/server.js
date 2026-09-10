@@ -7,7 +7,7 @@
  * A thin, zero-dependency wrapper over the public ticket board API deployed at
  * kiwi-os.com (functions/api/tickets/*). It exists so coding agents — Claude
  * Code, Codex, Gemini — can read the shared problem board, file new problems,
- * advance status, and LOOK at screenshots without burning tokens:
+ * hand solved ones to testing, and LOOK at screenshots without burning tokens:
  *
  *   - list_tickets / get_ticket return text only. Browsing the board is free.
  *   - view_ticket_image returns actual pixels ONLY when an agent asks, and
@@ -152,17 +152,18 @@ const TOOLS = [
     },
   },
   {
-    name: 'advance_ticket',
+    name: 'submit_for_testing',
     description:
-      "Move a ticket forward: action 'fixed' (problem → testing) or 'tested' (testing → done). " +
-      "WARNING: 'tested' permanently deletes that ticket's screenshots.",
+      'Move a ticket you have SOLVED into the "Requiring testing" column, so a human can verify it. ' +
+      'This is the only status move an agent may make: an agent never marks a ticket tested/done — ' +
+      'only the person who verifies the fix does that, from the board itself.',
     inputSchema: {
       type: 'object',
       properties: {
         id: { type: 'number', description: 'Ticket id.' },
-        action: { type: 'string', enum: ['fixed', 'tested'], description: "'fixed' or 'tested'." },
+        note: { type: 'string', description: 'Optional short note on what was changed, for your own reply to the user. Not sent to the board.' },
       },
-      required: ['id', 'action'],
+      required: ['id'],
     },
   },
 ];
@@ -176,7 +177,7 @@ async function callTool(id, params) {
       case 'get_ticket': return ok(id, text(await getTicket(args)));
       case 'view_ticket_image': return ok(id, await viewTicketImage(args));
       case 'create_ticket': return ok(id, text(await createTicket(args)));
-      case 'advance_ticket': return ok(id, text(await advanceTicket(args)));
+      case 'submit_for_testing': return ok(id, text(await submitForTesting(args)));
       default: return ok(id, errText('Unknown tool: ' + name));
     }
   } catch (e) {
@@ -296,19 +297,31 @@ async function createTicket(args) {
   return `Filed ${data.number || '#' + data.id} on ${BASE}/tickets${paths.length ? ` with ${paths.length} screenshot(s)` : ''}.`;
 }
 
-async function advanceTicket(args) {
+/* A solved ticket goes to "Requiring testing", never straight to done.
+ *
+ * The board's own API still exposes action:'tested' (testing → done), and that
+ * move also destroys the ticket's screenshots — so it belongs to the person who
+ * actually verified the fix, on the board, not to whichever agent believes it
+ * finished. This server deliberately exposes only the first half of the walk.
+ */
+async function submitForTesting(args) {
   const id = intOrThrow(args.id, 'id');
-  const action = String(args.action || '');
-  if (action !== 'fixed' && action !== 'tested') throw new Error("action must be 'fixed' or 'tested'.");
   const res = await fetch(`${BASE}/api/tickets/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action }),
+    body: JSON.stringify({ action: 'fixed' }),
   });
   const data = await safeJson(res);
-  if (!res.ok) throw new Error(`advance failed (HTTP ${res.status}): ${data.error || 'unknown'}${data.status ? ` (current status: ${data.status})` : ''}`);
-  const note = data.status === 'done' ? ` — moved to done, ${data.imagesDeleted || 0} screenshot(s) deleted` : ` — now ${data.status}`;
-  return `${data.number || '#' + id}${note}.`;
+  if (!res.ok) {
+    if (data.error === 'wrong-status' && data.status === 'testing') {
+      return `#${String(id).padStart(4, '0')} is already awaiting testing — nothing to do.`;
+    }
+    if (data.error === 'wrong-status' && data.status === 'done') {
+      throw new Error(`#${String(id).padStart(4, '0')} is already done; an agent cannot reopen or re-close it.`);
+    }
+    throw new Error(`submit failed (HTTP ${res.status}): ${data.error || 'unknown'}${data.status ? ` (current status: ${data.status})` : ''}`);
+  }
+  return `${data.number || '#' + id} moved to "Requiring testing". A human marks it tested on the board once verified.`;
 }
 
 /* ── helpers ─────────────────────────────────────────────────────────────── */
