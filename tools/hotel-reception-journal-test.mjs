@@ -17,7 +17,8 @@ const instrumented = source.replace(/\}\)\(\);\s*$/, `
     cuRefreshReception, cuSubmitStay, cuStayScope,
     cuState, cuHydrate, cuDocument, cuMerge, nowLabel,
     cuCommercialState, cuCommercialBody, cuQuoteRows, cuStayQuoteSignature, cuWireStayCommercial, cuLoadCommercial,
-    cuProductionState, cuProductionBody, cuLoadProduction,cuSejoursBody
+    cuProductionState, cuProductionBody, cuLoadProduction,cuSejoursBody,
+    cuRoomStatus, cuRoomOccupancy
   };
 })();`);
 const TODAY = '2026-09-08';
@@ -619,3 +620,55 @@ if (process.argv.includes('--preview')) {
 <main class="hx-page">${markup}</main></body></html>`, 'utf8');
   console.log('Synthetic reception preview: ' + output);
 }
+
+/* Ticket #0001 · le journal listait les mouvements du jour sans permettre de
+ * les enregistrer : aucun bouton pour marquer une arrivée ou un départ. */
+test('the reception journal offers the movements it lists', () => {
+  const f = boot();
+  const arriving = stay('bk-arrive', 'confirmed', TODAY, '2026-09-11');
+  const leaving = stay('bk-leave', 'checked_in', '2026-09-05', TODAY, { resourceId: 'room:2' });
+
+  const arrivals = journal(f, [arriving, leaving], { view: 'arrivals' });
+  assert.match(arrivals, /data-action="hx-stay-checkin" data-arg="bk-arrive"/,
+    'a confirmed arrival can be checked in straight from the journal');
+
+  const departures = journal(f, [arriving, leaving], { view: 'departures' });
+  assert.match(departures, /data-action="hx-stay-checkout" data-arg="bk-leave"/,
+    'an in-house guest leaving today can be checked out from the journal');
+  assert.doesNotMatch(departures, /data-action="hx-stay-checkin" data-arg="bk-leave"/,
+    'a guest already in the house is never offered a second check-in');
+  f.assertNetwork();
+});
+
+/* Ticket #0001 · la chambre 102, occupée par un client arrivé, s'affichait
+ * « Libre · propre » — et proposait de la revendre en walk-in. */
+test('room status follows the stays, not only the housekeeping document', () => {
+  const f = boot();
+  const rooms = f.api.cuState().rooms;
+  const key = Object.keys(rooms)[0];
+  assert.ok(key, 'the fixture hotel exposes at least one room');
+  const room = rooms[key];
+  room.status = 'libre';
+
+  assert.equal(f.api.cuRoomStatus(room).key, 'libre',
+    'a room with no stay stays free');
+
+  f.setDoc([stay('bk-inhouse', 'checked_in', '2026-09-05', '2026-09-12', { resourceId: room.id, updatedAt: 200 })]);
+  const occupied = f.api.cuRoomStatus(room);
+  assert.equal(occupied.key, 'occ',
+    'a checked-in guest makes the room read occupied even while housekeeping says libre');
+
+  f.setDoc([stay('bk-leaving', 'checked_in', '2026-09-05', TODAY, { resourceId: room.id, updatedAt: 300 })]);
+  assert.equal(f.api.cuRoomStatus(room).label, 'Départ aujourd’hui',
+    'a stay ending today reads as a departure');
+
+  f.setDoc([stay('bk-gone', 'completed', '2026-09-05', TODAY, { resourceId: room.id, updatedAt: 400 })]);
+  assert.equal(f.api.cuRoomStatus(room).key, 'libre',
+    'once checked out the room returns to what housekeeping says');
+
+  room.status = 'hs';
+  f.setDoc([stay('bk-inhouse2', 'checked_in', '2026-09-05', '2026-09-12', { resourceId: room.id, updatedAt: 500 })]);
+  assert.equal(f.api.cuRoomStatus(room).key, 'hs',
+    'an out-of-service room is never presented as sellable or occupied');
+  f.assertNetwork();
+});

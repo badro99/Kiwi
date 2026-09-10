@@ -461,6 +461,36 @@ export async function onRequestPost({ request, env }) {
       } catch (_) { return json({ error: 'write-failed' }, 503); }
       continue;
     }
+    /* Arrivée et départ au comptoir.
+     *
+     * Un check-in ou un check-out ne change QUE le statut. Passer par `save`
+     * obligerait la réception à renvoyer le dossier entier — nom, téléphone,
+     * e-mail, voyageurs, note — et `rec` est reconstruit à partir de la
+     * requête : le moindre champ oublié serait effacé sur une réservation
+     * réelle. Cette action ne touche donc que `status`, exactement comme
+     * `cancel`, et laisse `canTransition` refuser les sauts interdits
+     * (une demande non confirmée ne peut pas arriver directement). */
+    if (action === 'status') {
+      if (!old) return json({ error: 'stay-not-found' }, 404);
+      const next = str(b?.status, 24);
+      if (next !== 'checked_in' && next !== 'completed') return json({ error: 'bad-status' }, 400);
+      if (!canTransition(old.status, next)) {
+        return json({ error: 'invalid-status-transition', from: old.status, to: next }, 409);
+      }
+      if (old.status === next) return json({ ok: true, rev, booking: old });
+      const previous = { ...old, hotel: { ...old.hotel } };
+      old.status = next; old.updatedAt = now;
+      const indexInDoc = doc.bookings.findIndex((x) => x.id === old.id);
+      if (indexInDoc >= 0) doc.bookings[indexInDoc] = old;
+      /* Même règle que partout ailleurs : sans la table, le document est
+         l'unique copie et l'élaguer détruirait des séjours confirmés. */
+      if (hasResTable) pruneReservationsDoc(doc, now);
+      try {
+        const written = await writeReservationWithEvents(env, { merchant, doc, rev, now, actor, events: [{ previous, current: old, action: 'status' }] });
+        if (written) { await poke(env, merchant, 'reservations'); return json({ ok: true, rev: written, booking: old }); }
+      } catch (_) { return json({ error: 'write-failed' }, 503); }
+      continue;
+    }
     if (action !== 'save') return json({ error: 'bad-action' }, 400);
 
     const checkIn = str(b?.checkIn, 32), checkOut = str(b?.checkOut, 32), typeId = str(b?.roomTypeId, 64), askedRoom = str(b?.resourceId, 64);

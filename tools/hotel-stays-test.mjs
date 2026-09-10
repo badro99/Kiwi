@@ -52,7 +52,7 @@ const env = { DB, AUTH_SECRET: secret };
 const call = (body, withCookie = true) => onRequestPost({ env, request:new Request('https://kiwi.test/api/hotel/stays', { method:'POST', headers:{ 'Content-Type':'application/json', ...(withCookie ? { Cookie:cookie } : {}) }, body:JSON.stringify(body) }) });
 const day = (n) => new Date(Date.now()+n*86400000).toISOString().slice(0,10);
 const base = { action:'save', merchant:'riad-test', clientRef:'staff-ref-0001', roomTypeId:'type-atlas', checkIn:day(5), checkOut:day(7), partySize:2, channel:'booking', status:'confirmed', externalRef:'OTA-4219', actorId:'spoofed-client', actorRole:'admin', customer:{name:'Salma',phone:'0612345678',email:''}, guestSegments:[{guestId:'gst_test_0001',nationalityCountry:'MA',usualResidenceCountry:'MA',ageCategory:'adult'},{guestId:'gst_test_0002',nationalityCountry:'FR',usualResidenceCountry:'FR',ageCategory:'minor'}] };
-const EXPECTED = 21;
+const EXPECTED = 30;
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
 let controls = 0;
 function ok(value, label) { assert.ok(value, label); controls++; }
@@ -95,6 +95,43 @@ ok(response.status === 409 && body.error === 'duplicate-reference', 'one OTA ref
 
 const finalDoc = JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE merchant='riad-test' AND feature='reservations'").get().data);
 ok(finalDoc.bookings.some((x) => x.source === 'import') && finalDoc.bookings.some((x) => x.status === 'cancelled'), 'the shared reservations document holds OTA and lifecycle truth');
+
+/* Arrivée et départ au comptoir (action `status`).
+ *
+ * La propriété qui compte n'est pas « le statut change » mais « rien d'autre
+ * ne change » : `save` reconstruit le dossier depuis la requête, donc un
+ * check-in passé par `save` effacerait le téléphone, l'e-mail et les
+ * voyageurs que la réception n'aurait pas renvoyés. */
+const moveCreate = await call({ ...base, clientRef: 'staff-ref-move', externalRef: 'OTA-MOVE', checkIn: day(20), checkOut: day(22), customer: { name: 'Nadia', phone: '0655667788', email: 'nadia@test.ma' } });
+const movable = await moveCreate.json();
+ok(moveCreate.status === 200 && movable.booking && movable.booking.status === 'confirmed', 'a stay is created to exercise the reception movements');
+const moveId = movable.booking.id;
+
+let move = await call({ action: 'status', merchant: 'riad-test', id: moveId, status: 'checked_in' }, false);
+ok(move.status === 401, 'an anonymous caller cannot move a stay through reception');
+
+move = await call({ action: 'status', merchant: 'riad-test', id: moveId, status: 'completed' });
+ok(move.status === 409 && (await move.json()).error === 'invalid-status-transition', 'a confirmed stay cannot skip straight to completed');
+
+move = await call({ action: 'status', merchant: 'riad-test', id: moveId, status: 'cancelled' });
+ok(move.status === 400, 'the status action refuses anything but check-in and check-out');
+
+move = await call({ action: 'status', merchant: 'riad-test', id: 'bk-does-not-exist', status: 'checked_in' });
+ok(move.status === 404, 'an unknown stay id is refused');
+
+move = await call({ action: 'status', merchant: 'riad-test', id: moveId, status: 'checked_in' });
+const movedBody = await move.json();
+ok(move.status === 200 && movedBody.booking.status === 'checked_in', 'check-in records the arrival');
+ok(movedBody.booking.customer.phone === '0655667788' && movedBody.booking.customer.email === 'nadia@test.ma'
+  && movedBody.booking.hotel.guestSegments.length === 2 && movedBody.booking.hotel.externalRef === 'OTA-MOVE'
+  && movedBody.booking.hotel.checkIn === day(20) && movedBody.booking.hotel.checkOut === day(22),
+  'check-in preserves contact details, guest segments, OTA reference and dates');
+
+const moveEvent = sql.prepare("SELECT event_type FROM hotel_stay_events WHERE merchant='riad-test' AND stay_id=? ORDER BY srv_cursor DESC").get(moveId);
+ok(moveEvent.event_type === 'status_checked_in', 'the arrival is appended to the event ledger');
+
+move = await call({ action: 'status', merchant: 'riad-test', id: moveId, status: 'completed' });
+ok(move.status === 200 && (await move.json()).booking.status === 'completed', 'check-out closes the stay');
 
 const beforeAtomicRev = sql.prepare("SELECT rev FROM store_docs WHERE merchant='riad-test' AND feature='reservations'").get().rev;
 sql.prepare("INSERT INTO hotel_stay_events (merchant,id,stay_id,event_type,payload_json,occurred_ts,srv_cursor,event_ordinal,actor_id,actor_role) VALUES (?,?,?,?,?,?,?,?,?,?)").run('riad-test','hse:blocker','bk-blocker','created','{}',Date.now(),beforeAtomicRev+1,0,'test','system');

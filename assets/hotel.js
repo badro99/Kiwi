@@ -319,6 +319,9 @@
   let openModal = null;
   let cuTapeOffset = 0;
   let cuReservationEventsBound = false;
+  let cuReceptionControlsBound = false;
+  /* Occupation réelle, recalculée à chaque peinture (voir cuRoomOccupancy). */
+  let cuOccupancyMemo = null;
   const cuRackFilter = {
     floor: 'all',
     floors: new Set(),
@@ -978,6 +981,8 @@
     return p;
   }
   function rerender() {
+    // Les séjours ont pu bouger depuis la peinture précédente.
+    cuOccupancyMemo = null;
     if (!openDrawer) return;
     const body = openDrawer.el.querySelector('.genpage-body') || openDrawer.el.querySelector('.kiwi-drawer-body');
     if (body) {
@@ -1228,15 +1233,21 @@
     if ((r.status === 'occ' || r.status === 'depart') && F()[n]) return openFolio(n);
     if (r.status === 'arrivee' && F()[n]) return openFolio(n);
     const dates = (opts && opts.startAt && opts.endAt) ? { startAt: +opts.startAt, endAt: +opts.endAt } : null;
+    /* Ce qu'on affiche est l'état réel de la chambre, séjours compris — sans
+     * quoi une chambre habitée s'annonce « Libre · propre » et propose le
+     * walk-in. `live` sert aussi à nommer le client présent. */
+    const liveRoom = cuRoomLive(r);
+    const liveStatus = cuRoomStatus(r);
     const stLbl = { arrivee: 'Arrivée attendue', libre: 'Libre · propre', sale: 'Libre · sale, en remise', hs: 'Hors-service' };
     const m = K().modal({
       tag: 'CH. ' + n + ' · ' + roomTypeOf(n).name.toUpperCase(),
-      title: r.guest || stLbl[r.status] || 'Chambre ' + n,
+      title: r.guest || liveRoom?.stay?.customer?.name || (liveRoom ? liveStatus.label : (stLbl[r.status] || 'Chambre ' + n)),
       desc: r.meta || '',
       width: 480,
       body: `
         <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;">
-          <div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Statut</span><b>${stLbl[r.status] || r.status}</b></div>
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Statut</span><b>${esc(liveStatus.label)}</b></div>
+          ${liveRoom ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Dossier</span><b>${esc(liveRoom.stay.hotel.checkIn)} → ${esc(liveRoom.stay.hotel.checkOut)}</b></div>` : ''}
           <div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Tarif de base</span><b style="font-family:var(--mono);">${MAD(roomTypeOf(n).base)} / nuit</b></div>
           ${r.view ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Vue</span><b>Vue ${esc(cuViewLabel(r.view))}</b></div>` : ''}
           ${(r.characteristics && r.characteristics.length) ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Équipements</span><b>${esc(r.characteristics.map((c) => cuCharLabel(c)).join(', '))}</b></div>` : ''}
@@ -1256,7 +1267,8 @@
           ${r.status === 'sale' ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Ménage</span><b>${isCustomHotel() ? 'à remettre à blanc' : ((HK_QUEUE.find((q) => q.room === n) || {}).who || 'à assigner')}</b></div>` : ''}
         </div>
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap;">
-          ${r.status === 'libre' ? `<button class="hx-btn atlas" data-action="hx-walkin-room" data-arg="${n}">Vendre ce soir · walk-in</button>` : ''}
+          ${liveStatus.key === 'libre' ? `<button class="hx-btn atlas" data-action="hx-walkin-room" data-arg="${n}">Vendre ce soir · walk-in</button>` : ''}
+          ${liveRoom && liveRoom.kind !== 'arrivee' ? `<button class="hx-btn ghost" data-action="hx-stay-edit" data-arg="${esc(liveRoom.stay.id)}">Ouvrir le dossier</button>` : ''}
           ${r.status === 'sale' ? (isCustomHotel()
             ? `<button class="hx-btn atlas" data-action="hx-hk-done" data-arg="${n}">Marquer propre · relouable</button>`
             : `<button class="hx-btn atlas" data-action="hx-hk-open">Ouvrir la file ménage</button>`) : ''}
@@ -1792,7 +1804,7 @@
       ${['inhouse', 'attention'].includes(filter.view) ? '<p class="hx-daily-note">Cette vue suit les statuts actuels, indépendamment de la date des mouvements choisie.</p>' : ''}
       <div class="hx-daily-list">${rows.map((b) => {
         const room = rooms.find((r) => r.id === b.resourceId);
-        return `<article class="hx-daily-row"><div class="hx-daily-room">${room ? 'Ch. ' + esc(room.n) : 'Non attribuée'}</div><div class="hx-daily-guest"><b>${esc(b.customer?.name || 'Client')}</b><span>${esc(b.code || '')} · ${esc(channels[b.hotel.channel] || 'Autre')} ${b.hotel.externalRef ? '· ' + esc(b.hotel.externalRef) : ''}</span><span>${esc(b.hotel.checkIn)} → ${esc(b.hotel.checkOut)} · ${esc(b.partySize || 1)} pers. · ${esc(b.hotel.roomTypeName || '')}</span>${b.note ? `<span class="hx-daily-note">${esc(b.note)}</span>` : ''}</div><span class="hx-daily-status">${esc(labels[b.status] || b.status)}</span><button class="hx-btn ghost" data-action="hx-stay-edit" data-arg="${esc(b.id)}" aria-label="${esc('Ouvrir le dossier ' + (b.code || b.customer?.name || 'client'))}">Ouvrir le dossier</button></article>`;
+        return `<article class="hx-daily-row"><div class="hx-daily-room">${room ? 'Ch. ' + esc(room.n) : 'Non attribuée'}</div><div class="hx-daily-guest"><b>${esc(b.customer?.name || 'Client')}</b><span>${esc(b.code || '')} · ${esc(channels[b.hotel.channel] || 'Autre')} ${b.hotel.externalRef ? '· ' + esc(b.hotel.externalRef) : ''}</span><span>${esc(b.hotel.checkIn)} → ${esc(b.hotel.checkOut)} · ${esc(b.partySize || 1)} pers. · ${esc(b.hotel.roomTypeName || '')}</span>${b.note ? `<span class="hx-daily-note">${esc(b.note)}</span>` : ''}</div><span class="hx-daily-status">${esc(labels[b.status] || b.status)}</span>${b.status === 'confirmed' && b.hotel.checkIn <= today ? `<button class="hx-btn atlas" data-action="hx-stay-checkin" data-arg="${esc(b.id)}" aria-label="${esc('Enregistrer l’arrivée de ' + (b.customer?.name || 'client'))}">Check-in</button>` : ''}${b.status === 'checked_in' && b.hotel.checkOut <= today ? `<button class="hx-btn atlas" data-action="hx-stay-checkout" data-arg="${esc(b.id)}" aria-label="${esc('Enregistrer le départ de ' + (b.customer?.name || 'client'))}">Check-out</button>` : ''}<button class="hx-btn ghost" data-action="hx-stay-edit" data-arg="${esc(b.id)}" aria-label="${esc('Ouvrir le dossier ' + (b.code || b.customer?.name || 'client'))}">Ouvrir le dossier</button></article>`;
       }).join('') || '<p class="hx-empty">Aucun dossier dans cette vue. Vérifiez la date, les filtres et l’état de l’actualisation.</p>'}</div>
       <p class="hx-daily-note">Les walk-ins encaissés séparément restent accessibles dans le plan des chambres et les folios. Cette liste présente les dossiers de réservation.</p>
     </section>`;
@@ -2224,12 +2236,63 @@
     const st = cuState();
     return cuFloorRows().map((f) => ({ id: f.id, lbl: f.name, rooms: Object.keys(st.rooms).map(Number).filter((n) => st.rooms[n].floorId === f.id).sort((a, b) => a - b) }));
   }
+  function cuToday() {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  }
+  /* Qui occupe réellement chaque chambre, d'après les séjours.
+   *
+   * Le document « chambres » ne porte que l'état ménage : personne ne le
+   * repasse en « occ » quand un client arrive. Le plan affichait donc
+   * « Libre · propre » sur une chambre habitée, et lui proposait même
+   * « Vendre ce soir · walk-in » — revendre une chambre déjà occupée. La
+   * présence vient des séjours ; le document ne décide plus que de la
+   * propreté et du hors-service. */
+  function cuRoomOccupancy() {
+    const stays = cuAllStays();
+    /* Le cache se périme tout seul : se fier au seul `rerender()` rendrait la
+     * réponse fausse pour tout appel fait entre deux peintures. */
+    let freshest = 0;
+    stays.forEach((b) => { const u = +b?.updatedAt || 0; if (u > freshest) freshest = u; });
+    const signature = cuStayScope() + ':' + stays.size + ':' + freshest;
+    if (cuOccupancyMemo && cuOccupancyMemo.signature === signature) return cuOccupancyMemo.map;
+    const today = cuToday();
+    const map = new Map();
+    stays.forEach((b) => {
+      if (!b?.hotel || !b.resourceId) return;
+      if (['cancelled', 'no_show', 'completed'].includes(b.status)) return;
+      const cin = b.hotel.checkIn, cout = b.hotel.checkOut;
+      if (!cin || !cout) return;
+      if (b.status === 'checked_in' && cin <= today && today <= cout) {
+        map.set(b.resourceId, { kind: cout === today ? 'depart' : 'occ', stay: b });
+        return;
+      }
+      // Une arrivée attendue ne masque jamais un client déjà présent.
+      if (b.status === 'confirmed' && cin === today && !map.has(b.resourceId)) {
+        map.set(b.resourceId, { kind: 'arrivee', stay: b });
+      }
+    });
+    cuOccupancyMemo = { signature, map };
+    return map;
+  }
+  function cuRoomLive(room) {
+    // La maquette de démonstration porte déjà ses statuts en dur.
+    if (!room || !room.id || !isCustomHotel()) return null;
+    try { return cuRoomOccupancy().get(room.id) || null; } catch (_) { return null; }
+  }
   function cuRoomStatus(room) {
+    // Hors-service l'emporte : une chambre condamnée ne se vend pas, même
+    // si un dossier la désigne encore.
+    if (room.status === 'hs') return { key: 'hs', label: 'Hors-service' };
+    const live = cuRoomLive(room);
+    if (live) {
+      if (live.kind === 'depart') return { key: 'occ', label: 'Départ aujourd’hui' };
+      if (live.kind === 'occ') return { key: 'occ', label: 'Occupée' };
+      return { key: 'arrivee', label: 'Arrivée attendue' };
+    }
     if (room.status === 'occ') return { key: 'occ', label: 'Occupée' };
     if (room.status === 'depart') return { key: 'occ', label: 'Départ aujourd’hui' };
     if (room.status === 'arrivee') return { key: 'arrivee', label: 'Arrivée attendue' };
     if (room.status === 'sale') return { key: 'sale', label: 'À nettoyer' };
-    if (room.status === 'hs') return { key: 'hs', label: 'Hors-service' };
     return { key: 'libre', label: 'Libre · propre' };
   }
   function cuResetRackFilter() {
@@ -5556,6 +5619,51 @@
     } catch (_) { toast('Confirmation non reçue', { type: 'warn', desc: 'Actualisez le dossier pour vérifier si l’annulation a été enregistrée.' }); }
     finally { button.disabled = false; }
   }
+  /* Arrivée et départ, depuis le journal de réception.
+   *
+   * Le journal listait les mouvements du jour sans permettre de les
+   * enregistrer. On passe par l'action `status`, qui ne touche que le statut :
+   * un `save` complet reconstruit le dossier à partir de ce qu'on envoie et
+   * effacerait le téléphone, l'e-mail ou les voyageurs non renvoyés. */
+  async function cuMoveStayStatus(id, next, button) {
+    const slug = cuMerchantSlug();
+    if (!slug || !id) return;
+    const scope = cuStayScope(), cache = cuStayCache();
+    const arriving = next === 'checked_in';
+    if (button) button.disabled = true;
+    try {
+      const res = await fetch('/api/hotel/stays', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'status', merchant: slug, id, status: next }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.booking) {
+        toast(arriving ? 'Arrivée non enregistrée' : 'Départ non enregistré', {
+          type: 'warn',
+          desc: body.error === 'invalid-status-transition'
+            ? 'Statut actuel : ' + (body.from || 'inconnu') + '. Ouvrez le dossier.'
+            : (body.error || 'Réessayez.'),
+        });
+        return;
+      }
+      cache.set(body.booking.id, body.booking);
+      if (scope !== cuStayScope() || cuMerchantSlug() !== slug) return;
+      const doc = window.KiwiReservations?.get?.();
+      if (doc && Array.isArray(doc.bookings)) {
+        const i = doc.bookings.findIndex((x) => x.id === body.booking.id);
+        if (i >= 0) doc.bookings[i] = body.booking;
+      }
+      toast(arriving ? 'Client arrivé' : 'Départ enregistré', {
+        type: 'success',
+        desc: arriving
+          ? 'La chambre apparaît occupée dans le plan.'
+          : 'La chambre n’est plus occupée. Marquez-la à remettre à blanc si besoin.',
+      });
+      rerender();
+    } catch (_) {
+      toast('Confirmation non reçue', { type: 'warn', desc: 'Actualisez le journal pour vérifier si le mouvement a été enregistré.' });
+    } finally { if (button) button.disabled = false; }
+  }
   const cuCommercialByScope = new Map();
   const cuBoards = { room_only: 'Logement seul', bb: 'Bed & Breakfast', hb_lunch: 'Demi-pension · déjeuner', hb_dinner: 'Demi-pension · dîner', full_board: 'Pension complète' };
   const cuKinds = { individual: 'Particulier', agency: 'Agence', company: 'Société' };
@@ -6891,18 +6999,48 @@
   }
 
   /* — custom-hotel controls — */
-  handlers['hx-daily-apply'] = (el) => {
-    const root = el.closest('.hx-daily');
-    if (!root || !isCustomHotel()) return;
+  /* Le sélecteur « Vue » annonce lui-même ce qu'il contient — « Départs (1) ».
+   * Tant qu'il fallait ensuite appuyer sur « Afficher », la liste restait sur
+   * la vue précédente : le compteur promettait un départ et la page répondait
+   * « Aucun dossier dans cette vue ». Lire les contrôles est donc séparé de la
+   * décision de recharger. */
+  function cuReadReceptionControls(root) {
     const date = root.querySelector('[data-hx-daily-date]');
-    if (!date?.value || !date.checkValidity()) { date?.reportValidity(); return; }
+    if (!date?.value || !date.checkValidity()) { date?.reportValidity(); return null; }
     const filter = cuReceptionSelection();
+    const previousDate = filter.date;
     filter.date = date.value;
     const view = root.querySelector('[data-hx-daily-view]')?.value;
     filter.view = ['arrivals', 'departures', 'inhouse', 'attention'].includes(view) ? view : 'arrivals';
     filter.q = String(root.querySelector('[data-hx-daily-search]')?.value || '').slice(0, 100);
+    return { dateChanged: previousDate !== filter.date };
+  }
+  handlers['hx-daily-apply'] = (el) => {
+    const root = el.closest('.hx-daily');
+    if (!root || !isCustomHotel()) return;
+    if (!cuReadReceptionControls(root)) return;
     cuRefreshReception();
   };
+  if (!cuReceptionControlsBound) {
+    cuReceptionControlsBound = true;
+    /* Délégué au document : `rerender()` remplace tout le corps du tiroir, donc
+     * un écouteur posé sur le <select> lui-même ne survivrait pas au premier
+     * rafraîchissement. La recherche texte garde « Afficher » — elle ne doit
+     * pas se relancer à chaque frappe. */
+    document.addEventListener('change', (event) => {
+      const control = event.target?.closest?.('[data-hx-daily-view], [data-hx-daily-date]');
+      if (!control || !isCustomHotel()) return;
+      const root = control.closest('.hx-daily');
+      if (!root) return;
+      const read = cuReadReceptionControls(root);
+      if (!read) return;
+      // Changer de vue relit des dossiers déjà chargés ; changer de date
+      // demande un aller-retour serveur.
+      if (read.dateChanged) cuRefreshReception(); else rerender();
+    });
+  }
+  handlers['hx-stay-checkin'] = (el, arg) => { if (isCustomHotel()) cuMoveStayStatus(String(arg || ''), 'checked_in', el); };
+  handlers['hx-stay-checkout'] = (el, arg) => { if (isCustomHotel()) cuMoveStayStatus(String(arg || ''), 'completed', el); };
   handlers['hx-daily-refresh'] = () => { if (isCustomHotel()) cuRefreshReception(); };
   handlers['hx-monthly-closing'] = () => { if (isCustomHotel()) cuMonthlyClosingModal(); };
   handlers['hx-tape-prev'] = async () => {
