@@ -56,7 +56,8 @@ npx wrangler d1 execute kiwi-sales --remote \
 
 Copy `tools/shopify-sync-worker/wrangler.example.toml` to an ignored local
 `wrangler.toml`, set the same independent 32-byte `SHOPIFY_CRON_SECRET` on the
-Pages project and Worker, then deploy from that directory. The Worker calls one
+Pages project and Worker, trigger a production Pages deployment so the new
+binding is attached, then deploy from that directory. The Worker calls one
 exact, bearer-protected Pages route; Shopify OAuth secrets stay in Pages and are
 never duplicated. The cron drains up to 50 coalesced variant targets each
 minute. `/health` exposes availability only, never merchant names, products,
