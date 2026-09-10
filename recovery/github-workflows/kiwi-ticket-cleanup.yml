@@ -1,0 +1,17 @@
+# Recovery copy: install as .github/workflows/kiwi-ticket-cleanup.yml
+# once the GitHub credential has the workflow scope.
+name: Remove expired Kiwi tickets
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Delete tickets whose 20-day retention has ended
+        run: curl --fail --silent --show-error --retry 3 --request POST https://kiwi-os.com/api/tickets/cleanup
