@@ -340,12 +340,12 @@
     "sha": "d85678a7afe63a1a"
   },
   "assets/hotel.css": {
-    "v": "35",
-    "sha": "02953ae02120a5cf"
+    "v": "36",
+    "sha": "b9d5816119929f67"
   },
   "assets/hotel.js": {
-    "v": "58",
-    "sha": "f4c72349bb09f498"
+    "v": "59",
+    "sha": "6833ecc7c1f74869"
   },
   "assets/hours-ui.js": {
     "v": "1",
@@ -874,6 +874,14 @@
   "assets/tenant-purge.js": {
     "v": "2",
     "sha": "64673f83b7dd7b23"
+  },
+  "assets/tickets.css": {
+    "v": "2",
+    "sha": "76e11a63a483b31d"
+  },
+  "assets/tickets.js": {
+    "v": "2",
+    "sha": "a0b5de2d19ceb542"
   },
   "assets/tokens.css": {
     "v": "2052",

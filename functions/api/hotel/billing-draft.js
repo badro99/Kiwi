@@ -6,9 +6,13 @@ import { draftIdOK, digest, draftSource, draftRooms, buildDraft } from './_billi
 const reply=(b,s=200)=>json(b,s,{'Cache-Control':'no-store'});
 // The identical ordered snapshot is compared inside the single CAS write.
 // An added room, cancellation or changed price cannot race a saved draft.
-const snapshotSQL=`SELECT COALESCE(json_group_array(json_object('id',id,'code',code,'room_type_id',room_type_id,'room_id',room_id,'check_in',check_in,'check_out',check_out,'start_at',start_at,'end_at',end_at,'status',status,'party_size',party_size,'customer_name',customer_name,'rate',rate,'total',total,'updated_ts',updated_ts,'raw_json',raw_json)),'[]') FROM (SELECT * FROM hotel_reservations WHERE merchant=? AND COALESCE(NULLIF(CASE WHEN json_valid(raw_json) THEN json_extract(raw_json,'$.hotel.dossierId') END,''),id)=? ORDER BY id LIMIT 201)`;
+/* A completed individual stay must remain billable even when an older
+ * checkout/sync path left a stale dossierId in raw_json.  A group id still
+ * finds every member, while an exact reservation id is always accepted as a
+ * safe fallback.  Keep the predicate identical in GET and the CAS write. */
+const snapshotSQL=`SELECT COALESCE(json_group_array(json_object('id',id,'code',code,'room_type_id',room_type_id,'room_id',room_id,'check_in',check_in,'check_out',check_out,'start_at',start_at,'end_at',end_at,'status',status,'party_size',party_size,'customer_name',customer_name,'rate',rate,'total',total,'updated_ts',updated_ts,'raw_json',raw_json)),'[]') FROM (SELECT * FROM hotel_reservations WHERE merchant=? AND (id=? OR COALESCE(NULLIF(CASE WHEN json_valid(raw_json) THEN json_extract(raw_json,'$.hotel.dossierId') END,''),id)=?) ORDER BY id LIMIT 201)`;
 async function load(env,merchant,id){
-  const row=await env.DB.prepare(snapshotSQL).bind(merchant,id).first();
+  const row=await env.DB.prepare(snapshotSQL).bind(merchant,id,id).first();
   const raw=Object.values(row||{})[0];
   if(typeof raw!=='string')throw new Error('unavailable');
   const rows=JSON.parse(raw);
@@ -70,7 +74,7 @@ export async function onRequestPost({request,env}){
     const directoryCheck="COALESCE((SELECT rev FROM store_docs WHERE merchant=? AND feature='hotel-commercial'),0)=?";
     const result=await env.DB.prepare(`INSERT INTO store_docs(merchant,feature,data,rev,updated_ts) SELECT ?,?,?,1,? WHERE (${snapshotSQL})=? AND ${directoryCheck} AND (?=0 OR EXISTS(SELECT 1 FROM store_docs WHERE merchant=? AND feature=? AND rev=?))
       ON CONFLICT(merchant,feature) DO UPDATE SET data=excluded.data,rev=store_docs.rev+1,updated_ts=excluded.updated_ts WHERE store_docs.rev=?`)
-      .bind(merchant,d.feature,data,now,merchant,b.dossierId,d.raw,merchant,d.directoryRev,d.rev,merchant,d.feature,d.rev,d.rev).run();
+      .bind(merchant,d.feature,data,now,merchant,b.dossierId,b.dossierId,d.raw,merchant,d.directoryRev,d.rev,merchant,d.feature,d.rev,d.rev).run();
     if(Number(result.meta?.changes)!==1)return reply({error:'draft-stale'},409);
     return reply({ok:true,rev:d.rev+1,saved});
   }catch(e){return reply({error:e.code||'billing-unavailable'},e.code?400:503);}

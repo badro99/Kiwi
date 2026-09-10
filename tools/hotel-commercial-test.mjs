@@ -206,6 +206,21 @@ test('dossier reads list rooms despite broken billing material, writes stay clos
     assert.equal(badStatus.body.preview,null);
   }finally{f.sql.close();}
 });
+test('completed individual stay remains billable when its stored dossier id is stale',async()=>{
+  const f=await fixture();try{
+    await f.seed();
+    const stay=(await f.stay({clientRef:'completed-stay-billing-001'})).body.booking;
+    const raw=JSON.parse(f.sql.prepare('SELECT raw_json FROM hotel_reservations WHERE id=?').get(stay.id).raw_json);
+    raw.hotel={...(raw.hotel||{}),dossierId:'old-dossier-reference'};
+    f.sql.prepare('UPDATE hotel_reservations SET status=?,raw_json=? WHERE id=?').run('completed',JSON.stringify(raw),stay.id);
+    const result=await f.call(draftGet,null,true,'billing-draft?dossierId='+stay.id);
+    assert.equal(result.status,200,JSON.stringify(result.body));
+    assert.equal(result.body.billingError,null);
+    assert.ok(result.body.preview && result.body.preview.lines.length===2, JSON.stringify(result.body));
+    assert.equal(result.body.source.rooms[0].id,stay.id);
+    assert.equal(result.body.source.rooms[0].status,'completed');
+  }finally{f.sql.close();}
+});
 test('preinvoice CAS rejects source, directory and draft races without overwriting the saved version',async()=>{
   for(const kind of ['source','directory','draft']){
     const f=await fixture();try{

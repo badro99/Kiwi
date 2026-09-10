@@ -269,6 +269,38 @@ for (const mode of ['document', 'd1', 'd1-pruned']) {
     } finally { f.sql.close(); }
   });
 
+  test(`${mode}: exact stay lookup reopens a historical completed stay outside the default window`, async () => {
+    const f = await fixture(mode);
+    try {
+      const created = await f.post({ clientRef: `historical-${mode}` });
+      assert.equal(created.status, 200);
+      const id = created.body.booking.id;
+      const oldIn = '2020-01-10', oldOut = '2020-01-12';
+      const doc = f.savedDoc();
+      const historic = mode === 'document'
+        ? doc.bookings.find((b) => b.id === id)
+        : created.body.booking;
+      historic.status = 'completed';
+      historic.startAt = Date.parse(`${oldIn}T15:00:00Z`);
+      historic.endAt = Date.parse(`${oldOut}T11:00:00Z`);
+      historic.hotel = { ...historic.hotel, checkIn: oldIn, checkOut: oldOut, nights: 2 };
+      if (mode === 'document') {
+        f.sql.prepare("UPDATE store_docs SET data=? WHERE merchant=? AND feature='reservations'")
+          .run(JSON.stringify(doc), f.input.merchant);
+      }
+      if (mode !== 'document') {
+        f.sql.prepare('UPDATE hotel_reservations SET status=?,start_at=?,end_at=?,check_in=?,check_out=?,raw_json=? WHERE merchant=? AND id=?')
+          .run('completed', Date.parse(`${oldIn}T15:00:00Z`), Date.parse(`${oldOut}T11:00:00Z`), oldIn, oldOut, JSON.stringify(historic), f.input.merchant, id);
+      }
+      const result = await f.get({ id });
+      assert.equal(result.status, 200);
+      assert.equal(result.body.stays.length, 1, 'exact id lookup is not hidden by the current-date window');
+      assert.equal(result.body.stays[0].id, id);
+      assert.equal(result.body.stays[0].status, 'completed');
+      assert.equal(result.body.stays[0].hotel.checkIn, oldIn);
+    } finally { f.sql.close(); }
+  });
+
   test(`${mode}: edits keep booked cents; category changes use the current catalogue`, async () => {
     const f = await fixture(mode);
     try {

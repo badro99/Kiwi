@@ -172,6 +172,8 @@ try {
   await page.click('[data-action="hx-floors"]');
   await page.waitForSelector('.kiwi-modal.hx-floors-modal');
   await waitForModalAnimation(page);
+  check(await page.$('.hx-floors-modal [data-action="hx-views-manage-open"]') === null, 'section manager no longer mixes room-view configuration into section actions');
+  check(await page.$('[data-action="hx-views-manage-open"]') !== null, 'room plan keeps a dedicated views and characteristics action');
   check(await page.$eval('.hx-floors-modal', (modal) => getComputedStyle(modal).position === 'relative' && modal.getBoundingClientRect().width > 0), 'floor manager uses the shipped interactive modal layout');
   await page.screenshot({ path: path.join(screenshotDir, 'desktop-floor-manager.png'), fullPage: false });
   await page.click('[data-action="hx-floor-new"]');

@@ -354,8 +354,14 @@ export async function onRequestGet({ request, env }) {
 
   if (hasResTable) {
     try {
-      let query = "SELECT * FROM hotel_reservations WHERE merchant = ? AND start_at < ? AND end_at > ?";
-      const params = [merchant, toEpoch, fromEpoch];
+      // An exact id lookup is also used to reopen historical/completed stays
+      // from billing. Do not let the default current-date window hide it.
+      let query = "SELECT * FROM hotel_reservations WHERE merchant = ?";
+      const params = [merchant];
+      if (!stayId) {
+        query += " AND start_at < ? AND end_at > ?";
+        params.push(toEpoch, fromEpoch);
+      }
       if (stayId) { query += ' AND id = ?'; params.push(stayId); }
       if (clientRef) {
         query += " AND CASE WHEN json_valid(raw_json) THEN json_extract(raw_json, '$.publicRef') END = ?";
@@ -402,9 +408,9 @@ export async function onRequestGet({ request, env }) {
       if (dossierId && (b.hotel.dossierId || b.id) !== dossierId) return false;
       if (roomId && b.resourceId !== roomId) return false;
       if (statusParam && b.status !== statusParam) return false;
-      return overlaps(fromEpoch, toEpoch, b.startAt, b.endAt);
+      return stayId || overlaps(fromEpoch, toEpoch, b.startAt, b.endAt);
     });
-    return json({ ok: true, stays, coverage: 'document' }, 200, { 'Cache-Control': 'no-store' });
+      return json({ ok: true, stays, coverage: 'document' }, 200, { 'Cache-Control': 'no-store' });
   } catch (_) {
     return json({ error: 'service-unavailable' }, 503);
   }

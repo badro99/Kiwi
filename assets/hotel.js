@@ -318,6 +318,7 @@
   let openDrawer = null;   // { el, page }
   let openModal = null;
   let cuTapeOffset = 0;
+  let cuStayView = 'tape';
   let cuReservationEventsBound = false;
   let cuReceptionControlsBound = false;
   /* Occupation réelle, recalculée à chaque peinture (voir cuRoomOccupancy). */
@@ -2137,7 +2138,6 @@
       body: `<div class="hx-floor-manager-list">${rows || '<p>Aucune section.</p>'}</div>
         <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
           <button class="hx-type-add" type="button" data-action="hx-floor-new">+ ${trL({ fr: 'Créer une section', en: 'Create section', ar: 'إنشاء قسم' })}</button>
-          <button class="hx-btn ghost" type="button" data-action="hx-views-manage-open">${trL({ fr: 'Vues & caractéristiques', en: 'Views & amenities', ar: 'الإطلالات والمميزات' })}</button>
         </div>`,
     });
     m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal', 'hx-floors-modal');
@@ -2684,6 +2684,7 @@
           <button class="hx-btn ghost" data-action="hx-room-filters-open">Filtres ${filterCount ? `<b>(${filterCount})</b>` : ''}</button>
           <button class="hx-btn ${cuSelectionMode ? 'atlas' : 'ghost'}" data-action="hx-room-select-toggle">${cuSelectionMode ? 'Quitter la sélection' : 'Sélectionner'}</button>
           <button class="hx-btn ghost" data-action="hx-floors">Gérer les sections</button>
+          <button class="hx-btn ghost" data-action="hx-views-manage-open">Gérer les vues & caractéristiques</button>
           <button class="hx-btn ghost" data-action="hx-room-types">Gérer les catégories</button>
           <button class="hx-btn atlas" data-action="hx-room-add">+ Ajouter des chambres</button>
         </div>
@@ -2957,6 +2958,7 @@
     </div>`;
   }
   function cuSejoursBody() {
+    if (cuStayView === 'availability') return cuSejoursAvailabilityBody();
     const st = cuState();
     const rooms = Object.values(st.rooms || {}).sort((a, b) => a.n - b.n);
     const allStaysMap = cuAllStays();
@@ -2999,6 +3001,22 @@
         <div class="hx-cu-tape-head"><div><span class="hx-kicker">DISPONIBILITÉ UNIFIÉE</span><h3>Chambres × 14 jours</h3><p>Direct, saisie manuelle et OTA bloquent tous la même chambre.</p></div><div class="hx-cu-tape-actions"><button type="button" class="hx-btn ghost" data-action="hx-tape-prev" aria-label="14 jours précédents">←</button><button type="button" class="hx-btn ghost" data-action="hx-tape-today">Aujourd’hui</button><button type="button" class="hx-btn ghost" data-action="hx-tape-next" aria-label="14 jours suivants">→</button><button type="button" class="hx-btn ghost" data-action="hx-dispo">Disponibilités</button><button type="button" class="hx-btn ghost" data-action="hx-group-new">+ Réservation de groupe</button><button type="button" class="hx-btn atlas" data-action="hx-stay-new">+ Réservation</button></div></div>
         <div class="hx-cu-legend">${Object.keys(channels).map((c) => `<span class="src-${c}"><i></i>${channels[c]}</span>`).join('')}</div>
         ${rooms.length ? `<div class="hx-cu-tape-scroll"><div class="hx-cu-tape-grid"><div class="hx-cu-date-row"><div class="hx-cu-room"><span>CHAMBRE</span></div><div class="hx-cu-date-days">${dateHead}</div></div>${rows}<div class="hx-cu-occupancy"><div class="hx-cu-room"><b>Occupation</b><span>vendues</span></div><div>${occupancy}</div></div></div></div>` : `<div class="hx-cu-tape-empty"><b>Ajoutez d’abord vos chambres</b><p>Le tape chart attribue chaque séjour à une chambre réelle.</p><button class="hx-btn atlas" data-action="hx-room-add">Configurer les chambres</button></div>`}
+      </div>
+    </div>`;
+  }
+
+  /* Availability is a first-class reception view, not a modal hidden behind
+   * the tape chart.  Keep the old room-by-room tape available as a sibling
+   * view so reception can switch without losing context. */
+  function cuSejoursAvailabilityBody() {
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    if (!cuDispoMonth) cuDispoMonth = today.slice(0, 7);
+    const days = cuDispoMonthDays(cuDispoMonth);
+    return `<div class="hx-page">
+      ${cuStrip()}
+      <div class="hx-cu-tape block hx-cu-availability-page">
+        <div class="hx-cu-tape-head"><div><span class="hx-kicker">PLANNING PRÉVISIONNEL</span><h3>Disponibilités par jour</h3><p>Occupées et libres pour chaque date, avec le détail par catégorie de chambre.</p></div><div class="hx-cu-tape-actions"><button type="button" class="hx-btn ghost" data-action="hx-dispo-back">← Planning par chambre</button><button type="button" class="hx-btn atlas" data-action="hx-stay-new">+ Réservation</button></div></div>
+        <div data-hx-dispo-page-body>${cuDispoBody(cuDispoMonth, days)}</div>
       </div>
     </div>`;
   }
@@ -3054,7 +3072,7 @@
         <strong style="min-width:140px;text-align:center;">${esc(monthLabel)}</strong>
         <button type="button" class="hx-btn ghost" data-action="hx-dispo-next" aria-label="Mois suivant">→</button>
         <button type="button" class="hx-btn ghost" data-action="hx-dispo-today">Ce mois</button>
-        <select data-hx-dispo-cat aria-label="Catégorie">
+        <select data-hx-dispo-cat data-hx-dispo-page-select aria-label="Catégorie">
           <option value="all">Toutes catégories</option>
           ${[...cats.values()].map((c) => `<option value="${esc(c.name)}" ${cuDispoCat === c.name ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
         </select>
@@ -7221,6 +7239,12 @@
      * rafraîchissement. La recherche texte garde « Afficher » — elle ne doit
      * pas se relancer à chaque frappe. */
     document.addEventListener('change', (event) => {
+      const dispo = event.target?.closest?.('[data-hx-dispo-page-select]');
+      if (dispo && cuStayView === 'availability' && !dispo.closest('.kiwi-modal')) {
+        cuDispoCat = String(dispo.value || 'all');
+        rerender();
+        return;
+      }
       const control = event.target?.closest?.('[data-hx-daily-view], [data-hx-daily-date]');
       if (!control || !isCustomHotel()) return;
       const root = control.closest('.hx-daily');
@@ -7260,15 +7284,35 @@
   };
   handlers['hx-tape-today'] = () => { cuTapeOffset = 0; rerender(); };
   /* Ticket #0008 · monthly free/occupied grid per category. */
-  handlers['hx-dispo'] = () => { if (isCustomHotel()) cuDispoOpen(); };
-  handlers['hx-dispo-prev'] = (el) => { const host = el.closest('.kiwi-modal')?.querySelector('[data-hx-dispo-body]'); if (host) { cuDispoMonth = cuDispoAddMonth(cuDispoMonth, -1); cuDispoPaint(host, true); } };
-  handlers['hx-dispo-next'] = (el) => { const host = el.closest('.kiwi-modal')?.querySelector('[data-hx-dispo-body]'); if (host) { cuDispoMonth = cuDispoAddMonth(cuDispoMonth, 1); cuDispoPaint(host, true); } };
-  handlers['hx-dispo-today'] = (el) => {
-    const host = el.closest('.kiwi-modal')?.querySelector('[data-hx-dispo-body]'); if (!host) return;
-    cuDispoMonth = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()).slice(0, 7);
-    cuDispoPaint(host, false);
+  const cuDispoHost = (el) => el?.closest('.kiwi-modal')?.querySelector('[data-hx-dispo-body]') || document.querySelector('[data-hx-dispo-page-body]');
+  const cuDispoRefreshPage = async () => {
+    rerender();
+    const days = cuDispoMonthDays(cuDispoMonth);
+    await cuFetchStaysForWindow(days[0], cuDispoAddDays(days[days.length - 1], 1));
+    if (cuStayView === 'availability') rerender();
   };
-  handlers['hx-dispo-refresh'] = (el) => { const host = el.closest('.kiwi-modal')?.querySelector('[data-hx-dispo-body]'); if (host) cuDispoPaint(host, true); };
+  handlers['hx-dispo'] = () => {
+    if (!isCustomHotel()) return;
+    cuStayView = 'availability';
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    cuDispoMonth = today.slice(0, 7); cuDispoCat = 'all';
+    cuDispoRefreshPage();
+  };
+  handlers['hx-dispo-back'] = () => { cuStayView = 'tape'; rerender(); };
+  handlers['hx-dispo-prev'] = (el) => {
+    const host = cuDispoHost(el); cuDispoMonth = cuDispoAddMonth(cuDispoMonth, -1);
+    if (host?.closest('.kiwi-modal')) cuDispoPaint(host, true); else cuDispoRefreshPage();
+  };
+  handlers['hx-dispo-next'] = (el) => {
+    const host = cuDispoHost(el); cuDispoMonth = cuDispoAddMonth(cuDispoMonth, 1);
+    if (host?.closest('.kiwi-modal')) cuDispoPaint(host, true); else cuDispoRefreshPage();
+  };
+  handlers['hx-dispo-today'] = (el) => {
+    const host = cuDispoHost(el); if (!host) return;
+    cuDispoMonth = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()).slice(0, 7);
+    if (host.closest('.kiwi-modal')) cuDispoPaint(host, false); else rerender();
+  };
+  handlers['hx-dispo-refresh'] = (el) => { const host = cuDispoHost(el); if (host?.closest('.kiwi-modal')) cuDispoPaint(host, true); else cuDispoRefreshPage(); };
   handlers['hx-stay-new'] = () => { if (isCustomHotel()) cuStayEditor(null); };
   handlers['hx-group-new'] = () => { if (isCustomHotel()) cuGroupReservationModal(); };
     /* "Configurer ce tarif" beside a missing-rate warning: open the room-type

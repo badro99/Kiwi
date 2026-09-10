@@ -713,6 +713,10 @@ async function runAllTests() {
     ok(styles.includes('[dir="rtl"]'), 'hotel.css defines [dir="rtl"] overrides for Arabic localization');
     ok(styles.includes('@media (max-width: 900px)'), 'hotel.css defines tablet responsive layout rules');
     ok(styles.includes('.hx-views-config-list') && styles.includes('.hx-view-config-chip'), 'hotel.css contains styles for views configuration UI');
+    const floorManager = source.slice(source.indexOf('function cuFloorsManager'), source.indexOf('function cuViewsAndCharsManager'));
+    ok(!floorManager.includes('hx-views-manage-open'), 'section manager contains only section organization actions');
+    ok(source.includes('data-action="hx-views-manage-open">Gérer les vues & caractéristiques'), 'room-plan toolbar exposes views and characteristics as its own configuration action');
+    ok(styles.includes('.hx-dispo-table') && styles.includes('.hx-dispo-total'), 'availability grid has dedicated readable table and total-row styling');
   }
 
   console.log('\n■ 6. Bulk Room Editing: Target Freezing, Storage Failure Rollback, Server 409 & Atomic Execution');
