@@ -118,6 +118,37 @@
     </form>
   </dialog>
 
+  <dialog class="composer" id="followupComposer" aria-labelledby="followupTitle">
+    <form class="composer-panel" id="followupForm" method="dialog">
+      <header class="composer-head">
+        <div>
+          <p class="eyebrow">Test failed · <span id="followupTicketNumber"></span></p>
+          <h2 id="followupTitle">What is still broken?</h2>
+        </div>
+        <button class="icon-button" id="closeFollowup" type="button" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </header>
+      <p class="followup-intro">Add what happened in this test. The note stays linked to the original problem and moves it back to Problems.</p>
+      <label class="field-label" for="followupBody">New test notes</label>
+      <textarea id="followupBody" name="note" rows="6" maxlength="4000" placeholder="Explain what still fails, where it happened, and what you expected…" required></textarea>
+      <div class="upload-block">
+        <div class="upload-heading"><span>More images <small>optional</small></span><span id="followupImageCounter">0 / 6</span></div>
+        <label class="upload-target" for="followupImages">
+          <img class="material-icon upload-icon" src="assets/icons/material/photo_frame.svg" alt="" aria-hidden="true" />
+          <span><strong>Add new photos</strong><small>Choose from your library or take a photo</small></span>
+        </label>
+        <input id="followupImages" name="images" class="hidden-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple />
+        <div class="selected-images" id="followupSelectedImages"></div>
+      </div>
+      <p class="form-error" id="followupError" role="alert"></p>
+      <footer class="composer-actions">
+        <button class="cancel-button" id="cancelFollowup" type="button">Cancel</button>
+        <button class="publish-button failed-submit" id="publishFollowup" type="submit">Send back as still broken</button>
+      </footer>
+    </form>
+  </dialog>
+
   <dialog class="image-copy-fallback" id="imageCopyFallback" aria-labelledby="copyFallbackTitle">
     <div class="image-copy-panel">
       <h2 id="copyFallbackTitle">Touch and hold to copy</h2>

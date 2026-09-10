@@ -15,13 +15,18 @@ export async function onRequestGet({ env }) {
   if (!env.DB) return json({ error: 'not-configured' }, 503);
   try {
     await purgeExpired(env);
-    const [ticketRows, imageRows] = await Promise.all([
+    const [ticketRows, followupRows, imageRows] = await Promise.all([
       env.DB.prepare(
         `SELECT id, body, status, created_ts, updated_ts, completed_ts, expires_ts
          FROM kiwi_tickets ORDER BY id DESC`
       ).all(),
       env.DB.prepare(
-        `SELECT i.id, i.ticket_id, i.object_key, i.filename
+        `SELECT id, ticket_id, body, created_ts
+         FROM kiwi_ticket_followups
+         ORDER BY created_ts, id`
+      ).all(),
+      env.DB.prepare(
+        `SELECT i.id, i.ticket_id, i.followup_id, i.object_key, i.filename
          FROM kiwi_ticket_images i
          JOIN kiwi_tickets t ON t.id = i.ticket_id
          WHERE t.status != 'done'
@@ -30,10 +35,27 @@ export async function onRequestGet({ env }) {
     ]);
 
     const imagesByTicket = new Map();
+    const imagesByFollowup = new Map();
     for (const row of (imageRows.results || [])) {
+      if (row.followup_id) {
+        if (!imagesByFollowup.has(row.followup_id)) imagesByFollowup.set(row.followup_id, []);
+        imagesByFollowup.get(row.followup_id).push(publicImage(row));
+      } else {
+        const id = Number(row.ticket_id);
+        if (!imagesByTicket.has(id)) imagesByTicket.set(id, []);
+        imagesByTicket.get(id).push(publicImage(row));
+      }
+    }
+    const followupsByTicket = new Map();
+    for (const row of (followupRows.results || [])) {
       const id = Number(row.ticket_id);
-      if (!imagesByTicket.has(id)) imagesByTicket.set(id, []);
-      imagesByTicket.get(id).push(publicImage(row));
+      if (!followupsByTicket.has(id)) followupsByTicket.set(id, []);
+      followupsByTicket.get(id).push({
+        id: row.id,
+        body: row.body,
+        createdAt: Number(row.created_ts),
+        images: imagesByFollowup.get(row.id) || [],
+      });
     }
     const tickets = (ticketRows.results || []).map((row) => ({
       id: Number(row.id),
@@ -45,6 +67,10 @@ export async function onRequestGet({ env }) {
       completedAt: row.completed_ts == null ? null : Number(row.completed_ts),
       expiresAt: row.expires_ts == null ? null : Number(row.expires_ts),
       images: row.status === 'done' ? [] : (imagesByTicket.get(Number(row.id)) || []),
+      followups: (followupsByTicket.get(Number(row.id)) || []).map((followup) => ({
+        ...followup,
+        images: row.status === 'done' ? [] : followup.images,
+      })),
     }));
     return json({ tickets, retentionDays: 20 });
   } catch (error) {
