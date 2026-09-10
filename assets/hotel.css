@@ -380,7 +380,7 @@
   font-weight:500;
   line-height:1.35;
 }
-.hx-hotel-modal .hx-room-form input,
+.hx-hotel-modal .hx-room-form input:not([type="checkbox"]):not([type="radio"]),
 .hx-hotel-modal .hx-room-form select {
   appearance:none;
   min-height:50px;
@@ -1219,6 +1219,21 @@
 .hx-production-table abbr { text-decoration:none; }
 .hx-production-table .has-nights { background:color-mix(in srgb,var(--atlas) 8%,var(--surface)); font-weight:600; }
 .hx-production-table tfoot :is(th,td) { font-weight:600; background:var(--paper); }
+/* Ticket #0008 · Disponibilités : same sticky-table language as production. */
+.hx-dispo-bar { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+.hx-dispo-bar small { color:var(--n-600); font-size:12px; }
+.hx-dispo-scroll { overflow:auto; border:1px solid var(--n-200); border-radius:12px; max-height:min(62vh,640px); }
+.hx-dispo-table { border-collapse:separate; border-spacing:0; font-size:12.5px; font-variant-numeric:tabular-nums; min-width:100%; }
+.hx-dispo-table :is(th,td) { padding:8px 7px; min-width:34px; text-align:center; border-bottom:1px solid var(--n-200); background:var(--surface,#fff); }
+.hx-dispo-table thead th { position:sticky; top:0; background:var(--paper); background-image:linear-gradient(var(--surface),var(--surface)); z-index:2; }
+.hx-dispo-table thead th b { display:block; font-size:10px; text-transform:uppercase; color:var(--n-500); }
+.hx-dispo-table thead th span { font-size:13px; }
+.hx-dispo-table tbody th:first-child, .hx-dispo-table thead th:first-child { position:sticky; inset-inline-start:0; z-index:1; min-width:130px; text-align:start; background:var(--paper); background-image:linear-gradient(var(--surface),var(--surface)); border-inline-end:1px solid var(--n-200); }
+.hx-dispo-table thead th:first-child { z-index:3; }
+.hx-dispo-table tbody th small { display:block; color:var(--n-600); font-weight:400; }
+.hx-dispo-table td.today, .hx-dispo-table th.today { background:rgba(5,57,43,.07); }
+.hx-dispo-table tr.hx-dispo-total :is(th,td) { font-weight:700; background:var(--paper); }
+.hx-dispo-table tr.hx-dispo-free :is(th,td) { color:var(--atlas); }
 .hx-production-scroll:focus-visible { outline:2px solid var(--atlas); outline-offset:3px; }
 @media(max-width:900px) {
   .hx-commercial .hx-commercial-head { align-items:flex-start; flex-direction:column; gap:20px; }
@@ -1405,5 +1420,14 @@
 .hx-guest-item.is-frozen input, .hx-guest-item.is-frozen select { background: var(--n-100); color: var(--n-600); cursor: not-allowed; }
 .hx-filter-pill-label { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--n-200); background: var(--paper); cursor: pointer; user-select: none; }
 .hx-filter-pill-label:has(input:checked) { border-color: var(--atlas); background: rgba(5,57,43,.06); font-weight: 500; }
+/* Tickets #0005 · filter + characteristic checkboxes. The .hx-hotel-modal
+ * input rule above erased native boxes (blank 50px pills, column-stacked
+ * labels). Restore row pills with a visible checked state instead. */
+.hx-hotel-modal .hx-room-form label.hx-filter-check-label,
+.hx-hotel-modal .hx-room-form label.hx-char-label { flex-direction:row; align-items:center; gap:8px; border:1px solid var(--n-200); border-radius:10px; padding:8px 10px; cursor:pointer; }
+.hx-hotel-modal .hx-room-form label.hx-filter-check-label:has(input:checked),
+.hx-hotel-modal .hx-room-form label.hx-char-label:has(input:checked) { border-color:var(--atlas); background:rgba(5,57,43,.06); font-weight:600; }
+.hx-hotel-modal .hx-room-form label.hx-filter-check-label input[type="checkbox"],
+.hx-hotel-modal .hx-room-form label.hx-char-label input[type="checkbox"] { -webkit-appearance:checkbox; appearance:checkbox; width:17px; height:17px; min-height:0; margin:0; flex:none; accent-color:var(--atlas); }
 .hx-group-modal.is-submitting { pointer-events: none; opacity: 0.7; }
 

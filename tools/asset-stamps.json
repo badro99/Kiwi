@@ -172,8 +172,8 @@
     "sha": "6b257b5b2de1b441"
   },
   "assets/clients-directory.js": {
-    "v": "2",
-    "sha": "1fc1471a49a36689"
+    "v": "3",
+    "sha": "ee0857960783f7c2"
   },
   "assets/clients-store.js": {
     "v": "5",
@@ -340,12 +340,12 @@
     "sha": "d85678a7afe63a1a"
   },
   "assets/hotel.css": {
-    "v": "34",
-    "sha": "7ffc6e81f6b8b786"
+    "v": "35",
+    "sha": "02953ae02120a5cf"
   },
   "assets/hotel.js": {
-    "v": "56",
-    "sha": "e5b277b8f91bb488"
+    "v": "57",
+    "sha": "be206399ccee7da5"
   },
   "assets/hours-ui.js": {
     "v": "1",

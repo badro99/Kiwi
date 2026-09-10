@@ -957,6 +957,10 @@
     };
   };
   const totalRooms = () => (isCustomHotel() ? cuState().count : 24);
+  /* Ticket #0006 · connecting doors are physical: same floor only. Keyed on
+   * floorId (rename-safe); rooms without one fall back to the floor label so
+   * unknown floors group together instead of vanishing. */
+  const cuFloorKey = (r) => String((r && r.floorId) || ('~' + ((r && r.floor) || '')));
   const roomCountLabel = () => totalRooms() + ' chambre' + (totalRooms() === 1 ? '' : 's');
   const vName = () => ((window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {}).name || 'Votre établissement';
   /* A custom hotel's encaissements are REAL — feed the merchant sales store
@@ -1955,6 +1959,15 @@
     if (!room) return;
     const locked = ['occ', 'depart', 'arrivee'].includes(room.status);
     const status = room.status || 'libre';
+    // Same floor only; already-linked rooms stay visible (flagged) so an old
+    // cross-floor liaison can be reviewed and removed, never re-added.
+    const linkedIds = new Set(room.connectingRoomIds || []);
+    const connOptions = Object.values(cuState().rooms || {}).filter((r) => r.n !== room.n).sort((a, b) => a.n - b.n)
+      .filter((o) => linkedIds.has(o.id) || cuFloorKey(o) === cuFloorKey(room))
+      .map((o) => {
+        const otherFloor = cuFloorKey(o) !== cuFloorKey(room);
+        return `<option value="${esc(o.id)}" ${linkedIds.has(o.id) ? 'selected' : ''}>Ch. ${o.n} · ${esc(roomTypeOf(o.n).name)} (${esc(o.floor)})${otherFloor ? ' · autre étage' : ''}</option>`;
+      }).join('');
     const m = K().modal({
       tag: 'CHAMBRE ' + room.n, title: 'Modifier la chambre',
       desc: 'Changez uniquement ce qui distingue cette chambre.', width: 560,
@@ -1982,9 +1995,9 @@
         <div class="hx-room-form-wide">
           <label><span>Portes communicantes <small>· liaison réciproque directe</small></span>
             <select data-hx-room-connecting multiple size="3">
-              ${Object.values(cuState().rooms || {}).filter((r) => r.n !== room.n).sort((a, b) => a.n - b.n).map((o) => `<option value="${esc(o.id)}" ${(room.connectingRoomIds || []).includes(o.id) ? 'selected' : ''}>Ch. ${o.n} · ${esc(roomTypeOf(o.n).name)} (${esc(o.floor)})</option>`).join('')}
+              ${connOptions || '<option value="" disabled>Aucune autre chambre à cet étage</option>'}
             </select>
-            <small>Maintenu automatiquement dans les deux sens.</small>
+            <small>Seules les chambres du même étage peuvent être reliées. Maintenu automatiquement dans les deux sens.</small>
           </label>
         </div>
       </div>
@@ -2983,11 +2996,100 @@
     return `<div class="hx-page">
       ${cuStrip()}
       <div class="hx-cu-tape block">
-        <div class="hx-cu-tape-head"><div><span class="hx-kicker">DISPONIBILITÉ UNIFIÉE</span><h3>Chambres × 14 jours</h3><p>Direct, saisie manuelle et OTA bloquent tous la même chambre.</p></div><div class="hx-cu-tape-actions"><button type="button" class="hx-btn ghost" data-action="hx-tape-prev" aria-label="14 jours précédents">←</button><button type="button" class="hx-btn ghost" data-action="hx-tape-today">Aujourd’hui</button><button type="button" class="hx-btn ghost" data-action="hx-tape-next" aria-label="14 jours suivants">→</button><button type="button" class="hx-btn ghost" data-action="hx-group-new">+ Réservation de groupe</button><button type="button" class="hx-btn atlas" data-action="hx-stay-new">+ Réservation</button></div></div>
+        <div class="hx-cu-tape-head"><div><span class="hx-kicker">DISPONIBILITÉ UNIFIÉE</span><h3>Chambres × 14 jours</h3><p>Direct, saisie manuelle et OTA bloquent tous la même chambre.</p></div><div class="hx-cu-tape-actions"><button type="button" class="hx-btn ghost" data-action="hx-tape-prev" aria-label="14 jours précédents">←</button><button type="button" class="hx-btn ghost" data-action="hx-tape-today">Aujourd’hui</button><button type="button" class="hx-btn ghost" data-action="hx-tape-next" aria-label="14 jours suivants">→</button><button type="button" class="hx-btn ghost" data-action="hx-dispo">Disponibilités</button><button type="button" class="hx-btn ghost" data-action="hx-group-new">+ Réservation de groupe</button><button type="button" class="hx-btn atlas" data-action="hx-stay-new">+ Réservation</button></div></div>
         <div class="hx-cu-legend">${Object.keys(channels).map((c) => `<span class="src-${c}"><i></i>${channels[c]}</span>`).join('')}</div>
         ${rooms.length ? `<div class="hx-cu-tape-scroll"><div class="hx-cu-tape-grid"><div class="hx-cu-date-row"><div class="hx-cu-room"><span>CHAMBRE</span></div><div class="hx-cu-date-days">${dateHead}</div></div>${rows}<div class="hx-cu-occupancy"><div class="hx-cu-room"><b>Occupation</b><span>vendues</span></div><div>${occupancy}</div></div></div></div>` : `<div class="hx-cu-tape-empty"><b>Ajoutez d’abord vos chambres</b><p>Le tape chart attribue chaque séjour à une chambre réelle.</p><button class="hx-btn atlas" data-action="hx-room-add">Configurer les chambres</button></div>`}
       </div>
     </div>`;
+  }
+
+  /* Ticket #0008 · Disponibilités : chambres libres et occupées par jour, par
+   * catégorie, comme le planning prévisionnel de l'ancien système. 100 %
+   * client : mêmes registre chambres et séjours déjà chargés que le tape,
+   * aucun endpoint. Nuit de départ exclue, annulés/no-show exclus. */
+  let cuDispoMonth = '', cuDispoCat = 'all';
+  const cuDispoAddMonth = (ym, n) => { const [y, m] = String(ym).split('-').map(Number); const d = new Date(Date.UTC(y, m - 1 + n, 1)); return d.toISOString().slice(0, 7); };
+  const cuDispoMonthDays = (ym) => { const [y, m] = String(ym).split('-').map(Number); const n = new Date(Date.UTC(y, m, 0)).getUTCDate(); const out = []; for (let i = 1; i <= n; i++) out.push(ym + '-' + String(i).padStart(2, '0')); return out; };
+  const cuDispoAddDays = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  function cuDispoBody(ym, days) {
+    const st = cuState();
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const rooms = Object.values(st.rooms || {});
+    const byId = new Map(rooms.map((r) => [r.id, r]));
+    const sellable = rooms.filter((r) => r.status !== 'hs');
+    const cats = new Map();
+    for (const r of sellable) {
+      const key = r.typeId || roomTypeOf(r.n).name;
+      if (!cats.has(key)) cats.set(key, { name: roomTypeOf(r.n).name, rooms: [] });
+      cats.get(key).rooms.push(r);
+    }
+    const visibleCats = [...cats.values()].filter((c) => cuDispoCat === 'all' || c.name === cuDispoCat);
+    const occupying = ['requested', 'confirmed', 'checked_in', 'completed'];
+    const occ = new Map();
+    let unassigned = 0;
+    for (const b of cuAllStays().values()) {
+      if (!b || !b.hotel || !b.hotel.checkIn || !b.hotel.checkOut || !occupying.includes(b.status)) continue;
+      if (b.hotel.checkOut <= days[0] || b.hotel.checkIn > days[days.length - 1]) continue;
+      const room = b.resourceId ? byId.get(b.resourceId) : null;
+      if (!room || room.status === 'hs') { if (!room && b.status !== 'completed') unassigned++; continue; }
+      for (const d of days) {
+        if (b.hotel.checkIn <= d && b.hotel.checkOut > d) {
+          const key = d + '|' + room.id;
+          occ.set(key, true);
+        }
+      }
+    }
+    const occIn = (catRooms, d) => catRooms.filter((r) => occ.has(d + '|' + r.id)).length;
+    const head = days.map((d) => { const dt = new Date(d + 'T12:00:00Z'); return `<th class="${d === today ? 'today' : ''}"><b>${new Intl.DateTimeFormat('fr-FR', { weekday: 'narrow', timeZone: 'UTC' }).format(dt)}</b><span>${dt.getUTCDate()}</span></th>`; }).join('');
+    const catRows = visibleCats.map((c) => `<tr><th scope="row">${esc(c.name)}<small>${c.rooms.length}</small></th>${days.map((d) => `<td class="${d === today ? 'today' : ''}" title="${occIn(c.rooms, d)} occupée(s) sur ${c.rooms.length}">${occIn(c.rooms, d) || ''}</td>`).join('')}</tr>`).join('');
+    const totals = days.map((d) => {
+      const o = visibleCats.reduce((s, c) => s + occIn(c.rooms, d), 0);
+      const s = visibleCats.reduce((sum, c) => sum + c.rooms.length, 0);
+      return { o, f: Math.max(0, s - o), s };
+    });
+    const monthLabel = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(days[0] + 'T12:00:00Z'));
+    const loadErr = (cuStayLoads.get(cuStayScope()) || {}).error || '';
+    return `<div class="hx-dispo-bar"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button type="button" class="hx-btn ghost" data-action="hx-dispo-prev" aria-label="Mois précédent">←</button>
+        <strong style="min-width:140px;text-align:center;">${esc(monthLabel)}</strong>
+        <button type="button" class="hx-btn ghost" data-action="hx-dispo-next" aria-label="Mois suivant">→</button>
+        <button type="button" class="hx-btn ghost" data-action="hx-dispo-today">Ce mois</button>
+        <select data-hx-dispo-cat aria-label="Catégorie">
+          <option value="all">Toutes catégories</option>
+          ${[...cats.values()].map((c) => `<option value="${esc(c.name)}" ${cuDispoCat === c.name ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
+        </select>
+        <button type="button" class="hx-btn ghost" data-action="hx-dispo-refresh">Actualiser</button>
+      </div><small>${visibleCats.reduce((s, c) => s + c.rooms.length, 0)} chambres vendables${unassigned ? ` · ${unassigned} séjour(s) sans chambre attribuée` : ''}</small></div>
+      ${loadErr ? `<div class="hx-billing-notice" role="alert">${esc(loadErr)}</div>` : ''}
+      ${visibleCats.length ? `<div class="hx-dispo-scroll"><table class="hx-dispo-table"><thead><tr><th scope="col">Catégorie</th>${head}</tr></thead><tbody>
+        ${catRows}
+        <tr class="hx-dispo-total"><th scope="row">Occupées</th>${totals.map((t, i) => `<td class="${days[i] === today ? 'today' : ''}">${t.o || ''}</td>`).join('')}</tr>
+        <tr class="hx-dispo-total hx-dispo-free"><th scope="row">Libres</th>${totals.map((t, i) => `<td class="${days[i] === today ? 'today' : ''}">${t.f}</td>`).join('')}</tr>
+      </tbody></table></div>` : `<p>Aucune chambre vendable. Ajoutez vos chambres puis revenez.</p>`}`;
+  }
+  async function cuDispoPaint(host, refetch) {
+    if (!host || !host.isConnected) return;
+    const days = cuDispoMonthDays(cuDispoMonth);
+    if (refetch) {
+      host.innerHTML = '<p role="status">Chargement des disponibilités…</p>';
+      await cuFetchStaysForWindow(days[0], cuDispoAddDays(days[days.length - 1], 1));
+      if (!host.isConnected) return;
+    }
+    host.innerHTML = cuDispoBody(cuDispoMonth, days);
+    host.querySelector('[data-hx-dispo-cat]')?.addEventListener('change', (e) => {
+      cuDispoCat = String(e.target.value || 'all');
+      cuDispoPaint(host, false);
+    });
+  }
+  async function cuDispoOpen() {
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    cuDispoMonth = today.slice(0, 7);
+    cuDispoCat = 'all';
+    const m = K().modal({ tag: 'DISPONIBILITÉS', title: 'Chambres libres et occupées par jour', desc: 'Par catégorie, avec totaux Libres et Occupées pour chaque jour du mois.', width: 1080,
+      body: '<div data-hx-dispo-body role="status">Chargement des disponibilités…</div>' });
+    m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
+    openModal = { el: m.el, close: m.close };
+    await cuDispoPaint(m.el.querySelector('[data-hx-dispo-body]'), true);
   }
 
   function cuLang() {
@@ -3877,6 +3979,28 @@
       staged = JSON.parse(localStorage.getItem(stagedKey) || 'null');
     } catch (_) {}
     if (!staged || staged.merchant !== initialMerchant) staged = null;
+    /* Ticket #0007 · a stale staged draft must never wedge "new reservation".
+     * The staged cache is UI progress only (server truth is untouched), so a
+     * draft pointing at deleted rooms, an archived account or impossible
+     * dates is dropped and the modal opens blank instead of frozen. */
+    const stagedUsable = (s) => {
+      if (!s || typeof s !== 'object') return false;
+      if (s.checkIn && !/^\d{4}-\d{2}-\d{2}$/.test(s.checkIn)) return false;
+      if (s.checkOut && !/^\d{4}-\d{2}-\d{2}$/.test(s.checkOut)) return false;
+      if (s.checkIn && s.checkOut && s.checkOut <= s.checkIn) return false;
+      const roomIds = new Set(allRooms.map((r) => r.id));
+      if (Array.isArray(s.selectedRoomIds) && s.selectedRoomIds.some((id) => !roomIds.has(id))) return false;
+      if (Array.isArray(s.travelers) && s.travelers.some((t) => t && t.roomId && !roomIds.has(t.roomId))) return false;
+      if (s.accountId) {
+        const accounts = (commState && commState.accounts) || [];
+        if (accounts.length && !accounts.some((a) => a && a.id === s.accountId && !a.archived)) return false;
+      }
+      return true;
+    };
+    if (staged && !stagedUsable(staged)) {
+      try { localStorage.removeItem(stagedKey); } catch (_) {}
+      staged = null;
+    }
 
     // ── Durable submission intent, v2 (defect 2) ──────────────────────────
     // kiwi_hx_intent_<dossier> is the ONE authoritative recovery record: it
@@ -3935,7 +4059,7 @@
       ? { ...pendingIntent.terms }
       : null;
     const intentRooms = (pendingIntent && (adoptIntent || (staged && staged.dossierId === pendingIntent.dossierId)) && Array.isArray(pendingIntent.rooms))
-      ? pendingIntent.rooms.filter(r => r && r.roomId)
+      ? pendingIntent.rooms.filter(r => r && r.roomId && allRooms.some((room) => room.id === r.roomId))
       : [];
     const intentTravelers = (pendingIntent && (adoptIntent || (staged && staged.dossierId === pendingIntent.dossierId)) && Array.isArray(pendingIntent.travelers) && pendingIntent.travelers.length)
       ? pendingIntent.travelers
@@ -4016,6 +4140,15 @@
                 <br>Les chambres confirmées sont conservées et verrouillées. Vous pouvez finaliser les chambres restantes ou remplacer une chambre indisponible.
                 <div style="margin-top:6px;display:flex;gap:8px;">
                   <button type="button" class="hx-link-btn" data-action="hx-discard-staged">Abandonner ce brouillon local</button>
+                </div>
+              </div>
+            ` : ''}
+            ${!hasSavedRooms && committedTerms ? `
+              <div class="hx-group-partial-alert" data-hx-group-resume-alert>
+                <b>Tentative précédente reprise</b> : aucune chambre enregistrée, et les informations sont verrouillées pour protéger l’envoi en cours.
+                <br>Finalisez l’envoi, ou repartez d’un dossier vierge.
+                <div style="margin-top:6px;display:flex;gap:8px;">
+                  <button type="button" class="hx-link-btn" data-action="hx-discard-staged">Abandonner et nouveau dossier vierge</button>
                 </div>
               </div>
             ` : ''}
@@ -4914,6 +5047,13 @@
         committedTerms = null;
         activeQuoteSignature = '';
         groupDossierId = 'grp_' + Date.now() + '_' + crypto.randomUUID().slice(0, 8);
+        // A fresh dossier means blank inputs, no rooms, one empty traveler:
+        // leaving adopted values behind would re-freeze the next persist.
+        selectedRoomIds.clear();
+        travelers = [{ id: 'gst_' + crypto.randomUUID().slice(0, 12), name: '', sex: '', nationality: '', residenceCountry: '', birthDate: '', idDocType: '', idDocNumber: '', roomId: '' }];
+        for (const [name, value] of [['groupName', ''], ['checkIn', today], ['checkOut', tomorrow], ['contactName', ''], ['contactPhone', ''], ['contactEmail', ''], ['accountId', ''], ['channel', 'direct'], ['board', 'room_only']]) {
+          if (form.elements[name]) form.elements[name].value = value;
+        }
         const recoverySlot = form.querySelector('[data-hx-group-recovery-slot]');
         if (recoverySlot) recoverySlot.innerHTML = '';
         lockCommittedFields();
@@ -7100,6 +7240,16 @@
     rerender();
   };
   handlers['hx-tape-today'] = () => { cuTapeOffset = 0; rerender(); };
+  /* Ticket #0008 · monthly free/occupied grid per category. */
+  handlers['hx-dispo'] = () => { if (isCustomHotel()) cuDispoOpen(); };
+  handlers['hx-dispo-prev'] = (el) => { const host = el.closest('.kiwi-modal')?.querySelector('[data-hx-dispo-body]'); if (host) { cuDispoMonth = cuDispoAddMonth(cuDispoMonth, -1); cuDispoPaint(host, true); } };
+  handlers['hx-dispo-next'] = (el) => { const host = el.closest('.kiwi-modal')?.querySelector('[data-hx-dispo-body]'); if (host) { cuDispoMonth = cuDispoAddMonth(cuDispoMonth, 1); cuDispoPaint(host, true); } };
+  handlers['hx-dispo-today'] = (el) => {
+    const host = el.closest('.kiwi-modal')?.querySelector('[data-hx-dispo-body]'); if (!host) return;
+    cuDispoMonth = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()).slice(0, 7);
+    cuDispoPaint(host, false);
+  };
+  handlers['hx-dispo-refresh'] = (el) => { const host = el.closest('.kiwi-modal')?.querySelector('[data-hx-dispo-body]'); if (host) cuDispoPaint(host, true); };
   handlers['hx-stay-new'] = () => { if (isCustomHotel()) cuStayEditor(null); };
   handlers['hx-group-new'] = () => { if (isCustomHotel()) cuGroupReservationModal(); };
     /* "Configurer ce tarif" beside a missing-rate warning: open the room-type
@@ -7252,6 +7402,19 @@
       const connectingRoomIds = connSelect
         ? Array.from(connSelect.selectedOptions || []).map((o) => o.value).filter(Boolean)
         : (prior?.connectingRoomIds || []);
+      // Same-floor rule holds even when the floor itself was just changed:
+      // prior liaisons are grandfathered, new cross-floor picks are refused.
+      const keptLinked = new Set((prior?.connectingRoomIds || []).map(String));
+      const newFloorKey = cuFloorKey({ floorId, floor: st.floors[floorId]?.name });
+      const badNew = connectingRoomIds.filter((id) => {
+        if (keptLinked.has(String(id))) return false;
+        const o = Object.values(st.rooms).find((r) => String(r.id) === String(id));
+        return !!o && cuFloorKey(o) !== newFloorKey;
+      });
+      if (badNew.length) {
+        toast('Liaison impossible entre étages', { type: 'warn', desc: 'Seules les chambres du même étage peuvent être reliées. Retirez la sélection hors étage.' });
+        return;
+      }
       const active = prior && ['occ', 'depart', 'arrivee'].includes(prior.status);
       const savedStatus = active ? prior.status : (['libre', 'sale', 'hs'].includes(status) ? status : 'libre');
       const now = cuStamp();
