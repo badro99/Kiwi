@@ -1157,6 +1157,7 @@ section('Whole-project regressions');
     'orderpro-invalid-options-test.mjs',
     'orderpro-session-reorder-test.mjs',
     'orderpro-shared-table-test.mjs',
+    'orderpro-floorplan-race-test.mjs',
     'field-whole-item-split-test.mjs',
     'field-orderpro-acceptance-test.mjs',
     'field-table-transfer-test.mjs',

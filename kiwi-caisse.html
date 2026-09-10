@@ -5504,7 +5504,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=500" defer></script>
+  <script src="assets/caisse-pwa.js?v=501" defer></script>
   <script src="assets/live-link.js?v=35" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -8188,8 +8188,10 @@
       renderSalle();
     });
 
-    // Read the plan, (re)build `tables` from it (status reset to empty), then paint.
-    // Called on load, when pairing resolves, and when the dashboard saves a design.
+    // Read the plan, (re)build `tables` from it, then paint. Runtime service
+    // state must survive this rebuild: the cloud plan can refresh while an
+    // OrderPro order is being accepted, and geometry is not authority for the
+    // current bill or occupancy.
     function setupRealSalle() {
       if (!storeIsReal()) return;                      // demo untouched
       const view = document.querySelector('.view-salle');
@@ -8199,6 +8201,8 @@
       if (!host) { host = document.createElement('div'); host.className = 'plan-real'; view.appendChild(host); }
 
       const plan = caisseFloorPlan();
+      const runtimeTables = new Map();
+      Object.keys(tables).forEach((id) => runtimeTables.set(tableKey(id), tables[id]));
       Object.keys(tables).forEach(k => { delete tables[k]; });
       __realZoneOrder = [];
       __realPlan = plan;
@@ -8268,19 +8272,33 @@
 
       plan.tables.forEach(tb => {
         const id = String(tb.num || tb.id);
+        const key = tableKey(id);
+        const previous = runtimeTables.get(key);
+        const hasBill = !!((tableOrders[id] || []).length);
+        const hasLiveVisit = hasBill || phoneSeats.has(key) || phonePending.has(key)
+          || !!(previous && previous.status && previous.status !== 'khawya');
         const zone = zn[tb.zone] || 'Salle';
         if (__realZoneOrder.indexOf(zone) < 0) __realZoneOrder.push(zone);
         /* Carry the designed geometry through · the owner's layout is the
            point of the mirror, so shape/position/size come from the plan
            rather than being flattened to a round table at 0,0. */
-        tables[id] = {
+        const rebuilt = tables[id] = {
           designed: true, floor: 0, zone: tb.zone || 'z1', zoneName: zone,
           shape: tb.shape || 'round', covers: designedCovers(tb),
-          status: 'khawya', server: localServerFor(tb),
+          status: hasLiveVisit
+            ? ((previous && previous.status && previous.status !== 'khawya') ? previous.status : 'ka-yaklo')
+            : 'khawya',
+          server: (hasLiveVisit && previous && previous.server) || localServerFor(tb),
           x: +tb.x || 0, y: +tb.y || 0, w: +tb.w || 0, h: +tb.h || 0,
           rot: +tb.rot || 0, color: tb.color || null, num: tb.num || id,
-          elapsed: 0,
+          elapsed: hasLiveVisit && previous ? Math.max(0, +previous.elapsed || 0) : 0,
         };
+        if (hasLiveVisit && previous) {
+          if (+previous.covers > 0) rebuilt.covers = +previous.covers;
+          ['orderStartedAt', 'timerSession', 'orderNo', 'discount'].forEach((field) => {
+            if (previous[field] != null) rebuilt[field] = previous[field];
+          });
+        }
       });
       renderRealGrid();
     }
@@ -10013,6 +10031,15 @@
         const id = tableEl.dataset.table;
         const t = tables[id];
         if (!t) return;
+        /* A plan refresh used to be able to repaint an OrderPro table as
+           empty while its canonical bill/pending badge still existed. The
+           durable order evidence wins at click time too, so the cashier can
+           never be asked to open a second visit over the guest's order. */
+        if (t.status === 'khawya' && ((tableOrders[id] || []).length
+            || phoneSeats.has(tableKey(id)) || phonePending.has(tableKey(id)))) {
+          t.status = 'ka-yaklo';
+          refreshTableNode(id);
+        }
         if (wlSeating) {  // choosing a table for a waitlist party
           if (t.status === 'khawya') seatPartyAt(id);
           else toast('Table occupée, choisis une table libre');
@@ -19077,6 +19104,25 @@
       const withoutFormulaTag = (value) => String(value || '')
         .replace(/^\s*\[[^\]]*\]\s*(?:·\s*)?/, '').trim();
 
+      /* A formula parent is sometimes the actual dish while its components
+         are optional, or routed to another station. It must remain printable
+         on its own station; otherwise it exists on the final receipt but no
+         cook ever receives it. */
+      source.forEach((parent) => {
+        if (parent.kind !== 'formula' || stationIds(parent).indexOf(station) < 0) return;
+        const hasChoiceHere = source.some((part) => part.kind === 'formula-part'
+          && part.formulaUid && part.formulaUid === parent.formulaUid
+          && stationIds(part).indexOf(station) >= 0);
+        if (hasChoiceHere) return;
+        const parentVisual = visualText(parent);
+        out.push({
+          qty: parent.q,
+          name: parent.formulaName || parent.n,
+          note: [parentVisual, parentVisual ? parent.note : (parent.paperNote || parent.note)]
+            .filter(Boolean).join(' · '),
+        });
+      });
+
       source.forEach((it) => {
         if (stationIds(it).indexOf(station) < 0) return;
         /* The formula parent is a billing/container line, not a preparation
@@ -19133,7 +19179,6 @@
         const fallback = kdsStationFor(null);
         const byStation = new Map();
         (items || []).filter(Boolean).forEach((it) => {
-          if (it.kind === 'formula') return;
           const sids = (it.stations && it.stations.length) ? it.stations : [fallback];
           sids.forEach((sid) => {
             if (!byStation.has(sid)) byStation.set(sid, null);
@@ -19170,7 +19215,7 @@
           return { accepted: 0, skipped: 'print-hub-unavailable' };
         }
         if (!KP || !KP.printKitchen || (KP.isConnected && !KP.isConnected())) return;
-        return plan.reduce((chain, job) => chain.then(() => Promise.resolve(KP.printKitchen(job.payload, { station: job.station || sid })).then((result) => {
+        return plan.reduce((chain, job) => chain.then(() => Promise.resolve(KP.printKitchen(job.payload, { station: job.station || fallback })).then((result) => {
           if (!result || !result.ok) toast('Ticket cuisine non imprimé', 5200, 'warn', 'Vérifiez l’imprimante puis réimprimez le bon.');
         })), Promise.resolve());
       } catch (_) {}

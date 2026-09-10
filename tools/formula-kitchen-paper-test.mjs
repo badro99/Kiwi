@@ -50,6 +50,19 @@ assert.equal(bar.length, 1, 'the bar receives one headed formula group');
 assert.equal(bar[0].name, 'Prépare ton Plat');
 assert.deepEqual(bar[0].formulaChoices, [{ name: 'Coca-Cola', note: '' }], 'each station sees only its own formula choices');
 
+const parentOnly = kitchenPaperItems([
+  { q: 2, n: 'Menu enfant', kind: 'formula', formulaUid: 'f-empty', formulaName: 'Menu enfant', stations: ['kitchen'] },
+], 'kitchen', 'kitchen');
+assert.deepEqual(parentOnly, [{ qty: 2, name: 'Menu enfant', note: '' }],
+  'a formula without printable choices still reaches its preparation station');
+
+const splitOnly = kitchenPaperItems([
+  { q: 1, n: 'Formule déjeuner', kind: 'formula', formulaUid: 'f-split', stations: ['kitchen'] },
+  { q: 1, n: 'Eau gazeuse', kind: 'formula-part', formulaUid: 'f-split', formulaName: 'Formule déjeuner', stations: ['bar'] },
+], 'kitchen', 'kitchen');
+assert.deepEqual(splitOnly, [{ qty: 1, name: 'Formule déjeuner', note: '' }],
+  'a parent dish is not lost when its only choice prints at another station');
+
 const escContext = { window: {} };
 vm.createContext(escContext);
 vm.runInContext(read('assets/escpos.js'), escContext);
@@ -70,5 +83,7 @@ assert.ok(orderPro.includes("kind: 'formula-part'") && orderPro.includes('formul
 assert.ok(serveur.includes('if (l.kind) linePayload.kind = l.kind') && serveur.includes('if (l.formulaUid) linePayload.formulaUid = l.formulaUid'), 'employee app sends formula identity');
 assert.ok(caisse.includes('kind: l.kind || \'\'') && caisse.includes('formulaUid: l.formulaUid || \'\''), 'caisse ingests formula identity from remote inputs');
 assert.ok(caisse.includes('byStation.set(sid, kitchenPaperItems(items, sid, fallback))'), 'all paper paths share the same hierarchy formatter');
+assert.equal(caisse.includes("if (it.kind === 'formula') return;\n          const sids"), false,
+  'formula parents seed their own kitchen station ticket');
 
 console.log('✓ Formula kitchen paper hierarchy verified for caisse, OrderPro, and employee orders');
