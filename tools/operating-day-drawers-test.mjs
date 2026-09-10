@@ -97,6 +97,31 @@ assert.equal(merged.closedBy,'Owner','stale snapshot cannot erase closure actor'
 assert.equal(merged.closedCount,1,'overlapping snapshots do not double-count closure');
 assert.equal(R.closureRevisions(merged).length,1,'overlapping snapshots keep one explicit closure revision');
 assert.equal(merged.snapshotConflicts.length,1,'contradictory same-session snapshots are explicitly flagged');
+const countedConflict=R.build({day:cloudDay,store,sales:[{id:'cloud-sale',amount:85,ts:cloudTs('14:05'),method:'cash'}],session:{
+  sessionId:'same-session-key', terminalId:'cloud-terminal', openedAt:cloudTs('14:00'),
+  closedAt:cloudTs('14:10'), openingFloat:500, countedCash:600, closedBy:'Owner',
+}});
+countedConflict.builtAt=Number(finalSnapshot.builtAt)+200000;
+const countedMerged=R.mergeDaySnapshots(finalSnapshot,countedConflict);
+assert.equal(countedMerged.snapshotConflicts.length,1,'same expected with different counted cash is flagged');
+assert.equal(countedMerged.snapshotConflicts[0].right.counted,600,'counted cash is retained in conflict evidence');
+assert.equal(countedMerged.snapshotConflicts[0].right.ecart,15,'variance is retained in conflict evidence');
+const openEarly=R.build({day:cloudDay,store,sales:[],session:{
+  sessionId:'progress-session', terminalId:'progress-terminal', openedAt:cloudTs('15:00'), openingFloat:500,
+}});
+const openLater=R.build({day:cloudDay,store,sales:[],session:{
+  sessionId:'progress-session', terminalId:'progress-terminal', openedAt:cloudTs('15:00'), openingFloat:500,
+  cashMovements:[{ts:cloudTs('15:05'),type:'in',amount:10}],
+}});
+openLater.builtAt=Number(openEarly.builtAt)+1;
+const openMerged=R.mergeDaySnapshots(openEarly,openLater);
+assert.equal(openMerged.snapshotConflicts.length,0,'normal open-session progression is not flagged as a closure conflict');
+assert.equal(R.drawerSessions(openMerged)[0].cash.expected,510,'newer open-session drawer row is retained');
+const closedPlusNewOpen=R.mergeDaySnapshots(finalSnapshot,openLater);
+assert.equal(closedPlusNewOpen.closed,true,'closed aggregate remains final while a new session is open');
+assert.equal(R.drawerSessions(closedPlusNewOpen).length,2,'new open drawer is merged without replacing the closed aggregate');
+assert.equal(R.drawerSessions(closedPlusNewOpen).find((s)=>s.sessionId==='progress-session').cash.expected,510,
+  'new open drawer cash state remains available alongside the closed aggregate');
 
 /* Load the production dashboard resolver and both export surfaces. The seam is
  * the same local report store and KiwiSales/KiwiRefunds adapters used by the
