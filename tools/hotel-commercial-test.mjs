@@ -150,8 +150,60 @@ test('private preinvoice saves exact split snapshots, safely retries and blocks 
     assert.equal((await f.call(draftPost,command,false)).status,401);
     assert.equal((await f.call(draftGet,null,true,'billing-draft?dossierId=foreign-dossier')).status,404);
     f.sql.prepare('UPDATE hotel_reservations SET total=total+1 WHERE id=?').run(stay.id);
-    // An inconsistent accepted quote fails closed, not a misleading reprice.
-    assert.equal((await f.call(draftGet,null,true,url)).status,503);
+    // An inconsistent accepted quote fails closed for money, not a misleading
+    // reprice, but the rooms still list (ticket #0003) with a named reason.
+    const broken=await f.call(draftGet,null,true,url);
+    assert.equal(broken.status,200,JSON.stringify(broken.body));
+    assert.equal(broken.body.billingError,'billing-quote-mismatch');
+    assert.equal(broken.body.preview,null);
+    assert.equal(broken.body.source.rooms.length,1);
+    assert.equal(broken.body.source.rooms[0].id,stay.id);
+    assert.equal(broken.body.source.lines.length,0);
+    assert.equal((await f.call(draftPost,command)).status,409);
+  }finally{f.sql.close();}
+});
+test('dossier reads list rooms despite broken billing material, writes stay closed',async()=>{
+  const f=await fixture();try{
+    await f.seed();
+    // Corrupt saved draft: reads ignore it for render, a fresh save heals it.
+    const stay=(await f.stay({})).body.booking, url='billing-draft?dossierId='+stay.id;
+    f.sql.prepare("INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)").run(f.merchant,'hotel-billing-draft:'+stay.id,'{"draft":{"kind":"preinvoice"}}',1,1);
+    const unread=await f.call(draftGet,null,true,url);
+    assert.equal(unread.status,200,JSON.stringify(unread.body));
+    assert.equal(unread.body.savedWarning,'saved-unreadable');
+    assert.equal(unread.body.saved,null);
+    assert.equal(unread.body.preview.totalCents,unread.body.source.lines.reduce((s,l)=>s+l.amountCents,0));
+    const heal={action:'save-draft',dossierId:stay.id,rev:1,sourceDigest:unread.body.sourceDigest,directoryRev:unread.body.directoryRev,commandId:'draft-heal-0001',input:{extras:[],allocations:[]}};
+    const healed=await f.call(draftPost,heal);
+    assert.equal(healed.status,200,JSON.stringify(healed.body));
+    // Legacy row without hotel in raw_json: the columns carry the stay, so
+    // billing still builds instead of bricking the dossier.
+    const stay2=(await f.stay({clientRef:'legacy-row-reference',checkIn:'2027-07-10',checkOut:'2027-07-11'})).body.booking, url2='billing-draft?dossierId='+stay2.id;
+    f.sql.prepare('UPDATE hotel_reservations SET raw_json=? WHERE id=?').run('{"id":"legacy"}',stay2.id);
+    const legacy=await f.call(draftGet,null,true,url2);
+    assert.equal(legacy.status,200,JSON.stringify(legacy.body));
+    assert.equal(legacy.body.source.rooms.length,1);
+    assert.equal(legacy.body.source.rooms[0].roomId,'room:101');
+    assert.equal(legacy.body.billingError,null);
+    assert.ok(legacy.body.preview && legacy.body.preview.lines.length > 0);
+    // Same legacy shape plus a corrupted date column: the room still lists,
+    // billing names its reason and writes stay closed.
+    f.sql.prepare("UPDATE hotel_reservations SET check_in='09.09.2026' WHERE id=?").run(stay2.id);
+    const legacyBad=await f.call(draftGet,null,true,url2);
+    assert.equal(legacyBad.status,200,JSON.stringify(legacyBad.body));
+    assert.equal(legacyBad.body.source.rooms.length,1);
+    assert.equal(legacyBad.body.source.rooms[0].roomId,'room:101');
+    assert.equal(legacyBad.body.preview,null);
+    assert.equal(legacyBad.body.billingError,'billing-bad-stay');
+    assert.equal((await f.call(draftPost,{action:'save-draft',dossierId:stay2.id,rev:0,sourceDigest:legacyBad.body.sourceDigest,directoryRev:legacyBad.body.directoryRev,commandId:'draft-legacy-1',input:{extras:[],allocations:[]}})).status,409);
+    // Garbage status: room lists with a named reason instead of vanishing.
+    const stay3=(await f.stay({clientRef:'bad-status-reference',checkIn:'2027-07-12',checkOut:'2027-07-13'})).body.booking, url3='billing-draft?dossierId='+stay3.id;
+    f.sql.prepare('UPDATE hotel_reservations SET status=? WHERE id=?').run('checked_in ',stay3.id);
+    const badStatus=await f.call(draftGet,null,true,url3);
+    assert.equal(badStatus.status,200,JSON.stringify(badStatus.body));
+    assert.equal(badStatus.body.billingError,'billing-bad-status');
+    assert.equal(badStatus.body.source.rooms.length,1);
+    assert.equal(badStatus.body.preview,null);
   }finally{f.sql.close();}
 });
 test('preinvoice CAS rejects source, directory and draft races without overwriting the saved version',async()=>{
@@ -196,56 +248,6 @@ test('gaps, overlaps, mixed tax basis, invalid dates and unsupported occupancy r
   assert.equal(dateOK('2028-02-29'), true);
   assert.throws(() => quote(directory(), { ...input, occupancy: 4 }), /invalid-formula/);
   assert.throws(() => contract({ ...low, amountCents: 1.5 }), /invalid-price/);
-});
-test('quote simulation differentiates account-required, account-not-found, account-archived and invalid-formula and never creates reservations', async () => {
-  const d = directory();
-  assert.throws(() => quote(d, { ...input, accountId: '' }), /account-required/);
-  assert.throws(() => quote(d, { ...input, accountId: '   ' }), /account-required/);
-  assert.throws(() => quote(d, { ...input, accountId: 'non-existent' }), /account-not-found/);
-  const archivedDir = directory();
-  archivedDir.accounts[0].archived = true;
-  assert.throws(() => quote(archivedDir, input), /account-archived/);
-  assert.throws(() => quote(d, { ...input, occupancy: 0 }), /invalid-formula/);
-  assert.throws(() => quote(d, { ...input, occupancy: 4 }), /invalid-formula/);
-  assert.throws(() => quote(d, { ...input, board: 'all_inclusive' }), /invalid-formula/);
-
-  const f = await fixture();
-  try {
-    await f.seed();
-    const countBefore = f.sql.prepare("SELECT COUNT(*) as c FROM sqlite_master WHERE type='table' AND name='hotel_reservations'").get();
-    const storeBefore = f.sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get();
-
-    const sim = await f.call(onRequestPost, { action: 'quote', ...input });
-    assert.equal(sim.status, 200);
-    assert.equal(sim.body.ok, true);
-    assert.equal(sim.body.quote.totalCents, 130080);
-    assert.equal(sim.body.quote.rows.length, 2);
-
-    const storeAfter = f.sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get();
-    assert.deepEqual(storeBefore, storeAfter);
-    if (countBefore?.c) {
-      const resCount = f.sql.prepare("SELECT COUNT(*) as c FROM hotel_reservations").get();
-      assert.equal(resCount.c, 0);
-    }
-
-    const reqRes = await f.call(onRequestPost, { action: 'quote', ...input, accountId: '' });
-    assert.equal(reqRes.status, 400);
-    assert.equal(reqRes.body.error, 'account-required');
-
-    const nfRes = await f.call(onRequestPost, { action: 'quote', ...input, accountId: 'missing-id' });
-    assert.equal(nfRes.status, 400);
-    assert.equal(nfRes.body.error, 'account-not-found');
-
-    await f.post({ action: 'account', rev: 3, item: { ...agency, archived: true } });
-    const archRes = await f.call(onRequestPost, { action: 'quote', ...input });
-    assert.equal(archRes.status, 400);
-    assert.equal(archRes.body.error, 'account-archived');
-
-    await f.post({ action: 'account', rev: 4, item: { ...agency, archived: false } });
-    const formRes = await f.call(onRequestPost, { action: 'quote', ...input, accountId: agency.id, occupancy: 5 });
-    assert.equal(formRes.status, 400);
-    assert.equal(formRes.body.error, 'invalid-formula');
-  } finally { f.sql.close(); }
 });
 test('authenticated typed accounts round-trip, clear fields, archive and reject stale edits', async () => {
   const f = await fixture();

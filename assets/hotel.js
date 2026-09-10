@@ -3692,12 +3692,36 @@
     const options = selected => payers.map(p=>`<option value="${esc(p.id)}" ${p.id===selected?'selected':''}>${esc(p.name)}</option>`).join('');
     return `<article class="hx-billing-line" data-hx-billing-line="${esc(l.id)}" data-amount="${l.amountCents}"><header><div><b>${esc(l.label)}</b><span>${esc(l.date)} · ${esc(cuDraftRoom(l.roomId))} · ${l.quantity} unité(s)${l.board ? ' · '+esc(cuBoards[l.board] || l.board) : ''}</span></div><strong>${cuDraftMoney(l.amountCents)} MAD</strong></header><div class="hx-room-form hx-type-form"><label><span>Payeur principal</span><select data-hx-payer>${options(parts[0]?.payer || l.payer)}</select></label><label><span>Part du second payeur · MAD</span><input data-hx-part inputmode="decimal" value="${((parts[1]?.amountCents || 0)/100).toFixed(2)}"></label><label><span>Second payeur · si partage</span><select data-hx-second><option value="">Aucun</option>${options(parts[1]?.payer)}</select></label></div>${l.kind==='extra'?'<button class="hx-btn ghost" type="button" data-hx-remove-extra>Retirer ce supplément proposé</button>':''}</article>`;
   }
+  function cuDossierRooms(data) {
+    return `<div class="hx-dossier-rooms">${(data.source.rooms || []).map(r=>`<article><b>${esc(r.name || 'Séjour')}</b><span>${esc(cuDraftRoom(r.roomId))} · ${esc(r.code)} · ${esc(cuDraftStatus(r.status))}</span><span>${esc(r.checkIn)} → ${esc(r.checkOut)}${r.dayUse?' · Day-use '+esc(r.arrivalTime)+'–'+esc(r.departureTime):''}</span><button type="button" class="hx-btn ghost" data-hx-open-stay="${esc(r.id)}">Modifier cette chambre</button></article>`).join('')}</div>`;
+  }
+  /* A billing breakage hides no room: the dossier lists its rooms with a
+   * targeted reason instead of the blanket "indisponible", and the money form
+   * is withheld until the stay data is repaired. Ticket #0003. */
+  function cuBillingBlocked(code) {
+    if (code==='billing-quote-mismatch') return 'Le prix accepté ne correspond plus au séjour : dates, chambre ou tarif modifiés depuis l’acceptation. Rouvrez « Modifier cette chambre », vérifiez le prix et acceptez le nouveau devis, puis revenez. Aucune donnée comptable n’a été modifiée.';
+    if (code==='billing-bad-status') return 'Le statut d’un séjour du dossier bloque la préfacture. Rouvrez « Modifier cette chambre », vérifiez son statut et enregistrez, puis revenez. Aucune donnée comptable n’a été modifiée.';
+    if (code==='billing-bad-stay' || code==='billing-bad-dates') return 'Une donnée d’un séjour (dates, chambre ou montant) bloque la préfacture. Rouvrez « Modifier cette chambre », vérifiez puis enregistrez, puis revenez. Aucune donnée comptable n’a été modifiée.';
+    if (code==='directory-unreadable') return 'Le répertoire des comptes est illisible : la préfacture est suspendue le temps de le réparer. Les chambres restent modifiables séparément.';
+    return 'Préfacturation indisponible. Aucune donnée comptable n’a été modifiée.';
+  }
   function cuBillingBody(data) {
+    const roomsHtml=cuDossierRooms(data);
+    const savedWarn=data.savedWarning?`<div class="hx-billing-notice" role="alert"><b>Ancien brouillon illisible.</b><p>Il sera remplacé proprement au prochain enregistrement. Aucune donnée comptable n’a été modifiée.</p></div>`:'';
+    if (data.billingError || !data.preview) {
+      const count=(data.source.rooms || []).length;
+      return `<section class="hx-billing"><header class="hx-commercial-hero"><div><span class="hx-commercial-eyebrow">DOSSIER HÔTEL · PRÉFACTURATION</span><h2>Un séjour, plusieurs chambres.</h2><p>Les chambres restent modifiables et annulables séparément.</p></div><div><small>Chambres au dossier</small><strong>${count}</strong></div></header>
+      ${roomsHtml}
+      <div class="hx-billing-notice" role="alert"><b>Préfacture suspendue.</b><p>${cuBillingBlocked(data.billingError)}</p></div>
+      ${savedWarn}
+      <p role="status" data-hx-dossier-error></p></section>`;
+    }
     const saved=data.saved?.draft, draft=data.stale ? data.preview : (saved || data.preview);
     return `<section class="hx-billing"><header class="hx-commercial-hero"><div><span class="hx-commercial-eyebrow">DOSSIER HÔTEL · PRÉFACTURATION</span><h2>Un séjour, plusieurs chambres.</h2><p>Répartissez les prestations entre voyageurs, agence et société.</p></div><div><small>Total proposé</small><strong data-hx-draft-total>${cuDraftMoney(draft.totalCents)} MAD</strong></div></header>
       <p class="hx-billing-notice">Préfacture non fiscale. Taxes non validées et encaissements non rapprochés. Les suppléments saisis ici ne sont pas envoyés à la caisse. Aucune facture définitive ni paiement n’est créé.</p>
-      <div class="hx-dossier-rooms">${data.source.rooms.map(r=>`<article><b>${esc(r.name)}</b><span>${esc(cuDraftRoom(r.roomId))} · ${esc(r.code)} · ${esc(cuDraftStatus(r.status))}</span><span>${esc(r.checkIn)} → ${esc(r.checkOut)}${r.dayUse?' · Day-use '+esc(r.arrivalTime)+'–'+esc(r.departureTime):''}</span><button type="button" class="hx-btn ghost" data-hx-open-stay="${esc(r.id)}">Modifier cette chambre</button></article>`).join('')}</div>
+      ${roomsHtml}
       ${data.stale?`<div class="hx-billing-notice" role="alert"><b>Le dossier a changé depuis la dernière préfacture.</b><p>Le nouveau prix est affiché. Les répartitions et suppléments de l’ancien brouillon ne seront pas repris automatiquement.</p><button type="button" class="hx-btn ghost" data-hx-reset-draft>Repartir des séjours actuels et remplacer le brouillon</button></div>`:''}
+      ${savedWarn}
       <form data-hx-billing-form><fieldset ${data.stale?'disabled':''}><legend>Prestations et répartition</legend><div data-hx-billing-lines>${draft.lines.map(l=>cuBillingLine(l,data.source.payers)).join('')}</div>
         <details class="hx-commercial-stay"><summary>Ajouter un supplément proposé</summary><div class="hx-room-form hx-type-form"><label><span>Date de prestation</span><input type="date" name="extraDate" value="${esc(data.source.rooms[0]?.checkIn || '')}"></label><label><span>Libellé</span><input name="extraLabel" maxlength="160" placeholder="Repas, parking, service…"></label><label><span>Quantité</span><input name="extraQuantity" type="number" min="1" max="10000" value="1"></label><label><span>Prix unitaire proposé · MAD</span><input name="extraPrice" inputmode="decimal" placeholder="0,00"></label></div><button class="hx-btn ghost" type="button" data-hx-add-extra>Ajouter au brouillon</button></details>
         <label class="hx-billing-note"><span>Observations de préfacturation</span><textarea name="billingNote" maxlength="1000" rows="2">${esc(draft.note || '')}</textarea></label>
@@ -3731,11 +3755,28 @@
     const host=m.el.querySelector('[data-hx-dossier-body]');
     m.el.querySelector('[data-hx-linked-room]').onclick=()=>{m.close();if(scope===cuStayScope())cuStayEditor(null,booking);};
     try{
-      const res=await fetch('/api/hotel/billing-draft?'+new URLSearchParams({merchant,dossierId:id})),data=await res.json();
+      const res=await fetch('/api/hotel/billing-draft?'+new URLSearchParams({merchant,dossierId:id})),data=await res.json().catch(()=>({}));
       if(scope!==cuStayScope()||m.el.isConnected===false)return;
-      if(!res.ok)throw new Error('Préfacturation indisponible. Aucune donnée comptable n’a été modifiée.');
+      if(!res.ok){
+        const code=data?.error;
+        if(code==='dossier-not-found')throw new Error('Dossier introuvable. Actualisez la réception puis rouvrez-le.');
+        if(code==='unauthorized')throw new Error('Session expirée. Reconnectez-vous puis rouvrez le dossier.');
+        if(code==='invalid-dossier')throw new Error('Dossier illisible. Actualisez la réception.');
+        throw new Error('Préfacturation indisponible. Aucune donnée comptable n’a été modifiée.');
+      }
       host.innerHTML=cuBillingBody(data); host.removeAttribute('role');
-      const form=host.querySelector('[data-hx-billing-form]'),error=form.querySelector('[data-hx-billing-error]');
+      const error=host.querySelector('[data-hx-billing-error],[data-hx-dossier-error]');
+      host.querySelectorAll('[data-hx-open-stay]').forEach(button=>button.onclick=async()=>{
+        if(scope!==cuStayScope()){m.close();return;}
+        const response=await fetch('/api/hotel/stays?'+new URLSearchParams({merchant,id:button.dataset.hxOpenStay,includeCancelled:'1'}));
+        const body=await response.json();if(scope!==cuStayScope())return;
+        const stay=body.stays?.find(b=>b.id===button.dataset.hxOpenStay);
+        if(!response.ok||!stay){if(error)error.textContent='Séjour introuvable. Actualisez la réception.';return;}
+        cuStayCache().set(stay.id,stay);m.close();cuStayEditor(stay);
+      });
+      const form=host.querySelector('[data-hx-billing-form]');
+      if(form){
+      const formError=form.querySelector('[data-hx-billing-error]');
       let extras=data.stale?[]:(data.saved?.input?.extras||[]),pending=null,dirty=false;
       const dirtyNow=()=>{dirty=true;pending=null;form.querySelector('[data-hx-print-draft]').disabled=true;};
       const summary=()=>{
@@ -3749,14 +3790,6 @@
       };
       form.addEventListener('input',()=>{dirtyNow();summary();}); form.addEventListener('change',()=>{dirtyNow();summary();});
       host.querySelector('[data-hx-reset-draft]')?.addEventListener('click',()=>{form.querySelector('fieldset').disabled=false;dirtyNow();error.textContent='Les anciens suppléments et répartitions seront remplacés uniquement après enregistrement.';});
-      host.querySelectorAll('[data-hx-open-stay]').forEach(button=>button.onclick=async()=>{
-        if(scope!==cuStayScope()){m.close();return;}
-        const response=await fetch('/api/hotel/stays?'+new URLSearchParams({merchant,id:button.dataset.hxOpenStay,includeCancelled:'1'}));
-        const body=await response.json();if(scope!==cuStayScope())return;
-        const stay=body.stays?.find(b=>b.id===button.dataset.hxOpenStay);
-        if(!response.ok||!stay){error.textContent='Séjour introuvable. Actualisez la réception.';return;}
-        cuStayCache().set(stay.id,stay);m.close();cuStayEditor(stay);
-      });
       form.querySelector('[data-hx-add-extra]').onclick=()=>{
         const raw=form.elements.extraPrice.value.trim().replace(',','.'),quantity=Number(form.elements.extraQuantity.value),label=form.elements.extraLabel.value.trim(),date=form.elements.extraDate.value;
         if(!label||!date||!/^\d{1,7}(\.\d{1,2})?$/.test(raw)||!Number.isInteger(quantity)||quantity<1||quantity>10000){error.textContent='Complétez la date, le libellé, la quantité et le prix du supplément.';return;}
@@ -3774,12 +3807,13 @@
           form.__saving=true;form.querySelector('fieldset').disabled=true;error.textContent='Enregistrement serveur…';
           const response=await fetch('/api/hotel/billing-draft',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pending)}),body=await response.json();
           if(scope!==cuStayScope())return;
-          if(!response.ok)throw new Error(body.error==='draft-stale'?'Le dossier ou ses comptes ont changé. Rouvrez-le pour vérifier les prix avant enregistrement.':'Enregistrement refusé. Vérifiez les montants et les payeurs.');
+          if(!response.ok)throw new Error(body.error==='draft-stale'?'Le dossier ou ses comptes ont changé. Rouvrez-le pour vérifier les prix avant enregistrement.':(['billing-quote-mismatch','billing-bad-status','billing-bad-stay','billing-bad-dates','directory-unreadable'].includes(body.error)?cuBillingBlocked(body.error):'Enregistrement refusé. Vérifiez les montants et les payeurs.'));
           data.saved=body.saved;data.rev=body.rev;pending=null;dirty=false;form.querySelector('[data-hx-print-draft]').disabled=false;
           error.textContent='Préfacture enregistrée. Aucun paiement ni facture fiscale créé.';
         }catch(e){error.textContent=e.message||'Réponse non reçue. Réessayez sans modifier les champs pour conserver la même référence.';}
         finally{form.__saving=false;form.querySelector('fieldset').disabled=false;}
       };
+      }
     }catch(e){host.textContent=e.message||'Dossier indisponible.';}
   }
 

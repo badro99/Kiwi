@@ -2,7 +2,7 @@ import { json } from '../../auth/_lib.js';
 import { authorize } from './commercial.js';
 import { readCommercial } from './_commercial.js';
 import { hydrateReservation, resolveStayActor } from './_stay-events.js';
-import { draftIdOK, digest, draftSource, buildDraft } from './_billing-draft.js';
+import { draftIdOK, digest, draftSource, draftRooms, buildDraft } from './_billing-draft.js';
 const reply=(b,s=200)=>json(b,s,{'Cache-Control':'no-store'});
 // The identical ordered snapshot is compared inside the single CAS write.
 // An added room, cancellation or changed price cannot race a saved draft.
@@ -14,14 +14,22 @@ async function load(env,merchant,id){
   const rows=JSON.parse(raw);
   if(!rows.length)throw Object.assign(new Error(),{code:'dossier-not-found'});
   if(rows.length>200)throw Object.assign(new Error(),{code:'billing-limit'});
-  for(const r of rows) { if(!r.raw_json||!JSON.parse(r.raw_json)?.hotel)throw new Error('invalid-source'); }
-  const directory=await readCommercial(env,merchant);
-  const source=draftSource(rows.map(hydrateReservation),directory.accounts);
+  const stays=rows.map(hydrateReservation);
+  // The rooms list must survive broken billing material: a legacy row, a bad
+  // status or a stale accepted quote hides no room. Money stays strict.
+  let directory, directoryError=null;
+  try { directory=await readCommercial(env,merchant); }
+  catch(_) { directory={rev:0,accounts:[]}; directoryError='directory-unreadable'; }
   const feature='hotel-billing-draft:'+id;
   const stored=await env.DB.prepare('SELECT data,rev FROM store_docs WHERE merchant=? AND feature=?').bind(merchant,feature).first();
-  const saved=stored?JSON.parse(stored.data):null;
-  if(saved&&(!saved.draft||saved.draft.kind!=='preinvoice'||!saved.input))throw new Error('invalid-draft');
-  return {raw,source,feature,rev:stored?Number(stored.rev):0,saved,sourceDigest:await digest(raw),directoryRev:directory.rev};
+  // A malformed saved draft no longer bricks its dossier. The stored document
+  // is left untouched and the next save overwrites it through the normal CAS.
+  let saved=null, savedWarning=null;
+  if (stored) { try { saved=JSON.parse(stored.data); if(!saved?.draft||saved.draft.kind!=='preinvoice'||!saved.input) throw new Error('bad-shape'); } catch(_) { saved=null; savedWarning='saved-unreadable'; } }
+  let source, billingError=directoryError;
+  try { source=draftSource(stays,directory.accounts); }
+  catch(e) { source=draftRooms(stays,directory.accounts); billingError=billingError||e.code||'billing-source-invalid'; }
+  return {raw,source,feature,rev:stored?Number(stored.rev):0,saved,savedWarning,sourceDigest:await digest(raw),directoryRev:directory.rev,billingError};
 }
 export async function onRequestGet({request,env}){
   try{
@@ -29,8 +37,14 @@ export async function onRequestGet({request,env}){
     if(!merchant)return reply({error:'unauthorized'},401);
     if(!draftIdOK(id))return reply({error:'invalid-dossier'},400);
     const d=await load(env,merchant,id);
+    let preview=null, billingError=d.billingError;
+    if (!billingError) {
+      try { preview=buildDraft(d.source,{extras:[],allocations:[]}); }
+      catch(e) { billingError=e.code||'billing-build-failed'; }
+    }
+    if (billingError) d.source={...d.source,lines:[]};
     return reply({ok:true,dossierId:id,rev:d.rev,sourceDigest:d.sourceDigest,directoryRev:d.directoryRev,source:d.source,
-      saved:d.saved,stale:!!d.saved&&(d.saved.sourceDigest!==d.sourceDigest||d.saved.directoryRev!==d.directoryRev),preview:buildDraft(d.source,{extras:[],allocations:[]})});
+      saved:d.saved,savedWarning:d.savedWarning,stale:!!d.saved&&(d.saved.sourceDigest!==d.sourceDigest||d.saved.directoryRev!==d.directoryRev),preview,billingError});
   }catch(e){return reply({error:e.code||'billing-unavailable'},e.code==='dossier-not-found'?404:503);}
 }
 export async function onRequestPost({request,env}){
@@ -41,6 +55,9 @@ export async function onRequestPost({request,env}){
     if(b.action!=='save-draft')return reply({error:'final-invoicing-not-enabled'},409);
     if(!draftIdOK(b.dossierId)||!draftIdOK(b.commandId))return reply({error:'invalid-dossier'},400);
     const d=await load(env,merchant,b.dossierId);
+    // Writes fail closed with the specific reason while reads stay open:
+    // without trustworthy lines there is nothing a draft may allocate.
+    if (d.billingError) return reply({error:d.billingError},409);
     const requestHash=await digest(JSON.stringify({sourceDigest:b.sourceDigest,directoryRev:b.directoryRev,input:b.input}));
     if(d.saved?.commandId===b.commandId){
       if(d.saved.requestHash!==requestHash)return reply({error:'command-conflict'},409);
