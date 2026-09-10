@@ -1,25 +1,31 @@
-// Durable retry loop for Shopify inventory writes. Normal catalogue requests
-// attempt the outbox immediately through waitUntil(); this minute cron catches
-// outages, expired requests and devices that went offline after checkout.
+// Durable retry loop for Shopify inventory writes. Pages owns the OAuth token
+// encryption key; this Worker owns only a dedicated bearer secret and asks the
+// narrow Pages endpoint to drain the queue once per minute.
 
-import { flushShopifyOutbox } from '../../../functions/api/shopify/_lib.js';
-import { flushInboundStock } from '../../../functions/api/shopify/_inbound-stock.js';
-import { __test as inbound } from '../../../functions/api/channel/shopify/[link].js';
+async function run(env) {
+  const target = String(env && env.SYNC_URL || 'https://kiwi-os.com/api/shopify/cron');
+  const secret = String(env && env.SHOPIFY_CRON_SECRET || '');
+  if (secret.length < 32) throw new Error('SHOPIFY_CRON_SECRET is not configured');
+  const response = await fetch(target, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${secret}`, 'User-Agent': 'kiwi-shopify-sync/1' },
+  });
+  if (!response.ok) throw new Error(`Shopify retry endpoint returned ${response.status}`);
+  return response.json();
+}
 
 export default {
   async scheduled(_controller, env, ctx) {
-    ctx.waitUntil(flushInboundStock(env, inbound.applyShopifyOrderStock));
-    ctx.waitUntil(flushShopifyOutbox(env, '', 50).then((result) => {
+    ctx.waitUntil(run(env).then((result) => {
       if (result.processed || result.failed) console.log(JSON.stringify({ event: 'shopify-sync', ...result }));
     }));
   },
 
-  async fetch(request, env) {
+  async fetch(request) {
     const url = new URL(request.url);
     if (url.pathname !== '/health') return new Response('Not found', { status: 404 });
-    const pending = env.DB ? await env.DB.prepare(
-      `SELECT status, COUNT(*) AS n FROM shopify_sync_outbox GROUP BY status`
-    ).all().catch(() => ({ results: [] })) : { results: [] };
-    return Response.json({ ok: true, queue: pending.results || [] }, { headers: { 'Cache-Control': 'no-store' } });
+    return Response.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } });
   },
 };
+
+export const __test = { run };

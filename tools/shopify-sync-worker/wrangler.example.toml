@@ -8,12 +8,8 @@ crons = ["* * * * *"]
 [observability]
 enabled = true
 
-[[d1_databases]]
-binding = "DB"
-database_name = "kiwi-sales"
-database_id = "REPLACE_WITH_PRODUCTION_D1_ID"
+[vars]
+SYNC_URL = "https://kiwi-os.com/api/shopify/cron"
 
-# Set with `wrangler secret put`, never in this file:
-#   SHOPIFY_CLIENT_ID
-#   SHOPIFY_CLIENT_SECRET
-#   SHOPIFY_TOKEN_KEY
+# Set the same independent random value on Pages and this Worker, never here:
+#   SHOPIFY_CRON_SECRET

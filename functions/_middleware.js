@@ -376,6 +376,10 @@ async function routeRequest(context) {
    * propre état aléatoire, stocké sous forme de hash pendant dix minutes, lie
    * la boutique au commerçant. Chemin exact + GET/HEAD seulement. */
   if (isRead && path === '/api/shopify/callback') return next();
+  /* The minute Shopify retry worker has no merchant browser session. It owns a
+   * single random bearer secret and can reach only this exact POST route; the
+   * handler verifies that secret again before touching the durable outbox. */
+  if (method === 'POST' && path === '/api/shopify/cron') return next();
   /* Les deux seules écritures publiques : déposer une commande, et s'asseoir.
    * Chemins EXACTS — surtout pas le préfixe /api/order/, qui ouvrirait
    * /api/order/queue, c'est-à-dire la file du personnel avec ses articles, ses

@@ -55,10 +55,12 @@ npx wrangler d1 execute kiwi-sales --remote \
 ## Retry Worker
 
 Copy `tools/shopify-sync-worker/wrangler.example.toml` to an ignored local
-`wrangler.toml`, replace the D1 id, add the three Shopify secrets with
-`wrangler secret put`, then deploy from that directory. The cron drains up to 50
-coalesced variant targets each minute. `/health` exposes counts only, never
-merchant names, products, tokens, or errors.
+`wrangler.toml`, set the same independent 32-byte `SHOPIFY_CRON_SECRET` on the
+Pages project and Worker, then deploy from that directory. The Worker calls one
+exact, bearer-protected Pages route; Shopify OAuth secrets stay in Pages and are
+never duplicated. The cron drains up to 50 coalesced variant targets each
+minute. `/health` exposes availability only, never merchant names, products,
+tokens, queue contents, or errors.
 
 ## Merchant rollout
 

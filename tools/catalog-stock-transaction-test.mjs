@@ -70,6 +70,8 @@ const api = fs.readFileSync(path.join(ROOT, 'functions/api/catalog.js'), 'utf8')
 const pos = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
 ok(/UPDATE catalogs SET data = \?, rev = \?, updated_ts = \?[\s\S]*WHERE merchant = \? AND rev = \?/.test(api),
   'le write catalogue est un compare-and-swap atomique');
+ok(api.includes('scheduleShopifySync(env, merchant, before, data, next, waitUntil);'),
+  'chaque débit de vente accepté programme la quantité finale vers Shopify');
 ok(pos.includes('const frozen = {') && pos.includes('lines: frozen.lines.map'),
   'prix, reçu, journal et stock lisent le snapshot immuable du checkout');
 ok(pos.includes('state.checkoutBusy = true;\n    beginPay();')

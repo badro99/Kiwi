@@ -11,11 +11,32 @@ import {
   SHOPIFY_SCOPES, verifyOAuthHmac, verifyWebhookHmac,
 } from '../functions/api/shopify/_lib.js';
 import { __test as statusTest } from '../functions/api/shopify/status.js';
+import { __test as cronTest } from '../functions/api/shopify/cron.js';
+import retryWorker, { __test as retryTest } from './shopify-sync-worker/src/index.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 let pass = 0; const failures = [];
 const ok = (label, condition, detail = '') => condition ? pass++ : failures.push(`${label}${detail ? ` — ${detail}` : ''}`);
+
+const cronSecret = 'cron-secret-for-tests-with-at-least-32-characters';
+ok('cron rejects a missing bearer secret', !cronTest.authorized(new Request('https://kiwi.test/api/shopify/cron', { method: 'POST' }), { SHOPIFY_CRON_SECRET: cronSecret }));
+ok('cron rejects a wrong bearer secret', !cronTest.authorized(new Request('https://kiwi.test/api/shopify/cron', { method: 'POST', headers: { Authorization: 'Bearer wrong' } }), { SHOPIFY_CRON_SECRET: cronSecret }));
+ok('cron accepts only the configured bearer secret', cronTest.authorized(new Request('https://kiwi.test/api/shopify/cron', { method: 'POST', headers: { Authorization: `Bearer ${cronSecret}` } }), { SHOPIFY_CRON_SECRET: cronSecret }));
+ok('cron refuses weak shared-secret configuration', !cronTest.authorized(new Request('https://kiwi.test/api/shopify/cron', { method: 'POST', headers: { Authorization: 'Bearer short' } }), { SHOPIFY_CRON_SECRET: 'short' }));
+
+const workerFetch = globalThis.fetch;
+let cronCall = null;
+globalThis.fetch = async (url, init) => {
+  cronCall = { url: String(url), init };
+  return new Response(JSON.stringify({ ok: true, processed: 2, failed: 0 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+};
+const cronResult = await retryTest.run({ SYNC_URL: 'https://kiwi.test/api/shopify/cron', SHOPIFY_CRON_SECRET: cronSecret });
+globalThis.fetch = workerFetch;
+ok('minute worker calls the exact retry endpoint', cronCall && cronCall.url === 'https://kiwi.test/api/shopify/cron' && cronCall.init.method === 'POST');
+ok('minute worker presents the dedicated bearer secret', cronCall && cronCall.init.headers.Authorization === `Bearer ${cronSecret}`);
+ok('minute worker returns the drain result', cronResult.processed === 2 && cronResult.failed === 0);
+ok('worker health reveals no merchant or queue data', (await retryWorker.fetch(new Request('https://worker.test/health'))).status === 200);
 
 // Domain input is the only attacker-controlled part of the OAuth destination.
 ok('bare shop name becomes a myshopify domain', normalizeShopDomain('Atlas-Casa') === 'atlas-casa.myshopify.com');
@@ -209,6 +230,11 @@ ok('tokens are never selected by status route', !read('functions/api/shopify/sta
 const middleware = read('functions/_middleware.js');
 ok('OAuth callback has one exact public GET path', middleware.includes("isRead && path === '/api/shopify/callback'"));
 ok('Shopify control API is not publicly allow-listed', !middleware.includes("path.startsWith('/api/shopify/')"));
+ok('minute retry exposes only one exact authenticated POST path', middleware.includes("method === 'POST' && path === '/api/shopify/cron'"));
+const retrySource = read('tools/shopify-sync-worker/src/index.js');
+const retryConfig = read('tools/shopify-sync-worker/wrangler.example.toml');
+ok('retry worker keeps Shopify OAuth secrets inside Pages', !/SHOPIFY_(?:CLIENT_ID|CLIENT_SECRET|TOKEN_KEY)/.test(retrySource + retryConfig));
+ok('retry worker has no direct production database binding', !retryConfig.includes('[[d1_databases]]'));
 
 const connect = read('functions/api/shopify/connect.js');
 const callback = read('functions/api/shopify/callback.js');
