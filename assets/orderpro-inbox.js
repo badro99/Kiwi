@@ -141,8 +141,15 @@
         state.sessions = j.sessions || [];
         state.closedSessions = j.closedSessions || [];
         state.expired = j.expired || [];
-        bridge(delta);
-        if (cancelled.length) bridge(cancelled);
+        /* One coherent lifecycle snapshot per poll. Passing the rejected rows
+         * through a second ingest used to run the same terminal cleanup twice
+         * in one tick; worse, older API payloads had no status and could be
+         * reconstructed between both passes. Normalise at this trust boundary
+         * too, so a mixed-version deployment still converges safely. */
+        var terminal = cancelled.map(function (ticket) {
+          return Object.assign({}, ticket, { status: 'rejected' });
+        });
+        bridge(delta.concat(terminal));
         if (fresh) announce(fresh);
         warnExpiring();
         warnDegraded(j.degraded);
@@ -218,7 +225,13 @@
     return fetch('/api/order/queue', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-    }).then(function (r) { return r.ok ? r.json() : null; })
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        j = j && typeof j === 'object' ? j : {};
+        j.httpStatus = r.status;
+        return j;
+      });
+    })
       .then(function (j) {
         if (j && j.ok) {
           if (prev && j.status) prev.status = j.status;
@@ -244,7 +257,7 @@
         if (prev) { state.orders[id] = prev; paint(); }
         return j;
       })
-      .catch(function () { if (prev) { state.orders[id] = prev; paint(); } return null; });
+      .catch(function () { if (prev) { state.orders[id] = prev; paint(); } return { error: 'network-error', httpStatus: 0 }; });
   }
 
   /* ── L'addition est réglée : on coupe le téléphone ───────────────────────
@@ -697,7 +710,35 @@
             }
           } catch (_) {}
           setStatus(t.dataset.kopAcc, 'accepted', { server: srv });
-        } else if (t.dataset.kopRej) setStatus(t.dataset.kopRej, 'rejected');
+        } else if (t.dataset.kopRej) {
+          var rejectButton = t;
+          if (rejectButton.disabled) return;
+          rejectButton.disabled = true;
+          rejectButton.textContent = 'Annulation…';
+          setStatus(t.dataset.kopRej, 'rejected').then(function (result) {
+            if (result && result.ok) {
+              /* Pull from zero immediately: pending badges, the table bill and
+               * the phone-facing terminal state must agree before the cashier
+               * can press “Annuler mesa”. The operation is idempotent. */
+              state.since = 0;
+              return pull();
+            }
+            var message = result && result.httpStatus === 403
+              ? 'Annulation refusée · vérifiez l’appairage de cette caisse'
+              : 'Annulation non enregistrée · réessayez';
+            try {
+              var stack = document.getElementById('toast-stack');
+              if (stack) {
+                var notice = document.createElement('div'); notice.className = 'toast'; notice.textContent = message;
+                stack.appendChild(notice);
+                setTimeout(function () { notice.classList.add('fade'); }, 5500);
+                setTimeout(function () { notice.remove(); }, 5800);
+              }
+            } catch (_) {}
+            paint();
+            return null;
+          });
+        }
         else if (t.dataset.kopReady) setStatus(t.dataset.kopReady, 'ready');
         else if (t.dataset.kopServed) setStatus(t.dataset.kopServed, 'served');
       });

@@ -5580,7 +5580,7 @@
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=17" defer></script>
+  <script src="assets/orderpro-inbox.js?v=19" defer></script>
   <script src="assets/service-requests.js?v=1" defer></script>
   <script src="assets/caisse-menu-availability.js?v=4" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
@@ -20052,6 +20052,22 @@
       const id = caisseTableId(o.table);
       const t = id && tables[id];
       if (!t) return false;
+      /* Rejection is terminal and its line marker is globally unique. Remove
+         that exact order before checking the current phone session: the visit
+         may already have closed or the physical table may already belong to a
+         new party, but neither fact can make an old rejected line legitimate.
+         This is deliberately narrower than clearing the table. */
+      if (o.status === 'rejected') {
+        const before = (tableOrders[id] || []).length;
+        tableOrders[id] = (tableOrders[id] || []).filter(l => !String(l.orderProLine || '').startsWith(String(o.id) + ':'));
+        const changed = tableOrders[id].length !== before;
+        if (changed) {
+          refreshTableNode(id);
+          if (selectedId === id) mode === 'order' ? renderOrderPanel(id) : renderRightPanel(id);
+          try { persistShift(); } catch (_) {}
+        }
+        return changed;
+      }
       const activeSeat = phoneSeats.get(tableKey(id));
       /* A table is reused hundreds of times. Only tickets from its CURRENT
          session belong to this bill. Legacy employee rows have a server but no
@@ -20069,16 +20085,6 @@
       }
 
       let changed = false;
-      if (o.status === 'rejected') {
-        const before = (tableOrders[id] || []).length;
-        tableOrders[id] = (tableOrders[id] || []).filter(l => !String(l.orderProLine || '').startsWith(String(o.id) + ':'));
-        changed = tableOrders[id].length !== before;
-        if (changed) {
-          if (selectedId === id && mode === 'salle') renderRightPanel(id);
-          try { persistShift(); } catch (_) {}
-        }
-        return changed;
-      }
       if (t.status === 'khawya' || t.status === 'a-commander') {
         if (t.status === 'khawya') resetTableTimer(t);
         t.status = 'ka-yaklo';

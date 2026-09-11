@@ -508,6 +508,13 @@ export async function onRequestGet(context) {
       return {
         id: r.id, number: r.number, mode: r.mode, table: r.table_no || '',
         total: r.total, lines,
+        /* A cancelled ticket is not just an old order-shaped row. The caisse
+         * feeds this object back through the same ingestion bridge as a live
+         * queue delta, where `status` is the terminal-state discriminator.
+         * Omitting it made every poll rebuild the rejected ticket as active
+         * immediately after removing it, which repeated the cancellation
+         * toast forever and left its exact lines on the table bill. */
+        status: 'rejected',
         created_ts: r.created_ts, updated_ts: r.updated_ts,
       };
     });
