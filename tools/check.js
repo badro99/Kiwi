@@ -1039,6 +1039,7 @@ section('Whole-project regressions');
     'caisse-payment-upload-test.mjs',
     'dashboard-activity-test.mjs',
     'caisse-reconnect-test.mjs',
+    'caisse-pairing-repair-test.mjs',
     'takeaway-history-timestamps-test.mjs',
     'floorplan-sync-test.js',
     'kitchen-relay-test.js',

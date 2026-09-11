@@ -6,7 +6,7 @@
   if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) return;
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/kiwi-sw.js?v=554').then(function (reg) {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=555').then(function (reg) {
         try { reg.update(); } catch (_) {}
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
       }).catch(function () {});
@@ -79,6 +79,23 @@
 
   // Offline/online + real server queue reflection — visible enough to act on.
   var refreshingStatus = false;
+  var pairingRepairing = null;
+  var pairingRepairAttemptedAt = 0;
+  function repairPairing(force) {
+    if (pairingRepairing) return pairingRepairing;
+    if (!window.KiwiCaissePairing || typeof window.KiwiCaissePairing.repair !== 'function') {
+      return Promise.reject(new Error('pairing-repair-unavailable'));
+    }
+    var now = Date.now();
+    if (!force && pairingRepairAttemptedAt && now - pairingRepairAttemptedAt < 60 * 1000) {
+      return Promise.reject(new Error('pairing-repair-throttled'));
+    }
+    pairingRepairAttemptedAt = now;
+    pairingRepairing = Promise.resolve(window.KiwiCaissePairing.repair()).finally(function () {
+      pairingRepairing = null;
+    });
+    return pairingRepairing;
+  }
   function cashJournalStatus() {
     try { if (window.KiwiCashSessions && window.KiwiCashSessions.status) return window.KiwiCashSessions.status(); } catch (_) {}
     return { pendingCount: 0, pendingPairing: false, storageError: false };
@@ -131,7 +148,16 @@
     } else if (q.pending && (q.lastStatus === 401 || q.lastStatus === 403)) {
       tone = '#9F3028';
       label = 'Appairage à vérifier · ' + q.pending + ' en attente';
-      detail = 'Accès refusé (' + q.lastStatus + ') · opérations conservées';
+      detail = pairingRepairing ? 'Réactivation sécurisée en cours · opérations conservées'
+        : 'Accès refusé (' + q.lastStatus + ') · toucher pour réactiver';
+      /* One quiet attempt fixes the common case where this same browser still
+         carries the dashboard owner session. Throttling prevents a denied
+         terminal from creating a retry loop; a tap remains an explicit retry. */
+      if (!pairingRepairing && (!pairingRepairAttemptedAt || Date.now() - pairingRepairAttemptedAt >= 60 * 1000)) {
+        repairPairing(false).then(function () {
+          if (window.KiwiLive && window.KiwiLive.flush) return window.KiwiLive.flush(true);
+        }).then(status).catch(function () { status(); });
+      }
     } else if (q.pending) {
       tone = '#A56A16';
       label = q.pending + ' opération' + (q.pending > 1 ? 's' : '') + ' à synchroniser';
@@ -189,7 +215,16 @@
       if (sub) sub.textContent = 'Envoi des opérations au serveur…';
       var flushPromise;
       try {
-        flushPromise = (window.KiwiLive && window.KiwiLive.flush) ? window.KiwiLive.flush(true) : Promise.resolve();
+        /* A 401/403 is not a connectivity problem. First renew the secure till
+           proof, then replay the exact same durable receipt IDs. */
+        if (qNow.pending && (qNow.lastStatus === 401 || qNow.lastStatus === 403)) {
+          if (sub) sub.textContent = 'Réactivation sécurisée de cette caisse…';
+          flushPromise = repairPairing(true).then(function () {
+            return (window.KiwiLive && window.KiwiLive.flush) ? window.KiwiLive.flush(true) : Promise.resolve();
+          });
+        } else {
+          flushPromise = (window.KiwiLive && window.KiwiLive.flush) ? window.KiwiLive.flush(true) : Promise.resolve();
+        }
       } catch (err) {
         flushPromise = Promise.reject(err);
       }
@@ -214,7 +249,11 @@
         status();
       }).catch(function (err) {
         delete d.dataset.syncing;
-        toast('Échec de synchronisation · ' + (err && err.message || 'erreur réseau'), 'danger');
+        if (err && (err.status === 401 || err.status === 403)) {
+          toast('Réappairage requis · ouvrez cette caisse depuis le tableau de bord. Les opérations restent conservées.', 'danger');
+        } else {
+          toast('Échec de synchronisation · ' + (err && err.message || 'erreur réseau'), 'danger');
+        }
         status();
       });
     };

@@ -181,6 +181,69 @@
     }).catch(function () { return localRedeem(code); });                 // network → same-browser
   }
 
+  /* ── repair a local-only/stale pairing without touching the outbox ─────────
+   * A same-browser dashboard hand-off used to write only localStorage. The till
+   * therefore looked connected, but never received the httpOnly `kiwi_till`
+   * cookie that /api/sale requires. Every receipt was correctly retained by the
+   * durable outbox, then rejected forever with 403.
+   *
+   * The signed-in owner/operator session may mint a short-lived server code.
+   * Redeeming it immediately gives this physical terminal a fresh epoch-bound
+   * cookie. applyPairing() is deliberately called for the SAME merchant: the
+   * shared commit sees `switched === false`, so sales, the active shift and the
+   * queued receipts are never purged. A terminal without an owner/operator
+   * session simply gets a typed 401/403 error and keeps every receipt locally. */
+  var repairPromise = null;
+  function pairError(message, status) {
+    var err = new Error(message || 'pairing-repair-failed');
+    err.status = Number(status) || 0;
+    return err;
+  }
+  function jsonOrEmpty(response) {
+    return response.json().catch(function () { return {}; });
+  }
+  function pairFromAccount(venue) {
+    venue = venue || pairedVenue();
+    if (!venue || !venue.merchant) return Promise.reject(pairError('merchant-missing', 0));
+    if (repairPromise) return repairPromise;
+
+    repairPromise = fetch('/api/pair/create', {
+      method: 'POST',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        merchant: venue.merchant, type: venue.type || '', subtype: venue.subtype || '',
+        name: venue.name || '', location: venue.location || '',
+      }),
+    }).then(function (r) {
+      return jsonOrEmpty(r).then(function (j) {
+        if (!r.ok || !j || !j.ok || !/^\d{6}$/.test(String(j.code || ''))) {
+          throw pairError((j && j.error) || 'pair-create-failed', r.status);
+        }
+        return String(j.code);
+      });
+    }).then(function (code) {
+      return fetch('/api/pair/redeem', {
+        method: 'POST',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ code: code, terminalId: terminalId() }),
+      }).then(function (r) {
+        return jsonOrEmpty(r).then(function (j) {
+          if (!r.ok || !j || !j.ok) throw pairError((j && j.error) || 'pair-redeem-failed', r.status);
+          /* /api/pair/redeem owns merchant/type/name; the hand-off owns the
+             display-only venueId/location, which the API intentionally omits. */
+          var committed = applyPairing(code, Object.assign({}, venue, j));
+          if (!committed || !committed.ok) throw pairError((committed && committed.error) || 'pair-commit-failed', 0);
+          return committed;
+        });
+      });
+    }).finally(function () { repairPromise = null; });
+    return repairPromise;
+  }
+
   function unpair() {
     /* Unpairing used to delete only four binding keys. Pairing a different
        merchant afterwards then saw no `was` venue and skipped the cross-tenant
@@ -580,7 +643,14 @@
       var h = takeHandoff();
       if (h) {
         var handed = applyPairing('', h).venue;
-        if (h.operator === true) bootForOperator(handed); else bootWithPin(handed);
+        if (h.operator === true) bootForOperator(handed);
+        else {
+          /* Boot immediately so a slow network never blocks the register. The
+             secure cookie is repaired in parallel; KiwiLive listens for the
+             resulting `kiwi-paired` event and drains the existing outbox. */
+          bootWithPin(handed);
+          pairFromAccount(handed).catch(function () {});
+        }
         return;
       }
       var code = newestPending();
@@ -599,7 +669,11 @@
     var h2 = takeHandoff();
     if (h2) {
       var handed2 = applyPairing('', h2).venue;
-      if (h2.operator === true) bootForOperator(handed2); else bootWithPin(handed2);
+      if (h2.operator === true) bootForOperator(handed2);
+      else {
+        bootWithPin(handed2);
+        pairFromAccount(handed2).catch(function () {});
+      }
       return;
     }
 
@@ -629,6 +703,7 @@
 
   window.KiwiCaissePairing = {
     isPaired: isPaired, pairedVenue: pairedVenue, showPad: showPad, redeem: redeem,
+    repair: pairFromAccount,
     unpair: unpair, bootVertical: bootVertical,
     // Who unlocked this till, for any surface that needs to name them.
     staff: function () { return window.KiwiStaff || null; }, setStaff: setStaff,
