@@ -130,6 +130,32 @@ const SELECT_COLS =
   'rowid AS cursor, id, amount, amount_cents, method, label, ref, ts, lines, ' +
   'void_ts, void_reason, void_note, void_actor';
 
+/* A refund is a separate negative sales row, but sale_audit is the durable link
+   back to the positive receipt (`sale_id` = original, `note` = refund row id).
+   When God Mode removes a test receipt after it was refunded, leaving that
+   counter-entry live would turn a zero-net test into negative real turnover and
+   reduce the physical drawer even though no cash was handed out. The pair must
+   therefore move in and out of the books atomically. */
+async function linkedRefundRows(env, merchant, originalIds) {
+  if (!originalIds.length) return [];
+  const holes = originalIds.map(() => '?').join(',');
+  const rs = await env.DB.prepare(
+    `SELECT DISTINCT s.rowid AS cursor, s.id, s.amount, s.amount_cents, s.method,
+            s.label, s.ref, s.ts, s.lines, s.void_ts, s.void_reason,
+            s.void_note, s.void_actor
+       FROM sale_audit a
+       JOIN sales s ON s.merchant = a.merchant AND s.id = a.note
+      WHERE a.merchant = ? AND a.action = 'refund' AND a.sale_id IN (${holes})
+        AND COALESCE(s.amount_cents, s.amount * 100) < 0`
+  ).bind(merchant, ...originalIds).all();
+  return ((rs && rs.results) || []).map(normSaleRow);
+}
+
+function uniqueRows(rows) {
+  const seen = new Set();
+  return rows.filter((row) => row && !seen.has(row.id) && seen.add(row.id));
+}
+
 function normSaleRow(r) {
   if (!r) return r;
   const cents = r.amount_cents != null ? Number(r.amount_cents) : Math.round(Number(r.amount || 0) * 100);
@@ -167,9 +193,11 @@ export async function onRequestGet(context) {
   if (url.searchParams.get('impact') === '1') {
     if (!ids.length) return json({ error: 'ids-required' }, 400);
     try {
-      const rows = await byIds(env, merchant, ids);
-      if (rows.length !== ids.length) return json({ error: 'foreign-sale' }, 409);
-      return json(await impactFor(env, merchant, rows));
+      const selected = await byIds(env, merchant, ids);
+      if (selected.length !== ids.length) return json({ error: 'foreign-sale' }, 409);
+      const linked = selected.some((row) => Number(row && row.amountCents) < 0)
+        ? [] : await linkedRefundRows(env, merchant, selected.map((row) => row.id));
+      return json(await impactFor(env, merchant, uniqueRows(selected.concat(linked)), selected.length, linked));
     } catch (e) {
       if (isMissingVoidColumn(e)) return json({ error: 'migration-needed' }, 503);
       return json({ error: 'query-failed', detail: String(e && e.message || e) }, 500);
@@ -282,9 +310,9 @@ async function byIds(env, merchant, ids) {
 
 /* ── L'APERÇU : tout ce que le geste emporte, avant de le faire ─────────────*/
 
-async function impactFor(env, merchant, rows) {
+async function impactFor(env, merchant, rows, selectedCount = rows.length, linkedRefunds = []) {
   const days = await dayIndex(env, merchant);
-  const totals = { amount: 0, count: rows.length };
+  const totals = { amount: 0, count: selectedCount };
   const methods = {};
   const stock = [];          /* ce qu'il y aurait à remettre en rayon */
   const touched = {};        /* jour commercial → ce qu'on en sait */
@@ -295,7 +323,9 @@ async function impactFor(env, merchant, rows) {
     totals.amount += Number(r.amount) || 0;
     const m = r.method || 'cash';
     methods[m] = (methods[m] || 0) + (Number(r.amount) || 0);
-    (r.lines || []).forEach((l) => {
+    /* A refund can repeat the original basket for receipt printing. It is not a
+       second stock movement to reverse from this preview. */
+    (Number(r.amountCents) > 0 ? (r.lines || []) : []).forEach((l) => {
       if (!l || !(l.qty > 0)) return;
       stock.push({ name: l.name, qty: l.qty, cat: l.cat || '', sale: r.id });
     });
@@ -361,6 +391,7 @@ async function impactFor(env, merchant, rows) {
       label: r.label, ref: r.ref, ts: r.ts, lines: r.lines, void_ts: r.void_ts,
     })),
     totals, methods, stock, loyalty,
+    linkedRefunds: linkedRefunds.map((r) => ({ id:r.id, ref:r.ref, amount:r.amount })),
     days: Object.keys(touched).map((k) => touched[k]),
     dayBookKnown: !!days,
     warnings, blockers,
@@ -427,14 +458,27 @@ export async function onRequestPost(context) {
     return json({ error: 'refund-event-read-only' }, 409);
   }
 
+  /* Expand only after validating the user's explicit selection. A refund may
+     not be selected and voided by itself, but refunds linked to a selected test
+     receipt must follow that receipt so the net drawer and revenue stay true. */
+  let linkedRefunds = [];
+  try {
+    linkedRefunds = await linkedRefundRows(env, merchant, rows.map((row) => row.id));
+  } catch (e) {
+    if (isMissingColumn(e)) return json({ error: 'migration-needed' }, 503);
+    return json({ error: 'refund-link-query-failed', detail: String(e && e.message || e) }, 500);
+  }
+  const selectedRows = rows;
+  rows = uniqueRows(rows.concat(linkedRefunds));
+
   /* L'état d'abord, le risque ensuite. « Déjà sortie » n'est pas un danger à
      assumer, c'est une erreur de manipulation, et aucun `force` ne la passe —
      donc elle se tranche AVANT les blocages. Rangée après, elle se faisait
      absorber par le 409 'blocked' générique : la console affichait alors
      l'écran de conséquences et un bouton « sortir malgré l'avertissement » sur
      une vente déjà sortie, c'est-à-dire un bouton qui ne pouvait rien faire. */
-  if (action === 'void' && rows.some((r) => r.void_ts)) return json({ error: 'already-void' }, 409);
-  if (action === 'restore' && rows.every((r) => !r.void_ts)) return json({ error: 'not-void' }, 409);
+  if (action === 'void' && selectedRows.some((r) => r.void_ts)) return json({ error: 'already-void' }, 409);
+  if (action === 'restore' && selectedRows.every((r) => !r.void_ts)) return json({ error: 'not-void' }, 409);
   const roomRows = rows.filter((r) => ['room', 'folio'].includes(String(r.method || '').toLowerCase()));
   if (action === 'restore' && roomRows.length) {
     return json({ error: 'room-charge-restore-unsupported' }, 409);
@@ -451,7 +495,7 @@ export async function onRequestPost(context) {
     } catch (_) { return json({ error: 'room-charge-unavailable', migrationRequired: true }, 503); }
   }
 
-  const impact = await impactFor(env, merchant, rows);
+  const impact = await impactFor(env, merchant, rows, selectedRows.length, linkedRefunds);
   /* Les blocages, eux, sont des risques que l'opérateur PEUT assumer : on
      refuse, on renvoie les conséquences, et la console les montre. `force`
      n'est acceptable qu'après ce passage-là — il est envoyé par le bouton qui
@@ -521,6 +565,7 @@ export async function onRequestPost(context) {
            perSale(r), ts)));
   } catch (_) { journal = false; }
 
-  return json({ ok: true, action, merchant, count: rows.length, ts, journal,
+  return json({ ok: true, action, merchant, count: selectedRows.length,
+                linkedRefunds: linkedRefunds.length, ts, journal,
                 cursors: rows.map((r) => r.cursor) });
 }

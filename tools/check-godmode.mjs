@@ -539,6 +539,73 @@ G('6 · Une vente d’onboarding — sortie des livres, puis remise');
   ok(rl.lines && rl.lines.length === 1, '…avec son panier intact');
 }
 
+/* ═══ 6bis · TEST DÉJÀ REMBOURSÉ ══════════════════════════════════════════
+ * Une vente de formation peut avoir reçu un remboursement avant que God Mode
+ * ne l'identifie comme test. Sortir seulement le positif laisserait le négatif
+ * diminuer le vrai tiroir : les deux écritures doivent suivre le même état. */
+G('6bis · Vente test remboursée — le couple financier reste à zéro');
+{
+  sale('s-test-refunded', 'amira-boutique', 64, 'cash', 'OrderPro test', 'OP-105', now - 1800000, null);
+  sale('r-test-refunded', 'amira-boutique', -64, 'cash', 'Remboursement · OrderPro test', 'R-OP-105', now - 1700000, null);
+  db.prepare(`INSERT INTO sale_audit
+    (merchant,sale_id,action,reason,note,actor,actor_id,amount,amount_cents,method,ref,sale_ts,impact,ts)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .bind('amira-boutique', 's-test-refunded', 'refund', 'Erreur de saisie', 'r-test-refunded',
+      'Sara', 'staff-1', 64, 6400, 'cash', 'R-OP-105', now - 1800000, '{}', now - 1700000).run();
+
+  const preview = (await call(R.sales, 'GET',
+    '/api/admin/sales?impact=1&merchant=amira-boutique&ids=s-test-refunded')).json;
+  ok(preview.totals.amount === 0 && preview.totals.count === 1,
+    'l’aperçu annonce une vente sélectionnée et un impact net de 0 MAD');
+  ok(preview.linkedRefunds.length === 1 && preview.linkedRefunds[0].id === 'r-test-refunded',
+    'le remboursement lié est explicitement inclus');
+
+  const out = await call(R.sales, 'POST', '/api/admin/sales', { body: {
+    merchant:'amira-boutique', ids:['s-test-refunded'], action:'void', reason:'formation',
+  }});
+  ok(out.status === 200 && out.json.linkedRefunds === 1,
+    'la sortie neutralise atomiquement la vente et son remboursement');
+  const removed = db.prepare('SELECT id, void_ts FROM sales WHERE id IN (?,?) ORDER BY id')
+    .bind('s-test-refunded', 'r-test-refunded').all().results;
+  ok(removed.length === 2 && removed.every((row) => Number(row.void_ts) > 0),
+    'les deux lignes quittent les livres sans être supprimées');
+
+  const back = await call(R.sales, 'POST', '/api/admin/sales', { body: {
+    merchant:'amira-boutique', ids:['s-test-refunded'], action:'restore',
+  }});
+  ok(back.status === 200 && back.json.linkedRefunds === 1,
+    'une remise restaure aussi le couple financier complet');
+  const restored = db.prepare('SELECT id, void_ts FROM sales WHERE id IN (?,?) ORDER BY id')
+    .bind('s-test-refunded', 'r-test-refunded').all().results;
+  ok(restored.every((row) => row.void_ts == null), 'aucune moitié du couple ne reste orpheline');
+
+  const directRefund = await call(R.sales, 'POST', '/api/admin/sales', { body: {
+    merchant:'amira-boutique', ids:['r-test-refunded'], action:'void', reason:'formation',
+  }});
+  ok(directRefund.status === 409 && directRefund.json.error === 'refund-event-read-only',
+    'le remboursement seul reste protégé contre une manipulation isolée');
+
+  /* Reproduire une ligne déjà cassée en production par l'ancien comportement :
+     positif sorti, remboursement encore actif. Le prochain poll normal de la
+     caisse doit la réparer sans accès Cloudflare manuel. */
+  db.prepare("UPDATE sales SET void_ts=?, void_reason='formation' WHERE id=?")
+    .bind(now, 's-test-refunded').run();
+  const healedFeed = await feedFor('amira-boutique');
+  ok(!healedFeed.sales.some((row) => row.id === 'r-test-refunded'),
+    'un ancien remboursement orphelin disparaît du flux au prochain poll');
+  const healed = db.prepare('SELECT void_ts, void_reason FROM sales WHERE id=?')
+    .bind('r-test-refunded').first();
+  ok(Number(healed.void_ts) > 0 && healed.void_reason === 'linked-test-sale',
+    'la réparation est persistée comme retrait réversible, jamais comme suppression');
+
+  /* Ce scénario est autonome : ne pas modifier les totaux attendus par les
+     contrôles historiques qui suivent. */
+  db.prepare("DELETE FROM sale_audit WHERE merchant=? AND (sale_id=? OR note=?)")
+    .bind('amira-boutique', 's-test-refunded', 'r-test-refunded').run();
+  db.prepare('DELETE FROM sales WHERE merchant=? AND id IN (?,?)')
+    .bind('amira-boutique', 's-test-refunded', 'r-test-refunded').run();
+}
+
 /* ═══ 7 · LA JOURNÉE CLÔTURÉE ══════════════════════════════════════════════ */
 G('7 · Journée clôturée — refus, puis passage explicite');
 {
