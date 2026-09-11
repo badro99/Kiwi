@@ -9951,6 +9951,17 @@ function _bqxCopy(trade) {
     },
   };
 }
+/* Ticket #0034 · till PIN codes differ per trade (boutique 0002, maison
+ * 0017): hardcoding 0002 sends maison merchants to the wrong caisse. Empty
+ * when the trade is unknown, so the hint degrades to code-less copy. */
+function _bqxTillCode(trade) {
+  const tr = trade !== undefined ? String(trade || '') : (_bqxCopy().trade || '');
+  return ({ boutique: '0002', maison: '0017' })[tr] || '';
+}
+function _bqxTillHint(trade) {
+  const code = _bqxTillCode(trade);
+  return code ? ` (code ${code})` : '';
+}
 function _kindOptions(sel, trade) {
   const copy = _bqxCopy(trade);
   const effectiveSel = sel || copy.defaultKind;
@@ -9983,7 +9994,7 @@ function _bqxGridHtml() {
     return `<div class="kx-foot-hint"><div class="lh">Aucun produit</div><div class="rh">${
       _bqxColorFilter ? 'Aucun article de cette couleur. Touchez la pastille à nouveau pour tout revoir.'
         : _bqxQuery ? 'Aucun résultat pour cette recherche.'
-        : 'Créez un produit ici, ou depuis la caisse (code 0002) avec la douchette.'}</div></div>`;
+        : 'Créez un produit ici, ou depuis la caisse' + _bqxTillHint() + ' avec la douchette.'}</div></div>`;
   }
   return `<div class="kx-sku-grid">${products.map((p) => {
     const data = CAT().getProduct(p.id);
@@ -10962,7 +10973,7 @@ function _renderCategories() {
 
       <div class="kx-foot-hint">
         <div class="lh">Conseil</div>
-        <div class="rh">Les couleurs de catégorie apparaissent aussi en caisse (code 0002). Supprimer une catégorie déplace ses produits vers « Sans catégorie » ou une catégorie de votre choix.</div>
+        <div class="rh">Les couleurs de catégorie apparaissent aussi en caisse${_bqxTillHint()}. Supprimer une catégorie déplace ses produits vers « Sans catégorie » ou une catégorie de votre choix.</div>
       </div>
     `,
   });

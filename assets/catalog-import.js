@@ -696,8 +696,11 @@
     /* ── step 2 · the plan, before anything is written ── */
     function renderPlan(p) {
       const c = p.counts;
+      /* Merged hardening: refused rows are not creations — the created
+       * count excludes them (they get their own explicit KPI below). */
+      const createdCount = c.newProducts - (c.refusedProducts || 0);
       const kpis = kind === 'boutique' ? [
-        ['new', c.newProducts, c.newProducts === 1 ? 'article créé' : 'articles créés'],
+        ['new', createdCount, createdCount === 1 ? 'article créé' : 'articles créés'],
         ['warn', c.refusedProducts || 0, (c.refusedProducts || 0) === 1 ? 'article refusé' : 'articles refusés'],
         ['', c.updatedProducts, c.updatedProducts === 1 ? 'article mis à jour' : 'articles mis à jour'],
         ['new', c.newVariants, c.newVariants === 1 ? 'variante' : 'variantes'],
@@ -724,7 +727,7 @@
       const head = kind === 'boutique'
         ? '<tr><th>Article</th><th>Catégorie</th><th>Prix</th><th>Var.</th></tr>'
         : '<tr><th>Article</th><th>Catégorie</th><th>Prix</th><th>Dispo</th></tr>';
-      const total = kind === 'boutique' ? c.newProducts + c.updatedProducts : p.rows.length;
+      const total = kind === 'boutique' ? c.newProducts + c.updatedProducts - (c.refusedProducts || 0) : p.rows.length;
 
       const issues = p.issues.slice(0, 12);
       body.innerHTML = [

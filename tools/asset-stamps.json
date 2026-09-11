@@ -128,8 +128,8 @@
     "sha": "216d8525555e8c8b"
   },
   "assets/caisse-pairing.js": {
-    "v": "18",
-    "sha": "18979319d717bb43"
+    "v": "19",
+    "sha": "34f19c7883b40beb"
   },
   "assets/caisse-pwa.js": {
     "v": "502",
@@ -156,8 +156,8 @@
     "sha": "34cd851dee77ae3a"
   },
   "assets/catalog-import.js": {
-    "v": "4",
-    "sha": "f0339e09b68cccff"
+    "v": "5",
+    "sha": "0b05da5b5aa3522a"
   },
   "assets/channel-link.js": {
     "v": "202608272301",
@@ -532,8 +532,8 @@
     "sha": "57b562b061dc24d0"
   },
   "assets/pages-pro.js": {
-    "v": "2098",
-    "sha": "e86fd21c50c73dd0"
+    "v": "2099",
+    "sha": "f755d14220ef1cfc"
   },
   "assets/pages.js": {
     "v": "5",
@@ -604,8 +604,8 @@
     "sha": "3673be5ef49cb7de"
   },
   "assets/pos-dispatch.js": {
-    "v": "37",
-    "sha": "eab63b8e2e5eaae6"
+    "v": "38",
+    "sha": "0d2511e126c17259"
   },
   "assets/pos-epicerie.css": {
     "v": "5",
@@ -668,12 +668,12 @@
     "sha": "782a2a019b86fc81"
   },
   "assets/pos-maison.css": {
-    "v": "22",
+    "v": "23",
     "sha": "ae3c4dedfa5d7971"
   },
   "assets/pos-maison.js": {
-    "v": "22",
-    "sha": "82ff96bc09f237f8"
+    "v": "23",
+    "sha": "b075adf84199f545"
   },
   "assets/pos-mobile.css": {
     "v": "3",
@@ -828,8 +828,8 @@
     "sha": "60c57d3b95133a41"
   },
   "assets/retail-scan.js": {
-    "v": "6",
-    "sha": "18d82faaebb5bb78"
+    "v": "7",
+    "sha": "9465aba0b25f9676"
   },
   "assets/rtl-numbers.js": {
     "v": "1",

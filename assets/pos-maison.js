@@ -3949,7 +3949,11 @@
     const oldP = P[ln.pid] || { name: ln.name || 'Article retiré du catalogue', art: '' };
     const newP = P[newPid];
     if (!newP) { toast('Article de remplacement introuvable'); return; }
-    const newEff = lineDeal({ pid: newPid, isPiece: false }).price;
+    /* Review gap R5 · a piece return takes a piece replacement (same format,
+     * same loose-aware stock, same per-kind promo conversion) — never a set.
+     * The return side stays the frozen amount actually paid (ln.unit). */
+    const newIsPiece = !!ln.isPiece;
+    const newEff = lineDeal({ pid: newPid, isPiece: newIsPiece, customPrice: newIsPiece ? pieceUnitPrice(newP) : undefined }).price;
     const diff = newEff - ln.unit;
     const c = saleClient(sale);
     const el = $('#mz-exchm', root);
@@ -3964,7 +3968,7 @@
       </div>
       <div class="mz-exch-row is-new">
         <span class="mz-line-art">${artOf(newP.art)}</span>
-        <span class="mid"><b>${esc(newP.name)}</b><span>remplacement · ${esc(newSize)} · ${colorDot(newColor)} ${esc(colorLabel(newColor))}</span></span>
+        <span class="mid"><b>${esc(newP.name)}</b><span>remplacement · ${esc(newSize)}${newIsPiece ? ' · à la pièce' : ''} · ${colorDot(newColor)} ${esc(colorLabel(newColor))}</span></span>
         <span class="amt">+${fmtMAD(newEff)}</span>
       </div>
       <div class="mz-exch-diff ${diff > 0 ? 'pos' : diff < 0 ? 'neg' : 'zero'}">
@@ -3986,7 +3990,9 @@
     let applied = false;
     const apply = () => {
       if (applied) return true;
-      if (holdStock(newPid, newSize, 1, false) === false) {
+      /* Take the replacement FIRST (piece-aware), abort untouched on miss. */
+      const held = holdStock(newPid, newSize, 1, newIsPiece);
+      if (held === false) {
         toast(`${newP.name} · ${newSize}, stock insuffisant pour l'échange`);
         return false;
       }
@@ -3994,7 +4000,7 @@
       const back = releaseStock(ln.pid, ln.size, 1, ln.isPiece);
       // Commit the swap to the shared inventory: rendered piece back in, replacement out.
       persistStock(ln.pid, ln.size, ln.color, back);
-      persistStock(newPid, newSize, newColor, -1);
+      persistStock(newPid, newSize, newColor, -held);
       state.exchange = null;
       persistDay();
       queueIfOffline(`Échange ${sale.id}`);
@@ -4003,7 +4009,8 @@
     };
 
     $('#mz-exch-go', el).onclick = () => {
-      if (!canHoldStock(newPid, newSize, 1, false)) {
+      /* Pre-check before any money moves (piece-aware like the take). */
+      if (!canHoldStock(newPid, newSize, 1, newIsPiece)) {
         toast(`${newP.name} · ${newSize}, stock insuffisant pour l'échange`);
         return;
       }
@@ -4029,10 +4036,8 @@
             waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
             onPaid: (parts) => {
               const swapped = apply();
+              /* The paid path kills the old line too, like every return. */
               if (swapped) {
-                /* The positive-difference path is still a return: close the
-                   original line and write the immutable exchange record too,
-                   otherwise the same old item can be exchanged repeatedly. */
                 markLineReturned(ln, 1, `échange ${sale.id}`);
                 recordReturn(sale, [ex.idx], ln.unit, `Échange ${sale.id}`, 'echange', exchangeNumber);
               }
@@ -4040,7 +4045,7 @@
                 id: exchangeNumber, syncId: newSaleId(), at: new Date(), clientId: sale.clientId, by: STAFF.caissiere.name, kind: 'echange',
                 methods: parts.map((x) => x.m).join(' + '),
                 parts: parts.map((x) => ({ m: x.m, amount: Math.round((+x.amount || 0) * 100) / 100 })),
-                lines: swapped ? [{ pid: newPid, size: newSize, color: newColor, qty: 1, remise: 0, unit: diff, returned: false, note: `différence échange ${sale.id}` }] : [],
+                lines: swapped ? [{ pid: newPid, size: newSize, color: newColor, qty: 1, remise: 0, unit: diff, isPiece: newIsPiece, returned: false, note: `différence échange ${sale.id}` }] : [],
                 total: diff,
                 note: swapped ? '' : 'échange non appliqué (rupture entre-temps), différence encaissée à régulariser',
               };
@@ -7668,7 +7673,10 @@
          que les ventes portant ce ticket figé. Lui passer la fenêtre entière
          évite de refaire ici un filtre qui vit là-bas. */
       const salesWeek = () => SALES.filter((s) => s && !s.voided && withinRetention(s.at));
-      window.KiwiPosReprint.provide('boutique', () => salesWeek().map((s) => {
+      /* Ticket #0026 · registered under our own vertical id: the dispatcher
+       * mounts with id='maison', so 'boutique' here starved our journal AND
+       * clobbered the boutique provider on last-mounted-wins. */
+      window.KiwiPosReprint.provide('maison', () => salesWeek().map((s) => {
         const lines = (s.lines || []).map((ln) => ({
           name: lineName(ln),
           qty: ln.qty,

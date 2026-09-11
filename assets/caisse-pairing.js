@@ -116,7 +116,10 @@
     hideNativePin();
     var route = routeFor(v);
     if (route.kind === 'vertical' && window.KiwiPosDispatch && window.KiwiPosDispatch.unlockById) {
-      if (route.id === 'boutique') window.__kiwiPairedBoutiqueVenue = (v && v.venueId) || null;
+      /* Ticket #0022 · the boutique venue key must not outlive a boutique
+       * pairing: any other vertical clears it, or maison keeps reading and
+       * writing the wrong store's stock through the stale key. */
+      window.__kiwiPairedBoutiqueVenue = route.id === 'boutique' ? ((v && v.venueId) || null) : null;
       window.KiwiPosDispatch.unlockById(route.id);
     } else if (typeof window.__kiwiUnlockApp === 'function') {
       window.__kiwiUnlockApp();

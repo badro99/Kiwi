@@ -5,10 +5,15 @@
 (function () {
   'use strict';
 
-  var ELIGIBLE = { boutique: 1, epicerie: 1, pharmacie: 1, librairie: 1, fleuriste: 1, autre: 1 };
+  /* Ticket #0028 · maison is a product-led catalogue store like boutique:
+   * excluding it starved it of camera checkout. Settlement goes through the
+   * shared KiwiPosSale ledger like every other lane; native maison sales join
+   * that ledger under #0025. */
+  var ELIGIBLE = { boutique: 1, epicerie: 1, pharmacie: 1, librairie: 1, fleuriste: 1, autre: 1, maison: 1 };
   var LABELS = {
     boutique: 'Vente boutique', epicerie: 'Vente épicerie', pharmacie: 'Vente pharmacie',
     librairie: 'Vente librairie', fleuriste: 'Vente fleuriste', autre: 'Vente comptoir',
+    maison: 'Vente maison',
   };
   var FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'codabar', 'qr_code'];
   var mounted = Object.create(null);

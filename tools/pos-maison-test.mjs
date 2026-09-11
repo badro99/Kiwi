@@ -377,6 +377,49 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
     'grille : option éteinte ⇒ aucun repère B');
 }
 
+/* Tickets #0017/R4 · le VRAI bloc prix (promoForLine + lineDeal) exécuté avec
+ * un moteur promo bouchonné par kind : la pièce reçoit la promo convertie
+ * (percent sur base pièce, amount divisé, fixed ramené), jamais le prix du
+ * set ; l'affichage et l'encaissement partagent le même calcul. */
+{
+  const from = jsSrc.indexOf('  function promoFor(pid) {');
+  const to = jsSrc.indexOf('  const linePromo = (ln) => lineDeal(ln).promo;');
+  ok(from > 0 && to > from, 'le bloc prix est isolable dans la source');
+  const block = jsSrc.slice(from, to);
+  const mkApi = (rule) => {
+    const fakeWindow = rule ? { KiwiPromos: { priceFor: (item) => {
+      const was = Math.max(0, Math.round(Number(item.price) || 0));
+      let price;
+      if (rule.kind === 'percent') price = Math.round(was * (100 - rule.value) / 100);
+      else if (rule.kind === 'amount') price = was - rule.value;
+      else price = rule.value;
+      price = Math.max(0, Math.min(was, Math.round(price)));
+      if (price >= was) return null;
+      return { price, was, off: was - price, promo: { name: 'P', id: 'p1', kind: rule.kind, value: rule.value }, badge: '-x' };
+    } } } : null;
+    const P = { svc1: { price: 1200, servicePieces: 18 } };
+    const stockOf = () => 99;
+    const sizesOf = (p) => Object.keys(p.sizes || {});
+    const looseOf = () => 0;
+    // eslint-disable-next-line no-new-func
+    return new Function('P', 'window', 'stockOf', 'sizesOf', 'looseOf', block + '\n; return { promoForLine, lineDeal, lineBase: (ln) => lineDeal(ln).price };')(P, fakeWindow || {}, stockOf, sizesOf, looseOf);
+  };
+  const pct = mkApi({ kind: 'percent', value: 10 });
+  ok(pct.lineBase({ pid: 'svc1' }) === 1080, 'set 1200 + promo -10% → 1080');
+  ok(pct.lineBase({ pid: 'svc1', isPiece: true, customPrice: 120 }) === 108,
+    'pièce 120 + percent sur base pièce → 108 (pas 1080 du set)');
+  const amt = mkApi({ kind: 'amount', value: 180 });
+  ok(amt.lineBase({ pid: 'svc1', isPiece: true, customPrice: 120 }) === 110,
+    'amount 180 / 18 pièces → 120 − 10 = 110 (pas 0 du set − 180)');
+  const fix = mkApi({ kind: 'fixed', value: 1080 });
+  ok(fix.lineBase({ pid: 'svc1', isPiece: true, customPrice: 120 }) === 60,
+    'fixed 1080 / 18 pièces → 60');
+  const none = mkApi(null);
+  ok(none.lineBase({ pid: 'svc1' }) === 1200, 'sans moteur promo, prix catalogue');
+  ok(none.lineBase({ pid: 'svc1', isPiece: true, customPrice: 120 }) === 120, 'sans moteur, prix pièce catalogue');
+  ok(pct.lineDeal({ pid: 'svc1', promo: { price: 100 } }).price === 100, 'estampille plus basse conservée');
+}
+
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
 if (failures.length) {
   process.exit(1);

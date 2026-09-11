@@ -241,7 +241,7 @@ var SHELL = [
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=68',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
-  '/assets/catalog-import.js?v=4',
+  '/assets/catalog-import.js?v=5',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.
   '/assets/menu-scan.js?v=2',
   '/assets/salle-scan.js?v=2',
@@ -260,10 +260,10 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=10',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=6',
-  '/assets/pos-dispatch.js?v=37',
+  '/assets/pos-dispatch.js?v=38',
   '/assets/retail-scan.css?v=7',
   '/assets/vendor/zxing-browser.min.js?v=1',
-  '/assets/retail-scan.js?v=6',
+  '/assets/retail-scan.js?v=7',
   '/assets/caisse-dna.css?v=4',
   '/assets/caisse-dna.js?v=2',
   '/assets/pos-mobile.js?v=3',
@@ -305,9 +305,9 @@ var SHELL = [
   '/assets/pos-gym.js?v=5',
   '/assets/pos-autre.css?v=2',
   '/assets/pos-autre.js?v=2',
-  '/assets/pos-maison.css?v=22',
-  '/assets/pos-maison.js?v=22',
-  '/assets/caisse-pairing.js?v=18',
+  '/assets/pos-maison.css?v=23',
+  '/assets/pos-maison.js?v=23',
+  '/assets/caisse-pairing.js?v=19',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
