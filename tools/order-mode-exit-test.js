@@ -174,6 +174,10 @@ const sendFn = (CAISSE.match(/function sendTableToKitchen\(tableId\)\s*\{[\s\S]{
 ok('sendTableToKitchen n’envoie que les lignes non parties', /!l\.sent/.test(sendFn));
 ok('sendTableToKitchen marque les lignes envoyées', /l\.sent = true/.test(sendFn));
 
+const retireRejectedFn = (CAISSE.match(/function retireRejectedKitchenTicket\(ticket\)\s*\{[\s\S]{0,1800}?\n    \}/) || [''])[0];
+ok('un ticket rejeté retire aussi son pont de ligne OrderPro de la table',
+  /orderProLine/.test(retireRejectedFn) && /ticket\.opId/.test(retireRejectedFn));
+
 /* ── 2. L'invariant, rejoué ───────────────────────────────────────────────
  * Un modèle réduit de l'état réel (mode, mesa sélectionnée, lignes saisies) et
  * des cinq gestes qui doivent en sortir. La règle unique : après n'importe

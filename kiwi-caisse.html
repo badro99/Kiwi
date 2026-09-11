@@ -20142,18 +20142,38 @@
     function retireRejectedKitchenTicket(ticket) {
       if (!ticket || !ticket.opId) return false;
       const index = kdsOrders.indexOf(ticket);
-      if (index < 0) return false;
+      let retired = false;
       // This is a live-work projection, not the financial ledger. The server's
       // rejected record and cancellation history remain the durable evidence.
-      kdsOrders.splice(index, 1);
-      opTickets.delete(String(ticket.opId));
-      if (vrapEditingNum === ticket.num) {
-        vrapEditingNum = null;
-        clearCart();
-        setVrapView('board');
+      if (index >= 0) {
+        kdsOrders.splice(index, 1);
+        opTickets.delete(String(ticket.opId));
+        retired = true;
+        if (vrapEditingNum === ticket.num) {
+          vrapEditingNum = null;
+          clearCart();
+          setVrapView('board');
+        }
       }
+      /* A rejected/expired OrderPro ticket can already be absent from the
+         local kitchen projection after a reload or TTL sweep. Its bridge line
+         must still be removed from the table bill, otherwise the table stays
+         permanently "sent" and cannot be cancelled or closed. */
+      try {
+        const id = ticket.table ? caisseTableId(ticket.table) : null;
+        if (id && Array.isArray(tableOrders[id])) {
+          const before = tableOrders[id].length;
+          tableOrders[id] = tableOrders[id].filter(line =>
+            !String(line.orderProLine || '').startsWith(String(ticket.opId) + ':'));
+          if (tableOrders[id].length !== before) {
+            refreshTableNode(id);
+            if (selectedId === id && mode === 'salle') renderRightPanel(id);
+            try { persistShift(); } catch (_) {}
+          }
+        }
+      } catch (_) {}
       try { persistShift(); } catch (_) {}
-      return true;
+      return retired;
     }
     function canRecoverCaisseTable(o) {
       if (!o || o.channel !== 'caisse' || o.mode !== 'table' || !o.session || o.paid || o.status === 'rejected') return false;
