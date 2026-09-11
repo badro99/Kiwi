@@ -10826,7 +10826,33 @@
     }
     /* A settled row identifies the order, not the physical table. Keep the
        first kitchen ticket attached to this bill; later sends are additions. */
+    /* ── Ce qu'une ligne de journal doit dire ──────────────────────────────
+     * Une vente à emporter s'écrivait « À emporter #79 » ; une vente de salle
+     * s'écrivait « 51 ». Un nombre nu ne désigne rien : trois mois plus tard,
+     * face à une réclamation ou à un écart de caisse, on ne peut ni retrouver
+     * la table ni même savoir qu'il s'agissait d'une table. La moitié du
+     * journal était donc intraçable.
+     *
+     * On compose la même forme que pour l'emporter : « Table 5 #56 ».
+     *
+     * Le numéro BRUT reste stocké dans `t.orderNo`, et ce n'est pas un détail :
+     * il est comparé à `order.num` (migration d'un ancien numéro local) et il
+     * est TRANSFÉRÉ tel quel d'une table à l'autre lors d'un changement de
+     * table. Y coller le nom de la table ferait voyager l'ancienne table avec
+     * le ticket. L'étiquette est donc une vue, jamais la donnée. */
+    function tableSaleLabel(tableId, ref) {
+      const id = String(tableId || '').trim();
+      const num = String(ref == null ? '' : ref).trim();
+      if (!id) return num || 'Commande';
+      if (!num || num === id) return `Table ${id}`;
+      return `Table ${id} #${num}`;
+    }
+
     function settledOrderLabel(tableId) {
+      return tableSaleLabel(tableId, settledOrderRef(tableId));
+    }
+
+    function settledOrderRef(tableId) {
       const t = tableId && tables[tableId];
       if (t && t.orderNo != null && String(t.orderNo).trim()) return String(t.orderNo);
       /* Migration for a table already open when this fix is deployed: only a
@@ -15575,7 +15601,9 @@
         return `<button class="jr-entry${fresh}" data-jr-ref="${e.ref}">`
              + `<span class="jr-entry-ic jr-entry-ic--${icCls}"><i data-lucide="${icon}"></i></span>`
              + `<span class="jr-entry-main">`
-             +   `<span class="jr-entry-label">${e.label}${refundedTag}</span>`
+             /* L'étiquette porte maintenant le nom de table, saisi par le
+                commerçant : elle passe par l'échappement comme ses voisines. */
+             +   `<span class="jr-entry-label">${rpEsc(e.label)}${refundedTag}</span>`
              +   `<span class="jr-entry-meta">${hh}:${mm} · ${mLabel} · ${e.ref}${sourceMeta}${tipMeta}</span>`
              + `</span>`
              + `<span class="jr-entry-amount${isRefund ? ' is-refund' : ''}">${amtTxt}</span>`
