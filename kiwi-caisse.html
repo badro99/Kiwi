@@ -13552,6 +13552,40 @@
           return;
         }
       });
+
+      /* Legacy refunds created before the durable server refund link can still
+         be tied unambiguously to the original receipt inside this till's own
+         append-only journal. The original entry may have been matched by its
+         server id while refundOf contains its printed ref, so comparing the
+         refund only with the feed refs leaves the negative half active. Run a
+         second pass after originals have been reconciled and make that exact
+         local relationship follow the original's state. */
+      journal.forEach((refund) => {
+        if (!refund || refund.kind !== 'refund' || !refund.refundOf) return;
+        const link = String(refund.refundOf || '').trim();
+        if (!link) return;
+        const original = journal.find((sale) => {
+          if (!sale || sale.kind === 'refund') return false;
+          let cloudId = '';
+          try { cloudId = String(window.KiwiLive?.saleIdFor?.(sale, currentMerchantSlug()) || ''); } catch (_) {}
+          return [sale.ref, sale.id, sale.serverSaleId, cloudId]
+            .some((value) => String(value || '').trim() === link);
+        });
+        if (!original) return;
+        if (original.voided && !refund.voided) {
+          refund.voided = true;
+          refund.voidAuthority = 'linked-local';
+          refund.voidTs = Number(original.voidTs) || Date.now();
+          refund.voidAt = Date.now();
+          touched++;
+        } else if (!original.voided && refund.voided && refund.voidAuthority === 'linked-local') {
+          refund.voided = false;
+          delete refund.voidAuthority;
+          delete refund.voidTs;
+          delete refund.voidAt;
+          touched++;
+        }
+      });
       if (!touched) return 0;
       renderShiftStats();
       if ($('#journal-drawer') && $('#journal-drawer').classList.contains('is-open')) renderJournal();

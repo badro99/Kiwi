@@ -340,6 +340,25 @@ ok(/e\.voidAuthority === 'linked-ref'[\s\S]{0,240}?e\.voided = false/.test(caiss
 ok(/if \(e\.kind !== 'refund'\)[\s\S]{0,180}?KiwiInventoryConsumption/.test(caisse),
   'neutraliser un remboursement local ne rend jamais le stock une deuxième fois');
 
+/* Older Pasta Corner refunds predate the durable audit link. God Mode can
+   identify the positive by server id while the refund points to its local ref;
+   the second pass must follow the already-voided original. */
+J = [
+  { id: 'local-op-105', serverId: 'cloud-op-105', ref: 'OP-105', amount: 64, method: 'cash' },
+  { id: 'local-refund-105', ref: '260911-0001-PY', refundOf: 'OP-105', kind: 'refund', amount: -64, method: 'cash' },
+  { id: 'real-106', ref: '106', amount: 105, method: 'cash' },
+];
+v = runVoids(J, [], { ids: ['cloud-op-105'] });
+eq(v.touched, 2, 'la vente test et son ancien remboursement local sont neutralisés ensemble');
+eq(J[0].voided, true, 'la vente test est sortie par son identifiant serveur');
+eq(J[1].voided, true, 'le remboursement lié suit la référence locale de la vente');
+eq(J[1].voidAuthority, 'linked-local', 'la réparation locale reste identifiable et auditable');
+eq(!!J[2].voided, false, 'la vraie vente voisine reste intacte');
+v = runVoids(J, [], { restoredIds: new Set(['cloud-op-105']) });
+eq(v.touched, 2, 'la restauration explicite remet aussi les deux moitiés du couple local');
+eq(!!J[0].voided, false, 'la vente restaurée revient dans les livres');
+eq(!!J[1].voided, false, 'son remboursement local revient avec elle');
+
 /* ── 6. les boutons d'impression impriment ─────────────────────────────────── */
 
 ok(!/toast\('Ticket en impression…'\)/.test(caisse),
