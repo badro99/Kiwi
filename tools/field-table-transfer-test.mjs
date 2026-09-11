@@ -427,6 +427,9 @@ assert.equal(absentResponse.status, 409);
 assert.equal((await absentResponse.json()).error, 'source-session-required');
 const absent = context(); absent.tables = { '4': occupied(), '1': { status: 'khawya', covers: 0 } };
 absent.ctrfFromId = '4'; absent.ctrfSelectedToId = '1';
+absent.fetch = async (_url, init) => queue.onRequestPost({ env, request: new Request('https://fixture.invalid/api/order/queue', {
+  ...init, headers: { 'Content-Type': 'application/json', Cookie: cookie },
+}) });
 await absent.confirmCaisseTransfer();
 assert.equal(absent.tables['4'].status, 'ka-yaklo');
 assert.equal(absent.tables['1'].status, 'khawya');

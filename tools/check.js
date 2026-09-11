@@ -1167,6 +1167,7 @@ section('Whole-project regressions');
     'field-whole-item-split-test.mjs',
     'field-orderpro-acceptance-test.mjs',
     'field-table-transfer-test.mjs',
+    'caisse-table-actions-test.mjs',
     'trade-copy-test.mjs',
     'floor-accept-test.mjs',
     'onboarding-gate-test.mjs',

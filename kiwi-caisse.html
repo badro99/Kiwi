@@ -7464,8 +7464,10 @@
       if (orders[tableId] && (orders[tableId].length || !(tableOrders[tableId] || []).length)) return orders[tableId];
       // Live order built by cashier · convert to {qty,name,total} format
       if (tableId in tableOrders) {
-        return tableOrders[tableId].map(l => ({ id: l.id, qty: l.qty, name: lineLabel(l),
-          total: l.price * l.qty, note: l.note || '', kind: l.kind, formulaUid: l.formulaUid, formulaName: l.formulaName, slotLabel: l.slotLabel }));
+        return tableOrders[tableId].map(l => ({ id: l.id, uid: l.uid, qty: l.qty, name: lineLabel(l),
+          price: l.price, total: l.price * l.qty, note: l.note || '', sent: !!l.sent,
+          orderProPending: !!l.orderProPending, kind: l.kind, formulaUid: l.formulaUid,
+          formulaName: l.formulaName, slotLabel: l.slotLabel }));
       }
       /* Chez un vrai commerçant on s'arrête ici. Ce qui suit FABRIQUE des lignes
          · un couscous royal par couvert · et c'est appelé sans condition par
@@ -8657,8 +8659,8 @@
         if (mgBtn) { mgBtn.hidden = mergeOff; mgBtn.style.display = mergeOff ? 'none' : ''; }
         [trBtn, mgBtn].forEach(button => {
           if (!button) return;
-          button.disabled = caisseTableKitchenLocked(id);
-          button.title = button.disabled ? 'Commande déjà envoyée en cuisine : table verrouillée' : '';
+          button.disabled = false;
+          button.title = '';
         });
         tt.hidden = transferOff && mergeOff;
         tt.style.display = (transferOff && mergeOff) ? 'none' : '';
@@ -8672,7 +8674,8 @@
 
       let itemsHTML = lines.map(l => `
         <div class="rp-item">
-          <span class="rp-item-qty">${l.qty}×</span>
+          <span class="rp-item-qty">${l.qty}×${l.sent && l.kind !== 'formula-part' && l.uid
+            ? `<button type="button" class="qty-btn" data-table-void="${kdsEsc(l.uid)}" aria-label="Annuler un ${kdsEsc(l.name)} envoyé en cuisine">−</button>` : ''}</span>
           <span class="rp-item-name">${lineName(l)}</span>
           <span class="rp-item-price mono">${fmtMAD(l.total)}</span>
           ${l.note && l.note.trim() ? `<span class="rp-item-noteline">Note cuisine · ${kdsEsc(l.note)}</span>` : ''}
@@ -10120,6 +10123,16 @@
         return;
       }
 
+      // A sent dining-room line stays cancellable from the bill itself. The
+      // kitchen reason modal is the only destructive path: it writes the
+      // canonical void before the local amount changes.
+      const tableVoidBtn = e.target.closest('[data-table-void]');
+      if (tableVoidBtn && selectedId) {
+        const line = (tableOrders[selectedId] || []).find(l => l.uid === tableVoidBtn.dataset.tableVoid);
+        if (line && line.sent) openCaisseVoidModal(selectedId, line);
+        return;
+      }
+
       // Cart qty +/- buttons (vente rapida) · one specific line by uid
       const qtyBtn = e.target.closest('.qty-btn');
       if (qtyBtn) {
@@ -10541,14 +10554,14 @@
               });
               return;
             }
-            const t = tables[selectedId];
-            if (t) {
-              t.status = 'ka-yaklo';
-              delete t.discount; // clear remise · mesa rétablie
-              refreshTableNode(selectedId);
-            }
-            closeRightPanel();
-            toast('Table avec commande en cours · annulation impossible');
+            const tid = selectedId;
+            requireTillOperator(`Annuler la table ${tid} et prévenir la cuisine`, async (who) => {
+              try {
+                await cancelSentTable(tid, who);
+              } catch (err) {
+                toast(`Table ${tid} conservée · ${err.message || 'annulation non transmise'}`);
+              }
+            });
           }
         }
       });
@@ -11469,15 +11482,19 @@
           seat = { session: visit.id, since: visit.opened_ts, revision: Number(visit.seen_ts) };
         }
       }
-      if (!seat || !seat.session || !Number.isFinite(seat.revision)) {
-        try { window.KiwiOrderInbox?.refresh?.(); } catch (_) {}
-        throw new Error('Visite à actualiser · réessayez après synchronisation');
-      }
-      return (handler.pendingIntent = {
+      const intent = {
         merchant, from, to, operationId: crypto.randomUUID(),
-        expectedSession: String(seat.session), expectedRevision: seat.revision,
-        since: seat.since, destinationClosedAt: Number(tableClosedAt[tableKey(to)] || 0),
-      });
+        since: seat?.since || Date.now(), destinationClosedAt: Number(tableClosedAt[tableKey(to)] || 0),
+      };
+      /* A caisse-created visit can be fully valid on D1 before the inbox poll
+         has installed its local badge. In that case the server resolves the
+         current open visit atomically; missing local cache is not a reason to
+         turn Déplacer/Fusionner into dead controls. */
+      if (seat && seat.session && Number.isFinite(seat.revision)) {
+        intent.expectedSession = String(seat.session);
+        intent.expectedRevision = seat.revision;
+      }
+      return (handler.pendingIntent = intent);
     }
 
     function applyCaisseMovedVisit(from, to, data, intent, merge) {
@@ -11513,7 +11530,6 @@
     }
 
     function openCaisseTransferModal(tableId) {
-      if (caisseTableKitchenLocked(tableId)) { toast('Déplacement impossible : commande déjà envoyée en cuisine'); return; }
       if (!hasTables() || isFeatureOff('tableTransfer') || isFeatureOff('table-transfer')) {
         toast('Déplacement de table non disponible');
         return;
@@ -11552,7 +11568,6 @@
 
     async function confirmCaisseTransfer() {
       if (!ctrfFromId || !ctrfSelectedToId) return;
-      if (caisseTableKitchenLocked(ctrfFromId)) { toast('Déplacement impossible : commande déjà envoyée en cuisine'); return; }
       const from = ctrfFromId;
       const to = ctrfSelectedToId;
       const confirmBtn = $('#ctrf-confirm');
@@ -11585,7 +11600,8 @@
           transferData = data;
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
-          toast(`Déplacement impossible : ${err.message === 'table-kitchen-locked' ? 'commande déjà envoyée en cuisine' : (err.message || 'erreur réseau')}`);
+          toast(`Déplacement impossible : ${err.message === 'source-session-required' || err.message === 'stale-table-visit'
+            ? 'visite à actualiser · synchronisez puis réessayez' : (err.message || 'erreur réseau')}`);
           return;
         }
       }
@@ -11609,6 +11625,9 @@
         tableSplits.set(to, tableSplits.get(from));
         tableSplits.delete(from);
       }
+      kdsOrders.forEach(order => {
+        if (order && order.type === 'dineIn' && String(order.table) === String(from) && !order.paid) order.table = to;
+      });
 
       // Clear source table
       fromT.status = 'khawya';
@@ -11646,7 +11665,6 @@
     let cmrgSelectedTargetId = null;
 
     function openCaisseMergeModal(tableId) {
-      if (caisseTableKitchenLocked(tableId)) { toast('Fusion impossible : commande déjà envoyée en cuisine'); return; }
       if (!hasTables() || isFeatureOff('tableMerge') || isFeatureOff('table-merge')) {
         toast('Fusion de tables non disponible');
         return;
@@ -11685,9 +11703,6 @@
 
     async function confirmCaisseMerge() {
       if (!cmrgSourceId || !cmrgSelectedTargetId) return;
-      if (caisseTableKitchenLocked(cmrgSourceId) || caisseTableKitchenLocked(cmrgSelectedTargetId)) {
-        toast('Fusion impossible : commande déjà envoyée en cuisine'); return;
-      }
       const source = cmrgSourceId;
       const target = cmrgSelectedTargetId;
       const confirmBtn = $('#cmrg-confirm');
@@ -11720,7 +11735,8 @@
           mergeData = data;
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
-          toast(`Fusion impossible : ${err.message === 'table-kitchen-locked' ? 'commande déjà envoyée en cuisine' : (err.message || 'erreur réseau')}`);
+          toast(`Fusion impossible : ${err.message === 'source-session-required' || err.message === 'stale-table-visit'
+            ? 'visite à actualiser · synchronisez puis réessayez' : (err.message || 'erreur réseau')}`);
           return;
         }
       }
@@ -11751,6 +11767,9 @@
         tableSplits.delete(source);
         tableSplits.delete(target);
       }
+      kdsOrders.forEach(order => {
+        if (order && order.type === 'dineIn' && String(order.table) === String(source) && !order.paid) order.table = target;
+      });
 
       // Clear source table
       sourceT.status = 'khawya';
@@ -11867,7 +11886,8 @@
                  * par son identifiant de file, que `voidLine` accepte déjà
                  * (functions/api/order/queue.js · `if (b.voidLine.orderId)`). */
                 ...(scope.orderId ? { orderId: scope.orderId } : { table: tableId }),
-                lineId: line.id || line.uid,
+                lineId: line.uid || line.id,
+                itemId: line.id || '',
                 qty: 1,
                 reason: caisseSelectedVoidReason,
                 isWaste: caisseSelectedVoidIsWaste,
@@ -12054,7 +12074,10 @@
       } else {
         $('#rp-items').innerHTML = order.map(l => l.sent ? `
           <div class="rp-item rp-item--cart rp-item--sent" data-order-uid="${l.uid}">
-            <span class="rp-sent-qty">${l.qty}×</span>
+            ${l.kind === 'formula-part' ? `<span class="rp-sent-qty">${l.qty}×</span>` : `<div class="qty-control">
+              <button type="button" class="qty-btn" data-cart-action="dec" aria-label="Annuler un ${kdsEsc(l.name)} envoyé en cuisine">−</button>
+              <span class="qty-num mono">${l.qty}</span>
+            </div>`}
             <span class="rp-item-name">${lineName(l)}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}</span>
             <span class="rp-item-price mono">${fmtMAD(l.price * l.qty)}</span>
             <span class="rp-sent-mark">${KDS_SVG.check}${l.orderProPending ? 'OrderPro · à accepter' : 'En cuisine'}</span>
@@ -12151,7 +12174,7 @@
           group: o.g || o.group || '', label: o.cn || o.label || o.name || '',
         })).filter(o => o.group && o.label);
         const line = {
-          id: l.id || '', name: l.name || '', qty: l.qty || 1,
+          id: l.id || '', uid: l.uid || '', name: l.name || '', qty: l.qty || 1,
           unitPrice: Math.max(0, +l.price || +l.unitPrice || 0),
           options: optionChoices.map(o => o.label).join(' · '), optionChoices,
           visuals: optVisuals(l.opts), note: (l.note || '').trim(),
@@ -12351,6 +12374,59 @@
        repas d'une table qui mange. */
     function tableSentCount(id) {
       return (tableOrders[id] || []).reduce((s, l) => s + (l.sent ? l.qty : 0), 0);
+    }
+
+    function canonicalOrdersForTable(id) {
+      const found = new Map();
+      const add = (order) => {
+        if (!order || order.paid || order.status === 'rejected') return;
+        if (tableKey(caisseTableId(order.table) || order.table) !== tableKey(id)) return;
+        const orderId = String(order.opId || order.id || '').trim();
+        if (orderId) found.set(orderId, order);
+      };
+      try { Object.values(window.KiwiOrderInbox?.orders?.() || {}).forEach(add); } catch (_) {}
+      try { opTickets.forEach(add); } catch (_) {}
+      try { kdsOrders.forEach(add); } catch (_) {}
+      return Array.from(found.entries()).map(([id, order]) => ({ id, order }));
+    }
+
+    async function cancelSentTable(id, who) {
+      /* A whole-table cancellation is a terminal kitchen event, not a local
+         reset. Wait for any in-flight relay, reject every unpaid canonical
+         ticket with the operator proof, and only then release the table. */
+      const localTickets = kdsOrders.filter(order => order && order.type === 'dineIn'
+        && String(order.table) === String(id) && !order.paid && order.status !== 'rejected');
+      await Promise.all(localTickets.map(order => Promise.resolve(order.canonicalNumberPromise).catch(() => null)));
+      const canonical = canonicalOrdersForTable(id);
+      if (!canonical.length && tableSentCount(id) > 0) throw new Error('commande en cours de synchronisation · réessayez');
+      for (const entry of canonical) {
+        const res = await fetch('/api/order/queue', {
+          method: 'POST', credentials: 'same-origin', cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            merchant: currentMerchantSlug(), id: entry.id, status: 'rejected',
+            server: (who && who.name) || (typeof cashierName !== 'undefined' && cashierName) || 'Caisse',
+            actorProof: (who && who.actorProof) || ''
+          })
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'annulation non transmise');
+        entry.order.status = 'rejected';
+        entry.order.paid = false;
+      }
+      delete tableOrders[id];
+      delete orders[id];
+      const t = tables[id];
+      if (t) {
+        t.status = 'khawya'; t.covers = 0; resetTableTimer(t);
+        delete t.orderNo; delete t.server; delete t.discount;
+      }
+      releasePhoneTable(id, 'cancelled', true, (who && who.actorProof) || '');
+      try { persistShift(); publishServiceFloor(); } catch (_) {}
+      refreshTableNode(id);
+      if (selectedId === id) selectedId = null;
+      backToSalle();
+      toast(`Table ${id} annulée · cuisine prévenue · table libérée`);
     }
 
     /* Cancel an open table from Salle without touching a kitchen order. Salle

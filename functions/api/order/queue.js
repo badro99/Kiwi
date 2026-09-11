@@ -44,7 +44,6 @@
 import { json, entitledMerchant, activeServiceEmployee, readTillActorProof } from '../../auth/_lib.js';
 import { startOfDay, nextOrderNumber, deskTouch, normTable, priceOrder, newSessionId, SESSION_ID, CURSOR_LAG_MS, pollCursor } from './_lib.js';
 import { recordOrderCourse, closeOrderCourses } from './_course.js';
-import { kitchenLock, kitchenLocked } from './_table-mobility.js';
 
 function deferCourse(context, promise) {
   const safe = Promise.resolve(promise).catch(() => false);
@@ -1016,26 +1015,22 @@ export async function onRequestPost(context) {
       }
 
       const sessionId = String(sourceSession.id);
-      const mobility = kitchenLock(merchant, [fromTable]);
-      if (await kitchenLocked(env, mobility)) return json({ error: 'table-kitchen-locked' }, 409);
-
       const nextRevision = Math.max(now, (Number(sourceSession.seen_ts) || 0) + 1);
       const batch = await atomicStatements(env, [
         statement(env,
           `INSERT INTO table_transfers
              (id, merchant, from_table, to_table, session_id, server, covers, orders_count, is_merge, created_ts)
            SELECT ?, ?, ?, ?, ?, ?, ?,
-             (SELECT COUNT(*) FROM orders WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL),
+             (SELECT COUNT(*) FROM orders WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL AND status <> 'rejected'),
              0, ?
            WHERE EXISTS (SELECT 1 FROM table_sessions
                            WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open' AND seen_ts = ?)
              AND NOT EXISTS (SELECT 1 FROM table_sessions
                                WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open')
-             AND NOT EXISTS (SELECT 1 FROM table_transfers WHERE id = ?)
-             AND NOT ${mobility.sql}`,
+             AND NOT EXISTS (SELECT 1 FROM table_transfers WHERE id = ?)`,
           transferId, merchant, fromTable, toTable, sessionId, server || null, covers,
           merchant, fromTable, now, sessionId, merchant, fromTable, expectedRevision,
-          merchant, toTable, transferId, ...mobility.args),
+          merchant, toTable, transferId),
         statement(env,
           `UPDATE table_sessions SET table_no = ?, seen_ts = ?
              WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open' AND seen_ts = ?
@@ -1046,7 +1041,7 @@ export async function onRequestPost(context) {
           transferId, merchant, merchant, toTable),
         statement(env,
           `UPDATE orders SET table_no = ?, session_id = ?, updated_ts = ?
-             WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL
+             WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL AND status <> 'rejected'
                AND EXISTS (SELECT 1 FROM table_transfers WHERE id = ? AND merchant = ?)
                AND EXISTS (SELECT 1 FROM table_sessions
                              WHERE id = ? AND merchant = ? AND table_no = ?
@@ -1063,11 +1058,10 @@ export async function onRequestPost(context) {
         if (raced) return json({ ok: true, transferId: raced.id, fromTable: raced.from_table,
           toTable: raced.to_table, sessionId: raced.session_id || null,
           ordersMoved: Number(raced.orders_count) || 0, replayed: true, now });
-        if (await kitchenLocked(env, mobility)) return json({ error: 'table-kitchen-locked' }, 409);
         return json({ error: 'table-operation-conflict', retry: true }, 409);
       }
       const moved = await env.DB.prepare(
-        `SELECT COUNT(*) AS n FROM orders WHERE merchant = ? AND table_no = ? AND session_id = ? AND paid_ts IS NULL`
+        `SELECT COUNT(*) AS n FROM orders WHERE merchant = ? AND table_no = ? AND session_id = ? AND paid_ts IS NULL AND status <> 'rejected'`
       ).bind(merchant, toTable, sessionId).first();
       const orderCount = Number((moved && moved.n) || 0);
       let paidLeftBehind = 0;
@@ -1129,8 +1123,6 @@ export async function onRequestPost(context) {
           ordersMerged: Number(replay.orders_count) || 0, replayed: true, now });
       }
 
-      const mobility = kitchenLock(merchant, [sourceTable, targetTable]);
-      if (await kitchenLocked(env, mobility)) return json({ error: 'table-kitchen-locked' }, 409);
       // 1. Session cible
       const targetSession = await env.DB.prepare(
         `SELECT id, seen_ts FROM table_sessions WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open' ORDER BY opened_ts DESC LIMIT 1`
@@ -1163,7 +1155,7 @@ export async function onRequestPost(context) {
           `INSERT INTO table_transfers
              (id, merchant, from_table, to_table, session_id, server, covers, orders_count, is_merge, created_ts)
            SELECT ?, ?, ?, ?, ?, ?, 0,
-             (SELECT COUNT(*) FROM orders WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL),
+             (SELECT COUNT(*) FROM orders WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL AND status <> 'rejected'),
              1, ?
            WHERE EXISTS (SELECT 1 FROM table_sessions
                            WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open' AND seen_ts = ?)
@@ -1171,12 +1163,11 @@ export async function onRequestPost(context) {
                            WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open')
                OR (? = 1 AND NOT EXISTS (SELECT 1 FROM table_sessions
                            WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open')))
-             AND NOT EXISTS (SELECT 1 FROM table_transfers WHERE id = ?)
-             AND NOT ${mobility.sql}`,
+             AND NOT EXISTS (SELECT 1 FROM table_transfers WHERE id = ?)`,
           mergeId, merchant, sourceTable, targetTable, targetSessionId, server || null,
           merchant, sourceTable, now, sourceSessionId, merchant, sourceTable, expectedRevision,
           targetSessionId, merchant, targetTable, targetSession ? 0 : 1,
-          merchant, targetTable, mergeId, ...mobility.args),
+          merchant, targetTable, mergeId),
         statement(env,
           `INSERT INTO table_sessions (id, merchant, table_no, mode, status, opened_ts, seen_ts)
            SELECT ?, ?, ?, 'table', 'open', ?, ? WHERE ? = 1
@@ -1190,7 +1181,7 @@ export async function onRequestPost(context) {
           sourceTable, expectedRevision, mergeId, merchant),
         statement(env,
           `UPDATE orders SET table_no = ?, session_id = ?, updated_ts = ?
-             WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL
+             WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL AND status <> 'rejected'
                AND EXISTS (SELECT 1 FROM table_transfers WHERE id = ? AND merchant = ?)
                AND EXISTS (SELECT 1 FROM table_sessions
                              WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open')`,
@@ -1207,7 +1198,6 @@ export async function onRequestPost(context) {
         if (raced) return json({ ok: true, mergeId: raced.id, sourceTable: raced.from_table,
           targetTable: raced.to_table, targetSessionId: raced.session_id || null,
           ordersMerged: Number(raced.orders_count) || 0, replayed: true, now });
-        if (await kitchenLocked(env, mobility)) return json({ error: 'table-kitchen-locked' }, 409);
         return json({ error: 'table-operation-conflict', retry: true }, 409);
       }
 
@@ -1310,6 +1300,7 @@ export async function onRequestPost(context) {
   if (b && b.voidLine && typeof b.voidLine === 'object') {
     const table = normTable(b.voidLine.table);
     const lineId = String(b.voidLine.lineId || b.voidLine.itemId || b.voidLine.id || '').trim();
+    const fallbackItemId = String(b.voidLine.itemId || '').trim();
     const qtyToVoid = Math.max(1, Number(b.voidLine.qty) || 1);
     const reason = String(b.voidLine.reason || 'client_change').trim();
     const isWaste = b.voidLine.isWaste ? 1 : 0;
@@ -1334,7 +1325,8 @@ export async function onRequestPost(context) {
     let lines = [];
     try { lines = JSON.parse(targetOrder.lines) || []; } catch (_) { lines = []; }
 
-    const targetLine = lines.find(l => String(l.id) === lineId || String(l.uid) === lineId || String(l.name) === lineId);
+    const targetLine = lines.find(l => String(l.uid) === lineId || String(l.id) === lineId || String(l.name) === lineId)
+      || (fallbackItemId && lines.find(l => String(l.id) === fallbackItemId));
     if (!targetLine) return json({ error: 'line-not-on-order' }, 404);
 
     const isFormula = targetLine.kind === 'formula' && !!targetLine.formulaUid;

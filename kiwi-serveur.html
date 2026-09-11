@@ -7778,8 +7778,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       if (t.status === 'a-commander' || t.status === 'ka-yaklo' || t.status === 'bgha-ykhlass') {
         fHTML += `
           <div class="td-extra-row">
-            <button class="td-extra-btn" data-action="transfer-table" ${serviceTableKitchenLocked(id) ? 'disabled title="Commande déjà envoyée en cuisine"' : ''}><i data-lucide="arrow-right-left"></i>Changer table</button>
-            <button class="td-extra-btn" data-action="merge-table" ${serviceTableKitchenLocked(id) ? 'disabled title="Commande déjà envoyée en cuisine"' : ''}><i data-lucide="merge"></i>Fusionner</button>
+            <button class="td-extra-btn" type="button" data-action="transfer-table"><i data-lucide="arrow-right-left"></i>Changer table</button>
+            <button class="td-extra-btn" type="button" data-action="merge-table"><i data-lucide="merge"></i>Fusionner</button>
           </div>
         `;
       }
@@ -8097,7 +8097,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
               merchant: svSlug(),
               editLine: {
                 table: activeTableId,
-                lineId: line.id || line.uid,
+                lineId: line.uid || line.id,
                 note: inp.value,
                 actor: activeRole.fullName || activeRole.name || 'Serveur'
               }
@@ -8161,7 +8161,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
               merchant: svSlug(),
               voidLine: {
                 table: tableId,
-                lineId: line.id || line.uid,
+                lineId: line.uid || line.id,
                 qty: 1,
                 reason: selectedVoidReason,
                 isWaste: selectedVoidIsWaste,
@@ -8246,7 +8246,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
                 merchant: svSlug(),
                 editLine: {
                   table: tableId,
-                  lineId: line.id || line.uid,
+                  lineId: line.uid || line.id,
                   qty: newQty,
                   isWaste: 0,
                   actor: activeRole.fullName || activeRole.name || 'Serveur'
@@ -8285,7 +8285,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
                 merchant: svSlug(),
                 editLine: {
                   table: tableId,
-                  lineId: line.id || line.uid,
+                  lineId: line.uid || line.id,
                   qty: targetQty,
                   actor: activeRole.fullName || activeRole.name || 'Serveur'
                 }
@@ -8401,7 +8401,6 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     }
 
     function openTransferTableModal(tableId) {
-      if (serviceTableKitchenLocked(tableId)) { toast('Déplacement impossible : commande déjà envoyée en cuisine'); return; }
       trfFromId = tableId;
       trfSelectedToId = null;
       $('#trf-from-id').textContent = tableId;
@@ -8436,7 +8435,6 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
     async function confirmTransferTable() {
       if (!trfFromId || !trfSelectedToId) return;
-      if (serviceTableKitchenLocked(trfFromId)) { toast('Déplacement impossible : commande déjà envoyée en cuisine'); return; }
       const from = trfFromId;
       const to = trfSelectedToId;
       const confirmBtn = $('#trf-confirm');
@@ -8536,7 +8534,6 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     let mrgSelectedTargetId = null;
 
     function openMergeTableModal(tableId) {
-      if (serviceTableKitchenLocked(tableId)) { toast('Fusion impossible : commande déjà envoyée en cuisine'); return; }
       mrgSourceId = tableId;
       mrgSelectedTargetId = null;
       $('#mrg-source-id').textContent = tableId;
@@ -8572,9 +8569,6 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
     async function confirmMergeTable() {
       if (!mrgSourceId || !mrgSelectedTargetId) return;
-      if (serviceTableKitchenLocked(mrgSourceId) || serviceTableKitchenLocked(mrgSelectedTargetId)) {
-        toast('Fusion impossible : commande déjà envoyée en cuisine'); return;
-      }
       const source = mrgSourceId;
       const target = mrgSelectedTargetId;
       const confirmBtn = $('#mrg-confirm');

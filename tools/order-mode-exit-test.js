@@ -158,8 +158,8 @@ ok('Annuler mesa remet une table sans commande à zéro',
   /cancelOpenTable\(selectedId\)/.test(cancelTableWire));
 ok('Annuler mesa exige le code opérateur si des articles non envoyés existent',
   /tableSentCount\(selectedId\) === 0[\s\S]*?hasItems[\s\S]*?requireTillOperator\(/.test(cancelTableWire));
-ok('Annuler mesa protège une table avec commande en cours',
-  /annulation impossible/.test(cancelTableWire));
+ok('Annuler mesa transmet une commande envoyée au protocole cuisine',
+  /cancelSentTable\(tid,\s*who\)/.test(cancelTableWire));
 const cancelOpenFn = (CAISSE.match(/function cancelOpenTable\(id, who = null\)\s*\{[\s\S]{0,1600}?\n    \}/) || [''])[0];
 ok('cancelOpenTable existe et libère la session OrderPro',
   /releasePhoneTable\(id, 'caisse', true, who.actorProof \|\| ''\)/.test(cancelOpenFn));

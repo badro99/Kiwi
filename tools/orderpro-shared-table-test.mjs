@@ -94,19 +94,22 @@ async function pendingAt(table,ref) {
 const move=await pendingAt('2','movable');
 success((await post(queue,{transferTable:{from:'2',to:'3',operationId:'before-send'}},owner)).ok,'Pending, unsubmitted order can move');
 db.prepare("UPDATE orders SET status='accepted' WHERE id=?").run(move.o.id);
-const blocked=await post(queue,{transferTable:{from:'3',to:'4',operationId:'after-send'}},owner);
-success(blocked.status===409&&blocked.error==='table-kitchen-locked','Accepted order cannot move even before printer acknowledgement');
-await pendingAt('4','merge-pending');
-success((await post(queue,{mergeTables:{source:'4',target:'3',operationId:'merge-blocked'}},owner)).error==='table-kitchen-locked','Merge cannot bypass the lock on its destination');
+const movedAfterSend=await post(queue,{transferTable:{from:'3',to:'4',operationId:'after-send'}},owner);
+success(movedAfterSend.ok&&db.prepare('SELECT table_no FROM orders WHERE id=?').get(move.o.id).table_no==='4','Accepted kitchen order moves with its guests and keeps the same ticket');
+const mergePending=await pendingAt('5','merge-pending');
+success((await post(queue,{mergeTables:{source:'5',target:'4',operationId:'merge-after-send'}},owner)).ok,'Pending visit merges into a table whose order is already in kitchen');
+success(db.prepare('SELECT table_no FROM orders WHERE id=?').get(mergePending.o.id).table_no==='4','Merged order follows the destination table');
 db.prepare("UPDATE orders SET status='served',paid_ts=? WHERE id=?").run(now,move.o.id);
-success((await post(queue,{transferTable:{from:'3',to:'5',operationId:'paid-lock'}},owner)).error==='table-kitchen-locked','Paying one submitted order does not unlock the still-open visit');
+const paidMove=await post(queue,{transferTable:{from:'4',to:'5',operationId:'paid-left'}},owner);
+success(paidMove.ok&&paidMove.paidLeftBehind===1&&db.prepare('SELECT table_no FROM orders WHERE id=?').get(move.o.id).table_no==='4','Paid history stays on its original table while the open visit moves');
 const race=await pendingAt('6','race-kitchen');
 beforeBatch=()=>db.prepare("UPDATE orders SET status='accepted' WHERE id=?").run(race.o.id);
-success((await post(queue,{transferTable:{from:'6',to:'7',operationId:'race-send'}},owner)).error==='table-kitchen-locked','Kitchen submission racing with transfer is rejected inside the transaction');
-success(!db.prepare("SELECT id FROM table_transfers WHERE id='race-send'").get()&&db.prepare('SELECT table_no FROM orders WHERE id=?').get(race.o.id).table_no==='6','Rejected race leaves neither moved orders nor an audit claim');
+success((await post(queue,{transferTable:{from:'6',to:'7',operationId:'race-send'}},owner)).ok,'Kitchen submission racing with transfer follows the same atomic move');
+success(!!db.prepare("SELECT id FROM table_transfers WHERE id='trf-race-send'").get()&&db.prepare('SELECT table_no FROM orders WHERE id=?').get(race.o.id).table_no==='7','Kitchen race leaves one transfer audit and one canonical table');
 db.prepare('INSERT INTO order_course(merchant,order_id,sent_ts,created_ts,updated_ts) VALUES(?,?,?,?,?)').run(merchant,race.o.id,now,now,now);
 db.prepare("UPDATE orders SET status='rejected' WHERE id=?").run(race.o.id);
-success((await post(queue,{transferTable:{from:'6',to:'7',operationId:'cancelled-lock'}},owner)).error==='table-kitchen-locked','Cancelling after kitchen submission does not unlock the visit');
+const cancelledMove=await post(queue,{transferTable:{from:'7',to:'6',operationId:'cancelled-history'}},owner);
+success(cancelledMove.ok&&db.prepare('SELECT table_no FROM orders WHERE id=?').get(race.o.id).table_no==='7','Cancelled kitchen history stays on the table where cancellation happened');
 const a=await pendingAt('8','merge-a'),b=await pendingAt('9','merge-b');
 success((await post(queue,{mergeTables:{source:'8',target:'9',operationId:'merge-before-send'}},owner)).ok,'Two pending visits still merge before kitchen submission');
 const fresh=await get(queueGet,'',owner);
@@ -114,9 +117,9 @@ success(fresh.ok,'Staff order queue still works after the new safeguards');
 const mergeRace=await pendingAt('10','merge-race');
 beforeBatch=()=>db.prepare("UPDATE orders SET status='accepted' WHERE id=?").run(mergeRace.o.id);
 const mergeLost=await post(queue,{mergeTables:{source:'10',target:'11',operationId:'race-merge-empty'}},owner);
-success(mergeLost.error==='table-kitchen-locked'
-  && !db.prepare("SELECT id FROM table_sessions WHERE merchant=? AND table_no='11' AND status='open'").get(merchant),
-  'Failed merge race does not create an empty destination visit');
+success(!!(mergeLost.ok
+  && db.prepare("SELECT id FROM table_sessions WHERE merchant=? AND table_no='11' AND status='open'").get(merchant)),
+  'Kitchen submission racing with merge lands on one open destination visit');
 const staffSeat=await post(seat,{mode:'table',table:'12'});
 beforeWrite=sql=>{if(sql.includes('INSERT INTO orders')){beforeWrite=null;db.prepare("UPDATE table_sessions SET status='closed',closed_by='settle' WHERE id=?").run(staffSeat.session);}};
 const staffLate=await post(queue,{create:true,mode:'table',table:'12',expectedSession:staffSeat.session,ref:'staff-late',lines:[{id:'dish',qty:1}]},owner);
