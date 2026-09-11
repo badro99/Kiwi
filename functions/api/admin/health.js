@@ -3,9 +3,17 @@
  * or granting a mutation. Missing schema is reported, never disguised as zero. */
 import { json, isOperator } from '../../auth/_lib.js';
 
-async function first(env, sql, args, name, missing) {
-  try { return await env.DB.prepare(sql).bind(...args).first(); }
-  catch (e) { missing.push({ area: name, error: String(e && e.message || e).slice(0, 160) }); return null; }
+async function first(env, sqls, args, name, missing) {
+  const list = Array.isArray(sqls) ? sqls : [sqls];
+  for (let i = 0; i < list.length; i++) {
+    try { return await env.DB.prepare(list[i]).bind(...args).first(); }
+    catch (e) {
+      if (i === list.length - 1) {
+        missing.push({ area: name, error: String(e && e.message || e).slice(0, 160) });
+        return null;
+      }
+    }
+  }
 }
 
 export async function onRequestGet({ request, env }) {
@@ -22,12 +30,18 @@ export async function onRequestGet({ request, env }) {
       `SELECT mc.updated_ts, mc.account_id, mc.name, mc.type, mc.plan, a.status AS account_status
          FROM merchant_config mc LEFT JOIN accounts a ON a.id = mc.account_id
         WHERE mc.merchant = ?`, [merchant], 'configuration', missing),
-    first(env,
-      `SELECT COUNT(*) AS total,
-              SUM(CASE WHEN ts >= ? AND void_ts IS NULL THEN 1 ELSE 0 END) AS last_24h,
+    first(env, [
+      `SELECT SUM(CASE WHEN COALESCE(amount_cents, amount * 100) > 0 THEN 1 ELSE 0 END) AS total,
+              SUM(CASE WHEN ts >= ? AND void_ts IS NULL AND COALESCE(amount_cents, amount * 100) > 0 THEN 1 ELSE 0 END) AS last_24h,
+              SUM(CASE WHEN ts >= ? AND void_ts IS NULL THEN COALESCE(amount_cents, amount * 100) ELSE 0 END) / 100.0 AS amount_24h,
+              MAX(CASE WHEN void_ts IS NULL THEN ts ELSE NULL END) AS last_ts
+         FROM sales WHERE merchant = ?`,
+      `SELECT SUM(CASE WHEN amount > 0 THEN 1 ELSE 0 END) AS total,
+              SUM(CASE WHEN ts >= ? AND void_ts IS NULL AND amount > 0 THEN 1 ELSE 0 END) AS last_24h,
               SUM(CASE WHEN ts >= ? AND void_ts IS NULL THEN amount ELSE 0 END) AS amount_24h,
               MAX(CASE WHEN void_ts IS NULL THEN ts ELSE NULL END) AS last_ts
-         FROM sales WHERE merchant = ?`, [now - 86400000, now - 86400000, merchant], 'sales', missing),
+         FROM sales WHERE merchant = ?`,
+    ], [now - 86400000, now - 86400000, merchant], 'sales', missing),
     first(env,
       'SELECT COUNT(*) AS total, MAX(updated_ts) AS last_ts FROM store_docs WHERE merchant = ?',
       [merchant], 'cloud-documents', missing),
@@ -49,8 +63,8 @@ export async function onRequestGet({ request, env }) {
       `SELECT COUNT(*) AS total,
               SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active,
               MAX(last_ts) AS last_ts,
-              MAX(CASE WHEN last_err <> '' THEN last_err ELSE NULL END) AS last_error
-         FROM channel_links WHERE merchant = ?`, [merchant], 'channels', missing),
+              (SELECT last_err FROM channel_links WHERE merchant = ? AND last_err <> '' ORDER BY last_ts DESC LIMIT 1) AS last_error
+         FROM channel_links WHERE merchant = ?`, [merchant, merchant], 'channels', missing),
     first(env,
       'SELECT rev, updated_ts FROM catalogs WHERE merchant = ?',
       [merchant], 'catalog', missing),

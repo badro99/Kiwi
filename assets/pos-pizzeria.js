@@ -29,8 +29,8 @@
 
   /* Real / paired-store identity — a real store never shows the demo name
    * ("Pizzeria La Marsa"). Local demo (unpaired localhost) keeps it. */
-  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
-  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvPaired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
   function pvName(demo) { const p = pvPaired(); return (p && p.name) || (pvReal() ? '' : demo); }
   function pvCity(demo) { const p = pvPaired(); return (p && p.location) || (pvReal() ? '' : demo); }
 
@@ -365,10 +365,21 @@
   let seq = 208;
   let ticking = null;
   const state = { view: 'carte', ticket: null, offline: false, queued: 0 };
+  const pizzeriaOps = window.KiwiVerticalState?.open?.('pizzeria', {
+    schema: 1,
+    snapshot: () => ({ customers: CUSTOMERS, orders: ORDERS, seq, ticket: state.ticket }),
+    restore: (d) => {
+      CUSTOMERS.splice(0, CUSTOMERS.length, ...(d.customers || [])); Object.keys(CUST).forEach(k => delete CUST[k]); CUSTOMERS.forEach(c => { if (c?.id) CUST[c.id] = c; });
+      ORDERS.splice(0, ORDERS.length, ...(d.orders || [])); Object.keys(JOB).forEach(k => delete JOB[k]); oven.splice(0, oven.length, null, null, null, null);
+      ORDERS.forEach(o => (o.jobs || []).forEach(j => { JOB[j.jid] = j; if (j.status === 'four' && j.slot != null) oven[j.slot] = j.jid; }));
+      seq = Math.max(seq, +d.seq || 0); state.ticket = d.ticket || null;
+    },
+  });
   function freshTicket() {
     state.ticket = { num: posRef(`M-${seq}`), mode: 'surplace', table: null, customer: null, zone: null, address: '', lines: [] };
   }
   function queueIfOffline(label) {
+    pizzeriaOps?.save?.(label || 'operation');
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -386,9 +397,31 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
-  function postDay(total, method, label, ref) {
+  function saleLines(o, received) {
+    const productTotal = o.lines.reduce((s, ln) => s + linePrice(ln), 0);
+    const delivery = o.mode === 'livraison' && o.zone ? ZONE[o.zone].fee : 0;
+    const gross = productTotal + delivery;
+    const raw = o.lines.map((ln) => ({ ln, base: linePrice(ln) }));
+    if (delivery) raw.push({ delivery: true, base: delivery });
+    let allocated = 0;
+    return raw.map((row, i) => {
+      const total = i === raw.length - 1
+        ? Math.max(0, received - allocated)
+        : Math.round((received * row.base / Math.max(1, gross)) * 100) / 100;
+      allocated += total;
+      if (row.delivery) return { itemId: `livraison-${o.zone}`, name: `Livraison · ${ZONE[o.zone].label}`, category: 'livraison', qty: 1, unit: 'service', kind: 'service', total };
+      const ln = row.ln;
+      if (ln.kind === 'drink') return { itemId: ln.did, name: DRINK[ln.did].label, category: 'boissons', qty: ln.qty, unit: 'piece', kind: 'product', total };
+      return {
+        itemId: ln.pid, variantId: [ln.pidB || '', ln.size || '', ln.pate || ''].join(':'), name: jobLabel(ln),
+        category: 'pizzas', qty: ln.qty, unit: 'piece', kind: 'product', total,
+        options: (ln.supps || []).map((id) => ({ itemId: id, qty: ln.qty })),
+      };
+    });
+  }
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('pizzeria', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('pizzeria', { total, method, label, ref, lines });
     } catch (_) {}
   }
   /* Le numéro de commande repart AU-DELÀ du dernier encaissé aujourd'hui :
@@ -402,10 +435,11 @@
 
   /* ═══════════════════════ MOUNT ═══════════════════════ */
   function mount(rootEl) {
+    pizzeriaOps?.hydrate?.();
     root = rootEl;
     root.innerHTML = `
       <aside class="pz-rail">
-        <div class="pz-brand">kiwi<i></i></div>
+        <div class="pz-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="pz-venue">
           <div class="pz-venue-name">${esc(pvName('Pizzeria La Marsa') || 'Pizzeria')}</div>
           <div class="pz-venue-sub">${pvReal() ? (esc(pvCity('')) || '') : 'Tanger · Marina'}<br>Le même Kiwi, <b>un seul compte</b>.</div>
@@ -456,7 +490,7 @@
       v.addEventListener('click', (e) => { if (e.target === v) v.classList.remove('is-open'); });
     });
 
-    freshTicket();
+    if (!state.ticket) freshTicket();
     renderAll();
     if (!ticking) ticking = setInterval(tick, 1000);
   }
@@ -625,9 +659,12 @@
               </span>
             </span>
           </div>`).join('') : `
-          <div class="pz-tk-empty">
-            <i data-lucide="pizza"></i>
-            <div>La commande est vide.<br>Touchez une pizza dans la carte, le four l'attend.</div>
+          <div class="pz-tk-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">
+            <div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:4px;">
+              <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
+            </div>
+            <div style="font-weight:600; font-size:14px; color:var(--ink);">La commande est vide.</div>
+            <div style="font-size:12.5px; color:var(--n-500); line-height:1.45;">Touchez une pizza dans la carte, le four l'attend.</div>
           </div>`}
       </div>
       <div class="pz-tk-foot">
@@ -915,7 +952,7 @@
           ${forLiv ? '' : `<div class="pz-sheet-foot" style="margin-top:10px;"><button class="pz-btn ghost" id="pz-cl-guest">Client de passage, sans fiche</button></div>`}` : `
           <div class="pz-cl-form">
             <input class="pz-in" id="pz-cl-name" placeholder="Nom et prénom" value="${esc(/^[\d\s.+-]*$/.test(q || '') ? '' : (q || ''))}" />
-            <input class="pz-in" id="pz-cl-tel" inputmode="tel" placeholder="Téléphone${forLiv ? '' : ' (optionnel)'}" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
+            <input class="pz-in" id="pz-cl-tel" inputmode="tel" autocomplete="tel" placeholder="06… / +33…${forLiv ? '' : ' (optionnel)'}" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
             ${forLiv ? '<input class="pz-in" id="pz-cl-addr" placeholder="Adresse de livraison" />' : ''}
             <div class="pz-sheet-foot" style="margin-top:4px;">
               <button class="pz-btn secondary" id="pz-cl-back">Retour</button>
@@ -1048,6 +1085,19 @@
     renderBadges();
     renderStats();
     queueIfOffline(`Commande ${o.id}`);
+    try {
+      if (window.KiwiFoodProductionPrint) KiwiFoodProductionPrint.enqueue({
+        trade: 'pizzeria', ref: o.id, at: o.createdAt, destination: destLabel(o),
+        lines: o.lines.map((ln) => ({
+          qty: ln.qty, name: lineName(ln), station: ln.kind === 'drink' ? 'Comptoir' : 'Four',
+          note: ln.kind === 'pizza'
+            ? [SIZE[ln.size] && SIZE[ln.size].label, ln.pate && `Pâte ${PATES.find((p) => p.id === ln.pate)?.label || ln.pate}`,
+                (ln.supps || []).length && `Suppléments : ${ln.supps.map((id) => SUPP[id] ? SUPP[id].label : id).join(', ')}`, ln.note]
+                .filter(Boolean).join(' · ')
+            : '',
+        })),
+      });
+    } catch (_) {}
     const n = o.jobs.length;
     toast(n
       ? `${o.id} en cuisine, ${n} pizza${n > 1 ? 's' : ''} en file, le four attend`
@@ -1117,7 +1167,7 @@
         <p class="modal-subtle">${subtle}</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="pz-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="pz-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="pz-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${amount}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1158,13 +1208,13 @@
       setTimeout(() => {
         const disc = $('#pz-reader-disc', el);
         if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#pz-reader-status', el).textContent = 'Khlass! Paiement confirmé sur le lecteur';
-        $('#pz-reader-status', el).classList.add('is-success');
-        icons();
-        setTimeout(() => done('carte', 0), 900);
+        const status = $('#pz-reader-status', el);
+        const hw = window.KiwiHardware;
+        if (!hw || !hw.authorizeCard) { disc.classList.remove('is-pulsing'); status.textContent = 'Paiement non confirmé · lecteur indisponible'; return; }
+        hw.authorizeCard(amount, disc, status).then((result) => {
+          icons();
+          if (result && result.approved) setTimeout(() => done('carte', 0), 900);
+        });
       }, 1900);
     };
 
@@ -1176,7 +1226,7 @@
         /* Le solde d'un « payer à table / au retrait / à la livraison » rentre
            ICI. remitOrder et deliverOrder passent tous les deux par openPay
            en mode settle, donc cette ligne les couvre tous les deux. */
-        postDay(amount, method, `Solde ${order.id} · ${destLabel(order)}`, order.id);
+        postDay(amount, method, `Solde ${order.id} · ${destLabel(order)}`, order.id, saleLines(order, amount));
         closeVeil('#pz-pay-veil');
         toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
         renderStats();
@@ -1188,7 +1238,7 @@
       /* Le différé (data-defer) sort par commitOrder sans passer ici : il ne
          prend rien au comptoir, ce n'est pas une recette tant que le solde
          n'est pas encaissé. */
-      postDay(amount, method, `${order.id} · ${destLabel(order)}`, order.id);
+      postDay(amount, method, `${order.id} · ${destLabel(order)}`, order.id, saleLines(order, amount));
       closeVeil('#pz-pay-veil');
       commitOrder(order);
       toast(`Encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
@@ -1578,8 +1628,8 @@
   window.KiwiPosDispatch.register({
     id: 'pizzeria',
     greet: {
-      line1: 'Sba7 lkhir Reda,',
-      em: 'marhba.',
+      line1: 'Bonjour Reda,',
+      em: 'bienvenue.',
       sub: 'Pizzeria La Marsa <em>·</em> service du soir, le four est chaud',
     },
     mount(rootEl) { mount(rootEl); },

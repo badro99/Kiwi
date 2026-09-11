@@ -58,6 +58,7 @@
   var STORE_PREFIX = 'kiwi:';          // le préfixe de venue-store.js
   var COOLDOWN = 20000;                // relecture au retour d'onglet
   var DEBOUNCE = 900;
+  var SAVE_TIMEOUT = 10000;
 
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function lset(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
@@ -70,6 +71,9 @@
    * qui diffèrent, donc taire une modification) est impossible ici. */
   function identical(a, b) {
     try { return JSON.stringify(a) === JSON.stringify(b); } catch (_) { return false; }
+  }
+  function snapshot(value) {
+    try { return value == null ? value : JSON.parse(JSON.stringify(value)); } catch (_) { return value; }
   }
 
   /* Jumeau de slugMerchant (functions/auth/_lib.js). Le nom d'un magasin doit
@@ -108,8 +112,27 @@
   }
 
   function isReal() {
-    try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()); }
-    catch (_) { return false; }
+    try {
+      if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return true;
+      /* Une caisse appairée n'a normalement PAS de session propriétaire — et
+         c'est voulu. La traiter comme une démo coupait pourtant TOUS les
+         documents cloud du comptoir : horaires, rapports journaliers, équipe,
+         reçu, plan de salle… La caisse calculait alors sa journée commerciale
+         avec le seuil local par défaut pendant que le dashboard connaissait les
+         vraies heures du magasin.
+
+         L'appairage ne donne aucun droit ici : /api/store vérifie encore le
+         cookie httpOnly kiwi_till et le slug. Il dit seulement au navigateur
+         qu'il doit tenter la synchronisation de CE terminal réel. */
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.isPaired === 'function') {
+        if (window.KiwiPlatform.isPaired()) return true;
+      }
+      var pv = window.KiwiCaissePairing && window.KiwiCaissePairing.pairedVenue
+        && window.KiwiCaissePairing.pairedVenue();
+      if (pv && pv.merchant) return true;
+      var saved = JSON.parse(ls('kiwiPairedVenue') || 'null');
+      return !!(saved && saved.merchant);
+    } catch (_) { return false; }
   }
 
   /* Les magasins de démonstration ne quittent jamais ce navigateur : ils sont
@@ -378,6 +401,43 @@
     function readRev(slug) { var n = parseInt(ls(revKey(slug)) || '0', 10); return n > 0 ? n : 0; }
     function writeRev(slug, r) { lset(revKey(slug), String(r || 0)); }
 
+    /* ── LA REMONTÉE REFUSÉE ────────────────────────────────────────────────
+     * Un 413 (document hors bornes) laissait la copie locale intacte — c'est la
+     * bonne décision — puis PLUS RIEN. Le commentaire disait « on retentera » ;
+     * personne ne retentait. Le commerçant posait son logo, le voyait dans son
+     * aperçu, et son ticket de caisse ne changeait jamais.
+     *
+     * On garde donc une marque du refus, à côté du signet de révision. Elle
+     * survit au rechargement, et le prochain contact avec le serveur repropose
+     * le document : le jour où la borne serveur bouge, la copie en attente
+     * repart toute seule, sans que le commerçant ait à ré-enregistrer ce qu'il
+     * avait déjà enregistré. Une tentative par ouverture de page, pas plus. */
+    function refusedKey(slug) { return 'kiwiDocRefused:v1:' + revKey(slug).slice(REV_PREFIX.length); }
+    function markRefused(slug, why) { lset(refusedKey(slug), String(why || '1')); }
+    function clearRefused(slug) { try { localStorage.removeItem(refusedKey(slug)); } catch (_) {} }
+    function isRefused(slug) { return !!ls(refusedKey(slug)); }
+
+    /* Une panne réseau n'est pas un refus applicatif, mais elle doit survivre au
+     * rechargement de la page de la même façon. Sans cette marque, le signet de
+     * révision reste égal au serveur et le prochain pull conclut à tort que la
+     * copie locale (modifiée hors ligne) est déjà synchronisée. Le jeton change
+     * à chaque modification : une réponse à un ancien POST ne peut donc pas
+     * effacer la marque d'une saisie plus récente faite pendant son trajet. */
+    function dirtyKey(slug) { return 'kiwiDocDirty:v1:' + revKey(slug).slice(REV_PREFIX.length); }
+    function markDirty(slug) {
+      var token = Date.now().toString(36) + ':' + Math.random().toString(36).slice(2);
+      lset(dirtyKey(slug), token);
+      return token;
+    }
+    function dirtyToken(slug) { return ls(dirtyKey(slug)); }
+    function clearDirty(slug, token) {
+      try {
+        if (!token || localStorage.getItem(dirtyKey(slug)) === token) {
+          localStorage.removeItem(dirtyKey(slug));
+        }
+      } catch (_) {}
+    }
+
     /* Lit la copie serveur et la réconcilie avec la locale. `first` = tout
      * premier contact pour ce magasin : c'est le SEUL cas où un document local
      * vide est remplacé en bloc (le navigateur neuf adopte l'établissement).
@@ -391,11 +451,11 @@
                    { headers: { Accept: 'application/json' } })
         .then(function (r) { return (r && r.ok) ? r.json() : null; })
         .then(function (res) {
-          st.read[slug] = 1;
-          st.last = Date.now();
           // Le commerçant a changé de magasin pendant l'aller-retour : cette
           // réponse concerne un autre établissement, on la jette.
           if (!res || slug !== slugOf()) return false;
+          st.read[slug] = 1;
+          st.last = Date.now();
 
           var serverRev = +res.rev || 0;
           var theirs = res.data;
@@ -410,8 +470,13 @@
             return false;
           }
           st.rev = serverRev;
-          // Déjà à jour : notre dernière remontée EST ce que le serveur porte.
-          if (!mineEmpty && readRev(slug) === serverRev) return false;
+          /* Déjà à jour : notre dernière remontée EST ce que le serveur porte.
+             Sauf si une remontée a été refusée : le signet dit alors « à jour »
+             pour une copie que le serveur n'a jamais acceptée. On repropose. */
+          if (!mineEmpty && readRev(slug) === serverRev) {
+            if (isRefused(slug) || dirtyToken(slug)) push(0, true);
+            return false;
+          }
 
           var adopt = first && mineEmpty;
           var next = adopt ? theirs : merge(mine, theirs);
@@ -431,67 +496,145 @@
         .catch(function () { return false; });   // hors ligne → le local fait foi
     }
 
-    function push(delay) {
+    function push(delay, alreadyDirty) {
       if (!on()) return;
+      if (!alreadyDirty) markDirty(slugOf());
+      schedulePush(delay, slugOf());
+    }
+
+    function schedulePush(delay, originSlug) {
       if (st.timer) clearTimeout(st.timer);
-      st.timer = setTimeout(function () { pushNow(); }, delay == null ? DEBOUNCE : delay);
+      var scheduledSlug = originSlug || slugOf();
+      var timer = setTimeout(function () {
+        if (st.timer === timer) st.timer = null;
+        if (scheduledSlug !== slugOf()) return;
+        pushNow();
+      }, delay == null ? DEBOUNCE : delay);
+      st.timer = timer;
     }
 
     function pushNow(o) {
-      st.timer = null;
-      if (!on()) return;
+      o = o || {};
+      var explicit = !!o.explicit;
+      if (!on()) return Promise.resolve({ ok: false, status: 403, error: 'disabled', rev: st.rev });
       var slug = slugOf();
+      var sentDirty = explicit ? null : (dirtyToken(slug) || markDirty(slug));
+      var hasExplicitData = Object.prototype.hasOwnProperty.call(o, 'data');
+      var requestedData = explicit && hasExplicitData ? snapshot(o.data) : null;
+      var payloadData = hasExplicitData ? (explicit ? snapshot(o.data) : o.data) : opts.read();
+      if (o && o.expectedRevisions && payloadData && typeof payloadData === 'object') {
+        payloadData = Object.assign({}, payloadData, { _expectedRevisions: o.expectedRevisions });
+      }
       // Règle 3 : jamais pousser avant d'avoir lu, sinon un navigateur neuf efface.
-      if (!st.read[slug]) { pull(true); return; }
+      if (!st.read[slug]) {
+        if (!explicit) pull(true);
+        return Promise.resolve({ ok: false, status: 409, error: 'unread', rev: st.rev });
+      }
       /* Rien à dire au serveur : le document est vide ET il n'y a encore aucune
        * ligne en face. Sans ce garde, la simple ouverture d'une page suffisait à
        * créer une ligne — celle de la valeur par défaut que le module vient de
        * matérialiser, que le commerçant n'a jamais choisie. Le prochain appareil
        * l'aurait alors reçue comme un vrai réglage. Un document vidé APRÈS coup
        * (rev > 0) passe, lui : c'est une suppression, pas un silence. */
-      if (!st.rev && empty(opts.read())) return;
-      if (st.busy) { st.again = true; return; }
+      /* Explicit saves carry an intentional payload. A feature may define
+       * isEmpty() around one primary collection (for example rooms), while a
+       * section-only settings edit is still meaningful and must be posted. */
+      if (!explicit && !st.rev && empty(opts.read())) {
+        clearDirty(slug, sentDirty);
+        return Promise.resolve({ ok: true, status: 204, error: 'empty', rev: st.rev });
+      }
+      if (st.busy) {
+        if (!explicit) st.again = true;
+        return Promise.resolve({ ok: false, status: 409, error: 'busy', rev: st.rev });
+      }
       st.busy = true;
-      fetch('/api/store', {
+      var controller = typeof AbortController === 'function' ? new AbortController() : null;
+      var timeout;
+      var request = Promise.resolve().then(function () { return fetch('/api/store', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          feature: feature, merchant: slug, baseRev: st.rev, data: opts.read(),
+          feature: feature, merchant: slug, baseRev: (o && o.baseRev != null) ? o.baseRev : st.rev, data: payloadData,
         }),
         // L'onglet peut se fermer juste après une saisie : keepalive laisse la
         // requête partir quand même.
         keepalive: !!(o && o.keepalive),
-      })
+        signal: controller ? controller.signal : undefined,
+      }); })
         .then(function (r) {
           return r.json().then(function (j) { return { status: r.status, j: j }; })
             .catch(function () { return { status: r.status, j: null }; });
         })
+        ;
+      var timeoutResult = new Promise(function (resolve) {
+        timeout = setTimeout(function () {
+          if (controller) controller.abort();
+          resolve({ timeout: true });
+        }, SAVE_TIMEOUT);
+      });
+      return Promise.race([request, timeoutResult])
         .then(function (res) {
-          if (slug !== slugOf()) return;
+          if (res && res.timeout) {
+            return { ok: false, status: 408, error: 'timeout', rev: st.rev };
+          }
+          if (slug !== slugOf()) {
+            return { ok: false, status: 409, error: 'tenant-switched', rev: st.rev };
+          }
           if (res.status === 200 && res.j && res.j.ok) {
             st.rev = +res.j.rev || 0;
             writeRev(slug, st.rev);
+            clearRefused(slug);
+            if (!explicit || identical(requestedData, opts.read())) clearDirty(slug, sentDirty || dirtyToken(slug));
+            if (explicit && identical(requestedData, opts.read())) {
+              if (st.timer) clearTimeout(st.timer);
+              st.timer = null;
+              st.again = false;
+            }
             st.tries = 0;
-            return;
+            return { ok: true, status: 200, rev: st.rev, data: (res.j && res.j.data != null) ? res.j.data : payloadData };
+          }
+          /* 413 : le document dépasse une borne du serveur. La copie locale est
+             intacte, mais elle ne quittera JAMAIS cet appareil tant que rien ne
+             change -- un silence qui se lit comme « c'est enregistré ». On le
+             marque, on le retentera, et la surface qui sait parler au commerçant
+             peut le lui dire. */
+          if (res.status === 413) {
+            var tooLarge = (res.j && res.j.why) || 'too-large';
+            if (!explicit) markRefused(slug, tooLarge);
+            if (opts.onRefused) {
+              try { opts.onRefused(tooLarge); } catch (_) {}
+            }
+            return { ok: false, status: 413, error: tooLarge, rev: st.rev };
           }
           // 409 : le serveur a bougé (ou a refusé un envoi vide). Il rend sa
-          // copie — on fusionne et on repropose, quelques fois au plus pour ne
+          // copie -- on fusionne et on repropose, quelques fois au plus pour ne
           // jamais tourner en rond si l'autre appareil écrit en continu.
-          if (res.status === 409 && res.j && res.j.data && st.tries < 3) {
-            st.tries++;
-            var next = merge(opts.read(), res.j.data);
-            opts.write(next);
-            st.rev = +res.j.rev || 0;
-            writeRev(slug, st.rev);
-            if (opts.onPulled) { try { opts.onPulled(next); } catch (_) {} }
-            st.again = true;
+          if (res.status === 409) {
+            if (!explicit && (!o || !o.noAutoMerge) && (!res.j || res.j.error !== 'room-conflict') && res.j && res.j.data && st.tries < 3) {
+              st.tries++;
+              var next = merge(opts.read(), res.j.data);
+              opts.write(next);
+              st.rev = +res.j.rev || 0;
+              writeRev(slug, st.rev);
+              if (opts.onPulled) { try { opts.onPulled(next); } catch (_) {} }
+              st.again = true;
+            }
+            return { ok: false, status: 409, error: (res.j && res.j.error) || 'stale', rev: res.j && res.j.rev, data: res.j && res.j.data };
           }
-          // 401 / 413 / 503 / 500 → on garde tout en local et on retentera.
+          return { ok: false, status: res.status, error: (res.j && res.j.error) || 'save-failed', rev: st.rev };
         })
-        .catch(function () { /* hors ligne : la saisie reste, la remontée attendra */ })
-        .then(function () {
+        .catch(function (err) {
+          /* hors ligne : la saisie reste, la remontée attendra */
+          return { ok: false, status: 0, offline: true, error: String(err), rev: st.rev };
+        })
+        .then(function (result) {
+          clearTimeout(timeout);
           st.busy = false;
-          if (st.again) { st.again = false; push(400); }
+          if (st.again) {
+            st.again = false;
+            schedulePush(400, slug);
+          }
+          return result;
         });
     }
 
@@ -499,8 +642,8 @@
     // sa copie serveur une fois.
     function bind() {
       var slug = slugOf();
-      if (!on() || st.read[slug]) return;
-      pull(true);
+      if (!on() || st.read[slug]) return Promise.resolve(false);
+      return pull(true);
     }
 
     /* Revenir sur l'onglet est le moment où l'on veut voir ce que l'AUTRE
@@ -510,6 +653,18 @@
       if (document.visibilityState !== 'visible') return;
       if (!on() || Date.now() - st.last < COOLDOWN) return;
       pull(false);
+    });
+
+    /* `online` est le seul signal immédiat du navigateur après une coupure. Une
+     * copie sale repart sans attendre une nouvelle saisie ni un aller-retour
+     * d'onglet ; une copie propre relit simplement ce que les autres appareils
+     * ont pu faire pendant la panne. Le POST garde baseRev, donc un serveur qui
+     * a avancé répondra 409 et passera par la fusion normale. */
+    window.addEventListener('online', function () {
+      var slug = slugOf();
+      if (!on()) return;
+      if (dirtyToken(slug) || isRefused(slug)) push(0, true);
+      else pull(false);
     });
 
     // Une modification en attente ne doit pas mourir avec l'onglet.
@@ -524,7 +679,10 @@
       bind: bind,
       pull: pull,
       push: push,
-      flush: function () { if (st.timer) clearTimeout(st.timer); st.timer = null; pushNow({ keepalive: true }); },
+      pushNow: pushNow,
+      rev: function () { return st.rev; },
+      save: function (data) { return pushNow({ explicit: true, noAutoMerge: true, data: snapshot(data) }); },
+      flush: function () { if (st.timer) clearTimeout(st.timer); st.timer = null; return pushNow({ keepalive: true }); },
     };
     live.push(handle);
     return handle;

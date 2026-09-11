@@ -652,7 +652,7 @@
     const c = ({
       fr: {
         h: 'Chiffrez votre carte, et vos marges se calculent',
-        p: 'Kiwi connaît déjà ce que vous vendez. Il lui manque ce que chaque produit vous coûte — vous le saisissez une fois dans votre carte, et la marge de chaque vente se calcule toute seule.',
+        p: 'Kiwi connaît déjà ce que vous vendez. Il lui manque ce que chaque produit vous coûte · vous le saisissez une fois dans votre carte, et la marge de chaque vente se calcule toute seule.',
         n: (a, b) => `${a} produit${a > 1 ? 's' : ''} sur ${b} reste${a > 1 ? 'nt' : ''} à chiffrer.`,
         ok: (b) => `Vos ${b} produits sont chiffrés. Vos marges apparaissent sur le tableau de bord.`,
         none: 'Créez d’abord votre carte : c’est elle qui porte vos produits.',
@@ -660,7 +660,7 @@
       },
       en: {
         h: 'Cost your menu, and your margins compute themselves',
-        p: 'Kiwi already knows what you sell. What it is missing is what each product costs you — enter it once in your menu, and every sale’s margin follows.',
+        p: 'Kiwi already knows what you sell. What it is missing is what each product costs you · enter it once in your menu, and every sale’s margin follows.',
         n: (a, b) => `${a} of ${b} product${b > 1 ? 's' : ''} still need${a > 1 ? '' : 's'} a cost.`,
         ok: (b) => `All ${b} products are costed. Your margins now show on the dashboard.`,
         none: 'Start with your menu: that is what carries your products.',
@@ -668,7 +668,7 @@
       },
       ar: {
         h: 'حسب تكلفة قائمتك، والهوامش كتحسب بوحدها',
-        p: 'Kiwi عارف فاش كتبيع. اللي خاصو هو شحال كيكلفك كل منتج — دخّلو مرة وحدة فالقائمة، والهامش ديال كل بيعة كيتحسب بوحدو.',
+        p: 'Kiwi عارف فاش كتبيع. اللي خاصو هو شحال كيكلفك كل منتج · دخّلو مرة وحدة فالقائمة، والهامش ديال كل بيعة كيتحسب بوحدو.',
         n: (a, b) => `${a} منتج من ${b} مازال خاصهم التكلفة.`,
         ok: (b) => `${b} منتج كاملين محسوبين. الهوامش ديالك كتبان فلوحة التحكم.`,
         none: 'بدا بالقائمة ديالك: هي اللي فيها المنتجات.',

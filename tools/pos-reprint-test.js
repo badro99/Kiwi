@@ -79,6 +79,8 @@ function load(extra) {
       },
     }, (extra && extra.window) || {}),
     document: stubDom(),
+    fetch: extra && extra.fetch,
+    localStorage: (extra && extra.localStorage) || { getItem: () => null },
     setTimeout, clearTimeout, Promise, Date, Math, JSON, Array, String, Number, RegExp, isNaN,
   };
   ctx.window.document = ctx.document;
@@ -147,17 +149,35 @@ const SALE = {
   ok('et il porte lui aussi la mention', state.fromSnap.opts.copy === true);
 }
 
-/* ═══ la liste : aujourd'hui, le plus récent d'abord ═══ */
+/* ═══ la liste : le jour en cours, le plus récent d'abord ═══ */
 {
   const vieille = Object.assign({}, SALE, { ref: 'HIER', ts: T - 30 * 3600000 });
   const recente = Object.assign({}, SALE, { ref: 'RECENTE', ts: at(2) });
   const differee = Object.assign({}, SALE, { ref: 'DIFFERE', ts: at(10), total: 0 });
   const { RP } = load({ today: [SALE, vieille, recente, differee] });
   const r = RP.rows('boulangerie');
-  eq('la veille ne figure pas dans la liste du jour', r.filter((x) => x.ref === 'HIER').length, 0);
+  eq('la veille SANS ticket figé ne figure pas dans la liste', r.filter((x) => x.ref === 'HIER').length, 0);
   eq('un encaissement différé (0 MAD) n\'a pas de ticket', r.filter((x) => x.ref === 'DIFFERE').length, 0);
   eq('la plus récente est en tête', r[0].ref, 'RECENTE');
   eq('les ventes du jour sont toutes là', r.length, 2);
+}
+
+/* ═══ au-delà du jour : le ticket figé, et lui seul ═══
+ * Une vente d'avant-hier ne peut être RECOMPOSÉE sans risquer d'y coller
+ * l'en-tête d'aujourd'hui. Avec son `rc`, il n'y a rien à recomposer — c'est le
+ * document remis à la cliente, à l'octet près. La liste doit donc trancher sur
+ * la présence du ticket figé, pas sur la date. */
+{
+  const avantHier = T - 40 * 3600000;
+  const nue = Object.assign({}, SALE, { ref: 'NUE', ts: avantHier });
+  const figee = Object.assign({}, SALE, { ref: 'FIGEE', ts: avantHier, rc: { frozen: true } });
+  const { RP } = load({});
+  RP.provide('boutique', () => [nue, figee, Object.assign({}, SALE, { ref: 'AUJ', ts: at(5) })]);
+  const r = RP.rows('boutique');
+  eq('une vente d\'avant-hier AVEC son ticket figé reste ressortable',
+    r.filter((x) => x.ref === 'FIGEE').length, 1);
+  eq('la même sans ticket figé ne l\'est pas', r.filter((x) => x.ref === 'NUE').length, 0);
+  eq('le jour en cours passe toujours devant', r[0].ref, 'AUJ');
 }
 
 /* ═══ un métier qui tient son propre journal s'annonce ═══ */
@@ -191,11 +211,31 @@ const SALE = {
   });
 }
 
+/* ═══ annuler transmet l'id serveur, le magasin et le PIN personnel ═══ */
+{
+  let sent = null;
+  const { RP } = load({
+    localStorage: { getItem: (k) => k === 'kiwiLiveMerchant' ? 'amira-cafe' : null },
+    fetch: (url, opts) => {
+      sent = { url, opts, body: JSON.parse(opts.body) };
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true }) });
+    },
+  });
+  RP.cancelSale({ saleId: 'sale-42', ref: '1042' }, '2819').then(() => {
+    eq('l’annulation passe par la route dédiée', sent.url, '/api/sale/cancel');
+    eq('elle cible la vente serveur exacte', sent.body.id, 'sale-42');
+    eq('elle reste bornée au magasin appairé', sent.body.merchant, 'amira-cafe');
+    eq('elle transmet le code personnel au serveur', sent.body.pin, '2819');
+  }).catch((e) => fails.push(`annulation — ${e && e.message}`));
+}
+
 function done() {
-  if (fails.length) {
-    console.log(`\n  ✗ réimprimer un ticket — ${fails.length} échec(s) sur ${pass + fails.length}`);
-    fails.forEach((f) => console.log(`     · ${f}`));
-    process.exit(1);
-  }
-  console.log(`  ✓ réimprimer un ticket (${pass} contrôles : pas de double encaissement, numéro et heure d'origine, mention du duplicata, démo intacte)`);
+  setTimeout(() => {
+    if (fails.length) {
+      console.log(`\n  ✗ réimprimer un ticket — ${fails.length} échec(s) sur ${pass + fails.length}`);
+      fails.forEach((f) => console.log(`     · ${f}`));
+      process.exit(1);
+    }
+    console.log(`  ✓ réimprimer un ticket (${pass} contrôles : pas de double encaissement, numéro et heure d'origine, mention du duplicata, démo intacte)`);
+  }, 0);
 }

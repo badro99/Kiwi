@@ -6,10 +6,12 @@
  * the demo story is an owner who runs his restaurant AND his pressing on the
  * same system, one login.
  *
- * Everything lives here: the module injects its own DOM (#pressing-screen)
- * into kiwi-caisse.html, reuses the caisse's modal kit classes (.modal-veil,
- * .modal, .ma-btn, .cash-*, .reader-*) + #toast-stack, and exposes
- * window.KiwiPressing.{unlock,lock}. No restaurant code is referenced.
+ * Le pressing est un vertical ORDINAIRE du dispatcher (assets/pos-dispatch.js),
+ * comme la boutique ou la pharmacie : il se déclare via KiwiPosDispatch.register,
+ * reçoit sa racine, sa chorégraphie de déverrouillage, son « Rafraîchir » et sa
+ * réimpression sans les réécrire. Il garde son propre préfixe CSS `.px-*` et
+ * réutilise le kit modal de la caisse (.modal-veil, .modal, .ma-btn, .cash-*,
+ * .reader-*) + #toast-stack. window.KiwiPressing reste exposé en compatibilité.
  *
  * The headline differentiator: intake is a VISUAL grid of garment cards
  * (illustrations, not text lists) — tap a garment, configure service/couleur/
@@ -28,12 +30,196 @@
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtMAD  = (n) => new Intl.NumberFormat('fr-FR', { useGrouping: true }).format(Math.round(n)) + ' MAD';
   const icons   = () => { if (window.lucide) try { lucide.createIcons(); } catch (e) {} };
+  /* Google Material Symbols · Outlined 400 for primary navigation. Product
+     artwork stays garment-specific because the Google set has no complete
+     clothing catalogue (pants, skirt, caftan, linen, etc.). */
+  const MI_PRESSING = {
+    counter: 'M280-80v-240h-64q-40 0-68-28t-28-68q0-29 16-53.5t42-36.5l262-116v-26q-36-13-58-43.5T360-760q0-50 35-85t85-35q50 0 85 35t35 85h-80q0-17-11.5-28.5T480-800q-17 0-28.5 11.5T440-760q0 17 11.5 28.5T480-720t28.5 11.5Q520-697 520-680v58l262 116q26 12 42 36.5t16 53.5q0 40-28 68t-68 28h-64v240H280Zm-64-320h64v-40h400v40h64q7 0 11.5-5t4.5-13q0-5-2.5-8.5T750-432L480-552 210-432q-5 2-7.5 5.5T200-418q0 8 4.5 13t11.5 5Zm144 240h240v-200H360v200Z',
+    orders: 'M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h168q13-36 43.5-58t68.5-22q38 0 68.5 22t43.5 58h168q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm80-80h280v-80H280v80Zm0-160h400v-80H280v80Zm0-160h400v-80H280v80Z',
+    pickup: 'M120-160q-17 0-28.5-11.5T80-200q0-10 4-18.5T96-232l344-258v-70q0-17 12-28.5t29-11.5q25 0 42-18t17-43q0-25-17.5-42T480-720q-25 0-42.5 17.5T420-660h-80q0-58 41-99t99-41q58 0 99 40.5t41 98.5q0 47-27.5 84T520-526v36l344 258q8 5 12 13.5t4 18.5q0 17-11.5 28.5T840-160H120Zm120-80h480L480-420 240-240Z',
+    rack: 'M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Z',
+    prices: 'M856-390 570-104q-12 12-27 18t-30 6q-15 0-30-6t-27-18L103-457q-11-11-17-25.5T80-513v-287q0-33 23.5-56.5T160-880h287q16 0 31 6.5t26 17.5l352 353q12 12 17.5 27t5.5 30q0 15-5.5 29.5T856-390ZM513-160l286-286-353-354H160v286l353 354ZM260-640q25 0 42.5-17.5T320-700q0-25-17.5-42.5T260-760q-25 0-42.5 17.5T200-700q0 25 17.5 42.5T260-640Z',
+    apparel: 'm240-522-40 22q-14 8-30 4t-24-18L66-654q-8-14-4-30t18-24l230-132h70q9 0 14.5 5.5T400-820v20q0 33 23.5 56.5T480-720q33 0 56.5-23.5T560-800v-20q0-9 5.5-14.5T580-840h70l230 132q14 8 18 24t-4 30l-80 140q-8 14-23.5 17.5T760-501l-40-20v361q0 17-11.5 28.5T680-120H280q-17 0-28.5-11.5T240-160v-362Zm80-134v456h320v-456l124 68 42-70-172-100q-15 51-56.5 84.5T480-640q-56 0-97.5-33.5T326-758L154-658l42 70 124-68Z',
+    bed: 'M80-200v-240q0-27 11-49t29-39v-112q0-50 35-85t85-35h160q23 0 43 8.5t37 23.5q17-15 37-23.5t43-8.5h160q50 0 85 35t35 85v112q18 17 29 39t11 49v240h-80v-80H160v80H80Zm440-360h240v-80q0-17-11.5-28.5T720-680H560q-17 0-28.5 11.5T520-640v80Zm-320 0h240v-80q0-17-11.5-28.5T400-680H240q-17 0-28.5 11.5T200-640v80Zm-40 200h640v-80q0-17-11.5-28.5T760-480H200q-17 0-28.5 11.5T160-440v80Z',
+    shoes: 'M216-580q39 0 74 14t64 41l382 365h24q17 0 28.5-11.5T800-200q0-8-1.5-17T788-235L605-418l-71-214-74 18q-38 10-69-14t-31-63v-84l-28-14-154 206h38q39 0 74 14t64 41l266 254H566q-30 0-57-11t-50-31L134-417q-46-42-51.5-103T114-631l154-206q17-23 45.5-30.5T368-861l28 14q21 11 32.5 30t11.5 42v84l74-19q30-8 58 7.5t38 44.5l65 196 170 170q20 20 27.5 43t7.5 49q0 50-35 85t-85 35H566Z'
+  };
+  const materialIcon = (name, cls) => `<svg class="${cls || ''}" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="${MI_PRESSING[name]}"></path></svg>`;
+  const garmentIcon = (item, cls) => {
+    const shared = window.KiwiPressingGarmentIcons;
+    if (shared && shared.render) return shared.render(item, cls);
+    return `<img class="px-product-photo${cls ? ` ${cls}` : ''}" src="assets/pressing-products/chemise.png" alt="" aria-hidden="true">`;
+  };
   const DAYS    = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
   const MONTHS  = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
   const pad2    = (n) => String(n).padStart(2, '0');
   const fmtDT   = (d) => `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} · ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   const fmtDay  = (d) => `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
   const H = 3600 * 1000;
+  const MAX_QTY = 99;
+
+  /* Customer phones use one canonical value for search, duplicate detection
+   * and WhatsApp. Moroccan numbers keep their familiar local display; tourist
+   * numbers are accepted in E.164 form (+country code) or with a 00 prefix.
+   * We intentionally do not guess a foreign country from a bare national
+   * number: the cashier must enter +33…, +49…, 0044…, etc. */
+  function normalizePhone(value) {
+    if (window.KiwiPhone) return window.KiwiPhone.normalize(value);
+    const raw = String(value == null ? '' : value).trim();
+    if (!raw || /[A-Za-z]/.test(raw)) return '';
+    if (!/^[+]?[-.()\s\d]+$/.test(raw) || (raw.includes('+') && !raw.startsWith('+'))) return '';
+    /* A common travel-address-book form is +33 (0)6…: the trunk zero is used
+       only inside France and must not enter the international number. */
+    const prepared = raw.replace(/\(\s*0\s*\)/, '');
+    let digits = prepared.replace(/\D/g, '');
+    if (digits.startsWith('00212')) digits = '0' + digits.slice(5);
+    else if (digits.startsWith('212')) digits = '0' + digits.slice(3);
+    else if (/^[5-7]\d{8}$/.test(digits)) digits = '0' + digits;
+    if (/^0[5-7]\d{8}$/.test(digits)) {
+      return digits.replace(/^(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/, '$1 $2 $3 $4 $5');
+    }
+    if (!raw.startsWith('+') && !raw.startsWith('00')) return '';
+    if (raw.startsWith('+') && raw.indexOf('+', 1) !== -1) return '';
+    const international = raw.startsWith('00') ? prepared.replace(/\D/g, '').slice(2) : prepared.replace(/\D/g, '');
+    if (!/^[1-9]\d{6,14}$/.test(international)) return '';
+    return '+' + international;
+  }
+  /* Compatibility for older extensions/tests that consumed the former name. */
+  const normalizeMoroccanPhone = normalizePhone;
+  const phoneDigits = (value) => (normalizePhone(value) || String(value || '')).replace(/\D/g, '');
+  /* Comme phoneDigits, mais tolérant aux numéros INCOMPLETS : au retrait, la
+     cliente dicte son numéro et la caissière tape au fur et à mesure. « +212 6 »
+     doit déjà filtrer comme « 06 », alors que normalizePhone refuse
+     (à juste titre) un numéro trop court. On coupe donc l'indicatif à la main. */
+  function searchDigits(value) {
+    if (window.KiwiPhone) return window.KiwiPhone.digits(value) || String(value == null ? '' : value).replace(/\D/g, '');
+    let d = String(value == null ? '' : value).replace(/\D/g, '');
+    if (d.startsWith('00212')) d = '0' + d.slice(5);
+    else if (d.startsWith('212')) d = '0' + d.slice(3);
+    else if (/^[5-7]/.test(d) && d.length >= 9) d = '0' + d;
+    return d;
+  }
+  const whatsappPhone = (value) => {
+    if (window.KiwiPhone) return window.KiwiPhone.whatsapp(value);
+    const phone = normalizePhone(value);
+    if (!phone) return '';
+    if (phone.startsWith('+')) return phone.slice(1);
+    return '212' + phone.replace(/\D/g, '').slice(1);
+  };
+  const clampQty = (value) => Math.max(1, Math.min(MAX_QTY, Math.floor(Number(value) || 1)));
+  const validDeposit = (value, total) => Number.isFinite(+value) && +value >= 10 && +value <= +total;
+  const validReady = (value, now) => !!value && typeof value.getTime === 'function'
+    && Number.isFinite(value.getTime()) && value.getTime() > +(now || Date.now());
+
+  /* Public order / piece number handling (4-digit format) */
+  function normalizeOrderNo(value) {
+    const raw = String(value == null ? '' : value).trim();
+    if (!raw) return '';
+    const m = raw.match(/(\d{4})/);
+    if (m) return m[1];
+    const digits = raw.replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits.length >= 4) return digits.slice(0, 4);
+    return digits.padStart(4, '0');
+  }
+
+  function publicOrderNo(order) {
+    if (!order) return '';
+    if (order.displayNo && /^\d{4}$/.test(String(order.displayNo))) return String(order.displayNo);
+    return normalizeOrderNo(order.id) || '0000';
+  }
+
+  function publicPieceNo(order, piece) {
+    const base = publicOrderNo(order);
+    const n = (piece && (piece.n != null ? piece.n : piece.pieceNo)) || 1;
+    return `${base}-${n}`;
+  }
+
+  function nextAvailableOrderNo(seq, orders) {
+    const used = new Set((orders || []).map((o) => publicOrderNo(o)));
+    let candidate = (Number(seq) || 1) % 10000;
+    if (candidate === 0) candidate = 1;
+    let attempts = 0;
+    while (attempts < 10000) {
+      const formatted = String(candidate).padStart(4, '0');
+      if (!used.has(formatted)) return formatted;
+      candidate = (candidate + 1) % 10000;
+      if (candidate === 0) candidate = 1;
+      attempts++;
+    }
+    return String((Number(seq) || 1) % 10000).padStart(4, '0');
+  }
+
+  function ensurePublicOrderNumbers(orders) {
+    if (!Array.isArray(orders)) return;
+    const used = new Set();
+    orders.forEach((o, i) => {
+      let num = o.displayNo ? normalizeOrderNo(o.displayNo) : normalizeOrderNo(o.id);
+      if (!num || used.has(num)) {
+        let candidate = ((i + 1) % 10000) || 1;
+        while (used.has(String(candidate).padStart(4, '0'))) {
+          candidate = ((candidate + 1) % 10000) || 1;
+        }
+        num = String(candidate).padStart(4, '0');
+      }
+      o.displayNo = num;
+      used.add(num);
+    });
+  }
+
+  /* The counter promises clock times, not vague 24/48-hour offsets. Building
+     from local calendar days keeps noon and 18:00 stable across DST changes.
+     Sunday was already excluded by the pressing flow; keep that operational
+     rule while making the label honest whenever "tomorrow" becomes Monday. */
+  function pressingServiceDay(from, count) {
+    const d = new Date(from);
+    d.setHours(0, 0, 0, 0);
+    let left = Math.max(0, Math.floor(+count || 0));
+    while (left > 0) {
+      d.setDate(d.getDate() + 1);
+      if (d.getDay() !== 0) left--;
+    }
+    return d;
+  }
+  function pressingSlot(from, serviceDays, hour) {
+    const d = pressingServiceDay(from, serviceDays);
+    d.setHours(hour, 0, 0, 0);
+    return d;
+  }
+  function relativeServiceDay(date, now) {
+    const a = new Date(now); a.setHours(0, 0, 0, 0);
+    const b = new Date(date); b.setHours(0, 0, 0, 0);
+    const days = Math.round((b - a) / (24 * H));
+    if (days === 0) return "Aujourd'hui";
+    if (days === 1) return 'Demain';
+    if (days === 2) return 'Après-demain';
+    return fmtDay(date);
+  }
+  function readyOptions(value) {
+    const now = value && typeof value.getTime === 'function' && Number.isFinite(value.getTime())
+      ? new Date(value.getTime())
+      : new Date();
+    const beforeCutoff = now.getHours() < 13;
+    const nextNoon = pressingSlot(now, 1, 12);
+    const nextEvening = pressingSlot(now, 1, 18);
+    const followingNoon = pressingSlot(now, 2, 12);
+    const options = beforeCutoff
+      ? [
+          { key: 'today-evening', d: pressingSlot(now, 0, 18), sub: 'Express · dépôt avant 13:00' },
+          { key: 'next-noon', d: nextNoon, sub: 'Retrait à midi' },
+          { key: 'next-evening', d: nextEvening, sub: 'Service standard', recommended: true },
+        ]
+      : [
+          { key: 'next-noon', d: nextNoon, sub: 'Premier créneau disponible' },
+          { key: 'next-evening', d: nextEvening, sub: 'Service standard', recommended: true },
+          { key: 'following-noon', d: followingNoon, sub: 'Délai confortable' },
+        ];
+    return options.map((option) => ({
+      ...option,
+      day: relativeServiceDay(option.d, now),
+      time: `${pad2(option.d.getHours())}:${pad2(option.d.getMinutes())}`,
+      label: `${relativeServiceDay(option.d, now)} · ${pad2(option.d.getHours())}:${pad2(option.d.getMinutes())}`,
+    }));
+  }
 
   function toast(msg, ms) {
     const stack = $('#toast-stack');
@@ -46,17 +232,30 @@
     setTimeout(() => el.remove(), (ms || 2200) + 280);
   }
 
-  /* Deterministic pseudo-barcode (Code-39 lookalike) from a tag id. */
+  /* Real Code 39: the printed garment id can be read by an inexpensive USB or
+   * Bluetooth scanner instead of merely looking like a barcode. */
+  const CODE39 = {
+    '0':'nnnwwnwnn','1':'wnnwnnnnw','2':'nnwwnnnnw','3':'wnwwnnnnn','4':'nnnwwnnnw',
+    '5':'wnnwwnnnn','6':'nnwwwnnnn','7':'nnnwnnwnw','8':'wnnwnnwnn','9':'nnwwnnwnn',
+    A:'wnnnnwnnw',B:'nnwnnwnnw',C:'wnwnnwnnn',D:'nnnnwwnnw',E:'wnnnwwnnn',F:'nnwnwwnnn',
+    G:'nnnnnwwnw',H:'wnnnnwwnn',I:'nnwnnwwnn',J:'nnnnwwwnn',K:'wnnnnnnww',L:'nnwnnnnww',
+    M:'wnwnnnnwn',N:'nnnnwnnww',O:'wnnnwnnwn',P:'nnwnwnnwn',Q:'nnnnnnwww',R:'wnnnnnwwn',
+    S:'nnwnnnwwn',T:'nnnnwnwwn',U:'wwnnnnnnw',V:'nwwnnnnnw',W:'wwwnnnnnn',X:'nwnnwnnnw',
+    Y:'wwnnwnnnn',Z:'nwwnwnnnn','-':'nwnnnnwnw','.':'wwnnnnwnn',' ':'nwwnnnwnn','*':'nwnnwnwnn',
+  };
   function barcode(seed, h) {
     h = h || 30;
-    let bars = '', x = 0, s = 7;
-    const len = Math.max(seed.length * 4, 26);
-    for (let i = 0; i < len; i++) {
-      s = (s * 31 + seed.charCodeAt(i % seed.length) + i * 11) % 97;
-      const w = 1 + (s % 3);
-      bars += `<rect x="${x}" y="0" width="${w}" height="${h}"></rect>`;
-      x += w + 1 + ((s >> 3) % 2);
-    }
+    const text = String(seed || '').toUpperCase().replace(/[^0-9A-Z. -]/g, '-');
+    let bars = '', x = 0;
+    (`*${text}*`).split('').forEach((ch) => {
+      const pattern = CODE39[ch] || CODE39['-'];
+      pattern.split('').forEach((width, i) => {
+        const w = width === 'w' ? 3 : 1;
+        if (i % 2 === 0) bars += `<rect x="${x}" y="0" width="${w}" height="${h}"></rect>`;
+        x += w;
+      });
+      x += 1; /* narrow inter-character gap */
+    });
     return `<svg viewBox="0 0 ${x} ${h}" preserveAspectRatio="none" style="height:${h}px" fill="currentColor" aria-hidden="true">${bars}</svg>`;
   }
 
@@ -96,71 +295,26 @@
      Per garment × service — same garment, different service = different price.
      A missing key = service not offered for that garment. MAD, Tanger 2026. */
   /* Services are COMBINABLE on one garment (lavage + repassage is the
-     classic ask) — prices add up. Two real-world exclusions: le nettoyage
-     à sec est un procédé complet (il inclut le repassage) et ne se cumule
-     jamais avec le lavage à l'eau. Détachage / retouche stack with anything. */
-  const SERVICES = [
-    { id: 'sec',       label: 'Nettoyage à sec', short: 'À sec',     code: 'SEC' },
-    { id: 'lavage',    label: 'Lavage',          short: 'Lavage',    code: 'LAV' },
-    { id: 'repassage', label: 'Repassage',       short: 'Repassage', code: 'REP' },
-    { id: 'detachage', label: 'Détachage',       short: 'Détachage', code: 'DET' },
-    { id: 'retouche',  label: 'Retouche',        short: 'Retouche',  code: 'RET' },
-  ];
-  const SVC = Object.fromEntries(SERVICES.map((s) => [s.id, s]));
-  const SVC_CONFLICTS = { sec: ['lavage', 'repassage'], lavage: ['sec'], repassage: ['sec'] };
-  const svcCodes  = (svcs) => svcs.map((s) => SVC[s].code).join('+');
-  const svcShorts = (svcs) => svcs.map((s) => SVC[s].short).join(' + ');
+     classic ask) — prices add up. */
+  let SERVICES = [];
+  let SVC = {};
+  const HIDDEN_SERVICE_IDS = new Set(['sec']);
+  const svcCodes  = (svcs) => svcs.map((s) => SVC[s] ? SVC[s].code : s).join('+');
+  const svcShorts = (svcs) => svcs.map((s) => SVC[s] ? SVC[s].short : s).join(' + ');
 
-  const CATALOG = [
-    { id: 'hauts', label: 'Hauts', items: [
-      { id: 'chemise',  label: 'Chemise',  prices: { sec: 25, lavage: 18, repassage: 10, detachage: 30, retouche: 35 } },
-      { id: 'tshirt',   label: 'T-shirt',  prices: { lavage: 14, repassage: 8, detachage: 22, sec: 20 } },
-      { id: 'pull',     label: 'Pull',     prices: { sec: 30, lavage: 22, repassage: 12, detachage: 35, retouche: 40 } },
-      { id: 'veste',    label: 'Veste',    prices: { sec: 45, repassage: 20, detachage: 50, retouche: 60 } },
-      { id: 'costume',  label: 'Costume', flag: 'multi-pièces',
-        variants: [
-          { id: '2p', label: '2 pièces', pieces: ['Veste', 'Pantalon'],          prices: { sec: 70, repassage: 35, detachage: 80, retouche: 80 } },
-          { id: '3p', label: '3 pièces', pieces: ['Veste', 'Pantalon', 'Gilet'], prices: { sec: 90, repassage: 45, detachage: 100, retouche: 90 } },
-        ] },
-      { id: 'manteau',  label: 'Manteau',  prices: { sec: 60, repassage: 25, detachage: 65, retouche: 70 } },
-    ] },
-    { id: 'bas', label: 'Bas', items: [
-      { id: 'pantalon', label: 'Pantalon', prices: { sec: 28, lavage: 18, repassage: 12, detachage: 32, retouche: 30 } },
-      { id: 'jean',     label: 'Jean',     prices: { lavage: 20, repassage: 12, sec: 30, detachage: 35, retouche: 30 } },
-      { id: 'jupe',     label: 'Jupe',     prices: { sec: 26, lavage: 18, repassage: 12, detachage: 30, retouche: 35 } },
-      { id: 'short',    label: 'Short',    prices: { lavage: 12, repassage: 8, sec: 18, detachage: 20, retouche: 25 } },
-    ] },
-    { id: 'robes', label: 'Robes & tenues', items: [
-      { id: 'robe',        label: 'Robe',           prices: { sec: 40, lavage: 30, repassage: 18, detachage: 45, retouche: 50 } },
-      { id: 'robe_soiree', label: 'Robe de soirée', flag: 'délicat', prices: { sec: 90, repassage: 40, detachage: 100, retouche: 80 } },
-      { id: 'caftan',      label: 'Caftan · takchita', flag: 'main', prices: { sec: 120, repassage: 60, detachage: 130, retouche: 100 } },
-    ] },
-    { id: 'linge', label: 'Linge de maison', items: [
-      { id: 'drap',       label: 'Drap',             def: 'lavage', prices: { lavage: 15, repassage: 10, sec: 25 } },
-      { id: 'housse',     label: 'Housse de couette', def: 'lavage', prices: { lavage: 25, repassage: 15, sec: 35 } },
-      { id: 'couverture', label: 'Couverture',        def: 'lavage', prices: { lavage: 45, sec: 60 } },
-      { id: 'nappe',      label: 'Nappe',             def: 'lavage', prices: { lavage: 20, repassage: 12, sec: 30, detachage: 28 } },
-      { id: 'rideaux',    label: 'Rideaux', sub: 'par panneau', def: 'sec', prices: { sec: 50, lavage: 35, repassage: 20 } },
-      { id: 'tapis',      label: 'Tapis', flag: 'au m²', def: 'lavage',
-        variants: [
-          { id: 's', label: 'Petit · < 2 m²',  prices: { lavage: 80 } },
-          { id: 'm', label: 'Moyen · 2–4 m²',  prices: { lavage: 140 } },
-          { id: 'l', label: 'Grand · > 4 m²',  prices: { lavage: 220 } },
-        ] },
-    ] },
-    { id: 'cuir', label: 'Cuir & spécial', items: [
-      { id: 'veste_cuir', label: 'Veste cuir', flag: '72 h', prices: { sec: 180, detachage: 200, retouche: 90 } },
-      { id: 'daim',       label: 'Daim',       flag: '72 h', prices: { sec: 200, detachage: 220 } },
-      { id: 'doudoune',   label: 'Doudoune',   prices: { lavage: 70, sec: 90, retouche: 60 } },
-    ] },
-    { id: 'chaussures', label: 'Chaussures', items: [
-      { id: 'chaussures', label: 'Chaussures cuir', sub: 'la paire', def: 'sec', prices: { sec: 80 } },
-      { id: 'baskets',    label: 'Baskets', sub: 'la paire',         def: 'lavage', prices: { lavage: 70 } },
-      { id: 'babouches',  label: 'Babouches', sub: 'la paire',       def: 'sec', prices: { sec: 50 } },
-    ] },
-  ];
-  const ITEMS = {};
-  CATALOG.forEach((c) => c.items.forEach((it) => { it.cat = c.id; ITEMS[it.id] = it; }));
+  let CATALOG = [];
+  let ITEMS = {};
+  function loadCatalog() {
+    const api = window.KiwiPressingCatalog;
+    const doc = api && api.read ? api.read() : { services: [], categories: [], items: [] };
+    const allServices = (doc.services || []).slice();
+    SERVICES = allServices.filter((s) => !HIDDEN_SERVICE_IDS.has(s.id));
+    SVC = Object.fromEntries(allServices.map((s) => [s.id, s]));
+    ITEMS = {};
+    (doc.items || []).forEach((it) => { ITEMS[it.id] = it; });
+    CATALOG = (doc.categories || []).map((c) => ({ ...c, items: (doc.items || []).filter((it) => it.cat === c.id) }));
+  }
+  loadCatalog();
 
   function priceTable(item, variantId) {
     if (item.variants) {
@@ -171,7 +325,9 @@
   }
   function minPrice(item) {
     const tables = item.variants ? item.variants.map((v) => v.prices) : [item.prices];
-    return Math.min(...tables.flatMap((t) => Object.values(t)));
+    const visibleIds = new Set(SERVICES.map((s) => s.id));
+    const values = tables.flatMap((t) => Object.entries(t || {}).filter(([id]) => visibleIds.has(id)).map(([, price]) => price)).filter((n) => Number(n) > 0);
+    return values.length ? Math.min(...values) : 0;
   }
   function availServices(item, variantId) {
     const t = priceTable(item, variantId);
@@ -195,8 +351,8 @@
   /* Real/paired store never shows the demo "Pressing Marshan" customers, orders
      or name — it opens on its own empty counter. Local pitch demo unchanged.
      (Mirrors the pvReal() gate every other vertical uses.) */
-  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
-  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvPaired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
   function pvName(demo) { var p = pvPaired(); return (p && p.name) || (pvReal() ? 'Mon pressing' : demo); }
 
   const CUSTOMERS = pvReal() ? [] : [
@@ -218,7 +374,12 @@
     recu:  { label: 'Reçu',          dot: 'recu'  },
     trait: { label: 'En traitement', dot: 'trait' },
     pret:  { label: 'Prêt',          dot: 'pret'  },
-    livre: { label: 'Livré',         dot: 'livre' },
+    /* The persisted key stays `livre` for backwards compatibility, but at the
+       pressing counter this state means the garments were physically handed
+       back to the customer. "Remis" is accurate for a pickup and does not
+       pretend that Kiwi ran a home-delivery route. */
+    livre: { label: 'Remis',         dot: 'livre' },
+    annule: { label: 'Annulée',       dot: 'annule' },
   };
   const STATUS_FLOW = ['recu', 'trait', 'pret', 'livre'];
 
@@ -227,16 +388,23 @@
     const pieces = []; let n = 0;
     lines.forEach((ln, li) => {
       const item = ITEMS[ln.itemId];
-      const labels = (item.variants && (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]).pieces) || null;
-      for (let q = 0; q < ln.qty; q++) {
+      /* `variants: []` est vrai au sens JS mais n'a pas d'élément 0 : lire
+         `.pieces` dessus jetait un TypeError et la fiche entière ne s'affichait
+         plus. Une famille sans variante retombe sur une pièce anonyme, comme
+         partout ailleurs. */
+      const variant = item.variants && (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]);
+      const labels = (variant && variant.pieces) || null;
+      for (let q = 0; q < clampQty(ln.qty); q++) {
         (labels || [null]).forEach((plabel) => {
           n++;
           pieces.push({
             pid: `${orderId}-${n}`, n, lineIdx: li,
-            label: plabel ? `${item.label} · ${plabel}` : item.label,
-            itemId: ln.itemId, svcs: ln.services, color: ln.color,
+            label: plabel ? `${ln.label || item.label} · ${plabel}` : (ln.label || item.label),
+            itemId: ln.itemId, variantId: ln.variantId || null, svcs: ln.services, color: ln.color,
+            notes: (ln.notes || []).slice(), freeNote: ln.freeNote || '',
             status: (statuses && statuses[n - 1]) || 'recu',
             photos: ln.photos || 0,
+            photoData: Array.isArray(ln.photoData) ? ln.photoData : [],
           });
         });
       }
@@ -244,33 +412,86 @@
     pieces.forEach((p) => { p.of = pieces.length; });
     return pieces;
   }
-  function lineTotal(ln) {
+  function lineUnit(ln) {
+    if (Number.isFinite(+ln.unitPrice) && +ln.unitPrice >= 0) return +ln.unitPrice;
     const t = priceTable(ITEMS[ln.itemId], ln.variantId);
-    return ln.services.reduce((s, sv) => s + (t[sv] || 0), 0) * ln.qty;
+    return ln.services.reduce((s, sv) => s + (t[sv] || 0), 0);
+  }
+  function lineTotal(ln) {
+    return lineUnit(ln) * ln.qty;
   }
   function orderTotals(o) {
     const sub = o.lines.reduce((s, ln) => s + lineTotal(ln), 0);
     const remise = o.b2b ? Math.round(sub * B2B_REMISE) : 0;
     return { sub, remise, total: sub - remise };
   }
-  function orderStatus(o) {
-    const st = o.pieces.map((p) => p.status);
-    if (st.every((s) => s === 'livre')) return 'livre';
-    if (st.every((s) => s === 'pret' || s === 'livre')) return 'pret';
+  /* Snapshot the operational truth that already exists on the pressing ticket.
+   * Payments can be deposits or balances, so line totals are allocated pro-rata
+   * to the money received in THIS sale event; recording the full garment value
+   * at both deposit and pickup would double product revenue. */
+  function saleLines(o, received) {
+    if (!o || !Array.isArray(o.lines)) return [];
+    const full = orderTotals(o).total;
+    const factor = full > 0 ? Math.max(0, +received || 0) / full : 0;
+    let allocated = 0;
+    return o.lines.map((ln, idx) => {
+      const item = ITEMS[ln.itemId] || { label: 'Article', cat: '' };
+      const raw = lineTotal(ln) * (o.b2b ? (1 - B2B_REMISE) : 1) * factor;
+      const total = idx === o.lines.length - 1
+        ? Math.max(0, Math.round(((+received || 0) - allocated) * 100) / 100)
+        : Math.max(0, Math.round(raw * 100) / 100);
+      allocated += total;
+      return {
+        itemId: ln.itemId,
+        variantId: ln.variantId || '',
+        name: item.label,
+        cat: item.cat || '',
+        kind: 'service',
+        unit: 'piece',
+        qty: ln.qty,
+        total,
+        options: (ln.services || []).map((id) => ({ id, qty: ln.qty })),
+      };
+    });
+  }
+  function effectiveStatus(o, p, now) {
+    if (!p) return 'recu';
+    if (p.status === 'livre') return 'livre';
+    if (p.status === 'pret') return 'pret';
+    const rTs = o && o.readyAt instanceof Date ? o.readyAt.getTime() : (o && o.readyAt ? new Date(o.readyAt).getTime() : 0);
+    if (rTs && rTs <= (now || Date.now())) return 'pret';
+    return p.status || 'recu';
+  }
+  function orderStatus(o, now) {
+    if (!o || !Array.isArray(o.pieces)) return 'recu';
+    if (o.cancelledAt) return 'annule';
+    const t = now || Date.now();
+    const st = o.pieces.map((p) => effectiveStatus(o, p, t));
+    if (st.length && st.every((s) => s === 'livre')) return 'livre';
+    if (st.length && st.every((s) => s === 'pret' || s === 'livre')) return 'pret';
     if (st.some((s) => s === 'trait' || s === 'pret')) return 'trait';
     return 'recu';
   }
-  function isLate(o) {
-    const s = orderStatus(o);
-    return (s === 'recu' || s === 'trait') && o.readyAt.getTime() < Date.now();
+  function isLiveOrder(o) {
+    const st = orderStatus(o);
+    return st !== 'livre' && st !== 'annule';
+  }
+  function isLate(o, now) {
+    if (!o) return false;
+    const t = now || Date.now();
+    const rTs = o.readyAt instanceof Date ? o.readyAt.getTime() : (o.readyAt ? new Date(o.readyAt).getTime() : 0);
+    return isLiveOrder(o) && rTs > 0 && rTs < t;
   }
 
   const NOW = Date.now();
   function mkOrder(cfg) {
     const o = {
-      id: cfg.id, custId: cfg.custId || null, guest: cfg.guest || null,
+      id: cfg.id,
+      displayNo: normalizeOrderNo(cfg.displayNo || cfg.id),
+      custId: cfg.custId || null,
+      guest: cfg.guest || null,
       b2b: !!(cfg.custId && CUST[cfg.custId] && CUST[cfg.custId].b2b),
-      lines: cfg.lines.map((l) => ({ itemId: l[0], services: Array.isArray(l[1]) ? l[1] : [l[1]], qty: l[2], color: l[3], notes: l[4] || [], freeNote: l[5] || '', photos: l[6] || 0, variantId: l[7] || null })),
+      lines: cfg.lines.map((l) => ({ itemId: l[0], services: Array.isArray(l[1]) ? l[1] : [l[1]], qty: clampQty(l[2]), color: l[3], notes: l[4] || [], freeNote: l[5] || '', photos: l[6] || 0, variantId: l[7] || null })),
       droppedAt: new Date(NOW - cfg.droppedH * H),
       readyAt:   new Date(NOW + cfg.readyH * H),
       pay: cfg.pay,           /* {mode:'now'|'acompte'|'pickup'|'compte', method, paid} */
@@ -278,6 +499,7 @@
       notified: !!cfg.notified,
       collectedAt: cfg.collectedH != null ? new Date(NOW - cfg.collectedH * H) : null,
     };
+    o.lines.forEach((l) => { l.label = ITEMS[l.itemId].label; l.unitPrice = lineUnit(l); });
     o.pieces = buildPieces(o.id, o.lines, null);
     if (cfg.status) o.pieces.forEach((p) => { p.status = cfg.status; });
     if (cfg.statuses) o.pieces.forEach((p, i) => { p.status = cfg.statuses[Math.min(i, cfg.statuses.length - 1)]; });
@@ -286,80 +508,322 @@
 
   const ORDERS = pvReal() ? [] : [
     /* ── reçu ── */
-    mkOrder({ id: 'P-1044', custId: 'c4', droppedH: 0.6, readyH: 47, status: 'recu',
+    mkOrder({ id: '1044', custId: 'c4', droppedH: 0.6, readyH: 47, status: 'recu',
       pay: { mode: 'pickup', method: null, paid: 0 },
       lines: [['jean', 'lavage', 2, 'bleu'], ['pull', 'sec', 1, 'gris', ['Tache manche'], '', 1]] }),
-    mkOrder({ id: 'P-1043', custId: 'c1', droppedH: 1.4, readyH: 46, status: 'recu',
+    mkOrder({ id: '1043', custId: 'c1', droppedH: 1.4, readyH: 46, status: 'recu',
       pay: { mode: 'acompte', method: 'especes', paid: 40 },
       lines: [['chemise', ['lavage', 'repassage'], 4, 'blanc'], ['robe', 'sec', 1, 'rouge', ['Délicat'], '', 2]] }),
-    mkOrder({ id: 'P-1042', custId: 'c6', droppedH: 2.5, readyH: 22, status: 'recu',
+    mkOrder({ id: '1042', custId: 'c6', droppedH: 2.5, readyH: 22, status: 'recu',
       pay: { mode: 'pickup', method: null, paid: 0 },
       lines: [['chemise', 'repassage', 10, 'blanc', [], 'Lot du lundi'], ['pantalon', 'repassage', 2, 'noir']] }),
     /* ── en traitement ── */
-    mkOrder({ id: 'P-1041', custId: 'c2', droppedH: 6, readyH: 26, statuses: ['trait', 'trait', 'trait', 'recu'],
+    mkOrder({ id: '1041', custId: 'c2', droppedH: 6, readyH: 26, statuses: ['trait', 'trait', 'trait', 'recu'],
       pay: { mode: 'now', method: 'carte', paid: 170 },
       lines: [['costume', 'sec', 1, 'bleu', [], '', 1, '3p'], ['veste_cuir', 'sec', 1, 'noir', ['Délicat'], 'Col élimé', 2]] }),
-    mkOrder({ id: 'P-1040', custId: 'hb', droppedH: 8, readyH: 16, status: 'trait',
+    mkOrder({ id: '1040', custId: 'hb', droppedH: 8, readyH: 16, status: 'trait',
       pay: { mode: 'compte', method: 'compte', paid: 0 },
       lines: [['drap', 'lavage', 12, 'blanc'], ['nappe', 'lavage', 6, 'blanc'], ['housse', 'lavage', 4, 'blanc']] }),
-    mkOrder({ id: 'P-1039', custId: 'c3', droppedH: 20, readyH: 28, statuses: ['trait', 'pret'],
+    mkOrder({ id: '1039', custId: 'c3', droppedH: 20, readyH: 28, statuses: ['trait', 'pret'],
       pay: { mode: 'acompte', method: 'especes', paid: 100 },
       lines: [['caftan', 'sec', 1, 'vert', ['Délicat'], 'Sfifa fragile, nettoyage main', 3], ['robe_soiree', 'sec', 1, 'noir', [], '', 1]] }),
-    mkOrder({ id: 'P-1032', custId: 'c5', droppedH: 50, readyH: -14, status: 'trait',
+    mkOrder({ id: '1032', custId: 'c5', droppedH: 50, readyH: -14, status: 'trait',
       pay: { mode: 'pickup', method: null, paid: 0 },
       lines: [['rideaux', 'sec', 4, 'beige', [], 'Salon, 4 panneaux'], ['couverture', 'lavage', 1, 'marron']] }),
     /* ── prêt ── */
-    mkOrder({ id: 'P-1038', custId: 'c1', droppedH: 30, readyH: -2, status: 'pret', rack: 'A-04', notified: true,
+    mkOrder({ id: '1038', custId: 'c1', droppedH: 30, readyH: -2, status: 'pret', rack: 'A-04', notified: true,
       pay: { mode: 'now', method: 'especes', paid: 56 },
       lines: [['pantalon', 'sec', 2, 'noir']] }),
-    mkOrder({ id: 'P-1037', custId: 'c6', droppedH: 32, readyH: -1, status: 'pret', rack: 'B-07',
+    mkOrder({ id: '1037', custId: 'c6', droppedH: 32, readyH: -1, status: 'pret', rack: 'B-07',
       pay: { mode: 'pickup', method: null, paid: 0 },
       lines: [['chemise', ['lavage', 'repassage'], 8, 'blanc'], ['veste', 'sec', 1, 'gris']] }),
-    mkOrder({ id: 'P-1036', custId: 'c4', droppedH: 26, readyH: -4, status: 'pret',
+    mkOrder({ id: '1036', custId: 'c4', droppedH: 26, readyH: -4, status: 'pret',
       pay: { mode: 'acompte', method: 'carte', paid: 30 },
       lines: [['doudoune', 'lavage', 1, 'noir', [], '', 1], ['tshirt', 'lavage', 3, 'blanc']] }),
     /* ── livré ── */
-    mkOrder({ id: 'P-1035', custId: 'c2', droppedH: 54, readyH: -8, status: 'livre', collectedH: 5, notified: true,
+    mkOrder({ id: '1035', custId: 'c2', droppedH: 54, readyH: -8, status: 'livre', collectedH: 5, notified: true,
       pay: { mode: 'now', method: 'carte', paid: 105 },
       lines: [['costume', 'repassage', 1, 'gris', [], '', 0, '2p'], ['chemise', 'repassage', 7, 'blanc']] }),
-    mkOrder({ id: 'P-1031', custId: 'c5', droppedH: 76, readyH: -30, status: 'livre', collectedH: 26, notified: true,
-      pay: { mode: 'now', method: 'especes', paid: 92 },
+    mkOrder({ id: '1031', custId: 'c5', droppedH: 76, readyH: -30, status: 'livre', collectedH: 26, notified: true,
+      pay: { mode: 'now', method: 'especes', paid: 102 },
       lines: [['jupe', 'sec', 2, 'noir'], ['babouches', 'sec', 1, 'beige']] }),
   ];
+  ensurePublicOrderNumbers(ORDERS);
 
   /* rack — rails A/B/C × 12 positions */
   const RAILS = ['A', 'B', 'C'];
   const RAIL_SIZE = 12;
   const rackSlots = {};                  /* 'B-07' → orderId */
+  let rackConflicts = [];
   ORDERS.forEach((o) => { if (o.rack) rackSlots[o.rack] = o.id; });
 
   /* ───────────────────────── state ───────────────────────── */
   let ticketSeq = 1045;
+  const PRESSING_STORE_PREFIX = 'kiwi:pressing-store:v1:';
+  let pressingCloudHandle = null;
+  const persistedOrderHashes = Object.create(null);
+  const persistedCustomerHashes = Object.create(null);
   const state = {
     view: 'comptoir',
     cat: 'tous',
+    catalogQuery: '',
     ticket: null,            /* { num, lines:[], customer, ready } */
     boardQuery: '',
+    boardFilter: 'todo',
+    boardSelected: [],
+    scanMode: 'pickup',
     rtQuery: '', rtOrder: null,
     rackSelect: null,
     offline: false, queued: 0,
     unlocked: false,
   };
+  /* Operational state survives reloads and follows the paired pressing. UI
+     filters/modals stay local; only customers, orders, rack allocation, the
+     open intake ticket and numbering are mirrored. */
+  const pressingOps = window.KiwiVerticalState?.open?.('pressing', {
+    schema: 1,
+    snapshot: () => ({ customers: CUSTOMERS, orders: ORDERS, rackSlots, ticketSeq, ticket: state.ticket }),
+    restore: (d) => {
+      CUSTOMERS.splice(0, CUSTOMERS.length, ...((d.customers || []).map((c) => c)));
+      Object.keys(CUST).forEach((k) => delete CUST[k]); CUSTOMERS.forEach((c) => { if (c?.id) CUST[c.id] = c; });
+      const orders = (d.orders || []).map((o) => {
+        (o.lines || []).forEach((line) => { line.qty = clampQty(line.qty); });
+        o.droppedAt = new Date(o.droppedAt); o.readyAt = new Date(o.readyAt);
+        o.collectedAt = o.collectedAt ? new Date(o.collectedAt) : null; return o;
+      });
+      ORDERS.splice(0, ORDERS.length, ...orders);
+      ensurePublicOrderNumbers(ORDERS);
+      Object.keys(rackSlots).forEach((k) => delete rackSlots[k]);
+      Object.assign(rackSlots, d.rackSlots || {});
+      ticketSeq = Math.max(ticketSeq, +d.ticketSeq || 0);
+      state.ticket = d.ticket || null;
+      if (state.ticket?.ready) state.ticket.ready = new Date(state.ticket.ready);
+      if (state.ticket && !/^\d{4}$/.test(String(state.ticket.displayNo || ''))) state.ticket.displayNo = nextAvailableOrderNo(ticketSeq, ORDERS);
+      (state.ticket?.lines || []).forEach((line) => { line.qty = clampQty(line.qty); });
+    },
+  });
   function freshTicket() {
-    state.ticket = { num: posRef(`P-${ticketSeq}`), lines: [], customer: null, ready: suggestReady() };
+    const num = nextAvailableOrderNo(ticketSeq, ORDERS);
+    state.ticket = { num, displayNo: num, lines: [], customer: null, ready: suggestReady() };
   }
-  function suggestReady() {
-    const d = new Date(Date.now() + 48 * H);
-    d.setHours(18, 0, 0, 0);
-    if (d.getDay() === 0) d.setDate(d.getDate() + 1);   /* dimanche → lundi */
-    return d;
+  function suggestReady(value) {
+    const options = readyOptions(value);
+    return new Date((options.find((option) => option.recommended) || options[0]).d);
   }
   function findOrder(id) { return ORDERS.find((o) => o.id === id); }
   function custOf(o) {
     if (o.custId) return CUST[o.custId];
     return o.guest || { name: 'Client de passage', phone: '' };
   }
+  function pressingScope() {
+    try { if (window.KiwiPressingOps) return KiwiPressingOps.scope(); } catch (_) {}
+    const p = pvPaired();
+    return p && (p.merchant || p.slug || p.venueId || p.name) || '';
+  }
+  function pressingStoreKey() {
+    const s = pressingScope();
+    return s ? PRESSING_STORE_PREFIX + s : '';
+  }
+  function orderPayload(o) {
+    return {
+      id: String(o.id || '').slice(0, 40),
+      displayNo: publicOrderNo(o),
+      custId: o.custId || null,
+      guest: o.guest ? { name: String(o.guest.name || 'Client de passage').slice(0, 100), phone: String(o.guest.phone || '').slice(0, 40) } : null,
+      b2b: !!o.b2b,
+      lines: (o.lines || []).map((l) => ({
+        itemId: l.itemId, label: String(l.label || (ITEMS[l.itemId] && ITEMS[l.itemId].label) || 'Article').slice(0, 100),
+        unitPrice: Math.max(0, Math.min(100000, +l.unitPrice || 0)), services: (l.services || []).slice(0, 8), qty: Math.max(1, Math.min(500, +l.qty || 1)),
+        color: l.color || 'blanc', notes: (l.notes || []).slice(0, 12), freeNote: String(l.freeNote || '').slice(0, 500),
+        photos: Math.max(0, Math.min(20, +l.photos || 0)), variantId: l.variantId || null,
+      })),
+      pieces: (o.pieces || []).map((p) => ({
+        pid: p.pid, n: p.n, of: p.of, lineIdx: p.lineIdx, label: p.label, itemId: p.itemId,
+        svcs: (p.svcs || []).slice(0, 8), color: p.color || 'blanc', notes: (p.notes || []).slice(0, 12),
+        freeNote: String(p.freeNote || '').slice(0, 500), status: p.status, photos: Math.max(0, Math.min(20, +p.photos || 0)),
+      })),
+      droppedAt: o.droppedAt instanceof Date ? o.droppedAt.toISOString() : o.droppedAt,
+      readyAt: o.readyAt instanceof Date ? o.readyAt.toISOString() : o.readyAt,
+      pay: o.pay ? { mode: o.pay.mode || 'pickup', method: o.pay.method || null, paid: Math.max(0, +o.pay.paid || 0) } : { mode: 'pickup', method: null, paid: 0 },
+      rack: o.rack || null,
+      total: orderTotals(o).total,
+      notified: !!o.notified,
+      collectedAt: o.collectedAt instanceof Date ? o.collectedAt.toISOString() : (o.collectedAt || null),
+      cancelledAt: o.cancelledAt instanceof Date ? o.cancelledAt.toISOString() : (o.cancelledAt || null),
+      cancelledBy: o.cancelledBy ? {
+        id: String(o.cancelledBy.id || '').slice(0, 80), name: String(o.cancelledBy.name || '').slice(0, 100), role: String(o.cancelledBy.role || '').slice(0, 40),
+      } : null,
+      updatedAt: +o.updatedAt || 0,
+    };
+  }
+  function payloadHash(value) {
+    const copy = { ...value };
+    delete copy.updatedAt;
+    return JSON.stringify(copy);
+  }
+  function pressingDocument() {
+    const now = Date.now();
+    const customers = CUSTOMERS.slice(0, 2000).map((c) => {
+      const row = { ...c, id: String(c.id || '').slice(0, 40), name: String(c.name || '').slice(0, 100), phone: String(c.phone || '').slice(0, 40), prefs: (c.prefs || []).slice(0, 20), updatedAt: +c.updatedAt || 0 };
+      const h = payloadHash(row);
+      if (persistedCustomerHashes[row.id] !== h) row.updatedAt = c.updatedAt = now;
+      persistedCustomerHashes[row.id] = h;
+      return row;
+    });
+    const ordered = ORDERS.filter(isLiveOrder).concat(ORDERS.filter((o) => orderStatus(o) === 'annule')).concat(ORDERS.filter((o) => orderStatus(o) === 'livre'));
+    const orders = ordered.slice(0, 500).map((o) => {
+      const row = orderPayload(o);
+      const h = payloadHash(row);
+      if (persistedOrderHashes[row.id] !== h) row.updatedAt = o.updatedAt = now;
+      persistedOrderHashes[row.id] = h;
+      return row;
+    });
+    const cancellations = orders.filter((o) => o.cancelledAt).map((o) => ({ id: o.id, cancelledAt: o.cancelledAt, cancelledBy: o.cancelledBy || null }));
+    return { customers, orders, cancellations, rackConflicts: rackConflicts.slice(0, 100), seq: ticketSeq, updatedAt: now };
+  }
+  function readPressingDocument() {
+    const k = pressingStoreKey();
+    if (!k) return null;
+    try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (_) { return null; }
+  }
+  function restorePressingDocument(doc) {
+    if (!pvReal() || !doc || !Array.isArray(doc.orders) || !Array.isArray(doc.customers)) return false;
+    CUSTOMERS.splice(0, CUSTOMERS.length);
+    Object.keys(CUST).forEach((k) => { delete CUST[k]; });
+    doc.customers.slice(0, 2000).forEach((raw) => {
+      if (!raw || !raw.id || !raw.name) return;
+      const c = { ...raw, id: String(raw.id).slice(0, 40), name: String(raw.name).slice(0, 100), phone: String(raw.phone || '').slice(0, 40), prefs: Array.isArray(raw.prefs) ? raw.prefs.slice(0, 20) : [] };
+      CUSTOMERS.push(c); CUST[c.id] = c;
+      persistedCustomerHashes[c.id] = payloadHash(c);
+    });
+    ORDERS.splice(0, ORDERS.length);
+    doc.orders.slice(0, 500).forEach((raw) => {
+      if (!raw || !raw.id || !Array.isArray(raw.lines) || !raw.lines.length) return;
+      const lines = raw.lines.filter((l) => l && ITEMS[l.itemId]).map((l) => {
+        const row = {
+          itemId: l.itemId, services: Array.isArray(l.services) ? l.services.filter((s) => SERVICES.some((x) => x.id === s)).slice(0, 8) : [],
+          qty: Math.max(1, Math.min(500, +l.qty || 1)), color: COLOR[l.color] ? l.color : 'blanc',
+          notes: Array.isArray(l.notes) ? l.notes.map((n) => String(n).slice(0, 100)).slice(0, 12) : [],
+          freeNote: String(l.freeNote || '').slice(0, 500), photos: Math.max(0, Math.min(20, +l.photos || 0)), variantId: l.variantId || null,
+          label: String(l.label || ITEMS[l.itemId].label).slice(0, 100),
+        };
+        row.unitPrice = Number.isFinite(+l.unitPrice) && +l.unitPrice >= 0 ? +l.unitPrice : lineUnit(row);
+        return row;
+      }).filter((l) => l.services.length);
+      if (!lines.length) return;
+      const o = {
+        id: String(raw.id).slice(0, 40),
+        displayNo: normalizeOrderNo(raw.displayNo || raw.id),
+        custId: raw.custId && CUST[raw.custId] ? raw.custId : null,
+        guest: raw.guest && { name: String(raw.guest.name || 'Client de passage').slice(0, 100), phone: String(raw.guest.phone || '').slice(0, 40) },
+        b2b: !!raw.b2b, lines, droppedAt: new Date(raw.droppedAt), readyAt: new Date(raw.readyAt),
+        pay: raw.pay && { mode: raw.pay.mode, method: raw.pay.method || null, paid: Math.max(0, +raw.pay.paid || 0) },
+        rack: raw.rack ? String(raw.rack).slice(0, 20) : null, notified: !!raw.notified,
+        collectedAt: raw.collectedAt ? new Date(raw.collectedAt) : null,
+        cancelledAt: raw.cancelledAt ? new Date(raw.cancelledAt) : null,
+        cancelledBy: raw.cancelledBy && { id: String(raw.cancelledBy.id || '').slice(0, 80), name: String(raw.cancelledBy.name || '').slice(0, 100), role: String(raw.cancelledBy.role || '').slice(0, 40) },
+        updatedAt: +raw.updatedAt || 0,
+      };
+      if (!Number.isFinite(o.droppedAt.getTime())) o.droppedAt = new Date();
+      if (!Number.isFinite(o.readyAt.getTime())) o.readyAt = suggestReady();
+      if (!o.pay) o.pay = { mode: 'pickup', method: null, paid: 0 };
+      o.pieces = buildPieces(o.id, lines, null);
+      if (Array.isArray(raw.pieces)) o.pieces.forEach((p, i) => {
+        const saved = raw.pieces.find((x) => x && x.pid === p.pid) || raw.pieces[i];
+        if (saved && STATUS[saved.status]) p.status = saved.status;
+      });
+      ORDERS.push(o);
+      persistedOrderHashes[o.id] = payloadHash(orderPayload(o));
+    });
+    ensurePublicOrderNumbers(ORDERS);
+    ticketSeq = Math.max(ticketSeq, +doc.seq || 0, 1);
+    Object.keys(rackSlots).forEach((k) => { delete rackSlots[k]; });
+    rackConflicts = Array.isArray(doc.rackConflicts) ? doc.rackConflicts.slice(0, 100) : [];
+    ORDERS.forEach((o) => {
+      if (!isLiveOrder(o) || !o.rack) { o.rack = null; return; }
+      if (!rackSlots[o.rack]) rackSlots[o.rack] = o.id;
+      else o.rack = null;
+    });
+    return true;
+  }
+  function mergePressingDocuments(mine, theirs) {
+    const mergeRows = (a, b) => {
+      const byId = Object.create(null);
+      (b || []).concat(a || []).forEach((row) => {
+        if (!row || !row.id) return;
+        const old = byId[row.id];
+        if (!old || (+row.updatedAt || 0) >= (+old.updatedAt || 0)) byId[row.id] = row;
+      });
+      return Object.values(byId);
+    };
+    const cancellations = mergeRows(mine && mine.cancellations, theirs && theirs.cancellations);
+    const rackConflicts = [];
+    const orders = mergeRows(mine && mine.orders, theirs && theirs.orders).map((o) => {
+      const tombstone = cancellations.find((c) => c.id === o.id);
+      return tombstone ? { ...o, cancelledAt: tombstone.cancelledAt, cancelledBy: tombstone.cancelledBy || null, rack: null, updatedAt: Math.max(+o.updatedAt || 0, Date.parse(tombstone.cancelledAt || '') || 0) } : o;
+    });
+    const rackOwners = new Map();
+    orders.sort((a, b) => (+b.updatedAt || 0) - (+a.updatedAt || 0) || String(a.id).localeCompare(String(b.id)));
+    orders.forEach((o) => {
+      if (!isLiveOrder(o) || !o.rack) { if (!isLiveOrder(o)) o.rack = null; return; }
+      if (rackOwners.has(o.rack)) {
+        rackConflicts.push({ slot: o.rack, winnerId: rackOwners.get(o.rack), loserId: o.id, detectedAt: Date.now() });
+        o.rack = null;
+      } else rackOwners.set(o.rack, o.id);
+    });
+    return {
+      customers: mergeRows(mine && mine.customers, theirs && theirs.customers),
+      orders,
+      cancellations,
+      rackConflicts,
+      seq: Math.max(+(mine && mine.seq) || 0, +(theirs && theirs.seq) || 0),
+      updatedAt: Math.max(+(mine && mine.updatedAt) || 0, +(theirs && theirs.updatedAt) || 0),
+    };
+  }
+  function writePressingDocument(doc, refresh) {
+    const k = pressingStoreKey();
+    if (!k || !doc) return false;
+    try { localStorage.setItem(k, JSON.stringify(doc)); } catch (_) { return false; }
+    restorePressingDocument(doc);
+    if (refresh && root) { refreshOps(); }
+    return true;
+  }
+  function pressingCloud() {
+    if (pressingCloudHandle || !window.KiwiCloudDoc || !pvReal()) return pressingCloudHandle;
+    pressingCloudHandle = KiwiCloudDoc.attach({
+      feature: 'pressing-orders', slug: () => pressingScope(), localKey: pressingStoreKey,
+      read: () => readPressingDocument() || { customers: [], orders: [], seq: ticketSeq, updatedAt: 0 },
+      write: (doc) => writePressingDocument(doc, true), merge: mergePressingDocuments,
+      isEmpty: (doc) => !doc || (!doc.orders?.length && !doc.customers?.length && !doc.cancellations?.length),
+      onPulled: () => { if (root) { renderBadges(); refreshOps(); } },
+    });
+    return pressingCloudHandle;
+  }
+  function persistPressing() {
+    if (!pvReal()) return;
+    const doc = pressingDocument();
+    const k = pressingStoreKey();
+    if (k) { try { localStorage.setItem(k, JSON.stringify(doc)); } catch (_) {} }
+    const cloud = pressingCloud();
+    if (cloud) cloud.push();
+  }
+  /* Share only a tenant-scoped operational snapshot with the owner dashboard.
+     The till remains the source of truth for the detailed ticket; the bridge
+     strips it to the fields the dashboard needs and never includes a PIN. */
+  function syncOwnerOps() {
+    if (!pvReal()) return;
+    persistPressing();
+    if (!window.KiwiPressingOps) return;
+    try {
+      KiwiPressingOps.replace(ORDERS, {
+        customer: custOf,
+        total: function (o) { return orderTotals(o).total; },
+      });
+    } catch (_) {}
+  }
   function queueIfOffline(label) {
+    pressingOps?.save?.(label || 'operation');
+    state.offline = browserOffline();
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -369,7 +833,7 @@
   const tkLabel = (o) => {
     const l = o.lines[0];
     if (!l) return 'Pressing';
-    const nm = ITEMS[l.itemId] ? ITEMS[l.itemId].label : 'Pressing';
+    const nm = l.label || (ITEMS[l.itemId] ? ITEMS[l.itemId].label : 'Pressing');
     const n = o.lines.reduce((s, x) => s + x.qty, 0);
     return o.lines.length > 1 ? `${nm} +${n - l.qty} pièces` : nm;
   };
@@ -384,9 +848,9 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
-  function postDay(total, method, label, ref) {
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('pressing', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('pressing', { total, method, label, ref, lines });
     } catch (_) {}
   }
   /* Le numéro de bon repart AU-DELÀ du dernier encaissé aujourd'hui : sans ça
@@ -394,44 +858,121 @@
      même numéro, sur les pièces comme sur le rack. Démo : aucun effet. */
   try { if (window.KiwiPosSale) ticketSeq = window.KiwiPosSale.nextSeq('pressing', ticketSeq); } catch (_) {}
 
-  /* ═══════════════════════ ROOT INJECTION ═══════════════════════ */
+  /* ═══════════════════════ ROOT ═══════════════════════ */
+  /* La racine vient du dispatcher (<div class="vx-screen" id="pos-pressing">) —
+   * on y ajoute `px-screen` pour les tokens et le prefixe maison, puis on
+   * construit l'intérieur. Plus d'appendChild : la couche, l'animation
+   * d'entrée et le verrouillage appartiennent au dispatcher. */
   let root = null;
-  function injectRoot() {
-    if (root) return;
-    root = document.createElement('div');
-    root.className = 'px-screen';
-    root.id = 'pressing-screen';
-    root.setAttribute('aria-hidden', 'true');
+
+  function fullscreenOn() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+  function paintFullscreenButton() {
+    const button = root && $('#px-fullscreen', root);
+    if (!button) return;
+    const on = fullscreenOn();
+    const enterIcon = button.querySelector('[data-px-fs="enter"]');
+    const exitIcon = button.querySelector('[data-px-fs="exit"]');
+    if (enterIcon) enterIcon.style.display = on ? 'none' : '';
+    if (exitIcon) exitIcon.style.display = on ? '' : 'none';
+    const label = button.querySelector('span');
+    if (label) label.textContent = on ? 'Quitter le plein écran' : 'Plein écran';
+    button.setAttribute('aria-pressed', on ? 'true' : 'false');
+    button.title = on ? 'Quitter le plein écran' : 'Plein écran';
+  }
+  function toggleFullscreen() {
+    try {
+      const action = fullscreenOn()
+        ? (document.exitFullscreen || document.webkitExitFullscreen || function () {}).call(document)
+        : (function () {
+            const el = document.documentElement;
+            return (el.requestFullscreen || el.webkitRequestFullscreen || function () {}).call(el);
+          })();
+      if (action && action.catch) action.catch(function () {});
+    } catch (_) {}
+  }
+  function paintThemeButton() {
+    const button = root && $('#px-theme', root);
+    if (!button) return;
+    const dark = !!(window.KiwiCaisseTheme && window.KiwiCaisseTheme.current() === 'dark');
+    const moon = button.querySelector('[data-px-theme="dark"]');
+    const sun = button.querySelector('[data-px-theme="light"]');
+    if (moon) moon.style.display = dark ? 'none' : '';
+    if (sun) sun.style.display = dark ? '' : 'none';
+    const label = button.querySelector('span');
+    if (label) label.textContent = dark ? 'Mode jour' : 'Mode nuit';
+    button.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    button.title = dark ? 'Passer en mode jour' : 'Passer en mode nuit';
+  }
+  function setupTerminalControls() {
+    const theme = $('#px-theme', root);
+    const fullscreen = $('#px-fullscreen', root);
+    if (theme) theme.addEventListener('click', () => {
+      if (window.KiwiCaisseTheme) window.KiwiCaisseTheme.toggle();
+      paintThemeButton();
+    });
+    if (fullscreen) fullscreen.addEventListener('click', toggleFullscreen);
+    paintThemeButton();
+    paintFullscreenButton();
+    if (!setupTerminalControls._subscribed) {
+      setupTerminalControls._subscribed = true;
+      document.addEventListener('kiwi:caisse-theme', paintThemeButton);
+      document.addEventListener('fullscreenchange', paintFullscreenButton);
+      document.addEventListener('webkitfullscreenchange', paintFullscreenButton);
+    }
+  }
+
+  function build(rootEl) {
+    pressingOps?.hydrate?.();
+    root = rootEl;
+    root.classList.add('px-screen');
     root.innerHTML = `
       <aside class="px-rail">
-        <div class="px-brand">kiwi<i></i></div>
+        <div class="px-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="px-venue">
           <div class="px-venue-name">${esc(pvName('Pressing Marshan'))}</div>
-          <div class="px-venue-sub">${pvReal() ? esc((pvPaired() || {}).location || '') : 'Tanger · Marshan<br>Le même Kiwi que <b>votre restaurant</b>, un seul compte.'}</div>
+          <div class="px-venue-sub">${pvReal() ? esc((pvPaired() || {}).location || '') : 'Tanger · Marshan<br>Le même Kiwi pour <b>votre comptoir et votre atelier</b>, un seul compte.'}</div>
         </div>
         <nav class="px-nav" id="px-nav">
-          <button class="px-nav-it on" data-px-view="comptoir"><i data-lucide="shirt"></i><span>Comptoir</span></button>
-          <button class="px-nav-it" data-px-view="commandes"><i data-lucide="clipboard-list"></i><span>Commandes</span><b class="px-nav-badge" id="px-badge-cmd"></b></button>
-          <button class="px-nav-it" data-px-view="retrait"><i data-lucide="shopping-bag"></i><span>Retrait</span><b class="px-nav-badge" id="px-badge-rt"></b></button>
-          <button class="px-nav-it" data-px-view="rangement"><i data-lucide="archive"></i><span>Rangement</span><b class="px-nav-badge" id="px-badge-rack"></b></button>
+          <button class="px-nav-it on" data-px-view="comptoir">${materialIcon('counter')}<span>Comptoir</span></button>
+          <button class="px-nav-it" data-px-view="commandes">${materialIcon('orders')}<span>Commandes</span><b class="px-nav-badge" id="px-badge-cmd"></b></button>
+          <button class="px-nav-it" data-px-view="retrait">${materialIcon('pickup')}<span>Retrait</span><b class="px-nav-badge" id="px-badge-rt"></b></button>
+          <button class="px-nav-it" data-px-view="rangement">${materialIcon('rack')}<span>Rangement</span><b class="px-nav-badge" id="px-badge-rack"></b></button>
         </nav>
         <div class="px-rail-foot">
-          <button class="px-net" id="px-net" title="Simuler une coupure réseau">
+          <button class="px-net" id="px-net" title="État réseau détecté par cet appareil">
             <i class="px-net-dot"></i><span class="px-net-label">En ligne</span>
+          </button>
+          <button class="px-lock" id="px-theme" type="button" aria-pressed="false">
+            <i data-lucide="moon" data-px-theme="dark"></i>
+            <i data-lucide="sun" data-px-theme="light" style="display:none"></i>
+            <span>Mode nuit</span>
+          </button>
+          <button class="px-lock" id="px-fullscreen" type="button" aria-pressed="false">
+            <i data-lucide="maximize" data-px-fs="enter"></i>
+            <i data-lucide="minimize" data-px-fs="exit" style="display:none"></i>
+            <span>Plein écran</span>
           </button>
           <button class="px-lock" id="px-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
         </div>
       </aside>
       <main class="px-main">
         <div class="px-offline-note" id="px-offline-note" hidden>
-          Hors-ligne, les actions sont enregistrées sur la tablette et synchronisées au retour du réseau.
+          Hors-ligne, les changements restent sur cette tablette et seront reproposés au retour du réseau.
           <b id="px-queue-count"></b>
         </div>
         <section class="px-view is-on" data-px-panel="comptoir">
           <div class="px-intake">
             <header class="px-head">
               <div><h1>Comptoir de dépôt</h1><div class="px-head-sub" id="px-today"></div></div>
-              <div class="px-head-hint">Touchez un article pour l'ajouter au ticket</div>
+              <div class="px-head-tools">
+                <div class="px-head-hint"><b id="px-catalog-count"></b> articles · touchez pour ajouter</div>
+                <label class="px-catalog-search">
+                  <i data-lucide="search" aria-hidden="true"></i>
+                  <input id="px-catalog-search" type="search" autocomplete="off" placeholder="Trouver un article" aria-label="Rechercher un article">
+                </label>
+              </div>
             </header>
             <div class="px-cats" id="px-cats"></div>
             <div class="px-grid-scroll" id="px-gridwrap"></div>
@@ -451,20 +992,26 @@
       <div class="modal-veil" id="px-wa-veil"><div class="modal px-wa px-rel" id="px-wam"></div></div>
       <div class="modal-veil" id="px-photo-veil"><div class="modal px-photo" id="px-photom"></div></div>
       <div class="modal-veil" id="px-scan-veil"><div class="modal px-scan px-rel" id="px-scanm"></div></div>`;
-    document.body.appendChild(root);
 
     $('#px-nav', root).addEventListener('click', (e) => {
       const b = e.target.closest('[data-px-view]');
       if (b) switchView(b.dataset.pxView);
     });
     $('#px-lock', root).addEventListener('click', lock);
-    // Le pressing n'passe pas par le dispatcher : il pose son « Rafraîchir »
-    // lui-même, dans le même pied de rail (assets/caisse-refresh.js).
-    try { if (window.KiwiCaisseRefresh) window.KiwiCaisseRefresh.mount(root); } catch (_) {}
     $('#px-net', root).addEventListener('click', toggleOffline);
+    setupTerminalControls();
+    $('#px-catalog-search', root).addEventListener('input', (event) => {
+      state.catalogQuery = event.target.value || '';
+      renderGrid();
+      icons();
+    });
     /* fermer un modal en cliquant le voile */
     $$('.modal-veil', root).forEach((v) => {
-      v.addEventListener('click', (e) => { if (e.target === v) closeVeil(v); });
+      v.addEventListener('click', (e) => {
+        if (e.target !== v) return;
+        if (v.id === 'px-scan-veil') stopScanner();
+        closeVeil(v);
+      });
     });
   }
 
@@ -472,51 +1019,34 @@
   function closeVeil(v) { (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open'); }
 
   /* ═══════════════════════ UNLOCK / LOCK ═══════════════════════ */
-  function unlock() {
-    injectRoot();
-    const pinScreen = $('#pin-screen');
-    $$('#pin-dots .pin-dot').forEach((d, i) => setTimeout(() => d.classList.add('is-success'), i * 70));
-    setTimeout(() => {
-      if (pinScreen) pinScreen.classList.add('is-leaving');
-      document.body.classList.add('is-pressing', 'is-unlocked');
-    }, 460);
-    setTimeout(() => {
-      if (pinScreen) pinScreen.style.display = 'none';
-      entryFlash();
-    }, 940);
-  }
-
-  /* Greeting flash — same ritual as the cashier entry, pressing voice. */
-  function entryFlash() {
-    const g = document.createElement('div');
-    g.className = 'kiwi-greet';
-    g.setAttribute('aria-hidden', 'true');
-    g.innerHTML = `<div class="kiwi-greet-inner">
-      <h1>Sba7 lkhir${pvReal() ? '' : ' Sanae'}, <em>marhba.</em></h1>
-      <div class="kiwi-greet-sub">${esc(pvName('Pressing Marshan'))} <em>·</em> comptoir de dépôt</div>
-    </div>`;
-    document.body.appendChild(g);
-    requestAnimationFrame(() => { g.classList.add('is-visible'); g.setAttribute('aria-hidden', 'false'); });
-    setTimeout(() => {
-      g.classList.remove('is-visible');
-      showApp();
-    }, 2150);
-    setTimeout(() => g.remove(), 3000);
-  }
-
-  function showApp() {
+  /* Le dispatcher possède la chorégraphie : points du PIN, fondu de l'écran,
+   * flash de salutation (qui sait déjà taire le prénom de démo et nommer le
+   * vrai commerce), classes body, animation d'entrée. Il ne reste ici que
+   * l'état du comptoir. */
+  function enter() {
     state.unlocked = true;
+    state.offline = browserOffline();
     if (!state.ticket) freshTicket();
-    root.classList.add('is-entering');
-    root.setAttribute('aria-hidden', 'false');
-    setTimeout(() => root.classList.remove('is-entering'), 700);
+    /* A dashboard quick action can ask the till to land directly on Retrait or
+       Rangement after the operator unlocks it. One-shot session state: it does
+       not bypass the PIN and cannot strand later visits on an old subsection. */
+    try {
+      const requested = sessionStorage.getItem('kiwiPressingStartView');
+      sessionStorage.removeItem('kiwiPressingStartView');
+      if (['comptoir', 'commandes', 'retrait', 'rangement'].includes(requested)) state.view = requested;
+    } catch (_) {}
     renderAll();
   }
 
   function lock() {
-    document.body.classList.remove('is-pressing', 'is-unlocked');
-    root.setAttribute('aria-hidden', 'true');
-    $$('.modal-veil.is-open', root).forEach((v) => v.classList.remove('is-open'));
+    if (window.KiwiPosDispatch) { window.KiwiPosDispatch.lock(); return; }
+    /* Filet : le module peut être chargé seul (tests, page isolée). */
+    document.body.classList.remove('is-pos', 'is-pos-pressing', 'is-unlocked');
+    if (root) {
+      root.classList.remove('is-on');
+      root.setAttribute('aria-hidden', 'true');
+      $$('.modal-veil.is-open', root).forEach((v) => v.classList.remove('is-open'));
+    }
     if (typeof window.__kiwiPinReset === 'function') window.__kiwiPinReset();
     toast('Terminal verrouillé');
   }
@@ -532,7 +1062,7 @@
     icons();
   }
   function renderBadges() {
-    const active = ORDERS.filter((o) => orderStatus(o) !== 'livre').length;
+    const active = ORDERS.filter(isLiveOrder).length;
     const prets  = ORDERS.filter((o) => orderStatus(o) === 'pret').length;
     const toRack = ORDERS.filter((o) => orderStatus(o) === 'pret' && !o.rack).length;
     $('#px-badge-cmd', root).textContent = active || '';
@@ -555,12 +1085,20 @@
   }
 
   /* ═══════════════════════ COMPTOIR — the visual intake grid ═══════════════════════ */
+  function counterCatalog() {
+    return CATALOG.map((c) => ({ ...c, items: c.items.filter((it) => {
+      if (it.active === false) return false;
+      if (it.variants && it.variants.length) return it.variants.some((v) => availServices(it, v.id).length);
+      return availServices(it, null).length > 0;
+    }) })).filter((c) => c.items.length);
+  }
   function renderCats() {
-    const counts = Object.fromEntries(CATALOG.map((c) => [c.id, c.items.length]));
-    const all = CATALOG.reduce((s, c) => s + c.items.length, 0);
+    const visible = counterCatalog();
+    const counts = Object.fromEntries(visible.map((c) => [c.id, c.items.length]));
+    const all = visible.reduce((s, c) => s + c.items.length, 0);
     $('#px-cats', root).innerHTML =
       `<button class="px-cat ${state.cat === 'tous' ? 'on' : ''}" data-px-cat="tous">Tous <span class="px-cat-ct">${all}</span></button>` +
-      CATALOG.map((c) =>
+      visible.map((c) =>
         `<button class="px-cat ${state.cat === c.id ? 'on' : ''}" data-px-cat="${c.id}">${esc(c.label)} <span class="px-cat-ct">${counts[c.id]}</span></button>`
       ).join('');
     $('#px-cats', root).onclick = (e) => {
@@ -572,18 +1110,26 @@
   }
 
   function renderGrid() {
-    const cats = state.cat === 'tous' ? CATALOG : CATALOG.filter((c) => c.id === state.cat);
+    const visible = counterCatalog();
+    const cats = state.cat === 'tous' ? visible : visible.filter((c) => c.id === state.cat);
+    const query = state.catalogQuery.trim().toLocaleLowerCase('fr');
+    const rows = cats.flatMap((category) => category.items.map((item) => ({ category, item }))).filter(({ category, item }) => {
+      if (!query) return true;
+      return [item.label, item.sub, category.label].some((value) => String(value || '').toLocaleLowerCase('fr').includes(query));
+    });
     let i = 0;
-    $('#px-gridwrap', root).innerHTML = cats.map((c) => `
-      <div class="px-cat-head">${esc(c.label)}</div>
-      <div class="px-grid">${c.items.map((it) => `
+    const count = $('#px-catalog-count', root);
+    if (count) count.textContent = rows.length;
+    $('#px-gridwrap', root).innerHTML = rows.length ? `
+      <div class="px-grid px-grid-all">${rows.map(({ category, item: it }) => `
         <button class="px-card" data-px-item="${it.id}" style="--i:${i++}">
-          <span class="px-card-art">${ART[it.id] || ''}</span>
+          <span class="px-card-art">${garmentIcon(it)}</span>
+          <span class="px-card-cat">${esc(category.label)}</span>
           <span class="px-card-name">${esc(it.label)}</span>
           <span class="px-card-price">dès ${minPrice(it)} MAD${it.sub ? ` · ${esc(it.sub)}` : ''}</span>
           ${it.flag ? `<span class="px-card-flag">${esc(it.flag)}</span>` : ''}
         </button>`).join('')}
-      </div>`).join('');
+      </div>` : `<div class="px-grid-empty"><i data-lucide="search-x"></i><b>Aucun article trouvé</b><span>Essayez un autre nom ou choisissez une autre catégorie.</span></div>`;
     $('#px-gridwrap', root).onclick = (e) => {
       const b = e.target.closest('[data-px-item]');
       if (b) openSheet(b.dataset.pxItem);
@@ -594,7 +1140,13 @@
   function ticketCount(t) {
     return t.lines.reduce((s, ln) => {
       const item = ITEMS[ln.itemId];
-      const per = item.variants ? (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]).pieces.length : 1;
+      /* Une variante n'a pas forcément de pièces nommées : les paliers de
+         taille d'un tapis (petit / moyen / grand) sont des variantes de PRIX,
+         pas de découpe. Sans ce garde-fou, ajouter un tapis au ticket plantait
+         le comptoir — même règle qu'à buildPieces(), qui retombe déjà sur une
+         seule étiquette quand `pieces` manque. */
+      const variant = item.variants && (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]);
+      const per = (variant && Array.isArray(variant.pieces) && variant.pieces.length) || 1;
       return s + ln.qty * per;
     }, 0);
   }
@@ -637,7 +1189,7 @@
       <div class="px-tk-meta">
         ${customerRow(t)}
         <button class="px-tk-row ${t.ready ? 'is-set' : ''}" id="px-tk-date"><i data-lucide="calendar-clock"></i>
-          <span class="l"><b>Prêt le ${esc(fmtDT(t.ready))}</b><span>Date promise, modifiable</span></span>
+          <span class="l"><b>Prêt le ${esc(fmtDT(t.ready))}</b><span>Date de retrait, modifiable</span></span>
           <span class="edit">Modifier</span></button>
       </div>
       <div class="px-tk-lines" id="px-tk-lines">
@@ -668,7 +1220,10 @@
       const idx = minus ? +minus.dataset.pxMinus : plus ? +plus.dataset.pxPlus : -1;
       if (idx < 0) return;
       const ln = t.lines[idx];
-      if (plus) ln.qty++;
+      if (plus) {
+        if (ln.qty >= MAX_QTY) { toast(`Maximum ${MAX_QTY} pièces par ligne`); return; }
+        ln.qty++;
+      }
       else { ln.qty--; if (ln.qty <= 0) t.lines.splice(idx, 1); }
       renderTicket(); icons();
     };
@@ -680,9 +1235,9 @@
     const variant = item.variants ? (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]) : null;
     const notesCt = ln.notes.length + (ln.freeNote ? 1 : 0);
     return `<div class="px-line">
-      <span class="px-line-art">${ART[ln.itemId] || ''}</span>
+        <span class="px-line-art">${garmentIcon({ ...item, variantId: ln.variantId })}</span>
       <span class="px-line-mid">
-        <span class="px-line-name">${esc(item.label)}${variant ? ` · ${esc(variant.label)}` : ''}</span>
+        <span class="px-line-name">${esc(ln.label || item.label)}${variant ? ` · ${esc(variant.label)}` : ''}</span>
         <span class="px-line-sub">
           <i class="dot" style="background:${COLOR[ln.color] ? COLOR[ln.color].hex : '#ccc'}"></i>
           <span class="svc">${svcCodes(ln.services)}</span> ${esc(svcShorts(ln.services))}
@@ -700,7 +1255,7 @@
   }
 
   /* ═══════════════════════ CONFIG SHEET ═══════════════════════ */
-  const sheet = { itemId: null, services: [], variantId: null, qty: 1, color: 'blanc', notes: [], freeNote: '', photos: 0 };
+  const sheet = { itemId: null, services: [], variantId: null, qty: 1, color: 'blanc', notes: [], freeNote: '', photos: 0, photoData: [] };
 
   function defaultService(item, variantId) {
     const avail = availServices(item, variantId);
@@ -712,7 +1267,7 @@
     Object.assign(sheet, {
       itemId,
       variantId: item.variants ? item.variants[0].id : null,
-      services: [], qty: 1, color: 'blanc', notes: [], freeNote: '', photos: 0,
+      services: [], qty: 1, color: 'blanc', notes: [], freeNote: '', photos: 0, photoData: [],
     });
     sheet.services = [defaultService(item, sheet.variantId)];
     renderSheet();
@@ -737,7 +1292,7 @@
     el.innerHTML = `
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="px-sheet-head">
-        <span class="px-sheet-art">${ART[item.id] || ''}</span>
+        <span class="px-sheet-art">${garmentIcon({ ...item, variantId: sheet.variantId })}</span>
         <span class="px-sheet-title"><h3>${esc(item.label)}</h3><span class="sub">${esc(CATALOG.find((c) => c.id === item.cat).label)}${item.sub ? ` · ${esc(item.sub)}` : ''}</span></span>
         <span class="px-sheet-price"><span class="val" id="px-sheet-total">${fmtMAD(unit * sheet.qty)}</span><span class="per">${unit} MAD × ${sheet.qty}</span></span>
       </div>
@@ -769,24 +1324,16 @@
       <div class="px-f">
         <div class="px-f-lbl">Couleur</div>
         <div class="px-colors" id="px-colors">
-          ${COLORS.map((c) => `<button class="px-color ${c.id === sheet.color ? 'on' : ''}" data-px-color="${c.id}" data-c="${c.id}" style="background:${c.hex}" title="${esc(c.label)}" aria-label="${esc(c.label)}"></button>`).join('')}
+          ${COLORS.map((c) => `<button type="button" class="px-color ${c.id === sheet.color ? 'on' : ''}" data-px-color="${c.id}" data-c="${c.id}" style="background:${c.hex}" title="${esc(c.label)}" aria-label="${esc(c.label)}" aria-pressed="${c.id === sheet.color}"></button>`).join('')}
         </div>
       </div>
 
       <div class="px-f">
         <div class="px-f-lbl">Notes usuelles <span class="opt">· optionnel</span></div>
         <div class="px-chips" id="px-notes">
-          ${NOTES.map((n) => `<button class="px-chip ${sheet.notes.includes(n) ? 'on' : ''}" data-px-note="${esc(n)}">${esc(n)}</button>`).join('')}
+          ${NOTES.map((n) => `<button type="button" class="px-chip ${sheet.notes.includes(n) ? 'on' : ''}" data-px-note="${esc(n)}" aria-pressed="${sheet.notes.includes(n)}">${esc(n)}</button>`).join('')}
         </div>
         <input class="px-note-free" id="px-note-free" placeholder="Note libre (ex. « ourlet 2 cm »)…" value="${esc(sheet.freeNote)}" />
-      </div>
-
-      <div class="px-f">
-        <div class="px-f-lbl">État à la dépose <span class="opt">· la photo protège le client et vous</span></div>
-        <div class="px-photos" id="px-photos">
-          ${Array.from({ length: sheet.photos }, (_, k) => `<span class="px-photo-thumb">${ART[item.id] || ''}<b>${k + 1}</b></span>`).join('')}
-          <button class="px-photo-add" id="px-photo-add"><i data-lucide="camera"></i>Photo état</button>
-        </div>
       </div>
 
       <div class="px-sheet-foot">
@@ -811,11 +1358,6 @@
         if (sheet.services.length === 1) return;          /* toujours ≥ 1 service */
         sheet.services.splice(i, 1);
       } else {
-        /* déposer les services incompatibles (sec ⟷ lavage/repassage) */
-        (SVC_CONFLICTS[id] || []).forEach((c) => {
-          const j = sheet.services.indexOf(c);
-          if (j >= 0) sheet.services.splice(j, 1);
-        });
         sheet.services.push(id);
       }
       $$('[data-px-svc]', el).forEach((x) => {
@@ -834,12 +1376,19 @@
       if (window.KiwiLens) KiwiLens.rescan();
     };
     $('#px-qty-minus', el).onclick = () => { if (sheet.qty > 1) { sheet.qty--; refreshPrice(); } };
-    $('#px-qty-plus', el).onclick = () => { sheet.qty++; refreshPrice(); };
+    $('#px-qty-plus', el).onclick = () => {
+      if (sheet.qty >= MAX_QTY) { toast(`Maximum ${MAX_QTY} pièces par ligne`); return; }
+      sheet.qty++; refreshPrice();
+    };
     $('#px-colors', el).onclick = (e) => {
       const b = e.target.closest('[data-px-color]');
       if (!b) return;
       sheet.color = b.dataset.pxColor;
-      $$('[data-px-color]', el).forEach((x) => x.classList.toggle('on', x === b));
+      $$('[data-px-color]', el).forEach((x) => {
+        const on = x === b;
+        x.classList.toggle('on', on);
+        x.setAttribute('aria-pressed', on);
+      });
     };
     $('#px-notes', el).onclick = (e) => {
       const b = e.target.closest('[data-px-note]');
@@ -848,9 +1397,9 @@
       const i = sheet.notes.indexOf(n);
       if (i >= 0) sheet.notes.splice(i, 1); else sheet.notes.push(n);
       b.classList.toggle('on', i < 0);
+      b.setAttribute('aria-pressed', i < 0);
     };
     $('#px-note-free', el).oninput = (e) => { sheet.freeNote = e.target.value; };
-    $('#px-photo-add', el).onclick = openPhoto;
     $('#px-sheet-add', el).onclick = addSheetToTicket;
     $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-sheet-veil'); });
   }
@@ -858,8 +1407,9 @@
   function addSheetToTicket() {
     state.ticket.lines.push({
       itemId: sheet.itemId, variantId: sheet.variantId, services: sheet.services.slice(),
-      qty: sheet.qty, color: sheet.color, notes: sheet.notes.slice(), freeNote: sheet.freeNote.trim(),
-      photos: sheet.photos,
+      qty: clampQty(sheet.qty), color: sheet.color, notes: sheet.notes.slice(), freeNote: sheet.freeNote.trim(),
+      photos: (sheet.photoData || []).length,
+      photoData: (sheet.photoData || []).slice(),
     });
     closeVeil('#px-sheet-veil');
     const item = ITEMS[sheet.itemId];
@@ -867,14 +1417,14 @@
     renderTicket(); icons();
   }
 
-  /* condition photo — mock capture */
+  /* Condition photo — native camera/file picker, then a compact local proof. */
   function openPhoto() {
     const item = ITEMS[sheet.itemId];
     const el = $('#px-photom', root);
     el.innerHTML = `
       <div class="px-vf">
         <div class="px-vf-hint">Cadrez la zone (tache, accroc, bouton)…</div>
-        ${(ART[item.id] || '').replace('class="px-art"', 'class="px-art art"')}
+        ${garmentIcon({ ...item, variantId: sheet.variantId },'art')}
         <span class="px-vf-corner tl"></span><span class="px-vf-corner tr"></span>
         <span class="px-vf-corner bl"></span><span class="px-vf-corner br"></span>
         <div class="px-vf-flash" id="px-vf-flash"></div>
@@ -884,30 +1434,42 @@
         <button class="px-vf-close" id="px-vf-close">Fermer</button>
       </div>`;
     openVeil('#px-photo-veil');
-    $('#px-shutter', el).onclick = () => {
-      $('#px-vf-flash', el).classList.remove('go');
-      void $('#px-vf-flash', el).offsetWidth;
-      $('#px-vf-flash', el).classList.add('go');
-      sheet.photos++;
-      setTimeout(() => {
-        closeVeil('#px-photo-veil');
-        renderSheet(); icons();
-        if (window.KiwiLens) KiwiLens.rescan();
-        toast(`Photo état ${sheet.photos} enregistrée, jointe à la pièce`);
-      }, 420);
+    $('#px-shutter', el).onclick = async () => {
+      if (!window.KiwiImageProof) { toast('Appareil photo indisponible'); return; }
+      try {
+        const photo = await KiwiImageProof.pick({ maxDimension: 640, quality: 0.58 });
+        if (!photo) return;
+        const flash = $('#px-vf-flash', el);
+        flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
+        sheet.photoData = sheet.photoData || [];
+        sheet.photoData.push(photo);
+        sheet.photos = sheet.photoData.length;
+        setTimeout(() => {
+          closeVeil('#px-photo-veil');
+          renderSheet(); icons();
+          if (window.KiwiLens) KiwiLens.rescan();
+          toast(`Photo état ${sheet.photos} enregistrée, jointe à la pièce`);
+        }, 220);
+      } catch (_) { toast('Photo non enregistrée · vérifiez l’accès à l’appareil'); }
     };
     $('#px-vf-close', el).onclick = () => closeVeil('#px-photo-veil');
   }
 
   /* ═══════════════════════ CLIENT — phone-first ═══════════════════════ */
-  function openClient() {
+  function openClient(options = {}) {
     const el = $('#px-clientm', root);
+    const onSelected = typeof options.onSelected === 'function' ? options.onSelected : null;
+    const completeSelection = () => {
+      closeVeil('#px-client-veil');
+      renderTicket(); icons();
+      if (onSelected) setTimeout(onSelected, 0);
+    };
     let mode = 'search';
     const render = (q) => {
-      const digits = (q || '').replace(/\D/g, '');
+      const digits = phoneDigits(q);
       const ql = (q || '').toLowerCase();
       const hits = !q ? CUSTOMERS : CUSTOMERS.filter((c) =>
-        (digits && c.phone.replace(/\D/g, '').includes(digits)) ||
+        (digits && phoneDigits(c.phone).includes(digits)) ||
         (!digits && c.name.toLowerCase().includes(ql)));
       el.innerHTML = `
         <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -935,7 +1497,7 @@
           </div>` : `
           <div class="px-cl-form">
             <input class="px-in" id="px-cl-name" placeholder="Nom et prénom" value="${esc(/^[\d\s.+-]*$/.test(q || '') ? '' : (q || ''))}" />
-            <input class="px-in" id="px-cl-tel" inputmode="tel" placeholder="Téléphone (optionnel)" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
+            <input class="px-in" id="px-cl-tel" inputmode="tel" autocomplete="tel" placeholder="Téléphone · 06…, +212…, +33…, +49…" value="${esc(/^[\d\s().+-]+$/.test(q || '') ? q : '')}" />
             <div class="px-sheet-foot" style="margin-top:4px;">
               <button class="px-btn secondary" id="px-cl-back">Retour</button>
               <button class="px-btn primary" id="px-cl-create"><i data-lucide="check"></i>Créer la fiche</button>
@@ -946,10 +1508,9 @@
       $$('[data-px-cl]', el).forEach((b) => {
         b.onclick = () => {
           state.ticket.customer = { type: 'known', id: b.dataset.pxCl };
-          closeVeil('#px-client-veil');
           const c = CUST[b.dataset.pxCl];
           toast(c.b2b ? `${c.name}, compte B2B, remise –15 % appliquée` : `${c.name}, ${c.orders} commandes, bienvenue`);
-          renderTicket(); icons();
+          completeSelection();
         };
       });
       const newBtn = $('#px-cl-new', el);
@@ -957,23 +1518,26 @@
       const guest = $('#px-cl-guest', el);
       if (guest) guest.onclick = () => {
         state.ticket.customer = { type: 'guest' };
-        closeVeil('#px-client-veil');
-        renderTicket(); icons();
+        completeSelection();
       };
       const back = $('#px-cl-back', el);
       if (back) back.onclick = () => { mode = 'search'; render(q); icons(); };
       const create = $('#px-cl-create', el);
       if (create) create.onclick = () => {
         const name = $('#px-cl-name', el).value.trim();
-        const tel = $('#px-cl-tel', el).value.trim();
+        const tel = normalizePhone($('#px-cl-tel', el).value);
         if (!name) { toast('Le nom est requis pour la fiche'); return; }
+        if (!tel) { toast('Numéro valide requis · pour l’étranger, ajoutez + et l’indicatif pays'); return; }
+        const existing = CUSTOMERS.find((c) => phoneDigits(c.phone) === phoneDigits(tel));
+        if (existing) { toast(`Ce numéro appartient déjà à ${existing.name}`); return; }
         const id = 'cx' + Date.now().toString(36);
         const c = { id, name, phone: tel, orders: 0, prefs: [] };
         CUSTOMERS.unshift(c); CUST[id] = c;
+        persistPressing();
         state.ticket.customer = { type: 'known', id };
-        closeVeil('#px-client-veil');
+        pressingOps?.save?.('customer-created');
         toast(`Fiche créée, ${name}`);
-        renderTicket(); icons();
+        completeSelection();
       };
     };
     render('');
@@ -985,7 +1549,7 @@
     return name.split(/\s+/).map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
   }
   function dueOf(c) {
-    return ORDERS.filter((o) => o.custId === c.id && orderStatus(o) !== 'livre' && o.pay.mode !== 'compte')
+    return ORDERS.filter((o) => o.custId === c.id && isLiveOrder(o) && o.pay.mode !== 'compte')
       .reduce((s, o) => s + Math.max(0, orderTotals(o).total - o.pay.paid), 0);
   }
   function recoPanel(c) {
@@ -995,7 +1559,7 @@
       <div class="px-reco-rows">
         ${(c.prefs || []).map((p) => `<div class="px-reco-row"><i data-lucide="heart"></i>${esc(p)}</div>`).join('')}
         ${c.contact ? `<div class="px-reco-row"><i data-lucide="user"></i>${esc(c.contact)}</div>` : ''}
-        ${hist.map((o) => `<div class="px-reco-row"><i data-lucide="history"></i><b>${o.id}</b> · ${o.pieces.length} pièces · ${STATUS[orderStatus(o)].label}</div>`).join('')}
+        ${hist.map((o) => `<div class="px-reco-row"><i data-lucide="history"></i><b>${publicOrderNo(o)}</b> · ${o.pieces.length} pièces · ${STATUS[orderStatus(o)].label}</div>`).join('')}
       </div>
     </div>`;
   }
@@ -1004,41 +1568,55 @@
   }
 
   /* ═══════════════════════ READY DATE ═══════════════════════ */
-  function openDate() {
+  function openDate(options = {}) {
     const el = $('#px-datemm', root);
-    const mk = (h, hour) => { const d = new Date(Date.now() + h * H); d.setHours(hour, 0, 0, 0); if (d.getDay() === 0) d.setDate(d.getDate() + 1); return d; };
-    const opts = [
-      { label: 'Ce soir · 19:00', sub: 'express', d: (() => { const d = new Date(); d.setHours(19, 0, 0, 0); return d; })() },
-      { label: 'Demain · 18:00', sub: 'service standard', d: mk(24, 18) },
-      { label: fmtDay(mk(48, 18)) + ' · 18:00', sub: '48 h, suggéré', d: mk(48, 18) },
-      { label: fmtDay(mk(72, 18)) + ' · 18:00', sub: '72 h', d: mk(72, 18) },
-    ];
+    const onSelected = typeof options.onSelected === 'function' ? options.onSelected : null;
+    const completeSelection = (ready) => {
+      state.ticket.ready = ready;
+      closeVeil('#px-date-veil');
+      renderTicket(); icons();
+      if (onSelected) setTimeout(() => onSelected(ready), 0);
+    };
+    const now = new Date();
+    const opts = readyOptions(now);
     el.innerHTML = `
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <div class="px-date-kicker">PROMESSE CLIENT</div>
       <h3 class="modal-title">Prêt pour quand ?</h3>
-      <p class="modal-subtle">La date promise s'imprime sur le ticket et sert d'alerte au tableau.</p>
+      <p class="modal-subtle">Choisissez un créneau réaliste. Il sera imprimé sur le ticket et suivi par l'atelier.</p>
       <div class="px-date-chips">
-        ${opts.map((o, i) => `<button class="px-date-chip ${Math.abs(o.d - state.ticket.ready) < 60000 ? 'on' : ''}" data-px-d="${i}"><b>${esc(o.label)}</b><span>${esc(o.sub)}</span></button>`).join('')}
+        ${opts.map((o, i) => `<button class="px-date-chip ${Math.abs(o.d - state.ticket.ready) < 60000 ? 'on' : ''}" data-px-d="${i}" aria-label="${esc(o.label)}">
+          <span class="px-date-day">${esc(o.day)}</span><b>${esc(o.time)}</b><span class="px-date-meta">${esc(o.sub)}</span>${o.recommended ? '<em>RECOMMANDÉ</em>' : ''}<i data-lucide="check"></i>
+        </button>`).join('')}
       </div>
+      <div class="px-date-divider"><span>Autre date</span></div>
       <div class="px-date-custom">
-        <input class="px-in" id="px-date-input" type="datetime-local" value="${localDT(state.ticket.ready)}" />
-        <button class="px-btn primary" id="px-date-ok" style="flex:0 0 auto;">OK</button>
+        <label class="px-date-field" for="px-date-input" data-px-date-field>
+          <input class="px-in" id="px-date-input" type="datetime-local" min="${localDT(new Date(Date.now() + 60000))}" value="${localDT(state.ticket.ready)}" />
+        </label>
+        <button class="px-btn primary" id="px-date-ok">Valider</button>
       </div>`;
     openVeil('#px-date-veil');
     icons();
+    const dateInput = $('#px-date-input', el);
+    const dateField = $('[data-px-date-field]', el);
+    dateField?.addEventListener('click', () => {
+      dateInput?.focus();
+      try { dateInput?.showPicker?.(); } catch (_) { /* iOS opens the native picker from focus. */ }
+    });
     $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-date-veil'); });
     $$('[data-px-d]', el).forEach((b) => {
       b.onclick = () => {
-        state.ticket.ready = opts[+b.dataset.pxD].d;
-        closeVeil('#px-date-veil');
-        renderTicket(); icons();
+        const ready = opts[+b.dataset.pxD].d;
+        if (!validReady(ready)) { toast('Choisissez une date de retrait dans le futur'); return; }
+        completeSelection(ready);
       };
     });
     $('#px-date-ok', el).onclick = () => {
       const v = $('#px-date-input', el).value;
-      if (v) state.ticket.ready = new Date(v);
-      closeVeil('#px-date-veil');
-      renderTicket(); icons();
+      const ready = v ? new Date(v) : null;
+      if (!validReady(ready)) { toast('La date de retrait doit être dans le futur'); return; }
+      completeSelection(ready);
     };
   }
   function localDT(d) {
@@ -1049,13 +1627,29 @@
   function validateTicket() {
     const t = state.ticket;
     if (!t.lines.length) return;
-    if (!t.customer) { openClient(); toast("Attachez d'abord le client (ou « passage »)"); return; }
+    /* Validation is a guided hand-off, not a shortcut: identify the customer,
+       then explicitly confirm the pickup time before printing. */
+    const chooseReady = () => openDate({ onSelected: finalizeTicket });
+    if (!t.customer) {
+      openClient({ onSelected: chooseReady });
+      toast("Choisissez le client, puis la date de retrait");
+      return;
+    }
+    chooseReady();
+  }
+
+  function finalizeTicket() {
+    const t = state.ticket;
+    if (!t || !t.lines.length || !t.customer) return;
+    if (!validReady(t.ready)) { openDate({ onSelected: finalizeTicket }); toast('Choisissez une date de retrait dans le futur'); return; }
+    const num = normalizeOrderNo(t.displayNo || t.num) || nextAvailableOrderNo(ticketSeq, ORDERS);
     const order = {
-      id: t.num,
+      id: num,
+      displayNo: num,
       custId: t.customer.type === 'known' ? t.customer.id : null,
       guest: t.customer.type === 'guest' ? { name: 'Client de passage', phone: '' } : null,
       b2b: ticketTotals(t).b2b,
-      lines: t.lines.map((l) => ({ ...l, notes: l.notes.slice() })),
+      lines: t.lines.map((l) => ({ ...l, label: ITEMS[l.itemId].label, unitPrice: lineUnit(l), notes: l.notes.slice() })),
       droppedAt: new Date(), readyAt: t.ready,
       pay: { mode: null, method: null, paid: 0 },
       rack: null, notified: false, collectedAt: null,
@@ -1064,15 +1658,42 @@
     openTags(order, { fresh: true });
   }
 
-  function receiptHTML(o) {
+  /* En-tête du ticket. L'enseigne, l'adresse et les identifiants légaux
+   * viennent de la fiche établissement partagée (assets/receipt.js), la même
+   * que la boutique : un vrai pressing imprimait jusqu'ici « PRESSING MARSHAN,
+   * Rue Assad Ibn Al Fourat, Tanger » sur SES tickets. Les lignes de la démo
+   * ne servent plus que de repli quand aucune fiche n'existe. */
+  function receiptHead() {
+    const K = window.KiwiReceipt;
+    const b = (K && K.business) ? K.business() : null;
+    const L = (b && b.legal) || {};
+    const name = (b && (b.tradeName || b.name)) || pvName('Pressing Marshan');
+    const rows = [];
+    const addr = [L.address, L.city].filter(Boolean).join(', ');
+    if (addr) rows.push(esc(addr));
+    else if (!pvReal()) rows.push('Rue Assad Ibn Al Fourat, Tanger');
+    if (L.phone) rows.push(esc(L.phone));
+    const ids = [
+      L.ice     && 'ICE ' + L.ice,
+      L.fiscal  && 'IF ' + L.fiscal,
+      L.rc      && 'RC ' + L.rc,
+      L.patente && 'Patente ' + L.patente,
+    ].filter(Boolean).map(esc);
+    if (ids.length) rows.push(ids.join(' · '));
+    rows.push('propulsé par Kiwi');
+    return `<div class="c b lg">${esc(String(name).toUpperCase())}</div>
+      <div class="c mut">${rows.join('<br>')}</div>`;
+  }
+
+  function receiptHTML(o, copyLabel) {
     const c = custOf(o);
     const { sub, remise, total } = orderTotals(o);
     const due = o.pay.mode === 'compte' ? 0 : Math.max(0, total - o.pay.paid);
     return `<div class="px-receipt">
-      <div class="c b lg">PRESSING MARSHAN</div>
-      <div class="c mut">Rue Assad Ibn Al Fourat, Tanger<br>05 39 93 XX XX · propulsé par Kiwi</div>
+      <div class="px-receipt-copy${copyLabel ? ' is-workshop' : ''}">${copyLabel || 'EXEMPLAIRE CLIENT'}</div>
+      ${receiptHead()}
       <hr>
-      <div class="row"><span>Ticket</span><span class="b">${o.id}</span></div>
+      <div class="row"><span>Commande</span><span class="b">${publicOrderNo(o)}</span></div>
       <div class="row"><span>Client</span><span>${esc(c.name)}</span></div>
       ${c.phone ? `<div class="row"><span>Tél</span><span>${esc(c.phone)}</span></div>` : ''}
       <div class="row"><span>Déposé</span><span>${fmtDT(o.droppedAt)}</span></div>
@@ -1081,7 +1702,7 @@
       ${o.lines.map((ln) => {
         const item = ITEMS[ln.itemId];
         const variant = item.variants ? (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]).label : '';
-        return `<div class="row"><span class="nm">${ln.qty} × ${esc(item.label)}${variant ? ` (${esc(variant)})` : ''} · ${svcCodes(ln.services)}</span><span>${lineTotal(ln)}</span></div>`;
+        return `<div class="row"><span class="nm">${ln.qty} × ${esc(ln.label || item.label)}${variant ? ` (${esc(variant)})` : ''} · ${svcCodes(ln.services)}</span><span>${lineTotal(ln)}</span></div>`;
       }).join('')}
       <hr>
       <div class="row"><span>Sous-total</span><span>${sub} MAD</span></div>
@@ -1092,20 +1713,110 @@
          ${due ? `<div class="row due"><span>SOLDE AU RETRAIT</span><span>${due} MAD</span></div>` : ''}`}
       <div class="row"><span>Pièces</span><span>${o.pieces.length} · ${o.pieces.length} étiq.</span></div>
       <hr>
-      <div class="c">${barcode(o.id, 26)}</div>
-      <div class="c mut">${o.id} · merci, l'lah ikhellik</div>
+      <div class="c">${barcode(publicOrderNo(o), 26)}</div>
+      <div class="c mut">${publicOrderNo(o)} · merci, l'lah ikhellik</div>
     </div>`;
   }
 
   function tagHTML(p, o) {
-    const c = custOf(o);
+    const customer = custOf(o);
+    const care = [...(p.notes || []), p.freeNote].filter(Boolean);
     return `<div class="px-tag">
-      <div class="px-tag-top"><span class="px-tag-num">${o.id}</span><span class="px-tag-i">pièce ${p.n}/${p.of}</span></div>
-      <div class="px-tag-client">${esc(c.name)}</div>
-      <div class="px-tag-item"><i class="dot" style="background:${COLOR[p.color] ? COLOR[p.color].hex : '#ccc'}"></i>${esc(p.label)} · <span class="svc">${svcCodes(p.svcs)}</span></div>
-      ${barcode(p.pid, 26)}
-      <div class="px-tag-id">${p.pid}</div>
+      <div class="px-tag-top"><span class="px-tag-num">${publicOrderNo(o)}</span><span class="px-tag-i">pièce ${p.n}/${p.of}</span></div>
+      <div class="px-tag-item"><strong>${esc(p.label)}</strong><span aria-hidden="true">·</span><span class="svc">${svcCodes(p.svcs)}</span></div>
+      ${care.length ? `<div class="px-tag-care">ATTENTION · ${care.map(esc).join(' · ')}</div>` : ''}
+      <div class="px-tag-client">${esc(customer.name)}</div>
+      <div class="px-tag-id">${publicPieceNo(o, p)}</div>
     </div>`;
+  }
+
+  /* Impression réelle du ticket de dépôt et des étiquettes.
+   *
+   * Ce bouton n'imprimait rien. Il affichait « Envoyé, ticket (80 mm) +
+   * étiquettes (imprimante thermique) » qu'une imprimante existe ou non — sur
+   * un comptoir sans thermique appairée, il annonçait à chaque dépôt un ticket
+   * qui n'est jamais sorti, et la caissière ne s'en apercevait qu'en cherchant
+   * le papier. Il imprime maintenant, et quand il ne peut pas il le dit.
+   *
+   * Deux chemins, jamais les deux en même temps (deux boîtes de dialogue
+   * empilées, c'est pire que pas d'impression) :
+   *   · thermique appairée → ESC/POS, le ticket client, son duplicata atelier,
+   *                          puis les étiquettes ;
+   *   · rien d'appairé     → le pilote du système, les deux tickets ET les
+   *                          étiquettes sur la même page (« Enregistrer en PDF »
+   *                          compris).
+   * L'étiquette privilégie désormais le numéro public à quatre chiffres. Le
+   * client reste un repère secondaire et l'identifiant de pièce est lisible,
+   * sans sacrifier la surface utile à un code-barres rarement lu à l'atelier. */
+  function printOrderDocs(order) {
+    const KP = window.KiwiPrinter;
+    if (!KP) { toast('Impression indisponible sur cet appareil'); return; }
+    const n = order.pieces.length;
+    const plural = n > 1 ? 's' : '';
+
+    if (!(KP.isConnected && KP.isConnected() && window.KiwiEscPos)) {
+      KP.browserPrintHTML(
+        `<div class="px-print"><div class="px-print-receipts">${receiptHTML(order)}${receiptHTML(order, 'DUPLICATA · ATELIER')}</div>${order.pieces.map((p) => tagHTML(p, order)).join('')}</div>`,
+        (KP.getConfig && KP.getConfig().paper) || '80'
+      );
+      toast(`Impression système, ticket + duplicata + ${n} étiquette${plural}`);
+      return;
+    }
+
+    const K = window.KiwiReceipt;
+    const b = (K && K.business) ? K.business() : null;
+    const L = (b && b.legal) || {};
+    const { total } = orderTotals(order);
+    const doc = {
+      shop: (b && (b.tradeName || b.name)) || pvName('Pressing Marshan'),
+      address: [L.address, L.city].filter(Boolean).join(', '),
+      phone: L.phone || '',
+      ref: publicOrderNo(order),
+      date: fmtDT(order.droppedAt),
+      lines: order.lines.map((ln) => {
+        const item = ITEMS[ln.itemId];
+        const variant = item.variants ? (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]).label : '';
+        return { qty: ln.qty, name: `${ln.label || item.label}${variant ? ` (${variant})` : ''} · ${svcCodes(ln.services)}`, price: lineTotal(ln) };
+      }),
+      total: `${total} MAD`,
+      method: order.pay.mode === 'compte' ? 'Sur compte' : (order.pay.paid ? `${order.pay.paid} MAD payés` : 'Solde au retrait'),
+      footer: `PRÊT LE ${fmtDT(order.readyAt)} · ${n} pièce${plural}`,
+    };
+
+    const duplicate = {
+      ...doc,
+      copy: 'DUPLICATA · ATELIER',
+    };
+
+    const customer = custOf(order);
+    const labels = order.pieces.map((p) => ({
+      title: `${publicOrderNo(order)} · pièce ${p.n}/${p.of}`,
+      sub: customer.name,
+      detail: `${p.label} · ${svcCodes(p.svcs)}`,
+      footer: publicPieceNo(order, p),
+      code: publicPieceNo(order, p),
+      hideBarcode: true,
+      format: 'code128',
+    }));
+
+    toast('Impression…');
+    Promise.resolve(KP.printReceipt(doc))
+      .then((r) => {
+        if (!r || !r.ok) { toast('Ticket non imprimé, imprimante injoignable'); return null; }
+        return KP.printReceipt(duplicate);
+      })
+      .then((r) => {
+        if (r === null) return null;
+        if (!r || !r.ok) { toast('Ticket client imprimé, duplicata non imprimé'); return null; }
+        return KP.printLabels(labels);
+      })
+      .then((r) => {
+        if (r === null) return;
+        toast(r && r.ok
+          ? `Ticket + duplicata + ${n} étiquette${plural} imprimés`
+          : `Tickets imprimés, ${n} étiquette${plural} non imprimée${plural}`);
+      })
+      .catch(() => toast('Impression échouée'));
   }
 
   function openTags(order, ctx) {
@@ -1113,15 +1824,15 @@
     const fresh = ctx && ctx.fresh;
     el.innerHTML = `
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
-      <h3 class="modal-title">Ticket &amp; étiquettes, ${order.id}</h3>
-      <p class="modal-subtle">${order.pieces.length} pièce${order.pieces.length > 1 ? 's' : ''} = ${order.pieces.length} étiquette${order.pieces.length > 1 ? 's' : ''} imperméables. Un costume 3 pièces sort avec 3 étiquettes, rien ne se perd.</p>
+      <h3 class="modal-title">Ticket, duplicata &amp; étiquettes · ${publicOrderNo(order)}</h3>
+      <p class="modal-subtle">Le client garde son ticket. Le duplicata atelier reste avec la commande. Chaque pièce reçoit une étiquette lisible au nom du client.</p>
       <div class="px-tags-grid">
-        ${receiptHTML(order)}
+        <div class="px-receipts-preview">${receiptHTML(order)}${receiptHTML(order, 'DUPLICATA · ATELIER')}</div>
         <div class="px-tags-list">${order.pieces.map((p) => tagHTML(p, order)).join('')}</div>
       </div>
-      <div class="px-tags-note"><i data-lucide="shield-check"></i>Chaque étiquette porte le n° de commande, la pièce, le client et le service, scannable au rangement et au retrait.</div>
+      <div class="px-tags-note"><i data-lucide="shield-check"></i>Sur chaque étiquette : nom du client, commande, pièce, article et service. Rien d'autre.</div>
       <div class="px-tags-foot">
-        <button class="px-btn secondary" id="px-tags-print"><i data-lucide="printer"></i>Imprimer ticket + ${order.pieces.length} étiq.</button>
+        <button class="px-btn secondary" id="px-tags-print"><i data-lucide="printer"></i>Imprimer 2 tickets + ${order.pieces.length} étiq.</button>
         ${fresh
           ? `<button class="px-btn primary" id="px-tags-pay"><i data-lucide="banknote"></i>Encaissement</button>`
           : `<button class="px-btn primary" data-px-close><i data-lucide="check"></i>Fermer</button>`}
@@ -1129,12 +1840,13 @@
     openVeil('#px-tags-veil');
     icons();
     $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-tags-veil'); });
-    $('#px-tags-print', el).onclick = () => toast('Envoyé, ticket (80 mm) + étiquettes (imprimante thermique)');
+    $('#px-tags-print', el).onclick = () => printOrderDocs(order);
     const payBtn = $('#px-tags-pay', el);
     if (payBtn) payBtn.onclick = () => { closeVeil('#px-tags-veil'); openPay(order, { fresh: true }); };
   }
 
   /* ═══════════════════════ PAYMENT — now / acompte / pickup / compte ═══════════════════════ */
+  const paymentCommits = new Set();
   function openPay(order, ctx) {
     const el = $('#px-paym', root);
     const { total } = orderTotals(order);
@@ -1143,6 +1855,19 @@
     const fresh = ctx && ctx.fresh;
     const settle = ctx && ctx.settle;          /* encaisser un solde existant */
     const amountBase = settle ? due : total;
+    const commitKey = settle ? `settle:${order.id}:${order.pay.paid}` : `fresh:${order.id}`;
+    let committed = false;
+    let authorizationPending = false;
+    const closePay = () => {
+      if (authorizationPending) { toast('Paiement carte en cours · attendez la réponse du lecteur'); return; }
+      closeVeil('#px-pay-veil');
+    };
+    const beginCommit = () => {
+      if (committed || paymentCommits.has(commitKey)) return false;
+      committed = true;
+      paymentCommits.add(commitKey);
+      return true;
+    };
 
     const step1 = () => {
       el.innerHTML = `
@@ -1157,9 +1882,9 @@
             <span class="l"><b>Payer maintenant</b><span>Espèces ou carte à la dépose</span></span>
             <span class="amt">${fmtMAD(total)}</span>
           </button>
-          <button class="px-pay-opt" data-px-paymode="acompte">
+          <button class="px-pay-opt" data-px-paymode="acompte" ${total < 10 ? 'disabled' : ''}>
             <span class="ic"><i data-lucide="coins"></i></span>
-            <span class="l"><b>Acompte à la dépose</b><span>Le reste au retrait</span></span>
+            <span class="l"><b>Acompte à la dépose</b><span>${total < 10 ? 'Minimum 10 MAD · indisponible pour ce ticket' : 'Le reste au retrait'}</span></span>
           </button>
           <button class="px-pay-opt is-usual" data-px-paymode="pickup">
             <span class="ic"><i data-lucide="hand-coins"></i></span>
@@ -1182,7 +1907,7 @@
           </button>` : ''}
         </div>`;
       icons();
-      $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-pay-veil'); });
+      $$('[data-px-close]', el).forEach((b) => { b.onclick = closePay; });
       $$('[data-px-paymode]', el).forEach((b) => {
         b.onclick = () => {
           const mode = b.dataset.pxPaymode;
@@ -1193,6 +1918,7 @@
             order.pay = { mode: 'compte', method: 'compte', paid: 0 };
             finishFresh('Sur compte B2B, ajouté à la facture du mois');
           } else if (mode === 'acompte') {
+            if (total < 10) { toast('Un acompte doit être d’au moins 10 MAD'); return; }
             stepAcompte();
           } else {
             stepMethod(total, 'now');
@@ -1205,38 +1931,56 @@
     };
 
     const stepAcompte = () => {
-      let acompte = Math.max(10, Math.round(total / 2 / 10) * 10);
+      let acompte = Math.min(total, Math.max(10, Math.round(total / 2 / 10) * 10));
       el.innerHTML = `
         <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Acompte</h3>
         <p class="modal-subtle">${order.id} · total ${fmtMAD(total)}</p>
         <div class="modal-amount size-md" id="px-ac-val">${fmtMAD(acompte)}</div>
         <div class="px-acompte-row">
-          <button class="cash-preset" data-px-ac="20">20</button>
-          <button class="cash-preset" data-px-ac="50">50</button>
-          <button class="cash-preset" data-px-ac="100">100</button>
+          <button class="cash-preset" data-px-ac="20" ${total < 20 ? 'disabled' : ''}>20</button>
+          <button class="cash-preset" data-px-ac="50" ${total < 50 ? 'disabled' : ''}>50</button>
+          <button class="cash-preset" data-px-ac="100" ${total < 100 ? 'disabled' : ''}>100</button>
           <button class="cash-preset" data-px-ac="half">50 %</button>
         </div>
         <div class="cash-input-row" style="margin:10px 0 14px;">
           <label class="cash-input-label" for="px-ac-input">Montant</label>
           <input class="cash-input mono" id="px-ac-input" type="number" inputmode="numeric" min="10" max="${total}" step="5" value="${acompte}" />
         </div>
+        <p class="modal-subtle" id="px-ac-why" aria-live="polite"></p>
         <div class="px-sheet-foot">
           <button class="px-btn secondary" id="px-ac-back">Retour</button>
           <button class="px-btn primary" id="px-ac-ok">Encaisser l'acompte</button>
         </div>`;
       icons();
-      const refresh = () => { $('#px-ac-val', el).textContent = fmtMAD(acompte); $('#px-ac-input', el).value = acompte; };
-      $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-pay-veil'); });
+      const refresh = (writeInput) => {
+        $('#px-ac-val', el).textContent = Number.isFinite(acompte) ? fmtMAD(acompte) : '·';
+        if (writeInput) $('#px-ac-input', el).value = acompte;
+        const good = validDeposit(acompte, total);
+        $('#px-ac-ok', el).disabled = !good;
+        /* Un bouton grisé sans explication, c'est une caissière qui re-tape le
+           même montant trois fois. On dit POURQUOI il est grisé, pendant qu'elle
+           tape — pas au moment où elle appuie. */
+        $('#px-ac-why', el).textContent = good ? ''
+          : !Number.isFinite(acompte) ? 'Entrez un montant.'
+            : acompte < 10 ? `Acompte minimum 10 MAD · il manque ${fmtMAD(10 - acompte)}.`
+              : `Un acompte ne peut pas dépasser le total de ${fmtMAD(total)}.`;
+      };
+      $$('[data-px-close]', el).forEach((b) => { b.onclick = closePay; });
       $$('[data-px-ac]', el).forEach((b) => {
         b.onclick = () => {
-          acompte = b.dataset.pxAc === 'half' ? Math.round(total / 2 / 5) * 5 : Math.min(total, +b.dataset.pxAc);
-          refresh();
+          acompte = b.dataset.pxAc === 'half' ? Math.max(10, Math.round(total / 2 / 5) * 5) : +b.dataset.pxAc;
+          acompte = Math.min(total, acompte);
+          refresh(true);
         };
       });
-      $('#px-ac-input', el).oninput = (e) => { acompte = Math.max(0, Math.min(total, +e.target.value || 0)); $('#px-ac-val', el).textContent = fmtMAD(acompte); };
+      $('#px-ac-input', el).oninput = (e) => { acompte = Number(e.target.value); refresh(false); };
       $('#px-ac-back', el).onclick = step1;
-      $('#px-ac-ok', el).onclick = () => stepMethod(acompte, 'acompte');
+      $('#px-ac-ok', el).onclick = () => {
+        if (!validDeposit(acompte, total)) { toast(`Acompte requis entre 10 et ${fmtMAD(total)}`); return; }
+        stepMethod(acompte, 'acompte');
+      };
+      refresh(false);
     };
 
     const stepMethod = (amount, mode) => {
@@ -1255,7 +1999,7 @@
           </button>
         </div>`;
       icons();
-      $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-pay-veil'); });
+      $$('[data-px-close]', el).forEach((b) => { b.onclick = closePay; });
       $$('[data-m]', el).forEach((b) => {
         b.onclick = () => (b.dataset.m === 'especes' ? stepCash(amount, mode) : stepCard(amount, mode));
       });
@@ -1269,7 +2013,7 @@
         <p class="modal-subtle">${order.id} · ${esc(cust.name)}</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="px-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="px-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="px-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${amount}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1286,7 +2030,7 @@
         $('#px-cash-rendu', el).textContent = fmtMAD(Math.max(0, received - amount));
         $('#px-cash-ok', el).disabled = received < amount;
       };
-      $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-pay-veil'); });
+      $$('[data-px-close]', el).forEach((b) => { b.onclick = closePay; });
       $('#px-cash-in', el).oninput = (e) => { received = +e.target.value || 0; refresh(); };
       $$('[data-add]', el).forEach((b) => {
         b.onclick = () => { received += +b.dataset.add; $('#px-cash-in', el).value = received; refresh(); };
@@ -1306,48 +2050,88 @@
           <div class="reader-method">Lecteur CMI partenaire · V1 sans encaissement Kiwi</div>
         </div>`;
       icons();
-      $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-pay-veil'); });
+      $$('[data-px-close]', el).forEach((b) => { b.onclick = closePay; });
+      /* Le pressing peignait la coche verte au bout d'un timer : sur une vraie
+         caisse sans lecteur configuré, il déclarait donc « Khlass ! Paiement
+         confirmé » pour un paiement que personne n'avait autorisé, et la
+         commande partait payée. KiwiHardware.authorizeCard est l'adaptateur
+         partagé des quinze autres métiers — il ne peint la réussite qu'après
+         un approved=true, et en production sans terminal il refuse. */
       setTimeout(() => {
         const disc = $('#px-reader-disc', el);
+        const st = $('#px-reader-status', el);
         if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#px-reader-status', el).textContent = 'Khlass! Paiement confirmé sur le lecteur';
-        $('#px-reader-status', el).classList.add('is-success');
-        icons();
-        setTimeout(() => done(amount, 'carte', mode, 0), 900);
-      }, 1900);
+        const hw = window.KiwiHardware;
+        if (!hw || !hw.authorizeCard) {
+          disc.classList.remove('is-pulsing');
+          st.textContent = 'Paiement non confirmé · lecteur indisponible';
+          return;
+        }
+        authorizationPending = true;
+        let authorization;
+        try {
+          authorization = hw.authorizeCard(amount, disc, st);
+        } catch (_) {
+          authorizationPending = false;
+          disc.classList.remove('is-pulsing');
+          st.textContent = 'Paiement non confirmé · erreur lecteur';
+          return;
+        }
+        Promise.resolve(authorization).then((result) => {
+          authorizationPending = false;
+          icons();
+          if (!result || !result.approved) { toast('Paiement carte non confirmé'); return; }
+          setTimeout(() => done(amount, 'carte', mode, 0), 900);
+        }).catch(() => {
+          authorizationPending = false;
+          disc.classList.remove('is-pulsing');
+          st.textContent = 'Paiement non confirmé · erreur lecteur';
+        });
+      }, 1200);
     };
 
     const done = (amount, method, mode, rendu) => {
+      if (!(Number.isFinite(+amount) && +amount > 0)) { toast('Montant de paiement invalide'); return; }
+      if (mode === 'acompte' && !validDeposit(amount, total)) { toast(`Acompte requis entre 10 et ${fmtMAD(total)}`); return; }
       if (settle) {
+        const remaining = Math.max(0, total - order.pay.paid);
+        if (!(remaining > 0) || +amount > remaining + 0.009) { toast('Ce solde est déjà encaissé'); return; }
+        if (!beginCommit()) return;
         order.pay.paid += amount;
         order.pay.method = method;
+        pressingOps?.save?.('balance-paid');
         /* Le solde du « payer au retrait » est l'argent qui rentre vraiment :
            c'est ici qu'il devient une recette, pas à la prise de la commande. */
-        postDay(amount, method, `Solde ${order.id} · ${custOf(order).name}`, order.id);
+        postDay(amount, method, `Solde ${order.id} · ${custOf(order).name}`, order.id, saleLines(order, amount));
+        syncOwnerOps();
         closeVeil('#px-pay-veil');
         toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
         if (ctx && typeof ctx.onSettled === 'function') ctx.onSettled();
         return;
       }
       order.pay = { mode, method, paid: amount };
+      pressingOps?.save?.('payment-recorded');
       finishFresh(mode === 'acompte'
         ? `Acompte ${fmtMAD(amount)} encaissé, solde ${fmtMAD(total - amount)} au retrait`
         : `Encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
     };
 
     const finishFresh = (msg) => {
+      if (!beginCommit()) return;
       closeVeil('#px-pay-veil');
       /* `pickup` et `compte` passent aussi par ici avec paid: 0 : ils ne
          prennent rien au comptoir. Seul l'argent réellement encaissé (paiement
          complet ou acompte) est une recette, le solde sera journalisé par la
          branche `settle` au retrait. */
-      if (order.pay.paid > 0) postDay(order.pay.paid, order.pay.method, tkLabel(order), order.id);
+      if (order.pay.paid > 0) postDay(order.pay.paid, order.pay.method, tkLabel(order), order.id, saleLines(order, order.pay.paid));
       if (fresh) {
         ORDERS.unshift(order);
+        if (order.custId && CUST[order.custId]) CUST[order.custId].orders = (+CUST[order.custId].orders || 0) + 1;
+        /* Persist the NEXT available number, never the one just printed. This
+           matters most for pay-at-pickup tickets: no sale journal entry exists
+           yet to rescue nextSeq() after a reload. */
         ticketSeq++;
+        syncOwnerOps();
         freshTicket();
         renderTicket();
         renderBadges();
@@ -1363,7 +2147,6 @@
   }
 
   /* ═══════════════════════ TABLEAU DES COMMANDES ═══════════════════════ */
-  const STATUS_DOT_HEX = { recu: 'var(--ink-4)', trait: '#D99A2B', pret: 'var(--emerald)', livre: 'var(--line)' };
 
   function payPill(o) {
     const { total } = orderTotals(o);
@@ -1377,51 +2160,121 @@
   function matchesQuery(o, q) {
     if (!q) return true;
     const c = custOf(o);
-    const digits = q.replace(/\D/g, '');
-    return o.id.toLowerCase().includes(q.toLowerCase()) ||
+    /* Le client dicte son numéro comme il l'a en tête : « zéro six… » ou
+       « plus deux cent douze six… ». Les deux doivent trouver la même commande,
+       donc on ramène la RECHERCHE au même format local que la fiche avant de
+       comparer — sinon +212 6… ne retrouvait jamais un 06… enregistré. */
+    const digits = searchDigits(q);
+    const numeric = String(q).replace(/\D/g, '');
+    return (numeric && publicOrderNo(o).includes(numeric)) ||
+      o.id.toLowerCase().includes(q.toLowerCase()) ||
       c.name.toLowerCase().includes(q.toLowerCase()) ||
-      (digits.length >= 2 && (c.phone || '').replace(/\D/g, '').includes(digits));
+      (digits.length >= 2 && searchDigits(c.phone || '').includes(digits));
+  }
+
+  function boardBucket(o) {
+    const st = orderStatus(o);
+    if (st === 'livre' || st === 'annule') return 'history';
+    if (st === 'pret') return 'ready';
+    return 'todo';
+  }
+
+  function boardPriority(o) {
+    const st = orderStatus(o);
+    const lateWeight = isLate(o) ? -100000000000000 : 0;
+    const stageWeight = st === 'trait' ? -1000000000000 : st === 'recu' ? 0 : 1000000000000;
+    const readyTs = new Date(o.readyAt).getTime();
+    return lateWeight + stageWeight + (Number.isFinite(readyTs) ? readyTs : Number.MAX_SAFE_INTEGER);
+  }
+
+  function setWholeOrderStatus(o, target, label) {
+    if (!o || !isLiveOrder(o)) return;
+    const wasPret = orderStatus(o) === 'pret';
+    o.pieces.forEach((p) => { if (p.status !== 'livre') p.status = target; });
+    queueIfOffline(label || 'Statut commande');
+    afterStatusChange(o, wasPret);
+  }
+
+  function setSelectedReady() {
+    const selected = state.boardSelected.map(findOrder).filter((o) => o && boardBucket(o) === 'todo');
+    if (!selected.length) return;
+    selected.forEach((o) => o.pieces.forEach((p) => { if (p.status !== 'livre') p.status = 'pret'; }));
+    state.boardSelected = [];
+    queueIfOffline(`${selected.length} commande${selected.length > 1 ? 's' : ''} prête${selected.length > 1 ? 's' : ''}`);
+    syncOwnerOps();
+    refreshOps();
+    toast(`${selected.length} commande${selected.length > 1 ? 's' : ''} marquée${selected.length > 1 ? 's' : ''} prête${selected.length > 1 ? 's' : ''}`);
   }
 
   function orderCard(o) {
     const c = custOf(o);
     const late = isLate(o);
     const st = orderStatus(o);
-    const when = st === 'livre'
-      ? `retiré ${fmtDay(o.collectedAt || o.readyAt)}`
+    const selected = state.boardSelected.includes(o.id);
+    const when = st === 'annule'
+      ? `annulée ${fmtDay(o.cancelledAt || o.updatedAt || o.readyAt)}`
+      : st === 'livre'
+        ? `remis ${fmtDay(o.collectedAt || o.readyAt)}`
       : `prêt ${fmtDT(o.readyAt)}`;
-    return `<button class="px-ocard ${late ? 'is-late' : ''}" data-px-order="${o.id}">
-      <span class="px-ocard-top"><span class="px-ocard-num">${o.id}</span>
-        <span class="px-ocard-when ${late ? 'late' : ''}">${late ? 'EN RETARD · ' : ''}${esc(when)}</span></span>
-      <span class="px-ocard-client"><i data-lucide="${o.b2b ? 'building-2' : 'user'}"></i>${esc(c.name)}</span>
-      <span class="px-ocard-meta">
+    const mainAction = st === 'recu' || st === 'trait'
+      ? `<button class="px-work-primary" data-px-ready="${o.id}"><i data-lucide="check-check"></i>Prête</button>`
+      : st === 'pret' && !o.rack
+        ? `<button class="px-work-primary" data-px-rack="${o.id}"><i data-lucide="archive"></i>Ranger</button>`
+        : st === 'pret'
+          ? `<button class="px-work-primary" data-px-pickup="${o.id}"><i data-lucide="package-check"></i>Retrait</button>`
+          : '';
+    return `<article class="px-ocard ${late ? 'is-late' : ''} ${selected ? 'is-selected' : ''}" data-px-order="${o.id}">
+      <div class="px-ocard-select">
+        ${boardBucket(o) === 'todo' ? `<button class="px-work-check" data-px-select="${o.id}" aria-label="${selected ? 'Retirer' : 'Ajouter'} ${o.id} de la sélection"><i data-lucide="${selected ? 'check' : 'circle'}"></i></button>` : '<span></span>'}
+        <button class="px-work-detail" data-px-detail="${o.id}">Détails <i data-lucide="chevron-right"></i></button>
+      </div>
+      <div class="px-ocard-top"><span class="px-ocard-num">${publicOrderNo(o)}</span>
+        <span class="px-ocard-when ${late ? 'late' : ''}">${late ? 'EN ATTENTE DE RETRAIT · ' : ''}${esc(when)}</span></div>
+      <div class="px-ocard-client"><i data-lucide="${o.b2b ? 'building-2' : 'user'}"></i>${esc(c.name)}</div>
+      <div class="px-ocard-meta">
         <span class="px-pill"><i data-lucide="tag"></i>${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''}</span>
+        <span class="px-pill ${st === 'trait' ? 'warn' : st === 'pret' ? 'ok' : ''}">${STATUS[st].label}</span>
         ${payPill(o)}
         ${o.rack ? `<span class="px-pill rack">${o.rack}</span>` : ''}
         ${o.notified && st === 'pret' ? '<span class="px-pill wa">Notifié</span>' : ''}
-      </span>
-      <span class="px-piece-dots">${o.pieces.map((p) => `<i class="px-pdot ${p.status}"></i>`).join('')}</span>
-    </button>`;
+      </div>
+      <div class="px-piece-dots">${o.pieces.map((p) => `<i class="px-pdot ${effectiveStatus(o, p)}"></i>`).join('')}</div>
+      <div class="px-work-actions">
+        ${st === 'recu' ? `<button class="px-work-secondary" data-px-start="${o.id}">En cours <span>facultatif</span></button>` : ''}
+        ${st === 'pret' && !o.notified ? `<button class="px-work-secondary" data-px-notify="${o.id}"><i data-lucide="message-circle"></i>Prévenir</button>` : ''}
+        ${mainAction}
+      </div>
+    </article>`;
   }
 
   function renderBoard() {
     const panel = $('[data-px-panel="commandes"]', root);
     const q = state.boardQuery;
+    const counts = { todo: 0, ready: 0, history: 0 };
+    ORDERS.forEach((o) => { counts[boardBucket(o)]++; });
+    const list = ORDERS
+      .filter((o) => boardBucket(o) === state.boardFilter && matchesQuery(o, q))
+      .sort((a, b) => boardPriority(a) - boardPriority(b));
+    state.boardSelected = state.boardSelected.filter((id) => list.some((o) => o.id === id));
     panel.innerHTML = `
       <div class="px-board">
         <header class="px-head">
-          <div><h1>Tableau des commandes</h1><div class="px-head-sub">Chaque pièce a son statut, pas seulement le ticket</div></div>
-          <div class="px-search"><i data-lucide="search"></i>
-            <input id="px-board-q" placeholder="Téléphone, nom ou n° de ticket…" value="${esc(q)}" /></div>
+          <div><h1>File de travail</h1><div class="px-head-sub">Reçu automatiquement · « En cours » facultatif · une touche quand c’est prêt</div></div>
+          <div class="px-work-head-actions">
+            <button class="px-btn secondary" id="px-board-scan"><i data-lucide="scan-line"></i>Scanner</button>
+            <div class="px-search"><i data-lucide="search"></i>
+              <input id="px-board-q" placeholder="Téléphone, nom ou n° de commande…" value="${esc(q)}" /></div>
+          </div>
         </header>
-        <div class="px-board-cols">
-          ${STATUS_FLOW.map((s) => {
-            const list = ORDERS.filter((o) => orderStatus(o) === s && matchesQuery(o, q));
-            return `<div class="px-bcol">
-              <div class="px-bcol-head"><i style="background:${STATUS_DOT_HEX[s]}"></i>${STATUS[s].label} <span class="ct">${list.length}</span></div>
-              ${list.map(orderCard).join('') || '<div class="px-bempty">—</div>'}
-            </div>`;
-          }).join('')}
+        <div class="px-work-toolbar">
+          <div class="px-work-tabs" role="tablist">
+            ${[['todo', 'À faire'], ['ready', 'Prêtes'], ['history', 'Historique']].map(([key, label]) => `<button class="${state.boardFilter === key ? 'on' : ''}" data-px-board-filter="${key}">${label}<span>${counts[key]}</span></button>`).join('')}
+          </div>
+          <div class="px-work-legend"><i data-lucide="sparkles"></i>${state.boardFilter === 'todo' ? 'Les urgences et retards remontent en premier' : state.boardFilter === 'ready' ? 'À ranger, notifier ou remettre' : 'Les commandes remises restent consultables'}</div>
+        </div>
+        ${state.boardSelected.length ? `<div class="px-work-batch"><span><b>${state.boardSelected.length}</b> sélectionnée${state.boardSelected.length > 1 ? 's' : ''}</span><button data-px-clear-selection>Annuler</button><button class="px-work-primary" data-px-batch-ready><i data-lucide="check-check"></i>Marquer prête${state.boardSelected.length > 1 ? 's' : ''}</button></div>` : ''}
+        <div class="px-work-list">
+          ${list.map(orderCard).join('') || `<div class="px-work-empty"><i data-lucide="${q ? 'search-x' : state.boardFilter === 'todo' ? 'check-circle-2' : 'archive'}"></i><b>${q ? 'Aucune commande trouvée' : state.boardFilter === 'todo' ? 'Le travail en attente apparaîtra ici' : state.boardFilter === 'ready' ? 'Aucune commande prête' : 'Aucune commande remise'}</b><span>${q ? 'Essayez un nom, un téléphone ou un numéro de commande.' : state.boardFilter === 'todo' ? 'Vous pouvez quitter cet écran : le compteur du menu vous prévient.' : ''}</span></div>`}
         </div>
       </div>`;
     $('#px-board-q', panel).oninput = (e) => {
@@ -1429,9 +2282,32 @@
       renderBoard(); icons();
       const i = $('#px-board-q', panel); i.focus(); moveCaretEnd(i);
     };
+    $('#px-board-scan', panel).onclick = () => openScan('workflow');
     panel.onclick = (e) => {
-      const b = e.target.closest('[data-px-order]');
-      if (b) openDetail(b.dataset.pxOrder);
+      const filter = e.target.closest('[data-px-board-filter]');
+      if (filter) { state.boardFilter = filter.dataset.pxBoardFilter; state.boardSelected = []; renderBoard(); return; }
+      const select = e.target.closest('[data-px-select]');
+      if (select) {
+        const id = select.dataset.pxSelect;
+        state.boardSelected = state.boardSelected.includes(id) ? state.boardSelected.filter((x) => x !== id) : [...state.boardSelected, id];
+        renderBoard(); return;
+      }
+      if (e.target.closest('[data-px-clear-selection]')) { state.boardSelected = []; renderBoard(); return; }
+      if (e.target.closest('[data-px-batch-ready]')) { setSelectedReady(); return; }
+      const ready = e.target.closest('[data-px-ready]');
+      if (ready) { setWholeOrderStatus(findOrder(ready.dataset.pxReady), 'pret', 'Commande prête'); return; }
+      const start = e.target.closest('[data-px-start]');
+      if (start) { setWholeOrderStatus(findOrder(start.dataset.pxStart), 'trait', 'Commande en traitement'); return; }
+      const notify = e.target.closest('[data-px-notify]');
+      if (notify) { openWa(findOrder(notify.dataset.pxNotify)); return; }
+      const rack = e.target.closest('[data-px-rack]');
+      if (rack) { state.rackSelect = rack.dataset.pxRack; switchView('rangement'); return; }
+      const pickup = e.target.closest('[data-px-pickup]');
+      if (pickup) { state.rtQuery = pickup.dataset.pxPickup; switchView('retrait'); return; }
+      const detail = e.target.closest('[data-px-detail]');
+      if (detail) { openDetail(detail.dataset.pxDetail); return; }
+      const card = e.target.closest('[data-px-order]');
+      if (card) openDetail(card.dataset.pxOrder);
     };
     icons();
   }
@@ -1440,52 +2316,67 @@
   function openDetail(orderId) {
     const o = findOrder(orderId);
     if (!o) return;
+    /* On retient la commande affichée pour que refreshOps() puisse la
+       repeindre : sans ça, une remise au client ou une libération de cintre
+       déclenchée ailleurs laissait la fiche ouverte sur un état périmé. */
+    state.detailId = o.id;
     const el = $('#px-detailm', root);
     const c = custOf(o);
     const { total } = orderTotals(o);
     const due = o.pay.mode === 'compte' ? 0 : Math.max(0, total - o.pay.paid);
     const st = orderStatus(o);
     const delivered = st === 'livre';
+    const carePieces = o.pieces.map((p) => ({ p, care: [...(p.notes || []), p.freeNote].filter(Boolean) })).filter((x) => x.care.length);
 
     el.innerHTML = `
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="px-dt-head">
         <div>
-          <h3>${o.id}</h3>
+          <h3>${publicOrderNo(o)}</h3>
           <div class="px-dt-sub">${esc(c.name)} ${c.phone ? `<span class="tel">${esc(c.phone)}</span>` : ''}
             ${o.b2b ? '<span class="px-b2b-chip">B2B</span>' : ''}
             <span class="px-pill ${st === 'pret' ? 'ok' : st === 'trait' ? 'warn' : ''}">${STATUS[st].label}</span>
-            ${isLate(o) ? '<span class="px-pill due">En retard</span>' : ''}
+            ${isLate(o) ? '<span class="px-pill due">En attente de retrait</span>' : ''}
             ${payPill(o)}
             ${o.rack ? `<span class="px-pill rack">${o.rack}</span>` : ''}
           </div>
           <div class="px-dt-sub" style="margin-top:5px;">Déposé ${fmtDT(o.droppedAt)} · promis ${fmtDT(o.readyAt)}${o.collectedAt ? ` · retiré ${fmtDT(o.collectedAt)}` : ''}</div>
         </div>
       </div>
+      ${carePieces.length ? `<div class="px-dt-care-summary"><i data-lucide="triangle-alert"></i><div><b>${carePieces.length} pièce${carePieces.length > 1 ? 's' : ''} avec instruction${carePieces.length > 1 ? 's' : ''} à respecter</b><span>${carePieces.map((x) => `${esc(x.p.label)} : ${x.care.map(esc).join(' · ')}`).join(' · ')}</span></div></div>` : ''}
+      ${st === 'recu' || st === 'trait' ? `<div class="px-next-step"><div><b>Action habituelle</b><span>Quand tout est fini, marquez directement la commande prête. « En cours » reste facultatif.</span></div><button class="px-btn primary" id="px-dt-ready"><i data-lucide="check-check"></i>Commande prête</button></div>` : ''}
+      <details class="px-piece-exceptions" ${carePieces.length ? 'open' : ''}>
+        <summary><span>Pièces et exceptions</span><span>${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''} · suivi détaillé facultatif</span></summary>
       <div class="px-dt-grid">
-        ${o.pieces.map((p, i) => `
+        ${o.pieces.map((p, i) => {
+          const care = [...(p.notes || []), p.freeNote].filter(Boolean);
+          return `
           <div class="px-piece">
-            <span class="px-piece-art">${ART[p.itemId] || ''}</span>
+            <span class="px-piece-art">${garmentIcon({ ...(ITEMS[p.itemId] || {}), variantId: p.variantId })}</span>
             <span class="px-piece-mid">
-              <span class="px-piece-name"><i class="dot" style="background:${COLOR[p.color] ? COLOR[p.color].hex : '#ccc'}"></i>${esc(p.label)} · <span style="font-family:var(--mono);font-size:11px;">${svcCodes(p.svcs)}</span></span>
-              <span class="px-piece-id">${p.pid}${p.photos ? `<span class="ph"><i data-lucide="camera"></i>${p.photos} photo${p.photos > 1 ? 's' : ''}</span>` : ''}</span>
+              <span class="px-piece-name"><i class="dot" style="background:${COLOR[p.color] ? COLOR[p.color].hex : '#ccc'}"></i>${esc(p.label)} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · <span style="font-family:var(--mono);font-size:11px;">${svcCodes(p.svcs)}</span></span>
+              <span class="px-piece-id">${publicPieceNo(o, p)}${p.photos ? `<span class="ph"><i data-lucide="camera"></i>${p.photos} photo${p.photos > 1 ? 's' : ''}</span>` : ''}</span>
+              ${care.length ? `<span class="px-piece-care"><i data-lucide="triangle-alert"></i>${care.map(esc).join(' · ')}</span>` : ''}
             </span>
             ${delivered || p.status === 'livre'
               ? '<span class="px-pill">Livré</span>'
               : `<span class="px-pstatus">
                   ${['recu', 'trait', 'pret'].map((s) => `<button class="px-pstep ${p.status === s ? 'on ' + s : ''}" data-px-piece="${i}" data-px-st="${s}">${s === 'recu' ? 'Reçu' : s === 'trait' ? 'Trait.' : 'Prêt'}</button>`).join('')}
                 </span>`}
-          </div>`).join('')}
-      </div>
+          </div>`;
+        }).join('')}
+      </div></details>
       <div class="px-dt-actions">
         ${delivered ? '' : `
-          ${o.pieces.some((p) => p.status === 'recu') ? '<button class="px-btn secondary" data-px-all="trait"><i data-lucide="loader"></i>Tout en traitement</button>' : ''}
-          ${o.pieces.some((p) => p.status !== 'pret' && p.status !== 'livre') ? '<button class="px-btn secondary" data-px-all="pret"><i data-lucide="check-check"></i>Tout prêt</button>' : ''}`}
+          ${st === 'recu' ? '<button class="px-btn ghost" data-px-all="trait"><i data-lucide="loader"></i>Noter en cours</button>' : ''}`}
         <button class="px-btn secondary" id="px-dt-tags"><i data-lucide="printer"></i>Étiquettes</button>
         ${due > 0 && !delivered ? `<button class="px-btn secondary" id="px-dt-pay"><i data-lucide="banknote"></i>Solde · ${due} MAD</button>` : ''}
         ${st === 'pret' ? `<button class="px-btn ${o.notified ? 'secondary' : 'primary'}" id="px-dt-wa"><i data-lucide="message-circle"></i>${o.notified ? 'Re-notifier' : 'WhatsApp « c’est prêt »'}</button>` : ''}
+        ${st === 'pret' && o.draftOpenedAt && !o.notified ? '<button class="px-btn primary" id="px-dt-wa-confirm"><i data-lucide="check-check"></i>Confirmer l’envoi</button>' : ''}
         ${st === 'pret' && !o.rack ? '<button class="px-btn primary" id="px-dt-rack"><i data-lucide="archive"></i>Ranger</button>' : ''}
+        ${st === 'pret' ? `<button class="px-btn primary" id="px-dt-handover"><i data-lucide="check"></i>${due > 0 ? `Encaisser puis remettre · ${due} MAD` : 'Passer au retrait'}</button>` : ''}
         ${o.rack && !delivered ? '<button class="px-btn ghost" id="px-dt-unrack">Libérer le cintre</button>' : ''}
+        ${!delivered ? '<button class="px-btn ghost danger" id="px-dt-cancel" style="color:var(--danger,#b53b31);border-color:rgba(181,59,49,0.3);"><i data-lucide="ban"></i>Annuler</button>' : ''}
       </div>`;
     openVeil('#px-detail-veil');
     icons();
@@ -1508,6 +2399,8 @@
         afterStatusChange(o, wasPret);
       };
     });
+    const readyB = $('#px-dt-ready', el);
+    if (readyB) readyB.onclick = () => setWholeOrderStatus(o, 'pret', 'Commande prête');
     /* tags/pay veils precede the detail veil in the DOM — close detail first
        so they don't paint underneath it */
     $('#px-dt-tags', el).onclick = () => { closeVeil('#px-detail-veil'); openTags(o, { fresh: false }); };
@@ -1518,27 +2411,85 @@
     };
     const waB = $('#px-dt-wa', el);
     if (waB) waB.onclick = () => openWa(o);
+    const waConfirm = $('#px-dt-wa-confirm', el);
+    if (waConfirm) waConfirm.onclick = () => {
+      o.notified = true;
+      o.notifiedAt = new Date();
+      queueIfOffline('Notification client confirmée');
+      toast(`${publicOrderNo(o)}, notification confirmée`);
+      openDetail(o.id); refreshOps();
+    };
     const rackB = $('#px-dt-rack', el);
     if (rackB) rackB.onclick = () => {
       closeVeil('#px-detail-veil');
       state.rackSelect = o.id;
       switchView('rangement');
     };
+    const handoverB = $('#px-dt-handover', el);
+    if (handoverB) handoverB.onclick = () => {
+      closeVeil('#px-detail-veil');
+      state.rtQuery = o.id;
+      switchView('retrait');
+    };
     const unrackB = $('#px-dt-unrack', el);
     if (unrackB) unrackB.onclick = () => {
       releaseSlot(o);
-      toast(`${o.id}, cintre libéré`);
+      toast(`${publicOrderNo(o)}, cintre libéré`);
       openDetail(o.id); refreshOps();
+    };
+    const cancelB = $('#px-dt-cancel', el);
+    if (cancelB) cancelB.onclick = async () => {
+      const pin = prompt('Entrez le code manager pour annuler cette commande :');
+      if (pin === null) return;
+      if (!/^\d{4}$/.test(pin)) {
+        toast('Code manager à 4 chiffres requis.');
+        return;
+      }
+      let actor = null;
+      let cancellation = null;
+      try {
+        const merchant = pressingScope();
+        const response = merchant ? await fetch('/api/pressing/cancel', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ merchant, orderId: String(o.id), pin }),
+        }) : null;
+        const result = response && response.ok ? await response.json() : null;
+        cancellation = result && result.ok ? result : null;
+        actor = cancellation && cancellation.actor;
+      } catch (_) { actor = null; }
+      if (!actor || !(actor.id || actor.name)) {
+        toast('Code manager refusé ou vérification indisponible.');
+        return;
+      }
+      const cancelledAt = new Date(cancellation && cancellation.cancelledAt);
+      if (!Number.isFinite(cancelledAt.getTime())) {
+        toast('Annulation confirmée sans horodatage serveur. Réessayez.');
+        return;
+      }
+      const idx = ORDERS.findIndex((x) => x.id === o.id);
+      if (idx !== -1 && isLiveOrder(o)) {
+        releaseSlot(o);
+        o.cancelledAt = cancelledAt;
+        o.cancelledBy = { id: String(actor.id || '').slice(0, 80), name: String(actor.name || '').slice(0, 100), role: String(actor.role || '').slice(0, 40) };
+        o.updatedAt = cancelledAt.getTime();
+        syncOwnerOps();
+        queueIfOffline('Annulation commande');
+        if (window.KiwiPressingOps && KiwiPressingOps.cancelOrder) KiwiPressingOps.cancelOrder(o.id, o.cancelledBy, cancelledAt.toISOString());
+        closeVeil('#px-detail-veil');
+        toast(`Commande ${publicOrderNo(o)} annulée`);
+        refreshOps();
+      }
     };
   }
 
   function afterStatusChange(o, wasPret) {
     const nowSt = orderStatus(o);
-    openDetail(o.id);
+    syncOwnerOps();
+    /* refreshOps() repeint désormais la fiche ouverte : plus besoin de la
+       rouvrir ici, et surtout plus de rendu en double. */
     refreshOps();
     if (nowSt === 'pret' && !wasPret && !o.notified) {
-      toast(`${o.id} est prêt, prévenez ${custOf(o).name.split(' ')[0]} ?`);
-      setTimeout(() => openWa(o), 450);
+      toast(`${publicOrderNo(o)} est prêt · « Prévenir » reste disponible quand vous avez un moment`);
     }
   }
 
@@ -1548,6 +2499,12 @@
     if (state.view === 'commandes') renderBoard();
     if (state.view === 'retrait') renderRetrait();
     if (state.view === 'rangement') renderRack();
+    /* La fiche ouverte fait partie de « ce qu'il y a à repeindre ». Elle était
+       la seule surface oubliée : après une remise au client ou une libération
+       de cintre, elle continuait d'annoncer « Prêt », d'afficher le cintre
+       rendu et de proposer « Tout prêt » sur une commande déjà partie. On ne
+       la rouvre jamais — seulement si elle est déjà à l'écran. */
+    if (state.detailId && $('#px-detail-veil', root).classList.contains('is-open')) openDetail(state.detailId);
     icons();
   }
 
@@ -1557,10 +2514,10 @@
     const first = c.b2b ? c.name : c.name.split(' ')[0];
     const { total } = orderTotals(o);
     const due = o.pay.mode === 'compte' ? 0 : Math.max(0, total - o.pay.paid);
-    return `Sba7 lkhir ${first}, votre commande ${o.id} (${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''}) est prête chez ${pvName('Pressing Marshan')}.`
-      + `\nRetrait dès maintenant, jusqu'à 20h00.`
+    return `Bonjour ${first}, votre commande ${publicOrderNo(o)} (${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''}) est prête chez ${pvName('Pressing Marshan')}.`
+      + `\nRetrait dès maintenant.`
       + (due > 0 ? `\nSolde à régler au retrait : ${due} MAD.` : '')
-      + `\n— envoyé via Kiwi`;
+      + `\n·envoyé via Kiwi`;
   }
 
   function openWa(o) {
@@ -1579,13 +2536,13 @@
         </div>
       </div>
       <button class="px-wa-photo" id="px-wa-photo">
-        <span class="th">${ART[photoPiece.itemId] || ''}</span>
+        <span class="th">${garmentIcon({ ...(ITEMS[photoPiece.itemId] || {}), variantId: photoPiece.variantId })}</span>
         <span class="l">Joindre une photo du vêtement fini, le client voit son linge avant de se déplacer</span>
         <span class="tick"><i data-lucide="check"></i></span>
       </button>
       <div class="px-sheet-foot">
         <button class="px-btn ghost" data-px-close>Plus tard</button>
-        <button class="px-btn primary" id="px-wa-send" ${c.phone ? '' : 'disabled'}><i data-lucide="send"></i>Envoyer sur WhatsApp</button>
+        <button class="px-btn primary" id="px-wa-send" ${c.phone ? '' : 'disabled'}><i data-lucide="external-link"></i>Ouvrir WhatsApp</button>
       </div>`;
     openVeil('#px-wa-veil');
     icons();
@@ -1603,16 +2560,35 @@
     $('#px-wa-send', el).onclick = () => {
       const txt = $('#px-wa-text', el);
       const body = txt ? txt.value : waMessage(o);
-      const num = String(c.phone || '').replace(/\D/g, '');
+      const num = whatsappPhone(c.phone);
       if (!num) { toast(`Pas de numéro pour ${c.name}, ajoutez-le à sa fiche`); return; }
-      o.notified = true;
+      o.draftOpenedAt = new Date();
       closeVeil('#px-wa-veil');
-      queueIfOffline('Notification WhatsApp');
+      queueIfOffline('Brouillon WhatsApp');
+      let opened = null;
       try {
-        window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(body), '_blank', 'noopener');
-        toast(`WhatsApp ouvert pour ${c.name}, appuyez sur envoyer${withPhoto ? ' · joignez la photo dans WhatsApp' : ''}`);
+        opened = window.open('', '_blank');
+        if (opened) {
+          opened.opener = null;
+          opened.location.href = 'https://wa.me/' + num + '?text=' + encodeURIComponent(body);
+        }
       } catch (_) { toast('Impossible d\'ouvrir WhatsApp'); }
-      refreshOps();
+      if (!opened) { toast('WhatsApp n’a pas pu s’ouvrir, autorisez les fenêtres puis réessayez'); return; }
+      toast(`Brouillon WhatsApp ouvert pour ${c.name}${withPhoto ? ' · joignez la photo dans WhatsApp' : ''}`);
+      const foot = $('.px-sheet-foot', el);
+      foot.innerHTML = `
+        <button class="px-btn ghost" data-px-close>Pas encore envoyé</button>
+        <button class="px-btn primary" id="px-wa-confirm"><i data-lucide="check"></i>J’ai envoyé le message</button>`;
+      icons();
+      $('[data-px-close]', foot).onclick = () => closeVeil('#px-wa-veil');
+      $('#px-wa-confirm', foot).onclick = () => {
+        o.notified = true;
+        syncOwnerOps();
+        queueIfOffline('Notification WhatsApp confirmée');
+        closeVeil('#px-wa-veil');
+        toast(`${c.name} marqué comme prévenu`);
+        refreshOps();
+      };
     };
   }
 
@@ -1620,31 +2596,29 @@
   function renderRetrait() {
     const panel = $('[data-px-panel="retrait"]', root);
     const q = state.rtQuery;
-    const hits = q ? ORDERS.filter((o) => orderStatus(o) !== 'livre' && matchesQuery(o, q)) : [];
+    const active = ORDERS.filter(isLiveOrder);
+    /* Retrait is an operational queue, not an empty search page. With no query
+       it shows every ready order; typing or scanning narrows the same truth. */
+    const hits = q ? active.filter((o) => matchesQuery(o, q)) : active.filter((o) => orderStatus(o) === 'pret');
     const prets = hits.filter((o) => orderStatus(o) === 'pret');
-    const others = hits.filter((o) => orderStatus(o) !== 'pret');
+    const others = q ? hits.filter((o) => orderStatus(o) !== 'pret') : [];
     panel.innerHTML = `
       <div class="px-retrait">
         <div class="px-rt-inner">
           <header class="px-head" style="padding:22px 0 0;">
-            <div><h1>Retrait</h1><div class="px-head-sub">Le client donne son téléphone, ou on scanne son ticket / une étiquette</div></div>
+            <div><h1>Retrait</h1><div class="px-head-sub">${prets.length} commande${prets.length > 1 ? 's' : ''} prête${prets.length > 1 ? 's' : ''} · recherchez, scannez, encaissez si nécessaire, puis confirmez la remise</div></div>
           </header>
           <div class="px-rt-search">
             <div class="px-phone-in"><i data-lucide="phone"></i>
-              <input id="px-rt-q" inputmode="tel" placeholder="06… ou nom du client" value="${esc(q)}" autocomplete="off" /></div>
+              <input id="px-rt-q" inputmode="tel" placeholder="Téléphone, nom ou n° de ticket" value="${esc(q)}" autocomplete="off" /></div>
           </div>
           <div class="px-rt-or">ou</div>
           <button class="px-rt-scan" id="px-rt-scan"><i data-lucide="scan-line"></i>Scanner ticket ou étiquette</button>
           <div class="px-rt-results">
             ${prets.map(rtCard).join('')}
-            ${others.map((o) => `
-              <div class="px-rt-card">
-                <div class="px-rt-top">
-                  <div class="px-rt-who"><b>${o.id} · ${esc(custOf(o).name)}</b><span>${o.pieces.length} pièces · ${STATUS[orderStatus(o)].label}</span></div>
-                  <span class="px-pill warn">Pas encore prêt, promis ${fmtDT(o.readyAt)}</span>
-                </div>
-              </div>`).join('')}
-            ${q && !hits.length ? `<div class="px-bempty">Rien pour « ${esc(q)} », vérifiez le numéro, ou cherchez au tableau.</div>` : ''}
+            ${others.map(rtCard).join('')}
+            ${q && !hits.length ? `<div class="px-bempty" style="display:flex; flex-direction:column; align-items:center; padding:36px 16px;"><div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:10px;"><svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600; color:var(--ink);">Rien pour « ${esc(q)} »</div><div style="font-size:12.5px; color:var(--n-500); margin-top:4px;">Vérifiez le numéro ou cherchez au tableau.</div></div>` : ''}
+            ${!q && !prets.length ? `<div class="px-bempty" style="display:flex; flex-direction:column; align-items:center; padding:36px 16px;"><div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:10px;"><svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600; color:var(--ink);">Aucune commande prête à remettre pour le moment.</div><div style="font-size:12.5px; color:var(--n-500); margin-top:4px;">Toutes les pièces traitées apparaîtront ici pour remise.</div></div>` : ''}
           </div>
         </div>
       </div>`;
@@ -1653,7 +2627,7 @@
       renderRetrait(); icons();
       const i = $('#px-rt-q', panel); i.focus(); moveCaretEnd(i);
     };
-    $('#px-rt-scan', panel).onclick = openScan;
+    $('#px-rt-scan', panel).onclick = () => openScan('pickup');
     $$('[data-px-rt-pay]', panel).forEach((b) => {
       b.onclick = () => {
         const o = findOrder(b.dataset.pxRtPay);
@@ -1666,6 +2640,15 @@
     $$('[data-px-rt-wa]', panel).forEach((b) => {
       b.onclick = () => openWa(findOrder(b.dataset.pxRtWa));
     });
+    $$('[data-px-rt-wa-confirm]', panel).forEach((b) => {
+      b.onclick = () => {
+        const o = findOrder(b.dataset.pxRtWaConfirm);
+        if (!o) return;
+        o.notified = true; o.notifiedAt = new Date();
+        queueIfOffline('Notification client confirmée');
+        renderRetrait(); toast(`${publicOrderNo(o)}, notification confirmée`);
+      };
+    });
     icons();
   }
 
@@ -1673,13 +2656,18 @@
     const c = custOf(o);
     const { total } = orderTotals(o);
     const due = o.pay.mode === 'compte' ? 0 : Math.max(0, total - o.pay.paid);
+    const st = orderStatus(o);
+    const early = st !== 'pret';
     return `<div class="px-rt-card">
       <div class="px-rt-top">
-        <div class="px-rt-who"><b>${o.id} · ${esc(c.name)}</b><span>${c.phone ? esc(c.phone) + ' · ' : ''}déposé ${fmtDay(o.droppedAt)}${o.notified ? ' · notifié' : ''}</span></div>
-        <div class="px-rt-slot ${o.rack ? '' : 'none'}">${o.rack ? `<b>${o.rack}</b><span>cintre</span>` : '<b>—</b><span>non rangé</span>'}</div>
+        <div class="px-rt-who"><b>${publicOrderNo(o)} · ${esc(c.name)}</b><span>${c.phone ? esc(c.phone) + ' · ' : ''}déposé ${fmtDay(o.droppedAt)}${o.notified ? ' · notifié' : ''}</span></div>
+        ${early ? `<span class="px-pill warn">Pas encore prêt, promis ${fmtDT(o.readyAt)}</span>` : `<div class="px-rt-slot ${o.rack ? '' : 'none'}">${o.rack ? `<b>${o.rack}</b><span>cintre</span>` : '<b>·</b><span>non rangé</span>'}</div>`}
       </div>
       <div class="px-rt-pieces">
-        ${o.pieces.map((p) => `<div class="px-rt-piece"><i data-lucide="check-circle-2"></i>${esc(p.label)} · ${svcCodes(p.svcs)}<span class="pid">${p.pid}</span></div>`).join('')}
+        ${o.pieces.map((p) => {
+          const care = [...(p.notes || []), p.freeNote].filter(Boolean);
+          return `<div class="px-rt-piece"><i data-lucide="${early ? 'clock' : 'check-circle-2'}"></i><span>${esc(p.label)} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · ${svcCodes(p.svcs)}${care.length ? `<small>Attention · ${care.map(esc).join(' · ')}</small>` : ''}</span><span class="pid">${publicPieceNo(o, p)}</span></div>`;
+        }).join('')}
       </div>
       <div class="px-rt-balance ${due > 0 ? '' : 'paid'}">
         <span>${due > 0 ? 'Solde à encaisser' : o.pay.mode === 'compte' ? 'Sur compte B2B, facture fin de mois' : 'Déjà réglé'}</span>
@@ -1688,7 +2676,8 @@
       <div class="px-rt-actions">
         ${due > 0 ? `<button class="px-btn secondary" style="flex:1;" data-px-rt-pay="${o.id}"><i data-lucide="banknote"></i>Encaisser ${fmtMAD(due)}</button>` : ''}
         <button class="px-btn primary" style="flex:1;" data-px-rt-give="${o.id}" ${due > 0 ? 'disabled title="Encaissez le solde d’abord"' : ''}><i data-lucide="check"></i>Remettre au client</button>
-        ${!o.notified ? `<button class="px-btn ghost" data-px-rt-wa="${o.id}"><i data-lucide="message-circle"></i></button>` : ''}
+        ${!early && !o.notified ? `<button class="px-btn ghost" data-px-rt-wa="${o.id}" title="Ouvrir le brouillon WhatsApp"><i data-lucide="message-circle"></i></button>` : ''}
+        ${!early && o.draftOpenedAt && !o.notified ? `<button class="px-btn secondary" data-px-rt-wa-confirm="${o.id}"><i data-lucide="check-check"></i>Confirmer envoi</button>` : ''}
       </div>
     </div>`;
   }
@@ -1699,52 +2688,133 @@
     o.pieces.forEach((p) => { p.status = 'livre'; });
     o.collectedAt = new Date();
     releaseSlot(o);
+    syncOwnerOps();
     queueIfOffline('Retrait');
-    toast(`${o.id} remis à ${custOf(o).name}, merci envoyé sur WhatsApp`);
+    toast(`${publicOrderNo(o)} remis à ${custOf(o).name}, cintre libéré`);
     refreshOps();
   }
 
-  function openScan() {
-    const target = ORDERS.find((o) => orderStatus(o) === 'pret' && o.rack) || ORDERS.find((o) => orderStatus(o) === 'pret');
+  let scannerStop = null;
+  function stopScanner() {
+    if (!scannerStop) return;
+    const stop = scannerStop; scannerStop = null;
+    try { stop(); } catch (_) {}
+  }
+  function findScannedOrder(raw) {
+    const code = String(raw || '').trim().toUpperCase().replace(/^\*|\*$/g, '');
+    if (!code) return null;
+    const norm = normalizeOrderNo(code);
+    return ORDERS.find((o) => publicOrderNo(o) === code
+      || String(o.id).toUpperCase() === code
+      || (norm && (publicOrderNo(o) === norm || String(o.id).toUpperCase() === norm))
+      || (o.pieces || []).some((p) => String(p.pid).toUpperCase() === code
+        || publicPieceNo(o, p).toUpperCase() === code)) || null;
+  }
+  function acceptScan(raw) {
+    const target = findScannedOrder(raw);
+    if (!target) { toast('Code inconnu · vérifiez le ticket ou l’étiquette'); return false; }
+    if (orderStatus(target) === 'annule') { toast(`${publicOrderNo(target)} a été annulée`); return false; }
+    if (orderStatus(target) === 'livre' && state.scanMode !== 'workflow') { toast(`${publicOrderNo(target)} a déjà été remis au client`); return false; }
+    stopScanner();
+    closeVeil('#px-scan-veil');
+    if (state.scanMode === 'workflow') {
+      state.boardFilter = boardBucket(target);
+      state.boardQuery = target.id;
+      renderBoard(); icons();
+      openDetail(target.id);
+      toast(`${publicOrderNo(target)} · Kiwi propose la prochaine action utile`);
+      return true;
+    }
+    state.rtQuery = publicOrderNo(target);
+    renderRetrait(); icons();
+    toast(`Étiquette lue, ${publicOrderNo(target)}${target.rack ? ' · cintre ' + target.rack : ''}`);
+    return true;
+  }
+  async function startCameraScan(el) {
+    if (!navigator.mediaDevices?.getUserMedia || !window.BarcodeDetector) {
+      toast('Caméra-scanner indisponible · utilisez la douchette ou saisissez le code');
+      return;
+    }
+    stopScanner();
+    try {
+      const supported = window.BarcodeDetector.getSupportedFormats
+        ? await window.BarcodeDetector.getSupportedFormats() : ['code_39', 'code_128', 'qr_code'];
+      const formats = ['code_39', 'code_128', 'qr_code'].filter((f) => supported.includes(f));
+      if (!formats.length) throw new Error('format');
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+      if (!$('#px-scan-veil', root).classList.contains('is-open')) { stream.getTracks().forEach((t) => t.stop()); return; }
+      const stage = $('#px-scan-stage', el);
+      stage.innerHTML = '<video id="px-scan-video" playsinline muted style="width:100%;height:100%;object-fit:cover"></video><div class="px-scan-laser"></div>';
+      const video = $('#px-scan-video', el);
+      video.srcObject = stream;
+      await video.play();
+      const detector = new window.BarcodeDetector({ formats });
+      let live = true;
+      scannerStop = () => { live = false; stream.getTracks().forEach((t) => t.stop()); };
+      const frame = async () => {
+        if (!live) return;
+        try {
+          const hits = await detector.detect(video);
+          if (hits && hits[0] && acceptScan(hits[0].rawValue)) return;
+        } catch (_) {}
+        if (live) requestAnimationFrame(frame);
+      };
+      requestAnimationFrame(frame);
+    } catch (_) {
+      stopScanner();
+      toast('Caméra non ouverte · autorisez-la ou utilisez la douchette');
+    }
+  }
+  function openScan(mode = 'pickup') {
+    stopScanner();
+    state.scanMode = mode === 'workflow' ? 'workflow' : 'pickup';
     const el = $('#px-scanm', root);
-    const p = target ? target.pieces[0] : null;
+    const workflow = state.scanMode === 'workflow';
     el.innerHTML = `
-      <h3 class="modal-title">Scan en cours…</h3>
-      <p class="modal-subtle">Présentez le ticket ou n'importe quelle étiquette de la commande.</p>
-      <div class="px-scan-stage">
-        ${p ? `<div class="px-tag px-scan-tag">${tagInner(p, target)}</div>` : ''}
-        <div class="px-scan-laser"></div>
+      <button class="px-modal-x" id="px-scan-close" aria-label="Fermer"><i data-lucide="x"></i></button>
+      <h3 class="modal-title">${workflow ? 'Avancer une commande' : 'Scanner ticket ou étiquette'}</h3>
+      <p class="modal-subtle">${workflow ? 'Scannez depuis l’atelier : Kiwi ouvre la commande et propose l’action utile. Rien ne change sans votre validation.' : 'La douchette saisit le code automatiquement. Sur téléphone, utilisez la caméra si elle est disponible.'}</p>
+      <div class="px-scan-stage" id="px-scan-stage"><i data-lucide="scan-line" style="width:58px;height:58px;color:var(--mint)"></i></div>
+      <div class="cash-input-row"><label class="cash-input-label" for="px-scan-input">N° commande ou étiquette</label>
+        <input class="cash-input mono" id="px-scan-input" autocomplete="off" inputmode="numeric" placeholder="1054 ou 1054-1" />
+      </div>
+      <div class="px-sheet-foot" style="margin-top:12px">
+        <button class="px-btn secondary" id="px-scan-camera"><i data-lucide="camera"></i>Caméra</button>
+        <button class="px-btn primary" id="px-scan-accept"><i data-lucide="scan-line"></i>Lire le code</button>
       </div>`;
     openVeil('#px-scan-veil');
     icons();
-    setTimeout(() => {
-      closeVeil('#px-scan-veil');
-      if (target) {
-        state.rtQuery = target.id;
-        renderRetrait(); icons();
-        toast(`Étiquette lue, ${target.id}${target.rack ? ' · cintre ' + target.rack : ''}`);
-      } else {
-        toast('Aucune commande prête à scanner (démo)');
-      }
-    }, 1500);
+    const input = $('#px-scan-input', el);
+    $('#px-scan-close', el).onclick = () => { stopScanner(); closeVeil('#px-scan-veil'); };
+    $('#px-scan-accept', el).onclick = () => acceptScan(input.value);
+    $('#px-scan-camera', el).onclick = () => startCameraScan(el);
+    input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); acceptScan(input.value); } };
+    setTimeout(() => input.focus(), 50);
   }
   function tagInner(p, o) {
     const c = custOf(o);
-    return `<div class="px-tag-top"><span class="px-tag-num">${o.id}</span><span class="px-tag-i">pièce ${p.n}/${p.of}</span></div>
+    return `<div class="px-tag-top"><span class="px-tag-num">${publicOrderNo(o)}</span><span class="px-tag-i">pièce ${p.n}/${p.of}</span></div>
       <div class="px-tag-client">${esc(c.name)}</div>
       <div class="px-tag-item">${esc(p.label)} · <span class="svc">${svcCodes(p.svcs)}</span></div>
-      ${barcode(p.pid, 22)}
-      <div class="px-tag-id">${p.pid}</div>`;
+      <div class="px-tag-id">${publicPieceNo(o, p)}</div>`;
   }
 
   /* ═══════════════════════ RANGEMENT (rack) ═══════════════════════ */
   function releaseSlot(o) {
-    if (o.rack) { delete rackSlots[o.rack]; o.rack = null; }
+    if (o.rack) { delete rackSlots[o.rack]; o.rack = null; syncOwnerOps(); }
   }
   function assignSlot(o, slot) {
-    releaseSlot(o);
+    if (!o || !slot) return false;
+    const occupant = rackSlots[slot];
+    if (occupant && occupant !== o.id) {
+      toast(`Emplacement ${slot} déjà occupé.`);
+      return false;
+    }
+    if (o.rack && o.rack !== slot) delete rackSlots[o.rack];
     rackSlots[slot] = o.id;
     o.rack = slot;
+    syncOwnerOps();
+    return true;
   }
 
   function renderRack() {
@@ -1758,7 +2828,7 @@
           <div class="px-rack-queue-head"><i data-lucide="archive"></i>À ranger <span class="ct">${queue.length}</span></div>
           ${queue.map((o) => `
             <button class="px-qcard ${sel === o.id ? 'on' : ''}" data-px-q="${o.id}">
-              <div class="num">${o.id}</div>
+              <div class="num">${publicOrderNo(o)}</div>
               <div class="who">${esc(custOf(o).name)}</div>
               <div class="sub">${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''} · ${o.notified ? 'client notifié' : 'pas encore notifié'}</div>
             </button>`).join('') || '<div class="px-rack-hint">Rien à ranger.<br>Quand une commande passe « prête », elle arrive ici.</div>'}
@@ -1789,10 +2859,10 @@
       const slot = e.target.closest('[data-px-slot]');
       if (slot && state.rackSelect) {
         const o = findOrder(state.rackSelect);
-        assignSlot(o, slot.dataset.pxSlot);
+        if (!assignSlot(o, slot.dataset.pxSlot)) return;
         state.rackSelect = null;
         queueIfOffline('Rangement');
-        toast(`${o.id} → cintre ${o.rack}, retrouvable en un scan`);
+        toast(`${publicOrderNo(o)} → cintre ${o.rack}, retrouvable en un scan`);
         renderRack(); renderBadges(); icons();
         const flash = $(`[data-px-slot-full="${o.id}"]`, panel);
         if (flash) flash.classList.add('flash');
@@ -1801,35 +2871,111 @@
     icons();
   }
 
-  /* ═══════════════════════ OFFLINE (file d'attente simulée) ═══════════════════════ */
+  /* ═══════════════════════ OFFLINE — browser/network truth ═══════════════════════ */
+  function browserOffline() { return typeof navigator !== 'undefined' && navigator.onLine === false; }
   function toggleOffline() {
-    state.offline = !state.offline;
+    state.offline = browserOffline();
     if (!state.offline && state.queued) {
-      toast(`Réseau de retour, ${state.queued} action${state.queued > 1 ? 's' : ''} synchronisée${state.queued > 1 ? 's' : ''}`);
-      state.queued = 0;
-    } else if (state.offline) {
-      toast('Mode hors-ligne, la caisse continue, tout est mis en file');
+      try { pressingOps?.store?.cloud?.()?.flush?.(); } catch (_) {}
+    }
+    toast(state.offline
+      ? 'Connexion absente · les changements restent sur cette tablette'
+      : (state.queued ? `${state.queued} changement${state.queued > 1 ? 's' : ''} local${state.queued > 1 ? 'aux' : ''} · envoi serveur relancé` : 'Connexion réseau disponible'));
+    renderNet();
+  }
+  function networkChanged(online) {
+    state.offline = !online;
+    if (!online) {
+      toast('Connexion perdue · la caisse continue et conserve les changements localement');
+    } else if (state.queued) {
+      try { pressingOps?.store?.cloud?.()?.flush?.(); } catch (_) {}
+      toast(`${state.queued} changement${state.queued > 1 ? 's' : ''} conservé${state.queued > 1 ? 's' : ''} · envoi serveur relancé`);
+    } else {
+      toast('Connexion rétablie');
     }
     renderNet();
   }
+  window.addEventListener('offline', () => networkChanged(false));
+  window.addEventListener('online', () => networkChanged(true));
   function renderNet() {
+    if (!root) return;
     const net = $('#px-net', root);
+    if (!net) return;
     net.classList.toggle('is-off', state.offline);
-    $('.px-net-label', net).textContent = state.offline ? 'Hors-ligne' : 'En ligne';
+    net.title = 'État réseau détecté par cet appareil';
+    $('.px-net-label', net).textContent = state.offline ? 'Hors-ligne' : (state.queued ? 'Envoi en attente' : 'En ligne');
     let q = $('.px-net-queue', net);
-    if (state.offline && state.queued) {
+    if (state.queued) {
       if (!q) { q = document.createElement('b'); q.className = 'px-net-queue'; net.appendChild(q); }
       q.textContent = state.queued;
     } else if (q) q.remove();
     const note = $('#px-offline-note', root);
-    note.hidden = !state.offline;
-    $('#px-queue-count', root).textContent = state.queued ? `${state.queued} en attente` : '';
+    note.hidden = !state.offline && !state.queued;
+    note.firstChild.textContent = state.offline
+      ? 'Hors-ligne, les changements restent sur cette tablette et seront reproposés au retour du réseau. '
+      : 'Connexion rétablie, envoi serveur relancé. La copie locale reste conservée. ';
+    $('#px-queue-count', root).textContent = state.queued ? `${state.queued} changement${state.queued > 1 ? 's' : ''} local${state.queued > 1 ? 'aux' : ''}` : '';
   }
 
-  /* ═══════════════════════ boot ═══════════════════════ */
-  function boot() { injectRoot(); }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
+  /* ═══════════════════════ enregistrement ═══════════════════════ */
+  /* Chargé à la demande par le dispatcher au premier 0000 : plus de DOM injecté
+   * au démarrage de la caisse restaurant, plus de CSS ni de JS pressing sur le
+   * chemin critique des quinze autres métiers. */
+  if (window.KiwiPosDispatch) {
+    window.KiwiPosDispatch.register({
+      id: 'pressing',
+      greet: { line1: 'Bonjour Sanae,', em: 'bienvenue.',
+               sub: 'Pressing Marshan <em>·</em> comptoir de dépôt' },
+      mount(rootEl) {
+        restorePressingDocument(readPressingDocument());
+        build(rootEl); enter();
+        const catalog = window.KiwiPressingCatalog;
+        if (catalog) {
+          catalog.subscribe(() => {
+            loadCatalog();
+            if (state.cat !== 'tous' && !counterCatalog().some((c) => c.id === state.cat)) state.cat = 'tous';
+            if (root && state.unlocked) renderAll();
+          });
+          Promise.resolve(catalog.bind()).then(() => {
+            loadCatalog();
+            restorePressingDocument(readPressingDocument());
+            if (root && state.unlocked) renderAll();
+            const orderCloud = pressingCloud();
+            if (orderCloud) orderCloud.bind();
+          });
+        } else {
+          const orderCloud = pressingCloud();
+          if (orderCloud) orderCloud.bind();
+        }
+      },
+      onShow() { loadCatalog(); enter(); },
+    });
+  }
 
-  window.KiwiPressing = { unlock, lock };
+  /* Compat : d'anciens raccourcis (et les tests) appellent encore
+   * KiwiPressing.unlock() directement. */
+  window.KiwiPressing = {
+    unlock() {
+      if (window.KiwiPosDispatch) return window.KiwiPosDispatch.unlockById('pressing');
+    },
+    lock,
+    rules: Object.freeze({
+      normalizeOrderNo,
+      publicOrderNo,
+      publicPieceNo,
+      nextAvailableOrderNo,
+      ensurePublicOrderNumbers,
+      normalizePhone,
+      normalizeMoroccanPhone,
+      whatsappPhone,
+      clampQty,
+      validDeposit,
+      validReady,
+      readyOptions,
+      suggestReady,
+      findScannedOrder,
+      barcode,
+      maxQty: MAX_QTY,
+    }),
+  };
 })();

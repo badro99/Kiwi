@@ -1,0 +1,65 @@
+#!/usr/bin/env node
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
+import { makeSession, sessionCookie } from '../functions/auth/_lib.js';
+import { onRequestGet, onRequestPost } from '../functions/api/hotel/channels.js';
+import { decryptFeed, normalizeFeedUrl, parseIcal, syncHotelChannels } from '../functions/api/hotel/_channels.js';
+
+const sql=new DatabaseSync(':memory:');sql.exec(fs.readFileSync(new URL('../schema.sql',import.meta.url),'utf8'));
+const now=Date.now(),secret='hotel-channel-test-secret-0123456789';
+sql.prepare('INSERT INTO accounts (id,email,name,business,salt,hash,created_ts) VALUES (?,?,?,?,?,?,?)').run('acc-h','h@test.ma','H','Riad Sync','s','h',now);
+sql.prepare('INSERT INTO merchant_config (merchant,features,type,account_id,name,status,updated_ts) VALUES (?,?,?,?,?,?,?)').run('riad-sync','{}','hotel','acc-h','Riad Sync','active',now);
+sql.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)').run('riad-sync','rooms',JSON.stringify({v:4,baseRate:600,roomTypes:[{id:'type-a',name:'Atlas',rate:750}],rooms:[{id:'room:101',n:101,typeId:'type-a',status:'libre'}]}),1,now);
+sql.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)').run('riad-sync','reservations',JSON.stringify({v:1,settings:{},services:[],resources:[],blocked:[],bookings:[]}),1,now);
+class Statement{constructor(text){this.text=text;this.args=[]}bind(...a){this.args=a;return this}async first(){return sql.prepare(this.text).get(...this.args)||null}async all(){return{results:sql.prepare(this.text).all(...this.args)}}async run(){const r=sql.prepare(this.text).run(...this.args);return{success:true,meta:{changes:Number(r.changes)}}}rows(){return{results:sql.prepare(this.text).all(...this.args)}}}
+const DB={prepare(text){return new Statement(text)},async batch(ss){const writing=ss.some((s)=>!/^\s*SELECT\b/i.test(s.text));if(!writing)return ss.map((s)=>s.rows());sql.exec('BEGIN IMMEDIATE');try{const out=[];for(const s of ss)out.push(/^\s*SELECT\b/i.test(s.text)?s.rows():await s.run());sql.exec('COMMIT');return out}catch(error){sql.exec('ROLLBACK');throw error}}};
+const cookie=sessionCookie(await makeSession('acc-h',secret)).split(';')[0];
+let calendar=`BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:airbnb-reservation-1\r\nDTSTART;VALUE=DATE:20260910\r\nDTEND;VALUE=DATE:20260913\r\nSUMMARY:Reserved\r\nEND:VEVENT\r\nEND:VCALENDAR`, clock=now;
+const env={DB,AUTH_SECRET:secret,HOTEL_NOW:()=>clock,HOTEL_FEED_FETCH:async()=>new Response(calendar,{headers:{'Content-Type':'text/calendar'}})};
+const request=(body,auth=true)=>new Request('https://kiwi.test/api/hotel/channels',{method:'POST',headers:{'Content-Type':'application/json',...(auth?{Cookie:cookie}:{})},body:JSON.stringify(body)});
+let controls=0;const ok=(v,label)=>{assert.ok(v,label);controls++;console.log('  ✓ '+label)};
+
+ok(!normalizeFeedUrl('https://127.0.0.1/private.ics','airbnb')&&!normalizeFeedUrl('https://airbnb.com.attacker.test/x.ics','airbnb'),'calendar URL validation blocks private and lookalike SSRF targets');
+ok(normalizeFeedUrl('webcal://www.airbnb.com/calendar/ical/123.ics?s=secret','airbnb').startsWith('https://www.airbnb.com/'),'official webcal links are upgraded to HTTPS');
+ok(parseIcal(calendar).length===1&&parseIcal(calendar)[0].checkOut==='2026-09-13','fold-safe iCal parser reads exclusive hotel dates');
+let response=await onRequestPost({env,request:request({action:'save',merchant:'riad-sync',channel:'airbnb',label:'Airbnb 101',roomId:'room:101',feedUrl:'https://www.airbnb.com/calendar/ical/123.ics?s=secret'},false)});
+ok(response.status===401,'a paired or anonymous terminal cannot manage OTA bearer URLs');
+response=await onRequestPost({env,request:request({action:'save',merchant:'riad-sync',channel:'airbnb',label:'Airbnb 101',roomId:'room:101',feedUrl:'https://evil.test/steal.ics'})});
+ok(response.status===400,'only the selected provider official host can be fetched');
+response=await onRequestPost({env,request:request({action:'save',merchant:'riad-sync',channel:'airbnb',label:'Airbnb 101',roomId:'room:101',feedUrl:'https://www.airbnb.com/calendar/ical/123.ics?s=secret'})});
+let body=await response.json();ok(response.status===201&&body.channels.length===1&&body.channels[0].hasFeed&&!JSON.stringify(body).includes('s=secret'),'save performs first sync but never reflects the feed URL');
+const link=sql.prepare('SELECT * FROM channel_links').get(),cfg=JSON.parse(link.config);
+ok(!link.config.includes('airbnb.com')&&(await decryptFeed(cfg.feedEnc,secret)).includes('s=secret'),'D1 stores authenticated ciphertext and decrypts only server-side');
+let doc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
+ok(doc.bookings.length===1&&doc.bookings[0].resourceId==='room:101'&&doc.bookings[0].hotel.feedId===link.id,'OTA event blocks the exact mapped physical room in shared availability');
+let audit=sql.prepare("SELECT event_type,payload_json,actor_id,actor_role FROM hotel_stay_events WHERE merchant='riad-sync' ORDER BY srv_cursor,event_ordinal").all();
+ok(audit.length===1&&audit[0].event_type==='created'&&audit[0].actor_id===`channel:${link.id}`&&audit[0].actor_role==='system','OTA creation appends one channel-attributed shadow event');
+ok(!audit[0].payload_json.includes('Réservation')&&!audit[0].payload_json.includes('customer'),'OTA shadow payload excludes placeholder and customer PII');
+const stableRev=sql.prepare("SELECT rev FROM store_docs WHERE feature='reservations'").get().rev;
+sql.prepare("UPDATE store_docs SET data=? WHERE feature='rooms'").run(JSON.stringify({v:4,baseRate:600,roomTypes:[{id:'type-a',name:'Atlas',rate:990}],rooms:[{id:'room:101',n:101,typeId:'type-a',status:'libre'}]}));
+await syncHotelChannels(env,{merchant:'riad-sync'});doc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
+ok(doc.bookings.length===1&&doc.bookings[0].hotel.rate===750&&sql.prepare("SELECT rev FROM store_docs WHERE feature='reservations'").get().rev===stableRev,'unchanged polling preserves the booked rate and does not rewrite the reservation document');
+ok(sql.prepare("SELECT COUNT(*) AS n FROM hotel_stay_events WHERE merchant='riad-sync'").get().n===1,'unchanged OTA polling does not duplicate the shadow event');
+doc.bookings[0].status='checked_in';doc.bookings[0].customer={name:'Fatima Zahra',phone:'0600000000',email:''};
+sql.prepare("UPDATE store_docs SET data=?,rev=rev+1 WHERE feature='reservations'").run(JSON.stringify(doc));
+await syncHotelChannels(env,{merchant:'riad-sync'});doc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
+ok(doc.bookings[0].status==='checked_in'&&doc.bookings[0].customer.name==='Fatima Zahra','polling never regresses check-in state or overwrites front-desk guest details');
+doc.bookings[0].status='confirmed';sql.prepare("UPDATE store_docs SET data=?,rev=rev+1 WHERE feature='reservations'").run(JSON.stringify(doc));
+calendar='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR';let sync=await syncHotelChannels(env,{merchant:'riad-sync'});doc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
+ok(doc.bookings[0].status==='confirmed'&&sync.results[0].pendingCancellation===1,'one empty calendar observation cannot cancel a live reservation');
+clock+=6*60*1000;sync=await syncHotelChannels(env,{merchant:'riad-sync'});doc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
+ok(doc.bookings[0].status==='cancelled'&&sync.results[0].pendingCancellation===0,'a second spaced missing observation cancels the imported reservation without deleting history');
+audit=sql.prepare("SELECT event_type FROM hotel_stay_events WHERE merchant='riad-sync' ORDER BY srv_cursor,event_ordinal").all();
+ok(audit.length===2&&audit[1].event_type==='cancelled','confirmed OTA removal appends a cancellation event instead of rewriting history');
+response=await onRequestGet({env,request:new Request('https://kiwi.test/api/hotel/channels?merchant=riad-sync',{headers:{Cookie:cookie}})});body=await response.json();
+ok(response.status===200&&body.channels[0].health==='healthy'&&body.channels[0].syncMode==='ical-import'&&!body.channels[0].capabilities.pushesRates&&!('feedUrl' in body.channels[0]),'connection status exposes truthful one-way capability and health metadata only');
+// Ticket #0009: Expedia + Agoda ride the same one-way importer.
+ok(normalizeFeedUrl('https://www.expedia.com/calendar/ical/123.ics?s=secret','expedia').startsWith('https://www.expedia.com/')&&normalizeFeedUrl('https://euro.expedia.net/ical/abc.ics','expedia').startsWith('https://euro.expedia.net/')&&normalizeFeedUrl('https://www.expediapartnercentral.com/x.ics','expedia').startsWith('https://www.expediapartnercentral.com/'),'expedia export hosts accepted (incl. euro.expedia.net)');
+ok(normalizeFeedUrl('https://www.agoda.com/ical/x.ics','agoda').startsWith('https://www.agoda.com/')&&normalizeFeedUrl('https://ycs.agoda.com/ical/x.ics','agoda').startsWith('https://ycs.agoda.com/'),'agoda export hosts accepted (incl. YCS)');
+ok(!normalizeFeedUrl('https://www.expedia.com/x.ics','agoda')&&!normalizeFeedUrl('https://www.agoda.com/x.ics','expedia')&&!normalizeFeedUrl('https://evil.test/x.ics','expedia')&&!normalizeFeedUrl('https://www.jumbotours.com/x.ics','expedia'),'provider/host mismatch, foreign hosts and non-iCal bed banks refused');
+response=await onRequestPost({env,request:request({action:'save',merchant:'riad-sync',channel:'expedia',label:'Expedia 101',roomId:'room:101',feedUrl:'https://euro.expedia.net/ical/abc.ics?s=secret'})});
+body=await response.json();ok(response.status===201&&body.channels.some((c)=>c.channel==='expedia'&&c.hasFeed),'expedia channel saves through the same importer (201)');
+response=await onRequestPost({env,request:request({action:'save',merchant:'riad-sync',channel:'agoda',label:'Agoda 101',roomId:'room:101',feedUrl:'https://www.agoda.com/ical/x.ics'})});
+body=await response.json();ok(response.status===201&&body.channels.some((c)=>c.channel==='agoda'),'agoda channel saves through the same importer (201)');
+console.log(`hotel-channel-sync-test: ${controls} controls passed`);

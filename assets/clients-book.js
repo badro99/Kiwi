@@ -23,6 +23,13 @@
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
   function fmt(n) { try { return (Math.round(n) || 0).toLocaleString('fr-FR'); } catch (_) { return String(Math.round(n) || 0); } }
   function paired() { try { return !!(window.KiwiCaissePairing && KiwiCaissePairing.isPaired && KiwiCaissePairing.isPaired()); } catch (_) { return false; } }
+  function hospitalityMode() {
+    try {
+      if (document.body.classList.contains('is-pos-hotel')) return true;
+      var p = window.KiwiCaissePairing && KiwiCaissePairing.pairedVenue && KiwiCaissePairing.pairedVenue();
+      return !!(p && String(p.type || p.subtype || '').toLowerCase() === 'hotel');
+    } catch (_) { return false; }
+  }
   // A visible caisse chrome we can hang a NATIVE "Clients" entry off of — every
   // pos vertical + pressing render a <nav class="XX-nav">, the main café/resto
   // caisse a .act-selector. When one is on screen we inject there (wireCaisseEntry)
@@ -46,10 +53,20 @@
         return;
       }
     } catch (_) {}
+    try {
+      if (document.body) {
+        var fb = document.createElement('div');
+        fb.setAttribute('role', 'alert');
+        fb.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:8px 16px;border-radius:8px;z-index:99999;font-size:14px;';
+        fb.innerHTML = '<div style="font-weight:600">' + esc(msg) + '</div>' + (desc ? '<div style="opacity:.7;font-size:.85em;margin-top:2px">' + esc(desc) + '</div>' : '');
+        document.body.appendChild(fb);
+        setTimeout(function () { fb.remove(); }, 2500);
+      }
+    } catch (_) {}
   }
 
   var ICON = {
-    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    users: '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M856-390 570-104q-12 12-27 18t-30 6q-15 0-30-6t-27-18L103-457q-11-11-17-25.5T80-513v-287q0-33 23.5-56.5T160-880h287q16 0 31 6.5t26 17.5l352 353q12 12 17.5 27t5.5 30q0 15-5.5 29.5T856-390ZM513-160l286-286-353-354H160v286l353 354ZM260-640q25 0 42.5-17.5T320-700q0-25-17.5-42.5T260-760q-25 0-42.5 17.5T200-700q0 25 17.5 42.5T260-640Zm220 160Zm68 192 112-112q11-11 17.5-26t6.5-32q0-34-24-58t-58-24q-19 0-37.5 11T520-492q-30-28-47-38t-35-10q-34 0-58 24t-24 58q0 17 6.5 32t17.5 26l112 112q12 12 28 12t28-12Z"/></svg>',
     userplus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>',
     search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
     close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
@@ -87,9 +104,8 @@
       '@keyframes kcb-up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}',
       '#kcb-root .kcb-head{display:flex;align-items:center;gap:14px;padding:18px 22px;border-bottom:1px solid rgba(10,15,13,.08);background:var(--surface);}',
       '#kcb-root .kcb-head h2{margin:0;font-size:1.15rem;font-weight:700;letter-spacing:-.01em;}',
-      '#kcb-root .kcb-head .kcb-prog{margin-left:auto;font-size:.78rem;color:var(--atlas,#0B6E4F);background:var(--mint-soft,#E6FbEF);padding:6px 12px;border-radius:999px;font-weight:600;}',
-      '#kcb-root .kcb-x{width:38px;height:38px;border-radius:11px;border:1px solid rgba(10,15,13,.1);background:var(--surface);cursor:pointer;display:grid;place-items:center;color:var(--ink,#0A0F0D);}',
-      '#kcb-root .kcb-x svg{width:18px;height:18px;}',
+      '#kcb-root .kcb-x{width:44px;height:44px;min-width:44px;min-height:44px;border-radius:12px;border:1px solid rgba(10,15,13,.1);background:var(--surface);cursor:pointer;display:grid;place-items:center;color:var(--ink,#0A0F0D);touch-action:manipulation;-webkit-tap-highlight-color:transparent;}',
+      '#kcb-root .kcb-x svg{width:22px;height:22px;}',
       '#kcb-root .kcb-tools{display:flex;gap:10px;padding:16px 22px;align-items:center;}',
       '#kcb-root .kcb-searchwrap{flex:1;position:relative;}',
       '#kcb-root .kcb-searchwrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:rgba(10,15,13,.4);}',
@@ -125,6 +141,7 @@
       '.kcb-field input{width:100%;box-sizing:border-box;padding:13px 14px;border:1px solid rgba(10,15,13,.14);border-radius:12px;font-size:1rem;background:var(--surface);color:var(--ink,#0A0F0D);}',
       '.kcb-field input:focus{outline:none;border-color:var(--atlas,#0B6E4F);box-shadow:0 0 0 3px rgba(11,110,79,.12);}',
       '.kcb-field select.kcb-select{width:100%;box-sizing:border-box;padding:13px 14px;border:1px solid rgba(10,15,13,.14);border-radius:12px;font-size:1rem;background:var(--surface);color:var(--ink,#0A0F0D);}',
+      '.kcb-section{margin:18px 0 12px;padding-top:16px;border-top:1px solid rgba(10,15,13,.09);font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--atlas,#0B6E4F);}',
       '.kcb-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}',
       '@media (max-width:520px){.kcb-grid2{grid-template-columns:1fr;}}',
       '.kcb-info{background:var(--surface);border:1px solid rgba(10,15,13,.08);border-radius:16px;padding:4px 16px;margin-bottom:14px;}',
@@ -195,7 +212,7 @@
       document.body.appendChild(b);
     }
     var n = KC.count();
-    b.innerHTML = ICON.users + '<span class="kcb-lbl">Clients</span>' + (n ? '<span class="kcb-badge">' + n + '</span>' : '');
+    b.innerHTML = ICON.users + '<span class="kcb-lbl">' + (hospitalityMode() ? 'Hospitality+' : 'Clients') + '</span>' + (n ? '<span class="kcb-badge">' + n + '</span>' : '');
   }
 
   /* ── root panel ────────────────────────────────────────────────────────── */
@@ -205,13 +222,38 @@
    * the owner asked for) instead of a full-viewport takeover. Café/resto exposes a
    * 280px .sidebar; pos verticals a vertical nav rail. Unknown layouts fall back to
    * full-bleed (inset:0) so nothing is ever hidden. */
+  /* La barre latérale, pas la LISTE de boutons qu'elle contient.
+   *
+   * On mesurait le `<nav>` trouvé par le sélecteur. Dans la caisse boutique ce
+   * `<nav class="bq-nav">` est imbriqué dans `<aside class="bq-rail">` sous le
+   * logo et le bloc établissement : son bord haut est à ~270 px du sommet. Le
+   * carnet héritait donc de ce 270 px et s'ouvrait à mi-hauteur, décalé, en
+   * laissant dépasser l'écran de vente au-dessus de lui — alors que toutes les
+   * autres pages du métier occupent la zone de travail entière.
+   *
+   * On remonte donc les ancêtres tant qu'on reste sur une bande verticale de
+   * largeur comparable, et on garde la plus haute. Une caisse dont le `<nav>`
+   * EST déjà le rail ne bouge pas d'un pixel : son parent est la page, trop
+   * large, et la boucle s'arrête tout de suite. */
+  function railBox(el) {
+    var best = el.getBoundingClientRect();
+    var p = el.parentElement;
+    while (p && p !== document.body && p.nodeType === 1) {
+      var r = p.getBoundingClientRect();
+      if (r.width > best.width * 1.6) break;      // ce n'est plus une bande, c'est la page
+      if (r.height > best.height) best = r;
+      p = p.parentElement;
+    }
+    return best;
+  }
+
   function panelInset() {
     var res = { left: 0, top: 0, right: 0, bottom: 0 };
     try {
       var rail = null, cands = document.querySelectorAll('.sidebar, nav[class$="-nav"]');
       for (var i = 0; i < cands.length; i++) {
         var el = cands[i]; if (el.offsetParent === null) continue;
-        var rr = el.getBoundingClientRect();
+        var rr = railBox(el);
         // a vertical rail hugging a screen edge (taller than wide), not a top bar
         if (rr.height > rr.width * 1.4 && (rr.left < 60 || rr.right > window.innerWidth - 60)) { rail = rr; break; }
       }
@@ -235,32 +277,39 @@
     root.style.left = b.left + 'px'; root.style.top = b.top + 'px';
     root.style.right = b.right + 'px'; root.style.bottom = b.bottom + 'px';
   }
-  function open() {
+  /* Pas de croix : une page ne se ferme pas, elle se quitte. On sort du carnet
+     comme on sort de l'Inventaire — en touchant l'entrée suivante du rail. */
+  function open(entry) {
     css();
     var root = document.getElementById('kcb-root');
     if (!root) {
       root = document.createElement('div'); root.id = 'kcb-root';
-      root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', 'Carnet clients');
+      root.setAttribute('aria-label', 'Carnet clients');
       document.body.appendChild(root);
     }
     root.style.display = 'flex';
     positionRoot(root);
+    markNav(entry);
     root.innerHTML =
-      '<div class="kcb-head"><h2>Carnet clients</h2><span class="kcb-prog">' + esc(progLabel()) + '</span>' +
-        '<button class="kcb-x" id="kcb-close" aria-label="Fermer">' + ICON.close + '</button></div>' +
+      '<div class="kcb-head"><h2>' + (hospitalityMode() ? 'Hospitality+' : 'Carnet clients') + '</h2><span class="kcb-prog">' + esc(progLabel()) + '</span></div>' +
       '<div class="kcb-tools"><div class="kcb-searchwrap">' + ICON.search +
         '<input class="kcb-search" id="kcb-q" inputmode="search" placeholder="Rechercher un nom ou 06…" value="' + esc(state.q) + '"></div>' +
         '<button class="kcb-add" id="kcb-add">' + ICON.userplus + '<span>Nouveau client</span></button></div>' +
       '<div class="kcb-list" id="kcb-list"></div>';
     renderList();
     if (KC.pull) KC.pull(function (ch) { if (ch) { renderList(); ensureChip(); } }); // cross-device refresh
-    root.querySelector('#kcb-close').onclick = close;
     root.querySelector('#kcb-add').onclick = function () { openForm(null); };
     var q = root.querySelector('#kcb-q');
     q.oninput = function () { state.q = q.value; renderList(); };
     q.focus();
   }
-  function close() { var r = document.getElementById('kcb-root'); if (r) r.style.display = 'none'; ensureChip(); }
+  function close() {
+    // La fiche cliente part avec le carnet : ouverte par-dessus, elle restait
+    // sinon posée seule au milieu de l'écran de vente.
+    closeSheet();
+    var r = document.getElementById('kcb-root'); if (r) r.style.display = 'none';
+    clearNav(); ensureChip();
+  }
 
   function matches(c, q) {
     q = q.trim().toLowerCase(); if (!q) return true;
@@ -273,16 +322,16 @@
     if (!rows.length) {
       host.innerHTML = '<div class="kcb-empty">' + ICON.users +
         (all.length ? '<b>Aucun résultat</b><div>Essayez un autre nom ou numéro.</div>'
-                    : '<b>Aucun client pour l’instant</b><div>Ajoutez votre premier client — il apparaîtra aussitôt sur le tableau de bord.</div>') + '</div>';
+                    : '<b>Aucun client pour l’instant</b><div>Ajoutez votre premier client · il apparaîtra aussitôt sur le tableau de bord.</div>') + '</div>';
       return;
     }
     var cfg = KC.config();
     host.innerHTML = rows.map(function (c) {
       var seg = KC.segment(c);
       var ptsTxt = cfg.model === 'amount' ? (fmt(c.points) + ' <small>pts</small>') : ((c.stamps || 0) + '<small>/' + (cfg.model === 'product' ? cfg.product.target : cfg.visit.target) + '</small>');
-      return '<div class="kcb-row" data-id="' + c.id + '">' +
+      return '<div class="kcb-row" data-id="' + esc(c.id) + '">' +
         '<div class="kcb-av">' + esc(initials(c.name)) + '</div>' +
-        '<div><div class="kcb-nm">' + esc(c.name || 'Sans nom') + '</div><div class="kcb-ph">' + esc(c.phone || '—') + '</div></div>' +
+        '<div><div class="kcb-nm">' + esc(c.name || 'Sans nom') + '</div><div class="kcb-ph">' + esc(c.phone || '·') + '</div></div>' +
         '<div class="kcb-meta"><div class="kcb-pts">' + ptsTxt + '</div><span class="kcb-seg ' + seg + '">' + SEG_LBL[seg] + '</span></div></div>';
     }).join('');
     Array.prototype.forEach.call(host.querySelectorAll('.kcb-row'), function (row) {
@@ -312,19 +361,36 @@
 
   function genderOpts(v) {
     return ['', 'Femme', 'Homme', 'Autre'].map(function (g) {
-      var lbl = g || '—';
+      var lbl = g || '·';
       return '<option value="' + esc(g) + '"' + (v === g ? ' selected' : '') + '>' + esc(lbl) + '</option>';
     }).join('');
   }
   function openForm(client) {
     var c = client || {};
     var editing = !!client;
+    var hotel = hospitalityMode();
+    var h = c.hospitality || {};
+    var hospitalityFields = hotel ?
+      '<div class="kcb-section">Profil hôtelier</div>' +
+      '<div class="kcb-grid2">' +
+        '<div class="kcb-field"><label>Type de pièce</label><select id="kcb-f-doc-type" class="kcb-select">' +
+          ['', 'Passeport', 'CIN', 'Carte de séjour', 'Autre'].map(function (v) { return '<option value="' + esc(v) + '"' + (h.documentType === v ? ' selected' : '') + '>' + esc(v || 'Sélectionner') + '</option>'; }).join('') + '</select></div>' +
+        '<div class="kcb-field"><label>Numéro passeport / ID</label><input id="kcb-f-doc-number" value="' + esc(h.documentNumber || '') + '" placeholder="N° du document" autocomplete="off"></div>' +
+      '</div>' +
+      '<div class="kcb-grid2">' +
+        '<div class="kcb-field"><label>Nationalité</label><input id="kcb-f-nationality" value="' + esc(h.nationality || '') + '" placeholder="Marocaine, française…" autocomplete="off"></div>' +
+        '<div class="kcb-field"><label>Langue préférée</label><input id="kcb-f-language" value="' + esc(h.preferredLanguage || '') + '" placeholder="Français, العربية…" autocomplete="off"></div>' +
+      '</div>' +
+      '<div class="kcb-field"><label>Préférences de chambre</label><input id="kcb-f-room" value="' + esc(h.roomPreferences || '') + '" placeholder="Étage calme, lit king, loin de l’ascenseur…" autocomplete="off"></div>' +
+      '<div class="kcb-field"><label>Préférences de repas</label><input id="kcb-f-food" value="' + esc(h.foodPreferences || '') + '" placeholder="Végétarien, petit-déjeuner salé, thé sans sucre…" autocomplete="off"></div>' +
+      '<div class="kcb-field"><label>Allergies</label><input id="kcb-f-allergies" value="' + esc(h.allergies || '') + '" placeholder="Arachides, gluten, aucune connue…" autocomplete="off"></div>' +
+      '<div class="kcb-field"><label>Besoins particuliers</label><input id="kcb-f-access" value="' + esc(h.accessibilityNeeds || '') + '" placeholder="Mobilité, lit bébé, accessibilité…" autocomplete="off"></div>' : '';
     sheet(
-      '<h3>' + (editing ? 'Modifier le client' : 'Nouveau client') + '</h3>' +
-      '<div class="kcb-sub">' + (editing ? esc(c.name || '') : 'Renseignez un maximum d’informations — elles nourrissent la fidélité et le marketing.') + '</div>' +
+      '<h3>' + (editing ? (hotel ? 'Modifier le profil' : 'Modifier le client') : (hotel ? 'Nouveau profil client' : 'Nouveau client')) + '</h3>' +
+      '<div class="kcb-sub">' + (editing ? esc(c.name || '') : (hotel ? 'Identité, préférences et attentions utiles pour le prochain séjour.' : 'Renseignez un maximum d’informations · elles nourrissent la fidélité et le marketing.')) + '</div>' +
       '<div class="kcb-field"><label>Nom complet</label><input id="kcb-f-name" value="' + esc(c.name || '') + '" placeholder="Prénom Nom" autocomplete="off"></div>' +
       '<div class="kcb-grid2">' +
-        '<div class="kcb-field"><label>Téléphone</label><input id="kcb-f-phone" inputmode="tel" value="' + esc(c.phone || '') + '" placeholder="06 12 34 56 78" autocomplete="off"></div>' +
+        '<div class="kcb-field"><label>Téléphone</label><input id="kcb-f-phone" inputmode="tel" autocomplete="tel" value="' + esc(c.phone || '') + '" placeholder="06… / +33… / +49…"></div>' +
         '<div class="kcb-field"><label>Email</label><input id="kcb-f-email" type="email" inputmode="email" value="' + esc(c.email || '') + '" placeholder="nom@email.com" autocomplete="off"></div>' +
       '</div>' +
       '<div class="kcb-grid2">' +
@@ -335,11 +401,15 @@
         '<div class="kcb-field"><label>Ville</label><input id="kcb-f-city" value="' + esc(c.city || '') + '" placeholder="Casablanca" autocomplete="off"></div>' +
         '<div class="kcb-field"><label>Adresse</label><input id="kcb-f-address" value="' + esc(c.address || '') + '" placeholder="Quartier, rue…" autocomplete="off"></div>' +
       '</div>' +
-      '<div class="kcb-field"><label>Notes</label><input id="kcb-f-notes" value="' + esc(c.notes || '') + '" placeholder="Préférences, tailles, allergies…" autocomplete="off"></div>' +
-      '<label class="kcb-consent"><input type="checkbox" id="kcb-f-consent" ' + (editing ? (c.consent ? 'checked' : '') : 'checked') + '>' +
-        '<span>Accepte les messages <b>WhatsApp / SMS</b> (offres, fidélité). Consentement requis · CNDP loi 09-08.</span></label>' +
+      hospitalityFields +
+      '<div class="kcb-field"><label>Notes internes</label><input id="kcb-f-notes" value="' + esc(c.notes || '') + '" placeholder="Informations utiles à l’équipe…" autocomplete="off"></div>' +
+      '<div class="kcb-section">Communication</div>' +
+      '<label class="kcb-consent"><input type="checkbox" id="kcb-f-consent" ' + (editing ? (c.consent ? 'checked' : '') : (hotel ? '' : 'checked')) + '>' +
+        '<span>Accepte les messages <b>WhatsApp / SMS</b> (offres, fidélité).' + (hotel ? ' Optionnel et distinct de la fiche de séjour.' : ' Consentement requis · CNDP loi 09-08.') + '</span></label>' +
       '<label class="kcb-consent" style="margin-top:8px"><input type="checkbox" id="kcb-f-consent-email" ' + (c.consentEmail ? 'checked' : '') + '>' +
-        '<span>Accepte les <b>emails</b> marketing.</span></label>' +
+        /* « emails marketing » d'un seul tenant : coupé en deux nœuds, l'anglais
+           reconstruisait « Accepts marketing emails marketing ». */
+        '<span>Accepte les <b>emails marketing</b>.</span></label>' +
       '<div class="kcb-actions">' +
         (editing ? '<button class="kcb-btn danger" id="kcb-f-del" aria-label="Supprimer">' + ICON.trash + '</button>' : '') +
         '<button class="kcb-btn ghost" id="kcb-f-cancel">Annuler</button>' +
@@ -355,7 +425,8 @@
       var name = val('#kcb-f-name'), phone = val('#kcb-f-phone'), email = val('#kcb-f-email');
       var consent = sh.querySelector('#kcb-f-consent').checked;
       if (!name && !phone) { toast('Renseignez au moins un nom ou un numéro'); return; }
-      if (!consent) { toast('Le consentement est requis', 'Cochez la case WhatsApp / SMS pour enregistrer.'); return; }
+      if (phone && window.KiwiPhone && !window.KiwiPhone.valid(phone)) { toast('Numéro invalide', 'Pour l’étranger, ajoutez + et l’indicatif pays.'); return; }
+      if (!hotel && !consent) { toast('Le consentement est requis', 'Cochez la case WhatsApp / SMS pour enregistrer.'); return; }
       // dedup on phone when adding
       if (!editing && phone) {
         var dupe = KC.findByPhone(phone);
@@ -365,6 +436,12 @@
         id: editing ? c.id : '', name: name, phone: phone, email: email,
         birthday: val('#kcb-f-bday'), gender: val('#kcb-f-gender'), city: val('#kcb-f-city'),
         address: val('#kcb-f-address'), notes: val('#kcb-f-notes'),
+        hospitality: hotel ? {
+          documentType: val('#kcb-f-doc-type'), documentNumber: val('#kcb-f-doc-number'),
+          nationality: val('#kcb-f-nationality'), preferredLanguage: val('#kcb-f-language'),
+          roomPreferences: val('#kcb-f-room'), foodPreferences: val('#kcb-f-food'),
+          allergies: val('#kcb-f-allergies'), accessibilityNeeds: val('#kcb-f-access'),
+        } : (c.hospitality || {}),
         consent: consent, consentEmail: sh.querySelector('#kcb-f-consent-email').checked,
       });
       closeSheet(); renderList(); ensureChip();
@@ -389,16 +466,27 @@
     } else {
       var target = cfg.model === 'product' ? cfg.product.target : cfg.visit.target;
       var unit = cfg.model === 'product' ? (cfg.product.item || 'achat') : 'visite';
-      progTxt = (c.stamps || 0) + ' / ' + target + ' ' + esc(unit) + (target > 1 ? 's' : '');
+      // L'unité dans son propre nœud : « visites » se traduit, « cafés » (mot du
+      // commerçant) traverse — le balayage ne voit qu'un mot à la fois.
+      progTxt = (c.stamps || 0) + ' / ' + target + ' <span>' + esc(unit) + (target > 1 ? 's' : '') + '</span>';
       recordBlock = '<div class="kcb-record"><div class="rl">Ajouter un tampon</div><div class="kcb-recrow">' +
-        '<button class="kcb-big" id="kcb-rec" style="flex:1;justify-content:center">' + ICON.plus + '+ 1 ' + esc(unit) + '</button></div></div>';
+        '<button class="kcb-big" id="kcb-rec" style="flex:1;justify-content:center">' + ICON.plus + '+ 1 <span>' + esc(unit) + '</span></button></div></div>';
     }
     var infoRows = [];
+    var hotel = hospitalityMode();
+    var h = c.hospitality || {};
     if (c.email) infoRows.push(['Email', c.email]);
     if (c.city) infoRows.push(['Ville', c.city]);
     if (c.address) infoRows.push(['Adresse', c.address]);
     if (c.birthday) infoRows.push(['Anniversaire', c.birthday]);
     if (c.gender) infoRows.push(['Genre', c.gender]);
+    if (hotel && h.nationality) infoRows.push(['Nationalité', h.nationality]);
+    if (hotel && (h.documentType || h.documentNumber)) infoRows.push(['Passeport / ID', [h.documentType, h.documentNumber].filter(Boolean).join(' · ')]);
+    if (hotel && h.preferredLanguage) infoRows.push(['Langue préférée', h.preferredLanguage]);
+    if (hotel && h.roomPreferences) infoRows.push(['Préférences chambre', h.roomPreferences]);
+    if (hotel && h.foodPreferences) infoRows.push(['Préférences repas', h.foodPreferences]);
+    if (hotel && h.allergies) infoRows.push(['Allergies', h.allergies]);
+    if (hotel && h.accessibilityNeeds) infoRows.push(['Besoins particuliers', h.accessibilityNeeds]);
     if (c.notes) infoRows.push(['Notes', c.notes]);
     var consentTxt = [c.consent ? 'WhatsApp/SMS' : '', c.consentEmail ? 'Email' : ''].filter(Boolean).join(' · ');
     infoRows.push(['Consentement', consentTxt || 'Aucun']);
@@ -408,15 +496,19 @@
     sheet(
       '<div class="kcb-dhead"><div class="kcb-av">' + esc(initials(c.name)) + '</div>' +
         '<div style="flex:1"><h3 style="margin:0">' + esc(c.name || 'Sans nom') + '</h3>' +
-        '<div class="kcb-sub" style="margin:2px 0 0">' + esc(c.phone || '—') + ' · <span class="kcb-seg ' + seg + '">' + SEG_LBL[seg] + '</span></div></div>' +
+        '<div class="kcb-sub" style="margin:2px 0 0">' + esc(c.phone || '·') + ' · <span class="kcb-seg ' + seg + '">' + SEG_LBL[seg] + '</span></div></div>' +
         '<button class="kcb-x" id="kcb-d-close" aria-label="Fermer">' + ICON.close + '</button></div>' +
-      (rewardReady ? '<div class="kcb-reward">' + ICON.gift + 'Récompense prête — ' + esc((cfg.model === 'amount' ? cfg.amount.reward : (cfg.model === 'product' ? cfg.product.reward : cfg.visit.reward)) || '1 offert') + '</div>' : '') +
+      /* La phrase fixe dans son propre nœud : la récompense qui suit est le texte
+         du commerçant, elle doit traverser telle quelle. */
+      (rewardReady ? '<div class="kcb-reward">' + ICON.gift + '<span>Récompense prête</span> · ' + esc((cfg.model === 'amount' ? cfg.amount.reward : (cfg.model === 'product' ? cfg.product.reward : cfg.visit.reward)) || '1 offert') + '</div>' : '') +
       '<div class="kcb-stat"><div class="kcb-progtxt">' + progTxt + '</div>' +
         '<div class="kcb-progwrap"><div class="kcb-progbar" style="width:' + Math.round(prog * 100) + '%"></div></div></div>' +
       '<div class="kcb-kpis">' +
-        '<div class="kcb-kpi"><div class="v">' + (c.visits || 0) + '</div><div class="l">Visites</div></div>' +
+        '<div class="kcb-kpi"><div class="v">' + (c.visits || 0) + '</div><div class="l">' + (hotel ? 'Séjours' : 'Visites') + '</div></div>' +
         '<div class="kcb-kpi"><div class="v">' + fmt(c.spend) + '</div><div class="l">Dépensé (MAD)</div></div>' +
-        '<div class="kcb-kpi"><div class="v">' + (KC.daysSince(c.lastSeen) === Infinity ? '—' : KC.daysSince(c.lastSeen) + 'j') + '</div><div class="l">Dernière visite</div></div></div>' +
+        // « 3 j » et non « 3j » : l'abréviation doit être un mot à part pour se
+        // traduire — collée au nombre elle se relisait « j3 » en arabe.
+        '<div class="kcb-kpi"><div class="v">' + (KC.daysSince(c.lastSeen) === Infinity ? '·' : KC.daysSince(c.lastSeen) + ' j') + '</div><div class="l">Dernière visite</div></div></div>' +
       infoBlock +
       recordBlock +
       (rewardReady ? '<button class="kcb-btn primary" id="kcb-redeem" style="margin-top:8px">Offrir la récompense · réinitialiser</button>' : '') +
@@ -447,6 +539,37 @@
   // One implementation, every store type: for each vertical rail (<nav class="XX-nav">)
   // we redirect its existing client button to the carnet, or inject a native-looking
   // "Clients" item; for the restaurant caisse we add a "Clients" pill to .act-selector.
+  /* ── le rail doit montrer où l'on est ────────────────────────────────────
+     Le carnet détourne l'entrée « Clientes » du métier (capture +
+     stopImmediatePropagation) : le vertical ne bascule donc jamais son propre
+     état sélectionné, et le rail continuait d'éclairer la page précédente
+     pendant qu'on lisait le carnet. On pose le marqueur nous-mêmes, avec le
+     mot exact que ce rail-là emploie pour ses autres pages — et on le rend en
+     partant, pour ne pas laisser deux entrées allumées si on sort par Échap. */
+  var ACTIVE = /^(on|is-on|active|is-active|sel|selected)$/;
+  var navMark = null;   // { entry, token, prev }
+  function markNav(entry) {
+    clearNav();
+    if (!entry || !entry.parentNode) return;
+    var sibs = entry.parentNode.children, token = null, prev = null;
+    for (var i = 0; i < sibs.length && !token; i++) {
+      if (sibs[i] === entry || !sibs[i].classList) continue;
+      for (var j = 0; j < sibs[i].classList.length; j++) {
+        if (!ACTIVE.test(sibs[i].classList[j])) continue;
+        token = sibs[i].classList[j]; prev = sibs[i]; break;
+      }
+    }
+    if (!token) return;                       // ce rail ne marque rien : on n'invente pas
+    prev.classList.remove(token);
+    entry.classList.add(token);
+    navMark = { entry: entry, token: token, prev: prev };
+  }
+  function clearNav() {
+    if (!navMark) return;
+    navMark.entry.classList.remove(navMark.token);
+    navMark.prev.classList.add(navMark.token);
+    navMark = null;
+  }
   function makeItem(tag, cls, label) {
     var el = document.createElement(tag);
     if (tag === 'button') el.type = 'button';
@@ -454,13 +577,14 @@
     if (tag === 'a') el.setAttribute('href', '#');
     el.innerHTML = ICON.users + '<span>' + label + '</span>';
     el.setAttribute('data-kcb-navitem', '1');
-    el.addEventListener('click', function (e) { e.preventDefault(); open(); });
+    el.addEventListener('click', function (e) { e.preventDefault(); open(el); });
     return el;
   }
   function wireCaisseEntry() {
     // 1) vertical rails — pos-* and pressing.
     var navs = document.querySelectorAll('nav[class$="-nav"]');
     Array.prototype.forEach.call(navs, function (nav) {
+      var entryLabel = hospitalityMode() ? 'Hospitality+' : 'Clients';
       var buttons = nav.querySelectorAll('button, a');
       if (!buttons.length) return;
       var existing = Array.prototype.filter.call(buttons, function (b) {
@@ -469,19 +593,20 @@
       if (existing) {
         if (existing.getAttribute('data-kcb-redirect')) return;
         existing.setAttribute('data-kcb-redirect', '1');
-        existing.addEventListener('click', function (e) { e.preventDefault(); e.stopImmediatePropagation(); open(); }, true);
+        existing.addEventListener('click', function (e) { e.preventDefault(); e.stopImmediatePropagation(); open(existing); }, true);
       } else {
-        if (nav.querySelector('[data-kcb-navitem]')) return;
+        var injected = nav.querySelector('[data-kcb-navitem]');
+        if (injected) { var label = injected.querySelector('span'); if (label) label.textContent = entryLabel; return; }
         var sample = buttons[0];
         var cls = sample.className.replace(/\b(on|is-on|active|is-active|sel|selected)\b/g, '').replace(/\s+/g, ' ').trim();
-        nav.appendChild(makeItem(sample.tagName.toLowerCase(), cls, 'Clients'));
+        nav.appendChild(makeItem(sample.tagName.toLowerCase(), cls, entryLabel));
       }
     });
-    // 2) the main café/resto caisse — .act-selector pill.
-    Array.prototype.forEach.call(document.querySelectorAll('.act-selector'), function (sel) {
-      if (sel.querySelector('[data-kcb-navitem]')) return;
-      var sample = sel.querySelector('.act-pill, button'); if (!sample) return;
-      sel.appendChild(makeItem('button', sample.className.replace(/\s+/g, ' ').trim(), 'Clients & fidélité'));
+    // 2) the main café/resto caisse — .rail-links.
+    Array.prototype.forEach.call(document.querySelectorAll('.rail-links'), function (rail) {
+      if (rail.querySelector('[data-kcb-navitem]')) return;
+      var sample = rail.querySelector('.team-trigger, button'); if (!sample) return;
+      rail.appendChild(makeItem('button', sample.className.replace(/\s+/g, ' ').trim(), 'Clients & fidélité'));
     });
   }
 
@@ -491,7 +616,47 @@
     if (wireScheduled) return; wireScheduled = true;
     setTimeout(function () { wireScheduled = false; try { wireCaisseEntry(); ensureChip(); } catch (_) {} }, 120);
   }
+  /* ── le carnet est une PAGE, pas une fenêtre ──────────────────────────────
+     Il s'ouvre depuis le rail, à côté de Vente, Inventaire et Promotions, et il
+     occupe la même zone de travail qu'elles. Il devait donc se comporter comme
+     elles : toucher une autre entrée du rail l'emporte. Tant qu'il fallait le
+     FERMER d'abord, il se comportait comme une boîte de dialogue — deux gestes
+     là où le reste de la caisse en demande un, et la seule page du métier à
+     réclamer ça.
+     On écoute à la CAPTURE, avant que le métier ne traite son propre clic : la
+     page suivante se dessine sur une zone déjà libre, jamais sous le carnet. */
+  function isOpen() {
+    var r = document.getElementById('kcb-root');
+    return r && r.style.display !== 'none' ? r : null;
+  }
+  function sheetOpen() {
+    var s = document.getElementById('kcb-sheet');
+    return s && s.style.display !== 'none' ? s : null;
+  }
+  function wireDismiss() {
+    document.addEventListener('click', function (e) {
+      var root = isOpen(); if (!root) return;
+      var t = e.target;
+      if (!t || !t.closest) return;
+      if (root.contains(t)) return;                        // clic DANS le carnet
+      var sh = sheetOpen(); if (sh && sh.contains(t)) return;
+      // Une autre entrée du rail — et seulement le rail : un clic ailleurs sur
+      // l'écran ne ferme rien, sinon le carnet deviendrait impossible à garder
+      // ouvert pendant qu'on lit.
+      if (!t.closest('nav[class$="-nav"], .sidebar, .act-selector')) return;
+      if (t.closest('[data-kcb-navitem], [data-kcb-redirect]')) return;  // sa propre entrée
+      close();
+    }, true);
+    // Échap : d'abord la fiche cliente ouverte par-dessus, puis le carnet.
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || !isOpen()) return;
+      if (sheetOpen()) { closeSheet(); return; }
+      close();
+    });
+  }
+
   function boot() {
+    wireDismiss();
     window.addEventListener('resize', function () { var r = document.getElementById('kcb-root'); if (r && r.style.display !== 'none') positionRoot(r); });
     window.addEventListener('storage', function (e) {
       if (!e.key) return;

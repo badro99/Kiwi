@@ -10,6 +10,7 @@
 // handlers (signup/login/logout) and by _middleware.js.
 
 const ITER = 100000;            // PBKDF2 rounds
+export const PASSWORD_MAX = 1024;
 export const SESS_COOKIE = 'kiwi_sess';
 const SESS_DAYS = 30;
 
@@ -55,15 +56,70 @@ async function pbkdf2(password, saltBytes) {
 }
 
 export async function hashPassword(password) {
+  password = String(password || '');
+  if (password.length > PASSWORD_MAX) throw new RangeError('password-too-long');
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const hash = await pbkdf2(password, salt);
   return { salt: toHex(salt), hash: toHex(hash) };
 }
 
 export async function verifyPassword(password, saltHex, hashHex) {
+  password = String(password || '');
+  if (password.length > PASSWORD_MAX) return false;
   if (!saltHex || !hashHex) return false;
   const hash = await pbkdf2(password, fromHex(saltHex));
   return timingSafeEqualHex(toHex(hash), hashHex);
+}
+
+/* ── Account password policy (NIST SP 800-63B) ──────────────────────────────
+ * Length floor (10 characters) + blocklist + personal info check.
+ * No composition rules (uppercase/symbols), no forced rotation.
+ * Returns null if acceptable, or 'short' | 'long' | 'common' | 'personal'.
+ *
+ * Short entries without potential digit suffixes (e.g. 4-6 letter words)
+ * are omitted from COMMON_PASSWORDS because the length check (< 10) fires
+ * first and returns 'short'. We retain roots that are 10+ chars or are
+ * common targets for year/digit suffixes reachable through deSuffixed. */
+const COMMON_PASSWORDS = new Set([
+  'password', 'passwords', 'pass1234',
+  'motdepasse', 'azerty', 'azertyuiop',
+  'qwerty', 'qwertyuiop', '1234567890',
+  'kiwipos', 'kiwicafe', 'kiwiresto',
+  'marrakech', 'casablanca', 'bismillah', 'alhamdulillah', 'inshallah',
+  'welcome', 'bienvenue', 'administrator', 'princess', 'iloveyou'
+]);
+
+export function passwordProblem(password, ctx = {}) {
+  const p = String(password || '');
+  if (p.length < 10) return 'short';
+  if (p.length > PASSWORD_MAX) return 'long';
+
+  const norm = p.trim().toLowerCase();
+  const squashed = norm.replace(/[^a-z0-9]/g, '');
+  const deSuffixed = squashed.replace(/\d+$/, '');
+
+  if (
+    COMMON_PASSWORDS.has(norm) ||
+    COMMON_PASSWORDS.has(squashed) ||
+    (deSuffixed.length >= 4 && COMMON_PASSWORDS.has(deSuffixed)) ||
+    /^\d+$/.test(squashed) ||
+    /^(.)\1+$/.test(squashed)
+  ) {
+    return 'common';
+  }
+
+  if (ctx && typeof ctx === 'object') {
+    if (ctx.email) {
+      const emailLocal = String(ctx.email).split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (emailLocal.length >= 4 && squashed.includes(emailLocal)) return 'personal';
+    }
+    if (ctx.business) {
+      const biz = String(ctx.business).toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (biz.length >= 4 && squashed.includes(biz)) return 'personal';
+    }
+  }
+
+  return null;
 }
 
 async function hmacHex(secret, message) {
@@ -72,6 +128,60 @@ async function hmacHex(secret, message) {
   );
   const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(message));
   return toHex(sig);
+}
+
+/* A manager PIN must never be copied into the durable till outbox. After the
+ * server verifies that PIN, it can instead mint this short-lived capability.
+ * It is bound to one exact refund command, so stealing/replaying it cannot
+ * authorize a different sale, amount, merchant or refund id. */
+export async function managerRefundProof(authSecret, claims) {
+  const body = {
+    v: 1,
+    merchant: String(claims && claims.merchant || '').slice(0, 64),
+    staffId: String(claims && claims.staffId || '').slice(0, 96),
+    staffName: String(claims && claims.staffName || '').slice(0, 80),
+    staffRole: String(claims && claims.staffRole || '').slice(0, 80),
+    refundId: String(claims && claims.refundId || '').slice(0, 64),
+    originalSaleId: String(claims && claims.originalSaleId || '').slice(0, 64),
+    amountCents: Math.round(Number(claims && claims.amountCents) || 0),
+    exp: Date.now() + 10 * 60 * 1000,
+  };
+  if (!authSecret || !body.merchant || !body.staffId || !body.refundId
+      || !body.originalSaleId || body.amountCents <= 0) return '';
+  const payload = bytesToB64url(encoder.encode(JSON.stringify(body)));
+  return payload + '.' + await hmacHex(authSecret, 'kiwi-manager-refund-v1:' + payload);
+}
+
+export async function readManagerRefundProof(token, authSecret) {
+  if (!token || !authSecret || typeof token !== 'string' || token.indexOf('.') < 1) return null;
+  const dot = token.indexOf('.');
+  const payload = token.slice(0, dot);
+  const signature = token.slice(dot + 1);
+  const expected = await hmacHex(authSecret, 'kiwi-manager-refund-v1:' + payload);
+  if (!timingSafeEqualHex(signature, expected)) return null;
+  let body;
+  try { body = JSON.parse(new TextDecoder().decode(b64urlToBytes(payload))); } catch (_) { return null; }
+  if (!body || body.v !== 1 || !Number.isFinite(body.exp) || body.exp < Date.now()) return null;
+  return body;
+}
+
+// Identity attestation only: the receiving route still enforces merchant/till
+// authorization. Never trust a client-supplied display name as a PIN identity.
+export async function tillActorProof(secret, merchant, staff) {
+  if (!secret || !merchant || !staff?.id) return '';
+  const body = { merchant, id: staff.id, name: staff.name, role: staff.role, exp: Date.now() + 5 * 60000 };
+  const payload = bytesToB64url(encoder.encode(JSON.stringify(body)));
+  return payload + '.' + await hmacHex(secret, 'kiwi-till-actor-v1:' + payload);
+}
+export async function readTillActorProof(token, secret, merchant) {
+  if (!secret || typeof token !== 'string' || token.length > 2048 || !token.includes('.')) return null;
+  const [payload, signature] = token.split('.');
+  const expected = await hmacHex(secret, 'kiwi-till-actor-v1:' + payload);
+  if (!timingSafeEqualHex(signature || '', expected)) return null;
+  try {
+    const body = JSON.parse(new TextDecoder().decode(b64urlToBytes(payload)));
+    return body.merchant === merchant && body.id && Number.isFinite(body.exp) && body.exp > Date.now() ? body : null;
+  } catch (_) { return null; }
 }
 
 // ── Gate tokens (staff bypass + operator console) ───────────────────────────
@@ -98,20 +208,310 @@ export async function staffToken(sitePassword) {
 // not verify. Unforgeable without AUTH_SECRET; carries no expiry because a
 // pairing is meant to last until the merchant unpairs.
 export const TILL_COOKIE = 'kiwi_till';
+export const TERMINAL_COOKIE = 'kiwi_terminal';
 
-export async function tillToken(authSecret, merchant) {
+/* ── LE JETON DE CAISSE, ET COMMENT ON LE COUPE ────────────────────────────
+ * Il était `HMAC(secret, 'kiwi-till-v1:' + merchant)` : une FONCTION PURE du
+ * slug. Pas de nonce, pas d'identifiant d'appairage, pas d'horodatage, pas
+ * d'expiration, un cookie de 365 jours — et aucun chemin de révocation nulle
+ * part dans le dépôt, alors que le commentaire d'à côté promettait « until the
+ * merchant unpairs ». Tout appareil ayant appairé une fois gardait donc un
+ * accès permanent au carnet clients, au stock et aux documents : le téléphone
+ * d'un employé parti, une tablette revendue, un profil de navigateur oublié.
+ * La seule coupure possible était la rotation d'AUTH_SECRET, qui déconnecte
+ * TOUS les commerçants d'un coup.
+ *
+ * On ajoute donc un millésime par commerçant, `merchant_config.till_epoch`.
+ * Le jeton devient `<millésime>.<hmac>` et le millésime entre dans la
+ * signature. « Dépairer » = incrémenter le millésime : toutes les caisses de CE
+ * commerçant, et elles seules, doivent réappairer.
+ *
+ * Compatibilité : tant que le millésime vaut 0 — c'est-à-dire tant que personne
+ * n'a dépairé — l'ancienne forme reste acceptée, donc aucune caisse en service
+ * ne tombe au déploiement. Au premier dépairage, elle cesse de l'être : c'est
+ * exactement ce qu'on attend d'une révocation.
+ * ───────────────────────────────────────────────────────────────────────── */
+export async function tillToken(authSecret, merchant, epoch = 0) {
+  const n = Math.max(0, Math.round(Number(epoch) || 0));
+  const sig = await hmacHex(authSecret, 'kiwi-till-v2:' + String(merchant || '') + ':' + n);
+  return n + '.' + sig;
+}
+
+/* La forme d'avant le millésime. Conservée pour la reconnaître, jamais pour en
+ * émettre une nouvelle. */
+async function legacyTillToken(authSecret, merchant) {
   return hmacHex(authSecret, 'kiwi-till-v1:' + String(merchant || ''));
+}
+
+/* Le millésime coûte une lecture ; `isTillFor` est sur le chemin de presque
+ * chaque requête de caisse. On le garde donc en mémoire d'isolat une minute :
+ * une révocation met au pire soixante secondes à se propager, ce qui est le bon
+ * compromis pour un geste qui vise un appareil perdu, pas une intrusion en
+ * cours. Une lecture absente/échouée reste indisponible : elle ne doit jamais
+ * être convertie en epoch 0, qui rendrait un ancien jeton valide pendant une
+ * panne de révocation. */
+const TILL_EPOCH_TTL_MS = 60 * 1000;
+const tillEpochCaches = new WeakMap();
+const tillEpochCacheRefs = new Set();
+function tillEpochCacheFor(db) {
+  let cache = tillEpochCaches.get(db);
+  if (!cache) {
+    cache = new Map();
+    tillEpochCaches.set(db, cache);
+    tillEpochCacheRefs.add(cache);
+  }
+  return cache;
+}
+export async function tillEpoch(env, merchant) {
+  const key = String(merchant || '');
+  if (!key || !env || !env.DB) return null;
+  const cache = tillEpochCacheFor(env.DB);
+  const hit = cache.get(key);
+  if (hit && hit.until > Date.now()) return hit.value;
+  try {
+    const row = await env.DB.prepare(
+      'SELECT till_epoch FROM merchant_config WHERE merchant = ?'
+    ).bind(key).first();
+    if (!row) return null;
+    const value = Math.max(0, Math.round(Number(row.till_epoch) || 0));
+    cache.set(key, { value, until: Date.now() + TILL_EPOCH_TTL_MS });
+    return value;
+  } catch (_) { return null; }
+}
+export function forgetTillEpoch(merchant, db = null) {
+  const key = String(merchant || '');
+  if (db && typeof db === 'object') {
+    const cache = tillEpochCaches.get(db);
+    if (cache) cache.delete(key);
+    return;
+  }
+  for (const cache of tillEpochCacheRefs) cache.delete(key);
+}
+
+export async function terminalToken(authSecret, merchant, terminalId) {
+  return hmacHex(authSecret, 'kiwi-terminal-v1:' + String(merchant || '') + ':' + String(terminalId || ''));
+}
+
+// Stable, store-scoped proof written to the physical attendance NFC tag. The
+// employee still needs their own authenticated session; this token only proves
+// that their phone opened the tag installed at that specific establishment.
+export async function attendanceTagToken(authSecret, merchant) {
+  return hmacHex(authSecret, 'kiwi-attendance-v1:' + String(merchant || ''));
+}
+export async function isAttendanceTagFor(token, env, merchant) {
+  if (!token || !env || !env.AUTH_SECRET || !merchant) return false;
+  return timingSafeEqualHex(String(token), await attendanceTagToken(env.AUTH_SECRET, merchant));
 }
 export function tillCookie(value) {
   return `${TILL_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${365 * 86400}`;
 }
+export function terminalCookie(value) {
+  return `${TERMINAL_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${365 * 86400}`;
+}
 // True when the request proves it is the till of `merchant`.
 export async function isTillFor(request, env, merchant) {
+  const result = await tillVerification(request, env, merchant);
+  return result.ok;
+}
+export async function tillVerification(request, env, merchant) {
   const secret = env && env.AUTH_SECRET;
-  if (!secret || !merchant) return false;
+  if (!secret || !merchant) return { ok: false };
   const got = readCookie(request, TILL_COOKIE);
+  if (!got) return { ok: false };
+  const epoch = await tillEpoch(env, merchant);
+  if (!Number.isFinite(epoch)) return { ok: false, unavailable: true };
+  if (timingSafeEqualHex(got, await tillToken(secret, merchant, epoch))) return { ok: true };
+  /* L'ancienne forme n'est reconnue que tant que personne n'a dépairé. */
+  if (epoch === 0) return { ok: timingSafeEqualHex(got, await legacyTillToken(secret, merchant)) };
+  return { ok: false };
+}
+export async function isTerminalFor(request, env, merchant, terminalId) {
+  const secret = env && env.AUTH_SECRET;
+  if (!secret || !merchant || !terminalId) return false;
+  const got = readCookie(request, TERMINAL_COOKIE);
   if (!got) return false;
-  return timingSafeEqualHex(got, await tillToken(secret, merchant));
+  return timingSafeEqualHex(got, await terminalToken(secret, merchant, terminalId));
+}
+
+// ── Employee app session ─────────────────────────────────────────────────────
+// A staff PIN is checked once by /api/employee. The browser then receives a
+// short-lived, httpOnly session scoped to exactly one employee and one store.
+// Keeping the PIN out of the token means it is never replayed by page script or
+// stored in localStorage; deleting the staff_pins row still revokes the session
+// because every employee API call re-checks that row.
+export const EMPLOYEE_COOKIE = 'kiwi_employee';
+// An employee may reload or reopen the installed web app during a shift. The
+// live roster is revalidated on every request, so a longer cookie does not keep
+// a deleted employee active; it only prevents a browser reload from becoming
+// an accidental clock-out.
+const EMPLOYEE_SESSION_MS = 30 * 24 * 60 * 60 * 1000;
+
+export async function employeeToken(authSecret, employee) {
+  const payload = {
+    merchant: String(employee && employee.merchant || '').slice(0, 64),
+    staffId: String(employee && employee.staffId || '').slice(0, 96),
+    av: Math.max(0, Math.round(Number(employee && employee.authVersion) || 0)),
+    exp: Date.now() + EMPLOYEE_SESSION_MS,
+  };
+  const body = bytesToB64url(encoder.encode(JSON.stringify(payload)));
+  return body + '.' + await hmacHex(authSecret, 'kiwi-employee-v1:' + body);
+}
+
+export async function readEmployee(request, env) {
+  const secret = env && env.AUTH_SECRET;
+  const raw = readCookie(request, EMPLOYEE_COOKIE);
+  if (!secret || !raw) return null;
+  const dot = raw.lastIndexOf('.');
+  if (dot <= 0) return null;
+  const body = raw.slice(0, dot);
+  const want = await hmacHex(secret, 'kiwi-employee-v1:' + body);
+  if (!timingSafeEqualHex(raw.slice(dot + 1), want)) return null;
+  try {
+    const payload = JSON.parse(new TextDecoder().decode(b64urlToBytes(body)));
+    if (!payload || !payload.merchant || !payload.staffId || Number(payload.exp) <= Date.now()) return null;
+    return payload;
+  } catch (_) { return null; }
+}
+
+export function employeeCookie(value) {
+  return `${EMPLOYEE_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${Math.floor(EMPLOYEE_SESSION_MS / 1000)}`;
+}
+
+// Même raison que sessionNeedsRefresh, côté employé : la session de service a
+// elle aussi une fenêtre fixe, et l'app employé d'une salle qui tourne tous les
+// jours n'a aucune raison de redemander un code au bout d'un mois pile.
+export function employeeNeedsRefresh(payload) {
+  if (!payload || typeof payload.exp !== 'number') return false;
+  return payload.exp - Date.now() < EMPLOYEE_SESSION_MS / 2;
+}
+
+/* Team and employee-access are replaceable sync payloads. They may therefore
+ * lag a successful PIN write. The durable revision is the authorization
+ * source; a document is usable only when it agrees with it.
+ *
+ * A row-less revision is tolerated only for an explicitly zero-version
+ * document, preserving old never-rotated rosters during migration. A missing
+ * table, failed read, or malformed row is unavailable — never implicit zero. */
+export async function employeeAuthRevision(env, merchant, memberId, documentVersion = 0) {
+  const docVersion = Math.max(0, Math.round(Number(documentVersion) || 0));
+  const store = String(merchant || '').trim();
+  const member = String(memberId || '').trim();
+  if (!env || !env.DB || !store || !member) return { ok: false, unavailable: true };
+  try {
+    const row = await env.DB.prepare(
+      'SELECT auth_version FROM employee_auth_versions WHERE merchant = ? AND member_id = ?'
+    ).bind(store, member).first();
+    if (!row) return docVersion === 0
+      ? { ok: true, version: 0, legacy: true }
+      : { ok: false, unavailable: true };
+    const durable = Number(row.auth_version);
+    if (!Number.isInteger(durable) || durable < 0 || durable !== docVersion) {
+      return { ok: false, unavailable: false, version: Number.isInteger(durable) ? durable : null };
+    }
+    return { ok: true, version: durable, legacy: false };
+  } catch (_) {
+    return { ok: false, unavailable: true };
+  }
+}
+
+// Resolve the credentials the owner records on Dashboard → Équipe. Email is
+// read from the private access mirror written with the cashier PIN roster. Old
+// stores without that mirror still fall back to their Team document.
+export async function findEmployeeCredential(env, emailValue, pinValue) {
+  const email = String(emailValue || '').trim().toLocaleLowerCase('en').slice(0, 254);
+  const pin = String(pinValue || '').trim();
+  if (!env || !env.DB || !/^\S+@\S+\.\S+$/.test(email) || !/^\d{4}$/.test(pin)) return null;
+
+  let docs;
+  try {
+    docs = await env.DB.prepare(
+      "SELECT merchant, feature, data, updated_ts FROM store_docs WHERE feature IN ('employee-access', 'team')"
+    ).all();
+  } catch (_) { return null; }
+
+  const rows = (docs && docs.results) || [];
+  const byMerchant = new Map();
+  rows.forEach((row) => {
+    const merchant = String(row.merchant || '');
+    if (!merchant) return;
+    const pair = byMerchant.get(merchant) || {};
+    pair[row.feature === 'employee-access' ? 'access' : 'team'] = row;
+    byMerchant.set(merchant, pair);
+  });
+  const matches = [];
+  const seen = new Set();
+  for (const [merchant, pair] of byMerchant) {
+    let accessDoc = null, teamDoc = null;
+    try {
+      accessDoc = pair.access ? JSON.parse(pair.access.data || '{}') : null;
+    } catch (_) {
+      console.error('[auth] Corrupted JSON in access document for merchant', merchant);
+    }
+    try {
+      teamDoc = pair.team ? JSON.parse(pair.team.data || '{}') : null;
+    } catch (_) {
+      console.error('[auth] Corrupted JSON in team document for merchant', merchant);
+    }
+    const accessMembers = Array.isArray(accessDoc && accessDoc.members) ? accessDoc.members : [];
+    const teamMembers = Array.isArray(teamDoc && teamDoc.members) ? teamDoc.members : [];
+    const accessIdentity = accessMembers.find((member) =>
+      String((member && member.email) || '').trim().toLocaleLowerCase('en') === email);
+    // The mirror wins for an identity it knows (including a changed PIN). If it
+    // does not know the employee, a NEWER Team document is a newly saved hire,
+    // not a deleted account resurrected from stale data.
+    const teamIsNewer = !pair.access
+      || Number((pair.team && pair.team.updated_ts) || 0) > Number(pair.access.updated_ts || 0);
+    const members = accessIdentity ? [accessIdentity] : (teamIsNewer ? teamMembers : []);
+    for (const member of members) {
+      const memberEmail = String((member && member.email) || '').trim().toLocaleLowerCase('en');
+      const memberPin = String((member && (member.pinCode || member.password)) || '').trim();
+      const venue = String((member && member.venueSlug) || '').trim();
+      if (venue && venue !== merchant) continue;
+      const key = `${merchant}:${String((member && member.id) || '')}`;
+      if (memberEmail === email && memberPin === pin && !seen.has(key)) {
+        seen.add(key);
+        matches.push({ merchant, member });
+      }
+    }
+  }
+  // Never guess which workplace the person meant. The owner can resolve a rare
+  // duplicate by giving that employee a different PIN in one of the stores.
+  if (matches.length !== 1) return matches.length > 1 ? { ambiguous: true } : null;
+
+  const match = matches[0];
+  const memberId = String((match.member && match.member.id) || '').trim().slice(0, 96);
+  if (!memberId) return null;
+  try {
+    // `status` is an OPTIONAL column — a database that predates the per-store
+    // suspension migration simply has none. Naming it in the SELECT turns that
+    // missing ALTER into "no such column", and the catch below reports the throw
+    // as a failed credential: every employee of every store told their PIN is
+    // wrong, with the right PIN, forever. Read the row whole so an absent column
+    // arrives as undefined, and read undefined as active — the same way the rest
+    // of the schema treats a store that has never been suspended.
+    const cfg = await env.DB.prepare(
+      'SELECT * FROM merchant_config WHERE merchant = ? LIMIT 1'
+    ).bind(match.merchant).first();
+    if (!cfg) return null;
+    const documentVersion = Math.max(0, Math.round(Number(match.member.authVersion) || 0));
+    const revision = await employeeAuthRevision(env, match.merchant, memberId, documentVersion);
+    if (!revision.ok) return null;
+    return {
+      id: memberId,
+      merchant: match.merchant,
+      pin,
+      name: [match.member.firstName, match.member.lastName].filter(Boolean).join(' ').trim(),
+      role: String(match.member.function || match.member.department || 'staff'),
+      status: cfg.status || 'active',
+      type: cfg.type,
+      authVersion: revision.version,
+      member: match.member,
+    };
+  } catch (_) { return null; }
+}
+
+export function clearEmployeeCookie() {
+  return `${EMPLOYEE_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 }
 export async function operatorToken(authSecret) {
   return hmacHex(authSecret, 'kiwi-operator-v1');
@@ -291,9 +691,10 @@ export async function sendMail(env, msg) {
 }
 
 // Session token = base64url(JSON{aid,exp}) + "." + HMAC(secret, payload).
-export async function makeSession(accountId, secret) {
+export async function makeSession(accountId, secret, sessionVersion = 0) {
   const exp = Date.now() + SESS_DAYS * 86400 * 1000;
-  const payload = bytesToB64url(encoder.encode(JSON.stringify({ aid: accountId, exp })));
+  const sv = Math.max(0, Math.round(Number(sessionVersion) || 0));
+  const payload = bytesToB64url(encoder.encode(JSON.stringify({ aid: accountId, sv, exp })));
   const sig = await hmacHex(secret, payload);
   return payload + '.' + sig;
 }
@@ -311,11 +712,45 @@ export async function readSession(token, secret) {
   return obj;
 }
 
+/* A signed cookie proves integrity, not that the account is still active. Any
+ * owner-only route that is called directly (or is reached through a valid till
+ * cookie) must use this database-backed check before treating the session as
+ * an account identity. Missing/failed revocation reads deny the identity. */
+export async function activeAccountSession(request, env) {
+  if (!env || !env.DB || !env.AUTH_SECRET) return null;
+  const session = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+  if (!session || !session.aid) return null;
+  try {
+    const row = await env.DB.prepare(
+      'SELECT status, session_epoch FROM accounts WHERE id = ?'
+    ).bind(session.aid).first();
+    if (!row || String(row.status || 'active').trim().toLowerCase() === 'suspended') return null;
+    const expected = Math.max(0, Math.round(Number(row.session_epoch) || 0));
+    const presented = Math.max(0, Math.round(Number(session.sv) || 0));
+    return expected === presented ? session : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 export function sessionCookie(value) {
   return `${SESS_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESS_DAYS * 86400}`;
 }
 export function clearSessionCookie() {
   return `${SESS_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+}
+
+// Une caisse en mode kiosque ne se reconnecte jamais d'elle-même : on l'allume
+// le matin, on l'éteint le soir, et personne ne retape jamais un mot de passe.
+// Avec une fenêtre FIXE de 30 jours elle finit donc, un matin sur trente, sur
+// l'écran de connexion au lieu du comptoir — et le commerçant ouvre sans caisse.
+// Le jeton est donc réémis dès qu'il a passé la moitié de sa vie : un appareil
+// qui sert reste connecté indéfiniment, un appareil oublié expire toujours au
+// bout de 30 jours. Ne prolonge AUCUN droit : la révocation reste vérifiée en
+// base à chaque requête, et un compte supprimé est coupé au chargement suivant.
+export function sessionNeedsRefresh(sess) {
+  if (!sess || typeof sess.exp !== 'number') return false;
+  return sess.exp - Date.now() < (SESS_DAYS * 86400 * 1000) / 2;
 }
 
 export function readCookie(request, name) {
@@ -328,10 +763,11 @@ export function readCookie(request, name) {
   return null;
 }
 
-export function json(obj, status) {
+export function json(obj, status, extraHeaders) {
+  const headers = Object.assign({ 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, extraHeaders || {});
   return new Response(JSON.stringify(obj), {
     status: status || 200,
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    headers,
   });
 }
 
@@ -441,6 +877,25 @@ export async function storeOwner(env, slug) {
   } catch (_) { return null; }
 }
 
+/* Ce slug appartient-il NOMMÉMENT à quelqu'un d'autre ?
+ *
+ * Le slug d'un compte est dérivé de `accounts.business`, que l'utilisateur
+ * choisit lui-même et que rien n'oblige à être unique : deux comptes peuvent
+ * donc revendiquer le même. Le registre est le seul à savoir lequel le possède
+ * réellement, et jusqu'ici personne ne le lui demandait sur ce chemin.
+ *
+ * On ne refuse QUE sur une réponse positive : un autre compte nommé propriétaire.
+ * '' (boutique jamais revendiquée) et null (base non migrée, ou D1 en panne)
+ * rendent la main comme avant. C'est ce qui rend la garde sûre à déployer : un
+ * propriétaire légitime ne peut pas se retrouver enfermé dehors par elle, même
+ * pendant une panne de base — le seul cas refusé est celui où la base affirme
+ * que la boutique est à un autre. */
+export async function slugClaimedByOther(env, slug, aid) {
+  if (!slug || !aid) return false;
+  const owner = await storeOwner(env, slug);
+  return typeof owner === 'string' && owner !== '' && owner !== aid;
+}
+
 export async function entitledMerchant(request, env, asked, opts) {
   asked = String(asked || '').slice(0, 64);
   /* No auth configured at all (local static server, preview without secrets):
@@ -450,6 +905,17 @@ export async function entitledMerchant(request, env, asked, opts) {
 
   if (opts && opts.allowTill && asked) {
     try { if (await isTillFor(request, env, asked)) return asked; } catch (_) {}
+  }
+  /* The employee app has its own short-lived, store-scoped cookie. It used to
+   * open /api/employee only, so the waiter UI could say "commande envoyée"
+   * while /api/order/queue rejected the request at the tenant boundary. Validate
+   * the employee against the live Team document on every use: removing someone
+   * from Dashboard → Équipe revokes this access immediately. */
+  if (opts && opts.allowEmployee && asked) {
+    try {
+      const employee = await activeServiceEmployee(request, env, asked);
+      if (employee) return asked;
+    } catch (_) {}
   }
   /* God mode, BEFORE the account session — the console is opened from a browser
    * that is normally ALSO signed in as a merchant (the site gate admits real
@@ -466,7 +932,7 @@ export async function entitledMerchant(request, env, asked, opts) {
     try { if (await isOperator(request, env)) return asked; } catch (_) {}
   }
   try {
-    const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+    const sess = await activeAccountSession(request, env);
     if (sess && sess.aid && env.DB) {
       const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
       if (!(acc && acc.business)) return '';
@@ -481,11 +947,109 @@ export async function entitledMerchant(request, env, asked, opts) {
        * behind. An unowned or unclaimed slug still snaps back to the account,
        * so nothing widens beyond the caller's own shops. */
       if (asked && asked !== accSlug && (await storeOwner(env, asked)) === sess.aid) return asked;
+      /* Le repli sur le slug du compte était le trou : il rendait `accSlug` sans
+       * jamais demander à qui appartient cette boutique. Quiconque s'inscrivait
+       * avec le nom d'un commerçant existant héritait de son tenant. */
+      if (await slugClaimedByOther(env, accSlug, sess.aid)) return '';
       return accSlug;
     }
   } catch (_) { /* fall through to operator / demo */ }
   try { if (await isOperator(request, env)) return asked; } catch (_) {}
   return DEMO_MERCHANTS[asked] ? asked : '';
+}
+
+/* A signed employee cookie is not enough on its own: the member must still be
+ * present in this store's Team document. This helper is intentionally exported
+ * so the edge gate and staff-only endpoints enforce the same revocation rule. */
+export async function activeEmployee(request, env, asked) {
+  if (!env || !env.DB || !env.AUTH_SECRET) return null;
+  const session = await readEmployee(request, env);
+  if (!session || !session.merchant || !session.staffId) return null;
+  if (asked && String(session.merchant) !== String(asked)) return null;
+  try {
+    const [access, team] = await Promise.all([
+      env.DB.prepare("SELECT data, updated_ts FROM store_docs WHERE merchant = ? AND feature = 'employee-access'")
+        .bind(session.merchant).first(),
+      env.DB.prepare("SELECT data, updated_ts FROM store_docs WHERE merchant = ? AND feature = 'team'")
+        .bind(session.merchant).first(),
+    ]);
+    const accessDoc = JSON.parse((access && access.data) || '{}');
+    const teamDoc = JSON.parse((team && team.data) || '{}');
+    const find = (doc) => (Array.isArray(doc.members) ? doc.members : [])
+      .find((m) => m && String(m.id || '') === String(session.staffId));
+    const accessMember = find(accessDoc);
+    const teamMember = find(teamDoc);
+    const teamIsNewer = !access || Number((team && team.updated_ts) || 0) > Number(access.updated_ts || 0);
+    const member = accessMember
+      ? { ...(teamMember || {}), ...accessMember }
+      : (teamIsNewer ? teamMember : null);
+    if (member) {
+      const expected = Math.max(0, Math.round(Number(member.authVersion) || 0));
+      const presented = Math.max(0, Math.round(Number(session.av) || 0));
+      const revision = await employeeAuthRevision(env, session.merchant, session.staffId, expected);
+      if (!revision.ok || presented !== revision.version) return null;
+    }
+    return member ? { session, member, merchant: session.merchant } : null;
+  } catch (_) { return null; }
+}
+
+function normEmployeeRole(value) {
+  let s = String(value || '').trim().toLowerCase();
+  try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
+  return s.replace(/[’`´]/g, "'").replace(/\s+/g, ' ');
+}
+
+/* A personal PIN identifies every employee in the employee app, but opening a
+ * cash register is a separate permission. Keep this server-side too: filtering
+ * only in caisse JavaScript would let a crafted request reuse a server's PIN on
+ * privileged till actions. Owners, managers and cashiers are all authorized.
+ * `staff` is the single legacy onboarding role kept for stores created before
+ * explicit job assignments existed. */
+export function employeeRoleOpensTill(value) {
+  const role = normEmployeeRole(value);
+  return new Set([
+    'caisse', 'caissier', 'caissiere', 'cashier',
+    'manager', 'management', 'gerant', 'gerante', 'responsable', 'responsable rayon',
+    'proprietaire', 'owner', 'patron', 'patronne', 'direction', 'directeur', 'directrice', 'admin',
+    'staff',
+  ]).has(role);
+}
+
+/* Le TABLEAU DE BORD est la surface du patron — l'argent, les marges, la paie.
+ * Un code de caissier ouvre la caisse, jamais le dashboard. Cette frontière se
+ * tient ICI, côté serveur : verifyAccountPin ne reconnaît que ces rôles, donc
+ * aucun navigateur ne peut « oublier » de filtrer. Les managers passent parce
+ * qu'ils ont leur propre vue restreinte (assets/roleGate.js). */
+export function employeeRoleOpensDashboard(value) {
+  const role = normEmployeeRole(value);
+  return new Set([
+    'proprietaire', 'owner', 'patron', 'direction',
+    'manager', 'management', 'gerant', 'gerante', 'admin',
+  ]).has(role);
+}
+
+/* Only an employee who works service AND currently has an open attendance
+ * entry may use the operational order/event channels. Kitchen, dishwasher and
+ * off-shift accounts remain confined to /api/employee (schedule, hours and
+ * clock-in/out). */
+export async function activeServiceEmployee(request, env, asked) {
+  const employee = await activeEmployee(request, env, asked);
+  if (!employee) return null;
+  const role = normEmployeeRole(employee.member.function || employee.member.department);
+  const service = new Set([
+    'serveur', 'chef de rang', "maitre d'hotel", 'sommelier', 'barman',
+    "hote d'accueil", 'salle', 'service', 'manager', 'proprietaire',
+  ]);
+  if (!service.has(role)) return null;
+  try {
+    const row = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'attendance'")
+      .bind(employee.merchant).first();
+    const doc = JSON.parse((row && row.data) || '{}');
+    const open = (Array.isArray(doc.entries) ? doc.entries : []).find((entry) =>
+      entry && !entry.outTs
+      && String(entry.memberId || entry.staffId || '') === String(employee.session.staffId));
+    return open ? { ...employee, attendance: open } : null;
+  } catch (_) { return null; }
 }
 
 /* ─────────────────────── ATTEMPT LIMITER (brute force) ───────────────────────
@@ -501,15 +1065,27 @@ export async function entitledMerchant(request, env, asked, opts) {
  * appairage raté bloquerait une connexion, et l'opérateur partagerait son
  * quota avec les caisses.
  *
- * Toujours « fail open » : si la table manque ou que D1 tousse, on laisse
- * passer. Un limiteur cassé ne doit jamais empêcher un commerçant d'entrer
- * chez lui.
+ * Le compteur est une dépendance d'autorisation : si la table manque ou que
+ * D1 tousse, l'appelant reçoit un 503 récupérable. Un limiteur cassé ne doit
+ * jamais être confondu avec une absence d'échec enregistré.
  * ───────────────────────────────────────────────────────────────────────── */
 const LIMIT_WINDOW_MS = 15 * 60 * 1000;   // fenêtre d'observation
 const LIMIT_BLOCK_MS  = 15 * 60 * 1000;   // durée du blocage
 const LIMIT_MAX_FAILS = 8;                // essais ratés tolérés par fenêtre
 
-function limiterKey(request, scope) {
+/* Un compteur rattaché à la CIBLE, pas seulement à la source. Sans lui, un
+ * attaquant change d'adresse IP et repart à zéro sur le même compte ; avec lui,
+ * la cible garde son propre plafond quoi qu'il arrive. On range une empreinte
+ * tronquée et non l'adresse elle-même : `pair_attempts` ne doit pas devenir un
+ * annuaire des e-mails des employés. Ce n'est pas un secret, seulement une clé. */
+export async function targetKey(authSecret, kind, value) {
+  const v = String(value || '').trim().toLowerCase();
+  if (!v || !authSecret) return '';
+  return kind + ':' + (await hmacHex(authSecret, 'kiwi-limiter-v1:' + kind + ':' + v)).slice(0, 16);
+}
+
+function limiterKey(request, scope, identity = '') {
+  if (identity) return `${scope}|${identity}`;
   const ip = request.headers.get('CF-Connecting-IP')
           || request.headers.get('X-Forwarded-For')
           || '';
@@ -519,9 +1095,10 @@ function limiterKey(request, scope) {
 /* Déjà bloqué ? Vérifié AVANT de regarder le code, pour qu'une entrée
    malformée ne serve pas de sonde gratuite. Renvoie une Response 429 à
    retourner telle quelle, ou null si la voie est libre. */
-export async function limitCheck(request, env, scope) {
-  const k = limiterKey(request, scope);
-  if (!k || !env.DB) return null;
+export async function limitCheck(request, env, scope, identity = '') {
+  const k = limiterKey(request, scope, identity);
+  if (!k) return null;
+  if (!env || !env.DB) return rateLimitUnavailable();
   try {
     const a = await env.DB.prepare(
       'SELECT blocked_until FROM pair_attempts WHERE ip = ?'
@@ -530,39 +1107,258 @@ export async function limitCheck(request, env, scope) {
     if (a && a.blocked_until && a.blocked_until > now) {
       return json({ error: 'too_many_attempts', retry_after: Math.ceil((a.blocked_until - now) / 1000) }, 429);
     }
-  } catch (_) { /* pas de table → pas de limiteur */ }
+  } catch (_) { return rateLimitUnavailable(); }
   return null;
 }
 
 /* Un essai raté de plus. Fenêtre glissante par redémarrage : passé
    LIMIT_WINDOW_MS la ligne repart à 1, donc elle expire d'elle-même. */
-export async function limitFail(request, env, scope) {
-  const k = limiterKey(request, scope);
-  if (!k || !env.DB) return;
+export async function limitFail(request, env, scope, identity = '') {
+  const k = limiterKey(request, scope, identity);
+  if (!k) return true;
+  if (!env || !env.DB) return false;
   const now = Date.now();
   try {
-    const a = await env.DB.prepare(
-      'SELECT fails, first_ts FROM pair_attempts WHERE ip = ?'
-    ).bind(k).first();
-    if (!a || (now - a.first_ts) > LIMIT_WINDOW_MS) {
-      await env.DB.prepare(
-        `INSERT INTO pair_attempts (ip, fails, first_ts, blocked_until) VALUES (?, 1, ?, NULL)
-         ON CONFLICT(ip) DO UPDATE SET fails = 1, first_ts = excluded.first_ts, blocked_until = NULL`
-      ).bind(k, now).run();
-      return;
-    }
-    const fails = (a.fails || 0) + 1;
-    const blocked = fails >= LIMIT_MAX_FAILS ? (now + LIMIT_BLOCK_MS) : null;
-    await env.DB.prepare(
-      'UPDATE pair_attempts SET fails = ?, blocked_until = ? WHERE ip = ?'
-    ).bind(fails, blocked, k).run();
-  } catch (_) { /* limiteur indisponible → on laisse passer */ }
+    /* One SQLite statement owns the increment. A read followed by an UPDATE
+     * lets concurrent failed guesses overwrite one another and undercount. */
+    const result = await env.DB.prepare(
+      `INSERT INTO pair_attempts (ip, fails, first_ts, blocked_until) VALUES (?, 1, ?, NULL)
+       ON CONFLICT(ip) DO UPDATE SET
+         fails = CASE WHEN ? - pair_attempts.first_ts > ? THEN 1 ELSE pair_attempts.fails + 1 END,
+         first_ts = CASE WHEN ? - pair_attempts.first_ts > ? THEN ? ELSE pair_attempts.first_ts END,
+         blocked_until = CASE
+           WHEN ? - pair_attempts.first_ts > ? THEN NULL
+           WHEN pair_attempts.fails + 1 >= ? THEN ?
+           ELSE pair_attempts.blocked_until END`
+    ).bind(k, now, now, LIMIT_WINDOW_MS, now, LIMIT_WINDOW_MS, now,
+           now, LIMIT_WINDOW_MS, LIMIT_MAX_FAILS, now + LIMIT_BLOCK_MS).run();
+    const changes = Number(result && result.meta && result.meta.changes);
+    return Number.isFinite(changes) ? changes > 0 : true;
+  } catch (_) { return false; }
 }
 
 /* Entrée réussie : on efface l'ardoise, pour qu'un commerçant qui s'est
    trompé deux fois avant de réussir ne traîne pas son compteur. */
-export async function limitClear(request, env, scope) {
-  const k = limiterKey(request, scope);
-  if (!k || !env.DB) return;
-  try { await env.DB.prepare('DELETE FROM pair_attempts WHERE ip = ?').bind(k).run(); } catch (_) {}
+export async function limitClear(request, env, scope, identity = '') {
+  const k = limiterKey(request, scope, identity);
+  if (!k) return true;
+  if (!env || !env.DB) return false;
+  try { await env.DB.prepare('DELETE FROM pair_attempts WHERE ip = ?').bind(k).run(); return true; } catch (_) { return false; }
+}
+
+export function rateLimitUnavailable() {
+  return json({ error: 'rate-limit-unavailable' }, 503);
+}
+
+/* ─────────────────────── VÉRIFICATION DU CODE PERSONNEL ───────────────────────
+ * Un seul point d'entrée pour valider le code d'un membre du personnel côté
+ * serveur. Partagé entre /api/pin/verify (déverrouillage de caisse) et
+ * /api/sale/cancel (annulation de vente par un manager).
+ *
+ * Propriétés indispensables :
+ *  1. Limiteur de force brute : 10 000 combinaisons pour un code à 4 chiffres.
+ *     Sans plafond, un script découvre tous les codes en quelques minutes.
+ *  2. Frontière d'accès : réservé aux caisses appairées (isTillFor), aux
+ *     propriétaires connectés (entitledMerchant) et aux opérateurs nommés.
+ *  3. Projection stricte : ne sélectionne et ne retourne JAMAIS le code PIN,
+ *     uniquement l'identité { id, name, role }.
+ * ───────────────────────────────────────────────────────────────────────── */
+export async function verifyStaffPin(request, env, merchant, pin, { requireTill = true } = {}) {
+  if (!env || !env.DB) return { ok: false, error: 'not-configured', status: 503 };
+  merchant = slugMerchant(merchant);
+  pin = String(pin || '').trim();
+
+  if (!merchant || !/^\d{4}$/.test(pin)) {
+    return { ok: false, error: 'bad-pin', status: 401 };
+  }
+
+  // Determine and verify caller identity first:
+  // Requester must prove they are a paired till for this merchant (isTillFor HMAC),
+  // an authenticated session owner of this merchant (readSession signature), or a named operator.
+  let identity = '';
+  let authorized = false;
+
+  const till = await tillVerification(request, env, merchant);
+  if (till.unavailable && requireTill) {
+    return { ok: false, response: json({ error: 'auth-verification-unavailable' }, 503) };
+  }
+  if (till.ok) {
+    authorized = true;
+    identity = `till:${merchant}`;
+  } else {
+    const sess = await activeAccountSession(request, env);
+    if (sess && sess.aid) {
+      const entitled = await entitledMerchant(request, env, merchant);
+      if (entitled === merchant) {
+        authorized = true;
+        identity = `sess:${sess.aid}`;
+      }
+    }
+    if (!authorized) {
+      const isOp = await isOperator(request, env);
+      if (isOp) {
+        authorized = true;
+        identity = 'op:named';
+      }
+    }
+  }
+
+  if (requireTill && !authorized) {
+    return { ok: false, error: 'forbidden-till', status: 403 };
+  }
+
+  /* Le seau est commun à TOUS les codes de la boutique, et `limitClear`
+   * supprimait la ligne : un encaisseur qui connaît son propre code alternait
+   * sept essais faux et un vrai, et le compteur ne montait jamais — les 10 000
+   * combinaisons à quatre chiffres tombaient en une quarantaine de minutes.
+   * Un succès ne remet donc plus le compteur à zéro ici (voir plus bas) ;
+   * huit essais par quart d'heure restent larges pour un doigt qui glisse. */
+  // Attempt rate-limiting by scope: 'pin:<merchant>' keyed on proven identity (or IP if unauthenticated)
+  const blocked = await limitCheck(request, env, `pin:${merchant}`, identity);
+  if (blocked) return { ok: false, response: blocked };
+
+  let staff;
+  try {
+    // 1. First look up directly in this merchant's staff_pins
+    staff = await env.DB.prepare(
+      'SELECT id, name, role FROM staff_pins WHERE merchant = ? AND pin = ? LIMIT 1'
+    ).bind(merchant, pin).first();
+
+    // 2. If not found in this specific store, check if this PIN belongs to an OWNER or MANAGER across the merchant's account
+    if (!staff) {
+      let accountId = null;
+      try {
+        const cfg = await env.DB.prepare(
+          'SELECT account_id FROM merchant_config WHERE merchant = ? LIMIT 1'
+        ).bind(merchant).first();
+        if (cfg && cfg.account_id) accountId = cfg.account_id;
+      } catch (_) {}
+
+      /* Ici vivait un repli sur la session de l'APPELANT : quand la boutique
+       * visée n'avait pas d'account_id au registre — le cas des boutiques
+       * préparées par l'opérateur et de celles créées par le chemin de semis —
+       * la recherche élargie se faisait sur le compte de celui qui demande.
+       * N'importe qui pouvait donc créer un compte Kiwi gratuit, s'y donner un
+       * code de rôle propriétaire, et l'utiliser depuis la caisse d'un AUTRE
+       * commerçant pour annuler ses ventes et déverrouiller son manager, sans
+       * connaître un seul de ses codes — l'audit portant le nom de l'attaquant.
+       *
+       * Sans propriétaire au registre, il n'y a pas de compte à élargir : on
+       * s'en tient au code de la boutique elle-même. */
+
+      if (accountId) {
+        try {
+          const r = await env.DB.prepare(
+            `SELECT p.id, p.name, p.role
+               FROM staff_pins p
+               JOIN merchant_config c ON c.merchant = p.merchant
+              WHERE c.account_id = ? AND p.pin = ?
+              ORDER BY p.created_ts
+              LIMIT 10`
+          ).bind(accountId, pin).all();
+
+          const candidates = r.results || [];
+          const leader = candidates.find((c) => employeeRoleOpensDashboard(c.role) || employeeRoleOpensTill(c.role));
+          if (leader) staff = leader;
+        } catch (_) {}
+      }
+    }
+  } catch (_) {
+    return { ok: false, error: 'staff-unavailable', status: 503 };
+  }
+
+  if (!staff) {
+    if (!await limitFail(request, env, `pin:${merchant}`, identity)) {
+      return { ok: false, response: rateLimitUnavailable() };
+    }
+    return { ok: false, error: 'bad-pin', status: 401 };
+  }
+
+  return {
+    ok: true,
+    staff: {
+      id: String(staff.id || ''),
+      name: String(staff.name || ''),
+      role: String(staff.role || ''),
+    },
+  };
+}
+
+/* ──────────────── LE MÊME CODE, MAIS POUR TOUT UN COMPTE ────────────────────
+ * Le dashboard est la surface du PATRON et il embrasse tous ses établissements :
+ * son code doit l'ouvrir depuis n'importe lequel, alors que les codes sont rangés
+ * par BOUTIQUE (`staff_pins.merchant`). C'est exactement la question à laquelle
+ * `GET /api/config?accountPins=owners` répondait — en expédiant les codes au
+ * navigateur pour qu'il compare lui-même. Il les compare désormais ici.
+ *
+ * Dérivé de la SESSION, jamais d'un paramètre : on ne cherche que dans les
+ * boutiques que ce compte possède réellement (`merchant_config.account_id`), plus
+ * son slug d'origine pour une base pas encore migrée. Même limiteur, même
+ * projection stricte que verifyStaffPin : { id, name, role } et le slug où le
+ * code a été trouvé — jamais le code.
+ * ───────────────────────────────────────────────────────────────────────── */
+export async function verifyAccountPin(request, env, pin) {
+  if (!env || !env.DB || !env.AUTH_SECRET) return { ok: false, error: 'not-configured', status: 503 };
+  pin = String(pin || '').trim();
+  if (!/^\d{4}$/.test(pin)) return { ok: false, error: 'bad-pin', status: 401 };
+
+  let sess = null;
+  try { sess = await activeAccountSession(request, env); } catch (_) {}
+  if (!sess || !sess.aid) return { ok: false, error: 'unauthorized', status: 401 };
+
+  let accSlug = '';
+  try {
+    const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
+    if (acc && acc.business) accSlug = slugMerchant(acc.business);
+  } catch (_) {}
+
+  const identity = `sess:${sess.aid}`;
+  const blocked = await limitCheck(request, env, 'pin:account', identity);
+  if (blocked) return { ok: false, response: blocked };
+
+  /* Plusieurs personnes peuvent partager quatre chiffres (le patron d'une
+   * boutique, la caissière d'une autre). On lit donc les CANDIDATS, puis on ne
+   * retient que le premier rôle habilité au dashboard : un code de caissier ne
+   * l'ouvre JAMAIS, même s'il est le seul enregistré. Avant ce filtre, le code
+   * de n'importe quel employé déverrouillait la surface du patron. */
+  let rows = [];
+  try {
+    const r = await env.DB.prepare(
+      `SELECT p.id, p.name, p.role, p.merchant
+         FROM staff_pins p
+         LEFT JOIN merchant_config c ON c.merchant = p.merchant
+        WHERE p.pin = ? AND (c.account_id = ? OR p.merchant = ?)
+        ORDER BY p.created_ts
+        LIMIT 10`
+    ).bind(pin, sess.aid, accSlug).all();
+    rows = r.results || [];
+  } catch (_) {
+    /* Base pré-registre : on retombe sur la boutique d'origine du compte, ce qui
+     * préserve le comportement d'avant les multi-établissements. */
+    try {
+      const r = await env.DB.prepare(
+        'SELECT id, name, role, merchant FROM staff_pins WHERE merchant = ? AND pin = ? LIMIT 10'
+      ).bind(accSlug, pin).all();
+      rows = r.results || [];
+    } catch (__) { return { ok: false, error: 'staff-unavailable', status: 503 }; }
+  }
+  const staff = rows.find((row) => employeeRoleOpensDashboard(row.role)) || null;
+
+  if (!staff) {
+    if (!await limitFail(request, env, 'pin:account', identity)) {
+      return { ok: false, response: rateLimitUnavailable() };
+    }
+    return { ok: false, error: 'bad-pin', status: 401 };
+  }
+
+  await limitClear(request, env, 'pin:account', identity);
+  return {
+    ok: true,
+    merchant: String(staff.merchant || ''),
+    staff: {
+      id: String(staff.id || ''),
+      name: String(staff.name || ''),
+      role: String(staff.role || ''),
+    },
+  };
 }

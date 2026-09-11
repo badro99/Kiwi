@@ -5,7 +5,7 @@
    passe en display:flex à l'affichage). Tout est préfixé gy- ; les tokens
    viennent de kiwi-caisse.html ; le kit modal (.modal-veil, .modal, .cash- et
    .reader-) est réutilisé tel quel. Le moment signature : le check-in plein
-   écran — vert « marhba », rouge « expiré ».
+   écran — vert « bienvenue », rouge « expiré ».
    ═══════════════════════════════════════════════════════════════════════════ */
 
 #pos-gym {

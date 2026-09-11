@@ -28,13 +28,13 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
   <!-- Copie locale : ces pages tiraient lucide@latest depuis unpkg à chaque
        chargement. Non épinglé = ce qu'unpkg publie demain s'exécute sur le
        terminal de paiement du commerçant et sur le téléphone du client, sans
        relecture. Le fichier était déjà vendu dans assets/. -->
-  <script src="assets/lucide.min.js" defer></script>
+  <script src="assets/lucide.min.js?v=4" defer></script>
 
   <style>
     /* =========================================================
@@ -57,12 +57,12 @@
       --ink:          #111111;
       --ink-2:        #4A4A4A;
       --ink-3:        #6B6B6B;
-      --ink-4:        #9A9A9A;
+      --ink-4:        #6F6C65;
       --line:         #E5E5E5;
       --line-soft:    #EEEEEE;
 
       --sans:  "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      --serif: "Instrument Serif", "Times New Roman", serif;
+      --serif: "Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       --mono:  "JetBrains Mono", "SF Mono", ui-monospace, monospace;
       --arabic: "IBM Plex Sans Arabic", "Inter Tight", -apple-system, system-ui, sans-serif;
 
@@ -205,8 +205,10 @@ em, i, cite, dfn, var { font-style: normal; }
       56%, 100% { opacity: 0; }
     }
     .kiwi-greet-sub {
-      font-family: var(--mono); font-size: 10.5px;
-      letter-spacing: 0.16em; text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: -0.005em;
+      text-transform: none;
       color: var(--ink-3);
       margin-top: 22px;
     }
@@ -228,7 +230,7 @@ em, i, cite, dfn, var { font-style: normal; }
        ========================================================= */
     .screen-table {
       padding: var(--safe-top) 24px var(--safe-bottom);
-      justify-content: space-between;
+      justify-content: flex-start;
       align-items: center;
       background:
         radial-gradient(70% 40% at 50% -10%, rgba(31,93,60,0.06), transparent 60%),
@@ -244,7 +246,8 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .brand-mark {
       display: inline-flex; align-items: baseline; gap: 5px;
-      font-weight: 700; font-size: 30px;
+      font-weight: 600;
+      font-size: 20px;
       letter-spacing: -0.05em;
       color: var(--ink);
     }
@@ -257,7 +260,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .brand-tag {
       font-family: var(--serif);
-      font-size: 14px;
+      font-size: 13.5px;
       color: var(--ink-3);
     }
 
@@ -315,10 +318,10 @@ em, i, cite, dfn, var { font-style: normal; }
       100% { transform: translateY(0)     scale(1);  opacity: 1; }
     }
     .table-hint {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: -0.005em;
+      text-transform: none;
       color: var(--ink-4);
       margin: 0;
     }
@@ -337,8 +340,8 @@ em, i, cite, dfn, var { font-style: normal; }
       font-weight: 500;
       color: var(--ink);
       background: var(--surface);
-      border-radius: 16px;
-      box-shadow: var(--shadow-card);
+      border-radius: 14px;
+      box-shadow: 0 1px 2px rgba(17,17,17,0.05);
       border: 1px solid var(--line-soft);
       letter-spacing: -0.01em;
       display: flex;
@@ -366,7 +369,7 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 17px 22px;
       background: var(--ink-4);
       color: var(--paper-cream);
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 15px;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -418,11 +421,12 @@ em, i, cite, dfn, var { font-style: normal; }
       color: var(--ink);
     }
     .menu-cafe .ctx {
-      font-family: var(--mono);
-      font-size: 9.5px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 11px;
+      letter-spacing: 0;
+      text-transform: none;
       color: var(--ink-3);
+      font-weight: 500;
     }
     .table-badge {
       display: inline-flex;
@@ -448,6 +452,16 @@ em, i, cite, dfn, var { font-style: normal; }
       -webkit-overflow-scrolling: touch;
     }
     .menu-tabs::-webkit-scrollbar { display: none; }
+    .menu-subtabs {
+      display: none;
+      gap: 8px;
+      padding: 0 22px 14px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .menu-subtabs.is-visible { display: flex; }
+    .menu-subtabs::-webkit-scrollbar { display: none; }
     .menu-tab {
       flex: 0 0 auto;
       padding: 9px 14px;
@@ -506,12 +520,12 @@ em, i, cite, dfn, var { font-style: normal; }
       display: flex;
       flex-direction: column;
       background: var(--surface);
-      border-radius: 16px;
+      border-radius: 14px;
       overflow: hidden;
       text-align: left;
       transition: transform 200ms ease;
       width: 100%;
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(17,17,17,0.05);
       cursor: pointer;
     }
     .dish-card:active { transform: scale(0.97); }
@@ -599,10 +613,10 @@ em, i, cite, dfn, var { font-style: normal; }
       background: var(--surface);
       color: var(--forest);
       border-radius: 999px;
-      font-family: var(--mono);
+      font-family: var(--sans);
       font-size: 9.5px;
-      font-weight: 700;
-      letter-spacing: 0.18em;
+      font-weight: 600;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
       z-index: 2;
       box-shadow: 0 2px 6px rgba(0,0,0,0.25);
@@ -637,7 +651,7 @@ em, i, cite, dfn, var { font-style: normal; }
       background: var(--surface);
       border: 1px solid var(--line-soft);
       border-radius: 14px;
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(17,17,17,0.05);
     }
     .item-img {
       width: 64px; height: 64px;
@@ -718,7 +732,7 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 14px 18px;
       background: var(--ink);
       color: var(--paper-cream);
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 14px;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -824,10 +838,10 @@ em, i, cite, dfn, var { font-style: normal; }
       margin: 0 0 4px;
     }
     .cart-subtitle {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: -0.005em;
+      text-transform: none;
       color: var(--ink-3);
       margin: 0 0 16px;
     }
@@ -915,7 +929,7 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 16px 18px;
       background: var(--gradient);
       color: #fff;
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 15px;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -997,10 +1011,10 @@ em, i, cite, dfn, var { font-style: normal; }
       color: var(--mint);
     }
     .success-eta {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: -0.005em;
+      text-transform: none;
       opacity: 0.85;
     }
     .success-eta em {
@@ -1022,12 +1036,13 @@ em, i, cite, dfn, var { font-style: normal; }
       backdrop-filter: blur(6px);
     }
     .success-recap .recap-title {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 11px;
+      letter-spacing: 0;
+      text-transform: none;
       opacity: 0.7;
       margin-bottom: 6px;
+      font-weight: 500;
     }
     .success-bottom {
       width: 100%;
@@ -1049,7 +1064,7 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 16px 22px;
       background: var(--surface);
       color: var(--forest);
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 15px;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -1087,6 +1102,8 @@ em, i, cite, dfn, var { font-style: normal; }
       width: 100%;
       text-align: center;
       padding: 0 8px;
+      margin-top: auto;
+      margin-bottom: 22px;
     }
     .mode-ask {
       margin: 0 0 8px;
@@ -1110,22 +1127,22 @@ em, i, cite, dfn, var { font-style: normal; }
     .mode-cards {
       width: 100%;
       max-width: 380px;
-      margin: 0 auto;
+      margin: 0 auto auto;
       display: grid;
       gap: 12px;
     }
     .mode-card {
       background: var(--surface);
       border: 1px solid var(--line-soft);
-      border-radius: 18px;
+      border-radius: 14px;
       padding: 18px 18px;
       display: grid;
       grid-template-columns: 56px 1fr 16px;
       gap: 16px;
       align-items: center;
       text-align: left;
-      box-shadow: var(--shadow-card);
-      transition: transform 200ms ease, border-color 200ms ease;
+      box-shadow: 0 1px 2px rgba(17,17,17,0.05);
+      transition: transform 200ms cubic-bezier(0,0,.2,1), border-color 200ms cubic-bezier(0,0,.2,1);
       width: 100%;
     }
     .mode-card:active { transform: scale(0.98); border-color: var(--forest); }
@@ -1162,11 +1179,11 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .mode-card .mode-chev svg { width: 16px; height: 16px; }
     .mode-foot {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: var(--ink-4);
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: -0.005em;
+      text-transform: none;
+      color: var(--ink-3);
       text-align: center;
       padding: 0 12px;
     }
@@ -1176,7 +1193,7 @@ em, i, cite, dfn, var { font-style: normal; }
       position: absolute;
       top: calc(var(--safe-top) + 12px);
       left: 18px;
-      width: 38px; height: 38px;
+      width: 44px; height: 44px;
       border-radius: 999px;
       background: rgba(255,255,255,0.7);
       backdrop-filter: blur(6px);
@@ -1208,10 +1225,10 @@ em, i, cite, dfn, var { font-style: normal; }
       margin-top: 18px;
     }
     .cashier-eyebrow {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: -0.005em;
+      text-transform: none;
       color: var(--ink-3);
       margin-top: 4px;
     }
@@ -1266,15 +1283,16 @@ em, i, cite, dfn, var { font-style: normal; }
       border: 1px solid var(--line-soft);
       border-radius: 14px;
       text-align: left;
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(17,17,17,0.05);
     }
     .cashier-recap-title {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 11px;
+      letter-spacing: 0;
+      text-transform: none;
       color: var(--ink-3);
       margin-bottom: 6px;
+      font-weight: 500;
     }
     .cashier-recap-items {
       font-size: 13px;
@@ -1308,7 +1326,7 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 16px 18px;
       background: var(--ink);
       color: var(--paper-cream);
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 14.5px;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -1402,10 +1420,10 @@ em, i, cite, dfn, var { font-style: normal; }
       max-width: 300px;
     }
     .prep-eta {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: -0.005em;
+      text-transform: none;
       color: var(--ink-3);
     }
     .prep-eta strong {
@@ -1563,10 +1581,10 @@ em, i, cite, dfn, var { font-style: normal; }
       color: var(--mint);
     }
     .ready-sub {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: -0.005em;
+      text-transform: none;
       opacity: 0.85;
     }
     .ready-bottom {
@@ -1578,7 +1596,7 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 16px 22px;
       background: var(--surface);
       color: var(--forest);
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 15px;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -1673,16 +1691,25 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .option-group { margin-top: 16px; }
     .option-group:first-child { margin-top: 4px; }
+    .option-group.is-invalid {
+      border-radius: 14px;
+      box-shadow: 0 0 0 2px #B3261E;
+      padding: 10px;
+      margin-left: 2px;
+      margin-right: 2px;
+    }
+    .option-group.is-invalid .option-group-label { color: #B3261E; }
     .option-group-label {
-      font-family: var(--mono);
-      font-size: 9.5px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 11px;
+      letter-spacing: 0;
+      text-transform: none;
       color: var(--ink-3);
       margin-bottom: 9px;
       display: flex;
       align-items: baseline;
       justify-content: space-between;
+      font-weight: 500;
     }
     .option-group-label .opt-type {
       font-family: var(--sans);
@@ -1725,17 +1752,117 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .option-chip.is-active .delta { color: var(--forest); }
 
+    /* Formula steps can become a visual catalogue when the merchant explicitly
+       opts individual component photos in. The whole step uses one grid so a
+       missing/disabled photo never leaves a crooked half-card beside the others. */
+    .option-group.has-choice-images { margin-top: 22px; }
+    .option-group.has-choice-images .option-group-label { margin-bottom: 11px; }
+    .option-group.has-choice-images .option-chips {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .option-group.has-choice-images .option-chip {
+      position: relative;
+      min-width: 0;
+      padding: 0;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      align-items: stretch;
+      gap: 0;
+      border-color: var(--line);
+      border-radius: 16px;
+      background: var(--surface);
+      color: var(--ink);
+      text-align: start;
+      box-shadow: 0 5px 18px rgba(12, 28, 21, 0.06);
+    }
+    .option-group.has-choice-images .option-chip.is-active {
+      border-color: var(--forest);
+      background: var(--surface);
+      box-shadow: 0 0 0 2px var(--forest), 0 9px 24px rgba(7, 92, 66, 0.14);
+    }
+    .option-choice-media {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, var(--paper-mute), var(--mint-tint));
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .option-choice-media img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+    .option-choice-fallback {
+      color: var(--forest);
+      font-family: var(--display);
+      font-size: 30px;
+      font-weight: 600;
+      opacity: 0.58;
+    }
+    .option-choice-copy {
+      min-width: 0;
+      padding: 10px 11px 11px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 7px;
+      line-height: 1.25;
+    }
+    .option-choice-name {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .option-group.has-choice-images .option-chip .delta {
+      flex: 0 0 auto;
+      padding-top: 2px;
+      white-space: nowrap;
+    }
+    .option-choice-check {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 25px;
+      height: 25px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      color: transparent;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.88);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.16);
+      transition: color 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+    .option-choice-check svg { width: 14px; height: 14px; }
+    .option-chip.is-active .option-choice-check {
+      color: #fff;
+      background: var(--forest);
+      border-color: var(--forest);
+      transform: scale(1.04);
+    }
+    @media (max-width: 350px) {
+      .option-group.has-choice-images .option-chips { grid-template-columns: 1fr; }
+      .option-choice-media { aspect-ratio: 16 / 9; }
+    }
+
     .custom-note-section { margin-top: 18px; }
     .custom-note-label {
-      font-family: var(--mono);
-      font-size: 9.5px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 11px;
+      letter-spacing: 0;
+      text-transform: none;
       color: var(--ink-3);
       margin-bottom: 8px;
       display: flex;
       align-items: baseline;
       justify-content: space-between;
+      font-weight: 500;
     }
     .custom-note-label .meta {
       font-family: var(--sans);
@@ -1778,11 +1905,12 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .custom-price { display: flex; flex-direction: column; }
     .custom-price-label {
-      font-family: var(--mono);
-      font-size: 9.5px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 11px;
+      letter-spacing: 0;
+      text-transform: none;
       color: var(--ink-3);
+      font-weight: 500;
     }
     .custom-price-value {
       font-family: var(--mono);
@@ -1836,7 +1964,7 @@ em, i, cite, dfn, var { font-style: normal; }
       display: inline-flex;
       align-items: center;
       gap: 7px;
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(17,17,17,0.05);
       transition: background 200ms ease, color 200ms ease, transform 140ms ease, border-color 200ms ease;
     }
     .service-pill:active { transform: scale(0.96); }
@@ -1908,10 +2036,10 @@ em, i, cite, dfn, var { font-style: normal; }
       margin: 0 0 4px;
     }
     .bill-subtitle {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: -0.005em;
+      text-transform: none;
       color: var(--ink-3);
       margin: 0 0 12px;
     }
@@ -1971,7 +2099,7 @@ em, i, cite, dfn, var { font-style: normal; }
     /* Tip section — gamified */
     .tip-section {
       background: linear-gradient(160deg, #F6F8F2 0%, #EAEFE2 100%);
-      border-radius: 18px;
+      border-radius: 14px;
       padding: 16px 16px 18px;
       margin: 6px 0 12px;
       position: relative;
@@ -1991,10 +2119,10 @@ em, i, cite, dfn, var { font-style: normal; }
     .tip-section > * { position: relative; z-index: 1; }
 
     .tip-eyebrow {
-      font-family: var(--mono);
-      font-size: 9.5px;
-      letter-spacing: 0.20em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: -0.005em;
+      text-transform: none;
       color: var(--ink-3);
       text-align: center;
       display: block;
@@ -2137,7 +2265,7 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 16px 18px;
       background: var(--gradient);
       color: #fff;
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 15px;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -2158,7 +2286,7 @@ em, i, cite, dfn, var { font-style: normal; }
       background: var(--paper-mute);
       color: var(--ink);
       border: 1px solid var(--line-soft);
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 14px;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -2251,12 +2379,13 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     .split-section-label {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 11px;
+      letter-spacing: 0;
+      text-transform: none;
       color: var(--ink-3);
       margin: 14px 0 8px;
+      font-weight: 500;
     }
     .split-section-label:first-child { margin-top: 4px; }
     .split-chips {
@@ -2405,12 +2534,13 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .split-pool-item.is-other::after {
       content: attr(data-owner);
-      font-family: var(--mono);
-      font-size: 9.5px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 10px;
+      letter-spacing: 0;
+      text-transform: none;
       color: var(--ink-4);
       margin-left: 6px;
+      font-weight: 500;
     }
 
     .split-confirm-btn {
@@ -2419,7 +2549,7 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 16px 18px;
       background: var(--gradient);
       color: #fff;
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 15px;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -2441,22 +2571,22 @@ em, i, cite, dfn, var { font-style: normal; }
       right: 14px;
       z-index: 95;
       display: flex;
-      background: rgba(255,255,255,0.85);
+      background: rgba(247,245,240,0.9);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       border: 1px solid var(--line-soft);
       border-radius: 999px;
       padding: 3px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      box-shadow: 0 1px 2px rgba(17,17,17,0.05);
     }
     [dir="rtl"] .lang-picker {
       right: auto;
       left: 14px;
     }
     .lang-btn {
-      min-width: 30px;
-      height: 26px;
-      padding: 0 8px;
+      min-width: 52px;
+      height: 40px;
+      padding: 0 10px;
       border-radius: 999px;
       font-size: 11px;
       font-weight: 600;
@@ -2474,8 +2604,8 @@ em, i, cite, dfn, var { font-style: normal; }
       letter-spacing: 0;
     }
     .lang-btn.is-active {
-      background: var(--ink);
-      color: var(--paper-cream);
+      background: var(--forest);
+      color: #EAFFF4;
     }
 
     /* Hide picker over modal sheets so it doesn't sit on top of the backdrop */
@@ -2502,6 +2632,25 @@ em, i, cite, dfn, var { font-style: normal; }
       line-height: 1.5;
       color: rgba(255,255,255,0.72);
     }
+    .thanks-reorder-btn {
+      width: 100%;
+      padding: 16px 22px;
+      margin-bottom: 14px;
+      background: #fff;
+      color: var(--forest);
+      border: none;
+      border-radius: 14px;
+      font: 600 15px/1.2 "Inter Tight", system-ui, -apple-system, sans-serif;
+      letter-spacing: -0.005em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.12);
+      transition: transform 180ms ease, opacity 180ms ease;
+    }
+    .thanks-reorder-btn:active { transform: scale(0.98); opacity: 0.92; }
     .screen-ready.is-active ~ .lang-picker,
     .screen-thanks.is-active ~ .lang-picker { display: none; }
     .kiwi-greet.is-visible ~ .lang-picker { display: none; }
@@ -2529,11 +2678,11 @@ em, i, cite, dfn, var { font-style: normal; }
     @keyframes boot-spin { to { transform: rotate(360deg); } }
     .boot-icon {
       width: 60px; height: 60px;
-      border-radius: 18px;
+      border-radius: 14px;
       display: flex; align-items: center; justify-content: center;
       background: var(--surface);
       border: 1px solid var(--line);
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(17,17,17,0.05);
       color: var(--ink-3);
       margin-bottom: 20px;
     }
@@ -2582,7 +2731,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .bq-store {
       font-size: 17px;
-      font-weight: 700;
+      font-weight: 600;
       letter-spacing: -0.025em;
       color: var(--ink);
     }
@@ -2642,7 +2791,7 @@ em, i, cite, dfn, var { font-style: normal; }
       background: var(--surface);
       border: 1px solid var(--line-soft);
       border-radius: 14px;
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(17,17,17,0.05);
       text-align: start;
       width: 100%;
       font: inherit;
@@ -2741,7 +2890,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     /* Product hero — the merchant's own photo or clip, above the stock detail. */
     .bq-d-hero {
-      border-radius: 16px;
+      border-radius: 14px;
       overflow: hidden;
       background: var(--paper-mute);
       margin: 0 0 14px;
@@ -2753,7 +2902,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .bq-d-hero video { width: 100%; max-height: 46vh; object-fit: cover; display: block; }
     .bq-d-name {
       font-size: 19px;
-      font-weight: 700;
+      font-weight: 600;
       letter-spacing: -0.025em;
       color: var(--ink);
       line-height: 1.2;
@@ -2810,7 +2959,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .bq-scan-box {
       margin-top: 4px;
       position: relative;
-      border-radius: 16px;
+      border-radius: 14px;
       overflow: hidden;
       background: #111;
       aspect-ratio: 4 / 3;
@@ -2991,7 +3140,7 @@ em, i, cite, dfn, var { font-style: normal; }
       <div class="table-mid">
         <p class="table-ask"><span data-i18n="table_ask_pre">Quel est votre</span> <em data-i18n="table_ask_em">numéro de table</em><span data-i18n="table_ask_post"> ?</span></p>
         <div class="table-num-display" id="table-display">
-          <span class="table-digit is-placeholder">—</span>
+          <span class="table-digit is-placeholder"></span>
         </div>
         <p class="table-hint" data-i18n="table_hint">Le numéro est gravé sur le bois de la table</p>
       </div>
@@ -3036,7 +3185,7 @@ em, i, cite, dfn, var { font-style: normal; }
         </span>
         <button class="service-pill" type="button" data-service="call-server">
           <i data-lucide="bell-ring"></i>
-          <span data-i18n="service_call">Appeler un serveur</span>
+          <span data-i18n="service_call">Appeler l’équipe</span>
         </button>
         <button class="service-pill" type="button" data-service="ask-bill">
           <i data-lucide="receipt"></i>
@@ -3049,6 +3198,7 @@ em, i, cite, dfn, var { font-style: normal; }
       <div class="menu-tabs" role="tablist">
         <button class="menu-tab is-active" data-tab="all" data-i18n="tab_all">Tout</button>
       </div>
+      <div class="menu-subtabs" role="tablist" aria-label="Sous-catégories"></div>
 
       <div class="menu-list is-feed" id="menu-list"></div>
 
@@ -3070,10 +3220,10 @@ em, i, cite, dfn, var { font-style: normal; }
           </svg>
         </div>
         <h1 class="success-title"><span data-i18n="success_title_a">Commande envoyée</span><br/><em data-i18n="success_title_em">en cuisine.</em></h1>
-        <div class="success-eta"><span data-i18n="success_eta_pre">Table</span> <span id="success-table">—</span> <span data-i18n="success_eta_mid">· prêt dans</span> <em data-i18n="success_eta_em">4–6 min</em></div>
+        <div class="success-eta"><span data-i18n="success_eta_pre">Table</span> <span id="success-table"></span> <span data-i18n="success_eta_mid">· prêt dans</span> <em data-i18n="success_eta_em">4–6 min</em></div>
         <div class="success-recap">
           <div class="recap-title" data-i18n="success_recap">Votre commande</div>
-          <div id="success-items">—</div>
+          <div id="success-items"></div>
         </div>
       </div>
       <div class="success-bottom">
@@ -3089,7 +3239,7 @@ em, i, cite, dfn, var { font-style: normal; }
     <section class="screen screen-cashier" id="screen-cashier">
       <div class="cashier-top">
         <div class="brand-mark">Établissement<i aria-hidden="true"></i></div>
-        <div class="cashier-eyebrow" data-i18n="cashier_eyebrow">— à emporter</div>
+        <div class="cashier-eyebrow" data-i18n="cashier_eyebrow">à emporter</div>
       </div>
 
       <div class="cashier-mid">
@@ -3098,7 +3248,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
         <div class="cashier-recap">
           <div class="cashier-recap-title" data-i18n="cashier_recap">Votre commande</div>
-          <div class="cashier-recap-items" id="cashier-items">—</div>
+          <div class="cashier-recap-items" id="cashier-items"></div>
           <div class="cashier-recap-total">
             <span data-i18n="cashier_total">Total</span>
             <strong id="cashier-total">0 MAD</strong>
@@ -3119,7 +3269,7 @@ em, i, cite, dfn, var { font-style: normal; }
     <section class="screen screen-preparing" id="screen-preparing">
       <div class="prep-top">
         <div class="brand-mark">Établissement<i aria-hidden="true"></i></div>
-        <div class="cashier-eyebrow"><span data-i18n="prep_eyebrow_pre">— commande #</span><span id="prep-number">000</span></div>
+        <div class="cashier-eyebrow"><span data-i18n="prep_eyebrow_pre">commande #</span><span id="prep-number">000</span></div>
       </div>
 
       <div class="prep-mid">
@@ -3184,6 +3334,7 @@ em, i, cite, dfn, var { font-style: normal; }
         <div class="ready-sub" id="thanks-sub" data-i18n="thanks_sub">Votre addition est réglée. À très bientôt.</div>
       </div>
       <div class="ready-bottom">
+        <button class="thanks-reorder-btn" id="thanks-reorder-btn" type="button" data-i18n="thanks_reorder">Commander à nouveau</button>
         <div class="thanks-note" data-i18n="thanks_again">Pour commander à nouveau, approchez votre téléphone du tag.</div>
       </div>
     </section>
@@ -3195,7 +3346,7 @@ em, i, cite, dfn, var { font-style: normal; }
          or for an employee on the floor. Buying still happens at the till. -->
     <section class="screen screen-boutique" id="screen-boutique">
       <div class="bq-top">
-        <div class="bq-store" id="bq-store">—</div>
+        <div class="bq-store" id="bq-store"></div>
         <div class="bq-sub" id="bq-sub" data-i18n="bq_title">Nos produits</div>
         <div class="bq-tools">
           <input class="bq-search" id="bq-search" type="search" autocomplete="off"
@@ -3216,8 +3367,8 @@ em, i, cite, dfn, var { font-style: normal; }
       <div class="bq-panel">
         <div class="bq-grip"></div>
         <div class="bq-d-hero" id="bq-d-hero" hidden></div>
-        <div class="bq-d-name" id="bq-d-name">—</div>
-        <div class="bq-d-price" id="bq-d-price">—</div>
+        <div class="bq-d-name" id="bq-d-name"></div>
+        <div class="bq-d-price" id="bq-d-price"></div>
         <div id="bq-d-body"></div>
         <button class="bq-close" type="button" data-close-bq data-i18n="bq_close">Fermer</button>
       </div>
@@ -3259,9 +3410,9 @@ em, i, cite, dfn, var { font-style: normal; }
             <i data-lucide="coffee"></i>
           </div>
           <div class="custom-info">
-            <div class="custom-name" id="custom-name">—</div>
-            <div class="custom-desc" id="custom-desc">—</div>
-            <div class="custom-base" id="custom-base">— MAD</div>
+            <div class="custom-name" id="custom-name"></div>
+            <div class="custom-desc" id="custom-desc"></div>
+            <div class="custom-base" id="custom-base">MAD</div>
           </div>
         </div>
 
@@ -3297,8 +3448,9 @@ em, i, cite, dfn, var { font-style: normal; }
       <div class="bill-sheet-backdrop" data-close-bill></div>
       <div class="bill-sheet-panel">
         <div class="cart-handle" data-close-bill></div>
-        <h2 class="bill-title" data-i18n="bill_title">Votre addition</h2>
-        <div class="bill-subtitle" id="bill-subtitle">Table <span id="bill-table">—</span></div>
+        <h2 class="bill-title" data-i18n="bill_title">Mes commandes</h2>
+        <div class="bill-subtitle" id="bill-subtitle">Table <span id="bill-table"></span></div>
+        <p class="bill-subtitle" data-i18n="bill_scope">Commandes envoyées depuis ce téléphone. Demandez l’addition complète à l’équipe.</p>
 
         <ul class="bill-items" id="bill-items">
           <li class="bill-empty" data-i18n="bill_empty">Aucune commande passée, ajoutez d'abord au menu.</li>
@@ -3311,7 +3463,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
         <!-- Tip section — gamified -->
         <div class="tip-section">
-          <span class="tip-eyebrow" data-i18n="tip_eyebrow">— Pourboire pour l'équipe</span>
+          <span class="tip-eyebrow" data-i18n="tip_eyebrow">Pourboire pour l'équipe</span>
           <div class="tip-jar-wrap" id="tip-jar-wrap">
             <span class="tip-jar-sparkle sp-1" aria-hidden="true"></span>
             <span class="tip-jar-sparkle sp-2" aria-hidden="true"></span>
@@ -3530,7 +3682,7 @@ em, i, cite, dfn, var { font-style: normal; }
             body: JSON.stringify(body),
           });
           const j = await r.json().catch(() => null);
-          if (!r.ok) return { ok: false, status: r.status, error: (j && j.error) || 'http-' + r.status };
+          if (!r.ok) return Object.assign({ ok: false, status: r.status, error: (j && j.error) || 'http-' + r.status }, j || {});
           return j || { ok: false, error: 'empty' };
         } catch (_) { return { ok: false, error: 'network' }; }
       }
@@ -3559,6 +3711,8 @@ em, i, cite, dfn, var { font-style: normal; }
            → { ok, status, closedBy, table, mode } */
         sessionStatus: (id) => getJSON('/api/order/session?merchant=' + encodeURIComponent(slug) +
                                        '&session=' + encodeURIComponent(id)),
+        serviceRequest: (session, action) => postJSON('/api/order/session',
+          { merchant: slug, session, action }),
       };
     })();
 
@@ -3595,7 +3749,7 @@ em, i, cite, dfn, var { font-style: normal; }
         tab_savory: "Salé",
         tab_drink: "Boissons",
         tag_new: "Nouveau",
-        service_call: "Appeler un serveur",
+        service_call: "Appeler l’équipe",
         service_bill: "Addition",
         cart_pill: "Voir ma commande",
         custom_from: "À partir de",
@@ -3606,6 +3760,9 @@ em, i, cite, dfn, var { font-style: normal; }
         btn_add: "Ajouter",
         opt_choose_one: "choisir 1",
         opt_choose_many: "plusieurs possibles",
+        opt_required: "obligatoire",
+        opt_required_missing: "Choisissez une option pour « {name} ».",
+        opt_unavailable: "Option indisponible",
         // Per-option translations go here, keyed opt_label_<key> and opt_<key>_<choiceId>.
         // Missing keys fall back to the OPT definition's own label. Add per client menu.
         opt_retirer_prefix: "Sans ",
@@ -3651,7 +3808,8 @@ em, i, cite, dfn, var { font-style: normal; }
         ready_title_em: "prête.",
         ready_loc_post: "",
         ready_cta: "Récupérer au comptoir",
-        bill_title: "Votre addition",
+        bill_title: "Mes commandes",
+        bill_scope: "Commandes envoyées depuis ce téléphone. Demandez l’addition complète à l’équipe.",
         bill_empty: "Aucune commande passée, ajoutez d'abord au menu.",
         bill_subtotal: "Sous-total",
         tip_eyebrow: "Pourboire pour l'équipe",
@@ -3680,7 +3838,7 @@ em, i, cite, dfn, var { font-style: normal; }
         split_person_pre: "Conv.",
         toast_split_egal: "Addition divisée ·",
         toast_added: "ajouté",
-        toast_server_coming_pre: "Un serveur arrive · Table",
+        toast_server_coming_pre: "Demande transmise à l’équipe · Table",
         toast_bill_asked_pre: "Addition demandée ·",
         toast_bill_tip_post: "pourboire",
         notif_ready_title: "Établissement",
@@ -3702,19 +3860,25 @@ em, i, cite, dfn, var { font-style: normal; }
         boot_retry: "Réessayer",
         // ── order relay ──
         order_sending: "Envoi…",
-        order_failed: "Commande non envoyée — réessayez",
-        order_offline: "Pas de connexion — commande non envoyée",
+        order_failed: "Commande non envoyée · réessayez",
+        order_offline: "Pas de connexion · commande non envoyée",
+        order_unconfirmed: "Envoi non confirmé · réessayez, sans créer une nouvelle commande",
+        order_retry_local: "Envoi non confirmé · gardez cette page ouverte et réessayez ici",
         boot_closed_title: "Service fermé",
         boot_closed_body: "L'établissement ne prend pas de commandes en ce moment. Repassez pendant le service.",
-        order_closed: "Le service vient de fermer — commande non envoyée",
+        order_closed: "Le service vient de fermer · commande non envoyée",
         order_refused: "Le comptoir n'a pas pu prendre cette commande",
         order_served: "Servie · bon appétit",
         order_gone: "Plus disponible : {n}",
+        order_options_changed: "Options à rechoisir pour {n}",
+        order_menu_updated: "La carte a changé · vérifiez votre commande",
+        order_item_fallback: "un article",
         thanks_title_a: "Merci de votre",
         thanks_title_em: "visite.",
         thanks_sub: "Votre addition est réglée. À très bientôt.",
         thanks_expired: "Votre session s'est terminée. À très bientôt.",
         thanks_again: "Pour commander à nouveau, approchez votre téléphone du tag.",
+        thanks_reorder: "Commander à nouveau",
         prep_waiting: "En attente de la caisse",
         prep_accepted: "Acceptée · en préparation",
         // ── boutique vertical ──
@@ -3734,8 +3898,8 @@ em, i, cite, dfn, var { font-style: normal; }
         bq_empty: "Aucun produit publié pour le moment.",
         bq_noresult: "Aucun produit ne correspond.",
         bq_close: "Fermer",
-        bq_camera_denied: "Caméra refusée — saisissez le code à la main.",
-        bq_camera_none: "Scan caméra indisponible sur cet appareil — saisissez le code.",
+        bq_camera_denied: "Caméra refusée · saisissez le code à la main.",
+        bq_camera_none: "Scan caméra indisponible sur cet appareil · saisissez le code.",
         bq_foot: "Consultation uniquement · passez en caisse pour acheter",
       },
       en: {
@@ -3769,7 +3933,7 @@ em, i, cite, dfn, var { font-style: normal; }
         tab_savory: "Savory",
         tab_drink: "Drinks",
         tag_new: "New",
-        service_call: "Call the waiter",
+        service_call: "Call the team",
         service_bill: "Bill",
         cart_pill: "View my order",
         custom_from: "From",
@@ -3780,6 +3944,9 @@ em, i, cite, dfn, var { font-style: normal; }
         btn_add: "Add",
         opt_choose_one: "pick 1",
         opt_choose_many: "pick any",
+        opt_required: "required",
+        opt_required_missing: "Choose an option for “{name}”.",
+        opt_unavailable: "Option unavailable",
         // Per-option translations go here, keyed opt_label_<key> and opt_<key>_<choiceId>.
         // Missing keys fall back to the OPT definition's own label. Add per client menu.
         opt_retirer_prefix: "No ",
@@ -3825,7 +3992,8 @@ em, i, cite, dfn, var { font-style: normal; }
         ready_title_em: "ready.",
         ready_loc_post: "",
         ready_cta: "Pick up at the counter",
-        bill_title: "Your check",
+        bill_title: "My orders",
+        bill_scope: "Orders sent from this phone. Ask the team for the complete table bill.",
         bill_empty: "No orders placed, add something from the menu first.",
         bill_subtotal: "Subtotal",
         tip_eyebrow: "Tip for the team",
@@ -3854,7 +4022,7 @@ em, i, cite, dfn, var { font-style: normal; }
         split_person_pre: "Pers.",
         toast_split_egal: "Bill split ·",
         toast_added: "added",
-        toast_server_coming_pre: "Waiter coming · Table",
+        toast_server_coming_pre: "Request sent to the team · Table",
         toast_bill_asked_pre: "Check requested ·",
         toast_bill_tip_post: "tip",
         notif_ready_title: "Venue",
@@ -3874,19 +4042,25 @@ em, i, cite, dfn, var { font-style: normal; }
         boot_empty_body: "The venue hasn't published its menu yet. Please ask at the counter.",
         boot_retry: "Try again",
         order_sending: "Sending…",
-        order_failed: "Order not sent — try again",
-        order_offline: "No connection — order not sent",
+        order_failed: "Order not sent · try again",
+        order_offline: "No connection · order not sent",
+        order_unconfirmed: "Send unconfirmed · retry without creating a new order",
+        order_retry_local: "Send unconfirmed · keep this page open and retry here",
         boot_closed_title: "Closed",
         boot_closed_body: "This venue isn't taking orders right now. Come back during service.",
-        order_closed: "Service just closed — order not sent",
+        order_closed: "Service just closed · order not sent",
         order_refused: "The counter couldn't take this order",
         order_served: "Served · enjoy",
         order_gone: "No longer available: {n}",
+        order_options_changed: "Please reselect options for {n}",
+        order_menu_updated: "The menu has changed · please review your order",
+        order_item_fallback: "an item",
         thanks_title_a: "Thank you for",
         thanks_title_em: "visiting.",
         thanks_sub: "Your bill is settled. See you soon.",
         thanks_expired: "Your session has ended. See you soon.",
         thanks_again: "To order again, tap your phone on the tag.",
+        thanks_reorder: "Order again",
         prep_waiting: "Waiting for the till",
         prep_accepted: "Accepted · being prepared",
         bq_title: "Our products",
@@ -3905,8 +4079,8 @@ em, i, cite, dfn, var { font-style: normal; }
         bq_empty: "No products published yet.",
         bq_noresult: "No product matches.",
         bq_close: "Close",
-        bq_camera_denied: "Camera denied — type the code instead.",
-        bq_camera_none: "Camera scanning isn't available on this device — type the code.",
+        bq_camera_denied: "Camera denied · type the code instead.",
+        bq_camera_none: "Camera scanning isn't available on this device · type the code.",
         bq_foot: "Browsing only · pay at the till to buy",
       },
       ar: {
@@ -3940,7 +4114,7 @@ em, i, cite, dfn, var { font-style: normal; }
         tab_savory: "ساندويتش",
         tab_drink: "مشروبات",
         tag_new: "جديد",
-        service_call: "عيّط على الجارسون",
+        service_call: "نادي على الطاقم",
         service_bill: "الحساب",
         cart_pill: "شوف الطلب ديالي",
         custom_from: "إبتدا من",
@@ -3951,6 +4125,9 @@ em, i, cite, dfn, var { font-style: normal; }
         btn_add: "زيد",
         opt_choose_one: "اختار 1",
         opt_choose_many: "اختار اللي بغيتي",
+        opt_required: "ضروري",
+        opt_required_missing: "اختار واحد الاختيار فـ «{name}».",
+        opt_unavailable: "خيار غير متوفر",
         // Per-option translations go here, keyed opt_label_<key> and opt_<key>_<choiceId>.
         // Missing keys fall back to the OPT definition's own label. Add per client menu.
         opt_retirer_prefix: "بلا ",
@@ -3996,7 +4173,8 @@ em, i, cite, dfn, var { font-style: normal; }
         ready_title_em: "واجد.",
         ready_loc_post: "",
         ready_cta: "خد الطلب من الكونتوار",
-        bill_title: "الحساب ديالك",
+        bill_title: "طلباتي",
+        bill_scope: "الطلبات المرسلة من هذا الهاتف. اطلب الحساب الكامل للطاولة من الطاقم.",
         bill_empty: "ما عندك حتى طلب، زيد شي حاجة من المنيو أول.",
         bill_subtotal: "المجموع الفرعي",
         tip_eyebrow: "البقشيش للفريق",
@@ -4025,7 +4203,7 @@ em, i, cite, dfn, var { font-style: normal; }
         split_person_pre: "ش.",
         toast_split_egal: "الحساب تقسم ·",
         toast_added: "تزاد",
-        toast_server_coming_pre: "الجارسون جاي · طاولة",
+        toast_server_coming_pre: "تم إرسال الطلب للطاقم · طاولة",
         toast_bill_asked_pre: "الحساب تطلب ·",
         toast_bill_tip_post: "بقشيش",
         notif_ready_title: "المحل",
@@ -4045,19 +4223,25 @@ em, i, cite, dfn, var { font-style: normal; }
         boot_empty_body: "المحل مازال مانشرش القائمة ديالو. سول فالكونطوار.",
         boot_retry: "عاود جرّب",
         order_sending: "كنصيفطو…",
-        order_failed: "الطلب ماتصيفطش — عاود جرّب",
-        order_offline: "ماكاينش كونيكسيون — الطلب ماتصيفطش",
+        order_failed: "الطلب ماتصيفطش · عاود جرّب",
+        order_offline: "ماكاينش كونيكسيون · الطلب ماتصيفطش",
+        order_unconfirmed: "الإرسال ما تأكدش · عاود جرّب بلا ما تنشئ طلب جديد",
+        order_retry_local: "الإرسال ما تأكدش · خلي هاد الصفحة محلولة وعاود جرّب هنا",
         boot_closed_title: "الخدمة محلولة ماشي دابا",
         boot_closed_body: "هاد المحل ماكيديش الطلبات دابا. رجع فوقت الخدمة.",
-        order_closed: "الخدمة تسدّات — الطلب ماتصيفطش",
+        order_closed: "الخدمة تسدّات · الطلب ماتصيفطش",
         order_refused: "الكونطوار ماقدرش ياخد هاد الطلب",
         order_served: "تقدّم · بالصحة",
         order_gone: "ماكاينش: {n}",
+        order_options_changed: "يرجى إعادة اختيار خيارات {n}",
+        order_menu_updated: "تبدلات القائمة · عافاك راجع الطلب ديالك",
+        order_item_fallback: "أحد الأطباق",
         thanks_title_a: "شكراً على",
         thanks_title_em: "الزيارة.",
         thanks_sub: "الحساب تخلّص. نتلاقاو قريب.",
         thanks_expired: "الجلسة ديالك سالات. نتلاقاو قريب.",
         thanks_again: "باش تطلب من جديد، قرّب تيليفونك من التاڭ.",
+        thanks_reorder: "طلب من جديد",
         prep_waiting: "كنتسناو الكيس",
         prep_accepted: "تقبل · كيتوجد",
         bq_title: "المنتوجات ديالنا",
@@ -4076,8 +4260,8 @@ em, i, cite, dfn, var { font-style: normal; }
         bq_empty: "حتى منتوج مانشر دابا.",
         bq_noresult: "حتى منتوج ماتوافق.",
         bq_close: "سد",
-        bq_camera_denied: "الكاميرا مرفوضة — دخّل الكود بيدك.",
-        bq_camera_none: "السكان بالكاميرا ماكاينش فهاد الجهاز — دخّل الكود.",
+        bq_camera_denied: "الكاميرا مرفوضة · دخّل الكود بيدك.",
+        bq_camera_none: "السكان بالكاميرا ماكاينش فهاد الجهاز · دخّل الكود.",
         bq_foot: "غير للتصفح · خلّص فالكيس باش تشري",
       },
     };
@@ -4087,6 +4271,21 @@ em, i, cite, dfn, var { font-style: normal; }
        Empty in the white-label template — add one entry per menu item, e.g.:
          fr: { "mon-plat": { name: "Mon plat", desc: "Description…" } },
        Items with no entry fall back to the `name`/`desc` defined in MENU. */
+    /* Traductions portées par la carte publiée (assets/menu-i18n.js) — même
+       empreinte qu'au tableau de bord (djb2 → base36 sur « nom␟description ») ;
+       une traduction périmée (le patron a renommé) retombe sur son texte. */
+    function menuHash(name, desc) {
+      const str = String(name == null ? '' : name).trim() + '\u001f' + String(desc == null ? '' : desc).trim();
+      let h = 5381;
+      for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+      return (h >>> 0).toString(36);
+    }
+    function menuTr(e, l) {
+      const x = e && e.i18n && e.i18n[l];
+      if (!x || !x.name) return null;
+      if (!x.m && x.h !== menuHash(e.name, e.desc)) return null;
+      return x;
+    }
     const MENU_I18N = {
       fr: {},
       en: {},
@@ -4126,8 +4325,7 @@ em, i, cite, dfn, var { font-style: normal; }
       applyStaticI18n();
       // Dynamic
       if (typeof renderMenu === 'function') {
-        const activeTab = document.querySelector('.menu-tab.is-active')?.dataset.tab || 'all';
-        renderMenu(activeTab);
+        renderMenu(activeMenuFilter());
       }
       if (typeof applyMenuMode === 'function' && orderMode) applyMenuMode();
       if (typeof renderBoutique === 'function' && STORE.type === 'boutique') renderBoutique();
@@ -4160,6 +4358,8 @@ em, i, cite, dfn, var { font-style: normal; }
        - cat must match a menu-tab data-tab; icon maps to a style via ICON_CLASS below.
        - options, video and tag are optional. */
     const MENU = [];
+    const MENU_ALL = new Map();
+    const MENU_SUBTABS = new Map();
     const ICON_CLASS = {
       coffee: 'coffee',
       croissant: 'pastry',
@@ -4193,6 +4393,8 @@ em, i, cite, dfn, var { font-style: normal; }
     let customizerItem = null;
     let customizerSelections = {};
     let customizerNote = '';
+    let customizerEditingKey = null;
+    let customizerEditingQty = 1;
 
     /* ============ greeting flash (ported from kiwi-serveur) ============ */
     function runGreetingFlash() {
@@ -4242,7 +4444,7 @@ em, i, cite, dfn, var { font-style: normal; }
     function renderTableDisplay() {
       const disp = $('#table-display');
       if (!tableNumber) {
-        disp.innerHTML = `<span class="table-digit is-placeholder">—</span>`;
+        disp.innerHTML = `<span class="table-digit is-placeholder">·</span>`;
         return;
       }
       disp.innerHTML = tableNumber.split('').map(d => `<span class="table-digit">${d}</span>`).join('');
@@ -4397,15 +4599,17 @@ em, i, cite, dfn, var { font-style: normal; }
     function renderMenu(filter = 'all') {
       const list = $('#menu-list');
       list.classList.add('is-feed');
-      const items = MENU.filter(m => filter === 'all' || m.cat === filter);
+      const bits = String(filter).split('::'), catFilter = bits[0], subFilter = bits[1] || '';
+      const items = MENU.filter(m => catFilter === 'all' || (m.cat === catFilter && (!subFilter || m.subId === subFilter)));
       list.innerHTML = items.map(m => {
         const i = itemI18n(m.id);
         const out = m.avail === false;
         return `
-        <article class="dish-card${out ? ' is-out' : ''}"${out ? '' : ` data-add="${escapeHtml(m.id)}"`}>
+        <article class="dish-card${out ? ' is-out' : ''}"${out ? '' : ` data-card="${escapeHtml(m.id)}"`}>
           ${dishMedia(m)}${out ? `<div class="dish-out">${escapeHtml(t('dish_out'))}</div>` : ''}
           <div class="dish-meta">
-            <div class="dish-name">${i.name}</div>
+            ${m.formula ? '<div class="dish-tag">FORMULE</div>' : ''}
+            <div class="dish-name">${escapeHtml(i.name)}</div>
             <div class="dish-foot">
               <span class="dish-price">${m.price} ${cur()}</span>
               ${out ? '' : `<button type="button" class="dish-add" data-add="${escapeHtml(m.id)}" aria-label="${escapeHtml(t('btn_add'))} ${escapeHtml(i.name)}">+</button>`}
@@ -4415,6 +4619,20 @@ em, i, cite, dfn, var { font-style: normal; }
       `;}).join('');
       if (window.lucide) window.lucide.createIcons();
       feedMedia.bind();
+    }
+
+    function renderMenuSubtabs(categoryId) {
+      const row = $('.menu-subtabs');
+      if (!row) return;
+      const subtabs = MENU_SUBTABS.get(String(categoryId)) || [];
+      row.innerHTML = subtabs.map(s => `<button class="menu-tab menu-subtab" data-tab="${escapeHtml(String(categoryId) + '::' + String(s.id))}">${escapeHtml(String(s.name || ''))}</button>`).join('');
+      row.classList.toggle('is-visible', subtabs.length > 0);
+    }
+
+    function activeMenuFilter() {
+      return document.querySelector('.menu-subtab.is-active')?.dataset.tab
+        || document.querySelector('.menu-tabs .menu-tab.is-active')?.dataset.tab
+        || 'all';
     }
 
     /* ============ cart logic — line keys support variants ============ */
@@ -4439,14 +4657,72 @@ em, i, cite, dfn, var { font-style: normal; }
       return parts.join('|');
     }
 
-    function choiceLabel(optKey, choiceId) {
+    function choiceLabel(optKey, choiceId, optChoice, optGroup) {
       const key = `opt_${optKey}_${choiceId}`;
-      return I18N[currentLang]?.[key] || I18N.fr[key]
-          || OPT[optKey]?.choices.find(c => c.id === choiceId)?.label
-          || choiceId;
+      const staticVal = I18N[currentLang]?.[key] || I18N.fr?.[key];
+      if (staticVal) return staticVal;
+
+      const choiceStr = String(choiceId || '');
+      const catalogItem = (typeof MENU_ALL !== 'undefined' && MENU_ALL ? MENU_ALL.get(choiceStr) : null)
+        || (typeof allItems !== 'undefined' && Array.isArray(allItems) ? allItems.find(x => String(x.id) === choiceStr) : null);
+      if (catalogItem) {
+        const tr = (MENU_I18N[currentLang] && MENU_I18N[currentLang][choiceStr])
+          || (typeof menuTr === 'function' ? menuTr(catalogItem, currentLang) : null);
+        if (tr && tr.name) return String(tr.name);
+        if (catalogItem.name) return String(catalogItem.name);
+      }
+
+      const opt = optGroup || OPT[optKey];
+      let choice = optChoice || (opt && opt.choices ? opt.choices.find(c => String(c.id) === choiceStr) : null);
+      if (!choice && optKey && String(optKey).startsWith('formula_')) {
+        for (const [k, g] of Object.entries(OPT)) {
+          if (k.startsWith('formula_') && Array.isArray(g?.choices)) {
+            const found = g.choices.find(c => String(c.id) === choiceStr);
+            if (found) { choice = found; break; }
+          }
+        }
+      }
+
+      if (choice) {
+        if (choice.targetItem) {
+          const tr = (MENU_I18N[currentLang] && MENU_I18N[currentLang][choiceStr])
+            || (typeof menuTr === 'function' ? menuTr(choice.targetItem, currentLang) : null);
+          if (tr && tr.name) return String(tr.name);
+          if (choice.targetItem.name) return String(choice.targetItem.name);
+        }
+        if (choice._src && typeof menuTr === 'function') {
+          const tr = menuTr(choice._src, currentLang);
+          if (tr && tr.name) return String(tr.name);
+        }
+        if (choice.label) return String(choice.label);
+      }
+
+      if (/^(it|sl|opt)_[A-Za-z0-9_-]+$/i.test(choiceStr)) {
+        return t('opt_unavailable');
+      }
+
+      return choiceStr;
     }
     function groupLabel(optKey) {
-      return t(`opt_label_${optKey}`) || OPT[optKey]?.label || optKey;
+      const key = `opt_label_${optKey}`;
+      if (I18N[currentLang]?.[key]) return I18N[currentLang][key];
+      if (I18N.fr?.[key]) return I18N.fr[key];
+      const opt = OPT[optKey];
+      if (opt) {
+        if (opt._src && typeof menuTr === 'function') {
+          const tr = menuTr(opt._src, currentLang);
+          if (tr && tr.name) return String(tr.name);
+          if (tr && tr.label) return String(tr.label);
+        }
+        if (opt.label) return String(opt.label);
+      }
+      if (/^(it|sl|opt)_[A-Za-z0-9_-]+$/i.test(String(optKey || ''))) {
+        return t('opt_unavailable');
+      }
+      return String(optKey || '');
+    }
+    function choiceEmoji(optKey, choiceId) {
+      return OPT[optKey]?.choices.find(c => c.id === choiceId)?.emoji || '';
     }
     function describeOptions(line) {
       const item = itemOf(line.id);
@@ -4467,6 +4743,38 @@ em, i, cite, dfn, var { font-style: normal; }
         }
       }
       return parts.join(' · ');
+    }
+    function describeOptionChoices(line) {
+      const item = itemOf(line.id);
+      if (!item || !item.options) return [];
+      const out = [];
+      for (const opt of item.options) {
+        if (opt.formulaSlotId) continue;
+        const sel = line.options?.[opt.key];
+        const ids = opt.type === 'multi' ? (Array.isArray(sel) ? sel : []) : (!sel ? [] : [sel]);
+        ids.forEach(id => {
+          if (!id) return;
+          out.push({ group: opt.key, choiceId: id, label: choiceLabel(opt.key, id) });
+        });
+      }
+      return out;
+    }
+    function describeOptionVisuals(line, regularOnly = false) {
+      const item = itemOf(line.id);
+      if (!item || !item.options) return [];
+      const out = [];
+      for (const opt of item.options) {
+        if (regularOnly && opt.formulaSlotId) continue;
+        const sel = line.options?.[opt.key];
+        const ids = opt.type === 'multi' ? (Array.isArray(sel) ? sel : []) : (!sel ? [] : [sel]);
+        ids.forEach(id => {
+          if (!id) return;
+          const emoji = choiceEmoji(opt.key, id);
+          const name = choiceLabel(opt.key, id);
+          if (name) out.push({ emoji: emoji || '', name });
+        });
+      }
+      return out;
     }
 
     function totals() {
@@ -4498,8 +4806,8 @@ em, i, cite, dfn, var { font-style: normal; }
         return `
           <li class="cart-row">
             <div class="info">
-              <span class="label">${nameOf(line.id)}</span>
-              ${opts ? `<div class="cart-item-opts">${opts}</div>` : ''}
+              <span class="label">${escapeHtml(nameOf(line.id))}</span>
+              ${opts ? `<div class="cart-item-opts">${escapeHtml(opts)}</div>` : ''}
               ${note}
             </div>
             <span class="qty">
@@ -4518,10 +4826,11 @@ em, i, cite, dfn, var { font-style: normal; }
 
     function addLineToCart(line) {
       const key = lineKey(line.id, line.options, line.note);
+      const addQty = Math.max(1, Number(line && line.qty) || 1);
       if (cart.has(key)) {
-        cart.get(key).qty += 1;
+        cart.get(key).qty += addQty;
       } else {
-        cart.set(key, { ...line, qty: 1 });
+        cart.set(key, { ...line, qty: addQty });
       }
       refreshCartUI();
       showToast(`${nameOf(line.id)} · ${t('toast_added')}`);
@@ -4540,8 +4849,14 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     /* ============ + button on a menu item ============ */
+    function standaloneMenuItem(itemId) {
+      const source = MENU_ALL.get(String(itemId));
+      if (source && (source.archived || source.formulaOnly || source.avail === false)) { showToast(t('dish_out')); return null; }
+      return itemOf(itemId);
+    }
+
     function handleAddClick(itemId) {
-      const item = itemOf(itemId);
+      const item = standaloneMenuItem(itemId);
       if (!item) return;
       if (item.options && item.options.length > 0) {
         openCustomizer(item);
@@ -4556,14 +4871,22 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     /* ============ Customizer ============ */
-    function openCustomizer(item) {
-      customizerItem = item;
-      // Initialize with defaults
-      customizerSelections = {};
-      for (const opt of item.options || []) {
-        if (opt.type === 'single') customizerSelections[opt.key] = opt.default || opt.choices[0].id;
-        else customizerSelections[opt.key] = [];
+    function initialCustomizerSelections(options) {
+      const selections = {};
+      for (const opt of options || []) {
+        /* A published default is menu configuration, not customer consent.
+           Every OrderPro option starts empty and only an explicit tap may
+           select it, for ordinary modifiers and formula stages alike. */
+        selections[opt.key] = opt.type === 'single' ? '' : [];
       }
+      return selections;
+    }
+
+    function openCustomizer(item, qty, editingKey) {
+      customizerItem = item;
+      customizerEditingKey = editingKey || null;
+      customizerEditingQty = Math.max(1, Number(qty) || 1);
+      customizerSelections = initialCustomizerSelections(item.options);
       customizerNote = '';
 
       // Populate header
@@ -4573,27 +4896,35 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#custom-base').textContent = `${t('custom_from')} ${item.price} ${cur()}`;
       const imgEl = $('#custom-img');
       imgEl.className = 'custom-img ' + (ICON_CLASS[item.icon] || 'coffee');
-      imgEl.innerHTML = `<i data-lucide="${item.icon}"></i>`;
+      imgEl.innerHTML = `<i data-lucide="${escapeHtml(item.icon)}"></i>`;
 
       // Render option groups
       const opts = $('#custom-options');
-      opts.innerHTML = (item.options || []).map(opt => `
-        <div class="option-group" data-opt="${opt.key}">
+      opts.innerHTML = (item.options || []).map(opt => {
+        const showChoiceImages = !!opt.formulaSlotId && opt.choices.some(choice => choice.photo);
+        return `
+        <div class="option-group${showChoiceImages ? ' has-choice-images' : ''}" data-opt="${opt.key}">
           <div class="option-group-label">
             <span>${groupLabel(opt.key)}</span>
-            <span class="opt-type">${opt.type === 'multi' ? t('opt_choose_many') : t('opt_choose_one')}</span>
+            <span class="opt-type">${(opt.required || (opt.formulaSlotId && Math.max(0, Number(opt.min) || 0) > 0))
+              ? `${t('opt_required')} · ${opt.type === 'multi' ? t('opt_choose_many') : t('opt_choose_one')}`
+              : (opt.type === 'multi' ? t('opt_choose_many') : t('opt_choose_one'))}</span>
           </div>
           <div class="option-chips">
             ${opt.choices.map(c => `
               <button class="option-chip" type="button"
                       data-opt="${opt.key}" data-choice="${c.id}" data-type="${opt.type}">
-                <span>${choiceLabel(opt.key, c.id)}</span>
-                ${c.delta ? `<span class="delta">+${c.delta} ${cur()}</span>` : ''}
+                ${showChoiceImages ? `<span class="option-choice-media">${c.photo
+                  ? `<img src="${escapeHtml(c.photo)}" alt="" loading="lazy" decoding="async" />`
+                  : `<span class="option-choice-fallback" aria-hidden="true">${escapeHtml(choiceLabel(opt.key, c.id, c, opt).slice(0, 1).toUpperCase())}</span>`}</span>` : ''}
+                <span class="${showChoiceImages ? 'option-choice-copy' : ''}"><span class="${showChoiceImages ? 'option-choice-name' : ''}">${c.emoji ? `${escapeHtml(c.emoji)} ` : ''}${choiceLabel(opt.key, c.id, c, opt)}</span>
+                ${c.delta ? `<span class="delta">+${c.delta} ${cur()}</span>` : ''}</span>
+                ${showChoiceImages ? '<span class="option-choice-check" aria-hidden="true"><i data-lucide="check"></i></span>' : ''}
               </button>
             `).join('')}
           </div>
         </div>
-      `).join('');
+      `; }).join('');
 
       // Mark defaults as active
       $$('.option-chip', opts).forEach(chip => {
@@ -4605,6 +4936,8 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#custom-note-input').value = '';
 
       refreshCustomizerPrice();
+      const customScroll = $('.custom-scroll', $('#custom-sheet'));
+      if (customScroll) customScroll.scrollTop = 0;
       $('#custom-sheet').classList.add('is-open');
       $('#custom-sheet').setAttribute('aria-hidden', 'false');
       if (window.lucide) window.lucide.createIcons();
@@ -4613,22 +4946,30 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#custom-sheet').classList.remove('is-open');
       $('#custom-sheet').setAttribute('aria-hidden', 'true');
       customizerItem = null;
+      customizerEditingKey = null;
+      customizerEditingQty = 1;
     }
     function selectCustomizerChoice(optKey, choiceId, type) {
       if (type === 'single') {
-        customizerSelections[optKey] = choiceId;
+        const definition = (customizerItem.options || []).find(opt => opt.key === optKey);
+        const mayClear = !definition || (!definition.required && !(definition.formulaSlotId && Math.max(0, Number(definition.min) || 0) > 0));
+        customizerSelections[optKey] = mayClear && customizerSelections[optKey] === choiceId ? '' : choiceId;
       } else {
         const arr = customizerSelections[optKey] || [];
         const i = arr.indexOf(choiceId);
-        if (i >= 0) arr.splice(i, 1); else arr.push(choiceId);
+        const def = (customizerItem.options || []).find(opt => opt.key === optKey);
+        if (i >= 0) arr.splice(i, 1);
+        else if (!def || !def.formulaSlotId || arr.length < Math.max(1, Number(def.max) || 1)) arr.push(choiceId);
         customizerSelections[optKey] = arr;
       }
       // Update chip visuals
       const group = document.querySelector(`.option-group[data-opt="${optKey}"]`);
       if (!group) return;
+      group.classList.remove('is-invalid');
+      group.removeAttribute('aria-invalid');
       if (type === 'single') {
         $$('.option-chip', group).forEach(c => {
-          c.classList.toggle('is-active', c.dataset.choice === choiceId);
+          c.classList.toggle('is-active', customizerSelections[optKey] === c.dataset.choice);
         });
       } else {
         $$('.option-chip', group).forEach(c => {
@@ -4659,21 +5000,62 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     function confirmCustomizer() {
       if (!customizerItem) return;
+      const invalidRequiredOption = (customizerItem.options || []).find((opt) => {
+        const selected = customizerSelections[opt.key];
+        const count = Array.isArray(selected) ? selected.length : (selected ? 1 : 0);
+        const minimum = opt.formulaSlotId ? Math.max(0, Number(opt.min) || 0) : (opt.required ? 1 : 0);
+        const maximum = opt.formulaSlotId ? Math.max(1, Number(opt.max) || 1) : Infinity;
+        return count < minimum || count > maximum;
+      });
+      if (invalidRequiredOption) {
+        const group = Array.from(document.querySelectorAll('.option-group'))
+          .find(el => el.dataset.opt === invalidRequiredOption.key);
+        if (group) {
+          group.classList.add('is-invalid');
+          group.setAttribute('aria-invalid', 'true');
+          group.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const firstChoice = group.querySelector('.option-chip');
+          if (firstChoice) window.setTimeout(() => firstChoice.focus({ preventScroll: true }), 260);
+        }
+        const optGroupName = groupLabel(invalidRequiredOption.key) || '';
+        showToast(t('opt_required_missing').replace('{name}', optGroupName));
+        return;
+      }
+      if (customizerEditingKey && cart.has(customizerEditingKey)) {
+        cart.delete(customizerEditingKey);
+      }
+      const restoreQty = customizerEditingQty || 1;
+      customizerEditingKey = null;
+      customizerEditingQty = 1;
       customizerNote = $('#custom-note-input').value.trim();
       addLineToCart({
         id: customizerItem.id,
         options: { ...customizerSelections },
         note: customizerNote,
         unitPrice: customizerUnitPrice(),
+        qty: restoreQty,
       });
       closeCustomizer();
     }
 
     /* ============ Service bar (table mode) ============ */
-    function callServer() {
+    let serviceRequestPending = false;
+    async function sendServiceRequest(action) {
+      if (serviceRequestPending || !SESSION.id || SESSION.closed) return false;
+      serviceRequestPending = true;
+      const res = await NET.serviceRequest(SESSION.id, action);
+      serviceRequestPending = false;
+      if (res && res.ok) return true;
+      if (res && res.error === 'session-closed') SESSION.markClosed('settle');
+      else showToast(res && res.error === 'network' ? t('order_offline') : t('order_failed'));
+      return false;
+    }
+    async function callServer() {
       const pill = document.querySelector('[data-service="call-server"]');
       pill.classList.add('is-pulled');
-      showToast(`${t('toast_server_coming_pre')} ${tableNumber}`);
+      if (await sendServiceRequest('call-server')) {
+        showToast(`${t('toast_server_coming_pre')} ${tableNumber}`);
+      }
       setTimeout(() => pill.classList.remove('is-pulled'), 4000);
     }
 
@@ -4699,8 +5081,8 @@ em, i, cite, dfn, var { font-style: normal; }
           return `
             <li class="bill-row">
               <div class="bill-row-info">
-                <div class="bill-row-name">${l.qty}× ${nameOf(l.id)}</div>
-                ${opts ? `<div class="bill-row-opts">${opts}</div>` : ''}
+                <div class="bill-row-name">${l.qty}× ${escapeHtml(nameOf(l.id))}</div>
+                ${opts ? `<div class="bill-row-opts">${escapeHtml(opts)}</div>` : ''}
               </div>
               <div class="bill-row-price">${l.qty * l.unitPrice} ${cur()}</div>
             </li>
@@ -4770,13 +5152,12 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#bill-total-value').textContent = `${total} ${cur()}`;
     }
 
-    function confirmBill() {
-      const tipAmt = Math.round(sessionTotal * tipPercent / 100);
+    async function confirmBill() {
+      if (!await sendServiceRequest('ask-bill')) return;
       closeBill();
-      const msg = tipAmt > 0
-        ? `${t('toast_bill_asked_pre')} ${sessionTotal + tipAmt} ${cur()} (+${tipAmt} ${t('toast_bill_tip_post')})`
-        : `${t('toast_bill_asked_pre')} ${sessionTotal} ${cur()}`;
-      showToast(msg);
+      // This requests the whole table's bill, not this phone's subtotal or an
+      // unsaved tip. A successful write is not a promise that staff has arrived.
+      showToast(`${t('toast_bill_asked_pre')} ${tableNumber}`);
     }
 
     /* ============ Split-bill (égal / par article) ============ */
@@ -4838,7 +5219,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const subtitleEl = $('#split-subtitle');
       if (subtitleEl) {
         subtitleEl.textContent = t('split_subtitle_tpl')
-          .replace('{n}', tableNumber)
+          .replace('{n}', tableNumber || '—')
           .replace('{total}', grand)
           .replace('{cur}', cur());
       }
@@ -4889,7 +5270,7 @@ em, i, cite, dfn, var { font-style: normal; }
                data-split-item="${idx}" ${isOther ? `data-owner="${escapeHtml(ownerLabel)}"` : ''}>
             <span class="info">
               <span class="qty">${line.qty}×</span>
-              <span class="name">${nameOf(line.id)}</span>
+              <span class="name">${escapeHtml(nameOf(line.id))}</span>
             </span>
             <span class="price">${line.qty * line.unitPrice} ${cur()}</span>
           </div>
@@ -4923,11 +5304,16 @@ em, i, cite, dfn, var { font-style: normal; }
     /* ============ toast ============ */
     let toastTimer = null;
     function showToast(text) {
-      const t = $('#toast');
-      $('#toast-text').textContent = text;
-      t.classList.add('is-visible');
+      let clean = String(text || '').trim();
+      if (!clean) return;
+      if (clean.includes('{n}')) clean = clean.replace(/\{n\}/g, '').trim();
+      clean = clean.replace(/[:：]\s*$/, '').trim();
+      if (!clean) clean = t('order_menu_updated') || 'Menu mis à jour';
+      const tEl = $('#toast');
+      $('#toast-text').textContent = clean;
+      tEl.classList.add('is-visible');
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => t.classList.remove('is-visible'), 1400);
+      toastTimer = setTimeout(() => tEl.classList.remove('is-visible'), 1400);
     }
 
     /* ============ cart sheet ============ */
@@ -4953,8 +5339,18 @@ em, i, cite, dfn, var { font-style: normal; }
     async function sendOrder() {
       if (!cart.size) return;
       const btn = $('#send-btn');
+      if (btn.classList.contains('is-loading')) return;
+      if (SESSION.closed) { gotoScreen('screen-thanks'); return; }
       const label = $('#send-label');
       const prevLabel = label ? label.textContent : '';
+      const loadingOwner = { scope: SESSION.sendScope() };
+      btn.orderProLoadingOwner = loadingOwner;
+      const releaseLoading = (restoreLabel = true) => {
+        if (btn.orderProLoadingOwner !== loadingOwner) return;
+        btn.classList.remove('is-loading');
+        if (label && restoreLabel) label.textContent = prevLabel;
+        delete btn.orderProLoadingOwner;
+      };
       btn.classList.add('is-loading');
       if (label) label.textContent = t('order_sending');
 
@@ -4965,54 +5361,142 @@ em, i, cite, dfn, var { font-style: normal; }
       // Snapshot current cart into sentLines (for à-table bill aggregation)
       const linesCopy = [...cart.values()].map(l => ({ ...l, options: { ...l.options } }));
 
-      /* Une clé par envoi. Un double-tap, ou un réseau qui repasse pendant que
-         la requête était en vol, doit retrouver LA MÊME commande — pas en
-         créer une seconde avec un second numéro que la cuisine préparerait
-         deux fois. Le serveur la reconnaît et rejoue sa réponse. */
-      if (!pendingRef) pendingRef = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      // Resolve the visit BEFORE choosing its retry identity.
+      if ((!SESSION.id || SESSION.mode !== orderMode || String(SESSION.table || '') !== String(orderMode === 'table' ? tableNumber : ''))
+          && !(await SESSION.open(orderMode, orderMode === 'table' ? tableNumber : ''))) {
+        releaseLoading();
+        return;
+      }
+      loadingOwner.scope = SESSION.sendScope();
 
       /* On n'envoie plus ni les noms ni les prix : rien que des identifiants et
          des quantités. Le serveur ouvre la carte publiée par le commerçant, y
          lit le prix et recalcule le total. Avant, une requête modifiée créait
          une commande à 1 MAD pour un plat à 250 et le ticket cuisine sortait
          avec le faux prix. */
-      const res = await NET.placeOrder({
+      const makeLinesPayload = ref => linesCopy.flatMap((l, lineIndex) => {
+        const item = itemOf(l.id);
+        const formulaSlots = (item && item.options || []).filter(opt => opt.formulaSlotId);
+        const formulaUid = formulaSlots.length ? `${ref}-${lineIndex}`.slice(0, 40) : '';
+        const parent = {
+          id: l.id, qty: l.qty,
+          options: describeOptionChoices(l).map(p => `${groupLabel(p.group)}: ${p.label}`).join(' · '),
+          optionChoices: describeOptionChoices(l),
+          visuals: describeOptionVisuals(l, true),
+          note: l.note || '',
+        };
+        if (!formulaUid) return [parent];
+        Object.assign(parent, { kind: 'formula', formulaUid, formulaName: nameOf(l.id) });
+        const children = [];
+        formulaSlots.forEach(slot => {
+          const selected = l.options?.[slot.key];
+          /* Une étape facultative jamais touchée vaut '' (initialCustomizerSelections),
+             pas `undefined` : `== null` la laissait passer et on envoyait un
+             composant d'identifiant vide. Le serveur ne le trouvait dans aucun
+             choix du créneau et refusait TOUTE la formule — « Options à
+             rechoisir » sur un plat pourtant correctement composé. */
+          const ids = (slot.type === 'multi' ? (Array.isArray(selected) ? selected : [])
+            : (selected == null ? [] : [selected])).filter(Boolean);
+          ids.forEach((id, choiceIndex) => children.push({
+            id, qty: l.qty, kind: 'formula-part', formulaUid,
+            formulaName: nameOf(l.id), slotLabel: slot.label || '',
+            formulaSlotId: slot.formulaSlotId,
+            lineId: `${formulaUid}-${slot.formulaSlotId}-${choiceIndex}`.slice(0, 60),
+          }));
+        });
+        return [parent].concat(children);
+      });
+
+      // Hash the exact payload with neutral formula IDs, then restore its ref
+      // before deriving the real formulaUid/lineId values. No basket is stored.
+      const neutralPayload = makeLinesPayload('');
+      const attempt = await SESSION.prepareSend(neutralPayload);
+      if (SESSION.closed || attempt.scope !== SESSION.sendScope()) {
+        SESSION.clearPendingSend(attempt);
+        pendingRef = '';
+        releaseLoading();
+        return;
+      }
+      pendingRef = attempt.ref;
+      const linesPayload = neutralPayload.map(line => !line.formulaUid ? line : {
+        ...line, formulaUid: (pendingRef + line.formulaUid).slice(0, 40),
+        ...(line.lineId ? { lineId: (pendingRef + line.lineId).slice(0, 60) } : {}),
+      });
+
+      let res = await NET.placeOrder({
         mode: orderMode,                       // 'table' | 'takeout'
         table: orderMode === 'table' ? tableNumber : '',
         session: SESSION.id || '',
         ref: pendingRef,
-        lines: linesCopy.map(l => ({
-          id: l.id,
-          qty: l.qty,
-          options: describeOptions(l),
-          note: l.note || '',
-        })),
+        lines: linesPayload,
       });
 
-      btn.classList.remove('is-loading');
-      if (label) label.textContent = prevLabel;
+      const currentVisit = !SESSION.closed && attempt.scope === SESSION.sendScope();
+      releaseLoading(currentVisit);
+      // A response can outlive payment and an explicit reorder. Retire an
+      // acknowledged old attempt, but never apply it to the new visit's UI.
+      if (!currentVisit) {
+        if (res && res.ok) SESSION.clearPendingSend(attempt);
+        if (pendingRef === attempt.ref) pendingRef = '';
+        return;
+      }
 
       if (!res || !res.ok) {
         const err = res && res.error;
         /* La session a été fermée pendant qu'on commandait : l'addition vient
            d'être réglée. Le dire franchement vaut mieux qu'un « échec » qui
            inviterait à réessayer indéfiniment. */
-        if (err === 'session-closed') { SESSION.markClosed('settle'); return; }
+        if (err === 'session-closed') {
+          SESSION.markClosed('settle');
+          return;
+        }
         if (err === 'service-closed') { showToast(t('order_closed')); return; }
         /* La carte a bougé sous les doigts du client — un plat épuisé, un plat
            retiré. On le dit avec le nom, et on retire la ligne : réessayer à
            l'identique échouerait exactement pareil. */
         if (err === 'menu-changed') {
-          const gone = [].concat(res.unavailable || [], res.unknown || []);
-          showToast(t('order_gone').replace('{n}', gone.join(', ')));
+          SESSION.clearPendingSend(attempt);
           pendingRef = '';
-          dropUnavailable(res.unknown || [], res.unavailable || []);
+          const invalidOpts = Array.isArray(res.invalidOptions) ? res.invalidOptions.filter(Boolean) : [];
+          const gone = [].concat(res.unavailable || [], res.unknown || []).filter(Boolean);
+
+          if (invalidOpts.length) {
+            const targetNames = invalidOpts.join(', ');
+            showToast(t('order_options_changed').replace('{n}', targetNames || t('order_item_fallback')));
+            let reopened = false;
+            for (const [key, line] of [...cart.entries()]) {
+              const m = itemOf(line.id);
+              const match = invalidOpts.includes(line.id) || (m && invalidOpts.includes(m.name));
+              if (match && m) {
+                openCustomizer(m, line.qty, key);
+                reopened = true;
+                break;
+              }
+            }
+            if (!reopened) {
+              refreshCartUI();
+              reloadMenu();
+            }
+            return;
+          }
+
+          if (gone.length) {
+            const targetGone = gone.join(', ');
+            showToast(t('order_gone').replace('{n}', targetGone || t('order_item_fallback')));
+            dropUnavailable(res.unknown || [], res.unavailable || []);
+            return;
+          }
+
+          showToast(t('order_menu_updated'));
+          reloadMenu();
           return;
         }
-        showToast(err === 'network' ? t('order_offline') : t('order_failed'));
+        showToast(err === 'network' && !attempt.durable ? t('order_retry_local')
+          : err === 'network' ? t('order_unconfirmed') : t('order_failed'));
         return;                                // cart intact — they can retry
       }
 
+      SESSION.clearPendingSend(attempt);
       pendingRef = '';
       currentOrderId = String(res.id || '');
       lastStatus = '';
@@ -5024,11 +5508,11 @@ em, i, cite, dfn, var { font-style: normal; }
       const shownTotal = isFinite(serverTotal) && serverTotal > 0 ? serverTotal : totalNow;
       closeCart();
       if (orderMode === 'takeout') {
-        orderNumber = String(res.number || '').padStart(3, '0');
+        orderNumber = 'OPD-' + String(res.number || '');
         $('#cashier-number-digits').textContent = orderNumber;
         $('#prep-number').textContent = orderNumber;
         $('#ready-number').textContent = orderNumber;
-        $('#cashier-items').textContent = summary || '—';
+        $('#cashier-items').textContent = summary || '·';
         $('#cashier-total').textContent = `${shownTotal} ${cur()}`;
         gotoScreen('screen-cashier');
       } else {
@@ -5036,7 +5520,7 @@ em, i, cite, dfn, var { font-style: normal; }
         for (const l of linesCopy) sentLines.push(l);
         sessionTotal += shownTotal;
         $('#success-table').textContent = tableNumber;
-        $('#success-items').textContent = summary || '—';
+        $('#success-items').textContent = summary || '·';
         gotoScreen('screen-success');
         watchTableOrder();
       }
@@ -5065,6 +5549,64 @@ em, i, cite, dfn, var { font-style: normal; }
        ═══════════════════════════════════════════════════════════════════════ */
     const SESSION = {
       id: '', mode: '', table: '', closed: false, closedBy: '',
+      pendingSend: null,
+      retiredSendRefs: new Set(),
+      sendKey() { return 'kiwi-op-send:' + NET.slug; },
+      sendScope() { return JSON.stringify([NET.slug, this.id, this.mode, String(this.table || '')]); },
+      async prepareSend(lines) {
+        const key = this.sendKey(), scope = this.sendScope(), payload = JSON.stringify(lines);
+        const previous = this.pendingSend;
+        let fingerprint = '';
+        try {
+          const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
+          fingerprint = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
+        } catch (_) { /* unavailable storage/crypto permits only an in-page retry */ }
+        let ref = previous && previous.scope === scope && previous.payload === payload
+          && !this.retiredSendRefs.has(key + ':' + previous.ref) ? previous.ref : '';
+        if (!ref && fingerprint) {
+          try {
+            const saved = JSON.parse(localStorage.getItem(key) || 'null');
+            if (saved && saved.v === 1 && saved.scope === scope && saved.fingerprint === fingerprint
+                && /^r[A-Za-z0-9_-]{6,40}$/.test(saved.ref || '')
+                && !this.retiredSendRefs.has(key + ':' + saved.ref)
+                && localStorage.getItem(key + ':retired:' + saved.ref) !== '1') ref = saved.ref;
+          } catch (_) {}
+        }
+        if (!ref) ref = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 14);
+        const attempt = { key, scope, payload, ref, durable: false };
+        if (fingerprint) {
+          try {
+            const record = JSON.stringify({ v: 1, scope, fingerprint, ref });
+            localStorage.setItem(key, record);
+            attempt.durable = localStorage.getItem(key) === record;
+          } catch (_) {}
+        }
+        this.pendingSend = attempt;
+        return attempt;
+      },
+      clearPendingSend(attempt = this.pendingSend) {
+        const key = attempt ? attempt.key : this.sendKey();
+        let retireDurably = !!attempt;
+        if (attempt) this.retiredSendRefs.add(key + ':' + attempt.ref);
+        try {
+          const saved = JSON.parse(localStorage.getItem(key) || 'null');
+          if (saved && (attempt ? saved.ref === attempt.ref && saved.scope === attempt.scope
+              : saved.scope === this.sendScope())) {
+            // Tombstone first: if removeItem fails, a successful write still
+            // prevents an acknowledged ref from being restored after navigation.
+            try { localStorage.setItem(key, 'null'); } catch (_) {}
+            localStorage.removeItem(key);
+          }
+          retireDurably = false;
+        } catch (_) {}
+        // If the shared slot cannot be read, do not overwrite a potentially
+        // newer attempt. Retire ONLY the captured ref in its own small marker;
+        // navigation can then reject the stale record once reads recover.
+        if (retireDurably) {
+          try { localStorage.setItem(key + ':retired:' + attempt.ref, '1'); } catch (_) {}
+        }
+        if (!attempt || this.pendingSend === attempt) this.pendingSend = null;
+      },
       _key() { return 'kiwi-op-ses:' + NET.slug; },
       _read() {
         try { return JSON.parse(localStorage.getItem(this._key()) || 'null') || null; }
@@ -5077,13 +5619,19 @@ em, i, cite, dfn, var { font-style: normal; }
         } catch (_) {}
       },
       /* Une addition réglée à l'instant, sur CETTE table. */
-      recentlySettled(mode, table) {
+      recentlySettled(mode, table, allowReorder = false) {
+        if (allowReorder) return false;
+        if (cart && cart.size > 0) return false;
         // A counter tag starts a new takeaway purchase each time it is tapped.
         // Keeping its previous closed session here made the promised NFC retry
         // reopen the thank-you screen for 30 minutes instead of the menu.
         if (mode === 'takeout') return false;
         const s = this._read();
         if (!s || !s.closedAt) return false;
+        // Seule une vraie addition encaissée en caisse (settle) empêche la réouverture immédiate.
+        // Une table annulée sans encaissement ou expirée ne doit pas bloquer le client.
+        if (s.closedBy && s.closedBy !== 'settle') return false;
+        if (s.hadOrder === false) return false;
         if (s.mode !== mode || String(s.table || '') !== String(table || '')) return false;
         return (Date.now() - s.closedAt) < 30 * 60 * 1000;
       },
@@ -5115,8 +5663,9 @@ em, i, cite, dfn, var { font-style: normal; }
       },
       markClosed(why) {
         if (this.closed) return;
+        this.clearPendingSend();
         this.closed = true; this.closedBy = why || '';
-        this._write({ id: this.id, mode: this.mode, table: this.table, closedAt: Date.now() });
+        this._write({ closedBy: this.closedBy, id: this.id, mode: this.mode, table: this.table, closedAt: Date.now(), hadOrder: !!currentOrderId || (Array.isArray(sentLines) && sentLines.length > 0) });
         onSessionClosed();
       },
     };
@@ -5127,6 +5676,12 @@ em, i, cite, dfn, var { font-style: normal; }
        ne puisse encore envoyer quoi que ce soit. */
     function onSessionClosed() {
       LIVE.stop();
+      const sendButton = $('#send-btn');
+      if (sendButton && sendButton.orderProLoadingOwner?.scope === SESSION.sendScope()) {
+        sendButton.classList.remove('is-loading');
+        delete sendButton.orderProLoadingOwner;
+      }
+      pendingRef = '';
       cart.clear();
       refreshCartUI();
       const sub = $('#thanks-sub');
@@ -5163,7 +5718,12 @@ em, i, cite, dfn, var { font-style: normal; }
           const s = await NET.sessionStatus(SESSION.id);
           // Injoignable ⇒ on ne conclut RIEN. Déclarer la session fermée sur un
           // réseau qui tousse mettrait le client dehors au milieu du repas.
-          if (s && s.ok && s.status !== 'open') { SESSION.markClosed(s.closedBy); return; }
+          if (s && s.ok && s.status !== 'open') {
+            // Settlement ends the shared visit for EVERY phone, including
+            // phones with a draft. Only the explicit reorder action may reseat.
+            SESSION.markClosed(s.closedBy);
+            return;
+          }
         }
 
         if (currentOrderId) {
@@ -5270,8 +5830,7 @@ em, i, cite, dfn, var { font-style: normal; }
       }
       if (!hit) return;
       refreshCartUI();
-      const active = $('.menu-tab.is-active');
-      renderMenu((active && active.dataset.tab) || 'all');
+      renderMenu(activeMenuFilter());
     }
 
     /* ============ restart (back to menu after order sent) ============ */
@@ -5279,6 +5838,7 @@ em, i, cite, dfn, var { font-style: normal; }
       cart.clear();
       refreshCartUI();
       $$('.menu-tab').forEach(t => t.classList.toggle('is-active', t.dataset.tab === 'all'));
+      renderMenuSubtabs('all');
       renderMenu('all');
       gotoScreen('screen-menu');
     }
@@ -5303,8 +5863,8 @@ em, i, cite, dfn, var { font-style: normal; }
     /* S'asseoir. Le seul chemin par lequel une session s'ouvre, pour que les
        trois entrées (tag de table, tag de comptoir, choix à la main) passent
        par les mêmes refus et les mêmes messages. */
-    async function seatHere(mode, table) {
-      if (SESSION.recentlySettled(mode, table)) {
+    async function seatHere(mode, table, allowReorder = false) {
+      if (SESSION.recentlySettled(mode, table, allowReorder)) {
         // L'addition vient d'être réglée sur ce téléphone : recharger la page
         // ne rouvre pas le robinet. Le tag de la table servira au client
         // suivant, qui n'a pas ce souvenir dans le sien.
@@ -5331,7 +5891,7 @@ em, i, cite, dfn, var { font-style: normal; }
         serviceBar.hidden = false;
       } else {
         badge.innerHTML = `<i data-lucide="utensils"></i><span id="menu-badge-text">${t('badge_table')} ${tableNumber}</span>`;
-        subtitle.textContent = t('cart_subtitle_table').replace('{n}', tableNumber);
+        subtitle.textContent = t('cart_subtitle_table').replace('{n}', tableNumber || '—');
         note.textContent = t('cart_note_table');
         sendLabel.textContent = t('send_table');
         serviceBar.classList.remove('is-takeout');
@@ -5490,7 +6050,30 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     /* ============ boot screen states ============ */
+    /* La caisse dort, pas le restaurant : « fermé » est transitoire et doit se
+       réveiller seul. Même traitement pour « off », que le commerçant peut
+       réactiver à tout moment. Sans réessai, le téléphone restait mort même
+       après le réveil du comptoir — rescan compris, qui retombait pareil. */
+    let bootRetryId = null;
+    function clearBootRetry() {
+      if (bootRetryId) { clearTimeout(bootRetryId); bootRetryId = null; }
+    }
+    function scheduleBootRetry(kind) {
+      clearBootRetry();
+      if (kind !== 'closed' && kind !== 'off') return;
+      bootRetryId = setTimeout(() => {
+        bootRetryId = null;
+        const boot = document.getElementById('screen-boot');
+        if (document.hidden || !boot || !boot.classList.contains('is-active')) return;
+        bootFromLink();
+      }, 30000);
+    }
     function bootState(kind, opts) {
+      clearBootRetry();
+      if (kind === 'closed' || kind === 'off') {
+        opts = Object.assign({ retry: true }, opts || {});
+        scheduleBootRetry(kind);
+      }
       const spinner = $('#boot-spinner');
       const icon = $('#boot-icon');
       const title = $('#boot-title');
@@ -5512,6 +6095,19 @@ em, i, cite, dfn, var { font-style: normal; }
       body.textContent = t('boot_' + kind + '_body');
       icon.innerHTML = `<i data-lucide="${(opts && opts.icon) || 'nfc'}"></i>`;
       if (window.lucide) window.lucide.createIcons();
+    }
+
+    async function reloadMenu() {
+      try {
+        const res = await NET.catalog();
+        if (!res) return;
+        if (STORE.type === 'boutique' && res.shop) {
+          bootBoutique(res.shop);
+        } else if (res.menu) {
+          bootRestaurant(res.menu);
+        }
+        refreshCartUI();
+      } catch (_) {}
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
@@ -5564,6 +6160,27 @@ em, i, cite, dfn, var { font-style: normal; }
       }
     }
 
+    /* A cashier can sell out a dish while this page is already open. Refresh
+       only when the availability map changes, so browsing is uninterrupted
+       while the unavailable card disappears from the public menu. */
+    let availabilitySignature = '';
+    function availabilityOf(data) {
+      return ((Array.isArray(data && data.items) ? data.items : []).concat(Array.isArray(data && data.formulaItems) ? data.formulaItems : []))
+        .map((it) => String(it && it.id || '') + ':' + (it && it.avail === false ? '0' : '1')).sort().join('|');
+    }
+    setInterval(async () => {
+      if (!STORE.ready || STORE.type === 'boutique' || !STORE.slug) return;
+      const res = await NET.catalog();
+      const data = res && res.menu;
+      if (!data) return;
+      const next = availabilityOf(data);
+      if (!availabilitySignature) { availabilitySignature = next; return; }
+      if (next === availabilitySignature) return;
+      availabilitySignature = next;
+      bootRestaurant(data);
+      renderMenu(activeMenuFilter());
+    }, 15000);
+
     /* ═══════════════════════════════════════════════════════════════════════
        RESTAURANT — map the dashboard's published carte onto the app's model.
        Published shape (assets/menu-catalog.js):
@@ -5573,15 +6190,63 @@ em, i, cite, dfn, var { font-style: normal; }
        ═══════════════════════════════════════════════════════════════════════ */
     function bootRestaurant(data) {
       const cats = Array.isArray(data.cats) ? data.cats : [];
-      const items = (Array.isArray(data.items) ? data.items : []).filter(i => i && i.avail !== false);
-      if (!items.length) return false;
-
+      const allItems = (Array.isArray(data.items) ? data.items : []).concat(Array.isArray(data.formulaItems) ? data.formulaItems : []);
+      availabilitySignature = availabilityOf(data);
+      const items = allItems.filter(i => i && i.avail !== false && !i.formulaOnly && !i.archived);
+      MENU_ALL.clear();
       MENU.length = 0;
-      const names = {};
+      if (!items.length) return false;
+      allItems.forEach((it) => { if (it && it.id) MENU_ALL.set(String(it.id), it); });
+
+      const groups = new Map();
+      (Array.isArray(data.opts) ? data.opts : []).forEach(g => {
+        if (!g || !g.id || !Array.isArray(g.choices) || !g.choices.length) return;
+        const key = String(g.id);
+        const mapped = {
+          key,
+          label: String(g.name || ''),
+          type: g.kind === 'many' ? 'multi' : 'single',
+          default: '',
+          required: !!g.required,
+          _src: g,
+          choices: g.choices.filter(c => c && c.id && c.name).map(c => ({
+            id: String(c.id), label: String(c.name), emoji: String(c.emoji || ''), delta: Math.max(0, Number(c.price) || 0),
+            _src: c,
+          })),
+        };
+        OPT[key] = mapped;
+        groups.set(key, mapped);
+      });
+
+      const names = {}, namesEn = {}, namesAr = {};
+      const allToTranslate = (Array.isArray(allItems) && allItems.length) ? allItems : items;
+      for (const it of allToTranslate) {
+        if (!it || !it.id) continue;
+        names[String(it.id)] = { name: String(it.name || ''), desc: String(it.desc || '') };
+        [['fr', names], ['en', namesEn], ['ar', namesAr]].forEach(([l, map]) => {
+          const x = menuTr(it, l);
+          if (x) map[String(it.id)] = { name: String(x.name), desc: x.desc != null ? String(x.desc) : String(it.desc || '') };
+        });
+      }
+
       for (const it of items) {
+        const formulaOptions = it.formula && Array.isArray(it.formula.slots) ? it.formula.slots.map(s => {
+          const g = { key: 'formula_' + String(it.id) + '_' + String(s.id), formulaSlotId: String(s.id), label: String(s.label || ''), type: (+s.max || 1) > 1 ? 'multi' : 'single', default: '', required: (+s.min || 0) > 0, min: Math.max(0, +s.min || 0), max: Math.max(1, +s.max || 1), _src: s,
+            choices: (Array.isArray(s.choices) ? s.choices : []).map(c => { const target=allItems.find(x=>String(x.id)===String(c.itemId) && !x.archived && x.avail !== false); return target ? {id:String(c.itemId),label:String(target.name),emoji:'',delta:Math.max(0,Number(c.extra)||0),photo:target.showPhotoInFormulas === true ? String(target.photo || '') : '', targetItem: target, _src: target} : null; }).filter(Boolean) };
+          OPT[g.key] = g;
+          if (!OPT['formula_' + String(s.id)]) OPT['formula_' + String(s.id)] = g;
+          return g;
+        }).filter(g=>g.choices.length) : [];
+        const formulaBroken = it.formula && Array.isArray(it.formula.slots)
+          && it.formula.slots.some((slot) => {
+            const mapped = formulaOptions.find((opt) => opt.formulaSlotId === String(slot.id));
+            return !mapped || mapped.choices.length < Math.max(0, Number(slot.min) || 0);
+          });
+        if (formulaBroken) continue;
         MENU.push({
           id: String(it.id),
           cat: String(it.catId || ''),
+          subId: String(it.subId || ''),
           name: String(it.name || ''),
           desc: String(it.desc || ''),
           price: Math.max(0, Math.round(Number(it.price) || 0)),
@@ -5590,12 +6255,14 @@ em, i, cite, dfn, var { font-style: normal; }
           video: it.video || '',
           tag: it.tag || '',
           avail: it.avail !== false,
+          options: (Array.isArray(it.opts) ? it.opts : []).map(id => groups.get(String(id))).filter(Boolean).concat(formulaOptions),
+          formula: formulaOptions.length > 0,
         });
-        names[String(it.id)] = { name: String(it.name || ''), desc: String(it.desc || '') };
       }
-      // The merchant writes their carte once, in their own words — we don't
-      // machine-translate it. Every language falls back to what they typed.
-      MENU_I18N.fr = names; MENU_I18N.en = {}; MENU_I18N.ar = {};
+      // Le patron écrit sa carte une fois ; ses traductions (tableau de bord →
+      // Traductions) voyagent avec elle. Une langue non traduite retombe sur
+      // son texte (itemI18n → MENU_I18N.fr).
+      MENU_I18N.fr = names; MENU_I18N.en = namesEn; MENU_I18N.ar = namesAr;
 
       /* Les onglets sont ceux du patron, et rien d'autre. L'onglet « Top »
          a été retiré : il ne montrait que les plats filmés, ce qui coupait la
@@ -5605,12 +6272,17 @@ em, i, cite, dfn, var { font-style: normal; }
       const used = new Set(MENU.map(m => m.cat));
       const tabs = $('.menu-tabs');
       const parts = [];
+      MENU_SUBTABS.clear();
       parts.push(`<button class="menu-tab is-active" data-tab="all" data-i18n="tab_all">${escapeHtml(t('tab_all'))}</button>`);
       for (const c of cats) {
         if (!used.has(String(c.id))) continue;        // empty category → no tab
-        parts.push(`<button class="menu-tab" data-tab="${escapeHtml(String(c.id))}">${escapeHtml(String(c.name || ''))}</button>`);
+        parts.push(`<button class="menu-tab" data-tab="${escapeHtml(String(c.id))}">${escapeHtml(String((menuTr(c, currentLang) || c).name || ''))}</button>`);
+        const subtabs = (Array.isArray(c.sub) ? c.sub : []).filter(s =>
+          MENU.some(m => m.cat === String(c.id) && m.subId === String(s.id)));
+        if (subtabs.length) MENU_SUBTABS.set(String(c.id), subtabs);
       }
       tabs.innerHTML = parts.join('');
+      renderMenuSubtabs('all');
       renderMenu('all');
       return true;
     }
@@ -5899,13 +6571,42 @@ em, i, cite, dfn, var { font-style: normal; }
         if (e.target.closest('#prep-perm-btn')) { askNotificationPermission(); return; }
         // Takeout: ready → restart
         if (e.target.closest('#ready-cta')) { restartMenu(); return; }
-        // Add to cart — opens customizer if item has options
+        // Thanks screen: reorder button clears dead session and immediately reopens menu
+        if (e.target.closest('#thanks-reorder-btn')) {
+          SESSION._write(null);
+          SESSION.closed = false;
+          SESSION.closedBy = '';
+          SESSION.id = '';
+          sentLines.length = 0;
+          sessionTotal = 0;
+          cart.clear();
+          refreshCartUI();
+          if (orderMode === 'table' && tableNumber) {
+            seatHere('table', tableNumber, true).then((ok) => {
+              if (ok) { gotoScreen('screen-menu'); applyMenuMode(); }
+            });
+          } else {
+            restartMenu();
+          }
+          return;
+        }
+        // Add to cart — dedicated + button opens customizer if item has options, or adds directly
         const addBtn = e.target.closest('[data-add]');
         if (addBtn) {
           handleAddClick(addBtn.dataset.add);
           addBtn.classList.remove('is-popped');
           void addBtn.offsetWidth;
           addBtn.classList.add('is-popped');
+          return;
+        }
+        // Dish card tap: ONLY opens customizer if item has customizable options!
+        // Never silently add items with no options (e.g. water, drinks) on touch/scroll.
+        const cardEl = e.target.closest('[data-card]');
+        if (cardEl) {
+          const item = standaloneMenuItem(cardEl.dataset.card);
+          if (item && item.options && item.options.length > 0) {
+            openCustomizer(item);
+          }
           return;
         }
         // Cart qty (uses encoded lineKey)
@@ -5955,8 +6656,14 @@ em, i, cite, dfn, var { font-style: normal; }
         // Tabs
         const tab = e.target.closest('.menu-tab');
         if (tab) {
-          $$('.menu-tab').forEach(t => t.classList.remove('is-active'));
-          tab.classList.add('is-active');
+          if (tab.classList.contains('menu-subtab')) {
+            $$('.menu-subtab').forEach(t => t.classList.remove('is-active'));
+            tab.classList.add('is-active');
+          } else {
+            $$('.menu-tabs .menu-tab').forEach(t => t.classList.remove('is-active'));
+            tab.classList.add('is-active');
+            renderMenuSubtabs(tab.dataset.tab);
+          }
           renderMenu(tab.dataset.tab);
           return;
         }

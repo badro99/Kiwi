@@ -1,13 +1,18 @@
 -- Kiwi Live Link — Cloudflare D1 schema.
--- Apply once after creating the D1 database (see LIVE_LINK.md):
+-- Apply once after creating the D1 database (see docs/ops/LIVE_LINK.md):
 --   wrangler d1 execute kiwi-sales --file=schema.sql --remote
 -- or paste it into the D1 console in the Cloudflare dashboard.
 
 CREATE TABLE IF NOT EXISTS sales (
   id       TEXT PRIMARY KEY,   -- client-supplied unique id
-  merchant TEXT NOT NULL,      -- tenant key (one value for the pilot)
-  amount   INTEGER NOT NULL,   -- MAD, whole dirhams
-  method   TEXT NOT NULL,      -- cash | card | tap | qr | wallet
+  merchant     TEXT NOT NULL,      -- tenant key (one value for the pilot)
+  amount       INTEGER NOT NULL,   -- legacy whole MAD; retained for backward compatibility with pre-migration rows and unmigrated readers
+  amount_cents INTEGER,            -- centimes; authoritative when present. Legacy rows use amount (whole MAD).
+  gross_amount_cents INTEGER,      -- nullable: gross before an approved discount
+  discount_amount_cents INTEGER,   -- nullable: bounded, never greater than gross
+  discount_reason TEXT,            -- nullable enum: commercial|loyal-customer|kitchen-error|other
+  discount_actor_id TEXT,          -- nullable staff/account id, never a PIN or code
+  method       TEXT NOT NULL,      -- cash | card | tap | qr | wallet
   label    TEXT,               -- "À emporter #12", "Table 4", …
   ref      TEXT,               -- caisse receipt ref
   ts       INTEGER NOT NULL,   -- epoch ms of the sale
@@ -24,6 +29,12 @@ CREATE TABLE IF NOT EXISTS sales (
   -- to run in the same browser as the dashboard — which, for a merchant with a
   -- till at the counter and a dashboard in the back office, is never.
   lines    TEXT,
+
+  -- Where the money was earned. Unlike `method` (how it was paid), this is the
+  -- operational surface: dining, terrace, takeaway, delivery, orderpro…
+  -- Optional for historical rows; /api/feed reconstructs safe restaurant
+  -- cases from their table visit / frozen receipt label.
+  channel  TEXT,
 
   -- ── VENTE DE TEST : annulée, jamais effacée ────────────────────────────────
   -- Une installation, une formation, un essai d'imprimante laissent de vraies
@@ -51,13 +62,8 @@ CREATE TABLE IF NOT EXISTS sales (
 -- Existing databases: add the column in place. SQLite has no
 -- ADD COLUMN IF NOT EXISTS, so this errors harmlessly ("duplicate column name")
 -- when re-run on a schema that already has it — the rest of the file still
--- applies. See LIVE_LINK.md.
---   ALTER TABLE sales ADD COLUMN lines TEXT;
---   ALTER TABLE sales ADD COLUMN void_ts INTEGER;
---   ALTER TABLE sales ADD COLUMN void_reason TEXT;
---   ALTER TABLE sales ADD COLUMN void_note TEXT;
---   ALTER TABLE sales ADD COLUMN void_actor TEXT;
---   ALTER TABLE sales ADD COLUMN void_actor_id TEXT;
+-- applies. See docs/ops/LIVE_LINK.md.
+-- `node tools/d1-schema.mjs` les nomme, `--apply --yes` les pose.
 -- Tant que ces colonnes manquent, tout continue de fonctionner : /api/feed
 -- retombe sur sa requête d'origine et la console refuse l'annulation en le
 -- disant, plutôt que d'échouer en silence.
@@ -67,6 +73,30 @@ CREATE TABLE IF NOT EXISTS sales (
 -- appends rowid to every index, so this covers the (merchant, rowid) order.
 -- (You cannot name rowid in CREATE INDEX — SQLite rejects it.)
 CREATE INDEX IF NOT EXISTS idx_sales_merchant ON sales (merchant);
+
+-- Numeric receipt references are allocated independently from the money ledger.
+-- `next_value` is the first number that has never been reserved. A till advances
+-- it atomically by a small range, persists that lease locally, and can therefore
+-- continue offline without colliding with another till. Gaps are intentional:
+-- losing an unused lease must never make its numbers available to somebody else.
+CREATE TABLE IF NOT EXISTS ticket_sequences (
+  merchant   TEXT NOT NULL,
+  period     INTEGER NOT NULL, -- calendar year; keeps the visible ref at <= 5 digits
+  next_value INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, period)
+);
+
+-- Restaurant order numbers are operational call numbers, reset weekly. They
+-- cannot be derived from MAX(orders.number): support may delete a test/cancelled
+-- row, and that must create a gap rather than make the next guest reuse it.
+CREATE TABLE IF NOT EXISTS order_sequences (
+  merchant   TEXT NOT NULL,
+  period     INTEGER NOT NULL, -- Monday 00:00 Africa/Casablanca, epoch ms
+  next_value INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, period)
+);
 
 -- ── Accounts (merchant login + lead capture) ────────────────────────────────
 -- One row per merchant who signs up. Passwords are PBKDF2-SHA256: `salt` and
@@ -95,12 +125,10 @@ CREATE TABLE IF NOT EXISTS accounts (
   -- migration — une copie ne saurait plus dire si le client a choisi cette
   -- adresse pour sa facturation ou si personne n'a jamais posé la question.
   contact_email TEXT,                -- l'adresse à laquelle Kiwi écrit au commerce
-  billing_email TEXT                 -- facturation / comptabilité, quand elle diffère
+  billing_email TEXT,                -- facturation / comptabilité, quand elle diffère
+  session_epoch INTEGER NOT NULL DEFAULT 0 -- password recovery revokes older signed sessions
 );
--- Existing databases (table already created): add the column once —
---   ALTER TABLE accounts ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
---   ALTER TABLE accounts ADD COLUMN contact_email TEXT;
---   ALTER TABLE accounts ADD COLUMN billing_email TEXT;
+-- Base déjà déployée : `node tools/d1-schema.mjs` dit ce qui manque.
 -- The site gate (functions/_middleware.js → accountActive) revokes a live
 -- session as soon as its account row is missing (deleted) or status='suspended'.
 
@@ -108,7 +136,7 @@ CREATE TABLE IF NOT EXISTS accounts (
 -- Operator access codes for kiwi-admin.html. Hashed exactly like account
 -- passwords (PBKDF2-SHA256, per-code salt); plaintext is never stored. Add/delete
 -- from the console's "Opérateurs" panel. Bootstrap the first code via the staff
--- bypass (owner/partner). See ADMIN.md.
+-- bypass (owner/partner). See docs/ops/ADMIN.md.
 CREATE TABLE IF NOT EXISTS operators (
   id         TEXT PRIMARY KEY,       -- "op-<uuid>"
   label      TEXT,                   -- human name for the code ("Badr", "Partner")
@@ -163,13 +191,31 @@ CREATE TABLE IF NOT EXISTS merchant_config (
                                      -- decides which module set the operator console shows
   account_id TEXT,                   -- accounts.id of the owner ("acc-<uuid>"); NULL = unclaimed
   name       TEXT,                   -- the store's own name ("Café Nord")
-  -- active | suspended, PER STORE. accounts.status freezes a whole LOGIN, which
+  -- active | pending | suspended, PER STORE. `pending` is a fully onboarded
+  -- establishment that may explore Kiwi but has not yet been accepted as a
+  -- subscriber by God Mode. Existing/legacy NULL rows remain active.
+  -- accounts.status freezes a whole LOGIN, which
   -- is the wrong instrument for a client who runs a boutique and a café and has
   -- stopped paying for one of them: freezing the login takes down the shop that
   -- is paid up too. A suspended store keeps every byte it owns — this only cuts
   -- what it can DO: no new sale, no write, no public ordering page.
   -- NULL is read as active, so every row that predates the column is untouched.
   status     TEXT,
+
+  -- ── LE MILLÉSIME DES CAISSES ──────────────────────────────────────────────
+  -- Le jeton de caisse (`kiwi_till`) était HMAC(secret, 'kiwi-till-v1:' + slug) :
+  -- une fonction pure du nom de la boutique. La même valeur pour tous les
+  -- appareils, sans expiration, et RIEN dans le dépôt ne pouvait l'annuler —
+  -- alors que le code promettait « jusqu'à ce que le commerçant dépaire ». Un
+  -- téléphone d'employé parti gardait donc l'accès au carnet clients et au stock,
+  -- et la seule coupure possible, la rotation d'AUTH_SECRET, aurait déconnecté
+  -- tous les commerçants en même temps.
+  --
+  -- Le jeton porte maintenant ce nombre, et il entre dans la signature.
+  -- L'incrémenter (POST /api/pair/revoke) périme toutes les caisses de CETTE
+  -- boutique. Tant qu'il vaut 0, l'ancienne forme reste acceptée : aucun
+  -- comptoir en service ne tombe au déploiement.
+  till_epoch INTEGER NOT NULL DEFAULT 0,
 
   -- ── LA VILLE, ET CE QUE CET ÉTABLISSEMENT NOUS RAPPORTE ───────────────────
   -- Deux colonnes posées par l'OPÉRATEUR depuis la console, jamais par le
@@ -193,15 +239,23 @@ CREATE TABLE IF NOT EXISTS merchant_config (
   -- palier — c'est ce qui permet aussi d'inscrire une remise consentie.
   city       TEXT,
   mrr        INTEGER,
+
+  -- ── CYCLE COMMERCIAL ────────────────────────────────────────────────────
+  -- Ces champs sont administrés uniquement depuis God Mode. `billing_cycle`
+  -- décrit la périodicité du contrat payant ; les dates ISO (YYYY-MM-DD)
+  -- restent lisibles dans D1 et évitent les décalages de fuseau horaire.
+  -- `subscription_kind=trial` donne accès au magasin via status=active, tout en
+  -- conservant une échéance distincte et visible par l'opérateur.
+  subscription_kind  TEXT,          -- paid | trial (NULL = ancien contrat payé)
+  billing_cycle      TEXT,          -- monthly | annual
+  subscription_start TEXT,          -- YYYY-MM-DD
+  subscription_end   TEXT,          -- YYYY-MM-DD
+  trial_start        TEXT,          -- YYYY-MM-DD
+  trial_end          TEXT,          -- YYYY-MM-DD
+  trial_days         INTEGER,       -- durée convenue, en jours
   updated_ts INTEGER NOT NULL
 );
--- Existing databases (table already created): add the columns once —
---   ALTER TABLE merchant_config ADD COLUMN type TEXT;
---   ALTER TABLE merchant_config ADD COLUMN account_id TEXT;
---   ALTER TABLE merchant_config ADD COLUMN name TEXT;
---   ALTER TABLE merchant_config ADD COLUMN status TEXT;
---   ALTER TABLE merchant_config ADD COLUMN city TEXT;
---   ALTER TABLE merchant_config ADD COLUMN mrr INTEGER;
+-- Base déjà déployée : `node tools/d1-schema.mjs` dit ce qui manque.
 -- Tant que city/mrr manquent, la console reste utilisable : /api/admin/overview
 -- retombe sur une requête sans elles et répond `columns:{city:false,mrr:false}`,
 -- que la vue d'ensemble affiche telle quelle au lieu de montrer « 0 ville ».
@@ -288,13 +342,13 @@ CREATE TABLE IF NOT EXISTS menus (
 -- an order: a ticket the kitchen never saw is worse than a customer who waited to
 -- be told. The phone polls the same row, so what it shows is the real state.
 --
--- `number` is the per-day human ticket number the customer reads out at the
+-- `number` is the per-week human ticket number the customer reads out at the
 -- counter ("commande 047"). It is assigned inside the INSERT (one statement), so
 -- two phones ordering in the same second can never be handed the same number.
 CREATE TABLE IF NOT EXISTS orders (
   id         TEXT PRIMARY KEY,   -- "ord-<ts>-<rand>"
   merchant   TEXT NOT NULL,      -- tenant key (slugMerchant — same spine as sales/menus)
-  number     INTEGER NOT NULL,   -- human ticket number (per merchant, per day)
+  number     INTEGER NOT NULL,   -- human ticket number (per merchant, Mon–Sun)
   mode       TEXT NOT NULL,      -- 'table' | 'takeout'
   table_no   TEXT,               -- table number for dine-in, empty for takeout
   total      INTEGER NOT NULL,   -- MAD, whole dirhams
@@ -303,16 +357,27 @@ CREATE TABLE IF NOT EXISTS orders (
   created_ts INTEGER NOT NULL,
   updated_ts INTEGER NOT NULL,
   -- ── OrderPro · session de table (voir table_sessions, plus bas) ───────────
-  -- Déclarées ICI pour qu'une base neuve les ait d'emblée, et répétées en ALTER
-  -- commenté plus bas pour la base DÉJÀ déployée, que « CREATE TABLE IF NOT
-  -- EXISTS » ne touchera jamais. Toute lecture qui les nomme doit garder son
-  -- repli (queue.js) : les deux formes de base coexistent en ce moment.
+  -- Toute lecture qui les nomme garde son repli (queue.js) tant que la base
+  -- déployée ne les a pas reçues : `node tools/d1-schema.mjs` dit lesquelles
+  -- lui manquent, et `--apply --yes` les pose.
   session_id  TEXT,               -- table_sessions.id qui a passé la commande
   server_name TEXT,               -- le serveur affecté à la table, posé à l'acceptation
   menu_rev    INTEGER,            -- menus.updated_ts ayant servi à tarifer
   priced_ts   INTEGER,            -- NULL = prix jamais recalculés côté serveur
   client_ref  TEXT,               -- clé d'idempotence du téléphone
-  paid_ts     INTEGER             -- encaissée (au comptoir, ou avec l'addition de la table)
+  paid_ts     INTEGER,            -- encaissée (au comptoir, ou avec l'addition de la table)
+  cancel_actor_id TEXT NOT NULL DEFAULT '',
+  cancel_actor_name TEXT NOT NULL DEFAULT '',
+  cancel_ts INTEGER,
+  -- ── Canaux extérieurs (voir le commentaire sous la table) ────────────────
+  -- Elles n'étaient déclarées QUE dans un ALTER commenté : une base neuve ne
+  -- les recevait donc jamais, et le repli en cascade de queue.js masquait leur
+  -- absence en rendant `channel = 'kiwi'` et `ext_ref = ''` pour tout le monde.
+  -- Une commande Glovo y perdait le numéro du prestataire — le seul mot commun
+  -- entre son écran et le nôtre pour traiter une réclamation.
+  channel     TEXT,               -- NULL/'kiwi' = relais OrderPro · 'glovo', 'shopify', 'generic'…
+  ext_ref     TEXT,               -- le numéro que le prestataire imprime sur son bordereau
+  customer    TEXT                -- JSON {name, phone, address, note} — le client, pas le coursier
 );
 -- The caisse polls "WHERE merchant = ? AND updated_ts > ?" — this index covers
 -- both that and the per-merchant daily number lookup.
@@ -340,9 +405,11 @@ CREATE INDEX IF NOT EXISTS idx_orders_merchant ON orders (merchant, updated_ts);
 --             client : un ticket de livraison sans adresse ni téléphone oblige
 --             à retourner voir la tablette du prestataire, ce qui annule tout
 --             le bénéfice.
---   ALTER TABLE orders ADD COLUMN channel TEXT;
---   ALTER TABLE orders ADD COLUMN ext_ref TEXT;
---   ALTER TABLE orders ADD COLUMN customer TEXT;
+--
+-- Les trois colonnes sont déclarées dans le CREATE TABLE ci-dessus. Elles ne
+-- l'étaient PAS avant le 2026-08-11 — seul un ALTER commenté les portait, donc
+-- aucune base neuve ne les recevait, et le repli de queue.js rendait l'absence
+-- invisible. Base déjà déployée : `node tools/d1-schema.mjs`.
 
 -- Le jeton qu'un prestataire présente pour déposer une commande.
 --
@@ -375,6 +442,95 @@ CREATE TABLE IF NOT EXISTS channel_links (
 -- une de rechange le temps d'une rotation), d'où l'index plutôt qu'une clé
 -- primaire composite.
 CREATE INDEX IF NOT EXISTS idx_channel_links_merchant ON channel_links (merchant, channel);
+
+-- ── SHOPIFY · connecteur d'inventaire invisible ───────────────────────────
+-- Le commerçant autorise Kiwi depuis Intégrations ; aucun jeton Shopify ne
+-- traverse le navigateur. Les jetons sont chiffrés en AES-GCM avec
+-- SHOPIFY_TOKEN_KEY avant d'entrer dans D1. `channel_links` reste le chemin des
+-- anciennes connexions webhook-only et porte aussi l'URL de webhook créée par
+-- OAuth, mais jamais le jeton Admin API.
+CREATE TABLE IF NOT EXISTS shopify_connections (
+  merchant          TEXT PRIMARY KEY,
+  shop_domain       TEXT NOT NULL UNIQUE,
+  access_token_enc  TEXT NOT NULL,
+  refresh_token_enc TEXT,
+  token_expires_ts  INTEGER NOT NULL DEFAULT 0,
+  refresh_expires_ts INTEGER NOT NULL DEFAULT 0,
+  scopes            TEXT NOT NULL DEFAULT '',
+  location_id       TEXT NOT NULL DEFAULT '',
+  location_name     TEXT NOT NULL DEFAULT '',
+  channel_link_id   TEXT NOT NULL DEFAULT '',
+  status            TEXT NOT NULL DEFAULT 'needs_location',
+  connected_ts      INTEGER NOT NULL,
+  updated_ts        INTEGER NOT NULL,
+  last_sync_ts      INTEGER NOT NULL DEFAULT 0,
+  last_error        TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_shopify_connections_shop
+  ON shopify_connections (shop_domain, status);
+
+-- L'état OAuth est une capacité courte, à usage unique. Seul son SHA-256 est
+-- stocké ; voler une copie de D1 ne donne donc pas une URL de callback valide.
+CREATE TABLE IF NOT EXISTS shopify_oauth_states (
+  state_hash  TEXT PRIMARY KEY,
+  merchant    TEXT NOT NULL,
+  shop_domain TEXT NOT NULL,
+  created_ts  INTEGER NOT NULL,
+  expires_ts  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_shopify_oauth_states_expiry
+  ON shopify_oauth_states (expires_ts);
+
+-- Une correspondance exacte lie une variante Kiwi à l'InventoryItem Shopify
+-- d'un emplacement précis. Les noms ne sont jamais une clé : barcode d'abord,
+-- SKU unique ensuite, sinon la ligne reste non liée.
+CREATE TABLE IF NOT EXISTS shopify_variant_links (
+  merchant             TEXT NOT NULL,
+  kiwi_variant_id      TEXT NOT NULL,
+  shopify_variant_id   TEXT NOT NULL,
+  inventory_item_id    TEXT NOT NULL,
+  location_id          TEXT NOT NULL,
+  match_method         TEXT NOT NULL,
+  last_shopify_quantity INTEGER,
+  status               TEXT NOT NULL DEFAULT 'active',
+  updated_ts            INTEGER NOT NULL,
+  PRIMARY KEY (merchant, kiwi_variant_id),
+  UNIQUE (merchant, shopify_variant_id, location_id)
+);
+CREATE INDEX IF NOT EXISTS idx_shopify_variant_links_inventory
+  ON shopify_variant_links (merchant, inventory_item_id, location_id);
+
+-- File durable et coalescée : dix ventes rapides d'une même variante donnent
+-- une seule cible finale. Le passage caisse reste réussi même si Shopify est
+-- indisponible ; le connecteur réessaie en arrière-plan.
+CREATE TABLE IF NOT EXISTS shopify_sync_outbox (
+  id               TEXT PRIMARY KEY,
+  merchant         TEXT NOT NULL,
+  kiwi_variant_id  TEXT NOT NULL,
+  target_quantity  INTEGER NOT NULL,
+  source_rev       INTEGER NOT NULL DEFAULT 0,
+  status           TEXT NOT NULL DEFAULT 'pending',
+  attempts         INTEGER NOT NULL DEFAULT 0,
+  next_attempt_ts  INTEGER NOT NULL DEFAULT 0,
+  last_error       TEXT NOT NULL DEFAULT '',
+  created_ts       INTEGER NOT NULL,
+  updated_ts       INTEGER NOT NULL,
+  UNIQUE (merchant, kiwi_variant_id)
+);
+CREATE INDEX IF NOT EXISTS idx_shopify_sync_outbox_ready
+  ON shopify_sync_outbox (status, next_attempt_ts, updated_ts);
+
+-- Shopify peut livrer un webhook plusieurs fois. Son identifiant de livraison
+-- est la clé d'idempotence, pas l'heure ni le corps de la commande.
+CREATE TABLE IF NOT EXISTS shopify_webhook_events (
+  shop_domain  TEXT NOT NULL,
+  webhook_id   TEXT NOT NULL,
+  topic        TEXT NOT NULL,
+  received_ts  INTEGER NOT NULL,
+  PRIMARY KEY (shop_domain, webhook_id)
+);
+CREATE INDEX IF NOT EXISTS idx_shopify_webhook_events_received
+  ON shopify_webhook_events (received_ts);
 
 -- ── BOUTIQUE · inventaire (le stock privé du commerçant) ────────────────────
 -- Le catalogue d'une boutique — produits, déclinaisons couleur × taille, stock
@@ -444,6 +600,97 @@ CREATE TABLE IF NOT EXISTS store_docs (
   PRIMARY KEY (merchant, feature)
 );
 
+-- Append-only, non-PII hotel stay history. `srv_cursor` reuses the monotonic
+-- reservations-document revision; gaps are valid and batch imports may use
+-- `event_ordinal` for several stay events committed under one revision.
+CREATE TABLE IF NOT EXISTS hotel_stay_events (
+  merchant      TEXT NOT NULL,
+  id            TEXT NOT NULL,
+  stay_id       TEXT NOT NULL,
+  event_type    TEXT NOT NULL,
+  payload_json  TEXT NOT NULL,
+  occurred_ts   INTEGER NOT NULL,
+  srv_cursor    INTEGER NOT NULL,
+  event_ordinal INTEGER NOT NULL DEFAULT 0,
+  actor_id      TEXT NOT NULL,
+  actor_role    TEXT NOT NULL,
+  PRIMARY KEY (merchant, id),
+  UNIQUE (merchant, srv_cursor, event_ordinal)
+);
+CREATE INDEX IF NOT EXISTS idx_hotel_stay_events_stay
+  ON hotel_stay_events (merchant, stay_id, srv_cursor);
+
+-- ── RÉSERVATIONS D'HÔTEL · STOCK RELATIONNEL ET DISPONIBILITÉS ───────────
+-- Complément relationnel du document store_docs (feature='reservations').
+-- Porte l'autorité de disponibilité pour les séjours au-delà de la fenêtre
+-- chaude opérationnelle ([-3j, +14j]), évitant le surbooking sur la longue traîne.
+CREATE TABLE IF NOT EXISTS hotel_reservations (
+  merchant        TEXT NOT NULL,
+  id              TEXT NOT NULL,
+  code            TEXT NOT NULL,
+  room_id         TEXT NOT NULL,
+  room_type_id    TEXT NOT NULL,
+  start_at        INTEGER NOT NULL,
+  end_at          INTEGER NOT NULL,
+  check_in        TEXT NOT NULL,
+  check_out       TEXT NOT NULL,
+  status          TEXT NOT NULL,
+  channel         TEXT NOT NULL DEFAULT 'direct',
+  external_ref    TEXT NOT NULL DEFAULT '',
+  customer_name   TEXT NOT NULL DEFAULT '',
+  customer_phone  TEXT NOT NULL DEFAULT '',
+  customer_email  TEXT NOT NULL DEFAULT '',
+  party_size      INTEGER NOT NULL DEFAULT 1,
+  rate            INTEGER NOT NULL DEFAULT 0,
+  total           INTEGER NOT NULL DEFAULT 0,
+  raw_json        TEXT NOT NULL,
+  created_ts      INTEGER NOT NULL,
+  updated_ts      INTEGER NOT NULL,
+  PRIMARY KEY (merchant, id)
+);
+CREATE INDEX IF NOT EXISTS idx_hotel_reservations_room_dates
+  ON hotel_reservations (merchant, room_id, status, start_at, end_at);
+CREATE INDEX IF NOT EXISTS idx_hotel_reservations_dates
+  ON hotel_reservations (merchant, start_at, end_at);
+CREATE INDEX IF NOT EXISTS idx_hotel_reservations_lookup
+  ON hotel_reservations (merchant, status, check_in, check_out);
+
+-- ── STOCK RÉEL · REGISTRE DE MOUVEMENTS ──────────────────────────────────
+-- Une quantité de stock n'est jamais écrasée : elle est la somme de ce journal
+-- append-only. L'identifiant vient du client et rend le rejeu hors-ligne
+-- idempotent. `qty_milli` stocke l'unité de référence × 1 000 (g, ml, pièce),
+-- donc 1,250 kg ou 0,5 pièce traversent SQLite sans flottant cumulatif.
+CREATE TABLE IF NOT EXISTS inventory_movements (
+  id              TEXT PRIMARY KEY,
+  merchant        TEXT NOT NULL,
+  item_id         TEXT NOT NULL,
+  variant_id      TEXT NOT NULL DEFAULT '',
+  location_id     TEXT NOT NULL DEFAULT 'principal',
+  qty_milli       INTEGER NOT NULL,              -- signé : entrée +, sortie −
+  reason          TEXT NOT NULL,                 -- opening|receipt|sale|count|loss|transfer-*|production-*|return
+  unit_cost_cents INTEGER,                       -- coût d'entrée gelé ; NULL si inconnu (lecteurs historiques)
+  unit_cost_rate  INTEGER,                       -- TAUX ×1e-4 ; prime sur les centimes (0,0045 MAD/g survivra)
+  payload_hash    TEXT NOT NULL DEFAULT '',       -- immutable movement identity binding
+  currency        TEXT NOT NULL DEFAULT 'MAD',
+  ref_type        TEXT NOT NULL DEFAULT '',       -- sale|receipt|count|transfer|production|manual
+  ref_id          TEXT NOT NULL DEFAULT '',
+  note            TEXT NOT NULL DEFAULT '',
+  actor           TEXT NOT NULL DEFAULT '',
+  occurred_ts     INTEGER NOT NULL,
+  srv_ts          INTEGER NOT NULL,              -- curseur serveur monotone par magasin
+  reversal_of     TEXT NOT NULL DEFAULT '',       -- correction append-only, jamais DELETE
+  meta            TEXT,
+  created_ts      INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_inventory_movements_merchant_cursor
+  ON inventory_movements (merchant, srv_ts);
+CREATE INDEX IF NOT EXISTS idx_inventory_movements_merchant_item
+  ON inventory_movements (merchant, item_id, occurred_ts);
+CREATE TABLE IF NOT EXISTS inventory_sync_sequences (
+  merchant TEXT PRIMARY KEY,
+  last_ts   INTEGER NOT NULL
+);
+
 -- ── CARNET CLIENTS · fidélité ───────────────────────────────────────────────
 -- assets/clients-store.js appelle /api/clients depuis la livraison de la
 -- fidélité. L'endpoint n'existait pas : les trois appels tombaient sur un 404
@@ -476,6 +723,7 @@ CREATE TABLE IF NOT EXISTS clients (
   city          TEXT NOT NULL DEFAULT '',
   address       TEXT NOT NULL DEFAULT '',
   notes         TEXT NOT NULL DEFAULT '',
+  hospitality   TEXT NOT NULL DEFAULT '{}', -- hotel identity, preferences, allergies
   points        INTEGER NOT NULL DEFAULT 0,
   stamps        INTEGER NOT NULL DEFAULT 0,
   visits        INTEGER NOT NULL DEFAULT 0,
@@ -492,6 +740,26 @@ CREATE TABLE IF NOT EXISTS clients (
 );
 -- Le seul parcours de lecture : « WHERE merchant = ? AND srv_ts > ? ORDER BY srv_ts ».
 CREATE INDEX IF NOT EXISTS idx_clients_sync ON clients (merchant, srv_ts);
+
+-- Atomic cursor allocator for /api/clients. Reading MAX(srv_ts) and then
+-- writing Date.now() is racy: two tills can receive the same cursor, causing a
+-- third device to skip one of the two records forever after advancing `since`.
+CREATE TABLE IF NOT EXISTS client_sync_sequences (
+  merchant TEXT PRIMARY KEY,
+  last_ts  INTEGER NOT NULL
+);
+
+-- Idempotence for loyalty credited by an on-duty employee. A payment screen
+-- can be retried after weak Wi-Fi; the same table settlement must never award
+-- points twice.
+CREATE TABLE IF NOT EXISTS employee_loyalty_events (
+  merchant  TEXT NOT NULL,
+  ref       TEXT NOT NULL,
+  client_id TEXT NOT NULL,
+  amount    INTEGER NOT NULL DEFAULT 0,
+  created_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, ref)
+);
 
 -- ── Journal des modules (qui a activé/désactivé quoi, où, quand) ────────────
 -- Une ligne PAR MODULE CHANGÉ, écrite par functions/api/admin/config.js à chaque
@@ -538,13 +806,14 @@ CREATE TABLE IF NOT EXISTS sale_audit (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   merchant   TEXT NOT NULL,             -- l'établissement, jamais un autre (voir sales.js)
   sale_id    TEXT NOT NULL,             -- sales.id
-  action     TEXT NOT NULL,             -- 'void' | 'restore'
+  action     TEXT NOT NULL,             -- 'void' | 'restore' | 'refund' (paired till counter-entry)
   reason     TEXT NOT NULL DEFAULT '',  -- le motif imposé
   note       TEXT NOT NULL DEFAULT '',  -- l'explication écrite
   actor      TEXT NOT NULL DEFAULT '',  -- libellé du code opérateur, ou 'equipe'
   actor_id   TEXT NOT NULL DEFAULT '',  -- operators.id quand il est connu
-  amount     INTEGER NOT NULL DEFAULT 0,
-  method     TEXT NOT NULL DEFAULT '',
+  amount       INTEGER NOT NULL DEFAULT 0, -- legacy whole MAD
+  amount_cents INTEGER,                    -- centimes; authoritative when present. Legacy rows use amount (whole MAD).
+  method       TEXT NOT NULL DEFAULT '',
   ref        TEXT NOT NULL DEFAULT '',
   sale_ts    INTEGER NOT NULL DEFAULT 0,
   impact     TEXT NOT NULL DEFAULT '',  -- JSON : ce qui était annoncé comme touché
@@ -583,6 +852,103 @@ CREATE TABLE IF NOT EXISTS account_audit (
 );
 CREATE INDEX IF NOT EXISTS idx_account_audit ON account_audit (account_id, ts);
 CREATE INDEX IF NOT EXISTS idx_account_audit_merchant ON account_audit (merchant, ts);
+
+-- ── Help Centre: published knowledge + a real, auditable support queue ─────
+-- Articles are intentionally global product knowledge. `store_types` scopes
+-- what a merchant sees; all three languages are mandatory before publication.
+CREATE TABLE IF NOT EXISTS support_articles (
+  id            TEXT PRIMARY KEY,
+  slug          TEXT NOT NULL UNIQUE,
+  category      TEXT NOT NULL,
+  store_types   TEXT NOT NULL DEFAULT '["all"]',
+  feature_key   TEXT NOT NULL DEFAULT '',
+  feature_hash  TEXT NOT NULL DEFAULT '',
+  status        TEXT NOT NULL DEFAULT 'draft',
+  revision      INTEGER NOT NULL DEFAULT 1,
+  title_fr      TEXT NOT NULL DEFAULT '',
+  title_en      TEXT NOT NULL DEFAULT '',
+  title_ar      TEXT NOT NULL DEFAULT '',
+  body_fr       TEXT NOT NULL DEFAULT '',
+  body_en       TEXT NOT NULL DEFAULT '',
+  body_ar       TEXT NOT NULL DEFAULT '',
+  created_ts    INTEGER NOT NULL,
+  updated_ts    INTEGER NOT NULL,
+  published_ts  INTEGER,
+  actor         TEXT NOT NULL DEFAULT 'system'
+);
+CREATE INDEX IF NOT EXISTS idx_support_articles_status ON support_articles (status, category, updated_ts);
+
+CREATE TABLE IF NOT EXISTS support_article_versions (
+  id          TEXT PRIMARY KEY,
+  article_id  TEXT NOT NULL,
+  revision    INTEGER NOT NULL,
+  snapshot    TEXT NOT NULL,
+  actor       TEXT NOT NULL,
+  ts          INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_support_article_revision ON support_article_versions (article_id, revision);
+
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id              TEXT PRIMARY KEY,
+  reference       TEXT NOT NULL UNIQUE,
+  merchant        TEXT NOT NULL,
+  store_type      TEXT NOT NULL DEFAULT '',
+  category        TEXT NOT NULL,
+  priority        TEXT NOT NULL,
+  status          TEXT NOT NULL DEFAULT 'open',
+  channel         TEXT NOT NULL,
+  contact         TEXT NOT NULL,
+  summary         TEXT NOT NULL,
+  diagnostics     TEXT NOT NULL DEFAULT '{}',
+  assignee        TEXT NOT NULL DEFAULT '',
+  created_ts      INTEGER NOT NULL,
+  updated_ts      INTEGER NOT NULL,
+  closed_ts       INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_queue ON support_tickets (status, priority, updated_ts);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_merchant ON support_tickets (merchant, updated_ts);
+
+CREATE TABLE IF NOT EXISTS support_messages (
+  id          TEXT PRIMARY KEY,
+  ticket_id   TEXT NOT NULL,
+  kind        TEXT NOT NULL,
+  channel     TEXT NOT NULL,
+  author      TEXT NOT NULL,
+  body        TEXT NOT NULL,
+  delivery    TEXT NOT NULL DEFAULT '',
+  ts          INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_support_messages_ticket ON support_messages (ticket_id, ts);
+
+CREATE TABLE IF NOT EXISTS support_attachments (
+  id          TEXT PRIMARY KEY,
+  ticket_id   TEXT NOT NULL,
+  merchant    TEXT NOT NULL,
+  object_key  TEXT NOT NULL UNIQUE,
+  name        TEXT NOT NULL,
+  mime        TEXT NOT NULL,
+  size        INTEGER NOT NULL,
+  created_ts  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_support_attachments_ticket ON support_attachments (ticket_id, created_ts);
+
+-- Failed searches are deliberately anonymous: no merchant/account/IP column.
+CREATE TABLE IF NOT EXISTS support_searches (
+  id          TEXT PRIMARY KEY,
+  phrase      TEXT NOT NULL,
+  lang        TEXT NOT NULL,
+  store_type  TEXT NOT NULL DEFAULT '',
+  ts          INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS support_feedback (
+  id          TEXT PRIMARY KEY,
+  article_id  TEXT NOT NULL,
+  helpful     INTEGER NOT NULL,
+  store_type  TEXT NOT NULL DEFAULT '',
+  ts          INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_support_feedback_article ON support_feedback (article_id, ts);
 
 -- ── Liens de réinitialisation de mot de passe ───────────────────────────────
 -- Le lien vaut « je suis ce commerçant » : il est donc traité comme un mot de
@@ -644,6 +1010,8 @@ CREATE TABLE IF NOT EXISTS table_sessions (
   table_no    TEXT NOT NULL DEFAULT '',       -- vide pour un retrait au comptoir
   status      TEXT NOT NULL DEFAULT 'open',   -- 'open' | 'closed'
   closed_by   TEXT NOT NULL DEFAULT '',       -- 'settle' | 'caisse' | 'expiry' — pourquoi elle s'est fermée
+  closed_actor_id TEXT NOT NULL DEFAULT '',
+  closed_actor_name TEXT NOT NULL DEFAULT '',
   opened_ts   INTEGER NOT NULL,
   seen_ts     INTEGER NOT NULL,               -- dernier signe de vie du téléphone : c'est LUI qui allume la table sur le plan de salle
   closed_ts   INTEGER
@@ -664,6 +1032,45 @@ CREATE UNIQUE INDEX IF NOT EXISTS table_sessions_live
 -- La caisse relève « qui est assis en ce moment » à chaque tour de sondage.
 CREATE INDEX IF NOT EXISTS idx_tsess_live ON table_sessions (merchant, status, seen_ts);
 
+-- ── TABLE TRANSFERS & MERGES · Traçabilité des déplacements de tables ───────
+-- Déplacer ou fusionner une table ne doit jamais effacer l'historique comptable.
+-- Chaque déplacement d'une session ou d'une commande est consigné ici, avec la
+-- table d'origine, la table de destination, le serveur et l'horodatage.
+CREATE TABLE IF NOT EXISTS table_transfers (
+  id           TEXT PRIMARY KEY,  -- "trf-<uuid>"
+  merchant     TEXT NOT NULL,
+  from_table   TEXT NOT NULL,
+  to_table     TEXT NOT NULL,
+  session_id   TEXT,
+  server       TEXT,
+  covers       INTEGER,
+  orders_count INTEGER,
+  is_merge     INTEGER NOT NULL DEFAULT 0,  -- 1 si fusion de tables
+  created_ts   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_table_transfers_live ON table_transfers (merchant, created_ts);
+
+-- ── KITCHEN VOIDS & PERTES · Traçabilité des annulations et pertes cuisine ──
+-- Annuler ou modifier un plat envoyé en cuisine ne doit jamais effacer l'écriture.
+-- Chaque annulation est tracée avec son motif (erreur, changement client, perte, retour),
+-- l'impact perte matière éventuel et l'accord de la cuisine.
+CREATE TABLE IF NOT EXISTS kitchen_voids (
+  id           TEXT PRIMARY KEY,  -- "voi-<uuid>"
+  merchant     TEXT NOT NULL,
+  order_id     TEXT,
+  table_no     TEXT,
+  item_id      TEXT,
+  item_name    TEXT,
+  qty          INTEGER NOT NULL,
+  price        INTEGER,
+  reason       TEXT NOT NULL,    -- 'client_change' | 'order_error' | 'kitchen_waste' | 'quality_return'
+  is_waste     INTEGER NOT NULL DEFAULT 0,  -- 1 si perte matière réelle
+  actor        TEXT,             -- serveur ou caissier
+  status       TEXT NOT NULL DEFAULT 'approved', -- 'pending' | 'approved' | 'rejected'
+  created_ts   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_kitchen_voids_live ON kitchen_voids (merchant, created_ts);
+
 -- ── PRÉSENCE DE LA CAISSE · le service est-il ouvert ? ──────────────────────
 -- La protection contre la commande passée de chez soi ne peut pas venir du
 -- téléphone : il ment. Elle vient d'ici. La caisse interroge déjà sa file toutes
@@ -678,24 +1085,36 @@ CREATE TABLE IF NOT EXISTS order_desk (
   seen_ts  INTEGER NOT NULL      -- dernier sondage authentifié de /api/order/queue
 );
 
--- ── Colonnes additives sur `orders` ────────────────────────────────────────
--- Elles sont DÉJÀ dans le CREATE TABLE plus haut, ce qui suffit à une base
--- neuve. Voici les six ALTER à passer sur la base DÉJÀ DÉPLOYÉE, que
--- « CREATE TABLE IF NOT EXISTS » laisse par définition intacte :
+-- ── LA BASE DÉJÀ DÉPLOYÉE ──────────────────────────────────────────────────
+-- « CREATE TABLE IF NOT EXISTS » ne touche jamais une table qui existe : tout
+-- ce que ce fichier ajoute après le premier déploiement n'atteint la production
+-- que si quelqu'un le pose à la main. Cette consigne a été portée pendant un an
+-- par des ALTER en commentaire, et elle a échoué trois fois — toujours en
+-- silence, parce que chaque lecture qui nomme une colonne absente échoue à
+-- l'intérieur d'un `catch` qui la traduit en réponse vide ou en refus :
 --
---   ALTER TABLE orders ADD COLUMN session_id  TEXT;
---   ALTER TABLE orders ADD COLUMN server_name TEXT;
---   ALTER TABLE orders ADD COLUMN menu_rev    INTEGER;
---   ALTER TABLE orders ADD COLUMN priced_ts   INTEGER;
---   ALTER TABLE orders ADD COLUMN client_ref  TEXT;
---   ALTER TABLE orders ADD COLUMN paid_ts     INTEGER;
+--   · 2026-07-28  merchant_config.status absente → /api/config a rendu
+--     `{features:{}, pins:[]}` à TOUS les commerçants pendant 45 minutes.
+--   · 2026-08-08  la même → /api/employee refusait chaque employé, bon code en
+--     main, avec « Email ou code personnel incorrect. »
+--   · 2026-08-11  orders.channel/ext_ref/customer n'ont JAMAIS été déclarées
+--     dans le CREATE TABLE : aucune base neuve ne les avait, et le repli en
+--     cascade de queue.js rendait l'absence invisible.
 --
--- Chacune est NULL pour toute commande écrite avant elle, et toute lecture qui
--- les nomme garde le repli en cascade de queue.js — sans quoi une base pas
--- encore migrée renverrait une file VIDE au lieu d'une erreur, et le comptoir
--- ne verrait plus rien sans que personne ne le signale. Tant que les ALTER ne
--- sont pas passés, la session de table est simplement inerte : les commandes
--- arrivent comme avant, et rien ne casse.
+-- La consigne n'est donc plus écrite ici. Elle se lit :
+--
+--   node tools/d1-schema.mjs              # ce qui manque à la base déployée
+--   node tools/d1-schema.mjs --apply --yes  # le poser
+--
+-- L'outil DÉDUIT l'écart de ce fichier — il n'a pas de liste à tenir à jour, et
+-- ne peut donc pas dériver de lui. `tools/d1-schema-test.mjs` verrouille cette
+-- propriété : ajouter une colonne ici sans que l'outil sache la lire fait
+-- échouer le test, tout de suite, au lieu de la production dans trois semaines.
+--
+-- Chaque colonne additive est NULL pour toute ligne écrite avant elle, et toute
+-- lecture qui les nomme garde son repli — sans quoi une base pas encore migrée
+-- renverrait une file VIDE au lieu d'une erreur, et le comptoir ne verrait plus
+-- rien sans que personne ne le signale.
 CREATE INDEX IF NOT EXISTS idx_orders_session ON orders (session_id);
 -- Un double-tap sur « Commander », ou un réseau qui repasse, ne doit pas
 -- imprimer deux tickets. Index PARTIEL : les commandes sans client_ref (toutes
@@ -703,6 +1122,465 @@ CREATE INDEX IF NOT EXISTS idx_orders_session ON orders (session_id);
 -- entrent pas et ne peuvent donc pas se gêner entre elles.
 CREATE UNIQUE INDEX IF NOT EXISTS orders_client_ref
   ON orders (merchant, client_ref) WHERE client_ref IS NOT NULL;
+-- Les prestataires et Shopify rejouent leurs webhooks. La relecture dans les
+-- handlers évite le cas normal, cet index tranche la course où deux requêtes
+-- ont fait cette relecture avant que l'une des deux n'insère.
+CREATE UNIQUE INDEX IF NOT EXISTS orders_ext_ref
+  ON orders (merchant, channel, ext_ref)
+  WHERE ext_ref IS NOT NULL AND ext_ref <> '';
+
+-- ── Quota journalier de l'assistant IA côté serveur ───────────────────────
+-- /api/ai/ask est le modèle de SECOURS, proposé seulement aux appareils qui ne
+-- peuvent pas faire tourner l'assistant dans le navigateur (pas de WebGPU, pas
+-- de place, pas de mémoire). Il est facturé à l'appel, donc il se compte.
+--
+-- Le plafond est un garde-fou de DÉPENSE, pas une punition : il existe pour
+-- qu'une boucle de câblage cassée ne consomme pas l'allocation du compte en une
+-- nuit. La borne qui marche toujours reste `max_tokens` côté endpoint ; cette
+-- table n'est que la seconde ligne.
+--
+-- Tant qu'elle n'est PAS passée sur la base déjà déployée, functions/api/ai/
+-- ask.js laisse passer les appels — livrer une fonctionnalité morte serait pire
+-- qu'un compteur absent. À appliquer à la main, comme les ALTER ci-dessus.
+CREATE TABLE IF NOT EXISTS ai_usage (
+  merchant TEXT    NOT NULL,     -- slugMerchant
+  day      TEXT    NOT NULL,     -- AAAA-MM-JJ, UTC
+  calls    INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (merchant, day)
+);
+
+CREATE TABLE IF NOT EXISTS ai_usage_kind (
+  merchant TEXT    NOT NULL,     -- slugMerchant
+  day      TEXT    NOT NULL,     -- AAAA-MM-JJ, UTC
+  kind     TEXT    NOT NULL,     -- 'ask', 'invoice', 'index', 'resolve', 'transcribe', 'image'
+  calls    INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (merchant, day, kind)
+);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- KIWI OPERATIONS · commandes durables vers les fournisseurs externes
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Un bouton qui appelle WhatsApp, un prestataire de paiement, un export de
+-- paie ou un flux d'achat n'est pas un toast : c'est une commande métier. Elle
+-- garde le même identifiant quand le réseau revient, appartient explicitement
+-- à un établissement, expose son vrai état (bloquée si le fournisseur manque)
+-- et laisse une trace append-only de chaque transition.
+CREATE TABLE IF NOT EXISTS operational_commands (
+  id              TEXT PRIMARY KEY,
+  merchant        TEXT NOT NULL,
+  domain          TEXT NOT NULL,
+  action          TEXT NOT NULL,
+  status          TEXT NOT NULL,
+  provider        TEXT NOT NULL DEFAULT '',
+  idempotency_key TEXT NOT NULL,
+  payload         TEXT NOT NULL,
+  result          TEXT,
+  requested_by    TEXT NOT NULL DEFAULT '',
+  attempt_count   INTEGER NOT NULL DEFAULT 0,
+  last_error      TEXT NOT NULL DEFAULT '',
+  created_ts      INTEGER NOT NULL,
+  updated_ts      INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ops_merchant_idempotency
+  ON operational_commands (merchant, idempotency_key);
+CREATE INDEX IF NOT EXISTS idx_ops_merchant_domain_time
+  ON operational_commands (merchant, domain, updated_ts DESC);
+
+CREATE TABLE IF NOT EXISTS operational_events (
+  id          TEXT PRIMARY KEY,
+  command_id  TEXT NOT NULL,
+  merchant    TEXT NOT NULL,
+  event       TEXT NOT NULL,
+  status      TEXT NOT NULL,
+  detail      TEXT,
+  created_ts  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ops_events_command
+  ON operational_events (merchant, command_id, created_ts);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- OBSERVABILITÉ · Rapporteur d'erreurs client & télémétrie fail-soft
+-- ═══════════════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS client_errors (
+  id            TEXT PRIMARY KEY,
+  merchant      TEXT NOT NULL DEFAULT '',
+  message       TEXT NOT NULL,
+  file          TEXT NOT NULL DEFAULT '',
+  line          INTEGER NOT NULL DEFAULT 0,
+  col           INTEGER NOT NULL DEFAULT 0,
+  stack         TEXT NOT NULL DEFAULT '',
+  url           TEXT NOT NULL DEFAULT '',
+  version       TEXT NOT NULL DEFAULT '',
+  user_agent    TEXT NOT NULL DEFAULT '',
+  count         INTEGER NOT NULL DEFAULT 1,
+  first_seen_ts INTEGER NOT NULL,
+  last_seen_ts  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_client_errors_seen ON client_errors (merchant, last_seen_ts);
+CREATE INDEX IF NOT EXISTS idx_client_errors_sig ON client_errors (merchant, file, line, message);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- FACTURES DE VENTE · Émission et numérotation D1 idempotente
+-- ═══════════════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS sale_invoices (
+  merchant   TEXT NOT NULL,
+  seq        INTEGER NOT NULL,
+  number     TEXT NOT NULL,
+  sale_id    TEXT NOT NULL,
+  customer   TEXT,
+  snapshot   TEXT NOT NULL,
+  created_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, sale_id),
+  UNIQUE (merchant, seq)
+);
+CREATE INDEX IF NOT EXISTS idx_sale_invoices_merchant_seq ON sale_invoices (merchant, seq);
+-- Phase AI 1d-a: durable, append-only sale cancellation facts. The actor is an
+-- account/team id, never a PIN or operator code. `sales.void_*` remains the
+-- mutable reconciliation state consumed by /api/feed.
+CREATE TABLE IF NOT EXISTS sale_void_history (
+  id TEXT PRIMARY KEY,
+  merchant TEXT NOT NULL,
+  sale_id TEXT NOT NULL,
+  ref TEXT NOT NULL DEFAULT '',
+  voided_ts INTEGER NOT NULL,
+  reason TEXT NOT NULL,
+  actor_id TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL CHECK (amount_cents >= 0),
+  UNIQUE (merchant, sale_id)
+);
+CREATE INDEX IF NOT EXISTS idx_sale_void_history_merchant_ts
+  ON sale_void_history (merchant, voided_ts);
+
+-- Phase AI 1d-c: terminal-bound, append-only financial reconciliation events.
+CREATE TABLE IF NOT EXISTS cash_session_events (
+  id TEXT PRIMARY KEY,
+  merchant TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  terminal_id TEXT NOT NULL,
+  event_type TEXT NOT NULL CHECK (event_type IN ('open','movement','handover','close')),
+  expected_cents INTEGER,
+  counted_cents INTEGER,
+  gap_cents INTEGER,
+  movement_kind TEXT,
+  movement_amount_cents INTEGER,
+  movement_reason TEXT,
+  actor_id TEXT NOT NULL,
+  counterparty_actor_id TEXT,
+  opened_ts INTEGER NOT NULL,
+  occurred_ts INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_cash_session_events_merchant_ts
+  ON cash_session_events (merchant, occurred_ts);
+CREATE INDEX IF NOT EXISTS idx_cash_session_events_terminal_session
+  ON cash_session_events (merchant, terminal_id, session_id, occurred_ts);
+
+-- Phase AI 1d-d: one immutable timestamp per canonical order-course milestone.
+CREATE TABLE IF NOT EXISTS order_course (
+  merchant TEXT NOT NULL,
+  order_id TEXT NOT NULL,
+  order_number INTEGER,
+  accepted_ts INTEGER,
+  sent_ts INTEGER,
+  ready_ts INTEGER,
+  served_ts INTEGER,
+  closed_ts INTEGER,
+  created_ts INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, order_id)
+);
+CREATE INDEX IF NOT EXISTS idx_order_course_merchant_sent
+  ON order_course (merchant, sent_ts);
+
+-- ── Relais d'impression (migrations/2026-08-21-print-relay.sql) ─────────────
+
+CREATE TABLE IF NOT EXISTS print_bridges (
+  id           TEXT PRIMARY KEY,
+  merchant     TEXT NOT NULL,
+  name         TEXT,
+  platform     TEXT,
+  version      TEXT,
+  token_hash   TEXT NOT NULL UNIQUE,   -- sha256 du jeton porteur, jamais le jeton
+  created_ts   INTEGER NOT NULL,
+  last_seen_ts INTEGER,
+  revoked_ts   INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_print_bridges_merchant ON print_bridges (merchant, revoked_ts);
+
+CREATE TABLE IF NOT EXISTS print_bridge_codes (
+  code       TEXT NOT NULL,
+  merchant   TEXT NOT NULL,
+  created_ts INTEGER NOT NULL,
+  expires_ts INTEGER NOT NULL,
+  used_ts    INTEGER
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_print_bridge_codes_live ON print_bridge_codes (code) WHERE used_ts IS NULL;
+
+CREATE TABLE IF NOT EXISTS print_jobs (
+  id         TEXT PRIMARY KEY,
+  merchant   TEXT NOT NULL,
+  bridge_id  TEXT,                       -- NULL = n'importe quel pont du commerce
+  kind       TEXT,                       -- receipt · kitchen · label · test · drawer
+  target     TEXT NOT NULL,              -- JSON {ip,port} | {osPrinter}
+  data_b64   TEXT NOT NULL,
+  status     TEXT NOT NULL DEFAULT 'queued', -- queued · claimed · done · failed · expired
+  created_ts INTEGER NOT NULL,
+  expires_ts INTEGER NOT NULL,
+  claimed_ts INTEGER,
+  done_ts    INTEGER,
+  bytes      INTEGER,
+  error      TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_print_jobs_queue ON print_jobs (merchant, status, created_ts);
+
+-- ── Inventaire physique universel & validation propriétaire (migrations/2026-08-22-inventory-counts.sql)
+
+CREATE TABLE IF NOT EXISTS inventory_counts (
+  id TEXT PRIMARY KEY,
+  merchant TEXT NOT NULL,
+  engine TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'submitted',
+  store_id TEXT NOT NULL DEFAULT '',
+  store_name TEXT NOT NULL DEFAULT '',
+  employee_id TEXT NOT NULL DEFAULT '',
+  employee_name TEXT NOT NULL DEFAULT '',
+  employee_role TEXT NOT NULL DEFAULT '',
+  submitted_at INTEGER NOT NULL,
+  reviewed_at INTEGER,
+  reviewer_id TEXT DEFAULT '',
+  reviewer_name TEXT DEFAULT '',
+  review_decision TEXT DEFAULT '',
+  review_note TEXT DEFAULT '',
+  applied_at INTEGER,
+  total_lines INTEGER NOT NULL DEFAULT 0,
+  total_counted REAL NOT NULL DEFAULT 0,
+  total_system REAL NOT NULL DEFAULT 0,
+  total_diff REAL NOT NULL DEFAULT 0,
+  total_variance_cost_mad REAL NOT NULL DEFAULT 0,
+  abs_variance_cost_mad REAL NOT NULL DEFAULT 0,
+  lines_json TEXT NOT NULL DEFAULT '[]',
+  meta_json TEXT DEFAULT '{}',
+  created_ts INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_counts_merchant_date ON inventory_counts (merchant, submitted_at);
+CREATE INDEX IF NOT EXISTS idx_inventory_counts_merchant_status ON inventory_counts (merchant, status);
+
+CREATE TABLE IF NOT EXISTS inventory_count_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  count_id TEXT NOT NULL,
+  merchant TEXT NOT NULL,
+  event TEXT NOT NULL,
+  actor_id TEXT,
+  actor_name TEXT,
+  via TEXT,
+  note TEXT,
+  ts INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_count_events_merchant_count ON inventory_count_events (merchant, count_id, ts);
+CREATE TABLE IF NOT EXISTS hotel_internal_requests (
+  merchant TEXT NOT NULL,
+  id TEXT NOT NULL,
+  unit_id TEXT NOT NULL,
+  state TEXT NOT NULL DEFAULT 'draft',
+  cancelled INTEGER NOT NULL DEFAULT 0,
+  revision INTEGER NOT NULL DEFAULT 1,
+  create_key TEXT NOT NULL,
+  last_command_key TEXT NOT NULL DEFAULT '',
+  requester_id TEXT NOT NULL DEFAULT '',
+  requester_name TEXT NOT NULL DEFAULT '',
+  review_revision INTEGER NOT NULL DEFAULT 0,
+  accepted_revision INTEGER NOT NULL DEFAULT 0,
+  fulfilment_method TEXT NOT NULL DEFAULT 'pickup',
+  delivery_started_ts INTEGER,
+  disputed INTEGER NOT NULL DEFAULT 0,
+  created_ts INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL,
+  submitted_ts INTEGER,
+  closed_ts INTEGER,
+  PRIMARY KEY (merchant, id),
+  UNIQUE (merchant, create_key)
+);
+CREATE TABLE IF NOT EXISTS hotel_internal_request_lines (
+  merchant TEXT NOT NULL,
+  request_id TEXT NOT NULL,
+  line_no INTEGER NOT NULL,
+  item_id TEXT NOT NULL,
+  unit TEXT NOT NULL,
+  conversion_snapshot TEXT NOT NULL,
+  qty_requested_base_milli INTEGER NOT NULL,
+  qty_requested REAL NOT NULL,
+  qty_approved REAL NOT NULL DEFAULT 0,
+  qty_prepared REAL NOT NULL DEFAULT 0,
+  qty_received REAL NOT NULL DEFAULT 0,
+  resolution TEXT NOT NULL DEFAULT 'pending',
+  substitute_for TEXT NOT NULL DEFAULT '',
+  substitute_unit TEXT NOT NULL DEFAULT '',
+  substitute_conversion_snapshot TEXT NOT NULL DEFAULT '{}',
+  substitute_reason TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (merchant, request_id, line_no)
+);
+CREATE TABLE IF NOT EXISTS hotel_internal_request_events (
+  merchant TEXT NOT NULL,
+  id TEXT NOT NULL,
+  request_id TEXT NOT NULL,
+  revision INTEGER NOT NULL,
+  event TEXT NOT NULL,
+  idempotency_key TEXT NOT NULL,
+  actor_id TEXT NOT NULL DEFAULT '',
+  actor_name TEXT NOT NULL DEFAULT '',
+  payload TEXT NOT NULL DEFAULT '{}',
+  ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, id),
+  UNIQUE (merchant, idempotency_key)
+);
+CREATE INDEX IF NOT EXISTS idx_hotel_requests_unit
+  ON hotel_internal_requests (merchant, unit_id, updated_ts);
+CREATE INDEX IF NOT EXISTS idx_hotel_request_events
+  ON hotel_internal_request_events (merchant, request_id, revision);
+
+-- Non-guest room-charge audit. Guest identity and room assignment remain in
+-- the hotel folio; this table carries only sale, outlet, shift and cashier
+-- attribution needed for exactly-once reversal and management reporting.
+CREATE TABLE IF NOT EXISTS hotel_room_charge_events (
+  merchant TEXT NOT NULL,
+  id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  sale_id TEXT NOT NULL,
+  outlet_id TEXT NOT NULL,
+  shift_id TEXT NOT NULL,
+  cashier_id TEXT NOT NULL,
+  cashier_name TEXT NOT NULL DEFAULT '',
+  amount_cents INTEGER NOT NULL,
+  occurred_ts INTEGER NOT NULL,
+  reversal_of TEXT NOT NULL DEFAULT '',
+  reversed_by_id TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (merchant, id),
+  UNIQUE (merchant, sale_id, kind)
+);
+CREATE INDEX IF NOT EXISTS idx_hotel_room_charge_shift
+  ON hotel_room_charge_events (merchant, shift_id, occurred_ts);
+
+-- ── Enregistrement des jetons de notification Push ──────────────────────────
+-- Enregistrés par POST /api/push/register (Capacitor iOS, Android, PWA Web).
+-- Un jeton est un secret matériel : jamais journalisé, jamais exposé par un GET.
+CREATE TABLE IF NOT EXISTS push_tokens (
+  merchant TEXT NOT NULL,
+  token TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'caisse',
+  employee_id TEXT,
+  platform TEXT NOT NULL CHECK(platform IN ('ios', 'android', 'web')),
+  device_id TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (merchant, token)
+);
+CREATE INDEX IF NOT EXISTS idx_push_tokens_target ON push_tokens (merchant, role);
+
+-- ── Guichet unique documentaire (slice 1 : factures fournisseur PDF) ───────
+-- Registre des dépôts : l'empreinte SHA-256 du fichier est l'identifiant, donc
+-- un re-dépôt du même papier converge vers la même ligne (idempotence). Les
+-- octets vivent en R2 (préfixe intake/), jamais en D1 : cette table ne porte
+-- que le statut du brouillon (received → confirmed), la preuve d'archive
+-- (has_object) et le hash du brouillon relu qui arbitre les reprises. Aucune
+-- donnée extraite ni écriture métier ne transite par ici.
+CREATE TABLE IF NOT EXISTS intake_docs (
+  merchant   TEXT    NOT NULL,             -- slugMerchant (tenantFor strict)
+  doc_id     TEXT    NOT NULL,             -- SHA-256 hex des octets déposés
+  mime       TEXT    NOT NULL DEFAULT '',
+  size       INTEGER NOT NULL DEFAULT 0,   -- octets annoncés au commit, vérifiés à l'upload
+  r2_key     TEXT    NOT NULL DEFAULT '',
+  has_object INTEGER NOT NULL DEFAULT 0,   -- 1 une fois l'objet R2 écrit et vérifié
+  status     TEXT    NOT NULL DEFAULT 'received', -- received | confirmed
+  doc_type   TEXT    NOT NULL DEFAULT '',  -- supplier_invoice (V1)
+  source     TEXT    NOT NULL DEFAULT '',  -- ex. stock-scan
+  posting_hash TEXT  NOT NULL DEFAULT '',  -- SHA-256 du brouillon relu ; jamais son contenu
+  posting_count INTEGER NOT NULL DEFAULT 0, -- nb de mouvements requis avant confirmed
+  created_ts INTEGER NOT NULL DEFAULT 0,
+  updated_ts INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (merchant, doc_id)
+);
+CREATE INDEX IF NOT EXISTS idx_intake_docs_status ON intake_docs (merchant, status);
+
+-- Operator work records, migration 2026-09-07-operator-workspace.sql.
+CREATE TABLE IF NOT EXISTS operator_tasks (
+  id TEXT PRIMARY KEY, merchant TEXT NOT NULL, signal_key TEXT,
+  title TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '',
+  priority INTEGER NOT NULL DEFAULT 3 CHECK(priority BETWEEN 1 AND 4),
+  status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','in_progress','snoozed','resolved')),
+  assignee TEXT NOT NULL DEFAULT '', due_ts INTEGER, snoozed_until INTEGER,
+  outcome TEXT NOT NULL DEFAULT '', source_ts INTEGER NOT NULL DEFAULT 0,
+  version INTEGER NOT NULL DEFAULT 1, mutation_id TEXT NOT NULL,
+  created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL, created_by TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_operator_task_signal ON operator_tasks(merchant, signal_key) WHERE signal_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_operator_task_queue ON operator_tasks(status, updated_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_operator_task_merchant ON operator_tasks(merchant, updated_ts DESC);
+CREATE TABLE IF NOT EXISTS operator_task_events (
+  id TEXT PRIMARY KEY, task_id TEXT NOT NULL, merchant TEXT NOT NULL,
+  actor_id TEXT NOT NULL, actor TEXT NOT NULL, action TEXT NOT NULL,
+  detail TEXT NOT NULL DEFAULT '', ts INTEGER NOT NULL,
+  FOREIGN KEY(task_id) REFERENCES operator_tasks(id)
+);
+CREATE INDEX IF NOT EXISTS idx_operator_task_events ON operator_task_events(merchant,ts DESC);
+CREATE TABLE IF NOT EXISTS operator_notes (
+  id TEXT PRIMARY KEY, merchant TEXT NOT NULL, body TEXT NOT NULL,
+  actor_id TEXT NOT NULL, actor TEXT NOT NULL, ts INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_operator_notes ON operator_notes(merchant,ts DESC);
+
+-- Durable external effects, migration 2026-09-08-audit-payment-shopify-outboxes.sql.
+CREATE TABLE IF NOT EXISTS payment_refund_reservations (
+  merchant TEXT NOT NULL, command_id TEXT NOT NULL, reference TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL CHECK (amount_cents > 0), status TEXT NOT NULL,
+  provider_ref TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, command_id)
+);
+CREATE INDEX IF NOT EXISTS idx_refund_reservation_reference
+  ON payment_refund_reservations(merchant, reference, status);
+CREATE TABLE IF NOT EXISTS shopify_inbound_stock (
+  merchant TEXT NOT NULL, order_ref TEXT NOT NULL, payload TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0,
+  next_ts INTEGER NOT NULL DEFAULT 0, last_error TEXT NOT NULL DEFAULT '',
+  created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, order_ref)
+);
+CREATE INDEX IF NOT EXISTS idx_shopify_inbound_due ON shopify_inbound_stock(status, next_ts);
+
+-- Inventory/loyalty audit remediation, migration 2026-09-08-audit-remediation-inventory-loyalty.sql.
+CREATE TABLE IF NOT EXISTS inventory_request_reservations (
+  merchant TEXT NOT NULL, request_id TEXT NOT NULL, line_no INTEGER NOT NULL,
+  item_id TEXT NOT NULL, location_id TEXT NOT NULL, qty_milli INTEGER NOT NULL,
+  review_revision INTEGER NOT NULL, created_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, request_id, line_no)
+);
+CREATE INDEX IF NOT EXISTS idx_inventory_request_reservations_stock
+  ON inventory_request_reservations(merchant, item_id, location_id);
+CREATE TABLE IF NOT EXISTS client_purchase_events (
+  merchant TEXT NOT NULL, ref TEXT NOT NULL, client_id TEXT NOT NULL,
+  amount INTEGER NOT NULL DEFAULT 0, points INTEGER NOT NULL DEFAULT 0,
+  stamps INTEGER NOT NULL DEFAULT 0, visits INTEGER NOT NULL DEFAULT 1,
+  created_ts INTEGER NOT NULL, srv_ts INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (merchant, ref)
+);
+CREATE INDEX IF NOT EXISTS idx_client_purchase_events_sync ON client_purchase_events(merchant, srv_ts);
+
+CREATE TABLE IF NOT EXISTS client_reward_events (
+  merchant TEXT NOT NULL, ref TEXT NOT NULL, client_id TEXT NOT NULL,
+  points_delta INTEGER NOT NULL DEFAULT 0, stamps_delta INTEGER NOT NULL DEFAULT 0,
+  created_ts INTEGER NOT NULL, srv_ts INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (merchant, ref)
+);
+CREATE INDEX IF NOT EXISTS idx_client_reward_events_sync ON client_reward_events(merchant, srv_ts);
+
+CREATE TABLE IF NOT EXISTS employee_auth_versions (
+  merchant TEXT NOT NULL, member_id TEXT NOT NULL,
+  auth_version INTEGER NOT NULL DEFAULT 0, pin_digest TEXT NOT NULL,
+  updated_ts INTEGER NOT NULL, PRIMARY KEY (merchant, member_id)
+);
+CREATE INDEX IF NOT EXISTS idx_employee_auth_versions_merchant ON employee_auth_versions(merchant);
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- KIWI TICKETS · problème → à tester → corrigé et testé
@@ -723,6 +1601,15 @@ CREATE TABLE IF NOT EXISTS kiwi_tickets (
 CREATE INDEX IF NOT EXISTS idx_kiwi_tickets_status_expiry
   ON kiwi_tickets (status, expires_ts);
 
+CREATE TABLE IF NOT EXISTS kiwi_ticket_followups (
+  id         TEXT PRIMARY KEY,
+  ticket_id  INTEGER NOT NULL REFERENCES kiwi_tickets(id) ON DELETE CASCADE,
+  body       TEXT NOT NULL CHECK (length(body) BETWEEN 1 AND 4000),
+  created_ts INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_kiwi_ticket_followups_ticket
+  ON kiwi_ticket_followups (ticket_id, created_ts);
+
 CREATE TABLE IF NOT EXISTS kiwi_ticket_images (
   id           TEXT PRIMARY KEY,
   ticket_id    INTEGER NOT NULL REFERENCES kiwi_tickets(id) ON DELETE CASCADE,
@@ -730,6 +1617,7 @@ CREATE TABLE IF NOT EXISTS kiwi_ticket_images (
   filename     TEXT NOT NULL DEFAULT '',
   content_type TEXT NOT NULL,
   byte_size    INTEGER NOT NULL DEFAULT 0,
+  followup_id  TEXT,
   created_ts   INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_kiwi_ticket_images_ticket

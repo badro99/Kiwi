@@ -37,8 +37,8 @@
   const moveCaretEnd = (input) => { const v = input.value; input.value = ''; input.value = v; };
 
   /* real-store detection — neutralize demo PEOPLE when a merchant is paired */
-  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
-  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvPaired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
   function pvName(demo) { const p = pvPaired(); return (p && p.name) || (pvReal() ? '' : demo); }
   function pvCity(demo) { const p = pvPaired(); return (p && p.location) || (pvReal() ? '' : demo); }
 
@@ -291,7 +291,49 @@
     passSeq++;
     state.ticket = { num: posRef(`S-${passSeq}`), customer: null, lines: [] };
   }
+
+  const coiffureOps = window.KiwiVerticalState && window.KiwiVerticalState.register({
+    vertical: 'coiffure',
+    snapshot() {
+      return {
+        staff: STAFF,
+        catalog: CATALOG,
+        customers: CUSTOMERS,
+        passages: PASSAGES,
+        appointments: RDV,
+        doneToday: DONE_TODAY,
+        tips: TIP_LEDGER,
+        passSeq,
+        ticket: state.ticket,
+      };
+    },
+    restore(saved) {
+      if (!saved || typeof saved !== 'object') return;
+      if (Array.isArray(saved.staff)) STAFF.splice(0, STAFF.length, ...saved.staff);
+      Object.keys(SF).forEach((id) => delete SF[id]);
+      STAFF.forEach((person) => { SF[person.id] = person; });
+      if (Array.isArray(saved.catalog)) CATALOG.splice(0, CATALOG.length, ...saved.catalog);
+      Object.keys(ITEMS).forEach((id) => delete ITEMS[id]);
+      CATALOG.forEach((category) => category.items.forEach((item) => { item.cat = category.id; ITEMS[item.id] = item; }));
+      if (Array.isArray(saved.customers)) CUSTOMERS.splice(0, CUSTOMERS.length, ...saved.customers);
+      CUSTOMERS.forEach((customer) => {
+        if (customer.last) customer.last = new Date(customer.last);
+        (customer.hist || []).forEach((entry) => { if (entry.when) entry.when = new Date(entry.when); });
+      });
+      Object.keys(CUST).forEach((id) => delete CUST[id]);
+      CUSTOMERS.forEach((customer) => { CUST[customer.id] = customer; });
+      if (Array.isArray(saved.passages)) PASSAGES.splice(0, PASSAGES.length, ...saved.passages);
+      PASSAGES.forEach((passage) => { if (passage.arrivedAt) passage.arrivedAt = new Date(passage.arrivedAt); });
+      if (Array.isArray(saved.appointments)) RDV.splice(0, RDV.length, ...saved.appointments);
+      RDV.forEach((appointment) => { if (appointment.time) appointment.time = new Date(appointment.time); });
+      if (Array.isArray(saved.doneToday)) DONE_TODAY.splice(0, DONE_TODAY.length, ...saved.doneToday);
+      if (Array.isArray(saved.tips)) TIP_LEDGER.splice(0, TIP_LEDGER.length, ...saved.tips);
+      if (Number.isFinite(saved.passSeq)) passSeq = saved.passSeq;
+      if (saved.ticket) state.ticket = saved.ticket;
+    },
+  });
   function queueIfOffline(label) {
+    if (coiffureOps) coiffureOps.save(label);
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -309,9 +351,9 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
-  function postDay(total, method, label, ref) {
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('coiffure', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('coiffure', { total, method, label, ref, lines });
     } catch (_) {}
   }
 
@@ -319,11 +361,12 @@
   let root = null;
 
   function mount(rootEl) {
+    if (coiffureOps) coiffureOps.hydrate();
     root = rootEl;
-    freshTicket();
+    if (!state.ticket) freshTicket();
     root.innerHTML = `
       <aside class="cf-rail">
-        <div class="cf-brand">kiwi<i></i></div>
+        <div class="cf-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="cf-venue">
           <div class="cf-venue-name">${pvName('Salon Yasmine') || 'Salon'}</div>
           <div class="cf-venue-sub">${pvReal() ? (pvCity('') || '') : 'Tanger · Iberia'}<br>Le même Kiwi, <b>un seul compte</b>.</div>
@@ -649,9 +692,12 @@
       <div class="cf-tk-meta">${customerRow(t)}</div>
       <div class="cf-tk-lines" id="cf-tk-lines">
         ${t.lines.length ? t.lines.map((ln, i) => lineRow(ln, i)).join('') : `
-          <div class="cf-tk-empty">
-            <i data-lucide="scissors"></i>
-            <div>Le passage est vide.<br>Touchez une prestation dans la grille, vous l'attribuez à un·e coiffeur·se.</div>
+          <div class="cf-tk-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">
+            <div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:4px;">
+              <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
+            </div>
+            <div style="font-weight:600; font-size:14px; color:var(--ink);">Le passage est vide.</div>
+            <div style="font-size:12.5px; color:var(--n-500); line-height:1.45;">Touchez une prestation dans la grille, vous l'attribuez à un·e coiffeur·se.</div>
           </div>`}
       </div>
       <div class="cf-tk-foot">
@@ -976,7 +1022,7 @@
           </div>` : ''}` : `
           <div class="cf-cl-form">
             <input class="cf-in" id="cf-cl-name" placeholder="Nom et prénom" value="${esc(/^[\d\s.+-]*$/.test(q || '') ? '' : (q || ''))}" />
-            <input class="cf-in" id="cf-cl-tel" inputmode="tel" placeholder="Téléphone (optionnel)" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
+            <input class="cf-in" id="cf-cl-tel" inputmode="tel" autocomplete="tel" placeholder="06… / +33… (optionnel)" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
             <div class="cf-sheet-foot" style="margin-top:4px;">
               <button class="cf-btn secondary" id="cf-cl-back">Retour</button>
               <button class="cf-btn primary" id="cf-cl-create"><i data-lucide="check"></i>Créer la fiche</button>
@@ -1033,10 +1079,13 @@
     if (!c) return;
     const el = $('#cf-fichem', root);
     const colorArt = ART.couleur;
+    const referenceVisual = c.referencePhoto && c.referencePhoto.dataUrl
+      ? `<img src="${c.referencePhoto.dataUrl}" alt="Photo référence de ${esc(c.name)}">`
+      : colorArt;
     el.innerHTML = `
       <div class="cf-fiche-hero">
         <button class="cf-fiche-x" data-cf-close aria-label="Fermer"><i data-lucide="x"></i></button>
-        <span class="cf-fiche-photo">${colorArt}<span class="ref">réf. photo</span></span>
+        <span class="cf-fiche-photo">${referenceVisual}<span class="ref">réf. photo</span></span>
         <span class="cf-fiche-who">
           <h3>${esc(c.name)}</h3>
           <div class="cf-fiche-tel">${esc(c.phone || 'sans téléphone')}</div>
@@ -1111,7 +1160,7 @@
     };
   }
 
-  /* photo référence — mock capture */
+  /* Photo référence — native camera/file picker, persisted on the client file. */
   function openPhoto(c) {
     const el = $('#cf-photom', root);
     el.innerHTML = `
@@ -1128,13 +1177,21 @@
       </div>`;
     openVeil('#cf-photo-veil');
     icons();
-    $('#cf-shutter', el).onclick = () => {
-      const flash = $('#cf-vf-flash', el);
-      flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
-      setTimeout(() => {
-        closeVeil('#cf-photo-veil');
-        toast(`Photo référence enregistrée, fiche ${c.name.split(' ')[0]}`);
-      }, 420);
+    $('#cf-shutter', el).onclick = async () => {
+      if (!window.KiwiImageProof) { toast('Appareil photo indisponible'); return; }
+      try {
+        const photo = await KiwiImageProof.pick({ maxDimension: 720, quality: 0.68 });
+        if (!photo) return;
+        const flash = $('#cf-vf-flash', el);
+        flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
+        c.referencePhoto = photo;
+        queueIfOffline('Photo référence client');
+        setTimeout(() => {
+          closeVeil('#cf-photo-veil');
+          toast(`Photo référence enregistrée, fiche ${c.name.split(' ')[0]}`);
+          if ($('#cf-fiche-veil', root).classList.contains('is-open')) openFiche(c.id);
+        }, 220);
+      } catch (_) { toast('Photo non enregistrée · vérifiez l’accès à l’appareil'); }
     };
     $('#cf-vf-close', el).onclick = () => closeVeil('#cf-photo-veil');
   }
@@ -1155,7 +1212,7 @@
             <span class="cf-day-metrics" style="grid-template-columns:repeat(3,1fr);">
               <span class="cf-day-metric"><span class="m-lbl">Visites</span><span class="m-val">${c.visits}</span></span>
               <span class="cf-day-metric"><span class="m-lbl">Dernière</span><span class="m-val" style="font-size:12px">${esc(fmtDay(c.last))}</span></span>
-              <span class="cf-day-metric com"><span class="m-lbl">Formule</span><span class="m-val" style="font-size:12px">${c.formula ? esc(c.formula.base + ' ' + c.formula.tone) : '—'}</span></span>
+              <span class="cf-day-metric com"><span class="m-lbl">Formule</span><span class="m-val" style="font-size:12px">${c.formula ? esc(c.formula.base + ' ' + c.formula.tone) : '·'}</span></span>
             </span>
           </button>`).join('')}
       </div>`;
@@ -1265,7 +1322,7 @@
         <p class="modal-subtle">${esc(passCustName(p))}${tipTotal() ? ` · dont ${fmtMAD(tipTotal())} de pourboire` : ''}</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="cf-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="cf-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="cf-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${amount}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1309,14 +1366,13 @@
       setTimeout(() => {
         const disc = $('#cf-reader-disc', el);
         if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
         const st = $('#cf-reader-status', el);
-        st.textContent = 'Khlass ! Paiement confirmé sur le lecteur';
-        st.classList.add('is-success');
-        icons();
-        setTimeout(() => done('carte', 0), 900);
+        const hw = window.KiwiHardware;
+        if (!hw || !hw.authorizeCard) { disc.classList.remove('is-pulsing'); st.textContent = 'Paiement non confirmé · lecteur indisponible'; return; }
+        hw.authorizeCard(amount, disc, st).then((result) => {
+          icons();
+          if (result && result.approved) setTimeout(() => done('carte', 0), 900);
+        });
       }, 1900);
     };
 
@@ -1353,7 +1409,17 @@
       /* Journal partagé : prestations ET pourboire, c'est ce que la cliente a
          réellement payé au comptoir. Sans ça la recette du salon vivait dans
          DONE_TODAY et disparaissait au premier rechargement. */
-      postDay(total + tt, method, `${p.lines.map((ln) => ITEMS[ln.itemId].label).join(' + ')} · ${passCustName(p)}`, p.num || `S-${p.id}`);
+      const saleLines = p.lines.map((ln) => {
+        const item = ITEMS[ln.itemId];
+        const amount = priceOf(item, ln.variantId) + (ln.addons || []).reduce((s, a) => s + ADDON[a].price, 0);
+        return {
+          itemId: ln.itemId, variantId: ln.variantId || '', name: item.label,
+          cat: item.cat || '', kind: 'service', unit: 'service', qty: 1, total: amount,
+          options: (ln.addons || []).map((id) => ({ id, qty: 1 })),
+        };
+      });
+      if (tt > 0) saleLines.push({ itemId: 'pourboire', name: 'Pourboire', kind: 'tip', unit: 'payment', qty: 1, total: tt });
+      postDay(total + tt, method, `${p.lines.map((ln) => ITEMS[ln.itemId].label).join(' + ')} · ${passCustName(p)}`, p.num || `S-${p.id}`, saleLines);
       closeVeil('#cf-pay-veil');
       queueIfOffline('Encaissement');
       toast(`${passCustName(p)}, ${fmtMAD(total + tt)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}${tt ? ` · pourboire ${fmtMAD(tt)}` : ''}`);
@@ -1422,7 +1488,16 @@
         </div>
       </div>`;
     icons();
-    $('#cf-day-print', root).onclick = () => toast('Clôture envoyée, récap CA + commissions (imprimante thermique)');
+    $('#cf-day-print', root).onclick = () => {
+      const P = window.KiwiOperationalPrint;
+      if (!P) { toast('Impression indisponible'); return; }
+      const lines = [
+        { label:'Passages', value:totalPass }, { label:'CA du jour', value:fmtMAD(totalCA) },
+        { label:'Pourboires', value:fmtMAD(totalTip) }, { label:'Commissions', value:fmtMAD(totalCom) },
+      ];
+      STAFF.forEach((s) => { const b = byStaff[s.id]; lines.push({ label:s.name, value:`${b.passages} passages · ${fmtMAD(b.ca)} · commission ${fmtMAD(Math.round(b.ca * COMMISSION))}` }); });
+      P.printText({ title:'Clôture salon', subtitle:fmtDay(new Date()), paper:'80', lines }).then((r) => toast(r && r.ok ? 'Impression système ouverte' : 'Impression impossible'));
+    };
     $('#cf-day-close', root).onclick = () => {
       if (PASSAGES.some((p) => p.state !== 'fini')) {
         toast(`${PASSAGES.filter((p) => p.state !== 'fini').length} passage(s) encore en cours, terminez d'abord la file`);
@@ -1467,8 +1542,8 @@
   window.KiwiPosDispatch.register({
     id: 'coiffure',
     greet: {
-      line1: 'Sba7 lkhir Yasmine,',
-      em: 'marhba.',
+      line1: 'Bonjour Yasmine,',
+      em: 'bienvenue.',
       sub: 'Salon Yasmine <em>·</em> deux fauteuils occupés, la file tourne',
     },
     mount(rootEl) { mount(rootEl); },

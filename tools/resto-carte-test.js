@@ -32,6 +32,7 @@ const eq = (a, b, m) => ok(a === b, `${m} — attendu ${JSON.stringify(b)}, obte
 
 const caisse  = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
 const serveur = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+const menuCatalogSrc = fs.readFileSync(path.join(ROOT, 'assets/menu-catalog.js'), 'utf8');
 
 /* ── 1. la frontière démo / réel est posée, et sur TOUT ────────────────────── */
 
@@ -128,6 +129,11 @@ const PAYLOAD = {
     { id: 'a-04', name: 'Épuisé',      price: 30, catId: 'c-froid', avail: false },
     { id: 'a-05', name: 'Bouteille',   price: 8,  catId: null,      avail: true },
     { id: 'a-06', name: 'Fantôme',     price: 9,  catId: 'c-inexistante', avail: true },
+    { id: 'a-07', name: 'Ancien plat', price: 19, catId: 'c-chaud', avail: true, archived: true },
+  ],
+  formulaItems: [
+    { id: 'f-01', name: 'Dessert secret', price: 18, catId: 'c-froid', avail: true, formulaOnly: true },
+    { id: 'f-02', name: 'Dessert épuisé', price: 18, catId: 'c-froid', avail: false, formulaOnly: true },
   ],
 };
 
@@ -158,7 +164,7 @@ function runRebuild(payload) {
     function kdsRepaintStations() { throw new Error('kdsRepaintStations appelé alors que l\\'écran cuisine n\\'est pas monté'); }
     ${body}
     const changed = rebuildCarte();
-    return { changed, catLabels, catColor, catOrder, menuItems, activeCat, stations: carteState.stations, kitchenId: carteState.kitchenId, opts: carteState.opts };
+    return { changed, catLabels, catColor, catOrder, menuItems, formulaItems: carteState.formulaItems, activeCat, stations: carteState.stations, kitchenId: carteState.kitchenId, opts: carteState.opts };
   `);
   return fn(scope);
 }
@@ -166,6 +172,9 @@ function runRebuild(payload) {
 const r = runRebuild(PAYLOAD);
 ok(r.changed === true, 'rebuildCarte() signale qu\'elle a reconstruit');
 eq(r.menuItems.length, 5, 'un plat marqué indisponible ne descend pas au comptoir');
+ok(!r.menuItems.some((m) => m.id === 'f-01'), 'un article réservé aux formules ne descend pas dans la grille');
+ok(r.formulaItems.some((m) => m.id === 'f-01'), 'il reste disponible dans le registre du sélecteur de formule');
+ok(!r.formulaItems.some((m) => m.id === 'a-07'), 'un article archivé est absent de tous les registres de vente');
 ok(!r.menuItems.some((m) => m.name === 'Épuisé'), 'le plat indisponible est bien celui qui manque');
 
 const noCat = r.menuItems.find((m) => m.id === 'a-05');
@@ -229,6 +238,8 @@ ok(/const CARTE_MIRROR = 'kiwi:menuMirror:v1:';/.test(caisse),
   'le miroir de la carte est préfixé kiwi: (donc balayé au changement de compte)');
 ok(/CARTE_MIRROR \+ slug/.test(caisse),
   'et rangé par slug — deux commerces sur un appareil ne se mélangent pas');
+ok(/source && \(source\.archived \|\| source\.formulaOnly \|\| source\.avail === false\)/.test(caisse),
+  'le point d’ajout caisse refuse aussi un identifiant périmé ou injecté directement');
 ok(/kiwi:openingFloat:v1:/.test(caisse),
   'le fond d\'ouverture mémorisé est lui aussi par établissement et sous kiwi:');
 
@@ -249,7 +260,11 @@ function runVoids(journalRows, refs, opts) {
   const scope = {
     journal: journalRows,
     storeIsReal: () => (opts && opts.real === false ? false : true),
-    window: { KiwiPosSale: { refMatcher } },
+    currentMerchantSlug: () => 'resto-test',
+    window: {
+      KiwiPosSale: { refMatcher },
+      KiwiLive: { saleIdFor: (entry) => entry.serverId || entry.id || '' },
+    },
     renderShiftStats() { scope.painted = (scope.painted || 0) + 1; },
     persistShift() { scope.persisted = (scope.persisted || 0) + 1; },
     saveProvisional() {},
@@ -257,11 +272,14 @@ function runVoids(journalRows, refs, opts) {
     painted: 0, persisted: 0,
   };
   const fn = new Function('scope', `
-    const { journal, storeIsReal, window, renderShiftStats, persistShift, saveProvisional, $ } = scope;
+    const { journal, storeIsReal, currentMerchantSlug, window, renderShiftStats, persistShift, saveProvisional, $ } = scope;
     ${extract(caisse, 'reconcileVoids')}
-    return reconcileVoids(scope.__refs);
+    return reconcileVoids(scope.__refs, scope.__ids, scope.__events, scope.__opts);
   `);
   scope.__refs = refs;
+  scope.__ids = (opts && opts.ids) || [];
+  scope.__events = (opts && opts.events) || [];
+  scope.__opts = opts || {};
   const touched = fn(scope);
   return { touched, journal: journalRows, painted: scope.painted, persisted: scope.persisted };
 }
@@ -276,7 +294,7 @@ let v = runVoids(J, ['AB-1']);
 eq(v.touched, 1, 'une vente retirée est marquée');
 eq(J[0].voided, true, 'la bonne vente porte le drapeau');
 eq(!!J[1].voided, false, 'la voisine n\'est pas touchée');
-ok(v.persisted >= 1, 'le poste est réécrit — sinon un rechargement ressuscite la vente');
+ok(v.persisted >= 1, 'le poste est réécrit - sinon un rechargement ressuscite la vente');
 
 /* /api/feed renvoie la liste ENTIÈRE des retraits toutes les 90 s. Rejouer ne
    doit rien changer, sinon les totaux dérivent toute la journée. */
@@ -284,15 +302,28 @@ let drift = 0;
 for (let i = 0; i < 25; i++) drift += runVoids(J, ['AB-1']).touched;
 eq(drift, 0, 'vingt-cinq sondages de plus ne bougent rien (idempotent)');
 
-/* Rétablir : la liste ne contient plus la référence ⇒ la vente revient. */
+/* Rétablir : une simple omission ne ressuscite pas la vente annulee (durable). */
 v = runVoids(J, []);
-eq(v.touched, 1, 'le rétablissement est vu');
+eq(v.touched, 0, 'une simple omission ne ressuscite pas la vente annulee (durable)');
+eq(!!J[0].voided, true, 'la vente annulee reste sortie des livres');
+
+/* Le retablissement exige une preuve explicite (restoredIds ou etat actif serveur). */
+v = runVoids(J, [], { restoredIds: new Set(['AB-1']) });
+eq(v.touched, 1, 'le retablissement explicite est vu');
 eq(!!J[0].voided, false, 'la vente est remise dans les livres');
-eq(runVoids(J, []).touched, 0, 'et le rétablissement est idempotent lui aussi');
+eq(runVoids(J, [], { restoredIds: new Set(['AB-1']) }).touched, 0, 'et le retablissement est idempotent lui aussi');
 
 /* Une référence étrangère ne doit toucher à rien. */
 J = mkJournal();
 eq(runVoids(J, ['ZZ-9']).touched, 0, 'une référence d\'un autre magasin ne retire rien');
+
+/* God Mode supprime par l'identifiant serveur. Une caisse peut avoir conservé
+   un autre libellé imprimé : l'identité stable doit quand même retirer la vente. */
+J = mkJournal();
+J[1].serverId = 'sale-cloud-42';
+eq(runVoids(J, [], { ids: ['sale-cloud-42'] }).touched, 1,
+  'une suppression God Mode atteint la caisse par identifiant stable');
+eq(J[1].voided, true, 'la vente supprimée du dashboard disparaît aussi de la caisse');
 
 /* La démo n'a pas de livres à tenir. */
 J = mkJournal();
@@ -300,7 +331,7 @@ eq(runVoids(J, ['AB-1'], { real: false }).touched, 0, 'la démo ne réconcilie r
 
 /* Les totaux et la liste doivent EXCLURE le retiré — c'est là qu'un caissier
    rembourserait une vente qui n'existe plus. */
-ok(/if \(e\.voided\) continue;/.test(caisse), 'journalTotals() saute les ventes retirées');
+ok(/if \((?:!e \|\| )?e\.voided\) continue;/.test(caisse), 'journalTotals() saute les ventes retirées');
 ok(/journal\.filter\(e => !e\.voided\)\.reverse\(\)/.test(caisse), 'le journal affiché les cache');
 
 /* ── 6. les boutons d'impression impriment ─────────────────────────────────── */
@@ -344,6 +375,27 @@ ok(/opts\.copy === true \? d\.T\.copy : str\(opts\.copy, 40\)/.test(receiptSrc),
 /* ── 9. les postes de préparation, du bureau jusqu'au bon papier ───────────── */
 
 const menuApi = fs.readFileSync(path.join(ROOT, 'functions/api/menu.js'), 'utf8');
+ok(/formulaItems/.test(menuApi) && /!it\.archived && !it\.formulaOnly/.test(menuApi),
+  'la projection publique garde les anciens clients sûrs et réserve formulaItems aux nouveaux sélecteurs');
+
+/* Un article réservé aux formules n'est plus dans menuItems ; une ligne de formule
+ * le porte pourtant en cuisine : son poste et sa catégorie se résolvent sur la
+ * carte entière (menuLineFind), sinon le dessert part au poste par défaut. */
+ok(/function menuLineFind\(pred\)/.test(caisse) && /kdsStationFor\(menuLineFind\(x => x\.id === l\.id\)\)/.test(caisse),
+  'caisse · le poste cuisine d’une ligne se résout sur la carte entière, formules comprises');
+ok(/const m = menuLineFind\(x => \(id && x\.id === id\) \|\| \(name && x\.name === name\)\);/.test(caisse),
+  'caisse · la catégorie d’une ligne se résout sur la carte entière');
+ok(/\(\(typeof svFormulaItems !== 'undefined' && svFormulaItems\.length\) \? svFormulaItems : menuItems\)\.find\(mm => mm\.id === l\.id\)/.test(serveur),
+  'serveur · le poste d’une commande se résout sur la carte entière');
+const rmwSrc = fs.readFileSync(path.join(ROOT, 'assets/restaurant-menu-workspace.js'), 'utf8');
+const rmwAsk = rmwSrc.slice(rmwSrc.indexOf('function ask('), rmwSrc.indexOf('function ask(') + 700);
+ok(!/data-archive/.test(rmwAsk), 'workspace · ask() ne référence plus x (ReferenceError sur chaque invite)');
+/* La forme d'hier exigeait que « });const isFormulaCb » suive immédiatement le
+   pied : une ligne insérée entre les deux cassait le contrôle sans que rien ne
+   bouge à l'écran. On vérifie ce que la phrase dit — le bouton est dans le pied,
+   avec Annuler et Enregistrer, et il est câblé sur CETTE fenêtre. */
+ok(/data-archive[^]{0,200}data-cancel[^]{0,200}data-save/.test(rmwSrc) && /\$\('\[data-archive\]',m\.el\)/.test(rmwSrc),
+  'workspace · le bouton Archiver/Restaurer vit dans le pied de la fiche article, là où il est câblé');
 ok(/station: str\(c && c\.station, 40\)/.test(menuApi),
   'sanitizeMenu garde le poste de la CATÉGORIE — c\'est là que vit le routage');
 ok(/out\.kitchenId = str\(raw\.kitchenId, 40\)/.test(menuApi),
@@ -485,12 +537,30 @@ ok(/return ids\.map\(id => lib\.find\(g => g && g\.id === id\)\)\.filter\(Boolea
   'itemOptGroups écarte un groupe disparu plutôt que de bloquer la vente');
 ok(/const groups = itemOptGroups\(item\);\s*\n\s*if \(groups\.length\) \{ openOptSheet/.test(caisseSrc),
   'un produit à options ouvre la feuille AVANT d\'entrer dans la note');
+ok(/function addToTableOrder\(tableId, itemId\)[\s\S]{0,260}itemOptGroups\(item\)[\s\S]{0,600}openOptSheet\(item, groups,[\s\S]{0,100}pushTableOrderLine/.test(caisseSrc),
+  'la prise de commande à table ouvre la même feuille d\'options que la vente à emporter');
+ok(/const line = tableOrders\[tableId\]\.find\(l => l\.id === item\.id[\s\S]{0,180}\(l\.optSig \|\| ''\) === sig/.test(caisseSrc)
+  && /price: item\.price \+ extra, qty: 1, note: '', opts: \(opts \|\| \[\]\)\.slice\(\), optSig: sig/.test(caisseSrc),
+  'une table conserve chaque combinaison d\'options sur une ligne distincte et tarifée');
+ok(/name: lineLabel\(l\)/.test(caisseSrc),
+  'les options de la table restent lisibles sur l\'addition et le reçu');
 ok(/missing\.length \? 'disabled' : ''/.test(caisseSrc),
   'tant qu\'un groupe obligatoire est sans réponse, « Ajouter » ne répond pas');
 ok(/c\.optSig \|\| ''\) === sig/.test(caisseSrc),
   'deux cafés aux laits différents font deux lignes — les empiler en enverrait un seul en cuisine');
-ok(/note: kitchenNote\(l\)/.test(caisseSrc),
-  'les choix partent en cuisine par la note — donc sur l\'écran ET sur le papier');
+ok(/function kitchenItemsFromLines\(lines\)/.test(caisseSrc)
+  && /paperNote: parent \? \[formulaTag, kitchenNote\(l\)\]/.test(caisseSrc)
+  && /visuals: ownVisuals/.test(caisseSrc),
+  'les choix partent en texte sur le papier et en repères visuels structurés sur le KDS');
+ok(/note: i\.paperNote \|\| i\.note \|\| '', visuals: i\.visuals \|\| \[\]/.test(caisseSrc),
+  'le relais vers une tablette cuisine distante conserve aussi le texte des options');
+ok(/emoji: optionEmoji\(c && c\.emoji\)/.test(menuApi)
+  && /OPTION_EMOJIS = new Set/.test(menuApi),
+  'le repère visuel choisi survit à la publication sans accepter de texte libre');
+ok(/emoji: String\(c\.emoji \|\| ''\)/.test(caisseSrc),
+  'la caisse conserve le repère visuel de chaque choix');
+ok(/\.mx-og-ch\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*48px minmax\(0, 1fr\) auto auto;/.test(menuCatalogSrc),
+  'le bouton emoji et le nom du choix gardent chacun leur colonne sans se chevaucher');
 
 /* Le bon papier : un par poste, avec SES lignes, et jamais deux jobs en même
    temps sur une thermique. */
@@ -499,7 +569,7 @@ ok(/note: kitchenNote\(l\)/.test(caisseSrc),
    main avant de lire, sinon il ne verrait jamais un seul bon. */
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
-function runTickets(items, stations) {
+function runTickets(items, stations, order) {
   const jobs = [];
   const scope = {
     STATION_PALETTE, IS_DEMO: false,
@@ -517,8 +587,9 @@ function runTickets(items, stations) {
     ${extract(caisse, 'kdsStations')}
     ${extract(caisse, 'kdsKitchenId')}
     ${extract(caisse, 'kdsStationFor')}
+    ${extract(caisse, 'kitchenPaperItems')}
     ${extract(caisse, 'printKitchenTickets')}
-    printKitchenTickets({ num: 7, sentAt: new Date(2026, 0, 1, 12, 5) }, ${JSON.stringify(items)});
+    printKitchenTickets(Object.assign({ num: 7, sentAt: new Date(2026, 0, 1, 12, 5) }, ${JSON.stringify(order || {})}), ${JSON.stringify(items)});
   `);
   fn(scope);
   return jobs;
@@ -531,6 +602,14 @@ const split = runTickets([
   { q: 1, n: 'Pastilla', note: '', stations: ['st_1', 'st_2'] },
 ], STS);
 const solo1 = runTickets([{ q: 1, n: 'Café noir', note: '', stations: ['st_2'] }], STS);
+const caisseTable = runTickets([{ q: 1, n: 'Tajine', stations: ['st_1'] }], STS,
+  { table: '12', opChannel: 'caisse' });
+const employeeTable = runTickets([{ q: 1, n: 'Tajine', stations: ['st_1'] }], STS,
+  { table: '7', opId: 'employee-7', opChannel: 'serveur' });
+const nfcTable = runTickets([{ q: 1, n: 'Tajine', stations: ['st_1'] }], STS,
+  { table: 'T4', opId: 'nfc-t4', opChannel: 'orderpro' });
+const takeawayTicket = runTickets([{ q: 1, n: 'Tajine', stations: ['st_1'] }], STS,
+  { type: 'takeaway' });
 const ticketChecks = tick().then(() => {
   eq(split.length, 2, 'deux postes concernés → deux bons, pas un fourre-tout');
   if (split.length === 2) {
@@ -544,6 +623,14 @@ const ticketChecks = tick().then(() => {
   }
   eq(solo1.length, 1, 'un seul poste concerné → un seul bon, comme avant');
   if (solo1.length === 1) eq(solo1[0].title, 'BAR', 'et il est adressé à ce poste');
+  eq(caisseTable[0] && caisseTable[0].table, 'Table 12',
+    'un bon envoyé depuis la caisse imprime sa table');
+  eq(employeeTable[0] && employeeTable[0].table, 'Table 7',
+    'un bon envoyé depuis l’application employé imprime sa table');
+  eq(nfcTable[0] && nfcTable[0].table, 'Table T4',
+    'un bon envoyé depuis le lien NFC/OrderPro imprime sa table');
+  eq(takeawayTicket[0] && takeawayTicket[0].table, '',
+    'un bon à emporter ne fabrique jamais de fausse table');
 });
 
 /* Une caisse SANS imprimante n'envoie rien et ne jette pas : l'écran cuisine
@@ -560,6 +647,7 @@ const noPrinter = (() => {
     ${extract(caisse, 'kdsStations')}
     ${extract(caisse, 'kdsKitchenId')}
     ${extract(caisse, 'kdsStationFor')}
+    ${extract(caisse, 'kitchenPaperItems')}
     ${extract(caisse, 'printKitchenTickets')}
     printKitchenTickets({ num: 1, sentAt: new Date() }, [{ q: 1, n: 'X', note: '', stations: ['c'] }]);
     return jobs.length;
@@ -571,7 +659,7 @@ eq(noPrinter, 0, 'sans imprimante jointe, aucun bon n\'est tenté — et rien ne
 /* La salle part en cuisine, elle aussi — et n'y renvoie pas deux fois. */
 ok(/function sendTableToKitchen\(tableId\)/.test(caisse),
   'une mesa validée a un chemin vers l\'écran cuisine');
-ok(/\.filter\(l => l && l\.qty > 0 && !l\.sent\)/.test(caisse),
+ok(/\.filter\(l => l && l\.qty > 0 && !l\.sent && !l\.orderProPending\)/.test(caisse),
   'seules les lignes JAMAIS envoyées repartent — rouvrir une mesa ne relance pas le repas');
 ok(/lines\.forEach\(\(l\) => \{ l\.sent = true; \}\);/.test(caisse),
   'et elles sont marquées une fois parties');
@@ -579,8 +667,10 @@ ok(/kdsOrders: storeIsReal\(\) \? kdsOrders\.filter\(o => !staleQueuedServerTick
   'le board cuisine persiste sans réenregistrer les vieux tickets serveur en attente');
 ok(/if \(!o \|\| staleQueuedServerTicket\(o\)\) return;/.test(caisse),
   'un ancien ticket C-xxx en attente ne ressuscite pas au rechargement');
-ok(/o\.opNum == null.*o\.status !== 'new'.*o\.status !== 'held'/.test(caisse),
-  'la purge vise les tickets serveur en attente, pas une préparation active');
+ok(/o\.status === 'cooking'.*age > 6 \* 60 \* 60 \* 1000/.test(caisse),
+  'une préparation serveur oubliée expire après six heures au lieu de revenir le lendemain');
+ok(/function kdsPaint\(\)[\s\S]{0,350}?staleQueuedServerTicket\(kdsOrders\[i\]\)/.test(caisse),
+  'une caisse laissée ouverte purge aussi le ticket déjà présent en mémoire');
 ok(/let\s+kdsOrderSeq = IS_DEMO \? 52 : 0;/.test(caisse),
   'un vrai commerçant commence sa numérotation à 1, pas à 53');
 

@@ -42,13 +42,14 @@ function stubDom() {
     getElementById: () => null,
     createElement: node,
     querySelector: () => null,
+    addEventListener() {},
     head: { appendChild() {} },
   };
 }
 
 function load(globals) {
   const ctx = {
-    window: Object.assign({}, globals),
+    window: Object.assign({ addEventListener() {}, setInterval() {} }, globals),
     document: stubDom(),
     setTimeout, clearTimeout, Promise, Date, Math, JSON,
   };

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Assistance · Kiwi</title>
+<meta name="description" content="Assistance Kiwi : joindre l'équipe, résoudre les pannes courantes de la caisse, de l'imprimante et de l'application Kiwi Pro." />
+<meta name="theme-color" content="#0B6E4F" />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="https://kiwi-os.com/support.html" />
+
+<link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="assets/landing/kiwi-mark-app-icon.png" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="assets/landing/tokens.css" />
+<link rel="stylesheet" href="assets/landing/base.css" />
+<link rel="stylesheet" href="assets/landing/components.css?v=2" />
+
+<style>
+  body { background: var(--paper); }
+  .legal { padding: var(--s-16) 0 var(--s-24); }
+  .legal h1 {
+    font-family: var(--font-display);
+    font-size: clamp(36px, 4.4vw, 56px);
+    font-weight: var(--w-medium); letter-spacing: -0.028em;
+    line-height: 1.05; max-width: 22ch;
+  }
+  .legal .lede {
+    margin-top: var(--s-6); max-width: 64ch;
+    font-size: 18px; line-height: 1.55; color: var(--n-600);
+  }
+  .legal .meta {
+    margin-top: var(--s-6);
+    display: flex; gap: 24px; flex-wrap: wrap;
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--n-500); letter-spacing: 0.06em;
+    padding-bottom: var(--s-8);
+    border-bottom: 1px solid var(--paper-line);
+  }
+  .legal .meta b { color: var(--ink); font-weight: var(--w-medium); }
+  .legal h2 {
+    font-family: var(--font-display);
+    font-size: 24px; font-weight: var(--w-medium); letter-spacing: -0.018em;
+    margin-top: var(--s-12);
+  }
+  .legal h3 {
+    font-family: var(--font-display);
+    font-size: 17px; font-weight: var(--w-medium); letter-spacing: -0.014em;
+    margin-top: var(--s-6);
+  }
+  .legal p, .legal li {
+    font-size: 16px; line-height: 1.65; color: var(--n-700);
+    max-width: 72ch;
+  }
+  .legal p { margin-top: var(--s-3); }
+  .legal ul { margin-top: var(--s-3); padding-left: 22px; }
+  .legal li { margin-top: 6px; }
+  .legal b { color: var(--ink); font-weight: var(--w-medium); }
+  /* Précision de second plan : ce que Kiwi ne fait PAS. Utile au lecteur, mais
+     ne doit pas peser autant que l'engagement qu'elle nuance. */
+  .legal p.note {
+    color: var(--n-600); font-size: 0.94em;
+    border-left: 2px solid var(--n-200); padding-left: 12px;
+  }
+  .legal a { color: var(--atlas); border-bottom: 1px solid currentColor; }
+  .legal a:hover { color: var(--atlas-700); }
+  .legal-back {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--n-500); letter-spacing: 0.04em;
+    margin-bottom: var(--s-8);
+    transition: color var(--d-quick) var(--ease-glide);
+  }
+  .legal-back:hover { color: var(--atlas); }
+</style>
+</head>
+<body>
+
+<!-- Minimal nav -->
+<nav class="nav" aria-label="Navigation principale">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi" /></a>
+    <div class="nav-actions">
+      <a class="btn btn-ghost btn-sm" href="/">Retour au site</a>
+    </div>
+  </div>
+</nav>
+
+<section class="slab-paper legal">
+  <div class="wrap-narrow">
+    <a href="/" class="legal-back">← Retour à kiwi-os.com</a>
+    <span class="pill pill-paper pill-dot">Assistance · Kiwi et Kiwi Pro</span>
+
+    <h1 style="margin-top: var(--s-4);">Besoin d'aide ?</h1>
+    <p class="lede">
+      Une question, une panne au comptoir, un ticket qui ne sort pas : l'équipe Kiwi
+      répond directement, en français, en arabe et en anglais.
+    </p>
+    <div class="meta">
+      <span><b>E-mail</b> : <a href="mailto:contact@kiwi-os.com">contact@kiwi-os.com</a></span>
+      <span><b>Téléphone · WhatsApp</b> : <a href="tel:+212624495159">+212 6 24 49 51 59</a></span>
+    </div>
+
+    <h2>1. Nous joindre</h2>
+    <p>
+      Écrivez à <a href="mailto:contact@kiwi-os.com">contact@kiwi-os.com</a> ou
+      appelez le <a href="tel:+212624495159">+212 6 24 49 51 59</a> (WhatsApp compris).
+      Pour aller vite, indiquez le nom de votre établissement, l'appareil concerné
+      (iPad, tablette Android, ordinateur) et ce que vous voyez à l'écran ; une photo
+      ou une capture d'écran aide toujours.
+    </p>
+    <p class="note">
+      Ne nous envoyez jamais votre mot de passe ni vos codes d'accès. Personne chez
+      Kiwi ne vous les demandera.
+    </p>
+
+    <h2>2. Les pannes les plus courantes</h2>
+    <h3>2.1 L'imprimante ne sort plus les tickets</h3>
+    <ul>
+      <li>Vérifiez que l'imprimante est allumée et reliée au même réseau Wi-Fi que la caisse.</li>
+      <li>Dans la caisse, ouvrez <b>Imprimante</b> puis <b>Tester</b>. Si le test échoue, <b>Rechercher sur le réseau</b> retrouve une imprimante dont l'adresse a changé après un redémarrage de la box.</li>
+      <li>Sur iPad, si Kiwi Pro n'a pas l'autorisation réseau local : <b>Réglages › Kiwi Pro › Réseau local</b>, puis revenez dans l'app.</li>
+      <li>Les tickets en attente ne sont pas perdus : ils partent d'eux-mêmes dès que l'imprimante répond, sans doublon.</li>
+    </ul>
+    <h3>2.2 La caisse ne se connecte plus au tableau de bord</h3>
+    <ul>
+      <li>Depuis le tableau de bord, générez un code d'appairage à six chiffres et saisissez-le dans la caisse ou la cuisine ; le code expire vite, refaites-en un s'il est refusé.</li>
+      <li>Un appareil appairé reste appairé après un redémarrage ; si ce n'est plus le cas, appairez-le à nouveau, vos ventes locales sont conservées.</li>
+    </ul>
+    <h3>2.3 Mot de passe oublié</h3>
+    <p>
+      Écrivez-nous ou appelez-nous : nous envoyons un lien de réinitialisation à
+      l'adresse e-mail du compte, et uniquement à celle-ci. Le lien est valable une
+      heure. Personne chez Kiwi ne voit ni ne choisit votre mot de passe.
+    </p>
+
+    <h2>3. L'application Kiwi Pro</h2>
+    <p>
+      Kiwi Pro (iPad, iPhone, Android) contient la caisse, le tableau de bord,
+      l'app équipe et l'écran cuisine. Elle se connecte avec le même compte que le
+      site. Elle ne vend rien et ne contient aucun achat intégré : l'abonnement se
+      règle entre Kiwi et le commerçant. Pour supprimer un compte ou exporter ses
+      données, écrivez à <a href="mailto:dpo@kiwi-os.com">dpo@kiwi-os.com</a>.
+    </p>
+
+    <h2>4. Documents utiles</h2>
+    <ul>
+      <li><a href="privacy.html">Politique de confidentialité</a></li>
+      <li><a href="terms.html">Conditions générales</a></li>
+      <li><a href="mentions-legales.html">Mentions légales</a></li>
+      <li><a href="cookies.html">Politique cookies</a></li>
+    </ul>
+  </div>
+</section>
+
+</body>
+</html>

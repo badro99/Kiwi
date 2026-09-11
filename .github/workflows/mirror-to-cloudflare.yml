@@ -60,6 +60,13 @@ jobs:
           # L'avance rapide se vérifie contre l'historique réel : un clone
           # superficiel ne saurait pas dire si la cible est bien une aïeule.
           fetch-depth: 0
+          # Sans ceci, `checkout` écrit le GITHUB_TOKEN par défaut en clair dans
+          # .git/config pour toute la durée du job, où n'importe quelle étape
+          # suivante — ou n'importe quelle action tierce compromise — peut le
+          # relire. Ce workflow ne pousse JAMAIS avec ce jeton-là : il pousse
+          # vers `cloudflare` avec MIRROR_TOKEN (voir plus bas). Le jeton
+          # d'origine n'a donc aucune raison de rester dans le clone.
+          persist-credentials: false
 
       - name: Vérifier que le jeton est en place
         id: gate

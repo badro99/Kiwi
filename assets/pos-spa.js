@@ -261,10 +261,21 @@
     clQuery: '',
     offline: false, queued: 0,
   };
+  const spaOps = window.KiwiVerticalState?.open?.('spa', {
+    schema: 1,
+    snapshot: () => ({ products: PRODUCTS, clients: CLIENTES, cures: CURES, appointments: APPTS, cureSeq, apptSeq, ticketSeq, ticket: state.ticket }),
+    restore: (d) => {
+      PRODUCTS.splice(0, PRODUCTS.length, ...(d.products || [])); Object.keys(PROD).forEach(k => delete PROD[k]); PRODUCTS.forEach(p => { if (p?.id) PROD[p.id] = p; });
+      CLIENTES.splice(0, CLIENTES.length, ...(d.clients || [])); Object.keys(CL).forEach(k => delete CL[k]); CLIENTES.forEach(c => { if (c?.id) CL[c.id] = c; });
+      CURES.splice(0, CURES.length, ...(d.cures || [])); APPTS.splice(0, APPTS.length, ...(d.appointments || []));
+      cureSeq = Math.max(cureSeq, +d.cureSeq || 0); apptSeq = Math.max(apptSeq, +d.apptSeq || 0); ticketSeq = Math.max(ticketSeq, +d.ticketSeq || 0); state.ticket = d.ticket || null;
+    },
+  });
   function freshTicket() {
     state.ticket = { num: posRef(`S-${ticketSeq}`), lines: [], clientId: null, guest: false, apptId: null };
   }
   function queueIfOffline(label) {
+    spaOps?.save?.(label || 'operation');
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -282,9 +293,22 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
-  function postDay(total, method, label, ref) {
+  function saleLines(t, tip) {
+    const lines = t.lines.map((l) => {
+      const isService = l.type === 'svc';
+      const item = isService ? PRESTA[l.refId] : PROD[l.refId];
+      return {
+        itemId: item.id, variantId: isService ? l.prId : '', name: item.name,
+        category: isService ? item.cat : 'boutique', qty: l.qty, unit: isService ? 'seance' : 'piece',
+        kind: isService ? 'service' : 'product', total: l.price * l.qty,
+      };
+    });
+    if (tip > 0) lines.push({ itemId: 'pourboire', name: 'Pourboire', category: 'pourboire', qty: 1, unit: 'service', kind: 'tip', total: tip });
+    return lines;
+  }
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('spa', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('spa', { total, method, label, ref, lines });
     } catch (_) {}
   }
   /* Le numéro de ticket repart AU-DELÀ du dernier encaissé aujourd'hui : sans ça
@@ -296,17 +320,18 @@
 
   // Real spa identity from the pairing / hosted session — a real spa shows its own
   // name+city, never the demo "Spa Bahia". Local demo (unpaired) unchanged.
-  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
-  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvPaired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
   function pvName(demo) { const p = pvPaired(); return (p && p.name) || (pvReal() ? '' : demo); }
   function pvCity(demo) { const p = pvPaired(); return (p && p.location) || (pvReal() ? '' : demo); }
 
   /* ═══════════════════════ MOUNT (appelé par le dispatcher) ═══════════════ */
   function mount(rootEl) {
+    spaOps?.hydrate?.();
     root = rootEl;
     root.innerHTML = `
       <aside class="sp-rail">
-        <div class="sp-brand">kiwi<i></i></div>
+        <div class="sp-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="sp-venue">
           <div class="sp-venue-name">${pvName('Spa Bahia') || 'Spa'}</div>
           <div class="sp-venue-sub">${pvReal() ? (pvCity('') || '') : 'Marrakech · Hivernage'}<br>Le même Kiwi, un seul compte.</div>
@@ -364,7 +389,7 @@
       v.addEventListener('click', (e) => { if (e.target === v) closeVeil(v); });
     });
 
-    freshTicket();
+    if (!state.ticket) freshTicket();
     renderAll();
   }
 
@@ -943,9 +968,12 @@
       </div>
       <div class="sp-tk-lines" id="sp-tk-lines">
         ${t.lines.length ? t.lines.map((l, i) => lineRow(l, i)).join('') : `
-          <div class="sp-tk-empty">
-            <i data-lucide="sparkles"></i>
-            <div>Le ticket est vide.<br>Touchez un soin de la grille, ou chargez une séance terminée depuis le planning.</div>
+          <div class="sp-tk-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">
+            <div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:4px;">
+              <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
+            </div>
+            <div style="font-weight:600; font-size:14px; color:var(--ink);">Le ticket est vide.</div>
+            <div style="font-size:12.5px; color:var(--n-500); line-height:1.45;">Touchez un soin de la grille, ou chargez une séance terminée depuis le planning.</div>
           </div>`}
       </div>
       <div class="sp-tk-foot">
@@ -1109,7 +1137,7 @@
         <p class="modal-subtle">${esc(who)}${tip ? ` · dont ${tip} MAD de pourboire` : ''}</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="sp-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="sp-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="sp-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${amount}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1157,13 +1185,13 @@
       setTimeout(() => {
         const disc = $('#sp-reader-disc', el);
         if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#sp-reader-status', el).textContent = 'Khlass! Paiement confirmé sur le lecteur';
-        $('#sp-reader-status', el).classList.add('is-success');
-        icons();
-        setTimeout(() => done('carte', 0), 900);
+        const status = $('#sp-reader-status', el);
+        const hw = window.KiwiHardware;
+        if (!hw || !hw.authorizeCard) { disc.classList.remove('is-pulsing'); status.textContent = 'Paiement non confirmé · lecteur indisponible'; return; }
+        hw.authorizeCard(amount, disc, status).then((result) => {
+          icons();
+          if (result && result.approved) setTimeout(() => done('carte', 0), 900);
+        });
       }, 1900);
     };
 
@@ -1175,7 +1203,9 @@
         CURES.unshift(cu);
         /* Le forfait est encaissé en entier le jour de la vente : c'est une
            recette du jour, même si les séances seront consommées plus tard. */
-        postDay(ctx.price, method, `Forfait ${ctx.name}${CL[ctx.clientId] ? ` · ${CL[ctx.clientId].name}` : ''}`, cu.id);
+        postDay(ctx.price, method, `Forfait ${ctx.name}${CL[ctx.clientId] ? ` · ${CL[ctx.clientId].name}` : ''}`, cu.id, [
+          { itemId: ctx.familyId, variantId: String(ctx.size), name: ctx.name, category: 'forfait', qty: 1, unit: 'forfait', kind: 'service', total: ctx.price },
+        ]);
         queueIfOffline('Vente forfait');
         toast(`Forfait vendu, carte ${cu.id} active · ${ctx.size} séances pour ${CL[ctx.clientId].name}`);
         toast(`Économie cliente : ${fmtMAD(ffSaving(FORFAIT[ctx.familyId], ctx.size))} vs séances à l'unité`);
@@ -1194,7 +1224,7 @@
       const parts = tipSplit(tip, t.lines);
       /* Prestations ET pourboire : c'est le montant que la cliente a réellement
          laissé au comptoir, le même que celui annoncé dans le toast. */
-      postDay(base + tip, method, tkLabel(t), t.num);
+      postDay(base + tip, method, tkLabel(t), t.num, saleLines(t, tip));
       queueIfOffline('Encaissement');
       toast(`${t.num} encaissé, ${fmtMAD(base + tip)} en ${method}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
       if (tip > 0) toast(`Pourboire ${fmtMAD(tip)} réparti, ${parts.map((p) => `${PR[p.id].short} ${p.amount}`).join(' · ')}`, 2800);
@@ -1617,7 +1647,7 @@
             </div>` : ''}` : `
           <div class="sp-cl-form">
             <input class="sp-in" id="sp-pk-name" placeholder="Nom et prénom" value="${esc(/^[\d\s.+-]*$/.test(q || '') ? '' : (q || ''))}" />
-            <input class="sp-in" id="sp-pk-tel" inputmode="tel" placeholder="Téléphone" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
+            <input class="sp-in" id="sp-pk-tel" inputmode="tel" autocomplete="tel" placeholder="06… / +33…" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
             <input class="sp-in" id="sp-pk-alg" placeholder="Allergie connue (optionnel, ex. huile d'amande)" />
             <div class="sp-sheet-foot" style="margin-top:4px;">
               <button class="sp-btn secondary" id="sp-pk-back">Retour</button>
@@ -1655,7 +1685,7 @@
         const alg = $('#sp-pk-alg', el).value.trim();
         if (!name) { toast('Le nom est requis pour la fiche'); return; }
         const id = 'cx' + Date.now().toString(36);
-        const c = { id, name, phone: tel || '—', visits: 0, allergies: alg ? [alg] : [], prefs: [], lastDays: 0, lastWhat: '', hist: [], vip: false };
+        const c = { id, name, phone: tel || '·', visits: 0, allergies: alg ? [alg] : [], prefs: [], lastDays: 0, lastWhat: '', hist: [], vip: false };
         CLIENTES.unshift(c); CL[id] = c;
         closeVeil('#sp-client-veil');
         toast(`Fiche créée, ${name}${alg ? ` · allergie notée : ${alg}` : ''}`);
@@ -1699,8 +1729,8 @@
   window.KiwiPosDispatch.register({
     id: 'spa',
     greet: {
-      line1: 'Sba7 lkhir Imane,',
-      em: 'marhba.',
+      line1: 'Bonjour Imane,',
+      em: 'bienvenue.',
       sub: 'Spa Bahia <em>·</em> planning du jour',
     },
     mount,

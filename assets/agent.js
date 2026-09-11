@@ -22,6 +22,8 @@
    * off this object. opex keys are stable IDs — labels come from T.opex. */
   const ATLAS = {
     name: 'Café Atlas · Maarif',
+    trade: 'restaurant',
+    tradeLabel: 'Café · Restaurant',
     revenue: 842300,
     cogs: 261000,
     grossProfit: 581300,
@@ -66,6 +68,70 @@
    * Principle (KIWI_AI_ROADMAP.md): never emit a number we don't have. */
   let B = ATLAS;
 
+  const ROLLING_SALES_DAYS = 30;
+  const ROLLING_DAY_MS = 864e5;
+
+  function salesPeriod(vid) {
+    const now = Date.now();
+    const R = window.KiwiDayReport;
+    const venueData = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {};
+    let merchantKey = '';
+    try { merchantKey = R && typeof R.storeSlug === 'function' ? R.storeSlug() : ''; } catch (_) {}
+    merchantKey = merchantKey || venueData.slug || venueData.merchant || venueData.id || vid || undefined;
+    try {
+      if (R && typeof R.businessDay === 'function' && typeof R.dayBounds === 'function') {
+        const endDay = R.businessDay(now, merchantKey);
+        const startDay = R.shiftDay
+          ? R.shiftDay(endDay, -(ROLLING_SALES_DAYS - 1), merchantKey)
+          : new Date(Date.parse(endDay + 'T12:00:00Z') - (ROLLING_SALES_DAYS - 1) * ROLLING_DAY_MS).toISOString().slice(0, 10);
+        const first = R.dayBounds(startDay, merchantKey);
+        const last = R.dayBounds(endDay, merchantKey);
+        if (first && last && isFinite(first.from) && isFinite(last.to)) {
+          return {
+            from: first.from, to: last.to, days: ROLLING_SALES_DAYS,
+            timezone: typeof R.timezone === 'function' ? R.timezone(merchantKey) : undefined,
+            cutoff: typeof R.cutoff === 'function' ? R.cutoff(merchantKey) : undefined,
+            startDay, endDay,
+          };
+        }
+      }
+    } catch (_) {}
+    /* This is only a compatibility fallback for pages that do not load the
+     * shared day-report module. Keep the same 30-day denominator, but never
+     * pretend this host-local fallback is the merchant's business calendar. */
+    const to = now;
+    return { from: to - ROLLING_SALES_DAYS * ROLLING_DAY_MS, to, days: ROLLING_SALES_DAYS, startDay: null, endDay: null };
+  }
+
+  function rollingSales(vid) {
+    const period = salesPeriod(vid);
+    let totals = { revenue: 0, count: 0, basket: 0 };
+    try {
+      const S = window.KiwiSales;
+      if (S && typeof S.totals === 'function') {
+        totals = S.totals(vid, period.from, period.to) || totals;
+      }
+    } catch (_) {}
+    let asOf = null;
+    const note = (rows) => (Array.isArray(rows) ? rows : []).forEach((row) => {
+      const ts = +(row && row.ts) || 0;
+      if (ts >= period.from && ts < period.to && (!asOf || ts > asOf)) asOf = ts;
+    });
+    try { note(window.KiwiSales && window.KiwiSales.list && window.KiwiSales.list(vid)); } catch (_) {}
+    try { note(window.KiwiRefunds && window.KiwiRefunds.list && window.KiwiRefunds.list(vid)); } catch (_) {}
+    const revenue = Number(totals.revenue) || 0;
+    const count = Number(totals.count) || 0;
+    return {
+      ...period,
+      revenue,
+      count,
+      /* KiwiSales.totals is the authoritative sales API: its revenue is net
+       * of refunds, while its ticket count remains the sale denominator. */
+      basket: Number(totals.basket) || (count ? revenue / count : 0),
+      asOf,
+    };
+  }
+
   function buildProfile() {
     const KV = window.KiwiVenue;
     const real = !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal());
@@ -75,22 +141,44 @@
     if (!real && !custom) return ATLAS;
     const vd = (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
     const vid = KV && KV.getVenue ? KV.getVenue() : null;
-    const tot = (window.KiwiSales && window.KiwiSales.totals)
-      ? window.KiwiSales.totals(vid) : { revenue: 0, count: 0, basket: 0 };
+    const period = rollingSales(vid);
     let nm = vd.fullDisplay || [vd.name, vd.location].filter(Boolean).join(' · ');
     // Real-but-not-custom (defensive): vd may still be a demo venue — never quote
     // "Café Atlas"; prefer the real session name, else neutral.
     if (real && !custom) nm = (window.KiwiMe && (window.KiwiMe.business || window.KiwiMe.name)) || 'Votre établissement';
     if (!nm) nm = 'Votre établissement';
+    const tradeRaw = vd.subtype || vd.trade || vd.type || (window.KiwiMe && window.KiwiMe.type) || 'autre';
+    let trade = String(tradeRaw || 'autre');
+    try {
+      if (window.KiwiTrades && typeof window.KiwiTrades.resolve === 'function') {
+        trade = window.KiwiTrades.resolve(tradeRaw) || trade;
+      }
+    } catch (_) {}
+    let tradeLabel = trade;
+    try {
+      if (window.KiwiTrades && typeof window.KiwiTrades.label === 'function') {
+        tradeLabel = window.KiwiTrades.label(trade) || trade;
+      }
+    } catch (_) {}
     return {
       partial: true,
       name: nm,
-      revenue: tot.revenue,
-      ordersPerMonth: tot.count,
-      ordersPerDay: 0,
-      avgBasket: tot.basket,
-      daysOpen: 30,
-      dailyRev: tot.revenue / 30,
+      trade,
+      tradeLabel,
+      revenue: period.revenue,
+      ordersPerMonth: period.count,
+      ordersPerDay: period.count / period.days,
+      avgBasket: period.basket,
+      daysOpen: period.days,
+      dailyRev: period.revenue / period.days,
+      salesWindowDays: period.days,
+      salesWindowFrom: period.from,
+      salesWindowTo: period.to,
+      salesWindowStart: period.startDay,
+      salesWindowEnd: period.endDay,
+      salesTimezone: period.timezone,
+      salesCutoff: period.cutoff,
+      salesAsOf: period.asOf,
       /* cost structure unknown until the merchant records it */
       cogs: null, grossProfit: null, grossMargin: null,
       opex: {}, totalOpex: null, netProfit: null, netMargin: null,
@@ -121,6 +209,15 @@
     return { mtdRevenue: revenue, mtdDays: now.getDate(), daysInMonth };
   }
   function syncProfile() { B = buildProfile(); return B; }
+  function salesWindowEvidence(profile) {
+    if (!profile || !profile.partial || !profile.salesWindowStart || !profile.salesWindowEnd) return '';
+    const freshness = profile.salesAsOf
+      ? new Date(profile.salesAsOf).toISOString()
+      : 'aucun événement horodaté dans la fenêtre';
+    const zone = profile.salesTimezone ? ` · ${profile.salesTimezone}` : '';
+    const cutoff = profile.salesCutoff == null ? '' : ` · bascule ${profile.salesCutoff}h`;
+    return `Fenêtre ventes : ${profile.salesWindowStart} → ${profile.salesWindowEnd} inclus${zone}${cutoff} · dernière vente/remboursement : ${freshness}`;
+  }
 
   /* ─────────────── PERMISSIONS ───────────────
    * dashboard.html hides Marges & budget, Dépenses and Paie & planning from a
@@ -137,7 +234,12 @@
   function accessTier() {
     let raw = window.__kiwiRole;
     if (raw == null) { try { raw = localStorage.getItem('kiwiRole'); } catch (_) {} }
-    if (raw == null || raw === '') return 'owner';
+    /* An explicit badge is authoritative. No marker is the legacy owner
+     * dashboard, not an anonymous till surface. */
+    if (raw == null || raw === '') {
+      try { return window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal() ? 'staff' : 'owner'; }
+      catch (_) { return 'staff'; }
+    }
     let id = '';
     try { if (window.KiwiRoles && window.KiwiRoles.idOf) id = window.KiwiRoles.idOf(raw) || ''; } catch (_) {}
     if (id === 'proprietaire') return 'owner';
@@ -423,28 +525,16 @@
       },
       calc: { title: 'Calcul', result: 'résultat' },
       llm: {
-        noGpu: 'Cette question sort de mes calculs, je suis votre copilote chiffres : embauche, prix, investissement, seuil de rentabilité, prévisions, marges et charges. Demandez-moi l’un de ceux-là et la réponse arrive aussitôt. Et pour savoir quels articles de votre menu marchent, ou non, ouvrez la page Menu du tableau de bord.',
-        loading: (p) => `Mon assistant IA finit de se charger (${p} %). Je réponds dès qu’il est prêt.`,
-        offerLead: 'Cette question sort de mes calculs prédéfinis, mais je peux y répondre librement avec un <b>assistant IA open-source</b> qui s’exécute <b>entièrement dans votre navigateur</b> : aucune donnée ne part ailleurs.',
-        offerSize: (sz) => `Premier lancement : un téléchargement unique de ${sz}, ensuite instantané.`,
-        activate: 'Activer l’assistant IA',
-        installing: 'Installation de l’assistant IA, modèle open-source exécuté dans votre navigateur.',
-        initializing: 'Initialisation…',
-        ready: 'Assistant IA prêt.',
-        readyMsg: 'Mon assistant IA est prêt. Posez-moi vos questions sur la gestion, les finances, l’équipe ou le marketing de votre café, je reste concentré sur votre activité.',
-        loadFail: 'Échec du chargement.',
-        loadFailMsg: 'Je n’ai pas pu charger l’assistant IA (connexion, mémoire ou navigateur incompatible). Mes calculs financiers restent pleinement disponibles.',
         runErr: 'Une erreur est survenue côté assistant IA. Réessayez, ou demandez-moi un calcul précis.',
-        cancel: 'Annuler',
         stop: 'Arrêter',
-        cancelled: 'Téléchargement annulé. Mes calculs restent disponibles, et vous pourrez relancer l’installation quand vous voudrez.',
-        queued: (n) => n === 1 ? 'Je garde votre question, j’y réponds dès que l’assistant est prêt.' : `Je garde vos ${n} questions, j’y réponds dès que l’assistant est prêt.`,
-        timeout: 'Le téléchargement s’est arrêté en route, sans erreur du navigateur — le plus souvent le wifi de la boutique ou un pare-feu. Mes calculs restent disponibles.',
-        diag: (c) => `Code à donner au support : ${c}`,
-        unfitAdapter: 'Votre navigateur annonce WebGPU mais aucune carte graphique ne répond. L’assistant libre ne pourra pas s’exécuter ici, et je préfère vous le dire maintenant plutôt qu’après 1,2 Go de téléchargement.',
-        unfitSpace: 'Il n’y a pas assez d’espace de stockage libre dans ce navigateur pour garder le modèle (1,2 Go). Libérez de la place, ou continuez avec mes calculs, qui ne demandent rien.',
-        unfitMemory: 'Cet appareil a trop peu de mémoire pour faire tourner le modèle sans bloquer votre caisse. Je ne vais pas le tenter.',
         unfitTail: 'Ce que je calcule reste entier : embauche, prix, seuil de rentabilité, prévisions, marges, charges, trésorerie, et vos ventes par article, par client et par jour.',
+        privateLead: 'Mode privé : cette question sort de mes calculs, et vous avez choisi que rien ne quitte cet appareil. Vous pouvez activer l’IA serveur dans le panneau de droite.',
+        unavailable: 'Cette question sort de mes calculs, et le serveur Kiwi n’est pas joignable pour l’instant.',
+        cloudLead: 'Cette question sort de mes calculs prédéfinis. Kiwi peut y répondre depuis ses serveurs.',
+        cloudPrivacy: 'À dire franchement : dans ce mode, votre question et les chiffres de votre établissement nécessaires à la réponse sont envoyés à Kiwi pour être traités, de façon sécurisée. En mode privé, rien ne sort et mes calculs restent entiers. Vous choisissez une fois ; c’est modifiable dans le panneau.',
+        cloudActivate: 'Répondre depuis les serveurs Kiwi',
+        cloudDecline: 'Non merci, garder mes calculs seuls',
+        cloudQuota: 'L’assistant serveur a atteint sa limite du jour pour votre établissement. Il repart demain ; d’ici là mes calculs restent entiers.',
       },
       acct: {
         hub: 'Je suis aussi votre comptable, teneur de livres, fiscaliste et gestionnaire de paie, tout est réuni dans votre Comptabilité : livre, états financiers, TVA & impôts, et paie.',
@@ -603,28 +693,16 @@
       },
       calc: { title: 'Calculation', result: 'result' },
       llm: {
-        noGpu: 'That’s outside what I calculate, I’m your numbers copilot: hiring, pricing, investment, break-even, forecasts, margins and charges. Ask me any of those and the answer comes right back. And to see which menu items are working, or not, open the Menu page in your dashboard.',
-        loading: (p) => `My AI assistant is finishing loading (${p}%). I'll answer as soon as it's ready.`,
-        offerLead: 'This question is beyond my preset calculations, but I can answer it freely with an <b>open-source AI assistant</b> that runs <b>entirely in your browser</b>: no data goes anywhere.',
-        offerSize: (sz) => `First launch: a one-time download of ${sz}, instant after that.`,
-        activate: 'Turn on the AI assistant',
-        installing: 'Installing the AI assistant, open-source model running in your browser.',
-        initializing: 'Initialising…',
-        ready: 'AI assistant ready.',
-        readyMsg: 'My AI assistant is ready. Ask me about managing, financing, staffing or marketing your café, I stay focused on your business.',
-        loadFail: 'Loading failed.',
-        loadFailMsg: 'I couldn\'t load the AI assistant (connection, memory, or an incompatible browser). My financial calculations remain fully available.',
         runErr: 'Something went wrong on the AI assistant side. Try again, or ask me for a precise calculation.',
-        cancel: 'Cancel',
         stop: 'Stop',
-        cancelled: 'Download cancelled. My calculations are still here, and you can start the install again whenever you like.',
-        queued: (n) => n === 1 ? "I'll hold your question and answer it as soon as the assistant is ready." : `I'll hold your ${n} questions and answer them as soon as the assistant is ready.`,
-        timeout: 'The download stalled part-way with no browser error — usually shop wifi or a firewall. My calculations are still available.',
-        diag: (c) => `Code for support: ${c}`,
-        unfitAdapter: 'Your browser advertises WebGPU but no graphics adapter answers. The open model cannot run here, and I would rather say so now than after a 1.2 GB download.',
-        unfitSpace: 'There is not enough free storage in this browser to keep the model (1.2 GB). Free some space, or carry on with my calculations, which need none.',
-        unfitMemory: 'This device has too little memory to run the model without freezing your till. I am not going to try.',
         unfitTail: 'What I calculate is untouched: hiring, pricing, break-even, forecasts, margins, costs, cash, and your sales by item, by customer and by day.',
+        privateLead: 'Private mode: this question is outside my calculations, and you chose that nothing leaves this device. You can enable server AI in the right-hand panel.',
+        unavailable: 'This question is outside my calculations, and Kiwi’s server can’t be reached right now.',
+        cloudLead: 'This question is beyond my preset calculations. Kiwi can answer it from its servers.',
+        cloudPrivacy: 'Plainly: in this mode your question and the figures of your business needed for the answer are sent to Kiwi for processing, securely. In private mode nothing leaves, and my calculations stay untouched. You choose once; it can be changed in the panel.',
+        cloudActivate: 'Answer from Kiwi’s servers',
+        cloudDecline: 'No thanks, keep my calculations only',
+        cloudQuota: 'The server assistant has reached today’s limit for your business. It resets tomorrow; until then my calculations are untouched.',
       },
       acct: {
         hub: 'I\'m also your accountant, bookkeeper, tax adviser and payroll manager, it\'s all together in your Accounting: ledger, financial statements, VAT & tax, and payroll.',
@@ -785,28 +863,16 @@
       },
       calc: { title: 'حساب', result: 'النتيجة' },
       llm: {
-        noGpu: 'هذا السؤال خارج نطاق حساباتي، أنا مساعدك في الأرقام: التوظيف، الأسعار، الاستثمار، عتبة الربحية، التوقّعات، الهوامش والمصاريف. اسألني عن أيٍّ منها وتصلك الإجابة فوراً. ولمعرفة أصناف قائمتك الناجحة من غيرها، افتح صفحة القائمة في لوحة التحكم.',
-        loading: (p) => `مساعد الذكاء الاصطناعي يكمل التحميل (${p}%). سأجيب فور جاهزيته.`,
-        offerLead: 'هذا السؤال خارج حساباتي المُعدّة مسبقاً، لكن يمكنني الإجابة عنه بحرية عبر <b>مساعد ذكاء اصطناعي مفتوح المصدر</b> يعمل <b>كلياً داخل متصفّحك</b>: لا تغادر أي بيانات.',
-        offerSize: (sz) => `الإطلاق الأول: تنزيل واحد بحجم ${sz}، ثم فوري بعد ذلك.`,
-        activate: 'تشغيل مساعد الذكاء الاصطناعي',
-        installing: 'تثبيت مساعد الذكاء الاصطناعي، نموذج مفتوح المصدر يعمل في متصفّحك.',
-        initializing: 'جارٍ التهيئة…',
-        ready: 'مساعد الذكاء الاصطناعي جاهز.',
-        readyMsg: 'مساعد الذكاء الاصطناعي جاهز. اسألني عن تسيير مقهاك وتمويله وفريقه وتسويقه، أبقى مركّزاً على نشاطك.',
-        loadFail: 'فشل التحميل.',
-        loadFailMsg: 'تعذّر تحميل مساعد الذكاء الاصطناعي (الاتصال أو الذاكرة أو متصفّح غير متوافق). تبقى حساباتي المالية متاحة بالكامل.',
         runErr: 'حدث خطأ من جهة مساعد الذكاء الاصطناعي. أعد المحاولة، أو اطلب مني حساباً دقيقاً.',
-        cancel: 'إلغاء',
         stop: 'إيقاف',
-        cancelled: 'تمّ إلغاء التنزيل. حساباتي ما زالت متاحة، ويمكنك إعادة التثبيت متى شئت.',
-        queued: (n) => n === 1 ? 'سأحتفظ بسؤالك وأجيب عنه فور جهوز المساعد.' : `سأحتفظ بأسئلتك الـ${n} وأجيب عنها فور جهوز المساعد.`,
-        timeout: 'توقّف التنزيل في منتصفه دون خطأ من المتصفّح — غالباً شبكة المحل أو جدار حماية. حساباتي ما زالت متاحة.',
-        diag: (c) => `رمز للدعم التقني: ${c}`,
-        unfitAdapter: 'متصفّحك يعلن دعم WebGPU لكن لا تستجيب أي بطاقة رسومات. لن يعمل النموذج المفتوح هنا، وأفضّل إخبارك الآن بدل أن أخبرك بعد تنزيل 1,2 غيغابايت.',
-        unfitSpace: 'لا توجد مساحة تخزين كافية في هذا المتصفّح للاحتفاظ بالنموذج (1,2 غيغابايت). أفرغ بعض المساحة، أو تابع مع حساباتي التي لا تحتاج شيئاً.',
-        unfitMemory: 'ذاكرة هذا الجهاز أقل من أن تشغّل النموذج دون تجميد صندوقك. لن أحاول.',
         unfitTail: 'ما أحسبه يبقى كاملاً: التوظيف، الأسعار، عتبة الربحية، التوقّعات، الهوامش، المصاريف، الخزينة، ومبيعاتك حسب الصنف والزبون واليوم.',
+        privateLead: 'الوضع الخاص: هذا السؤال خارج نطاق حساباتي، وقد اخترت ألا يغادر أي شيء هذا الجهاز. يمكنك تفعيل الذكاء الاصطناعي عبر الخادم من اللوحة الجانبية.',
+        unavailable: 'هذا السؤال خارج نطاق حساباتي، وخادم Kiwi غير متاح حالياً.',
+        cloudLead: 'هذا السؤال خارج حساباتي المعدّة مسبقاً. يمكن لـ Kiwi الإجابة عنه من خوادمه.',
+        cloudPrivacy: 'بصراحة: في هذا الوضع يُرسل سؤالك وأرقام محلّك اللازمة للإجابة إلى Kiwi لمعالجتها بشكل آمن. في الوضع الخاص لا يغادر أي شيء، وتبقى حساباتي كاملة. تختار مرة واحدة، ويمكن تغييره من اللوحة.',
+        cloudActivate: 'الإجابة من خوادم Kiwi',
+        cloudDecline: 'لا، شكراً · الاكتفاء بحساباتي',
+        cloudQuota: 'بلغ المساعد على الخادم حدّه اليومي لمحلّك. يُستأنف غداً، وحساباتي تبقى كاملة حتى ذلك الحين.',
       },
       acct: {
         hub: 'أنا أيضاً محاسبك وماسك دفاترك ومستشارك الضريبي ومدير أجورك، كل ذلك مجتمع في قسم المحاسبة: الدفتر، القوائم المالية، الضريبة والرسوم، والأجور.',
@@ -1270,28 +1336,81 @@
     },
   };
   const HL = () => HERO_L[L] || HERO_L.fr;
+  const PRODUCT_HERO = {
+    fr: { c1t: 'Mes fonctions Kiwi', c1s: 'Selon mon métier', c2t: 'Configurer mon activité', c2s: 'Parcours guidé en 3 questions', c4t: 'Lire une facture fournisseur', c4s: 'PDF → réception pré-remplie, vous confirmez' },
+    en: { c1t: 'My Kiwi features', c1s: 'Matched to my trade', c2t: 'Configure my business', c2s: '3-question guided setup', c4t: 'Read a supplier invoice', c4s: 'PDF → pre-filled receipt, you confirm' },
+    ar: { c1t: 'وظائف Kiwi لدي', c1s: 'حسب نشاطي', c2t: 'إعداد نشاطي', c2s: 'مسار موجه في 3 أسئلة', c4t: 'قراءة فاتورة مورد', c4s: 'PDF ← استلام مُعبّأ مسبقاً، أنت تؤكد' },
+  };
+  /* La carte « facture fournisseur » ouvre la réception du module Stock
+   * (assets/stock.js › stock-scan-invoice) : le copilote n'écrit rien, c'est le
+   * commerçant qui confirme. Réel seulement, et seulement si l'opérateur a
+   * vendu le module — même filtre que les intentions de navigation (navOff). */
+  function supplierInvoiceOn() {
+    try {
+      if (!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal())) return false;
+      if (window.KiwiConfig && window.KiwiConfig.off && window.KiwiConfig.off('stock')) return false;
+      return !!(window.Kiwi && window.Kiwi.handlers && typeof window.Kiwi.handlers['stock-scan-invoice'] === 'function');
+    } catch (_) { return false; }
+  }
+  const OPS_HERO = {
+    fr: { pressing: ['État de l’atelier', 'Prêtes, retards et soldes', 'Combien de commandes pressing sont prêtes ou en retard ?'], restaurant: ['État de la salle', 'Tables libres et occupées', 'Combien de tables sont libres ou occupées maintenant ?'], boutique: ['État du stock', 'Positions et synchronisation', 'Quel est l’état du stock maintenant ?'], other: ['État des opérations', 'Données reliées en direct', 'Quelles données opérationnelles sont disponibles maintenant ?'] },
+    en: { pressing: ['Workshop status', 'Ready, late and balances', 'How many pressing orders are ready or late?'], restaurant: ['Floor status', 'Free and occupied tables', 'How many tables are free or occupied now?'], boutique: ['Inventory status', 'Positions and synchronisation', 'What is the inventory status now?'], other: ['Operations status', 'Live connected data', 'Which operational data is available now?'] },
+    ar: { pressing: ['حالة الورشة', 'الجاهز والمتأخر والأرصدة', 'كم طلب مصبنة جاهز أو متأخر؟'], restaurant: ['حالة القاعة', 'الطاولات الحرة والمشغولة', 'كم طاولة حرة أو مشغولة الآن؟'], boutique: ['حالة المخزون', 'الأرصدة والمزامنة', 'ما حالة المخزون الآن؟'], other: ['حالة التشغيل', 'البيانات المتصلة مباشرة', 'ما بيانات التشغيل المتاحة الآن؟'] },
+  };
+  function operationalHero() {
+    const t = String(B.trade || '');
+    const family = t === 'pressing' ? 'pressing' : t === 'restaurant' || t === 'cafe' ? 'restaurant'
+      : ['boutique', 'epicerie', 'pharmacie', 'librairie', 'fleuriste'].includes(t) ? 'boutique' : 'other';
+    return (OPS_HERO[L] || OPS_HERO.fr)[family];
+  }
+  function assistantUiCopy() {
+    let c = null;
+    try { c = window.KiwiFeatureTruth && window.KiwiFeatureTruth.context ? window.KiwiFeatureTruth.context({ role: accessTier() }) : null; } catch (_) {}
+    const label = (B.tradeLabel || B.trade || (L === 'en' ? 'business' : L === 'ar' ? 'النشاط' : 'activité'));
+    const mode = c && c.aiMode || 'ask';
+    const title = L === 'en' ? `Kiwi copilot · ${label}` : L === 'ar' ? `مساعد Kiwi · ${label}` : `Copilote Kiwi · ${label}`;
+    const privacy = mode === 'cloud'
+      ? (L === 'en' ? 'Server AI on: a free-text question and only the business context it needs are sent securely to Kiwi. Your figures are computed here. The assistant remains read-only.' : L === 'ar' ? 'الذكاء الاصطناعي عبر الخادم مفعّل: يُرسل السؤال الحر والسياق الضروري فقط بأمان إلى Kiwi. أرقامك تُحسب هنا. يبقى المساعد للقراءة فقط.' : 'IA serveur activée : une question libre et le seul contexte nécessaire sont envoyés de façon sécurisée à Kiwi. Vos chiffres sont calculés ici. Le copilote reste en lecture seule.')
+      : mode === 'deterministic'
+        ? (L === 'en' ? 'Private mode: calculations only, nothing leaves this device. Read-only.' : L === 'ar' ? 'الوضع الخاص: حسابات فقط، لا يغادر أي شيء هذا الجهاز. قراءة فقط.' : 'Mode privé : calculs seuls, rien ne quitte cet appareil. Lecture seule.')
+        : (L === 'en' ? 'Your figures are computed on this device. A free-text question goes to Kiwi’s server only after you agree, once. Read-only.' : L === 'ar' ? 'أرقامك تُحسب على هذا الجهاز. السؤال الحر يُرسل إلى خادم Kiwi فقط بعد موافقتك، مرة واحدة. قراءة فقط.' : 'Vos chiffres sont calculés sur cet appareil. Une question libre part vers le serveur Kiwi seulement après votre accord, une fois. Lecture seule.');
+    const modeToggle = mode === 'cloud'
+      ? (L === 'en' ? 'Switch to private mode' : L === 'ar' ? 'الانتقال إلى الوضع الخاص' : 'Passer en mode privé')
+      : (L === 'en' ? 'Enable server AI' : L === 'ar' ? 'تفعيل الذكاء الاصطناعي عبر الخادم' : 'Activer l’IA serveur');
+    return { title, privacy, modeToggle };
+  }
 
   function renderHero() {
     const h = HL();
     const safety = (B.revenue - B.breakEvenRev) / B.revenue * 100;
     const icHire = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.6"/><path d="M5 21v-1a6 6 0 016-6h2a6 6 0 016 6v1"/></svg>';
     const icPct  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 5L5 19"/><circle cx="7" cy="7" r="2.4"/><circle cx="17" cy="17" r="2.4"/></svg>';
+    const icFeatures = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="m15 18 2 2 4-5"/></svg>';
+    const icSetup = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>';
     const icBook = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4a2 2 0 012-2h12v20H7a2 2 0 01-2-2z"/><path d="M9 2v20"/></svg>';
-    const icIns  = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.6l2.55 6.86 6.85 2.54-6.85 2.55L12 22.4l-2.55-6.85L2.6 13l6.85-2.54z"/></svg>';
+    const icIns  = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M289-329q-29-29-29-71t29-71q29-29 71-29t71 29q29 29 29 71t-29 71q-29 29-71 29t-71-29ZM200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Z"/></svg>';
+    const icInv  = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M240-80q-50 0-85-35t-35-85v-120h120v-560l60 60 60-60 60 60 60-60 60 60 60-60 60 60 60-60 60 60 60-60v680q0 50-35 85t-85 35H240Zm480-80q17 0 28.5-11.5T760-200v-560H320v440h360v120q0 17 11.5 28.5T720-160ZM360-600v-80h240v80H360Zm0 120v-80h240v80H360Zm320-120q-17 0-28.5-11.5T640-640q0-17 11.5-28.5T680-680q17 0 28.5 11.5T720-640q0 17-11.5 28.5T680-600Zm0 120q-17 0-28.5-11.5T640-520q0-17 11.5-28.5T680-560q17 0 28.5 11.5T720-520q0 17-11.5 28.5T680-480ZM240-160h360v-80H200v40q0 17 11.5 28.5T240-160Zm-40 0v-80 80Z"/></svg>';
     const heroH   = B.partial ? nv().heroGreet        : h.greet;
     const heroP   = B.partial ? nv().heroLead(escHtml(B.name)) : h.lead;
     const heroIns = B.partial ? nv().heroIns          : h.ins(fmt1(B.netMargin), fmt1(safety));
+    const ph = PRODUCT_HERO[L] || PRODUCT_HERO.fr;
+    const firstQuery = B.partial && window.KiwiFeatureGuide ? (L === 'en' ? 'Which Kiwi features do I have?' : L === 'ar' ? 'ما هي وظائف Kiwi المتاحة؟' : 'Quelles fonctions Kiwi ai-je ?') : tr().chips.hire;
+    const secondQuery = B.partial && window.KiwiFeatureGuide ? (L === 'en' ? 'Help me configure my business' : L === 'ar' ? 'ساعدني في إعداد مؤسستي' : 'Aide-moi à configurer mon établissement') : tr().chips.price5;
+    const op = operationalHero();
     return `<div class="fa-hero" data-fa-hero>
       <div class="fa-hero-mark">${ICON.avatar}</div>
       <div class="fa-hero-h">${heroH}</div>
       <div class="fa-hero-p">${heroP}</div>
       <div class="fa-hero-cards">
-        <button class="fa-hero-card" type="button" data-fa-follow="${escAttr(tr().chips.hire)}">
-          <span class="ic">${icHire}</span><span class="t">${h.c1t}</span><span class="s">${h.c1s}</span></button>
-        <button class="fa-hero-card" type="button" data-fa-follow="${escAttr(tr().chips.price5)}">
-          <span class="ic">${icPct}</span><span class="t">${h.c2t}</span><span class="s">${h.c2s}</span></button>
-        <button class="fa-hero-card" type="button" data-fa-open="open-comptabilite">
-          <span class="ic">${icBook}</span><span class="t">${h.c3t}</span><span class="s">${h.c3s}</span></button>
+        <button class="fa-hero-card" type="button" data-fa-follow="${escAttr(firstQuery)}">
+          <span class="ic">${B.partial ? icFeatures : icHire}</span><span class="t">${B.partial ? ph.c1t : h.c1t}</span><span class="s">${B.partial ? ph.c1s : h.c1s}</span></button>
+        <button class="fa-hero-card" type="button" data-fa-follow="${escAttr(secondQuery)}">
+          <span class="ic">${B.partial ? icSetup : icPct}</span><span class="t">${B.partial ? ph.c2t : h.c2t}</span><span class="s">${B.partial ? ph.c2s : h.c2s}</span></button>
+        ${B.partial ? `<button class="fa-hero-card" type="button" data-fa-follow="${escAttr(op[2])}">
+          <span class="ic">${icBook}</span><span class="t">${op[0]}</span><span class="s">${op[1]}</span></button>` : `<button class="fa-hero-card" type="button" data-fa-open="open-comptabilite">
+          <span class="ic">${icBook}</span><span class="t">${h.c3t}</span><span class="s">${h.c3s}</span></button>`}
+        ${supplierInvoiceOn() ? `<button class="fa-hero-card" type="button" data-fa-open="stock-scan-invoice">
+          <span class="ic">${icInv}</span><span class="t">${ph.c4t}</span><span class="s">${ph.c4s}</span></button>` : ''}
       </div>
       <div class="fa-hero-insight">${icIns}<div><b>${h.insT}</b> ${heroIns}</div></div>
     </div>`;
@@ -1424,7 +1543,7 @@
       openGain: 'Marge apportée', openGainH: (d) => `${d} journée${d > 1 ? 's' : ''} d’activité moyenne`,
       openRev: 'CA de la journée', openRevH: () => `au panier moyen de ${fmtMad(B.avgBasket)}`,
       openShare: 'Effet sur le résultat', openShareH: 'du bénéfice mensuel',
-      openV: (v) => `La journée rapporte ${v} de marge. Elle est rentable tant que le personnel et l’énergie de cette journée coûtent moins que ça — ce chiffre-là, je ne l’ai pas, vous êtes le seul à le connaître.`,
+      openV: (v) => `La journée rapporte ${v} de marge. Elle est rentable tant que le personnel et l’énergie de cette journée coûtent moins que ça · ce chiffre-là, je ne l’ai pas, vous êtes le seul à le connaître.`,
       openNote: 'Je raisonne à activité moyenne. Un dimanche ne fait presque jamais une journée moyenne : testez-le quatre semaines avant de trancher.',
       /* ─ profit target ─ */
       goalText: (a) => `Pour dégager <b>${fmtMad(a)}</b> de bénéfice net par mois, il faut d’abord couvrir vos charges fixes, puis dégager ce montant avec votre taux de marge actuel.`,
@@ -1500,7 +1619,7 @@
       identity: 'Non, je suis un logiciel, et je tourne sur cet appareil, pas ailleurs. C’est volontaire : vos chiffres ne partent nulle part. Je sais faire une chose, bien : calculer ce que vos décisions changent à votre résultat, à partir de vos ventes réelles.',
       outside: 'Ça, ce n’est pas de mon ressort, et je préfère vous le dire plutôt que de vous répondre approximativement. Je m’occupe des chiffres de votre commerce : marges, charges, seuil de rentabilité, embauche, prix, trésorerie, prévision.',
       cantdo: 'Je ne peux pas agir en dehors de votre tableau de bord : ni appeler, ni envoyer un message, ni commander à votre place. À l’intérieur de Kiwi, en revanche, je peux ouvrir vos pages, créer un lien de paiement ou lancer une vente. Et pour tout ce qui est chiffré, je calcule.',
-      inject: 'Non. Je ne change pas de rôle et je n’annonce pas un chiffre que vos ventes ne montrent pas — c’est exactement ce que cet assistant ne doit jamais faire. Chaque montant que je donne vient de vos 30 derniers jours enregistrés dans Kiwi. Demandez-moi un calcul et vous aurez le vrai.',
+      inject: 'Non. Je ne change pas de rôle et je n’annonce pas un chiffre que vos ventes ne montrent pas · c’est exactement ce que cet assistant ne doit jamais faire. Chaque montant que je donne vient de vos 30 derniers jours enregistrés dans Kiwi. Demandez-moi un calcul et vous aurez le vrai.',
       otherShop: 'Je ne vois que votre établissement, et c’est délibéré : les données d’un autre commerçant ne transitent pas par cet écran. Pour vos propres chiffres, demandez-les moi directement.',
       calcErr: 'Ce calcul n’a pas de résultat : une division par zéro, ou une expression que je ne sais pas lire. Réécrivez-la et je la refais.',
       /* ─ une journée ─ */
@@ -1512,9 +1631,9 @@
       dayVUp: (p) => `Journée ${p} % au-dessus de votre moyenne. Une bonne journée isolée ne fait pas un mois : c’est sa répétition qui compte.`,
       dayVDown: (p) => `Journée ${p} % sous votre moyenne. Un jour creux est normal ; s’il retombe chaque semaine sur le même jour, c’est une question d’horaires, pas une mauvaise passe.`,
       dayNote: 'Je ne compte que ce qui est passé en caisse Kiwi : une vente non enregistrée n’apparaît pas ici.',
-      dayNoteToday: 'La journée n’est pas finie — ce chiffre bougera encore d’ici la fermeture.',
+      dayNoteToday: 'La journée n’est pas finie · ce chiffre bougera encore d’ici la fermeture.',
       dayZero: (d) => `Aucune vente enregistrée le ${d}. Fermé, ou rien n’est passé en caisse ce jour-là : je ne peux pas trancher entre les deux, je ne vois que ce qui est saisi.`,
-      dayBeforeFirst: (d, f) => `Je n’ai rien pour le ${d} : votre première vente enregistrée dans Kiwi date du ${f}. Avant elle je n’ai pas d’historique — et un zéro affiché ici ressemblerait à une mauvaise journée, ce qui serait faux.`,
+      dayBeforeFirst: (d, f) => `Je n’ai rien pour le ${d} : votre première vente enregistrée dans Kiwi date du ${f}. Avant elle je n’ai pas d’historique · et un zéro affiché ici ressemblerait à une mauvaise journée, ce qui serait faux.`,
       dayNoSales: (n) => `${n} n’a pas encore de vente enregistrée, je n’ai donc aucune journée à vous montrer. Dès la première vente saisie en caisse, je vous donne le détail jour par jour.`,
       dayAggregate: 'Sur cette démonstration je raisonne sur un modèle de 30 jours agrégé, pas sur un journal de ventes horodaté : je ne peux donc pas isoler une journée. Sur un compte réel, chaque vente porte son heure et je vous donne la journée exacte, comparée à la veille et à votre moyenne.',
       noData: (x) => `Ce chiffre-là n’est pas dans mes calculs, mais il est bien dans Kiwi : il vit dans ${x}. Je vous y emmène, plutôt que de vous répondre à peu près.`,
@@ -1527,9 +1646,9 @@
       seasGeneric: 'I have no seasonal history for your venue and I won’t invent a forecast. What I can price exactly is what a swing in activity does to your result.',
       swingL: (p) => `Activity ${p > 0 ? '+' : '−'}${Math.abs(p)}%`,
       swingH: 'net profit /mo',
-      seasV: (v, d) => `Every point of activity is worth ${v} of monthly profit. Below −${d}% you drop under your break-even point — that is where the limit sits, not at the first quiet day.`,
+      seasV: (v, d) => `Every point of activity is worth ${v} of monthly profit. Below −${d}% you drop under your break-even point · that is where the limit sits, not at the first quiet day.`,
       seasNote: 'Fixed costs held constant: rent, payroll and subscriptions do not move with footfall. That is why a drop in activity hits the result far harder than it hits revenue.',
-      closeText: (d) => `Closing for <b>${d} day${d > 1 ? 's' : ''}</b> only costs you the margin of those days — your fixed costs keep running.`,
+      closeText: (d) => `Closing for <b>${d} day${d > 1 ? 's' : ''}</b> only costs you the margin of those days · your fixed costs keep running.`,
       closeLost: 'Margin lost', closeLostH: (d) => `${d} day${d > 1 ? 's' : ''} with no sales`,
       closeFixed: 'Costs that run anyway', closeFixedH: 'rent, payroll, subscriptions',
       closeNet: 'Net profit for the month after', closeNetH: () => `vs ${fmtMad(B.netProfit)} on a full month`,
@@ -1541,7 +1660,7 @@
       openGain: 'Margin added', openGainH: (d) => `${d} day${d > 1 ? 's' : ''} at average activity`,
       openRev: 'Revenue for the day', openRevH: () => `at the ${fmtMad(B.avgBasket)} average basket`,
       openShare: 'Effect on the result', openShareH: 'of monthly profit',
-      openV: (v) => `The day brings in ${v} of margin. It pays as long as the staffing and energy for that day cost less than that — and that figure I don’t have, you are the only one who does.`,
+      openV: (v) => `The day brings in ${v} of margin. It pays as long as the staffing and energy for that day cost less than that · and that figure I don’t have, you are the only one who does.`,
       openNote: 'I reason at average activity. A Sunday is almost never an average day: test it for four weeks before deciding.',
       goalText: (a) => `To clear <b>${fmtMad(a)}</b> of net profit a month you first have to cover your fixed costs, then earn that amount at your current margin rate.`,
       goalRev: 'Monthly revenue needed', goalRevH: () => `vs ${fmtMad(B.revenue)} today`,
@@ -1553,7 +1672,7 @@
       goalDone: (a) => `You are already there: your net profit is above ${fmtMad(a)} a month. The real question becomes holding it, not reaching it.`,
       goalNear: (p) => `Reachable: you are ${p}% of activity short. That is the order of magnitude a reworked menu and a measured price rise can go and get.`,
       goalFar: (p) => `Demanding target: you would need ${p}% more activity. On the same floor with the same team that is not a setting, it is a different format.`,
-      goalWild: (p) => `This target needs ${p}% more activity. No pricing or menu lever does that — it would take several venues. I’d rather tell you than simulate it.`,
+      goalWild: (p) => `This target needs ${p}% more activity. No pricing or menu lever does that · it would take several venues. I’d rather tell you than simulate it.`,
       goalNote: 'Computed with the cost structure unchanged. A rise of that size usually adds staff and costs, which this figure does not include.',
       stockText: (n) => `Your catalogue holds <b>${n} active item${n > 1 ? 's' : ''}</b>. Two bases, never to be confused: what the goods cost you, and what they would bring in sold.`,
       stockCost: 'Value at purchase cost', stockCostH: 'the basis for accounts or insurance',
@@ -1569,7 +1688,7 @@
       cliLoyal: 'Regulars · of which VIP', cliLoyalH: 'the base of your revenue',
       cliNew: 'New', cliNewH: 'last 30 days',
       cliLost: 'Dormant', cliLostH: 'over 30 days without a visit',
-      cliVGood: (p) => `${p}% of your identified clients come back: that is your most profitable asset — a returning client costs nothing to acquire.`,
+      cliVGood: (p) => `${p}% of your identified clients come back: that is your most profitable asset · a returning client costs nothing to acquire.`,
       cliVLow: (p) => `Only ${p}% come back. Waking the dormant ones costs far less than finding that many new clients.`,
       cliNote: 'I only count clients identified at the till. Anonymous walk-ins do not show here, so your real return rate is probably higher.',
       cliNone: 'Your client book is not active yet. Once clients are identified at the till (phone or loyalty card), I can give you the return rate, the regulars and the dormant ones.',
@@ -1588,9 +1707,9 @@
       finSafe: 'Margin of safety', finSafeH: 'above break-even',
       finCash: 'Cash', finCashH: 'contribution you can put in',
       finV: 'These figures are your argument, not your cash need. A Moroccan bank asks for financial statements, bank records and often a guarantee: lead with the result and the break-even point, not with the urgency.',
-      finNote: 'I am not your banker and I don’t know the criteria of the bank that refused. If it was a short-term cash refusal, an overdraft facility is negotiated differently from an investment loan — your accountant will tell you which to ask for.',
-      theft: 'I cannot know whether someone is stealing from you — I only see what gets recorded. But till theft nearly always leaves the same traces, and Kiwi keeps those: voids and discounts granted, reopened tickets, gaps between the counted float and the expected one, and how all of that splits by employee. Put every employee on their own code in Team, then look at Transactions over two weeks: if the pattern concentrates on one person or one shift, it will show. In the meantime, here is where your money actually goes.',
-      expText: 'A second venue has its own rent, its own team and its own ramp-up — I have none of those and I won’t invent them. What I can give you is your real funding capacity, from the business you already have:',
+      finNote: 'I am not your banker and I don’t know the criteria of the bank that refused. If it was a short-term cash refusal, an overdraft facility is negotiated differently from an investment loan · your accountant will tell you which to ask for.',
+      theft: 'I cannot know whether someone is stealing from you · I only see what gets recorded. But till theft nearly always leaves the same traces, and Kiwi keeps those: voids and discounts granted, reopened tickets, gaps between the counted float and the expected one, and how all of that splits by employee. Put every employee on their own code in Team, then look at Transactions over two weeks: if the pattern concentrates on one person or one shift, it will show. In the meantime, here is where your money actually goes.',
+      expText: 'A second venue has its own rent, its own team and its own ramp-up · I have none of those and I won’t invent them. What I can give you is your real funding capacity, from the business you already have:',
       expCash: 'Cash available', expCashH: 'mobilisable today',
       expMonth: 'Net profit /mo', expMonthH: 'what the business clears',
       expYear: 'Over 12 months', expYearH: 'at the current rate',
@@ -1604,25 +1723,25 @@
       valFixed: 'Fixed costs /mo', valFixedH: 'what the buyer takes on too',
       valV: 'A small business commonly changes hands at a multiple of its annual result, and that multiple varies enormously with the lease, the location and how transferable the customer base is. The result above is the base; the multiple is negotiated and signed off by an accountant, not by me.',
       valNote: 'For a partner exit, the split written into your articles of association overrides any estimate. Have the accounts drawn up at the exit date before anyone names a figure.',
-      thanks: 'Any time. I’m here for a hire, a price rise, an investment, your break-even point or this month’s forecast — tell me what you want to look at.',
-      identity: 'No, I’m software, and I run on this device, nowhere else. That is deliberate: your figures don’t travel. I do one thing well — work out what your decisions change in your result, from your real sales.',
+      thanks: 'Any time. I’m here for a hire, a price rise, an investment, your break-even point or this month’s forecast · tell me what you want to look at.',
+      identity: 'No, I’m software, and I run on this device, nowhere else. That is deliberate: your figures don’t travel. I do one thing well · work out what your decisions change in your result, from your real sales.',
       outside: 'That one is outside what I do, and I’d rather say so than answer you approximately. I handle the numbers of your business: margins, costs, break-even, hiring, pricing, cash, forecast.',
-      cantdo: 'I can’t act outside your dashboard — no calls, no messages, no ordering on your behalf. Inside Kiwi I can open your pages, create a payment link or start a sale. And anything with a number in it, I compute.',
-      inject: 'No. I don’t change role and I don’t announce a figure your sales don’t show — that is precisely what this assistant must never do. Every amount I give comes from your last 30 days recorded in Kiwi. Ask me for a calculation and you’ll get the real one.',
+      cantdo: 'I can’t act outside your dashboard · no calls, no messages, no ordering on your behalf. Inside Kiwi I can open your pages, create a payment link or start a sale. And anything with a number in it, I compute.',
+      inject: 'No. I don’t change role and I don’t announce a figure your sales don’t show · that is precisely what this assistant must never do. Every amount I give comes from your last 30 days recorded in Kiwi. Ask me for a calculation and you’ll get the real one.',
       otherShop: 'I only see your venue, and that is deliberate: another merchant’s data does not pass through this screen. For your own figures, just ask me directly.',
-      calcErr: 'That calculation has no result — a division by zero, or an expression I can’t read. Write it again and I’ll redo it.',
+      calcErr: 'That calculation has no result · a division by zero, or an expression I can’t read. Write it again and I’ll redo it.',
       /* ─ one day ─ */
       dayText: (d) => `Your day on <b>${d}</b>, as it was rung up:`,
       dayRev: 'Taken', dayRevH: (n) => `${n} recorded sale${n > 1 ? 's' : ''}`,
       dayBasket: 'Average basket', dayBasketH: 'on that day',
       dayPrev: 'Day before', dayNone: 'no sale',
       dayAvg: 'Daily average', dayAvgH: (n) => `over your ${n} recorded days`,
-      dayVUp: (p) => `${p} % above your daily average. One good day is not a month — what counts is whether it repeats.`,
+      dayVUp: (p) => `${p} % above your daily average. One good day is not a month · what counts is whether it repeats.`,
       dayVDown: (p) => `${p} % below your daily average. A quiet day is normal; if it lands on the same weekday every week, that is an opening-hours question, not a bad patch.`,
       dayNote: 'I only count what went through the Kiwi till: a sale that was never recorded does not show up here.',
-      dayNoteToday: 'The day is not over — this figure will still move before you close.',
+      dayNoteToday: 'The day is not over · this figure will still move before you close.',
       dayZero: (d) => `No sale recorded on ${d}. Closed, or nothing was rung up that day: I can’t tell those two apart, I only see what was entered.`,
-      dayBeforeFirst: (d, f) => `I have nothing for ${d}: your first sale recorded in Kiwi is from ${f}. Before that I have no history — and a zero here would read like a bad day, which would be false.`,
+      dayBeforeFirst: (d, f) => `I have nothing for ${d}: your first sale recorded in Kiwi is from ${f}. Before that I have no history · and a zero here would read like a bad day, which would be false.`,
       dayNoSales: (n) => `${n} has no recorded sale yet, so I have no day to show you. From the first sale rung up, I can give you the day-by-day detail.`,
       dayAggregate: 'In this demo I reason from an aggregated 30-day model, not a timestamped sales journal, so I can’t isolate a single day. On a real account every sale carries its time and I give you the exact day, against the day before and against your average.',
       noData: (x) => `That figure isn’t in my calculations, but it is in Kiwi: it lives in ${x}. I’ll take you there rather than answer you approximately.`,
@@ -1649,7 +1768,7 @@
       openGain: 'الهامش المضاف', openGainH: (d) => `${d} ${d > 1 ? 'أيام' : 'يوم'} بنشاط متوسط`,
       openRev: 'رقم معاملات اليوم', openRevH: () => `بمتوسط سلة ${fmtMad(B.avgBasket)}`,
       openShare: 'الأثر على النتيجة', openShareH: 'من الربح الشهري',
-      openV: (v) => `اليوم يجلب ${v} من الهامش. يبقى مربحًا ما دامت أجور ذلك اليوم وطاقته أقل من ذلك — وهذا الرقم ليس عندي، أنت وحدك تعرفه.`,
+      openV: (v) => `اليوم يجلب ${v} من الهامش. يبقى مربحًا ما دامت أجور ذلك اليوم وطاقته أقل من ذلك · وهذا الرقم ليس عندي، أنت وحدك تعرفه.`,
       openNote: 'أحسب على نشاط متوسط. والأحد نادرًا ما يكون يومًا متوسطًا: جرّبه أربعة أسابيع قبل الحسم.',
       goalText: (a) => `لتحقيق <b>${fmtMad(a)}</b> ربحًا صافيًا شهريًا عليك أولًا تغطية تكاليفك الثابتة، ثم تحقيق هذا المبلغ بمعدّل هامشك الحالي.`,
       goalRev: 'رقم المعاملات الشهري المطلوب', goalRevH: () => `مقابل ${fmtMad(B.revenue)} اليوم`,
@@ -1715,11 +1834,11 @@
       valFixed: 'التكاليف الثابتة/شهر', valFixedH: 'ما يتحمّله المشتري أيضًا',
       valV: 'الأصل التجاري يُتداول عادةً بمضاعف من النتيجة السنوية، ويتغيّر هذا المضاعف كثيرًا حسب عقد الكراء والموقع وقابلية انتقال الزبناء. النتيجة أعلاه هي الأساس؛ أما المضاعف فيُتفاوض عليه ويصادق عليه خبير محاسب، لا أنا.',
       valNote: 'في خروج شريك، ما ينصّ عليه النظام الأساسي يعلو على أي تقدير. اطلب إعداد الحسابات في تاريخ الخروج قبل ذكر أي رقم.',
-      thanks: 'بكل سرور. أبقى جاهزًا: توظيف، رفع أسعار، استثمار، نقطة تعادل أو توقّع الشهر — قل لي ما تريد أن ننظر فيه.',
+      thanks: 'بكل سرور. أبقى جاهزًا: توظيف، رفع أسعار، استثمار، نقطة تعادل أو توقّع الشهر · قل لي ما تريد أن ننظر فيه.',
       identity: 'لا، أنا برنامج، وأشتغل على هذا الجهاز لا في مكان آخر. وهذا مقصود: أرقامك لا تغادر. أُتقن شيئًا واحدًا: حساب ما تغيّره قراراتك في نتيجتك، انطلاقًا من مبيعاتك الحقيقية.',
       outside: 'هذا خارج اختصاصي، وأفضّل أن أقولها بدل أن أجيبك تقريبًا. أنا أهتمّ بأرقام تجارتك: الهوامش، التكاليف، نقطة التعادل، التوظيف، الأسعار، السيولة، التوقّعات.',
       cantdo: 'لا أستطيع التصرّف خارج لوحة تحكّمك: لا اتصال، ولا رسالة، ولا طلب نيابة عنك. أما داخل Kiwi فأستطيع فتح صفحاتك، أو إنشاء رابط دفع، أو بدء عملية بيع. وكل ما فيه رقم، أحسبه.',
-      inject: 'لا. لا أغيّر دوري ولا أعلن رقمًا لا تُظهره مبيعاتك — وهذا بالضبط ما يجب ألّا يفعله هذا المساعد أبدًا. كل مبلغ أعطيه يأتي من آخر 30 يومًا مسجّلة في Kiwi. اطلب مني حسابًا وستحصل على الحقيقي.',
+      inject: 'لا. لا أغيّر دوري ولا أعلن رقمًا لا تُظهره مبيعاتك · وهذا بالضبط ما يجب ألّا يفعله هذا المساعد أبدًا. كل مبلغ أعطيه يأتي من آخر 30 يومًا مسجّلة في Kiwi. اطلب مني حسابًا وستحصل على الحقيقي.',
       otherShop: 'لا أرى إلا محلّك، وهذا مقصود: بيانات تاجر آخر لا تمرّ عبر هذه الشاشة. أما أرقامك أنت، فاطلبها مني مباشرة.',
       calcErr: 'هذا الحساب بلا نتيجة: قسمة على صفر، أو تعبير لا أستطيع قراءته. أعد كتابته وأعيد حسابه.',
       /* ─ يوم واحد ─ */
@@ -1728,12 +1847,12 @@
       dayBasket: 'متوسط السلة', dayBasketH: 'في هذا اليوم',
       dayPrev: 'اليوم السابق', dayNone: 'لا بيع',
       dayAvg: 'المعدّل اليومي', dayAvgH: (n) => `على ${n} ${n <= 10 ? 'أيام مسجّلة' : 'يوماً مسجّلاً'}`,
-      dayVUp: (p) => `يوم أعلى بـ ${p} % من معدّلك. يوم جيّد واحد لا يصنع شهراً — المهم أن يتكرّر.`,
+      dayVUp: (p) => `يوم أعلى بـ ${p} % من معدّلك. يوم جيّد واحد لا يصنع شهراً · المهم أن يتكرّر.`,
       dayVDown: (p) => `يوم أقل بـ ${p} % من معدّلك. اليوم الضعيف عادي؛ لكن إن تكرّر في نفس يوم الأسبوع فالمسألة مسألة توقيت عمل، لا فترة سيّئة.`,
       dayNote: 'لا أحتسب إلا ما مرّ في صندوق Kiwi: البيع غير المسجّل لا يظهر هنا.',
-      dayNoteToday: 'اليوم لم ينتهِ بعد — هذا الرقم سيتحرّك إلى حين الإغلاق.',
+      dayNoteToday: 'اليوم لم ينتهِ بعد · هذا الرقم سيتحرّك إلى حين الإغلاق.',
       dayZero: (d) => `لا عملية بيع مسجّلة يوم ${d}. إمّا كنت مغلقاً، وإمّا لم يمرّ شيء في الصندوق ذلك اليوم: لا أستطيع الحسم بينهما، لا أرى إلا ما سُجّل.`,
-      dayBeforeFirst: (d, f) => `ليس لديّ شيء عن ${d}: أول عملية بيع مسجّلة في Kiwi تعود إلى ${f}. قبلها لا تاريخ لديّ — وصفر معروض هنا سيبدو كيوم سيّئ، وذلك غير صحيح.`,
+      dayBeforeFirst: (d, f) => `ليس لديّ شيء عن ${d}: أول عملية بيع مسجّلة في Kiwi تعود إلى ${f}. قبلها لا تاريخ لديّ · وصفر معروض هنا سيبدو كيوم سيّئ، وذلك غير صحيح.`,
       dayNoSales: (n) => `${n} ليس لديه بعد أي عملية بيع مسجّلة، فلا يوم لأعرضه عليك. من أول عملية بيع في الصندوق، أعطيك التفصيل يوماً بيوم.`,
       dayAggregate: 'في هذا العرض التوضيحي أعتمد نموذجاً مجمّعاً على 30 يوماً، لا سجلّ مبيعات موقّتاً، فلا أستطيع عزل يوم بعينه. في حساب حقيقي تحمل كل عملية بيع ساعتها، فأعطيك اليوم بالضبط، مقارناً باليوم السابق وبمعدّلك.',
       noData: (x) => `هذا الرقم ليس ضمن حساباتي، لكنه موجود في Kiwi: يوجد في ${x}. سآخذك إليه بدل أن أجيبك تقريبًا.`,
@@ -1892,9 +2011,27 @@
     ledger().forEach((e) => { const ts = +((e && e.ts) || 0); if (ts && ts < min) min = ts; });
     return isFinite(min) ? min : null;
   }
+  /* MINUIT N'EST PAS LA FIN DU SERVICE. Un restaurant qui encaisse jusqu'à
+   * 2 h du matin voyait sa soirée coupée en deux : le rapport Z la gardait
+   * entière — il groupe sur la journée COMMERCIALE, bascule à 5 h par défaut
+   * (day-report.js) — pendant que l'assistant, lui, comptait sur minuit civil.
+   * Les deux surfaces décrivaient le même service avec deux chiffres, et le
+   * patron n'avait aucun moyen de savoir laquelle mentait. Aucune ne mentait :
+   * elles ne parlaient pas de la même journée.
+   * La borne du rapport fait foi ; minuit civil ne reste qu'un filet quand
+   * day-report.js n'est pas chargé sur cette page. */
+  function dayStart(ts) {
+    try {
+      const R = window.KiwiDayReport;
+      if (R && R.dayBounds && R.businessDay) {
+        const b = R.dayBounds(R.businessDay(ts));
+        if (b && isFinite(b.from)) return b.from;
+      }
+    } catch (_) {}
+    const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime();
+  }
   function midnight(offset) {
-    const d = new Date(); d.setHours(0, 0, 0, 0);
-    return d.getTime() - (offset || 0) * DAY_MS;
+    return dayStart(Date.now()) - (offset || 0) * DAY_MS;
   }
   const DATE_LOC = { fr: 'fr-FR', en: 'en-GB', ar: 'ar-MA' };
   function dateLabel(ts) {
@@ -2000,7 +2137,7 @@
     const first = firstSaleTs();
     if (first == null) return { text: t.dayNoSales(escHtml(B.name)) };
     if (to <= first) return { text: t.dayBeforeFirst(label, dateLabel(first)) };
-    const firstDay = midnight(0) - Math.round((midnight(0) - new Date(first).setHours(0, 0, 0, 0)) / DAY_MS) * DAY_MS;
+    const firstDay = midnight(0) - Math.round((midnight(0) - dayStart(first)) / DAY_MS) * DAY_MS;
     const spanDays = Math.max(1, Math.round((midnight(0) - firstDay) / DAY_MS) + 1);
     const avg = windowStats(firstDay, Infinity).revenue / spanDays;
     const cur = windowStats(from, to);
@@ -2270,6 +2407,9 @@
     { rx: /\bequipe\b|\bteam\b|personnel|\btravaille\b|\bon\s+shift\b|\bplanning\b|\bhoraires?\b|\bstaff\b|\bkhddam\b|\bkhdam\b|فريق|يعمل/, h: 'nav-equipe', key: 'equipe' },
     { rx: /\btables?\b|plan de salle|floor plan|طاولات/, h: 'nav-tables', key: 'tables' },
     { rx: /cuisine|\bkds\b|kitchen|مطبخ/, h: 'nav-kds', key: 'kds' },
+    /* Avant l'entrée générique « stock », sinon elle ne gagne jamais. `noun` :
+     * « ma facture fournisseur » nomme la chose à faire, pas besoin d'impératif. */
+    { rx: /factures?\s+fournisseur|(?:lire|lis|scanner?|scanne|read|scan)\s+(?:une|ma|la|cette|a|my|the)?\s*facture|supplier\s+invoice|فاتورة\s+(?:مورد|الممون|المورد)/, h: 'stock-scan-invoice', key: 'stock', label: 'supplierInvoice', noun: true },
     { rx: /stock|inventaire|inventory|ingredient|مخزون/, h: 'nav-stock', key: 'stock' },
     { rx: /reservation|booking|\brdv\b|حجز|حجوزات/, h: 'nav-reservations', key: 'reservations' },
     { rx: /lien de paiement|payment link|رابط دفع/, h: 'payment-link', key: 'paymentLink' },
@@ -2287,7 +2427,7 @@
     if (!ACTION_VERB.test(q)) {
       /* "un lien de paiement" and "nouvelle vente" name a thing to create; the
        * noun IS the instruction, so these two need no imperative in front. */
-      for (const t of NAV_TARGETS) if ((t.key === 'paymentLink' || t.key === 'newSale') && t.rx.test(q)) return t;
+      for (const t of NAV_TARGETS) if ((t.key === 'paymentLink' || t.key === 'newSale' || t.noun) && t.rx.test(q) && !navOff(t)) return t;
       return null;
     }
     for (const t of NAV_TARGETS) if (t.rx.test(q) && !navOff(t)) return t;
@@ -2310,20 +2450,140 @@
     fr: { lead: (x) => `J’ouvre ${x}.`, btn: (x) => `Ouvrir ${x}`,
       menu: 'la carte', transactions: 'les commandes', terminaux: 'les terminaux', reglements: 'les règlements',
       conformite: 'la conformité', equipe: 'l’équipe', tables: 'les tables', kds: 'l’écran cuisine', stock: 'le stock',
-      reservations: 'les réservations', paymentLink: 'un lien de paiement', newSale: 'une nouvelle vente' },
+      reservations: 'les réservations', paymentLink: 'un lien de paiement', newSale: 'une nouvelle vente', supplierInvoice: 'la lecture d’une facture fournisseur' },
     en: { lead: (x) => `Opening ${x}.`, btn: (x) => `Open ${x}`,
       menu: 'the menu', transactions: 'orders', terminaux: 'the terminals', reglements: 'settlements',
       conformite: 'compliance', equipe: 'the team', tables: 'the tables', kds: 'the kitchen screen', stock: 'stock',
-      reservations: 'reservations', paymentLink: 'a payment link', newSale: 'a new sale' },
+      reservations: 'reservations', paymentLink: 'a payment link', newSale: 'a new sale', supplierInvoice: 'the supplier-invoice reader' },
     ar: { lead: (x) => `أفتح ${x}.`, btn: (x) => `افتح ${x}`,
       menu: 'القائمة', transactions: 'الطلبات', terminaux: 'الأجهزة', reglements: 'التسويات',
       conformite: 'الامتثال', equipe: 'الفريق', tables: 'الطاولات', kds: 'شاشة المطبخ', stock: 'المخزون',
-      reservations: 'الحجوزات', paymentLink: 'رابط دفع', newSale: 'عملية بيع جديدة' },
+      reservations: 'الحجوزات', paymentLink: 'رابط دفع', newSale: 'عملية بيع جديدة', supplierInvoice: 'قراءة فاتورة مورد' },
   };
   function sAction(target) {
     const a = ACT[L] || ACT.fr;
-    const name = a[target.key] || target.key;
+    const name = a[target.label] || a[target.key] || target.key;
     return { text: a.lead(name), open: [{ label: a.btn(name), handler: target.h }] };
+  }
+
+  /* ─────────────── FAIRE AVANCER UNE COMMANDE ───────────────
+   * La seule action que l'assistant peut proposer de bout en bout. Les trois
+   * autres actions du moteur (`functions/api/operations.js`, domaine `ai`) sont
+   * réelles mais ne se déduisent pas d'une phrase : réimprimer s'exécute sur
+   * l'appareil qui le demande et non sur un tableau de bord ; un bon d'achat
+   * exige un fournisseur et un prix unitaire par ligne ; un message client exige
+   * un destinataire que la table `orders` ne porte pas. Elles restent
+   * accessibles par `KiwiOperations.agentRun` depuis les écrans qui tiennent ces
+   * arguments. Promettre ici ce qu'on ne peut pas tenir serait pire que se
+   * taire.
+   *
+   * Deux conditions, jamais une seule : un verbe d'état ET un numéro précédé
+   * d'un mot qui désigne un ticket. « table 3 » n'est pas la commande 3, et
+   * « la commande arrive » n'est pas un ordre. Les motifs sont écrits sans
+   * accents ni diacritiques : `norm()` les a déjà retirés. */
+  const OP_STATUS = [
+    { status: 'accepted', rx: /\baccept|\bvalid|\bconfirm|\bok\s+(?:pour|la|le)\b|\bqbel\b|\bkbel\b|قبول|اقبل|وافق/ },
+    { status: 'rejected', rx: /\brefus|\breject|\bannul|\bcancel|\bdecline|\bredd\b|رفض|الغ/ },
+    { status: 'ready', rx: /\bprete?\b|\bprets?\b|\bready\b|\bprepare?e?\b|\bwajda\b|\bwajed\b|جاهز/ },
+    { status: 'served', rx: /\bservi|\bserve|\blivre|\bdeliver|\bremis|\bqdem\b|\bsift\b|قدم|سلم|تسليم/ },
+  ];
+  /* Le mot « numéro » peut se glisser entre le nom du ticket et le chiffre, et
+     c'est la forme normale en arabe : « الطلب رقم 9 ». Sans lui, la phrase la
+     plus courante de la cuisine ne se lisait pas. */
+  const OP_TICKET_RX = /(?:commande|commmande|ticket|order|bon|n\s*[°o]|numero|#|طلبية|طلب)\s*(?:(?:n\s*[°o]|numero|no|رقم)\s*)?#?\s*(\d{1,6})\b/;
+  function matchOperation(q) {
+    const num = OP_TICKET_RX.exec(fixDigits(q));
+    if (!num) return null;
+    const number = Number(num[1]);
+    if (!number) return null;
+    for (const s of OP_STATUS) if (s.rx.test(q)) return { status: s.status, number };
+    return null;
+  }
+  const OPS = {
+    fr: {
+      verb: { accepted: 'accepter', rejected: 'refuser', ready: 'passer en prête', served: 'passer en servie' },
+      state: { pending: 'en attente', accepted: 'acceptée', rejected: 'refusée', ready: 'prête', served: 'servie' },
+      lead: (v, n) => `Vous me demandez de ${v} la commande n° ${n}.`,
+      btn: (v, n) => `${v.charAt(0).toUpperCase() + v.slice(1)} la n° ${n}`,
+      pending: 'Rien n’est envoyé tant que vous n’avez pas confirmé.',
+      working: 'Un instant…',
+      done: (n, s) => `C’est fait : la commande n° ${n} est ${s}.`,
+      unknown: (n) => `Je ne trouve pas de commande n° ${n} en cours. Rien n’a été touché.`,
+      ambiguous: (n) => `Deux commandes ouvertes portent le n° ${n}. Faites-le depuis la page Commandes : je ne veux pas toucher la mauvaise.`,
+      already: (n, s) => `La commande n° ${n} est déjà ${s}. Rien n’a été touché.`,
+      bad: (n, s) => `La commande n° ${n} est ${s} : ce passage n’est pas permis. Rien n’a été touché.`,
+      off: 'Les commandes ne sont pas ouvertes ici. Rien n’a été touché.',
+      denied: 'Votre accès ne permet pas de faire avancer une commande. Rien n’a été touché.',
+      queued: (n) => `Vous êtes hors ligne : la commande n° ${n} avancera dès le retour du réseau.`,
+      fail: (why) => `Je n’ai pas pu : ${why}. Rien n’a été touché.`,
+      absent: 'Je ne peux pas toucher aux commandes depuis cet écran.',
+    },
+    en: {
+      verb: { accepted: 'accept', rejected: 'reject', ready: 'mark ready', served: 'mark served' },
+      state: { pending: 'pending', accepted: 'accepted', rejected: 'rejected', ready: 'ready', served: 'served' },
+      lead: (v, n) => `You are asking me to ${v} order no. ${n}.`,
+      btn: (v, n) => `${v.charAt(0).toUpperCase() + v.slice(1)} no. ${n}`,
+      pending: 'Nothing is sent until you confirm.',
+      working: 'One moment…',
+      done: (n, s) => `Done: order no. ${n} is ${s}.`,
+      unknown: (n) => `I can't find an open order no. ${n}. Nothing was touched.`,
+      ambiguous: (n) => `Two open orders carry no. ${n}. Do it from the Orders page · I won't risk the wrong one.`,
+      already: (n, s) => `Order no. ${n} is already ${s}. Nothing was touched.`,
+      bad: (n, s) => `Order no. ${n} is ${s}: that move isn't allowed. Nothing was touched.`,
+      off: 'Orders aren’t switched on here. Nothing was touched.',
+      denied: 'Your access doesn’t allow moving an order along. Nothing was touched.',
+      queued: (n) => `You’re offline: order no. ${n} will move as soon as the network is back.`,
+      fail: (why) => `I couldn’t: ${why}. Nothing was touched.`,
+      absent: 'I can’t touch orders from this screen.',
+    },
+    ar: {
+      verb: { accepted: 'قبول', rejected: 'رفض', ready: 'تعيينها جاهزة', served: 'تعيينها مقدَّمة' },
+      state: { pending: 'في الانتظار', accepted: 'مقبولة', rejected: 'مرفوضة', ready: 'جاهزة', served: 'مقدَّمة' },
+      lead: (v, n) => `تطلب مني ${v} الطلب رقم ${n}.`,
+      btn: (v, n) => `${v} رقم ${n}`,
+      pending: 'لا شيء يُرسل قبل تأكيدك.',
+      working: 'لحظة…',
+      done: (n, s) => `تم: الطلب رقم ${n} ${s}.`,
+      unknown: (n) => `لا أجد طلبًا مفتوحًا رقم ${n}. لم يُمسّ شيء.`,
+      ambiguous: (n) => `طلبان مفتوحان يحملان رقم ${n}. افعلها من صفحة الطلبات · لا أريد لمس الخطأ.`,
+      already: (n, s) => `الطلب رقم ${n} ${s} أصلًا. لم يُمسّ شيء.`,
+      bad: (n, s) => `الطلب رقم ${n} ${s}: هذا الانتقال غير مسموح. لم يُمسّ شيء.`,
+      off: 'الطلبات غير مفعّلة هنا. لم يُمسّ شيء.',
+      denied: 'صلاحيتك لا تسمح بتحريك طلب. لم يُمسّ شيء.',
+      queued: (n) => `أنت دون اتصال: سيتحرك الطلب رقم ${n} فور عودة الشبكة.`,
+      fail: (why) => `لم أستطع: ${why}. لم يُمسّ شيء.`,
+      absent: 'لا أستطيع لمس الطلبات من هذه الشاشة.',
+    },
+  };
+  const opCopy = () => OPS[L] || OPS.fr;
+  /* Le serveur ne jette pas sur un refus métier : il répond 200 avec
+     `command.status === 'failed'` et la raison dans `command.lastError`.
+     Traduire ce code plutôt que l'afficher brut est la différence entre « la 12
+     est déjà servie » et « bad-transition:served ». */
+  function opWhy(o, code, number) {
+    const c = String(code || '');
+    if (c.indexOf('already-') === 0) return o.already(number, o.state[c.slice(8)] || c.slice(8));
+    if (c.indexOf('bad-transition:') === 0) return o.bad(number, o.state[c.slice(15)] || c.slice(15));
+    if (c === 'order-unknown' || c === 'order-id-required') return o.unknown(number);
+    if (c === 'orders-unavailable') return o.off;
+    if (c === 'permission-denied' || c === 'forbidden' || c === 'role-forbidden') return o.denied;
+    return o.fail(c || '?');
+  }
+  function sOperation(op, said) {
+    const o = opCopy();
+    const K = window.KiwiOperations;
+    if (!K || typeof K.agentRun !== 'function' || typeof K.orders !== 'function') return { text: o.absent };
+    /* Le même droit que le même travail fait à la main. Un écran qui ne peut
+       pas faire avancer une commande ne doit pas afficher le bouton. */
+    let may = false;
+    try { may = K.agentAllowed('update-order-status'); } catch (_) { may = false; }
+    if (!may) return { text: o.denied };
+    const verb = o.verb[op.status] || op.status;
+    return {
+      text: o.lead(verb, op.number),
+      note: o.pending,
+      run: { action: 'update-order-status', status: op.status, number: op.number, said: said, label: o.btn(verb, op.number) },
+    };
   }
 
   /* ─────────────── INTENT CLASSIFIER (scored · fr / en / ar) ───────────────
@@ -3059,6 +3319,11 @@
      * model is genuinely better at, and a deterministic answer would be the
      * worse failure: "write a thank you note" was answered "avec plaisir". */
     if (COMPOSE_RX.test(q)) return { kind: null, raw, q };
+    /* Avant matchAction : « valide la commande 12 » nomme une destination
+       (les commandes) autant qu'un ordre, et ouvrir la page serait une réponse
+       à côté. Le verbe d'état tranche. */
+    const op = matchOperation(q);
+    if (op) return { kind: 'operation', raw, q, op };
     const act = matchAction(q);
     if (act) return { kind: 'action', raw, q, action: act };
     if (META_RX.test(q)) return { kind: 'meta', raw, q };
@@ -3195,9 +3460,61 @@
   /* Which scenario answered the last question — read by the telemetry hook in
    * ask(). Kept out of the reply object so nothing renders it by accident. */
   let lastRouteKind = null;
+  function featureCanTake(raw, decided) {
+    try {
+      const guide = window.KiwiFeatureGuide;
+      if (!guide || !guide.canHandle(raw)) return false;
+      if (guide.isPending && guide.isPending()) return !decided || decided.kind !== 'illicit';
+      if (!decided || decided.kind === null) return true;
+      if (decided.kind === 'help' || decided.kind === 'greet') return true;
+      if (decided.kind === 'price') {
+        const priceQ = norm(fixDigits(raw));
+        return !/[\d%]/.test(priceQ) && (/(?:ou|where).{0,24}(?:modifier|change|edit|renomm)/.test(priceQ)
+          || /(?:configur|parametr|setup).{0,24}(?:service|tarif|price|prix)/.test(priceQ));
+      }
+      /* Stock/client words are also data intents. "How many customers?" must
+       * return the ledger count; "how do I configure loyalty?" needs the
+       * product guide. No feature explainer may outrank finance, permissions,
+       * action routing or the integrity refusal. */
+      if (decided.kind !== 'stock' && decided.kind !== 'clients') return false;
+      const q = norm(fixDigits(raw));
+      if (/\b(?:combien|how many|how much|total|nombre|aujourd|today|this month|ce mois|right now|maintenant)\b/.test(q)) return false;
+      return /\b(?:configur|parametr|activer|utiliser|integr|comment fonctionne|how (?:does|to)|ou (?:modifier|regler)|where (?:to|can))\b/.test(q);
+    } catch (_) { return false; }
+  }
   function respond(rawIn) {
     syncProfile();  // reason off whatever venue is active right now
+    try {
+      const briefing = window.KiwiBriefing;
+      if (briefing && briefing.canHandle && briefing.canHandle(rawIn)) {
+        lastRouteKind = 'briefing';
+        return briefing.reply(rawIn, { lang: detectQLang(rawIn), role: accessTier() });
+      }
+    } catch (_) {}
     const d = decideRoute(rawIn);
+    /* Operational state has its own deterministic lane. It runs before the
+     * feature explainer and the finance model, but never before integrity or a
+     * restricted-books route. Thus “combien de commandes pressing sont en
+     * retard ?” cannot become a finance question, and “comment fonctionne le
+     * pressing ?” remains a product explanation rather than a fake live read. */
+    try {
+      const ops = window.KiwiAgentOps;
+      if (ops && d.kind !== 'illicit' && !BOOKS_ROUTES[d.kind] && ops.canHandle(rawIn)) {
+        const operational = ops.reply(rawIn, { lang: detectQLang(rawIn), role: accessTier() });
+        if (operational) { lastRouteKind = 'ops-' + (window.KiwiFeatureTruth && window.KiwiFeatureTruth.intent ? window.KiwiFeatureTruth.intent(rawIn) : 'live'); return operational; }
+      }
+    } catch (_) {}
+    /* Product questions must not fall through to the generic finance model.
+     * The guide reads the same trade/workspace registries as the dashboard, so
+     * it explains only features this merchant actually owns and hands setup
+     * back to the real validated page. */
+    try {
+      const guide = window.KiwiFeatureGuide;
+      if (guide && featureCanTake(rawIn, d)) {
+        const guided = guide.reply(rawIn, { lang: detectQLang(rawIn), role: accessTier() });
+        if (guided) { lastRouteKind = 'feature'; return guided; }
+      }
+    } catch (_) {}
     lastRouteKind = d.kind === null ? 'llm' : d.kind;
     /* Permission is checked BEFORE the scenario runs — a refusal must never be
      * computed from figures this reader is not allowed to see, or the numbers
@@ -3223,6 +3540,7 @@
     if (d.kind === 'hire' || d.kind === 'afford' || d.kind === 'price' || d.kind === 'compound') lastScenario = d.kind;
     if (d.kind === 'math') return sCalc(d.raw, evalMath(d.raw));
     if (d.kind === 'action') return sAction(d.action);
+    if (d.kind === 'operation') return sOperation(d.op, d.raw);
     if (d.kind === 'compound') return sCompound(d.raw);
     if (d.kind === 'illicit') return sIllicit();
     if (d.kind === 'negated') return sNegated();
@@ -3455,7 +3773,13 @@
     ['quels terminaux sont actifs', 'nodata'],
     ['où sont mes règlements', 'nodata'],
   ];
-  function routeLabel(s) { const d = decideRoute(s); return d.kind === null ? 'llm' : d.kind; }
+  function routeLabel(s) {
+    try { if (window.KiwiBriefing && window.KiwiBriefing.canHandle && window.KiwiBriefing.canHandle(s)) return 'briefing'; }
+    catch (_) {}
+    const d = decideRoute(s);
+    if (featureCanTake(s, d)) return 'feature';
+    return d.kind === null ? 'llm' : d.kind;
+  }
   function runEval() {
     lastScenario = null;  // stateless harness — never inherit conversation context
     /* tools/agent-corpus.js carries 830 more merchant questions in fr / en / ar
@@ -3535,95 +3859,232 @@
   window.KiwiAgentAsk = function (q, lang) { L = lang || getLang(); return respond(q); };
   window.KiwiAgentProfile = function () { return syncProfile(); };
   window.KiwiAgentRedact = function (text, lang) { return redactUnsupported(text, lang || getLang()); };
+  /* Une trame SSE de /api/ai/ask n'a pas UNE forme. Qwen streame `{response}` ;
+   * gpt-oss-120b (le titulaire depuis le 2026-08-19) streame au format OpenAI,
+   * `choices[0].delta.content`, avec des deltas `delta.reasoning` INTERCALÉS —
+   * son brouillon de réflexion, en anglais, qui ne doit jamais atteindre ni
+   * l'écran ni le redacteur (un « 33.33% » de brouillon corroborerait une
+   * réponse). Une seule fonction, pure, pour les deux ; le lecteur ne fait
+   * que l'appeler. Renvoie '' pour tout ce qui n'est pas du texte de réponse. */
+  function llmChunkText(o) {
+    if (!o || typeof o !== 'object') return '';
+    if (typeof o.response === 'string' && o.response) return o.response;
+    var c = Array.isArray(o.choices) && o.choices[0];
+    if (!c) return '';
+    var d = c.delta || c.message || null;
+    if (d && typeof d.content === 'string' && d.content) return d.content;
+    return '';
+  }
+  window.KiwiAgentChunkText = llmChunkText;
   window.KiwiAgentTier = accessTier;
+  /* Le seul lecteur d'ordre de la maison, exposé nu : une phrase entre, un
+     `{status, number}` sort — ou `null`. Le distinguer de la route permet au
+     gate d'affirmer que « la 12 » a bien été lue comme la commande 12, et pas
+     seulement qu'une carte a été proposée. Lecture pure, rien n'est envoyé. */
+  window.KiwiAgentOperation = function (s) { return matchOperation(norm(String(s || ''))); };
   /* La route seule, sans exécuter le scénario — ce qu'il faut pour mesurer la
      robustesse aux fautes de frappe sur des milliers de variantes sans payer
      le coût de la réponse. Lecture pure. */
   window.KiwiAgentRoute = routeLabel;
 
-  /* ═══════════════ IN-BROWSER LLM · WebLLM ═══════════════
-   * Anything the deterministic engine doesn't recognise is answered by an
-   * open-source model running fully in the browser via WebGPU — no backend,
-   * no API key, no data leaves the device. Opt-in download. */
-  const LLM = {
-    /* Qwen3.5-2B — Qwen stays the strongest small family for FR/AR (Phi is
-     * English-centric, Llama/Gemma are weak on Arabic), and 3.5-2B is a
-     * generation newer than the 4B it replaces at roughly HALF the download.
-     * Download size is the real adoption blocker on a shop till, so a smaller
-     * newer model beats a bigger older one here.
-     * Thinking: Qwen3.5 dropped Qwen3's `/no_think` prompt switch. Its chat
-     * template now emits a pre-closed `<think></think>` block unless the
-     * caller passes enable_thinking:true — i.e. NON-thinking is the default
-     * and needs no flag. Passing `/no_think` would just be dead text in the
-     * system prompt. stripThink() below stays as the safety net.
-     * CDN is version-pinned so model availability/behaviour can't drift. */
-    model: 'Qwen3.5-2B-q4f16_1-MLC',
-    sizeLabel: '≈ 1,2 Go',
-    cdn: 'https://esm.run/@mlc-ai/web-llm@0.2.84',
-    status: 'idle',
-    engine: null,
-    progress: 0,
-    /* A QUEUE, not a slot. `LLM.pending = question` meant a merchant who typed
-     * a second question during the 1,2 Go download silently lost the first —
-     * and the one that survived was the one they had already given up on. */
-    pending: [],
-    cancelled: false,
-    diag: '',
-    lastProgressAt: 0,
-  };
-  /* Roughly what the weights need on disk, with room for the browser's own
-   * bookkeeping. Checked BEFORE the download, not discovered at 94 %. */
-  const LLM_NEED_BYTES = 1.6 * 1024 * 1024 * 1024;
-  /* No progress callback for this long means the transfer is dead. WebLLM has
-   * no timeout of its own, so without this the merchant watches a bar that
-   * will never move again, with no way to leave. */
-  const LLM_STALL_MS = 60000;
-  /* A code the merchant can read down the phone. Short, no personal data. */
-  function diagCode() {
-    let n = 0;
-    try { n = Date.now() % 1679616; } catch (_) { n = 0; }
-    return 'KAI-' + n.toString(36).toUpperCase().padStart(4, '0');
+  /* ═══════════════ MODÈLE DE REPLI · serveur Kiwi ═══════════════ */
+  /* Le repli hors calculs est le modèle SERVEUR (/api/ai/ask, Workers AI).
+   * Le modèle téléchargé dans le navigateur (WebLLM, 1,2 Go, WebGPU) a été
+   * retiré le 2026-08-19 : il excluait l'iPad du comptoir, le vieux portable
+   * et les téléphones — exactement les appareils des commerçants — et un
+   * modèle de 2 milliards de paramètres répondait « regardez votre tableau de
+   * bord » à « quel est mon stock ». Le moteur déterministe reste PREMIER :
+   * aucun chiffre du commerçant ne passe par un modèle. Le consentement est
+   * demandé UNE fois, et un « non » tient : mode privé, calculs seuls. */
+  const LLM = { pending: [], cancelled: false, proposals: [] };
+  function cloudAccepted() {
+    try { return localStorage.getItem('kiwiAiCloud') === 'on'; } catch (_) { return false; }
   }
-  /* A device that cannot run the model should stop being asked to try. */
-  function llmDisabled() {
-    try { return localStorage.getItem('kiwiAiLocal') === 'off'; } catch (_) { return false; }
+  function cloudDeclined() {
+    try { return localStorage.getItem('kiwiAiCloud') === 'off'; } catch (_) { return false; }
   }
-  function disableLlm() {
-    try { localStorage.setItem('kiwiAiLocal', 'off'); } catch (_) {}
+  function setCloud(on) {
+    try { localStorage.setItem('kiwiAiCloud', on ? 'on' : 'off'); } catch (_) {}
   }
 
-  /* Can this machine actually do it? `'gpu' in navigator` only says the API is
-   * declared. Asking for an adapter, for free disk and for memory takes a few
-   * milliseconds and replaces the worst outcome available here: a shop till on
-   * shop wifi spending eight minutes downloading 1,2 Go to arrive at "Failed to
-   * fetch". A straight no, now, is kinder and truer. */
-  async function llmCapability() {
-    if (!('gpu' in navigator)) return { ok: false, why: 'noGpu' };
-    let adapter = null;
-    try { adapter = await navigator.gpu.requestAdapter(); } catch (_) { adapter = null; }
-    if (!adapter) return { ok: false, why: 'unfitAdapter' };
-    try {
-      if (navigator.storage && navigator.storage.estimate) {
-        const est = await navigator.storage.estimate();
-        const free = (est && est.quota ? est.quota : 0) - (est && est.usage ? est.usage : 0);
-        if (est && est.quota && free < LLM_NEED_BYTES) return { ok: false, why: 'unfitSpace' };
-      }
-    } catch (_) {}
-    if (navigator.deviceMemory && navigator.deviceMemory < 4) return { ok: false, why: 'unfitMemory' };
-    return { ok: true };
-  }
-
-  /* Qwen can emit <think>…</think> reasoning blocks. Qwen3.5 defaults to
-   * non-thinking (see LLM above), but we strip defensively so the merchant
-   * never sees a stray tag — handles both a closed block, the empty
-   * `<think></think>` the template itself emits, and one still mid-stream. */
   function stripThink(s) {
     return String(s)
       .replace(/<think>[\s\S]*?<\/think>/gi, '')
       .replace(/<think>[\s\S]*$/i, '')
+      /* gpt-oss met les chiffres en **gras** et titre en ### : une bulle de
+       * chat n'est pas une page markdown. On retire la syntaxe, pas le texte. */
+      .replace(/\*\*/g, '')
+      .replace(/^#{1,4}\s+/gm, '')
       .replace(/^\s+/, '');
   }
   const llmHistory = [];
+
+  /* ── Les faits du tour : ce que le moteur déterministe et les outils ont
+   * établi pour CETTE question. Le redacteur les ajoute à son corpus de
+   * corroboration (knownFigures/knownPercents/knownCounts) : un chiffre que
+   * le modèle tient d'un outil ou du brouillon déterministe est un chiffre
+   * que Kiwi tient — le retirer, c'est « [chiffre retiré] » devant un montant
+   * qu'on vient de calculer. Un chiffre qui n'est NI dans le corpus de base
+   * NI ici, lui, reste retiré. Vidé à chaque question. */
+  const TURN_FACTS = { money: new Set(), pct: new Set(), counts: new Set() };
+  const TURN_EVIDENCE = [];
+  function clearTurnFacts() { TURN_FACTS.money.clear(); TURN_FACTS.pct.clear(); TURN_FACTS.counts.clear(); TURN_EVIDENCE.length = 0; }
+  function noteTurnEvidence(name, args, out) {
+    if (!out || out.error || out.available === false) return;
+    const sourceByTool = { sales_between: 'KiwiSales.totals', top_products: 'KiwiSales.list', stock_level: 'catalogue stock', stock_summary: 'registre stock', tables_now: 'plan de salle', reservations_today: 'réservations du plan', orders_open: 'commandes ouvertes' };
+    const openByTool = { sales_between: 'nav-ventes', top_products: 'nav-ventes', stock_level: 'nav-stock', stock_summary: 'nav-stock', tables_now: 'nav-plan-salle', reservations_today: 'nav-reservations', orders_open: 'nav-commandes' };
+    const source = String(out.source || sourceByTool[name] || '');
+    if (!source) return;
+    const period = args && args.from ? (args.from + (args.to && args.to !== args.from ? ' → ' + args.to : '')) : '';
+    const volume = out.tickets != null ? String(out.tickets) + ' tickets' : Array.isArray(out.items) ? String(out.items.length) + ' lignes' : Array.isArray(out.orders) ? String(out.orders.length) + ' commandes' : '';
+    const key = [source, period, volume].join('|');
+    if (TURN_EVIDENCE.some((x) => x.key === key)) return;
+    TURN_EVIDENCE.push({ key, source, period, volume, open: openByTool[name] || '' });
+  }
+  /* Tout nombre d'un résultat d'outil ou d'un brouillon déterministe est
+   * corroboré dans les trois espaces : une source autoritaire n'a pas de
+   * dimension cachée. 1 234,5 · 1234.5 · 1 234 sont le même nombre. */
+  function noteTurnFacts(anything) {
+    let str = '';
+    try { str = typeof anything === 'string' ? anything : JSON.stringify(anything || ''); } catch (_) { str = String(anything || ''); }
+    str = str.replace(/<[^>]+>/g, ' ');
+    const seen = str.match(/\d[\d  . ]*(?:[.,]\d+)?/g) || [];
+    seen.forEach((raw) => {
+      const a = parseFloat(String(raw).replace(/[\s  . ]/g, '').replace(',', '.'));
+      const b = parseFloat(String(raw).replace(/[\s  ]/g, '').replace(/,/g, ''));
+      [a, b].forEach((v) => {
+        if (!isFinite(v)) return;
+        TURN_FACTS.money.add(Math.round(v));
+        TURN_FACTS.counts.add(Math.round(v));
+        TURN_FACTS.pct.add(Math.round(v * 10) / 10);
+      });
+    });
+  }
+
+  /* ── Les outils que le modèle peut appeler. Chacun est une LECTURE sur ce
+   * que le tableau de bord tient déjà : les chiffres viennent de notre code,
+   * le modèle ne fait que les demander et les rédiger. Aucune écriture ici —
+   * requestAction/confirmAction existent pour ça et gardent leur sas. Les
+   * dates suivent la journée d'affaires (seuil 5 h) via KiwiDayReport. */
+  const LLM_TOOLS = [
+    { type: 'function', function: { name: 'sales_between', description: "Total des ventes TTC (MAD), nombre de tickets et panier moyen entre deux journées d'affaires incluses (seuil 5 h). Dates au format YYYY-MM-DD.", parameters: { type: 'object', properties: { from: { type: 'string', description: 'YYYY-MM-DD' }, to: { type: 'string', description: 'YYYY-MM-DD' } }, required: ['from', 'to'] } } },
+    { type: 'function', function: { name: 'top_products', description: "Les articles les plus vendus (quantité et CA) entre deux journées d'affaires incluses.", parameters: { type: 'object', properties: { from: { type: 'string' }, to: { type: 'string' }, n: { type: 'integer', description: '1-10' } }, required: ['from', 'to'] } } },
+    { type: 'function', function: { name: 'stock_level', description: "Le niveau de stock d'un article par son nom (recherche approchée).", parameters: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } } },
+    { type: 'function', function: { name: 'stock_summary', description: 'Résumé du stock : positions, ruptures, sous seuil, noms concernés.', parameters: { type: 'object', properties: {} } } },
+    { type: 'function', function: { name: 'tables_now', description: 'État des tables maintenant (libres, occupées, réservées, addition).', parameters: { type: 'object', properties: {} } } },
+    { type: 'function', function: { name: 'reservations_today', description: "Réservations du jour d'après le plan de salle.", parameters: { type: 'object', properties: {} } } },
+    { type: 'function', function: { name: 'orders_open', description: 'Les commandes ouvertes (id, numéro, statut, total) · à appeler AVANT de proposer un changement de statut.', parameters: { type: 'object', properties: {} } } },
+    { type: 'function', function: { name: 'propose_action', description: "Modifier quelque chose. Actions : stock-adjust {itemId, qty (négatif pour retirer), reason, note} · order-status {orderId, status: accepted|rejected|ready|served} · reprint {ref} · customer-message-draft {phone, text}. Résous d'abord l'id exact (stock_level → items[].id ; orders_open → orders[].id) ; ne devine jamais un id. Le résultat dit si l'action est exécutée (executed) ou attend la confirmation du commerçant (awaiting_confirmation).", parameters: { type: 'object', properties: { name: { type: 'string', enum: ['stock-adjust', 'order-status', 'reprint', 'customer-message-draft'] }, args: { type: 'object' }, summary: { type: 'string', description: 'Une ligne lisible décrivant l\'action, dans la langue du commerçant.' } }, required: ['name', 'args', 'summary'] } } },
+  ];
+  /* Direct execution is an explicit owner-only, per-venue preference. The
+   * default remains proposal + confirmation; managers and staff can never turn
+   * this on, even by writing the localStorage key themselves. */
+  function autoActKey() { const v = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueId) ? window.KiwiVenue.getCurrentVenueId() : 'default'; return 'kiwiAiAutoAct:' + String(v || 'default'); }
+  function autoActOn() { if (accessTier() !== 'owner') return false; try { return localStorage.getItem(autoActKey()) === 'on'; } catch (_) { return false; } }
+  function setAutoAct(on) { if (accessTier() !== 'owner' && on) return; try { localStorage.setItem(autoActKey(), on ? 'on' : 'off'); } catch (_) {} }
+  const ACTION_NAME_RX = /^(stock-adjust|order-status|reprint|customer-message-draft|create-po)$/;
+  const TOOL_RESULT_MAX = 2000;
+  const ACTION_COPY = {
+    fr: { confirm: 'Confirmer', cancel: 'Annuler', done: 'Fait.', refused: 'Action refusée', expired: 'Proposition expirée · redemandez.', cancelled: 'Annulé, rien n’a été modifié.', autoOn: 'Exécution directe : activée · l’assistant modifie stock, commandes et réimpressions sans confirmation.', autoOff: 'Exécution directe : désactivée · chaque action attend votre confirmation.', autoToggleOn: 'Désactiver l’exécution directe', autoToggleOff: 'Activer l’exécution directe' },
+    en: { confirm: 'Confirm', cancel: 'Cancel', done: 'Done.', refused: 'Action refused', expired: 'Proposal expired · ask again.', cancelled: 'Cancelled, nothing changed.', autoOn: 'Direct execution: on · the assistant changes stock, orders and reprints without confirmation.', autoOff: 'Direct execution: off · every action waits for your confirmation.', autoToggleOn: 'Turn off direct execution', autoToggleOff: 'Turn on direct execution' },
+    ar: { confirm: 'تأكيد', cancel: 'إلغاء', done: 'تم.', refused: 'رُفض الإجراء', expired: 'انتهت صلاحية الاقتراح · أعد الطلب.', cancelled: 'أُلغي، لم يتغيّر شيء.', autoOn: 'التنفيذ المباشر: مفعّل · يغيّر المساعد المخزون والطلبات وإعادة الطباعة دون تأكيد.', autoOff: 'التنفيذ المباشر: معطّل · كل إجراء ينتظر تأكيدك.', autoToggleOn: 'إيقاف التنفيذ المباشر', autoToggleOff: 'تفعيل التنفيذ المباشر' },
+  };
+  const TOOLS_RULE = "OUTILS · les chiffres viennent des outils ou du bloc FAITS, jamais de toi. Pour agir (retirer ou ajouter du stock, changer le statut d'une commande, réimprimer, rédiger un message client) appelle propose_action après avoir résolu l'identifiant exact par stock_level ou orders_open ; quantité négative = retrait. Ne devine jamais un id : si tu ne trouves pas l'article ou la commande, dis-le. Le résultat de propose_action dit si c'est fait (executed) ou en attente de confirmation (awaiting_confirmation) : annonce exactement cela, en une phrase.";
+  const FACTS_LEAD = "FAITS · calculés par Kiwi pour cette question, à partir des données réelles du commerce. Ils font autorité : reformule-les clairement dans la langue de la question, garde le fil de la conversation, ne modifie AUCUN chiffre et n'en invente aucun. Si la question demande une donnée absente des faits, appelle un outil. Pas de markdown.\n";
+  const TOOL_DATE_RX = /^\d{4}-\d{2}-\d{2}$/;
+  function toolDayBounds(day) {
+    const R = window.KiwiDayReport;
+    if (R && R.dayBounds) { try { const b = R.dayBounds(day); if (b && isFinite(b.from)) return b; } catch (_) {} }
+    const p = String(day).split('-'); const d = new Date(+p[0], (+p[1] || 1) - 1, +p[2] || 1, 0, 0, 0, 0);
+    return { from: d.getTime(), to: d.getTime() + 24 * 3600000 };
+  }
+  function toolNorm(x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9؀-ۿ]+/g, ' ').trim(); }
+  function runTool(name, args) {
+    const a = args && typeof args === 'object' ? args : {};
+    const S = window.KiwiSales, T = window.KiwiAgentTruth;
+    const vid = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueId) ? window.KiwiVenue.getCurrentVenueId() : undefined;
+    try {
+      if (name === 'sales_between' || name === 'top_products') {
+        if (!TOOL_DATE_RX.test(a.from || '') || !TOOL_DATE_RX.test(a.to || '')) return { error: 'dates YYYY-MM-DD requises' };
+        const lo = toolDayBounds(a.from).from, hi = toolDayBounds(a.to).to;
+        if (!S || !S.totals) return { error: 'ventes indisponibles' };
+        if (name === 'sales_between') {
+          const t = S.totals(vid, lo, hi);
+          return { from: a.from, to: a.to, total_mad: Math.round(t.revenue * 100) / 100, tickets: t.count, basket_mad: Math.round(t.basket * 100) / 100, source: 'KiwiSales.totals', day_cutoff: '5h' };
+        }
+        const by = Object.create(null);
+        (S.list ? S.list(vid) : []).forEach((x) => {
+          const ts = +(x && x.ts) || 0; if (ts < lo || ts >= hi || !Array.isArray(x.lines)) return;
+          x.lines.forEach((l) => { const k = String(l.name || 'Article'); const o = by[k] || (by[k] = { name: k, qty: 0, total_mad: 0 }); o.qty += +l.qty || 0; o.total_mad += +l.total || 0; });
+        });
+        const n = Math.max(1, Math.min(10, parseInt(a.n, 10) || 5));
+        const rows = Object.values(by).sort((x, y) => y.qty - x.qty).slice(0, n).map((o) => ({ name: o.name, qty: Math.round(o.qty * 1000) / 1000, total_mad: Math.round(o.total_mad * 100) / 100 }));
+        return { from: a.from, to: a.to, items: rows, source: 'KiwiSales.list', note: rows.length ? undefined : 'aucune ligne détaillée sur la période' };
+      }
+      if (name === 'stock_summary') { const r = T && T.read ? T.read('inventory') : null; return r && r.available ? { source: r.source, data: r.data } : { available: false }; }
+      if (name === 'tables_now') { const r = T && T.read ? T.read('tables') : null; return r && r.available ? { source: r.source, data: r.data } : { available: false }; }
+      if (name === 'reservations_today') { const r = T && T.read ? T.read('reservations') : null; return r && r.available ? { source: r.source, data: r.data, limited: !!r.limited } : { available: false }; }
+      if (name === 'stock_level') {
+        const q = toolNorm(a.query); if (!q) return { error: 'query requise' };
+        const pools = [];
+        try { if (window.KiwiRestaurantStock && window.KiwiRestaurantStock.items) pools.push(window.KiwiRestaurantStock.items() || []); } catch (_) {}
+        try { if (window.KiwiBoutiqueCatalog && window.KiwiBoutiqueCatalog.listProducts) pools.push(window.KiwiBoutiqueCatalog.listProducts() || []); } catch (_) {}
+        const hits = [];
+        pools.forEach((rows) => (Array.isArray(rows) ? rows : []).forEach((it) => {
+          const nm = String((it && (it.name || it.label || it.title)) || ''); const nn = toolNorm(nm); if (!nn) return;
+          const score = nn === q ? 3 : nn.indexOf(q) >= 0 ? 2 : q.split(' ').every((w) => nn.indexOf(w) >= 0) ? 1 : 0;
+          if (!score) return;
+          const stock = [it.stock, it.qty, it.quantity, it.onHand].find((v) => typeof v === 'number');
+          hits.push({ id: String((it && it.id) || ''), name: nm, stock: stock == null ? null : stock, unit: it.unit || it.stockUnit || '', threshold: it.threshold == null ? undefined : it.threshold, score });
+        }));
+        hits.sort((x, y) => y.score - x.score);
+        return { query: a.query, found: hits.length > 0, items: hits.slice(0, 5).map((h) => { delete h.score; return h; }) };
+      }
+      if (name === 'orders_open') {
+        const I = window.KiwiOrderInbox; if (!I || typeof I.orders !== 'function') return { available: false };
+        const raw = I.orders() || {}; const rows = Array.isArray(raw) ? raw : Object.keys(raw).map((k) => raw[k]);
+        const open = rows.filter((o) => o && !/^(served|rejected|cancelled|closed)$/.test(String(o.status || ''))).slice(0, 20)
+          .map((o) => ({ id: String(o.id || ''), number: o.number == null ? undefined : o.number, status: String(o.status || ''), total_mad: o.total == null ? undefined : +o.total, table: o.table || o.tableNum || undefined }));
+        return { available: true, orders: open };
+      }
+      if (name === 'propose_action') {
+        const A = window.KiwiAgentActions;
+        if (!A || typeof A.request !== 'function') return { error: 'actions indisponibles' };
+        const act = String(a.name || '');
+        if (!ACTION_NAME_RX.test(act)) return { error: 'action inconnue' };
+        const args = Object.assign({}, a.args && typeof a.args === 'object' ? a.args : {});
+        const summary = String(a.summary || '').slice(0, 200);
+        args.said = summary || act;
+        /* Un id de commande par proposition : le sas d'idempotence de
+         * KiwiAgentActions est à lui — on ne le contourne pas, on le nourrit. */
+        args.commandId = 'llm-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+        const req = A.request(act, args);
+        if (!req || !req.ok) return { proposed: false, action: act, reason: (req && req.reason) || 'refused' };
+        if (req.replayed) return { executed: true, replayed: true, action: act, result: req.result };
+        if (autoActOn()) {
+          let res;
+          try { res = A.confirm(req.token); } catch (_) { return { executed: false, action: act, summary, reason: 'failed' }; }
+          const shape = (r) => ({ executed: !!(r && r.ok), action: act, summary, result: r });
+          if (res && typeof res.then === 'function') return res.then(shape, () => ({ executed: false, action: act, summary, reason: 'failed' }));
+          return shape(res);
+        }
+        LLM.proposals.push({ token: req.token, action: act, summary, args: req.summary });
+        return { proposed: true, action: act, summary, awaiting_confirmation: true, note: 'Le commerçant doit confirmer par le bouton affiché sous la réponse.' };
+      }
+    } catch (e) { return { error: 'lecture impossible' }; }
+    return { error: 'outil inconnu' };
+  }
+  function toolResultText(v) { let s = ''; try { s = JSON.stringify(v); } catch (_) { s = String(v); } return s.length > TOOL_RESULT_MAX ? s.slice(0, TOOL_RESULT_MAX) : s; }
+  /* Le brouillon déterministe, en texte nu, pour le bloc FAITS du modèle. */
+  function draftFacts(reply) {
+    if (!reply) return '';
+    const strip = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    let out = strip(reply.text);
+    if (reply.stats && reply.stats.length) out += '\n' + reply.stats.map((x) => strip(x.l) + ': ' + strip(x.v) + (x.h ? ' (' + strip(x.h) + ')' : '')).join('\n');
+    if (reply.verdict && reply.verdict.text) out += '\n' + strip(reply.verdict.text);
+    return out.slice(0, 3000);
+  }
+  window.KiwiAgentTools = { list: LLM_TOOLS, run: runTool, noteFacts: noteTurnFacts, noteEvidence: noteTurnEvidence, clearFacts: clearTurnFacts, facts: TURN_FACTS, evidence: TURN_EVIDENCE, draftFacts: draftFacts, pending: function () { return LLM.proposals.slice(); }, resetPending: function () { LLM.proposals = []; }, autoActOn, setAutoAct };
 
   const SP_DIR = {
     fr: 'IMPÉRATIF : rédige ta réponse entièrement en FRANÇAIS.',
@@ -3657,7 +4118,7 @@
     /* Aggregates straight from the simulator — the merchant sees these at the
      * top of the dashboard, so the agent must match them exactly. */
     lines.push(
-      `  · Heure de service simulée : ~${sim.simHourLabel || '—'}`,
+      `  · Heure de service simulée : ~${sim.simHourLabel || '·'}`,
       `  · Commandes encaissées depuis ce matin : ${fmt(sim.cumTx || 0)}`,
       `  · CA réalisé depuis ce matin : ${fmt(sim.cumRevenue || 0)} MAD`,
       `  · Panier moyen aujourd'hui : ${fmt(sim.panierMoyen || 0)} MAD`,
@@ -3671,11 +4132,11 @@
       const recent = orders.slice(0, 8).map(o => {
         const items = (o.items || []).slice(0, 2).map(it => `×${it.qty} ${it.name}`).join(', ');
         const more = (o.items || []).length > 2 ? ` (+${o.items.length - 2})` : '';
-        const table = o.table != null ? `T${o.table}` : '—';
+        const table = o.table != null ? `T${o.table}` : '·';
         const covers = o.covers ? ` · ${o.covers} couvert${o.covers > 1 ? 's' : ''}` : '';
         const server = o.server ? ` · servi par ${o.server}` : '';
-        const total = (o.total || o.amt) ? `${o.total || o.amt} MAD` : '—';
-        return `  · ${o.t || '—'} · ${o.customer || '—'} · ${table}${covers}${server} · ${o.primary || '—'} · ${total}${items ? `, ${items}${more}` : ''}`;
+        const total = (o.total || o.amt) ? `${o.total || o.amt} MAD` : '·';
+        return `  · ${o.t || '·'} · ${o.customer || '·'} · ${table}${covers}${server} · ${o.primary || '·'} · ${total}${items ? `, ${items}${more}` : ''}`;
       });
       lines.push('', `  Les ${recent.length} dernières commandes encaissées (la plus récente d'abord) :`);
       lines.push(...recent);
@@ -3910,13 +4371,13 @@
     const mark = REDACTED[L2];
     let n = 0, rateSeen = false;
     try {
-      const knownM = Array.from(knownFigures());
-      const knownP = Array.from(knownPercents());
+      const knownM = Array.from(knownFigures()).concat(Array.from(TURN_FACTS.money));
+      const knownP = Array.from(knownPercents()).concat(Array.from(TURN_FACTS.pct));
       const citedM = (v) => knownM.some((k) => Math.abs(k - v) <= Math.max(50, v * 0.01));
       const citedP = (v) => knownP.some((k) => Math.abs(k - v) <= 0.6);
       /* Per namespace: a dish sold 312 times does not make 312 CLIENTS a
        * figure we hold. */
-      const citedC = (v, kind) => Array.from(knownCounts(kind)).some((k) => Math.abs(k - v) <= Math.max(1, v * 0.01));
+      const citedC = (v, kind) => Array.from(knownCounts(kind)).concat(Array.from(TURN_FACTS.counts)).some((k) => Math.abs(k - v) <= Math.max(1, v * 0.01));
       const num = (raw) => parseFloat(String(raw).replace(/[\s  . ]/g, '').replace(',', '.'));
 
       /* Sentence by sentence — "is this a hypothesis?" is only answerable
@@ -3992,6 +4453,20 @@
 
   function buildSystemPrompt(lang) {
     const dir = SP_DIR[lang] || SP_DIR.fr;
+    let featureContext = '';
+    try {
+      if (window.KiwiFeatureGuide && typeof window.KiwiFeatureGuide.promptContext === 'function') {
+        featureContext = window.KiwiFeatureGuide.promptContext(B.trade, lang);
+      }
+    } catch (_) {}
+    let capabilityContext = '';
+    try {
+      if (window.KiwiFeatureTruth && window.KiwiFeatureTruth.context) {
+        const c = window.KiwiFeatureTruth.context({ role: accessTier() });
+        capabilityContext = JSON.stringify({ venue: c.venue, plan: c.plan, role: c.role, aiMode: c.aiMode,
+          access: c.assistantAccess, features: c.features.map((f) => ({ key: f.key, nav: f.nav, enabled: f.enabled, live: f.live, permission: f.permission })) });
+      }
+    } catch (_) {}
     /* The books never enter the context of a reader who may not see them.
      * Gating the deterministic answers alone would have been theatre: every
      * unmatched question goes to the model, and the model was handed the full
@@ -4006,11 +4481,15 @@
       ];
       if (liveR) outR.push('', 'Activité en direct, enregistrée par la caisse depuis l’ouverture aujourd’hui :', liveR);
       if (menuR) outR.push('', 'La carte, avec les ventes du mois par article :', menuR);
+      if (featureContext) outR.push('', `Fonctions Kiwi disponibles pour le métier « ${B.tradeLabel || B.trade || 'établissement'} » :`, featureContext);
+      if (capabilityContext) outR.push('', 'Contexte de capacité vérifié (source produit) :', capabilityContext);
       outR.push(
         '',
         'Règles :',
         `- Tu ne connais PAS et tu ne donnes JAMAIS : les marges, le coût matière, les charges, le loyer, les salaires, la masse salariale, le bénéfice, la trésorerie, le seuil de rentabilité, la valorisation. Si on te les demande, réponds que ces chiffres sont réservés au propriétaire du compte, en une phrase, sans t'excuser et sans en deviner un seul.`,
         `- Tu aides sur la caisse, les ventes, la carte, le stock, le service, les clients et les opérations.`,
+        `- Pour expliquer ou configurer une fonction, appuie-toi uniquement sur la liste ci-dessus. Pose des questions courtes, puis guide vers la page correspondante. Ne prétends jamais avoir activé, enregistré ou intégré une fonction : la validation se fait sur la vraie page Kiwi.`,
+        `- Tu es en LECTURE SEULE. Tu peux lire uniquement les adaptateurs explicitement marqués live. Tu ne modifies jamais stock, commande, reçu, imprimante, client ou réglage depuis une réponse.`,
         `- N'invente JAMAIS un chiffre, un plat ou une statistique.`,
         `- Tu n'as pas accès à Internet ni à des données en temps réel.`,
         INTEGRITY_RULE,
@@ -4020,23 +4499,31 @@
       return outR.join('\n');
     }
     if (B.partial) {
-      return [
+      const partialPrompt = [
         dir, '',
         `Tu es l'assistant financier de "${B.name}", un établissement qui vient de démarrer sur Kiwi, au Maroc.`,
+        `Type d'activité : ${B.tradeLabel || B.trade || 'non renseigné'}.`,
+        salesWindowEvidence(B),
         B.revenue > 0
           ? `Seules données réelles disponibles : ${fmt(B.revenue)} MAD de ventes sur ${fmt(B.ordersPerMonth)} vente(s), panier moyen ${fmt(B.avgBasket)} MAD.`
           : `Aucune vente n'a encore été enregistrée pour cet établissement.`,
         `Tu n'as PAS sa structure de coûts (loyer, salaires, coût matière, marge, trésorerie, effectif) ni le détail de sa carte.`,
-        '',
+      ];
+      if (featureContext) partialPrompt.push('', 'Fonctions Kiwi réellement disponibles pour ce métier :', featureContext);
+      if (capabilityContext) partialPrompt.push('', 'Contexte de capacité vérifié (source produit) :', capabilityContext);
+      partialPrompt.push('',
         'Règles :',
         `- N'invente JAMAIS un chiffre, un plat ou une statistique. Si on te demande une marge, un bénéfice, un seuil de rentabilité, des charges, ou les articles du menu, explique que le commerçant doit d'abord renseigner ces données dans Kiwi, ne donne ni nombre ni liste inventée.`,
         `- Tu peux donner des conseils de gestion généraux et qualitatifs, sans chiffrer ce que tu ne connais pas.`,
+        `- Pour expliquer ou configurer une fonction, appuie-toi uniquement sur la liste ci-dessus. Pose des questions courtes et guide vers la page correspondante. Ne prétends jamais avoir activé, enregistré ou intégré une fonction : la validation se fait sur la vraie page Kiwi.`,
+        `- Tu es en LECTURE SEULE. Un adaptateur live peut te donner un état, jamais l'autorisation de le changer.`,
         `- Tu n'as pas accès à Internet ni à des données en temps réel.`,
         `- Ne donne jamais de conseil d'investissement boursier. Ne réponds pas aux questions sans lien avec l'activité.`,
         INTEGRITY_RULE,
         '',
-        dir,
-      ].join('\n');
+        dir
+      );
+      return partialPrompt.join('\n');
     }
     const o = B.opex;
     const menu = menuContextLines();
@@ -4069,11 +4556,13 @@
     } else {
       lines.push('', `Tu n'as pas le détail de sa carte : pour une question sur les plats, invite-le à ouvrir la page Menu, ne cite aucun plat de mémoire.`);
     }
+    if (featureContext) lines.push('', 'Fonctions Kiwi réellement disponibles pour ce métier :', featureContext);
     lines.push(
       '',
       'Règles :',
       `- Sois concis, concret et chiffré quand c'est utile.`,
       `- Tu peux parler de tout ce qui touche la gestion du café : finances, RH, marketing, opérations, fournisseurs, stratégie, menu.`,
+      `- Pour expliquer ou configurer une fonction, appuie-toi uniquement sur la liste ci-dessus. Pose des questions courtes et guide vers la page correspondante. Ne prétends jamais avoir activé, enregistré ou intégré une fonction : la validation se fait sur la vraie page Kiwi.`,
       `- N'invente JAMAIS un chiffre, un plat ou une statistique : appuie-toi uniquement sur les données ci-dessus. Si une information manque, dis-le simplement.`,
       `- Tu NE réponds PAS aux questions sans lien avec l'activité (sport, célébrités, actualité). Décline poliment en une phrase.`,
       `- Tu n'as pas accès à Internet ni à des données en temps réel ; ne donne jamais de conseil d'investissement boursier.`,
@@ -4088,9 +4577,9 @@
 
   const ICON = {
     avatar: '<img class="fa-avatar-ico" src="assets/landing/icons/merchant.png" alt="" width="17" height="17" decoding="async"/>',
-    keypad: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="3"/><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h4"/></svg>',
-    send: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>',
-    lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>',
+    keypad: '<i data-lucide="dialpad" aria-hidden="true"></i>',
+    send: '<i data-lucide="send" aria-hidden="true"></i>',
+    lock: '<i data-lucide="lock" aria-hidden="true"></i>',
   };
 
   /* one-time CSS */
@@ -4102,10 +4591,10 @@
     /* ─── Financial assistant · interface ─────────────────────────────── */
     .fa-drawer .kiwi-drawer { display:flex; flex-direction:column; }
     .fa-drawer .kiwi-drawer-body { flex:1; min-height:0; padding:0 !important; display:flex; }
-    .fa-drawer .kiwi-drawer-head { background:var(--paper); }
-    .fa-drawer .kiwi-drawer-head h3 { font-family:'Instrument Serif',serif; font-weight:400;
-      font-size:28px; letter-spacing:0; }
-    .fa-drawer .kiwi-drawer-head p { color:var(--n-500); font-size:12.5px; }
+    .fa-drawer .kiwi-drawer-head { background:var(--paper); padding:20px max(48px, calc((100vw - 1480px) / 2 + 48px)); }
+    .fa-drawer .kiwi-drawer-head h3 { font-family:var(--sans); font-weight:600;
+      font-size:18px; letter-spacing:-0.015em; color:var(--ink); }
+    .fa-drawer .kiwi-drawer-head p { color:var(--n-500); font-size:13px; margin-top:3px; }
 
     .fa { display:flex; width:100%; height:100%; background:var(--paper);
       --fa-ease:var(--ease-glide,cubic-bezier(.16,1,.30,1)); }
@@ -4128,10 +4617,10 @@
       filter:brightness(0) saturate(100%) invert(85%) sepia(31%) saturate(469%)
         hue-rotate(70deg) brightness(102%) contrast(91%); }
 
-    /* agent message — text flows on paper, no box */
+    /* agent message · text flows on paper, no box */
     .fa-msg.agent .fa-bubble { flex:1; min-width:0; max-width:632px; padding-top:3px;
       font-size:14px; line-height:1.62; color:var(--ink); }
-    /* user message — soft white card */
+    /* user message · soft white card */
     .fa-msg.user .fa-bubble { max-width:78%; background:var(--surface); border:1px solid var(--n-200);
       border-radius:18px 18px 6px 18px; padding:11px 16px; font-size:13.5px; line-height:1.55;
       color:var(--ink); box-shadow:0 4px 16px -10px rgba(10,15,13,.22); }
@@ -4157,10 +4646,16 @@
     .fa-verdict.bad  { background:rgba(193,58,48,.10); color:#b3392f; }
     .fa-note { margin-top:11px; font-size:11.5px; color:var(--n-500); line-height:1.5; }
     /* La provenance : établissement · période · module · volume · fraîcheur.
-       Discrète par construction — elle ne s'adresse pas au commerçant tous les
+       Discrète par construction · elle ne s'adresse pas au commerçant tous les
        jours, elle sert le jour où deux surfaces annoncent deux chiffres. */
     .fa-meta { margin-top:9px; font-size:10.5px; color:var(--n-500); opacity:.8;
       letter-spacing:.015em; line-height:1.45; }
+    .fa-evidence { display:flex; flex-wrap:wrap; gap:6px; margin-top:11px; }
+    .fa-evidence-chip { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--n-200);
+      border-radius:999px; background:var(--paper-soft); color:var(--n-600); padding:5px 9px;
+      font-size:10.5px; line-height:1.2; font-weight:550; }
+    button.fa-evidence-chip { cursor:pointer; font-family:inherit; }
+    button.fa-evidence-chip:hover { color:var(--atlas); border-color:rgba(11,110,79,.35); }
 
     /* suggestion chips */
     .fa-follow { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
@@ -4180,29 +4675,37 @@
     .fa-dock { border-top:1px solid var(--n-200); background:var(--paper);
       padding:15px clamp(20px,8%,120px) 19px; }
     .fa-dock-in { max-width:730px; margin:0 auto; }
-    .fa-inputwrap { display:flex; align-items:flex-end; gap:8px; background:var(--surface);
-      border:1px solid var(--n-300); border-radius:21px; padding:6px; padding-inline-start:18px;
-      box-shadow:0 8px 26px -16px rgba(10,15,13,.26); transition:border-color 170ms, box-shadow 170ms; }
-    .fa-inputwrap:focus-within { border-color:var(--atlas); box-shadow:0 10px 30px -16px rgba(11,110,79,.4); }
-    .fa-input { flex:1; resize:none; border:none; outline:none; background:transparent; font:inherit;
-      font-size:14px; line-height:1.5; padding:10px 0; max-height:144px; color:var(--ink); }
-    .fa-input::placeholder { color:var(--n-400); }
-    .fa-send { width:39px; height:39px; border-radius:50%; border:none; flex-shrink:0; cursor:pointer;
-      background:var(--atlas); color:#fff; display:flex; align-items:center; justify-content:center;
-      transition:transform 150ms var(--fa-ease), background 150ms; }
-    .fa-send:hover { background:var(--riad); transform:scale(1.06); }
-    .fa-send:active { transform:scale(.93); }
-    [dir="rtl"] .fa-send svg { transform:scaleX(-1); }
+    .fa-inputwrap { display:flex; align-items:center; gap:10px; background:var(--surface,#fff);
+      border:1.5px solid var(--n-300,#E0DFDB); border-radius:999px; padding:6px 8px 6px 20px; min-height:52px; box-sizing:border-box;
+      box-shadow:0 4px 20px -2px rgba(10,15,13,.06), 0 1px 3px rgba(10,15,13,.04);
+      transition:border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease; }
+    .fa-inputwrap:focus-within { border-color:var(--atlas,#0B6E4F); background:#fff;
+      box-shadow:0 6px 24px -4px rgba(11,110,79,.18), 0 0 0 3px rgba(11,110,79,.12); }
+    .fa-input { flex:1; min-width:0; resize:none; border:none !important; outline:none !important;
+      box-shadow:none !important; background:transparent !important; background-color:transparent !important;
+      -webkit-appearance:none; appearance:none; font:inherit; font-size:15px; line-height:22px;
+      padding:0; margin:0 !important; height:22px; min-height:22px; max-height:140px; color:var(--ink,#0A0F0D);
+      box-sizing:border-box; display:block; align-self:center; }
+    .fa-input::placeholder { color:var(--n-500,#8A948F); font-size:14.5px; opacity:.85; letter-spacing:-.01em; line-height:22px; }
+    .fa-send { width:38px; height:38px; min-width:38px; min-height:38px; border-radius:50%; border:none; flex-shrink:0; cursor:pointer;
+      background:var(--atlas,#0B6E4F); color:#fff; display:inline-flex; align-items:center; justify-content:center;
+      padding:0; margin:0; box-shadow:0 2px 8px rgba(11,110,79,.28);
+      transition:transform 150ms cubic-bezier(.34,1.56,.64,1), background 150ms ease, box-shadow 150ms ease; }
+    .fa-send:hover { background:var(--riad,#053B2C); transform:scale(1.06); box-shadow:0 4px 14px rgba(11,110,79,.38); }
+    .fa-send:active { transform:scale(.92); box-shadow:0 1px 4px rgba(11,110,79,.2); }
+    .fa-send svg { width:17px; height:17px; display:block; margin-inline-start:1px; }
+    [dir="rtl"] .fa-send svg { transform:scaleX(-1); margin-inline-start:-1px; }
+    [dir="rtl"] .fa-inputwrap { padding:6px 18px 6px 6px; }
     .fa-toolbar { display:flex; align-items:center; justify-content:space-between; margin-top:11px; padding:0 4px; }
     .fa-tool { display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:500;
       color:var(--n-600); background:var(--surface); border:1px solid var(--n-200); border-radius:999px;
       padding:7px 14px; cursor:pointer; transition: transform 150ms var(--fa-ease), opacity 150ms var(--fa-ease), background-color 150ms var(--fa-ease), border-color 150ms var(--fa-ease), color 150ms var(--fa-ease), box-shadow 150ms var(--fa-ease); }
-    .fa-tool:hover { border-color:var(--n-400); color:var(--ink); transform:translateY(-1px); }
+    .fa-tool:hover { border-color: var(--n-400); color:var(--ink); transform:translateY(-1px); }
     .fa-tool.on { background:var(--atlas); border-color:var(--atlas); color:#fff; }
     .fa-tool svg { width:14px; height:14px; }
-    .fa-hint { font-size:11px; color:var(--n-400); }
+    .fa-hint { font-size:11px; color: var(--n-500); }
 
-    /* calculator — hidden until toggled */
+    /* calculator · hidden until toggled */
     .fa-keypad { display:none; }
     .fa-keypad.open { display:block; animation:fa-kp-in 300ms var(--ease-out,cubic-bezier(.32,.72,0,1)) both; }
     @keyframes fa-kp-in { from{ opacity:0; transform:translateY(18px); } to{ opacity:1; transform:none; } }
@@ -4262,17 +4765,18 @@
     .fa-ctx-note { margin-top:20px; font-size:11.5px; color:var(--n-500); line-height:1.55; }
     .fa-ctx-trust { margin-top:13px; display:flex; gap:7px; align-items:flex-start; font-size:11px; color:var(--n-500); line-height:1.45; }
     .fa-ctx-trust svg { width:13px; height:13px; color:var(--atlas); flex-shrink:0; margin-top:1px; }
+    .fa-ctx-mode { margin-top:8px; background:none; border:1px solid var(--n-200); border-radius:999px; padding:4px 10px; font:inherit; font-size:11px; color:var(--atlas); cursor:pointer; }
+    .fa-ctx-mode:hover { border-color:var(--atlas); }
     @media (max-width:920px) { .fa-context { display:none; } }
 
-    /* ─── empty-state hero — the first screen, before any conversation ─── */
+    /* ─── empty-state hero · the first screen, before any conversation ─── */
     .fa-hero { display:flex; flex-direction:column; }
     .fa-hero-mark { width:46px; height:46px; border-radius:50%; display:flex; align-items:center;
       justify-content:center; background:linear-gradient(150deg,var(--atlas),var(--riad)); color:var(--mint);
       box-shadow:0 8px 22px -8px rgba(11,110,79,.6); }
-    .fa-hero-mark svg { width:21px; height:21px; }
-    .fa-hero-h { font-family:'Instrument Serif',serif; font-size:31px; color:var(--ink); margin:17px 0 0; line-height:1.08; }
+    .fa-hero-h { font-family:var(--sans); font-size:32px; font-weight:650; letter-spacing:-0.03em; color:var(--ink); margin:17px 0 0; line-height:1.15; }
     .fa-hero-p { font-size:14px; color:var(--n-600); line-height:1.62; margin-top:9px; max-width:540px; }
-    .fa-hero-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:11px; margin-top:24px; }
+    .fa-hero-cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:11px; margin-top:24px; }
     .fa-hero-card { display:flex; flex-direction:column; align-items:flex-start; text-align:start;
       background:var(--surface); border:1px solid var(--n-200); border-radius:16px; padding:15px 14px; cursor:pointer;
       font:inherit; transition:transform 160ms var(--fa-ease), border-color 160ms, box-shadow 160ms;
@@ -4292,7 +4796,7 @@
     .fa-hero-insight b { color:var(--atlas); font-weight:600; }
     @media (max-width:560px) { .fa-hero-cards { grid-template-columns:1fr; } }
 
-    /* ─── curated context rail — 4 KPIs, a cost split, the rest folded away ─── */
+    /* ─── curated context rail · 4 KPIs, a cost split, the rest folded away ─── */
     .fa-ctx-kpis { margin-top:20px; }
     .fa-ctx-kpi { display:flex; justify-content:space-between; align-items:baseline; gap:12px; width:100%;
       border:0; background:transparent; padding:12px 8px; border-radius:11px; cursor:pointer;
@@ -4316,7 +4820,7 @@
     .fa-ctx-more { width:100%; margin-top:18px; font:inherit; font-size:12px; font-weight:500;
       color:var(--n-600); background:transparent; border:1px solid var(--n-200); border-radius:11px;
       padding:10px; cursor:pointer; transition: transform 140ms, opacity 140ms, background-color 140ms, border-color 140ms, color 140ms, box-shadow 140ms; }
-    .fa-ctx-more:hover { border-color:var(--n-400); color:var(--ink); }
+    .fa-ctx-more:hover { border-color: var(--n-400); color:var(--ink); }
     .fa-ctx-detail[hidden] { display:none; }
 
     /* in-browser LLM */
@@ -4336,7 +4840,7 @@
 
     /* ─── Dark theme · flat, contour-free, off-white (ChatGPT-style) ──────
      * In dark mode the assistant drops every light card, border and bright
-     * accent — surfaces sit on the flat --paper tones, text is off-white,
+     * accent · surfaces sit on the flat --paper tones, text is off-white,
      * nothing is outlined. */
     html[data-theme="dark"] .fa-msg.user .fa-bubble {
       background:var(--paper-soft); border:none; box-shadow:none; }
@@ -4348,12 +4852,11 @@
     html[data-theme="dark"] .fa-follow button {
       background:var(--paper-soft); border:none; color:var(--ink); box-shadow:none; }
     html[data-theme="dark"] .fa-follow button:hover { background:var(--paper-muted); color:var(--ink); }
-    html[data-theme="dark"] .fa-dock { border-top:none; }
-    html[data-theme="dark"] .fa-inputwrap { background:var(--paper-soft); border:none; box-shadow:none; }
+    html[data-theme="dark"] .fa-inputwrap { background:var(--paper-soft); border:1.5px solid rgba(255,255,255,.1); box-shadow:0 8px 32px rgba(0,0,0,.36); }
     html[data-theme="dark"] .fa-inputwrap:focus-within {
-      background:var(--paper-muted); border:none; box-shadow:none; }
-    html[data-theme="dark"] .fa-send { background:var(--ink); color:var(--paper); }
-    html[data-theme="dark"] .fa-send:hover { background:var(--n-700); }
+      background:var(--paper-muted); border-color:var(--mint,#3FB67A); box-shadow:0 8px 32px rgba(0,0,0,.45), 0 0 0 3px rgba(63,182,122,.18); }
+    html[data-theme="dark"] .fa-send { background:var(--mint,#3FB67A); color:#0A0F0D; box-shadow:0 2px 10px rgba(63,182,122,.4); }
+    html[data-theme="dark"] .fa-send:hover { background:#5ccfa0; transform:scale(1.06); box-shadow:0 4px 14px rgba(63,182,122,.55); }
     html[data-theme="dark"] .fa-tool { background:var(--paper-soft); border:none; color:var(--ink); }
     html[data-theme="dark"] .fa-tool:hover,
     html[data-theme="dark"] .fa-tool.on { background:var(--paper-muted); border:none; color:var(--ink); }
@@ -4387,7 +4890,7 @@
     }
     if (r.verdict) h += `<div class="fa-verdict ${r.verdict.tone}">${r.verdict.text}</div>`;
     if (r.note) h += `<div class="fa-note">${r.note}</div>`;
-    if (r.meta) h += `<div class="fa-meta">${r.meta}</div>`;
+    if (r.meta) h += `<div class="fa-evidence"><span class="fa-evidence-chip">${escHtml(r.meta)}</span></div>`;
     if (r.follow && r.follow.length) {
       h += '<div class="fa-follow">' + r.follow.map((f) =>
         `<button data-fa-follow="${escAttr(f)}">${f}</button>`).join('') + '</div>';
@@ -4395,6 +4898,15 @@
     if (r.open && r.open.length) {
       h += '<div class="fa-follow">' + r.open.map((o) =>
         `<button class="fa-llm-btn" data-fa-open="${escAttr(o.handler)}">${o.label}</button>`).join('') + '</div>';
+    }
+    /* Une proposition, pas une exécution : le bouton porte l'ordre, et rien ne
+       part avant que le commerçant ne clique dessus. La phrase qu'il a dite
+       voyage avec, parce que le journal côté serveur doit pouvoir répondre à
+       « pourquoi cette commande a-t-elle bougé ». */
+    if (r.run) {
+      h += '<div class="fa-follow"><button class="fa-llm-btn" data-fa-run="' + escAttr(r.run.action)
+        + '" data-fa-status="' + escAttr(r.run.status) + '" data-fa-number="' + escAttr(r.run.number)
+        + '" data-fa-said="' + escAttr(r.run.said || '') + '">' + r.run.label + '</button></div>';
     }
     return h;
   }
@@ -4405,6 +4917,7 @@
     injectCss();
     syncProfile();  // build the profile for whatever venue is active
     const u = tr().ui;
+    const dynamicUi = assistantUiCopy();
 
     // Every fact the agent knows — grouped, each row click-to-insert.
     const ctxItem = (k, v) =>
@@ -4427,8 +4940,11 @@
           ? `<div class="fa-ctx-kpis">${rows.map(([k, v]) =>
               `<button class="fa-ctx-kpi" type="button" data-fa-fact="${escAttr(k + ' : ' + v)}"><span class="k">${k}</span><span class="v">${v}</span></button>`).join('')}</div>`
           : '') +
+        (salesWindowEvidence(B) ? `<div class="fa-ctx-detail" style="display:block;font-size:12.5px;color:var(--n-500);line-height:1.55;">${escHtml(salesWindowEvidence(B))}</div>` : '') +
         `<div class="fa-ctx-detail" style="display:block;font-size:12.5px;color:var(--n-500);line-height:1.55;">${p.railEmpty}</div>` +
-        `<div class="fa-ctx-trust">${ICON.lock}<span>${u.ctxTrust}</span></div>`;
+        `<div class="fa-ctx-trust" data-fa-trust>${ICON.lock}<span data-fa-trust-text>${dynamicUi.privacy}</span></div>` +
+        `<button type="button" class="fa-ctx-mode" data-fa-mode-toggle>${dynamicUi.modeToggle}</button>` +
+        autoActMarkup();
     } else {
       const f = tr().facts;
       const opexItems = Object.entries(B.opex).sort((a, b) => b[1] - a[1])
@@ -4477,7 +4993,9 @@
         `</div>` +
         `<button class="fa-ctx-more" type="button" data-fa-ctx-more>${HL().more}</button>` +
         `<div class="fa-ctx-detail" data-fa-detail hidden>${ctxRail}</div>` +
-        `<div class="fa-ctx-trust">${ICON.lock}<span>${u.ctxTrust}</span></div>`;
+        `<div class="fa-ctx-trust" data-fa-trust>${ICON.lock}<span data-fa-trust-text>${dynamicUi.privacy}</span></div>` +
+        `<button type="button" class="fa-ctx-mode" data-fa-mode-toggle>${dynamicUi.modeToggle}</button>` +
+        autoActMarkup();
     }
 
     const body = `
@@ -4515,8 +5033,14 @@
       </div>`;
 
     const res = window.Kiwi.drawer({
-      title: u.title,
-      subtitle: u.subtitle,
+      title: dynamicUi.title,
+      subtitle: (() => {
+        try {
+          return window.KiwiFeatureGuide && window.KiwiFeatureGuide.assistantSubtitle
+            ? window.KiwiFeatureGuide.assistantSubtitle(L, B.trade)
+            : u.subtitle;
+        } catch (_) { return u.subtitle; }
+      })(),
       body,
       fullpage: true,
     });
@@ -4558,6 +5082,42 @@
       return m;
     }
 
+    /* L'exécution vit ici, et pas dans le classifieur : `respond()` est
+       synchrone et rend une carte tout de suite. Résoudre « la 12 » en
+       identifiant demande un aller-retour réseau, et il ne doit avoir lieu
+       qu'après le clic — sinon le simple fait de poser la question aurait déjà
+       parlé au serveur. */
+    async function runOperation(btn) {
+      const o = opCopy();
+      const K = window.KiwiOperations;
+      const wanted = btn.getAttribute('data-fa-status') || '';
+      const number = Number(btn.getAttribute('data-fa-number')) || 0;
+      const said = btn.getAttribute('data-fa-said') || '';
+      btn.textContent = o.working;
+      const typing = pushTyping();
+      const done = (text) => { typing.remove(); pushAgent(replyHtml({ text: text })); };
+      if (!K || typeof K.agentRun !== 'function') { done(o.absent); return; }
+      let out;
+      try {
+        const inbox = await K.orders({ open: true, limit: 120 });
+        if (inbox && inbox.unavailable) { done(o.off); return; }
+        const hit = ((inbox && inbox.orders) || []).filter((row) => Number(row.number) === number);
+        if (!hit.length) { done(o.unknown(number)); return; }
+        /* Deux tickets ouverts au même numéro ne devraient pas exister — la
+           numérotation est hebdomadaire et par commerçant. Si cela arrive, on
+           refuse plutôt que de tirer au sort. */
+        if (hit.length > 1) { done(o.ambiguous(number)); return; }
+        out = await K.agentRun('update-order-status', { orderId: hit[0].id, status: wanted }, said);
+      } catch (error) {
+        done(opWhy(o, (error && error.code) || 'reseau', number));
+        return;
+      }
+      const cmd = (out && out.command) || {};
+      if (cmd.status === 'completed') { done(o.done(number, o.state[wanted] || wanted)); return; }
+      if (cmd.status === 'queued-offline') { done(o.queued(number)); return; }
+      done(opWhy(o, cmd.lastError || cmd.status, number));
+    }
+
     function ask(text) {
       const t = (text || '').trim();
       if (!t) return;
@@ -4577,6 +5137,23 @@
         qLength: t.length,
       });
       if (reply) {
+        /* Le moteur de décision et le modèle travaillent ENSEMBLE, pas l'un
+         * après l'autre. Quand le nuage est accepté, le brouillon déterministe
+         * s'affiche tout de suite — chiffres instantanés, calculés par notre
+         * code — puis le modèle le reformule dans la même bulle, dans la
+         * langue de la question, en tenant le fil de la conversation, et va
+         * chercher par un outil ce que le brouillon n'a pas. Ses chiffres sont
+         * vérifiés contre les faits du tour : ce qu'il ne tient ni du moteur
+         * ni d'un outil est retiré. S'il échoue, le brouillon reste. Sans
+         * consentement nuage : le brouillon, comme avant. Un refus ou une
+         * réponse sur les livres d'un autre n'ont rien à gagner à une
+         * reformulation : ils restent déterministes. */
+        const collaborate = !reply.refused && !reply.run && cloudAccepted() && window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal();
+        if (collaborate) {
+          const bubble = pushAgent(replyHtml(reply));
+          runLlm(t, { reply, bubble });
+          return;
+        }
         const typing = pushTyping();
         setTimeout(() => { typing.remove(); pushAgent(replyHtml(reply)); }, 460 + Math.random() * 300);
         return;
@@ -4591,165 +5168,205 @@
       } catch (_) {}
     }
 
-    /* The deterministic-only answer: what Kiwi computes, said plainly. Used
-     * when the device cannot run the model and when the merchant has turned it
-     * off — never as a shrug, always with the list of what still works. */
+    /* Le panneau dit le mode courant ; on le repeint quand il change. */
+    function refreshTrustLine() {
+      const u = assistantUiCopy();
+      root.querySelectorAll('[data-fa-trust-text]').forEach((el) => { el.textContent = u.privacy; });
+      root.querySelectorAll('[data-fa-mode-toggle]').forEach((el) => { el.textContent = u.modeToggle; });
+      const ac = ACTION_COPY[L] || ACTION_COPY.fr;
+      root.querySelectorAll('[data-fa-auto-text]').forEach((el) => { el.textContent = autoActOn() ? ac.autoOn : ac.autoOff; });
+      root.querySelectorAll('[data-fa-auto-toggle]').forEach((el) => { el.textContent = autoActOn() ? ac.autoToggleOn : ac.autoToggleOff; });
+    }
+    /* The switch is visible only to the owner after server AI consent. */
+    function autoActMarkup() {
+      if (accessTier() !== 'owner' || !cloudAccepted()) return '';
+      const ac = ACTION_COPY[L] || ACTION_COPY.fr;
+      return `<div class="fa-ctx-trust" data-fa-auto>${ICON.lock}<span data-fa-auto-text>${autoActOn() ? ac.autoOn : ac.autoOff}</span></div>` +
+        `<button type="button" class="fa-ctx-mode" data-fa-auto-toggle>${autoActOn() ? ac.autoToggleOn : ac.autoToggleOff}</button>`;
+    }
+
+    /* Hors calculs et sans modèle : on le dit, avec la liste de ce qui
+     * marche toujours — jamais un haussement d'épaules. */
     function deterministicOnly(why) {
       const m = tr().llm;
-      const lead = why && m[why] ? m[why] : m.noGpu;
+      const lead = why === 'private' ? m.privateLead : m.unavailable;
       pushAgent(replyHtml({
-        text: why && m[why] ? lead + ' ' + m.unfitTail : lead,
+        text: lead + ' ' + m.unfitTail,
         follow: [tr().chips.charges, tr().chips.breakeven],
       }));
     }
 
-    async function routeToLlm(question) {
+    /* Le consentement, une fois. La question attend dans la file ; « oui »
+     * l'envoie, « non » est gardé (mode privé) et se change dans le panneau. */
+    function offerCloud(question) {
       const m = tr().llm;
-      if (LLM.status === 'ready') { runLlm(question); return; }
-      if (llmDisabled()) { deterministicOnly('noGpu'); return; }
-      if (LLM.status === 'loading') {
-        /* Queue. The old line was `LLM.pending = question`, so asking a second
-         * thing during a 1,2 Go download threw the first one away in silence. */
-        LLM.pending.push(question);
-        pushAgent(replyHtml({ text: m.loading(Math.round(LLM.progress * 100)) + ' ' + m.queued(LLM.pending.length) }));
-        return;
-      }
-      /* Ask the machine before asking the merchant. A device that will fail at
-       * 94 % should be told so at 0 %. */
-      const cap = await llmCapability();
-      if (!cap.ok) {
-        if (cap.why !== 'noGpu') disableLlm();
-        deterministicOnly(cap.why);
-        return;
-      }
       LLM.pending.push(question);
       pushAgent(
-        `<div>${m.offerLead}</div>
-         <div class="fa-note" style="font-style:normal;">${m.offerSize(LLM.sizeLabel)}</div>
-         <div class="fa-follow"><button type="button" class="fa-llm-btn" data-fa-activate>${m.activate}</button></div>`);
+        `<div>${m.cloudLead}</div>
+         <div class="fa-note" style="font-style:normal;">${m.cloudPrivacy}</div>
+         <div class="fa-follow"><button type="button" class="fa-llm-btn" data-fa-cloud>${m.cloudActivate}</button>`
+        + `<button type="button" class="fa-llm-btn" data-fa-cloud-no>${m.cloudDecline}</button></div>`);
     }
 
-    async function activateLlm() {
-      if (LLM.status === 'loading' || LLM.status === 'ready') return;
-      const m = tr().llm;
-      LLM.status = 'loading';
-      LLM.cancelled = false;
-      LLM.diag = diagCode();
-      LLM.lastProgressAt = Date.now();
-      /* A cancel button, because 1,2 Go on shop wifi is a decision a merchant
-       * is allowed to change their mind about — and because a progress bar
-       * with no way out is what makes people close the tab on the whole app. */
-      const card = pushAgent(
-        `<div>${m.installing}</div>
-         <div class="fa-llm-prog"><div class="fa-llm-bar" data-fa-bar></div></div>
-         <div class="fa-llm-ptxt" data-fa-ptxt>${m.initializing}</div>
-         <div class="fa-follow"><button type="button" class="fa-llm-btn" data-fa-cancel-llm>${m.cancel}</button></div>`);
-      const bar = card.querySelector('[data-fa-bar]');
-      const ptxt = card.querySelector('[data-fa-ptxt]');
-      /* WebLLM offers no timeout and no abort. A transfer that dies mid-way
-       * simply stops calling back, so the bar freezes at 61 % for ever. Watch
-       * the callback clock instead and give up out loud. */
-      const stall = setInterval(() => {
-        if (LLM.status !== 'loading') { clearInterval(stall); return; }
-        if (Date.now() - LLM.lastProgressAt < LLM_STALL_MS) return;
-        clearInterval(stall);
-        LLM.cancelled = true;
-        LLM.status = 'error';
-        LLM.pending.length = 0;
-        try { card.remove(); } catch (_) {}
-        pushAgent(replyHtml({ text: m.timeout, note: m.diag(LLM.diag) }));
-      }, 4000);
-      const done = () => { try { clearInterval(stall); } catch (_) {} };
-      try {
-        const webllm = await import(LLM.cdn);
-        /* The model's WASM lib defaults to raw.githubusercontent.com, which many
-         * ISPs, firewalls and privacy/ad-blocker extensions drop — causing a
-         * "Failed to fetch" before the download even starts. Swap it for
-         * jsDelivr's GitHub mirror (a real CDN with proper CORS) so activation
-         * works on real networks. Weights still come from Hugging Face. */
-        const base = webllm.prebuiltAppConfig;
-        const appConfig = {
-          ...base,
-          model_list: base.model_list.map((mm) => mm.model_lib && mm.model_lib.includes('raw.githubusercontent.com')
-            ? { ...mm, model_lib: mm.model_lib.replace(/https:\/\/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/([^/]+)\//, 'https://cdn.jsdelivr.net/gh/$1/$2@$3/') }
-            : mm),
-        };
-        LLM.engine = await webllm.CreateMLCEngine(LLM.model, {
-          appConfig,
-          initProgressCallback: (p) => {
-            LLM.lastProgressAt = Date.now();   // feeds the stall watchdog
-            LLM.progress = p.progress || 0;
-            if (bar) bar.style.width = Math.round(LLM.progress * 100) + '%';
-            if (ptxt) ptxt.textContent = p.text || `${Math.round(LLM.progress * 100)} %`;
-          },
-        });
-        done();
-        /* Cancelled while the weights were still arriving: the engine resolves
-         * anyway, and we must not silently light it up after the merchant said
-         * no. Drop it and leave the door open for later. */
-        if (LLM.cancelled) { LLM.status = 'idle'; LLM.engine = null; return; }
-        LLM.status = 'ready';
-        logAi({ route: 'llm-activate', provenance: 'deterministic', ms: 0, qLength: 0 });
-        if (bar) bar.style.width = '100%';
-        if (ptxt) ptxt.textContent = m.ready;
-        const cancelBtn = card.querySelector('[data-fa-cancel-llm]');
-        if (cancelBtn) cancelBtn.remove();
-        pushAgent(replyHtml({ text: m.readyMsg }));
-        /* Drain the whole queue, oldest first — every question the merchant
-         * asked while waiting gets its answer, in the order they asked. */
-        const queued = LLM.pending.slice();
-        LLM.pending.length = 0;
-        for (const q of queued) { await runLlm(q); }
-      } catch (e) {
-        done();
-        if (LLM.cancelled) { LLM.status = 'idle'; return; }
-        console.error('[Kiwi] In-browser LLM failed to load:', LLM.diag, e);
-        /* Into the same buffer the support team already reads
-         * (window.KiwiErrors.report()), tagged with the code shown on screen. */
-        try { window.dispatchEvent(new ErrorEvent('error', { message: 'LLM ' + LLM.diag + ': ' + (e && e.message), filename: 'agent.js' })); } catch (_) {}
-        LLM.status = 'error';
-        logAi({ route: 'llm-activate', provenance: 'error', ms: 0, qLength: 0, diag: LLM.diag });
-        LLM.pending.length = 0;
-        if (ptxt) ptxt.textContent = m.loadFail;
-        pushAgent(replyHtml({ text: m.loadFailMsg, note: m.diag(LLM.diag) }));
-      }
-    }
-
-    /* The merchant changed their mind. Mark it before the engine resolves so
-     * the success path knows to throw the result away. */
-    function cancelLlm() {
-      if (LLM.status !== 'loading') return;
-      LLM.cancelled = true;
-      LLM.status = 'idle';
+    async function acceptCloud() {
+      setCloud(true);
+      refreshTrustLine();
+      const queued = LLM.pending.slice();
       LLM.pending.length = 0;
-      pushAgent(replyHtml({ text: tr().llm.cancelled }));
+      for (const q of queued) await runLlm(q);
     }
 
-    async function runLlm(question) {
+    function declineCloud() {
+      setCloud(false);
+      refreshTrustLine();
+      LLM.pending.length = 0;
+      deterministicOnly('private');
+    }
+
+    function routeToLlm(question) {
+      if (cloudDeclined()) { deterministicOnly('private'); return; }
+      if (cloudAccepted()) { runLlm(question); return; }
+      offerCloud(question);
+    }
+
+    /* Le serveur rend du SSE sur HTTP ; on le ramène à un flux de bouts de
+     * texte pour que découpage par phrase, redactUnsupported(), note de garde,
+     * télémétrie, boutons d'avis et historique expurgé soient écrits UNE fois. */
+    /* Premier tour : le modèle voit la question, les faits et la liste des
+     * outils, et répond soit par des appels d'outils, soit directement (texte
+     * entier, non streamé). Une réponse JSON, pas un flux. */
+    async function cloudToolRound(messages) {
+      const res = await fetch('/api/ai/ask', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ messages, tools: LLM_TOOLS, round: 'tools' }),
+      });
+      let j = null;
+      try { j = await res.json(); } catch (_) { j = null; }
+      if (!res.ok || !j || !j.ok) {
+        const err = new Error('cloud:' + ((j && j.error) || res.status));
+        err.kiwiCode = (j && j.error) || '';
+        throw err;
+      }
+      return j;
+    }
+    async function cloudDeltas(messages) {
+      const res = await fetch('/api/ai/ask', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ messages, tools: LLM_TOOLS, round: 'answer' }),
+      });
+      if (!res.ok || !res.body) {
+        /* L'endpoint nomme sa panne — binding absent, quota du jour, session
+         * expirée, modèle en échec. On la remonte telle quelle pour que
+         * l'appelant puisse retomber sur le message d'avant plutôt que
+         * d'afficher une erreur brute. */
+        let code = '';
+        try { const j = await res.json(); code = (j && j.error) || ''; } catch (_) {}
+        const err = new Error('cloud:' + (code || res.status));
+        err.kiwiCode = code;
+        throw err;
+      }
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      return (async function* () {
+        let buf = '';
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          /* Une lecture réseau peut couper une ligne SSE en deux : seules les
+           * lignes complètes sortent du tampon. */
+          let i;
+          while ((i = buf.indexOf('\n')) >= 0) {
+            const line = buf.slice(0, i).trim();
+            buf = buf.slice(i + 1);
+            if (line.slice(0, 5) !== 'data:') continue;
+            const payload = line.slice(5).trim();
+            if (!payload || payload === '[DONE]') continue;
+            try {
+              const t = llmChunkText(JSON.parse(payload));
+              if (t) yield t;
+            } catch (_) { /* trame partielle ou commentaire : on ignore */ }
+          }
+        }
+        /* Un flux qui se termine sans saut de ligne final laisserait sa
+         * dernière phrase dans le tampon. On la rend quand même. */
+        const tail = buf.trim();
+        if (tail.slice(0, 5) === 'data:') {
+          const payload = tail.slice(5).trim();
+          if (payload && payload !== '[DONE]') {
+            try {
+              const t = llmChunkText(JSON.parse(payload));
+              if (t) yield t;
+            } catch (_) {}
+          }
+        }
+      })();
+    }
+
+    /* Deux tours au plus. Tour 1 (JSON) : faits + outils, le modèle demande
+     * des lectures ou répond. Tour 2 (flux) : les résultats d'outils sont
+     * renvoyés, tool_choice 'none', le modèle rédige. Les résultats passent
+     * par noteTurnFacts AVANT le rendu : le redacteur les connaît. */
+    async function llmAnswerStream(messages) {
+      const r1 = await cloudToolRound(messages);
+      const calls = Array.isArray(r1.tool_calls) ? r1.tool_calls.slice(0, 4) : [];
+      if (!calls.length) {
+        const text = typeof r1.text === 'string' ? r1.text : '';
+        return { deltas: (async function* () { if (text) yield text; })(), tools: 0 };
+      }
+      const results = [];
+      for (const c of calls) {
+        let args = {};
+        try { args = typeof c.arguments === 'string' ? JSON.parse(c.arguments) : (c.arguments || {}); } catch (_) { args = {}; }
+        const out = await runTool(String(c.name || ''), args);
+        noteTurnFacts(out);
+        noteTurnEvidence(String(c.name || ''), args, out);
+        results.push({ id: String(c.id || ''), name: String(c.name || ''), content: toolResultText(out) });
+      }
+      const toolMsgs = [
+        { role: 'assistant', content: '', tool_calls: calls.map((c) => ({ id: String(c.id || ''), type: 'function', function: { name: String(c.name || ''), arguments: typeof c.arguments === 'string' ? c.arguments : JSON.stringify(c.arguments || {}) } })) },
+        ...results.map((r) => ({ role: 'tool', tool_call_id: r.id, name: r.name, content: r.content })),
+      ];
+      return { deltas: await cloudDeltas([...messages, ...toolMsgs]), tools: calls.length };
+    }
+
+    async function runLlm(question, draft) {
       const tLlm = Date.now();
-      const typing = pushTyping();
+      const hasDraft = !!(draft && draft.bubble);
+      const typing = hasDraft ? null : pushTyping();
+      clearTurnFacts();
       llmHistory.push({ role: 'user', content: question });
       /* No `/no_think` suffix: that was Qwen3's switch and Qwen3.5 removed it
        * (its template is non-thinking unless enable_thinking:true is passed).
        * Appending it now would only pollute the system prompt. */
       const sys = buildSystemPrompt(detectQLang(question));
-      const messages = [{ role: 'system', content: sys }, ...llmHistory.slice(-8)];
+      const facts = hasDraft ? draftFacts(draft.reply) : '';
+      if (facts) noteTurnFacts(facts);
+      LLM.proposals = [];
+      const messages = [{ role: 'system', content: sys }, { role: 'system', content: TOOLS_RULE }]
+        .concat(facts ? [{ role: 'system', content: FACTS_LEAD + facts }] : [])
+        .concat(llmHistory.slice(-8));
       try {
-        const stream = await LLM.engine.chat.completions.create({
-          messages,
-          /* Deliberately below Qwen3.5's packaged default (temp 1.0 / top_p
-           * 1.0): this assistant answers with the merchant's real money, so
-           * the failure we most need to suppress is an invented MAD figure.
-           * 0.7/0.8 stays clear of the repetition that greedy decoding
-           * triggers while keeping output tight against the grounding. */
-          temperature: 0.7,
-          top_p: 0.8,
-          stream: true,
-        });
-        typing.remove();
+        const run = await llmAnswerStream(messages);
+        const deltas = run.deltas;
+        if (typing) typing.remove();
         LLM.cancelled = false;
-        const bubble = pushAgent('<span data-fa-stream></span><div class="fa-follow" data-fa-stopwrap><button type="button" class="fa-llm-btn" data-fa-stop-llm>' + tr().llm.stop + '</button></div>');
-        const target = bubble.querySelector('[data-fa-stream]');
+        let bubble, target, draftText = '';
+        if (hasDraft) {
+          /* Même bulle : le texte du brouillon est remplacé phrase par phrase,
+           * les statistiques, boutons et pistes restent. Si rien n'arrive, le
+           * brouillon est encore là. */
+          bubble = draft.bubble;
+          target = bubble.querySelector(':scope > div') || bubble;
+          draftText = target.textContent;
+        } else {
+          bubble = pushAgent('<span data-fa-stream></span><div class="fa-follow" data-fa-stopwrap><button type="button" class="fa-llm-btn" data-fa-stop-llm>' + tr().llm.stop + '</button></div>');
+          target = bubble.querySelector('[data-fa-stream]');
+        }
         let acc = '';
         /* Stream by SETTLED SENTENCE, not by token. The redactor works on whole
          * clauses — it has to, since "is this a hypothesis or a claim?" is only
@@ -4759,9 +5376,9 @@
          * reading over the till does not get that second back. */
         const SETTLED = /[\s\S]*[.!?\n؟]/;
         let shown = 0;
-        for await (const chunk of stream) {
+        for await (const piece of deltas) {
           if (LLM.cancelled) break;
-          acc += chunk.choices?.[0]?.delta?.content || '';
+          acc += piece;
           const m = stripThink(acc).match(SETTLED);
           const settled = m ? m[0] : '';
           if (settled.length > shown) {
@@ -4777,7 +5394,10 @@
          * redactUnsupported). redacted === -1 means the detector itself threw:
          * an answer we could not check is an answer we do not show. */
         const red = redactUnsupported(clean, L);
-        if (target) target.textContent = red.redacted === -1 ? tr().llm.runErr : red.text;
+        if (target) {
+          if (hasDraft && (red.redacted === -1 || !red.text.trim())) target.textContent = draftText;
+          else target.textContent = red.redacted === -1 ? tr().llm.runErr : red.text;
+        }
         if (bubble && red.redacted > 0) {
           const note = document.createElement('div');
           note.className = 'fa-note';
@@ -4792,14 +5412,40 @@
           cav.textContent = red.caveat;
           bubble.appendChild(cav);
         }
-        logAi({ route: 'model', provenance: red.redacted === -1 ? 'error' : 'model', ms: Date.now() - tLlm, qLength: question.length, redacted: Math.max(0, red.redacted) });
+        logAi({ route: hasDraft ? 'cloud+deterministic' : 'cloud', provenance: red.redacted === -1 ? 'error' : 'model', ms: Date.now() - tLlm, qLength: question.length, redacted: Math.max(0, red.redacted), tools: run.tools });
+        /* Ce que le modèle a PROPOSÉ attend un doigt : un bouton par action,
+         * avec le résumé exact, qui appelle le même confirm que le reste. */
+        if (bubble && LLM.proposals.length) {
+          const ac = ACTION_COPY[L] || ACTION_COPY.fr;
+          LLM.proposals.forEach((pr) => {
+            const row = document.createElement('div');
+            row.className = 'fa-follow';
+            row.innerHTML = '<button type="button" class="fa-llm-btn" data-fa-confirm="' + escAttr(pr.token) + '">' + ac.confirm + ' · ' + escHtml(pr.summary || pr.action) + '</button>'
+              + '<button type="button" class="fa-llm-btn" data-fa-confirm-no="' + escAttr(pr.token) + '">' + ac.cancel + '</button>';
+            bubble.appendChild(row);
+          });
+          LLM.proposals = [];
+        }
+        if (bubble && TURN_EVIDENCE.length) {
+          const evidence = document.createElement('div');
+          evidence.className = 'fa-evidence';
+          TURN_EVIDENCE.forEach((ev) => {
+            const chip = document.createElement(ev.open ? 'button' : 'span');
+            if (ev.open) { chip.type = 'button'; chip.setAttribute('data-fa-open', ev.open); }
+            chip.className = 'fa-evidence-chip';
+            chip.title = 'Source: ' + ev.source;
+            chip.textContent = [ev.volume, ev.period, ev.source].filter(Boolean).join(' · ');
+            evidence.appendChild(chip);
+          });
+          bubble.appendChild(evidence);
+        }
         /* The merchant's own verdict — the only signal that says whether the
          * answer was any good. Two buttons, no free text, nothing transmitted. */
         if (bubble && red.redacted !== -1) {
           const rate = document.createElement('div');
           rate.className = 'fa-follow';
-          rate.innerHTML = '<button type="button" class="fa-rate" data-fa-rate="up" aria-label="Utile">👍</button>'
-            + '<button type="button" class="fa-rate" data-fa-rate="down" aria-label="Pas utile">👎</button>';
+          rate.innerHTML = '<button type="button" class="fa-rate" data-fa-rate="up" aria-label="Utile"><i data-lucide="thumbs-up" width="17" height="17" aria-hidden="true"></i></button>'
+            + '<button type="button" class="fa-rate" data-fa-rate="down" aria-label="Pas utile"><i data-lucide="thumbs-down" width="17" height="17" aria-hidden="true"></i></button>';
           bubble.appendChild(rate);
         }
         scrollDown();
@@ -4809,8 +5455,22 @@
          * guidance is to keep prior thinking content out of history anyway. */
         llmHistory.push({ role: 'assistant', content: red.redacted === -1 ? '' : red.text });
       } catch (e) {
-        typing.remove();
-        pushAgent(replyHtml({ text: tr().llm.runErr }));
+        if (typing) typing.remove();
+        /* Avec un brouillon déterministe à l'écran, une panne du modèle ne
+         * vaut pas un message : le commerçant a déjà sa réponse. */
+        if (hasDraft) { llmHistory.push({ role: 'assistant', content: draftFacts(draft.reply).slice(0, 600) }); return; }
+        /* La route serveur nomme sa panne. Binding absent, session expirée,
+         * modèle en échec : le commerçant n'a pas à lire ça — il retrouve
+         * simplement la réponse déterministe qu'il avait avant que cette route
+         * existe. Le quota, lui, se dit : c'est temporaire et il repart demain. */
+        const code = e && e.kiwiCode;
+        if (code === 'quota') {
+          pushAgent(replyHtml({ text: tr().llm.cloudQuota }));
+        } else if (code === 'unbound' || code === 'auth' || code === 'model' || code === 'messages' || code === 'body') {
+          deterministicOnly('unavailable');
+        } else {
+          pushAgent(replyHtml({ text: tr().llm.runErr }));
+        }
       }
     }
 
@@ -4842,8 +5502,10 @@
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
     });
     input.addEventListener('input', () => {
-      input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 130) + 'px';
+      input.style.height = '22px';
+      if (input.scrollHeight > 24) {
+        input.style.height = Math.min(input.scrollHeight, 130) + 'px';
+      }
     });
 
     // ─── chips + follow-ups + facts (delegated) ───
@@ -4869,8 +5531,41 @@
         }, 360);
         return;
       }
-      if (e.target.closest('[data-fa-activate]')) { activateLlm(); return; }
-      if (e.target.closest('[data-fa-cancel-llm]')) { cancelLlm(); return; }
+      const runBtn = e.target.closest('[data-fa-run]');
+      if (runBtn) {
+        /* Un ordre ne part qu'une fois : le second clic ne doit pas rejouer la
+           transition, même si le premier est encore en vol. */
+        if (runBtn.disabled) return;
+        runBtn.disabled = true;
+        runOperation(runBtn);
+        return;
+      }
+      if (e.target.closest('[data-fa-cloud]')) { acceptCloud(); return; }
+      if (e.target.closest('[data-fa-cloud-no]')) { declineCloud(); return; }
+      if (e.target.closest('[data-fa-mode-toggle]')) { setCloud(!cloudAccepted()); refreshTrustLine(); return; }
+      if (e.target.closest('[data-fa-auto-toggle]')) { if (accessTier() === 'owner') setAutoAct(!autoActOn()); refreshTrustLine(); return; }
+      const confirmBtn = e.target.closest('[data-fa-confirm]');
+      if (confirmBtn) {
+        if (confirmBtn.disabled) return;
+        const row = confirmBtn.parentElement; const token = confirmBtn.getAttribute('data-fa-confirm');
+        const ac = ACTION_COPY[L] || ACTION_COPY.fr;
+        row.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+        const A = window.KiwiAgentActions;
+        Promise.resolve().then(() => A && A.confirm ? A.confirm(token) : { ok: false, reason: 'unavailable' }).then((res) => {
+          const okRes = !!(res && res.ok);
+          row.textContent = okRes ? ac.done : (res && res.reason === 'expired' ? ac.expired : ac.refused + (res && res.reason ? ' (' + res.reason + ')' : ''));
+          logAi({ route: 'action', provenance: okRes ? 'executed' : 'refused', ms: 0, qLength: 0 });
+        }, () => { row.textContent = ac.refused; });
+        return;
+      }
+      const cancelBtn = e.target.closest('[data-fa-confirm-no]');
+      if (cancelBtn) {
+        const row = cancelBtn.parentElement;
+        const A = window.KiwiAgentActions;
+        if (A && A.cancel) A.cancel(cancelBtn.getAttribute('data-fa-confirm-no'));
+        row.textContent = (ACTION_COPY[L] || ACTION_COPY.fr).cancelled;
+        return;
+      }
       const rateBtn = e.target.closest('[data-fa-rate]');
       if (rateBtn) {
         try { window.KiwiAiTelemetry && window.KiwiAiTelemetry.rate(rateBtn.getAttribute('data-fa-rate')); } catch (_) {}
@@ -4938,12 +5633,18 @@
   }
 
   /* ─────────────── REGISTER ─────────────── */
+  window.KiwiAgent = { open, resetConversation, syncProfile, ask: (q) => { open(q); } };
+  window.__kiwiAgentOpen = open;
   function register() {
-    if (!window.Kiwi || !window.Kiwi.handlers) { setTimeout(register, 80); return; }
+    if (!window.Kiwi) window.Kiwi = {};
+    if (!window.Kiwi.handlers) window.Kiwi.handlers = {};
     window.Kiwi.handlers['nav-assistant'] = open;
     window.Kiwi.handlers['open-assistant'] = open;
   }
   register();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', register);
+  }
 
   /* Keep the active profile in lockstep with the venue switcher — AND drop
    * everything the previous establishment said.

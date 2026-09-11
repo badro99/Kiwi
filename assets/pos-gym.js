@@ -2,7 +2,7 @@
  * Kiwi · SALLE DE SPORT — Atlas Fitness (PIN 0015), via assets/pos-dispatch.js
  * ---------------------------------------------------------------------------
  * Le comptoir d'une salle de sport tient sur un geste : le check-in. Un membre
- * présente son code, l'écran flashe VERT (« Marhba Omar — abonnement jusqu'au
+ * présente son code, l'écran flashe VERT (« Bienvenue Omar — abonnement jusqu'au
  * 28 août ») ou ROUGE (« Expiré depuis 12 jours ») avec, en un tap, le
  * renouvellement qui ouvre le kit d'encaissement. Autour : la vente/renouvelle-
  * ment d'abonnements (mensuel, trimestriel, annuel, étudiant –20 %, gel
@@ -31,8 +31,8 @@
 
   /* real-store detection : neutralize seeded demo PEOPLE for a paired merchant,
      while the local demo (pvReal() === false) stays byte-identical. */
-  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
-  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvPaired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
   function pvName(demo) { const p = pvPaired(); return (p && p.name) || (pvReal() ? '' : demo); }
   function pvCity(demo) { const p = pvPaired(); return (p && p.location) || (pvReal() ? '' : demo); }
   const DAYS   = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
@@ -274,7 +274,67 @@
   const passagesToday = () => MEMBERS.reduce((s, m) => s + (m.checkedToday ? 1 : 0), 0) + BASE_PASSAGES;
   let BASE_PASSAGES = 23 - MEMBERS.filter((m) => m.checkedToday).length;  /* keep live counter at 23 at boot */
 
+  const gymOps = window.KiwiVerticalState && window.KiwiVerticalState.register({
+    vertical: 'gym',
+    snapshot() {
+      return {
+        plans: PLANS,
+        shop: SHOP,
+        coaches: COACHES,
+        classes: CLASSES,
+        schedule: SCHEDULE,
+        ptToday: PT_TODAY,
+        club: CLUB,
+        members: MEMBERS,
+        peakSlots: PEAK_SLOTS,
+        basePassages: BASE_PASSAGES,
+        cart: state.cart,
+        dayRevenue: state.dayRevenue,
+        inGym: state.inGym,
+        passesToday: state.passesToday,
+      };
+    },
+    restore(saved) {
+      if (!saved || typeof saved !== 'object') return;
+      if (Array.isArray(saved.plans)) PLANS.splice(0, PLANS.length, ...saved.plans);
+      Object.keys(PLAN).forEach((id) => delete PLAN[id]);
+      PLANS.forEach((plan) => { PLAN[plan.id] = plan; });
+      if (Array.isArray(saved.shop)) SHOP.splice(0, SHOP.length, ...saved.shop);
+      Object.keys(SHOP_ITEM).forEach((id) => delete SHOP_ITEM[id]);
+      SHOP.forEach((item) => { SHOP_ITEM[item.id] = item; });
+      if (Array.isArray(saved.coaches)) COACHES.splice(0, COACHES.length, ...saved.coaches);
+      Object.keys(COACH).forEach((id) => delete COACH[id]);
+      Object.keys(COACH_BY_NAME).forEach((name) => delete COACH_BY_NAME[name]);
+      COACHES.forEach((coach) => { COACH[coach.id] = coach; COACH_BY_NAME[coach.name] = coach; });
+      if (Array.isArray(saved.classes)) CLASSES.splice(0, CLASSES.length, ...saved.classes);
+      Object.keys(CLASS).forEach((id) => delete CLASS[id]);
+      CLASSES.forEach((klass) => { CLASS[klass.id] = klass; });
+      if (Array.isArray(saved.schedule)) SCHEDULE.splice(0, SCHEDULE.length, ...saved.schedule);
+      if (saved.ptToday && typeof saved.ptToday === 'object') {
+        Object.keys(PT_TODAY).forEach((id) => delete PT_TODAY[id]);
+        Object.assign(PT_TODAY, saved.ptToday);
+      }
+      if (saved.club && typeof saved.club === 'object') {
+        Object.keys(CLUB).forEach((key) => delete CLUB[key]);
+        Object.assign(CLUB, saved.club);
+      }
+      if (Array.isArray(saved.members)) MEMBERS.splice(0, MEMBERS.length, ...saved.members);
+      MEMBERS.forEach((member) => {
+        ['start', 'end', 'frozenUntil'].forEach((key) => { if (member[key]) member[key] = new Date(member[key]); });
+      });
+      Object.keys(MEMBER).forEach((id) => delete MEMBER[id]);
+      MEMBERS.forEach((member) => { MEMBER[member.id] = member; });
+      if (Array.isArray(saved.peakSlots)) PEAK_SLOTS.splice(0, PEAK_SLOTS.length, ...saved.peakSlots);
+      if (Number.isFinite(saved.basePassages)) BASE_PASSAGES = saved.basePassages;
+      if (Array.isArray(saved.cart)) state.cart = saved.cart;
+      if (saved.dayRevenue && typeof saved.dayRevenue === 'object') state.dayRevenue = saved.dayRevenue;
+      if (Number.isFinite(saved.inGym)) state.inGym = saved.inGym;
+      if (Number.isFinite(saved.passesToday)) state.passesToday = saved.passesToday;
+    },
+  });
+
   function queueIfOffline(label) {
+    if (gymOps) gymOps.save(label);
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -288,9 +348,9 @@
      shop, coaching, pass), pas par moyen de paiement. Le journal ne retient
      que le moyen de paiement, donc il n'y a rien à recréditer sans inventer
      une ligne — mieux vaut ne rien restaurer que fausser la ventilation. */
-  function postDay(total, method, label, ref) {
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('gym', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('gym', { total, method, label, ref, lines });
     } catch (_) {}
   }
   function initials(name) {
@@ -337,10 +397,11 @@
   let root = null;
 
   function mount(rootEl) {
+    if (gymOps) gymOps.hydrate();
     root = rootEl;
     root.innerHTML = `
       <aside class="gy-rail">
-        <div class="gy-brand">kiwi<i></i></div>
+        <div class="gy-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="gy-venue">
           <div class="gy-venue-name">${pvName('Atlas Fitness') || 'Ma salle'}</div>
           <div class="gy-venue-sub">${pvReal() ? (pvCity('') || '') : 'Tanger · Route de Rabat'}<br>Le même Kiwi, <b>un seul compte</b>.</div>
@@ -499,7 +560,10 @@
     const ciInput = $('#gy-ci-input', root);
     ciInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doCheckin(ciInput.value); });
     $('#gy-ci-go', root).addEventListener('click', () => doCheckin(ciInput.value));
-    $('#gy-ci-scanbtn', root).addEventListener('click', mockScan);
+    $('#gy-ci-scanbtn', root).addEventListener('click', () => {
+      if (pvReal()) { ciInput.focus(); toast('Lecteur actif · approchez le badge ou saisissez son code'); }
+      else mockScan();
+    });
     $('#gy-ci-quick', root).addEventListener('click', (e) => {
       const b = e.target.closest('[data-gy-quick]');
       if (b) { ciInput.value = b.dataset.gyQuick; doCheckin(b.dataset.gyQuick); }
@@ -774,7 +838,7 @@
         <div class="gy-ci-card">
           <div class="gy-ci-photo">${esc(initials(m.name))}</div>
           <div class="gy-ci-card-l">
-            <div class="gy-ci-verdict"><i data-lucide="check-circle-2"></i> Marhba ${esc(firstName(m.name))}</div>
+            <div class="gy-ci-verdict"><i data-lucide="check-circle-2"></i> Bienvenue ${esc(firstName(m.name))}</div>
             <div class="gy-ci-name">${esc(m.name)}</div>
             <div class="gy-ci-meta">Abonnement ${esc(PLAN[m.plan].label.toLowerCase())} ${esc(until)} · ${m.coach !== 'Sans coach' ? esc(m.coach) : 'sans coach'}</div>
             ${warn}
@@ -790,7 +854,7 @@
         </div>`;
       icons();
       renderCounter(); renderBadges();
-      toast(`Marhba ${firstName(m.name)}, entrée pointée`);
+      toast(`Bienvenue ${firstName(m.name)}, entrée pointée`);
       restoreCiInput();
       return;
     }
@@ -883,7 +947,7 @@
           ${frozen.length ? `<div class="gy-freeze-list">${frozen.map((m) => `
             <button class="gy-freeze-row" data-gy-exp-fiche="${m.id}">
               <span class="gy-mem-ava frozen">${esc(initials(m.name))}</span>
-              <span class="gy-freeze-row-l"><b>${esc(m.name)}</b><span>reprise le ${esc(m.frozenUntil ? fmtLong(m.frozenUntil) : '—')}</span></span>
+              <span class="gy-freeze-row-l"><b>${esc(m.name)}</b><span>reprise le ${esc(m.frozenUntil ? fmtLong(m.frozenUntil) : '·')}</span></span>
               <span class="gy-pill snow"><i data-lucide="snowflake"></i> en pause</span>
             </button>`).join('')}</div>` : ''}
         </div>`;
@@ -1027,7 +1091,9 @@
       setTimeout(() => openMember(id), 350);
     }
     addRevenue('abos', price);
-    postDay(price, method, `${sel.renew ? 'Renouvellement' : 'Abonnement'} ${PLAN[sel.plan].label.toLowerCase()}${sel.student ? ' · étudiant' : ''}`, sel.member ? sel.member.code : '');
+    postDay(price, method, `${sel.renew ? 'Renouvellement' : 'Abonnement'} ${PLAN[sel.plan].label.toLowerCase()}${sel.student ? ' · étudiant' : ''}`, sel.member ? sel.member.code : '', [
+      { itemId: `abonnement-${sel.plan}`, variantId: sel.student ? 'etudiant' : 'standard', name: PLAN[sel.plan].label, category: 'abonnements', qty: 1, unit: 'abonnement', kind: 'service', total: price },
+    ]);
     refreshOps();
   }
 
@@ -1143,12 +1209,13 @@
       title: 'Comptoir',
       sub: esc(summary),
       onPaid: (method, rendu) => {
+        const lines = state.cart.map((l) => ({ itemId: l.id, name: SHOP_ITEM[l.id].label, category: 'comptoir', qty: l.qty, unit: 'piece', kind: l.id === 'coach' || l.id === 'serviette' ? 'service' : 'product', total: SHOP_ITEM[l.id].price * l.qty }));
         state.cart = [];
         addRevenue('shop', total);
-        postDay(total, method, `Comptoir · ${summary}`, '');
+        postDay(total, method, `Comptoir · ${summary}`, '', lines);
         renderCart(); renderBadges(); icons();
         if (state.view === 'pilotage') renderPilotage();
-        toast(`Khlass, ${fmtMAD(total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+        toast(`${fmtMAD(total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
       },
     });
   }
@@ -1198,7 +1265,7 @@
         <div class="modal-amount size-md">${fmtMAD(cfg.amount)}</div>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="gy-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="gy-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="gy-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${cfg.amount}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1240,17 +1307,18 @@
       setTimeout(() => {
         const disc = $('#gy-reader-disc', el);
         if (!disc || !veil.classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#gy-reader-status', el).textContent = 'Khlass ! Paiement confirmé sur le lecteur';
-        $('#gy-reader-status', el).classList.add('is-success');
-        icons();
-        setTimeout(() => {
-          if (!veil.classList.contains('is-open')) return;
-          close();
-          cfg.onPaid('carte', 0);
-        }, 900);
+        const status = $('#gy-reader-status', el);
+        const hw = window.KiwiHardware;
+        if (!hw || !hw.authorizeCard) { disc.classList.remove('is-pulsing'); status.textContent = 'Paiement non confirmé · lecteur indisponible'; return; }
+        hw.authorizeCard(cfg.amount, disc, status).then((result) => {
+          icons();
+          if (!(result && result.approved)) return;
+          setTimeout(() => {
+            if (!veil.classList.contains('is-open')) return;
+            close();
+            cfg.onPaid('carte', 0);
+          }, 900);
+        });
       }, 1900);
     };
 
@@ -1413,17 +1481,17 @@
       return `Salam ${first} ! On ne t'a pas vu à ${gymVenue} depuis un moment, ton abonnement a expiré il y a ${Math.abs(d)} jours.`
         + `\nReviens quand tu veux : on te garde le tarif ${PLAN[m.plan].label.toLowerCase()} (${planPrice(m.plan, m.student)} MAD) et ${m.coach !== 'Sans coach' ? m.coach + ' t\'attend' : 'un coach pour te relancer'}.`
         + `\nUne séance et on repart fort, nchallah.`
-        + `\n— ${gymVenue}, via Kiwi`;
+        + `\n·${gymVenue}, via Kiwi`;
     }
     if (s === 'expiring') {
       return `Salam ${first} ! Ton abonnement ${gymVenue} se termine ${d === 0 ? "aujourd'hui" : 'dans ' + d + ' jour' + (d > 1 ? 's' : '')}.`
         + `\nRenouvelle dès maintenant pour ne pas couper ton élan, ${PLAN[m.plan].label.toLowerCase()} à ${planPrice(m.plan, m.student)} MAD.`
         + `\nObjectif « ${m.goal} » : on y est presque, lâche rien !`
-        + `\n— ${gymVenue}, via Kiwi`;
+        + `\n·${gymVenue}, via Kiwi`;
     }
     return `Salam ${first} ! Petit message d'${gymVenue}, continue comme ça, ${m.visits} passages ce mois, c'est du sérieux.`
       + `\nBesoin d'un coup de main sur ton objectif « ${m.goal} » ? ${m.coach !== 'Sans coach' ? m.coach : 'Un coach'} est dispo cette semaine.`
-      + `\n— ${gymVenue}, via Kiwi`;
+      + `\n·${gymVenue}, via Kiwi`;
   }
 
   function openWa(m) {
@@ -1490,7 +1558,7 @@
     if (tone === 'offre') {
       return `Salam ${first} ! Offre fidélité ${gymVenue} : renouvelle cette semaine et on t'offre une séance coach + un shaker.`
         + `\n${PLAN[m.plan].label} à ${planPrice(m.plan, m.student)} MAD. On t'attend !`
-        + `\n— ${gymVenue}, via Kiwi`;
+        + `\n·${gymVenue}, via Kiwi`;
     }
     return waMessage(m);
   }
@@ -1854,7 +1922,9 @@
             sel.member.ptCredits += pk.n;
             if (sel.coach && sel.member.coach === 'Sans coach') sel.member.coach = COACH[sel.coach].name;
             addRevenue('coaching', pk.price);
-            postDay(pk.price, method, `Coaching · ${pk.n} séance${pk.n > 1 ? 's' : ''} · ${sel.member.name}`, sel.member.code || '');
+            postDay(pk.price, method, `Coaching · ${pk.n} séance${pk.n > 1 ? 's' : ''} · ${sel.member.name}`, sel.member.code || '', [
+              { itemId: pk.id, variantId: sel.coach || '', name: `Coaching · ${pk.n} séance${pk.n > 1 ? 's' : ''}`, category: 'coaching', qty: pk.n, unit: 'seance', kind: 'service', total: pk.price },
+            ]);
             queueIfOffline('Vente séances coaching');
             toast(`${firstName(sel.member.name)}, ${pk.n} séance${pk.n > 1 ? 's' : ''} ajoutée${pk.n > 1 ? 's' : ''}${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
             refreshOps();
@@ -1982,7 +2052,9 @@
             state.passesToday += 1;
             state.inGym += (p.id === 'duo' ? 2 : 1);
             addRevenue('pass', p.price);
-            postDay(p.price, method, `Pass · ${p.label}`, '');
+            postDay(p.price, method, `Pass · ${p.label}`, '', [
+              { itemId: `pass-${p.id}`, name: p.label, category: 'pass', qty: 1, unit: 'pass', kind: 'service', total: p.price },
+            ]);
             queueIfOffline('Séance unique / pass');
             toast(`${p.label} vendu, accès ouvert${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
             refreshOps();
@@ -2040,8 +2112,8 @@
   window.KiwiPosDispatch.register({
     id: 'gym',
     greet: {
-      line1: 'Sba7 lkhir Coach Amine,',
-      em: 'marhba.',
+      line1: 'Bonjour Coach Amine,',
+      em: 'bienvenue.',
       sub: 'Atlas Fitness <em>·</em> comptoir, check-in du jour',
     },
     mount(rootEl) { mount(rootEl); },

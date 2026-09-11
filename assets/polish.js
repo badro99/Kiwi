@@ -166,7 +166,7 @@
         </div>
         <div class="ctx">${item.ctx}</div>
         <div class="amt">${item.amt.toFixed(2).replace('.', ',')}</div>
-        <div class="tip">${item.tip > 0 ? '+' + item.tip.toFixed(2).replace('.', ',') : '—'}</div>
+        <div class="tip">${item.tip > 0 ? '+' + item.tip.toFixed(2).replace('.', ',') : '·'}</div>
         <div class="more"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></div>
       `;
       feed.insertBefore(row, feed.firstChild);

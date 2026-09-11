@@ -109,7 +109,12 @@
       fetch('/auth/operator', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code }) })
         .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
         .then(function (res) {
-          if (res.ok && res.j && res.j.ok) { window.location.href = res.j.redirect || '/kiwi-admin.html'; return; }
+          /* Destination en dur, pas celle que la réponse propose. Le serveur ne
+           * renvoie qu'une seule valeur (`/kiwi-admin.html`, functions/auth/
+           * operator.js), donc suivre le champ n'apporte rien — mais le jour où
+           * cette réponse serait falsifiée, un code juste enverrait l'opérateur
+           * sur la page d'un tiers, avec sa session fraîchement ouverte. */
+          if (res.ok && res.j && res.j.ok) { window.location.href = '/kiwi-admin.html'; return; }
           err.textContent = 'Code incorrect.'; goBtn.disabled = false;
         })
         .catch(function () { err.textContent = 'Indisponible ici.'; goBtn.disabled = false; });

@@ -688,7 +688,7 @@
           <span class="cf-eq-hist-date">${esc(h.date)}</span>
           <span class="cf-eq-hist-what">${esc(trD(h.what))}</span>
           <span class="cf-eq-hist-tech">${esc(h.tech)}</span>
-          <span class="cf-eq-hist-cost">${h.cost > 0 ? fmtMad(h.cost) : '—'}</span>
+          <span class="cf-eq-hist-cost">${h.cost > 0 ? fmtMad(h.cost) : '·'}</span>
         </div>`).join('')
       : `<div class="cf-eq-hist-empty">${esc(t('eqDetailEmpty'))}</div>`;
     bd.innerHTML = `

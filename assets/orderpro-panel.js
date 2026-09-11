@@ -78,7 +78,7 @@
     try {
       var ndef = new window.NDEFReader();
       await ndef.write({ records: [{ recordType: 'url', data: url }] });
-      msgEl.textContent = 'Tag écrit ✓ — collez-le et testez-le.';
+      msgEl.textContent = 'Tag écrit ✓ · collez-le et testez-le.';
     } catch (e) {
       msgEl.textContent = (e && e.name === 'NotAllowedError')
         ? 'Autorisation NFC refusée.'
@@ -109,7 +109,7 @@
     } else {
       rows.push(row('Tag comptoir · à emporter', 'Commande à emporter, paiement à la caisse.', takeoutLink()));
       for (var i = 1; i <= tableCount; i++) {
-        rows.push(row('Table ' + i, 'Le numéro de table est déjà dans le lien — le client ne le saisit pas.', tableLink(i)));
+        rows.push(row('Table ' + i, 'Le numéro de table est déjà dans le lien · le client ne le saisit pas.', tableLink(i)));
       }
     }
     return '' +
@@ -175,18 +175,7 @@
     document.head.appendChild(s);
   }
 
-  function open() {
-    var Kw = K();
-    if (!Kw || !Kw.drawer) return;
-    if (!merchant()) return;
-    css();
-    var d = Kw.drawer({
-      title: 'Order Pro · tags NFC',
-      subtitle: 'Commande depuis le téléphone du client',
-      width: 560,
-      body: bodyHtml(),
-    });
-    var el = d && d.el;
+  function bindPanel(el) {
     if (!el || !el.querySelector) return;
     var msg = el.querySelector('[data-opp-msg]');
     var pubState = el.querySelector('[data-opp-pub-state]');
@@ -200,9 +189,9 @@
         .then(function (j) {
           if (!j) { pubState.textContent = 'État inconnu (hors ligne ?)'; return; }
           var count = (j.shop && j.shop.products || []).length || (j.menu && j.menu.items || []).length;
-          if (!count) { pubState.textContent = 'Rien de publié — vos clients voient une page vide.'; return; }
+          if (!count) { pubState.textContent = 'Rien de publié · vos clients voient une page vide.'; return; }
           pubState.textContent = count + (j.shop ? ' produit' : ' article') + (count > 1 ? 's' : '') +
-            ' en ligne · ' + (j.name || '—');
+            ' en ligne · ' + (j.name || '·');
         })
         .catch(function () { pubState.textContent = 'État inconnu (hors ligne ?)'; });
     }
@@ -230,13 +219,35 @@
         if (rows) {
           var add = '';
           for (var i = tableCount - 11; i <= tableCount; i++) {
-            add += row('Table ' + i, 'Le numéro de table est déjà dans le lien — le client ne le saisit pas.', tableLink(i));
+            add += row('Table ' + i, 'Le numéro de table est déjà dans le lien · le client ne le saisit pas.', tableLink(i));
           }
           rows.insertAdjacentHTML('beforeend', add);
         }
         return;
       }
     });
+  }
+
+  function mount(el) {
+    if (!el || !merchant()) return false;
+    css();
+    el.innerHTML = bodyHtml();
+    bindPanel(el);
+    return true;
+  }
+
+  function open() {
+    var Kw = K();
+    if (!Kw || !Kw.drawer) return;
+    if (!merchant()) return;
+    css();
+    var d = Kw.drawer({
+      title: 'Order Pro · tags NFC',
+      subtitle: 'Commande depuis le téléphone du client',
+      width: 560,
+      body: bodyHtml(),
+    });
+    bindPanel(d && d.el);
   }
 
   /* ── register with the dashboard ─────────────────────────────────────────── */
@@ -251,6 +262,7 @@
 
   window.KiwiOrderProPanel = {
     open: open,
+    mount: mount,
     enabled: enabled,
     links: function () {
       return { base: browseLink(), takeout: takeoutLink(), table: tableLink };

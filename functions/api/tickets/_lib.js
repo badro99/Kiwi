@@ -48,6 +48,7 @@ export async function purgeExpired(env, now = Date.now()) {
 
   await env.DB.batch([
     env.DB.prepare(`DELETE FROM kiwi_ticket_images WHERE ticket_id IN (${marks})`).bind(...ids),
+    env.DB.prepare(`DELETE FROM kiwi_ticket_followups WHERE ticket_id IN (${marks})`).bind(...ids),
     env.DB.prepare(`DELETE FROM kiwi_tickets WHERE id IN (${marks})`).bind(...ids),
   ]);
   return ids.length;

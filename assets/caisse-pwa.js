@@ -1,9 +1,13 @@
 /* Kiwi Caisse — PWA registration, install affordance, offline reflection. */
 (function () {
   'use strict';
+  // App native (Capacitor) : pas de service worker ni de bouton « Installer » —
+  // le bundle embarqué est versionné par la release (docs/roadmaps/KIWI_APP_PLAN.md §1.4).
+  if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) return;
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/kiwi-sw.js').then(function (reg) {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=553').then(function (reg) {
+        try { reg.update(); } catch (_) {}
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
       }).catch(function () {});
     });
@@ -15,53 +19,212 @@
     showInstall();
   });
 
+  /* Les deux pastilles de ce fichier flottaient dans les coins bas et se
+     posaient sur du contenu : « Installer la caisse » (right:16/bottom:16)
+     atterrissait pile sur le chip carnet de clients (#kcb-chip, right:18/
+     bottom:18) et l'état réseau (left:12/bottom:12) recouvrait la ligne
+     « Sortir » du pied de rail. Elles vivent maintenant DANS ce pied
+     (.quick-actions) : elles prennent leur propre place au lieu de flotter
+     au-dessus de quelque chose. Repli flottant seulement si le pied n'existe
+     pas — et alors au-dessus de la pile de chips établie (18 / 82 / 146). */
+  function railFoot() { return document.querySelector('.quick-actions'); }
+
   function showInstall() {
     if (document.getElementById('kiwi-install')) return;
+    var foot = railFoot();
     var b = document.createElement('button');
     b.id = 'kiwi-install';
-    b.textContent = 'Installer la caisse';
-    b.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:9998;padding:12px 18px;' +
-      'border:0;border-radius:12px;background:#0B6E4F;color:#F7F5F0;font:600 14px/1 "Inter Tight",system-ui;' +
-      'box-shadow:0 8px 24px -8px rgba(11,110,79,.5);cursor:pointer';
+    b.type = 'button';
+    b.title = 'Installer la caisse sur cet appareil';
+    if (foot) {
+      b.className = 'qa-btn ghost';
+      b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/>' +
+        '<line x1="12" y1="15" x2="12" y2="3"/></svg><span>Installer la caisse</span>';
+    } else {
+      b.textContent = 'Installer la caisse';
+      b.style.cssText = 'position:fixed;right:18px;bottom:146px;z-index:9998;padding:12px 18px;' +
+        'border:0;border-radius:12px;background:#0B6E4F;color:#F7F5F0;font:600 14px/1 "Inter Tight",system-ui;' +
+        'box-shadow:0 8px 24px -8px rgba(11,110,79,.5);cursor:pointer';
+    }
     b.addEventListener('click', function () {
       if (!deferred) return;
       deferred.prompt();
       deferred.userChoice.finally(function () { deferred = null; b.remove(); });
     });
-    document.body.appendChild(b);
+    /* En tête du pied : c'est un réglage d'appareil, comme « Mode nuit » et
+       « Plein écran » — et jamais entre « Fin d'service » et « Sortir ». */
+    if (foot) foot.insertBefore(b, foot.firstChild); else document.body.appendChild(b);
   }
   window.addEventListener('appinstalled', function () {
     var b = document.getElementById('kiwi-install'); if (b) b.remove();
   });
 
+  function toast(msg, kind) {
+    var stack = document.getElementById('toast-stack');
+    if (!stack) {
+      stack = document.createElement('div');
+      stack.id = 'toast-stack';
+      stack.className = 'toast-stack';
+      document.body.appendChild(stack);
+    }
+    var el = document.createElement('div');
+    el.className = 'toast' + (kind ? ' is-' + kind : '');
+    el.textContent = msg;
+    stack.appendChild(el);
+    setTimeout(function () { el.classList.add('fade'); }, 3000);
+    setTimeout(function () { el.remove(); }, 3300);
+  }
+
   // Offline/online + real server queue reflection — visible enough to act on.
+  var refreshingStatus = false;
+  function cashJournalStatus() {
+    try { if (window.KiwiCashSessions && window.KiwiCashSessions.status) return window.KiwiCashSessions.status(); } catch (_) {}
+    return { pendingCount: 0, pendingPairing: false, storageError: false };
+  }
   function status() {
+    try {
+      if (!refreshingStatus && window.KiwiLive?.refreshQueue) {
+        refreshingStatus = true;
+        Promise.resolve(window.KiwiLive.refreshQueue()).finally(function () { refreshingStatus = false; });
+      }
+    } catch (_) { refreshingStatus = false; }
     var d = document.getElementById('kiwi-net') || (function () {
-      var s = document.createElement('div'); s.id = 'kiwi-net';
-      s.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:9998;padding:7px 10px;border-radius:999px;' +
-        'font:600 11px/1.2 system-ui;color:white;box-shadow:0 4px 14px rgba(0,0,0,.18);pointer-events:none';
-      document.body.appendChild(s); return s;
+      var s = document.createElement('button'); s.id = 'kiwi-net'; s.type = 'button';
+      s.setAttribute('aria-live', 'polite');
+      var host = railFoot();
+      if (host) {
+        /* Dernière ligne du pied, sous « Sortir » : une ligne d'état, pas une
+           pastille posée par-dessus. Pastille de couleur + libellé. */
+        s.style.cssText = 'width:100%;display:grid;grid-template-columns:8px minmax(0,1fr);align-items:center;' +
+          'gap:10px;padding:10px 12px;border:1px solid transparent;border-radius:14px;text-align:left;' +
+          'font-family:"Inter Tight",system-ui;background:transparent;transition:background .24s,border-color .24s,opacity .2s;cursor:pointer';
+        s.innerHTML = '<i class="kn-dot" style="width:8px;height:8px;flex:0 0 8px;border-radius:50%"></i>' +
+          '<span style="min-width:0"><b class="kn-txt" style="display:block;font-size:12px;line-height:1.2"></b>' +
+          '<small class="kn-detail" style="display:block;margin-top:3px;font-size:10px;line-height:1.25;font-weight:500;opacity:.7"></small></span>';
+        host.appendChild(s);
+      } else {
+        s.style.cssText = 'position:fixed;right:18px;bottom:210px;z-index:9998;padding:7px 10px;border-radius:999px;' +
+          'font:600 11px/1.2 system-ui;color:white;box-shadow:0 4px 14px rgba(0,0,0,.18);pointer-events:none';
+        document.body.appendChild(s);
+      }
+      return s;
     })();
+    if (d.dataset.syncing === '1') return;
     var q = { pending: 0, blocked: 0, storageError: false };
     try { if (window.KiwiLive?.queueStatus) q = window.KiwiLive.queueStatus(); } catch (_) {}
-    if (q.storageError || q.blocked) {
-      d.style.background = '#9F3028';
-      d.textContent = q.storageError ? 'Stockage ventes saturé · support requis' : q.blocked + ' vente bloquée · support requis';
+    var cashJournal = cashJournalStatus();
+    var tone, label, detail;
+    if (q.storageError || cashJournal.storageError || q.blocked) {
+      tone = '#9F3028';
+      label = q.storageError || cashJournal.storageError ? 'Protection locale à vérifier' : q.blocked + ' opération' + (q.blocked > 1 ? 's' : '') + ' conservée' + (q.blocked > 1 ? 's' : '');
+      detail = 'À vérifier avec le support · rien n’est supprimé';
+    } else if (cashJournal.pendingPairing) {
+      tone = '#9F3028';
+      label = 'Journal caisse · appairage requis';
+      detail = cashJournal.pendingCount + ' événement(s) conservé(s)' + (q.pending ? ' · ' + q.pending + ' vente(s) à synchroniser' : ' · ventes synchronisées');
     } else if (!navigator.onLine) {
-      d.style.background = '#B85245';
-      d.textContent = 'Hors ligne' + (q.pending ? ' · ' + q.pending + ' vente(s) en attente' : '');
+      tone = '#B85245';
+      label = 'Hors ligne' + (q.pending ? ' · ' + q.pending + ' en attente' : '');
+      detail = q.pending ? 'Opérations protégées sur cet appareil' : 'La caisse continue normalement';
+    } else if (q.pending && (q.lastStatus === 401 || q.lastStatus === 403)) {
+      tone = '#9F3028';
+      label = 'Appairage à vérifier · ' + q.pending + ' en attente';
+      detail = 'Accès refusé (' + q.lastStatus + ') · opérations conservées';
     } else if (q.pending) {
-      d.style.background = '#A56A16';
-      d.textContent = q.pending + ' vente(s) à synchroniser';
+      tone = '#A56A16';
+      label = q.pending + ' opération' + (q.pending > 1 ? 's' : '') + ' à synchroniser';
+      detail = q.sending ? 'Envoi sécurisé en cours' : 'Reprise automatique · toucher pour réessayer';
+    } else if (cashJournal.pendingCount) {
+      tone = '#A56A16';
+      label = 'Journal caisse · synchronisation en attente';
+      detail = cashJournal.pendingCount + ' événement(s) conservé(s) · reprise automatique';
     } else {
-      d.style.background = '#287B55';
-      d.textContent = 'En ligne · synchronisé';
+      tone = '#287B55';
+      label = 'Synchronisé';
+      detail = q.engine === 'indexeddb' ? 'Opérations protégées hors ligne' : 'En ligne';
     }
-    d.title = d.textContent;
+    var dot = d.querySelector('.kn-dot'), txt = d.querySelector('.kn-txt'), sub = d.querySelector('.kn-detail');
+    if (dot && txt) {
+      /* Nominal : le pied reste calme — pastille verte, libellé discret. Les
+         trois états anormaux réclament une action, donc la ligne se peint. */
+      var nominal = tone === '#287B55';
+      dot.style.background = tone;
+      d.style.background = nominal ? 'transparent' : tone;
+      d.style.borderColor = nominal ? 'transparent' : 'rgba(255,255,255,.14)';
+      d.style.color = nominal ? '#6a6e6c' : '#F7F5F0';
+      d.style.opacity = nominal ? '.78' : '1';
+      txt.textContent = label;
+      if (sub) sub.textContent = detail;
+    } else {
+      d.style.background = tone;
+      d.textContent = label;
+    }
+    d.title = label + ' · ' + detail;
+    d.onclick = function () {
+      if (d.dataset.syncing === '1') return;
+      var qNow = { pending: 0, blocked: 0, storageError: false };
+      try { if (window.KiwiLive && window.KiwiLive.queueStatus) qNow = window.KiwiLive.queueStatus(); } catch (_) {}
+      var journalNow = cashJournalStatus();
+      if (!qNow.pending && !qNow.blocked && !qNow.storageError) {
+        if (journalNow.storageError) toast('Journal caisse non enregistré · stockage local à vérifier, gardez cette page ouverte', 'danger');
+        else if (journalNow.pendingPairing) toast('Appairez cette caisse pour transmettre son journal · événements conservés', 'warn');
+        else if (journalNow.pendingCount) toast('Journal caisse en attente · reprise automatique, événements conservés', 'warn');
+        status();
+        return;
+      }
+      if (!navigator.onLine) {
+        toast('Appareil hors ligne · connexion Internet requise', 'warn');
+        status();
+        return;
+      }
+      d.dataset.syncing = '1';
+      if (dot) dot.style.background = '#F2A900';
+      d.style.background = '#A56A16';
+      d.style.borderColor = 'rgba(255,255,255,.14)';
+      d.style.color = '#F7F5F0';
+      d.style.opacity = '1';
+      if (txt) txt.textContent = 'Synchronisation en cours…';
+      if (sub) sub.textContent = 'Envoi des opérations au serveur…';
+      var flushPromise;
+      try {
+        flushPromise = (window.KiwiLive && window.KiwiLive.flush) ? window.KiwiLive.flush(true) : Promise.resolve();
+      } catch (err) {
+        flushPromise = Promise.reject(err);
+      }
+      Promise.resolve(flushPromise).then(function () {
+        delete d.dataset.syncing;
+        var after = { pending: 0, blocked: 0, storageError: false };
+        try { if (window.KiwiLive && window.KiwiLive.queueStatus) after = window.KiwiLive.queueStatus(); } catch (_) {}
+        var journalAfter = cashJournalStatus();
+        if (!after.pending && !after.blocked && !after.storageError && journalAfter.storageError) {
+          toast('Ventes transmises · protection du journal caisse à vérifier', 'danger');
+        } else if (!after.pending && !after.blocked && !after.storageError && journalAfter.pendingCount) {
+          toast(journalAfter.pendingPairing ? 'Ventes transmises · journal caisse en attente d’appairage' : 'Ventes transmises · journal caisse encore en attente', 'warn');
+        } else if (!after.pending && !after.blocked && !after.storageError) {
+          toast('Synchronisation réussie · opérations transmises');
+        } else if (after.lastStatus === 401 || after.lastStatus === 403) {
+          toast('Erreur d’authentification (' + after.lastStatus + ') · vérifiez l’appairage', 'danger');
+        } else if (after.lastStatus >= 500) {
+          toast('Serveur momentanément indisponible (' + after.lastStatus + ') · réessai automatique', 'warn');
+        } else if (after.lastError) {
+          toast('Synchronisation en attente · ' + after.lastError, 'warn');
+        }
+        status();
+      }).catch(function (err) {
+        delete d.dataset.syncing;
+        toast('Échec de synchronisation · ' + (err && err.message || 'erreur réseau'), 'danger');
+        status();
+      });
+    };
   }
   window.addEventListener('online', status);
   window.addEventListener('offline', status);
   window.addEventListener('kiwi:sale-queue', status);
+  window.addEventListener('kiwi:outbox', status);
+  window.addEventListener('kiwi:cash-sessions', status);
+  window.addEventListener('kiwi:cash-sessions-ready', status);
   window.setInterval(status, 5000);
 
   /* The 14 vertical POS screens originally shipped a clickable "simulate
@@ -71,7 +234,7 @@
      real/paired till, drive every mounted vertical from the browser signal. */
   function realTill() {
     try {
-      return !!window.KiwiEnv?.isReal?.() || !!JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+      return !!window.KiwiEnv?.isReal?.() || !!window.KiwiPlatform?.isPaired?.() || !!JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
     } catch (_) { return false; }
   }
   function netButtons() {

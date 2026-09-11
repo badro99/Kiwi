@@ -18,14 +18,14 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
-  if (!window.KiwiStore) { console.warn('[menu-catalog] KiwiStore missing — load venue-store.js first'); return; }
+  if (!window.KiwiStore) { console.warn('[menu-catalog] KiwiStore missing · load venue-store.js first'); return; }
 
   /* ───────────────── i18n mini ───────────────── */
   const LANG = () => (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
   const tr = (o) => (o == null ? '' : (o[LANG()] != null ? o[LANG()] : o.fr));
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const T = {
-    title:      { fr: 'Menu', en: 'Menu', ar: 'القائمة' },
+    title:      { fr: 'Menu & modificateurs', en: 'Menu & modifiers', ar: 'القائمة والإضافات' },
     emptyH:     { fr: 'Votre carte est vide, et c\'est normal', en: 'Your menu is empty, and that\'s fine', ar: 'قائمتك فارغة، وهذا طبيعي' },
     emptyP:     { fr: 'Ajoutez vos catégories et vos produits. Tout est enregistré pour votre établissement et servira directement sur la caisse.', en: 'Add your categories and products. Everything is saved to your business and rings up straight on the register.', ar: 'أضف فئاتك ومنتجاتك. كل شيء محفوظ لنشاطك ويظهر مباشرة على الصندوق.' },
     addCat:     { fr: 'Ajouter une catégorie', en: 'Add a category', ar: 'إضافة فئة' },
@@ -64,7 +64,7 @@
     catL:       { fr: 'Catégorie', en: 'Category', ar: 'الفئة' },
     subL:       { fr: 'Sous-catégorie (option)', en: 'Sub-category (optional)', ar: 'فئة فرعية (اختياري)' },
     descL:      { fr: 'Description (option)', en: 'Description (optional)', ar: 'وصف (اختياري)' },
-    none:       { fr: '—', en: '—', ar: '—' },
+    none:       { fr: '·', en: '·', ar: '·' },
     allItems:   { fr: 'Tous', en: 'All', ar: 'الكل' },
     products:   { fr: 'produits', en: 'products', ar: 'منتجات' },
     product:    { fr: 'produit', en: 'product', ar: 'منتج' },
@@ -72,6 +72,11 @@
     noItems:    { fr: 'Aucun produit dans cette catégorie pour le moment.', en: 'No products in this category yet.', ar: 'لا منتجات في هذه الفئة بعد.' },
     avail:      { fr: 'Disponible', en: 'Available', ar: 'متاح' },
     unavail:    { fr: 'Indisponible', en: 'Unavailable', ar: 'غير متاح' },
+    standalone: { fr: 'Vendable individuellement', en: 'Sellable individually', ar: 'كيتباع بوحدو' },
+    formulaPhoto:{ fr: 'Afficher la photo dans les formules', en: 'Show photo in set menus', ar: 'عرض الصورة داخل الفورمولات' },
+    formulaPhotoHint:{ fr: 'Dans OrderPro, cette photo illustre l’article lorsqu’il devient un choix de formule.', en: 'In OrderPro, this photo illustrates the item when it is offered as a set-menu choice.', ar: 'في OrderPro، تظهر هذه الصورة عندما يكون هذا الصنف اختياراً داخل فورمولة.' },
+    formulaOnly:{ fr: 'Réservé aux formules', en: 'Formula only', ar: 'غير فالفورمولات' },
+    archived:   { fr: 'Archivé', en: 'Archived', ar: 'مؤرشف' },
     saved:      { fr: 'Menu mis à jour', en: 'Menu updated', ar: 'تم تحديث القائمة' },
     firstCat:   { fr: 'Commencez par créer une catégorie (ex. Entrées, Plats, Boissons).', en: 'Start by creating a category (e.g. Starters, Mains, Drinks).', ar: 'ابدأ بإنشاء فئة (مثل مقبلات، أطباق، مشروبات).' },
     mediaL:     { fr: 'Photo / vidéo (option)', en: 'Photo / video (optional)', ar: 'صورة / فيديو (اختياري)' },
@@ -85,7 +90,7 @@
        personne ne verra la fin — et un fil où chaque tuile tourne à son rythme
        cesse de ressembler à un fil. D'où un plafond dit clairement, avec la
        durée constatée, plutôt qu'un refus muet à l'envoi. */
-    mediaLong:  { fr: 'Clip trop long ({n} s). Filmez 3 à 5 secondes — maximum {max} s.', en: 'Clip too long ({n}s). Film 3 to 5 seconds — {max}s max.', ar: 'الفيديو طويل بزاف ({n} ثانية). صوّر من 3 ل 5 ثواني — الحد {max} ثانية.' },
+    mediaLong:  { fr: 'Clip trop long ({n} s). Filmez 3 à 5 secondes · maximum {max} s.', en: 'Clip too long ({n}s). Film 3 to 5 seconds · {max}s max.', ar: 'الفيديو طويل بزاف ({n} ثانية). صوّر من 3 ل 5 ثواني · الحد {max} ثانية.' },
     mediaWide:  { fr: 'Filmé à l\'horizontale : il sera recadré. Préférez la verticale.', en: 'Filmed landscape: it will be cropped. Prefer vertical.', ar: 'مصوّر بالعرض: غادي يتقصّ. حسن تصوّر بالطول.' },
     mediaOff:   { fr: 'Stockage média pas encore activé sur votre compte.', en: 'Media storage isn\'t enabled on your account yet.', ar: 'تخزين الميديا مازال ماتفعّلش فالحساب ديالك.' },
     mediaBig:   { fr: 'Fichier trop lourd.', en: 'File too large.', ar: 'الملف ثقيل بزاف.' },
@@ -98,7 +103,7 @@
        d'eux réécrit douze fois. Même principe que le poste sur la catégorie. */
     opts:       { fr: 'Options et suppléments', en: 'Options & extras', ar: 'الخيارات والزيادات' },
     optsHi:     { fr: 'Un groupe se définit ici, puis s\'attache aux produits qui le demandent. Dès qu\'un produit en porte un, le comptoir demande le choix avant de l\'ajouter à la note.', en: 'Define a group here, then attach it to the products that need it. As soon as a product carries one, the till asks for the choice before adding it to the bill.', ar: 'عرّف مجموعة هنا، ومن بعد ربطها بالمنتجات اللي كيحتاجوها. ملي منتج كيحمل وحدة، الصندوق كيسول على الاختيار قبل ما يزيدو للحساب.' },
-    optsEm:     { fr: 'Aucun groupe d\'options. Créez-en un si un produit se commande en plusieurs façons — un café avec ou sans lait, une viande à point ou bien cuite.', en: 'No option groups yet. Create one if a product is ordered in several ways — a coffee with or without milk, a steak medium or well done.', ar: 'مازال مامجموعات ديال الخيارات. سير واجد وحدة إلا كان منتج كيتطلب بأشكال مختلفة.' },
+    optsEm:     { fr: 'Aucun groupe d\'options. Créez-en un si un produit se commande en plusieurs façons · un café avec ou sans lait, une viande à point ou bien cuite.', en: 'No option groups yet. Create one if a product is ordered in several ways · a coffee with or without milk, a steak medium or well done.', ar: 'مازال مامجموعات ديال الخيارات. سير واجد وحدة إلا كان منتج كيتطلب بأشكال مختلفة.' },
     optAdd:     { fr: 'Ajouter un groupe', en: 'Add a group', ar: 'إضافة مجموعة' },
     optNm:      { fr: 'Nom du groupe', en: 'Group name', ar: 'اسم المجموعة' },
     optEx:      { fr: 'ex. Type de lait, Cuisson, Suppléments', en: 'e.g. Milk, Doneness, Extras', ar: 'مثل: نوع الحليب، الطهي، الزيادات' },
@@ -108,8 +113,11 @@
     optReqHi:   { fr: 'Le comptoir ne pourra pas ajouter le produit sans avoir répondu.', en: 'The till can\'t add the product until this is answered.', ar: 'الصندوق ما يقدرش يزيد المنتج بلا جواب.' },
     optChAdd:   { fr: 'Ajouter un choix', en: 'Add a choice', ar: 'إضافة اختيار' },
     optChNm:    { fr: 'Nom du choix', en: 'Choice name', ar: 'اسم الاختيار' },
+    optChEmoji: { fr: 'Repère visuel', en: 'Visual marker', ar: 'رمز بصري' },
+    optEmojiHi: { fr: 'Ajoutez un emoji facultatif à chaque choix pour le rendre immédiatement reconnaissable sur l’écran cuisine.', en: 'Add an optional emoji to each choice so it is immediately recognisable on the kitchen display.', ar: 'زيد إيموجي اختياري لكل اختيار باش يتعرف عليه العامل بسرعة فشاشة المطبخ.' },
+    optEmojiNone:{ fr: 'Aucun repère', en: 'No marker', ar: 'بلا رمز' },
     optChPr:    { fr: 'Supplément', en: 'Extra', ar: 'زيادة' },
-    optChEm:    { fr: 'Ce groupe n\'a aucun choix — le comptoir n\'aurait rien à proposer.', en: 'This group has no choices — the till would have nothing to offer.', ar: 'هاد المجموعة بلا اختيارات — الصندوق ماغاديش يلقى شنو يقترح.' },
+    optChEm:    { fr: 'Ce groupe n\'a aucun choix · le comptoir n\'aurait rien à proposer.', en: 'This group has no choices · the till would have nothing to offer.', ar: 'هاد المجموعة بلا اختيارات · الصندوق ماغاديش يلقى شنو يقترح.' },
     optDelQ:    { fr: 'Supprimer ce groupe ? Il sera retiré des produits qui l\'utilisent.', en: 'Delete this group? It will be removed from the products using it.', ar: 'حذف هاد المجموعة؟ غادي تتحيد من المنتجات اللي كيستعملوها.' },
     optAttach:  { fr: 'Options de ce produit', en: 'Options for this product', ar: 'خيارات هاد المنتج' },
     optNoneYet: { fr: 'Créez d\'abord un groupe d\'options.', en: 'Create an option group first.', ar: 'واجد مجموعة ديال الخيارات لاول.' },
@@ -125,8 +133,8 @@
     stationDefB:{ fr: 'reçoit le reste', en: 'gets the rest', ar: 'كتوصلها الباقي' },
     stationDelQ:{ fr: 'Supprimer ce poste ? Les catégories qui y allaient repartiront vers la cuisine.', en: 'Delete this station? Categories routed there fall back to the kitchen.', ar: 'حذف هذه المحطة؟ الفئات ديالها غادي ترجع للمطبخ.' },
     stationNone:{ fr: 'Aucun poste défini', en: 'No station defined', ar: 'لا محطة محددة' },
-    stationsHi: { fr: 'Le routage se règle sur la catégorie, pas ici : ouvrez une catégorie et donnez-lui son poste. La cuisine reçoit tout ce que vous n\'avez pas envoyé ailleurs — elle ne se supprime pas. L\'ordre ci-dessous est celui des onglets de l\'écran cuisine.', en: 'Routing is set on the category, not here: open a category and give it its station. The kitchen gets everything you haven\'t sent elsewhere — it can\'t be deleted. The order below is the tab order on the kitchen screen.', ar: 'التوجيه كيتحدد فالفئة ماشي هنا: حل فئة وعطيها المحطة ديالها. المطبخ كيوصلو كلشي اللي ما صيفطيهش لمحطة أخرى — وما كيتحدفش. الترتيب تحت هو ترتيب الأبواب فشاشة المطبخ.' },
-    stationsEm: { fr: 'Vous n\'avez pas encore de postes. Sans poste, tout part sur un seul écran cuisine — ce qui suffit à beaucoup de cafés.', en: 'No stations yet. Without them everything lands on one kitchen screen — which is plenty for many cafés.', ar: 'مازال ماعندكش محطات. بلا محطات كلشي كيوصل لشاشة مطبخ وحدة — وهادشي كافي لبزاف ديال المقاهي.' },
+    stationsHi: { fr: 'Le routage se règle sur la catégorie, pas ici : ouvrez une catégorie et donnez-lui son poste. La cuisine reçoit tout ce que vous n\'avez pas envoyé ailleurs · elle ne se supprime pas. L\'ordre ci-dessous est celui des onglets de l\'écran cuisine.', en: 'Routing is set on the category, not here: open a category and give it its station. The kitchen gets everything you haven\'t sent elsewhere · it can\'t be deleted. The order below is the tab order on the kitchen screen.', ar: 'التوجيه كيتحدد فالفئة ماشي هنا: حل فئة وعطيها المحطة ديالها. المطبخ كيوصلو كلشي اللي ما صيفطيهش لمحطة أخرى · وما كيتحدفش. الترتيب تحت هو ترتيب الأبواب فشاشة المطبخ.' },
+    stationsEm: { fr: 'Vous n\'avez pas encore de postes. Sans poste, tout part sur un seul écran cuisine · ce qui suffit à beaucoup de cafés.', en: 'No stations yet. Without them everything lands on one kitchen screen · which is plenty for many cafés.', ar: 'مازال ماعندكش محطات. بلا محطات كلشي كيوصل لشاشة مطبخ وحدة · وهادشي كافي لبزاف ديال المقاهي.' },
     stationCol: { fr: 'Changer la couleur', en: 'Change the colour', ar: 'تغيير اللون' },
     moveUp:     { fr: 'Monter', en: 'Move up', ar: 'رفع' },
     moveDown:   { fr: 'Descendre', en: 'Move down', ar: 'خفض' },
@@ -136,6 +144,41 @@
        « aucun » qui laisserait croire que le plat ne part nulle part. */
     catStationL:{ fr: 'Part vers', en: 'Goes to', ar: 'كيمشي ل' },
     catStationD:{ fr: 'par défaut', en: 'default', ar: 'افتراضي' },
+    formulaIs:      { fr: 'C\'est une formule (menu composé)', en: 'This is a set menu / combo', ar: 'هذه وجبة مركبة (قائمة محددة)' },
+    formulaHint:    { fr: 'Composez les étapes de la formule (ex. Pain, Boisson, Dessert). Chaque choix correspond à un produit existant de la carte.',
+                      en: 'Build the combo steps (e.g. Bread, Drink, Dessert). Each choice points to an existing menu item.',
+                      ar: 'أنشئ مراحل الوجبة المركبة (مثل: الخبز، المشروب، التحلية). كل اختيار يرتبط بمنتج موجود في القائمة.' },
+    formulaSlots:   { fr: 'Étapes de la formule', en: 'Combo slots', ar: 'مراحل الوجبة' },
+    formulaAddSlot: { fr: 'Ajouter une étape', en: 'Add a slot', ar: 'إضافة مرحلة' },
+    formulaSlotNm:  { fr: 'Titre de l\'étape (ex. La boisson)', en: 'Step title (e.g. The beverage)', ar: 'عنوان الخطوة (مثال: المشروب)' },
+    formulaMinMax:  { fr: 'Choix min / max', en: 'Min / max choices', ar: 'الحد الأدنى / الأقصى' },
+    formulaMin:     { fr: 'Min', en: 'Min', ar: 'أدنى' },
+    formulaMax:     { fr: 'Max', en: 'Max', ar: 'أقصى' },
+    formulaChoices: { fr: 'Choix proposés', en: 'Choices offered', ar: 'الخيارات المقترحة' },
+    formulaAddCh:   { fr: 'Ajouter un produit', en: 'Add an item', ar: 'إضافة منتج' },
+    formulaPickIt:  { fr: 'Choisir un produit de la carte', en: 'Pick a menu item', ar: 'اختر منتجاً من القائمة' },
+    formulaBrowse:  { fr: 'Rechercher ou parcourir les sections', en: 'Search or browse sections', ar: 'ابحث أو تصفح الأقسام' },
+    formulaSearch:  { fr: 'Rechercher un article…', en: 'Search menu items…', ar: 'ابح عن منتج…' },
+    formulaNoMatch: { fr: 'Aucun article ne correspond à cette recherche.', en: 'No menu item matches this search.', ar: 'لا يوجد منتج مطابق للبحث.' },
+    formulaExtra:   { fr: 'Supplément (+ MAD)', en: 'Extra (+ MAD)', ar: 'زيادة (+ درهم)' },
+    formulaDelSlot: { fr: 'Supprimer l\'étape', en: 'Delete slot', ar: 'حذف المرحلة' },
+    formulaNoSlots: { fr: 'Aucune étape définie. Cliquez sur « Ajouter une étape » pour commencer.', en: 'No slots defined yet. Click "Add a slot" to start.', ar: 'لم يتم تحديد مراحل بعد. انقر على "إضافة مرحلة" للبدء.' },
+    formulaNoItems: {
+      fr: 'Aucun produit sur la carte pour l\'instant. Créez d\'abord vos produits (ex. Café noir, Croissant), puis revenez composer la formule : les choix se sélectionnent dans la liste, jamais à la main.',
+      en: 'No items on the menu yet. Create your items first (e.g. Black coffee, Croissant), then return to build the set menu: choices are picked from the list, never typed manually.',
+      ar: 'لا توجد منتجات في القائمة حالياً. أنشئ منتجاتك أولاً (مثل: قهوة سوداء، كرواسون)، ثم عد لتكوين الوجبة: يتم اختيار الأصناف من القائمة وليس يدوياً.'
+    },
+    formulaSaveAndCreate: {
+      fr: 'Enregistrer et créer un produit',
+      en: 'Save and create an item',
+      ar: 'حفظ وإنشاء منتج'
+    },
+    formulaAllChosen: {
+      fr: 'Tous les produits de la carte sont déjà proposés dans cette étape.',
+      en: 'All menu items are already offered in this step.',
+      ar: 'جميع منتجات القائمة مقترحة بالفعل في هذه المرحلة.'
+    },
+    formulaTag:     { fr: 'Formule', en: 'Combo', ar: 'وجبة مركبة' },
   };
 
   /* La palette des postes — exactement les sept teintes que l'écran cuisine de
@@ -191,7 +234,7 @@
   }
 
   const store = window.KiwiStore.define('menu', {
-    blank: () => ({ seq: 0, cats: [], items: [], stations: [], kitchenId: '', opts: [] }),
+    blank: () => ({ seq: 0, cats: [], items: [], stations: [], kitchenId: '', opts: [], formulaTemplates: [] }),
     example: example,
     /* Des postes seuls ne font pas une carte : un établissement qui n'a saisi
      * que « Bar » et « Cuisson » n'a toujours rien à vendre, et l'écran d'accueil
@@ -206,6 +249,46 @@
   const itemsIn = (d, catId, subId) => (d.items || []).filter((i) => i.catId === catId && (subId == null || i.subId === subId));
   const stationsOf = (d) => (d && Array.isArray(d.stations)) ? d.stations : [];
   const stationById = (d, id) => stationsOf(d).find((s) => s && s.id === id) || null;
+
+  /* Une formule compose des choix parmi des articles existants de la carte.
+   * RÈGLE DE LECTURE : un choix qui pointe un article supprimé est retiré dès
+   * la lecture (pas de fantôme sélectionnable pour le serveur). */
+  function cleanFormula(formula, items) {
+    if (!formula || typeof formula !== 'object' || !Array.isArray(formula.slots)) return null;
+    const itemMap = new Set((items || []).filter((i) => i && !i.archived).map((i) => i.id).filter(Boolean));
+    const rawSlots = Array.isArray(formula.slots) ? formula.slots.slice(0, 10) : [];
+    const slots = rawSlots.map((s, idx) => {
+      if (!s || typeof s !== 'object') return null;
+      const id = String(s.id || ('sl_' + (idx + 1))).slice(0, 40);
+      const label = String(s.label || '').trim().slice(0, 60);
+      let min = Math.max(0, Math.min(10, Math.round(Number(s.min) || 0)));
+      let max = Math.max(1, Math.min(10, Math.round(Number(s.max) || 1)));
+      if (min > max) min = max;
+      const rawChoices = Array.isArray(s.choices) ? s.choices.slice(0, 20) : [];
+      const choices = rawChoices.filter((c) => c && c.itemId && itemMap.has(c.itemId)).map((c) => ({
+        itemId: String(c.itemId).slice(0, 40),
+        extra: Math.max(0, Math.min(1e5, Number(c.extra) || 0)),
+      }));
+      return { id, label, min, max, choices };
+    }).filter((s) => s && s.id && s.choices && s.choices.length > 0);
+    return slots.length ? { slots } : null;
+  }
+
+  function saveFormulaTemplate(name, formula) {
+    return store.update((d) => {
+      const clean = cleanFormula(formula, d.items);
+      const label = String(name || '').trim().slice(0, 80);
+      if (!clean || !label) return d;
+      d.formulaTemplates = Array.isArray(d.formulaTemplates) ? d.formulaTemplates : [];
+      const existing = d.formulaTemplates.find((t) => t && t.name.toLowerCase() === label.toLowerCase());
+      if (existing) { existing.name = label; existing.formula = clean; }
+      else d.formulaTemplates.push({ id: nid(d, 'ft'), name: label, formula: clean });
+      return d;
+    });
+  }
+  function deleteFormulaTemplate(id) {
+    return store.update((d) => { d.formulaTemplates = (d.formulaTemplates || []).filter((t) => t && t.id !== id); return d; });
+  }
 
   /* ─── postes de préparation ───
    * LE ROUTAGE VIT SUR LA CATÉGORIE. « Boissons → Bar » se dit une fois et vaut
@@ -338,6 +421,31 @@
    * Un choix peut porter un supplément (`price`, en MAD, 0 = compris). */
   const optsOf = (d) => (d && Array.isArray(d.opts)) ? d.opts : [];
   const optById = (d, id) => optsOf(d).find((g) => g && g.id === id) || null;
+  const OPT_EMOJIS = Object.freeze([
+    // Fruits, légumes, aromates et ingrédients bruts.
+    '🍏', '🍎', '🍐', '🍊', '🍋', '🍋‍🟩', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈',
+    '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🫒', '🥑', '🍆', '🥔', '🍠', '🥕',
+    '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅', '🥜', '🫘', '🌰', '🫛',
+    '🫚', '🍄', '🌿', '🍀', '🌱', '🌾', '🍚', '🧂', '🧈', '🍯', '🥛', '🧀',
+    // Boulangerie, protéines et plats préparés.
+    '🍞', '🥐', '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🥚', '🍳', '🍖', '🍗',
+    '🥩', '🥓', '🐟', '🦐', '🦞', '🦀', '🦑', '🐙', '🦪', '🍤', '🍔', '🍟',
+    '🍕', '🌭', '🥪', '🌮', '🌯', '🫔', '🥙', '🧆', '🥘', '🍲', '🫕', '🥣',
+    '🥗', '🍿', '🥫', '🍝', '🍜', '🍛', '🍣', '🍱', '🥟', '🍙', '🍘', '🍥',
+    '🥠', '🥮', '🍢', '🍡', '🥡',
+    // Desserts et boissons.
+    '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍩',
+    '🍪', '🍼', '🥤', '🧋', '🧃', '🧉', '🫖', '🍵', '☕', '🍶', '🍺', '🍻',
+    '🥂', '🍷', '🥃', '🍸', '🍹', '🍾', '🧊',
+    // Repères opérationnels : validation, interdiction, température, matériel et couleurs.
+    '✅', '❌', '🚫', '⛔', '⚠️', '➕', '➖', '🔥', '♨️', '❄️', '💧', '⏱️',
+    '🔪', '🥄', '🍴', '🥢', '🍽️', '📦', '🛍️', '🔔', '⭐', '❤️',
+    '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⚫', '⚪',
+  ]);
+  const cleanOptEmoji = (value) => {
+    const emoji = String(value || '').trim();
+    return OPT_EMOJIS.indexOf(emoji) >= 0 ? emoji : '';
+  };
 
   function addOptGroup(name) {
     return store.update((d) => {
@@ -373,11 +481,11 @@
       return d;
     });
   }
-  function addOptChoice(gid, name, price) {
+  function addOptChoice(gid, name, price, emoji) {
     return store.update((d) => {
       const g = optById(d, gid); if (!g) return d;
       g.choices = Array.isArray(g.choices) ? g.choices : [];
-      g.choices.push({ id: nid(d, 'oc'), name: String(name || '').trim() || tr(T.optChNm), price: Math.max(0, +price || 0) });
+      g.choices.push({ id: nid(d, 'oc'), name: String(name || '').trim() || tr(T.optChNm), price: Math.max(0, +price || 0), emoji: cleanOptEmoji(emoji) });
       return d;
     });
   }
@@ -387,6 +495,7 @@
       const c = (g.choices || []).find((x) => x && x.id === cid); if (!c) return d;
       if (patch.name != null) c.name = String(patch.name).trim() || c.name;
       if (patch.price != null) c.price = Math.max(0, +patch.price || 0);
+      if (patch.emoji != null) c.emoji = cleanOptEmoji(patch.emoji);
       return d;
     });
   }
@@ -420,12 +529,25 @@
   function renameCategory(id, name) {
     return store.update((d) => { const c = catById(d, id); if (c) c.name = String(name || c.name).trim() || c.name; return d; });
   }
-  function deleteCategory(id) {
+  function moveCategory(id, delta) {
     return store.update((d) => {
+      d.cats = Array.isArray(d.cats) ? d.cats : [];
+      const i = d.cats.findIndex((c) => c && c.id === id);
+      const j = i + (+delta || 0);
+      if (i < 0 || j < 0 || j >= d.cats.length) return d;
+      const [category] = d.cats.splice(i, 1);
+      d.cats.splice(j, 0, category);
+      return d;
+    });
+  }
+  function deleteCategory(id) {
+    const next = store.update((d) => {
       d.cats = (d.cats || []).filter((c) => c.id !== id);
       d.items = (d.items || []).filter((i) => i.catId !== id);
       return d;
     });
+    authorizeExplicitEmpty(next);
+    return next;
   }
   function addSubcategory(catId, name) {
     return store.update((d) => {
@@ -435,9 +557,30 @@
       return d;
     });
   }
+  function renameSubcategory(catId, subId, name) {
+    return store.update((d) => {
+      const c = catById(d, catId); if (!c) return d;
+      const s = (c.sub || []).find((x) => x && x.id === subId); if (!s) return d;
+      s.name = String(name || s.name).trim() || s.name;
+      return d;
+    });
+  }
+  /* Removing a subsection must not remove products. They remain in their section
+   * as unclassified items so the merchant can move them or create a new grouping. */
+  function deleteSubcategory(catId, subId) {
+    return store.update((d) => {
+      const c = catById(d, catId); if (!c) return d;
+      c.sub = (c.sub || []).filter((s) => s && s.id !== subId);
+      (d.items || []).forEach((it) => {
+        if (it && it.catId === catId && it.subId === subId) it.subId = null;
+      });
+      return d;
+    });
+  }
   function addItem(data) {
     return store.update((d) => {
-      d.items.push({
+      const formula = cleanFormula(data && data.formula, d.items);
+      const item = {
         id: nid(d, 'it'),
         name: String(data.name || 'Produit').trim() || 'Produit',
         price: Math.max(0, +data.price || 0),
@@ -445,6 +588,9 @@
         subId: data.subId || null,
         desc: String(data.desc || '').trim(),
         avail: data.avail !== false,
+        formulaOnly: data.formulaOnly === true,
+        showPhotoInFormulas: data.showPhotoInFormulas === true,
+        archived: data.archived === true,
         // Pas de poste sur le plat : il suit sa catégorie. Les valeurs écrites
         // par la version précédente restent dans le document et ne sont plus
         // lues — ensureKitchen() les a remontées à la catégorie une fois pour
@@ -457,7 +603,9 @@
         // l'ajoute d'un geste, sans rien demander — c'est le cas de presque
         // tout ce qui se vend.
         opts: Array.isArray(data.opts) ? data.opts.slice() : [],
-      });
+      };
+      if (formula) item.formula = formula;
+      d.items.push(item);
       return d;
     });
   }
@@ -470,14 +618,100 @@
       if ('subId' in patch) it.subId = patch.subId || null;
       if (patch.desc != null) it.desc = String(patch.desc).trim();
       if (patch.avail != null) it.avail = !!patch.avail;
+      if (patch.formulaOnly != null) it.formulaOnly = !!patch.formulaOnly;
+      if (patch.showPhotoInFormulas != null) it.showPhotoInFormulas = !!patch.showPhotoInFormulas;
+      if (patch.archived != null) it.archived = !!patch.archived;
       if ('opts' in patch) it.opts = Array.isArray(patch.opts) ? patch.opts.slice() : [];
       if ('photo' in patch) it.photo = String(patch.photo || '');
       if ('video' in patch) it.video = String(patch.video || '');
+      if ('nutrition' in patch) {
+        if (patch.nutrition && typeof patch.nutrition === 'object') it.nutrition = { ...patch.nutrition };
+        else delete it.nutrition;
+      }
+      if ('allergens' in patch) it.allergens = Array.isArray(patch.allergens) ? patch.allergens.slice() : [];
+      if ('nutritionComplete' in patch) it.nutritionComplete = patch.nutritionComplete === true;
+      if ('hideNutrition' in patch) it.hideNutrition = patch.hideNutrition === true;
+      if ('formula' in patch) {
+        const formula = cleanFormula(patch.formula, d.items);
+        if (formula) it.formula = formula;
+        else delete it.formula;
+      }
+      if ('archived' in patch) {
+        (d.items || []).forEach((candidate) => {
+          if (!candidate || !candidate.formula) return;
+          const cleaned = cleanFormula(candidate.formula, d.items);
+          if (cleaned) candidate.formula = cleaned;
+          else delete candidate.formula;
+        });
+        (d.formulaTemplates || []).forEach((template) => {
+          if (!template || !template.formula) return;
+          const cleaned = cleanFormula(template.formula, d.items);
+          if (cleaned) template.formula = cleaned;
+          else template.formula = { slots: [] };
+        });
+      }
       return d;
     });
   }
+  /* ───────────────── traductions (assets/menu-i18n.js) ─────────────────
+   * Les traductions vivent SUR les entités (cat.i18n, item.i18n, …), jamais à
+   * la place du libellé canonique. Le store ne traduit rien lui-même : le
+   * workspace demande à Kiwi AI ce qui manque (KiwiMenuI18n.needs) et dépose
+   * la réponse ici (setI18n) ; une correction du patron passe par setI18nEntry
+   * et n'est plus jamais écrasée par la machine. Écrire dans le store suffit à
+   * republier la carte (boot() → schedulePublish). */
+  const MI = () => window.KiwiMenuI18n || null;
+  function setI18n(lang, res, opts) {
+    const m = MI(); if (!m) return 0;
+    let n = 0;
+    store.update((d) => { n = m.apply(d, lang, res, opts || {}); return d; });
+    return n;
+  }
+  function i18nTarget(d, kind, id, subId) {
+    if (kind === 'cat') return catById(d, id);
+    if (kind === 'sub') { const c = catById(d, id); return c ? (c.sub || []).find((s) => s.id === subId) || null : null; }
+    if (kind === 'item') return itemById(d, id);
+    if (kind === 'opt') return optById(d, id);
+    if (kind === 'choice') { const g = optById(d, id); return g ? (g.choices || []).find((c) => c.id === subId) || null : null; }
+    return null;
+  }
+  function setI18nEntry(kind, id, subId, lang, patch) {
+    const m = MI(); if (!m) return false;
+    let okFlag = false;
+    store.update((d) => {
+      const e = i18nTarget(d, kind, id, subId);
+      if (!e) return d;
+      const cur = (e.i18n && e.i18n[lang]) || {};
+      // Une description corrigée sans nom traduit garde le nom du patron : la correction n'est pas perdue.
+      const name = patch && patch.name != null ? patch.name : (cur.name || e.name);
+      const desc = patch && patch.desc != null ? patch.desc : (cur.desc != null ? cur.desc : null);
+      okFlag = m.setManual(e, lang, name, desc);
+      return d;
+    });
+    return okFlag;
+  }
+  function clearI18n(lang, keepManual) {
+    const m = MI(); if (!m) return;
+    store.update((d) => { m.clear(d, lang, keepManual); return d; });
+  }
+  function setLanguages(next) {
+    const m = MI();
+    store.update((d) => { d.langs = m ? m.langs({ langs: next }) : ['fr', 'ar', 'en']; return d; });
+  }
   function deleteItem(id) {
-    return store.update((d) => { d.items = (d.items || []).filter((i) => i.id !== id); return d; });
+    const next = store.update((d) => {
+      d.items = (d.items || []).filter((i) => i.id !== id);
+      (d.items || []).forEach((it) => {
+        if (it && it.formula) {
+          const cleaned = cleanFormula(it.formula, d.items);
+          if (cleaned) it.formula = cleaned;
+          else delete it.formula;
+        }
+      });
+      return d;
+    });
+    authorizeExplicitEmpty(next);
+    return next;
   }
 
   /* ───────────────── styles ───────────────── */
@@ -505,7 +739,7 @@
       .mx-cat-head .nm { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--ink); letter-spacing: -0.005em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .mx-cat-head .ct { font-family: var(--mono); font-size: 10.5px; color: var(--n-500); background: var(--paper-soft); padding: 2px 7px; border-radius: 999px; }
       .mx-cat.on .mx-cat-head .ct { color: var(--atlas); background: var(--surface); }
-      .mx-cat-head .ed { display: inline-flex; color: var(--n-400); padding: 2px; border-radius: 6px; }
+      .mx-cat-head .ed { display: inline-flex; color: var(--n-500); padding: 2px; border-radius: 6px; }
       .mx-cat-head .ed:hover { color: var(--ink); background: var(--surface); }
       .mx-subs { padding: 4px 8px 10px; display: flex; flex-direction: column; gap: 4px; }
       .mx-sub { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 8px; font-size: 12.5px; color: var(--n-600); cursor: pointer; transition: transform 120ms, opacity 120ms, background-color 120ms, border-color 120ms, color 120ms, box-shadow 120ms; }
@@ -526,12 +760,12 @@
       /* La marge se lit sous le prix, jamais à sa place : c'est le prix qui est
          l'information principale de cette ligne. Roman, comme tout le reste. */
       .mx-item .pr .mg { display: block; font-size: 10.5px; font-weight: 500; font-style: normal; letter-spacing: .01em; color: var(--atlas); margin-top: 2px; }
-      .mx-item .pr .mg.none { color: var(--n-400); }
+      .mx-item .pr .mg.none { color: var(--n-500); }
       .mx-item .pr .mg.bad { color: var(--danger); }
       .mx-cost-live { min-height: 16px; margin-top: 7px; font-size: 12px; color: var(--atlas); font-weight: 500; }
       .mx-cost-live.bad { color: var(--danger); }
       .mx-cost-live i { font-style: normal; color: var(--n-500); font-weight: 400; }
-      .mx-opt-note { font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--n-400); margin-left: 6px; }
+      .mx-opt-note { font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--n-500); margin-left: 6px; }
       .mx-item .sw { width: 34px; height: 20px; border-radius: 999px; background: var(--n-300); position: relative; cursor: pointer; transition: background 160ms; flex-shrink: 0; }
       .mx-item .sw.on { background: var(--atlas); }
       .mx-item .sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); transition: transform 160ms; }
@@ -549,7 +783,7 @@
       .mx-field input:focus, .mx-field select:focus, .mx-field textarea:focus { border-color: var(--atlas); }
       .mx-field.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
       .mx-field textarea { resize: vertical; min-height: 60px; }
-      /* media picker — the file inputs stay hidden, these are the affordances */
+      /* media picker · the file inputs stay hidden, these are the affordances */
       .mx-media { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
       /* 4/5 et non un carré : c'est EXACTEMENT le cadre de la tuile côté
          client (--tile-ratio dans OrderPro.html). Un aperçu carré montrait au
@@ -559,12 +793,12 @@
       .mx-media-actions { display: flex; gap: 6px; flex-wrap: wrap; }
       .mx-media-btn { padding: 8px 12px; font-size: 12.5px; }
       .mx-media-msg { font-size: 11.5px; color: var(--n-500); margin-top: 7px; line-height: 1.45; }
-      /* item row thumbnail — only present once the merchant adds media */
+      /* item row thumbnail · only present once the merchant adds media */
       .mx-item .th { width: 38px; height: 38px; border-radius: 9px; object-fit: cover; background: var(--paper-soft); border: 1px solid var(--mx-line); }
-      /* postes de préparation — la pastille est le même repère que sur l'écran
+      /* postes de préparation · la pastille est le même repère que sur l'écran
          cuisine de la caisse, à la même couleur. */
       .mx-stdot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: 0 0 8px; }
-      /* Les groupes d'options — une carte par groupe : le nom, la règle, puis
+      /* Les groupes d'options · une carte par groupe : le nom, la règle, puis
          les choix. La règle se lit avant les choix parce qu'elle change ce que
          les choix veulent dire (un seul, ou autant qu'on veut). */
       .mx-og { border: 1px solid var(--line); border-radius: 12px; padding: 12px 13px 10px;
@@ -573,7 +807,7 @@
       .mx-og-nm { flex: 1; min-width: 0; border: 0; background: none; outline: none; font: inherit;
         font-size: 14px; font-weight: 600; color: var(--ink); padding: 2px 0; }
       .mx-og-nm:focus { box-shadow: 0 1px 0 0 var(--atlas); }
-      .mx-og-head .del { display: inline-flex; color: var(--n-400); padding: 4px; border-radius: 7px;
+      .mx-og-head .del { display: inline-flex; color: var(--n-500); padding: 4px; border-radius: 7px;
         border: 0; background: none; cursor: pointer; }
       .mx-og-head .del:hover { color: var(--danger); background: var(--paper-soft); }
       .mx-og-rules { display: flex; align-items: center; gap: 12px; margin: 9px 0 11px; flex-wrap: wrap; }
@@ -583,8 +817,27 @@
       .mx-og-kind button.on { background: var(--mint-soft); color: var(--riad); font-weight: 600; }
       .mx-og-req { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--n-600); cursor: pointer; }
       .mx-og-list { display: flex; flex-direction: column; gap: 6px; }
-      .mx-og-ch { display: flex; align-items: center; gap: 8px; }
-      .mx-og-ch > input[type="text"] { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 8px;
+      .mx-og-ch { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto auto;
+        align-items: center; gap: 8px; }
+      .mx-og-emoji-wrap { position: relative; width: 48px; flex: 0 0 48px; }
+      .mx-og-emoji { width: 48px; height: 34px; border: 1px solid var(--line); border-radius: 8px;
+        padding: 4px; font: inherit; font-size: 20px; line-height: 1; text-align: center; cursor: pointer;
+        color: var(--ink); background: var(--paper-soft); outline: none; }
+      .mx-og-emoji.empty { color: var(--n-500); font-size: 18px; }
+      .mx-og-emoji:hover, .mx-og-emoji:focus, .mx-og-emoji[aria-expanded="true"] { border-color: var(--atlas); background: var(--surface); }
+      .mx-og-emoji-picker { position: absolute; z-index: 30; inset-inline-start: 0; top: calc(100% + 6px); width: 254px;
+        padding: 9px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface);
+        box-shadow: 0 12px 32px rgba(10, 30, 22, .16); max-height: 360px; overflow-y: auto;
+        overscroll-behavior: contain; }
+      .mx-og-emoji-picker[hidden] { display: none; }
+      .mx-og-emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+      .mx-og-emoji-pick { height: 34px; border: 1px solid transparent; border-radius: 7px; background: transparent;
+        font-size: 20px; line-height: 1; cursor: pointer; }
+      .mx-og-emoji-pick:hover, .mx-og-emoji-pick:focus { border-color: var(--line); background: var(--paper-soft); outline: none; }
+      .mx-og-emoji-clear { width: 100%; margin-top: 7px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 7px;
+        background: var(--paper-soft); color: var(--n-600); font: inherit; font-size: 11.5px; cursor: pointer; }
+      .mx-og-visual-hint { font-size: 11.5px; line-height: 1.45; color: var(--n-500); margin: -3px 0 10px; }
+      .mx-og-ch > input[type="text"] { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 8px;
         padding: 6px 9px; font: inherit; font-size: 13px; color: var(--ink); background: var(--paper-soft); outline: none; }
       .mx-og-ch > input[type="text"]:focus { border-color: var(--atlas); background: var(--surface); }
       .mx-og-ch .pr { display: inline-flex; align-items: center; gap: 5px; }
@@ -592,12 +845,12 @@
         font: inherit; font-size: 13px; font-family: var(--mono); text-align: right; color: var(--ink);
         background: var(--paper-soft); outline: none; }
       .mx-og-ch .pr span { font-family: var(--mono); font-size: 10px; color: var(--n-500); }
-      .mx-og-ch .del { display: inline-flex; color: var(--n-400); padding: 4px; border-radius: 7px;
+      .mx-og-ch .del { display: inline-flex; color: var(--n-500); padding: 4px; border-radius: 7px;
         border: 0; background: none; cursor: pointer; }
       .mx-og-ch .del:hover { color: var(--danger); background: var(--paper-soft); }
       .mx-og-empty { font-size: 12px; color: var(--n-500); padding: 4px 0 2px; }
       /* L'attachement, dans la fiche du produit : des cases, pas une liste
-         déroulante — un produit peut porter plusieurs groupes. */
+         déroulante · un produit peut porter plusieurs groupes. */
       .mx-opts-pick { display: flex; flex-wrap: wrap; gap: 7px; }
       .mx-opts-pick label { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line);
         border-radius: 999px; padding: 5px 11px 5px 9px; font-size: 12.5px; color: var(--n-600);
@@ -627,23 +880,124 @@
       .mx-st-act button:disabled { opacity: 0.32; cursor: default; }
       .mx-st-act button.del:hover { color: var(--danger); border-color: var(--danger); }
       .mx-st-empty { padding: 22px 4px 26px; text-align: center; color: var(--n-500); font-size: 13px; line-height: 1.55; }
+      /* Merchant menu, 2026 shell. The catalogue/store above remains the only
+         source of truth; these rules only replace the legacy split-pane skin. */
+      .mx-menu-tabs { display: flex; align-items: center; gap: 5px; overflow-x: auto; padding: 5px; margin: 0 0 18px; border: 1px solid var(--mx-line); border-radius: 999px; background: var(--surface); scrollbar-width: none; }
+      .mx-menu-tabs::-webkit-scrollbar { display: none; }
+      .mx-menu-tab { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: 0 0 auto; min-height: 36px; padding: 8px 15px; border: 0; border-radius: 999px; background: transparent; color: var(--n-500); font: 500 12.5px/1 var(--sans); cursor: pointer; transition: background-color 150ms, color 150ms, box-shadow 150ms, transform 150ms; }
+      .mx-menu-tab:hover { color: var(--ink); background: var(--paper-soft); }
+      .mx-menu-tab.on { color: var(--inverse-ink); background: var(--inverse-surface); box-shadow: 0 6px 14px color-mix(in srgb, var(--inverse-surface) 18%, transparent); }
+      .mx-catalog { padding: 24px; border: 2px solid color-mix(in srgb, var(--atlas) 34%, var(--n-200)); border-radius: 18px; background: var(--surface); box-shadow: 0 14px 34px color-mix(in srgb, var(--ink) 8%, transparent); }
+      .mx-catalog-tools { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+      .mx-filter-row { display: flex; align-items: center; gap: 8px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+      .mx-filter-row::-webkit-scrollbar { display: none; }
+      .mx-filter-pair { display: inline-flex; flex: 0 0 auto; align-items: stretch; border: 1px solid var(--mx-line); border-radius: 999px; overflow: hidden; background: var(--surface); }
+      .mx-filter-pill { min-height: 38px; padding: 8px 16px; border: 0; background: transparent; color: var(--n-600); font: 500 13px/1 var(--sans); cursor: pointer; white-space: nowrap; }
+      .mx-filter-pill:hover { color: var(--ink); background: var(--paper-soft); }
+      .mx-filter-pair.on { border-color: var(--atlas); background: var(--atlas); }
+      .mx-filter-pair.on .mx-filter-pill { color: var(--inverse-ink); }
+      .mx-filter-pair.on .mx-filter-pill:hover { background: transparent; }
+      .mx-filter-edit { display: inline-flex; align-items: center; justify-content: center; width: 34px; border: 0; border-inline-start: 1px solid var(--mx-line); background: transparent; color: var(--n-500); cursor: pointer; }
+      .mx-filter-edit:hover { color: var(--ink); background: var(--paper-soft); }
+      .mx-filter-pair.on .mx-filter-edit { color: var(--inverse-ink); border-inline-start-color: color-mix(in srgb, var(--inverse-ink) 24%, transparent); }
+      .mx-filter-count { margin-inline-start: 6px; font-family: var(--mono); font-size: 10px; opacity: .66; }
+      .mx-subfilters { display: flex; align-items: center; gap: 7px; margin: -6px 0 18px; overflow-x: auto; scrollbar-width: none; }
+      .mx-subfilters::-webkit-scrollbar { display: none; }
+      .mx-subfilter { flex: 0 0 auto; padding: 7px 12px; border: 1px solid var(--mx-line); border-radius: 999px; background: var(--surface); color: var(--n-500); font: 500 11.5px/1 var(--sans); cursor: pointer; }
+      .mx-subfilter:hover, .mx-subfilter.on { border-color: var(--atlas); color: var(--atlas); background: var(--mint-soft); }
+      .mx-card-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+      .mx-product-card { display: flex; flex-direction: column; min-width: 0; min-height: 176px; padding: 18px 18px 14px; border: 1px solid var(--mx-line); border-top: 3px solid color-mix(in srgb, var(--atlas) 30%, var(--n-200)); border-radius: 16px; background: var(--surface); box-shadow: 0 8px 18px color-mix(in srgb, var(--ink) 7%, transparent); transition: transform 150ms, box-shadow 150ms, border-color 150ms; }
+      .mx-product-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--atlas) 46%, var(--n-200)); box-shadow: 0 13px 26px color-mix(in srgb, var(--ink) 11%, transparent); }
+      .mx-product-card.off { opacity: .55; }
+      .mx-product-card .cat { font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--n-500); }
+      .mx-product-card .name { margin-top: 14px; color: var(--ink); font-size: 15px; font-weight: 600; letter-spacing: -.015em; line-height: 1.25; }
+      .mx-product-card .desc { min-height: 18px; margin-top: 4px; color: var(--n-500); font-size: 11.5px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .mx-product-card .price { margin-top: 10px; color: var(--atlas); font-family: var(--mono); font-size: 24px; font-weight: 600; letter-spacing: -.035em; }
+      .mx-product-card .price .mg { display: inline; margin-inline-start: 7px; color: var(--n-500); font-size: 10px; font-style: normal; font-weight: 500; letter-spacing: 0; }
+      .mx-product-card .price .mg.bad { color: var(--danger); }
+      .mx-product-card .foot { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--mx-line); color: var(--n-500); font-size: 11.5px; }
+      .mx-product-card .foot .meta { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .mx-product-card .act { display: inline-flex; gap: 5px; }
+      .mx-product-card .act button { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 1px solid var(--mx-line); border-radius: 9px; background: var(--surface); color: var(--n-500); cursor: pointer; }
+      .mx-product-card .act button:hover { border-color: var(--n-400); color: var(--ink); }
+      .mx-product-card .act button.del:hover { border-color: var(--danger); color: var(--danger); }
+      .mx-product-card .sw { width: 32px; height: 19px; border-radius: 999px; background: var(--n-300); position: relative; cursor: pointer; flex: 0 0 auto; }
+      .mx-product-card .sw.on { background: var(--atlas); }
+      .mx-product-card .sw::after { content: ''; position: absolute; inset: 2px auto auto 2px; width: 15px; height: 15px; border-radius: 50%; background: var(--surface); transition: transform 150ms; }
+      .mx-product-card .sw.on::after { transform: translateX(13px); }
+      /* Formule / menu composé dans la fiche produit */
+      .mx-formula-toggle-wrap { margin: 14px 0 10px; padding: 12px 14px; border: 1px solid var(--n-200); border-radius: 12px; background: var(--paper-soft); }
+      .mx-formula-toggle-label { display: flex; align-items: center; gap: 9px; cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--ink); }
+      .mx-formula-toggle-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--atlas); }
+      .mx-formula-hint { font-size: 11.5px; color: var(--n-500); margin-top: 5px; line-height: 1.4; }
+      .mx-formula-wrap { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+      .mx-formula-wrap[hidden] { display: none; }
+      .mx-slot-card { border: 1px solid var(--line); border-radius: 11px; padding: 12px; background: var(--surface); margin-bottom: 8px; }
+      .mx-slot-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+      .mx-slot-label-inp { flex: 1; min-width: 140px; padding: 6px 10px; border: 1.5px solid var(--n-200); border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--ink); }
+      .mx-slot-label-inp:focus { border-color: var(--atlas); }
+      .mx-slot-bounds { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--n-600); }
+      .mx-slot-bounds input { width: 44px; padding: 4px 6px; text-align: center; border: 1px solid var(--n-200); border-radius: 6px; font-size: 12px; font-family: var(--mono); }
+      .mx-slot-del-btn, .mx-slot-move-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--n-200); background: var(--surface); color: var(--n-500); cursor: pointer; }
+      .mx-slot-del-btn:hover { color: var(--danger); border-color: var(--danger); }
+      .mx-slot-choices-list { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+      .mx-slot-choice-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 6px 10px; background: var(--paper-soft); border-radius: 8px; }
+      .mx-slot-choice-name { font-size: 12.5px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .mx-slot-choice-extra { display: flex; align-items: center; gap: 4px; font-size: 11.5px; font-family: var(--mono); color: var(--n-600); }
+      .mx-slot-choice-extra input { width: 54px; padding: 4px 6px; border: 1px solid var(--n-200); border-radius: 6px; text-align: right; font-size: 11.5px; font-family: var(--mono); }
+      .mx-slot-add-ch-bar { position: relative; margin-top: 10px; }
+      .mx-formula-picker-trigger { width: 100%; min-height: 48px; padding: 8px 11px; display: grid; grid-template-columns: 32px minmax(0,1fr) 22px; align-items: center; gap: 10px; border: 1px solid var(--n-200); border-radius: 13px; background: var(--surface); color: var(--ink); text-align: left; cursor: pointer; transition: border-color .16s ease, box-shadow .16s ease, background .16s ease; }
+      .mx-formula-picker-trigger:hover, .mx-formula-picker-trigger[aria-expanded="true"] { border-color: color-mix(in srgb,var(--atlas) 55%,var(--n-200)); background: color-mix(in srgb,var(--atlas) 4%,var(--surface)); box-shadow: 0 0 0 3px color-mix(in srgb,var(--atlas) 10%,transparent); }
+      .mx-formula-picker-icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; background: color-mix(in srgb,var(--atlas) 11%,transparent); color: var(--atlas); }
+      .mx-formula-picker-trigger svg { width: 18px; height: 18px; fill: currentColor; }
+      .mx-formula-picker-copy { min-width: 0; display: grid; gap: 2px; }
+      .mx-formula-picker-copy strong { font-size: 13px; font-weight: 650; }
+      .mx-formula-picker-copy small { overflow: hidden; color: var(--n-500); font-size: 10.5px; text-overflow: ellipsis; white-space: nowrap; }
+      .mx-formula-picker-chevron { color: var(--n-500); transition: transform .16s ease; }
+      .mx-formula-picker-trigger[aria-expanded="true"] .mx-formula-picker-chevron { transform: rotate(180deg); }
+      .mx-formula-picker { margin-top: 8px; overflow: hidden; border: 1px solid var(--n-200); border-radius: 15px; background: var(--surface); box-shadow: 0 18px 44px -30px rgba(0,0,0,.48); }
+      .mx-formula-picker[hidden] { display: none; }
+      .mx-formula-picker-search { position: sticky; top: 0; z-index: 2; padding: 10px; border-bottom: 1px solid var(--n-200); background: color-mix(in srgb,var(--surface) 94%,transparent); backdrop-filter: blur(14px); }
+      .mx-formula-picker-search label { height: 38px; padding: 0 11px; display: flex; align-items: center; gap: 8px; border: 1px solid var(--n-200); border-radius: 11px; background: var(--paper-soft); color: var(--n-500); }
+      .mx-formula-picker-search svg { width: 17px; height: 17px; fill: currentColor; flex: 0 0 auto; }
+      .mx-formula-picker-search input { width: 100%; height: 100%; padding: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: 500 12.5px var(--sans); }
+      .mx-formula-picker-results { max-height: 292px; overflow: auto; padding: 5px 7px 8px; scrollbar-width: thin; scrollbar-color: var(--n-300) transparent; }
+      .mx-formula-picker-group { padding-top: 5px; }
+      .mx-formula-picker-group[hidden], .mx-formula-picker-option[hidden] { display: none; }
+      .mx-formula-picker-group-title { padding: 7px 9px 5px; color: var(--n-500); font: 700 9px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+      .mx-formula-picker-option { width: 100%; min-height: 45px; padding: 7px 9px; display: grid; grid-template-columns: minmax(0,1fr) auto 24px; align-items: center; gap: 10px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+      .mx-formula-picker-option:hover, .mx-formula-picker-option:focus-visible { outline: 0; background: color-mix(in srgb,var(--atlas) 10%,transparent); }
+      .mx-formula-picker-option-copy { min-width: 0; display: grid; gap: 2px; }
+      .mx-formula-picker-option-copy strong { overflow: hidden; font-size: 12.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+      .mx-formula-picker-option-copy small { overflow: hidden; color: var(--n-500); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+      .mx-formula-picker-price { color: var(--n-600); font: 600 10.5px var(--mono); white-space: nowrap; }
+      .mx-formula-picker-add { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 7px; background: color-mix(in srgb,var(--atlas) 12%,transparent); color: var(--atlas); }
+      .mx-formula-picker-add svg { width: 13px; height: 13px; }
+      .mx-formula-picker-empty { padding: 22px 14px; color: var(--n-500); font-size: 11.5px; text-align: center; }
+      .mx-formula-add-slot-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 12px; border: 1.5px dashed var(--atlas); border-radius: 10px; background: var(--mint-soft); color: var(--riad); font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; box-sizing: border-box; }
+      @media (max-width: 1280px) { .mx-card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+      @media (max-width: 980px) { .mx-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mx-catalog-tools { align-items: flex-start; flex-direction: column; } }
+      @media (max-width: 640px) { .mx-catalog { padding: 14px; } .mx-card-grid { grid-template-columns: 1fr; } }
     `;
     document.head.appendChild(s);
   }
 
   /* ───────────────── small SVGs ───────────────── */
   const PLUS = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+  const PICKER_SEARCH = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>';
+  const PICKER_CHEVRON = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M480-360 280-560l56-56 144 144 144-144 56 56-200 200Z"/></svg>';
   const EDIT = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>';
   const DOWNLOAD = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>';
   const TRASH = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>';
   const SPARK = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.7L19.6 10l-5.7 1.9L12 17.6l-1.9-5.7L4.4 10l5.7-1.9z"/></svg>';
+  const LIST = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>';
   /* Une cloche de passe — l'objet qu'on tape quand le plat sort du poste. */
   const BELL = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18"/><path d="M20 15a8 8 0 1 0-16 0"/><path d="M12 4V2"/></svg>';
   const ARR_UP = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
   const ARR_DN = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>';
 
   /* ───────────────── UI state ───────────────── */
-  let activeCat = null;
+  let activeCat = 'all';
   let activeSub = null; // null = all subs of the active category
 
   const fmt = (n) => Number(n || 0).toLocaleString(LANG() === 'ar' ? 'ar-MA' : 'fr-FR');
@@ -660,7 +1014,7 @@
   }
 
   /* ───────────────── render ───────────────── */
-  function render() {
+  function renderLegacy() {
     injectCss();
     const d = store.get();
     const cats = d.cats || [];
@@ -668,44 +1022,29 @@
 
     if (!cats.length && !items.length) return renderEmpty();
 
-    // keep active selection valid
-    if (!activeCat || !catById(d, activeCat)) { activeCat = cats[0] ? cats[0].id : null; activeSub = null; }
-    const cat = catById(d, activeCat);
+    // Keep the visual filter valid. "all" is a view state only; stored
+    // category ids and item relationships are untouched.
+    if (!activeCat || (activeCat !== 'all' && !catById(d, activeCat))) { activeCat = 'all'; activeSub = null; }
+    const cat = activeCat === 'all' ? null : catById(d, activeCat);
     if (activeSub && cat && !(cat.sub || []).some((s) => s.id === activeSub)) activeSub = null;
 
-    const rail = cats.map((c) => {
+    const filters = cats.map((c) => {
       const isOn = c.id === activeCat;
       const count = itemsIn(d, c.id).length;
-      const subs = (c.sub || []).map((s) => `
-        <div class="mx-sub ${isOn && activeSub === s.id ? 'on' : ''}" data-action="mx-sub-pick" data-arg="${c.id}::${s.id}">
-          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(s.name)}</span>
-          <span style="font-family:var(--mono);font-size:10px;opacity:.6;">${itemsIn(d, c.id, s.id).length}</span>
-        </div>`).join('');
-      /* La pastille ne s'affiche QUE pour une catégorie détournée. Un point sur
-       * chaque ligne serait du bruit — c'est l'exception qu'on veut voir sauter
-       * aux yeux, et « pas de pastille » se lit alors « ça part en cuisine ». */
-      const cSt = c.station ? stationById(d, c.station) : null;
-      const cDot = cSt ? `<i class="mx-stdot" style="background:${esc(cSt.color || STATION_COLORS[0])}" title="${esc(cSt.name)}"></i>` : '';
       return `
-        <div class="mx-cat ${isOn ? 'on' : ''}">
-          <div class="mx-cat-head" data-action="mx-cat-pick" data-arg="${c.id}">
-            <span class="nm">${esc(c.name)}</span>
-            ${cDot}
-            <span class="ct">${count}</span>
-            <span class="ed" data-action="mx-cat-edit" data-arg="${c.id}" title="${esc(tr(T.rename))}">${EDIT}</span>
-          </div>
-          ${isOn ? `<div class="mx-subs">
-            <div class="mx-sub ${activeSub == null ? 'on' : ''}" data-action="mx-sub-pick" data-arg="${c.id}::">
-              <span style="flex:1;">${esc(tr(T.allItems))}</span><span style="font-family:var(--mono);font-size:10px;opacity:.6;">${count}</span>
-            </div>
-            ${subs}
-            <button class="mx-sub-add" data-action="mx-sub-add" data-arg="${c.id}">${PLUS}<span>${esc(tr(T.addSub))}</span></button>
-          </div>` : ''}
+        <div class="mx-filter-pair ${isOn ? 'on' : ''}">
+          <button class="mx-filter-pill" data-action="mx-cat-pick" data-arg="${c.id}">${esc(c.name)}<span class="mx-filter-count">${count}</span></button>
+          <button class="mx-filter-edit" data-action="mx-cat-edit" data-arg="${c.id}" title="${esc(tr(T.rename))}" aria-label="${esc(tr(T.rename))} · ${esc(c.name)}">${EDIT}</button>
         </div>`;
     }).join('');
 
-    const shown = cat ? itemsIn(d, cat.id, activeSub) : [];
-    const subName = activeSub && cat ? (cat.sub || []).find((s) => s.id === activeSub) : null;
+    const shown = cat ? itemsIn(d, cat.id, activeSub) : items.slice();
+    const subfilters = cat ? `
+      <div class="mx-subfilters">
+        <button class="mx-subfilter ${activeSub == null ? 'on' : ''}" data-action="mx-sub-pick" data-arg="${cat.id}::">${esc(tr(T.allItems))}</button>
+        ${(cat.sub || []).map((s) => `<button class="mx-subfilter ${activeSub === s.id ? 'on' : ''}" data-action="mx-sub-pick" data-arg="${cat.id}::${s.id}">${esc(s.name)} · ${itemsIn(d, cat.id, s.id).length}</button>`).join('')}
+        <button class="mx-subfilter" data-action="mx-sub-add" data-arg="${cat.id}">${PLUS} ${esc(tr(T.addSub))}</button>
+      </div>` : '';
 
     /* Le carnet des coûts et la base TVA sont lus UNE FOIS pour toute la liste.
      * Cette page se repeint à chaque frappe (voir bindCatStation), et
@@ -724,7 +1063,8 @@
     };
 
     const itemRows = shown.length ? shown.map((it) => {
-      const sub = (cat.sub || []).find((s) => s.id === it.subId);
+      const itemCat = catById(d, it.catId);
+      const sub = itemCat && (itemCat.sub || []).find((s) => s.id === it.subId);
       /* Plus de pastille de poste par plat : tous les plats affichés ici
        * partagent la catégorie ouverte, donc son poste. Le répéter sur chaque
        * ligne laisserait croire qu'il se règle ligne par ligne. Il se lit une
@@ -734,47 +1074,50 @@
        * produit fera parler le comptoir avant d'entrer dans la note se lit d'un
        * coup d'œil, sans ouvrir la fiche. */
       const nOpt = (Array.isArray(it.opts) ? it.opts : []).filter((x) => !!optById(d, x)).length;
-      const stTag = nOpt ? `<span class="otag">${esc(tr(T.optCount).replace('{n}', nOpt))}</span>` : '';
+      const station = itemCat && stationById(d, itemCat.station || kitchenIdOf(d));
+      const footer = [sub && sub.name, station && station.name, nOpt ? tr(T.optCount).replace('{n}', nOpt) : ''].filter(Boolean).join(' · ');
       return `
-        <div class="mx-item ${it.avail === false ? 'off' : ''}">
-          <div style="display:flex;align-items:center;gap:11px;min-width:0;">
-            ${it.video ? `<video class="th" src="${esc(it.video)}" muted playsinline preload="metadata"></video>`
-              : (it.photo ? `<img class="th" src="${esc(it.photo)}" alt="" loading="lazy" />` : '')}
-            <div style="min-width:0;">
-              <div class="nm">${esc(it.name)}${sub ? `<span class="tag">${esc(sub.name)}</span>` : ''}${stTag}</div>
-              ${it.desc ? `<div class="d">${esc(it.desc)}</div>` : ''}
+        <div class="mx-product-card ${it.avail === false ? 'off' : ''}">
+          <div class="cat">${esc(itemCat ? itemCat.name : tr(T.title))}</div>
+          <div class="name">${esc(it.name)}</div>
+          <div class="desc">${esc(it.desc || '')}</div>
+          <div class="price">${fmt(it.price)} MAD${mgHtml(it)}</div>
+          <div class="foot">
+            <span class="meta">${esc(footer || tr(it.avail === false ? T.unavail : T.avail))}</span>
+            <span class="sw ${it.avail === false ? '' : 'on'}" data-action="mx-item-avail" data-arg="${it.id}" role="switch" aria-checked="${it.avail !== false}" title="${esc(tr(it.avail === false ? T.unavail : T.avail))}"></span>
+            <div class="act">
+              <button data-action="mx-item-edit" data-arg="${it.id}" title="${esc(tr(T.rename))}">${EDIT}</button>
+              <button class="del" data-action="mx-item-del" data-arg="${it.id}" title="${esc(tr(T.del))}">${TRASH}</button>
             </div>
-          </div>
-          <div class="pr">${fmt(it.price)} MAD${mgHtml(it)}</div>
-          <span class="sw ${it.avail === false ? '' : 'on'}" data-action="mx-item-avail" data-arg="${it.id}" role="switch" aria-checked="${it.avail !== false}" title="${esc(tr(it.avail === false ? T.unavail : T.avail))}"></span>
-          <div class="act">
-            <button data-action="mx-item-edit" data-arg="${it.id}" title="${esc(tr(T.rename))}">${EDIT}</button>
-            <button class="del" data-action="mx-item-del" data-arg="${it.id}" title="${esc(tr(T.del))}">${TRASH}</button>
           </div>
         </div>`;
     }).join('') : `<div class="mx-empty-items">${esc(tr(T.noItems))}</div>`;
 
     const body = `
       <div class="mx-wrap">
-        <div class="mx-grid">
-          <div class="mx-rail">
-            <button class="mx-cat-add" data-action="mx-cat-add">${PLUS}<span>${esc(tr(T.addCat))}</span></button>
-            ${rail}
-          </div>
-          <div class="mx-pane">
-            <div class="mx-pane-head">
-              <div>
-                <h3>${cat ? esc(cat.name) : esc(tr(T.title))}${subName ? ' · ' + esc(subName.name) : ''}</h3>
-                <div class="sub">${shown.length} ${esc(tr(shown.length === 1 ? T.product : T.products))}</div>
+        <div class="mx-menu-tabs">
+          <button class="mx-menu-tab on" type="button">${LIST}<span>${esc(tr(T.title))}</span></button>
+          <button class="mx-menu-tab" type="button" data-action="mx-stations-manage">${BELL}<span>${esc(tr(T.stations))}</span></button>
+          <button class="mx-menu-tab" type="button" data-action="mx-opts"><span>${esc(tr(T.opts))}</span></button>
+          ${orderProOn() ? `<button class="mx-menu-tab" type="button" data-action="orderpro-tags"><span>${esc(tr(T.tags))}</span></button>` : ''}
+        </div>
+        <div class="mx-catalog">
+          <div class="mx-catalog-tools">
+            <div class="mx-filter-row">
+              <div class="mx-filter-pair ${activeCat === 'all' ? 'on' : ''}">
+                <button class="mx-filter-pill" data-action="mx-cat-pick" data-arg="all">${esc(tr(T.allItems))}<span class="mx-filter-count">${items.length}</span></button>
               </div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                ${orderProOn() ? `<button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="orderpro-tags"><span>${esc(tr(T.tags))}</span></button>` : ''}
-                <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-opts"><span>${esc(tr(T.opts))}</span></button>
-                <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-stations" data-arg="${cat ? esc(cat.id) : ''}">${BELL}<span>${esc(tr(T.stations))}</span></button>
-                <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-import">${DOWNLOAD}<span>${esc(tr(T.importCsv))}</span></button>
-                <button class="mx-pane-add" data-action="mx-item-add">${PLUS}<span>${esc(tr(T.addItem))}</span></button>
-              </div>
+              ${filters}
             </div>
+            <div style="display:flex;gap:8px;align-items:center;flex:0 0 auto;">
+              ${cat ? `<button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-stations">${BELL}<span>${esc(tr(T.catStationL))}</span></button>` : ''}
+              <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-import">${DOWNLOAD}<span>${esc(tr(T.importCsv))}</span></button>
+              <button class="mx-cat-add" style="width:auto;border-style:solid;margin:0;" data-action="mx-cat-add">${PLUS}<span>${esc(tr(T.addCat))}</span></button>
+              <button class="mx-pane-add" data-action="mx-item-add">${PLUS}<span>${esc(tr(T.addItem))}</span></button>
+            </div>
+          </div>
+          ${subfilters}
+          <div class="mx-card-grid">
             ${itemRows}
           </div>
         </div>
@@ -782,9 +1125,18 @@
 
     window.Kiwi.appPage('menu', {
       title: tr(T.title),
-      subtitle: `${esc(venueName())} · ${items.length} ${tr(T.products)} · ${cats.length} ${tr(T.cats)}`,
+      subtitle: `${items.length} ${tr(T.products)} · ${cats.length} ${tr(T.cats)} · ${esc(venueName())}`,
       body,
     });
+  }
+
+  /* The store keeps persistence, cloud publishing and editing modals. The
+   * visible menu itself has one owner: venues.js's current card-based screen. */
+  function render() {
+    injectCss();
+    const KV = window.KiwiVenue;
+    if (KV && typeof KV.showMenu === 'function') return KV.showMenu();
+    if (KV && typeof KV.refreshMenu === 'function') return KV.refreshMenu();
   }
 
   function renderEmpty() {
@@ -1048,8 +1400,21 @@
     function paint(focusSel) {
       const list = optsOf(store.get());
       const cards = list.map((g) => {
-        const choices = (g.choices || []).map((c) => `
+        const choices = (g.choices || []).map((c) => {
+          const emoji = cleanOptEmoji(c.emoji);
+          return `
           <div class="mx-og-ch" data-oc="${esc(c.id)}">
+            <div class="mx-og-emoji-wrap">
+              <button class="mx-og-emoji ${emoji ? '' : 'empty'}" type="button"
+                      data-oc-emoji-open="${esc(g.id)}::${esc(c.id)}" aria-expanded="false"
+                      aria-label="${esc(tr(T.optChEmoji))}" title="${esc(tr(T.optChEmoji))}">${emoji ? esc(emoji) : '+'}</button>
+              <div class="mx-og-emoji-picker" data-oc-emoji-picker="${esc(g.id)}::${esc(c.id)}" hidden>
+                <div class="mx-og-emoji-grid">
+                  ${OPT_EMOJIS.map((icon) => `<button class="mx-og-emoji-pick" type="button" data-oc-emoji-pick="${esc(g.id)}::${esc(c.id)}" data-emoji="${esc(icon)}" aria-label="${esc(icon)}">${esc(icon)}</button>`).join('')}
+                </div>
+                <button class="mx-og-emoji-clear" type="button" data-oc-emoji-pick="${esc(g.id)}::${esc(c.id)}" data-emoji="">${esc(tr(T.optEmojiNone))}</button>
+              </div>
+            </div>
             <input type="text" value="${esc(c.name)}" data-oc-name="${esc(g.id)}::${esc(c.id)}" aria-label="${esc(tr(T.optChNm))}" />
             <div class="pr">
               <input type="number" min="0" step="1" value="${c.price ? esc(c.price) : ''}" placeholder="0"
@@ -1057,7 +1422,8 @@
               <span>MAD</span>
             </div>
             <button type="button" class="del" data-oc-del="${esc(g.id)}::${esc(c.id)}" title="${esc(tr(T.del))}" aria-label="${esc(tr(T.del))}">${TRASH}</button>
-          </div>`).join('');
+          </div>`;
+        }).join('');
         return `
         <div class="mx-og" data-og="${esc(g.id)}">
           <div class="mx-og-head">
@@ -1076,6 +1442,7 @@
             </label>
           </div>
           <div class="mx-og-list">
+            <div class="mx-og-visual-hint">${esc(tr(T.optEmojiHi))}</div>
             ${choices || `<div class="mx-og-empty">${esc(tr(T.optChEm))}</div>`}
           </div>
           <button class="mx-sub-add" type="button" data-oc-add="${esc(g.id)}">${PLUS}<span>${esc(tr(T.optChAdd))}</span></button>
@@ -1116,6 +1483,26 @@
       if (rq) { flush(); updateOptGroup(rq.dataset.ogReq, { required: rq.checked }); }
     });
     body.addEventListener('click', (e) => {
+      const picked = e.target.closest('[data-oc-emoji-pick]');
+      if (picked) {
+        flush();
+        const [g, c] = pair(picked.dataset.ocEmojiPick);
+        updateOptChoice(g, c, { emoji: picked.dataset.emoji || '' });
+        paint();
+        return;
+      }
+      const opener = e.target.closest('[data-oc-emoji-open]');
+      if (opener) {
+        const id = opener.dataset.ocEmojiOpen;
+        const picker = body.querySelector(`[data-oc-emoji-picker="${id}"]`);
+        const willOpen = !!(picker && picker.hidden);
+        body.querySelectorAll('[data-oc-emoji-picker]').forEach((el) => { el.hidden = true; });
+        body.querySelectorAll('[data-oc-emoji-open]').forEach((el) => { el.setAttribute('aria-expanded', 'false'); });
+        if (picker && willOpen) { picker.hidden = false; opener.setAttribute('aria-expanded', 'true'); }
+        return;
+      }
+      body.querySelectorAll('[data-oc-emoji-picker]').forEach((el) => { el.hidden = true; });
+      body.querySelectorAll('[data-oc-emoji-open]').forEach((el) => { el.setAttribute('aria-expanded', 'false'); });
       const kd = e.target.closest('[data-og-kind]');
       if (kd) { flush(); const [g, k] = pair(kd.dataset.ogKind); updateOptGroup(g, { kind: k }); paint(); return; }
       const gd = e.target.closest('[data-og-del]');
@@ -1151,7 +1538,8 @@
     const d = store.get();
     const cats = d.cats || [];
     if (!cats.length) { promptText({ title: tr(T.addCat), desc: tr(T.firstCat), placeholder: tr(T.catName), ok: tr(T.addCat) }, (v) => { if (v) { addCategory(v); render(); } }); return; }
-    const it = existing || { name: '', price: '', catId: activeCat || cats[0].id, subId: activeSub || null, desc: '', avail: true, photo: '', video: '', opts: [] };
+    const selectedCat = catById(d, activeCat) ? activeCat : cats[0].id;
+    const it = existing || { name: '', price: '', catId: selectedCat, subId: activeSub || null, desc: '', avail: true, formulaOnly: false, showPhotoInFormulas: false, archived: false, photo: '', video: '', opts: [] };
     /* Le coût ne vient pas de l'article : il se lit dans le carnet des coûts,
        par identifiant. Un article neuf n'en a pas encore — il sera écrit après
        addItem(), quand l'identifiant existe. */
@@ -1162,6 +1550,9 @@
     // Live media state for this modal — mutated by the picker, read on save.
     const media = { photo: it.photo || '', video: it.video || '' };
 
+    const initialFormula = cleanFormula(it.formula, d.items);
+    let formulaSlots = initialFormula && initialFormula.slots ? JSON.parse(JSON.stringify(initialFormula.slots)) : [];
+
     const catOpts = cats.map((c) => `<option value="${c.id}" ${c.id === it.catId ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
     const subsFor = (cid) => (catById(d, cid) ? (catById(d, cid).sub || []) : []);
     const subOptsHtml = (cid, sel) => `<option value="">${esc(tr(T.none))}</option>` + subsFor(cid).map((s) => `<option value="${s.id}" ${s.id === sel ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
@@ -1169,7 +1560,7 @@
     const m = K.modal({
       tag: venueName(),
       title: existing ? tr(T.rename) : tr(T.addItem),
-      width: 460,
+      width: 480,
       body: `
         <div class="mx-field"><label>${esc(tr(T.nameL))}</label><input data-f-name type="text" value="${esc(it.name)}" placeholder="${esc(tr(T.nameL))}"/></div>
         <div class="mx-field two">
@@ -1200,7 +1591,24 @@
             </label>`).join('')}
           </div>` : `<div class="mx-opts-none">${esc(tr(T.optNoneYet))}</div>`}
         </div>
+        <div class="mx-formula-toggle-wrap">
+          <label class="mx-formula-toggle-label">
+            <input type="checkbox" data-f-is-formula ${formulaSlots.length ? 'checked' : ''} />
+            <span>${esc(tr(T.formulaIs))}</span>
+          </label>
+          <div class="mx-formula-hint">${esc(tr(T.formulaHint))}</div>
+          <div class="mx-formula-wrap" data-f-formula-wrap ${formulaSlots.length ? '' : 'hidden'}>
+            <div data-f-slots-container></div>
+            <button type="button" class="mx-formula-add-slot-btn" data-f-add-slot>${PLUS}<span>${esc(tr(T.formulaAddSlot))}</span></button>
+          </div>
+        </div>
         <div class="mx-field"><label>${esc(tr(T.descL))}</label><textarea data-f-desc placeholder="${esc(tr(T.descL))}">${esc(it.desc || '')}</textarea></div>
+        <div class="mx-field two">
+          <label class="mx-formula-toggle-label"><input type="checkbox" data-f-standalone ${it.formulaOnly ? '' : 'checked'} /><span>${esc(tr(T.standalone))}</span></label>
+          <label class="mx-formula-toggle-label"><input type="checkbox" data-f-formula-photo ${it.showPhotoInFormulas ? 'checked' : ''} /><span>${esc(tr(T.formulaPhoto))}</span></label>
+        </div>
+        <div class="mx-formula-hint" style="margin-top:-7px;">${esc(tr(T.formulaPhotoHint))}</div>
+        <div class="mx-field"><label class="mx-formula-toggle-label"><input type="checkbox" data-f-archived ${it.archived ? 'checked' : ''} /><span>${esc(tr(T.archived))}</span></label></div>
         <div class="mx-field">
           <label>${esc(tr(T.mediaL))}</label>
           <div class="mx-media" data-f-media></div>
@@ -1213,6 +1621,236 @@
     });
     const q = (s) => m.el.querySelector(s);
     q('[data-f-cat]').addEventListener('change', (e) => { q('[data-f-sub]').innerHTML = subOptsHtml(e.target.value, null); });
+
+    /* ── formule / menu composé ─────────────────────────────────────────── */
+    const availableItems = (d.items || []).filter((x) => x && x.id && !x.archived && (!existing || x.id !== existing.id));
+    const isFormulaCb = q('[data-f-is-formula]');
+    const formulaWrap = q('[data-f-formula-wrap]');
+    const slotsContainer = q('[data-f-slots-container]');
+
+    function renderFormulaSlots() {
+      if (!slotsContainer) return;
+      if (!formulaSlots.length) {
+        slotsContainer.innerHTML = `<div style="font-size:12px;color:var(--n-500);padding:6px 2px;">${esc(tr(T.formulaNoSlots))}</div>`;
+        return;
+      }
+      slotsContainer.innerHTML = formulaSlots.map((slot, si) => {
+        const choicesHtml = (slot.choices || []).map((ch, ci) => {
+          const match = (d.items || []).find((x) => x.id === ch.itemId);
+          const chName = match ? match.name : ch.itemId;
+          const matchCat = match && catById(d, match.catId);
+          return `
+            <div class="mx-slot-choice-row" data-si="${si}" data-ci="${ci}">
+              <div class="mx-slot-choice-name">
+                ${esc(chName)} ${matchCat ? `<span style="font-size:10px;color:var(--n-500);margin-left:4px;">(${esc(matchCat.name)})</span>` : ''}
+              </div>
+              <div class="mx-slot-choice-extra">
+                <span>+</span>
+                <input type="number" min="0" max="100000" step="1" data-f-ch-extra="${si}-${ci}" value="${ch.extra || 0}" />
+                <span>MAD</span>
+              </div>
+              <button type="button" class="mx-slot-del-btn" data-f-del-choice="${si}-${ci}" title="${esc(tr(T.del))}">${TRASH}</button>
+            </div>`;
+        }).join('');
+
+        const availableToAdd = availableItems.filter((it) => !(slot.choices || []).some((c) => c.itemId === it.id));
+        const pickerOption = (it, category) => {
+          const sub = category && (category.sub || []).find((entry) => entry.id === it.subId);
+          const context = sub ? sub.name : (category ? category.name : tr(T.uncategorized || { fr: 'Sans section', en: 'Uncategorised', ar: 'بلا قسم' }));
+          const search = `${it.name || ''} ${category ? category.name : ''} ${sub ? sub.name : ''}`.toLocaleLowerCase();
+          return `<button type="button" class="mx-formula-picker-option" role="option" data-f-picker-item="${esc(it.id)}" data-f-picker-si="${si}" data-picker-search="${esc(search)}"><span class="mx-formula-picker-option-copy"><strong>${esc(it.name)}</strong><small>${esc(context)}</small></span><span class="mx-formula-picker-price">${fmt(it.price)} MAD</span><span class="mx-formula-picker-add">${PLUS}</span></button>`;
+        };
+        const pickerGroups = (d.cats || []).map((category) => {
+          const items = availableToAdd.filter((it) => it.catId === category.id);
+          return items.length ? `<section class="mx-formula-picker-group" data-picker-group><div class="mx-formula-picker-group-title">${esc(category.name)}</div>${items.map((it) => pickerOption(it, category)).join('')}</section>` : '';
+        }).join('');
+        const uncategorized = availableToAdd.filter((it) => !(d.cats || []).some((category) => category.id === it.catId));
+        const pickerGroupsHtml = pickerGroups + (uncategorized.length ? `<section class="mx-formula-picker-group" data-picker-group><div class="mx-formula-picker-group-title">Sans section</div>${uncategorized.map((it) => pickerOption(it, null)).join('')}</section>` : '');
+
+        let addChBarHtml = '';
+        if (availableItems.length === 0) {
+          addChBarHtml = `
+            <div class="mx-slot-empty-notice" style="background:var(--n-50,#f8f9fa);border:1px dashed var(--n-300,#d0d5dd);border-radius:6px;padding:10px 12px;margin-top:6px;font-size:12px;color:var(--n-700,#344054);">
+              <div>${esc(tr(T.formulaNoItems))}</div>
+              <button type="button" class="kb ghost sm" data-f-save-and-create style="margin-top:8px;font-size:11.5px;font-weight:600;">${esc(tr(T.formulaSaveAndCreate))}</button>
+            </div>`;
+        } else if (availableToAdd.length === 0) {
+          addChBarHtml = `
+            <div class="mx-slot-all-chosen" style="font-size:11.5px;color:var(--n-500);padding:6px 2px;">
+              ${esc(tr(T.formulaAllChosen))}
+            </div>`;
+        } else {
+          addChBarHtml = `
+            <div class="mx-slot-add-ch-bar">
+              <button type="button" class="mx-formula-picker-trigger" data-f-picker-toggle="${si}" aria-haspopup="listbox" aria-expanded="false"><span class="mx-formula-picker-icon">${PICKER_SEARCH}</span><span class="mx-formula-picker-copy"><strong>${esc(tr(T.formulaAddCh))}</strong><small>${esc(tr(T.formulaBrowse))}</small></span><span class="mx-formula-picker-chevron">${PICKER_CHEVRON}</span></button>
+              <div class="mx-formula-picker" data-f-picker-panel="${si}" role="listbox" aria-label="${esc(tr(T.formulaPickIt))}" hidden>
+                <div class="mx-formula-picker-search"><label>${PICKER_SEARCH}<input type="search" data-f-picker-search="${si}" placeholder="${esc(tr(T.formulaSearch))}" autocomplete="off" /></label></div>
+                <div class="mx-formula-picker-results">${pickerGroupsHtml}<div class="mx-formula-picker-empty" data-picker-empty hidden>${esc(tr(T.formulaNoMatch))}</div></div>
+              </div>
+            </div>`;
+        }
+
+        return `
+          <div class="mx-slot-card" data-slot-index="${si}">
+            <div class="mx-slot-head">
+              <input type="text" class="mx-slot-label-inp" data-f-slot-label="${si}" value="${esc(slot.label)}" placeholder="${esc(tr(T.formulaSlotNm))}" />
+              <div class="mx-slot-bounds">
+                <label>${esc(tr(T.formulaMin))}</label>
+                <input type="number" min="0" max="10" data-f-slot-min="${si}" value="${slot.min != null ? slot.min : 1}" />
+                <label>${esc(tr(T.formulaMax))}</label>
+                <input type="number" min="1" max="10" data-f-slot-max="${si}" value="${slot.max != null ? slot.max : 1}" />
+              </div>
+              ${si > 0 ? `<button type="button" class="mx-slot-move-btn" data-f-slot-move="${si},-1" title="Monter">↑</button>` : ''}
+              ${si < formulaSlots.length - 1 ? `<button type="button" class="mx-slot-move-btn" data-f-slot-move="${si},1" title="Descendre">↓</button>` : ''}
+              <button type="button" class="mx-slot-del-btn" data-f-slot-del="${si}" title="${esc(tr(T.formulaDelSlot))}">${TRASH}</button>
+            </div>
+            <div class="mx-slot-choices-list">${choicesHtml || `<div style="font-size:11.5px;color:var(--n-500);padding:2px 0;">${esc(tr(T.formulaChoices))} : aucun produit</div>`}</div>
+            ${addChBarHtml}
+          </div>`;
+      }).join('');
+    }
+
+    if (isFormulaCb) {
+      isFormulaCb.addEventListener('change', () => {
+        const on = isFormulaCb.checked;
+        if (on && !formulaSlots.length) {
+          formulaSlots.push({ id: 'sl_1', label: '', min: 1, max: 1, choices: [] });
+        }
+        if (formulaWrap) formulaWrap.hidden = !on;
+        renderFormulaSlots();
+      });
+    }
+
+    if (m.el.querySelector('[data-f-add-slot]')) {
+      m.el.querySelector('[data-f-add-slot]').addEventListener('click', () => {
+        if (formulaSlots.length >= 10) return;
+        const nextId = 'sl_' + (formulaSlots.length + 1);
+        formulaSlots.push({ id: nextId, label: '', min: 1, max: 1, choices: [] });
+        renderFormulaSlots();
+      });
+    }
+
+    slotsContainer && slotsContainer.addEventListener('input', (e) => {
+      const pickerSearch = e.target.closest('[data-f-picker-search]');
+      if (pickerSearch) {
+        const panel = pickerSearch.closest('[data-f-picker-panel]');
+        const term = pickerSearch.value.trim().toLocaleLowerCase();
+        let visible = 0;
+        panel.querySelectorAll('[data-picker-search]').forEach((option) => {
+          const match = !term || (option.dataset.pickerSearch || '').includes(term);
+          option.hidden = !match;
+          if (match) visible += 1;
+        });
+        panel.querySelectorAll('[data-picker-group]').forEach((group) => { group.hidden = !group.querySelector('[data-picker-search]:not([hidden])'); });
+        const empty = panel.querySelector('[data-picker-empty]');
+        if (empty) empty.hidden = visible !== 0;
+        return;
+      }
+      const lblInp = e.target.closest('[data-f-slot-label]');
+      if (lblInp) {
+        const si = Number(lblInp.dataset.fSlotLabel);
+        if (formulaSlots[si]) formulaSlots[si].label = lblInp.value;
+        return;
+      }
+      const minInp = e.target.closest('[data-f-slot-min]');
+      if (minInp) {
+        const si = Number(minInp.dataset.fSlotMin);
+        if (formulaSlots[si]) formulaSlots[si].min = Math.max(0, Math.min(10, Math.round(Number(minInp.value) || 0)));
+        return;
+      }
+      const maxInp = e.target.closest('[data-f-slot-max]');
+      if (maxInp) {
+        const si = Number(maxInp.dataset.fSlotMax);
+        if (formulaSlots[si]) formulaSlots[si].max = Math.max(1, Math.min(10, Math.round(Number(maxInp.value) || 1)));
+        return;
+      }
+      const extInp = e.target.closest('[data-f-ch-extra]');
+      if (extInp) {
+        const [si, ci] = extInp.dataset.fChExtra.split('-').map(Number);
+        if (formulaSlots[si] && formulaSlots[si].choices && formulaSlots[si].choices[ci]) {
+          formulaSlots[si].choices[ci].extra = Math.max(0, Math.min(1e5, Number(extInp.value) || 0));
+        }
+      }
+    });
+
+    slotsContainer && slotsContainer.addEventListener('click', (e) => {
+      const pickerToggle = e.target.closest('[data-f-picker-toggle]');
+      if (pickerToggle) {
+        const panel = slotsContainer.querySelector(`[data-f-picker-panel="${pickerToggle.dataset.fPickerToggle}"]`);
+        const willOpen = panel && panel.hidden;
+        slotsContainer.querySelectorAll('[data-f-picker-panel]').forEach((entry) => { entry.hidden = true; });
+        slotsContainer.querySelectorAll('[data-f-picker-toggle]').forEach((entry) => { entry.setAttribute('aria-expanded', 'false'); });
+        if (panel && willOpen) {
+          panel.hidden = false;
+          pickerToggle.setAttribute('aria-expanded', 'true');
+          requestAnimationFrame(() => panel.querySelector('[data-f-picker-search]')?.focus());
+        }
+        return;
+      }
+      const pickerItem = e.target.closest('[data-f-picker-item]');
+      if (pickerItem) {
+        const si = Number(pickerItem.dataset.fPickerSi);
+        const pickedId = pickerItem.dataset.fPickerItem;
+        if (pickedId && formulaSlots[si]) {
+          formulaSlots[si].choices = formulaSlots[si].choices || [];
+          if (formulaSlots[si].choices.length < 20 && !formulaSlots[si].choices.some((choice) => choice.itemId === pickedId)) {
+            formulaSlots[si].choices.push({ itemId: pickedId, extra: 0 });
+            renderFormulaSlots();
+          }
+        }
+        return;
+      }
+      const saveAndCreateBtn = e.target.closest('[data-f-save-and-create]');
+      if (saveAndCreateBtn) {
+        saveCurrent(() => { itemModal(null); });
+        return;
+      }
+      const delSlotBtn = e.target.closest('[data-f-slot-del]');
+      if (delSlotBtn) {
+        const si = Number(delSlotBtn.dataset.fSlotDel);
+        formulaSlots.splice(si, 1);
+        renderFormulaSlots();
+        return;
+      }
+      const moveSlotBtn = e.target.closest('[data-f-slot-move]');
+      if (moveSlotBtn) {
+        const [si, delta] = moveSlotBtn.dataset.fSlotMove.split(',').map(Number);
+        const target = si + delta;
+        if (target >= 0 && target < formulaSlots.length) {
+          const item = formulaSlots.splice(si, 1)[0];
+          formulaSlots.splice(target, 0, item);
+          renderFormulaSlots();
+        }
+        return;
+      }
+      const delChBtn = e.target.closest('[data-f-del-choice]');
+      if (delChBtn) {
+        const [si, ci] = delChBtn.dataset.fDelChoice.split('-').map(Number);
+        if (formulaSlots[si] && formulaSlots[si].choices) {
+          formulaSlots[si].choices.splice(ci, 1);
+          renderFormulaSlots();
+        }
+        return;
+      }
+    });
+
+    slotsContainer && slotsContainer.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const panel = e.target.closest('[data-f-picker-panel]');
+      if (!panel) return;
+      const si = panel.dataset.fPickerPanel;
+      panel.hidden = true;
+      const trigger = slotsContainer.querySelector(`[data-f-picker-toggle="${si}"]`);
+      trigger?.setAttribute('aria-expanded', 'false');
+      trigger?.focus();
+    });
+    m.el.addEventListener('click', (e) => {
+      if (e.target.closest('.mx-slot-add-ch-bar')) return;
+      slotsContainer?.querySelectorAll('[data-f-picker-panel]').forEach((panel) => { panel.hidden = true; });
+      slotsContainer?.querySelectorAll('[data-f-picker-toggle]').forEach((trigger) => { trigger.setAttribute('aria-expanded', 'false'); });
+    });
+
+    renderFormulaSlots();
 
     /* ── la marge, pendant qu'il tape ──────────────────────────────────────
        Le patron apprend le rapport prix/coût en le VOYANT bouger, pas en lisant
@@ -1266,10 +1904,20 @@
           ${del}
         </div>`;
     }
-    function uploadErr(error) {
-      if (error === 'no-media' || error === 'not-configured') return tr(T.mediaOff);
-      if (error === 'too-large') return tr(T.mediaBig);
-      if (error === 'bad-type') return tr(T.mediaBad);
+    /* La phrase vient de KiwiOrderPro.uploadError : c'est lui qui connaît la
+       taille réelle, le plafond et l'extension refusée. Le repli local ne sert
+       qu'au cas où le publisher n'est pas chargé — il reste vague parce qu'il
+       n'a, lui, aucun chiffre à donner. */
+    function uploadErr(res) {
+      var code = (res && res.error) || res;
+      try {
+        if (window.KiwiOrderPro && window.KiwiOrderPro.uploadError && res && res.error) {
+          return window.KiwiOrderPro.uploadError(res);
+        }
+      } catch (_) {}
+      if (code === 'no-media' || code === 'not-configured') return tr(T.mediaOff);
+      if (code === 'too-large') return tr(T.mediaBig);
+      if (code === 'bad-type') return tr(T.mediaBad);
       return tr(T.mediaErr);
     }
     /* Ce que le fichier contient VRAIMENT, avant de l'envoyer. Le navigateur
@@ -1306,7 +1954,7 @@
       }
       msg(tr(T.mediaUp));
       const res = await window.KiwiOrderPro.uploadMedia(file);
-      if (!res || !res.ok) { msg(uploadErr(res && res.error)); return; }
+      if (!res || !res.ok) { msg(uploadErr(res)); return; }
       // One medium per item: a video supersedes a photo and vice-versa, so the
       // card can never show two competing things.
       if (kind === 'video') { media.video = res.url; media.photo = ''; }
@@ -1325,12 +1973,17 @@
     q('[data-f-video-input]').addEventListener('change', (e) => handleFile(e.target.files && e.target.files[0], 'video'));
     renderMedia();
 
-    q('[data-f-cancel]').addEventListener('click', () => m.close());
-    q('[data-f-save]').addEventListener('click', () => {
+    function saveCurrent(onSuccess) {
+      const isFormula = isFormulaCb && isFormulaCb.checked;
+      const formulaData = isFormula && formulaSlots.length ? { slots: formulaSlots } : null;
       const data = {
         name: q('[data-f-name]').value, price: q('[data-f-price]').value,
         catId: q('[data-f-cat]').value, subId: q('[data-f-sub]').value || null, desc: q('[data-f-desc]').value,
         photo: media.photo, video: media.video,
+        formula: formulaData,
+        formulaOnly: !q('[data-f-standalone]').checked,
+        showPhotoInFormulas: q('[data-f-formula-photo]').checked,
+        archived: q('[data-f-archived]').checked,
         // Aucun poste ici : un plat part au poste de SA catégorie. Changer de
         // catégorie dans ce formulaire change donc son poste — c'est la même
         // phrase dite une fois, et c'est tout l'intérêt.
@@ -1360,7 +2013,12 @@
       }
       m.close(); render();
       if (window.Kiwi.toast) window.Kiwi.toast(tr(T.saved), { type: 'success', force: true });
-    });
+      if (typeof onSuccess === 'function') onSuccess();
+      return true;
+    }
+
+    q('[data-f-cancel]').addEventListener('click', () => m.close());
+    q('[data-f-save]').addEventListener('click', () => saveCurrent());
     setTimeout(() => { try { q('[data-f-name]').focus(); } catch (_) {} }, 180);
   }
 
@@ -1387,6 +2045,7 @@
     // Do not fall back to the station-management screen: the merchant only
     // needs to choose or create the single destination for this category.
     H['mx-stations'] = () => { if (activeCat) categoryStationModal(activeCat); };
+    H['mx-stations-manage'] = () => stationsModal();
     H['mx-opts'] = () => optsModal();
     H['mx-item-add'] = () => itemModal(null);
     H['mx-item-edit'] = (_el, id) => { const it = itemById(store.get(), id); if (it) itemModal(it); };
@@ -1416,22 +2075,8 @@
     m.el.querySelector('[data-c-yes]').addEventListener('click', () => { m.close(); onYes(); });
   }
 
-  /* ───────────────── nav-menu ownership (custom venues only) ───────────────── */
+  /* ───────────────── venue scope ───────────────── */
   function isCustom() { const KV = window.KiwiVenue; return !!(KV && KV.isCustom && KV.isCustom()); }
-  let owned = false;
-  function ownNav() {
-    if (owned) return;
-    const H = window.Kiwi && window.Kiwi.handlers;
-    if (!H) return;
-    const prev = H['nav-menu'];
-    const wrapped = function () {
-      if (isCustom()) { document.body.classList.remove('page-genpage'); return render(); }
-      return prev ? prev.apply(this, arguments) : undefined;
-    };
-    wrapped.__mxOwned = true;
-    H['nav-menu'] = wrapped;
-    owned = true;
-  }
 
   /* ───────────────── publish to the customer QR page (real merchants only) ───
    * The customer self-order page (kiwi-order.html) runs on the diner's own phone
@@ -1478,9 +2123,12 @@
    *  2. NE RIEN PERDRE. Panne, hors ligne, 503, session expirée : on avale, la
    *     copie locale reste la vérité de travail, on retente à la modification
    *     suivante. Le tableau de bord ne bloque jamais sur le réseau.
-   *  3. FUSIONNER, PAS ÉCRASER. Union par id : ce que CET appareil affiche
-   *     l'emporte sur un id connu des deux côtés, et tout ce que l'autre a
-   *     ajouté vient s'ajouter. Rien ne disparaît.
+   *  3. LE SERVEUR FAIT FOI APRÈS LA PREMIÈRE PUBLICATION. Une union par id ne
+   *     sait pas distinguer « absent car supprimé » de « absent car pas encore
+   *     téléchargé ». Elle ressuscitait donc les sections supprimées dès qu'un
+   *     ancien onglet God Mode se réveillait. Une carte déjà publiée est adoptée
+   *     telle quelle ; une copie locale n'est conservée que si le serveur n'a
+   *     encore aucune carte.
    *
    * Rien ici ne connaît un magasin en particulier : l'identité est
    * slugMerchant(nom de l'établissement) côté serveur, résolue depuis la
@@ -1501,7 +2149,37 @@
   const clouds = Object.create(null);
   function cloudFor(slug) {
     const k = slug || '·';
-    return clouds[k] || (clouds[k] = { read: false, merchant: '', tried: 0, pulling: false });
+    return clouds[k] || (clouds[k] = {
+      read: false, merchant: '', tried: 0, pulling: false,
+      updatedTs: 0, explicitEmpty: false,
+    });
+  }
+
+  /* Une carte vide n'est publiable que si le commerçant vient réellement de
+   * supprimer son dernier contenu. Le démarrage, l'hydratation et un nouvel
+   * appareil ne passent jamais ici. */
+  function authorizeExplicitEmpty(data) {
+    if (data && ((data.cats && data.cats.length) || (data.items && data.items.length))) return;
+    const c = cloudFor(storeSlug());
+    if (c.read && c.updatedTs) c.explicitEmpty = true;
+  }
+
+  /* Un même magasin a pu changer d'identifiant local (`v<horloge>` puis
+   * `v-<slug>`). Avant d'afficher du vide, recopier sa carte orpheline si le
+   * navigateur la possède encore. Copie seulement : aucune preuve de secours
+   * n'est détruite. */
+  function recoverLocalMenu(vid, slug) {
+    try {
+      const KCD = window.KiwiCloudDoc;
+      if (!KCD || !KCD.carryForward || !vid || !slug) return false;
+      const raw = KCD.carryForward('menu', vid, slug, function (value) {
+        try {
+          const d = JSON.parse(value || 'null');
+          return !!(d && ((d.cats && d.cats.length) || (d.items && d.items.length)));
+        } catch (_) { return false; }
+      });
+      return !!raw;
+    } catch (_) { return false; }
   }
 
   function storeSlug() {
@@ -1535,6 +2213,7 @@
     // balayage, un navigateur neuf recréerait og_1 par-dessus un groupe existant
     // et les produits du serveur pointeraient le mauvais.
     (d.opts || []).forEach((g) => { scan(g.id); (g.choices || []).forEach((c) => scan(c.id)); });
+    (d.formulaTemplates || []).forEach((t) => scan(t.id));
     d.seq = max;
     return d;
   }
@@ -1550,7 +2229,7 @@
     const out = {
       seq: Math.max(+(mine && mine.seq) || 0, +(theirs && theirs.seq) || 0),
       kitchenId: (mine && mine.kitchenId) || (theirs && theirs.kitchenId) || '',
-      cats: [], items: [], stations: [], opts: [],
+      cats: [], items: [], stations: [], opts: [], formulaTemplates: [],
     };
     /* La bibliothèque de groupes d'options, union par id, cet appareil d'abord —
      * comme les postes. Un groupe perdu ici, et le produit qui le porte
@@ -1558,6 +2237,10 @@
     const ogSeen = Object.create(null);
     [((mine && mine.opts) || []), ((theirs && theirs.opts) || [])].forEach((list) => {
       list.forEach((g) => { if (g && g.id && !ogSeen[g.id]) { ogSeen[g.id] = 1; out.opts.push(g); } });
+    });
+    const ftSeen = Object.create(null);
+    [((mine && mine.formulaTemplates) || []), ((theirs && theirs.formulaTemplates) || [])].forEach((list) => {
+      list.forEach((t) => { if (t && t.id && !ftSeen[t.id]) { ftSeen[t.id] = 1; out.formulaTemplates.push(t); } });
     });
     /* Les postes fusionnent AVANT le reste et dans l'ordre de cet appareil :
      * cet ordre est celui des onglets de l'écran cuisine, donc celui qu'on a
@@ -1593,8 +2276,17 @@
     return healSeq(out);
   }
 
-  /* Relire la carte du compte. Adoption pure si ce navigateur est vierge (le cas
-   * qui compte : téléphone, iPad, fenêtre privée), fusion sinon. */
+  const applyingServer = Object.create(null);
+  function adoptServerMenu(raw, vid) {
+    const data = healSeq({ seq: 0, langs: Array.isArray(raw.langs) ? raw.langs.slice() : ['fr', 'ar', 'en'], cats: raw.cats || [], items: raw.items || [], stations: raw.stations || [], kitchenId: raw.kitchenId || '', opts: raw.opts || [] });
+    applyingServer[vid || '·'] = true;
+    try { store.set(data, vid); }
+    finally { delete applyingServer[vid || '·']; }
+    return data;
+  }
+
+  /* Relire la carte du compte. Une carte publiée est adoptée telle quelle ; si
+   * le serveur est vide ou indisponible, la copie locale reste intacte. */
   /* Pour DÉCIDER D'ALLER LIRE, c'est le métier de l'établissement affiché qui
    * tranche, pas celui que le serveur a renvoyé pour le magasin précédent : au
    * moment d'un changement d'établissement la config du nouveau n'est pas
@@ -1623,6 +2315,7 @@
     const c = cloudFor(slug);
     if (c.pulling) return Promise.resolve(false);
     if (isBoutiqueForRead(vd)) return Promise.resolve(false);  // le stock passe par orderpro-publish.js
+    recoverLocalMenu(vid, slug);
     c.pulling = true;
     return fetch('/api/menu?mine=1' + (slug ? '&merchant=' + encodeURIComponent(slug) : ''),
                  { headers: { Accept: 'application/json' } })
@@ -1631,16 +2324,29 @@
         c.pulling = false;
         if (!j || j.error || j.unreachable) return false;   // injoignable → surtout ne pas publier
         c.merchant = j.merchant || '';
+        c.updatedTs = +j.updatedTs || 0;
         c.read = true;                                       // à partir d'ici, publier est sûr
         const theirs = j.menu;
         if (!theirs || !((theirs.items && theirs.items.length) || (theirs.cats && theirs.cats.length))) return false;
-        const mine = store.get(vid);
-        const empty = !((mine.cats && mine.cats.length) || (mine.items && mine.items.length));
-        store.set(empty ? healSeq({ seq: 0, cats: theirs.cats || [], items: theirs.items || [], stations: theirs.stations || [], kitchenId: theirs.kitchenId || '', opts: theirs.opts || [] })
-                        : mergeMenus(mine, theirs), vid);
+        /* A published carte is the canonical document. Do not union it with an
+         * older browser copy: an id present only locally may be a section that
+         * another manager deliberately deleted. The server-empty case returned
+         * above is the only recovery path where local work remains untouched. */
+        adoptServerMenu(theirs, vid);
         /* Ne repeindre que si on est TOUJOURS sur ce magasin, sinon la carte du
-         * café s'afficherait par-dessus la page de la boutique. */
-        try { if (isCustom() && storeSlug() === slug) render(); } catch (_) {}
+         * café s'afficherait par-dessus la page de la boutique — ET seulement si
+         * le patron regarde DÉJÀ la page Menu. render() passe par
+         * KiwiVenue.showMenu(), qui n'est pas un rafraîchissement mais une
+         * NAVIGATION : elle pose page-menu, éteint l'Accueil et déplace le
+         * curseur de la barre latérale. Or pull() part 1,2 s après le
+         * chargement, à chaque retour sur l'onglet et à chaque changement
+         * d'établissement : la carte surgissait donc par-dessus l'Accueil à
+         * chaque connexion. Quand la page Menu est ouverte, le repaint est
+         * déjà assuré par store.subscribe → refreshMenu() dans boot(). */
+        try {
+          if (isCustom() && storeSlug() === slug &&
+              document.body.classList.contains('page-menu')) render();
+        } catch (_) {}
         return true;
       })
       .catch(() => { c.pulling = false; return false; });   // hors ligne → local reste la vérité
@@ -1652,14 +2358,19 @@
     const KV = window.KiwiVenue;
     const vd = (KV && KV.getVenueData && KV.getVenueData(vid)) ||
                (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
+    const targetVid = vid || vd.id;
     if (isBoutiqueVenue(vd)) return;              // stock is published by orderpro-publish.js
     // RÈGLE 1 — rien ne part tant qu'on n'a pas lu. Sans ce verrou, un navigateur
     // neuf publiait sa carte vide par-dessus la vraie, quinze cents millisecondes
     // après l'ouverture du tableau de bord.
     const c = cloudFor(storeSlug());
     if (!c.read) { if (c.tried++ < 3) pull().then(() => { if (c.read) publish(vid); }); return; }
-    const data = store.get(vid);
+    const data = store.get(targetVid);
     const slug = c.merchant || storeSlug();
+    const empty = !((data.cats && data.cats.length) || (data.items && data.items.length));
+    /* Le simple fait d'avoir relu le serveur n'autorise jamais un effacement.
+     * Seule la suppression explicite du dernier contenu pose ce jeton. */
+    if (empty && !c.explicitEmpty) return;
     /* Les horaires partent AVEC la carte. Le téléphone du client ne peut pas
      * lire les réglages du commerçant : sans ce passager, la page de commande
      * ne saurait pas que le restaurant est fermé et prendrait la commande
@@ -1682,10 +2393,36 @@
           merchant: slug || undefined,
           // On a relu le serveur : une carte vide ici est une carte vidée exprès,
           // pas un navigateur qui n'a rien trouvé. Le serveur refuse l'inverse.
-          allowEmpty: true,
+          allowEmpty: empty && c.explicitEmpty,
+          // Every restaurant write is compare-and-swap. An old God Mode tab
+          // cannot put back sections after another browser deleted them.
+          expectedUpdatedTs: c.updatedTs || 0,
         }),
-      }).catch(function () {});                    // fire-and-forget, fail-soft
-    } catch (_) {}
+      }).then(function (r) {
+        if (r && r.ok) return r.json();
+        return (r && r.json ? r.json().catch(function () { return null; }) : Promise.resolve(null))
+          .then(function (err) {
+            /* A newer revision won. Replace this stale browser copy instead of
+             * merging it and immediately attempting to resurrect old ids. */
+            if (r && r.status === 409 && err && err.error === 'stale-menu' && err.data) {
+              c.updatedTs = +err.updatedTs || c.updatedTs;
+              adoptServerMenu(err.data, targetVid);
+            }
+            if (window.Kiwi?.toast) window.Kiwi.toast('Échec de synchronisation de la carte', {
+              type: 'warn', force: true, desc: (err && err.error) || 'Publication refusée',
+            });
+            return null;
+          });
+      }).then(function (j) {
+        if (!j || !j.ok) return;
+        c.updatedTs = +j.updatedTs || c.updatedTs;
+        if (empty) c.explicitEmpty = false;
+      }).catch(function () {
+        if (window.Kiwi?.toast) window.Kiwi.toast('Échec de synchronisation de la carte', { type: 'warn', force: true });
+      });
+    } catch (_) {
+      if (window.Kiwi?.toast) window.Kiwi.toast('Échec de synchronisation de la carte', { type: 'warn', force: true });
+    }
   }
   function schedulePublish(vid) {
     if (!isRealSession()) return;
@@ -1696,17 +2433,14 @@
   /* ───────────────── boot ───────────────── */
   function boot() {
     registerHandlers();
-    // venues.js re-asserts nav-menu at 'load'; own it just after, before the
-    // starter layer wraps at load+150ms (it lets 'menu' through via REAL_FOR_CUSTOM).
-    setTimeout(ownNav, 60);
     // re-render the open menu page live when this venue's menu changes elsewhere
     // (caisse), and — for a real merchant — publish the new carte to the server so
     // the customer QR page picks it up.
     store.subscribe((vid) => {
-      if (isCustom() && document.querySelector('.dash-genpage [data-page="menu"], .kw-app [data-genpage="menu"]')) {
-        try { render(); } catch (_) {}
+      if (document.body.classList.contains('page-menu')) {
+        try { window.KiwiVenue?.refreshMenu?.(); } catch (_) {}
       }
-      schedulePublish(vid);
+      if (!applyingServer[vid || '·']) schedulePublish(vid);
     });
     /* Un changement d'horaires doit repartir vers la page client tout de suite :
      * un commerçant qui déclare sa fermeture de l'Aïd le matin ne doit pas voir
@@ -1722,7 +2456,12 @@
     // qui autorise la publication (voir la règle 1 dans publish()).
     if (isRealSession()) {
       setTimeout(function () {
-        pull().then(function () { try { publish(); } catch (_) {} });
+        pull().then(function (serverAdopted) {
+          /* A published server menu was only hydrated, so writing it straight
+           * back creates a needless new revision. If the server had no menu,
+           * publish the local recovery copy as before. */
+          if (!serverAdopted) { try { publish(); } catch (_) {} }
+        });
       }, 1200);
       // Revenir sur l'onglet après avoir modifié la carte sur un autre appareil
       // doit suffire à la voir arriver — sans marteler le réseau.
@@ -1764,12 +2503,27 @@
   window.KiwiMenuStore = {
     data: (vid) => store.get(vid),
     categories: (vid) => (store.get(vid).cats || []),
-    items: (vid) => (store.get(vid).items || []),
-    availableItems: (vid) => (store.get(vid).items || []).filter((i) => i.avail !== false),
+    items: (vid) => {
+      const d = store.get(vid);
+      return (d.items || []).map((it) => {
+        if (!it || !it.formula) return it;
+        const cleaned = cleanFormula(it.formula, d.items);
+        if (cleaned) it.formula = cleaned;
+        else delete it.formula;
+        return it;
+      });
+    },
+    availableItems: (vid) => (window.KiwiMenuStore.items(vid) || []).filter((i) => i.avail !== false && !i.formulaOnly && !i.archived),
+    formulaItems: (vid) => (window.KiwiMenuStore.items(vid) || []).filter((i) => !i.archived),
+    cleanFormula, saveFormulaTemplate, deleteFormulaTemplate,
     isEmpty: (vid) => store.isEmpty(vid),
     subscribe: (fn) => store.subscribe(fn),
     loadExample: (vid) => store.loadExample(vid),
-    addCategory, addSubcategory, addItem, updateItem, deleteItem, renameCategory, deleteCategory,
+    addCategory, addSubcategory, renameSubcategory, deleteSubcategory,
+    addItem, updateItem, deleteItem, renameCategory, moveCategory, deleteCategory,
+    /* Traductions de la carte — voir le bloc « traductions » plus haut. */
+    setI18n, setI18nEntry, clearI18n, setLanguages,
+    languages: (vid) => { const m = MI(); return m ? m.langs(store.get(vid)) : ['fr', 'ar', 'en']; },
     /* Les postes de préparation. `stations()` rend la liste DANS L'ORDRE, qui
      * est l'ordre des onglets de l'écran cuisine — plus le réglage de routage.
      * Le routage se lit sur la catégorie (`cat.station`, vide = la cuisine) et
@@ -1780,9 +2534,39 @@
     /* Les groupes d'options. La caisse lit `optionGroups()` + `item.opts`
      * pour savoir quoi demander avant d'ajouter un produit à la note. */
     optionGroups: (vid) => (store.get(vid).opts || []),
+    optionEmojis: () => OPT_EMOJIS.slice(),
     addOptGroup, updateOptGroup, deleteOptGroup,
     addOptChoice, updateOptChoice, deleteOptChoice, setItemOpts,
     addStation, renameStation, deleteStation, moveStation, cycleStationColor,
+    openItem: (id) => {
+      injectCss();
+      const it = id ? itemById(store.get(), id) : null;
+      itemModal(it || null);
+    },
+    duplicateItem: (id) => {
+      const it = itemById(store.get(), id); if (!it) return;
+      addItem({ ...it, name: `${it.name} (copie)` });
+    },
+    requestDeleteItem: (id) => {
+      const it = itemById(store.get(), id); if (!it) return;
+      injectCss();
+      confirmThen(tr(T.delItemQ), () => deleteItem(id));
+    },
+    toggleAvailable: (id) => {
+      const it = itemById(store.get(), id);
+      if (it) updateItem(id, { avail: it.avail === false });
+    },
+    promptAddCategory: () => {
+      injectCss();
+      promptText({ title: tr(T.addCat), placeholder: tr(T.catName), ok: tr(T.addCat) }, (v) => { if (v) addCategory(v); });
+    },
+    openOptions: () => { injectCss(); optsModal(); },
+    openStations: () => { injectCss(); stationsModal(); },
+    openCategoryRoute: (id) => { injectCss(); categoryStationModal(id); },
+    importMenu: () => {
+      if (!window.KiwiCatalogImport) return window.Kiwi?.toast?.('Import indisponible', { type: 'warn', desc: 'Rechargez la page.', force: true });
+      window.KiwiCatalogImport.openMenu({ onDone: () => window.KiwiVenue?.refreshMenu?.() });
+    },
     render,
     publish: (vid) => publish(vid),   // push this venue's carte to the customer QR page (real merchants only)
     _store: store,

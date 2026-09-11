@@ -300,7 +300,37 @@
   };
   function freshCart() { state.cart = { num: posRef(`V-${saleSeq}`), lines: [], client: null }; }
 
+  const librairieOps = window.KiwiVerticalState && window.KiwiVerticalState.register({
+    vertical: 'librairie',
+    snapshot() {
+      return { catalog: CATALOG, customers: CUSTOMERS, commands: CMDS, cmdSeq, saleSeq, cart: state.cart };
+    },
+    restore(saved) {
+      if (!saved || typeof saved !== 'object') return;
+      if (Array.isArray(saved.catalog)) CATALOG.splice(0, CATALOG.length, ...saved.catalog);
+      Object.keys(ITEM).forEach((id) => delete ITEM[id]);
+      Object.keys(RAYON).forEach((id) => delete RAYON[id]);
+      CATALOG.forEach((rayon) => {
+        RAYON[rayon.id] = rayon;
+        rayon.items.forEach((item) => { item.rayon = rayon.id; ITEM[item.id] = item; });
+      });
+      if (Array.isArray(saved.customers)) CUSTOMERS.splice(0, CUSTOMERS.length, ...saved.customers);
+      Object.keys(CUST).forEach((id) => delete CUST[id]);
+      CUSTOMERS.forEach((customer) => { CUST[customer.id] = customer; });
+      if (Array.isArray(saved.commands)) CMDS.splice(0, CMDS.length, ...saved.commands);
+      CMDS.forEach((command) => {
+        ['orderedAt', 'arrivedAt', 'pickedAt'].forEach((key) => {
+          if (command[key]) command[key] = new Date(command[key]);
+        });
+      });
+      if (Number.isFinite(saved.cmdSeq)) cmdSeq = saved.cmdSeq;
+      if (Number.isFinite(saved.saleSeq)) saleSeq = saved.saleSeq;
+      if (saved.cart) state.cart = saved.cart;
+    },
+  });
+
   function queueIfOffline(label) {
+    if (librairieOps) librairieOps.save(label);
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -324,9 +354,22 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
-  function postDay(total, method, label, ref) {
+  function saleLines(c, received) {
+    const bases = c.lines.map((l) => ITEM[l.key].price * l.qty);
+    const baseTotal = bases.reduce((s, n) => s + n, 0);
+    let allocated = 0;
+    return c.lines.map((l, i) => {
+      const it = ITEM[l.key];
+      const total = i === c.lines.length - 1
+        ? Math.max(0, received - allocated)
+        : Math.round((received * bases[i] / Math.max(1, baseTotal)) * 100) / 100;
+      allocated += total;
+      return { itemId: it.id, name: it.title, category: it.rayon, qty: l.qty, unit: 'piece', kind: 'product', total };
+    });
+  }
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('librairie', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('librairie', { total, method, label, ref, lines });
     } catch (_) {}
   }
   /* Le numéro de vente repart AU-DELÀ du dernier encaissé aujourd'hui : sans ça
@@ -337,11 +380,12 @@
   /* ═══════════════════════ ROOT INJECTION ═══════════════════════ */
   let root = null;
   function mount(rootEl) {
+    if (librairieOps) librairieOps.hydrate();
     root = rootEl;
-    freshCart();
+    if (!state.cart) freshCart();
     root.innerHTML = `
       <aside class="lb-rail">
-        <div class="lb-brand">kiwi<i></i></div>
+        <div class="lb-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="lb-venue">
           <div class="lb-venue-name">${esc(pvName('Librairie Al Boughaz') || 'Librairie')}</div>
           <div class="lb-venue-sub">${pvReal() ? (esc(pvCity('')) || '') : 'Tanger · Petit Socco'}<br>Le même Kiwi, <b>un seul compte</b>.</div>
@@ -562,9 +606,12 @@
       <div class="lb-pn-meta">${clientRow(c)}</div>
       <div class="lb-pn-lines" id="lb-pn-lines">
         ${c.lines.length ? c.lines.map((l, i) => lineHTML(l, i)).join('') : `
-          <div class="lb-pn-empty">
-            <i data-lucide="book-open"></i>
-            <div>Le panier est vide.<br>Touchez un livre ou une fourniture, ou scannez son ISBN.</div>
+          <div class="lb-pn-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">
+            <div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:4px;">
+              <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
+            </div>
+            <div style="font-weight:600; font-size:14px; color:var(--ink);">Le panier est vide.</div>
+            <div style="font-size:12.5px; color:var(--n-500); line-height:1.45;">Touchez un livre ou une fourniture, ou scannez son ISBN.</div>
           </div>`}
       </div>
       <div class="lb-pn-foot">
@@ -713,7 +760,7 @@
           </div>` : `
           <div class="lb-cl-form">
             <input class="lb-in" id="lb-cl-name" placeholder="Nom et prénom" value="${esc(/^[\d\s.+-]*$/.test(q || '') ? '' : (q || ''))}" />
-            <input class="lb-in" id="lb-cl-tel" inputmode="tel" placeholder="Téléphone (optionnel)" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
+            <input class="lb-in" id="lb-cl-tel" inputmode="tel" autocomplete="tel" placeholder="06… / +33… (optionnel)" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
             <div class="lb-foot" style="margin-top:4px;">
               <button class="lb-btn secondary" id="lb-cl-back">Retour</button>
               <button class="lb-btn primary" id="lb-cl-create"><i data-lucide="check"></i>Créer la fiche</button>
@@ -792,8 +839,8 @@
 
   // Real store identity from the pairing / hosted session — a real bookshop prints
   // its own name+city, never the demo "Librairie Al Boughaz". Demo unchanged.
-  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
-  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvPaired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
   function pvName(demo) { const p = pvPaired(); return (p && p.name) || (pvReal() ? '' : demo); }
   function pvCity(demo) { const p = pvPaired(); return (p && p.location) || (pvReal() ? '' : demo); }
 
@@ -841,7 +888,15 @@
     openVeil('#lb-rec-veil');
     icons();
     $$('[data-lb-close]', el).forEach((b) => { b.onclick = () => closeVeil('#lb-rec-veil'); });
-    $('#lb-rec-print', el).onclick = () => toast('Envoyé, ticket 80 mm (imprimante thermique)');
+    $('#lb-rec-print', el).onclick = () => {
+      const P = window.KiwiOperationalPrint;
+      if (!P) { toast('Impression indisponible'); return; }
+      const lines = Array.from(el.querySelectorAll('.lb-receipt .row')).map((row) => ({
+        label:(row.children[0] && row.children[0].textContent || '').trim(),
+        value:(row.children[1] && row.children[1].textContent || '').trim(),
+      }));
+      P.printText({ title:`Ticket ${c.num}`, paper:'80', lines }).then((r) => toast(r && r.ok ? 'Impression système ouverte' : 'Impression impossible'));
+    };
     $('#lb-rec-pay', el).onclick = () => { closeVeil('#lb-rec-veil'); openPay(); };
   }
 
@@ -884,7 +939,7 @@
         <p class="modal-subtle">${c.num} · rendu calculé automatiquement</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="lb-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="lb-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="lb-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${total}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -925,13 +980,13 @@
       setTimeout(() => {
         const disc = $('#lb-reader-disc', el);
         if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#lb-reader-status', el).textContent = 'Khlass! Paiement confirmé sur le lecteur';
-        $('#lb-reader-status', el).classList.add('is-success');
-        icons();
-        setTimeout(() => done('carte', 0), 900);
+        const status = $('#lb-reader-status', el);
+        const hw = window.KiwiHardware;
+        if (!hw || !hw.authorizeCard) { disc.classList.remove('is-pulsing'); status.textContent = 'Paiement non confirmé · lecteur indisponible'; return; }
+        hw.authorizeCard(total, disc, status).then((result) => {
+          icons();
+          if (result && result.approved) setTimeout(() => done('carte', 0), 900);
+        });
       }, 1900);
     };
 
@@ -944,7 +999,7 @@
         cu.visits += 1;
         earnMsg = ` · +${total} pts fidélité`;
       }
-      postDay(total, method, cartLabel(c), c.num);
+      postDay(total, method, cartLabel(c), c.num, saleLines(c, total));
       queueIfOffline(`Vente ${c.num}`);
       saleSeq++;
       freshCart();
@@ -1016,7 +1071,7 @@
             const list = CMDS.filter((c) => c.status === s && matchCmd(c, q));
             return `<div class="lb-ccol">
               <div class="lb-ccol-head"><i class="dot" style="background:${CMD_STATUS[s].dot}"></i>${CMD_STATUS[s].label} <span class="ct">${list.length}</span></div>
-              ${list.map(cmdCard).join('') || '<div class="lb-cempty">—</div>'}
+              ${list.map(cmdCard).join('') || '<div class="lb-cempty">·</div>'}
             </div>`;
           }).join('')}
         </div>
@@ -1072,7 +1127,8 @@
       </div>
       <div class="lb-dt-actions">
         ${c.status === 'commande' ? '<button class="lb-btn primary" data-lb-advance="arrivee"><i data-lucide="package-check"></i>Marquer arrivé</button>' : ''}
-        ${c.status === 'arrivee' ? `<button class="lb-btn ${c.notified ? 'secondary' : 'primary'}" id="lb-dt-wa"><i data-lucide="message-circle"></i>${c.notified ? 'Re-notifier' : 'WhatsApp « il est arrivé »'}</button>` : ''}
+        ${c.status === 'arrivee' ? `<button class="lb-btn ${c.notified ? 'secondary' : 'primary'}" id="lb-dt-wa"><i data-lucide="message-circle"></i>${c.notified ? 'Re-notifier' : 'Ouvrir le brouillon WhatsApp'}</button>` : ''}
+        ${c.status === 'arrivee' && c.draftOpenedAt && !c.notified ? '<button class="lb-btn primary" id="lb-dt-wa-confirm"><i data-lucide="check-check"></i>Confirmer le message envoyé</button>' : ''}
         ${c.status === 'arrivee' ? `<button class="lb-btn ${c.notified ? 'primary' : 'secondary'}" data-lb-advance="retiree"><i data-lucide="check"></i>Remettre au client${due > 0 ? ` · ${due} MAD` : ''}</button>` : ''}
         ${c.status !== 'retiree' ? '<button class="lb-btn ghost" id="lb-dt-cancel">Annuler la commande</button>' : ''}
       </div>`;
@@ -1091,8 +1147,21 @@
     });
     const wa = $('#lb-dt-wa', el);
     if (wa) wa.onclick = () => openWa(c);
+    const waConfirm = $('#lb-dt-wa-confirm', el);
+    if (waConfirm) waConfirm.onclick = () => {
+      c.notified = true;
+      c.notifiedAt = new Date();
+      queueIfOffline('WhatsApp confirmé envoyé');
+      closeVeil('#lb-detail-veil');
+      renderCmd(); renderBadges(); icons();
+      toast(`${c.id}, message marqué envoyé`);
+    };
     const cancel = $('#lb-dt-cancel', el);
     if (cancel) cancel.onclick = () => {
+      if (c.acompte > 0) {
+        toast(`Annulation bloquée, remboursez d'abord l'acompte de ${c.acompte} MAD depuis les encaissements`, 4200);
+        return;
+      }
       const i = CMDS.indexOf(c);
       if (i >= 0) CMDS.splice(i, 1);
       closeVeil('#lb-detail-veil');
@@ -1272,10 +1341,10 @@
     const cu = cmdCust(c);
     const first = cu.school ? cu.name : cu.name.split(' ')[0];
     const due = cmdDue(c);
-    return `Sba7 lkhir ${first}, bonne nouvelle, votre commande « ${c.title} » est arrivée à ${pvName('la Librairie Al Boughaz') || 'la librairie'}.`
+    return `Bonjour ${first}, bonne nouvelle, votre commande « ${c.title} » est arrivée à ${pvName('la Librairie Al Boughaz') || 'la librairie'}.`
       + `\nJe vous la garde au comptoir. Passez quand vous voulez, du lundi au samedi jusqu'à 20h00.`
       + (due > 0 ? `\nSolde à régler au retrait : ${due} MAD.` : (c.acompte ? `\nDéjà réglée, il ne reste rien à payer.` : ''))
-      + `\n— envoyé via Kiwi`;
+      + `\n·envoyé via Kiwi`;
   }
 
   function openWa(c) {
@@ -1319,9 +1388,9 @@
       const body = txt ? txt.value : waMessage(c);
       const num = String(cu.phone || '').replace(/\D/g, '');
       if (!num) { toast(`Pas de numéro pour ${cu.name}, ajoutez-le à sa fiche`); return; }
-      c.notified = true;
+      c.draftOpenedAt = new Date();
       closeVeil('#lb-wa-veil');
-      queueIfOffline('Notification WhatsApp');
+      queueIfOffline('Brouillon WhatsApp ouvert');
       try {
         window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(body), '_blank', 'noopener');
         toast(`WhatsApp ouvert pour ${cu.name}, appuyez sur envoyer${withCover ? ' · joignez la couverture dans WhatsApp' : ''}`);
@@ -1632,8 +1701,8 @@
   window.KiwiPosDispatch.register({
     id: 'librairie',
     greet: {
-      line1: 'Sba7 lkhir Hassan,',
-      em: 'marhba.',
+      line1: 'Bonjour Hassan,',
+      em: 'bienvenue.',
       sub: 'Librairie Al Boughaz <em>·</em> matinée de rentrée, Petit Socco',
     },
     mount(rootEl) { mount(rootEl); },

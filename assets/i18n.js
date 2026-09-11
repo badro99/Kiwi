@@ -209,8 +209,9 @@
       'sidebar.restaurant.finance': 'Margins & budget',
       'sidebar.boutique.inventory': 'Product inventory',
       'sidebar.boutique.categories':'Categories',
-      'sidebar.boutique.promos':    'Promotions & offers',
+      'sidebar.boutique.promos':    'Promotions',
       'sidebar.boutique.returns':   'Returns & exchanges',
+      'sidebar.boutique.sold':      'Sold',
       'sidebar.spa.appointments':   'Appointment calendar',
       'sidebar.spa.services':       'Services & packages',
       'sidebar.spa.practitioners':  'Practitioners',
@@ -222,7 +223,7 @@
       'dash.kpi.fillRate':         'Fill rate',
       // Mix de paiement footer — venue-typed
       // Footer
-            'dash.footer.help':          'WhatsApp help',
+            'dash.footer.help':          'Help centre',
       'dash.mix.center.unit': 'MAD card',
       'dash.settle.instant': 'Settle instantly',
       'dash.kpi.tx': 'Orders',
@@ -288,18 +289,15 @@
       'dash.mobilenav.menu': 'Menu',
       'dash.mobilenav.sale': 'Sale',
       'dash.sidebar.growth': 'Growth',
-      'dash.sidebar.ordering': 'Online ordering',
-      'dash.sidebar.qr': 'Order at table',
       'dash.sidebar.crm': 'Customers & Marketing',
-      'dash.sidebar.giftcards': 'Gift cards',
-      'dash.sidebar.payroll': 'Payroll & scheduling',
+      'dash.sidebar.payroll': 'Planning',
       'dash.sidebar.kiwipay': 'Kiwi Pay',
       'dash.sidebar.depenses': 'Spend & cards',
       'dash.sidebar.new': 'NEW',
       'dash.sidebar.reservations': 'Reservations & appointments',
       'dash.sidebar.assistant': 'Financial assistant',
       'dash.sidebar.ownerAdmin': 'Owner · admin',
-      'dash.breadcrumb': 'Home <span class="sep">/</span> <b>Dashboard</b>',
+      'dash.breadcrumb': '<span class="breadcrumb-home">Home</span> <span class="sep">/</span> <b>Dashboard</b>',
       'dash.search.placeholder': 'Search order, product, customer, team…',
       'dash.search.aria': 'Search',
       'dash.agent': 'Kiwi AI · Agent',
@@ -577,7 +575,7 @@
       'lz.faq.q9': "Why should I trust Kiwi?",
       'lz.faq.a1': "Kiwi is the software that runs your business. A single app replaces the till, the order book, the floor plan, the kitchen screen, stock tracking, the payslip and the dashboard. Kiwi records every sale, cash, card, mobile, and gives the owner a clear, real-time view of the venue, in French, Darija and Arabic.",
       'lz.faq.a2': "No. Kiwi is a software subscription, not a percentage of your revenue. You pay 399 MAD per month, that’s it. Whether you do 10,000 or 500,000 MAD in sales, the price does not move. Your money never passes through Kiwi: it goes where it already goes today.",
-      'lz.faq.a3': "Four tiers. Kiwi Basic: 199 MAD/month, the full software (point of sale, floor, kitchen, stock, team, dashboard) on your own hardware, for one venue, integrated into your existing till, with on-site training and guides. Kiwi Pro: 399 MAD/month, everything in Basic plus one free Kiwi cashier, T+1 settlement and hardware maintenance. Kiwi Ultra: 1,499 MAD/month, unlimited venues, multi-country, enterprise API and a dedicated 24/7 account manager. Kiwi Ultimate: custom quote, a bespoke plan defined with you. No commitment, no installation fee.",
+      'lz.faq.a3': "Four tiers. Kiwi Basic: 199 MAD/month, the full software (point of sale, floor, kitchen, stock, team, dashboard) on your own hardware, for one venue, integrated into your existing till, with on-site training and guides. Kiwi Pro: 399 MAD/month, everything in Basic plus priority support with faster replies and advanced Kiwi IQ. Kiwi Ultra: 1,499 MAD/month, unlimited venues, multi-country, enterprise API and a dedicated 24/7 account manager. Kiwi Ultimate: custom quote, a bespoke plan defined with you. No commitment, no installation fee.",
       'lz.faq.a4': "Kiwi records every sale whatever the payment method, cash, card, mobile payment, and works alongside your current payment terminal. Kiwi is the software that steers the business; it does not itself process or settle the money. You keep your existing payment setup; Kiwi finally gives you the tool that organizes it.",
       'lz.faq.a5': "Seven minutes to create the account from your phone, and the venue is operational the next day. The Kiwi team imports your menu, configures your floor plan and trains your staff on site. For a multi-site brand, allow 48 working hours to configure shifts, permissions and venues.",
       'lz.faq.a6': "Yes. The till and the kitchen screen keep working offline: orders are taken, cashed in and sent to the kitchen as usual. As soon as the connection returns, everything syncs automatically to the dashboard. An evening service is never blocked by a network outage.",
@@ -740,7 +738,7 @@
       'final.desc': 'ابدؤوا بقبول البطاقات في 3 دقائق. بدون التزام، بدون عتاد للشراء، بدون رسوم خفية.',
       'final.cta.create': 'إنشاء حساب كيوي',
       'final.cta.advisor': 'التحدّث إلى مستشار',
-      'final.micro': 'التسجيل بالفرنسية أو الدارجة أو العربية · دعم WhatsApp 7/7',
+      'final.micro': 'التسجيل بالفرنسية أو الدارجة أو العربية · دعم عبر طلبات قابلة للتتبع',
 
       /* Footer */
       'foot.products': 'المنتجات',
@@ -824,8 +822,9 @@
       'sidebar.restaurant.finance': 'الهوامش والميزانية',
       'sidebar.boutique.inventory': 'مخزون المنتجات',
       'sidebar.boutique.categories':'الفئات',
-      'sidebar.boutique.promos':    'الترويج والعروض',
+      'sidebar.boutique.promos':    'الترويج',
       'sidebar.boutique.returns':   'المرتجعات والتبادل',
+      'sidebar.boutique.sold':      'المبيعات',
       'sidebar.spa.appointments':   'تقويم المواعيد',
       'sidebar.spa.services':       'الخدمات والباقات',
       'sidebar.spa.practitioners':  'العاملات',
@@ -837,7 +836,7 @@
       'dash.kpi.fillRate':         'نسبة الإشغال',
       // Mix
       // Footer
-            'dash.footer.help':          'مساعدة عبر واتساب',
+            'dash.footer.help':          'مركز المساعدة',
       'dash.mix.center.unit': 'درهم بطاقة',
       'dash.settle.instant': 'تسوية فورية',
       'dash.kpi.tx': 'الطلبات',
@@ -901,18 +900,15 @@
       'dash.mobilenav.menu': 'القائمة',
       'dash.mobilenav.sale': 'بيع',
       'dash.sidebar.growth': 'النمو',
-      'dash.sidebar.ordering': 'الطلب عبر الإنترنت',
-      'dash.sidebar.qr': 'الطلب من الطاولة',
       'dash.sidebar.crm': 'العملاء والتسويق',
-      'dash.sidebar.giftcards': 'بطاقات الهدايا',
-      'dash.sidebar.payroll': 'الرواتب والتخطيط',
+      'dash.sidebar.payroll': 'التخطيط',
       'dash.sidebar.kiwipay': 'Kiwi Pay',
       'dash.sidebar.depenses': 'المصاريف والبطاقات',
       'dash.sidebar.new': 'جديد',
       'dash.sidebar.reservations': 'الحجوزات والمواعيد',
       'dash.sidebar.assistant': 'المساعد المالي',
       'dash.sidebar.ownerAdmin': 'المالك · المدير',
-      'dash.breadcrumb': 'الرئيسية <span class="sep">/</span> <b>لوحة التحكم</b>',
+      'dash.breadcrumb': '<span class="breadcrumb-home">الرئيسية</span> <span class="sep">/</span> <b>لوحة التحكم</b>',
       'dash.search.placeholder': 'ابحث عن طلب أو منتج أو زبون أو فريق…',
       'dash.search.aria': 'بحث',
       'dash.agent': 'كيوي AI · الوكيل',
@@ -1188,7 +1184,7 @@
       'lz.faq.q9': "لماذا أثق في كيوي؟",
       'lz.faq.a1': "كيوي هو البرنامج الذي يُشغّل تجارتك. تطبيق واحد يعوّض الصندوق وكناش الطلبات ومخطط القاعة وشاشة المطبخ وتتبّع المخزون وورقة الأجر ولوحة التحكم. تسجّل كيوي كل عملية بيع، نقدًا، بطاقة، هاتفًا، وتمنح المسيّر رؤية واضحة وفورية لمحلّه، بالفرنسية والدارجة والعربية.",
       'lz.faq.a2': "لا. كيوي اشتراك برمجي، وليست نسبة من رقم معاملاتك. تدفع 399 درهمًا في الشهر، لا غير. سواء حقّقت 10 000 أو 500 000 درهم من المبيعات، لا يتغيّر السعر. لا يمرّ مالك أبدًا عبر كيوي: يذهب حيث يذهب اليوم بالفعل.",
-      'lz.faq.a3': "أربعة أبواب. كيوي Basic: 199 درهم/الشهر، البرنامج الكامل (نقطة بيع، قاعة، مطبخ، مخزون، فريق، لوحة تحكم) على عتادك الخاص، لمحل واحد، مدمج في صندوقك الحالي، مع تكوين ميداني وأدلة. كيوي Pro: 399 درهم/الشهر، كل ما في Basic إضافة إلى صندوق كيوي مجاني، تسوية T+1 وصيانة العتاد. كيوي Ultra: 1 499 درهم/الشهر، محلات غير محدودة، تعدّد البلدان، API للمؤسسات ومدير حساب مخصّص 24/7. كيوي Ultimate: حسب الطلب، عرض مُفصّل يُحدّد معك. دون التزام، دون رسوم تركيب.",
+      'lz.faq.a3': "أربعة أبواب. كيوي Basic: 199 درهم/الشهر، البرنامج الكامل (نقطة بيع، قاعة، مطبخ، مخزون، فريق، لوحة تحكم) على عتادك الخاص، لمحل واحد، مدمج في صندوقك الحالي، مع تكوين ميداني وأدلة. كيوي Pro: 399 درهم/الشهر، كل ما في Basic إضافة إلى دعم ذي أولوية بردود أسرع وKiwi IQ متقدم. كيوي Ultra: 1 499 درهم/الشهر، محلات غير محدودة، تعدّد البلدان، API للمؤسسات ومدير حساب مخصّص 24/7. كيوي Ultimate: حسب الطلب، عرض مُفصّل يُحدّد معك. دون التزام، دون رسوم تركيب.",
       'lz.faq.a4': "تسجّل كيوي كل عملية بيع أيًّا كانت وسيلة الدفع، نقدًا، بطاقة، دفعًا هاتفيًا، وتشتغل إلى جانب جهاز الدفع الحالي لديك. كيوي هي البرنامج الذي يقود التجارة؛ وهي لا تعالج المال ولا تحوّله بنفسها. تحتفظ بنظام تحصيلك الحالي؛ وتمنحك كيوي أخيرًا الأداة التي تنظّمه.",
       'lz.faq.a5': "سبع دقائق لإنشاء الحساب من هاتفك، ويصبح المحل جاهزًا للعمل في اليوم التالي. يستورد فريق كيوي قائمتك، ويُعِدّ مخطط قاعتك، ويُكوّن فريقك في عين المكان. بالنسبة لعلامة متعدّدة المواقع، احتسب 48 ساعة عمل لإعداد الورديات والصلاحيات والمحلات.",
       'lz.faq.a6': "نعم. يواصل الصندوق وشاشة المطبخ العمل دون اتصال: تُؤخذ الطلبات وتُحصَّل وتُرسَل إلى المطبخ بشكل عادي. وبمجرد عودة الاتصال، تتزامن كل البيانات تلقائيًا نحو لوحة التحكم. لا تتوقّف خدمة مساء أبدًا بسبب انقطاع الشبكة.",
@@ -1264,6 +1260,12 @@
     document.documentElement.lang = lang;
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
     localStorage.setItem('kiwiLang', lang);
+    /* Keep the edge-rendered account gate in the same language as the app.
+       localStorage is invisible to Cloudflare's middleware, so the cookie is
+       the server-readable half of the locale handoff. */
+    document.cookie = 'kiwi_lang=' + lang
+      + '; Path=/; Max-Age=2592000; SameSite=Lax'
+      + (location.protocol === 'https:' ? '; Secure' : '');
 
     document.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.dataset.i18n;
@@ -1300,9 +1302,15 @@
   }
 
   /* ─── setTheme ───
-   * Kept programmatic-only — Go Ultra / fusion-mode (venues.js) flips the
+   * Programmatic — Go Ultra / fusion-mode (venues.js) flips the
    * <html data-theme="dark"> attribute to layer the dark surface tokens under
-   * its brand palette. No user-facing toggle is exposed anywhere. */
+   * its brand palette.
+   *
+   * This is NOT the dashboard's merchant-facing light/dark switch. That one
+   * lives in assets/design-vexel.js and writes `kiwiDashTheme`, precisely
+   * because `kiwiTheme` below is shared with brand.html, pitch.html and
+   * wallet.html — none of which have a dark surface. A dashboard choice
+   * written here would follow the merchant onto those pages. */
   function setTheme(theme) {
     if (!['dark','light'].includes(theme)) theme = 'light';
     document.documentElement.setAttribute('data-theme', theme);
@@ -1331,16 +1339,22 @@
       });
     });
 
-    // Light-only mode: dark toggle removed per product decision
-    // (CSS vars still flip if data-theme is set programmatically)
-
-    // Apply persisted state — always light now
-    setTheme('light');
+    // Adopt whatever climate is already on <html> rather than forcing light.
+    // This used to be an unconditional setTheme('light'), which ran at
+    // DOMContentLoaded and therefore stomped the dashboard's own preference a
+    // beat after design-vexel.js had primed it.
+    //
+    // On a page that owns its own climate (the dashboard, via KiwiDashTheme)
+    // the attribute is adopted WITHOUT persisting: writing it to `kiwiTheme`
+    // would carry a dashboard dark choice onto brand.html, pitch.html and
+    // wallet.html, which all load theme.css and would go dark with it.
+    // Everywhere else there is no dark writer, so the attribute is absent and
+    // this still lands on light — exactly as the old forced call did.
+    var climate = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    if (window.KiwiDashTheme) document.documentElement.setAttribute('data-theme', climate);
+    else setTheme(climate);
     setLang(getLang());
   }
-
-  /* Light-only mode — clear any previously saved dark preference */
-  localStorage.setItem('kiwiTheme', 'light');
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

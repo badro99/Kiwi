@@ -29,6 +29,8 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const AGENT = path.join(ROOT, 'assets', 'agent.js');
 const DATA = path.join(ROOT, 'assets', 'agent-data.js');
+const FEATURES = path.join(ROOT, 'assets', 'agent-features.js');
+const TRUTH = path.join(ROOT, 'assets', 'agent-truth.js');
 
 /* ── DOM shim ─────────────────────────────────────────────────────────────
  * Enough of a browser for agent.js to define itself. It never opens the UI
@@ -36,11 +38,16 @@ const DATA = path.join(ROOT, 'assets', 'agent-data.js');
 function makeCtx(opts) {
   opts = opts || {};
   const noop = () => {};
-  const el = () => ({
-    dataset: {}, style: {}, classList: { add: noop, remove: noop, toggle: noop, contains: () => false },
-    addEventListener: noop, removeEventListener: noop, appendChild: noop, querySelector: () => null,
-    querySelectorAll: () => [], setAttribute: noop, getAttribute: () => null, textContent: '', innerHTML: '',
-  });
+  const el = () => {
+    const e = {
+      dataset: {}, style: {}, classList: { add: noop, remove: noop, toggle: noop, contains: () => false },
+      addEventListener: noop, removeEventListener: noop, appendChild: noop, insertAdjacentHTML: noop,
+      querySelectorAll: () => [], setAttribute: noop, getAttribute: () => null, textContent: '', innerHTML: '',
+      focus: noop, scrollTop: 0, scrollHeight: 0,
+    };
+    e.querySelector = () => e;
+    return e;
+  };
   const document = {
     readyState: 'complete', documentElement: el(), head: el(), body: el(),
     createElement: () => el(), querySelector: () => null, querySelectorAll: () => [],
@@ -87,6 +94,8 @@ function load(opts) {
    * automatically when it is there. */
   if (fs.existsSync(CORPUS)) vm.runInContext(fs.readFileSync(CORPUS, 'utf8'), ctx, { filename: 'agent-corpus.js' });
   vm.runInContext(fs.readFileSync(DATA, 'utf8'), ctx, { filename: 'agent-data.js' });
+  vm.runInContext(fs.readFileSync(FEATURES, 'utf8'), ctx, { filename: 'agent-features.js' });
+  vm.runInContext(fs.readFileSync(TRUTH, 'utf8'), ctx, { filename: 'agent-truth.js' });
   vm.runInContext(fs.readFileSync(AGENT, 'utf8'), ctx, { filename: 'agent.js' });
   return ctx.window;
 }
@@ -125,6 +134,74 @@ for (const lang of ['fr', 'en', 'ar']) {
   if (r.fails && r.fails.length) {
     fail(`[${lang}] ${r.pass}/${r.total} — ` + r.fails.slice(0, 6).map((x) => `"${x.q}" ${x.got}≠${x.expected}`).join(' · '));
   } else ok(`[${lang}] ${r.pass}/${r.total} routes correct`);
+}
+
+/* ── 1b · faire avancer une commande ───────────────────────────────────────
+ * L'assistant peut proposer UNE action de bout en bout, et proposer une
+ * transition sur la mauvaise commande coûte plus cher que ne rien proposer du
+ * tout. Deux conditions doivent tenir ensemble : un verbe d'état ET un numéro
+ * précédé d'un mot qui désigne un ticket. Ce qui suit vérifie les deux sens —
+ * ce qui doit passer, et surtout ce qui ne doit pas. */
+section('Ordres de commande · lecture et refus');
+{
+  const w = load({ lang: 'fr' });
+  const parse = w.KiwiAgentOperation;
+  if (typeof parse !== 'function') {
+    fail('window.KiwiAgentOperation missing — agent.js must export the order reader');
+  } else {
+    const reads = [
+      ['accepte la commande 12', 'accepted', 12],
+      ['valide le ticket n° 4', 'accepted', 4],
+      ['refuse la commande 7', 'rejected', 7],
+      ['annule le ticket 31', 'rejected', 31],
+      ['la commande 9 est prête', 'ready', 9],
+      ['commande 15 servie', 'served', 15],
+      ['mark order 7 ready', 'ready', 7],
+      ['accept order #3', 'accepted', 3],
+      ['order 21 served', 'served', 21],
+      ['الطلب رقم 9 جاهز', 'ready', 9],
+      ['قبول الطلب 5', 'accepted', 5],
+      ['رفض الطلبية 8', 'rejected', 8],
+      ['wajda commande 6', 'ready', 6],
+      ['qbel commande 2', 'accepted', 2],
+    ];
+    let bad = [];
+    reads.forEach(([q, status, number]) => {
+      const got = parse(q);
+      if (!got || got.status !== status || got.number !== number)
+        bad.push(`"${q}" → ${got ? got.status + '/' + got.number : 'null'} ≠ ${status}/${number}`);
+    });
+    t(`${reads.length - bad.length}/${reads.length} phrases lues fr/en/ar/darija`, !bad.length, bad.slice(0, 4).join(' · '));
+
+    /* Le silence est la bonne réponse pour tout le reste. « table 3 » n'est pas
+       la commande 3, une commande qui « arrive » n'est pas un ordre, et
+       demander à VOIR les commandes ne doit rien déclencher. */
+    const silent = [
+      'table 3', 'la table 12 attend', 'combien j ai fait aujourd hui',
+      'montre les commandes', 'ouvre la commande 12', 'la commande arrive',
+      'accepte', 'j ai 12 commandes aujourd hui', 'commande 12',
+      'prête pour demain', 'add 3 cafés', 'الطاولة 3',
+    ];
+    const spoke = silent.filter((q) => parse(q));
+    t(`${silent.length - spoke.length}/${silent.length} phrases laissées tranquilles`, !spoke.length,
+      spoke.map((q) => `"${q}" a déclenché ${JSON.stringify(parse(q))}`).slice(0, 4).join(' · '));
+
+    /* Et la route : un ordre d'état doit sortir en `operation`, pas en `action`
+       (ouvrir la page Commandes serait une réponse à côté de la question). */
+    const routed = ['accepte la commande 12', 'refuse le ticket 4', 'la commande 9 est prête'];
+    const wrong = routed.filter((q) => w.KiwiAgentRoute(q) !== 'operation');
+    t('un ordre d\'état route en « operation », jamais en « action »', !wrong.length,
+      wrong.map((q) => `"${q}" → ${w.KiwiAgentRoute(q)}`).join(' · '));
+    /* …et l'inverse tient : voir les commandes reste une destination. */
+    t('« montre les commandes » reste une destination', w.KiwiAgentRoute('montre les commandes') !== 'operation',
+      'got ' + w.KiwiAgentRoute('montre les commandes'));
+
+    /* Sans KiwiOperations chargé, la carte ne doit porter aucun bouton : une
+       proposition qu'on ne peut pas exécuter est une promesse en l'air. */
+    const r = w.KiwiAgentAsk('accepte la commande 12');
+    t('aucun bouton proposé quand le moteur d\'opérations est absent', r && !r.run,
+      r && r.run ? 'a button was offered with no KiwiOperations on the page' : '');
+  }
 }
 
 /* ── 2 · multi-turn conversation + 3 · guardrail units ────────────────────── */
@@ -569,7 +646,57 @@ section('Production acceptance (re-audit, July 2026)');
   }
 }
 
-/* ── 9 · typos must not change the decision ────────────────────────────────
+/* ── 9 · merchant product knowledge & guided setup ─────────────────────────
+ * The financial engine is also the front door to Kiwi's product. A pressing
+ * must receive pressing operations, a shop must receive retail scanning, and
+ * the assistant must ask before proposing an implementation path. */
+section('Merchant-aware product guide');
+{
+  const mk = (subtype) => load({
+    lang: 'fr', role: 'owner',
+    env: { isReal: () => true },
+    venue: {
+      isCustom: () => true,
+      getVenue: () => 'merchant-' + subtype,
+      getCurrentVenueData: () => ({ name: 'Audit ' + subtype, subtype }),
+      getSubtypeProfile: () => ({ items: [] }),
+    },
+    sales: { list: () => [], totals: () => ({ revenue: 0, count: 0, basket: 0 }) },
+  });
+  const pressing = mk('pressing');
+  t('feature-list question uses the deterministic product guide',
+    pressing.KiwiAgentRoute('Quelles fonctions Kiwi ai-je ?') === 'feature');
+  const list = flatten(pressing.KiwiAgentAsk('Quelles fonctions Kiwi ai-je ?'));
+  t('pressing explanation contains its service-pricing workflow', /Services et tarifs/.test(list), list);
+  t('pressing explanation does not advertise the retail EAN scanner', !/Scan continu mobile/.test(list), list);
+  const price = flatten(pressing.KiwiAgentAsk('Où modifier les noms et les prix des chemises ?'));
+  t('pressing price question opens the real service configuration', /Services et tarifs/.test(price), price);
+
+  const boutique = mk('boutique');
+  const shop = flatten(boutique.KiwiAgentAsk('Quelles fonctions Kiwi ai-je ?'));
+  const scan = flatten(boutique.KiwiAgentAsk('Comment fonctionne le scan continu mobile ?'));
+  t('boutique explanation includes continuous mobile scanning', /Scan continu mobile/.test(scan), scan);
+  t('boutique explanation excludes pressing workshop flow', !/Atelier et flux/.test(shop), shop);
+
+  const setup = mk('pressing');
+  const q1 = setup.KiwiAgentAsk('Aide-moi à configurer mon établissement');
+  const q2 = setup.KiwiAgentAsk('Non, pas encore');
+  const q3 = setup.KiwiAgentAsk('Partiellement');
+  const done = setup.KiwiAgentAsk('Oui, nous livrons');
+  t('guided setup asks three questions before its roadmap',
+    /1\/3/.test(flatten(q1)) && /2\/3/.test(flatten(q2)) && /3\/3/.test(flatten(q3)) && done && done.open && done.open.length > 0);
+  t('guided setup prioritises missing pressing pricing', /Services et tarifs/.test(flatten(done)), flatten(done));
+
+  const focused = mk('pressing');
+  const fq1 = focused.KiwiAgentAsk('Aide-moi à configurer les services et tarifs');
+  focused.KiwiAgentAsk('Oui, dans un fichier Excel');
+  focused.KiwiAgentAsk('Urgence et détachage');
+  const fd = focused.KiwiAgentAsk('Une chemise à sec');
+  t('named-feature integration asks before opening configuration',
+    /grille actuelle/.test(flatten(fq1)) && fd && fd.open && fd.open.some((x) => /pressing-services/.test(x.handler)));
+}
+
+/* ── 10 · typos must not change the decision ───────────────────────────────
  * The re-audit ran a mutation suite: 450 of 10 151 variants changed the route,
  * and it named the three that matter — a hiring question read as generic
  * affordability, a layoff read as an employee lookup, Ramadan read as generic
@@ -620,6 +747,225 @@ section('Typos do not change a high-impact decision');
     if (got !== want) { invented++; fail(`"${q}" was corrected into ${got}, expected ${want}`); }
   }
   if (!invented) ok(`${INNOCENT.length} ordinary questions are not corrected into another intent`);
+}
+
+/* ── 11 · supplier-invoice reader reachable from the copilot ─────────────────
+ * The copilot is read-only; it may OPEN the Stock reception (handler
+ * stock-scan-invoice) and the merchant confirms there. The typed intent must
+ * win over the generic "stock" target, vanish when the operator has not sold
+ * the stock module, and the hero card must be gated by the very same rule. */
+section('Supplier-invoice reader from the copilot');
+{
+  const base = (cfg) => load({
+    lang: 'fr', role: 'owner',
+    env: { isReal: () => true },
+    venue: { isCustom: () => true, getVenue: () => 'v1', getCurrentVenueData: () => ({ name: 'Zaka Vogue', subtype: 'maison' }) },
+    sales: { list: () => [], totals: () => ({ revenue: 0, count: 0, basket: 0 }) },
+    globals: { KiwiConfig: cfg },
+  });
+  const on = base({ off: () => false });
+  const r1 = on.KiwiAgentAsk('lis ma facture fournisseur');
+  t('"lis ma facture fournisseur" opens the invoice reader, not the stock page',
+    !!(r1 && r1.open && r1.open.some((x) => x.handler === 'stock-scan-invoice') && !r1.open.some((x) => x.handler === 'nav-stock')), flatten(r1));
+  const r1b = on.KiwiAgentAsk('scanner une facture');
+  t('"scanner une facture" opens the invoice reader',
+    !!(r1b && r1b.open && r1b.open.some((x) => x.handler === 'stock-scan-invoice')), flatten(r1b));
+  const r2 = on.KiwiAgentAsk('ouvre le stock');
+  t('"ouvre le stock" still opens the stock page (ordering did not break the generic target)',
+    !!(r2 && r2.open && r2.open.some((x) => x.handler === 'nav-stock')), flatten(r2));
+  const off = base({ off: (k) => k === 'stock' });
+  const r3 = off.KiwiAgentAsk('lis ma facture fournisseur');
+  t('without the stock module, no invoice-reader button is offered',
+    !(r3 && r3.open && r3.open.some((x) => x.handler === 'stock-scan-invoice')), flatten(r3));
+
+  /* Hero card: same gate as the intent. Run the real supplierInvoiceOn() from
+   * agent.js, and pin that the card markup is guarded by it. */
+  const src = fs.readFileSync(AGENT, 'utf8');
+  const fnm = src.match(/function supplierInvoiceOn\(\) \{[\s\S]*?\n  \}/);
+  t('supplierInvoiceOn() exists in agent.js', !!fnm);
+  const gate = (w) => new Function('window', fnm[0] + '\nreturn supplierInvoiceOn();')(w);
+  const handlers = { 'stock-scan-invoice': () => {} };
+  t('hero card gate: real + stock sold + handler present → on',
+    gate({ KiwiEnv: { isReal: () => true }, KiwiConfig: { off: () => false }, Kiwi: { handlers } }) === true);
+  t('hero card gate: demo → off',
+    gate({ KiwiEnv: { isReal: () => false }, KiwiConfig: { off: () => false }, Kiwi: { handlers } }) === false);
+  t('hero card gate: stock module not sold → off',
+    gate({ KiwiEnv: { isReal: () => true }, KiwiConfig: { off: (k) => k === 'stock' }, Kiwi: { handlers } }) === false);
+  t('hero card markup is guarded by supplierInvoiceOn()',
+    /\$\{supplierInvoiceOn\(\) \? `<button class="fa-hero-card" type="button" data-fa-open="stock-scan-invoice">/.test(src));
+}
+
+/* ── 12 · server model is the fallback; WebLLM download is gone ──────────────
+ * The deterministic engine stays first. What it cannot answer goes to
+ * /api/ai/ask — after ONE explicit consent — or stays private (calculations
+ * only) if the merchant declined. No 1,2 Go download may ever be offered. */
+section('Server-model fallback, no in-browser download');
+{
+  const src = fs.readFileSync(AGENT, 'utf8');
+  const truthSrc = fs.readFileSync(TRUTH, 'utf8');
+  /* static guards — code, not comments: strip block + line comments first */
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  t('no WebLLM engine / CDN / WebGPU capability code remains in agent.js',
+    !/CreateMLCEngine|esm\.run|navigator\.gpu|requestAdapter|llmCapability|activateLlm|localDeltas/.test(code));
+  t('no download-offer strings remain in the llm dictionaries',
+    !/offerSize|unfitAdapter|unfitSpace|unfitMemory|loadFailMsg/.test(code));
+  t('routeToLlm: declined → private, accepted → server, otherwise consent offer',
+    /function routeToLlm\(question\) \{\s*if \(cloudDeclined\(\)\) \{ deterministicOnly\('private'\); return; \}\s*if \(cloudAccepted\(\)\) \{ runLlm\(question\); return; \}\s*offerCloud\(question\);\s*\}/.test(code));
+  t('runLlm has a single transport: llmAnswerStream → cloudToolRound / cloudDeltas', /const run = await llmAnswerStream\(messages\);/.test(code) && /await cloudToolRound\(messages\)/.test(code) && /await cloudDeltas\(\[\.\.\.messages, \.\.\.toolMsgs\]\)/.test(code) && !/localDeltas\(/.test(code));
+  t('the panel carries a mode toggle wired to setCloud', /data-fa-mode-toggle/.test(code) && /\[data-fa-mode-toggle\]'\)\) \{ setCloud\(!cloudAccepted\(\)\); refreshTrustLine\(\); return; \}/.test(code));
+
+  /* aiMode(), executed from agent-truth.js: three states */
+  const am = truthSrc.match(/function aiMode\(\) \{[\s\S]*?\n  \}/);
+  t('aiMode() exists in agent-truth.js', !!am);
+  const mode = (store) => new Function('storage', am[0] + '\nreturn aiMode();')((k) => store[k] == null ? null : store[k]);
+  t('aiMode: kiwiAiCloud=on → cloud', mode({ kiwiAiCloud: 'on' }) === 'cloud');
+  t('aiMode: kiwiAiCloud=off → deterministic (private)', mode({ kiwiAiCloud: 'off' }) === 'deterministic');
+  t('aiMode: undecided → ask (never "local")', mode({}) === 'ask' && mode({ kiwiAiLocal: 'off' }) === 'ask');
+
+  /* the three trust sentences exist, and the undecided one promises the consent step */
+  t('trust line: cloud / private / undecided sentences present',
+    /IA serveur activée/.test(src) && /Mode privé : calculs seuls/.test(src) && /seulement après votre accord, une fois/.test(src));
+}
+
+
+/* ── 13 · decision engine + model work TOGETHER, the numbers stay ours ──────
+ * Every question: the deterministic draft renders at once, the model rewrites
+ * it in the same bubble and may call read-only tools; anything it says that
+ * neither the draft nor a tool result supports is redacted. */
+section('Collaboration · draft + tools + corroboration');
+{
+  const src = fs.readFileSync(AGENT, 'utf8');
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  /* flow */
+  t('ask(): a deterministic reply renders first, then runLlm(t, { reply, bubble }) refines it in place',
+    /const bubble = pushAgent\(replyHtml\(reply\)\);\s*runLlm\(t, \{ reply, bubble \}\);\s*return;/.test(code));
+  t('collaboration is gated on consent + real session and never on a refusal or an action proposal',
+    /const collaborate = !reply\.refused && !reply\.run && cloudAccepted\(\) && window\.KiwiEnv && window\.KiwiEnv\.isReal && window\.KiwiEnv\.isReal\(\);/.test(code));
+  t('with a draft, a model failure leaves the draft and says nothing',
+    /if \(hasDraft\) \{ llmHistory\.push\(\{ role: 'assistant', content: draftFacts\(draft\.reply\)\.slice\(0, 600\) \}\); return; \}/.test(code));
+  t('with a draft, an empty or unverifiable model answer restores the draft text',
+    /if \(hasDraft && \(red\.redacted === -1 \|\| !red\.text\.trim\(\)\)\) target\.textContent = draftText;/.test(code));
+  t('two rounds at most: tool calls capped at 4 and the answer round streams with the tool results',
+    /r1\.tool_calls\.slice\(0, 4\)/.test(code) && /deltas: await cloudDeltas\(\[\.\.\.messages, \.\.\.toolMsgs\]\)/.test(code));
+  t('tool results enter the corroboration corpus BEFORE rendering (noteTurnFacts in the executor loop)',
+    /const out = await runTool\(String\(c\.name \|\| ''\), args\);\s*noteTurnFacts\(out\);/.test(code));
+  t('the draft facts enter the corpus and the FAITS block before the first call',
+    /const facts = hasDraft \? draftFacts\(draft\.reply\) : '';\s*if \(facts\) noteTurnFacts\(facts\);/.test(code) && /FACTS_LEAD \+ facts/.test(code));
+  t('TURN_FACTS is cleared at the start of every turn', /clearTurnFacts\(\);\s*llmHistory\.push\(\{ role: 'user', content: question \}\);/.test(code));
+  t('the redactor unions TURN_FACTS into all three namespaces',
+    /knownFigures\(\)\)\.concat\(Array\.from\(TURN_FACTS\.money\)\)/.test(code) && /knownPercents\(\)\)\.concat\(Array\.from\(TURN_FACTS\.pct\)\)/.test(code) && /knownCounts\(kind\)\)\.concat\(Array\.from\(TURN_FACTS\.counts\)\)/.test(code));
+
+  /* tools: every declared tool has an executor, no write tool */
+  const names = Array.from(code.matchAll(/function: \{ name: '([a-z_]+)'/g)).map((m) => m[1]);
+  const EXPECTED_TOOLS = ['sales_between', 'top_products', 'stock_level', 'stock_summary', 'tables_now', 'reservations_today', 'orders_open', 'propose_action'];
+  t('LLM_TOOLS declares exactly seven read tools + propose_action', JSON.stringify(names) === JSON.stringify(EXPECTED_TOOLS), names.join(','));
+  t('every declared tool has an executor branch in runTool', EXPECTED_TOOLS.every((n) => new RegExp("name === '" + n + "'").test(code)));
+  const runToolSrc = code.slice(code.indexOf('function runTool'), code.indexOf('function toolResultText'));
+  t('the only write path is propose_action → KiwiAgentActions.request (+ confirm only under autoActOn); no direct salesAdd / KiwiInventory / setStatus',
+    /A\.request\(act, args\)/.test(runToolSrc) && /if \(autoActOn\(\)\) \{[\s\S]*?A\.confirm\(req\.token\)/.test(runToolSrc) && !/salesAdd|KiwiInventory\.add|setStatus\(|KiwiPosReprint\.reprint/.test(runToolSrc));
+  t('propose_action only accepts the five existing action names', /const ACTION_NAME_RX = \/\^\(stock-adjust\|order-status\|reprint\|customer-message-draft\|create-po\)\$\//.test(code));
+  t('the prompt carries the tools rule: resolve ids first, never guess, announce executed vs awaiting', /const TOOLS_RULE = "OUTILS/.test(src) && /stock_level ou orders_open/.test(src) && /Ne devine jamais un id/.test(src) && /\{ role: 'system', content: TOOLS_RULE \}/.test(code));
+  t('pending proposals render a Confirm + Cancel button per action, then are cleared', /data-fa-confirm="' \+ escAttr\(pr\.token\)/.test(code) && /data-fa-confirm-no="/.test(code) && /LLM\.proposals = \[\];\s*\}\s*\n/.test(code));
+  t('the Confirm handler calls KiwiAgentActions.confirm(token) and disables the row first', /data-fa-confirm\]'\);\s*if \(confirmBtn\) \{[\s\S]*?row\.querySelectorAll\('button'\)\.forEach\(\(b\) => \{ b\.disabled = true; \}\);[\s\S]*?A\.confirm\(token\)/.test(code));
+  t('the direct-execution switch is owner-only and per venue', /if \(accessTier\(\) !== 'owner' \|\| !cloudAccepted\(\)\) return '';/.test(code) && /'kiwiAiAutoAct:' \+ String\(v \|\| 'default'\)/.test(code));
+
+  /* executed: the tools against a stubbed ledger, through the loaded window */
+  const day = (d, h) => new Date(2026, 7, d, h, 0, 0).getTime();   // Aug 2026, local
+  const sales = {
+    totals: (id, lo, hi) => { const rows = SALES.filter((x) => x.ts >= lo && x.ts < hi); const rev = rows.reduce((a, x) => a + x.amount, 0); return { revenue: rev, count: rows.length, basket: rows.length ? rev / rows.length : 0 }; },
+    list: () => SALES,
+  };
+  const SALES = [
+    { ts: day(10, 12), amount: 1200, lines: [{ name: 'Tajine poulet', qty: 4, total: 480 }, { name: 'Thé', qty: 8, total: 160 }] },
+    { ts: day(11, 20), amount: 2585, lines: [{ name: 'Tajine poulet', qty: 6, total: 720 }, { name: 'Pastilla', qty: 3, total: 450 }] },
+    { ts: day(12, 1), amount: 1000, lines: [{ name: 'Thé', qty: 5, total: 100 }] },   // 01:00 on the 12th = business day of the 11th
+    { ts: day(13, 12), amount: 999, lines: [] },
+  ];
+  const truth = { read: (k) => k === 'inventory' ? { available: true, source: 'inventory-ledger', data: { positions: 12, out: 1, low: 2, outNames: ['Citron'], lowNames: ['Menthe', 'Sucre'] } } : { available: false, source: k } };
+  const dayReport = { dayBounds: (d) => { const p = d.split('-').map(Number); const from = new Date(p[0], p[1] - 1, p[2], 5, 0, 0).getTime(); return { from, to: from + 86400000 }; } };
+  const actLog = [];
+  const actions = {
+    request: (name, args) => { actLog.push(['request', name, args]); if (name === 'stock-adjust' && !(args.itemId && isFinite(+args.qty) && +args.qty !== 0)) return { ok: false, reason: 'invalid' }; return { ok: true, confirmationRequired: true, token: 'confirm-' + actLog.length, summary: args }; },
+    confirm: (token) => { actLog.push(['confirm', token]); return { ok: true, id: 'mv-1' }; },
+  };
+  const w = load({ lang: 'fr', sales, globals: { KiwiAgentTruth: truth, KiwiDayReport: dayReport, KiwiAgentActions: actions, KiwiRestaurantStock: { items: () => [{ id: 'it-the', name: 'Thé à la menthe', stock: 42, unit: 'sachet' }, { id: 'it-taj', name: 'Tajine poulet', stock: 7 }] } } });
+  const T = w.KiwiAgentTools;
+  w.KiwiAgentActions = actions;   // agent-truth.js installs the real one on load; the stub must win for these controls
+  t('window.KiwiAgentTools is exposed with list/run/noteFacts/clearFacts/draftFacts', !!(T && T.list && T.run && T.noteFacts && T.clearFacts && T.draftFacts));
+  const sb = T.run('sales_between', { from: '2026-08-10', to: '2026-08-11' });
+  t('sales_between follows the 5 h business day: the 01:00 sale on the 12th belongs to the 11th', sb.total_mad === 4785 && sb.tickets === 3 && sb.day_cutoff === '5h', JSON.stringify(sb));
+  const sb2 = T.run('sales_between', { from: '2026-08-13', to: '2026-08-13' });
+  t('sales_between isolates a single day', sb2.total_mad === 999 && sb2.tickets === 1);
+  t('sales_between refuses malformed dates', !!T.run('sales_between', { from: 'hier', to: '2026-08-13' }).error);
+  const tp = T.run('top_products', { from: '2026-08-10', to: '2026-08-13', n: 2 });
+  t('top_products aggregates lines by name and ranks by quantity', tp.items.length === 2 && tp.items[0].name === 'Thé' && tp.items[0].qty === 13 && tp.items[1].name === 'Tajine poulet' && tp.items[1].qty === 10, JSON.stringify(tp));
+  const sl = T.run('stock_level', { query: 'the menthe' });
+  t('stock_level matches approximately (accents, case) and returns the level AND the id the model must reuse', sl.found && sl.items[0].name === 'Thé à la menthe' && sl.items[0].stock === 42 && sl.items[0].id === 'it-the');
+  /* actions through the model: propose by default, execute only under the owner switch */
+  T.setAutoAct(false); T.resetPending();
+  const p1 = T.run('propose_action', { name: 'stock-adjust', args: { itemId: 'it-the', qty: -3, reason: 'casse' }, summary: '− 3 Thé à la menthe' });
+  t('propose_action (switch off) → KiwiAgentActions.request with a commandId, NO confirm, awaiting_confirmation', p1.proposed === true && p1.awaiting_confirmation === true && actLog.filter((x) => x[0] === 'request').length === 1 && /^llm-/.test(actLog[0][2].commandId) && !actLog.some((x) => x[0] === 'confirm'), JSON.stringify(p1));
+  t('the pending proposal carries the token for the Confirm button', T.pending().length === 1 && T.pending()[0].token === 'confirm-1' && T.pending()[0].summary === '− 3 Thé à la menthe');
+  t('an invalid proposal is refused by the existing validator, not executed', T.run('propose_action', { name: 'stock-adjust', args: { itemId: '', qty: 0 }, summary: 'x' }).proposed === false);
+  t('an unknown action name is rejected before reaching KiwiAgentActions', !!T.run('propose_action', { name: 'delete-venue', args: {}, summary: 'x' }).error && actLog.filter((x) => x[0] === 'request').length === 2);
+  T.setAutoAct(true); T.resetPending();
+  const p2 = T.run('propose_action', { name: 'stock-adjust', args: { itemId: 'it-the', qty: -3, reason: 'casse' }, summary: '− 3 Thé à la menthe' });
+  t('propose_action (switch ON) → request then confirm immediately, executed:true, nothing pending', p2.executed === true && actLog.some((x) => x[0] === 'confirm') && T.pending().length === 0, JSON.stringify(p2));
+  T.setAutoAct(false);
+  t('the switch is per venue in localStorage (kiwiAiAutoAct:<venue>)', w.localStorage.getItem('kiwiAiAutoAct:default') === 'off');
+  t('stock_level says not found rather than guessing', T.run('stock_level', { query: 'caviar' }).found === false);
+  t('stock_summary reads KiwiAgentTruth inventory', T.run('stock_summary', {}).data.positions === 12);
+  t('tables_now reports unavailable when the floor plan is absent', T.run('tables_now', {}).available === false);
+  t('unknown tool → error, never a throw', !!T.run('nope', {}).error);
+
+  /* corroboration: the redactor keeps figures the tools produced and removes the rest */
+  T.clearFacts();
+  const before = w.KiwiAgentRedact('Votre chiffre est de 4 785 MAD sur 62 tickets.', 'fr');
+  t('before any tool result, an unknown amount is redacted', before.redacted >= 1 && !/4 785 MAD/.test(before.text), before.text);
+  T.noteFacts({ total_mad: 4785, tickets: 62 });
+  const after = w.KiwiAgentRedact('Votre chiffre est de 4 785 MAD sur 62 tickets.', 'fr');
+  t('after the tool result, the same sentence passes intact', after.redacted === 0 && /4 785 MAD/.test(after.text), after.text);
+  const other = w.KiwiAgentRedact('Votre chiffre est de 5 000 MAD.', 'fr');
+  t('a figure that no tool produced is still redacted', other.redacted === 1 && !/5 000 MAD/.test(other.text), other.text);
+  T.clearFacts();
+  const cleared = w.KiwiAgentRedact('Votre chiffre est de 4 785 MAD.', 'fr');
+  t('clearFacts forgets the previous turn', cleared.redacted === 1);
+  /* draft facts: numbers in the deterministic draft count as ours */
+  T.noteFacts(T.draftFacts({ text: '<b>Marge</b> de 33 %', stats: [{ l: 'CA', v: '12 400 MAD', h: '' }] }));
+  const dr = w.KiwiAgentRedact('Votre CA atteint 12 400 MAD avec une marge de 33 %.', 'fr');
+  t('figures from the deterministic draft are corroborated (money and percent)', dr.redacted === 0, dr.text);
+
+  /* open-assistant handler: drawer opens without ReferenceError */
+  let drawerCalled = null;
+  const wUi = load({
+    globals: {
+      Kiwi: {
+        handlers: {},
+        drawer: (cfg) => {
+          drawerCalled = cfg;
+          const mockEl = () => {
+            const m = {
+              dataset: {}, style: {}, classList: { add: () => {}, remove: () => {} },
+              addEventListener: () => {}, insertAdjacentHTML: () => {},
+              querySelectorAll: () => [], querySelector: () => mockEl(),
+              focus: () => {}, scrollTop: 0, scrollHeight: 0,
+            };
+            return m;
+          };
+          return { el: mockEl(), close: () => {} };
+        }
+      }
+    }
+  });
+  t('open-assistant registered into Kiwi.handlers', typeof wUi.Kiwi.handlers['open-assistant'] === 'function');
+  let openErr = null;
+  try {
+    wUi.Kiwi.handlers['open-assistant']();
+  } catch (e) {
+    openErr = e;
+  }
+  t('open-assistant executes cleanly without error', openErr === null, openErr ? openErr.stack : '');
+  t('drawer received a valid non-empty title', drawerCalled && typeof drawerCalled.title === 'string' && drawerCalled.title.length > 0, JSON.stringify(drawerCalled && drawerCalled.title));
 }
 
 /* ── summary ──────────────────────────────────────────────────────────────── */

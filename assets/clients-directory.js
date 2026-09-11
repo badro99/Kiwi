@@ -20,32 +20,58 @@
   var esc = function (x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
 
   var STR = {
-    fr: { title: 'Clients', sub: 'Le carnet complet — coordonnées, fidélité et consentement.',
-      search: 'Rechercher un nom, téléphone ou email…', export: 'Exporter (CSV)', campaign: 'Campagne', program: 'Programme de fidélité', total: 'clients', withEmail: 'avec email', withPhone: 'avec téléphone', consented: 'contactables',
+    fr: { title: 'Clients', sub: 'Le carnet complet · coordonnées, fidélité et consentement.',
+      search: 'Rechercher un nom, téléphone ou email…', export: 'Exporter (CSV)', campaign: 'Campagne', program: 'Programme de fidélité', newClient: '+ Nouveau client',
+      total: 'clients', withEmail: 'avec email', withPhone: 'avec téléphone', consented: 'contactables',
       seg: { all: 'Tous', reg: 'Réguliers', vip: 'VIP', new: 'Nouveaux', win: 'Dormants' },
       th: { name: 'Client', phone: 'Téléphone', email: 'Email', city: 'Ville', visits: 'Visites', spend: 'Dépensé', points: 'Points', seg: 'Segment', last: 'Dernière visite' },
-      tag: { reg: 'Régulier', vip: 'VIP', new: 'Nouveau', win: 'Dormant' }, none: '—', empty: 'Aucun client — ajoutez-en depuis la caisse.',
+      tag: { reg: 'Régulier', vip: 'VIP', new: 'Nouveau', win: 'Dormant' }, none: '·', empty: 'Aucun client · créez la première fiche avec « Nouveau client ».',
       ago: function (d) { return d === 0 ? "aujourd'hui" : 'il y a ' + d + ' j'; }, close: 'Fermer',
-      detail: 'Fiche client', birthday: 'Anniversaire', gender: 'Genre', address: 'Adresse', notes: 'Notes', consent: 'Consentement', consentWa: 'WhatsApp / SMS', consentEmail: 'Email', firstSeen: 'Client depuis' },
-    en: { title: 'Customers', sub: 'The full book — contacts, loyalty and consent.',
-      search: 'Search name, phone or email…', export: 'Export (CSV)', campaign: 'Campaign', program: 'Loyalty program', total: 'customers', withEmail: 'with email', withPhone: 'with phone', consented: 'contactable',
+      detail: 'Fiche client', birthday: 'Anniversaire', gender: 'Genre', address: 'Adresse', notes: 'Notes', consent: 'Consentement', consentWa: 'WhatsApp / SMS', consentEmail: 'Email', firstSeen: 'Client depuis',
+      form: { title: 'Nouveau client', sub: 'La fiche rejoint le carnet partagé, avec ou sans caisse.', save: 'Ajouter', cancel: 'Annuler',
+        needNameOrPhone: 'Renseignez au moins un nom ou un numéro.', badPhone: 'Numéro invalide · pour l’étranger, ajoutez + et l’indicatif pays.',
+        consentRequired: 'Le consentement est requis · cochez la case WhatsApp / SMS pour enregistrer.', alreadyExists: 'Client déjà enregistré', added: 'Client ajouté' } },
+    en: { title: 'Customers', sub: 'The full book · contacts, loyalty and consent.',
+      search: 'Search name, phone or email…', export: 'Export (CSV)', campaign: 'Campaign', program: 'Loyalty program', newClient: '+ New customer', total: 'customers', withEmail: 'with email', withPhone: 'with phone', consented: 'contactable',
       seg: { all: 'All', reg: 'Regulars', vip: 'VIP', new: 'New', win: 'Dormant' },
       th: { name: 'Customer', phone: 'Phone', email: 'Email', city: 'City', visits: 'Visits', spend: 'Spent', points: 'Points', seg: 'Segment', last: 'Last visit' },
-      tag: { reg: 'Regular', vip: 'VIP', new: 'New', win: 'Dormant' }, none: '—', empty: 'No customers yet — add them from the till.',
+      tag: { reg: 'Regular', vip: 'VIP', new: 'New', win: 'Dormant' }, none: '·', empty: 'No customers yet · create the first record with “New customer”.',
       ago: function (d) { return d === 0 ? 'today' : d + 'd ago'; }, close: 'Close',
-      detail: 'Customer', birthday: 'Birthday', gender: 'Gender', address: 'Address', notes: 'Notes', consent: 'Consent', consentWa: 'WhatsApp / SMS', consentEmail: 'Email', firstSeen: 'Customer since' },
-    ar: { title: 'العملاء', sub: 'الدفتر الكامل — جهات الاتصال والوفاء والموافقة.',
-      search: 'ابحث بالاسم أو الهاتف أو البريد…', export: 'تصدير (CSV)', campaign: 'حملة', program: 'برنامج الوفاء', total: 'عميل', withEmail: 'ببريد', withPhone: 'بهاتف', consented: 'قابلون للتواصل',
+      detail: 'Customer', birthday: 'Birthday', gender: 'Gender', address: 'Address', notes: 'Notes', consent: 'Consent', consentWa: 'WhatsApp / SMS', consentEmail: 'Email', firstSeen: 'Customer since',
+      form: { title: 'New customer', sub: 'The record joins the shared book, with or without a till.', save: 'Add', cancel: 'Cancel',
+        needNameOrPhone: 'Enter at least a name or a phone number.', badPhone: 'Invalid number · abroad, add + and the country code.',
+        consentRequired: 'Consent is required · tick WhatsApp / SMS to save.', alreadyExists: 'Customer already on file', added: 'Customer added' } },
+    ar: { title: 'العملاء', sub: 'الدفتر الكامل · جهات الاتصال والوفاء والموافقة.',
+      search: 'ابحث بالاسم أو الهاتف أو البريد…', export: 'تصدير (CSV)', campaign: 'حملة', program: 'برنامج الوفاء', newClient: '+ عميل جديد', total: 'عميل', withEmail: 'ببريد', withPhone: 'بهاتف', consented: 'قابلون للتواصل',
       seg: { all: 'الكل', reg: 'دائمون', vip: 'كبار', new: 'جدد', win: 'خاملون' },
       th: { name: 'العميل', phone: 'الهاتف', email: 'البريد', city: 'المدينة', visits: 'الزيارات', spend: 'الإنفاق', points: 'النقاط', seg: 'الفئة', last: 'آخر زيارة' },
-      tag: { reg: 'دائم', vip: 'كبير', new: 'جديد', win: 'خامل' }, none: '—', empty: 'لا يوجد عملاء بعد — أضِفهم من الصندوق.',
+      tag: { reg: 'دائم', vip: 'كبير', new: 'جديد', win: 'خامل' }, none: '·', empty: 'لا يوجد عملاء بعد · أنشئ أول بطاقة بزر «عميل جديد».',
       ago: function (d) { return d === 0 ? 'اليوم' : 'منذ ' + d + ' ي'; }, close: 'إغلاق',
-      detail: 'بطاقة العميل', birthday: 'الميلاد', gender: 'الجنس', address: 'العنوان', notes: 'ملاحظات', consent: 'الموافقة', consentWa: 'واتساب / SMS', consentEmail: 'بريد', firstSeen: 'عميل منذ' },
+      detail: 'بطاقة العميل', birthday: 'الميلاد', gender: 'الجنس', address: 'العنوان', notes: 'ملاحظات', consent: 'الموافقة', consentWa: 'واتساب / SMS', consentEmail: 'بريد', firstSeen: 'عميل منذ',
+      form: { title: 'عميل جديد', sub: 'ينضم الملف إلى الدفتر المشترك، بالصندوق أو بدونه.', save: 'إضافة', cancel: 'إلغاء',
+        needNameOrPhone: 'أدخل الاسم أو رقم الهاتف على الأقل.', badPhone: 'رقم غير صالح · للخارج أضف + ورمز البلد.',
+        consentRequired: 'الموافقة مطلوبة · حدّد واتساب / SMS للحفظ.', alreadyExists: 'العميل مسجل مسبقاً', added: 'تمت إضافة العميل' } },
   };
 
   var SEG_LBL = function (T, id) { return T.tag[id] || id; };
   var DAY = 86400000;
   function daysSince(ts) { return ts ? Math.floor((Date.now() - ts) / DAY) : Infinity; }
+  function hospitalityMode() {
+    try {
+      var V = window.KiwiVenue;
+      var d = V && V.getCurrentVenueData && V.getCurrentVenueData();
+      var type = (V && V.getVenueType && V.getVenueType()) || (d && (d.type || d.kind)) || '';
+      return String(type).toLowerCase() === 'hotel';
+    } catch (_) { return false; }
+  }
+  var HOTEL = {
+    fr: { title: 'Hospitality+', sub: 'Chaque séjour enrichit une seule fiche client · identité, préférences et attention personnalisée.', empty: 'Aucun client · créez la première fiche avec « Nouveau client ».',
+      nationality: 'Nationalité', identity: 'Passeport / ID', language: 'Langue', room: 'Préférences chambre', food: 'Préférences repas', allergies: 'Allergies', access: 'Besoins particuliers', stays: 'Séjours' },
+    en: { title: 'Hospitality+', sub: 'Every stay enriches one guest profile · identity, preferences and personalised care.', empty: 'No guests yet · create the first profile with “New customer”.',
+      nationality: 'Nationality', identity: 'Passport / ID', language: 'Language', room: 'Room preferences', food: 'Food preferences', allergies: 'Allergies', access: 'Accessibility needs', stays: 'Stays' },
+    ar: { title: 'Hospitality+', sub: 'كل إقامة تثري ملف ضيف واحداً · الهوية والتفضيلات والعناية الشخصية.', empty: 'لا يوجد ضيوف بعد · أنشئ أول ملف بزر «عميل جديد».',
+      nationality: 'الجنسية', identity: 'جواز السفر / الهوية', language: 'اللغة', room: 'تفضيلات الغرفة', food: 'تفضيلات الطعام', allergies: 'الحساسيات', access: 'احتياجات خاصة', stays: 'الإقامات' },
+  };
 
   // Demo directory — shown only when there's no real/paired store (pitch demo).
   var DEMO = [
@@ -61,17 +87,31 @@
 
   function isRealTenant() {
     try { if (window.KiwiEnv && KiwiEnv.isReal && KiwiEnv.isReal()) return true; } catch (_) {} // hosted / signed-in → always real
-    try { if (localStorage.getItem('kiwiPaired') === '1' && localStorage.getItem('kiwiLiveMerchant')) return true; } catch (_) {}
+    try { if (window.KiwiMe) return true; } catch (_) {}
+    try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.isPaired === 'function' && window.KiwiPlatform.isPaired()) return true;
+      var P = window.KiwiCaissePairing;
+      if (P && P.isPaired && P.isPaired() && P.pairedVenue && (P.pairedVenue() || {}).merchant) return true;
+      if (localStorage.getItem('kiwiPaired') === '1') {
+        var pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+        if ((pv && pv.merchant) || localStorage.getItem('kiwiLiveMerchant')) return true;
+      }
+    } catch (_) {}
     try { if (window.KiwiVenue && KiwiVenue.isCustom && KiwiVenue.isCustom()) return true; } catch (_) {}
     return false;
   }
   // Returns { rows:[…], real:bool }. Rows carry a uniform shape for the table.
   function load() {
     var KCl = window.KiwiClients;
+    /* A real tenant with no book is an empty address book, not permission to
+       fall through to Salma/Nawal and their phone numbers. */
+    if (isRealTenant() && (!KCl || !KCl.hasBook || !KCl.hasBook())) {
+      return { rows: [], real: true };
+    }
     if (KCl && KCl.hasBook && KCl.hasBook() && (KCl.count() > 0 || isRealTenant())) {
       var rows = KCl.list().map(function (c) {
         return { id: c.id, name: c.name, phone: c.phone, email: c.email, city: c.city, address: c.address,
-          birthday: c.birthday, gender: c.gender, notes: c.notes, visits: c.visits, spend: c.spend,
+          birthday: c.birthday, gender: c.gender, notes: c.notes, hospitality: c.hospitality || {}, visits: c.visits, spend: c.spend,
           points: c.points, consent: c.consent, consentEmail: c.consentEmail, seg: KCl.segment(c),
           last: daysSince(c.lastSeen) === Infinity ? 0 : daysSince(c.lastSeen), firstSeen: daysSince(c.firstSeen) };
       });
@@ -91,6 +131,8 @@
     '.cd-exp{display:inline-flex;align-items:center;gap:7px;padding:11px 15px;border:1px solid var(--n-200);border-radius:11px;background:var(--surface);color:var(--ink);font:600 13px/1 inherit;cursor:pointer;}',
     '.cd-exp:hover{border-color:var(--atlas);color:var(--atlas);}',
     '.cd-exp.cd-camp{background:var(--atlas);color:#fff;border-color:var(--atlas);}',
+    '.cd-exp.cd-new{background:var(--atlas);color:#fff;border-color:var(--atlas);}',
+    '.cd-exp.cd-new:hover{filter:brightness(1.07);color:#fff;}',
     '.cd-exp.cd-camp:hover{filter:brightness(1.07);color:#fff;}',
     '.cd-segs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px;}',
     '.cd-segchip{font-size:12.5px;padding:7px 13px;border-radius:999px;border:1px solid var(--n-200);background:var(--surface,#fff);cursor:pointer;color:var(--ink);transition: transform .12s, opacity .12s, background-color .12s, border-color .12s, color .12s, box-shadow .12s;}',
@@ -107,10 +149,18 @@
     '.cd-muted{color:var(--n-500);}',
     '.cd-tag{font-size:10.5px;font-family:var(--mono);padding:3px 9px;border-radius:999px;}',
     '.cd-tag.reg{background:var(--mint-soft);color:#075238;}.cd-tag.vip{background:#FBF0D6;color:#8A6210;}.cd-tag.new{background:#E4ECF8;color:#3E78C9;}.cd-tag.win{background:#FBE3DD;color:#C0492F;}',
-    '.cd-ok{color:var(--atlas);font-weight:700;}.cd-no{color:var(--n-400);}',
+    '.cd-ok{color:var(--atlas);font-weight:700;}.cd-no{color: var(--n-500);}',
     '.cd-empty{text-align:center;color:var(--n-500);padding:40px 14px;}',
     '.cd-drow{display:flex;justify-content:space-between;gap:16px;padding:11px 0;border-top:1px solid var(--n-200);font-size:13.5px;}',
     '.cd-drow:first-child{border-top:0;}.cd-drow .k{color:var(--n-500);}.cd-drow .v{font-weight:600;text-align:end;word-break:break-word;}',
+    '.cd-f-sub{color:var(--n-500);font-size:13px;margin:2px 0 14px;}',
+    '.cd-f-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;}',
+    '.cd-f{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--n-600);min-width:0;}',
+    '.cd-f input,.cd-f select{padding:11px 12px;border:1px solid var(--n-200);border-radius:10px;font-size:14px;background:var(--surface);color:var(--ink);min-width:0;}',
+    '.cd-f input:focus,.cd-f select:focus{outline:none;border-color:var(--atlas);box-shadow:0 0 0 3px rgba(11,110,79,.12);}',
+    '.cd-f-check{display:flex;align-items:center;gap:8px;font-size:13px;margin-top:12px;cursor:pointer;}',
+    '.cd-f-check input{width:17px;height:17px;accent-color:var(--atlas);flex:none;}',
+    '.cd-f-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}',
     'html[data-theme="dark"] .cd-tblwrap,html[data-theme="dark"] .cd-search,html[data-theme="dark"] .cd-exp,html[data-theme="dark"] .cd-segchip,html[data-theme="dark"] .cd-tbl{background:#131916;border-color:#26302b;color:var(--paper);}',
     'html[data-theme="dark"] .cd-tbl th{background:#0f1714;}html[data-theme="dark"] .cd-tbl td{border-color:#26302b;}',
     'html[data-theme="dark"] .cd-tbl tbody tr:hover td{background:#0f1714;}',
@@ -123,7 +173,22 @@
     var body = rows.map(function (c) {
       return [c.name || '', c.phone || '', c.email || '', c.city || '', c.birthday || '', c.visits || 0, c.spend || 0, c.points || 0, SEG_LBL(T, c.seg), c.consent ? 'oui' : 'non', c.consentEmail ? 'oui' : 'non'];
     });
-    var csv = [head].concat(body).map(function (r) { return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(','); }).join('\r\n');
+    if (hospitalityMode()) {
+      var H = HOTEL[lang()] || HOTEL.fr;
+      head = head.concat([H.nationality, H.identity, H.language, H.room, H.food, H.allergies, H.access]);
+      body = body.map(function (r, i) {
+        var h = rows[i].hospitality || {};
+        return r.concat([h.nationality || '', [h.documentType, h.documentNumber].filter(Boolean).join(' · '), h.preferredLanguage || '', h.roomPreferences || '', h.foodPreferences || '', h.allergies || '', h.accessibilityNeeds || '']);
+      });
+    }
+    var csvCell = function (v) {
+      var s = String(v == null ? '' : v);
+      // Excel/LibreOffice execute cells beginning with these characters. Client
+      // names and emails are untrusted input, even when correctly CSV-quoted.
+      if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
+      return '"' + s.replace(/"/g, '""') + '"';
+    };
+    var csv = [head].concat(body).map(function (r) { return r.map(csvCell).join(','); }).join('\r\n');
     try {
       var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
       var url = URL.createObjectURL(blob);
@@ -135,6 +200,9 @@
 
   window.Kiwi.handlers['clients-directory'] = function () {
     var T = STR[lang()] || STR.fr;
+    var hotel = hospitalityMode();
+    var H = HOTEL[lang()] || HOTEL.fr;
+    if (hotel) T = Object.assign({}, T, { title: H.title, sub: H.sub, empty: H.empty });
     var data = load();
     var all = data.rows.slice().sort(function (a, b) { return (b.spend || 0) - (a.spend || 0); });
     var state = { q: '', seg: 'all' };
@@ -151,11 +219,26 @@
         return (c.name || '').toLowerCase().indexOf(q) >= 0 ||
           String(c.phone || '').replace(/\s/g, '').indexOf(q.replace(/\s/g, '')) >= 0 ||
           (c.email || '').toLowerCase().indexOf(q) >= 0 ||
-          (c.city || '').toLowerCase().indexOf(q) >= 0;
+          (c.city || '').toLowerCase().indexOf(q) >= 0 ||
+          (hotel && Object.keys(c.hospitality || {}).some(function (k) { return String(c.hospitality[k] || '').toLowerCase().indexOf(q) >= 0; }));
       });
     }
 
     function rowHtml(c) {
+      if (hotel) {
+        var h = c.hospitality || {};
+        var identity = [h.documentType, h.documentNumber].filter(Boolean).join(' · ') || T.none;
+        return '<tr data-cd-id="' + esc(c.id) + '">' +
+          '<td class="cd-nm">' + esc(c.name || T.none) + '</td>' +
+          '<td class="mono">' + esc(c.phone || T.none) + '</td>' +
+          '<td>' + esc(h.nationality || T.none) + '</td>' +
+          '<td class="mono">' + esc(identity) + '</td>' +
+          '<td>' + esc(h.roomPreferences || T.none) + '</td>' +
+          '<td class="' + (h.allergies ? '' : 'cd-muted') + '">' + esc(h.allergies || T.none) + '</td>' +
+          '<td class="mono">' + (c.visits || 0) + '</td>' +
+          '<td class="mono">' + fmt(c.spend) + '</td>' +
+          '<td class="cd-muted">' + T.ago(c.last) + '</td></tr>';
+      }
       return '<tr data-cd-id="' + esc(c.id) + '">' +
         '<td class="cd-nm">' + esc(c.name || T.none) + '</td>' +
         '<td class="mono">' + esc(c.phone || T.none) + '</td>' +
@@ -170,6 +253,9 @@
     function tableHtml() {
       var rows = filtered();
       if (!rows.length) return '<div class="cd-empty">' + esc(T.empty) + '</div>';
+      if (hotel) return '<div class="cd-tblwrap"><table class="cd-tbl"><thead><tr>' +
+        [T.th.name, T.th.phone, H.nationality, H.identity, H.room, H.allergies, H.stays, T.th.spend, T.th.last].map(function (label) { return '<th>' + esc(label) + '</th>'; }).join('') +
+        '</tr></thead><tbody>' + rows.map(rowHtml).join('') + '</tbody></table></div>';
       return '<div class="cd-tblwrap"><table class="cd-tbl"><thead><tr>' +
         ['name', 'phone', 'email', 'city', 'visits', 'spend', 'points', 'seg', 'last'].map(function (k) { return '<th>' + T.th[k] + '</th>'; }).join('') +
         '</tr></thead><tbody>' + rows.map(rowHtml).join('') + '</tbody></table></div>';
@@ -188,6 +274,7 @@
         '<div class="cd-stat"><div class="v">' + fmt(withEmail()) + '</div><div class="l">' + T.withEmail + '</div></div>' +
         '<div class="cd-stat"><div class="v">' + fmt(contactable()) + '</div><div class="l">' + T.consented + '</div></div>' +
       '</div><div class="cd-tools">' +
+        '<button class="cd-exp cd-new" id="cd-new">' + esc(T.newClient) + '</button>' +
         '<input class="cd-search" id="cd-q" type="search" placeholder="' + esc(T.search) + '">' +
         '<button class="cd-exp" id="cd-exp"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' + T.export + '</button>' +
         '<button class="cd-exp" id="cd-loyalty" data-feature="loyalty"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>' + T.program + '</button>' +
@@ -216,6 +303,7 @@
     root.addEventListener('click', function (e) {
       var sg = e.target.closest('[data-cd-seg]');
       if (sg) { state.seg = sg.getAttribute('data-cd-seg'); rerenderSegs(); rerenderTable(); return; }
+      if (e.target.closest('#cd-new')) { openNewClient(); return; }
       if (e.target.closest('#cd-exp')) { csvExport(filtered(), T); Kiwi.toast && Kiwi.toast(T.export, { type: 'success', desc: fmt(filtered().length) + ' ' + T.total }); return; }
       if (e.target.closest('#cd-loyalty')) { if (window.Kiwi.handlers && Kiwi.handlers['loyalty']) Kiwi.handlers['loyalty'](); return; }
       // In-flow: growth-crm's appPage replaces this page's host, so no close() needed
@@ -224,6 +312,62 @@
       var tr = e.target.closest('[data-cd-id]');
       if (tr) { openDetail(all.filter(function (c) { return c.id === tr.getAttribute('data-cd-id'); })[0], T); }
     });
+
+    // Ticket #0004 · dashboard-native creation: reception has no till, so the
+    // directory creates fiches itself through the same shared book + server
+    // sync as the caisse (KiwiClients.upsert), with the same validation.
+    function openNewClient() {
+      if (!window.KiwiClients || !window.Kiwi.modal) return;
+      var F = T.form;
+      var fld = function (id, label, inner) { return '<label class="cd-f"><span>' + esc(label) + '</span>' + inner + '</label>'; };
+      var inp = function (id, val, ph, type) { return '<input id="' + id + '" value="' + esc(val || '') + '"' + (type ? ' type="' + type + '"' : '') + (ph ? ' placeholder="' + esc(ph) + '"' : '') + ' autocomplete="off">'; };
+      var hotelBox = hotel ?
+        fld('cdn-h-nationality', H.nationality, inp('cdn-h-nationality', '', '')) +
+        fld('cdn-h-identity', H.identity, inp('cdn-h-identity', '', '')) +
+        fld('cdn-h-language', H.language, inp('cdn-h-language', '', '')) +
+        fld('cdn-h-room', H.room, inp('cdn-h-room', '', '')) +
+        fld('cdn-h-food', H.food, inp('cdn-h-food', '', '')) +
+        fld('cdn-h-allergies', H.allergies, inp('cdn-h-allergies', '', '')) +
+        fld('cdn-h-access', H.access, inp('cdn-h-access', '', '')) : '';
+      var m = window.Kiwi.modal({ tag: F.title, title: hotel ? H.title + ' · ' + F.title : F.title, width: 520,
+        body: '<p class="cd-f-sub">' + esc(F.sub) + '</p><div class="cd-f-grid">' +
+        fld('cdn-name', T.th.name, inp('cdn-name', '', '')) +
+        fld('cdn-phone', T.th.phone, inp('cdn-phone', '', '06…')) +
+        fld('cdn-email', T.th.email, inp('cdn-email', '', '', 'email')) +
+        fld('cdn-city', T.th.city, inp('cdn-city', '', '')) +
+        fld('cdn-birthday', T.birthday, inp('cdn-birthday', '', '', 'date')) +
+        '<label class="cd-f"><span>' + esc(T.gender) + '</span><select id="cdn-gender"><option value=""></option><option>Femme</option><option>Homme</option><option>Autre</option></select></label>' +
+        hotelBox +
+        fld('cdn-notes', T.notes, inp('cdn-notes', '', '')) +
+        '</div><label class="cd-f-check"><input type="checkbox" id="cdn-consent"' + (hotel ? '' : ' checked') + '><span>' + esc(T.consentWa) + (hotel ? '' : ' · requis CNDP 09-08') + '</span></label>' +
+        '<label class="cd-f-check"><input type="checkbox" id="cdn-consent-email"><span>' + esc(T.consentEmail) + '</span></label>' +
+        '<div class="cd-f-actions"><button class="cd-exp" data-close>' + esc(F.cancel) + '</button><button class="cd-exp cd-new" data-save>' + esc(F.save) + '</button></div>' });
+      var val = function (sel) { var n = m.el.querySelector(sel); return n ? String(n.value || '').trim() : ''; };
+      m.el.addEventListener('click', function (e) {
+        if (e.target.closest('[data-close]')) { m.close(); return; }
+        if (!e.target.closest('[data-save]')) return;
+        var name = val('#cdn-name'), phone = val('#cdn-phone');
+        if (!name && !phone) { Kiwi.toast && Kiwi.toast(F.needNameOrPhone, { type: 'warn' }); return; }
+        if (phone && window.KiwiPhone && !window.KiwiPhone.valid(phone)) { Kiwi.toast && Kiwi.toast(F.badPhone, { type: 'warn' }); return; }
+        var consent = !!m.el.querySelector('#cdn-consent').checked;
+        if (!hotel && !consent) { Kiwi.toast && Kiwi.toast(F.consentRequired, { type: 'warn' }); return; }
+        if (phone) {
+          var dupe = KiwiClients.findByPhone(phone);
+          if (dupe) { m.close(); openDetail(all.filter(function (c) { return c.id === dupe.id; })[0] || dupe, T); Kiwi.toast && Kiwi.toast(F.alreadyExists, { type: 'info' }); return; }
+        }
+        var rec = KiwiClients.upsert({
+          id: '', name: name, phone: phone, email: val('#cdn-email'), city: val('#cdn-city'),
+          birthday: val('#cdn-birthday'), gender: val('#cdn-gender'), notes: val('#cdn-notes'),
+          hospitality: hotel ? { nationality: val('#cdn-h-nationality'), documentType: '', documentNumber: val('#cdn-h-identity'),
+            preferredLanguage: val('#cdn-h-language'), roomPreferences: val('#cdn-h-room'), foodPreferences: val('#cdn-h-food'),
+            allergies: val('#cdn-h-allergies'), accessibilityNeeds: val('#cdn-h-access') } : {},
+          consent: consent, consentEmail: !!m.el.querySelector('#cdn-consent-email').checked, source: 'dashboard',
+        });
+        m.close();
+        refreshData();
+        Kiwi.toast && Kiwi.toast(F.added, { type: 'success', desc: rec.name || rec.phone });
+      });
+    }
 
     // Live: pull the shared book from the server (cross-device) and refresh when it
     // changes here or on another device. Guarded so a closed drawer unsubscribes.
@@ -250,9 +394,17 @@
     if (!c || !window.Kiwi.modal) return;
     function row(k, v) { return v ? '<div class="cd-drow"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>' : ''; }
     var consent = [c.consent ? T.consentWa : '', c.consentEmail ? T.consentEmail : ''].filter(Boolean).join(' · ') || T.none;
+    var hotel = hospitalityMode();
+    var H = HOTEL[lang()] || HOTEL.fr;
+    var h = c.hospitality || {};
+    var hospitalityRows = hotel ?
+      row(H.nationality, h.nationality) + row(H.identity, [h.documentType, h.documentNumber].filter(Boolean).join(' · ')) +
+      row(H.language, h.preferredLanguage) + row(H.room, h.roomPreferences) + row(H.food, h.foodPreferences) +
+      row(H.allergies, h.allergies) + row(H.access, h.accessibilityNeeds) : '';
     var body = '<div style="margin-top:4px">' +
       row(T.th.phone, c.phone) + row(T.th.email, c.email) + row(T.th.city, c.city) + row(T.address, c.address) +
       row(T.birthday, c.birthday) + row(T.gender, c.gender) +
+      hospitalityRows +
       '<div class="cd-drow"><span class="k">' + T.th.visits + ' · ' + T.th.spend + '</span><span class="v">' + (c.visits || 0) + ' · ' + fmt(c.spend) + ' MAD</span></div>' +
       '<div class="cd-drow"><span class="k">' + T.th.points + ' · ' + T.th.seg + '</span><span class="v">' + fmt(c.points) + ' · ' + SEG_LBL(T, c.seg) + '</span></div>' +
       row(T.notes, c.notes) +

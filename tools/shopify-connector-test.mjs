@@ -1,0 +1,442 @@
+#!/usr/bin/env node
+
+import cryptoNode from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
+  buildExactVariantMapping, decryptToken, encryptToken, normalizeShopDomain,
+  enqueueStockChanges, exchangeClientCredentials, flushShopifyOutbox,
+  isClientCredentials, sha256Hex, stockSnapshot,
+  SHOPIFY_SCOPES, verifyOAuthHmac, verifyWebhookHmac,
+} from '../functions/api/shopify/_lib.js';
+import { __test as statusTest } from '../functions/api/shopify/status.js';
+import { __test as cronTest } from '../functions/api/shopify/cron.js';
+import retryWorker, { __test as retryTest } from './shopify-sync-worker/src/index.js';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+let pass = 0; const failures = [];
+const ok = (label, condition, detail = '') => condition ? pass++ : failures.push(`${label}${detail ? ` — ${detail}` : ''}`);
+
+const cronSecret = 'cron-secret-for-tests-with-at-least-32-characters';
+ok('cron rejects a missing bearer secret', !cronTest.authorized(new Request('https://kiwi.test/api/shopify/cron', { method: 'POST' }), { SHOPIFY_CRON_SECRET: cronSecret }));
+ok('cron rejects a wrong bearer secret', !cronTest.authorized(new Request('https://kiwi.test/api/shopify/cron', { method: 'POST', headers: { Authorization: 'Bearer wrong' } }), { SHOPIFY_CRON_SECRET: cronSecret }));
+ok('cron accepts only the configured bearer secret', cronTest.authorized(new Request('https://kiwi.test/api/shopify/cron', { method: 'POST', headers: { Authorization: `Bearer ${cronSecret}` } }), { SHOPIFY_CRON_SECRET: cronSecret }));
+ok('cron refuses weak shared-secret configuration', !cronTest.authorized(new Request('https://kiwi.test/api/shopify/cron', { method: 'POST', headers: { Authorization: 'Bearer short' } }), { SHOPIFY_CRON_SECRET: 'short' }));
+
+const workerFetch = globalThis.fetch;
+let cronCall = null;
+globalThis.fetch = async (url, init) => {
+  cronCall = { url: String(url), init };
+  return new Response(JSON.stringify({ ok: true, processed: 2, failed: 0 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+};
+const cronResult = await retryTest.run({ SYNC_URL: 'https://kiwi.test/api/shopify/cron', SHOPIFY_CRON_SECRET: cronSecret });
+globalThis.fetch = workerFetch;
+ok('minute worker calls the exact retry endpoint', cronCall && cronCall.url === 'https://kiwi.test/api/shopify/cron' && cronCall.init.method === 'POST');
+ok('minute worker presents the dedicated bearer secret', cronCall && cronCall.init.headers.Authorization === `Bearer ${cronSecret}`);
+ok('minute worker returns the drain result', cronResult.processed === 2 && cronResult.failed === 0);
+ok('worker health reveals no merchant or queue data', (await retryWorker.fetch(new Request('https://worker.test/health'))).status === 200);
+
+// Domain input is the only attacker-controlled part of the OAuth destination.
+ok('bare shop name becomes a myshopify domain', normalizeShopDomain('Atlas-Casa') === 'atlas-casa.myshopify.com');
+ok('full shop URL is normalized', normalizeShopDomain('https://Atlas-Casa.myshopify.com/admin') === 'atlas-casa.myshopify.com');
+ok('lookalike host is rejected', normalizeShopDomain('atlas.myshopify.com.evil.test') === '');
+ok('path-only injection is rejected', normalizeShopDomain('evil.test/@atlas.myshopify.com') === '');
+ok('OAuth requests location read access', SHOPIFY_SCOPES.split(',').includes('read_locations'));
+
+// Token ciphertext must be randomized and authenticated.
+const tokenKey = 'unit-test-token-key-with-more-than-32-bytes';
+const first = await encryptToken('offline-token-for-test', tokenKey);
+const second = await encryptToken('offline-token-for-test', tokenKey);
+ok('access token encrypts with an explicit version', first.startsWith('v1.'));
+ok('AES-GCM uses a fresh nonce', first !== second);
+ok('encrypted token decrypts exactly', await decryptToken(first, tokenKey) === 'offline-token-for-test');
+let wrongKeyRejected = false;
+try { await decryptToken(first, 'a-different-unit-test-key-over-32-bytes'); } catch (_) { wrongKeyRejected = true; }
+ok('wrong encryption key cannot decrypt', wrongKeyRejected);
+
+// Independent Node HMAC implementations verify the two Shopify signature forms.
+const oauthSecret = 'oauth-secret-for-test';
+const params = new URLSearchParams({ code: 'abc', shop: 'atlas.myshopify.com', state: 'state', timestamp: '1787860000' });
+const message = [...params.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([k, v]) => `${k}=${v}`).join('&');
+params.set('hmac', cryptoNode.createHmac('sha256', oauthSecret).update(message).digest('hex'));
+ok('OAuth callback HMAC is accepted', await verifyOAuthHmac(new URL(`https://kiwi.test/callback?${params}`), oauthSecret));
+params.set('state', 'tampered');
+ok('tampered OAuth callback is rejected', !(await verifyOAuthHmac(new URL(`https://kiwi.test/callback?${params}`), oauthSecret)));
+const raw = '{"inventory_item_id":12,"available":3}';
+const webhookSig = cryptoNode.createHmac('sha256', oauthSecret).update(raw).digest('base64');
+ok('raw webhook HMAC is accepted', await verifyWebhookHmac(raw, webhookSig, oauthSecret));
+ok('changed webhook body is rejected', !(await verifyWebhookHmac(raw + ' ', webhookSig, oauthSecret)));
+
+// Mapping is exact and unique. Product names intentionally look similar but do
+// not create a match.
+const catalog = {
+  products: [
+    { id: 'p1', name: 'Polo Stretch', sku: '' },
+    { id: 'p2', name: 'Chemise', sku: '' },
+    { id: 'p3', name: 'Nom identique seulement', sku: '' },
+  ],
+  variants: [
+    { id: 'k-bar', productId: 'p1', size: 'S', colorLabel: 'Noir', stock: 2, sku: '', barcodes: [{ code: '6111111111111' }] },
+    { id: 'k-sku', productId: 'p2', size: 'M', colorLabel: 'Blanc', stock: 7, sku: 'CHEM-M', barcodes: [] },
+    { id: 'k-name', productId: 'p3', size: 'L', colorLabel: 'Bleu', stock: 4, sku: '', barcodes: [] },
+    { id: 'k-dup-a', productId: 'p1', size: 'L', colorLabel: 'Noir', stock: 1, sku: 'DUP', barcodes: [] },
+    { id: 'k-dup-b', productId: 'p1', size: 'XL', colorLabel: 'Noir', stock: 1, sku: 'DUP', barcodes: [] },
+  ],
+};
+const shop = [
+  { id: 's-bar', inventoryItemId: 'i-bar', title: 'Different title', barcode: '6111111111111', sku: '', tracked: true, quantity: 9 },
+  { id: 's-sku', inventoryItemId: 'i-sku', title: 'Another title', barcode: '', sku: 'chem-m', tracked: true, quantity: 3 },
+  { id: 's-name', inventoryItemId: 'i-name', title: 'Nom identique seulement', barcode: '', sku: '', tracked: true, quantity: 4 },
+  { id: 's-dup', inventoryItemId: 'i-dup', title: 'Duplicate', barcode: '', sku: 'DUP', tracked: true, quantity: 5 },
+];
+const mapping = buildExactVariantMapping(catalog, shop);
+ok('unique barcode matches first', mapping.matches.some((x) => x.kiwi.id === 'k-bar' && x.shopify.id === 's-bar' && x.method === 'barcode'));
+ok('unique SKU matches second', mapping.matches.some((x) => x.kiwi.id === 'k-sku' && x.shopify.id === 's-sku' && x.method === 'sku'));
+ok('same product name alone never matches', mapping.unmatched.some((x) => x.id === 'k-name'));
+ok('duplicate SKU is reported ambiguous', mapping.ambiguous.filter((x) => x.id.startsWith('k-dup')).length === 2);
+ok('stock snapshot keeps exact variant ids', stockSnapshot(catalog).get('k-bar') === 2);
+
+const importRemote = [
+  { id: 'gid://shopify/ProductVariant/101', productId: 'gid://shopify/Product/10', productTitle: 'Toner A', variantTitle: 'Default Title', inventoryItemId: 'i-101', title: 'Toner A · Default Title', barcode: '99001', sku: '', tracked: true, quantity: 6 },
+  { id: 'gid://shopify/ProductVariant/102', productId: 'gid://shopify/Product/10', productTitle: 'Toner A', variantTitle: 'XL', inventoryItemId: 'i-102', title: 'Toner A · XL', barcode: '', sku: 'TONER-A-XL', tracked: true, quantity: 4 },
+  { id: 'gid://shopify/ProductVariant/103', productId: 'gid://shopify/Product/11', productTitle: 'No identifier', variantTitle: 'Default Title', inventoryItemId: 'i-103', title: 'No identifier · Default Title', barcode: '', sku: '', tracked: true, quantity: 2 },
+  { id: 'gid://shopify/ProductVariant/104', productId: 'gid://shopify/Product/12', productTitle: 'Duplicate one', variantTitle: 'Default Title', inventoryItemId: 'i-104', title: 'Duplicate one · Default Title', barcode: '', sku: 'DUP-REMOTE', tracked: true, quantity: 1 },
+  { id: 'gid://shopify/ProductVariant/105', productId: 'gid://shopify/Product/13', productTitle: 'Duplicate two', variantTitle: 'Default Title', inventoryItemId: 'i-105', title: 'Duplicate two · Default Title', barcode: '', sku: 'DUP-REMOTE', tracked: true, quantity: 1 },
+];
+const importMapping = buildExactVariantMapping({ products: [], variants: [] }, importRemote);
+const importable = statusTest.importCandidates({ products: [], variants: [] }, importRemote, importMapping);
+ok('Shopify-only variants need a unique barcode or SKU before import', importable.filter((x) => x.eligible).length === 2);
+ok('identifier-free Shopify variants stay disabled', importable.some((x) => x.id.endsWith('/103') && x.reason === 'missing-identifier'));
+ok('duplicate Shopify identifiers stay disabled', importable.filter((x) => x.reason === 'duplicate-identifier').length === 2);
+const importedCatalog = statusTest.appendImportedVariants({ v: 1, categories: [], products: [], variants: [], removed: {} }, importable.filter((x) => x.eligible), 1787860000000);
+ok('selected Shopify variants create one grouped Kiwi product', importedCatalog.products === 1 && importedCatalog.variants === 2 && importedCatalog.data.products.length === 1);
+ok('imported Shopify products are inactive until priced', importedCatalog.data.products[0].archived === true && importedCatalog.data.products[0].priceMAD === 0);
+ok('imported stock starts from the selected Shopify location quantity', importedCatalog.data.variants.some((x) => x.stock === 6 && x.base === 6));
+ok('import preserves exact identifiers for future mapping', importedCatalog.data.variants.some((x) => x.barcodes[0] && x.barcodes[0].code === '99001') && importedCatalog.data.variants.some((x) => x.sku === 'TONER-A-XL'));
+const pendingSetup = statusTest.pendingImportProducts(importedCatalog.data);
+ok('new Shopify products appear in the post-import setup queue', pendingSetup.length === 1 && pendingSetup[0].variants === 2 && pendingSetup[0].stock === 10);
+const configuredCatalog = statusTest.applyImportSetup(importedCatalog.data, [{ productId: pendingSetup[0].productId, priceMAD: 349.5 }], 1787860000100);
+ok('post-import setup writes the MAD price and activates the product', configuredCatalog.updated === 1 && configuredCatalog.data.products[0].priceMAD === 349.5 && configuredCatalog.data.products[0].archived === false);
+ok('configured Shopify products leave the pending setup queue', statusTest.pendingImportProducts(configuredCatalog.data).length === 0 && configuredCatalog.data.products[0].flag === 'Shopify');
+let invalidSetupRejected = false;
+try { statusTest.applyImportSetup(importedCatalog.data, [{ productId: pendingSetup[0].productId, priceMAD: 0 }], 1787860000100); } catch (error) { invalidSetupRejected = error.message === 'setup-price-invalid'; }
+ok('zero-price Shopify activation is rejected server-side', invalidSetupRejected);
+
+// Exercise the real coalesced outbox and real GraphQL request builder against a
+// pocket D1. A second local write must replace the target/idempotency key, not
+// append another deduction.
+function syncDB(connection) {
+  const state = { connection, links: [{ merchant: 'atlas', kiwi_variant_id: 'k-bar', inventory_item_id: 'i-bar', location_id: 'loc-1', last_shopify_quantity: 9, status: 'active' }], outbox: [] };
+  const db = {
+    state,
+    prepare(sql) {
+      const q = sql.replace(/\s+/g, ' ').trim(); let a = [];
+      const api = {
+        bind(...args) { a = args; return api; },
+        async first() {
+          if (q.includes('FROM shopify_connections WHERE merchant = ?')) return state.connection.merchant === a[0] ? { ...state.connection } : null;
+          throw new Error(`unexpected first: ${q}`);
+        },
+        async all() {
+          if (q.startsWith('SELECT kiwi_variant_id FROM shopify_variant_links')) return { results: state.links.filter((x) => x.merchant === a[0] && x.location_id === a[1] && x.status === 'active') };
+          if (q.startsWith('SELECT o.id, o.merchant')) {
+            return { results: state.outbox.filter((x) => ['pending', 'failed'].includes(x.status) && x.next_attempt_ts <= a[0]).map((x) => ({ ...x, ...state.links.find((l) => l.merchant === x.merchant && l.kiwi_variant_id === x.kiwi_variant_id) })) };
+          }
+          throw new Error(`unexpected all: ${q}`);
+        },
+        async run() {
+          if (q.startsWith('INSERT INTO shopify_sync_outbox')) {
+            const [id, merchant, kiwi_variant_id, target_quantity, source_rev, created_ts, updated_ts] = a;
+            const prior = state.outbox.find((x) => x.merchant === merchant && x.kiwi_variant_id === kiwi_variant_id);
+            const next = { id, merchant, kiwi_variant_id, target_quantity, source_rev, status: 'pending', attempts: 0, next_attempt_ts: 0, last_error: '', created_ts: prior ? prior.created_ts : created_ts, updated_ts };
+            if (prior) state.outbox[state.outbox.indexOf(prior)] = next; else state.outbox.push(next);
+            return { meta: { changes: 1 } };
+          }
+          if (q.startsWith("UPDATE shopify_sync_outbox SET status = 'processing'")) {
+            const row = state.outbox.find((x) => x.id === a[1] && ['pending', 'failed'].includes(x.status));
+            if (row) { row.status = 'processing'; row.updated_ts = a[0]; }
+            return { meta: { changes: row ? 1 : 0 } };
+          }
+          if (q.startsWith('DELETE FROM shopify_sync_outbox')) {
+            const before = state.outbox.length; state.outbox = state.outbox.filter((x) => x.id !== a[0]);
+            return { meta: { changes: before - state.outbox.length } };
+          }
+          if (q.startsWith('UPDATE shopify_variant_links SET last_shopify_quantity')) {
+            const row = state.links.find((x) => x.merchant === a[2] && x.kiwi_variant_id === a[3]);
+            if (row) { row.last_shopify_quantity = a[0]; row.status = 'active'; }
+            return { meta: { changes: row ? 1 : 0 } };
+          }
+          if (q.startsWith("UPDATE shopify_connections SET last_sync_ts")) {
+            state.connection.last_sync_ts = a[0]; state.connection.last_error = ''; return { meta: { changes: 1 } };
+          }
+          if (q.startsWith("UPDATE shopify_sync_outbox SET status = 'failed'")) return { meta: { changes: 1 } };
+          if (q.startsWith('UPDATE shopify_connections SET last_error')) { state.connection.last_error = a[0]; return { meta: { changes: 1 } }; }
+          if (q.startsWith('UPDATE shopify_variant_links SET status')) return { meta: { changes: 1 } };
+          throw new Error(`unexpected run: ${q}`);
+        },
+      };
+      return api;
+    },
+    async batch(statements) { const out = []; for (const stmt of statements) out.push(await stmt.run()); return out; },
+  };
+  return db;
+}
+
+const syncKey = 'another-test-encryption-key-with-32-bytes';
+const DB = syncDB({
+  merchant: 'atlas', shop_domain: 'atlas.myshopify.com',
+  access_token_enc: await encryptToken('test-admin-token', syncKey), refresh_token_enc: '',
+  token_expires_ts: Date.now() + 3600000, refresh_expires_ts: Date.now() + 86400000,
+  scopes: 'write_inventory', location_id: 'loc-1', location_name: 'Boutique', channel_link_id: 'chl-test',
+  status: 'active', connected_ts: Date.now(), updated_ts: Date.now(), last_sync_ts: 0, last_error: '',
+});
+const syncEnv = { DB, SHOPIFY_TOKEN_KEY: syncKey, SHOPIFY_CLIENT_ID: 'test-client', SHOPIFY_CLIENT_SECRET: 'test-secret' };
+await enqueueStockChanges(syncEnv, 'atlas', { variants: [{ id: 'k-bar', stock: 2 }] }, { variants: [{ id: 'k-bar', stock: 3 }] }, 10, false);
+const firstOutboxId = DB.state.outbox[0] && DB.state.outbox[0].id;
+await enqueueStockChanges(syncEnv, 'atlas', { variants: [{ id: 'k-bar', stock: 3 }] }, { variants: [{ id: 'k-bar', stock: 2 }] }, 11, false);
+ok('rapid stock changes coalesce to one outbox row', DB.state.outbox.length === 1 && DB.state.outbox[0].target_quantity === 2);
+ok('coalescing rotates the idempotency key when parameters change', DB.state.outbox[0].id !== firstOutboxId);
+
+const realFetch = globalThis.fetch;
+let sentMutation = null;
+globalThis.fetch = async (_url, init) => {
+  sentMutation = JSON.parse(init.body);
+  return new Response(JSON.stringify({ data: { inventorySetQuantities: { inventoryAdjustmentGroup: { changes: [] }, userErrors: [] } } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+};
+const flushed = await flushShopifyOutbox(syncEnv, 'atlas', 5);
+globalThis.fetch = realFetch;
+ok('outbox flush processes the coalesced target', flushed.processed === 1 && flushed.failed === 0);
+ok('successful Shopify write removes the durable target', DB.state.outbox.length === 0);
+ok('successful Shopify write advances known remote quantity', DB.state.links[0].last_shopify_quantity === 2);
+ok('GraphQL carries the durable row UUID as idempotency key', sentMutation && sentMutation.variables.key === firstOutboxId ? false : /^[0-9a-f-]{36}$/.test(sentMutation && sentMutation.variables.key || ''));
+ok('GraphQL CAS starts from last observed Shopify quantity', sentMutation && sentMutation.variables.input.quantities[0].changeFromQuantity === 9);
+
+const schema = read('schema.sql');
+for (const table of ['shopify_connections', 'shopify_oauth_states', 'shopify_variant_links', 'shopify_sync_outbox', 'shopify_webhook_events']) {
+  ok(`schema defines ${table}`, schema.includes(`CREATE TABLE IF NOT EXISTS ${table}`));
+}
+ok('OAuth state stores a hash, not the state token', /shopify_oauth_states[\s\S]{0,500}state_hash\s+TEXT PRIMARY KEY/.test(schema));
+ok('variant outbox coalesces per merchant and variant', /UNIQUE \(merchant, kiwi_variant_id\)/.test(schema));
+
+const connector = read('functions/api/shopify/_lib.js');
+ok('inventory mutation uses Shopify idempotency directive', connector.includes('@idempotent(key: $key)'));
+ok('inventory mutation uses current CAS field', connector.includes('changeFromQuantity'));
+ok('outbound queue stores target quantities before Shopify writes', connector.indexOf('INSERT INTO shopify_sync_outbox') < connector.indexOf('inventorySetQuantities(input: $input)'));
+ok('an abandoned token-refresh lock expires instead of blocking forever', connector.includes('DELETE FROM shopify_oauth_states WHERE state_hash = ? AND expires_ts <= ?'));
+ok('tokens are never selected by status route', !read('functions/api/shopify/status.js').includes('access_token_enc'));
+
+const middleware = read('functions/_middleware.js');
+ok('OAuth callback has one exact public GET path', middleware.includes("isRead && path === '/api/shopify/callback'"));
+ok('Shopify control API is not publicly allow-listed', !middleware.includes("path.startsWith('/api/shopify/')"));
+ok('minute retry exposes only one exact authenticated POST path', middleware.includes("method === 'POST' && path === '/api/shopify/cron'"));
+const retrySource = read('tools/shopify-sync-worker/src/index.js');
+const retryConfig = read('tools/shopify-sync-worker/wrangler.example.toml');
+ok('retry worker keeps Shopify OAuth secrets inside Pages', !/SHOPIFY_(?:CLIENT_ID|CLIENT_SECRET|TOKEN_KEY)/.test(retrySource + retryConfig));
+ok('retry worker has no direct production database binding', !retryConfig.includes('[[d1_databases]]'));
+
+const connect = read('functions/api/shopify/connect.js');
+const callback = read('functions/api/shopify/callback.js');
+ok('a connected merchant cannot silently switch Shopify shops', connect.includes("current.shop_domain !== shop && current.status !== 'disconnected'"));
+ok('reauthorisation cannot turn a merely ready connection active', callback.includes("WHEN shopify_connections.status = 'active' THEN 'active'"));
+ok('a legitimate shop replacement drops the old variant links', callback.includes("DELETE FROM shopify_variant_links WHERE merchant = ?"));
+
+const webhook = read('functions/api/channel/shopify/[link].js');
+ok('OAuth webhook verifies with app secret', webhook.includes('oauth ? env.SHOPIFY_CLIENT_SECRET'));
+ok('online order movement is deterministic', webhook.includes('const moveId = `so-'));
+ok('online order path does not call outbound enqueuer', !/applyShopifyOrderStock[\s\S]{0,5000}enqueueStockChanges/.test(webhook));
+ok('inventory webhook detects external drift', webhook.includes("drift ? 'drift' : 'active'"));
+
+const ui = read('assets/channel-link.js');
+ok('Shopify card starts OAuth instead of creating a manual key', ui.includes("if (channel === 'shopify') return openShopify()"));
+ok('activation warning states Kiwi quantities will replace linked Shopify quantities', ui.includes('Shopify prendra les quantités Kiwi'));
+ok('Shopify card has a router-independent click path', ui.includes("[data-action=\"integration-connect\"][data-channel=\"shopify\"]"));
+ok('dedicated Shopify click wins before a stale shared router', ui.includes("event.stopImmediatePropagation()"));
+ok('connected Shopify store can reauthorize added scopes', ui.includes('authorizeShopify(connection.shop)'));
+ok('refreshing the current Shopify location preserves active sync state', ui.includes("sameLocation ? 'refresh-mapping' : 'select-location'"));
+ok('Shopify-only rows require an explicit checkbox selection', ui.includes("check.type = 'checkbox'") && ui.includes('importBtn.disabled = true'));
+ok('selected Shopify rows use the dedicated import action', ui.includes("shopApi('import-selected', { variantIds: ids })"));
+ok('Shopify import rows render external text through textContent', ui.includes("name.textContent = row.title || ''"));
+ok('Shopify import browser searches the full candidate payload', ui.includes("search.addEventListener('input', renderImportRows)") && ui.includes('filtered.slice(0, 100)'));
+ok('Shopify import browser preserves the 100-product write limit', ui.includes('selectedIds.size >= 100') && ui.includes('Array.from(selectedIds)'));
+ok('Shopify modal includes an in-product connection and feature guide', ui.includes('guideSteps:') && ui.includes('features:') && ui.includes('shopGuide(root, s)'));
+ok('post-import pricing uses a dedicated server action', ui.includes("shopApi('configure-imports', { products: rows })"));
+ok('inventory alignment requires explicit acknowledgement', ui.includes("ack.type = 'checkbox'") && ui.includes('activate.disabled = true'));
+ok('manual reconciliation asks before replacing Shopify quantities', ui.includes('window.confirm(s.reconcileConfirm)'));
+ok('connector health shows linked count and last completed sync', ui.includes('s.linkedVariants') && ui.includes('connection.lastSyncTs'));
+ok('known setup errors are translated instead of exposing internal codes', ui.includes("code === 'no-linked-variants'") && ui.includes("code === 'setup-required'"));
+
+const statusRoute = read('functions/api/shopify/status.js');
+ok('import selections are revalidated against live eligible Shopify rows', statusRoute.includes('eligible.get(id)') && statusRoute.includes("throw new Error('import-selection-invalid')"));
+ok('catalog import uses revision compare-and-swap', statusRoute.includes('WHERE merchant = ? AND rev = ?'));
+ok('Shopify candidate payload covers large catalogs for client-side search', statusRoute.includes('imports.slice(0, 5000)'));
+ok('server refuses activation when no variants are linked', statusRoute.includes("throw new Error('no-linked-variants')"));
+ok('server refuses first activation while imported products still need prices', statusRoute.includes("action === 'activate' && mapped.setup.length") && statusRoute.includes("throw new Error('setup-required')"));
+ok('user input errors do not poison connector health', statusRoute.includes('clientError ? 400 : 502') && statusRoute.includes('if (!clientError)'));
+
+const dashboardUi = read('assets/dateRange.js');
+ok('real merchant dashboard exposes a Shopify card', dashboardUi.includes("{ n: 'Shopify', logo: 'S', bg: '#5E8E3E', channel: 'shopify' }"));
+ok('direct integration cards preserve their connector channel', dashboardUi.includes("data-channel=\"${it.channel || ''}\""));
+ok('Shopify card opens its connector without the generic chooser', dashboardUi.includes("it.channel ? 'integration-connect' : 'add-integration'"));
+
+ok('state hashes are deterministic but do not expose input', (await sha256Hex('state')) !== 'state');
+
+/* ═══ DON D'IDENTIFIANTS CLIENT (client credentials) ═══════════════════════
+ * Le second chemin de connexion, pour une app et une boutique de la même
+ * organisation Shopify. Ce qu'on protège ici tient en deux phrases : le mode
+ * doit rester reconnaissable sans colonne de base (donc sans migration qui
+ * peut manquer en production), et ni le secret client ni le jeton ne doivent
+ * pouvoir atteindre le navigateur ou un journal. */
+
+// Le mode se lit sur la ligne elle-même : un don d'identifiants n'a pas de
+// jeton de rafraîchissement, et `exchangeAuthorizationCode` en exige un.
+ok('a row without a refresh token reads as client credentials',
+  isClientCredentials({ refresh_token_enc: null }) === true);
+ok('an empty refresh token also reads as client credentials',
+  isClientCredentials({ refresh_token_enc: '' }) === true);
+ok('an authorization-code row is not mistaken for client credentials',
+  isClientCredentials({ refresh_token_enc: 'v1.abc.def' }) === false);
+ok('a missing row is not a grant', isClientCredentials(null) === false);
+
+// L'échange lui-même : bon point d'accès, bon type de don, identifiants portés
+// dans le CORPS et jamais dans l'URL (une URL finit dans les journaux).
+{
+  const realFetch = globalThis.fetch;
+  let seen = null;
+  globalThis.fetch = async (url, init) => {
+    seen = { url: String(url), init };
+    return { ok: true, status: 200, json: async () => ({ access_token: 'shpat-test', expires_in: 86399, scope: SHOPIFY_SCOPES }) };
+  };
+  try {
+    const env = { SHOPIFY_CLIENT_ID: 'client-id-test', SHOPIFY_CLIENT_SECRET: 'client-secret-test' };
+    const data = await exchangeClientCredentials(env, 'atlas-casa.myshopify.com');
+    const body = seen && seen.init && String(seen.init.body || '');
+    ok('client credentials posts to the shop access_token endpoint',
+      seen.url === 'https://atlas-casa.myshopify.com/admin/oauth/access_token');
+    ok('client credentials uses POST', seen.init.method === 'POST');
+    ok('the grant type is client_credentials', /(^|&)grant_type=client_credentials(&|$)/.test(body));
+    ok('the client id travels in the body', body.includes('client_id=client-id-test'));
+    ok('the client secret travels in the body', body.includes('client_secret=client-secret-test'));
+    ok('no credential is ever put in the query string', !seen.url.includes('client_secret') && !seen.url.includes('?'));
+    ok('no authorization code is sent for this grant', !body.includes('code='));
+    ok('the returned token is handed back to the caller', data.access_token === 'shpat-test');
+    ok('the announced lifetime is read, not assumed', Number(data.expires_in) === 86399);
+  } finally { globalThis.fetch = realFetch; }
+}
+
+// Un refus doit rester muet sur les identifiants : seul le code HTTP sort.
+{
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({
+    ok: false, status: 401,
+    json: async () => ({ error: 'invalid_client', error_description: 'client_secret client-secret-test is wrong' }),
+  });
+  let message = '';
+  try {
+    await exchangeClientCredentials(
+      { SHOPIFY_CLIENT_ID: 'client-id-test', SHOPIFY_CLIENT_SECRET: 'client-secret-test' },
+      'atlas-casa.myshopify.com'
+    );
+  } catch (e) { message = String((e && e.message) || ''); }
+  finally { globalThis.fetch = realFetch; }
+  ok('a refused exchange throws', message !== '');
+  ok('the thrown error names the status and the OAuth reason, nothing else',
+    message === 'shopify-client-credentials-401-invalid_client', message);
+  ok('the thrown error never carries the client secret', !message.includes('client-secret-test'));
+}
+
+// Le motif du refus doit remonter — mais SEULEMENT l'énumération OAuth, jamais
+// la description, qui a déjà été vue répéter des valeurs envoyées.
+{
+  const realFetch = globalThis.fetch;
+  const call = async (payload) => {
+    globalThis.fetch = async () => ({ ok: false, status: 400, json: async () => payload });
+    try {
+      await exchangeClientCredentials({ SHOPIFY_CLIENT_ID: 'a', SHOPIFY_CLIENT_SECRET: 'sekrit-value' }, 'atlas-casa.myshopify.com');
+    } catch (e) { return String((e && e.message) || ''); }
+    finally { globalThis.fetch = realFetch; }
+    return '';
+  };
+  const grant = await call({ error: 'unsupported_grant_type', error_description: 'secret sekrit-value rejected' });
+  ok('the OAuth error code reaches the caller', grant === 'shopify-client-credentials-400-unsupported_grant_type');
+  ok('the error description never travels with it', !grant.includes('sekrit-value') && !grant.includes('rejected'));
+  const junk = await call({ error: 'sekrit-value leaked <script>' });
+  ok('a non-enum error field is dropped rather than relayed', junk === 'shopify-client-credentials-400');
+  const none = await call({});
+  ok('a body with no error field still names the status', none === 'shopify-client-credentials-400');
+}
+
+// Un jeton sans `access_token` n'est pas un succès, quel que soit le code HTTP.
+{
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({}) });
+  let threw = false;
+  try {
+    await exchangeClientCredentials({ SHOPIFY_CLIENT_ID: 'a', SHOPIFY_CLIENT_SECRET: 'b' }, 'atlas-casa.myshopify.com');
+  } catch (_) { threw = true; } finally { globalThis.fetch = realFetch; }
+  ok('an empty 200 is not accepted as a token', threw);
+}
+
+// Le renouvellement et la réautorisation, lus à la source : une ligne « don
+// d'identifiants » ne doit jamais tomber dans la branche `shopify-reauthorize`,
+// sinon la boutique se déconnecterait toutes les 24 h.
+{
+  const lib = read('functions/api/shopify/_lib.js');
+  ok('the refresh path branches on the grant', lib.includes('if (isClientCredentials(row)) {')
+    && lib.includes('data = await exchangeClientCredentials(env, row.shop_domain);'));
+  ok('re-authorization is skipped for client credentials',
+    lib.includes("if (!isClientCredentials(row) && Number(row.refresh_expires_ts || 0) <= Date.now())"));
+  ok('a refreshed client-credentials row keeps a NULL refresh token',
+    lib.includes('data.refresh_token ? await encryptToken(data.refresh_token, env.SHOPIFY_TOKEN_KEY) : null'));
+  ok('webhook registration is shared by both grants', lib.includes('export async function registerWebhooks('));
+}
+
+// Le point d'entrée : tenancy stricte, et rien de secret dans la réponse.
+{
+  const direct = read('functions/api/shopify/connect-direct.js');
+  ok('connect-direct demands an owner session',
+    direct.includes("tenantFor(request, env, body && body.merchant, { strict: true })"));
+  ok('connect-direct refuses to run unconfigured',
+    direct.includes("return json({ error: 'shopify-not-configured' }, 503);"));
+  ok('connect-direct stores a NULL refresh token to mark the grant',
+    direct.includes('refresh_token_enc = NULL'));
+  ok('connect-direct never returns the access token',
+    !/json\(\{[^}]*access_token/.test(direct) && !direct.includes('token.access_token,\n    grant'));
+  ok('connect-direct never returns the client secret',
+    !direct.includes('SHOPIFY_CLIENT_SECRET }') && !/json\([^)]*CLIENT_SECRET/.test(direct));
+  /* Cloudflare remplace le corps de toute réponse 5xx d'une Pages Function par
+   * sa propre page d'erreur. Un refus d'identifiants renvoyé en 5xx perd donc
+   * le `detail` qui dit pourquoi, et ressemble à une panne de Kiwi. Mesuré en
+   * production le 2026-09-06 ; ce contrôle empêche la rechute. */
+  const refusal = (direct.match(/client-credentials-refused[^;]*?\}, (\d{3})\)/) || [])[1];
+  ok('the credentials refusal is reported, not a 5xx Cloudflare eats',
+    !!refusal && Number(refusal) >= 400 && Number(refusal) < 500, `status ${refusal}`);
+  ok('no branch of connect-direct returns 502', !/\}, 502\)/.test(direct));
+  ok('the refusal detail keeps underscores so the OAuth enum survives',
+    direct.includes("replace(/[^a-z0-9_-]/gi, '')"));
+  ok('connect-direct keeps the shop exclusive to one merchant',
+    direct.includes("'shop-already-connected'") && direct.includes("'merchant-already-connected'"));
+  ok('changing shop clears the old variant mapping',
+    direct.includes('DELETE FROM shopify_variant_links WHERE merchant = ?'));
+}
+
+// Le navigateur n'envoie que le domaine, et tente le don direct en premier.
+{
+  const ui = read('assets/channel-link.js');
+  ok('the browser tries the direct grant before the redirect round',
+    ui.indexOf("'/api/shopify/connect-direct'") > -1
+    && ui.indexOf("'/api/shopify/connect-direct'") < ui.indexOf("'/api/shopify/connect'"));
+  ok('the browser still falls back to the authorization round',
+    ui.includes("if (!r.ok || !j.authorize) throw new Error(j.error || shopStr().invalid); return j; }); })"));
+  ok('an exclusivity conflict does not retry the other grant',
+    ui.includes("if (code === 'merchant-already-connected' || code === 'shop-already-connected')"));
+  ok('the browser never sends a client secret', !ui.includes('client_secret') && !ui.includes('SHOPIFY_CLIENT_SECRET'));
+}
+
+console.log(`\nShopify connector · ${pass} checks`);
+if (failures.length) {
+  failures.forEach((f) => console.error(`✗ ${f}`));
+  process.exit(1);
+}
+console.log('✓ OAuth, encryption, exact mapping, CAS outbox and webhook loop guards');

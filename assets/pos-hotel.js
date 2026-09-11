@@ -32,8 +32,8 @@
   /* Real / paired-store identity. On a real store (hosted OR paired to a venue)
    * the demo name/address/phone ("Riad Yasmina", "7 Rue de la Kasbah…") must
    * NEVER print or render. Local demo (unpaired localhost) keeps the demo. */
-  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
-  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvPaired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
   function pvName(demo) { const p = pvPaired(); return (p && p.name) || (pvReal() ? '' : demo); }
   function pvCity(demo) { const p = pvPaired(); return (p && p.location) || (pvReal() ? '' : demo); }
   const fmtDay  = (d) => `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
@@ -97,11 +97,8 @@
 
   /* ───────────────────────── constants (canon: assets/hotel.js) ───────────────────────── */
   const TPT = 27;                       /* taxe de séjour · MAD / nuit / adulte */
-  const TYPES = {
-    patio:   { name: 'Chambre Patio',  rate: 750 },
-    confort: { name: 'Confort Médina', rate: 950 },
-    suite:   { name: 'Suite Yasmina',  rate: 1400 },
-  };
+  const DEMO_HOTEL = !pvReal();
+  const TYPES = {};
   const SRC = {
     booking: { label: 'Booking.com', cls: 'booking' },
     airbnb:  { label: 'Airbnb',      cls: 'airbnb' },
@@ -124,16 +121,26 @@
 
   /* ───────────────────────── rooms (8 — riad scale) ─────────────────────────
      status: occ | depart | libre | menage | hs */
-  const FLOORS = [
-    { lbl: 'Rez-de-chaussée · patio', rooms: [1, 2, 3] },
-    { lbl: '1er étage',               rooms: [4, 5, 6] },
-    { lbl: '2e étage · terrasse',     rooms: [7, 8] },
-  ];
+  const FLOORS = [];
   const typeOf = (n) => (n <= 3 ? 'patio' : n <= 6 ? 'confort' : 'suite');
   const ROOMS = {};
-  for (let n = 1; n <= 8; n++) ROOMS[n] = { n, type: typeOf(n), status: 'libre', note: '' };
-  const roomName = (n) => TYPES[ROOMS[n].type].name;
-  const roomRate = (n) => TYPES[ROOMS[n].type].rate;
+  if (DEMO_HOTEL) {
+    Object.assign(TYPES, {
+      patio: { name: 'Chambre Patio', rate: 750 },
+      confort: { name: 'Confort Médina', rate: 950 },
+      suite: { name: 'Suite Yasmina', rate: 1400 },
+    });
+    FLOORS.push(
+      { lbl: 'Rez-de-chaussée · patio', rooms: [1, 2, 3] },
+      { lbl: '1er étage', rooms: [4, 5, 6] },
+      { lbl: '2e étage · terrasse', rooms: [7, 8] },
+    );
+    for (let n = 1; n <= 8; n++) ROOMS[n] = { n, type: typeOf(n), status: 'libre', note: '' };
+  }
+  const roomName = (n) => (ROOMS[n] && (ROOMS[n].name || TYPES[ROOMS[n].type]?.name)) || 'Chambre ' + n;
+  const roomRate = (n) => Math.max(0, +(ROOMS[n] && (ROOMS[n].rate ?? TYPES[ROOMS[n].type]?.rate)) || 0);
+  let ROOM_DOC = { v: 4, rooms: [], roomTypes: [], floors: [], folios: [], updatedAt: 0 };
+  let roomCloud = null;
 
   /* ───────────────────────── stays / folios (seed, mid-shift) ───────────────────────── */
   const STAYS = {};                     /* room n → open stay */
@@ -148,8 +155,10 @@
       guest: cfg.guest, src: cfg.src,
       pax: cfg.pax, adults: cfg.adults != null ? cfg.adults : cfg.pax,
       nights: cfg.nights, day: cfg.day,
+      nightlyRate: roomRate(room),
       inAt, outAt,
       caution: cfg.caution || 'carte',
+      cautionAmount: Math.max(0, +cfg.cautionAmount || 0),
       prefs: cfg.prefs || '',
       charges: (cfg.charges || []).map((c, i) => ({ uid: `${room}-${i}`, cid: c[0], qty: c[1], at: c[2], note: c[3] || '' })),
       payments: (cfg.payments || []).map((p) => ({ method: p[0], amount: p[1], label: p[2] })),
@@ -158,7 +167,21 @@
   }
   let chargeUid = 100;
 
-  function setRoom(n, status, note) { ROOMS[n].status = status; ROOMS[n].note = note || ''; }
+  function setRoom(n, status, note) {
+    if (!ROOMS[n]) return;
+    ROOMS[n].status = status; ROOMS[n].note = note || '';
+    if (!DEMO_HOTEL) {
+      const row = (ROOM_DOC.rooms || []).find((r) => r && !r.deletedAt && +r.n === +n);
+      if (row) {
+        row.status = status === 'menage' ? 'sale' : status;
+        row.hk = status === 'menage' ? 'dirty' : status === 'libre' ? 'clean' : row.hk;
+        row.meta = note || row.meta || '';
+        row.updatedAt = Date.now();
+        ROOM_DOC.updatedAt = row.updatedAt;
+        roomCloud?.push?.();
+      }
+    }
+  }
 
   /* En maison (j-courant) — 5 chambres sur 8 ≈ 60 % · demo seed only, a real riad starts empty */
   if (!pvReal()) {
@@ -209,10 +232,85 @@
     { id: 'd2', t: '12h00', guest: 'Karim Bennis',  room: 2, done: false, late: true },
   ];
 
+  /* The dashboard owns the room catalogue. A paired front desk adopts that
+   * exact document; it never invents rooms, room names, floors or prices. */
+  function applyRoomDocument(raw) {
+    if (DEMO_HOTEL) return;
+    const doc = raw && typeof raw === 'object' ? raw : {};
+    ROOM_DOC = { ...doc, rooms: Array.isArray(doc.rooms) ? doc.rooms.slice() : [], roomTypes: Array.isArray(doc.roomTypes) ? doc.roomTypes.slice() : [], floors: Array.isArray(doc.floors) ? doc.floors.slice() : [] };
+    Object.keys(TYPES).forEach((k) => delete TYPES[k]);
+    Object.keys(ROOMS).forEach((k) => delete ROOMS[k]);
+    FLOORS.splice(0, FLOORS.length);
+    ROOM_DOC.roomTypes.filter((t) => t && !t.deletedAt).forEach((t) => {
+      TYPES[t.id] = { name: String(t.name || 'Chambre'), rate: t.rate == null ? null : Math.max(0, +t.rate || 0) };
+    });
+    const floorMap = new Map();
+    ROOM_DOC.floors.filter((f) => f && !f.deletedAt).sort((a, b) => (+a.order || 0) - (+b.order || 0)).forEach((f) => {
+      const group = { id: String(f.id || ''), lbl: String(f.name || 'Vos chambres'), rooms: [] };
+      floorMap.set(group.id, group); FLOORS.push(group);
+    });
+    ROOM_DOC.rooms.filter((r) => r && !r.deletedAt).sort((a, b) => (+a.n || 0) - (+b.n || 0)).forEach((r) => {
+      const n = parseInt(r.n, 10);
+      if (!Number.isFinite(n) || n < 1 || n > 9999 || ROOMS[n]) return;
+      const type = TYPES[r.typeId] || { name: r.typeName || 'Chambre', rate: r.rate };
+      const status = r.status === 'sale' ? 'menage' : ['occ', 'depart', 'hs', 'libre'].includes(r.status) ? r.status : 'libre';
+      ROOMS[n] = { n, type: r.typeId || '', name: type.name, rate: r.rate == null ? (type.rate == null ? doc.baseRate : type.rate) : r.rate, status, note: r.meta || '' };
+      let group = floorMap.get(String(r.floorId || ''));
+      if (!group) {
+        const name = String(r.floor || 'Vos chambres');
+        group = FLOORS.find((f) => f.lbl === name);
+        if (!group) { group = { id: String(r.floorId || 'legacy:' + name), lbl: name, rooms: [] }; FLOORS.push(group); }
+      }
+      group.rooms.push(n);
+    });
+    const populated = FLOORS.filter((f) => f.rooms.length);
+    FLOORS.splice(0, FLOORS.length, ...populated);
+    if (root) refreshOps();
+  }
+  function mergeRoomDocuments(mine, theirs) {
+    const mergeRows = (a, b, fallback) => {
+      const rows = {};
+      [...(Array.isArray(b) ? b : []), ...(Array.isArray(a) ? a : [])].forEach((x) => {
+        if (!x) return;
+        const id = String(x.id || fallback(x));
+        const old = rows[id];
+        const stamp = Math.max(+x.updatedAt || 0, +x.deletedAt || 0);
+        const prior = old ? Math.max(+old.updatedAt || 0, +old.deletedAt || 0) : -1;
+        if (!old || stamp >= prior) rows[id] = { ...x, id };
+      });
+      return Object.values(rows);
+    };
+    const a = mine || {}, b = theirs || {};
+    return {
+      ...b, ...a, v: 4,
+      rooms: mergeRows(a.rooms, b.rooms, (r) => 'room:' + r.n),
+      roomTypes: mergeRows(a.roomTypes, b.roomTypes, (t) => 'type:' + (t.name || 'chambre')),
+      floors: mergeRows(a.floors, b.floors, (f) => 'floor:' + (f.name || 'section')),
+      updatedAt: Math.max(+a.updatedAt || 0, +b.updatedAt || 0),
+    };
+  }
+  function bindRoomDocument() {
+    if (DEMO_HOTEL || roomCloud || !window.KiwiCloudDoc?.attach) return roomCloud;
+    roomCloud = window.KiwiCloudDoc.attach({
+      feature: 'rooms', slug: () => window.KiwiCloudDoc.currentSlug(),
+      localKey: () => 'kiwi:hotel-pos-rooms:v1:' + (window.KiwiCloudDoc.currentSlug() || 'unpaired'),
+      read: () => ROOM_DOC, write: applyRoomDocument, merge: mergeRoomDocuments,
+      isEmpty: (d) => !d || !Array.isArray(d.rooms) || !d.rooms.some((r) => r && !r.deletedAt),
+      onPulled: () => { if (root) refreshOps(); },
+    });
+    roomCloud.bind();
+    return roomCloud;
+  }
+
   /* ───────────────────────── folio math ───────────────────────── */
   function chargeAmt(c) { return CHARGE[c.cid].unit * c.qty; }
+  // Old saved stays have no rate snapshot; keep their existing catalogue fallback.
+  function stayRate(st) {
+    return Number.isFinite(st.nightlyRate) && st.nightlyRate >= 0 ? st.nightlyRate : roomRate(st.room);
+  }
+  const POSTED_CHARGE_LOCK = 'Charge déjà enregistrée : modification indisponible sans annulation liée à la vente.';
   function stayTotals(st) {
-    const nuitees = roomRate(st.room) * st.nights;
+    const nuitees = stayRate(st) * st.nights;
     const taxe = TPT * st.adults * st.nights;
     const extras = st.charges.reduce((s, c) => s + chargeAmt(c), 0);
     const total = nuitees + taxe + extras;
@@ -228,8 +326,75 @@
     offline: false, queued: 0,
   };
   let root = null;
+  const ROOM_CHARGE_QUEUE = 'kiwi:hotelRoomChargeOutbox:v1';
+  let roomChargeFlushing = false;
+
+  function roomChargeRows() {
+    try {
+      const rows = JSON.parse(localStorage.getItem(ROOM_CHARGE_QUEUE) || '[]');
+      return Array.isArray(rows) ? rows.filter((row) => row && row.saleId) : [];
+    } catch (_) { return []; }
+  }
+  function writeRoomChargeRows(rows) {
+    try { localStorage.setItem(ROOM_CHARGE_QUEUE, JSON.stringify(rows.slice(-300))); return true; }
+    catch (_) { return false; }
+  }
+  function roomChargeContext() {
+    try { return window.KiwiCaisseContext?.current?.() || {}; }
+    catch (_) { return {}; }
+  }
+  async function flushRoomCharges() {
+    if (roomChargeFlushing || state.offline || navigator.onLine === false) return;
+    const rows = roomChargeRows();
+    if (!rows.length) { state.queued = 0; renderNet(); return; }
+    roomChargeFlushing = true;
+    const pending = [];
+    for (const row of rows) {
+      try {
+        const response = await fetch('/api/hotel/room-charges', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(row),
+        });
+        if (response.ok) continue;
+        const body = await response.json().catch(() => ({}));
+        if (response.status === 404 && body.error === 'sale-not-found') pending.push(row);
+        else if (response.status >= 500) pending.push(row);
+        else pending.push({ ...row, blocked: String(body.error || 'refused').slice(0, 80) });
+      } catch (_) { pending.push(row); }
+    }
+    writeRoomChargeRows(pending);
+    state.queued = pending.length;
+    roomChargeFlushing = false;
+    renderNet();
+    if (pending.length && navigator.onLine !== false) setTimeout(flushRoomCharges, 3500);
+  }
+  function enqueueRoomCharge(payload) {
+    const rows = roomChargeRows();
+    if (!rows.some((row) => row.saleId === payload.saleId)) rows.push(payload);
+    if (!writeRoomChargeRows(rows)) return false;
+    state.queued = rows.length;
+    renderNet();
+    setTimeout(flushRoomCharges, 900);
+    return true;
+  }
+  window.addEventListener?.('online', () => setTimeout(flushRoomCharges, 250));
+
+  const hotelOps = window.KiwiVerticalState?.open?.('hotel', {
+    schema: 2,
+    snapshot: () => ({ catalogSource: DEMO_HOTEL ? 'demo' : 'rooms-doc-v4', rooms: DEMO_HOTEL ? ROOMS : {}, stays: STAYS, arrivals: ARRIVALS, departures: DEPARTURES, factureSeq, policeSeq, chargeUid }),
+    restore: (d) => {
+      if (DEMO_HOTEL) {
+        Object.keys(ROOMS).forEach(k => delete ROOMS[k]); Object.assign(ROOMS, d.rooms || {});
+      }
+      Object.keys(STAYS).forEach(k => delete STAYS[k]);
+      Object.entries(d.stays || {}).forEach(([k, st]) => { st.inAt = new Date(st.inAt); st.outAt = new Date(st.outAt); STAYS[k] = st; });
+      ARRIVALS.splice(0, ARRIVALS.length, ...(d.arrivals || [])); DEPARTURES.splice(0, DEPARTURES.length, ...(d.departures || []));
+      factureSeq = Math.max(factureSeq, +d.factureSeq || 0); policeSeq = Math.max(policeSeq, +d.policeSeq || 0); chargeUid = Math.max(chargeUid, +d.chargeUid || 0);
+    },
+  });
 
   function queueIfOffline(label) {
+    hotelOps?.save?.(label || 'operation');
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -240,10 +405,42 @@
      La maison d'hôtes encaissait dans le folio du séjour, et le folio meurt
      avec le check-out : la recette n'existait nulle part une fois la chambre
      passée en ménage. Démo : no-op. */
-  function postDay(total, method, label, ref) {
+  function staySaleLines(st, received) {
+    const rows = [
+      { itemId: `chambre-${ROOMS[st.room].type}`, variantId: String(st.room), name: roomName(st.room), category: 'nuitees', qty: st.nights, unit: 'nuit', kind: 'service', base: stayRate(st) * st.nights },
+      { itemId: 'taxe-sejour', name: 'Taxe de séjour', category: 'taxes', qty: st.adults * st.nights, unit: 'nuit-personne', kind: 'tax', base: TPT * st.adults * st.nights },
+      ...st.charges.map((c) => ({ itemId: c.cid, variantId: c.uid, name: CHARGE[c.cid].label, category: 'extras', qty: c.qty, unit: CHARGE[c.cid].per, kind: 'service', base: chargeAmt(c) })),
+    ].filter((r) => r.base > 0);
+    const gross = rows.reduce((s, r) => s + r.base, 0);
+    let allocated = 0;
+    return rows.map((r, i) => {
+      const total = i === rows.length - 1 ? Math.max(0, received - allocated) : Math.round((received * r.base / Math.max(1, gross)) * 100) / 100;
+      allocated += total;
+      const { base, ...line } = r;
+      return { ...line, total };
+    });
+  }
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('hotel', { total, method, label, ref });
+      if (typeof window.KiwiPosSale?.record !== 'function') return null;
+      const entry = window.KiwiPosSale.record('hotel', { total, method, label, ref, lines });
+      /* pos-sale.js returns { ts, total, m, method, ref, ... } or null,
+       * not KiwiLive.postSale's { ok, queued } result. Reject failure objects
+       * and malformed returns without requiring an `ok` field on real entries.
+       * Even a valid entry proves neither persistence nor a server ACK: the
+       * recorder currently swallows local-write and mirror failures. */
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)
+          || (entry.ok !== undefined && entry.ok !== true)
+          || typeof entry.then === 'function'
+          || !Number.isFinite(entry.ts) || entry.ts <= 0
+          || !Number.isFinite(entry.total) || entry.total <= 0
+          || entry.total !== Math.round(total * 100) / 100
+          || typeof entry.m !== 'string' || !entry.m.trim()
+          || typeof entry.method !== 'string' || !entry.method.trim()
+          || typeof entry.ref !== 'string' || !entry.ref.trim()) return null;
+      return entry;
     } catch (_) {}
+    return null;
   }
   /* Le numéro de facture repart AU-DELÀ de la dernière émise aujourd'hui :
      sans ça un rechargement le remet à F-1208 et deux séjours différents
@@ -252,11 +449,13 @@
 
   /* ═══════════════════════ MOUNT (shell) ═══════════════════════ */
   function mount(rootEl) {
+    hotelOps?.hydrate?.();
     root = rootEl;
+    bindRoomDocument();
     root.classList.add('ht-app');
     root.innerHTML = `
       <aside class="ht-rail">
-        <div class="ht-brand">kiwi<i></i></div>
+        <div class="ht-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="ht-venue">
           <div class="ht-venue-name">${esc(pvName('Riad Yasmina') || 'Hôtel')}</div>
           <div class="ht-venue-sub">${pvReal() ? (esc(pvCity('')) || '') : 'Tanger · Kasbah'}<br>Le même Kiwi, <b>un seul compte</b>.</div>
@@ -265,6 +464,7 @@
           <button class="ht-nav-it on" data-ht-view="reception"><i data-lucide="layout-dashboard"></i><span>Réception</span><b class="ht-nav-badge" id="ht-badge-rec"></b></button>
           <button class="ht-nav-it" data-ht-view="chambres"><i data-lucide="building-2"></i><span>Chambres</span><b class="ht-nav-badge" id="ht-badge-rooms"></b></button>
           <button class="ht-nav-it" data-ht-view="folios"><i data-lucide="clipboard-list"></i><span>Folios</span><b class="ht-nav-badge" id="ht-badge-folios"></b></button>
+          <button class="ht-nav-it" data-ht-view="clients"><i data-lucide="heart-handshake"></i><span>Hospitality+</span></button>
         </nav>
         <div class="ht-rail-foot">
           <button class="ht-net" id="ht-net" title="Simuler une coupure réseau">
@@ -298,10 +498,12 @@
       v.addEventListener('click', (e) => { if (e.target === v) closeVeil(v); });
     });
 
+    state.queued = roomChargeRows().length;
     renderAll();
+    flushRoomCharges();
   }
 
-  function onShow() { renderAll(); }
+  function onShow() { roomCloud?.pull?.(false); state.queued = roomChargeRows().length; renderAll(); flushRoomCharges(); }
 
   function openVeil(id) { const v = $(id, root); v.classList.add('is-open'); return v; }
   function closeVeil(v) { (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open'); }
@@ -431,11 +633,11 @@
       <div class="ht-recep">
         <div class="ht-col">
           <div class="ht-col-head">Arrivées du jour <span class="ct">${ARRIVALS.length}</span></div>
-          ${ARRIVALS.map(arrivalRow).join('') || '<div class="ht-empty">Aucune arrivée aujourd’hui.</div>'}
+          ${ARRIVALS.map(arrivalRow).join('') || '<div class="ht-empty" style="display:flex; flex-direction:column; align-items:center; padding:36px 16px;"><div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:10px;"><svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600; color:var(--ink);">Aucune arrivée aujourd’hui.</div></div>'}
         </div>
         <div class="ht-col">
           <div class="ht-col-head">Départs du jour <span class="ct">${DEPARTURES.length}</span></div>
-          ${DEPARTURES.map(departureRow).join('') || '<div class="ht-empty">Aucun départ aujourd’hui.</div>'}
+          ${DEPARTURES.map(departureRow).join('') || '<div class="ht-empty" style="display:flex; flex-direction:column; align-items:center; padding:36px 16px;"><div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:10px;"><svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600; color:var(--ink);">Aucun départ aujourd’hui.</div></div>'}
         </div>
       </div>`;
     panel.onclick = (e) => {
@@ -504,9 +706,12 @@
         ${Object.entries(ST_META).map(([s, m]) => `<span class="ht-leg"><i style="background:${m.dot}"></i>${m.label} <b>${counts[s] || 0}</b></span>`).join('')}
       </div>
       <div class="ht-board">
-        ${FLOORS.map((f) => `
+        ${FLOORS.length ? FLOORS.map((f) => `
           <div class="ht-floor-lbl">${esc(f.lbl)}</div>
-          <div class="ht-rooms">${f.rooms.map((n) => roomCard(n, i++)).join('')}</div>`).join('')}
+          <div class="ht-rooms">${f.rooms.map((n) => roomCard(n, i++)).join('')}</div>`).join('') : `<div class="ht-room-empty">
+            <i data-lucide="cloud-download"></i><b>Aucune chambre synchronisée</b>
+            <span>Ajoutez vos chambres dans le tableau de bord, puis touchez Rafraîchir. Kiwi n’affiche aucune donnée fictive.</span>
+          </div>`}
       </div>`;
     panel.onclick = (e) => {
       const b = e.target.closest('[data-ht-room]');
@@ -600,7 +805,34 @@
     }
 
     const el = $('#ht-checkinm', root);
-    const ci = { scanned: false, police: null, caution: 'carte' };
+    const guestClient = (() => {
+      try {
+        const want = String(a.guest || '').trim().toLocaleLowerCase('fr');
+        return window.KiwiClients?.list?.().find((c) => String(c.name || '').trim().toLocaleLowerCase('fr') === want) || null;
+      } catch (_) { return null; }
+    })();
+    const gh = guestClient?.hospitality || {};
+    const ci = {
+      scanned: false, police: null, caution: 'carte', cautionAmount: 0,
+      profile: {
+        phone: guestClient?.phone || '', email: guestClient?.email || '',
+        documentType: gh.documentType || 'Passeport', documentNumber: gh.documentNumber || '',
+        nationality: gh.nationality || '', preferredLanguage: gh.preferredLanguage || '',
+        roomPreferences: gh.roomPreferences || '', foodPreferences: gh.foodPreferences || '',
+        allergies: gh.allergies || '', accessibilityNeeds: gh.accessibilityNeeds || '',
+      },
+    };
+
+    const readGuestProfile = () => {
+      const val = (id) => String($(id, el)?.value || '').trim();
+      ci.profile = {
+        phone: val('#ht-ci-phone'), email: val('#ht-ci-email'),
+        documentType: val('#ht-ci-doc-type'), documentNumber: val('#ht-ci-doc-number'),
+        nationality: val('#ht-ci-nationality'), preferredLanguage: val('#ht-ci-language'),
+        roomPreferences: val('#ht-ci-room-prefs'), foodPreferences: val('#ht-ci-food-prefs'),
+        allergies: val('#ht-ci-allergies'), accessibilityNeeds: val('#ht-ci-access'),
+      };
+    };
 
     const guestCard = () => `
       <div class="ht-ci-guest">
@@ -626,15 +858,31 @@
         ${guestCard()}
         ${a.note ? `<div class="ht-arr-note" style="margin:-4px 0 10px;"><i data-lucide="sticky-note"></i>${esc(a.note)}</div>` : ''}
         <div class="ht-ci-f">
+          <div class="ht-ci-lbl">Hospitality+ <span class="opt">· informations utiles pendant et après le séjour</span></div>
+          <div class="ht-ci-profile-grid">
+            <label><span>Téléphone</span><input class="ht-in" id="ht-ci-phone" inputmode="tel" value="${esc(ci.profile.phone)}" placeholder="06… / +33…"></label>
+            <label><span>Email</span><input class="ht-in" id="ht-ci-email" type="email" value="${esc(ci.profile.email)}" placeholder="nom@email.com"></label>
+            <label><span>Type de pièce</span><select class="ht-in" id="ht-ci-doc-type">${['Passeport','CIN','Carte de séjour','Autre'].map((v) => `<option ${ci.profile.documentType === v ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+            <label><span>Numéro passeport / ID</span><input class="ht-in" id="ht-ci-doc-number" value="${esc(ci.profile.documentNumber)}" placeholder="N° du document"></label>
+            <label><span>Nationalité</span><input class="ht-in" id="ht-ci-nationality" value="${esc(ci.profile.nationality)}" placeholder="Nationalité"></label>
+            <label><span>Langue préférée</span><input class="ht-in" id="ht-ci-language" value="${esc(ci.profile.preferredLanguage)}" placeholder="Français, العربية…"></label>
+            <label class="wide"><span>Préférences de chambre</span><input class="ht-in" id="ht-ci-room-prefs" value="${esc(ci.profile.roomPreferences)}" placeholder="Étage calme, lit king, loin de l’ascenseur…"></label>
+            <label class="wide"><span>Préférences de repas</span><input class="ht-in" id="ht-ci-food-prefs" value="${esc(ci.profile.foodPreferences)}" placeholder="Végétarien, petit-déjeuner salé, thé sans sucre…"></label>
+            <label><span>Allergies</span><input class="ht-in" id="ht-ci-allergies" value="${esc(ci.profile.allergies)}" placeholder="Aucune connue…"></label>
+            <label><span>Besoins particuliers</span><input class="ht-in" id="ht-ci-access" value="${esc(ci.profile.accessibilityNeeds)}" placeholder="Mobilité, lit bébé…"></label>
+          </div>
+        </div>
+        <div class="ht-ci-f">
           <div class="ht-ci-lbl">Pièce d'identité <span class="opt">· passeport ou CIN</span></div>
           <div class="ht-scan-stage" id="ht-scan-stage">
             ${ART.passeport.replace('class="ht-art"', 'class="ht-art doc"')}
             <span class="ht-scan-corner tl"></span><span class="ht-scan-corner tr"></span>
             <span class="ht-scan-corner bl"></span><span class="ht-scan-corner br"></span>
-            <div class="ht-scan-hint" id="ht-scan-hint">Posez la pièce sous la caméra…</div>
+            <div class="ht-scan-hint" id="ht-scan-hint">Joignez une photo lisible de la pièce</div>
           </div>
           <div id="ht-scan-result">
-            <button class="ht-scan-cta" id="ht-scan-go"><i data-lucide="scan-line"></i>Scanner la pièce</button>
+            <label class="ht-scan-cta" for="ht-id-file"><i data-lucide="camera"></i>Prendre ou choisir une photo</label>
+            <input id="ht-id-file" type="file" accept="image/*" capture="environment" hidden />
           </div>
         </div>
         <div class="ht-ci-foot">
@@ -644,27 +892,14 @@
       icons();
       $$('[data-ht-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ht-checkin-veil'); });
       const refreshNext = () => { $('#ht-ci-next', el).disabled = !ci.scanned; };
-      $('#ht-scan-go', el).onclick = () => {
-        const stage = $('#ht-scan-stage', el);
-        if ($('.ht-scan-laser', stage)) return;
-        const laser = document.createElement('div');
-        laser.className = 'ht-scan-laser';
-        stage.appendChild(laser);
-        $('#ht-scan-hint', el).textContent = 'Lecture MRZ en cours…';
-        setTimeout(() => {
-          if (!el.closest('.modal-veil').classList.contains('is-open')) return;
-          laser.remove();
-          ci.scanned = true;
-          ci.police = `FP-2026-${policeSeq++}`;
-          $('#ht-scan-hint', el).textContent = 'Pièce lue';
-          $('#ht-scan-result', el).innerHTML = `
-            <div class="ht-scan-ok"><i data-lucide="check-circle-2"></i>Fiche de police pré-remplie, n° ${ci.police}<span>envoyée à la DGSN ce soir</span></div>`;
-          icons();
-          refreshNext();
-          toast(`Pièce lue, fiche de police ${ci.police} pré-remplie`);
-        }, 1600);
+      $('#ht-id-file', el).onchange = (e) => {
+        const file = e.target.files && e.target.files[0]; if (!file) return;
+        ci.scanned = true; ci.police = `FP-${new Date().getFullYear()}-${policeSeq++}`;
+        $('#ht-scan-hint', el).textContent = 'Photo sélectionnée · vérifiez la pièce';
+        $('#ht-scan-result', el).innerHTML = `<div class="ht-scan-ok"><i data-lucide="check-circle-2"></i>Vérification locale · fiche ${ci.police}<span>Kiwi ne conserve pas la photo et n’effectue aucun envoi DGSN.</span></div>`;
+        hotelOps?.save?.('identity-document-checked'); icons(); refreshNext();
       };
-      $('#ht-ci-next', el).onclick = () => { if (ci.scanned) step2(); };
+      $('#ht-ci-next', el).onclick = () => { if (ci.scanned) { readGuestProfile(); step2(); } };
       refreshNext();
     };
 
@@ -678,12 +913,14 @@
         <div class="ht-ci-f">
           <div class="ht-ci-lbl">Caution <span class="opt">· libérée au check-out</span></div>
           <div class="ht-seg" data-lens-demo id="ht-caution-seg">
-            <button class="ht-seg-it ${ci.caution === 'carte' ? 'on' : ''}" data-lens-item data-ht-caution="carte">Empreinte carte<small>1 000 MAD</small></button>
-            <button class="ht-seg-it ${ci.caution === 'especes' ? 'on' : ''}" data-lens-item data-ht-caution="especes">Espèces<small>1 000 MAD au coffre</small></button>
+            <button class="ht-seg-it ${ci.caution === 'carte' ? 'on' : ''}" data-lens-item data-ht-caution="carte">Empreinte carte<small>via lecteur connecté</small></button>
+            <button class="ht-seg-it ${ci.caution === 'especes' ? 'on' : ''}" data-lens-item data-ht-caution="especes">Espèces<small>à enregistrer au coffre</small></button>
             <button class="ht-seg-it ${ci.caution === 'sans' ? 'on' : ''}" data-lens-item data-ht-caution="sans">Sans<small>client fidèle</small></button>
           </div>
+          <label class="ht-ci-lbl" style="margin-top:12px;">Montant de caution (MAD)</label>
+          <input class="ht-in" id="ht-caution-amount" type="number" min="0" step="1" placeholder="À définir" value="${ci.cautionAmount || ''}" />
         </div>
-        <div class="ht-welcome"><i data-lucide="sparkles"></i><span><b>Accueil Yasmina</b>, thé à la menthe offert au salon, plateau envoyé à l'arrivée.${a.note && a.note.includes('thé') ? ' Sans sucre pour ce client.' : ''}</span></div>
+        <div class="ht-welcome"><i data-lucide="sparkles"></i><span><b>Accueil de l’hôtel</b>, thé à la menthe offert au salon, plateau envoyé à l'arrivée.${a.note && a.note.includes('thé') ? ' Sans sucre pour ce client.' : ''}</span></div>
         <div class="ht-ci-foot">
           <button class="ht-btn secondary" id="ht-ci-back">Retour</button>
           <button class="ht-btn primary" id="ht-ci-done"><i data-lucide="check"></i>Terminer le check-in</button>
@@ -699,6 +936,8 @@
       };
       $('#ht-ci-back', el).onclick = step1;
       $('#ht-ci-done', el).onclick = () => {
+        ci.cautionAmount = Math.max(0, +($('#ht-caution-amount', el)?.value || 0));
+        if (ci.caution !== 'sans' && !(ci.cautionAmount > 0)) { toast('Indiquez le montant de la caution'); return; }
         if (ci.caution === 'carte') stepCautionReader();
         else finishCheckin();
       };
@@ -708,7 +947,7 @@
     const stepCautionReader = () => {
       el.innerHTML = `
         <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
-        <h3 class="modal-title">Empreinte carte · ${fmtMAD(1000)}</h3>
+        <h3 class="modal-title">Empreinte carte · ${fmtMAD(ci.cautionAmount)}</h3>
         <p class="modal-subtle">Caution, pré-autorisation, rien n'est débité</p>
         <div class="reader-stage">
           <div class="reader-disc is-pulsing" id="ht-caution-disc"><i data-lucide="credit-card"></i></div>
@@ -720,14 +959,13 @@
       setTimeout(() => {
         const disc = $('#ht-caution-disc', el);
         if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#ht-caution-status', el).textContent = 'Khlass! Empreinte enregistrée';
-        $('#ht-caution-status', el).classList.add('is-success');
-        icons();
-        setTimeout(finishCheckin, 900);
-      }, 1900);
+        const hw = window.KiwiHardware;
+        if (!hw?.authorizeCard) { disc.classList.remove('is-pulsing'); $('#ht-caution-status', el).textContent = 'Pré-autorisation non confirmée · lecteur indisponible'; return; }
+        hw.authorizeCard(ci.cautionAmount, disc, $('#ht-caution-status', el), { capture: false, purpose: 'deposit' }).then((result) => {
+          icons(); if (!result?.approved) { toast('Empreinte carte non confirmée'); return; }
+          hotelOps?.save?.('card-deposit-authorized'); setTimeout(finishCheckin, 700);
+        });
+      }, 300);
     };
 
     const finishCheckin = () => {
@@ -738,19 +976,42 @@
       const st = mkStay(a.room, {
         guest: a.guest, src: a.src, pax: a.pax, adults: a.adults, nights: a.nights, day: 1,
         caution: ci.caution,
+        cautionAmount: ci.cautionAmount,
         prefs: a.note || '',
         charges: [], payments: a.acompte ? [['carte', a.acompte, 'Acompte à la réservation']] : [],
       });
       st.police = ci.police;
+      try {
+        if (window.KiwiClients?.upsert) {
+          const client = window.KiwiClients.upsert({
+            id: guestClient?.id || '', name: a.guest, phone: ci.profile.phone, email: ci.profile.email,
+            hospitality: {
+              documentType: ci.profile.documentType, documentNumber: ci.profile.documentNumber,
+              nationality: ci.profile.nationality, preferredLanguage: ci.profile.preferredLanguage,
+              roomPreferences: ci.profile.roomPreferences, foodPreferences: ci.profile.foodPreferences,
+              allergies: ci.profile.allergies, accessibilityNeeds: ci.profile.accessibilityNeeds,
+            },
+            consent: guestClient?.consent || false, consentEmail: guestClient?.consentEmail || false,
+            source: 'hotel-checkin',
+          });
+          st.clientId = client?.id || '';
+          if (client?.id) window.KiwiClients.recordPurchase(client.id, { amount: 0, visit: 1 });
+        }
+      } catch (_) {}
       /* L'acompte de réservation entre dans les livres ici : le check-out ne
          journalise que le SOLDE, donc sans cette ligne cet argent n'arrivait
          jamais au tableau de bord. La caution, elle, n'est pas une recette :
          elle est rendue au départ, on ne la journalise pas. */
-      if (a.acompte > 0) postDay(a.acompte, 'carte', `Acompte réservation · Ch. ${a.room} · ${a.guest}`, `Ch-${a.room}`);
+      if (a.acompte > 0) postDay(a.acompte, 'carte', `Acompte réservation · Ch. ${a.room} · ${a.guest}`, `Ch-${a.room}`, [
+        { itemId: `chambre-${ROOMS[a.room].type}`, variantId: String(a.room), name: roomName(a.room), category: 'nuitees', qty: a.nights, unit: 'nuit', kind: 'service', total: a.acompte },
+      ]);
       queueIfOffline(`Check-in Ch. ${a.room}`);
-      toast(`Check-in Ch. ${a.room}, ${a.guest} · marhba`);
-      if (ci.caution === 'especes') toast('Caution 1 000 MAD espèces, au coffre, reçu remis');
-      setTimeout(() => toast('Thé à la menthe envoyé au salon, accueil Yasmina'), 700);
+      toast(`Check-in Ch. ${a.room}, ${a.guest} · bienvenue`);
+      if (ci.caution === 'especes') toast(`Caution ${fmtMAD(ci.cautionAmount)} espèces enregistrée au coffre`);
+      st.serviceRequests = st.serviceRequests || [];
+      st.serviceRequests.push({ id:`welcome-${st.room}-${Date.now()}`, label:'Thé à la menthe de bienvenue', status:'pending', createdAt:new Date() });
+      hotelOps?.save?.('welcome-service-request');
+      setTimeout(() => toast('Tâche accueil créée · thé de bienvenue à servir'), 700);
       refreshOps();
     };
 
@@ -787,9 +1048,19 @@
               ${t.due > 0 ? `<span class="ht-pill due">solde ${fmtMAD(t.due)}</span>` : '<span class="ht-pill ok">soldé</span>'}
             </div>
           </button>`;
-        }).join('') || '<div class="ht-empty">Aucun folio ouvert, la maison est vide ce soir.</div>'}
+        }).join('') || `<div class="ht-empty ht-folio-empty">
+          <span class="ht-folio-empty-icon"><i data-lucide="clipboard-list"></i></span>
+          <b>Aucun folio ouvert</b>
+          <p>Un folio s’ouvre automatiquement au check-in et regroupe la chambre, les extras et la taxe de séjour jusqu’au départ.</p>
+          <div class="ht-folio-empty-actions">
+            <button class="ht-btn primary" data-ht-empty-view="reception"><i data-lucide="layout-dashboard"></i>Aller à la réception</button>
+            <button class="ht-btn secondary" data-ht-empty-view="chambres"><i data-lucide="building-2"></i>Voir les chambres</button>
+          </div>
+        </div>`}
       </div>`;
     panel.onclick = (e) => {
+      const jump = e.target.closest('[data-ht-empty-view]');
+      if (jump) { switchView(jump.dataset.htEmptyView); return; }
       const b = e.target.closest('[data-ht-fo]');
       if (b) openFolioDetail(+b.dataset.htFo);
     };
@@ -860,7 +1131,7 @@
             ${folioLine({
               cls: 'is-auto', art: ART.nuitee,
               name: `Nuitées · ${esc(roomName(n))} × ${st.nights}`,
-              sub: `${fmtMAD(roomRate(n)).replace(' MAD', '')} MAD/nuit · séjour complet`,
+              sub: `${fmtMAD(stayRate(st)).replace(' MAD', '')} MAD/nuit · séjour complet`,
               amt: t.nuitees, right: '<span class="ht-auto-pill">auto</span>',
             })}
             ${st.charges.map((c) => {
@@ -870,11 +1141,12 @@
                 <span class="ht-fline-mid">
                   <span class="ht-fline-name">${esc(def.label)}${c.note ? ` · ${esc(c.note)}` : ''}</span>
                   <span class="ht-fline-sub">${esc(c.at)} · ${def.unit} MAD</span>
+                  ${c.saleId ? `<span class="ht-fline-sub">${esc(POSTED_CHARGE_LOCK)}</span>` : ''}
                 </span>
                 <span class="ht-fline-right">
                   <span class="ht-fline-amt">${fmtMAD(chargeAmt(c))}</span>
                   <span class="ht-fline-qty">
-                    <button data-ht-cminus="${c.uid}" aria-label="Retirer">−</button><b>${c.qty}</b><button data-ht-cplus="${c.uid}" aria-label="Ajouter">+</button>
+                    <button data-ht-cminus="${c.uid}" aria-label="Retirer" ${c.saleId ? `disabled title="${esc(POSTED_CHARGE_LOCK)}"` : ''}>−</button><b>${c.qty}</b><button data-ht-cplus="${c.uid}" aria-label="Ajouter" ${c.saleId ? `disabled title="${esc(POSTED_CHARGE_LOCK)}"` : ''}>+</button>
                   </span>
                 </span>
               </div>`;
@@ -912,6 +1184,7 @@
       const idx = st.charges.findIndex((c) => c.uid === uid);
       if (idx < 0) return;
       const c = st.charges[idx];
+      if (c.saleId) { toast(POSTED_CHARGE_LOCK, 5000); return; }
       if (plus) { c.qty++; }
       else {
         c.qty--;
@@ -932,51 +1205,76 @@
     const st = STAYS[roomN];
     if (!st) return;
     const def = CHARGE[cid];
-    const sheet = { qty: 1, note: '' };
+    const sheet = { qty: 1, note: '', stage: 'ask', busy: false };
     const el = $('#ht-chargem', root);
-    el.innerHTML = `
-      <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
-      <div class="ht-ch-head">
-        <span class="ht-ch-art">${ART[cid] || ''}</span>
-        <span class="ht-ch-title"><h3>${esc(def.label)}</h3><span class="sub">${esc(def.sub)} · ${esc(def.per)}</span></span>
-        <span class="ht-ch-price"><span class="val" id="ht-ch-total">${fmtMAD(def.unit)}</span><span class="per">${def.unit} MAD × <span id="ht-ch-qn">1</span></span></span>
-      </div>
-      <div class="ht-ci-f">
-        <div class="ht-ci-lbl">Quantité</div>
-        <div class="ht-stepper">
-          <button id="ht-ch-minus" aria-label="Moins">−</button>
-          <b id="ht-ch-qty">1</b>
-          <button id="ht-ch-plus" aria-label="Plus">+</button>
-        </div>
-      </div>
-      <div class="ht-ci-f">
-        <div class="ht-ci-lbl">Note <span class="opt">· optionnel, visible sur la facture</span></div>
-        <input class="ht-note-free" id="ht-ch-note" placeholder="ex. « sans sucre », « chambre à 19h »…" />
-      </div>
-      <div class="ht-ci-foot">
-        <button class="ht-btn secondary" data-ht-close>Annuler</button>
-        <button class="ht-btn primary" id="ht-ch-add"><i data-lucide="plus"></i>Poster sur le folio · <span id="ht-ch-cta">${fmtMAD(def.unit)}</span></button>
-      </div>`;
-    openVeil('#ht-charge-veil');
-    icons();
-    const refresh = () => {
-      $('#ht-ch-qty', el).textContent = sheet.qty;
-      $('#ht-ch-qn', el).textContent = sheet.qty;
-      $('#ht-ch-total', el).textContent = fmtMAD(def.unit * sheet.qty);
-      $('#ht-ch-cta', el).textContent = fmtMAD(def.unit * sheet.qty);
+    const veil = openVeil('#ht-charge-veil');
+    veil.classList.add('ht-identity-veil');
+    const close = () => { veil.classList.remove('ht-identity-veil'); closeVeil(veil); };
+    const render = () => {
+      if (sheet.stage === 'ask') {
+        el.innerHTML = `<button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
+          <div class="ht-verify-mark"><i data-lucide="shield-check"></i></div>
+          <div class="ht-verify-kicker">Vérification · chambre ${roomN}</div>
+          <h3 class="ht-verify-title">Demandez au client de dire son nom.</h3>
+          <p class="ht-verify-copy">Ne proposez aucun nom et ne montrez pas la fiche. La réponse vient d’abord.</p>
+          <div class="ht-ci-foot"><button class="ht-btn secondary" data-ht-close>Annuler</button><button class="ht-btn primary" id="ht-ch-reveal">Le client a répondu · révéler</button></div>`;
+      } else if (sheet.stage === 'reveal') {
+        el.innerHTML = `<button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
+          <div class="ht-verify-kicker">Nom attendu · chambre ${roomN}</div>
+          <div class="ht-verify-name">${esc(st.guest)}</div>
+          <p class="ht-verify-copy">Comparez exactement avec la réponse donnée, sans lire le nom à voix haute.</p>
+          <div class="ht-ci-foot"><button class="ht-btn secondary" id="ht-ch-mismatch">Le nom ne correspond pas</button><button class="ht-btn primary" id="ht-ch-match"><i data-lucide="check"></i>Le nom correspond</button></div>`;
+      } else {
+        el.innerHTML = `<button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
+          <div class="ht-ch-head"><span class="ht-ch-art">${ART[cid] || ''}</span><span class="ht-ch-title"><h3>${esc(def.label)}</h3><span class="sub">Ch. ${roomN} · identité vérifiée · ${esc(def.per)}</span></span><span class="ht-ch-price"><span class="val" id="ht-ch-total">${fmtMAD(def.unit * sheet.qty)}</span><span class="per">${def.unit} MAD × <span id="ht-ch-qn">${sheet.qty}</span></span></span></div>
+          <div class="ht-ci-f"><div class="ht-ci-lbl">Quantité</div><div class="ht-stepper"><button id="ht-ch-minus" aria-label="Moins">−</button><b id="ht-ch-qty">${sheet.qty}</b><button id="ht-ch-plus" aria-label="Plus">+</button></div></div>
+          <div class="ht-ci-f"><div class="ht-ci-lbl">Note <span class="opt">· optionnel, visible sur la facture</span></div><input class="ht-note-free" id="ht-ch-note" value="${esc(sheet.note)}" placeholder="ex. « sans sucre », « chambre à 19h »…" /></div>
+          <div class="ht-ci-foot"><button class="ht-btn secondary" data-ht-close>Annuler</button><button class="ht-btn primary" id="ht-ch-add" ${sheet.busy ? 'disabled' : ''}><i data-lucide="plus"></i>${sheet.busy ? 'Enregistrement…' : 'Poster sur le folio · ' + fmtMAD(def.unit * sheet.qty)}</button></div>`;
+      }
+      icons();
+      $$('[data-ht-close]', el).forEach((b) => { b.onclick = close; });
+      const reveal = $('#ht-ch-reveal', el); if (reveal) reveal.onclick = () => { sheet.stage = 'reveal'; render(); };
+      const mismatch = $('#ht-ch-mismatch', el); if (mismatch) mismatch.onclick = () => { toast('Charge annulée · identité non confirmée'); close(); };
+      const match = $('#ht-ch-match', el); if (match) match.onclick = () => { sheet.stage = 'charge'; render(); };
+      const minus = $('#ht-ch-minus', el); if (minus) minus.onclick = () => { if (sheet.qty > 1) { sheet.qty--; render(); } };
+      const plus = $('#ht-ch-plus', el); if (plus) plus.onclick = () => { sheet.qty++; render(); };
+      const note = $('#ht-ch-note', el); if (note) note.oninput = (e) => { sheet.note = e.target.value; };
+      const add = $('#ht-ch-add', el); if (add) add.onclick = async () => {
+        if (sheet.busy) return;
+        sheet.note = String($('#ht-ch-note', el)?.value || sheet.note).trim();
+        const total = def.unit * sheet.qty;
+        let saleId = '';
+        if (pvReal()) {
+          const ctx = roomChargeContext();
+          if (!ctx.merchant || !ctx.terminalId || !ctx.cashierId || !ctx.shiftId) {
+            toast('Ouvrez le service et appairez cette caisse avant de poster sur une chambre', 4200);
+            return;
+          }
+          sheet.busy = true; render();
+          let entry = null;
+          try {
+            entry = window.KiwiPosSale?.record?.('hotel', {
+              total, method: 'room', label: def.label,
+              ref: window.KiwiReceipt?.nextRef?.() || '',
+              lines: [{ itemId: cid, name: def.label, category: 'extras', qty: sheet.qty, unit: def.per, kind: 'service', total }],
+            });
+          } catch (_) {}
+          saleId = String(entry && entry.saleId || '');
+          if (!saleId || !enqueueRoomCharge({ merchant: ctx.merchant, terminalId: ctx.terminalId, saleId, shiftId: ctx.shiftId, cashierId: ctx.cashierId })) {
+            sheet.busy = false; render();
+            toast('Impossible de sécuriser la charge · espace local indisponible', 4200);
+            return;
+          }
+        }
+        st.charges.push({ uid: `c${chargeUid++}`, cid, qty: sheet.qty, at: new Date().toLocaleString('fr-FR'), note: sheet.note, saleId });
+        close();
+        queueIfOffline(`Charge ${def.label}`);
+        toast(`${def.label} × ${sheet.qty}, posté sur le folio Ch. ${roomN} (+${fmtMAD(total)})`);
+        refreshOps();
+        if (state.view === 'folios' && state.folioRoom === roomN) { renderFolioDetail(); icons(); }
+      };
     };
-    $$('[data-ht-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ht-charge-veil'); });
-    $('#ht-ch-minus', el).onclick = () => { if (sheet.qty > 1) { sheet.qty--; refresh(); } };
-    $('#ht-ch-plus', el).onclick = () => { sheet.qty++; refresh(); };
-    $('#ht-ch-note', el).oninput = (e) => { sheet.note = e.target.value; };
-    $('#ht-ch-add', el).onclick = () => {
-      st.charges.push({ uid: `c${chargeUid++}`, cid, qty: sheet.qty, at: `auj. ${nowHM()}`, note: sheet.note.trim() });
-      closeVeil('#ht-charge-veil');
-      queueIfOffline(`Charge ${def.label}`);
-      toast(`${def.label} × ${sheet.qty}, posté sur le folio Ch. ${roomN} (+${fmtMAD(def.unit * sheet.qty)})`);
-      refreshOps();
-      if (state.view === 'folios' && state.folioRoom === roomN) { renderFolioDetail(); icons(); }
-    };
+    render();
   }
 
   /* ═══════════════════════ CHECK-OUT ═══════════════════════ */
@@ -1027,7 +1325,7 @@
               <span class="l"><b>Folio soldé, confirmer le départ</b><span>Facture imprimée, chambre en ménage</span></span>
             </button>
           </div>`}
-        <div class="ht-foot-note">${st.caution === 'carte' ? 'Empreinte carte 1 000 MAD libérée au départ.' : st.caution === 'especes' ? 'Caution espèces 1 000 MAD rendue au départ.' : 'Sans caution sur ce séjour.'}</div>`;
+        <div class="ht-foot-note">${st.caution === 'carte' ? `Empreinte carte ${fmtMAD(st.cautionAmount)} à libérer sur le lecteur au départ.` : st.caution === 'especes' ? `Caution espèces ${fmtMAD(st.cautionAmount)} à rendre au départ.` : 'Sans caution sur ce séjour.'}</div>`;
       icons();
       $$('[data-ht-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ht-checkout-veil'); });
       $$('[data-ht-pm]', el).forEach((b) => {
@@ -1049,7 +1347,7 @@
         <p class="modal-subtle">Ch. ${n} · ${esc(st.guest)}</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="ht-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="ht-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="ht-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${t.due}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1094,24 +1392,33 @@
       setTimeout(() => {
         const disc = $('#ht-reader-disc', el);
         if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#ht-reader-status', el).textContent = 'Khlass! Paiement confirmé sur le lecteur';
-        $('#ht-reader-status', el).classList.add('is-success');
-        icons();
-        setTimeout(() => done('carte', t.due, 0), 900);
+        const status = $('#ht-reader-status', el);
+        const hw = window.KiwiHardware;
+        if (!hw || !hw.authorizeCard) { disc.classList.remove('is-pulsing'); status.textContent = 'Paiement non confirmé · lecteur indisponible'; return; }
+        hw.authorizeCard(t.due, disc, status).then((result) => {
+          icons();
+          if (result && result.approved) setTimeout(() => done('carte', t.due, 0), 900);
+        });
       }, 1900);
     };
 
     const done = (method, amount, rendu) => {
+      if (STAYS[n] !== st) return; // Ignore a repeated completion callback.
+      /* record() returns a browser journal entry, not a durable server ACK.
+       * Do not mutate the folio if even that recording step fails. */
+      if (amount > 0) {
+        const entry = postDay(amount, method, `Solde séjour · Ch. ${n} · ${st.guest}`, `F-${factureSeq}`, staySaleLines(st, amount));
+        if (pvReal() && !entry) {
+          toast('Paiement non enregistré. Séjour conservé ouvert. Vérifiez tout paiement déjà reçu avant de réessayer.', 6500);
+          return;
+        }
+      }
       if (method === 'carte') st.payments.push({ method, amount, label: 'Solde au départ · carte' });
       if (method === 'especes') st.payments.push({ method, amount, label: 'Solde au départ · espèces' });
       if (method === 'online') st.payments.push({ method, amount, label: `Réglé en ligne · ${online}` });
       /* Le folio déjà soldé passe par done(null, 0, 0) : rien n'est pris au
          comptoir ce jour-là, ce n'est donc pas une recette du jour — l'argent
          a été journalisé au moment où il est réellement rentré. */
-      if (amount > 0) postDay(amount, method, `Solde séjour · Ch. ${n} · ${st.guest}`, `F-${factureSeq}`);
       closeVeil('#ht-checkout-veil');
 
       /* clôture du séjour */
@@ -1128,8 +1435,8 @@
       else if (method === 'carte') toast(`Encaissé, ${fmtMAD(amount)} en carte`);
       else if (method === 'online') toast(`Solde marqué réglé via ${online}, versement OTA`);
       else toast('Départ confirmé, folio déjà soldé');
-      if (closed.caution === 'carte') setTimeout(() => toast('Empreinte carte libérée, pré-autorisation annulée'), 650);
-      else if (closed.caution === 'especes') setTimeout(() => toast('Caution espèces rendue, 1 000 MAD'), 650);
+      if (closed.caution === 'carte') setTimeout(() => toast(`Libérez l’empreinte ${fmtMAD(closed.cautionAmount)} sur le lecteur puis conservez son justificatif`), 650);
+      else if (closed.caution === 'especes') setTimeout(() => toast(`Caution espèces ${fmtMAD(closed.cautionAmount)} marquée rendue`), 650);
       setTimeout(() => toast(`Ch. ${n} → ménage${arr ? `, ${arr.guest} arrive ${arr.t}` : ''}`), 1250);
 
       refreshOps();
@@ -1157,7 +1464,7 @@
       ${st.police ? `<div class="row"><span>Fiche police</span><span>${st.police}</span></div>` : ''}
       <hr>
       <div class="row"><span class="nm">Nuitées · ${esc(roomName(st.room))} ×${st.nights}</span><span>${t.nuitees}</span></div>
-      ${st.charges.map((c) => `<div class="row"><span class="nm">${esc(CHARGE[c.cid].label)} ×${c.qty}${c.note ? ` (${esc(c.note)})` : ''}</span><span>${chargeAmt(c)}</span></div>`).join('')}
+      ${st.charges.map((c) => `<div class="row"><span class="nm">${c.at ? `${esc(c.at)} · ` : ''}${esc(CHARGE[c.cid].label)} ×${c.qty}${c.note ? ` (${esc(c.note)})` : ''}</span><span>${chargeAmt(c)}</span></div>`).join('')}
       <div class="row b"><span class="nm">Taxe de séjour (TPT) · ${st.adults} ad. ×${st.nights} nuits</span><span>${t.taxe}</span></div>
       <hr>
       <div class="row tot"><span>TOTAL</span><span>${t.total} MAD</span></div>
@@ -1187,7 +1494,16 @@
     openVeil('#ht-facture-veil');
     icons();
     $$('[data-ht-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ht-facture-veil'); });
-    $('#ht-fact-print', el).onclick = () => toast('Facture envoyée à l’imprimante, 80 mm');
+    $('#ht-fact-print', el).onclick = () => {
+      const P = window.KiwiOperationalPrint;
+      if (!P) { toast('Impression indisponible'); return; }
+      const lines = Array.from(el.querySelectorAll('.ht-facture .row')).map((row) => ({
+        label:(row.children[0] && row.children[0].textContent || '').trim(),
+        value:(row.children[1] && row.children[1].textContent || '').trim(),
+      }));
+      P.printText({ title:provisional ? `Note provisoire · chambre ${st.room}` : `Facture · chambre ${st.room}`, paper:'80', lines })
+        .then((r) => toast(r && r.ok ? 'Impression système ouverte' : 'Impression impossible'));
+    };
   }
 
   /* ═══════════════════════ OFFLINE (file simulée) ═══════════════════════ */
@@ -1219,12 +1535,16 @@
   }
 
   /* ═══════════════════════ register ═══════════════════════ */
+  window.KiwiHotelPosCatalog = Object.freeze({
+    current: () => ({ rooms: Object.values(ROOMS).map((r) => ({ ...r })), floors: FLOORS.map((f) => ({ ...f, rooms: f.rooms.slice() })) }),
+    apply: (doc) => applyRoomDocument(doc),
+  });
   window.KiwiPosDispatch.register({
     id: 'hotel',
     greet: {
-      line1: 'Sba7 lkhir Hamza,',
-      em: 'marhba.',
-      sub: 'Riad Yasmina <em>·</em> 3 arrivées cet après-midi, un départ à encaisser',
+      line1: pvReal() ? 'Bonjour,' : 'Bonjour Hamza,',
+      em: 'bienvenue.',
+      sub: pvReal() ? esc(pvName('') || 'Votre hôtel') : 'Riad Yasmina <em>·</em> 3 arrivées cet après-midi, un départ à encaisser',
     },
     mount,
     onShow,

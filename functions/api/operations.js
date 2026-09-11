@@ -1,0 +1,2448 @@
+// /api/operations — durable, tenant-scoped operational commands.
+//
+// This is Kiwi's small orchestration boundary.  It deliberately does not copy
+// Novu, Medusa, OpenFGA or ERPNext into a no-build application; it borrows the
+// useful invariants: stable command IDs, explicit lifecycle states, provider
+// capabilities, confirmation for risky work and an append-only audit trail.
+// A missing provider is a BLOCKED command, never a green "sent" toast.
+
+import {
+  json, sendMail, readSession, readCookie, SESS_COOKIE, isOperator,
+  activeEmployee, isTillFor, storeOwner, slugMerchant,
+} from '../auth/_lib.js';
+import { tenantFor } from './_private.js';
+
+const ACTIONS = {
+  notification: new Set(['send-email', 'send-whatsapp', 'send-sms', 'send-receipt', 'send-reminder', 'send-link', 'set-preferences']),
+  procurement: new Set(['create-po', 'submit-po', 'receive-po', 'supplier-return']),
+  payroll: new Set(['export-payroll', 'prepare-payslips', 'submit-cnss']),
+  accounting: new Set(['export-journal', 'create-invoice', 'credit-note', 'lock-period']),
+  payment: new Set(['create-link', 'cancel-link', 'refund-link', 'settle-link']),
+  device: new Set(['heartbeat', 'test-print', 'ack-alert']),
+  ai: new Set(['stock-adjust', 'reprint', 'update-order-status', 'message-customer', 'create-po']),
+};
+const CONFIRM = new Set([
+  'procurement:submit-po', 'procurement:supplier-return', 'payroll:submit-cnss',
+  'accounting:credit-note', 'accounting:lock-period', 'payment:cancel-link',
+  'payment:refund-link', 'ai:stock-adjust', 'ai:reprint', 'ai:update-order-status',
+  'ai:message-customer', 'ai:create-po',
+]);
+const TRANSITIONS = {
+  draft: new Set(['pending-approval', 'cancelled']),
+  prepared: new Set(['sent', 'cancelled']),
+  'pending-approval': new Set(['approved', 'rejected', 'cancelled']),
+  approved: new Set(['processing', 'cancelled']),
+  processing: new Set(['completed', 'failed', 'blocked']),
+  blocked: new Set(['processing', 'cancelled']),
+  failed: new Set(['processing', 'cancelled']),
+  active: new Set(['cancelled', 'completed']),
+};
+
+/* ————— Plafonds ————————————————————————————————————————————————
+ *
+ * Trois choses n'avaient aucune borne : la taille du corps qu'on acceptait de
+ * parser, le nombre de commandes qu'une session pouvait écrire, et le nombre de
+ * fois qu'une commande pouvait être relancée.  Les deux premières coûtent de
+ * l'argent réel — un SMS, un e-mail, une ligne de journal — et la troisième
+ * transforme un incident en boucle.
+ *
+ * La fenêtre est fixe, pas glissante : à cheval sur deux heures, un appelant
+ * peut donc écrire jusqu'à deux fois le plafond.  C'est assumé.  Ce compteur
+ * n'est pas un pare-feu, c'est un frein contre l'emballement d'une session
+ * légitime ou volée ; un vrai anti-abus se joue au bord, pas dans D1. */
+const BODY_MAX = 32 * 1024;
+const PAYLOAD_MAX = 24000;
+const RATE_WINDOW = 60 * 60 * 1000;
+const RATE_PER_HOUR = {
+  device: 600,        /* une caisse bat toutes les cinq minutes, et un commerce en a plusieurs */
+  notification: 150,  /* prévenir 150 clients en une heure : au-delà, ce n'est plus un service */
+  payment: 150,
+  procurement: 120,
+  accounting: 120,
+  ai: 120,
+  payroll: 60,        /* une paie ne s'exporte pas soixante fois par heure */
+};
+const RATE_DEFAULT = 120;
+/* `attempt_count` compte chaque écriture d'état.  Au-delà, la commande peut
+   encore être close à la main — jamais relancée : une borne qui piégerait une
+   commande dans un état ouvert serait pire que l'absence de borne. */
+const ATTEMPT_MAX = 12;
+
+function rateCeiling(env, domain) {
+  const forced = Number(env && env.OPS_RATE_PER_HOUR);
+  if (Number.isFinite(forced) && forced > 0) return Math.floor(forced);
+  return RATE_PER_HOUR[domain] || RATE_DEFAULT;
+}
+
+const clean = (value, max = 120) => String(value == null ? '' : value).trim().slice(0, max);
+const idOk = (value) => /^[A-Za-z0-9._:-]{8,128}$/.test(clean(value, 128));
+const now = () => Date.now();
+const safeJson = (value, limit = 24000) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  try { const out = JSON.stringify(value); return out.length <= limit ? out : null; } catch (_) { return null; }
+};
+const parseJson = (value) => { try { return value ? JSON.parse(value) : null; } catch (_) { return null; } };
+
+async function ensureSchema(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS operational_commands (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, domain TEXT NOT NULL,
+      action TEXT NOT NULL, status TEXT NOT NULL, provider TEXT NOT NULL DEFAULT '',
+      idempotency_key TEXT NOT NULL, payload TEXT NOT NULL, result TEXT,
+      requested_by TEXT NOT NULL DEFAULT '', attempt_count INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL,
+      updated_ts INTEGER NOT NULL
+    )`
+  ).run();
+  await env.DB.prepare(
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_ops_merchant_idempotency ON operational_commands (merchant, idempotency_key)'
+  ).run();
+  await env.DB.prepare(
+    'CREATE INDEX IF NOT EXISTS idx_ops_merchant_domain_time ON operational_commands (merchant, domain, updated_ts DESC)'
+  ).run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS operational_events (
+      id TEXT PRIMARY KEY, command_id TEXT NOT NULL, merchant TEXT NOT NULL,
+      event TEXT NOT NULL, status TEXT NOT NULL, detail TEXT,
+      created_ts INTEGER NOT NULL,
+      seq INTEGER NOT NULL DEFAULT 0,
+      prev_hash TEXT NOT NULL DEFAULT '', hash TEXT NOT NULL DEFAULT ''
+    )`
+  ).run();
+  await env.DB.prepare(
+    'CREATE INDEX IF NOT EXISTS idx_ops_events_command ON operational_events (merchant, command_id, created_ts)'
+  ).run();
+  /* Les deux colonnes de la chaîne sont arrivées après la table : une base déjà
+     en production ne les a pas, et `CREATE TABLE IF NOT EXISTS` ne les ajoutera
+     jamais.  L'ALTER échoue bruyamment la deuxième fois — c'est le seul cas où
+     avaler l'erreur est la bonne réponse. */
+  for (const column of ['prev_hash', 'hash']) {
+    try {
+      await env.DB.prepare(`ALTER TABLE operational_events ADD COLUMN ${column} TEXT NOT NULL DEFAULT ''`).run();
+    } catch (_) { /* déjà présente */ }
+  }
+  try {
+    await env.DB.prepare('ALTER TABLE operational_events ADD COLUMN seq INTEGER NOT NULL DEFAULT 0').run();
+  } catch (_) { /* déjà présente */ }
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS operational_rate (
+      merchant TEXT NOT NULL, bucket TEXT NOT NULL, window_ts INTEGER NOT NULL,
+      hits INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (merchant, bucket, window_ts)
+    )`
+  ).run();
+}
+
+/* Compte d'abord, refuse ensuite : la tentative refusée est elle-même comptée,
+   sinon marteler le plafond resterait gratuit. */
+async function spend(env, merchant, bucket, ceiling) {
+  const at = now();
+  const window = Math.floor(at / RATE_WINDOW) * RATE_WINDOW;
+  await env.DB.prepare(
+    `INSERT INTO operational_rate (merchant, bucket, window_ts, hits) VALUES (?, ?, ?, 1)
+     ON CONFLICT (merchant, bucket, window_ts) DO UPDATE SET hits = hits + 1`
+  ).bind(merchant, bucket, window).run();
+  const row = await env.DB.prepare(
+    'SELECT hits FROM operational_rate WHERE merchant = ? AND bucket = ? AND window_ts = ?'
+  ).bind(merchant, bucket, window).first();
+  const hits = Number((row && row.hits) || 0);
+  return { ok: hits <= ceiling, hits, ceiling, retryAfter: Math.ceil((window + RATE_WINDOW - at) / 1000) };
+}
+
+function providers(env) {
+  return {
+    email: !!(env && env.MAIL_WEBHOOK),
+    whatsapp: !!(env && env.WHATSAPP_WEBHOOK),
+    sms: !!(env && env.SMS_WEBHOOK),
+    payment: !!(env && env.PAYMENT_LINK_WEBHOOK),
+  };
+}
+
+function publicRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id, merchant: row.merchant, domain: row.domain, action: row.action,
+    status: row.status, provider: row.provider || '',
+    payload: parseJson(row.payload) || {}, result: parseJson(row.result),
+    requestedBy: row.requested_by || '', attempts: Number(row.attempt_count || 0),
+    lastError: row.last_error || '', createdAt: Number(row.created_ts || 0),
+    updatedAt: Number(row.updated_ts || 0),
+  };
+}
+
+/* Server-side authorization.
+ *
+ * assets/platform-kernel.js carries the same relation table for the browser and
+ * says of itself that a front-end check "never replaces server authorization".
+ * This is that server authorization — the same table, minus the localStorage
+ * grant/deny document, which the client writes and therefore may not widen what
+ * a caller is allowed to do here.  Roles this file does not know fall through to
+ * `employee`, which can create nothing. */
+const ROLE = {
+  owner: ['*'], proprietaire: ['*'], operator: ['*'],
+  /* write:device permet d'acquitter une alarme de parc — un responsable de
+     salle fait taire une caisse tombée sans réveiller le propriétaire.  La
+     caisse elle-même ne l'a pas : un appareil ne se déclare pas sain. */
+  manager: ['read:*', 'write:catalog', 'write:inventory', 'write:planning', 'write:customers',
+    'write:orders', 'write:reservations', 'write:reports', 'write:device',
+    'action:refund', 'action:reprint', 'action:message'],
+  caisse: ['read:catalog', 'read:inventory', 'read:customers', 'read:orders', 'read:device',
+    'write:orders', 'write:customers', 'action:checkout', 'action:reprint'],
+  serveur: ['read:tables', 'read:orders', 'read:planning', 'write:orders', 'action:request-bill'],
+  kitchen: ['read:orders', 'write:order-status'],
+  stock: ['read:catalog', 'read:inventory', 'write:inventory'],
+  employee: ['read:planning'],
+  /* A pairing cookie is a device, not a person.  It proves which counter the
+     request came from and nothing else, so it may report its own health and
+     exercise its own printer — and nothing else.  action:reprint is here only
+     because the test page is executed by the very device that asks for it and
+     the verdict must come back from that same cookie; it grants no read of the
+     merchant's books and no state change on anyone else's work. */
+  till: ['read:device', 'action:reprint'],
+};
+ROLE.cashier = ROLE.caisse; ROLE.caissier = ROLE.caisse; ROLE.caissiere = ROLE.caisse;
+ROLE.server = ROLE.serveur; ROLE.cuisinier = ROLE.kitchen; ROLE.magasinier = ROLE.stock;
+ROLE.employe = ROLE.employee;
+
+/* Same normalisation as normEmployeeRole in functions/auth/_lib.js: a job title
+   typed as "Caissière" must land on the same row as "caisse". */
+function normRole(value) {
+  let text = String(value == null ? '' : value).trim().toLowerCase();
+  try { text = text.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
+  return text.replace(/[’`´]/g, "'").replace(/\s+/g, ' ').slice(0, 40);
+}
+
+/* The permission a (domain, action) pair costs.  Mirror of needed() in
+   assets/operations.js — if one side changes the other must change with it, or
+   the dashboard offers a button the Worker answers with 403. */
+function needed(domain, action) {
+  if (domain === 'device' && action === 'heartbeat') return ['read', 'device'];
+  /* Envoyer un message et décider par quel canal la maison écrit à ses
+     clients ne sont pas le même droit : le second est un réglage de
+     l'établissement, qu'aucun rôle de salle ne détient. */
+  if (domain === 'notification' && action === 'set-preferences') return ['write', 'notification'];
+  if (domain === 'notification') return ['action', 'message'];
+  if (domain === 'procurement') return ['write', 'inventory'];
+  if (domain === 'payroll') return ['write', 'payroll'];
+  /* Rembourser, c'est rendre de l'argent : le droit qui compte est celui du
+     remboursement, pas celui d'émettre un lien.  Relever l'état auprès du
+     fournisseur ne change rien et reste une lecture. */
+  if (domain === 'payment' && action === 'refund-link') return ['action', 'refund'];
+  if (domain === 'payment' && action === 'settle-link') return ['read', 'payment'];
+  /* Une action dictée à l'assistant coûte exactement le droit que coûterait le
+     même travail fait à la main : ni plus, ni moins.  `write:ai` ne figure dans
+     aucun rôle — le laisser en défaut faisait de ces trois actions un privilège
+     réservé au propriétaire par accident et non par décision. */
+  if (domain === 'ai' && action === 'reprint') return ['action', 'reprint'];
+  if (domain === 'ai' && action === 'stock-adjust') return ['write', 'inventory'];
+  if (domain === 'ai' && action === 'message-customer') return ['action', 'message'];
+  if (domain === 'ai' && action === 'create-po') return ['write', 'inventory'];
+  if (domain === 'ai' && action === 'update-order-status') return ['write', 'orders'];
+  /* Imprimer un ticket d'essai, c'est réimprimer : une caissière teste sa
+     propre imprimante.  Faire taire une alarme est un acte d'exploitation et
+     coûte write:device, que la caisse n'a pas. */
+  if (domain === 'device' && action === 'test-print') return ['action', 'reprint'];
+  return ['write', domain];
+}
+
+function can(role, act, resource) {
+  const rules = ROLE[normRole(role)] || ROLE.employee;
+  const wanted = `${act}:${resource}`;
+  return rules.some((rule) => rule === '*' || rule === wanted || rule === `${act}:*`);
+}
+
+/* tenantFor() has already proved the caller may act on this merchant.  actorFor
+   answers the next question: as whom.  Cheapest identity first — the employee
+   branch costs two D1 reads because the role lives on the live roster, not in
+   the cookie. */
+/* La session `aid` possède-t-elle ce marchand ? Le registre fait foi ; à défaut
+ * de registre (base non migrée, D1 muet) on retombe sur le slug dérivé du nom du
+ * compte, qui reste la clé historique. Voir slugClaimedByOther dans auth/_lib.js
+ * pour la même prudence : on ne refuse que sur une réponse positive contraire. */
+async function sessionOwnsMerchant(env, aid, merchant) {
+  if (!aid || !merchant) return false;
+  try {
+    const owner = await storeOwner(env, merchant);
+    if (typeof owner === 'string' && owner !== '') return owner === aid;
+    const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(aid).first();
+    return !!(acc && acc.business && slugMerchant(acc.business) === merchant);
+  } catch (_) { return false; }
+}
+
+async function actorFor(request, env, merchant) {
+  try {
+    const session = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+    /* Le commentaire ci-dessus disait vrai pour la session SEULE : tenantFor a
+     * bien prouvé que l'appelant peut agir sur ce marchand. Mais tenantFor
+     * accepte AUSSI le cookie de caisse, et dans ce cas il a résolu le marchand
+     * depuis la caisse, pas depuis la session. Rendre `owner` sans revérifier
+     * revenait à donner ROLE.owner = ['*'] à n'importe quelle session posée à
+     * côté d'un cookie de caisse : il suffisait à un caissier de s'ouvrir un
+     * compte gratuit pour sortir le grand livre du commerçant, geler sa
+     * comptabilité et forger ses bulletins. On exige donc que la session
+     * possède réellement CE marchand ; sinon elle ne vaut rien ici et on
+     * retombe sur l'opérateur, l'employé, puis la caisse — dont le rôle est
+     * volontairement réduit à ['read:device','action:reprint']. */
+    if (session && session.aid && await sessionOwnsMerchant(env, session.aid, merchant)) {
+      return { kind: 'owner', role: 'owner', name: 'Propriétaire' };
+    }
+  } catch (_) {}
+  try { if (await isOperator(request, env)) return { kind: 'operator', role: 'operator', name: 'Opérateur Kiwi' }; } catch (_) {}
+  try {
+    const staff = await activeEmployee(request, env, merchant);
+    if (staff && staff.member) {
+      return {
+        kind: 'employee',
+        role: normRole(staff.member.function || staff.member.department || 'employee'),
+        name: clean(staff.member.name, 100) || 'Équipe',
+      };
+    }
+  } catch (_) {}
+  try { if (await isTillFor(request, env, merchant)) return { kind: 'till', role: 'till', name: 'Caisse' }; } catch (_) {}
+  return null;
+}
+
+/* Rend l'acteur, pas un booléen : ce qui signe un acquittement ou un document
+   doit venir de la session prouvée, jamais d'un nom que l'appelant se donne
+   lui-même dans le corps de la requête. */
+async function mayCommand(request, env, merchant, domain, action) {
+  const actor = await actorFor(request, env, merchant);
+  if (!actor) return null;
+  const check = needed(domain, action);
+  return can(actor.role, check[0], check[1]) ? actor : null;
+}
+
+/* Le maillon, pas la ligne : chaque événement scelle le précédent, si bien
+   qu'effacer ou réécrire une ligne au milieu du journal casse tout ce qui suit.
+   La chaîne est par commande et non par marchand — deux commandes écrites en
+   même temps ne se disputent pas la même tête de chaîne, et l'effacement de
+   l'histoire entière d'une commande se voit quand même : la commande, elle,
+   garde son compteur de tentatives et le vérificateur les compare. */
+async function seal(parts) {
+  const bytes = new TextEncoder().encode(parts.join(' '));
+  const sum = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(sum)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function event(env, command, name, status, detail) {
+  const at = now();
+  const kind = clean(name, 48);
+  const state = clean(status, 32);
+  const body = safeJson(detail || {}, 4000) || '{}';
+  /* Le rang, pas l'horloge.  Quatre états d'une même commande tiennent dans la
+     même milliseconde, et le suffixe aléatoire de l'identifiant n'est pas un
+     départage : trier là-dessus revient à tirer au sort le maillon précédent,
+     et la chaîne se fend à l'écriture même. */
+  for (let retry = 0; retry < 12; retry += 1) {
+  const last = await env.DB.prepare(
+    `SELECT hash, seq FROM operational_events WHERE merchant = ? AND command_id = ?
+      ORDER BY seq DESC LIMIT 1`
+  ).bind(command.merchant, command.id).first();
+  const prev = (last && last.hash) || '';
+  const seq = Number((last && last.seq) || 0) + 1;
+  const id = `${command.id}:${at}:${seq}`;
+  const hash = await seal([prev, id, command.id, command.merchant, kind, state, body, String(at), String(seq)]);
+  const inserted = await env.DB.prepare(
+    `INSERT INTO operational_events (id, command_id, merchant, event, status, detail, created_ts, seq, prev_hash, hash)
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+       WHERE COALESCE((SELECT MAX(seq) FROM operational_events WHERE merchant = ? AND command_id = ?), 0) = ?`
+  ).bind(id, command.id, command.merchant, kind, state, body, at, seq, prev, hash,
+    command.merchant, command.id, seq - 1).run();
+  if (Number(inserted && inserted.meta && inserted.meta.changes) === 1) return;
+  }
+  throw new Error('event-chain-contention');
+}
+
+async function update(env, command, status, provider, result, error, limit) {
+  const at = now();
+  /* `limit` existe pour une seule raison : un export de journal rend des lignes,
+     pas un accusé de réception.  Les autres domaines gardent le plafond serré. */
+  const stored = safeJson(result || {}, limit || 12000);
+  const terminalRefund = command.domain === 'payment' && command.action === 'refund-link';
+  const changed = await env.DB.prepare(
+    `UPDATE operational_commands SET status = ?, provider = ?, result = ?,
+       last_error = ?, attempt_count = attempt_count + 1, updated_ts = ?
+     WHERE id = ? AND merchant = ?${terminalRefund ? " AND status != 'completed'" : ''}`
+  ).bind(status, provider || '', stored, clean(error, 240), at, command.id, command.merchant).run();
+  if (terminalRefund && Number(changed && changed.meta && changed.meta.changes) === 0) {
+    const current = await env.DB.prepare('SELECT * FROM operational_commands WHERE id = ? AND merchant = ?')
+      .bind(command.id, command.merchant).first();
+    if (current) return current;
+    throw new Error('refund-command-missing');
+  }
+  await event(env, command, 'state', status, { provider: provider || '', reason: error || '' });
+  return Object.assign({}, command, { status, provider: provider || '', result: stored, last_error: clean(error, 240), updated_ts: at, attempt_count: Number(command.attempt_count || 0) + 1 });
+}
+
+async function postWebhook(url, body) {
+  if (!url) return { ok: false, reason: 'provider-unconfigured' };
+  try {
+    const response = await fetch(url, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json',
+        ...(body.commandId ? { 'Idempotency-Key': String(body.commandId) } : {}) },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(12000),
+    });
+    let data = {}; try { data = await response.json(); } catch (_) {}
+    return response.ok ? { ok: true, data } : { ok: false, reason: `provider-http-${response.status}` };
+  } catch (_) { return { ok: false, reason: 'provider-network' }; }
+}
+
+/* ————— Notifications ——————————————————————————————————————————————
+ *
+ * Prévenir un client n'est pas un appel HTTP unique.  Trois choses
+ * manquaient : le commerçant ne pouvait pas dire par quel canal il veut
+ * joindre ses clients, un canal muet ne laissait aucune seconde chance, et
+ * un même reçu redemandé partait deux fois.  Ce bloc traite l'envoi comme un
+ * flux : ordre de canaux, repli, dédoublonnage, une ligne de journal par
+ * tentative — y compris les tentatives qui n'ont pas eu lieu.
+ *
+ * Le repli ne s'applique jamais à `send-email` / `send-sms` /
+ * `send-whatsapp` : ces actions NOMMENT leur canal, et livrer le corps d'un
+ * e-mail par SMS serait une erreur, pas un secours.  Seules les intentions
+ * — reçu, rappel, lien de paiement — descendent la liste des préférences. */
+const NOTIFY_CHANNELS = ['whatsapp', 'sms', 'email'];
+const NOTIFY_PINNED = { 'send-email': 'email', 'send-sms': 'sms', 'send-whatsapp': 'whatsapp' };
+const NOTIFY_KINDS = { 'send-receipt': 'receipt', 'send-reminder': 'reminder', 'send-link': 'payment-link' };
+const NOTIFY_KIND_LIST = ['receipt', 'reminder', 'payment-link', 'message'];
+const NOTIFY_DEDUPE_MS = 6 * 60 * 60 * 1000;
+
+async function ensureNotify(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS notification_prefs (
+      merchant TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      channels TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      updated_ts INTEGER NOT NULL,
+      PRIMARY KEY (merchant, kind)
+    )`,
+  ).run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS notification_deliveries (
+      id TEXT PRIMARY KEY,
+      merchant TEXT NOT NULL,
+      command_id TEXT NOT NULL,
+      dedupe_key TEXT NOT NULL DEFAULT '',
+      kind TEXT NOT NULL DEFAULT '',
+      channel TEXT NOT NULL,
+      recipient TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL,
+      reason TEXT NOT NULL DEFAULT '',
+      created_ts INTEGER NOT NULL
+    )`,
+  ).run();
+  await env.DB.prepare(
+    'CREATE INDEX IF NOT EXISTS idx_notify_dedupe ON notification_deliveries (merchant, dedupe_key, created_ts DESC)',
+  ).run();
+  await env.DB.prepare(
+    'CREATE INDEX IF NOT EXISTS idx_notify_command ON notification_deliveries (merchant, command_id)',
+  ).run();
+}
+
+const NOTIFY_DAILY_CAP = 300;
+
+const looksEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+const looksPhone = (value) => /^\+?[0-9][0-9\s.-]{6,24}$/.test(value);
+
+/* Un canal ne peut être tenté que si l'on a l'adresse qu'il consomme.  Un
+   numéro de téléphone dans `to` ne rend pas l'e-mail possible, et une adresse
+   e-mail ne rend pas le SMS possible : le canal est alors sauté, pas échoué. */
+function recipientFor(channel, payload) {
+  const to = clean(payload && payload.to, 160);
+  if (channel === 'email') {
+    const mail = clean(payload && payload.email, 160) || to;
+    return looksEmail(mail) ? mail : '';
+  }
+  const phone = clean(payload && payload.phone, 40) || to;
+  return looksPhone(phone) ? phone.replace(/[\s.-]/g, '') : '';
+}
+
+/* sendMail() et postWebhook() vivent dans deux fichiers et ne parlent pas le
+   même vocabulaire d'échec : « unconfigured » d'un côté,
+   « provider-unconfigured » de l'autre.  Sans cette traduction, la même panne
+   se lirait de deux façons selon le canal essayé. */
+function normalizeMailReason(reason) {
+  const value = clean(reason, 60);
+  if (value === 'unconfigured') return 'provider-unconfigured';
+  if (value === 'no-recipient') return 'no-recipient';
+  if (value === 'network') return 'provider-network';
+  if (value.startsWith('http-')) return `provider-${value}`;
+  return 'delivery-failed';
+}
+
+async function deliverOne(env, channel, row, payload, to) {
+  if (channel === 'email') {
+    const sent = await sendMail(env, {
+      to, subject: clean(payload.subject, 160) || 'Kiwi', text: clean(payload.text, 4000),
+    });
+    return sent && sent.ok ? { ok: true } : { ok: false, reason: normalizeMailReason(sent && sent.reason) };
+  }
+  const endpoint = channel === 'sms' ? env.SMS_WEBHOOK : env.WHATSAPP_WEBHOOK;
+  const sent = await postWebhook(endpoint, {
+    kind: channel, to, text: clean(payload.text, 4000), subject: clean(payload.subject, 160),
+    reference: clean(payload.reference, 120), url: clean(payload.url, 400),
+    merchant: row.merchant, commandId: row.id,
+  });
+  return sent && sent.ok ? { ok: true } : { ok: false, reason: clean(sent && sent.reason, 60) || 'delivery-failed' };
+}
+
+function parseChannels(value) {
+  const raw = Array.isArray(value) ? value : String(value == null ? '' : value).split(',');
+  const seen = new Set();
+  const out = [];
+  raw.forEach((entry) => {
+    const channel = clean(entry, 20).toLowerCase();
+    if (NOTIFY_CHANNELS.includes(channel) && !seen.has(channel)) { seen.add(channel); out.push(channel); }
+  });
+  return out;
+}
+
+async function channelPlan(env, row, payload) {
+  const pinned = NOTIFY_PINNED[row.action];
+  if (pinned) return { order: [pinned], kind: 'message', pinned: true, enabled: true };
+  const kind = NOTIFY_KINDS[row.action] || 'message';
+  const asked = clean(payload && payload.channel, 20).toLowerCase();
+  if (NOTIFY_CHANNELS.includes(asked)) return { order: [asked], kind, pinned: true, enabled: true };
+  let stored = null;
+  try {
+    stored = await env.DB.prepare('SELECT channels, enabled FROM notification_prefs WHERE merchant = ? AND kind = ?')
+      .bind(row.merchant, kind).first();
+  } catch (_) { stored = null; }
+  const listed = stored ? parseChannels(stored.channels) : [];
+  return {
+    order: listed.length ? listed : NOTIFY_CHANNELS.slice(),
+    kind,
+    pinned: false,
+    enabled: !stored || Number(stored.enabled) !== 0,
+  };
+}
+
+async function recordDelivery(env, row, entry) {
+  const id = `nd-${clean(row.id, 60)}-${entry.channel}-${Math.random().toString(36).slice(2, 8)}`;
+  await env.DB.prepare(
+    `INSERT INTO notification_deliveries
+      (id, merchant, command_id, dedupe_key, kind, channel, recipient, status, reason, created_ts)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).bind(
+    id, row.merchant, row.id, clean(entry.dedupeKey, 120), clean(entry.kind, 30), entry.channel,
+    clean(entry.recipient, 160), entry.status, clean(entry.reason, 120), now(),
+  ).run();
+}
+
+async function notifyPrefs(env, row, payload) {
+  const kind = clean(payload && payload.kind, 30).toLowerCase();
+  if (!NOTIFY_KIND_LIST.includes(kind)) return update(env, row, 'failed', 'kiwi-notify', {}, 'unknown-kind');
+  const channels = parseChannels(payload && payload.channels);
+  if (!channels.length) return update(env, row, 'failed', 'kiwi-notify', {}, 'channels-required');
+  const enabled = payload && payload.enabled === false ? 0 : 1;
+  await env.DB.prepare(
+    `INSERT INTO notification_prefs (merchant, kind, channels, enabled, updated_ts) VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT (merchant, kind) DO UPDATE SET
+       channels = excluded.channels, enabled = excluded.enabled, updated_ts = excluded.updated_ts`,
+  ).bind(row.merchant, kind, channels.join(','), enabled, now()).run();
+  return update(env, row, 'completed', 'kiwi-notify',
+    { kind: kind, channels: channels, enabled: enabled === 1 }, '');
+}
+
+async function notifications(env, row, payload) {
+  try { await ensureNotify(env); } catch (_) { return update(env, row, 'failed', 'kiwi-notify', {}, 'unmigrated'); }
+  if (row.action === 'set-preferences') return notifyPrefs(env, row, payload);
+
+  /* Relais sortant : rien ne bornait le VOLUME. Le destinataire, le texte et
+   * l'URL viennent de l'appelant, aucun n'est rattaché au carnet du commerçant,
+   * et un compte tout neuf est « propriétaire ». Le carnet ne peut pas servir
+   * de filtre (une confirmation part souvent vers un client qui n'y est pas
+   * encore), donc on borne ce qui est bornable : un commerçant ne peut pas
+   * dépasser un quota d'envois par 24 h. Un relais mal configuré coûte alors au
+   * plus NOTIFY_DAILY_CAP messages, pas une campagne. */
+  try {
+    const since = now() - 86400000;
+    const used = await env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM notification_deliveries
+        WHERE merchant = ? AND status = 'sent' AND created_ts >= ?`,
+    ).bind(row.merchant, since).first();
+    if (used && Number(used.n) >= NOTIFY_DAILY_CAP) {
+      return update(env, row, 'blocked', 'kiwi-notify', {}, 'daily-cap');
+    }
+  } catch (_) { /* table absente : ensureNotify a déjà tranché */ }
+
+  const plan = await channelPlan(env, row, payload);
+  if (!plan.enabled) {
+    return update(env, row, 'blocked', 'kiwi-notify', { kind: plan.kind }, 'kind-disabled');
+  }
+  const configured = providers(env);
+  const order = plan.order.filter((channel) => configured[channel]);
+  if (!order.length) {
+    /* Un fournisseur absent est un commandement BLOQUÉ, jamais un « envoyé »
+       vert : le commerçant doit savoir que rien n'est parti. */
+    return update(env, row, 'blocked', plan.order[0] || '',
+      { kind: plan.kind, attempts: [] }, 'provider-unconfigured');
+  }
+
+  /* Dédoublonnage : un reçu redemandé pendant que le premier part encore ne
+     doit pas arriver deux fois chez le client.  La clé est explicite ou
+     dérivée de la référence — sans référence rien n'est dédoublonné, car deux
+     messages libres se ressemblent sans être le même message. */
+  const reference = clean(payload && payload.reference, 120);
+  const dedupeKey = clean(payload && payload.dedupeKey, 120) || (reference ? `${plan.kind}:${reference}` : '');
+  if (dedupeKey) {
+    const seen = await env.DB.prepare(
+      `SELECT command_id, channel FROM notification_deliveries
+        WHERE merchant = ? AND dedupe_key = ? AND status = 'sent' AND created_ts > ?
+        ORDER BY created_ts DESC LIMIT 1`,
+    ).bind(row.merchant, dedupeKey, now() - NOTIFY_DEDUPE_MS).first();
+    if (seen && clean(seen.command_id, 128) !== row.id) {
+      return update(env, row, 'sent', clean(seen.channel, 20),
+        { deduped: true, of: clean(seen.command_id, 128), kind: plan.kind, dedupeKey: dedupeKey }, '');
+    }
+  }
+
+  const attempts = [];
+  let last = 'delivery-failed';
+  let lastChannel = order[0];
+  for (let i = 0; i < order.length; i += 1) {
+    const channel = order[i];
+    lastChannel = channel;
+    const to = recipientFor(channel, payload);
+    if (!to) {
+      attempts.push({ channel: channel, status: 'skipped', reason: 'no-recipient' });
+      last = 'no-recipient';
+      await recordDelivery(env, row, { channel, status: 'skipped', reason: 'no-recipient', dedupeKey, kind: plan.kind, recipient: '' });
+      /* Le journal porte le canal et la raison, jamais le destinataire : la
+         piste d'audit ne doit pas devenir un carnet d'adresses. */
+      await event(env, row, 'delivery', 'skipped', { channel: channel, reason: 'no-recipient' });
+      continue;
+    }
+    const outcome = await deliverOne(env, channel, row, payload, to);
+    const status = outcome.ok ? 'sent' : 'failed';
+    const reason = outcome.ok ? '' : (outcome.reason || 'delivery-failed');
+    attempts.push({ channel: channel, status: status, reason: reason });
+    await recordDelivery(env, row, { channel, status, reason, dedupeKey, kind: plan.kind, recipient: to });
+    await event(env, row, 'delivery', status, { channel: channel, reason: reason });
+    if (outcome.ok) {
+      return update(env, row, 'sent', channel,
+        { delivered: true, channel: channel, kind: plan.kind, attempts: attempts, dedupeKey: dedupeKey }, '');
+    }
+    last = reason;
+  }
+  return update(env, row, 'blocked', lastChannel, { kind: plan.kind, attempts: attempts }, last);
+}
+
+/* ————— Comptabilité ————————————————————————————————————————————————
+ *
+ * Ces quatre actions n'existaient que sous forme de chaînes dans une liste
+ * blanche : elles retombaient sur la branche par défaut d'execute() et
+ * écrivaient `{persisted:true}`.  Une facture sans numéro, un avoir qui ne
+ * référence rien et une période « verrouillée » qui n'empêchait aucune écriture
+ * ne sont pas de la comptabilité.  Ce qui suit tient les trois invariants qui
+ * comptent vraiment : une numérotation continue attribuée par le serveur, des
+ * écritures en partie double dont le débit égale le crédit, et un verrou de
+ * période qui refuse réellement les écritures postérieures.
+ *
+ * Comptes du CGNC marocain : 3421 Clients · 7111 Ventes de marchandises ·
+ * 4455 État — TVA facturée.  La TVA n'est jamais inventée : sans `taxRate`
+ * explicite dans la charge utile, le taux est zéro et la pièce ne porte pas de
+ * ligne 4455. */
+const PERIOD = /^\d{4}-(0[1-9]|1[0-2])$/;
+const ACC = { client: '3421', ventes: '7111', tva: '4455' };
+
+function ymd(value) {
+  const text = clean(value, 10);
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (!parts) return '';
+  const [year, month, day] = [Number(parts[1]), Number(parts[2]), Number(parts[3])];
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  const round = probe.getUTCFullYear() === year && probe.getUTCMonth() === month - 1 && probe.getUTCDate() === day;
+  return round ? text : '';
+}
+
+/* L'argent circule en centimes entiers.  Un total en flottant finit toujours
+   par produire un journal qui ne s'équilibre pas à un centime près. */
+function cents(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return NaN;
+  const exact = Math.round(amount * 100);
+  return Number.isSafeInteger(exact) ? exact : NaN;
+}
+
+async function ensureLedger(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS accounting_documents (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, kind TEXT NOT NULL,
+      series TEXT NOT NULL, seq INTEGER NOT NULL, number TEXT NOT NULL,
+      doc_date TEXT NOT NULL, currency TEXT NOT NULL DEFAULT 'MAD',
+      total_cents INTEGER NOT NULL, tax_cents INTEGER NOT NULL DEFAULT 0,
+      customer TEXT NOT NULL DEFAULT '', parent_number TEXT NOT NULL DEFAULT '',
+      command_id TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL
+    )`
+  ).run();
+  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_acc_seq ON accounting_documents (merchant, series, seq)').run();
+  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_acc_number ON accounting_documents (merchant, number)').run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_acc_parent ON accounting_documents (merchant, parent_number)').run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS accounting_entries (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, document_id TEXT NOT NULL,
+      number TEXT NOT NULL, doc_date TEXT NOT NULL, account TEXT NOT NULL,
+      label TEXT NOT NULL DEFAULT '', debit_cents INTEGER NOT NULL DEFAULT 0,
+      credit_cents INTEGER NOT NULL DEFAULT 0, created_ts INTEGER NOT NULL
+    )`
+  ).run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_acc_entries_period ON accounting_entries (merchant, doc_date)').run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS accounting_periods (
+      merchant TEXT NOT NULL, period TEXT NOT NULL, locked_ts INTEGER NOT NULL,
+      locked_by TEXT NOT NULL DEFAULT '', command_id TEXT NOT NULL DEFAULT '',
+      PRIMARY KEY (merchant, period)
+    )`
+  ).run();
+}
+
+async function lockedPeriod(env, merchant, date) {
+  const hit = await env.DB.prepare(
+    'SELECT period FROM accounting_periods WHERE merchant = ? AND period = ?'
+  ).bind(merchant, date.slice(0, 7)).first();
+  return hit ? hit.period : '';
+}
+
+/* La numérotation est continue parce que le numéro est attribué et consommé
+   dans le même geste : il n'existe qu'une fois la pièce écrite.  L'index unique
+   (merchant, series, seq) fait échouer bruyamment deux allocations simultanées
+   — on réessaie sur le suivant, on ne saute jamais un rang.  Les lignes sont
+   écrites après l'en-tête et non dans une transaction : D1 n'en offre pas ici,
+   et un en-tête sans lignes se voit immédiatement dans l'export, alors qu'un
+   numéro sauté serait invisible et irréparable. */
+async function writeDocument(env, doc, lines) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const top = await env.DB.prepare(
+      'SELECT COALESCE(MAX(seq), 0) AS taken FROM accounting_documents WHERE merchant = ? AND series = ?'
+    ).bind(doc.merchant, doc.series).first();
+    const seq = Number((top && top.taken) || 0) + 1;
+    const number = `${doc.series}-${String(seq).padStart(6, '0')}`;
+    try {
+      await env.DB.prepare(
+        `INSERT INTO accounting_documents
+         (id, merchant, kind, series, seq, number, doc_date, currency, total_cents,
+          tax_cents, customer, parent_number, command_id, created_ts)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(doc.id, doc.merchant, doc.kind, doc.series, seq, number, doc.date, doc.currency,
+        doc.totalCents, doc.taxCents, doc.customer, doc.parent || '', doc.id, now()).run();
+      for (let i = 0; i < lines.length; i += 1) {
+        await env.DB.prepare(
+          `INSERT INTO accounting_entries
+           (id, merchant, document_id, number, doc_date, account, label, debit_cents, credit_cents, created_ts)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(`${doc.id}:${i}`, doc.merchant, doc.id, number, doc.date, lines[i].account,
+          lines[i].label, lines[i].debit || 0, lines[i].credit || 0, now()).run();
+      }
+      return { seq, number };
+    } catch (_) { /* rang pris entre-temps — on recommence sur le suivant */ }
+  }
+  return null;
+}
+
+const balanced = (lines) => lines.reduce((sum, line) => sum + (line.debit || 0), 0)
+  === lines.reduce((sum, line) => sum + (line.credit || 0), 0);
+
+async function accounting(env, row, payload) {
+  await ensureLedger(env);
+  const merchant = row.merchant;
+  const fail = (reason) => update(env, row, 'failed', 'kiwi-ledger', {}, reason);
+
+  if (row.action === 'lock-period') {
+    const period = clean(payload && payload.period, 7);
+    if (!PERIOD.test(period)) return fail('period-required');
+    const held = await env.DB.prepare(
+      'SELECT locked_ts FROM accounting_periods WHERE merchant = ? AND period = ?'
+    ).bind(merchant, period).first();
+    if (held) {
+      return update(env, row, 'completed', 'kiwi-ledger',
+        { period, lockedAt: Number(held.locked_ts || 0), alreadyLocked: true }, '');
+    }
+    const at = now();
+    await env.DB.prepare(
+      'INSERT INTO accounting_periods (merchant, period, locked_ts, locked_by, command_id) VALUES (?, ?, ?, ?, ?)'
+    ).bind(merchant, period, at, clean(row.requested_by, 100), row.id).run();
+    return update(env, row, 'completed', 'kiwi-ledger', { period, lockedAt: at, alreadyLocked: false }, '');
+  }
+
+  if (row.action === 'export-journal') {
+    const from = ymd(payload && payload.from);
+    const to = ymd(payload && payload.to);
+    if (!from || !to || from > to) return fail('range-required');
+    const found = await env.DB.prepare(
+      `SELECT number, doc_date, account, label, debit_cents, credit_cents
+       FROM accounting_entries WHERE merchant = ? AND doc_date >= ? AND doc_date <= ?
+       ORDER BY doc_date, number, account`
+    ).bind(merchant, from, to).all();
+    const rows = found.results || [];
+    const accounts = {};
+    let debit = 0; let credit = 0;
+    const lines = rows.map((entry) => {
+      const d = Number(entry.debit_cents || 0); const c = Number(entry.credit_cents || 0);
+      debit += d; credit += c;
+      const bucket = accounts[entry.account] || (accounts[entry.account] = { debitCents: 0, creditCents: 0 });
+      bucket.debitCents += d; bucket.creditCents += c;
+      return { number: entry.number, date: entry.doc_date, account: entry.account, label: entry.label, debitCents: d, creditCents: c };
+    });
+    const summary = { from, to, count: rows.length, debitCents: debit, creditCents: credit, balanced: debit === credit, accounts };
+    /* Un export tronqué qui ne le dit pas est pire qu'un export vide. */
+    const full = Object.assign({ lines, truncated: false }, summary);
+    const fits = !!safeJson(full, 55000);
+    return update(env, row, 'completed', 'kiwi-ledger',
+      fits ? full : Object.assign({ truncated: true }, summary), '', 60000);
+  }
+
+  const date = ymd(payload && payload.date);
+  if (!date) return fail('date-required');
+  const total = cents(payload && payload.amount);
+  if (!(total > 0 && total <= 1000000000)) return fail('invalid-amount');
+  const locked = await lockedPeriod(env, merchant, date);
+  if (locked) return fail(`period-locked:${locked}`);
+  const currency = clean((payload && payload.currency) || 'MAD', 3).toUpperCase();
+  const customer = clean(payload && payload.customer, 160);
+
+  if (row.action === 'create-invoice') {
+    const rate = Number((payload && payload.taxRate) || 0);
+    if (!(rate >= 0 && rate <= 100)) return fail('invalid-tax-rate');
+    const tax = Math.round((total * rate) / (100 + rate));
+    const net = total - tax;
+    const lines = [
+      { account: ACC.client, label: 'Clients', debit: total, credit: 0 },
+      { account: ACC.ventes, label: 'Ventes', debit: 0, credit: net },
+    ];
+    if (tax > 0) lines.push({ account: ACC.tva, label: 'TVA facturée', debit: 0, credit: tax });
+    if (!balanced(lines)) return fail('unbalanced-entry');
+    const written = await writeDocument(env, {
+      id: row.id, merchant, kind: 'invoice', series: `FA-${date.slice(0, 4)}`,
+      date, currency, totalCents: total, taxCents: tax, customer, parent: '',
+    }, lines);
+    if (!written) return fail('numbering-conflict');
+    return update(env, row, 'completed', 'kiwi-ledger', {
+      number: written.number, series: `FA-${date.slice(0, 4)}`, seq: written.seq, date,
+      currency, totalCents: total, taxCents: tax, netCents: net, customer,
+      entries: lines.length, balanced: true,
+    }, '');
+  }
+
+  /* credit-note — un avoir est toujours l'avoir de quelque chose. */
+  const target = clean(payload && payload.invoice, 40);
+  const invoice = await env.DB.prepare(
+    "SELECT * FROM accounting_documents WHERE merchant = ? AND number = ? AND kind = 'invoice'"
+  ).bind(merchant, target).first();
+  if (!invoice) return fail('invoice-not-found');
+  const already = await env.DB.prepare(
+    "SELECT COALESCE(SUM(total_cents), 0) AS credited FROM accounting_documents WHERE merchant = ? AND parent_number = ? AND kind = 'credit-note'"
+  ).bind(merchant, target).first();
+  const remaining = Number(invoice.total_cents || 0) - Number((already && already.credited) || 0);
+  if (!(total <= remaining)) return fail('exceeds-invoice');
+  /* L'avoir porte la même proportion de TVA que la facture qu'il annule. */
+  const tax = Number(invoice.total_cents) > 0
+    ? Math.round((total * Number(invoice.tax_cents || 0)) / Number(invoice.total_cents))
+    : 0;
+  const net = total - tax;
+  const lines = [
+    { account: ACC.client, label: 'Clients', debit: 0, credit: total },
+    { account: ACC.ventes, label: 'Ventes', debit: net, credit: 0 },
+  ];
+  if (tax > 0) lines.push({ account: ACC.tva, label: 'TVA facturée', debit: tax, credit: 0 });
+  if (!balanced(lines)) return fail('unbalanced-entry');
+  const written = await writeDocument(env, {
+    id: row.id, merchant, kind: 'credit-note', series: `AV-${date.slice(0, 4)}`,
+    date, currency, totalCents: total, taxCents: tax,
+    customer: customer || clean(invoice.customer, 160), parent: target,
+  }, lines);
+  if (!written) return fail('numbering-conflict');
+  return update(env, row, 'completed', 'kiwi-ledger', {
+    number: written.number, series: `AV-${date.slice(0, 4)}`, seq: written.seq, date,
+    invoice: target, currency, totalCents: total, taxCents: tax, netCents: net,
+    remainingCents: remaining - total, entries: lines.length, balanced: true,
+  }, '');
+}
+
+/* ---- Achats ------------------------------------------------------------
+ * Un bon de commande n'est pas un message : c'est un engagement qui vit
+ * plusieurs jours et que trois gestes différents viennent modifier.  Tant que
+ * `create-po` se contentait de persister sa charge utile, « réceptionner »
+ * ne voulait rien dire — rien ne retenait la quantité commandée, donc rien ne
+ * pouvait constater qu'on en recevait plus que prévu.
+ *
+ * Les trois invariants tenus ici : une numérotation continue attribuée par le
+ * serveur (BC-AAAA-000001), des quantités reçues cumulées ligne à ligne qui ne
+ * dépassent jamais la quantité commandée, et un rapprochement à trois voies —
+ * commandé / reçu / facturé — qui refuse une facture fournisseur qui ne
+ * correspond pas à ce qui est effectivement entré en stock. */
+const PO_MAX_LINES = 60;
+
+async function ensurePurchase(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS purchase_orders (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, seq INTEGER NOT NULL,
+      number TEXT NOT NULL, supplier TEXT NOT NULL, status TEXT NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'MAD', expected_date TEXT NOT NULL DEFAULT '',
+      total_cents INTEGER NOT NULL DEFAULT 0, invoiced_cents INTEGER NOT NULL DEFAULT 0,
+      command_id TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL,
+      updated_ts INTEGER NOT NULL
+    )`
+  ).run();
+  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_po_number ON purchase_orders (merchant, number)').run();
+  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_po_seq ON purchase_orders (merchant, seq)').run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_po_status ON purchase_orders (merchant, status, updated_ts DESC)').run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS purchase_order_lines (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, number TEXT NOT NULL,
+      line_no INTEGER NOT NULL, sku TEXT NOT NULL, label TEXT NOT NULL DEFAULT '',
+      unit TEXT NOT NULL DEFAULT '', qty INTEGER NOT NULL, unit_cents INTEGER NOT NULL,
+      received_qty INTEGER NOT NULL DEFAULT 0, returned_qty INTEGER NOT NULL DEFAULT 0,
+      created_ts INTEGER NOT NULL
+    )`
+  ).run();
+  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_po_line_sku ON purchase_order_lines (merchant, number, sku)').run();
+}
+
+/* Les quantités sont des entiers : une demi-bouteille commandée n'existe pas,
+   et un flottant finirait par rendre « tout reçu » indécidable. */
+function poLines(payload) {
+  const raw = payload && Array.isArray(payload.lines) ? payload.lines : null;
+  if (!raw || !raw.length) return { error: 'no-lines' };
+  if (raw.length > PO_MAX_LINES) return { error: 'too-many-lines' };
+  const seen = new Set();
+  const lines = [];
+  for (let i = 0; i < raw.length; i += 1) {
+    const item = raw[i] || {};
+    const sku = clean(item.sku || item.ref, 60);
+    if (!sku) return { error: 'sku-required' };
+    if (seen.has(sku)) return { error: 'duplicate-sku' };
+    seen.add(sku);
+    const qty = Number(item.qty);
+    if (!Number.isSafeInteger(qty) || qty <= 0 || qty > 1000000) return { error: 'invalid-quantity' };
+    const unitCents = cents(item.unitPrice != null ? item.unitPrice : item.unit_price);
+    if (!Number.isFinite(unitCents) || unitCents < 0) return { error: 'invalid-price' };
+    lines.push({
+      sku, qty, unitCents, label: clean(item.label, 160),
+      unit: clean(item.unit, 24),
+    });
+  }
+  return { lines };
+}
+
+/* Même geste que la numérotation comptable : le rang est consommé au moment
+   où l'en-tête s'écrit, l'index unique fait échouer une allocation simultanée,
+   et l'on réessaie sur le suivant plutôt que de sauter un numéro. */
+async function writePurchaseOrder(env, order, lines) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const top = await env.DB.prepare(
+      'SELECT COALESCE(MAX(seq), 0) AS taken FROM purchase_orders WHERE merchant = ?'
+    ).bind(order.merchant).first();
+    const seq = Number((top && top.taken) || 0) + 1;
+    const number = `BC-${order.year}-${String(seq).padStart(6, '0')}`;
+    try {
+      await env.DB.prepare(
+        `INSERT INTO purchase_orders
+         (id, merchant, seq, number, supplier, status, currency, expected_date,
+          total_cents, invoiced_cents, command_id, created_ts, updated_ts)
+         VALUES (?, ?, ?, ?, ?, 'draft', ?, ?, ?, 0, ?, ?, ?)`
+      ).bind(order.id, order.merchant, seq, number, order.supplier, order.currency,
+        order.expectedDate, order.totalCents, order.id, now(), now()).run();
+      for (let i = 0; i < lines.length; i += 1) {
+        await env.DB.prepare(
+          `INSERT INTO purchase_order_lines
+           (id, merchant, number, line_no, sku, label, unit, qty, unit_cents, received_qty, returned_qty, created_ts)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)`
+        ).bind(`${order.id}:${i}`, order.merchant, number, i + 1, lines[i].sku,
+          lines[i].label, lines[i].unit, lines[i].qty, lines[i].unitCents, now()).run();
+      }
+      return { seq, number };
+    } catch (_) { /* rang pris entre-temps — on recommence sur le suivant */ }
+  }
+  return null;
+}
+
+/* Les mouvements de réception et de retour partagent leur forme : une liste de
+   couples (sku, quantité) rapprochée des lignes déjà en base. */
+function movement(payload) {
+  const raw = payload && Array.isArray(payload.lines) ? payload.lines : null;
+  if (!raw || !raw.length) return { error: 'no-lines' };
+  if (raw.length > PO_MAX_LINES) return { error: 'too-many-lines' };
+  const moves = [];
+  for (let i = 0; i < raw.length; i += 1) {
+    const item = raw[i] || {};
+    const sku = clean(item.sku || item.ref, 60);
+    if (!sku) return { error: 'sku-required' };
+    const qty = Number(item.qty);
+    if (!Number.isSafeInteger(qty) || qty <= 0 || qty > 1000000) return { error: 'invalid-quantity' };
+    moves.push({ sku, qty });
+  }
+  return { moves };
+}
+
+async function procurement(env, row, payload) {
+  await ensurePurchase(env);
+  const merchant = row.merchant;
+  const fail = (reason) => update(env, row, 'failed', 'kiwi-procurement', {}, reason);
+
+  if (row.action === 'create-po') {
+    const supplier = clean(payload && payload.supplier, 160);
+    if (!supplier) return fail('supplier-required');
+    const expected = payload && payload.expectedDate ? ymd(payload.expectedDate) : '';
+    if (payload && payload.expectedDate && !expected) return fail('invalid-date');
+    const read = poLines(payload);
+    if (read.error) return fail(read.error);
+    const total = read.lines.reduce((sum, line) => sum + line.qty * line.unitCents, 0);
+    if (!Number.isSafeInteger(total)) return fail('invalid-price');
+    const currency = clean((payload && payload.currency) || 'MAD', 3).toUpperCase();
+    const written = await writePurchaseOrder(env, {
+      id: row.id, merchant, supplier, currency, expectedDate: expected,
+      totalCents: total, year: (expected || new Date(now()).toISOString().slice(0, 10)).slice(0, 4),
+    }, read.lines);
+    if (!written) return fail('numbering-conflict');
+    /* La commande reste `draft` : c'est l'état du bon lui-même, et c'est ce
+       point d'entrée du cycle de vie que le tableau de bord fait avancer. */
+    return update(env, row, 'draft', 'kiwi-procurement', {
+      number: written.number, seq: written.seq, status: 'draft', supplier, currency,
+      expectedDate: expected, totalCents: total, lines: read.lines.length,
+      units: read.lines.reduce((sum, line) => sum + line.qty, 0),
+    }, '');
+  }
+
+  const number = clean(payload && (payload.po || payload.number), 40);
+  const order = await env.DB.prepare(
+    'SELECT * FROM purchase_orders WHERE merchant = ? AND number = ?'
+  ).bind(merchant, number).first();
+  if (!order) return fail('po-not-found');
+
+  if (row.action === 'submit-po') {
+    /* Un bon déjà parti chez le fournisseur ne se renvoie pas : le second envoi
+       serait une seconde commande sans que personne ne l'ait décidé. */
+    if (order.status !== 'draft') return fail(`bad-transition:${order.status}`);
+    await env.DB.prepare(
+      "UPDATE purchase_orders SET status = 'submitted', updated_ts = ? WHERE merchant = ? AND number = ?"
+    ).bind(now(), merchant, number).run();
+    return update(env, row, 'completed', 'kiwi-procurement', {
+      number, status: 'submitted', supplier: clean(order.supplier, 160),
+      totalCents: Number(order.total_cents || 0), expectedDate: clean(order.expected_date, 10),
+    }, '');
+  }
+
+  const rows = await env.DB.prepare(
+    'SELECT sku, label, qty, unit_cents, received_qty, returned_qty FROM purchase_order_lines WHERE merchant = ? AND number = ? ORDER BY line_no'
+  ).bind(merchant, number).all();
+  const book = new Map((rows && rows.results || []).map((line) => [String(line.sku), line]));
+
+  if (row.action === 'receive-po') {
+    if (order.status !== 'submitted' && order.status !== 'partial') return fail(`not-submitted:${order.status}`);
+    const read = movement(payload);
+    if (read.error) return fail(read.error);
+    /* On valide tout le bordereau avant d'écrire quoi que ce soit : une
+       réception à moitié appliquée serait un écart de stock invisible. */
+    let receivedCents = 0;
+    for (const move of read.moves) {
+      const line = book.get(move.sku);
+      if (!line) return fail('line-not-found');
+      if (Number(line.received_qty || 0) + move.qty > Number(line.qty)) return fail('exceeds-ordered');
+      receivedCents += move.qty * Number(line.unit_cents || 0);
+    }
+    /* Rapprochement à trois voies : si le fournisseur joint sa facture, elle
+       doit valoir exactement ce qui entre en stock, sinon rien n'est reçu. */
+    const invoiced = payload && payload.invoiceAmount != null ? cents(payload.invoiceAmount) : null;
+    if (invoiced != null && !Number.isFinite(invoiced)) return fail('invalid-amount');
+    if (invoiced != null && invoiced !== receivedCents) return fail('invoice-mismatch');
+    for (const move of read.moves) {
+      await env.DB.prepare(
+        'UPDATE purchase_order_lines SET received_qty = received_qty + ? WHERE merchant = ? AND number = ? AND sku = ?'
+      ).bind(move.qty, merchant, number, move.sku).run();
+      const line = book.get(move.sku);
+      line.received_qty = Number(line.received_qty || 0) + move.qty;
+    }
+    let outstanding = 0;
+    let receivedUnits = 0;
+    book.forEach((line) => {
+      outstanding += Number(line.qty) - Number(line.received_qty || 0);
+      receivedUnits += Number(line.received_qty || 0);
+    });
+    const status = outstanding > 0 ? 'partial' : 'received';
+    await env.DB.prepare(
+      'UPDATE purchase_orders SET status = ?, invoiced_cents = invoiced_cents + ?, updated_ts = ? WHERE merchant = ? AND number = ?'
+    ).bind(status, invoiced != null ? invoiced : 0, now(), merchant, number).run();
+    return update(env, row, 'completed', 'kiwi-procurement', {
+      number, status, receivedCents, receivedUnits, outstandingUnits: outstanding,
+      matched: invoiced != null, lines: read.moves.length,
+    }, '');
+  }
+
+  /* supplier-return — on ne rend que ce qui est entré, et jamais deux fois. */
+  const read = movement(payload);
+  if (read.error) return fail(read.error);
+  let creditCents = 0;
+  for (const move of read.moves) {
+    const line = book.get(move.sku);
+    if (!line) return fail('line-not-found');
+    const held = Number(line.received_qty || 0) - Number(line.returned_qty || 0);
+    if (move.qty > held) return fail('exceeds-received');
+    creditCents += move.qty * Number(line.unit_cents || 0);
+  }
+  for (const move of read.moves) {
+    await env.DB.prepare(
+      'UPDATE purchase_order_lines SET returned_qty = returned_qty + ? WHERE merchant = ? AND number = ? AND sku = ?'
+    ).bind(move.qty, merchant, number, move.sku).run();
+    const line = book.get(move.sku);
+    line.returned_qty = Number(line.returned_qty || 0) + move.qty;
+  }
+  let heldUnits = 0;
+  let returnedUnits = 0;
+  book.forEach((line) => {
+    heldUnits += Number(line.received_qty || 0) - Number(line.returned_qty || 0);
+    returnedUnits += Number(line.returned_qty || 0);
+  });
+  await env.DB.prepare(
+    'UPDATE purchase_orders SET updated_ts = ? WHERE merchant = ? AND number = ?'
+  ).bind(now(), merchant, number).run();
+  return update(env, row, 'completed', 'kiwi-procurement', {
+    number, status: clean(order.status, 20), creditCents, returnedUnits,
+    heldUnits, lines: read.moves.length,
+  }, '');
+}
+
+/* ---- Paie --------------------------------------------------------------
+ * Un export de paie n'est pas un fichier : c'est un calcul qui engage
+ * l'employeur devant le salarié, la CNSS et le fisc.  Tant que le domaine
+ * tombait dans le fourre-tout générique, « préparer les bulletins » ne
+ * calculait rien et ne retenait rien — et trois écrans annonçaient pourtant
+ * un PDF envoyé au comptable.
+ *
+ * Les taux sont exprimés en points de base : 4,48 % s'écrit 448, donc aucun
+ * arrondi flottant ne se glisse dans un salaire.  Ce sont ceux publiés au
+ * Maroc au moment de l'écriture, et le commerçant peut les remplacer
+ * (`payload.rates`) parce qu'un taux légal change plus vite qu'un
+ * déploiement.  Chaque bulletin porte le jeu de taux qui l'a produit : un
+ * chiffre de paie sans son taux ne se vérifie pas.  Le barème de l'IGR, lui,
+ * n'est pas paramétrable — il n'appartient pas au commerçant. */
+const PAY = {
+  cnss: 448, amo: 226, cnssEmployer: 898, amoEmployer: 411, family: 640, training: 160,
+  ceilingCents: 600000,
+  fraisHigh: 3500, fraisLow: 2500, fraisThresholdCents: 650000, fraisCapCents: 291667,
+  dependentCents: 4167, dependentMax: 6,
+};
+const IGR = [[333300, 0], [500000, 1000], [666700, 2000], [833300, 3000], [1500000, 3400], [Infinity, 3700]];
+const PAYACC = { salaires: '6171', charges: '6174', avances: '3431', dus: '4432', cnss: '4441', igr: '4452' };
+const PAY_MAX_STAFF = 200;
+const bp = (base, rate) => Math.round((base * rate) / 10000);
+const monthEnd = (period) => new Date(Date.UTC(
+  Number(period.slice(0, 4)), Number(period.slice(5, 7)), 0
+)).toISOString().slice(0, 10);
+
+/* Barème progressif parcouru tranche par tranche.  La « somme à déduire » des
+   tables usuelles donnerait le même résultat, mais elle cache le calcul : ici
+   chaque tranche est visible et se relit contre le texte. */
+function igrCents(taxable) {
+  let tax = 0; let floor = 0;
+  for (const [ceiling, rate] of IGR) {
+    if (taxable <= floor) break;
+    tax += bp(Math.min(taxable, ceiling) - floor, rate);
+    floor = ceiling;
+  }
+  return tax;
+}
+
+function payRates(payload) {
+  const over = payload && payload.rates && typeof payload.rates === 'object' ? payload.rates : null;
+  const rates = Object.assign({}, PAY);
+  if (!over) return { rates, set: 'ma-2026' };
+  for (const key of ['cnss', 'amo', 'cnssEmployer', 'amoEmployer', 'family', 'training']) {
+    if (over[key] == null) continue;
+    const value = Number(over[key]);
+    if (!Number.isSafeInteger(value) || value < 0 || value > 10000) return { error: `invalid-rate:${key}` };
+    rates[key] = value;
+  }
+  if (over.ceilingCents != null) {
+    const ceiling = Number(over.ceilingCents);
+    if (!Number.isSafeInteger(ceiling) || ceiling < 0 || ceiling > 100000000) return { error: 'invalid-ceiling' };
+    rates.ceilingCents = ceiling;
+  }
+  return { rates, set: 'custom' };
+}
+
+function payStaff(payload) {
+  const raw = payload && Array.isArray(payload.employees) ? payload.employees : null;
+  if (!raw || !raw.length) return { error: 'no-employees' };
+  if (raw.length > PAY_MAX_STAFF) return { error: 'too-many-employees' };
+  const seen = new Set();
+  const staff = [];
+  for (let i = 0; i < raw.length; i += 1) {
+    const item = raw[i] || {};
+    const id = clean(item.id || item.memberId, 80);
+    if (!id) return { error: 'member-required' };
+    if (seen.has(id)) return { error: 'duplicate-member' };
+    seen.add(id);
+    const base = cents(item.base != null ? item.base : item.baseSalary);
+    const overtime = item.overtime != null ? cents(item.overtime) : 0;
+    const bonus = item.bonus != null ? cents(item.bonus) : 0;
+    const advance = item.advance != null ? cents(item.advance) : 0;
+    for (const part of [base, overtime, bonus, advance]) {
+      if (!Number.isFinite(part) || part < 0 || part > 100000000) return { error: 'invalid-amount' };
+    }
+    const dependents = item.dependents == null ? 0 : Number(item.dependents);
+    if (!Number.isSafeInteger(dependents) || dependents < 0 || dependents > 20) return { error: 'invalid-dependents' };
+    const gross = base + overtime + bonus;
+    if (gross <= 0) return { error: 'invalid-amount' };
+    if (advance > gross) return { error: 'advance-exceeds-gross' };
+    staff.push({ id, name: clean(item.name, 120), role: clean(item.role, 60), base, overtime, bonus, advance, dependents, gross });
+  }
+  return { staff };
+}
+
+function payslipFor(person, rates) {
+  const gross = person.gross;
+  const capped = Math.min(gross, rates.ceilingCents);
+  const cnss = bp(capped, rates.cnss);
+  const amo = bp(gross, rates.amo);
+  /* Frais professionnels : forfait plus généreux sous le seuil, plafonné dans
+     les deux cas — sans lui l'assiette imposable serait fausse pour tout le
+     monde, et surtout pour les petits salaires. */
+  const frais = Math.min(bp(gross, gross <= PAY.fraisThresholdCents ? PAY.fraisHigh : PAY.fraisLow), PAY.fraisCapCents);
+  const taxable = Math.max(0, gross - frais - cnss - amo);
+  const relief = Math.min(person.dependents, PAY.dependentMax) * PAY.dependentCents;
+  const igr = Math.max(0, igrCents(taxable) - relief);
+  const employer = bp(capped, rates.cnssEmployer) + bp(gross, rates.amoEmployer)
+    + bp(gross, rates.family) + bp(gross, rates.training);
+  return {
+    grossCents: gross, cappedCents: capped, cnssCents: cnss, amoCents: amo,
+    taxableCents: taxable, igrCents: igr, employerCents: employer,
+    advanceCents: person.advance, netCents: gross - cnss - amo - igr - person.advance,
+  };
+}
+
+async function ensurePayroll(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS payslips (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, period TEXT NOT NULL,
+      member_id TEXT NOT NULL, member_name TEXT NOT NULL DEFAULT '',
+      role TEXT NOT NULL DEFAULT '', rate_set TEXT NOT NULL DEFAULT '',
+      base_cents INTEGER NOT NULL DEFAULT 0, overtime_cents INTEGER NOT NULL DEFAULT 0,
+      bonus_cents INTEGER NOT NULL DEFAULT 0, advance_cents INTEGER NOT NULL DEFAULT 0,
+      gross_cents INTEGER NOT NULL, capped_cents INTEGER NOT NULL DEFAULT 0,
+      cnss_cents INTEGER NOT NULL DEFAULT 0, amo_cents INTEGER NOT NULL DEFAULT 0,
+      igr_cents INTEGER NOT NULL DEFAULT 0, employer_cents INTEGER NOT NULL DEFAULT 0,
+      net_cents INTEGER NOT NULL, dependents INTEGER NOT NULL DEFAULT 0,
+      command_id TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL
+    )`
+  ).run();
+  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_payslip_member ON payslips (merchant, period, member_id)').run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_payslip_period ON payslips (merchant, period)').run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS payroll_periods (
+      merchant TEXT NOT NULL, period TEXT NOT NULL, status TEXT NOT NULL,
+      employees INTEGER NOT NULL DEFAULT 0, gross_cents INTEGER NOT NULL DEFAULT 0,
+      net_cents INTEGER NOT NULL DEFAULT 0, employer_cents INTEGER NOT NULL DEFAULT 0,
+      journal_number TEXT NOT NULL DEFAULT '', declaration TEXT NOT NULL DEFAULT '',
+      updated_ts INTEGER NOT NULL, PRIMARY KEY (merchant, period)
+    )`
+  ).run();
+}
+
+const payTotals = (rows) => rows.reduce((sum, slip) => ({
+  employees: sum.employees + 1,
+  grossCents: sum.grossCents + Number(slip.gross_cents || 0),
+  cappedCents: sum.cappedCents + Number(slip.capped_cents || 0),
+  cnssCents: sum.cnssCents + Number(slip.cnss_cents || 0),
+  amoCents: sum.amoCents + Number(slip.amo_cents || 0),
+  igrCents: sum.igrCents + Number(slip.igr_cents || 0),
+  employerCents: sum.employerCents + Number(slip.employer_cents || 0),
+  advanceCents: sum.advanceCents + Number(slip.advance_cents || 0),
+  netCents: sum.netCents + Number(slip.net_cents || 0),
+}), { employees: 0, grossCents: 0, cappedCents: 0, cnssCents: 0, amoCents: 0, igrCents: 0, employerCents: 0, advanceCents: 0, netCents: 0 });
+
+async function payroll(env, row, payload) {
+  await ensurePayroll(env);
+  const merchant = row.merchant;
+  const fail = (reason) => update(env, row, 'failed', 'kiwi-payroll', {}, reason);
+  const period = clean(payload && payload.period, 7);
+  if (!PERIOD.test(period)) return fail('period-required');
+  const held = await env.DB.prepare(
+    'SELECT * FROM payroll_periods WHERE merchant = ? AND period = ?'
+  ).bind(merchant, period).first();
+
+  if (row.action === 'prepare-payslips') {
+    /* Une période déjà déclarée est un chiffre parti à la CNSS, et une période
+       déjà passée au journal est une écriture comptable : la recalculer en
+       silence ferait diverger le livre de ce que le salarié a touché. */
+    if (held && held.declaration) return fail('period-declared');
+    if (held && held.journal_number) return fail('period-posted');
+    const read = payStaff(payload);
+    if (read.error) return fail(read.error);
+    const rated = payRates(payload);
+    if (rated.error) return fail(rated.error);
+    const slips = [];
+    for (const person of read.staff) {
+      const slip = payslipFor(person, rated.rates);
+      /* Un net négatif n'est pas un bulletin : c'est une avance qu'on réclame
+         au salarié.  On refuse plutôt que d'écrire un salaire impossible. */
+      if (slip.netCents < 0) return fail(`net-negative:${person.id}`);
+      slips.push({ person, slip });
+    }
+    await env.DB.prepare('DELETE FROM payslips WHERE merchant = ? AND period = ?').bind(merchant, period).run();
+    for (let i = 0; i < slips.length; i += 1) {
+      const { person, slip } = slips[i];
+      await env.DB.prepare(
+        `INSERT INTO payslips
+         (id, merchant, period, member_id, member_name, role, rate_set, base_cents,
+          overtime_cents, bonus_cents, advance_cents, gross_cents, capped_cents,
+          cnss_cents, amo_cents, igr_cents, employer_cents, net_cents, dependents,
+          command_id, created_ts, updated_ts)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(`${row.id}:${i}`, merchant, period, person.id, person.name, person.role,
+        rated.set, person.base, person.overtime, person.bonus, person.advance,
+        slip.grossCents, slip.cappedCents, slip.cnssCents, slip.amoCents, slip.igrCents,
+        slip.employerCents, slip.netCents, person.dependents, row.id, now(), now()).run();
+    }
+    const totals = payTotals(slips.map(({ person, slip }) => ({
+      gross_cents: slip.grossCents, capped_cents: slip.cappedCents, cnss_cents: slip.cnssCents,
+      amo_cents: slip.amoCents, igr_cents: slip.igrCents, employer_cents: slip.employerCents,
+      advance_cents: slip.advanceCents, net_cents: slip.netCents,
+    })));
+    await env.DB.prepare(
+      `INSERT INTO payroll_periods (merchant, period, status, employees, gross_cents, net_cents, employer_cents, journal_number, declaration, updated_ts)
+       VALUES (?, ?, 'prepared', ?, ?, ?, ?, '', '', ?)
+       ON CONFLICT (merchant, period) DO UPDATE SET status = 'prepared', employees = excluded.employees,
+         gross_cents = excluded.gross_cents, net_cents = excluded.net_cents,
+         employer_cents = excluded.employer_cents, updated_ts = excluded.updated_ts`
+    ).bind(merchant, period, totals.employees, totals.grossCents, totals.netCents, totals.employerCents, now()).run();
+    return update(env, row, 'prepared', 'kiwi-payroll', Object.assign({
+      period, rateSet: rated.set, status: 'prepared',
+      payslips: slips.map(({ person, slip }) => ({
+        memberId: person.id, name: person.name, grossCents: slip.grossCents,
+        cnssCents: slip.cnssCents, amoCents: slip.amoCents, igrCents: slip.igrCents,
+        netCents: slip.netCents,
+      })),
+    }, totals), '', 60000);
+  }
+
+  const stored = await env.DB.prepare(
+    'SELECT * FROM payslips WHERE merchant = ? AND period = ? ORDER BY member_name, member_id'
+  ).bind(merchant, period).all();
+  const list = (stored && stored.results) || [];
+  /* Exporter ou déclarer une paie qui n'a jamais été calculée produirait un
+     fichier vide qui a l'air d'un fichier. */
+  if (!list.length) return fail('no-payslips');
+  const totals = payTotals(list);
+
+  if (row.action === 'export-payroll') {
+    if (held && held.journal_number) {
+      return update(env, row, 'completed', 'kiwi-payroll', Object.assign({
+        period, number: clean(held.journal_number, 40), alreadyPosted: true, status: 'exported',
+      }, totals), '');
+    }
+    await ensureLedger(env);
+    const date = monthEnd(period);
+    const locked = await lockedPeriod(env, merchant, date);
+    if (locked) return fail(`period-locked:${locked}`);
+    /* Le brut n'est pas une charge à lui seul : ce que l'entreprise supporte,
+       c'est le brut plus la part patronale, et ce qu'elle doit se répartit
+       entre le salarié, la CNSS, l'État et les avances déjà versées. */
+    const social = totals.cnssCents + totals.amoCents + totals.employerCents;
+    const lines = [
+      { account: PAYACC.salaires, label: 'Rémunérations du personnel', debit: totals.grossCents, credit: 0 },
+      { account: PAYACC.charges, label: 'Charges sociales employeur', debit: totals.employerCents, credit: 0 },
+      { account: PAYACC.dus, label: 'Rémunérations dues au personnel', debit: 0, credit: totals.netCents },
+      { account: PAYACC.cnss, label: 'CNSS · AMO', debit: 0, credit: social },
+      { account: PAYACC.igr, label: 'État · IGR', debit: 0, credit: totals.igrCents },
+      { account: PAYACC.avances, label: 'Avances et acomptes au personnel', debit: 0, credit: totals.advanceCents },
+    ].filter((line) => line.debit > 0 || line.credit > 0);
+    if (!balanced(lines)) return fail('unbalanced-entry');
+    const series = `PAIE-${period.slice(0, 4)}`;
+    const written = await writeDocument(env, {
+      id: row.id, merchant, kind: 'payroll', series, date, currency: 'MAD',
+      totalCents: totals.grossCents + totals.employerCents, taxCents: totals.igrCents,
+      customer: '', parent: '',
+    }, lines);
+    if (!written) return fail('numbering-conflict');
+    await env.DB.prepare(
+      "UPDATE payroll_periods SET status = 'exported', journal_number = ?, updated_ts = ? WHERE merchant = ? AND period = ?"
+    ).bind(written.number, now(), merchant, period).run();
+    /* Les lignes partent avec le résultat : l'écran de paie écrit un vrai CSV
+       à partir de ce que le serveur a calculé, jamais d'un tableau reconstruit
+       côté navigateur.  Un export tronqué le dit. */
+    const rows = list.map((slip) => ({
+      memberId: clean(slip.member_id, 80), name: clean(slip.member_name, 120), role: clean(slip.role, 60),
+      grossCents: Number(slip.gross_cents || 0), cnssCents: Number(slip.cnss_cents || 0),
+      amoCents: Number(slip.amo_cents || 0), igrCents: Number(slip.igr_cents || 0),
+      advanceCents: Number(slip.advance_cents || 0), employerCents: Number(slip.employer_cents || 0),
+      netCents: Number(slip.net_cents || 0),
+    }));
+    const summary = Object.assign({
+      period, number: written.number, series, seq: written.seq, date, status: 'exported',
+      entries: lines.length, balanced: true, alreadyPosted: false,
+    }, totals);
+    const full = Object.assign({ rows, truncated: false }, summary);
+    return update(env, row, 'completed', 'kiwi-payroll',
+      safeJson(full, 55000) ? full : Object.assign({ truncated: true }, summary), '', 60000);
+  }
+
+  /* submit-cnss — la déclaration fige la période : après elle, un recalcul
+     silencieux ferait mentir un bordereau déjà déposé. */
+  if (held && held.declaration) {
+    return update(env, row, 'completed', 'kiwi-payroll', Object.assign({
+      period, declaration: clean(held.declaration, 40), alreadyDeclared: true, status: 'declared',
+    }, totals), '');
+  }
+  const declaration = `DS-${period}`;
+  await env.DB.prepare(
+    `INSERT INTO payroll_periods (merchant, period, status, employees, gross_cents, net_cents, employer_cents, journal_number, declaration, updated_ts)
+     VALUES (?, ?, 'declared', ?, ?, ?, ?, '', ?, ?)
+     ON CONFLICT (merchant, period) DO UPDATE SET status = 'declared', declaration = excluded.declaration, updated_ts = excluded.updated_ts`
+  ).bind(merchant, period, totals.employees, totals.grossCents, totals.netCents,
+    totals.employerCents, declaration, now()).run();
+  return update(env, row, 'completed', 'kiwi-payroll', Object.assign({
+    period, declaration, alreadyDeclared: false, status: 'declared',
+    socialCents: totals.cnssCents + totals.amoCents + totals.employerCents,
+  }, totals), '');
+}
+
+/* ————— Encaissement à distance —————————————————————————————————————————
+ *
+ * `create-link` appelait déjà un vrai fournisseur, mais `cancel-link` et
+ * `refund-link` n'existaient que dans la liste blanche : elles retombaient sur
+ * la branche par défaut d'execute() et répondaient `draft` + {persisted:true}
+ * sans rien annuler ni rembourser.  Trois invariants tiennent ici :
+ *
+ *   · le lien est une pièce du commerçant.  Sa référence PAY-000001 est
+ *     attribuée par le serveur ; celle du fournisseur n'est qu'un identifiant
+ *     externe rangé à côté, jamais la clé sur laquelle on raisonne ;
+ *   · un lien ne devient « payé » que parce que le fournisseur l'affirme
+ *     (`settle-link`), jamais parce qu'un client l'a cliqué — et le montant
+ *     annoncé est écrêté au montant demandé, sinon un fournisseur bavard
+ *     gonflerait la recette ;
+ *   · le remboursé est la SOMME des lignes de remboursement, pas un compteur.
+ *     L'index unique sur le numéro fait échouer la seconde écriture simultanée,
+ *     on relit alors le total et on re-vérifie le plafond avant de réessayer :
+ *     deux remboursements lancés ensemble ne peuvent pas dépasser l'encaissé.
+ */
+async function ensurePayments(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS payment_links (
+      merchant TEXT NOT NULL, reference TEXT NOT NULL, seq INTEGER NOT NULL,
+      command_id TEXT NOT NULL DEFAULT '', provider_ref TEXT NOT NULL DEFAULT '',
+      url TEXT NOT NULL DEFAULT '', amount_cents INTEGER NOT NULL,
+      paid_cents INTEGER NOT NULL DEFAULT 0, currency TEXT NOT NULL DEFAULT 'MAD',
+      description TEXT NOT NULL DEFAULT '', customer TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL, created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL,
+      PRIMARY KEY (merchant, reference)
+    )`
+  ).run();
+  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_pay_seq ON payment_links (merchant, seq)').run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS payment_refunds (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, reference TEXT NOT NULL,
+      number TEXT NOT NULL, amount_cents INTEGER NOT NULL, reason TEXT NOT NULL DEFAULT '',
+      command_id TEXT NOT NULL DEFAULT '', provider_ref TEXT NOT NULL DEFAULT '',
+      created_ts INTEGER NOT NULL
+    )`
+  ).run();
+  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_pay_refund_number ON payment_refunds (merchant, number)').run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_pay_refund_ref ON payment_refunds (merchant, reference, created_ts)').run();
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS payment_refund_reservations (
+    merchant TEXT NOT NULL, command_id TEXT NOT NULL, reference TEXT NOT NULL,
+    amount_cents INTEGER NOT NULL CHECK(amount_cents > 0), status TEXT NOT NULL,
+    provider_ref TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL,
+    PRIMARY KEY (merchant, command_id)
+  )`).run();
+}
+
+async function reserveRefund(env, merchant, reference, commandId, amountCents) {
+  // One SQL statement checks committed refunds AND all uncertain/in-flight
+  // external calls. Do not release a reservation merely because HTTP timed out.
+  return env.DB.prepare(`INSERT INTO payment_refund_reservations
+    (merchant, command_id, reference, amount_cents, status, created_ts, updated_ts)
+    SELECT ?, ?, ?, ?, 'reserved', ?, ? FROM payment_links p
+      WHERE p.merchant = ? AND p.reference = ?
+        AND ? <= p.paid_cents
+          - COALESCE((SELECT SUM(amount_cents) FROM payment_refunds f
+             WHERE f.merchant = p.merchant AND f.reference = p.reference), 0)
+          - COALESCE((SELECT SUM(amount_cents) FROM payment_refund_reservations r
+             WHERE r.merchant = p.merchant AND r.reference = p.reference
+               AND r.status IN ('reserved', 'unknown')
+               AND NOT EXISTS (SELECT 1 FROM payment_refunds f
+                 WHERE f.merchant = r.merchant AND f.command_id = r.command_id)), 0)
+    ON CONFLICT(merchant, command_id) DO NOTHING RETURNING command_id`)
+    .bind(merchant, commandId, reference, amountCents, now(), now(), merchant, reference, amountCents).first();
+}
+
+async function refundedFor(env, merchant, reference) {
+  const seen = await env.DB.prepare(
+    'SELECT COUNT(*) AS lines, COALESCE(SUM(amount_cents), 0) AS total FROM payment_refunds WHERE merchant = ? AND reference = ?'
+  ).bind(merchant, reference).first();
+  return { lines: Number((seen && seen.lines) || 0), total: Number((seen && seen.total) || 0) };
+}
+
+/* L'état se déduit des montants, jamais de l'ordre d'arrivée des commandes :
+   un `settle-link` qui traîne ne doit pas repeindre en « payé » un lien déjà
+   remboursé. */
+function linkState(base, paidCents, refundedCents) {
+  if (refundedCents > 0) return refundedCents >= paidCents ? 'refunded' : 'partially-refunded';
+  if (paidCents > 0) return 'paid';
+  return base;
+}
+
+function linkView(link, paidCents, refundedCents, reservedCents = 0) {
+  return {
+    reference: clean(link.reference, 40),
+    status: linkState(clean(link.status, 24), paidCents, refundedCents),
+    amountCents: Number(link.amount_cents || 0),
+    paidCents, refundedCents,
+    reservedCents, reconciliationRequired: reservedCents > 0,
+    refundableCents: Math.max(0, paidCents - refundedCents - reservedCents),
+    currency: clean(link.currency, 3), url: clean(link.url, 800),
+    customer: clean(link.customer, 160), description: clean(link.description, 240),
+    providerRef: clean(link.provider_ref, 160),
+  };
+}
+
+async function writeLink(env, wish) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const top = await env.DB.prepare(
+      'SELECT COALESCE(MAX(seq), 0) AS taken FROM payment_links WHERE merchant = ?'
+    ).bind(wish.merchant).first();
+    const seq = Number((top && top.taken) || 0) + 1;
+    const reference = `PAY-${String(seq).padStart(6, '0')}`;
+    const at = now();
+    try {
+      await env.DB.prepare(
+        `INSERT INTO payment_links (merchant, reference, seq, command_id, provider_ref, url,
+           amount_cents, paid_cents, currency, description, customer, status, created_ts, updated_ts)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 'active', ?, ?)`
+      ).bind(wish.merchant, reference, seq, wish.commandId, wish.providerRef, wish.url,
+        wish.amountCents, wish.currency, wish.description, wish.customer, at, at).run();
+      return { seq, reference };
+    } catch (_) { /* rang pris entre-temps — on recommence sur le suivant */ }
+  }
+  return null;
+}
+
+async function writeRefund(env, wish) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const existing = await env.DB.prepare('SELECT number FROM payment_refunds WHERE merchant = ? AND command_id = ?')
+      .bind(wish.merchant, wish.commandId).first();
+    if (existing) return { ok: true, number: existing.number, refundedCents: (await refundedFor(env, wish.merchant, wish.reference)).total };
+    const seen = await refundedFor(env, wish.merchant, wish.reference);
+    if (wish.amountCents > wish.paidCents - seen.total) return { ok: false, reason: 'refund-exceeds-paid' };
+    const number = `${wish.reference}/R${seen.lines + 1}`;
+    try {
+      await env.DB.prepare(
+        `INSERT INTO payment_refunds (id, merchant, reference, number, amount_cents, reason,
+           command_id, provider_ref, created_ts)
+         SELECT ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE NOT EXISTS
+           (SELECT 1 FROM payment_refunds WHERE merchant = ? AND command_id = ?)`
+      ).bind(`${wish.merchant}:${number}`, wish.merchant, wish.reference, number, wish.amountCents,
+        wish.reason, wish.commandId, wish.providerRef, now(), wish.merchant, wish.commandId).run();
+      const stored = await env.DB.prepare('SELECT number FROM payment_refunds WHERE merchant = ? AND command_id = ?')
+        .bind(wish.merchant, wish.commandId).first();
+      if (stored) return { ok: true, number: stored.number, refundedCents: (await refundedFor(env, wish.merchant, wish.reference)).total };
+    } catch (_) { /* numéro pris — on relit le total et on re-vérifie le plafond */ }
+  }
+  return { ok: false, reason: 'refund-number-taken' };
+}
+
+const SETTLED = new Set(['pending', 'active', 'paid', 'expired', 'cancelled']);
+
+function refundEvidence(data, row, amountCents, requireStatus = false) {
+  if (!data || !clean(data.reference, 160)) return '';
+  if (data.commandId != null && data.commandId !== row.id) return '';
+  if (data.amount != null && cents(data.amount) !== amountCents) return '';
+  const status = clean(data.status, 24).toLowerCase();
+  if ((requireStatus || status) && !['refunded', 'completed', 'succeeded'].includes(status)) return '';
+  if (requireStatus && (data.commandId !== row.id || cents(data.amount) !== amountCents)) return '';
+  return clean(data.reference, 160);
+}
+
+async function finishRefund(env, row, link, reservation, providerRef) {
+  // Persist provider evidence before the ledger write, allowing a local-only
+  // retry after a DB interruption. The balance remains held until recorded.
+  await env.DB.prepare(`UPDATE payment_refund_reservations SET status = 'unknown', provider_ref = ?, updated_ts = ?
+    WHERE merchant = ? AND command_id = ?`).bind(providerRef, now(), row.merchant, row.id).run();
+  const payload = parseJson(row.payload) || {};
+  const written = await writeRefund(env, {
+    merchant: row.merchant, reference: reservation.reference, amountCents: Number(reservation.amount_cents),
+    paidCents: Number(link.paid_cents), reason: clean(payload.reason, 240), commandId: row.id, providerRef,
+  });
+  if (!written.ok) return update(env, row, 'blocked', 'payment-link', {
+    reference: reservation.reference, reservedCents: Number(reservation.amount_cents), reconciliationRequired: true,
+  }, 'refund-provider-accepted-ledger-pending');
+  await env.DB.prepare(`UPDATE payment_refund_reservations SET status = 'confirmed', updated_ts = ?
+    WHERE merchant = ? AND command_id = ?`).bind(now(), row.merchant, row.id).run();
+  const status = linkState(clean(link.status, 24), Number(link.paid_cents), written.refundedCents);
+  await env.DB.prepare('UPDATE payment_links SET status = ?, updated_ts = ? WHERE merchant = ? AND reference = ?')
+    .bind(status, now(), row.merchant, reservation.reference).run();
+  return update(env, row, 'completed', 'payment-link', Object.assign(
+    linkView(link, Number(link.paid_cents), written.refundedCents),
+    { status, number: written.number, refundCents: Number(reservation.amount_cents) }), '');
+}
+
+async function reconcileRefund(env, row) {
+  await ensurePayments(env);
+  const reservation = await env.DB.prepare('SELECT * FROM payment_refund_reservations WHERE merchant = ? AND command_id = ?')
+    .bind(row.merchant, row.id).first();
+  // No reservation means no external refund was attempted by this flow.
+  if (!reservation) {
+    // A queued command may still be between creation and reservation in another
+    // request. Do not start a competing external execution in that window.
+    if ((row.status === 'queued' || row.status === 'processing') && now() - Number(row.updated_ts || row.created_ts || 0) < 60000) return {
+      ...row, result: JSON.stringify({ pending: true, reconciliationRequired: true }),
+    };
+    return payments(env, row, parseJson(row.payload) || {});
+  }
+  const link = await env.DB.prepare('SELECT * FROM payment_links WHERE merchant = ? AND reference = ?')
+    .bind(row.merchant, reservation.reference).first();
+  if (!link) return update(env, row, 'blocked', 'payment-link', { reconciliationRequired: true }, 'link-not-found');
+  let providerRef = clean(reservation.provider_ref, 160);
+  if (!providerRef) {
+    // This is a status inquiry, NEVER a repeat of payment-refund. Unsupported,
+    // pending, empty or mismatched responses leave the balance safely held.
+    const answer = await postWebhook(env.PAYMENT_LINK_WEBHOOK, {
+      kind: 'payment-refund-status', merchant: row.merchant, commandId: row.id,
+      reference: reservation.reference, providerRef: clean(link.provider_ref, 160),
+    });
+    providerRef = answer.ok ? refundEvidence(answer.data, row, Number(reservation.amount_cents), true) : '';
+  }
+  if (!providerRef) return update(env, row, 'blocked', 'payment-link', {
+    reference: reservation.reference, reservedCents: Number(reservation.amount_cents), reconciliationRequired: true,
+  }, 'refund-provider-outcome-unknown');
+  return finishRefund(env, row, link, reservation, providerRef);
+}
+
+async function duplicateView(env, row) {
+  const view = publicRow(row);
+  if (row.domain !== 'payment' || row.action !== 'refund-link' || row.status === 'completed') return view;
+  try {
+    const reservation = await env.DB.prepare('SELECT * FROM payment_refund_reservations WHERE merchant = ? AND command_id = ?')
+      .bind(row.merchant, row.id).first();
+    if (reservation) view.result = Object.assign({}, view.result || {}, {
+      reference: reservation.reference, reservedCents: Number(reservation.amount_cents), reconciliationRequired: true,
+    });
+  } catch (_) { view.result = Object.assign({}, view.result || {}, { reconciliationRequired: true }); }
+  return view;
+}
+
+async function payments(env, row, payload) {
+  await ensurePayments(env);
+  const merchant = row.merchant;
+  const fail = (reason) => update(env, row, 'failed', 'payment-link', {}, reason);
+  const held = (reason) => update(env, row, 'blocked', 'payment-link', {}, reason);
+
+  if (row.action === 'create-link') {
+    const amountCents = cents(payload.amount);
+    if (!Number.isFinite(amountCents) || amountCents <= 0 || amountCents > 1000000000) return fail('invalid-amount');
+    const currency = clean(payload.currency || 'MAD', 3).toUpperCase();
+    const description = clean(payload.description, 240);
+    const customer = clean(payload.customer, 160);
+    const delivered = await postWebhook(env.PAYMENT_LINK_WEBHOOK, {
+      kind: 'payment-link', merchant, commandId: row.id,
+      amount: amountCents / 100, currency, description, customer,
+      expiresAt: Number(payload.expiresAt || 0) || null,
+    });
+    if (!delivered.ok) return held(delivered.reason || 'provider-failed');
+    const url = clean(delivered.data && delivered.data.url, 800);
+    const providerRef = clean(delivered.data && delivered.data.reference, 160);
+    if (!/^https:\/\//.test(url)) return fail('provider-returned-no-link');
+    const written = await writeLink(env, {
+      merchant, commandId: row.id, providerRef, url,
+      amountCents, currency, description, customer,
+    });
+    if (!written) return fail('reference-allocation-failed');
+    return update(env, row, 'active', 'payment-link', {
+      url, reference: written.reference, providerRef,
+      amountCents, currency, status: 'active',
+    }, '');
+  }
+
+  const reference = clean(payload.reference, 40);
+  if (!reference) return fail('reference-required');
+  const link = await env.DB.prepare(
+    'SELECT * FROM payment_links WHERE merchant = ? AND reference = ?'
+  ).bind(merchant, reference).first();
+  if (!link) return fail('link-not-found');
+  const refunds = await refundedFor(env, merchant, reference);
+  const refundedCents = refunds.total;
+  let paidCents = Number(link.paid_cents || 0);
+  const state = linkState(clean(link.status, 24), paidCents, refundedCents);
+
+  if (row.action === 'cancel-link') {
+    /* Rejouer une annulation ne doit pas rappeler le fournisseur ni échouer :
+       la commande a déjà eu l'effet demandé. */
+    if (state === 'cancelled') {
+      return update(env, row, 'completed', 'payment-link',
+        Object.assign(linkView(link, paidCents, refundedCents), { alreadyCancelled: true }), '');
+    }
+    if (paidCents > 0) return fail('link-already-paid');
+    const answer = await postWebhook(env.PAYMENT_LINK_WEBHOOK, {
+      kind: 'payment-cancel', merchant, commandId: row.id,
+      reference, providerRef: clean(link.provider_ref, 160),
+    });
+    if (!answer.ok) return held(answer.reason || 'provider-failed');
+    await env.DB.prepare(
+      'UPDATE payment_links SET status = ?, updated_ts = ? WHERE merchant = ? AND reference = ?'
+    ).bind('cancelled', now(), merchant, reference).run();
+    return update(env, row, 'completed', 'payment-link', Object.assign(
+      linkView(link, paidCents, refundedCents), { status: 'cancelled', alreadyCancelled: false }), '');
+  }
+
+  if (row.action === 'settle-link') {
+    const answer = await postWebhook(env.PAYMENT_LINK_WEBHOOK, {
+      kind: 'payment-status', merchant, commandId: row.id,
+      reference, providerRef: clean(link.provider_ref, 160),
+    });
+    if (!answer.ok) return held(answer.reason || 'provider-failed');
+    const observed = clean(answer.data && answer.data.status, 24).toLowerCase();
+    if (!SETTLED.has(observed)) return fail('provider-returned-no-status');
+    let base = clean(link.status, 24);
+    if (observed === 'paid') {
+      const seen = answer.data.paidAmount == null
+        ? Number(link.amount_cents || 0) : cents(answer.data.paidAmount);
+      if (!Number.isFinite(seen) || seen <= 0) return fail('provider-returned-no-amount');
+      paidCents = Math.min(seen, Number(link.amount_cents || 0));
+      base = 'paid';
+    } else if (observed === 'expired' || observed === 'cancelled') { base = observed; }
+    const status = linkState(base, paidCents, refundedCents);
+    await env.DB.prepare(
+      'UPDATE payment_links SET paid_cents = ?, status = ?, updated_ts = ? WHERE merchant = ? AND reference = ?'
+    ).bind(paidCents, status, now(), merchant, reference).run();
+    return update(env, row, 'completed', 'payment-link', Object.assign(
+      linkView(link, paidCents, refundedCents), { status, observed }), '');
+  }
+
+  if (row.action === 'refund-link') {
+    if (paidCents <= 0) return fail('link-not-paid');
+    const askedCents = payload.amount == null ? paidCents - refundedCents : cents(payload.amount);
+    if (!Number.isFinite(askedCents) || askedCents <= 0) return fail('invalid-amount');
+    if (askedCents > paidCents - refundedCents) return fail('refund-exceeds-paid');
+    if (!env.PAYMENT_LINK_WEBHOOK) return held('provider-unconfigured');
+    const reservation = await reserveRefund(env, merchant, reference, row.id, askedCents);
+    if (!reservation) {
+      const own = await env.DB.prepare('SELECT * FROM payment_refund_reservations WHERE merchant = ? AND command_id = ?')
+        .bind(merchant, row.id).first();
+      if (own) {
+        const current = await env.DB.prepare('SELECT * FROM operational_commands WHERE id = ? AND merchant = ?')
+          .bind(row.id, merchant).first();
+        return current && current.status === 'completed' ? current : {
+          ...(current || row), result: JSON.stringify({ reference, pending: true, reservedCents: Number(own.amount_cents), reconciliationRequired: true }),
+        };
+      }
+      return fail('refund-balance-reserved-or-exceeded');
+    }
+    const answer = await postWebhook(env.PAYMENT_LINK_WEBHOOK, {
+      kind: 'payment-refund', merchant, commandId: row.id, reference,
+      providerRef: clean(link.provider_ref, 160), amount: askedCents / 100,
+      currency: clean(link.currency, 3), reason: clean(payload.reason, 240),
+    });
+    const refundRef = answer.ok ? refundEvidence(answer.data, row, askedCents) : '';
+    if (!refundRef) {
+      await env.DB.prepare(`UPDATE payment_refund_reservations SET status = 'unknown', updated_ts = ?
+        WHERE merchant = ? AND command_id = ?`).bind(now(), merchant, row.id).run();
+      return update(env, row, 'blocked', 'payment-link', {
+        reference, reservedCents: askedCents, reconciliationRequired: true,
+      }, 'refund-provider-outcome-unknown');
+    }
+    return finishRefund(env, row, link, { reference, amount_cents: askedCents }, refundRef);
+  }
+
+  return fail('unsupported-action');
+}
+
+/* Parc et santé des appareils.
+ *
+ * Le battement de cœur existait déjà côté navigateur ; le serveur répondait
+ * « recorded: true » et n'écrivait rien.  Un parc dont on ne garde pas la
+ * dernière nouvelle ne dit pas si une caisse est tombée à midi.
+ *
+ * Trois invariants tiennent ce module.  Un appareil est identifié par un
+ * jeton stable qu'il porte lui-même — sans quoi le parc s'effondre à une
+ * ligne par type d'application.  Une alarme est un état qui s'ouvre et se
+ * ferme dans un journal, pas un booléen qu'on repeint.  Et « hors ligne » se
+ * calcule à la lecture : un appareil éteint n'envoie évidemment pas le
+ * battement qui le déclarerait absent, donc une machine à états qui ne
+ * tournerait qu'à l'écriture ne lèverait jamais cette alarme-là. */
+const BEAT_MS = 300000;                          /* période du battement client */
+const DEVICE_OFFLINE_MS = 3 * BEAT_MS + 60000;   /* trois battements manqués */
+const DEVICE_STALE_MS = 30 * 24 * 3600 * 1000;   /* un appareil oublié sort du parc */
+
+async function ensureDevices(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS device_health (
+      merchant TEXT NOT NULL, device_id TEXT NOT NULL,
+      app TEXT NOT NULL DEFAULT '', label TEXT NOT NULL DEFAULT '',
+      online INTEGER NOT NULL DEFAULT 1, standalone INTEGER NOT NULL DEFAULT 0,
+      printer_configured INTEGER NOT NULL DEFAULT 0, printer_connected INTEGER NOT NULL DEFAULT 0,
+      alert TEXT NOT NULL DEFAULT '', alert_since_ts INTEGER NOT NULL DEFAULT 0,
+      acked_ts INTEGER NOT NULL DEFAULT 0, acked_by TEXT NOT NULL DEFAULT '',
+      beats INTEGER NOT NULL DEFAULT 0,
+      first_seen_ts INTEGER NOT NULL, last_seen_ts INTEGER NOT NULL,
+      PRIMARY KEY (merchant, device_id)
+    )`
+  ).run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_device_seen ON device_health (merchant, last_seen_ts)').run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS device_alerts (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, device_id TEXT NOT NULL,
+      code TEXT NOT NULL, opened_ts INTEGER NOT NULL, closed_ts INTEGER NOT NULL DEFAULT 0,
+      acked_ts INTEGER NOT NULL DEFAULT 0, acked_by TEXT NOT NULL DEFAULT ''
+    )`
+  ).run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_device_alert_open ON device_alerts (merchant, device_id, closed_ts)').run();
+}
+
+/* Fonction pure, appelée à l'écriture ET à la lecture.  Une seule alarme à la
+   fois, par ordre de gravité : un appareil muet passe avant son imprimante. */
+function deviceAlarm(row, at) {
+  if (!row) return '';
+  if (at - Number(row.last_seen_ts || 0) > DEVICE_OFFLINE_MS) return 'device-offline';
+  if (Number(row.printer_configured) && !Number(row.printer_connected)) return 'printer-unreachable';
+  if (clean(row.app, 24) === 'caisse' && !Number(row.printer_configured)) return 'printer-unconfigured';
+  return '';
+}
+
+/* Un battement mis en file hors ligne arrive au serveur bien après avoir été
+   émis.  L'horodatage porté par le client fait foi tant qu'il n'est ni futur
+   ni vieux d'un jour ; sinon l'heure du serveur reprend la main. */
+function beatTime(payload, at) {
+  const claimed = Number(payload && payload.at) || 0;
+  if (!claimed || claimed > at || at - claimed > 86400000) return at;
+  return claimed;
+}
+
+async function reconcileAlert(env, merchant, deviceId, before, code, at) {
+  if (before === code) return;
+  if (before) {
+    await env.DB.prepare(
+      'UPDATE device_alerts SET closed_ts = ? WHERE merchant = ? AND device_id = ? AND code = ? AND closed_ts = 0'
+    ).bind(at, merchant, deviceId, before).run();
+  }
+  if (code) {
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO device_alerts (id, merchant, device_id, code, opened_ts, closed_ts, acked_ts, acked_by)
+       VALUES (?, ?, ?, ?, ?, 0, 0, '')`
+    ).bind(merchant + ':' + deviceId + ':' + code + ':' + at, merchant, deviceId, code, at).run();
+  }
+  /* Une alarme neuve n'est pas acquittée : changer de code efface le silence. */
+  await env.DB.prepare(
+    "UPDATE device_health SET alert = ?, alert_since_ts = ?, acked_ts = 0, acked_by = '' WHERE merchant = ? AND device_id = ?"
+  ).bind(code, code ? at : 0, merchant, deviceId).run();
+}
+
+function deviceView(row, code, at) {
+  const held = code && code === clean(row.alert, 40);
+  return {
+    deviceId: clean(row.device_id, 80), app: clean(row.app, 24), label: clean(row.label, 80),
+    online: !!Number(row.online), standalone: !!Number(row.standalone),
+    printerConfigured: !!Number(row.printer_configured), printerConnected: !!Number(row.printer_connected),
+    alert: code, alertSince: held ? Number(row.alert_since_ts) || at : at,
+    acknowledged: !!(held && Number(row.acked_ts)), ackedBy: held ? clean(row.acked_by, 100) : '',
+    beats: Number(row.beats) || 0, firstSeen: Number(row.first_seen_ts) || 0,
+    lastSeen: Number(row.last_seen_ts) || 0, silentMs: Math.max(0, at - (Number(row.last_seen_ts) || 0)),
+  };
+}
+
+async function devices(env, row, payload) {
+  await ensureDevices(env);
+  const merchant = row.merchant;
+  const at = now();
+  const deviceId = clean(payload.deviceId, 80);
+  const fail = (reason) => update(env, row, 'failed', 'kiwi-device', {}, reason);
+  if (!deviceId) return fail('device-id-required');
+  const known = await env.DB.prepare(
+    'SELECT * FROM device_health WHERE merchant = ? AND device_id = ?'
+  ).bind(merchant, deviceId).first();
+
+  if (row.action === 'heartbeat') {
+    const seen = Math.max(beatTime(payload, at), Number(known && known.last_seen_ts) || 0);
+    const next = {
+      app: clean(payload.app, 24) || clean(known && known.app, 24) || 'dashboard',
+      label: clean(payload.label, 80) || clean(known && known.label, 80),
+      online: payload.online === false ? 0 : 1,
+      standalone: payload.standalone ? 1 : 0,
+      configured: payload.printerConfigured ? 1 : 0,
+      connected: payload.printerConnected ? 1 : 0,
+    };
+    await env.DB.prepare(
+      `INSERT INTO device_health (merchant, device_id, app, label, online, standalone,
+         printer_configured, printer_connected, alert, alert_since_ts, acked_ts, acked_by,
+         beats, first_seen_ts, last_seen_ts)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', 0, 0, '', 1, ?, ?)
+       ON CONFLICT (merchant, device_id) DO UPDATE SET
+         app = excluded.app, label = excluded.label, online = excluded.online,
+         standalone = excluded.standalone, printer_configured = excluded.printer_configured,
+         printer_connected = excluded.printer_connected, beats = device_health.beats + 1,
+         last_seen_ts = excluded.last_seen_ts`
+    ).bind(merchant, deviceId, next.app, next.label, next.online, next.standalone,
+      next.configured, next.connected, seen, seen).run();
+    const merged = {
+      app: next.app, last_seen_ts: seen,
+      printer_configured: next.configured, printer_connected: next.connected,
+    };
+    const code = deviceAlarm(merged, at);
+    await reconcileAlert(env, merchant, deviceId, clean(known && known.alert, 40), code, at);
+    return update(env, row, 'completed', 'kiwi-device',
+      { deviceId: deviceId, app: next.app, recorded: true, alert: code }, '');
+  }
+
+  if (row.action === 'ack-alert') {
+    if (!known) return fail('device-unknown');
+    const code = deviceAlarm(known, at);
+    await reconcileAlert(env, merchant, deviceId, clean(known.alert, 40), code, at);
+    /* Acquitter fait taire, pas guérir : un appareil toujours muet le reste. */
+    if (!code) return fail('no-open-alert');
+    const by = clean(row.requested_by, 100);
+    await env.DB.prepare(
+      'UPDATE device_health SET acked_ts = ?, acked_by = ? WHERE merchant = ? AND device_id = ?'
+    ).bind(at, by, merchant, deviceId).run();
+    await env.DB.prepare(
+      'UPDATE device_alerts SET acked_ts = ?, acked_by = ? WHERE merchant = ? AND device_id = ? AND code = ? AND closed_ts = 0'
+    ).bind(at, by, merchant, deviceId, code).run();
+    return update(env, row, 'completed', 'kiwi-device',
+      { deviceId: deviceId, code: code, acknowledged: true, ackedBy: by }, '');
+  }
+
+  if (row.action === 'test-print') {
+    if (payload.printerConfigured === false) {
+      return update(env, row, 'blocked', 'local-device', { deviceId: deviceId }, 'printer-unconfigured');
+    }
+    /* « processing » et non « pending-approval » : la table des transitions
+       n'ouvre completed/failed que depuis processing, et c'est l'appareil qui
+       rapportera ce que l'imprimante a réellement fait. */
+    return update(env, row, 'processing', 'local-device',
+      { deviceId: deviceId, instruction: 'execute-on-requesting-device' }, '');
+  }
+  return fail('unsupported-action');
+}
+
+/* Le même tableau que functions/api/order/queue.js fait respecter à la file de
+   commandes.  Copié et non redérivé : deux surfaces qui décident séparément de
+   ce qu'est une transition légale finissent par ne plus décider la même chose.
+   « servi » accepte « accepté » parce qu'un café tendu au comptoir ne passe
+   jamais par « prêt » ; « servi » et « refusé » ne figurent dans aucun départ,
+   donc rien ne rouvre une commande close. */
+const AI_ORDER_FROM = {
+  accepted: ['pending'],
+  rejected: ['pending'],
+  ready: ['accepted'],
+  served: ['ready', 'accepted'],
+};
+const AI_ORDER_ID = /^ord-[a-z0-9-]{6,48}$/;
+
+async function aiActions(env, row, payload) {
+  const fail = (reason) => update(env, row, 'failed', 'kiwi-agent', {}, reason);
+  /* « Pourquoi ceci s'est-il produit ? » doit avoir une réponse.  La phrase du
+     commerçant est conservée telle qu'il l'a dite : sans elle, une action
+     déclenchée par l'assistant est un événement sans auteur ni motif. */
+  const said = clean(payload && payload.said, 240);
+  if (!said) return fail('intent-required');
+  await event(env, row, 'intent', row.status, { said, action: row.action });
+
+  /* Rien ici ne réécrit un envoi de message ni une numérotation de bon
+     d'achat : l'ordre dicté passe par le moteur qui fait déjà ce travail pour
+     un humain, et hérite donc du repli entre canaux, de l'anti-doublon, des
+     préférences de la maison et de la numérotation réelle.  Les deux moteurs
+     aiguillent sur row.action seul, jamais sur row.domain. */
+  if (row.action === 'message-customer') return notifications(env, row, payload);
+  if (row.action === 'create-po') return procurement(env, row, payload);
+
+  if (row.action === 'stock-adjust') {
+    const itemId = clean(payload && payload.itemId, 80);
+    const movementId = clean(payload && payload.movementId, 128);
+    const qty = Number(payload && payload.qty);
+    if (!itemId || !idOk(movementId)) return fail('stock-reference-required');
+    if (!Number.isFinite(qty) || qty === 0 || Math.abs(qty) > 100000) return fail('invalid-quantity');
+    return update(env, row, 'processing', 'client-inventory-ledger', {
+      itemId, movementId, qty, reason: clean(payload && payload.reason, 32),
+      note: clean(payload && payload.note, 300), said,
+      instruction: 'execute-on-requesting-client',
+    }, '');
+  }
+
+  if (row.action === 'reprint') {
+    await ensureDevices(env);
+    const deviceId = clean(payload && payload.deviceId, 80);
+    if (!deviceId) return fail('device-id-required');
+    const known = await env.DB.prepare(
+      'SELECT * FROM device_health WHERE merchant = ? AND device_id = ?'
+    ).bind(row.merchant, deviceId).first();
+    if (!known) return fail('device-unknown');
+    /* Promettre une réimpression à une caisse muette ou sans imprimante, c'est
+       mentir : le même prédicat qui allume l'alarme refuse le travail. */
+    const alarm = deviceAlarm(known, now());
+    if (alarm) return update(env, row, 'blocked', 'local-device', { deviceId, said }, alarm);
+    return update(env, row, 'processing', 'local-device',
+      { deviceId, said, instruction: 'execute-on-requesting-device' }, '');
+  }
+
+  if (row.action === 'update-order-status') {
+    const orderId = clean(payload && payload.orderId, 64);
+    const wanted = clean(payload && payload.status, 16).toLowerCase();
+    if (!AI_ORDER_ID.test(orderId)) return fail('order-id-required');
+    if (!AI_ORDER_FROM[wanted]) return fail('unsupported-status');
+    let order;
+    try {
+      order = await env.DB.prepare(
+        'SELECT id, number, status FROM orders WHERE id = ? AND merchant = ?'
+      ).bind(orderId, row.merchant).first();
+    } catch (_) { return fail('orders-unavailable'); }
+    if (!order) return fail('order-unknown');
+    const from = clean(order.status, 16);
+    if (from === wanted) return fail(`already-${wanted}`);
+    if (!AI_ORDER_FROM[wanted].includes(from)) return fail(`bad-transition:${from}`);
+    const at = now();
+    await env.DB.prepare('UPDATE orders SET status = ?, updated_ts = ? WHERE id = ? AND merchant = ?')
+      .bind(wanted, at, orderId, row.merchant).run();
+    return update(env, row, 'completed', 'kiwi-agent',
+      { orderId, number: Number(order.number) || 0, from, status: wanted, said }, '');
+  }
+  return fail('unsupported-action');
+}
+
+async function execute(env, row, payload) {
+  if (row.domain === 'device') return devices(env, row, payload);
+  if (row.domain === 'notification') return notifications(env, row, payload);
+  if (row.domain === 'payment') return payments(env, row, payload);
+  if (row.domain === 'ai') return aiActions(env, row, payload);
+  if (row.domain === 'accounting') return accounting(env, row, payload);
+  if (row.domain === 'procurement') return procurement(env, row, payload);
+  if (row.domain === 'payroll') return payroll(env, row, payload);
+  const initial = row.action.startsWith('export-') || row.action.startsWith('prepare-') ? 'prepared' : 'draft';
+  return update(env, row, initial, 'kiwi-workflow', { persisted: true }, '');
+}
+
+export async function onRequestGet({ request, env }) {
+  const url = new URL(request.url);
+  if (!env || !env.DB) return json({ error: 'not-configured' }, 503);
+  const merchant = await tenantFor(request, env, url.searchParams.get('merchant'));
+  if (!merchant) return json({ error: 'unauthorized' }, 401);
+  /* Command payloads can contain customer contacts, payment references and
+     payroll metadata.  A paired register may report health but must never be
+     able to enumerate the merchant's operational ledger — and neither may a
+     manager, who is kept out of salary figures everywhere else in the product.
+     Deliberately narrower than the per-command permissions below. */
+  const reader = await actorFor(request, env, merchant);
+  if (!reader || (reader.kind !== 'owner' && reader.kind !== 'operator')) {
+    return json({ error: 'owner-session-required' }, 403);
+  }
+  try { await ensureSchema(env); } catch (_) { return json({ error: 'unmigrated' }, 503); }
+  /* Le livre des achats se lit à part : un bon de commande n'est pas une
+     commande opérationnelle de plus, et l'écran de réception a besoin du reste
+     dû ligne par ligne — sinon il demande au commerçant de taper un numéro et
+     une référence de mémoire. */
+  /* Les préférences d'envoi et le journal des tentatives se lisent ensemble :
+     l'écran doit pouvoir montrer « WhatsApp d'abord, puis SMS » ET la raison
+     pour laquelle le dernier reçu est parti par SMS.  Le journal ne rend
+     jamais le destinataire — le canal et la raison suffisent à comprendre. */
+  /* Le journal se relit contre lui-même.  Un audit qui se contente d'afficher
+     ses propres lignes ne prouve rien : c'est la même table qui répondrait après
+     une réécriture.  Ici chaque maillon est recalculé, et une ligne modifiée,
+     supprimée ou intercalée casse la chaîne à partir d'elle.  Les lignes
+     antérieures à la chaîne n'ont pas de sceau : elles sont comptées à part, pas
+     accusées. */
+  if (clean(url.searchParams.get('view'), 24) === 'audit') {
+    try {
+      const scope = clean(url.searchParams.get('commandId'), 128);
+      const cap = Math.max(1, Math.min(2000, Number(url.searchParams.get('limit')) || 500));
+      const rows = await env.DB.prepare(
+        `SELECT id, command_id, merchant, event, status, detail, created_ts, seq, prev_hash, hash
+           FROM operational_events
+          WHERE merchant = ?${scope ? ' AND command_id = ?' : ''}
+          ORDER BY command_id ASC, seq ASC LIMIT ?`
+      ).bind(...(scope ? [merchant, scope, cap + 1] : [merchant, cap + 1])).all();
+      const listed = (rows && rows.results) || [];
+      const truncated = listed.length > cap;
+      const events = truncated ? listed.slice(0, cap) : listed;
+      const breaks = [];
+      const byCommand = new Map();
+      let sealed = 0;
+      let unsealed = 0;
+      for (const row of events) {
+        if (!row.hash) { unsealed++; continue; }
+        const key = String(row.command_id || '');
+        if (!byCommand.has(key)) byCommand.set(key, []);
+        byCommand.get(key).push(row);
+        sealed++;
+      }
+      /* La vérification ne fait confiance ni à l'ordre rendu par SQL ni aux
+         horodatages : elle repart du premier maillon — celui qui ne scelle rien —
+         et suit les sceaux de proche en proche.  Une ligne que cette marche
+         n'atteint pas est hors chaîne, quelle que soit la place que la table lui
+         donne. */
+      for (const [command, kept] of byCommand) {
+        const followers = new Map();
+        for (const row of kept) {
+          const recomputed = await seal([
+            String(row.prev_hash || ''), String(row.id || ''), command, String(row.merchant || ''),
+            String(row.event || ''), String(row.status || ''), String(row.detail || '{}'),
+            String(Number(row.created_ts || 0)), String(Number(row.seq || 0)),
+          ]);
+          if (recomputed !== String(row.hash)) {
+            breaks.push({ commandId: command, eventId: String(row.id || ''), reason: 'rewritten', at: Number(row.created_ts || 0) });
+          }
+          const link = String(row.prev_hash || '');
+          if (!followers.has(link)) followers.set(link, row);
+        }
+        const walked = new Set();
+        let cursor = followers.get('');
+        while (cursor && !walked.has(String(cursor.id))) {
+          walked.add(String(cursor.id));
+          cursor = followers.get(String(cursor.hash));
+        }
+        for (const row of kept) {
+          if (walked.has(String(row.id))) continue;
+          breaks.push({ commandId: command, eventId: String(row.id || ''), reason: 'out-of-chain', at: Number(row.created_ts || 0) });
+        }
+      }
+      /* Une commande qui a bougé mais n'a plus une seule ligne d'état : son
+         histoire n'a pas été réécrite, elle a été effacée.  Le compteur de
+         tentatives vit dans l'autre table et ne ment pas avec elle. */
+      let orphans = [];
+      if (!scope) {
+        const moved = await env.DB.prepare(
+          `SELECT c.id FROM operational_commands c
+            WHERE c.merchant = ? AND c.attempt_count > 0
+              AND NOT EXISTS (SELECT 1 FROM operational_events e
+                               WHERE e.merchant = c.merchant AND e.command_id = c.id AND e.event = 'state')
+            LIMIT 50`
+        ).bind(merchant).all();
+        orphans = ((moved && moved.results) || []).map((row) => String(row.id || ''));
+        for (const id of orphans) breaks.push({ commandId: id, eventId: '', reason: 'history-missing', at: 0 });
+      }
+      return json({
+        merchant, ok: breaks.length === 0, checked: events.length,
+        sealed, unsealed, truncated, orphans, breaks,
+      });
+    } catch (_) { return json({ error: 'unmigrated' }, 503); }
+  }
+  if (clean(url.searchParams.get('view'), 24) === 'notifications') {
+    try {
+      await ensureNotify(env);
+      const prefs = await env.DB.prepare(
+        'SELECT kind, channels, enabled, updated_ts FROM notification_prefs WHERE merchant = ? ORDER BY kind',
+      ).bind(merchant).all();
+      const stored = new Map((prefs && prefs.results || []).map((row) => [clean(row.kind, 30), row]));
+      const deliveries = await env.DB.prepare(
+        `SELECT command_id, dedupe_key, kind, channel, status, reason, created_ts
+           FROM notification_deliveries WHERE merchant = ? ORDER BY created_ts DESC LIMIT ?`,
+      ).bind(merchant, Math.max(1, Math.min(200, Number(url.searchParams.get('limit')) || 40))).all();
+      return json({
+        merchant,
+        providers: providers(env),
+        defaults: NOTIFY_CHANNELS.slice(),
+        preferences: NOTIFY_KIND_LIST.map((kind) => {
+          const row = stored.get(kind);
+          const listed = row ? parseChannels(row.channels) : [];
+          return {
+            kind: kind,
+            channels: listed.length ? listed : NOTIFY_CHANNELS.slice(),
+            enabled: !row || Number(row.enabled) !== 0,
+            custom: !!row,
+            updatedAt: row ? Number(row.updated_ts || 0) : 0,
+          };
+        }),
+        deliveries: (deliveries && deliveries.results || []).map((row) => ({
+          commandId: clean(row.command_id, 128), dedupeKey: clean(row.dedupe_key, 120),
+          kind: clean(row.kind, 30), channel: clean(row.channel, 20),
+          status: clean(row.status, 20), reason: clean(row.reason, 120),
+          createdAt: Number(row.created_ts || 0),
+        })),
+      });
+    } catch (_) { return json({ error: 'unmigrated' }, 503); }
+  }
+  if (clean(url.searchParams.get('view'), 24) === 'purchase-orders') {
+    try {
+      await ensurePurchase(env);
+      const open = clean(url.searchParams.get('state'), 16) === 'open';
+      const orders = await env.DB.prepare(
+        `SELECT number, supplier, currency, status, expected_date, total_cents, invoiced_cents, updated_ts
+           FROM purchase_orders WHERE merchant = ?${open ? " AND status IN ('draft','submitted','partial')" : ''}
+          ORDER BY seq DESC LIMIT ?`
+      ).bind(merchant, Math.max(1, Math.min(60, Number(url.searchParams.get('limit')) || 25))).all();
+      const list = orders && orders.results || [];
+      if (!list.length) return json({ merchant, orders: [] });
+      const lines = await env.DB.prepare(
+        `SELECT number, sku, label, unit, qty, unit_cents, received_qty, returned_qty
+           FROM purchase_order_lines WHERE merchant = ? AND number IN (${list.map(() => '?').join(',')})
+          ORDER BY number, line_no`
+      ).bind(merchant, ...list.map((order) => order.number)).all();
+      const byNumber = new Map(list.map((order) => [order.number, []]));
+      (lines && lines.results || []).forEach((line) => {
+        const bucket = byNumber.get(line.number);
+        if (bucket) bucket.push({
+          sku: line.sku, label: clean(line.label, 160), unit: clean(line.unit, 24),
+          qty: Number(line.qty), unitCents: Number(line.unit_cents || 0),
+          receivedQty: Number(line.received_qty || 0), returnedQty: Number(line.returned_qty || 0),
+        });
+      });
+      return json({ merchant, orders: list.map((order) => ({
+        number: order.number, supplier: clean(order.supplier, 160), currency: clean(order.currency, 3),
+        status: clean(order.status, 20), expectedDate: clean(order.expected_date, 10),
+        totalCents: Number(order.total_cents || 0), invoicedCents: Number(order.invoiced_cents || 0),
+        updatedAt: Number(order.updated_ts || 0), lines: byNumber.get(order.number) || [],
+      })) });
+    } catch (_) { return json({ error: 'db' }, 503); }
+  }
+  /* Le livre de paie se lit aussi à part.  Sans période, on renvoie l'état de
+     chaque mois — préparé, journalisé, déclaré — parce que c'est la question
+     que le commerçant pose en premier : « où j'en suis ? ». */
+  /* Le parc.  La lecture réévalue chaque ligne et ouvre les alarmes que le
+     temps a rendues vraies : un appareil éteint n'écrit rien, donc s'il fallait
+     un battement pour le déclarer absent, il ne le serait jamais. */
+  if (clean(url.searchParams.get('view'), 24) === 'devices') {
+    try {
+      await ensureDevices(env);
+      const at = now();
+      const seen = await env.DB.prepare(
+        'SELECT * FROM device_health WHERE merchant = ? AND last_seen_ts > ? ORDER BY last_seen_ts DESC LIMIT 200'
+      ).bind(merchant, at - DEVICE_STALE_MS).all();
+      const fleet = [];
+      for (const device of (seen && seen.results) || []) {
+        const code = deviceAlarm(device, at);
+        const view = deviceView(device, code, at);
+        if (code !== clean(device.alert, 40)) {
+          await reconcileAlert(env, merchant, clean(device.device_id, 80), clean(device.alert, 40), code, at);
+          view.acknowledged = false; view.ackedBy = '';
+        }
+        fleet.push(view);
+      }
+      return json({
+        merchant, devices: fleet,
+        thresholds: { beatMs: BEAT_MS, offlineMs: DEVICE_OFFLINE_MS },
+        alerts: fleet.filter((d) => d.alert && !d.acknowledged).length,
+        offline: fleet.filter((d) => d.alert === 'device-offline').length,
+      });
+    } catch (_) { return json({ error: 'db' }, 503); }
+  }
+  if (clean(url.searchParams.get('view'), 24) === 'payments') {
+    try {
+      await ensurePayments(env);
+      const links = await env.DB.prepare(
+        `SELECT * FROM payment_links WHERE merchant = ? ORDER BY seq DESC LIMIT 200`
+      ).bind(merchant).all();
+      const rows = (links && links.results) || [];
+      /* Le remboursé est relu ligne à ligne : c'est la seule valeur que le
+         journal des remboursements peut contredire. */
+      const paid = await env.DB.prepare(
+        `SELECT reference, COUNT(*) AS lines, COALESCE(SUM(amount_cents), 0) AS total
+           FROM payment_refunds WHERE merchant = ? GROUP BY reference`
+      ).bind(merchant).all();
+      const back = new Map(((paid && paid.results) || []).map((r) => [String(r.reference), r]));
+      const reservations = await env.DB.prepare(`SELECT reference, SUM(amount_cents) AS total
+        FROM payment_refund_reservations r WHERE merchant = ? AND status IN ('reserved', 'unknown')
+          AND NOT EXISTS (SELECT 1 FROM payment_refunds f
+            WHERE f.merchant = r.merchant AND f.command_id = r.command_id)
+        GROUP BY reference`).bind(merchant).all();
+      const held = new Map((reservations.results || []).map(r => [String(r.reference), Number(r.total || 0)]));
+      return json({ merchant, providers: providers(env), links: rows.map((link) => {
+        const seen = back.get(String(link.reference));
+        const refundedCents = Number((seen && seen.total) || 0);
+        return Object.assign(linkView(link, Number(link.paid_cents || 0), refundedCents, held.get(String(link.reference)) || 0), {
+          refunds: Number((seen && seen.lines) || 0),
+          createdAt: Number(link.created_ts || 0), updatedAt: Number(link.updated_ts || 0),
+        });
+      }) });
+    } catch (_) { return json({ error: 'db' }, 503); }
+  }
+  if (clean(url.searchParams.get('view'), 24) === 'payslips') {
+    try {
+      await ensurePayroll(env);
+      const period = clean(url.searchParams.get('period'), 7);
+      if (period && !PERIOD.test(period)) return json({ error: 'invalid-period' }, 400);
+      if (!period) {
+        const months = await env.DB.prepare(
+          `SELECT period, status, employees, gross_cents, net_cents, employer_cents, journal_number, declaration, updated_ts
+             FROM payroll_periods WHERE merchant = ? ORDER BY period DESC LIMIT 24`
+        ).bind(merchant).all();
+        return json({ merchant, periods: ((months && months.results) || []).map((month) => ({
+          period: clean(month.period, 7), status: clean(month.status, 20),
+          employees: Number(month.employees || 0), grossCents: Number(month.gross_cents || 0),
+          netCents: Number(month.net_cents || 0), employerCents: Number(month.employer_cents || 0),
+          number: clean(month.journal_number, 40), declaration: clean(month.declaration, 40),
+          updatedAt: Number(month.updated_ts || 0),
+        })) });
+      }
+      const header = await env.DB.prepare(
+        'SELECT * FROM payroll_periods WHERE merchant = ? AND period = ?'
+      ).bind(merchant, period).first();
+      const slips = await env.DB.prepare(
+        `SELECT member_id, member_name, role, rate_set, base_cents, overtime_cents, bonus_cents,
+                advance_cents, gross_cents, cnss_cents, amo_cents, igr_cents, employer_cents,
+                net_cents, dependents
+           FROM payslips WHERE merchant = ? AND period = ? ORDER BY member_name, member_id`
+      ).bind(merchant, period).all();
+      const rows = (slips && slips.results) || [];
+      return json({
+        merchant, period,
+        status: header ? clean(header.status, 20) : rows.length ? 'prepared' : 'none',
+        number: header ? clean(header.journal_number, 40) : '',
+        declaration: header ? clean(header.declaration, 40) : '',
+        totals: payTotals(rows),
+        payslips: rows.map((slip) => ({
+          memberId: clean(slip.member_id, 80), name: clean(slip.member_name, 120),
+          role: clean(slip.role, 60), rateSet: clean(slip.rate_set, 24),
+          baseCents: Number(slip.base_cents || 0), overtimeCents: Number(slip.overtime_cents || 0),
+          bonusCents: Number(slip.bonus_cents || 0), advanceCents: Number(slip.advance_cents || 0),
+          grossCents: Number(slip.gross_cents || 0), cnssCents: Number(slip.cnss_cents || 0),
+          amoCents: Number(slip.amo_cents || 0), igrCents: Number(slip.igr_cents || 0),
+          employerCents: Number(slip.employer_cents || 0), netCents: Number(slip.net_cents || 0),
+          dependents: Number(slip.dependents || 0),
+        })),
+      });
+    } catch (_) { return json({ error: 'db' }, 503); }
+  }
+  /* Les tickets, en lecture seule.  L'assistant a besoin de traduire « la 12 »
+     en `ord-…` avant de proposer quoi que ce soit, et la file de la cuisine ne
+     peut pas servir à ça : son GET marque le comptoir éveillé au passage
+     (`deskTouch`), ce qui rouvrirait la commande à distance pour les clients
+     depuis un simple écran de tableau de bord.  Ici on ne touche rien. */
+  if (clean(url.searchParams.get('view'), 24) === 'orders') {
+    const wanted = clean(url.searchParams.get('state'), 16);
+    const open = wanted === 'open';
+    try {
+      const rows = await env.DB.prepare(
+        `SELECT id, number, mode, table_no, total, status, created_ts, updated_ts
+           FROM orders WHERE merchant = ?${open ? " AND status IN ('pending','accepted','ready')" : ''}
+          ORDER BY created_ts DESC LIMIT ?`
+      ).bind(merchant, Math.max(1, Math.min(120, Number(url.searchParams.get('limit')) || 40))).all();
+      return json({ merchant, orders: ((rows && rows.results) || []).map((order) => ({
+        id: clean(order.id, 64), number: Number(order.number) || 0,
+        mode: clean(order.mode, 16), table: clean(order.table_no, 12),
+        total: Number(order.total || 0), status: clean(order.status, 16),
+        createdAt: Number(order.created_ts || 0), updatedAt: Number(order.updated_ts || 0),
+      })) });
+    } catch (_) {
+      /* La table est créée par le module des commandes, pas par `ensureSchema` :
+         une base qui n'a jamais vu de commande n'est pas une base en panne. */
+      return json({ merchant, orders: [], unavailable: true });
+    }
+  }
+  const domain = clean(url.searchParams.get('domain'), 32);
+  const status = clean(url.searchParams.get('status'), 32);
+  const limit = Math.max(1, Math.min(200, Number(url.searchParams.get('limit')) || 50));
+  const filters = ['merchant = ?']; const values = [merchant];
+  if (domain) { filters.push('domain = ?'); values.push(domain); }
+  if (status) { filters.push('status = ?'); values.push(status); }
+  try {
+    const rows = await env.DB.prepare(
+      `SELECT * FROM operational_commands WHERE ${filters.join(' AND ')} ORDER BY updated_ts DESC LIMIT ?`
+    ).bind(...values, limit).all();
+    return json({ merchant, providers: providers(env), commands: (rows.results || []).map(publicRow) });
+  } catch (_) { return json({ error: 'db' }, 503); }
+}
+
+export async function onRequestPost({ request, env }) {
+  if (!env || !env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
+  /* Refuser AVANT de parser.  `safeJson` bornait ce qu'on stocke, jamais ce
+     qu'on lit : un corps de dix mégaoctets était intégralement mis en mémoire
+     puis rejeté pour « commande invalide ». */
+  const declared = Number(request.headers.get('content-length') || 0);
+  if (Number.isFinite(declared) && declared > BODY_MAX) return json({ error: 'payload-too-large', limit: BODY_MAX }, 413);
+  let raw; try { raw = await request.text(); } catch (_) { return json({ error: 'bad-json' }, 400); }
+  if (raw.length > BODY_MAX) return json({ error: 'payload-too-large', limit: BODY_MAX }, 413);
+  let body; try { body = JSON.parse(raw); } catch (_) { return json({ error: 'bad-json' }, 400); }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return json({ error: 'bad-json' }, 400);
+  const merchant = await tenantFor(request, env, body && body.merchant, { strict: true });
+  if (!merchant) return json({ error: 'unauthorized' }, 401);
+  try { await ensureSchema(env); } catch (_) { return json({ error: 'unmigrated' }, 503); }
+
+  if (body && body.commandId && body.transition) {
+    const id = clean(body.commandId, 128), wanted = clean(body.transition, 32);
+    const row = await env.DB.prepare('SELECT * FROM operational_commands WHERE id = ? AND merchant = ?').bind(id, merchant).first();
+    if (!row) return json({ error: 'not-found' }, 404);
+    /* Moving a command through its lifecycle costs the same permission as
+       creating it.  A paired till may write its own device heartbeat, but it may
+       not approve, cancel or complete a purchase order: state transitions are
+       management actions and must never be authorized by possession of a
+       pairing cookie alone. */
+    if (!(await mayCommand(request, env, merchant, row.domain, row.action))) {
+      return json({ error: 'permission-denied', domain: row.domain, action: row.action }, 403);
+    }
+    if (row.domain === 'payment' && row.action === 'refund-link') {
+      if (row.status === 'completed') return json({ ok: true, command: publicRow(row) });
+      if (wanted !== 'processing' || body.confirmed !== true) return json({ error: 'refund-reconciliation-required' }, 409);
+      const moved = await spend(env, merchant, row.domain, rateCeiling(env, row.domain));
+      if (!moved.ok) return json({ error: 'rate-limited', limit: moved.ceiling, retryAfter: moved.retryAfter }, 429);
+      try { return json({ ok: true, command: publicRow(await reconcileRefund(env, row)) }); }
+      catch (_) { return json({ error: 'refund-reconciliation-unavailable', reconciliationRequired: true }, 503); }
+    }
+    if (!(TRANSITIONS[row.status] && TRANSITIONS[row.status].has(wanted))) return json({ error: 'invalid-transition', status: row.status }, 409);
+    if (['approved', 'cancelled', 'completed'].includes(wanted) && body.confirmed !== true) return json({ error: 'confirmation-required' }, 409);
+    /* Une commande relancée sans fin n'est pas une commande résiliente, c'est
+       une boucle : passé le plafond, elle ne peut plus que se clore. */
+    if (wanted === 'processing' && Number(row.attempt_count || 0) >= ATTEMPT_MAX) {
+      return json({ error: 'attempt-limit', attempts: Number(row.attempt_count || 0), limit: ATTEMPT_MAX }, 409);
+    }
+    const moved = await spend(env, merchant, row.domain, rateCeiling(env, row.domain));
+    if (!moved.ok) return json({ error: 'rate-limited', limit: moved.ceiling, retryAfter: moved.retryAfter }, 429);
+    /* Un échec sans motif n'apprend rien à personne : quand l'appareil ou
+       l'opérateur ferme une commande sur un échec ou un blocage, sa raison est
+       conservée telle quelle dans last_error. */
+    const beaten = ['failed', 'blocked'].includes(wanted) ? clean(body.reason, 120) : '';
+    const changed = await update(env, row, wanted, row.provider, parseJson(row.result) || {}, beaten);
+    return json({ ok: true, command: publicRow(changed) });
+  }
+
+  const domain = clean(body && body.domain, 32).toLowerCase();
+  const action = clean(body && body.action, 48).toLowerCase();
+  const id = clean(body && body.id, 128);
+  const idem = clean(body && body.idempotencyKey, 128);
+  const given = body && body.payload;
+  const payloadJson = safeJson(given, PAYLOAD_MAX);
+  if (!ACTIONS[domain] || !ACTIONS[domain].has(action)) return json({ error: 'unsupported-action' }, 400);
+  /* Every command costs a named permission, resolved from the caller's real
+     role on this merchant.  A till reports its own heartbeat and nothing else;
+     purchasing, payroll, accounting, notifications, payment links and agent
+     actions each need the matching grant.  Knowing a pairing cookie is never
+     enough to create financial documents or contact arbitrary people. */
+  const actor = await mayCommand(request, env, merchant, domain, action);
+  if (!actor) {
+    return json({ error: 'permission-denied', domain, action }, 403);
+  }
+  /* Un bon de commande de trente kilo-octets n'est pas une « commande
+     invalide » : c'est une commande trop grosse, et le client mérite de savoir
+     laquelle des deux il vient d'envoyer. */
+  if (given && typeof given === 'object' && !Array.isArray(given) && !payloadJson) {
+    return json({ error: 'payload-too-large', limit: PAYLOAD_MAX }, 413);
+  }
+  if (!idOk(id) || !idOk(idem) || !payloadJson) return json({ error: 'invalid-command' }, 400);
+  if (CONFIRM.has(`${domain}:${action}`) && body.confirmed !== true) return json({ error: 'confirmation-required' }, 409);
+
+  const duplicate = await env.DB.prepare(
+    'SELECT * FROM operational_commands WHERE merchant = ? AND idempotency_key = ?'
+  ).bind(merchant, idem).first();
+  /* Un rejeu idempotent ne consomme rien : il ne crée pas de ligne, n'appelle
+     aucun fournisseur, et un client qui réessaie proprement ne doit pas être
+     puni pour ça.  Le plafond se paie après le contrôle de permission, sinon
+     une session autorisée mais sans droit sur ce domaine pourrait épuiser le
+     budget du commerçant à sa place. */
+  if (duplicate) return json({ ok: true, duplicate: true, command: await duplicateView(env, duplicate), providers: providers(env) });
+  const spent = await spend(env, merchant, domain, rateCeiling(env, domain));
+  if (!spent.ok) return json({ error: 'rate-limited', limit: spent.ceiling, retryAfter: spent.retryAfter }, 429);
+
+  const at = now();
+  const row = {
+    id, merchant, domain, action, status: 'queued', provider: '', idempotency_key: idem,
+    /* La signature vient de la session prouvée, pas du corps de la requête :
+       un acquittement ou un bon d'achat signé d'un nom que l'appelant se donne
+       lui-même n'est pas une piste d'audit.  Le libellé client ne sert que
+       lorsque rien de mieux n'a pu être prouvé. */
+    payload: payloadJson, result: null,
+    requested_by: clean(actor.name, 100) || clean(body.requestedBy, 100),
+    attempt_count: 0, last_error: '', created_ts: at, updated_ts: at,
+  };
+  try {
+    await env.DB.prepare(
+      `INSERT INTO operational_commands
+       (id, merchant, domain, action, status, provider, idempotency_key, payload,
+        result, requested_by, attempt_count, last_error, created_ts, updated_ts)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(row.id, merchant, domain, action, row.status, '', idem, payloadJson, null,
+      row.requested_by, 0, '', at, at).run();
+    await event(env, row, 'created', 'queued', { domain, action });
+    const finished = await execute(env, row, body.payload || {});
+    return json({ ok: true, duplicate: false, command: publicRow(finished), providers: providers(env) });
+  } catch (_) {
+    const race = await env.DB.prepare('SELECT * FROM operational_commands WHERE merchant = ? AND idempotency_key = ?').bind(merchant, idem).first();
+    if (race) return json({ ok: true, duplicate: true, command: await duplicateView(env, race), providers: providers(env) });
+    return json({ error: 'db' }, 503);
+  }
+}

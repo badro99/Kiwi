@@ -1,0 +1,305 @@
+/* Kiwi · pressing operational subpages
+ * Keeps the shared owner dashboard intact and replaces only the navigation
+ * destinations that are specific to the exact `pressing` trade.
+ */
+(function () {
+  'use strict';
+
+  var host = null;
+  var current = false;
+  var currentPage = '';
+  var PAGE_LABELS = {
+    'pressing-orders': ['Dépôts & commandes', 'Tous les bons, vêtements et échéances au même endroit'],
+    'pressing-workshop': ['Atelier & flux', 'Pilotez chaque pièce du dépôt au contrôle qualité'],
+    'pressing-pickup': ['Retraits & rack', 'Trouvez un client, son cintre et son solde en quelques secondes'],
+    'pressing-services': ['Services & tarifs', 'Structurez les traitements, suppléments et délais'],
+    'pressing-quality': ['Qualité & incidents', 'Photos, taches, réserves et reprises sans perte d’information'],
+    'pressing-delivery': ['Collecte & livraison', 'Organisez les tournées et les promesses client']
+  };
+
+  var PATHS = {
+    shirt: '<path d="M6.5 3 3 5.5 5 9l2-1v13h10V8l2 1 2-3.5L17.5 3A5 5 0 0 1 12 6a5 5 0 0 1-5.5-3Z"/>',
+    play: '<path d="m8 5 11 7-11 7Z"/>',
+    scan: '<path d="M3 7V4a1 1 0 0 1 1-1h3M17 3h3a1 1 0 0 1 1 1v3M21 17v3a1 1 0 0 1-1 1h-3M7 21H4a1 1 0 0 1-1-1v-3M7 12h10"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    rack: '<path d="M5 21V7h14v14M3 21h18M8 7V3h8v4M8 12h8M8 16h8"/>',
+    alert: '<path d="M10.3 3.6 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>',
+    money: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M17 14h.01"/><circle cx="12" cy="12" r="2"/>',
+    workflow: '<path d="M5 5h7M5 12h14M12 19h7"/><circle cx="16" cy="5" r="2"/><circle cx="8" cy="19" r="2"/>',
+    bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
+    van: '<path d="M3 6h11v11H3zM14 10h4l3 3v4h-7z"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/>',
+    droplet: '<path d="M12 2s7 7.2 7 12a7 7 0 0 1-14 0c0-4.8 7-12 7-12Z"/>',
+    check: '<path d="m5 12 4 4L19 6"/>',
+    tag: '<path d="M20.6 13.4 11 3.8A2 2 0 0 0 9.6 3H4v5.6a2 2 0 0 0 .6 1.4l9.6 9.6a2 2 0 0 0 2.8 0l3.6-3.6a2 2 0 0 0 0-2.6Z"/><circle cx="7.5" cy="7.5" r="1"/>',
+    message: '<path d="M21 15a4 4 0 0 1-4 4H8l-5 3 1.7-5A8 8 0 1 1 21 15Z"/>',
+    list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21h-4v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H3v-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6V3h4v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1v4H21a1.7 1.7 0 0 0-1.6 1Z"/>'
+  };
+
+  var MATERIAL_ICONS = { shirt:'shirt', play:'play', scan:'scan-line', clock:'clock', rack:'inventory-2', alert:'alert-triangle', money:'banknote', workflow:'account-tree', bell:'bell', van:'truck', droplet:'droplets', check:'check', tag:'tag', message:'message-circle', list:'list', settings:'settings' };
+  function icon(name) {
+    return '<i data-lucide="' + (MATERIAL_ICONS[name] || 'shirt') + '" aria-hidden="true"></i>';
+  }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+  function num(n) { return Math.round(Number(n) || 0).toLocaleString('fr-FR'); }
+  function when(s) {
+    if (!s) return 'Échéance non définie';
+    var d = new Date(s); if (!Number.isFinite(d.getTime())) return 'Échéance non définie';
+    return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }) + ' · ' + d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+  }
+  function venue() { try { return window.KiwiVenue && KiwiVenue.getCurrentVenueData(); } catch (_) { return null; } }
+  function isPressing() {
+    var v = venue();
+    return !!(v && (v.subtype === 'pressing' || v.trade === 'pressing'));
+  }
+  function summary() {
+    try { return window.KiwiPressingOps ? KiwiPressingOps.summary() : { orders:[], active:0,received:0,treating:0,ready:0,late:0,due:0,pieces:0,attention:0,racks:0,unnotified:0 }; }
+    catch (_) { return { orders:[], active:0,received:0,treating:0,ready:0,late:0,due:0,pieces:0,attention:0,racks:0,unnotified:0 }; }
+  }
+  function todayRevenue() {
+    try {
+      var id = KiwiVenue.getVenue();
+      var d = new Date(); d.setHours(0,0,0,0); var start = d.getTime();
+      return KiwiSales.totals(id, start, start + 86400000).revenue || 0;
+    } catch (_) { return 0; }
+  }
+  /* The ops snapshot freezes `status` when the till syncs. An order that crosses
+     its readyAt while the till is idle still reads 'trait' there, even though
+     summary() — which recomputes — already counts it ready. Deriving here keeps
+     the lists and the counters above them answering the same question. */
+  function effStatus(o) {
+    try {
+      if (window.KiwiPressingOps && KiwiPressingOps.orderStatus) {
+        return KiwiPressingOps.orderStatus(o.pieces, o.readyAt);
+      }
+    } catch (_) {}
+    return o.status;
+  }
+  function statusLabel(o) {
+    var st = effStatus(o);
+    if (st === 'pret') return ['Prêt', 'ready'];
+    if (st === 'trait') return ['En traitement', ''];
+    if (st === 'livre') return ['Retiré', 'muted'];
+    var late = o.readyAt && new Date(o.readyAt).getTime() < Date.now();
+    return late ? ['En attente de retrait', 'ready'] : ['Reçu', ''];
+  }
+  function sortedActive(s) {
+    return s.orders.filter(function (o) { return effStatus(o) !== 'livre'; }).sort(function (a,b) {
+      var al = a.readyAt && new Date(a.readyAt).getTime() < Date.now();
+      var bl = b.readyAt && new Date(b.readyAt).getTime() < Date.now();
+      if (al !== bl) return al ? -1 : 1;
+      return new Date(a.readyAt || 0) - new Date(b.readyAt || 0);
+    });
+  }
+
+  function garmentPreview(pieces) {
+    pieces = pieces || [];
+    var shared = window.KiwiPressingGarmentIcons;
+    if (!shared || !shared.render || !pieces.length) return '<span class="pxd-garments is-empty" aria-hidden="true"></span>';
+    var labels = pieces.map(function (p) { return p.label || p.itemId || 'Article'; });
+    var icons = pieces.slice(0,3).map(function (p) {
+      return '<span class="pxd-garment">' + shared.render({ id:p.itemId, art:p.art, label:p.label, cat:p.cat, variantId:p.variantId }, 'pxd-garment-art') + '</span>';
+    }).join('');
+    if (pieces.length > 3) icons += '<b class="pxd-garment-more">+' + (pieces.length-3) + '</b>';
+    return '<span class="pxd-garments" aria-label="Articles : ' + esc(labels.join(', ')) + '">' + icons + '</span>';
+  }
+
+  function orderRows(rows, limit) {
+    rows = rows.slice(0, limit || rows.length);
+    if (!rows.length) return empty('list', 'Aucune commande à afficher', 'Les nouveaux dépôts apparaîtront ici dès qu’ils seront enregistrés sur la caisse.', 'Nouveau dépôt', 'comptoir');
+    return '<div class="pxd-order-list">' + rows.map(function (o) {
+      var st = statusLabel(o);
+      var canCancel = effStatus(o) !== 'livre';
+      return '<div class="pxd-order" data-pxd-order="' + esc(o.id) + '">' +
+        '<div><span class="pxd-order-id">' + esc(o.id) + '</span><span class="pxd-order-time">' + esc(when(o.readyAt)) + '</span></div>' +
+        garmentPreview(o.pieces) +
+        '<div class="pxd-order-main"><b>' + esc((o.customer && o.customer.name) || 'Client de passage') + '</b><span>' + num((o.pieces || []).length) + ' pièce' + ((o.pieces || []).length === 1 ? '' : 's') + (o.rack ? ' · rack ' + esc(o.rack) : '') + (o.due ? ' · solde ' + num(o.due) + ' MAD' : '') + '</span></div>' +
+        '<div class="pxd-order-right"><span class="pxd-status ' + st[1] + '">' + st[0] + '</span>' +
+        (canCancel ? '<button class="pxd-cancel-btn" type="button" data-pxd-cancel="' + esc(o.id) + '" title="Annuler la commande">Annuler</button>' : '') +
+        '</div></div>';
+    }).join('') + '</div>';
+  }
+  function empty(ic, title, body, cta, view) {
+    return '<div class="pxd-empty"><div><span class="pxd-empty-icon">' + icon(ic) + '</span><b>' + esc(title) + '</b><p>' + esc(body) + '</p>' +
+      (cta ? '<button class="pxd-btn" type="button" data-pxd-open="' + esc(view || 'comptoir') + '">' + esc(cta) + '</button>' : '') + '</div></div>';
+  }
+  function icon(name) {
+    var icons = {
+      shirt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>',
+      workflow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/></svg>',
+      rack: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m15 12-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9"/><path d="M17.64 15 22 10.64"/><path d="m20.91 3.26-2.17-2.17a2.12 2.12 0 0 0-3 0L12 4.82l6.91 6.91 3.73-3.73a2.12 2.12 0 0 0 0-3z"/></svg>',
+      alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+      money: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>',
+      play: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>',
+      scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>',
+      bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
+      check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>',
+      list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+      clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+      van: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect width="14" height="10" x="1" y="6" rx="2"/><polygon points="15 8 19 8 23 12 23 16 15 16 15 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>'
+    };
+    return icons[name] || '';
+  }
+  function cardHead(ic,title,sub,cta,view) {
+    return '<div class="pxd-card-head"><div><span class="pxd-card-ic">' + icon(ic) + '</span><div><h3>' + esc(title) + '</h3><p>' + esc(sub) + '</p></div></div>' +
+      (cta ? '<button class="pxd-link-btn" type="button" data-pxd-page="' + esc(view) + '">' + esc(cta) + ' →</button>' : '') + '</div>';
+  }
+  function flow(s) {
+    var stages = [
+      ['Reçues', s.received, 'À trier et contrôler'],
+      ['En traitement', s.treating, 'Nettoyage, lavage, finition'],
+      ['Prêtes', s.ready, 'À ranger ou remettre'],
+      ['Retirées', s.delivered, 'Historique synchronisé']
+    ];
+    var mx = Math.max.apply(Math, stages.map(function (x) { return x[1]; }).concat([1]));
+    return '<div class="pxd-flow">' + stages.map(function (x) {
+      return '<div class="pxd-stage"><div class="pxd-stage-num">' + num(x[1]) + '</div><div class="pxd-stage-name">' + x[0] + '</div><div class="pxd-stage-sub">' + x[2] + '</div><div class="pxd-stage-bar"><i style="width:' + Math.max(3, Math.round(x[1] / mx * 100)) + '%"></i></div></div>';
+    }).join('') + '</div>';
+  }
+  function rackBody(s) {
+    var ready = s.orders.filter(function (o) { return effStatus(o) === 'pret'; }).sort(function (a,b) { return new Date(a.readyAt || 0) - new Date(b.readyAt || 0); });
+    if (!ready.length) return empty('rack', 'Rack disponible', 'Les commandes prêtes et leur emplacement apparaîtront ici.', 'Ouvrir le rangement', 'rangement');
+    return '<div class="pxd-rack">' + ready.slice(0,5).map(function (o) {
+      return '<div class="pxd-rack-row"><div><b>' + esc(o.customer && o.customer.name || o.id) + '</b><span>' + esc(o.id) + (o.notified ? ' · client prévenu' : ' · à prévenir') + '</span></div><span class="pxd-rack-slot">' + esc(o.rack || 'À ranger') + '</span></div>';
+    }).join('') + '</div>' + (s.unnotified ? '<div class="pxd-callout"><b>' + num(s.unnotified) + ' client' + (s.unnotified > 1 ? 's' : '') + ' à prévenir</b><span>Ouvrez WhatsApp depuis la fiche de retrait pour envoyer le message “c’est prêt”.</span></div>' : '');
+  }
+
+  function kpisBand(s) {
+    return '<section class="pxd-kpis" aria-label="État de l’atelier">' +
+      kpi('shirt','Pièces dans l’atelier',s.pieces,'Toutes les pièces non retirées','') +
+      kpi('workflow','Commandes en traitement',s.treating,'Nettoyage et finition en cours','') +
+      kpi('rack','Prêtes au retrait',s.ready,s.racks + ' rangée' + (s.racks === 1 ? '' : 's') + ' sur le rack','') +
+      kpi('alert','En attente de retrait',s.late,'Promesse dépassée, non retirée',s.late ? 'alert' : '') +
+      kpi('money','Solde à encaisser',num(s.due) + ' MAD','CA encaissé aujourd’hui · ' + num(todayRevenue()) + ' MAD','') +
+    '</section>';
+  }
+
+  function renderHome() {
+    if (!host || !current) return;
+    var s = summary();
+    var v = venue() || {};
+    var active = sortedActive(s);
+    host.innerHTML = '<div class="pxd-shell">' +
+      '<header class="pxd-hero"><div><div class="pxd-eyebrow">Pilotage pressing</div><h1>Votre atelier, sans angle mort.</h1><p>' + esc(v.fullDisplay || v.name || 'Pressing') + ' · du dépôt au retrait, pièce par pièce</p></div>' +
+      '<div class="pxd-hero-actions"><button class="pxd-btn" type="button" data-pxd-open="retrait">' + icon('scan') + 'Retrait express</button><button class="pxd-btn primary" type="button" data-pxd-open="comptoir">' + icon('play') + 'Nouveau dépôt</button></div></header>' +
+      kpisBand(s) +
+      '<div class="pxd-grid"><div class="pxd-stack">' +
+        '<section class="pxd-card">' + cardHead('workflow','Flux atelier','La charge réelle à chaque étape','Ouvrir l’atelier','pressing-workshop') + flow(s) + '</section>' +
+        '<section class="pxd-card">' + cardHead('clock','Priorités du jour','Échéances les plus proches et retraits en attente','Toutes les commandes','pressing-orders') + orderRows(active,6) + '</section>' +
+      '</div><aside class="pxd-stack side">' +
+        '<section class="pxd-card">' + cardHead('play','Actions rapides','Les gestes de comptoir les plus fréquents','','') +
+          '<div class="pxd-action-grid">' + action('shirt','Nouveau dépôt','Créer le bon et étiqueter','comptoir') + action('scan','Retrait express','Téléphone ou scan du ticket','retrait') + action('rack','Ranger au rack','Attribuer un cintre','rangement') + action('bell','Clients à prévenir',s.unnotified ? num(s.unnotified) + ' message' + (s.unnotified > 1 ? 's' : '') + ' en attente' : 'Tout est à jour','retrait') + '</div></section>' +
+        '<section class="pxd-card">' + cardHead('rack','Retraits & rack','Commandes prêtes, emplacement et notification','Gérer','pressing-pickup') + rackBody(s) + '</section>' +
+        '<section class="pxd-card">' + cardHead('alert','Qualité & vigilance','Textiles délicats, réserves et promesses','Contrôler','pressing-quality') +
+          (s.attention ? '<div class="pxd-callout" style="margin-top:18px"><b>' + num(s.attention) + ' pièce' + (s.attention > 1 ? 's' : '') + ' documentée' + (s.attention > 1 ? 's' : '') + '</b><span>Les réserves restent liées au vêtement pour sécuriser la remise.</span></div>' : empty('check','Aucune vigilance ouverte','Les réserves et reprises apparaîtront ici sans polluer le flux principal.','','')) + '</section>' +
+      '</aside></div></div>';
+  }
+  function kpi(ic,label,value,sub,cls) {
+    return '<article class="pxd-kpi ' + cls + '"><div class="pxd-kpi-top"><span>' + esc(label) + '</span><span class="pxd-kpi-icon">' + icon(ic) + '</span></div><strong>' + esc(value) + '</strong><small>' + esc(sub) + '</small></article>';
+  }
+  function action(ic,title,sub,view) {
+    return '<button class="pxd-action" type="button" data-pxd-open="' + esc(view) + '">' + icon(ic) + '<b>' + esc(title) + '</b><span>' + esc(sub) + '</span></button>';
+  }
+
+  function pageBody(nav) {
+    var s = summary();
+    var active = sortedActive(s);
+    var band = kpisBand(s);
+    var content = '';
+    if (nav === 'pressing-orders') content = '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('list','Commandes actives','Triées par urgence et date de retrait','','') + orderRows(active) + '</section><section class="pxd-card">' + cardHead('check','Commandes retirées','Historique conservé pour le suivi client','','') + orderRows(s.orders.filter(function(o){return effStatus(o)==='livre';}),20) + '</section></div>';
+    else if (nav === 'pressing-workshop') content = '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('workflow','Vue atelier','Une commande avance selon l’état réel de ses pièces','','') + flow(s) + '</section><section class="pxd-card">' + cardHead('clock','File de production','Promesses échues en premier, puis échéances les plus proches','','') + orderRows(active) + '</section></div>';
+    else if (nav === 'pressing-pickup') content = '<div class="pxd-page-grid two"><section class="pxd-card">' + cardHead('rack','Prêtes au retrait','Rack, notification et solde sur le même écran','','') + rackBody(s) + '</section><section class="pxd-page-card"><h3>Retrait en trois gestes</h3><p>Recherchez le téléphone, confirmez les pièces, encaissez le solde.</p><div class="pxd-checks"><div class="pxd-check"><span>1 · Identifier le client</span><small>Téléphone ou scan</small></div><div class="pxd-check"><span>2 · Vérifier les pièces</span><small>Bon détaillé</small></div><div class="pxd-check"><span>3 · Libérer le rack</span><small>Après remise</small></div></div><button class="pxd-btn primary" style="margin-top:14px" data-pxd-open="retrait">Ouvrir le retrait express</button></section></div>';
+    else if (nav === 'pressing-services') {
+      var serviceLabels = { lavage:'Lavage', repassage:'Repassage', detachage:'Détachage', retouche:'Retouche' };
+      var serviceRows = Object.keys(serviceLabels).map(function (id) {
+        var count = num((s.services || {})[id] || 0);
+        return '<div class="pxd-check"><span>' + serviceLabels[id] + '</span><small>' + count + ' pièce' + (count === '1' ? '' : 's') + ' active' + (count === '1' ? '' : 's') + '</small></div>';
+      }).join('');
+      content = '<div class="pxd-page-grid"><div data-pce-host></div><div class="pxd-page-grid two"><section class="pxd-page-card"><h3>Charge par traitement</h3><p>Volumes réels des commandes encore présentes dans l’atelier.</p><div class="pxd-checks">' + serviceRows + '</div></section><section class="pxd-page-card"><h3>Application des tarifs</h3><p>Une modification s’applique aux prochains dépôts. Les anciens tickets gardent le nom et le prix convenus avec le client.</p><div class="pxd-checks"><div class="pxd-check"><span>Caisse appairée</span><small>Synchronisée par établissement</small></div><div class="pxd-check"><span>Article masqué</span><small>Conservé dans l’historique</small></div><div class="pxd-check"><span>Prix vide</span><small>Service non proposé</small></div></div><button class="pxd-btn primary" style="margin-top:14px" data-pxd-open="tarifs">Ouvrir les tarifs sur la caisse</button></section></div></div>';
+    }
+    else if (nav === 'pressing-quality') {
+      var attention = active.filter(function (o) { return (o.pieces || []).some(function (p) { return p.notes; }); });
+      content = '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('alert','Vigilances actives','Taches et instructions particulières','','') + (attention.length ? orderRows(attention) + '<div class="pxd-page-action"><button class="pxd-btn primary" data-pxd-open="commandes">Ouvrir le contrôle atelier</button></div>' : empty('check','Aucune vigilance ouverte','Une tache ou une instruction saisie au comptoir apparaîtra ici.','Nouveau dépôt','comptoir')) + '</section><section class="pxd-page-card"><h3>Contrôle avant remise</h3><p>La commande ne devient prête qu’après vérification de toutes ses pièces.</p><div class="pxd-checks"><div class="pxd-check"><span>Commandes prêtes</span><small>' + num(s.ready) + '</small></div><div class="pxd-check"><span>Pièces documentées</span><small>' + num(s.attention) + '</small></div><div class="pxd-check"><span>Clients encore à prévenir</span><small>' + num(s.unnotified) + '</small></div></div></section></div>';
+    }
+    else {
+      content = '<div class="pxd-page-grid two"><section class="pxd-page-card"><h3>Collecte & livraison</h3><p>Cette caisse ne promet pas une tournée qu’elle ne sait pas encore exécuter.</p>' + empty('van','Aucune tournée active','Les dépôts et retraits restent au comptoir tant qu’un module de tournée n’est pas activé.','Créer un dépôt comptoir','comptoir') + '</section><section class="pxd-page-card"><h3>Commandes prêtes</h3><p>Utilisez le rack et la notification client pour organiser les retraits actuels.</p>' + rackBody(s) + '</section></div>';
+    }
+    return band + content;
+  }
+
+  function showPage(nav) {
+    if (!current || !PAGE_LABELS[nav] || !window.Kiwi || !Kiwi.appPage) return;
+    var meta = PAGE_LABELS[nav];
+    currentPage = nav;
+    Kiwi.appPage(nav, { title: meta[0], subtitle: meta[1], body: pageBody(nav) });
+    if (nav === 'pressing-services') requestAnimationFrame(function () {
+      var editor = document.querySelector('[data-pce-host]');
+      if (editor && window.KiwiPressingCatalog) KiwiPressingCatalog.mountEditor(editor);
+    });
+  }
+  function openTill(view) {
+    try { sessionStorage.setItem('kiwiPressingStartView', view || 'comptoir'); } catch (_) {}
+    window.location.href = 'kiwi-caisse.html';
+  }
+  function ensureHost() {
+    if (host && host.isConnected) return host;
+    var container = document.querySelector('.container');
+    if (!container) return null;
+    host = document.createElement('section');
+    host.className = 'pressing-home';
+    host.setAttribute('aria-label', 'Tableau de bord pressing');
+    container.insertBefore(host, container.querySelector('.status-bar') || null);
+    return host;
+  }
+  function activate() {
+    current = isPressing();
+    document.body.classList.remove('is-pressing');
+    if (host) host.remove();
+    host = null;
+    try { if (current && window.KiwiPressingOps && KiwiPressingOps.bindCloud) KiwiPressingOps.bindCloud(); } catch (_) {}
+    try { if (current && window.KiwiPressingCatalog && KiwiPressingCatalog.bind) KiwiPressingCatalog.bind(); } catch (_) {}
+  }
+
+  /* The shared dashboard registers its delegated sidebar listener during the
+   * venues boot, before this module. Listen at window capture level so a
+   * pressing destination is claimed before that generic handler can turn it
+   * into a boutique starter page. */
+  window.addEventListener('click', function (e) {
+    var open = e.target.closest && e.target.closest('[data-pxd-open]');
+    if (open) { e.preventDefault(); openTill(open.dataset.pxdOpen); return; }
+    var cancel = e.target.closest && e.target.closest('[data-pxd-cancel]');
+    if (cancel) {
+      e.preventDefault();
+      var id = cancel.dataset.pxdCancel;
+      if (confirm('Confirmer l’annulation de la commande ' + id + ' ?')) {
+        if (window.KiwiPressingOps && KiwiPressingOps.cancelOrder) {
+          KiwiPressingOps.cancelOrder(id);
+          if (typeof Kiwi !== 'undefined' && Kiwi.toast) Kiwi.toast('Commande ' + id + ' annulée');
+          if (currentPage) showPage(currentPage);
+          else renderHome();
+        }
+      }
+      return;
+    }
+    var page = e.target.closest && e.target.closest('[data-pxd-page]');
+    if (page) { e.preventDefault(); showPage(page.dataset.pxdPage); return; }
+    var nav = e.target.closest && e.target.closest('.sidebar nav a[data-nav]');
+    if (!nav || !current) return;
+    if (PAGE_LABELS[nav.dataset.nav]) {
+      e.preventDefault(); e.stopImmediatePropagation(); showPage(nav.dataset.nav); return;
+    }
+  }, true);
+
+  function boot() {
+    activate();
+    try { if (window.KiwiPressingOps && KiwiPressingOps.bindCloud) KiwiPressingOps.bindCloud(); } catch (_) {}
+    try { if (window.KiwiPressingOps) KiwiPressingOps.subscribe(function () { if (currentPage) showPage(currentPage); }); } catch (_) {}
+    try { if (window.KiwiPressingCatalog) KiwiPressingCatalog.subscribe(function () { if (currentPage === 'pressing-services') showPage(currentPage); }); } catch (_) {}
+    try { KiwiVenue.subscribe(activate); } catch (_) {}
+    window.addEventListener('kiwi:langchange', activate);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+
+  window.KiwiPressingDashboard = { render: renderHome, showPage: showPage, isActive: function () { return current; } };
+})();

@@ -1,0 +1,21 @@
+{
+  "name": "kiwi-pos",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Kiwi POS & Operating System for Moroccan Merchants",
+  "scripts": {
+    "test": "node tools/check.js",
+    "check": "node tools/check.js",
+    "stamp": "node tools/bump-stamp.js",
+    "dev": "npx wrangler pages dev .",
+    "load:validate": "node tools/load-test-suite-test.mjs",
+    "load:prod:smoke": "KIWI_PROFILE=smoke k6 run tests/load/k6/production-readonly.js",
+    "load:prod:baseline": "KIWI_PROFILE=baseline k6 run tests/load/k6/production-readonly.js",
+    "load:local:smoke": "KIWI_PROFILE=smoke k6 run tests/load/k6/local-operations.js",
+    "load:orderpro:smoke": "KIWI_PROFILE=smoke k6 run tests/load/k6/orderpro-pressure.js",
+    "load:orderpro:pressure": "KIWI_PROFILE=pressure k6 run tests/load/k6/orderpro-pressure.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

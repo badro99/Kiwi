@@ -76,7 +76,8 @@ body.design-2026 .sidebar nav a.active {
 body.design-2026 :is(
   .acc-card, .acc-biz, .acc-contact-card, .acc-topic, .integ-card, .kpi-m, .kpi-band,
   .kpi-customize, .cf-card, .fin-card, .p-card, .sh-section, .dkfix-card, .venue-dropdown,
-  .st-card, .pay-card, .mi-card, .tile, .glass-card
+  .st-card, .pay-card, .mi-card, .tile, .glass-card, .kdr-id, .kdr-kpi, .kdr-strip,
+  .kdr-top-c, .kdr-cat, .dep-card, .dep-site, .bk-choice, .bk-summary
 ) {
   background: var(--g-fill) !important;
   -webkit-backdrop-filter: blur(var(--g-blur)) saturate(1.35); backdrop-filter: blur(var(--g-blur)) saturate(1.35);
@@ -86,7 +87,7 @@ body.design-2026 :is(
   transition: transform 0.38s var(--g-ease), box-shadow 0.38s var(--g-ease), border-color 0.3s ease !important;
 }
 /* lift the genuinely interactive cards on hover (not dense data panels) */
-body.design-2026 :is(.acc-biz, .acc-contact-card, .acc-topic, .integ-card, .kpi-m, .p-card):hover {
+body.design-2026 :is(.acc-biz, .acc-contact-card, .acc-topic, .integ-card, .kpi-m, .p-card, .dep-site, .bk-choice):hover {
   transform: translateY(-3px);
   box-shadow: var(--g-hi), var(--g-shadow-lift) !important;
   border-color: color-mix(in srgb, var(--atlas) 32%, transparent) !important;

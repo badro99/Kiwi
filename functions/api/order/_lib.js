@@ -11,14 +11,51 @@
 // c'est la bibliothèque des trois autres (même convention que functions/auth/_lib.js).
 
 /* ── Le jour d'ouverture ───────────────────────────────────────────────────
- * Les numéros de ticket repartent à 1 chaque jour. Le Maroc est à UTC+1 toute
+ * Les limites de file repartent à 1 chaque jour. Le Maroc est à UTC+1 toute
  * l'année, donc la frontière se calcule à +1h : une commande de 00h30
- * appartient au jour qui commence, pas à la numérotation de la veille.
+ * appartient au jour qui commence, pas aux limites de la veille.
  * (Ce n'est PAS le « jour commercial » du rapport Z, qui suit les horaires
  * saisis par le commerçant — deux notions voisines et volontairement distinctes.) */
 export function startOfDay(now) {
   const shifted = now + 3600000;
   return Math.floor(shifted / 86400000) * 86400000 - 3600000;
+}
+
+/* Les numéros lisibles des commandes restaurant repartent à 1 chaque lundi
+ * à 00:00 (heure Maroc). Cette borne est distincte du jour commercial et ne
+ * touche pas aux tickets boutique, dont la séquence sert aux retours. */
+export function startOfWeek(now) {
+  const day = startOfDay(now);
+  const shiftedDay = new Date(day + 3600000).getUTCDay(); // 0 dim. … 6 sam.
+  return day - ((shiftedDay + 6) % 7) * 86400000;
+}
+
+/* Allocate the next human-facing restaurant order number. The counter is
+ * independent from deletable order rows: cancellation/support cleanup leaves a
+ * deliberate gap and can never make a number reappear. The MAX query is only a
+ * one-time migration floor for weeks already in progress when this ships. */
+export async function nextOrderNumber(env, merchant, now) {
+  const period = startOfWeek(now);
+  const stamp = Date.now();
+  await env.DB.prepare(
+    'CREATE TABLE IF NOT EXISTS order_sequences (' +
+    'merchant TEXT NOT NULL, period INTEGER NOT NULL, next_value INTEGER NOT NULL, ' +
+    'updated_ts INTEGER NOT NULL, PRIMARY KEY (merchant, period))'
+  ).run();
+  const old = await env.DB.prepare(
+    'SELECT COALESCE(MAX(number), 0) + 1 AS n FROM orders WHERE merchant = ? AND created_ts >= ?'
+  ).bind(merchant, period).first();
+  const floor = Math.max(1, Number(old && old.n) || 1);
+  await env.DB.prepare(
+    'INSERT OR IGNORE INTO order_sequences (merchant, period, next_value, updated_ts) VALUES (?, ?, ?, ?)'
+  ).bind(merchant, period, floor, stamp).run();
+  const row = await env.DB.prepare(
+    'UPDATE order_sequences SET next_value = ' +
+    '(CASE WHEN next_value < ? THEN ? ELSE next_value END) + 1, updated_ts = ? ' +
+    'WHERE merchant = ? AND period = ? RETURNING next_value - 1 AS number'
+  ).bind(floor, floor, stamp, merchant, period).first();
+  if (!row || !Number.isFinite(Number(row.number))) throw new Error('order-number-allocation-failed');
+  return Number(row.number);
 }
 
 /* ── L'option est-elle ouverte chez ce commerçant ? ────────────────────────
@@ -57,6 +94,34 @@ export function normTable(v) {
 /* La clé de rapprochement, jamais ce qu'on affiche. */
 export function tableKey(v) {
   return normTable(v).toUpperCase().replace(/\s+/g, '');
+}
+
+/* ── LE CURSEUR REGARDE LÉGÈREMENT EN ARRIÈRE ──────────────────────────────
+ * Les sondages avancent avec `since` : le client renvoie le `now` de la réponse
+ * précédente, et le serveur ne rend que ce qui a changé DEPUIS. Le piège est
+ * d'une milliseconde, et il perd des commandes pour de bon.
+ *
+ * `now` est pris AVANT la lecture — il faut bien le prendre quelque part — et
+ * plusieurs écritures peuvent s'intercaler entre les deux (l'expiration des
+ * `pending`, le pointage des sessions). Une commande écrite dans cet intervalle
+ * porte un `updated_ts` inférieur ou égal à `now` : la lecture de CE tour ne la
+ * voit pas encore, et le tour SUIVANT l'exclut, puisqu'il ne demande que
+ * `updated_ts > now`. Elle n'est jamais présentée. Comme la caisse n'attache
+ * une commande à l'addition qu'au moment où on la lui présente, elle est perdue
+ * pour l'addition — silencieusement.
+ *
+ * On recule donc le curseur de deux secondes. Le chevauchement re-présente
+ * quelques commandes déjà connues, ce qui ne coûte rien : les trois clients
+ * sont idempotents (marqueurs de ligne côté caisse, `opId` côté cuisine, `id`
+ * côté salle). Un client qui perd une commande coûte de l'argent ; un client
+ * qui la revoit ne coûte rien.
+ *
+ * Reculer le CURSEUR plutôt que corriger chaque client a une conséquence utile :
+ * les navigateurs qui tournent encore sur une version en cache reçoivent le
+ * correctif sans rien réinstaller. */
+export const CURSOR_LAG_MS = 2000;
+export function pollCursor(now) {
+  return Math.max(0, Number(now) - CURSOR_LAG_MS);
 }
 
 /* ── L'identifiant de session ──────────────────────────────────────────────
@@ -155,12 +220,68 @@ export async function priceOrder(env, merchant, rawLines) {
   } catch (_) { menuRow = null; }
 
   let index = null;
+  let optionIndex = new Map();
   let menuRev = null;
   if (menuRow && menuRow.data) {
     try {
       const parsed = JSON.parse(menuRow.data);
       const items = Array.isArray(parsed && parsed.items) ? parsed.items : [];
+      /* Preparation routing belongs to the category, not the item. Keep it
+       * on the canonical priced line so every source (OrderPro, employee
+       * app and caisse) reaches KDS with the same frozen station decision.
+       *
+       * Résolu AVANT le choix de la forme de catalogue, parce que les deux en
+       * ont besoin : une boutique repartait avec `station: ''`, et la caisse
+       * retombait alors sur une recherche PAR NOM. Un article renommé depuis
+       * l'envoi ne se rapprochait plus de rien et le bon partait au poste par
+       * défaut. Le poste doit être figé sur la ligne à l'instant de l'envoi,
+       * comme sur un ticket papier — c'est la règle, et elle ne dépend pas du
+       * métier du commerçant. */
+      const stationIds = (Array.isArray(parsed && parsed.stations) ? parsed.stations : [])
+        .map((station) => String((station && station.id) || '')).filter(Boolean);
+      const configuredKitchen = String((parsed && parsed.kitchenId) || '');
+      const fallbackStation = stationIds.includes(configuredKitchen)
+        ? configuredKitchen : (stationIds[0] || '');
       if (items.length) {
+        const categoryStations = new Map();
+        for (const category of (Array.isArray(parsed && parsed.cats) ? parsed.cats : [])) {
+          if (!category || !category.id) continue;
+          const wanted = String(category.station || '').slice(0, 40);
+          categoryStations.set(String(category.id), stationIds.includes(wanted) ? wanted : fallbackStation);
+        }
+        for (const group of (Array.isArray(parsed && parsed.opts) ? parsed.opts : [])) {
+          if (!group || !group.id) continue;
+          const choices = new Map();
+          const choicesById = new Map();
+          for (const choice of (Array.isArray(group.choices) ? group.choices : [])) {
+            if (!choice) continue;
+            const cObj = {
+              id: String(choice.id || '').trim(),
+              name: String(choice.name || '').trim(),
+              price: Math.max(0, Math.round(Number(choice.price) || 0)),
+              emoji: String(choice.emoji || '').trim().slice(0, 16),
+            };
+            if (cObj.name) {
+              choices.set(cObj.name.toLocaleLowerCase('fr'), cObj);
+            }
+            if (cObj.id) {
+              choicesById.set(cObj.id, cObj);
+            }
+          }
+          optionIndex.set(String(group.id), {
+            name: String(group.name || '').trim(),
+            kind: group.kind === 'many' ? 'many' : 'one',
+            required: group.required === true,
+            /* Older published menus only carried `required` and `kind`. Keep
+             * those menus valid while enforcing richer min/max contracts when
+             * the publisher has preserved them. */
+            min: Math.max(0, Math.min(40, Math.round(Number(group.min) || (group.required === true ? 1 : 0)))),
+            max: Math.max(1, Math.min(40, Math.round(Number(group.max) ||
+              (group.kind === 'many' ? Math.max(1, (Array.isArray(group.choices) ? group.choices.length : 1)) : 1)))),
+            choices,
+            choicesById,
+          });
+        }
         index = new Map();
         for (const it of items) {
           if (!it || !it.id) continue;
@@ -168,6 +289,21 @@ export async function priceOrder(env, merchant, rawLines) {
             name: String(it.name || ''),
             price: Math.max(0, Math.round(Number(it.price) || 0)),
             avail: it.avail !== false,
+            formulaOnly: it.formulaOnly === true,
+            archived: it.archived === true,
+            opts: new Set((Array.isArray(it.opts) ? it.opts : []).map(String)),
+            formula: it.formula && Array.isArray(it.formula.slots) ? {
+              slots: it.formula.slots.map((slot) => ({
+                id: String((slot && slot.id) || ''),
+                label: String((slot && slot.label) || '').trim(),
+                min: Math.max(0, Math.round(Number(slot && slot.min) || 0)),
+                max: Math.max(1, Math.round(Number(slot && slot.max) || 1)),
+                choices: new Map((Array.isArray(slot && slot.choices) ? slot.choices : [])
+                  .filter((choice) => choice && choice.itemId)
+                  .map((choice) => [String(choice.itemId), Math.max(0, Math.round(Number(choice.extra) || 0))])),
+              })).filter((slot) => slot.id && slot.choices.size),
+            } : null,
+            station: categoryStations.get(String(it.catId || '')) || fallbackStation,
           });
         }
         menuRev = menuRow.updated_ts || null;
@@ -195,6 +331,9 @@ export async function priceOrder(env, merchant, rawLines) {
               name: String(p.name || ''),
               price: Math.max(0, Math.round(Number(p.priceMAD) || 0)),
               avail: stock.has(k) ? stock.get(k) > 0 : true,
+              /* Une boutique n'a pas de catégories de préparation ; elle a
+                 néanmoins un poste par défaut dès qu'un écran existe. */
+              station: fallbackStation,
             });
           }
           menuRev = menuRow.updated_ts || null;
@@ -206,6 +345,9 @@ export async function priceOrder(env, merchant, rawLines) {
   const lines = [];
   const unknown = [];
   const unavailable = [];
+  const formulaOnly = [];
+  const archived = [];
+  const invalidOptions = [];
   let total = 0;
 
   /* Rien contre quoi vérifier ⇒ on ne devine pas, on le DIT. L'appelant en fait
@@ -214,20 +356,180 @@ export async function priceOrder(env, merchant, rawLines) {
    * laisser un inconnu tarifer la marchandise d'un commerçant. */
   if (!index) {
     return { lines: [], total: 0, priced: false, noCatalogue: true, menuRev: null,
-             unknown: [], unavailable: [] };
+             unknown: [], unavailable: [], formulaOnly: [], archived: [] };
+  }
+
+  /* A composed menu is one billable parent plus non-billable preparation
+   * children. Validate that relationship against the published formula before
+   * pricing anything: the device cannot invent a zero-price child, and the
+   * canonical repricer must not turn an included drink back into a full-price
+   * standalone article. Only each choice's configured `extra` is added to the
+   * parent. */
+  const formulaContexts = new Map();
+  for (const parent of rawLines) {
+    const uid = String((parent && parent.formulaUid) || '').slice(0, 40);
+    if (!uid || String((parent && parent.kind) || '') !== 'formula') continue;
+    const parentRef = index.get(String((parent && parent.id) || ''));
+    const slots = parentRef && parentRef.formula && parentRef.formula.slots;
+    const children = rawLines.filter((line) => String((line && line.kind) || '') === 'formula-part'
+      && String((line && line.formulaUid) || '').slice(0, 40) === uid);
+    let valid = !!(slots && slots.length);
+    let extra = 0;
+    /* Keep the authoritative supplement of EACH selected component. Billing
+     * still charges the composed-menu parent once; this map only lets the
+     * customer receipt explain which choice contributed 0 MAD and which one
+     * contributed (for example) 12 MAD. Never trust a client-supplied amount. */
+    const choiceExtras = new Map();
+    const assigned = new Set();
+    /* Le créneau se comptait en LIGNES. Une seule ligne satisfaisait donc
+       « min ≤ 1 ≤ max » tout en portant la quantité de l'appelant — jusqu'à 99 —
+       et l'enfant d'une formule est facturé zéro. Une commande passée depuis le
+       QR d'une table, sans le moindre identifiant, sortait ainsi 99 boissons
+       offertes par menu vendu, imprimées « inclus » sur l'addition.
+       On compte donc les quantités, et on les borne à ce que le parent commande :
+       deux menus donnent droit à deux boissons, pas à quatre-vingt-dix-neuf. */
+    const parentQty = Math.min(MAX_LINE_QTY, Math.max(1, Math.round(Number(parent && parent.qty) || 1)));
+    const childQty = (child) => Math.min(MAX_LINE_QTY, Math.max(1, Math.round(Number(child && child.qty) || 1)));
+    if (valid) {
+      for (const slot of slots) {
+        const selected = children.filter((child, childIndex) => {
+          if (assigned.has(childIndex)) return false;
+          const explicitSlot = String((child && child.formulaSlotId) || '');
+          const lineId = String((child && child.lineId) || '');
+          const label = String((child && child.slotLabel) || '').trim();
+          /* OrderPro appends a choice index to lineId when a slot allows
+             multiple selections (…-slot-0, …-slot-1). Match that stable slot
+             prefix as well as the legacy exact form; otherwise a perfectly
+             configured salle formula is rejected as “options à recueillir”. */
+          const slotLinePrefix = `${uid}-${slot.id}`;
+          return explicitSlot === slot.id || lineId === slotLinePrefix
+            || lineId.startsWith(slotLinePrefix + '-')
+            || (!!slot.label && label === slot.label);
+        });
+        const takenQty = selected.reduce((n, child) => n + childQty(child), 0);
+        if (takenQty < slot.min * parentQty || takenQty > slot.max * parentQty) { valid = false; break; }
+        for (const child of selected) {
+          const childIndex = children.indexOf(child);
+          const childId = String((child && child.id) || '');
+          if (!slot.choices.has(childId)) { valid = false; break; }
+          assigned.add(childIndex);
+          const choiceExtra = slot.choices.get(childId) || 0;
+          choiceExtras.set(child, choiceExtra);
+          extra += choiceExtra;
+        }
+        if (!valid) break;
+      }
+      if (assigned.size !== children.length) valid = false;
+    }
+    formulaContexts.set(uid, { valid, extra, choiceExtras, parentId: String((parent && parent.id) || '') });
   }
 
   for (const l of rawLines) {
     const id = String((l && l.id) || '').slice(0, 40);
     const qty = Math.min(MAX_LINE_QTY, Math.max(1, Math.round(Number(l && l.qty) || 1)));
-    const options = String((l && l.options) || '').slice(0, 200);
+    let options = String((l && l.options) || '').slice(0, 200);
     const note = String((l && l.note) || '').slice(0, 200);
+    const visuals = (Array.isArray(l && l.visuals) ? l.visuals.slice(0, 12) : [])
+      .map((v) => ({
+        emoji: String((v && (v.emoji || v.e)) || '').trim().slice(0, 16),
+        name: String((v && (v.name || v.label || v.cn)) || '').trim().slice(0, 60),
+      }))
+      .filter((v) => v.name);
 
     const ref = id && index.get(id);
     if (!ref) { unknown.push(id || '?'); continue; }
+    const kind = String((l && l.kind) || '').slice(0, 20);
+    const formulaUid = String((l && l.formulaUid) || '').slice(0, 40);
+    const formulaContext = formulaUid ? formulaContexts.get(formulaUid) : null;
+    if ((kind === 'formula' || kind === 'formula-part') && (!formulaContext || !formulaContext.valid)) {
+      invalidOptions.push(ref.name || id || '?');
+      continue;
+    }
+    if (ref.archived) { archived.push(ref.name || id); continue; }
+    if (ref.formulaOnly && kind !== 'formula-part') { formulaOnly.push(ref.name || id); continue; }
     if (!ref.avail) { unavailable.push(ref.name || id); continue; }
-    lines.push({ id, name: ref.name, qty, unitPrice: ref.price, options, note });
-    total += ref.price * qty;
+    let optionExtra = 0;
+    let canonicalVisuals = visuals;
+    const selected = Array.isArray(l && l.optionChoices) ? l.optionChoices.slice(0, 40) : [];
+    /* Formula parents are a legacy composite contract: their required choices
+     * are represented by formula-part lines/slots, not by the regular `opts`
+     * array. Enforcing the regular group here would reject existing published
+     * formulas before their slot children are priced. Explicit optionChoices on
+     * a formula parent still go through the normal identity/count validation. */
+    const hasRequiredOption = kind !== 'formula' && !!(ref.opts && Array.from(ref.opts).some((groupId) => {
+      const group = optionIndex.get(groupId);
+      return group && group.min > 0;
+    }));
+    if (selected.length || hasRequiredOption) {
+      const labels = [];
+      canonicalVisuals = [];
+      const oneSeen = new Set();
+      const groupCounts = new Map();
+      const groupChoices = new Map();
+      let valid = true;
+      for (const picked of selected) {
+        if (!picked) continue;
+        const groupId = String((picked && picked.group) || '').slice(0, 40);
+        const choiceId = String((picked && (picked.choiceId || picked.id)) || '').trim().slice(0, 40);
+        const labelKey = String((picked && picked.label) || '').trim().toLocaleLowerCase('fr');
+        if (!choiceId && !labelKey) continue;
+        const group = optionIndex.get(groupId);
+        const choice = group && (
+          (choiceId && group.choicesById && group.choicesById.get(choiceId)) ||
+          (labelKey && group.choices && group.choices.get(labelKey))
+        );
+        if (!group || !ref.opts || !ref.opts.has(groupId) || !choice
+            || (group.kind === 'one' && oneSeen.has(groupId))) {
+          valid = false;
+          break;
+        }
+        if (group.kind === 'one') oneSeen.add(groupId);
+        const pickedChoices = groupChoices.get(groupId) || new Set();
+        if (pickedChoices.has(choice.id)) {
+          valid = false;
+          break;
+        }
+        pickedChoices.add(choice.id);
+        groupChoices.set(groupId, pickedChoices);
+        groupCounts.set(groupId, (groupCounts.get(groupId) || 0) + 1);
+        labels.push(`${group.name}: ${choice.name}`);
+        optionExtra += choice.price;
+        canonicalVisuals.push({ emoji: choice.emoji || '', name: choice.name });
+      }
+      if (valid) {
+        for (const groupId of ref.opts) {
+          const group = optionIndex.get(groupId);
+          if (!group) { valid = false; break; }
+          const count = groupCounts.get(groupId) || 0;
+          if (count < group.min || count > group.max) {
+            valid = false;
+            break;
+          }
+        }
+      }
+      if (!valid) { invalidOptions.push(ref.name || id || '?'); continue; }
+      options = labels.join(' · ').slice(0, 200);
+    }
+    const formulaExtra = kind === 'formula' && formulaContext ? formulaContext.extra : 0;
+    const unitPrice = kind === 'formula-part' ? 0 : ref.price + optionExtra + formulaExtra;
+    const line = { id, name: ref.name, qty, unitPrice, options, note, visuals: canonicalVisuals,
+                   station: ref.station || '' };
+    if (l && l.uid) line.uid = String(l.uid).slice(0, 60);
+    if (kind) line.kind = kind;
+    if (formulaUid) line.formulaUid = formulaUid;
+    if (l && l.formulaName) line.formulaName = String(l.formulaName).slice(0, 80);
+    if (l && l.slotLabel) line.slotLabel = String(l.slotLabel).slice(0, 80);
+    if (l && l.formulaSlotId) line.formulaSlotId = String(l.formulaSlotId).slice(0, 40);
+    if (l && l.lineId) line.lineId = String(l.lineId).slice(0, 60);
+    if (kind === 'formula-part') {
+      /* `unitPrice` deliberately remains zero: the parent already carries the
+       * supplement in the payable total. `formulaExtra` is presentation data
+       * for the itemised receipt, computed from the published catalogue. */
+      line.formulaExtra = Math.max(0, Number(formulaContext && formulaContext.choiceExtras
+        && formulaContext.choiceExtras.get(l)) || 0);
+    }
+    lines.push(line);
+    total += unitPrice * qty;
   }
 
   return {
@@ -235,6 +537,6 @@ export async function priceOrder(env, merchant, rawLines) {
     priced: true,             // on n'arrive ici qu'avec un catalogue en main
     noCatalogue: false,
     menuRev,
-    unknown, unavailable,
+    unknown, unavailable, formulaOnly, archived, invalidOptions,
   };
 }

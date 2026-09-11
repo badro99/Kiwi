@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Kiwi · La première banque en ligne du Maroc</title>
 <meta name="description" content="Compte, carte, paiements, investissement et transferts diaspora. Une banque pensée pour les Marocains, dans votre poche." />
-<link rel="icon" href="assets/favicon.svg" />
+<link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="assets/tokens.css" />
 <link rel="stylesheet" href="assets/theme.css" />
 <link rel="stylesheet" href="assets/polish.css" />
@@ -27,7 +27,7 @@
   .nav { position: sticky; top: 0; z-index: 80; background: rgba(2,32,26,0.72); backdrop-filter: blur(22px) saturate(140%); border-bottom: 1px solid rgba(255,255,255,0.06); }
   .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; color: var(--paper); }
   .nav-logo { display: inline-flex; align-items: baseline; gap: 4px; font-weight: 700; font-size: 24px; letter-spacing: -0.05em; color: var(--paper); }
-  .nav-logo .dot { width: 6px; height: 6px; background: var(--mint); border-radius: 50%; translate: 0 -2px; }
+  .nav-logo img { display:block; width:auto; height:28px; }
   .nav-links { display: flex; gap: 28px; font-size: 13.5px; color: #c6ead4; }
   .nav-links a { color: inherit; transition: color .2s; }
   .nav-links a:hover { color: var(--mint); }
@@ -39,7 +39,7 @@
   @media (max-width: 840px) { .nav-links { display: none; } .hide-mob { display: none !important; } }
 
   /* Hamburger */
-  .nav-burger { display: none; width: 38px; height: 38px; background: transparent; border: 0; cursor: pointer; flex-direction: column; justify-content: center; align-items: center; gap: 4px; padding: 0; margin-left: 4px; }
+  .nav-burger { display: none; width: 44px; height: 44px; background: transparent; border: 0; cursor: pointer; flex-direction: column; justify-content: center; align-items: center; gap: 4px; padding: 0; margin-left: 4px; }
   .nav-burger span { width: 20px; height: 1.8px; background: var(--paper); border-radius: 2px; transition: transform .25s, opacity .2s; }
   .nav-burger[aria-expanded="true"] span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
   .nav-burger[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
@@ -211,8 +211,8 @@
 
   .card-visual { aspect-ratio: 1.585; border-radius: 18px; padding: 22px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; box-shadow: 0 20px 40px -15px rgba(0,0,0,0.25); }
   .card-visual .top { display: flex; justify-content: space-between; align-items: flex-start; }
-  .card-visual .brand { font-size: 20px; font-weight: 700; letter-spacing: -0.05em; display: inline-flex; align-items: baseline; gap: 3px; }
-  .card-visual .brand .d { width: 5px; height: 5px; background: var(--mint); border-radius: 50%; }
+  .card-visual .brand { display: inline-flex; align-items: center; }
+  .card-visual .brand img { display:block; width:auto; height:22px; }
   .card-visual .tag { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.7; }
   .card-visual .bot { display: flex; justify-content: space-between; align-items: flex-end; }
   .card-visual .num { font-family: var(--mono); font-size: 13px; letter-spacing: 0.06em; opacity: 0.85; }
@@ -372,6 +372,7 @@
   .vs-table { background: var(--surface); border: 1px solid var(--n-200); border-radius: 24px; overflow: hidden; }
   .vs-table-h { display: grid; grid-template-columns: 1.4fr 1fr 1fr; background: var(--paper-soft); padding: 22px 28px; font-size: 13px; font-weight: 500; color: var(--n-500); letter-spacing: 0.04em; }
   .vs-table-h .kiwi { color: var(--atlas); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+  .vs-table-h .kiwi img { display:block; width:auto; height:20px; }
   .vs-row { display: grid; grid-template-columns: 1.4fr 1fr 1fr; padding: 20px 28px; align-items: center; border-top: 1px solid var(--n-200); font-size: 15px; }
   .vs-row .l { color: var(--n-700); font-weight: 500; }
   .vs-row .kiwi { color: var(--atlas); font-weight: 500; font-family: var(--mono); }
@@ -627,6 +628,41 @@
   .iv-vault-card .foot { display: flex; justify-content: space-between; font-size: 10.5px; color: rgba(255,255,255,0.55); margin-top: 8px; font-family: var(--mono); }
   .iv-vault-card.alt { border-color: rgba(255,255,255,0.06); }
   .iv-vault-card.alt .apy { background: rgba(255,255,255,0.1); color: var(--paper); }
+
+  /* Final mobile layer: the original phone rules appeared before the desktop
+     component declarations, so the cascade silently restored desktop sizes. */
+  @media (max-width: 540px) {
+    html, body { max-width: 100%; overflow-x: clip; }
+    .wrap, .wrap-sm { padding-inline: 20px; }
+    .hero { padding: 60px 0 0; }
+    .hero h1 {
+      font-size: clamp(40px, 12vw, 54px);
+      line-height: .95;
+      overflow-wrap: anywhere;
+    }
+    .hero p.lead { font-size: 16px; }
+    .hero-form { flex-direction: column; padding: 8px; border-radius: 22px; max-width: 100%; }
+    .hero-form input { width: 100%; padding: 12px 16px; text-align: left; }
+    .hero-form button { width: 100%; min-height: 46px; padding: 14px; }
+    .hero-grid { gap: 30px; min-height: auto; padding-bottom: 40px; }
+    .phone { width: min(280px, calc(100vw - 40px)); }
+    .phone-screen { height: 580px; }
+    .pf-bal, .rv-bal { font-size: 36px; }
+    .sec-head { margin-bottom: 40px; }
+    section { padding: 70px 0; }
+    .xfer-mega { gap: 30px; }
+    .xfer-stats { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .xfer-stat { padding: 14px; }
+    .xfer-stat .v { font-size: 22px; }
+    .phone.s-mini { width: min(260px, calc(100vw - 40px)); }
+    .phone.s-mini .phone-screen { height: 520px; }
+    .vs-row { font-size: 14px; }
+    .final { padding: 90px 0 110px; border-radius: 28px 28px 0 0; }
+    .road { grid-template-columns: 1fr; }
+    .card-tile { padding: 28px 24px 26px; }
+    .card-tile h3 { font-size: 26px; }
+    .foot-top { grid-template-columns: 1fr; gap: 30px; }
+  }
 </style>
 </head>
 <body>
@@ -634,7 +670,7 @@
 <!-- ============ NAV ============ -->
 <nav class="nav">
   <div class="wrap nav-inner">
-    <a href="index.html" class="nav-logo">kiwi<i class="dot"></i></a>
+    <a href="index.html" class="nav-logo"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></a>
     <div class="nav-links">
       <a href="#compte">Compte</a>
       <a href="#carte">Carte</a>
@@ -802,7 +838,7 @@
         <p class="sub">Le compte gratuit, sans condition.</p>
         <div class="card-visual cv-standard">
           <div class="top">
-            <div class="brand">kiwi<i class="d"></i></div>
+            <div class="brand"><img src="assets/kiwi-newlogo.svg" alt="Kiwi"></div>
             <div class="tag">Visa Debit</div>
           </div>
           <div class="bot">
@@ -831,7 +867,7 @@
         <p class="sub">Pour ceux qui voyagent et investissent.</p>
         <div class="card-visual cv-pro">
           <div class="top">
-            <div class="brand">kiwi<i class="d"></i></div>
+            <div class="brand"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
             <div class="tag">Visa Platinum</div>
           </div>
           <div class="bot">
@@ -860,7 +896,7 @@
         <p class="sub">L'expérience signature, en métal brossé.</p>
         <div class="card-visual cv-atlas">
           <div class="top">
-            <div class="brand">kiwi<i class="d"></i></div>
+            <div class="brand"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
             <div class="tag accent">Visa Infinite</div>
           </div>
           <div class="bot">
@@ -1252,7 +1288,7 @@
     <div class="vs-table">
       <div class="vs-table-h">
         <div>Service</div>
-        <div class="kiwi">kiwi<i style="width:5px;height:5px;background:var(--mint);border-radius:50%;display:inline-block;"></i></div>
+        <div class="kiwi"><img src="assets/kiwi-newlogo.svg" alt="Kiwi"></div>
         <div>Banque traditionnelle</div>
       </div>
       <div class="vs-row">
@@ -1440,7 +1476,7 @@
   <div class="wrap">
     <div class="foot-top">
       <div>
-        <a href="index.html" class="nav-logo" style="font-size:26px;">kiwi<i class="dot"></i></a>
+        <a href="index.html" class="nav-logo"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></a>
         <p style="color:#88a098;font-size:13.5px;line-height:1.6;margin:18px 0 0;max-width:340px;">La première banque en ligne pensée par et pour les Marocains. Tanger · Casablanca.</p>
       </div>
       <div>
@@ -1458,7 +1494,7 @@
           <li><a href="index.html#produits">Kiwi POS</a></li>
           <li><a href="pitch.html">Investisseurs</a></li>
           <li><a href="brand.html">Identité</a></li>
-          <li><a href="mailto:invest@kiwi.ma">Contact</a></li>
+          <li><a href="mailto:invest@kiwi-os.com">Contact</a></li>
         </ul>
       </div>
       <div>

@@ -197,6 +197,23 @@
 
   const familyId = (id, label, hex) => normalize(id, label, hex).id;
 
+  function customHex(id) {
+    const m = /^custom-([0-9a-f]{6})$/i.exec(String(id || '').trim());
+    return m ? `#${m[1].toUpperCase()}` : '';
+  }
+
+  /* Exact custom colours keep their own visible hex while still resolving to a
+     general family through normalize()/familyId() for reports and filters. */
+  function display(id, label, hex) {
+    const exact = customHex(id) || (/^#[0-9a-f]{6}$/i.test(String(hex || '').trim()) && /^custom-/i.test(String(id || '')) ? String(hex).toUpperCase() : '');
+    if (!exact) return normalize(id, label, hex);
+    const hsl = hexToHsl(exact);
+    return {
+      id: String(id), label: String(label || `Couleur personnalisée ${exact}`), hex: exact,
+      light: !!(hsl && hsl.l > 0.78), custom: true,
+    };
+  }
+
   /* ───────────────── styles ─────────────────
      Injected once, shared by both apps. Sizes: default 30px (dense tables and
      dashboard forms), `lg` 44px (caisse touch targets — a thumb at the counter),
@@ -259,6 +276,20 @@
       .kc-cap:empty::before { content: attr(data-kc-empty); opacity: .75; }
       .kc-tag { display: inline-flex; align-items: center; gap: 6px; }
       .kc-tag-src { font-size: 11px; color: var(--n-500, #77807b); }
+      .kc-more { display:inline-flex; align-items:center; justify-content:center; font-size:21px; line-height:1; background:var(--paper,#fff); color:var(--atlas,#0B6E4F); }
+      .kc-custom-wrap { position:relative; }
+      /* The custom controls used to be a 430px absolute popover anchored to the
+         30px plus button. In a two-column modal that pushed its leading controls
+         outside the dialog, where the modal clipped them. Keep the editor in the
+         picker's own flow: every control stays visible and the form grows instead
+         of covering the stock and barcode fields below it. */
+      .kc-custom-pop { box-sizing:border-box; position:static; width:100%; margin-top:10px; padding:12px; border:1px solid var(--line,#ddd); border-radius:12px; background:var(--paper,#fff); box-shadow:0 8px 22px rgba(10,15,13,.12); display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+      .kc-custom-pop[hidden] { display:none; }
+      .kc-custom-pop input[type="color"] { width:54px; height:42px; padding:2px; border:1px solid var(--line,#ddd); border-radius:9px; background:transparent; cursor:pointer; }
+      .kc-custom-pop input[type="text"] { min-height:42px; padding:9px; border:1px solid var(--line,#ddd); border-radius:9px; background:var(--paper,#fff); color:var(--ink,#0A0F0D); }
+      .kc-custom-pop input[data-kc-hex-input] { width:92px; font:12px var(--mono,monospace); text-transform:uppercase; }
+      .kc-custom-pop input[data-kc-name-input] { flex:1 1 150px; min-width:150px; font:13px var(--sans,system-ui); }
+      .kc-custom-pop button { padding:9px 11px; border:0; border-radius:9px; background:var(--atlas,#0B6E4F); color:#fff; cursor:pointer; }
       @media (max-width: 720px) { .kc-sw { width: 36px; height: 36px; } .kc-sw.kc-sm { width: 16px; height: 16px; } }
       @media (prefers-reduced-motion: reduce) { .kc-sw { transition: none; } button.kc-sw:hover { transform: none; } }
     `;
@@ -284,7 +315,7 @@
      name for assistive tech even though nothing is printed next to it. */
   function swatch(idOrFamily, opts) {
     opts = opts || {};
-    const f = typeof idOrFamily === 'object' && idOrFamily ? idOrFamily : normalize(idOrFamily);
+    const f = typeof idOrFamily === 'object' && idOrFamily ? idOrFamily : display(idOrFamily);
     const a = swAttrs(f, opts.size || 'sm');
     const name = opts.name || f.label;
     return `<i class="${a.cls}" ${a.pat ? `data-kc-pattern="${a.pat}"` : ''} style="${a.style}" `
@@ -298,10 +329,12 @@
     opts = opts || {};
     const size = opts.size || 'md';
     const list = opts.ids && opts.ids.length
-      ? opts.ids.map((i) => BY_ID[i] || normalize(i)).filter(Boolean)
+      ? opts.ids.map((i) => BY_ID[i] || display(i)).filter(Boolean)
       : FAMILIES.filter((f) => !f.optional || opts.optional);
     const seen = new Set();
-    const sel = selected ? familyId(selected) : '';
+    const selectedObj = typeof selected === 'object' && selected ? selected : null;
+    const sel = selectedObj ? selectedObj.id : (selected ? String(selected) : '');
+    const customSelected = selectedObj && selectedObj.custom ? selectedObj : (customHex(sel) ? display(sel) : null);
     const btns = list.filter((f) => (seen.has(f.id) ? false : seen.add(f.id))).map((f) => {
       const a = swAttrs(f, size);
       const on = f.id === sel;
@@ -310,11 +343,19 @@
         + `aria-checked="${on ? 'true' : 'false'}" tabindex="${on || (!sel && f === list[0]) ? '0' : '-1'}" `
         + `title="${esc(f.label)}" aria-label="${esc(f.label)}"></button>`;
     }).join('');
+    const customBtn = customSelected && !list.some((f) => f.id === customSelected.id) ? (() => {
+      const a = swAttrs(customSelected, size);
+      return `<button type="button" class="${a.cls}" style="${a.style}" data-kc-color="${esc(customSelected.id)}" data-kc-hex="${esc(customSelected.hex)}" value="${esc(customSelected.id)}" role="radio" aria-checked="true" tabindex="0" title="${esc(customSelected.label)}" aria-label="${esc(customSelected.label)}"></button>`;
+    })() : '';
+    const customName = customSelected && !/^Couleur personnalisée\s+#[0-9a-f]{6}$/i.test(String(customSelected.label || ''))
+      ? customSelected.label : '';
+    const moreButton = opts.custom ? `<span class="kc-custom-wrap"><button type="button" class="kc-sw kc-more" data-kc-more aria-expanded="false" aria-label="Choisir une couleur personnalisée" title="Plus de couleurs">+</button></span>` : '';
+    const customPanel = opts.custom ? `<div class="kc-custom-pop" data-kc-pop hidden><input type="color" value="${customSelected ? esc(customSelected.hex) : '#4A67D6'}" data-kc-native aria-label="Sélecteur de couleur"><input type="text" value="${customSelected ? esc(customSelected.hex) : '#4A67D6'}" data-kc-hex-input maxlength="7" aria-label="Code hexadécimal"><input type="text" value="${esc(customName)}" data-kc-name-input maxlength="40" placeholder="Nom, ex. Bleu clair" aria-label="Nom affiché de la couleur"><button type="button" data-kc-apply>Choisir</button></div>` : '';
     const cap = opts.caption === false ? ''
       : `<div class="kc-cap" data-kc-cap data-kc-empty="${esc(opts.hint || 'Survolez une pastille pour lire son nom')}">`
         + `${sel ? esc(BY_ID[sel] ? BY_ID[sel].label : '') : ''}</div>`;
     return `<div class="kc-picker" data-kc-picker="${esc(name || 'color')}" role="radiogroup" `
-      + `aria-label="${esc(opts.label || 'Couleur')}"><div class="kc-row">${btns}</div>${cap}</div>`;
+      + `aria-label="${esc(opts.label || 'Couleur')}"><div class="kc-row">${btns}${customBtn}${moreButton}</div>${customPanel}${cap}</div>`;
   }
 
   /* Read the current value out of a rendered picker (or its container). */
@@ -326,6 +367,16 @@
     return on ? on.getAttribute('data-kc-color') : '';
   }
 
+  function selection(root) {
+    if (!root) return null;
+    const box = root.matches && root.matches('[data-kc-picker]') ? root : root.querySelector('[data-kc-picker]');
+    const on = box && box.querySelector('[aria-checked="true"][data-kc-color]');
+    if (!on) return null;
+    const id = on.getAttribute('data-kc-color');
+    const f = display(id, on.getAttribute('title'), on.getAttribute('data-kc-hex'));
+    return { id, label: f.label, hex: f.hex, custom: !!f.custom };
+  }
+
   function select(box, id) {
     if (!box) return;
     box.querySelectorAll('[data-kc-color]').forEach((b) => {
@@ -334,7 +385,10 @@
       b.setAttribute('tabindex', on ? '0' : '-1');
     });
     const cap = box.querySelector('[data-kc-cap]');
-    if (cap) cap.textContent = BY_ID[id] ? BY_ID[id].label : '';
+    if (cap) {
+      const on = box.querySelector(`[data-kc-color="${id}"]`);
+      cap.textContent = on ? (on.getAttribute('title') || '') : (BY_ID[id] ? BY_ID[id].label : '');
+    }
   }
 
   /* One delegated wiring for every picker on the page, present or future — no
@@ -346,6 +400,55 @@
     document.__kcWired = true;
 
     document.addEventListener('click', (e) => {
+      const more = e.target.closest && e.target.closest('[data-kc-more]');
+      if (more) {
+        const box = more.closest('[data-kc-picker]');
+        const pop = box && box.querySelector('[data-kc-pop]');
+        if (pop) {
+          pop.hidden = !pop.hidden;
+          more.setAttribute('aria-expanded', pop.hidden ? 'false' : 'true');
+          if (!pop.hidden) {
+            const first = pop.querySelector('[data-kc-native]');
+            if (first) first.focus();
+          }
+        }
+        return;
+      }
+      const apply = e.target.closest && e.target.closest('[data-kc-apply]');
+      if (apply) {
+        const pop = apply.closest('[data-kc-pop]');
+        const box = apply.closest('[data-kc-picker]');
+        const input = pop && pop.querySelector('[data-kc-hex-input]');
+        const nameInput = pop && pop.querySelector('[data-kc-name-input]');
+        const raw = input && input.value.trim();
+        if (!box || !/^#[0-9a-f]{6}$/i.test(raw || '')) return;
+        const hex = raw.toUpperCase();
+        const id = `custom-${hex.slice(1).toLowerCase()}`;
+        const label = String(nameInput && nameInput.value || '').trim().replace(/\s+/g, ' ').slice(0, 40)
+          || `Couleur personnalisée ${hex}`;
+        let b = box.querySelector(`[data-kc-color="${id}"]`);
+        if (!b) {
+          const f = display(id, label, hex);
+          const a = swAttrs(f, 'md');
+          b = document.createElement('button');
+          b.type = 'button'; b.className = a.cls; b.style.cssText = a.style;
+          b.setAttribute('data-kc-color', id); b.setAttribute('data-kc-hex', hex);
+          b.setAttribute('role', 'radio'); b.setAttribute('title', f.label); b.setAttribute('aria-label', f.label);
+          box.querySelector('.kc-custom-wrap').before(b);
+        } else {
+          b.setAttribute('data-kc-hex', hex);
+          b.setAttribute('title', label);
+          b.setAttribute('aria-label', label);
+        }
+        select(box, id); pop.hidden = true;
+        const moreButton = box.querySelector('[data-kc-more]');
+        if (moreButton) moreButton.setAttribute('aria-expanded', 'false');
+        box.dispatchEvent(new CustomEvent('kc:change', {
+          bubbles: true,
+          detail: { value: id, name: box.getAttribute('data-kc-picker'), label, hex, custom: true },
+        }));
+        return;
+      }
       const b = e.target.closest && e.target.closest('button.kc-sw[data-kc-color]');
       if (!b) return;
       const box = b.closest('[data-kc-picker]');
@@ -355,6 +458,13 @@
         bubbles: true, detail: { value: b.getAttribute('data-kc-color'), name: box.getAttribute('data-kc-picker') },
       }));
     }, true);
+
+    document.addEventListener('input', (e) => {
+      if (e.target.matches && e.target.matches('[data-kc-native]')) {
+        const t = e.target.closest('[data-kc-pop]').querySelector('[data-kc-hex-input]');
+        if (t) t.value = e.target.value.toUpperCase();
+      }
+    });
 
     document.addEventListener('keydown', (e) => {
       const b = e.target.closest && e.target.closest('button.kc-sw[data-kc-color]');
@@ -408,10 +518,10 @@
     families: (opts) => FAMILIES.filter((f) => !f.optional || (opts && opts.optional)).slice(),
     all: () => FAMILIES.slice(),
     get: (id) => BY_ID[slug(id)] || null,
-    normalize, familyId,
+    normalize, familyId, display,
     label: (id) => (normalize(id).label),
     isFamily: (id) => !!BY_ID[slug(id)],
     slug, hexToHsl, familyFromHex,
-    swatch, picker, value, select, injectCss, install,
+    swatch, picker, value, selection, select, injectCss, install,
   };
 })();

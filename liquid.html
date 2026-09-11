@@ -61,7 +61,38 @@ em, i, cite, dfn, var { font-style: normal; }
     font:12px/1 'JetBrains Mono', ui-monospace, monospace; color:var(--ink);
     background:rgba(255,255,255,.86); border:1px solid rgba(0,0,0,.08); padding:8px 12px; border-radius:10px; }
   .hud b{ color:var(--atlas); } .hud button{ font:inherit; cursor:pointer; border:1px solid rgba(0,0,0,.12);
-    background:var(--surface); border-radius:7px; padding:6px 10px; } .hud input{ width:120px; }
+    background:var(--surface); border-radius:7px; padding:6px 10px; min-height:44px; } .hud input{ width:120px; min-height:44px; }
+  @media (max-width: 600px) {
+    .hud {
+      right: 12px;
+      width: auto;
+      flex-wrap: wrap;
+      row-gap: 6px;
+    }
+    .hud label { display: flex; flex: 1 1 100%; align-items: center; gap: 8px; }
+    .hud input { flex: 1; width: auto; }
+    #kpi, #live {
+      left: 12px;
+      right: 12px;
+      width: auto;
+      padding: 20px;
+    }
+    #kpi { top: 140px; }
+    #live { top: auto; bottom: 92px; }
+    .card .big { font-size: 2.2rem; }
+    .card .row { gap: 16px; }
+    #nav {
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+      width: auto;
+      transform: none;
+      overflow-x: auto;
+      justify-content: space-between;
+    }
+    #nav a { padding: 10px 12px; white-space: nowrap; }
+    .stage .tag, .stage .wm { display: none; }
+  }
 </style>
 </head>
 <body>

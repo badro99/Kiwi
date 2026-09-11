@@ -116,8 +116,8 @@
     nextDay:   { fr: 'Jour suivant', en: 'Next day', ar: 'اليوم التالي' },
     reopened:  { fr: 'Clôturée {n} fois', en: 'Closed {n} times', ar: 'أُقفل {n} مرات' },
     revision:  { fr: 'Historique des clôtures', en: 'Closing history', ar: 'سجل الإقفال' },
-    coverage:  { fr: 'Ce détail porte sur {p}% du chiffre encaissé — les ventes sans panier détaillé n’y figurent pas.', en: 'This breakdown covers {p}% of revenue — sales with no itemised basket are not in it.', ar: 'يغطي هذا التفصيل {p}٪ من المداخيل — المبيعات بدون سلة مفصّلة غير مدرجة.' },
-    noDetail:  { fr: 'Aucun détail produit pour cette journée — les ventes ont été encaissées sans panier détaillé.', en: 'No product detail for this day — sales were taken without an itemised basket.', ar: 'لا تفاصيل للمنتجات في هذا اليوم.' },
+    coverage:  { fr: 'Ce détail porte sur {p}% du chiffre encaissé · les ventes sans panier détaillé n’y figurent pas.', en: 'This breakdown covers {p}% of revenue · sales with no itemised basket are not in it.', ar: 'يغطي هذا التفصيل {p}٪ من المداخيل · المبيعات بدون سلة مفصّلة غير مدرجة.' },
+    noDetail:  { fr: 'Aucun détail produit pour cette journée · les ventes ont été encaissées sans panier détaillé.', en: 'No product detail for this day · sales were taken without an itemised basket.', ar: 'لا تفاصيل للمنتجات في هذا اليوم.' },
     divers:    { fr: 'Divers', en: 'Other', ar: 'متفرقات' },
     total:     { fr: 'Total', en: 'Total', ar: 'المجموع' },
     /* ── les blocs ajoutés ── */
@@ -205,7 +205,9 @@
       '.kdr-chip.is-closed{background:color-mix(in srgb,var(--atlas) 13%,transparent);color:var(--atlas)}',
       '.kdr-chip.is-live{background:color-mix(in srgb,var(--mint) 30%,transparent);color:var(--riad)}',
       '.kdr-chip.is-open{background:var(--n-100);color:var(--n-500)}',
-      '.kdr-btn{border:1px solid var(--n-200);border-radius:10px;padding:8px 14px;background:transparent;color:var(--ink);font:inherit;font-size:13px;cursor:pointer;transition:background 140ms,border-color 140ms}',
+      '.kdr-btn{border:1px solid var(--n-200);border-radius:10px;padding:8px 14px;background:transparent;color:var(--ink);font:inherit;font-size:13px;cursor:pointer;transition:background 140ms,border-color 140ms,transform 80ms var(--spring)}',
+      '.kdr-btn:active{transform:scale(0.97)}',
+      '.kdr-btn:focus-visible{outline:2px solid var(--atlas);outline-offset:2px}',
       '.kdr-btn:hover{background:color-mix(in srgb,var(--atlas) 8%,transparent);border-color:var(--atlas)}',
       /* ── la frise des quatorze jours ── */
       '.kdr-strip{border:1px solid var(--n-200);border-radius:14px;padding:13px 15px 10px;margin-bottom:16px}',
@@ -258,13 +260,30 @@
       '.kdr-r.is-sub .kdr-r-l{color:var(--n-500);font-size:13px;padding-inline-start:14px}',
       '.kdr-r.is-sub .kdr-r-v{color:var(--n-500);font-size:13px}',
       /* ── la courbe horaire ── */
-      '.kdr-hrs{display:flex;align-items:stretch;gap:3px;height:96px;padding-top:4px}',
-      '.kdr-hr{flex:1;min-width:0;display:flex;align-items:flex-end}',
-      '.kdr-hr-b{width:100%;min-height:2px;border-radius:3px 3px 0 0;background:color-mix(in srgb,var(--atlas) 30%,transparent);transition:background 140ms}',
-      '.kdr-hr:hover .kdr-hr-b{background:color-mix(in srgb,var(--atlas) 60%,transparent)}',
+      '.kdr-hrs{display:flex;align-items:stretch;gap:4px;height:96px;padding-top:6px}',
+      '.kdr-hr{flex:1;min-width:0;height:100%;display:flex;align-items:flex-end;position:relative;cursor:default}',
+      '.kdr-hr-b{width:100%;display:block;min-height:2px;border-radius:3px 3px 0 0;background:color-mix(in srgb,var(--atlas) 45%,transparent);transition:background 140ms,transform 140ms}',
+      '.kdr-hr.is-void .kdr-hr-b{background:var(--n-200);min-height:2px;opacity:0.45}',
+      '.kdr-hr:hover:not(.is-void) .kdr-hr-b{background:color-mix(in srgb,var(--atlas) 80%,transparent);transform:scaleY(1.02);transform-origin:bottom}',
       '.kdr-hr.is-peak .kdr-hr-b{background:var(--atlas)}',
-      '.kdr-hrx{display:flex;gap:3px;margin-top:7px}',
-      '.kdr-hrx span{flex:1;min-width:0;text-align:center;font-family:var(--mono);font-size:10px;color:var(--n-500);white-space:nowrap;overflow:hidden}',
+      '.kdr-hr.is-peak:hover .kdr-hr-b{background:var(--atlas)}',
+      '.kdr-hrx{display:flex;gap:4px;margin-top:8px}',
+      '.kdr-hrx span{flex:1;min-width:0;text-align:center;font-family:var(--mono);font-size:10.5px;color:var(--n-500);white-space:nowrap;overflow:hidden}',
+      /* ── mode sombre ── */
+      'html[data-theme="dark"] .kdr-hr-b{background:color-mix(in srgb,var(--mint) 50%,transparent)}',
+      'html[data-theme="dark"] .kdr-hr.is-void .kdr-hr-b{background:rgba(255,255,255,0.2);opacity:0.5}',
+      'html[data-theme="dark"] .kdr-hr:hover:not(.is-void) .kdr-hr-b{background:color-mix(in srgb,var(--mint) 85%,transparent)}',
+      'html[data-theme="dark"] .kdr-hr.is-peak .kdr-hr-b{background:var(--mint);box-shadow:0 0 14px rgba(63,182,122,0.45)}',
+      'html[data-theme="dark"] .kdr-sd-b{background:color-mix(in srgb,var(--mint) 45%,transparent)}',
+      'html[data-theme="dark"] .kdr-sd:hover .kdr-sd-b{background:color-mix(in srgb,var(--mint) 80%,transparent)}',
+      'html[data-theme="dark"] .kdr-sd.is-void .kdr-sd-b{background:rgba(255,255,255,0.15)}',
+      'html[data-theme="dark"] .kdr-sd.is-sel .kdr-sd-b{background:var(--mint);box-shadow:0 0 10px rgba(63,182,122,0.4)}',
+      'html[data-theme="dark"] .kdr-kpi.is-lead{background:rgba(63,182,122,0.15);border-color:rgba(63,182,122,0.35)}',
+      'html[data-theme="dark"] .kdr-kpi.is-lead .kdr-kpi-v{color:var(--mint)}',
+      'html[data-theme="dark"] .kdr-kpi.is-lead .kdr-kpi-l{color:rgba(247,245,240,0.7)}',
+      'html[data-theme="dark"] .kdr-h em{color:var(--mint)}',
+      'html[data-theme="dark"] .kdr-cat-h{background:rgba(63,182,122,0.08)}',
+      'html[data-theme="dark"] .kdr-cat-v,html[data-theme="dark"] .kdr-top-r,html[data-theme="dark"] .kdr-p-q{color:var(--mint)}',
       /* ── ce qui a fait la journée ── */
       '.kdr-top{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}',
       '.kdr-top-c{border:1px solid var(--n-200);border-radius:12px;padding:12px 14px;display:flex;align-items:baseline;gap:10px}',
@@ -288,8 +307,10 @@
       '.kdr-note{font-size:12.5px;line-height:1.55;color:var(--n-500);margin-top:10px}',
       /* ── le vide ── */
       '.kdr-empty{text-align:center;padding:40px 20px}',
-      '.kdr-empty h3{font-family:var(--serif);font-weight:400;font-size:24px;color:var(--ink);margin:0 0 8px}',
+      '.kdr-empty h3{font-family:var(--sans);font-weight:600;font-size:22px;color:var(--ink);margin:0 0 8px;letter-spacing:-0.02em}',
       '.kdr-empty p{font-size:13.5px;color:var(--n-500);margin:0 0 18px;line-height:1.6}',
+      'html[data-theme="dark"] .kdr-id,html[data-theme="dark"] .kdr-strip,html[data-theme="dark"] .kdr-cat,html[data-theme="dark"] .kdr-top-c{background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.08)}',
+      'html[data-theme="dark"] .kdr-kpi:not(.is-lead){background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.08)}',
       '@media (max-width:820px){.kdr-two{grid-template-columns:1fr;gap:0}}',
       '@media (max-width:640px){.kdr-day{font-size:13.5px}.kdr-kpi-v{font-size:21px}.kdr-sd-t{height:40px}.kdr-hrs{height:76px}}',
     ].join('');
@@ -318,7 +339,13 @@
 
   /* Les ventes que le tableau de bord connaît, pour le repli sans instantané. */
   function dashSales() {
-    try { return (window.KiwiSales && window.KiwiSales.list && window.KiwiSales.list()) || []; }
+    try {
+      var sales = (window.KiwiSales && window.KiwiSales.list && window.KiwiSales.list()) || [];
+      var refunds = (window.KiwiRefunds && window.KiwiRefunds.list && window.KiwiRefunds.list()) || [];
+      return sales.concat(refunds.map(function (r) {
+        return Object.assign({}, r, { amount: -Math.abs(+r.amount || 0), kind: 'refund' });
+      }));
+    }
     catch (_) { return []; }
   }
   function storeInfo() {
@@ -346,6 +373,12 @@
       else { net += s.amount; gross += s.amount; txns++; }
     });
     return { net: Math.round(net * 100) / 100, gross: Math.round(gross * 100) / 100, txns: txns };
+  }
+  function feedIsAuthoritative() {
+    try {
+      var status = window.KiwiLive && window.KiwiLive.status && window.KiwiLive.status();
+      return !!(status && status.on && status.backfillComplete);
+    } catch (_) { return false; }
   }
 
   /* L'instantané de la caisse peut avoir RATÉ des ventes que le serveur, lui,
@@ -387,7 +420,7 @@
     var d = DR(); if (!d) return null;
     var snap = null;
     try { snap = d.load(day); } catch (_) {}
-    if (snap && !snapMissesSales(snap, day)) return snap;
+    if (snap && !feedIsAuthoritative() && !snapMissesSales(snap, day)) return snap;
     var built = null;
     try {
       built = d.build({ day: day, sales: dashSales(), session: snap ? sessionOf(snap) : {},
@@ -399,6 +432,7 @@
          historique, pas un calcul. */
       built.closedCount = snap.closedCount || 0;
       built.revisions = snap.revisions || [];
+      if (d.inheritDrawers) d.inheritDrawers(built, snap);
     } else {
       built.live = true;   /* aucun instantané : le tiroir est inconnu */
     }
@@ -413,7 +447,7 @@
     var d = DR(); if (!d) return { net: 0, gross: 0, txns: 0, has: false, closed: false };
     var snap = null;
     try { snap = d.load(day); } catch (_) {}
-    if (snap && !snapMissesSales(snap, day)) {
+    if (snap && !feedIsAuthoritative() && !snapMissesSales(snap, day)) {
       return {
         net: +snap.net || 0, gross: +snap.gross || 0, txns: +snap.txns || 0,
         has: !!(snap.txns || (snap.refunds && snap.refunds.count)),
@@ -433,7 +467,7 @@
      s'afficherait « non clôturée » à jamais. */
   function isClosed(r) {
     if (!r || r.live) return false;
-    return !!(r.closed || r.closedAt || (r.closedCount || 0) > 0);
+    return r.closed === false ? false : !!(r.closedAt || r.closed);
   }
 
   /* Le dernier jour qui contient quelque chose, à partir de `before` inclus.
@@ -533,25 +567,63 @@
   }
 
   function hourlyHtml(r) {
-    var hrs = (r.hours || []).filter(function (h) { return h && (h.net > 0 || h.txns > 0); });
-    if (!hrs.length) {
+    var rawHours = (r.hours || []).filter(function (h) { return h && (h.net > 0 || h.txns > 0); });
+    if (!rawHours.length) {
       return '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.hourly)) + '</span></div>'
         + '<div class="kdr-note">' + esc(T(L.noHours)) + '</div></div>';
     }
-    var max = hrs.reduce(function (m, h) { return Math.max(m, h.net); }, 0);
-    var peak = hrs.reduce(function (m, h) { return (!m || h.net > m.net) ? h : m; }, null);
-    /* Une étiquette sous chaque colonne devient illisible dès dix heures
-       d'ouverture : on n'en garde qu'une sur deux au-delà de huit colonnes. */
-    var every = hrs.length > 8 ? 2 : 1;
-    var cols = hrs.map(function (h) {
-      var pct = max > 0 ? Math.max(3, Math.round(h.net / max * 100)) : 3;
-      var tip = hourLabel(h.h) + ' · ' + money(h.net) + ' MAD · ' + h.txns + ' ' + T(L.tx);
-      return '<div class="kdr-hr' + (peak && h.h === peak.h ? ' is-peak' : '') + '" title="' + esc(tip) + '">'
-        + '<span class="kdr-hr-b" style="height:' + pct + '%"></span></div>';
+    var cut = typeof r.cutoff === 'number' ? r.cutoff : 5;
+    var byHour = Object.create(null);
+    var max = 0;
+    var peak = null;
+    rawHours.forEach(function (h) {
+      byHour[h.h] = h;
+      if (h.net > max) { max = h.net; peak = h; }
+    });
+
+    /* Calcul des offsets par rapport au début de journée commerciale (cut) */
+    var activeOffsets = [];
+    rawHours.forEach(function (h) {
+      var off = (h.h - cut + 24) % 24;
+      activeOffsets.push(off);
+    });
+    var minOff = Math.min.apply(null, activeOffsets);
+    var maxOff = Math.max.apply(null, activeOffsets);
+
+    /* Définir une plage continue et équilibrée (au moins 8h-22h pour le jour, ou englobant) */
+    var dayStartOff = (8 - cut + 24) % 24;   /* 8h */
+    var dayEndOff   = (22 - cut + 24) % 24;  /* 22h */
+
+    var startOff = Math.min(dayStartOff, Math.max(0, minOff - 1));
+    var endOff   = Math.max(dayEndOff, Math.min(23, maxOff + 1));
+
+    /* Construire la liste des heures continues de la plage */
+    var timeline = [];
+    for (var off = startOff; off <= endOff; off++) {
+      var hNum = (cut + off) % 24;
+      var data = byHour[hNum] || { h: hNum, net: 0, txns: 0 };
+      timeline.push(data);
+    }
+
+    /* Fréquence des étiquettes X : toutes les 2h si > 8 barres, sinon chaque heure */
+    var every = timeline.length > 8 ? 2 : 1;
+
+    var cols = timeline.map(function (h) {
+      var isVoid = h.net <= 0 && h.txns <= 0;
+      var isPeak = peak && h.h === peak.h && !isVoid;
+      var pct = isVoid ? 0 : (max > 0 ? Math.max(4, Math.round(h.net / max * 100)) : 4);
+      var tip = isVoid
+        ? hourLabel(h.h) + ' · ' + T(L.noSale)
+        : hourLabel(h.h) + ' · ' + money(h.net) + ' MAD · ' + h.txns + ' ' + T(L.tx);
+      var cls = 'kdr-hr' + (isPeak ? ' is-peak' : '') + (isVoid ? ' is-void' : '');
+      return '<div class="' + cls + '" title="' + esc(tip) + '">'
+        + '<span class="kdr-hr-b" style="height:' + (isVoid ? '2px' : (pct + '%')) + '"></span></div>';
     }).join('');
-    var labels = hrs.map(function (h, i) {
+
+    var labels = timeline.map(function (h, i) {
       return '<span>' + (i % every === 0 ? esc(hourLabel(h.h)) : '') + '</span>';
     }).join('');
+
     var head = peak
       ? '<em>' + esc(T(L.peak).replace('{h}', hourLabel(peak.h))) + ' · ' + esc(money(peak.net)) + ' MAD</em>'
       : '';
@@ -638,8 +710,13 @@
       var pageE = window.Kiwi.appPage(NAV, {
         title: T(L.title),
         subtitle: (st.name || '') + (st.name ? ' · ' : '') + dayLabel(current),
-        body: nav + strip + '<div class="kdr-empty"><h3>' + esc(T(L.empty)) + '</h3><p>'
-          + esc(T(L.emptyHint)) + '</p>' + cta + '</div>',
+        body: nav + strip + '<div class="kdr-empty" style="display:flex; flex-direction:column; align-items:center; padding:52px 20px 60px;">'
+          + '<div style="width:48px;height:48px;border-radius:14px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:16px;">'
+          + '<svg width="24" height="24" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>'
+          + '</div>'
+          + '<h3 style="font-family:var(--sans);font-weight:600;font-size:18px;color:var(--ink);margin:0 0 6px;letter-spacing:-0.015em;">' + esc(T(L.empty)) + '</h3>'
+          + '<p style="font-size:13px;color:var(--n-500);margin:0 0 20px;line-height:1.55;max-width:380px;">' + esc(T(L.emptyHint)) + '</p>'
+          + cta + '</div>',
       });
       bind(pageE, r);
       return pageE;
@@ -655,7 +732,7 @@
     if (r.closedAt) push(T(L.closedAt), hm(r.closedAt));
     else if (r.lastSaleAt) push(T(L.lastSale), hm(r.lastSaleAt));
     push(T(L.openedBy), r.openedBy);
-    push(T(L.closedBy), r.closedBy);
+    if (r.closedAt) push(T(L.closedBy), r.closedBy);
     var idBlock = idCells.length ? '<div class="kdr-id">' + idCells.join('') + '</div>' : '';
 
     /* ── les quatre chiffres, chacun avec sa référence ── */
@@ -668,7 +745,7 @@
       + kpi(T(L.txns), String(r.txns), null, '', delta(r.txns, base.txns, baseDay, base.has))
       + kpi(T(L.basket), money(r.basket), null, 'MAD', delta(r.basket, baseBasket, baseDay, base.has && base.txns > 0))
       + (r.cash && r.cash.counted != null
-        ? kpi(T(L.ecart), (ec > 0 ? '+' : ec < 0 ? '−' : '') + money(Math.abs(ec)), Math.abs(ec) <= 5 ? 'ok' : 'off', 'MAD')
+        ? kpi((r.drawerSessions || []).length > 1 ? T({fr:'Écart du dernier service',en:'Latest service variance',ar:'فرق آخر وردية'}) : T(L.ecart), (ec > 0 ? '+' : ec < 0 ? '−' : '') + money(Math.abs(ec)), Math.abs(ec) <= 5 ? 'ok' : 'off', 'MAD')
         : kpi(T(L.gross), money(r.gross), null, 'MAD'))
       + '</div>';
 
@@ -686,6 +763,10 @@
       cashBlock = '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.drawer)) + '</span></div>'
         + '<div class="kdr-note">' + esc(T(L.noDrawer)) + '</div></div>';
     } else {
+      var drawers = d.drawerSessions ? d.drawerSessions(r) : [];
+      if (!drawers.length) drawers = [{ cash: cash, openedAt: r.openedAt, closedAt: r.closedAt }];
+      cashBlock = drawers.map(function (drawer) {
+      var cash = drawer.cash || {};
       var cr = row(T(L.opening), money(cash.opening) + ' MAD');
       cr += row(T(L.cashIn), '+ ' + money(cash.sales) + ' MAD');
       if (cash.tips) cr += row(T(L.cashTips), '+ ' + money(cash.tips) + ' MAD');
@@ -700,7 +781,9 @@
       /* Les mouvements hors ventes se disent même quand il n'y en a pas : « rien
          n'est sorti du tiroir » est une information, une section absente non. */
       if (!(cash.movements || []).length) cr += '<div class="kdr-note">' + esc(T(L.movesNone)) + '</div>';
-      cashBlock = '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.drawer)) + '</span></div>' + cr + '</div>';
+      return '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.drawer)) + '</span><em>'
+        + esc(hm(drawer.openedAt) + (drawer.closedAt ? ' · ' + hm(drawer.closedAt) : '')) + '</em></div>' + cr + '</div>';
+      }).join('');
     }
 
     /* ── le détail par catégorie ── */
@@ -761,8 +844,9 @@
 
     /* ── la trace des réouvertures ── */
     var revBlock = '';
-    if ((r.closedCount || 0) > 1 && (r.revisions || []).length) {
-      var revs = r.revisions.slice().reverse().map(function (v) {
+    var closures = d.closureRevisions ? d.closureRevisions(r) : (r.revisions || []).filter(function (v) { return v.note !== 'en cours'; });
+    if ((r.closedCount || 0) > 1 && closures.length) {
+      var revs = closures.slice().reverse().map(function (v) {
         return row(hm(v.at) + (v.by ? ' · ' + v.by : ''), money(v.gross) + ' MAD · ' + v.txns + ' tx', 'sub');
       }).join('');
       revBlock = '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.revision)) + '</span><em>'
@@ -807,7 +891,11 @@
         return;
       }
       if (a === 'print') { printReport(report); return; }
-      if (a === 'csv') { exportCsv(report); return; }
+      if (a === 'csv') {
+        if (window.KiwiDayReportExport && window.KiwiDayReportExport.open) window.KiwiDayReportExport.open(report);
+        else exportCsv(report); /* cache partiel : conserver l'ancien filet */
+        return;
+      }
     });
     var pick = page.el.querySelector('[data-kdr="pick"]');
     if (pick) {
@@ -844,7 +932,7 @@
       openedLabel: hm(r.openedAt || r.firstSaleAt),
       closedLabel: r.closedAt ? hm(r.closedAt) : '',
       detailTitle: String(V.cats || 'catégories').toUpperCase(),
-      drawerTitle: T(L.drawer).toUpperCase(),
+      drawerTitle: (T(L.drawer) + ' · ' + hm(r.openedAt) + (r.closedAt ? ' · ' + hm(r.closedAt) : '')).toUpperCase(),
       netLabel: T(L.net).toUpperCase(),
       unitWord: V.items,
       unitWordOne: V.item,
@@ -863,7 +951,11 @@
     var st = storeInfo();
     var V = (DR() ? DR().vocab(st.type || undefined) : { cats: 'catégories', items: 'articles' });
     var q = function (arr) {
-      return arr.map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }).join(',');
+      return arr.map(function (v) {
+        var s = String(v == null ? '' : v);
+        if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
+        return '"' + s.replace(/"/g, '""') + '"';
+      }).join(',');
     };
     var out = [];
     out.push(q([T(L.title), st.name || (r.store && r.store.name) || '', dayLabel(r.day)]));
@@ -882,16 +974,21 @@
       if (r.methods[k]) out.push(q([methodLabel(k), raw2(r.methods[k])]));
     });
     if (!r.live && r.cash) {
+      var drawers = DR() && DR().drawerSessions ? DR().drawerSessions(r) : [];
+      if (!drawers.length) drawers = [{cash:r.cash,openedAt:r.openedAt,closedAt:r.closedAt}];
+      drawers.forEach(function (drawer) {
+      var cash = drawer.cash;
       out.push('');
-      out.push(q([T(L.drawer), 'MAD']));
-      out.push(q([T(L.opening), raw2(r.cash.opening)]));
-      out.push(q([T(L.cashIn), raw2(r.cash.sales)]));
-      (r.cash.movements || []).forEach(function (m) {
+      out.push(q([T(L.drawer), 'MAD', hm(drawer.openedAt), hm(drawer.closedAt)]));
+      out.push(q([T(L.opening), raw2(cash.opening)]));
+      out.push(q([T(L.cashIn), raw2(cash.sales)]));
+      (cash.movements || []).forEach(function (m) {
         out.push(q([m.reason || m.type, (m.type === 'out' ? '-' : '') + raw2(m.amount)]));
       });
-      out.push(q([T(L.expected), raw2(r.cash.expected)]));
-      out.push(q([T(L.counted), r.cash.counted == null ? T(L.notCount) : raw2(r.cash.counted)]));
-      if (r.cash.counted != null) out.push(q([T(L.ecart), raw2(r.cash.ecart)]));
+      out.push(q([T(L.expected), raw2(cash.expected)]));
+      out.push(q([T(L.counted), cash.counted == null ? T(L.notCount) : raw2(cash.counted)]));
+      if (cash.counted != null) out.push(q([T(L.ecart), raw2(cash.ecart)]));
+      });
     }
     if ((r.hours || []).length) {
       out.push('');

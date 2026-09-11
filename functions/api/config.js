@@ -1,21 +1,51 @@
 // GET /api/config?merchant=slug — the client apps' own config read.
 //
 // Returns { features, pins } for one merchant so the caisse/serveur/dashboard can
-// (a) hide modules an operator toggled off and (b) resolve PINs the operator
-// manages remotely. This is NOT operator-gated: any authenticated same-origin
-// session reaches it (the site gate already stands in front of every request), and
-// a merchant only ever reads its own slug. Absent config ⇒ empty, and every app
-// falls back to its current hardcoded behavior — so this endpoint being missing
-// (GitHub Pages, local static) changes nothing.
+// (a) hide modules an operator toggled off and (b) name the staff on the roster.
+// This is NOT operator-gated: any authenticated same-origin session reaches it
+// (the site gate already stands in front of every request), and a merchant only
+// ever reads its own slug. Absent config ⇒ empty, and every app falls back to its
+// current hardcoded behavior — so this endpoint being missing (GitHub Pages,
+// local static) changes nothing.
+//
+// THE ROSTER CARRIES NO CODES. `pins` used to ship the four-digit staff code
+// itself, so every till, every dashboard and every browser extension on the shop
+// floor held the credential that opens the money drawer — and kiwi-sw.js could
+// bank it in the HTTP cache on the way past. Each row is now { name, role } only:
+// enough to say WHO is on the roster, never enough to become them. Whether a code
+// is correct is answered SERVER-SIDE and nowhere else — by three verifiers that all
+// live in functions/auth/_lib.js, never in a route and never in the browser:
+// verifyStaffPin (a till code, `{merchant, pin}` — reached by POST /api/pin/verify
+// and by the manager override in POST /api/sale/cancel), verifyAccountPin (the
+// account-wide dashboard lock, `{pin}` alone, also via /api/pin/verify) and
+// findEmployeeCredential (the employee app's e-mail + code login, via POST
+// /api/employee). Each one is rate-limited, tells the caller nothing but yes/no +
+// the identity it proved, and never echoes a code back. Add a fourth entry point
+// if you must, but add it BY CALLING one of those three — a comparison written
+// inline in a route is a comparison nobody reviewed.
+// Anything that needs to CHANGE a code goes through POST /api/config (write-only)
+// or the operator console. Do not reintroduce `pin` into these projections; the
+// SELECTs below are deliberately narrow and tools/config-pin-projection-test.mjs
+// fails the build if a code finds its way back in.
 
-import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator, isTillFor } from '../auth/_lib.js';
+import {
+  json, activeAccountSession, slugMerchant, isOperator, isTillFor,
+  employeeRoleOpensTill,
+} from '../auth/_lib.js';
+import { employeeAuthVersion } from './_private.js';
 
 const VALID_PIN = /^\d{4}$/;
 
+function accountOwnerRole(value) {
+  let role = String(value || '').trim().toLowerCase();
+  try { role = role.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
+  return new Set(['owner', 'proprietaire', 'direction', 'patron']).has(role);
+}
+
 /* ── Ce qu'un établissement TOUT NEUF reçoit ────────────────────────────────
- * Cinq modules qui ne servent qu'à une partie des clients : un snack de quartier
- * n'a ni terminal de paiement à recenser, ni dossier de conformité, ni carnet de
- * réservations, ni cartes de dépenses, et Order Pro ouvre la carte au téléphone
+ * Quatre modules qui ne servent qu'à une partie des clients : un snack de quartier
+ * n'a ni terminal de paiement à recenser, ni dossier de conformité, ni cartes de
+ * dépenses, et Order Pro ouvre la carte au téléphone
  * des passants. Les laisser allumés d'office, c'est livrer un labyrinthe et
  * quatre pages vides ; l'opérateur les rallume module par module quand le client
  * en a réellement besoin (kiwi-admin.html › Fonctionnalités).
@@ -29,7 +59,6 @@ const VALID_PIN = /^\d{4}$/;
 const NEW_STORE_FEATURES = {
   terminaux: false,
   conformite: false,
-  reservations: false,
   depenses: false,
   orderpro: false,
 };
@@ -73,24 +102,48 @@ async function storeOwner(env, slug) {
 /* Stamp the store's identity — owner + display name — without touching its
  * features, plan or type. First write wins on account_id: once a store belongs to
  * an account it is locked to it, so a second merchant can never take over a slug
- * that is already someone's shop. (Two merchants who pick the identical store
- * name still race for the free slug, exactly as they already race for it in
- * `sales`; the loser's sync is refused with 403 rather than silently merged.)
- * Fail-soft: pre-migration this throws and is swallowed — the config write that
- * follows still works, we just cannot group the store under its owner yet. */
+ * that is already someone's shop. The result is read back after the atomic
+ * upsert; dependent PIN/document writes are allowed only if the winning owner is
+ * this account. A registry write that cannot be verified is a 503, never a
+ * cross-tenant fallback. */
 async function claimStore(env, merchant, accountId, name, seed) {
   try {
     await env.DB.prepare(
-      `INSERT INTO merchant_config (merchant, features, plan, type, account_id, name, updated_ts)
-       VALUES (?, ?, NULL, NULL, ?, ?, ?)
+      `INSERT INTO merchant_config (merchant, features, plan, type, account_id, name, status, updated_ts)
+       VALUES (?, ?, NULL, NULL, ?, ?, ?, ?)
        ON CONFLICT(merchant) DO UPDATE SET
-         account_id = COALESCE(merchant_config.account_id, excluded.account_id),
+         account_id = CASE
+           WHEN merchant_config.account_id IS NULL OR merchant_config.account_id = excluded.account_id
+           THEN excluded.account_id ELSE merchant_config.account_id END,
          name       = COALESCE(NULLIF(excluded.name, ''), merchant_config.name),
-         updated_ts = excluded.updated_ts`
+         updated_ts = excluded.updated_ts
+       WHERE merchant_config.account_id IS NULL OR merchant_config.account_id = excluded.account_id`
     ).bind(merchant, seed ? JSON.stringify(NEW_STORE_FEATURES) : '{}',
-           accountId, String(name || ''), Date.now()).run();
-    return true;
-  } catch (_) { return false; }
+           accountId, String(name || ''), seed ? 'pending' : null, Date.now()).run();
+    const row = await env.DB.prepare('SELECT account_id FROM merchant_config WHERE merchant = ?')
+      .bind(merchant).first();
+    const owner = row && row.account_id ? String(row.account_id) : '';
+    return owner === String(accountId) ? { ok: true } : { ok: false, owner };
+  } catch (_) {
+    /* The registry is an authorization boundary. Do not write into a requested
+       tenant when its ownership cannot be read or claimed. */
+    try {
+      await env.DB.prepare(
+        `INSERT INTO merchant_config (merchant, features, plan, type, account_id, name, updated_ts)
+         VALUES (?, ?, NULL, NULL, ?, ?, ?)
+         ON CONFLICT(merchant) DO UPDATE SET
+           account_id = COALESCE(merchant_config.account_id, excluded.account_id),
+           name       = COALESCE(NULLIF(excluded.name, ''), merchant_config.name),
+           updated_ts = excluded.updated_ts
+         WHERE merchant_config.account_id IS NULL OR merchant_config.account_id = excluded.account_id`
+      ).bind(merchant, seed ? JSON.stringify(NEW_STORE_FEATURES) : '{}',
+             accountId, String(name || ''), Date.now()).run();
+      const row = await env.DB.prepare('SELECT account_id FROM merchant_config WHERE merchant = ?')
+        .bind(merchant).first();
+      const owner = row && row.account_id ? String(row.account_id) : '';
+      return owner === String(accountId) ? { ok: true } : { ok: false, owner };
+    } catch (__) { return { ok: false, unavailable: true }; }
+  }
 }
 
 /* Rattrapage de la course décrite plus haut : la fiche existait déjà, mais
@@ -111,12 +164,13 @@ export async function onRequestGet(context) {
   if (!env.DB) return json({ features: {}, pins: [] }); // no backend → neutral
   let merchant = (url.searchParams.get('merchant') || '').trim();
 
-  // Whose config is this? The response carries staff PINs — the credential that
-  // opens a till — so the slug must never be taken on the client's word when we
-  // can do better. The signed-in account is authoritative and OVERRIDES an
-  // explicit ?merchant=: the site gate admits every merchant (and the shared
-  // staff passcode), so honouring the parameter let any account read any other
-  // account's till PINs just by knowing its slug.
+  // Whose config is this? The response carries the staff ROSTER — who works at
+  // this shop — so the slug must never be taken on the client's word when we can
+  // do better. The signed-in account is authoritative and OVERRIDES an explicit
+  // ?merchant=: the site gate admits every merchant (and the shared staff
+  // passcode), so honouring the parameter let any account read any other
+  // account's roster just by knowing its slug. (It once read their four-digit
+  // codes too; those no longer leave the database — see the file header.)
   //
   // That first fix left one door open for months: `operator` below still
   // counted the SHARED team passcode as God mode, so a browser that had been
@@ -128,24 +182,22 @@ export async function onRequestGet(context) {
   //   · operator (God mode) → ?merchant= honoured; that is what the console is.
   //   · no session (a paired caisse) → ?merchant= is still honoured for the
   //     FEATURE FLAGS and the type, which are not secrets and which a till needs
-  //     to hide modules the operator switched off. PINs, however, are now only
+  //     to hide modules the operator switched off. The roster, however, is only
   //     returned when the caller can PROVE it is that merchant: an account
   //     session, an operator, or the httpOnly till token that /api/pair/redeem
-  //     hands out (see isTillFor). Knowing a slug is no longer enough to read a
-  //     store's staff PINs.
+  //     hands out (see isTillFor). Knowing a slug is no longer enough to read who
+  //     works at a store.
   //
   //     Tills paired BEFORE this shipped carry no token, so they receive an
   //     empty `pins` until they re-pair. That degrades gracefully and opens
-  //     nothing: the only PIN-validating surface is the dashboard lock, which
-  //     always has an account session and is unaffected. A session-less caisse
-  //     uses these rows for staff NAMES (kiwi-caisse.html) and for the optional
-  //     role match in kiwi-serveur.html, both of which already fall back to
-  //     "Caissier" / "Serveur N" when the list is empty.
+  //     nothing: entering a code is verified against /api/pin/verify regardless,
+  //     and a session-less caisse uses these rows only for staff NAMES, which
+  //     already fall back to "Caissier" / "Serveur N" when the list is empty.
   let sessionMerchant = '';
   let sessionAid = '';
   if (env.AUTH_SECRET) {
     try {
-      const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+      const sess = await activeAccountSession(request, env);
       if (sess && sess.aid) {
         const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
         if (acc && acc.business) { sessionMerchant = slugMerchant(acc.business); sessionAid = sess.aid; }
@@ -153,6 +205,37 @@ export async function onRequestGet(context) {
     } catch (_) { /* fall through to neutral */ }
   }
   const operator = await isOperator(request, env);
+
+  /* The dashboard owner code belongs to the ACCOUNT, not to the store selected
+   * in the sidebar. Resolve it here from the signed account's registry instead
+   * of asking the browser to enumerate stores from /api/me: legacy/partially
+   * registered stores can be absent from that list even though their config row
+   * is correctly attached to the account. Managers are deliberately excluded;
+   * their code remains scoped to the active store below. */
+  if (url.searchParams.get('accountPins') === 'owners') {
+    if (!sessionAid) return json({ pins: [] }, 401);
+    let rows = [];
+    try {
+      const result = await env.DB.prepare(
+        `SELECT p.name, p.role
+           FROM staff_pins p
+           LEFT JOIN merchant_config c ON c.merchant = p.merchant
+          WHERE c.account_id = ? OR p.merchant = ?
+          ORDER BY p.created_ts`
+      ).bind(sessionAid, sessionMerchant).all();
+      rows = result.results || [];
+    } catch (_) {
+      // Pre-registry database: the account's original slug is still safe and
+      // preserves the former single-store behaviour until migrations land.
+      try {
+        const result = await env.DB.prepare(
+          'SELECT name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts'
+        ).bind(sessionMerchant).all();
+        rows = result.results || [];
+      } catch (_) {}
+    }
+    return json({ pins: rows.filter((row) => accountOwnerRole(row.role)) });
+  }
 
   // A login can hold SEVERAL établissements, and each one is its own store with
   // its own type, its own modules and its own staff. So the account slug is no
@@ -166,48 +249,79 @@ export async function onRequestGet(context) {
     ownsRequested = (await storeOwner(env, merchant)) === sessionAid;
   }
   if (sessionMerchant && !operator && !ownsRequested) merchant = sessionMerchant;
-  if (!merchant) return json({ features: {}, pins: [] });
+  if (!merchant) return json({ features: {}, pins: [], pinGateConfigured: false });
 
-  // May this caller read THIS merchant's staff PINs? Its own session, another of
-  // its own stores, the operator console, or a till that redeemed a pairing code
-  // for this store.
+  // May this caller read THIS merchant's staff roster? Its own session, another
+  // of its own stores, the operator console, or a till that redeemed a pairing
+  // code for this store. The codes themselves are never in the answer, but a
+  // roster is still a list of the shop's employees by name.
   const mayReadPins = (merchant === sessionMerchant) || ownsRequested || operator
     || (await isTillFor(request, env, merchant));
 
   let features = {};
   let pins = [];
   let type = '';
+  let pinGateConfigured = false;
+  /* The subscription is an entitlement, so it comes from D1 with the rest of
+   * the store identity.  A UI-side constant can decorate a demo; it must never
+   * unlock a paid operation for a real merchant.  Empty means "not resolved"
+   * (not Ultra), while an existing legacy row with no explicit plan is Basic. */
+  let plan = '';
+  /* Whether the row states its tier outright. A legacy row with no explicit
+   * plan reads as Basic for feature display, but venue-count enforcement
+   * (POST below, and the client's pre-check) must only fire on an explicit
+   * basic/pro — otherwise every legacy second store is refused. Ticket #0010. */
+  let planExplicit = false;
   /* Cet établissement est-il suspendu ? On le DIT au client plutôt que de le
    * laisser deviner à partir d'une suite de refus. Un écran qui explique vaut
    * mieux qu'un écran qui bugue. */
   let suspended = false;
+  let subscription = 'active';
   try {
     let cfg;
     try {
       cfg = await env.DB.prepare(
-        `SELECT features, type, status FROM merchant_config WHERE merchant = ?`
+        `SELECT features, plan, type, status FROM merchant_config WHERE merchant = ?`
       ).bind(merchant).first();
     } catch (_) {
       // `status` was added after feature flags. Until that migration reaches a
       // database, keep returning the flags instead of silently turning every
       // module back on for the merchant.
       cfg = await env.DB.prepare(
-        `SELECT features, type FROM merchant_config WHERE merchant = ?`
+        `SELECT features, plan, type FROM merchant_config WHERE merchant = ?`
       ).bind(merchant).first();
     }
     if (cfg && cfg.features) { try { features = JSON.parse(cfg.features) || {}; } catch (_) {} }
     if (cfg && cfg.type) type = cfg.type;
+    if (cfg) {
+      const rawPlan = String(cfg.plan || '').trim().toLowerCase();
+      planExplicit = ['basic', 'pro', 'ultra', 'ultimate'].includes(rawPlan);
+      plan = planExplicit
+        ? rawPlan
+        : 'basic';
+    }
     if (cfg && String(cfg.status || '') === 'suspended') suspended = true;
+    if (cfg && String(cfg.status || '') === 'pending') subscription = 'pending';
 
     if (mayReadPins) {
       const rows = await env.DB.prepare(
-        `SELECT pin, name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts`
+        `SELECT name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts`
       ).bind(merchant).all();
-      pins = rows.results || [];
+      // Older databases may still contain waiter/kitchen rows. Never send them
+      // to a till: employee login remains available through the separate
+      // private employee-access roster.
+      pins = (rows.results || []).filter((row) => employeeRoleOpensTill(row.role));
+      const access = await env.DB.prepare(
+        "SELECT 1 AS configured FROM store_docs WHERE merchant = ? AND feature = 'employee-access' LIMIT 1"
+      ).bind(merchant).first();
+      // A mirror row means the owner deliberately configured an employee
+      // roster. Even if none is a cashier, do not interpret that as “no security”.
+      pinGateConfigured = !!access || pins.length > 0;
     }
   } catch (_) { /* table missing / db error → neutral config */ }
 
-  return json({ features, pins, type, suspended });
+  return json({ features, pins, pinGateConfigured, type, plan, planExplicit, suspended,
+    subscription: { state: subscription, active: subscription === 'active' } });
 }
 
 // POST /api/config — a merchant syncs ONE OF ITS STORES up to the server so the
@@ -244,7 +358,7 @@ export async function onRequestPost(context) {
   const { request, env } = context;
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
 
-  const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+  const sess = await activeAccountSession(request, env);
   if (!sess || !sess.aid) return json({ error: 'unauthorized' }, 401);
 
   const acc = await env.DB.prepare('SELECT business, created_ts FROM accounts WHERE id = ?').bind(sess.aid).first();
@@ -283,6 +397,38 @@ export async function onRequestPost(context) {
     if (owner === '') {          // on est déjà dans la branche wanted !== accSlug
       return json({ error: 'merchant-reserved' }, 403);
     }
+    /* ── VÉRIFICATION DU PLAFOND D'ÉTABLISSEMENTS PAR OFFRE ───────────────
+     * Règles :
+     *   - Basic (199 MAD)  : 1 établissement max
+     *   - Pro (399 MAD)    : 1 établissement max (même que Basic)
+     *   - Ultra (1 499 MAD): Illimité
+     *   - Ultimate         : Illimité
+     *   - NULL / vide      : Illimité (propriété de sécurité permissive pour l'existant)
+     *
+     * Seul un compte portant explicitement une offre 'basic' ou 'pro' est bloqué
+     * à la création d'un 2e établissement. Un établissement déjà possédé n'est
+     * jamais bloqué en mise à jour (owner === sess.aid). */
+    if (owner !== sess.aid) {
+      try {
+        const existingStores = await env.DB.prepare(
+          "SELECT plan FROM merchant_config WHERE account_id = ? AND (status IS NULL OR status != 'suspended')"
+        ).bind(sess.aid).all();
+        const rows = existingStores.results || [];
+        const activeCount = rows.length;
+        const explicitPlans = rows
+          .map((r) => String(r.plan || '').trim().toLowerCase())
+          .filter((p) => ['basic', 'pro', 'ultra', 'ultimate'].includes(p));
+
+        const isUltraOrUltimate = explicitPlans.includes('ultra') || explicitPlans.includes('ultimate');
+        const isExplicitBasicOrPro = !isUltraOrUltimate && (explicitPlans.includes('basic') || explicitPlans.includes('pro'));
+
+        if (isExplicitBasicOrPro && activeCount >= 1) {
+          const tier = explicitPlans.includes('pro') ? 'pro' : 'basic';
+          return json({ error: 'plan-limit-exceeded', limit: 'venues', max: 1, tier }, 403);
+        }
+      } catch (_) { /* fail-soft permissif */ }
+    }
+
     /* ── LE GARDE-FOU DU MAGASIN FANTÔME ──────────────────────────────────
      * `owner === null` : aucune fiche sous ce slug. Deux situations très
      * différentes se ressemblent ici, et il a fallu un incident pour les
@@ -350,8 +496,11 @@ export async function onRequestPost(context) {
     || Number(acc.created_ts || 0) >= NEW_ACCOUNT_FROM;
 
   const claimed = await claimStore(env, merchant, sess.aid, storeName, wantSeed);
-  if (!claimed && merchant !== accSlug) merchant = accSlug;
-  if (wantSeed && claimed) await seedBlankFeatures(env, merchant);
+  if (!claimed.ok) {
+    if (claimed.owner && claimed.owner !== sess.aid) return json({ error: 'merchant-not-yours' }, 409);
+    return json({ error: 'merchant-ownership-unavailable' }, 503);
+  }
+  if (wantSeed) await seedBlankFeatures(env, merchant);
 
   const result = { ok: true, merchant };
 
@@ -364,25 +513,117 @@ export async function onRequestPost(context) {
       const code = String(p.code || p.pin || '').trim();
       if (!VALID_PIN.test(code) || seen.has(code)) continue;
       seen.add(code);
+      const email = String(p.email || '').trim().toLocaleLowerCase('en').slice(0, 254);
       clean.push({
         code,
         name: String(p.name || '').trim().slice(0, 60),
         role: String(p.role || '').trim().slice(0, 24) || 'staff',
+        memberId: String(p.memberId || '').trim().slice(0, 96),
+        firstName: String(p.firstName || '').trim().slice(0, 60),
+        lastName: String(p.lastName || '').trim().slice(0, 60),
+        email: /^\S+@\S+\.\S+$/.test(email) ? email : '',
+        department: String(p.department || '').trim().slice(0, 40),
+        venueSlug: String(p.venueSlug || '').trim().slice(0, 96),
       });
       if (clean.length >= 20) break;
     }
     // Atomic replace. created_ts is offset per index so the GET's ORDER BY
     // created_ts preserves the submitted order.
     const base = Date.now();
-    const stmts = [env.DB.prepare('DELETE FROM staff_pins WHERE merchant = ?').bind(merchant)];
-    clean.forEach((p, i) => {
+    let tillPins = clean.filter((p) => employeeRoleOpensTill(p.role));
+    /* LE PATRON NE FIGURE PAS DANS LE ROSTER D'ÉQUIPE. La page Équipe
+     * (assets/team.js › publishPins) republie ses EMPLOYÉS à chaque
+     * modification — et un remplacement intégral effaçait alors le code
+     * propriétaire posé à l'onboarding ou depuis la console God mode : après
+     * chaque rafraîchissement, le patron disparaissait de staff_pins et seule
+     * sa caissière restait. Règle : une liste SANS propriétaire ne touche pas
+     * aux lignes propriétaire existantes ; une liste AVEC propriétaire (le
+     * wizard d'onboarding, la console) les remplace comme avant. */
+    const incomingHasOwner = tillPins.some((p) => accountOwnerRole(p.role));
+    const keepIds = [];
+    if (!incomingHasOwner) {
+      try {
+        const existing = await env.DB.prepare(
+          'SELECT id, role FROM staff_pins WHERE merchant = ?'
+        ).bind(merchant).all();
+        (existing.results || []).forEach((row) => {
+          if (accountOwnerRole(row.role)) keepIds.push(String(row.id));
+        });
+      } catch (_) {}
+    }
+    const keepMarks = keepIds.map(() => '?').join(',');
+    const stmts = [keepIds.length
+      ? env.DB.prepare(
+          'DELETE FROM staff_pins WHERE merchant = ? AND id NOT IN (' + keepMarks + ')'
+        ).bind(merchant, ...keepIds)
+      : env.DB.prepare('DELETE FROM staff_pins WHERE merchant = ?').bind(merchant)];
+    tillPins.forEach((p, i) => {
       stmts.push(env.DB.prepare(
         'INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) VALUES (?,?,?,?,?,?)'
       ).bind('pin-' + crypto.randomUUID(), merchant, p.code, p.name, p.role, base + i));
     });
+    /* Le code conservé du patron gagne : une ligne d'équipe qui porterait les
+     * mêmes quatre chiffres créerait un doublon dont le rôle dépendrait de
+     * l'ordre de lecture. La comparaison reste ENTIÈREMENT dans SQL — aucun
+     * code ne remonte en JavaScript (voir config-pin-projection-test.mjs). */
+    if (keepIds.length) {
+      stmts.push(env.DB.prepare(
+        'DELETE FROM staff_pins WHERE merchant = ? AND id NOT IN (' + keepMarks + ') '
+        + 'AND EXISTS (SELECT 1 FROM staff_pins k WHERE k.id IN (' + keepMarks + ') AND k.pin = staff_pins.pin)'
+      ).bind(merchant, ...keepIds, ...keepIds));
+    }
+    // Keep a private, exact employee-login roster beside the cashier PINs.
+    // Replacing it in the same D1 batch means a deleted employee loses access
+    // immediately and an employee can log in even when the larger Team document
+    // is still waiting to sync from the dashboard device.
+    let previousAccess = { members: [] };
+    try {
+      const previousRow = await env.DB.prepare(
+        "SELECT data FROM store_docs WHERE merchant = ? AND feature = 'employee-access'"
+      ).bind(merchant).first();
+      if (previousRow && previousRow.data) {
+        const parsed = JSON.parse(previousRow.data);
+        if (parsed && Array.isArray(parsed.members)) previousAccess = parsed;
+      }
+    } catch (_) {
+      return json({ error: 'employee-access-unavailable' }, 503);
+    }
+    const previousById = new Map(previousAccess.members.map((member) => [
+      String(member && member.id || ''), member,
+    ]));
+    const accessMembers = [];
+    for (const p of clean.filter((item) => item.email)) {
+      const id = p.memberId || `employee-${p.code}`;
+      const previous = previousById.get(id);
+      const previousPin = String(previous && (previous.pinCode || previous.password) || '');
+      const previousVersion = Math.max(0, Math.round(Number(previous && previous.authVersion) || 0));
+      const seedVersion = previousVersion + (previous && previousPin !== p.code ? 1 : 0);
+      const revision = await employeeAuthVersion(env, merchant, id, p.code, seedVersion);
+      if (!revision.ok) return json({ error: 'employee-access-unavailable' }, 503);
+      accessMembers.push({
+        id,
+        firstName: p.firstName,
+        lastName: p.lastName,
+        email: p.email,
+        pinCode: p.code,
+        password: p.code,
+        authVersion: revision.version,
+        function: p.role,
+        department: p.department,
+        venueSlug: merchant,
+      });
+    }
+    const access = { members: accessMembers };
+    stmts.push(env.DB.prepare(
+      `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
+       VALUES (?, 'employee-access', ?, 1, ?)
+       ON CONFLICT(merchant, feature) DO UPDATE SET
+         data = excluded.data, rev = store_docs.rev + 1, updated_ts = excluded.updated_ts`
+    ).bind(merchant, JSON.stringify(access), base));
     try { await env.DB.batch(stmts); }
     catch (_) { return json({ error: 'write-failed' }, 500); }
-    result.pins = clean.length;
+    result.pins = tillPins.length + keepIds.length;
+    result.employees = access.members.length;
   }
 
   // ── Business type (only when sent) — upsert without disturbing features/plan ─

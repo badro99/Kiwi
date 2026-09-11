@@ -7,7 +7,7 @@
 //
 // Codes are what the hidden long-press prompt on the login screen accepts.
 
-import { isOperator, isSeniorOperator, hashPassword, json } from '../../auth/_lib.js';
+import { PASSWORD_MAX, isOperator, isSeniorOperator, hashPassword, json } from '../../auth/_lib.js';
 
 async function guard(context) {
   const ok = await isOperator(context.request, context.env);
@@ -49,6 +49,7 @@ export async function onRequestPost(context) {
   // (limitCheck, scope 'op') rend le grinding coûteux ; ce plancher le rend
   // inutile. Les codes déjà émis restent valides : ils sont à renouveler.
   if (code.length < 10) return json({ error: 'code-too-short' }, 400);
+  if (code.length > PASSWORD_MAX) return json({ error: 'code-too-long' }, 400);
   const { salt, hash } = await hashPassword(code);
   const id = 'op-' + crypto.randomUUID();
   await context.env.DB.prepare(

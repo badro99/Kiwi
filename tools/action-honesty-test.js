@@ -57,7 +57,7 @@ check(orphans.length === 0, `aucune clé gardée orpheline${orphans.length ? ' �
  * rester gardées. Les exports qui fabriquent un vrai Blob n'y sont pas. */
 const OUTWARD = [
   'eq-publish-plan', 'eq-gap-whatsapp', 'eq-export-payroll', 'pay-export',
-  'export-payroll', 'stock-send-suggested', 'stock-wa-supplier',
+  'export-payroll', 'stock-send-suggested',
   'stock-program-shortfall', 'audit-export', 'cal-export', 'cf-hyg-export',
   'hx-taxe-export', 'mi-export', 'resv-sms'
 ];

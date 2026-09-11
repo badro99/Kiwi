@@ -258,7 +258,7 @@ handlers['nav-transactions'] = () => {
   const METHODS = {
     [T.cards]:    [{ n: 'Visa', mask: '4291' }, { n: 'Mastercard', mask: '7820' }, { n: 'Visa', mask: '0043' }, { n: 'Visa', mask: '8124' }, { n: 'Mastercard', mask: '1209' }, { n: 'Mastercard', mask: '6670' }],
     [T.mobile]:    [{ n: 'Kiwi Tap', mask: 'NFC' }, { n: 'Kiwi Wallet', mask: 'QR' }, { n: 'Apple Pay', mask: 'NFC' }, { n: 'Google Pay', mask: 'NFC' }],
-    [T.cash]: [{ n: T.cash, mask: '—' }],
+    [T.cash]: [{ n: T.cash, mask: '·' }],
   };
   const CUSTOMERS = ['Karim B.', 'Sara L.', 'Youssef A.', 'Nawal K.', 'Hassan J.', 'Imane M.', 'Mehdi R.', 'Fatima Z.', 'Rachid O.', 'Lina S.', 'Ahmed T.', 'Yasmine H.', 'Omar F.', 'Naima Z.', 'Tarik B.', 'Aïcha M.', 'Walid K.', 'Soukaina A.', 'Reda H.', 'Salma F.', 'Hicham D.', 'Mariam S.', 'Brahim K.', 'Latifa O.', 'Khalid R.'];
 
@@ -418,7 +418,7 @@ handlers['nav-transactions'] = () => {
                   <td><b>${r.n}</b> <span style="color:var(--n-500);">${r.mask}</span></td>
                   <td style="color:var(--n-600);">${r.c}</td>
                   <td class="mono right" style="${r.amt < 0 ? 'color:var(--danger);' : ''}">${r.amt < 0 ? '−' : ''}${fmt2(r.amt)}</td>
-                  <td class="mono right" style="color:${r.tip > 0 ? 'var(--success)' : 'var(--n-400)'};">${r.tip > 0 ? '+' + fmt2(r.tip) : '—'}</td>
+                  <td class="mono right" style="color:${r.tip > 0 ? 'var(--success)' : 'var(--n-400)'};">${r.tip > 0 ? '+' + fmt2(r.tip) : '·'}</td>
                   <td><span class="chip ${r.status === 'ok' ? 'ok' : 'pend'}">${r.status === 'ok' ? T.paid : r.status === 'ref' ? T.refunded : T.pending}</span></td>
                 </tr>
               `).join('')}
@@ -747,21 +747,34 @@ const TERMINAUX_STR = {
  * Terminaux drawer being closed & re-opened within a session. A full page
  * reload re-seeds the demo fleet. */
 let TERM_FLEET = null;
+/* Stable pseudo-random demo values. These cards are illustrative, but figures
+ * that change on every open look like a live-data defect. The key gives each
+ * terminal/day its own repeatable value without touching IDs or real data. */
+function demoUnit(key) {
+  let h = 2166136261;
+  const text = String(key);
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  h += h << 13; h ^= h >>> 7; h += h << 3; h ^= h >>> 17; h += h << 5;
+  return (h >>> 0) / 4294967295;
+}
 function termFleetSeed() {
   return [
-    { id: 'KP-PRO-2831', model: 'KiwiPad pro',     loc: 'comptoir', net: 'wifi', img: 'Hardware_pictures/Hardware_gamefication4.png',    state: 'on',  batt: 87,  battStart: 96,  fw: '4.2.1', fwUpdate: false, txDay: 87,  life: 'loaned',      pulse: 0.70 },
-    { id: 'KP-CL-1208',  model: 'KiwiPad cashless', loc: 'salle',    net: '4g',   img: 'Hardware_pictures/Hardware_gamefication2.png',    state: 'on',  batt: 63,  battStart: 92,  fw: '2.0.4', fwUpdate: true,  txDay: 54,  life: 'purchased',   pulse: 0.55 },
-    { id: 'KP-PRO-2832', model: 'KiwiPad pro',     loc: 'terrasse', net: 'wifi', img: 'Hardware_pictures/Hardware_gamefication4.png',    state: 'off', batt: 64,  battStart: 88,  fw: '4.2.1', fwUpdate: false, txDay: 0,   life: 'replacement', pulse: 0.05 },
-    { id: 'KO-PRO-4501', model: 'KiwiOrders pro',  loc: 'cuisine',  net: 'wifi', img: 'Hardware_pictures/Hardware_KDSgamefication1.png', state: 'on',  batt: 100, battStart: 100, fw: '3.1.0', fwUpdate: false, txDay: 132, life: 'loaned',      pulse: 0.78 },
+    { id: 'KP-PRO-2831', model: 'KiwiPad pro',     loc: 'comptoir', net: 'wifi', img: 'assets/media/hardware/Hardware_gamefication4.png',    state: 'on',  batt: 87,  battStart: 96,  fw: '4.2.1', fwUpdate: false, txDay: 87,  life: 'loaned',      pulse: 0.70 },
+    { id: 'KP-CL-1208',  model: 'KiwiPad cashless', loc: 'salle',    net: '4g',   img: 'assets/media/hardware/Hardware_gamefication2.png',    state: 'on',  batt: 63,  battStart: 92,  fw: '2.0.4', fwUpdate: true,  txDay: 54,  life: 'purchased',   pulse: 0.55 },
+    { id: 'KP-PRO-2832', model: 'KiwiPad pro',     loc: 'terrasse', net: 'wifi', img: 'assets/media/hardware/Hardware_gamefication4.png',    state: 'off', batt: 64,  battStart: 88,  fw: '4.2.1', fwUpdate: false, txDay: 0,   life: 'replacement', pulse: 0.05 },
+    { id: 'KO-PRO-4501', model: 'KiwiOrders pro',  loc: 'cuisine',  net: 'wifi', img: 'assets/media/hardware/Hardware_KDSgamefication1.png', state: 'on',  batt: 100, battStart: 100, fw: '3.1.0', fwUpdate: false, txDay: 132, life: 'loaned',      pulse: 0.78 },
   ];
 }
 function termFleet() { if (!TERM_FLEET) TERM_FLEET = termFleetSeed(); return TERM_FLEET; }
 
 /* Hardware the "Add a terminal" form can register. */
 const TERM_MODELS = {
-  'KiwiPad pro':      { prefix: 'KP-PRO', fw: '4.2.1', img: 'Hardware_pictures/Hardware_gamefication4.png' },
-  'KiwiPad cashless': { prefix: 'KP-CL',  fw: '2.0.4', img: 'Hardware_pictures/Hardware_gamefication2.png' },
-  'KiwiOrders pro':   { prefix: 'KO-PRO', fw: '3.1.0', img: 'Hardware_pictures/Hardware_KDSgamefication1.png' },
+  'KiwiPad pro':      { prefix: 'KP-PRO', fw: '4.2.1', img: 'assets/media/hardware/Hardware_gamefication4.png' },
+  'KiwiPad cashless': { prefix: 'KP-CL',  fw: '2.0.4', img: 'assets/media/hardware/Hardware_gamefication2.png' },
+  'KiwiOrders pro':   { prefix: 'KO-PRO', fw: '3.1.0', img: 'assets/media/hardware/Hardware_KDSgamefication1.png' },
 };
 
 handlers['nav-terminaux'] = () => {
@@ -788,7 +801,7 @@ handlers['nav-terminaux'] = () => {
     for (let i = 0; i <= 12; i++) pts.push(start + ((end - start) * i / 12));
     return spark(pts, 'var(--atlas)');
   };
-  const beat = (n) => Array.from({ length: 30 }, () => Math.max(0.4, n + (Math.random() - 0.5) * 0.5));
+  const beat = (id, n) => Array.from({ length: 30 }, (_, i) => Math.max(0.4, n + (demoUnit(`${id}:beat:${i}`) - 0.5) * 0.5));
 
   /* ── fleet markup · re-rendered in place after every mutation ───────── */
   function fleetHtml() {
@@ -835,7 +848,7 @@ handlers['nav-terminaux'] = () => {
           <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; padding-top:12px; border-top:1px solid var(--n-200);">
             <div>
               <div style="font-size:10px; letter-spacing:0.08em; color:var(--n-500); font-family:var(--mono); margin-bottom:4px;">${T.beats}</div>
-              ${spark(beat(t.state === 'on' ? t.pulse : 0.05), sparkColor)}
+              ${spark(beat(t.id, t.state === 'on' ? t.pulse : 0.05), sparkColor)}
             </div>
             <div>
               <div style="font-size:10px; letter-spacing:0.08em; color:var(--n-500); font-family:var(--mono); margin-bottom:4px;">${T.battery} · ${t.batt} %</div>
@@ -843,8 +856,8 @@ handlers['nav-terminaux'] = () => {
             </div>
             <div>
               <div style="font-size:10px; letter-spacing:0.08em; color:var(--n-500); font-family:var(--mono); margin-bottom:4px;">${T.lastTx}</div>
-              <div style="font-family:var(--mono); font-weight:500; font-size:13px;">${t.state === 'on' ? '14:' + (28 + Math.floor(Math.random() * 9)) : '09:18'}</div>
-              <div style="font-size:11px; color:var(--n-500); margin-top:2px;">${t.state === 'on' ? Math.round(40 + Math.random() * 200) + ',00 MAD' : T.beforeDisconnect}</div>
+              <div style="font-family:var(--mono); font-weight:500; font-size:13px;">${t.state === 'on' ? '14:' + (28 + Math.floor(demoUnit(`${t.id}:minute`) * 9)) : '09:18'}</div>
+              <div style="font-size:11px; color:var(--n-500); margin-top:2px;">${t.state === 'on' ? Math.round(40 + demoUnit(`${t.id}:amount`) * 200) + ',00 MAD' : T.beforeDisconnect}</div>
             </div>
           </div>
         </div>`;
@@ -1070,7 +1083,7 @@ const CATALOG_STR = {
         heroTitle: 'CATALOGUE HARDWARE · KIWI 2026',
         heroModels: '3 modèles',
         heroKds: 'dont 1 KDS',
-        heroSubtitle: "Le KiwiPad pro et le KiwiOrders pro sont prêtés gratuitement avec l'abonnement Kiwi Pro · les modèles additionnels et upgrades sont facturés.",
+        heroSubtitle: "Le KiwiPad pro et le KiwiOrders pro se commandent ici · chaque modèle et chaque upgrade est facturé.",
         flagship: 'FLAGSHIP 2026',
         order: 'Commander',
         proProgram: 'PROGRAMME PRO',
@@ -1096,7 +1109,7 @@ const CATALOG_STR = {
         heroTitle: 'HARDWARE CATALOG · KIWI 2026',
         heroModels: '3 models',
         heroKds: 'including 1 KDS',
-        heroSubtitle: 'The KiwiPad pro and a KiwiOrders pro are loaned for free with the Kiwi Pro subscription · additional models and upgrades are billed.',
+        heroSubtitle: 'The KiwiPad pro and the KiwiOrders pro are ordered here · every model and upgrade is billed.',
         flagship: 'FLAGSHIP 2026',
         order: 'Order',
         proProgram: 'PRO PROGRAM',
@@ -1122,7 +1135,7 @@ const CATALOG_STR = {
         heroTitle: 'كتالوج الأجهزة · كيوي 2026',
         heroModels: '3 موديلات',
         heroKds: 'منها 1 KDS',
-        heroSubtitle: 'يتم إعارة KiwiPad pro و KiwiOrders pro مجانًا مع اشتراك Kiwi Pro · تتم فوترة الموديلات الإضافية والترقيات.',
+        heroSubtitle: 'يُطلب KiwiPad pro و KiwiOrders pro من هنا · تتم فوترة كل موديل وكل ترقية.',
         flagship: 'رائد 2026',
         order: 'اطلب',
         proProgram: 'برنامج PRO',
@@ -1142,20 +1155,20 @@ handlers['terminal-catalog'] = () => {
   const CATALOG = [
     {
       sku: 'kiwipad-pro', name: 'KiwiPad pro', price: '300 €',
-      img: 'Hardware_pictures/Hardware_4.png',
+      img: 'assets/media/hardware/Hardware_4.png',
       tag: T.kiwipadProTag,
       desc: T.kiwipadProDesc,
       featured: true,
     },
     {
       sku: 'kiwiorders-pro', name: 'KiwiOrders pro', price: '200 €',
-      img: 'Hardware_pictures/Hardware_KDS1.png',
+      img: 'assets/media/hardware/Hardware_KDS1.png',
       tag: T.kiwiordersProTag,
       desc: T.kiwiordersProDesc,
     },
     {
       sku: 'kiwipad-cashless', name: 'KiwiPad cashless', price: '100 €',
-      img: 'Hardware_pictures/Hardware_2.png',
+      img: 'assets/media/hardware/Hardware_2.png',
       tag: T.kiwipadCashlessTag,
       desc: T.kiwipadCashlessDesc,
     },
@@ -1193,7 +1206,7 @@ handlers['terminal-catalog'] = () => {
         `).join('')}
       </div>
 
-      <div style="padding:16px 18px; background:var(--ink); color:var(--paper); border-radius:14px;">
+      <div style="padding:16px 18px; background:var(--inverse-surface); color:var(--inverse-ink); border-radius:14px;">
         <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
           <div style="flex:1; min-width:240px;">
             <div style="font-family:var(--mono); font-size:10px; letter-spacing:0.12em; color:var(--mint); margin-bottom:4px;">${T.proProgram}</div>
@@ -1363,7 +1376,7 @@ handlers['nav-reglements'] = () => {
   for (let i = 0; i < days; i++) {
     const dow = (i + 3) % 7; // mon=0..sun=6
     const weekendBoost = dow >= 4 ? 1.18 : 1.0;
-    const drift = base + Math.sin(i / 4) * 2200 + (Math.random() - 0.5) * 1800;
+    const drift = base + Math.sin(i / 4) * 2200 + (demoUnit(`settlements:forecast:${i}`) - 0.5) * 1800;
     fc.push(Math.round(drift * weekendBoost));
   }
   const W = 660, H = 110, pad = 6;
@@ -1654,7 +1667,7 @@ handlers['nav-conformite'] = () => {
     ['CIN gérant', 'Rachid Benhima · BK 384721', 'Expire dans 14 mois', 'ok', '14 mars 2027'],
     ['Registre de commerce', 'RC Tanger · 3847821', 'Renouvelé · valide 12 mois', 'ok', '20 janv. 2027'],
     ['Patente professionnelle', 'Article 21 · TPE Tanger', 'Expire dans 47 jours', 'pend', '15 juin 2026'],
-    ['ICE', '00284912000089 · DGI', 'Permanent · vérifié', 'ok', '—'],
+    ['ICE', '00284912000089 · DGI', 'Permanent · vérifié', 'ok', '·'],
     ['Attestation CNSS', 'Affiliation 9 281 037', 'À jour · payée le 12 avril', 'ok', 'Trim. suivant'],
     ['Quittance TVA · Q1 2026', 'Régime du réel · trimestriel', 'À déposer dans 6 jours', 'pend', '5 mai 2026'],
   ];
@@ -1666,7 +1679,7 @@ handlers['nav-conformite'] = () => {
   ];
   const audit = [
     ['14:02', 'Screening AML automatique', 'Système · 4 listes', 'ok'],
-    ['09:18', 'Export ledger anonymisé', 'badromail9@kiwi.ma', 'ok'],
+    ['09:18', 'Export ledger anonymisé', 'badromail9@kiwi-os.com', 'ok'],
     ['Hier 23:11', 'Rotation token webhook', 'Système · cron', 'ok'],
     ['Hier 18:44', 'Accès données client (RGPD art. 15)', 'Sara L. · demande satisfaite', 'ok'],
     ['22 avril', 'Audit trail exporté pour DGI', 'Comptable Hassani', 'ok'],
@@ -2020,7 +2033,7 @@ handlers['nav-equipe'] = () => {
       </div>
 
       <!-- Kiwi AI · pointage anomalies -->
-      <div style="background:linear-gradient(135deg, var(--ink) 0%, #15201A 100%); color:var(--paper); border-radius:14px; padding:16px 18px; margin-bottom:14px;">
+      <div style="background:linear-gradient(135deg, var(--inverse-surface) 0%, #15201A 100%); color:var(--inverse-ink); border-radius:14px; padding:16px 18px; margin-bottom:14px;">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
           <div style="display:flex; align-items:center; gap:10px;">
             <div style="width:24px; height:24px; border-radius:7px; background:rgba(125,242,176,0.16); display:flex; align-items:center; justify-content:center;">
@@ -2036,7 +2049,7 @@ handlers['nav-equipe'] = () => {
         ${AI_ALERTS.map(a => `
           <div style="display:grid; grid-template-columns:1fr auto; gap:14px; align-items:center; padding:10px 0; border-top:1px solid rgba(255,255,255,0.07);">
             <div>
-              <div style="font-size:13px; font-weight:500; color:var(--paper);">${a.title}</div>
+              <div style="font-size:13px; font-weight:500; color:var(--inverse-ink);">${a.title}</div>
               <div style="font-size:11.5px; color:#a7d5b9; margin-top:3px; line-height:1.5;">${a.detail}</div>
             </div>
             <button class="kb" data-action="ai-pointage" data-arg="${a.kind}" style="background:rgba(125,242,176,0.14); color:var(--mint); padding:6px 12px; font-size:11.5px; white-space:nowrap;">${a.action} →</button>
@@ -2264,7 +2277,7 @@ handlers['nav-equipe'] = () => {
             border-color: var(--atlas);
             box-shadow: 0 0 0 3px rgba(11,110,79,0.12);
           }
-          [data-eq-form] input::placeholder { color: var(--n-400); }
+          [data-eq-form] input::placeholder { color: var(--n-500); }
           [data-eq-form] .eq-section-label {
             font-family: var(--mono);
             font-size: 10px;
@@ -2322,7 +2335,7 @@ handlers['nav-equipe'] = () => {
           <!-- Téléphone (optionnel) -->
           <div>
             <div class="eq-section-label" style="margin-bottom: 9px;">
-              Téléphone <span style="color: var(--n-400); font-weight: 400; letter-spacing: 0.02em; text-transform: none; margin-left: 6px;">— optionnel, pour l'invitation SMS</span>
+              Téléphone <span style="color: var(--n-500); font-weight: 400; letter-spacing: 0.02em; text-transform: none; margin-left: 6px;">·optionnel, pour l'invitation SMS</span>
             </div>
             <div style="display: grid; grid-template-columns: 92px 1fr; gap: 8px;">
               <div style="display: flex; align-items: center; justify-content: center; padding: 11px 8px; border: 1px solid var(--n-300); border-radius: 9px; background: var(--paper-soft); font-family: var(--mono); font-size: 13px; color: var(--n-600); gap: 5px; box-sizing: border-box;">
@@ -2782,7 +2795,7 @@ handlers['nav-reservations'] = () => {
     { t: '19:00', n: 'Société Atlas Pharma', p: 12, note: { fr: 'Groupe · menu fixe', en: 'Group · set menu', ar: 'مجموعة · قائمة محددة' }, ns: 'med', st: 'pend', tag: { fr: 'Acompte attendu', en: 'Deposit pending', ar: 'عربون مرتقب' } },
     { t: '19:00', n: 'Famille Lahcen', p: 5, note: { fr: 'Terrasse · 2 enfants · chaise haute', en: 'Terrace · 2 kids · high chair', ar: 'تراس · طفلان · كرسي مرتفع' }, ns: 'high', st: 'ok', tag: { fr: 'Alerte pacing', en: 'Pacing alert', ar: 'تنبيه التدفق' } },
     { t: '19:15', n: 'Sophie & Yann', p: 2, note: { fr: 'Touristes · table fenêtre', en: 'Tourists · window table', ar: 'سياح · طاولة بجانب النافذة' }, ns: 'med', st: 'ok', tag: { fr: 'Anniversaire', en: 'Birthday', ar: 'عيد ميلاد' } },
-    { t: '20:00', n: 'Hassan & invités', p: 6, note: { fr: 'Salle · vin frais demandé', en: 'Indoors · chilled wine requested', ar: 'القاعة · طلب نبيذ بارد' }, ns: 'low', st: 'ok', tag: { fr: '—', en: '—', ar: '—' } },
+    { t: '20:00', n: 'Hassan & invités', p: 6, note: { fr: 'Salle · vin frais demandé', en: 'Indoors · chilled wine requested', ar: 'القاعة · طلب نبيذ بارد' }, ns: 'low', st: 'ok', tag: { fr: '·', en: '·', ar: '·' } },
     { t: '21:00', n: 'Reservation +212 6 41 ··', p: 4, note: { fr: 'Sans préférence', en: 'No preference', ar: 'بدون تفضيل' }, ns: 'high', st: 'pend', tag: { fr: '2 no-shows', en: '2 no-shows', ar: 'غيابان سابقان' } },
   ];
   const confirmed = bookings.filter((b) => b.st === 'ok').length;
@@ -2841,7 +2854,7 @@ handlers['nav-reservations'] = () => {
         <table class="p-table" style="font-size:12.5px;">
           <thead><tr><th>${T.th[0]}</th><th>${T.th[1]}</th><th class="right">${T.th[2]}</th><th>${T.th[3]}</th><th>${T.th[4]}</th><th>${T.th[5]}</th></tr></thead>
           <tbody>
-            ${bookings.map((b) => {
+            ${bookings.length === 0 ? '<tr><td colspan="6" style="padding:44px 20px;text-align:center;"><div style="display:flex;flex-direction:column;align-items:center;"><div style="width:44px;height:44px;border-radius:12px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:12px;"><svg width="22" height="22" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600;font-size:14.5px;color:var(--ink);">Aucune réservation pour aujourd’hui.</div></div></td></tr>' : bookings.map((b) => {
               const [chipKind, chipLabel] = noShowChip[b.ns];
               return `
                 <tr data-action="resv-detail" data-arg="${escV(b.n)}">
@@ -3019,10 +3032,36 @@ function wireDismiss(m) {
  *   Resetting wipes back to the venue's default template.
  * ═══════════════════════════════════════════════════════════════════════════ */
 const PDS_LS_KEY = 'kiwiPlanDeSalle';
-/* Per-store floor plan: every store keeps its own layout under its own key. */
-function pdsKey() {
-  const v = (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || 'default';
-  return PDS_LS_KEY + ':' + v;
+const PDS_TRANSIENT_IDS = ['scoped', 'own'];
+/* Nettoyage au chargement des anciens seaux non nommés écrits par les versions
+ * antérieures : 'kiwiPlanDeSalle:scoped' et 'kiwiPlanDeSalle:own' ne doivent plus
+ * jamais être lus comme source de plan. */
+PDS_TRANSIENT_IDS.forEach(function (tid) {
+  try { localStorage.removeItem(PDS_LS_KEY + ':' + tid); } catch (_) {}
+});
+
+function pdsTenant(vid) {
+  if (window.KiwiVenue && typeof window.KiwiVenue.tenantOf === 'function') {
+    return window.KiwiVenue.tenantOf(vid) || '';
+  }
+  if (window.KiwiVenue && typeof window.KiwiVenue.slugOf === 'function') {
+    const s = window.KiwiVenue.slugOf(vid);
+    if (s) return s;
+  }
+  if (vid === 'scoped') return '';
+  try { return String(localStorage.getItem('kiwiLiveMerchant') || '').trim(); } catch (_) { return ''; }
+}
+
+/* Per-store floor plan: every store keeps its own layout under its own key.
+ * Pour les identifiants transitoires ('scoped', 'own'), le seau est nommé par
+ * le slug du locataire résolu ('kiwiPlanDeSalle:scoped@<slug>'). Sans slug
+ * résolu, la clé retourne '' (fail-closed) : aucun cache partagé ni écriture. */
+function pdsKey(id) {
+  const vid = id || (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || 'default';
+  const transients = (window.KiwiVenue && window.KiwiVenue.TRANSIENT_IDS) || PDS_TRANSIENT_IDS;
+  if (transients.indexOf(vid) < 0) return PDS_LS_KEY + ':' + vid;
+  const slug = pdsTenant(vid);
+  return slug ? PDS_LS_KEY + ':' + vid + '@' + slug : '';
 }
 const PDS_GRID = 16;         /* snap-to-grid unit (px) */
 const PDS_CANVAS_W = 880;
@@ -3032,6 +3071,307 @@ const PDS_CANVAS_H = 540;
    fixture drawing primitives now live in assets/floorplan-core.js, loaded
    just before this file. They are shared verbatim with the caisse so the
    till can render the owner's actual plan instead of its own guess at it. */
+
+/* ─── Vue nuit / vue jour — la console de service ─────────────────────────
+ * Le plan que la page d'accueil promet est sombre : une salle charbon, des
+ * tables au trait, le statut porté par la lumière. Mais c'est LE CLIMAT DU
+ * DASHBOARD qui décide : ouvrir le plan depuis un dashboard clair et tomber
+ * sur une salle noire, c'est changer de produit en passant une porte. La vue
+ * nuit suit donc `data-theme` — la seule vérité de ce qui est peint, celle
+ * que design-vexel.js recopie sur `data-vexel-mode`.
+ *
+ * La bascule reste : elle permet de regarder les matières en plein jour sans
+ * quitter le climat sombre. Mais elle est mémorisée AVEC le climat où elle a
+ * été choisie (`nuit@dark`), et une préférence prise sous l'autre climat est
+ * ignorée — sinon un « jour » cliqué une fois en clair suivrait l'utilisateur
+ * jusque dans le noir. Les anciennes valeurs nues (`nuit` / `jour`) n'ont pas
+ * de climat : elles retombent sur le thème, ce qui efface d'un coup les
+ * `nuit` hérités de l'époque où la nuit était le défaut.
+ * L'état du plan lui-même reste partagé avec la caisse ; ceci n'est qu'un
+ * choix d'affichage du dashboard, d'où sa clé séparée. */
+const PDS_VIEW_KEY = 'kiwiPdsView';
+function pdsClimat() {
+  try { return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
+  catch (_) { return 'light'; }
+}
+function pdsNoir() {
+  const climat = pdsClimat();
+  try {
+    const saved = localStorage.getItem(PDS_VIEW_KEY) || '';
+    const at = saved.indexOf('@');
+    if (at > 0 && saved.slice(at + 1) === climat) return saved.slice(0, at) === 'nuit';
+  } catch (_) {}
+  return climat === 'dark';
+}
+function pdsSetNoir(on) {
+  try { localStorage.setItem(PDS_VIEW_KEY, (on ? 'nuit' : 'jour') + '@' + pdsClimat()); } catch (_) {}
+}
+/* Une matière sur la scène nuit : rabattue vers le charbon en gardant `keep`
+ * de sa teinte — le noyer reste chaud, le sauge reste vert, mais tout devient
+ * nocturne. Encres et chaises suivent d'elles-mêmes : pdsInk/pdsChairTone
+ * raisonnent en luminance, pas en clair codé en dur. */
+function pdsNoirC(hex, keep) {
+  const k = keep == null ? 0.18 : keep;
+  const h = String(hex || '#141A16').replace('#', '');
+  const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const base = [4, 5, 4];      /* #040504 — le charbon de la salle, quasi noir */
+  return '#' + [0, 2, 4].map((i, j) => {
+    const c = parseInt(n.slice(i, i + 2), 16) || 0;
+    return Math.round(base[j] + (c - base[j]) * k).toString(16).padStart(2, '0');
+  }).join('');
+}
+/* Même contrat que PDS_STATUS_RING (la caisse n'y touche pas), mais les
+ * valeurs sont CELLES du mockup de l'accueil (SVG fp-* d'index.html) : une
+ * échelle de blanc — libre 0.19, réservé 0.40 — et l'accent #00FFAE réservé
+ * à l'occupée, qui seule a droit au halo et à l'anneau d'appel. Pas d'ambre :
+ * le mockup n'en a pas. `fill`/`num`/`chair` suivent la même échelle. */
+const PDS_STATUS_RING_NOIR = {
+  /* Échelle remontée d'un cran par rapport au SVG de l'accueil : sur le sol
+   * quasi noir demandé, les valeurs du mockup (0.19/0.40) lisaient trop bas.
+   * Trois langages de trait pour trois états sans couleur : plein faible
+   * (libre), tiret long (réservée), pointillé (à nettoyer). La distinction
+   * survit au daltonisme et à la distance — c'est le motif qui parle. */
+  free:     { s: 'rgba(255,255,255,0.30)', w: 1.25, dash: '',        fill: 'rgba(255,255,255,0.02)', chair: 'rgba(255,255,255,0.20)' },
+  occupied: { s: '#00FFAE',                w: 1.25, dash: '',        fill: 'rgba(0,255,174,0.14)',   chair: 'rgba(0,255,174,0.70)' },
+  reserved: { s: '#E8C067', w: 1.25, dash: '6 3',     fill: 'rgba(232,192,103,0.08)', chair: 'rgba(232,192,103,0.50)' },
+  cleaning: { s: 'rgba(255,255,255,0.40)', w: 1.25, dash: '1.5 3.5', fill: 'rgba(255,255,255,0.02)', chair: 'rgba(255,255,255,0.20)' },
+};
+/* Une matière en vue jour ligne-claire : rabattue vers le papier chaud de la
+ * marque en gardant `keep` de sa teinte — un lavis, pas une peinture. Le
+ * noyer devient un beige chaud, le sauge un vert pâle : la MATIÈRE choisie
+ * par le commerçant reste lisible sans casser le dessin à l'encre. */
+function pdsJourC(hex, keep) {
+  const k = keep == null ? 0.16 : keep;
+  const h = String(hex || '#B9AF9B').replace('#', '');
+  const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const base = [247, 245, 240];   /* #F7F5F0 — le papier de la marque */
+  return '#' + [0, 2, 4].map((i, j) => {
+    const c = parseInt(n.slice(i, i + 2), 16) || 0;
+    return Math.round(base[j] + (c - base[j]) * k).toString(16).padStart(2, '0');
+  }).join('');
+}
+/* Le miroir exact de l'échelle nuit, à l'encre sur papier : une échelle
+ * d'encre #0A0F0D — libre 0.30, réservée 0.55 — et l'atlas #0B6E4F réservé
+ * à l'occupée, qui seule a droit au halo et à l'anneau d'appel. La menthe
+ * appartient à la nuit ; le jour vit en vert de la marque. */
+const PDS_STATUS_RING_JOUR = {
+  /* Même langage de trait que la nuit : plein faible / tiret long / pointillé.
+   * La réservée s'ancre dans le riad #053B2C — encore de la marque, jamais
+   * d'ambre ni de bleu. */
+  free:     { s: 'rgba(10,15,13,0.30)', w: 1.25, dash: '',        fill: 'rgba(10,15,13,0.015)', chair: 'rgba(10,15,13,0.22)' },
+  occupied: { s: '#0B6E4F',             w: 1.25, dash: '',        fill: 'rgba(11,110,79,0.10)', chair: 'rgba(11,110,79,0.70)' },
+  reserved: { s: '#C89235',  w: 1.25, dash: '6 3',     fill: 'rgba(200,146,53,0.10)',   chair: 'rgba(200,146,53,0.55)' },
+  cleaning: { s: 'rgba(10,15,13,0.45)', w: 1.25, dash: '1.5 3.5', fill: 'rgba(10,15,13,0.02)',  chair: 'rgba(10,15,13,0.24)' },
+};
+
+/* ─── Rendu nuit : le trait, pas la matière ───────────────────────────────
+ * La scène de l'accueil est un dessin au trait — contours en filet, chaises
+ * en tirets, remplissage à peine au-dessus du sol, la lumière réservée à
+ * l'état. Re-teinter le rendu matières (bois éclairé, chaises en volume) n'y
+ * arrivera jamais : la nuit a son propre tracé, le jour garde le sien. */
+function pdsNoirTick(x, y, deg, fill) {
+  /* La chaise du mockup, au pixel : rect(-9,-3,18,6, rx 3), centrée à 12 px
+   * du bord de la table, la couleur suivant le statut de la table. */
+  return `<rect x="-9" y="-3" width="18" height="6" rx="3" fill="${fill}"
+    transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${deg.toFixed(1)})"/>`;
+}
+function pdsNoirChairs(g, seats, ring) {
+  if (!seats || seats < 1) return '';
+  const { w, h, shape } = g;
+  const fill = (ring && ring.chair) || 'rgba(255,255,255,0.12)';
+  let out = '';
+  if (shape === 'round') {
+    /* Tirets tangents sur la circonférence, comme la grande ronde du mockup. */
+    const rx = w / 2 + 12, ry = h / 2 + 12, cx = w / 2, cy = h / 2;
+    for (let i = 0; i < seats; i++) {
+      const a = -90 + (360 * i) / seats;
+      const rad = a * Math.PI / 180;
+      out += pdsNoirTick(cx + rx * Math.cos(rad), cy + ry * Math.sin(rad), a + 90, fill);
+    }
+    return out;
+  }
+  const alloc = pdsSeatSlots(w, h, seats);
+  const along = (n, len) => Array.from({ length: n }, (_, j) => (len * (j + 1)) / (n + 1));
+  along(alloc.top, w).forEach(px => { out += pdsNoirTick(px, -12, 0, fill); });
+  along(alloc.bottom, w).forEach(px => { out += pdsNoirTick(px, h + 12, 0, fill); });
+  along(alloc.left, h).forEach(py => { out += pdsNoirTick(-12, py, 90, fill); });
+  along(alloc.right, h).forEach(py => { out += pdsNoirTick(w + 12, py, 90, fill); });
+  return out;
+}
+/* Plateau du mockup, couche par couche : le disque d'appel (dégradé radial
+ * menthe, occupée seulement), le corps en dégradé vertical #101312→#050605
+ * posé sur une ombre portée (fp-body + fp-lift), puis la couche de statut —
+ * remplissage + contour 1.25 sur la MÊME forme, rx 8. L'occupée reçoit en
+ * plus l'anneau d'appel qui pulse (classe .pds-noir-call, animée en CSS,
+ * l'équivalent exact de .kw-plan-call sur l'accueil). Les dégradés et le
+ * filtre vivent une seule fois dans les defs partagées de la scène — les SVG
+ * inline résolvent url(#…) à l'échelle du document. */
+function pdsNoirTableBody(g, ring, status, tint) {
+  /* `tint` absent = scène nuit (corps charbon, halo menthe). Présent = vue
+   * jour ligne-claire : le corps est le lavis de la matière du commerçant
+   * (pdsJourC), l'ombre et le halo passent aux defs jour (encre, atlas). */
+  const jour = tint != null;
+  const hot = status === 'occupied';
+  const dash = ring.dash ? `stroke-dasharray="${ring.dash}"` : '';
+  const fill = ring.fill || 'rgba(255,255,255,0.012)';
+  const bodyFill = jour ? tint : 'url(#pdsNoirBody)';
+  const lift = jour ? 'url(#pdsJourLift)' : 'url(#pdsNoirLift)';
+  const callId = jour ? 'url(#pdsJourCall)' : 'url(#pdsNoirCall)';
+  const cx = g.w / 2, cy = g.h / 2;
+  /* Le disque d'appel aux valeurs du mockup — le sol quasi noir encaisse
+   * la somme des halos sans se noyer, l'adoucissement n'est plus utile. */
+  const call = hot ? `<circle cx="${cx}" cy="${cy}" r="${(Math.max(g.w, g.h) * 1.45).toFixed(0)}" fill="${callId}"/>` : '';
+  if (g.shape === 'round') {
+    return `${call}
+      <ellipse cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="${bodyFill}" filter="${lift}"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="${fill}" stroke="${ring.s}" stroke-width="${ring.w}" ${dash}/>
+      ${hot ? `<ellipse class="pds-noir-call" cx="${cx}" cy="${cy}" rx="${cx}" ry="${cy}" fill="none" stroke="${ring.s}" stroke-width="${ring.w}"/>` : ''}`;
+  }
+  const r = Math.min(8, g.w / 5, g.h / 5);
+  return `${call}
+    <rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="${bodyFill}" filter="${lift}"/>
+    <rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="${fill}" stroke="${ring.s}" stroke-width="${ring.w}" ${dash}/>
+    ${hot ? `<rect class="pds-noir-call" x="0" y="0" width="${g.w}" height="${g.h}" rx="${r}" fill="none" stroke="${ring.s}" stroke-width="${ring.w}"/>` : ''}`;
+}
+/* Le bâti au trait. Chaque genre a son idéogramme — la caisse porte son
+ * interrupteur menthe, la cuisine ses hachures en filet, la porte son arc —
+ * et l'inconnu retombe sur un simple contour. Les gabarits (couleur,
+ * matière) ne jouent pas ici : la nuit dessine, elle ne peint pas. */
+function pdsNoirFixture(e, K, g) {
+  /* Le même trait dans les deux vues, seule l'encre change. Nuit : blanc un
+   * cran au-dessus du mockup pour tenir sur le sol quasi noir — filet 0.38,
+   * discret 0.20, pilules 0.05 / 0.20 — l'accent #00FFAE réservé au vivant
+   * (interrupteur de caisse, plantes). Jour : encre #0A0F0D sur papier —
+   * filet 0.45, discret 0.25 — et l'atlas de la marque en accent. */
+  const jour = !pdsNoir();
+  const line = jour ? 'rgba(10,15,13,0.45)' : 'rgba(255,255,255,0.38)';
+  const dim  = jour ? 'rgba(10,15,13,0.25)' : 'rgba(255,255,255,0.20)';
+  const pillFill = jour ? 'rgba(10,15,13,0.035)' : 'rgba(255,255,255,0.05)';
+  const pillLine = jour ? 'rgba(10,15,13,0.25)' : 'rgba(255,255,255,0.20)';
+  const acc = jour ? '11,110,79' : '0,255,174';
+  switch (e.type) {
+    case 'texte': return '';
+    case 'comptoir': {
+      /* Le bar du mockup porte ses tabourets : des cercles r 7 cerclés 0.22,
+       * espacés de 38, à 15 px au-dessus du long côté. Seulement quand la
+       * pilule est vraiment un comptoir (long et bas) — le SVG déborde de la
+       * boîte, .pds-el-svg est en overflow:visible la nuit pour ça. */
+      let stools = '';
+      if (g.w >= 100 && g.w > g.h * 2) {
+        const n = Math.max(2, Math.min(8, Math.floor(g.w / 38)));
+        for (let i = 0; i < n; i++) {
+          const sx = (g.w * (i + 1)) / (n + 1);
+          stools += `<circle cx="${sx.toFixed(1)}" cy="-15" r="7" fill="none" stroke="${jour ? 'rgba(10,15,13,0.28)' : 'rgba(255,255,255,0.22)'}" stroke-width="1.25"/>`;
+        }
+      }
+      return `${stools}<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${Math.max(3, Math.min(g.h / 2 - 1, 12))}"
+        fill="${pillFill}" stroke="${pillLine}" stroke-width="1"/>`;
+    }
+    case 'caisse': {
+      const kr = Math.max(3, Math.min(g.h / 2 - 1, 12));
+      /* L'interrupteur du mockup : 22 × 14, rx 3, à 10 px du bord droit. */
+      const th = Math.min(14, Math.max(8, g.h - 10)), tw = th / 14 * 22;
+      const tx = g.w - tw - 10, ty = (g.h - th) / 2;
+      return `<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${kr}" fill="${pillFill}" stroke="${pillLine}" stroke-width="1"/>
+        <rect x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" width="${tw.toFixed(1)}" height="${th.toFixed(1)}" rx="3" fill="rgba(${acc},0.14)" stroke="rgba(${acc},0.5)" stroke-width="1"/>`;
+    }
+    case 'cuisine':
+      return `<defs><pattern id="pdsNoirHatch" width="16" height="16" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+          <line x1="0" y1="0" x2="0" y2="16" stroke="${dim}" stroke-width="1"/></pattern></defs>
+        <rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="8" fill="url(#pdsNoirHatch)" stroke="${dim}" stroke-width="1.2" stroke-dasharray="5 4"/>`;
+    case 'porte':
+      /* La porte de l'accueil : seuil net (0.28 · 1.5), battement en arc
+       * pointillé 3 3 (0.14 · 1). */
+      return `<path d="M2 ${g.h - 2} A ${g.w - 4} ${g.w - 4} 0 0 1 ${g.w - 2} ${g.h - 2}" fill="none" stroke="${dim}" stroke-width="1" stroke-dasharray="3 3"/>
+        <line x1="0" y1="${g.h - 1.5}" x2="${g.w}" y2="${g.h - 1.5}" stroke="${line}" stroke-width="1.5"/>`;
+    case 'mur':
+      return `<rect x="0" y="0" width="${g.w}" height="${g.h}" rx="${Math.min(2, g.h / 2)}" fill="${line}"/>`;
+    case 'fenetre':
+      return `<rect x="0" y="${g.h / 2 - 0.75}" width="${g.w}" height="1.5" fill="${line}"/>
+        <rect x="0" y="0" width="1.5" height="${g.h}" fill="${line}"/>
+        <rect x="${g.w - 1.5}" y="0" width="1.5" height="${g.h}" fill="${line}"/>`;
+    case 'passe':
+      return `<rect x="0.6" y="0.6" width="${g.w - 1.2}" height="${g.h - 1.2}" rx="${Math.min(g.h / 2, 6)}" fill="none" stroke="${dim}" stroke-width="1.2"/>`;
+    case 'plante': {
+      const cx = g.w / 2, cy = g.h / 2, r = Math.max(2, Math.min(g.w, g.h) / 2 - 1.5);
+      return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="rgba(${acc},0.04)" stroke="rgba(${acc},0.35)" stroke-width="1.2"/>
+        <circle cx="${cx}" cy="${cy}" r="${Math.max(1, r * 0.45)}" fill="none" stroke="rgba(${acc},0.28)" stroke-width="1"/>`;
+    }
+    case 'colonne':
+      return `<rect x="1" y="1" width="${g.w - 2}" height="${g.h - 2}" rx="3" fill="${jour ? 'rgba(10,15,13,0.05)' : 'rgba(255,255,255,0.06)'}" stroke="${line}" stroke-width="1.2"/>`;
+    case 'wc':
+      return `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="8" fill="none" stroke="${dim}" stroke-width="1.2" stroke-dasharray="5 4"/>`;
+    case 'escalier': {
+      const n = Math.max(3, Math.min(12, Math.round(g.h / 15))), step = g.h / n;
+      let out = `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="4" fill="none" stroke="${dim}" stroke-width="1.2"/>`;
+      for (let i = 1; i < n; i++) {
+        out += `<line x1="1.5" y1="${(step * i).toFixed(1)}" x2="${g.w - 1.5}" y2="${(step * i).toFixed(1)}" stroke="${dim}" stroke-width="1"/>`;
+      }
+      return out;
+    }
+    case 'banquette':
+      /* Sur l'accueil la banquette est une seule pilule pleine (0.05 / 0.13,
+       * rx 6) — pas de coussins dessinés. */
+      return `<rect x="0.5" y="0.5" width="${g.w - 1}" height="${g.h - 1}" rx="${Math.min(6, g.h / 3, g.w / 3)}" fill="${pillFill}" stroke="${pillLine}" stroke-width="1"/>`;
+    case 'claustra':
+      return `<rect x="0" y="${g.h / 2 - 0.75}" width="${g.w}" height="1.5" fill="${dim}"/>` +
+        Array.from({ length: Math.max(2, Math.round(g.w / 11)) }, (_, i) =>
+          `<rect x="${(i * 11 + 2).toFixed(1)}" y="0" width="1.5" height="${g.h}" fill="${line}"/>`).join('');
+    case 'garde':
+      return `<rect x="0" y="${g.h / 2 - 0.75}" width="${g.w}" height="1.5" rx="0.75" fill="${line}"/>` +
+        Array.from({ length: Math.max(2, Math.round(g.w / 22)) }, (_, i) =>
+          `<rect x="${(i * 22 + 2).toFixed(1)}" y="0" width="1.5" height="${g.h}" fill="${dim}"/>`).join('');
+    case 'tapis':
+      return `<rect x="1" y="1" width="${g.w - 2}" height="${g.h - 2}" rx="3" fill="${jour ? 'rgba(10,15,13,0.02)' : 'rgba(255,255,255,0.02)'}" stroke="${dim}" stroke-width="1.2" stroke-dasharray="2 3"/>`;
+    case 'vitrine':
+      return jour
+        ? `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="6" fill="rgba(64,102,124,0.08)" stroke="rgba(64,102,124,0.45)" stroke-width="1.2"/>`
+        : `<rect x="0.75" y="0.75" width="${g.w - 1.5}" height="${g.h - 1.5}" rx="6" fill="rgba(191,217,232,0.05)" stroke="rgba(191,217,232,0.35)" stroke-width="1.2"/>`;
+    default:
+      return `<rect x="0.75" y="0.75" width="${Math.max(2, g.w - 1.5)}" height="${Math.max(2, g.h - 1.5)}" rx="6" fill="none" stroke="${dim}" stroke-width="1.2"/>`;
+  }
+}
+/* Le sol la nuit : charbon teinté par le sol du commerçant, une grille fine
+ * calée sur le pas d'aimantation (3 × PDS_GRID), et un souffle de lumière
+ * depuis le haut — la même lumière que l'accueil sombre. Les finitions
+ * (terrazzo, zellige) sont dessinées à l'encre sombre et disparaîtraient
+ * ici ; la grille les remplace, la vue jour les garde. */
+function pdsRoomShellNoir(zone) {
+  /* Le sol du mockup (fp-floor + fp-grid) : un souffle blanc décentré —
+   * 0.05 à 42 % / 34 %, 0.015 à 60 %, rien au bord — sur le charbon teinté
+   * par le sol du commerçant, et la grille fine de 31 px à 0.028. Le mur est
+   * le trait blanc 0.13 de l'accueil, pas la matière du gabarit. */
+  const r = pdsRoom(zone);
+  return `<div class="pds-floor" data-pds-floor style="
+    background-color:${pdsNoirC(r.floor, 0.03)};
+    background-image:
+      radial-gradient(78% 78% at 42% 34%, rgba(255,255,255,0.04), rgba(255,255,255,0.012) 60%, transparent 100%),
+      linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
+    background-size: 100% 100%, 31px 31px, 31px 31px;
+    background-repeat: no-repeat, repeat, repeat;
+    ${r.wallW > 2 ? `box-shadow: inset 0 0 0 ${r.wallW}px rgba(255,255,255,0.20);` : ''}
+  "></div>`;
+}
+/* Le sol le jour : le même dessin, à l'encre sur papier. Le sol choisi par le
+ * commerçant devient un lavis sur le papier chaud (pdsJourC 0.30 — assez pour
+ * distinguer chêne de béton, pas assez pour casser le dessin), la grille
+ * passe à l'encre fine, la lumière entre par la même fenêtre décentrée que la
+ * nuit — en blanc franc, c'est le matin — et le mur est un trait d'encre,
+ * comme la nuit le fait en blanc : le mur du gabarit ne peint pas ici. */
+function pdsRoomShellJour(zone) {
+  const r = pdsRoom(zone);
+  return `<div class="pds-floor" data-pds-floor style="
+    background-color:${pdsJourC(r.floor, 0.30)};
+    background-image:
+      radial-gradient(78% 78% at 42% 34%, rgba(255,255,255,0.50), rgba(255,255,255,0.15) 60%, transparent 100%),
+      linear-gradient(rgba(10,15,13,0.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(10,15,13,0.055) 1px, transparent 1px);
+    background-size: 100% 100%, 31px 31px, 31px 31px;
+    background-repeat: no-repeat, repeat, repeat;
+    ${r.wallW > 2 ? `box-shadow: inset 0 0 0 ${r.wallW}px rgba(10,15,13,0.30);` : ''}
+  "></div>`;
+}
 
 
 /* ─── Static i18n table — every label, status, role, template name ───────── */
@@ -3049,8 +3389,10 @@ const PDS_STR = {
     modeRotateDesc: 'Faites tourner les serveurs entre zones et tables pour éviter la lassitude, équité automatique.',
     /* Top bar */
     save: 'Sauvegarder',
+    saving: 'Enregistrement…',
+    savedButton: 'Enregistré',
     saved: 'Plan enregistré',
-    savedDesc: 'Disposition, zones, serveurs et rotation sauvegardés dans le navigateur.',
+    savedDesc: 'Toutes les modifications ont bien été enregistrées.',
     reset: 'Réinitialiser',
     resetTitle: 'Réinitialiser le plan ?',
     resetDesc: 'Supprime toutes les tables, zones et affectations · charge le template par défaut. Action irréversible.',
@@ -3087,6 +3429,9 @@ const PDS_STR = {
     /* Add table palette */
     paletteTitle: 'Ajouter une table',
     paletteHint: 'Cliquez pour ajouter, la table apparaît au centre de la zone.',
+    /* Une table comme un comptoir s'ouvrent de la même façon ; rien ne le
+       disait, et le comptoir passait pour un décor qu'on ne peut pas toucher. */
+    editHint: 'Cliquez un objet posé · table, comptoir, cuisine, plante · pour le redimensionner ou le supprimer.',
     structTitle: 'Éléments structurels',
     structHint: 'Murs, portes, fenêtres et plantes, purement visuels.',
     elWall: 'Mur',
@@ -3105,6 +3450,8 @@ const PDS_STR = {
     addedElementToast: 'Élément ajouté',
     addedElementDesc: 'Glissez-le pour positionner · cliquez pour pivoter.',
     /* Snap */
+    viewNuit: 'Vue nuit · console de service',
+    viewJour: 'Vue jour · matières & décor',
     snapOn: 'Aimanter',
     snapOff: 'Libre',
     snapHint: 'Aimanter aligne les tables sur la grille',
@@ -3116,6 +3463,9 @@ const PDS_STR = {
     inspectorStatus: 'Statut',
     inspectorNotes: 'Notes',
     inspectorServer: 'Serveur affecté',
+    reservationName: 'Nom de réservation',
+    reservationTime: 'Heure',
+    reservationNamePlaceholder: 'ex. Benali',
     inspectorRotate: 'Pivoter',
     inspectorDuplicate: 'Dupliquer',
     inspectorDelete: 'Supprimer',
@@ -3139,6 +3489,20 @@ const PDS_STR = {
     bulkOkDelete: (n) => `${n} tables supprimées`,
     bulkOkStatus: (n, s) => `${n} tables marquées ${s}`,
     bulkHintNone: 'Maintenez Maj et cliquez pour sélectionner plusieurs tables · au moins 2 pour aligner.',
+    /* Groupement */
+    groupTables: 'Grouper',
+    ungroupTables: 'Dissocier',
+    groupPickHint: 'Cliquez sur une autre table pour la grouper avec celle-ci.',
+    groupPickCancel: 'Groupement annulé',
+    groupOk: (nums, covers) => `Tables ${nums} groupées · ${covers} couverts`,
+    ungroupOk: 'Tables dissociées',
+    undoAction: 'Annuler',
+    deleteUndone: 'Table restaurée',
+    ungroupUndone: 'Groupe restauré',
+    bulkGroup: 'Grouper la sélection',
+    bulkOkGroup: (n) => `${n} tables groupées`,
+    groupCovers: (n) => `${n} couverts`,
+    groupedWith: (nums) => `Groupée avec ${nums}`,
     /* Templates */
     templatesTitle: 'Templates de salle',
     templatesDesc: 'Démarrez avec une disposition pré-construite · vous pourrez la modifier ensuite.',
@@ -3169,6 +3533,17 @@ const PDS_STR = {
     rosterUnassigned: 'Non affecté',
     rosterTables: (n) => `${n} tables`,
     rosterCovers: (n) => `${n} couverts`,
+    rosterEmpty: 'Personne en service. Ajoutez un serveur ici, ou renseignez votre équipe depuis la page Équipe · elle apparaîtra automatiquement.',
+    rosterAdd: '+ Ajouter un serveur',
+    rosterAddTitle: 'Ajouter un serveur',
+    rosterAddDesc: 'Il apparaîtra dans l\'équipe en service et pourra être glissé sur une table ou une zone.',
+    rosterAddLabel: 'Nom du serveur',
+    rosterAddPlaceholder: 'ex. Karim',
+    rosterAddOk: 'Ajouter',
+    rosterAddDone: (n) => `${n} ajouté au service`,
+    rosterRemove: 'Retirer du service',
+    rosterRemoveDone: (n) => `${n} retiré du service`,
+    rosterRemoveDoneDesc: (n) => n ? `${n} tables libérées.` : 'Aucune table n\'était affectée.',
     clearAssign: 'Effacer toutes les affectations',
     clearAssignTitle: 'Effacer toutes les affectations ?',
     clearAssignDesc: 'Aucun serveur ne sera affecté à aucune table. Les affectations seront vides jusqu\'à réassignation.',
@@ -3246,8 +3621,10 @@ const PDS_STR = {
     modeAssignDesc: 'Drag a server onto a table to assign · click a table to reassign.',
     modeRotateDesc: 'Rotate servers across zones and tables so they don\'t burn out, fairness built-in.',
     save: 'Save',
+    saving: 'Saving…',
+    savedButton: 'Saved',
     saved: 'Plan saved',
-    savedDesc: 'Layout, zones, servers and rotation saved in your browser.',
+    savedDesc: 'All floor-plan changes were saved successfully.',
     reset: 'Reset',
     resetTitle: 'Reset the plan?',
     resetDesc: 'Removes all tables, zones and assignments · loads the default template. Cannot be undone.',
@@ -3281,6 +3658,7 @@ const PDS_STR = {
     zoneRenamedDesc: (n) => `Zone renamed to "${n}".`,
     paletteTitle: 'Add a table',
     paletteHint: 'Click to add, the table appears at the center of the zone.',
+    editHint: 'Click any placed object · table, counter, kitchen, plant · to resize or delete it.',
     structTitle: 'Structural elements',
     structHint: 'Walls, doors, windows and plants, visual only.',
     elWall: 'Wall',
@@ -3298,6 +3676,8 @@ const PDS_STR = {
     addedTableDesc: (s, z) => `${s} seats · ${z} · drag to position.`,
     addedElementToast: 'Element added',
     addedElementDesc: 'Drag to position · click to rotate.',
+    viewNuit: 'Night view · service console',
+    viewJour: 'Day view · materials & decor',
     snapOn: 'Snap',
     snapOff: 'Free',
     snapHint: 'Snap aligns tables to the grid',
@@ -3308,6 +3688,9 @@ const PDS_STR = {
     inspectorStatus: 'Status',
     inspectorNotes: 'Notes',
     inspectorServer: 'Assigned server',
+    reservationName: 'Reservation name',
+    reservationTime: 'Time',
+    reservationNamePlaceholder: 'e.g. Benali',
     inspectorRotate: 'Rotate',
     inspectorDuplicate: 'Duplicate',
     inspectorDelete: 'Delete',
@@ -3330,6 +3713,19 @@ const PDS_STR = {
     bulkOkDelete: (n) => `${n} tables deleted`,
     bulkOkStatus: (n, s) => `${n} tables set to ${s}`,
     bulkHintNone: 'Hold Shift and click to select multiple tables · at least 2 to align.',
+    groupTables: 'Group',
+    ungroupTables: 'Ungroup',
+    groupPickHint: 'Click another table to group it with this one.',
+    groupPickCancel: 'Grouping cancelled',
+    groupOk: (nums, covers) => `Tables ${nums} grouped · ${covers} covers`,
+    ungroupOk: 'Tables ungrouped',
+    undoAction: 'Undo',
+    deleteUndone: 'Table restored',
+    ungroupUndone: 'Group restored',
+    bulkGroup: 'Group selection',
+    bulkOkGroup: (n) => `${n} tables grouped`,
+    groupCovers: (n) => `${n} covers`,
+    groupedWith: (nums) => `Grouped with ${nums}`,
     templatesTitle: 'Room templates',
     templatesDesc: 'Start from a pre-built layout · you can modify it after.',
     tplBistro: 'Bistro · 30 covers',
@@ -3357,6 +3753,17 @@ const PDS_STR = {
     rosterUnassigned: 'Unassigned',
     rosterTables: (n) => `${n} tables`,
     rosterCovers: (n) => `${n} covers`,
+    rosterEmpty: 'Nobody on shift. Add a server here, or fill in your team on the Team page · it shows up automatically.',
+    rosterAdd: '+ Add a server',
+    rosterAddTitle: 'Add a server',
+    rosterAddDesc: 'They join the team on shift and can be dragged onto a table or a zone.',
+    rosterAddLabel: 'Server name',
+    rosterAddPlaceholder: 'e.g. Karim',
+    rosterAddOk: 'Add',
+    rosterAddDone: (n) => `${n} added to the shift`,
+    rosterRemove: 'Remove from shift',
+    rosterRemoveDone: (n) => `${n} removed from the shift`,
+    rosterRemoveDoneDesc: (n) => n ? `${n} tables freed.` : 'No table was assigned.',
     clearAssign: 'Clear all assignments',
     clearAssignTitle: 'Clear all assignments?',
     clearAssignDesc: 'No server will be assigned to any table. Assignments will be empty until reassigned.',
@@ -3428,8 +3835,10 @@ const PDS_STR = {
     modeAssignDesc: 'اسحب نادلًا فوق طاولة لإسنادها · انقر طاولة لإعادة الإسناد.',
     modeRotateDesc: 'قم بتدوير النوادل بين المناطق والطاولات حتى لا يملّوا، العدالة تلقائية.',
     save: 'حفظ',
+    saving: 'جارٍ الحفظ…',
+    savedButton: 'تم الحفظ',
     saved: 'تم حفظ المخطط',
-    savedDesc: 'تم حفظ الترتيب والمناطق والنوادل والتدوير في المتصفح.',
+    savedDesc: 'تم حفظ جميع تغييرات مخطط القاعة بنجاح.',
     reset: 'إعادة تعيين',
     resetTitle: 'إعادة تعيين المخطط؟',
     resetDesc: 'يحذف كل الطاولات والمناطق والإسنادات · يحمّل القالب الافتراضي. لا يمكن التراجع.',
@@ -3463,6 +3872,7 @@ const PDS_STR = {
     zoneRenamedDesc: (n) => `تمت إعادة تسمية المنطقة إلى "${n}".`,
     paletteTitle: 'إضافة طاولة',
     paletteHint: 'انقر للإضافة، تظهر الطاولة في وسط المنطقة.',
+    editHint: 'انقر أي عنصر موضوع · طاولة، بار، مطبخ، نبتة · لتغيير حجمه أو حذفه.',
     structTitle: 'العناصر الهيكلية',
     structHint: 'جدران، أبواب، نوافذ ونباتات، للعرض فقط.',
     elWall: 'جدار',
@@ -3480,6 +3890,8 @@ const PDS_STR = {
     addedTableDesc: (s, z) => `${s} مقاعد · ${z} · اسحبها للموقع.`,
     addedElementToast: 'تمت إضافة العنصر',
     addedElementDesc: 'اسحب للموقع · انقر للتدوير.',
+    viewNuit: 'عرض ليلي · وحدة الخدمة',
+    viewJour: 'عرض نهاري · الخامات والديكور',
     snapOn: 'محاذاة',
     snapOff: 'حر',
     snapHint: 'المحاذاة تصفّ الطاولات على الشبكة',
@@ -3490,6 +3902,9 @@ const PDS_STR = {
     inspectorStatus: 'الحالة',
     inspectorNotes: 'ملاحظات',
     inspectorServer: 'النادل المعين',
+    reservationName: 'اسم الحجز',
+    reservationTime: 'الوقت',
+    reservationNamePlaceholder: 'مثال: بنعلي',
     inspectorRotate: 'تدوير',
     inspectorDuplicate: 'نسخ',
     inspectorDelete: 'حذف',
@@ -3512,6 +3927,19 @@ const PDS_STR = {
     bulkOkDelete: (n) => `تم حذف ${n} طاولة`,
     bulkOkStatus: (n, s) => `تم تعيين ${n} طاولة على ${s}`,
     bulkHintNone: 'اضغط Shift وانقر لاختيار عدة طاولات · 2 على الأقل للمحاذاة.',
+    groupTables: 'تجميع',
+    ungroupTables: 'فصل',
+    groupPickHint: 'انقر على طاولة أخرى لتجميعها مع هذه.',
+    groupPickCancel: 'تم إلغاء التجميع',
+    groupOk: (nums, covers) => `تم تجميع الطاولات ${nums} · ${covers} مقعدًا`,
+    ungroupOk: 'تم فصل الطاولات',
+    undoAction: 'تراجع',
+    deleteUndone: 'تمت استعادة الطاولة',
+    ungroupUndone: 'تمت استعادة المجموعة',
+    bulkGroup: 'تجميع المحدد',
+    bulkOkGroup: (n) => `تم تجميع ${n} طاولات`,
+    groupCovers: (n) => `${n} مقعدًا`,
+    groupedWith: (nums) => `مجمّعة مع ${nums}`,
     templatesTitle: 'قوالب القاعة',
     templatesDesc: 'ابدأ بترتيب جاهز · يمكنك تعديله لاحقًا.',
     tplBistro: 'بيسترو · 30 مقعدًا',
@@ -3539,6 +3967,17 @@ const PDS_STR = {
     rosterUnassigned: 'غير معيّن',
     rosterTables: (n) => `${n} طاولات`,
     rosterCovers: (n) => `${n} مقاعد`,
+    rosterEmpty: 'لا أحد في الخدمة. أضف نادلًا هنا، أو سجّل فريقك في صفحة الفريق · سيظهر تلقائيًا.',
+    rosterAdd: '+ إضافة نادل',
+    rosterAddTitle: 'إضافة نادل',
+    rosterAddDesc: 'سينضم إلى الفريق في الخدمة ويمكن سحبه فوق طاولة أو منطقة.',
+    rosterAddLabel: 'اسم النادل',
+    rosterAddPlaceholder: 'مثال: كريم',
+    rosterAddOk: 'إضافة',
+    rosterAddDone: (n) => `${n} أُضيف إلى الخدمة`,
+    rosterRemove: 'إزالة من الخدمة',
+    rosterRemoveDone: (n) => `${n} أُزيل من الخدمة`,
+    rosterRemoveDoneDesc: (n) => n ? `${n} طاولات تحرّرت.` : 'لم تكن أي طاولة مسندة.',
     clearAssign: 'مسح كل الإسنادات',
     clearAssignTitle: 'مسح كل الإسنادات؟',
     clearAssignDesc: 'لن يكون أي نادل مسندًا لأي طاولة. ستبقى فارغة حتى إعادة الإسناد.',
@@ -3610,6 +4049,7 @@ Object.assign(PDS_STR.fr, {
   undoNothing: 'Rien à annuler', redoNothing: 'Rien à rétablir',
   unitCm: 'cm', deletedSuffix: 'supprimé',
   roomTitle: 'La salle', roomHint: 'Sol, murs et dimensions de cette zone.',
+  roomHintNuit: 'Dimensions de cette zone.',
   roomFloor: 'Sol', roomWall: 'Murs', roomFinish: 'Finition',
   roomW: 'Larg.', roomH: 'Prof.', roomWallW: 'Mur',
   finplain: 'Uni', finterrazzo: 'Terrazzo', finzellige: 'Zellige',
@@ -3628,11 +4068,12 @@ Object.assign(PDS_STR.fr, {
   inspectorRotation: 'Orientation', inspectorMaterial: 'Matière', inspectorDepth: 'Profondeur',
   layerBack: 'Arrière', layerFront: 'Avant',
   lock: 'Verrouiller', unlock: 'Déverrouiller',
-  lockedHint: 'Verrouillé — déverrouillez pour modifier',
+  lockedHint: 'Verrouillé · déverrouillez pour modifier',
   rotateHint: 'Faire pivoter · Maj pour 15°',
   noRoom: 'Pas de place libre ici',
   ambianceLabel: 'Ambiance', customColor: 'Couleur libre',
   wizTitle: 'Composons votre salle', wizDesc: 'Huit questions, puis trois plans meublés à comparer.',
+  scanSalle: 'Scanner ma salle', scanUnavailable: 'Scan indisponible',
   wizVenue: 'Type d’établissement', wizFloors: 'Combien d’étages ?',
   wizExtras: 'Vous avez aussi…', wizDims: 'Dimensions de la salle',
   wizW: 'Largeur', wizH: 'Profondeur', wizTables: 'Combien de tables ?',
@@ -3655,13 +4096,14 @@ Object.assign(PDS_STR.fr, {
   ambriad: 'Riad', ambmarine: 'Bord de mer', ambbistrot: 'Néo-bistrot', ambjardin: 'Jardin',
   ambianceApplied: (n) => `Ambiance ${n} appliquée`,
   ambianceDesc: 'Sol, murs, tables et fond repeints ensemble. Les pièces peintes à la main sont conservées.',
-  blockedHint: 'Chevauchement — relâchez pour poser à côté',
+  blockedHint: 'Chevauchement · relâchez pour poser à côté',
 });
 Object.assign(PDS_STR.en, {
   undo: 'Undo', redo: 'Redo',
   undoNothing: 'Nothing to undo', redoNothing: 'Nothing to redo',
   unitCm: 'cm', deletedSuffix: 'deleted',
   roomTitle: 'The room', roomHint: 'Floor, walls and dimensions of this zone.',
+  roomHintNuit: 'Dimensions of this zone.',
   roomFloor: 'Floor', roomWall: 'Walls', roomFinish: 'Finish',
   roomW: 'Width', roomH: 'Depth', roomWallW: 'Wall',
   finplain: 'Plain', finterrazzo: 'Terrazzo', finzellige: 'Zellige',
@@ -3680,11 +4122,12 @@ Object.assign(PDS_STR.en, {
   inspectorRotation: 'Orientation', inspectorMaterial: 'Material', inspectorDepth: 'Depth',
   layerBack: 'Send back', layerFront: 'Bring front',
   lock: 'Lock', unlock: 'Unlock',
-  lockedHint: 'Locked — unlock to edit',
+  lockedHint: 'Locked · unlock to edit',
   rotateHint: 'Rotate · hold Shift for 15°',
   noRoom: 'No free space here',
   ambianceLabel: 'Ambiance', customColor: 'Custom colour',
   wizTitle: 'Let’s lay out your room', wizDesc: 'Eight questions, then three furnished plans to compare.',
+  scanSalle: 'Scan my room', scanUnavailable: 'Scan unavailable',
   wizVenue: 'Type of venue', wizFloors: 'How many floors?',
   wizExtras: 'You also have…', wizDims: 'Room dimensions',
   wizW: 'Width', wizH: 'Depth', wizTables: 'How many tables?',
@@ -3707,13 +4150,14 @@ Object.assign(PDS_STR.en, {
   ambriad: 'Riad', ambmarine: 'Seaside', ambbistrot: 'Neo-bistro', ambjardin: 'Garden',
   ambianceApplied: (n) => `${n} ambiance applied`,
   ambianceDesc: 'Floor, walls, tables and backdrop repainted together. Hand-picked pieces are kept.',
-  blockedHint: 'Overlapping — release to settle beside it',
+  blockedHint: 'Overlapping · release to settle beside it',
 });
 Object.assign(PDS_STR.ar, {
   undo: 'تراجع', redo: 'إعادة',
   undoNothing: 'لا شيء للتراجع عنه', redoNothing: 'لا شيء لإعادته',
   unitCm: 'سم', deletedSuffix: 'حُذف',
   roomTitle: 'القاعة', roomHint: 'الأرضية والجدران وأبعاد هذه المنطقة.',
+  roomHintNuit: 'أبعاد هذه المنطقة.',
   roomFloor: 'الأرضية', roomWall: 'الجدران', roomFinish: 'التشطيب',
   roomW: 'العرض', roomH: 'العمق', roomWallW: 'الجدار',
   finplain: 'سادة', finterrazzo: 'تيرازو', finzellige: 'زليج',
@@ -3732,11 +4176,12 @@ Object.assign(PDS_STR.ar, {
   inspectorRotation: 'الاتجاه', inspectorMaterial: 'المادة', inspectorDepth: 'العمق',
   layerBack: 'إلى الخلف', layerFront: 'إلى الأمام',
   lock: 'قفل', unlock: 'فتح',
-  lockedHint: 'مقفل — افتح القفل للتعديل',
+  lockedHint: 'مقفل · افتح القفل للتعديل',
   rotateHint: 'تدوير · اضغط Shift لـ 15°',
   noRoom: 'لا توجد مساحة فارغة هنا',
   ambianceLabel: 'الأجواء', customColor: 'لون حر',
   wizTitle: 'لنرتّب قاعتك', wizDesc: 'ثمانية أسئلة، ثم ثلاثة مخططات مؤثّثة للمقارنة.',
+  scanSalle: 'مسح قاعتي بالصورة', scanUnavailable: 'المسح غير متاح',
   wizVenue: 'نوع المحل', wizFloors: 'كم طابقًا؟',
   wizExtras: 'لديك أيضًا…', wizDims: 'أبعاد القاعة',
   wizW: 'العرض', wizH: 'العمق', wizTables: 'كم طاولة؟',
@@ -3759,7 +4204,7 @@ Object.assign(PDS_STR.ar, {
   ambriad: 'رياض', ambmarine: 'شاطئ', ambbistrot: 'بيسترو', ambjardin: 'حديقة',
   ambianceApplied: (n) => `تم تطبيق أجواء ${n}`,
   ambianceDesc: 'الأرضية والجدران والطاولات والخلفية أُعيد طلاؤها معًا. القطع الملوّنة يدويًا تبقى كما هي.',
-  blockedHint: 'تداخل — أفلت ليستقر بجانبه',
+  blockedHint: 'تداخل · أفلت ليستقر بجانبه',
 });
 
 /* ─── Default roster — used when no team data is provided ────────────────── */
@@ -3773,6 +4218,85 @@ const PDS_DEFAULT_STAFF = [
   { id: 'AY', name: 'Ayoub Tazi',      color: '#5A6CDB' },
   { id: 'IM', name: 'Imane Lahlou',    color: '#0B8A7B' },
 ];
+
+/* ─── Le vrai personnel ─────────────────────────────────────────────────────
+ * Un magasin réel démarre sur pdsTemplate('blank') : roster VIDE, pour que
+ * « Karim Rifai » et les sept autres noms de démonstration ne s'affichent
+ * jamais chez un commerçant. Sauf qu'aucun écran ne permettait ensuite d'y
+ * ajouter qui que ce soit — l'onglet Affectation restait sans une seule
+ * pastille à glisser et les vingt-et-une tables lisaient « non affecté » à
+ * vie. La page Équipe, elle, connaît le personnel : KiwiTeam.roster() est la
+ * source, ce fichier ne fait que la refléter. */
+const PDS_STAFF_COLORS = ['#0B6E4F', '#D99A2B', '#053B2C', '#A85F00', '#1A8FE3', '#C0306E', '#5A6CDB', '#0B8A7B'];
+function pdsStaffColor(seed) {
+  const s = String(seed || '');
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return PDS_STAFF_COLORS[h % PDS_STAFF_COLORS.length];
+}
+const PDS_MAX_TABLE_SERVERS = 3;
+function pdsServerIds(table) {
+  if (!table) return [];
+  const ids = Array.isArray(table.servers) ? table.servers : [table.server];
+  return Array.from(new Set(ids.filter(Boolean).map(String))).slice(0, PDS_MAX_TABLE_SERVERS);
+}
+function pdsSetServerIds(table, ids) {
+  const clean = Array.from(new Set((ids || []).filter(Boolean).map(String))).slice(0, PDS_MAX_TABLE_SERVERS);
+  table.servers = clean;
+  /* Keep the historical scalar as the primary waiter so caisse and older
+     clients continue to work while multi-assignment-aware clients use servers. */
+  table.server = clean[0] || null;
+  return clean;
+}
+function pdsHasServer(table, sid) { return pdsServerIds(table).includes(String(sid || '')); }
+function pdsIsFloorRole(role) {
+  const plain = String(role || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return /(^|\b)(serveur|serveuse|server|waiter|waitress|chef de rang|maitre d[' ]hotel|responsable de salle|floor manager)(\b|$)/.test(plain)
+    || /(?:نادل|نادلة|رئيس القاعة|مشرف القاعة)/.test(String(role || ''));
+}
+function pdsTeamStaff() {
+  try {
+    const roster = (window.KiwiTeam && window.KiwiTeam.roster) ? window.KiwiTeam.roster() : [];
+    return (roster || []).filter(m => m && m.id && pdsIsFloorRole(m.role)).map(m => ({
+      id: 'tm-' + m.id,
+      name: (m.name && m.name !== '·') ? m.name : String(m.role || '').trim() || '·',
+      color: pdsStaffColor(m.id),
+      role: m.role || '',
+      from: 'team',
+    }));
+  } catch (e) { return []; }
+}
+/* Un vrai magasin, c'est soit une session réelle, soit un établissement créé
+ * par le commerçant : les deux doivent voir leur équipe, pas la nôtre. */
+function pdsIsRealStore() {
+  try {
+    if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return true;
+    if (window.KiwiVenue && window.KiwiVenue.isCustom && window.KiwiVenue.isCustom()) return true;
+  } catch (e) {}
+  return false;
+}
+/* Rapproche le roster du plan de l'équipe réelle : les fiches Équipe font
+ * autorité sur le nom, les pastilles ajoutées à la main ici (id « sv- »)
+ * survivent, et les serveurs de démonstration disparaissent dès qu'un vrai
+ * magasin est ouvert. Une table qui pointait sur un serveur disparu est
+ * libérée — sinon elle porterait une pastille sans nom ni couleur. */
+function pdsSyncStaff(state) {
+  if (!state || !Array.isArray(state.staff) || !Array.isArray(state.tables)) return state;
+  if (!pdsIsRealStore()) return state;
+  const demo = new Set(PDS_DEFAULT_STAFF.map(s => s.id));
+  const team = pdsTeamStaff();
+  const byId = new Map(team.map(s => [s.id, s]));
+  const kept = state.staff.filter(s => s && s.id && !demo.has(s.id) && (s.from !== 'team' || byId.has(s.id))).map(s => {
+    const t = byId.get(s.id);
+    return t ? Object.assign({}, s, { name: t.name, role: t.role, color: s.color || t.color }) : s;
+  });
+  const have = new Set(kept.map(s => s.id));
+  team.forEach(t => { if (!have.has(t.id)) kept.push(t); });
+  const live = new Set(kept.map(s => s.id));
+  state.tables.forEach(t => pdsSetServerIds(t, pdsServerIds(t).filter(id => live.has(id))));
+  state.staff = kept;
+  return state;
+}
 
 /* ─── Table types — each has a default size + shape + seats ─────────────── */
 
@@ -3839,6 +4363,7 @@ const PDS_EL_RENAME = { wall: 'mur', door: 'porte', window: 'fenetre', column: '
 
 function pdsNormalize(state) {
   if (!state || !Array.isArray(state.zones)) return state;
+  if (!state.gone || typeof state.gone !== 'object' || Array.isArray(state.gone)) state.gone = {};
   const fresh = state.v !== 2;
   let nextEl = 1;
   const elId = () => 'em' + (nextEl++) + '_' + Math.random().toString(36).slice(2, 6);
@@ -3871,6 +4396,7 @@ function pdsNormalize(state) {
     if (t.shape == null) t.shape = cfg.shape;
     if (t.color === undefined) t.color = null;
     if (t.locked == null) t.locked = false;
+    pdsSetServerIds(t, pdsServerIds(t));
   });
 
   state.elements = (state.elements || []).map((e, i) => {
@@ -3889,22 +4415,29 @@ function pdsNormalize(state) {
   }).filter(Boolean);
 
   if (state.showChairs == null) state.showChairs = true;
+  pdsSyncStaff(state);
   state.v = 2;
   return state;
 }
 
 function pdsLoad() {
-  try {
-    const raw = localStorage.getItem(pdsKey());
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && parsed.zones && parsed.tables && parsed.staff) return pdsNormalize(parsed);
-    }
-  } catch (e) { /* fall through to default */ }
+  const key = pdsKey();
+  if (key) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.zones && parsed.tables && parsed.staff) return pdsNormalize(parsed);
+      }
+    } catch (e) { /* fall through to default */ }
+  }
   return pdsNormalize(pdsDefaultState());
 }
 function pdsWriteLocal(state) {
-  try { localStorage.setItem(pdsKey(), JSON.stringify(state)); } catch (e) {}
+  const key = pdsKey();
+  if (key) {
+    try { localStorage.setItem(key, JSON.stringify(state)); } catch (e) {}
+  }
   /* Mirror the layout under the merchant SLUG. The caisse has no KiwiVenue to
    * resolve pdsKey(), so it reads the plan by slug (storePaired().merchant) —
    * the same identity spine the boutique/menu already share, so a design made
@@ -3913,9 +4446,10 @@ function pdsWriteLocal(state) {
   try {
     var vd = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
     if (vd && vd.custom && vd.name) {
-      // Slug gravé d'abord (venues.js › slugOf) : la caisse lit le plan sous le
-      // slug de son appairage, qui ne change pas quand l'enseigne se corrige.
-      var slug = vd.slug || _bqxSlug(vd.name);
+      var vid = (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || '';
+      var transients = (window.KiwiVenue && window.KiwiVenue.TRANSIENT_IDS) || PDS_TRANSIENT_IDS;
+      if (transients.indexOf(vid) >= 0 && !key) return;
+      var slug = vd.slug || (window.KiwiVenue && window.KiwiVenue.slugOf && window.KiwiVenue.slugOf(vid)) || _bqxSlug(vd.name);
       if (slug) localStorage.setItem(PDS_LS_KEY + ':slug:' + slug, JSON.stringify(state));
     }
   } catch (e) {}
@@ -3945,9 +4479,29 @@ function pdsSave(state) {
 var pdsLive = null;    // l'état actuellement ouvert à l'écran, s'il y en a un
 var pdsDoc = null;
 
+function pdsRefreshLiveStaff() {
+  if (!pdsLive || !pdsIsRealStore()) return;
+  const before = JSON.stringify({
+    staff: (pdsLive.staff || []).map(s => [s.id, s.name, s.role]),
+    tables: (pdsLive.tables || []).map(t => [t.id, pdsServerIds(t)]),
+  });
+  pdsSyncStaff(pdsLive);
+  const after = JSON.stringify({
+    staff: (pdsLive.staff || []).map(s => [s.id, s.name, s.role]),
+    tables: (pdsLive.tables || []).map(t => [t.id, pdsServerIds(t)]),
+  });
+  if (before === after) return;
+  pdsWriteLocal(pdsLive);
+  if (pdsLive._refresh) pdsLive._refresh();
+}
+window.addEventListener('kiwi-team-ready', pdsRefreshLiveStaff);
+window.addEventListener('kiwi-team-changed', pdsRefreshLiveStaff);
+
 function pdsRawState() {
+  const key = pdsKey();
+  if (!key) return { zones: [], tables: [], staff: [] };
   try {
-    var raw = localStorage.getItem(pdsKey());
+    var raw = localStorage.getItem(key);
     var p = raw ? JSON.parse(raw) : null;
     if (p && p.zones && p.tables) return p;
   } catch (e) {}
@@ -3957,11 +4511,33 @@ function pdsRawState() {
 /* Union par identifiant, cet appareil prioritaire (le défaut de cloud-doc.js),
  * SAUF que le plan porte aussi des réglages scalaires (mode, snap, zone
  * courante) : ceux-là restent les nôtres, changer la zone affichée sur l'iPad
- * n'a pas à déplacer la vue du portable. */
+ * n'a pas à déplacer la vue du portable.
+ *
+ * `epoch` : l'union ne sait pas supprimer — une table effacée sur le serveur
+ * ressuscite dès qu'un appareil qui la garde en local refusionne (vécu : le
+ * plan empoisonné à 33 tables se réinstallait après réparation). Un plan qui
+ * porte une époque STRICTEMENT supérieure remplace donc l'autre copie en bloc,
+ * au lieu de s'y unir. L'époque ne bouge jamais sur une sauvegarde ordinaire ;
+ * elle n'est incrémentée que par une réparation délibérée qui doit s'imposer à
+ * tous les appareils. À époque égale (le quotidien), l'union protège comme
+ * avant les saisies concurrentes. */
 function pdsMerge(mine, theirs) {
   var M = window.KiwiCloudDoc && window.KiwiCloudDoc.mergeDefault;
   if (!M || !theirs) return mine;
-  var out = M(mine, theirs);
+  /* La fusion vit désormais dans floorplan-core.js (pdsMergePlans : époque +
+     pierres tombales), partagée avec la caisse. Le code ci-dessous n'est plus
+     qu'un repli sans tombales pour un chargement sans floorplan-core. */
+  if (typeof pdsMergePlans === 'function') return pdsMergePlans(mine, theirs, M);
+  var mEp = (mine && isFinite(+mine.epoch)) ? +mine.epoch : 0;
+  var tEp = (theirs && isFinite(+theirs.epoch)) ? +theirs.epoch : 0;
+  var out;
+  if (tEp !== mEp) {
+    var win = tEp > mEp ? theirs : mine;
+    out = {};
+    Object.keys(win).forEach(function (k) { out[k] = win[k]; });
+  } else {
+    out = M(mine, theirs);
+  }
   ['mode', 'snap', 'zone', 'zoneId'].forEach(function (k) {
     if (mine && Object.prototype.hasOwnProperty.call(mine, k)) out[k] = mine[k];
   });
@@ -3978,6 +4554,8 @@ function pdsCarryForward() {
   var vid = (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || '';
   var slug = window.KiwiCloudDoc.currentSlug();
   if (!vid || !slug) return;
+  var transients = (window.KiwiVenue && window.KiwiVenue.TRANSIENT_IDS) || PDS_TRANSIENT_IDS;
+  if (transients.indexOf(vid) >= 0) return;
   window.KiwiCloudDoc.carryForward('floorplan', vid, slug, function (raw) {
     try { var d = JSON.parse(raw || 'null'); return !!(d && d.tables && d.tables.length); }
     catch (e) { return false; }
@@ -3998,6 +4576,7 @@ function pdsCloud() {
     localKey: pdsKey,
     read: pdsRawState,
     write: function (d) {
+      d = pdsSyncStaff(d);
       pdsWriteLocal(d);
       /* La page est ouverte : on remplace le contenu de l'état VIVANT (les
        * gestionnaires de glisser-déposer tiennent cette référence) plutôt que
@@ -4205,6 +4784,9 @@ handlers['nav-tables'] = () => {
   /* Avant de lire : récupérer un dessin laissé sous un ancien identifiant. */
   try { pdsCarryForward(); } catch (_) {}
   const state = pdsLoad();
+  if (pdsExpireReservations(state)) {
+    try { pdsSave(state); } catch (_) {}
+  }
   /* L'état vivant, pour que la copie serveur qui arrive pendant qu'on dessine
    * repeigne la salle au lieu de se contenter du localStorage. */
   pdsLive = state;
@@ -4314,11 +4896,15 @@ function pdsPlaneOf(state) {
  *   pdsPush is called BEFORE a mutation, by the action that performs it. */
 const PDS_UNDO = { stack: [], redo: [] };
 function pdsSnap(state) {
-  return JSON.stringify({ zones: state.zones, tables: state.tables, elements: state.elements });
+  return JSON.stringify({ zones: state.zones, tables: state.tables, elements: state.elements, staff: state.staff, gone: state.gone || {} });
 }
 function pdsApplySnap(state, s) {
   const d = JSON.parse(s);
   state.zones = d.zones; state.tables = d.tables; state.elements = d.elements;
+  /* Le roster fait partie de l'instantané : sans lui, annuler le retrait d'un
+     serveur rendrait ses tables à un identifiant qui n'existe plus. */
+  if (d.staff) state.staff = d.staff;
+  state.gone = (d.gone && typeof d.gone === 'object') ? d.gone : {};
   if (!state.zones.some(z => z.id === state.activeZone)) state.activeZone = state.zones[0]?.id;
 }
 function pdsPush(state) {
@@ -4662,6 +5248,7 @@ function pdsRenderStage(state, T) {
   /* Fixtures paint under tables, and within fixtures a rug must sit under a
      comptoir. z is explicit so the merchant can reorder. */
   const ordered = elsInZone.slice().sort((a, b) => (a.z || 0) - (b.z || 0));
+  const noir = pdsNoir();
   return `
     <div class="pds-stage-grid pds-stage-${state.mode}">
       <div class="pds-rail" data-pds-rail>
@@ -4684,6 +5271,12 @@ function pdsRenderStage(state, T) {
               <button class="pds-tool" data-pds-action="redo" title="${T.redo}" aria-label="${T.redo}">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6.4 2.6L21 13"/></svg>
               </button>` : ''}
+            <button class="pds-tool pds-tool-view" data-pds-action="toggle-view"
+                    title="${noir ? T.viewJour : T.viewNuit}" aria-label="${noir ? T.viewJour : T.viewNuit}">
+              ${noir
+                ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
+                : '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'}
+            </button>
             <label class="pds-snap" title="${T.snapHint}">
               <input type="checkbox" data-pds-snap ${state.snap?'checked':''}/>
               <span>${state.snap ? T.snapOn : T.snapOff}</span>
@@ -4691,15 +5284,23 @@ function pdsRenderStage(state, T) {
           </div>
         </div>
         <div class="pds-plan-canvas" data-pds-backdrop
-             style="${pdsRoom(zone).backdrop ? `background:${pdsRoom(zone).backdrop};` : ''}">
+             style="${!noir && pdsRoom(zone).backdrop ? `background:${pdsRoom(zone).backdrop};` : ''}">
           <div class="pds-plan-room" data-pds-room style="max-width:${P.w}px; aspect-ratio:${P.w} / ${P.h};">
             <div class="pds-plan-label">${pdsEsc(zone?.name || '')} <em>· ${T.viewOwner || 'vue propriétaire'}</em></div>
             <div class="pds-plan-scale" data-pds-scale
                  style="width:${P.w}px; height:${P.h}px; transform:scale(calc(100cqw / ${P.w}px));">
-              ${pdsRoomShell(zone)}
+              <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+                <linearGradient id="pdsNoirBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#101312"/><stop offset="100%" stop-color="#050605"/></linearGradient>
+                <radialGradient id="pdsNoirCall"><stop offset="0%" stop-color="#00FFAE" stop-opacity="0.20"/><stop offset="100%" stop-color="#00FFAE" stop-opacity="0"/></radialGradient>
+                <filter id="pdsNoirLift" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity="0.8"/></filter>
+                <radialGradient id="pdsJourCall"><stop offset="0%" stop-color="#0B6E4F" stop-opacity="0.16"/><stop offset="100%" stop-color="#0B6E4F" stop-opacity="0"/></radialGradient>
+                <filter id="pdsJourLift" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0A0F0D" flood-opacity="0.20"/></filter>
+              </defs></svg>
+              ${noir ? pdsRoomShellNoir(zone) : pdsRoomShellJour(zone)}
               <div class="pds-canvas" data-pds-canvas style="width:${P.w}px; height:${P.h}px;">
                 ${isEmpty ? pdsRenderEmpty(state, T) : ''}
                 ${ordered.map(e => pdsRenderElement(e, state, T)).join('')}
+                ${pdsRenderGroups(tablesInZone, state, T)}
                 ${tablesInZone.map(t => pdsRenderTable(t, state, T)).join('')}
                 <div class="pds-bulk" data-pds-bulk hidden></div>
               </div>
@@ -4726,7 +5327,8 @@ function pdsRenderEmpty(state, T) {
     <div class="pds-empty">
       <h4>${T.emptyTitle}</h4>
       <p>${T.emptyDesc}</p>
-      <div style="display:flex; gap:8px; justify-content:center;">
+      <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+        <button class="kb atlas" data-pds-action="scan-salle">${T.scanSalle}</button>
         <button class="kb atlas" data-pds-action="open-wizard">${T.wizGenerate}</button>
         <button class="kb ghost" data-pds-action="add-table-default">${T.emptyBlank}</button>
       </div>
@@ -4744,7 +5346,7 @@ function pdsRenderLayoutRail(state, T) {
   return `
     <div class="pds-rail-card">
       <div class="pds-rail-title">${T.paletteTitle}</div>
-      <div class="pds-rail-hint">${T.paletteHint}</div>
+      <div class="pds-rail-hint">${T.paletteHint} ${T.editHint}</div>
       <div class="pds-palette">
         ${types.map(k => {
           const t = PDS_TABLE_TYPES[k];
@@ -4774,6 +5376,7 @@ function pdsRenderLayoutRail(state, T) {
     ${pdsRenderRoomCard(state, T)}
     <div class="pds-rail-card">
       <button class="kb atlas pds-rail-cta" data-pds-action="open-wizard">${T.wizTitle}</button>
+      <button class="kb ghost pds-rail-cta" data-pds-action="scan-salle">${T.scanSalle}</button>
       <button class="kb ghost pds-rail-cta" data-pds-action="rename-zone">${T.renameZone}</button>
       <button class="kb ghost pds-rail-cta pds-rail-danger" data-pds-action="delete-zone">${T.deleteZone}</button>
     </div>
@@ -4789,15 +5392,14 @@ function pdsFixMini(kind, K) {
   const w = ar >= 1 ? box : Math.max(6, box * ar);
   const h = ar >= 1 ? Math.max(6, box / ar) : box;
   const g = { w, h };
-  const c = K.color;
-  if (K.render === 'svg') {
-    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${K.draw({}, c, g)}</svg>`;
-  }
+  /* La vignette passe par le MÊME renderer au trait que la scène
+     (pdsNoirFixture, qui choisit son encre selon la vue) : le bouton montre
+     ce qui sera réellement posé. Le texte n'a pas de dessin — un Aa suffit. */
+  const inkAa = pdsNoir() ? 'rgba(255,255,255,0.45)' : 'rgba(10,15,13,0.55)';
   if (K.render === 'none') {
-    return `<span style="font:600 9px/1 var(--font-mono,monospace);color:${c};">Aa</span>`;
+    return `<span style="font:600 9px/1 var(--font-mono,monospace);color:${inkAa};">Aa</span>`;
   }
-  return `<span style="display:block;width:${w}px;height:${h}px;
-    ${pdsBoxStyle(K.draw({}, c, g) || {}, c)}"></span>`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${pdsNoirFixture({ type: kind }, K, g)}</svg>`;
 }
 
 /* Thumbnail drawn from the candidate's OWN objects. The five templates
@@ -4843,10 +5445,17 @@ function pdsRenderRoomCard(state, T) {
     <label class="pds-sw pds-sw-custom" title="${T.customColor}">
       <input type="color" data-pds-room-field="${field}" value="${pdsHexOf(val)}"/>
     </label>`;
+  /* En vue nuit le rendu aplatit toute matière vers le charbon (pdsNoirC) :
+     ambiance, sol, murs, fond et finition n'auraient aucun effet visible.
+     On ne montre que les dimensions. La vue jour trace murs et sol à l'encre
+     (pdsRoomShellJour) : seuls ambiance, teinte du sol et fond jouent encore —
+     murs et finition ont suivi le même sort que la nuit. */
+  const noir = pdsNoir();
   return `
     <div class="pds-rail-card">
       <div class="pds-rail-title">${T.roomTitle}</div>
-      <div class="pds-rail-hint">${T.roomHint}</div>
+      <div class="pds-rail-hint">${noir ? T.roomHintNuit : T.roomHint}</div>
+      ${noir ? '' : `
       <label class="pds-mini-label">${T.ambianceLabel}</label>
       <div class="pds-amb-row">
         ${Object.keys(PDS_AMBIANCE).map(k => {
@@ -4863,19 +5472,13 @@ function pdsRenderRoomCard(state, T) {
       </div>
       <label class="pds-mini-label">${T.roomFloor}</label>
       <div class="pds-sw-row">${sw(r.floor, 'floor')}${custom(r.floor, 'floor')}</div>
-      <label class="pds-mini-label">${T.roomWall}</label>
-      <div class="pds-sw-row">${sw(r.wall, 'wall')}${custom(r.wall, 'wall')}</div>
       <label class="pds-mini-label">${T.roomBackdrop}</label>
       <div class="pds-sw-row">
         <button class="pds-sw pds-sw-none ${r.backdrop ? '' : 'active'}"
                 data-pds-room-field="backdrop" data-pds-val=""
                 title="${T.backdropNone}" aria-label="${T.backdropNone}"></button>
         ${sw(r.backdrop, 'backdrop')}${custom(r.backdrop || '#F7F5F0', 'backdrop')}
-      </div>
-      <label class="pds-mini-label">${T.roomFinish}</label>
-      <select class="kf-input pds-input" data-pds-room-field="finish">
-        ${Object.keys(PDS_FLOORS).map(k => `<option value="${k}" ${r.finish===k?'selected':''}>${T['fin'+k] || k}</option>`).join('')}
-      </select>
+      </div>`}
       <div class="pds-num-grid">
         <label>${T.roomW}<input class="kf-input pds-input" type="number" min="240" max="2400" step="20" data-pds-room-field="w" value="${P.w}"/></label>
         <label>${T.roomH}<input class="kf-input pds-input" type="number" min="200" max="2000" step="20" data-pds-room-field="h" value="${P.h}"/></label>
@@ -4892,8 +5495,8 @@ function pdsRenderAssignRail(state, T) {
       <div class="pds-rail-title">${T.rosterTitle}</div>
       <div class="pds-rail-hint">${T.rosterHint}</div>
       <div class="pds-roster">
-        ${state.staff.map(s => {
-          const tbls = state.tables.filter(t => t.server === s.id);
+        ${state.staff.length ? state.staff.map(s => {
+          const tbls = state.tables.filter(t => pdsHasServer(t, s.id));
           const seats = tbls.reduce((acc, t) => acc + pdsGeom(t).seats, 0);
           return `
             <div class="pds-chip" draggable="false" data-pds-chip="${s.id}" style="--chip:${s.color};">
@@ -4902,10 +5505,12 @@ function pdsRenderAssignRail(state, T) {
                 <b>${pdsEsc(s.name)}</b>
                 <em>${T.rosterTables(tbls.length)} · ${T.rosterCovers(seats)}</em>
               </span>
+              ${s.from === 'team' ? '' : `<button class="pds-chip-x" type="button" title="${T.rosterRemove}" aria-label="${T.rosterRemove}" data-pds-action="del-server" data-pds-sid="${s.id}">×</button>`}
             </div>
           `;
-        }).join('')}
+        }).join('') : `<div class="pds-roster-empty">${T.rosterEmpty}</div>`}
       </div>
+      <button class="kb ghost pds-rail-cta" data-pds-action="add-server">${T.rosterAdd}</button>
     </div>
     <div class="pds-rail-card">
       <button class="kb ghost pds-rail-cta pds-rail-danger" data-pds-action="clear-assign">${T.clearAssign}</button>
@@ -4937,18 +5542,18 @@ function pdsRenderAssignSummary(state, T) {
   return `
     <div class="pds-assign-sum">
       ${state.staff.map(s => {
-        const tbls = state.tables.filter(t => t.server === s.id);
+        const tbls = state.tables.filter(t => pdsHasServer(t, s.id));
         return `<div class="pds-asum-row" style="--chip:${s.color};">
           <span class="pds-asum-dot"></span>
           <span class="pds-asum-name">${pdsEsc(s.name.split(' ')[0])}</span>
           <span class="pds-asum-n">${tbls.length}</span>
         </div>`;
       }).join('')}
-      ${state.tables.filter(t => !t.server).length > 0 ? `
+      ${state.tables.filter(t => !pdsServerIds(t).length).length > 0 ? `
         <div class="pds-asum-row pds-asum-unassigned">
           <span class="pds-asum-dot" style="--chip:#9CA3AF;"></span>
           <span class="pds-asum-name">${T.rosterUnassigned}</span>
-          <span class="pds-asum-n">${state.tables.filter(t => !t.server).length}</span>
+          <span class="pds-asum-n">${state.tables.filter(t => !pdsServerIds(t).length).length}</span>
         </div>
       ` : ''}
     </div>
@@ -5008,7 +5613,7 @@ function pdsRenderInspector(state, T, obj) {
         <div class="pds-form-row">
           <label>${T.inspectorLabel}</label>
           <input class="kf-input pds-input" data-pds-field="label"
-                 value="${pdsEsc(obj.label != null ? obj.label : (K.label || ''))}" placeholder="—"/>
+                 value="${pdsEsc(obj.label != null ? obj.label : (K.label || ''))}" placeholder="·"/>
         </div>
       `}
 
@@ -5032,10 +5637,11 @@ function pdsRenderInspector(state, T, obj) {
         </div>
       </div>
 
+      ${!pdsNoir() && isT ? `
       <div class="pds-form-row">
         <label>${T.inspectorMaterial}</label>
         <div class="pds-sw-row">${swatches}</div>
-      </div>
+      </div>` : ''}
 
       ${isT ? `
         <div class="pds-form-row">
@@ -5048,16 +5654,32 @@ function pdsRenderInspector(state, T, obj) {
             `).join('')}
           </div>
         </div>
+        ${obj.status === 'reserved' ? `
+        <div class="pds-resv-fields">
+          <label class="pds-resv-field">
+            <span>${T.reservationName}</span>
+            <input class="kf-input pds-input" data-pds-field="reservationName"
+                   value="${pdsEsc(obj.reservationName || '')}" placeholder="${pdsEsc(T.reservationNamePlaceholder)}"/>
+          </label>
+          <label class="pds-resv-field">
+            <span>${T.reservationTime}</span>
+            <input class="kf-input pds-input" type="time" data-pds-field="reservationTime"
+                   value="${pdsEsc(obj.reservationTime || '')}"/>
+          </label>
+        </div>` : ''}
         <div class="pds-form-row">
-          <label>${T.inspectorServer}</label>
-          <select class="kf-input pds-input" data-pds-field="server">
-            <option value="">${T.inspectorUnassigned}</option>
-            ${state.staff.map(s => `<option value="${s.id}" ${s.id===obj.server?'selected':''}>${pdsEsc(s.name)}</option>`).join('')}
-          </select>
+          <label>${T.inspectorServer} · 3 max.</label>
+          ${[0,1,2].map(slot => {
+            const assigned = pdsServerIds(obj);
+            return `<select class="kf-input pds-input pds-server-slot" data-pds-server-slot="${slot}">
+              <option value="">${slot === 0 ? T.inspectorUnassigned : '·'}</option>
+              ${state.staff.map(s => `<option value="${s.id}" ${s.id===assigned[slot]?'selected':''}>${pdsEsc(s.name)}</option>`).join('')}
+            </select>`;
+          }).join('')}
         </div>
         <div class="pds-form-row">
           <label>${T.inspectorNotes}</label>
-          <input class="kf-input pds-input" data-pds-field="notes" value="${pdsEsc(obj.notes || '')}" placeholder="—"/>
+          <input class="kf-input pds-input" data-pds-field="notes" value="${pdsEsc(obj.notes || '')}" placeholder="·"/>
         </div>
       ` : `
         <div class="pds-form-row">
@@ -5069,8 +5691,20 @@ function pdsRenderInspector(state, T, obj) {
         </div>
       `}
 
+      ${isT && obj.group ? (() => {
+        /* La fusion se lit ici aussi : partenaires et capacité partagée. */
+        const disp = (n) => /^\d$/.test(String(n)) ? '0' + n : n;
+        const peers = state.tables.filter(tt => tt.group === obj.group && tt.id !== obj.id)
+          .sort((a, b) => String(a.num).localeCompare(String(b.num), undefined, { numeric: true }));
+        const seats = state.tables.filter(tt => tt.group === obj.group)
+          .reduce((s, tt) => s + (pdsGeom(tt).seats || 0), 0);
+        return `<div class="pds-group-info">${pdsEsc(T.groupedWith(peers.map(p => disp(p.num)).join(' + ')))} · ${pdsEsc(T.groupCovers(seats))}</div>`;
+      })() : ''}
+
       <div class="pds-inspect-actions">
         <button class="kb ghost" data-pds-action="obj-lock" data-pds-id="${obj.id}">${obj.locked ? T.unlock : T.lock}</button>
+        ${isT ? `<button class="kb ghost ${state._groupPickFrom === obj.id ? 'pds-group-arming' : ''}" data-pds-action="table-group" data-pds-id="${obj.id}">${T.groupTables}</button>` : ''}
+        ${isT && obj.group ? `<button class="kb ghost" data-pds-action="table-ungroup" data-pds-id="${obj.id}">${T.ungroupTables}</button>` : ''}
         <button class="kb ghost" data-pds-action="table-duplicate" data-pds-id="${obj.id}">${T.inspectorDuplicate}</button>
         <button class="kb ghost pds-rail-danger" data-pds-action="table-delete" data-pds-id="${obj.id}">${T.inspectorDelete}</button>
       </div>
@@ -5104,8 +5738,9 @@ function pdsRenderBulkInspector(state, T, selectedIds) {
         <button class="kb ghost" data-pds-action="bulk-dist-v">${T.bulkDistV}</button>
       </div>
       <div class="pds-inspect-actions">
+        <button class="kb ghost" data-pds-action="bulk-group">${T.bulkGroup}</button>
         <button class="kb ghost" data-pds-action="bulk-clear">${T.bulkClear}</button>
-        <button class="kb ghost pds-rail-danger" data-pds-action="bulk-delete">${T.bulkDelete}</button>
+        <button class="kb ghost pds-rail-danger" data-pds-action="bulk-delete" style="grid-column:1 / -1;">${T.bulkDelete}</button>
       </div>
     </div>
   `;
@@ -5153,28 +5788,210 @@ function pdsHandles(o, g, T) {
  *   matter what size the merchant drags it to. Number and cover count are an
  *   HTML overlay, never SVG text — SVG text scales with the shape and smears
  *   on a long table.                                                       */
+/* ─── Tables groupées, façon accueil ─────────────────────────────────────
+ * Le mockup de l'accueil fusionne « 06 + 07 » : une enveloppe capsule qui
+ * embrasse les deux tables, un halo doux derrière, et une pastille combinée
+ * au-dessus. Ici la même grammaire, pilotée par `t.group` (id partagé,
+ * persisté dans le plan) : l'enveloppe se dessine SOUS les tables — c'est
+ * un lien, pas un couvercle — et suit les tables quand on les déplace. */
+function pdsSweepGroups(state) {
+  /* Un groupe réduit à une seule table après suppression n'existe plus. */
+  const count = {};
+  state.tables.forEach(t => { if (t.group) count[t.group] = (count[t.group] || 0) + 1; });
+  state.tables.forEach(t => { if (t.group && count[t.group] < 2) delete t.group; });
+}
+
+function pdsTodayKey(now) {
+  const d = new Date(now == null ? Date.now() : now);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function pdsClearReservation(t) {
+  delete t.reservationName;
+  delete t.reservationTime;
+  delete t.reservationDate;
+}
+
+/* A grouped table is one service object: status, seated time and reservation
+   details follow the anchor across every member, regardless of group size. */
+function pdsSyncGroupService(state, gid, anchor) {
+  if (!gid || !anchor) return;
+  state.tables.forEach(t => {
+    if (t.group !== gid || t.id === anchor.id) return;
+    t.status = anchor.status || 'free';
+    if (anchor.status === 'occupied' && anchor.since) t.since = anchor.since;
+    else delete t.since;
+    if (anchor.status === 'reserved') {
+      if (anchor.reservationName) t.reservationName = anchor.reservationName;
+      else delete t.reservationName;
+      if (anchor.reservationTime) t.reservationTime = anchor.reservationTime;
+      else delete t.reservationTime;
+      if (anchor.reservationDate) t.reservationDate = anchor.reservationDate;
+      else delete t.reservationDate;
+    } else {
+      pdsClearReservation(t);
+    }
+  });
+}
+
+/* Time-only reservations belong to the day on which they were entered. Once
+   that instant is over by two hours, the next render returns the whole group
+   to libre. Keeping the date internally prevents yesterday's 23:30 booking
+   from surviving until tonight when the dashboard opens after midnight. */
+function pdsExpireReservations(state, now) {
+  now = now == null ? Date.now() : now;
+  const expiredGroups = new Set();
+  const expiredIds = new Set();
+  let changed = false;
+  state.tables.forEach(t => {
+    if (t.status !== 'reserved' || !/^\d{2}:\d{2}$/.test(t.reservationTime || '')) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(t.reservationDate || '')) {
+      t.reservationDate = pdsTodayKey(now);
+      changed = true;
+    }
+    const day = t.reservationDate;
+    const stamp = new Date(`${day}T${t.reservationTime}:00`).getTime();
+    if (Number.isFinite(stamp) && now > stamp + 2 * 60 * 60 * 1000) {
+      if (t.group) expiredGroups.add(t.group);
+      else expiredIds.add(t.id);
+    }
+  });
+  state.tables.forEach(t => {
+    if (!expiredIds.has(t.id) && !(t.group && expiredGroups.has(t.group))) return;
+    t.status = 'free';
+    delete t.since;
+    pdsClearReservation(t);
+    changed = true;
+  });
+  return changed;
+}
+
+function pdsReservationLabel(t) {
+  const time = /^\d{2}:\d{2}$/.test(t.reservationTime || '') ? t.reservationTime.replace(':', 'h') : '';
+  const name = String(t.reservationName || '').trim();
+  return [time, name].filter(Boolean).join(' · ');
+}
+
+/* Destructive toasts restore only the table objects the action touched. This
+   avoids rewinding unrelated edits the merchant may make while the five-second
+   undo window is open. */
+function pdsTableSnapshot(state, tables) {
+  return tables.map(t => ({
+    index: state.tables.indexOf(t),
+    value: JSON.parse(JSON.stringify(t)),
+  }));
+}
+
+function pdsRestoreTableSnapshot(state, snapshot) {
+  snapshot.slice().sort((a, b) => a.index - b.index).forEach(s => {
+    const value = JSON.parse(JSON.stringify(s.value));
+    const at = state.tables.findIndex(t => t.id === value.id);
+    if (at >= 0) state.tables[at] = value;
+    else state.tables.splice(Math.max(0, Math.min(s.index, state.tables.length)), 0, value);
+    if (typeof pdsUnbury === 'function') pdsUnbury(state, value.id);
+  });
+}
+
+function pdsOfferTableUndo(state, T, snapshot, refresh, selection, title, restoredTitle, selectId) {
+  let restored = false;
+  Kiwi.toast(title, {
+    type: 'warn', duration: 5200, force: true,
+    action: {
+      label: T.undoAction,
+      onClick: () => {
+        if (restored) return;
+        restored = true;
+        pdsPush(state);
+        pdsRestoreTableSnapshot(state, snapshot);
+        selection.clear();
+        if (selectId && state.tables.some(t => t.id === selectId)) selection.add(selectId);
+        refresh();
+        if (selectId) setTimeout(() => state._openInspector(selectId), 0);
+        Kiwi.toast(restoredTitle, { type: 'success', duration: 1400, force: true });
+      },
+    },
+  });
+}
+
+function pdsRenderGroups(tables, state, T) {
+  const byGroup = new Map();
+  tables.forEach(t => {
+    if (!t.group) return;
+    if (!byGroup.has(t.group)) byGroup.set(t.group, []);
+    byGroup.get(t.group).push(t);
+  });
+  let out = '';
+  byGroup.forEach((members, gid) => {
+    if (members.length < 2) return;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    let seats = 0;
+    members.forEach(t => {
+      const g = pdsGeom(t);
+      x0 = Math.min(x0, t.x); y0 = Math.min(y0, t.y);
+      x1 = Math.max(x1, t.x + g.w); y1 = Math.max(y1, t.y + g.h);
+      seats += g.seats || 0;
+    });
+    const pad = 8;
+    const nums = members.slice()
+      .sort((a, b) => String(a.num).localeCompare(String(b.num), undefined, { numeric: true }))
+      .map(t => /^\d$/.test(String(t.num)) ? '0' + t.num : t.num);
+    out += `
+      <div class="pds-group-env" data-pds-group="${pdsEsc(gid)}" style="left:${x0 - pad}px; top:${y0 - pad}px; width:${(x1 - x0) + pad * 2}px; height:${(y1 - y0) + pad * 2}px;">
+        <span class="pds-group-chip">${pdsEsc(nums.join(' + '))}<span class="pds-group-covers"> · ${pdsEsc(T.groupCovers(seats))}</span></span>
+      </div>`;
+  });
+  return out;
+}
+
 function pdsRenderTable(t, state, T) {
   const g = pdsGeom(t);
+  /* Les deux vues passent par le MÊME tracé (chaises en tirets, corps posé
+     sur son ombre, numéro à deux chiffres) — seule l'encre change : blanc et
+     menthe la nuit, encre et atlas le jour, où le corps porte en plus le
+     lavis de la matière choisie (pdsJourC) pour que le nuancier MATIÈRE
+     reste un vrai choix. Le rendu matières de floorplan-core reste à la
+     caisse, intact. */
+  const noir = pdsNoir();
   const c = pdsColor(t);
   const P = PDS_PAD;
   const sel = PDS_SEL.has(t.id);
   const only = sel && PDS_SEL.size === 1;
-  const sv = state.staff.find(s => s.id === t.server);
-  const initials = sv ? sv.name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase() : '';
-  const ring = PDS_STATUS_RING[t.status] || PDS_STATUS_RING.free;
-  const ink = pdsInk(c);
-  /* Shared with the caisse — see pdsTableBody in assets/floorplan-core.js. */
-  const body = pdsTableBody(g, c, ring);
+  const assignedServers = pdsServerIds(t).map(id => state.staff.find(s => s.id === id)).filter(Boolean);
+  const sv = assignedServers[0];
+  const R = noir ? PDS_STATUS_RING_NOIR : PDS_STATUS_RING_JOUR;
+  const ring = R[t.status] || R.free;
+  const ink = noir ? 'rgba(255,255,255,0.5)'
+    : (t.status === 'occupied' ? '#0B6E4F' : 'rgba(10,15,13,0.60)');
+  const body = noir
+    ? pdsNoirTableBody(g, ring, t.status || 'free')
+    : pdsNoirTableBody(g, ring, t.status || 'free', pdsJourC(c, 0.30));
 
   const showChairs = state.showChairs !== false;
-  const chairs = showChairs ? pdsChairsFor(g, g.seats, c) : '';
-  const serverBadge = sv
-    ? `<span class="pds-tbl-server" style="background:${sv.color};" title="${pdsEsc(sv.name)}">${initials}</span>`
+  const chairs = showChairs ? pdsNoirChairs(g, g.seats, ring) : '';
+  const numDisp = /^\d$/.test(String(t.num)) ? '0' + t.num : t.num;
+  const serverBadge = assignedServers.length
+    ? `<span class="pds-tbl-servers">${assignedServers.map(server => {
+        const initials = server.name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase();
+        return `<span class="pds-tbl-server" style="background:${server.color};color:${pdsInk(server.color)};" title="${pdsEsc(server.name)}">${initials}</span>`;
+      }).join('')}</span>`
+    : '';
+  /* La pastille « 6 min » du mockup : le temps depuis l'assise, posé
+   * au-dessus de la table. Elle n'existe que si la table porte son heure
+   * d'occupation (t.since, écrite quand le statut passe à occupée). */
+  let sinceChip = '';
+  if (t.status === 'occupied' && t.since > 0) {
+    const min = Math.max(0, Math.round((Date.now() - t.since) / 60000));
+    const disp = min >= 90 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}` : `${min} min`;
+    sinceChip = `<span class="pds-tbl-since">${disp}</span>`;
+  }
+  const reservationLabel = t.status === 'reserved' ? pdsReservationLabel(t) : '';
+  const reservationChip = reservationLabel
+    ? `<span class="pds-resv-chip">${pdsEsc(reservationLabel)}</span>`
     : '';
 
   return `
     <div class="pds-tbl-cell ${sel?'is-selected':''} ${state.mode==='assign' && sv?'pds-has-server':''} ${t.locked?'is-locked':''}"
-         data-pds-table="${t.id}"
+         data-pds-table="${t.id}" data-status="${t.status || 'free'}"
          role="button" tabindex="0"
          aria-label="Table ${pdsEsc(t.num)}, ${g.seats} ${T.seats}"
          style="left:${t.x - P}px; top:${t.y - P}px; width:${g.w + P*2}px; height:${g.h + P*2}px;
@@ -5183,10 +6000,12 @@ function pdsRenderTable(t, state, T) {
         ${chairs}${body}
       </svg>
       <div class="pds-tbl-face" style="color:${ink};">
-        <span class="pds-tbl-num">${pdsEsc(t.num)}</span>
+        <span class="pds-tbl-num">${pdsEsc(numDisp)}</span>
         ${g.seats ? `<span class="pds-tbl-covers">${g.seats}p</span>` : ''}
       </div>
       ${serverBadge}
+      ${sinceChip}
+      ${reservationChip}
       ${only ? pdsHandles(t, g, T) : ''}
     </div>
   `;
@@ -5199,18 +6018,17 @@ function pdsRenderElement(e, state, T) {
   const K = PDS_FIX[e.type];
   if (!K) return '';
   const g = pdsGeom(e);
+  const noir = pdsNoir();
   const c = pdsColor(e);
   const sel = PDS_SEL.has(e.id);
   const only = sel && PDS_SEL.size === 1;
   const label = (e.label != null ? e.label : (K.label || ''));
 
-  let inner = '';
-  let boxStyle = '';
-  if (K.render === 'svg') {
-    inner = `<svg class="pds-el-svg" viewBox="0 0 ${g.w} ${g.h}" aria-hidden="true">${K.draw(e, c, g)}</svg>`;
-  } else if (K.render === 'box') {
-    boxStyle = pdsBoxStyle(K.draw(e, c, g) || {}, c);
-  }
+  /* Les deux vues dessinent les mêmes idéogrammes au trait (pdsNoirFixture
+     choisit son encre selon la vue) — les gabarits peints de floorplan-core
+     restent à la caisse. */
+  const inner = K.render === 'none' ? ''
+    : `<svg class="pds-el-svg" viewBox="0 0 ${g.w} ${g.h}" aria-hidden="true">${pdsNoirFixture(e, K, g)}</svg>`;
 
   return `
     <div class="pds-el pds-el-${e.type} ${sel?'is-selected':''} ${e.locked?'is-locked':''}"
@@ -5218,8 +6036,8 @@ function pdsRenderElement(e, state, T) {
          aria-label="${pdsEsc(T['fix'+e.type] || e.type)}"
          style="left:${e.x}px; top:${e.y}px; width:${g.w}px; height:${g.h}px;
                 --pad:0px; transform:rotate(${e.rot||0}deg); z-index:${10 + (e.z||0)};">
-      <div class="pds-el-fill" style="${boxStyle}">${inner}</div>
-      ${label ? `<span class="pds-el-label" style="color:${pdsInk(c)};">${pdsEsc(label)}</span>` : ''}
+      <div class="pds-el-fill">${inner}</div>
+      ${label ? `<span class="pds-el-label" style="color:${noir ? 'rgba(255,255,255,0.62)' : 'rgba(10,15,13,0.55)'};">${pdsEsc(label)}</span>` : ''}
       ${only ? pdsHandles(e, g, T) : ''}
     </div>
   `;
@@ -5265,7 +6083,7 @@ function pdsRenderRotateStage(state, T) {
                   return `<div class="pds-rot-line" style="--chip:${s.color};">
                     <span class="pds-asum-dot"></span>
                     <b>${s.name.split(' ')[0]}</b>
-                    <em>${zone?.name || '—'}</em>
+                    <em>${zone?.name || '·'}</em>
                   </div>`;
                 }).join('')}
               </div>
@@ -5305,7 +6123,7 @@ function pdsRenderRotateStage(state, T) {
               <span class="pds-hist-name"><span class="pds-asum-dot"></span>${s.name.split(' ')[0]}</span>
               ${(state.history || []).map(d => {
                 const z = d.servers[s.id];
-                const zname = state.zones.find(zo => zo.id === z)?.name || '—';
+                const zname = state.zones.find(zo => zo.id === z)?.name || '·';
                 const tag = z === 'z1' ? 'a' : z === 'z2' ? 'b' : z === 'z3' ? 'c' : 'd';
                 return `<span class="pds-hist-cell pds-hist-${tag}" title="${zname}">${zname.slice(0,1)}</span>`;
               }).join('')}
@@ -5381,9 +6199,13 @@ function pdsRenderFoot(state, T) {
 
 /* ═══ INTERACTIVITY ═════════════════════════════════════════════════ */
 function pdsAttach(root, state, T, dr) {
+  /* La vue nuit est une classe sur la racine du tiroir : tout le squelette
+     pds- en hérite, et la bascule ne re-rend que le corps. */
+  root.classList.toggle('pds-noir', pdsNoir());
   /* Re-renders body + foot in-place, then re-binds events. Used after
    * every state mutation. */
   const refresh = () => {
+    pdsExpireReservations(state);
     const body = root.querySelector('.kiwi-drawer-body');
     const foot = root.querySelector('.kiwi-drawer-foot');
     if (body) body.innerHTML = pdsRenderBody(state, T);
@@ -5443,7 +6265,14 @@ function pdsAttach(root, state, T, dr) {
     if (state.mode !== 'rotate') {
       root.querySelectorAll('[data-pds-table]').forEach(el => {
         const id = el.getAttribute('data-pds-table');
-        pdsAttachDrag(el, id, state, T, root, refresh, selection);
+        /* bind() also runs when only the inspector is redrawn, while these
+         * stage nodes survive. Wire each surviving node once: otherwise the
+         * Shift toggle and drag-finish closures replay in a stack. A full
+         * refresh creates fresh nodes without this marker and wires normally. */
+        if (el.getAttribute('data-pds-drag-wired') !== '1') {
+          el.setAttribute('data-pds-drag-wired', '1');
+          pdsAttachDrag(el, id, state, T, root, refresh, selection);
+        }
         el.onclick = (ev) => {
           if (ev.detail === 0) return; /* keyboard-triggered click without coords */
         };
@@ -5453,7 +6282,10 @@ function pdsAttach(root, state, T, dr) {
          capability that did not exist while they were scene artwork. */
       root.querySelectorAll('[data-pds-el]').forEach(el => {
         const id = el.getAttribute('data-pds-el');
-        pdsAttachElDrag(el, id, state, T, root, refresh);
+        if (el.getAttribute('data-pds-drag-wired') !== '1') {
+          el.setAttribute('data-pds-drag-wired', '1');
+          pdsAttachElDrag(el, id, state, T, root, refresh);
+        }
         el.onclick = (ev) => {
           ev.stopPropagation();
           if (state.mode !== 'layout') return;
@@ -5520,7 +6352,22 @@ function pdsAttach(root, state, T, dr) {
           if (f === 'num')        o.num = v.trim() || o.num;
           else if (f === 'label') o.label = v;
           else if (f === 'notes') o.notes = v;
-          else if (f === 'server') o.server = v || null;
+          else if (f === 'server') pdsSetServerIds(o, v ? [v] : []);
+          else if (f === 'reservationName') {
+            o.reservationName = v.trim();
+            if (!o.reservationName) delete o.reservationName;
+            if (o.group) pdsSyncGroupService(state, o.group, o);
+          }
+          else if (f === 'reservationTime') {
+            if (/^\d{2}:\d{2}$/.test(v)) {
+              o.reservationTime = v;
+              o.reservationDate = pdsTodayKey();
+            } else {
+              delete o.reservationTime;
+              delete o.reservationDate;
+            }
+            if (o.group) pdsSyncGroupService(state, o.group, o);
+          }
           else if (f === 'type') {
             /* Changing the type re-seeds geometry, otherwise a 2-top turned
                into a 10-top keeps the 2-top's footprint and the seats have
@@ -5544,7 +6391,22 @@ function pdsAttach(root, state, T, dr) {
             reselect();
           }
         };
-        input.onchange = commit;
+        if (f === 'reservationName' || f === 'reservationTime') {
+          /* Text insertion APIs and some mobile keyboards can update the
+           * control without delivering change until much later. Blur is the
+           * reliable commit boundary; guard it so a normal change+blur pair
+           * still records exactly one undo snapshot. */
+          let committedValue = input.value;
+          const commitReservation = () => {
+            if (input.value === committedValue) return;
+            committedValue = input.value;
+            commit();
+          };
+          input.onchange = commitReservation;
+          input.onblur = commitReservation;
+        } else {
+          input.onchange = commit;
+        }
 
         /* The rotation dial previews as you drag it; the commit lands on
            change. Without this the dial only moved the table on release,
@@ -5564,6 +6426,21 @@ function pdsAttach(root, state, T, dr) {
         }
       });
 
+      root.querySelectorAll('[data-pds-server-slot]').forEach(input => {
+        input.onchange = () => {
+          const found = pdsFind(state, input.closest('[data-pds-inspect-id]')?.getAttribute('data-pds-inspect-id'));
+          if (!found || !found.table) return;
+          const table = found.o;
+          const slot = Math.max(0, Math.min(PDS_MAX_TABLE_SERVERS - 1, Number(input.getAttribute('data-pds-server-slot')) || 0));
+          const ids = pdsServerIds(table);
+          ids[slot] = input.value || '';
+          pdsPush(state);
+          pdsSetServerIds(table, ids);
+          refresh();
+          setTimeout(() => state._openInspector(table.id), 0);
+        };
+      });
+
       /* Status pill row inside inspector */
       root.querySelectorAll('[data-pds-status]').forEach(btn => {
         if (btn.getAttribute('data-pds-action')) return; /* handled elsewhere */
@@ -5571,6 +6448,21 @@ function pdsAttach(root, state, T, dr) {
           if (!found.table) return;
           pdsPush(state);
           o.status = btn.getAttribute('data-pds-status');
+          /* L'heure d'assise nourrit la pastille « N min » de la vue nuit. */
+          if (o.status === 'occupied') {
+            if (!o.since) o.since = Date.now();
+            pdsClearReservation(o);
+          } else {
+            delete o.since;
+            if (o.status === 'reserved') {
+              if (!o.reservationDate) o.reservationDate = pdsTodayKey();
+            } else {
+              pdsClearReservation(o);
+            }
+          }
+          /* Une table groupée est UNE table pour le service : le statut
+             s'applique au groupe entier, heure d'assise partagée. */
+          if (o.group) pdsSyncGroupService(state, o.group, o);
           reselect();
         };
       });
@@ -5648,6 +6540,12 @@ function pdsAttach(root, state, T, dr) {
     if (!f) { inspector.innerHTML = pdsRenderInspectorEmpty(state, T); return; }
     inspector.innerHTML = pdsRenderInspector(state, T, f.o);
     bind();
+    /* Sous 1100px l'inspecteur passe sous le plan : sélectionner un objet
+       ouvrait alors un panneau qu'on ne voyait pas. 'nearest' ne bouge rien
+       quand il est déjà à l'écran, donc la colonne large ne saute pas.
+       Sans 'smooth' : mesuré dans ce tiroir, l'animation ne défile pas d'un
+       pixel là où le saut direct parcourt ses 561. */
+    try { inspector.scrollIntoView({ block: 'nearest' }); } catch (_) {}
   };
   /* Open bulk inspector */
   const openBulkInspector = () => {
@@ -5721,11 +6619,54 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
   let startX, startY, origX, origY, transformX, transformY;
   let dragK = 1;
   let blockFrame = 0;
+  let groupPeers = [];
+  let groupOrig = {};
+  let selectionOrig = {};
   const t = state.tables.find(tt => tt.id === id);
   if (!t) return;
 
   el.addEventListener('pointerdown', (ev) => {
     if (ev.button !== 0) return;
+    /* Mode « grouper » armé : le clic suivant lie les deux tables. Sur
+     * soi-même, il annule. On sort avant toute logique de sélection ou de
+     * drag — le refresh() reconstruit le DOM, donc plus rien à faire ici. */
+    if (state._groupPickFrom) {
+      ev.preventDefault();
+      const fromId = state._groupPickFrom;
+      state._groupPickFrom = null;
+      const t = state.tables.find(tt => tt.id === id);
+      if (fromId === id || !t) {
+        toast(T.groupPickCancel, { duration: 1400 });
+        refresh();
+        setTimeout(() => state._openInspector(id), 0);
+        return;
+      }
+      const from = state.tables.find(tt => tt.id === fromId);
+      if (!from) { refresh(); return; }
+      pdsPush(state);
+      const serviceAnchor = from.group ? from : (t.group ? t : from);
+      if (from.group && t.group && from.group !== t.group) {
+        /* Deux groupes existants fusionnent : la cible rejoint le premier. */
+        const old = t.group;
+        state.tables.forEach(tt => { if (tt.group === old) tt.group = from.group; });
+      } else {
+        const gid = from.group || t.group || ('grp' + Date.now().toString(36));
+        from.group = gid; t.group = gid;
+      }
+      pdsSyncGroupService(state, from.group || t.group, serviceAnchor);
+      selection.clear();
+      selection.add(id);
+      refresh();
+      const disp = (n) => /^\d$/.test(String(n)) ? '0' + n : n;
+      const grouped = state.tables.filter(tt => tt.group && tt.group === (from.group || t.group));
+      const nums = grouped.slice()
+        .sort((a, b) => String(a.num).localeCompare(String(b.num), undefined, { numeric: true }))
+        .map(tt => disp(tt.num)).join(' + ');
+      const covers = grouped.reduce((sum, tt) => sum + (pdsGeom(tt).seats || 0), 0);
+      toast(T.groupOk(nums, covers), { type: 'success' });
+      setTimeout(() => state._openInspector(id), 0);
+      return;
+    }
     /* Selection logic */
     if (ev.shiftKey) {
       if (selection.has(id)) {
@@ -5739,14 +6680,23 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
       ev.preventDefault();
       return;
     } else {
-      /* Plain click — clear selection, pick this one */
-      if (!selection.has(id) || selection.size > 1) {
+      /* Plain click on an unselected table starts a fresh selection. A table
+       * already inside a shift-selection keeps that selection intact so the
+       * pointerdown can immediately become a multi-table drag. */
+      const wasSelected = selection.has(id);
+      if (!wasSelected) {
         selection.clear();
         root.querySelectorAll('.pds-tbl-cell.is-selected').forEach(n => n.classList.remove('is-selected'));
       }
       selection.add(id);
       el.classList.add('is-selected');
-      state._openInspector(id);
+      /* The matching inspector is already open for an existing selection.
+       * Reopening it here calls bind(), stacking a fresh drag closure during
+       * pointerdown and can steal the gesture before its first move. */
+      if (!wasSelected) {
+        if (selection.size > 1) state._openBulkInspector();
+        else state._openInspector(id);
+      }
     }
     dragging = true;
     startX = ev.clientX; startY = ev.clientY;
@@ -5757,6 +6707,27 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
      * meaning a screen delta of D px must be written as D/k logical units to
      * track the cursor 1:1. */
     dragK = pdsK(root);
+    /* Les partenaires de groupe (et leur enveloppe) suivent le même
+       translate pendant le drag : la fusion se déplace d'un seul geste. */
+    groupPeers = [];
+    groupOrig = {};
+    selectionOrig = {};
+    if (selection.size > 1 && selection.has(id)) {
+      state.tables.forEach(tt => {
+        if (selection.has(tt.id)) selectionOrig[tt.id] = { x: tt.x, y: tt.y };
+      });
+    }
+    if (t.group) {
+      state.tables.forEach(tt => {
+        if (tt.group === t.group && tt.id !== id) {
+          groupOrig[tt.id] = { x: tt.x, y: tt.y };
+          const n = root.querySelector(`[data-pds-table="${tt.id}"]`);
+          if (n) groupPeers.push({ n, rot: tt.rot || 0 });
+        }
+      });
+      const env = root.querySelector(`[data-pds-group="${t.group}"]`);
+      if (env) groupPeers.push({ n: env, rot: null });
+    }
     el.setPointerCapture(ev.pointerId);
     el.classList.add('is-dragging');
     ev.preventDefault();
@@ -5767,6 +6738,9 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
     transformX = (ev.clientX - startX) / dragK;
     transformY = (ev.clientY - startY) / dragK;
     el.style.transform = `translate(${transformX}px, ${transformY}px) rotate(${t.rot||0}deg)`;
+    groupPeers.forEach(p => {
+      p.n.style.transform = `translate(${transformX}px, ${transformY}px)` + (p.rot === null ? '' : ` rotate(${p.rot}deg)`);
+    });
     /* The table always follows the cursor 1:1 — a table that refuses to move
        reads as a broken app, not as a rule. Illegality is shown, not enforced,
        until release. The collision test is coalesced to one per frame. */
@@ -5804,7 +6778,7 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
     /* Settle. A drop on top of something lands beside it — searched outward
        from where you actually aimed, so the table still goes where you meant
        it to go rather than springing back to where it started. */
-    if (selection.size <= 1 && pdsBlockers(state, t, { x: nx, y: ny }).length) {
+    if (selection.size <= 1 && !t.group && pdsBlockers(state, t, { x: nx, y: ny }).length) {
       const spot = pdsNearestFree(state, t, nx, ny, plane);
       if (spot) { nx = spot.x; ny = spot.y; }
       else {
@@ -5812,17 +6786,38 @@ function pdsAttachDrag(el, id, state, T, root, refresh, selection) {
         if (window.Kiwi && Kiwi.toast) Kiwi.toast(T.noRoom);
       }
     }
-    /* If shift-multi-drag, move all selected by the same delta */
+    /* If shift-multi-drag, move all selected by the same delta. Positions are
+       absolute from pointerdown origins: surviving DOM nodes may carry stacked
+       finish listeners after a wire pass, and replaying one must be idempotent. */
     if (selection.size > 1 && selection.has(id)) {
       const dx = nx - origX;
       const dy = ny - origY;
       state.tables.forEach(tt => {
         if (selection.has(tt.id) && tt.id !== id) {
+          const o = selectionOrig[tt.id];
+          if (!o) return;
           const tg = pdsGeom(tt);
-          tt.x = Math.max(0, Math.min(plane.w - tg.w, tt.x + dx));
-          tt.y = Math.max(0, Math.min(plane.h - tg.h, tt.y + dy));
+          tt.x = Math.max(0, Math.min(plane.w - tg.w, o.x + dx));
+          tt.y = Math.max(0, Math.min(plane.h - tg.h, o.y + dy));
         }
       });
+    }
+    /* Une table groupée entraîne ses partenaires : la fusion est un seul
+       meuble. Même delta pour chacun, borné à la pièce. Position absolue
+       depuis l'origine capturée au pointerdown — un finish() qui rejoue
+       (écouteurs empilés par un re-câblage) reste alors sans effet. */
+    if (t.group) {
+      const dx = nx - origX;
+      const dy = ny - origY;
+      state.tables.forEach(tt => {
+        const o = groupOrig[tt.id];
+        if (o && tt.group === t.group && !(selection.size > 1 && selection.has(tt.id))) {
+          const tg = pdsGeom(tt);
+          tt.x = Math.max(0, Math.min(plane.w - tg.w, o.x + dx));
+          tt.y = Math.max(0, Math.min(plane.h - tg.h, o.y + dy));
+        }
+      });
+      groupPeers = [];
     }
     t.x = nx;
     t.y = ny;
@@ -5849,6 +6844,7 @@ function pdsAttachElDrag(el, id, state, T, root, refresh) {
   let dragging = false;
   let startX, startY, origX, origY;
   let dragK = 1;
+  let moved = false;
   let blockFrame = 0, lastX = 0, lastY = 0;
   const elObj = state.elements.find(e => e.id === id);
   if (!elObj) return;
@@ -5865,6 +6861,7 @@ function pdsAttachElDrag(el, id, state, T, root, refresh) {
     }
     lastTap = now;
     dragging = true;
+    moved = false;
     startX = ev.clientX; startY = ev.clientY;
     origX = elObj.x; origY = elObj.y;
     dragK = pdsK(root);   /* screen px → logical units, see pdsK() */
@@ -5874,6 +6871,8 @@ function pdsAttachElDrag(el, id, state, T, root, refresh) {
   });
   el.addEventListener('pointermove', (ev) => {
     if (!dragging) return;
+    if (!moved && Math.abs(ev.clientX - startX) < 3 && Math.abs(ev.clientY - startY) < 3) return;
+    moved = true;
     el.style.transform = `translate(${(ev.clientX - startX)/dragK}px, ${(ev.clientY - startY)/dragK}px) rotate(${elObj.rot||0}deg)`;
     if (!blockFrame) blockFrame = requestAnimationFrame(() => {
       blockFrame = 0;
@@ -5894,6 +6893,11 @@ function pdsAttachElDrag(el, id, state, T, root, refresh) {
     el.classList.remove('is-dragging', 'is-blocked');
     if (blockFrame) { cancelAnimationFrame(blockFrame); blockFrame = 0; }
     root.querySelectorAll('.pds-blocker').forEach(n => n.classList.remove('pds-blocker'));
+    /* A press that never moved is a click. Refreshing here would rebuild the
+       stage DOM before the browser dispatches the click event, so the
+       selection handler on this node would never fire — the fixture would
+       feel impossible to select, resize or delete. Leave the DOM alone. */
+    if (!moved) return;
     let nx = origX + (ev.clientX - startX) / dragK;
     let ny = origY + (ev.clientY - startY) / dragK;
     if (state.snap) {
@@ -5927,6 +6931,9 @@ function pdsAttachChipDrag(chip, sid, state, T, root, refresh) {
   let startX, startY;
   let ghost = null;
   const create = (ev) => {
+    /* La croix de retrait vit dans la pastille : sans cette sortie, le
+       pointerdown démarrerait un glisser et avalerait le clic. */
+    if (ev.target && ev.target.closest && ev.target.closest('[data-pds-action]')) return;
     dragging = true;
     startX = ev.clientX; startY = ev.clientY;
     chip.setPointerCapture(ev.pointerId);
@@ -5964,7 +6971,13 @@ function pdsAttachChipDrag(chip, sid, state, T, root, refresh) {
         const tid = tableEl.getAttribute('data-pds-table');
         const t = state.tables.find(tt => tt.id === tid);
         if (t) {
-          t.server = sid;
+          const current = pdsServerIds(t);
+          if (!current.includes(sid) && current.length >= PDS_MAX_TABLE_SERVERS) {
+            Kiwi.toast('3 serveurs maximum', { type: 'info', desc: 'Retirez un serveur de cette table avant d’en ajouter un autre.' });
+            refresh();
+            return;
+          }
+          pdsSetServerIds(t, current.concat(sid));
           const sv = state.staff.find(s => s.id === sid);
           Kiwi.toast(T.assignDone(sv?.name.split(' ')[0] || sid, t.num), { type: 'success', desc: T.assignDoneDesc });
           refresh();
@@ -5974,7 +6987,12 @@ function pdsAttachChipDrag(chip, sid, state, T, root, refresh) {
         const zid = zoneEl.getAttribute('data-pds-zone');
         /* Assign chip to every table in that zone */
         let count = 0;
-        state.tables.forEach(t => { if (t.zone === zid) { t.server = sid; count++; } });
+        state.tables.forEach(t => {
+          if (t.zone !== zid) return;
+          const current = pdsServerIds(t);
+          if (current.includes(sid)) return;
+          if (current.length < PDS_MAX_TABLE_SERVERS) { pdsSetServerIds(t, current.concat(sid)); count++; }
+        });
         const zname = state.zones.find(z => z.id === zid)?.name || '';
         const sv = state.staff.find(s => s.id === sid);
         Kiwi.toast(`${sv?.name.split(' ')[0] || sid} → ${zname}`, { type: 'success', desc: `${count} tables affectées.` });
@@ -6005,9 +7023,17 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
   const newElId = () => 'el' + Math.random().toString(36).slice(2, 8);
 
   switch (action) {
+    case 'toggle-view': {
+      pdsSetNoir(!pdsNoir());
+      root.classList.toggle('pds-noir', pdsNoir());
+      refresh();
+      break;
+    }
     case 'save': {
+      const feedback = Kiwi.buttonFeedback?.(btn, { pending: T.saving, done: T.savedButton });
       pdsSave(state);
-      toast(T.saved, { type: 'success', desc: T.savedDesc });
+      feedback?.success(T.savedButton);
+      toast(T.saved, { type: 'success', desc: T.savedDesc, force: true });
       break;
     }
     case 'reset': {
@@ -6125,6 +7151,10 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       if (!m || !m.el) break;
       const confirm = m.el.querySelector('[data-pds-zone-del-confirm]');
       confirm?.addEventListener('click', () => {
+        if (typeof pdsBury === 'function') {
+          pdsBury(state, state.tables.filter(t => t.zone === z.id).map(t => t.id)
+            .concat(state.elements.filter(e => e.zone === z.id).map(e => e.id)));
+        }
         state.tables = state.tables.filter(t => t.zone !== z.id);
         state.elements = state.elements.filter(e => e.zone !== z.id);
         state.zones = state.zones.filter(zz => zz.id !== z.id);
@@ -6140,6 +7170,31 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
        furnished candidates built from the answers — each labelled with the
        numbers it actually produced, so the count on the card and the count
        on the floor cannot drift apart the way the templates' could. */
+    /* « Scanner ma salle » — la photo remplace le questionnaire, pas le
+     * générateur. Le modèle vision extrait les FAITS (combien de tables,
+     * quelles formes, terrasse, type d'établissement), on pré-remplit les
+     * réponses du magicien avec, et c'est pdsGeneratePlan qui dessine — allées
+     * garanties, zéro coordonnée inventée. Le commerçant relit les réponses,
+     * ajuste, puis compare les trois plans comme d'habitude. */
+    case 'scan-salle': {
+      const scan = window.KiwiSalleScan;
+      if (!scan || !scan.open) { toast(T.scanUnavailable, { type: 'warn' }); break; }
+      scan.open({
+        onFacts: (facts) => {
+          const A = state._wizAnswers || (state._wizAnswers = {
+            venue: 'restaurant', floors: ['RDC'], extras: [],
+            dims_default: { w: 1200, h: 800 }, tables: 18,
+            kitchenWall: 'n', entranceWall: 's', wc: true,
+          });
+          if (facts.venue) A.venue = facts.venue;
+          if (facts.tables) A.tables = Math.min(60, Math.max(2, facts.tables));
+          if (facts.mix && facts.mix.length) A.mix = facts.mix;
+          if (facts.terrasse && !A.extras.includes('terrasse')) A.extras = A.extras.concat('terrasse');
+          pdsHandleAction('open-wizard', btn, state, T, root, dr, refresh, selection);
+        },
+      });
+      break;
+    }
     case 'open-templates':
     case 'open-wizard': {
       const A = state._wizAnswers || (state._wizAnswers = {
@@ -6228,8 +7283,10 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
 
       const build = () => {
         /* Vary the mix rotation per regeneration so "Régénérer" gives a
-           genuinely different arrangement rather than the same one twice. */
-        const mix = (PDS_VENUE_MIX[A.venue] || PDS_VENUE_MIX.restaurant).slice();
+           genuinely different arrangement rather than the same one twice.
+           A scanned mix (Scanner ma salle) wins over the venue default: it
+           reflects the tables actually photographed in this room. */
+        const mix = ((A.mix && A.mix.length) ? A.mix : (PDS_VENUE_MIX[A.venue] || PDS_VENUE_MIX.restaurant)).slice();
         for (let i = 0; i < (spin % Math.max(1, mix.length)); i++) mix.push(mix.shift());
         const ans = Object.assign({}, A, {
           mix,
@@ -6399,10 +7456,56 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       wireDismiss(m);
       const confirm = m?.el?.querySelector('[data-pds-clear-confirm]');
       confirm?.addEventListener('click', () => {
-        state.tables.forEach(t => { t.server = null; });
+        state.tables.forEach(t => { pdsSetServerIds(t, []); });
         refresh();
         toast(T.clearAssignDone, { type: 'success', desc: T.clearAssignDoneDesc });
       });
+      break;
+    }
+    case 'add-server': {
+      const m = modal({
+        tag: T.tagPdS,
+        title: T.rosterAddTitle,
+        desc: T.rosterAddDesc,
+        width: 460,
+        body: `
+          <div class="kf-group">
+            <label class="kf-label">${T.rosterAddLabel}</label>
+            <input class="kf-input pds-input" type="text" maxlength="40" data-pds-new-server placeholder="${T.rosterAddPlaceholder}"/>
+          </div>
+        `,
+        foot: `
+          <button class="kb ghost" data-dismiss>${T.cancel}</button>
+          <button class="kb atlas" data-pds-new-server-ok>${T.rosterAddOk}</button>
+        `,
+      });
+      wireDismiss(m);
+      const input = m?.el?.querySelector('[data-pds-new-server]');
+      try { input?.focus(); } catch (e) {}
+      const commit = () => {
+        const name = String(input?.value || '').trim();
+        if (!name) { input?.focus(); return; }
+        pdsPush(state);
+        const id = 'sv-' + Date.now().toString(36);
+        state.staff.push({ id, name, color: pdsStaffColor(id + name), from: 'local' });
+        m?.close?.();
+        refresh();
+        toast(T.rosterAddDone(name), { type: 'success', desc: T.rosterHint });
+      };
+      m?.el?.querySelector('[data-pds-new-server-ok]')?.addEventListener('click', commit);
+      input?.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); commit(); } });
+      break;
+    }
+    case 'del-server': {
+      const sid = btn.getAttribute('data-pds-sid');
+      const sv = state.staff.find(s => s.id === sid);
+      if (!sv) break;
+      pdsPush(state);
+      const freed = state.tables.filter(t => pdsHasServer(t, sid)).length;
+      state.tables.forEach(t => { if (pdsHasServer(t, sid)) pdsSetServerIds(t, pdsServerIds(t).filter(id => id !== sid)); });
+      state.staff = state.staff.filter(s => s.id !== sid);
+      refresh();
+      toast(T.rosterRemoveDone(sv.name), { type: 'info', desc: T.rosterRemoveDoneDesc(freed) });
       break;
     }
     case 'rotate-configure': {
@@ -6474,13 +7577,13 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
           Object.entries(preview).forEach(([sid, zid]) => {
             state.tables.forEach(t => {
               /* Tables in zid get this server */
-              if (t.zone === zid) t.server = sid;
+              if (t.zone === zid) pdsSetServerIds(t, [sid]);
             });
           });
         } else {
           /* Tables / pairs — round-robin shuffle of server property across tables */
           const sids = state.staff.map(s => s.id);
-          state.tables.forEach((t, i) => { t.server = sids[i % sids.length]; });
+          state.tables.forEach((t, i) => { pdsSetServerIds(t, [sids[i % sids.length]]); });
         }
         /* Append to history */
         state.history = state.history || [];
@@ -6527,6 +7630,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       pdsPush(state);
       if (f.table) {
         const newT = { ...f.o, id: newTableId(), x: f.o.x + 24, y: f.o.y + 24, num: f.o.num + '·' };
+        delete newT.group;
         state.tables.push(newT);
         selection.clear(); selection.add(newT.id);
         refresh();
@@ -6547,14 +7651,44 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       if (!f) break;
       pdsPush(state);
       if (f.table) {
+        const affected = f.o.group ? state.tables.filter(t => t.group === f.o.group) : [f.o];
+        const snapshot = pdsTableSnapshot(state, affected);
+        const title = `Table ${f.o.num} · ${T.deletedSuffix}`;
         state.tables.splice(state.tables.findIndex(o => o.id === id), 1);
-        toast(`Table ${f.o.num} · ${T.deletedSuffix}`, { type: 'warn', duration: 1400 });
+        if (typeof pdsBury === 'function') pdsBury(state, id);
+        pdsSweepGroups(state);
+        selection.delete(id);
+        refresh();
+        pdsOfferTableUndo(state, T, snapshot, refresh, selection, title, T.deleteUndone, id);
+        break;
       } else {
         state.elements.splice(state.elements.findIndex(o => o.id === id), 1);
+        if (typeof pdsBury === 'function') pdsBury(state, id);
         toast(`${T['fix'+f.o.type] || f.o.type} · ${T.deletedSuffix}`, { type: 'warn', duration: 1400 });
       }
       selection.delete(id);
       refresh();
+      break;
+    }
+    case 'table-group': {
+      /* Arme le mode « choisir la seconde table » — le pointerdown de la
+       * table cliquée ensuite fait la liaison (voir pdsAttachDrag). */
+      const id = btn.getAttribute('data-pds-id');
+      state._groupPickFrom = id;
+      toast(T.groupPickHint, { duration: 2600 });
+      setTimeout(() => state._openInspector(id), 0);
+      break;
+    }
+    case 'table-ungroup': {
+      const id = btn.getAttribute('data-pds-id');
+      const f = pdsFind(state, id);
+      if (!f || !f.table || !f.o.group) break;
+      pdsPush(state);
+      const gid = f.o.group;
+      const snapshot = pdsTableSnapshot(state, state.tables.filter(tt => tt.group === gid));
+      state.tables.forEach(tt => { if (tt.group === gid) delete tt.group; });
+      refresh();
+      pdsOfferTableUndo(state, T, snapshot, refresh, selection, T.ungroupOk, T.ungroupUndone, id);
       break;
     }
     case 'obj-lock': {
@@ -6648,10 +7782,36 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
     }
     case 'bulk-delete': {
       const n = selection.size;
+      const selectedGroups = new Set();
+      selection.forEach(id => {
+        const t = state.tables.find(tt => tt.id === id);
+        if (t && t.group) selectedGroups.add(t.group);
+      });
+      const affected = state.tables.filter(t => selection.has(t.id) || (t.group && selectedGroups.has(t.group)));
+      const snapshot = pdsTableSnapshot(state, affected);
+      const firstId = [...selection][0] || null;
+      pdsPush(state);
+      if (typeof pdsBury === 'function') pdsBury(state, state.tables.filter(t => selection.has(t.id)).map(t => t.id));
       state.tables = state.tables.filter(t => !selection.has(t.id));
+      pdsSweepGroups(state);
       selection.clear();
       refresh();
-      toast(T.bulkOkDelete(n), { type: 'warn', duration: 1400 });
+      pdsOfferTableUndo(state, T, snapshot, refresh, selection, T.bulkOkDelete(n), T.deleteUndone, firstId);
+      break;
+    }
+    case 'bulk-group': {
+      const picked = state.tables.filter(t => selection.has(t.id));
+      if (picked.length < 2) break;
+      pdsPush(state);
+      const touchedGroups = new Set(picked.map(t => t.group).filter(Boolean));
+      const members = state.tables.filter(t => selection.has(t.id) || (t.group && touchedGroups.has(t.group)));
+      const anchor = picked.find(t => t.group) || picked[0];
+      const gid = anchor.group || ('grp' + Date.now().toString(36));
+      members.forEach(t => { t.group = gid; });
+      pdsSyncGroupService(state, gid, anchor);
+      refresh();
+      toast(T.bulkOkGroup(members.length), { type: 'success' });
+      setTimeout(() => state._openBulkInspector(), 0);
       break;
     }
     case 'bulk-clear': {
@@ -6663,7 +7823,41 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
     case 'bulk-status': {
       const st = btn.getAttribute('data-pds-status');
       const n = selection.size;
-      selection.forEach(id => { const t = state.tables.find(tt => tt.id === id); if (t) t.status = st; });
+      const gids = new Set();
+      selection.forEach(id => {
+        const t = state.tables.find(tt => tt.id === id);
+        if (!t) return;
+        t.status = st;
+        if (st === 'occupied') {
+          if (!t.since) t.since = Date.now();
+          pdsClearReservation(t);
+        } else {
+          delete t.since;
+          if (st === 'reserved') {
+            if (!t.reservationDate) t.reservationDate = pdsTodayKey();
+          } else {
+            pdsClearReservation(t);
+          }
+        }
+        if (t.group) gids.add(t.group);
+      });
+      /* Le statut déborde sur les partenaires de groupe hors sélection. */
+      state.tables.forEach(tt => {
+        if (tt.group && gids.has(tt.group) && !selection.has(tt.id)) {
+          tt.status = st;
+          if (st === 'occupied') {
+            if (!tt.since) tt.since = Date.now();
+            pdsClearReservation(tt);
+          } else {
+            delete tt.since;
+            if (st === 'reserved') {
+              if (!tt.reservationDate) tt.reservationDate = pdsTodayKey();
+            } else {
+              pdsClearReservation(tt);
+            }
+          }
+        }
+      });
       refresh();
       toast(T.bulkOkStatus(n, T['status' + st.charAt(0).toUpperCase() + st.slice(1)]), { type: 'success', duration: 1400 });
       break;
@@ -6691,7 +7885,7 @@ const PDS_INLINE_CSS = `
   .pds-modes { display:flex; gap:4px; padding:3px; background:var(--paper-soft); border:1px solid var(--n-200); border-radius:11px; }
   .pds-mode { background:transparent; border:none; padding:8px 14px; border-radius:8px; font-size:12.5px; font-weight:500; color:var(--n-600); cursor:pointer; transition:.18s letter-spacing:0.01em; }
   .pds-mode:hover { color:var(--ink); }
-  .pds-mode.active { background:var(--ink); color:var(--paper); font-weight:600; box-shadow:0 1px 2px rgba(10,15,13,0.16); }
+  .pds-mode.active { background:var(--inverse-surface); color:var(--inverse-ink); font-weight:600; box-shadow:0 1px 2px rgba(10,15,13,0.16); }
   .pds-mode-desc { flex:1; font-size:12px; color:var(--n-600); padding:0 6px; min-width:240px; }
   .pds-zone-tabs { display:flex; gap:4px; padding:3px; background:var(--paper-soft); border:1px solid var(--n-200); border-radius:10px; }
   .pds-zone { background:transparent; border:none; padding:7px 12px; border-radius:7px; font-size:12px; font-weight:500; color:var(--n-700); cursor:pointer; display:flex; align-items:center; gap:6px; transition:.16s; }
@@ -6702,8 +7896,31 @@ const PDS_INLINE_CSS = `
   .pds-zone-add { padding:7px 10px; color:var(--atlas); font-weight:700; font-size:14px; }
   .pds-zone-add:hover { background:var(--paper); }
 
-  .pds-stage-grid { display:grid; grid-template-columns: 220px 1fr 240px; gap:14px; }
+  /* align-items:start est la moitié qui compte : une piste de grille s'étire
+     par défaut à la hauteur de la plus haute, et la palette fait deux mille
+     six cents pixels. Le plan partait donc hors de l'écran dès qu'on
+     descendait chercher une plante. Les deux colonnes latérales défilent
+     maintenant chez elles, et le plan ne bouge plus. */
+  .pds-stage-grid { display:grid; grid-template-columns: 220px 1fr 240px; gap:14px; align-items:start; }
   @media (max-width: 1100px) { .pds-stage-grid { grid-template-columns: 200px 1fr; } .pds-inspector { grid-column: 1 / -1; } }
+
+  /* overscroll-behavior:contain arrête la chaîne : arrivé en bas de la
+     palette, la molette ne repart pas dans le tiroir. C'est ce report-là
+     qui donnait la sensation de défilement sans fin. */
+  .pds-rail, .pds-inspector {
+    position:sticky; top:0;
+    max-height:calc(100vh - 210px); min-height:320px;
+    overflow-y:auto; overscroll-behavior:contain;
+    padding-right:4px; scrollbar-width:thin;
+  }
+  /* Sous 1100px l'inspecteur devient une rangée pleine largeur sous le plan :
+     le coller ou le plafonner n'a plus de sens, il suit le flux. La palette,
+     elle, garde son propre défilement · c'est elle qui fait deux mille pixels,
+     à toutes les largeurs. */
+  @media (max-width: 1100px) {
+    .pds-rail { position:static; max-height:calc(100vh - 260px); }
+    .pds-inspector { position:static; max-height:none; min-height:0; overflow:visible; }
+  }
 
   .pds-rail { display:flex; flex-direction:column; gap:10px; }
   .pds-rail-card { background:var(--paper-soft); border:1px solid var(--n-200); border-radius:12px; padding:14px; }
@@ -6735,31 +7952,35 @@ const PDS_INLINE_CSS = `
   .pds-canvas-bar { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; background:var(--paper-soft); border:1px solid var(--n-200); border-radius:10px; flex-wrap:wrap; }
   .pds-legend { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   .pds-legend-title { font-size:10.5px; font-family:var(--mono); letter-spacing:0.1em; color:var(--n-500); text-transform:uppercase; margin-right:4px; }
-  .pds-legend-item { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--n-700); letter-spacing:0.01em; font-family:var(--sans, inherit); font-weight:500; }
-  .pds-legend-swatch { width:12px; height:12px; border-radius:3px; display:inline-block; border:1px solid transparent; box-shadow:0 1px 2px rgba(10,15,13,0.12); }
-  .pds-sw-free      { background:var(--surface); border-color:#C8C5BD; }
-  .pds-sw-occupied  { background:#EBF5F0; border-color:#C5E0D3; }
-  .pds-sw-reserved  { background:#FFF1D6; border-color:#E8C88A; }
-  .pds-sw-cleaning  { background:#1F5D3C; }
-  .pds-pill { font-size:10px; font-family:var(--mono); letter-spacing:0.06em; padding:3px 8px; border-radius:99px; text-transform:uppercase; font-weight:600; }
+  .pds-legend-item { display:inline-flex; align-items:center; gap:6px; color:rgba(10,15,13,0.55); font:400 11px/1.2 var(--font-ui, 'Inter Tight'), system-ui; letter-spacing:-0.01em; }
+  /* Légende jour : les mêmes cases 17 × 13 rx 4 que la nuit, à l'encre sur
+     papier · l'atlas ne s'allume que pour l'occupée, comme dans la scène. */
+  .pds-legend-swatch { width:17px; height:13px; border-radius:4px; display:inline-block; border:1.25px solid transparent; }
+  .pds-sw-free      { background:rgba(10,15,13,0.015); border-color:rgba(10,15,13,0.30); }
+  .pds-sw-occupied  { background:rgba(11,110,79,0.10); border-color:#0B6E4F; }
+  .pds-sw-reserved  { background:rgba(200,146,53,0.10); border-style:dashed; border-color:#C89235; }
+  .pds-sw-cleaning  { background:rgba(10,15,13,0.02); border-style:dotted; border-color:rgba(10,15,13,0.45); }
+  .pds-pill { font-size:10px; font-family:var(--mono); letter-spacing:0.06em; padding:3px 8px; border-radius:99px; text-transform:uppercase; font-weight:600; border:1px solid transparent; }
   .pds-pill-free { background:rgba(10,15,13,0.06); color:var(--n-700); }
   .pds-pill-occupied { background:rgba(11,110,79,0.14); color:var(--atlas); }
-  .pds-pill-reserved { background:rgba(217,154,43,0.18); color:#A85F00; }
-  .pds-pill-cleaning { background:rgba(26,143,227,0.15); color:#0F6FBF; }
+  /* Les mêmes traits que le plan : tiret riad pour réservée, pointillé encre
+     pour à nettoyer · plus d'ambre ni de bleu que le plan ne peint jamais. */
+  .pds-pill-reserved { background:rgba(232,200,138,0.18); color:#7D5A1A; border:1px dashed rgba(200,146,53,0.65); }
+  .pds-pill-cleaning { background:rgba(10,15,13,0.02); color:var(--n-700); border:1px dotted rgba(10,15,13,0.45); }
   .pds-snap { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:var(--n-700); cursor:pointer; user-select:none; padding:4px 8px; border-radius:7px; }
   .pds-snap input { accent-color:var(--atlas); }
 
-  /* ═════ ARCHITECTURAL ROOM — mirrors kiwi-caisse plan de salle ═════════════
+  /* ═════ ARCHITECTURAL ROOM · mirrors kiwi-caisse plan de salle ═════════════
      A cream "paper" floor framed by a 1.5px ink border with an inset highlight
      and a soft warm shadow. SVG backdrop draws the fixtures (comptoir,
      escalier, plantes, fenêtres). The inner .pds-canvas absorbs all the
-     pointer events for table dragging — it is positioned over the SVG. */
+     pointer events for table dragging · it is positioned over the SVG. */
   .pds-plan-canvas { position:relative; display:flex; flex-direction:column; gap:6px; min-width:0; min-height:0; }
   /* The room is a RESPONSIVE box; the stage inside it is a FIXED logical
      ${PDS_CANVAS_W}×${PDS_CANVAS_H} space scaled to fit (see .pds-plan-scale).
      It used to be a hard ${PDS_CANVAS_W}px wide with max-width:100%, so below
      ~1490px of viewport the room narrowed while the absolutely-positioned
-     tables kept their px coordinates — and overflow:hidden silently cropped
+     tables kept their px coordinates · and overflow:hidden silently cropped
      everything past the new edge. Scaling instead of cropping means one
      coordinate space at every width, which is also what lets the backdrop
      and the tables finally agree. 1 logical unit = 1 cm. */
@@ -6789,7 +8010,7 @@ const PDS_INLINE_CSS = `
     border-color:#A89770;
     background:#F7F2E8;
   }
-  /* Fixed logical stage — the backdrop and the tables live on ONE plane that is
+  /* Fixed logical stage · the backdrop and the tables live on ONE plane that is
      scaled as a whole, so they can never drift apart. 100cqw is the room's own
      width, so dividing it by the logical width yields the exact fit ratio with
      no JS involved. transform-origin is top-left so logical (0,0) stays pinned
@@ -6818,7 +8039,7 @@ const PDS_INLINE_CSS = `
     pointer-events:none;
   }
   .pds-plan-label em {
-    font-family:var(--serif, "Instrument Serif", serif);
+    font-family:"Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
      font-weight:400;
     text-transform:none;
     color:#5C5447;
@@ -6854,13 +8075,13 @@ const PDS_INLINE_CSS = `
   .pds-empty h4 { margin:0; font-size:18px; letter-spacing:-0.02em; color:var(--ink); }
   .pds-empty p { font-size:13px; color:var(--n-600); max-width:340px; margin:0; line-height:1.5; }
 
-  /* ═════ TABLES — architectural language mirrored from kiwi-caisse ═══════
+  /* ═════ TABLES · architectural language mirrored from kiwi-caisse ═══════
      Tables are absolute on the canvas. Each .pds-tbl-cell contains:
-       • .pds-tbl       — the tabletop (wood/marble vibe via shadows)
-       • .pds-tbl-num   — large bold number
-       • .pds-tbl-covers— seat count (instrument serif, roman)
-       • .pds-tbl-chairs / .pds-chair  — chair pills around the table
-       • .pds-tbl-server — corner badge with server initials + color        */
+       • .pds-tbl · the tabletop (wood/marble vibe via shadows)
+       • .pds-tbl-num · large bold number
+       • .pds-tbl-covers·seat count (instrument serif, roman)
+       • .pds-tbl-chairs / .pds-chair · chair pills around the table
+       • .pds-tbl-server · corner badge with server initials + color        */
   .pds-tbl-cell {
     position:absolute;
     cursor:pointer; user-select:none;
@@ -6936,6 +8157,10 @@ const PDS_INLINE_CSS = `
     top:-8px; right:auto;
     left:50%; transform:translateX(-50%);
   }
+  .pds-tbl-cell.pds-is-round .pds-tbl-servers { top:-8px; right:50%; transform:translateX(50%); }
+  .pds-tbl-cell.pds-is-round .pds-tbl-servers .pds-tbl-server {
+    top:auto; right:auto; left:auto; transform:none;
+  }
   .pds-tbl-cell.pds-is-square .pds-tbl { border-radius:4px; }
   .pds-tbl-cell.pds-is-bar    .pds-tbl { border-radius:4px; }
 
@@ -6946,9 +8171,9 @@ const PDS_INLINE_CSS = `
     font-feature-settings:"tnum" 1;
   }
   .pds-tbl-num    { font-weight:700; letter-spacing:0.01em; font-size:17px; line-height:1; color:inherit; }
-  .pds-tbl-covers { font-family:var(--serif, "Instrument Serif", serif); font-weight:400; font-size:12px; line-height:1; opacity:0.7; }
+  .pds-tbl-covers { font-family:"Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-weight:400; font-size:12px; line-height:1; opacity:0.7; }
 
-  /* Status color encodings — mirrors caisse khawya / ka-yaklo etc. */
+  /* Status color encodings · mirrors caisse khawya / ka-yaklo etc. */
   .pds-tbl[data-status="free"] {
     background:var(--surface);
     border:1.5px solid #C8C5BD;
@@ -6981,7 +8206,7 @@ const PDS_INLINE_CSS = `
   .pds-tbl[data-status="cleaning"] .pds-tbl-num    { color:#fff; }
   .pds-tbl[data-status="cleaning"] .pds-tbl-covers { color:rgba(255,255,255,0.78); }
 
-  /* Selection — green outline ring (does not touch the table shape) */
+  /* Selection · green outline ring (does not touch the table shape) */
   .pds-tbl-cell.is-selected .pds-tbl {
     box-shadow:
       0 0 0 3px rgba(11,110,79,0.28),
@@ -6991,10 +8216,10 @@ const PDS_INLINE_CSS = `
   .pds-tbl-cell.is-dragging { z-index:5; cursor:grabbing; }
   .pds-tbl-cell.is-dragging .pds-tbl { box-shadow: 0 14px 30px -10px rgba(10,15,13,0.32); }
 
-  /* Server color overlay (assign mode) — picks server color for tabletop border */
+  /* Server color overlay (assign mode) · picks server color for tabletop border */
   .pds-tbl-cell.pds-has-server .pds-tbl { border-color: var(--pds-server, currentColor); border-width:2px; }
 
-  /* Server badge — caisse style: circle pinned to corner, white ring */
+  /* Server badge · caisse style: circle pinned to corner, white ring */
   .pds-tbl-server {
     position:absolute;
     top:-10px; right:-10px;
@@ -7010,6 +8235,13 @@ const PDS_INLINE_CSS = `
     pointer-events:none;
     font-family:var(--sans, "Inter Tight", system-ui, sans-serif);
   }
+  .pds-tbl-servers {
+    position:absolute; top:-10px; right:-10px; display:flex; flex-direction:row-reverse;
+    z-index:3; pointer-events:none;
+  }
+  .pds-tbl-servers .pds-tbl-server { position:relative; top:auto; right:auto; }
+  .pds-tbl-servers .pds-tbl-server + .pds-tbl-server { margin-right:-8px; }
+  .pds-server-slot + .pds-server-slot { margin-top:6px; }
 
   .pds-el { position:absolute; background: var(--n-700); border-radius:2px; cursor:grab; will-change: transform; }
   .pds-el.pds-el-wall { background:#2C2520; height:8px; box-shadow:inset 0 0 0 1px rgba(0,0,0,0.2); }
@@ -7030,22 +8262,41 @@ const PDS_INLINE_CSS = `
     cursor:pointer; color:var(--n-600); transition:.16s;
     flex-shrink:0;
   }
-  .pds-inspect-close:hover { background:var(--paper); color:var(--ink); border-color:var(--n-400); }
+  .pds-inspect-close:hover { background:var(--paper); color:var(--ink); border-color: var(--n-400); }
   .pds-inspect-close:active { transform:translateY(1px); }
   .pds-inspect-close svg { display:block; }
   .pds-form-row { margin-bottom:10px; }
   .pds-form-row > label { display:block; font-size:10.5px; font-family:var(--mono); letter-spacing:0.1em; color:var(--n-500); text-transform:uppercase; margin-bottom:5px; font-weight:600; }
   .pds-input { width:100%; padding:7px 9px; font-size:12.5px; }
+  .pds-resv-fields { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(96px,.65fr); gap:7px; margin:-2px 0 10px; }
+  .pds-resv-field { min-width:0; }
+  .pds-resv-field > span { display:block; margin-bottom:5px; color:#0B6E4F; font:500 9.5px/1.2 var(--mono, 'JetBrains Mono'); letter-spacing:0.07em; text-transform:uppercase; }
+  .pds-resv-field .pds-input { min-width:0; height:32px; padding:6px 8px; background:#F7F5F0; border-color:rgba(11,110,79,0.34); color:#053B2C; font-size:11.5px; }
+  .pds-resv-field .pds-input:focus { border-color:#0B6E4F; box-shadow:0 0 0 2px rgba(11,110,79,0.12); outline:0; }
   .pds-status-pills { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
   .pds-status-pill { padding:6px 8px; border:1.5px solid transparent; background:transparent; border-radius:7px; font-size:10.5px; font-weight:600; cursor:pointer; font-family:var(--mono); letter-spacing:0.04em; text-transform:uppercase; transition:.16s; }
   .pds-status-pill.pds-pill-free { background:rgba(10,15,13,0.06); color:var(--n-700); border-color:transparent; }
   .pds-status-pill.pds-pill-occupied { background:rgba(11,110,79,0.10); color:var(--atlas); }
-  .pds-status-pill.pds-pill-reserved { background:rgba(217,154,43,0.12); color:#A85F00; }
-  .pds-status-pill.pds-pill-cleaning { background:rgba(26,143,227,0.10); color:#0F6FBF; }
+  .pds-status-pill.pds-pill-reserved { background:rgba(232,200,138,0.14); color:#7D5A1A; border-style:dashed; border-color:rgba(200,146,53,0.55); }
+  .pds-status-pill.pds-pill-cleaning { background:rgba(10,15,13,0.02); color:var(--n-700); border-style:dotted; border-color:rgba(10,15,13,0.40); }
   .pds-status-pill:hover { transform:translateY(-1px); }
   .pds-status-pill.active { border-color: currentColor; box-shadow:0 0 0 1px currentColor inset; }
   .pds-inspect-actions { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }
   .pds-inspect-actions .kb { padding:7px 8px; font-size:11.5px; justify-content:center; }
+  /* Bouton « Grouper » armé : il pulse doucement le temps du choix. */
+  .pds-inspect-actions .kb.pds-group-arming { border-color:var(--atlas); color:var(--atlas); animation:pdsGroupArm 1.2s ease-in-out infinite; }
+  @keyframes pdsGroupArm { 0%,100% { box-shadow:0 0 0 0 rgba(11,110,79,0); } 50% { box-shadow:0 0 0 3px rgba(11,110,79,0.18); } }
+
+  /* ═════ TABLES GROUPÉES · l'enveloppe « 06 + 07 » du mockup d'accueil ═════
+     Un cadre rx 20 qui embrasse les tables liées, une lueur radiale douce,
+     et le cachet des numéros combinés au-dessus. Sous les tables, jamais
+     cliquable · le groupe est un fait, pas une cible. */
+  .pds-group-env { position:absolute; border-radius:20px; border:1.25px solid rgba(11,110,79,0.45); background:rgba(11,110,79,0.05); pointer-events:none; z-index:0; }
+  .pds-group-env::before { content:''; position:absolute; inset:-30%; border-radius:50%; background:radial-gradient(closest-side, rgba(11,110,79,0.10), rgba(11,110,79,0)); z-index:-1; }
+  .pds-group-chip { position:absolute; top:-26px; left:50%; transform:translateX(-50%); height:19px; padding:0 10px; border-radius:9.5px; background:var(--paper, #F7F5F0); border:1px solid rgba(11,110,79,0.45); color:#0B6E4F; font:500 10px/19px var(--mono, 'JetBrains Mono'); letter-spacing:0.02em; white-space:nowrap; }
+  .pds-group-covers { opacity:0.72; }
+  /* Ligne d'info du groupe dans l'inspecteur : un fait, pas un bouton. */
+  .pds-group-info { margin-top:8px; padding:7px 10px; border-radius:9px; border:1px dashed rgba(11,110,79,0.35); background:rgba(11,110,79,0.05); color:#0B6E4F; font:500 11px/1.4 var(--mono, 'JetBrains Mono'); letter-spacing:0.01em; }
 
   .pds-inspect-empty .pds-rail-hint { line-height:1.55; }
 
@@ -7058,6 +8309,11 @@ const PDS_INLINE_CSS = `
   .pds-chip-body { display:flex; flex-direction:column; line-height:1.25; min-width:0; flex:1; }
   .pds-chip-body b { font-size:12.5px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .pds-chip-body em { font-style:normal; font-size:10.5px; color:var(--n-500); font-family:var(--mono); letter-spacing:0.02em; margin-top:1px; }
+  .pds-chip-x { flex-shrink:0; width:20px; height:20px; display:grid; place-items:center; padding:0; border:0; border-radius:6px; background:transparent; color:var(--n-500); font-size:15px; line-height:1; cursor:pointer; opacity:0; transition:.16s; }
+  .pds-chip:hover .pds-chip-x, .pds-chip-x:focus-visible { opacity:1; }
+  .pds-chip-x:hover { background:var(--n-100); color:var(--ink); }
+  .pds-chip-ghost .pds-chip-x { display:none; }
+  .pds-roster-empty { padding:10px 2px 2px; font-size:11.5px; line-height:1.5; color:var(--n-500); }
 
   .pds-assign-sum { display:flex; flex-direction:column; gap:4px; margin-top:6px; }
   .pds-asum-row { display:flex; align-items:center; gap:8px; padding:6px 4px; font-size:12px; }
@@ -7117,7 +8373,7 @@ const PDS_INLINE_CSS = `
   .pds-pillrow { display:flex; gap:6px; flex-wrap:wrap; }
   .pds-cfg-pill { padding:7px 12px; border:1px solid var(--n-200); background:var(--paper); border-radius:8px; font-size:12px; cursor:pointer; color:var(--n-700); transition:.18s; font-family:inherit; }
   .pds-cfg-pill:hover { border-color:var(--atlas); }
-  .pds-cfg-pill.active { background:var(--ink); color:var(--paper); border-color:var(--ink); font-weight:600; }
+  .pds-cfg-pill.active { background:var(--inverse-surface); color:var(--inverse-ink); border-color:var(--inverse-surface); font-weight:600; }
   .pds-strat-cards { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
   @media (max-width: 720px) { .pds-strat-cards { grid-template-columns:1fr; } }
   .pds-strat-card { background:var(--paper); border:1.5px solid var(--n-200); border-radius:10px; padding:12px; text-align:left; cursor:pointer; transition:.16s; font-family:inherit; }
@@ -7136,7 +8392,7 @@ const PDS_INLINE_CSS = `
   }
   .pds-scene-pill:hover { border-color:var(--atlas); color:var(--ink); transform: translateY(-1px); }
   .pds-scene-pill.active {
-    background:var(--ink); color:var(--paper); border-color:var(--ink);
+    background:var(--inverse-surface); color:var(--inverse-ink); border-color:var(--inverse-surface);
     font-weight:600; box-shadow:0 1px 2px rgba(10,15,13,0.16);
   }
 
@@ -7152,9 +8408,11 @@ const PDS_INLINE_CSS = `
      rules are left in place because a few of them (cell positioning, rail
      chrome, status pills) are still correct; the ones that are not are
      overridden here by source order. Anything keyed to a v1 fixture type
-     (.pds-el-wall, .pds-el-door, …) is inert — those kinds were renamed. */
+     (.pds-el-wall, .pds-el-door, …) is inert · those kinds were renamed. */
 
   /* Floor + walls, driven by zone.room rather than a baked scene. */
+  /* Le creux de la pièce est posé en ligne par pdsRoomShell(), avec le mur :
+     un box-shadow ici ne pourrait jamais l'emporter sur un style en ligne. */
   .pds-floor {
     position:absolute; inset:0;
     border-radius:14px;
@@ -7170,7 +8428,11 @@ const PDS_INLINE_CSS = `
     transform-origin:50% 50%;
     transition: filter 150ms ease;
   }
-  .pds-tbl-cell:hover { filter:brightness(1.03); }
+  /* Le survol soulève la table. La propriété transform est réservée à la
+     rotation et au glisser · la toucher ici décalerait la géométrie·, donc
+     l'élévation passe par une ombre portée, qui suit la silhouette SVG et
+     non la boîte. */
+  .pds-tbl-cell:hover { filter:brightness(1.035) drop-shadow(0 5px 10px rgba(20,15,10,0.20)); }
   .pds-tbl-cell.is-selected  { z-index:6; }
   .pds-tbl-cell.is-resizing  { z-index:7; }
   .pds-tbl-cell.is-locked    { cursor:default; }
@@ -7185,20 +8447,69 @@ const PDS_INLINE_CSS = `
     pointer-events:none; text-align:center;
   }
   .pds-tbl-num    { font:600 15px/1 var(--font-ui, 'Inter Tight'), system-ui; letter-spacing:-0.01em; }
-  .pds-tbl-covers { font:400 10px/1 var(--mono, monospace); opacity:.6; margin-top:3px; }
+  /* Comme la nuit : seul le numéro habite la table, les couverts ne se
+     montrent qu'à l'approche. */
+  .pds-tbl-covers { font:400 10px/1 var(--mono, monospace); opacity:0; transition:opacity 180ms ease; margin-top:3px; }
+  .pds-tbl-cell:hover .pds-tbl-covers,
+  .pds-tbl-cell.is-selected .pds-tbl-covers { opacity:.5; }
+  /* L'anneau d'appel pulse dans les deux vues · même géométrie, seule
+     l'encre change (menthe la nuit, atlas le jour). Les @keyframes vivent
+     dans la couche nuit ; ils sont globaux au document. */
+  .pds-noir-call {
+    transform-box:fill-box; transform-origin:center;
+    animation:pdsNoirCall 2.6s cubic-bezier(.22,.7,.3,1) infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pds-noir-call { animation:none; opacity:0; }
+  }
+  /* La pastille « N min » en jour : la même géométrie que la nuit, sur
+     papier · jamais de blanc pur. */
+  .pds-tbl-since {
+    position:absolute; top:calc(var(--pad, 0px) - 24px); left:calc(var(--pad, 0px) - 6px);
+    height:19px; padding:0 9px; border-radius:9.5px;
+    display:inline-flex; align-items:center;
+    background:rgba(247,245,240,0.92); border:1px solid rgba(10,15,13,0.16);
+    font:500 10px/1 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:0.02em; color:rgba(10,15,13,0.66);
+    white-space:nowrap; pointer-events:none; z-index:4;
+  }
+  .pds-resv-chip {
+    position:absolute; bottom:calc(var(--pad, 0px) - 24px); left:50%; transform:translateX(-50%);
+    height:19px; max-width:calc(100% - 4px); padding:0 9px; border-radius:9.5px;
+    display:inline-flex; align-items:center;
+    overflow:hidden; text-overflow:ellipsis;
+    background:rgba(247,245,240,0.94); border:1px solid rgba(11,110,79,0.42);
+    color:#0B6E4F; font:500 10px/1 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:0.01em; white-space:nowrap; pointer-events:none; z-index:4;
+  }
 
   /* ── Fixtures ──────────────────────────────────────────────────────────
      The v1 rule painted .pds-el itself dark; v2 paints the .pds-el-fill
      child from the instance's own material, so the host must be cleared. */
   .pds-el { background:transparent; border-radius:0; transform-origin:50% 50%; }
-  .pds-el-fill { position:absolute; inset:0; background-repeat:repeat; overflow:hidden; }
-  .pds-el-svg  { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  /* overflow:visible, pas hidden : le clip du bâti avalait les tabourets
+     du comptoir (cy negatif) dans les deux vues · le trait ne déborde
+     nulle part ailleurs, il n'y a plus de texture à contenir. */
+  .pds-el-fill { position:absolute; inset:0; background-repeat:repeat; overflow:visible; }
+  /* Les tabourets du comptoir se dessinent hors de la boîte du bâti,
+     dans les deux vues. */
+  .pds-el-svg  { position:absolute; inset:0; width:100%; height:100%; display:block; overflow:visible; }
   .pds-el-label {
     position:absolute; inset:0; padding:2px;
     display:flex; align-items:center; justify-content:center;
-    font:600 9.5px/1.2 var(--mono, monospace);
-    letter-spacing:0.16em; text-transform:uppercase;
+    font:500 9px/1.2 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:0.14em; text-transform:uppercase;
     pointer-events:none; text-align:center; overflow:hidden;
+  }
+  /* Les pilules BAR / CAISSE portent leur nom à gauche, comme la nuit. */
+  .pds-el-comptoir .pds-el-label,
+  .pds-el-caisse .pds-el-label { justify-content:flex-start; padding-left:16px; text-align:left; }
+  /* Le curseur « grab » annonce le glisser, pas l'édition : rien ne disait
+     qu'un comptoir s'ouvre, se redimensionne et se supprime comme une table.
+     Le survol le dit maintenant, avec la même élévation que les tables. */
+  .pds-el:not(.is-locked):not(.is-dragging):hover {
+    filter: drop-shadow(0 4px 9px rgba(20,15,10,0.20));
+    outline: 1.5px solid rgba(11,110,79,0.55); outline-offset: 2px;
   }
   .pds-el.is-selected { z-index:60; }
   .pds-el.is-locked   { cursor:default; }
@@ -7270,7 +8581,7 @@ const PDS_INLINE_CSS = `
     letter-spacing:0.08em; text-transform:uppercase; color:var(--n-500);
   }
   .pds-num-grid input { width:100%; padding:5px 6px; font-size:12px; text-align:center; }
-  .pds-unit { font:400 9.5px/1 var(--mono, monospace); color:var(--n-400); letter-spacing:0.06em; text-transform:none; }
+  .pds-unit { font:400 9.5px/1 var(--mono, monospace); color: var(--n-500); letter-spacing:0.06em; text-transform:none; }
   .pds-step { display:flex; align-items:center; gap:5px; }
   .pds-step-val { flex:1; text-align:center; padding:5px 4px; }
   .pds-step-btn {
@@ -7294,7 +8605,7 @@ const PDS_INLINE_CSS = `
     background:var(--surface); color:var(--n-600); cursor:pointer;
   }
   .pds-tool:hover { background:var(--paper-muted); color:var(--atlas); border-color:var(--atlas); }
-  .pds-plan-dims { font:400 10px/1 var(--mono, monospace); color:var(--n-400); letter-spacing:0.06em; }
+  .pds-plan-dims { font:400 10px/1 var(--mono, monospace); color: var(--n-500); letter-spacing:0.06em; }
   .pds-plan-footer { display:flex; align-items:center; justify-content:space-between; gap:10px; }
 
   /* Palette thumbnails are the fixture's own drawing, so the button always
@@ -7307,7 +8618,7 @@ const PDS_INLINE_CSS = `
 
   /* ═══ v3 · collision, fluid resize, free rotation ════════════════════════ */
 
-  /* Illegal placement is SHOWN, never enforced mid-drag — the object keeps
+  /* Illegal placement is SHOWN, never enforced mid-drag · the object keeps
      following the cursor and settles legally on release. Red is the one
      non-brand hue in the editor, and it only ever appears mid-gesture. */
   .pds-tbl-cell.is-blocked,
@@ -7427,6 +8738,282 @@ const PDS_INLINE_CSS = `
   }
   .pds-wiz-note { margin:10px 0 0; font-size:11.5px; color:var(--n-500); }
   @media (max-width: 620px) { .pds-wiz-cards { grid-template-columns:1fr; } }
+
+  /* ═══ v4 · vue nuit · la console de service ═══════════════════════════════
+     Le look promis par la page d'accueil : salle charbon, tables au trait,
+     le statut porté par la lumière. Tout vit sous .pds-noir (posée sur la
+     racine du tiroir par pdsAttach) ; la vue jour au-dessus reste le rendu
+     matières, intact. Une seule teinte d'accent · la menthe · et son halo
+     rgba(0,255,174,…), le même vert que l'accueil sombre. */
+
+  .pds-noir { color-scheme: dark; }
+
+  /* La classe est doublée dans chaque sélecteur à dessein : le skin Vexel
+     peint ce même chrome via « body.design-vexel :is(…) » · un élément plus
+     deux classes · et la vue nuit doit l'emporter par spécificité, pas par
+     ordre de source. */
+
+  /* · La coque du tiroir : le cockpit entier passe au noir · */
+  .pds-noir.pds-noir.pds-noir { background:rgba(5, 8, 6, 0.72); }
+  /* !important : le skin 2026 (empilé par défaut) pose son verre blanc sur
+     .kiwi-drawer avec !important · la spécificité seule ne suffit pas ici. */
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer { background:#090D0A !important; border-color:rgba(242,239,230,0.10) !important; }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-body { background:transparent; }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-head { background:#0B0F0C; border-color:rgba(242,239,230,0.08); }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-head :is(h1, h2, h3) { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-head p { color:rgba(242,239,230,0.50); }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-close {
+    background:#141813; border-color:rgba(242,239,230,0.14); color:rgba(242,239,230,0.78);
+  }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-close:hover { border-color:rgba(125,242,176,0.55); color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .kiwi-drawer-foot { background:#0B0F0C; border-color:rgba(242,239,230,0.08); }
+  .pds-noir.pds-noir.pds-noir .pds-inspector {
+    background:transparent; border:none; box-shadow:none;
+    -webkit-backdrop-filter:none; backdrop-filter:none;
+  }
+
+  /* · Chrome : panneaux, palette, inspecteur · */
+  .pds-noir.pds-noir.pds-noir .pds-rail-card,
+  .pds-noir.pds-noir.pds-noir .pds-tpl { background:#0F130F; border-color:rgba(242,239,230,0.08); }
+  .pds-noir.pds-noir.pds-noir .pds-rail-title, .pds-noir.pds-noir.pds-noir .pds-legend-title,
+  .pds-noir.pds-noir.pds-noir .pds-mini-label, .pds-noir.pds-noir.pds-noir .pds-wiz-q,
+  .pds-noir.pds-noir.pds-noir .pds-form-row > label, .pds-noir.pds-noir.pds-noir .pds-rot-lbl { color:rgba(242,239,230,0.62); }
+  .pds-noir.pds-noir.pds-noir .pds-rail-hint, .pds-noir.pds-noir.pds-noir .pds-mode-desc { color:rgba(242,239,230,0.55); }
+  .pds-noir.pds-noir.pds-noir .pds-pal-item,
+  .pds-noir.pds-noir.pds-noir .pds-tool, .pds-noir.pds-noir.pds-noir .pds-step-btn, .pds-noir.pds-noir.pds-noir .pds-inspect-close,
+  .pds-noir.pds-noir.pds-noir .pds-cfg-pill, .pds-noir.pds-noir.pds-noir .pds-scene-pill, .pds-noir.pds-noir.pds-noir .pds-wiz-opt,
+  .pds-noir.pds-noir.pds-noir .pds-amb, .pds-noir.pds-noir.pds-noir .pds-strat-card, .pds-noir.pds-noir.pds-noir .pds-chip,
+  .pds-noir.pds-noir.pds-noir .pds-wiz-card {
+    background:#141813; border-color:rgba(242,239,230,0.10); color:rgba(242,239,230,0.78);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-pal-label { color:rgba(242,239,230,0.66); }
+  .pds-noir.pds-noir.pds-noir .pds-pal-shape { background:#1C221C; border-color:rgba(242,239,230,0.30); }
+  .pds-noir.pds-noir.pds-noir .pds-pal-item:hover { border-color:rgba(125,242,176,0.55); box-shadow:0 6px 16px -10px rgba(0,255,174,0.35); }
+  .pds-noir.pds-noir.pds-noir .pds-tool:hover, .pds-noir.pds-noir.pds-noir .pds-step-btn:hover,
+  .pds-noir.pds-noir.pds-noir .pds-cfg-pill:hover, .pds-noir.pds-noir.pds-noir .pds-scene-pill:hover,
+  .pds-noir.pds-noir.pds-noir .pds-wiz-opt:hover, .pds-noir.pds-noir.pds-noir .pds-amb:hover,
+  .pds-noir.pds-noir.pds-noir .pds-strat-card:hover, .pds-noir.pds-noir.pds-noir .pds-inspect-close:hover {
+    background:#1A201A; color:#EDEAE0; border-color:rgba(125,242,176,0.55);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-chip-body b { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .pds-roster-empty { color:rgba(242,239,230,0.62); }
+  .pds-noir.pds-noir.pds-noir .pds-chip-x { color:rgba(242,239,230,0.62); }
+  .pds-noir.pds-noir.pds-noir .pds-chip-x:hover { background:rgba(242,239,230,0.10); color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .pds-asum-name { color:rgba(242,239,230,0.80); }
+  .pds-noir.pds-noir.pds-noir .pds-rot-meta > div, .pds-noir.pds-noir.pds-noir .pds-rot-step {
+    background:#141813; border-color:rgba(242,239,230,0.10);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-rot-val, .pds-noir.pds-noir.pds-noir .pds-fair-name, .pds-noir.pds-noir.pds-noir .pds-hist-name,
+  .pds-noir.pds-noir.pds-noir .pds-strat-card b { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .pds-strat-card em { color:rgba(242,239,230,0.55); }
+  .pds-noir.pds-noir.pds-noir .pds-fair-bar { background:rgba(242,239,230,0.10); }
+
+  /* Champs · color-scheme:dark règle les natifs, le reste suit. */
+  .pds-noir.pds-noir.pds-noir .pds-input, .pds-noir.pds-noir.pds-noir input[type="number"], .pds-noir.pds-noir.pds-noir input[type="text"],
+  .pds-noir.pds-noir.pds-noir select, .pds-noir.pds-noir.pds-noir textarea {
+    background:#141813; border-color:rgba(242,239,230,0.14); color:#EDEAE0;
+  }
+  .pds-noir.pds-noir.pds-noir .pds-range, .pds-noir.pds-noir.pds-noir .pds-snap input { accent-color:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-snap { color:rgba(242,239,230,0.66); }
+  .pds-noir.pds-noir.pds-noir .pds-unit { color:rgba(242,239,230,0.58); }
+  .pds-noir.pds-noir.pds-noir .pds-num-grid > label { color:rgba(242,239,230,0.62); }
+  .pds-noir.pds-noir.pds-noir .pds-step-btn { color:#EDEAE0; }
+
+  /* Bandeau KPI */
+  .pds-noir.pds-noir.pds-noir .p-kpi { background:#0F130F; border:1px solid rgba(242,239,230,0.08); }
+  .pds-noir.pds-noir.pds-noir .p-kpi .l { color:rgba(242,239,230,0.62); }
+  .pds-noir.pds-noir.pds-noir .p-kpi .v { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .p-kpi .d { color:rgba(242,239,230,0.62); }
+
+  /* Modes + zones : rail sombre, pilule active claire · le contraste inversé
+     de la vue jour, même géométrie pour que la lentille liquide suive. */
+  .pds-noir.pds-noir.pds-noir .pds-modes, .pds-noir.pds-noir.pds-noir .pds-zone-tabs {
+    background:#0D110D; border-color:rgba(242,239,230,0.10);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-mode, .pds-noir.pds-noir.pds-noir .pds-zone { color:rgba(242,239,230,0.55); }
+  .pds-noir.pds-noir.pds-noir .pds-mode:hover, .pds-noir.pds-noir.pds-noir .pds-zone:hover { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .pds-mode.active { background:#EDEAE0; color:#0B0F0C; }
+  .pds-noir.pds-noir.pds-noir .pds-zone.active { background:#1C221C; color:#EDEAE0; box-shadow:none; }
+  .pds-noir.pds-noir.pds-noir .pds-zone.active em { color:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-zone em { color:rgba(242,239,230,0.62); }
+  .pds-noir.pds-noir.pds-noir .pds-zone-add { color:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-zone-add:hover { background:#1C221C; }
+
+  /* Barre du plan + légende façon accueil : cases au trait, l'occupée seule
+     rayonne. */
+  .pds-noir.pds-noir.pds-noir .pds-canvas-bar { background:#0D110D; border-color:rgba(242,239,230,0.08); }
+  /* Légende : les pastilles 17 × 13 rx 4 de l'accueil, sur la même échelle
+     de blanc que les tables, la menthe pour l'occupée. Typo du mockup :
+     400 · 11 px · -0.01em, encre 0.5. */
+  .pds-noir.pds-noir.pds-noir .pds-legend-item {
+    color:rgba(255,255,255,0.5);
+    font:400 11px/1.2 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:-0.01em;
+  }
+  /* Les tabourets du comptoir se dessinent hors de la boîte du bâti. */
+  .pds-noir.pds-noir.pds-noir .pds-el-svg { overflow:visible; }
+  .pds-noir.pds-noir.pds-noir .pds-legend-swatch {
+    width:17px; height:13px; border-radius:4px;
+    background:rgba(255,255,255,0.012); box-shadow:none; border:1.25px solid rgba(255,255,255,0.19);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-sw-occupied {
+    border-color:#00FFAE; background:rgba(0,255,174,0.11);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-sw-reserved { border-style:dashed; border-color:#E8C067; background:rgba(232,192,103,0.08); }
+  .pds-noir.pds-noir.pds-noir .pds-sw-cleaning { border-style:dotted; border-color:rgba(255,255,255,0.40); background:rgba(255,255,255,0.02); }
+
+  /* · La scène · */
+  .pds-noir.pds-noir.pds-noir .pds-plan-canvas {
+    background:#020302;
+    border:1px solid rgba(255,255,255,0.06);
+    border-radius:20px;
+    padding:16px 16px 8px;
+  }
+  .pds-noir.pds-noir.pds-noir .pds-plan-room {
+    border:1.5px solid rgba(255,255,255,0.13);
+    border-radius:18px;
+    box-shadow: 0 34px 70px -40px rgba(0,0,0,0.9);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-plan-room.is-terrasse {
+    border-style:dashed; border-color:rgba(0,255,174,0.30); background:transparent;
+  }
+  .pds-noir.pds-noir.pds-noir .pds-plan-label { color:rgba(242,239,230,0.78); }
+  .pds-noir.pds-noir.pds-noir .pds-plan-label em { color:rgba(242,239,230,0.62); }
+  .pds-noir.pds-noir.pds-noir .pds-plan-footer { color:rgba(242,239,230,0.62); }
+  .pds-noir.pds-noir.pds-noir .pds-plan-floor-count { color:rgba(242,239,230,0.62); }
+  .pds-noir.pds-noir.pds-noir .pds-plan-dims { color:rgba(242,239,230,0.58); }
+  .pds-noir.pds-noir.pds-noir .pds-empty { background:rgba(10,14,11,0.78); }
+  .pds-noir.pds-noir.pds-noir .pds-empty h4 { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .pds-empty p { color:rgba(242,239,230,0.55); }
+
+  /* · Tables : le statut est une lumière, le numéro se lit sans effort.
+     Typo du mockup : 500 · 0.04em ; l'échelle de blanc remontée à 0.40 / 0.55
+     pour tenir sur le sol quasi noir, la menthe 0.90 pour l'occupée. Le
+     survol remonte encore l'encre · un plan d'édition doit rester
+     manipulable, l'accueil n'a pas ce souci. · */
+  .pds-noir.pds-noir.pds-noir .pds-tbl-num {
+    font:500 11px/1 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:0.04em; color:rgba(255,255,255,0.62);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"] .pds-tbl-num { color:rgba(0,255,174,0.90); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="reserved"] .pds-tbl-num { color:rgba(232,192,103,0.80); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell:hover .pds-tbl-num,
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell.is-selected .pds-tbl-num { color:rgba(255,255,255,0.75); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"]:hover .pds-tbl-num,
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"].is-selected .pds-tbl-num { color:#00FFAE; }
+  /* Le nombre de couverts n'existe qu'à l'approche · le mockup n'affiche que
+     le numéro, et c'est ce silence qui le rend cher. */
+  .pds-noir.pds-noir.pds-noir .pds-tbl-covers { opacity:0; transition:opacity 180ms ease; }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell:hover .pds-tbl-covers,
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell.is-selected .pds-tbl-covers { opacity:.5; }
+  /* Le halo de l'occupée vit désormais DANS le SVG (disque pdsNoirCall),
+     comme sur l'accueil ; le survol garde juste un peu de lumière en plus. */
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell:hover { filter:brightness(1.25); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"]:hover { filter:brightness(1.15); }
+  /* L'anneau d'appel · la copie de .kw-plan-call de l'accueil. */
+  .pds-noir.pds-noir.pds-noir .pds-noir-call {
+    transform-box:fill-box; transform-origin:center;
+    animation:pdsNoirCall 2.6s cubic-bezier(.22,.7,.3,1) infinite;
+  }
+  @keyframes pdsNoirCall {
+    0%, 62% { opacity:.85; transform:scale(1); }
+    100%    { opacity:0;   transform:scale(1.5); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pds-noir.pds-noir.pds-noir .pds-noir-call { animation:none; opacity:0; }
+  }
+  /* La pastille « 6 min » : 19 px de haut, rx 9.5, encre 0.72 sur noir 0.92. */
+  .pds-noir.pds-noir.pds-noir .pds-tbl-since {
+    position:absolute; top:calc(var(--pad, 0px) - 24px); left:calc(var(--pad, 0px) - 6px);
+    height:19px; padding:0 9px; border-radius:9.5px;
+    display:inline-flex; align-items:center;
+    background:rgba(10,10,10,0.92); border:1px solid rgba(255,255,255,0.18);
+    font:500 10px/1 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:0.02em; color:rgba(255,255,255,0.72);
+    white-space:nowrap; pointer-events:none; z-index:4;
+  }
+  .pds-noir.pds-noir.pds-noir .pds-resv-chip {
+    background:rgba(4,26,20,0.94); border-color:rgba(125,242,176,0.60); color:#7DF2B0;
+    box-shadow:0 0 14px rgba(125,242,176,0.12);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-resv-field > span { color:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-resv-field .pds-input {
+    color-scheme:dark; background:#0D110E; border-color:rgba(125,242,176,0.34); color:#F7F5F0;
+  }
+  .pds-noir.pds-noir.pds-noir .pds-resv-field .pds-input:focus {
+    border-color:#7DF2B0; box-shadow:0 0 0 2px rgba(125,242,176,0.14);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-server { border-color:#0D110E; }
+  /* Les pastilles serveur appartiennent à l'Affectation ; en Aménagement
+     elles ne font que du bruit que le mockup n'a pas. */
+  .pds-noir.pds-noir.pds-noir .pds-stage-layout .pds-tbl-server { display:none; }
+
+  /* · Sélection : cadre menthe + tirets d'angle, le geste de l'accueil · */
+  .pds-noir.pds-noir.pds-noir .pds-hdl-layer::before {
+    border-color:#7DF2B0; border-radius:9px;
+    box-shadow:0 0 0 3px rgba(0,255,174,0.13), 0 0 26px rgba(0,255,174,0.20);
+  }
+  .pds-noir.pds-noir.pds-noir .pds-hdl { background:#0D110E; border-color:#7DF2B0; box-shadow:0 0 6px rgba(0,255,174,0.35); }
+  .pds-noir.pds-noir.pds-noir .pds-hdl:hover { background:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-hdl-n, .pds-noir.pds-noir.pds-noir .pds-hdl-s { width:18px; height:5px; margin:-2.5px 0 0 -9px; border-radius:3px; }
+  .pds-noir.pds-noir.pds-noir .pds-hdl-e, .pds-noir.pds-noir.pds-noir .pds-hdl-w { width:5px; height:18px; margin:-9px 0 0 -2.5px; border-radius:3px; }
+  .pds-noir.pds-noir.pds-noir .pds-hdl-rot { background:#7DF2B0; border-color:#0D110E; }
+  .pds-noir.pds-noir.pds-noir .pds-hdl-rot::before { background:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-dim { background:#7DF2B0; color:#07100C; }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell.is-resizing .pds-dim,
+  .pds-noir.pds-noir.pds-noir .pds-el.is-resizing .pds-dim { background:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-locked { background:rgba(242,239,230,0.14); color:#EDEAE0; }
+
+  /* · Bâti : les idéogrammes se dessinent en SVG (pdsNoirFixture), le CSS ne
+     rajoute rien sur le fond · un liseré ici doublerait le trait. · */
+  .pds-noir.pds-noir.pds-noir .pds-el:not(.is-locked):not(.is-dragging):hover {
+    outline-color:rgba(125,242,176,0.65);
+    filter:drop-shadow(0 0 12px rgba(0,255,174,0.14));
+  }
+  /* Étiquettes du bâti : la typo du mockup · 500 · 0.14em · blanc 0.34 · et
+     les pilules BAR / CAISSE portent leur nom à gauche, pas au centre. */
+  .pds-noir.pds-noir.pds-noir .pds-el-label {
+    font:500 9px/1.2 var(--font-ui, 'Inter Tight'), system-ui;
+    letter-spacing:0.14em;
+  }
+  .pds-noir.pds-noir.pds-noir .pds-el-comptoir .pds-el-label,
+  .pds-noir.pds-noir.pds-noir .pds-el-caisse .pds-el-label {
+    justify-content:flex-start; padding-left:16px; text-align:left;
+  }
+
+  /* Gêne de placement : le rouge reste le seul hors-marque, plus clair ici. */
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell.is-blocked::after,
+  .pds-noir.pds-noir.pds-noir .pds-el.is-blocked::after { border-color:#E4604E; background:rgba(228,96,78,0.14); }
+  .pds-noir.pds-noir.pds-noir .pds-blocker::before { border-color:#E4604E; }
+
+  /* · Statuts (légende de l'inspecteur) · */
+  .pds-noir.pds-noir.pds-noir .pds-pill-free { background:rgba(242,239,230,0.07); color:rgba(242,239,230,0.66); }
+  .pds-noir.pds-noir.pds-noir .pds-pill-occupied { background:rgba(0,255,174,0.10); color:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-pill-reserved { background:rgba(232,192,103,0.10); color:#E8C067; border:1px dashed rgba(232,192,103,0.55); }
+  .pds-noir.pds-noir.pds-noir .pds-pill-cleaning { background:rgba(255,255,255,0.02); color:rgba(242,239,230,0.60); border:1px dotted rgba(255,255,255,0.40); }
+
+  /* · Groupes : l'enveloppe passe à la menthe sur la scène noire · */
+  .pds-noir.pds-noir.pds-noir .pds-group-env { border-color:rgba(0,255,174,0.55); background:rgba(0,255,174,0.10); }
+  .pds-noir.pds-noir.pds-noir .pds-group-env::before { background:radial-gradient(closest-side, rgba(0,255,174,0.16), rgba(0,255,174,0)); }
+  .pds-noir.pds-noir.pds-noir .pds-group-chip { background:rgba(4,26,20,0.92); border-color:rgba(0,255,174,0.55); color:#00FFAE; }
+  .pds-noir.pds-noir.pds-noir .pds-inspect-actions .kb.pds-group-arming { border-color:#00FFAE; color:#00FFAE; animation:pdsGroupArm 1.2s ease-in-out infinite; }
+  .pds-noir.pds-noir.pds-noir .pds-group-info { border-color:rgba(0,255,174,0.35); background:rgba(0,255,174,0.07); color:#7DF2B0; }
+
+  /* Nuancier : l'anneau de l'actif passe à la menthe sur fond noir. */
+  .pds-noir.pds-noir.pds-noir .pds-sw { border-color:rgba(242,239,230,0.18); }
+  .pds-noir.pds-noir.pds-noir .pds-sw.active { box-shadow:0 0 0 2px #0F130F, 0 0 0 3.5px #7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-sw-none {
+    background:
+      linear-gradient(45deg, transparent 45%, #E4604E 45% 55%, transparent 55%),
+      #141813;
+  }
+
+  /* Pied de page */
+  .pds-noir.pds-noir.pds-noir .pds-foot-meta { color:rgba(242,239,230,0.62); }
+  .pds-noir.pds-noir.pds-noir .kb.ghost { background:#141813; border-color:rgba(242,239,230,0.14); color:rgba(242,239,230,0.78); }
+  .pds-noir.pds-noir.pds-noir .kb.ghost:hover { border-color:rgba(125,242,176,0.55); color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .pds-rail-danger { color:#E4604E; }
+  .pds-noir.pds-noir.pds-noir .pds-rail-danger:hover { border-color:#E4604E; }
 `;
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -8169,7 +9756,7 @@ function _bqxCss() {
     .bqx-vtable { width: 100%; border-collapse: collapse; font-size: 13px; }
     .bqx-vtable th { text-align: left; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--n-500, #77807b); padding: 8px 10px; background: var(--paper-soft, #f3f1ea); }
     .bqx-vtable td { padding: 9px 10px; border-top: 1px solid var(--line, #eee); vertical-align: middle; }
-    /* Les pastilles elles-mêmes viennent de color-palette.js (.kc-sw) — un seul
+    /* Les pastilles elles-mêmes viennent de color-palette.js (.kc-sw) · un seul
        dessin pour le tableau de bord et la caisse. Ici : ce qui les entoure. */
     .bqx-cbtn { display: inline-flex; align-items: center; gap: 7px; background: none; border: 0; padding: 3px 5px; margin: -3px -5px; border-radius: 8px; font: inherit; color: inherit; cursor: pointer; }
     .bqx-cbtn:hover { background: var(--paper-soft, #f3f1ea); }
@@ -8209,6 +9796,49 @@ function _bqxCss() {
     .bqx-cat-sw button { width: 18px; height: 18px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
     .bqx-cat-sw button.on { border-color: var(--ink, #0A0F0D); }
     .bqx-price-tag { font-family: var(--mono, monospace); }
+    /* Catégorie A / B · la propriété de la marchandise, choisie à la création. */
+    .bqx-ab { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .bqx-ab label { display: flex; align-items: center; gap: 9px; padding: 12px 13px; border: 1px solid var(--line, #e7e3da);
+      border-radius: 11px; cursor: pointer; background: var(--paper, #fff); }
+    .bqx-ab label:has(input:checked) { border-color: var(--atlas, #0B6E4F); box-shadow: inset 0 0 0 1px var(--atlas, #0B6E4F); }
+    .bqx-ab input { accent-color: var(--atlas, #0B6E4F); }
+    .bqx-ab b { display: block; font-size: 13px; font-weight: 600; }
+    .bqx-ab-b { font-family: var(--mono, monospace); font-size: 10px; letter-spacing: .06em; color: var(--atlas, #0B6E4F);
+      border: 1px solid var(--atlas, #0B6E4F); border-radius: 999px; padding: 0 5px; margin-left: 6px; vertical-align: 1px; }
+    /* Variant colour editor: the active choice reads as a labelled value, not
+       merely as a ring around one of fourteen anonymous dots. The optional
+       note remains available but sits below the merchant's actual task. */
+    .bqx-color-edit { display: grid; gap: 12px; }
+    .kiwi-modal.bqx-color-modal { display: flex; flex-direction: column; overflow: hidden; }
+    .kiwi-modal.bqx-color-modal .kiwi-modal-head,
+    .kiwi-modal.bqx-color-modal .kiwi-modal-foot { flex: none; }
+    .kiwi-modal.bqx-color-modal .kiwi-modal-body { min-height: 0; overflow-y: auto; }
+    .bqx-color-card { padding: 16px; border: 1px solid var(--n-200, #e7e3da); border-radius: 16px; background: var(--surface, #fff); }
+    .bqx-color-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+    .bqx-color-heading { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+    .bqx-color-step { display: inline-flex; width: 24px; height: 24px; flex: none; align-items: center; justify-content: center; border-radius: 8px; background: var(--mint-soft, rgba(125,242,176,.2)); color: var(--atlas, #0B6E4F); font: 650 11px/1 var(--mono, monospace); }
+    .bqx-color-heading strong { display: block; font-size: 13.5px; line-height: 1.3; letter-spacing: -.01em; }
+    .bqx-color-heading small { display: block; margin-top: 3px; color: var(--n-500, #77807b); font-size: 11.5px; line-height: 1.35; }
+    .bqx-color-selected { display: inline-flex; flex: none; align-items: center; gap: 8px; max-width: 46%; padding: 6px 10px 6px 7px; border: 1px solid var(--n-200, #e7e3da); border-radius: 999px; background: var(--paper-soft, #f3f1ea); color: var(--ink, #0A0F0D); font-size: 12px; font-weight: 600; }
+    .bqx-color-selected > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bqx-color-selected .kc-sw { width: 22px; height: 22px; flex: none; }
+    .bqx-color-picker .kc-picker { position: relative; }
+    .bqx-color-picker .kc-row { gap: 10px; }
+    .bqx-color-picker .kc-sw { width: 34px; height: 34px; }
+    .bqx-color-picker .kc-cap { margin-top: 10px; min-height: 17px; }
+    .bqx-color-field { padding: 14px 16px; border: 1px solid var(--n-200, #e7e3da); border-radius: 14px; background: color-mix(in srgb, var(--surface, #fff) 62%, transparent); }
+    .bqx-color-field .kf-group { margin: 0; }
+    .bqx-color-field .kf-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; font-size: 12.5px; color: var(--ink, #0A0F0D); }
+    .bqx-color-optional { color: var(--n-500, #77807b); font-size: 10.5px; font-weight: 500; }
+    .bqx-color-safe { display: flex; align-items: center; gap: 8px; padding: 2px 3px; color: var(--n-500, #77807b); font-size: 11.5px; line-height: 1.35; }
+    .bqx-color-safe svg { flex: none; color: var(--atlas, #0B6E4F); }
+    @media (max-width: 520px) {
+      .bqx-color-card, .bqx-color-field { padding: 13px; }
+      .bqx-color-head { display: grid; gap: 10px; }
+      .bqx-color-selected { max-width: 100%; width: fit-content; }
+      .bqx-color-picker .kc-custom-wrap { position: static; }
+      .bqx-color-picker .kc-custom-pop { inset-inline: 0; width: 100%; }
+    }
   `;
   document.head.appendChild(st);
 }
@@ -8237,7 +9867,7 @@ function _bqxSubscribe() {
 function _colorPicker(sel, opts) {
   const k = window.KiwiColors;
   if (!k) return '';
-  return k.picker('bqx-color', sel, Object.assign({ optional: true, label: 'Couleur' }, opts || {}));
+  return k.picker('bqx-color', sel, Object.assign({ optional: true, custom: true, label: 'Couleur' }, opts || {}));
 }
 /* La famille qu'une variante affiche, tolérante à un enregistrement écrit avant
    la normalisation (copie serveur d'un ancien build). */
@@ -8247,16 +9877,96 @@ function _bqxFam(v) {
   const k = window.KiwiColors;
   return k ? k.familyId(v.colorId, v.colorLabel, v.colorHex) : 'gris';
 }
+/* Families drive filters; a variant row must show the exact custom colour the
+   merchant picked instead of repainting it as the nearest family. */
+function _bqxShownColor(v) {
+  const k = window.KiwiColors;
+  if (k && k.display) return k.display(v.colorId, v.colorLabel, v.colorHex);
+  const id = _bqxFam(v);
+  return { id, label: v.colorLabel || id, hex: v.colorHex || '#9AA0A6' };
+}
 /* Ce qui distingue deux variantes tombant dans la même famille : la précision
    saisie par le commerçant, sinon la nuance d'origine. */
-function _bqxVarNote(v) { return (v && (v.note || v.colorSource)) || ''; }
+function _bqxColorSource(v) {
+  if (!v || !v.colorSource) return '';
+  const shown = _bqxShownColor(v);
+  return String(v.colorSource).trim().toLowerCase() === String(shown.label || '').trim().toLowerCase()
+    ? '' : v.colorSource;
+}
+function _bqxVarNote(v) { return (v && (v.note || _bqxColorSource(v))) || ''; }
 function _catOptions(sel, includeNone) {
-  const none = includeNone ? `<option value="">— Sans catégorie</option>` : '';
+  const none = includeNone ? `<option value="">·Sans catégorie</option>` : '';
   return none + CAT().listCategories().map((c) => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${_esc(c.name)}</option>`).join('');
 }
-function _kindOptions(sel) {
-  const k = [['taille', 'Vêtement (tailles S-XL)'], ['pointure', 'Chaussure (pointures)'], ['tu', 'Taille unique']];
-  return k.map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('');
+/* Vocabulaire par métier : boutique garde le caftan/vêtement/taille, maison et les autres reçoivent des termes neutres. */
+function _bqxCopy(trade) {
+  const tr = trade !== undefined ? String(trade || '') : (window.KiwiStoreTemplates && window.KiwiStoreTemplates.currentTrade ? window.KiwiStoreTemplates.currentTrade() : '');
+  const isBoutique = (tr === 'boutique');
+  const isMaison = (tr === 'maison');
+
+  if (isBoutique) {
+    return {
+      trade: 'boutique',
+      modalDesc: 'Créez le produit, puis ajoutez ses variantes couleur × taille et leurs codes-barres.',
+      namePlaceholder: 'Ex. Caftan brodé main',
+      pricePlaceholder: '1890',
+      catPlaceholder: 'Ex. Caftans de mariée',
+      defaultKind: 'taille',
+      varTag: 'COULEUR × TAILLE',
+      varCreatedDesc: 'Ajoutez maintenant ses variantes couleur × taille.',
+      varEmpty: 'Aucune variante. Ajoutez une couleur × taille ci-dessous.',
+      gridHint: 'Cliquez un produit pour ouvrir sa matrice couleur × taille : stock par variante, génération et impression d\'étiquettes EAN-13, ou enregistrement d\'un ancien code-barres.',
+      sizeColHeader: (_kind) => 'Taille',
+      sizeInputLabel: (kind) => (kind === 'pointure' ? 'Pointure' : 'Taille'),
+      kindList: (_sel) => [
+        ['taille', 'Vêtement (tailles S-XL)'],
+        ['pointure', 'Chaussure (pointures)'],
+        ['tu', 'Taille unique'],
+      ],
+    };
+  }
+
+  return {
+    trade: isMaison ? 'maison' : (tr || 'autre'),
+    modalDesc: 'Créez le produit, puis ajoutez ses déclinaisons et leurs codes-barres.',
+    namePlaceholder: isMaison ? 'Ex. Vase en terre cuite 30 cm' : 'Ex. Article',
+    pricePlaceholder: isMaison ? '450' : '150',
+    catPlaceholder: isMaison ? 'Ex. Arts de la table' : 'Ex. Rayon principal',
+    defaultKind: 'tu',
+    varTag: 'DÉCLINAISON',
+    varCreatedDesc: 'Ajoutez maintenant ses déclinaisons.',
+    varEmpty: 'Aucune variante. Ajoutez une déclinaison ci-dessous.',
+    gridHint: 'Cliquez un produit pour ouvrir ses déclinaisons : stock par variante, génération et impression d\'étiquettes EAN-13, ou enregistrement d\'un ancien code-barres.',
+    sizeColHeader: (kind) => (kind === 'taille' ? 'Format' : kind === 'pointure' ? 'Pointure' : ' · '),
+    sizeInputLabel: (kind) => (kind === 'pointure' ? 'Pointure' : kind === 'taille' ? 'Format' : 'Format'),
+    kindList: (sel) => {
+      const opts = [
+        ['tu', 'Pièce unique (sans taille)'],
+        ['taille', 'Formats (S · M · L)'],
+      ];
+      if (sel === 'pointure') {
+        opts.push(['pointure', 'Pointure']);
+      }
+      return opts;
+    },
+  };
+}
+/* Ticket #0034 · till PIN codes differ per trade (boutique 0002, maison
+ * 0017): hardcoding 0002 sends maison merchants to the wrong caisse. Empty
+ * when the trade is unknown, so the hint degrades to code-less copy. */
+function _bqxTillCode(trade) {
+  const tr = trade !== undefined ? String(trade || '') : (_bqxCopy().trade || '');
+  return ({ boutique: '0002', maison: '0017' })[tr] || '';
+}
+function _bqxTillHint(trade) {
+  const code = _bqxTillCode(trade);
+  return code ? ` (code ${code})` : '';
+}
+function _kindOptions(sel, trade) {
+  const copy = _bqxCopy(trade);
+  const effectiveSel = sel || copy.defaultKind;
+  const list = copy.kindList(effectiveSel);
+  return list.map(([v, l]) => `<option value="${v}" ${v === effectiveSel ? 'selected' : ''}>${l}</option>`).join('');
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -8269,10 +9979,22 @@ function _bqxGridHtml() {
   // toutes les deux, et restent malgré tout deux articles distincts.
   if (_bqxColorFilter) products = products.filter((p) => (CAT().getProduct(p.id).families || []).includes(_bqxColorFilter));
   if (!products.length) {
+    /* Catalogue entièrement vide et métier pourvu de modèles : on ouvre la porte
+       plutôt que de constater le vide. Un filtre ou une recherche sans résultat
+       reste un simple constat — le magasin, lui, n'est pas vide. */
+    const virgin = !_bqxColorFilter && !_bqxQuery && _bqxFilter === 'all' && !CAT().listProducts({ includeArchived: true }).length;
+    if (virgin && _bqxTemplatesOn()) {
+      return `<div class="kx-foot-hint" style="align-items:center;">
+        <div class="lh">Catalogue vide</div>
+        <div class="rh">Partez d'un modèle de rayons · arts de la table, verrerie, bougies, décoration · puis ajustez les prix et saisissez vos quantités.
+          <div style="margin-top:10px;"><button class="kb atlas" data-action="bqx-templates">${window.KiwiStoreTemplates.mark(14)}Choisir mes rayons</button></div>
+        </div>
+      </div>`;
+    }
     return `<div class="kx-foot-hint"><div class="lh">Aucun produit</div><div class="rh">${
       _bqxColorFilter ? 'Aucun article de cette couleur. Touchez la pastille à nouveau pour tout revoir.'
         : _bqxQuery ? 'Aucun résultat pour cette recherche.'
-        : 'Créez un produit ici, ou depuis la caisse (code 0002) avec la douchette.'}</div></div>`;
+        : 'Créez un produit ici, ou depuis la caisse' + _bqxTillHint() + ' avec la douchette.'}</div></div>`;
   }
   return `<div class="kx-sku-grid">${products.map((p) => {
     const data = CAT().getProduct(p.id);
@@ -8288,8 +10010,9 @@ function _bqxGridHtml() {
         <div class="kx-sku-img-tag">${cat ? _esc(cat.name.charAt(0).toUpperCase()) : '·'}</div>
       </div>
       <div class="kx-sku-body">
-        <div class="kx-sku-head"><div class="n">${_esc(p.name)}</div><span class="chip neutral">${cat ? _esc(cat.name) : 'Divers'}</span></div>
-        <div class="bqx-card-cols">${(data.colors || []).slice(0, 8).map((c) => (window.KiwiColors ? window.KiwiColors.swatch(c.id) : '')).join('')}${data.colors.length > 8 ? `<em>+${data.colors.length - 8}</em>` : ''}</div>
+        <div class="kx-sku-head"><div class="n">${_esc(p.name)}${_bqxAbOn() && p.ownership === 'consignment'
+          ? '<span class="bqx-ab-b" title="Catégorie B">B</span>' : ''}</div><span class="chip neutral">${cat ? _esc(cat.name) : 'Divers'}</span></div>
+        <div class="bqx-card-cols">${(data.colors || []).slice(0, 8).map((c) => (window.KiwiColors ? window.KiwiColors.swatch(c) : '')).join('')}${data.colors.length > 8 ? `<em>+${data.colors.length - 8}</em>` : ''}</div>
         <div class="kx-sku-sku mono">${data.sizes.length} taille${data.sizes.length > 1 ? 's' : ''} · ${_bqxN(data.variants.length, 'variante')}</div>
         <div class="kx-sku-row">
           <div class="kx-sku-price mono">${_mad(p.priceMAD)} MAD</div>
@@ -8472,6 +10195,16 @@ function _bqxStockKPI(st) {
   };
 }
 
+/* Les rayons tout prêts (assets/store-templates.js). Le bouton n'apparaît que
+   pour un métier qui en a — aujourd'hui « Maison » : proposer des assiettes à
+   un caviste serait pire que ne rien proposer. */
+function _bqxTemplatesOn() {
+  try {
+    const T = window.KiwiStoreTemplates;
+    return !!(T && T.has(T.currentTrade()));
+  } catch (_) { return false; }
+}
+
 function _renderInventory() {
   const cat = CAT();
   cat.use(_bqxVenue());
@@ -8493,6 +10226,7 @@ function _renderInventory() {
           <input data-bqx-search placeholder="Rechercher produit, catégorie, code-barres…" value="${_esc(_bqxQuery)}" style="border:none;background:transparent;outline:none;margin-left:6px;font:inherit;color:inherit;flex:1;min-width:120px;" /></div>
         <button class="kb ghost" data-action="bqx-import">${_ICN.download}Importer CSV</button>
         <button class="kb ghost" data-action="bqx-export">${_ICN.upload}Exporter CSV</button>
+        ${_bqxTemplatesOn() ? `<button class="kb ghost" data-action="bqx-templates">${window.KiwiStoreTemplates.mark(14)}Modèles de rayons</button>` : ''}
         ${_orderProOn() ? `<button class="kb ghost" data-action="orderpro-tags">Tags NFC</button>` : ''}
         <button class="kb primary" data-action="bqx-new">${_ICN.plus}Nouveau produit</button>
       </div>
@@ -8508,7 +10242,7 @@ function _renderInventory() {
 
       <div class="kx-foot-hint">
         <div class="lh">Astuce</div>
-        <div class="rh">Cliquez un produit pour ouvrir sa matrice couleur × taille : stock par variante, génération et impression d'étiquettes EAN-13, ou enregistrement d'un ancien code-barres.</div>
+        <div class="rh">${_esc(_bqxCopy().gridHint)}</div>
       </div>
     `,
   });
@@ -8573,13 +10307,13 @@ function _variantRow(v, kind) {
   const genOrPrint = primary
     ? `<button class="kb ghost xs" data-action="bqx-var-print" data-arg="${v.id}" title="Imprimer l'étiquette">${_ICN.upload}Étiquette</button>`
     : `<button class="kb ghost xs" data-action="bqx-var-gen" data-arg="${v.id}" title="Générer un EAN-13">${_ICN.scan}Générer</button>`;
-  const fam = _bqxFam(v);
+  const shown = _bqxShownColor(v);
   const note = _bqxVarNote(v);
   const kc = window.KiwiColors;
   return `<tr>
     <td><div class="bqx-ccell">
       <button class="bqx-cbtn" data-action="bqx-var-color" data-arg="${v.id}" title="Changer la couleur">
-        ${kc ? kc.swatch(fam) : ''}<span>${_esc(kc ? kc.label(fam) : v.colorLabel)}</span></button>
+        ${kc ? kc.swatch(shown) : ''}<span>${_esc(shown.label)}</span></button>
       ${note ? `<em class="bqx-csrc">${_esc(note)}</em>` : ''}</div></td>
     <td class="mono">${_esc(v.size)}</td>
     <td><span class="bqx-stk">
@@ -8606,11 +10340,12 @@ function _bqxProductBody(pid) {
    * chasse — et il apparaissait par défaut sur CHAQUE produit d'une boutique qui
    * vient d'importer son stock. null ⇒ la ligne dit « prix d'achat manquant »,
    * ce qui est à la fois vrai et actionnable. */
+  const copy = _bqxCopy();
   const cost = +p.cost > 0 ? +p.cost : null;
   const margin = (cost != null && p.priceMAD > 0) ? Math.round((1 - cost / p.priceMAD) * 100) : null;
   const rows = data.variants.length
     ? data.variants.map((v) => _variantRow(v, p.kind)).join('')
-    : `<tr><td colspan="5" style="text-align:center;color:var(--n-500,#99a);padding:18px;">Aucune variante. Ajoutez une couleur × taille ci-dessous.</td></tr>`;
+    : `<tr><td colspan="5" style="text-align:center;color:var(--n-500,#99a);padding:18px;">${_esc(copy.varEmpty)}</td></tr>`;
   return `
     <div class="kx-stat-3">
       <div class="stat"><div class="l">PRIX VENTE</div><div class="v bqx-price-tag">${_mad(p.priceMAD)} MAD</div><div class="sub">${margin == null ? 'Prix d’achat manquant' : `Marge ${margin} %`}</div></div>
@@ -8619,7 +10354,7 @@ function _bqxProductBody(pid) {
     </div>
     <div class="bqx-vwrap">
       <table class="bqx-vtable">
-        <thead><tr><th>Couleur</th><th>Taille</th><th>Stock</th><th>Code-barres</th><th style="text-align:right;">Actions</th></tr></thead>
+        <thead><tr><th>Couleur</th><th>${_esc(copy.sizeColHeader(p.kind))}</th><th>Stock</th><th>Code-barres</th><th style="text-align:right;">Actions</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -8769,16 +10504,17 @@ handlers['bqx-var-reg-save'] = (_el, arg) => {
 /* add a variant (colour × size × stock) */
 handlers['bqx-var-add'] = (_el, arg) => {
   const data = CAT().getProduct(arg);
-  const kind = data ? data.product.kind : 'taille';
+  const copy = _bqxCopy();
+  const kind = data ? data.product.kind : copy.defaultKind;
   const presets = CAT().sizePresets(kind);
   _bqxModal = modal({
-    title: 'Ajouter une variante', tag: 'COULEUR × TAILLE',
+    title: 'Ajouter une variante', tag: copy.varTag,
     desc: 'Chaque variante est un article distinct avec son propre code-barres.',
     width: 480,
     body: `
       <div class="kf-row">
         <div class="kf-group"><label class="kf-label">Couleur</label>${_colorPicker('noir')}</div>
-        <div class="kf-group"><label class="kf-label">${kind === 'pointure' ? 'Pointure' : kind === 'tu' ? 'Taille' : 'Taille'}</label>
+        <div class="kf-group"><label class="kf-label">${_esc(copy.sizeInputLabel(kind))}</label>
           <input class="kf-input" list="bqx-sizes" data-bqx-vsize value="${_esc(presets[0] || '')}" />
           <datalist id="bqx-sizes">${presets.map((s) => `<option value="${_esc(s)}">`).join('')}</datalist></div>
       </div>
@@ -8795,15 +10531,16 @@ handlers['bqx-var-add'] = (_el, arg) => {
 handlers['bqx-var-add-save'] = (_el, arg) => {
   const b = document.querySelector('.kiwi-backdrop');
   if (!b) return;
-  const colorId = (window.KiwiColors && window.KiwiColors.value(b)) || 'noir';
+  const color = (window.KiwiColors && window.KiwiColors.selection(b)) || { id: 'noir' };
+  const colorId = color.id;
   const size = b.querySelector('[data-bqx-vsize]').value.trim() || 'TU';
   const stock = parseInt(b.querySelector('[data-bqx-vstock]').value, 10) || 0;
   const bc = b.querySelector('[data-bqx-vbc]').value;
   const note = (b.querySelector('[data-bqx-vnote]') || {}).value || '';
-  const v = CAT().addVariant({ productId: arg, colorId, size, stock, note: note.trim() });
+  const v = CAT().addVariant({ productId: arg, colorId, colorLabel: color.label, colorHex: color.hex, size, stock, note: note.trim() });
   if (v && bc === 'gen') CAT().generateBarcode(v.id);
   if (_bqxModal) _bqxModal.close();
-  toast('Variante ajoutée', { desc: `${CAT().colorById(colorId)?.label || colorId} · ${size}${bc === 'gen' ? ' · EAN-13 généré' : ''}`, type: 'success', duration: 2400 });
+  toast('Variante ajoutée', { desc: `${color.label || CAT().colorById(colorId)?.label || colorId} · ${size}${bc === 'gen' ? ' · EAN-13 généré' : ''}`, type: 'success', duration: 2400 });
 };
 
 /* Recolorer une variante existante. Elle garde son stock, ses codes-barres et
@@ -8813,26 +10550,85 @@ handlers['bqx-var-color'] = (_el, arg) => {
   const v = (CAT().listVariants(_bqxDrawerPid) || []).find((x) => x.id === arg);
   if (!v) return;
   const data = CAT().getProduct(_bqxDrawerPid);
+  const custom = /^custom-[0-9a-f]{6}$/i.test(String(v.colorId || ''));
+  const shown = _bqxShownColor(v);
+  const selected = /^custom-/i.test(v.colorId || '')
+    ? { id: v.colorId, label: v.colorLabel, hex: v.colorHex, custom: true }
+    : _bqxFam(v);
+  const selectedSwatch = window.KiwiColors && window.KiwiColors.swatch
+    ? window.KiwiColors.swatch(shown, { name: shown.label }) : '';
   _bqxModal = modal({
-    title: 'Couleur de la variante', tag: `TAILLE ${_esc(v.size)}`,
-    desc: data ? `${data.product.name}${v.colorSource ? ` · saisie à l'origine « ${v.colorSource} »` : ''}` : '',
-    width: 460,
+    title: 'Modifier la couleur', tag: `VARIANTE · TAILLE ${_esc(v.size)}`,
+    desc: data ? data.product.name : '',
+    width: 520,
     body: `
-      <div class="kf-group"><label class="kf-label">Couleur</label>${_colorPicker(_bqxFam(v))}</div>
-      <div class="kf-group"><label class="kf-label">Précision (facultatif)</label>
-        <input class="kf-input" maxlength="60" value="${_esc(v.note || '')}" data-bqx-vcnote placeholder="Ex. rayé, délavé, motif" />
-        <div class="kf-help">Sert à distinguer deux variantes de même couleur. Le sélecteur, lui, reste simple.</div></div>`,
-    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-var-color-save" data-arg="${arg}">Enregistrer</button>`,
+      <div class="bqx-color-edit">
+        <section class="bqx-color-card">
+          <div class="bqx-color-head">
+            <div class="bqx-color-heading"><span class="bqx-color-step">1</span><span><strong>Choisissez une couleur</strong><small>Les couleurs standard restent faciles à retrouver en caisse.</small></span></div>
+            <div class="bqx-color-selected" aria-live="polite"><span data-bqx-vpreview>${selectedSwatch}</span><span data-bqx-vselected>${_esc(shown.label)}</span></div>
+          </div>
+          <div class="bqx-color-picker">${_colorPicker(selected)}</div>
+        </section>
+        <section class="bqx-color-field" data-bqx-vcname-wrap ${custom ? '' : 'hidden'}>
+          <div class="kf-group"><label class="kf-label" for="bqx-vcname">Nom de cette couleur</label>
+            <input class="kf-input" id="bqx-vcname" maxlength="40" value="${custom ? _esc(v.colorLabel || '') : ''}" data-bqx-vcname placeholder="Ex. Bleu clair" autocomplete="off" />
+            <div class="kf-help">Le même nom sera repris pour toutes les tailles de cette couleur exacte.</div></div>
+        </section>
+        <section class="bqx-color-field">
+          <div class="kf-group"><label class="kf-label" for="bqx-vcnote"><span>Détail de la variante</span><span class="bqx-color-optional">Facultatif</span></label>
+            <input class="kf-input" id="bqx-vcnote" maxlength="60" value="${_esc(v.note || '')}" data-bqx-vcnote placeholder="Ex. Rayé, délavé, motif…" autocomplete="off" />
+            <div class="kf-help">Ajoutez-le uniquement pour distinguer deux articles de couleur similaire.</div></div>
+        </section>
+        <div class="bqx-color-safe"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg><span>Le stock, la taille et les codes-barres ne seront pas modifiés.</span></div>
+      </div>`,
+    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-var-color-save" data-arg="${arg}">Enregistrer les modifications</button>`,
   });
+  const b = document.querySelector('.kiwi-backdrop');
+  const modalPanel = b && b.querySelector('.kiwi-modal');
+  if (modalPanel) modalPanel.classList.add('bqx-color-modal');
+  const picker = b && b.querySelector('[data-kc-picker]');
+  const nameWrap = b && b.querySelector('[data-bqx-vcname-wrap]');
+  const nameInput = b && b.querySelector('[data-bqx-vcname]');
+  const selectedLabel = b && b.querySelector('[data-bqx-vselected]');
+  const selectedPreview = b && b.querySelector('[data-bqx-vpreview]');
+  const syncName = (event) => {
+    const color = window.KiwiColors && window.KiwiColors.selection(b);
+    const isCustom = !!(color && color.custom);
+    const customApplied = !!(event && event.detail && event.detail.custom);
+    if (nameWrap) nameWrap.hidden = !isCustom;
+    if (selectedLabel) selectedLabel.textContent = color ? color.label : 'Aucune couleur';
+    if (selectedPreview) selectedPreview.innerHTML = color && window.KiwiColors.swatch
+      ? window.KiwiColors.swatch(color, { name: color.label }) : '';
+    if (isCustom && nameInput && (customApplied || nameInput.dataset.colorId !== color.id)) {
+      nameInput.value = /^Couleur personnalisée\s+#[0-9a-f]{6}$/i.test(String(color.label || '')) ? '' : (color.label || '');
+      nameInput.dataset.colorId = color.id;
+    }
+  };
+  const syncTypedName = () => {
+    const color = window.KiwiColors && window.KiwiColors.selection(b);
+    if (!color || !color.custom || !selectedLabel) return;
+    selectedLabel.textContent = nameInput.value.trim() || color.label;
+  };
+  if (nameInput && custom) nameInput.dataset.colorId = v.colorId;
+  if (picker) picker.addEventListener('kc:change', syncName);
+  if (nameInput) nameInput.addEventListener('input', syncTypedName);
+  syncName();
 };
 handlers['bqx-var-color-save'] = (_el, arg) => {
   const b = document.querySelector('.kiwi-backdrop');
   if (!b) return;
-  const colorId = window.KiwiColors && window.KiwiColors.value(b);
+  let color = window.KiwiColors && window.KiwiColors.selection(b);
+  const name = String((b.querySelector('[data-bqx-vcname]') || {}).value || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+  if (color && color.custom && name) color = Object.assign({}, color, { label: name });
   const note = (b.querySelector('[data-bqx-vcnote]') || {}).value || '';
-  CAT().updateVariant(arg, { colorId: colorId || undefined, note: note.trim() });
+  let renamed = 0;
+  CAT().batch(() => {
+    CAT().updateVariant(arg, { colorId: color ? color.id : undefined, colorLabel: color && color.label, colorHex: color && color.hex, note: note.trim() });
+    if (color && color.custom && name) renamed = CAT().renameColor(color.id, name);
+  });
   if (_bqxModal) _bqxModal.close();
-  toast('Couleur mise à jour', { type: 'success', duration: 2000 });
+  toast('Couleur mise à jour', { desc: renamed > 1 ? `Nom appliqué à ${renamed} variantes.` : '', type: 'success', duration: 2000 });
 };
 
 /* Order Pro is a paid add-on and a PUBLIC surface — its entry point only exists
@@ -8891,6 +10687,66 @@ function _bqxSkuField(sku) {
     </div>`;
 }
 
+/* ── Catégorie A / B : à qui appartient la marchandise ───────────────────────
+ * A = achetée ferme, c'est le stock du magasin et la vente est sa recette.
+ * B = dépôt-vente, vendue pour le compte d'un tiers : la vente est enregistrée
+ * en entier (ticket, journal, stock), mais le montant ne compte pas dans sa
+ * recette. C'est une PROPRIÉTÉ de l'article, pas un rayon : elle se pose à la
+ * création, parce qu'après coup personne ne repasse sur un catalogue.
+ *
+ * Aucune option n'est pré-cochée à la création : un défaut silencieux ferait
+ * entrer toute la marchandise d'un tiers dans le chiffre d'affaires du magasin
+ * sans que personne ait rien décidé. Le choix est donc explicite, une fois. */
+/* L'option est posée par l'opérateur Kiwi, commerce par commerce
+   (kiwi-admin.html › Modules → « Dépôt-vente »). Comparaison stricte, comme
+   Order Pro : clé absente, backend injoignable, réponse vide → NON. Éteinte,
+   le formulaire ne pose pas la question et la création n'exige rien. */
+function _bqxAbOn() {
+  try { return !!(window.KiwiConfig && window.KiwiConfig.features
+    && window.KiwiConfig.features.depotvente === true); } catch (_) { return false; }
+}
+function _bqxAbField(p) {
+  if (!_bqxAbOn()) return '';
+  const own = p ? (p.ownership === 'consignment' ? 'consignment' : 'outright') : '';
+  const who = p ? (p.consignor || '') : '';
+  return `
+    <div class="kf-group">
+      <label class="kf-label">Catégorie A / B</label>
+      <div class="bqx-ab">
+        <label><input type="radio" name="bqx-ab" value="outright" ${own === 'outright' ? 'checked' : ''} data-bqx-ab />
+          <div><b>Catégorie A</b></div></label>
+        <label><input type="radio" name="bqx-ab" value="consignment" ${own === 'consignment' ? 'checked' : ''} data-bqx-ab />
+          <div><b>Catégorie B</b></div></label>
+      </div>
+    </div>
+    <div class="kf-group" data-bqx-ab-who style="${own === 'consignment' ? '' : 'display:none'}">
+      <label class="kf-label">Propriétaire de la marchandise (option)</label>
+      <input class="kf-input" value="${_esc(who)}" data-bqx-consignor placeholder="Ex. Baobab Collection" maxlength="60" />
+    </div>`;
+}
+/* Révèle le nom du déposant quand B est choisie. Le champ vit dans la modale,
+   donc on se raccroche au backdrop plutôt qu'au document. */
+function _bqxWireAb() {
+  const b = document.querySelector('.kiwi-backdrop');
+  if (!b) return;
+  const who = b.querySelector('[data-bqx-ab-who]');
+  b.querySelectorAll('[data-bqx-ab]').forEach((r) => r.addEventListener('change', () => {
+    if (who) who.style.display = r.checked && r.value === 'consignment' ? '' : 'none';
+  }));
+}
+/* Ce que les deux formulaires écrivent. `null` = rien de coché : l'appelant
+   refuse d'enregistrer, il ne devine pas. */
+function _bqxAbRead(b) {
+  const picked = b.querySelector('[data-bqx-ab]:checked');
+  if (!picked) return null;
+  const consignment = picked.value === 'consignment';
+  const who = b.querySelector('[data-bqx-consignor]');
+  return {
+    ownership: consignment ? 'consignment' : 'outright',
+    consignor: consignment ? ((who && who.value.trim()) || '') : '',
+  };
+}
+
 function _bqxPhotoField(photo, video) {
   _bqxPhoto = photo || '';
   _bqxVideo = video || '';
@@ -8929,10 +10785,10 @@ function _bqxWirePhoto(photo, video) {
     msg.textContent = 'Envoi…';
     const res = await window.KiwiOrderPro.uploadMedia(file);
     if (!res || !res.ok) {
-      msg.textContent = (res && (res.error === 'no-media' || res.error === 'not-configured'))
-        ? "Stockage média pas encore activé sur votre compte."
-        : (res && res.error === 'too-large') ? 'Fichier trop lourd.'
-        : (res && res.error === 'bad-type') ? 'Format non pris en charge.'
+      /* Une échelle de messages recopiée ici disait « fichier trop lourd »
+         sans jamais dire de combien. KiwiOrderPro.uploadError porte les chiffres. */
+      msg.textContent = (window.KiwiOrderPro && window.KiwiOrderPro.uploadError)
+        ? window.KiwiOrderPro.uploadError(res)
         : 'Envoi impossible, réessayez.';
       return;
     }
@@ -8946,27 +10802,37 @@ function _bqxWirePhoto(photo, video) {
 }
 
 /* new product */
+handlers['bqx-templates'] = () => {
+  const T = window.KiwiStoreTemplates;
+  if (!T) return;
+  CAT().use(_bqxVenue());
+  T.open({ onApplied: () => _renderInventory() });
+};
+
 handlers['bqx-new'] = () => {
+  const copy = _bqxCopy();
   _bqxModal = modal({
     // The store's OWN name — this modal is reachable by every real boutique, and
     // a hardcoded demo tag put "MAISON MANSOUR" on a real client's screen.
     title: 'Nouveau produit', tag: 'INVENTAIRE · ' + _bqxTag(),
-    desc: 'Créez le produit, puis ajoutez ses variantes couleur × taille et leurs codes-barres.',
+    desc: copy.modalDesc,
     width: 520,
     body: `
-      <div class="kf-group"><label class="kf-label">Nom du produit</label><input class="kf-input" placeholder="Ex. Caftan brodé main" data-bqx-name /></div>
+      <div class="kf-group"><label class="kf-label">Nom du produit</label><input class="kf-input" placeholder="${_esc(copy.namePlaceholder)}" data-bqx-name /></div>
       <div class="kf-row">
         <div class="kf-group"><label class="kf-label">Catégorie</label><select class="kf-input" data-bqx-cat>${_catOptions(_bqxFilter !== 'all' ? _bqxFilter : '', true)}</select></div>
-        <div class="kf-group"><label class="kf-label">Type</label><select class="kf-input" data-bqx-kind>${_kindOptions('taille')}</select></div>
+        <div class="kf-group"><label class="kf-label">Type</label><select class="kf-input" data-bqx-kind>${_kindOptions()}</select></div>
       </div>
       <div class="kf-row">
-        <div class="kf-group"><label class="kf-label">Prix vente (MAD)</label><input class="kf-input" type="number" min="0" placeholder="1890" data-bqx-price /></div>
+        <div class="kf-group"><label class="kf-label">Prix vente (MAD)</label><input class="kf-input" type="number" min="0" placeholder="${_esc(copy.pricePlaceholder)}" data-bqx-price /></div>
         <div class="kf-group"><label class="kf-label">Coût d'achat (MAD)</label><input class="kf-input" type="number" min="0" placeholder="optionnel" data-bqx-cost /></div>
       </div>
+      ${_bqxAbField(null)}
       ${_bqxPhotoField('', '')}`,
     foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-new-save">Créer le produit</button>`,
   });
   _bqxWirePhoto('', '');
+  _bqxWireAb();
   setTimeout(() => { const i = document.querySelector('.kiwi-backdrop [data-bqx-name]'); if (i) i.focus(); }, 60);
 };
 handlers['bqx-new-save'] = () => {
@@ -8974,16 +10840,24 @@ handlers['bqx-new-save'] = () => {
   if (!b) return;
   const name = b.querySelector('[data-bqx-name]').value.trim();
   if (!name) { toast('Nom requis', { type: 'warn' }); return; }
+  /* Pas de défaut : tant que A ou B n'est pas choisie, rien n'est créé. Option
+     éteinte, la question n'est pas posée et rien n'est exigé. */
+  const ab = _bqxAbRead(b);
+  if (_bqxAbOn() && !ab) { toast('Choisissez la catégorie', { desc: 'Catégorie A ou Catégorie B.', type: 'warn' }); return; }
   const p = CAT().addProduct({
     name, categoryId: b.querySelector('[data-bqx-cat]').value || null,
     kind: b.querySelector('[data-bqx-kind]').value,
     priceMAD: parseInt(b.querySelector('[data-bqx-price]').value, 10) || 0,
     cost: parseInt(b.querySelector('[data-bqx-cost]').value, 10) || 0,
+    /* Option éteinte → `ab` est nul : addProduct retombe alors sur « achetée
+       ferme », son défaut, plutôt que de recevoir undefined.ownership. */
+    ownership: ab ? ab.ownership : 'outright',
+    consignor: ab ? ab.consignor : '',
     photo: _bqxPhoto,
     video: _bqxVideo,
   });
   if (_bqxModal) _bqxModal.close();
-  toast('Produit créé', { desc: 'Ajoutez maintenant ses variantes couleur × taille.', type: 'success' });
+  toast('Produit créé', { desc: _bqxCopy().varCreatedDesc, type: 'success' });
   setTimeout(() => _bqxOpenProduct(p.id), 260);
 };
 
@@ -9004,16 +10878,24 @@ handlers['bqx-prod-edit'] = (_el, arg) => {
         <div class="kf-group"><label class="kf-label">Prix vente (MAD)</label><input class="kf-input" type="number" min="0" value="${p.priceMAD}" data-bqx-eprice /></div>
         <div class="kf-group"><label class="kf-label">Coût d'achat (MAD)</label><input class="kf-input" type="number" min="0" value="${p.cost || 0}" data-bqx-ecost /></div>
       </div>
+      ${_bqxAbField(p)}
       ${_bqxSkuField(p.sku)}
       ${_bqxPhotoField(p.photo, p.video)}`,
     foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-prod-edit-save" data-arg="${arg}">Enregistrer</button>`,
   });
   _bqxWirePhoto(p.photo || '', p.video || '');
+  _bqxWireAb();
 };
 handlers['bqx-prod-edit-save'] = (_el, arg) => {
   const b = document.querySelector('.kiwi-backdrop');
   if (!b) return;
+  /* Une fiche ouverte porte déjà sa catégorie : rien de coché ne peut arriver
+     ici, mais si cela arrivait, on laisse la valeur en base plutôt que de la
+     réécrire au hasard — d'où les `undefined`. */
+  const ab = _bqxAbRead(b);
   CAT().updateProduct(arg, {
+    ownership: ab ? ab.ownership : undefined,
+    consignor: ab ? ab.consignor : undefined,
     name: b.querySelector('[data-bqx-ename]').value.trim() || undefined,
     categoryId: b.querySelector('[data-bqx-ecat]').value || null,
     kind: b.querySelector('[data-bqx-ekind]').value,
@@ -9091,7 +10973,7 @@ function _renderCategories() {
 
       <div class="kx-foot-hint">
         <div class="lh">Conseil</div>
-        <div class="rh">Les couleurs de catégorie apparaissent aussi en caisse (code 0002). Supprimer une catégorie déplace ses produits vers « Sans catégorie » ou une catégorie de votre choix.</div>
+        <div class="rh">Les couleurs de catégorie apparaissent aussi en caisse${_bqxTillHint()}. Supprimer une catégorie déplace ses produits vers « Sans catégorie » ou une catégorie de votre choix.</div>
       </div>
     `,
   });
@@ -9106,7 +10988,7 @@ handlers['bqx-cat-new'] = () => {
   _bqxModal = modal({
     title: 'Ajouter une catégorie', tag: 'RAYON', width: 480,
     body: `
-      <div class="kf-group"><label class="kf-label">Nom de la catégorie</label><input class="kf-input" placeholder="Ex. Caftans de mariée" data-bqx-cname /></div>
+      <div class="kf-group"><label class="kf-label">Nom de la catégorie</label><input class="kf-input" placeholder="${_esc(_bqxCopy().catPlaceholder)}" data-bqx-cname /></div>
       <div class="kf-group"><label class="kf-label">Couleur</label>
         <div class="bqx-cat-sw" data-bqx-cnewsw>${_TAGS.map((t, i) => `<button class="${i === 0 ? 'on' : ''}" style="background:${t.hex};width:24px;height:24px;" title="${t.name}" data-tone="${t.id}"></button>`).join('')}</div></div>`,
     foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-cat-new-save">Créer la catégorie</button>`,
@@ -9157,7 +11039,7 @@ handlers['bqx-cat-del'] = (_el, arg) => {
     title: 'Supprimer cette catégorie ?', width: 480,
     desc: `« ${c.name} » contient ${count} produit${count > 1 ? 's' : ''}. Choisissez où les déplacer.`,
     body: `<div class="kf-group"><label class="kf-label">Déplacer les produits vers</label>
-      <select class="kf-input" data-bqx-reassign><option value="">— Sans catégorie</option>${others.map((o) => `<option value="${o.id}">${_esc(o.name)}</option>`).join('')}</select></div>
+      <select class="kf-input" data-bqx-reassign><option value="">·Sans catégorie</option>${others.map((o) => `<option value="${o.id}">${_esc(o.name)}</option>`).join('')}</select></div>
       <div class="kx-warn-box danger"><div class="hd">Suppression</div><ul><li>La catégorie disparaît de la caisse et du dashboard.</li><li>Les produits sont conservés et déplacés, jamais supprimés.</li></ul></div>`,
     foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb danger" data-action="bqx-cat-del-ok" data-arg="${arg}">${_ICN.trash}Supprimer</button>`,
   });
@@ -9204,9 +11086,21 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   const { toast, modal, drawer, handlers } = window.Kiwi;
 
   /* ═══════════════════ Inline SVG icon set ═══════════════════ */
+  /* Material Symbols (Outlined, 400) recopiées depuis assets/icons/material/.
+   * Forme native : viewBox 0 -960 960 960, tracé plein piloté par `color`. */
+  const msym = (d, px) =>
+    `<svg width="${px}" height="${px}" viewBox="0 -960 960 960" fill="currentColor"><path d="${d}"/></svg>`;
+  /* redeem.svg */
+  const D_REDEEM = 'M160-280v80h640v-80H160Zm0-440h88q-5-9-6.5-19t-1.5-21q0-50 35-85t85-35q30 0 55.5 15.5T460-826l20 26 20-26q18-24 44-39t56-15q50 0 85 35t35 85q0 11-1.5 21t-6.5 19h88q33 0 56.5 23.5T880-640v440q0 33-23.5 56.5T800-120H160q-33 0-56.5-23.5T80-200v-440q0-33 23.5-56.5T160-720Zm0 320h640v-240H596l84 114-64 46-136-184-136 184-64-46 82-114H160v240Zm228.5-331.5Q400-743 400-760t-11.5-28.5Q377-800 360-800t-28.5 11.5Q320-777 320-760t11.5 28.5Q343-720 360-720t28.5-11.5ZM600-720q17 0 28.5-11.5T640-760q0-17-11.5-28.5T600-800q-17 0-28.5 11.5T560-760q0 17 11.5 28.5T600-720Z';
+
   const SVG = {
     discount: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>',
-    code:     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
+    /* Les trois canaux de remboursement se disaient avec deux dessins pour trois
+     * sens : le « $ » servait à la fois la carte et les espèces, et les chevrons
+     * de code servaient le bon d'achat. Un canal, une icône — Material Symbols,
+     * recopiées depuis assets/icons/material/ (nom du fichier en commentaire). */
+    voucher:  msym(D_REDEEM, 18),
+    voucherSm: msym(D_REDEEM, 13),  /* pied de modale : la rangée est en 13 */
     bundle:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
     tax:      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
     bell:     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>',
@@ -9220,8 +11114,11 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     check:    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>',
     x:        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
     swap:     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>',
-    wa:       '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>',
-    coin:     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M9 9.5c0-1.5 1.5-2 3-2s3 .5 3 2-1 1.8-3 2.5-3 1-3 2.5 1.5 2 3 2 3-.5 3-2"/></svg>',
+    /* Seul usage : la tuile « Notifier WhatsApp », à côté de card et voucher en 18.
+     * Marque tierce — elle reste au trait, elle ne peut pas venir de Material. */
+    wa:       '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>',
+    card:     '<svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor"><path d="M880-720v480q0 33-23.5 56.5T800-160H160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720Zm-720 80h640v-80H160v80Zm0 160v240h640v-240H160Zm0 240v-480 480Z"/></svg>',  /* credit_card.svg */
+    cash:     '<svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor"><path d="M560-440q-50 0-85-35t-35-85q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35ZM280-320q-33 0-56.5-23.5T200-400v-320q0-33 23.5-56.5T280-800h560q33 0 56.5 23.5T920-720v320q0 33-23.5 56.5T840-320H280Zm80-80h400q0-33 23.5-56.5T840-480v-160q-33 0-56.5-23.5T760-720H360q0 33-23.5 56.5T280-640v160q33 0 56.5 23.5T360-400Zm440 240H120q-33 0-56.5-23.5T40-240v-440h80v440h680v80ZM280-400v-320 320Z"/></svg>',  /* payments.svg */
     flag:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>',
     cal:      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
   };
@@ -9241,7 +11138,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       { id: 'P-2812', name: 'Code MAROC10',                  type: 'code',     kind: 'Code',       value: '−10 %',         redem:  87, uplift: '+11,2 %', aov: '+4 %',  expiry: '21 j',   live: true },
       { id: 'P-2813', name: 'Lot 3-pour-2 babouches',        type: 'bundle',   kind: 'Lot',        value: '3 pour 2',      redem:  46, uplift: '+22,8 %', aov: '+31 %', expiry: '6 j',    live: true },
       { id: 'P-2814', name: 'Tax-free Touristes UE',         type: 'tax',      kind: 'Segment',    value: 'TVA −20 %',     redem: 184, uplift: '+34,1 %', aov: '+24 %', expiry: 'Permanent', live: true },
-      { id: 'P-2815', name: 'Black Friday avant-première',   type: 'discount', kind: '−25 %',     value: '−25 %',         redem:   0, uplift: '—', aov: '—',     expiry: 'J−18',   scheduled: true },
+      { id: 'P-2815', name: 'Black Friday avant-première',   type: 'discount', kind: '−25 %',     value: '−25 %',         redem:   0, uplift: '·', aov: '·',     expiry: 'J−18',   scheduled: true },
     ];
 
     const segments = [
@@ -9264,10 +11161,10 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const totalUplift = 47820;
 
     window.Kiwi.appPage('promos', {
-      title: 'Promotions & offres',
+      title: 'Promotions',
       subtitle: 'Maison Mansour · Gueliz · 4 campagnes en direct · 1 planifiée',
       body: `
-        <div class="p-hero" style="background: linear-gradient(135deg, var(--riad), var(--atlas));">
+        <div class="p-hero" style="background: linear-gradient(135deg, var(--brand-deep), var(--atlas));">
           <div class="l">UPLIFT REVENUE · CAMPAGNES ACTIVES</div>
           <div class="big">+${fmtInt(totalUplift)} <span style="font-size:18px; opacity:0.7;">MAD</span></div>
           <div class="sub">${fmtInt(totalRedem)} échanges aujourd'hui · ${active.filter(a => a.live).length} promos en cours · Tax-free Touristes UE = top performer</div>
@@ -9323,7 +11220,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
                 </td>
                 <td><span class="chip ${p.scheduled ? 'pend' : 'ok'}" style="font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.04em;">${p.kind.toUpperCase()}</span></td>
                 <td class="mono right">${p.value}</td>
-                <td class="mono right">${p.redem === 0 ? '—' : fmtInt(p.redem)}</td>
+                <td class="mono right">${p.redem === 0 ? '·' : fmtInt(p.redem)}</td>
                 <td class="mono right" style="color: ${p.uplift.startsWith('+') ? 'var(--atlas)' : 'var(--n-500)'}; font-weight: 600;">${p.uplift}</td>
                 <td class="mono right" style="color: var(--n-500);">${p.aov}</td>
                 <td><span class="chip ${p.expiry === 'Permanent' ? 'neutral' : p.scheduled ? 'pend' : 'ok'}" style="font-family: var(--mono); font-size: 10.5px;">${p.expiry}</span></td>
@@ -9466,8 +11363,8 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
           <div style="background: var(--paper-soft); border: 1px solid var(--n-200); border-radius: 14px; padding: 18px; margin-top: 10px;">
             <div style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: var(--n-500); text-transform: uppercase; margin-bottom: 8px;">APERÇU CAMPAGNE</div>
             <dl class="tx-detail-grid" style="margin: 0;">
-              <dt>Type</dt><dd>${typLabel || '—'}</dd>
-              <dt>Valeur</dt><dd>${state.value || '—'}</dd>
+              <dt>Type</dt><dd>${typLabel || '·'}</dd>
+              <dt>Valeur</dt><dd>${state.value || '·'}</dd>
               <dt>Audience</dt><dd>${audLabel}</dd>
               <dt>Période</dt><dd>${state.start} → ${state.end}</dd>
               <dt>Estim. uplift</dt><dd style="color: var(--atlas);">+12 à +28 % AOV</dd>
@@ -9510,7 +11407,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     modal({
       tag: 'CONFIRMATION',
       title: 'Mettre en pause cette promo ?',
-      desc: `Aucun client ne pourra plus l'utiliser tant qu'elle n'est pas réactivée. ID interne : ${id || '—'}.`,
+      desc: `Aucun client ne pourra plus l'utiliser tant qu'elle n'est pas réactivée. ID interne : ${id || '·'}.`,
       width: 460,
       foot: `<button class="kb ghost" data-cancel>Annuler</button><button class="kb danger" data-confirm>${SVG.pause} Pauser la promo</button>`,
     }).el.addEventListener('click', (e) => {
@@ -9566,8 +11463,33 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
    * Retours & échanges. Width 980. Pending list, return-policy editor, fraud
    * watch, refund issuance row.
    * ─────────────────────────────────────────────────────────────────────────── */
+  let liveReturns = [];
+  let liveReturnsCloud = null;
+  let liveReturnsSlug = '';
+  function realReturnsStore() {
+    try { return !!window.KiwiEnv?.isReal?.() || !!window.KiwiVenue?.isCustom?.(); } catch (_) { return false; }
+  }
+  function bindLiveReturns() {
+    if (!realReturnsStore() || !window.KiwiCloudDoc) return;
+    const slug = window.KiwiCloudDoc.currentSlug();
+    if (slug !== liveReturnsSlug) { liveReturnsSlug = slug; liveReturns = []; }
+    if (!liveReturnsCloud) {
+      liveReturnsCloud = window.KiwiCloudDoc.attach({
+        feature: 'returns', slug: () => window.KiwiCloudDoc.currentSlug(),
+        read: () => ({ list: liveReturns }),
+        write: (doc) => {
+          liveReturns = Array.isArray(doc && doc.list) ? doc.list : [];
+          if (document.querySelector('[data-live-returns]')) handlers['nav-returns']();
+        },
+        isEmpty: (doc) => !doc || !Array.isArray(doc.list) || !doc.list.length,
+      });
+    }
+    liveReturnsCloud.bind();
+  }
   handlers['nav-returns'] = () => {
-    const pending = [
+    const real = realReturnsStore();
+    bindLiveReturns();
+    const demoPending = [
       { id: 'R-7821', d: '24/04', name: 'Caftan brodé taille S',         amt: 2450,  reason: 'Taille',                client: 'Anna M. (DE)',     status: 'pend',  emoji: 'C' },
       { id: 'R-7822', d: '23/04', name: 'Babouches cuir caramel',         amt: 380,   reason: 'Défaut · couture',      client: 'Sophie L. (FR)',   status: 'pend',  emoji: 'B' },
       { id: 'R-7823', d: '23/04', name: 'Tapis berbère 1,2 × 1,8 m',     amt: 4200,  reason: 'Cadeau non désiré',     client: 'Karen B. (US)',    status: 'pend',  emoji: 'T' },
@@ -9575,26 +11497,41 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       { id: 'R-7825', d: '22/04', name: 'Coussin tissé Kilim',            amt: 290,   reason: 'Défaut · tache',        client: 'Hassan J. (MA)',   status: 'pend',  emoji: 'CO' },
       { id: 'R-7826', d: '21/04', name: 'Bracelet argent berbère',       amt: 1200,  reason: 'Taille',                client: 'Karima O. (MA)',   status: 'neutral', emoji: 'BR' },
     ];
+    const pending = real ? liveReturns.flatMap((ret) => {
+      const items = Array.isArray(ret && ret.items) ? ret.items : [];
+      return items.map((item, i) => ({
+        id: String(ret.id || 'RET') + (items.length > 1 ? '-' + (i + 1) : ''),
+        d: new Date(Number(ret.ts) || Date.now()).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+        name: `${Number(item.qty) || 1} × ${item.name || 'Article'}${item.size ? ' · ' + item.size : ''}`,
+        amt: Number(item.amount) || Number(ret.amount) || 0,
+        reason: ret.reason || (ret.kind === 'echange' ? 'Échange' : 'Avoir'),
+        /* Le type de retour est une donnée, pas une chaîne d'affichage. La
+           pastille se lisait sur le motif : un échange dont le motif n'était pas
+           littéralement « Echange » s'affichait « Retourné ». On garde le kind. */
+        kind: ret.kind || 'avoir',
+        client: ret.client || 'Cliente de passage', status: 'ok', emoji: '', actor: ret.actor || 'Caisse',
+      }));
+    }).sort((a, b) => String(b.id).localeCompare(String(a.id))) : demoPending;
 
-    const flagged = [
+    const flagged = real ? [] : [
       { name: 'Diana K. (US)',  reason: '4 retours en 28 j · 2 sur articles soldés', amt: '4 280 MAD', risk: 'Élevé' },
       { name: 'Sofia A. (FR)',  reason: '3 retours en 30 j · pattern post-Instagram', amt: '2 940 MAD', risk: 'Modéré' },
     ];
 
     window.Kiwi.appPage('returns', {
       title: 'Retours & échanges',
-      subtitle: 'Maison Mansour · Gueliz · 5 demandes en attente · 2 clients flaggés',
+      subtitle: real ? `${pending.length} article${pending.length > 1 ? 's' : ''} retourné${pending.length > 1 ? 's' : ''}` : 'Maison Mansour · Gueliz · 5 demandes en attente · 2 clients flaggés',
       body: `
-        <div class="p-hero" style="background: linear-gradient(135deg, var(--atlas), var(--riad));">
-          <div class="l">FENÊTRE DE RETOUR · 14 JOURS</div>
-          <div class="big">${pending.filter(p => p.status === 'pend').length} <span style="font-size:18px; opacity:0.7;">en attente</span></div>
-          <div class="sub">Taux de retour 30 j : 4,8 % · taux d'échange 30 j : 12,1 % · politique modifiable plus bas</div>
+        <div class="p-hero" data-live-returns style="background: linear-gradient(135deg, var(--atlas), var(--riad));">
+          <div class="l">FENÊTRE DE RETOUR · ${real ? '7' : '14'} JOURS</div>
+          <div class="big">${real ? pending.length : pending.filter(p => p.status === 'pend').length} <span style="font-size:18px; opacity:0.7;">${real ? 'articles retournés' : 'en attente'}</span></div>
+          <div class="sub">${real ? 'Retours et échanges enregistrés depuis la caisse de cette boutique.' : "Taux de retour 30 j : 4,8 % · taux d'échange 30 j : 12,1 % · politique modifiable plus bas"}</div>
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px; flex-wrap: wrap;">
           <div>
-            <div style="font-size: 11px; color: var(--n-500); letter-spacing: 0.1em; font-family: var(--mono); text-transform: uppercase;">DEMANDES EN ATTENTE</div>
-            <div style="font-size: 12px; color: var(--n-500); margin-top: 4px;">Approuvez, refusez ou échangez. Cliquez "Détail" pour voir l'historique client complet.</div>
+            <div style="font-size: 11px; color: var(--n-500); letter-spacing: 0.1em; font-family: var(--mono); text-transform: uppercase;">${real ? 'ARTICLES RETOURNÉS' : 'DEMANDES EN ATTENTE'}</div>
+            <div style="font-size: 12px; color: var(--n-500); margin-top: 4px;">${real ? 'Article, montant, motif, client et employé enregistrés à la caisse.' : 'Approuvez, refusez ou échangez. Cliquez "Détail" pour voir l\'historique client complet.'}</div>
           </div>
           <div style="display: flex; gap: 8px;">
             <button class="kb ghost" data-action="ret-export"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M5 10l7 7 7-7M5 21h14"/></svg>Exporter</button>
@@ -9604,17 +11541,17 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
 
         <div class="p-card" style="padding: 8px 18px 12px;">
           ${pending.map(r => `
-            <div class="b-ret-row" data-action="ret-detail" data-arg="${r.id}">
+            <div class="b-ret-row" ${real ? '' : `data-action="ret-detail" data-arg="${r.id}"`}>
               <div class="b-ret-id">${r.id}<br><span style="opacity:0.7; font-size: 10px;">${r.d}</span></div>
               <div class="b-ret-thumb">${SVG.box}</div>
               <div class="b-ret-body">
                 <div class="n">${r.name}</div>
                 <div class="reason">Raison : ${r.reason}</div>
-                <div class="who">${r.client}</div>
+                <div class="who">${r.client}${real ? ' · ' + r.actor : ''}</div>
               </div>
               <div class="b-ret-amt">${fmtMAD(r.amt, 0)} MAD</div>
               <div style="display: flex; gap: 6px; align-items: center;">
-                <span class="chip ${r.status}" style="font-size: 10.5px;">${r.status === 'pend' ? 'En attente' : r.status === 'ok' ? 'Approuvé' : r.status === 'ref' ? 'Refusé' : 'Échangé'}</span>
+                <span class="chip ${r.status}" style="font-size: 10.5px;">${real ? (r.kind === 'echange' ? 'Échangé' : 'Retourné') : r.status === 'pend' ? 'En attente' : r.status === 'ok' ? 'Approuvé' : r.status === 'ref' ? 'Refusé' : 'Échangé'}</span>
                 ${r.status === 'pend' ? `
                   <button class="kb ghost" style="padding: 5px 10px; font-size: 11px;" data-action="ret-approve" data-arg="${r.id}" data-bubble="stop" title="Approuver">${SVG.check}</button>
                   <button class="kb ghost" style="padding: 5px 10px; font-size: 11px; color: var(--danger);" data-action="ret-refuse" data-arg="${r.id}" data-bubble="stop" title="Refuser">${SVG.x}</button>
@@ -9623,6 +11560,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
               </div>
             </div>
           `).join('')}
+          ${real && !pending.length ? '<div style="padding:24px 4px;color:var(--n-500);">Aucun retour enregistré pour cette boutique.</div>' : ''}
         </div>
 
         <div class="p-grid-2" style="margin-top: 18px;">
@@ -9635,7 +11573,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
             <div class="b-ret-policy" id="retPolicy">
               <div class="field">
                 <div class="lbl">FENÊTRE DE RETOUR</div>
-                <input type="number" value="14" min="0" max="90" step="1"/>
+                <input type="number" value="${real ? 7 : 14}" min="0" max="90" step="1"/>
                 <div style="font-size: 11px; color: var(--n-500); margin-top: 4px;">jours après l'achat</div>
               </div>
               <div class="field">
@@ -9691,14 +11629,14 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
           <div style="font-size: 12.5px; color: var(--n-500); margin-bottom: 12px; line-height: 1.45;">Choisissez le canal, la commande d'origine sera automatiquement liée pour la conformité.</div>
           <div class="p-grid-3">
             <button class="kb ghost" style="padding: 14px; flex-direction: column; gap: 8px; min-height: 76px; align-items: center; justify-content: center;" data-action="ret-refund-original">
-              ${SVG.coin}
+              ${SVG.card}
               <div style="text-align: center;">
                 <div style="font-weight: 600; font-size: 13px;">Carte d'origine</div>
                 <div style="font-size: 11px; color: var(--n-500); margin-top: 2px;">Visa / Mastercard · 1-3 jours</div>
               </div>
             </button>
             <button class="kb ghost" style="padding: 14px; flex-direction: column; gap: 8px; min-height: 76px; align-items: center; justify-content: center;" data-action="ret-refund-credit">
-              ${SVG.code}
+              ${SVG.voucher}
               <div style="text-align: center;">
                 <div style="font-weight: 600; font-size: 13px;">Crédit boutique</div>
                 <div style="font-size: 11px; color: var(--n-500); margin-top: 2px;">Bon valable 12 mois</div>
@@ -9722,7 +11660,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   handlers['ret-detail'] = (id) => {
     const samplePhotos = ['mint-soft', 'rgba(217,154,43,0.16)', 'var(--paper-soft)', 'rgba(11,110,79,0.10)'];
     modal({
-      tag: 'DEMANDE DE RETOUR · ' + (id || '—'),
+      tag: 'DEMANDE DE RETOUR · ' + (id || '·'),
       title: 'Caftan brodé taille S',
       desc: 'Anna M. (DE) · achat le 17/04/2026 · ticket #T-21847',
       width: 640,
@@ -9763,7 +11701,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       `,
       foot: `
         <button class="kb ghost" data-action="ret-refuse" data-arg="${id || ''}" data-bubble="stop" style="color: var(--danger);">${SVG.x} Refuser</button>
-        <button class="kb ghost" data-action="ret-refund-credit" data-bubble="stop">${SVG.code} Crédit boutique</button>
+        <button class="kb ghost" data-action="ret-refund-credit" data-bubble="stop">${SVG.voucherSm} Crédit boutique</button>
         <button class="kb ghost" data-action="ret-exchange" data-arg="${id || ''}" data-bubble="stop">${SVG.swap} Échanger</button>
         <button class="kb atlas" data-action="ret-approve" data-arg="${id || ''}" data-bubble="stop">${SVG.check} Approuver remboursement</button>
       `,
@@ -9774,20 +11712,20 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     modal({
       tag: 'CHOISIR LE CANAL',
       title: 'Comment rembourser ?',
-      desc: `Demande ${id || '—'} · 2 450 MAD · Anna M. (DE)`,
+      desc: `Demande ${id || '·'} · 2 450 MAD · Anna M. (DE)`,
       width: 540,
       body: `
         <div style="display: grid; gap: 10px;">
           <div class="wiz-choice" data-channel="card">
-            <div class="wc-ic">${SVG.coin}</div>
+            <div class="wc-ic">${SVG.card}</div>
             <div><div class="wc-t">Carte d'origine · Visa ••4291</div><div class="wc-d">Crédité en 1 à 3 jours ouvrés. Aucun frais.</div></div>
           </div>
           <div class="wiz-choice" data-channel="credit">
-            <div class="wc-ic">${SVG.code}</div>
+            <div class="wc-ic">${SVG.voucher}</div>
             <div><div class="wc-t">Crédit boutique</div><div class="wc-d">Bon valable 12 mois sur tous les articles. +10 % offerts en bonus.</div></div>
           </div>
           <div class="wiz-choice" data-channel="cash">
-            <div class="wc-ic">${SVG.coin}</div>
+            <div class="wc-ic">${SVG.cash}</div>
             <div><div class="wc-t">Espèces / virement</div><div class="wc-d">Disponible immédiatement à la caisse ou sous 48 h par virement.</div></div>
           </div>
         </div>
@@ -9841,7 +11779,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       ['Caftan brodé Riad · M',     '3 200 MAD', '+ 750 MAD'],
     ];
     modal({
-      tag: 'ÉCHANGE · ' + (id || '—'),
+      tag: 'ÉCHANGE · ' + (id || '·'),
       title: 'Choisir un article de remplacement',
       desc: 'Article retourné : Caftan brodé taille S · 2 450 MAD',
       width: 580,
@@ -9977,17 +11915,11 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
 
   /* ─── Helpers ─── */
   const fmt = (n) => Math.round(n).toLocaleString('fr-FR').replace(/,/g, ' ');
-  const SVG = (p, sz = 14) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  const SVG = (name, sz = 14) => `<i data-lucide="${name}" style="width:${sz}px;height:${sz}px" aria-hidden="true"></i>`;
   const ICN = {
-    plus:    SVG('<path d="M12 5v14M5 12h14"/>'),
-    cal:     SVG('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'),
-    user:    SVG('<circle cx="12" cy="8" r="4"/><path d="M4 22v-2a4 4 0 014-4h8a4 4 0 014 4v2"/>'),
-    clock:   SVG('<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>'),
-    sparkle: SVG('<path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3zM18 14l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z"/>'),
-    pkg:     SVG('<path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/>'),
-    edit:    SVG('<path d="M12 20h9M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4 12.5-12.5z"/>'),
-    trash:   SVG('<path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>'),
-    bell:    SVG('<path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/>'),
+    plus: SVG('plus'), cal: SVG('calendar'), user: SVG('user'),
+    clock: SVG('clock'), sparkle: SVG('sparkles'), pkg: SVG('package'),
+    edit: SVG('pencil'), trash: SVG('trash-2'), bell: SVG('bell')
   };
   const chip = (txt, cls = 'ok') => `<span class="chip ${cls}">${txt}</span>`;
   const riskChip = (r) => r === 'low' ? chip('Faible', 'ok') : r === 'mid' ? chip('Modéré', 'pend') : chip('Élevé', 'ref');
@@ -10100,7 +12032,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       title: 'Calendrier rendez-vous',
       subtitle: 'Spa Bahia · Hivernage · 3 praticiennes',
       body: `
-        <div class="p-hero" style="background: linear-gradient(135deg, var(--atlas), var(--riad));">
+        <div class="p-hero" style="background: linear-gradient(135deg, var(--atlas), var(--brand-deep));">
           <div class="l">SEMAINE DU 27 AVRIL · MERCREDI EN COURS</div>
           <div class="big">${todaysCount} <span style="font-size:18px; opacity:0.7;">RDV aujourd'hui</span></div>
           <div class="sub">3 praticiennes · 12 heures d'ouverture · liste d'attente : ${WAIT.length} clientes</div>
@@ -10116,9 +12048,9 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
 
         <!-- Toolbar -->
         <div class="p-toolbar" style="margin: 4px 0 14px;">
-          <div class="p-search">${SVG('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>')}Rechercher cliente ou téléphone…</div>
-          <button class="kb ghost" data-action="appt-filter">${SVG('<path d="M4 6h16M7 12h10M10 18h4"/>',13)}Filtrer</button>
-          <button class="kb ghost" data-action="appt-export">${SVG('<path d="M12 3v12M5 10l7 7 7-7M5 21h14"/>',13)}Exporter</button>
+          <div class="p-search">${SVG('search')}Rechercher cliente ou téléphone…</div>
+          <button class="kb ghost" data-action="appt-filter">${SVG('list-filter',13)}Filtrer</button>
+          <button class="kb ghost" data-action="appt-export">${SVG('arrow-down-to-line',13)}Exporter</button>
           <button class="kb atlas" data-action="appt-new">${ICN.plus}Nouveau RDV</button>
         </div>
 
@@ -10374,8 +12306,8 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
             <div class="s-rec-line"><span>Praticienne</span><b>${pr.name}</b></div>
             <div class="s-rec-line"><span>Date · heure</span><b>${dy} · ${tm}</b></div>
             <div class="s-rec-line"><span>Salle</span><b>${sv.room}</b></div>
-            <div class="s-rec-line"><span>Cliente</span><b>${picked.client?.n || '—'}</b></div>
-            <div class="s-rec-line"><span>Téléphone</span><b>${picked.client?.p || '—'}</b></div>
+            <div class="s-rec-line"><span>Cliente</span><b>${picked.client?.n || '·'}</b></div>
+            <div class="s-rec-line"><span>Téléphone</span><b>${picked.client?.p || '·'}</b></div>
             <div class="s-rec-total"><span>Total</span><b>${fmt(sv.price)} MAD</b></div>
           </div>
           <label class="s-rec-check"><input type="checkbox" id="wiz-deposit"><span>Demander un acompte de 30 %</span></label>
@@ -10495,7 +12427,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
                 <td class="mono right">${fmt(s.price)} MAD</td>
                 <td><span class="s-room-pill">${s.room}</span></td>
                 <td><span class="s-skill ${s.skill}">${s.skill}</span></td>
-                <td>${s.contras.length ? s.contras.map(c => `<span class="chip pend" style="margin-right:4px;">${c}</span>`).join('') : '<span style="color:var(--n-400);">—</span>'}</td>
+                <td>${s.contras.length ? s.contras.map(c => `<span class="chip pend" style="margin-right:4px;">${c}</span>`).join('') : '<span style="color: var(--n-500);">·</span>'}</td>
                 <td class="mono right"><b>#${s.sales + 1}</b></td>
                 <td><button class="kb ghost" style="padding:4px 8px; font-size:11px;" data-action="svc-edit" data-arg="${SERVICES.indexOf(s)}">${ICN.edit}</button></td>
               </tr>
@@ -10509,7 +12441,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       title: 'Services & forfaits',
       subtitle: 'Spa Bahia · catalogue complet · 17 prestations',
       body: `
-        <div class="p-hero" style="background: linear-gradient(135deg, var(--atlas), var(--riad));">
+        <div class="p-hero" style="background: linear-gradient(135deg, var(--atlas), var(--brand-deep));">
           <div class="l">CATALOGUE COMPLET</div>
           <div class="big">${SERVICES.length + PACKAGES.length + CURES.length} <span style="font-size:18px; opacity:0.7;">prestations actives</span></div>
           <div class="sub">12 services à la carte · 4 forfaits journée · 3 cures · ticket moyen 612 MAD</div>
@@ -10527,9 +12459,9 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
 
         <!-- Toolbar -->
         <div class="p-toolbar" style="margin: 4px 0 14px;">
-          <div class="p-search">${SVG('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>')}Rechercher un service…</div>
+          <div class="p-search">${SVG('search')}Rechercher un service…</div>
           <button class="kb ghost" data-action="svc-season">${ICN.cal}Programmation saisonnière</button>
-          <button class="kb ghost" data-action="svc-export">${SVG('<path d="M12 3v12M5 10l7 7 7-7M5 21h14"/>',13)}Exporter</button>
+          <button class="kb ghost" data-action="svc-export">${SVG('arrow-down-to-line',13)}Exporter</button>
           <button class="kb atlas" data-action="svc-new">${ICN.plus}Nouveau service</button>
         </div>
 
@@ -10762,7 +12694,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     .pr-card .top { display: grid; grid-template-columns: 80px 1fr auto; gap: 14px; align-items: flex-start; margin-bottom: 12px; }
     .pr-blob { width: 80px; height: 80px; border-radius: 22px; display: flex; align-items: center; justify-content: center; color: var(--paper); font-weight: 600; font-size: 26px; letter-spacing: -0.04em; position: relative; overflow: hidden; }
     .pr-blob::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 28% 20%, rgba(255,255,255,0.28), transparent 55%); border-radius: 22px; }
-    .pr-blob.a { background: linear-gradient(135deg, var(--atlas), var(--riad)); }
+    .pr-blob.a { background: linear-gradient(135deg, var(--atlas), var(--brand-deep)); }
     .pr-blob.b { background: linear-gradient(135deg, #D99A2B, #8A6210); }
     .pr-blob.c { background: linear-gradient(135deg, var(--atlas-700, #054C36), var(--atlas)); }
     .pr-card .nm { font-weight: 600; font-size: 16px; letter-spacing: -0.015em; }
@@ -10774,7 +12706,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     .pr-bio { font-size: 12.5px; color: var(--n-600); line-height: 1.5; margin: 4px 0 12px; }
     .pr-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
     .pr-chip { font-size: 11px; padding: 3px 9px; border-radius: 999px; background: var(--surface); border: 1px solid var(--n-200); color: var(--n-700); font-weight: 500; }
-    html[data-theme="dark"] .pr-chip { background: var(--paper); }
+    html[data-theme="dark"] .pr-chip { background: var(--inverse-surface); }
     .pr-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 12px 0; border-top: 1px solid var(--n-200); border-bottom: 1px solid var(--n-200); margin-bottom: 12px; }
     .pr-kpis .k { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--n-500); font-family: var(--mono); }
     .pr-kpis .v { font-family: var(--mono); font-weight: 600; font-size: 14px; margin-top: 3px; letter-spacing: -0.01em; font-feature-settings: "tnum" 1; }
@@ -10795,12 +12727,12 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     .pr-cert-stat.ok { background: #E3F7EC; color: var(--atlas-700, #054C36); }
     .pr-cert-stat.warn { background: var(--warn-soft); color: var(--warn-ink); }
     .pr-cert-stat.exp { background: #FDE8E4; color: #9B2F22; }
-    .pr-calc-out { background: linear-gradient(135deg, var(--atlas), var(--riad)); color: var(--paper); border-radius: 14px; padding: 18px; margin-top: 14px; }
+    .pr-calc-out { background: linear-gradient(135deg, var(--atlas), var(--brand-deep)); color: var(--inverse-ink); border-radius: 14px; padding: 18px; margin-top: 14px; }
     .pr-calc-out .l { font-size: 10.5px; font-family: var(--mono); letter-spacing: 0.1em; color: var(--mint); text-transform: uppercase; }
     .pr-calc-out .v { font-size: 32px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px; font-feature-settings: "tnum" 1; }
     .pr-calc-out .br { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(125,242,176,0.18); font-size: 12px; }
     .pr-calc-out .br span { color: #c6ead4; font-family: var(--mono); }
-    .pr-calc-out .br b { color: var(--paper); font-family: var(--mono); font-weight: 600; }
+    .pr-calc-out .br b { color: var(--inverse-ink); font-family: var(--mono); font-weight: 600; }
     `;
     document.head.appendChild(style);
   }
@@ -10819,7 +12751,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       ],
       commission: 25, rdv: 84, revenue: 38600, nps: 92, retention: 78,
       week: ['busy', 'full', 'busy', 'full', 'full', 'off', 'off'],
-      hours: ['10', '8', '9', '8', '8', '—', '—'],
+      hours: ['10', '8', '9', '8', '8', '·', '·'],
     },
     {
       id: 'SB', cls: 'b', name: 'Salma Benkirane', role: 'Esthéticienne certifiée · 5 ans',
@@ -10833,7 +12765,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       ],
       commission: 22, rdv: 72, revenue: 28200, nps: 88, retention: 71,
       week: ['busy', 'busy', 'full', 'busy', 'busy', 'full', 'off'],
-      hours: ['7', '7', '9', '8', '7', '9', '—'],
+      hours: ['7', '7', '9', '8', '7', '9', '·'],
     },
     {
       id: 'YB', cls: 'c', name: 'Yasmine Bouchikhi', role: 'Praticienne junior · 2 ans',
@@ -10847,7 +12779,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       ],
       commission: 18, rdv: 56, revenue: 18400, nps: 84, retention: 62,
       week: ['off', 'busy', 'busy', 'full', 'busy', 'full', 'busy'],
-      hours: ['—', '7', '7', '8', '7', '8', '6'],
+      hours: ['·', '7', '7', '8', '7', '8', '6'],
     },
   ];
 
@@ -10881,7 +12813,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
 
         <div class="pr-week">
           ${p.week.map((s, i) => `
-            <div class="pr-day ${s}"><div class="d">${dows[i]}</div><div class="h">${p.hours[i] === '—' ? 'off' : p.hours[i] + 'h'}</div></div>
+            <div class="pr-day ${s}"><div class="d">${dows[i]}</div><div class="h">${p.hours[i] === '·' ? 'off' : p.hours[i] + 'h'}</div></div>
           `).join('')}
         </div>
 
@@ -11037,12 +12969,12 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         </div>
         <div class="pr-calc-out" id="pr-calc-out">
           <div class="l">COMMISSION NETTE · APRÈS CNSS</div>
-          <div class="v" id="pr-calc-v">— MAD</div>
+          <div class="v" id="pr-calc-v">·MAD</div>
           <div class="br">
-            <div><span>CA brut généré</span><br><b id="pr-calc-gross">— MAD</b></div>
-            <div><span>Commission brute</span><br><b id="pr-calc-com">— MAD</b></div>
-            <div><span>CNSS (4,48%)</span><br><b id="pr-calc-cnss">— MAD</b></div>
-            <div><span>Taux appliqué</span><br><b id="pr-calc-rate">—%</b></div>
+            <div><span>CA brut généré</span><br><b id="pr-calc-gross">·MAD</b></div>
+            <div><span>Commission brute</span><br><b id="pr-calc-com">·MAD</b></div>
+            <div><span>CNSS (4,48%)</span><br><b id="pr-calc-cnss">·MAD</b></div>
+            <div><span>Taux appliqué</span><br><b id="pr-calc-rate">·%</b></div>
           </div>
         </div>
       `,
@@ -11274,12 +13206,18 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     .sc-history-row .pr { font-family: var(--mono); font-weight: 600; text-align: right; font-feature-settings: "tnum" 1; }
     .sc-history-row .pra { font-size: 11.5px; color: var(--n-500); }
 
-    .sc-gift { background: linear-gradient(135deg, var(--ink), var(--ink-soft)); color: var(--paper); border-radius: 14px; padding: 18px; margin-bottom: 12px; position: relative; overflow: hidden; }
+    .sc-gift { background: linear-gradient(135deg, var(--inverse-surface), #15201A); color: var(--inverse-ink); border-radius: 14px; padding: 18px; margin-bottom: 12px; position: relative; overflow: hidden; }
     .sc-gift::after { content: ""; position: absolute; right: -50px; top: -50px; width: 160px; height: 160px; background: radial-gradient(circle, var(--mint), transparent 60%); opacity: 0.18; pointer-events: none; }
     .sc-gift .l { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em; color: var(--mint); }
     .sc-gift .v { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; margin-top: 4px; font-feature-settings: "tnum" 1; }
     .sc-gift .s { font-size: 12px; color: #c6ead4; margin-top: 4px; }
     .sc-gift .ac { display: flex; gap: 8px; margin-top: 12px; position: relative; z-index: 1; }
+    /* Climat sombre : la carte cadeau ne peut plus « descendre » vers le noir·
+     * la page l'est déjà, et l'arrivée opaque #15201A pose un bloc mat au milieu
+     * d'un panneau translucide. Elle monte à la place, comme tous les inverses
+     * de ce climat. En clair la règle de base reste la bonne : vert profond vers
+     * presque-noir, texte bone par-dessus. */
+    html[data-theme="dark"] .sc-gift { background: linear-gradient(135deg, var(--inverse-surface), var(--inverse-line)); }
 
     .sc-amounts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
     .sc-amount { padding: 12px 8px; background: var(--surface); border: 1px solid var(--n-200); border-radius: 10px; text-align: center; cursor: pointer; transition: transform 150ms, opacity 150ms, background-color 150ms, border-color 150ms, color 150ms, box-shadow 150ms; font-family: var(--mono); font-size: 13px; font-weight: 500; }
@@ -11375,7 +13313,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       <tr data-spa-row data-spa-id="${c.id}" data-spa-tier="${c.tier}" data-spa-new="${isNew(c) ? 1 : 0}" data-spa-fid="${isFidele(c) ? 1 : 0}" data-spa-vip="${isVIP(c) ? 1 : 0}" data-spa-bday="${c.bday ? 1 : 0}">
         <td><span class="sc-flag ${c.flag}"></span><b>${c.fn} ${c.ln}</b>${bdayChip}</td>
         <td style="color:var(--n-600);">${c.last}</td>
-        <td class="mono right">${fmtMAD(c.ltv)} <span style="color:var(--n-400); font-size:11px;">MAD</span></td>
+        <td class="mono right">${fmtMAD(c.ltv)} <span style="color: var(--n-500); font-size:11px;">MAD</span></td>
         <td>${c.fav}</td>
         <td><span class="sc-tier ${c.tier}">${tierLabel[c.tier]}</span></td>
       </tr>
@@ -11977,7 +13915,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         <div class="kw-items-pane">
           <div class="kw-items-head">
             <h3>
-              ${cat ? cat.label.toUpperCase() : '—'}
+              ${cat ? cat.label.toUpperCase() : '·'}
               <span class="edit-cat" data-action="menu-cat-edit" title="Renommer · supprimer">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4z"/></svg>
               </span>
@@ -12023,7 +13961,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
             <h3>Groupes d'options</h3>
             <div class="sub">${OPTION_GROUPS.length} groupes · attachez-les à un produit depuis l'éditeur d'item.</div>
           </div>
-          <button class="kw-menu-action" data-action="menu-opt-add" style="background:var(--ink); color:var(--paper); border-color:var(--ink);">
+          <button class="kw-menu-action" data-action="menu-opt-add" style="background:var(--inverse-surface); color:var(--inverse-ink); border-color:var(--inverse-surface);">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
             Créer un groupe
           </button>
@@ -12699,13 +14637,13 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       .kit-stationbar::-webkit-scrollbar { display: none; }
       .kit-station { display: inline-flex; align-items: center; gap: 7px; padding: 10px 12px; flex-shrink: 0; border-radius: 10px; border: 1px solid var(--n-200); background: var(--surface); cursor: pointer; font-family: var(--sans); font-size: 13px; font-weight: 500; color: var(--n-600); letter-spacing: -0.005em; white-space: nowrap; transition: background 130ms ease, border-color 130ms ease, color 130ms ease; }
       .kit-station:hover { border-color: var(--n-400); color: var(--ink); }
-      .kit-station.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+      .kit-station.on { background: var(--inverse-surface); border-color: var(--inverse-surface); color: var(--inverse-ink); }
       .kit-station i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
       .kit-station-ct { font-family: var(--mono); font-size: 11.5px; font-weight: 600; line-height: 1; padding: 2px 6px; border-radius: 999px; background: var(--paper-soft); color: var(--n-600); }
       .kit-station.on .kit-station-ct { background: rgba(255,255,255,0.18); color: var(--paper); }
       .kit-history-toggle { display: inline-flex; align-items: center; gap: 8px; padding: 11px 15px; border-radius: 11px; border: 1px solid var(--n-200); background: var(--surface); cursor: pointer; font-family: var(--sans); font-size: 13.5px; font-weight: 500; color: var(--n-600); white-space: nowrap; flex-shrink: 0; transition: background 130ms ease, border-color 130ms ease, color 130ms ease; }
       .kit-history-toggle:hover { border-color: var(--n-400); color: var(--ink); }
-      .kit-history-toggle.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+      .kit-history-toggle.on { background: var(--inverse-surface); border-color: var(--inverse-surface); color: var(--inverse-ink); }
       .kit-history-toggle svg { width: 16px; height: 16px; }
       .kit-htg-ct { font-family: var(--mono); font-size: 12px; font-weight: 600; line-height: 1; padding: 3px 7px; border-radius: 999px; background: var(--paper-soft); color: var(--n-600); }
       .kit-history-toggle.on .kit-htg-ct { background: rgba(255,255,255,0.18); color: var(--paper); }
@@ -12755,7 +14693,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       .kit-act-ready:hover { background: var(--atlas-700); }
       .kit-act:active { filter: brightness(0.93); }
       .kit-empty { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 40px 20px; text-align: center; background: var(--paper-soft); border: 1px dashed var(--n-300); border-radius: 13px; }
-      .kit-empty svg { width: 26px; height: 26px; color: var(--n-400); }
+      .kit-empty svg { width: 26px; height: 26px; color: var(--n-500); }
       .kit-empty span { font-size: 12.5px; color: var(--n-500); }
       .kit-history { position: fixed; top: 0; right: 0; bottom: 0; width: 340px; max-width: 86vw; z-index: 40; background: var(--paper); border-left: 1px solid var(--n-200); box-shadow: -24px 0 55px -30px rgba(10,15,13,0.5); transform: translateX(100%); transition: transform 300ms cubic-bezier(0.4,0,0.2,1); overflow-y: auto; padding: 18px; }
       .kit-history.open { transform: translateX(0); }
@@ -12769,7 +14707,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       .kit-hrow-num { font-size: 16px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; flex-shrink: 0; }
       .kit-hrow-time { margin-inline-start: auto; display: inline-flex; align-items: center; gap: 4px; font-family: var(--mono); font-size: 11px; color: var(--atlas); flex-shrink: 0; }
       .kit-hrow-time svg { width: 13px; height: 13px; }
-      .kit-hrow-eye { width: 16px; height: 16px; color: var(--n-400); flex-shrink: 0; }
+      .kit-hrow-eye { width: 16px; height: 16px; color: var(--n-500); flex-shrink: 0; }
       .kit-served-at { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 15px; font-weight: 600; padding: 5px 9px; border-radius: 8px; line-height: 1; color: var(--atlas); background: rgba(11,110,79,0.10); flex-shrink: 0; }
       .kit-served-at svg { width: 13px; height: 13px; }
       .kit-zoom-backdrop { position: fixed; inset: 0; z-index: 9995; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(10,15,13,0.46); -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px); opacity: 0; transition: opacity 220ms ease; }
@@ -12792,9 +14730,9 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       /* ── Recipe popup · cuisinier taps a dish on a ticket → ingredients + prep ─ */
       .kit-item.has-recipe { cursor: pointer; transition: background 120ms; border-radius: 6px; padding: 2px 4px; margin: -2px -4px; }
       .kit-item.has-recipe:hover { background: var(--paper-soft); }
-      .kit-recipe-ico { width: 14px; height: 14px; flex-shrink: 0; color: var(--n-400); margin-left: auto; opacity: 0; transition: opacity 140ms, color 140ms; align-self: center; }
+      .kit-recipe-ico { width: 14px; height: 14px; flex-shrink: 0; color: var(--n-500); margin-left: auto; opacity: 0; transition: opacity 140ms, color 140ms; align-self: center; }
       .kit-item.has-recipe:hover .kit-recipe-ico { opacity: 1; color: var(--atlas); }
-      /* Fire-schedule badge on each ticket item — shows when a sync-enabled
+      /* Fire-schedule badge on each ticket item · shows when a sync-enabled
          station is being delayed so the plate finishes with the slowest one,
          or signals "served first" for stations with sync OFF (drinks etc.). */
       .kit-fire { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 99px; font-size: 9.5px; font-weight: 700; font-family: var(--mono); letter-spacing: 0.02em; vertical-align: middle; }
@@ -12833,7 +14771,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       .kit-recipe-empty-t { font-size: 15px; font-weight: 600; color: var(--ink); }
       .kit-recipe-empty-b { font-size: 13px; line-height: 1.5; max-width: 280px; }
       html[data-theme="dark"] .kit-station, html[data-theme="dark"] .kit-history-toggle, html[data-theme="dark"] .kit-order, html[data-theme="dark"] .kit-hrow, html[data-theme="dark"] .kit-zoom, html[data-theme="dark"] .kit-history-head .kit-history-x { background: var(--paper-soft); }
-      html[data-theme="dark"] .kit-station.on, html[data-theme="dark"] .kit-history-toggle.on { background: var(--paper); border-color: var(--paper); color: var(--ink); }
+      html[data-theme="dark"] .kit-station.on, html[data-theme="dark"] .kit-history-toggle.on { background: var(--inverse-surface); border-color: var(--inverse-line); color: var(--inverse-ink); }
       html[data-theme="dark"] .kit-station.on .kit-station-ct, html[data-theme="dark"] .kit-history-toggle.on .kit-htg-ct { background: var(--paper-muted); color: var(--ink); }
       html[data-theme="dark"] .kit-station-ct, html[data-theme="dark"] .kit-htg-ct, html[data-theme="dark"] .kit-q, html[data-theme="dark"] .kit-eye, html[data-theme="dark"] .kit-zoom .kit-q { background: var(--paper-muted); }
       html[data-theme="dark"] .kit-act-accept { background: var(--paper-muted); color: var(--ink); }
@@ -12987,7 +14925,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
               : `<span class="kit-fire kit-fire-now">⏱ en cours</span>`;
           }
         }
-        return `<li class="kit-item${off ? ' kit-item-off' : ''}${hasRecipe ? ' has-recipe' : ''}"${hasRecipe ? ` data-kit-recipe="${esc(i.n)}"` : ''}><span class="kit-q">${i.q}</span><span class="kit-nm">${esc(i.n)}${fireBadge}</span>${hasRecipe ? `<svg class="kit-recipe-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>` : ''}</li>`;
+        return `<li class="kit-item${off ? ' kit-item-off' : ''}${hasRecipe ? ' has-recipe' : ''}"${hasRecipe ? ` data-kit-recipe="${esc(i.n)}"` : ''}><span class="kit-q">${i.q}</span><span class="kit-nm">${esc(i.n)}${fireBadge}</span>${hasRecipe ? `<i class="kit-recipe-ico" data-lucide="book-open" aria-hidden="true"></i>` : ''}</li>`;
       }).join('');
       const act = isReady
         ? ''
@@ -13029,7 +14967,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         <svg class="kit-hrow-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
       </button>`;
 
-    const emptyHtml = (msg) => `<div class="kit-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>${esc(msg)}</span></div>`;
+    const emptyHtml = (msg) => `<div class="kit-empty"><i data-lucide="check-circle-2" aria-hidden="true"></i><span>${esc(msg)}</span></div>`;
 
     const stationBar = () => {
       const btn = (id, dot, label) => {
@@ -13039,7 +14977,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       return btn('all', 'var(--ink)', T.allStations) + STATIONS.map((s) => btn(s.id, s.raw, s.name)).join('');
     };
 
-    const historyToggleHtml = () => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 2.5-6.2"/><path d="M3 4v4h4"/><path d="M12 8v4.5l3 1.8"/></svg><span>${esc(T.history)}</span><span class="kit-htg-ct">${groupOrders('ready').length}</span>`;
+    const historyToggleHtml = () => `<i data-lucide="history" aria-hidden="true"></i><span>${esc(T.history)}</span><span class="kit-htg-ct">${groupOrders('ready').length}</span>`;
 
     const colHeadHtml = (label, count) => `<div class="kit-col-head"><span>${esc(label)}</span><span class="kit-col-ct">${count}</span></div>`;
 
@@ -13055,7 +14993,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     };
     const historyHtml = () => {
       const list = groupOrders('ready');
-      return `<div class="kit-col-head kit-history-head"><span>${esc(T.historyTitle)}</span><span class="kit-col-ct">${list.length}</span><button class="kit-history-x" data-kit-history-toggle aria-label="${esc(T.close)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`
+      return `<div class="kit-col-head kit-history-head"><span>${esc(T.historyTitle)}</span><span class="kit-col-ct">${list.length}</span><button class="kit-history-x" data-kit-history-toggle aria-label="${esc(T.close)}"><i data-lucide="x" aria-hidden="true"></i></button></div>`
         + `<div class="kit-history-rows">${list.length ? list.map(historyRow).join('') : emptyHtml(T.emptyHistory)}</div>`;
     };
 
@@ -13163,7 +15101,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         const yld = recipe.yield || 1;
         const ingRows = (recipe.ingredients || []).map((ing) => {
           const ref = eng.resolveIngredient(ing.invId);
-          const name = (ref && ref.name) || ing.name || '—';
+          const name = (ref && ref.name) || ing.name || '·';
           const unit = ing.unit || (ref && ref.unit) || '';
           const qty  = Number(ing.qty || 0);
           const qDisp = qty < 0.01 ? qty.toFixed(4) : qty < 1 ? qty.toFixed(3) : qty.toString();
@@ -13352,7 +15290,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
                      b: ['Registres générés à partir de votre activité réelle', 'Alertes avant chaque échéance', 'Dossier prêt en cas de contrôle'] },
     equipe:        { t: 'Équipe',             d: 'Vos employés, leurs rôles et leurs codes PIN.',
                      b: ['Un code PIN par personne sur la caisse', 'Rôles et permissions par poste', 'Performance individuelle dès les premières ventes'] },
-    payroll:       { t: 'Paie & planning',    d: 'Plannings, pointage et préparation de la paie.',
+    payroll:       { t: 'Planning',           d: 'Plannings, pointage et préparation de la paie.',
                      b: ['Plannings hebdomadaires par personne', 'Pointage directement sur la caisse', 'Heures cumulées prêtes pour la paie'] },
     reservations:  { t: 'Réservations & RDV', d: 'Votre agenda client, connecté à la caisse.',
                      b: ['Réservations et rendez-vous au même endroit', 'Rappels automatiques WhatsApp', 'No-shows suivis et acomptes possibles'] },
@@ -13402,7 +15340,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
      the nav first and swapped in the generic "Encore rien ici" starter. Their own
      empty state is strictly better: it names the register, keeps the tabs, and
      tells the merchant what will fill it. */
-  const REAL_FOR_CUSTOM = new Set(['inventory', 'categories', 'equipe', 'menu', 'tables',
+  const REAL_FOR_CUSTOM = new Set(['inventory', 'categories', 'promos', 'equipe', 'menu', 'tables',
     'conformite', 'stock', 'finance', 'payroll']);
 
   /* Data-conditional destinations: a module that builds a real per-venue page but
@@ -13444,7 +15382,10 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   function pairedDeviceLines(nav) {
     if (nav !== 'terminaux') return [];
     let pv = null;
-    try { pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return []; }
+    try {
+      pv = (window.KiwiPlatform && typeof window.KiwiPlatform.pairedVenue === 'function' && window.KiwiPlatform.pairedVenue())
+        || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+    } catch (_) { return []; }
     if (!pv || !pv.name) return [];
     return ['Caisse Kiwi · ' + pv.name + (pv.location ? ' · ' + pv.location : '') + ' · connectée'];
   }
@@ -13588,6 +15529,58 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   function registerActions() {
     const H = window.Kiwi && window.Kiwi.handlers; if (!H) return;
     if (!H['starter-add']) H['starter-add'] = (_el, nav) => openAddModal(nav);
+    H['sale-invoice-pdf'] = (_el, saleId) => {
+      if (!saleId) {
+        if (window.Kiwi && typeof window.Kiwi.toast === 'function') {
+          window.Kiwi.toast('Facture disponible après synchronisation de la vente', { type: 'warning' });
+        }
+        return;
+      }
+      const sales = window.KiwiSales?.list?.() || [];
+      const sale = sales.find((s) => (s.saleId === saleId || s.id === saleId));
+      if (sale && window.KiwiInvoice) {
+        window.KiwiInvoice.generate(sale, 'pdf');
+      }
+    };
+    H['sale-invoice-print'] = (_el, saleId) => {
+      if (!saleId) {
+        if (window.Kiwi && typeof window.Kiwi.toast === 'function') {
+          window.Kiwi.toast('Facture disponible après synchronisation de la vente', { type: 'warning' });
+        }
+        return;
+      }
+      const sales = window.KiwiSales?.list?.() || [];
+      const sale = sales.find((s) => (s.saleId === saleId || s.id === saleId));
+      if (sale && window.KiwiInvoice) {
+        window.KiwiInvoice.generate(sale, 'print');
+      }
+    };
+    H['sales-day'] = (_el, offset) => {
+      const merchant = auditMerchant() || String(window.KiwiVenue?.getCurrentVenueData?.()?.id || 'venue');
+      salesDayByMerchant[merchant] = Math.max(0, Math.min(6, Number(offset) || 0));
+      renderRealTransactions('transactions', STARTERS.transactions);
+    };
+    H['sales-kind'] = (_el, kind) => {
+      salesKindByMerchant[auditMerchant()] = ['sale', 'refund', 'cancel'].includes(kind) ? kind : 'all';
+      renderRealTransactions('transactions', STARTERS.transactions);
+    };
+    H['sales-activity-retry'] = () => { loadCancelAudit(true); };
+    H['sales-method'] = (_el, method) => {
+      const merchant = auditMerchant() || String(window.KiwiVenue?.getCurrentVenueData?.()?.id || 'venue');
+      const allowed = ['cash', 'card', 'delivery'];
+      const current = (salesMethodsByMerchant[merchant] || []).filter((m) => allowed.includes(m));
+      if (method === 'all' || !allowed.includes(method)) {
+        salesMethodsByMerchant[merchant] = [];
+      } else if (current.includes(method)) {
+        salesMethodsByMerchant[merchant] = current.filter((m) => m !== method);
+      } else if (current.length >= 2) {
+        /* A third simultaneous type becomes the simpler, honest "Tout" view. */
+        salesMethodsByMerchant[merchant] = [];
+      } else {
+        salesMethodsByMerchant[merchant] = current.concat(method);
+      }
+      renderRealTransactions('transactions', STARTERS.transactions);
+    };
   }
 
   function starterTitle(nav, meta) {
@@ -13616,16 +15609,101 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       '.rtx-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--n-200)}' +
       '.rtx-count{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--n-500)}' +
       '.rtx-total{font-size:14px;color:var(--ink)}.rtx-total b{font-family:var(--mono)}' +
+      '.rtx-days{display:flex;gap:7px;overflow-x:auto;padding:0 0 16px;scrollbar-width:thin}' +
+      '.rtx-day{border:1px solid var(--n-200);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 12px;white-space:nowrap;font:600 11px var(--sans);cursor:pointer}' +
+      '.rtx-day.on{background:var(--inverse-surface);border-color:var(--inverse-surface);color:var(--inverse-ink)}' +
+      '.rtx-methods{display:flex;gap:7px;flex-wrap:wrap;padding:0 0 16px}' +
+      '.rtx-method{border:1px solid var(--n-200);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 12px;font:600 11px var(--sans);cursor:pointer}' +
+      '.rtx-method.on{background:var(--atlas);border-color:var(--atlas);color:#fff}' +
       '.rtx-list{display:flex;flex-direction:column}' +
-      '.rtx-row{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:14px;padding:12px 2px;border-bottom:1px solid var(--n-100)}' +
+      '.rtx-row{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:14px 2px;border-bottom:1px solid var(--n-100)}' +
+      '.rtx-row.is-refund .rtx-a{color:var(--danger)}.rtx-row.is-refund .rtx-m{background:color-mix(in srgb,var(--danger) 10%,transparent);color:var(--danger)}' +
       '.rtx-row.is-new{animation:rtx-in .45s cubic-bezier(.32,.72,0,1)}' +
       '@keyframes rtx-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}' +
       '.rtx-t{font-family:var(--mono);font-size:12.5px;color:var(--n-500)}' +
       '.rtx-m{font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--atlas) 12%,transparent);color:var(--atlas);white-space:nowrap}' +
-      '.rtx-l{font-size:14px;color:var(--ink)}' +
+      '.rtx-products{display:flex;flex-direction:column;gap:5px;min-width:0}.rtx-product{display:flex;justify-content:space-between;gap:14px;font-size:14px;color:var(--ink)}' +
+      '.rtx-identity{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:2px}.rtx-ref{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--ink)}.rtx-source{font-size:11px;color:var(--n-500)}' +
+      '.rtx-product-name{overflow:hidden;text-overflow:ellipsis}.rtx-product-amount{font-family:var(--mono);font-size:12px;white-space:nowrap;color:var(--n-500)}' +
+      '.rtx-products-missing{font-size:13px;color:var(--n-500)}' +
       '.rtx-a{font-family:var(--mono);font-size:14.5px;font-weight:600;color:var(--ink);white-space:nowrap}' +
-      '.rtx-cur{font-size:10px;color:var(--n-500)}';
+      '.rtx-cur{font-size:10px;color:var(--n-500)}' +
+      '.rtx-actions{display:flex;align-items:center;gap:6px;margin-inline-start:4px}' +
+      '.rtx-act-btn{border:1px solid var(--n-200);background:var(--surface);color:var(--n-600);border-radius:6px;padding:5px 7px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s}' +
+      '.rtx-act-btn:hover{background:var(--n-100);color:var(--ink);border-color:var(--n-300)}' +
+      '.rtx-act-btn:disabled{opacity:.35;cursor:not-allowed}' +
+      '.rtx-inv-badge{font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--ok-bg,#ecfdf5);color:var(--ok-fg,#047857);margin-right:2px}' +
+      '.rtx-voids{margin-top:26px;padding-top:18px;border-top:1px solid var(--n-200)}' +
+      '.rtx-void-title{font-size:14px;font-weight:650;margin-bottom:4px}.rtx-void-sub{font-size:12px;color:var(--n-500);margin-bottom:10px}' +
+      '.rtx-void-row{display:grid;grid-template-columns:auto minmax(120px,1fr) minmax(150px,2fr) auto;gap:12px;align-items:center;padding:11px 2px;border-bottom:1px solid var(--n-100)}' +
+      '.rtx-void-who{font-size:13px;font-weight:600}.rtx-void-lines{font-size:12px;color:var(--n-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '.rtx-void-amount{font-family:var(--mono);font-size:13px;font-weight:650;color:#b44338;white-space:nowrap}' +
+      '.rtx-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0 24px}.rtx-summary>div{padding:18px;border:1px solid var(--n-200);border-radius:16px;background:var(--n-0,#fff)}.rtx-summary span{display:block;font-size:12px;color:var(--n-500)}.rtx-summary strong{display:block;font-size:26px;color:var(--g-700,#087454);margin-top:7px}.rtx-summary small{font-size:12px;font-weight:500}.rtx-summary .is-refund strong{color:#b44338}' +
+      '.rtx-activity-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;padding:18px 0;border-bottom:1px solid var(--n-100);align-items:start}.rtx-activity-tag{font-size:11px;font-weight:650;color:#81501a;background:#fcf0da;padding:5px 9px;border-radius:7px}.rtx-activity-value{text-align:end;font-weight:650;font-size:15px}.rtx-activity-value small{display:block;font-size:11px;font-weight:400;color:var(--n-500);margin-top:5px;max-width:200px}.rtx-detail{font-size:12px;color:var(--n-500);overflow-wrap:anywhere}.rtx-detail summary{cursor:pointer;min-height:44px;display:flex;align-items:center;text-decoration:underline;text-underline-offset:3px}.rtx-detail p{margin:6px 0}.rtx-notice{padding:12px 16px;border-radius:12px;background:#fcf0da;color:#81501a;font-size:13px}.rtx-method,.rtx-day{min-height:44px}.rtx button:focus-visible,.rtx summary:focus-visible{outline:2px solid var(--g-700,#087454);outline-offset:3px}' +
+      '@media(max-width:600px){.rtx-summary{gap:6px}.rtx-summary>div{padding:12px 8px}.rtx-summary strong{font-size:19px}.rtx-summary span{font-size:11px}.rtx-activity-row{grid-template-columns:auto minmax(0,1fr);gap:10px}.rtx-activity-value{grid-column:2;text-align:start}.rtx-activity-value small{max-width:none}.rtx-identity{flex-wrap:wrap}.rtx-row{grid-template-columns:auto minmax(0,1fr) auto;gap:10px;padding:18px 0}.rtx-row>.rtx-t{grid-column:1;grid-row:1}.rtx-row>.rtx-m{grid-column:2;grid-row:1;justify-self:start}.rtx-row>.rtx-a{grid-column:3;grid-row:1}.rtx-row>.rtx-products{grid-column:1/-1;grid-row:2;width:100%}.rtx-row>.rtx-actions{grid-column:3;grid-row:3}.rtx-product-name{white-space:normal}.rtx-product{gap:12px}}';
     document.head.appendChild(s);
+  }
+
+  let cancelAudit = [];
+  let cancelAuditMerchant = '';
+  let cancelAuditLoading = false;
+  let cancelAuditError = false;
+  let cancelAuditWindow = null;
+  let cancelAuditRequest = 0;
+  let cancelAuditLoadedAt = 0;
+  let cancelAuditVoidSig = '';
+  const salesDayByMerchant = Object.create(null);
+  const salesMethodsByMerchant = Object.create(null);
+  const salesKindByMerchant = Object.create(null);
+  function salesMethodKey(s) {
+    const raw = String((s && s.method) || '').toLowerCase();
+    return ({ 'espèces': 'cash', especes: 'cash', carte: 'card', livraison: 'delivery' })[raw] || raw;
+  }
+  function auditMerchant() {
+    try { return String(window.KiwiLive?.merchant?.() || ''); } catch (_) { return ''; }
+  }
+  function loadCancelAudit(force) {
+    const merchant = auditMerchant();
+    const windowKey = cancelAuditWindow;
+    if (!merchant || !windowKey || windowKey.merchant !== merchant) return;
+    const key = `${merchant}:${windowKey.from}:${windowKey.to}`;
+    if (!force && cancelAuditMerchant === key && (cancelAuditLoading || Date.now() - cancelAuditLoadedAt < 30000)) return;
+    if (cancelAuditMerchant !== key) cancelAudit = [];
+    cancelAuditMerchant = key;
+    cancelAuditLoading = true;
+    cancelAuditError = false;
+    const generation = ++cancelAuditRequest;
+    (async () => {
+      const events = [], cursors = new Set();
+      let next = null;
+      do {
+        const query = new URLSearchParams({ merchant, from: windowKey.from, to: windowKey.to });
+        if (next) { query.set('before', next.before); query.set('beforeId', next.beforeId); }
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 12000);
+        let data;
+        try {
+          const response = await fetch(`/api/order/activity?${query}`, { credentials: 'same-origin', signal: controller.signal });
+          if (!response.ok) throw new Error('activity-unavailable');
+          data = await response.json();
+        } finally { clearTimeout(timeout); }
+        if (generation !== cancelAuditRequest || merchant !== auditMerchant()) return;
+        if (data.merchant !== merchant || data.from !== windowKey.from || data.to !== windowKey.to || !Array.isArray(data.events)) throw new Error('activity-scope');
+        events.push(...data.events);
+        next = data.next;
+        if (next) {
+          const cursor = JSON.stringify(next);
+          if (cursors.has(cursor) || cursors.size >= 100) throw new Error('activity-incomplete');
+          cursors.add(cursor);
+        }
+      } while (next);
+      cancelAudit = events;
+    })().catch(() => { if (generation === cancelAuditRequest) cancelAuditError = true; }).finally(() => {
+      if (generation !== cancelAuditRequest) return;
+      cancelAuditLoading = false;
+      cancelAuditLoadedAt = Date.now();
+      if (merchant === auditMerchant() && document.querySelector('[data-real-tx]')) renderRealTransactions('transactions', STARTERS.transactions);
+    });
   }
 
   /* A custom/real venue's Ventes page shows the merchant's ACTUAL sales from
@@ -13638,14 +15716,17 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const vd = KV?.getCurrentVenueData?.() || {};
     const lang = window.KiwiI18n?.getLang?.() || 'fr';
     const sales = (window.KiwiSales?.list?.() || []).slice();
+    const refunds = (window.KiwiRefunds?.list?.() || []).map((r) => ({
+      ...r, amount: -Math.abs(+r.amount || 0), kind: 'refund', origin: 'caisse',
+    }));
     const ML = {
-      fr: { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Lien', split: 'Partagée', vente: 'Vente' },
-      en: { cash: 'Cash', card: 'Card', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Link', split: 'Split', vente: 'Sale' },
-      ar: { cash: 'نقدًا', card: 'بطاقة', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'رابط', split: 'مقسّمة', vente: 'بيع' },
+      fr: { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Lien', split: 'Partagée', delivery: 'Livraison', unknown: 'Non renseigné' },
+      en: { cash: 'Cash', card: 'Card', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Link', split: 'Split', delivery: 'Delivery', unknown: 'Not recorded' },
+      ar: { cash: 'نقدًا', card: 'بطاقة', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'رابط', split: 'مقسّمة', delivery: 'توصيل', unknown: 'غير مسجّل' },
     };
     const L = ML[lang] || ML.fr;
     const SUM = { fr: { n: 'ventes', one: 'vente', total: 'Total' }, en: { n: 'sales', one: 'sale', total: 'Total' }, ar: { n: 'مبيعات', one: 'بيع', total: 'المجموع' } }[lang] || { n: 'ventes', one: 'vente', total: 'Total' };
-    const fmt = n => { try { return (Math.round(n) || 0).toLocaleString(lang === 'ar' ? 'ar-MA' : 'fr-FR'); } catch (_) { return String(Math.round(n) || 0); } };
+    const fmt = n => { try { return (Number(n) || 0).toLocaleString(lang === 'ar' ? 'ar-MA' : 'fr-FR', { maximumFractionDigits: 2 }); } catch (_) { return String(Number(n) || 0); } };
     /* ── La MÊME fenêtre que le tableau de bord ────────────────────────────
      * Cette page additionnait tout l'historique du navigateur et imprimait le
      * résultat en gros, sous un tableau de bord qui, lui, affichait la période
@@ -13658,58 +15739,213 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
      * sous l'autre. On borne donc, et quand la fenêtre couvre plus d'un jour
      * on date la ligne — sans quoi borner n'aurait fait que cacher le problème
      * au lieu de le dire. */
-    const rangeKey = (() => { try { return window.KiwiDateRange?.getDateRange?.() || ''; } catch (_) { return ''; } })();
-    const win = (() => { try { return window.KiwiDateRange?.bounds?.() || []; } catch (_) { return []; } })();
-    const lo = (win[0] == null) ? -Infinity : win[0];
-    const hi = (win[1] == null) ? Infinity : win[1];
-    const inWindow = sales.filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; });
-    const RANGE_L = {
-      fr: { aujourdhui: "aujourd'hui", hier: 'hier', septJours: '7 derniers jours', trenteJours: '30 derniers jours', moisDernier: 'mois dernier', trimestre: 'trimestre', annee: 'année', personnalise: 'période choisie' },
-      en: { aujourdhui: 'today', hier: 'yesterday', septJours: 'last 7 days', trenteJours: 'last 30 days', moisDernier: 'last month', trimestre: 'quarter', annee: 'year', personnalise: 'selected period' },
-      ar: { aujourdhui: 'اليوم', hier: 'أمس', septJours: 'آخر 7 أيام', trenteJours: 'آخر 30 يومًا', moisDernier: 'الشهر الماضي', trimestre: 'الربع', annee: 'السنة', personnalise: 'الفترة المختارة' },
-    }[lang] || {};
-    const rangeLabel = RANGE_L[rangeKey] || '';
-    // Une fenêtre d'un seul jour n'a pas besoin d'être datée ligne à ligne.
-    const oneDay = rangeKey === 'aujourdhui' || rangeKey === 'hier';
-    const total = inWindow.reduce((a, s) => a + (s.amount || 0), 0);
-    const count = inWindow.length;
-    const rows = inWindow.slice().reverse().map((s, i) => {
+    const merchant = auditMerchant() || String(vd.id || vd.name || 'venue');
+    const dayOffset = Math.max(0, Math.min(6, Number(salesDayByMerchant[merchant]) || 0));
+    const selectedMethods = (salesMethodsByMerchant[merchant] || []).filter((m) => ['cash', 'card', 'delivery'].includes(m));
+    const now = Date.now();
+    const R = window.KiwiDayReport;
+    const addDay = (day, delta) => {
+      const p = String(day || '').split('-');
+      return new Date(Date.UTC(+p[0], (+p[1] || 1) - 1, +p[2] || 1) + delta * 864e5).toISOString().slice(0, 10);
+    };
+    const zone = (() => {
+      const candidate = vd.timezone || vd.timeZone || vd.tz || window.KiwiConfig?.timezone || window.KiwiConfig?.timeZone || 'Africa/Casablanca';
+      try { new Intl.DateTimeFormat('en-CA', { timeZone: candidate }).format(); return candidate; } catch (_) { return 'Africa/Casablanca'; }
+    })();
+    const partsAt = (ts) => {
+      const out = {};
+      new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' })
+        .formatToParts(new Date(ts)).forEach((p) => { if (p.type !== 'literal') out[p.type] = p.value; });
+      return out;
+    };
+    const fallbackDay = (ts) => {
+      const p = partsAt(ts);
+      const day = `${p.year}-${p.month}-${p.day}`;
+      const cutoff = Number(window.KiwiConfig?.dayCutoff ?? 5);
+      return +p.hour < cutoff ? addDay(day, -1) : day;
+    };
+    const fallbackBounds = (day) => {
+      const cutoff = Number(window.KiwiConfig?.dayCutoff ?? 5);
+      const boundary = (d) => {
+        const target = Date.parse(`${d}T00:00:00Z`) + cutoff * 3600000;
+        let guess = target;
+        for (let i = 0; i < 6; i++) {
+          const p = partsAt(guess);
+          const observed = Date.parse(`${p.year}-${p.month}-${p.day}T${p.hour}:00:00Z`);
+          if (observed === target) return guess;
+          guess += target - observed;
+        }
+        return guess;
+      };
+      return { from: boundary(day), to: boundary(addDay(day, 1)) };
+    };
+    const todayKey = R?.businessDay ? R.businessDay(now, merchant) : fallbackDay(now);
+    const selectedKey = R?.shiftDay ? R.shiftDay(todayKey, -dayOffset, merchant) : addDay(todayKey, -dayOffset);
+    const selectedWindow = R?.dayBounds ? R.dayBounds(selectedKey, merchant) : fallbackBounds(selectedKey);
+    const lo = selectedWindow.from;
+    const hi = selectedWindow.to;
+    cancelAuditWindow = { merchant: auditMerchant(), from: lo, to: hi };
+    loadCancelAudit();
+    const activity = cancelAuditMerchant === `${auditMerchant()}:${lo}:${hi}` ? cancelAudit : [];
+    // Refund audit metadata enriches the existing receipt, never adds a second
+    // debit. A refund absent from a stale local feed remains visible from D1.
+    const refundById = new Map(refunds.map(r => [String(r.saleId || r.id), r]));
+    activity.filter(a => a.kind === 'refund' && a.refundId).forEach(a => {
+      const old = refundById.get(String(a.refundId)) || {};
+      refundById.set(String(a.refundId), { ...old, id: a.refundId, kind: 'refund', ts: a.ts,
+        amount: -Math.abs(a.amountCents / 100), method: a.method, ref: a.ref,
+        reason: a.reason, actor: a.actor, actorId: a.actorId, originalRef: a.originalRef || a.saleId,
+        lines: old.lines || [], origin: 'caisse' });
+    });
+    const selectedDay = new Date(`${selectedKey}T12:00:00Z`);
+    const daySales = sales.concat([...refundById.values()]).filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; });
+    const financialWindow = selectedMethods.length
+      ? daySales.filter((s) => selectedMethods.includes(salesMethodKey(s)))
+      : daySales;
+    const selectedKind = salesKindByMerchant[auditMerchant()] || 'all';
+    const inWindow = financialWindow.filter(s => selectedKind === 'all' ||
+      (selectedKind === 'refund' ? s.kind === 'refund' || s.amount < 0 : selectedKind === 'sale' && s.kind !== 'refund' && s.amount >= 0));
+    const kindButtons = [
+      ['all', T({ fr: 'Tout', en: 'All', ar: 'الكل' })],
+      ['sale', T({ fr: 'Ventes', en: 'Sales', ar: 'المبيعات' })],
+      ['refund', T({ fr: 'Remboursements', en: 'Refunds', ar: 'المبالغ المستردة' })],
+      ['cancel', T({ fr: 'Annulations', en: 'Cancellations', ar: 'الإلغاءات' })],
+      ['handover', T({ fr: 'Remises au client', en: 'Handovers', ar: 'التسليمات' })],
+    ].map(([kind, label]) => `<button class="rtx-method${selectedKind === kind ? ' on' : ''}" type="button" data-action="sales-kind" data-arg="${kind}" aria-pressed="${selectedKind === kind}">${escS(label)}</button>`).join('');
+    const dayLabel = dayOffset === 0 ? T({ fr: "aujourd'hui", en: 'today', ar: 'اليوم' })
+      : dayOffset === 1 ? T({ fr: 'hier', en: 'yesterday', ar: 'أمس' })
+      : new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA' : lang, { timeZone: zone, weekday: 'long', day: 'numeric', month: 'short' }).format(selectedDay);
+    const dayButtons = Array.from({ length: 7 }, (_, offset) => {
+      const d = new Date(`${(R?.shiftDay ? R.shiftDay(todayKey, -offset, merchant) : addDay(todayKey, -offset))}T12:00:00Z`);
+      const label = offset === 0 ? T({ fr: "Aujourd'hui", en: 'Today', ar: 'اليوم' })
+        : offset === 1 ? T({ fr: 'Hier', en: 'Yesterday', ar: 'أمس' })
+        : new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA' : lang, { timeZone: zone, weekday: 'short', day: 'numeric', month: 'short' }).format(d);
+      return `<button class="rtx-day${offset === dayOffset ? ' on' : ''}" type="button" data-action="sales-day" data-arg="${offset}" aria-pressed="${offset === dayOffset}">${escS(label)}</button>`;
+    }).join('');
+    const methodLabels = {
+      all: T({ fr: 'Tout', en: 'All', ar: 'الكل' }),
+      cash: L.cash, card: L.card, delivery: L.delivery,
+    };
+    const methodButtons = ['all', 'cash', 'card', 'delivery'].map((method) => {
+      const active = method === 'all' ? selectedMethods.length === 0 : selectedMethods.includes(method);
+      return `<button class="rtx-method${active ? ' on' : ''}" type="button" data-action="sales-method" data-arg="${method}" aria-pressed="${active}">${escS(methodLabels[method])}</button>`;
+    }).join('');
+    const collected = financialWindow.reduce((a, s) => a + Math.max(0, Math.round(Number(s.amount || 0) * 100)), 0) / 100;
+    const returned = financialWindow.reduce((a, s) => a + Math.max(0, -Math.round(Number(s.amount || 0) * 100)), 0) / 100;
+    const total = Math.round((collected - returned) * 100) / 100;
+    const count = financialWindow.filter((s) => s.kind !== 'refund' && Number(s.amount) > 0).length;
+    const rows = inWindow.slice().sort((a, b) => (+b.ts || 0) - (+a.ts || 0)).map((s, i) => {
+      const isRefund = s.kind === 'refund' || Number(s.amount) < 0;
       const d = new Date(s.ts || Date.now());
-      const hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-      const when = oneDay ? hh
-        : `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${hh}`;
-      const m = L[s.method] || L.vente;
-      return `<div class="rtx-row${i === 0 ? ' is-new' : ''}">` +
+      const hh = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA-u-nu-latn' : lang, { timeZone: zone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
+      const when = hh;
+      const m = isRefund ? T({ fr: 'Remboursement', en: 'Refund', ar: 'استرداد' }) : (L[salesMethodKey(s)] || L.unknown);
+      const ref = String(s.ref || s.label || '').trim();
+      const origin = String(s.origin || (ref ? 'caisse' : '')).toLowerCase();
+      const source = origin === 'employee'
+        ? (s.server ? `${s.server} · ${T({ fr: 'App employé', en: 'Employee app', ar: 'تطبيق الموظف' })}` : T({ fr: 'App employé', en: 'Employee app', ar: 'تطبيق الموظف' }))
+        : origin === 'orderpro' ? 'OrderPro'
+        : origin === 'caisse' ? T({ fr: 'Caisse', en: 'Till', ar: 'الصندوق' }) : '';
+      const identity = ref || source
+        ? `<div class="rtx-identity">${ref ? `<span class="rtx-ref">${escS(ref)}</span>` : ''}${source ? `<span class="rtx-source">${escS(source)}</span>` : ''}</div>`
+        : '';
+      const lines = Array.isArray(s.lines) ? s.lines.filter((l) => l && l.name) : [];
+      const products = lines.length ? lines.map((l) => {
+        const qty = Math.max(1, Number(l.qty) || 1);
+        const lineAmount = Number(l.total);
+        return `<div class="rtx-product"><span class="rtx-product-name">${qty} × ${escS(l.name)}</span>${Number.isFinite(lineAmount) ? `<span class="rtx-product-amount">${fmt(lineAmount)} MAD</span>` : ''}</div>`;
+      }).join('') : `<span class="rtx-products-missing">${escS(isRefund
+        ? T({ fr: 'Montant rendu au client', en: 'Amount returned to customer', ar: 'المبلغ المعاد إلى العميل' })
+        : T({ fr: 'Détail produit indisponible', en: 'Product detail unavailable', ar: 'تفاصيل المنتج غير متوفرة' }))}</span>`;
+      const saleId = String(s.saleId || s.id || '').trim();
+      const hasId = !!saleId;
+      const cachedInv = hasId && window.KiwiInvoice?.getCachedInvoices?.()[saleId];
+      const invBadge = cachedInv?.number
+        ? `<span class="rtx-inv-badge" title="Facture ${escS(cachedInv.number)}">${escS(cachedInv.number)}</span>`
+        : '';
+      const tooltip = hasId ? '' : ' title="Facture disponible après synchronisation de la vente"';
+      const disabledAttr = hasId ? '' : ' disabled aria-disabled="true"';
+      const invoiceActions = isRefund ? '<div class="rtx-actions"></div>' : `
+        <div class="rtx-actions">
+          ${invBadge}
+          <button class="rtx-act-btn" type="button" data-action="sale-invoice-pdf" data-arg="${escS(saleId)}"${disabledAttr}${tooltip || ' title="Facture PDF"'} aria-label="Facture PDF">
+            <svg viewBox="0 -960 960 960" width="15" height="15" fill="currentColor"><path d="M360-460h40v-80h40q17 0 28.5-11.5T480-580v-40q0-17-11.5-28.5T440-660h-80v200Zm40-120v-40h40v40h-40Zm120 120h80q17 0 28.5-11.5T640-500v-120q0-17-11.5-28.5T600-660h-80v200Zm40-40v-120h40v120h-40Zm120 40h40v-80h40v-40h-40v-40h40v-40h-80v200ZM320-240q-33 0-56.5-23.5T240-320v-480q0-33 23.5-56.5T320-880h480q33 0 56.5 23.5T880-800v480q0 33-23.5 56.5T800-240H320Zm0-80h480v-480H320v480ZM160-80q-33 0-56.5-23.5T80-160v-560h80v560h560v80H160Zm160-720v480-480Z"/></svg>
+          </button>
+          <button class="rtx-act-btn" type="button" data-action="sale-invoice-print" data-arg="${escS(saleId)}"${disabledAttr}${tooltip || ' title="Imprimer A4"'} aria-label="Imprimer A4">
+            <svg viewBox="0 -960 960 960" width="15" height="15" fill="currentColor"><path d="M640-640v-120H320v120h-80v-200h480v200h-80Zm-480 80h640-640Zm560 100q17 0 28.5-11.5T760-500q0-17-11.5-28.5T720-540q-17 0-28.5 11.5T680-500q0 17 11.5 28.5T720-460Zm-80 260v-160H320v160h320Zm80 80H240v-160H80v-240q0-51 35-85.5t85-34.5h560q51 0 85.5 34.5T880-520v240H720v160Zm80-240v-160q0-17-11.5-28.5T760-560H200q-17 0-28.5 11.5T160-520v160h80v-80h480v80h80Z"/></svg>
+          </button>
+        </div>`;
+      return `<div class="rtx-row${i === 0 ? ' is-new' : ''}${isRefund ? ' is-refund' : ''}">` +
         `<span class="rtx-t">${when}</span>` +
         `<span class="rtx-m">${escS(m)}</span>` +
-        `<span class="rtx-l">${escS(L.vente)}</span>` +
+        `<span class="rtx-products">${identity}${products}${isRefund ? `<details class="rtx-detail"><summary>${escS(T({ fr: 'Détails du remboursement', en: 'Refund details', ar: 'تفاصيل الاسترداد' }))}</summary><p>${escS(s.originalRef || s.originalSaleId || T({ fr: 'Ticket d’origine non enregistré', en: 'Original receipt not recorded', ar: 'الإيصال الأصلي غير مسجل' }))}</p><p>${escS(s.actor || s.actorId || T({ fr: 'Identité non enregistrée', en: 'Identity not recorded', ar: 'الهوية غير مسجلة' }))} · ${escS(s.reason || T({ fr: 'Motif non enregistré', en: 'Reason not recorded', ar: 'السبب غير مسجل' }))}</p><p>${escS(d.toLocaleString(lang))} · ${escS(L[salesMethodKey(s)] || L.unknown)}</p></details>` : ''}</span>` +
         `<span class="rtx-a">${fmt(s.amount)}<span class="rtx-cur"> MAD</span></span>` +
+        invoiceActions +
         `</div>`;
     }).join('');
-    const startingUp = T({ fr: 'compte en démarrage', en: 'account getting started', ar: 'حساب قيد الإعداد' });
+    const voids = activity.filter((v) => {
+      const ts = +(v && v.ts) || 0;
+      const kindMatches = selectedKind === 'all'
+        || (selectedKind === 'cancel' && v.kind !== 'takeout-handover')
+        || (selectedKind === 'handover' && v.kind === 'takeout-handover');
+      return v.kind !== 'refund' && kindMatches && ts >= lo && ts < hi && (!selectedMethods.length || selectedMethods.includes(salesMethodKey(v)));
+    });
+    const renderActivityRows = (sourceRows) => sourceRows.map((v) => {
+      const d = new Date(v.ts || Date.now());
+      const when = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      const detail = (v.lines || []).map(l => `${Number(l.qty) || 1} × ${l.name || 'Article'}`).join(' · ') || v.label || 'Vente';
+      const label = v.kind === 'takeout-handover' ? T({ fr: 'Commande remise au client', en: 'Order handed to customer', ar: 'سُلِّم الطلب إلى العميل' })
+        : v.kind === 'closure' ? T({ fr: 'Table fermée / remise à zéro', en: 'Table closed / reset', ar: 'إغلاق / إعادة ضبط الطاولة' })
+        : v.kind === 'order-cancel' ? T({ fr: 'Commande annulée', en: 'Order cancelled', ar: 'طلب ملغى' })
+        : v.kind === 'restore' ? T({ fr: 'Vente rétablie', en: 'Sale restored', ar: 'استعادة البيع' }) : T({ fr: 'Vente annulée', en: 'Sale voided', ar: 'بيع ملغى' });
+      const who = v.actor || v.actorId || T({ fr: 'Identité non enregistrée', en: 'Identity not recorded', ar: 'الهوية غير مسجلة' });
+      const cashNote = ['closure', 'takeout-handover', 'order-cancel'].includes(v.kind) ? T({ fr: 'Sans mouvement d’argent', en: 'No cash movement', ar: 'بدون حركة مالية' }) : T({ fr: 'Correction de vente, pas un remboursement', en: 'Sale correction, not a refund', ar: 'تصحيح بيع، وليس استردادًا' });
+      const source = v.source === 'caisse' ? T({ fr: 'Caisse', en: 'Till', ar: 'الصندوق' }) : v.source || '';
+      const orderValue = ['closure', 'takeout-handover'].includes(v.kind) ? v.orderAmountCents : v.amountCents;
+      const refs = ['closure', 'takeout-handover'].includes(v.kind)
+        ? (v.kind === 'takeout-handover' ? `${T({ fr: 'Commande', en: 'Order', ar: 'الطلب' })} ${(v.orders || []).map(o => '#' + o.number).join(', ')}` : `${T({ fr: 'Table', en: 'Table', ar: 'طاولة' })} ${v.tableNo || '?'} · ${(v.orders || []).map(o => '#' + o.number).join(', ')}`)
+        : v.ref || v.originalRef || v.saleId;
+      return `<div class="rtx-activity-row"><span class="rtx-t">${escS(when)}</span><div><div class="rtx-identity"><span class="rtx-activity-tag">${escS(label)}</span><strong>${escS(refs)}</strong></div><div class="rtx-source">${escS(who)}${source ? ' · ' + escS(source) : ''}</div><details class="rtx-detail"><summary>${escS(T({ fr: 'Voir les détails', en: 'View details', ar: 'عرض التفاصيل' }))}</summary><p>${escS(detail)}</p><p>${escS(v.reason || '')} · ${escS(d.toLocaleString(lang))}</p><p>${escS(v.sessionId || v.saleId || '')}</p>${v.detailsTruncated ? `<p>${escS(T({ fr: 'Détail partiel (250 commandes maximum)', en: 'Partial detail (250 orders maximum)', ar: 'تفاصيل جزئية (250 طلبًا كحد أقصى)' }))}</p>` : ''}</details></div><div class="rtx-activity-value">${fmt(orderValue / 100)} MAD<small>${escS(cashNote)}</small></div></div>`;
+    }).join('');
+    const voidRows = renderActivityRows(voids.filter(v => v.kind !== 'takeout-handover'));
+    const handoverRows = renderActivityRows(voids.filter(v => v.kind === 'takeout-handover'));
+    const startingUp = T({ fr: 'Historique des opérations', en: 'Operations history', ar: 'سجل العمليات' });
     window.Kiwi.appPage('transactions', {
-      title: starterTitle(nav, meta),
+      title: T({ fr: 'Ventes & activité', en: 'Sales & activity', ar: 'المبيعات والنشاط' }),
       subtitle: `${vd.name || 'Votre établissement'} · ${startingUp}`,
       body: `
         <div data-real-tx class="rtx">
           <div class="rtx-head">
-            <div class="rtx-count">${count} ${escS(count === 1 ? SUM.one : SUM.n)}${rangeLabel ? ' · ' + escS(rangeLabel) : ''}</div>
-            <div class="rtx-total">${escS(SUM.total)} · <b>${fmt(total)} MAD</b></div>
+            <div class="rtx-count">${count} ${escS(count === 1 ? SUM.one : SUM.n)} · ${escS(dayLabel)}</div>
+            <div class="rtx-total">${voids.filter(v => v.kind !== 'restore' && v.kind !== 'takeout-handover').length} ${escS(T({ fr: 'annulations / fermetures', en: 'cancellations / closures', ar: 'إلغاءات / إغلاقات' }))}</div>
           </div>
-          <div class="rtx-list">${rows || `<div class="rtx-row"><span class="rtx-l">${escS(T({
-            fr: 'Aucune vente sur cette période.',
-            en: 'No sales in this period.',
-            ar: 'لا توجد مبيعات في هذه الفترة.',
+          <div class="rtx-summary">${[
+            [T({ fr: 'Encaissements', en: 'Collected', ar: 'المقبوضات' }), collected, ''],
+            [T({ fr: 'Remboursements', en: 'Refunded', ar: 'المبالغ المستردة' }), -returned, 'is-refund'],
+            [T({ fr: 'Net encaissé', en: 'Net collected', ar: 'صافي المقبوضات' }), total, ''],
+          ].map(([label, value, cls]) => `<div class="${cls}"><span>${escS(label)}</span><strong>${fmt(value)} <small>MAD</small></strong></div>`).join('')}</div>
+          <div class="rtx-days" role="group" aria-label="${escS(T({ fr: 'Jour des ventes', en: 'Sales day', ar: 'يوم المبيعات' }))}">${dayButtons}</div>
+          <div class="rtx-methods" role="group" aria-label="${escS(T({ fr: 'Activité', en: 'Activity', ar: 'النشاط' }))}">${kindButtons}</div>
+          <div class="rtx-methods" role="group" aria-label="${escS(T({ fr: 'Type de vente', en: 'Sale type', ar: 'نوع البيع' }))}">${methodButtons}</div>
+          ${cancelAuditLoading ? `<p class="rtx-notice" role="status">${escS(T({ fr: 'Chargement du journal…', en: 'Loading activity…', ar: 'جارٍ تحميل السجل…' }))}</p>` : ''}
+          ${cancelAuditError ? `<p class="rtx-notice" role="alert">${escS(T({ fr: 'Journal indisponible. Les remboursements et annulations peuvent être incomplets.', en: 'Activity unavailable. Refunds and cancellations may be incomplete.', ar: 'السجل غير متاح. قد تكون المبالغ المستردة والإلغاءات غير مكتملة.' }))} <button type="button" class="rtx-method" data-action="sales-activity-retry">${escS(T({ fr: 'Réessayer', en: 'Retry', ar: 'إعادة المحاولة' }))}</button></p>` : ''}
+          <div class="rtx-list">${rows || (voids.length && ['all', 'cancel', 'handover'].includes(selectedKind)) || cancelAuditLoading || cancelAuditError ? rows : `<div class="rtx-row"><span class="rtx-products-missing">${escS(T({
+            fr: 'Aucune activité pour ces filtres.',
+            en: 'No activity for these filters.',
+            ar: 'لا يوجد نشاط لهذه الفلاتر.',
           }))}</span></div>`}</div>
+          ${voids.some(v => v.kind !== 'takeout-handover') && ['all', 'cancel'].includes(selectedKind) ? `<section class="rtx-voids"><h3 class="rtx-void-title">${escS(T({ fr:'Annulations & fermetures', en:'Cancellations & closures', ar:'الإلغاءات والإغلاقات' }))}</h3><p class="rtx-void-sub">${escS(T({ fr:'Valeurs des commandes à titre informatif. Ces actions ne sont pas déduites une seconde fois du net encaissé.', en:'Order values are informational. These actions are not deducted again from net collected.', ar:'قيم الطلبات للمعلومات فقط. لا تُخصم هذه الإجراءات مرة أخرى من صافي المقبوضات.' }))}</p>${voidRows}</section>` : ''}
+          ${handoverRows && ['all', 'handover'].includes(selectedKind) ? `<section class="rtx-voids"><h3 class="rtx-void-title">${escS(T({ fr:'Remises au client', en:'Customer handovers', ar:'تسليمات العملاء' }))}</h3>${handoverRows}</section>` : ''}
         </div>
       `,
     });
+    loadCancelAudit();
   }
 
   function renderStarter(nav, meta) {
     /* Ventes: once the merchant has real sales (rung locally OR bridged from a
      * Live-Link caisse), show the actual list, not the "nothing yet" placeholder. */
-    if (nav === 'transactions' && window.KiwiSales?.list && window.KiwiSales.list().length) {
+    if (nav === 'transactions') {
       return renderRealTransactions(nav, meta);
     }
     /* Cette destination est celle affichée : une copie serveur qui arrive
@@ -13787,6 +16023,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       const orig = H[key];
       if (orig && orig.__kiwiStarter) return;
       const wrapped = function () {
+        if (nav === 'transactions') loadCancelAudit();
         const realOrCustom = window.KiwiVenue?.isCustom?.() || window.KiwiEnv?.isReal?.();
         const allowed = REAL_FOR_CUSTOM.has(nav) || (REAL_WHEN[nav] && REAL_WHEN[nav]());
         if (realOrCustom && !allowed) return renderStarter(nav, meta);
@@ -13815,6 +16052,43 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       if (!document.querySelector('[data-real-tx], [data-starter-nav="transactions"]')) return;
       const H = window.Kiwi && window.Kiwi.handlers;
       try { if (H && H['nav-transactions']) H['nav-transactions'](); } catch (_) {}
+    });
+    if (window.KiwiRefunds?.subscribe) window.KiwiRefunds.subscribe(() => {
+      if (document.querySelector('[data-real-tx]')) renderRealTransactions('transactions', STARTERS.transactions);
+    });
+    const refreshActivity = () => {
+      if (!document.hidden && document.querySelector('[data-real-tx]')) loadCancelAudit();
+    };
+    window.setInterval(refreshActivity, 30000);
+    window.addEventListener('online', refreshActivity);
+    document.addEventListener('visibilitychange', refreshActivity);
+    window.addEventListener('kiwi-day-report-ready', () => {
+      if (!document.querySelector('[data-real-tx], [data-starter-nav="transactions"]')) return;
+      const H = window.Kiwi && window.Kiwi.handlers;
+      try { if (H && H['nav-transactions']) H['nav-transactions'](); } catch (_) {}
+    });
+    document.addEventListener('kiwi-sales-voided', (e) => {
+      const isSync = e && e.detail && e.detail.source === 'live-link';
+      const sig = JSON.stringify((e && e.detail && e.detail.refs) || []);
+      if (sig === cancelAuditVoidSig) return;
+      cancelAuditVoidSig = sig;
+      loadCancelAudit(true);
+      const refs = (e && e.detail && e.detail.refs) || [];
+      refs.forEach((ref) => {
+        let reversed = 0;
+        try {
+          if (ref && window.KiwiInventoryConsumption && window.KiwiInventoryConsumption.reverse) {
+            reversed = window.KiwiInventoryConsumption.reverse(ref, 'Annulation tableau de bord');
+          }
+        } catch (_) {}
+        if (!reversed && !isSync) {
+          try {
+            const msg = 'Vente annulée · stock non recrédité (référence introuvable)';
+            if (typeof toast === 'function') toast(msg, { type: 'warning' });
+            else if (window.Kiwi && window.Kiwi.toast) window.Kiwi.toast(msg, { type: 'warning' });
+          } catch (_) {}
+        }
+      });
     });
   });
 })();

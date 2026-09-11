@@ -20,6 +20,7 @@
 // worked before the registry stops working now.
 
 import { isOperator, isSeniorOperator, slugMerchant, json, operatorActor } from '../../auth/_lib.js';
+import { businessDayStart } from '../_business-day.js';
 
 export async function onRequestGet(context) {
   const { request, env } = context;
@@ -34,12 +35,9 @@ export async function onRequestGet(context) {
      griser sans raison ou de laisser découvrir un 403 après avoir tout saisi. */
   const senior = await isSeniorOperator(request, env);
 
-  // Start of "today" in the server's clock (UTC on Workers). Good enough for a
-  // pilot; the console shows the day's running tally, not an accounting close.
+  // Start of "today" respecting the 5:00 AM business day cutoff.
   const now = Date.now();
-  const startOfDay = new Date(now);
-  startOfDay.setHours(0, 0, 0, 0);
-  const dayStart = startOfDay.getTime();
+  const dayStart = businessDayStart(now);
 
   const map = new Map(); // merchant slug → row
   function row(m) {
@@ -54,7 +52,7 @@ export async function onRequestGet(context) {
              * boutique-là (merchant_config.status). Les deux existent parce que
              * les deux gestes existent : couper l'accès d'un client, ou fermer
              * l'un de ses établissements en laissant l'autre ouvert. */
-            store_status: 'active',
+            store_status: 'active', subscription: 'active',
             owner: '', owner_name: '', owner_business: '', primary: false };
       map.set(m, r);
     }
@@ -63,13 +61,24 @@ export async function onRequestGet(context) {
 
   try {
     // Sales aggregate per merchant.
-    const sales = await env.DB.prepare(
-      `SELECT merchant,
-              COALESCE(SUM(CASE WHEN ts >= ? THEN amount ELSE 0 END), 0) AS today_amount,
-              COALESCE(SUM(CASE WHEN ts >= ? THEN 1 ELSE 0 END), 0)      AS today_count,
-              MAX(ts) AS last_ts
-       FROM sales GROUP BY merchant`
-    ).bind(dayStart, dayStart).all();
+    let sales = null;
+    try {
+      sales = await env.DB.prepare(
+        `SELECT merchant,
+                COALESCE(SUM(CASE WHEN ts >= ? THEN COALESCE(amount_cents, amount * 100) ELSE 0 END), 0) / 100.0 AS today_amount,
+                COALESCE(SUM(CASE WHEN ts >= ? AND COALESCE(amount_cents, amount * 100) > 0 THEN 1 ELSE 0 END), 0) AS today_count,
+                MAX(ts) AS last_ts
+         FROM sales WHERE void_ts IS NULL GROUP BY merchant`
+      ).bind(dayStart, dayStart).all();
+    } catch (_) {
+      sales = await env.DB.prepare(
+        `SELECT merchant,
+                COALESCE(SUM(CASE WHEN ts >= ? THEN amount ELSE 0 END), 0) AS today_amount,
+                COALESCE(SUM(CASE WHEN ts >= ? AND amount > 0 THEN 1 ELSE 0 END), 0) AS today_count,
+                MAX(ts) AS last_ts
+         FROM sales WHERE void_ts IS NULL GROUP BY merchant`
+      ).bind(dayStart, dayStart).all();
+    }
     for (const s of (sales.results || [])) {
       const r = row(s.merchant);
       r.today_amount = s.today_amount || 0;
@@ -87,7 +96,9 @@ export async function onRequestGet(context) {
     try {
       // `city` est posée par l'opérateur (voir /api/admin/overview) : la console
       // la montre dans le roster ET la cherche, donc elle voyage avec la ligne.
-      cfg = await env.DB.prepare(`SELECT merchant, plan, type, account_id, name, status, city FROM merchant_config`).all();
+      cfg = await env.DB.prepare(`SELECT merchant, plan, type, account_id, name, status, city, mrr,
+        subscription_kind, billing_cycle, subscription_start, subscription_end,
+        trial_start, trial_end, trial_days FROM merchant_config`).all();
     } catch (_0) {
     try {
       cfg = await env.DB.prepare(`SELECT merchant, plan, type, account_id, name, status FROM merchant_config`).all();
@@ -104,7 +115,16 @@ export async function onRequestGet(context) {
       r.plan = c.plan || '';
       r.type = c.type || '';
       r.city = c.city || '';
+      r.mrr = c.mrr == null ? null : Number(c.mrr);
+      r.subscription_kind = c.subscription_kind || 'paid';
+      r.billing_cycle = c.billing_cycle || 'monthly';
+      r.subscription_start = c.subscription_start || '';
+      r.subscription_end = c.subscription_end || '';
+      r.trial_start = c.trial_start || '';
+      r.trial_end = c.trial_end || '';
+      r.trial_days = c.trial_days == null ? null : Number(c.trial_days);
       if (c.status === 'suspended') r.store_status = 'suspended';
+      if (c.status === 'pending') { r.store_status = 'pending'; r.subscription = 'pending'; }
       if (c.name) r.business = c.name;              // the store's own name
       if (c.account_id) ownerOf.set(c.merchant, c.account_id);
     }
@@ -124,6 +144,14 @@ export async function onRequestGet(context) {
       ownerOf.set(m, a.id);
     }
 
+    // Count non-suspended venues per account
+    const venuesPerAccount = new Map();
+    for (const c of (cfg.results || [])) {
+      if (c.account_id && c.status !== 'suspended') {
+        venuesPerAccount.set(c.account_id, (venuesPerAccount.get(c.account_id) || 0) + 1);
+      }
+    }
+
     // Attach the owner to every store, primary or not. This is what turns a flat
     // list of slugs into a list of CLIENTS: two stores of the same merchant now
     // carry the same `owner`, and a store with no owner stays a demo.
@@ -139,6 +167,7 @@ export async function onRequestGet(context) {
       r.status = a.status || 'active'; // active | suspended (frozen for non-payment)
       r.demo = false; // real email+password signup → a real client
       if (!r.business) r.business = a.business || '';
+      r.account_venues = venuesPerAccount.get(aid) || 1;
     }
   } catch (e) {
     return json({ error: 'query-failed', detail: String(e) }, 500);
@@ -172,7 +201,7 @@ export async function onRequestPatch(context) {
     merchant = (b.merchant || '').toString().trim().slice(0, 64);
     status = (b.status || '').toString().trim();
   } catch (_) { /* no body */ }
-  if (status !== 'active' && status !== 'suspended') return json({ error: 'bad-status' }, 400);
+  if (!['active', 'pending', 'suspended'].includes(status)) return json({ error: 'bad-status' }, 400);
 
   /* ── UN ÉTABLISSEMENT, ou TOUT LE COMPTE ──────────────────────────────────
    * `merchant` gèle UNE boutique ; `email` gèle le login, donc toutes.
@@ -267,11 +296,13 @@ async function merchantTables(env) {
  * pouvait fabriquer un établissement fantôme, et la console n'offrait aucun
  * moyen de le retirer.
  *
- * Trois garde-fous, parce que c'est irréversible :
+ * Quatre garde-fous, parce que c'est irréversible :
  *   · code opérateur nommé (senior), pas le laissez-passer d'équipe ;
  *   · `confirm` doit répéter le slug — on ne supprime pas d'un doigt qui glisse ;
- *   · tout part en un seul batch (atomique côté D1) : pas de magasin à moitié
- *     effacé si la connexion lâche au milieu.
+ *   · les pièces R2 `intake/<merchant>/` sont listées (paginé) puis supprimées
+ *     AVANT le batch D1 : un échec R2 annule tout et ne rapporte aucun succès ;
+ *   · le batch D1 reste atomique, mais D1+R2 ne le sont pas ensemble : voir le
+ *     commentaire au-dessus de la phase R2 pour l'ordre et la reprise.
  *
  * La réponse est un CONSTAT, pas une promesse : elle liste chaque table touchée
  * avec le nombre de lignes réellement retirées, et les journaux conservés. */
@@ -343,14 +374,163 @@ export async function onRequestDelete(context) {
       if (n) removed[t] = n;
     } catch (_) { /* illisible → elle sortira du batch aussi */ }
   }
+  let deleteSupportMessages = null;
+  if (tables.indexOf('support_tickets') >= 0) {
+    try {
+      const sm = await env.DB.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='support_messages' LIMIT 1"
+      ).first();
+      if (sm && sm.name) {
+        const c = await env.DB.prepare(
+          'SELECT COUNT(*) AS n FROM support_messages WHERE ticket_id IN (SELECT id FROM support_tickets WHERE merchant = ?)'
+        ).bind(merchant).first();
+        const n = Number((c && c.n) || 0);
+        if (n) removed.support_messages = n;
+        deleteSupportMessages = env.DB.prepare(
+          'DELETE FROM support_messages WHERE ticket_id IN (SELECT id FROM support_tickets WHERE merchant = ?)'
+        ).bind(merchant);
+      }
+    } catch (e) {
+      return json({ error: 'inventory-failed', detail: 'cannot inventory support messages: ' + String(e) }, 500);
+    }
+  }
+
+  /* R2 : trois familles d'objets appartiennent à l'établissement : pièces du
+   * guichet (`intake/<merchant>/`), médias catalogue/chambres
+   * (`<merchant>/`) et pièces support (`support/<merchant>/`). Supprimer les
+   * lignes D1 seules les orphelinerait sans index pour les retrouver. Il
+   * n'existe pas de transaction distribuée D1+R2 : l'ordre est donc R2 PUIS
+   * D1. Un crash entre les deux laisse des lignes D1 dont les octets manquent
+   * (lectures en 404, rien d'orphelin), et la reprise re-liste ce qui reste
+   * puis rejoue le batch D1, idempotent par nature (des DELETE répétés). Tant
+   * qu'un objet d'une famille connue subsiste, le registre D1 n'est pas touché
+   * et la suppression n'est pas annoncée. */
+  let r2 = { status: 'skipped', prefix: null, prefixes: [], listed: 0, deleted: 0 };
+  if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(merchant)) {
+    // Chaque préfixe R2 dérive du slug : interdire surtout '/' et '.' empêche
+    // toute suppression de déborder sur un autre établissement.
+    return json({ error: 'invalid-merchant' }, 400);
+  }
+  if (merchant === 'intake' || merchant === 'support') {
+    /* Les médias historiques sont à la racine `<merchant>/`. Pour ces deux
+     * slugs seulement, cette racine recouvrirait les espaces partagés
+     * `intake/<autre marchand>/` ou `support/<autre marchand>/`. Refuser vaut
+     * mieux qu'une clôture cross-tenant. Les nouveaux dépôts vivent sous
+     * `media/<merchant>/`, mais ce garde reste nécessaire tant que des URLs
+     * historiques peuvent encore référencer l'ancienne racine ambiguë. */
+    return json({ error: 'r2-prefix-collision', detail: 'merchant slug overlaps a reserved R2 namespace' }, 409);
+  }
+  const r2Prefixes = [
+    'intake/' + merchant + '/',
+    'media/' + merchant + '/',
+    merchant + '/',
+    'support/' + merchant + '/',
+  ];
+  r2.prefix = r2Prefixes[0]; // compatibilité avec les anciens rapports opérateur
+  r2.prefixes = r2Prefixes.slice();
+  if (!env.MEDIA) {
+    // Liaison absente : on ne peut ni lister ni supprimer. On ne continue que
+    // sur preuve POSITIVE qu'aucun registre ne référence encore un objet —
+    // jamais sur une erreur transformée en zéro. Chaque table est sondée avant
+    // sa lecture (même motif que hotel/declarations.js) : table absente ⇒ cette
+    // famille n'a jamais été enregistrée ici ; table illisible ⇒ 503 sans rien
+    // toucher. `instr`, pas LIKE : '_' est autorisé dans un slug et ne doit pas
+    // devenir un joker SQL.
+    try {
+      const mediaNeedles = ['/api/media/media/' + merchant + '/', '/api/media/' + merchant + '/'];
+      const registries = [
+        { table: 'intake_docs', sql: 'SELECT COUNT(*) AS n FROM intake_docs WHERE merchant = ?', args: [merchant] },
+        { table: 'support_attachments', sql: 'SELECT COUNT(*) AS n FROM support_attachments WHERE merchant = ?', args: [merchant] },
+        { table: 'menus', sql: 'SELECT COUNT(*) AS n FROM menus WHERE merchant = ? AND (instr(data, ?) > 0 OR instr(data, ?) > 0)', args: [merchant, ...mediaNeedles] },
+        { table: 'catalogs', sql: 'SELECT COUNT(*) AS n FROM catalogs WHERE merchant = ? AND (instr(data, ?) > 0 OR instr(data, ?) > 0)', args: [merchant, ...mediaNeedles] },
+        { table: 'store_docs', sql: 'SELECT COUNT(*) AS n FROM store_docs WHERE merchant = ? AND (instr(data, ?) > 0 OR instr(data, ?) > 0)', args: [merchant, ...mediaNeedles] },
+      ];
+      const pending = {};
+      for (const registry of registries) {
+        const t = await env.DB.prepare(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name=? LIMIT 1"
+        ).bind(registry.table).first();
+        if (!t || !t.name) continue;
+        const c = await env.DB.prepare(registry.sql).bind(...registry.args).first();
+        const n = Number((c && c.n) || 0);
+        if (n > 0) pending[registry.table] = n;
+      }
+      if (Object.keys(pending).length) {
+        return json({
+          error: 'r2-binding-missing',
+          detail: 'R2-backed rows exist but no bound bucket can verify or delete their objects',
+          pending,
+        }, 503);
+      }
+    } catch (_) {
+      // Base illisible : on ne sait pas s'il reste des objets — refus, aucune
+      // suppression. Le flux historique reste ouvert quand les registres sont
+      // absents ou tous prouvés vides.
+      return json({ error: 'db-unavailable', detail: 'cannot verify R2-backed registries without MEDIA binding' }, 503);
+    }
+    r2.status = 'binding-missing-no-rows';
+  }
+  if (env.MEDIA) {
+    try {
+      /* Vidage par vagues SANS curseur conservé : chaque tour reliste depuis
+       * le début du préfixe et supprime la page reçue en UN appel bulk
+       * (tableaux de 1000 clés au plus). Aucune hypothèse sur la stabilité
+       * d'un curseur après suppression — la reprise (normale ou après
+       * échec) retrouve simplement ce qui reste. Terminaison : chaque tour
+       * réussi retire ≥1 objet (décroissance stricte) ; une page vide, même
+       * annoncée `truncated`, termine ; une tête de page qui survit à deux
+       * suppressions annoncées réussies signale un seau menteur et avorte. */
+      for (const prefix of r2Prefixes) {
+        let lastHead = null;
+        let headRepeats = 0;
+        for (;;) {
+          const page = await env.MEDIA.list({ prefix, limit: 1000 });
+          const objects = (page && page.objects) || [];
+          if (!objects.length) break;
+          const keys = [];
+          for (const o of objects) {
+            const key = o && o.key;
+            if (typeof key !== 'string' || !key.startsWith(prefix)) {
+              return json({ error: 'r2-scope-violation', detail: 'R2 listed a key outside ' + prefix }, 500);
+            }
+            keys.push(key);
+          }
+          r2.listed += keys.length;
+          for (let i = 0; i < keys.length; i += 1000) {
+            await env.MEDIA.delete(keys.slice(i, i + 1000));
+          }
+          r2.deleted += keys.length;
+          if (keys[0] === lastHead) {
+            headRepeats += 1;
+            if (headRepeats >= 2) throw new Error('r2-delete-stalled:' + prefix);
+          } else {
+            lastHead = keys[0];
+            headRepeats = 0;
+          }
+        }
+      }
+      r2.status = 'cleaned';
+    } catch (e) {
+      r2.status = 'failed';
+      return json({ error: 'r2-cleanup-failed', detail: String((e && e.message) || e), r2 }, 500);
+    }
+  }
 
   try {
     const deletes = tables.map((t) =>
       env.DB.prepare(`DELETE FROM ${t} WHERE merchant = ?`).bind(merchant));
+    if (deleteSupportMessages) deletes.unshift(deleteSupportMessages);
     if (owner && nextStore && slugMerchant(owner.business) === merchant) {
       deletes.push(env.DB.prepare('UPDATE accounts SET business = ? WHERE id = ?')
         .bind(nextStore.name || nextStore.merchant, owner.id));
     } else if (owner && !nextStore) {
+      // Account-wide privacy requests intentionally have no merchant. Remove
+      // their PII only with the last store/account, never with a sibling store.
+      if (tables.includes('support_tickets')) {
+        const ownedRequest = "SELECT id FROM support_tickets WHERE merchant = '' AND category = 'account-deletion' AND json_valid(diagnostics) AND json_extract(diagnostics, '$.account_id') = ?";
+        if (deleteSupportMessages) deletes.push(env.DB.prepare('DELETE FROM support_messages WHERE ticket_id IN (' + ownedRequest + ')').bind(owner.id));
+        deletes.push(env.DB.prepare('DELETE FROM support_tickets WHERE id IN (' + ownedRequest + ')').bind(owner.id));
+      }
       deletes.push(env.DB.prepare('DELETE FROM reset_tokens WHERE account_id = ?').bind(owner.id));
       deletes.push(env.DB.prepare('DELETE FROM accounts WHERE id = ?').bind(owner.id));
       removed.accounts = 1;
@@ -361,12 +541,13 @@ export async function onRequestDelete(context) {
   }
 
   await logStoreAction(context, merchant, 'store-delete', 'deleted',
-    'suppression définitive · ' + JSON.stringify(removed));
+    'suppression définitive · ' + JSON.stringify(removed) + ' · r2 ' + JSON.stringify(r2));
 
   return json({
     ok: true, merchant,
     scanned: tables,          // tout ce qui porte une colonne `merchant`
     removed,                  // table → lignes réellement retirées
     kept: AUDIT_TABLES,       // les journaux d'opérateur, conservés exprès
+    r2,                       // préfixe, objets listés/supprimés, statut
   });
 }

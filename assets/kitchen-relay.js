@@ -170,13 +170,13 @@
   }
 
   /* Faire avancer un bon (prête, servie). Même route, même garde. */
-  function bump(id, status) {
+  function bump(id, status, station) {
     var m = merchant();
     if (!m || !id) return Promise.resolve(null);
     return fetch('/api/order/queue', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ merchant: m, id: id, status: status }),
+      body: JSON.stringify({ merchant: m, id: id, status: status, station: station || '' }),
       cache: 'no-store',
     }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
   }
@@ -190,6 +190,48 @@
       + (role ? '&role=' + encodeURIComponent(role) : '');
     return fetch(u, { headers: { Accept: 'application/json' }, cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; });
+  }
+
+  /* Annuler une ligne en cuisine (pré-cuisson immédiat ou alerte cuisson) */
+  function voidLine(payload) {
+    var m = merchant();
+    if (!m || !payload) return Promise.resolve(null);
+    return fetch('/api/order/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchant: m, voidLine: payload }),
+      cache: 'no-store',
+    }).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (res) {
+        if (res && res.directVoid && !payload.isWaste && !res.isWaste) {
+          try {
+            window.KiwiInventoryConsumption?.reverseVoid?.(res);
+          } catch (_) {}
+        }
+        return res;
+      })
+      .catch(function () { return null; });
+  }
+
+  /* Acquitter une demande d'annulation (chef valide l'arrêt ou dit "déjà prêt") */
+  function ackVoid(orderId, action, isWaste) {
+    var m = merchant();
+    if (!m || !orderId) return Promise.resolve(null);
+    return fetch('/api/order/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchant: m, ackVoid: { orderId: orderId, action: action || 'accept', isWaste: isWaste } }),
+      cache: 'no-store',
+    }).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (res) {
+        if (res && res.action === 'accepted' && !res.isWaste && !isWaste) {
+          try {
+            window.KiwiInventoryConsumption?.reverseVoid?.(res);
+          } catch (_) {}
+        }
+        return res;
+      })
       .catch(function () { return null; });
   }
 
@@ -208,6 +250,8 @@
     bump: bump,
     pull: pull,
     pending: pending,
+    voidLine: voidLine,
+    ackVoid: ackVoid,
     reachable: function () { return !backendAbsent; },
   };
 })();

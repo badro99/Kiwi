@@ -1,6 +1,9 @@
 // POST /auth/signup — create a merchant account, start a session, mirror the
 // lead. Body JSON: { email, name, business, password }.
-import { hashPassword, makeSession, sessionCookie, json, normEmail, mirrorLead } from './_lib.js';
+import {
+  PASSWORD_MAX, hashPassword, makeSession, sessionCookie, json, normEmail, mirrorLead,
+  limitCheck, limitFail, passwordProblem, slugMerchant, rateLimitUnavailable,
+} from './_lib.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -11,18 +14,69 @@ export async function onRequestPost(context) {
 
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
+  if (String(body && body.email || '').length > 254) return json({ error: 'email' }, 400);
+  if (String(body && body.password || '').length > PASSWORD_MAX) return json({ error: 'weak', reason: 'long' }, 400);
+
+  const blocked = await limitCheck(request, env, 'signup');
+  if (blocked) return blocked;
 
   const email = normEmail(body.email);
   const name = String(body.name || '').trim().slice(0, 120);
   const business = String(body.business || '').trim().slice(0, 120);
   const password = String(body.password || '');
 
-  if (!EMAIL_RE.test(email)) return json({ error: 'email' }, 400);
-  if (!name) return json({ error: 'name' }, 400);
-  if (password.length < 8) return json({ error: 'weak' }, 400);
+  if (email.length > 254 || !EMAIL_RE.test(email)) {
+    if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
+    return json({ error: 'email' }, 400);
+  }
+  if (!name) {
+    if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
+    return json({ error: 'name' }, 400);
+  }
+  const problem = passwordProblem(password, { email, business });
+  if (problem) {
+    if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
+    return json({ error: 'weak', reason: problem }, 400);
+  }
 
   const existing = await env.DB.prepare('SELECT id FROM accounts WHERE email = ?').bind(email).first();
-  if (existing) return json({ error: 'exists' }, 409);
+  if (existing) {
+    if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
+    return json({ error: 'exists' }, 409);
+  }
+
+  /* Le nom d'établissement N'EST PAS un simple libellé : tout le backend en
+   * dérive l'identité du locataire (slugMerchant → tenantFor → entitledMerchant).
+   * Le laisser libre revenait à laisser n'importe qui choisir de quel commerçant
+   * il fait partie : s'inscrire sous le nom d'une enseigne existante suffisait à
+   * hériter de son tenant. Les résolveurs refusent désormais un slug que le
+   * registre attribue à un autre compte ; on ferme ici l'autre moitié, le cas
+   * d'une boutique qui existe mais n'a jamais été enregistrée.
+   *
+   * On ne consulte que des comptes, jamais un secret, et on ne dit pas à qui
+   * appartient le nom — seulement qu'il est pris. */
+  const wantedSlug = slugMerchant(business);
+  if (business && wantedSlug && wantedSlug !== 'client') {
+    let taken = false;
+    try {
+      const claimed = await env.DB.prepare(
+        'SELECT account_id FROM merchant_config WHERE merchant = ? LIMIT 1'
+      ).bind(wantedSlug).first();
+      if (claimed && claimed.account_id) taken = true;
+    } catch (_) { /* registre absent (base non migrée) → on s'en remet au balayage */ }
+    if (!taken) {
+      try {
+        const rs = await env.DB.prepare(
+          "SELECT business FROM accounts WHERE business IS NOT NULL AND business <> ''"
+        ).all();
+        taken = (rs.results || []).some((r) => slugMerchant(r.business) === wantedSlug);
+      } catch (_) { /* illisible → ne bloque pas une inscription légitime */ }
+    }
+    if (taken) {
+      if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
+      return json({ error: 'business-taken' }, 409);
+    }
+  }
 
   const { salt, hash } = await hashPassword(password);
   const id = 'acc-' + crypto.randomUUID();
@@ -34,8 +88,14 @@ export async function onRequestPost(context) {
     ).bind(id, email, name, business, salt, hash, ts).run();
   } catch (e) {
     // UNIQUE(email) race → treat as already-registered.
+    if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
     return json({ error: 'exists' }, 409);
   }
+
+  /* Effacer le compteur à chaque succès rendait la création de comptes
+   * illimitée : un script alternait les inscriptions réussies et n'était jamais
+   * freiné. Un compte créé compte donc comme une tentative. */
+  if (!await limitFail(request, env, 'signup')) return rateLimitUnavailable();
 
   // Best-effort lead mirror to the Google Sheet — never blocks the response.
   context.waitUntil(mirrorLead(env, { email, name, business, ts }));

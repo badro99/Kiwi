@@ -18,7 +18,7 @@ This project has **no unit-test harness** (vanilla, zero-dep — see `tools/chec
    - Every `data-action="x"` in HTML **must** have a handler known to some `assets/*.js` file, or it fails. Any new `data-action` (Task 4's `toggle-ticket`, Task 7's actions) ships with its handler in the same commit.
    - No `background: var(--ink)` in CSS/JS (inverts in dark mode) — use `--ink-bg`, `--riad`, or `--riad-deep`.
    - No secret-shaped strings.
-2. **In-browser verification** via the Claude Preview MCP against the local static server (`kiwi-static`, port 4178): `preview_start` → navigate to `http://localhost:4178/kiwi-caisse.html` → `preview_screenshot` / `preview_inspect` (assert exact CSS props) / `preview_resize` (viewport shapes). Where a step reads runtime state it uses **`preview_eval`** with the given expression. The caisse boots to a PIN keypad; enter `1234` (any unlisted code → café register), pick an opening float, click **Ouvrir la caisse** to reach the register.
+2. **In-browser verification** via the Claude Preview MCP against the local static server (`kiwi-static`, port 4178): `preview_start` → navigate to `http://localhost:4178/kiwi-caisse.html` → `preview_screenshot` / `preview_inspect` (assert exact CSS props) / `preview_resize` (viewport shapes). Where a step reads runtime state it uses **`preview_eval`** with the given expression. The caisse boots to a PIN keypad; enter a 4-digit code (any unlisted code → café register), pick an opening float, click **Ouvrir la caisse** to reach the register.
 
 **Commit** after each green task with author footer `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>` and `<scope> · <what>` subject. **Push** to both remotes at task checkpoints via `tools/push-both.sh` (or, if remote names reshuffled, push `main` by URL to both the Cloudflare repo `zaka33333-hash/Kiwi` and the Pages repo `badro99/Kiwi` — see `~/.claude/.../memory/deploy-remotes.md`). Per CLAUDE.md never `git add -A`; stage explicit paths.
 
@@ -942,7 +942,7 @@ Expected: `✓ all checks passed`.
 
 - [ ] **Step 2: Cross-viewport smoke of the whole caisse**
 
-Preview → for each of `width:1920,height:1080`, `width:1024,height:768`, `width:390,height:844`: navigate to the caisse, verify the PIN dispatcher renders, enter `1234` → café register renders elevated and reflows (no horizontal scroll: `preview_eval` → expression: `document.documentElement.scrollWidth <= window.innerWidth + 1` → `true`), and enter `0000` → pressing renders elevated at the same viewport. Screenshot each.
+Preview → for each of `width:1920,height:1080`, `width:1024,height:768`, `width:390,height:844`: navigate to the caisse, verify the PIN dispatcher renders, enter café PIN → café register renders elevated and reflows (no horizontal scroll: `preview_eval` → expression: `document.documentElement.scrollWidth <= window.innerWidth + 1` → `true`), and enter `0000` → pressing renders elevated at the same viewport. Screenshot each.
 
 - [ ] **Step 3: Install + offline confirmation**
 

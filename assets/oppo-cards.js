@@ -90,14 +90,6 @@
   /* ─── Card pool — one feature per card, CTA = the feature's real handler ─── */
   const POOL = [
     {
-      id: 'depenses', art: 'depenses', action: 'open-depenses', feat: 'depenses',
-      t: { fr: 'Maîtrisez vos sorties', en: 'Control what goes out', ar: 'تحكّم في مصاريفك' },
-      d: { fr: 'Des cartes Kiwi pour votre équipe, un plafond par catégorie, et chaque dirham qui sort, net de ce qui rentre.',
-           en: 'Kiwi cards for your team, a per-category limit, and every dirham going out, net of what comes in.',
-           ar: 'بطاقات Kiwi لفريقك، حدّ لكل فئة، وكل درهم يخرج، مقابل ما يدخل.' },
-      cta: { fr: 'Voir Dépenses', en: 'Open Spend', ar: 'فتح المصاريف' },
-    },
-    {
       id: 'paylink', art: 'paylink', action: 'payment-link',
       t: { fr: 'Encaissez à distance', en: 'Get paid remotely', ar: 'حصّل عن بُعد' },
       d: { fr: 'Envoyez un lien de paiement par WhatsApp, acomptes, commandes, réservations. L\'argent arrive avant le client.',
@@ -180,15 +172,15 @@
         background: none; border: 0; padding: 6px 0 2px; cursor: pointer; font-family: inherit; }
       .oppo-cta:hover { text-decoration: underline; text-underline-offset: 3px; }
       .oppo-x { position: absolute; top: 10px; inset-inline-end: 10px; width: 26px; height: 26px; border-radius: 8px;
-        border: 0; background: none; color: var(--n-400); cursor: pointer; display: flex; align-items: center;
+        border: 0; background: none; color: var(--n-500); cursor: pointer; display: flex; align-items: center;
         justify-content: center; opacity: 0.6; transition: opacity 160ms ease, background 160ms ease, color 160ms ease; }
       .oppo-card:hover .oppo-x, .oppo-x:focus-visible { opacity: 1; }
       .oppo-x:hover { background: var(--paper-soft); color: var(--ink); }
       /* Au doigt, il n'y a pas de survol. Deux conséquences que la règle
          ci-dessus laissait passer sur téléphone :
-           — la croix restait à 60 % d'opacité pour toujours, puisque la règle
+           la croix restait à 60 % d'opacité pour toujours, puisque la règle
              de survol sur .oppo-card ne se produit jamais ;
-           — et elle mesurait 26 px, sous le seuil de confort tactile. Le pouce
+           et elle mesurait 26 px, sous le seuil de confort tactile. Le pouce
              manque la croix, touche la carte, et ouvre la fonction qu'on
              voulait justement écarter.
          La zone sensible passe de 25 à 45 px par un pseudo-élément débordant

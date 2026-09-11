@@ -16,8 +16,8 @@
 
   function isOn() { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } }
   function getGlass() {
-    try { var v = localStorage.getItem(GKEY); return LEVELS.indexOf(v) !== -1 ? v : 'standard'; }
-    catch (e) { return 'standard'; }
+    try { var v = localStorage.getItem(GKEY); return LEVELS.indexOf(v) !== -1 ? v : 'opaque'; }
+    catch (e) { return 'opaque'; }
   }
   function setGlass(level) {
     if (LEVELS.indexOf(level) === -1) level = 'standard';

@@ -17,18 +17,20 @@
  *   KiwiEscPos.label(o)                       → Uint8Array (barcode étiquette)
  *   KiwiEscPos.testSlip(o)                    → Uint8Array (printer test)
  *   o.paper: '58' | '80'  (mm; default '80')
+ *   o.label: { w, h }     (mm; barcode labels only)
  * ═══════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
 
   var ESC = 0x1B, GS = 0x1D;
+  var PLATFORM_CREDIT = 'Powered by kiwi-os.com';
 
   // Windows-1252 upper-range specials (0x80–0x9F) that differ from Latin-1.
   var CP1252 = {
     '€': 0x80, '‚': 0x82, 'ƒ': 0x83, '„': 0x84, '…': 0x85,
     '†': 0x86, '‡': 0x87, 'ˆ': 0x88, '‰': 0x89, 'Š': 0x8A,
     '‹': 0x8B, 'Œ': 0x8C, 'Ž': 0x8E, '‘': 0x91, '’': 0x92,
-    '“': 0x93, '”': 0x94, '•': 0x95, '–': 0x96, '—': 0x97,
+    '“': 0x93, '”': 0x94, '•': 0x95, '–': 0x96, '·': 0x97,
     '˜': 0x98, '™': 0x99, 'š': 0x9A, '›': 0x9B, 'œ': 0x9C,
     'ž': 0x9E, 'Ÿ': 0x9F,
   };
@@ -51,6 +53,7 @@
   Builder.prototype.text = function (s) { return this.raw(encodeCp1252(s)); };
   Builder.prototype.line = function (s) { return this.text(s == null ? '' : s).raw([0x0A]); };
   Builder.prototype.feed = function (n) { return this.raw([ESC, 0x64, Math.max(0, n | 0)]); };   // ESC d n
+  Builder.prototype.feedDots = function (n) { return this.raw([ESC, 0x4A, Math.max(0, Math.min(255, n | 0))]); }; // ESC J n
   Builder.prototype.align = function (a) { var m = a === 'center' ? 1 : a === 'right' ? 2 : 0; return this.raw([ESC, 0x61, m]); };
   Builder.prototype.bold = function (on) { return this.raw([ESC, 0x45, on ? 1 : 0]); };
   // GS ! n — width multiplier in high nibble, height in low nibble (1–8 → 0–7).
@@ -59,7 +62,8 @@
     return this.raw([GS, 0x21, (wm << 4) | hm]);
   };
   Builder.prototype.drawer = function () { return this.raw([ESC, 0x70, 0x00, 0x19, 0xFA]); };    // kick pin 2
-  Builder.prototype.cut = function () { return this.feed(3).raw([GS, 0x56, 0x00]); };            // feed + full cut
+  Builder.prototype.cut = function () { return this.feed(5).raw([GS, 0x56, 0x00]); };            // feed + full cut
+  Builder.prototype.cutNow = function () { return this.raw([GS, 0x56, 0x00]); };                  // full cut, no receipt feed
 
   // Barcode via GS k format 2 (length-prefixed). HRI text below.
   //   ean13: 12 or 13 ASCII digits (m=67).   code128: "{B"+data (m=73).
@@ -104,12 +108,23 @@
    * ticket — it just prints as standard 80 mm. */
   var COLS = { '44': 24, '57': 32, '58': 32, '76': 40, '80': 48, '110': 66, '112': 64 };
   function cols(paper) { return COLS[String(paper)] || 48; }
+  function cell(v) {
+    return String(v == null ? '' : v).replace(/[\r\n\t\x00-\x1F\x7F]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  }
+  function fit(v, paper, widthMultiplier) {
+    var cap = Math.max(1, Math.floor(cols(paper) / Math.max(1, widthMultiplier || 1)));
+    return cell(v).slice(0, cap);
+  }
   // "name .......... price" padded to the paper width.
   function row(left, right, paper) {
     var w = cols(paper);
-    left = String(left == null ? '' : left);
-    right = String(right == null ? '' : right);
-    if (left.length + right.length + 1 > w) left = left.slice(0, w - right.length - 1);
+    left = cell(left);
+    right = cell(right);
+    /* Never let a merchant-entered label or an unexpectedly long amount push a
+       fixed-width row past the configured roll. The right column is kept first
+       because it carries the accounting value. */
+    if (right.length >= w) right = right.slice(0, w - 1);
+    if (left.length + right.length + 1 > w) left = left.slice(0, Math.max(0, w - right.length - 1));
     var gap = Math.max(1, w - left.length - right.length);
     return left + new Array(gap + 1).join(' ') + right;
   }
@@ -124,10 +139,11 @@
   function receipt(o) {
     o = o || {}; var paper = o.paper || '80';
     var b = new Builder().init();
-    b.align('center').bold(true).size(2, 2).line(o.shop || 'Kiwi').size(1, 1).bold(false);
-    if (o.address) b.line(o.address);
-    if (o.phone) b.line(o.phone);
-    if (o.ref || o.date) b.line([o.ref, o.date].filter(Boolean).join('  '));
+    b.align('center').bold(true).size(2, 2).line(fit(o.shop || 'Kiwi', paper, 2)).size(1, 1).bold(false);
+    if (o.address) b.line(fit(o.address, paper));
+    if (o.phone) b.line(fit(o.phone, paper));
+    if (o.ref || o.date) b.line(fit([o.ref, o.date].filter(Boolean).join('  '), paper));
+    if (o.copy) b.bold(true).size(1, 2).line(fit(o.copy, paper)).size(1, 1).bold(false);
     b.align('left').line(rule(paper));
     (o.lines || []).forEach(function (l) {
       var name = (l.qty ? l.qty + '× ' : '') + (l.name || '');
@@ -136,8 +152,8 @@
     b.line(rule(paper));
     b.bold(true).size(1, 2).line(row('TOTAL', (o.total != null ? o.total : '') + '', paper)).size(1, 1).bold(false);
     if (o.method) b.line(row('Paiement', o.method, paper));
-    if (o.footer) b.feed(1).align('center').line(o.footer);
-    b.align('center').feed(1).line('Merci · Kiwi');
+    if (o.footer) b.feed(1).align('center').line(fit(o.footer, paper));
+    b.align('center').feed(1).line(PLATFORM_CREDIT);
     b.cut();
     if (o.openDrawer) b.drawer();
     return b.bytes();
@@ -146,25 +162,55 @@
   function kitchenTicket(o) {
     o = o || {}; var paper = o.paper || '80';
     var b = new Builder().init();
-    b.align('center').bold(true).size(2, 2).line(o.title || 'CUISINE').size(1, 1).bold(false);
-    if (o.table || o.order) b.line([o.table, o.order].filter(Boolean).join('  ·  '));
-    if (o.time) b.line(o.time);
+    b.align('center').bold(true).size(2, 2).line(fit(o.title || 'CUISINE', paper, 2)).size(1, 1).bold(false);
+    if (o.table || o.order) b.bold(true).size(2, 2).line(fit([o.table, o.order].filter(Boolean).join('  ·  '), paper, 2)).size(1, 1).bold(false);
+    if (o.time) b.line(fit(o.time, paper));
     b.align('left').line(rule(paper));
     (o.items || []).forEach(function (it) {
-      b.bold(true).size(1, 2).line((it.qty ? it.qty + '× ' : '') + (it.name || '')).size(1, 1).bold(false);
-      if (it.note) b.line('   > ' + it.note);
+      b.bold(true).size(2, 2).line(fit((it.qty ? it.qty + '× ' : '') + (it.name || ''), paper, 2)).size(1, 1).bold(false);
+      /* A composed menu is one kitchen instruction, not a row of unrelated
+       * dishes. Its selected components are deliberately smaller than the
+       * formula name and each starts with the same unmistakable `>` marker.
+       * Ordinary dishes never carry formulaChoices, so their long-standing
+       * name + note layout stays byte-for-byte unchanged. */
+      (it.formulaChoices || []).forEach(function (choice) {
+        var label = typeof choice === 'string' ? choice : (choice && choice.name);
+        var detail = typeof choice === 'object' && choice ? choice.note : '';
+        if (!label) return;
+        b.bold(false).size(1, 1)
+          .line(fit('> ' + label + (detail ? ' · ' + detail : ''), paper))
+          .size(1, 1);
+      });
+      if (it.note) b.bold(true).size(1, 2).line(fit('   > ' + it.note, paper)).size(1, 1).bold(false);
     });
-    b.line(rule(paper)).cut();
+    b.line(rule(paper)).feed(3).cut();
     return b.bytes();
   }
 
   function label(o) {
     o = o || {}; var paper = o.paper || '80';
     var b = new Builder().init().align('center');
-    if (o.title) b.bold(true).line(o.title).bold(false);
-    if (o.sub) b.line(o.sub);
-    if (o.price != null && o.price !== '') b.bold(true).size(1, 2).line(String(o.price) + ' MAD').size(1, 1).bold(false);
-    b.feed(1).barcode(o.code, { format: o.format || 'ean13', height: 60 });
+    var compact = o.label && Number(o.label.h) <= 24;
+    // A 50 × 20 mm label has room for one dominant identifier and two compact
+    // operational lines. Retail labels keep their barcode; pressing labels can
+    // explicitly trade it for a large customer name while retaining the piece
+    // reference in plain text. Compact stock still cuts after a few dots.
+    if (compact) {
+      if (o.title) b.bold(true).size(2, 2).line(fit(o.title, paper, 2)).size(1, 1).bold(false);
+      if (o.sub) b.bold(true).line(fit(o.sub, paper)).bold(false);
+      if (o.detail) b.line(fit(o.detail, paper));
+      if (o.price != null && o.price !== '') b.bold(true).size(2, 2).line(fit(String(o.price) + ' MAD', paper, 2)).size(1, 1).bold(false);
+      if (!o.hideBarcode) b.barcode(o.code, { format: o.format || 'ean13', height: 32, module: 2 });
+      if (o.footer) b.line(fit(o.footer, paper));
+      b.feedDots(4).cutNow();
+      return b.bytes();
+    }
+    if (o.title) b.bold(true).line(fit(o.title, paper)).bold(false);
+    if (o.sub) b.line(fit(o.sub, paper));
+    if (o.detail) b.line(fit(o.detail, paper));
+    if (o.price != null && o.price !== '') b.bold(true).size(1, 2).line(fit(String(o.price) + ' MAD', paper)).size(1, 1).bold(false);
+    if (!o.hideBarcode) b.feed(1).barcode(o.code, { format: o.format || 'ean13', height: 60 });
+    if (o.footer) b.line(fit(o.footer, paper));
     b.feed(1).cut();
     return b.bytes();
   }
@@ -194,18 +240,24 @@
   function dayReport(o) {
     o = o || {}; var paper = o.paper || '80';
     var r = o.report || {};
-    var f = o.fmt || function (n) { return String(Math.round(+n || 0)); };
+    /* Intl.NumberFormat('fr-FR') separates thousands with U+202F (narrow
+       no-break space). ESC/POS CP1252 cannot encode it and used to print
+       `1?000` / `1?163` in the cash-drawer block. Keep the dashboard's
+       formatting, but translate every Unicode spacing character to the plain
+       ASCII space the printer supports. */
+    var sourceFmt = o.fmt || function (n) { return String(Math.round(+n || 0)); };
+    var f = function (n) { return String(sourceFmt(n)).replace(/[\s\u00A0\u202F]+/g, ' '); };
     var money = function (n) { return f(n) + ' MAD'; };
     var b = new Builder().init();
 
     /* En-tête — l'identité du commerce et la journée décrite. */
-    b.align('center').bold(true).size(2, 2).line(o.shop || (r.store && r.store.name) || 'Kiwi').size(1, 1);
-    b.line(o.title || 'RAPPORT JOURNALIER').bold(false);
-    if (o.address || (r.store && r.store.location)) b.line(o.address || r.store.location);
-    if (o.dateLabel) b.line(o.dateLabel);
+    b.align('center').bold(true).size(2, 2).line(fit(o.shop || (r.store && r.store.name) || 'Kiwi', paper, 2)).size(1, 1);
+    b.line(fit(o.title || 'RAPPORT JOURNALIER', paper)).bold(false);
+    if (o.address || (r.store && r.store.location)) b.line(fit(o.address || r.store.location, paper));
+    if (o.dateLabel) b.line(fit(o.dateLabel, paper));
     /* Une réimpression doit se voir : deux exemplaires du même Z qui circulent
        sans le dire, c'est une pièce comptable qu'on ne peut plus rapprocher. */
-    if (o.copy) b.bold(true).line('— ' + o.copy + ' —').bold(false);
+    if (o.copy) b.bold(true).line('·' + o.copy + '·').bold(false);
     b.align('left').line(rule(paper));
 
     if (o.openedLabel) b.line(row('Ouverture', o.openedLabel, paper));
@@ -226,12 +278,20 @@
     /* L'argent. */
     if (!itemsOnly) {
       b.line(row('Transactions', String(r.txns || 0), paper));
-      b.bold(true).line(row('TOTAL ENCAISSÉ', money(r.gross), paper)).bold(false);
+      /* Le titre suit ce que le chiffre contient : une créance dedans (livraison
+         en compte, crédit) et « ENCAISSÉ » ment. On annonce FACTURÉ, on
+         retranche, on redonne le net. Sans créance, sortie inchangée. */
+      var recv = +r.receivable || 0;
+      b.bold(true).line(row(recv > 0 ? 'TOTAL FACTURÉ' : 'TOTAL ENCAISSÉ', money(r.gross), paper)).bold(false);
       var M = o.methodLabels || {};
       Object.keys(r.methods || {}).forEach(function (k) {
         if (!r.methods[k]) return;
         b.line(row('  ' + (M[k] || k), money(r.methods[k]), paper));
       });
+      if (recv > 0) {
+        b.line(row('dont à recevoir', '- ' + money(recv), paper));
+        b.bold(true).line(row('NET ENCAISSÉ', money(r.gross - recv), paper)).bold(false);
+      }
       if (r.basket) b.line(row('Ticket moyen', money(r.basket), paper));
       if (r.tips) b.line(row('Pourboires', money(r.tips), paper));
       if (r.discounts && r.discounts.amount) {
@@ -239,6 +299,14 @@
       }
       if (r.refunds && r.refunds.count) {
         b.line(row('Remboursements (' + r.refunds.count + ')', '- ' + money(r.refunds.amount), paper));
+      }
+      /* Hors du total encaissé, et imprimés quand même : un avoir sort de la
+         marchandise sans faire sonner le tiroir. */
+      if (r.avoirs && r.avoirs.used) {
+        b.line(row('Réglé en avoir (' + (r.avoirs.usedCount || 0) + ')', money(r.avoirs.used), paper));
+      }
+      if (r.avoirs && r.avoirs.issued) {
+        b.line(row('Avoirs émis (' + (r.avoirs.issuedCount || 0) + ')', money(r.avoirs.issued), paper));
       }
       if (r.cancels) b.line(row('Annulations', String(r.cancels), paper));
     }

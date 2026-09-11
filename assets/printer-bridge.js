@@ -1,12 +1,16 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Kiwi · PRINTER BRIDGE CLIENT — window.KiwiPrinter
+ * Kiwi · PRINTER BRIDGE CLIENT · window.KiwiPrinter
  * ---------------------------------------------------------------------------
  * The web half of real thermal printing. Detects the Kiwi Printer Bridge running
  * on the counter machine (bridge/server.js), lets the owner pair a printer
  * (IP · port · model · paper width · test slip), and relays ESC/POS jobs built by
  * assets/escpos.js to it. If the bridge isn't running, every print call returns
  * { ok:false, reason:'bridge-*' } so callers fail soft (KiwiHardware falls back
- * to its on-screen preview) — the exact pattern the caisse pairing uses.
+ * to its on-screen preview) · the exact pattern the caisse pairing uses.
+ *
+ * Transports, dans l'ordre : socket TCP natif · Web Bluetooth · WebUSB · pont
+ * local 127.0.0.1 · RELAIS CLOUD (/api/print · l'iPad et les tablettes : la caisse dépose le
+ * ticket, le pont du comptoir le récupère). Voir « transport D » plus bas.
  *
  * Config (localStorage `kiwiPrinterCfg`): { ip, port, model, paper }.
  * Bridge URL: http://127.0.0.1:9110 (loopback; a secure context, so an HTTPS page
@@ -25,7 +29,7 @@
   'use strict';
 
   /* The bridge's own port. 9110 is the default, but on a Windows till it is not
-   * guaranteed free — and the bridge exits when the port is taken, which on
+   * guaranteed free · and the bridge exits when the port is taken, which on
    * Windows means a console flash the owner never sees, then "pont non détecté"
    * with no way forward. So the shop can start it on another port
    * (KIWI_BRIDGE_PORT, see the .cmd on /printer) and we FIND it instead of
@@ -34,10 +38,19 @@
   var BRIDGE_PORTS = [9110, 9111, 9112, 9113, 9114];
   var PORT_KEY = 'kiwiBridgePort';
   var bridgePort = 0;
+  var bridgeCapability = '';
+  var bridgeMode = 'unknown';
+  var secureBridgeSeen = false;
+  var SECURE_BRIDGE_KEY = 'kiwiBridgeCapabilityRequired';
   function bridgeBase(p) { return 'http://127.0.0.1:' + (p || bridgePort || BRIDGE_PORTS[0]); }
   var BRIDGE_URL = bridgeBase();   // kept for compatibility; prefer bridgeBase()
   var BRIDGE_DOWNLOAD = '/printer';
   var CFG_KEY = 'kiwiPrinterCfg';
+  var lastTiming = null;
+  var lastWakeAt = 0;
+  var nativeFailureCount = 0;
+  var nativeDiscoveryPending = false;
+  var nativeDiscoveryRunning = false;
 
   /* Roll widths come from the encoder (window.KiwiEscPos.paperWidths) so the list
    * the owner picks from and the list the encoder can actually lay out stay the
@@ -63,7 +76,7 @@
     { w: 110, h: 30 }, { w: 110, h: 50 }, { w: 100, h: 50 }, { w: 100, h: 150 },
   ];
   function labelOptions(sel) {
-    var cur = (sel && sel.w ? sel.w : 50) + 'x' + (sel && sel.h ? sel.h : 30);
+    var cur = (sel && sel.w ? sel.w : 50) + 'x' + (sel && sel.h ? sel.h : 20);
     return LABEL_SIZES.map(function (l) {
       var v = l.w + 'x' + l.h;
       return '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + l.w + ' × ' + l.h + ' mm</option>';
@@ -71,20 +84,20 @@
   }
 
   /* Makes sold into Moroccan / North-African POS. All of these speak ESC/POS,
-   * which is what KiwiEscPos emits — the field is a label for the owner, not a
+   * which is what KiwiEscPos emits · the field is a label for the owner, not a
    * driver, so an unlisted make that speaks ESC/POS works on "Générique".
    * `note` carries a real caveat shown under the picker when that make is
    * chosen.
    *
    * The model families in the labels are the ones actually on sale in Morocco,
    * taken from the catalogues of Moroccan POS vendors (fournipro.ma, iris.ma,
-   * lepc.ma, posmaroc.ma) rather than from a manufacturer's world range — a
+   * lepc.ma, posmaroc.ma) rather than from a manufacturer's world range · a
    * merchant recognises the box on their counter, not the global SKU list.
    *
    * `driver` is the make's own driver/support page, and it is a FALLBACK, not
    * the happy path: over Bluetooth, USB or the bridge, Kiwi pushes ESC/POS
    * bytes itself and no driver is involved at all. It matters in exactly two
-   * places — printing labels through the browser/Windows driver route (see
+   * places · printing labels through the browser/Windows driver route (see
    * LABEL_SIZES above), and Windows refusing a WebUSB claim until the printer
    * has a WinUSB-flavoured driver (see the usb transport below). Every URL here
    * was fetched and confirmed live; a make with no reachable official download
@@ -104,7 +117,7 @@
     { id: 'citizen', label: 'Citizen (CT-E351 / CT-S851)',
       driver: 'https://www.citizen-systems.com/en/support/drivers-and-tools/' },
     /* Vendu au Maroc surtout en portable Bluetooth (MTP-3F, PT-210). Pas de
-     * page de téléchargement officielle joignable — d'où l'absence de lien. */
+     * page de téléchargement officielle joignable · d'où l'absence de lien. */
     { id: 'goojprt', label: 'Goojprt (MTP-3F / PT-210)',
       note: 'Goojprt ne publie pas de page de téléchargement officielle joignable. Ces modèles sont de l\'ESC/POS générique : connectez-les en Bluetooth ou en USB, aucun pilote n\'est nécessaire.' },
     { id: 'munbyn', label: 'Munbyn',
@@ -118,7 +131,7 @@
     { id: 'posiflex', label: 'Posiflex (Aura)', driver: 'https://download.posiflex.com/' },
     { id: 'nexa', label: 'Nexa' },
     { id: 'milestone', label: 'Milestone' },
-    /* First Kiwi client's hardware — et pas un cas isolé : posmaroc.ma vend
+    /* First Kiwi client's hardware · et pas un cas isolé : posmaroc.ma vend
      * toute la gamme (WD8260, WD8210, WD9800, WD980, tiroir WD0408), donc
      * c'est le distributeur à indiquer plutôt qu'un site constructeur.
      * WD8260 (reçus, 80 mm, USB + LAN) déclare "Command Support: ESC/POS" sur
@@ -126,7 +139,7 @@
      * (étiquettes, 110 mm, USB + Bluetooth) ne déclare PAS son langage :
      * beaucoup d'imprimantes d'étiquettes parlent TSPL et non ESC/POS.
      * À vérifier par un ticket test avant de compter dessus. */
-    { id: 'wdlink', label: 'WDLink (WD8260 / WD8210)', note: 'WD8260 (reçus, 80 mm) : ESC/POS confirmé sur la plaque, rien à régler. WD8210 (étiquettes, 110 mm) : le langage n\'est pas indiqué — beaucoup d\'imprimantes d\'étiquettes parlent TSPL. Faites un ticket test avant la mise en service.',
+    { id: 'wdlink', label: 'WDLink (WD8260 / WD8210)', note: 'WD8260 (reçus, 80 mm) : ESC/POS confirmé sur la plaque, rien à régler. WD8210 (étiquettes, 110 mm) : le langage n\'est pas indiqué · beaucoup d\'imprimantes d\'étiquettes parlent TSPL. Faites un ticket test avant la mise en service.',
       driver: 'https://posmaroc.ma/' },
     { id: 'star', label: 'Star', note: 'Les Star impriment en mode Star Line, pas en ESC/POS. Activez l\'émulation ESC/POS sur l\'imprimante, sinon le ticket sortira illisible.',
       driver: 'https://starmicronics.com/support/downloads/' },
@@ -135,7 +148,7 @@
      * fournipro.ma, iris.ma) et elle parle ZPL, pas ESC/POS. Sans cette entrée
      * le commerçant choisit « Générique » et sort une étiquette illisible sans
      * comprendre pourquoi : l'avertissement vaut mieux que le silence. */
-    { id: 'zebra', label: 'Zebra (ZQ / ZD) — étiquettes', note: 'Les Zebra parlent ZPL, pas ESC/POS : Kiwi ne peut pas les piloter directement en Bluetooth ni en USB. Pour vos étiquettes, installez le pilote Zebra sur la caisse et utilisez le bouton « Imprimer » (impression navigateur).',
+    { id: 'zebra', label: 'Zebra (ZQ / ZD) · étiquettes', note: 'Les Zebra parlent ZPL, pas ESC/POS : Kiwi ne peut pas les piloter directement en Bluetooth ni en USB. Pour vos étiquettes, installez le pilote Zebra sur la caisse et utilisez le bouton « Imprimer » (impression navigateur).',
       driver: 'https://www.zebra.com/us/en/support-downloads/printers.html' },
   ];
   function modelNote(id) {
@@ -151,17 +164,141 @@
   function set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
 
+  /* ── Station-based printer routing (per-tenant) ────────────────────────────
+   * Enables the cashier app to bind physical printers to specific stations
+   * (Caisse for client receipts, Cuisine, Bar, etc. for production tickets). */
+  var STATION_PRINTERS_PREFIX = 'kiwiStationPrinters:';
+
+  function currentMerchantKey() {
+    var m = '';
+    try {
+      if (window.KiwiKitchenRelay && typeof KiwiKitchenRelay.merchant === 'function') {
+        m = KiwiKitchenRelay.merchant() || '';
+      }
+      if (!m) {
+        var pv = JSON.parse(ls('kiwiPairedVenue') || 'null');
+        if (pv && (pv.merchant || pv.venueId)) m = pv.merchant || pv.venueId;
+      }
+      if (!m && ls('kiwiPaired') === '1') {
+        m = ls('kiwiLiveMerchant') || '';
+      }
+    } catch (_) {}
+    return m || 'unpaired';
+  }
+
+  function stationStorageKey(merchant) {
+    return STATION_PRINTERS_PREFIX + (merchant || currentMerchantKey());
+  }
+
+  function getStationConfig(merchant) {
+    var d = { profiles: [], bindings: {} };
+    try {
+      var raw = ls(stationStorageKey(merchant));
+      if (!raw && (!merchant || merchant === currentMerchantKey())) {
+        raw = ls('kiwiStationPrinters');
+      }
+      var o = JSON.parse(raw || '{}');
+      if (o && typeof o === 'object') {
+        d.profiles = Array.isArray(o.profiles) ? o.profiles : [];
+        d.bindings = (o.bindings && typeof o.bindings === 'object') ? o.bindings : {};
+      }
+      return d;
+    } catch (_) {
+      return d;
+    }
+  }
+
+  function setStationConfig(cfg, merchant) {
+    cfg = cfg || {};
+    var profiles = Array.isArray(cfg.profiles) ? cfg.profiles : [];
+    var bindings = (cfg.bindings && typeof cfg.bindings === 'object') ? cfg.bindings : {};
+    var data = { profiles: profiles, bindings: bindings, updatedAt: Date.now() };
+    set(stationStorageKey(merchant), JSON.stringify(data));
+    try { window.dispatchEvent(new CustomEvent('kiwi:station-printers-config', { detail: data })); } catch (_) {}
+    return data;
+  }
+
+  function getPrepStations() {
+    try {
+      if (typeof window.KiwiCaisseStations === 'function') {
+        var cs = window.KiwiCaisseStations();
+        if (Array.isArray(cs) && cs.length) return cs;
+      }
+      if (typeof window.kdsStations === 'function') {
+        var ks = window.kdsStations();
+        if (Array.isArray(ks) && ks.length) return ks;
+      }
+      if (window.KiwiMenuStore && typeof window.KiwiMenuStore.stations === 'function') {
+        var ms = window.KiwiMenuStore.stations();
+        if (Array.isArray(ms) && ms.length) return ms;
+      }
+      var m = currentMerchantKey();
+      if (m && m !== 'unpaired') {
+        var raw = ls('kiwi:menuMirror:v1:' + m);
+        if (raw) {
+          var doc = JSON.parse(raw);
+          if (doc && Array.isArray(doc.stations) && doc.stations.length) return doc.stations;
+        }
+      }
+    } catch (_) {}
+    return [
+      { id: 'cuisson', name: 'Cuisine' },
+      { id: 'bar', name: 'Bar cocktails' },
+    ];
+  }
+
+  function resolveStationTarget(stationId, merchant) {
+    var sc = getStationConfig(merchant);
+    var profId = (sc.bindings && sc.bindings[stationId]) || '';
+    if (!profId && stationId) {
+      var norm = String(stationId).toLowerCase().trim();
+      var normClean = norm.replace(/[^a-z0-9]/g, '');
+      var bKeys = Object.keys(sc.bindings || {});
+      for (var i = 0; i < bKeys.length; i++) {
+        var k = bKeys[i];
+        var kNorm = k.toLowerCase().trim();
+        if (kNorm === norm || kNorm.replace(/[^a-z0-9]/g, '') === normClean) {
+          profId = sc.bindings[k];
+          break;
+        }
+      }
+      if (!profId && Array.isArray(sc.profiles)) {
+        var pMatch = sc.profiles.find(function (p) {
+          if (!p || !p.name) return false;
+          var pNorm = p.name.toLowerCase().trim();
+          var pClean = pNorm.replace(/[^a-z0-9]/g, '');
+          return pNorm === norm || pClean === normClean || normClean.indexOf(pClean) >= 0 || pClean.indexOf(normClean) >= 0;
+        });
+        if (pMatch) return pMatch;
+      }
+    }
+    if (!profId && stationId !== 'caisse') {
+      profId = (sc.bindings && sc.bindings.caisse) || '';
+    }
+    if (!profId) return null;
+    var prof = (sc.profiles || []).find(function (p) { return p && p.id === profId; });
+    return prof || null;
+  }
+
+  function hasStationBindings(merchant) {
+    var sc = getStationConfig(merchant);
+    return !!((sc.profiles && sc.profiles.length) || Object.keys(sc.bindings || {}).length);
+  }
+
   /* `osPrinter` is the name of a printer the till ALREADY has installed, printed
    * to through the bridge's spooler route. It is the answer for the commonest
-   * shop setup — a USB thermal printer on a Windows caisse — where Bluetooth,
+   * shop setup · a USB thermal printer on a Windows caisse · where Bluetooth,
    * WebUSB and the network path all fail at once (Windows owns the USB device,
    * and a USB printer has no IP). */
   function getConfig() {
-    var d = { ip: '', port: 9100, osPrinter: '', model: 'escpos', paper: '80', label: { w: 50, h: 30 } };
+    var d = { ip: '', port: 9100, osPrinter: '', model: 'escpos', paper: '80', label: { w: 50, h: 20 } };
     try { var o = JSON.parse(ls(CFG_KEY) || '{}') || {}; return Object.assign(d, o); } catch (_) { return d; }
   }
-  function setConfig(cfg) { set(CFG_KEY, JSON.stringify(Object.assign(getConfig(), cfg || {}))); }
-  function isConfigured() { var c = getConfig(); return !!(c.ip || c.osPrinter); }
+  function setConfig(cfg) {
+    set(CFG_KEY, JSON.stringify(Object.assign(getConfig(), cfg || {})));
+    try { window.dispatchEvent(new CustomEvent('kiwi:printer-config')); } catch (_) {}
+  }
+  function isConfigured() { var c = getConfig(); return !!(c.ip || c.osPrinter || hasStationBindings()); }
 
   // ── bridge transport ───────────────────────────────────────────────────────
   function withTimeout(promise, ms) {
@@ -170,17 +307,68 @@
     return { signal: ctrl.signal, done: function () { clearTimeout(t); } };
   }
 
+  function bridgeHeaders(extra) {
+    var headers = Object.assign({}, extra || {});
+    if (bridgeCapability) headers['X-Kiwi-Bridge-Capability'] = bridgeCapability;
+    return headers;
+  }
+
+  function bridgeTarget(target) {
+    var cfg = getConfig();
+    if (target && target.osPrinter) return { osPrinter: String(target.osPrinter) };
+    if (target && target.ip) return { ip: String(target.ip), port: Number(target.port) || 9100 };
+    if (cfg.osPrinter) return { osPrinter: cfg.osPrinter };
+    return cfg.ip ? { ip: cfg.ip, port: Number(cfg.port) || 9100 } : null;
+  }
+
+  function saveBridgeTarget(target) {
+    var t = bridgeTarget(target);
+    // Transition release: keep known, pre-capability installations printing.
+    // This does not secure those old servers: upgrade them after these clients
+    // are loaded. Never downgrade a bridge that advertised secure commands.
+    if (t && bridgePort && bridgeMode === 'legacy') return Promise.resolve({ ok: true, legacy: true });
+    if (!t || !bridgeCapability || !bridgePort) return Promise.resolve({ ok: false, error: 'bridge-capability-required' });
+    var to = withTimeout(null, 6000);
+    return fetch(bridgeBase() + '/kiwi/targets', {
+      method: 'POST', headers: bridgeHeaders({ 'Content-Type': 'application/json' }), signal: to.signal,
+      body: JSON.stringify({ action: 'save', target: t }),
+    }).then(function (r) {
+      to.done();
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        return r.ok && j && j.ok ? j : { ok: false, error: j && j.error || 'bridge-capability-required' };
+      });
+    }).catch(function () { to.done(); return { ok: false, error: 'bridge-unreachable' }; });
+  }
+
+  function pairLocalBridge(code) {
+    return ping().then(function (j) {
+      if (!j) return { ok: false, error: 'bridge-unreachable' };
+      if (bridgeMode !== 'legacy' && !bridgeCapability) return { ok: false, error: 'bridge-capability-required' };
+      var to = withTimeout(null, 15000);
+      return fetch(bridgeBase() + '/kiwi/relay/pair', {
+        method: 'POST', headers: bridgeHeaders({ 'Content-Type': 'application/json' }),
+        signal: to.signal, body: JSON.stringify({ code: code }),
+      }).then(function (r) {
+        to.done();
+        return r.json().then(function (body) { return r.ok ? body : { ok: false, error: body && body.error || 'bridge-capability-required' }; });
+      }).catch(function () { to.done(); return { ok: false, error: 'bridge-unreachable' }; });
+    });
+  }
+
   function pingPort(p, ms) {
     var to = withTimeout(null, ms || 1400);
     return fetch(bridgeBase(p) + '/kiwi/ping', { signal: to.signal, cache: 'no-store' })
       .then(function (r) { to.done(); return r.ok ? r.json() : null; })
-      .then(function (j) { return (j && j.ok) ? j : null; })
+      .then(function (j) {
+        if (j && j.lastTiming) lastTiming = j.lastTiming;
+        return (j && j.ok) ? j : null;
+      })
       .catch(function () { to.done(); return null; });
   }
 
   /* Try the remembered port, then the rest of the range. Each miss is a refused
    * connection on loopback, which fails in about a millisecond, so a full scan
-   * is imperceptible — and it only ever happens once per browser. */
+   * is imperceptible · and it only ever happens once per browser. */
   function ping() {
     var remembered = 0;
     try { remembered = Number(ls(PORT_KEY)) || 0; } catch (_) {}
@@ -191,10 +379,21 @@
     }
     var i = 0;
     function step() {
-      if (i >= order.length) { bridgePort = 0; return null; }
+      if (i >= order.length) { bridgePort = 0; bridgeCapability = ''; bridgeMode = 'unknown'; return null; }
       var p = order[i++];
       return pingPort(p, i === 1 ? 1400 : 600).then(function (j) {
         if (!j) return step();
+        // Bind the handshake to the selected bridge, never a previous port.
+        bridgeCapability = /^kbc_[0-9a-f]{64}$/.test(j.capability || '') ? String(j.capability) : '';
+        secureBridgeSeen = secureBridgeSeen || ls(SECURE_BRIDGE_KEY) === '1';
+        var knownLegacy = j.name === 'kiwi-printer-bridge'
+          && /^1\.(?:[0-3]\.\d+|4\.[0-4])$/.test(String(j.version || ''))
+          && !Object.prototype.hasOwnProperty.call(j, 'capability') && !j.capabilityRequired;
+        if (bridgeCapability || j.capabilityRequired) {
+          secureBridgeSeen = true;
+          set(SECURE_BRIDGE_KEY, '1');
+        }
+        bridgeMode = knownLegacy && !secureBridgeSeen ? 'legacy' : 'secure';
         bridgePort = p;
         BRIDGE_URL = bridgeBase(p);
         try { set(PORT_KEY, String(p)); } catch (_) {}
@@ -204,10 +403,10 @@
     return step();
   }
 
-  // ── transport A: Web Bluetooth (preferred — appless, no IP) ──────────────────
+  // ── transport A: Web Bluetooth (preferred · appless, no IP) ──────────────────
   // Cheap ESC/POS BLE printers expose varied GATT services, so we request broadly
   // and discover a writable characteristic after connecting. The browser shows its
-  // own device picker (needs a user gesture). Chrome / Android / desktop Chrome —
+  // own device picker (needs a user gesture). Chrome / Android / desktop Chrome ·
   // not iOS Safari (feature-detected via navigator.bluetooth).
   var bt = { device: null, chr: null, name: '' };
   function btConnected() { return !!(bt.chr && bt.device && bt.device.gatt && bt.device.gatt.connected); }
@@ -271,7 +470,7 @@
   // USB+Bluetooth), and a USB receipt printer is the most common setup in a
   // small shop: no IP to type, no bridge to install, no pairing.
   //
-  // USB printers expose interface class 7 (printer) with a bulk OUT endpoint —
+  // USB printers expose interface class 7 (printer) with a bulk OUT endpoint ·
   // ESC/POS bytes go straight down it. The browser shows its own device picker
   // (needs a user gesture) and remembers the grant per origin.
   //
@@ -334,7 +533,7 @@
   /* Silent re-attach. Chrome remembers a USB grant per origin, so after the
    * owner has picked the printer once, navigator.usb.getDevices() hands it back
    * on every later load with NO picker and no user gesture. Without this the
-   * cashier had to re-pick the printer every single morning — the permission was
+   * cashier had to re-pick the printer every single morning · the permission was
    * still there, Kiwi just wasn't asking for it. Best-effort: any failure simply
    * leaves the panel showing "aucune imprimante", exactly as before. */
   function reconnectUsb() {
@@ -361,7 +560,9 @@
   function disconnectUsb() {
     try {
       if (usb.device && usb.device.opened) {
-        usb.device.releaseInterface(usb.iface).catch(function () {}).then(function () {
+        usb.device.releaseInterface(usb.iface).catch(function (err) {
+          if (window.KiwiReportError) window.KiwiReportError(err, 'hardware:printer_usb_release_interface_failed');
+        }).then(function () {
           try { usb.device.close(); } catch (_) {}
         });
       }
@@ -381,67 +582,452 @@
     return step();
   }
 
-  /* ── transport C: the bridge — to a TCP printer, or to one the OS already has ──
+  /* ── transport E: socket TCP natif Capacitor ─────────────────────────────
+   * Dans l'app, l'iPad et Android ouvrent directement le port ESC/POS de
+   * l'imprimante. L'absence du plugin ou tout échec rend immédiatement la main
+   * à la chaîne web existante, sans modifier son comportement. */
+  function nativeSocket() {
+    try {
+      var cap = window.Capacitor;
+      if (!cap || typeof cap.isNativePlatform !== 'function' || !cap.isNativePlatform()) return null;
+      if (typeof cap.isPluginAvailable === 'function' && !cap.isPluginAvailable('KiwiPrinterSocket')) return null;
+      var plugin = cap.Plugins && cap.Plugins.KiwiPrinterSocket;
+      return plugin && typeof plugin.send === 'function' ? plugin : null;
+    } catch (_) { return null; }
+  }
+  function nativeSocketTarget(target) {
+    var cfg = getConfig();
+    var t = target && target.ip ? target : (!target && cfg.ip ? cfg : null);
+    return t ? { host: t.ip, port: Number(t.port) || 9100 } : null;
+  }
+  function printQueueIdle() {
+    try { var q = window.KiwiKitchenPrint; return !(q && q.status && q.status().running); } catch (_) { return true; }
+  }
+  function discoveryNotice(detail) {
+    try { window.dispatchEvent(new CustomEvent('kiwi:printer-discovery', { detail: detail || {} })); } catch (_) {}
+  }
+  function maybeDiscoverNativePrinter() {
+    var plugin = nativeSocket(), cfg = getConfig();
+    if (!nativeDiscoveryPending || nativeDiscoveryRunning || !printQueueIdle() || !plugin || !cfg.ip) return Promise.resolve(null);
+    nativeDiscoveryRunning = true;
+    return plugin.probe({ host: cfg.ip, port: Number(cfg.port) || 9100, timeoutMs: 1800 }).then(function (probe) {
+      if (probe && probe.ok) {
+        nativeFailureCount = 0; nativeDiscoveryPending = false;
+        discoveryNotice({ ok: true, unchanged: true, ip: cfg.ip });
+        return null;
+      }
+      if (probe && probe.code === 'local-network-denied') {
+        nativeDiscoveryPending = false;
+        discoveryNotice({ ok: false, reason: 'local-network-denied', probeOnly: true });
+        return null;
+      }
+      return plugin.scan({ port: Number(cfg.port) || 9100, timeoutMs: 600 }).then(function (scan) {
+        var hosts = scan && scan.ok && Array.isArray(scan.hosts) ? scan.hosts : [];
+        nativeDiscoveryPending = false;
+        if (hosts.length === 1) {
+          setConfig({ ip: hosts[0].host, port: Number(cfg.port) || 9100 });
+          nativeFailureCount = 0;
+          discoveryNotice({ ok: true, changed: hosts[0].host !== cfg.ip, ip: hosts[0].host });
+        } else if (hosts.length > 1) discoveryNotice({ ok: false, reason: 'multiple-printers', hosts: hosts });
+        else discoveryNotice({ ok: false, reason: (scan && scan.code) || 'not-found', hosts: [] });
+        return hosts;
+      });
+    }).catch(function () { nativeDiscoveryPending = false; discoveryNotice({ ok: false, reason: 'unreachable' }); return null; })
+      .then(function (value) { nativeDiscoveryRunning = false; return value; }, function () { nativeDiscoveryRunning = false; return null; });
+  }
+  function noteNativeFailure(reason) {
+    if (reason === 'local-network-denied') {
+      discoveryNotice({ ok: false, reason: reason, probeOnly: true });
+      return;
+    }
+    nativeFailureCount += 1;
+    if (nativeFailureCount < 3) return;
+    nativeDiscoveryPending = true;
+    setTimeout(maybeDiscoverNativePrinter, 0);
+  }
+  function nativeSocketSend(bytes, target) {
+    var plugin = nativeSocket();
+    var t = nativeSocketTarget(target);
+    if (!plugin || !t) return Promise.resolve({ ok: false, reason: 'socket-unavailable' });
+    return plugin.send({
+      host: t.host, port: t.port, data: window.KiwiEscPos.toB64(bytes), timeoutMs: 4000,
+    }).then(function (r) {
+      if (r && r.ok) { nativeFailureCount = 0; return { ok: true, via: 'socket', bytes: Number(r.bytes) || bytes.length }; }
+      var reason = (r && r.code) || 'socket-unreachable'; noteNativeFailure(reason);
+      return { ok: false, reason: reason };
+    }, function (e) {
+      var reason = (e && (e.code || e.message)) || 'socket-unreachable'; noteNativeFailure(reason);
+      return { ok: false, reason: reason };
+    });
+  }
+  function nativeSocketFirst(bytes, target, next) {
+    if (!nativeSocket() || !nativeSocketTarget(target)) return next();
+    return nativeSocketSend(bytes, target).then(function (r) { return r.ok ? r : next(); }, next);
+  }
+
+  /* ── transport C: the bridge · to a TCP printer, or to one the OS already has ──
    * Same helper, two targets. `osPrinter` wins when both are set: it is the
    * deliberate choice made in the panel, while an `ip` can survive in saved
    * config from an earlier setup and would otherwise silently outrank it. */
-  function bridgePrintBytes(bytes) {
+  /* `target` (optionnel) force la cible : { ip, port } imprime en TCP même si
+   * un nom d'imprimante OS est enregistré. Sans lui, un « ticket test réseau »
+   * partait vers l'imprimante système et validait une IP jamais essayée. */
+  function bridgePrintBytes(bytes, target) {
     var cfg = getConfig();
-    if (!cfg.ip && !cfg.osPrinter) return Promise.resolve({ ok: false, reason: 'not-configured' });
+    if (!(target && (target.ip || target.osPrinter)) && !cfg.ip && !cfg.osPrinter) return Promise.resolve({ ok: false, reason: 'not-configured' });
     // Locate the bridge before the first job if we haven't yet (or if it moved
-    // ports since — a restart on a busy 9110 lands somewhere else).
-    if (!bridgePort) {
+    // ports since · a restart on a busy 9110 lands somewhere else).
+    if (!bridgePort || bridgeMode !== 'secure' || !bridgeCapability) {
       return ping().then(function (j) {
-        return j ? bridgePrintNow(bytes) : { ok: false, reason: 'bridge-unreachable' };
+        return j ? bridgePrintNow(bytes, target) : viaRelayOrFail(bytes, target);
       });
     }
-    return bridgePrintNow(bytes);
+    return bridgePrintNow(bytes, target).then(function (res) {
+      // Le pont local a disparu entre deux tickets : on oublie son port et on
+      // tente le relais · la prochaine impression re-sondera 127.0.0.1 d'abord.
+      if (res && res.reason === 'bridge-unreachable') { bridgePort = 0; return viaRelayOrFail(bytes, target); }
+      return res;
+    });
   }
-  function bridgePrintNow(bytes) {
+  function viaRelayOrFail(bytes, target) {
+    /* POST /jobs already performs the authoritative "bridge seen recently"
+       check.  Probing /bridges first was a redundant round-trip on the exact
+       path used by tablets and remote caisses, and could add six seconds before
+       the ticket even existed. */
+    return relayEnqueue(bytes, target, relayKind(bytes));
+  }
+  function bridgePrintNow(bytes, target) {
     var cfg = getConfig();
     var to = withTimeout(null, 9000);
-    return fetch(bridgeBase() + '/kiwi/print', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: to.signal,
-      body: JSON.stringify(cfg.osPrinter
-        ? { printerName: cfg.osPrinter, dataB64: window.KiwiEscPos.toB64(bytes) }
-        : { printerIp: cfg.ip, port: Number(cfg.port) || 9100, dataB64: window.KiwiEscPos.toB64(bytes) }),
+    var t = bridgeTarget(target);
+    if (!t) return Promise.resolve({ ok: false, reason: 'not-configured' });
+    return saveBridgeTarget(t).then(function (saved) {
+      if (!saved || !saved.ok) return { ok: false, reason: saved && saved.error || 'bridge-capability-required' };
+      return fetch(bridgeBase() + '/kiwi/print', {
+        method: 'POST', headers: bridgeHeaders({ 'Content-Type': 'application/json' }), signal: to.signal,
+        body: JSON.stringify(t.osPrinter
+          ? { printerName: t.osPrinter, dataB64: window.KiwiEscPos.toB64(bytes) }
+          : { printerIp: t.ip, port: t.port, dataB64: window.KiwiEscPos.toB64(bytes) }),
+      });
     }).then(function (r) {
+      if (!r || typeof r.json !== 'function') { to.done(); return { ok: false, reason: r && r.reason || 'print-failed' }; }
       to.done();
-      return r.json().then(function (j) { return (r.ok && j && j.ok) ? { ok: true, via: 'bridge', bytes: j.bytes } : { ok: false, reason: (j && j.error) || 'print-failed' }; },
+      return r.json().then(function (j) {
+        if (j && j.timing) lastTiming = j.timing;
+        return (r.ok && j && j.ok) ? { ok: true, via: 'bridge', bytes: j.bytes, timing: j.timing } : { ok: false, reason: (j && j.error) || 'print-failed' };
+      },
         function () { return { ok: false, reason: 'bad-response' }; });
-    }).catch(function () { to.done(); return { ok: false, reason: 'bridge-unreachable' }; });
+      }).catch(function () { to.done(); return { ok: false, reason: 'bridge-unreachable' }; });
+  }
+
+  // ── transport D: le relais cloud (l'iPad, la tablette, tout appareil sans pont) ──
+  // Un iPad n'a ni pont local (127.0.0.1), ni Web Bluetooth, ni WebUSB. La caisse
+  // DÉPOSE donc le ticket ESC/POS sur kiwi-os.com (/api/print/jobs) et le Kiwi
+  // Printer Bridge du comptoir, appairé une fois avec un code, vient le chercher
+  // et le pousse à l'imprimante réseau · sortant uniquement, rien à ouvrir, pas
+  // d'IP de PC à taper, pas de certificat. Même cible (ip:port / imprimante
+  // système) que le pont local ; seul le chemin change. Fail-soft partout :
+  // { ok:false, reason } et l'appelant retombe sur l'aperçu à l'écran.
+  var RELAY_API = '/api/print';
+  var RELAY_PROBE_TTL = 20000;
+  var relayState = { at: 0, online: false, bridges: [], provisioned: true, pending: null };
+  function relayMerchantQS() {
+    var m = '';
+    try { m = currentMerchantKey() || ''; } catch (_) {}
+    return (m && m !== 'unpaired') ? ('?merchant=' + encodeURIComponent(m)) : '';
+  }
+  function relayFetch(path, opts, ms) {
+    var to = withTimeout(null, ms || 8000);
+    var o = Object.assign({ credentials: 'same-origin', cache: 'no-store', signal: to.signal }, opts || {});
+    return fetch(RELAY_API + path, o).then(function (r) {
+      to.done();
+      return r.json().then(function (j) { return { status: r.status, j: j }; }, function () { return { status: r.status, j: null }; });
+    }).catch(function () { to.done(); return { status: 0, j: null }; });
+  }
+  /* Y a-t-il un pont appairé EN LIGNE pour ce commerce ? Mis en cache 20 s :
+   * chaque impression ne doit pas coûter un aller-retour de plus. */
+  function relayProbe(force) {
+    var now = Date.now();
+    if (!force && relayState.at && (now - relayState.at) < RELAY_PROBE_TTL) return Promise.resolve(relayState);
+    if (relayState.pending) return relayState.pending;
+    relayState.pending = relayFetch('/bridges' + relayMerchantQS(), { method: 'GET' }, 6000).then(function (r) {
+      relayState.pending = null;
+      relayState.at = Date.now();
+      relayState.provisioned = !(r.j && r.j.error === 'relay-not-provisioned');
+      relayState.online = !!(r.j && r.j.ok && r.j.online);
+      relayState.bridges = (r.j && Array.isArray(r.j.bridges)) ? r.j.bridges : [];
+      relayState.authed = r.status !== 401;
+      return relayState;
+    });
+    return relayState.pending;
+  }
+  function relayTargetOf(target) {
+    var cfg = getConfig();
+    if (target && target.ip) return { ip: target.ip, port: Number(target.port) || 9100 };
+    if (target && target.osPrinter) return { osPrinter: target.osPrinter };
+    if (cfg.osPrinter) return { osPrinter: cfg.osPrinter };
+    if (cfg.ip) return { ip: cfg.ip, port: Number(cfg.port) || 9100 };
+    return null;
+  }
+  /* Observe an accepted relay job without holding the local durable queue.
+   * The server owns that job for ten minutes once POST /jobs succeeds. Waiting
+   * here for its acknowledgement used to serialize every station ticket for up
+   * to twelve seconds: cuisine behind bar behind pass could therefore start
+   * printing 30–40 seconds after the caisse receipt. Monitoring remains useful
+   * for a concrete printer failure, but it must be a background concern. */
+  function watchRelayJob(id, qs, bytesLength) {
+    var started = Date.now();
+    (function tick() {
+      relayFetch('/jobs' + (qs ? qs + '&' : '?') + 'id=' + encodeURIComponent(id), { method: 'GET' }, 5000).then(function (st) {
+        var job = st.j && st.j.ok && st.j.job;
+        if (job && job.status === 'done') {
+          try { window.dispatchEvent(new CustomEvent('kiwi:printer-relay-status', { detail: { ok: true, id: id, bytes: job.bytes || bytesLength } })); } catch (_) {}
+          return;
+        }
+        if (job && (job.status === 'failed' || job.status === 'expired')) {
+          var reason = job.error || job.status;
+          try { window.dispatchEvent(new CustomEvent('kiwi:printer-relay-status', { detail: { ok: false, id: id, reason: reason } })); } catch (_) {}
+          fallbackNotice('Impression distante échouée · ' + frReason(reason));
+          return;
+        }
+        if (job && job.status === 'uncertain') {
+          var uncertainReason = job.error || 'output-unknown-ack-timeout';
+          try { window.dispatchEvent(new CustomEvent('kiwi:printer-relay-status', { detail: { ok: false, uncertain: true, id: id, reason: uncertainReason } })); } catch (_) {}
+          fallbackNotice('Impression distante incertaine · ' + frReason(uncertainReason));
+          return;
+        }
+        if (Date.now() - started <= 12000) setTimeout(tick, 700);
+      });
+    })();
+  }
+
+  /* Dépose le ticket. Dès que le serveur l'a accepté, rendre la main : le pont
+   * le réclame de façon atomique et le job reste durable côté serveur. */
+  function relayEnqueue(bytes, target, kind) {
+    var t = relayTargetOf(target);
+    if (!t) return Promise.resolve({ ok: false, reason: 'not-configured' });
+    var qs = relayMerchantQS();
+    return relayFetch('/jobs' + qs, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: t, dataB64: window.KiwiEscPos.toB64(bytes), kind: kind || 'other' }),
+    }, 10000).then(function (r) {
+      if (!r.j || !r.j.ok) {
+        var why = (r.j && r.j.error) || (r.status === 401 ? 'unauthorized' : 'relay-unreachable');
+        if (why === 'relay-offline') { relayState.online = false; relayState.at = Date.now(); }
+        return { ok: false, reason: why };
+      }
+      var id = r.j.id;
+      watchRelayJob(id, qs, bytes.length);
+      return { ok: true, via: 'relay', queued: true, id: id };
+    });
+  }
+  /* Génère le code à taper sur le pont (ou à lui passer directement quand il
+   * tourne sur CETTE machine). { ok, code, expires_ts } */
+  function relayPairCode() {
+    return relayFetch('/bridges' + relayMerchantQS(), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'pair-code' }),
+    }).then(function (r) { return (r.j && r.j.ok) ? r.j : { ok: false, reason: (r.j && r.j.error) || (r.status === 401 ? 'unauthorized' : 'relay-unreachable') }; });
+  }
+  function relayRevoke(id) {
+    return relayFetch('/bridges' + relayMerchantQS(), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'revoke', id: id }),
+    }).then(function (r) { relayState.at = 0; return !!(r.j && r.j.ok); });
+  }
+  function relayKind(bytes) {
+    // Le relais range les tickets par genre pour le journal du pont ; rien de plus.
+    return 'other';
+  }
+
+  function wakeViaRelay(t) {
+    var qs = relayMerchantQS();
+    return relayFetch('/jobs' + qs, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: t, dataB64: 'EAE=', kind: 'wake' }),
+    }, 6000).then(function (r) {
+      return (r.j && r.j.ok) ? { ok: true, via: 'relay', id: r.j.id } : { ok: false, reason: (r.j && r.j.error) || 'relay-offline' };
+    }).catch(function () { return { ok: false, reason: 'relay-unreachable' }; });
+  }
+
+  function wakePrinter(target) {
+    var now = Date.now();
+    if (now - lastWakeAt < 10000) return Promise.resolve({ ok: true, throttled: true });
+    lastWakeAt = now;
+    var t = relayTargetOf(target);
+    if (!t || !t.ip) return Promise.resolve({ ok: false, reason: 'not-configured' });
+    if (bridgePort && bridgeMode === 'secure') {
+      return saveBridgeTarget(t).then(function (saved) {
+        if (!saved || !saved.ok) return { ok: false, reason: saved && saved.error || 'bridge-capability-required' };
+        return fetch(bridgeBase() + '/kiwi/wake', {
+          method: 'POST', headers: bridgeHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ printerIp: t.ip, port: t.port || 9100 }),
+        });
+      }).then(function (r) {
+        if (!r || typeof r.json !== 'function') return r;
+        return r.json().then(function (j) {
+          if (j && j.timing) lastTiming = j.timing;
+          return (j && j.ok) ? { ok: true, via: 'bridge', waking: true } : { ok: false, reason: (j && j.error) || 'wake-failed' };
+        }).catch(function () { return { ok: false, reason: 'bad-response' }; });
+      }).catch(function () {
+        bridgePort = 0;
+        return wakeViaRelay(t);
+      });
+    }
+    return ping().then(function (j) {
+      if (j) {
+        return saveBridgeTarget(t).then(function (saved) {
+          if (!saved || !saved.ok) return { ok: false, reason: saved && saved.error || 'bridge-capability-required' };
+          return fetch(bridgeBase() + '/kiwi/wake', {
+            method: 'POST', headers: bridgeHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ printerIp: t.ip, port: t.port || 9100 }),
+          });
+        }).then(function (r) {
+          if (!r || typeof r.json !== 'function') return r;
+          return r.json().then(function (res) {
+            if (res && res.timing) lastTiming = res.timing;
+            return (res && res.ok) ? { ok: true, via: 'bridge', waking: true } : { ok: false, reason: (res && res.error) || 'wake-failed' };
+          }).catch(function () { return { ok: false, reason: 'bad-response' }; });
+        }).catch(function () { return wakeViaRelay(t); });
+      }
+      return wakeViaRelay(t);
+    });
+  }
+
+  /* Imprime directement sur un profil ou une cible donnée ({ type, ip, port, osPrinter }). */
+  function printBytesToTarget(bytes, target) {
+    if (!target) return printBytes(bytes);
+    var type = target.type || (target.ip ? 'ip' : target.osPrinter ? 'os' : '');
+    if (type === 'bt') {
+      if (!btConnected()) return Promise.resolve({ ok: false, reason: 'bt-not-connected' });
+      return btWrite(bytes).then(function () { return { ok: true, via: 'bluetooth', bytes: bytes.length }; });
+    }
+    if (type === 'usb') {
+      if (!usbConnected()) return Promise.resolve({ ok: false, reason: 'usb-not-connected' });
+      return usbWrite(bytes).then(function () { return { ok: true, via: 'usb', bytes: bytes.length }; });
+    }
+    if (type === 'os' || target.osPrinter) {
+      return bridgePrintBytes(bytes, { osPrinter: target.osPrinter || target.name });
+    }
+    if (type === 'ip' || target.ip) {
+      var networkTarget = { ip: target.ip, port: Number(target.port) || 9100 };
+      return nativeSocketFirst(bytes, networkTarget, function () { return bridgePrintBytes(bytes, networkTarget); });
+    }
+    return printBytes(bytes);
   }
 
   // Route ESC/POS bytes to whichever printer is live: Bluetooth, then USB, then
   // the network bridge. Callers fail soft when this resolves { ok:false }.
-  function printBytes(bytes) {
+  function printBytes(bytes, targetOrStation) {
     if (!window.KiwiEscPos) return Promise.resolve({ ok: false, reason: 'no-encoder' });
-    if (btConnected()) {
-      return btWrite(bytes).then(function () { return { ok: true, via: 'bluetooth', bytes: bytes.length }; },
-        function (e) { return { ok: false, reason: 'bt-' + ((e && e.message) || 'write-failed') }; });
+    if (typeof targetOrStation === 'string') {
+      var t = resolveStationTarget(targetOrStation);
+      if (t) return printBytesToTarget(bytes, t);
+    } else if (targetOrStation && typeof targetOrStation === 'object') {
+      if (targetOrStation.station) {
+        var t2 = resolveStationTarget(targetOrStation.station, targetOrStation.merchant);
+        if (t2) return printBytesToTarget(bytes, t2);
+      } else if (targetOrStation.ip || targetOrStation.osPrinter || targetOrStation.type) {
+        return printBytesToTarget(bytes, targetOrStation);
+      }
     }
-    if (usbConnected()) {
-      return usbWrite(bytes).then(function () { return { ok: true, via: 'usb', bytes: bytes.length }; },
-        function (e) { return { ok: false, reason: 'usb-' + ((e && e.message) || 'write-failed') }; });
+    function viaBridge() { return bridgePrintBytes(bytes); }
+    function viaUsb() {
+      if (!usbConnected()) return viaBridge();
+      return usbWrite(bytes).then(
+        function () { return { ok: true, via: 'usb', bytes: bytes.length }; },
+        /* A stale WebUSB grant must not prevent the configured network/OS
+           printer from receiving the same job. */
+        viaBridge);
     }
-    return bridgePrintBytes(bytes);
+    function viaWebTransports() {
+      if (!btConnected()) return viaUsb();
+      return btWrite(bytes).then(
+        function () { return { ok: true, via: 'bluetooth', bytes: bytes.length }; },
+        /* Bluetooth can disconnect between isConnected() and the first chunk.
+           Continue down the declared transport order instead of failing early. */
+        viaUsb);
+    }
+    return nativeSocketFirst(bytes, null, viaWebTransports);
   }
 
-  // A printer is "connected" if Bluetooth or USB is live, OR the bridge is set up.
-  function isConnected() { return btConnected() || usbConnected() || isConfigured(); }
+  // A printer is "connected" if Bluetooth or USB is live, OR the bridge is set up, OR a station is bound.
+  function isConnected() { return btConnected() || usbConnected() || isConfigured() || hasStationBindings(); }
 
-  function printReceipt(o) { return window.KiwiEscPos ? printBytes(window.KiwiEscPos.receipt(withPaper(o))) : Promise.resolve({ ok: false, reason: 'no-encoder' }); }
-  function printKitchen(o) { return window.KiwiEscPos ? printBytes(window.KiwiEscPos.kitchenTicket(withPaper(o))) : Promise.resolve({ ok: false, reason: 'no-encoder' }); }
+  function printReceipt(o, options) {
+    if (!window.KiwiEscPos) return Promise.resolve({ ok: false, reason: 'no-encoder' });
+    var target = resolveStationTarget('caisse', options && options.merchant);
+    var paper = (target && target.paper) || withPaper(o).paper;
+    var bytes = window.KiwiEscPos.receipt(Object.assign({}, o, { paper: paper }));
+    if (target) {
+      return printBytesToTarget(bytes, target).then(function (res) {
+        if (res && res.ok) return res;
+        return printBytes(bytes);
+      }, function () {
+        return printBytes(bytes);
+      });
+    }
+    return printBytes(bytes);
+  }
+
+  /* La caisse n'a PAS window.Kiwi.toast (vérifié sur prod) : l'avis de repli
+   * doit se suffire à lui-même, sinon il est muet sur la seule surface où il
+   * compte · le comptoir qui doit savoir qu'un bon cuisine est sorti chez lui. */
+  function fallbackNotice(msg) {
+    try {
+      if (window.Kiwi && window.Kiwi.toast) { window.Kiwi.toast(msg); return; }
+      var el = document.createElement('div');
+      el.textContent = msg;
+      el.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#0A0F0D;color:#F7F5F0;padding:10px 18px;border-radius:10px;z-index:99999;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);';
+      document.body.appendChild(el);
+      setTimeout(function () { try { el.remove(); } catch (_) {} }, 4500);
+    } catch (_) {}
+  }
+
+  function printKitchen(o, options) {
+    if (!window.KiwiEscPos) return Promise.resolve({ ok: false, reason: 'no-encoder' });
+    var stationId = (options && options.station) || (o && o.station) || '';
+    var target = stationId ? resolveStationTarget(stationId, options && options.merchant) : resolveStationTarget('cuisson', options && options.merchant);
+    var paper = (target && target.paper) || withPaper(o).paper;
+    var bytes = window.KiwiEscPos.kitchenTicket(Object.assign({}, o, { paper: paper }));
+    if (target) {
+      return printBytesToTarget(bytes, target).then(function (res) {
+        if (res && res.ok) return res;
+        // Fail-soft fallback: attempt printing to caisse target or default printer
+        var caisseTarget = resolveStationTarget('caisse', options && options.merchant);
+        var stName = (o && o.title) || stationId || 'cuisine';
+        fallbackNotice('Imprimante ' + stName + ' indisponible · ticket imprimé à la caisse');
+        return printBytesToTarget(bytes, caisseTarget || null).then(function (cRes) {
+          if (cRes && cRes.ok) return Object.assign({}, cRes, { fallback: true, originalReason: res && res.reason });
+          return printBytes(bytes);
+        }, function () {
+          return printBytes(bytes);
+        });
+      }, function (err) {
+        var caisseTarget = resolveStationTarget('caisse', options && options.merchant);
+        var stName = (o && o.title) || stationId || 'cuisine';
+        fallbackNotice('Imprimante ' + stName + ' indisponible · ticket imprimé à la caisse');
+        return printBytesToTarget(bytes, caisseTarget || null).then(function (cRes) {
+          if (cRes && cRes.ok) return Object.assign({}, cRes, { fallback: true, originalReason: err && err.message });
+          return printBytes(bytes);
+        }, function () {
+          return printBytes(bytes);
+        });
+      });
+    }
+    return printBytes(bytes);
+  }
+
   function printLabels(labels) {
     if (!window.KiwiEscPos) return Promise.resolve({ ok: false, reason: 'no-encoder' });
     var list = (Array.isArray(labels) ? labels : [labels]).filter(Boolean);
-    var paper = getConfig().paper;
+    var cfg = getConfig();
+    var paper = cfg.paper;
+    var label = cfg.label;
     // Concatenate each label's bytes into one job.
-    var chunks = list.map(function (l) { return window.KiwiEscPos.label(Object.assign({ paper: paper }, l)); });
+    var chunks = list.map(function (l) { return window.KiwiEscPos.label(Object.assign({ paper: paper, label: label }, l)); });
     var total = chunks.reduce(function (n, c) { return n + c.length; }, 0);
     var all = new Uint8Array(total); var off = 0;
     chunks.forEach(function (c) { all.set(c, off); off += c.length; });
-    return printBytes(all);
+    return printBytes(all, 'caisse');
   }
   function withPaper(o) { o = o || {}; if (!o.paper) o.paper = getConfig().paper; return o; }
 
@@ -451,7 +1037,7 @@
    * l'imprimante est déjà installée, c'est justement impossible : Windows
    * possède le périphérique, WebUSB se voit refuser le claim (« Imprimante déjà
    * utilisée par le système ») et il n'y a ni Bluetooth ni pont. L'imprimante
-   * marche pourtant très bien — pour tout le reste de Windows.
+   * marche pourtant très bien · pour tout le reste de Windows.
    *
    * D'où cette quatrième voie : on peint le reçu en HTML et on laisse le pilote
    * du système l'imprimer. Ce n'est pas silencieux (il y a une boîte de
@@ -483,7 +1069,7 @@
    * Le « Z » de fin de journée est une pièce comptable : le patron l'agrafe, le
    * comptable le relit. Il doit donc sortir IDENTIQUE que Kiwi parle à
    * l'imprimante en ESC/POS (KiwiEscPos.dayReport) ou que ce soit le pilote
-   * Windows qui l'imprime — sinon deux exemplaires du même jour n'ont pas la
+   * Windows qui l'imprime · sinon deux exemplaires du même jour n'ont pas la
    * même tête et plus personne ne sait lequel fait foi. L'ordre des blocs,
    * les libellés et les totaux suivent donc ligne pour ligne l'encodeur. */
   function dayReportHTML(o) {
@@ -502,7 +1088,7 @@
     var addr = o.address || (r.store && r.store.location) || '';
     if (addr) out.push('<div class="kpr-c">' + esc(addr) + '</div>');
     if (o.dateLabel) out.push('<div class="kpr-c">' + esc(o.dateLabel) + '</div>');
-    if (o.copy) out.push('<div class="kpr-c kpr-copy">— ' + esc(o.copy) + ' —</div>');
+    if (o.copy) out.push('<div class="kpr-c kpr-copy">· ' + esc(o.copy) + ' ·</div>');
     rule();
 
     if (o.openedLabel) R('Ouverture', o.openedLabel);
@@ -513,21 +1099,38 @@
 
     /* Le mode « ventes par article » suit l'encodeur ESC/POS coupe pour coupe
        (KiwiEscPos.dayReport, même drapeau) : sans ça, demander le détail article
-       sur une imprimante pilotée par le système sortait un Z complet — net et
-       tiroir compris — au lieu du petit ticket demandé. */
+       sur une imprimante pilotée par le système sortait un Z complet · net et
+       tiroir compris · au lieu du petit ticket demandé. */
     var itemsOnly = !!o.itemsOnly;
 
     if (!itemsOnly) {
     R('Transactions', String(r.txns || 0));
-    R('TOTAL ENCAISSÉ', money(r.gross), 'kpr-b');
+    /* Le titre suit ce que le chiffre contient. Dès qu'une créance pèse dedans
+       · une livraison partie en compte, un règlement à crédit ·, « ENCAISSÉ »
+       est faux : l'écran de clôture les exclut déjà de son propre total, et le
+       Z imprimait un nombre plus grand sous le même intitulé. Deux documents du
+       même service, deux totaux. On annonce donc FACTURÉ, on retranche la
+       créance, on redonne l'encaissé réel. Sans créance, pas un octet ne change
+       · les autres métiers impriment à l'identique. */
+    var recv = +r.receivable || 0;
+    R(recv > 0 ? 'TOTAL FACTURÉ' : 'TOTAL ENCAISSÉ', money(r.gross), 'kpr-b');
     var M = o.methodLabels || {};
     Object.keys(r.methods || {}).forEach(function (k) {
       if (!r.methods[k]) return;
       R('  ' + (M[k] || k), money(r.methods[k]));
     });
+    if (recv > 0) {
+      R('dont à recevoir', '- ' + money(recv));
+      R('NET ENCAISSÉ', money(r.gross - recv), 'kpr-b');
+    }
     if (r.basket) R('Ticket moyen', money(r.basket));
     if (r.tips) R('Pourboires', money(r.tips));
     if (r.discounts && r.discounts.amount) R('Remises accordées', '- ' + money(r.discounts.amount));
+    /* Ni l'un ni l'autre n'entre dans le total encaissé · ils sont imprimés
+       parce qu'un avoir fait sortir de la marchandise sans faire sonner le
+       tiroir, et qu'un Z muet là-dessus ne se relit pas. */
+    if (r.avoirs && r.avoirs.used) R('Réglé en avoir (' + (r.avoirs.usedCount || 0) + ')', money(r.avoirs.used));
+    if (r.avoirs && r.avoirs.issued) R('Avoirs émis (' + (r.avoirs.issuedCount || 0) + ')', money(r.avoirs.issued));
     if (r.refunds && r.refunds.count) R('Remboursements (' + r.refunds.count + ')', '- ' + money(r.refunds.amount));
     if (r.cancels) R('Annulations', String(r.cancels));
     }
@@ -611,11 +1214,26 @@
       '#kpr-print-root{display:none;}' +
       '@media print{' +
         '@page{size:' + w + 'mm auto;margin:0;}' +
-        'html,body{margin:0!important;padding:0!important;background:#fff!important;}' +
+        'html,body{margin:0!important;padding:0!important;background:#fff!important;color:#000!important;color-scheme:light!important;}' +
         /* Tout le reste de la caisse disparaît : sans ça la boîte d'impression
          * sort la page entière (grille produits, panneaux) au lieu du reçu. */
         'body>*:not(#kpr-print-root){display:none!important;}' +
-        '#kpr-print-root{display:block!important;position:static!important;}' +
+        '#kpr-print-root{display:block!important;position:static!important;background:#fff!important;color:#000!important;color-scheme:light!important;}' +
+        /* Some verticals build their browser fallback from their on-screen
+         * preview markup. Those components normally inherit the caisse theme;
+         * printing must sever that inheritance at the last possible layer so
+         * a stale or missing skin stylesheet can never produce a black ticket. */
+        '#kpr-print-root .px-print,#kpr-print-root .px-receipt,#kpr-print-root .px-tag,' +
+        '#kpr-print-root .ff-receipt,#kpr-print-root .ht-facture,#kpr-print-root .lb-receipt,' +
+        '#kpr-print-root .ph-receipt,#kpr-print-root .fl-receipt,#kpr-print-root .fl-card-preview,' +
+        '#kpr-print-root .bq-avoir,#kpr-print-root .ho-slip{' +
+          'background:#fff!important;color:#000!important;color-scheme:light!important;box-shadow:none!important;' +
+          '--paper:#fff;--paper-elev:#fff;--paper-soft:#fff;--paper-mute:#f4f6f4;--cream:#fff;--surface:#fff;' +
+          '--ink:#000;--ink-2:#202020;--ink-3:#404040;--ink-4:#606060;--line:#aaa;--line-soft:#ddd;' +
+        '}' +
+        '#kpr-print-root .px-receipt *,#kpr-print-root .px-tag *{color:#000!important;opacity:1!important;}' +
+        '#kpr-print-root .px-receipt hr{border-color:#000!important;}' +
+        '#kpr-print-root .px-tag::before,#kpr-print-root .bq-avoir::before{background:#fff!important;border-color:#000!important;}' +
         '.kpr-ticket{width:' + (w - 6) + 'mm;margin:0 auto;padding:3mm 0;color:#000;' +
           'font-family:var(--mono,ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace);font-size:9pt;line-height:1.45;}' +
         '.kpr-shop{text-align:center;font-weight:700;font-size:14pt;margin-bottom:2mm;}' +
@@ -625,7 +1243,7 @@
         '.kpr-r>span:last-child{white-space:nowrap;}' +
         '.kpr-tot{font-weight:700;font-size:12pt;margin:1mm 0;}' +
         '.kpr-foot{margin-top:3mm;}' +
-        /* Rapport journalier — le titre sous l'enseigne, la mention de copie,
+        /* Rapport journalier · le titre sous l'enseigne, la mention de copie,
          * les lignes en gras (catégories, totaux) et la note de couverture.
          * `white-space:pre` sur le libellé garde l'indentation de deux espaces
          * qui distingue un produit de sa catégorie ; sans elle le HTML les
@@ -637,7 +1255,7 @@
         '.kpr-sub{opacity:.75;}' +
         '.kpr-note{font-size:7.5pt;opacity:.75;margin-top:1mm;}' +
         /* Une catégorie et ses produits ne doivent pas être coupés par un saut
-         * de page au milieu — sur une imprimante à feuilles, un rayon dont le
+         * de page au milieu · sur une imprimante à feuilles, un rayon dont le
          * total atterrit seul sur la page suivante est illisible. */
         '.kpr-r{break-inside:avoid;}' +
       '}';
@@ -669,7 +1287,7 @@
     return browserPrintHTML(dayReportHTML(o), o.paper);
   }
 
-  /* printDayReport — la voie nominale, avec le repli qui compte.
+  /* printDayReport · la voie nominale, avec le repli qui compte.
    *
    * Les trois transports ESC/POS ne répondent que si une imprimante est
    * réellement appairée. Une clôture ne doit PAS échouer parce que le
@@ -697,6 +1315,10 @@
     var s = document.createElement('style'); s.id = 'kpr-style';
     s.textContent =
       '#kpr-ov{position:fixed;inset:0;z-index:9998;display:grid;place-items:center;background:rgba(10,15,13,.5);padding:20px;}' +
+      '.kpr-code{margin:10px 0 4px;padding:14px 16px;border:1px dashed #0B6E4F;border-radius:12px;background:rgba(11,110,79,.06);}' +
+      '.kpr-code-num{font:600 34px/1.1 "JetBrains Mono",ui-monospace,Menlo,monospace;letter-spacing:.18em;color:#0B6E4F;text-align:center;}' +
+      '.kpr-relay-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(10,15,13,.08);}' +
+      '.kpr-relay-row:first-child{border-top:0;} .kpr-relay-row small{color:#5b6660;flex:1;} .kpr-relay-row .kpr-d.on{background:#0B6E4F;}' +
       '#kpr-card{background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);width:460px;max-width:94vw;max-height:92vh;overflow:auto;border-radius:18px;padding:24px;box-shadow:0 30px 70px -24px rgba(5,59,44,.5);}' +
       '#kpr-card h2{font-size:1.16rem;letter-spacing:-.01em;margin:0 0 4px;display:flex;align-items:center;gap:8px;}' +
       '.kpr-sub{margin:0 0 16px;color:var(--ink,#0A0F0D);opacity:.65;font-size:.9rem;line-height:1.5;}' +
@@ -724,11 +1346,9 @@
       '.kpr-quick{display:flex;gap:10px;margin:0 0 16px;}' +
       '.kpr-quick .kpr-btn{flex:1;width:auto;margin:0;}' +
       '.kpr-quick .kpr-browser{background:var(--atlas,#0B6E4F);color:#fff;border:0;opacity:1;}' +
-      '.kpr-quick .kpr-browser:hover{filter:brightness(1.06);border:0;}' +
-      '.kpr-quick .kpr-pdf{background:var(--surface);border:1.5px solid var(--atlas,#0B6E4F);color:var(--atlas,#0B6E4F);}' +
-      '.kpr-bt{border:1.5px solid rgba(11,110,79,.25);border-radius:14px;padding:15px 16px;margin:0 0 14px;background:rgba(11,110,79,.045);}' +
-      '.kpr-bt h3{margin:0 0 3px;font-size:1rem;}' +
-      '.kpr-bt>p{margin:0 0 12px;font-size:.82rem;opacity:.7;line-height:1.45;}' +
+      '.kpr-hub{display:flex;align-items:flex-start;gap:12px;padding:13px 14px;border:1px solid rgba(11,110,79,.22);border-radius:12px;background:var(--surface,#fff);cursor:pointer;}' +
+      '.kpr-hub input{width:19px;height:19px;margin:1px 0 0;accent-color:var(--atlas,#0B6E4F);flex:none;}' +
+      '.kpr-hub span{display:grid;gap:3px;line-height:1.35;}.kpr-hub b{font-size:.88rem;}.kpr-hub small{font-size:.76rem;opacity:.68;}' +
       '.kpr-btc{width:100%;font:inherit;font-weight:700;padding:13px;border-radius:12px;cursor:pointer;border:0;background:var(--atlas,#0B6E4F);color:#fff;}' +
       '.kpr-btc:hover{filter:brightness(1.06);}.kpr-btc:disabled{opacity:.5;cursor:default;}' +
       '.kpr-adv{margin-top:8px;border-top:1px solid rgba(0,0,0,.08);padding-top:12px;}' +
@@ -736,16 +1356,32 @@
       '.kpr-adv[open]>summary{margin-bottom:14px;}' +
       '.kpr-x{float:right;background:none;border:0;font-size:1.3rem;line-height:1;cursor:pointer;color:var(--ink,#0A0F0D);opacity:.5;}' +
       '.kpr-note{margin:14px 0 0;font-size:.78rem;opacity:.6;line-height:1.5;}' +
-      /* Sans ça les liens d'une note (« Télécharger le pont », la page de pilote)
-       * sortent du même gris que le texte autour et ne se lisent pas comme des
-       * liens — le commerçant ne clique pas ce qu'il ne voit pas. */
-      '.kpr-note a{color:var(--atlas,#0B6E4F);font-weight:600;text-decoration:underline;}';
+      '.kpr-note a{color:var(--atlas,#0B6E4F);font-weight:600;text-decoration:underline;}' +
+      '.kpr-st-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;}' +
+      '.kpr-st-sub{font-size:.84rem;color:var(--ink,#0A0F0D);opacity:.68;margin:2px 0 0;line-height:1.4;}' +
+      '.kpr-st-add-btn{background:var(--atlas,#0B6E4F);color:#fff;padding:8px 14px;border-radius:10px;font-size:.82rem;font-weight:600;white-space:nowrap;border:0;cursor:pointer;flex:none;}' +
+      '.kpr-st-add-btn:hover{filter:brightness(1.06);}' +
+      '.kpr-profile-card{background:rgba(11,110,79,.06);border:1.5px solid rgba(11,110,79,.22);border-radius:14px;padding:16px;margin:12px 0 16px;}' +
+      '.kpr-profile-card h4{margin:0 0 12px;font-size:.95rem;font-weight:700;color:var(--ink,#0A0F0D);}' +
+      '.kpr-profiles-chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}' +
+      '.kpr-prof-chip{display:inline-flex;align-items:center;gap:7px;background:var(--surface,#fff);border:1px solid rgba(0,0,0,.15);padding:5px 10px;border-radius:9px;font-size:.82rem;color:var(--ink,#0A0F0D);}' +
+      '.kpr-prof-chip b{font-weight:600;}' +
+      '.kpr-prof-del{background:none;border:none;color:#9ca3af;cursor:pointer;font-size:15px;line-height:1;padding:0 2px;margin-left:2px;}' +
+      '.kpr-prof-del:hover{color:#dc2626;}' +
+      '.kpr-st-cards{display:grid;gap:10px;margin-top:10px;}' +
+      '.kpr-st-card{background:var(--surface,#fff);border:1px solid rgba(0,0,0,.1);border-radius:12px;padding:14px;display:grid;gap:10px;}' +
+      '.kpr-st-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}' +
+      '.kpr-st-top b{font-size:.9rem;letter-spacing:-.01em;}' +
+      '.kpr-st-actions{display:flex;gap:8px;}' +
+      '.kpr-st-actions .kpr-btn{flex:1;padding:9px 10px;font-size:.8rem;border-radius:9px;white-space:nowrap;}' +
+      '.kpr-st-badge{display:inline-block;padding:2px 7px;border-radius:6px;font-size:.75rem;font-weight:600;background:rgba(0,0,0,.06);color:var(--ink,#0A0F0D);}' +
+      '.kpr-st-badge.receipt{background:#e0f2fe;color:#0369a1;}' +
+      '.kpr-st-badge.production{background:#fef3c7;color:#92400e;}' +
+      '.kpr-st-sel{width:100%;padding:10px 12px;border:1.5px solid rgba(0,0,0,.12);border-radius:10px;background:var(--surface,#fff);color:var(--ink,#0A0F0D);font-size:.85rem;}' +
+      '.kpr-st-sel:focus{outline:none;border-color:var(--atlas,#0B6E4F);box-shadow:0 0 0 4px rgba(11,110,79,.13);}';
     document.head.appendChild(s);
   }
 
-  // context (optional): { onBrowserPrint } — when the modal is opened from a print
-  // attempt on a machine with no bridge, we surface a "print via browser/PDF"
-  // escape so a label still comes out without the Kiwi Printer Bridge.
   function openSetup(context) {
     context = context || {};
     injectCss();
@@ -755,11 +1391,8 @@
     var opts = MODELS.map(function (m) { return '<option value="' + m.id + '"' + (m.id === cfg.model ? ' selected' : '') + '>' + esc(m.label) + '</option>'; }).join('');
     var btLive = btConnected();
     var usbLive = usbConnected();
+    var socket = nativeSocket();
     var fromPrint = !!(context.onBrowserPrint || context.onSavePdf);
-    /* Le modal servait les étiquettes uniquement, donc le titre les nommait en
-     * dur. Le reçu emprunte le même chemin depuis que l'impression système est
-     * un repli : `kind` évite de proposer « Imprimer l'étiquette » à une
-     * caissière qui encaisse une vente. */
     var isLabel = (context.kind || 'label') === 'label';
     ov.innerHTML =
       '<div id="kpr-card">' +
@@ -768,11 +1401,7 @@
         '<p class="kpr-sub">' + (fromPrint
           ? (isLabel
             ? 'Imprimez tout de suite, ou connectez une imprimante (Bluetooth ou réseau) pour imprimer directement la prochaine fois.'
-            : 'Aucune imprimante n’est connectée à Kiwi. Si l’imprimante est déjà installée sur cette caisse, imprimez par le système — ou connectez-la en Bluetooth ou en USB pour imprimer sans boîte de dialogue la prochaine fois.')
-          /* Cette phrase renvoyait vers un bouton « Imprimer » qui n'existe que
-           * lorsqu'on ouvre le modal DEPUIS une impression (fromPrint). Ouvert
-           * par « connecter une imprimante », elle envoyait le commerçant
-           * chercher un bouton absent de l'écran. */
+            : 'Aucune imprimante n’est connectée à Kiwi. Si l’imprimante est déjà installée sur cette caisse, imprimez par le système · ou connectez-la en Bluetooth ou en USB pour imprimer sans boîte de dialogue la prochaine fois.')
           : 'Connectez l’imprimante en Bluetooth ou en USB pour imprimer sans boîte de dialogue. Si elle est déjà installée sur cette caisse, Kiwi peut aussi l’utiliser via la boîte d’impression du système.') + '</p>' +
         (fromPrint ? '<div class="kpr-quick">' +
           (context.onBrowserPrint ? '<button class="kpr-btn kpr-browser" type="button" id="kpr-browser">Imprimer</button>' : '') +
@@ -792,9 +1421,12 @@
           '<button class="kpr-btc" type="button" id="kpr-usb-connect">' + (usbLive ? 'Changer d’imprimante' : 'Choisir l’imprimante USB') + '</button>' +
           '<div class="kpr-actions"><button class="kpr-btn kpr-test" type="button" id="kpr-usb-test"' + (usbLive ? '' : ' disabled') + '>Imprimer un ticket test</button></div>' +
         '</div>' : '') +
-        /* Printers the till already has. Hidden until the bridge answers with a
-         * non-empty list — on a tablet, or with no bridge, an empty box that
-         * never fills is worse than no box. Populated in the ping handler. */
+        (window.KiwiKitchenPrint ? '<div class="kpr-bt" id="kpr-kitchen">' +
+          '<h3>Tickets de production automatiques</h3>' +
+          '<p>Ce poste peut imprimer les commandes envoyées depuis la caisse, l’app employé et les autres terminaux. Activez cette option sur un seul ordinateur par établissement.</p>' +
+          '<label class="kpr-hub"><input type="checkbox" id="kpr-hub"' + (KiwiKitchenPrint.isHub() ? ' checked' : '') + '>' +
+            '<span><b>Faire de ce poste le hub d’impression</b><small id="kpr-hub-status"></small></span></label>' +
+        '</div>' : '') +
         '<div class="kpr-bt" id="kpr-os" style="display:none;">' +
           '<h3>Imprimante déjà installée</h3>' +
           '<p>Celle que cet ordinateur utilise déjà. Kiwi lui envoie le ticket directement, sans boîte de dialogue.</p>' +
@@ -805,10 +1437,64 @@
             '<button class="kpr-btn kpr-save" type="button" id="kpr-os-save">Utiliser cette imprimante</button>' +
           '</div>' +
         '</div>' +
+        '<div class="kpr-bt" id="kpr-stations-box">' +
+          '<div class="kpr-st-hdr">' +
+            '<div>' +
+              '<h3>Imprimantes par poste</h3>' +
+              '<p class="kpr-st-sub">Associez chaque poste (caisse, cuisine, bar…) à son imprimante physique.</p>' +
+            '</div>' +
+            '<button type="button" class="kpr-st-add-btn" id="kpr-add-prof-btn">+ Nouvelle imprimante</button>' +
+          '</div>' +
+          '<div id="kpr-profile-form" class="kpr-profile-card" style="display:none;">' +
+            '<h4 id="kpr-prof-form-title">Ajouter une imprimante</h4>' +
+            '<div class="kpr-field"><label for="kpr-prof-name">Nom de l’imprimante</label><input id="kpr-prof-name" type="text" placeholder="ex. Cuisine, Bar, Fournil…"></div>' +
+            '<div class="kpr-two">' +
+              '<div class="kpr-field"><label for="kpr-prof-type">Type</label><select id="kpr-prof-type">' +
+                '<option value="ip">Réseau (IP · Wi-Fi / Ethernet)</option>' +
+                '<option value="os">Imprimante système (installée)</option>' +
+                '<option value="usb">USB direct</option>' +
+                '<option value="bt">Bluetooth</option>' +
+              '</select></div>' +
+              '<div class="kpr-field"><label for="kpr-prof-paper">Papier</label><select id="kpr-prof-paper"><option value="80">80 mm (standard)</option><option value="58">58 mm</option></select></div>' +
+            '</div>' +
+            '<div id="kpr-prof-ip-box" class="kpr-two">' +
+              '<div class="kpr-field"><label for="kpr-prof-ip">Adresse IP</label><input id="kpr-prof-ip" type="text" placeholder="192.168.1.50" inputmode="decimal"></div>' +
+              '<div class="kpr-field"><label for="kpr-prof-port">Port</label><input id="kpr-prof-port" type="text" value="9100" inputmode="numeric"></div>' +
+            '</div>' +
+            '<div id="kpr-prof-os-box" class="kpr-field" style="display:none;">' +
+              '<label for="kpr-prof-os-sel">Imprimante du système</label><select id="kpr-prof-os-sel"></select>' +
+            '</div>' +
+            '<div class="kpr-actions" style="margin-top:12px;">' +
+              '<button class="kpr-btn kpr-test" type="button" id="kpr-prof-test-btn">Tester</button>' +
+              '<button class="kpr-btn kpr-save" type="button" id="kpr-prof-save-btn">Enregistrer</button>' +
+              '<button class="kpr-btn" type="button" id="kpr-prof-cancel-btn" style="background:#e5e7eb;color:#1f2937;">Annuler</button>' +
+            '</div>' +
+          '</div>' +
+          '<div id="kpr-profiles-list" class="kpr-profiles-chip-row"></div>' +
+          '<div id="kpr-station-tbody" class="kpr-st-cards"></div>' +
+          '<div class="kpr-actions" style="margin-top:12px;">' +
+            '<button class="kpr-btn kpr-save" type="button" id="kpr-save-stations-btn">Enregistrer le routage par poste</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="kpr-bt" id="kpr-relay">' +
+          '<h3>Imprimer depuis un iPad ou une tablette · relais Kiwi</h3>' +
+          '<p>Sans pont sur cet appareil, Kiwi envoie les tickets au pont de l’ordinateur du comptoir, qui les imprime sur votre imprimante réseau. Une association suffit, puis tout est automatique.</p>' +
+          '<div class="kpr-status off" id="kpr-relay-status"><span class="kpr-d"></span><span id="kpr-relay-status-t">Vérification du relais…</span></div>' +
+          '<div id="kpr-relay-list" class="kpr-note"></div>' +
+          '<div id="kpr-relay-code" class="kpr-code" style="display:none;"></div>' +
+          '<div class="kpr-actions">' +
+            '<button class="kpr-btc" type="button" id="kpr-relay-pair">Associer un pont</button>' +
+            '<button class="kpr-btc" type="button" id="kpr-relay-pair-local" style="display:none;">Associer ce pont maintenant</button>' +
+          '</div>' +
+        '</div>' +
         '<details class="kpr-adv"' + (cfg.ip ? ' open' : '') + '>' +
-          '<summary>Option avancée · imprimante réseau (Wi-Fi / Ethernet)</summary>' +
-          '<div class="kpr-status off" id="kpr-status"><span class="kpr-d"></span><span id="kpr-status-t">Vérification du pont…</span></div>' +
+          '<summary>Option avancée · imprimante réseau globale (Wi-Fi / Ethernet)</summary>' +
+          '<div class="kpr-status off" id="kpr-status"><span class="kpr-d"></span><span id="kpr-status-t">' + (socket ? 'Impression directe disponible dans l’app Kiwi.' : 'Vérification du pont…') + '</span></div>' +
+          '<p class="kpr-note" id="kpr-target"></p>' +
           '<div class="kpr-field"><label for="kpr-ip">Adresse IP de l’imprimante</label><input id="kpr-ip" type="text" inputmode="decimal" placeholder="192.168.1.50" value="' + esc(cfg.ip) + '"></div>' +
+          '<button class="kpr-btc" type="button" id="kpr-scan"' + (socket ? '' : ' disabled') + '>' + (socket ? 'Rechercher sur le réseau' : 'Détecter les imprimantes du réseau') + '</button>' +
+          '<div id="kpr-scan-out" class="kpr-note" style="display:none;"></div>' +
+          '<button class="kpr-btc" type="button" id="kpr-diagnostics">Exporter le diagnostic d’impression</button>' +
           '<div class="kpr-two">' +
             '<div class="kpr-field"><label for="kpr-port">Port</label><input id="kpr-port" type="text" inputmode="numeric" value="' + esc(cfg.port) + '"></div>' +
             '<div class="kpr-field"><label for="kpr-paper">Largeur papier</label><select id="kpr-paper">' + paperOptions(cfg.paper) + '</select></div>' +
@@ -816,16 +1502,12 @@
           '</div>' +
           '<div class="kpr-field"><label for="kpr-model">Modèle</label><select id="kpr-model">' + opts + '</select>' +
             '<p class="kpr-note" id="kpr-model-note" style="margin-top:8px;' + (modelNote(cfg.model) ? '' : 'display:none;') + '">' + esc(modelNote(cfg.model)) + '</p>' +
-            /* Le pilote ne sert PAS aux trois transports de Kiwi (Bluetooth, USB,
-             * pont) : il sert à imprimer les étiquettes via le pilote Windows, et
-             * à débloquer un refus de claim WebUSB. Le libellé le dit, pour ne pas
-             * envoyer le commerçant installer un pilote dont il n'a pas besoin. */
             '<p class="kpr-note" id="kpr-model-driver" style="margin-top:6px;' + (modelDriver(cfg.model) ? '' : 'display:none;') + '">' +
               'Pilote Windows (utile seulement pour les étiquettes ou si l\'USB est refusé) : ' +
               '<a id="kpr-model-driver-a" href="' + esc(modelDriver(cfg.model)) + '" target="_blank" rel="noopener noreferrer">page de téléchargement</a>' +
             '</p></div>' +
           '<div class="kpr-actions">' +
-            '<button class="kpr-btn kpr-test" type="button" id="kpr-test" disabled>Imprimer un ticket test</button>' +
+            '<button class="kpr-btn kpr-test" type="button" id="kpr-test"' + (socket ? '' : ' disabled') + '>' + (socket ? 'Tester' : 'Imprimer un ticket test') + '</button>' +
             '<button class="kpr-btn kpr-save" type="button" id="kpr-save">Enregistrer</button>' +
           '</div>' +
           '<p class="kpr-note">Le pont tourne sur l’ordinateur de la caisse et ne communique qu’avec votre imprimante locale. <a href="' + esc(BRIDGE_DOWNLOAD) + '" target="_blank" rel="noopener">Télécharger le pont</a></p>' +
@@ -835,66 +1517,437 @@
 
     var $ = function (id) { return ov.querySelector(id); };
     function readForm() {
-      var lv = ($('#kpr-label') ? $('#kpr-label').value : '50x30').split('x');
+      var lv = ($('#kpr-label') ? $('#kpr-label').value : '50x20').split('x');
       return {
         ip: $('#kpr-ip').value.trim(), port: $('#kpr-port').value.trim() || '9100',
         model: $('#kpr-model').value, paper: $('#kpr-paper').value,
-        label: { w: Number(lv[0]) || 50, h: Number(lv[1]) || 30 },
+        label: { w: Number(lv[0]) || 50, h: Number(lv[1]) || 20 },
       };
     }
     function close() { ov.remove(); }
-    function toast(msg) { try { if (window.Kiwi && Kiwi.toast) Kiwi.toast(msg); } catch (_) {} }
+    /* La caisse n'a pas window.Kiwi.toast : sans repli, chaque « Tester » du
+       modal serait muet au comptoir · la surface qui s'en sert vraiment. */
+    function toast(msg) { try { if (window.Kiwi && Kiwi.toast) Kiwi.toast(msg); else fallbackNotice(msg); } catch (_) {} }
 
-    /* Fill the "already installed" picker from the bridge. Older bridges (< 1.2)
-     * have no /kiwi/printers and 404 — the section simply stays hidden, so an
-     * un-updated till degrades to exactly today's behaviour instead of showing a
-     * control that can never work. */
+    function validIp(s) {
+      if (!s) return true;
+      var m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(s);
+      if (m) return [m[1], m[2], m[3], m[4]].every(function (o) { return Number(o) <= 255; });
+      return /^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?)+$/i.test(s);
+    }
+    function validPort(s) { var n = Number(s); return Number.isInteger(n) && n >= 1 && n <= 65535; }
+
+    function frReason(reason) {
+      var r = String(reason || '');
+      if (r === 'bridge-unreachable') return 'Pont introuvable · lancez Kiwi Printer Bridge sur cet ordinateur, ou associez un pont au relais Kiwi pour imprimer depuis une tablette';
+      if (r === 'bridge-capability-required') return 'Ce pont doit être mis à jour · installez la dernière version de Kiwi Printer Bridge puis revérifiez';
+      if (r === 'printer-target-not-saved') return 'Cette imprimante doit être enregistrée dans le pont · relancez le test depuis ce poste';
+      if (r === 'printer-target-not-local') return 'Le pont refuse cette cible réseau · utilisez une imprimante locale au poste du comptoir';
+      if (r === 'output-unknown-ack-timeout' || r === 'output-unknown-after-bridge-restart') return 'Le ticket a peut-être déjà été imprimé · vérifiez le papier avant toute reprise manuelle';
+      if (r === 'relay-offline') return 'Aucun pont en ligne pour le relais Kiwi · vérifiez que Kiwi Printer Bridge tourne sur l’ordinateur du comptoir';
+      if (r === 'relay-not-provisioned') return 'Relais d’impression pas encore activé côté serveur';
+      if (r === 'unauthorized') return 'Caisse non reconnue · appairez-la ou reconnectez-vous';
+      if (r === 'expired') return 'Le pont n’a pas récupéré le ticket à temps';
+      if (r === 'not-configured') return 'Aucune imprimante configurée';
+      if (r === 'local-network-denied') return 'Accès au réseau local refusé. Ouvrez Réglages > Kiwi Pro > Réseau local';
+      if (r === 'refused') return 'Connexion refusée. Vérifiez le port de l’imprimante';
+      if (r === 'unreachable') return 'Imprimante introuvable sur ce réseau';
+      if (/timeout/i.test(r)) return 'Imprimante injoignable · vérifiez l’adresse IP et qu’elle est allumée';
+      if (/ECONNREFUSED/i.test(r)) return 'Connexion refusée à cette adresse · ce n’est pas le port d’une imprimante réseau';
+      if (/ENOTFOUND|EHOSTUNREACH|ENETUNREACH|EINVAL|EHOSTDOWN/i.test(r)) return 'Adresse introuvable sur le réseau · vérifiez l’IP';
+      return r || 'inconnu';
+    }
+
+    function paintTarget() {
+      var el = $('#kpr-target'); if (!el) return;
+      var c = getConfig();
+      el.textContent = c.osPrinter
+        ? 'Cible actuelle : imprimante système « ' + c.osPrinter + ' ». Enregistrer une IP ici la remplacera.'
+        : (c.ip ? 'Cible actuelle : réseau · ' + c.ip + ':' + (c.port || 9100) : 'Aucune cible réseau enregistrée.');
+    }
+    function paintHubStatus() {
+      var el = $('#kpr-hub-status');
+      if (!el || !window.KiwiKitchenPrint) return;
+      var s = KiwiKitchenPrint.status();
+      el.textContent = s.pending
+        ? s.pending + ' ticket' + (s.pending > 1 ? 's' : '') + ' en attente · nouvelle tentative automatique'
+        : (s.hub ? (s.printerReady ? 'Prêt · aucune impression en attente' : 'Hub actif · connectez une imprimante') : 'Les commandes de ce poste continuent à s’imprimer localement.');
+    }
+    var hub = $('#kpr-hub');
+    if (hub) hub.addEventListener('change', function () {
+      KiwiKitchenPrint.setHub(this.checked);
+      paintHubStatus();
+      toast(this.checked ? 'Hub d’impression cuisine activé' : 'Hub d’impression désactivé');
+    });
+    paintHubStatus();
+
+    // ── Station Routing UI Logic ──
+    var stConfig = getStationConfig();
+    var prepStations = (context.stations && Array.isArray(context.stations)) ? context.stations : getPrepStations();
+
+    function renderProfilesChips() {
+      var chipRow = $('#kpr-profiles-list');
+      if (!chipRow) return;
+      if (!stConfig.profiles.length) {
+        chipRow.innerHTML = '<span class="kpr-note" style="margin:0 0 6px;display:block;">Aucune imprimante additionnelle enregistrée. Ajoutez-en une pour router par poste.</span>';
+        return;
+      }
+      chipRow.innerHTML = stConfig.profiles.map(function (p) {
+        var desc = p.type === 'ip' ? (p.ip + ':' + (p.port || 9100)) : p.type === 'os' ? p.osPrinter : p.type.toUpperCase();
+        return '<span class="kpr-prof-chip" data-prof-id="' + esc(p.id) + '">' +
+          '<b>' + esc(p.name) + '</b> <small>(' + esc(desc) + ')</small>' +
+          '<button type="button" class="kpr-prof-del" data-del-prof="' + esc(p.id) + '" aria-label="Supprimer">×</button>' +
+          '</span>';
+      }).join('');
+
+      chipRow.querySelectorAll('[data-del-prof]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var pid = this.getAttribute('data-del-prof');
+          stConfig.profiles = stConfig.profiles.filter(function (p) { return p.id !== pid; });
+          Object.keys(stConfig.bindings).forEach(function (k) {
+            if (stConfig.bindings[k] === pid) delete stConfig.bindings[k];
+          });
+          setStationConfig(stConfig);
+          renderProfilesChips();
+          renderStationRows();
+          toast('Imprimante retirée');
+        });
+      });
+    }
+
+    function renderStationRows() {
+      var tbody = $('#kpr-station-tbody');
+      if (!tbody) return;
+      var rows = [];
+
+      var caisseCur = stConfig.bindings.caisse || '';
+      var caisseOpts = '<option value="">· Imprimante par défaut (actuelle) ·</option>' +
+        stConfig.profiles.map(function (p) {
+          return '<option value="' + esc(p.id) + '"' + (p.id === caisseCur ? ' selected' : '') + '>' + esc(p.name) + ' (' + esc(p.type === 'ip' ? p.ip : p.type) + ')</option>';
+        }).join('');
+      rows.push('<div class="kpr-st-card">' +
+        '<div class="kpr-st-top"><b>Caisse (comptoir)</b><span class="kpr-st-badge receipt">Reçus clients</span></div>' +
+        '<select class="kpr-st-sel" data-station-id="caisse" aria-label="Imprimante de la caisse">' + caisseOpts + '</select>' +
+        '<div class="kpr-st-actions">' +
+          '<button type="button" class="kpr-btn kpr-test kpr-st-test" data-test-station="caisse" data-station-title="Caisse">Ticket test</button>' +
+          '<button type="button" class="kpr-btn kpr-test" id="kpr-drawer-test">Tester le tiroir</button>' +
+        '</div>' +
+        '</div>');
+
+      prepStations.forEach(function (st) {
+        var cur = stConfig.bindings[st.id] || '';
+        var opts = '<option value="">· Même imprimante que la caisse ·</option>' +
+          stConfig.profiles.map(function (p) {
+            return '<option value="' + esc(p.id) + '"' + (p.id === cur ? ' selected' : '') + '>' + esc(p.name) + ' (' + esc(p.type === 'ip' ? p.ip : p.type) + ')</option>';
+          }).join('');
+        rows.push('<div class="kpr-st-card">' +
+          '<div class="kpr-st-top"><b>' + esc(st.name || st.id) + '</b><span class="kpr-st-badge production">Production</span></div>' +
+          '<select class="kpr-st-sel" data-station-id="' + esc(st.id) + '" aria-label="Imprimante du poste ' + esc(st.name || st.id) + '">' + opts + '</select>' +
+          '<div class="kpr-st-actions">' +
+            '<button type="button" class="kpr-btn kpr-test kpr-st-test" data-test-station="' + esc(st.id) + '" data-station-title="' + esc(st.name || st.id) + '">Ticket test</button>' +
+          '</div>' +
+          '</div>');
+      });
+
+      tbody.innerHTML = rows.join('');
+
+      tbody.querySelectorAll('.kpr-st-test').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var sid = this.getAttribute('data-test-station');
+          var stTitle = this.getAttribute('data-station-title') || 'Poste';
+          var rowSel = tbody.querySelector('.kpr-st-sel[data-station-id="' + sid + '"]');
+          var profId = rowSel ? rowSel.value : '';
+          var prof = profId ? stConfig.profiles.find(function (p) { return p.id === profId; }) : null;
+          var paper = (prof && prof.paper) || getConfig().paper || '80';
+          var bTest = this;
+          bTest.disabled = true; var origText = bTest.textContent; bTest.textContent = 'Impression…';
+          var slipBytes = (sid === 'caisse')
+            ? window.KiwiEscPos.receipt({ shop: 'TEST CAISSE', lines: [{ name: 'Test reçu client', price: '0.00' }], total: '0.00', paper: paper })
+            : window.KiwiEscPos.kitchenTicket({ title: 'TEST ' + stTitle.toUpperCase(), order: '#TEST', time: '12:00', items: [{ name: 'Article test ' + stTitle, qty: 1 }], paper: paper });
+          (prof ? printBytesToTarget(slipBytes, prof) : printBytes(slipBytes)).then(function (res) {
+            bTest.textContent = origText; bTest.disabled = false;
+            toast(res.ok ? ('Ticket test envoyé (' + stTitle + ')') : ('Échec : ' + frReason(res.reason)));
+          }, function () {
+            bTest.textContent = origText; bTest.disabled = false;
+            toast('Échec d’impression');
+          });
+        });
+      });
+
+      /* Le test du tiroir : une impulsion ESC/POS (sans papier) vers l'imprimante
+         du comptoir. L'électronique ne sait pas confirmer l'ouverture physique,
+         donc le toast dit quoi vérifier si le tiroir reste fermé. */
+      var drawerBtn = tbody.querySelector('#kpr-drawer-test');
+      if (drawerBtn) drawerBtn.addEventListener('click', function () {
+        var rowSel = tbody.querySelector('.kpr-st-sel[data-station-id="caisse"]');
+        var profId = rowSel ? rowSel.value : '';
+        var prof = profId ? stConfig.profiles.find(function (p) { return p.id === profId; }) : null;
+        var bd = this; bd.disabled = true; var orig = bd.textContent; bd.textContent = 'Envoi…';
+        var kick = window.KiwiEscPos.builder().init().drawer().bytes();
+        (prof ? printBytesToTarget(kick, prof) : printBytes(kick)).then(function (res) {
+          bd.textContent = orig; bd.disabled = false;
+          toast(res.ok
+            ? 'Impulsion envoyée · tiroir fermé ? Vérifiez le câble RJ11 sur le port DK de l\'imprimante et la clé en position verticale'
+            : ('Échec : ' + frReason(res.reason)));
+        }, function () {
+          bd.textContent = orig; bd.disabled = false;
+          toast('Échec de l\'impulsion tiroir');
+        });
+      });
+    }
+
+    var addProfBtn = $('#kpr-add-prof-btn');
+    var profForm = $('#kpr-profile-form');
+    var profTypeSel = $('#kpr-prof-type');
+    var profIpBox = $('#kpr-prof-ip-box');
+    var profOsBox = $('#kpr-prof-os-box');
+
+    if (addProfBtn && profForm) {
+      addProfBtn.addEventListener('click', function () {
+        profForm.style.display = profForm.style.display === 'none' ? 'block' : 'none';
+        if (profForm.style.display === 'block') {
+          $('#kpr-prof-name').value = '';
+          $('#kpr-prof-ip').value = '';
+          $('#kpr-prof-name').focus();
+        }
+      });
+    }
+    if ($('#kpr-prof-cancel-btn')) {
+      $('#kpr-prof-cancel-btn').addEventListener('click', function () {
+        if (profForm) profForm.style.display = 'none';
+      });
+    }
+    if (profTypeSel) {
+      profTypeSel.addEventListener('change', function () {
+        if (profIpBox) profIpBox.style.display = this.value === 'ip' ? 'flex' : 'none';
+        if (profOsBox) profOsBox.style.display = this.value === 'os' ? 'block' : 'none';
+      });
+    }
+
+    if ($('#kpr-prof-test-btn')) {
+      $('#kpr-prof-test-btn').addEventListener('click', function () {
+        var type = $('#kpr-prof-type').value;
+        var name = ($('#kpr-prof-name').value || 'Test').trim();
+        var ip = ($('#kpr-prof-ip').value || '').trim();
+        var port = Number($('#kpr-prof-port').value) || 9100;
+        var osPrinter = $('#kpr-prof-os-sel') ? $('#kpr-prof-os-sel').value : '';
+        var paper = $('#kpr-prof-paper').value || '80';
+        if (type === 'ip') {
+          if (!ip) { toast('Saisissez une adresse IP'); return; }
+          if (!validIp(ip)) { toast('Adresse IP invalide'); return; }
+          if (!validPort(port)) { toast('Port invalide'); return; }
+        }
+        var target = { type: type, name: name, ip: ip, port: port, osPrinter: osPrinter, paper: paper };
+        var btn = this; btn.disabled = true; var origText = btn.textContent; btn.textContent = 'Impression…';
+        var slipBytes = window.KiwiEscPos.testSlip({ title: 'TEST ' + name.toUpperCase(), ip: ip, paper: paper });
+        printBytesToTarget(slipBytes, target).then(function (res) {
+          btn.textContent = origText; btn.disabled = false;
+          toast(res.ok ? ('Ticket test envoyé à ' + name) : ('Échec : ' + frReason(res.reason)));
+        }, function () {
+          btn.textContent = origText; btn.disabled = false;
+          toast('Échec d’impression');
+        });
+      });
+    }
+
+    if ($('#kpr-prof-save-btn')) {
+      $('#kpr-prof-save-btn').addEventListener('click', function () {
+        var name = ($('#kpr-prof-name').value || '').trim();
+        var type = $('#kpr-prof-type').value;
+        var ip = ($('#kpr-prof-ip').value || '').trim();
+        var port = Number($('#kpr-prof-port').value) || 9100;
+        var osPrinter = $('#kpr-prof-os-sel') ? $('#kpr-prof-os-sel').value : '';
+        var paper = $('#kpr-prof-paper').value || '80';
+
+        if (!name) { toast('Donnez un nom à cette imprimante (ex. Cuisine, Bar)'); $('#kpr-prof-name').focus(); return; }
+        if (type === 'ip') {
+          if (!ip) { toast('Saisissez une adresse IP'); $('#kpr-prof-ip').focus(); return; }
+          if (!validIp(ip)) { toast('Adresse IP invalide'); $('#kpr-prof-ip').focus(); return; }
+          if (!validPort(port)) { toast('Port invalide'); $('#kpr-prof-port').focus(); return; }
+        }
+        if (type === 'os' && !osPrinter) {
+          toast('Sélectionnez une imprimante système'); return;
+        }
+
+        var newProf = {
+          id: 'prof_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+          name: name,
+          type: type,
+          ip: ip,
+          port: port,
+          osPrinter: osPrinter,
+          paper: paper
+        };
+        stConfig.profiles.push(newProf);
+        setStationConfig(stConfig);
+        renderProfilesChips();
+        renderStationRows();
+        if (profForm) profForm.style.display = 'none';
+        toast('Imprimante « ' + name + ' » enregistrée');
+      });
+    }
+
+    if ($('#kpr-save-stations-btn')) {
+      $('#kpr-save-stations-btn').addEventListener('click', function () {
+        var selects = ov.querySelectorAll('.kpr-st-sel');
+        var newBindings = {};
+        selects.forEach(function (sel) {
+          var sid = sel.getAttribute('data-station-id');
+          if (sid && sel.value) newBindings[sid] = sel.value;
+        });
+        stConfig.bindings = newBindings;
+        setStationConfig(stConfig);
+        toast('Routage des imprimantes par poste enregistré');
+      });
+    }
+
+    renderProfilesChips();
+    renderStationRows();
+
     function loadOsPrinters() {
-      var box = $('#kpr-os'), sel = $('#kpr-os-sel');
+      var box = $('#kpr-os'), sel = $('#kpr-os-sel'), profSel = $('#kpr-prof-os-sel');
       if (!box || !sel) return Promise.resolve();
       var to = withTimeout(null, 6000);
-      return fetch(bridgeBase() + '/kiwi/printers', { signal: to.signal })
+      return fetch(bridgeBase() + '/kiwi/printers', { headers: bridgeHeaders(), signal: to.signal })
         .then(function (r) { to.done(); return r.ok ? r.json() : null; })
         .catch(function () { to.done(); return null; })
         .then(function (j) {
           var list = (j && j.ok && Array.isArray(j.printers)) ? j.printers : [];
           if (!list.length) { box.style.display = 'none'; return; }
           var cur = getConfig().osPrinter || j.default || '';
-          sel.innerHTML = list.map(function (n) {
+          var optionsHtml = list.map(function (n) {
             return '<option value="' + esc(n) + '"' + (n === cur ? ' selected' : '') + '>' + esc(n) + '</option>';
           }).join('');
+          sel.innerHTML = optionsHtml;
+          if (profSel) profSel.innerHTML = optionsHtml;
           box.style.display = '';
         });
     }
 
     var bridgeUp = false;
+    var localPing = null;   // la réponse du pont local (pour savoir s'il est déjà relais)
     function refreshStatus() {
-      var st = $('#kpr-status'), t = $('#kpr-status-t'), test = $('#kpr-test');
+      var st = $('#kpr-status'), t = $('#kpr-status-t'), test = $('#kpr-test'), scan = $('#kpr-scan');
+      if (socket) {
+        bridgeUp = true;
+        st.className = 'kpr-status on';
+        t.textContent = 'Connexion directe à l’imprimante depuis l’app Kiwi.';
+        test.disabled = false;
+        if (scan) scan.disabled = false;
+        paintRelay();
+        return Promise.resolve({ ok: true, via: 'socket' });
+      }
       t.textContent = 'Vérification du pont…'; st.className = 'kpr-status off';
       return ping().then(function (j) {
+        localPing = j;
         bridgeUp = !!j;
+        if (scan) scan.disabled = !j;
         if (j) {
+          if (!bridgeCapability && bridgeMode !== 'legacy') {
+            st.className = 'kpr-status off';
+            t.textContent = 'Pont détecté · mettez à jour Kiwi Printer Bridge pour sécuriser cette caisse.';
+            test.disabled = true;
+            if (scan) scan.disabled = true;
+            return { ok: false, reason: 'bridge-capability-required' };
+          }
           st.className = 'kpr-status on';
-          t.textContent = 'Pont connecté · v' + (j.version || '?');
+          t.textContent = 'Pont connecté · v' + (j.version || '?')
+            + (bridgeMode === 'legacy' ? ' · impression maintenue, mise à jour de sécurité recommandée' : '');
           test.disabled = false;
           loadOsPrinters();
-        } else {
-          var box = $('#kpr-os'); if (box) box.style.display = 'none';
-          st.className = 'kpr-status off';
-          // Rebuild with download + re-check affordances.
-          t.innerHTML = 'Kiwi Printer Bridge non détecté. <a href="' + esc(BRIDGE_DOWNLOAD) + '" target="_blank" rel="noopener">Télécharger le pont</a> · <button type="button" class="kpr-recheck" id="kpr-recheck">Revérifier</button>';
-          var rc = $('#kpr-recheck'); if (rc) rc.addEventListener('click', refreshStatus);
-          test.disabled = true;
+          paintRelay();
+          return;
         }
+        var box = $('#kpr-os'); if (box) box.style.display = 'none';
+        st.className = 'kpr-status off';
+        t.innerHTML = 'Kiwi Printer Bridge non détecté sur cet appareil. <a href="' + esc(BRIDGE_DOWNLOAD) + '" target="_blank" rel="noopener">Télécharger le pont</a> · <button type="button" class="kpr-recheck" id="kpr-recheck">Revérifier</button>';
+        var rc = $('#kpr-recheck'); if (rc) rc.addEventListener('click', refreshStatus);
+        test.disabled = true;
+        /* Pas de pont ici (iPad, tablette, PC sans pont) : un pont EN LIGNE via
+         * le relais suffit · l'imprimante réseau ci-dessous passe par lui. */
+        return paintRelay().then(function (rs) {
+          if (!ov.isConnected || !rs || !rs.online) return;
+          var names = rs.bridges.filter(function (b) { return b.online; }).map(function (b) { return b.name || 'pont'; });
+          st.className = 'kpr-status on';
+          t.textContent = 'Relais Kiwi · ' + (names.length > 1 ? names.length + ' ponts en ligne' : 'pont « ' + names[0] + ' » en ligne') + ' · l’imprimante réseau s’imprime via ce pont';
+          test.disabled = false; bridgeUp = true;
+        });
       });
     }
+    /* ── Le panneau du relais ─────────────────────────────────────────────── */
+    function fmtAgo(ts) {
+      if (!ts) return 'jamais vu';
+      var sec = Math.round((Date.now() - ts) / 1000);
+      return sec < 60 ? 'vu à l’instant' : sec < 3600 ? 'vu il y a ' + Math.round(sec / 60) + ' min' : 'vu il y a ' + Math.round(sec / 3600) + ' h';
+    }
+    function paintRelay() {
+      var st = $('#kpr-relay-status'), t = $('#kpr-relay-status-t'), list = $('#kpr-relay-list'), local = $('#kpr-relay-pair-local');
+      if (!st) return Promise.resolve(null);
+      return relayProbe(true).then(function (rs) {
+        if (!ov.isConnected) return rs;
+        if (!rs.provisioned) { st.className = 'kpr-status off'; t.textContent = 'Relais pas encore activé côté serveur.'; return rs; }
+        if (rs.authed === false) { st.className = 'kpr-status off'; t.textContent = 'Cet appareil n’est pas reconnu comme la caisse d’un commerce · appairez-le d’abord.'; return rs; }
+        var on = rs.bridges.filter(function (b) { return b.online; }).length;
+        st.className = 'kpr-status ' + (on ? 'on' : 'off');
+        t.textContent = !rs.bridges.length ? 'Aucun pont associé à ce commerce.'
+          : on ? (on + ' pont' + (on > 1 ? 's' : '') + ' en ligne') : 'Pont associé mais hors ligne · lancez Kiwi Printer Bridge sur l’ordinateur du comptoir.';
+        list.innerHTML = rs.bridges.map(function (b) {
+          return '<div class="kpr-relay-row"><span class="kpr-d ' + (b.online ? 'on' : '') + '"></span><b>' + esc(b.name || 'Pont') + '</b> <small>' + esc((b.platform ? b.platform + ' · ' : '') + (b.online ? 'en ligne' : fmtAgo(b.last_seen_ts))) + '</small>' +
+            '<button type="button" class="kpr-prof-del" data-relay-revoke="' + esc(b.id) + '" aria-label="Dissocier">×</button></div>';
+        }).join('');
+        list.querySelectorAll('[data-relay-revoke]').forEach(function (b) {
+          b.addEventListener('click', function () {
+            if (!confirm('Dissocier ce pont ? Il ne recevra plus les tickets de vos tablettes.')) return;
+            relayRevoke(this.getAttribute('data-relay-revoke')).then(function (ok) { toast(ok ? 'Pont dissocié' : 'Échec'); paintRelay(); refreshStatus(); });
+          });
+        });
+        // Le pont local n'est pas encore relais : on peut l'associer d'un clic, sans code à taper.
+        if (local) local.style.display = (localPing && localPing.relay && !localPing.relay.paired) ? '' : 'none';
+        return rs;
+      });
+    }
+    function showPairCode(j) {
+      var box = $('#kpr-relay-code'); if (!box) return;
+      box.style.display = '';
+      var mins = Math.max(1, Math.round((j.expires_ts - Date.now()) / 60000));
+      box.innerHTML = '<div class="kpr-code-num">' + esc(String(j.code)) + '</div>' +
+        '<p class="kpr-note">Sur l’ordinateur du comptoir, lancez Kiwi Printer Bridge puis ouvrez <b>http://127.0.0.1:9110</b> et tapez ce code. Valable ' + mins + ' min · une seule fois.</p>';
+    }
+    var pairBtn = $('#kpr-relay-pair');
+    if (pairBtn) pairBtn.addEventListener('click', function () {
+      var b = this; b.disabled = true;
+      relayPairCode().then(function (j) {
+        b.disabled = false;
+        if (!j.ok) { toast('Impossible de générer le code : ' + frReason(j.reason)); return; }
+        showPairCode(j);
+      });
+    });
+    var pairLocal = $('#kpr-relay-pair-local');
+    if (pairLocal) pairLocal.addEventListener('click', function () {
+      var b = this; b.disabled = true; var orig = b.textContent; b.textContent = 'Association…';
+      relayPairCode().then(function (j) {
+        if (!j.ok) { b.disabled = false; b.textContent = orig; toast('Impossible de générer le code : ' + frReason(j.reason)); return null; }
+        return pairLocalBridge(j.code);
+      }).then(function (r) {
+        b.disabled = false; b.textContent = orig;
+        if (r === null) return;
+        toast(r && r.ok ? 'Ce pont imprime désormais les tickets de vos tablettes' : ('Échec : ' + ((r && r.error) || 'pont injoignable')));
+        setTimeout(function () { ping().then(function (j) { localPing = j; paintRelay(); }); }, 800);
+      });
+    });
 
     $('#kpr-close').addEventListener('click', close);
     ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
-    $('#kpr-save').addEventListener('click', function () { setConfig(readForm()); toast('Imprimante enregistrée'); close(); });
+    $('#kpr-save').addEventListener('click', function () {
+      var f = readForm();
+      if (!validIp(f.ip)) { toast('Adresse invalide · attendu : 192.168.1.50 (ou un nom comme EPSON.local)'); $('#kpr-ip').focus(); return; }
+      if (!validPort(f.port)) { toast('Port invalide · un nombre entre 1 et 65535 (9100 en général)'); $('#kpr-port').focus(); return; }
+      setConfig(Object.assign(f, { osPrinter: '' }));
+      paintTarget();
+      toast('Imprimante enregistrée');
+      close();
+    });
 
-    /* Choosing an installed printer clears any saved IP. Leaving both set would
-     * be ambiguous to read back later, even though the bridge prefers the name. */
     $('#kpr-os-save').addEventListener('click', function () {
       var sel = $('#kpr-os-sel'); if (!sel || !sel.value) return;
       setConfig({ osPrinter: sel.value, ip: '' });
@@ -905,20 +1958,20 @@
       close();
     });
 
-    /* Test prints to the printer highlighted right now, not to the saved one —
-     * the owner is trying candidates, and a test that ignores the picker would
-     * report success for a printer they didn't select. */
     $('#kpr-os-test').addEventListener('click', function () {
       var sel = $('#kpr-os-sel'); if (!sel || !sel.value) return;
       var btn = this, orig = btn.textContent;
       btn.disabled = true; btn.textContent = 'Impression…';
       var cfg2 = getConfig();
       var to = withTimeout(null, 12000);
-      fetch(bridgeBase() + '/kiwi/print', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: to.signal,
-        body: JSON.stringify({ printerName: sel.value,
-          dataB64: window.KiwiEscPos.toB64(window.KiwiEscPos.testSlip({ paper: cfg2.paper })) }),
-      }).then(function (r) { to.done(); return r.json().catch(function () { return null; }); })
+      saveBridgeTarget({ osPrinter: sel.value }).then(function (saved) {
+        if (!saved || !saved.ok) return { ok: false, error: saved && saved.error || 'bridge-capability-required' };
+        return fetch(bridgeBase() + '/kiwi/print', {
+          method: 'POST', headers: bridgeHeaders({ 'Content-Type': 'application/json' }), signal: to.signal,
+          body: JSON.stringify({ printerName: sel.value,
+            dataB64: window.KiwiEscPos.toB64(window.KiwiEscPos.testSlip({ paper: cfg2.paper })) }),
+        }).then(function (r) { to.done(); return r.json().catch(function () { return null; }); });
+      })
         .then(function (j) {
           btn.textContent = orig; btn.disabled = false;
           toast(j && j.ok ? 'Ticket test envoyé' : ('Échec : ' + ((j && j.error) || 'inconnu')));
@@ -937,7 +1990,6 @@
       if (sp) sp.addEventListener('click', function () { close(); try { context.onSavePdf(); } catch (_) {} });
     }
 
-    // ── Bluetooth: connect + test ──
     $('#kpr-bt-connect').addEventListener('click', function () {
       var st = $('#kpr-bt-status'), t = $('#kpr-bt-status-t'), btn = this;
       if (!navigator.bluetooth) { st.className = 'kpr-status off'; t.textContent = 'Bluetooth indisponible sur ce navigateur. Utilisez Chrome (ordinateur ou Android).'; return; }
@@ -964,7 +2016,6 @@
       });
     });
 
-    // ── USB (WebUSB): same shape as Bluetooth, different transport ──
     if ($('#kpr-usb-connect')) {
       $('#kpr-usb-connect').addEventListener('click', function () {
         var st = $('#kpr-usb-status'), t = $('#kpr-usb-status-t'), btn = this;
@@ -977,9 +2028,6 @@
         }, function (e) {
           btn.disabled = false; btn.textContent = orig; st.className = 'kpr-status off';
           var m = (e && e.message) || '';
-          /* The honest failure here is "the operating system already owns this
-             printer" — macOS/Linux hand printer-class devices to CUPS and Windows
-             wants a WinUSB driver. Say that instead of a raw DOMException. */
           if (/no-webusb/.test(m)) t.textContent = 'USB indisponible sur ce navigateur. Utilisez Chrome (ordinateur ou Android).';
           else if (/cancel|NotFound|chooser|No device selected/i.test(m)) t.textContent = 'Aucune imprimante sélectionnée.';
           else if (/no-bulk-out/.test(m)) t.textContent = 'Appareil trouvé mais ce n’est pas une imprimante USB standard.';
@@ -997,8 +2045,6 @@
       });
     }
 
-    // Model caveats (Star emulation, WD8210 language, Zebra = ZPL) and the make's
-    // driver page surface as they're picked.
     $('#kpr-model').addEventListener('change', function () {
       var el = $('#kpr-model-note');
       if (el) {
@@ -1009,29 +2055,84 @@
       var dp = $('#kpr-model-driver'), da = $('#kpr-model-driver-a');
       if (dp && da) {
         var d = modelDriver(this.value);
-        // href, jamais innerHTML : l'URL vient de MODELS, mais on garde le même
-        // réflexe que partout ailleurs dans ce fichier.
         if (d) da.setAttribute('href', d);
         dp.style.display = d ? '' : 'none';
       }
     });
 
-    // ── Network bridge (advanced): test targets the bridge explicitly ──
     $('#kpr-test').addEventListener('click', function () {
-      setConfig(readForm());
-      var cfg2 = getConfig();
+      var f = readForm();
+      if (!f.ip) { toast('Saisissez d’abord l’adresse IP de l’imprimante'); $('#kpr-ip').focus(); return; }
+      if (!validIp(f.ip)) { toast('Adresse invalide · attendu : 192.168.1.50 (ou un nom comme EPSON.local)'); $('#kpr-ip').focus(); return; }
+      if (!validPort(f.port)) { toast('Port invalide · un nombre entre 1 et 65535 (9100 en général)'); $('#kpr-port').focus(); return; }
       var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Impression…';
-      bridgePrintBytes(window.KiwiEscPos.testSlip({ ip: cfg2.ip, paper: cfg2.paper })).then(function (res) {
-        btn.textContent = orig; btn.disabled = !bridgeUp;
-        toast(res.ok ? 'Ticket test envoyé' : ('Échec : ' + (res.reason || 'inconnu')));
+      var target = { ip: f.ip, port: Number(f.port) || 9100 };
+      var slip = window.KiwiEscPos.testSlip({ ip: f.ip, paper: f.paper });
+      var attempt = socket
+        ? socket.probe({ host: target.ip, port: target.port, timeoutMs: 4000 }).then(function (probe) {
+            return probe && probe.ok ? nativeSocketSend(slip, target) : { ok: false, reason: (probe && probe.code) || 'unreachable' };
+          }, function () { return { ok: false, reason: 'unreachable' }; })
+        : bridgePrintBytes(slip, target);
+      attempt.then(function (res) {
+        btn.textContent = orig; btn.disabled = !(socket || bridgeUp);
+        toast(res.ok ? 'Ticket test envoyé' : ('Échec : ' + frReason(res.reason)));
       });
     });
 
-    refreshStatus();
+    var scanBtn = $('#kpr-scan');
+    if (scanBtn) scanBtn.addEventListener('click', function () {
+      var out = $('#kpr-scan-out');
+      if (!printQueueIdle()) { if (out) { out.style.display = ''; out.textContent = 'Une impression est en cours. La recherche démarrera une fois la file au repos.'; } return; }
+      scanBtn.disabled = true; var orig = scanBtn.textContent; scanBtn.textContent = 'Recherche en cours…';
+      if (out) { out.style.display = ''; out.textContent = ''; }
+      var scanAttempt;
+      if (socket) {
+        scanAttempt = socket.scan({ port: Number($('#kpr-port').value) || 9100, timeoutMs: 600 }).then(function (r) {
+          if (!r || !r.ok) return { ok: false, error: (r && r.code) || 'unreachable' };
+          return { ok: true, printers: (r.hosts || []).map(function (h) { return { ip: h.host, ms: h.ms }; }) };
+        }, function () { return null; });
+      } else {
+        var to = withTimeout(null, 30000);
+        scanAttempt = fetch(bridgeBase() + '/kiwi/scan', { headers: bridgeHeaders(), signal: to.signal })
+          .then(function (r) { to.done(); return r.status === 404 ? { legacy: true } : r.json(); })
+          .catch(function () { to.done(); return null; });
+      }
+      scanAttempt
+        .then(function (j) {
+          scanBtn.textContent = orig; scanBtn.disabled = !(socket || bridgeUp);
+          if (!out) return;
+          if (!j) { out.textContent = 'Pont injoignable · relancez Kiwi Printer Bridge puis réessayez.'; return; }
+          if (j.legacy) { out.textContent = 'Détection indisponible sur ce pont · installez la version 1.3 ou plus récente.'; return; }
+          if (!j.ok) { out.textContent = 'Recherche impossible : ' + frReason(j.error); return; }
+          if (!j.printers.length) { out.textContent = 'Aucune imprimante réseau trouvée. Vérifiez qu’elle est allumée et sur le même réseau que cet ordinateur.'; return; }
+          out.innerHTML = 'Trouvée' + (j.printers.length > 1 ? 's' : '') + ' : ' + j.printers.map(function (p) {
+            return '<button type="button" class="kpr-btc kpr-scan-pick" data-ip="' + esc(p.ip) + '">' + esc(p.ip) + '</button>';
+          }).join(' ');
+          out.querySelectorAll('.kpr-scan-pick').forEach(function (b) {
+            b.addEventListener('click', function () {
+              $('#kpr-ip').value = this.getAttribute('data-ip');
+              $('#kpr-port').value = '9100';
+              toast('Adresse remplie · imprimez un ticket test puis enregistrez');
+            });
+          });
+        });
+    });
 
-    /* A printer granted on an earlier visit is re-attached silently; reflect it
-     * here so the panel never claims "aucune imprimante" for one that is in fact
-     * connected and ready to print. */
+    var diagnosticsBtn = $('#kpr-diagnostics');
+    if (diagnosticsBtn) diagnosticsBtn.addEventListener('click', function () {
+      var queue = window.KiwiKitchenPrint;
+      if (!queue || typeof queue.exportDiagnostics !== 'function') { toast('Diagnostic indisponible'); return; }
+      try {
+        var blob = new Blob([queue.exportDiagnostics()], { type: 'application/json' });
+        var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'kiwi-print-diagnostic.json'; a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+        toast('Diagnostic exporté');
+      } catch (_) { toast('Export impossible'); }
+    });
+
+    refreshStatus();
+    paintTarget();
+
     reconnectUsb().then(function (r) {
       if (!r || !ov.isConnected) return;
       var st = $('#kpr-usb-status'), t = $('#kpr-usb-status-t'), btn = $('#kpr-usb-connect');
@@ -1047,29 +2148,42 @@
     var t = e.target.closest && e.target.closest('[data-action="printer-connect"]');
     if (t) { e.preventDefault(); openSetup(); }
   });
+  window.addEventListener('kiwi:kitchen-print-status', maybeDiscoverNativePrinter);
+  window.addEventListener('kiwi:printer-discovery', function (event) {
+    var d = event.detail || {};
+    if (d.reason === 'local-network-denied') fallbackNotice('Réseau local refusé. Kiwi garde la dernière adresse. Ouvrez Réglages > Kiwi Pro > Réseau local.');
+    else if (d.reason === 'multiple-printers') fallbackNotice('Plusieurs imprimantes ont répondu. Ouvrez Imprimante et choisissez la bonne adresse.');
+    else if (d.changed) fallbackNotice('Imprimante retrouvée sur ' + d.ip + '. La file reprend automatiquement.');
+  });
 
-  /* Re-attach an already-granted USB printer as soon as the till loads, so the
-   * first receipt of the day prints without anyone opening this panel. */
   try { reconnectUsb(); } catch (_) {}
 
   window.KiwiPrinter = {
     getConfig: getConfig, setConfig: setConfig, isConfigured: isConfigured, isConnected: isConnected,
-    ping: ping, printBytes: printBytes,
+    ping: ping, printBytes: printBytes, printBytesToTarget: printBytesToTarget,
+    getStationConfig: getStationConfig, setStationConfig: setStationConfig,
+    hasStationBindings: hasStationBindings, resolveStationTarget: resolveStationTarget,
+    getPrepStations: getPrepStations,
     connectBluetooth: connectBluetooth, disconnectBluetooth: disconnectBluetooth, btConnected: btConnected,
     connectUsb: connectUsb, disconnectUsb: disconnectUsb, usbConnected: usbConnected, usbSupported: usbSupported,
     reconnectUsb: reconnectUsb,
+    nativeSocket: nativeSocket, nativeSocketSend: nativeSocketSend,
+    discoverNativePrinter: maybeDiscoverNativePrinter,
     printReceipt: printReceipt, printKitchen: printKitchen, printLabels: printLabels,
-    // Le rapport de clôture. Contrairement aux trois au-dessus, celui-ci porte
     // son propre repli : une journée doit pouvoir se clôturer sans thermique.
     printDayReport: printDayReport, dayReportHTML: dayReportHTML,
-    // Le repli « pilote du système » — même objet reçu que printReceipt.
+    // Le repli « pilote du système » · même objet reçu que printReceipt.
     browserReceipt: browserReceipt, browserDayReport: browserDayReport,
     /* Le repli brut, pour un module qui peint SON propre ticket : le reçu de
      * caisse (assets/receipt.js) a sa mise en page et n'a besoin d'ici que la
-     * mécanique — isoler le ticket dans la page, poser la largeur du rouleau,
+     * mécanique · isoler le ticket dans la page, poser la largeur du rouleau,
      * ouvrir la boîte d'impression, nettoyer derrière. */
     browserPrintHTML: browserPrintHTML,
     // A function, not a snapshot: the port is only known after discovery.
     openSetup: openSetup, bridgeUrl: function () { return bridgeBase(); }, bridgePorts: BRIDGE_PORTS,
+    // Le relais cloud · ce que l'iPad utilise à la place du pont local.
+    relayProbe: relayProbe, relayEnqueue: relayEnqueue, relayPairCode: relayPairCode, relayRevoke: relayRevoke,
+    relayPairLocal: pairLocalBridge,
+    wake: wakePrinter, getLastTiming: function () { return lastTiming; },
   };
 })();

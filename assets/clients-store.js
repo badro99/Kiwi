@@ -27,7 +27,7 @@
   'use strict';
 
   if (!window.KiwiStore || !window.KiwiStore.define) {
-    console.warn('clients-store.js loaded before venue-store.js — KiwiClients disabled');
+    console.warn('clients-store.js loaded before venue-store.js · KiwiClients disabled');
     return;
   }
 
@@ -36,15 +36,14 @@
   function now() { return Date.now(); }
   function daysSince(ts) { return ts ? Math.floor((now() - ts) / DAY) : Infinity; }
 
-  // the POS vertical currently unlocked on the caisse. pos-* verticals carry
-  // is-pos-<id>; the pressing carries is-pressing; the main café/resto caisse only
-  // is-unlocked. Order matters — is-pos-* also has is-unlocked.
+  // the POS vertical currently unlocked on the caisse. Every vertical, pressing
+  // included, carries is-pos-<id>; the main café/resto caisse only is-unlocked.
+  // Order matters — is-pos-* also has is-unlocked.
   function activePosId() {
     try {
       var cls = document.body.className || '';
       var m = cls.match(/is-pos-([a-z0-9]+)/);
       if (m) return m[1];
-      if (/\bis-pressing\b/.test(cls)) return 'pressing';
       if (/\bis-unlocked\b/.test(cls)) return 'restaurant';
       return '';
     } catch (_) { return ''; }
@@ -270,16 +269,22 @@
   }
 
   /* ── normalisation & dedup ─────────────────────────────────────────────── */
-  function normPhone(p) { return String(p == null ? '' : p).replace(/[^\d+]/g, ''); }
+  function normPhone(p) {
+    return window.KiwiPhone ? window.KiwiPhone.normalize(p) : String(p == null ? '' : p).replace(/[^\d+]/g, '');
+  }
+  function money(v) {
+    var n = Number(v);
+    return isFinite(n) ? Math.max(0, Math.min(1000000000, Math.round(n * 100) / 100)) : 0;
+  }
   function samePhone(a, b) {
+    if (window.KiwiPhone) return window.KiwiPhone.same(a, b);
     a = normPhone(a); b = normPhone(b);
     if (!a || !b) return false;
-    // compare on the last 9 digits (Moroccan mobile) so 06… / +2126… match.
-    var ta = a.replace(/\D/g, '').slice(-9), tb = b.replace(/\D/g, '').slice(-9);
-    return ta.length >= 6 && ta === tb;
+    return a === b;
   }
   function blankClient() {
     return { id: '', name: '', phone: '', email: '', birthday: '', gender: '', city: '', address: '', notes: '', tags: [],
+      hospitality: {},
       points: 0, stamps: 0, visits: 0, spend: 0, consent: false, consentEmail: false,
       source: 'caisse', firstSeen: 0, lastSeen: 0, updated: 0 };
   }
@@ -309,12 +314,16 @@
       if (typeof input.consent === 'boolean') rec.consent = input.consent;
       if (typeof input.consentEmail === 'boolean') rec.consentEmail = input.consentEmail;
       if (Array.isArray(input.tags)) rec.tags = input.tags.slice();
+      if (input.hospitality && typeof input.hospitality === 'object') {
+        rec.hospitality = Object.assign({}, rec.hospitality || {}, input.hospitality);
+      }
     } else {
       rec = Object.assign(blankClient(), {
         id: 'c' + (++d.seq) + '_' + Math.abs(hash(book + (input.phone || input.name || d.seq))).toString(36),
         name: input.name || '', phone: normPhone(input.phone), email: input.email || '',
         birthday: input.birthday || '', gender: input.gender || '', city: input.city || '',
         address: input.address || '', notes: input.notes || '',
+        hospitality: input.hospitality && typeof input.hospitality === 'object' ? Object.assign({}, input.hospitality) : {},
         consent: !!input.consent, consentEmail: !!input.consentEmail,
         tags: Array.isArray(input.tags) ? input.tags.slice() : [],
         source: input.source || 'caisse', firstSeen: now(), lastSeen: now(),
@@ -338,7 +347,7 @@
     var rec = d.list.filter(function (c) { return c.id === id; })[0];
     if (!rec) return null;
     var cfg = config(book);
-    var amount = Math.max(0, Math.round(opts.amount || 0));
+    var amount = money(opts.amount);
 
     rec.visits = (rec.visits || 0) + 1;
     rec.lastSeen = now();
@@ -346,20 +355,27 @@
     if (amount > 0) rec.spend = (rec.spend || 0) + amount;
 
     var rewardReady = false;
+    var delta = { points: 0, stamps: 0, visits: 1, spend: amount };
     if (cfg.model === 'amount') {
       var per = (cfg.amount && cfg.amount.perMad) || 1;
-      rec.points = (rec.points || 0) + Math.round(amount * per);
+      delta.points = Math.round(amount * per);
+      rec.points = (rec.points || 0) + delta.points;
       var thr = (cfg.amount && cfg.amount.threshold) || 100;
       rewardReady = thr > 0 && rec.points >= thr;
     } else {
       // visit / product → one stamp per record.
       var target = (cfg.model === 'product' ? (cfg.product && cfg.product.target) : (cfg.visit && cfg.visit.target)) || 10;
-      rec.stamps = (rec.stamps || 0) + 1;
+      delta.stamps = 1;
+      rec.stamps = (rec.stamps || 0) + delta.stamps;
       rewardReady = rec.stamps >= target;
     }
     rec.updated = now();
     writeBook(d, book);
-    pushClient(rec, book);
+    var ref = 'purchase:' + id + ':' + rec.updated + ':' + Math.abs(hash(String(Math.random()))).toString(36);
+    var event = { kind: 'purchase', ref: ref, clientId: id, amount: amount, points: delta.points,
+      stamps: delta.stamps, visits: delta.visits, spend: delta.spend, created: rec.updated };
+    purchaseAdd(book, event);
+    purchasePush(book, event);
     return { client: rec, rewardReady: rewardReady };
   }
 
@@ -370,16 +386,24 @@
     var rec = d.list.filter(function (c) { return c.id === id; })[0];
     if (!rec) return null;
     var cfg = config(book);
+    var pointsDelta = 0, stampsDelta = 0;
     if (cfg.model === 'amount') {
       var thr = (cfg.amount && cfg.amount.threshold) || 100;
-      rec.points = Math.max(0, (rec.points || 0) - thr);
+      if ((rec.points || 0) < thr) return rec;
+      pointsDelta = thr;
+      rec.points -= pointsDelta;
     } else {
       var target = (cfg.model === 'product' ? (cfg.product && cfg.product.target) : (cfg.visit && cfg.visit.target)) || 10;
-      rec.stamps = Math.max(0, (rec.stamps || 0) - target);
+      if ((rec.stamps || 0) < target) return rec;
+      stampsDelta = target;
+      rec.stamps -= stampsDelta;
     }
     rec.updated = now();
     writeBook(d, book);
-    pushClient(rec, book);
+    var ref = 'redemption:' + id + ':' + rec.updated + ':' + Math.abs(hash(String(Math.random()))).toString(36);
+    var event = { ref: ref, clientId: id, points: pointsDelta, stamps: stampsDelta, created: rec.updated };
+    redemptionAdd(book, event);
+    redemptionPush(book, event);
     return rec;
   }
 
@@ -470,6 +494,77 @@
     if (i >= 0) { a.splice(i, 1); outWrite(book, a); }
   }
 
+  function purchaseKey(book) { return 'kiwi:clients-purchases:v1:' + book; }
+  function purchaseRead(book) {
+    try {
+      var a = JSON.parse(ls(purchaseKey(book)) || '[]');
+      return Array.isArray(a) ? a.filter(function (e) { return e && e.ref && e.clientId; }) : [];
+    } catch (_) { return []; }
+  }
+  function purchaseWrite(book, events) {
+    // Never evict unacknowledged purchases. The server event table is the
+    // durable acknowledgement boundary; trimming here would silently lose
+    // sales after a long offline period.
+    try { localStorage.setItem(purchaseKey(book), JSON.stringify(events)); } catch (_) {}
+  }
+  function purchaseAdd(book, event) {
+    if (!syncable(book) || !event || !event.ref) return;
+    var events = purchaseRead(book);
+    if (!events.some(function (e) { return e.ref === event.ref; })) {
+      events.push(event); purchaseWrite(book, events);
+    }
+  }
+  function purchaseDrop(book, ref) {
+    purchaseWrite(book, purchaseRead(book).filter(function (e) { return e.ref !== ref; }));
+  }
+  function purchasePush(book, event) {
+    if (!syncable(book) || !event || !event.ref) return;
+    try {
+      fetch('/api/clients', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+        body: JSON.stringify({ merchant: book, purchase: {
+          clientId: event.clientId, ref: event.ref, amount: event.amount,
+        } }),
+      }).then(function (r) { if (r && r.ok) purchaseDrop(book, event.ref); }).catch(function () {});
+    } catch (_) {}
+  }
+  function flushPurchases(book) {
+    purchaseRead(book).slice(0, 25).forEach(function (event) { purchasePush(book, event); });
+  }
+
+  function redemptionKey(book) { return 'kiwi:clients-redemptions:v1:' + book; }
+  function redemptionRead(book) {
+    try {
+      var a = JSON.parse(ls(redemptionKey(book)) || '[]');
+      return Array.isArray(a) ? a.filter(function (e) { return e && e.ref && e.clientId; }) : [];
+    } catch (_) { return []; }
+  }
+  function redemptionWrite(book, events) {
+    try { localStorage.setItem(redemptionKey(book), JSON.stringify(events)); } catch (_) {}
+  }
+  function redemptionAdd(book, event) {
+    if (!syncable(book) || !event || !event.ref) return;
+    var events = redemptionRead(book);
+    if (!events.some(function (e) { return e.ref === event.ref; })) {
+      events.push(event); redemptionWrite(book, events);
+    }
+  }
+  function redemptionDrop(book, ref) {
+    redemptionWrite(book, redemptionRead(book).filter(function (e) { return e.ref !== ref; }));
+  }
+  function redemptionPush(book, event) {
+    if (!syncable(book) || !event || !event.ref) return;
+    try {
+      fetch('/api/clients', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+        body: JSON.stringify({ merchant: book, redemption: { clientId: event.clientId, ref: event.ref } }),
+      }).then(function (r) { if (r && r.ok) redemptionDrop(book, event.ref); }).catch(function () {});
+    } catch (_) {}
+  }
+  function flushRedemptions(book) {
+    redemptionRead(book).slice(0, 25).forEach(function (event) { redemptionPush(book, event); });
+  }
+
   function pushClient(rec, book) {
     if (!syncable(book) || !rec || !rec.id) return;
     var id = rec.id;
@@ -518,13 +613,35 @@
 
   // map a D1 row (snake_case, 0/1) back onto a client record.
   function fromServer(r) {
+    var hospitality = {};
+    try { hospitality = JSON.parse(r.hospitality || '{}') || {}; } catch (_) {}
     return {
       id: r.id, name: r.name || '', phone: r.phone || '', email: r.email || '', birthday: r.birthday || '',
       gender: r.gender || '', city: r.city || '', address: r.address || '', notes: r.notes || '', tags: [],
+      hospitality: hospitality && typeof hospitality === 'object' && !Array.isArray(hospitality) ? hospitality : {},
       points: r.points || 0, stamps: r.stamps || 0, visits: r.visits || 0, spend: r.spend || 0,
       consent: !!r.consent, consentEmail: !!r.consent_email, source: r.source || 'caisse',
       firstSeen: r.first_seen || 0, lastSeen: r.last_seen || 0, updated: r.updated_ts || 0,
+      purchaseRefs: Array.isArray(r.purchase_refs) ? r.purchase_refs.slice() : [],
+      rewardRefs: Array.isArray(r.reward_refs) ? r.reward_refs.slice() : [],
     };
+  }
+  function pendingPurchaseDelta(book, id) {
+    var out = { points: 0, stamps: 0, visits: 0, spend: 0 };
+    purchaseRead(book).forEach(function (event) {
+      if (event.clientId !== id) return;
+      out.points += Number(event.points || 0); out.stamps += Number(event.stamps || 0);
+      out.visits += Number(event.visits || 0); out.spend += Number(event.spend || event.amount || 0);
+    });
+    return out;
+  }
+  function pendingRedemptionDelta(book, id) {
+    var out = { points: 0, stamps: 0 };
+    redemptionRead(book).forEach(function (event) {
+      if (event.clientId !== id) return;
+      out.points -= Number(event.points || 0); out.stamps -= Number(event.stamps || 0);
+    });
+    return out;
   }
   // merge server rows into the local book, last-write-wins on `updated`.
   function mergeServer(book, rows) {
@@ -543,6 +660,21 @@
         return;
       }
       var sc = fromServer(r), local = byId[sc.id];
+      sc.purchaseRefs.forEach(function (ref) { purchaseDrop(book, ref); });
+      sc.rewardRefs.forEach(function (ref) { redemptionDrop(book, ref); });
+      var pending = pendingPurchaseDelta(book, sc.id);
+      var pendingReward = pendingRedemptionDelta(book, sc.id);
+      if (local && (pending.points || pending.stamps || pending.visits || pending.spend
+        || pendingReward.points || pendingReward.stamps)) {
+        sc.points = Number(sc.points || 0) + pending.points;
+        sc.stamps = Number(sc.stamps || 0) + pending.stamps;
+        sc.visits = Number(sc.visits || 0) + pending.visits;
+        sc.spend = Number(sc.spend || 0) + pending.spend;
+        sc.points = Math.max(0, sc.points + pendingReward.points);
+        sc.stamps = Math.max(0, sc.stamps + pendingReward.stamps);
+        sc.lastSeen = Math.max(Number(sc.lastSeen || 0), Number(local.lastSeen || 0));
+        sc.updated = Math.max(Number(sc.updated || 0), Number(local.updated || 0));
+      }
       if (!local) {
         d.list.push(sc); byId[sc.id] = sc; changed = true;
         var mm = /^c(\d+)_/.exec(sc.id); if (mm) { var n = parseInt(mm[1], 10); if (n > (d.seq || 0)) d.seq = n; }
@@ -587,6 +719,8 @@
     var b = bookId();
     if (!syncable(b)) return;
     flushOutbox(b);   // d'abord ce qui n'est jamais parti d'ici…
+    flushPurchases(b);
+    flushRedemptions(b);
     pull(b);          // …puis ce que les autres appareils ont fait
   }
   function startSync() {

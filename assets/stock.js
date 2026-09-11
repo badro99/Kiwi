@@ -150,6 +150,19 @@
       mScanBtnFile: 'Choisir un fichier', mScanBtnCam: 'Utiliser la caméra',
       mScanManual: 'Saisir manuellement',
       mScanReadingT: 'Lecture de la facture…', mScanReadingS: 'Extraction OCR · reconnaissance des articles',
+      mScanReadingFile: 'Extraction du texte PDF…',
+      mScanServerNotice: 'La facture est analysée sur le serveur Kiwi pour pré-remplir les lignes.',
+      mScanFailFallback: 'Lecture automatique indisponible · passage en saisie manuelle.',
+      mCountErrOffline: 'Connexion perdue · rien n’a été appliqué. Vérifiez le réseau et réessayez.',
+      mCountErrDenied: 'Action non autorisée pour ce rôle · rien n’a été appliqué.',
+      mCountErrGone: 'Cet inventaire n’existe plus côté serveur · rien n’a été appliqué.',
+      mCountErrConflict: 'Écriture refusée par le serveur · rien n’a été appliqué. Rouvrez la revue et réessayez.',
+      mCountErrGeneric: 'Échec d’enregistrement · rien n’a été appliqué.',
+      mScanUpdateCost: 'Mettre à jour le prix d\'achat',
+      mScanColCurrentCost: 'Prix réf.',
+      mScanColInvoicedCost: 'Facturé',
+      mScanIgnore: 'Ignorer cette ligne',
+      mScanChoose: 'Choisir un article…',
       mScanReviewT: 'Facture détectée',
       mScanSupplier: 'Fournisseur', mScanDate: 'Date', mScanNum: 'Numéro',
       mScanTva: 'TVA', mScanTotal: 'Total',
@@ -157,12 +170,83 @@
       mScanWarn: '⚠ 1 nouvel article détecté, voulez-vous l\'ajouter au catalogue ?',
       mScanConfirm: 'Confirmer la facture',
       mScanToast: 'Facture enregistrée · Stock mis à jour · 3 articles',
+      mScanIdTitle: 'Pièce d’identité non acceptée',
+      mScanIdBody: 'Ce guichet ne traite que les factures fournisseur. Rien n’a été envoyé ni conservé : choisissez un autre document ou saisissez manuellement.',
+      mScanDupT: 'Document déjà déposé',
+      mScanDupDone: (d) => `Cette facture a déjà été enregistrée${d ? ` (${d})` : ''}. Nouvel envoi bloqué pour protéger vos stocks.`,
+      mScanArchived: 'Document archivé comme pièce comptable',
+      mScanResume: 'Dépôt déjà en cours : reprise sans doublon.',
+      mScanMarkRetry: 'Stock mis à jour. Le statut d’archive sera resynchronisé automatiquement.',
+      mScanArcLink: 'Documents fournisseurs',
+      mScanArcTitle: 'Documents fournisseurs',
+      mScanArcEmpty: 'Aucun document déposé pour le moment.',
+      mScanArcDown: 'Archive indisponible. Vérifiez la connexion puis réessayez.',
+      mScanArcRetry: 'Réessayer',
+      mScanArcView: 'Voir',
+      mScanArcDownload: 'Télécharger',
+      mScanArcBack: 'Retour',
+      mScanArcMore: 'Afficher plus',
+      mScanArcLoading: 'Chargement…',
+      mScanArcTypeInvoice: 'Facture fournisseur',
+      mScanArcTypeOther: 'Document',
+      mScanArcStReceived: 'Déposé',
+      mScanArcStConfirmed: 'Confirmé',
+      mScanArcPending: 'Envoi en cours…',
+      mScanArcUB: 'o',
+      mScanArcUKB: 'Ko',
+      mScanArcUMB: 'Mo',
+      mScanConflictT: 'Cette tentative ne correspond plus au premier envoi',
+      mScanConflictB1: 'Un premier envoi utilisait des valeurs relues différentes.',
+      mScanConflictB2: 'Cette tentative n’a ajouté aucun stock.',
+      mScanConflictB3: 'Kiwi a refusé de mélanger les deux versions.',
+      mScanConflictRec: 'Déjà enregistré',
+      mScanConflictCur: 'Cette relecture',
+      mScanConflictAdded: 'Ajouté',
+      mScanConflictMissing: 'Manquant',
+      mScanConflictChanged: 'Modifié',
+      mScanConflictBack: 'Retour à la relecture',
+      mScanConflictHistory: 'Voir l’historique de l’article',
+      mScanConflictColItem: 'Article',
+      mScanConflictColQty: 'Qté',
+      mScanConflictColCost: 'Coût',
+      mScanConflictNoRec: 'Les lignes déjà enregistrées n’ont pas pu être chargées. Rien n’a été ajouté.',
+      mScanConflictPartial: 'La comparaison ci-dessous couvre uniquement les mouvements de stock déjà enregistrés.',
+      mScanConflictNoDiff: 'Aucun écart de quantité ou de coût n’est visible dans l’historique. Le conflit concerne un autre détail relu, l’ordre des lignes, la DLC ou le choix de mise à jour du coût, que Kiwi ne conserve pas dans cet historique.',
       mCountTitle: 'Inventaire physique',
       mCountSub: 'Comptez chaque article et saisissez la quantité réelle. Kiwi calcule l\'écart automatiquement.',
       mCountColTheo: 'STOCK THÉORIQUE', mCountColReal: 'QUANTITÉ COMPTÉE', mCountColVar: 'ÉCART', mCountColCost: 'VALEUR ÉCART',
       mCountProg: (done, total) => `${done} / ${total} articles comptés`,
       mCountSave: 'Sauvegarder le brouillon', mCountValidate: "Valider l'inventaire",
       mCountToast: (totalCost) => `Inventaire validé · Écart total : ${totalCost} · Stock mis à jour`,
+      mCountBlind: "Comptage à l'aveugle",
+      mCountBlindTip: 'le stock théorique reste masqué pendant la saisie pour ne pas influencer le comptage',
+      mCountLast: (d, v) => `Dernier inventaire : ${d} · écart ${v}`,
+      btnSheet: "Feuille d'inventaire",
+      mSheetTitle: "Feuille d'inventaire",
+      mSheetSub: 'Imprimez la feuille, comptez rayon par rayon, puis saisissez les quantités dans « Inventaire physique ».',
+      mSheetTheo: 'Afficher le stock théorique sur la feuille',
+      mSheetTheoTip: "recommandé : sans le théorique, on note ce qu'on voit vraiment",
+      mSheetCount: (n) => `${n} articles seront listés, regroupés par catégorie.`,
+      mSheetPrint: 'Imprimer la feuille',
+      sheetCounter: 'Compté par', sheetSign: 'Signature',
+      sheetColItem: 'Article', sheetColUnit: 'Unité', sheetColNotes: 'Remarques',
+      sheetFoot: "Comptez chaque article une seule fois, réserve comprise. En cas de doute sur l'unité (kg / pièce / carton), notez-le en remarque.",
+      mRevTitle: "Écarts d'inventaire",
+      mRevSub: (n) => `${n} articles comptés. Vérifiez chaque écart et sa cause probable avant d'ajuster le stock.`,
+      mRevColReason: 'CAUSE PROBABLE',
+      mRevNoneT: 'Aucun écart',
+      mRevNone: 'Le comptage correspond au stock théorique. Confirmez pour enregistrer cet inventaire.',
+      mRevTotal: (n, v) => `${n} écart(s) · valeur totale ${v}`,
+      mRevBack: 'Annuler',
+      mRevApply: 'Confirmer et ajuster le stock',
+      reasonZero: 'Article introuvable au comptage · vérifier la réserve, le rangement ou un vol.',
+      reasonUnit: "Écart démesuré · probable erreur d'unité (grammes saisis au lieu de kg, ou pièces / carton).",
+      reasonWaste: 'Des pertes ont été signalées récemment · probable casse ou périmé supplémentaire non enregistré.',
+      reasonRecipes: 'Proche de la consommation recettes de la semaine · portions servies non décomptées du stock.',
+      reasonPerish: 'Produit périssable · pertes, parage ou portions généreuses probables.',
+      reasonLoss: 'Sortie non enregistrée · casse, offert, usage interne ou coulage.',
+      reasonDeliv: 'Livraison enregistrée il y a moins de 48 h · risque de double saisie du même carton.',
+      reasonExtra: 'Réception non saisie ou retour non enregistré · vérifier les bons de livraison.',
       mQoTitle: 'Commande rapide',
       mQoArticle: 'Article', mQoQty: 'Quantité à commander', mQoSup: 'Fournisseur',
       mQoMode: 'Mode de livraison', mQoModeStd: 'Standard · 24-48h', mQoModeExp: 'Express · 6h · +120 MAD',
@@ -196,6 +280,23 @@
       addItemName: 'Nom', addItemCat: 'Catégorie', addItemUnit: 'Unité',
       addItemSupplier: 'Fournisseur principal', addItemPar: 'Par level', addItemReorder: 'Niveau de réappro',
       addItemCost: 'Coût unitaire (MAD)',
+      nutriTitle: 'Nutrition & allergènes', nutriSummary: 'Facultatif · utilisé uniquement quand la fiche est complète',
+      nutriSearch: 'Rechercher dans Ciqual', nutriSearchPh: 'Ex. tomate, poulet, farine',
+      nutriLoading: 'Chargement du référentiel…', nutriNoMatch: 'Aucun aliment correspondant.',
+      nutriSource: 'Source', nutriManual: 'Saisie manuelle', nutriCiqual: 'Anses · Ciqual 2025',
+      nutriKcal: 'Énergie (kcal)', nutriProtein: 'Protéines (g)', nutriCarbs: 'Glucides (g)',
+      nutriFat: 'Lipides (g)', nutriSugars: 'Sucres (g)', nutriSalt: 'Sel (g)',
+      nutriPer100: 'Valeurs pour 100 g', nutriGramsPiece: 'Grammes par pièce', nutriGramsMl: 'Grammes par ml',
+      nutriGramsHint: 'Nécessaire pour convertir cette unité en grammes.',
+      nutriPortionPrefill: (grams, label) => `Suggestion · ${grams} g pour ${label}`,
+      nutriPortionApply: 'Utiliser cette valeur',
+      allergenTitle: 'Allergènes UE', allergenConfirm: "J'ai vérifié ces allergènes",
+      allergenSuggested: 'Suggestions à confirmer, elles ne seront pas publiées sans vérification.',
+      'allergen.gluten': 'Gluten', 'allergen.crustaces': 'Crustacés', 'allergen.oeufs': 'Œufs',
+      'allergen.poissons': 'Poissons', 'allergen.arachides': 'Arachides', 'allergen.soja': 'Soja',
+      'allergen.lait': 'Lait', 'allergen.fruits_a_coque': 'Fruits à coque', 'allergen.celeri': 'Céleri',
+      'allergen.moutarde': 'Moutarde', 'allergen.sesame': 'Sésame', 'allergen.sulfites': 'Sulfites',
+      'allergen.lupin': 'Lupin', 'allergen.mollusques': 'Mollusques',
       addItemBtn: "Ajouter au catalogue",
       addItemStock: 'Stock actuel',
       addItemToast: (name) => `${name} ajouté au catalogue`,
@@ -222,6 +323,14 @@
       addCatToast: (name) => `Catégorie « ${name} » créée`,
       addCatInline: 'Confirmer',
       addCatPillTitle: 'Ajouter une catégorie',
+      manageCatTitle: 'Gérer la catégorie',
+      renameCatLabel: 'Nouveau nom',
+      renameCatBtn: 'Renommer',
+      renameCatToast: (name) => `Catégorie renommée « ${name} »`,
+      deleteCatBtn: 'Supprimer la catégorie',
+      deleteCatMove: 'Déplacer les articles vers',
+      deleteCatBlocked: 'Créez une autre catégorie avant de supprimer celle-ci.',
+      deleteCatToast: (name) => `Catégorie « ${name} » supprimée`,
       // Suppliers
       addSupCta: 'Ajouter un fournisseur',
       addSupTitle: 'Nouveau fournisseur',
@@ -236,9 +345,21 @@
       deleteSupToast: (name) => `${name} supprimé`,
       supName: 'Nom', supCat: 'Catégorie', supPhone: 'Téléphone', supLoc: 'Ville · localisation',
       supPay: 'Conditions de paiement', supDeliv: 'Fréquence de livraison',
-      supRating: 'Note (1-5)', supSpend: 'Dépense mensuelle estimée (MAD)',
-      // Tooltip on row icon buttons
-      titleEdit: 'Modifier', titleDelete: 'Supprimer',
+      // Backup suppliers
+      mItSuppliersT: 'Fournisseurs',
+      mItNoSuppliers: 'Aucun fournisseur enregistré.',
+      mItAddBackupSup: 'Ajouter un fournisseur de secours',
+      supRankPrincipal: 'Principal',
+      supRankBackup: 'Secours',
+      addBackupSupTitle: 'Ajouter un fournisseur de secours',
+      addBackupSupLabel: 'Fournisseur',
+      addBackupSupPrice: 'Prix unitaire d’achat',
+      addBackupSupOptNew: '+ Nouveau fournisseur…',
+      addBackupSupNewName: 'Nom du nouveau fournisseur',
+      addBackupSupHelp: 'Ce fournisseur sera proposé lors des réceptions et commandes pour cet article.',
+      addBackupSupConfirm: 'Enregistrer',
+      backupSupAddedToast: (name) => `${name} ajouté comme fournisseur de secours`,
+      backupSupUpdatedToast: (name, price) => `Prix de ${name} mis à jour (${price} MAD)`,
       // Fusion-mode toggle
       venueAll: 'Tous', venueAtlas: 'Café Atlas', venueMaison: 'Maison Mansour', venueSpa: 'Spa Bahia',
     },
@@ -339,6 +460,19 @@
       mScanBtnFile: 'Choose file', mScanBtnCam: 'Use camera',
       mScanManual: 'Enter manually',
       mScanReadingT: 'Reading invoice…', mScanReadingS: 'OCR extraction · item recognition',
+      mScanReadingFile: 'Extracting PDF text…',
+      mScanServerNotice: 'The invoice is analyzed on Kiwi\'s server to pre-fill lines.',
+      mScanFailFallback: 'Automatic reading unavailable · switched to manual entry.',
+      mCountErrOffline: 'Connection lost · nothing was applied. Check the network and retry.',
+      mCountErrDenied: 'Action not allowed for this role · nothing was applied.',
+      mCountErrGone: 'This count no longer exists on the server · nothing was applied.',
+      mCountErrConflict: 'Write refused by the server · nothing was applied. Reopen the review and retry.',
+      mCountErrGeneric: 'Save failed · nothing was applied.',
+      mScanUpdateCost: 'Update purchase price',
+      mScanColCurrentCost: 'Ref. price',
+      mScanColInvoicedCost: 'Invoiced',
+      mScanIgnore: 'Ignore this line',
+      mScanChoose: 'Choose an item…',
       mScanReviewT: 'Invoice detected',
       mScanSupplier: 'Supplier', mScanDate: 'Date', mScanNum: 'Number',
       mScanTva: 'VAT', mScanTotal: 'Total',
@@ -346,12 +480,83 @@
       mScanWarn: '⚠ 1 new item detected, add to catalogue?',
       mScanConfirm: 'Confirm invoice',
       mScanToast: 'Invoice recorded · Stock updated · 3 items',
+      mScanIdTitle: 'ID document not accepted',
+      mScanIdBody: 'This intake only handles supplier invoices. Nothing was sent or kept: pick another document or enter it manually.',
+      mScanDupT: 'Document already filed',
+      mScanDupDone: (d) => `This invoice was already recorded${d ? ` (${d})` : ''}. Re-upload blocked to protect your stock.`,
+      mScanArchived: 'Document archived as a business record',
+      mScanResume: 'Filing already in progress: resuming without duplicating.',
+      mScanMarkRetry: 'Stock updated. The archive status will resync automatically.',
+      mScanArcLink: 'Supplier documents',
+      mScanArcTitle: 'Supplier documents',
+      mScanArcEmpty: 'No documents filed yet.',
+      mScanArcDown: 'Archive unavailable. Check your connection and retry.',
+      mScanArcRetry: 'Retry',
+      mScanArcView: 'View',
+      mScanArcDownload: 'Download',
+      mScanArcBack: 'Back',
+      mScanArcMore: 'Show more',
+      mScanArcLoading: 'Loading…',
+      mScanArcTypeInvoice: 'Supplier invoice',
+      mScanArcTypeOther: 'Document',
+      mScanArcStReceived: 'Filed',
+      mScanArcStConfirmed: 'Confirmed',
+      mScanArcPending: 'Upload pending…',
+      mScanArcUB: 'B',
+      mScanArcUKB: 'KB',
+      mScanArcUMB: 'MB',
+      mScanConflictT: 'This attempt no longer matches the first submission',
+      mScanConflictB1: 'An earlier attempt used different reviewed values.',
+      mScanConflictB2: 'This attempt added no stock.',
+      mScanConflictB3: 'Kiwi refused to mix the two versions.',
+      mScanConflictRec: 'Already recorded',
+      mScanConflictCur: 'This review',
+      mScanConflictAdded: 'Added',
+      mScanConflictMissing: 'Missing',
+      mScanConflictChanged: 'Changed',
+      mScanConflictBack: 'Back to review',
+      mScanConflictHistory: 'View item history',
+      mScanConflictColItem: 'Item',
+      mScanConflictColQty: 'Qty',
+      mScanConflictColCost: 'Cost',
+      mScanConflictNoRec: 'Recorded lines could not be loaded. Nothing was added.',
+      mScanConflictPartial: 'The comparison below covers only stock movements that were already recorded.',
+      mScanConflictNoDiff: 'No quantity or cost difference is visible in stock history. The conflict concerns another reviewed detail, line order, expiry date, or cost-update choice that Kiwi does not retain in this history.',
       mCountTitle: 'Physical count',
       mCountSub: 'Count each item and enter the actual quantity. Kiwi computes the variance automatically.',
       mCountColTheo: 'THEORETICAL STOCK', mCountColReal: 'COUNTED QTY', mCountColVar: 'VARIANCE', mCountColCost: 'VARIANCE VALUE',
       mCountProg: (done, total) => `${done} / ${total} items counted`,
       mCountSave: 'Save draft', mCountValidate: 'Validate inventory',
       mCountToast: (totalCost) => `Inventory validated · Total variance: ${totalCost} · Stock updated`,
+      mCountBlind: 'Blind count',
+      mCountBlindTip: 'the theoretical stock stays hidden while counting so it does not influence the figures',
+      mCountLast: (d, v) => `Last inventory: ${d} · variance ${v}`,
+      btnSheet: 'Count sheet',
+      mSheetTitle: 'Inventory count sheet',
+      mSheetSub: 'Print the sheet, count aisle by aisle, then enter the quantities in "Physical count".',
+      mSheetTheo: 'Show theoretical stock on the sheet',
+      mSheetTheoTip: 'recommended: without the theoretical figure, you write down what you actually see',
+      mSheetCount: (n) => `${n} items will be listed, grouped by category.`,
+      mSheetPrint: 'Print the sheet',
+      sheetCounter: 'Counted by', sheetSign: 'Signature',
+      sheetColItem: 'Item', sheetColUnit: 'Unit', sheetColNotes: 'Notes',
+      sheetFoot: 'Count each item once, back room included. If unsure about the unit (kg / piece / box), write it in the notes.',
+      mRevTitle: 'Inventory variances',
+      mRevSub: (n) => `${n} items counted. Review each variance and its probable cause before adjusting stock.`,
+      mRevColReason: 'PROBABLE CAUSE',
+      mRevNoneT: 'No variance',
+      mRevNone: 'The count matches theoretical stock. Confirm to record this inventory.',
+      mRevTotal: (n, v) => `${n} variance(s) · total value ${v}`,
+      mRevBack: 'Cancel',
+      mRevApply: 'Confirm and adjust stock',
+      reasonZero: 'Item not found during the count · check the back room, shelving, or possible theft.',
+      reasonUnit: 'Outsized variance · likely a unit error (grams entered instead of kg, or pieces / box).',
+      reasonWaste: 'Waste was reported recently · likely additional breakage or expiry not recorded.',
+      reasonRecipes: "Close to this week's recipe consumption · served portions not deducted from stock.",
+      reasonPerish: 'Perishable product · losses, trimming, or generous portions are likely.',
+      reasonLoss: 'Unrecorded outflow · breakage, freebies, internal use, or shrinkage.',
+      reasonDeliv: 'A delivery was recorded less than 48h ago · risk of the same box being entered twice.',
+      reasonExtra: 'Unrecorded delivery or return · check the delivery notes.',
       mQoTitle: 'Quick order',
       mQoArticle: 'Item', mQoQty: 'Quantity to order', mQoSup: 'Supplier',
       mQoMode: 'Delivery mode', mQoModeStd: 'Standard · 24-48h', mQoModeExp: 'Express · 6h · +120 MAD',
@@ -382,6 +587,23 @@
       addItemName: 'Name', addItemCat: 'Category', addItemUnit: 'Unit',
       addItemSupplier: 'Primary supplier', addItemPar: 'Par level', addItemReorder: 'Reorder level',
       addItemCost: 'Unit cost (MAD)',
+      nutriTitle: 'Nutrition & allergens', nutriSummary: 'Optional · used only when the record is complete',
+      nutriSearch: 'Search Ciqual', nutriSearchPh: 'E.g. tomato, chicken, flour',
+      nutriLoading: 'Loading reference data…', nutriNoMatch: 'No matching food.',
+      nutriSource: 'Source', nutriManual: 'Manual entry', nutriCiqual: 'Anses · Ciqual 2025',
+      nutriKcal: 'Energy (kcal)', nutriProtein: 'Protein (g)', nutriCarbs: 'Carbohydrate (g)',
+      nutriFat: 'Fat (g)', nutriSugars: 'Sugars (g)', nutriSalt: 'Salt (g)',
+      nutriPer100: 'Values per 100 g', nutriGramsPiece: 'Grams per piece', nutriGramsMl: 'Grams per ml',
+      nutriGramsHint: 'Required to convert this unit to grams.',
+      nutriPortionPrefill: (grams, label) => `Suggestion · ${grams} g for ${label}`,
+      nutriPortionApply: 'Use this value',
+      allergenTitle: 'EU allergens', allergenConfirm: 'I have checked these allergens',
+      allergenSuggested: 'Confirm the suggestions. They are never published before review.',
+      'allergen.gluten': 'Gluten', 'allergen.crustaces': 'Crustaceans', 'allergen.oeufs': 'Eggs',
+      'allergen.poissons': 'Fish', 'allergen.arachides': 'Peanuts', 'allergen.soja': 'Soy',
+      'allergen.lait': 'Milk', 'allergen.fruits_a_coque': 'Tree nuts', 'allergen.celeri': 'Celery',
+      'allergen.moutarde': 'Mustard', 'allergen.sesame': 'Sesame', 'allergen.sulfites': 'Sulphites',
+      'allergen.lupin': 'Lupin', 'allergen.mollusques': 'Molluscs',
       addItemBtn: 'Add to catalogue',
       addItemStock: 'Current stock',
       addItemToast: (name) => `${name} added to catalogue`,
@@ -400,6 +622,21 @@
       ordPauseToast: (id) => `Recurring order #${id} paused`,
       poNewToast: 'New order · select the items',
       mItDelete: 'Delete item',
+      // Backup suppliers
+      mItSuppliersT: 'Suppliers',
+      mItNoSuppliers: 'No supplier recorded.',
+      mItAddBackupSup: 'Add backup supplier',
+      supRankPrincipal: 'Primary',
+      supRankBackup: 'Backup',
+      addBackupSupTitle: 'Add backup supplier',
+      addBackupSupLabel: 'Supplier',
+      addBackupSupPrice: 'Unit purchase price',
+      addBackupSupOptNew: '+ New supplier…',
+      addBackupSupNewName: 'New supplier name',
+      addBackupSupHelp: 'This supplier will be proposed during deliveries and orders for this item.',
+      addBackupSupConfirm: 'Save',
+      backupSupAddedToast: (name) => `${name} added as backup supplier`,
+      backupSupUpdatedToast: (name, price) => `Price for ${name} updated (${price} MAD)`,
       addCatOpt: '+ New category…',
       addCatTitle: 'New category',
       addCatName: 'Category name',
@@ -407,6 +644,14 @@
       addCatToast: (name) => `Category "${name}" created`,
       addCatInline: 'Confirm',
       addCatPillTitle: 'Add category',
+      manageCatTitle: 'Manage category',
+      renameCatLabel: 'New name',
+      renameCatBtn: 'Rename',
+      renameCatToast: (name) => `Category renamed “${name}”`,
+      deleteCatBtn: 'Delete category',
+      deleteCatMove: 'Move items to',
+      deleteCatBlocked: 'Create another category before deleting this one.',
+      deleteCatToast: (name) => `Category “${name}” deleted`,
       addSupCta: 'Add supplier',
       addSupTitle: 'New supplier',
       addSupBtn: 'Add supplier',
@@ -513,6 +758,19 @@
       mScanBtnFile: 'اختيار ملف', mScanBtnCam: 'استخدام الكاميرا',
       mScanManual: 'إدخال يدوي',
       mScanReadingT: 'قراءة الفاتورة…', mScanReadingS: 'استخراج OCR · تعرف على المنتجات',
+      mScanReadingFile: 'استخراج نص PDF…',
+      mScanServerNotice: 'تتم قراءة الفاتورة على خادم Kiwi لملء البنود مسبقاً.',
+      mScanFailFallback: 'القراءة التلقائية غير متوفرة · التحويل إلى الإدخال اليدوي.',
+      mCountErrOffline: 'انقطع الاتصال · لم يُطبَّق أي شيء. تحقق من الشبكة وأعد المحاولة.',
+      mCountErrDenied: 'غير مسموح بهذا الإجراء لهذا الدور · لم يُطبَّق أي شيء.',
+      mCountErrGone: 'هذا الجرد لم يعد موجودًا على الخادم · لم يُطبَّق أي شيء.',
+      mCountErrConflict: 'رفض الخادم الكتابة · لم يُطبَّق أي شيء. أعد فتح المراجعة وحاول مجددًا.',
+      mCountErrGeneric: 'فشل الحفظ · لم يُطبَّق أي شيء.',
+      mScanUpdateCost: 'تحديث سعر الشراء',
+      mScanColCurrentCost: 'السعر المرجعي',
+      mScanColInvoicedCost: 'المفوتر',
+      mScanIgnore: 'تجاهل هذا السطر',
+      mScanChoose: 'اختر منتجاً…',
       mScanReviewT: 'تم اكتشاف فاتورة',
       mScanSupplier: 'المورد', mScanDate: 'التاريخ', mScanNum: 'الرقم',
       mScanTva: 'الضريبة', mScanTotal: 'المجموع',
@@ -520,12 +778,83 @@
       mScanWarn: '⚠ تم اكتشاف منتج جديد، هل تريد إضافته للكتالوج؟',
       mScanConfirm: 'تأكيد الفاتورة',
       mScanToast: 'تم تسجيل الفاتورة · تحديث المخزون · 3 منتجات',
+      mScanIdTitle: 'وثيقة هوية غير مقبولة',
+      mScanIdBody: 'هذا الشباك يعالج فواتير الموردين فقط. لم يتم إرسال أو حفظ أي شيء: اختر مستندًا آخر أو أدخل يدويًا.',
+      mScanDupT: 'تم إيداع هذا المستند مسبقًا',
+      mScanDupDone: (d) => `تم تسجيل هذه الفاتورة مسبقًا${d ? ` (${d})` : ''}. تم حظر الإرسال الجديد لحماية مخزونك.`,
+      mScanArchived: 'تمت أرشفة المستند كوثيقة محاسبية',
+      mScanResume: 'الإيداع جارٍ مسبقًا: استئناف بدون تكرار.',
+      mScanMarkRetry: 'تم تحديث المخزون. ستتم إعادة مزامنة حالة الأرشفة تلقائيًا.',
+      mScanArcLink: 'مستندات الموردين',
+      mScanArcTitle: 'مستندات الموردين',
+      mScanArcEmpty: 'لا توجد مستندات مودعة بعد.',
+      mScanArcDown: 'الأرشيف غير متاح. تحقق من الاتصال ثم أعد المحاولة.',
+      mScanArcRetry: 'إعادة المحاولة',
+      mScanArcView: 'عرض',
+      mScanArcDownload: 'تنزيل',
+      mScanArcBack: 'رجوع',
+      mScanArcMore: 'عرض المزيد',
+      mScanArcLoading: 'جارٍ التحميل…',
+      mScanArcTypeInvoice: 'فاتورة مورد',
+      mScanArcTypeOther: 'مستند',
+      mScanArcStReceived: 'مودع',
+      mScanArcStConfirmed: 'مؤكد',
+      mScanArcPending: 'جارٍ الرفع…',
+      mScanArcUB: 'ب',
+      mScanArcUKB: 'ك.ب',
+      mScanArcUMB: 'م.ب',
+      mScanConflictT: 'هذه المحاولة لم تعد تطابق الإرسال الأول',
+      mScanConflictB1: 'استخدم إرسال سابق قيمًا مراجعة مختلفة.',
+      mScanConflictB2: 'لم تضف هذه المحاولة أي مخزون.',
+      mScanConflictB3: 'رفض Kiwi خلط النسختين.',
+      mScanConflictRec: 'مسجل مسبقًا',
+      mScanConflictCur: 'هذه المراجعة',
+      mScanConflictAdded: 'مضاف',
+      mScanConflictMissing: 'مفقود',
+      mScanConflictChanged: 'معدّل',
+      mScanConflictBack: 'عودة إلى المراجعة',
+      mScanConflictHistory: 'عرض سجل المنتج',
+      mScanConflictColItem: 'المنتج',
+      mScanConflictColQty: 'الكمية',
+      mScanConflictColCost: 'التكلفة',
+      mScanConflictNoRec: 'تعذّر تحميل الأسطر المسجلة. لم تتم إضافة أي شيء.',
+      mScanConflictPartial: 'تغطي المقارنة أدناه حركات المخزون المسجلة فقط.',
+      mScanConflictNoDiff: 'لا يظهر أي اختلاف في الكمية أو التكلفة في سجل المخزون. يتعلق التعارض بتفصيل آخر تمت مراجعته أو ترتيب الأسطر أو تاريخ الصلاحية أو اختيار تحديث التكلفة، وهي بيانات لا يحتفظ بها Kiwi في هذا السجل.',
       mCountTitle: 'جرد فعلي',
       mCountSub: 'عُدّ كل منتج وأدخل الكمية الفعلية. Kiwi يحسب الفرق تلقائيًا.',
       mCountColTheo: 'المخزون النظري', mCountColReal: 'الكمية المعدودة', mCountColVar: 'الفرق', mCountColCost: 'قيمة الفرق',
       mCountProg: (done, total) => `${done} / ${total} منتجًا معدودًا`,
       mCountSave: 'حفظ المسودة', mCountValidate: 'تأكيد الجرد',
       mCountToast: (totalCost) => `تم تأكيد الجرد · الفرق الكلي: ${totalCost} · المخزون محدث`,
+      mCountBlind: 'جرد أعمى',
+      mCountBlindTip: 'يبقى المخزون النظري مخفيًا أثناء الإدخال حتى لا يؤثر على العدّ',
+      mCountLast: (d, v) => `آخر جرد: ${d} · فرق ${v}`,
+      btnSheet: 'ورقة الجرد',
+      mSheetTitle: 'ورقة الجرد',
+      mSheetSub: 'اطبع الورقة، عُدّ رفًا برف، ثم أدخل الكميات في « جرد فعلي ».',
+      mSheetTheo: 'إظهار المخزون النظري على الورقة',
+      mSheetTheoTip: 'يُنصح بدونه: من غير الرقم النظري يكتب العدّاد ما يراه فعلًا',
+      mSheetCount: (n) => `سيتم إدراج ${n} منتجًا، مجمعة حسب الفئة.`,
+      mSheetPrint: 'طباعة الورقة',
+      sheetCounter: 'عُدّ بواسطة', sheetSign: 'التوقيع',
+      sheetColItem: 'المنتج', sheetColUnit: 'الوحدة', sheetColNotes: 'ملاحظات',
+      sheetFoot: 'عُدّ كل منتج مرة واحدة بما في ذلك المخزن. عند الشك في الوحدة (كغ / قطعة / صندوق) اكتب ذلك في الملاحظات.',
+      mRevTitle: 'فروقات الجرد',
+      mRevSub: (n) => `${n} منتجًا معدودًا. راجع كل فرق وسببه المحتمل قبل تعديل المخزون.`,
+      mRevColReason: 'السبب المحتمل',
+      mRevNoneT: 'لا فرق',
+      mRevNone: 'العدّ مطابق للمخزون النظري. أكّد لتسجيل هذا الجرد.',
+      mRevTotal: (n, v) => `${n} فرق (فروقات) · القيمة الإجمالية ${v}`,
+      mRevBack: 'إلغاء',
+      mRevApply: 'تأكيد وتعديل المخزون',
+      reasonZero: 'المنتج غير موجود عند العدّ · تحقق من المخزن أو الترتيب أو احتمال سرقة.',
+      reasonUnit: 'فرق ضخم · على الأرجح خطأ في الوحدة (غرامات بدل كغ، أو قطع / صندوق).',
+      reasonWaste: 'تم التبليغ عن خسائر مؤخرًا · على الأرجح كسر أو انتهاء صلاحية إضافي غير مسجل.',
+      reasonRecipes: 'قريب من استهلاك الوصفات هذا الأسبوع · حصص مقدمة لم تُخصم من المخزون.',
+      reasonPerish: 'منتج سريع التلف · خسائر أو تشذيب أو حصص سخية محتملة.',
+      reasonLoss: 'خروج غير مسجل · كسر، مجاني، استعمال داخلي أو تسرب.',
+      reasonDeliv: 'سُجلت تسليمة قبل أقل من 48 ساعة · خطر إدخال نفس الصندوق مرتين.',
+      reasonExtra: 'استلام غير مسجل أو إرجاع غير مسجل · تحقق من سندات التسليم.',
       mQoTitle: 'طلبية سريعة',
       mQoArticle: 'المنتج', mQoQty: 'الكمية للطلب', mQoSup: 'المورد',
       mQoMode: 'وضع التسليم', mQoModeStd: 'عادي · 24-48س', mQoModeExp: 'سريع · 6س · +120 درهم',
@@ -555,6 +884,23 @@
       addItemName: 'الاسم', addItemCat: 'الفئة', addItemUnit: 'الوحدة',
       addItemSupplier: 'المورد الرئيسي', addItemPar: 'الحد', addItemReorder: 'حد إعادة التموين',
       addItemCost: 'تكلفة الوحدة (درهم)',
+      nutriTitle: 'القيم الغذائية ومسببات الحساسية', nutriSummary: 'اختياري · يُستخدم فقط عند اكتمال البطاقة',
+      nutriSearch: 'البحث في Ciqual', nutriSearchPh: 'مثال: طماطم، دجاج، دقيق',
+      nutriLoading: 'جار تحميل المرجع…', nutriNoMatch: 'لا توجد نتيجة مطابقة.',
+      nutriSource: 'المصدر', nutriManual: 'إدخال يدوي', nutriCiqual: 'Anses · Ciqual 2025',
+      nutriKcal: 'الطاقة (kcal)', nutriProtein: 'البروتينات (غ)', nutriCarbs: 'الكربوهيدرات (غ)',
+      nutriFat: 'الدهون (غ)', nutriSugars: 'السكريات (غ)', nutriSalt: 'الملح (غ)',
+      nutriPer100: 'القيم لكل 100 غ', nutriGramsPiece: 'الغرامات لكل قطعة', nutriGramsMl: 'الغرامات لكل مل',
+      nutriGramsHint: 'ضروري لتحويل هذه الوحدة إلى غرامات.',
+      nutriPortionPrefill: (grams, label) => `اقتراح · ${grams} غ لـ ${label}`,
+      nutriPortionApply: 'استخدام هذه القيمة',
+      allergenTitle: 'مسببات الحساسية', allergenConfirm: 'تحققت من مسببات الحساسية',
+      allergenSuggested: 'اقتراحات تحتاج إلى تأكيد، ولا تُنشر قبل التحقق.',
+      'allergen.gluten': 'الغلوتين', 'allergen.crustaces': 'القشريات', 'allergen.oeufs': 'البيض',
+      'allergen.poissons': 'الأسماك', 'allergen.arachides': 'الفول السوداني', 'allergen.soja': 'الصويا',
+      'allergen.lait': 'الحليب', 'allergen.fruits_a_coque': 'المكسرات', 'allergen.celeri': 'الكرفس',
+      'allergen.moutarde': 'الخردل', 'allergen.sesame': 'السمسم', 'allergen.sulfites': 'الكبريتيت',
+      'allergen.lupin': 'الترمس', 'allergen.mollusques': 'الرخويات',
       addItemBtn: 'إضافة للكتالوج',
       addItemStock: 'المخزون الحالي',
       addItemToast: (name) => `${name} تمت إضافته للكتالوج`,
@@ -580,6 +926,14 @@
       addCatToast: (name) => `تم إنشاء الفئة «${name}»`,
       addCatInline: 'تأكيد',
       addCatPillTitle: 'إضافة فئة',
+      manageCatTitle: 'إدارة الفئة',
+      renameCatLabel: 'الاسم الجديد',
+      renameCatBtn: 'إعادة التسمية',
+      renameCatToast: (name) => `تم تغيير اسم الفئة إلى «${name}»`,
+      deleteCatBtn: 'حذف الفئة',
+      deleteCatMove: 'نقل المقالات إلى',
+      deleteCatBlocked: 'أنشئ فئة أخرى قبل حذف هذه الفئة.',
+      deleteCatToast: (name) => `تم حذف الفئة «${name}»`,
       addSupCta: 'إضافة مورد',
       addSupTitle: 'مورد جديد',
       addSupBtn: 'إضافة المورد',
@@ -595,6 +949,21 @@
       supPay: 'شروط الدفع', supDeliv: 'وتيرة التسليم',
       supRating: 'التقييم (1-5)', supSpend: 'الإنفاق الشهري المقدر (درهم)',
       titleEdit: 'تعديل', titleDelete: 'حذف',
+            // Backup suppliers
+      mItSuppliersT: 'الموردون',
+      mItNoSuppliers: 'لا يوجد مورد مسجل.',
+      mItAddBackupSup: 'إضافة مورد احتياطي',
+      supRankPrincipal: 'رئيسي',
+      supRankBackup: 'احتياطي',
+      addBackupSupTitle: 'إضافة مورد احتياطي',
+      addBackupSupLabel: 'المورد',
+      addBackupSupPrice: 'سعر الشراء للوحدة',
+      addBackupSupOptNew: '+ مورد جديد…',
+      addBackupSupNewName: 'اسم المورد الجديد',
+      addBackupSupHelp: 'سيتوفر هذا المورد أثناء الاستلام والطلبات لهذا المنتج.',
+      addBackupSupConfirm: 'حفظ',
+      backupSupAddedToast: (name) => `تمت إضافة ${name} كمورد احتياطي`,
+      backupSupUpdatedToast: (name, price) => `تم تحديث سعر ${name} (${price} درهم)`,
       venueAll: 'الكل', venueAtlas: 'مقهى أطلس', venueMaison: 'ميزون منصور', venueSpa: 'سبا باهية',
     },
   };
@@ -618,6 +987,16 @@
   let stSortBy = 'name';
   let stSortDir = 'asc';
   let stVenueFilter = 'all';
+  let stItemSubView = 'catalog'; // 'catalog' | 'waste' | 'counts'
+  let stWasteFilterReason = 'all';
+  let stWasteDateRange = '30j';
+  let stWasteSearch = '';
+  let stCountSubTab = 'list'; // 'list' | 'rollup'
+  let stCountStatusFilter = 'all'; // 'all' | 'submitted' | 'applied' | 'rejected'
+  let stCountDateFilter = '30j'; // 'aujourdhui' | '7j' | '30j' | 'tout'
+  let stCountSearch = '';
+  let stCountsCache = [];
+  let stCountsLastFetched = 0;
   const stStockOverrides = {};
   const stMarked86 = new Set();
   const stConfirmedOrders = new Set();
@@ -635,6 +1014,8 @@
   const stSupOverrides  = Object.create(null); // edits to existing suppliers, keyed by id
   const stDeletedSups   = new Set();          // soft-deleted supplier ids
   let stUserCategories  = [];                 // owner-added categories [{ id, label }]
+  const stCategoryOverrides = Object.create(null); // renamed built-ins/user categories, keyed by id
+  const stDeletedCategories = new Set();      // deleted category ids (items are reassigned first)
 
   /* ── Persistance de la surcouche — VRAI commerçant uniquement ──
    * Le contrat « ça repart à zéro au rechargement » ci-dessus vaut pour la
@@ -657,18 +1038,118 @@
     ar: ' (تجريبي · يُعاد عند التحديث)',
   }[lang()] || ' (démo · réinitialisé au refresh)'));
 
-  const stOverlayKey = () => 'kiwi:stockOverlay:' + currentVenueId();
+  /* `currentVenueId()` peut valoir la constante 'scoped' — ce n'est pas un
+     établissement, c'est « celui que la console opérateur regarde ». Deux
+     commerçants ouverts l'un après l'autre depuis la console partageaient donc
+     la même clé `kiwi:stockOverlay:scoped`, et le cache stOverlayLoadedFor, qui
+     compare ce même identifiant, ne rechargeait même pas entre les deux : le
+     stock du premier restait à l'écran sous le nom du second. Dès que
+     l'identifiant est transitoire, on range par slug résolu. */
+  const stOverlayScope = () => {
+    const vid = currentVenueId();
+    try {
+      /* Real dashboard + paired caisse use the SAME local key as well as the
+       * same server document. This gives same-browser tabs immediate storage
+       * events; carryForward below adopts the former venue-id/scoped key. */
+      const s = stShowReal() && window.KiwiCloudDoc && window.KiwiCloudDoc.slugFor(vid);
+      if (s) return s;
+    } catch (_) {}
+    return vid;
+  };
+  const stOverlayKey = () => 'kiwi:stockOverlay:' + stOverlayScope();
   let stOverlayLoadedFor = null;
+
+  function migrateStockDocV2(d) {
+    if (!d || typeof d !== 'object') return d;
+    if ((d.schemaVersion || 1) >= 2 && Array.isArray(d.subcategories)) return d;
+
+    const categories = Array.isArray(d.cats) ? [...d.cats] : (Array.isArray(d.categories) ? [...d.categories] : []);
+    const knownCatIds = new Set(categories.map(c => c && c.id));
+    const subcategories = [];
+
+    const originals = new Map();
+    (Array.isArray(d.items) ? d.items : []).forEach(item => {
+      if (!item || !item.id) return;
+      originals.set(String(item.id), item);
+      const catId = String(item.category || item.cat || 'epicerie');
+      if (!knownCatIds.has(catId)) {
+        categories.push({ id: catId, label: String(item.category || item.cat || 'Épicerie') });
+        knownCatIds.add(catId);
+      }
+      const supCards = [];
+      if (item.supplier) {
+        supCards.push({
+          id: 'sup-card-' + item.id,
+          supplierName: String(item.supplier),
+          defaultPrice: Number.isFinite(+item.costPerUnit) ? +item.costPerUnit : (Number.isFinite(+item.cost) ? +item.cost : 0),
+          purchaseUnit: String(item.unit || 'unité'),
+          factor: 1,
+          rank: 1,
+        });
+      }
+      subcategories.push({
+        id: String(item.id),
+        categoryId: catId,
+        name: String(item.name || 'Article'),
+        unit: String(item.unit || 'unité'),
+        defaultCost: Number.isFinite(+item.costPerUnit) ? +item.costPerUnit : (Number.isFinite(+item.cost) ? +item.cost : 0),
+        suppliers: supCards,
+        currentStock: Number.isFinite(+item.currentStock) ? +item.currentStock : (Number.isFinite(+item.stock) ? +item.stock : 0),
+        parLevel: item.parLevel != null ? +item.parLevel : (item.par != null ? +item.par : null),
+        reorderLevel: item.reorderLevel != null ? +item.reorderLevel : (item.reorder != null ? +item.reorder : null),
+        usageThisWeek: +item.usageThisWeek || 0,
+        theoreticalUsage: +item.theoreticalUsage || 0,
+        updatedAt: +item.updatedAt || Date.now(),
+      });
+    });
+
+    d.schemaVersion = 2;
+    d.cats = categories;
+    d.categories = categories;
+    d.subcategories = subcategories;
+
+    /* Enveloppe de compatibilité. On PART de l'article d'origine et on n'écrase
+       que les champs projetés : reconstruire depuis une liste fixe détruit en
+       silence tout champ hors liste (lastDelivery, deliveryFrequency, status,
+       sku, notes…), et stOverlayRaw() réécrit le document migré dans
+       localStorage dès la lecture — la perte est immédiate et irréversible. */
+    d.items = subcategories.map(s => Object.assign({}, originals.get(s.id) || {}, {
+      id: s.id,
+      name: s.name,
+      category: s.categoryId,
+      unit: s.unit,
+      costPerUnit: s.defaultCost,
+      supplier: (s.suppliers && s.suppliers[0] && s.suppliers[0].supplierName) || '',
+      currentStock: s.currentStock != null ? +s.currentStock : 0,
+      parLevel: s.parLevel,
+      reorderLevel: s.reorderLevel,
+      usageThisWeek: s.usageThisWeek != null ? +s.usageThisWeek : 0,
+      theoreticalUsage: s.theoreticalUsage != null ? +s.theoreticalUsage : 0,
+      updatedAt: s.updatedAt,
+    }));
+    return d;
+  }
 
   function stSaveOverlay() {
     if (!stShowReal()) return;
     try {
-      localStorage.setItem(stOverlayKey(), JSON.stringify({
-        items: stUserItems, itemOv: stItemOverrides, delItems: [...stDeletedItems],
-        sups: stUserSuppliers, supOv: stSupOverrides, delSups: [...stDeletedSups],
-        cats: stUserCategories, stockOv: stStockOverrides,
-      }));
+      const doc = migrateStockDocV2({
+        schemaVersion: 2,
+        items: stUserItems,
+        itemOv: stItemOverrides,
+        delItems: [...stDeletedItems],
+        sups: stUserSuppliers,
+        supOv: stSupOverrides,
+        delSups: [...stDeletedSups],
+        cats: stUserCategories,
+        categories: stUserCategories,
+        catOv: stCategoryOverrides,
+        delCats: [...stDeletedCategories],
+        stockOv: stStockOverrides,
+      });
+      localStorage.setItem(stOverlayKey(), JSON.stringify(doc));
     } catch (_) { /* quota plein → on ne casse pas la saisie en cours */ }
+    try { window.dispatchEvent(new CustomEvent('kiwi-stock-changed', { detail: { venue: stOverlayScope() } })); } catch (_) {}
     const c = stCloud();
     if (c) c.push();
   }
@@ -687,13 +1168,22 @@
    * comme état courant ferait adopter la copie serveur PAR-DESSUS une saisie
    * locale bien réelle. */
   let stDoc = null;
+  let stDocBound = false;
 
   function stOverlayRaw() {
     try {
-      const s = JSON.parse(localStorage.getItem(stOverlayKey()) || 'null');
-      if (s && typeof s === 'object') return s;
+      const raw = localStorage.getItem(stOverlayKey());
+      const s = JSON.parse(raw || 'null');
+      if (s && typeof s === 'object') {
+        const hadV2 = (s.schemaVersion || 1) >= 2 && Array.isArray(s.subcategories);
+        const migrated = migrateStockDocV2(s);
+        if (!hadV2 && stShowReal()) {
+          try { localStorage.setItem(stOverlayKey(), JSON.stringify(migrated)); } catch (_) {}
+        }
+        return migrated;
+      }
     } catch (_) {}
-    return { items: [], sups: [], cats: [], itemOv: {}, supOv: {}, stockOv: {}, delItems: [], delSups: [] };
+    return { schemaVersion: 2, items: [], subcategories: [], sups: [], cats: [], categories: [], itemOv: {}, supOv: {}, catOv: {}, stockOv: {}, delItems: [], delSups: [], delCats: [] };
   }
 
   /* Union par identifiant (le défaut de cloud-doc.js) — SAUF les suppressions.
@@ -702,13 +1192,64 @@
    * supprimé sur la tablette réapparaissait donc au premier envoi du portable,
    * en boucle. Deux suppressions s'additionnent, elles ne s'arbitrent pas. */
   function stMergeOverlay(mine, theirs) {
+    mine = migrateStockDocV2(mine);
+    theirs = migrateStockDocV2(theirs);
     const M = window.KiwiCloudDoc && window.KiwiCloudDoc.mergeDefault;
     if (!M || !theirs) return mine;
     const out = M(mine, theirs);
-    ['delItems', 'delSups'].forEach((k) => {
+    out.schemaVersion = 2;
+    ['delItems', 'delSups', 'delCats'].forEach((k) => {
       const a = Array.isArray(mine && mine[k]) ? mine[k] : [];
       const b = Array.isArray(theirs && theirs[k]) ? theirs[k] : [];
       out[k] = [...new Set([...a, ...b])];
+    });
+    /* The caisse edits user-created items through itemOv so it never needs a
+       second catalog. Resolve the rare same-item, two-device edit by its row
+       timestamp instead of whichever browser happened to pull last. */
+    ['itemOv', 'supOv', 'catOv'].forEach((k) => {
+      out[k] = { ...((theirs && theirs[k]) || {}) };
+      Object.entries((mine && mine[k]) || {}).forEach(([id, row]) => {
+        const other = out[k][id];
+        if (!other || (+row?.updatedAt || 0) >= (+other?.updatedAt || 0)) out[k][id] = row;
+      });
+    });
+    // Merge subcategories by id and updatedAt
+    const subMap = new Map();
+    (Array.isArray(theirs && theirs.subcategories) ? theirs.subcategories : []).forEach(s => {
+      if (s && s.id) subMap.set(String(s.id), s);
+    });
+    (Array.isArray(mine && mine.subcategories) ? mine.subcategories : []).forEach(s => {
+      if (!s || !s.id) return;
+      const other = subMap.get(String(s.id));
+      if (!other || (+s.updatedAt || 0) >= (+other.updatedAt || 0)) subMap.set(String(s.id), s);
+    });
+    out.subcategories = Array.from(subMap.values());
+    /* Même règle qu'à la migration : on PART de l'article existant, jamais de
+       la sous-catégorie seule — elle n'a jamais porté lastDelivery, status, sku,
+       notes… Ce merge tourne à CHAQUE synchronisation cloud ; reconstruire depuis
+       la sous-catégorie défaisait le correctif de la migration au premier pull. */
+    const prevItems = new Map();
+    [theirs, mine].forEach((side) => {
+      (Array.isArray(side && side.items) ? side.items : []).forEach((it) => {
+        if (it && it.id != null) prevItems.set(String(it.id), Object.assign({}, prevItems.get(String(it.id)) || {}, it));
+      });
+    });
+    out.items = out.subcategories.map(s => {
+      const ov = (out.itemOv && out.itemOv[s.id]) || {};
+      return Object.assign({}, prevItems.get(String(s.id)) || {}, {
+        id: s.id,
+        name: ov.name != null ? String(ov.name) : s.name,
+        category: ov.category != null ? String(ov.category) : (ov.cat != null ? String(ov.cat) : s.categoryId),
+        unit: ov.unit != null ? String(ov.unit) : s.unit,
+        costPerUnit: ov.costPerUnit != null ? +ov.costPerUnit : (ov.cost != null ? +ov.cost : s.defaultCost),
+        supplier: ov.supplier != null ? String(ov.supplier) : ((s.suppliers && s.suppliers[0] && s.suppliers[0].supplierName) || ''),
+        currentStock: s.currentStock != null ? +s.currentStock : 0,
+        parLevel: ov.parLevel != null ? +ov.parLevel : (ov.par != null ? +ov.par : s.parLevel),
+        reorderLevel: ov.reorderLevel != null ? +ov.reorderLevel : (ov.reorder != null ? +ov.reorder : s.reorderLevel),
+        usageThisWeek: s.usageThisWeek != null ? +s.usageThisWeek : 0,
+        theoreticalUsage: s.theoreticalUsage != null ? +s.theoreticalUsage : 0,
+        updatedAt: Math.max(+s.updatedAt || 0, +ov.updatedAt || 0),
+      });
     });
     return out;
   }
@@ -726,15 +1267,18 @@
         stOverlayLoadedFor = null;
         try { stEnsureOverlay(); } catch (_) {}
         if (stPageActive) { try { render(); } catch (_) {} }
+        try { window.dispatchEvent(new CustomEvent('kiwi-stock-changed', { detail: { venue: stOverlayScope() } })); } catch (_) {}
       },
       merge: stMergeOverlay,
       /* Un commerçant qui n'a rien saisi porte quand même les huit champs
        * vides : sans ce test, ouvrir la page suffisait à créer une ligne. */
       isEmpty: (d) => !d || !(
-        (d.items && d.items.length) || (d.sups && d.sups.length) || (d.cats && d.cats.length)
+        (d.items && d.items.length) || (d.subcategories && d.subcategories.length)
+        || (d.sups && d.sups.length) || (d.cats && d.cats.length)
         || (d.itemOv && Object.keys(d.itemOv).length) || (d.supOv && Object.keys(d.supOv).length)
+        || (d.catOv && Object.keys(d.catOv).length)
         || (d.stockOv && Object.keys(d.stockOv).length)
-        || (d.delItems && d.delItems.length) || (d.delSups && d.delSups.length)
+        || (d.delItems && d.delItems.length) || (d.delSups && d.delSups.length) || (d.delCats && d.delCats.length)
       ),
     });
     return stDoc;
@@ -743,25 +1287,33 @@
   /* Recharge la surcouche du commerce courant. Les Set/objet sont `const` :
      on les vide et les re-remplit sur place plutôt que de les réaffecter. */
   function stEnsureOverlay() {
-    const venue = currentVenueId();
+    const venue = stOverlayScope();
     if (stOverlayLoadedFor === venue) return;
     stOverlayLoadedFor = venue;
     stUserItems = []; stUserSuppliers = []; stUserCategories = [];
     stDeletedItems.clear(); stDeletedSups.clear();
+    stDeletedCategories.clear();
     Object.keys(stItemOverrides).forEach((k) => delete stItemOverrides[k]);
     Object.keys(stSupOverrides).forEach((k) => delete stSupOverrides[k]);
+    Object.keys(stCategoryOverrides).forEach((k) => delete stCategoryOverrides[k]);
     Object.keys(stStockOverrides).forEach((k) => delete stStockOverrides[k]);
     if (!stShowReal()) return;                       // la démo repart de zéro, comme avant
     let s = null;
     try { s = JSON.parse(localStorage.getItem(stOverlayKey()) || 'null'); } catch (_) { return; }
     if (!s || typeof s !== 'object') return;
-    if (Array.isArray(s.items)) stUserItems = s.items;
+    s = migrateStockDocV2(s);
+    if (Array.isArray(s.items)) stUserItems = s.items.map(normalizeStockItem);
     if (Array.isArray(s.sups)) stUserSuppliers = s.sups;
     if (Array.isArray(s.cats)) stUserCategories = s.cats;
     (s.delItems || []).forEach((id) => stDeletedItems.add(id));
     (s.delSups || []).forEach((id) => stDeletedSups.add(id));
+    (s.delCats || []).forEach((id) => stDeletedCategories.add(id));
     Object.assign(stItemOverrides, s.itemOv || {});
+    Object.keys(stItemOverrides).forEach((id) => {
+      if (stItemOverrides[id]?.unit) stItemOverrides[id].unit = stockUnit(stItemOverrides[id].unit);
+    });
     Object.assign(stSupOverrides, s.supOv || {});
+    Object.assign(stCategoryOverrides, s.catOv || {});
     Object.assign(stStockOverrides, s.stockOv || {});
   }
 
@@ -776,14 +1328,40 @@
     const vid = currentVenueId();
     const slug = window.KiwiCloudDoc.slugFor(vid);
     if (!slug) return;                                  // démo / pas un vrai magasin
-    window.KiwiCloudDoc.carryForward('stockOverlay', vid, slug, (raw) => {
+    let migratedLocal = false;
+    /* Operator view used `scoped:<slug>` before both surfaces standardized on
+       the canonical slug. Adopt that exact legacy key once; cloud-doc's generic
+       carryForward cannot infer a slug from the `scoped:` composite. */
+    try {
+      const currentKey = stOverlayKey();
+      const scopedKey = 'kiwi:stockOverlay:scoped:' + slug;
+      if (!localStorage.getItem(currentKey) && localStorage.getItem(scopedKey)) {
+        localStorage.setItem(currentKey, localStorage.getItem(scopedKey));
+        migratedLocal = true;
+      }
+    } catch (_) {}
+    const carried = window.KiwiCloudDoc.carryForward('stockOverlay', stOverlayScope(), slug, (raw) => {
       try {
         const d = JSON.parse(raw || 'null');
         return !!(d && ((d.items && d.items.length) || (d.sups && d.sups.length)));
       } catch (_) { return false; }
     }, 'kiwi:stockOverlay:');
+    if (carried || migratedLocal) {
+      stOverlayLoadedFor = null;
+      stEnsureOverlay();
+      if (stPageActive) render();
+    }
     const c = stCloud();
-    if (c) c.bind();
+    if (!c) return;
+    if (!stDocBound) {
+      stDocBound = true;
+      c.bind();
+    } else {
+      /* Re-opening the stock page is an explicit refresh boundary: fetch
+       * caisse movements/catalog edits even when this SPA never went hidden. */
+      c.pull(false);
+    }
+    try { window.KiwiInventory?.sync?.(); } catch (_) {}
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
@@ -802,6 +1380,7 @@
     trendingUp: '<path d="M22 7l-8 8-4-4-8 8"/><path d="M16 7h6v6"/>',
     trendingDown: '<path d="M22 17l-8-8-4 4-8-8"/><path d="M16 17h6v-6"/>',
     minus: '<path d="M5 12h14"/>',
+    swap: '<path d="M7 7h11l-3-3M18 7l-3 3M17 17H6l3 3M6 17l3-3"/>',
     eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     edit: '<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>',
@@ -819,7 +1398,18 @@
     upload: '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',
     info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
   };
-  const svg = (k, sz = 14) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k] || ''}</svg>`;
+  const STOCK_MATERIAL_ICONS = {
+    layoutDashboard: 'layout-dashboard', package: 'package', truck: 'truck',
+    clipboardList: 'clipboard-list', sparkles: 'sparkles', wallet: 'wallet',
+    alertTriangle: 'alert-triangle', alertCircle: 'alert-circle', receipt: 'receipt',
+    trendingUp: 'trending-up', trendingDown: 'trending-down', minus: 'minus',
+    swap: 'arrow-left-right', eye: 'eye', plus: 'plus', edit: 'pencil',
+    moreH: 'more-horizontal', phone: 'phone', messageCircle: 'message-circle',
+    search: 'search', x: 'x', checkCircle: 'check-circle-2', zap: 'zap',
+    camera: 'camera', calendar: 'calendar', star: 'star',
+    download: 'arrow-down-to-line', upload: 'arrow-up-from-line', info: 'info'
+  };
+  const svg = (k, sz = 14) => `<i data-lucide="${STOCK_MATERIAL_ICONS[k] || 'help'}" style="width:${sz}px;height:${sz}px" aria-hidden="true"></i>`;
 
   /* ═══════════════════════════════════════════════════════════════════════
    * Formatting helpers
@@ -834,6 +1424,13 @@
   const fmtUnit = (q, u) => {
     const dec = Number.isInteger(q) ? 0 : (Math.abs(q) < 10 ? 1 : 0);
     return `${fmtNum(q, dec)} ${u}`;
+  };
+  const unitApi = () => window.KiwiRestaurantUnits;
+  const stockUnit = (value) => unitApi()?.normalize?.(value) || 'unité';
+  const normalizeStockItem = (item) => ({ ...(item || {}), unit: stockUnit(item?.unit) });
+  const stockUnitOptions = (value) => {
+    const selected = stockUnit(value);
+    return (unitApi()?.list?.() || []).map((unit) => `<option value="${esc(unit.id)}"${unit.id === selected ? ' selected' : ''}>${esc(unit.label)}</option>`).join('');
   };
   const fmtPct = (n, dec = 1) => `${n > 0 ? '+' : ''}${fmtNum(n, dec)} %`;
   const fmtDateShort = (iso) => {
@@ -856,10 +1453,42 @@
    * Data access
    * ═══════════════════════════════════════════════════════════════════════ */
   function isFusion() {
-    return (window.KiwiVenue?.isFusion?.() === true) || document.body.classList.contains('fusion-mode');
+    return (window.KiwiVenue?.isFusion?.() === true) || !!document.body?.classList?.contains('fusion-mode');
   }
   function currentVenueId() {
     return window.KiwiVenue?.getVenue?.() || 'cafeAtlas';
+  }
+  function stockBusinessSlug() {
+    try {
+      const slug = window.KiwiDayReport?.storeSlug;
+      if (typeof slug === 'function') return slug() || currentVenueId();
+    } catch (_) {}
+    return currentVenueId();
+  }
+  /* Operational dates belong to the merchant day, not the developer's last
+   * demo snapshot. KiwiDayReport owns the cutoff/timezone rules; the local
+   * calendar date is only a fail-soft fallback while that module is loading. */
+  function stockBusinessDate(ts) {
+    const slug = stockBusinessSlug();
+    try {
+      const d = window.KiwiDayReport?.businessDay;
+      if (typeof d === 'function') return d(ts == null ? Date.now() : ts, slug);
+    } catch (_) {}
+    const now = new Date(ts == null ? Date.now() : ts);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  }
+  function stockBusinessDateDate(ts) {
+    // Noon avoids a timezone conversion moving a YYYY-MM-DD key to its eve.
+    return new Date(`${stockBusinessDate(ts)}T12:00:00`);
+  }
+  function stockCalendarDates(ts, count = 7) {
+    const today = stockBusinessDateDate(ts);
+    return Array.from({ length: count }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      return d;
+    });
   }
   // The "Kiwi AI" insight cards are hardcoded demo prose naming demo suppliers
   // (Coopérative Taliouine, Marché Central…) and demo dishes. For a REAL session
@@ -877,7 +1506,7 @@
   }
   function getInv() {
     const V = window.KiwiVenue;
-    if (!V?.getInventory) return [...stUserItems];
+    if (!V?.getInventory) return [...stUserItems].map(normalizeStockItem);
     let base;
     if (isFusion()) {
       if (stVenueFilter && stVenueFilter !== 'all') base = V.getInventory(stVenueFilter);
@@ -889,7 +1518,7 @@
     } else {
       base = V.getInventory(currentVenueId());
     }
-    return [...applyItemOverlay(base), ...stUserItems.filter(it => !stDeletedItems.has(it.id))];
+    return [...applyItemOverlay(base), ...applyItemOverlay(stUserItems)].map(normalizeStockItem);
   }
   function getSup() {
     const base = window.KiwiVenue?.getSuppliers?.() || [];
@@ -910,32 +1539,165 @@
       { id: 'boissons',     label: t('catBoissons') },
       { id: 'consommables', label: t('catConsommables') },
     ];
-    return [...builtin, ...stUserCategories];
+    return [...builtin, ...stUserCategories]
+      .filter(c => !stDeletedCategories.has(c.id))
+      .map(c => stCategoryOverrides[c.id] ? { ...c, ...stCategoryOverrides[c.id] } : c);
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
    * Computed metrics
    * ═══════════════════════════════════════════════════════════════════════ */
-  const currentStockFor = (it) => (stStockOverrides[it.id] != null ? stStockOverrides[it.id] : it.currentStock);
-  const statusOf = (it) => {
-    const s = currentStockFor(it);
-    if (s <= 0) return 'out';
-    // If demo state has overridden the stock (invoice scan / physical count),
-    // compute status dynamically against reorder level. Otherwise the spec's
-    // pre-marked `status` field is the source of truth (richer than a simple
-    // reorderLevel threshold — accounts for run-rate & lead-time).
-    if (stStockOverrides[it.id] != null) {
-      return s < it.reorderLevel ? 'low' : 'ok';
-    }
-    return it.status || 'ok';
+  function stockLocationId() {
+    try { return window.KiwiInventory?.locationId?.() || 'principal'; }
+    catch (_) { return 'principal'; }
+  }
+  function stockUnitId() {
+    try { return window.KiwiInventory?.unitId?.() || ''; }
+    catch (_) { return ''; }
+  }
+  function ledgerOpeningFor(it) {
+    const legacy = stStockOverrides[it.id] != null ? stStockOverrides[it.id] : it.currentStock;
+    try {
+      const L = window.KiwiInventory;
+      if (stShowReal() && L && L.isReal && L.isReal()) {
+        const locationId = stockLocationId();
+        L.ensureOpening(it.id, +legacy || 0, { unitCost: +it.costPerUnit || null, locationId });
+        return L.balance(it.id, { locationId });
+      }
+    } catch (_) {}
+    return legacy;
+  }
+  const currentStockFor = (it) => ledgerOpeningFor(it);
+  /* Read-only projection for the morning briefing. "Tracked" means both an
+   * explicit positive reorder threshold and durable ledger history; an absent
+   * snapshot is never interpreted as zero stock. */
+  function briefingStockItems() {
+    return getInv().map((it) => {
+      const threshold = Number(it && it.reorderLevel);
+      let history = [], balance = null;
+      try {
+        if (window.KiwiInventory?.history && window.KiwiInventory?.balance) {
+          const locationId = stockLocationId();
+          history = window.KiwiInventory.history(it.id, { locationId }) || [];
+          if (history.length) balance = window.KiwiInventory.balance(it.id, { locationId });
+        }
+      } catch (_) { history = []; balance = null; }
+      return {
+        id: String(it.id || ''), name: String(it.name || ''), unit: String(it.unit || ''),
+        balance: Number.isFinite(+balance) ? +balance : null,
+        threshold: Number.isFinite(threshold) && threshold > 0 ? threshold : null,
+        par: Number.isFinite(+it.parLevel) && +it.parLevel > 0 ? +it.parLevel : null,
+        supplier: String(it.supplier || ''), tracked: history.length > 0 && Number.isFinite(threshold) && threshold > 0
+      };
+    });
+  }
+  window.KiwiStockBriefing = { items: briefingStockItems };
+
+  function moveStock(it, qty, reason, refType, refId, note, unitCost, meta) {
+    if (!it || !qty) return null;
+    try {
+      const L = window.KiwiInventory;
+      if (stShowReal() && L && L.isReal && L.isReal()) {
+        const locationId = meta && meta.locationId ? meta.locationId : stockLocationId();
+        const movementMeta = Object.assign({}, meta || {}, { unitId: (meta && meta.unitId) || stockUnitId() });
+        delete movementMeta.locationId;
+        /* movementId explicite ⇒ le registre déduplique sur l'id (rejouer le
+         * même dépôt est un no-op). Absent ⇒ comportement historique (UUID). */
+        const payload = {
+          itemId: it.id, locationId, qty, reason, refType: refType || 'manual', refId: refId || '',
+          note: note || '', unitCost: unitCost == null ? (+it.costPerUnit || null) : unitCost,
+          meta: movementMeta,
+        };
+        if (movementMeta.movementId) payload.id = movementMeta.movementId;
+        delete movementMeta.movementId;
+        return L.add(payload);
+      }
+    } catch (_) {}
+    stStockOverrides[it.id] = currentStockFor(it) + qty;
+    return null;
+  }
+
+  function countStock(it, counted, refId) {
+    const diff = Math.round((counted - currentStockFor(it)) * 1000) / 1000;
+    if (diff) moveStock(it, diff, 'count', 'count', refId || ('count-' + Date.now()), 'Ajustement issu du comptage');
+    return diff;
+  }
+  /* A real restaurant's recipe is the source of theoretical ingredient usage.
+   * Demo venues keep their historic fixture values; real venues never inherit
+   * those figures and only receive a number once sales + recipes exist. */
+  let stTheoUsageBusy = false;
+  const theoreticalUsageFor = (it) => {
+    /* The recipe engine reads this same inventory back to resolve units and
+     * costs. Without this guard the two call each other until the tab dies. */
+    if (stTheoUsageBusy) return Number(it.theoreticalUsage) || 0;
+    try {
+      stTheoUsageBusy = true;
+      const measured = window.KiwiRestaurantRecipes?.theoreticalUsage?.(it.id, currentVenueId(), 7);
+      if (stShowReal()) return Number(measured) || 0;
+      if (Number(measured) > 0) return Number(measured);
+    } catch (_) {} finally { stTheoUsageBusy = false; }
+    return Number(it.theoreticalUsage) || 0;
   };
-  const variance = (it) => (it.theoreticalUsage > 0 ? ((it.usageThisWeek - it.theoreticalUsage) / it.theoreticalUsage) * 100 : 0);
+  function stockConfiguredSupplierName(value) {
+    const name = String(value || '').trim();
+    if (!name) return '';
+    if (/^(?:fournisseur principal|primary supplier|supplier|nosupplier|no supplier|none|null|n\/a|-)$/i.test(name)) return '';
+    return name;
+  }
+  function stockSupplierEvidence(it) {
+    const supplier = stockConfiguredSupplierName(it?.supplier);
+    if (supplier) return { kind: 'supplier', name: supplier };
+    try {
+      const lots = it?.id && window.KiwiInventoryConsumption?.deriveLots?.(it.id);
+      const lot = (lots || []).find(l => Number(l?.remainingQty) > 0 && Number(l?.rank) < 999);
+      if (lot) return { kind: 'lot', name: stockConfiguredSupplierName(lot.supplierName) };
+    } catch (_) {}
+    return null;
+  }
+  function stockAlertState(it, stock) {
+    const s = Number(stock);
+    const threshold = Number(it?.reorderLevel);
+    const hasThreshold = Number.isFinite(threshold) && threshold > 0;
+    const status = !Number.isFinite(s) || s <= 0
+      ? 'out'
+      : (hasThreshold && s < threshold ? 'low' : 'ok');
+    return {
+      status,
+      threshold: hasThreshold ? threshold : null,
+      supplierEvidence: status === 'low' ? stockSupplierEvidence(it) : null,
+    };
+  }
+  const statusOf = (it) => stockAlertState(it, currentStockFor(it)).status;
+  window.KiwiStockOperatingDay = {
+    businessDate: stockBusinessDate,
+    businessSlug: stockBusinessSlug,
+    calendarDates: (ts, count) => stockCalendarDates(ts, count),
+    alertState: stockAlertState,
+    catalogue: () => { stEnsureOverlay(); return getInv(); },
+    overviewAlerts: (items) => overviewAlertRows(items),
+    lastDelivery: actualLastDelivery,
+  };
+  const variance = (it) => {
+    const theoretical = theoreticalUsageFor(it);
+    return theoretical > 0 ? ((it.usageThisWeek - theoretical) / theoretical) * 100 : 0;
+  };
   const daysOfStock = (it) => {
     const rate = it.usageThisWeek / 7;
-    return rate > 0 ? currentStockFor(it) / rate : 999;
+    return rate > 0 ? Math.max(0, Math.round(currentStockFor(it) / rate)) : null;
   };
+  function actualLastDelivery(it) {
+    if (!stShowReal()) return it.lastDelivery || null;
+    try {
+      const rows = itemHistory(it).filter((r) =>
+        (+r.qty || 0) > 0 && ['receipt', 'transfer-in'].includes(String(r.reason || ''))
+      );
+      if (!rows.length) return null;
+      const latest = rows.reduce((a, b) => (+a.occurredTs || 0) >= (+b.occurredTs || 0) ? a : b);
+      return latest.occurredTs ? stockBusinessDate(latest.occurredTs) : null;
+    } catch (_) { return null; }
+  }
   const totalValue = (items) => items.reduce((s, it) => s + (currentStockFor(it) * it.costPerUnit), 0);
-  const foodCostMonth = (items) => items.reduce((s, it) => s + (it.theoreticalUsage * it.costPerUnit * 4), 0);
+  const foodCostMonth = (items) => items.reduce((s, it) => s + (theoreticalUsageFor(it) * it.costPerUnit * 4.33), 0);
   /* Le dénominateur du ratio « coût matière / chiffre d'affaires ».
    *
    * Ces montants sont ceux des trois établissements de démonstration. Le repli
@@ -1029,6 +1791,10 @@
     // Wire up search input
     const sb = document.querySelector('[data-stock-search-input]');
     if (sb) sb.addEventListener('input', (e) => { stSearch = e.target.value.toLowerCase(); rerenderTabBody(); });
+    const wsb = document.querySelector('[data-stock-waste-search]');
+    if (wsb) wsb.addEventListener('input', (e) => { stWasteSearch = e.target.value; rerenderTabBody(); });
+    const csb = document.querySelector('[data-stock-count-search]');
+    if (csb) csb.addEventListener('input', (e) => { stCountSearch = e.target.value; rerenderTabBody(); });
   }
 
   function rerenderTabBody() {
@@ -1064,6 +1830,7 @@
         </div>
         <div class="st-head-acts">
           <button class="st-btn" type="button" data-action="stock-scan-invoice">${svg('camera', 13)}<span>${esc(t('btnScan'))}</span></button>
+          <button class="st-btn" type="button" data-action="stock-count-sheet">${svg('download', 13)}<span>${esc(t('btnSheet'))}</span></button>
           <button class="st-btn" type="button" data-action="stock-physical-count">${svg('clipboardList', 13)}<span>${esc(t('btnCount'))}</span></button>
           <button class="st-btn primary" type="button" data-action="stock-add-item">${svg('plus', 13)}<span>${esc(t('btnAdd'))}</span></button>
         </div>
@@ -1109,10 +1876,65 @@
   /* ═══════════════════════════════════════════════════════════════════════
    * TAB 1 · Vue d'ensemble
    * ═══════════════════════════════════════════════════════════════════════ */
+  function computeTier1LowAlerts(items) {
+    if (!window.KiwiInventoryConsumption?.deriveLots) return [];
+    const raw = stOverlayRaw();
+    const subMap = new Map((raw.subcategories || []).map(s => [s.id, s]));
+    const list = [];
+    (items || []).forEach(it => {
+      if (!it || !it.id) return;
+      if (statusOf(it) === 'out' || statusOf(it) === 'low') return;
+      const lots = window.KiwiInventoryConsumption.deriveLots(it.id) || [];
+      if (!lots.length) return;
+      const r1Lots = lots.filter(l => l.rank === 1 && l.remainingQty > 0);
+      // Opening stock is rank 999 and is not a supplier tier. Without a real
+      // rank-1 lot/card this path fabricated a "principal vs next lot"
+      // alert for every newly-created item.
+      const r1Qty = Math.round(r1Lots.reduce((sum, l) => sum + l.remainingQty, 0) * 1000) / 1000;
+      const sub = subMap.get(it.id);
+      const cards = sub && Array.isArray(sub.suppliers) ? sub.suppliers : [];
+      const primaryCard = cards.find(c => c.rank === 1);
+      const secondaryCard = cards.find(c => c.rank === 2);
+      const secondaryLot = lots.find(l => l.rank > 1 && l.rank < 999 && l.remainingQty > 0);
+      const primarySupplier = stockConfiguredSupplierName(primaryCard?.supplierName);
+      const hasRankedSupplierLot = r1Lots.some(l => stockConfiguredSupplierName(l.supplierName));
+      const secondarySupplier = stockConfiguredSupplierName(secondaryCard?.supplierName);
+      if (!primarySupplier && !hasRankedSupplierLot) return;
+      
+      const threshold = (primaryCard && primaryCard.lowBuffer > 0)
+        ? primaryCard.lowBuffer
+        : Math.max(1, Math.round(((it.usageThisWeek || 0) / 7) * 3 * 10) / 10);
+      
+      if (r1Qty <= threshold && (secondaryLot || (secondarySupplier && secondaryCard.defaultPrice > (primaryCard ? primaryCard.defaultPrice : it.costPerUnit)))) {
+        list.push(Object.assign({}, it, {
+          alertKind: 'tierLow',
+          r1Qty: r1Qty,
+          t1Threshold: threshold,
+          p1Cost: (primaryCard && primaryCard.defaultPrice != null) ? primaryCard.defaultPrice : it.costPerUnit,
+          p2Cost: secondaryLot ? secondaryLot.unitCost : (secondaryCard ? secondaryCard.defaultPrice : null),
+          p2SupName: secondaryLot ? (secondaryLot.supplierName || 'Fournisseur secondaire') : (secondaryCard ? secondaryCard.supplierName : 'Fournisseur secondaire'),
+        }));
+      }
+    });
+    return list;
+  }
+
+  function overviewAlertRows(items) {
+    const rows = items || [];
+    const out = rows.filter(it => statusOf(it) === 'out');
+    const low = rows.filter(it => statusOf(it) === 'low');
+    const tierLow = computeTier1LowAlerts(rows);
+    const alerts = [
+      ...out,
+      ...low.sort((a, b) => (daysOfStock(a) ?? Number.MAX_SAFE_INTEGER) - (daysOfStock(b) ?? Number.MAX_SAFE_INTEGER)),
+      ...tierLow,
+    ].slice(0, 12);
+    return { out, low, tierLow, alerts, totalAlertCount: out.length + low.length + tierLow.length };
+  }
+
   function renderOverview() {
     const items = getInv();
-    const out = items.filter(it => statusOf(it) === 'out');
-    const low = items.filter(it => statusOf(it) === 'low');
+    const { out, low, tierLow, alerts, totalAlertCount } = overviewAlertRows(items);
     const ok  = items.filter(it => statusOf(it) === 'ok');
     const totalVal = totalValue(items);
     const costMonth = foodCostMonth(items);
@@ -1127,22 +1949,62 @@
     // Mock 4-week trend bars
     const trendBars = [62, 70, 66, 74].map(h => `<i style="height:${h}%;"></i>`).join('');
 
-    // Alerts sorted: out first, then low (by daysOfStock asc)
-    const alerts = [
-      ...out,
-      ...low.sort((a, b) => daysOfStock(a) - daysOfStock(b)),
-    ].slice(0, 12);
-
+    // Alerts sorted: out first, then low (by daysOfStock asc), then tierLow
     return `
-      ${renderKpiCards({ totalVal, items, out, low, costWeek, ratio, ratioClass, nextDelivery, trendBars })}
+      ${renderKpiCards({ totalVal, items, out, low, tierLow, costWeek, ratio, ratioClass, nextDelivery, trendBars })}
+
+      ${(function() {
+        const expiringLots = (window.KiwiInventoryConsumption?.expiring && window.KiwiInventoryConsumption.expiring({ horizonDays: 7 })) || [];
+        if (!expiringLots.length) return '';
+        return `
+          <div class="st-section" style="margin-bottom:20px;">
+            <div class="st-section-head">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:24px;height:24px;border-radius:6px;background:rgba(239,68,68,0.12);color:#dc2626;display:grid;place-items:center;">
+                  ${svg('alertTriangle', 14)}
+                </div>
+                <h3 style="color:#b91c1c;">Alertes péremptions (DLC / DDM)</h3>
+              </div>
+              <span class="st-count-badge warn">${expiringLots.length}</span>
+            </div>
+            <div class="st-alerts" style="display:grid;gap:8px;">
+              ${expiringLots.map(l => {
+                const isExp = l.status === 'expired';
+                const badgeStyle = isExp ? 'background:#fef2f2;color:#b91c1c;border:1px solid rgba(185,28,28,0.25);' : 'background:#fffbeb;color:#b45309;border:1px solid rgba(180,83,9,0.25);';
+                const dateStr = new Date(l.expiresAt).toLocaleDateString('fr-FR');
+                const statusLabel = isExp ? `Périmé (${dateStr})` : (l.daysLeft === 0 ? `Périme aujourd'hui` : `Expire dans ${l.daysLeft} j (${dateStr})`);
+                return `
+                  <div class="st-alert-card" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--paper-soft);border:1px solid var(--n-200);border-radius:10px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                      <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;${badgeStyle}">${statusLabel}</span>
+                      <div>
+                        <b style="font-size:13.5px;color:var(--ink);">${esc(l.name)}</b>
+                        <div style="font-size:11.5px;color:var(--n-500);">${l.remainingQty} ${esc(l.unit)} restant${l.supplierName ? ` · Fournisseur : ${esc(l.supplierName)}` : ''}${l.totalCostMAD ? ` · Valeur : ${fmtMad(l.totalCostMAD)}` : ''}</div>
+                      </div>
+                    </div>
+                    <button class="st-btn small" type="button" data-action="stock-declare-waste-prefill" data-item-id="${esc(l.itemId)}" data-qty="${l.remainingQty}" data-reason="perime" style="color:#b91c1c;border-color:rgba(185,28,28,0.3);white-space:nowrap;">
+                      ${svg('trash2', 12)}<span style="margin-left:4px;">Déclarer en perte</span>
+                    </button>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      })()}
 
       <div class="st-section">
         <div class="st-section-head">
           <h3>${esc(t('alertsT'))}</h3>
-          ${(out.length + low.length) > 0 ? `<span class="st-count-badge warn">${out.length + low.length}</span>` : ''}
+          ${totalAlertCount > 0 ? `<span class="st-count-badge warn">${totalAlertCount}</span>` : ''}
         </div>
         <div class="st-alerts">
-          ${alerts.length === 0 ? `<div style="color:var(--n-500); font-size:13px; padding:6px 2px;">${esc(t('alertsEmpty'))}</div>` :
+          ${alerts.length === 0 ? `<div style="padding:28px 16px; text-align:center; color:var(--n-500); font-size:13px; background:var(--paper-soft); border-radius:12px; border:1px solid var(--n-200); display:flex; align-items:center; justify-content:center; gap:10px;">
+            <div style="width:28px; height:28px; border-radius:8px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center;">
+              <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>
+            </div>
+            <span style="font-weight:500; color:var(--ink);">${esc(t('alertsEmpty'))}</span>
+          </div>` :
             alerts.map(renderAlertCard).join('')}
         </div>
       </div>
@@ -1164,8 +2026,8 @@
     `;
   }
 
-  function renderKpiCards({ totalVal, items, out, low, costWeek, ratio, ratioClass, nextDelivery, trendBars }) {
-    const alertCount = out.length + low.length;
+  function renderKpiCards({ totalVal, items, out, low, tierLow = [], costWeek, ratio, ratioClass, nextDelivery, trendBars }) {
+    const alertCount = out.length + low.length + tierLow.length;
     const alertColor = alertCount > 0 ? 'warn' : 'ok';
     return `
       <div class="st-kpis">
@@ -1178,7 +2040,7 @@
         <div class="st-kpi">
           <div class="st-kpi-l">${esc(t('kpiAlertL'))}<span class="st-kpi-ico ${alertColor}">${svg('alertTriangle', 14)}</span></div>
           <div class="st-kpi-v ${alertColor}">${alertCount}</div>
-          <div class="st-kpi-sub">${esc(alertCount === 0 ? t('kpiAlertOk') : t('kpiAlertSub', out.length, low.length))}</div>
+          <div class="st-kpi-sub">${esc(alertCount === 0 ? t('kpiAlertOk') : t('kpiAlertSub', out.length, low.length + tierLow.length))}</div>
         </div>
         <div class="st-kpi">
           <div class="st-kpi-l">${esc(t('kpiCostL'))}<span class="st-kpi-ico">${svg('receipt', 14)}</span></div>
@@ -1199,12 +2061,44 @@
   }
 
   function renderAlertCard(it) {
+    if (it.alertKind === 'tierLow') {
+      const priceDiff = it.p2Cost != null ? (it.p2Cost - it.p1Cost) : null;
+      return `
+        <div class="st-alert tier-low">
+          <div class="st-alert-ico" style="color:var(--warning);">${svg('alertTriangle', 18)}</div>
+          <div class="st-alert-body">
+            <div class="st-alert-top">
+              <span class="st-alert-name">${esc(it.name)}</span>
+              <span class="st-alert-cat">${esc(catLabel(it.category))}</span>
+              <span class="st-alert-status low">Fournisseur principal bas · ${esc(fmtUnit(it.r1Qty, it.unit))} restant</span>
+            </div>
+            <div class="st-alert-meta">
+              Lot principal : ${esc(fmtMad(it.p1Cost))}/${esc(it.unit)}${it.p2Cost != null ? ` · Lot suivant : ${esc(it.p2SupName)} (${esc(fmtMad(it.p2Cost))}/${esc(it.unit)}${priceDiff > 0 ? ` +${esc(fmtMad(priceDiff))}` : ''})` : ''}
+            </div>
+            <div class="st-alert-impact">
+              Seuil tampon : <b>${esc(fmtUnit(it.t1Threshold, it.unit))}</b> (calculé sur 3j d'usage) · Transition prochaine vers tarif secondaire.
+            </div>
+          </div>
+          <div class="st-alert-acts">
+            <button class="st-btn primary" type="button" data-action="stock-reorder" data-item-id="${esc(it.id)}">Commander chez principal</button>
+          </div>
+        </div>
+      `;
+    }
     const st = statusOf(it);
     const isOut = st === 'out';
-    const days = isOut ? 0 : Math.max(0, Math.round(daysOfStock(it)));
+    const days = isOut ? 0 : daysOfStock(it);
     const cur = currentStockFor(it);
     const dailyMissed = (it.usageThisWeek / 7) * it.costPerUnit * 3.2;
     const parPct = it.parLevel > 0 ? (cur / it.parLevel) * 100 : 0;
+    const state = stockAlertState(it, cur);
+    const supplierMeta = state.supplierEvidence
+      ? `${esc(t('supplier'))} : ${esc(state.supplierEvidence.name || 'Lot enregistré')}`
+      : '';
+    const deliveryDate = actualLastDelivery(it);
+    const deliveryMeta = deliveryDate ? `${esc(t('lastDeliv'))} : ${esc(fmtDateShort(deliveryDate))}` : '';
+    const alertMeta = [deliveryMeta, supplierMeta].filter(Boolean).join('<span class="sep">·</span>');
+    const lowLabel = days == null ? t('statusLow') : `${t('statusLow')} · ${t('daysLeft', days)}`;
 
     return `
       <div class="st-alert ${isOut ? 'out' : ''}">
@@ -1213,12 +2107,9 @@
           <div class="st-alert-top">
             <span class="st-alert-name">${esc(it.name)}</span>
             <span class="st-alert-cat">${esc(catLabel(it.category))}</span>
-            <span class="st-alert-status ${isOut ? 'out' : 'low'}">${esc(isOut ? t('statusOut') : `${t('statusLow')} · ${t('daysLeft', days)}`)}</span>
+            <span class="st-alert-status ${isOut ? 'out' : 'low'}">${esc(isOut ? t('statusOut') : lowLabel)}</span>
           </div>
-          <div class="st-alert-meta">
-            ${esc(t('lastDeliv'))} : ${esc(fmtDateShort(it.lastDelivery))}<span class="sep">·</span>
-            ${esc(t('supplier'))} : ${esc(it.supplier)}
-          </div>
+          ${alertMeta ? `<div class="st-alert-meta">${alertMeta}</div>` : ''}
           ${isOut
             ? `<div class="st-alert-impact">${esc(t('impactCost'))} : <b>${esc(fmtMad(dailyMissed))}</b>${esc(t('perDayMissed'))}</div>`
             : `<div class="st-alert-impact">${esc(t('level'))} : <b>${esc(fmtUnit(cur, it.unit))}</b> · ${esc(t('par'))} : <b>${esc(fmtUnit(it.parLevel, it.unit))}</b></div>
@@ -1246,16 +2137,14 @@
     `;
   }
 
-  /* 7-day delivery strip — current date is 2026-05-23 (Saturday), but we
-   * generate from "today" relative to system date for realism. Calendar
-   * shows static demo deliveries per day-of-week. */
+  /* 7-day delivery strip — the weekday supplier pattern is demo data, but the
+   * displayed dates follow the merchant's current operating day. */
   function renderDeliveryStrip() {
-    const today = new Date('2026-05-23T08:00:00'); // brief stub — see currentDate ref
     const items = [];
     const dayNames = [t('daySun'), t('dayMon'), t('dayTue'), t('dayWed'), t('dayThu'), t('dayFri'), t('daySat')];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
+    const dates = stockCalendarDates();
+    for (let i = 0; i < dates.length; i++) {
+      const d = dates[i];
       const dow = d.getDay();
       const monthLabel = fmtDateShort(d.toISOString().slice(0, 10));
       const isToday = i === 0;
@@ -1291,7 +2180,7 @@
   }
 
   function computeNextDelivery() {
-    const today = new Date('2026-05-23T08:00:00');
+    const today = stockBusinessDateDate();
     for (let i = 1; i <= 7; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
@@ -1305,7 +2194,7 @@
         };
       }
     }
-    return { when: '—', supplier: '—', cost: 0 };
+    return { when: '·', supplier: '·', cost: 0 };
   }
 
   function tickFoodCost() {
@@ -1319,9 +2208,954 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
-   * TAB 2 · Articles & stock
+   * TAB 2 · Articles & stock (Catalogue, Journal des pertes, Historique)
    * ═══════════════════════════════════════════════════════════════════════ */
+  function getWasteMovements() {
+    const I = window.KiwiInventory;
+    if (!I || !I.history) return [];
+    const all = I.history() || [];
+    let wasteRows = all.filter(r => r && (r.refType === 'waste' || ['loss', 'expiry', 'gift', 'staff-meal'].includes(r.reason)));
+    
+    // Apply date range filter
+    const now = Date.now();
+    const dayStart = (window.KiwiDayReport && window.KiwiDayReport.dayBounds)
+      ? window.KiwiDayReport.dayBounds(window.KiwiDayReport.businessDay(now)).from
+      : new Date().setHours(5, 0, 0, 0);
+    
+    if (stWasteDateRange === 'aujourdhui') {
+      wasteRows = wasteRows.filter(r => (+r.occurredTs || 0) >= dayStart);
+    } else if (stWasteDateRange === '7j') {
+      wasteRows = wasteRows.filter(r => (+r.occurredTs || 0) >= now - 7 * 864e5);
+    } else if (stWasteDateRange === '30j') {
+      wasteRows = wasteRows.filter(r => (+r.occurredTs || 0) >= now - 30 * 864e5);
+    }
+    
+    // Reason filter
+    if (stWasteFilterReason !== 'all') {
+      wasteRows = wasteRows.filter(r => {
+        const fine = r.meta && r.meta.wasteReason;
+        if (fine === stWasteFilterReason) return true;
+        if (stWasteFilterReason === 'expiry' && r.reason === 'expiry') return true;
+        if (stWasteFilterReason === 'gift' && r.reason === 'gift') return true;
+        if (stWasteFilterReason === 'staff-meal' && r.reason === 'staff-meal') return true;
+        if (stWasteFilterReason === 'loss' && r.reason === 'loss') return true;
+        return false;
+      });
+    }
+
+    // Search filter
+    if (stWasteSearch) {
+      const q = stWasteSearch.toLowerCase();
+      wasteRows = wasteRows.filter(r => {
+        const it = getInv().find(x => x.id === r.itemId);
+        const name = (it ? it.name : r.itemId).toLowerCase();
+        const actor = String(r.actor || '').toLowerCase();
+        const note = String(r.note || '').toLowerCase();
+        return name.includes(q) || actor.includes(q) || note.includes(q);
+      });
+    }
+
+    return wasteRows;
+  }
+
+  function renderWasteJournal() {
+    const rows = getWasteMovements();
+    const inv = getInv();
+    const totalQty = rows.reduce((acc, r) => acc + Math.abs(+r.qty || 0), 0);
+    const totalVal = rows.reduce((acc, r) => {
+      const it = inv.find(x => x.id === r.itemId);
+      const cost = r.unitCost != null ? r.unitCost : (it ? it.costPerUnit : 0);
+      return acc + Math.abs(+r.qty || 0) * cost;
+    }, 0);
+
+    const rangePill = (id, label) => `<button class="st-cat-pill${stWasteDateRange === id ? ' on' : ''}" type="button" data-action="stock-waste-range" data-range="${id}">${esc(label)}</button>`;
+    const reasonPill = (id, label) => `<button class="st-cat-pill${stWasteFilterReason === id ? ' on' : ''}" type="button" data-action="stock-waste-reason" data-reason="${id}">${esc(label)}</button>`;
+
+    const reasonLabelMap = {
+      'perime': 'Périmé',
+      'casse': 'Casse',
+      'avarie': 'Avarié / Abîmé',
+      'offert': 'Offert',
+      'repas-equipe': 'Repas équipe',
+      'autre': 'Autre perte',
+      'expiry': 'Périmé',
+      'gift': 'Offert',
+      'staff-meal': 'Repas équipe',
+      'loss': 'Perte'
+    };
+
+    return `
+      <div class="st-section">
+        <div class="st-toolbar" style="margin-bottom:16px;">
+          <div class="st-search-row">
+            <div class="st-search-wrap">
+              ${svg('search', 16)}
+              <input class="st-search" type="text" placeholder="Chercher un article, employé, note…" value="${esc(stWasteSearch)}" data-stock-waste-search aria-label="Recherche journal des pertes" />
+            </div>
+            <button class="st-btn primary" type="button" data-action="stock-open-declare-waste" style="background:#b91c1c;border-color:#991b1b;color:#fff;display:flex;align-items:center;gap:6px;">
+              ${svg('trash2', 14)}<span>Déclarer une perte</span>
+            </button>
+            <button class="st-btn secondary" type="button" data-action="stock-export-waste-csv" style="display:flex;align-items:center;gap:6px;">
+              ${svg('download', 14)}<span>Exporter CSV</span>
+            </button>
+          </div>
+          <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%; flex-wrap:wrap;">
+            ${rangePill('aujourdhui', "Aujourd'hui")}
+            ${rangePill('7j', '7 derniers jours')}
+            ${rangePill('30j', '30 derniers jours')}
+            ${rangePill('tout', 'Tout l’historique')}
+          </div>
+          <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%; flex-wrap:wrap;">
+            ${reasonPill('all', 'Tous motifs')}
+            ${reasonPill('perime', 'Périmé')}
+            ${reasonPill('casse', 'Casse')}
+            ${reasonPill('avarie', 'Avarié')}
+            ${reasonPill('offert', 'Offert')}
+            ${reasonPill('repas-equipe', 'Repas équipe')}
+          </div>
+        </div>
+
+        <div class="st-kpis" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
+          <div class="st-kpi"><div class="st-kpi-l">TOTAL VALEUR PERDUE</div><div class="st-kpi-v" style="color:#b91c1c;">${fmtMad(totalVal)}</div><div class="st-kpi-sub">${rows.length} déclarations de pertes</div></div>
+          <div class="st-kpi"><div class="st-kpi-l">VOLUME D'ARTICLES PERDUS</div><div class="st-kpi-v">${Math.round(totalQty * 10) / 10}</div><div class="st-kpi-sub">unités / kg sorties</div></div>
+        </div>
+
+        <div class="st-tbl-wrap">
+          <table class="st-tbl">
+            <thead>
+              <tr>
+                <th>Date &amp; Heure</th>
+                <th>Article</th>
+                <th>Quantité</th>
+                <th>Unité</th>
+                <th>Motif</th>
+                <th>Valeur MAD</th>
+                <th>Employé</th>
+                <th>Note</th>
+                <th style="text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.length ? rows.map(r => {
+                const it = inv.find(x => x.id === r.itemId) || { name: r.itemId, unit: 'unité', costPerUnit: r.unitCost || 0 };
+                const cost = r.unitCost != null ? r.unitCost : (it.costPerUnit || 0);
+                const valMAD = Math.abs(+r.qty || 0) * cost;
+                const d = new Date(r.occurredTs);
+                const dateStr = d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                const fine = (r.meta && r.meta.wasteReason) || r.reason;
+                const reasonLabel = reasonLabelMap[fine] || fine || 'Perte';
+                const isReversal = !!r.reversalOf;
+                return `
+                  <tr style="${isReversal ? 'opacity:0.6;font-style:italic;' : ''}">
+                    <td class="st-mono" style="font-size:12px;color:var(--n-600);white-space:nowrap;">${dateStr}</td>
+                    <td><b>${esc(it.name)}</b>${r.meta?.lotId ? `<div style="font-size:11px;color:var(--n-500);">Lot: ${esc(r.meta.lotId)}</div>` : ''}</td>
+                    <td class="st-mono" style="color:${+r.qty < 0 ? '#b91c1c' : 'var(--atlas)'};font-weight:600;">${+r.qty < 0 ? '−' : '+'}${Math.abs(+r.qty || 0)}</td>
+                    <td>${esc(it.unit)}</td>
+                    <td><span class="st-badge warn" style="font-size:11px;">${esc(reasonLabel)}</span></td>
+                    <td class="st-mono">${fmtMad(valMAD)}</td>
+                    <td style="font-size:12.5px;">${esc(r.actor || (r.meta && r.meta.actor) || '·')}</td>
+                    <td style="font-size:12px;color:var(--n-600);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(r.note || '')}">${esc(r.note || '·')}</td>
+                    <td style="text-align:right;">
+                      ${stShowReal() && !isReversal ? `
+                        <button class="st-btn small" type="button" data-action="stock-cancel-waste" data-movement-id="${esc(r.id)}" title="Annuler cette perte" style="color:#b91c1c;border-color:rgba(185,28,28,0.25);">
+                          Annuler
+                        </button>
+                      ` : '·'}
+                    </td>
+                  </tr>
+                `;
+              }).join('') : `<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--n-500);">Aucune perte enregistrée sur cette période.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+        <div class="st-tbl-foot">
+          Total : ${rows.length} lignes de pertes · Valeur cumulée : <b>${fmtMad(totalVal)}</b>
+        </div>
+      </div>
+    `;
+  }
+
+  function exportWasteCsv() {
+    const rows = getWasteMovements();
+    const inv = getInv();
+    const reasonLabelMap = {
+      'perime': 'Périmé', 'casse': 'Casse', 'avarie': 'Avarié / Abîmé',
+      'offert': 'Offert', 'repas-equipe': 'Repas équipe', 'autre': 'Autre perte',
+      'expiry': 'Périmé', 'gift': 'Offert', 'staff-meal': 'Repas équipe', 'loss': 'Perte'
+    };
+    function csvSafe(v) {
+      let s = String(v == null ? '' : v);
+      if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    const header = ['Date', 'Article', 'Quantite', 'Unite', 'Motif', 'Valeur_MAD', 'Employe', 'Note', 'ID_Mouvement'];
+    const lines = [header.join(';')];
+    rows.forEach(r => {
+      const it = inv.find(x => x.id === r.itemId) || { name: r.itemId, unit: 'unité', costPerUnit: r.unitCost || 0 };
+      const cost = r.unitCost != null ? r.unitCost : (it.costPerUnit || 0);
+      const valMAD = Math.abs(+r.qty || 0) * cost;
+      const d = new Date(r.occurredTs).toISOString().slice(0, 19).replace('T', ' ');
+      const fine = (r.meta && r.meta.wasteReason) || r.reason;
+      const reasonLabel = reasonLabelMap[fine] || fine || 'Perte';
+      lines.push([
+        d,
+        csvSafe(it.name),
+        Math.abs(+r.qty || 0),
+        csvSafe(it.unit),
+        csvSafe(reasonLabel),
+        valMAD.toFixed(2),
+        csvSafe(r.actor || ''),
+        csvSafe(r.note || ''),
+        r.id
+      ].join(';'));
+    });
+    const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `journal-pertes-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+  }
+
+  function cancelWasteMovement(movementId) {
+    if (!movementId || !window.KiwiInventory) return;
+    const history = window.KiwiInventory.history() || [];
+    const m = history.find(r => r.id === movementId);
+    if (!m) { window.Kiwi?.toast?.('Mouvement introuvable', { type: 'warn' }); return; }
+    if (!confirm(`Annuler la perte de ${Math.abs(m.qty)} pour cet article ? Un contre-mouvement sera écrit dans le registre.`)) {
+      return;
+    }
+    const rev = window.KiwiInventory.reverse(m, 'manual', `Annulation perte ${m.refId || m.id}`);
+    if (rev) {
+      window.KiwiInventory.sync();
+      window.Kiwi?.toast?.('Perte annulée · contre-mouvement enregistré', { type: 'success' });
+      if (stPageActive) render();
+    }
+  }
+
+  function openDeclareWasteModal(prefill) {
+    prefill = prefill || {};
+    const items = getInv();
+    const prefillId = prefill.itemId || (items[0] && items[0].id) || '';
+    const prefillQty = prefill.qty != null ? prefill.qty : 1;
+    const prefillReason = prefill.reason || 'perime';
+
+    const itemOptions = items.map(it => `
+      <option value="${esc(it.id)}"${it.id === prefillId ? ' selected' : ''}>
+        ${esc(it.name)} (${it.currentStock} ${esc(it.unit || 'unité')})
+      </option>
+    `).join('');
+
+    const html = `
+      <div class="st-modal-head">
+        <div>
+          <h3>Déclarer une perte de stock</h3>
+          <p style="margin:2px 0 0;font-size:12.5px;color:var(--n-500);">Déduction immédiate du registre et traçabilité dans le journal des pertes.</p>
+        </div>
+        <button class="st-modal-x" type="button" data-action="stock-modal-close">${svg('x', 18)}</button>
+      </div>
+      <form class="st-form" id="st-waste-declare-form" style="padding:16px 20px;">
+        <div class="st-field" style="margin-bottom:12px;">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">Article concerné</label>
+          <select class="st-select" id="st-wf-item" required style="width:100%;">
+            ${itemOptions}
+          </select>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:12px;">
+          <div class="st-field" style="flex:1;">
+            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">Quantité perdue</label>
+            <input class="st-input" id="st-wf-qty" type="number" step="any" min="0.001" value="${prefillQty}" required style="width:100%;" />
+          </div>
+          <div class="st-field" style="flex:1.5;">
+            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">Motif de la perte</label>
+            <select class="st-select" id="st-wf-reason" style="width:100%;">
+              <option value="perime"${prefillReason === 'perime' || prefillReason === 'Péremption' || prefillReason === 'expiry' ? ' selected' : ''}>Péremption / DLC dépassée</option>
+              <option value="casse"${prefillReason === 'casse' ? ' selected' : ''}>Casse / Détérioration</option>
+              <option value="avarie"${prefillReason === 'avarie' ? ' selected' : ''}>Avarie / Défaut</option>
+              <option value="offert"${prefillReason === 'offert' ? ' selected' : ''}>Geste commercial / Offert</option>
+              <option value="repas-equipe"${prefillReason === 'repas-equipe' ? ' selected' : ''}>Repas employé / équipe</option>
+              <option value="autre"${prefillReason === 'autre' ? ' selected' : ''}>Autre motif</option>
+            </select>
+          </div>
+        </div>
+        <div class="st-field" style="margin-bottom:16px;">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">Justification / Note (optionnelle)</label>
+          <input class="st-input" id="st-wf-note" type="text" placeholder="Ex: DLC au 21/08, bocal brisé à la mise en rayon…" style="width:100%;" />
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button class="st-btn secondary" type="button" data-action="stock-modal-close">Annuler</button>
+          <button class="st-btn primary" type="submit" style="background:#b91c1c;border-color:#991b1b;color:#fff;">
+            ${svg('trash2', 14)}<span style="margin-left:4px;">Enregistrer la perte</span>
+          </button>
+        </div>
+      </form>
+    `;
+
+    openModal(html);
+
+    const form = document.getElementById('st-waste-declare-form');
+    if (form) {
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        const itemId = document.getElementById('st-wf-item')?.value;
+        const qty = parseFloat(document.getElementById('st-wf-qty')?.value) || 0;
+        const reason = document.getElementById('st-wf-reason')?.value || 'perime';
+        const note = (document.getElementById('st-wf-note')?.value || '').trim();
+        if (!itemId || !(qty > 0)) {
+          window.Kiwi?.toast?.('Précisez une quantité valide', { type: 'warn' });
+          return;
+        }
+        if (window.KiwiInventory) {
+          const it = items.find(x => x.id === itemId);
+          const unitCost = it ? (it.costPerUnit || it.cost || null) : null;
+          window.KiwiInventory.add({
+            locationId: stockLocationId(),
+            itemId,
+            qty: -qty,
+            reason: 'waste',
+            refType: 'waste',
+            refId: 'waste-' + Date.now().toString(36),
+            unitCost,
+            note: note || `Déclaration perte · ${reason}`,
+            meta: {
+              wasteReason: reason,
+              actor: 'Propriétaire',
+              actorId: 'owner'
+            }
+          });
+          window.KiwiInventory.sync();
+          window.Kiwi?.toast?.('Perte enregistrée et déduite du stock', { type: 'success' });
+          closeModal();
+          if (stPageActive) render();
+        }
+      };
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+   * HISTORIQUE DES INVENTAIRES PHYSIQUES & REVUE PROPRIÉTAIRE
+   * ═══════════════════════════════════════════════════════════════════════ */
+  async function fetchServerCounts() {
+    try {
+      const resp = await fetch('/api/inventory/counts');
+      const data = await resp.json();
+      if (data && Array.isArray(data.counts)) {
+        stCountsCache = data.counts;
+        stCountsLastFetched = Date.now();
+      }
+    } catch (_) {}
+  }
+
+  function getAllCounts() {
+    const serverCounts = Array.isArray(stCountsCache) ? stCountsCache : [];
+    const localHist = stCountHistory() || [];
+    
+    const localMapped = localHist.map((h, i) => {
+      const gaps = Array.isArray(h.gaps) ? h.gaps : [];
+      return {
+        id: h.ref || `local_cnt_${h.ts || i}`,
+        engine: 'ledger',
+        status: 'applied',
+        storeId: '',
+        storeName: 'Magasin principal',
+        employeeId: '',
+        employeeName: 'Propriétaire',
+        employeeRole: 'Admin',
+        submittedAt: h.ts || Date.now(),
+        reviewedAt: h.ts || Date.now(),
+        reviewerName: 'Propriétaire',
+        reviewDecision: 'approved',
+        appliedAt: h.ts || Date.now(),
+        totalLines: h.counted || gaps.length,
+        totalDiff: gaps.reduce((acc, g) => acc + (g.diff || 0), 0),
+        totalVarianceCostMAD: h.varMad || gaps.reduce((acc, g) => acc + (g.mad || 0), 0),
+        absVarianceCostMAD: Math.abs(h.varMad || gaps.reduce((acc, g) => acc + Math.abs(g.mad || 0), 0)),
+        lines: gaps.map(g => ({
+          key: g.id,
+          itemId: g.id,
+          productName: g.name,
+          color: '',
+          size: '',
+          sku: g.id,
+          unit: g.unit || 'unité',
+          unitCost: 0,
+          systemQty: g.theo || 0,
+          countedQty: g.counted || 0,
+          diff: g.diff || 0,
+          varianceCost: g.mad || 0,
+          explanation: g.reason || '',
+          note: ''
+        }))
+      };
+    });
+
+    const byId = new Map();
+    serverCounts.forEach(c => byId.set(c.id, c));
+    localMapped.forEach(c => { if (!byId.has(c.id)) byId.set(c.id, c); });
+    
+    return Array.from(byId.values()).sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
+  }
+
+  function filterCounts(counts) {
+    const now = Date.now();
+    let rows = counts.slice();
+
+    if (stCountDateFilter === 'aujourdhui') {
+      const dayStart = (window.KiwiDayReport && window.KiwiDayReport.dayBounds)
+        ? window.KiwiDayReport.dayBounds(window.KiwiDayReport.businessDay(now)).from
+        : new Date().setHours(5, 0, 0, 0);
+      rows = rows.filter(r => (r.submittedAt || 0) >= dayStart);
+    } else if (stCountDateFilter === '7j') {
+      rows = rows.filter(r => (r.submittedAt || 0) >= now - 7 * 864e5);
+    } else if (stCountDateFilter === '30j') {
+      rows = rows.filter(r => (r.submittedAt || 0) >= now - 30 * 864e5);
+    }
+
+    if (stCountStatusFilter !== 'all') {
+      rows = rows.filter(r => r.status === stCountStatusFilter);
+    }
+
+    if (stCountSearch) {
+      const q = stCountSearch.toLowerCase();
+      rows = rows.filter(r => {
+        const emp = (r.employeeName || '').toLowerCase();
+        const stn = (r.storeName || '').toLowerCase();
+        const cid = (r.id || '').toLowerCase();
+        return emp.includes(q) || stn.includes(q) || cid.includes(q);
+      });
+    }
+
+    return rows;
+  }
+
+  function renderCountsHistory() {
+    if (Date.now() - stCountsLastFetched > 30000) {
+      fetchServerCounts().then(() => {
+        if (stPageActive && stItemSubView === 'counts') rerenderTabBody();
+      });
+    }
+
+    const allCounts = getAllCounts();
+    const filtered = filterCounts(allCounts);
+
+    const rangePill = (id, label) => `<button class="st-cat-pill${stCountDateFilter === id ? ' on' : ''}" type="button" data-action="stock-count-range" data-range="${id}">${esc(label)}</button>`;
+    const statusPill = (id, label) => `<button class="st-cat-pill${stCountStatusFilter === id ? ' on' : ''}" type="button" data-action="stock-count-status" data-status="${id}">${esc(label)}</button>`;
+    const tabBtn = (id, label) => `<button class="st-cat-pill${stCountSubTab === id ? ' on' : ''}" type="button" data-action="stock-count-tab" data-tab="${id}" style="font-weight:600;">${esc(label)}</button>`;
+
+    const totalEcartsMad = filtered.reduce((acc, c) => acc + (c.totalVarianceCostMAD || 0), 0);
+    const totalAbsEcartsMad = filtered.reduce((acc, c) => acc + (c.absVarianceCostMAD || 0), 0);
+    const pendingCount = allCounts.filter(c => c.status === 'submitted').length;
+
+    return `
+      <div class="st-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;gap:6px;">
+            ${tabBtn('list', 'Liste des inventaires')}
+            ${tabBtn('rollup', 'Écarts récurrents (Analyse)')}
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="st-btn secondary" type="button" data-action="stock-export-counts-csv" style="display:flex;align-items:center;gap:6px;">
+              ${svg('download', 14)}<span>Exporter CSV</span>
+            </button>
+            <button class="st-btn primary" type="button" data-action="stock-physical-count">
+              ${svg('plus', 14)}<span>Nouvel inventaire</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="st-toolbar" style="margin-bottom:16px;">
+          <div class="st-search-row">
+            <div class="st-search-wrap">
+              ${svg('search', 16)}
+              <input class="st-search" type="text" placeholder="Chercher un inventaire, employé, magasin…" value="${esc(stCountSearch)}" data-stock-count-search aria-label="Recherche inventaires" />
+            </div>
+          </div>
+          <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%; flex-wrap:wrap;">
+            ${rangePill('aujourdhui', "Aujourd'hui")}
+            ${rangePill('7j', '7 derniers jours')}
+            ${rangePill('30j', '30 derniers jours')}
+            ${rangePill('tout', 'Tout l’historique')}
+          </div>
+          <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%; flex-wrap:wrap;">
+            ${statusPill('all', 'Tous statuts')}
+            ${statusPill('submitted', `À valider (${pendingCount})`)}
+            ${statusPill('applied', 'Validés')}
+            ${statusPill('rejected', 'Refusés')}
+          </div>
+        </div>
+
+        <div class="st-kpis" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
+          <div class="st-kpi"><div class="st-kpi-l">INVENTAIRES RÉALISÉS</div><div class="st-kpi-v">${filtered.length}</div><div class="st-kpi-sub">${pendingCount} en attente de revue</div></div>
+          <div class="st-kpi"><div class="st-kpi-l">ÉCART NET EN VALEUR</div><div class="st-kpi-v" style="color:${totalEcartsMad < 0 ? '#b91c1c' : 'var(--atlas)'};">${totalEcartsMad > 0 ? '+' : ''}${fmtMad(totalEcartsMad)}</div><div class="st-kpi-sub">Écart absolu : ${fmtMad(totalAbsEcartsMad)}</div></div>
+        </div>
+
+        ${stCountSubTab === 'rollup' ? renderCountsRollup(filtered) : `
+          <div class="st-tbl-wrap">
+            <table class="st-tbl">
+              <thead>
+                <tr>
+                  <th>Date &amp; Heure</th>
+                  <th>Réf.</th>
+                  <th>Magasin</th>
+                  <th>Employé</th>
+                  <th style="text-align:center;">Articles</th>
+                  <th style="text-align:right;">Écart net MAD</th>
+                  <th style="text-align:center;">Statut</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filtered.length ? filtered.map(c => {
+                  const d = new Date(c.submittedAt || Date.now());
+                  const dateStr = d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                  const stLabel = c.status === 'submitted' ? 'À valider' : (c.status === 'applied' || c.status === 'approved' ? 'Validé' : 'Refusé');
+                  const stClass = c.status === 'submitted' ? 'warn' : (c.status === 'applied' || c.status === 'approved' ? 'ok' : 'bad');
+                  const mad = c.totalVarianceCostMAD || 0;
+                  return `
+                    <tr>
+                      <td class="st-mono" style="font-size:12px;color:var(--n-600);white-space:nowrap;">${dateStr}</td>
+                      <td><b>${esc(c.id)}</b></td>
+                      <td>${esc(c.storeName || 'Magasin principal')}</td>
+                      <td>${esc(c.employeeName || '·')} <span style="font-size:11px;color:var(--n-500);">(${esc(c.employeeRole || '·')})</span></td>
+                      <td style="text-align:center;" class="st-mono">${c.totalLines || 0}</td>
+                      <td style="text-align:right;font-weight:600;color:${mad < 0 ? '#b91c1c' : mad > 0 ? 'var(--atlas)' : 'inherit'};" class="st-mono">
+                        ${mad > 0 ? '+' : ''}${fmtMad(mad)}
+                      </td>
+                      <td style="text-align:center;">
+                        <span class="st-badge ${stClass}" style="font-size:11px;">${esc(stLabel)}</span>
+                      </td>
+                      <td style="text-align:right;">
+                        <button class="st-btn small" type="button" data-action="stock-count-detail" data-count-id="${esc(c.id)}" style="${c.status === 'submitted' ? 'background:#059669;color:#fff;border-color:#047857;' : ''}">
+                          ${c.status === 'submitted' ? 'Examiner' : 'Détails'}
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('') : `<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--n-500);">Aucun inventaire correspondant aux filtres.</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+          <div class="st-tbl-foot">
+            ${filtered.length} inventaire${filtered.length > 1 ? 's' : ''} affiché${filtered.length > 1 ? 's' : ''}
+          </div>
+        `}
+      </div>
+    `;
+  }
+
+  function renderCountsRollup(counts) {
+    const variantMap = new Map();
+    const employeeMap = new Map();
+    const storeMap = new Map();
+
+    counts.forEach(c => {
+      const lines = Array.isArray(c.lines) ? c.lines : [];
+      lines.forEach(l => {
+        const vKey = l.variantId || l.itemId || l.key;
+        const vLabel = l.productName ? `${l.productName}${l.color ? ' · ' + l.color : ''}${l.size ? ' · ' + l.size : ''}` : (l.name || vKey);
+        const curV = variantMap.get(vKey) || { key: vKey, label: vLabel, sku: l.sku || '', countTimes: 0, absDiffSum: 0, absCostSum: 0, netDiffSum: 0, unit: l.unit || 'unité' };
+        curV.countTimes++;
+        curV.absDiffSum += Math.abs(Number(l.diff) || 0);
+        curV.absCostSum += Math.abs(Number(l.varianceCost) || 0);
+        curV.netDiffSum += Number(l.diff) || 0;
+        variantMap.set(vKey, curV);
+      });
+
+      const empKey = c.employeeId || c.employeeName || 'Inconnu';
+      const curE = employeeMap.get(empKey) || { id: empKey, name: c.employeeName || empKey, countTimes: 0, absCostSum: 0, netCostSum: 0 };
+      curE.countTimes++;
+      curE.absCostSum += Number(c.absVarianceCostMAD) || Math.abs(Number(c.totalVarianceCostMAD) || 0);
+      curE.netCostSum += Number(c.totalVarianceCostMAD) || 0;
+      employeeMap.set(empKey, curE);
+
+      const stKey = c.storeId || c.storeName || 'Principal';
+      const curS = storeMap.get(stKey) || { id: stKey, name: c.storeName || stKey, countTimes: 0, absCostSum: 0, netCostSum: 0 };
+      curS.countTimes++;
+      curS.absCostSum += Number(c.absVarianceCostMAD) || Math.abs(Number(c.totalVarianceCostMAD) || 0);
+      curS.netCostSum += Number(c.totalVarianceCostMAD) || 0;
+      storeMap.set(stKey, curS);
+    });
+
+    const topVariants = Array.from(variantMap.values()).sort((a, b) => b.absCostSum - a.absCostSum).slice(0, 15);
+    const topEmployees = Array.from(employeeMap.values()).sort((a, b) => b.absCostSum - a.absCostSum).slice(0, 8);
+    const stores = Array.from(storeMap.values());
+
+    return `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:16px;">
+        <div style="background:var(--paper);border:1px solid var(--n-200);border-radius:14px;padding:16px;">
+          <h4 style="margin:0 0 12px;font-size:15px;">Articles &amp; déclinaisons aux plus forts écarts</h4>
+          <div class="st-tbl-wrap">
+            <table class="st-tbl" style="font-size:12.5px;">
+              <thead><tr><th>Article</th><th>Comptages</th><th style="text-align:right;">Écart cumulé</th><th style="text-align:right;">Impact MAD</th></tr></thead>
+              <tbody>
+                ${topVariants.length ? topVariants.map(v => `
+                  <tr>
+                    <td><b>${esc(v.label)}</b>${v.sku ? `<div style="font-size:11px;color:var(--n-500);">Réf: ${esc(v.sku)}</div>` : ''}</td>
+                    <td class="st-mono">${v.countTimes}</td>
+                    <td style="text-align:right;" class="st-mono">${v.netDiffSum > 0 ? '+' : ''}${Math.round(v.netDiffSum * 10) / 10} ${esc(v.unit)}</td>
+                    <td style="text-align:right;font-weight:600;color:#b91c1c;" class="st-mono">${fmtMad(v.absCostSum)}</td>
+                  </tr>
+                `).join('') : `<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--n-500);">Aucun écart détecté.</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="display:grid;gap:16px;">
+          <div style="background:var(--paper);border:1px solid var(--n-200);border-radius:14px;padding:16px;">
+            <h4 style="margin:0 0 12px;font-size:15px;">Écarts par employé</h4>
+            <div class="st-tbl-wrap">
+              <table class="st-tbl" style="font-size:12.5px;">
+                <thead><tr><th>Employé</th><th>Inventaires</th><th style="text-align:right;">Écart absolu cumulé</th></tr></thead>
+                <tbody>
+                  ${topEmployees.length ? topEmployees.map(e => `
+                    <tr>
+                      <td><b>${esc(e.name)}</b></td>
+                      <td class="st-mono">${e.countTimes}</td>
+                      <td style="text-align:right;font-weight:600;" class="st-mono">${fmtMad(e.absCostSum)}</td>
+                    </tr>
+                  `).join('') : `<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--n-500);">Aucun comptage.</td></tr>`}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style="background:var(--paper);border:1px solid var(--n-200);border-radius:14px;padding:16px;">
+            <h4 style="margin:0 0 12px;font-size:15px;">Synthèse par établissement</h4>
+            <div class="st-tbl-wrap">
+              <table class="st-tbl" style="font-size:12.5px;">
+                <thead><tr><th>Établissement</th><th>Inventaires</th><th style="text-align:right;">Écart net</th><th style="text-align:right;">Écart absolu</th></tr></thead>
+                <tbody>
+                  ${stores.length ? stores.map(s => `
+                    <tr>
+                      <td><b>${esc(s.name)}</b></td>
+                      <td class="st-mono">${s.countTimes}</td>
+                      <td style="text-align:right;" class="st-mono">${s.netCostSum > 0 ? '+' : ''}${fmtMad(s.netCostSum)}</td>
+                      <td style="text-align:right;font-weight:600;" class="st-mono">${fmtMad(s.absCostSum)}</td>
+                    </tr>
+                  `).join('') : `<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--n-500);">Aucun comptage.</td></tr>`}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function openCountDetailModal(countId) {
+    if (!countId) return;
+    let count = getAllCounts().find(c => c.id === countId);
+    
+    // Fetch full frozen details from server if missing lines
+    if (!count || !count.lines || !count.lines.length) {
+      try {
+        const resp = await fetch(`/api/inventory/counts?id=${encodeURIComponent(countId)}`);
+        const data = await resp.json();
+        if (data && data.count) count = data.count;
+      } catch (_) {}
+    }
+
+    if (!count) {
+      window.Kiwi?.toast?.('Inventaire introuvable', { type: 'warn' });
+      return;
+    }
+
+    const lines = Array.isArray(count.lines) ? count.lines : [];
+    const submittedDate = new Date(count.submittedAt || Date.now());
+    const submittedStr = submittedDate.toLocaleDateString('fr-FR') + ' à ' + submittedDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const isSubmitted = count.status === 'submitted';
+    const isApproved = count.status === 'applied' || count.status === 'approved';
+    const isRejected = count.status === 'rejected';
+
+    const modal = window.Kiwi.modal({
+      title: `Inventaire #${count.id}`,
+      desc: `${count.storeName || 'Magasin principal'} · Soumis par ${count.employeeName || 'Employé'} le ${submittedStr}`,
+      width: 820,
+      body: `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="st-badge ${isSubmitted ? 'warn' : isApproved ? 'ok' : 'bad'}" style="font-size:13px;padding:4px 10px;">
+              ${isSubmitted ? 'À valider par le propriétaire' : isApproved ? 'Validé & appliqué' : 'Refusé'}
+            </span>
+            <span style="font-size:13px;color:var(--n-600);">${lines.length} article${lines.length > 1 ? 's' : ''} compté${lines.length > 1 ? 's' : ''}</span>
+          </div>
+          <div style="font-size:14px;">
+            Écart total en valeur : <b style="color:${(count.totalVarianceCostMAD || 0) < 0 ? '#b91c1c' : (count.totalVarianceCostMAD || 0) > 0 ? 'var(--atlas)' : 'inherit'};">${(count.totalVarianceCostMAD || 0) > 0 ? '+' : ''}${fmtMad(count.totalVarianceCostMAD || 0)}</b>
+          </div>
+        </div>
+
+        ${count.reviewNote ? `
+          <div class="st-notice ${isApproved ? 'ok' : 'warn'}" style="margin-bottom:14px;">
+            ${svg(isApproved ? 'checkCircle' : 'alertTriangle', 14)}
+            <div><b>Note de revue :</b> ${esc(count.reviewNote)} ${count.reviewerName ? `<span style="font-size:11px;color:var(--n-500);">(par ${esc(count.reviewerName)})</span>` : ''}</div>
+          </div>
+        ` : ''}
+
+        <div class="st-tbl-wrap" style="max-height:360px;overflow-y:auto;border:1px solid var(--n-200);border-radius:12px;margin-bottom:16px;">
+          <table class="st-tbl" style="font-size:12.5px;">
+            <thead>
+              <tr>
+                <th>Article &amp; Déclinaison</th>
+                <th style="text-align:right;">Stock avant</th>
+                <th style="text-align:right;">Compté</th>
+                <th style="text-align:right;">Écart</th>
+                <th style="text-align:right;">Valeur MAD</th>
+                <th>Remarque</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${lines.length ? lines.map(l => {
+                const label = l.productName ? `${l.productName}${l.color ? ' · ' + l.color : ''}${l.size ? ' · ' + l.size : ''}` : (l.name || l.itemId);
+                const diff = Number(l.diff) || 0;
+                const cost = Number(l.varianceCost) || 0;
+                const diffColor = diff < 0 ? '#b91c1c' : diff > 0 ? 'var(--atlas)' : 'inherit';
+                return `
+                  <tr>
+                    <td>
+                      <b>${esc(label)}</b>
+                      ${l.sku ? `<div style="font-size:11px;color:var(--n-500);">Réf: ${esc(l.sku)}</div>` : ''}
+                    </td>
+                    <td style="text-align:right;" class="st-mono">${l.systemQty} ${esc(l.unit)}</td>
+                    <td style="text-align:right;font-weight:700;" class="st-mono">${l.countedQty} ${esc(l.unit)}</td>
+                    <td style="text-align:right;font-weight:600;color:${diffColor};" class="st-mono">${diff > 0 ? '+' : ''}${diff} ${esc(l.unit)}</td>
+                    <td style="text-align:right;font-weight:600;color:${diffColor};" class="st-mono">${cost > 0 ? '+' : ''}${fmtMad(cost)}</td>
+                    <td style="color:var(--n-600);font-size:11.5px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.explanation || l.note || '')}">
+                      ${esc(l.explanation || l.note || '·')}
+                    </td>
+                  </tr>
+                `;
+              }).join('') : `<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--n-500);">Aucune ligne enregistrée.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+
+        ${isSubmitted ? `
+          <div style="background:var(--paper-soft);border:1px solid var(--n-200);border-radius:12px;padding:12px;margin-bottom:12px;">
+            <label style="font-size:12px;font-weight:600;color:var(--n-600);display:block;margin-bottom:4px;">Note ou commentaire de décision (optionnel)</label>
+            <input class="st-search" id="st-cnt-review-note" placeholder="Justification de la décision…" style="width:100%;">
+          </div>
+        ` : ''}
+      `,
+      foot: `
+        <button class="st-btn" data-dismiss-modal>Fermer</button>
+        ${isSubmitted ? `
+          <button class="st-btn" id="st-cnt-reject-btn" style="color:#b91c1c;border-color:rgba(185,28,28,0.3);">Refuser l'inventaire</button>
+          <button class="st-btn primary" id="st-cnt-approve-btn" style="background:#059669;border-color:#047857;">Valider et appliquer le stock</button>
+        ` : ''}
+      `
+    });
+
+    const scope = modal?.el || topBackdrop();
+    wireDismiss(scope);
+
+    scope?.querySelector('#st-cnt-approve-btn')?.addEventListener('click', () => {
+      const note = scope?.querySelector('#st-cnt-review-note')?.value || '';
+      reviewCount(count.id, 'approved', note);
+    });
+
+    scope?.querySelector('#st-cnt-reject-btn')?.addEventListener('click', () => {
+      const note = scope?.querySelector('#st-cnt-review-note')?.value || '';
+      reviewCount(count.id, 'rejected', note);
+    });
+  }
+
+  /* Garde partagée approve/reject : un seul appui effectif à la fois. Le
+   * fanion module bloque le ré-appui pendant la requête ; les boutons portent
+   * disabled + aria-busy sur la modale pour les lecteurs d'écran et le tactile. */
+  let stReviewBusy = false;
+  function stReviewBusyTake(btns, root) {
+    if (stReviewBusy) return false;
+    stReviewBusy = true;
+    (btns || []).forEach((b) => { try { if (b) b.setAttribute('disabled', ''); } catch (_) {} });
+    try { if (root && root.setAttribute) root.setAttribute('aria-busy', 'true'); } catch (_) {}
+    return true;
+  }
+  function stReviewBusyRelease(btns, root) {
+    stReviewBusy = false;
+    (btns || []).forEach((b) => { try { if (b && b.removeAttribute) b.removeAttribute('disabled'); } catch (_) {} });
+    try { if (root && root.removeAttribute) root.removeAttribute('aria-busy'); } catch (_) {}
+  }
+
+  /* Envoi seul, sans état : construit le corps, appelle, rend le verdict brut.
+   * fetchFn injectable pour les tests (défaut : fetch global). */
+  async function stReviewCountSend({ countId, decision, note, fetchFn }) {
+    const F = fetchFn || fetch;
+    const res = await F('/api/inventory/counts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'review',
+        id: countId,
+        decision: decision,
+        reviewNote: note || '',
+        reviewerName: 'Propriétaire'
+      })
+    });
+    let data = null;
+    try { data = await res.json(); } catch (_) { data = null; }
+    return { ok: !!res.ok, status: res.status, data };
+  }
+
+  /* Décision pure : que doit faire la coquille à partir du verdict ?
+   * Jamais d'écriture ici — seulement un plan. Le serveur reste le seul
+   * écrivain des approbations réelles ; la surcouche locale (démo) rejoue
+   * le comportement historique, jamais en plus d'un succès serveur. */
+  function stReviewCountErr(send) {
+    if (!send) return 'mCountErrGeneric';
+    if (send.network) return 'mCountErrOffline';
+    const code = send.data && send.data.error;
+    if (send.status === 403 || code === 'forbidden') return 'mCountErrDenied';
+    if (send.status === 404 || code === 'not_found') return 'mCountErrGone';
+    if (send.status === 409 || code === 'catalog-conflict') return 'mCountErrConflict';
+    return 'mCountErrGeneric';
+  }
+  function stReviewCountPlan(decision, isReal, send) {
+    if (!send || !send.ok || !(send.data && send.data.success)) {
+      return { ok: false, err: stReviewCountErr(send), setStatus: null, overlay: false, close: false, sync: false };
+    }
+    const approved = decision === 'approved';
+    return {
+      ok: true, err: null,
+      setStatus: approved ? 'applied' : 'rejected',
+      overlay: !isReal && approved,
+      close: true,
+      sync: isReal && approved,
+    };
+  }
+
+  async function reviewCount(countId, decision, note) {
+    if (!countId) return;
+    const scope = topBackdrop() || document;
+    const approveBtn = scope.querySelector('#st-cnt-approve-btn');
+    const rejectBtn = scope.querySelector('#st-cnt-reject-btn');
+    if (!stReviewBusyTake([approveBtn, rejectBtn], scope)) return;
+    const release = () => stReviewBusyRelease([approveBtn, rejectBtn], scope);
+    try {
+      const count = getAllCounts().find(c => c.id === countId);
+      // Idempotence locale : un compte déjà tranché ne repasse jamais —
+      // couvre le second clic mis en file après fermeture (boutons détachés
+      // mais écouteurs vivants). Seul un échec (jamais muté) peut rejouer.
+      if (count && count.reviewDecision && (count.status === 'applied' || count.status === 'rejected')) {
+        release();
+        return;
+      }
+      let real = false;
+      try { real = stShowReal(); } catch (_) { real = false; }
+      let send;
+      if (!real) {
+        // Démo / hors-ligne local : pas d'appel serveur, comportement
+        // historique (surcouche locale), jamais présenté comme une écriture.
+        send = { ok: true, status: 200, data: { success: true, demo: true } };
+      } else {
+        try {
+          send = await stReviewCountSend({ countId, decision, note });
+        } catch (_) {
+          send = { ok: false, network: true };
+        }
+      }
+      const plan = stReviewCountPlan(decision, real, send);
+      if (!plan.ok) {
+        window.Kiwi?.toast?.(t(plan.err), { type: 'error' });
+        release();
+        return; // modale ouverte, contrôles réactivés, RIEN d'appliqué
+      }
+
+      if (count) {
+        count.status = plan.setStatus;
+        count.reviewDecision = decision;
+        count.reviewedAt = Date.now();
+        count.reviewerName = 'Propriétaire';
+        count.reviewNote = note || '';
+        if (decision === 'approved') count.appliedAt = Date.now();
+      }
+
+      // Surcouche locale : démo uniquement, jamais après un succès serveur.
+      if (plan.overlay && count && Array.isArray(count.lines)) {
+        count.lines.forEach(l => {
+          if (l.diff) {
+            moveStock({ id: l.itemId, costPerUnit: l.unitCost }, l.diff, 'count', 'count', countId,
+              l.explanation || 'Inventaire physique validé', null,
+              { locationId: l.locationId || stockLocationId(), unitId: count.storeId || '' });
+          }
+        });
+        stSaveOverlay();
+      }
+
+      if (decision === 'approved') {
+        try {
+          if (window.KiwiBoutiqueCatalog?.sync) window.KiwiBoutiqueCatalog.sync();
+        } catch (_) {}
+      }
+      if (plan.sync) {
+        // Succès réel : on tire l'état faisant foi, on ne reposte rien.
+        try { await window.KiwiInventory?.sync?.(); } catch (_) {}
+      }
+
+      try { closeTopModal(); } catch (_) {}
+      release();
+      window.Kiwi?.toast?.(decision === 'approved' ? 'Inventaire validé · stock mis à jour' : 'Inventaire refusé', { type: decision === 'approved' ? 'success' : 'info' });
+      if (stPageActive) render();
+    } catch (_) {
+      release();
+      try { window.Kiwi?.toast?.(t('mCountErrGeneric'), { type: 'error' }); } catch (_) {}
+    }
+  }
+
+  function exportCountsCsv() {
+    const counts = filterCounts(getAllCounts());
+    function csvSafe(v) {
+      let s = String(v == null ? '' : v);
+      if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    const header = ['ID_Inventaire', 'Date', 'Magasin', 'Employe', 'Role', 'Statut', 'Nb_Lignes', 'Ecart_Net_MAD', 'Ecart_Abs_MAD', 'Validateur', 'Decision', 'Note_Revue'];
+    const lines = [header.join(';')];
+    counts.forEach(c => {
+      const d = new Date(c.submittedAt || Date.now()).toISOString().slice(0, 19).replace('T', ' ');
+      lines.push([
+        csvSafe(c.id),
+        d,
+        csvSafe(c.storeName || 'Principal'),
+        csvSafe(c.employeeName || '·'),
+        csvSafe(c.employeeRole || '·'),
+        csvSafe(c.status),
+        c.totalLines || 0,
+        (c.totalVarianceCostMAD || 0).toFixed(2),
+        (c.absVarianceCostMAD || 0).toFixed(2),
+        csvSafe(c.reviewerName || '·'),
+        csvSafe(c.reviewDecision || '·'),
+        csvSafe(c.reviewNote || '·')
+      ].join(';'));
+    });
+    const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `historique-inventaires-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+  }
+
   function renderItems() {
+    const subNav = `
+      <div class="st-item-subtabs" style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--n-200);padding-bottom:10px;">
+        <button class="st-cat-pill${stItemSubView === 'catalog' ? ' on' : ''}" type="button" data-action="stock-subview" data-subview="catalog" style="font-weight:600;">Catalogue des articles</button>
+        <button class="st-cat-pill${stItemSubView === 'waste' ? ' on' : ''}" type="button" data-action="stock-subview" data-subview="waste" style="font-weight:600;">Journal des pertes</button>
+        <button class="st-cat-pill${stItemSubView === 'counts' ? ' on' : ''}" type="button" data-action="stock-subview" data-subview="counts" style="font-weight:600;">Historique des inventaires</button>
+      </div>
+    `;
+
+    if (stItemSubView === 'waste') {
+      return `<div class="st-section">${subNav}${renderWasteJournal()}</div>`;
+    }
+    if (stItemSubView === 'counts') {
+      return `<div class="st-section">${subNav}${typeof renderCountsHistory === 'function' ? renderCountsHistory() : '<div style="padding:20px;">Chargement de l\'historique…</div>'}</div>`;
+    }
+
     const items = getInv();
     const filteredAll = filterItems(items);
     const sorted = sortItems(filteredAll);
@@ -1333,6 +3167,7 @@
     };
     return `
       <div class="st-section">
+        ${subNav}
         ${renderToolbar()}
         ${stItemView === 'list' ? renderItemTable(sorted) : renderItemCardGrid(sorted)}
         <div class="st-tbl-foot">
@@ -1362,6 +3197,8 @@
         <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%; flex-wrap:wrap;">
           ${catPill('all', t('catAll'))}
           ${cats.map(c => catPill(c.id, c.label)).join('')}
+          ${stCatFilter !== 'all' && cats.some(c => c.id === stCatFilter)
+            ? `<button class="st-cat-pill" type="button" data-action="stock-manage-cat" data-cat="${esc(stCatFilter)}" title="${esc(t('manageCatTitle'))}" aria-label="${esc(t('manageCatTitle'))}">${svg('edit', 12)}<span>${esc(t('manageCatTitle'))}</span></button>` : ''}
           <button class="st-cat-pill" type="button" data-action="stock-add-cat" title="${esc(t('addCatPillTitle'))}" aria-label="${esc(t('addCatPillTitle'))}" style="font-weight:700;">+</button>
         </div>
         <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%;">
@@ -1435,7 +3272,7 @@
             </tr>
           </thead>
           <tbody>
-            ${items.map(renderItemRow).join('')}
+            ${items.length === 0 ? '<tr><td colspan="10" style="padding:44px 20px;text-align:center;"><div style="display:flex;flex-direction:column;align-items:center;"><div style="width:44px;height:44px;border-radius:12px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:12px;"><svg width="22" height="22" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600;font-size:14.5px;color:var(--ink);margin-bottom:4px;">' + esc(t('noMatch') || 'Aucun article ne correspond aux filtres.') + '</div></div></td></tr>' : items.map(renderItemRow).join('')}
           </tbody>
         </table>
       </div>
@@ -1451,12 +3288,13 @@
     const varCls = varAbs <= 5 ? 'ok' : varAbs <= 15 ? 'warn' : 'bad';
     const varIco = v > 1 ? 'trendingUp' : v < -1 ? 'trendingDown' : 'minus';
     const days = daysOfStock(it);
-    const daysShown = days >= 999 ? '—' : Math.round(days);
+    const daysShown = days >= 999 ? '·' : Math.round(days);
     const daysCls = days >= 7 ? 'ok' : days >= 3 ? 'warn' : days >= 1 ? 'bad' : 'crit';
     const st = statusOf(it);
     const stLabel = st === 'ok' ? t('stOk') : st === 'low' ? t('stLow') : t('stOut');
     const valueCell = fmtMad(cur * it.costPerUnit);
-    const varCostMad = fmtMad(Math.abs(v) / 100 * it.theoreticalUsage * it.costPerUnit);
+    const theoretical = theoreticalUsageFor(it);
+    const varCostMad = fmtMad(Math.abs(v) / 100 * theoretical * it.costPerUnit);
     return `
       <tr class="st-row-in">
         <td>
@@ -1474,15 +3312,15 @@
         </td>
         <td>
           <span class="st-cell-var ${varCls}">${svg(varIco, 12)}${esc(fmtPct(v))}
-            <span class="st-tt">${esc(t('varTip', fmtUnit(it.usageThisWeek, it.unit), fmtUnit(it.theoreticalUsage, it.unit), varCostMad))}</span>
+            <span class="st-tt">${esc(t('varTip', fmtUnit(it.usageThisWeek, it.unit), fmtUnit(theoretical, it.unit), varCostMad))}</span>
           </span>
         </td>
         <td class="r"><span class="st-cell-value">${esc(valueCell)}</span></td>
         <td>
           <div class="st-cell-sup">${esc(it.supplier.split(' · ')[0])}</div>
-          <div class="st-cell-sup-sub">${esc(fmtDateShort(it.lastDelivery))}</div>
+          <div class="st-cell-sup-sub">${esc(actualLastDelivery(it) ? fmtDateShort(actualLastDelivery(it)) : '·')}</div>
         </td>
-        <td class="c"><span class="st-cell-days ${daysCls}">${esc(daysShown === '—' ? '—' : `${daysShown} j`)}</span></td>
+        <td class="c"><span class="st-cell-days ${daysCls}">${esc(daysShown === '·' ? '·' : `${daysShown} j`)}</span></td>
         <td><span class="st-cell-status ${st}"><span class="sd"></span>${esc(stLabel)}</span></td>
         <td class="r">
           <div class="st-actions">
@@ -1525,6 +3363,101 @@
   /* ═══════════════════════════════════════════════════════════════════════
    * TAB 3 · Fournisseurs
    * ═══════════════════════════════════════════════════════════════════════ */
+  function computeRealSupplierPriceChanges() {
+    if (!window.KiwiInventory || !window.KiwiInventory.history) return [];
+    const raw = stOverlayRaw();
+    const subList = Array.isArray(raw.subcategories) ? raw.subcategories : [];
+    const changes = [];
+    
+    subList.forEach(sub => {
+      const hist = (window.KiwiInventory.history(sub.id) || []).filter(m => m.reason === 'receipt' && m.unitCost != null);
+      if (!hist.length) return;
+      
+      const bySup = new Map();
+      hist.forEach(m => {
+        const supName = (m.meta && m.meta.supplierName) || (m.meta && m.meta.supplierId) || 'Fournisseur';
+        if (!bySup.has(supName)) bySup.set(supName, []);
+        bySup.get(supName).push(m);
+      });
+
+      bySup.forEach((mList, supName) => {
+        mList.sort((a, b) => (+b.occurredTs || 0) - (+a.occurredTs || 0));
+        const latest = mList[0];
+        const prev = mList[1] || null;
+        if (!prev) return;
+        const pLast = latest.unitCost;
+        const pPrev = prev.unitCost;
+        if (pLast != null && pPrev != null && pLast !== pPrev) {
+          const delta = Math.round((pLast - pPrev) * 100) / 100;
+          const pct = Math.round(((delta) / pPrev) * 1000) / 10;
+          
+          const impactedRecipes = [];
+          try {
+            const costDoc = window.KiwiCost && window.KiwiCost.doc ? window.KiwiCost.doc() : (window.KiwiCost && window.KiwiCost.store ? window.KiwiCost.store.get(stOverlayScope()) : null);
+            const recipes = (costDoc && costDoc.recipes) || (window.KiwiRestaurantRecipes && window.KiwiRestaurantRecipes.getAll ? window.KiwiRestaurantRecipes.getAll() : {});
+            Object.entries(recipes).forEach(([rId, rec]) => {
+              if (!rec || !Array.isArray(rec.ingredients)) return;
+              const line = rec.ingredients.find(ing => ing.stockId === sub.id || ing.name === sub.name);
+              if (line) {
+                const portionQty = +line.qty || 0;
+                const dishCostDelta = Math.round(portionQty * delta * 100) / 100;
+                impactedRecipes.push({
+                  id: rId,
+                  name: rec.itemName || rec.name || rId,
+                  dishCostDelta: dishCostDelta,
+                });
+              }
+            });
+          } catch (_) {}
+
+          changes.push({
+            subId: sub.id,
+            subName: sub.name,
+            unit: sub.unit,
+            supplierName: supName,
+            pLast: pLast,
+            pPrev: pPrev,
+            delta: delta,
+            pct: pct,
+            date: latest.occurredTs || Date.now(),
+            impactedRecipes: impactedRecipes,
+          });
+        }
+      });
+    });
+
+    return changes;
+  }
+
+  function renderRealSupplierPriceChanges() {
+    const changes = computeRealSupplierPriceChanges();
+    if (!changes.length) {
+      return `
+        <div class="st-ai" style="margin-top:16px;">
+          <div class="st-ai-t">Évolution des tarifs fournisseurs</div>
+          <div class="st-ai-b">Tous les tarifs facturés lors des dernières réceptions sont stables. Kiwi analyse automatiquement l'historique des bons de livraison pour détecter les variations de prix.</div>
+        </div>
+      `;
+    }
+    return changes.map(ch => {
+      const isUp = ch.delta > 0;
+      const recipesText = ch.impactedRecipes.length > 0
+        ? ` · Impact sur ${ch.impactedRecipes.length} recette${ch.impactedRecipes.length > 1 ? 's' : ''} (ex: ${esc(ch.impactedRecipes[0].name)} ${isUp ? '+' : ''}${fmtMad(ch.impactedRecipes[0].dishCostDelta)}/portion)`
+        : '';
+      return `
+        <div class="st-ai ${isUp ? 'warn' : 'ok'}" style="margin-top:14px;">
+          <div class="st-ai-t" style="display:flex; align-items:center; gap:6px;">
+            ${svg(isUp ? 'trendingUp' : 'trendingDown', 14)}
+            <span>${esc(ch.supplierName)} : variation de tarif sur ${esc(ch.subName)} (${isUp ? '+' : ''}${fmtPct(ch.pct, 1)})</span>
+          </div>
+          <div class="st-ai-b">
+            Passage de <b>${esc(fmtMad(ch.pPrev))}</b> à <b>${esc(fmtMad(ch.pLast))}</b> / ${esc(ch.unit)}${recipesText}.
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
   function renderSuppliers() {
     const sup = getSup();
     const totalSpend = sup.reduce((s, x) => s + x.monthlySpend, 0);
@@ -1564,7 +3497,7 @@
         </div>
       </div>
 
-      ${stShowReal() ? '' : renderAiCard(t('aiPriceUpT'), t('aiPriceUpB'), t('aiPriceUpA'))}
+      ${stShowReal() ? renderRealSupplierPriceChanges() : renderAiCard(t('aiPriceUpT'), t('aiPriceUpB'), t('aiPriceUpA'))}
     `;
   }
 
@@ -1574,7 +3507,10 @@
     const priceIco = pcl > 1 ? 'trendingUp' : pcl < -1 ? 'trendingDown' : 'minus';
     const priceLabel = pcl === 0 ? t('priceStable') : fmtPct(pcl, 1);
     const risePill = pcl > 5 ? `<span class="st-sup-rise-pill">${esc(t('priceUp'))}</span>` : '';
-    const stars = Math.round(s.rating);
+    const rateVal = (s.rating != null && !isNaN(s.rating) && s.rating !== '') ? Number(s.rating) : null;
+    const rateHtml = rateVal != null
+      ? `<span class="st-sup-rate"><span class="st">${'★'.repeat(Math.round(rateVal))}</span>${esc(rateVal.toFixed(1))}</span>`
+      : `<span class="st-sup-rate muted" style="color:var(--n-500);">·</span>`;
     return `
       <tr>
         <td>
@@ -1589,11 +3525,11 @@
           <div class="st-sup-deliv">${esc(s.deliverySchedule)}</div>
           <div class="st-sup-deliv-sub">${esc(s.paymentTerms)}</div>
         </td>
-        <td><span class="st-sup-rate"><span class="st">${'★'.repeat(stars)}</span>${esc(s.rating.toFixed(1))}</span></td>
+        <td>${rateHtml}</td>
         <td class="r">
           <div class="st-actions">
-            <button class="st-icon-btn" type="button" data-action="stock-call-supplier" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}" title="${esc(t('mSupCall'))}" aria-label="${esc(t('mSupCall'))}">${svg('phone', 14)}</button>
-            <button class="st-icon-btn" type="button" data-action="stock-wa-supplier" data-name="${esc(s.name)}" title="${esc(t('mSupWa'))}" aria-label="${esc(t('mSupWa'))}">${svg('messageCircle', 14)}</button>
+            <button class="st-icon-btn" type="button" data-action="stock-call-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}" title="${esc(t('mSupCall'))}" aria-label="${esc(t('mSupCall'))}">${svg('phone', 14)}</button>
+            <button class="st-icon-btn" type="button" data-action="stock-wa-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}" title="${esc(t('mSupWa'))}" aria-label="${esc(t('mSupWa'))}">${svg('messageCircle', 14)}</button>
             <button class="st-icon-btn" type="button" data-action="stock-supplier-detail" data-supplier-id="${esc(s.id)}" title="${esc(t('btnDetail'))}" aria-label="${esc(t('btnDetail'))}">${svg('eye', 14)}</button>
             <button class="st-icon-btn" type="button" data-action="stock-edit-supplier" data-supplier-id="${esc(s.id)}" title="${esc(t('titleEdit'))}" aria-label="${esc(t('titleEdit'))}">${svg('edit', 14)}</button>
             <button class="st-icon-btn" type="button" data-action="stock-new-po" data-supplier-id="${esc(s.id)}" title="${esc(t('mSupOrd'))}" aria-label="${esc(t('mSupOrd'))}">${svg('plus', 14)}</button>
@@ -2006,54 +3942,1052 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
+   * EXTRACTION & MATCHING FACTURES FOURNISSEUR
+   * ═══════════════════════════════════════════════════════════════════════ */
+  function normalizeMatchStr(s) {
+    return String(s || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function tokenizeMatchStr(s) {
+    return normalizeMatchStr(s).split(' ').filter((w) => w.length >= 2);
+  }
+
+  function tokenOverlapScore(a, b) {
+    const setA = new Set(tokenizeMatchStr(a));
+    const setB = new Set(tokenizeMatchStr(b));
+    if (!setA.size || !setB.size) return 0;
+    let inter = 0;
+    for (const t of setA) {
+      if (setB.has(t)) inter++;
+    }
+    return inter / Math.max(setA.size, setB.size);
+  }
+
+  function matchInvoiceLines(lines, items) {
+    const allItems = Array.isArray(items) ? items : [];
+    return (lines || []).map((line) => {
+      if (!line) return { itemId: null, confidence: 0 };
+
+      // 1. EAN / Code-barres
+      if (line.ean) {
+        const eanHit = allItems.find((it) => it.barcode === line.ean || it.ean === line.ean);
+        if (eanHit) return { itemId: eanHit.id, confidence: 1.0 };
+      }
+
+      // 2. Ref / SKU sur la carte fournisseur ou sur l'article
+      if (line.ref) {
+        const refHit = allItems.find((it) => {
+          if (it.sku === line.ref) return true;
+          const cards = Array.isArray(it.suppliers) ? it.suppliers : [];
+          return cards.some((c) => c.ref === line.ref);
+        });
+        if (refHit) return { itemId: refHit.id, confidence: 0.95 };
+      }
+
+      // 3. Correspondance exacte du nom normalisé
+      const normLabel = normalizeMatchStr(line.label);
+      if (normLabel) {
+        const exactHit = allItems.find((it) => normalizeMatchStr(it.name) === normLabel);
+        if (exactHit) return { itemId: exactHit.id, confidence: 0.9 };
+      }
+
+      // 4. Chevauchement de jetons (seuil >= 0.6)
+      let bestHit = null;
+      let bestScore = 0;
+      for (const it of allItems) {
+        const score = tokenOverlapScore(line.label, it.name);
+        if (score > bestScore) {
+          bestScore = score;
+          bestHit = it;
+        }
+      }
+      if (bestScore >= 0.6 && bestHit) {
+        return { itemId: bestHit.id, confidence: Math.round(bestScore * 100) / 100 };
+      }
+
+      return { itemId: null, confidence: 0 };
+    });
+  }
+
+  function compareLineCost(item, invoicedCost, supplierName) {
+    const invCostNum = Math.max(0, Number(invoicedCost) || 0);
+    if (!item) {
+      return {
+        currentCost: 0,
+        invoicedPerUnit: invCostNum,
+        pct: 0,
+        isRise: false,
+        isDrop: false,
+        isChecked: invCostNum > 0,
+        factor: 1,
+        card: null,
+      };
+    }
+
+    const cards = Array.isArray(item.suppliers) ? item.suppliers : [];
+    let card = null;
+    if (supplierName) {
+      card = cards.find((c) => String(c.supplierName || '').trim().toLowerCase() === String(supplierName).trim().toLowerCase());
+    }
+    if (!card) card = cards[0] || null;
+
+    const factor = (card && Number.isFinite(+card.factor) && +card.factor > 0) ? +card.factor : 1;
+    const current = (card && card.defaultPrice != null && Number.isFinite(+card.defaultPrice))
+      ? +card.defaultPrice
+      : (Number.isFinite(+item.costPerUnit) ? +item.costPerUnit : 0);
+
+    // Facture en unité d'achat ramenée à l'unité de la carte
+    const invoicedPerUnit = Math.round((invCostNum / factor) * 10000) / 10000;
+
+    if (current <= 0) {
+      return {
+        currentCost: current,
+        invoicedPerUnit,
+        pct: 0,
+        isRise: false,
+        isDrop: false,
+        isChecked: invoicedPerUnit > 0,
+        factor,
+        card,
+      };
+    }
+
+    const diff = invoicedPerUnit - current;
+    const pct = Math.round((diff / current) * 100);
+    const isRise = diff > 0.001;
+    const isDrop = diff < -0.001;
+    const isChecked = isRise; // Coché par défaut uniquement en cas de hausse réelle
+
+    return {
+      currentCost: current,
+      invoicedPerUnit,
+      pct,
+      isRise,
+      isDrop,
+      isChecked,
+      factor,
+      card,
+    };
+  }
+
+  let _pdfjsPromise = null;
+  function loadPdfJs() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return Promise.reject(new Error('no-dom'));
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    if (_pdfjsPromise) return _pdfjsPromise;
+    _pdfjsPromise = new Promise((resolve, reject) => {
+      if (typeof document.createElement !== 'function') {
+        return resolve(window.pdfjsLib || null);
+      }
+      const script = document.createElement('script');
+      script.src = 'assets/vendor/pdfjs/pdf.min.js';
+      script.onload = () => {
+        if (window.pdfjsLib) {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdfjs/pdf.worker.min.js';
+          resolve(window.pdfjsLib);
+        } else {
+          resolve(null);
+        }
+      };
+      script.onerror = () => reject(new Error('Erreur de chargement pdf.js'));
+      const target = document.head || document.body || document.documentElement;
+      if (target && target.appendChild) target.appendChild(script);
+      else resolve(null);
+    });
+    return _pdfjsPromise;
+  }
+
+  async function extractPdfText(file) {
+    const pdfjs = await loadPdfJs();
+    const ab = await file.arrayBuffer();
+    const loadingTask = pdfjs.getDocument({ data: ab, isEvalSupported: false });
+    const pdf = await loadingTask.promise;
+    const maxPages = Math.min(pdf.numPages, 10);
+    let fullText = '';
+    for (let i = 1; i <= maxPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const strings = (content.items || []).map((it) => it.str);
+      fullText += strings.join(' ') + '\n';
+    }
+    return fullText.trim();
+  }
+
+  /* ── Guichet unique, slice 1 (facture PDF) — derrière fanion ────────────
+   * Fanion : ?intake=1 ou localStorage kiwiIntake1=1. Éteint = comportement
+   * historique à l'octet près. Le pré-filtre identité tourne sur le texte
+   * pdf.js AVANT tout upload et tout appel modèle (sign-off : pré-filtre
+   * exigé avant expédition) ; l'empreinte SHA-256 est l'identifiant du
+   * document (re-dépôt = même id, jamais de doublon silencieux). */
+
+  /* Entretien des cartes fournisseur d'un article (surcouche locale).
+   * Convergent : retrouver une carte existante par nom, sinon créer avec un
+   * id fourni (déterministe sur le chemin guichet) ou historique sinon.
+   * Ne poste JAMAIS de mouvement — le propriétaire des mouvements est
+   * l'appelant. Extraite du flux de confirmation, comportement identique. */
+  function stUpsertSupplierCard(it, supplier, line, forcedId) {
+    let supRank = 1;
+    let supId = forcedId || ('sup-' + Date.now().toString(36));
+    if (!stShowReal()) return { supId, supRank };
+    const ov = stItemOverrides[it.id] || {};
+    const cards = Array.isArray(it.suppliers) ? it.suppliers.slice() : [];
+    let existing = cards.find((s) => String(s.supplierName || '').trim().toLowerCase() === String(supplier).toLowerCase());
+
+    if (!existing) {
+      supRank = cards.length + 1;
+      existing = {
+        id: supId,
+        supplierName: supplier,
+        defaultPrice: line.cost || +it.costPerUnit || 0,
+        purchaseUnit: it.unit || 'unité',
+        factor: 1,
+        rank: supRank,
+      };
+      if (line.updateCost) {
+        cards.push(existing);
+      }
+    } else {
+      supId = existing.id;
+      supRank = existing.rank || 1;
+      // MISE À JOUR DE defaultPrice SEULEMENT SI LA CASE EST COCHÉE
+      if (line.updateCost && line.cost > 0) {
+        const factor = (Number.isFinite(+existing.factor) && +existing.factor > 0) ? +existing.factor : 1;
+        existing.defaultPrice = Math.round((line.cost / factor) * 100) / 100;
+      }
+    }
+    if (cards.length > 0) {
+      ov.suppliers = cards;
+      ov.updatedAt = Date.now();
+      stItemOverrides[it.id] = ov;
+    }
+    return { supId, supRank };
+  }
+
+  /* Empreinte du brouillon RELU, distincte du hash du PDF. L'ordre des lignes
+   * est volontairement significatif puisque les ids de mouvement portent
+   * l'index : une reprise réordonnée doit être refusée avant toute écriture,
+   * jamais mêlée silencieusement à la tentative précédente. */
+  function stIntakePostingLines(ctx) {
+    return ((ctx && ctx.lines) || []).map((l) => ({
+      itemId: String(l.itemId || '').slice(0, 80),
+      name: String(l.name || l.itemId || '').slice(0, 120),
+      qty: Math.round(Math.max(0, +(l.qty || 0)) * 1000) / 1000,
+      unit: String(l.unit || 'unité').slice(0, 24),
+      unitCost: Math.round(Math.max(0, +(l.unitCost || 0)) * 10000) / 10000,
+      updateCost: !!l.updateCost,
+      dlc: String(l.dlc || '').slice(0, 10),
+      /* Dérivés de la carte locale : nécessaires au mouvement, mais exclus de
+       * l'empreinte pour que deux appareils au cache différent ne divergent. */
+      cardSupplierId: String(l.cardSupplierId || '').slice(0, 80),
+      cardRank: Math.max(1, Math.round(+l.cardRank || 1)),
+    })).filter((l) => l.itemId && l.qty > 0);
+  }
+  function stIntakePostingCanonical(ctx) {
+    ctx = ctx || {};
+    return {
+      supplierName: String(ctx.supplierName || ''),
+      externalRef: String(ctx.externalRef || ''),
+      receivedAt: Math.max(0, Math.round(+ctx.receivedAt || 0)),
+      issuedAt: Math.max(0, Math.round(+ctx.issuedAt || 0)),
+      source: String(ctx.source || 'pdf'),
+      lines: stIntakePostingLines(ctx).map((l) => ({
+        itemId: l.itemId, name: l.name, qty: l.qty, unit: l.unit,
+        unitCost: l.unitCost, updateCost: l.updateCost, dlc: l.dlc,
+      })),
+    };
+  }
+  async function stIntakePostingFingerprint(ctx) {
+    const bytes = new TextEncoder().encode(JSON.stringify(stIntakePostingCanonical(ctx)));
+    return stSha256Hex(bytes);
+  }
+  async function stIntakePrepare(docId, postingHash, lineCount) {
+    const res = await fetch('/api/ai/intake', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchant: stIntakeMerchant(), action: 'prepare', docId, postingHash, lineCount }),
+    });
+    let data = null;
+    try { data = await res.json(); } catch (_) {}
+    if (!res.ok || !data || data.ok !== true || data.prepared !== true) {
+      throw new Error('intake-' + String((data && data.error) || ('prepare-' + res.status)));
+    }
+    return true;
+  }
+
+  /* ── Guichet unique : le SEUL propriétaire des écritures d'un dépôt ──────
+   * Reçoit des données pures (aucun DOM), écrit : ligne comptable
+   * (upsert déterministe), mouvements (ids déterministes, registre
+   * déduplique), coûts (cases à cocher), facture (upsert déterministe).
+   * Chaque couche converge : rejouer après N'IMPORTE QUELLE interruption
+   * (y compris entre deux lignes) produit exactement le même état.
+   * Dépend uniquement de window.* — exécutable en test sur le vrai code. */
+  async function stIntakePostAll(ctx) {
+    const P = window.KiwiProcurement || null;
+    const K = window.KiwiInventory || null;
+    const C = window.KiwiCost || null;
+    const docId = String((ctx && ctx.docId) || '');
+    if (!docId) throw new Error('intake-doc-required');
+    /* Sans registre, aucun mouvement ne doit partir : un K.add absent
+     * avalerait chaque ligne en silence et le document serait marqué
+     * confirmé sur du vide. */
+    if (!K || typeof K.add !== 'function') throw new Error('intake-ledger-required');
+    const owner = (typeof K.merchant === 'function') ? String(K.merchant() || '') : '';
+    if (!owner) throw new Error('intake-merchant-required');
+    const supplierName = String(ctx.supplierName || '');
+    const externalRef = String(ctx.externalRef || '');
+    const receivedAt = +ctx.receivedAt || Date.now();
+    const issuedAt = +ctx.issuedAt || receivedAt;
+
+    let supplierId = '';
+    if (P) {
+      const list = (P.doc && P.doc().suppliers) || [];
+      const norm = supplierName.trim().toLowerCase();
+      const known = list.find((s) => String((s && s.name) || '').trim().toLowerCase() === norm);
+      if (known) supplierId = known.id;
+      else if (norm) {
+        const created = P.addSupplier({ id: stIntakeSupplierId(supplierName), name: supplierName });
+        supplierId = (created && created.id) || '';
+      }
+    }
+
+    const normalizedCtx = Object.assign({}, ctx, {
+      receivedAt, issuedAt, lines: ctx.lines || [],
+    });
+    const canonical = stIntakePostingCanonical(normalizedCtx);
+    const postLines = stIntakePostingLines(normalizedCtx);
+    const cleanLines = postLines.map((l) => ({
+      itemId: l.itemId, name: l.name, qty: l.qty, unit: l.unit, unitCost: l.unitCost,
+    }));
+    if (!cleanLines.length) throw new Error('intake-lines-required');
+    const ids = await stIntakePostingIds(owner, docId, postLines.length);
+
+    /* Avant la première écriture locale, le serveur fige l'empreinte du
+     * brouillon relu. Un crash puis une nouvelle extraction/correction ne peut
+     * donc pas réutiliser les ids indexés avec un autre contenu. */
+    const postingHash = await stSha256Hex(new TextEncoder().encode(JSON.stringify(canonical)));
+    await stIntakePrepare(docId, postingHash, cleanLines.length);
+
+    let receipt = null;
+    if (P && P.receiveDirect) {
+      receipt = P.receiveDirect({
+        receiptId: ids.receiptId, supplierId, externalRef, receivedAt,
+        lines: cleanLines, skipMovements: true, skipCosts: true,
+      });
+      if (!receipt || receipt.error) throw new Error((receipt && receipt.error) || 'receipt-failed');
+    }
+
+    postLines.forEach((l, idx) => {
+      /* Acceptation vérifiée ligne par ligne : K.add rend null quand le
+       * registre refuse (pas réel, pas de marchand, ligne invalide). Un
+       * refus silencieux serait une confirmation mensongère — on lève, la
+       * reprise rejouera (ids déterministes, couches convergentes). */
+      const accepted = K.add({
+        id: ids.movementIds[idx],
+        itemId: l.itemId, qty: +l.qty, reason: 'receipt',
+        refType: 'receipt', refId: receipt ? receipt.id : ids.receiptId,
+        note: [supplierName, externalRef].filter(Boolean).join(' · '),
+        unitCost: l.unitCost, occurredTs: receivedAt,
+        meta: {
+          supplierId: l.cardSupplierId || supplierId,
+          supplierName, externalRef, receiptRef: ids.receiptId,
+          receivedAt, rank: l.cardRank || 1,
+          expiresAt: l.dlc ? new Date(l.dlc + 'T23:59:59').getTime() : null,
+        },
+      });
+      if (!accepted) throw new Error('intake-movement-rejected:' + l.itemId);
+      if (l.updateCost && +l.unitCost > 0 && C && C.setItemCost) {
+        try { C.setItemCost(l.itemId, +l.unitCost, supplierName); } catch (_) {}
+      }
+    });
+
+    /* K.add est local-first et ne constitue pas un accusé de réception D1.
+     * Sans ce sync explicite, le document pouvait être marqué confirmed puis
+     * l'onglet mourir avant que le setTimeout du registre pousse ses lignes. */
+    if (typeof K.sync !== 'function' || await K.sync() !== true) {
+      throw new Error('intake-movement-sync-required');
+    }
+
+    let invoice = null;
+    if (P && P.attachInvoice) {
+      const inv = P.attachInvoice({
+        invoiceId: ids.invoiceId, supplierId, number: externalRef,
+        issuedAt, receiptId: receipt ? receipt.id : ids.receiptId,
+        lines: cleanLines, source: String(ctx.source || 'pdf'),
+      });
+      if (inv && !inv.error) invoice = inv;
+    }
+    return { receiptId: receipt ? receipt.id : ids.receiptId, invoiceId: invoice ? invoice.id : null, movementIds: ids.movementIds };
+  }
+  function stIntakeEnabled() {
+    try {
+      if (new URLSearchParams(window.location.search).get('intake') === '1') return true;
+      return window.localStorage.getItem('kiwiIntake1') === '1';
+    } catch (_) { return false; }
+  }
+  function stIntakeIdHint(text) {
+    return /passeport|passport|carte\s+(nationale|d['’]identit)|c\.?\s*n\.?\s*i\.?\s*e\.?\b|\bcin\b|fiche\s+de\s+police|acte\s+de\s+naissance|جواز\s*السفر|بطاقة\s*(التعريف|الوطنية)| الحالة\s*المدنية/i.test(String(text || ''));
+  }
+  function stIntakeMrzZone(text) {
+    const lines = String(text || '').split(/\r?\n/);
+    for (const raw of lines) {
+      const line = raw.replace(/\s+/g, '').toUpperCase();
+      if (line.length < 30) continue;
+      if (!/^[A-Z0-9<]+$/.test(line)) continue;
+      let fillers = 0;
+      for (const ch of line) if (ch === '<') fillers++;
+      if (fillers >= 10) return true;
+    }
+    return false;
+  }
+  /* FNV-1a 32 bits → hex : empreinte courte stable pour dériver des ids
+   * déterministes (ce n'est PAS un identifiant de sécurité, cf. SHA-256
+   * côté registre). Pure, testée. */
+  function stIntakeHash(str) {
+    let h = 2166136261;
+    const s = String(str || '');
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return (h >>> 0).toString(16).padStart(8, '0');
+  }
+  /* Ids primaires d'un dépôt — contrat d'idempotence inter-marchands.
+   * `inventory_movements.id` est GLOBALEMENT unique : sans le marchand dans
+   * l'empreinte, deux marchands traitant le même PDF partageraient les ids —
+   * le second INSERT serait ignoré puis faussement acquitté. Ici :
+   * SHA-256(marchand + docId + index). Le `merchant` est celui qui possédera
+   * le mouvement (registre local, même valeur que la synchro enverra) ; le
+   * serveur refuse en plus un id pris par un autre (409 id-conflict).
+   * Les ids comptables (réception/facture) restent doc-scopés : leurs
+   * magasins sont par-marchand, seule la table des mouvements est globale.
+   * Async (SubtleCrypto) ; échoue fermé sans marchand ni crypto. */
+  async function stIntakePostingIds(merchant, docId, lineCount) {
+    const m = String(merchant || '');
+    const d = String(docId || '');
+    if (!m || !d) throw new Error('intake-id-scope-required');
+    const subtle = (window.crypto && window.crypto.subtle) || null;
+    if (!subtle) throw new Error('intake-crypto-required');
+    const enc = new TextEncoder();
+    const movementIds = [];
+    const n = Math.max(0, Math.min(200, lineCount | 0));
+    for (let i = 0; i < n; i++) {
+      const digest = await subtle.digest('SHA-256', enc.encode(m + '\n' + d + '\n' + i));
+      const hex = Array.from(new Uint8Array(digest)).map((x) => x.toString(16).padStart(2, '0')).join('');
+      movementIds.push('mov-intake-' + hex.slice(0, 20) + '-' + i);
+    }
+    return {
+      receiptId: 'grn-intake-' + d.slice(0, 16),
+      invoiceId: 'invdoc-intake-' + d.slice(0, 16),
+      movementIds,
+    };
+  }
+  function stIntakeSupplierId(name) {
+    return 'sup-intake-' + stIntakeHash(String(name || '').trim().toLowerCase());
+  }
+  async function stSha256Hex(buffer) {
+    const digest = await window.crypto.subtle.digest('SHA-256', buffer);
+    return Array.from(new Uint8Array(digest)).map((x) => x.toString(16).padStart(2, '0')).join('');
+  }
+  function stIntakeMerchant() {
+    try { return (window.Kiwi && window.Kiwi.venue && window.Kiwi.venue()) || ''; } catch (_) { return ''; }
+  }
+  async function stIntakeCommit(payload) {
+    const res = await fetch('/api/ai/intake', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchant: stIntakeMerchant(), action: 'commit', ...payload }),
+    });
+    let data = null;
+    try { data = await res.json(); } catch (_) { data = null; }
+    return { status: res.status, data };
+  }
+  async function stIntakeUpload(docId, bytes) {
+    // Booléen, jamais d'exception : l'appelant décide (archive ou repli).
+    try {
+      const res = await fetch(`/api/ai/intake?merchant=${encodeURIComponent(stIntakeMerchant())}&docId=${encodeURIComponent(docId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/pdf' },
+        body: bytes,
+      });
+      return res.ok;
+    } catch (_) { return false; }
+  }
+  function stIntakeOutboxKey() { return 'kiwi:intakeOutbox:v1:' + (stIntakeMerchant() || 'local'); }
+  function stIntakeOutboxRead() {
+    try {
+      const raw = window.localStorage.getItem(stIntakeOutboxKey());
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr.filter((e) => e && typeof e.docId === 'string').slice(-50) : [];
+    } catch (_) { return []; }
+  }
+  function stIntakeOutboxWrite(list) {
+    try { window.localStorage.setItem(stIntakeOutboxKey(), JSON.stringify((list || []).slice(-50))); } catch (_) {}
+  }
+  function stIntakePostedKey() { return 'kiwi:intakePosted:v1:' + (stIntakeMerchant() || 'local'); }
+  function stIntakePostedHas(docId) {
+    try {
+      const raw = window.localStorage.getItem(stIntakePostedKey());
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) && arr.indexOf(docId) !== -1;
+    } catch (_) { return false; }
+  }
+  function stIntakePostedAdd(docId) {
+    try {
+      const raw = window.localStorage.getItem(stIntakePostedKey());
+      const arr = raw ? JSON.parse(raw) : [];
+      const list = Array.isArray(arr) ? arr : [];
+      if (list.indexOf(docId) === -1) list.push(docId);
+      window.localStorage.setItem(stIntakePostedKey(), JSON.stringify(list.slice(-200)));
+    } catch (_) {}
+  }
+  /* Garde pure : un docId déjà posté ici, ou déjà confirmé côté serveur
+   * (deuxième appareil), ne reposte jamais le stock. Testée. */
+  function stIntakePostGuard(posted, serverStatus) {
+    if (posted) return 'duplicate-local';
+    if (serverStatus === 'confirmed') return 'duplicate-server';
+    return 'ok';
+  }
+  async function stIntakeServerStatus(docId) {
+    // Injoignable → '' : la garde reste ouverte, l'outbox garde la vérité.
+    try {
+      const res = await fetch(`/api/ai/intake?merchant=${encodeURIComponent(stIntakeMerchant())}&docId=${encodeURIComponent(docId)}`);
+      if (!res.ok) return '';
+      const data = await res.json().catch(() => null);
+      return (data && data.doc && data.doc.status) || '';
+    } catch (_) { return ''; }
+  }
+  /* Une seule tentative de marquage, outbox tenue à jour. L'outbox ne
+   * contient que des « stock déjà posté, marquage en attente » : la rejouer
+   * ne reposte jamais le stock, elle ne renvoie que le marquage. */
+  async function stIntakeMarkOnce(docId) {
+    const box = stIntakeOutboxRead();
+    if (!box.some((e) => e.docId === docId)) {
+      box.push({ docId, ts: Date.now() });
+      stIntakeOutboxWrite(box);
+    }
+    try {
+      const res = await fetch('/api/ai/intake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchant: stIntakeMerchant(), action: 'mark', docId, status: 'confirmed' }),
+      });
+      if (res.ok) {
+        stIntakeOutboxWrite(stIntakeOutboxRead().filter((e) => e.docId !== docId));
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+  async function stIntakeFlushOutbox() {
+    const pending = stIntakeOutboxRead();
+    for (const e of pending) {
+      try {
+        if (await stIntakeServerStatus(e.docId) === 'confirmed') {
+          stIntakeOutboxWrite(stIntakeOutboxRead().filter((x) => x.docId !== e.docId));
+          continue;
+        }
+        await stIntakeMarkOnce(e.docId);
+      } catch (_) {}
+    }
+  }
+  function stRenderIntakeStop(title, body) {
+    return `
+      <div class="st-notice warn">${svg('alertTriangle', 14)}<div><b>${esc(title)}</b><br />${esc(body)}</div></div>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
+        <button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>
+        <button class="st-btn" type="button" data-stock-scan-manual2>${esc(t('mScanManual'))}</button>
+      </div>`;
+  }
+  function wireIntakeStop() {
+    const scope = topBackdrop() || document;
+    const stage = scope.querySelector('[data-stock-scan-stage]');
+    scope.querySelector('[data-stock-scan-manual2]')?.addEventListener('click', () => {
+      if (!stage) return;
+      stage.innerHTML = renderRealReceiptReview({ supplier: null });
+      wireScanReview();
+    });
+  }
+
+  /* ── Conflit de reprise (409 posting-conflict) ──────────────────────────
+   * Un premier envoi a figé une empreinte différente : la tentative en cours
+   * n'a RIEN écrit (le prepare précède réception, mouvements, coûts et
+   * facture) et ne doit rien écrire. On montre ce qui diffère — jamais le
+   * hash du document ni l'empreinte figée — avec pour seules issues : fermer,
+   * revenir à la relecture, voir l'historique de l'article (workflow
+   * existant via data-action="stock-item-detail"). Ni reset, ni écrasement,
+   * ni contre-passation, ni republication, ni suppression, ni « continuer ».
+   * Stash DOM : les nœuds de la relecture sont mis de côté (valeurs saisies
+   * et écouteurs intacts, aucun réaffichage) puis restaurés au retour. */
+  let stConflictStash = null;
+  async function stIntakeFetchRecorded(docId) {
+    const refId = 'grn-intake-' + String(docId || '').slice(0, 16);
+    const res = await fetch(`/api/inventory/movements?merchant=${encodeURIComponent(stIntakeMerchant())}&refId=${encodeURIComponent(refId)}&reason=receipt`);
+    if (!res.ok) throw new Error('intake-recorded-' + res.status);
+    const data = await res.json().catch(() => null);
+    const rows = data && Array.isArray(data.movements) ? data.movements : [];
+    return rows.map((r) => ({
+      itemId: String((r && r.itemId) || ''),
+      qty: +(r && r.qty) || 0,
+      unitCost: r && r.unitCost == null ? null : +(r.unitCost),
+    })).filter((r) => r.itemId);
+  }
+  function stIntakeCompareConflict(recorded, current) {
+    /* Plusieurs lignes d'une même facture peuvent pointer vers le même article
+     * (lots ou DLC différents). On conserve donc chaque occurrence dans l'ordre
+     * au lieu d'écraser silencieusement les suivantes dans une Map par article. */
+    const index = (rows, pick) => {
+      const m = new Map();
+      for (const r of rows || []) {
+        const id = String((r && r.itemId) || '');
+        if (!id) continue;
+        if (!m.has(id)) m.set(id, []);
+        m.get(id).push(pick(r));
+      }
+      return m;
+    };
+    const rec = index(recorded, (r) => ({ qty: +r.qty || 0, unitCost: r.unitCost == null ? null : +r.unitCost }));
+    const cur = index(current, (r) => ({ name: String(r.name || r.itemId || ''), qty: +r.qty || 0, unit: String(r.unit || ''), unitCost: r.unitCost == null ? null : +r.unitCost }));
+    const sameCost = (a, b) => (a == null && b == null) || (a != null && b != null && Math.abs(a - b) < 0.00005);
+    const rows = [];
+    const ids = new Set([...cur.keys(), ...rec.keys()]);
+    for (const id of ids) {
+      const currentRows = cur.get(id) || [];
+      const recordedRows = rec.get(id) || [];
+      const count = Math.max(currentRows.length, recordedRows.length);
+      for (let occurrence = 0; occurrence < count; occurrence += 1) {
+        const c = currentRows[occurrence] || null;
+        const r = recordedRows[occurrence] || null;
+        if (c && !r) rows.push({ kind: 'added', itemId: id, name: c.name, recQty: null, recCost: null, curQty: c.qty, curCost: c.unitCost, unit: c.unit });
+        else if (r && !c) rows.push({ kind: 'missing', itemId: id, name: id, recQty: r.qty, recCost: r.unitCost, curQty: null, curCost: null, unit: '' });
+        else if (r && c && (r.qty !== c.qty || !sameCost(r.unitCost, c.unitCost))) {
+          rows.push({ kind: 'changed', itemId: id, name: c.name, recQty: r.qty, recCost: r.unitCost, curQty: c.qty, curCost: c.unitCost, unit: c.unit });
+        }
+      }
+    }
+    return rows;
+  }
+  function stRenderIntakeConflict(cmp) {
+    const rows = (cmp && cmp.rows) || [];
+    const fetchFailed = !!(cmp && cmp.fetchFailed);
+    const badge = (kind) => {
+      const label = kind === 'added' ? t('mScanConflictAdded') : kind === 'missing' ? t('mScanConflictMissing') : t('mScanConflictChanged');
+      const paint = kind === 'added'
+        ? 'background:var(--ok-bg,#ecfdf5);color:var(--ok-fg,#047857);'
+        : kind === 'missing'
+          ? 'background:#fdecec;color:#C94A3A;'
+          : 'background:var(--warn-bg,#fffbeb);color:var(--warn-fg,#b45309);';
+      return `<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;${paint}">${esc(label)}</span>`;
+    };
+    const cell = (v, suffix) => (v == null
+      ? '<span style="color:var(--n-400,#9ca3af);">·</span>'
+      : `<bdi dir="ltr" class="mono">${esc(String(v))}${suffix ? ' ' + esc(suffix) : ''}</bdi>`);
+    const firstId = rows.length ? rows[0].itemId : '';
+    return `
+      <div class="st-notice warn">${svg('alertTriangle', 14)}<div><b>${esc(t('mScanConflictT'))}</b><br />${esc(t('mScanConflictB1'))}<br />${esc(t('mScanConflictB2'))}<br />${esc(t('mScanConflictB3'))}</div></div>
+      ${fetchFailed
+        ? `<div class="st-notice" style="margin-top:8px;">${svg('info', 14)}<div>${esc(t('mScanConflictNoRec'))}</div></div>`
+        : rows.length ? `<div class="st-notice" style="margin-top:8px;">${svg('info', 14)}<div>${esc(t('mScanConflictPartial'))}</div></div>
+        <div style="overflow-x:auto;margin-top:12px;border:1px solid var(--n-200,#e5e7eb);border-radius:6px;">
+        <table class="st-inv-items" style="margin:0;width:100%;">
+          <thead><tr><th>${esc(t('mScanConflictColItem'))}</th><th class="r">${esc(t('mScanConflictRec'))}</th><th class="r">${esc(t('mScanConflictCur'))}</th><th></th></tr></thead>
+          <tbody>${rows.map((r) => `
+            <tr>
+              <td style="min-width:140px;"><div style="font-size:12px;font-weight:500;color:var(--n-800);">${esc(r.name)}</div></td>
+              <td class="r" style="font-size:12px;"><span>${esc(t('mScanConflictColQty'))} · ${cell(r.recQty, r.unit)}</span><br /><span>${esc(t('mScanConflictColCost'))} · ${cell(r.recCost)}</span></td>
+              <td class="r" style="font-size:12px;"><span>${esc(t('mScanConflictColQty'))} · ${cell(r.curQty, r.unit)}</span><br /><span>${esc(t('mScanConflictColCost'))} · ${cell(r.curCost)}</span></td>
+              <td style="min-width:90px;">${badge(r.kind)}</td>
+            </tr>`).join('')}</tbody>
+        </table>
+      </div>` : `<div class="st-notice" style="margin-top:8px;">${svg('info', 14)}<div>${esc(t('mScanConflictNoDiff'))}</div></div>`}
+      <div style="display:flex; justify-content:flex-end; flex-wrap:wrap; gap:8px; margin-top:14px;">
+        ${firstId && !fetchFailed ? `<button class="st-btn" type="button" data-action="stock-item-detail" data-item-id="${esc(firstId)}">${svg('eye', 12)}<span>${esc(t('mScanConflictHistory'))}</span></button>` : ''}
+        <button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>
+        <button class="st-btn primary" type="button" data-stock-conflict-back>${esc(t('mScanConflictBack'))}</button>
+      </div>`;
+  }
+  async function stShowIntakeConflict(scope, stage, opts) {
+    const o = opts || {};
+    const currentLines = Array.isArray(o.currentLines) ? o.currentLines : [];
+    stConflictStash = [];
+    if (stage && stage.firstChild) {
+      let n = stage.firstChild;
+      const kept = [];
+      while (n) { kept.push(n); n = n.nextSibling; }
+      kept.forEach((node) => { try { stage.removeChild(node); } catch (_) {} });
+      stConflictStash = kept;
+    }
+    let recorded = null, fetchFailed = false;
+    try { recorded = await stIntakeFetchRecorded(o.docId); }
+    catch (_) { recorded = null; fetchFailed = true; }
+    const rows = fetchFailed ? [] : stIntakeCompareConflict(recorded, currentLines);
+    if (stage) {
+      stage.innerHTML = stRenderIntakeConflict({ rows, fetchFailed });
+      stage.querySelector('[data-stock-conflict-back]')?.addEventListener('click', () => {
+        stRestoreIntakeReview(scope, stage);
+      });
+    }
+    return { rows, fetchFailed };
+  }
+  async function stHandleIntakePostingConflict(scope, err, docId, currentLines) {
+    if (!docId || String((err && err.message) || err).indexOf('posting-conflict') === -1) return false;
+    const stage = scope && scope.querySelector ? scope.querySelector('[data-stock-scan-stage]') : null;
+    if (stage) await stShowIntakeConflict(scope, stage, { docId, currentLines });
+    else window.Kiwi.toast?.(t('mScanFailFallback'), { type: 'warn' });
+    return true;
+  }
+  function stRestoreIntakeReview(scope, stage) {
+    const kept = stConflictStash; stConflictStash = null;
+    if (!stage) return false;
+    if (kept && kept.length) {
+      stage.innerHTML = '';
+      kept.forEach((node) => { try { stage.appendChild(node); } catch (_) {} });
+      return true;
+    }
+    stage.innerHTML = renderRealReceiptReview({ supplier: null });
+    wireScanReview();
+    return false;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Scan invoice
    * ═══════════════════════════════════════════════════════════════════════ */
-  function openInvoiceScan() {
+  function openInvoiceScan(opts) {
+    // Pré-chargement discret en tâche de fond de pdf.js
+    try { loadPdfJs(); } catch (_) {}
+    // Guichet unique : rejoue les marquages interrompus (marquage seul).
+    try { if (stIntakeEnabled()) stIntakeFlushOutbox(); } catch (_) {}
+    stConflictStash = null;
+
+    const preSupId = typeof opts === 'string' ? opts : opts?.supplierId;
+    const sup = preSupId ? getSup().find((s) => s.id === preSupId) : null;
     const m = window.Kiwi.modal({
       title: t('mScanTitle'),
-      width: 640,
-      body: `<div data-stock-scan-stage>${renderScanStage1()}</div>`,
+      width: 720,
+      body: `<div data-stock-scan-stage>${sup ? renderRealReceiptReview({ supplier: sup }) : renderScanStage1()}</div>`,
       foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>`,
     });
-    requestAnimationFrame(() => { wireDismiss(m?.el || topBackdrop()); wireScanStage1(); });
+    requestAnimationFrame(() => {
+      wireDismiss(m?.el || topBackdrop());
+      if (sup) {
+        wireScanReview();
+      } else {
+        wireScanStage1();
+      }
+    });
   }
 
   function renderScanStage1() {
     return `
-      <div class="st-dropzone" data-stock-scan-trigger>
+      <div class="st-dropzone" data-stock-dropzone>
+        <input type="file" data-stock-file-input accept="application/pdf,image/*" style="display:none;" />
+        <input type="file" data-stock-cam-input accept="image/*" capture="environment" style="display:none;" />
         <div class="st-dropzone-ico">${svg('upload', 26)}</div>
         <div class="st-dropzone-t">${esc(t('mScanDropT'))}</div>
         <div class="st-dropzone-s">${esc(t('mScanDropS'))}</div>
-        <div class="st-dropzone-acts">
-          <button class="st-btn" type="button">${esc(t('mScanBtnFile'))}</button>
-          <button class="st-btn" type="button">${svg('camera', 12)}<span>${esc(t('mScanBtnCam'))}</span></button>
+        <div class="st-dropzone-acts" style="display:flex;gap:10px;margin-top:12px;">
+          <button class="st-btn" type="button" data-stock-pick-file>${esc(t('mScanBtnFile'))}</button>
+          <button class="st-btn" type="button" data-stock-pick-cam>${svg('camera', 12)}<span>${esc(t('mScanBtnCam'))}</span></button>
         </div>
       </div>
-      <div class="st-dropzone-link" data-stock-scan-trigger>${esc(t('mScanManual'))}</div>
+      <div style="font-size:11.5px;color:var(--n-500,#6b7280);text-align:center;margin-top:8px;">
+        ${esc(t('mScanServerNotice'))}
+      </div>
+      <div class="st-dropzone-link" data-stock-scan-manual style="text-align:center;margin-top:12px;cursor:pointer;color:var(--primary,#0070f3);font-size:13px;text-decoration:underline;">
+        ${esc(t('mScanManual'))}
+      </div>
+      ${stIntakeEnabled() ? `<div class="st-dropzone-link" data-stock-scan-archive style="text-align:center;margin-top:6px;cursor:pointer;color:var(--primary,#0070f3);font-size:13px;text-decoration:underline;">
+        ${esc(t('mScanArcLink'))}
+      </div>` : ''}
     `;
   }
 
   function wireScanStage1() {
-    document.querySelectorAll('[data-stock-scan-trigger]').forEach(el => {
-      el.addEventListener('click', () => {
-        const stage = document.querySelector('[data-stock-scan-stage]');
+    const scope = topBackdrop() || document;
+    const dropzone = scope.querySelector('[data-stock-dropzone]');
+    const fileInp = scope.querySelector('[data-stock-file-input]');
+    const camInp = scope.querySelector('[data-stock-cam-input]');
+    const btnFile = scope.querySelector('[data-stock-pick-file]');
+    const btnCam = scope.querySelector('[data-stock-pick-cam]');
+    const linkManual = scope.querySelector('[data-stock-scan-manual]');
+    const stage = scope.querySelector('[data-stock-scan-stage]');
+
+    if (linkManual) {
+      linkManual.onclick = () => {
         if (!stage) return;
-        stage.innerHTML = `
-          <div class="st-scanning">
-            <div class="st-scanning-spinner"></div>
-            <div class="st-scanning-t">${esc(t('mScanReadingT'))}</div>
-            <div class="st-scanning-s">${esc(t('mScanReadingS'))}</div>
-          </div>
-        `;
-        setTimeout(() => {
-          stage.innerHTML = renderScanReview();
+        stage.innerHTML = renderRealReceiptReview({ supplier: null });
+        wireScanReview();
+      };
+    }
+
+    const linkArchive = scope.querySelector('[data-stock-scan-archive]');
+    if (linkArchive) {
+      linkArchive.onclick = () => {
+        if (!stage) return;
+        openScanArchive(scope, stage);
+      };
+    }
+
+    if (btnFile && fileInp) {
+      btnFile.onclick = () => fileInp.click();
+    }
+    if (btnCam && camInp) {
+      btnCam.onclick = () => camInp.click();
+    }
+
+    const processFile = async (file) => {
+      if (!file || !stage) return;
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
+      stage.innerHTML = `
+        <div class="st-scanning" style="text-align:center;padding:40px 20px;">
+          <div class="st-scanning-spinner" style="margin:0 auto 16px;"></div>
+          <div class="st-scanning-t" style="font-weight:600;font-size:15px;margin-bottom:4px;">${esc(isPdf ? t('mScanReadingFile') : t('mScanReadingT'))}</div>
+          <div class="st-scanning-s" style="font-size:12px;color:var(--n-500);">${esc(t('mScanReadingS'))}</div>
+        </div>
+      `;
+
+      if (isPdf) {
+        try {
+          const text = await extractPdfText(file);
+          if (!text) throw new Error('empty-text');
+
+          // Guichet unique (fanion stIntakeEnabled) : le texte est déjà là,
+          // donc le pré-filtre identité ne coûte aucun appel et précède tout.
+          let intakeDocId = '';
+          if (stIntakeEnabled()) {
+            if (stIntakeIdHint(text) || stIntakeMrzZone(text)) {
+              stage.innerHTML = stRenderIntakeStop(t('mScanIdTitle'), t('mScanIdBody'));
+              wireIntakeStop();
+              return;
+            }
+            try {
+              const bytes = await file.arrayBuffer();
+              if (!bytes.byteLength || bytes.byteLength > 10 * 1024 * 1024) throw new Error('too-large');
+              const sha = await stSha256Hex(bytes);
+              const commit = await stIntakeCommit({
+                sha256: sha, mime: 'application/pdf', size: bytes.byteLength,
+                docType: 'supplier_invoice', source: 'stock-scan',
+                textSample: text.slice(0, 4000),
+              });
+              if (commit.status === 422) {
+                stage.innerHTML = stRenderIntakeStop(t('mScanIdTitle'), t('mScanIdBody'));
+                wireIntakeStop();
+                return;
+              }
+              if (commit.data && commit.data.duplicate && commit.data.doc && commit.data.doc.status === 'confirmed') {
+                const d = commit.data.doc.createdTs ? new Date(commit.data.doc.createdTs).toLocaleDateString() : '';
+                stage.innerHTML = stRenderIntakeStop(t('mScanDupT'), t('mScanDupDone', d));
+                wireIntakeStop();
+                return;
+              }
+              if (commit.data && (commit.data.docId || (commit.data.doc && commit.data.doc.docId))) {
+                const candidate = commit.data.docId || commit.data.doc.docId;
+                // Vérité de l'archive : intakeDocId n'est posé que si l'objet
+                // R2 est écrit et vérifié (le serveur compare le SHA-256).
+                // Sans archive, l'extraction continue mais l'UI ne prétend
+                // rien et aucun marquage ne sera possible (409 not-archived).
+                if (await stIntakeUpload(candidate, bytes)) {
+                  intakeDocId = candidate;
+                  if (commit.data.duplicate) window.Kiwi.toast?.(t('mScanResume'), { type: 'info' });
+                } else {
+                  intakeDocId = '';
+                }
+              }
+              // Registre ou quota indisponible (429, 503, réseau) : on ne
+              // bloque jamais le travail, l'extraction continue sans archive.
+            } catch (_) { intakeDocId = ''; }
+          }
+
+          const venue = (window.Kiwi && window.Kiwi.venue && window.Kiwi.venue()) || '';
+          const res = await fetch('/api/ai/invoice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ merchant: venue, kind: 'text', text }),
+          });
+
+          if (!res.ok) {
+            throw new Error('server-error-' + res.status);
+          }
+          const data = await res.json();
+          if (data.ok && Array.isArray(data.lines) && data.lines.length) {
+            stage.innerHTML = renderRealReceiptReview({ parsed: data, intakeDocId });
+            wireScanReview();
+            return;
+          }
+          throw new Error(data.error || data.reason || 'unparsed');
+        } catch (err) {
+          window.Kiwi.toast?.(t('mScanFailFallback'), { type: 'warn' });
+          // Repli manuel : le contexte documentaire est préservé (si le
+          // PDF est archivé, la confirmation marquera le brouillon).
+          stage.innerHTML = renderRealReceiptReview({ supplier: null, intakeDocId });
           wireScanReview();
-        }, 2000);
+          return;
+        }
+      } else {
+        // Image scan / photo — repli sur la table pour l'instant (Commit 1)
+        setTimeout(() => {
+          stage.innerHTML = renderRealReceiptReview({ supplier: null });
+          wireScanReview();
+        }, 800);
+      }
+    };
+
+    if (fileInp) {
+      fileInp.onchange = (e) => {
+        if (e.target.files && e.target.files[0]) processFile(e.target.files[0]);
+      };
+    }
+    if (camInp) {
+      camInp.onchange = (e) => {
+        if (e.target.files && e.target.files[0]) processFile(e.target.files[0]);
+      };
+    }
+
+    if (dropzone) {
+      ['dragenter', 'dragover'].forEach((eventName) => {
+        dropzone.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); dropzone.classList.add('is-dragover'); });
       });
-    });
+      ['dragleave', 'drop'].forEach((eventName) => {
+        dropzone.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); dropzone.classList.remove('is-dragover'); });
+      });
+      dropzone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt?.files;
+        if (files && files[0]) processFile(files[0]);
+      });
+    }
   }
 
-  function renderScanReview() {
+  /* ── Coffre des pièces déposées (lecture seule) ─────────────────────────
+   * Liste paginée des métadonnées + visionneuse PDF authentifiée (cookie de
+   * session). N'invente ni fournisseur ni montant : D1 ne retient que le
+   * type, la date, le statut, la taille et l'identifiant raccourci. Aucune
+   * mention « archivé » sans hasObject. Mise en page fluide (aucune largeur
+   * fixe) : 320 px comme desktop, sens de lecture hérité de la page. */
+  function stArchiveUrl(docId, download) {
+    return '/api/ai/intake-archive?merchant=' + encodeURIComponent(stIntakeMerchant()) +
+      '&docId=' + encodeURIComponent(String(docId || '')) + (download ? '&download=1' : '');
+  }
+  async function stIntakeArchiveList(cursor) {
+    const res = await fetch('/api/ai/intake-archive?merchant=' + encodeURIComponent(stIntakeMerchant()) +
+      '&limit=20' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''));
+    if (!res.ok) throw new Error('archive-' + res.status);
+    const data = await res.json().catch(() => null);
+    if (!data || data.ok !== true || !Array.isArray(data.docs)) throw new Error('archive-bad-shape');
+    return data;
+  }
+  function stFmtSize(bytes) {
+    const n = Math.max(0, Number(bytes) || 0);
+    const dec = (x) => x.toFixed(1).replace('.', lang() === 'en' ? '.' : ',');
+    if (n >= 1048576) return dec(n / 1048576) + ' ' + t('mScanArcUMB');
+    if (n >= 1024) return dec(n / 1024) + ' ' + t('mScanArcUKB');
+    return Math.round(n) + ' ' + t('mScanArcUB');
+  }
+  function stFmtArcDate(ts) {
+    try {
+      const loc = lang() === 'ar' ? 'ar-MA' : lang() === 'en' ? 'en-GB' : 'fr-MA';
+      return new Date(Number(ts) || 0).toLocaleDateString(loc, { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch (_) { return ''; }
+  }
+  function stArcTypeLabel(docType) {
+    if (docType === 'supplier_invoice') return t('mScanArcTypeInvoice');
+    const raw = String(docType || '').trim();
+    return raw ? raw.slice(0, 24) : t('mScanArcTypeOther');
+  }
+  function stArcStatusLabel(status) {
+    return status === 'confirmed' ? t('mScanArcStConfirmed') : t('mScanArcStReceived');
+  }
+  function renderScanArchive(state) {
+    const st = state || {};
+    const status = st.status || 'loading';
+    const docs = Array.isArray(st.docs) ? st.docs : [];
+    const head = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <button class="st-btn small" type="button" data-stock-arc-back>${esc(t('mScanArcBack'))}</button>
+        <div class="st-mb-eyebrow" style="margin:0;">${esc(t('mScanArcTitle'))}</div>
+      </div>`;
+    if (status === 'loading') {
+      return head + `<div style="text-align:center;padding:28px 12px;font-size:13px;color:var(--n-500,#6b7280);">${esc(t('mScanArcLoading'))}</div>`;
+    }
+    if (status === 'unavailable' && !docs.length) {
+      return head + `<div class="st-notice warn">${svg('alertTriangle', 14)}<div>${esc(t('mScanArcDown'))}</div></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+          <button class="st-btn" type="button" data-stock-arc-retry>${esc(t('mScanArcRetry'))}</button>
+        </div>`;
+    }
+    if (!docs.length) {
+      return head + `<div class="st-notice">${svg('info', 14)}<div>${esc(t('mScanArcEmpty'))}</div></div>`;
+    }
+    const rows = docs.map((d) => {
+      const id = String((d && d.docId) || '');
+      const short = id ? id.slice(0, 12) + '…' : '·';
+      const archived = !!d.hasObject && !!id;
+      const acts = archived
+        ? `<a class="st-btn small" href="${esc(stArchiveUrl(id, false))}" target="_blank" rel="noopener">${esc(t('mScanArcView'))}</a>`
+          + `<a class="st-btn small" href="${esc(stArchiveUrl(id, true))}" download>${esc(t('mScanArcDownload'))}</a>`
+        : `<span style="font-size:11.5px;color:var(--n-500,#6b7280);">${esc(t('mScanArcPending'))}</span>`;
+      return `
+        <div style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--n-200,#e5e7eb);">
+          <div style="min-width:0;flex:1 1 180px;">
+            <div style="font-size:13px;font-weight:600;">${esc(stArcTypeLabel(d.docType))}</div>
+            <div style="font-size:11.5px;color:var(--n-500,#6b7280);display:flex;flex-wrap:wrap;gap:2px 8px;">
+              <bdi dir="ltr" class="mono">${esc(short)}</bdi>
+              <bdi dir="ltr">${esc(stFmtArcDate(d.createdTs))}</bdi>
+              <bdi dir="ltr">${esc(stFmtSize(d.size))}</bdi>
+              <span>${esc(stArcStatusLabel(d.status))}</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0;">${acts}</div>
+        </div>`;
+    }).join('');
+    return head + `<div>${rows}</div>` + (st.nextCursor
+      ? `<div style="display:flex;justify-content:center;margin-top:12px;">
+          <button class="st-btn" type="button" data-stock-arc-more data-cursor="${esc(st.nextCursor)}">${esc(t('mScanArcMore'))}</button>
+        </div>`
+      : '');
+  }
+  function openScanArchive(scope, stage) {
+    if (!stage) return;
+    const acc = [];
+    let cursor = null;
+    let busy = false;
+    function paint(state) {
+      stage.innerHTML = renderScanArchive(state);
+      const back = scope.querySelector('[data-stock-arc-back]');
+      if (back) back.onclick = () => { stage.innerHTML = renderScanStage1(); wireScanStage1(); };
+      const retry = scope.querySelector('[data-stock-arc-retry]');
+      if (retry) retry.onclick = () => load(true);
+      const more = scope.querySelector('[data-stock-arc-more]');
+      if (more) more.onclick = () => load(false);
+    }
+    async function load(reset) {
+      if (reset) { acc.length = 0; cursor = null; paint({ status: 'loading', docs: [] }); }
+      else if (busy) return;
+      busy = true;
+      try {
+        const data = await stIntakeArchiveList(reset ? null : cursor);
+        for (const d of data.docs) acc.push(d);
+        cursor = data.nextCursor || null;
+        paint({ status: acc.length ? 'ready' : 'empty', docs: acc, nextCursor: cursor });
+      } catch (_) {
+        paint({ status: acc.length ? 'ready' : 'unavailable', docs: acc, nextCursor: cursor });
+      }
+      busy = false;
+    }
+    load(true);
+  }
+
+  function renderScanReview(opts) {
+    if (stShowReal() || opts?.supplier) return renderRealReceiptReview(opts);
+    const inv = getInv();
+    const rows = [
+      { id: 'inv01', name: 'Viande hachée bœuf', qty: 12, total: 1140 },
+      { id: 'inv03', name: 'Agneau épaule', qty: 14, total: 2352 },
+      { id: 'inv04', name: 'Merguez', qty: 4, total: 312 },
+    ];
     return `
       <div class="st-mb-eyebrow">${esc(t('mScanReviewT'))}</div>
       <div class="st-mb-row three">
@@ -2062,11 +4996,12 @@
         <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanNum'))}</label><input class="st-mb-input mono" value="FAC-2026-1842" /></div>
       </div>
       <table class="st-inv-items">
-        <thead><tr><th>Article</th><th class="r">Qté</th><th class="r">Total</th></tr></thead>
+        <thead><tr><th>Article</th><th class="r">Qté</th><th>Unité</th><th class="r">Total</th></tr></thead>
         <tbody>
-          <tr><td>Viande hachée bœuf</td><td class="r mono">12 kg</td><td class="r mono">1 140 MAD</td></tr>
-          <tr><td>Agneau épaule</td><td class="r mono">14 kg</td><td class="r mono">2 352 MAD</td></tr>
-          <tr><td>Merguez</td><td class="r mono">4 kg</td><td class="r mono">312 MAD</td></tr>
+          ${rows.map((row) => {
+            const item = inv.find((candidate) => candidate.id === row.id), unit = stockUnit(item?.unit || 'kg');
+            return `<tr data-stock-scan-row="${esc(row.id)}"><td>${esc(item?.name || row.name)}</td><td class="r"><input class="st-pc-input mono" type="number" min="0" step="0.001" value="${row.qty}" data-stock-scan-qty /></td><td><select class="st-mb-input" data-stock-scan-unit>${stockUnitOptions(unit)}</select></td><td class="r mono">${esc(fmtMad(row.total))}</td></tr>`;
+          }).join('')}
         </tbody>
       </table>
       <div style="display:flex; justify-content:space-between; font-size:12.5px; color:var(--n-600); padding:6px 0;">
@@ -2082,22 +5017,457 @@
     `;
   }
 
-  function wireScanReview() {
-    document.querySelector('[data-stock-scan-confirm]')?.addEventListener('click', () => {
-      // Apply stock overrides for matched items
-      const inv = getInv();
-      const matches = {
-        'inv01': 12,   // Viande hachée bœuf — restocked by 12kg
-        'inv03': 14,   // Agneau épaule — out → 14kg now
-        'inv04': 4,    // Merguez — +4
-      };
-      Object.entries(matches).forEach(([id, q]) => {
-        const it = inv.find(x => x.id === id);
-        if (it) stStockOverrides[id] = (stStockOverrides[id] != null ? stStockOverrides[id] : it.currentStock) + q;
-        stSaveOverlay();
+  function renderRealReceiptReview(opts) {
+    const preSupplier = opts?.supplier || null;
+    const parsed = opts?.parsed || null;
+    const allItems = getInv();
+    let items = allItems;
+    if (preSupplier) {
+      const match = allItems.filter((it) => {
+        const hasCard = (it.suppliers || []).some((card) =>
+          String(card.supplierName || '').trim().toLowerCase() === preSupplier.name.toLowerCase() || card.id === preSupplier.id
+        );
+        return hasCard || (it.category === preSupplier.category) || (String(it.supplier || '').trim().toLowerCase() === preSupplier.name.toLowerCase());
       });
+      if (match.length > 0) items = match;
+    }
+
+    const supName = parsed?.supplier?.name || preSupplier?.name || '';
+    const today = new Date().toISOString().slice(0, 10);
+    const invoiceDate = parsed?.date || today;
+    const invoiceNum = parsed?.number || '';
+
+    const matches = parsed?.lines ? matchInvoiceLines(parsed.lines, items) : [];
+
+    const makeRow = (line, matchHit) => {
+      const matchedId = matchHit?.itemId || '';
+      const matchedItem = matchedId ? items.find((it) => it.id === matchedId) : null;
+
+      const lineQty = line ? line.qty : '';
+      const lineCost = line ? line.unitCost : '';
+
+      const comparison = compareLineCost(matchedItem, lineCost, supName);
+      const isChecked = comparison.isChecked;
+
+      let badgeHtml = '';
+      if (matchedItem && comparison.currentCost > 0 && Number.isFinite(lineCost) && lineCost > 0) {
+        if (comparison.isRise) {
+          badgeHtml = `<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;background:var(--warn-bg,#fffbeb);color:var(--warn-fg,#b45309);margin-right:6px;">↑ +${comparison.pct}%</span>`;
+        } else if (comparison.isDrop) {
+          badgeHtml = `<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;background:var(--ok-bg,#ecfdf5);color:var(--ok-fg,#047857);margin-right:6px;">↓ −${Math.abs(comparison.pct)}%</span>`;
+        }
+      }
+
+      const optionsHtml = `<option value="">${esc(t('mScanChoose'))}</option>` + items.map((it) => {
+        const isSel = it.id === matchedId;
+        const card = (it.suppliers || []).find((c) =>
+          preSupplier && (String(c.supplierName || '').trim().toLowerCase() === preSupplier.name.toLowerCase() || c.id === preSupplier.id)
+        );
+        const defaultCost = card?.defaultPrice ?? it.costPerUnit ?? 0;
+        return `<option value="${esc(it.id)}" data-default-cost="${defaultCost}" ${isSel ? 'selected' : ''}>${esc(it.name)} (${esc(it.unit || 'unité')})</option>`;
+      }).join('');
+
+      return `
+        <tr data-stock-receive-row>
+          <td style="min-width:180px;">
+            <div style="font-size:12px;font-weight:500;margin-bottom:3px;color:var(--n-800);">${line ? esc(line.label) : ''}</div>
+            <select class="st-mb-input" data-stock-receive-item style="width:100%;font-size:12px;">${optionsHtml}</select>
+          </td>
+          <td class="r" style="width:90px;">
+            <input class="st-mb-input mono" data-stock-receive-qty type="number" min="0" step="0.001" placeholder="0" value="${lineQty}" style="font-size:12px;" />
+          </td>
+          <td class="r" style="width:100px;">
+            <input class="st-mb-input mono" data-stock-receive-cost type="number" min="0" step="0.01" placeholder="0.00" value="${lineCost}" style="font-size:12px;" />
+          </td>
+          <td class="r" style="width:132px;"><input class="st-mb-input mono" data-stock-receive-dlc type="date" title="DLC / DDM (optionnel)" style="font-size:12px;" /></td>
+          <td class="r mono" data-stock-receive-ref-cost style="width:90px;font-size:12px;color:var(--n-600);">
+            ${comparison.currentCost > 0 ? fmtMad(comparison.currentCost) : '·'}
+          </td>
+          <td style="min-width:170px;font-size:12px;">
+            <div style="display:flex;align-items:center;">
+              <span data-stock-receive-badge>${badgeHtml}</span>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11.5px;color:var(--n-700);">
+                <input type="checkbox" data-stock-receive-update-cost ${isChecked ? 'checked' : ''} />
+                <span>${esc(t('mScanUpdateCost'))}</span>
+              </label>
+            </div>
+          </td>
+          <td class="r" style="width:30px;">
+            <button class="st-btn" type="button" data-stock-receive-remove aria-label="${esc(t('mScanIgnore'))}" style="padding:4px 8px;font-size:12px;">×</button>
+          </td>
+        </tr>`;
+    };
+
+    let rowsHtml = '';
+    if (parsed?.lines?.length) {
+      rowsHtml = parsed.lines.map((l, i) => makeRow(l, matches[i])).join('');
+    } else {
+      rowsHtml = makeRow(null, null) + makeRow(null, null) + makeRow(null, null);
+    }
+
+    const supInputHtml = preSupplier
+      ? `<input class="st-mb-input" data-stock-receive-supplier value="${esc(preSupplier.name)}" readonly style="background:var(--n-100,#f4f5f6); cursor:not-allowed;" />`
+      : `<input class="st-mb-input" data-stock-receive-supplier autocomplete="organization" placeholder="Nom du fournisseur" value="${esc(supName)}" />`;
+
+    return `
+      <div class="st-mb-eyebrow">${parsed ? esc(t('mScanReviewT')) : 'Réception fournisseur'}</div>
+      <div class="st-notice ok">${svg('checkCircle', 14)}<div>Le document reste à vérifier : les prix et quantités sont pré-remplis pour vérification humaine.</div></div>
+      ${opts?.intakeDocId ? `<input type="hidden" data-stock-intake-doc value="${esc(String(opts.intakeDocId))}" /><div class="st-notice info" style="margin-top:8px;">${svg('receipt', 14)}<div>${esc(t('mScanArchived'))} · <span class="mono">${esc(String(opts.intakeDocId).slice(0, 12))}…</span></div></div>` : ''}
+      <div class="st-mb-row three" style="margin-top:12px;">
+        <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanSupplier'))}</label>${supInputHtml}</div>
+        <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanDate'))}</label><input class="st-mb-input mono" data-stock-receive-date type="date" value="${invoiceDate}" /></div>
+        <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanNum'))}</label><input class="st-mb-input mono" data-stock-receive-ref placeholder="BL / facture" value="${esc(invoiceNum)}" /></div>
+      </div>
+      <div style="overflow-x:auto;max-height:360px;margin-top:12px;border:1px solid var(--n-200,#e5e7eb);border-radius:6px;">
+        <table class="st-inv-items" style="margin:0;width:100%;">
+          <thead>
+            <tr>
+              <th>Article reçu</th>
+              <th class="r">Quantité</th>
+              <th class="r">${esc(t('mScanColInvoicedCost'))} MAD</th>
+              <th class="r">DLC</th>
+              <th class="r">${esc(t('mScanColCurrentCost'))}</th>
+              <th>Évolution & MAJ</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody data-stock-receive-rows>${rowsHtml}</tbody>
+        </table>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+        <button class="st-btn" type="button" data-stock-receive-add>+ Ajouter une ligne</button>
+        <div class="st-inv-foot" style="margin:0;padding:0;border:none;"><span>Total document</span><b data-stock-receive-total>0,00 MAD</b></div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
+        <button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>
+        <button class="st-btn primary" data-stock-scan-confirm>Enregistrer la réception</button>
+      </div>`;
+  }
+
+  /* Chemin historique (hors guichet) : UN SEUL propriétaire des mouvements.
+   * La boucle moveStock du handler reste l'unique écrivain ; receiveDirect ne
+   * fait que la pièce comptable (skipMovements) et n'applique aucun coût
+   * (skipCosts — la case à cocher du handler reste seule décisionnaire).
+   * Reçoit des données pures + le catalogue résolu ; testable en vm. */
+  function stLegacyPostAll(ctx) {
+    const supplier = String((ctx && ctx.supplier) || '');
+    const externalRef = String((ctx && ctx.externalRef) || '');
+    const date = String((ctx && ctx.date) || '');
+    const receivedAt = +((ctx && ctx.receivedAt) || Date.now());
+    const receiptRef = String((ctx && ctx.receiptRef) || ('receipt-' + Date.now().toString(36)));
+    const lines = Array.isArray(ctx && ctx.lines) ? ctx.lines : [];
+    const items = Array.isArray(ctx && ctx.items) ? ctx.items : [];
+    const receivingLines = lines.map((line) => {
+      const it = items.find((x) => x.id === line.itemId);
+      return {
+        itemId: line.itemId,
+        name: it?.name || line.itemId,
+        qty: line.qty,
+        unit: it?.unit || 'unité',
+        unitCost: line.cost,
+      };
+    });
+    let receiptId = receiptRef;
+    if (window.KiwiProcurement?.receiveDirect) {
+      let known = window.KiwiProcurement.doc()?.suppliers?.find((s) => String(s.name || '').toLowerCase() === supplier.toLowerCase());
+      if (!known) known = window.KiwiProcurement.addSupplier({ name: supplier });
+      const receipt = window.KiwiProcurement.receiveDirect({
+        receiptId: receiptRef,
+        supplierId: known?.id || supplier,
+        externalRef,
+        receivedAt,
+        lines: receivingLines,
+        skipMovements: true,
+        skipCosts: true,
+      });
+      if (receipt && receipt.id) receiptId = receipt.id;
+      if (window.KiwiProcurement?.attachInvoice) {
+        try {
+          window.KiwiProcurement.attachInvoice({
+            supplierId: known?.id || supplier,
+            number: externalRef,
+            date,
+            receiptId,
+            lines: receivingLines,
+            source: 'pdf',
+          });
+        } catch (_) {}
+      }
+    }
+    // La boucle moveStock reste la SEULE à écrire des mouvements sur ce chemin.
+    lines.forEach((line) => {
+      const it = items.find((x) => x.id === line.itemId);
+      if (!it) return;
+      const { supId, supRank } = stUpsertSupplierCard(it, supplier, line);
+      moveStock(it, line.qty, 'receipt', 'receipt', receiptRef,
+        [supplier, externalRef, date].filter(Boolean).join(' · '), line.cost || null, {
+          supplierId: supId,
+          supplierName: supplier,
+          externalRef,
+          receiptRef,
+          receivedAt,
+          rank: supRank,
+          expiresAt: line.dlc ? new Date(line.dlc + 'T23:59:59').getTime() : null,
+        });
+      if (line.updateCost && line.cost > 0 && window.KiwiCost?.setItemCost) {
+        window.KiwiCost.setItemCost(it.id, line.cost, supplier);
+      }
+    });
+    return { receiptId };
+  }
+
+  /* Garde anti double-clic du bouton de confirmation : le premier appui
+   * pose le fanion et désactive le bouton ; tout appui concurrent est jeté.
+   * Libérer (stReleaseConfirmBusy) sur chaque échec récupérable ; le succès
+   * ferme la modale, le bouton disparaît avec elle. */
+  function stClaimConfirmBusy(btn) {
+    if (!btn || btn.dataset?.busy === '1') return false;
+    try {
+      btn.dataset.busy = '1';
+      if (typeof btn.setAttribute === 'function') btn.setAttribute('disabled', '');
+    } catch (_) {}
+    return true;
+  }
+  function stReleaseConfirmBusy(btn) {
+    if (!btn) return;
+    try {
+      delete btn.dataset.busy;
+      if (typeof btn.removeAttribute === 'function') btn.removeAttribute('disabled');
+    } catch (_) {}
+  }
+
+  function wireScanReview() {
+    const scope = topBackdrop() || document;
+    const tbody = scope.querySelector('[data-stock-receive-rows]');
+    const allItems = getInv();
+
+    const recompute = () => {
+      let total = 0;
+      const supInput = scope.querySelector('[data-stock-receive-supplier]');
+      const currentSup = supInput ? supInput.value.trim() : '';
+
+      scope.querySelectorAll('[data-stock-receive-row]').forEach((row) => {
+        const qty = Math.max(0, +(row.querySelector('[data-stock-receive-qty]')?.value || 0));
+        const cost = Math.max(0, +(row.querySelector('[data-stock-receive-cost]')?.value || 0));
+        total += qty * cost;
+
+        const sel = row.querySelector('[data-stock-receive-item]');
+        const itemId = sel ? sel.value : '';
+        const item = itemId ? allItems.find((candidate) => candidate.id === itemId) : null;
+
+        const comp = compareLineCost(item, cost, currentSup);
+        const refCostEl = row.querySelector('[data-stock-receive-ref-cost]');
+        if (refCostEl) {
+          refCostEl.textContent = comp.currentCost > 0 ? fmtMad(comp.currentCost) : '·';
+        }
+
+        const cb = row.querySelector('[data-stock-receive-update-cost]');
+        if (cb && cb.dataset.userSet !== '1') {
+          cb.checked = !!(item && comp.currentCost > 0 && cost > 0 && comp.isRise);
+        }
+
+        const badgeSpan = row.querySelector('[data-stock-receive-badge]');
+        if (badgeSpan) {
+          if (item && comp.currentCost > 0 && cost > 0) {
+            if (comp.isRise) {
+              badgeSpan.innerHTML = `<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;background:var(--warn-bg,#fffbeb);color:var(--warn-fg,#b45309);margin-right:6px;">↑ +${comp.pct}%</span>`;
+            } else if (comp.isDrop) {
+              badgeSpan.innerHTML = `<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;background:var(--ok-bg,#ecfdf5);color:var(--ok-fg,#047857);margin-right:6px;">↓ −${Math.abs(comp.pct)}%</span>`;
+            } else {
+              badgeSpan.innerHTML = '';
+            }
+          } else {
+            badgeSpan.innerHTML = '';
+          }
+        }
+      });
+
+      const out = scope.querySelector('[data-stock-receive-total]');
+      if (out) out.textContent = fmtMad(total);
+    };
+
+    const wireRows = () => {
+      scope.querySelectorAll('[data-stock-receive-qty],[data-stock-receive-cost]').forEach((el) => {
+        el.oninput = recompute;
+      });
+      scope.querySelectorAll('[data-stock-receive-update-cost]').forEach((cb) => {
+        cb.onchange = () => {
+          cb.dataset.userSet = '1';
+        };
+      });
+      scope.querySelectorAll('[data-stock-receive-item]').forEach((sel) => {
+        sel.onchange = () => {
+          const row = sel.closest('tr');
+          const cb = row?.querySelector('[data-stock-receive-update-cost]');
+          if (cb) delete cb.dataset.userSet;
+          const costInp = row?.querySelector('[data-stock-receive-cost]');
+          const itemId = sel.value;
+          const it = itemId ? allItems.find((candidate) => candidate.id === itemId) : null;
+          if (it && costInp && !costInp.value) {
+            const comp = compareLineCost(it, 0, scope.querySelector('[data-stock-receive-supplier]')?.value);
+            if (comp.currentCost > 0) costInp.value = comp.currentCost;
+          }
+          recompute();
+        };
+      });
+      scope.querySelectorAll('[data-stock-receive-remove]').forEach((el) => {
+        el.onclick = () => {
+          if (scope.querySelectorAll('[data-stock-receive-row]').length > 1) {
+            el.closest('tr')?.remove();
+          }
+          recompute();
+        };
+      });
+    };
+
+    scope.querySelector('[data-stock-receive-add]')?.addEventListener('click', () => {
+      const optionsHtml = `<option value="">${esc(t('mScanChoose'))}</option>` + allItems.map((it) => `<option value="${esc(it.id)}">${esc(it.name)} (${esc(it.unit || 'unité')})</option>`).join('');
+      const emptyRowHtml = `
+        <tr data-stock-receive-row>
+          <td style="min-width:180px;">
+            <select class="st-mb-input" data-stock-receive-item style="width:100%;font-size:12px;">${optionsHtml}</select>
+          </td>
+          <td class="r" style="width:90px;">
+            <input class="st-mb-input mono" data-stock-receive-qty type="number" min="0" step="0.001" placeholder="0" style="font-size:12px;" />
+          </td>
+          <td class="r" style="width:100px;">
+            <input class="st-mb-input mono" data-stock-receive-cost type="number" min="0" step="0.01" placeholder="0.00" style="font-size:12px;" />
+          </td>
+          <td class="r" style="width:132px;"><input class="st-mb-input mono" data-stock-receive-dlc type="date" title="DLC / DDM (optionnel)" style="font-size:12px;" /></td>
+          <td class="r mono" data-stock-receive-ref-cost style="width:90px;font-size:12px;color:var(--n-600);">·</td>
+          <td style="min-width:170px;font-size:12px;">
+            <div style="display:flex;align-items:center;">
+              <span data-stock-receive-badge></span>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11.5px;color:var(--n-700);">
+                <input type="checkbox" data-stock-receive-update-cost />
+                <span>${esc(t('mScanUpdateCost'))}</span>
+              </label>
+            </div>
+          </td>
+          <td class="r" style="width:30px;">
+            <button class="st-btn" type="button" data-stock-receive-remove aria-label="${esc(t('mScanIgnore'))}" style="padding:4px 8px;font-size:12px;">×</button>
+          </td>
+        </tr>`;
+      tbody?.insertAdjacentHTML('beforeend', emptyRowHtml);
+      wireRows();
+      recompute();
+    });
+
+    wireRows();
+    recompute();
+
+    const confirmBtn = scope.querySelector('[data-stock-scan-confirm]');
+    confirmBtn?.addEventListener('click', async () => {
+      const supplier = scope.querySelector('[data-stock-receive-supplier]')?.value.trim() || '';
+      const externalRef = scope.querySelector('[data-stock-receive-ref]')?.value.trim() || '';
+      const date = scope.querySelector('[data-stock-receive-date]')?.value || '';
+      const intakeDocId = scope.querySelector('[data-stock-intake-doc]')?.value || '';
+
+      const lines = Array.from(scope.querySelectorAll('[data-stock-receive-row]')).map((row) => ({
+        itemId: row.querySelector('[data-stock-receive-item]')?.value || '',
+        qty: Math.max(0, +(row.querySelector('[data-stock-receive-qty]')?.value || 0)),
+        cost: Math.max(0, +(row.querySelector('[data-stock-receive-cost]')?.value || 0)),
+        updateCost: !!row.querySelector('[data-stock-receive-update-cost]')?.checked,
+        // DLC / DDM saisie à la réception — alimente le suivi de péremption (lots FIFO)
+        dlc: row.querySelector('[data-stock-receive-dlc]')?.value || '',
+      })).filter((line) => line.itemId && line.qty > 0);
+
+      if (!supplier || !lines.length) {
+        window.Kiwi.toast?.('Indiquez le fournisseur et au moins une ligne reçue.', { type: 'warning' });
+        return;
+      }
+
+      // Garde anti double-clic : un seul appui effectif jusqu'à la fermeture
+      // ou l'échec récupérable. Les appuis concurrents sont jetés.
+      if (!stClaimConfirmBusy(confirmBtn)) return;
+      const releaseBusy = () => stReleaseConfirmBusy(confirmBtn);
+
+      // Guichet unique : jamais deux écritures stock pour le même document.
+      // Le même PDF re-déposé (deuxième appareil, marquage interrompu) est
+      // arrêté ici, AVANT tout moveStock.
+      if (intakeDocId) {
+        const guard = stIntakePostGuard(stIntakePostedHas(intakeDocId), await stIntakeServerStatus(intakeDocId));
+        if (guard !== 'ok') {
+          const st = scope.querySelector('[data-stock-scan-stage]');
+          if (st) { st.innerHTML = stRenderIntakeStop(t('mScanDupT'), t('mScanDupDone', '')); wireIntakeStop(); }
+          else window.Kiwi.toast?.(t('mScanDupT'), { type: 'warn' });
+          releaseBusy();
+          return;
+        }
+      }
+
+      // Chemin historique (hors guichet) : référence aléatoire, inchangé.
+      const receiptRef = 'receipt-' + Date.now().toString(36);
+      const receivedAt = date ? new Date(`${date}T12:00:00`).getTime() : Date.now();
+      const inv = getInv();
+
+      if (intakeDocId) {
+        // Guichet unique : UN SEUL propriétaire des écritures (stIntakePostAll
+        // : ligne comptable + mouvements + coûts + facture, tout déterministe
+        // et rejouable après n'importe quelle interruption). Ni receiveDirect
+        // ni moveStock ne sont appelés sur ce chemin.
+        const ctxLines = lines.map((line) => {
+          const it = inv.find((x) => x.id === line.itemId);
+          let cardSupplierId = '';
+          let cardRank = 1;
+          if (it) {
+            const card = stUpsertSupplierCard(it, supplier, line,
+              'supc-intake-' + stIntakeHash(it.id + '|' + String(supplier).toLowerCase()));
+            cardSupplierId = card.supId;
+            cardRank = card.supRank;
+          }
+          return {
+            itemId: line.itemId,
+            name: it?.name || line.itemId,
+            qty: line.qty,
+            unit: it?.unit || 'unité',
+            unitCost: line.cost,
+            updateCost: line.updateCost,
+            dlc: line.dlc || '',
+            cardSupplierId, cardRank,
+          };
+        }).filter((l) => l.itemId && l.qty > 0);
+        try {
+          await stIntakePostAll({
+            docId: intakeDocId, supplierName: supplier, externalRef, receivedAt,
+            issuedAt: date ? new Date(`${date}T12:00:00`).getTime() : receivedAt,
+            source: 'pdf', lines: ctxLines,
+          });
+        } catch (err) {
+          /* Reprise divergente : aucun écrit n'a eu lieu (le prepare précède
+           * tout), on montre l'état dédié plutôt que l'échec générique — et
+           * toujours ni postedAdd, ni marquage, ni fermeture. */
+          if (await stHandleIntakePostingConflict(scope, err, intakeDocId, ctxLines)) { releaseBusy(); return; }
+          window.Kiwi.toast?.(t('mScanFailFallback'), { type: 'warn' });
+          releaseBusy();
+          return; // ni postedAdd, ni marquage, ni fermeture : la reprise converge.
+        }
+      } else {
+
+      // Chemin historique : stLegacyPostAll est l'unique écrivain (boucle
+      // moveStock seule ; receiveDirect ne fait que la pièce + facture).
+      try {
+        stLegacyPostAll({ supplier, externalRef, date, receivedAt, lines, items: inv, receiptRef });
+      } catch (_) {
+        window.Kiwi.toast?.(t('mScanFailFallback'), { type: 'warn' });
+        releaseBusy();
+        return;
+      }
+      } // fin chemin historique
+
+      stSaveOverlay();
+      // Guichet unique : le stock est écrit, on scelle le brouillon. Si le
+      // marquage échoue (onglet tué, réseau coupé), l'outbox le rejouera —
+      // marquage seul, jamais de repost — à la prochaine ouverture du scan.
+      if (intakeDocId) {
+        stIntakePostedAdd(intakeDocId);
+        try {
+          const marked = await stIntakeMarkOnce(intakeDocId);
+          if (!marked) window.Kiwi.toast?.(t('mScanMarkRetry'), { type: 'warn' });
+        } catch (_) {}
+      }
       closeTopModal();
-      window.Kiwi.toast(t('mScanToast'), { type: 'success', duration: 3800 });
+      window.Kiwi.toast?.(`${lines.length} ligne${lines.length > 1 ? 's' : ''} reçue${lines.length > 1 ? 's' : ''} et ajoutée${lines.length > 1 ? 's' : ''} au stock.`, { type: 'success', duration: 3800 });
       if (stPageActive) render();
     });
   }
@@ -2105,14 +5475,242 @@
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Physical count
    * ═══════════════════════════════════════════════════════════════════════ */
+  /* ═══════════════════════════════════════════════════════════════════════
+   * Guide d'inventaire — cause probable, historique, feuille imprimable
+   * ═══════════════════════════════════════════════════════════════════════ */
+  /* Cause probable d'un écart de comptage. Fonction pure : l'ordre des règles
+   * est un choix métier — un signal enregistré (pertes déclarées, livraison
+   * récente) explique mieux qu'une heuristique de catégorie, donc il passe
+   * avant. `moves` vient du registre (7 derniers jours, hors 'count'). */
+  function stCountReason(ctx) {
+    const diff = +ctx.diff || 0;
+    if (!diff) return '';
+    const expected = +ctx.expected || 0;
+    const counted = +ctx.counted || 0;
+    const theoUsage = +ctx.theoUsage || 0;
+    const moves = Array.isArray(ctx.moves) ? ctx.moves : [];
+    const now = +ctx.now || Date.now();
+    if (counted === 0 && expected > 0) return 'reasonZero';
+    if (diff > 0 && expected > 0 && counted >= expected * 20) return 'reasonUnit';
+    if (diff < 0) {
+      if (moves.some((m) => m && m.reason === 'waste')) return 'reasonWaste';
+      if (theoUsage > 0 && Math.abs(diff) <= theoUsage * 1.25) return 'reasonRecipes';
+      if (['viandes', 'poissons', 'legumes', 'laitiers'].indexOf(String(ctx.cat)) !== -1) return 'reasonPerish';
+      return 'reasonLoss';
+    }
+    if (moves.some((m) => m && +m.qty > 0 && /receipt|procurement|delivery|invoice/.test(String(m.refType || '')) && now - (+m.occurredTs || 0) < 48 * 3600 * 1000)) return 'reasonDeliv';
+    return 'reasonExtra';
+  }
+  /* Mouvements récents d'un article, pour nourrir stCountReason. Registre réel
+   * uniquement : les fixtures démo n'ont pas d'historique de mouvements. */
+  function stRecentMoves(itemId) {
+    try {
+      const L = window.KiwiInventory;
+      if (!L || !L.isReal || !L.isReal()) return [];
+      const since = Date.now() - 7 * 24 * 3600 * 1000;
+      return (L.history(itemId) || []).filter((m) => (+m.occurredTs || 0) >= since && m.reason !== 'count');
+    } catch (_) { return []; }
+  }
+  /* Historique des inventaires validés — même portée tenant que l'overlay
+   * stock (compte réel = slug cloud, sinon venue id). Plafonné : c'est un
+   * journal de tendance, pas une base ; le registre reste la vérité. */
+  const stCountHistKey = () => 'kiwi:inventoryCounts:v1:' + stOverlayScope();
+  function stCountHistory() {
+    try {
+      const a = JSON.parse(localStorage.getItem(stCountHistKey()) || '[]');
+      return Array.isArray(a) ? a : [];
+    } catch (_) { return []; }
+  }
+  function stSaveCountHistory(ref, lines) {
+    const gaps = lines.filter((l) => l.diff);
+    const entry = {
+      ref: String(ref), ts: Date.now(), counted: lines.length,
+      varMad: Math.round(gaps.reduce((s, l) => s + (+l.costDiff || 0), 0)),
+      gaps: gaps.slice(0, 200).map((l) => ({
+        id: l.it.id, name: l.it.name, unit: l.it.unit,
+        theo: l.theo, counted: l.counted, diff: l.diff,
+        mad: Math.round(+l.costDiff || 0), reason: l.reasonKey || '',
+      })),
+    };
+    try { localStorage.setItem(stCountHistKey(), JSON.stringify([entry, ...stCountHistory()].slice(0, 24))); } catch (_) {}
+    return entry;
+  }
+  const stCountDate = (ts) => {
+    try {
+      const loc = lang() === 'ar' ? 'ar-MA' : lang() === 'en' ? 'en-GB' : 'fr-FR';
+      return new Date(ts).toLocaleDateString(loc, { day: 'numeric', month: 'long', year: 'numeric' });
+    } catch (_) { return new Date(ts).toLocaleDateString(); }
+  };
+
+  /* Feuille d'inventaire papier. À l'aveugle par défaut : sans la colonne
+   * théorique, le compteur note ce qu'il voit au lieu de confirmer le chiffre
+   * attendu. Impression via iframe caché (même motif qu'operational-print). */
+  function stSheetHtml(showTheo) {
+    const items = getInv();
+    const cats = allCategories();
+    const catName = (id) => { const c = cats.find((x) => x.id === id); return c ? c.label : id; };
+    const groups = new Map();
+    items.forEach((it) => {
+      const id = String(it.category || it.cat || 'epicerie');
+      if (!groups.has(id)) groups.set(id, []);
+      groups.get(id).push(it);
+    });
+    let venueName = '';
+    try { venueName = window.KiwiVenue?.getCurrentVenueData?.()?.name || ''; } catch (_) {}
+    const last = stCountHistory()[0];
+    const rtl = lang() === 'ar';
+    const sections = Array.from(groups.entries()).map(([id, rows]) => `
+      <section>
+        <h2>${esc(catName(id))}</h2>
+        <table>
+          <thead><tr><th class="w-name">${esc(t('sheetColItem'))}</th><th>${esc(t('sheetColUnit'))}</th>${showTheo ? `<th>${esc(t('mCountColTheo'))}</th>` : ''}<th class="w-count">${esc(t('mCountColReal'))}</th><th class="w-note">${esc(t('sheetColNotes'))}</th></tr></thead>
+          <tbody>${rows.map((it) => `<tr><td class="w-name">${esc(it.name)}</td><td>${esc(it.unit)}</td>${showTheo ? `<td class="mono">${esc(fmtUnit(currentStockFor(it), it.unit))}</td>` : ''}<td class="w-count"></td><td class="w-note"></td></tr>`).join('')}</tbody>
+        </table>
+      </section>`).join('');
+    return `<!doctype html><html dir="${rtl ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><title>${esc(t('mSheetTitle'))}</title><style>
+      @page { margin: 12mm; }
+      html, body { background: #fff; color: #0A0F0D; color-scheme: light; }
+      body { margin: 0; font: 12px/1.5 Arial, sans-serif; }
+      header { border-bottom: 2px solid #0B6E4F; padding-bottom: 10px; }
+      header h1 { margin: 0; font-size: 20px; }
+      header p { margin: 3px 0 0; color: #555; }
+      .meta { display: flex; gap: 26px; margin: 12px 0 4px; font-size: 12px; }
+      .meta span { display: inline-block; border-bottom: 1px solid #999; min-width: 150px; padding: 0 4px 2px; }
+      section { break-inside: avoid-page; }
+      h2 { font-size: 13px; margin: 16px 0 6px; color: #0B6E4F; text-transform: uppercase; letter-spacing: 0.06em; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #bbb; padding: 6px 8px; text-align: ${rtl ? 'right' : 'left'}; font-size: 11.5px; }
+      th { background: #F7F5F0; text-transform: uppercase; font-size: 9.5px; letter-spacing: 0.05em; color: #444; }
+      td { height: 18px; }
+      .w-count { width: 110px; } .w-note { width: 170px; } .mono { font-family: monospace; }
+      footer { margin-top: 18px; font-size: 10.5px; color: #666; }
+    </style></head><body>
+      <header>
+        <h1>${esc(t('mSheetTitle'))}${venueName ? ' · ' + esc(venueName) : ''}</h1>
+        <p>${esc(stCountDate(Date.now()))}${last ? ' · ' + esc(t('mCountLast', stCountDate(last.ts), fmtMad(last.varMad))) : ''}</p>
+      </header>
+      <div class="meta">
+        <div>${esc(t('sheetCounter'))} : <span>&nbsp;</span></div>
+        <div>${esc(t('sheetSign'))} : <span>&nbsp;</span></div>
+      </div>
+      ${sections}
+      <footer>${esc(t('sheetFoot'))}</footer>
+    </body></html>`;
+  }
+  function printCountSheet(showTheo) {
+    const frame = document.createElement('iframe');
+    frame.setAttribute('title', t('mSheetTitle'));
+    frame.style.cssText = 'position:fixed;width:1px;height:1px;right:0;bottom:0;opacity:0;';
+    document.body.appendChild(frame);
+    const doc = frame.contentDocument;
+    doc.open(); doc.write(stSheetHtml(showTheo)); doc.close();
+    setTimeout(() => {
+      try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (_) {}
+      setTimeout(() => frame.remove(), 1500);
+    }, 120);
+  }
+  function openCountSheet() {
+    const n = getInv().length;
+    const m = window.Kiwi.modal({
+      title: t('mSheetTitle'),
+      desc: t('mSheetSub'),
+      width: 520,
+      body: `
+        <label class="st-pc-blindrow">
+          <input type="checkbox" data-sheet-theo />
+          <span><b>${esc(t('mSheetTheo'))}</b> · ${esc(t('mSheetTheoTip'))}</span>
+        </label>
+        <p style="font-size:12px;color:var(--n-600);margin:10px 2px 0;">${esc(t('mSheetCount', n))}</p>
+      `,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(t('mRevBack'))}</button><button class="st-btn primary" data-stock-sheet-print>${esc(t('mSheetPrint'))}</button>`,
+    });
+    requestAnimationFrame(() => {
+      const scope = m?.el || topBackdrop();
+      wireDismiss(scope);
+      scope?.querySelector('[data-stock-sheet-print]')?.addEventListener('click', () => {
+        printCountSheet(!!scope.querySelector('[data-sheet-theo]')?.checked);
+        closeTopModal();
+      }, { once: true });
+    });
+  }
+  /* Revue des écarts avant application. Seul chemin d'écriture : countStock →
+   * moveStock → registre. Rien ne bouge tant que le propriétaire n'a pas vu
+   * chaque écart, sa valeur en MAD et sa cause probable. */
+  function openCountReview(lines, countBack) {
+    const countRef = 'count-' + Date.now().toString(36);
+    const gaps = lines.filter((l) => l.diff);
+    gaps.forEach((l) => {
+      l.reasonKey = stCountReason({
+        diff: l.diff, expected: l.theo, counted: l.counted,
+        cat: String(l.it.category || l.it.cat || ''),
+        theoUsage: theoreticalUsageFor(l.it),
+        moves: stRecentMoves(l.it.id),
+      });
+    });
+    const totalVar = gaps.reduce((s, l) => s + l.costDiff, 0);
+    const m = window.Kiwi.modal({
+      title: t('mRevTitle'),
+      desc: t('mRevSub', lines.length),
+      width: 860,
+      body: gaps.length ? `
+        <div class="st-pc-wrap">
+          <table class="st-pc-tbl">
+            <thead><tr>
+              <th>${esc(t('colArticle'))}</th>
+              <th class="r">${esc(t('mCountColTheo'))}</th>
+              <th class="r">${esc(t('mCountColReal'))}</th>
+              <th class="r">${esc(t('mCountColVar'))}</th>
+              <th class="r">${esc(t('mCountColCost'))}</th>
+              <th>${esc(t('mRevColReason'))}</th>
+            </tr></thead>
+            <tbody>
+              ${gaps.map((l) => {
+                const pct = l.theo > 0 ? Math.abs(l.diff / l.theo) * 100 : 100;
+                const cls = pct < 2 ? 'ok' : pct < 10 ? 'warn' : 'bad';
+                return `<tr>
+                  <td><b>${esc(l.it.name)}</b> <span style="color:var(--n-500); font-size:11px;">· ${esc(l.it.unit)}</span></td>
+                  <td class="r mono">${esc(fmtUnit(l.theo, l.it.unit))}</td>
+                  <td class="r mono">${esc(fmtUnit(l.counted, l.it.unit))}</td>
+                  <td class="r"><span class="st-pc-var ${cls}">${l.diff > 0 ? '+' : ''}${fmtNum(l.diff, Math.abs(l.diff) < 10 ? 1 : 0)} ${esc(l.it.unit)}</span></td>
+                  <td class="r"><span class="st-pc-var ${cls}">${l.costDiff > 0 ? '+' : ''}${esc(fmtMad(l.costDiff))}</span></td>
+                  <td class="st-rev-reason">${esc(t(l.reasonKey))}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="st-pc-prog"><span class="st-pc-prog-l">${esc(t('mRevTotal', gaps.length, fmtMad(totalVar)))}</span></div>
+      ` : `<div class="st-notice"><b>${esc(t('mRevNoneT'))}</b>${esc(t('mRevNone'))}</div>`,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(t('mRevBack'))}</button><button class="st-btn primary" data-stock-rev-apply>${esc(t('mRevApply'))}</button>`,
+    });
+    requestAnimationFrame(() => {
+      const scope = m?.el || topBackdrop();
+      wireDismiss(scope);
+      scope?.querySelector('[data-stock-rev-apply]')?.addEventListener('click', () => {
+        lines.forEach((l) => countStock(l.it, l.counted, countRef));
+        stSaveOverlay();
+        stSaveCountHistory(countRef, lines);
+        closeTopModal();
+        try { countBack?.querySelector('.kiwi-modal-close')?.click(); } catch (_) {}
+        window.Kiwi.toast(t('mCountToast', fmtMad(totalVar)), { type: 'success', duration: 4200 });
+        if (stPageActive) render();
+      }, { once: true });
+    });
+  }
+
   function openPhysicalCount() {
     const items = getInv();
+    const last = stCountHistory()[0];
     const m = window.Kiwi.modal({
       title: t('mCountTitle'),
-      desc: t('mCountSub'),
+      desc: (last ? t('mCountLast', stCountDate(last.ts), fmtMad(last.varMad)) + ' · ' : '') + t('mCountSub'),
       width: 760,
       body: `
-        <div class="st-pc-wrap">
+        <label class="st-pc-blindrow">
+          <input type="checkbox" data-pc-blind checked />
+          <span><b>${esc(t('mCountBlind'))}</b> · ${esc(t('mCountBlindTip'))}</span>
+        </label>
+        <div class="st-pc-wrap st-pc-blind">
           <table class="st-pc-tbl">
             <thead>
               <tr>
@@ -2130,9 +5728,9 @@
                   <tr data-stock-pc-row="${esc(it.id)}">
                     <td><b>${esc(it.name)}</b> <span style="color:var(--n-500); font-size:11px;">· ${esc(it.unit)}</span></td>
                     <td class="r mono"><span data-pc-theo>${esc(fmtUnit(cur, it.unit))}</span></td>
-                    <td class="r"><input class="st-pc-input" type="number" step="0.1" min="0" placeholder="—" data-pc-real="${esc(it.id)}" data-pc-theo-val="${cur}" data-pc-cost="${it.costPerUnit}" data-pc-unit="${esc(it.unit)}" /></td>
-                    <td class="r"><span class="st-pc-var" data-pc-var>—</span></td>
-                    <td class="r"><span class="st-pc-var" data-pc-cost-out>—</span></td>
+                    <td class="r"><input class="st-pc-input" type="number" step="0.1" min="0" placeholder="·" data-pc-real="${esc(it.id)}" data-pc-theo-val="${cur}" data-pc-cost="${it.costPerUnit}" data-pc-unit="${esc(it.unit)}" /></td>
+                    <td class="r"><span class="st-pc-var" data-pc-var>·</span></td>
+                    <td class="r"><span class="st-pc-var" data-pc-cost-out>·</span></td>
                   </tr>
                 `;
               }).join('')}
@@ -2150,11 +5748,9 @@
   }
 
   function wirePhysicalCount(items) {
-    let totalCostVar = 0;
     const recomputeProgress = () => {
       const inputs = document.querySelectorAll('[data-pc-real]');
       let counted = 0;
-      totalCostVar = 0;
       inputs.forEach(inp => {
         const val = parseFloat(inp.value);
         if (!isNaN(val) && inp.value !== '') {
@@ -2164,7 +5760,6 @@
           const unit = inp.dataset.pcUnit;
           const diff = val - theo;
           const costDiff = diff * cost;
-          totalCostVar += costDiff;
           const varCell = inp.closest('tr').querySelector('[data-pc-var]');
           const costCell = inp.closest('tr').querySelector('[data-pc-cost-out]');
           const absDiff = Math.abs(diff);
@@ -2176,9 +5771,9 @@
           costCell.textContent = `${costDiff > 0 ? '+' : ''}${fmtMad(costDiff)}`;
         } else {
           const tr = inp.closest('tr');
-          tr.querySelector('[data-pc-var]').textContent = '—';
+          tr.querySelector('[data-pc-var]').textContent = '·';
           tr.querySelector('[data-pc-var]').className = 'st-pc-var';
-          tr.querySelector('[data-pc-cost-out]').textContent = '—';
+          tr.querySelector('[data-pc-cost-out]').textContent = '·';
           tr.querySelector('[data-pc-cost-out]').className = 'st-pc-var';
         }
       });
@@ -2193,16 +5788,27 @@
       }
     };
     document.querySelectorAll('[data-pc-real]').forEach(inp => inp.addEventListener('input', recomputeProgress));
+    /* À l'aveugle par défaut : les colonnes théorique / écart / valeur restent
+     * masquées pendant la saisie (CSS), le propriétaire peut les révéler. */
+    const blindBox = document.querySelector('[data-pc-blind]');
+    blindBox?.addEventListener('change', () => {
+      document.querySelector('.st-pc-wrap')?.classList.toggle('st-pc-blind', blindBox.checked);
+    });
+    /* Valider n'écrit plus directement : on passe par la revue des écarts
+     * (cause probable + valeur MAD), qui seule applique via countStock. */
     document.querySelector('[data-stock-pc-validate]')?.addEventListener('click', () => {
-      // Apply counted values as stock overrides
+      const lines = [];
       document.querySelectorAll('[data-pc-real]').forEach(inp => {
         const v = parseFloat(inp.value);
-        if (!isNaN(v)) stStockOverrides[inp.dataset.pcReal] = v;
+        const it = items.find((x) => x.id === inp.dataset.pcReal);
+        if (isNaN(v) || inp.value === '' || !it) return;
+        const theo = parseFloat(inp.dataset.pcTheoVal) || 0;
+        const diff = Math.round((v - theo) * 1000) / 1000;
+        lines.push({ it, theo, counted: v, diff, costDiff: diff * (+it.costPerUnit || 0) });
       });
-      stSaveOverlay();     // un inventaire physique se compte une fois, pas à chaque rechargement
-      closeTopModal();
-      window.Kiwi.toast(t('mCountToast', fmtMad(totalCostVar)), { type: 'success', duration: 4200 });
-      if (stPageActive) render();
+      /* La revue s'empile SUR la grille de comptage : Annuler doit rendre les
+       * 40 saisies intactes (corriger une erreur d'unité), pas une page vide. */
+      openCountReview(lines, topBackdrop());
     });
   }
 
@@ -2214,13 +5820,10 @@
     if (!s) return;
     const deliveriesCount = Math.round(s.monthlySpend / s.avgInvoice);
     const pcl = s.priceChangeLast30d;
-    const trendCls = pcl > 1 ? 'up' : pcl < -1 ? 'down' : '';
-    // Mock price history — 6 months
-    const ph = [s.avgInvoice * 0.95, s.avgInvoice * 0.97, s.avgInvoice * 1.0, s.avgInvoice * 0.99, s.avgInvoice * 1.02, s.avgInvoice];
-
+    const rateStr = s.rating != null && !isNaN(s.rating) && s.rating !== '' ? ` · ★ ${Number(s.rating).toFixed(1)}` : '';
     const m = window.Kiwi.modal({
       title: s.name,
-      desc: `${esc(s.location)} · ${catLabel(s.category)} · ★ ${s.rating.toFixed(1)}`,
+      desc: `${esc(s.location)} · ${catLabel(s.category)}${rateStr}`,
       width: 720,
       body: `
         <div class="st-md-stats">
@@ -2253,23 +5856,13 @@
         </div>
       `,
       foot: `
-        <button class="st-btn" data-stock-call-supplier data-name="${esc(s.name)}" data-phone="${esc(s.contact)}">${svg('phone', 12)}<span>${esc(t('mSupCall'))}</span></button>
-        <button class="st-btn" data-stock-wa-supplier data-name="${esc(s.name)}">${svg('messageCircle', 12)}<span>${esc(t('mSupWa'))}</span></button>
-        <button class="st-btn primary" data-stock-new-po data-supplier-id="${esc(s.id)}">${esc(t('mSupOrd'))}</button>
+        <button class="st-btn" data-action="stock-call-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}">${svg('phone', 12)}<span>${esc(t('mSupCall'))}</span></button>
+        <button class="st-btn" data-action="stock-wa-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}">${svg('messageCircle', 12)}<span>${esc(t('mSupWa'))}</span></button>
+        <button class="st-btn primary" data-action="stock-new-po" data-supplier-id="${esc(s.id)}">${esc(t('mSupOrd'))}</button>
       `,
     });
     requestAnimationFrame(() => {
       wireDismiss(m?.el || topBackdrop());
-      document.querySelector('[data-stock-call-supplier]')?.addEventListener('click', (e) => {
-        window.Kiwi.toast(`Appel à ${e.currentTarget.dataset.name} · ${e.currentTarget.dataset.phone}`, { type: 'info' });
-      });
-      document.querySelector('[data-stock-wa-supplier]')?.addEventListener('click', (e) => {
-        window.Kiwi.toast(`Message WhatsApp envoyé à ${e.currentTarget.dataset.name}`, { type: 'success' });
-      });
-      document.querySelector('[data-stock-new-po]')?.addEventListener('click', () => {
-        closeTopModal();
-        window.Kiwi.toast(t('poNewToast'), { type: 'info' });
-      });
     });
   }
 
@@ -2296,6 +5889,356 @@
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Item detail
    * ═══════════════════════════════════════════════════════════════════════ */
+  function movementLabel(reason) {
+    return ({
+      opening: 'Solde initial', receipt: 'Réception', 'supplier-return': 'Retour fournisseur',
+      sale: 'Vente', 'sale-reversal': 'Annulation de vente', 'production-input': 'Matière consommée',
+      'production-output': 'Production', 'transfer-out': 'Transfert sortant', 'transfer-in': 'Transfert entrant',
+      loss: 'Perte', expiry: 'Périmé', gift: 'Offert', 'staff-meal': 'Consommation équipe',
+      count: 'Écart de comptage', return: 'Retour client', manual: 'Ajustement manuel',
+    })[reason] || reason || 'Mouvement';
+  }
+  function itemHistory(it) {
+    try { return window.KiwiInventory?.history?.(it.id) || []; } catch (_) { return []; }
+  }
+  function renderRealItemMovementSummary(it) {
+    const rows = itemHistory(it);
+    const received = rows.filter(r => r.reason === 'receipt').reduce((n, r) => n + Math.max(0, +r.qty || 0), 0);
+    const consumed = rows.filter(r => (+r.qty || 0) < 0).reduce((n, r) => n + Math.abs(+r.qty || 0), 0);
+    return `
+      <div class="st-md-col-t">Activité enregistrée</div>
+      <div class="st-md-pair"><span class="l">Entrées fournisseur</span><span class="v">${esc(fmtUnit(received, it.unit))}</span></div>
+      <div class="st-md-pair"><span class="l">Sorties enregistrées</span><span class="v">${esc(fmtUnit(consumed, it.unit))}</span></div>
+      <div class="st-md-pair"><span class="l">Mouvements</span><span class="v">${rows.length}</span></div>
+      <div class="st-notice ${rows.length ? 'ok' : 'warn'}" style="margin-top:12px;">
+        ${svg(rows.length ? 'checkCircle' : 'alertTriangle', 14)}
+        <div>${rows.length ? 'Le stock affiché est reconstruit depuis le registre de mouvements.' : 'Aucun mouvement n’a encore été enregistré pour cet article.'}</div>
+      </div>`;
+  }
+  function swapSupplierRanks(itemId) {
+    if (!itemId) return;
+    const raw = stOverlayRaw();
+    const sub = (raw.subcategories || []).find(s => s.id === itemId);
+    if (!sub || !Array.isArray(sub.suppliers) || sub.suppliers.length < 2) return;
+    const s0 = sub.suppliers[0];
+    const s1 = sub.suppliers[1];
+    s0.rank = 2;
+    s1.rank = 1;
+    sub.suppliers = [s1, s0, ...sub.suppliers.slice(2)];
+    sub.updatedAt = Date.now();
+    stItemOverrides[itemId] = Object.assign({}, stItemOverrides[itemId] || {}, {
+      suppliers: sub.suppliers,
+      supplier: s1.supplierName,
+      updatedAt: Date.now(),
+    });
+    stSaveOverlay();
+    window.Kiwi?.toast?.(`Fournisseur principal défini sur ${s1.supplierName} (s'applique aux prochaines livraisons)`, { type: 'success' });
+    closeTopModal();
+    if (stPageActive) render();
+  }
+
+  function renderRealItemHistory(it) {
+    const raw = stOverlayRaw();
+    const sub = (raw.subcategories || []).find(s => s.id === it.id);
+    const cards = sub && Array.isArray(sub.suppliers) ? sub.suppliers : [];
+    let advisoryHtml = '';
+    if (cards.length >= 2) {
+      const c1 = cards[0];
+      const c2 = cards[1];
+      if (c2.defaultPrice != null && c1.defaultPrice != null && c2.defaultPrice < c1.defaultPrice) {
+        advisoryHtml = `
+          <div class="st-notice info" style="margin:10px 0; display:flex; align-items:flex-start; gap:8px;">
+            ${svg('info', 16)}
+            <div style="flex:1;">
+              <div><b>Opportunité tarifaire :</b> ${esc(c2.supplierName)} propose <b>${esc(fmtMad(c2.defaultPrice))}/${esc(sub.unit)}</b> (vs ${esc(fmtMad(c1.defaultPrice))}/${esc(sub.unit)} chez ${esc(c1.supplierName)}).</div>
+              <button class="st-btn small" type="button" data-stock-swap-ranks data-item-id="${esc(it.id)}" style="margin-top:6px;">
+                Définir en fournisseur principal (s'applique aux prochaines livraisons)
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    }
+    const rows = itemHistory(it).slice(0, 12);
+    return `
+      ${advisoryHtml}
+      <div class="st-md-section">
+        <div class="st-md-section-t">${esc(t('mItSuppliersT'))}</div>
+        <div class="st-md-list">
+          ${cards.length ? cards.map(c => `
+            <div class="st-md-list-row">
+              <div>
+                <span class="n">${esc(c.supplierName)}</span>
+                <span class="${c.rank === 1 ? 'status-ok' : 'status-warn'}" style="margin-left:8px; font-size:11px; padding:2px 6px; border-radius:4px;">
+                  ${c.rank === 1 ? esc(t('supRankPrincipal')) : `${esc(t('supRankBackup'))} ${c.rank - 1}`}
+                </span>
+              </div>
+              <div class="v">${c.defaultPrice != null ? `${esc(fmtMad(c.defaultPrice))} / ${esc(sub?.unit || it.unit || 'unité')}` : '·'}</div>
+            </div>`).join('') : `<div style="padding:9px 4px; font-size:12.5px; color:var(--n-500);">${esc(t('mItNoSuppliers'))}</div>`}
+        </div>
+        <button class="st-btn small" type="button" data-stock-add-backup-supplier data-item-id="${esc(it.id)}" style="margin-top:8px;">
+          ${svg('plus', 12)}<span>${esc(t('mItAddBackupSup'))}</span>
+        </button>
+      </div>
+      <div class="st-md-section">
+        <div class="st-md-section-t">Historique des mouvements</div>
+        <div class="st-md-list">
+          ${rows.length ? rows.map(r => `
+            <div class="st-md-list-row">
+              <div><span class="n">${esc(movementLabel(r.reason))}</span><span class="d" style="margin-left:6px;">${esc(r.note || r.refId || '')}</span></div>
+              <div class="v" style="color:${(+r.qty || 0) >= 0 ? 'var(--atlas)' : 'var(--danger)'};">${(+r.qty || 0) > 0 ? '+' : ''}${esc(fmtUnit(+r.qty || 0, it.unit))}</div>
+              <div class="d">${esc(new Date(r.occurredTs || Date.now()).toLocaleDateString(lang() === 'ar' ? 'ar-MA' : lang() === 'en' ? 'en-GB' : 'fr-MA'))}</div>
+            </div>`).join('') : `<div style="padding:12px 4px; font-size:12.5px; color:var(--n-500);">Aucun mouvement enregistré.</div>`}
+        </div>
+      </div>
+      ${(function(){
+        const wasteMoves = rows.filter(r => r && (r.refType === 'waste' || ['loss', 'expiry', 'gift', 'staff-meal'].includes(r.reason)));
+        if (!wasteMoves.length) return '';
+        return `
+          <div class="st-md-section" style="margin-top:16px;">
+            <div class="st-md-section-t" style="display:flex;justify-content:space-between;align-items:center;">
+              <span>Pertes &amp; sorties exceptionnelles</span>
+              <span style="font-size:11.5px;color:#b91c1c;font-weight:600;">${wasteMoves.length} déclaration${wasteMoves.length > 1 ? 's' : ''}</span>
+            </div>
+            <div class="st-md-list">
+              ${wasteMoves.map(r => {
+                const d = new Date(r.occurredTs || Date.now());
+                const dateStr = d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                const fine = (r.meta && r.meta.wasteReason) || r.reason;
+                const reasonLabel = (function(why){
+                  if (why === 'perime' || r.reason === 'expiry') return 'Périmé';
+                  if (why === 'casse') return 'Casse';
+                  if (why === 'avarie') return 'Avarié';
+                  if (why === 'offert' || r.reason === 'gift') return 'Offert';
+                  if (why === 'repas-equipe' || r.reason === 'staff-meal') return 'Repas équipe';
+                  return 'Perte';
+                })(fine);
+                const isReversal = !!r.reversalOf;
+                return `
+                  <div class="st-md-list-row" style="${isReversal ? 'opacity:0.5;' : ''}">
+                    <div>
+                      <span class="n" style="color:#b91c1c;">${esc(reasonLabel)}</span>
+                      <span class="d" style="margin-left:6px;">${esc(r.actor || '·')} ${r.note ? `· ${esc(r.note)}` : ''}</span>
+                    </div>
+                    <div class="v" style="color:#b91c1c;font-weight:600;">−${Math.abs(+r.qty || 0)} ${esc(it.unit)}</div>
+                    <div class="d" style="display:flex;align-items:center;gap:6px;">
+                      <span>${dateStr}</span>
+                      ${stShowReal() && !isReversal ? `
+                        <button class="st-btn small" type="button" data-action="stock-cancel-waste" data-movement-id="${esc(r.id)}" title="Annuler cette perte" style="color:#b91c1c;padding:1px 6px;font-size:11px;">
+                          Annuler
+                        </button>
+                      ` : ''}
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      })()}`;
+  }
+  function openAddBackupSupplier(itemId) {
+    const it = getInv().find(x => x.id === itemId);
+    if (!it) return;
+    const raw = stOverlayRaw();
+    const sub = (raw.subcategories || []).find(s => s.id === itemId);
+    const unit = (sub && sub.unit) || it.unit || 'unité';
+
+    const m = window.Kiwi.modal({
+      title: t('addBackupSupTitle'),
+      desc: `${it.name} · ${catLabel(it.category)}`,
+      width: 520,
+      body: `
+        <div class="st-mb-field" style="margin-bottom:12px;">
+          <label class="st-mb-label">${esc(t('addBackupSupLabel'))}</label>
+          <select class="st-mb-input" data-stock-backup-sup>
+            ${renderSupOptions()}
+            <option value="__new__">${esc(t('addBackupSupOptNew'))}</option>
+          </select>
+          <div data-stock-newsup-wrap style="display:none; margin-top:8px;">
+            <input class="st-mb-input" type="text" placeholder="${esc(t('addBackupSupNewName'))}" data-stock-newsup-name />
+          </div>
+        </div>
+        <div class="st-mb-field">
+          <label class="st-mb-label">${esc(t('addBackupSupPrice'))} (MAD / ${esc(unit)})</label>
+          <input class="st-mb-input mono" type="number" min="0" step="0.01" placeholder="0.00" data-stock-backup-price />
+        </div>
+        <div class="st-notice ok" style="margin-top:12px;">
+          ${svg('checkCircle', 14)}
+          <div>${esc(t('addBackupSupHelp'))}</div>
+        </div>
+      `,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()]?.btnCancel || 'Annuler')}</button><button class="st-btn primary" data-stock-backup-save>${esc(t('addBackupSupConfirm'))}</button>`,
+    });
+
+    const scope = m?.el || topBackdrop();
+    wireDismiss(scope);
+
+    const supSel = scope?.querySelector('[data-stock-backup-sup]');
+    const newsupWrap = scope?.querySelector('[data-stock-newsup-wrap]');
+    const newsupInput = scope?.querySelector('[data-stock-newsup-name]');
+
+    supSel?.addEventListener('change', () => {
+      if (supSel.value === '__new__') {
+        if (newsupWrap) newsupWrap.style.display = '';
+        newsupInput?.focus();
+      } else {
+        if (newsupWrap) newsupWrap.style.display = 'none';
+      }
+    });
+
+    scope?.querySelector('[data-stock-backup-save]')?.addEventListener('click', () => {
+      let rawSup = '';
+      if (supSel?.value === '__new__') {
+        rawSup = (newsupInput?.value || '').trim();
+        if (!rawSup) { newsupInput?.focus(); return; }
+      } else {
+        rawSup = (supSel?.value || '').trim();
+      }
+      if (!rawSup) return;
+
+      const foundSup = getSup().find(s => s.name === rawSup || `${s.name} · ${s.location || ''}`.trim().replace(/ ·\s*$/, '') === rawSup);
+      const supplierName = foundSup ? foundSup.name : rawSup;
+
+      if (window.KiwiProcurement?.addSupplier) {
+        const known = window.KiwiProcurement.doc?.()?.suppliers?.find(s => String(s.name || '').trim().toLowerCase() === supplierName.toLowerCase());
+        if (!known) {
+          try { window.KiwiProcurement.addSupplier({ name: supplierName }); } catch (_) {}
+        }
+      }
+
+      const priceVal = parseFloat(scope.querySelector('[data-stock-backup-price]')?.value);
+      const defaultPrice = (Number.isFinite(priceVal) && priceVal >= 0) ? Math.round(priceVal * 100) / 100 : (+it.costPerUnit || 0);
+
+      const rawDoc = stOverlayRaw();
+      let subcat = (rawDoc.subcategories || []).find(s => s.id === itemId);
+      if (!subcat) {
+        subcat = {
+          id: itemId,
+          categoryId: it.category || 'legumes',
+          name: it.name,
+          unit: unit,
+          defaultCost: +it.costPerUnit || 0,
+          suppliers: [],
+          currentStock: currentStockFor(it),
+          parLevel: it.parLevel,
+          reorderLevel: it.reorderLevel,
+          usageThisWeek: it.usageThisWeek || 0,
+          theoreticalUsage: it.theoreticalUsage || 0,
+          updatedAt: Date.now(),
+        };
+        if (!Array.isArray(rawDoc.subcategories)) rawDoc.subcategories = [];
+        rawDoc.subcategories.push(subcat);
+      }
+
+      const cards = Array.isArray(subcat.suppliers) ? subcat.suppliers.slice() : [];
+      if (!cards.length && it.supplier) {
+        cards.push({
+          id: 'sup-' + Date.now().toString(36) + '-main',
+          supplierName: it.supplier,
+          defaultPrice: +it.costPerUnit || 0,
+          purchaseUnit: unit,
+          factor: 1,
+          rank: 1,
+        });
+      }
+
+      const normName = supplierName.trim().toLowerCase();
+      const existingCard = cards.find(s => String(s.supplierName || '').trim().toLowerCase() === normName);
+
+      let toastMsg = '';
+      if (existingCard) {
+        existingCard.defaultPrice = defaultPrice;
+        toastMsg = t('backupSupUpdatedToast', existingCard.supplierName, defaultPrice);
+      } else {
+        const rank = cards.length + 1;
+        const newCard = {
+          id: 'sup-' + Date.now().toString(36),
+          supplierName: supplierName,
+          defaultPrice: defaultPrice,
+          purchaseUnit: unit,
+          factor: 1,
+          rank: rank,
+        };
+        cards.push(newCard);
+        toastMsg = t('backupSupAddedToast', supplierName);
+      }
+
+      subcat.suppliers = cards;
+      subcat.updatedAt = Date.now();
+
+      stItemOverrides[itemId] = Object.assign({}, stItemOverrides[itemId] || {}, {
+        suppliers: cards,
+        updatedAt: Date.now(),
+      });
+
+      stSaveOverlay();
+      closeTopModal();
+      window.Kiwi?.toast?.(toastMsg, { type: 'success' });
+      if (stPageActive) render();
+    });
+  }
+
+  function openItemMovement(itemId) {
+    const it = getInv().find(x => x.id === itemId); if (!it) return;
+    const m = window.Kiwi.modal({
+      title: `Mouvement · ${it.name}`,
+      desc: `Stock actuel : ${fmtUnit(currentStockFor(it), it.unit)}`,
+      width: 560,
+      body: `
+        <div class="st-mb-row two">
+          <div class="st-mb-field"><label class="st-mb-label">Motif</label>
+            <select class="st-mb-input" data-stock-move-reason>
+              <option value="receipt">Réception fournisseur</option>
+              <option value="return">Retour client</option>
+              <option value="loss">Perte / casse</option>
+              <option value="expiry">Périmé</option>
+              <option value="gift">Offert</option>
+              <option value="staff-meal">Consommation équipe</option>
+              <option value="count">Comptage physique</option>
+              <option value="manual">Correction manuelle</option>
+            </select>
+          </div>
+          <div class="st-mb-field"><label class="st-mb-label" data-stock-move-qty-label>Quantité</label><input class="st-mb-input mono" data-stock-move-qty type="number" min="0" step="0.001" placeholder="0" /></div>
+        </div>
+        <div class="st-mb-field"><label class="st-mb-label">Référence / note</label><input class="st-mb-input" data-stock-move-note placeholder="Motif, document ou responsable" /></div>
+        <div class="st-mb-field" data-stock-move-dlc-wrap><label class="st-mb-label">DLC / DDM (optionnel)</label><input class="st-mb-input mono" data-stock-move-dlc type="date" /></div>
+        <div class="st-notice ok" data-stock-move-help>${svg('checkCircle', 14)}<div>Une entrée augmente le stock. Le registre conserve la trace de l’opération.</div></div>`,
+      foot: `<button class="st-btn" data-dismiss-modal>Annuler</button><button class="st-btn primary" data-stock-move-save>Enregistrer</button>`,
+    });
+    const scope = m?.el || topBackdrop();
+    const reason = scope?.querySelector('[data-stock-move-reason]');
+    const label = scope?.querySelector('[data-stock-move-qty-label]');
+    const help = scope?.querySelector('[data-stock-move-help] div');
+    const dlcWrap = scope?.querySelector('[data-stock-move-dlc-wrap]');
+    const updateHelp = () => {
+      const isCount = reason?.value === 'count';
+      if (dlcWrap) dlcWrap.style.display = reason?.value === 'receipt' ? '' : 'none';
+      if (label) label.textContent = isCount ? `Quantité réellement comptée (${it.unit})` : `Quantité (${it.unit})`;
+      if (help) help.textContent = isCount
+        ? 'Kiwi calcule et enregistre uniquement l’écart entre le stock théorique et le comptage.'
+        : ['receipt', 'return'].includes(reason?.value) ? 'Cette entrée augmente le stock et reste traçable.' : 'Cette sortie diminue le stock et reste traçable.';
+    };
+    reason?.addEventListener('change', updateHelp); updateHelp();
+    scope?.querySelector('[data-stock-move-save]')?.addEventListener('click', () => {
+      const value = Math.max(0, +(scope.querySelector('[data-stock-move-qty]')?.value || 0));
+      const why = reason?.value || 'manual';
+      const note = scope.querySelector('[data-stock-move-note]')?.value.trim() || '';
+      if (!(value >= 0) || (why !== 'count' && value <= 0)) {
+        window.Kiwi.toast('Indiquez une quantité valide.', { type: 'warning' }); return;
+      }
+      const ref = `manual-${Date.now().toString(36)}`;
+      if (why === 'count') countStock(it, value, ref);
+      else {
+        const dlc = why === 'receipt' ? (scope.querySelector('[data-stock-move-dlc]')?.value || '') : '';
+        moveStock(it, ['receipt', 'return'].includes(why) ? value : -value, why, 'manual', ref, note, null,
+          dlc ? { expiresAt: new Date(dlc + 'T23:59:59').getTime() } : null);
+      }
+      closeTopModal(); window.Kiwi.toast('Mouvement de stock enregistré.', { type: 'success' });
+      if (stPageActive) render();
+    });
+    wireDismiss(scope);
+  }
   function openItemDetail(itemId) {
     const it = getInv().find(x => x.id === itemId);
     if (!it) return;
@@ -2319,18 +6262,19 @@
             <div class="st-md-pair"><span class="l">${esc(t('mItValue'))}</span><span class="v">${esc(fmtMad(cur * it.costPerUnit))}</span></div>
             <div class="st-md-pair"><span class="l">${esc(t('mItCost'))}</span><span class="v">${esc(fmtMad(it.costPerUnit))} / ${esc(it.unit)}</span></div>
             <div class="st-md-pair"><span class="l">${esc(t('mItVarW'))}</span><span class="v" style="color:var(--${Math.abs(v) <= 5 ? 'n-600' : Math.abs(v) <= 15 ? 'warning' : 'danger'});">${esc(fmtPct(v))}</span></div>
-            <div class="st-md-pair"><span class="l">${esc(t('mItDaysL'))}</span><span class="v">${days >= 999 ? '—' : Math.round(days) + ' j'}</span></div>
+            <div class="st-md-pair"><span class="l">${esc(t('mItDaysL'))}</span><span class="v">${days >= 999 ? '·' : Math.round(days) + ' j'}</span></div>
           </div>
           <div>
-            <div class="st-md-col-t">${esc(t('mItUsageT'))}</div>
-            ${renderItemUsageChart(it)}
-            <div style="display:flex; gap:14px; margin-top:8px; font-size:11.5px; color:var(--n-500);">
-              <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:2px; background:var(--atlas);"></span>${esc(t('mItUsageL'))}</span>
-              <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:2px; background:var(--n-400); border-top:1.5px dashed var(--n-400);"></span>${esc(t('mItUsageTheo'))}</span>
-            </div>
+            ${stShowReal() ? renderRealItemMovementSummary(it) : `
+              <div class="st-md-col-t">${esc(t('mItUsageT'))}</div>
+              ${renderItemUsageChart(it)}
+              <div style="display:flex; gap:14px; margin-top:8px; font-size:11.5px; color:var(--n-500);">
+                <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:2px; background:var(--atlas);"></span>${esc(t('mItUsageL'))}</span>
+                <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:14px; height:2px; background:var(--n-400); border-top:1.5px dashed var(--n-400);"></span>${esc(t('mItUsageTheo'))}</span>
+              </div>`}
           </div>
         </div>
-        <div class="st-md-section">
+        ${stShowReal() ? renderRealItemHistory(it) : `<div class="st-md-section">
           <div class="st-md-section-t">${esc(t('mItPricesT'))}</div>
           <div class="st-md-list">
             ${[0.92, 0.95, 0.97, 1.0, 1.02].map((m, i) => `
@@ -2353,10 +6297,11 @@
               </div>
             `).join('') : `<div style="padding:9px 4px; font-size:12.5px; color:var(--n-500);">Aucun fournisseur alternatif identifié dans cette catégorie.</div>`}
           </div>
-        </div>
+        </div>`}
       `,
       foot: `
         <button class="st-btn" data-stock-mark-86 data-item-name="${esc(it.name)}">${esc(t('mItMark'))}</button>
+        ${stShowReal() ? `<button class="st-btn" data-stock-detail-move data-item-id="${esc(it.id)}">${svg('swap', 12)}<span>Mouvement</span></button>` : ''}
         <button class="st-btn" data-stock-detail-edit data-item-id="${esc(it.id)}">${svg('edit', 12)}<span>${esc(t('mItEdit'))}</span></button>
         <button class="st-btn" data-stock-detail-delete data-item-id="${esc(it.id)}" style="color:#9a1f1f; border-color:rgba(154,31,31,0.35);">${esc(t('mItDelete'))}</button>
         <button class="st-btn" data-dismiss-modal>${esc(t('mItClose'))}</button>
@@ -2376,6 +6321,18 @@
       closeTopModal();
       openEditItem(id);
     });
+    scope?.querySelector('[data-stock-detail-move]')?.addEventListener('click', (e) => {
+      const id = e.currentTarget.dataset.itemId;
+      closeTopModal(); openItemMovement(id);
+    });
+    scope?.querySelector('[data-stock-swap-ranks]')?.addEventListener('click', (e) => {
+      swapSupplierRanks(e.currentTarget.dataset.itemId);
+    });
+    scope?.querySelector('[data-stock-add-backup-supplier]')?.addEventListener('click', (e) => {
+      const id = e.currentTarget.dataset.itemId;
+      closeTopModal();
+      openAddBackupSupplier(id);
+    });
     scope?.querySelector('[data-stock-detail-delete]')?.addEventListener('click', (e) => {
       const id = e.currentTarget.dataset.itemId;
       closeTopModal();
@@ -2387,7 +6344,7 @@
     const W = 320, H = 130, PAD = { l: 24, r: 8, t: 10, b: 20 };
     const innerW = W - PAD.l - PAD.r, innerH = H - PAD.t - PAD.b;
     const daily = (it.usageThisWeek / 7);
-    const theoDaily = (it.theoreticalUsage / 7);
+    const theoDaily = (theoreticalUsageFor(it) / 7);
     // Generate 14 days of mock data around the daily average
     const actual = Array.from({ length: 14 }, (_, i) => daily * (0.85 + Math.random() * 0.3));
     const theo = Array.from({ length: 14 }, () => theoDaily);
@@ -2474,6 +6431,177 @@
       window.Kiwi.toast(t('addCatToast', raw), { type: 'success' });
     });
   }
+  const nutritionKeys = ['kcal', 'protein', 'carbs', 'fat', 'sugars', 'salt'];
+  const allergenKeys = () => window.KiwiMenuNutrition?.ALLERGEN_KEYS || [
+    'gluten', 'crustaces', 'oeufs', 'poissons', 'arachides', 'soja', 'lait',
+    'fruits_a_coque', 'celeri', 'moutarde', 'sesame', 'sulfites', 'lupin', 'mollusques',
+  ];
+  let ciqualPromise = null;
+  function loadCiqual() {
+    if (!ciqualPromise) {
+      ciqualPromise = fetch('assets/data/ciqual-lite.json?v=4', { credentials: 'same-origin' })
+        .then((response) => { if (!response.ok) throw new Error('ciqual ' + response.status); return response.json(); })
+        .then((payload) => ({
+          foods: Array.isArray(payload?.foods) ? payload.foods : [],
+          aliases: payload?.aliases && typeof payload.aliases === 'object' ? payload.aliases : {},
+          portionSuggestions: payload?.portionSuggestions && typeof payload.portionSuggestions === 'object' ? payload.portionSuggestions : {},
+        }))
+        .catch(() => ({ foods: [], aliases: {}, portionSuggestions: {} }));
+    }
+    return ciqualPromise;
+  }
+  function searchKey(value) {
+    return String(value || '').toLocaleLowerCase('fr').replace(/œ/g, 'oe').replace(/æ/g, 'ae').normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  function nutrientLabel(key) {
+    return t({ kcal: 'nutriKcal', protein: 'nutriProtein', carbs: 'nutriCarbs', fat: 'nutriFat', sugars: 'nutriSugars', salt: 'nutriSalt' }[key]);
+  }
+  function nutrientSection(existing) {
+    const per100g = existing?.nutrition?.per100g || {};
+    const selected = new Set(Array.isArray(existing?.allergens) ? existing.allergens : []);
+    const source = ['ciqual', 'off', 'manual'].includes(existing?.nutrition?.source) ? existing.nutrition.source : 'manual';
+    return `<details class="st-nutrition" data-stock-nutrition data-source="${esc(source)}" data-ref="${esc(existing?.nutrition?.ref || '')}">
+      <summary><span><b>${esc(t('nutriTitle'))}</b><small>${esc(t('nutriSummary'))}</small></span></summary>
+      <div class="st-nutrition-body">
+        <div class="st-ciqual-search">
+          <label class="st-mb-label">${esc(t('nutriSearch'))}</label>
+          <input class="st-mb-input" type="search" autocomplete="off" placeholder="${esc(t('nutriSearchPh'))}" data-ciqual-search />
+          <div class="st-ciqual-results" data-ciqual-results hidden></div>
+        </div>
+        <div class="st-nutrition-meta"><span>${esc(t('nutriSource'))}</span><b data-nutri-source-label>${esc(source === 'ciqual' ? t('nutriCiqual') : t('nutriManual'))}</b></div>
+        <div class="st-mb-label st-nutrition-kicker">${esc(t('nutriPer100'))}</div>
+        <div class="st-nutrient-grid">${nutritionKeys.map((key) => `<label><span>${esc(nutrientLabel(key))}</span><input class="st-mb-input mono" type="number" min="0" step="${key === 'kcal' ? '1' : '0.01'}" value="${esc(per100g[key] ?? '')}" data-stock-nutrient="${key}" /></label>`).join('')}</div>
+        <div class="st-mb-field st-grams-field" data-grams-wrap hidden>
+          <label class="st-mb-label" data-grams-label>${esc(t('nutriGramsPiece'))}</label>
+          <input class="st-mb-input mono" type="number" min="0.001" step="0.001" value="${esc(existing?.gramsPerUnit ?? '')}" data-stock-grams />
+          <small>${esc(t('nutriGramsHint'))}</small>
+          <div class="st-portion-prefill" data-portion-prefill hidden><span data-portion-copy></span><button type="button" data-apply-grams>${esc(t('nutriPortionApply'))}</button></div>
+        </div>
+        <div class="st-mb-label st-nutrition-kicker">${esc(t('allergenTitle'))}</div>
+        <div class="st-allergen-chips">${allergenKeys().map((key) => `<button type="button" data-allergen="${key}" aria-pressed="${selected.has(key) ? 'true' : 'false'}">${esc(t('allergen.' + key))}</button>`).join('')}</div>
+        <p class="st-allergen-help">${esc(t('allergenSuggested'))}</p>
+        <label class="st-allergen-confirm"><input type="checkbox" data-allergen-confirm${Array.isArray(existing?.allergens) ? ' checked' : ''}/><span>${esc(t('allergenConfirm'))}</span></label>
+      </div>
+    </details>`;
+  }
+  function wireNutrition(scope, existing) {
+    const section = scope?.querySelector('[data-stock-nutrition]');
+    const unitSelect = scope?.querySelector('[data-stock-add-unit]');
+    if (!section || !unitSelect) return;
+    const sourceLabel = section.querySelector('[data-nutri-source-label]');
+    const gramsWrap = section.querySelector('[data-grams-wrap]');
+    const gramsInput = section.querySelector('[data-stock-grams]');
+    const gramsLabel = section.querySelector('[data-grams-label]');
+    const portionPrefill = section.querySelector('[data-portion-prefill]');
+    const portionCopy = section.querySelector('[data-portion-copy]');
+    const nameInput = scope.querySelector('[data-stock-add-name]');
+    let portionSuggestions = {};
+    const updateGrams = () => {
+      const unit = stockUnit(unitSelect.value), visible = ['unité', 'ml', 'cl', 'L'].includes(unit);
+      gramsWrap.hidden = !visible;
+      gramsLabel.textContent = t(unit === 'unité' ? 'nutriGramsPiece' : 'nutriGramsMl');
+      gramsInput.placeholder = ['ml', 'cl', 'L'].includes(unit) ? '1' : '';
+      const suggestion = unit === 'unité' ? portionSuggestions[section.dataset.portionCategory || ''] : null;
+      portionPrefill.hidden = !suggestion || !!gramsInput.value;
+      if (suggestion) portionCopy.textContent = t('nutriPortionPrefill', suggestion.grams, suggestion['label' + (lang() === 'en' ? 'En' : lang() === 'ar' ? 'Ar' : 'Fr')]);
+    };
+    updateGrams();
+    unitSelect.addEventListener('change', updateGrams);
+    nameInput?.addEventListener('input', updateGrams);
+    section.addEventListener('toggle', () => {
+      if (!section.open || section.dataset.loaded) return;
+      section.dataset.loaded = '1';
+      const results = section.querySelector('[data-ciqual-results]');
+      results.hidden = false; results.textContent = t('nutriLoading');
+      loadCiqual().then((ciqual) => {
+        portionSuggestions = ciqual.portionSuggestions;
+        const food = ciqual.foods.find((row) => String(row.id) === String(section.dataset.ref || ''));
+        section.dataset.portionCategory = food?.portionCategory || '';
+        updateGrams(); results.hidden = true; results.textContent = '';
+      });
+    });
+    const results = section.querySelector('[data-ciqual-results]');
+    const search = section.querySelector('[data-ciqual-search]');
+    search.addEventListener('input', async () => {
+      const query = searchKey(search.value);
+      if (query.length < 2) { results.hidden = true; results.textContent = ''; return; }
+      const ciqual = await loadCiqual();
+      /* Classement (alias exact, premier mot, début de nom, mot entier, préfixe de
+       * mot, sous-chaîne ; FR avant EN ; le plus court d'abord) : dans
+       * assets/menu-nutrition.js · searchFoods. Sans lui, « oeuf » ne montrait
+       * jamais l'œuf : un biscuit et sept « Boeuf » remplissaient les huit places. */
+      const N = window.KiwiMenuNutrition;
+      const hits = N && N.searchFoods ? N.searchFoods(ciqual, search.value, 8) : (() => {
+        const aliasHits = Object.entries(ciqual.aliases)
+          .filter(([alias]) => searchKey(alias).includes(query))
+          .map(([alias, id]) => ({ alias, food: ciqual.foods.find((row) => String(row.id) === String(id)) }))
+          .filter((entry) => entry.food);
+        const canonicalHits = ciqual.foods
+          .filter((food) => searchKey(food.nameFr + ' ' + food.nameEn).includes(query))
+          .map((food) => ({ alias: '', food }));
+        const seen = new Set();
+        return [...aliasHits, ...canonicalHits].filter((entry) => {
+          const id = String(entry.food.id);
+          if (seen.has(id)) return false;
+          seen.add(id); return true;
+        }).slice(0, 8);
+      })();
+      results.hidden = false;
+      results.innerHTML = hits.length ? hits.map(({ food, alias }) => `<button type="button" data-ciqual-id="${esc(food.id)}"><b>${esc(lang() === 'en' ? food.nameEn : food.nameFr)}</b><span>${alias ? esc(alias) + ' · ' : ''}${esc(lang() === 'en' ? food.nameFr : food.nameEn)} · ${esc(food.kcal)} kcal</span></button>`).join('') : `<span>${esc(t('nutriNoMatch'))}</span>`;
+    });
+    results.addEventListener('click', async (event) => {
+      const button = event.target.closest('[data-ciqual-id]'); if (!button) return;
+      const food = (await loadCiqual()).foods.find((row) => String(row.id) === button.dataset.ciqualId); if (!food) return;
+      nutritionKeys.forEach((key) => { const input = section.querySelector(`[data-stock-nutrient="${key}"]`); if (input) input.value = food[key]; });
+      section.dataset.source = 'ciqual'; section.dataset.ref = String(food.id); sourceLabel.textContent = t('nutriCiqual');
+      portionSuggestions = (await loadCiqual()).portionSuggestions;
+      section.dataset.portionCategory = food.portionCategory || '';
+      search.value = lang() === 'en' ? food.nameEn : food.nameFr; results.hidden = true;
+      const hints = new Set(food.allergenHints || []);
+      section.querySelectorAll('[data-allergen]').forEach((chip) => chip.setAttribute('aria-pressed', hints.has(chip.dataset.allergen) ? 'true' : 'false'));
+      section.dataset.allergensTouched = '1';
+      const confirm = section.querySelector('[data-allergen-confirm]'); if (confirm) confirm.checked = false;
+      updateGrams();
+    });
+    section.querySelector('[data-apply-grams]')?.addEventListener('click', () => {
+      const suggestion = portionSuggestions[section.dataset.portionCategory || ''];
+      if (!suggestion || gramsInput.value) return;
+      gramsInput.value = String(suggestion.grams);
+      updateGrams();
+    });
+    gramsInput.addEventListener('input', updateGrams);
+    section.querySelectorAll('[data-stock-nutrient]').forEach((input) => input.addEventListener('input', () => {
+      section.dataset.source = 'manual'; sourceLabel.textContent = t('nutriManual');
+    }));
+    section.querySelector('.st-allergen-chips')?.addEventListener('click', (event) => {
+      const chip = event.target.closest('[data-allergen]'); if (!chip) return;
+      chip.setAttribute('aria-pressed', chip.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+      section.dataset.allergensTouched = '1';
+      const confirm = section.querySelector('[data-allergen-confirm]'); if (confirm) confirm.checked = true;
+    });
+    section.querySelector('[data-allergen-confirm]')?.addEventListener('change', () => { section.dataset.allergensTouched = '1'; });
+  }
+  function readNutrition(scope) {
+    const section = scope.querySelector('[data-stock-nutrition]'), per100g = {};
+    let hasNutrition = false;
+    nutritionKeys.forEach((key) => {
+      const raw = section.querySelector(`[data-stock-nutrient="${key}"]`)?.value.trim();
+      if (raw === '') return;
+      const value = Number(raw);
+      if (Number.isFinite(value) && value >= 0) { per100g[key] = value; hasNutrition = true; }
+    });
+    const grams = Number(section.querySelector('[data-stock-grams]')?.value);
+    const confirm = section.querySelector('[data-allergen-confirm]');
+    let allergens;
+    if (confirm?.checked) allergens = [...section.querySelectorAll('[data-allergen][aria-pressed="true"]')].map((chip) => chip.dataset.allergen);
+    else if (section.dataset.allergensTouched) allergens = null;
+    return {
+      nutrition: hasNutrition ? { per100g, source: section.dataset.source || 'manual', ref: section.dataset.ref || '' } : null,
+      gramsPerUnit: Number.isFinite(grams) && grams > 0 ? grams : null,
+      allergens,
+    };
+  }
   function openAddItem() { openItemForm(null); }
   function openEditItem(itemId) {
     const it = getInv().find(x => x.id === itemId);
@@ -2483,11 +6611,10 @@
     const isEdit = !!existing;
     const title = isEdit ? t('editItemTitle') : t('addItemTitle');
     const cta = isEdit ? t('editItemBtn') : t('addItemBtn');
-    const units = ['kg','g','L','unité','boîte','paquet','botte','pot','bouteille','paire'];
-    const unitOptions = units.map(u => `<option ${existing?.unit === u ? 'selected' : ''}>${esc(u)}</option>`).join('');
+    const unitOptions = stockUnitOptions(existing?.unit || 'unité');
     const m = window.Kiwi.modal({
       title,
-      width: 560,
+      width: 720,
       body: `
         <div class="st-mb-field" style="margin-bottom:12px;">
           <label class="st-mb-label">${esc(t('addItemName'))}</label>
@@ -2524,6 +6651,7 @@
           <label class="st-mb-label">${esc(t('addItemCost'))}</label>
           <input class="st-mb-input mono" type="number" min="0" step="0.5" placeholder="0" value="${esc(existing?.costPerUnit ?? '')}" data-stock-add-cost />
         </div>
+        ${nutrientSection(existing)}
       `,
       foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button class="st-btn primary" data-stock-add-confirm>${esc(cta)}</button>`,
     });
@@ -2531,14 +6659,14 @@
     wireDismiss(scope);
     /* Attach listeners synchronously — the modal markup is already in DOM by now
      * (interactive.js's modal() appendChild is synchronous) so we don't need rAF. */
-    try { wireCatNewToggle(scope); } catch (err) { console.error('wireCatNewToggle failed', err); }
+    try { wireCatNewToggle(scope); wireNutrition(scope, existing); } catch (err) { console.error('wireItemForm failed', err); }
     scope?.querySelector('[data-stock-add-confirm]')?.addEventListener('click', () => {
         const name = (scope.querySelector('[data-stock-add-name]')?.value || '').trim();
         if (!name) { scope.querySelector('[data-stock-add-name]')?.focus(); return; }
         const catSel = scope.querySelector('[data-stock-add-cat]');
         let category = catSel?.value || 'legumes';
         if (category === '__new__') category = existing?.category || 'legumes';
-        const unit = scope.querySelector('[data-stock-add-unit]')?.value || 'unité';
+        const unit = stockUnit(scope.querySelector('[data-stock-add-unit]')?.value);
         const supplier = scope.querySelector('[data-stock-add-sup]')?.value || (existing?.supplier || '');
         const cur = parseFloat(scope.querySelector('[data-stock-add-current]')?.value);
         const par = parseFloat(scope.querySelector('[data-stock-add-par]')?.value);
@@ -2548,8 +6676,12 @@
         const reorderLevel = isNaN(reorder) ? Math.max(0, Math.round(parLevel * 0.4)) : reorder;
         const costPerUnit = isNaN(cost) ? 0 : cost;
         const currentStock = isNaN(cur) ? (existing ? currentStockFor(existing) : parLevel) : cur;
+        const nutritionData = readNutrition(scope);
+        const nutritionPatch = { nutrition: nutritionData.nutrition, gramsPerUnit: nutritionData.gramsPerUnit };
+        if (nutritionData.allergens !== undefined) nutritionPatch.allergens = nutritionData.allergens;
 
         if (isEdit) {
+          const before = currentStockFor(existing);
           // Edit path: update overlay (or user item directly)
           if (existing.id.startsWith('usr-')) {
             const i = stUserItems.findIndex(x => x.id === existing.id);
@@ -2557,7 +6689,12 @@
               stUserItems[i] = {
                 ...stUserItems[i],
                 name, category, unit, supplier,
-                parLevel, reorderLevel, costPerUnit, currentStock,
+                parLevel, reorderLevel, costPerUnit, currentStock, ...nutritionPatch, updatedAt: Date.now(),
+              };
+              stItemOverrides[existing.id] = {
+                ...(stItemOverrides[existing.id] || {}),
+                name, category, unit, supplier, parLevel, reorderLevel, costPerUnit, ...nutritionPatch,
+                updatedAt: Date.now(),
               };
               stSaveOverlay();   // article créé PAR le commerçant : sa correction compte autant
             }
@@ -2565,12 +6702,16 @@
             stItemOverrides[existing.id] = {
               ...(stItemOverrides[existing.id] || {}),
               name, category, unit, supplier,
-              parLevel, reorderLevel, costPerUnit, currentStock,
+              parLevel, reorderLevel, costPerUnit, currentStock, ...nutritionPatch, updatedAt: Date.now(),
             };
             // Reflect current stock in stStockOverrides so statusOf/daysOfStock pick it up.
             stStockOverrides[existing.id] = currentStock;
             stSaveOverlay();
           }
+          if (Math.abs(currentStock - before) > 0.0005) {
+            countStock(existing, currentStock, 'manual-count-' + Date.now().toString(36));
+          }
+          window.KiwiRestaurantRecipes?.recomputeForStock?.(existing.id, stOverlayScope());
           closeTopModal();
           window.Kiwi.toast(t('editItemToast', name) + stDemoNote(), { type: 'success' });
           if (stPageActive) render();
@@ -2579,21 +6720,29 @@
 
         // Add path: build a real item that matches the venues.js shape so
         // currentStockFor / statusOf / variance / daysOfStock all behave.
-        const today = new Date('2026-05-23').toISOString().slice(0, 10);
         const status = currentStock <= 0 ? 'out' : (currentStock < reorderLevel ? 'low' : 'ok');
         const item = {
           id: 'usr-' + Date.now().toString(36),
           name, category, unit, supplier,
           currentStock,
           parLevel, reorderLevel, costPerUnit,
-          lastDelivery: today,
-          deliveryFrequency: '—',
+          ...nutritionPatch,
+          // An opening balance is not a supplier delivery. Keep delivery
+          // history unknown until a real receipt movement exists.
+          lastDelivery: null,
+          deliveryFrequency: '·',
           usageThisWeek: 0,
           theoreticalUsage: 0,
-          status,
+          status, updatedAt: Date.now(),
         };
         stUserItems.push(item);
+        try {
+          if (window.KiwiInventory && stShowReal()) {
+            window.KiwiInventory.ensureOpening(item.id, currentStock, { unitCost: costPerUnit, locationId: stockLocationId() });
+          }
+        } catch (_) {}
         stSaveOverlay();
+        window.KiwiRestaurantRecipes?.recomputeForStock?.(item.id, stOverlayScope());
         closeTopModal();
         window.Kiwi.toast(t('addItemToast', name) + stDemoNote(), { type: 'success' });
         if (stPageActive) render();
@@ -2683,7 +6832,7 @@
         <div class="st-mb-row">
           <div class="st-mb-field">
             <label class="st-mb-label">${esc(t('supRating'))}</label>
-            <input class="st-mb-input mono" type="number" min="1" max="5" step="0.1" placeholder="4.5" value="${esc(existing?.rating ?? '')}" data-stock-sup-rating />
+            <input class="st-mb-input mono" type="number" min="1" max="5" step="0.1" placeholder="·" value="${esc(existing?.rating != null ? existing.rating : '')}" data-stock-sup-rating />
           </div>
           <div class="st-mb-field">
             <label class="st-mb-label">${esc(t('supSpend'))}</label>
@@ -2702,9 +6851,10 @@
       const contact = (scope.querySelector('[data-stock-sup-phone]')?.value || '').trim();
       const location = (scope.querySelector('[data-stock-sup-loc]')?.value || '').trim();
       const paymentTerms = scope.querySelector('[data-stock-sup-pay]')?.value || 'Net 30';
-      const deliverySchedule = (scope.querySelector('[data-stock-sup-deliv]')?.value || '—').trim();
-      const ratingRaw = parseFloat(scope.querySelector('[data-stock-sup-rating]')?.value);
-      const rating = isNaN(ratingRaw) ? 4.5 : Math.min(5, Math.max(1, ratingRaw));
+      const deliverySchedule = (scope.querySelector('[data-stock-sup-deliv]')?.value || '·').trim();
+      const ratingVal = (scope.querySelector('[data-stock-sup-rating]')?.value || '').trim();
+      const ratingRaw = ratingVal ? parseFloat(ratingVal) : NaN;
+      const rating = isNaN(ratingRaw) ? null : Math.min(5, Math.max(1, ratingRaw));
       const spendRaw = parseFloat(scope.querySelector('[data-stock-sup-spend]')?.value);
       const monthlySpend = isNaN(spendRaw) ? 0 : spendRaw;
 
@@ -2797,6 +6947,68 @@
     input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
   }
 
+  function openManageCategory(categoryId) {
+    const category = allCategories().find(c => c.id === categoryId);
+    if (!category) return;
+    const assigned = getInv().filter(item => item.category === categoryId);
+    const alternatives = allCategories().filter(c => c.id !== categoryId);
+    const replacement = alternatives[0]?.id || '';
+    const m = window.Kiwi.modal({
+      title: t('manageCatTitle'),
+      width: 480,
+      body: `
+        <div class="st-mb-field">
+          <label class="st-mb-label">${esc(t('renameCatLabel'))}</label>
+          <div style="display:flex;gap:8px;">
+            <input class="st-mb-input" type="text" maxlength="60" value="${esc(category.label)}" data-stock-cat-rename style="flex:1;" />
+            <button class="st-btn primary" type="button" data-stock-cat-rename-confirm>${esc(t('renameCatBtn'))}</button>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--n-200);margin:20px 0 14px;"></div>
+        ${assigned.length ? `<div class="st-mb-field">
+          <label class="st-mb-label">${esc(t('deleteCatMove'))} · ${assigned.length} article${assigned.length > 1 ? 's' : ''}</label>
+          ${alternatives.length
+            ? `<select class="st-mb-input" data-stock-cat-replacement>${alternatives.map(c => `<option value="${esc(c.id)}"${c.id === replacement ? ' selected' : ''}>${esc(c.label)}</option>`).join('')}</select>`
+            : `<div class="st-notice warn">${esc(t('deleteCatBlocked'))}</div>`}
+        </div>` : ''}
+        <button class="st-btn" type="button" data-stock-cat-delete-confirm ${assigned.length && !alternatives.length ? 'disabled' : ''} style="color:#9a1f1f;border-color:rgba(154,31,31,.35);width:100%;">${esc(t('deleteCatBtn'))}</button>
+      `,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>`,
+    });
+    const scope = m?.el || topBackdrop();
+    wireDismiss(scope);
+    const renameInput = scope?.querySelector('[data-stock-cat-rename]');
+    scope?.querySelector('[data-stock-cat-rename-confirm]')?.addEventListener('click', () => {
+      const name = (renameInput?.value || '').trim();
+      if (!name) { renameInput?.focus(); return; }
+      if (allCategories().some(c => c.id !== categoryId && c.label.trim().toLocaleLowerCase() === name.toLocaleLowerCase())) {
+        renameInput?.focus(); return;
+      }
+      stCategoryOverrides[categoryId] = { label: name, updatedAt: Date.now() };
+      stSaveOverlay();
+      closeTopModal();
+      window.Kiwi.toast(t('renameCatToast', name), { type: 'success' });
+      if (stPageActive) render();
+    });
+    scope?.querySelector('[data-stock-cat-delete-confirm]')?.addEventListener('click', () => {
+      const target = scope.querySelector('[data-stock-cat-replacement]')?.value || '';
+      if (assigned.length && !target) return;
+      assigned.forEach((item) => {
+        const userIndex = stUserItems.findIndex(candidate => candidate.id === item.id);
+        if (userIndex >= 0) stUserItems[userIndex] = { ...stUserItems[userIndex], category: target, updatedAt: Date.now() };
+        stItemOverrides[item.id] = { ...(stItemOverrides[item.id] || {}), category: target, updatedAt: Date.now() };
+      });
+      stUserCategories = stUserCategories.filter(c => c.id !== categoryId);
+      delete stCategoryOverrides[categoryId];
+      stDeletedCategories.add(categoryId);
+      if (stCatFilter === categoryId) stCatFilter = target || 'all';
+      stSaveOverlay();
+      closeTopModal();
+      window.Kiwi.toast(t('deleteCatToast', category.label), { type: 'info' });
+      if (stPageActive) render();
+    });
+  }
+
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Day deliveries detail
    * ═══════════════════════════════════════════════════════════════════════ */
@@ -2847,6 +7059,19 @@
 
     // Tabs / filters / view
     H['stock-tab'] = (el) => { stCurrentTab = el.dataset.tab; render(); };
+    H['stock-subview'] = (el) => { stItemSubView = el.dataset.subview; render(); };
+    H['stock-waste-range'] = (el) => { stWasteDateRange = el.dataset.range; rerenderTabBody(); };
+    H['stock-waste-reason'] = (el) => { stWasteFilterReason = el.dataset.reason; rerenderTabBody(); };
+    H['stock-open-declare-waste'] = () => openDeclareWasteModal();
+    H['stock-declare-waste-prefill'] = (el) => openDeclareWasteModal({ itemId: el.dataset.itemId, qty: parseFloat(el.dataset.qty) || 1, reason: el.dataset.reason });
+    H['stock-modal-close'] = () => closeTopModal();
+    H['stock-export-waste-csv'] = () => exportWasteCsv();
+    H['stock-cancel-waste'] = (el) => cancelWasteMovement(el.dataset.movementId);
+    H['stock-count-range'] = (el) => { stCountDateFilter = el.dataset.range; rerenderTabBody(); };
+    H['stock-count-status'] = (el) => { stCountStatusFilter = el.dataset.status; rerenderTabBody(); };
+    H['stock-count-tab'] = (el) => { stCountSubTab = el.dataset.tab; rerenderTabBody(); };
+    H['stock-count-detail'] = (el) => openCountDetailModal(el.dataset.countId);
+    H['stock-export-counts-csv'] = () => exportCountsCsv();
     H['stock-venue-filter'] = (el) => { stVenueFilter = el.dataset.venue; render(); };
     H['stock-cat-filter'] = (el) => { stCatFilter = el.dataset.cat; rerenderTabBody(); };
     H['stock-status-filter'] = (el) => { stStatusFilter = el.dataset.status; rerenderTabBody(); };
@@ -2861,6 +7086,7 @@
     // Header actions
     H['stock-scan-invoice'] = () => openInvoiceScan();
     H['stock-physical-count'] = () => openPhysicalCount();
+    H['stock-count-sheet'] = () => openCountSheet();
     H['stock-add-item'] = () => openAddItem();
 
     // Item actions
@@ -2875,12 +7101,47 @@
     H['stock-ignore-24h'] = (el) => window.Kiwi.toast(`Alerte ${el.dataset.itemName} ignorée pour 24h`, { type: 'info' });
     // Category pill add
     H['stock-add-cat'] = () => openAddCategory();
+    H['stock-manage-cat'] = (el) => openManageCategory(el.dataset.cat);
+
+    function isPhone(v) { return /^\+?[\d\s.-]{8,}$/.test(String(v || '').trim()); }
+    function phoneDigits(v) {
+      const d = String(v || '').replace(/\D/g, '');
+      return String(v || '').trim().startsWith('+') ? '+' + d : d;
+    }
+    function waDigits(v) {
+      let d = String(v || '').replace(/\D/g, '');
+      if (/^0[67]\d{8}$/.test(d)) d = '212' + d.slice(1);
+      return d;
+    }
 
     // Supplier actions
     H['stock-supplier-detail'] = (el) => openSupplierProfile(el.dataset.supplierId);
-    H['stock-call-supplier'] = (el) => window.Kiwi.toast(`Appel à ${el.dataset.name} · ${el.dataset.phone}`, { type: 'info' });
-    H['stock-wa-supplier'] = (el) => window.Kiwi.toast(`Message WhatsApp envoyé à ${el.dataset.name}`, { type: 'success' });
-    H['stock-new-po'] = (el) => window.Kiwi.toast(t('poNewToast'), { type: 'info' });
+    H['stock-call-supplier'] = (el) => {
+      const contact = (el.dataset.phone || '').trim();
+      const name = (el.dataset.name || '').trim();
+      const supId = el.dataset.supplierId;
+      if (isPhone(contact)) {
+        location.href = 'tel:' + phoneDigits(contact);
+      } else {
+        window.Kiwi.toast('Pas de numéro · modifiez le fournisseur', { type: 'warn' });
+        const sup = getSup().find(s => s.id === supId || s.name === name);
+        if (sup) openEditSupplier(sup.id);
+      }
+    };
+    H['stock-wa-supplier'] = (el) => {
+      const contact = (el.dataset.phone || '').trim();
+      const name = (el.dataset.name || '').trim();
+      const supId = el.dataset.supplierId;
+      if (isPhone(contact)) {
+        const text = `Bonjour ${name}, `;
+        window.open(`https://wa.me/${waDigits(contact)}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+      } else {
+        window.Kiwi.toast('Pas de numéro · modifiez le fournisseur', { type: 'warn' });
+        const sup = getSup().find(s => s.id === supId || s.name === name);
+        if (sup) openEditSupplier(sup.id);
+      }
+    };
+    H['stock-new-po'] = (el) => openInvoiceScan({ supplierId: el.dataset.supplierId });
     H['stock-add-supplier'] = () => openAddSupplier();
     H['stock-edit-supplier'] = (el) => openEditSupplier(el.dataset.supplierId);
     H['stock-delete-supplier'] = (el) => confirmDeleteSupplier(el.dataset.supplierId);
@@ -2911,7 +7172,48 @@
     // Re-render on venue/language changes
     window.KiwiVenue?.subscribe?.(() => { if (stPageActive) render(); });
     window.KiwiI18n?.onLangChange?.(() => { if (stPageActive) render(); });
+    let stockSyncPaint = 0;
+    const repaintFromSharedStock = () => {
+      if (!stPageActive || stockSyncPaint) return;
+      stockSyncPaint = setTimeout(() => { stockSyncPaint = 0; render(); }, 0);
+    };
+    window.KiwiInventory?.subscribe?.(repaintFromSharedStock);
+    window.addEventListener('storage', (e) => {
+      if (e.key !== stOverlayKey()) return;
+      stOverlayLoadedFor = null;
+      repaintFromSharedStock();
+    });
   }
+
+  /* Private bridge used by restaurant recipes. It exposes the same persisted
+   * inventory the Stock page renders, including edits and physical counts;
+   * no demo inventory is copied into a real restaurant. */
+  window.KiwiRestaurantStock = {
+    items: () => {
+      stEnsureOverlay();
+      const rows = getInv().map((it) => ({ ...it, currentStock: currentStockFor(it) }));
+      const recipeUsage = window.KiwiRestaurantRecipes?.theoreticalUsageMap
+        ? window.KiwiRestaurantRecipes.theoreticalUsageMap(currentVenueId(), 7, rows)
+        : null;
+      return rows.map((it) => ({
+        ...it,
+        theoreticalUsage: recipeUsage ? (+recipeUsage[String(it.id)] || 0) : theoreticalUsageFor(it),
+      }));
+    },
+    /* Same rows without the recipe-derived usage. The recipe engine reads the
+     * inventory to resolve units and costs, and it is what computes that usage
+     * in the first place: enriching the rows it consumes would recurse. */
+    rows: () => {
+      stEnsureOverlay();
+      return getInv().map((it) => ({ ...it, currentStock: currentStockFor(it) }));
+    },
+    theoreticalUsage: (stockId) => {
+      stEnsureOverlay();
+      const it = getInv().find((row) => String(row.id) === String(stockId));
+      return it ? theoreticalUsageFor(it) : 0;
+    },
+  };
+  try { window.dispatchEvent(new CustomEvent('kiwi-stock-ready')); } catch (_) {}
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', registerHandlers);

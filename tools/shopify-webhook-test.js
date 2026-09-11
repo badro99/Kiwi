@@ -22,6 +22,7 @@
 
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
 import { makeSession, sessionCookie } from '../functions/auth/_lib.js';
 import { onRequestPost as postHook } from '../functions/api/channel/shopify/[link].js';
 import { onRequestPost as postKeys, onRequestGet as getKeys } from '../functions/api/channel/keys.js';
@@ -38,13 +39,23 @@ const ok = (l, c, d) => { if (c) pass++; else fails.push(l + (d ? ' — ' + d : 
 
 /* ── D1 de poche ─────────────────────────────────────────────────────────── */
 function makeDB() {
-  const T = { channel_links: [], orders: [], merchant_config: [], accounts: {} };
+  const retryDB = new DatabaseSync(':memory:');
+  const T = { channel_links: [], orders: [], merchant_config: [], accounts: {}, catalogs: [], shopify_variant_links: [], hideDuplicateOnce: false };
   T.accounts[ACC_A] = { business: 'Atlas Casa' };
   T.accounts[ACC_B] = { business: 'Chez Rival' };
 
   const db = {
     _t: T,
     prepare(sql) {
+      if (sql.includes('shopify_inbound_stock')) {
+        let values = [];
+        return {
+          bind(...args) { values = args; return this; },
+          async run() { const r = retryDB.prepare(sql).run(...values); return { meta: { changes: Number(r.changes) } }; },
+          async first() { return retryDB.prepare(sql).get(...values) || null; },
+          async all() { return { results: retryDB.prepare(sql).all(...values) }; },
+        };
+      }
       const q = sql.replace(/\s+/g, ' ').trim();
       let a = [];
       const api = {
@@ -54,6 +65,9 @@ function makeDB() {
           if (q.startsWith('SELECT id, channel, label, status, created_ts, last_ts, last_err FROM channel_links')) {
             return { results: T.channel_links.filter((r) => r.merchant === a[0]) };
           }
+          if (q.startsWith('SELECT kiwi_variant_id, shopify_variant_id FROM shopify_variant_links')) {
+            return { results: T.shopify_variant_links.filter((r) => r.merchant === a[0] && ['active', 'drift'].includes(r.status)) };
+          }
           throw new Error('unexpected all(): ' + q);
         },
         async first() {
@@ -61,6 +75,11 @@ function makeDB() {
             return T.channel_links.find((r) => r.id === a[0]) || null;
           }
           if (q.startsWith('SELECT business FROM accounts')) return T.accounts[a[0]] || null;
+          if (q.startsWith('SELECT status, session_epoch FROM accounts')) return T.accounts[a[0]] ? { status: 'active', session_epoch: 0 } : null;
+          if (q.startsWith('SELECT status FROM merchant_config')) {
+            const r = T.merchant_config.find((x) => x.merchant === a[0]);
+            return r ? { status: r.status || 'active' } : null;
+          }
           if (q.startsWith('SELECT account_id FROM merchant_config')) {
             const r = T.merchant_config.find((x) => x.merchant === a[0]);
             return r ? { account_id: r.account_id } : null;
@@ -89,13 +108,26 @@ function makeDB() {
             return { id: a[0] };
           }
           if (q.startsWith('SELECT id, number FROM orders WHERE merchant = ? AND channel')) {
+            if (T.hideDuplicateOnce) { T.hideDuplicateOnce = false; return null; }
             return T.orders.find((o) => o.merchant === a[0] && o.channel === a[1] && o.ext_ref === a[2]) || null;
           }
           if (q.startsWith('SELECT COUNT(*) AS n FROM orders')) {
             return { n: T.orders.filter((o) => o.merchant === a[0] && o.status === 'pending').length };
           }
+          if (q.startsWith('SELECT data, rev FROM catalogs WHERE merchant')) {
+            return T.catalogs.find((c) => c.merchant === a[0]) || null;
+          }
+          if (q.startsWith('UPDATE catalogs SET data')) {
+            const r = T.catalogs.find((c) => c.merchant === a[3] && c.rev === a[4]);
+            if (!r) return { meta: { changes: 0 } };
+            r.data = a[0]; r.rev = a[1]; r.updated_ts = a[2];
+            return { meta: { changes: 1 } };
+          }
           if (q.startsWith('INSERT INTO orders')) {
             const [id, merchant, mode, total, lines, created, updated, channel, ref, customer] = a;
+            if (ref && T.orders.some((o) => o.merchant === merchant && o.channel === channel && o.ext_ref === ref)) {
+              throw new Error('UNIQUE constraint failed: orders.merchant, orders.channel, orders.ext_ref');
+            }
             const number = T.orders.filter((o) => o.merchant === merchant).reduce((m, o) => Math.max(m, o.number), 0) + 1;
             T.orders.push({ id, merchant, number, mode, table_no: '', total, lines, status: 'pending', created_ts: created, updated_ts: updated, channel, ext_ref: ref, customer });
             return { number };
@@ -157,7 +189,7 @@ const ORDER = (over) => JSON.stringify(Object.assign({
   total_price: '240.00',
   note: 'Sonner deux fois',
   line_items: [
-    { id: 11, title: 'Tajine kefta', quantity: 2, price: '120.00', variant_title: 'Default Title' },
+    { id: 11, variant_id: 901, title: 'Tajine kefta', quantity: 2, price: '120.00', variant_title: 'Default Title' },
   ],
   customer: { first_name: 'Karim', last_name: 'B.' },
   shipping_address: {
@@ -169,8 +201,17 @@ const ORDER = (over) => JSON.stringify(Object.assign({
 (async function run() {
   const sessA = sessionCookie(await makeSession(ACC_A, SECRET)).split(';')[0];
   const sessB = sessionCookie(await makeSession(ACC_B, SECRET)).split(';')[0];
-  DB._t.merchant_config.push({ merchant: 'atlas-casa', account_id: ACC_A });
-  DB._t.merchant_config.push({ merchant: 'chez-rival', account_id: ACC_B });
+  DB._t.merchant_config.push({ merchant: 'atlas-casa', account_id: ACC_A, status: 'active' });
+  DB._t.merchant_config.push({ merchant: 'chez-rival', account_id: ACC_B, status: 'active' });
+  DB._t.shopify_variant_links.push({ merchant: 'atlas-casa', kiwi_variant_id: 'kv-1', shopify_variant_id: 'gid://shopify/ProductVariant/901', status: 'active' });
+  DB._t.catalogs.push({
+    merchant: 'atlas-casa', rev: 1, updated_ts: Date.now(),
+    data: JSON.stringify({
+      v: 1, seq: 1, categories: [], removed: {}, moves: [],
+      products: [{ id: 'kp-1', name: 'Tajine kefta', priceMAD: 120, createdAt: 1 }],
+      variants: [{ id: 'kv-1', productId: 'kp-1', colorId: 'default', colorFamily: 'default', size: 'U', stock: 10, base: 10, baseAt: 1, barcodes: [] }],
+    }),
+  });
 
   /* ── 1 · le lien, et l'adresse qu'on remet au commerçant ────────────────── */
   let r = await post(postKeys, { channel: 'shopify', label: 'Boutique' }, { Cookie: sessA });
@@ -232,6 +273,7 @@ const ORDER = (over) => JSON.stringify(Object.assign({
   r = await signed(linkId, raw);
   ok('une commande correctement signée est acceptée', r.status === 200 && r.body.ok === true, JSON.stringify(r.body));
   ok('…un seul ticket existe', DB._t.orders.length === 1);
+  ok('…la variante Kiwi liée est décrémentée une fois', JSON.parse(DB._t.catalogs[0].data).variants[0].stock === 8);
 
   const t = DB._t.orders[0];
   ok('le ticket appartient au magasin du LIEN', t.merchant === 'atlas-casa', t.merchant);
@@ -257,15 +299,22 @@ const ORDER = (over) => JSON.stringify(Object.assign({
   r = await signed(linkId, raw);
   ok('rejouer la même commande ne crée pas un second ticket', r.status === 200 && r.body.duplicate === true, JSON.stringify(r.body));
   ok('…il n\'y a toujours qu\'un ticket', DB._t.orders.length === 1);
+  ok('…et le rejeu ne décrémente pas une deuxième fois', JSON.parse(DB._t.catalogs[0].data).variants[0].stock === 8);
+
+  DB._t.hideDuplicateOnce = true;
+  r = await signed(linkId, raw);
+  ok('une course perdue sur l\'INSERT est traitée comme un rejeu réussi',
+    r.status === 200 && r.body.duplicate === true && r.body.id === t.id, JSON.stringify(r.body));
+  ok('…sans second ticket Shopify', DB._t.orders.length === 1);
 
   /* ── 7 · les centimes ───────────────────────────────────────────────────── */
   const cents = ORDER({ id: 777, total_price: '129.90', note: '' });
   r = await signed(linkId, cents);
   ok('une commande à centimes est acceptée', r.status === 200 && r.body.ok === true, JSON.stringify(r.body));
   const t2 = DB._t.orders[1];
-  ok('…arrondie au dirham pour la base', t2.total === 130, String(t2.total));
-  ok('…mais le montant exact part sur le ticket',
-    /129,90 MAD/.test(JSON.parse(t2.customer).note), JSON.parse(t2.customer).note);
+  ok('…les centimes sont conservés dans la base', t2.total === 129.90, String(t2.total));
+  ok('…aucune note ne masque un montant différent',
+    JSON.parse(t2.customer).note === '', JSON.parse(t2.customer).note);
 
   const round = ORDER({ id: 778, total_price: '240.00', note: '' });
   r = await signed(linkId, round);

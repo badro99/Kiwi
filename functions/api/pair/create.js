@@ -20,7 +20,7 @@
 // Runs behind the passcode gate (functions/_middleware.js). No DB / no secret ⇒
 // 503 so a static host (GitHub Pages, local) is unaffected.
 
-import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator } from '../../auth/_lib.js';
+import { json, activeAccountSession, slugMerchant, isOperator } from '../../auth/_lib.js';
 
 const TTL = 15 * 60 * 1000; // a code is live for 15 minutes
 
@@ -34,7 +34,7 @@ export async function onRequestPost(context) {
   const { request, env } = context;
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
 
-  const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+  const sess = await activeAccountSession(request, env);
 
   let body = {};
   try { body = (await request.json()) || {}; } catch (_) { body = {}; }

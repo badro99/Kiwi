@@ -33,8 +33,21 @@
 // erreur base — 200 neutre en lecture, 503 en écriture. Le client garde sa copie
 // locale et retentera. Un serveur qui tousse ne doit jamais coûter une donnée.
 
-import { json } from '../auth/_lib.js';
-import { tenantFor } from './_private.js';
+import { json, entitledMerchant } from '../auth/_lib.js';
+import { employeeAuthVersion, tenantFor } from './_private.js';
+import { poke } from './_live.js';
+import {
+  HOTEL_UNITS_FEATURE,
+  isHotelMerchantType,
+  validateHotelUnits,
+} from './_hotel-units.js';
+import {
+  ECONOMAT_CATALOGUE_FEATURE,
+  validateEconomatCatalogue,
+} from './inventory/_economat-catalogue.js';
+import { hotelUnitDeactivationBlockers } from './inventory/_hotel-unit-deactivation.js';
+import { validateCommercialSync } from './hotel/_commercial.js';
+import { validateRoomsDocument } from './hotel/_rooms.js';
 
 /* Les fonctionnalités qui ont le droit d'exister ici, et ce qu'on sait de leur
  * forme. La liste est FERMÉE : sans elle, n'importe quel client authentifié
@@ -55,25 +68,51 @@ import { tenantFor } from './_private.js';
  * planning au mois pèsent lourd, et refuser l'écriture d'un commerçant parce
  * qu'il a trop de salariés serait absurde. */
 const FEATURES = {
+  [HOTEL_UNITS_FEATURE]: { keys: ['units'],                       max: 80000 },
+  [ECONOMAT_CATALOGUE_FEATURE]: { keys: ['items'],                max: 600000 },
   /* PAS la carte. `menu` est listé pour qu'un slug connu ne devienne pas un nom
    * inventé, mais assets/menu-catalog.js ne passe PAS par ici : il relit sa
    * carte par GET /api/menu?mine=1, la ligne que la page client lit déjà. Deux
    * miroirs pour une même carte, c'est deux vérités qui divergent — ne câblez
    * pas `cloud` sur le menu. */
   menu:         { keys: ['cats', 'items'],                        max: 600000 },
+  recipes:      { keys: ['items'],                                max: 600000 },
+  costs:        { keys: ['items', 'ingredients', 'recipes', 'charges', 'targets'], max: 600000 },
   team:         { keys: ['members', 'hours', 'shifts'],            max: 600000 },
+  attendance:   { keys: ['entries'],                               max: 600000 },
   fidelity:     { keys: ['model', 'visit', 'amount', 'product'],   max: 20000 },
   floorplan:    { keys: ['rooms', 'tables', 'zones', 'objects'],   max: 400000 },
   stock:        { keys: ['items', 'lines', 'movements', 'suppliers'], max: 600000 },
+  /* Private cost truth.  assets/cost.js deliberately keeps purchase prices,
+   * ingredients, recipes and fixed charges out of the public menu document.
+   * The browser has always declared this cloud document; omitting it here made
+   * every real cross-device save fail with unknown-feature while the local UI
+   * looked healthy.  This is the compatibility bridge until transactional
+   * supplier prices and recipe versions move to normalized ledger tables. */
+  costs:        { keys: ['items', 'ingredients', 'recipes', 'charges'], max: 600000 },
   reservations: { keys: ['list', 'bookings', 'slots'],             max: 600000 },
   services:     { keys: ['list', 'cats', 'items'],                 max: 400000 },
   promotions:   { keys: ['list', 'rules'],                         max: 200000 },
+  retailcredit: { keys: ['entries', 'seq'],                        max: 600000 },
   returns:      { keys: ['list'],                                  max: 400000 },
   rooms:        { keys: ['list', 'rooms'],                         max: 400000 },
   kds:          { keys: ['stations', 'list'],                      max: 200000 },
   payroll:      { keys: ['periods', 'list'],                       max: 400000 },
   suppliers:    { keys: ['list'],                                  max: 200000 },
+  procurement:  { keys: ['suppliers', 'orders', 'receipts', 'invoices', 'seq'], max: 900000 },
+  /* Operational state can contain a compact condition photo (pressing damage
+   * proof). Keep the document cap authoritative while allowing one bounded
+   * image string; the generic 4 kB string ceiling is appropriate for notes,
+   * not for a deliberately compressed data URL. */
+  verticalops:   { keys: ['verticals', 'commands', 'seq'],             max: 1500000, maxStr: 350000 },
   expenses:     { keys: ['list'],                                  max: 400000 },
+  /* Assistant approvals and their version trail. Protected from paired tills
+   * below because summaries can contain customer and operational identifiers. */
+  agentactions:  { keys: ['items', 'versions'],                      max: 250000 },
+  /* Morning briefings eventually carry measured revenue, margin and stock
+   * figures. Treat the cache as books from day one: non-editing surfaces see
+   * an empty projection and, critically, cannot write that projection back. */
+  briefing:      { keys: ['days'],                                   max: 250000 },
   /* Les trois destinations « starter » qui n'avaient pas encore de case ici.
    * Le starter (pages-pro.js) range une simple LISTE de lignes saisies à la
    * main, d'où la forme `{ list: [...] }` — la même que `suppliers` ou
@@ -93,14 +132,38 @@ const FEATURES = {
    * qui figureront sur toute facture. Elle vivait dans `kiwiSet:biz:*`, donc
    * dans UN navigateur : le commerçant saisissait son ICE au bureau et son
    * ticket sortait sans mention légale au comptoir. */
-  business:     { keys: ['name', 'tradeName', 'legal'],            max: 20000 },
+  business:     { keys: ['name', 'tradeName', 'logo', 'slogan', 'legal'], max: 400000, maxStr: 350000 },
   /* L'apparence du reçu — logo, en-tête, messages, ce qu'on affiche, largeur
    * du rouleau. `max` généreux à cause du logo, qui est une image en data: URI
-   * (bornée à 200 ko côté client, voir assets/receipt.js). */
-  receipt:      { keys: ['look', 'show', 'msg', 'print', 'vat'],    max: 400000 },
+   * (fichier borné à 300 ko avant encodage côté client ; data URI ≤ 500 ko).
+   *
+   * `maxStr` : le logo est UNE chaîne de plusieurs dizaines de milliers de
+   * caractères, et le bornage générique refuse toute chaîne au-delà de 4 000.
+   * Le document entier était donc rejeté (413 · string-too-long) DÈS QU'UN
+   * COMMERÇANT POSAIT SON LOGO — en silence : le tableau de bord gardait sa
+   * copie locale et montrait le nouveau reçu dans l'aperçu, le serveur n'en
+   * recevait rien, et la caisse continuait d'imprimer l'ancien ticket
+   * indéfiniment. Observé chez un client le 30/07/2026.
+   *
+   * On ne relâche la borne QUE pour cette fonctionnalité-là : partout ailleurs
+   * une chaîne de 500 ko est une anomalie, ici c'est le format normal d'une
+   * image. `max` reste le vrai plafond du document. */
+  receipt:      { keys: ['look', 'show', 'msg', 'print', 'vat'],    max: 700000, maxStr: 500000 },
   terminals:    { keys: ['list'],                                  max: 200000 },
   appointments: { keys: ['list'],                                  max: 400000 },
   practitioners:{ keys: ['list'],                                  max: 200000 },
+  /* Exact-trade operational boards (pre-orders, production, prescriptions,
+   * memberships, deliveries, etc.). One tenant-scoped document deliberately
+   * holds every board so a status change made on the phone is visible on the
+   * desktop without multiplying store_docs rows. Records are bounded again in
+   * the client; this server limit is the final safety rail. */
+  workspaces:   { keys: ['trade', 'records'],                       max: 600000 },
+  /* Garment tickets are the pressing's operational source of truth: customer,
+   * care instructions, per-piece status, rack and outstanding balance. */
+  'pressing-orders': { keys: ['customers', 'orders', 'cancellations', 'rackConflicts', 'seq'], max: 1500000 },
+  /* Editable garment/service catalogue shared by the owner dashboard and the
+   * paired pressing till. Historical tickets keep their own price snapshot. */
+  'pressing-catalog': { keys: ['categories', 'services', 'items'], max: 600000 },
   /* Les rapports de clôture (le « Z » de fin de journée), un document par
    * magasin contenant `days['2026-07-26'] = {…}`. C'est le SEUL de cette liste
    * qui soit une pièce comptable : un commerçant le rouvre pour justifier un
@@ -150,16 +213,17 @@ const MAX_STR = 4000;
 const MAX_ARRAY = 20000;
 const MAX_KEYS = 400;
 
-function bounded(raw) {
+function bounded(raw, maxStr) {
   let nodes = 0;
   let overflow = '';
+  const strCap = maxStr > 0 ? maxStr : MAX_STR;
 
   function walk(v, depth) {
     if (++nodes > MAX_NODES) { overflow = overflow || 'too-many-nodes'; return null; }
     if (v == null) return null;
     const t = typeof v;
     if (t === 'string') {
-      if (v.length > MAX_STR) { overflow = overflow || 'string-too-long'; return null; }
+      if (v.length > strCap) { overflow = overflow || 'string-too-long'; return null; }
       return v;
     }
     if (t === 'number') return Number.isFinite(v) ? v : 0;
@@ -215,6 +279,132 @@ function isEmptyDoc(d) {
   return true;
 }
 
+/* A pressing cancellation is custody evidence, not an optional field in a
+ * last-writer-wins snapshot. Older clients do not know `cancellations`, and a
+ * full document from one of them must therefore never erase a tombstone that
+ * another terminal already recorded. There is deliberately no implicit
+ * restoration path here: an authorized restore would be a separate action. */
+function preservePressingCancellations(current, incoming) {
+  if (!current || !incoming || typeof current !== 'object' || typeof incoming !== 'object') return incoming;
+  const oldCancellations = Array.isArray(current.cancellations) ? current.cancellations : [];
+  const oldOrders = Array.isArray(current.orders) ? current.orders : [];
+  const oldConflicts = Array.isArray(current.rackConflicts) ? current.rackConflicts : [];
+  if (!oldCancellations.length && !oldConflicts.length && !oldOrders.some((o) => o && o.cancelledAt)) return incoming;
+  const cancellations = Array.isArray(incoming.cancellations) ? incoming.cancellations.slice() : [];
+  const byId = new Map(cancellations.filter((c) => c && c.id).map((c) => [String(c.id), c]));
+  oldCancellations.forEach((c) => {
+    if (c && c.id && !byId.has(String(c.id))) { byId.set(String(c.id), c); cancellations.push(c); }
+  });
+  oldOrders.filter((o) => o && o.id && o.cancelledAt).forEach((o) => {
+    const id = String(o.id);
+    if (!byId.has(id)) {
+      const tombstone = { id, cancelledAt: o.cancelledAt, cancelledBy: o.cancelledBy || null };
+      byId.set(id, tombstone);
+      cancellations.push(tombstone);
+    }
+  });
+  const orders = Array.isArray(incoming.orders) ? incoming.orders.slice() : [];
+  const orderById = new Map(orders.filter((o) => o && o.id).map((o) => [String(o.id), o]));
+  oldOrders.filter((o) => o && o.id && o.cancelledAt).forEach((old) => {
+    const id = String(old.id);
+    const row = orderById.get(id);
+    if (!row) orders.push(old);
+    else Object.assign(row, {
+      cancelledAt: old.cancelledAt,
+      cancelledBy: old.cancelledBy || null,
+      rack: null,
+      updatedAt: Math.max(Number(row.updatedAt) || 0, Number(old.updatedAt) || 0),
+    });
+  });
+  const conflicts = Array.isArray(incoming.rackConflicts) ? incoming.rackConflicts.slice() : [];
+  const conflictKeys = new Set(conflicts.map((c) => `${c && c.slot}|${c && c.loserId}`));
+  oldConflicts.forEach((c) => {
+    const key = `${c && c.slot}|${c && c.loserId}`;
+    if (c && !conflictKeys.has(key)) { conflictKeys.add(key); conflicts.push(c); }
+  });
+  return { ...incoming, orders, cancellations, rackConflicts: conflicts.slice(-100) };
+}
+
+function pressingCancellationActor(actor) {
+  if (!actor || typeof actor !== 'object') return null;
+  return {
+    id: String(actor.id || '').slice(0, 80),
+    name: String(actor.name || '').slice(0, 100),
+    role: String(actor.role || '').slice(0, 40),
+  };
+}
+
+function samePressingCancellation(a, b) {
+  if (!a || !b) return false;
+  return String(a.cancelledAt || '') === String(b.cancelledAt || '')
+    && JSON.stringify(pressingCancellationActor(a.cancelledBy)) === JSON.stringify(pressingCancellationActor(b.cancelledBy));
+}
+
+/* Generic document sync is not an authorization boundary. In particular, a
+ * till must not be able to invent a cancelledAt/cancelledBy pair merely by
+ * posting a full snapshot. Only /api/pressing/cancel may create that evidence;
+ * this check accepts an already-known tombstone exactly as recorded and rejects
+ * both forged/re-written tombstones and removal of live orders. */
+function validatePressingSnapshot(current, incoming) {
+  if (!incoming || typeof incoming !== 'object') return null;
+  if (!current || typeof current !== 'object' || Array.isArray(current)) {
+    const forged = (Array.isArray(incoming.cancellations) && incoming.cancellations.find((c) => c && c.id))
+      || (Array.isArray(incoming.orders) && incoming.orders.find((o) => o && o.id && o.cancelledAt));
+    return forged ? { error: 'pressing-cancellation-route-required', id: String(forged.id) } : null;
+  }
+  const oldOrders = Array.isArray(current.orders) ? current.orders : [];
+  const oldTombstones = new Map();
+  (Array.isArray(current.cancellations) ? current.cancellations : []).forEach((c) => {
+    if (c && c.id) oldTombstones.set(String(c.id), c);
+  });
+  oldOrders.forEach((o) => {
+    if (o && o.id && o.cancelledAt && !oldTombstones.has(String(o.id))) {
+      oldTombstones.set(String(o.id), { id: String(o.id), cancelledAt: o.cancelledAt, cancelledBy: o.cancelledBy || null });
+    }
+  });
+  const incomingOrders = Array.isArray(incoming.orders) ? incoming.orders : [];
+  const incomingById = new Map(incomingOrders.filter((o) => o && o.id).map((o) => [String(o.id), o]));
+  const incomingCancellations = Array.isArray(incoming.cancellations) ? incoming.cancellations : [];
+
+  for (const old of oldOrders) {
+    if (!old || !old.id || old.cancelledAt) continue;
+    if (!incomingById.has(String(old.id))) return { error: 'pressing-order-retention-conflict', id: String(old.id) };
+  }
+  for (const cancellation of incomingCancellations) {
+    if (!cancellation || !cancellation.id) continue;
+    const id = String(cancellation.id);
+    const old = oldTombstones.get(id);
+    if (!old) return { error: 'pressing-cancellation-route-required', id };
+    if (!samePressingCancellation(old, cancellation)) return { error: 'pressing-cancellation-immutable', id };
+  }
+  for (const [id, incomingOrder] of incomingById) {
+    if (!incomingOrder || !incomingOrder.cancelledAt) continue;
+    const old = oldTombstones.get(id);
+    if (!old) return { error: 'pressing-cancellation-route-required', id };
+    if (!samePressingCancellation(old, incomingOrder)) return { error: 'pressing-cancellation-immutable', id };
+  }
+  for (const [id, old] of oldTombstones) {
+    const incomingOrder = incomingById.get(id);
+    if (incomingOrder && (!incomingOrder.cancelledAt || !samePressingCancellation(old, incomingOrder))) {
+      return { error: 'pressing-cancellation-immutable', id };
+    }
+  }
+  return null;
+}
+
+function pressingRackConflict(doc) {
+  const owners = new Map();
+  for (const order of (doc && doc.orders) || []) {
+    if (!order || order.cancelledAt || !order.rack) continue;
+    const rack = String(order.rack).trim().slice(0, 20);
+    if (!rack) continue;
+    const previous = owners.get(rack);
+    if (previous && previous !== String(order.id || '')) return { slot: rack, orderId: String(order.id || '') };
+    owners.set(rack, String(order.id || ''));
+  }
+  return null;
+}
+
 /* Le document ressemble-t-il à CETTE fonctionnalité ? Voir FEATURES.keys. */
 function shapeOk(feature, raw) {
   if (!raw || typeof raw !== 'object') return false;
@@ -222,6 +412,125 @@ function shapeOk(feature, raw) {
   if (!keys || !keys.length) return true;
   if (Array.isArray(raw)) return false;
   return keys.some((k) => Object.prototype.hasOwnProperty.call(raw, k));
+}
+
+/* The employee portal must never depend on a second best-effort browser
+ * request after the Team document has been saved. That split was the reason an
+ * employee could be visible in Dashboard → Équipe while /api/employee still
+ * knew nothing about them: the large Team POST succeeded, the small
+ * /api/config PIN mirror failed silently, and the UI nevertheless looked
+ * saved.
+ *
+ * Build the private login roster from the exact Team document accepted by this
+ * endpoint and write both rows in the same D1 batch. `tenantFor()` has already
+ * resolved the real store, so this also remains correctly scoped when one
+ * owner has several dashboards/stores. */
+/* ── LE CODE PERSONNEL N'EST PAS UNE DONNÉE D'ÉQUIPE COMME UNE AUTRE ─────────
+ * Le document `team` porte, pour chaque salarié, le code à quatre chiffres qui
+ * lui ouvre l'app employé — dans `pinCode` et `password`, deux champs qui
+ * portent la même valeur. La page Équipe du tableau de bord les AFFICHE, et
+ * c'est voulu : c'est là que le patron lit le code qu'il va donner à sa
+ * caissière.
+ *
+ * Une caisse appairée n'a rien à voir là-dedans, et elle y avait accès. Le
+ * jeton de caisse est un cookie httpOnly posé sur un appareil de comptoir que
+ * n'importe qui peut approcher : `tenantFor()` l'accepte (voir _private.js ›
+ * resolveTenant), donc `GET /api/store?feature=team` rendait à ce comptoir
+ * l'intégralité des codes du personnel. C'est la même fuite que celle que
+ * /api/config vient de perdre, par une autre porte.
+ *
+ * On rend donc l'équipe SANS les codes à qui n'est pas en train de la tenir à
+ * jour. La caisse garde ce qu'elle utilise — des noms, des rôles, des heures —
+ * et perd ce qu'elle n'a jamais lu. */
+function stripTeamCodes(doc) {
+  if (!doc || typeof doc !== 'object') return doc;
+  const members = Array.isArray(doc.members) ? doc.members : null;
+  if (!members) return doc;
+  return { ...doc, members: members.map((m) => {
+    if (!m || typeof m !== 'object') return m;
+    const { pinCode, password, ...rest } = m;
+    return rest;
+  }) };
+}
+
+function stripAgentActions() { return { items: [], versions: [] }; }
+function stripBriefing() { return { days: [] }; }
+
+/* Quelles fonctionnalités cachent un secret à qui ne l'écrit pas. */
+const REDACT = { team: stripTeamCodes, agentactions: stripAgentActions, briefing: stripBriefing };
+const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE]);
+
+/* Celui-ci tient-il la fiche, ou ne fait-il que la consulter ?
+ * `entitledMerchant` SANS `allowTill` répond exactement à ça : la session du
+ * compte propriétaire, ou un opérateur nommé — les deux seules surfaces qui
+ * éditent l'équipe. Une caisse appairée, un employé connecté : non.
+ * L'opérateur reste dedans volontairement. Sa vue portée ouvre la même page
+ * Équipe, et un champ code vidé n'y serait pas anodin : le formulaire
+ * régénère un code quand il n'en relit pas un (assets/team.js › makeCode),
+ * donc masquer sans plus reviendrait à faire tourner les codes du client dans
+ * son dos. */
+async function editsRoster(request, env, merchant) {
+  if (!merchant) return false;
+  try { return (await entitledMerchant(request, env, merchant)) === merchant; }
+  catch (_) { return false; }
+}
+
+async function isHotelMerchant(env, merchant) {
+  try {
+    const row = await env.DB.prepare('SELECT type FROM merchant_config WHERE merchant=?')
+      .bind(merchant)
+      .first();
+    return isHotelMerchantType(row && row.type);
+  } catch (_) {
+    return false;
+  }
+}
+
+async function employeeAccessFromTeam(env, team, merchant) {
+  const members = Array.isArray(team && team.members) ? team.members : [];
+  let previous = { members: [] };
+  try {
+    const row = await env.DB.prepare(
+      "SELECT data FROM store_docs WHERE merchant = ? AND feature = 'employee-access'"
+    ).bind(merchant).first();
+    if (row && row.data) {
+      const parsed = JSON.parse(row.data);
+      if (parsed && Array.isArray(parsed.members)) previous = parsed;
+    }
+  } catch (_) { return null; }
+  const previousById = new Map(previous.members.map((member) => [String(member && member.id || ''), member]));
+  const seen = new Set();
+  const access = [];
+  for (const member of members) {
+    if (!member) continue;
+    const id = String(member.id || '').trim().slice(0, 96);
+    const email = String(member.email || '').trim().toLocaleLowerCase('en').slice(0, 254);
+    const pin = String(member.pinCode || member.password || '').trim();
+    if (!id || !/^\S+@\S+\.\S+$/.test(email) || !/^\d{4}$/.test(pin)) continue;
+    const key = `${email}:${id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const prior = previousById.get(id);
+    const priorPin = String(prior && (prior.pinCode || prior.password) || '');
+    const priorVersion = Math.max(0, Math.round(Number(prior && prior.authVersion) || 0));
+    const revision = await employeeAuthVersion(
+      env, merchant, id, pin, priorVersion + (prior && priorPin !== pin ? 1 : 0)
+    );
+    if (!revision.ok) return null;
+    access.push({
+      id,
+      firstName: String(member.firstName || '').trim().slice(0, 60),
+      lastName: String(member.lastName || '').trim().slice(0, 60),
+      email,
+      pinCode: pin,
+      password: pin,
+      authVersion: revision.version,
+      function: String(member.function || '').trim().slice(0, 60),
+      department: String(member.department || '').trim().slice(0, 60),
+      venueSlug: merchant,
+    });
+  }
+  return { members: access };
 }
 
 export async function onRequestGet(context) {
@@ -237,6 +546,10 @@ export async function onRequestGet(context) {
 
   const merchant = await tenantFor(request, env, url.searchParams.get('merchant'));
   if (!merchant) return json({ error: 'unauthorized' }, 401);
+  if ((feature === HOTEL_UNITS_FEATURE || feature === ECONOMAT_CATALOGUE_FEATURE)
+      && !(await isHotelMerchant(env, merchant))) {
+    return json({ feature, merchant, data: null, rev: 0 });
+  }
 
   try {
     const row = await env.DB.prepare(
@@ -245,7 +558,9 @@ export async function onRequestGet(context) {
     if (!row) return json({ feature, merchant, data: null, rev: 0 });
     let data = null;
     try { data = JSON.parse(row.data); } catch (_) { data = null; }
-    return json({ feature, merchant, data, rev: row.rev || 0, updated_ts: row.updated_ts || 0 });
+    const redact = REDACT[feature];
+    const safe = (redact && !(await editsRoster(request, env, merchant))) ? redact(data) : data;
+    return json({ feature, merchant, data: safe, rev: row.rev || 0, updated_ts: row.updated_ts || 0 });
   } catch (_) {
     // Table absente (migration pas encore passée) → neutre, surtout pas une
     // erreur : le client doit continuer à fonctionner en local.
@@ -266,6 +581,24 @@ export async function onRequestPost(context) {
   const merchant = await tenantFor(request, env, body && body.merchant, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
+  /* Qui ne peut pas LIRE les codes ne peut pas RÉÉCRIRE le document qui les
+   * porte. Sans cette ligne, la rédaction du GET creuse un trou pire que celui
+   * qu'elle bouche : une caisse relit l'équipe expurgée, la repousse telle
+   * quelle, et tous les codes du magasin disparaissent de la base — une panne
+   * silencieuse le lendemain matin, quand personne n'arrive à se connecter.
+   * Aucune surface de caisse n'écrit l'équipe (seul assets/team.js le fait,
+   * depuis le tableau de bord), donc c'est un verrou, pas un retrait. */
+  if (REDACT[feature] && !(await editsRoster(request, env, merchant))) {
+    return json({ error: 'forbidden-feature', feature }, 403);
+  }
+  if (OWNER_EDIT_FEATURES.has(feature) && !(await editsRoster(request, env, merchant))) {
+    return json({ error: 'forbidden-feature', feature }, 403);
+  }
+  if ((feature === HOTEL_UNITS_FEATURE || feature === ECONOMAT_CATALOGUE_FEATURE)
+      && !(await isHotelMerchant(env, merchant))) {
+    return json({ error: 'hotel-only' }, 403);
+  }
+
   const raw = (body && body.data) || null;
 
   // Garde-fou de forme. Un document qui n'est pas celui qu'on croit écraserait
@@ -273,12 +606,12 @@ export async function onRequestPost(context) {
   // supprimé) porte quand même ses clés, donc il passe.
   if (!shapeOk(feature, raw)) return json({ error: 'shape-mismatch', expected: feature }, 409);
 
-  const clean = bounded(raw);
+  const clean = bounded(raw, FEATURES[feature].maxStr);
   // Refus plutôt que troncature : voir la note de `bounded`. Le client garde sa
   // copie locale — il ne perd rien, il n'a simplement pas de copie serveur.
   if (!clean.ok) return json({ error: 'too-large', why: clean.why }, 413);
 
-  const text = JSON.stringify(clean.value);
+  let text = JSON.stringify(clean.value);
   if (text.length > FEATURES[feature].max) {
     return json({ error: 'too-large', why: 'byte-size', max: FEATURES[feature].max }, 413);
   }
@@ -298,21 +631,80 @@ export async function onRequestPost(context) {
   }
 
   const serverRev = (current && current.rev) || 0;
+  let mine = null;
+  try { mine = current ? JSON.parse(current.data) : null; } catch (_) { mine = null; }
+
+  if (feature === 'rooms' && current) {
+    const currentCheck = validateRoomsDocument(mine, mine);
+    if (!currentCheck.ok) return json({ error: currentCheck.error, feature }, 503);
+    // Room audit history is server-owned. A generic document save may update
+    // room metadata, but it cannot forge, edit, or remove historical entries.
+    clean.value.roomAudits = Array.isArray(mine.roomAudits)
+      ? JSON.parse(JSON.stringify(mine.roomAudits)) : [];
+  } else if (feature === 'rooms') {
+    clean.value.roomAudits = [];
+  }
 
   // Écriture basée sur une révision périmée : on ne l'applique PAS. On renvoie la
   // copie serveur pour que le client fusionne et repropose. Sans ça, deux
   // appareils ouverts en même temps se recouvrent l'un l'autre.
   if (serverRev && baseRev !== serverRev) {
-    let mine = null;
-    try { mine = JSON.parse(current.data); } catch (_) { mine = null; }
     return json({ error: 'stale', feature, rev: serverRev, data: mine }, 409);
   }
 
+  if (feature === 'pressing-orders') {
+    if (serverRev && (!mine || typeof mine !== 'object' || Array.isArray(mine) || !Array.isArray(mine.orders))) {
+      return json({ error: 'corrupt-document', feature }, 503);
+    }
+    const snapshotError = validatePressingSnapshot(mine, clean.value);
+    if (snapshotError) return json({ error: snapshotError.error, feature, id: snapshotError.id }, 409);
+    clean.value = preservePressingCancellations(mine, clean.value);
+    const conflict = pressingRackConflict(clean.value);
+    if (conflict) return json({ error: 'rack-conflict', feature, ...conflict }, 409);
+    text = JSON.stringify(clean.value);
+    if (text.length > FEATURES[feature].max) {
+      return json({ error: 'too-large', why: 'byte-size', max: FEATURES[feature].max }, 413);
+    }
+  }
+
+  if (feature === 'reservations') {
+    try { await validateCommercialSync(env, merchant, mine, clean.value); }
+    catch (e) { return json({ error: e?.code || 'commercial-unavailable', feature }, e?.code === 'commercial-stays-use-api' ? 409 : 503); }
+  }
+
+  if (feature === HOTEL_UNITS_FEATURE) {
+    const checked = validateHotelUnits(clean.value, mine);
+    if (!checked.ok) {
+      return json({ error: checked.error, detail: checked.detail }, checked.status || 422);
+    }
+    clean.value = checked.value;
+    let drained;
+    try {
+      drained = await hotelUnitDeactivationBlockers(env.DB, merchant, mine, clean.value);
+    } catch (_) {
+      return json({ error: 'unmigrated' }, 503);
+    }
+    if (!drained.ok) {
+      return json({ error: drained.error, blockers: drained.blockers }, drained.status || 409);
+    }
+    text = JSON.stringify(clean.value);
+  }
+  if (feature === ECONOMAT_CATALOGUE_FEATURE) {
+    const checked = validateEconomatCatalogue(clean.value);
+    if (!checked.ok) return json({ error: checked.error }, checked.status || 422);
+    clean.value = checked.value;
+    text = JSON.stringify(clean.value);
+  }
+  if (feature === 'rooms') {
+    const checked = validateRoomsDocument(clean.value, mine, { checkDuplicateNumbers: true });
+    if (!checked.ok) return json({ error: checked.error, detail: checked.detail, roomId: checked.roomId }, checked.status || 422);
+    clean.value = checked.value;
+    text = JSON.stringify(clean.value);
+    if (text.length > FEATURES[feature].max) return json({ error: 'too-large', why: 'byte-size', max: FEATURES[feature].max }, 413);
+  }
   // Un premier envoi VIDE ne doit pas effacer un document déjà en ligne : c'est
   // la signature d'un navigateur neuf qui pousse avant d'avoir hydraté.
   if (serverRev && isEmptyDoc(clean.value)) {
-    let mine = null;
-    try { mine = JSON.parse(current.data); } catch (_) { mine = null; }
     if (!isEmptyDoc(mine)) {
       return json({ error: 'refused-empty', feature, rev: serverRev, data: mine }, 409);
     }
@@ -320,13 +712,70 @@ export async function onRequestPost(context) {
 
   const rev = serverRev + 1;
   try {
-    await env.DB.prepare(
-      `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
-       VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(merchant, feature) DO UPDATE SET
-         data = excluded.data, rev = excluded.rev, updated_ts = excluded.updated_ts`
-    ).bind(merchant, feature, text, rev, now).run();
+    if (feature === 'rooms') {
+      const writeDoc = serverRev
+        ? env.DB.prepare('UPDATE store_docs SET data=?,rev=?,updated_ts=? WHERE merchant=? AND feature=? AND rev=?')
+          .bind(text, rev, now, merchant, feature, serverRev)
+        : env.DB.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?) ON CONFLICT(merchant,feature) DO NOTHING')
+          .bind(merchant, feature, text, rev, now);
+      const written = await writeDoc.run();
+      if (Number(written.meta?.changes) !== 1) {
+        let latest = null;
+        try { latest = await env.DB.prepare('SELECT data, rev FROM store_docs WHERE merchant=? AND feature=?').bind(merchant, feature).first(); } catch (_) {}
+        let latestData = null;
+        try { latestData = latest?.data ? JSON.parse(latest.data) : null; } catch (_) {}
+        return json({ error: 'stale', feature, rev: latest?.rev || serverRev, data: latestData }, 409);
+      }
+      await poke(env, merchant, feature);
+      return json({ ok: true, feature, merchant, rev, updated_ts: now, bytes: text.length, data: clean.value });
+    }
+    const writeDoc = feature === 'reservations' ? (serverRev
+      ? env.DB.prepare('UPDATE store_docs SET data=?,rev=?,updated_ts=? WHERE merchant=? AND feature=? AND rev=?').bind(text, rev, now, merchant, feature, serverRev)
+      : env.DB.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?) ON CONFLICT(merchant,feature) DO NOTHING').bind(merchant, feature, text, rev, now)) : env.DB.prepare(
+      feature === 'pressing-orders'
+        ? (serverRev
+          ? 'UPDATE store_docs SET data=?,rev=?,updated_ts=? WHERE merchant=? AND feature=? AND rev=?'
+          : 'INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?) ON CONFLICT(merchant,feature) DO NOTHING')
+        : `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(merchant, feature) DO UPDATE SET
+             data = excluded.data, rev = excluded.rev, updated_ts = excluded.updated_ts`
+    ).bind(...(feature === 'pressing-orders' && serverRev
+      ? [text, rev, now, merchant, feature, serverRev]
+      : [merchant, feature, text, rev, now]));
+    if (feature === 'team') {
+      const access = await employeeAccessFromTeam(env, clean.value, merchant);
+      if (!access) return json({ error: 'employee-access-unavailable' }, 503);
+      const accessText = JSON.stringify(access);
+      const writeAccess = env.DB.prepare(
+        `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
+         VALUES (?, 'employee-access', ?, 1, ?)
+         ON CONFLICT(merchant, feature) DO UPDATE SET
+           data = excluded.data, rev = store_docs.rev + 1, updated_ts = excluded.updated_ts`
+      ).bind(merchant, accessText, now);
+      await env.DB.batch([writeDoc, writeAccess]);
+    } else {
+      const written = await writeDoc.run();
+      if (feature === 'reservations' && Number(written.meta?.changes) !== 1) return json({ error: 'stale', feature }, 409);
+      if (feature === 'pressing-orders' && Number(written.meta?.changes) !== 1) {
+        let latest = null;
+        try {
+          latest = await env.DB.prepare('SELECT data, rev FROM store_docs WHERE merchant=? AND feature=?')
+            .bind(merchant, feature).first();
+        } catch (_) {}
+        let latestData = mine;
+        try { latestData = latest && latest.data ? JSON.parse(latest.data) : latestData; } catch (_) {}
+        return json({ error: 'stale', feature, rev: latest?.rev || serverRev, data: latestData }, 409);
+      }
+    }
   } catch (_) { return json({ error: 'write-failed' }, 500); }
+
+  /* Écriture faite : on réveille les autres appareils du commerçant pour qu'ils
+   * relisent maintenant plutôt qu'au prochain tour d'horloge. Attendu plutôt que
+   * détaché — sans binding c'est un simple test de vérité, et avec binding
+   * l'aller-retour reste dans le même centre de données, à côté des requêtes D1
+   * qu'on vient déjà de faire. */
+  await poke(env, merchant, feature);
 
   return json({ ok: true, feature, merchant, rev, updated_ts: now, bytes: text.length });
 }

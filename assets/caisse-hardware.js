@@ -13,11 +13,43 @@
   function realTill() {
     try {
       if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return true;
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.isPaired === 'function') return window.KiwiPlatform.isPaired();
       return !!JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
     } catch (_) { return false; }
   }
 
   function failed(reason) { return Promise.resolve({ ok: false, reason: reason }); }
+
+  function readCard(amount) {
+    if (realTill()) return Promise.resolve({ approved: false, ok: false, amount: amount, reason: 'payment-terminal-not-configured' });
+    return Promise.resolve({ approved: true, ok: true, amount: amount, mock: true });
+  }
+
+  /* One visual adapter for every POS vertical. It may paint success only after
+     readCard() returns approved=true; production therefore cannot manufacture
+     an approval with a timer. The caller still owns the actual sale commit. */
+  function authorizeCard(amount, disc, status) {
+    return readCard(amount).then(function (result) {
+      if (disc && disc.classList) disc.classList.remove('is-pulsing');
+      if (disc && disc.replaceChildren && document.createElement) {
+        var icon = document.createElement('i');
+        icon.setAttribute('data-lucide', result && result.approved ? 'check' : 'x');
+        disc.replaceChildren(icon);
+      }
+      if (result && result.approved) {
+        if (disc && disc.classList) disc.classList.add('is-success');
+        if (status) { status.textContent = 'Paiement confirmé sur le lecteur'; status.classList && status.classList.add('is-success'); }
+      } else {
+        if (disc && disc.classList) disc.classList.remove('is-success');
+        if (status) { status.textContent = 'Paiement non confirmé · lecteur indisponible'; status.classList && status.classList.remove('is-success'); }
+      }
+      return result;
+    }, function () {
+      if (disc && disc.classList) disc.classList.remove('is-pulsing', 'is-success');
+      if (status) { status.textContent = 'Paiement non confirmé · erreur lecteur'; status.classList && status.classList.remove('is-success'); }
+      return { approved: false, ok: false, amount: amount, reason: 'payment-terminal-error' };
+    });
+  }
 
   function el(tag, css, text) {
     var n = document.createElement(tag);
@@ -75,10 +107,12 @@
       return realTill() ? failed('printer-not-configured') : mockPrint(ticket);
     },
     // Open the cash drawer (ESC/POS kick). Real via the bridge when configured; the
-    // mock resolves immediately otherwise.
+    // mock resolves immediately otherwise. Le tiroir est branché en RJ11 sur
+    // l'imprimante du COMPTOIR : le coup part vers le profil « caisse », jamais
+    // vers une imprimante de production (cuisine/bar) du poste multi-imprimantes.
     openDrawer: function () {
       if (window.KiwiPrinter && (KiwiPrinter.isConnected ? KiwiPrinter.isConnected() : KiwiPrinter.isConfigured()) && window.KiwiEscPos) {
-        return KiwiPrinter.printBytes(window.KiwiEscPos.builder().init().drawer().bytes())
+        return KiwiPrinter.printBytes(window.KiwiEscPos.builder().init().drawer().bytes(), 'caisse')
           .then(function (res) {
             if (res && res.ok) return { ok: true, opened: true, via: res.via || '' };
             return realTill() ? { ok: false, reason: (res && res.reason) || 'drawer-failed' } : { ok: true, mock: true };
@@ -95,9 +129,14 @@
     },
     // NO certified EMV provider is connected here. A real till gets an explicit
     // rejection instead of a fabricated approval that could mark an unpaid sale paid.
-    readCard: function (amount) {
-      if (realTill()) return Promise.resolve({ approved: false, ok: false, amount: amount, reason: 'payment-terminal-not-configured' });
-      return Promise.resolve({ approved: true, ok: true, amount: amount, mock: true });
-    }
+    readCard: readCard,
+    authorizeCard: authorizeCard,
+    // Pré-réchauffe le canal thermique dès qu'une intention d'encaissement apparaît,
+    // évitant la latence de réveil (15–20 s) au premier ticket après une accalmie.
+    warmPrinter: function (target) {
+      if (window.KiwiPrinter && typeof window.KiwiPrinter.wake === 'function') {
+        window.KiwiPrinter.wake(target);
+      }
+    },
   };
 })();

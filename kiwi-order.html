@@ -20,20 +20,20 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
   <!-- Copie locale : ces pages tiraient lucide@latest depuis unpkg à chaque
        chargement. Non épinglé = ce qu'unpkg publie demain s'exécute sur le
        terminal de paiement du commerçant et sur le téléphone du client, sans
        relecture. Le fichier était déjà vendu dans assets/. -->
-  <script src="assets/lucide.min.js" defer></script>
+  <script src="assets/lucide.min.js?v=4" defer></script>
   <!-- Les horaires de l'établissement. Cette page tourne sur le téléphone d'un
        client : elle ne lit aucun réglage local, elle reçoit la semaine PUBLIÉE
        avec la carte (/api/menu) et l'interroge avec statusOf()/summaryOf(), qui
        sont des fonctions pures — aucun stockage, aucune session. C'est ce qui
        permet de dire « fermé, nous rouvrons demain à 12:00 » au lieu de prendre
        la commande d'un commerce fermé. -->
-  <script src="assets/hours.js" defer></script>
+  <script src="assets/hours.js?v=1" defer></script>
 
   <style>
     /* =========================================================
@@ -56,12 +56,12 @@
       --ink:          #111111;
       --ink-2:        #4A4A4A;
       --ink-3:        #6B6B6B;
-      --ink-4:        #9A9A9A;
+      --ink-4:        #6F6C65;
       --line:         #E5E5E5;
       --line-soft:    #EEEEEE;
 
       --sans:  "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      --serif: "Instrument Serif", "Times New Roman", serif;
+      --serif: "Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       --mono:  "JetBrains Mono", "SF Mono", ui-monospace, monospace;
       --arabic: "IBM Plex Sans Arabic", "Inter Tight", -apple-system, system-ui, sans-serif;
 
@@ -204,8 +204,8 @@ em, i, cite, dfn, var { font-style: normal; }
       56%, 100% { opacity: 0; }
     }
     .kiwi-greet-sub {
-      font-family: var(--mono); font-size: 10.5px;
-      letter-spacing: 0.16em; text-transform: uppercase;
+      font-family: var(--sans); font-size: 12px;
+      letter-spacing: -0.005em; text-transform: none;
       color: var(--ink-3);
       margin-top: 22px;
     }
@@ -241,22 +241,26 @@ em, i, cite, dfn, var { font-style: normal; }
       gap: 6px;
       margin-top: 18px;
     }
+    /* L'enseigne était composée en 30 px gras (700) presque noir : sur un
+       écran de 375 px elle écrasait la question qu'elle surmonte, et la
+       charte interdit les graisses d'affichage. Elle redevient ce qu'elle
+       est — un en-tête qui situe le lieu, pas une affiche. */
     .brand-mark {
       display: inline-flex; align-items: baseline; gap: 5px;
-      font-weight: 700; font-size: 30px;
-      letter-spacing: -0.05em;
+      font-weight: 600; font-size: 20px;
+      letter-spacing: -0.03em;
       color: var(--ink);
     }
     .brand-mark i {
-      width: 7px; height: 7px;
+      width: 5px; height: 5px;
       background: var(--forest);
       border-radius: 50%;
       display: inline-block;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
     }
     .brand-tag {
       font-family: var(--serif);
-      font-size: 14px;
+      font-size: 13.5px;
       color: var(--ink-3);
     }
 
@@ -314,10 +318,10 @@ em, i, cite, dfn, var { font-style: normal; }
       100% { transform: translateY(0)     scale(1);  opacity: 1; }
     }
     .table-hint {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: -0.005em;
+      text-transform: none;
       color: var(--ink-4);
       margin: 0;
     }
@@ -336,8 +340,8 @@ em, i, cite, dfn, var { font-style: normal; }
       font-weight: 500;
       color: var(--ink);
       background: var(--surface);
-      border-radius: 16px;
-      box-shadow: var(--shadow-card);
+      border-radius: 14px;
+      box-shadow: 0 1px 2px rgba(17,17,17,0.05);
       border: 1px solid var(--line-soft);
       letter-spacing: -0.01em;
       display: flex;
@@ -365,7 +369,7 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 17px 22px;
       background: var(--ink-4);
       color: var(--paper-cream);
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 15px;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -417,10 +421,10 @@ em, i, cite, dfn, var { font-style: normal; }
       color: var(--ink);
     }
     .menu-cafe .ctx {
-      font-family: var(--mono);
-      font-size: 9.5px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
+      font-family: var(--sans); font-weight: 500;
+      font-size: 11px;
+      letter-spacing: 0;
+      text-transform: none;
       color: var(--ink-3);
     }
     .table-badge {
@@ -493,7 +497,7 @@ em, i, cite, dfn, var { font-style: normal; }
       text-align: left;
       transition: transform 200ms ease;
       width: 100%;
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(17,17,17,0.05);
     }
     .video-card:active { transform: scale(0.97); }
     .video-thumb {
@@ -565,10 +569,10 @@ em, i, cite, dfn, var { font-style: normal; }
       background: var(--surface);
       color: var(--forest);
       border-radius: 999px;
-      font-family: var(--mono);
+      font-family: var(--sans);
       font-size: 9.5px;
-      font-weight: 700;
-      letter-spacing: 0.18em;
+      font-weight: 600;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
       z-index: 2;
       box-shadow: 0 2px 6px rgba(0,0,0,0.25);
@@ -583,7 +587,7 @@ em, i, cite, dfn, var { font-style: normal; }
       background: var(--surface);
       border: 1px solid var(--line-soft);
       border-radius: 14px;
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(17,17,17,0.05);
     }
     .item-img {
       width: 64px; height: 64px;
@@ -625,6 +629,19 @@ em, i, cite, dfn, var { font-style: normal; }
       margin-top: 4px;
       letter-spacing: -0.01em;
     }
+    .item-detail { min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+    .item-detail:focus-visible { outline: 2px solid var(--forest); outline-offset: 3px; border-radius: 6px; }
+    .item-nutrition {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px 5px;
+      margin-top: 5px;
+      color: var(--ink-4);
+      font-family: var(--mono);
+      font-size: 9.5px;
+      line-height: 1.35;
+    }
+    .item-nutrition bdi { unicode-bidi: isolate; white-space: nowrap; }
     .item-add {
       width: 34px; height: 34px;
       border-radius: 999px;
@@ -660,7 +677,7 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 14px 18px;
       background: var(--ink);
       color: var(--paper-cream);
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 14px;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -766,10 +783,10 @@ em, i, cite, dfn, var { font-style: normal; }
       margin: 0 0 4px;
     }
     .cart-subtitle {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: -0.005em;
+      text-transform: none;
       color: var(--ink-3);
       margin: 0 0 16px;
     }
@@ -857,7 +874,7 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 16px 18px;
       background: var(--gradient);
       color: #fff;
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 15px;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -939,10 +956,10 @@ em, i, cite, dfn, var { font-style: normal; }
       color: var(--mint);
     }
     .success-eta {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: -0.005em;
+      text-transform: none;
       opacity: 0.85;
     }
     .success-eta em {
@@ -964,10 +981,10 @@ em, i, cite, dfn, var { font-style: normal; }
       backdrop-filter: blur(6px);
     }
     .success-recap .recap-title {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
+      font-family: var(--sans); font-weight: 500;
+      font-size: 11px;
+      letter-spacing: 0;
+      text-transform: none;
       opacity: 0.7;
       margin-bottom: 6px;
     }
@@ -991,7 +1008,7 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 16px 22px;
       background: var(--surface);
       color: var(--forest);
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 15px;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -1017,9 +1034,19 @@ em, i, cite, dfn, var { font-style: normal; }
     /* =========================================================
        MODE-CHOICE screen (à table / à emporter)
        ========================================================= */
+    /* L'écran était réglé en `space-between` : quatre blocs projetés aux
+       quatre coins d'une colonne de 812 px, avec 136 px de vide entre
+       l'enseigne et la question, puis encore 135 px entre la question et
+       les deux choix. La question ne se lisait plus comme le titre des
+       cartes qu'elle annonce — elle flottait toute seule.
+
+       On garde l'enseigne en haut et la signature en bas, mais la
+       question et les cartes forment désormais UN groupe : marges auto
+       au-dessus et au-dessous, 22 px entre les deux. Le vide restant se
+       partage également, au lieu d'être injecté entre les éléments. */
     .screen-mode {
       padding: var(--safe-top) 24px var(--safe-bottom);
-      justify-content: space-between;
+      justify-content: flex-start;
       align-items: center;
       background:
         radial-gradient(70% 40% at 50% -10%, rgba(31,93,60,0.06), transparent 60%),
@@ -1029,6 +1056,8 @@ em, i, cite, dfn, var { font-style: normal; }
       width: 100%;
       text-align: center;
       padding: 0 8px;
+      margin-top: auto;
+      margin-bottom: 22px;
     }
     .mode-ask {
       margin: 0 0 8px;
@@ -1052,28 +1081,33 @@ em, i, cite, dfn, var { font-style: normal; }
     .mode-cards {
       width: 100%;
       max-width: 380px;
-      margin: 0 auto;
+      margin: 0 auto auto;
       display: grid;
       gap: 12px;
     }
+    /* Rayon de 18 px et ombre à deux couches : les cartes flottaient
+       au-dessus du papier comme un composant sorti d'une bibliothèque.
+       14 px et une seule ombre serrée les reposent dessus — c'est le
+       même correctif que sur les touches de kiwi-serveur. */
     .mode-card {
       background: var(--surface);
       border: 1px solid var(--line-soft);
-      border-radius: 18px;
+      border-radius: 14px;
       padding: 18px 18px;
       display: grid;
       grid-template-columns: 56px 1fr 16px;
       gap: 16px;
       align-items: center;
       text-align: left;
-      box-shadow: var(--shadow-card);
-      transition: transform 200ms ease, border-color 200ms ease;
+      box-shadow: 0 1px 2px rgba(17,17,17,0.05);
+      transition: transform 200ms cubic-bezier(0,0,.2,1),
+                  border-color 200ms cubic-bezier(0,0,.2,1);
       width: 100%;
     }
     .mode-card:active { transform: scale(0.98); border-color: var(--forest); }
     .mode-card .mode-icon {
       width: 56px; height: 56px;
-      border-radius: 14px;
+      border-radius: 12px;
       background: var(--mint-tint);
       display: flex;
       align-items: center;
@@ -1103,11 +1137,14 @@ em, i, cite, dfn, var { font-style: normal; }
       align-items: center;
     }
     .mode-card .mode-chev svg { width: 16px; height: 16px; }
+    /* « Café Atlas · service self-order » était composé en JetBrains Mono
+       de 10,5 px, tout en capitales, à 1,68 px d'interlettrage. Une phrase
+       de marque en français traitée comme une référence machine : c'est le
+       tic typographique que le patron a pointé du doigt. Une seule voix,
+       en bas de casse, discrète par la taille et la couleur. */
     .mode-foot {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: -0.005em;
       color: var(--ink-4);
       text-align: center;
       padding: 0 12px;
@@ -1118,7 +1155,7 @@ em, i, cite, dfn, var { font-style: normal; }
       position: absolute;
       top: calc(var(--safe-top) + 12px);
       left: 18px;
-      width: 38px; height: 38px;
+      width: 44px; height: 44px;
       border-radius: 999px;
       background: rgba(255,255,255,0.7);
       backdrop-filter: blur(6px);
@@ -1150,10 +1187,10 @@ em, i, cite, dfn, var { font-style: normal; }
       margin-top: 18px;
     }
     .cashier-eyebrow {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: -0.005em;
+      text-transform: none;
       color: var(--ink-3);
       margin-top: 4px;
     }
@@ -1208,13 +1245,13 @@ em, i, cite, dfn, var { font-style: normal; }
       border: 1px solid var(--line-soft);
       border-radius: 14px;
       text-align: left;
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(17,17,17,0.05);
     }
     .cashier-recap-title {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
+      font-family: var(--sans); font-weight: 500;
+      font-size: 11px;
+      letter-spacing: 0;
+      text-transform: none;
       color: var(--ink-3);
       margin-bottom: 6px;
     }
@@ -1250,7 +1287,7 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 16px 18px;
       background: var(--ink);
       color: var(--paper-cream);
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 14.5px;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -1344,10 +1381,10 @@ em, i, cite, dfn, var { font-style: normal; }
       max-width: 300px;
     }
     .prep-eta {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: -0.005em;
+      text-transform: none;
       color: var(--ink-3);
     }
     .prep-eta strong {
@@ -1505,10 +1542,10 @@ em, i, cite, dfn, var { font-style: normal; }
       color: var(--mint);
     }
     .ready-sub {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: -0.005em;
+      text-transform: none;
       opacity: 0.85;
     }
     .ready-bottom {
@@ -1520,7 +1557,7 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 16px 22px;
       background: var(--surface);
       color: var(--forest);
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 15px;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -1601,10 +1638,45 @@ em, i, cite, dfn, var { font-style: normal; }
     .custom-base {
       font-family: var(--mono);
       font-size: 11px;
+      font-feature-settings: "tnum" 1;
       color: var(--ink-2);
       margin-top: 4px;
       letter-spacing: -0.005em;
     }
+    .custom-nutrition {
+      margin: 4px 0 14px;
+      padding: 14px;
+      border: 1px solid var(--line-soft);
+      border-radius: 14px;
+      background: var(--paper-mute);
+    }
+    .custom-nutrition-title {
+      margin-bottom: 10px;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .custom-nutrition-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 7px;
+    }
+    .custom-nutrition-cell {
+      min-width: 0;
+      padding: 9px;
+      border: 1px solid var(--line-soft);
+      border-radius: 10px;
+      background: var(--surface);
+    }
+    .custom-nutrition-cell span { display: block; color: var(--ink-4); font-size: 9.5px; }
+    .custom-nutrition-cell bdi { display: block; margin-top: 3px; color: var(--ink); font: 600 11px var(--mono); unicode-bidi: isolate; }
+    .custom-allergens { margin-top: 12px; }
+    .custom-allergens-label { margin-bottom: 7px; color: var(--ink-3); font-size: 10.5px; font-weight: 600; }
+    .custom-allergen-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .custom-allergen-chip { display: inline-flex; align-items: center; gap: 5px; padding: 6px 8px; border: 1px solid var(--line-soft); border-radius: 999px; background: var(--surface); color: var(--ink-2); font-size: 10px; }
+    .custom-allergen-icon { width: 13px; height: 13px; flex: 0 0 auto; background: currentColor; -webkit-mask: url('assets/icons/material/bakery_dining.svg') center/contain no-repeat; mask: url('assets/icons/material/bakery_dining.svg') center/contain no-repeat; }
+    .custom-nutrition-note { margin: 10px 0 0; color: var(--ink-4); font-size: 10px; line-height: 1.4; }
+    @media (max-width: 360px) { .custom-nutrition-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
     .custom-scroll {
       flex: 1;
@@ -1616,10 +1688,10 @@ em, i, cite, dfn, var { font-style: normal; }
     .option-group { margin-top: 16px; }
     .option-group:first-child { margin-top: 4px; }
     .option-group-label {
-      font-family: var(--mono);
-      font-size: 9.5px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
+      font-family: var(--sans); font-weight: 500;
+      font-size: 11px;
+      letter-spacing: 0;
+      text-transform: none;
       color: var(--ink-3);
       margin-bottom: 9px;
       display: flex;
@@ -1669,10 +1741,10 @@ em, i, cite, dfn, var { font-style: normal; }
 
     .custom-note-section { margin-top: 18px; }
     .custom-note-label {
-      font-family: var(--mono);
-      font-size: 9.5px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
+      font-family: var(--sans); font-weight: 500;
+      font-size: 11px;
+      letter-spacing: 0;
+      text-transform: none;
       color: var(--ink-3);
       margin-bottom: 8px;
       display: flex;
@@ -1720,10 +1792,10 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .custom-price { display: flex; flex-direction: column; }
     .custom-price-label {
-      font-family: var(--mono);
-      font-size: 9.5px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
+      font-family: var(--sans); font-weight: 500;
+      font-size: 11px;
+      letter-spacing: 0;
+      text-transform: none;
       color: var(--ink-3);
     }
     .custom-price-value {
@@ -1778,7 +1850,7 @@ em, i, cite, dfn, var { font-style: normal; }
       display: inline-flex;
       align-items: center;
       gap: 7px;
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 1px 2px rgba(17,17,17,0.05);
       transition: background 200ms ease, color 200ms ease, transform 140ms ease, border-color 200ms ease;
     }
     .service-pill:active { transform: scale(0.96); }
@@ -1850,10 +1922,10 @@ em, i, cite, dfn, var { font-style: normal; }
       margin: 0 0 4px;
     }
     .bill-subtitle {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: -0.005em;
+      text-transform: none;
       color: var(--ink-3);
       margin: 0 0 12px;
     }
@@ -1913,7 +1985,7 @@ em, i, cite, dfn, var { font-style: normal; }
     /* Tip section — gamified */
     .tip-section {
       background: linear-gradient(160deg, #F6F8F2 0%, #EAEFE2 100%);
-      border-radius: 18px;
+      border-radius: 14px;
       padding: 16px 16px 18px;
       margin: 6px 0 12px;
       position: relative;
@@ -1933,10 +2005,10 @@ em, i, cite, dfn, var { font-style: normal; }
     .tip-section > * { position: relative; z-index: 1; }
 
     .tip-eyebrow {
-      font-family: var(--mono);
-      font-size: 9.5px;
-      letter-spacing: 0.20em;
-      text-transform: uppercase;
+      font-family: var(--sans);
+      font-size: 12px;
+      letter-spacing: -0.005em;
+      text-transform: none;
       color: var(--ink-3);
       text-align: center;
       display: block;
@@ -2079,7 +2151,7 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 16px 18px;
       background: var(--gradient);
       color: #fff;
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 15px;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -2100,7 +2172,7 @@ em, i, cite, dfn, var { font-style: normal; }
       background: var(--paper-mute);
       color: var(--ink);
       border: 1px solid var(--line-soft);
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 14px;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -2193,10 +2265,10 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     .split-section-label {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
+      font-family: var(--sans); font-weight: 500;
+      font-size: 11px;
+      letter-spacing: 0;
+      text-transform: none;
       color: var(--ink-3);
       margin: 14px 0 8px;
     }
@@ -2347,10 +2419,10 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .split-pool-item.is-other::after {
       content: attr(data-owner);
-      font-family: var(--mono);
-      font-size: 9.5px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
+      font-family: var(--sans); font-weight: 500;
+      font-size: 10px;
+      letter-spacing: 0;
+      text-transform: none;
       color: var(--ink-4);
       margin-left: 6px;
     }
@@ -2361,7 +2433,7 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 16px 18px;
       background: var(--gradient);
       color: #fff;
-      border-radius: 16px;
+      border-radius: 14px;
       font-size: 15px;
       font-weight: 600;
       letter-spacing: -0.005em;
@@ -2377,28 +2449,41 @@ em, i, cite, dfn, var { font-style: normal; }
     /* =========================================================
        LANGUAGE SWITCHER (floating top-right segmented pill)
        ========================================================= */
+    /* La pastille flottait sur un blanc translucide avec une ombre portée
+       de 6 px, et la langue choisie s'affichait sur un disque presque noir
+       (`--ink`) — le seul aplat sombre de tout l'écran, pour la commande la
+       moins importante de la page. Elle passe au papier de la marque, sur
+       un filet, sans ombre diffuse ; la sélection prend le vert Kiwi. */
     .lang-picker {
       position: absolute;
       top: calc(var(--safe-top) + 8px);
       right: 14px;
       z-index: 95;
       display: flex;
-      background: rgba(255,255,255,0.85);
+      background: rgba(247,245,240,0.9);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       border: 1px solid var(--line-soft);
       border-radius: 999px;
       padding: 3px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      box-shadow: 0 1px 2px rgba(17,17,17,0.05);
+      max-width: calc(100% - 28px);
+      overflow-x: auto;
+      scrollbar-width: none;
     }
+    .lang-picker::-webkit-scrollbar { display: none; }
     [dir="rtl"] .lang-picker {
       right: auto;
       left: 14px;
     }
+    /* 44 px de haut pour 44 px de large : la langue active devenait une
+       bille verte. On garde la cible tactile de 44 px — c'est une page
+       pour clients, sur téléphone — et on élargit pour retrouver une
+       pastille allongée plutôt qu'un disque. */
     .lang-btn {
-      min-width: 30px;
-      height: 26px;
-      padding: 0 8px;
+      min-width: 52px;
+      height: 40px;
+      padding: 0 10px;
       border-radius: 999px;
       font-size: 11px;
       font-weight: 600;
@@ -2410,14 +2495,17 @@ em, i, cite, dfn, var { font-style: normal; }
       transition: background 200ms ease, color 200ms ease;
       font-family: var(--sans);
     }
+    /* « د » rendu en 13 px à côté de EN/FR en 11 px capitales : l'arabe
+       paraissait désactivé. L'écriture arabe a besoin de plus de corps
+       pour peser autant. */
     .lang-btn[data-lang="ar"] {
       font-family: var(--arabic);
-      font-size: 13px;
+      font-size: 15px;
       letter-spacing: 0;
     }
     .lang-btn.is-active {
-      background: var(--ink);
-      color: var(--paper-cream);
+      background: var(--forest);
+      color: #EAFFF4;
     }
 
     /* Hide picker over modal sheets so it doesn't sit on top of the backdrop */
@@ -2474,7 +2562,7 @@ em, i, cite, dfn, var { font-style: normal; }
       font-size: 22px;
       line-height: 1.4;
       border: 1px dashed var(--line);
-      border-radius: 18px;
+      border-radius: 14px;
       background: var(--paper-soft);
     }
   </style>
@@ -2484,11 +2572,7 @@ em, i, cite, dfn, var { font-style: normal; }
   <div class="app" id="app">
 
     <!-- ============ LANGUAGE PICKER (floating top-right) ============ -->
-    <div class="lang-picker" id="lang-picker" role="group" aria-label="Langue">
-      <button class="lang-btn" type="button" data-lang="ar" aria-label="الدارجة">د</button>
-      <button class="lang-btn" type="button" data-lang="en">EN</button>
-      <button class="lang-btn is-active" type="button" data-lang="fr">FR</button>
-    </div>
+    <div class="lang-picker" id="lang-picker" role="group" aria-label="Langue" data-lens-demo></div>
 
     <!-- ============ GREETING FLASH (overlay) ============ -->
     <div class="kiwi-greet" data-kiwi-greet aria-hidden="true">
@@ -2502,7 +2586,7 @@ em, i, cite, dfn, var { font-style: normal; }
     <section class="screen screen-mode is-active" id="screen-mode">
       <div class="table-top">
         <div class="brand-mark">Café Atlas<i aria-hidden="true"></i></div>
-        <div class="brand-tag" data-i18n="brand_tag">— Médina, Tanger</div>
+        <div class="brand-tag" data-i18n="brand_tag">Médina, Tanger</div>
       </div>
 
       <div class="mode-mid">
@@ -2539,13 +2623,13 @@ em, i, cite, dfn, var { font-style: normal; }
       </button>
       <div class="table-top">
         <div class="brand-mark">Café Atlas<i aria-hidden="true"></i></div>
-        <div class="brand-tag" data-i18n="brand_tag">— Médina, Tanger</div>
+        <div class="brand-tag" data-i18n="brand_tag">Médina, Tanger</div>
       </div>
 
       <div class="table-mid">
         <p class="table-ask"><span data-i18n="table_ask_pre">Quel est votre</span> <em data-i18n="table_ask_em">numéro de table</em><span data-i18n="table_ask_post"> ?</span></p>
         <div class="table-num-display" id="table-display">
-          <span class="table-digit is-placeholder">—</span>
+          <span class="table-digit is-placeholder"></span>
         </div>
         <p class="table-hint" data-i18n="table_hint">Le numéro est gravé sur le bois de la table</p>
       </div>
@@ -2627,10 +2711,10 @@ em, i, cite, dfn, var { font-style: normal; }
           </svg>
         </div>
         <h1 class="success-title"><span data-i18n="success_title_a">Commande envoyée</span><br/><em data-i18n="success_title_em">en cuisine.</em></h1>
-        <div class="success-eta"><span data-i18n="success_eta_pre">Table</span> <span id="success-table">—</span> <span data-i18n="success_eta_mid">· prêt dans</span> <em data-i18n="success_eta_em">4–6 min</em></div>
+        <div class="success-eta"><span data-i18n="success_eta_pre">Table</span> <span id="success-table"></span> <span data-i18n="success_eta_mid">· prêt dans</span> <em data-i18n="success_eta_em">4–6 min</em></div>
         <div class="success-recap">
           <div class="recap-title" data-i18n="success_recap">Votre commande</div>
-          <div id="success-items">—</div>
+          <div id="success-items"></div>
         </div>
       </div>
       <div class="success-bottom">
@@ -2646,7 +2730,7 @@ em, i, cite, dfn, var { font-style: normal; }
     <section class="screen screen-cashier" id="screen-cashier">
       <div class="cashier-top">
         <div class="brand-mark">Café Atlas<i aria-hidden="true"></i></div>
-        <div class="cashier-eyebrow" data-i18n="cashier_eyebrow">— à emporter</div>
+        <div class="cashier-eyebrow" data-i18n="cashier_eyebrow">à emporter</div>
       </div>
 
       <div class="cashier-mid">
@@ -2655,7 +2739,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
         <div class="cashier-recap">
           <div class="cashier-recap-title" data-i18n="cashier_recap">Votre commande</div>
-          <div class="cashier-recap-items" id="cashier-items">—</div>
+          <div class="cashier-recap-items" id="cashier-items"></div>
           <div class="cashier-recap-total">
             <span data-i18n="cashier_total">Total</span>
             <strong id="cashier-total">0 MAD</strong>
@@ -2676,7 +2760,7 @@ em, i, cite, dfn, var { font-style: normal; }
     <section class="screen screen-preparing" id="screen-preparing">
       <div class="prep-top">
         <div class="brand-mark">Café Atlas<i aria-hidden="true"></i></div>
-        <div class="cashier-eyebrow"><span data-i18n="prep_eyebrow_pre">— commande #</span><span id="prep-number">000</span></div>
+        <div class="cashier-eyebrow"><span data-i18n="prep_eyebrow_pre">commande #</span><span id="prep-number">000</span></div>
       </div>
 
       <div class="prep-mid">
@@ -2714,7 +2798,7 @@ em, i, cite, dfn, var { font-style: normal; }
           </svg>
         </div>
         <h1 class="ready-title"><span data-i18n="ready_title_a">Votre commande est</span> <em data-i18n="ready_title_em">prête.</em></h1>
-        <div class="ready-sub">#<span id="ready-number">000</span><span data-i18n="ready_loc_post"> · café atlas · médina</span></div>
+        <div class="ready-sub">#<span id="ready-number">000</span><span data-i18n="ready_loc_post"> · Café Atlas · Médina</span></div>
       </div>
       <div class="ready-bottom">
         <button class="ready-cta" type="button" id="ready-cta">
@@ -2740,13 +2824,14 @@ em, i, cite, dfn, var { font-style: normal; }
             <i data-lucide="coffee"></i>
           </div>
           <div class="custom-info">
-            <div class="custom-name" id="custom-name">—</div>
-            <div class="custom-desc" id="custom-desc">—</div>
-            <div class="custom-base" id="custom-base">— MAD</div>
+            <div class="custom-name" id="custom-name"></div>
+            <div class="custom-desc" id="custom-desc"></div>
+            <div class="custom-base" id="custom-base">MAD</div>
           </div>
         </div>
 
         <div class="custom-scroll">
+          <div id="custom-nutrition" hidden></div>
           <div id="custom-options"></div>
 
           <div class="custom-note-section">
@@ -2779,7 +2864,7 @@ em, i, cite, dfn, var { font-style: normal; }
       <div class="bill-sheet-panel">
         <div class="cart-handle" data-close-bill></div>
         <h2 class="bill-title" data-i18n="bill_title">Votre addition</h2>
-        <div class="bill-subtitle" id="bill-subtitle">Table <span id="bill-table">—</span> · Café Atlas</div>
+        <div class="bill-subtitle" id="bill-subtitle">Table <span id="bill-table"></span> · Café Atlas</div>
 
         <ul class="bill-items" id="bill-items">
           <li class="bill-empty" data-i18n="bill_empty">Aucune commande passée, ajoutez d'abord au menu.</li>
@@ -2792,7 +2877,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
         <!-- Tip section — gamified -->
         <div class="tip-section">
-          <span class="tip-eyebrow" data-i18n="tip_eyebrow">— Pourboire pour l'équipe</span>
+          <span class="tip-eyebrow" data-i18n="tip_eyebrow">Pourboire pour l'équipe</span>
           <div class="tip-jar-wrap" id="tip-jar-wrap">
             <span class="tip-jar-sparkle sp-1" aria-hidden="true"></span>
             <span class="tip-jar-sparkle sp-2" aria-hidden="true"></span>
@@ -2965,6 +3050,8 @@ em, i, cite, dfn, var { font-style: normal; }
 
   </div>
 
+  <script src="assets/menu-i18n.js?v=5"></script>
+  <script src="assets/order-ui-langs.js?v=2"></script>
   <script>
     /* ============ helpers ============ */
     const $  = (s, c = document) => c.querySelector(s);
@@ -3014,6 +3101,17 @@ em, i, cite, dfn, var { font-style: normal; }
         custom_note_optional: "facultatif",
         custom_note_placeholder: "Ex : peu de glaçons, sans sel, allergie aux noix…",
         custom_price: "Prix",
+        nutrition_title: "Valeurs nutritionnelles",
+        nutrition_indicative: "Valeurs indicatives par portion, hors options",
+        nutrition_allergens: "Allergènes",
+        nutrition_none: "Aucun allergène déclaré",
+        nutrient_energy: "Énergie", nutrient_protein: "Protéines", nutrient_carbs: "Glucides",
+        nutrient_fat: "Lipides", nutrient_sugars: "Sucres", nutrient_salt: "Sel",
+        nutrient_short_protein: "P", nutrient_short_carbs: "G", nutrient_short_fat: "L",
+        allergen_gluten: "Gluten", allergen_crustaces: "Crustacés", allergen_oeufs: "Œufs", allergen_poissons: "Poissons",
+        allergen_arachides: "Arachides", allergen_soja: "Soja", allergen_lait: "Lait", allergen_fruits_a_coque: "Fruits à coque",
+        allergen_celeri: "Céleri", allergen_moutarde: "Moutarde", allergen_sesame: "Sésame", allergen_sulfites: "Sulfites",
+        allergen_lupin: "Lupin", allergen_mollusques: "Mollusques",
         btn_add: "Ajouter",
         opt_choose_one: "choisir 1",
         opt_choose_many: "plusieurs possibles",
@@ -3063,6 +3161,10 @@ em, i, cite, dfn, var { font-style: normal; }
         cart_subtitle_takeout: "À emporter · Café Atlas",
         send_table: "Envoyer en cuisine",
         send_takeout: "Passer commande",
+        session_closed: "Cette visite est terminée. Rescannez le QR de la table pour commander.",
+        service_closed: "La caisse semble endormie. On réessaie tout seul · sinon appelez un serveur.",
+        session_unavailable: "Impossible de relier cette table à la caisse. Réessayez ou appelez un serveur.",
+        order_send_failed: "La commande n'a pas été envoyée. Votre panier est conservé · réessayez.",
         success_title_a: "Commande envoyée",
         success_title_em: "en cuisine.",
         success_eta_pre: "Table",
@@ -3094,7 +3196,7 @@ em, i, cite, dfn, var { font-style: normal; }
         prep_note_post: ". Votre téléphone vibre et sonne dès que c'est prêt.",
         ready_title_a: "Votre commande est",
         ready_title_em: "prête.",
-        ready_loc_post: " · café atlas · médina",
+        ready_loc_post: " · Café Atlas · Médina",
         ready_cta: "Récupérer au comptoir",
         bill_title: "Votre addition",
         bill_empty: "Aucune commande passée, ajoutez d'abord au menu.",
@@ -3175,6 +3277,17 @@ em, i, cite, dfn, var { font-style: normal; }
         custom_note_optional: "optional",
         custom_note_placeholder: "Ex: less ice, no salt, nut allergy…",
         custom_price: "Price",
+        nutrition_title: "Nutrition facts",
+        nutrition_indicative: "Indicative values per portion, excluding options",
+        nutrition_allergens: "Allergens",
+        nutrition_none: "No declared allergens",
+        nutrient_energy: "Energy", nutrient_protein: "Protein", nutrient_carbs: "Carbohydrate",
+        nutrient_fat: "Fat", nutrient_sugars: "Sugars", nutrient_salt: "Salt",
+        nutrient_short_protein: "P", nutrient_short_carbs: "C", nutrient_short_fat: "F",
+        allergen_gluten: "Gluten", allergen_crustaces: "Crustaceans", allergen_oeufs: "Eggs", allergen_poissons: "Fish",
+        allergen_arachides: "Peanuts", allergen_soja: "Soy", allergen_lait: "Milk", allergen_fruits_a_coque: "Nuts",
+        allergen_celeri: "Celery", allergen_moutarde: "Mustard", allergen_sesame: "Sesame", allergen_sulfites: "Sulphites",
+        allergen_lupin: "Lupin", allergen_mollusques: "Molluscs",
         btn_add: "Add",
         opt_choose_one: "pick 1",
         opt_choose_many: "pick any",
@@ -3224,6 +3337,10 @@ em, i, cite, dfn, var { font-style: normal; }
         cart_subtitle_takeout: "Takeout · Café Atlas",
         send_table: "Send to kitchen",
         send_takeout: "Place order",
+        session_closed: "This visit has ended. Scan the table QR again to order.",
+        service_closed: "The till looks asleep. Retrying on its own · otherwise call a waiter.",
+        session_unavailable: "We couldn't connect this table to the till. Retry or call a waiter.",
+        order_send_failed: "The order was not sent. Your cart is safe · please retry.",
         success_title_a: "Order sent to",
         success_title_em: "the kitchen.",
         success_eta_pre: "Table",
@@ -3255,7 +3372,7 @@ em, i, cite, dfn, var { font-style: normal; }
         prep_note_post: ". Your phone vibrates and chimes the moment it's ready.",
         ready_title_a: "Your order is",
         ready_title_em: "ready.",
-        ready_loc_post: " · café atlas · médina",
+        ready_loc_post: " · Café Atlas · Médina",
         ready_cta: "Pick up at the counter",
         bill_title: "Your check",
         bill_empty: "No orders placed, add something from the menu first.",
@@ -3336,6 +3453,17 @@ em, i, cite, dfn, var { font-style: normal; }
         custom_note_optional: "اختياري",
         custom_note_placeholder: "مثلاً: شوية ديال الجليد، بلا ملح، حساسية…",
         custom_price: "الثمن",
+        nutrition_title: "القيم الغذائية",
+        nutrition_indicative: "قيم تقريبية لكل حصة، بدون الخيارات",
+        nutrition_allergens: "مسببات الحساسية",
+        nutrition_none: "لا توجد مسببات حساسية مصرح بها",
+        nutrient_energy: "الطاقة", nutrient_protein: "البروتين", nutrient_carbs: "الكربوهيدرات",
+        nutrient_fat: "الدهون", nutrient_sugars: "السكريات", nutrient_salt: "الملح",
+        nutrient_short_protein: "ب", nutrient_short_carbs: "ك", nutrient_short_fat: "د",
+        allergen_gluten: "الغلوتين", allergen_crustaces: "القشريات", allergen_oeufs: "البيض", allergen_poissons: "السمك",
+        allergen_arachides: "الفول السوداني", allergen_soja: "الصويا", allergen_lait: "الحليب", allergen_fruits_a_coque: "المكسرات",
+        allergen_celeri: "الكرفس", allergen_moutarde: "الخردل", allergen_sesame: "السمسم", allergen_sulfites: "الكبريتيت",
+        allergen_lupin: "الترمس", allergen_mollusques: "الرخويات",
         btn_add: "زيد",
         opt_choose_one: "اختار 1",
         opt_choose_many: "اختار اللي بغيتي",
@@ -3385,6 +3513,10 @@ em, i, cite, dfn, var { font-style: normal; }
         cart_subtitle_takeout: "للأخذ · كافي أطلس",
         send_table: "صيفط للمطبخ",
         send_takeout: "أكد الطلب",
+        session_closed: "انتهت هذه الجلسة. امسح رمز الطاولة من جديد للطلب.",
+        service_closed: "يبدو أن الصندوق نائم. نعيد المحاولة تلقائياً · وإلا اطلب النادل.",
+        session_unavailable: "تعذر ربط الطاولة بصندوق الدفع. أعد المحاولة أو اطلب النادل.",
+        order_send_failed: "لم يتم إرسال الطلب. سلة طلبك محفوظة، أعد المحاولة.",
         success_title_a: "الطلب تصيفط",
         success_title_em: "للمطبخ.",
         success_eta_pre: "طاولة",
@@ -3458,6 +3590,28 @@ em, i, cite, dfn, var { font-style: normal; }
     };
 
     /* ============ menu item translations ============ */
+    /* Traductions portées par la carte publiée (assets/menu-i18n.js) :
+       it.i18n[l] = {name, desc, h, m}. Même empreinte qu'au tableau de bord
+       (djb2 → base36 sur « nom␟description ») : une traduction dont h ne
+       correspond plus au texte du patron est périmée, on montre son texte. */
+    function menuHash(name, desc) {
+      const str = String(name == null ? '' : name).trim() + '\u001f' + String(desc == null ? '' : desc).trim();
+      let h = 5381;
+      for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+      return (h >>> 0).toString(36);
+    }
+    Object.keys(window.KiwiOrderUiLangs || {}).forEach((lang) => {
+      I18N[lang] = Object.assign({}, I18N.en, window.KiwiOrderUiLangs[lang]);
+    });
+
+    function menuTr(e, l) {
+      const M = window.KiwiMenuI18n;
+      if (M && e) return { name: M.name(e, l), desc: M.desc(e, l) };
+      const x = e && e.i18n && e.i18n[l];
+      if (!x || !x.name) return null;
+      if (!x.m && x.h !== menuHash(e.name, e.desc)) return null;
+      return x;
+    }
     const MENU_I18N = {
       fr: {
         espresso:       { name: "Espresso",             desc: "Court, intense, torréfaction du jour" },
@@ -3507,11 +3661,14 @@ em, i, cite, dfn, var { font-style: normal; }
     };
 
     /* ============ i18n state + helpers ============ */
-    let currentLang = (() => {
-      try { return localStorage.getItem('cafeAtlasLang') || 'fr'; } catch (_) { return 'fr'; }
+    const MENU_LANG = window.KiwiMenuI18n;
+    const savedOrderLang = (() => {
+      try { return localStorage.getItem('kiwiOrderLang') || localStorage.getItem('cafeAtlasLang') || ''; } catch (_) { return ''; }
     })();
+    let configuredLangs = MENU_LANG ? MENU_LANG.LANGS.slice() : ['fr', 'ar', 'en'];
+    let currentLang = (MENU_LANG && MENU_LANG.asLang(savedOrderLang)) || 'fr';
     function t(key) {
-      return (I18N[currentLang] && I18N[currentLang][key]) ?? I18N.fr[key] ?? key;
+      return (I18N[currentLang] && I18N[currentLang][key]) ?? I18N.en[key] ?? I18N.fr[key] ?? key;
     }
     function itemI18n(id) {
       return (MENU_I18N[currentLang] && MENU_I18N[currentLang][id]) || MENU_I18N.fr[id] || { name: id, desc: '' };
@@ -3527,16 +3684,29 @@ em, i, cite, dfn, var { font-style: normal; }
         el.setAttribute('placeholder', t(el.dataset.i18nPlaceholder));
       });
     }
-    function applyLang(lang) {
-      if (!I18N[lang]) lang = 'fr';
+    function buildLanguagePicker() {
+      const picker = $('#lang-picker'); if (!picker) return;
+      const names = (MENU_LANG && MENU_LANG.NAMES) || { fr:'Français', ar:'العربية', en:'English' };
+      picker.innerHTML = configuredLangs.map((lang) => `<button class="lang-btn${lang===currentLang?' is-active':''}" type="button" data-lens-item data-lang="${lang}" dir="${MENU_LANG&&MENU_LANG.rtl(lang)?'rtl':'ltr'}">${escapeHtml(names[lang]||lang)}</button>`).join('');
+    }
+    function applyLang(lang, remember = true) {
+      lang = MENU_LANG ? MENU_LANG.asLang(lang) : lang;
+      if (!lang || !configuredLangs.includes(lang) || !I18N[lang]) lang = 'fr';
       currentLang = lang;
-      try { localStorage.setItem('cafeAtlasLang', lang); } catch (_) {}
+      if (remember) try { localStorage.setItem('kiwiOrderLang', lang); localStorage.setItem('cafeAtlasLang', lang); } catch (_) {}
       document.documentElement.lang = lang;
-      document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+      document.documentElement.setAttribute('dir', MENU_LANG && MENU_LANG.rtl(lang) ? 'rtl' : 'ltr');
       // Picker visual
       $$('.lang-btn').forEach(b => b.classList.toggle('is-active', b.dataset.lang === lang));
       // Static
       applyStaticI18n();
+      // Les options de la carte serveur gardent leur entité source afin de se
+      // relocaliser sans nouvel appel réseau quand le client change de langue.
+      if (MENU_LANG) Object.keys(OPT || {}).forEach((key) => {
+        const group = OPT[key]; if (!group || !group._src) return;
+        group.label = MENU_LANG.name(group._src, lang);
+        (group.choices || []).forEach((choice) => { if (choice._src) choice.label = MENU_LANG.name(choice._src, lang); });
+      });
       // Dynamic
       if (typeof renderMenu === 'function') {
         const activeTab = document.querySelector('.menu-tab.is-active')?.dataset.tab || 'all';
@@ -3634,11 +3804,11 @@ em, i, cite, dfn, var { font-style: normal; }
     // ?merchant= slug, KiwiTenant replaces it with that venue's published carte.
     // Untouched on the local demo — the array below stays exactly as-is.
     let MENU = [
-      { id: 'espresso',     cat: 'coffee', name: 'Espresso',           desc: 'Court, intense, torréfaction du jour',           price: 12, icon: 'coffee',      options: [OPT.sucre, OPT.shot], video: 'menu_try_video/v24044gl0000d47044vog65jf7h8q560.mov' },
+      { id: 'espresso',     cat: 'coffee', name: 'Espresso',           desc: 'Court, intense, torréfaction du jour',           price: 12, icon: 'coffee',      options: [OPT.sucre, OPT.shot], video: 'assets/media/menu-demo/v24044gl0000d47044vog65jf7h8q560.mov' },
       { id: 'noss-noss',    cat: 'coffee', name: 'Noss-noss',           desc: 'Moitié café, moitié lait chaud, la fierté locale', price: 16, icon: 'coffee',   options: [OPT.sucre] },
-      { id: 'cappuccino',   cat: 'coffee', name: 'Cappuccino',         desc: 'Mousse onctueuse, cacao en option',              price: 22, icon: 'coffee',      options: [OPT.sucre, OPT.lait, OPT.shot], video: 'menu_try_video/v09044g40000cbokh6rc77uem774h4fg.mov' },
-      { id: 'iced-latte',   cat: 'coffee', name: 'Latte glacé',        desc: 'Café froid, lait, glaçons, sirop vanille optionnel', price: 26, icon: 'glass-water', options: [OPT.sucre, OPT.lait], video: 'menu_try_video/v14044g50000d33o2m7og65urp9k0keg.mov', tag: 'new' },
-      { id: 'the-menthe',   cat: 'drink',  name: 'Thé à la menthe',    desc: 'Théière en argent, menthe fraîche, sucre à part', price: 22, icon: 'glass-water', options: [OPT.sucre], video: 'menu_try_video/v1c044g50000d6lqmn7og65uhmc2vtl0.mov', tag: 'new' },
+      { id: 'cappuccino',   cat: 'coffee', name: 'Cappuccino',         desc: 'Mousse onctueuse, cacao en option',              price: 22, icon: 'coffee',      options: [OPT.sucre, OPT.lait, OPT.shot], video: 'assets/media/menu-demo/v09044g40000cbokh6rc77uem774h4fg.mov' },
+      { id: 'iced-latte',   cat: 'coffee', name: 'Latte glacé',        desc: 'Café froid, lait, glaçons, sirop vanille optionnel', price: 26, icon: 'glass-water', options: [OPT.sucre, OPT.lait], video: 'assets/media/menu-demo/v14044g50000d33o2m7og65urp9k0keg.mov', tag: 'new' },
+      { id: 'the-menthe',   cat: 'drink',  name: 'Thé à la menthe',    desc: 'Théière en argent, menthe fraîche, sucre à part', price: 22, icon: 'glass-water', options: [OPT.sucre], video: 'assets/media/menu-demo/v1c044g50000d6lqmn7og65uhmc2vtl0.mov', tag: 'new' },
       { id: 'msemen',       cat: 'pastry', name: 'Msemen au miel',     desc: 'Crêpe feuilletée chaude, miel d\'oranger',       price: 18, icon: 'croissant',   options: [OPT.chauffer] },
       { id: 'briouate',     cat: 'pastry', name: 'Briouate aux amandes', desc: 'Pâte filo, amandes, eau de fleur d\'oranger',  price: 14, icon: 'cookie',      options: [OPT.chauffer] },
       { id: 'croissant',    cat: 'pastry', name: 'Croissant beurre',   desc: 'Pur beurre · cuit ce matin',                     price: 12, icon: 'croissant',   options: [OPT.chauffer, OPT.pastryExtras] },
@@ -3648,6 +3818,7 @@ em, i, cite, dfn, var { font-style: normal; }
       { id: 'avocado',      cat: 'drink',  name: 'Smoothie avocat-banane', desc: 'Lait d\'amande, miel, cardamome',            price: 26, icon: 'glass-water', options: [OPT.sucre, OPT.glace] },
       { id: 'sparkling',    cat: 'drink',  name: 'Eau pétillante Oulmès', desc: '33cl · servie fraîche',                       price:  8, icon: 'glass-water' },
     ];
+    const ORDER_ITEM_FLAGS = new Map();
     const ICON_CLASS = {
       coffee: 'coffee',
       croissant: 'pastry',
@@ -3668,6 +3839,10 @@ em, i, cite, dfn, var { font-style: normal; }
     let tableNumber = '';
     let orderNumber = '';       // takeout only — like "047"
     let prepRafId = null;       // animation handle for prep progress
+    let tableSessionId = '';
+    let tableSessionStatus = 'idle'; // idle | opening | open | closed | error
+    let tableSessionPromise = null;
+    let tableSessionPollId = null;
 
     // Cart: lineKey -> { id, options, note, unitPrice, qty }
     const cart = new Map();
@@ -3738,7 +3913,7 @@ em, i, cite, dfn, var { font-style: normal; }
     function renderTableDisplay() {
       const disp = $('#table-display');
       if (!tableNumber) {
-        disp.innerHTML = `<span class="table-digit is-placeholder">—</span>`;
+        disp.innerHTML = `<span class="table-digit is-placeholder">·</span>`;
         return;
       }
       disp.innerHTML = tableNumber.split('').map(d => `<span class="table-digit">${d}</span>`).join('');
@@ -3762,6 +3937,23 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     /* ============ menu render ============ */
+    function nutritionSummary(item) {
+      const n = item && item.nutrition;
+      if (!n) return '';
+      return `<div class="item-nutrition"><bdi dir="ltr">${escapeHtml(n.kcal)} kcal</bdi><span>·</span><span>${escapeHtml(t('nutrient_short_protein'))} <bdi dir="ltr">${escapeHtml(n.protein)} g</bdi></span><span>·</span><span>${escapeHtml(t('nutrient_short_carbs'))} <bdi dir="ltr">${escapeHtml(n.carbs)} g</bdi></span><span>·</span><span>${escapeHtml(t('nutrient_short_fat'))} <bdi dir="ltr">${escapeHtml(n.fat)} g</bdi></span></div>`;
+    }
+    function nutritionDetail(item) {
+      const n = item && item.nutrition;
+      if (!n) return '';
+      const cells = [
+        ['nutrient_energy', 'kcal', 'kcal'], ['nutrient_protein', 'protein', 'g'],
+        ['nutrient_carbs', 'carbs', 'g'], ['nutrient_fat', 'fat', 'g'],
+        ['nutrient_sugars', 'sugars', 'g'], ['nutrient_salt', 'salt', 'g'],
+      ].map(([label, key, unit]) => `<div class="custom-nutrition-cell"><span>${escapeHtml(t(label))}</span><bdi dir="ltr">${escapeHtml(n[key])} ${unit}</bdi></div>`).join('');
+      const allergens = Array.isArray(item.allergens) ? item.allergens : [];
+      const chips = allergens.length ? allergens.map((key) => `<span class="custom-allergen-chip">${key === 'gluten' ? '<i class="custom-allergen-icon" aria-hidden="true"></i>' : ''}${escapeHtml(t(`allergen_${key}`))}</span>`).join('') : `<span class="custom-allergen-chip">${escapeHtml(t('nutrition_none'))}</span>`;
+      return `<section class="custom-nutrition" aria-label="${escapeHtml(t('nutrition_title'))}"><div class="custom-nutrition-title">${escapeHtml(t('nutrition_title'))}</div><div class="custom-nutrition-grid">${cells}</div><div class="custom-allergens"><div class="custom-allergens-label">${escapeHtml(t('nutrition_allergens'))}</div><div class="custom-allergen-list">${chips}</div></div><p class="custom-nutrition-note">${escapeHtml(t('nutrition_indicative'))}</p></section>`;
+    }
     function renderMenu(filter = 'all') {
       if (filter === 'top') { renderVideoGrid(); return; }
       const list = $('#menu-list');
@@ -3774,11 +3966,12 @@ em, i, cite, dfn, var { font-style: normal; }
           <div class="item-img ${ICON_CLASS[m.icon] || 'coffee'}">
             <i data-lucide="${escapeHtml(m.icon)}"></i>
           </div>
-          <div class="item-body">
+          <button class="item-body item-detail" type="button" data-detail="${escapeHtml(m.id)}" aria-label="${escapeHtml(i.name)}">
             <div class="item-name">${escapeHtml(i.name)}</div>
             <div class="item-desc">${escapeHtml(i.desc)}</div>
             <div class="item-price">${escapeHtml(m.price)} ${cur()}</div>
-          </div>
+            ${nutritionSummary(m)}
+          </button>
           <button class="item-add" type="button" data-add="${escapeHtml(m.id)}" aria-label="${t('btn_add')} ${escapeHtml(i.name)}">+</button>
         </article>
       `;}).join('');
@@ -3842,6 +4035,9 @@ em, i, cite, dfn, var { font-style: normal; }
     function groupLabel(optKey) {
       return t(`opt_label_${optKey}`) || OPT[optKey]?.label || optKey;
     }
+    function choiceEmoji(optKey, choiceId) {
+      return OPT[optKey]?.choices.find(c => c.id === choiceId)?.emoji || '';
+    }
     function describeOptions(line) {
       const item = itemOf(line.id);
       if (!item || !item.options) return '';
@@ -3862,6 +4058,21 @@ em, i, cite, dfn, var { font-style: normal; }
       }
       return parts.join(' · ');
     }
+    function describeOptionVisuals(line) {
+      const item = itemOf(line.id);
+      if (!item || !item.options) return [];
+      const out = [];
+      for (const opt of item.options) {
+        const sel = line.options?.[opt.key];
+        const ids = opt.type === 'multi' ? (Array.isArray(sel) ? sel : []) : (sel == null ? [] : [sel]);
+        ids.forEach(id => {
+          const emoji = choiceEmoji(opt.key, id);
+          const name = choiceLabel(opt.key, id);
+          if (name) out.push({ emoji: emoji || '', name });
+        });
+      }
+      return out;
+    }
 
     function totals() {
       let count = 0, total = 0;
@@ -3879,6 +4090,7 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#cart-grand').textContent = `${total} ${cur()}`;
       pill.classList.toggle('is-visible', count > 0);
       $('#send-btn').disabled = count === 0;
+      syncSendGate();
 
       const itemsEl = $('#cart-items');
       if (count === 0) {
@@ -3892,8 +4104,8 @@ em, i, cite, dfn, var { font-style: normal; }
         return `
           <li class="cart-row">
             <div class="info">
-              <span class="label">${nameOf(line.id)}</span>
-              ${opts ? `<div class="cart-item-opts">${opts}</div>` : ''}
+              <span class="label">${escapeHtml(nameOf(line.id))}</span>
+              ${opts ? `<div class="cart-item-opts">${escapeHtml(opts)}</div>` : ''}
               ${note}
             </div>
             <span class="qty">
@@ -3935,6 +4147,8 @@ em, i, cite, dfn, var { font-style: normal; }
 
     /* ============ + button on a menu item ============ */
     function handleAddClick(itemId) {
+      const source = ORDER_ITEM_FLAGS.get(String(itemId));
+      if (source && (source.archived || source.formulaOnly || source.avail === false)) { showToast(t('closed_order')); return; }
       const item = itemOf(itemId);
       if (!item) return;
       if (item.options && item.options.length > 0) {
@@ -3965,9 +4179,13 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#custom-name').textContent = i.name;
       $('#custom-desc').textContent = i.desc;
       $('#custom-base').textContent = `${t('custom_from')} ${item.price} ${cur()}`;
+      const nutritionEl = $('#custom-nutrition');
+      const nutritionHtml = nutritionDetail(item);
+      nutritionEl.innerHTML = nutritionHtml;
+      nutritionEl.hidden = !nutritionHtml;
       const imgEl = $('#custom-img');
       imgEl.className = 'custom-img ' + (ICON_CLASS[item.icon] || 'coffee');
-      imgEl.innerHTML = `<i data-lucide="${item.icon}"></i>`;
+      imgEl.innerHTML = `<i data-lucide="${escapeHtml(item.icon)}"></i>`;
 
       // Render option groups
       const opts = $('#custom-options');
@@ -3981,7 +4199,7 @@ em, i, cite, dfn, var { font-style: normal; }
             ${opt.choices.map(c => `
               <button class="option-chip" type="button"
                       data-opt="${opt.key}" data-choice="${c.id}" data-type="${opt.type}">
-                <span>${choiceLabel(opt.key, c.id)}</span>
+                <span>${c.emoji ? `${escapeHtml(c.emoji)} ` : ''}${choiceLabel(opt.key, c.id)}</span>
                 ${c.delta ? `<span class="delta">+${c.delta} ${cur()}</span>` : ''}
               </button>
             `).join('')}
@@ -4093,8 +4311,8 @@ em, i, cite, dfn, var { font-style: normal; }
           return `
             <li class="bill-row">
               <div class="bill-row-info">
-                <div class="bill-row-name">${l.qty}× ${nameOf(l.id)}</div>
-                ${opts ? `<div class="bill-row-opts">${opts}</div>` : ''}
+                <div class="bill-row-name">${l.qty}× ${escapeHtml(nameOf(l.id))}</div>
+                ${opts ? `<div class="bill-row-opts">${escapeHtml(opts)}</div>` : ''}
               </div>
               <div class="bill-row-price">${l.qty * l.unitPrice} ${cur()}</div>
             </li>
@@ -4104,7 +4322,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
       // Update bill subtitle (e.g. "Table 7 · Café Atlas")
       const subtitleEl = $('#bill-subtitle');
-      if (subtitleEl) subtitleEl.innerHTML = `${t('badge_table')} <span id="bill-table">${tableNumber}</span> · ${VENUE_NAME}`;
+      if (subtitleEl) subtitleEl.innerHTML = `${escapeHtml(t('badge_table'))} <span id="bill-table">${escapeHtml(tableNumber)}</span> · ${escapeHtml(VENUE_NAME)}`;
 
       $('#bill-subtotal-value').textContent = `${sessionTotal} ${cur()}`;
       setTipPercent(billItems.length === 0 ? 0 : 15);
@@ -4283,7 +4501,7 @@ em, i, cite, dfn, var { font-style: normal; }
                data-split-item="${idx}" ${isOther ? `data-owner="${escapeHtml(ownerLabel)}"` : ''}>
             <span class="info">
               <span class="qty">${line.qty}×</span>
-              <span class="name">${nameOf(line.id)}</span>
+              <span class="name">${escapeHtml(nameOf(line.id))}</span>
             </span>
             <span class="price">${line.qty * line.unitPrice} ${cur()}</span>
           </div>
@@ -4347,26 +4565,161 @@ em, i, cite, dfn, var { font-style: normal; }
        réseau absent), on retombe sur l'affichage local plutôt que de laisser
        le client devant un bouton mort. */
     let liveOrderId = null;
+    function tableSessionKey() {
+      const slug = KiwiTenant && KiwiTenant.slug ? KiwiTenant.slug : '';
+      return 'kiwi.order.session.' + slug + '.' + String(tableNumber || '');
+    }
+    function rememberTableSession(id) {
+      tableSessionId = String(id || '');
+      /* localStorage, pas sessionStorage : un onglet jeté par l'OS (téléphone
+         en poche trois minutes) puis restauré repart avec la visite, au lieu
+         de retomber sur « session introuvable ». Le serveur revalide de toute
+         façon à la reprise — un identifiant périmé ne rouvre rien. */
+      try { localStorage.setItem(tableSessionKey(), tableSessionId); }
+      catch (_) { try { sessionStorage.setItem(tableSessionKey(), tableSessionId); } catch (_) {} }
+    }
+    function readStoredTableSession() {
+      try { return localStorage.getItem(tableSessionKey()) || sessionStorage.getItem(tableSessionKey()) || ''; }
+      catch (_) { try { return sessionStorage.getItem(tableSessionKey()) || ''; } catch (_) { return ''; } }
+    }
+    function clearStoredTableSession() {
+      try { localStorage.removeItem(tableSessionKey()); } catch (_) {}
+      try { sessionStorage.removeItem(tableSessionKey()); } catch (_) {}
+    }
+    function sessionError(code) {
+      const err = new Error(code || 'session-unavailable');
+      err.code = code || 'session-unavailable';
+      return err;
+    }
+    /* Un seul endroit qui choisit le mot : « fermée » (visite terminée),
+       « caisse endormie » (le comptoir ne répond pas, on réessaie seul),
+       sinon l'indisponible générique. */
+    function tableSessionErrKey(err) {
+      const code = err && err.code;
+      if (code === 'session-closed' || code === 'session-required') return 'session_closed';
+      if (code === 'service-closed') return 'service_closed';
+      return orderMode === 'table' ? 'session_unavailable' : 'order_send_failed';
+    }
+    function setTableSessionClosed() {
+      tableSessionStatus = 'closed';
+      if (tableSessionPollId) clearInterval(tableSessionPollId);
+      tableSessionPollId = null;
+      clearServiceRetry();
+      syncSendGate();
+    }
+    /* La caisse dort (service-closed) : le téléphone ne doit pas mourir avec
+       elle. Un réveil silencieux toutes les trente secondes, onglet visible
+       seulement, jusqu'au succès ou à une vraie fermeture. Sans ça, une sieste
+       de la tablette laissait le menu mort même après son réveil — « plus rien
+       ne marche, même en rescannant », alors que rescanner retombait sur la
+       même caisse endormie. */
+    let serviceRetryId = null;
+    function clearServiceRetry() {
+      if (serviceRetryId) { clearTimeout(serviceRetryId); serviceRetryId = null; }
+    }
+    function scheduleServiceRetry() {
+      clearServiceRetry();
+      serviceRetryId = setTimeout(() => {
+        serviceRetryId = null;
+        if (document.hidden || tableSessionStatus !== 'error') return;
+        ensureTableSession().catch(() => {});
+      }, 30000);
+    }
+    function pollTableSession() {
+      if (tableSessionPollId || !tableSessionId || !KiwiTenant || !KiwiTenant.slug) return;
+      const check = () => fetch('/api/order/session?merchant=' + encodeURIComponent(KiwiTenant.slug)
+        + '&session=' + encodeURIComponent(tableSessionId), { headers: { Accept: 'application/json' } })
+        .then((r) => r.ok ? r.json() : null)
+        .then((d) => {
+          if (d && d.ok && d.status !== 'open') {
+            setTableSessionClosed();
+            showToast(t('session_closed'));
+          }
+        }).catch(() => { /* transient network errors do not revoke a live visit */ });
+      tableSessionPollId = setInterval(check, 5000);
+    }
+    function ensureTableSession() {
+      const T = KiwiTenant;
+      if (orderMode !== 'table' || !T || !T.hasTenant || !T.slug) return Promise.resolve(null);
+      if (tableSessionStatus === 'closed') return Promise.reject(sessionError('session-closed'));
+      if (tableSessionStatus === 'open' && tableSessionId) return Promise.resolve(tableSessionId);
+      if (tableSessionPromise) return tableSessionPromise;
+      tableSessionStatus = 'opening';
+      syncSendGate();
+      const saved = readStoredTableSession();
+      const validate = saved
+        ? fetch('/api/order/session?merchant=' + encodeURIComponent(T.slug) + '&session=' + encodeURIComponent(saved),
+            { headers: { Accept: 'application/json' } })
+            .then((r) => r.ok ? r.json() : null)
+        : Promise.resolve(null);
+      tableSessionPromise = validate.then((existing) => {
+        if (existing && existing.ok && existing.status === 'open') return { ok: true, session: saved };
+        /* ── UN MORT NE DOIT PAS EMPOISONNER LES RESCAN ───────────────────
+         * L'identifiant gardé appartenait à une visite fermée (addition
+         * réglée, table annulée au comptoir, ménage) : le jeter puis se
+         * rasseoir d'un geste, au lieu de répondre « fermée » à chaque nouvel
+         * essai. Avant, le rescan retombait sur le même identifiant mort et
+         * rendait la même erreur — « rescannez » qui ne marche jamais, quoi
+         * qu'on fasse. Le POST ci-dessous reprend la visite encore en cours
+         * s'il y en a une, sinon il en ouvre une neuve : dans les deux cas on
+         * avance, jamais on ne boucle sur un fantôme. */
+        if (existing && existing.ok && existing.status === 'closed') clearStoredTableSession();
+        return fetch('/api/order/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ merchant: T.slug, mode: 'table', table: tableNumber }),
+        }).then(async (r) => {
+          const data = await r.json().catch(() => null);
+          if (!r.ok || !data || !data.ok || data.status !== 'open') {
+            throw sessionError((data && data.error) || 'session-unavailable');
+          }
+          return data;
+        });
+      }).then((data) => {
+        rememberTableSession(data.session);
+        tableSessionStatus = 'open';
+        clearServiceRetry();
+        pollTableSession();
+        syncSendGate();
+        return tableSessionId;
+      }).catch((err) => {
+        if (err && err.code === 'session-closed') setTableSessionClosed();
+        else {
+          tableSessionStatus = 'error';
+          syncSendGate();
+          if (err && err.code === 'service-closed') scheduleServiceRetry();
+        }
+        throw err;
+      }).finally(() => { tableSessionPromise = null; });
+      return tableSessionPromise;
+    }
     function postOrderToTill(totalNow, linesCopy) {
       liveOrderId = null;
       const T = KiwiTenant;
-      if (!T || !T.hasTenant || !T.slug) return Promise.resolve(null);
+      if (!T || !T.hasTenant || !T.slug) return Promise.resolve({ ok: true, demo: true });
       const lines = linesCopy.map((l) => ({
         id: String(l.id || ''), name: nameOf(l.id), qty: l.qty, unitPrice: l.unitPrice,
-        options: Object.values(l.options || {}).filter(Boolean).join(', '),
+        options: describeOptions(l),
+        visuals: describeOptionVisuals(l),
         note: String(l.note || ''),
       }));
-      return fetch('/api/order', {
+      return ensureTableSession().then((session) => fetch('/api/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
           merchant: T.slug, mode: orderMode === 'takeout' ? 'takeout' : 'table',
-          table: tableNumber, total: totalNow, lines: lines,
+          table: tableNumber, session: session || undefined, total: totalNow, lines: lines,
         }),
-      })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d) => (d && d.ok ? (liveOrderId = d.id, d) : null))
-        .catch(() => null);
+      })).then(async (r) => {
+        const data = await r.json().catch(() => null);
+        if (!r.ok || !data || !data.ok) {
+          const code = (data && data.error) || 'order-send-failed';
+          if (code === 'session-closed' || code === 'session-required') setTableSessionClosed();
+          throw sessionError(code);
+        }
+        liveOrderId = data.id;
+        return data;
+      });
     }
 
     function sendOrder() {
@@ -4383,8 +4736,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const totalNow = totals().total;
       // Snapshot current cart into sentLines (for à-table bill aggregation)
       const linesCopy = [...cart.values()].map(l => ({ ...l, options: { ...l.options } }));
-      const sent = postOrderToTill(totalNow, linesCopy);
-      setTimeout(() => {
+      postOrderToTill(totalNow, linesCopy).then((sent) => {
         btn.classList.remove('is-loading');
         closeCart();
         if (orderMode === 'takeout') {
@@ -4393,17 +4745,16 @@ em, i, cite, dfn, var { font-style: normal; }
              ne correspondait à rien — deux clients pouvaient recevoir le même, et
              aucun ne figurait sur l'écran de la caisse. */
           orderNumber = String(40 + Math.floor((performance.now() % 60))).padStart(3, '0');
-          sent.then((d) => {
-            if (!d || !d.number) return;
-            orderNumber = String(d.number).padStart(3, '0');
+          if (sent && sent.number) {
+            orderNumber = String(sent.number).padStart(3, '0');
             $('#cashier-number-digits').textContent = orderNumber;
             $('#prep-number').textContent = orderNumber;
             $('#ready-number').textContent = orderNumber;
-          });
+          }
           $('#cashier-number-digits').textContent = orderNumber;
           $('#prep-number').textContent = orderNumber;
           $('#ready-number').textContent = orderNumber;
-          $('#cashier-items').textContent = summary || '—';
+          $('#cashier-items').textContent = summary || '·';
           $('#cashier-total').textContent = `${totalNow} ${cur()}`;
           gotoScreen('screen-cashier');
         } else {
@@ -4411,12 +4762,16 @@ em, i, cite, dfn, var { font-style: normal; }
           for (const l of linesCopy) sentLines.push(l);
           sessionTotal += totalNow;
           $('#success-table').textContent = tableNumber;
-          $('#success-items').textContent = summary || '—';
+          $('#success-items').textContent = summary || '·';
           gotoScreen('screen-success');
         }
         cart.clear();
         refreshCartUI();
-      }, 1100);
+      }).catch((err) => {
+        btn.classList.remove('is-loading');
+        showToast(t(tableSessionErrKey(err)));
+        syncSendGate();
+      });
     }
 
     /* ============ restart (back to menu after order sent) ============ */
@@ -4469,8 +4824,12 @@ em, i, cite, dfn, var { font-style: normal; }
     /* ============ continue from table-entry to menu ============ */
     function commitTable() {
       if (!tableNumber) return;
-      gotoScreen('screen-menu');
-      applyMenuMode();
+      ensureTableSession().then(() => {
+        gotoScreen('screen-menu');
+        applyMenuMode();
+      }).catch((err) => {
+        showToast(t(tableSessionErrKey(err)));
+      });
     }
 
     /* ============ takeout: cashier → preparing ============ */
@@ -4511,7 +4870,7 @@ em, i, cite, dfn, var { font-style: normal; }
       // Vraie commande partie à la caisse → on suit SON état, pas un minuteur.
       if (pollUntilReady()) {
         const eta0 = $('#prep-eta');
-        if (eta0) eta0.textContent = t('prep_now') === undefined ? '' : '—';
+        if (eta0) eta0.textContent = t('prep_now') === undefined ? '' : '·';
         return;
       }
       const totalMs = 10000; // 10s demo — real life: pull from KDS estimate
@@ -4664,7 +5023,7 @@ em, i, cite, dfn, var { font-style: normal; }
     function patchTenantIdentity(name) {
       VENUE_NAME = name || 'Kiwi Order';
       NOTIF_TAG = (KiwiTenant.slug || 'kiwi') + '-ready';
-      ['fr', 'en', 'ar'].forEach((l) => {
+      Object.keys(I18N).forEach((l) => {
         const src = I18N_ORIG[l], d = I18N[l];
         if (!src || !d) return;
         Object.keys(src).forEach((k) => {
@@ -4692,16 +5051,40 @@ em, i, cite, dfn, var { font-style: normal; }
     // Lucide icons) simply aren't present for a real merchant — items degrade to
     // name · desc · price with a direct add-to-cart.
     function adaptServerMenu(menu) {
-      const items = (menu.items || []).filter((it) => it.avail !== false);
+      if (MENU_LANG) MENU_LANG.index(menu);
+      const allItems = (menu.items || []).concat(Array.isArray(menu.formulaItems) ? menu.formulaItems : []);
+      ORDER_ITEM_FLAGS.clear();
+      allItems.forEach((it) => { if (it && it.id) ORDER_ITEM_FLAGS.set(String(it.id), it); });
+      const items = (menu.items || []).filter((it) => it.avail !== false && !it.formulaOnly && !it.archived);
+      const groups = new Map();
+      (Array.isArray(menu.opts) ? menu.opts : []).forEach((g) => {
+        if (!g || !g.id || !Array.isArray(g.choices) || !g.choices.length) return;
+        const key = String(g.id);
+        const mapped = {
+          key, label: String(g.name || ''), type: g.kind === 'many' ? 'multi' : 'single',
+          default: '', required: !!g.required, _src: g,
+          choices: g.choices.filter(c => c && c.id && c.name).map(c => ({
+            id: String(c.id), label: String(c.name), emoji: String(c.emoji || ''), delta: Math.max(0, Number(c.price) || 0), _src: c,
+          })),
+        };
+        OPT[key] = mapped;
+        groups.set(key, mapped);
+      });
       MENU = items.map((it) => ({
         id: it.id, cat: it.catId || 'uncat',
         name: it.name, desc: it.desc || '', price: Number(it.price) || 0,
-        icon: 'utensils', options: [],
+        icon: 'utensils', options: (Array.isArray(it.opts) ? it.opts : []).map(id => groups.get(String(id))).filter(Boolean),
+        nutrition: it.nutritionComplete === true && it.nutrition ? { ...it.nutrition } : null,
+        allergens: it.nutritionComplete === true && Array.isArray(it.allergens) ? it.allergens.slice() : [],
       }));
-      // The menu isn't translated server-side → the same text serves every lang.
-      ['fr', 'en', 'ar'].forEach((l) => {
+      // La carte voyage avec ses traductions ; ce qui n'est pas (encore)
+      // traduit, ou plus à jour, retombe sur le texte du patron.
+      configuredLangs.forEach((l) => {
         MENU_I18N[l] = MENU_I18N[l] || {};
-        items.forEach((it) => { MENU_I18N[l][it.id] = { name: it.name, desc: it.desc || '' }; });
+        allItems.forEach((it) => {
+          const x = menuTr(it, l);
+          MENU_I18N[l][it.id] = x ? { name: x.name, desc: x.desc != null ? String(x.desc) : (it.desc || '') } : { name: it.name, desc: it.desc || '' };
+        });
       });
       const used = {}; MENU.forEach((m) => { used[m.cat] = true; });
       return (menu.cats || []).filter((c) => used[c.id]);
@@ -4711,7 +5094,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const tabsEl = $('.menu-tabs'); if (!tabsEl) return;
       const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
       let html = `<button class="menu-tab is-active" data-tab="all">${esc(t('tab_all'))}</button>`;
-      cats.forEach((c) => { html += `<button class="menu-tab" data-tab="${esc(c.id)}">${esc(c.name)}</button>`; });
+      cats.forEach((c) => { html += `<button class="menu-tab" data-tab="${esc(c.id)}">${esc((menuTr(c, currentLang) || c).name)}</button>`; });
       tabsEl.style.display = '';
       tabsEl.innerHTML = html;
     }
@@ -4763,7 +5146,7 @@ em, i, cite, dfn, var { font-style: normal; }
         host.insertBefore(el, host.firstChild);
       }
       el.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#c0392b;flex-shrink:0;"></span>' +
-        '<span><b>' + t('closed_now') + '</b> · ' + shopStatusText() + '</span>';
+        '<span><b>' + escapeHtml(t('closed_now')) + '</b> · ' + escapeHtml(shopStatusText()) + '</span>';
     }
     /* Le bouton d'envoi suit le même état : désactivé et nommé, jamais un
        bouton actif qui échouera à la seconde d'après. */
@@ -4771,10 +5154,14 @@ em, i, cite, dfn, var { font-style: normal; }
       const btn = document.getElementById('send-btn');
       if (!btn) return;
       const closed = shopClosed();
-      btn.disabled = closed;
-      btn.style.opacity = closed ? '0.55' : '';
-      btn.style.pointerEvents = closed ? 'none' : '';
+      const noItems = totals().count === 0;
+      const visitClosed = orderMode === 'table' && tableSessionStatus === 'closed';
+      const opening = orderMode === 'table' && tableSessionStatus === 'opening';
+      btn.disabled = closed || noItems || visitClosed || opening;
+      btn.style.opacity = closed || visitClosed || opening ? '0.55' : '';
+      btn.style.pointerEvents = closed || visitClosed || opening ? 'none' : '';
       if (closed) btn.setAttribute('title', t('closed_why'));
+      else if (visitClosed) btn.setAttribute('title', t('session_closed'));
       else btn.removeAttribute('title');
     }
     function refreshHoursGate() { renderClosedBanner(); syncSendGate(); }
@@ -4787,11 +5174,19 @@ em, i, cite, dfn, var { font-style: normal; }
       TENANT_HOURS = (menu && menu.hours) || null;
       patchTenantIdentity((payload && payload.name) || prettySlug(KiwiTenant.slug));
       if (menu && menu.items && menu.items.length) {
+        configuredLangs = MENU_LANG && payload.menuLangs === true ? MENU_LANG.langs(menu) : (MENU_LANG ? MENU_LANG.LANGS.slice() : ['fr','ar','en']);
+        const preferred = savedOrderLang && configuredLangs.includes(MENU_LANG ? MENU_LANG.asLang(savedOrderLang) : savedOrderLang)
+          ? (MENU_LANG ? MENU_LANG.asLang(savedOrderLang) : savedOrderLang)
+          : (MENU_LANG ? MENU_LANG.autoPick(configuredLangs, navigator.languages || [navigator.language]) : 'fr');
         const cats = adaptServerMenu(menu);
+        currentLang = preferred;
+        buildLanguagePicker();
         buildTenantTabs(cats);
-        applyLang(currentLang);     // re-render static i18n + menu from patched data
+        applyLang(preferred);       // re-render static i18n + menu from patched data
         renderMenu('all');
       } else {
+        configuredLangs = MENU_LANG ? MENU_LANG.LANGS.slice() : ['fr','ar','en'];
+        buildLanguagePicker();
         applyLang(currentLang);
         showComingSoon();           // real venue, carte not published yet
       }
@@ -4805,7 +5200,8 @@ em, i, cite, dfn, var { font-style: normal; }
     function bootTenant() {
       MENU = [];
       patchTenantIdentity(prettySlug(KiwiTenant.slug));
-      applyLang(currentLang);
+      buildLanguagePicker();
+      applyLang(currentLang, false);
       if (window.lucide) window.lucide.createIcons();
       fetch('/api/menu?merchant=' + encodeURIComponent(KiwiTenant.slug), { headers: { Accept: 'application/json' } })
         .then((r) => (r && r.ok) ? r.json() : null)
@@ -4823,6 +5219,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
     /* ============ wire it up ============ */
     document.addEventListener('DOMContentLoaded', () => {
+      buildLanguagePicker();
       if (KiwiTenant.hasTenant) {
         // Real merchant — resolve identity + carte from the server.
         bootTenant();
@@ -4834,6 +5231,11 @@ em, i, cite, dfn, var { font-style: normal; }
       } else {
         // Local pitch demo — original init, byte-for-byte unchanged.
         // Apply saved language FIRST so the greeting flash measures the right em width
+        configuredLangs = MENU_LANG ? MENU_LANG.LANGS.slice() : ['fr','ar','en'];
+        currentLang = savedOrderLang && configuredLangs.includes(MENU_LANG ? MENU_LANG.asLang(savedOrderLang) : savedOrderLang)
+          ? (MENU_LANG ? MENU_LANG.asLang(savedOrderLang) : savedOrderLang)
+          : (MENU_LANG ? MENU_LANG.autoPick(configuredLangs, navigator.languages || [navigator.language]) : 'fr');
+        buildLanguagePicker();
         applyLang(currentLang);
         renderMenu('all');
         refreshCartUI();
@@ -4884,6 +5286,12 @@ em, i, cite, dfn, var { font-style: normal; }
           addBtn.classList.remove('is-popped');
           void addBtn.offsetWidth;
           addBtn.classList.add('is-popped');
+          return;
+        }
+        const detail = e.target.closest('[data-detail]');
+        if (detail) {
+          const selected = itemOf(detail.dataset.detail);
+          if (selected) openCustomizer(selected);
           return;
         }
         // Cart qty (uses encoded lineKey)
@@ -4957,6 +5365,9 @@ em, i, cite, dfn, var { font-style: normal; }
         if (modeScreen) modeScreen.classList.remove('is-active');
         if (menuScreen) menuScreen.classList.add('is-active');
         if (typeof applyMenuMode === 'function') applyMenuMode();
+        ensureTableSession().catch((err) => {
+          showToast(t(tableSessionErrKey(err)));
+        });
       }
 
       // Greeting plays on landing — demo-only flourish (its hero copy names the

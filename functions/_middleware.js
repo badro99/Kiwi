@@ -10,9 +10,8 @@
 //   1. Account session — a merchant who signed up / logged in (email + password).
 //      Handled by /auth/* (see functions/auth/*). Session = HMAC-signed cookie,
 //      verified here with AUTH_SECRET.
-//   2. Staff bypass — the shared passcode in SITE_PASSWORD, entered once via the
-//      "Accès équipe" field. Lets the owner + partner demo without an account and
-//      never get locked out. Handled here (POST /__unlock), cookie = HMAC(pass).
+//   2. Employee access — email + personal 4-digit code saved by the owner in
+//      Dashboard → Équipe. It opens only the employee app, never the dashboard.
 //
 // ── Configure (Cloudflare Pages → Settings → Variables & Secrets) ─────────────
 //   AUTH_SECRET   = <random 32-byte hex>   (secret; signs account sessions)
@@ -23,14 +22,116 @@
 
 import {
   readSession, readCookie, SESS_COOKIE, clearSessionCookie,
+  makeSession, sessionCookie, sessionNeedsRefresh,
   operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE, namedOperatorId, verifyPassword,
-  limitCheck, limitFail, limitClear,
+  findEmployeeCredential, employeeToken, employeeCookie, activeServiceEmployee,
+  limitCheck, limitFail, limitClear, rateLimitUnavailable,
 } from './auth/_lib.js';
 
 const GATE_COOKIE = 'kiwi_gate';
 const UNLOCK_PATH = '/__unlock';
 const OPERATOR_PATH = '/__operator';
+const LANGUAGE_COOKIE = 'kiwi_lang';
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+const CANONICAL_HOST = 'kiwi-os.com';
+
+/* One public origin, one landing URL. The previous static export served a full
+ * second copy at `/`, while `www` could serve every page again under another
+ * hostname. Redirect before the account gate so crawlers and visitors receive
+ * the same single-hop answer without needing JavaScript or a session. The
+ * destination host is fixed, never derived from an untrusted Host header. */
+function canonicalSiteRedirect(request) {
+  const url = new URL(request.url);
+  const isRoot = url.pathname === '/' || url.pathname === '/index.html';
+  const isApex = url.hostname === CANONICAL_HOST;
+  const isWww = url.hostname === `www.${CANONICAL_HOST}`;
+  const isHttp = url.protocol !== 'https:';
+  if (!isWww && !(isApex && (isRoot || isHttp))) return null;
+
+  url.protocol = 'https:';
+  url.hostname = CANONICAL_HOST;
+  url.port = '';
+  if (isRoot) url.pathname = '/fr/';
+  return new Response(null, {
+    status: 308,
+    headers: {
+      Location: url.toString(),
+      'Cache-Control': 'public, max-age=3600',
+    },
+  });
+}
+
+/* ── App native (Capacitor) — docs/roadmaps/KIWI_APP_PLAN.md §1.4 ───────────
+ * Les surfaces embarquées dans l'app tournent sous capacitor://localhost (iOS)
+ * ou https://localhost (Android) et appellent cette API en absolu (le shim
+ * assets/api-base.js préfixe /api/ et /auth/). Avec CapacitorHttp la requête
+ * part du natif — pas d'en-tête Origin, pas de CORS. Mais EventSource, WebSocket
+ * et un bundle testé dans un navigateur de bureau passent par le moteur web,
+ * qui exige un CORS explicite avec identifiants. On ne reflète QUE ces origines
+ * locales, jamais `*`, et seulement sur /api/* et /auth/* : le gate de compte
+ * des pages HTML n'est pas touché. Le port optionnel couvre Android (https
+ * scheme sur localhost) et un serveur statique local ; un site tiers n'est
+ * jamais « localhost ». */
+const APP_ORIGIN = /^(?:capacitor|ionic):\/\/localhost$|^https?:\/\/localhost(?::\d{2,5})?$/;
+function appOrigin(request) {
+  const o = request.headers.get('Origin') || '';
+  return APP_ORIGIN.test(o) ? o : '';
+}
+function appCorsHeaders(origin, request) {
+  const h = new Headers();
+  h.set('Access-Control-Allow-Origin', origin);
+  h.set('Access-Control-Allow-Credentials', 'true');
+  h.set('Vary', 'Origin');
+  if (request && request.method === 'OPTIONS') {
+    h.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    h.set('Access-Control-Allow-Headers', request.headers.get('Access-Control-Request-Headers') || 'Content-Type, Authorization, Accept');
+    h.set('Access-Control-Max-Age', '86400');
+  } else {
+    h.set('Access-Control-Expose-Headers', 'Content-Disposition, Content-Type');
+  }
+  return h;
+}
+function isAppApiPath(path) {
+  return path.indexOf('/api/') === 0 || path.indexOf('/auth/') === 0;
+}
+
+const SUPPORTED_LANGUAGES = new Set(['fr', 'en', 'ar']);
+
+function landingDocumentLanguage(request) {
+  if (!request || (request.method !== 'GET' && request.method !== 'HEAD')) return '';
+  const url = new URL(request.url);
+  const path = url.pathname.replace(/\/index\.html$/, '/');
+  const isDocument = request.headers.get('Sec-Fetch-Dest') === 'document'
+    || (request.headers.get('Accept') || '').includes('text/html');
+  if (!isDocument) return '';
+  if (path === '/en' || path === '/en/') return 'en';
+  if (path === '/ar' || path === '/ar/') return 'ar';
+  if (path === '/' || path === '/fr' || path === '/fr/') return 'fr';
+  return '';
+}
+
+function requestedLanguage(request) {
+  try {
+    const url = new URL(request.url);
+    const explicit = (url.searchParams.get('lang') || '').toLowerCase();
+    if (SUPPORTED_LANGUAGES.has(explicit)) return explicit;
+    const saved = (readCookie(request, LANGUAGE_COOKIE) || '').toLowerCase();
+    if (SUPPORTED_LANGUAGES.has(saved)) return saved;
+    const ref = request.headers.get('Referer');
+    if (ref) {
+      const first = new URL(ref).pathname.split('/').filter(Boolean)[0];
+      if (SUPPORTED_LANGUAGES.has(first)) return first;
+    }
+    const preferred = (request.headers.get('Accept-Language') || '').toLowerCase();
+    if (/^ar(?:-|,|;|$)/.test(preferred)) return 'ar';
+    if (/^en(?:-|,|;|$)/.test(preferred)) return 'en';
+  } catch (_) {}
+  return 'fr';
+}
+
+function languageCookie(lang) {
+  return `${LANGUAGE_COOKIE}=${lang}; Path=/; Secure; SameSite=Lax; Max-Age=${MAX_AGE}`;
+}
 
 // Staff cookie value = HMAC-SHA256("kiwi-gate-v1", passcode). Unforgeable without
 // the passcode, so a stolen/guessed cookie cannot be constructed.
@@ -50,28 +151,43 @@ async function expectedToken(password) {
 //   · row missing  → the account was deleted   → revoke (return false)
 //   · status suspended → the client is frozen   → revoke (return false)
 //   · active       → allow
-// FAIL OPEN on any infrastructure problem (no DB binding, query throws, or the
-// `status` column not migrated yet): we return true so a transient database
-// blip can never lock out every paying client at once. Only a definitive
-// "row is gone" or "status = suspended" result revokes access.
-async function accountActive(env, aid) {
-  if (!env.DB || !aid) return true;
+// A revocation read is an authorization dependency. If it is unavailable, the
+// private request is denied; treating the error as active would keep a revoked
+// token alive during the exact outage in which the check cannot be trusted.
+async function accountActive(env, aid, sessionVersion = 0) {
+  if (!env || !env.DB || !aid) return { ok: false, unavailable: true };
   try {
-    const row = await env.DB.prepare('SELECT status FROM accounts WHERE id = ?').bind(aid).first();
-    if (!row) return false;                // deleted
-    return row.status !== 'suspended';     // frozen for non-payment, etc.
+    const row = await env.DB.prepare('SELECT status, session_epoch FROM accounts WHERE id = ?').bind(aid).first();
+    if (!row) return { ok: false };        // deleted
+    const expected = Math.max(0, Math.round(Number(row.session_epoch) || 0));
+    const presented = Math.max(0, Math.round(Number(sessionVersion) || 0));
+    return { ok: String(row.status || 'active').trim().toLowerCase() !== 'suspended' && expected === presented };
   } catch (_) {
-    return true;                           // can't verify → don't lock anyone out
+    return { ok: false, unavailable: true };
   }
 }
 
-export async function onRequest(context) {
+async function routeRequest(context) {
   const { request, env, next } = context;
   const url = new URL(request.url);
   const path = url.pathname;
+  const canonicalRedirect = canonicalSiteRedirect(request);
+  if (canonicalRedirect) return canonicalRedirect;
   const authSecret = env.AUTH_SECRET;
   const sitePassword = env.SITE_PASSWORD;
   const isApi = path.indexOf('/api/') === 0;
+
+  // Le projet Capacitor (app/) vit dans le dépôt, donc dans le déploiement
+  // Pages : il n'y a rien à y servir — ni le projet Xcode, ni le bundle.
+  if (path === '/app' || path.startsWith('/app/')) {
+    return new Response('Not found', { status: 404, headers: { 'Cache-Control': 'no-store' } });
+  }
+  // Préflight CORS de l'app native (voir APP_ORIGIN) : répondre avant le gate,
+  // un OPTIONS ne porte ni cookie ni données.
+  const nativeAppOrigin = appOrigin(request);
+  if (nativeAppOrigin && request.method === 'OPTIONS' && isAppApiPath(path)) {
+    return new Response(null, { status: 204, headers: appCorsHeaders(nativeAppOrigin, request) });
+  }
 
   // ── Public customer surface (unauthenticated by design) ────────────────────
   // A diner who scans a table QR has NO account and NO gate cookie, so the whole
@@ -103,6 +219,52 @@ export async function onRequest(context) {
   // clean URL adds no surface: it is the same document, GET/HEAD only.
   const method = request.method;
   const isRead = method === 'GET' || method === 'HEAD';
+
+  // Search engines reach these files without a merchant session. The landing
+  // was public already, but sitemap.xml still fell through to the account gate
+  // and returned 401, so no crawler could discover the public guide URLs named
+  // by robots.txt. Exact GET/HEAD paths only; both files are static and contain
+  // no merchant data.
+  if (isRead && (path === '/sitemap.xml' || path === '/robots.txt')) return next();
+
+  // The marketing landing page is public. Keep the merchant application and
+  // its APIs behind the account/staff gate below, but let visitors reach the
+  // homepage (and the static Next assets it renders) before signing in.
+  //
+  // Chaque dossier de langue est ouvert EN ENTIER, pas seulement son index.
+  // Un export Next ne se réduit pas à `/fr/index.html` : à côté vivent la
+  // charge RSC de navigation (`index.txt`, `__next._tree.txt`,
+  // `__next.$d$locale.__PAGE__.txt` …) et `opengraph-image`. N'autoriser que
+  // le chemin exact `/fr/` les laissait tous en 401, et rien ne le signalait :
+  // Next voit échouer sa navigation douce, retombe sur un rechargement complet
+  // de la page — qui, lui, répond 200 — et le site paraît fonctionner. Le prix
+  // était invisible : un aller-retour 401 gaspillé à chaque préchargement, un
+  // rechargement complet à chaque changement de langue, et surtout aucun
+  // aperçu de lien, puisque le scraper WhatsApp recevait l'écran de connexion
+  // à la place de l'image OG.
+  //
+  // Ça n'ouvre rien : ces six dossiers sont la sortie statique du site
+  // vitrine, ils ne contiennent ni données marchandes ni API.
+  const isLandingPath = path === '/'
+    || path === '/fr' || path.startsWith('/fr/')
+    || path === '/en' || path.startsWith('/en/')
+    || path === '/ar' || path.startsWith('/ar/')
+    || path === '/de' || path.startsWith('/de/')
+    || path === '/it' || path.startsWith('/it/')
+    || path === '/nl' || path.startsWith('/nl/')
+    || path.startsWith('/_next/') || path.startsWith('/images/')
+    || path.startsWith('/model/') || path.startsWith('/draco/')
+    // La favicone du site vitrine vit a la racine, pas sous /assets : Next la
+    // demande en `/icon.svg`, et les navigateurs vont chercher `/favicon.ico`
+    // tout seuls meme quand personne ne l'a declaree. Ni l'une ni l'autre ne
+    // correspondait a un prefixe autorise, donc les deux repartaient en 401 --
+    // et un 401 sur une favicone ne se signale nulle part : la page repond 200,
+    // la console reste muette, l'onglet affiche simplement le globe gris par
+    // defaut. C'est ce qu'on voyait sur kiwi-os.com. Un fichier d'icone ne
+    // contient rien de prive.
+    || path === '/icon.svg' || path === '/favicon.ico' || path === '/apple-icon.png';
+  if (isRead && isLandingPath) return next();
+
   /* Les fichiers statiques que ces pages CHARGENT. Allow-lister la page sans ses
    * scripts, c'est servir un document qui demande ensuite `assets/lucide.min.js`
    * et reçoit l'écran de connexion à la place : le navigateur tente de lire du
@@ -122,16 +284,67 @@ export async function onRequest(context) {
    * quinzième script ajouté à kiwi-order.html ne doit pas re-casser la commande
    * client en silence (tools/public-assets-test.js tient cette promesse). */
   if (isRead && path.startsWith('/assets/')) return next();
-  // Kiwi Tickets is deliberately link-only: the owner and partner asked for no
-  // account, password or staff gate. Keep the carve-out exact to this one page,
-  // its API, and its non-cacheable image reader. The handlers still cap text,
-  // file type, file count and upload size independently.
+  // Kiwi Tickets is deliberately link-only: the owner and partner use this
+  // board without an account or staff gate. Keep the exception exact,
+  // method-scoped, and limited to this board, its API, and its no-store image
+  // reader. The handlers still enforce their own text and upload limits.
   if (isRead && (path === '/tickets.html' || path === '/tickets')) return next();
   if (isRead && path.startsWith('/api/ticket-images/')) return next();
   if (path === '/api/tickets' && (method === 'GET' || method === 'POST')) return next();
   if (/^\/api\/tickets\/\d+$/.test(path) && method === 'PATCH') return next();
   if (path === '/api/tickets/cleanup' && method === 'POST') return next();
-  if (isRead && (path === '/kiwi-order.html' || path === '/kiwi-order' || path === '/api/menu')) return next();
+  /* Même raisonnement, pour les quatre fichiers que le navigateur va chercher
+   * TOUT SEUL et qui, eux, ne peuvent pas vivre sous /assets.
+   *
+   * Le service worker d'abord : sa portée est celle de son URL, donc contrôler
+   * tout le site impose de le servir depuis la racine. Ici il recevait 401 avec
+   * l'écran de connexion en text/html — `register()` échoue en silence, aucune
+   * console ne s'ouvre, et le SW déjà installé sur le poste du marchand ne se
+   * met JAMAIS à jour : il continue de servir l'ancienne génération de cache
+   * indéfiniment. Toute la mécanique de `?v=` en amont ne sert à rien si le
+   * fichier qui la lit n'est pas joignable.
+   *
+   * Puis les trois manifestes restants. `serveur.webmanifest` était déjà
+   * allow-listé plus bas — les autres ont simplement été oubliés, et un
+   * manifeste en 401 retire l'installation PWA de la caisse et du dashboard.
+   * Leurs icônes pointent toutes vers /assets, déjà ouvert.
+   *
+   * Aucune donnée : ce sont quatre fichiers statiques identiques pour tous les
+   * marchands, déjà publics sur les dépôts GitHub. */
+  if (isRead && (path === '/kiwi-sw.js'
+    || path === '/dashboard.webmanifest' || path === '/manifest.webmanifest'
+    || path === '/cuisine.webmanifest')) return next();
+  /* L'APK Android est distribué par un lien Kiwi direct. Il ne contient aucune
+   * donnée marchande ni aucun secret ; exiger une session ici renverrait la
+   * page de connexion (401) au gestionnaire de téléchargements Android. Chemin
+   * exact + lecture seule : aucun dossier ni autre artefact n'est ouvert. */
+  if (isRead && path === '/downloads/kiwi-print-bridge.apk') return next();
+  if (isRead && (path === '/kiwi-order.html' || path === '/kiwi-order' || path === '/api/menu'
+    || path === '/booking.html' || path === '/booking' || path === '/api/booking')) return next();
+  // A guest may create one booking against the merchant's published services.
+  // The handler performs its own availability, rate, tenancy and conflict checks;
+  // no private list or customer record is exposed through this exception.
+  if (method === 'POST' && path === '/api/booking') return next();
+  // Employee/service app. The page itself contains no merchant data; its single
+  // API independently validates a store PIN and then an httpOnly employee
+  // session. Exact paths only — no other private API is opened by this exception.
+  if (isRead && (path === '/kiwi-serveur.html' || path === '/kiwi-serveur'
+    || path === '/serveur.webmanifest' || path === '/api/employee')) return next();
+  if (method === 'POST' && path === '/api/employee') return next();
+  /* Only a clocked-in floor-service employee may cross from the private
+   * employee app into the shared operational channels. Kitchen/dishwasher and
+   * off-shift accounts remain limited to schedule, hours and pointage. */
+  if ((path === '/api/order/queue' || path === '/api/service/events' || path === '/api/employee-clients')
+      && authSecret && await activeServiceEmployee(request, env)) return next();
+  /* Les écritures financières de caisse (/api/sale, /api/sale/refund, /api/sale/cancel).
+   * Les caisses appairées détiennent un cookie `kiwi_till` (Max-Age 365j) mais
+   * n'ont pas forcément de session commerçant `kiwi_sess` active. Les trois
+   * handlers authentifient eux-mêmes strictement l'appelant via
+   * `entitledMerchant(..., { allowTill: true })` ou `verifyStaffPin(..., { requireTill: true })`
+   * et rejettent tout accès illégitime en 403. POST seulement — les lectures
+   * d'audit (GET /api/sale/cancel) restent gardées derrière la session propriétaire. */
+  if (method === 'POST' && (path === '/api/sale' || path === '/api/sale/refund' || path === '/api/sale/cancel'
+    || path === '/api/pressing/cancel')) return next();
   // La page de réinitialisation de mot de passe. Quelqu'un qui a perdu son mot
   // de passe n'a par définition AUCUNE session : la porte du site la lui
   // refuserait, et le lien qu'on vient de lui envoyer tomberait sur l'écran de
@@ -142,9 +355,31 @@ export async function onRequest(context) {
   // /auth/reset (déjà accessible, comme tout /auth/*) qui exige un jeton signé
   // et ne renvoie jamais d'adresse e-mail.
   if (isRead && (path === '/reset.html' || path === '/reset')) return next();
+  /* Les pages légales et la page d'assistance. Elles sont écrites pour être lues
+   * par quelqu'un qui n'a PAS de compte : un prospect qui veut savoir ce qu'on
+   * fait de ses données, et surtout les équipes de revue d'Apple et de Google,
+   * qui ouvrent l'URL de politique de confidentialité et l'URL d'assistance
+   * déclarées sur la fiche de l'app Kiwi Pro sans aucune session. Un 401 sur
+   * l'une ou l'autre, c'est un refus de publication. Les deux orthographes,
+   * comme au-dessus. Aucune donnée : ce sont des pages statiques identiques
+   * pour tous, déjà publiques sur les dépôts GitHub. */
+  if (isRead && (path === '/privacy.html' || path === '/privacy'
+    || path === '/terms.html' || path === '/terms'
+    || path === '/mentions-legales.html' || path === '/mentions-legales'
+    || path === '/cookies.html' || path === '/cookies'
+    || path === '/support.html' || path === '/support')) return next();
   if (isRead && (path === '/OrderPro.html' || path === '/OrderPro'
     || path === '/api/order' || path === '/api/order/session'
     || path.startsWith('/api/media/'))) return next();
+  /* Shopify revient ici après son écran d'autorisation. Le navigateur a bien
+   * une session Kiwi, mais le callback ne doit pas dépendre du cookie : son
+   * propre état aléatoire, stocké sous forme de hash pendant dix minutes, lie
+   * la boutique au commerçant. Chemin exact + GET/HEAD seulement. */
+  if (isRead && path === '/api/shopify/callback') return next();
+  /* The minute Shopify retry worker has no merchant browser session. It owns a
+   * single random bearer secret and can reach only this exact POST route; the
+   * handler verifies that secret again before touching the durable outbox. */
+  if (method === 'POST' && path === '/api/shopify/cron') return next();
   /* Les deux seules écritures publiques : déposer une commande, et s'asseoir.
    * Chemins EXACTS — surtout pas le préfixe /api/order/, qui ouvrirait
    * /api/order/queue, c'est-à-dire la file du personnel avec ses articles, ses
@@ -174,6 +409,17 @@ export async function onRequest(context) {
    * signature HMAC que le handler vérifie lui-même, et il refuse tout tant que
    * le commerçant n'a pas enregistré la clé de signature de sa boutique. */
   if (method === 'POST' && /^\/api\/channel\/shopify\/[A-Za-z0-9-]{6,64}$/.test(path)) return next();
+  /* Le relais d'impression (functions/api/print/*). Le Kiwi Printer Bridge du
+   * comptoir n'est pas un navigateur : pas de cookie de porte, jamais. Il
+   * échange son code d'appairage (POST /api/print/bridges — le handler exige un
+   * code vivant, ou une session pour les autres actions, et ne rend rien
+   * sinon), puis présente un jeton porteur `kpb_…` que le handler vérifie
+   * lui-même contre print_bridges. Chemins EXACTS, et la porte ne s'ouvre au
+   * GET/POST des jobs QUE si ce jeton est présenté : sans lui, la caisse passe
+   * par la porte normale comme pour n'importe quelle API. */
+  if (method === 'POST' && path === '/api/print/bridges') return next();
+  if ((path === '/api/print/jobs' || path === '/api/print/bridges')
+      && /^Bearer\s+kpb_[0-9a-f]{64}$/i.test(request.headers.get('Authorization') || '')) return next();
 
   // /order is the short link written onto NFC tags — every byte counts on an
   // NTAG213, and it is what a guest glimpses as their phone buzzes. Rewrite
@@ -199,6 +445,7 @@ export async function onRequest(context) {
   // cookie can still be honoured, then land on the lockout screen with the dead
   // session cookie cleared.
   let sessionRevoked = false;
+  let sessionVerificationUnavailable = false;
   if (authSecret) {
     const token = readCookie(request, SESS_COOKIE);
     const sess = token ? await readSession(token, authSecret) : null;
@@ -207,8 +454,23 @@ export async function onRequest(context) {
       const wantsDoc = dest === 'document' ||
         (!dest && (request.headers.get('Accept') || '').indexOf('text/html') !== -1);
       if (!(wantsDoc || isApi)) return next();         // asset → trust the token
-      if (await accountActive(env, sess.aid)) return next();
-      sessionRevoked = true;                           // deleted/suspended → lock out below
+      const accountState = await accountActive(env, sess.aid, sess.sv);
+      if (accountState.ok) {
+        /* Fenêtre glissante — voir sessionNeedsRefresh(). Uniquement sur un
+         * CHARGEMENT DE PAGE arrivé à mi-vie : jamais sur un asset (le cookie
+         * repartirait sur chaque fichier), jamais sur une réponse 101, parce
+         * que reconstruire une réponse tue la bascule WebSocket. */
+        if (wantsDoc && sessionNeedsRefresh(sess)) {
+          const res = await next();
+          if (res.status === 101) return res;
+          const out = new Response(res.body, res);
+          out.headers.append('Set-Cookie', sessionCookie(await makeSession(sess.aid, authSecret, sess.sv)));
+          return out;
+        }
+        return next();
+      }
+      sessionVerificationUnavailable = !!accountState.unavailable;
+      sessionRevoked = !sessionVerificationUnavailable; // only a confirmed revoke purges identity
     }
   }
 
@@ -226,41 +488,30 @@ export async function onRequest(context) {
   // Not authorized. The /auth/* endpoints must still run so the screen works.
   if (path.startsWith('/auth/')) return next();
 
-  // Staff unlock attempt (shared passcode).
-  if (sitePassword && request.method === 'POST' && path === UNLOCK_PATH) {
-    /* Le même plafond que la porte d'à côté. Celle-ci n'en avait AUCUN : le code
-     * équipe est un secret partagé, court, tapé sur un téléphone — donc court par
-     * nécessité — et il ouvrait le site entier en essais illimités. Le code
-     * opérateur, quelques lignes plus bas, était compté depuis longtemps ; c'est
-     * la serrure la plus faible qui était restée sans compteur.
-     *
-     * Compteur PROPRE ('gate'), et non le 'op' de la console. Les partager
-     * paraissait plus sévère, mais couplait deux portes qui n'ont ni le même
-     * public ni le même risque : un serveur qui se trompe trois fois de code
-     * équipe pendant le coup de feu aurait fermé la console d'administration au
-     * patron, au même instant et depuis la même adresse IP. Chaque porte porte
-     * sa propre ardoise ; l'attaquant n'en tire aucun essai supplémentaire.
-     *
-     * Faillible vers le haut, comme tout le limiteur : table absente ou D1 qui
-     * tousse ⇒ on laisse passer. Un compteur en panne ne doit jamais enfermer
-     * dehors une équipe en plein service. */
-    const tooMany = await limitCheck(request, env, 'gate');
+  // Employee login. The old shared SITE_PASSWORD form opened the whole product;
+  // this route now accepts only the email + personal PIN from the private team
+  // roster and creates a store-scoped employee session.
+  if (request.method === 'POST' && path === UNLOCK_PATH) {
+    if (!authSecret || !env.DB) return htmlResponse(authPage({ staffError: true, allowStaff: false, lang: requestedLanguage(request) }));
+    const tooMany = await limitCheck(request, env, 'employee');
     if (tooMany) return tooMany;
     const form = await request.formData();
-    const tried = (form.get('passcode') || '').toString();
-    if (tried === sitePassword) {
-      await limitClear(request, env, 'gate');
-      const staff = await expectedToken(sitePassword);
+    const email = (form.get('email') || '').toString();
+    const pin = (form.get('pin') || '').toString().replace(/\D/g, '').slice(0, 4);
+    const employee = await findEmployeeCredential(env, email, pin);
+    if (employee && !employee.ambiguous && String(employee.status || 'active') !== 'suspended') {
+      await limitClear(request, env, 'employee');
+      const token = await employeeToken(authSecret, { merchant: employee.merchant, staffId: employee.id, authVersion: employee.authVersion });
       return new Response(null, {
         status: 303,
         headers: {
-          Location: '/',
-          'Set-Cookie': `${GATE_COOKIE}=${staff}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${MAX_AGE}`,
+          Location: '/kiwi-serveur',
+          'Set-Cookie': employeeCookie(token),
         },
       });
     }
-    await limitFail(request, env, 'gate');
-    return htmlResponse(authPage({ staffError: true, allowStaff: true }));
+    if (!await limitFail(request, env, 'employee')) return rateLimitUnavailable();
+    return htmlResponse(authPage({ staffError: true, allowStaff: true, lang: requestedLanguage(request) }));
   }
 
   // Operator unlock attempt — a code from the `operators` table, revealed by the
@@ -295,8 +546,8 @@ export async function onRequest(context) {
       }
       return new Response(null, { status: 303, headers });
     }
-    await limitFail(request, env, 'op');
-    return htmlResponse(authPage({ allowStaff: !!sitePassword, operatorError: true }));
+    if (!await limitFail(request, env, 'op')) return rateLimitUnavailable();
+    return htmlResponse(authPage({ allowStaff: !!(authSecret && env.DB), operatorError: true, lang: requestedLanguage(request) }));
   }
 
   // Locked → show the account screen. If we got here because a signed session
@@ -310,9 +561,61 @@ export async function onRequest(context) {
       headers: { ...lockHeaders, 'Content-Type': 'application/json' },
     });
   }
-  return new Response(authPage({ allowStaff: !!sitePassword, revoked: sessionRevoked }), {
+  if (sessionVerificationUnavailable && isApi) {
+    return new Response(JSON.stringify({ error: 'auth-verification-unavailable' }), {
+      status: 503,
+      headers: { ...lockHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  if (sessionVerificationUnavailable) {
+    return new Response(authPage({ allowStaff: !!(authSecret && env.DB), revoked: false, lang: requestedLanguage(request) }), {
+      status: 503,
+      headers: { ...lockHeaders, 'Content-Type': 'text/html; charset=utf-8' },
+    });
+  }
+  return new Response(authPage({ allowStaff: !!(authSecret && env.DB), revoked: sessionRevoked, lang: requestedLanguage(request) }), {
     status: 401,
     headers: { ...lockHeaders, 'Content-Type': 'text/html; charset=utf-8' },
+  });
+}
+
+/* Apply baseline response hardening to every route, including Pages Functions
+ * reached through next(). SAMEORIGIN preserves the intentional same-site
+ * iframes in the business plan while blocking third-party clickjacking. A full
+ * CSP needs the inline-heavy app to be migrated first; pretending otherwise
+ * would either break the product or require unsafe-inline everywhere. */
+function secureResponse(response) {
+  if (!response) return response;
+  /* Une réponse 101 porte la socket sur `response.webSocket` : la reconstruire
+   * perd cette propriété (et 101 n'est pas un statut constructible), donc le
+   * navigateur ne voit jamais la poignée de main et ferme en 1006. Le Live Link
+   * passe par là — on la laisse intacte. */
+  if (response.status === 101 || response.webSocket) return response;
+  const headers = new Headers(response.headers);
+  headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('X-Frame-Options', 'SAMEORIGIN');
+  headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+export async function onRequest(context) {
+  const response = secureResponse(await routeRequest(context));
+  const lang = landingDocumentLanguage(context.request);
+  const nativeAppOrigin = appOrigin(context.request);
+  const corsPath = nativeAppOrigin && isAppApiPath(new URL(context.request.url).pathname);
+  if ((!lang && !corsPath) || !response || response.status === 101 || response.webSocket) return response;
+  const headers = new Headers(response.headers);
+  if (lang) headers.append('Set-Cookie', languageCookie(lang));
+  if (corsPath) appCorsHeaders(nativeAppOrigin).forEach((v, k) => (k === 'vary' ? headers.append(k, v) : headers.set(k, v)));
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
   });
 }
 
@@ -323,10 +626,9 @@ function htmlResponse(body) {
   });
 }
 
-// Self-contained login / signup screen — no external assets (it must render
-// while the site is locked). Uses the real Kiwi wordmark (`kiwi` in Inter Tight
-// 700 with a mint dot, per the brand system) — no leaf, no pictogram, per
-// brand.html §01. Brand tokens inlined; dark-mode aware. Tab pill uses the
+// Login / signup screen. /assets/* is explicitly public above, so the opt-in
+// Vexel layer and its two cropped wordmarks can load while the gate is closed;
+// the complete legacy palette remains inlined as the no-skin fallback. Tab pill uses the
 // signature spring easing. Vertical centering uses `margin: auto` inside a
 // flex column so the card centers when it fits and lets the body scroll when
 // the "Créer un compte" form pushes it past the viewport (fixes the previous
@@ -337,37 +639,83 @@ function authPage(opts) {
   const allowStaff = opts && opts.allowStaff;
   const operatorError = opts && opts.operatorError;
   const revoked = opts && opts.revoked;
+  const lang = SUPPORTED_LANGUAGES.has(opts && opts.lang) ? opts.lang : 'fr';
+  const dir = lang === 'ar' ? 'rtl' : 'ltr';
+  const copy = {
+    fr: {
+      title: 'Kiwi · Votre compte', welcome: 'Bienvenue <em>chez Kiwi</em>.',
+      sub: 'Votre espace commerçant, en un seul lien.', login: 'Se connecter', signup: 'Créer un compte',
+      email: 'E-mail', password: 'Mot de passe', name: 'Nom', business: 'Établissement',
+      language: 'Langue', emailPlaceholder: 'vous@exemple.ma',
+      namePlaceholder: 'Prénom Nom', businessPlaceholder: 'Café Atlas', passwordHint: 'Au moins 10 caractères.',
+      create: 'Créer mon compte', staff: 'Accès équipe', revoked: 'Votre session a été fermée. Reconnectez-vous.',
+      encrypted: 'Données chiffrées', private: 'Jamais revendues', flexible: 'Sans engagement',
+      operatorBad: 'Code opérateur incorrect.', operatorCode: 'Code opérateur', enter: 'Entrer',
+      strength: { label: 'Force', weak: 'faible', medium: 'moyen', strong: 'fort' },
+      errors: { email: 'Adresse e-mail invalide.', name: 'Indiquez votre nom.', weak: 'Mot de passe : 10 caractères minimum.', short: 'Au moins 10 caractères.', common: 'Ce mot de passe est trop courant.', personal: 'Évitez votre e-mail ou le nom de votre commerce.', long: 'Mot de passe trop long.', exists: 'Cet e-mail a déjà un compte · connectez-vous.', 'bad-creds': 'E-mail ou mot de passe incorrect.', 'bad-json': 'Requête invalide.', 'not-configured': 'Service momentanément indisponible.', fallback: 'Une erreur est survenue. Réessayez.', network: 'Erreur réseau. Réessayez.' }
+    },
+    en: {
+      title: 'Kiwi · Your account', welcome: 'Welcome <em>to Kiwi</em>.',
+      sub: 'Your entire business, one secure sign-in.', login: 'Sign in', signup: 'Create an account',
+      email: 'Email', password: 'Password', name: 'Name', business: 'Business',
+      language: 'Language', emailPlaceholder: 'you@example.com',
+      namePlaceholder: 'First and last name', businessPlaceholder: 'Atlas Café', passwordHint: 'Use at least 10 characters.',
+      create: 'Create my account', staff: 'Team access', revoked: 'Your session has ended. Please sign in again.',
+      encrypted: 'Encrypted data', private: 'Never sold', flexible: 'No commitment',
+      operatorBad: 'Incorrect operator code.', operatorCode: 'Operator code', enter: 'Enter',
+      strength: { label: 'Strength', weak: 'weak', medium: 'medium', strong: 'strong' },
+      errors: { email: 'Enter a valid email address.', name: 'Enter your name.', weak: 'Password must contain at least 10 characters.', short: 'At least 10 characters.', common: 'This password is too common.', personal: 'Avoid your email or business name.', long: 'Password is too long.', exists: 'This email already has an account · sign in instead.', 'bad-creds': 'Incorrect email or password.', 'bad-json': 'Invalid request.', 'not-configured': 'Service temporarily unavailable.', fallback: 'Something went wrong. Please try again.', network: 'Network error. Please try again.' }
+    },
+    ar: {
+      title: 'Kiwi · حسابك', welcome: 'مرحباً بك <em>في Kiwi</em>.',
+      sub: 'كل ما تحتاجه لإدارة نشاطك، بحساب واحد.', login: 'تسجيل الدخول', signup: 'إنشاء حساب',
+      email: 'البريد الإلكتروني', password: 'كلمة المرور', name: 'الاسم', business: 'اسم النشاط',
+      language: 'اللغة', emailPlaceholder: 'name@example.com',
+      namePlaceholder: 'الاسم الكامل', businessPlaceholder: 'مقهى أطلس', passwordHint: 'استعمل 10 أحرف على الأقل.',
+      create: 'إنشاء حسابي', staff: 'دخول فريق العمل', revoked: 'انتهت جلستك. يرجى تسجيل الدخول من جديد.',
+      encrypted: 'بيانات مشفّرة', private: 'لا نبيع بياناتك', flexible: 'دون التزام',
+      operatorBad: 'رمز المشغّل غير صحيح.', operatorCode: 'رمز المشغّل', enter: 'دخول',
+      strength: { label: 'القوة', weak: 'ضعيفة', medium: 'متوسطة', strong: 'قوية' },
+      errors: { email: 'أدخل بريداً إلكترونياً صحيحاً.', name: 'أدخل اسمك.', weak: 'يجب أن تتكون كلمة المرور من 10 أحرف على الأقل.', short: '10 أحرف على الأقل.', common: 'كلمة المرور هذه شائعة جداً.', personal: 'تجنب بريدك الإلكتروني أو اسم نشاطك.', long: 'كلمة المرور طويلة جداً.', exists: 'يوجد حساب بهذا البريد · سجّل الدخول.', 'bad-creds': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.', 'bad-json': 'الطلب غير صالح.', 'not-configured': 'الخدمة غير متاحة مؤقتاً.', fallback: 'حدث خطأ. حاول مرة أخرى.', network: 'تعذر الاتصال بالشبكة. حاول مرة أخرى.' }
+    }
+  };
+  const t = copy[lang];
   // Operator prompt — no visible affordance. Revealed only by a long-press on the
   // wordmark (see the script below), or shown pre-open when a code was rejected.
   const operatorBlock = `
     <form class="staff op" id="op-form" method="POST" action="${OPERATOR_PATH}"${operatorError ? '' : ' hidden'}>
-      ${operatorError ? `<p class="err staff-err" role="alert">Code opérateur incorrect.</p>` : ''}
+      ${operatorError ? `<p class="err staff-err" role="alert">${t.operatorBad}</p>` : ''}
       <div class="staff-row">
-        <input name="code" type="password" inputmode="numeric" autocomplete="off" placeholder="Code opérateur" aria-label="Code opérateur" />
-        <button type="submit">Entrer</button>
+        <input name="code" type="password" inputmode="numeric" autocomplete="off" placeholder="${t.operatorCode}" aria-label="${t.operatorCode}" />
+        <button type="submit">${t.enter}</button>
       </div>
     </form>`;
   const staffBlock = allowStaff ? `
-    <button type="button" class="staff-link" id="staff-toggle">Accès équipe</button>
-    <form class="staff" id="staff-form" method="POST" action="${UNLOCK_PATH}"${staffError ? '' : ' hidden'}>
-      ${staffError ? `<p class="err staff-err" role="alert">Code équipe incorrect.</p>` : ''}
-      <div class="staff-row">
-        <input name="passcode" type="password" inputmode="text" autocomplete="off" placeholder="Code équipe" aria-label="Code équipe" />
-        <button type="submit">Entrer</button>
-      </div>
-    </form>` : '';
+    <a class="staff-link" id="staff-toggle" href="/kiwi-serveur">${t.staff}</a>` : '';
 
   return `<!doctype html>
-<html lang="fr">
+<html lang="${lang}" dir="${dir}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
-<title>Kiwi · Votre compte</title>
+<title>${t.title}</title>
+<script>try{localStorage.setItem('kiwiLang','${lang}');document.cookie='kiwi_lang=${lang}; Path=/; Max-Age=2592000; SameSite=Lax'+(location.protocol==='https:'?'; Secure':'')}catch(_){}</script>
+<!-- design-vexel.css habille la porte (33 règles .vx-auth-card) mais consomme les
+     jetons --n-*, --sans, --elev-* qui vivent dans tokens.css. Sans ce lien, ces
+     règles gagnaient la cascade puis échouaient en silence sur des var() vides,
+     et la porte s'affichait en page blanche sans carte ni bouton vert. Placé
+     AVANT le style en ligne : la palette propre à la porte reste la référence si
+     un skin optionnel ne charge pas. -->
+<link rel="stylesheet" href="/assets/tokens.css" />
 <style>
   :root {
+    /* Déclaré explicitement : sans ça, un Mac en mode nuit fait rendre à Chrome
+       les champs et la barre de défilement en sombre par-dessus notre palette
+       claire. Le sombre est repris plus bas, sur html[data-theme="dark"]. */
+    color-scheme: light;
     --atlas:#0B6E4F; --riad:#053B2C; --mint:#7DF2B0;
-    /* --paper is the brand's cream — must stay CREAM in both themes so the
+    /* --paper is the brand's cream · must stay CREAM in both themes so the
        wordmark's "on-dark" variant (paper text on dark surface) still reads.
        --bg is the page background token, which is what actually flips. */
     --paper:#F7F5F0; --ink:#0A0F0D;
@@ -377,11 +725,11 @@ function authPage(opts) {
     --danger:#b0402f;
     --sans: "Inter Tight", -apple-system, BlinkMacSystemFont, "SF Pro Display",
             "Segoe UI Variable", "Segoe UI", Inter, Roboto, sans-serif;
-    --serif: "Instrument Serif", "New York", ui-serif, Georgia, Cambria, serif;
+    --serif: "Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   }
 
     /* Emphasis is roman. <em>/<i>/<cite> default to italic in every browser, and a
-       sheared sans at UI sizes reads as a rendering fault rather than as emphasis —
+       sheared sans at UI sizes reads as a rendering fault rather than as emphasis·
        the colour and face already set on each em rule carry the emphasis instead.
        Italics that DEPICT something (icing piped on a cake, an imitated masthead)
        set font-style on their own class, which outranks this. */
@@ -421,9 +769,11 @@ function authPage(opts) {
       0 8px 24px -14px rgba(5,59,44,.20),
       0 1px 0 rgba(255,255,255,.6) inset;
   }
-  /* Real Kiwi wordmark — lowercase "kiwi" Inter Tight 700 + mint accent dot.
-     Per brand.html §01: no pictogram, no kiwi leaf. Long-press this to open
-     the operator prompt. */
+  .brand-row { display:flex; align-items:center; justify-content:space-between; gap:20px; }
+  .auth-langs { display:inline-flex; align-items:center; gap:2px; padding:3px; border:1px solid var(--line); border-radius:999px; background:var(--field); }
+  .auth-langs a { min-width:31px; padding:5px 7px; border-radius:999px; color:var(--muted); font-size:11px; font-weight:650; text-align:center; text-decoration:none; }
+  .auth-langs a[aria-current="true"] { color:var(--surface); background:var(--atlas); }
+  /* Canonical Kiwi vector. Long-press this to open the operator prompt. */
   .brand {
     display: inline-flex;
     align-items: baseline;
@@ -445,6 +795,8 @@ function authPage(opts) {
     translate: 0 -1px;
     box-shadow: 0 0 0 4px rgba(125,242,176,.22);
   }
+  .auth-brand-legacy img { display:block; width:auto; height:34px; }
+  .brand .vx-entry-logo { display: none; }
   .head { margin: 26px 0 24px; }
   h1 {
     font-size: 26px;
@@ -512,6 +864,7 @@ function authPage(opts) {
     transition: transform .31s cubic-bezier(0.34, 1.45, 0.5, 1);
   }
   .tabs[data-mode="signup"] .pill { transform: translateX(100%); }
+  html[dir="rtl"] .tabs[data-mode="signup"] .pill { transform: translateX(-100%); }
   form.pane {
     display: flex;
     flex-direction: column;
@@ -519,6 +872,7 @@ function authPage(opts) {
     text-align: left;
     margin: 0;
   }
+  html[dir="rtl"] form.pane, html[dir="rtl"] .revoked { text-align:right; }
   form.pane.hidden { display: none; }
   label {
     display: flex;
@@ -601,8 +955,9 @@ function authPage(opts) {
   .staff-link:hover { color: var(--riad); text-decoration-color: rgba(5,59,44,.6); }
   .op { margin-top: 14px; }
   .staff { margin: 14px 0 0; }
-  .staff-row { display: flex; gap: 8px; }
+  .staff-row { display: flex; flex-wrap: wrap; gap: 8px; }
   .staff input { flex: 1; padding: 11px 13px; font-size: 14px; }
+  .staff input[name="email"] { flex-basis: 100%; }
   .staff button {
     border: 0;
     border-radius: 10px;
@@ -642,61 +997,88 @@ function authPage(opts) {
     h1 { font-size: 22px; }
     .brand { font-size: 30px; }
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      /* Only --bg / --surface / structural tokens flip — --paper stays cream so
-         the wordmark's on-dark variant (paper text on dark card) still reads. */
-      --bg:#0c1310;
-      --ink:#e8efe9;
-      --surface:#141b17;
-      --line:#26302b;
-      --muted:#93a89c;
-      --field:#0e1613;
-      --field-focus:#131d18;
-    }
-    body {
-      background:
-        radial-gradient(1200px 720px at 50% -180px, rgba(125,242,176,.14), transparent 62%),
-        radial-gradient(900px 560px at 92% 108%, rgba(11,110,79,.10), transparent 56%),
-        var(--bg);
-    }
-    /* Wordmark in dark = paper cream on dark surface — matches brand.html §01
-       "Inverse" logo variant. */
-    .brand { color: var(--paper); }
-    .brand i { box-shadow: 0 0 0 4px rgba(125,242,176,.15); }
-    h1 { color: var(--paper); }
-    h1 em { color: var(--mint); }
-    .card {
-      box-shadow:
-        0 40px 80px -34px rgba(0,0,0,.55),
-        0 8px 24px -14px rgba(0,0,0,.40);
-    }
-    /* Liquid Glass — DARK MODE ONLY. Here the card floats over the dark green-tinted
-       gradient, so real refraction reads beautifully. Light mode keeps its crisp
-       white card (glass would wash out on cream). Fill stays high (70%) so the login
-       form remains a legible reading/input surface. Falls back to the opaque dark
-       card wherever url() backdrop filters aren't supported. */
-    @supports ((-webkit-backdrop-filter: url("#k")) or (backdrop-filter: url("#k"))) {
-      .card {
-        background: color-mix(in srgb, var(--surface) 70%, transparent);
-        border-color: rgba(255,255,255,.10);
-        -webkit-backdrop-filter: url(#kiwi-lg) blur(22px) saturate(1.5);
-                backdrop-filter: url(#kiwi-lg) blur(22px) saturate(1.5);
-      }
-    }
-    .tab[aria-selected="true"] { color: var(--paper); }
-    .pill { background: #1c2622; box-shadow: 0 2px 10px rgba(0,0,0,.5), 0 0 0 1px rgba(125,242,176,.08); }
-    input::placeholder { color: #6a7770; }
-    .err, .staff-err { color: #ff9d8a; }
-    .revoked { background: rgba(255,157,138,.08); border-color: rgba(255,157,138,.28); color: #ff9d8a; }
-    .staff button { background: var(--atlas); }
-    .staff button:hover { background: #0e8560; }
+  /* Le sombre est un CHOIX du commerçant, pas une conséquence des réglages de son
+     Mac. La porte suivait prefers-color-scheme, donc un poste en mode nuit
+     ouvrait Kiwi sur un écran noir alors que le tableau de bord, lui, démarre en
+     clair · deux surfaces du même produit qui ne se ressemblaient pas. On s'aligne
+     donc sur data-theme, écrit par design-vexel.js depuis la clé kiwiDashTheme
+     avant le premier rendu : clair par défaut, sombre uniquement si le commerçant
+     a basculé l'interrupteur. Si le script ne charge pas, on reste en clair. */
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    /* Only --bg / --surface / structural tokens flip · --paper stays cream so
+       the wordmark's on-dark variant (paper text on dark card) still reads. */
+    --bg:#0c1310;
+    --ink:#e8efe9;
+    --surface:#141b17;
+    --line:#26302b;
+    --muted:#93a89c;
+    --field:#0e1613;
+    --field-focus:#131d18;
   }
+  html[data-theme="dark"] body {
+    background:
+      radial-gradient(1200px 720px at 50% -180px, rgba(125,242,176,.14), transparent 62%),
+      radial-gradient(900px 560px at 92% 108%, rgba(11,110,79,.10), transparent 56%),
+      var(--bg);
+  }
+  /* Wordmark in dark = paper cream on dark surface · matches brand.html §01
+     "Inverse" logo variant. */
+  html[data-theme="dark"] .brand { color: var(--paper); }
+  html[data-theme="dark"] .brand i { box-shadow: 0 0 0 4px rgba(125,242,176,.15); }
+  html[data-theme="dark"] h1 { color: var(--paper); }
+  html[data-theme="dark"] h1 em { color: var(--mint); }
+  html[data-theme="dark"] .card {
+    box-shadow:
+      0 40px 80px -34px rgba(0,0,0,.55),
+      0 8px 24px -14px rgba(0,0,0,.40);
+  }
+  /* Liquid Glass · DARK MODE ONLY. Here the card floats over the dark green-tinted
+     gradient, so real refraction reads beautifully. Light mode keeps its crisp
+     white card (glass would wash out on cream). Fill stays high (70%) so the login
+     form remains a legible reading/input surface. Falls back to the opaque dark
+     card wherever url() backdrop filters aren't supported. */
+  @supports ((-webkit-backdrop-filter: url("#k")) or (backdrop-filter: url("#k"))) {
+    html[data-theme="dark"] .card {
+      background: color-mix(in srgb, var(--surface) 70%, transparent);
+      border-color: rgba(255,255,255,.10);
+      -webkit-backdrop-filter: url(#kiwi-lg) blur(22px) saturate(1.5);
+              backdrop-filter: url(#kiwi-lg) blur(22px) saturate(1.5);
+    }
+  }
+  html[data-theme="dark"] .tab[aria-selected="true"] { color: var(--paper); }
+  html[data-theme="dark"] .pill { background: #1c2622; box-shadow: 0 2px 10px rgba(0,0,0,.5), 0 0 0 1px rgba(125,242,176,.08); }
+  html[data-theme="dark"] input::placeholder { color: #6a7770; }
+  html[data-theme="dark"] .err, html[data-theme="dark"] .staff-err { color: #ff9d8a; }
+  html[data-theme="dark"] .revoked { background: rgba(255,157,138,.08); border-color: rgba(255,157,138,.28); color: #ff9d8a; }
+  html[data-theme="dark"] .staff button { background: var(--atlas); }
+  html[data-theme="dark"] .staff button:hover { background: #0e8560; }
+  html[data-theme="dark"] .auth-langs a[aria-current="true"] { color:#0A0F0D; background:var(--mint); }
 </style>
+<link rel="stylesheet" href="/assets/design-vexel.css" />
+<script src="/assets/design-vexel.js"></script>
 </head>
-<body>
-  <!-- Liquid Glass displacement filter (inline — this page is served pre-auth, so it
-       can't depend on /assets/*). Drives the dark-mode .card glass in the <style> above. -->
+<body class="vx-auth-page">
+  <script>
+    window.KiwiDesignVexel && window.KiwiDesignVexel.prime();
+    /* design-vexel.css range ses palettes claire et sombre derriere
+       body.design-vexel[data-vexel-mode="…"] : sans cet attribut aucune des
+       deux couches ne s'active et les regles .vx-auth-card tombent sur des
+       var() vides. C'est desormais syncMode() dans design-vexel.js qui le
+       pose, pour la porte comme pour le tableau de bord. On garde ce miroir
+       local en ceinture : la porte est servie par le middleware et doit rester
+       lisible meme si le skin ne se charge pas. */
+    (function () {
+      var root = document.documentElement;
+      var mirror = function () {
+        document.body.setAttribute('data-vexel-mode', root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+      };
+      mirror();
+      new MutationObserver(mirror).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+    })();
+  </script>
+  <!-- Liquid Glass displacement filter stays inline so the legacy dark fallback
+       remains autonomous even if an optional skin asset fails to load. -->
   <svg width="0" height="0" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
     <filter id="kiwi-lg" x="-35%" y="-35%" width="170%" height="170%" color-interpolation-filters="sRGB">
       <feTurbulence type="fractalNoise" baseFrequency="0.006 0.011" numOctaves="2" seed="12" result="n"/>
@@ -704,56 +1086,69 @@ function authPage(opts) {
       <feDisplacementMap in="SourceGraphic" in2="nb" scale="46" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
   </svg>
-  <main class="card">
-    <div class="brand" id="brand-mark" aria-label="Kiwi">kiwi<i aria-hidden="true"></i></div>
-    <div class="head">
-      <h1>Bienvenue <em>chez Kiwi</em>.</h1>
-      <p class="sub">Votre espace commerçant, en un seul lien.</p>
+  <main class="card vx-auth-card">
+    <div class="brand-row">
+      <div class="brand" id="brand-mark" aria-label="Kiwi">
+        <picture class="auth-brand-legacy"><source media="(prefers-color-scheme: dark)" srcset="/assets/kiwi-newlogo-inverse.svg"><img src="/assets/kiwi-newlogo.svg" alt=""></picture>
+        <span class="vx-entry-logo" aria-hidden="true">
+          <img class="brand-logo-light" src="/assets/kiwi-newlogo.svg" width="886" height="486" alt="" />
+          <img class="brand-logo-dark" src="/assets/kiwi-newlogo-inverse.svg" width="886" height="486" alt="" />
+        </span>
+      </div>
+      <nav class="auth-langs" aria-label="${t.language}">
+        <a href="/dashboard?lang=fr" aria-current="${lang === 'fr'}">FR</a>
+        <a href="/dashboard?lang=en" aria-current="${lang === 'en'}">EN</a>
+        <a href="/dashboard?lang=ar" aria-current="${lang === 'ar'}">AR</a>
+      </nav>
     </div>
-    ${revoked ? `<p class="revoked" role="alert">Votre session a été fermée. Reconnectez-vous.</p>` : ''}
+    <div class="head">
+      <h1>${t.welcome}</h1>
+      <p class="sub">${t.sub}</p>
+    </div>
+    ${revoked ? `<p class="revoked" role="alert">${t.revoked}</p>` : ''}
 
     <div class="tabs" data-mode="login">
-      <button type="button" class="tab" id="tab-login" aria-selected="true">Se connecter</button>
-      <button type="button" class="tab" id="tab-signup" aria-selected="false">Créer un compte</button>
+      <button type="button" class="tab" id="tab-login" aria-selected="true">${t.login}</button>
+      <button type="button" class="tab" id="tab-signup" aria-selected="false">${t.signup}</button>
       <span class="pill" aria-hidden="true"></span>
     </div>
 
     <form class="pane" id="form-login" novalidate>
-      <label>E-mail
-        <input id="li-email" type="email" autocomplete="email" placeholder="vous@exemple.ma" required />
+      <label>${t.email}
+        <input id="li-email" type="email" autocomplete="email" placeholder="${t.emailPlaceholder}" required />
       </label>
-      <label>Mot de passe
+      <label>${t.password}
         <input id="li-pass" type="password" autocomplete="current-password" placeholder="••••••••" required />
       </label>
       <p class="err" id="li-err" role="alert"></p>
-      <button class="go" type="submit">Se connecter</button>
+      <button class="go" type="submit">${t.login}</button>
     </form>
 
     <form class="pane hidden" id="form-signup" novalidate>
-      <label>Nom
-        <input id="su-name" type="text" autocomplete="name" placeholder="Prénom Nom" required />
+      <label>${t.name}
+        <input id="su-name" type="text" autocomplete="name" placeholder="${t.namePlaceholder}" required />
       </label>
-      <label>Établissement
-        <input id="su-biz" type="text" autocomplete="organization" placeholder="Café Atlas" />
+      <label>${t.business}
+        <input id="su-biz" type="text" autocomplete="organization" placeholder="${t.businessPlaceholder}" />
       </label>
-      <label>E-mail
-        <input id="su-email" type="email" autocomplete="email" placeholder="vous@exemple.ma" required />
+      <label>${t.email}
+        <input id="su-email" type="email" autocomplete="email" placeholder="${t.emailPlaceholder}" required />
       </label>
-      <label>Mot de passe
-        <input id="su-pass" type="password" autocomplete="new-password" placeholder="8 caractères min." minlength="8" required />
+      <label>${t.password}
+        <input id="su-pass" type="password" autocomplete="new-password" placeholder="${t.passwordHint}" minlength="10" required />
       </label>
-      <p class="hint">Au moins 8 caractères.</p>
+      <p class="hint">${t.passwordHint}</p>
       <p class="err" id="su-err" role="alert"></p>
-      <button class="go" type="submit">Créer mon compte</button>
+      <button class="go" type="submit">${t.create}</button>
     </form>
     ${staffBlock}
     ${operatorBlock}
     <div class="foot">
-      <span>Données chiffrées</span>
+      <span>${t.encrypted}</span>
       <span class="dot-sep" aria-hidden="true"></span>
-      <span>Jamais revendues</span>
+      <span>${t.private}</span>
       <span class="dot-sep" aria-hidden="true"></span>
-      <span>Sans engagement</span>
+      <span>${t.flexible}</span>
     </div>
   </main>
 <script>
@@ -774,16 +1169,8 @@ function authPage(opts) {
   tLogin.addEventListener('click', function(){ setMode('login'); });
   tSignup.addEventListener('click', function(){ setMode('signup'); });
 
-  var MSG = {
-    email: 'Adresse e-mail invalide.',
-    name: 'Indiquez votre nom.',
-    weak: 'Mot de passe : 8 caractères minimum.',
-    exists: 'Cet e-mail a déjà un compte — connectez-vous.',
-    'bad-creds': 'E-mail ou mot de passe incorrect.',
-    'bad-json': 'Requête invalide.',
-    'not-configured': 'Service momentanément indisponible.'
-  };
-  function fail(code){ return MSG[code] || 'Une erreur est survenue. Réessayez.'; }
+  var MSG = ${JSON.stringify(t.errors)};
+  function fail(code){ return MSG[code] || MSG.fallback; }
   function val(id){ var el = document.getElementById(id); return el ? el.value : ''; }
 
   // On success we go straight INTO the product, never a bare location.reload()
@@ -791,7 +1178,7 @@ function authPage(opts) {
   // marketing landing page instead of the dashboard). Login → the dashboard
   // (their PIN lock). Signup → the dashboard with ?onboarding=1, which forces
   // the setup wizard to open (assets/onboarding.js) even over any stale demo
-  // state — a brand-new merchant has no PIN yet and must reach setup, not a
+  // state · a brand-new merchant has no PIN yet and must reach setup, not a
   // PIN prompt for a code they never chose.
   function post(u, data, errEl, btn, dest){
     errEl.textContent = '';
@@ -799,33 +1186,48 @@ function authPage(opts) {
     fetch(u, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) })
       .then(function(r){
         if (r.ok){ location.assign(dest || '/dashboard'); return; }
-        return r.json().then(function(j){ errEl.textContent = fail(j && j.error); btn.disabled = false; },
-                             function(){ errEl.textContent = fail(); btn.disabled = false; });
+        return r.json().then(function(j){
+          var msg = (j && j.reason && MSG[j.reason]) || fail(j && j.error);
+          errEl.textContent = msg;
+          btn.disabled = false;
+        }, function(){ errEl.textContent = fail(); btn.disabled = false; });
       })
-      .catch(function(){ errEl.textContent = 'Erreur réseau. Réessayez.'; btn.disabled = false; });
+      .catch(function(){ errEl.textContent = MSG.network; btn.disabled = false; });
   }
 
   fLogin.addEventListener('submit', function(e){
     e.preventDefault();
     post('/auth/login', { email: val('li-email'), password: val('li-pass') },
-         document.getElementById('li-err'), fLogin.querySelector('.go'), '/dashboard');
+         document.getElementById('li-err'), fLogin.querySelector('.go'), '/dashboard?lang=${lang}');
   });
   fSignup.addEventListener('submit', function(e){
     e.preventDefault();
     post('/auth/signup', { name: val('su-name'), business: val('su-biz'), email: val('su-email'), password: val('su-pass') },
-         document.getElementById('su-err'), fSignup.querySelector('.go'), '/dashboard?onboarding=1');
+         document.getElementById('su-err'), fSignup.querySelector('.go'), '/dashboard?onboarding=1&lang=${lang}');
   });
 
-  var staffToggle = document.getElementById('staff-toggle');
-  var staffForm = document.getElementById('staff-form');
-  if (staffToggle && staffForm){
-    staffToggle.addEventListener('click', function(){
-      staffForm.hidden = !staffForm.hidden;
-      if (!staffForm.hidden){ var i = staffForm.querySelector('input'); if (i) i.focus(); }
+  var suPass = document.getElementById('su-pass');
+  var suHint = document.querySelector('#form-signup .hint');
+  if (suPass && suHint) {
+    var STR = ${JSON.stringify(t.strength)};
+    suPass.addEventListener('input', function() {
+      var v = suPass.value || '';
+      if (!v) { suHint.textContent = '${t.passwordHint}'; return; }
+      if (v.length < 10) {
+        suHint.textContent = '${t.errors.short}' + ' · ' + STR.weak;
+        return;
+      }
+      var variety = 0;
+      if (/[a-z]/.test(v)) variety++;
+      if (/[A-Z]/.test(v)) variety++;
+      if (/[0-9]/.test(v)) variety++;
+      if (/[^a-zA-Z0-9]|\s/.test(v)) variety++;
+      var st = (v.length >= 16 || (v.length >= 12 && variety >= 2) || (v.length >= 10 && variety >= 3)) ? STR.strong : STR.medium;
+      suHint.textContent = STR.label + ' : ' + st;
     });
   }
 
-  // Hidden operator entry — long-press (~1.4s) the wordmark to reveal the code
+  // Hidden operator entry · long-press (~1.4s) the wordmark to reveal the code
   // prompt. No visible affordance; clients never stumble onto it.
   var mark = document.getElementById('brand-mark');
   var opForm = document.getElementById('op-form');

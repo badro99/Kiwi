@@ -166,7 +166,7 @@
              : !isRealSession() ? 'not-a-real-session'
              : biz.type !== 'boutique' ? 'type-is-' + biz.type
              : !products.length ? 'catalogue-empty'
-             : 'none — should publish',
+             : 'none · should publish',
       merchant: biz && biz.merchant,
       name: biz && biz.name,
       resolvedType: biz && biz.type,
@@ -235,18 +235,203 @@
   /* ───────────────── media upload ─────────────────
    * Turns a chosen File into a URL. Everything about media in Kiwi hangs off
    * this: catalogues store what it returns, never the bytes. */
+  var MAX_PHOTO = 16 * 1024 * 1024;   // filet de sécurité : la photo est rétrécie AVANT (voir shrinkPhoto)
+  var MAX_VIDEO = 48 * 1024 * 1024;   // ≈ 20 s de vidéo 1080p de téléphone
+
+  /* ── Rétrécir la photo dans le navigateur, avant tout envoi ─────────────
+   * Un téléphone de 2026 sort des JPEG de 10 à 14 Mo pour une photo de
+   * croissant ; une carte en ligne n'affiche jamais plus de ~1600 px. On
+   * décode donc ici, on ramène le grand côté à PHOTO_EDGE, on ré-encode en
+   * JPEG : 12 Mo → ~300 Ko. Trois gains d'un coup — le plafond ne se voit
+   * plus, l'envoi passe en deux secondes sur la 4G du café, et la carte du
+   * client charge vite. createImageBitmap respecte l'orientation EXIF (une
+   * photo prise à la verticale reste verticale), et Safari décode le HEIC :
+   * une photo HEIC de l'iPad part donc en JPEG au lieu d'être refusée.
+   *
+   * Ce qu'on ne touche pas : les GIF (animation), les petits PNG (un logo
+   * avec transparence), et tout fichier qu'on n'arrive pas à décoder — dans
+   * ce cas il part tel quel et c'est le serveur qui dit précisément pourquoi
+   * (format, taille). Jamais de refus silencieux côté navigateur. */
+  var PHOTO_EDGE = 1600;
+  var PHOTO_QUALITY = 0.82;
+  var PHOTO_KEEP_BELOW = 700 * 1024;   // en dessous, le gain ne vaut pas le recodage
+
+  function decodeImage(file) {
+    if (typeof createImageBitmap === 'function') {
+      return createImageBitmap(file, { imageOrientation: 'from-image' })
+        .catch(function () { return createImageBitmap(file); })
+        .catch(function () { return decodeViaImg(file); });
+    }
+    return decodeViaImg(file);
+  }
+  function decodeViaImg(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('decode')); };
+      img.src = url;
+    });
+  }
+  function shrinkPhoto(file) {
+    var type = (file && file.type) || '';
+    if (!/^image\//.test(type) || /gif/.test(type)) return Promise.resolve(file);
+    if (/png/.test(type) && file.size <= PHOTO_KEEP_BELOW * 2) return Promise.resolve(file);
+    if (file.size <= PHOTO_KEEP_BELOW) return Promise.resolve(file);
+    if (typeof document === 'undefined' || !document.createElement) return Promise.resolve(file);
+    return decodeImage(file).then(function (src) {
+      var w = src.width || src.naturalWidth || 0, h = src.height || src.naturalHeight || 0;
+      if (!w || !h) return file;
+      var scale = Math.min(1, PHOTO_EDGE / Math.max(w, h));
+      var tw = Math.max(1, Math.round(w * scale)), th = Math.max(1, Math.round(h * scale));
+      var canvas = document.createElement('canvas');
+      canvas.width = tw; canvas.height = th;
+      var ctx = canvas.getContext('2d');
+      if (!ctx) return file;
+      ctx.drawImage(src, 0, 0, tw, th);
+      if (src.close) { try { src.close(); } catch (_) {} }
+      return new Promise(function (resolve) {
+        canvas.toBlob(function (blob) {
+          if (!blob || blob.size >= file.size) { resolve(file); return; }
+          var name = String(file.name || 'photo').replace(/\.[A-Za-z0-9]{1,6}$/, '') + '.jpg';
+          try { resolve(new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() })); }
+          catch (_) { blob.name = name; resolve(blob); }
+        }, 'image/jpeg', PHOTO_QUALITY);
+      });
+    }).catch(function () { return file; });
+  }
+
+  /* Tout échec sort d'ici avec les MÊMES champs — code, taille réelle, plafond,
+   * type, extension — pour qu'un appelant n'ait jamais à redeviner ce qui s'est
+   * passé. Trois surfaces appellent uploadMedia (carte restaurant, boutique,
+   * atelier menu) et les trois écrivaient leur propre échelle de messages : la
+   * même phrase vague y était recopiée trois fois, et aucune des trois ne
+   * connaissait les chiffres. */
+  function fileFacts(file) {
+    var type = (file && file.type) || '';
+    return {
+      name: (file && file.name) || '', type: type, size: (file && file.size) || 0,
+      kind: /^video\//.test(type) ? 'video' : 'photo',
+    };
+  }
+  function failure(code, file, extra) {
+    var out = { ok: false, error: code || 'upload-failed' }, facts = fileFacts(file), k;
+    for (k in facts) out[k] = facts[k];
+    if (extra) for (k in extra) if (extra[k] != null) out[k] = extra[k];
+    if (!out.max) out.max = out.kind === 'video' ? MAX_VIDEO : MAX_PHOTO;
+    return out;
+  }
+
   function uploadMedia(file) {
-    if (!file) return Promise.resolve({ ok: false, error: 'no-file' });
-    return fetch('/api/media?name=' + encodeURIComponent(file.name || 'file'), {
+    if (!file) return Promise.resolve(failure('no-file', file));
+    return shrinkPhoto(file).then(function (ready) { return sendMedia(ready || file); });
+  }
+  function sendMedia(file) {
+    /* /api/media authorizes the exact selected store, not merely the account.
+     * Since the owner-only hardening, omitting `merchant` makes every otherwise
+     * valid dashboard upload look unauthenticated. Keep the store derived from
+     * the same pinned venue identity used by catalogue publishing; never
+     * re-slugify the editable display name here. */
+    var biz = currentBiz();
+    var merchant = biz ? biz.merchant : '';
+    var resilient = window.KiwiPlatformOps && window.KiwiPlatformOps.uploads;
+    if (resilient && typeof resilient.upload === 'function') {
+      return resilient.upload(file, { merchant: merchant }).catch(function (error) {
+        return failure((error && (error.code || error.message)) || 'upload-failed', file, error && error.detail);
+      });
+    }
+    var mediaUrl = '/api/media?name=' + encodeURIComponent(file.name || 'file');
+    if (merchant) mediaUrl += '&merchant=' + encodeURIComponent(merchant);
+    return fetch(mediaUrl, {
       method: 'POST',
       headers: { 'Content-Type': file.type || 'application/octet-stream' },
       body: file,
     }).then(function (r) {
       return r.json().catch(function () { return null; }).then(function (j) {
         if (r.ok && j && j.ok) return j;             // { ok, url, kind }
-        return { ok: false, error: (j && j.error) || ('http-' + r.status), status: r.status };
+        return failure((j && j.error) || ('http-' + r.status), file, { status: r.status, max: j && j.max });
       });
-    }).catch(function () { return { ok: false, error: 'network' }; });
+    }).catch(function () { return failure('network', file); });
+  }
+
+  /* ── Dire ce qui ne va pas, avec le chiffre ──────────────────────────
+   * « Envoi impossible, réessayez » demande à un commerçant de refaire ce qui
+   * vient d'échouer, sans lui dire que sa vidéo fait 38 Mo pour un plafond de
+   * 24. Chaque refus rend ici sa cause ET sa mesure ; seule une vraie panne
+   * réseau mérite « réessayez », parce que c'est la seule où réessayer marche. */
+  function lang() {
+    try { if (window.KiwiI18n && KiwiI18n.getLang) return KiwiI18n.getLang() || 'fr'; } catch (_) {}
+    try { return localStorage.getItem('kiwiLang') || 'fr'; } catch (_) {}
+    return 'fr';
+  }
+  function pick(d) { var l = lang(); return d[l] || d.fr; }
+  /* Un nombre suivi de son unité se fait couper en RTL et se relit « Mo 38 ».
+   * L'isolat le tient ensemble sans toucher au sens. */
+  function unit(n, u) { var s = n + ' ' + u; return lang() === 'ar' ? '\u2068' + s + '\u2069' : s; }
+  function mb(bytes) {
+    var v = (Number(bytes) || 0) / 1048576;
+    return unit(v >= 10 ? Math.round(v) : Math.round(v * 10) / 10,
+                pick({ fr: 'Mo', en: 'MB', ar: '\u0645.\u0628' }));
+  }
+  function extOf(name) {
+    var m = String(name || '').match(/\.([A-Za-z0-9]{1,6})$/);
+    return m ? '.' + m[1].toLowerCase() : '';
+  }
+
+  function uploadError(res) {
+    var code = (res && res.error) || 'upload-failed';
+    var video = (res && res.kind) === 'video';
+    var size = mb(res && res.size);
+    var max = mb((res && res.max) || (video ? MAX_VIDEO : MAX_PHOTO));
+    var got = extOf(res && res.name) || (res && res.type) || '';
+    var okList = video ? 'MP4, WebM, MOV' : 'JPG, PNG, WebP, AVIF, GIF';
+
+    if (code === 'too-large') return pick({
+      fr: (video ? 'Vidéo trop lourde' : 'Photo trop lourde') + ' : ' + size + '. Le maximum est ' + max + '.',
+      en: (video ? 'Video too large' : 'Photo too large') + ': ' + size + '. The maximum is ' + max + '.',
+      ar: (video ? '\u0627\u0644\u0641\u064a\u062f\u064a\u0648 \u062b\u0642\u064a\u0644 \u0628\u0632\u0627\u0641' : '\u0627\u0644\u0635\u0648\u0631\u0629 \u062b\u0642\u064a\u0644\u0629 \u0628\u0632\u0627\u0641') + ': ' + size + '. \u0627\u0644\u062d\u062f \u0627\u0644\u0623\u0642\u0635\u0649 ' + max + '.',
+    });
+    if (code === 'bad-type') return pick({
+      fr: (got ? 'Format ' + got + ' non pris en charge.' : 'Format non pris en charge.') + ' Formats acceptés : ' + okList + '.',
+      en: (got ? 'Format ' + got + ' is not supported.' : 'Format not supported.') + ' Accepted: ' + okList + '.',
+      ar: (got ? '\u0635\u064a\u063a\u0629 ' + got + ' \u0645\u0627\u062e\u062f\u0627\u0645\u0627\u0634.' : '\u0627\u0644\u0635\u064a\u063a\u0629 \u0645\u0627\u062e\u062f\u0627\u0645\u0627\u0634.') + ' \u0627\u0644\u0635\u064a\u063a \u0627\u0644\u0645\u0642\u0628\u0648\u0644\u0629: ' + okList + '.',
+    });
+    if (code === 'empty' || code === 'no-file') return pick({
+      fr: 'Ce fichier est vide · rien à envoyer.',
+      en: 'That file is empty · there is nothing to send.',
+      ar: '\u0647\u0627\u062f \u0627\u0644\u0645\u0644\u0641 \u062e\u0627\u0648\u064a.',
+    });
+    if (code === 'offline') return pick({
+      fr: 'Vous êtes hors ligne. Le fichier partira dès le retour du réseau.',
+      en: "You're offline. The file will go out as soon as the network is back.",
+      ar: '\u0646\u062a\u0627 \u062e\u0627\u0631\u062c \u0627\u0644\u0634\u0628\u0643\u0629. \u0627\u0644\u0645\u0644\u0641 \u063a\u0627\u062f\u064a \u064a\u0645\u0634\u064a \u0645\u0644\u064a \u062a\u0631\u062c\u0639.',
+    });
+    if (code === 'no-media' || code === 'not-configured') return pick({
+      fr: 'Stockage média pas encore activé sur votre compte.',
+      en: "Media storage isn't enabled on your account yet.",
+      ar: '\u062a\u062e\u0632\u064a\u0646 \u0627\u0644\u0645\u064a\u062f\u064a\u0627 \u0645\u0627\u0632\u0627\u0644 \u0645\u0627\u062a\u0641\u0639\u0651\u0644\u0634 \u0641\u0627\u0644\u062d\u0633\u0627\u0628 \u062f\u064a\u0627\u0644\u0643.',
+    });
+    if (code === 'unauthorized' || code === 'http-401') return pick({
+      fr: 'Votre session a expiré. Reconnectez-vous, puis renvoyez le fichier.',
+      en: 'Your session expired. Sign in again, then send the file.',
+      ar: '\u0627\u0644\u062c\u0644\u0633\u0629 \u0633\u0627\u0644\u0627\u062a. \u062f\u062e\u0644 \u0645\u0646 \u062c\u062f\u064a\u062f \u0648\u0639\u0627\u0648\u062f \u0635\u064a\u0641\u0637.',
+    });
+    if (code === 'cancelled') return pick({
+      fr: 'Envoi annulé.', en: 'Upload cancelled.',
+      ar: '\u062a\u0644\u063a\u0627\u062a \u0627\u0644\u0639\u0645\u0644\u064a\u0629.',
+    });
+    if (code === 'network') return pick({
+      fr: 'Réseau interrompu pendant l’envoi. Réessayez.',
+      en: 'The network dropped during the upload. Try again.',
+      ar: '\u0627\u0644\u0634\u0628\u0643\u0629 \u062a\u0642\u0637\u0639\u0627\u062a. \u0639\u0627\u0648\u062f \u062c\u0631\u0651\u0628.',
+    });
+    /* Reste les pannes serveur : on nomme le code plutôt que de le cacher, il
+     * fait la différence entre un support qui devine et un support qui sait. */
+    return pick({
+      fr: 'Envoi impossible (' + code + '). Réessayez ; si cela persiste, envoyez ce code au support.',
+      en: 'Upload failed (' + code + '). Try again; if it persists, send that code to support.',
+      ar: '\u0645\u0627\u0645\u0634\u0627\u0634 \u0627\u0644\u0635\u064a\u0641\u0637 (' + code + '). \u0639\u0627\u0648\u062f \u062c\u0631\u0651\u0628.',
+    });
   }
 
   /* Is media storage actually live? The dashboard can ask before offering the
@@ -301,7 +486,11 @@
     diagnose: diagnose,
     schedule: schedule,
     uploadMedia: uploadMedia,
+    uploadError: uploadError,
     mediaReady: mediaReady,
+    shrinkPhoto: shrinkPhoto,
+    MAX_PHOTO: MAX_PHOTO,
+    MAX_VIDEO: MAX_VIDEO,
     merchant: function () { var b = currentBiz(); return b ? b.merchant : ''; },
     type: function () { var b = currentBiz(); return b ? b.type : ''; },
     state: function () { return { publishing: state.publishing, lastOk: state.lastOk, lastError: state.lastError }; },

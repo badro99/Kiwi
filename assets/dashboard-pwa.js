@@ -3,49 +3,121 @@
  * FR-only injected UI (matches caisse-pwa.js); no data-action / data-i18n. */
 (function () {
   'use strict';
+  // App native (Capacitor) : pas de service worker ni de bouton « Installer » —
+  // le bundle embarqué est versionné par la release (docs/roadmaps/KIWI_APP_PLAN.md §1.4).
+  if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) return;
 
   // Standalone (installed) detection → body.standalone gates the native layer.
   function isStandalone() {
     return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
            window.navigator.standalone === true;
   }
-  function markStandalone() { if (isStandalone() && document.body) document.body.classList.add('standalone'); }
+  function markStandalone() {
+    if (isStandalone() && document.body) document.body.classList.add('standalone');
+  }
   if (document.readyState !== 'loading') markStandalone();
   else document.addEventListener('DOMContentLoaded', markStandalone);
 
   // Register the shared root service worker.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/kiwi-sw.js').then(function (reg) {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=553').then(function (reg) {
+        try { reg.update(); } catch (_) {}
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
       }).catch(function () {});
     });
   }
 
-  // Install affordance — a branded button surfaced when the browser offers install.
+  // Install affordance — lives in the sidebar instead of floating over cards.
   var deferred = null;
   window.addEventListener('beforeinstallprompt', function (e) {
-    e.preventDefault(); deferred = e; showInstall();
+    e.preventDefault(); deferred = e; renderInstallCard();
   });
-  function showInstall() {
-    if (document.getElementById('kiwi-install') || !document.body) return;
-    var b = document.createElement('button');
-    b.id = 'kiwi-install';
-    b.type = 'button';
-    b.textContent = 'Installer Kiwi';
-    b.style.cssText = 'position:fixed;right:16px;bottom:96px;z-index:9998;padding:12px 18px;' +
-      'border:0;border-radius:12px;background:#0B6E4F;color:#F7F5F0;font:600 14px/1 "Inter Tight",system-ui;' +
-      'box-shadow:0 8px 24px -8px rgba(11,110,79,.5);cursor:pointer';
-    b.addEventListener('click', function () {
-      if (!deferred) return;
-      deferred.prompt();
-      deferred.userChoice.finally(function () { deferred = null; b.remove(); });
-    });
-    document.body.appendChild(b);
+
+  var COPY = {
+    fr: {
+      eyebrow: 'APPLICATION KIWI', title: 'Kiwi, toujours à portée de main.',
+      body: 'Installez votre tableau de bord pour un accès rapide, même avec une connexion instable.',
+      quick: 'Accès rapide', offline: 'Prêt hors ligne', install: 'Installer Kiwi',
+      installed: 'Kiwi est installée', hint: 'Ouvrez le menu du navigateur puis choisissez « Installer Kiwi ».'
+    },
+    en: {
+      eyebrow: 'KIWI APP', title: 'Kiwi, always within reach.',
+      body: 'Install your dashboard for faster access, even when your connection is unreliable.',
+      quick: 'Quick access', offline: 'Offline ready', install: 'Install Kiwi',
+      installed: 'Kiwi is installed', hint: 'Open your browser menu and choose “Install Kiwi”.'
+    },
+    ar: {
+      eyebrow: 'تطبيق KIWI', title: 'Kiwi في متناول يدك دائماً.',
+      body: 'ثبّت لوحة التحكم للوصول السريع حتى عندما يكون الاتصال غير مستقر.',
+      quick: 'وصول سريع', offline: 'يعمل دون اتصال', install: 'تثبيت Kiwi',
+      installed: 'تم تثبيت Kiwi', hint: 'افتح قائمة المتصفح ثم اختر «تثبيت Kiwi».'
+    }
+  };
+
+  function language() {
+    var l = window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang();
+    return l === 'en' || l === 'ar' ? l : 'fr';
   }
-  window.addEventListener('appinstalled', function () {
-    var b = document.getElementById('kiwi-install'); if (b) b.remove();
+
+  function renderInstallCard() {
+    var wrap = document.querySelector('[data-upsell]');
+    if (!wrap) return;
+    var c = COPY[language()] || COPY.fr;
+    var installed = isStandalone();
+    wrap.className = 'upsell kiwi-app-install-card' + (installed ? ' is-installed' : '');
+    wrap.innerHTML =
+      '<div class="kiwi-install-head"><span class="kiwi-install-mark" aria-hidden="true">' +
+        '<img src="assets/kiwi-favicon-new.svg" alt="" width="18" height="18">' +
+      '</span><span class="t">' + c.eyebrow + '</span></div>' +
+      '<h4>' + c.title + '</h4>' +
+      '<p>' + c.body + '</p>' +
+      '<div class="kiwi-install-benefits"><span><i></i>' + c.quick + '</span><span><i></i>' + c.offline + '</span></div>' +
+      '<button type="button" data-pwa-install' + (installed ? ' disabled' : '') + '>' +
+        (installed
+          ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4L19 6"/></svg>'
+          : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M5 21h14"/></svg>') +
+        '<span>' + (installed ? c.installed : c.install) + '</span>' +
+      '</button>';
+  }
+
+  function install() {
+    if (isStandalone()) return;
+    if (!deferred) {
+      window.alert((COPY[language()] || COPY.fr).hint);
+      return;
+    }
+    deferred.prompt();
+    deferred.userChoice.finally(function () {
+      deferred = null;
+      renderInstallCard();
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('[data-pwa-install]')) return;
+    install();
   });
+
+  window.addEventListener('appinstalled', function () {
+    deferred = null;
+    if (document.body) document.body.classList.add('standalone');
+    renderInstallCard();
+  });
+
+  function bindVenue() {
+    if (!window.KiwiVenue || typeof window.KiwiVenue.subscribe !== 'function') {
+      setTimeout(bindVenue, 40);
+      return;
+    }
+    window.KiwiVenue.subscribe(renderInstallCard);
+    renderInstallCard();
+  }
+  window.addEventListener('kiwi:langchange', renderInstallCard);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindVenue);
+  else bindVenue();
+
+  window.KiwiPWAInstall = { install: install, render: renderInstallCard, isStandalone: isStandalone };
 
   // Offline banner — honest "showing last-cached data" reflection (styled in
   // dashboard-native.css as #kiwi-offline).

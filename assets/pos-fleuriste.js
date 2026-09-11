@@ -7,7 +7,7 @@
  *      pressing), un bouquet qui se construit en direct (total + taille S/M/L
  *      suggérée), plus deux bouquets signatures, et l'emballage kraft/satin.
  *   2. OCCASION & CARTE : l'occasion (la copie s'adapte avec pudeur pour le
- *      deuil) et la carte-message imprimée en Instrument Serif, petit format.
+ *      deuil) et la carte-message imprimée en Inter Tight, petit format.
  *   3. LIVRAISONS DU JOUR : un tableau par créneau (10–12 / 14–16 / 16–19),
  *      adresses de Tanger, statut préparé → en route → livré, destinataire ≠
  *      acheteur, et la confiance : photo du bouquet avant le départ.
@@ -23,8 +23,8 @@
 
   /* ── demo-people guard : a real store (paired venue / KiwiEnv) starts clean,
      local demo stays byte-identical (pvReal() === false → same output). ── */
-  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
-  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvPaired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
   function pvName(demo) { const p = pvPaired(); return (p && p.name) || (pvReal() ? '' : demo); }
   function pvCity(demo) { const p = pvPaired(); return (p && p.location) || (pvReal() ? '' : demo); }
 
@@ -313,6 +313,7 @@
   function moveCaretEnd(input) { const v = input.value; input.value = ''; input.value = v; }
 
   function queueIfOffline(label) {
+    if (fleuristeOps) fleuristeOps.save(label);
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -330,9 +331,28 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
-  function postDay(total, method, label, ref) {
+  function allocateLines(rows, received) {
+    const gross = rows.reduce((s, r) => s + r.base, 0);
+    let allocated = 0;
+    return rows.map((r, i) => {
+      const total = i === rows.length - 1 ? Math.max(0, received - allocated) : Math.round((received * r.base / Math.max(1, gross)) * 100) / 100;
+      allocated += total;
+      return { itemId: r.id, name: r.name, category: r.category, qty: r.qty, unit: r.unit, kind: 'product', total };
+    });
+  }
+  function bouquetSaleLines(b, received) {
+    const rows = [];
+    Object.keys(b.stems).forEach((id) => rows.push({ id, name: STEM[id].label, category: 'tiges', qty: b.stems[id], unit: 'tige', base: unitPrice(id) * b.stems[id] }));
+    b.presets.forEach((p) => rows.push({ id: p.id, name: PRESET[p.id].label, category: 'bouquets-signature', qty: 1, unit: 'bouquet', base: PRESET[p.id].price }));
+    if (WRAP[b.wrap].price) rows.push({ id: `emballage-${b.wrap}`, name: WRAP[b.wrap].label, category: 'emballage', qty: 1, unit: 'service', base: WRAP[b.wrap].price });
+    return allocateLines(rows, received);
+  }
+  function deliverySaleLines(order, received) {
+    return allocateLines(order.items.map((it, i) => ({ id: it.id || `composition-${i + 1}`, name: it.label, category: it.kind || 'bouquet', qty: 1, unit: 'bouquet', base: it.total })), received);
+  }
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('fleuriste', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('fleuriste', { total, method, label, ref, lines });
     } catch (_) {}
   }
   /* Le numéro de bon repart AU-DELÀ du dernier encaissé aujourd'hui : sans ça
@@ -340,13 +360,48 @@
      même numéro. Démo : journal vide, aucun effet. */
   try { if (window.KiwiPosSale) bouquetSeq = window.KiwiPosSale.nextSeq('fleuriste', bouquetSeq); } catch (_) {}
 
+  const fleuristeOps = window.KiwiVerticalState && window.KiwiVerticalState.register({
+    vertical: 'fleuriste',
+    snapshot() {
+      return {
+        customers: CUSTOMERS,
+        deliveries: DELIVERIES,
+        arrivals: ARRIVALS,
+        saleState,
+        deliverySeq,
+        bouquetSeq,
+        bouquet: state.bouquet,
+      };
+    },
+    restore(saved) {
+      if (!saved || typeof saved !== 'object') return;
+      if (Array.isArray(saved.customers)) CUSTOMERS.splice(0, CUSTOMERS.length, ...saved.customers);
+      Object.keys(CUST).forEach((id) => delete CUST[id]);
+      CUSTOMERS.forEach((customer) => { CUST[customer.id] = customer; });
+      if (Array.isArray(saved.deliveries)) DELIVERIES.splice(0, DELIVERIES.length, ...saved.deliveries);
+      DELIVERIES.forEach((delivery) => {
+        if (delivery.createdAt) delivery.createdAt = new Date(delivery.createdAt);
+        if (delivery.doneAt) delivery.doneAt = new Date(delivery.doneAt);
+      });
+      if (Array.isArray(saved.arrivals)) ARRIVALS.splice(0, ARRIVALS.length, ...saved.arrivals);
+      if (saved.saleState && typeof saved.saleState === 'object') {
+        Object.keys(saleState).forEach((id) => delete saleState[id]);
+        Object.assign(saleState, saved.saleState);
+      }
+      if (Number.isFinite(saved.deliverySeq)) deliverySeq = saved.deliverySeq;
+      if (Number.isFinite(saved.bouquetSeq)) bouquetSeq = saved.bouquetSeq;
+      if (saved.bouquet) state.bouquet = saved.bouquet;
+    },
+  });
+
   /* ═══════════════════════ MOUNT ═══════════════════════ */
   function mount(rootEl) {
+    if (fleuristeOps) fleuristeOps.hydrate();
     root = rootEl;
     if (!state.bouquet) freshBouquet();
     root.innerHTML = `
       <aside class="fl-rail">
-        <div class="fl-brand">kiwi<i></i></div>
+        <div class="fl-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="fl-venue">
           <div class="fl-venue-name">${pvName('Fleurs du Détroit') || 'Ma boutique'}</div>
           <div class="fl-venue-sub">${pvReal() ? (pvCity('') || '') : 'Tanger · Marché central'}<br>Le même Kiwi, <b>un seul compte</b>.</div>
@@ -614,7 +669,7 @@
       <div class="fl-bq-size">
         <div class="fl-bq-size-top">
           <span class="fl-bq-size-lbl"><i data-lucide="flower-2"></i>${count} tige${count > 1 ? 's' : ''}${b.presets.length ? ` · ${b.presets.length} signature${b.presets.length > 1 ? 's' : ''}` : ''}</span>
-          <span class="fl-bq-size-val">${size ? `${esc(size.label)} <b>(${size.id})</b>` : '—'}</span>
+          <span class="fl-bq-size-val">${size ? `${esc(size.label)} <b>(${size.id})</b>` : '·'}</span>
         </div>
         <div class="fl-bq-bar ${reduceMotion() ? 'reduce' : ''}"><i style="width:${pct}%"></i></div>
         <div class="fl-bq-ticks"><b class="${size && size.id === 'S' ? 'on' : ''}">S · &lt;10</b><b class="${size && size.id === 'M' ? 'on' : ''}">M · 10–20</b><b class="${size && size.id === 'L' ? 'on' : ''}">L · &gt;20</b></div>
@@ -622,9 +677,12 @@
 
       <div class="fl-bq-lines" id="fl-bq-lines">
         ${empty ? `
-          <div class="fl-bq-empty">
-            <i data-lucide="flower"></i>
-            <div>Le bouquet est vide.<br>Touchez une tige dans la grille, ou partez d'un bouquet signature.</div>
+          <div class="fl-bq-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">
+            <div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:4px;">
+              <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
+            </div>
+            <div style="font-weight:600; font-size:14px; color:var(--ink);">Le bouquet est vide.</div>
+            <div style="font-size:12.5px; color:var(--n-500); line-height:1.45;">Touchez une tige dans la grille, ou partez d'un bouquet signature.</div>
           </div>` : `
           ${b.presets.map((p, i) => presetLine(p, i)).join('')}
           ${Object.keys(b.stems).map((id) => stemLine(id)).join('')}`}
@@ -778,7 +836,7 @@
         <span class="fl-cp-spray">${ART[occ.deuil ? 'lys' : 'rose_rouge'] || ''}</span>
         <div class="fl-cp-occ">${esc(occ.deuil ? 'Avec nos condoléances' : occ.label)}</div>
         <div class="fl-cp-body ${has ? '' : 'placeholder'}">${has ? esc(b.message) : (occ.deuil ? 'Le mot du client apparaîtra ici.' : 'Le message du client apparaîtra ici, dans cette police.')}</div>
-        ${signer ? `<div class="fl-cp-sign">— ${esc(signer)}</div>` : ''}
+        ${signer ? `<div class="fl-cp-sign">·${esc(signer)}</div>` : ''}
         <div class="fl-cp-foot">${pvReal() ? (esc(pvName('')) + (pvCity('') ? ' · ' + esc(pvCity('')) : '')) : 'Fleurs du Détroit · Tanger'}</div>
         <div class="fl-cp-actions">
           <button class="fl-btn secondary" id="fl-cp-print" style="flex:1;"><i data-lucide="printer"></i>Imprimer la carte</button>
@@ -786,8 +844,10 @@
       </div>`;
     $('#fl-cp-print', host).onclick = () => {
       if (!has) { toast('Écrivez d\'abord le message de la carte'); return; }
-      queueIfOffline('Carte');
-      toast('Carte envoyée à l\'imprimante, jointe au bouquet');
+      const P = window.KiwiOperationalPrint;
+      if (!P) { toast('Impression indisponible'); return; }
+      P.printText({ title:occ.deuil ? 'Avec nos condoléances' : occ.label, paper:'A4', lines:[b.message, signer ? `·${signer}` : '', pvName('Fleurs du Détroit')] })
+        .then((r) => { if (r && r.ok) queueIfOffline('Carte imprimée'); toast(r && r.ok ? 'Impression système ouverte' : 'Impression impossible'); });
     };
     icons();
   }
@@ -893,7 +953,15 @@
         delivSlot = o.dataset.flSlot === 'none' ? null : o.dataset.flSlot;
         render();
       };
-      $('#fl-recap-print', el).onclick = () => toast('Envoyé, ticket (80 mm) + étiquette bouquet' + (b.message ? ' + carte' : ''));
+      $('#fl-recap-print', el).onclick = () => {
+        const P = window.KiwiOperationalPrint;
+        if (!P) { toast('Impression indisponible'); return; }
+        P.printText({ title:`Bouquet ${b.num}`, paper:'80', lines:[
+          { label:'Client', value:cust.name }, { label:'Occasion', value:occ.label },
+          { label:'Composition', value:`${count} tige${count > 1 ? 's' : ''} · ${WRAP[b.wrap].label}` },
+          b.message ? { label:'Carte', value:b.message } : { label:'Carte', value:'Sans message' },
+        ] }).then((r) => toast(r && r.ok ? 'Impression système ouverte · ticket et étiquette' : 'Impression impossible'));
+      };
       $('#fl-recap-pay', el).onclick = () => { closeVeil('#fl-recap-veil'); openPay({ b, delivSlot }); };
       icons();
     };
@@ -1037,7 +1105,7 @@
         <p class="modal-subtle">${settle ? order.id : ctx.b.num} · ${esc(cust.name)}</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="fl-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="fl-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="fl-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${amount}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1078,13 +1146,13 @@
       setTimeout(() => {
         const disc = $('#fl-reader-disc', el);
         if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#fl-reader-status', el).textContent = 'Khlass! Paiement confirmé sur le lecteur';
-        $('#fl-reader-status', el).classList.add('is-success');
-        icons();
-        setTimeout(() => done(amount, 'carte', mode, 0), 900);
+        const status = $('#fl-reader-status', el);
+        const hw = window.KiwiHardware;
+        if (!hw || !hw.authorizeCard) { disc.classList.remove('is-pulsing'); status.textContent = 'Paiement non confirmé · lecteur indisponible'; return; }
+        hw.authorizeCard(amount, disc, status).then((result) => {
+          icons();
+          if (result && result.approved) setTimeout(() => done(amount, 'carte', mode, 0), 900);
+        });
       }, 1900);
     };
 
@@ -1094,7 +1162,7 @@
         order.pay.method = method;
         /* Le solde d'une livraison est encaissé ici, pas à la prise de commande :
            c'est le seul moment où l'argent rentre vraiment. */
-        postDay(amount, method, `Solde ${order.id} · ${buyerLabel(order)}`, order.id);
+        postDay(amount, method, `Solde ${order.id} · ${buyerLabel(order)}`, order.id, deliverySaleLines(order, amount));
         closeVeil('#fl-pay-veil');
         toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
         if (typeof ctx.onSettled === 'function') ctx.onSettled();
@@ -1112,7 +1180,7 @@
       /* `pickup` et `compte` ne prennent rien au comptoir : seul l'argent
          réellement encaissé (paiement complet ou acompte) est une recette,
          le solde sera journalisé au passage par la branche `settle`. */
-      if (paid > 0) postDay(paid, method, `Bouquet · ${OCC[b.occ] ? OCC[b.occ].label : 'Composition'}`, b.num);
+      if (paid > 0) postDay(paid, method, `Bouquet · ${OCC[b.occ] ? OCC[b.occ].label : 'Composition'}`, b.num, bouquetSaleLines(b, paid));
       const cId = b.customer && b.customer.type === 'known' ? b.customer.id : null;
       if (ctx.delivSlot) {
         const created = mkDelivery({
@@ -1310,7 +1378,7 @@
     else if (d.doneAt) d.doneAt = null;
     queueIfOffline('Statut livraison');
     if (s === 'route') toast(`${d.id}, en route vers ${recipFirst(d)}`);
-    else if (s === 'done') toast(`${d.id} livré à ${esc(d.recipient.name)}, merci envoyé`);
+    else if (s === 'done') toast(`${d.id} marqué livré à ${esc(d.recipient.name)}`);
     openDelivDetail(d.id);
     refreshOps();
   }
@@ -1331,17 +1399,23 @@
         <button class="fl-vf-close" id="fl-vf-close">Fermer</button>
       </div>`;
     openVeil('#fl-photo-veil');
-    $('#fl-shutter', el).onclick = () => {
-      const flash = $('#fl-vf-flash', el);
-      flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
-      d.photo = true;
-      setTimeout(() => {
-        closeVeil('#fl-photo-veil');
-        queueIfOffline('Photo bouquet');
-        toast(`Photo de ${d.id} enregistrée, jointe au bon de livraison`);
-        if ($('#fl-dt-veil', root).classList.contains('is-open')) openDelivDetail(d.id);
-        refreshOps();
-      }, 420);
+    $('#fl-shutter', el).onclick = async () => {
+      if (!window.KiwiImageProof) { toast('Appareil photo indisponible'); return; }
+      try {
+        const photo = await KiwiImageProof.pick({ maxDimension: 720, quality: 0.68 });
+        if (!photo) return;
+        const flash = $('#fl-vf-flash', el);
+        flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
+        d.photo = true;
+        d.photoProof = photo;
+        setTimeout(() => {
+          closeVeil('#fl-photo-veil');
+          queueIfOffline('Photo bouquet');
+          toast(`Photo de ${d.id} enregistrée, jointe au bon de livraison`);
+          if ($('#fl-dt-veil', root).classList.contains('is-open')) openDelivDetail(d.id);
+          refreshOps();
+        }, 220);
+      } catch (_) { toast('Photo non enregistrée · vérifiez l’accès à l’appareil'); }
     };
     $('#fl-vf-close', el).onclick = () => closeVeil('#fl-photo-veil');
   }
@@ -1355,9 +1429,9 @@
       return `Bonjour, une composition de la part de ${buyerLabel(d)} sera remise aujourd'hui (${SLOT[d.slot].hours}) à l'adresse indiquée.`
         + `\nAvec nos sincères pensées, ${shopNm}.`;
     }
-    return `Sba7 lkhir ${first}, un bouquet vous attend de la part de ${buyerLabel(d)}.`
+    return `Bonjour ${first}, un bouquet vous attend de la part de ${buyerLabel(d)}.`
       + `\nLivraison prévue aujourd'hui, créneau ${SLOT[d.slot].hours}.`
-      + `\n— ${shopNm}, via Kiwi`;
+      + `\n·${shopNm}, via Kiwi`;
   }
 
   function openWa(d) {
@@ -1509,7 +1583,7 @@
           </div>` : `
           <div class="fl-cl-form">
             <input class="fl-in" id="fl-cl-name" placeholder="Nom et prénom" value="${esc(/^[\d\s.+-]*$/.test(q || '') ? '' : (q || ''))}" />
-            <input class="fl-in" id="fl-cl-tel" inputmode="tel" placeholder="Téléphone (optionnel)" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
+            <input class="fl-in" id="fl-cl-tel" inputmode="tel" autocomplete="tel" placeholder="06… / +33… (optionnel)" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
             <div class="fl-sheet-foot" style="margin-top:4px;">
               <button class="fl-btn secondary" id="fl-cl-back">Retour</button>
               <button class="fl-btn primary" id="fl-cl-create"><i data-lucide="check"></i>Créer la fiche</button>
@@ -1612,8 +1686,8 @@
   window.KiwiPosDispatch.register({
     id: 'fleuriste',
     greet: {
-      line1: 'Sba7 lkhir Rim,',
-      em: 'marhba.',
+      line1: 'Bonjour Rim,',
+      em: 'bienvenue.',
       sub: 'Fleurs du Détroit <em>·</em> l\'arrivage du matin est en boutique',
     },
     mount(rootEl) { mount(rootEl); },

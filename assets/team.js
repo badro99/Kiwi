@@ -69,7 +69,7 @@
       profileSub: (role, dept) => `${role} · ${dept}`,
       secIdentity:    'Identité',
       secContact:     'Contact',
-      secAccess:      'Accès Kiwi Caisse',
+      secAccess:      'Compte employé Kiwi',
       secRole:        'Rôle & affectation',
       secContract:    'Contrat',
       secComp:        'Rémunération',
@@ -80,7 +80,7 @@
       lastName:  'Nom',
       email:     'Email',
       phone:     'Téléphone',
-      password:  'Code caisse · 4 chiffres',
+      password:  'Code personnel · 4 chiffres',
       generate:  'Générer',
       copy:      'Copier',
       function:  'Fonction',
@@ -102,15 +102,17 @@
       editTitle: 'Modifier le membre',
       photoLabel:'Photo',
       uploadPhoto:'Téléverser une photo',
-      placeholder: { firstName: 'Sara', lastName: 'Belkadi', email: 'sara@kiwi.ma', phone: '6XX XX XX XX', address: 'Rue 12, Maarif, Casablanca', cin: 'BK 384721', emergencyName: 'Karim Belkadi', emergencyPhone: '6XX XX XX XX', notes: 'Allergie crustacés · disponibilité étendue le week-end' },
-      vRequired: 'Prénom, nom et fonction requis',
+      placeholder: { firstName: 'Sara', lastName: 'Belkadi', email: 'sara@kiwi-os.com', phone: '06… / +33…', address: 'Rue 12, Maarif, Casablanca', cin: 'BK 384721', emergencyName: 'Karim Belkadi', emergencyPhone: '06… / +33…', notes: 'Allergie crustacés · disponibilité étendue le week-end' },
+      vRequired: 'Prénom, nom, email et fonction requis',
       vInvalidEmail: 'Email invalide',
+      vDuplicateEmail: 'Cet email est déjà utilisé par un autre membre',
+      vDuplicateCode: 'Ce code est déjà utilisé par un autre membre',
       vEndAfterStart: "La date de fin doit être après la date de début",
-      vCode: "Le code caisse doit faire 4 chiffres",
-      payTitle: 'Paie & planning',
+      vCode: "Le code personnel doit faire 4 chiffres",
+      payTitle: 'Planning',
       paySub: 'planning, heures et paie de la période',
       payEmptyH: 'Ajoutez votre équipe pour commencer',
-      payEmptyP: "Le planning et la paie se construisent à partir de vos employés. Ajoutez-les dans Équipe, puis saisissez leurs heures ici — les totaux et le coût de la période se calculent tout seuls.",
+      payEmptyP: "Le planning et la paie se construisent à partir de vos employés. Ajoutez-les dans Équipe, puis saisissez leurs heures ici · les totaux et le coût de la période se calculent tout seuls.",
       payStatDue: 'À payer · période',
       payStatDueSub: (a, b) => `salaires de base + heures, ${a} au ${b}`,
       payStatHours: 'Heures de la période',
@@ -119,10 +121,10 @@
       payStatVarSub: 'heures × taux horaire',
       payStatBase: 'Salaires de base',
       payStatBaseSub: (n, tot) => `${n} sur ${tot} en service sur la période`,
-      codeKeep: 'Inchangé — 4 chiffres pour le modifier',
+      codeKeep: 'Inchangé · 4 chiffres pour le modifier',
       tabPlanning: 'Planning', tabRealised: 'Heures travaillées',
-      plNone: '—', plMember: 'Membre', plPlanned: 'Planifié', plCost: 'Coût prévu',
-      plApply: 'Reporter sur les heures', plClear: 'Vider le planning',
+      plNone: '·', plMember: 'Membre', plPlanned: 'Planifié', plCost: 'Coût prévu',
+      plApply: 'Valider en heures réalisées', plClear: 'Effacer cette période',
       plFooter: 'Total planifié',
       plHint: 'Cliquez une case pour saisir les heures exactes du service, ou marquer un jour de repos.',
       plApplied: (n) => `${n} journée${n > 1 ? 's' : ''} reportée${n > 1 ? 's' : ''} sur les heures.`,
@@ -138,6 +140,7 @@
       plSameTime: "L'heure de fin doit être différente de l'heure de début.",
       plWeekOf: (a, b) => `Semaine du ${a} au ${b}`,
       plPrevWeek: 'Semaine précédente', plNextWeek: 'Semaine suivante',
+      plPrevPeriod: 'Période précédente', plNextPeriod: 'Période suivante', plCurrentPeriod: 'Aujourd’hui',
       plPlannedPeriod: 'Planifié · période',
       plWeekApplied: (n) => `Service appliqué sur ${n} jour${n > 1 ? 's' : ''}.`,
       submitAdd:  'Ajouter le membre',
@@ -147,19 +150,20 @@
       delDesc:  'Action irréversible. Le compte Kiwi Caisse sera désactivé immédiatement.',
       delConfirm: 'Supprimer',
       tAdded:    (n) => `${n} ajouté·e à l'équipe`,
-      tAddedDesc:(p) => `Code caisse ${p} · utilisable tout de suite sur la caisse`,
+      tAddedDesc:(p) => `Code personnel ${p} · compte employé activé`,
       tUpdated:  (n) => `${n} · profil mis à jour`,
       tDeleted:  (n) => `${n} a été retiré·e de l'équipe`,
       tPwdCopied:'Code caisse copié',
       tPwdGen:   'Nouveau code caisse généré',
       // Hours pane
-      hPeriodWeek: 'Cette semaine',
+      hPeriodWeek: 'Semaine',
       hPeriodFort: 'Quinzaine',
-      hPeriodMonth:'Ce mois',
+      hPeriodMonth:'Mois',
       hQuickEntry:'Saisie rapide',
       hExport:    'Exporter CSV',
       hImport:    'Importer CSV',
       hValidate:  'Valider la période',
+      hUnlock:    'Déverrouiller la période',
       hMember:    'Membre',
       hTotal:     'Total heures',
       hPay:       'Salaire calculé',
@@ -178,7 +182,9 @@
       tImport:    'Import CSV',
       tImportDesc:'Glissez votre fichier · vérification automatique des en-têtes.',
       tValidated: (start, end) => `Période verrouillée · du ${start} au ${end}`,
-      tValidatedDesc: 'Heures envoyées à Paie & Planning · masse salariale recalculée.',
+      tValidatedDesc: 'Heures envoyées au planning · masse salariale recalculée.',
+      tUnlocked:  (start, end) => `Période déverrouillée · du ${start} au ${end}`,
+      tUnlockedDesc: 'Les heures et le planning peuvent à nouveau être modifiés.',
       placeholderPwd: '····',
       monthName: ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'],
       dayName:   ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'],
@@ -219,7 +225,7 @@
       profileSub: (role, dept) => `${role} · ${dept}`,
       secIdentity:    'Identity',
       secContact:     'Contact',
-      secAccess:      'Kiwi Caisse access',
+      secAccess:      'Kiwi employee account',
       secRole:        'Role & assignment',
       secContract:    'Contract',
       secComp:        'Compensation',
@@ -230,7 +236,7 @@
       lastName:  'Last name',
       email:     'Email',
       phone:     'Phone',
-      password:  'Till code · 4 digits',
+      password:  'Personal code · 4 digits',
       generate:  'Generate',
       copy:      'Copy',
       function:  'Function',
@@ -252,15 +258,17 @@
       editTitle: 'Edit member',
       photoLabel:'Photo',
       uploadPhoto:'Upload a photo',
-      placeholder: { firstName: 'Sara', lastName: 'Belkadi', email: 'sara@kiwi.ma', phone: '6XX XX XX XX', address: '12 Rue, Maarif, Casablanca', cin: 'BK 384721', emergencyName: 'Karim Belkadi', emergencyPhone: '6XX XX XX XX', notes: 'Shellfish allergy · extended weekend availability' },
-      vRequired: 'First name, last name and function are required',
+      placeholder: { firstName: 'Sara', lastName: 'Belkadi', email: 'sara@kiwi-os.com', phone: '06… / +33…', address: '12 Rue, Maarif, Casablanca', cin: 'BK 384721', emergencyName: 'Karim Belkadi', emergencyPhone: '06… / +33…', notes: 'Shellfish allergy · extended weekend availability' },
+      vRequired: 'First name, last name, email and function are required',
       vInvalidEmail: 'Invalid email',
+      vDuplicateEmail: 'Another member already uses this email',
+      vDuplicateCode: 'Another member already uses this code',
       vEndAfterStart: 'End date must be after the start date',
-      vCode: 'The till code must be 4 digits',
-      payTitle: 'Payroll & scheduling',
+      vCode: 'The personal code must be 4 digits',
+      payTitle: 'Planning',
       paySub: 'schedule, hours and pay for the period',
       payEmptyH: 'Add your team to get started',
-      payEmptyP: 'Scheduling and payroll are built from your employees. Add them under Team, then enter their hours here — period totals and cost work themselves out.',
+      payEmptyP: 'Scheduling and payroll are built from your employees. Add them under Team, then enter their hours here · period totals and cost work themselves out.',
       payStatDue: 'Due · period',
       payStatDueSub: (a, b) => `base salaries + hours, ${a} to ${b}`,
       payStatHours: 'Hours this period',
@@ -269,10 +277,10 @@
       payStatVarSub: 'hours × hourly rate',
       payStatBase: 'Base salaries',
       payStatBaseSub: (n, tot) => `${n} of ${tot} on duty this period`,
-      codeKeep: 'Unchanged — enter 4 digits to change it',
+      codeKeep: 'Unchanged · enter 4 digits to change it',
       tabPlanning: 'Schedule', tabRealised: 'Hours worked',
-      plNone: '—', plMember: 'Member', plPlanned: 'Scheduled', plCost: 'Projected cost',
-      plApply: 'Copy onto hours', plClear: 'Clear schedule',
+      plNone: '·', plMember: 'Member', plPlanned: 'Scheduled', plCost: 'Projected cost',
+      plApply: 'Confirm as hours worked', plClear: 'Clear this period',
       plFooter: 'Total scheduled',
       plHint: 'Click a cell to set the exact shift hours, or mark the day as time off.',
       plApplied: (n) => `${n} day${n > 1 ? 's' : ''} copied onto hours.`,
@@ -288,6 +296,7 @@
       plSameTime: 'The end time must differ from the start time.',
       plWeekOf: (a, b) => `Week of ${a} to ${b}`,
       plPrevWeek: 'Previous week', plNextWeek: 'Next week',
+      plPrevPeriod: 'Previous period', plNextPeriod: 'Next period', plCurrentPeriod: 'Today',
       plPlannedPeriod: 'Scheduled · period',
       plWeekApplied: (n) => `Shift applied to ${n} day${n > 1 ? 's' : ''}.`,
       submitAdd:  'Add member',
@@ -297,18 +306,19 @@
       delDesc:  'Permanent. The Kiwi Caisse account will be disabled immediately.',
       delConfirm: 'Remove',
       tAdded:    (n) => `${n} added to the team`,
-      tAddedDesc:(p) => `Till code ${p} · usable on the register right away`,
+      tAddedDesc:(p) => `Personal code ${p} · employee account enabled`,
       tUpdated:  (n) => `${n} · profile updated`,
       tDeleted:  (n) => `${n} has been removed from the team`,
       tPwdCopied:'Till code copied',
       tPwdGen:   'New till code generated',
-      hPeriodWeek: 'This week',
+      hPeriodWeek: 'Week',
       hPeriodFort: 'Fortnight',
-      hPeriodMonth:'This month',
+      hPeriodMonth:'Month',
       hQuickEntry:'Quick entry',
       hExport:    'Export CSV',
       hImport:    'Import CSV',
       hValidate:  'Validate period',
+      hUnlock:    'Unlock period',
       hMember:    'Member',
       hTotal:     'Total hours',
       hPay:       'Computed pay',
@@ -327,7 +337,9 @@
       tImport:    'CSV import',
       tImportDesc:'Drop your file · headers checked automatically.',
       tValidated: (start, end) => `Period locked · from ${start} to ${end}`,
-      tValidatedDesc: 'Hours sent to Payroll & Planning · wage cost recomputed.',
+      tValidatedDesc: 'Hours sent to Planning · wage cost recomputed.',
+      tUnlocked:  (start, end) => `Period unlocked · from ${start} to ${end}`,
+      tUnlockedDesc: 'Hours and planning can be edited again.',
       placeholderPwd: '····',
       monthName: ['January','February','March','April','May','June','July','August','September','October','November','December'],
       dayName:   ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
@@ -368,7 +380,7 @@
       profileSub: (role, dept) => `${role} · ${dept}`,
       secIdentity:    'الهوية',
       secContact:     'الاتصال',
-      secAccess:      'الوصول لـ Kiwi Caisse',
+      secAccess:      'حساب موظف Kiwi',
       secRole:        'المنصب والتكليف',
       secContract:    'العقد',
       secComp:        'الراتب',
@@ -379,7 +391,7 @@
       lastName:  'النسب',
       email:     'البريد الإلكتروني',
       phone:     'الهاتف',
-      password:  'رمز الصندوق · 4 أرقام',
+      password:  'الرمز الشخصي · 4 أرقام',
       generate:  'إنشاء',
       copy:      'نسخ',
       function:  'الوظيفة',
@@ -401,15 +413,17 @@
       editTitle: 'تعديل العضو',
       photoLabel:'الصورة',
       uploadPhoto:'تحميل صورة',
-      placeholder: { firstName: 'سارة', lastName: 'بلقاضي', email: 'sara@kiwi.ma', phone: '6XX XX XX XX', address: 'شارع 12، المعاريف، الدار البيضاء', cin: 'BK 384721', emergencyName: 'كريم بلقاضي', emergencyPhone: '6XX XX XX XX', notes: 'حساسية من القشريات · توفر موسع نهاية الأسبوع' },
-      vRequired: 'الاسم الأول والنسب والوظيفة مطلوبة',
+      placeholder: { firstName: 'سارة', lastName: 'بلقاضي', email: 'sara@kiwi-os.com', phone: '06… / +33…', address: 'شارع 12، المعاريف، الدار البيضاء', cin: 'BK 384721', emergencyName: 'كريم بلقاضي', emergencyPhone: '06… / +33…', notes: 'حساسية من القشريات · توفر موسع نهاية الأسبوع' },
+      vRequired: 'الاسم والنسب والبريد الإلكتروني والوظيفة مطلوبة',
       vInvalidEmail: 'بريد إلكتروني غير صالح',
+      vDuplicateEmail: 'هذا البريد مستعمل من طرف موظف آخر',
+      vDuplicateCode: 'هذا الرمز مستعمل من طرف موظف آخر',
       vEndAfterStart: 'يجب أن يكون تاريخ الانتهاء بعد تاريخ البدء',
-      vCode: 'رمز الصندوق يجب أن يكون 4 أرقام',
-      payTitle: 'الأجور والتخطيط',
+      vCode: 'يجب أن يكون الرمز الشخصي من 4 أرقام',
+      payTitle: 'التخطيط',
       paySub: 'التخطيط والساعات وأجور الفترة',
       payEmptyH: 'أضف فريقك للبدء',
-      payEmptyP: 'يُبنى التخطيط والأجور انطلاقاً من موظفيك. أضفهم في «الفريق»، ثم أدخل ساعاتهم هنا — تُحتسب المجاميع وتكلفة الفترة تلقائياً.',
+      payEmptyP: 'يُبنى التخطيط والأجور انطلاقاً من موظفيك. أضفهم في «الفريق»، ثم أدخل ساعاتهم هنا · تُحتسب المجاميع وتكلفة الفترة تلقائياً.',
       payStatDue: 'المستحق · الفترة',
       payStatDueSub: (a, b) => `الأجور الأساسية + الساعات، من ${a} إلى ${b}`,
       payStatHours: 'ساعات الفترة',
@@ -418,10 +432,10 @@
       payStatVarSub: 'الساعات × الأجر بالساعة',
       payStatBase: 'الأجور الأساسية',
       payStatBaseSub: (n, tot) => `${n} من ${tot} في الخدمة خلال الفترة`,
-      codeKeep: 'دون تغيير — أدخل 4 أرقام لتغييره',
+      codeKeep: 'دون تغيير · أدخل 4 أرقام لتغييره',
       tabPlanning: 'الجدول', tabRealised: 'ساعات العمل',
-      plNone: '—', plMember: 'العضو', plPlanned: 'مُجدول', plCost: 'التكلفة المتوقعة',
-      plApply: 'نقل إلى الساعات', plClear: 'مسح الجدول',
+      plNone: '·', plMember: 'العضو', plPlanned: 'مُجدول', plCost: 'التكلفة المتوقعة',
+      plApply: 'اعتمادها كساعات منجزة', plClear: 'مسح هذه الفترة',
       plFooter: 'إجمالي المجدول',
       plHint: 'انقر على خانة لإدخال ساعات الوردية بالضبط، أو لتحديد يوم راحة.',
       plApplied: (n) => `تم نقل ${n} يوم إلى الساعات.`,
@@ -437,6 +451,7 @@
       plSameTime: 'يجب أن تختلف ساعة النهاية عن ساعة البداية.',
       plWeekOf: (a, b) => `أسبوع من ${a} إلى ${b}`,
       plPrevWeek: 'الأسبوع السابق', plNextWeek: 'الأسبوع التالي',
+      plPrevPeriod: 'الفترة السابقة', plNextPeriod: 'الفترة التالية', plCurrentPeriod: 'اليوم',
       plPlannedPeriod: 'مُجدول · الفترة',
       plWeekApplied: (n) => `تم تطبيق الوردية على ${n} يوم.`,
       submitAdd:  'إضافة العضو',
@@ -446,18 +461,19 @@
       delDesc:  'إجراء نهائي. سيتم تعطيل حساب Kiwi Caisse فورًا.',
       delConfirm: 'إزالة',
       tAdded:    (n) => `تمت إضافة ${n} إلى الفريق`,
-      tAddedDesc:(p) => `رمز الصندوق ${p} · جاهز للاستعمال فوراً`,
+      tAddedDesc:(p) => `الرمز الشخصي ${p} · حساب الموظف مفعل`,
       tUpdated:  (n) => `${n} · تم تحديث الملف`,
       tDeleted:  (n) => `تمت إزالة ${n} من الفريق`,
       tPwdCopied:'تم نسخ رمز الصندوق',
       tPwdGen:   'تم إنشاء رمز صندوق جديد',
-      hPeriodWeek: 'هذا الأسبوع',
+      hPeriodWeek: 'أسبوع',
       hPeriodFort: 'نصف شهر',
-      hPeriodMonth:'هذا الشهر',
+      hPeriodMonth:'شهر',
       hQuickEntry:'إدخال سريع',
       hExport:    'تصدير CSV',
       hImport:    'استيراد CSV',
       hValidate:  'تأكيد الفترة',
+      hUnlock:    'فتح الفترة',
       hMember:    'العضو',
       hTotal:     'إجمالي الساعات',
       hPay:       'الأجر المحتسب',
@@ -476,7 +492,9 @@
       tImport:    'استيراد CSV',
       tImportDesc:'أفلت ملفك · يتم التحقق من الرؤوس تلقائيًا.',
       tValidated: (start, end) => `الفترة مقفلة · من ${start} إلى ${end}`,
-      tValidatedDesc: 'تم إرسال الساعات إلى الرواتب والتخطيط · أعيد حساب كتلة الأجور.',
+      tValidatedDesc: 'تم إرسال الساعات إلى التخطيط · أعيد حساب كتلة الأجور.',
+      tUnlocked:  (start, end) => `تم فتح الفترة · من ${start} إلى ${end}`,
+      tUnlockedDesc: 'يمكن تعديل الساعات والتخطيط من جديد.',
       placeholderPwd: '····',
       monthName: ['يناير','فبراير','مارس','أبريل','ماي','يونيو','يوليوز','غشت','شتنبر','أكتوبر','نونبر','دجنبر'],
       dayName:   ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'],
@@ -513,6 +531,58 @@
     boutique: {
       departments: ['Vente', 'Vitrine', 'Caisse', 'Stock', 'Management'],
       functions:   ['Vendeur conseil', 'Caissier', 'Magasinier', 'Visual merchandiser', 'Manager'],
+    },
+    pressing: {
+      departments: ['Accueil', 'Atelier', 'Repassage', 'Retouches', 'Livraison', 'Caisse', 'Management'],
+      functions:   ['Agent de réception', 'Opérateur lavage', 'Détacheur', 'Repasseur', 'Retoucheur', 'Livreur', 'Caissier', "Responsable d'atelier", 'Manager'],
+    },
+    hotel: {
+      departments: ['Réception', 'Réservations', 'Étages', 'Restauration', 'Maintenance', 'Caisse', 'Management'],
+      functions:   ['Réceptionniste', 'Concierge', 'Veilleur de nuit', 'Responsable réservations', 'Gouvernante', 'Femme de chambre', 'Valet de chambre', 'Bagagiste', 'Technicien de maintenance', 'Caissier', 'Manager'],
+    },
+    fastfood: {
+      departments: ['Cuisine', 'Comptoir', 'Livraison', 'Caisse', 'Stock', 'Management'],
+      functions:   ['Équipier polyvalent', 'Cuisinier', 'Préparateur', 'Caissier', 'Livreur', 'Plongeur', 'Responsable de shift', 'Manager'],
+    },
+    bakery: {
+      departments: ['Fournil', 'Pâtisserie', 'Vente', 'Caisse', 'Livraison', 'Management'],
+      functions:   ['Boulanger', 'Pâtissier', 'Tourier', 'Vendeur', 'Caissier', 'Livreur', 'Responsable de production', 'Manager'],
+    },
+    pizzeria: {
+      departments: ['Cuisine', 'Four', 'Comptoir', 'Salle', 'Livraison', 'Caisse', 'Management'],
+      functions:   ['Pizzaiolo', 'Aide-pizzaiolo', 'Préparateur', 'Serveur', 'Caissier', 'Livreur', 'Responsable de shift', 'Manager'],
+    },
+    traiteur: {
+      departments: ['Production', 'Logistique', 'Service', 'Commercial', 'Caisse', 'Management'],
+      functions:   ['Chef traiteur', 'Cuisinier', 'Commis', "Maître d'hôtel", 'Serveur événementiel', 'Chauffeur-livreur', 'Responsable logistique', 'Commercial', 'Caissier', 'Manager'],
+    },
+    foodtruck: {
+      departments: ['Cuisine', 'Comptoir', 'Tournée', 'Caisse', 'Stock', 'Management'],
+      functions:   ['Équipier food truck', 'Cuisinier', 'Préparateur', 'Caissier', 'Chauffeur', 'Responsable de tournée', 'Manager'],
+    },
+    librairie: {
+      departments: ['Vente', 'Commandes', 'Caisse', 'Stock', 'Management'],
+      functions:   ['Libraire', 'Conseiller', 'Caissier', 'Magasinier', 'Responsable commandes', 'Manager'],
+    },
+    maison: {
+      departments: ['Vente', 'Vitrine', 'Liste de mariage', 'Emballage', 'Livraison', 'Caisse', 'Stock', 'Management'],
+      functions:   ['Vendeur conseil', 'Conseiller liste de mariage', 'Emballeur', 'Livreur', 'Caissier', 'Magasinier', 'Visual merchandiser', 'Manager'],
+    },
+    fleuriste: {
+      departments: ['Atelier floral', 'Vente', 'Livraison', 'Caisse', 'Stock', 'Management'],
+      functions:   ['Fleuriste', 'Aide-fleuriste', 'Conseiller', 'Livreur', 'Caissier', "Responsable d'atelier", 'Manager'],
+    },
+    coiffure: {
+      departments: ['Coiffure', 'Coloration', 'Barbier', 'Accueil', 'Caisse', 'Management'],
+      functions:   ['Coiffeur', 'Coiffeuse', 'Coloriste', 'Barbier', 'Shampouineur', 'Réceptionniste', 'Caissier', 'Manager'],
+    },
+    sport: {
+      departments: ['Accueil', 'Coaching', 'Cours collectifs', 'Vente', 'Caisse', 'Entretien', 'Management'],
+      functions:   ['Coach sportif', 'Personal trainer', 'Professeur de cours collectif', 'Conseiller abonnements', 'Réceptionniste', 'Caissier', "Agent d'entretien", 'Manager'],
+    },
+    autre: {
+      departments: ['Opérations', 'Vente', 'Service', 'Caisse', 'Stock', 'Management'],
+      functions:   ['Agent polyvalent', 'Conseiller', 'Technicien', 'Caissier', 'Magasinier', 'Responsable', 'Manager'],
     },
   };
   function unionCatalog() {
@@ -590,7 +660,12 @@
           : (isCode(m.password) ? String(m.password).trim() : '');
         if (!code || seen[code]) return;                    // no code yet, or a duplicate
         seen[code] = 1;
-        pins.push({ code, name: memberFullName(m), role: m.function || m.department || 'staff' });
+        pins.push({
+          memberId: m.id || '', code, name: memberFullName(m),
+          firstName: m.firstName || '', lastName: m.lastName || '',
+          email: m.email || '', role: m.function || m.department || 'staff',
+          department: m.department || '', venueSlug: m.venueSlug || '',
+        });
       });
       window.KiwiConfig.syncPins(pins);
     } catch (_) {}
@@ -670,7 +745,7 @@
         id: 'mem-' + Math.random().toString(36).slice(2, 9),
         firstName: first,
         lastName: last,
-        email: (first + '.' + last).toLowerCase().replace(/[^a-z.]/g, '') + '@kiwi.ma',
+        email: (first + '.' + last).toLowerCase().replace(/[^a-z.]/g, '') + '@kiwi-os.com',
         phone: '+212 6 ' + (10 + i) + ' ' + (40 + i * 3) + ' ' + (10 + i * 2) + ' ' + (20 + i),
         password: makeCode(),
         function: fn,
@@ -687,7 +762,7 @@
         cin: ['BK', 'AB', 'JC', 'TK', 'MR'][i % 5] + ' ' + (300000 + i * 4317),
         emergencyName: ['Karim Belkadi','Sofia Mansouri','Hassan Berrada','Nadia Tazi','Hicham Lhassani'][i % 5],
         emergencyPhone: '+212 6 22 ' + (30 + i * 2) + ' ' + (10 + i * 3) + ' ' + (40 + i),
-        notes: ['Disponible week-end','Demande horaires aménagés mardi','Allergies alimentaires connues','Permis B','—'][i % 5],
+        notes: ['Disponible week-end','Demande horaires aménagés mardi','Allergies alimentaires connues','Permis B','·'][i % 5],
         avatarTone: AVATAR_TONES[i % AVATAR_TONES.length],
         venueType,
         createdAt: Date.now() - i * 1000 * 60 * 60 * 24,
@@ -710,8 +785,13 @@
   }
 
   /* ═══════════════ ROOT STATE ═══════════════ */
-  if (!window.__kiwiTeamV2) window.__kiwiTeamV2 = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, periodKind: 'week', periodLocked: false };
+  if (!window.__kiwiTeamV2) window.__kiwiTeamV2 = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, planningByVenue: {}, periodKind: 'week', periodLocked: false };
   if (!window.__kiwiTeamV2.shiftsByVenue) window.__kiwiTeamV2.shiftsByVenue = {};
+  if (!window.__kiwiTeamV2.planningByVenue) window.__kiwiTeamV2.planningByVenue = {};
+  /* Period navigation is intentionally UI state: it never changes or copies
+   * the saved shifts until the manager edits the newly displayed dates. */
+  const periodOffsets = { week:0, fortnight:0, month:0 };
+  const periodLocks = {};
 
   /* ── PLANNING ────────────────────────────────────────────────────────────
    * La page s'appelle « Paie & planning » et ne savait que constater : une
@@ -768,6 +848,12 @@
     const h = Math.floor(mins / 60), m = mins % 60;
     return m ? `${h} h ${pad(m)}` : `${h} h`;
   }
+  /* Attendance is stored as decimal hours for exact payroll arithmetic, but a
+   * value such as 0.61 means 37 minutes — displaying it as "0,61" makes the
+   * fractional part look like impossible clock minutes. */
+  function fmtHours(value) {
+    return fmtDur(Math.max(0, Math.round((Number(value) || 0) * 60)));
+  }
   /* new Date('2026-07-20') = minuit UTC : au Maroc ça retombe la veille selon
    * la saison. Une date de planning se lit en local, chiffre par chiffre. */
   function fromISO(d) {
@@ -791,7 +877,20 @@
      demo seed (unchanged). A REAL (custom/onboarded) venue is keyed by its own
      id, starts EMPTY, and persists to localStorage — so a new store builds its
      own team and it survives a reload, with no demo staff leaking in. */
-  function teamKey(venue) { return (venue && venue.custom) ? venue.id : ((venue && venue.type) || 'restaurant'); }
+  function teamKey(venue) {
+    if (venue && venue.custom) {
+      /* God Mode uses one synthetic venue id (`scoped`) for every client. Using
+       * that id as the Team key made the roster transient on purpose — and also
+       * meant an employee visibly created from an operator-opened dashboard was
+       * never written to that store's cloud document. Namespace the local key
+       * with the server-confirmed slug instead: every client remains isolated,
+       * while Équipe behaves like the same dashboard regardless of who opened
+       * it. */
+      if (venue.id === 'scoped' && venue.slug) return `scoped:${String(venue.slug)}`;
+      return venue.id;
+    }
+    return (venue && venue.type) || 'restaurant';
+  }
   const DEMO_TYPE_KEYS = new Set(['restaurant', 'boutique', 'spa', 'hotel']);
   /* venues.js les déclare transitoires et « never persisted » : 'scoped' est la
    * vue opérateur sur le client de quelqu'un d'autre, 'own' un placeholder de
@@ -810,6 +909,7 @@
           root.byVenue[k] = raw.byVenue[k];
           root.hoursByVenue[k] = (raw.hoursByVenue || {})[k] || {};
           root.shiftsByVenue[k] = (raw.shiftsByVenue || {})[k] || {};
+          root.planningByVenue[k] = window.KiwiPlanningCore?.normalize?.((raw.planningByVenue || {})[k], root.byVenue[k]) || (raw.planningByVenue || {})[k] || {};
         }
       });
     } catch (_) {}
@@ -820,12 +920,13 @@
   function persistTeams() {
     try {
       const root = window.__kiwiTeamV2;
-      const out = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {} };
+      const out = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, planningByVenue: {} };
       Object.keys(root.byVenue).forEach((k) => {
         if (persistableTeamKey(k)) {
           out.byVenue[k] = root.byVenue[k];
           out.hoursByVenue[k] = root.hoursByVenue[k] || {};
           out.shiftsByVenue[k] = root.shiftsByVenue[k] || {};
+          out.planningByVenue[k] = root.planningByVenue[k] || {};
         }
       });
       localStorage.setItem(LS_TEAM, JSON.stringify(out));
@@ -888,7 +989,13 @@
    * without guessing about records whose origin cannot be proved. */
   function teamSlug() {
     const k = teamVenueKey();
-    try { return k && window.KiwiCloudDoc ? window.KiwiCloudDoc.slugFor(k) : ''; }
+    try {
+      const v = window.KiwiVenue?.getCurrentVenueData?.();
+      // `v.slug` only exists after /api/me authenticated the God Mode scope.
+      // Never derive this from the visible store name or the URL.
+      if (v && v.id === 'scoped' && v.slug) return String(v.slug);
+      return k && window.KiwiCloudDoc ? window.KiwiCloudDoc.slugFor(k) : '';
+    }
     catch (_) { return ''; }
   }
   function memberBelongsToStore(member, slug) {
@@ -910,6 +1017,7 @@
       members,
       hours: mergeByDay(src.hours, null, alive),
       shifts: mergeByDay(src.shifts, null, alive),
+      planning: window.KiwiPlanningCore?.normalize?.(src.planning, members) || src.planning || {},
     };
   }
 
@@ -945,6 +1053,7 @@
       members,
       hours: mergeByDay(mine && mine.hours, theirs && theirs.hours, seen),
       shifts: mergeByDay(mine && mine.shifts, theirs && theirs.shifts, seen),
+      planning: window.KiwiPlanningCore?.merge?.(mine && mine.planning, theirs && theirs.planning, members) || mine.planning || theirs.planning || {},
     };
   }
 
@@ -953,15 +1062,16 @@
     if (teamCloud || !window.KiwiCloudDoc) return teamCloud;
     teamCloud = window.KiwiCloudDoc.attach({
       feature: 'team',
-      slug: () => window.KiwiCloudDoc.slugFor(teamVenueKey()),
+      slug: () => teamSlug(),
       read: () => {
         const k = teamVenueKey();
         const root = window.__kiwiTeamV2;
-        if (!k) return { members: [], hours: {}, shifts: {} };
+        if (!k) return { members: [], hours: {}, shifts: {}, planning: {} };
         return scopeTeamDoc({
           members: root.byVenue[k] || [],
           hours: root.hoursByVenue[k] || {},
           shifts: root.shiftsByVenue[k] || {},
+          planning: root.planningByVenue[k] || {},
         }, teamSlug());
       },
       write: (doc) => {
@@ -972,6 +1082,7 @@
         root.byVenue[k] = clean.members;
         root.hoursByVenue[k] = clean.hours;
         root.shiftsByVenue[k] = clean.shifts;
+        root.planningByVenue[k] = clean.planning;
         persistTeams();          // surtout PAS saveCustomTeams : pas de re-remontée
         afterTeamChange();       // le till et la carte d'accueil apprennent l'équipe
       },
@@ -985,7 +1096,7 @@
   }
   function teamCloudBind() {
     const c = teamCloudInit();
-    if (c) c.bind();
+    if (c) Promise.resolve(c.bind()).then(() => publishPins()).catch(() => {});
   }
   function teamCloudPush() {
     const c = teamCloudInit();
@@ -997,7 +1108,7 @@
     const key = teamKey(venue);
     if (!root.byVenue[key]) root.byVenue[key] = (venue && venue.custom) ? [] : seedFor((venue && venue.type) || 'restaurant');
     if (venue && venue.custom) {
-      const slug = (() => { try { return window.KiwiCloudDoc?.slugFor?.(key) || ''; } catch (_) { return ''; } })();
+      const slug = teamSlug();
       if (slug) {
         const before = root.byVenue[key];
         const kept = before.filter((m) => memberBelongsToStore(m, slug));
@@ -1022,6 +1133,8 @@
         ? {}
         : seedHours(root.byVenue[key], buildPeriod(root.periodKind).days);
     }
+    if (!root.planningByVenue[key]) root.planningByVenue[key] = window.KiwiPlanningCore?.blank?.() || {};
+    root.planningByVenue[key] = window.KiwiPlanningCore?.normalize?.(root.planningByVenue[key], root.byVenue[key]) || root.planningByVenue[key];
     return root;
   }
   function getMembers(venueType) { return window.__kiwiTeamV2.byVenue[venueType] || []; }
@@ -1033,23 +1146,43 @@
   function toISO(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
   function buildPeriod(kind) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    let start, end;
-    if (kind === 'fortnight') {
-      const day = today.getDay();
-      start = new Date(today); start.setDate(today.getDate() - ((day + 6) % 7) - 7);
-      end = new Date(start); end.setDate(start.getDate() + 13);
-    } else if (kind === 'month') {
-      start = new Date(today.getFullYear(), today.getMonth(), 1);
-      end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    } else {
-      const day = today.getDay();
-      start = new Date(today); start.setDate(today.getDate() - ((day + 6) % 7));
-      end = new Date(start); end.setDate(start.getDate() + 6);
+    kind = ['week', 'fortnight', 'month'].includes(kind) ? kind : 'week';
+    const core = window.KiwiPlanningCore?.calendarPeriod?.(kind, toISO(today), periodOffsets[kind] || 0);
+    if (core) {
+      const start = fromISO(core.start), end = fromISO(core.end);
+      return { start:core.start, end:core.end, startFr:fmtFr(start), endFr:fmtFr(end), days:core.days };
     }
-    const days = [];
-    const cur = new Date(start);
+    /* Fail-soft fallback for a partially cached shell. */
+    let start, end;
+    if (kind === 'month') {
+      start = new Date(today.getFullYear(), today.getMonth() + (periodOffsets.month || 0), 1);
+      end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+    } else {
+      const day = today.getDay(), span = kind === 'fortnight' ? 14 : 7;
+      start = new Date(today); start.setDate(today.getDate() - ((day + 6) % 7) + (periodOffsets[kind] || 0) * span);
+      end = new Date(start); end.setDate(start.getDate() + span - 1);
+    }
+    const days = [], cur = new Date(start);
     while (cur <= end) { days.push(toISO(cur)); cur.setDate(cur.getDate() + 1); }
     return { start: toISO(start), end: toISO(end), startFr: fmtFr(start), endFr: fmtFr(end), days };
+  }
+
+  function periodNavigatorHtml(T, period) {
+    const kind = window.__kiwiTeamV2.periodKind || 'week';
+    const shifted = (periodOffsets[kind] || 0) !== 0;
+    return `<nav class="kt-period-nav" aria-label="${esc(T.hPeriodLabel(period.startFr, period.endFr))}">
+      <button class="kt-period-arrow" type="button" data-action="kt-period-nav" data-arg="prev" aria-label="${esc(T.plPrevPeriod)}" title="${esc(T.plPrevPeriod)}">‹</button>
+      <strong>${esc(T.hPeriodLabel(period.startFr, period.endFr))}</strong>
+      <button class="kt-period-arrow" type="button" data-action="kt-period-nav" data-arg="next" aria-label="${esc(T.plNextPeriod)}" title="${esc(T.plNextPeriod)}">›</button>
+      ${shifted ? `<button class="kt-period-current" type="button" data-action="kt-period-nav" data-arg="current">${esc(T.plCurrentPeriod)}</button>` : ''}
+    </nav>`;
+  }
+
+  function rememberPeriodLock(root, kind, period) {
+    periodLocks[`${kind}:${period.start}:${period.end}`] = !!root.periodLocked;
+  }
+  function restorePeriodLock(root, kind, period) {
+    root.periodLocked = !!periodLocks[`${kind}:${period.start}:${period.end}`];
   }
 
   function todayLongLabel() {
@@ -1074,10 +1207,101 @@
   let pageMode = null;
   let unsubscribeVenue = null;
   let unsubscribeLang = null;
+  let liveTeam = { merchant: '', members: [] };
+  let liveTeamSignature = '';
+  let liveTeamBusy = false;
+  let liveTeamPendingRender = false;
+
+  function liveMember(memberId) {
+    return (liveTeam.members || []).find((member) => String(member.id || '') === String(memberId || '')) || null;
+  }
+  /* Le sondage ci-dessous tourne toutes les secondes et `pointedHours` est un
+   * temps écoulé : dès qu'un employé est pointé, la réponse du serveur change
+   * toute seule (27,43 h → 27,44 h). Repeindre à ce moment-là arrachait
+   * l'éditeur de service des mains du gérant — render() commence par
+   * closeShiftPop() — et lui volait le focus au milieu de la saisie d'un
+   * horaire. Tant qu'il édite, on garde la donnée et on remet la peinture à la
+   * fin de la saisie. */
+  function teamIsBeingEdited() {
+    if (shiftPop) return true;
+    const el = document.activeElement;
+    if (!el || el === document.body) return false;
+    if (el.isContentEditable) return true;
+    return /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName || '');
+  }
+  function applyLiveTeam() {
+    if (teamIsBeingEdited()) { liveTeamPendingRender = true; return; }
+    liveTeamPendingRender = false;
+    if (pageActive) render();
+    try { window.dispatchEvent(new Event('kiwi-team-changed')); } catch (_) {}
+  }
+  function pollLiveTeam() {
+    if (liveTeamBusy || !isCustomVenue()) return;
+    const merchant = teamSlug();
+    if (!merchant) return;
+    liveTeamBusy = true;
+    fetch('/api/team/live?merchant=' + encodeURIComponent(merchant), {
+      credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
+    }).then((response) => response.ok ? response.json() : null).then((data) => {
+      if (!data || !data.ok || data.merchant !== merchant) return;
+      const signature = JSON.stringify([merchant, data.members || [], data.pointedHours || {}]);
+      /* Réponse identique à la précédente ⇒ rien à fusionner, rien à écrire.
+         La fusion des heures pointées se faisait à CHAQUE réponse, donc
+         persistTeams() réécrivait 70 ko de localStorage toutes les secondes
+         pour reposer exactement les mêmes octets. */
+      if (signature === liveTeamSignature) return;
+      liveTeamSignature = signature;
+      liveTeam = { merchant, members: Array.isArray(data.members) ? data.members : [] };
+      const venueKey = teamVenueKey();
+      if (venueKey && data.pointedHours && typeof data.pointedHours === 'object') {
+        const root = window.__kiwiTeamV2;
+        const venueHours = root.hoursByVenue[venueKey] || (root.hoursByVenue[venueKey] = {});
+        /* Une écriture localStorage par seconde pour des heures inchangées :
+         * on ne persiste que ce qui a réellement bougé. */
+        let touched = false;
+        Object.keys(data.pointedHours).forEach((memberId) => {
+          const before = JSON.stringify(venueHours[memberId] || {});
+          const merged = Object.assign({}, venueHours[memberId] || {}, data.pointedHours[memberId] || {});
+          if (JSON.stringify(merged) === before) return;
+          venueHours[memberId] = merged;
+          touched = true;
+        });
+        if (touched) persistTeams();
+      }
+      if (signature !== liveTeamSignature) {
+        liveTeamSignature = signature;
+        applyLiveTeam();
+      } else if (liveTeamPendingRender) {
+        applyLiveTeam();
+      }
+    }).catch(() => {}).finally(() => { liveTeamBusy = false; });
+  }
+  /* Le pointage doit battre à la seconde QUAND on le regarde. Ailleurs — c'est
+     à dire sur chacune des autres pages du tableau de bord, où ce module n'a
+     rien à l'écran — la même seconde faisait une requête réseau et un tour de
+     JSON.stringify sur toute l'équipe, pour personne. Et le premier chargement
+     du tableau de bord, lui, a mieux à faire que ça pendant que les chiffres
+     arrivent. On garde la seconde sur Équipe/Paie, on lève le pied partout
+     ailleurs, et on s'arrête net quand l'onglet passe en arrière-plan. */
+  const LIVE_TEAM_FAST_MS = 1000, LIVE_TEAM_IDLE_MS = 20000;
+  let liveTeamTimer = null;
+  function scheduleLiveTeam() {
+    if (liveTeamTimer) { clearTimeout(liveTeamTimer); liveTeamTimer = null; }
+    let hidden = false;
+    try { hidden = !!document.hidden; } catch (_) {}
+    const wait = (pageActive && !hidden) ? LIVE_TEAM_FAST_MS : LIVE_TEAM_IDLE_MS;
+    liveTeamTimer = setTimeout(() => { try { pollLiveTeam(); } catch (_) {} scheduleLiveTeam(); }, wait);
+  }
+  function startLiveTeamPolling() {
+    scheduleLiveTeam();
+    try { document.addEventListener('visibilitychange', scheduleLiveTeam); } catch (_) {}
+  }
+  if (window.KiwiDashboardBoot?.whenUnlocked) window.KiwiDashboardBoot.whenUnlocked(startLiveTeamPolling);
+  else startLiveTeamPolling();
 
   /* ═══════════════ HELPERS ═══════════════ */
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const memberFullName = (m) => `${m.firstName || ''} ${m.lastName || ''}`.trim() || '—';
+  const memberFullName = (m) => `${m.firstName || ''} ${m.lastName || ''}`.trim() || '·';
   function isCustomVenue() { const KV = window.KiwiVenue; return !!(KV && KV.isCustom && KV.isCustom()); }
 
   function fmtMad(n) {
@@ -1098,24 +1322,13 @@
   }
 
   /* ═══════════════ SVG ICONS ═══════════════ */
-  const svgIcon = (path, sz = 14) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+  const svgIcon = (name, sz = 14) => `<i data-lucide="${name}" style="width:${sz}px;height:${sz}px" aria-hidden="true"></i>`;
   const IC = {
-    plus:     '<path d="M12 5v14M5 12h14"/>',
-    search:   '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>',
-    edit:     '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>',
-    trash:    '<path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>',
-    eye:      '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
-    refresh:  '<path d="M1 4v6h6M23 20v-6h-6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.64A9 9 0 0020.49 15"/>',
-    copy:     '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>',
-    download: '<path d="M12 3v12M5 10l7 7 7-7M5 21h14"/>',
-    upload:   '<path d="M12 21V9M5 14l7-7 7 7M5 3h14"/>',
-    check:    '<path d="M5 12l5 5L20 7"/>',
-    lock:     '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/>',
-    users:    '<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>',
-    userCheck:'<path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M17 11l2 2 4-4"/>',
-    wallet:   '<path d="M21 12V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2v-1"/><path d="M21 12h-5a2 2 0 100 4h5"/>',
-    timer:    '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6M12 2v3"/>',
-    calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>',
+    plus: 'plus', search: 'search', edit: 'pencil', trash: 'trash-2', eye: 'eye',
+    refresh: 'refresh-cw', copy: 'copy', download: 'arrow-down-to-line',
+    upload: 'arrow-up-from-line', check: 'check', lock: 'lock', unlock: 'unlock',
+    users: 'users', userCheck: 'user-check', wallet: 'wallet', timer: 'timer',
+    calendar: 'calendar'
   };
 
   /* ═══════════════ PAGE SHOW / HIDE ═══════════════ */
@@ -1135,13 +1348,16 @@
 
     const venue = window.KiwiVenue?.getCurrentVenueData?.() || { name: 'Votre établissement', type: 'restaurant' };
     ensureVenueData(venue);
-
+    pollLiveTeam();
+    scheduleLiveTeam();          // la page est à l'écran : on repasse à la seconde
     /* Re-render when the venue or language changes. */
     if (!unsubscribeVenue && window.KiwiVenue?.subscribe) {
       unsubscribeVenue = window.KiwiVenue.subscribe(() => {
         if (!pageActive) return;
         const v2 = window.KiwiVenue.getCurrentVenueData();
         ensureVenueData(v2);
+        liveTeam = { merchant: '', members: [] }; liveTeamSignature = '';
+        pollLiveTeam();
         render();
       });
     }
@@ -1152,9 +1368,17 @@
     render();
   }
 
+  function deactivateTeam() {
+    pageActive = false;
+    pageMode = null;
+    if (unsubscribeVenue) { try { unsubscribeVenue(); } catch (_) {} unsubscribeVenue = null; }
+  }
+  window.__kiwiTeamDeactivate = deactivateTeam;
+
   function showDashboard() {
     if (!pageActive) return;
     pageActive = false;
+    scheduleLiveTeam();          // plus personne ne regarde : on leve le pied
     pageMode = null;
     document.body.classList.remove('page-equipe');
     const bc = document.querySelector('.breadcrumb');
@@ -1163,11 +1387,19 @@
     window.Kiwi?.setActivePage?.('accueil');
   }
 
-  /* ═══════════════ RENDER ═══════════════ */
+  /* =============================== RENDER =============================== */
   function render() {
-    // L'éditeur de service est ancré sur une case : la case disparaît, lui aussi.
+    // L'editeur de service est ancre sur une case : la case disparait, lui aussi.
     closeShiftPop();
-    if (pageMode === 'payroll') { showPayroll(); return; }
+    if (pageMode === 'payroll') {
+      const payrollNav = document.querySelector('.sidebar nav a[data-nav="payroll"]');
+      if (!payrollNav?.classList.contains('active') && document.body.classList.contains('page-genpage')) {
+        deactivateTeam();
+        return;
+      }
+      showPayroll();
+      return;
+    }
     const root = document.querySelector('[data-equipe-root]');
     if (!root) return;
     root.removeAttribute('hidden');
@@ -1212,6 +1444,8 @@
 
   /* ═══════════════ HEADER ═══════════════ */
   function renderHeader(T, venue, members) {
+    const employeeAppLabel = trLang() === 'ar' ? 'تطبيق الموظفين' : trLang() === 'en' ? 'Employee app' : 'App employés';
+    const showEmployeeApp = venue && venue.custom && (tradeKey(venue) === 'restaurant' || tradeKey(venue) === 'cafe');
     return `
       <div class="eq-head">
         <div>
@@ -1219,6 +1453,7 @@
           <div class="eq-date">${esc(T.subDate(todayLongLabel()))}</div>
         </div>
         <div class="eq-head-acts">
+          ${showEmployeeApp ? `<button class="btn-slim" type="button" data-action="kt-employee-app">${svgIcon(IC.users, 13)}<span>${esc(employeeAppLabel)}</span></button>` : ''}
           <button class="btn-slim" type="button" data-action="kt-export-csv">${svgIcon(IC.download, 13)}<span>${esc(T.exportCsv)}</span></button>
           <button class="btn-slim primary" type="button" data-action="kt-add-member">${svgIcon(IC.plus, 13)}<span>${esc(T.addMember)}</span></button>
         </div>
@@ -1256,7 +1491,9 @@
      * définition de Paie (onDuty) ; la démo garde son estimation. */
     const todayKey = toISO(new Date());
     const present = isCustomVenue()
-      ? members.filter((m) => (+((hours[m.id] || {})[todayKey]) || 0) > 0).length
+      ? (liveTeam.merchant === teamSlug()
+        ? liveTeam.members.filter((member) => member.status === 'on-duty' || member.status === 'on-pause').length
+        : members.filter((m) => (+((hours[m.id] || {})[todayKey]) || 0) > 0).length)
       : Math.max(0, Math.round(totalMembers * 0.75));
     let totalHours = 0;
     members.forEach(m => {
@@ -1274,7 +1511,7 @@
         ${tile(T.statTotal,   String(totalMembers),                   T.statTotalSub(totalMembers, venue.name))}
         ${tile(T.statPresent, String(present),                        T.statPresentSub)}
         ${tile(T.statPayroll, fmtMad(monthlyPayroll),                 T.statPayrollSub)}
-        ${tile(T.statHours,   totalHours.toFixed(1).replace('.', ',') + ' h', T.statHoursSub)}
+        ${tile(T.statHours,   fmtHours(totalHours), T.statHoursSub)}
       </div>
     `;
 
@@ -1307,7 +1544,13 @@
 
         <div data-kt-grid-host style="margin-top:14px;">
           ${visible.length === 0
-            ? `<div style="padding:36px 14px;text-align:center;color:var(--n-500);font-size:13px;background:var(--paper-soft);border:1px dashed var(--n-300);border-radius:12px;">${esc(T.noMatch)}</div>`
+            ? `<div style="padding:44px 20px;text-align:center;color:var(--n-500);font-size:13px;background:var(--paper-soft);border:1px dashed var(--n-300);border-radius:14px;display:flex;flex-direction:column;align-items:center;">
+                <div style="width:44px;height:44px;border-radius:12px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:12px;">
+                  <svg width="22" height="22" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
+                </div>
+                <div style="font-weight:600;font-size:14.5px;color:var(--ink);margin-bottom:4px;">${esc(T.noMatch)}</div>
+                <button class="kb atlas" type="button" data-action="nav-equipe" style="margin-top:10px;">${svgIcon(IC.plus, 13)}${esc(T.addMember)}</button>
+              </div>`
             : renderMembersTable(T, visible)}
         </div>
       </div>
@@ -1323,6 +1566,11 @@
         : contractTone === 'pend' ? 'kt-tag kt-tag-pend'
         : 'kt-tag kt-tag-neutral';
       const langChips = (m.languages || []).slice(0, 3).map(l => `<span class="kt-langchip">${esc(l)}</span>`).join('') + ((m.languages || []).length > 3 ? `<span class="kt-langchip">+${(m.languages || []).length - 3}</span>` : '');
+      const live = liveMember(m.id);
+      const liveText = live && live.status === 'on-pause' ? 'En pause'
+        : live && live.status === 'on-duty' ? 'En service' : 'Hors service';
+      const liveColor = live && live.status === 'on-pause' ? '#B26B0F'
+        : live && live.status === 'on-duty' ? 'var(--atlas)' : 'var(--n-500)';
       return `
         <tr class="eq-row-in">
           <td>
@@ -1330,14 +1578,14 @@
               <span class="eq-av md" style="background:${AVATAR_COLORS[tone] || AVATAR_COLORS.a}">${esc(ini)}</span>
               <div>
                 <div class="eq-member-name">${esc(memberFullName(m))}</div>
-                <div class="eq-member-role">${esc(m.email || '—')}</div>
+                <div class="eq-member-role">${esc(m.email || '·')} · <span style="color:${liveColor};font-weight:600;">${liveText}</span></div>
               </div>
             </div>
           </td>
           <td><div class="kt-cell-strong">${esc(m.function)}</div></td>
           <td><span class="eq-venue-badge">${esc(m.department)}</span></td>
-          <td><span class="${contractCls}">${esc(m.contract || '—')}</span></td>
-          <td><div class="kt-chips">${langChips || '<span class="eq-cell-empty">—</span>'}</div></td>
+          <td><span class="${contractCls}">${esc(m.contract || '·')}</span></td>
+          <td><div class="kt-chips">${langChips || '<span class="eq-cell-empty">·</span>'}</div></td>
           <td><div class="eq-salary-v">${fmtMad(m.baseSalary)}</div><div class="eq-salary-sub">${(m.hourlyRate || 0).toLocaleString('fr-FR')} MAD/h</div></td>
           <td>
             <div class="eq-actions">
@@ -1398,7 +1646,7 @@
         total += v;
         const isToday = (d === toISO(new Date()));
         return `<td class="kt-day-cell${isToday ? ' today' : ''}${locked ? ' locked' : ''}">
-          <input type="number" step="0.25" min="0" max="24" value="${v}" data-kt-hour data-mid="${esc(m.id)}" data-day="${esc(d)}" ${locked ? 'disabled' : ''} />
+          <input type="text" inputmode="decimal" value="${esc(fmtHours(v))}" data-hours-value="${v}" data-kt-hour data-mid="${esc(m.id)}" data-day="${esc(d)}" ${locked ? 'disabled' : ''} />
         </td>`;
       }).join('');
       const pay = total * (m.hourlyRate || 0);
@@ -1415,7 +1663,7 @@
             </div>
           </td>
           ${cells}
-          <td class="kt-h-total mono"><b>${total.toFixed(2).replace('.', ',')}</b><span>h</span></td>
+          <td class="kt-h-total mono"><b>${fmtHours(total)}</b></td>
           <td class="kt-h-pay mono"><b>${pay.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>
         </tr>
       `;
@@ -1436,11 +1684,12 @@
             <button class="btn-slim" type="button" data-action="kt-quick-entry">${svgIcon(IC.plus, 13)}<span>${esc(T.hQuickEntry)}</span></button>
             <button class="btn-slim" type="button" data-action="kt-export-csv">${svgIcon(IC.download, 13)}<span>${esc(T.hExport)}</span></button>
             <button class="btn-slim" type="button" data-action="kt-import-csv">${svgIcon(IC.upload, 13)}<span>${esc(T.hImport)}</span></button>
-            <button class="btn-slim ${locked ? '' : 'primary'}" type="button" data-action="kt-validate-period" ${locked ? 'disabled' : ''}>
-              ${locked ? svgIcon(IC.lock, 13) : svgIcon(IC.check, 13)}<span>${esc(locked ? T.hLocked : T.hValidate)}</span>
+            <button class="btn-slim ${locked ? '' : 'primary'}" type="button" data-action="${locked ? 'kt-unlock-period' : 'kt-validate-period'}">
+              ${locked ? svgIcon(IC.unlock, 13) : svgIcon(IC.check, 13)}<span>${esc(locked ? T.hUnlock : T.hValidate)}</span>
             </button>
           </div>
         </div>
+        ${periodNavigatorHtml(T, period)}
 
         <div class="kt-h-tablewrap">
           <table class="kt-h-table">
@@ -1457,7 +1706,7 @@
               <tr>
                 <td class="kt-h-foot-label">${esc(T.hFooterLabel)}</td>
                 <td colspan="${period.days.length}"></td>
-                <td class="kt-h-foot-tot mono"><b>${grandHours.toFixed(2).replace('.', ',')}</b><span>h</span></td>
+                <td class="kt-h-foot-tot mono"><b>${fmtHours(grandHours)}</b></td>
                 <td class="kt-h-foot-tot mono"><b>${grandPay.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>
               </tr>
             </tfoot>
@@ -1521,12 +1770,244 @@
     Kiwi.toast(t().plCleared, { type: 'info' });
   };
 
+  function planningContext() {
+    const root = window.__kiwiTeamV2;
+    const venue = window.KiwiVenue?.getCurrentVenueData?.() || { type:'restaurant' };
+    const key = teamKey(venue);
+    const members = getMembers(key);
+    const period = buildPeriod(root.periodKind || 'week');
+    const planning = root.planningByVenue[key] || (root.planningByVenue[key] = window.KiwiPlanningCore?.blank?.() || {});
+    const shifts = root.shiftsByVenue[key] || (root.shiftsByVenue[key] = {});
+    return { root, venue, key, members, period, planning, shifts };
+  }
+  function planningHoursKey(ctx) {
+    const venue=ctx&&ctx.venue||{};
+    if(venue.id==='scoped'&&venue.slug)return venue.slug;
+    return venue.id||venue.slug||(ctx&&ctx.key)||'';
+  }
+  function planningDayMeta(day, ctx) {
+    const KH=window.KiwiHours,calendar=window.KiwiMoroccoCalendar,lang=trLang(),key=planningHoursKey(ctx);
+    const configured=!!(KH?.isConfigured?.(key));
+    const resolved=configured&&KH?.periodsOn?.(day,key);
+    const periods=Array.isArray(resolved)?resolved:(resolved?.periods||[]);
+    const exception=(resolved&&!Array.isArray(resolved)&&resolved.exception)||KH?.exceptionOn?.(day,key)||null;
+    const holiday=calendar?.info?.(day,lang)||null;
+    return { day, configured, periods, exception, holiday, closed:configured&&!periods.length };
+  }
+  function planningPeriodMeta(days, ctx) {
+    return Object.fromEntries((days||[]).map((day)=>[day,planningDayMeta(day,ctx)]));
+  }
+  function planningHolidaysByDay(days) {
+    const calendar=window.KiwiMoroccoCalendar,lang=trLang();
+    return Object.fromEntries((days||[]).map((day)=>[day,calendar?.info?.(day,lang)?.label||'']).filter((entry)=>entry[1]));
+  }
+  function compactPeriods(periods) {
+    const short=(value)=>String(value||'').replace(':00','h').replace(':30','h30');
+    return (periods||[]).map((period)=>`${short(period.from)}–${short(period.to)}`).join(' / ');
+  }
+
+  handlers['kt-plan-template-save'] = () => {
+    const copy = planningCopy();
+    const mdl = modal({
+      title: copy.templateTitle,
+      width: 440,
+      body: `<div class="kt-plan-modal-field"><label for="kt-template-name">${esc(copy.templateName)}</label><input id="kt-template-name" data-kt-template-name maxlength="80" value="${esc(copy.templateTitle)}" /></div>`,
+      foot: `<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button class="kb atlas" data-action="kt-plan-template-confirm">${esc(copy.saveNow)}</button>`
+    });
+    mdl.el.addEventListener('click', (event) => { if (event.target.closest('[data-dismiss]')) mdl.close(); });
+    window.__kiwiPlanningModal = mdl;
+    setTimeout(() => mdl.el.querySelector('[data-kt-template-name]')?.select(), 20);
+  };
+  handlers['kt-plan-template-confirm'] = () => {
+    const mdl = window.__kiwiPlanningModal;
+    if (!mdl?.el) return;
+    const name = mdl.el.querySelector('[data-kt-template-name]')?.value.trim();
+    if (!name) return;
+    const ctx = planningContext();
+    const template = window.KiwiPlanningCore.templateFromWeek(name, ctx.members, ctx.shifts, visibleDays());
+    ctx.planning.templates.push(template);
+    saveCustomTeams();
+    mdl.close(); window.__kiwiPlanningModal = null;
+    render(); toast(planningCopy().templateDone, { type:'success' });
+  };
+  handlers['kt-plan-template-apply'] = (el) => {
+    const host = el.closest('.eq-section');
+    const id = host?.querySelector('[data-kt-template-select]')?.value;
+    if (!id) return;
+    const ctx = planningContext();
+    const template = (ctx.planning.templates || []).find((item) => item.id === id);
+    if (!template) return;
+    ctx.root.shiftsByVenue[ctx.key] = window.KiwiPlanningCore.applyTemplate(template, visibleDays(), ctx.shifts, ctx.members);
+    saveCustomTeams(); render(); toast(planningCopy().applyDone, { type:'success' });
+  };
+  handlers['kt-plan-publish'] = () => {
+    const ctx = planningContext();
+    const KH=window.KiwiHours,hoursKey=planningHoursKey(ctx),configured=!!KH?.isConfigured?.(hoursKey);
+    const periodsByDay=configured?Object.fromEntries(ctx.period.days.map((day)=>{const resolved=KH.periodsOn(day,hoursKey);return[day,Array.isArray(resolved)?resolved:(resolved?.periods||[])];})):null;
+    const holidaysByDay=planningHolidaysByDay(ctx.period.days);
+    const result = window.KiwiPlanningCore.publish(ctx.planning, ctx.shifts, ctx.period.days, ctx.members, undefined, { periodsByDay, holidaysByDay });
+    if (!result.ok) {
+      toast(planningCopy().publishBlocked, { type:'error' });
+      render();
+      return;
+    }
+    ctx.root.planningByVenue[ctx.key] = result.planning;
+    saveCustomTeams(); render(); toast(planningCopy().publishDone, { type:'success' });
+  };
+  handlers['kt-plan-optimize'] = () => {
+    const ctx=planningContext(),P=window.KiwiPlanningCore,copy=Object.assign({},planningCopy(),optimizationCopy());if(!P?.optimize)return;
+    const KH=window.KiwiHours,hoursKey=planningHoursKey(ctx),configured=!!KH?.isConfigured?.(hoursKey),periodsByDay=configured?Object.fromEntries(ctx.period.days.map((day)=>{const resolved=KH.periodsOn(day,hoursKey);return[day,Array.isArray(resolved)?resolved:(resolved?.periods||[])];})):null;
+    const holidaysByDay=planningHolidaysByDay(ctx.period.days);
+    const result=P.optimize({planning:ctx.planning,shifts:ctx.shifts,days:ctx.period.days,members:ctx.members,periodsByDay,holidaysByDay});
+    if(!result.assignments.length){toast(result.unresolved.length?copy.optimizeBlocked:copy.optimizeNothing,{type:result.unresolved.length?'error':'info'});return;}
+    const mdl=modal({title:copy.optimizeTitle,width:620,body:`<div class="kt-opt-summary"><strong>${esc(copy.optimizeCount(result.assignments.length))}</strong><p>${esc(copy.optimizeReview)}</p></div>${result.assignments.slice(0,30).map((row)=>{const member=ctx.members.find((m)=>String(m.id)===String(row.memberId));return `<div class="kt-opt-row"><b>${esc(member?memberFullName(member):row.memberId)}</b><span>${esc(row.day)} · ${esc(row.start)}–${esc(row.end)}</span></div>`;}).join('')}${result.unresolved.length?`<div class="kt-plan-issue is-blocker"><b>!</b><span>${esc(copy.optimizeUnresolved(result.unresolved.length))}</span></div>`:''}`,foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button class="kb atlas" data-action="kt-plan-optimize-confirm">${esc(copy.optimizeApply)}</button>`});
+    mdl.el.addEventListener('click',(event)=>{if(event.target.closest('[data-dismiss]'))mdl.close();});window.__kiwiPlanningOptimize={mdl,result,key:ctx.key};
+  };
+  handlers['kt-plan-optimize-confirm'] = () => {const p=window.__kiwiPlanningOptimize;if(!p?.mdl?.el)return;window.__kiwiTeamV2.shiftsByVenue[p.key]=p.result.shifts;saveCustomTeams();p.mdl.close();window.__kiwiPlanningOptimize=null;render();toast(optimizationCopy().optimizeDone,{type:'success'});};
+
+  function fairScheduleCopy() {
+    const lang=trLang();
+    if(lang==='en')return{action:'Auto-schedule fairly',title:'Fair auto-schedule',intro:'Kiwi uses this venue’s opening hours, approved leave and each person’s availability. It balances hours and prepares a draft only.',people:'People needed each day',peopleHint:'Unique team members scheduled across the day.',shifts:'Shifts per day',shiftsHint:'The opening day is divided into consecutive shifts.',hours:'Opening hours',hoursReady:'The venue’s saved opening hours will be used.',hoursMissing:'Opening hours must be configured before Kiwi can build a truthful schedule.',configure:'Configure opening hours',reviewTitle:'Review the proposal',review:(a,d)=>`${a} assignments across ${d} open day${d===1?'':'s'}`,balance:(a,b)=>`Hours per person: ${a}–${b} h`,reviewNote:'Applying replaces the current draft for this period. It does not publish the schedule.',build:'Create proposal',apply:'Replace draft',done:'The fair proposal is now in the draft.',invalid:'People per day must be at least the number of shifts.',shortage:(n)=>`${n} staffing gap${n===1?'':'s'} could not be filled safely.`,closed:(n)=>`${n} closed day${n===1?' was':'s were'} skipped.`,tools:'Planning tools',toolsHint:'Coverage rules, open shifts, templates and period maintenance.',coverageGroup:'Demand rules',coverageDesc:'Describe role-specific minimum coverage, then build from those rules.',openGroup:'Staff opportunities',openDesc:'Share an unassigned shift for employees to claim.',templateGroup:'Reusable weeks',templateDesc:'Save or apply a reviewed weekly pattern.',maintenance:'Period maintenance',maintenanceDesc:'Clear the draft or transfer it into recorded hours.',fromRules:'Build from rules'};
+    if(lang==='ar')return{action:'توزيع عادل تلقائياً',title:'توزيع عادل للورديات',intro:'يعتمد Kiwi على ساعات فتح المؤسسة والإجازات المقبولة وتوفر كل موظف، ثم يوازن الساعات ويُنشئ مسودة فقط.',people:'عدد الأشخاص المطلوب يومياً',peopleHint:'أعضاء مختلفون موزعون على اليوم.',shifts:'عدد الورديات يومياً',shiftsHint:'يتم تقسيم فترة الفتح إلى ورديات متتالية.',hours:'ساعات الفتح',hoursReady:'سيتم استعمال ساعات فتح المؤسسة المسجلة.',hoursMissing:'يجب ضبط ساعات الفتح قبل إنشاء جدول واقعي.',configure:'ضبط ساعات الفتح',reviewTitle:'مراجعة الاقتراح',review:(a,d)=>`${a} تعيينات خلال ${d} أيام مفتوحة`,balance:(a,b)=>`ساعات كل شخص: ${a}–${b}`,reviewNote:'سيستبدل التطبيق مسودة هذه الفترة فقط، ولن ينشر الجدول.',build:'إنشاء الاقتراح',apply:'استبدال المسودة',done:'تمت إضافة الاقتراح العادل إلى المسودة.',invalid:'يجب ألا يقل عدد الأشخاص عن عدد الورديات.',shortage:(n)=>`تعذر ملء ${n} مناصب بأمان.`,closed:(n)=>`تم تجاوز ${n} أيام مغلقة.`,tools:'أدوات التخطيط',toolsHint:'قواعد التغطية والورديات الشاغرة والنماذج وصيانة الفترة.',coverageGroup:'قواعد الحاجة',coverageDesc:'حدد الحد الأدنى حسب الوظيفة، ثم أنشئ الجدول وفقاً للقواعد.',openGroup:'فرص الفريق',openDesc:'انشر وردية غير معينة ليطلبها الموظفون.',templateGroup:'أسابيع قابلة لإعادة الاستخدام',templateDesc:'احفظ أو طبق أسبوعاً نموذجياً تمت مراجعته.',maintenance:'صيانة الفترة',maintenanceDesc:'امسح المسودة أو انقلها إلى الساعات المنجزة.',fromRules:'إنشاء من القواعد'};
+    return{action:'Répartir équitablement',title:'Répartition automatique',intro:'Kiwi lit les horaires d’ouverture, les congés approuvés et les disponibilités. Il équilibre les heures et prépare uniquement un brouillon.',people:'Personnes nécessaires par jour',peopleHint:'Des membres différents, répartis sur la journée.',shifts:'Nombre de shifts par jour',shiftsHint:'La journée d’ouverture est découpée en services successifs.',hours:'Horaires d’ouverture',hoursReady:'Les horaires enregistrés de l’établissement seront utilisés.',hoursMissing:'Renseignez les horaires d’ouverture pour que Kiwi construise un planning réel.',configure:'Configurer les horaires',reviewTitle:'Vérifier la proposition',review:(a,d)=>`${a} affectation${a===1?'':'s'} sur ${d} jour${d===1?'':'s'} ouvert${d===1?'':'s'}`,balance:(a,b)=>`Heures par personne : ${a}–${b} h`,reviewNote:'Appliquer remplace le brouillon de cette période. Le planning ne sera pas publié.',build:'Créer la proposition',apply:'Remplacer le brouillon',done:'La proposition équitable est dans le brouillon.',invalid:'Le nombre de personnes doit être au moins égal au nombre de shifts.',shortage:(n)=>`${n} besoin${n===1?'':'s'} n’ont pas pu être couvert${n===1?'':'s'} sans conflit.`,closed:(n)=>`${n} jour${n===1?' fermé a':'s fermés ont'} été ignoré${n===1?'':'s'}.`,tools:'Outils de planning',toolsHint:'Couverture détaillée, services ouverts, modèles et entretien de la période.',coverageGroup:'Besoins précis',coverageDesc:'Définissez un minimum par fonction et horaire, puis composez depuis ces règles.',openGroup:'Opportunités équipe',openDesc:'Partagez un service non attribué auquel les employés peuvent candidater.',templateGroup:'Semaines réutilisables',templateDesc:'Enregistrez ou appliquez une semaine type déjà vérifiée.',maintenance:'Entretien de la période',maintenanceDesc:'Effacez le brouillon ou validez-le comme heures réalisées.',fromRules:'Composer depuis les règles'};
+  }
+
+  handlers['kt-plan-fair'] = () => {
+    const ctx=planningContext(),copy=fairScheduleCopy(),KH=window.KiwiHours;
+    const hoursKey=planningHoursKey(ctx),configured=!!(KH&&KH.isConfigured&&KH.isConfigured(hoursKey));
+    const suggested=Math.max(1,Math.min(ctx.members.length,Math.ceil(ctx.members.length/2)||1));
+    const suggestedShifts=Math.max(1,Math.min(2,suggested));
+    const body=`<p class="kt-fair-intro">${esc(copy.intro)}</p><div class="kt-fair-fields"><div class="kt-plan-modal-field"><label for="kt-fair-people">${esc(copy.people)}</label><input id="kt-fair-people" data-kt-fair-people type="number" inputmode="numeric" min="1" max="${ctx.members.length||1}" value="${suggested}"><small>${esc(copy.peopleHint)}</small></div><div class="kt-plan-modal-field"><label for="kt-fair-shifts">${esc(copy.shifts)}</label><input id="kt-fair-shifts" data-kt-fair-shifts type="number" inputmode="numeric" min="1" max="6" value="${suggestedShifts}"><small>${esc(copy.shiftsHint)}</small></div></div><div class="kt-fair-hours ${configured?'is-ready':'is-missing'}"><strong>${esc(copy.hours)}</strong><span>${esc(configured?copy.hoursReady:copy.hoursMissing)}</span>${configured?'':`<button class="kb ghost" type="button" data-action="kt-plan-hours">${esc(copy.configure)}</button>`}</div>`;
+    const mdl=modal({title:copy.title,width:600,body,foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button class="kb atlas" data-action="kt-plan-fair-build"${configured?'':' disabled'}>${esc(copy.build)}</button>`});
+    mdl.el.addEventListener('click',(event)=>{if(event.target.closest('[data-dismiss]'))mdl.close();});window.__kiwiPlanningFair={mdl,key:ctx.key,hoursKey};
+  };
+  handlers['kt-plan-hours'] = () => {
+    const pending=window.__kiwiPlanningFair,ctx=planningContext();
+    pending?.mdl?.close?.();window.__kiwiPlanningFair=null;
+    if(window.KiwiHoursUI?.open)window.KiwiHoursUI.open({venueId:planningHoursKey(ctx),title:ctx.venue?.name||'',onSave:()=>setTimeout(()=>pending?handlers['kt-plan-fair']():render(),100)});
+  };
+  handlers['kt-plan-fair-build'] = () => {
+    const pending=window.__kiwiPlanningFair,ctx=planningContext(),P=window.KiwiPlanningCore,KH=window.KiwiHours,copy=fairScheduleCopy();if(!pending?.mdl?.el||!P?.fairSchedule||!KH)return;
+    const people=Math.max(1,Math.floor(Number(pending.mdl.el.querySelector('[data-kt-fair-people]')?.value)||1));
+    const shiftCount=Math.max(1,Math.floor(Number(pending.mdl.el.querySelector('[data-kt-fair-shifts]')?.value)||1));
+    if(people<shiftCount){toast(copy.invalid,{type:'error'});return;}
+    const hoursKey=pending.hoursKey||planningHoursKey(ctx),periodsByDay=Object.fromEntries(ctx.period.days.map((day)=>{const resolved=KH.periodsOn(day,hoursKey);return[day,Array.isArray(resolved)?resolved:(resolved?.periods||[])];}));
+    const result=P.fairSchedule({planning:ctx.planning,shifts:ctx.shifts,days:ctx.period.days,members:ctx.members,dailyPeople:people,shiftsPerDay:shiftCount,periodsByDay,holidaysByDay:planningHolidaysByDay(ctx.period.days),seed:`${ctx.key}|${ctx.period.start}`});
+    const hours=result.hoursByMember.map((row)=>row.hours);const low=hours.length?Math.min(...hours):0,high=hours.length?Math.max(...hours):0;
+    const openDays=ctx.period.days.length-result.closedDays.length;
+    const issues=[];if(result.unresolved.length)issues.push(`<div class="kt-plan-issue is-blocker"><b>!</b><span>${esc(copy.shortage(result.unresolved.length))}</span></div>`);if(result.closedDays.length)issues.push(`<div class="kt-plan-issue is-warning"><b>i</b><span>${esc(copy.closed(result.closedDays.length))}</span></div>`);
+    const rows=result.hoursByMember.filter((row)=>row.hours>0).map((row)=>{const member=ctx.members.find((item)=>String(item.id)===row.memberId);return `<div class="kt-fair-review-row"><b>${esc(member?memberFullName(member):row.memberId)}</b><span>${row.hours.toLocaleString('fr-FR',{maximumFractionDigits:1})} h</span></div>`;}).join('');
+    pending.mdl.close();
+    const mdl=modal({title:copy.reviewTitle,width:620,body:`<div class="kt-opt-summary"><strong>${esc(copy.review(result.assignments.length,openDays))}</strong><p>${esc(copy.balance(low.toLocaleString('fr-FR',{maximumFractionDigits:1}),high.toLocaleString('fr-FR',{maximumFractionDigits:1})))}</p><p>${esc(copy.reviewNote)}</p></div><div class="kt-fair-review">${rows}</div>${issues.join('')}`,foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button class="kb atlas" data-action="kt-plan-fair-confirm"${result.assignments.length?'':' disabled'}>${esc(copy.apply)}</button>`});
+    mdl.el.addEventListener('click',(event)=>{if(event.target.closest('[data-dismiss]'))mdl.close();});window.__kiwiPlanningFair={mdl,key:ctx.key,result};
+  };
+  handlers['kt-plan-fair-confirm'] = () => {const pending=window.__kiwiPlanningFair;if(!pending?.mdl?.el||!pending.result)return;window.__kiwiTeamV2.shiftsByVenue[pending.key]=pending.result.shifts;saveCustomTeams();pending.mdl.close();window.__kiwiPlanningFair=null;render();toast(fairScheduleCopy().done,{type:'success'});};
+
+  function planningRoleOptions(ctx, selected) {
+    const copy = planningCopy();
+    const roles = Array.from(new Set(ctx.members.map((member)=>String(member.function || member.department || '').trim()).filter(Boolean))).sort();
+    return `<option value="">${esc(copy.allRoles)}</option>${roles.map((role)=>`<option value="${esc(role)}"${role===selected?' selected':''}>${esc(role)}</option>`).join('')}`;
+  }
+  function planningDaysInput(selected) {
+    const labels=trLang()==='ar'?['ح','ن','ث','ر','خ','ج','س']:trLang()==='en'?['S','M','T','W','T','F','S']:['D','L','M','M','J','V','S'];
+    const values=new Set((selected||[1,2,3,4,5]).map(Number));
+    return `<div class="kt-plan-weekdays">${labels.map((label,day)=>`<label><input type="checkbox" value="${day}" data-kt-coverage-day${values.has(day)?' checked':''}><span>${esc(label)}</span></label>`).join('')}</div>`;
+  }
+  handlers['kt-plan-coverage'] = () => {
+    const ctx=planningContext(), copy=planningCopy(), rules=(ctx.planning.coverageRules||[]).filter((rule)=>rule&&rule.active!==false);
+    const rulesHtml=rules.length?`<div class="kt-coverage-list">${rules.map((rule)=>`<div class="kt-coverage-rule"><div><strong>${esc(rule.label||rule.role||copy.coverage)}</strong><span>${esc(rule.start)}–${esc(rule.end)} · ${esc(rule.role||copy.allRoles)} · ${esc(copy.minimum)} ${Number(rule.minimum)||1}</span></div><button class="kb ghost" data-action="kt-plan-coverage-delete" data-rule-id="${esc(rule.id)}">${esc(copy.delete)}</button></div>`).join('')}</div>`:'';
+    const body=`${rulesHtml}<div class="kt-plan-form-grid"><div class="kt-plan-modal-field wide"><label>${esc(copy.label)}</label><input data-kt-coverage-label maxlength="80" placeholder="${esc(copy.labelHint)}"></div><div class="kt-plan-modal-field"><label>${esc(copy.role)}</label><select data-kt-coverage-role>${planningRoleOptions(ctx,'')}</select></div><div class="kt-plan-modal-field"><label>${esc(copy.minimum)}</label><input data-kt-coverage-min type="number" min="1" max="99" value="1"></div><div class="kt-plan-modal-field"><label>${esc(copy.start)}</label><input data-kt-coverage-start type="time" value="11:30"></div><div class="kt-plan-modal-field"><label>${esc(copy.end)}</label><input data-kt-coverage-end type="time" value="14:30"></div><div class="kt-plan-modal-field wide"><label>${esc(copy.weekdays)}</label>${planningDaysInput()}</div></div>`;
+    const mdl=modal({title:copy.coverage,width:680,body,foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button class="kb atlas" data-action="kt-plan-coverage-save">${esc(copy.addRule)}</button>`});
+    mdl.el.addEventListener('click',(event)=>{if(event.target.closest('[data-dismiss]'))mdl.close();});window.__kiwiPlanningCoverage=mdl;
+  };
+  handlers['kt-plan-coverage-save'] = () => {
+    const mdl=window.__kiwiPlanningCoverage, ctx=planningContext(), copy=planningCopy(); if(!mdl?.el)return;
+    const start=mdl.el.querySelector('[data-kt-coverage-start]')?.value,end=mdl.el.querySelector('[data-kt-coverage-end]')?.value;
+    const weekdays=Array.from(mdl.el.querySelectorAll('[data-kt-coverage-day]:checked')).map((input)=>Number(input.value));
+    if(!start||!end||start===end||!weekdays.length){toast(copy.decisionFailed,{type:'error'});return;}
+    const now=new Date().toISOString();
+    ctx.planning.coverageRules.push({id:`cov-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`,label:mdl.el.querySelector('[data-kt-coverage-label]')?.value.trim().slice(0,80)||`${start}–${end}`,role:mdl.el.querySelector('[data-kt-coverage-role]')?.value||'',minimum:Math.max(1,Math.min(99,Number(mdl.el.querySelector('[data-kt-coverage-min]')?.value)||1)),start,end,weekdays,active:true,createdAt:now,updatedAt:now});
+    saveCustomTeams();mdl.close();window.__kiwiPlanningCoverage=null;render();toast(copy.ruleSaved,{type:'success'});
+  };
+  handlers['kt-plan-coverage-delete'] = (el) => {
+    const ctx=planningContext(),rule=(ctx.planning.coverageRules||[]).find((item)=>item.id===el.dataset.ruleId);if(!rule)return;
+    rule.active=false;rule.updatedAt=new Date().toISOString();saveCustomTeams();window.__kiwiPlanningCoverage?.close?.();window.__kiwiPlanningCoverage=null;render();
+  };
+  handlers['kt-plan-open'] = () => {
+    const ctx=planningContext(),copy=planningCopy(),day=visibleDays()[0]||toISO(new Date());
+    const today=toISO(new Date());
+    const body=`<div class="kt-plan-form-grid"><div class="kt-plan-modal-field"><label>${esc(copy.date)}</label><input data-kt-open-day type="date" min="${esc(today)}" value="${esc(day<today?today:day)}"></div><div class="kt-plan-modal-field"><label>${esc(copy.role)}</label><select data-kt-open-role>${planningRoleOptions(ctx,'')}</select></div><div class="kt-plan-modal-field"><label>${esc(copy.start)}</label><input data-kt-open-start type="time" value="09:00"></div><div class="kt-plan-modal-field"><label>${esc(copy.end)}</label><input data-kt-open-end type="time" value="17:00"></div><div class="kt-plan-modal-field wide"><label>${esc(copy.label)}</label><input data-kt-open-note maxlength="160"></div></div>`;
+    const mdl=modal({title:copy.openShift,width:620,body,foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button class="kb atlas" data-action="kt-plan-open-save">${esc(copy.openShift)}</button>`});mdl.el.addEventListener('click',(event)=>{if(event.target.closest('[data-dismiss]'))mdl.close();});window.__kiwiPlanningOpen=mdl;
+  };
+  handlers['kt-plan-open-save'] = () => {
+    const mdl=window.__kiwiPlanningOpen,ctx=planningContext(),P=window.KiwiPlanningCore,copy=planningCopy();if(!mdl?.el||!P)return;
+    const result=P.createOpenShift(ctx.planning,{day:mdl.el.querySelector('[data-kt-open-day]')?.value,start:mdl.el.querySelector('[data-kt-open-start]')?.value,end:mdl.el.querySelector('[data-kt-open-end]')?.value,role:mdl.el.querySelector('[data-kt-open-role]')?.value||'',note:mdl.el.querySelector('[data-kt-open-note]')?.value||''});if(!result.ok){toast(copy.decisionFailed,{type:'error'});return;}
+    ctx.root.planningByVenue[ctx.key]=result.planning;saveCustomTeams();mdl.close();window.__kiwiPlanningOpen=null;render();toast(copy.openSaved,{type:'success'});
+  };
+
+  handlers['kt-plan-requests'] = () => {
+    const copy = planningCopy();
+    const ctx = planningContext();
+    const pending = (ctx.planning.requests || []).filter((request) => request.status === 'pending');
+    const openClaims=(ctx.planning.openShifts||[]).filter((shift)=>shift.status==='claimed');
+    const swapClaims=(ctx.planning.swapRequests||[]).filter((request)=>request.status==='claimed');
+    const byId = new Map(ctx.members.map((member) => [member.id, member]));
+    const standard=pending.map((request) => {
+      const member = byId.get(request.memberId);
+      const range = request.type === 'leave' ? `${request.startDate} → ${request.endDate}` : `${(request.weekdays || []).join(', ')} · ${request.start || '·'} → ${request.end || '·'}`;
+      return `<article class="kt-plan-request"><div class="kt-plan-request-head"><div><strong>${esc(member ? memberFullName(member) : request.memberId)}</strong><div>${esc(request.type === 'leave' ? copy.leave : copy.availability)} · ${esc(range)}</div></div></div>${request.reason ? `<p>${esc(request.reason)}</p>` : ''}<div class="kt-plan-request-actions"><button class="kb atlas" data-action="kt-plan-request-decision" data-kind="request" data-rid="${esc(request.id)}" data-decision="approved">${esc(copy.approve)}</button><button class="kb ghost" data-action="kt-plan-request-decision" data-kind="request" data-rid="${esc(request.id)}" data-decision="rejected">${esc(copy.reject)}</button></div></article>`;
+    });
+    const opportunities=openClaims.map((shift)=>{const member=byId.get(shift.claimantId);return `<article class="kt-plan-request"><div class="kt-plan-request-head"><div><strong>${esc(copy.openClaim)} · ${esc(member?memberFullName(member):shift.claimantId)}</strong><div>${esc(shift.day)} · ${esc(shift.start)}–${esc(shift.end)} · ${esc(shift.role||copy.allRoles)}</div></div></div><div class="kt-plan-request-actions"><button class="kb atlas" data-action="kt-plan-request-decision" data-kind="open" data-rid="${esc(shift.id)}" data-decision="approved">${esc(copy.approve)}</button><button class="kb ghost" data-action="kt-plan-request-decision" data-kind="open" data-rid="${esc(shift.id)}" data-decision="rejected">${esc(copy.reject)}</button></div></article>`;})
+      .concat(swapClaims.map((request)=>{const owner=byId.get(request.memberId),claimant=byId.get(request.claimantId);return `<article class="kt-plan-request"><div class="kt-plan-request-head"><div><strong>${esc(copy.swap)} · ${esc(owner?memberFullName(owner):request.memberId)} ↔ ${esc(claimant?memberFullName(claimant):request.claimantId)}</strong><div>${esc(request.day)} ↔ ${esc(request.offeredDay)}</div></div></div><div class="kt-plan-request-actions"><button class="kb atlas" data-action="kt-plan-request-decision" data-kind="swap" data-rid="${esc(request.id)}" data-decision="approved">${esc(copy.approve)}</button><button class="kb ghost" data-action="kt-plan-request-decision" data-kind="swap" data-rid="${esc(request.id)}" data-decision="rejected">${esc(copy.reject)}</button></div></article>`;}));
+    const all=standard.concat(opportunities);
+    const body = all.length ? `<div class="kt-plan-request-list">${all.join('')}</div>` : `<p>${esc(copy.empty)}</p>`;
+    const mdl = modal({ title:copy.review, width:620, body, foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button>` });
+    mdl.el.addEventListener('click', (event) => { if (event.target.closest('[data-dismiss]')) mdl.close(); });
+    window.__kiwiPlanningRequests = mdl;
+  };
+  handlers['kt-plan-request-decision'] = (el) => {
+    const ctx = planningContext();
+    const kind=el.dataset.kind||'request';
+    if(kind==='open'||kind==='swap'){
+      const result=kind==='open'?window.KiwiPlanningCore.decideOpenShift(ctx.planning,ctx.shifts,el.dataset.rid,el.dataset.decision,ctx.members):window.KiwiPlanningCore.decideSwap(ctx.planning,ctx.shifts,el.dataset.rid,el.dataset.decision,ctx.members);
+      if(!result.ok){toast(planningCopy().decisionFailed,{type:'error'});return;}
+      ctx.root.planningByVenue[ctx.key]=result.planning;ctx.root.shiftsByVenue[ctx.key]=result.shifts;saveCustomTeams();window.__kiwiPlanningRequests?.close?.();window.__kiwiPlanningRequests=null;render();toast(el.dataset.decision==='approved'?planningCopy().approved:planningCopy().rejected,{type:'success'});return;
+    }
+    const request = (ctx.planning.requests || []).find((item) => item.id === el.dataset.rid);
+    if (!request || request.status !== 'pending') return;
+    request.status = el.dataset.decision === 'approved' ? 'approved' : 'rejected';
+    request.updatedAt = new Date().toISOString();
+    if (request.status === 'approved' && request.type === 'availability') {
+      const current = ctx.planning.availability[request.memberId] || { weekdays:{} };
+      (request.weekdays || []).forEach((weekday) => { current.weekdays[String(weekday)] = { available:request.available !== false, start:request.start || '', end:request.end || '' }; });
+      current.updatedAt = request.updatedAt;
+      ctx.planning.availability[request.memberId] = current;
+    }
+    saveCustomTeams();
+    window.__kiwiPlanningRequests?.close?.(); window.__kiwiPlanningRequests = null;
+    render(); toast(request.status === 'approved' ? planningCopy().approved : planningCopy().rejected, { type:'success' });
+  };
+
   handlers['kt-plan-week'] = (_el, dir) => {
     closeShiftPop();
     const chunks = weekChunks(buildPeriod(window.__kiwiTeamV2.periodKind || 'week').days);
     const next = planWeekIdx + (dir === 'next' ? 1 : -1);
     if (next < 0 || next >= chunks.length) return;
     planWeekIdx = next;
+    render();
+  };
+
+  handlers['kt-period-nav'] = (_el, dir) => {
+    closeShiftPop();
+    const root = window.__kiwiTeamV2;
+    const kind = root.periodKind || 'week';
+    if (!Object.prototype.hasOwnProperty.call(periodOffsets, kind)) return;
+    rememberPeriodLock(root, kind, buildPeriod(kind));
+    if (dir === 'current') periodOffsets[kind] = 0;
+    else periodOffsets[kind] += dir === 'next' ? 1 : -1;
+    const period = buildPeriod(kind);
+    restorePeriodLock(root, kind, period);
+    planWeekIdx = periodOffsets[kind] === 0 ? weekIdxForToday(period.days) : 0;
     render();
   };
 
@@ -1592,6 +2073,10 @@
     window.removeEventListener('scroll', placeShiftPop, true);
     shiftPop.el.remove();
     shiftPop = null;
+    /* La saisie est finie : on rattrape le rafraîchissement mis de côté par
+     * applyLiveTeam(). Le drapeau est remis à zéro avant render(), qui rappelle
+     * closeShiftPop() — sans quoi les deux se relanceraient l'un l'autre. */
+    if (liveTeamPendingRender) applyLiveTeam();
   }
   function onPopDown(e) {
     if (!shiftPop) return;
@@ -1726,12 +2211,12 @@
       const tr = rows[idx];
       if (!tr) return;
       const tb = tr.querySelector('.kt-h-total b');
-      if (tb) tb.textContent = h.toFixed(2).replace('.', ',');
+      if (tb) tb.textContent = fmtHours(h);
       const pb = tr.querySelector('.kt-h-pay b');
       if (pb) pb.textContent = cost.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
     });
     const foot = root.querySelectorAll('tfoot .kt-h-foot-tot b');
-    if (foot[0]) foot[0].textContent = grandH.toFixed(2).replace('.', ',');
+    if (foot[0]) foot[0].textContent = fmtHours(grandH);
     if (foot[1]) foot[1].textContent = grandC.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
   }
 
@@ -1755,10 +2240,24 @@
     const vt = teamKey(venue || { type: 'restaurant' });
     const hours = window.__kiwiTeamV2.hoursByVenue[vt] || (window.__kiwiTeamV2.hoursByVenue[vt] = {});
     if (!hours[mid]) hours[mid] = {};
-    const val = Math.max(0, Math.min(24, parseFloat(t2.value) || 0));
+    const val = Math.max(0, Math.min(24, parseFloat(String(t2.value).replace(',', '.')) || 0));
+    t2.dataset.hoursValue = String(val);
     hours[mid][day] = val;
     updateHourTotals();
     saveCustomTeams();          // an hour typed is payroll data — persist it
+  });
+
+  document.addEventListener('focusin', (e) => {
+    const input = e.target;
+    if (!input.matches || !input.matches('[data-kt-hour]')) return;
+    input.value = String(Number(input.dataset.hoursValue) || 0);
+    input.select();
+  });
+
+  document.addEventListener('focusout', (e) => {
+    const input = e.target;
+    if (!input.matches || !input.matches('[data-kt-hour]')) return;
+    input.value = fmtHours(input.dataset.hoursValue);
   });
 
   function updateHourTotals() {
@@ -1783,12 +2282,12 @@
       if (tr) {
         const totalCell = tr.querySelector('.kt-h-total b');
         const payCell   = tr.querySelector('.kt-h-pay b');
-        if (totalCell) totalCell.textContent = tot.toFixed(2).replace('.', ',');
+        if (totalCell) totalCell.textContent = fmtHours(tot);
         if (payCell)   payCell.textContent   = pay.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
       }
     });
     const footTot = root.querySelectorAll('table.kt-h-table tfoot .kt-h-foot-tot b');
-    if (footTot[0]) footTot[0].textContent = grandH.toFixed(2).replace('.', ',');
+    if (footTot[0]) footTot[0].textContent = fmtHours(grandH);
     if (footTot[1]) footTot[1].textContent = grandP.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
 
     // On Paie & planning the band above the grid is the headline the owner reads
@@ -1798,7 +2297,7 @@
       const baseMass = members.reduce((a, m) => a + (+m.baseSalary || 0), 0);
       const vals = root.querySelectorAll('.eq-stats .eq-stat-v');
       if (vals[0]) vals[0].textContent = fmtMad(baseMass + grandP);
-      if (vals[1]) vals[1].textContent = grandH.toFixed(1).replace('.', ',') + ' h';
+      if (vals[1]) vals[1].textContent = fmtHours(grandH);
       if (vals[2]) vals[2].textContent = fmtMad(grandP);
       if (vals[3]) vals[3].textContent = fmtMad(baseMass);
     }
@@ -1883,7 +2382,7 @@
           <div class="kt-fsec">
             <div class="kt-fseclabel">${esc(T.secContact)}</div>
             <div class="kt-fgrid-2">
-              <label><span class="l">${esc(T.email)}</span><input type="email" name="email" value="${esc(m.email)}" placeholder="${esc(T.placeholder.email)}" /></label>
+              <label><span class="l">${esc(T.email)}</span><input type="email" name="email" value="${esc(m.email)}" placeholder="${esc(T.placeholder.email)}" autocomplete="email" required /></label>
               <label><span class="l">${esc(T.phone)}</span><input type="tel" name="phone" value="${esc(m.phone)}" placeholder="${esc(T.placeholder.phone)}" /></label>
             </div>
             <label><span class="l">${esc(T.address)}</span><input type="text" name="address" value="${esc(m.address)}" placeholder="${esc(T.placeholder.address)}" /></label>
@@ -1971,6 +2470,13 @@
   }
 
   handlers['kt-add-member']  = () => openMemberModal(null);
+  handlers['kt-employee-app'] = () => {
+    let slug = '';
+    try { slug = teamSlug() || window.KiwiConfig?.storeSlug?.() || ''; } catch (_) {}
+    if (!slug) { toast('Enregistrez d\'abord cet établissement', { type: 'pend' }); return; }
+    const url = `${location.origin}/kiwi-serveur.html?merchant=${encodeURIComponent(slug)}`;
+    window.open(url, '_blank', 'noopener');
+  };
   handlers['kt-edit-member'] = (_el, id) => {
     if (window.__kiwiTeamProfileDrawer) {
       try { window.__kiwiTeamProfileDrawer.close(); } catch (_) {}
@@ -2048,7 +2554,7 @@
     const form = mdl.el.querySelector('[data-kt-form]'); if (!form) return;
     const data = Object.fromEntries(new FormData(form).entries());
 
-    if (!data.firstName?.trim() || !data.lastName?.trim() || !data.function?.trim()) {
+    if (!data.firstName?.trim() || !data.lastName?.trim() || !data.email?.trim() || !data.function?.trim()) {
       Kiwi.toast(T.vRequired, { type: 'pend' }); return;
     }
     if (data.email && !/^\S+@\S+\.\S+$/.test(data.email)) {
@@ -2065,6 +2571,14 @@
     const venueType = st.venueType;
     const members = getMembers(venueType);
     const prev = st.editing ? members.find((x) => x.id === st.memberId) : null;
+    const emailKey = String(data.email || '').trim().toLocaleLowerCase('en');
+    if (members.some((x) => x.id !== st.memberId && String(x.email || '').trim().toLocaleLowerCase('en') === emailKey)) {
+      Kiwi.toast(T.vDuplicateEmail, { type: 'pend' }); return;
+    }
+    const effectiveCode = code || (prev && (prev.pinCode || prev.password)) || '';
+    if (effectiveCode && members.some((x) => x.id !== st.memberId && String(x.pinCode || x.password || '').trim() === effectiveCode)) {
+      Kiwi.toast(T.vDuplicateCode, { type: 'pend' }); return;
+    }
     const member = {
       id: st.memberId,
       firstName: data.firstName.trim(),
@@ -2093,7 +2607,7 @@
       notes: (data.notes || '').trim(),
       avatarTone: st.avatarTone || AVATAR_TONES[Math.floor(Math.random() * AVATAR_TONES.length)],
       venueType,
-      venueSlug: (() => { try { return window.KiwiCloudDoc?.slugFor?.(venueType) || ''; } catch (_) { return ''; } })(),
+      venueSlug: teamSlug(),
       createdAt: st.origCreatedAt || Date.now(),
     };
 
@@ -2153,8 +2667,8 @@
 
           ${profileSection(T.secContract, [
             [T.contractType, m.contract],
-            [T.startDate, m.startDate || '—'],
-            ...(m.contract === 'CDD' || m.contract === 'Stage' ? [[T.endDate, m.endDate || '—']] : []),
+            [T.startDate, m.startDate || '·'],
+            ...(m.contract === 'CDD' || m.contract === 'Stage' ? [[T.endDate, m.endDate || '·']] : []),
           ])}
 
           ${profileSection(T.secComp, [
@@ -2162,11 +2676,11 @@
             [T.hourlyRate, `<span class="mono">${(m.hourlyRate || 0).toLocaleString('fr-FR')} MAD</span>`],
           ], true)}
 
-          ${profileSection(T.cin, [['', m.cin || '—']], true)}
+          ${profileSection(T.cin, [['', m.cin || '·']], true)}
 
           ${profileSection(T.secEmergency, [
-            [T.emergencyName, m.emergencyName || '—'],
-            [T.emergencyPhone, m.emergencyPhone || '—'],
+            [T.emergencyName, m.emergencyName || '·'],
+            [T.emergencyPhone, m.emergencyPhone || '·'],
           ])}
 
           ${m.notes ? profileSection(T.secNotes, [['', m.notes]]) : ''}
@@ -2183,7 +2697,7 @@
   function profileSection(title, rows, prehtml) {
     const inner = rows.map(([l, v]) => {
       const lbl = l ? `<div class="kt-pf-l">${esc(l)}</div>` : '';
-      const val = prehtml ? `<div class="kt-pf-v">${v}</div>` : `<div class="kt-pf-v">${esc(v || '—')}</div>`;
+      const val = prehtml ? `<div class="kt-pf-v">${v}</div>` : `<div class="kt-pf-v">${esc(v || '·')}</div>`;
       return `<div class="kt-pf-row">${lbl}${val}</div>`;
     }).join('');
     return `
@@ -2241,9 +2755,13 @@
   handlers['kt-period'] = (_el, kind) => {
     if (!['week', 'fortnight', 'month'].includes(kind)) return;
     const root = window.__kiwiTeamV2;
+    const previousKind = root.periodKind || 'week';
+    rememberPeriodLock(root, previousKind, buildPeriod(previousKind));
     root.periodKind = kind;
-    root.periodLocked = false;
-    planWeekIdx = weekIdxForToday(buildPeriod(kind).days);   // nouvelle période ⇒ on retombe sur la semaine en cours
+    periodOffsets[kind] = 0;
+    const targetPeriod = buildPeriod(kind);
+    restorePeriodLock(root, kind, targetPeriod);
+    planWeekIdx = weekIdxForToday(targetPeriod.days);   // nouvelle période ⇒ on retombe sur la semaine en cours
     const venue = window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' };
     const vt = teamKey(venue);
     const period = buildPeriod(kind);
@@ -2274,7 +2792,7 @@
     const venue = window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' };
     const venueType = teamKey(venue);
     const members = getMembers(venueType);
-    if (!members.length) { Kiwi.toast('—', { type: 'info' }); return; }
+    if (!members.length) { Kiwi.toast('·', { type: 'info' }); return; }
     const today = toISO(new Date());
     const qe = modal({
       title: T.qeTitle,
@@ -2289,7 +2807,7 @@
             <label><span class="l">${esc(T.qeDate)}</span><input type="date" data-kt-qe-date value="${esc(today)}" /></label>
             <label><span class="l">${esc(T.qeHours)}</span><input type="number" data-kt-qe-hours min="0" max="24" step="0.25" value="8" /></label>
           </div>
-          <label><span class="l">${esc(T.qeNote)}</span><input type="text" data-kt-qe-note placeholder="—" /></label>
+          <label><span class="l">${esc(T.qeNote)}</span><input type="text" data-kt-qe-note placeholder="·" /></label>
         </div>
       `,
       foot: `
@@ -2309,7 +2827,7 @@
     const mid = qe.el.querySelector('[data-kt-qe-member]')?.value;
     const date = qe.el.querySelector('[data-kt-qe-date]')?.value;
     const hVal = parseFloat(qe.el.querySelector('[data-kt-qe-hours]')?.value) || 0;
-    if (!mid || !date) { Kiwi.toast('—', { type: 'pend' }); return; }
+    if (!mid || !date) { Kiwi.toast('·', { type: 'pend' }); return; }
     const hours = window.__kiwiTeamV2.hoursByVenue[vt] || (window.__kiwiTeamV2.hoursByVenue[vt] = {});
     if (!hours[mid]) hours[mid] = {};
     hours[mid][date] = hVal;
@@ -2322,7 +2840,48 @@
 
   handlers['kt-export-csv'] = () => {
     const T = t();
+    const venue = window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' };
+    const key = teamKey(venue), members = getMembers(key), hours = getHours(key);
+    const period = buildPeriod(window.__kiwiTeamV2.periodKind || 'week');
+    const csv = (value) => {
+      let safe = String(value == null ? '' : value);
+      /* Excel, Numbers and LibreOffice may execute cells beginning with a
+         formula sigil. Employee names/roles are merchant data, so keep them
+         literal even when somebody is genuinely called "@samir". */
+      if (/^[=+\-@]/.test(safe)) safe = "'" + safe;
+      return `"${safe.replace(/"/g, '""')}"`;
+    };
+    const rows = [[
+      'Période début', 'Période fin', 'ID membre', 'Employé', 'Fonction',
+      'Date', 'Heures', 'Taux horaire MAD', 'Coût heures MAD', 'Salaire de base MAD',
+    ]];
+    let totalHours = 0;
+    members.forEach((member) => {
+      period.days.forEach((day) => {
+        const value = Math.max(0, +(hours[member.id] || {})[day] || 0);
+        totalHours += value;
+        rows.push([
+          period.start, period.end, member.id, memberFullName(member), member.function || '', day,
+          value.toFixed(2), (+member.hourlyRate || 0).toFixed(2),
+          (value * (+member.hourlyRate || 0)).toFixed(2), (+member.baseSalary || 0).toFixed(2),
+        ]);
+      });
+    });
+    const content = '\uFEFF' + rows.map((row) => row.map(csv).join(';')).join('\r\n');
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob), anchor = document.createElement('a');
+    const slug = String(venue.slug || venue.id || venue.type || 'kiwi').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase();
+    const filename = `kiwi-paie-${slug}-${period.start}-${period.end}.csv`;
+    anchor.href = url; anchor.download = filename; anchor.hidden = true;
+    document.body.appendChild(anchor); anchor.click(); anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     Kiwi.toast(T.tExport, { type: 'success', desc: T.tExportDesc });
+    /* The file is created locally first. The command is only the durable audit
+       hand-off; a provider failure can never eat the merchant's export. */
+    window.KiwiOperations?.create?.('payroll', 'export-payroll', {
+      format: 'csv', filename, periodStart: period.start, periodEnd: period.end,
+      teamCount: members.length, rowCount: rows.length - 1, totalHours,
+    }).catch(() => {});
   };
   handlers['kt-import-csv'] = () => {
     const T = t();
@@ -2336,6 +2895,15 @@
     const period = buildPeriod(root.periodKind);
     if (pageActive) render();
     Kiwi.toast(T.tValidated(period.startFr, period.endFr), { type: 'success', desc: T.tValidatedDesc });
+  };
+  handlers['kt-unlock-period'] = () => {
+    const T = t();
+    const root = window.__kiwiTeamV2;
+    if (!root.periodLocked) return;
+    root.periodLocked = false;
+    const period = buildPeriod(root.periodKind);
+    if (pageActive) render();
+    Kiwi.toast(T.tUnlocked(period.startFr, period.endFr), { type: 'success', desc: T.tUnlockedDesc });
   };
 
   /* ═══════════════ PAIE & PLANNING ═══════════════
@@ -2396,11 +2964,11 @@
   }
   const dateLocale = () => (trLang() === 'en' ? 'en-US' : trLang() === 'ar' ? 'ar-MA' : 'fr-FR');
 
-  function planCellHtml(T, m, d, cur, locked) {
+  function planCellHtml(T, m, d, cur, locked, dayMeta) {
     const s = normShift(cur);
     const isToday = (d === toISO(new Date()));
     const title = shiftCellTitle(T, cur, d);
-    return `<td class="kt-day-cell kt-plan-cell${isToday ? ' today' : ''}${s && !s.off ? ' on' : ''}${s && s.off ? ' off' : ''}"
+    return `<td class="kt-day-cell kt-plan-cell${isToday ? ' today' : ''}${s && !s.off ? ' on' : ''}${s && s.off ? ' off' : ''}${dayMeta?.closed?' is-closed':''}${dayMeta?.holiday?' is-holiday':''}"
       data-kt-cell="${esc(m.id)}|${esc(d)}">
       <button class="kt-sh" type="button" data-action="kt-shift-edit" data-mid="${esc(m.id)}" data-day="${esc(d)}"
         ${locked ? 'disabled' : ''}${title ? ` title="${esc(title)}"` : ''}>${shiftCellInner(T, cur, locked)}</button>
@@ -2426,12 +2994,67 @@
     return i < 0 ? 0 : Math.floor(i / 7);
   }
 
-  function renderPlanningPane(T, venue, venueType, members) {
+  function planningCopy() {
+    const lang = trLang();
+    if (lang === 'en') return { draft:'Draft', published:'Published', changed:'Changes to publish', save:'Save as template', apply:'Apply template', requests:'Requests', publish:'Publish schedule', noTemplate:'No template', healthy:'Ready to publish', blocked:(n)=>`${n} conflict${n===1?'':'s'} to resolve`, pending:(n)=>`${n} pending request${n===1?'':'s'}`, templateTitle:'Save this week', templateName:'Template name', saveNow:'Save template', review:'Review requests', empty:'No pending request.', approve:'Approve', reject:'Reject', approved:'Request approved.', rejected:'Request rejected.', leave:'Leave', availability:'Availability', publishDone:'Schedule published to the employee app.', templateDone:'Template saved.', applyDone:'Template applied. Review it before publishing.', publishBlocked:'Publishing is blocked until every conflict is resolved.', coverage:'Coverage rules', rules:(n)=>`${n} coverage rule${n===1?'':'s'}`, labelHint:'e.g. Lunch service', claims:(n)=>`${n} claim${n===1?'':'s'} received`, more:(n)=>`+${n} more`, openShift:'Open shift', planned:'Planned', worked:'Worked', gaps:'Coverage gaps', opportunities:'Open opportunities', warnings:'Warnings', addRule:'Add a coverage rule', minimum:'Minimum team', role:'Role', allRoles:'All roles', weekdays:'Days', start:'Start', end:'End', date:'Date', label:'Label', delete:'Delete', ruleSaved:'Coverage rule saved.', openSaved:'Open shift shared with employees.', openClaim:'Open shift claim', swap:'Shift exchange', decisionFailed:'The change cannot be approved because it conflicts with the current schedule.' };
+    if (lang === 'ar') return { draft:'مسودة', published:'منشور', changed:'تغييرات تنتظر النشر', save:'حفظ كنموذج', apply:'تطبيق النموذج', requests:'الطلبات', publish:'نشر الجدول', noTemplate:'لا يوجد نموذج', healthy:'جاهز للنشر', blocked:(n)=>n===1?'تعارض واحد يجب حله':`${n} تعارضات يجب حلها`, pending:(n)=>n===1?'طلب واحد معلق':`${n} طلبات معلقة`, templateTitle:'حفظ هذا الأسبوع', templateName:'اسم النموذج', saveNow:'حفظ النموذج', review:'مراجعة الطلبات', empty:'لا توجد طلبات معلقة.', approve:'موافقة', reject:'رفض', approved:'تمت الموافقة على الطلب.', rejected:'تم رفض الطلب.', leave:'إجازة', availability:'أوقات التوفر', publishDone:'تم نشر الجدول في تطبيق الموظفين.', templateDone:'تم حفظ النموذج.', applyDone:'تم تطبيق النموذج. راجعه قبل النشر.', publishBlocked:'يجب حل جميع التعارضات قبل النشر.', coverage:'قواعد التغطية', rules:(n)=>n===1?'قاعدة تغطية واحدة':`${n} قواعد تغطية`, labelHint:'مثال: خدمة الغداء', claims:(n)=>n===1?'ترشيح واحد':`${n} ترشيحات`, more:(n)=>`+${n} أخرى`, openShift:'وردية شاغرة', planned:'مخطط', worked:'منجز', gaps:'نقص التغطية', opportunities:'فرص مفتوحة', warnings:'تنبيهات', addRule:'إضافة قاعدة تغطية', minimum:'الحد الأدنى للفريق', role:'الوظيفة', allRoles:'كل الوظائف', weekdays:'الأيام', start:'البداية', end:'النهاية', date:'التاريخ', label:'التسمية', delete:'حذف', ruleSaved:'تم حفظ قاعدة التغطية.', openSaved:'تم نشر الوردية الشاغرة للموظفين.', openClaim:'طلب وردية شاغرة', swap:'تبادل وردية', decisionFailed:'لا يمكن اعتماد التغيير لأنه يتعارض مع الجدول الحالي.' };
+    return { draft:'Brouillon', published:'Publié', changed:'Modifications à publier', save:'Enregistrer comme modèle', apply:'Appliquer le modèle', requests:'Demandes', publish:'Publier le planning', noTemplate:'Aucun modèle', healthy:'Prêt à publier', blocked:(n)=>`${n} conflit${n===1?'':'s'} à résoudre`, pending:(n)=>`${n} demande${n===1?'':'s'} en attente`, templateTitle:'Enregistrer cette semaine', templateName:'Nom du modèle', saveNow:'Enregistrer le modèle', review:'Examiner les demandes', empty:'Aucune demande en attente.', approve:'Approuver', reject:'Refuser', approved:'Demande approuvée.', rejected:'Demande refusée.', leave:'Congé', availability:'Disponibilités', publishDone:'Planning publié dans l’application employé.', templateDone:'Modèle enregistré.', applyDone:'Modèle appliqué. Vérifiez-le avant publication.', publishBlocked:'La publication reste bloquée tant que les conflits ne sont pas résolus.', coverage:'Règles de couverture', rules:(n)=>`${n} règle${n===1?'':'s'} de couverture`, labelHint:'ex. Service du midi', claims:(n)=>`${n} candidature${n===1?'':'s'} reçue${n===1?'':'s'}`, more:(n)=>`+${n} autre${n===1?'':'s'}`, openShift:'Service à pourvoir', planned:'Planifié', worked:'Réalisé', gaps:'Manques de couverture', opportunities:'Opportunités ouvertes', warnings:'Alertes', addRule:'Ajouter une règle de couverture', minimum:'Équipe minimum', role:'Fonction', allRoles:'Toutes les fonctions', weekdays:'Jours', start:'Début', end:'Fin', date:'Date', label:'Libellé', delete:'Supprimer', ruleSaved:'Règle de couverture enregistrée.', openSaved:'Service partagé avec les employés.', openClaim:'Candidature à un service', swap:'Échange de service', decisionFailed:'Ce changement ne peut pas être approuvé car il entre en conflit avec le planning actuel.' };
+  }
+  function optimizationCopy(){const lang=trLang();if(lang==='en')return{optimize:'Build schedule',optimizeTitle:'Suggested schedule',optimizeCount:(n)=>`${n} shift${n===1?'':'s'} proposed`,optimizeReview:'Review the proposal before applying it. Nothing is published automatically.',optimizeUnresolved:(n)=>`${n} coverage gap${n===1?' remains':'s remain'}`,optimizeApply:'Apply to draft',optimizeDone:'Suggested shifts added to the draft.',optimizeBlocked:'No safe assignment covers these gaps.',optimizeNothing:'The schedule already covers every rule.'};if(lang==='ar')return{optimize:'إنشاء الجدول',optimizeTitle:'الجدول المقترح',optimizeCount:(n)=>`${n} ورديات مقترحة`,optimizeReview:'راجع الاقتراح قبل تطبيقه. لن يتم نشر أي شيء تلقائياً.',optimizeUnresolved:(n)=>`${n} فجوات دون حل آمن`,optimizeApply:'إضافة إلى المسودة',optimizeDone:'تمت إضافة الورديات المقترحة إلى المسودة.',optimizeBlocked:'لا يوجد تعيين آمن لتغطية هذا النقص.',optimizeNothing:'الجدول يغطي جميع القواعد بالفعل.'};return{optimize:'Composer le planning',optimizeTitle:'Planning suggéré',optimizeCount:(n)=>`${n} service${n===1?'':'s'} proposé${n===1?'':'s'}`,optimizeReview:'Vérifiez la proposition avant de l’appliquer. Rien n’est publié automatiquement.',optimizeUnresolved:(n)=>`${n} manque${n===1?' reste':'s restent'} sans solution sûre`,optimizeApply:'Ajouter au brouillon',optimizeDone:'Les services suggérés ont été ajoutés au brouillon.',optimizeBlocked:'Aucune affectation sûre ne couvre ces manques.',optimizeNothing:'Le planning couvre déjà toutes les règles.'};}
+  function issueLabel(issue) {
+    /* Un manque de couverture ne vise personne : il vise une règle. Sans ce
+     * repli, la ligne s'ouvrait sur la date et ne disait pas quelle règle. */
+    const who = issue.memberName || issue.memberId || issue.label;
+    const labels = trLang() === 'en'
+      ? { 'approved-leave':'is on approved leave', unavailable:'is marked unavailable', 'outside-availability':'is scheduled outside availability', 'outside-contract':'is outside the contract period', overlap:'has overlapping shifts', 'unknown-member':'is no longer on the team', 'empty-schedule':'No shift or day off has been entered', 'coverage-gap':`coverage short: ${issue.scheduled}/${issue.required}`, 'long-shift':'has a long shift', 'weekly-hours':'exceeds the weekly-hour alert', 'short-rest':'has too little rest', 'open-shift':'still has an open shift', 'closed-day':'is scheduled while the venue is closed', 'outside-opening-hours':'is scheduled outside opening hours', 'public-holiday':`is scheduled on ${issue.holiday}; review compensation` }
+      : trLang() === 'ar'
+        ? { 'approved-leave':'في إجازة معتمدة', unavailable:'غير متاح في هذا اليوم', 'outside-availability':'مجدول خارج أوقات توفره', 'outside-contract':'خارج مدة العقد', overlap:'لديه فترات عمل متداخلة', 'unknown-member':'لم يعد ضمن الفريق', 'empty-schedule':'لم يتم إدخال أي وردية أو يوم راحة', 'coverage-gap':`نقص في التغطية: ${issue.scheduled}/${issue.required}`, 'long-shift':'لديه وردية طويلة', 'weekly-hours':'تجاوز حد الساعات الأسبوعية', 'short-rest':'فترة الراحة غير كافية', 'open-shift':'لديه وردية شاغرة', 'closed-day':'مجدول في يوم تكون فيه المؤسسة مغلقة', 'outside-opening-hours':'مجدول خارج ساعات فتح المؤسسة', 'public-holiday':`مجدول خلال ${issue.holiday}؛ راجع التعويض` }
+        : { 'approved-leave':'est en congé approuvé', unavailable:'est indisponible ce jour', 'outside-availability':'est planifié hors disponibilité', 'outside-contract':'est hors période de contrat', overlap:'a des services qui se chevauchent', 'unknown-member':"n’est plus dans l’équipe", 'empty-schedule':'Aucun service ni jour de repos n’a été saisi', 'coverage-gap':`couverture insuffisante : ${issue.scheduled}/${issue.required}`, 'long-shift':'a un service long', 'weekly-hours':'dépasse l’alerte hebdomadaire', 'short-rest':'a trop peu de repos', 'open-shift':'a encore un service à pourvoir', 'closed-day':'est planifié alors que l’établissement est fermé', 'outside-opening-hours':'est planifié hors horaires d’ouverture', 'public-holiday':`est planifié pendant ${issue.holiday} ; vérifiez la compensation` };
+    return [who, issue.day, labels[issue.code] || issue.code].filter(Boolean).join(' · ');
+  }
+
+  function renderPlanningPane(T, venue, venueType, members, options = {}) {
+    /* Managers build and publish shifts, but salary rates and projected labour
+     * cost remain owner-only. One renderer keeps the operational plan identical
+     * while removing the financial column at the source (not merely with CSS). */
+    const showCosts = options.showCosts !== false;
     const root = window.__kiwiTeamV2;
     const period = buildPeriod(root.periodKind || 'week');
     const shifts = root.shiftsByVenue[venueType] || (root.shiftsByVenue[venueType] = {});
     const locked = root.periodLocked;
+    const P = window.KiwiPlanningCore;
+    const planning = root.planningByVenue[venueType] || (root.planningByVenue[venueType] = P?.blank?.() || {});
+    const copy = planningCopy();
+    const optimizeCopy = optimizationCopy();
+    const fairCopy = fairScheduleCopy();
+    const lifecycle = P?.status?.(planning, shifts, period.days) || { state:'draft' };
+    const ctx={venue,key:venueType};
+    const calendarMeta=planningPeriodMeta(period.days,ctx);
+    const periodsByDay=Object.fromEntries(period.days.map((day)=>[day,calendarMeta[day]?.periods||[]]));
+    const holidaysByDay=planningHolidaysByDay(period.days);
+    const hoursConfigured=Object.values(calendarMeta).some((meta)=>meta.configured);
+    const issues = P?.validate?.({ planning, shifts, days:period.days, members, periodsByDay:hoursConfigured?periodsByDay:null, holidaysByDay }) || [];
+    const blockers=issues.filter((issue)=>issue.severity==='blocker');
+    const warnings=issues.filter((issue)=>issue.severity!=='blocker');
+    /* La liste est tronquée à six lignes. `validate()` sort les alertes avant
+     * les bloquants, donc la troncature cachait précisément ce qui empêche de
+     * publier — on remonte les bloquants et on annonce le reste. */
+    const shownIssues=blockers.concat(warnings).slice(0,6);
+    const hiddenIssues=Math.max(0,issues.length-shownIssues.length);
+    const pending = (planning.requests || []).filter((request) => request.status === 'pending');
+    const opportunityClaims=(planning.openShifts||[]).filter((item)=>item.status==='claimed').length+(planning.swapRequests||[]).filter((item)=>item.status==='claimed').length;
+    const coverage=P?.coverageSummary?.({planning,shifts,days:period.days,members,periodsByDay:hoursConfigured?periodsByDay:null})||[];
+    const coverageGaps=coverage.reduce((sum,row)=>sum+(Number(row.gap)||0),0);
+    /* `coverage` liste les manques, pas les règles : une seule règle appliquée
+     * sur sept jours en rend sept. La tuile annonçait donc « 7 règles de
+     * couverture » à un patron qui n'en avait écrit qu'une — et serait retombée
+     * à « 0 règles » le jour où le planning est enfin complet. */
+    const coverageRuleCount=(planning.coverageRules||[]).filter((rule)=>rule&&rule.active!==false).length;
+    const openOpportunities=(planning.openShifts||[]).filter((item)=>['open','claimed'].includes(item.status)).length+(planning.swapRequests||[]).filter((item)=>['open','claimed'].includes(item.status)).length;
     let grandH = 0, grandCost = 0;
+    let workedH=0;
+    const realised=root.hoursByVenue[venueType]||{};
+    members.forEach((member)=>period.days.forEach((day)=>{workedH+=Number(realised[member.id]&&realised[member.id][day])||0;}));
 
     const chunks = weekChunks(period.days);
     if (planWeekIdx >= chunks.length) planWeekIdx = chunks.length - 1;
@@ -2442,7 +3065,9 @@
     const headDays = view.map((d) => {
       const dt = fromISO(d);
       const dayLbl = dt.toLocaleDateString(dateLocale(), { weekday: 'short' });
-      return `<th class="kt-day-head"><span class="d">${pad(dt.getDate())}</span><span class="m">${dayLbl}</span></th>`;
+      const meta=calendarMeta[d],hours=!meta.configured?'À configurer':meta.closed?'Fermé':compactPeriods(meta.periods);
+      const special=meta.exception?.label||meta.holiday?.label||'';
+      return `<th class="kt-day-head${meta.closed?' is-closed':''}${meta.holiday?' is-holiday':''}" title="${esc([special,hours].filter(Boolean).join(' · '))}"><span class="d">${pad(dt.getDate())}</span><span class="m">${dayLbl}</span><span class="kt-day-hours">${esc(hours)}</span>${special?`<span class="kt-day-special">${esc(special)}</span>`:''}</th>`;
     }).join('');
 
     let anyNextDay = false;
@@ -2454,7 +3079,7 @@
       period.days.forEach((d) => { h += shiftHours(row[d]); });
       const cells = view.map((d) => {
         if (shiftIsNextDay(row[d])) anyNextDay = true;
-        return planCellHtml(T, m, d, row[d], locked);
+        return planCellHtml(T, m, d, row[d], locked, calendarMeta[d]);
       }).join('');
       const cost = h * (+m.hourlyRate || 0);
       grandH += h; grandCost += cost;
@@ -2469,12 +3094,12 @@
             </div>
           </td>
           ${cells}
-          <td class="kt-h-total mono"><b>${h.toFixed(2).replace('.', ',')}</b><span>h</span></td>
-          <td class="kt-h-pay mono"><b>${cost.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>
+          <td class="kt-h-total mono"><b>${fmtHours(h)}</b></td>
+          ${showCosts ? `<td class="kt-h-pay mono"><b>${cost.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>` : ''}
         </tr>`;
     }).join('');
 
-    const cols = `<colgroup><col class="kt-plan-col-mem">${view.map(() => '<col>').join('')}<col class="kt-plan-col-tot"><col class="kt-plan-col-tot"></colgroup>`;
+    const cols = `<colgroup><col class="kt-plan-col-mem">${view.map(() => '<col>').join('')}<col class="kt-plan-col-tot">${showCosts ? '<col class="kt-plan-col-tot">' : ''}</colgroup>`;
     const stepper = multiWeek ? `
       <div class="kt-plan-step">
         <button class="kt-plan-arrow" type="button" data-action="kt-plan-week" data-arg="prev"
@@ -2484,6 +3109,46 @@
           aria-label="${esc(T.plNextWeek)}" ${planWeekIdx >= chunks.length - 1 ? 'disabled' : ''}>›</button>
       </div>` : '';
 
+    const stateText = lifecycle.state === 'published' ? copy.published : lifecycle.state === 'changed' ? copy.changed : copy.draft;
+    const qualityText = blockers.length ? copy.blocked(blockers.length) : copy.healthy;
+    const templates = planning.templates || [];
+    const specialDays=period.days.map((day)=>calendarMeta[day]).filter((meta)=>meta.exception||meta.holiday);
+    const calendarCopy=trLang()==='en'
+      ? {title:'Business calendar',ready:'Weekly opening hours, exceptions and public holidays are reflected below.',missing:'Set opening days before building the team schedule.',edit:'Edit hours',holiday:'Public holiday',review:'Review compensation policy'}
+      : trLang()==='ar'
+        ? {title:'تقويم المؤسسة',ready:'تظهر ساعات الفتح والاستثناءات والعطل الرسمية في الجدول.',missing:'حدد أيام وساعات العمل قبل إعداد جدول الفريق.',edit:'تعديل الساعات',holiday:'عطلة رسمية',review:'راجع سياسة التعويض'}
+        : {title:'Calendrier de l’établissement',ready:'Horaires, fermetures exceptionnelles et jours fériés sont intégrés au planning.',missing:'Renseignez les jours d’ouverture avant de composer le planning.',edit:'Modifier les horaires',holiday:'Jour férié',review:'Vérifier la compensation'};
+    const calendarBridge=`<div class="kt-calendar-bridge ${hoursConfigured?'is-ready':'is-missing'}"><i></i><div><strong>${esc(calendarCopy.title)}</strong><span>${esc(hoursConfigured?calendarCopy.ready:calendarCopy.missing)}</span>${specialDays.length?`<small>${specialDays.slice(0,3).map((meta)=>`${esc(fromISO(meta.day).toLocaleDateString(dateLocale(),{weekday:'short',day:'numeric',month:'short'}))} · ${esc(meta.exception?.label||meta.holiday?.label||calendarCopy.holiday)}${meta.holiday&&!meta.exception?' · '+esc(calendarCopy.review):''}`).join('<br>')}</small>`:''}</div><button class="btn-slim" type="button" data-action="kt-plan-hours">${esc(calendarCopy.edit)}</button></div>`;
+    const planningCommand = `
+      ${calendarBridge}
+      <div class="kt-planning-command">
+        <div class="kt-planning-health">
+          <span class="kt-plan-state ${esc(lifecycle.state)}"><i></i>${esc(stateText)}</span>
+          <div><strong>${esc(qualityText)}</strong><p>${esc(copy.pending(pending.length+opportunityClaims))}</p></div>
+        </div>
+        <div class="kt-planning-actions">
+          <div class="kt-plan-primary-row">
+            <button class="btn-slim kt-plan-fair-action" type="button" data-action="kt-plan-fair">${esc(fairCopy.action)}</button>
+            <div class="kt-plan-action-group is-publish">
+              ${pending.length+opportunityClaims ? `<button class="btn-slim" type="button" data-action="kt-plan-requests">${esc(copy.requests)} · ${pending.length+opportunityClaims}</button>` : ''}
+              <button class="btn-slim primary" type="button" data-action="kt-plan-publish">${esc(copy.publish)}</button>
+            </div>
+          </div>
+          <details class="kt-plan-tools">
+            <summary><span>${esc(fairCopy.tools)}</span><small>${esc(fairCopy.toolsHint)}</small></summary>
+            <div class="kt-plan-tools-panel">
+              <section><div><strong>${esc(fairCopy.coverageGroup)}</strong><p>${esc(fairCopy.coverageDesc)}</p></div><div class="kt-plan-action-group"><button class="btn-slim" type="button" data-action="kt-plan-coverage">${esc(copy.coverage)}</button><button class="btn-slim" type="button" data-action="kt-plan-optimize">${esc(fairCopy.fromRules)}</button></div></section>
+              <section><div><strong>${esc(fairCopy.openGroup)}</strong><p>${esc(fairCopy.openDesc)}</p></div><div class="kt-plan-action-group"><button class="btn-slim" type="button" data-action="kt-plan-open">${esc(copy.openShift)}</button></div></section>
+              <section><div><strong>${esc(fairCopy.templateGroup)}</strong><p>${esc(fairCopy.templateDesc)}</p></div><div class="kt-plan-action-group"><button class="btn-slim" type="button" data-action="kt-plan-template-save">${esc(copy.save)}</button><select class="kt-plan-select" data-kt-template-select aria-label="${esc(copy.apply)}"><option value="">${esc(copy.noTemplate)}</option>${templates.map((template)=>`<option value="${esc(template.id)}">${esc(template.name)}</option>`).join('')}</select><button class="btn-slim" type="button" data-action="kt-plan-template-apply">${esc(copy.apply)}</button></div></section>
+              <section><div><strong>${esc(fairCopy.maintenance)}</strong><p>${esc(fairCopy.maintenanceDesc)}</p></div><div class="kt-plan-action-group"><button class="btn-slim" type="button" data-action="kt-plan-clear" ${locked?'disabled':''}>${esc(T.plClear)}</button><button class="btn-slim" type="button" data-action="kt-plan-apply" ${locked?'disabled':''}>${svgIcon(IC.check,13)}<span>${esc(T.plApply)}</span></button></div></section>
+            </div>
+          </details>
+        </div>
+      </div>
+      <div class="kt-plan-intelligence"><div><b>${esc(copy.planned)}</b><strong>${fmtHours(grandH)}</strong><span>${esc(copy.worked)} · ${fmtHours(workedH)}</span></div><div><b>${esc(copy.gaps)}</b><strong>${coverageGaps}</strong><span>${esc(copy.rules(coverageRuleCount))}</span></div><div><b>${esc(copy.opportunities)}</b><strong>${openOpportunities}</strong><span>${esc(copy.claims(opportunityClaims))}</span></div><div><b>${esc(copy.warnings)}</b><strong>${issues.length}</strong><span>${esc(copy.blocked(blockers.length))}</span></div></div>
+      ${shownIssues.map((issue)=>`<div class="kt-plan-issue ${issue.severity==='blocker'?'is-blocker':'is-warning'}"><b>${issue.severity==='blocker'?'!':'i'}</b><span>${esc(issueLabel(issue))}</span></div>`).join('')}
+      ${hiddenIssues?`<div class="kt-plan-issue is-more"><b>+</b><span>${esc(copy.more(hiddenIssues))}</span></div>`:''}`;
+
     return `
       <div class="eq-section">
         <div class="eq-section-head">
@@ -2492,12 +3157,10 @@
         </div>
         <div class="kt-hbar">
           <div class="eq-pill-row">${periodPillsHtml(T)}</div>
-          <div class="kt-hbar-right">
-            <button class="btn-slim" type="button" data-action="kt-plan-clear" ${locked ? 'disabled' : ''}>${esc(T.plClear)}</button>
-            <button class="btn-slim ${locked ? '' : 'primary'}" type="button" data-action="kt-plan-apply" ${locked ? 'disabled' : ''}>${svgIcon(IC.check, 13)}<span>${esc(T.plApply)}</span></button>
-          </div>
         </div>
+        ${periodNavigatorHtml(T, period)}
         <p class="kt-plan-hint">${esc(T.plHint)}</p>
+        ${planningCommand}
         ${stepper}
         <div class="kt-plan-wrap">
           <table class="kt-h-table kt-plan-table">
@@ -2507,7 +3170,7 @@
                 <th class="kt-h-memberhead">${esc(T.plMember)}</th>
                 ${headDays}
                 <th class="kt-h-totalhead">${esc(multiWeek ? T.plPlannedPeriod : T.plPlanned)}</th>
-                <th class="kt-h-totalhead">${esc(T.plCost)}</th>
+                ${showCosts ? `<th class="kt-h-totalhead">${esc(T.plCost)}</th>` : ''}
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -2515,8 +3178,8 @@
               <tr>
                 <td class="kt-h-foot-label">${esc(T.plFooter)}</td>
                 <td colspan="${view.length}"></td>
-                <td class="kt-h-foot-tot mono"><b>${grandH.toFixed(2).replace('.', ',')}</b><span>h</span></td>
-                <td class="kt-h-foot-tot mono"><b>${grandCost.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>
+                <td class="kt-h-foot-tot mono"><b>${fmtHours(grandH)}</b></td>
+                ${showCosts ? `<td class="kt-h-foot-tot mono"><b>${grandCost.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>` : ''}
               </tr>
             </tfoot>
           </table>
@@ -2525,17 +3188,29 @@
       </div>`;
   }
 
-  function renderPayrollBody(T, venue, venueType, members) {
+  function payrollAccess() {
+    const role = window.__kiwiRole || 'owner';
+    const payrollEnabled = window.KiwiConfig?.features?.payroll !== false;
+    return role === 'staff' ? 'none' : role === 'manager' || !payrollEnabled ? 'planning' : 'full';
+  }
+
+  function renderPayrollBody(T, venue, venueType, members, access = payrollAccess()) {
     const period = buildPeriod(window.__kiwiTeamV2.periodKind || 'week');
     if (!members.length) {
       return `
         <div class="dash-equipe">
-          <div class="eq-section" style="text-align:center; padding:44px 18px;">
-            <h3 style="margin:0 0 8px;">${esc(T.payEmptyH)}</h3>
-            <p style="margin:0 auto 18px; max-width:44ch; color:var(--n-500); line-height:1.55;">${esc(T.payEmptyP)}</p>
+          <div class="eq-section" style="text-align:center; padding:44px 18px; display:flex; flex-direction:column; align-items:center;">
+            <div style="width:48px;height:48px;border-radius:14px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:16px;">
+              <svg width="24" height="24" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
+            </div>
+            <h3 style="margin:0 0 6px; font-family:var(--sans); font-size:18px; font-weight:600; letter-spacing:-0.015em; color:var(--ink);">${esc(T.payEmptyH)}</h3>
+            <p style="margin:0 auto 18px; max-width:44ch; color:var(--n-500); line-height:1.55; font-size:13px;">${esc(T.payEmptyP)}</p>
             <button class="kb atlas" type="button" data-action="nav-equipe">${svgIcon(IC.plus, 13)}${esc(T.addMember)}</button>
           </div>
         </div>`;
+    }
+    if (access === 'planning') {
+      return `<div class="dash-equipe">${renderPlanningPane(T, venue, venueType, members, { showCosts: false })}</div>`;
     }
     const f = payrollFigures(members, venueType, period);
     const tile = (label, value, sub) => `
@@ -2548,7 +3223,7 @@
       <div class="dash-equipe">
         <div class="eq-stats">
           ${tile(T.payStatDue,   fmtMad(f.baseMass + f.variablePay), T.payStatDueSub(period.startFr, period.endFr))}
-          ${tile(T.payStatHours, f.totalHours.toFixed(1).replace('.', ',') + ' h', T.payStatHoursSub)}
+          ${tile(T.payStatHours, fmtHours(f.totalHours), T.payStatHoursSub)}
           ${tile(T.payStatVar,   fmtMad(f.variablePay),              T.payStatVarSub)}
           ${tile(T.payStatBase,  fmtMad(f.baseMass),                 T.payStatBaseSub(f.onDuty, members.length))}
         </div>
@@ -2559,24 +3234,35 @@
           </div>
         </div>
         ${payTab === 'planning'
-          ? renderPlanningPane(T, venue, venueType, members)
+          ? renderPlanningPane(T, venue, venueType, members, { showCosts: true })
           : renderHoursPane(T, venue, venueType, members)}
       </div>`;
   }
 
   function showPayroll() {
     if (!window.Kiwi || !window.Kiwi.appPage) return;
+    const access = payrollAccess();
+    if (access === 'none') {
+      window.Kiwi.toast?.('Accès réservé au gérant ou au propriétaire', { type: 'info' });
+      return;
+    }
     const T = t();
     const venue = window.KiwiVenue?.getCurrentVenueData?.() || { name: 'Votre établissement', type: 'restaurant' };
     ensureVenueData(venue);
     const venueType = teamKey(venue);
     const members = getMembers(venueType);
     pageActive = true;
+    scheduleLiveTeam();          // la paie lit le pointage : cadence rapide
     pageMode = 'payroll';
+    const managerCopy = trLang() === 'en'
+      ? { title: 'Planning', sub: 'shifts, availability and coverage' }
+      : trLang() === 'ar'
+        ? { title: 'التخطيط', sub: 'الورديات والتوفر والتغطية' }
+        : { title: 'Planning', sub: 'services, disponibilités et couverture' };
     window.Kiwi.appPage('payroll', {
-      title: T.payTitle,
-      subtitle: `${venue.name || 'Votre établissement'} · ${T.paySub}`,
-      body: renderPayrollBody(T, venue, venueType, members),
+      title: access === 'planning' ? managerCopy.title : T.payTitle,
+      subtitle: `${venue.name || 'Votre établissement'} · ${access === 'planning' ? managerCopy.sub : T.paySub}`,
+      body: renderPayrollBody(T, venue, venueType, members, access),
     });
     // The venue/language subscriptions live on showPage(); mirror the venue one so
     // switching store while on Paie repaints instead of showing the old roster.
@@ -2594,14 +3280,14 @@
     if (!window.Kiwi || !window.Kiwi.handlers) return;
     const H = window.Kiwi.handlers;
     H['nav-equipe'] = () => showPage();
-    // Paie & planning: ours for a REAL store, venues.js's demo payroll otherwise,
-    // so the pitch demo (Café Atlas & co.) is untouched. Captured on each install
-    // so venues.js's late 'load' re-assertion becomes the fallback, not the winner.
+    // Paie & planning is one product surface in demo and production. Keeping the
+    // old pitch-only drawer as a demo fallback meant every new planning feature
+    // (availability, publishing and fair allocation) disappeared exactly where
+    // merchants try it first.
     const prevPayroll = H['nav-payroll'];
     if (!prevPayroll || !prevPayroll.__ktOwned) {
       const wrapped = function () {
-        if (isCustomVenue()) { showPayroll(); return; }
-        if (prevPayroll) { try { return prevPayroll.apply(this, arguments); } catch (_) {} }
+        showPayroll();
       };
       wrapped.__ktOwned = true;
       H['nav-payroll'] = wrapped;
@@ -2638,7 +3324,7 @@
     .dash-equipe .kt-plan-table .kt-h-total, .dash-equipe .kt-plan-table .kt-h-pay { min-width: 0; padding-right: 10px; }
     .dash-equipe .kt-plan-table .kt-day-cell { padding: 5px 3px; }
 
-    /* Le pas à pas des semaines — visible seulement sur quinzaine / mois. */
+    /* Le pas à pas des semaines · visible seulement sur quinzaine / mois. */
     .dash-equipe .kt-plan-step { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
     .dash-equipe .kt-plan-arrow {
       width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--n-200);
@@ -2661,7 +3347,7 @@
     .dash-equipe .kt-sh:hover:not(:disabled) { border-color: var(--atlas); }
     .dash-equipe .kt-sh:focus-visible { outline: none; border-color: var(--atlas); box-shadow: 0 0 0 3px rgba(11,110,79,0.10); }
     .dash-equipe .kt-sh:disabled { opacity: 0.55; cursor: default; }
-    .dash-equipe .kt-sh-empty { color: var(--n-400); font-size: 13px; }
+    .dash-equipe .kt-sh-empty { color: var(--n-500); font-size: 13px; }
     .dash-equipe .kt-sh-rest { font-family: var(--sans); font-size: 11px; color: var(--n-500); }
     .dash-equipe .kt-sh-t { display: block; white-space: nowrap; }
     .dash-equipe .kt-sh-t.end { color: var(--n-600); }
@@ -2693,7 +3379,7 @@
       .dash-equipe .kt-sh .kt-sh-next { display: block; margin: 1px 0 0; }
     }
 
-    /* Éditeur de service — ancré sur la case, jamais dans le flux du tableau. */
+    /* Éditeur de service · ancré sur la case, jamais dans le flux du tableau. */
     .kt-shpop {
       position: fixed; z-index: 900; width: 268px; padding: 14px;
       background: var(--surface, #fff); border: 1px solid var(--n-200);
@@ -2703,7 +3389,7 @@
     .kt-shpop-head { margin-bottom: 11px; }
     .kt-shpop-head b { display: block; font-size: 13px; }
     /* « lundi 20 juillet » : en français seule la 1re lettre prend la majuscule
-       — capitalize aurait écrit « Lundi 20 Juillet ». */
+       capitalize aurait écrit « Lundi 20 Juillet ». */
     .kt-shpop-head span { display: block; font-size: 11px; color: var(--n-500); margin-top: 2px; }
     .kt-shpop-head span::first-letter { text-transform: uppercase; }
     .kt-shpop-times { display: flex; gap: 8px; }
@@ -2732,7 +3418,7 @@
 
     /* Search bar */
     .dash-equipe .kt-searchbar { position: relative; }
-    .dash-equipe .kt-searchbar-ic { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--n-400); pointer-events: none; }
+    .dash-equipe .kt-searchbar-ic { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--n-500); pointer-events: none; }
     .dash-equipe .kt-searchbar input { width: 100%; padding: 11px 12px 11px 36px; border: 1px solid var(--n-200); border-radius: 10px; font-family: var(--sans); font-size: 13px; background: var(--surface); color: var(--ink); outline: none; box-sizing: border-box; transition: border-color 140ms, box-shadow 140ms; }
     .dash-equipe .kt-searchbar input:focus { border-color: var(--atlas); box-shadow: 0 0 0 3px rgba(11,110,79,0.10); }
 
@@ -2745,7 +3431,7 @@
     .dash-equipe .kt-chips { display: flex; flex-wrap: wrap; gap: 4px; }
     .dash-equipe .kt-cell-strong { font-weight: 500; color: var(--ink); }
 
-    /* Hours tab — table */
+    /* Hours tab · table */
     .dash-equipe .kt-hbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
     .dash-equipe .kt-hbar-right { display: inline-flex; gap: 6px; flex-wrap: wrap; }
     .dash-equipe .kt-h-tablewrap { border: 1px solid var(--n-200); border-radius: 12px; overflow-x: auto; background: var(--surface); }
@@ -2754,6 +3440,10 @@
     .dash-equipe .kt-h-table .kt-day-head { text-align: center; min-width: 54px; }
     .dash-equipe .kt-h-table .kt-day-head .d { display: block; font-size: 12.5px; color: var(--ink); font-weight: 600; }
     .dash-equipe .kt-h-table .kt-day-head .m { display: block; font-size: 9.5px; color: var(--n-500); text-transform: lowercase; letter-spacing: 0.04em; margin-top: 2px; }
+    .dash-equipe .kt-h-table .kt-day-head .kt-day-hours { display: block; overflow: hidden; margin-top: 5px; color: var(--n-700); font: 600 8px/1.25 var(--mono); letter-spacing: 0; text-overflow: ellipsis; white-space: nowrap; text-transform: none; }
+    .dash-equipe .kt-h-table .kt-day-head .kt-day-special { display: block; overflow: hidden; margin-top: 4px; padding: 3px 4px; border-radius: 999px; background: color-mix(in srgb, var(--atlas) 10%, var(--surface)); color: var(--atlas); font: 700 7px/1.2 var(--mono); letter-spacing: .03em; text-overflow: ellipsis; white-space: nowrap; text-transform: none; }
+    .dash-equipe .kt-h-table .kt-day-head.is-closed { background: color-mix(in srgb, var(--n-200) 45%, var(--paper-soft)); }
+    .dash-equipe .kt-h-table .kt-day-head.is-closed .kt-day-hours { color: var(--n-500); }
     .dash-equipe .kt-h-table tbody td { border-top: 1px solid var(--n-200); padding: 9px 9px; vertical-align: middle; }
     .dash-equipe .kt-h-table .kt-h-member { display: flex; align-items: center; gap: 10px; min-width: 200px; }
     .dash-equipe .kt-h-table .kt-h-member .n { font-weight: 600; font-size: 12.5px; color: var(--ink); }
@@ -2763,6 +3453,8 @@
     .dash-equipe .kt-h-table .kt-day-cell input::-webkit-outer-spin-button, .dash-equipe .kt-h-table .kt-day-cell input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .dash-equipe .kt-h-table .kt-day-cell input:focus { border-color: var(--atlas); box-shadow: 0 0 0 2px rgba(11,110,79,0.12); }
     .dash-equipe .kt-h-table .kt-day-cell.today { background: rgba(125, 242, 176, 0.10); }
+    .dash-equipe .kt-h-table .kt-day-cell.is-closed { background-image: repeating-linear-gradient(135deg, transparent 0 7px, color-mix(in srgb, var(--n-200) 42%, transparent) 7px 8px); }
+    .dash-equipe .kt-h-table .kt-day-cell.is-holiday .kt-sh { border-color: color-mix(in srgb, var(--atlas) 30%, var(--n-200)); }
     .dash-equipe .kt-h-table .kt-day-cell.locked input { background: var(--paper-soft); color: var(--n-500); cursor: not-allowed; }
     .dash-equipe .kt-h-table .kt-h-total, .dash-equipe .kt-h-table .kt-h-pay { text-align: right; min-width: 82px; padding-right: 14px; }
     .dash-equipe .kt-h-table .kt-h-total b, .dash-equipe .kt-h-table .kt-h-pay b { font-size: 13px; color: var(--ink); }
@@ -2784,10 +3476,10 @@
     body.fusion-mode .dash-equipe .kt-h-table .kt-day-cell input { background: #0F0F0F !important; color: var(--paper); border-color: rgba(125,242,176,0.18) !important; }
     body.fusion-mode .kt-shpop-b.primary { background: var(--atlas) !important; border-color: var(--atlas) !important; }
     body.fusion-mode .dash-equipe .kt-sh-t.end,
-    body.fusion-mode .dash-equipe .kt-sh-rest { color: var(--n-400); }
+    body.fusion-mode .dash-equipe .kt-sh-rest { color: var(--n-500); }
     body.fusion-mode .dash-equipe .kt-h-table thead th,
     body.fusion-mode .dash-equipe .kt-h-table tfoot td { background: rgba(255,255,255,0.04) !important; color: var(--paper); }
-    body.fusion-mode .dash-equipe .kt-h-table .kt-day-cell.locked input { background: rgba(255,255,255,0.06) !important; color: var(--n-400); }
+    body.fusion-mode .dash-equipe .kt-h-table .kt-day-cell.locked input { background: rgba(255,255,255,0.06) !important; color: var(--n-500); }
     body.fusion-mode .dash-equipe .kt-tag-neutral { background: rgba(255,255,255,0.05); color: var(--n-300); border-color: rgba(125,242,176,0.12); }
     body.fusion-mode .dash-equipe .kt-langchip { background: rgba(255,255,255,0.05); color: var(--n-300); border-color: rgba(125,242,176,0.12); }
   `;
@@ -2898,7 +3590,7 @@
         languages: [], address: '', cin: '', emergencyName: '', emergencyPhone: '', notes: '',
         avatarTone: AVATAR_TONES[list.length % AVATAR_TONES.length],
         role, venueType: key,
-        venueSlug: (() => { try { return window.KiwiCloudDoc?.slugFor?.(key) || ''; } catch (_) { return ''; } })(),
+        venueSlug: teamSlug(),
         createdAt: Date.now(),
       });
       hours[id] = {};
@@ -2922,14 +3614,102 @@
       const todayKey = toISO(new Date());
       return members.map((m) => ({
         id: m.id,
-        name: [m.firstName, m.lastName].filter(Boolean).join(' ').trim() || '—',
+        name: [m.firstName, m.lastName].filter(Boolean).join(' ').trim() || '·',
         role: m.function || m.department || '',
         avatar: String(m.firstName || '?').trim().charAt(0).toUpperCase() || '?',
-        hoursToday: +((hours[m.id] || {})[todayKey]) || 0,
+        status: (liveMember(m.id) || {}).status || 'off-duty',
+        hoursToday: liveMember(m.id)
+          && ['on-duty', 'on-pause'].includes(liveMember(m.id).status)
+          ? Math.max(0.01, +((hours[m.id] || {})[todayKey]) || 0.01)
+          : (+((hours[m.id] || {})[todayKey]) || 0),
       }));
     } catch (_) { return []; }
   }
-  window.KiwiTeam = Object.assign(window.KiwiTeam || {}, { importMembers, roster });
+  /* Public, read-only day snapshot for reports and the assistant.  Historical
+   * reports must not reuse `roster().hoursToday`: that would quietly attach
+   * today's hours to an older Z report.  This adapter reads the same realised
+   * hours and published/draft planning grids as the Planning page, for the
+   * requested calendar day, and says exactly which source each figure came
+   * from. */
+  function daySnapshot(dayKey) {
+    try {
+      dayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(dayKey || '')) ? String(dayKey) : toISO(new Date());
+      const venue = window.KiwiVenue?.getCurrentVenueData?.() || {};
+      const key = teamKey(venue), members = getMembers(key) || [];
+      const realised = getHours(key) || {}, shifts = getShifts(key) || {};
+      return members.map((m) => {
+        const shift = normShift((shifts[m.id] || {})[dayKey]);
+        let plannedHours = 0;
+        if (shift && !shift.off) {
+          const from = hhmmToMin(shift.start), to = hhmmToMin(shift.end);
+          plannedHours = Math.max(0, (to > from ? to - from : 1440 - from + to) / 60);
+        }
+        return {
+          id: m.id,
+          name: memberFullName(m) || '·',
+          role: m.function || m.department || m.role || '',
+          plannedStart: shift && !shift.off ? shift.start : '',
+          plannedEnd: shift && !shift.off ? shift.end : '',
+          plannedHours: Math.round(plannedHours * 100) / 100,
+          workedHours: Math.max(0, +((realised[m.id] || {})[dayKey]) || 0),
+          dayOff: !!(shift && shift.off),
+        };
+      });
+    } catch (_) { return []; }
+  }
+  /* Read-only planning evidence for the morning briefing. A draft is not a
+   * promise to the team: only the frozen published grid may prove that an open
+   * service is staffed. Names are reduced to first names at this boundary so
+   * the briefing never receives contracts, pay, codes or full identities. */
+  function planningDay(dayKey) {
+    try {
+      dayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(dayKey || '')) ? String(dayKey) : toISO(new Date());
+      const venue = window.KiwiVenue?.getCurrentVenueData?.() || {};
+      const key = teamKey(venue), members = getMembers(key) || [];
+      const planning = window.__kiwiTeamV2.planningByVenue[key] || {};
+      const published = planning.publishingEnabled === true && planning.publishedShifts && typeof planning.publishedShifts === 'object';
+      const shifts = published ? planning.publishedShifts : {};
+      const configured = published && members.some((m) => Object.prototype.hasOwnProperty.call(shifts[m.id] || {}, dayKey));
+      return {
+        day: dayKey, configured: !!configured, published: !!published,
+        members: members.map((m) => {
+          const shift = normShift((shifts[m.id] || {})[dayKey]);
+          return {
+            id: String(m.id || ''),
+            firstName: String(m.firstName || memberFullName(m) || '').trim().split(/\s+/)[0].slice(0, 40),
+            start: shift && !shift.off ? shift.start : '', end: shift && !shift.off ? shift.end : '', off: !!(shift && shift.off)
+          };
+        }).filter((m) => m.id)
+      };
+    } catch (_) { return { day: String(dayKey || ''), configured: false, published: false, members: [] }; }
+  }
+  /* Reservations consume the SAME planning grid as Paie, never a second staff
+   * calendar.  A slot is covered only when a floor-capable team member's
+   * planned shift spans the whole booking.  `configured` stays false when the
+   * owner has not filled that day yet, so an incomplete planning cannot close
+   * the public diary by accident. */
+  function bookingCoverage(startAt, endAt) {
+    try {
+      const venue = window.KiwiVenue?.getCurrentVenueData?.() || {};
+      const key = teamKey(venue), members = getMembers(key) || [], shifts = getShifts(key) || {};
+      const start = new Date(+startAt || 0), currentDay = toISO(start), previousDay = toISO(addDays(fromISO(currentDay), -1));
+      const days = [previousDay, currentDay], currentConfigured = members.some((m) => Object.prototype.hasOwnProperty.call(shifts[m.id] || {}, currentDay));
+      const floor = members.filter((m) => {
+        const role = m.role || m.function || m.department || '';
+        return window.KiwiRoles?.isService ? window.KiwiRoles.isService(role) : /serveur|service|salle|rang|ma[iî]tre|barista|barman|accueil|h[oô]te|manager|propri[eé]taire|staff|[eé]quipier/i.test(role);
+      });
+      const covered = floor.filter((m) => days.some((day) => {
+        const shift = normShift((shifts[m.id] || {})[day]);
+        if (!shift || shift.off) return false;
+        const a = fromISO(day), from = hhmmToMin(shift.start), to = hhmmToMin(shift.end);
+        a.setHours(Math.floor(from / 60), from % 60, 0, 0);
+        const z = new Date(a); z.setMinutes(z.getMinutes() + (to > from ? to - from : 1440 - from + to));
+        return a.getTime() <= +startAt && z.getTime() >= +endAt;
+      })).map((m) => ({ id: m.id, name: memberFullName(m), role: m.function || m.department || m.role || '' }));
+      return { configured: currentConfigured || covered.length > 0, members: covered };
+    } catch (_) { return { configured: false, members: [] }; }
+  }
+  window.KiwiTeam = Object.assign(window.KiwiTeam || {}, { importMembers, roster, daySnapshot, planningDay, bookingCoverage });
   try { window.dispatchEvent(new Event('kiwi-team-ready')); } catch (_) {}
 
   /* ═══════════════ HYDRATATION AU DÉMARRAGE ═══════════════════════════════

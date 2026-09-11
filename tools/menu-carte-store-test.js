@@ -88,6 +88,7 @@ function stubDom() {
  * repli qui décide où atterrit une carte lue sur le réseau. */
 function stubStore(world) {
   const mem = Object.create(null);
+  Object.keys(world.initialMem || {}).forEach((k) => { mem[k] = world.initialMem[k]; });
   const blank = () => ({ seq: 0, cats: [], items: [], stations: [], kitchenId: '' });
   const resolve = (vid) => vid || world.currentVid;
   const empty = (d) => !((d.cats || []).length || (d.items || []).length);
@@ -125,6 +126,7 @@ function makeWorld(venues, opts) {
     calls: [],            // toutes les requêtes réseau
     pages: [],            // tout ce que le module a rendu
     serverMenus: opts.serverMenus || {},
+    initialMem: opts.localMenus || {},
     orderProOn: opts.orderProOn !== false,
     configLagMs: opts.configLagMs == null ? 250 : opts.configLagMs,
     mem: null,
@@ -150,6 +152,8 @@ function makeWorld(venues, opts) {
       getVenueData: (id) => venues.find((v) => v.id === id) || cur(),
       slugOf: () => cur().slug,
       subscribe: (fn) => subs.push(fn),
+      showMenu: () => { world.pages.push({ name: 'menu-v2', body: '' }); },
+      refreshMenu: () => { world.pages.push({ name: 'menu-v2-refresh', body: '' }); },
     },
     KiwiOrderProPanel: { enabled: () => world.orderProOn },
     Kiwi: {
@@ -180,7 +184,9 @@ function makeWorld(venues, opts) {
       const menu = world.serverMenus[slug];
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve(menu ? { merchant: slug, menu } : { merchant: slug }),
+        json: () => Promise.resolve(menu
+          ? { merchant: slug, menu, published: true, updatedTs: 1234 }
+          : { merchant: slug, published: false, updatedTs: 0 }),
       });
     }
     return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true }) });
@@ -210,7 +216,7 @@ function load(world) {
 }
 
 const CARTE = (n) => ({
-  seq: 9, kitchenId: '', stations: [],
+  seq: 9, langs: ['fr','ar','en','es','zh-Hans'], kitchenId: '', stations: [],
   cats: [{ id: 'cat_1', name: 'Boissons', sub: [] }],
   items: [{ id: 'it_1', name: 'Café ' + n, price: 10, catId: 'cat_1', avail: true }],
 });
@@ -237,7 +243,24 @@ const suite = [
     const gets = menuGets(w);
     ok('passer au café va lire SA carte', gets.some((c) => c.url.indexOf('merchant=amira-cafe') !== -1));
     eq('la carte atterrit chez le café', itemsOf(w, 'v-cf'), 1);
+    eq('la liste de langues publiée est adoptée avec la carte', w.mem['v-cf'].langs.join(','), 'fr,ar,en,es,zh-Hans');
     eq('la boutique n’a pas été touchée', itemsOf(w, 'v-bq'), 0);
+  })(),
+
+  /* A section absent from the server is deleted, not "missing". A stale local
+   * copy must therefore be replaced, never unioned back into the carte. */
+  (async () => {
+    const server = CARTE('canonique');
+    const stale = CARTE('ancien');
+    stale.cats.push({ id:'cat_old', name:'Section supprimée', sub:[] });
+    stale.items.push({ id:'it_old', name:'Ancien plat', price:20, catId:'cat_old', avail:true });
+    const w = makeWorld([CAFE], {
+      serverMenus: { 'amira-cafe': server }, localMenus: { 'v-cf': stale },
+    });
+    load(w);
+    await sleep(1600);
+    eq('la lecture serveur retire une section supprimée restée dans ce navigateur', w.mem['v-cf'].cats.length, 1);
+    eq('les anciens plats de cette section ne sont pas ressuscités', w.mem['v-cf'].items.length, 1);
   })(),
 
   /* 2 — Le court-circuit de la boutique ne doit pas verrouiller les autres.
@@ -284,51 +307,46 @@ const suite = [
     eq('…et vise SA fiche, pas celle du premier', posts[0] && posts[0].body && posts[0].body.merchant, 'le-second');
   })(),
 
-  /* 5 — LA PAGE CARTE VIDE garde l'entrée Order Pro. Un établissement neuf a
-   *     payé l'option et doit pouvoir écrire ses tags avant d'avoir saisi son
-   *     premier plat. */
+  /* 5 — LE STORE NE POSSÈDE PLUS UNE DEUXIÈME PAGE MENU. Vide ou remplie,
+   *     render() délègue au seul écran visuel porté par venues.js. */
   (async () => {
     const w = makeWorld([CAFE], { serverMenus: {}, orderProOn: true });
     const API = load(w);
     await sleep(1500);
+    eq('un navigateur neuf ne publie jamais une carte vide au démarrage', menuPosts(w).length, 0);
     w.pages.length = 0;
     API.render();
-    const body = (w.pages[w.pages.length - 1] || {}).body || '';
-    ok('l’état vide est bien celui rendu', body.indexOf('mx-empty') !== -1);
-    ok('l’état vide offre les tags Order Pro', body.indexOf('data-action="orderpro-tags"') !== -1);
+    const page = w.pages[w.pages.length - 1] || {};
+    eq('la carte vide ouvre le menu v2', page.name, 'menu-v2');
+    ok('la carte vide ne ressuscite pas l’ancien écran', page.body.indexOf('mx-empty') === -1);
   })(),
 
-  /* 6 — …et ne les invente pas quand l'option est coupée. Order Pro est une
-   *     surface PUBLIQUE : elle ne s'affiche jamais par défaut. */
+  /* 6 — Le choix du renderer ne dépend d'aucun feature flag Order Pro. */
   (async () => {
     const w = makeWorld([CAFE], { serverMenus: {}, orderProOn: false });
     const API = load(w);
     await sleep(1500);
     w.pages.length = 0;
     API.render();
-    const body = (w.pages[w.pages.length - 1] || {}).body || '';
-    ok('option coupée : aucune entrée Order Pro dans l’état vide',
-       body.indexOf('mx-empty') !== -1 && body.indexOf('orderpro-tags') === -1);
+    eq('option coupée : le menu v2 reste le seul renderer',
+       (w.pages[w.pages.length - 1] || {}).name, 'menu-v2');
   })(),
 
-  /* 7 — La carte remplie garde son entrée, allumée comme éteinte. */
+  /* 7 — Une carte remplie suit exactement la même route unique. */
   (async () => {
     const on = makeWorld([CAFE], { serverMenus: { 'amira-cafe': CARTE('plein') }, orderProOn: true });
     const A = load(on);
     await sleep(1600);
     on.pages.length = 0; A.render();
-    const bodyOn = (on.pages[on.pages.length - 1] || {}).body || '';
 
     const off = makeWorld([CAFE], { serverMenus: { 'amira-cafe': CARTE('plein') }, orderProOn: false });
     const B = load(off);
     await sleep(1600);
     off.pages.length = 0; B.render();
-    const bodyOff = (off.pages[off.pages.length - 1] || {}).body || '';
-
-    ok('carte remplie + option allumée : l’entrée est là',
-       bodyOn.indexOf('mx-empty') === -1 && bodyOn.indexOf('data-action="orderpro-tags"') !== -1);
-    ok('carte remplie + option coupée : rien',
-       bodyOff.indexOf('mx-empty') === -1 && bodyOff.indexOf('orderpro-tags') === -1);
+    eq('carte remplie + option allumée : menu v2',
+       (on.pages[on.pages.length - 1] || {}).name, 'menu-v2');
+    eq('carte remplie + option coupée : menu v2',
+       (off.pages[off.pages.length - 1] || {}).name, 'menu-v2');
   })(),
 
   /* 8 — Une boutique n'est jamais lue comme une carte : son stock a son propre
@@ -355,6 +373,78 @@ const suite = [
     API.render();
     eq('hors ligne : la carte locale est intacte', itemsOf(w, 'v-cf'), 1);
   })(),
+
+  /* 10 — Renommer et retirer une sous-catégorie ne doit jamais jeter ses plats.
+   *      Ils reviennent dans « À classer » au sein de la même section. */
+  (async () => {
+    const w = makeWorld([CAFE], { serverMenus: {} });
+    w.fetch = function () { return Promise.reject(new Error('hors ligne')); };
+    const API = load(w);
+    API.addCategory('Sweets');
+    const cid = API.data('v-cf').cats[0].id;
+    API.addSubcategory(cid, 'Cookies');
+    const sid = API.data('v-cf').cats[0].sub[0].id;
+    API.addItem({ name:'Brookie', price:30, catId:cid, subId:sid });
+    API.renameSubcategory(cid, sid, 'Cookies & Brownies');
+    eq('une sous-catégorie se renomme dans le document partagé', API.data('v-cf').cats[0].sub[0].name, 'Cookies & Brownies');
+    API.deleteSubcategory(cid, sid);
+    eq('supprimer la sous-catégorie retire seulement le groupe', API.data('v-cf').cats[0].sub.length, 0);
+    eq('le plat reste dans sa section', API.data('v-cf').items[0].catId, cid);
+    eq('le plat devient non classé au lieu d’être supprimé', API.data('v-cf').items[0].subId, null);
+  })(),
+
+  /* 11 — L'ordre des sections est le tableau publié lui-même. Le déplacer ne
+   *       recrée rien et ne détache aucun article de sa section. */
+  (async () => {
+    const w = makeWorld([CAFE], { serverMenus: {} });
+    w.fetch = function () { return Promise.reject(new Error('hors ligne')); };
+    const API = load(w);
+    API.addCategory('Entrées'); API.addCategory('Plats'); API.addCategory('Desserts');
+    const ids = API.data('v-cf').cats.map((c) => c.id);
+    API.addItem({ name:'Tarte', price:30, catId:ids[2] });
+    API.moveCategory(ids[2], -1);
+    API.moveCategory(ids[2], -1);
+    eq('une section peut être déplacée jusqu’en première position', API.data('v-cf').cats[0].id, ids[2]);
+    eq('les autres sections gardent leur ordre relatif', API.data('v-cf').cats.map((c) => c.id).join(','), [ids[2],ids[0],ids[1]].join(','));
+    eq('l’article reste lié à sa section déplacée', API.data('v-cf').items[0].catId, ids[2]);
+    API.moveCategory(ids[2], -1);
+    eq('déplacer au-delà du début ne change rien', API.data('v-cf').cats[0].id, ids[2]);
+  })(),
+
+  /* 12 — Une formule déjà enregistrée sert de modèle réutilisable. La copie
+   *       garde toutes les étapes mais reste indépendante de l’originale. */
+  (async () => {
+    const w = makeWorld([CAFE], { serverMenus: {} });
+    w.fetch = function () { return Promise.reject(new Error('hors ligne')); };
+    const API = load(w);
+    API.addCategory('Formules');
+    const cid = API.data('v-cf').cats[0].id;
+    API.addItem({ name:'Jus', price:12, catId:cid });
+    const juice = API.data('v-cf').items[0].id;
+    API.addItem({ name:'Petit déjeuner', price:60, catId:cid, formula:{slots:[{id:'sl_1',label:'Boisson',min:1,max:1,choices:[{itemId:juice,extra:0}]}]} });
+    const original = API.data('v-cf').items[1];
+    API.duplicateItem(original.id);
+    const copy = API.data('v-cf').items[2];
+    eq('réutiliser crée un nouvel article formule', !!copy.formula, true);
+    eq('la copie reprend les étapes et leurs choix', copy.formula.slots[0].choices[0].itemId, juice);
+    API.updateItem(copy.id,{formula:{slots:[{id:'sl_1',label:'Boisson',min:1,max:1,choices:[{itemId:juice,extra:5}]}]}});
+    eq('modifier la copie ne change pas le modèle enregistré', original.formula.slots[0].choices[0].extra, 0);
+  })(),
+
+  /* 13 — Les modèles de formule sont des données partagées, indépendantes des
+   *       articles qui les utilisent, comme les groupes d'options. */
+  (async () => {
+    const w = makeWorld([CAFE], { serverMenus: {} });
+    w.fetch = function () { return Promise.reject(new Error('hors ligne')); };
+    const API = load(w);
+    API.addCategory('Formules');
+    const cid = API.data('v-cf').cats[0].id;
+    API.addItem({ name:'Jus', price:12, catId:cid });
+    const juice = API.data('v-cf').items[0].id;
+    API.saveFormulaTemplate('Boisson petit déjeuner', {slots:[{id:'sl_1',label:'Boisson',min:1,max:1,choices:[{itemId:juice,extra:0}]}]});
+    eq('un modèle de formule est persisté séparément', API.data('v-cf').formulaTemplates.length, 1);
+    eq('le modèle garde ses articles sélectionnables', API.data('v-cf').formulaTemplates[0].formula.slots[0].choices[0].itemId, juice);
+  })(),
 ];
 
 Promise.all(suite).then(() => {
@@ -363,7 +453,7 @@ Promise.all(suite).then(() => {
     fails.forEach((f) => console.log(`     · ${f}`));
     process.exit(1);
   }
-  console.log(`  ✓ carte par établissement (${pass} contrôles : relecture au changement, isolation des magasins, cible de publication, entrée Order Pro)`);
+  console.log(`  ✓ carte par établissement (${pass} contrôles : relecture au changement, isolation des magasins, cible de publication, route menu v2)`);
 }).catch((e) => {
   console.log(`\n  ✗ carte par établissement — ${e && e.stack}`);
   process.exit(1);

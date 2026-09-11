@@ -10,7 +10,7 @@
 
 import {
   operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE,
-  verifyPassword, json, limitCheck, limitFail, limitClear,
+  verifyPassword, json, limitCheck, limitFail, limitClear, rateLimitUnavailable,
 } from './_lib.js';
 
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
@@ -38,7 +38,10 @@ export async function onRequestPost(context) {
       }
     } catch (_) { /* table missing / db error → no match */ }
   }
-  if (!ok) { await limitFail(request, env, 'op'); return json({ error: 'bad-code' }, 401); }
+  if (!ok) {
+    if (!await limitFail(request, env, 'op')) return rateLimitUnavailable();
+    return json({ error: 'bad-code' }, 401);
+  }
   await limitClear(request, env, 'op');
 
   if (!opId) return json({ error: 'operator-identity-missing' }, 503);

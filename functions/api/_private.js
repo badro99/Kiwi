@@ -21,8 +21,8 @@
 // sur CE magasin.
 
 import {
-  readSession, readCookie, SESS_COOKIE,
-  slugMerchant, isTillFor, isOperator,
+  activeAccountSession,
+  slugMerchant, isTillFor, isOperator, slugClaimedByOther,
 } from '../auth/_lib.js';
 
 /* À qui appartient ce magasin ? NULL = ligne d'avant le registre (ou magasin
@@ -80,7 +80,7 @@ export async function ownedStores(request, env, from) {
   // 2) La session du compte — elle EST le propriétaire, rien à remonter.
   if (!aid && env.AUTH_SECRET) {
     try {
-      const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+      const sess = await activeAccountSession(request, env);
       if (sess && sess.aid) aid = sess.aid;
     } catch (_) { /* ni caisse ni session → opérateur, sinon rien */ }
   }
@@ -118,7 +118,11 @@ export async function ownedStores(request, env, from) {
   // tel commerçant se verrait répondre « aucun établissement », y compris le sien.
   try {
     const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(aid).first();
-    if (acc && acc.business) push({ merchant: slugMerchant(acc.business), name: acc.business, type: '' });
+    /* Ce repli portait le même défaut que les deux résolveurs : il ajoutait le
+     * slug dérivé du nom sans vérifier qu'il n'est pas celui d'un autre. */
+    if (acc && acc.business && !(await slugClaimedByOther(env, slugMerchant(acc.business), aid))) {
+      push({ merchant: slugMerchant(acc.business), name: acc.business, type: '' });
+    }
   } catch (_) {}
 
   return out;
@@ -154,12 +158,72 @@ export async function storeSuspended(env, slug) {
   } catch (_) { return false; }
 }
 
+/* Writes need a three-way answer. A failed status read is not evidence that a
+ * store is active: returning `false` here would let an outage turn into a
+ * successful employee/team mutation. Keep the older boolean helper above for
+ * read paths, and make write paths use this explicit state. */
+export async function storeOperationalState(env, slug) {
+  slug = String(slug == null ? '' : slug).trim();
+  if (!slug || !env || !env.DB) return { ok: false, unavailable: true };
+  try {
+    const row = await env.DB.prepare('SELECT status FROM merchant_config WHERE merchant = ?')
+      .bind(slug).first();
+    if (!row) return { ok: false, unavailable: true };
+    const status = String(row.status || '').trim().toLowerCase();
+    return { ok: true, suspended: status === 'suspended', pending: status === 'pending' };
+  } catch (_) {
+    return { ok: false, unavailable: true };
+  }
+}
+
+/* New stores finish onboarding before a human accepts their subscription.
+ * They may read every screen, but no operational write may cross this boundary.
+ * NULL and a missing column mean active so no existing client is retroactively
+ * locked by a deployment. */
+export async function storeSubscriptionPending(env, slug) {
+  slug = String(slug == null ? '' : slug).trim();
+  if (!slug || !env || !env.DB) return false;
+  try {
+    const r = await env.DB.prepare('SELECT status FROM merchant_config WHERE merchant = ?')
+      .bind(slug).first();
+    return !!(r && String(r.status || '') === 'pending');
+  } catch (_) { return false; }
+}
+
+/* Persist the employee credential revision outside the replaceable Team and
+ * employee-access JSON documents. The upsert compares a digest in SQLite and
+ * increments in the same statement, so two concurrent different PIN changes
+ * cannot both publish revision 1. A missing auth-revision table is an explicit
+ * release prerequisite, not a reason to silently reset a credential to zero. */
+export async function employeeAuthVersion(env, merchant, memberId, pin, fallbackVersion = 0) {
+  const fallback = Math.max(0, Math.round(Number(fallbackVersion) || 0));
+  const text = `${String(merchant || '')}\u0000${String(memberId || '')}\u0000${String(pin || '')}`;
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  const digest = Array.from(new Uint8Array(bytes), (value) => value.toString(16).padStart(2, '0')).join('');
+  try {
+    const row = await env.DB.prepare(
+      `INSERT INTO employee_auth_versions (merchant, member_id, auth_version, pin_digest, updated_ts)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(merchant, member_id) DO UPDATE SET
+         auth_version = employee_auth_versions.auth_version
+           + CASE WHEN employee_auth_versions.pin_digest = excluded.pin_digest THEN 0 ELSE 1 END,
+         pin_digest = excluded.pin_digest,
+         updated_ts = excluded.updated_ts
+       RETURNING auth_version`
+    ).bind(String(merchant || ''), String(memberId || ''), fallback, digest, Date.now()).first();
+    if (!row || !Number.isFinite(Number(row.auth_version))) return { ok: false };
+    return { ok: true, version: Math.max(0, Math.round(Number(row.auth_version))) };
+  } catch (_) {
+    return { ok: false };
+  }
+}
+
 export async function tenantFor(request, env, asked, opts) {
   /* `strict` — pour les ÉCRITURES. Deux règles s'y ajoutent, et aucune des deux
    * ne doit gêner une lecture :
    *   · un slug inconnu ne se rabat plus sur le magasin du compte (voir le
    *     repli en bas de resolveTenant) ;
-   *   · un magasin SUSPENDU n'écrit plus. Sa lecture reste ouverte — le patron
+   *   · un magasin SUSPENDU ou EN ATTENTE n'écrit plus. Sa lecture reste ouverte — le patron
    *     doit pouvoir consulter son historique et voir ce qu'il retrouvera en
    *     payant ; couper la lecture ferait passer une suspension pour une
    *     suppression.
@@ -167,7 +231,10 @@ export async function tenantFor(request, env, asked, opts) {
    * demandé : c'est le seul point par lequel toutes les branches repassent. */
   const strict = !!(opts && opts.strict);
   const who = await resolveTenant(request, env, asked, strict);
-  if (strict && who && await storeSuspended(env, who)) return '';
+  if (strict && who) {
+    const state = await storeOperationalState(env, who);
+    if (!state.ok || state.suspended || state.pending) return '';
+  }
   return who;
 }
 
@@ -182,7 +249,7 @@ async function resolveTenant(request, env, asked, strict) {
   let sessionAid = '';
   if (env.AUTH_SECRET) {
     try {
-      const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+      const sess = await activeAccountSession(request, env);
       if (sess && sess.aid) {
         const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?')
           .bind(sess.aid).first();
@@ -194,6 +261,11 @@ async function resolveTenant(request, env, asked, strict) {
   try { if (await isOperator(request, env)) return asked || sessionMerchant; } catch (_) {}
 
   if (!sessionMerchant) return '';
+  /* Même trou que dans entitledMerchant : le slug du compte était rendu sans
+   * qu'on demande au registre à qui il appartient. Un compte créé avec le nom
+   * d'un commerçant existant tombait directement dans son tenant, en lecture
+   * comme en écriture. */
+  if (await slugClaimedByOther(env, sessionMerchant, sessionAid)) return '';
   if (!asked || asked === sessionMerchant) return sessionMerchant;
   // Une deuxième boutique du même compte : autorisée si la base confirme qu'elle
   // lui appartient. Un slug inconnu retombe sur le magasin du compte plutôt que
@@ -209,4 +281,51 @@ async function resolveTenant(request, env, asked, strict) {
    * locale — il ne perd rien et retentera ; un mauvais destinataire, si. */
   if (strict) return '';
   return sessionMerchant;
+}
+
+/* Le locataire vu UNIQUEMENT par sa session propriétaire. Contrairement à
+ * `tenantFor`, cette règle ne consulte JAMAIS le cookie de caisse appairée
+ * (`isTillFor`) ni le cookie opérateur : un terminal compromis ou prêté ne
+ * peut ni élargir, ni détourner, ni rediriger l'autorité de la session, et
+ * une console sans session propriétaire n'ouvre rien. C'est l'outil des
+ * lectures privées où la session suffit et où rien d'autre ne doit parler :
+ * archives de pièces, exports comptables.
+ *
+ * Règles, dans l'ordre :
+ *   1. session propriétaire valide → aid, sinon '' (jamais d'anonyme) ;
+ *   2. le registre attribue EXACTEMENT le magasin demandé à cet aid ;
+ *   3. repli mono-boutique historique : le slug du compte, UNIQUEMENT s'il
+ *      n'est revendiqué par personne d'autre (même garde que resolveTenant) ;
+ *   4. lecture par défaut : ni suspension ni attente ne ferment la lecture
+ *      (politique explicite de tenantFor : couper la lecture ferait passer
+ *      une suspension pour une suppression). Avec `{ strict: true }`, une
+ *      ÉCRITURE exige en plus un magasin actif — même miroir que tenantFor.
+ * Renvoie le slug demandé ou '' : l'appelant refuse, sans rien révéler. */
+export async function ownerMerchant(request, env, asked, opts) {
+  asked = String(asked == null ? '' : asked).slice(0, 64).trim();
+  if (!asked) return '';
+  if (!env || !env.DB || !env.AUTH_SECRET) return '';
+  let aid = '';
+  try {
+    const sess = await activeAccountSession(request, env);
+    if (sess && sess.aid) aid = sess.aid;
+  } catch (_) { return ''; }
+  if (!aid) return '';
+  let owned = false;
+  try {
+    if ((await storeOwner(env, asked)) === aid) owned = true;
+  } catch (_) { /* registre illisible → repli ci-dessous */ }
+  if (!owned) {
+    try {
+      const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(aid).first();
+      if (acc && acc.business && slugMerchant(acc.business) === asked
+          && !(await slugClaimedByOther(env, asked, aid))) owned = true;
+    } catch (_) { /* base non migrée → refus sauf registre */ }
+  }
+  if (!owned) return '';
+  if (opts && opts.strict) {
+    const state = await storeOperationalState(env, asked);
+    if (!state.ok || state.suspended || state.pending) return '';
+  }
+  return asked;
 }

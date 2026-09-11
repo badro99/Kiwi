@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/cream">
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="24dp">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Kiwi Print Bridge" android:textColor="@color/ink" android:textSize="28sp" android:textStyle="bold" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Connecte Kiwi à vos imprimantes réseau. Laissez cette application installée et active." android:textColor="#52605A" android:textSize="16sp" />
+    <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="28dp" android:background="#FFFFFF" android:padding="18dp" android:text="Non associé" android:textColor="@color/ink" android:textSize="17sp" />
+    <EditText android:id="@+id/code" android:layout_width="match_parent" android:layout_height="56dp" android:layout_marginTop="20dp" android:background="#FFFFFF" android:digits="0123456789" android:gravity="center" android:hint="Code à 6 chiffres" android:inputType="number" android:maxLength="6" android:textSize="22sp" />
+    <Button android:id="@+id/pair" android:layout_width="match_parent" android:layout_height="56dp" android:layout_marginTop="12dp" android:backgroundTint="@color/kiwi" android:text="Associer ce pont" android:textColor="#FFFFFF" />
+    <Button android:id="@+id/unpair" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="10dp" android:text="Dissocier" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="28dp" android:text="Test direct de l’imprimante" android:textColor="@color/ink" android:textSize="18sp" android:textStyle="bold" />
+    <EditText android:id="@+id/printerIp" android:layout_width="match_parent" android:layout_height="54dp" android:layout_marginTop="10dp" android:background="#FFFFFF" android:hint="Adresse IP, ex. 192.168.1.100" android:inputType="text" android:padding="12dp" />
+    <EditText android:id="@+id/printerPort" android:layout_width="match_parent" android:layout_height="54dp" android:layout_marginTop="8dp" android:background="#FFFFFF" android:hint="Port" android:inputType="number" android:padding="12dp" android:text="9100" />
+    <Button android:id="@+id/test" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="10dp" android:text="Imprimer un ticket test" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="22dp" android:text="Pour une impression fiable : Paramètres Samsung → Applications → Kiwi Print Bridge → Batterie → Sans restriction. Le pont redémarre automatiquement avec la tablette." android:textColor="#52605A" android:textSize="14sp" />
+</LinearLayout></ScrollView>

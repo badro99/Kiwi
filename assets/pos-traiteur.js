@@ -311,6 +311,14 @@
     date: localDate(new Date(NOW + 34 * DAY)), lieu: 'Villa Harris · Malabata',
     menu: ['pastilla', 'tajine_agneau', 'the'], extras: ['service', 'livraison'],
   };
+  const cateringOps = window.KiwiVerticalState?.open?.('traiteur', {
+    schema: 1,
+    snapshot: () => ({ events: EVENTS, evSeq, dvSeq, draft }),
+    restore: (d) => {
+      const events = (d.events || []).map(ev => { ['date', 'sentAt', 'confirmedAt', 'deliveredAt'].forEach(k => { if (ev[k]) ev[k] = new Date(ev[k]); }); (ev.tranches || []).forEach(tr => { if (tr.due) tr.due = new Date(tr.due); if (tr.paid?.at) tr.paid.at = new Date(tr.paid.at); }); return ev; });
+      EVENTS.splice(0, EVENTS.length, ...events); evSeq = Math.max(evSeq, +d.evSeq || 0); dvSeq = Math.max(dvSeq, +d.dvSeq || 0); draft = d.draft || blankDraft();
+    },
+  });
   function draftTotals() {
     const pp = draft.menu.reduce((s, id) => s + DISH[id].price, 0);
     const menuTotal = pp * draft.guests;
@@ -319,6 +327,7 @@
   }
 
   function queueIfOffline(label) {
+    cateringOps?.save?.(label || 'operation');
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -331,9 +340,24 @@
      c'est ici que la trésorerie du mois se joue. Démo : no-op.
      Pas de reprise de compteur : la référence journalisée est la référence
      BANCAIRE de la tranche, pas un numéro de ticket à incrémenter. */
-  function postDay(total, method, label, ref) {
+  function eventSaleLines(ev, received) {
+    const rows = ev.menu.map((id) => ({ itemId: id, name: DISH[id].label, category: DISH[id].course, qty: ev.guests, unit: 'personne', kind: 'service', base: DISH[id].price * ev.guests }));
+    ev.extras.forEach((id) => {
+      const c = EXTRA[id].calc(ev.guests);
+      rows.push({ itemId: id, name: EXTRA[id].label, category: 'extras', qty: c.qty, unit: c.unit, kind: 'service', base: c.qty * c.each });
+    });
+    const gross = rows.reduce((s, r) => s + r.base, 0);
+    let allocated = 0;
+    return rows.map((r, i) => {
+      const total = i === rows.length - 1 ? Math.max(0, received - allocated) : Math.round((received * r.base / Math.max(1, gross)) * 100) / 100;
+      allocated += total;
+      const { base, ...line } = r;
+      return { ...line, total };
+    });
+  }
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('traiteur', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('traiteur', { total, method, label, ref, lines });
     } catch (_) {}
   }
 
@@ -341,10 +365,11 @@
   let root = null;
 
   function mount(rootEl) {
+    cateringOps?.hydrate?.();
     root = rootEl;
     root.innerHTML = `
       <aside class="tr-rail">
-        <div class="tr-brand">kiwi<i></i></div>
+        <div class="tr-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="tr-venue">
           <div class="tr-venue-name">${pvName('Traiteur Dar Zellij') || 'Traiteur'}</div>
           <div class="tr-venue-sub">${pvReal() ? (pvCity('') || '') : 'Tanger · Mesnana'}<br>Le même Kiwi, <b>un seul compte.</b></div>
@@ -605,7 +630,7 @@
           <button class="tr-btn primary" id="tr-dt-confirm"><i data-lucide="check"></i>Marquer confirmé</button>` : ''}
         ${ev.status === 'confirme' || ev.status === 'acompte' ? `
           ${nt ? `<button class="tr-btn primary ${trancheState(ev, nt) !== 'next' ? 'is-urgent' : ''}" id="tr-dt-pay"><i data-lucide="banknote"></i>Encaisser ${nt.pct} % · ${fmtMAD(nt.amount)}</button>` : ''}
-          ${nt ? `<button class="tr-btn secondary" id="tr-dt-rappel"><i data-lucide="message-circle"></i>Rappel WhatsApp</button>` : '<span class="tr-pill ok" style="align-self:center;">Soldé, khlass</span>'}
+          ${nt ? `<button class="tr-btn secondary" id="tr-dt-rappel"><i data-lucide="message-circle"></i>Rappel WhatsApp</button>` : '<span class="tr-pill ok" style="align-self:center;">Soldé</span>'}
           <button class="tr-btn secondary" id="tr-dt-doc"><i data-lucide="file-text"></i>Devis</button>
           ${isToday(ev.date) ? `<button class="tr-btn secondary" id="tr-dt-bon"><i data-lucide="truck"></i>Bon de livraison</button>` : ''}` : ''}
         ${ev.status === 'livre' ? `
@@ -624,6 +649,18 @@
       ev.status = 'confirme';
       ev.confirmedAt = new Date();
       ev.tranches[0].due = new Date();
+      try {
+        if (window.KiwiFoodProductionPrint) KiwiFoodProductionPrint.enqueue({
+          trade: 'traiteur', ref: ev.id, at: ev.confirmedAt,
+          destination: `${ev.name} · ${fmtN(ev.guests)} pers. · ${fmtDay(ev.date)}`,
+          lines: ev.menu.map((id) => ({
+            qty: 1, name: DISH[id].label, note: DISH[id].pack(ev.guests),
+            station: DISH[id].course === 'entrees' ? 'Entrées'
+              : DISH[id].course === 'desserts' ? 'Pâtisserie'
+              : DISH[id].course === 'boissons' ? 'Boissons' : 'Cuisine',
+          })),
+        });
+      } catch (_) {}
       queueIfOffline('Confirmation événement');
       toast(`${ev.name} confirmé, tranche 1 (30 %) à encaisser`);
       openDetail(ev.id);
@@ -692,7 +729,7 @@
             <div class="tr-f-lbl">Client</div>
             <div class="tr-row-2">
               <input class="tr-in" id="tr-q-client" placeholder="Nom du client" value="${esc(draft.client)}" />
-              <input class="tr-in" id="tr-q-phone" inputmode="tel" placeholder="06…" value="${esc(draft.phone)}" />
+              <input class="tr-in" id="tr-q-phone" inputmode="tel" autocomplete="tel" placeholder="06… / +33…" value="${esc(draft.phone)}" />
             </div>
           </div>
           <div class="tr-f">
@@ -800,7 +837,13 @@
         ${draft.menu.length ? `
           ${byCourse.map((x) => x.items.map((id) => `<div class="tr-q-line"><span class="nm">${esc(DISH[id].label)}</span><span class="vl">${DISH[id].price} MAD</span></div>`).join('')).join('')}
           <div class="tr-q-line is-pp"><span class="nm">Menu / personne</span><span class="vl">${pp} MAD</span></div>`
-        : `<div class="tr-q-empty">Le menu est vide.<br>Touchez les plats à gauche, le prix par personne se construit tout seul.</div>`}
+        : `<div class="tr-q-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">
+            <div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:4px;">
+              <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
+            </div>
+            <div style="font-weight:600; font-size:14px; color:var(--ink);">Le menu est vide.</div>
+            <div style="font-size:12.5px; color:var(--n-500); line-height:1.45;">Touchez les plats à gauche, le prix par personne se calcule automatiquement.</div>
+          </div>`}
         ${draft.extras.map((id) => `<div class="tr-q-line"><span class="nm">${esc(EXTRA[id].label)}</span><span class="vl">${fmtMAD(extraCost(id, draft.guests))}</span></div>`).join('')}
       </div>
       ${total > 0 ? `
@@ -964,7 +1007,7 @@
       ${nt ? `<div class="tr-payc-actions">
         <button class="tr-btn primary ${hot ? 'is-urgent' : ''}" data-tr-paytr="${ev.id}"><i data-lucide="banknote"></i>Encaisser la tranche ${nt.pct} % · ${fmtMAD(nt.amount)}</button>
         <button class="tr-btn secondary" data-tr-watr="${ev.id}"><i data-lucide="message-circle"></i>Rappel WhatsApp</button>
-      </div>` : `<div class="tr-payc-note"><i data-lucide="check-check"></i>Soldé, l’événement est entièrement payé, khlass.</div>`}
+      </div>` : `<div class="tr-payc-note"><i data-lucide="check-check"></i>Soldé, l’événement est entièrement payé.</div>`}
     </div>`;
   }
 
@@ -1061,7 +1104,7 @@
             <i data-lucide="map-pin"></i>${esc(ev.lieu)}
             <span class="sep">·</span><i data-lucide="phone"></i>${esc(ev.client)} · ${esc(ev.phone)}
             <span class="sep">·</span><i data-lucide="users"></i>${ev.guests} invités
-            <span class="sep">·</span>${due > 0 ? `<span class="tr-pill due">solde ${fmtMAD(due)}</span>` : '<span class="tr-pill ok">réglé, khlass</span>'}
+            <span class="sep">·</span>${due > 0 ? `<span class="tr-pill due">solde ${fmtMAD(due)}</span>` : '<span class="tr-pill ok">réglé</span>'}
           </div>
         </div>
         <div class="tr-bl-headactions">
@@ -1117,34 +1160,34 @@
     const { pp, total } = evTotals(ev);
     const t1 = Math.round(total * 0.3), t2 = Math.round(total * 0.5);
     if (kind === 'devis') {
-      return `Sba7 lkhir ${first}, voici votre devis ${pvName('Dar Zellij') || 'le traiteur'} (${ev.devisRef}) :`
+      return `Bonjour ${first}, voici votre devis ${pvName('Dar Zellij') || 'le traiteur'} (${ev.devisRef}) :`
         + `\n${TYPES[ev.type].label} · ${ev.guests} invités · ${fmtDay(ev.date)} · ${ev.lieu}`
         + `\nMenu ${pp} MAD / personne : ${ev.menu.map((id) => DISH[id].label.toLowerCase()).join(', ')}.`
         + (ev.extras.length ? `\nExtras : ${ev.extras.map((id) => EXTRA[id].label.toLowerCase()).join(', ')}.` : '')
         + `\nTotal : ${fmtMAD(total)}, 30 % à la confirmation (${fmtMAD(t1)}), 50 % à J-7 (${fmtMAD(t2)}), solde le jour J.`
         + `\nRépondez OUI pour confirmer, la date reste bloquée 7 jours.`
-        + `\n— ${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
+        + `\n·${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
     }
     if (kind === 'relance') {
-      return `Sba7 lkhir ${first}, petit rappel de ${pvName('Dar Zellij') || 'le traiteur'} : votre devis ${ev.devisRef}`
+      return `Bonjour ${first}, petit rappel de ${pvName('Dar Zellij') || 'le traiteur'} : votre devis ${ev.devisRef}`
         + ` (${TYPES[ev.type].label.toLowerCase()} · ${ev.guests} invités · ${fmtDay(ev.date)}) est toujours réservé.`
         + `\nLa date du ${fmtDay(ev.date)} part vite en saison, répondez OUI pour la bloquer définitivement.`
-        + `\n— ${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
+        + `\n·${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
     }
     if (kind === 'route') {
       const arr = new Date(ev.date.getTime() - 45 * 60000);
-      return `Sba7 lkhir ${first}, l’équipe ${pvName('Dar Zellij') || 'le traiteur'} est en route pour ${ev.lieu}.`
+      return `Bonjour ${first}, l’équipe ${pvName('Dar Zellij') || 'le traiteur'} est en route pour ${ev.lieu}.`
         + `\nArrivée prévue vers ${timeOf(arr)}, installation puis service à ${timeOf(ev.date)}.`
         + `\nTout est chargé et contrôlé. À tout de suite !`
-        + `\n— ${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
+        + `\n·${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
     }
     /* rappel d'échéance */
     const t = nextTranche(ev);
-    return `Sba7 lkhir ${first}, rappel de ${pvName('Dar Zellij') || 'le traiteur'} pour ${ev.name} du ${fmtDay(ev.date)} :`
+    return `Bonjour ${first}, rappel de ${pvName('Dar Zellij') || 'le traiteur'} pour ${ev.name} du ${fmtDay(ev.date)} :`
       + `\nla tranche « ${t ? t.label : 'solde'} » de ${t ? fmtMAD(t.amount) : ''} arrive à échéance.`
       + `\nVous pouvez régler en espèces au labo, par carte ou par virement.`
       + `\nChoukran, l’lah ikhellik.`
-      + `\n— ${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
+      + `\n·${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
   }
 
   function openWa(ev, kind) {
@@ -1218,8 +1261,8 @@
   /* ═══════════════════════ DOCUMENTS (devis · bon · récap) ═══════════════════════ */
   // Real caterer identity from the pairing / hosted session — devis & bons print
   // the real business name+city, never the demo "Traiteur Dar Zellij". Demo unchanged.
-  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
-  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvPaired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
   function pvName(demo) { const p = pvPaired(); return (p && p.name) || (pvReal() ? '' : demo); }
   function pvCity(demo) { const p = pvPaired(); return (p && p.location) || (pvReal() ? '' : demo); }
 
@@ -1270,7 +1313,7 @@
     return `<div class="tr-doc">${head}
       <div class="c b">DEVIS · ${esc(ev.devisRef)}</div>
       <hr>
-      <div class="row"><span>Client</span><span class="b">${esc(ev.client || '—')}</span></div>
+      <div class="row"><span>Client</span><span class="b">${esc(ev.client || '·')}</span></div>
       ${ev.phone ? `<div class="row"><span>Tél</span><span>${esc(ev.phone)}</span></div>` : ''}
       <div class="row"><span>Événement</span><span>${esc(TYPES[ev.type].label)} · ${ev.guests} invités</span></div>
       <div class="row"><span>Date</span><span>${esc(fmtDay(ev.date))}</span></div>
@@ -1307,8 +1350,16 @@
     icons();
     $$('[data-tr-close]', el).forEach((b) => { b.onclick = () => closeVeil('#tr-veil-doc'); });
     $('#tr-doc-print', el).onclick = () => {
-      queueIfOffline('Impression document');
-      toast(kind === 'bon' ? 'Bon de livraison envoyé à l’imprimante, 2 exemplaires (équipe + client)' : `${kind === 'recap' ? 'Récapitulatif' : 'Devis'} envoyé à l’imprimante A4`);
+      const P = window.KiwiOperationalPrint;
+      if (!P) { toast('Impression indisponible'); return; }
+      const lines = Array.from(el.querySelectorAll('.tr-doc-wrap .row')).map((row) => ({
+        label:(row.children[0] && row.children[0].textContent || '').trim(),
+        value:(row.children[1] && row.children[1].textContent || '').trim(),
+      }));
+      P.printText({ title:titles[kind] || 'Document', paper:'A4', copies:kind === 'bon' ? 2 : 1, lines }).then((r) => {
+        if (r && r.ok) queueIfOffline('Document imprimé');
+        toast(r && r.ok ? `Impression système ouverte${kind === 'bon' ? ' · 2 exemplaires' : ''}` : 'Impression impossible');
+      });
     };
   }
 
@@ -1361,7 +1412,7 @@
         <p class="modal-subtle">${esc(ev.name)} · tranche ${t.pct} %</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="tr-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="tr-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="tr-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${amount}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1402,13 +1453,13 @@
       setTimeout(() => {
         const disc = $('#tr-reader-disc', el);
         if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#tr-reader-status', el).textContent = 'Khlass! Paiement confirmé sur le lecteur';
-        $('#tr-reader-status', el).classList.add('is-success');
-        icons();
-        setTimeout(() => done('carte', 0), 900);
+        const status = $('#tr-reader-status', el);
+        const hw = window.KiwiHardware;
+        if (!hw || !hw.authorizeCard) { disc.classList.remove('is-pulsing'); status.textContent = 'Paiement non confirmé · lecteur indisponible'; return; }
+        hw.authorizeCard(amount, disc, status).then((result) => {
+          icons();
+          if (result && result.approved) setTimeout(() => done('carte', 0), 900);
+        });
       }, 1900);
     };
 
@@ -1439,12 +1490,12 @@
       if (wasConfirme) ev.status = 'acompte';
       /* Une tranche encaissée est une recette du jour, pas le total de
          l'événement : le reste rentrera à ses propres échéances. */
-      postDay(t.amount, method, `Tranche ${t.pct} % · ${ev.name}`, ref);
+      postDay(t.amount, method, `Tranche ${t.pct} % · ${ev.name}`, ref, eventSaleLines(ev, t.amount));
       closeVeil('#tr-veil-pay');
       queueIfOffline('Encaissement tranche');
       toast(`Tranche ${t.pct} % encaissée, ${fmtMAD(amount)} en ${METHODS[method]}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
       if (wasConfirme) toast(`${ev.name} passe en « Acompte reçu », la date est verrouillée`);
-      if (dueTotal(ev) <= 0) toast(`${ev.name} est soldé, khlass, rien à encaisser le jour J`);
+      if (dueTotal(ev) <= 0) toast(`${ev.name} est soldé, rien à encaisser le jour J`);
       refreshAll();
       if (ctx && typeof ctx.onDone === 'function') ctx.onDone();
     };
@@ -1483,8 +1534,8 @@
   window.KiwiPosDispatch.register({
     id: 'traiteur',
     greet: {
-      line1: 'Sba7 lkhir Naima,',
-      em: 'marhba.',
+      line1: 'Bonjour Naima,',
+      em: 'bienvenue.',
       sub: 'Traiteur Dar Zellij <em>·</em> iftar 120 pers ce soir · une échéance à encaisser',
     },
     mount(rootEl) { mount(rootEl); },

@@ -1,0 +1,316 @@
+/* Kiwi Inventory Ledger — append-only stock truth shared by dashboard/caisse.
+ * Quantities are movements, never overwritten snapshots. Local-first writes are
+ * queued and replayed idempotently to /api/inventory/movements. */
+(function () {
+  'use strict';
+
+  var PREFIX = 'kiwi:inventoryLedger:v1:';
+  var subs = new Set();
+  var syncing = false;
+  var cachedKey = '';
+  var cachedRaw = null;
+  var cachedDoc = null;
+  var cachedSnapshotDoc = null;
+  var cachedSnapshot = null;
+
+  function real() {
+    try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!paired(); }
+    catch (_) { return !!paired(); }
+  }
+  function paired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  /* QUEL MAGASIN ÉCRIT CE MOUVEMENT DE STOCK ?
+   * L'appairage (`kiwiPairedVenue`) est l'identité du COMPTE derrière ce
+   * comptoir, pas de l'établissement qu'on regarde. Un commerçant qui tient un
+   * pressing, un restaurant et une boutique le voyait donc empiler trois stocks
+   * dans un seul registre : une réception de tissu au pressing atterrissait sur
+   * la même clé que le réassort du café.
+   * `KiwiCloudDoc.currentSlug()` est la chaîne canonique (cloud-doc.js) :
+   * établissement à l'écran d'abord, appairage ensuite, flux Live en dernier.
+   * On la suit ; l'appairage ne reste qu'un filet quand cloud-doc n'a pas
+   * encore répondu (ou n'est pas chargé sur cette page). */
+  function merchant() {
+    try {
+      if (window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug) {
+        var cur = window.KiwiCloudDoc.currentSlug(); if (cur) return String(cur).slice(0, 64);
+      }
+    } catch (_) {}
+    try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
+        var pm = window.KiwiPlatform.pairedMerchant();
+        if (pm) return pm;
+      }
+    } catch (_) {}
+    var p = paired();
+    if (p && p.merchant) return String(p.merchant).slice(0, 64);
+    try {
+      if (window.KiwiLive && window.KiwiLive.merchant) {
+        var m = window.KiwiLive.merchant(); if (m) return String(m).slice(0, 64);
+      }
+    } catch (_) {}
+    return '';
+  }
+  function terminalId() {
+    try { return String(localStorage.getItem('kiwi:caisse:terminal-id:v1') || '').trim().slice(0, 80); }
+    catch (_) { return ''; }
+  }
+  function key() { return PREFIX + merchant(); }
+  function blank() {
+    return { cursor: 0, base: {}, rows: [], queued: [], unitId: '', locationId: '', economatLocationId: '' };
+  }
+  function retainScope(d, scope) {
+    if (!scope || typeof scope !== 'object') return d;
+    d.unitId = String(scope.unitId || '').slice(0, 80);
+    d.locationId = String(scope.locationId || '').slice(0, 80);
+    d.economatLocationId = String(scope.economatLocationId || '').slice(0, 80);
+    return d;
+  }
+  function unitId() { return String(read().unitId || '').slice(0, 80); }
+  function locationId() {
+    var d = read();
+    return String(d.locationId || d.economatLocationId || 'principal').slice(0, 80);
+  }
+  function effectiveLocation(d, value) {
+    var id = String(value || 'principal').slice(0, 80);
+    return id === 'principal' && d.economatLocationId ? d.economatLocationId : id;
+  }
+  function read() {
+    if (!real() || !merchant()) return blank();
+    try {
+      var k = key();
+      var raw = localStorage.getItem(k) || 'null';
+      if (cachedDoc && cachedKey === k && cachedRaw === raw) return cachedDoc;
+      var d = JSON.parse(raw);
+      if (!d || typeof d !== 'object') d = blank();
+      d.base = d.base && typeof d.base === 'object' ? d.base : {};
+      d.rows = Array.isArray(d.rows) ? d.rows : [];
+      d.queued = Array.isArray(d.queued) ? d.queued : [];
+      d.cursor = Math.max(0, +d.cursor || 0);
+      d.unitId = String(d.unitId || '').slice(0, 80);
+      d.locationId = String(d.locationId || '').slice(0, 80);
+      d.economatLocationId = String(d.economatLocationId || '').slice(0, 80);
+      cachedKey = k; cachedRaw = raw; cachedDoc = d;
+      cachedSnapshotDoc = null; cachedSnapshot = null;
+      return d;
+    } catch (_) { return blank(); }
+  }
+  function balanceKey(r, d) {
+    return [r.itemId || '', r.variantId || '', effectiveLocation(d, r.locationId)].join('|');
+  }
+  function compact(d) {
+    if (d.rows.length <= 6000) return d;
+    var keep = d.rows.slice(-4000);
+    var kept = new Set(keep.map(function (r) { return r.id; }));
+    d.rows.forEach(function (r) {
+      if (kept.has(r.id) || !(+r.cursor > 0)) return;
+      var k = balanceKey(r, d);
+      d.base[k] = Math.round(((+d.base[k] || 0) + (+r.qty || 0)) * 1000) / 1000;
+    });
+    d.rows = keep;
+    return d;
+  }
+  function write(d) {
+    try {
+      var k = key(); var next = compact(d); var raw = JSON.stringify(next);
+      localStorage.setItem(k, raw);
+      cachedKey = k; cachedRaw = raw; cachedDoc = next;
+      cachedSnapshotDoc = null; cachedSnapshot = null;
+    } catch (_) {
+      cachedKey = ''; cachedRaw = null; cachedDoc = null;
+      cachedSnapshotDoc = null; cachedSnapshot = null;
+    }
+    subs.forEach(function (fn) { try { fn(); } catch (_) {} });
+  }
+  function hash(s) {
+    var h = 2166136261;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return (h >>> 0).toString(36);
+  }
+  function uuid() {
+    try { if (crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (_) {}
+    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  }
+  function clean(raw) {
+    raw = raw || {};
+    var qty = Math.round((+raw.qty || 0) * 1000) / 1000;
+    return {
+      id: String(raw.id || ('inv-' + uuid())).slice(0, 80),
+      itemId: String(raw.itemId || '').slice(0, 80),
+      variantId: String(raw.variantId || '').slice(0, 80),
+      locationId: String(raw.locationId || 'principal').slice(0, 80),
+      qty: qty, reason: String(raw.reason || 'manual').slice(0, 32),
+      /* Un coût unitaire est un taux, pas un montant : arrondi au centime, un
+       * ingrédient tenu au gramme (0,008 MAD) devient 0,01 — 25 % d'écart sur
+       * tout le coût matière. Les montants, eux, s'arrondissent en aval. */
+      unitCost: raw.unitCost == null || !Number.isFinite(+raw.unitCost) ? null : Math.max(0, Math.round(+raw.unitCost * 10000) / 10000),
+      currency: String(raw.currency || 'MAD').slice(0, 3),
+      refType: String(raw.refType || 'manual').slice(0, 32),
+      refId: String(raw.refId || '').slice(0, 100),
+      note: String(raw.note || '').slice(0, 500), actor: String(raw.actor || '').slice(0, 100),
+      occurredTs: Math.max(1, Math.round(+raw.occurredTs || Date.now())),
+      reversalOf: String(raw.reversalOf || '').slice(0, 80),
+      meta: raw.meta && typeof raw.meta === 'object' ? raw.meta : null,
+      cursor: Math.max(0, +raw.cursor || 0),
+    };
+  }
+  function add(raw) {
+    if (!real() || !merchant()) return null;
+    raw = Object.assign({}, raw || {});
+    if (!raw.locationId) raw.locationId = locationId();
+    var m = clean(raw);
+    if (!m.itemId || !m.qty) return null;
+    var d = read();
+    if (d.rows.some(function (r) { return r.id === m.id; })) return m;
+    d.rows.push(m); d.queued.push(m.id); write(d);
+    setTimeout(sync, 0);
+    return m;
+  }
+  /* A transfer pair is authored atomically by the server. This hook mirrors
+   * only acknowledged rows into the local ledger and never queues them for a
+   * second POST, so the browser cannot split the pair or mint authority. */
+  function acknowledge(rows) {
+    if (!real() || !merchant() || !Array.isArray(rows)) return 0;
+    var d = read(); var byId = new Map(d.rows.map(function (r) { return [r.id, r]; })); var added = 0;
+    rows.forEach(function (raw) {
+      var m = clean(raw);
+      if (!m.id || !m.itemId || !m.qty) return;
+      if (!byId.has(m.id)) { d.rows.push(m); byId.set(m.id, m); added++; }
+      else if (m.cursor) byId.get(m.id).cursor = m.cursor;
+      d.queued = d.queued.filter(function (id) { return id !== m.id; });
+      d.cursor = Math.max(d.cursor, m.cursor || 0);
+    });
+    if (added || rows.length) write(d);
+    return added;
+  }
+  function ensureOpening(itemId, qty, opts) {
+    opts = opts || {};
+    qty = Math.round((+qty || 0) * 1000) / 1000;
+    if (!itemId || !qty) return null;
+    var targetLocation = opts.locationId || locationId();
+    var seed = [merchant(), itemId, opts.variantId || '', targetLocation].join('|');
+    return add({
+      id: 'inv-open-' + hash(seed), itemId: itemId, variantId: opts.variantId,
+      locationId: targetLocation, qty: qty, reason: 'opening', unitCost: opts.unitCost,
+      refType: 'opening', refId: itemId, note: opts.note || 'Solde initial migré',
+      occurredTs: opts.occurredTs,
+    });
+  }
+  function snapshotFor(d) {
+    if (cachedSnapshotDoc === d && cachedSnapshot) return cachedSnapshot;
+    var out = {};
+    Object.keys(d.base).forEach(function (key) {
+      var parts = key.split('|');
+      var mapped = [parts[0] || '', parts[1] || '', effectiveLocation(d, parts[2])].join('|');
+      out[mapped] = Math.round(((+out[mapped] || 0) + (+d.base[key] || 0)) * 1000) / 1000;
+    });
+    d.rows.forEach(function (r) {
+      var k = balanceKey(r, d); out[k] = Math.round(((+out[k] || 0) + (+r.qty || 0)) * 1000) / 1000;
+    });
+    cachedSnapshotDoc = d; cachedSnapshot = out;
+    return out;
+  }
+  function snapshot() { return Object.assign({}, snapshotFor(read())); }
+  function balance(itemId, opts) {
+    opts = opts || {}; var d = read(); var snap = snapshotFor(d); var total = 0;
+    var requestedLocation = opts.locationId == null ? null : effectiveLocation(d, opts.locationId);
+    Object.keys(snap).forEach(function (k) {
+      var p = k.split('|');
+      if (p[0] !== String(itemId)) return;
+      if (opts.variantId != null && p[1] !== String(opts.variantId)) return;
+      if (requestedLocation != null && p[2] !== requestedLocation) return;
+      total += +snap[k] || 0;
+    });
+    return Math.round(total * 1000) / 1000;
+  }
+  function history(itemId, opts) {
+    var d = read(); opts = opts || {};
+    var requestedLocation = opts.locationId == null ? null : effectiveLocation(d, opts.locationId);
+    return d.rows.filter(function (r) {
+      if (itemId && r.itemId !== itemId) return false;
+      return requestedLocation == null || effectiveLocation(d, r.locationId) === requestedLocation;
+    }).map(function (r) {
+      if (requestedLocation == null) return r;
+      return Object.assign({}, r, { locationId: effectiveLocation(d, r.locationId) });
+    })
+      .sort(function (a, b) { return b.occurredTs - a.occurredTs; });
+  }
+  /* Read-only bounded range for exports.  Keeping this filtering in the ledger
+   * avoids reports reaching into its private localStorage shape (and therefore
+   * accidentally mixing tenants). */
+  function between(from, to) {
+    from = Math.max(0, +from || 0); to = Math.max(from, +to || Date.now());
+    return read().rows.filter(function (r) {
+      return (+r.occurredTs || 0) >= from && (+r.occurredTs || 0) < to;
+    }).sort(function (a, b) { return a.occurredTs - b.occurredTs; });
+  }
+  async function push(d, m) {
+    var ids = d.queued.slice(0, 200);
+    if (!ids.length) return d;
+    var set = new Set(ids);
+    var movements = d.rows.filter(function (r) { return set.has(r.id); });
+    if (!movements.length) { d.queued = d.queued.filter(function (id) { return !set.has(id); }); return d; }
+    var res = await fetch('/api/inventory/movements', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin', body: JSON.stringify({ merchant: m, movements: movements, terminalId: terminalId() }),
+    });
+    if (!res.ok) throw new Error('inventory-push-' + res.status);
+    var body = await res.json();
+    retainScope(d, body.scope);
+    var cursors = new Map((body.accepted || []).map(function (x) { return [x.id, +x.cursor || 0]; }));
+    d.rows.forEach(function (r) { if (cursors.has(r.id)) r.cursor = cursors.get(r.id); });
+    d.queued = d.queued.filter(function (id) { return !cursors.has(id); });
+    return d;
+  }
+  async function pull(d, m) {
+    do {
+      var res = await fetch('/api/inventory/movements?merchant=' + encodeURIComponent(m) + '&since=' + encodeURIComponent(d.cursor) + '&terminalId=' + encodeURIComponent(terminalId()), { credentials: 'same-origin', cache: 'no-store' });
+      if (!res.ok) throw new Error('inventory-pull-' + res.status);
+      var body = await res.json(); retainScope(d, body.scope);
+      var byId = new Map(d.rows.map(function (r) { return [r.id, r]; }));
+      (body.movements || []).forEach(function (raw) {
+        var r = clean(raw); r.cursor = +raw.cursor || 0;
+        if (!byId.has(r.id)) { d.rows.push(r); byId.set(r.id, r); }
+        else if (r.cursor) byId.get(r.id).cursor = r.cursor;
+      });
+      d.cursor = Math.max(d.cursor, +body.cursor || 0);
+      if (!body.more) break;
+    } while (true);
+    return d;
+  }
+  async function sync() {
+    var online = typeof navigator === 'undefined' || navigator.onLine !== false;
+    var m = merchant(); if (syncing || !real() || !m || !online) return false;
+    syncing = true;
+    try { var d = read(); d = await push(d, m); d = await pull(d, m); write(d); return true; }
+    catch (_) { return false; }
+    finally { syncing = false; }
+  }
+  function reverse(movement, reason, note, opts) {
+    if (!movement || !movement.id || !movement.qty) return null;
+    opts = opts || {};
+    return add({
+      id: opts.id,
+      itemId: movement.itemId, variantId: movement.variantId, locationId: movement.locationId,
+      qty: -movement.qty, reason: reason || 'manual', unitCost: movement.unitCost,
+      refType: movement.refType, refId: movement.refId, note: note || 'Contre-mouvement',
+      reversalOf: movement.id,
+    });
+  }
+
+  function startBackgroundSync() {
+    window.addEventListener('online', sync);
+    window.addEventListener('focus', sync);
+    window.addEventListener('storage', function (e) { if (e.key && e.key.indexOf(PREFIX) === 0) subs.forEach(function (fn) { try { fn(); } catch (_) {} }); });
+    setInterval(sync, 20000);
+    setTimeout(sync, 1200);
+  }
+  if (window.KiwiDashboardBoot?.whenUnlocked) window.KiwiDashboardBoot.whenUnlocked(startBackgroundSync);
+  else startBackgroundSync();
+
+  window.KiwiInventory = {
+    isReal: real, merchant: merchant, terminalId: terminalId, unitId: unitId, locationId: locationId,
+    add: add, acknowledge: acknowledge, reverse: reverse,
+    ensureOpening: ensureOpening, balance: balance, snapshot: snapshot, history: history, between: between,
+    sync: sync, pending: function () { return read().queued.length; },
+    subscribe: function (fn) { subs.add(fn); return function () { subs.delete(fn); }; },
+  };
+}());

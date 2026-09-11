@@ -102,6 +102,57 @@
   function round2(n) { return Math.round(num(n) * 100) / 100; }
   function pad2(n) { return String(n).padStart(2, '0'); }
   function ymd(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  var DEFAULT_TIMEZONE = 'Africa/Casablanca';
+
+  /* A browser may be in Berlin while the merchant's books are in Casablanca.
+     Never let Date's host-local calendar decide which business day a sale
+     belongs to.  The venue metadata is optional for old accounts; Morocco is
+     the safe historical default for Kiwi. */
+  function merchantTimezone(slug) {
+    var candidates = [];
+    try {
+      var vd = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
+      if (vd && (!slug || vd.slug === slug || vd.merchant === slug || vd.id === slug)) candidates.push(vd.timezone, vd.timeZone, vd.tz);
+    } catch (_) {}
+    try { candidates.push(window.KiwiConfig && (window.KiwiConfig.timezone || window.KiwiConfig.timeZone)); } catch (_) {}
+    try {
+      var pv = window.KiwiPlatform && window.KiwiPlatform.pairedVenue && window.KiwiPlatform.pairedVenue();
+      candidates.push(pv && (pv.timezone || pv.timeZone || pv.tz));
+    } catch (_) {}
+    for (var i = 0; i < candidates.length; i++) {
+      var zone = String(candidates[i] || '').trim();
+      if (!zone) continue;
+      try { new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(); return zone; } catch (_) {}
+    }
+    return DEFAULT_TIMEZONE;
+  }
+  function civilParts(epoch, timezone) {
+    var f = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone || DEFAULT_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+    });
+    var out = {};
+    f.formatToParts(new Date(epoch)).forEach(function (p) { if (p.type !== 'literal') out[p.type] = p.value; });
+    return out;
+  }
+  function addCivilDays(day, delta) {
+    var p = String(day || '').split('-');
+    var n = Date.UTC(+p[0], (+p[1] || 1) - 1, +p[2] || 1) + num(delta) * 86400000;
+    return new Date(n).toISOString().slice(0, 10);
+  }
+  function zonedBoundary(day, hour, timezone) {
+    /* Convert a merchant wall-clock timestamp to an epoch without ever
+       constructing the intermediate Date in the operator's timezone. */
+    var target = Date.parse(String(day) + 'T00:00:00Z') + hour * 3600000;
+    var guess = target;
+    for (var i = 0; i < 6; i++) {
+      var p = civilParts(guess, timezone);
+      var observed = Date.parse(String(p.year) + '-' + p.month + '-' + p.day + 'T' + p.hour + ':' + p.minute + ':' + p.second + 'Z');
+      if (observed === target) return guess;
+      guess += target - observed;
+    }
+    return guess;
+  }
 
   /* Le slug du magasin — la seule clé sur laquelle la caisse et le tableau de
      bord tombent d'accord. Même cascade que clients-store.js bookId(), pour
@@ -131,13 +182,19 @@
     var m = ls('kiwiLiveMerchant'); if (m) return m;
     /* 3) CAISSE : le magasin appairé. */
     try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
+        var pm = window.KiwiPlatform.pairedMerchant();
+        if (pm) return pm;
+      }
       var pv = window.KiwiCaissePairing && window.KiwiCaissePairing.pairedVenue
         && window.KiwiCaissePairing.pairedVenue();
       if (pv && pv.merchant) return pv.merchant;
-    } catch (_) {}
+    } catch (err) {
+      if (window.KiwiReportError) window.KiwiReportError(err, 'ledger:day_report_paired_merchant_scope_failed');
+    }
     try {
       var pv2 = JSON.parse(ls('kiwiPairedVenue') || 'null');
-      if (pv2 && pv2.name) return slugStore(pv2.name);
+      if (pv2 && (pv2.merchant || pv2.slug)) return pv2.merchant || pv2.slug;
     } catch (_) {}
     return '';
   }
@@ -148,6 +205,7 @@
   function isReal() {
     try {
       if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return true;
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.isPaired === 'function' && window.KiwiPlatform.isPaired()) return true;
       if (JSON.parse(ls('kiwiPairedVenue') || 'null')) return true;
     } catch (_) {}
     try { return !!(window.KiwiVenue && window.KiwiVenue.isCustom && window.KiwiVenue.isCustom()); } catch (_) {}
@@ -196,13 +254,16 @@
      patron entend par « la recette d'hier soir ». */
   function businessDay(ts, slug) {
     var t = (ts instanceof Date) ? ts.getTime() : num(ts || Date.now());
-    return ymd(new Date(t - cutoff(slug) * 3600000));
+    var zone = merchantTimezone(slug);
+    var p = civilParts(t, zone);
+    var day = p.year + '-' + p.month + '-' + p.day;
+    return +p.hour < cutoff(slug) ? addCivilDays(day, -1) : day;
   }
   /* Les bornes réelles d'une journée commerciale, en millisecondes. */
   function dayBounds(day, slug) {
-    var p = String(day || '').split('-');
-    var d = new Date(+p[0], (+p[1] || 1) - 1, +p[2] || 1, cutoff(slug), 0, 0, 0);
-    return { from: d.getTime(), to: d.getTime() + 24 * 3600000 };
+    var zone = merchantTimezone(slug);
+    var h = cutoff(slug);
+    return { from: zonedBoundary(day, h, zone), to: zonedBoundary(addCivilDays(day, 1), h, zone) };
   }
   function today(slug) { return businessDay(Date.now(), slug); }
   /* La dernière journée TERMINÉE — celle que le patron regarde le matin. */
@@ -211,8 +272,7 @@
     return businessDay(b.from - 1000, slug);
   }
   function shiftDay(day, delta, slug) {
-    var b = dayBounds(day, slug);
-    return businessDay(b.from + num(delta) * 24 * 3600000 + 3600000, slug);
+    return addCivilDays(day, delta);
   }
 
   /* ──────────────────── le vocabulaire du métier ──────────────────── */
@@ -262,7 +322,7 @@
     var t = '';
     try { t = (window.KiwiConfig && window.KiwiConfig.type) || ''; } catch (_) {}
     if (!t) { try { t = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && (window.KiwiVenue.getCurrentVenueData() || {}).type) || ''; } catch (_) {} }
-    if (!t) { try { t = (JSON.parse(ls('kiwiPairedVenue') || 'null') || {}).type || ''; } catch (_) {} }
+    if (!t) { try { var pv = (window.KiwiPlatform && typeof window.KiwiPlatform.pairedVenue === 'function' && window.KiwiPlatform.pairedVenue()) || JSON.parse(ls('kiwiPairedVenue') || 'null'); t = (pv || {}).type || ''; } catch (_) {} }
     t = String(t || '').toLowerCase();
     return BASE_OF[t] || (VOCAB[t] ? t : 'generic');
   }
@@ -350,6 +410,7 @@
       discount: num(s.discount),
       cashier: String(s.cashier || ''),
       lines: lines,
+      voided: Boolean(s.voided || s.void_ts),
     };
   }
 
@@ -375,8 +436,9 @@
     var seen = Object.create(null);
     var rows = [];
     (opts.sales || []).forEach(function (raw) {
+      if (raw && (raw.voided || raw.void_ts)) return;
       var s = normSale(raw);
-      if (!s || s.ts < b.from || s.ts >= b.to) return;
+      if (!s || s.voided || s.ts < b.from || s.ts >= b.to) return;
       var k = s.id || (s.ts + ':' + s.amount + ':' + s.ref);
       if (seen[k]) return;
       seen[k] = 1;
@@ -496,8 +558,32 @@
     var discounts = round2(sess.discounts);
     var discountsN = num(sess.discountsCount) || 0;
     var cancels = num(sess.cancels) || 0;
+    /* Les avoirs, quand la caisse en tient. Émis = dette contractée aujourd'hui,
+       consommé = marchandise sortie contre une dette ancienne : aucun des deux
+       n'est de l'argent encaissé, et aucun des deux ne doit disparaître du Z.
+       Le bloc reste absent si la caisse ne renseigne rien — un rapport de
+       restaurant ne doit pas se mettre à imprimer des zéros. */
+    var avoirs = null;
+    if (sess.avoirs) {
+      var avIss = round2(num(sess.avoirs.issued)), avUsed = round2(num(sess.avoirs.used));
+      if (avIss || avUsed) {
+        avoirs = {
+          issued: avIss, issuedCount: num(sess.avoirs.issuedCount) || 0,
+          used: avUsed, usedCount: num(sess.avoirs.usedCount) || 0,
+        };
+      }
+    }
 
     var net = round2(gross - refundAmt);
+    /* Ce qui est FACTURÉ mais pas ENCAISSÉ. Une livraison partie en compte et
+       un règlement à crédit gonflent `gross` sans qu'un dirham soit entré :
+       l'écran de clôture de la boutique les exclut déjà de son « Total
+       encaissé », le Z imprimé, lui, les additionnait sous ce même intitulé.
+       Deux documents du même service, deux totaux. On ne touche pas à `gross`
+       — il sert de base au détail par rayon et au tableau de bord — on expose
+       la créance pour que le ticket puisse dire les deux chiffres. */
+    var receivable = round2(num(methods.delivery) + num(methods.credit));
+    if (receivable < 0) receivable = 0;
 
     return {
       v: VER,
@@ -510,6 +596,8 @@
         type: (opts.store && opts.store.type) || businessType(),
       },
       openedAt: num(sess.openedAt) || first || 0,
+      sessionId: String(sess.sessionId || ''),
+      terminalId: String(sess.terminalId || ''),
       closedAt: num(sess.closedAt) || 0,
       /* La journée est close quand la caisse a posé une heure de fermeture, et
          à ce moment-là seulement. Le drapeau existait déjà côté lecteurs —
@@ -520,13 +608,15 @@
       firstSaleAt: first || 0,
       lastSaleAt: last || 0,
       openedBy: String(sess.openedBy || ''),
-      closedBy: String(sess.closedBy || ''),
+      closedBy: num(sess.closedAt) ? String(sess.closedBy || '') : '',
       txns: txns,
       gross: round2(gross),
+      receivable: receivable,
       net: net,
       basket: txns ? round2(gross / txns) : 0,
       refunds: { count: refundN, amount: round2(refundAmt) },
       discounts: { count: discountsN, amount: discounts },
+      avoirs: avoirs,
       cancels: cancels,
       methods: methods,
       tips: round2(tips),
@@ -581,6 +671,7 @@
     n += (r.cash && r.cash.movements ? r.cash.movements.length : 0) * 5;
     n += (r.handovers || []).length * 5;
     n += (r.revisions || []).length * 7;
+    (r.drawerSessions || []).forEach(function (s) { n += 45 + (s.cash && s.cash.movements || []).length * 8; });
     n += (r.hours || []).length * 4;        /* au plus 24 — une par heure ouverte */
     n += (r.cashiers || []).length * 4;
     (r.categories || []).forEach(function (c) {
@@ -620,6 +711,154 @@
   }
   function days(slug) { return Object.keys(readAll(slug).days || {}).sort().reverse(); }
 
+  /* Daily sales and a counted drawer have different scopes. Preserve the
+     caisse's session evidence when rebuilding daily sales from the feed. */
+  function drawerKey(r) {
+    return (r && r.terminalId || '') + ':' + (r && r.sessionId || 'legacy:' + (r && r.openedAt || ''));
+  }
+  function preferDrawer(a, b) {
+    if (!a) return b;
+    if (!b) return a;
+    if (!a.closedAt && b.closedAt) return b;
+    if (a.closedAt && !b.closedAt) return a;
+    if (num(a.closedAt) !== num(b.closedAt)) return num(a.closedAt) > num(b.closedAt) ? a : b;
+    /* A closure actor is evidence that this is the completed state. Do not
+       let a clock-skewed snapshot with a later builtAt erase it. */
+    if (!a.closedBy && b.closedBy) return b;
+    if (a.closedBy && !b.closedBy) return a;
+    return num(b.builtAt) >= num(a.builtAt) ? b : a;
+  }
+  function drawerSessions(report) {
+    if (!report) return [];
+    var rows = (report.drawerSessions || []).slice();
+    if (report.cash && report.openedAt && !report.live && !report.drawerRebuilt) rows.push({
+      sessionId: report.sessionId || '', terminalId: report.terminalId || '', openedAt: report.openedAt,
+      closedAt: report.closedAt || 0, openedBy: report.openedBy || '',
+      closedBy: report.closedAt ? report.closedBy || '' : '', cash: report.cash,
+      gross: report.gross, net: report.net, txns: report.txns, builtAt: report.builtAt || 0,
+    });
+    var byId = Object.create(null);
+    rows.forEach(function (r) {
+      if (!r || !r.cash || !r.openedAt) return;
+      var key = drawerKey(r);
+      var old = byId[key];
+      byId[key] = preferDrawer(old, r);
+    });
+    return Object.keys(byId).map(function (key) { return byId[key]; })
+      .sort(function (a, b) { return a.openedAt - b.openedAt; });
+  }
+  function closureRevisions(report) {
+    var seen = Object.create(null);
+    return (report && report.revisions || []).filter(function (r) {
+      if (!r || r.note === 'en cours' || r.closed === false) return false;
+      if (!(r.closedAt || r.closed === true || r.note === 'clôture' || r.note === 'réouverture')) return false;
+      var key = r.sessionId && r.closedAt ? (r.terminalId || '') + ':' + r.sessionId + ':' + r.closedAt : r.at;
+      if (!key || seen[key]) return false;
+      seen[key] = true; return true;
+    });
+  }
+  function inheritDrawers(built, snap) {
+    if (!built || !snap) return built;
+    built.sessionId = snap.sessionId || '';
+    built.terminalId = snap.terminalId || '';
+    built.cash = snap.cash;
+    built.drawerSessions = drawerSessions(snap);
+    built.drawerRebuilt = true;
+    built.closedCount = snap.closedCount || 0;
+    built.revisions = snap.revisions || [];
+    built.closedBy = snap.closedAt ? snap.closedBy || '' : '';
+    return built;
+  }
+
+  function revisionKey(r) {
+    return r && (r.sessionId && r.closedAt ? (r.terminalId || '') + ':' + r.sessionId + ':' + r.closedAt : r.at);
+  }
+  function mergedRevisions(m, t) {
+    var seen = Object.create(null);
+    return ((m && m.revisions || []).concat(t && t.revisions || [])).filter(function (r) {
+      var key = revisionKey(r);
+      if (!key || seen[key]) return false;
+      seen[key] = 1; return true;
+    }).sort(function (x, y) { return num(x.at) - num(y.at); });
+  }
+  function snapshotEvidence(r) {
+    var rows = drawerSessions(r), revs = closureRevisions(r), latest = 0, opened = 0;
+    rows.forEach(function (s) {
+      latest = Math.max(latest, num(s.closedAt));
+      opened = Math.max(opened, num(s.openedAt));
+    });
+    return {
+      revisions: revs.length,
+      closedRows: rows.filter(function (s) { return !!s.closedAt; }).length,
+      latestClosedAt: latest,
+      latestOpenedAt: opened,
+      builtAt: num(r && r.builtAt),
+    };
+  }
+  function preferSnapshot(a, b) {
+    var x = snapshotEvidence(a), y = snapshotEvidence(b);
+    if (y.revisions !== x.revisions) return y.revisions > x.revisions ? b : a;
+    if (y.closedRows !== x.closedRows) return y.closedRows > x.closedRows ? b : a;
+    if (y.latestClosedAt !== x.latestClosedAt) return y.latestClosedAt > x.latestClosedAt ? b : a;
+    if (y.latestOpenedAt !== x.latestOpenedAt) return y.latestOpenedAt > x.latestOpenedAt ? b : a;
+    return y.builtAt > x.builtAt ? b : a;
+  }
+  function cashMetric(row, key) {
+    return row && row.cash && row.cash[key] != null ? num(row.cash[key]) : null;
+  }
+  function snapshotConflicts(m, t) {
+    var left = Object.create(null), out = [];
+    drawerSessions(m).forEach(function (r) { left[drawerKey(r)] = r; });
+    drawerSessions(t).forEach(function (r) {
+      var old = left[drawerKey(r)];
+      /* Two open snapshots are normal progress, not an irreconcilable
+         closure. Their expected/count values will be replaced by the more
+         recent row selected by preferDrawer(). */
+      if (!old || (!old.closedAt && !r.closedAt)) return;
+      if (num(old.closedAt) === num(r.closedAt) && String(old.closedBy || '') === String(r.closedBy || '') &&
+          cashMetric(old, 'expected') === cashMetric(r, 'expected') &&
+          cashMetric(old, 'counted') === cashMetric(r, 'counted') &&
+          cashMetric(old, 'ecart') === cashMetric(r, 'ecart')) return;
+      out.push({
+        key: drawerKey(r),
+        left: {
+          closedAt: num(old.closedAt), closedBy: String(old.closedBy || ''),
+          expected: cashMetric(old, 'expected'), counted: cashMetric(old, 'counted'), ecart: cashMetric(old, 'ecart'),
+        },
+        right: {
+          closedAt: num(r.closedAt), closedBy: String(r.closedBy || ''),
+          expected: cashMetric(r, 'expected'), counted: cashMetric(r, 'counted'), ecart: cashMetric(r, 'ecart'),
+        },
+      });
+    });
+    return out;
+  }
+  function mergeDaySnapshots(m, t) {
+    if (!m) return t;
+    if (!t) return m;
+    var keep = preferSnapshot(m, t), revs = mergedRevisions(m, t);
+    var conflicts = (m.snapshotConflicts || []).concat(t.snapshotConflicts || [], snapshotConflicts(m, t)).slice(-12);
+    keep = Object.assign({}, keep, {
+      drawerSessions: drawerSessions({ drawerSessions: drawerSessions(m).concat(drawerSessions(t)) }),
+      revisions: revs,
+      closedCount: Math.max(num(m.closedCount), num(t.closedCount), closureRevisions({ revisions: revs }).length),
+      snapshotConflicts: conflicts,
+    });
+    /* If the chosen aggregate is old but the matching drawer row has the
+       surviving closure evidence, retain its actor rather than showing an
+       anonymous final drawer. */
+    if (keep.closedAt && !keep.closedBy) {
+      var row = drawerSessions(keep).filter(function (s) {
+        return drawerKey(s) === drawerKey(keep) && num(s.closedAt) === num(keep.closedAt);
+      })[0];
+      var rev = revs.filter(function (r) {
+        return drawerKey(r) === drawerKey(keep) && num(r.closedAt) === num(keep.closedAt);
+      })[0];
+      keep.closedBy = String((row && row.closedBy) || (rev && rev.by) || '');
+    }
+    return keep;
+  }
+
   /* save(report, {by, note, reopen}) — LA règle de la double clôture.
    *
    * Le rapport entrant a été RECALCULÉ depuis le journal : il est déjà juste.
@@ -637,15 +876,27 @@
     if (!doc.days) doc.days = {};
     var prev = doc.days[report.day] || null;
 
-    report.closedCount = (prev ? num(prev.closedCount) : 0) + (meta.reopen === false ? 0 : 1);
-    report.revisions = (prev && Array.isArray(prev.revisions) ? prev.revisions.slice(-19) : []);
-    report.revisions.push({
-      at: Date.now(),
+    report.drawerSessions = drawerSessions({ drawerSessions: drawerSessions(prev).concat(drawerSessions(report)) });
+    var closedEvent = !!report.closedAt && meta.reopen !== false;
+    var sameClose = prev && closureRevisions(prev).some(function (r) {
+      return r.closedAt === report.closedAt && (r.sessionId || '') === (report.sessionId || '') && (r.terminalId || '') === (report.terminalId || '');
+    });
+    report.closedCount = (prev ? num(prev.closedCount) : 0) + (closedEvent && !sameClose ? 1 : 0);
+    report.revisions = (prev && Array.isArray(prev.revisions) ? prev.revisions.slice() : []);
+    if (closedEvent && !sameClose) report.revisions.push({
+      at: report.closedAt,
+      closed: true, closedAt: report.closedAt, sessionId: report.sessionId || '', terminalId: report.terminalId || '',
       by: String(meta.by || report.closedBy || ''),
       gross: report.gross,
       txns: report.txns,
       ecart: report.cash ? report.cash.ecart : null,
-      note: String(meta.note || (prev ? 'réouverture' : 'clôture')),
+      /* « Réouverture » veut dire : on rouvre une journée DÉJÀ CLÔTURÉE. Pas
+         « il existait un document ». Les autosauvegardes de mi-service en
+         écrivent un dès l'ouverture du poste, si bien que la vraie première
+         clôture de la journée arrivait toujours avec un `prev` et se retrouvait
+         classée « réouverture » au journal — le contraire de ce qui s'est
+         passé. Ce qui compte, c'est `prev.closed`. */
+      note: String(meta.note || (prev && prev.closed ? 'réouverture' : 'clôture')),
     });
     if (prev && prev.openedAt && !report.openedAt) report.openedAt = prev.openedAt;
     if (prev && prev.openedBy && !report.openedBy) report.openedBy = prev.openedBy;
@@ -683,19 +934,7 @@
         Object.keys(c).forEach(function (k) {
           var m = out.days[k], t = c[k];
           if (!m) { out.days[k] = t; return; }
-          var keep = (num(t.builtAt) > num(m.builtAt)) ? t : m;
-          var other = keep === t ? m : t;
-          var revs = (other.revisions || []).concat(keep.revisions || []);
-          /* Dédoublonnage sur l'horodatage : la même clôture remontée deux fois
-             ne doit pas apparaître deux fois dans l'historique. */
-          var seenR = Object.create(null);
-          keep = Object.assign({}, keep, {
-            revisions: revs.filter(function (r) {
-              var kk = r && r.at; if (!kk || seenR[kk]) return false; seenR[kk] = 1; return true;
-            }).sort(function (x, y) { return x.at - y.at; }).slice(-20),
-            closedCount: Math.max(num(m.closedCount), num(t.closedCount)),
-          });
-          out.days[k] = keep;
+          out.days[k] = mergeDaySnapshots(m, t);
         });
         /* La fusion de deux classeurs peut dépasser le budget que chacun
            respectait séparément — c'est le résultat de la fusion qui repart au
@@ -727,10 +966,13 @@
     businessDay: businessDay, dayBounds: dayBounds, today: today,
     lastClosedDay: lastClosedDay, shiftDay: shiftDay,
     cutoff: cutoff, setCutoff: setCutoff,
+    timezone: merchantTimezone,
     /* langue du métier */
     vocab: vocab, businessType: businessType,
     /* calcul */
     build: build, categoryIndex: categoryIndex, normSale: normSale,
+    drawerSessions: drawerSessions, closureRevisions: closureRevisions, inheritDrawers: inheritDrawers,
+    mergeDaySnapshots: mergeDaySnapshots,
     /* classeur */
     save: save, load: load, list: list, days: days,
     storeSlug: storeSlug, isReal: isReal,
@@ -738,6 +980,7 @@
     push: push, pull: pull, flush: flush,
     subscribe: function (fn) { subs.add(fn); return function () { subs.delete(fn); }; },
   };
+  try { window.dispatchEvent(new CustomEvent('kiwi-day-report-ready')); } catch (_) {}
 
   /* Hydrate au chargement : sans ça, un navigateur neuf a un classeur vide et
      le premier `push()` effacerait les rapports du serveur (règle 3 de

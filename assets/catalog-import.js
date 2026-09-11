@@ -71,7 +71,7 @@
   /* Prices go BACK to the merchant in the format they typed them in: 340,50 —
      not the 340.5 a raw JS number stringifies to. Whole dirhams stay whole. */
   function mad(n) {
-    if (!isFinite(n)) return '—';
+    if (!isFinite(n)) return '·';
     const dec = Math.round(n * 100) % 100 === 0 ? 0 : 2;
     return n.toLocaleString('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + ' MAD';
   }
@@ -263,13 +263,13 @@
       if (rawPrice && !isFinite(g.priceMAD)) {
         const p = num(rawPrice);
         if (isFinite(p)) g.priceMAD = p;
-        else issues.push({ line, level: 'warn', msg: 'prix illisible (« ' + rawPrice + ' ») — ignoré' });
+        else issues.push({ line, level: 'warn', msg: 'prix illisible (« ' + rawPrice + ' ») · ignoré' });
       }
       const rawCost = cell(row, idx.cout);
       if (rawCost && !isFinite(g.cost)) {
         const c = num(rawCost);
         if (isFinite(c)) g.cost = c;
-        else issues.push({ line, level: 'warn', msg: 'coût d\'achat illisible (« ' + rawCost + ' ») — ignoré' });
+        else issues.push({ line, level: 'warn', msg: 'coût d\'achat illisible (« ' + rawCost + ' ») · ignoré' });
       }
 
       /* Variant: couleur × taille. A shop with no colours or no sizes still
@@ -309,10 +309,10 @@
       const stockGiven = rawStock !== '';
       const stock = stockGiven ? intOr(rawStock, 0) : null;
       if (stockGiven && !isFinite(num(rawStock))) {
-        issues.push({ line, level: 'warn', msg: 'stock illisible (« ' + rawStock + ' ») — compté 0' });
+        issues.push({ line, level: 'warn', msg: 'stock illisible (« ' + rawStock + ' ») · compté 0' });
       }
 
-      const vk = colorId + ' ' + keyName(size);
+      const vk = colorId + '\u0000' + keyName(size);
       let v = g.variants.find((x) => x.key === vk);
       if (!v) {
         v = { key: vk, colorId, colorLabel: hit ? hit.label : colorLabel, size, stock, stockGiven, barcodes: [], line };
@@ -333,7 +333,7 @@
         const vkFull = gk + '|' + vk;
         const dupInFile = seenCodes.get(code);
         if (dupInFile && dupInFile.vk !== vkFull) {
-          issues.push({ line, level: 'warn', msg: 'code-barres ' + code + ' déjà utilisé ligne ' + dupInFile.line + ' — ignoré ici' });
+          issues.push({ line, level: 'warn', msg: 'code-barres ' + code + ' déjà utilisé ligne ' + dupInFile.line + ' · ignoré ici' });
         } else if (!dupInFile) {
           seenCodes.set(code, { line, vk: vkFull });
           const owner = CAT.findByBarcode(code);
@@ -341,7 +341,7 @@
             const sameArticle = keyName(owner.product && owner.product.name) === gk
               && owner.variant.colorId === colorId && keyName(owner.variant.size) === keyName(size);
             if (sameArticle) v.barcodes.push({ code, type: cell(row, idx.type), already: true });
-            else issues.push({ line, level: 'warn', msg: 'code-barres ' + code + ' appartient déjà à « ' + ((owner.product && owner.product.name) || '?') + ' » — ignoré' });
+            else issues.push({ line, level: 'warn', msg: 'code-barres ' + code + ' appartient déjà à « ' + ((owner.product && owner.product.name) || '?') + ' » · ignoré' });
           } else {
             v.barcodes.push({ code, type: cell(row, idx.type), already: false });
           }
@@ -353,6 +353,7 @@
        confirmation screen are the numbers that will actually happen. */
     const products = [...groups.values()];
     let newVariants = 0, updatedVariants = 0, newCodes = 0, missingCodes = 0;
+    const priceIssueLines = new Set(issues.filter((x) => /prix (illisible|manquant)/i.test(x.msg)).map((x) => x.line));
     products.forEach((g) => {
       const have = g.existing ? CAT.listVariants(g.existing.id) : [];
       g.variants.forEach((v) => {
@@ -368,6 +369,9 @@
       const sizes = g.variants.map((v) => String(v.size).toUpperCase());
       g.kind = sizes.every((s) => /^\d{2}$/.test(s) && +s >= 35 && +s <= 48) ? 'pointure'
         : (sizes.every((s) => s === 'TU') ? 'tu' : 'taille');
+      if (!g.existing && !isFinite(g.priceMAD) && !g.lines.some((line) => priceIssueLines.has(line))) {
+        issues.push({ line: g.lines[0], level: 'warn', msg: 'prix manquant · produit refusé à l’import' });
+      }
     });
 
     return {
@@ -375,7 +379,8 @@
       headerRaw: parsed.headerRaw, products, newCategories, issues,
       counts: {
         rows: parsed.rows.length,
-        newProducts: products.filter((g) => !g.existing).length,
+        newProducts: products.filter((g) => !g.existing && isFinite(g.priceMAD)).length,
+        refusedProducts: products.filter((g) => !g.existing && !isFinite(g.priceMAD)).length,
         updatedProducts: products.filter((g) => g.existing).length,
         newVariants, updatedVariants, newCodes, missingCodes,
         newCategories: newCategories.length,
@@ -412,10 +417,12 @@
           if (wantCat && prod.categoryId !== wantCat) patch.categoryId = wantCat;
           if (Object.keys(patch).length) CAT.updateProduct(prod.id, patch);
         } else {
+          /* A missing price is not a free product. Explicit 0 remains valid. */
+          if (!isFinite(g.priceMAD)) { res.failed.push(g.name + ' · prix manquant ou illisible, produit non créé'); return; }
           prod = CAT.addProduct({
             name: g.name,
             categoryId: wantCat || null,
-            priceMAD: isFinite(g.priceMAD) ? g.priceMAD : 0,
+            priceMAD: g.priceMAD,
             cost: isFinite(g.cost) ? g.cost : 0,
             kind: g.kind || 'taille',
           });
@@ -461,7 +468,7 @@
     const cats = MS.categories() || [];
     const catByName = new Map(cats.map((c) => [keyName(c.name), c]));
     const items = MS.items() || [];
-    const itemKey = (name, catName) => keyName(name) + ' ' + keyName(catName);
+    const itemKey = (name, catName) => keyName(name) + '\u0000' + keyName(catName);
     const itemIndex = new Map();
     items.forEach((it) => {
       const c = cats.find((x) => x.id === it.catId);
@@ -483,7 +490,7 @@
       const rawPrice = cell(row, idx.prix_mad);
       const price = num(rawPrice);
       if (rawPrice && !isFinite(price)) {
-        issues.push({ line, level: 'warn', msg: 'prix illisible (« ' + rawPrice + ' ») — compté 0' });
+        issues.push({ line, level: 'warn', msg: 'prix illisible (« ' + rawPrice + ' ») · compté 0' });
       }
       if (catName && !catByName.has(keyName(catName)) && !newCategories.some((n) => keyName(n) === keyName(catName))) {
         newCategories.push(catName);
@@ -491,7 +498,7 @@
       if (catName && subName) {
         const c = catByName.get(keyName(catName));
         const has = c && (c.sub || []).some((s) => keyName(s.name) === keyName(subName));
-        const key = keyName(catName) + ' ' + keyName(subName);
+        const key = keyName(catName) + '\u0000' + keyName(subName);
         if (!has && !newSubs.some((s) => s.key === key)) newSubs.push({ key, catName, subName });
       }
 
@@ -613,6 +620,7 @@
       '.kci-tbl td{padding:5px 8px 5px 0;border-top:1px solid var(--n-200,#e7e3db);color:var(--ink,#0A0F0D);vertical-align:top;}',
       '.kci-tag{display:inline-block;font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:5px;background:var(--n-200,#e7e3db);color:var(--n-700,#544f48);}',
       '.kci-tag.new{background:color-mix(in srgb,var(--atlas,#0B6E4F) 14%,transparent);color:var(--atlas,#0B6E4F);}',
+      '.kci-tag.warn{background:color-mix(in srgb,#B0613F 16%,transparent);color:#8A4A22;}',
       '.kci-scroll{max-height:210px;overflow:auto;margin:0 0 4px;}',
       '.kci-iss{margin:14px 0 0;padding:11px 13px;border-radius:11px;background:color-mix(in srgb,#B0613F 8%,transparent);font-size:12.5px;color:var(--ink,#0A0F0D);line-height:1.6;}',
       '.kci-iss b{font-weight:600;}',
@@ -688,8 +696,12 @@
     /* ── step 2 · the plan, before anything is written ── */
     function renderPlan(p) {
       const c = p.counts;
+      /* Merged hardening: refused rows are not creations — the created
+       * count excludes them (they get their own explicit KPI below). */
+      const createdCount = c.newProducts - (c.refusedProducts || 0);
       const kpis = kind === 'boutique' ? [
-        ['new', c.newProducts, c.newProducts === 1 ? 'article créé' : 'articles créés'],
+        ['new', createdCount, createdCount === 1 ? 'article créé' : 'articles créés'],
+        ['warn', c.refusedProducts || 0, (c.refusedProducts || 0) === 1 ? 'article refusé' : 'articles refusés'],
         ['', c.updatedProducts, c.updatedProducts === 1 ? 'article mis à jour' : 'articles mis à jour'],
         ['new', c.newVariants, c.newVariants === 1 ? 'variante' : 'variantes'],
         ['', c.newCodes, c.newCodes === 1 ? 'code-barres' : 'codes-barres'],
@@ -703,18 +715,19 @@
 
       const rowsHtml = kind === 'boutique'
         ? p.products.slice(0, 60).map((g) => '<tr><td>' + esc(g.name)
-            + (g.existing ? '' : ' <span class="kci-tag new">nouveau</span>') + '</td><td>'
-            + esc(g.categoryName || '—') + '</td><td>' + esc(mad(g.priceMAD))
+            + (g.existing ? '' : ' <span class="kci-tag new">nouveau</span>')
+            + (!g.existing && !isFinite(g.priceMAD) ? ' <span class="kci-tag warn">prix manquant — refusé</span>' : '') + '</td><td>'
+            + esc(g.categoryName || '·') + '</td><td>' + esc(mad(g.priceMAD))
             + '</td><td>' + g.variants.length + '</td></tr>').join('')
         : p.rows.slice(0, 60).map((r) => '<tr><td>' + esc(r.name)
             + (r.existing ? '' : ' <span class="kci-tag new">nouveau</span>') + '</td><td>'
-            + esc(r.catName || '—') + (r.subName ? ' · ' + esc(r.subName) : '') + '</td><td>'
+            + esc(r.catName || '·') + (r.subName ? ' · ' + esc(r.subName) : '') + '</td><td>'
             + esc(mad(r.price)) + '</td><td>' + (r.avail ? 'oui' : 'non') + '</td></tr>').join('');
 
       const head = kind === 'boutique'
         ? '<tr><th>Article</th><th>Catégorie</th><th>Prix</th><th>Var.</th></tr>'
         : '<tr><th>Article</th><th>Catégorie</th><th>Prix</th><th>Dispo</th></tr>';
-      const total = kind === 'boutique' ? p.products.length : p.rows.length;
+      const total = kind === 'boutique' ? c.newProducts + c.updatedProducts - (c.refusedProducts || 0) : p.rows.length;
 
       const issues = p.issues.slice(0, 12);
       body.innerHTML = [
@@ -734,8 +747,8 @@
         '<p class="kci-hint">Rien n\'est encore enregistré. Les articles déjà présents sont mis à jour, jamais dupliqués.</p>',
       ].join('');
 
-      go.disabled = false; go.style.opacity = '1';
-      go.textContent = 'Importer ' + total + (total === 1 ? ' article' : ' articles');
+      go.disabled = total === 0; go.style.opacity = total ? '1' : '.5';
+      go.textContent = total ? 'Importer ' + total + (total === 1 ? ' article' : ' articles') : 'Aucun article importable';
     }
 
     const ERRORS = {
@@ -747,6 +760,26 @@
       'carte-absente': 'Le module carte n\'est pas chargé.',
     };
 
+    /* CSV (fichier ou texte déjà en mémoire) → analyse → plan à l'écran.
+     * Partagé entre le dépôt de fichier et l'entrée directe openMenuWithCsv
+     * (scan AI d'un menu) : même analyse, même revue, même chemin d'écriture. */
+    function usePlan(csvText) {
+      const parsed = parse(csvText);
+      if (!parsed.ok) { plan = null; renderPick(ERRORS[parsed.error] || 'Fichier illisible.'); return; }
+      const p = kind === 'boutique' ? analyseBoutique(parsed) : analyseMenu(parsed);
+      if (!p.ok) {
+        plan = null;
+        renderPick((ERRORS[p.error] || 'Fichier illisible.')
+          + (p.headerRaw ? ' Colonnes lues : ' + p.headerRaw.join(' · ') : ''));
+        return;
+      }
+      if (!(kind === 'boutique' ? p.products.length : p.rows.length)) {
+        plan = null; renderPick('Aucun article exploitable dans ce fichier.'); return;
+      }
+      plan = p;
+      renderPlan(p);
+    }
+
     function handleFile(file) {
       if (!file) return;
       if (/\.(xlsx|xls|numbers|ods)$/i.test(file.name)) {
@@ -755,22 +788,7 @@
       }
       const fr = new FileReader();
       fr.onerror = () => renderPick('Ce fichier n\'a pas pu être lu.');
-      fr.onload = () => {
-        const parsed = parse(decodeBytes(fr.result));
-        if (!parsed.ok) { plan = null; renderPick(ERRORS[parsed.error] || 'Fichier illisible.'); return; }
-        const p = kind === 'boutique' ? analyseBoutique(parsed) : analyseMenu(parsed);
-        if (!p.ok) {
-          plan = null;
-          renderPick((ERRORS[p.error] || 'Fichier illisible.')
-            + (p.headerRaw ? ' Colonnes lues : ' + p.headerRaw.join(' · ') : ''));
-          return;
-        }
-        if (!(kind === 'boutique' ? p.products.length : p.rows.length)) {
-          plan = null; renderPick('Aucun article exploitable dans ce fichier.'); return;
-        }
-        plan = p;
-        renderPlan(p);
-      };
+      fr.onload = () => usePlan(decodeBytes(fr.result));
       fr.readAsArrayBuffer(file);
     }
 
@@ -821,6 +839,7 @@
     });
 
     renderPick('');
+    if (opts.csvText) usePlan(String(opts.csvText));
     return m;
   }
 
@@ -830,6 +849,9 @@
     parse, analyseBoutique, analyseMenu, applyBoutique, applyMenu,
     // UI
     open, openBoutique: (o) => open('boutique', o), openMenu: (o) => open('menu', o),
+    /* Entrée directe pour un CSV déjà construit (scan AI d'un menu) : ouvre la
+     * même revue « rien n'est écrit avant confirmation » que le dépôt de fichier. */
+    openMenuWithCsv: (csvText, o) => open('menu', Object.assign({}, o, { csvText })),
     downloadTemplate, templates: () => Object.assign({}, TEMPLATES),
     // exposed for tests
     _num: num, _normKey: normKey, _bool: bool, _decode: decodeBytes,

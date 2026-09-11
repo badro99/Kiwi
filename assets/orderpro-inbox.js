@@ -20,7 +20,7 @@
   'use strict';
 
   var POLL_MS = 6000;
-  var state = { orders: {}, sessions: [], since: 0, open: false, timer: null, seen: {} };
+  var state = { orders: {}, sessions: [], closedSessions: [], expired: [], since: 0, open: false, timer: null, seen: {}, expiryWarned: {} };
 
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
   function fmt(n) { try { return (Math.round(n) || 0).toLocaleString('fr-FR'); } catch (_) { return String(Math.round(n) || 0); } }
@@ -57,26 +57,37 @@
       'font-family:"Inter Tight",Inter,system-ui,sans-serif;color:var(--ink,#0A0F0D);animation:kop-fade .2s ease;}',
       '@keyframes kop-fade{from{opacity:0}to{opacity:1}}',
       '#kop-root .kop-head{display:flex;align-items:center;gap:14px;padding:18px 22px;border-bottom:1px solid rgba(10,15,13,.08);background:var(--surface);}',
-      '#kop-root .kop-head h2{margin:0;font-size:1.15rem;font-weight:700;letter-spacing:-.01em;}',
-      '#kop-root .kop-x{margin-left:auto;width:38px;height:38px;border-radius:11px;border:1px solid rgba(10,15,13,.1);background:var(--surface);cursor:pointer;display:grid;place-items:center;color:var(--ink,#0A0F0D);}',
-      '#kop-root .kop-x svg{width:18px;height:18px;}',
+      '#kop-root .kop-x{margin-left:auto;width:44px;height:44px;min-width:44px;min-height:44px;border-radius:12px;border:1px solid rgba(10,15,13,.1);background:var(--surface);cursor:pointer;display:grid;place-items:center;color:var(--ink,#0A0F0D);touch-action:manipulation;-webkit-tap-highlight-color:transparent;}',
+      '#kop-root .kop-x svg{width:22px;height:22px;}',
       '#kop-root .kop-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 22px 40px;}',
       '#kop-root .kop-sec{font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--atlas,#0B6E4F);margin:22px 0 10px;}',
       '#kop-root .kop-sec:first-child{margin-top:0;}',
       '#kop-root .kop-card{background:var(--surface);border:1px solid rgba(10,15,13,.08);border-radius:16px;padding:15px 17px;margin-bottom:11px;box-shadow:0 1px 2px rgba(10,15,13,.04);}',
       '#kop-root .kop-card.pending{border-color:rgba(11,110,79,.45);box-shadow:0 4px 16px rgba(11,110,79,.12);}',
-      '#kop-root .kop-top{display:flex;align-items:baseline;gap:10px;margin-bottom:9px;}',
+      '#kop-root .kop-top{display:flex;align-items:center;gap:8px;margin-bottom:9px;flex-wrap:wrap;}',
       '#kop-root .kop-num{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:1.15rem;font-weight:600;}',
       '#kop-root .kop-where{font-size:.82rem;font-weight:600;color:var(--riad,#053B2C);background:var(--mint-soft,#E6FBEF);padding:4px 10px;border-radius:999px;}',
+      '#kop-root button.kop-where-btn{border:0;cursor:pointer;touch-action:manipulation;transition:transform .1s,box-shadow .1s;}',
+      '#kop-root button.kop-where-btn:hover{transform:translateY(-1px);box-shadow:0 2px 6px rgba(11,110,79,.2);}',
+      '#kop-root .kop-server{font-size:.78rem;font-weight:600;color:var(--ink,#0A0F0D);opacity:.75;background:rgba(10,15,13,.06);padding:3px 8px;border-radius:6px;}',
+      '#kop-root .kop-time{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.78rem;font-weight:600;color:rgba(10,15,13,.65);background:rgba(10,15,13,.04);padding:3px 8px;border-radius:6px;}',
+      '#kop-root .kop-time.is-late{color:#b0402f;background:rgba(176,64,47,.1);font-weight:700;}',
       '#kop-root .kop-total{margin-left:auto;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:1rem;font-weight:600;}',
       '#kop-root .kop-line{display:flex;gap:9px;font-size:.9rem;padding:3px 0;color:var(--ink,#0A0F0D);}',
       '#kop-root .kop-line .q{font-family:"JetBrains Mono",ui-monospace,monospace;color:var(--atlas,#0B6E4F);font-weight:600;min-width:24px;}',
       '#kop-root .kop-line .o{color:rgba(10,15,13,.55);font-size:.82rem;}',
-      '#kop-root .kop-acts{display:flex;gap:8px;margin-top:13px;}',
+      '#kop-root .kop-formula-parts{margin-left:26px;margin-top:2px;margin-bottom:6px;border-left:2px solid rgba(11,110,79,.18);padding-left:10px;}',
+      '#kop-root .kop-formula-part{display:flex;gap:6px;font-size:.84rem;padding:2px 0;color:rgba(10,15,13,.78);}',
+      '#kop-root .kop-part-bullet{color:var(--atlas,#0B6E4F);font-weight:700;}',
+      '#kop-root .kop-slot{color:rgba(10,15,13,.5);font-size:.78rem;}',
+      '#kop-root .kop-opt-badge{display:inline-block;background:rgba(11,110,79,.09);color:var(--atlas,#0B6E4F);font-size:.74rem;font-weight:600;padding:1px 6px;border-radius:4px;vertical-align:middle;margin-left:4px;}',
+      '#kop-root .kop-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px;}',
       '#kop-root .kop-btn{flex:1;border:0;border-radius:11px;padding:12px;font:600 .92rem/1 inherit;cursor:pointer;}',
       '#kop-root .kop-btn.go{background:var(--atlas,#0B6E4F);color:#fff;}',
+      '#kop-root .kop-btn.send{background:var(--mint-soft,#E6FBEF);color:var(--riad,#053B2C);border:1px solid rgba(11,110,79,.22);}',
       '#kop-root .kop-btn.ghost{background:var(--surface);border:1px solid rgba(10,15,13,.14);color:rgba(10,15,13,.65);}',
       '#kop-root .kop-btn.ghost:hover{color:var(--danger,#b0402f);border-color:var(--danger,#b0402f);}',
+      '#kop-root .kop-btn.kop-print{flex:0 0 auto;min-width:86px;}',
       '#kop-root .kop-empty{text-align:center;color:rgba(10,15,13,.5);font-size:.92rem;padding:60px 20px;line-height:1.6;}',
       /* La provenance et l'adresse. Une commande de livraison sans elles renvoie
          le comptoir vers la tablette du prestataire — ce qui annule tout le
@@ -119,13 +130,30 @@
         state.since = j.now || state.since;
         var fresh = 0;
         var delta = j.orders || [];
+        var cancelled = Array.isArray(j.cancelledTickets) ? j.cancelledTickets : [];
+        cancelled.forEach(function (ticket) {
+          if (ticket && ticket.id) delete state.orders[ticket.id];
+        });
         delta.forEach(function (o) {
           if (!state.seen[o.id] && o.status === 'pending') { fresh++; state.seen[o.id] = 1; }
           state.orders[o.id] = o;
         });
         state.sessions = j.sessions || [];
-        bridge(delta);
+        state.closedSessions = j.closedSessions || [];
+        state.expired = j.expired || [];
+        /* One coherent lifecycle snapshot per poll. Passing the rejected rows
+         * through a second ingest used to run the same terminal cleanup twice
+         * in one tick; worse, older API payloads had no status and could be
+         * reconstructed between both passes. Normalise at this trust boundary
+         * too, so a mixed-version deployment still converges safely. */
+        var terminal = cancelled.map(function (ticket) {
+          return Object.assign({}, ticket, { status: 'rejected' });
+        });
+        bridge(delta.concat(terminal));
         if (fresh) announce(fresh);
+        warnExpiring();
+        warnDegraded(j.degraded);
+        verifyCloses();
         paint();
         return fresh;
       })
@@ -145,18 +173,45 @@
     try {
       if (!window.KiwiCaisseKitchen) return;
       var all = Object.keys(state.orders).map(function (k) { return state.orders[k]; });
-      window.KiwiCaisseKitchen.ingest(delta, all, state.sessions);
+      window.KiwiCaisseKitchen.ingest(delta, all, state.sessions, state.closedSessions, state.expired);
     } catch (_) {}
   }
 
   function setStatus(id, status, extra) {
     var m = merchant();
     if (!m) return Promise.resolve(null);
+    var needsTillActor = (status === 'rejected' || (status === 'served' && state.orders[id] && state.orders[id].mode === 'takeout'))
+      && !(extra && (extra.actorProof || extra.pinAuthorized));
+    if (needsTillActor && !window.KiwiAuthorizeTillAction) return Promise.resolve(null);
+    if (needsTillActor && window.KiwiAuthorizeTillAction) {
+      return new Promise(function (resolve) {
+        var action = status === 'served' ? 'Remise de la commande au client' : 'Annuler la commande';
+        window.KiwiAuthorizeTillAction(action, function (who) {
+          resolve(setStatus(id, status, Object.assign({}, extra, { actorProof: who && who.actorProof || '', pinAuthorized: true })));
+        });
+      });
+    }
     var prev = state.orders[id];
     // Optimistic, then reconciled by the next poll: the till must feel instant.
     if (prev) {
       if (status === 'rejected') delete state.orders[id];
-      else prev.status = status;
+      else if (status === 'cooking') {
+        (prev.lines || []).forEach(function (line) {
+          if (!(extra && extra.station) || line.station === extra.station) line.stationAccepted = true;
+        });
+      }
+      else if (status === 'ready' && extra && extra.station) {
+        (prev.lines || []).forEach(function (line) {
+          if (line.station === extra.station) {
+            line.stationReady = true;
+          }
+        });
+        if ((prev.lines || []).length
+            && prev.lines.every(function (line) { return line.stationReady === true; })) {
+          prev.status = 'ready';
+        }
+      } else prev.status = status;
+      if (extra && extra.paid) prev.paid = true;
       paint();
     }
     var body = { merchant: m, id: id, status: status };
@@ -164,13 +219,23 @@
     // paiement d'un retrait au comptoir : deux informations que SEULE la caisse
     // détient à cet instant, et qui doivent voyager avec la transition.
     if (extra && extra.server) body.server = extra.server;
+    if (extra && extra.actorProof) body.actorProof = extra.actorProof;
     if (extra && extra.paid) body.paid = true;
+    if (extra && extra.station) body.station = extra.station;
     return fetch('/api/order/queue', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-    }).then(function (r) { return r.ok ? r.json() : null; })
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        j = j && typeof j === 'object' ? j : {};
+        j.httpStatus = r.status;
+        return j;
+      });
+    })
       .then(function (j) {
         if (j && j.ok) {
+          if (prev && j.status) prev.status = j.status;
+          if (prev && Array.isArray(j.lines)) prev.lines = j.lines;
           /* `pending` n'est pas encore un bon de cuisine. Le papier ne doit
            * sortir que sur l'appareil qui a réellement obtenu la transition
            * pending → accepted du serveur — pas sur chaque caisse qui sonde la
@@ -182,7 +247,7 @@
               }
             } catch (_) {}
           }
-          bridge([]);
+          bridge(prev ? [prev] : []);
           return j;
         }
         /* Refus du serveur. Un 409 « bad-transition » n'est PAS une panne :
@@ -192,7 +257,7 @@
         if (prev) { state.orders[id] = prev; paint(); }
         return j;
       })
-      .catch(function () { if (prev) { state.orders[id] = prev; paint(); } return null; });
+      .catch(function () { if (prev) { state.orders[id] = prev; paint(); } return { error: 'network-error', httpStatus: 0 }; });
   }
 
   /* ── L'addition est réglée : on coupe le téléphone ───────────────────────
@@ -200,17 +265,85 @@
    * commun à la carte, aux espèces et à l'addition partagée — et l'appel réseau
    * vit ici. Une vente ne doit jamais attendre le réseau, ni échouer parce
    * qu'il est tombé : la session se refermera au pire à son expiration. */
+  /* ── Une fermeture non confirmée n'est pas une fermeture ─────────────────
+   * Ce POST partait en aveugle : toute réponse HTTP (403, 500, même `closed: 0`
+   * dans un `ok:true`) passait par le même `.then`, et le réseau tombé par le
+   * même `.catch` vide. La caisse, elle, avait déjà tout éteint en local — et
+   * le sondage suivant rallumait la table, indéfiniment. La table ne fermait
+   * jamais, en silence.
+   *
+   * On attend donc la PREUVE : la visite absente des sessions ouvertes au
+   * sondage suivant. Sinon on rejoue (la fermeture est idempotente), cinq fois
+   * au plus, puis on le DIT au lieu de laisser la table se rallumer toute
+   * seule toute la soirée. */
+  var pendingCloses = [];
+  var CLOSE_ATTEMPTS = 5;
+  function normCloseTable(v) {
+    return String(v == null ? '' : v).toLowerCase().replace(/^table\s*/, '').replace(/^t(?=\d+$)/, '');
+  }
   function closeSession(detail) {
     var m = merchant();
     if (!m || !detail) return;
     var body = { merchant: m, closedBy: detail.why || 'settle' };
-    if (detail.session) body.closeSession = detail.session;
-    else if (detail.table) body.closeTable = String(detail.table);
+    if (detail.actorProof) body.actorProof = detail.actorProof;
+    var key = '';
+    if (detail.session) { body.closeSession = detail.session; key = 's:' + detail.session; }
+    else if (detail.table && detail.expectedSession) {
+      body.closeTable = String(detail.table);
+      body.expectedSession = String(detail.expectedSession);
+      if (detail.expectedRevision != null) body.expectedRevision = Number(detail.expectedRevision);
+      key = 's:' + body.expectedSession;
+    }
     else return;
+    var known = null;
+    pendingCloses.forEach(function (p) { if (p.key === key) known = p; });
+    if (!known) { known = { body: body, key: key, attempts: 0 }; pendingCloses.push(known); }
+    sendClose(known);
+  }
+  function sendClose(p) {
+    p.attempts++;
     fetch('/api/order/queue', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    }).then(function () { state.since = 0; return pull(); }).catch(function () {});
+      body: JSON.stringify(p.body),
+    /* `since = 0` REDEMANDE TOUT, volontairement. Fermer une table change des
+       lignes que le curseur n'aurait pas rapportées — une commande soldée ne
+       « change » pas au sens de updated_ts pour tout le monde — et la caisse
+       doit repartir d'une image complète plutôt que d'un delta qui la
+       laisserait avec une table éteinte d'un côté et vivante de l'autre.
+       C'est sûr parce que tout est idempotent : les tickets se reconnaissent
+       par `opId`, les lignes d'addition par leur marqueur `<id>:<rang>`. Ce
+       n'est donc pas une optimisation ratée, c'est une resynchronisation. */
+    }).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function () { state.since = 0; return pull(); })
+      .then(function () { verifyCloses(); })
+      .catch(function () { /* le sondage régulier suivant re-vérifiera */ });
+  }
+  function verifyCloses() {
+    if (!pendingCloses.length) return;
+    var openIds = {}, seated = {};
+    (state.sessions || []).forEach(function (s) {
+      if (!s) return;
+      if (s.id) openIds[String(s.id)] = 1;
+      if (s.table) seated[normCloseTable(s.table)] = 1;
+    });
+    pendingCloses = pendingCloses.filter(function (p) {
+      var done = p.body.closeSession
+        ? !openIds[String(p.body.closeSession)]
+        : !seated[normCloseTable(p.body.closeTable)];
+      if (done) return false;
+      if (p.attempts < CLOSE_ATTEMPTS) { sendClose(p); return true; }
+      try {
+        var stack = document.getElementById('toast-stack');
+        if (stack) {
+          var el = document.createElement('div'); el.className = 'toast';
+          el.textContent = 'Fermeture non confirmée par le serveur · la table peut se rallumer · réessaie de l’encaisser';
+          stack.appendChild(el);
+          setTimeout(function () { el.classList.add('fade'); }, 8000);
+          setTimeout(function () { el.remove(); }, 8300);
+        }
+      } catch (_) {}
+      return false;
+    });
   }
 
   /* ── attention: a new order must not be missable on a busy counter ────── */
@@ -248,12 +381,85 @@
     } catch (_) {}
   }
 
+  /* ── Une attente qui vieillit doit crier plus fort, pas s'éteindre ────────
+   * `announce()` ne sonne qu'à l'arrivée. En coup de feu, personne ne lève
+   * les yeux à temps, et à trente minutes le TTL tranche en silence : la
+   * commande disparaît sans que le comptoir ait jamais su qu'elle mourait.
+   * Passé vingt minutes sans décision, on prévient UNE fois par commande
+   * (le rechargement ré-avertit — c'est voulu : une attente qui survit au
+   * rechargement est exactement celle qu'il faut revoir). */
+  var EXPIRY_WARN_MS = 20 * 60 * 1000;
+  function warnExpiring() {
+    try {
+      var nowTs = Date.now();
+      Object.keys(state.orders).forEach(function (id) {
+        var o = state.orders[id];
+        if (!o || o.status !== 'pending' || state.expiryWarned[id]) return;
+        var age = nowTs - Number(o.created_ts || nowTs);
+        if (!(age > EXPIRY_WARN_MS)) return;
+        state.expiryWarned[id] = 1;
+        var left = Math.max(1, Math.round((30 * 60 * 1000 - age) / 60000));
+        var label = (o.number != null ? 'N°' + o.number : 'commande') +
+          (o.mode === 'table' && o.table ? ' · Table ' + o.table : ' · À emporter');
+        try {
+          var stack = document.getElementById('toast-stack');
+          if (stack) {
+            var el = document.createElement('div'); el.className = 'toast';
+            el.textContent = label + ' en attente depuis 20 min · expire dans ~' + left + ' min';
+            stack.appendChild(el);
+            setTimeout(function () { el.classList.add('fade'); }, 5000);
+            setTimeout(function () { el.remove(); }, 5300);
+          }
+        } catch (_) {}
+        try { if (navigator.vibrate) navigator.vibrate([60, 80, 60]); } catch (_) {}
+      });
+    } catch (_) {}
+  }
+
+  /* ── Une base non migrée ment sur les paiements : le dire ─────────────────
+   * Quand il manque `paid_ts`, le sondage répond `paid:false` pour TOUTES les
+   * commandes et l'écriture du timbre tombe dans le repli « état seul » : le
+   * comptoir affiche « impayé » sur des commandes réglées, et rien ne le
+   * signale — le faux impayé parfait. Le serveur le DIT déjà à chaque sondage
+   * (`degraded`), personne ne l'écoutait. Une fois par chargement, on l'affiche
+   * avec le remède exact, au lieu de laisser douter de chaque encaissement. */
+  function warnDegraded(degraded) {
+    try {
+      if (!Array.isArray(degraded) || !degraded.length || state.degradedWarned) return;
+      state.degradedWarned = 1;
+      var stack = document.getElementById('toast-stack');
+      if (stack) {
+        var el = document.createElement('div'); el.className = 'toast';
+        el.textContent = 'Base à migrer (' + degraded.join(', ') +
+          ') · statuts de paiement non fiables · lancer node tools/d1-schema.mjs';
+        stack.appendChild(el);
+        setTimeout(function () { el.classList.add('fade'); }, 8000);
+        setTimeout(function () { el.remove(); }, 8300);
+      }
+    } catch (_) {}
+  }
+
   /* ── render ───────────────────────────────────────────────────────────── */
   function list(status) {
+    var closedSet = {};
+    (state.closedSessions || []).forEach(function (s) {
+      var id = s && typeof s === 'object' ? s.id : s;
+      if (id) closedSet[String(id)] = 1;
+    });
     return Object.keys(state.orders)
       .map(function (k) { return state.orders[k]; })
-      .filter(function (o) { return o.status === status; })
-      .sort(function (a, b) { return a.created_ts - b.created_ts; });
+      .filter(function (o) {
+        if (!o || o.status !== status) return false;
+        // Jamais de commandes internes de la caisse dans la boîte "Commandes clients"
+        if (o.channel === 'caisse') return false;
+        // Une commande sur table déjà réglée ou dont la session est close est achevée
+        if (o.mode === 'table') {
+          if (o.paid && (status === 'accepted' || status === 'pending')) return false;
+          if (o.session && closedSet[String(o.session)]) return false;
+        }
+        return true;
+      })
+      .sort(function (a, b) { return (a.created_ts || 0) - (b.created_ts || 0); });
   }
 
   /* D'où vient cette commande. 'kiwi' est le téléphone d'un client : c'est le
@@ -274,34 +480,138 @@
     return '<div class="kop-cust">' + (head ? '<div>' + head + '</div>' : '') + addr + note + '</div>';
   }
 
+  function serverInitials(name) {
+    var parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '';
+    return ((parts[0][0] || '') + (parts.length > 1 ? (parts[parts.length - 1][0] || '') : '')).toUpperCase();
+  }
+
+  function orderRef(o) {
+    var n = String((o && o.number) || 0);
+    if (o && o.channel === 'kiwi') {
+      var employeePrefix = serverInitials(o.server);
+      if (employeePrefix) return employeePrefix + '-' + n;
+      return (o.mode === 'takeout' ? 'OPD-' : 'OP-') + n;
+    }
+    return n;
+  }
+
+  function timeAgo(ts) {
+    if (!ts) return '';
+    var min = Math.max(0, Math.floor((Date.now() - Number(ts)) / 60000));
+    if (min < 1) return 'à l\'instant';
+    if (min < 60) return min + ' min';
+    var h = Math.floor(min / 60);
+    var rem = min % 60;
+    return h + 'h' + (rem ? (rem < 10 ? '0' : '') + rem : '');
+  }
+
+  function clockTime(ts) {
+    if (!ts) return '';
+    try {
+      var d = new Date(Number(ts));
+      var hh = d.getHours();
+      var mm = d.getMinutes();
+      return (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
+    } catch (_) { return ''; }
+  }
+
+  function cleanLineNote(note) {
+    if (!note) return '';
+    return String(note).replace(/^\[.*?\]\s*(·\s*)?/, '').trim();
+  }
+
+  function linesHtml(o) {
+    var raw = o.lines || [];
+    if (!raw.length) return '';
+
+    var formulas = {};
+    var formulaParts = {};
+    raw.forEach(function (l) {
+      if (l.kind === 'formula' && l.formulaUid) formulas[l.formulaUid] = l;
+      if (l.kind === 'formula-part' && l.formulaUid) {
+        if (!formulaParts[l.formulaUid]) formulaParts[l.formulaUid] = [];
+        formulaParts[l.formulaUid].push(l);
+      }
+    });
+
+    var html = [];
+    raw.forEach(function (l) {
+      if (l.kind === 'formula-part' && l.formulaUid && formulas[l.formulaUid]) return;
+
+      var note = cleanLineNote(l.note);
+      var opts = l.options ? ' <span class="kop-opt-badge">' + esc(l.options) + '</span>' : '';
+      var noteSpan = note ? ' <span class="o">· ' + esc(note) + '</span>' : '';
+
+      if (l.kind === 'formula' && l.formulaUid && formulaParts[l.formulaUid]) {
+        var parts = formulaParts[l.formulaUid];
+        var partsHtml = parts.map(function (p) {
+          var pNote = cleanLineNote(p.note);
+          var pOpts = p.options ? ' <span class="kop-opt-badge">' + esc(p.options) + '</span>' : '';
+          var pNoteSpan = pNote ? ' <span class="o">· ' + esc(pNote) + '</span>' : '';
+          var slot = p.slotLabel ? '<span class="kop-slot">' + esc(p.slotLabel) + ' : </span>' : '';
+          return '<div class="kop-formula-part"><span class="kop-part-bullet">↳</span><span>' +
+            slot + esc(p.name || '') + pOpts + pNoteSpan + '</span></div>';
+        }).join('');
+
+        html.push(
+          '<div class="kop-line kop-line-parent">' +
+            '<span class="q">' + (l.qty || 1) + '×</span>' +
+            '<span class="kop-item-name">' + esc(l.name || '') + opts + noteSpan + '</span>' +
+          '</div>' +
+          '<div class="kop-formula-parts">' + partsHtml + '</div>'
+        );
+      } else {
+        html.push(
+          '<div class="kop-line">' +
+            '<span class="q">' + (l.qty || 1) + '×</span>' +
+            '<span>' + esc(l.name || '') + opts + noteSpan + '</span>' +
+          '</div>'
+        );
+      }
+    });
+
+    return html.join('');
+  }
+
   function cardHtml(o) {
-    var where = o.mode === 'table' ? 'Table ' + esc(o.table || '?')
-      : (o.mode === 'delivery' ? 'Livraison' : 'À emporter');
+    var where = o.mode === 'table'
+      ? '<button type="button" class="kop-where kop-where-btn" data-kop-table="' + esc(o.id) + '" title="Voir la table sur le plan">Table ' + esc(o.table || '?') + '</button>'
+      : '<span class="kop-where">' + (o.mode === 'delivery' ? 'Livraison' : 'À emporter') + '</span>';
     var src = o.channel && o.channel !== 'kiwi'
       ? '<span class="kop-src">' + esc(SRC[o.channel] || o.channel) + '</span>' : '';
-    var lines = (o.lines || []).map(function (l) {
-      return '<div class="kop-line"><span class="q">' + (l.qty || 1) + '×</span><span>' + esc(l.name || '') +
-        (l.options ? ' <span class="o">' + esc(l.options) + '</span>' : '') +
-        (l.note ? ' <span class="o">— ' + esc(l.note) + '</span>' : '') + '</span></div>';
-    }).join('');
+    var serverHtml = o.server ? '<span class="kop-server" title="Serveur">Serveur : ' + esc(o.server) + '</span>' : '';
+
+    var elapsedMin = o.created_ts ? Math.floor((Date.now() - Number(o.created_ts)) / 60000) : 0;
+    var isLate = o.status !== 'ready' && o.status !== 'served' && elapsedMin >= 15;
+    var timeHtml = o.created_ts
+      ? '<span class="kop-time' + (isLate ? ' is-late' : '') + '">' +
+          clockTime(o.created_ts) + ' · ' + timeAgo(o.created_ts) + '</span>'
+      : '';
+
+    var lines = linesHtml(o);
+    var pay = !o.paid
+      ? '<button class="kop-btn go" data-kop-pay="' + esc(o.id) + '">Encaisser</button>'
+      : '';
+    var cancel = !o.paid
+      ? '<button class="kop-btn ghost" data-kop-rej="' + esc(o.id) + '">' +
+          (o.status === 'pending' ? 'Refuser' : 'Annuler') + '</button>'
+      : '';
+
     var acts = o.status === 'pending'
       ? '<div class="kop-acts">' +
-          '<button class="kop-btn ghost" data-kop-rej="' + esc(o.id) + '">Refuser</button>' +
-          '<button class="kop-btn go" data-kop-acc="' + esc(o.id) + '">Accepter · envoyer en cuisine</button>' +
+          cancel +
+          '<button class="kop-btn send" data-kop-acc="' + esc(o.id) + '">Envoyer en cuisine</button>' + pay +
         '</div>'
       : (o.status === 'accepted'
-          ? '<div class="kop-acts"><button class="kop-btn go" data-kop-ready="' + esc(o.id) + '">Marquer prêt</button></div>'
+          ? '<div class="kop-acts">' + cancel + '<button class="kop-btn send" data-kop-ready="' + esc(o.id) + '">Marquer prêt</button>' + pay + '</div>'
           : (o.status === 'ready'
-              /* Le point final. Sans lui, une commande restait « prête » pour
-               * toujours : le téléphone du client ne recevait jamais son
-               * remerciement, et la file gardait une ligne que plus personne
-               * n'avait à traiter. */
-              ? '<div class="kop-acts"><button class="kop-btn go" data-kop-served="' + esc(o.id) + '">' +
-                (o.mode === 'table' ? 'Servie' : 'Remise au client') + '</button></div>'
+              ? '<div class="kop-acts">' + cancel + '<button class="kop-btn send" data-kop-served="' + esc(o.id) + '">' +
+                (o.mode === 'table' ? 'Servie' : 'Remise au client') + '</button>' + pay + '</div>'
               : ''));
     return '<div class="kop-card ' + esc(o.status) + '">' +
-      '<div class="kop-top"><span class="kop-num">#' + String(o.number || 0).padStart(3, '0') + '</span>' +
-      '<span class="kop-where">' + where + '</span>' + src +
+      '<div class="kop-top"><span class="kop-num">' + orderRef(o) + '</span>' +
+      where + serverHtml + src + timeHtml +
       '<span class="kop-total">' + fmt(o.total) + ' MAD</span></div>' +
       lines + custHtml(o) + acts + '</div>';
   }
@@ -368,10 +678,27 @@
       root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', 'Commandes OrderPro');
       document.body.appendChild(root);
       root.addEventListener('click', function (e) {
-        var t = e.target.closest('[data-kop-acc],[data-kop-rej],[data-kop-ready],[data-kop-served],#kop-close');
+        if (e.target === root) { close(); return; }
+        var t = e.target.closest('[data-kop-acc],[data-kop-pay],[data-kop-rej],[data-kop-ready],[data-kop-served],[data-kop-print],[data-kop-table],#kop-close');
         if (!t) return;
         if (t.id === 'kop-close') { close(); return; }
-        if (t.dataset.kopAcc) {
+        if (t.dataset.kopTable) {
+          try {
+            if (window.KiwiCaisseKitchen && window.KiwiCaisseKitchen.checkoutOrder
+                && window.KiwiCaisseKitchen.checkoutOrder(t.dataset.kopTable)) close();
+          } catch (_) {}
+        } else if (t.dataset.kopPrint) {
+          try {
+            if (window.KiwiCaisseKitchen && window.KiwiCaisseKitchen.printOrder) {
+              window.KiwiCaisseKitchen.printOrder(t.dataset.kopPrint);
+            }
+          } catch (_) {}
+        } else if (t.dataset.kopPay) {
+          try {
+            if (window.KiwiCaisseKitchen && window.KiwiCaisseKitchen.checkoutOrder
+                && window.KiwiCaisseKitchen.checkoutOrder(t.dataset.kopPay)) close();
+          } catch (_) {}
+        } else if (t.dataset.kopAcc) {
           /* Accepter une commande en salle, c'est aussi décider AU NOM DE QUI
            * elle part : le bon de cuisine porte le serveur affecté à la table,
            * et seule la caisse connaît cette affectation à cet instant. */
@@ -383,9 +710,40 @@
             }
           } catch (_) {}
           setStatus(t.dataset.kopAcc, 'accepted', { server: srv });
-        } else if (t.dataset.kopRej) setStatus(t.dataset.kopRej, 'rejected');
+        } else if (t.dataset.kopRej) {
+          var rejectButton = t;
+          if (rejectButton.disabled) return;
+          rejectButton.disabled = true;
+          rejectButton.textContent = 'Annulation…';
+          setStatus(t.dataset.kopRej, 'rejected').then(function (result) {
+            if (result && result.ok) {
+              /* Pull from zero immediately: pending badges, the table bill and
+               * the phone-facing terminal state must agree before the cashier
+               * can press “Annuler mesa”. The operation is idempotent. */
+              state.since = 0;
+              return pull();
+            }
+            var message = result && result.httpStatus === 403
+              ? 'Annulation refusée · vérifiez l’appairage de cette caisse'
+              : 'Annulation non enregistrée · réessayez';
+            try {
+              var stack = document.getElementById('toast-stack');
+              if (stack) {
+                var notice = document.createElement('div'); notice.className = 'toast'; notice.textContent = message;
+                stack.appendChild(notice);
+                setTimeout(function () { notice.classList.add('fade'); }, 5500);
+                setTimeout(function () { notice.remove(); }, 5800);
+              }
+            } catch (_) {}
+            paint();
+            return null;
+          });
+        }
         else if (t.dataset.kopReady) setStatus(t.dataset.kopReady, 'ready');
         else if (t.dataset.kopServed) setStatus(t.dataset.kopServed, 'served');
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && state.open) close();
       });
     }
     root.style.display = 'flex';
@@ -415,6 +773,9 @@
   else start();
   // Pairing can happen after load (the pad is redeemed live) — pick it up.
   window.addEventListener('storage', function (e) {
+    /* Changement d'établissement : le curseur d'AVANT ne veut plus rien dire,
+       et le garder ferait manquer tout l'historique du nouveau commerce. On
+       repart de zéro — même resynchronisation volontaire que ci-dessus. */
     if (e.key === 'kiwiPaired' || e.key === 'kiwiLiveMerchant') { state.since = 0; chip(); pull(); }
   });
   // La config arrive après le premier passage : c'est elle qui décide si cette
@@ -425,7 +786,25 @@
   /* L'addition réglée coupe le téléphone. L'évènement vient de markPaid() dans
    * kiwi-caisse.html — le seul point de passage commun à la carte, aux espèces
    * et à l'addition partagée. */
-  document.addEventListener('kiwi-table-released', function (e) { closeSession(e.detail); });
+  document.addEventListener('kiwi-table-released', function (e) {
+    var d = e && e.detail;
+    if (d) {
+      Object.keys(state.orders).forEach(function (id) {
+        var o = state.orders[id];
+        if (!o || o.mode !== 'table') return;
+        if (d.session ? String(o.session) === String(d.session) :
+            (d.table && normCloseTable(o.table) === normCloseTable(d.table))) {
+          // A reset closes the visit, not a payment. Keep the recorded paid flag.
+          if (d.why === 'settle') o.paid = true;
+          if (o.session && state.closedSessions.indexOf(String(o.session)) < 0) {
+            state.closedSessions.push(String(o.session));
+          }
+        }
+      });
+      paint();
+    }
+    closeSession(e.detail);
+  });
 
   window.KiwiOrderInbox = {
     open: open, close: close, refresh: pull,

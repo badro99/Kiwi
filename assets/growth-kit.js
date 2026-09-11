@@ -64,7 +64,7 @@
   .gk-qr-mark::after { content:''; position:absolute; inset:0; margin:auto; width:34%; height:34%;
     background:var(--mint); border-radius:50%; }
 
-  /* ── Hero atmosphere — the deep-green glow used on the dashboard hero ── */
+  /* ── Hero atmosphere · the deep-green glow used on the dashboard hero ── */
   .gk-hero { position:relative; overflow:hidden; color:var(--paper);
     background:linear-gradient(152deg, var(--riad) 0%, var(--atlas) 78%); border-radius:20px; }
   .gk-hero::before { content:''; position:absolute; inset:0; pointer-events:none;
@@ -73,7 +73,7 @@
     background-image:radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px); background-size:5px 5px; }
   .gk-hero > * { position:relative; }
 
-  /* ── Editorial display accent (Instrument Serif) ── */
+  /* ── Editorial display accent (Inter Tight) ── */
   .gk-serif { font-family:var(--serif); font-weight:400; letter-spacing:-.01em; font-feature-settings:"tnum" 1; }
 
   /* ── Premium toggle (replaces the flat checkbox toggles) ── */

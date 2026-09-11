@@ -52,6 +52,7 @@
 import {
   isOperator, isSeniorOperator, operatorActor, json,
 } from '../../auth/_lib.js';
+import { roomChargeId, roomChargeReversalId } from '../hotel/_room-charge-data.js';
 
 /* Les motifs. Fermés côté serveur : un journal dont le motif est du texte libre
    se remplit de « test », « ok », « rien » et ne répond plus à la question qu'on
@@ -95,11 +96,10 @@ async function dayIndex(env, merchant) {
   } catch (_) { return null; }
 }
 
-/* La vente porte-t-elle déjà les marques d'un retour ? /api/sale refuse les
-   montants négatifs, donc un remboursement n'atteint JAMAIS cette table : il
-   n'existe que dans le rapport journalier. On ne peut donc pas prétendre relier
-   une vente à son avoir. Ce qu'on peut faire honnêtement, c'est lire le libellé
-   que la caisse a écrit — « Retour », « Avoir », « Remb. » — et le signaler. */
+/* Les anciennes lignes positives peuvent encore porter un libellé de retour
+   sans contre-écriture structurée. Les nouveaux remboursements sont des lignes
+   négatives channel=refund et sont reconnus explicitement par tsRow(); ce
+   détecteur reste le filet de lecture pour l'historique antérieur. */
 function looksLikeReturn(row) {
   const s = ((row && row.label) || '') + ' ' + ((row && row.ref) || '');
   return /\b(retour|avoir|remb|refund|annul)/i.test(s);
@@ -127,8 +127,20 @@ function isMissingVoidColumn(e) {
 }
 
 const SELECT_COLS =
-  'rowid AS cursor, id, amount, method, label, ref, ts, lines, ' +
+  'rowid AS cursor, id, amount, amount_cents, method, label, ref, ts, lines, ' +
   'void_ts, void_reason, void_note, void_actor';
+
+function normSaleRow(r) {
+  if (!r) return r;
+  const cents = r.amount_cents != null ? Number(r.amount_cents) : Math.round(Number(r.amount || 0) * 100);
+  return {
+    ...r,
+    amountCents: cents,
+    amount: cents / 100,
+    lines: parseLines(r.lines),
+    returnish: looksLikeReturn(r),
+  };
+}
 
 async function guard(context, senior) {
   if (!(await isOperator(context.request, context.env))) return json({ error: 'forbidden' }, 403);
@@ -184,8 +196,8 @@ export async function onRequestGet(context) {
   if (to) { where.push('ts <= ?'); args.push(to); }
   const min = Number(url.searchParams.get('min')) || 0;
   const max = Number(url.searchParams.get('max')) || 0;
-  if (min) { where.push('amount >= ?'); args.push(Math.round(min)); }
-  if (max) { where.push('amount <= ?'); args.push(Math.round(max)); }
+  if (min) { where.push('COALESCE(amount_cents, amount * 100) >= ?'); args.push(Math.round(min * 100)); }
+  if (max) { where.push('COALESCE(amount_cents, amount * 100) <= ?'); args.push(Math.round(max * 100)); }
   const method = (url.searchParams.get('method') || '').trim().slice(0, 16);
   if (method) { where.push('method = ?'); args.push(method); }
 
@@ -203,7 +215,7 @@ export async function onRequestGet(context) {
     const truncated = rows.length > limit;
     if (truncated) rows.pop();
     return json({
-      sales: rows.map((r) => ({ ...r, lines: parseLines(r.lines), returnish: looksLikeReturn(r) })),
+      sales: rows.map(normSaleRow),
       truncated, merchant, reasons: REASONS,
     });
   } catch (e) {
@@ -215,7 +227,8 @@ export async function onRequestGet(context) {
        plutôt que `void_ts`. Ne reconnaître que `void_` renvoyait alors un 500
        opaque sur une base qui pouvait parfaitement être servie. */
     if (isMissingColumn(e)) {
-      const plain = where.filter((w) => !w.includes('void_ts'));
+      const plain = where.filter((w) => !w.includes('void_ts')).map((w) =>
+        w.replace(/COALESCE\(amount_cents,\s*amount\s*\*\s*100\)/g, 'amount * 100'));
       /* Sur une base sans colonnes d'annulation, AUCUNE vente ne peut être
          sortie des livres : « les sorties » est donc une liste vide, pas la
          liste entière. Retirer la condition du WHERE sans traiter ce cas aurait
@@ -234,7 +247,7 @@ export async function onRequestGet(context) {
             `SELECT ${cols} FROM sales WHERE ${plain.join(' AND ')} ORDER BY ts DESC LIMIT ?`
           ).bind(...args, limit).all();
           return json({
-            sales: ((rs && rs.results) || []).map((r) => ({ ...r, lines: parseLines(r.lines), returnish: looksLikeReturn(r) })),
+            sales: ((rs && rs.results) || []).map(normSaleRow),
             truncated: false, merchant, reasons: REASONS, migration: 'needed',
           });
         } catch (_) { /* forme suivante */ }
@@ -251,10 +264,20 @@ export async function onRequestGet(context) {
 async function byIds(env, merchant, ids) {
   if (!ids.length) return [];
   const holes = ids.map(() => '?').join(',');
-  const rs = await env.DB.prepare(
-    `SELECT ${SELECT_COLS} FROM sales WHERE merchant = ? AND id IN (${holes})`
-  ).bind(merchant, ...ids).all();
-  return ((rs && rs.results) || []).map((r) => ({ ...r, lines: parseLines(r.lines) }));
+  try {
+    const rs = await env.DB.prepare(
+      `SELECT ${SELECT_COLS} FROM sales WHERE merchant = ? AND id IN (${holes})`
+    ).bind(merchant, ...ids).all();
+    return ((rs && rs.results) || []).map(normSaleRow);
+  } catch (e) {
+    if (isMissingColumn(e)) {
+      const rs = await env.DB.prepare(
+        `SELECT rowid AS cursor, id, amount, method, label, ref, ts, lines FROM sales WHERE merchant = ? AND id IN (${holes})`
+      ).bind(merchant, ...ids).all();
+      return ((rs && rs.results) || []).map(normSaleRow);
+    }
+    throw e;
+  }
 }
 
 /* ── L'APERÇU : tout ce que le geste emporte, avant de le faire ─────────────*/
@@ -276,10 +299,10 @@ async function impactFor(env, merchant, rows) {
       if (!l || !(l.qty > 0)) return;
       stock.push({ name: l.name, qty: l.qty, cat: l.cat || '', sale: r.id });
     });
-    if (r.void_ts) blockers.push({ code: 'already-void', sale: r.id, label: 'Vente déjà sortie des livres — utilisez « Remettre ».' });
+    if (r.void_ts) blockers.push({ code: 'already-void', sale: r.id, label: 'Vente déjà sortie des livres · utilisez « Remettre ».' });
     if (looksLikeReturn(r)) {
       warnings.push({ code: 'return', sale: r.id,
-        label: 'Le libellé de cette vente évoque un retour ou un avoir. Sortir un remboursement des livres REMONTE le chiffre d’affaires au lieu de le baisser — vérifiez le ticket avant.' });
+        label: 'Le libellé de cette vente évoque un retour ou un avoir. Sortir un remboursement des livres REMONTE le chiffre d’affaires au lieu de le baisser · vérifiez le ticket avant.' });
     }
   });
   totals.basket = totals.count ? Math.round(totals.amount / totals.count) : 0;
@@ -396,6 +419,13 @@ export async function onRequestPost(context) {
      entier. Traiter les autres et taire celui-là serait le pire des deux mondes :
      l'opérateur croirait avoir sorti cinq lignes et en aurait sorti quatre. */
   if (rows.length !== ids.length) return json({ error: 'foreign-sale', found: rows.length, asked: ids.length }, 409);
+  /* A refund is already the immutable counter-entry to a sale. Treating it as
+     an ordinary test sale and voiding it would silently raise revenue again
+     without issuing a compensating financial event. It stays readable in God
+     Mode, but this generic test-sale action cannot mutate it. */
+  if (rows.some((row) => Number(row && row.amountCents) < 0)) {
+    return json({ error: 'refund-event-read-only' }, 409);
+  }
 
   /* L'état d'abord, le risque ensuite. « Déjà sortie » n'est pas un danger à
      assumer, c'est une erreur de manipulation, et aucun `force` ne la passe —
@@ -405,6 +435,21 @@ export async function onRequestPost(context) {
      une vente déjà sortie, c'est-à-dire un bouton qui ne pouvait rien faire. */
   if (action === 'void' && rows.some((r) => r.void_ts)) return json({ error: 'already-void' }, 409);
   if (action === 'restore' && rows.every((r) => !r.void_ts)) return json({ error: 'not-void' }, 409);
+  const roomRows = rows.filter((r) => ['room', 'folio'].includes(String(r.method || '').toLowerCase()));
+  if (action === 'restore' && roomRows.length) {
+    return json({ error: 'room-charge-restore-unsupported' }, 409);
+  }
+  if (action === 'void' && roomRows.length) {
+    try {
+      const originals = await Promise.all(roomRows.map((r) => env.DB.prepare(
+        `SELECT id FROM hotel_room_charge_events
+          WHERE merchant = ? AND id = ? AND kind = 'room-charge' LIMIT 1`
+      ).bind(merchant, roomChargeId(r.id)).first()));
+      if (originals.some((row) => !row || !row.id)) {
+        return json({ error: 'room-charge-not-found' }, 409);
+      }
+    } catch (_) { return json({ error: 'room-charge-unavailable', migrationRequired: true }, 503); }
+  }
 
   const impact = await impactFor(env, merchant, rows);
   /* Les blocages, eux, sont des risques que l'opérateur PEUT assumer : on
@@ -425,6 +470,17 @@ export async function onRequestPost(context) {
         `UPDATE sales SET void_ts = ?, void_reason = ?, void_note = ?, void_actor = ?, void_actor_id = ?
           WHERE id = ? AND merchant = ?`
       ).bind(ts, reason, note, actor.label, actor.id, r.id, merchant));
+      if (['room', 'folio'].includes(String(r.method || '').toLowerCase())) {
+        stmts.push(env.DB.prepare(
+          `INSERT OR IGNORE INTO hotel_room_charge_events
+            (merchant, id, kind, sale_id, outlet_id, shift_id, cashier_id, cashier_name,
+             amount_cents, occurred_ts, reversal_of, reversed_by_id)
+           SELECT merchant, ?, 'room-charge-reversal', sale_id, outlet_id, shift_id,
+                  cashier_id, cashier_name, -ABS(amount_cents), ?, id, ?
+             FROM hotel_room_charge_events
+            WHERE merchant = ? AND id = ? AND kind = 'room-charge'`
+        ).bind(roomChargeReversalId(r.id), ts, actor.id, merchant, roomChargeId(r.id)));
+      }
     } else {
       stmts.push(env.DB.prepare(
         `UPDATE sales SET void_ts = NULL, void_reason = NULL, void_note = NULL, void_actor = NULL, void_actor_id = NULL

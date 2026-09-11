@@ -23,8 +23,8 @@
      Un vrai snack appairé ne doit jamais voir de noms de démo (clients,
      livreurs, équipe). En démo locale : pvReal() === false ⇒ sortie
      strictement identique. */
-  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
-  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvPaired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
   function pvName(demo) { const p = pvPaired(); return (p && p.name) || (pvReal() ? '' : demo); }
   function pvCity(demo) { const p = pvPaired(); return (p && p.location) || (pvReal() ? '' : demo); }
 
@@ -187,6 +187,27 @@
   const lineTotal = (ln) => unitPrice(ln) * ln.qty;
   const orderTotal = (o) => o.lines.reduce((s, ln) => s + lineTotal(ln), 0);
   const dueOf = (o) => Math.max(0, orderTotal(o) - o.pay.paid);
+  function saleLines(o, received) {
+    const full = orderTotal(o);
+    const factor = full > 0 ? Math.max(0, +received || 0) / full : 0;
+    let allocated = 0;
+    return o.lines.map((ln, idx) => {
+      const it = ITEM[ln.itemId];
+      const raw = lineTotal(ln) * factor;
+      const total = idx === o.lines.length - 1
+        ? Math.max(0, Math.round(((+received || 0) - allocated) * 100) / 100)
+        : Math.max(0, Math.round(raw * 100) / 100);
+      allocated += total;
+      const options = [];
+      if (ln.combo) options.push({ id: 'menu', qty: ln.qty }, { id: `boisson:${ln.drink || 'coca'}`, qty: ln.qty });
+      (ln.sauces || []).forEach((s) => options.push({ id: `sauce:${s}`, qty: ln.qty }));
+      return {
+        itemId: ln.itemId, variantId: [ln.variantId || '', ln.sizeId || ''].join(':'),
+        name: it.label, cat: it.cat || '', kind: 'product', unit: 'piece',
+        qty: ln.qty, total, options,
+      };
+    });
+  }
 
   function lineName(ln) {
     const item = ITEM[ln.itemId];
@@ -333,11 +354,21 @@
     offline: false,
     queued: 0,
   };
+  const fastfoodOps = window.KiwiVerticalState?.open?.('fastfood', {
+    schema: 1,
+    snapshot: () => ({ orders: ORDERS, tally, seq: state.seq, ticket: state.ticket, lastCalled: state.lastCalled }),
+    restore: (d) => {
+      ORDERS.splice(0, ORDERS.length, ...((d.orders || []).map(o => { o.placedAt = new Date(o.placedAt); o.remisAt = o.remisAt ? new Date(o.remisAt) : null; return o; })));
+      Object.keys(tally).forEach(k => delete tally[k]); Object.assign(tally, d.tally || {});
+      state.seq = Math.max(state.seq, +d.seq || 0); state.ticket = d.ticket || null; state.lastCalled = +d.lastCalled || 0;
+    },
+  });
   function freshTicket() {
     state.ticket = { lines: [], channel: 'surplace', glovoRef: null };
   }
   const findOrder = (num) => ORDERS.find((o) => o.num === Number(num));
   function queueIfOffline(label) {
+    fastfoodOps?.save?.(label || 'operation');
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -358,9 +389,13 @@
      Le comptoir encaissait tout le service dans `tally` et rien d'autre : la
      patronne voyait 0 MAD et un refresh effaçait la recette du midi.
      Démo : no-op. */
-  function postDay(total, method, label, ref) {
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('fastfood', { total, method, label, ref });
+      if (window.KiwiPosSale) {
+        const channel = state.ticket && state.ticket.channel === 'glovo' ? 'delivery'
+          : (state.ticket && state.ticket.channel === 'surplace' ? 'counter' : 'takeaway');
+        window.KiwiPosSale.record('fastfood', { total, method, label, ref, lines, channel });
+      }
     } catch (_) {}
   }
   /* Reprise du service en cours : un rechargement (mise à jour PWA, onglet tué,
@@ -368,26 +403,36 @@
      tiroir est plein. Le prochain numéro de commande repart AU-DELÀ du dernier
      encaissé, sinon deux commandes du même service portent le même nº.
      Démo : journal vide, aucun effet. */
-  (function restoreDay() {
+  function reconcileDay() {
     try {
       if (!window.KiwiPosSale) return;
       const t = window.KiwiPosSale.totals('fastfood');
-      if (!t.count) return;
-      tally.especes += t.cash;
-      tally.carte += t.card + t.other;
-      tally.revenue += t.total;
-      tally.orders += t.count;
+      tally.especes = t.cash;
+      tally.carte = t.card;
+      tally.glovo = t.other;
+      tally.revenue = t.total;
+      tally.orders = t.count;
+      const sold = {};
+      window.KiwiPosSale.today('fastfood').forEach((sale) => {
+        (sale.lines || []).forEach((line) => {
+          const id = String(line.itemId || '');
+          if (id) sold[id] = (sold[id] || 0) + (+line.qty || 0);
+        });
+      });
+      if (Object.keys(sold).length) tally.items = sold;
       state.seq = window.KiwiPosSale.nextSeq('fastfood', state.seq);
     } catch (_) {}
-  })();
+  }
+  reconcileDay();
 
   /* ═══════════════════════ MOUNT (shell) ═══════════════════════ */
   function mount(rootEl) {
+    fastfoodOps?.hydrate?.();
     root = rootEl;
-    freshTicket();
+    if (!state.ticket) freshTicket();
     root.innerHTML = `
       <aside class="ff-rail">
-        <div class="ff-brand">kiwi<i></i></div>
+        <div class="ff-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="ff-venue">
           <div class="ff-venue-name">${pvName('Snack Chamal') || 'Mon snack'}</div>
           <div class="ff-venue-sub">${pvReal() ? (pvCity('') || '') : 'Tanger · Boulevard Pasteur'}<br>Le même Kiwi, <b>un seul compte.</b></div>
@@ -533,9 +578,12 @@
       </div>
       <div class="ff-tk-lines" id="ff-tk-lines">
         ${t.lines.length ? t.lines.map((l, i) => lineRow(l, i)).join('') : `
-          <div class="ff-tk-empty">
-            <i data-lucide="utensils"></i>
-            <div>La commande est vide.<br>Touchez la carte, le menu se propose tout seul.</div>
+          <div class="ff-tk-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">
+            <div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:4px;">
+              <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
+            </div>
+            <div style="font-weight:600; font-size:14px; color:var(--ink);">La commande est vide.</div>
+            <div style="font-size:12.5px; color:var(--n-500); line-height:1.45;">Touchez la carte, le menu se propose tout seul.</div>
           </div>`}
       </div>
       <div class="ff-tk-foot">
@@ -794,7 +842,66 @@
     renderTicket();
     renderBadges();
     queueIfOffline(`Commande #${order.num}`);
+    relayKitchen(order, false);
+    /* The kitchen printer follows the same committed order as the KDS relay.
+       A stable order/station key makes retries and refreshes harmless. */
+    try {
+      if (window.KiwiFoodProductionPrint) KiwiFoodProductionPrint.enqueue({
+        trade: 'fastfood', ref: order.num, at: order.placedAt,
+        destination: order.channel === 'surplace' ? `Comptoir #${order.num}` : CHANNELS[order.channel].label,
+        lines: order.lines.map((ln) => {
+          const item = ITEM[ln.itemId];
+          const counter = item && item.cat === 'sides' && (ln.itemId === 'jus' || ln.itemId === 'soda');
+          const notes = [];
+          if (ln.combo) notes.push(`Menu · ${DRINK[ln.drink] ? DRINK[ln.drink].label : 'boisson'}`);
+          if ((ln.sauces || []).length) notes.push(`Sauces : ${ln.sauces.join(', ')}`);
+          return { qty: ln.qty, name: lineName(ln), note: notes.join(' · '), station: counter ? 'Boissons' : 'Cuisine' };
+        }),
+      });
+    } catch (_) {}
     icons(); lens();
+  }
+
+  function relayKitchen(order, announce) {
+    const relay = window.KiwiKitchenRelay;
+    if (!relay || !relay.merchant || !relay.merchant()) {
+      if (announce) toast('Relais cuisine non configuré · commande conservée sur cette caisse');
+      return Promise.resolve({ ok: false, skipped: true });
+    }
+    if (!order.kitchenId) order.kitchenId = relay.newId();
+    const lines = order.lines.map((ln) => ({
+      name: lineName(ln), qty: ln.qty,
+      note: (ln.sauces || []).length ? `Sauces : ${ln.sauces.join(', ')}` : '',
+    }));
+    return Promise.resolve(relay.send({
+      id: order.kitchenId,
+      mode: order.channel === 'surplace' ? 'table' : 'takeout',
+      table: order.channel === 'surplace' ? `Comptoir #${order.num}` : '',
+      server: 'Fast-food', lines,
+    })).then((result) => {
+      if (announce) toast(result && (result.ok || result.queued) ? `#${order.num} renvoyé au relais cuisine` : `#${order.num} conservé localement · relais cuisine indisponible`);
+      return result;
+    });
+  }
+
+  function printReceipt(order, received, change) {
+    const K = window.KiwiReceipt;
+    if (!K || !K.build || !K.print) { toast('Impression indisponible'); return; }
+    const total = orderTotal(order);
+    const doc = K.build({
+      ref: `#${order.num}`,
+      ts: order.placedAt,
+      lines: saleLines(order, total),
+      total,
+      method: order.pay && order.pay.method,
+      received: received == null ? undefined : received,
+      change: change == null ? undefined : change,
+      customer: order.name ? { name: order.name } : null,
+    });
+    Promise.resolve(K.print(doc)).then(
+      (result) => toast(result && result.ok ? (result.via === 'browser' ? 'Ticket ouvert dans l’impression système' : 'Ticket imprimé') : 'Impression non confirmée'),
+      () => toast('Impression échouée')
+    );
   }
 
   function receiptHTML(o, rendu, received) {
@@ -846,7 +953,7 @@
         <div class="ff-pay-opts">
           <button class="ff-pay-opt" data-ff-m="especes">
             <span class="ic"><i data-lucide="banknote"></i></span>
-            <span class="l"><b>Espèces</b><span>Flous direct, billets rapides, rendu calculé</span></span>
+            <span class="l"><b>Espèces</b><span>Espèces en main, billets rapides, rendu calculé</span></span>
           </button>
           <button class="ff-pay-opt" data-ff-m="carte">
             <span class="ic"><i data-lucide="credit-card"></i></span>
@@ -879,7 +986,7 @@
         <p class="modal-subtle">${settle ? `#${order.num} · ${esc(who)}` : `Commande nº ${order.num}`}, touchez le billet reçu, le rendu suit</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="ff-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="ff-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="ff-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${amount}" />
           </div>
           <div class="cash-presets" aria-label="Billets rapides">
@@ -917,13 +1024,13 @@
       setTimeout(() => {
         const disc = $('#ff-reader-disc', el);
         if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#ff-reader-status', el).textContent = 'Khlass ! Paiement confirmé sur le lecteur';
-        $('#ff-reader-status', el).classList.add('is-success');
-        icons();
-        setTimeout(() => done('carte', 0, null), 850);
+        const status = $('#ff-reader-status', el);
+        const hw = window.KiwiHardware;
+        if (!hw || !hw.authorizeCard) { disc.classList.remove('is-pulsing'); status.textContent = 'Paiement non confirmé · lecteur indisponible'; return; }
+        hw.authorizeCard(amount, disc, status).then((result) => {
+          icons();
+          if (result && result.approved) setTimeout(() => done('carte', 0, null), 850);
+        });
       }, 1900);
     };
 
@@ -958,7 +1065,7 @@
         tally[method === 'carte' ? 'carte' : 'especes'] += amount;
         /* Le solde du « payer au retrait » est l'argent qui rentre vraiment :
            c'est ici qu'il devient une recette, pas au moment de la commande. */
-        postDay(amount, method, `Solde #${order.num} · ${ordLabel(order)}`, `#${order.num}`);
+        postDay(amount, method, `Solde #${order.num} · ${ordLabel(order)}`, `#${order.num}`, saleLines(order, amount));
         closeVeil('#ff-pay-veil');
         queueIfOffline('Encaissement');
         toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
@@ -970,7 +1077,7 @@
       if (method === 'especes') tally.especes += amount;
       else if (method === 'carte') tally.carte += amount;
       else if (method === 'glovo') tally.glovo += amount;
-      postDay(amount, method, ordLabel(order), `#${order.num}`);
+      postDay(amount, method, ordLabel(order), `#${order.num}`, saleLines(order, amount));
       postOrder(order);
       success(order, rendu, received, null);
     };
@@ -991,7 +1098,7 @@
       icons();
       closeBtns();
       toast(`#${o.num} en préparation${rendu ? `, rendu ${fmtMAD(rendu)}` : ''}`);
-      $('#ff-print', el).onclick = () => toast('Ticket parti, imprimante 80 mm du comptoir');
+      $('#ff-print', el).onclick = () => printReceipt(o, received, rendu);
       $('#ff-next', el).onclick = () => closeVeil('#ff-pay-veil');
     };
 
@@ -1030,7 +1137,7 @@
     const waiting = minsSince(o.placedAt);
     const late = o.status === 'prep' && waiting >= 12;
     const when = o.status === 'remis'
-      ? `remis à ${o.remisAt ? fmtHM(o.remisAt) : '—'}`
+      ? `remis à ${o.remisAt ? fmtHM(o.remisAt) : '·'}`
       : agoLabel(o.placedAt);
     /* div, pas button — les actions rapides sont des boutons imbriqués */
     return `<div class="ff-ocard ${o.status}" data-ff-o="${o.num}" role="button" tabindex="0">
@@ -1071,7 +1178,7 @@
         <div class="ff-callbar">
           <div class="ff-mic">
             <i data-lucide="volume-2"></i>
-            <span class="l"><span class="lbl">Au micro</span><b id="ff-mic-num">${state.lastCalled ? `#${state.lastCalled}` : '—'}</b></span>
+            <span class="l"><span class="lbl">Au micro</span><b id="ff-mic-num">${state.lastCalled ? `#${state.lastCalled}` : '·'}</b></span>
           </div>
           <span class="ff-call-hint">le client entend son numéro, pas son nom</span>
           ${target
@@ -1082,7 +1189,7 @@
           ${cols.map(({ f, list }) => `
             <div class="ff-col">
               <div class="ff-col-head"><i style="background:${f.dot}"></i>${f.label} <span class="ct">${list.length}</span></div>
-              ${list.map(orderCard).join('') || `<div class="ff-bempty">${f.id === 'prep' ? 'Rien en cuisine, la grille n’attend que vous.' : f.id === 'pret' ? 'Rien de prêt pour l’instant.' : 'Les remises du service s’affichent ici.'}</div>`}
+              ${list.map(orderCard).join('') || `<div class="ff-bempty" style="display:flex; flex-direction:column; align-items:center; padding:36px 16px;"><div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:10px;"><svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600; color:var(--ink);">${f.id === 'prep' ? 'Rien en cuisine' : f.id === 'pret' ? 'Rien de prêt pour l’instant' : 'Aucune commande remise'}</div><div style="font-size:12.5px; color:var(--n-500); margin-top:4px;">${f.id === 'prep' ? 'La grille n’attend que vous.' : f.id === 'pret' ? 'Les plateaux terminés apparaîtront ici.' : 'Les remises du service s’affichent ici.'}</div></div>`}
             </div>`).join('')}
         </div>
       </div>`;
@@ -1132,7 +1239,7 @@
   function deliver(o) {
     const due = dueOf(o);
     if (due > 0) {
-      toast(`Solde ${fmtMAD(due)} à encaisser d’abord, khlass puis remise`);
+      toast(`Solde ${fmtMAD(due)} à encaisser d’abord, puis remise`);
       openPay(o, { settle: true, onDone: () => deliver(o) });
       return;
     }
@@ -1206,7 +1313,7 @@
       deliver(o);
       openDetail(o.num);
     };
-    $('#ff-dt-kds', el).onclick = () => toast(`#${o.num} renvoyé en cuisine, imprimante 80 mm`);
+    $('#ff-dt-kds', el).onclick = () => relayKitchen(o, true);
   }
 
   /* ═══════════════════════ ENCAISSEMENT (vue) ═══════════════════════ */
@@ -1255,7 +1362,7 @@
             </div>`).join('') : `
             <div class="ff-allclear">
               <i data-lucide="check-circle-2"></i>
-              <div>Rien à encaisser, tout est khlass.<br>Les soldes « payer au retrait » atterrissent ici.</div>
+              <div>Rien à encaisser, tout est réglé.<br>Les soldes « payer au retrait » atterrissent ici.</div>
             </div>`}
           <div class="ff-foot-note">Les commandes Glovo ne passent jamais par la caisse, le compte se fait fin de mois.</div>
         </div>
@@ -1373,11 +1480,12 @@
   window.KiwiPosDispatch.register({
     id: 'fastfood',
     greet: {
-      line1: pvReal() ? 'Sba7 lkhir,' : 'Sba7 lkhir Bilal,',
-      em: 'marhba.',
+      line1: pvReal() ? 'Bonjour,' : 'Bonjour Bilal,',
+      em: 'bienvenue.',
       sub: 'Snack Chamal <em>·</em> coup de feu de midi, 5 commandes en file',
     },
     mount(rootEl) { mount(rootEl); },
+    onSalesSync() { reconcileDay(); if (root) renderAll(); },
     onShow() {
       if (!root) return;
       renderClock();

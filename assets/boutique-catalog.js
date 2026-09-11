@@ -23,6 +23,11 @@
   // KiwiBoutiqueCatalog.use(venueId) to switch which store's catalogue is active
   // (the caisse pins 0002 → 'maisonMansour'; the dashboard follows KiwiVenue).
   const DEMO_VENUE = 'maisonMansour';
+  /* Les vitrines de démonstration et le socle que chacune pré-remplit. Le pré-
+   * remplissage reste réservé à ces clés-là : un magasin réel ou jumelé démarre
+   * vide (voir hostedOrPaired dans load()). Ajouter un vertical de démonstration,
+   * c'est ajouter SA clé ici — sans quoi sa caisse ouvre sur un catalogue vide. */
+  const DEMO_SEEDS = { maisonMansour: () => SEED, vogueHome: () => SEED_MAISON };
   const keyFor = (v) => 'kiwiBoutiqueCatalog:v1:' + v;
   let VENUE = DEMO_VENUE;
   let KEY = keyFor(VENUE);
@@ -89,7 +94,13 @@
     const fam = k ? k.normalize(id, srcLabel, srcHex)
       : (KC_FALLBACK.find((c) => c.id === id) || KC_FALLBACK[2]);
     const source = srcLabel && String(srcLabel).toLowerCase() !== String(fam.label).toLowerCase() ? srcLabel : '';
-    return { family: fam, source };
+    const isCustom = /^custom-[0-9a-f]{6}$/i.test(String(id || '')) && /^#[0-9a-f]{6}$/i.test(String(srcHex || ''));
+    return {
+      family: fam, source,
+      displayLabel: isCustom ? (srcLabel || `Couleur personnalisée ${String(srcHex).toUpperCase()}`) : fam.label,
+      displayHex: isCustom ? String(srcHex).toUpperCase() : fam.hex,
+      custom: isCustom,
+    };
   }
 
   /* Size presets per garment kind. `taille` = clothing, `pointure` = shoes,
@@ -140,13 +151,273 @@
     ] },
   ];
 
+  /* ───────────────── seed spécifique Vogue Home (Maison Tanger) ───────────────── */
+  const SEED_MAISON = [
+    { rayon: 'arts_table', rayonLabel: 'Arts de la table', items: [
+      { id: 'mz_fes_bleu_service', name: 'Service 18 pièces Fès Bleu', price: 1450, art: 'assiette', kind: 'tu', format: 'service', servicePieces: 18, piecePriceMAD: 85, marque: 'Vogue Table', motif: 'Fès Bleu', fragile: true, sizes: { TU: 4 }, colors: ['bleu', 'ivoire'] },
+      { id: 'mz_fes_bleu_assiette', name: 'Assiette plate 27cm Fès Bleu', price: 85, art: 'assiette', kind: 'tu', format: 'piece', marque: 'Vogue Table', motif: 'Fès Bleu', fragile: true, sizes: { TU: 24 }, colors: ['bleu', 'ivoire'] },
+      { id: 'mz_fes_bleu_bol', name: 'Bol à soupe 16cm Fès Bleu', price: 65, art: 'bol', kind: 'tu', format: 'piece', marque: 'Vogue Table', motif: 'Fès Bleu', fragile: true, sizes: { TU: 18 }, colors: ['bleu', 'ivoire'] },
+      { id: 'mz_fes_bleu_tasse', name: 'Tasse & soucoupe Fès Bleu', price: 55, art: 'tasse', kind: 'tu', format: 'piece', marque: 'Vogue Table', motif: 'Fès Bleu', fragile: true, sizes: { TU: 16 }, colors: ['bleu', 'ivoire'] },
+      { id: 'mz_zellige_service', name: 'Service 12 pièces Zellige Vert', price: 1100, art: 'assiette', kind: 'tu', format: 'service', servicePieces: 12, piecePriceMAD: 95, marque: 'Céramique Majorelle', motif: 'Zellige Vert', fragile: true, sizes: { TU: 3 }, colors: ['emeraude', 'blanc'] },
+    ] },
+    { rayon: 'verrerie', rayonLabel: 'Verrerie & Cristallerie', items: [
+      { id: 'mz_verres_beldi_set', name: 'Verres soufflés Beldi (Set de 6)', price: 140, art: 'verre', kind: 'tu', format: 'service', servicePieces: 6, piecePriceMAD: 25, marque: 'Beldi Glass', motif: 'Classique', fragile: true, sizes: { TU: 8 }, colors: ['emeraude', 'transparent', 'ambre'] },
+      { id: 'mz_carafe_beldi', name: 'Carafe soufflée Beldi 1.5L', price: 120, art: 'carafe', kind: 'tu', format: 'piece', marque: 'Beldi Glass', motif: 'Classique', fragile: true, sizes: { TU: 6 }, colors: ['emeraude', 'transparent'] },
+      { id: 'mz_coupes_dessert', name: 'Coupes à dessert dorées', price: 75, art: 'coupe', kind: 'tu', format: 'piece', marque: 'Cristal Atlas', motif: 'Sahara Or', fragile: true, sizes: { TU: 12 }, colors: ['dore', 'transparent'] },
+    ] },
+    { rayon: 'bougies', rayonLabel: 'Bougies & Senteurs', items: [
+      { id: 'mz_baobab_feathers', name: 'Bougie Max 24 Totem Feathers', price: 1850, art: 'bougie', kind: 'tu', format: 'piece', marque: 'Baobab Collection', motif: 'Totem', ownership: 'consignment', consignor: 'Baobab Collection', fragile: true, sizes: { TU: 5 }, colors: ['ivoire', 'noir'] },
+      { id: 'mz_baobab_aurum', name: 'Bougie Max 16 Aurum Platinum', price: 1250, art: 'bougie', kind: 'tu', format: 'piece', marque: 'Baobab Collection', motif: 'Aurum', ownership: 'consignment', consignor: 'Baobab Collection', fragile: true, sizes: { TU: 4 }, colors: ['dore', 'argent'] },
+      { id: 'mz_diffuseur_oranger', name: 'Diffuseur Fleur d’Oranger Tanger', price: 480, art: 'diffuseur', kind: 'tu', format: 'piece', marque: 'Les Senteurs de Tanger', motif: 'Botanique', fragile: true, sizes: { TU: 9 }, colors: ['ambre', 'blanc'] },
+    ] },
+    { rayon: 'decoration', rayonLabel: 'Décoration & Cadeaux', items: [
+      { id: 'mz_vase_majorelle', name: 'Vase céramique émaillée 35cm', price: 650, art: 'vase', kind: 'tu', format: 'piece', marque: 'Céramique Majorelle', motif: 'Zellige Vert', fragile: true, sizes: { TU: 4 }, colors: ['emeraude', 'bleu'] },
+      { id: 'mz_plateau_martcle', name: 'Plateau laiton martelé main', price: 420, art: 'plateau', kind: 'tu', format: 'piece', marque: 'Artisanat Fès', motif: 'Sahara Or', fragile: false, sizes: { TU: 6 }, colors: ['dore', 'argent'] },
+      { id: 'mz_miroir_soleil', name: 'Miroir soleil laiton 50cm', price: 890, art: 'miroir', kind: 'tu', format: 'piece', marque: 'Vogue Home', motif: 'Sahara Or', fragile: true, sizes: { TU: 3 }, colors: ['dore'] },
+    ] }
+  ];
+
   /* ───────────────── in-memory state + persistence ───────────────── */
   let db = null;               // { v, categories[], products[], variants[], seq }
   const subs = new Set();      // change listeners on this page
 
   function nextId(prefix) { db.seq = (db.seq || 0) + 1; return prefix + '_' + db.seq; }
 
-  function blank() { return { v: 1, categories: [], products: [], variants: [], seq: 0 }; }
+  /* `removed` : les SUPPRESSIONS, nommées. Voir la note au-dessus de mergeDocs —
+     sans cette carte, une absence ne se distingue pas d'une ignorance, et un
+     article supprimé revient à chaque synchronisation. */
+  function blank() { return { v: 1, categories: [], products: [], variants: [], seq: 0, removed: {}, moves: [] }; }
+
+  /* ═══ LE STOCK EST UN JOURNAL, PAS UN NOMBRE ════════════════════════════════
+   *
+   * Première version : chaque déclinaison portait `stock`, un nombre, et la
+   * fusion gardait celui de l'appareil local. Un onglet resté ouvert
+   * réécrasait donc le stock vendu par la caisse, indéfiniment (cf. 4 078).
+   *
+   * Deuxième version : `stockAt`, un horodatage, et la fusion gardait le plus
+   * récent. Ça règle l'écrasement par un document périmé — mais pas le vrai
+   * problème du comptage à deux mains : DEUX VENTES SIMULTANÉES NE S'ADDITIONNENT
+   * PAS. La caisse vend 2 (10 → 8), le tableau de bord en vend 1 (10 → 9) dans
+   * la même minute ; « le plus récent gagne » retient 8 ou 9, jamais 7. Un
+   * article part sans sortir du stock, et personne ne peut le voir.
+   *
+   * Un nombre absolu ne PEUT pas fusionner : il dit où l'on est arrivé, pas ce
+   * qui s'est passé. Deux personnes qui décrivent leur arrivée ne se
+   * réconcilient pas ; deux personnes qui décrivent leurs PAS, si.
+   *
+   * D'où ce modèle, à deux étages :
+   *
+   *   · UN SOCLE. `base` + `baseAt` — un comptage ABSOLU, posé par un geste qui
+   *     affirme un état : création de la déclinaison, inventaire physique,
+   *     saisie directe d'une quantité. Il ANNULE tout ce qui précède : quand on
+   *     compte les cartons à la main, l'historique d'avant ne discute pas.
+   *
+   *   · DES MOUVEMENTS. `db.moves` — une vente, un retour, une réception, un
+   *     ±1 au comptoir : chacun est une écriture IMMUABLE, avec un id unique
+   *     par appareil, un delta et un instant. Deux appareils qui vendent en
+   *     même temps produisent deux mouvements DIFFÉRENTS, donc l'union les
+   *     garde tous les deux, donc les deux ventes comptent. Idempotent : le
+   *     même mouvement reçu deux fois reste un mouvement.
+   *
+   * `stock` continue d'exister, matérialisé (socle + somme des mouvements
+   * postérieurs). Les cent lecteurs de `v.stock` — grilles, ruptures, valeur
+   * d'inventaire, étiquettes, recherche — n'ont pas à savoir tout ceci. Seuls
+   * les ÉCRIVAINS et la fusion changent.
+   *
+   * COMPACTION. Un journal qui ne se vide jamais finit par peser plus que le
+   * catalogue. Les mouvements de plus de MOVE_DAYS jours sont donc REPLIÉS dans
+   * le socle — jamais jetés : `base += Σ deltas`, `baseAt = leur dernier
+   * instant`. Le stock matérialisé ne bouge pas d'une unité. Et comme la règle
+   * de fusion ne retient que les mouvements POSTÉRIEURS au socle le plus
+   * récent, un appareil qui a compacté et un appareil qui ne l'a pas encore
+   * fait arrivent au même nombre.
+   * ══════════════════════════════════════════════════════════════════════════ */
+  var MOVE_DAYS = 45;
+  var MOVE_MAX = 12000;
+
+  /* L'appareil, pour que deux mouvements nés à la même milliseconde sur deux
+     comptoirs ne portent jamais le même id — c'est tout ce qui empêche l'union
+     de prendre deux ventes pour une. */
+  var DEV = null;
+  function devId() {
+    if (DEV) return DEV;
+    try {
+      DEV = localStorage.getItem('kiwiCatalogDev');
+      if (!DEV) {
+        DEV = Math.random().toString(36).slice(2, 8);
+        localStorage.setItem('kiwiCatalogDev', DEV);
+      }
+    } catch (e) { DEV = DEV || Math.random().toString(36).slice(2, 8); }
+    return DEV;
+  }
+  var moveSeq = 0;
+  function moveId() {
+    /* devId is shared by every tab through localStorage, while moveSeq is local
+       to one page. Add entropy so two tabs moving stock in the same millisecond
+       cannot generate the same id and make the merge discard one real sale. */
+    moveSeq++;
+    var random = '';
+    try {
+      if (window.crypto && window.crypto.getRandomValues) {
+        var bytes = new Uint32Array(2); window.crypto.getRandomValues(bytes);
+        random = bytes[0].toString(36) + bytes[1].toString(36);
+      }
+    } catch (e) {}
+    if (!random) random = Math.random().toString(36).slice(2, 10);
+    return devId() + '-' + Date.now().toString(36) + '-' + moveSeq + '-' + random;
+  }
+
+  /* ── une horloge qui ne rend jamais deux fois le même instant ─────────────
+     La règle de fusion est stricte : un mouvement ne compte que s'il est
+     POSTÉRIEUR au socle. Or créer une déclinaison puis la vendre peut tomber
+     dans la même milliseconde — au comptoir avec une douchette, ce n'est pas
+     une hypothèse d'école. Le mouvement était alors réputé antérieur au socle,
+     donc ignoré : la vente disparaissait sans un mot. Un compteur monotone
+     suffit à rendre l'ordre des écritures locales indiscutable. */
+  var lastNow = 0;
+  function now() {
+    var t = Date.now();
+    if (t <= lastNow) t = lastNow + 1;
+    lastNow = t;
+    return t;
+  }
+
+  /* Le socle d'une déclinaison, tolérant des deux formes antérieures : un
+     document d'avant ce modèle n'a pas de `base` (son `stock` EST son socle) et
+     peut ne porter qu'un `stockAt`. Sans cette lecture-là, la première fusion
+     après déploiement remettrait tout le monde à zéro. */
+  function baseOf(v) { return v && v.base != null ? (+v.base || 0) : Math.max(0, +(v && v.stock) || 0); }
+  function baseAtOf(v) { return +(v && (v.baseAt || v.stockAt)) || 0; }
+
+  /* stock = socle + tout ce qui s'est passé DEPUIS le socle. */
+  function materialize(doc, vid) {
+    var vs = (doc.variants || []).filter(function (v) { return v && (!vid || v.id === vid); });
+    if (!vs.length) return;
+    var by = Object.create(null);
+    vs.forEach(function (v) { by[v.id] = { v: v, n: baseOf(v), at: baseAtOf(v) }; });
+    (doc.moves || []).forEach(function (m) {
+      var slot = m && by[m.vid];
+      if (!slot) return;
+      if ((+m.at || 0) <= slot.at) return;      // antérieur au comptage : replié
+      slot.n += (+m.d || 0);
+    });
+    Object.keys(by).forEach(function (id) {
+      var s = by[id];
+      /* Le socle n'est PAS recalculé ici — seul un comptage (setAbsolute) ou une
+         compaction le déplace. On ne fait que normaliser une déclinaison d'avant
+         ce modèle, pour qu'elle cesse d'être ambiguë. */
+      if (s.v.base == null) { s.v.base = baseOf(s.v); s.v.baseAt = s.at; }
+      s.v.stock = Math.max(0, Math.round(s.n));
+    });
+  }
+
+  /* Un geste qui AFFIRME un état : comptage physique, saisie directe, création.
+     Il repose le socle et rend caducs les mouvements d'avant. */
+  function setAbsolute(v, n) {
+    if (!v) return v;
+    v.base = Math.max(0, n | 0);
+    v.baseAt = now();
+    v.stock = v.base;
+    /* Les mouvements de cette déclinaison antérieurs au comptage ne servent
+       plus à rien ici — la règle de fusion les ignore déjà, autant ne pas les
+       traîner. Ceux des AUTRES déclinaisons ne bougent pas. */
+    if (Array.isArray(db.moves)) {
+      db.moves = db.moves.filter(function (m) { return !m || m.vid !== v.id || (+m.at || 0) > v.baseAt; });
+    }
+    return v;
+  }
+
+  /* Un geste qui RACONTE un événement : vente, retour, réception, ±1. */
+  function move(v, d, why, extra) {
+    if (!v || !(d = d | 0)) return v;
+    if (!Array.isArray(db.moves)) db.moves = [];
+    const entry = { id: moveId(), vid: v.id, d: d, at: now(), why: String(why || 'ajust').slice(0, 16) };
+    if (extra && typeof extra === 'object') {
+      if (extra.actor) entry.actor = String(extra.actor).slice(0, 64);
+      if (extra.ref) entry.ref = String(extra.ref).slice(0, 64);
+    }
+    db.moves.push(entry);
+    materialize(db, v.id);
+    return v;
+  }
+
+  /* Replie ce qui est vieux dans le socle, et borne le journal. Rien n'est
+     perdu : un mouvement replié a été ADDITIONNÉ au socle avant d'être retiré. */
+  function compact(doc) {
+    var moves = Array.isArray(doc.moves) ? doc.moves.filter(Boolean) : [];
+    if (!moves.length) { doc.moves = []; return doc; }
+    var cutoff = Date.now() - MOVE_DAYS * 86400000;
+    /* Un mouvement antérieur au socle de sa déclinaison est déjà replié : il ne
+       pourra plus jamais changer un stock. Le garder ferait grossir le document
+       à chaque comptage physique, sans effet. */
+    var socles = Object.create(null);
+    (doc.variants || []).forEach(function (v) { if (v && v.id) socles[v.id] = baseAtOf(v); });
+    moves = moves.filter(function (m) { return !(m.vid in socles) || (+m.at || 0) > socles[m.vid]; });
+    if (!moves.length) { doc.moves = []; return doc; }
+    /* Trop de mouvements : on replie aussi les plus anciens au-delà du plafond,
+       sinon un très gros commerce ferait grossir le document sans fin. */
+    moves.sort(function (a, b) { return (+a.at || 0) - (+b.at || 0); });
+    var over = Math.max(0, moves.length - MOVE_MAX);
+    var byId = Object.create(null);
+    (doc.variants || []).forEach(function (v) { if (v && v.id) byId[v.id] = v; });
+    var keep = [];
+    var folded = Object.create(null);
+    moves.forEach(function (m, i) {
+      var old = (+m.at || 0) <= cutoff || i < over;
+      var v = byId[m.vid];
+      if (!old || !v) {
+        if (!old) {
+          var keepEntry = {
+            id: String(m.id || '').slice(0, 64),
+            vid: String(m.vid || '').slice(0, 40),
+            d: (+m.d || 0),
+            at: (+m.at || 0),
+            why: String(m.why || 'ajust').slice(0, 16),
+          };
+          if (m.actor) keepEntry.actor = String(m.actor).slice(0, 64);
+          if (m.ref) keepEntry.ref = String(m.ref).slice(0, 64);
+          keep.push(keepEntry);
+        }
+        return;
+      }
+      if ((+m.at || 0) <= baseAtOf(v)) return;              // déjà replié
+      var slot = folded[v.id] || (folded[v.id] = { d: 0, at: baseAtOf(v) });
+      slot.d += (+m.d || 0);
+      slot.at = Math.max(slot.at, +m.at || 0);
+    });
+    Object.keys(folded).forEach(function (id) {
+      var v = byId[id], f = folded[id];
+      if (!v || !f) return;
+      /* `stock` is clamped for display; the ledger base is not. Remembering an
+         oversold deficit is what keeps a later return from inventing stock. */
+      v.base = baseOf(v) + f.d;
+      v.baseAt = f.at;
+    });
+    doc.moves = keep;
+    return doc;
+  }
+
+  /* ── une suppression est un FAIT, pas un vide ──────────────────────────────
+     On note l'id et l'instant. Rien ne relit cette carte en local (le tableau
+     est déjà filtré) : elle n'existe que pour la fusion, et c'est précisément
+     là qu'elle manquait. Bornée à 180 jours — au-delà, l'autre appareil a
+     forcément resynchronisé, et une carte qui ne se vide jamais finit par peser
+     plus lourd que le catalogue. */
+  var TOMB_DAYS = 180;
+  function tomb(ids) {
+    if (!db.removed) db.removed = {};
+    var t = now();
+    (Array.isArray(ids) ? ids : [ids]).forEach(function (id) { if (id) db.removed[id] = t; });
+  }
+  function pruneTombs(map) {
+    var out = Object.create(null);
+    var floor = Date.now() - TOMB_DAYS * 86400000;
+    Object.keys(map || {}).forEach(function (id) {
+      var t = +map[id] || 0;
+      if (t > floor) out[id] = t;
+    });
+    return out;
+  }
 
   // Airtight backstop: the Maison Mansour demo cast is a LOCAL-pitch affordance
   // only. A real signed-in / hosted merchant or a paired till must never inherit
@@ -171,10 +442,16 @@
     if (!db || !db.products) {
       db = blank();
       dropIndex();
-      if (VENUE === DEMO_VENUE && !hostedOrPaired()) seed();   // demo store pre-fills ONLY on the local pitch demo; a real/paired store starts empty
+      if (DEMO_SEEDS[VENUE] && !hostedOrPaired()) seed();   // demo store pre-fills ONLY on the local pitch demo; a real/paired store starts empty
       persist();
-    } else if (migrate()) {
-      persist();   // teach older records their colour family, once, in place
+    } else {
+      /* Un document d'avant le journal n'a ni socle ni mouvements : on le
+         normalise une fois, en place, pour qu'il cesse d'être ambigu. compact()
+         replie au passage ce qui a vieilli. */
+      const had = JSON.stringify(db.moves || []) + '|' + (db.variants || []).length;
+      if (!Array.isArray(db.moves)) db.moves = [];
+      compact(db); materialize(db);
+      if (migrate() || had !== JSON.stringify(db.moves || []) + '|' + (db.variants || []).length) persist();
     }
     return db;
   }
@@ -187,6 +464,7 @@
     VENUE = v;
     KEY = keyFor(VENUE);
     db = null;
+    cloud.dirty = false;
     dropIndex();
     crossReset();  // « l'autre boutique » ne désigne plus les mêmes
     load();
@@ -204,6 +482,8 @@
   // le réseau pour encaisser.
   function commit() {
     if (batchDepth > 0) { batchDirty = true; return; }
+    if (Array.isArray(db.moves) && db.moves.length > MOVE_MAX) { compact(db); materialize(db); }
+    markCatalogDirty();      // une mutation locale : nous avons quelque chose à dire
     persist(); notify(); schedulePush();
   }
 
@@ -226,13 +506,19 @@
     try { return fn(); }
     finally {
       batchDepth--;
-      if (batchDepth === 0 && batchDirty) { batchDirty = false; persist(); notify(); schedulePush(); }
+      if (batchDepth === 0 && batchDirty) {
+        batchDirty = false;
+        if (Array.isArray(db.moves) && db.moves.length > MOVE_MAX) { compact(db); materialize(db); }
+        markCatalogDirty();
+        persist(); notify(); schedulePush();
+      }
     }
   }
   function notify() { subs.forEach((fn) => { try { fn(); } catch (e) {} }); }
 
   // Cross-tab: another tab wrote the catalog → reload + notify our listeners.
   window.addEventListener('storage', (e) => {
+    if (e.key === DIRTY_KEY(VENUE)) { cloud.dirty = !!e.newValue; return; }
     if (e.key !== KEY) return;
     try { db = e.newValue ? JSON.parse(e.newValue) : blank(); } catch (err) { return; }
     dropIndex();
@@ -265,20 +551,58 @@
    *  3. NE JAMAIS POUSSER AVANT D'AVOIR LU. Un navigateur neuf a un catalogue
    *     vide ; s'il poussait en premier il effacerait le vrai stock.
    *
-   * Fusion : union par id. Ce que CET appareil affiche l'emporte sur un id connu
-   * des deux côtés, et tout ce que l'autre a ajouté vient s'ajouter. Deux
-   * appareils qui modifient LA MÊME déclinaison en même temps voient donc un des
-   * deux comptes gagner — mais rien ne disparaît jamais, ce qui est le seul
-   * arbitrage acceptable sur un inventaire. */
+   * Fusion : union par id, plus deux arbitrages qui manquaient et qui ont coûté
+   * cher à un vrai commerçant le 30/07/2026 — son stock revenait indéfiniment à
+   * 4 078 unités quoi qu'il vende ou supprime.
+   *
+   *  · UNE SUPPRESSION EST UN FAIT, PAS UN VIDE. « Union par id, rien ne
+   *    disparaît jamais » paraît prudent sur un inventaire, et c'est faux : une
+   *    ABSENCE ne se distingue pas d'une IGNORANCE. L'appareil qui supprime un
+   *    article se retrouve simplement à ne plus l'avoir, la copie serveur l'a
+   *    encore, la fusion le rend — puis le repousse au serveur. La suppression
+   *    n'était pas perdue, elle était ANNULÉE, et le geste ne pouvait pas
+   *    aboutir un seul jour. D'où `removed` : la carte des ids supprimés, avec
+   *    l'instant. Les ids ne sont jamais réattribués (nextId monte), donc un id
+   *    marqué supprimé est supprimé, des deux côtés.
+   *
+   *  · LE COMPTE LE PLUS RÉCENT GAGNE, PAS LE COMPTE LOCAL. « cet appareil
+   *    d'abord » se juge depuis chaque appareil : la caisse vend, son compte
+   *    baisse ; l'onglet tableau de bord resté ouvert garde l'ancien, et quand
+   *    c'est LUI qui pousse, c'est l'ancien qui gagne. Les deux se renvoyaient
+   *    le même document (révision 165 en production, pour un catalogue de 41
+   *    déclinaisons) et le stock ne bougeait plus. Chaque écriture de quantité
+   *    horodate donc `stockAt`, et la fusion prend la plus récente des deux.
+   *    Un document d'avant ce correctif n'a pas d'horodatage : il compte pour le
+   *    plus ancien, donc la première vente qui suit le remet dans le vrai.
+   *
+   * Le reste des champs (nom, prix, couleur, codes-barres) suit toujours l'appareil
+   * local : c'est de l'édition, pas du comptage, et la dernière main qui a tapé
+   * est là, devant l'écran. */
   const REV_KEY = (slug) => 'kiwiCatalogRev:v1:' + slug;
-  const cloud = { rev: 0, read: Object.create(null), timer: null, busy: false, again: false, tries: 0, last: 0 };
+  const DIRTY_KEY = (slug) => 'kiwiCatalogDirty:v1:' + slug;
+  /* `dirty` : ce navigateur porte une écriture que le serveur n'a pas encore
+     acceptée. Posé par commit() (toute mutation locale passe par là), levé
+     seulement quand le serveur a dit oui. C'est ce drapeau, avec `ahead.mine`,
+     qui empêche un appareil sans rien à dire de republier en boucle. */
+  const cloud = { rev: 0, read: Object.create(null), timer: null, busy: false, again: false, tries: 0, last: 0, dirty: false };
 
   // La démo (Maison Mansour) ne quitte jamais ce navigateur : elle est semée
   // localement et n'appartient à aucun compte.
   function cloudOn() {
     try {
       if (!VENUE || VENUE === DEMO_VENUE) return false;
-      return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal());
+      if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return true;
+      /* Une caisse APPAIRÉE est un appareil réel, même sans session du
+         propriétaire. KiwiEnv ne voit que la session/le domaine : sur la
+         tablette du magasin il répondait donc faux, cloudBind() ne lisait
+         jamais /api/catalog, et le stock restait celui d'un vieux localStorage
+         pendant que le dashboard et God mode affichaient la copie serveur.
+
+         On n'ouvre que LE magasin lié à ce terminal. Le serveur revérifie le
+         cookie httpOnly kiwi_till dans /api/catalog ; ce test client décide
+         seulement s'il faut tenter la synchro, il n'accorde aucun accès. */
+      const pairedMerchant = window.KiwiPlatform?.pairedMerchant?.() || (JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null') || {}).merchant;
+      return !!(pairedMerchant && String(pairedMerchant) === String(VENUE));
     } catch (e) { return false; }
   }
   function readRev(slug) {
@@ -287,25 +611,193 @@
   function writeRev(slug, rev) {
     try { localStorage.setItem(REV_KEY(slug), String(rev || 0)); } catch (e) {}
   }
+  function dirtyToken(slug) {
+    try { return localStorage.getItem(DIRTY_KEY(slug)); } catch (e) { return null; }
+  }
+  function markCatalogDirty() {
+    cloud.dirty = true;
+    try {
+      const token = Date.now().toString(36) + ':' + Math.random().toString(36).slice(2);
+      localStorage.setItem(DIRTY_KEY(VENUE), token);
+      return token;
+    } catch (e) { return null; }
+  }
+  function clearCatalogDirty(slug, token) {
+    try {
+      if (!token || localStorage.getItem(DIRTY_KEY(slug)) === token) {
+        localStorage.removeItem(DIRTY_KEY(slug));
+      }
+    } catch (e) {}
+    cloud.dirty = !!dirtyToken(slug);
+  }
+
+  /* Ce que la dernière fusion a appris, et de qui. `mine` vrai = nous portons
+     quelque chose que le serveur n'a pas, donc il faut remonter. `theirs` vrai =
+     nous venons d'apprendre quelque chose. Lu par pull() pour ne PAS republier un
+     document auquel nous n'avons rien ajouté — voir la note là-bas. */
+  var ahead = { mine: false, theirs: false };
 
   function mergeDocs(mine, theirs) {
+    ahead = { mine: false, theirs: false };
+    /* Les suppressions des deux côtés, réunies : celle que l'autre appareil a
+       faite compte autant que la nôtre. */
+    const gone = pruneTombs(Object.assign(
+      Object.create(null), (theirs && theirs.removed) || {}, (mine && mine.removed) || {}
+    ));
+    /* Une suppression que nous portons et qu'ils n'ont pas est exactement ce
+       qu'il faut leur transmettre — sans ce test, un pull « propre » la garderait
+       pour lui et l'article resterait vivant sur l'autre comptoir. */
+    Object.keys(gone).forEach((id) => {
+      if (!((theirs && theirs.removed) || {})[id]) ahead.mine = true;
+    });
     const out = {
       v: 1, categories: [], products: [], variants: [],
       seq: Math.max(+(mine && mine.seq) || 0, +(theirs && theirs.seq) || 0),
+      removed: gone,
     };
     ['categories', 'products', 'variants'].forEach((k) => {
       const seen = Object.create(null);
       const list = [];
-      const take = (e) => { if (e && e.id && !seen[e.id]) { seen[e.id] = 1; list.push(e); } };
-      ((mine && mine[k]) || []).forEach(take);     // cet appareil d'abord
-      ((theirs && theirs[k]) || []).forEach(take); // puis ce que l'autre a ajouté
+      /* Ce que l'autre côté connaît déjà. Sert uniquement à savoir si NOUS
+         portons du neuf — sans quoi pull() ne peut pas décider s'il a quelque
+         chose à remonter. */
+      const theirIds = Object.create(null);
+      ((theirs && theirs[k]) || []).forEach((e) => { if (e && e.id) theirIds[e.id] = 1; });
+      const take = (e) => {
+        if (!e || !e.id) return;
+        if (gone[e.id]) return;                     // supprimé ici ou là-bas
+        if (!seen[e.id]) { seen[e.id] = 1; list.push(e); ahead.theirs = true; return; }
+        /* Connu des deux côtés. L'enregistrement local est gardé — le nom, le
+           prix, la couleur, les codes-barres sont de l'ÉDITION, et la dernière
+           main qui a tapé est devant l'écran.
+           Le SOCLE, lui, n'est pas de l'édition : c'est un comptage. Le plus
+           récent des deux gagne, parce qu'un inventaire physique fait ce matin
+           n'a pas à céder devant un chiffre d'hier. Les MOUVEMENTS ne sont
+           arbitrés nulle part ici : ils sont réunis plus bas, tous. */
+        const kept = seen[e.id];
+        const mineMetaAt = +(kept && kept.metaAt) || 0;
+        const theirMetaAt = +(e && e.metaAt) || 0;
+        if (k === 'categories') {
+          if (theirMetaAt > mineMetaAt) {
+            ['name', 'color', 'order', 'metaAt'].forEach((f) => { kept[f] = e[f]; });
+            ahead.theirs = true;
+          } else if (mineMetaAt > theirMetaAt) ahead.mine = true;
+          return;
+        }
+        if (k === 'products') {
+          /* Product media is edited on the dashboard but consumed on caisse.
+             A caisse that already knew the product used to keep its older blank
+             `photo` forever because local metadata always won the merge. Keep a
+             small media clock so upload, replacement and removal all propagate.
+             Legacy documents have no clock: in that one migration case, a real
+             URL beats a blank value. */
+          const mineAt = +kept.mediaAt || 0;
+          const theirAt = +e.mediaAt || 0;
+          const mineMedia = !!(kept.photo || kept.video);
+          const theirMedia = !!(e.photo || e.video);
+          const differs = String(kept.photo || '') !== String(e.photo || '')
+            || String(kept.video || '') !== String(e.video || '');
+          const fields = ['legacyId', 'name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad',
+            'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership', 'consignor',
+            'sku', 'createdAt', 'archived', 'metaAt'];
+          if (theirMetaAt > mineMetaAt) {
+            fields.forEach((f) => {
+              if (e[f] === undefined) delete kept[f]; else kept[f] = e[f];
+            });
+            ahead.theirs = true;
+          } else if (mineMetaAt > theirMetaAt) ahead.mine = true;
+          if (theirAt > mineAt || (!mineAt && !theirAt && !mineMedia && theirMedia)) {
+            kept.photo = String(e.photo || '');
+            kept.video = String(e.video || '');
+            if (theirAt) kept.mediaAt = theirAt;
+            ahead.theirs = true;
+          } else if (differs && (mineAt > theirAt || mineMedia)) {
+            ahead.mine = true;
+          }
+          return;
+        }
+        if (k !== 'variants') return;
+        const variantFields = ['productId', 'colorId', 'colorFamily', 'colorSource', 'colorSourceHex', 'colorWas',
+          'colorLabel', 'colorHex', 'size', 'sku', 'note', 'metaAt'];
+        if (theirMetaAt > mineMetaAt) {
+          variantFields.forEach((f) => {
+            if (e[f] === undefined) delete kept[f]; else kept[f] = e[f];
+          });
+          ahead.theirs = true;
+        } else if (mineMetaAt > theirMetaAt) ahead.mine = true;
+
+        /* Barcode additions are a union. Timestamped removals cross devices and
+           beat older additions, so scanning a label on one till cannot be undone
+           by a stale copy from another. */
+        const removed = Object.assign({}, kept.barcodeRemoved || {});
+        Object.keys(e.barcodeRemoved || {}).forEach((code) => {
+          removed[code] = Math.max(+removed[code] || 0, +e.barcodeRemoved[code] || 0);
+        });
+        const codes = Object.create(null);
+        ;(kept.barcodes || []).concat(e.barcodes || []).forEach((b) => {
+          if (!b || !b.code) return;
+          const prior = codes[b.code];
+          if (!prior || (+b.at || 0) > (+prior.at || 0)) codes[b.code] = Object.assign({}, b);
+        });
+        const mergedCodes = Object.keys(codes).map((code) => codes[code])
+          .filter((b) => (+removed[b.code] || 0) < (+b.at || 0) || (!(+removed[b.code] || 0) && !b.at));
+        if (JSON.stringify(mergedCodes) !== JSON.stringify(kept.barcodes || [])) ahead.theirs = true;
+        kept.barcodes = mergedCodes;
+        kept.barcodeRemoved = removed;
+
+        if (baseAtOf(e) > baseAtOf(kept)) {
+          kept.base = baseOf(e);
+          kept.baseAt = baseAtOf(e);
+          ahead.theirs = true;
+        } else if (baseAtOf(kept) > baseAtOf(e)) { ahead.mine = true; }
+      };
+      /* Deux passes, pour que la seconde puisse RETROUVER l'enregistrement gardé
+         et non seulement savoir qu'il existe. */
+      ((mine && mine[k]) || []).forEach((e) => {
+        if (!e || !e.id || gone[e.id] || seen[e.id]) return;
+        seen[e.id] = e;
+        list.push(e);
+        if (!theirIds[e.id]) ahead.mine = true;   // créé ici, inconnu là-bas
+      });
+      ((theirs && theirs[k]) || []).forEach(take);
       out[k] = list;
     });
+
+    /* ── LES MOUVEMENTS : UNE UNION, PAS UN ARBITRAGE ────────────────────────
+       C'est ici que deux ventes simultanées s'additionnent enfin. Chaque
+       mouvement porte un id unique par appareil ; réunir les deux journaux par
+       id garde donc les deux ventes, et recevoir deux fois le même mouvement ne
+       le compte qu'une fois. Rien à départager : un événement qui a eu lieu a
+       eu lieu. */
+    const byMove = Object.create(null);
+    const theirMove = Object.create(null);
+    ((theirs && theirs.moves) || []).forEach((m) => { if (m && m.id) theirMove[m.id] = m; });
+    ((mine && mine.moves) || []).forEach((m) => {
+      if (!m || !m.id) return;
+      byMove[m.id] = m;
+      if (!theirMove[m.id]) ahead.mine = true;   // une vente d'ici qu'ils ignorent
+    });
+    Object.keys(theirMove).forEach((id) => {
+      if (!byMove[id]) { byMove[id] = theirMove[id]; ahead.theirs = true; }
+      else if (byMove[id].why === 'reserve' && theirMove[id].why === 'vente') {
+        byMove[id] = theirMove[id]; ahead.theirs = true;
+      }
+    });
+    out.moves = Object.keys(byMove).map((id) => byMove[id])
+      .filter((m) => !gone[m.vid]);   // les mouvements d'un article supprimé s'en vont avec lui
+
     // Une déclinaison dont le produit a été supprimé des deux côtés n'a plus de
     // parent : elle deviendrait un article fantôme, invendable et invisible.
     const alive = Object.create(null);
     out.products.forEach((p) => { alive[p.id] = 1; });
     out.variants = out.variants.filter((v) => alive[v.productId]);
+
+    /* Replier le vieux, puis recalculer : le stock affiché est TOUJOURS le socle
+       plus les mouvements postérieurs, jamais un nombre qu'on se serait
+       transmis. C'est ce qui rend la fusion reproductible — deux appareils
+       partis des mêmes deux journaux arrivent au même stock. */
+    compact(out);
+    materialize(out);
     return out;
   }
 
@@ -343,11 +835,15 @@
     })
       .then((r) => (r && r.ok ? r.json() : null))
       .then((res) => {
-        cloud.read[slug] = 1;
-        cloud.last = Date.now();
         // Le commerçant a changé de magasin pendant l'aller-retour : cette
         // réponse concerne l'inventaire d'une autre boutique, on la jette.
         if (!res || slug !== VENUE) return false;
+        /* Only a valid server document satisfies "read before write". A 500 used
+           to become `null` but still set cloud.read, licensing the next local
+           mutation to overwrite a server copy this browser had never seen. */
+        cloud.read[slug] = 1;
+        cloud.last = Date.now();
+        cloud.dirty = cloud.dirty || !!dirtyToken(slug);
 
         const serverRev = +res.rev || 0;
         const theirs = res.data;
@@ -362,14 +858,31 @@
           return false;
         }
         cloud.rev = serverRev;
-        if (!mineEmpty && readRev(slug) === serverRev) { healSeq(); return false; } // déjà à jour
+        if (!mineEmpty && readRev(slug) === serverRev) {
+          /* Same revision does not mean "nothing to do" when a prior offline
+             push failed. The local movement is still dirty and must leave now
+             that the server is reachable again. */
+          if (cloud.dirty) schedulePush(0);
+          healSeq();
+          return false;
+        }
 
         const adopt = first && mineEmpty;
         db = adopt ? theirs : mergeDocs(db, theirs);
         dropIndex();
         migrate();   // la copie serveur peut venir d'un build antérieur aux familles
         persist(); writeRev(slug, serverRev); healSeq(); notify();
-        if (!adopt) schedulePush(0);   // notre fusion doit remonter
+        /* ── NE PAS REPUBLIER CE QU'ON VIENT DE LIRE ──────────────────────────
+           On repoussait après CHAQUE fusion, systématiquement. Un appareil qui
+           n'avait rien changé republiait donc le document qu'il venait de
+           recevoir : le serveur incrémentait sa révision, l'autre appareil
+           relisait, refusionnait, republiait à son tour. C'est cette boucle qui
+           a porté le document d'un client à la révision 165 pour 41 articles —
+           et c'est sous ce bruit que l'écrasement du stock passait inaperçu.
+           On ne remonte donc que si nous portons vraiment quelque chose que le
+           serveur n'a pas : une vente, une création, une suppression, un
+           comptage plus récent. mergeDocs vient de le dire. */
+        if (!adopt && (cloud.dirty || ahead.mine)) schedulePush(0);
         return true;
       })
       .catch(() => false);   // hors ligne → la copie locale reste la vérité
@@ -377,6 +890,7 @@
 
   function schedulePush(delay) {
     if (!cloudOn()) return;
+    if (!cloud.dirty || !dirtyToken(VENUE)) markCatalogDirty();
     if (cloud.timer) clearTimeout(cloud.timer);
     cloud.timer = setTimeout(pushNow, delay == null ? 900 : delay);
   }
@@ -388,6 +902,7 @@
     // Règle 3 : jamais pousser avant d'avoir lu, sinon un navigateur neuf efface.
     if (!cloud.read[slug]) { pull(true); return; }
     if (cloud.busy) { cloud.again = true; return; }
+    const sentDirty = dirtyToken(slug);
     cloud.busy = true;
     fetch('/api/catalog', {
       method: 'POST',
@@ -401,8 +916,11 @@
       .then((res) => {
         if (slug !== VENUE) return;
         if (res.status === 200 && res.j && res.j.ok) {
-          cloud.rev = +res.j.rev || 0;
+          cloud.rev = Math.max(cloud.rev, +res.j.rev || 0);
           writeRev(slug, cloud.rev);
+          /* Accepté : plus rien à remonter. Levé ICI et nulle part ailleurs — un
+             drapeau baissé sur un envoi refusé perdrait la vente silencieusement. */
+          clearCatalogDirty(slug, sentDirty);
           cloud.tries = 0;
           return;
         }
@@ -425,6 +943,101 @@
         cloud.busy = false;
         if (cloud.again) { cloud.again = false; schedulePush(400); }
       });
+  }
+
+  /* A checkout reservation is a small server-side compare-and-swap against the
+     current catalogue. Unlike the background full-document mirror, it returns a
+     definite answer before payment: either these exact variants are held, or the
+     till must not collect money. Network failure remains an explicit offline
+     fallback; a real stock refusal never does. */
+  function saleStockAction(action, ref, lines) {
+    load();
+    if (!cloudOn() || typeof fetch !== 'function') return Promise.resolve({ ok: false, offline: true });
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeout = controller ? setTimeout(() => controller.abort(), 4500) : null;
+    return fetch('/api/catalog', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchant: VENUE, stockAction: action, ref: String(ref || '').slice(0, 64), lines: lines || [] }),
+      signal: controller ? controller.signal : undefined,
+    }).then((r) => r.json().then((j) => ({ status: r.status, j })).catch(() => ({ status: r.status, j: null })))
+      .then((res) => {
+        if (res.status === 200 && res.j && res.j.ok && res.j.data) {
+          db = mergeDocs(db, res.j.data);
+          dropIndex(); migrate(); materialize(db);
+          cloud.rev = Math.max(cloud.rev, +res.j.rev || 0);
+          writeRev(VENUE, cloud.rev); persist(); healSeq(); notify();
+          if (ahead.mine) { markCatalogDirty(); schedulePush(0); }
+          return { ok: true };
+        }
+        if (res.status === 409 && res.j && res.j.error === 'stock-insufficient') {
+          if (res.j.data) {
+            db = mergeDocs(db, res.j.data); dropIndex(); migrate(); materialize(db);
+            cloud.rev = Math.max(cloud.rev, +res.j.rev || 0); writeRev(VENUE, cloud.rev); persist(); notify();
+            if (ahead.mine) { markCatalogDirty(); schedulePush(0); }
+          }
+          return { ok: false, issue: res.j.issue || null };
+        }
+        /* The till can legitimately have a durable local catalogue before the
+           shared catalogue table is available (freshly paired shop, migration
+           still rolling out, or the first background upload not accepted yet).
+           Those replies are explicit non-writes: no server hold exists, so the
+           established offline checkout path is safe and will publish the sale
+           with its idempotency reference later. Treating every 409/503 as an
+           ambiguous hold blocked a stocked shop at “Vérification du stock…”. */
+        const reason = (res.j && res.j.error) || '';
+        if ((res.status === 409 && reason === 'catalog-missing')
+            || (res.status === 503 && (reason === 'unmigrated' || reason === 'not-configured'))) {
+          return { ok: false, offline: true, reason };
+        }
+        if (res.status === 409) {
+          if (res.j && res.j.data) {
+            db = mergeDocs(db, res.j.data); dropIndex(); migrate(); materialize(db);
+            cloud.rev = Math.max(cloud.rev, +res.j.rev || 0); writeRev(VENUE, cloud.rev); persist(); notify();
+            if (ahead.mine) { markCatalogDirty(); schedulePush(0); }
+          }
+          return { ok: false, fatal: true, reason: (res.j && res.j.error) || 'stock-contention' };
+        }
+        if (res.status === 401 || res.status === 403 || res.status === 400) {
+          return { ok: false, fatal: true, reason: (res.j && res.j.error) || 'stock-action-refused' };
+        }
+        /* Once a request was sent, a lost/5xx response is ambiguous: Cloudflare
+           may have committed the hold before the connection broke. Never fall
+           back to a second local debit. Retrying the same ref is idempotent. */
+        return { ok: false, fatal: true, uncertain: true, reason: reason || ('http-' + res.status) };
+      }).catch(() => ({ ok: false, fatal: true, uncertain: true, reason: 'network-uncertain' }))
+      .finally(() => { if (timeout) clearTimeout(timeout); });
+  }
+
+  function reserveSale(ref, lines) { return saleStockAction('reserve', ref, lines); }
+  function confirmSale(ref) {
+    /* Confirm locally first. If the network disappears after the card terminal
+       approves, the next catalogue push carries `vente`, never an ambiguous hold. */
+    let touched = false;
+    (db.moves || []).forEach((m) => {
+      if (m && m.ref === ref && m.why === 'reserve') { m.why = 'vente'; touched = true; }
+    });
+    if (touched) commit();
+    return saleStockAction('confirm', ref);
+  }
+  function releaseSale(ref) {
+    /* Release locally before asking the server. If Wi-Fi dies between opening and
+       cancelling payment, the inverse movement remains durable and retries through
+       the ordinary catalogue mirror. IDs match the server action, so both routes
+       arriving is still exactly one release. */
+    const held = (db.moves || []).filter((m) => m && m.ref === ref && m.why === 'reserve');
+    const paid = (db.moves || []).some((m) => m && m.ref === ref && m.why === 'vente');
+    if (!paid && held.length) {
+      let at = now();
+      held.forEach((m) => {
+        const id = 'rel-' + String(m.id).slice(0, 60);
+        if ((db.moves || []).some((x) => x && x.id === id)) return;
+        const v = varById(m.vid); at = Math.max(at + 1, baseAtOf(v) + 1, (+m.at || 0) + 1);
+        db.moves.push({ id, vid: m.vid, d: -(+m.d || 0), at, why: 'release', ref: String(ref).slice(0, 64) });
+      });
+      materialize(db); commit();
+    }
+    return saleStockAction('release', ref);
   }
 
   /* ─── « et dans l'autre boutique ? » ──────────────────────────────────────
@@ -518,6 +1131,7 @@
   function cloudBind() {
     const slug = VENUE;
     if (!cloudOn() || cloud.read[slug]) return;
+    cloud.dirty = !!dirtyToken(slug);
     pull(true);
   }
 
@@ -529,6 +1143,25 @@
     if (!cloudOn() || Date.now() - cloud.last < 20000) return;
     pull(false);
   });
+
+  /* An offline stock movement must not wait for a second sale to reach D1.
+     Browser `online` is only a wake-up hint; pushNow still handles failures and
+     revision conflicts safely. */
+  window.addEventListener('online', () => {
+    if (!cloudOn()) return;
+    if (cloud.dirty) schedulePush(0);
+    else if (Date.now() - cloud.last >= 20000) pull(false);
+  });
+
+  /* A till can stay visible for an entire shift. Visibility-only refresh meant
+     two open tills never learned about each other's sales. Poll only hosted real
+     pages, only while visible, and retain the existing 20 s floor. */
+  if (window.location && typeof window.setInterval === 'function') {
+    window.setInterval(() => {
+      if (document.visibilityState !== 'visible' || !cloudOn() || cloud.busy) return;
+      if (Date.now() - cloud.last >= 20000) pull(false);
+    }, 20000);
+  }
 
   // Une modification en attente ne doit pas mourir avec l'onglet.
   window.addEventListener('pagehide', () => {
@@ -552,14 +1185,29 @@
 
   function seed() {
     const palette = ['atlas', 'warn', 'riad', 'mint', 'info', 'danger'];
-    SEED.forEach((rayon, ri) => {
-      const cat = { id: nextId('cat'), name: rayon.rayonLabel, color: palette[ri % palette.length], order: ri };
+    const currentSeed = (DEMO_SEEDS[VENUE] || DEMO_SEEDS[DEMO_VENUE])();
+    currentSeed.forEach((rayon, ri) => {
+      const cat = { id: nextId('cat'), name: rayon.rayonLabel, color: palette[ri % palette.length], order: ri, metaAt: now() };
       db.categories.push(cat);
       rayon.items.forEach((it) => {
         const prod = {
           id: nextId('prod'), legacyId: it.id, name: it.name, categoryId: cat.id,
-          priceMAD: it.price, cost: Math.round(it.price * 0.55), art: it.art, kind: it.kind,
-          flag: it.flag || '', grad: null, createdAt: Date.now(), archived: false,
+          priceMAD: it.price, cost: Math.round(it.price * 0.55), art: it.art, kind: it.kind || 'tu',
+          flag: it.flag || '', grad: null,
+          marque: it.marque || '',
+          format: (it.format === 'service' || it.format === 'piece') ? it.format : 'piece',
+          servicePieces: it.servicePieces != null ? Math.max(1, parseInt(it.servicePieces, 10) || 1) : null,
+          piecePriceMAD: it.piecePriceMAD != null ? (+it.piecePriceMAD || 0) : null,
+          motif: it.motif || '',
+          fragile: !!it.fragile,
+          /* PROPRIÉTÉ DU STOCK. 'outright' = la marchandise est au commerce.
+           * 'consignment' = dépôt-vente : elle appartient à un tiers (`consignor`),
+           * le commerce la vend POUR LUI. La vente est enregistrée normalement —
+           * ticket, journal, stock — mais l'argent ne lui appartient pas : il est
+           * dû au déposant. Voir le journal dépôt-vente dans assets/pos-maison.js. */
+          ownership: it.ownership === 'consignment' ? 'consignment' : 'outright',
+          consignor: String(it.consignor || '').trim(),
+          createdAt: Date.now(), archived: false, metaAt: now(),
         };
         db.products.push(prod);
         const sizeKeys = Object.keys(it.sizes);
@@ -595,8 +1243,10 @@
       id: nextId('var'), productId,
       colorId: String(colorId || n.family.id),
       colorFamily: n.family.id,
-      colorLabel: n.family.label, colorHex: n.family.hex,
-      size: String(size), stock: Math.max(0, stock | 0), sku: '', barcodes: [],
+      colorLabel: n.displayLabel, colorHex: n.displayHex,
+      size: String(size), stock: Math.max(0, stock | 0),
+      base: Math.max(0, stock | 0), baseAt: now(),
+      sku: '', barcodes: [], barcodeRemoved: {}, metaAt: now(),
     };
     if (n.source) {
       v.colorSource = n.source;
@@ -623,10 +1273,16 @@
         if (!v.colorSourceHex && v.colorHex) v.colorSourceHex = v.colorHex;
       }
       v.colorFamily = n.family.id;
-      v.colorLabel = n.family.label;
-      v.colorHex = n.family.hex;
+      v.colorLabel = n.displayLabel;
+      v.colorHex = n.displayHex;
       touched++;
     });
+    if (Array.isArray(db.moves)) {
+      db.moves.forEach((m) => {
+        if (m && m.actor && typeof m.actor !== 'string') { m.actor = String(m.actor).slice(0, 64); touched++; }
+        if (m && m.ref && typeof m.ref !== 'string') { m.ref = String(m.ref).slice(0, 64); touched++; }
+      });
+    }
     if (touched) db.v = 2;
     return touched > 0;
   }
@@ -720,6 +1376,52 @@
 
   function productStock(pid) { return variantsOf(pid).reduce((s, v) => s + (v.stock || 0), 0); }
 
+  /* Stock vendable d'une déclinaison telle que la caisse la présente :
+     produit × taille × FAMILLE de couleur. compat() additionne volontairement
+     toutes les couleurs dans `sizes` pour les cartes produit ; cette somme ne
+     doit jamais servir à autoriser une vente de Noir quand seules les pièces
+     Blanches sont encore en rayon. Une couleur personnalisée reste appariée
+     par son identifiant exact. */
+  function variantStock(pid, size, color) {
+    const wantedSize = String(size == null ? '' : size);
+    const wantedColor = String(color == null ? '' : color);
+    return variantsOf(pid).reduce((sum, v) => {
+      if (String(v.size) !== wantedSize) return sum;
+      if (String(v.colorId) !== wantedColor && String(famOf(v)) !== wantedColor) return sum;
+      return sum + Math.max(0, +v.stock || 0);
+    }, 0);
+  }
+
+  /* Mouvement atomique sur la même déclinaison vendable. Une vente peut vider
+     plusieurs tons d'une même famille (Bleu + Bleu nuit), mais jamais une autre
+     couleur. On vérifie le total AVANT la première écriture : insuffisant veut
+     dire zéro mouvement, pas un stock à moitié décrémenté. Un retour dont la
+     couleur n'existe plus est signalé à rapprocher, jamais crédité sur une autre. */
+  function adjustVariantStock(pid, size, color, delta, opts) {
+    opts = opts || {};
+    delta = Math.trunc(+delta || 0);
+    if (!delta) return true;
+    const sameSize = variantsOf(pid).filter((v) => String(v.size) === String(size));
+    const matched = sameSize.filter((v) => String(v.colorId) === String(color) || String(famOf(v)) === String(color));
+    if (delta < 0) {
+      let remaining = -delta;
+      if (variantStock(pid, size, color) < remaining) return false;
+      batch(() => matched
+        .slice().sort((a, b) => (String(b.colorId) === String(color) ? 1 : 0) - (String(a.colorId) === String(color) ? 1 : 0))
+        .forEach((v) => {
+          if (!remaining) return;
+          const qty = Math.min(remaining, Math.max(0, +v.stock || 0));
+          if (qty) { adjustStock(v.id, -qty, opts.why || 'vente', { ref: opts.ref, actor: opts.actor }); remaining -= qty; }
+        }));
+      return remaining === 0;
+    }
+    const v = matched[0];
+    if (!v) return false;
+    adjustStock(v.id, delta, opts.why || 'retour',
+      { ref: opts.ref, actor: opts.actor });
+    return true;
+  }
+
   function normCode(s) { return String(s == null ? '' : s).trim(); }
 
   /* La référence commune, mise à plat avant d'être comparée. Elle est SAISIE À
@@ -776,16 +1478,17 @@
   function listCategories() { return db.categories.slice().sort((a, b) => (a.order || 0) - (b.order || 0)); }
 
   function addCategory(name, color) {
-    const cat = { id: nextId('cat'), name: String(name || 'Catégorie').trim() || 'Catégorie', color: color || 'atlas', order: db.categories.length };
+    const cat = { id: nextId('cat'), name: String(name || 'Catégorie').trim() || 'Catégorie', color: color || 'atlas', order: db.categories.length, metaAt: now() };
     db.categories.push(cat); commit(); return cat;
   }
-  function renameCategory(id, name) { const c = catById(id); if (c) { c.name = String(name || c.name).trim() || c.name; commit(); } return c; }
-  function setCategoryColor(id, color) { const c = catById(id); if (c) { c.color = color; commit(); } return c; }
+  function renameCategory(id, name) { const c = catById(id); if (c) { c.name = String(name || c.name).trim() || c.name; c.metaAt = now(); commit(); } return c; }
+  function setCategoryColor(id, color) { const c = catById(id); if (c) { c.color = color; c.metaAt = now(); commit(); } return c; }
   function deleteCategory(id, opts) {
     opts = opts || {};
     const reassignTo = opts.reassignTo || null; // null → uncategorised
-    db.products.forEach((p) => { if (p.categoryId === id) p.categoryId = reassignTo; });
+    db.products.forEach((p) => { if (p.categoryId === id) { p.categoryId = reassignTo; p.metaAt = now(); } });
     db.categories = db.categories.filter((c) => c.id !== id);
+    tomb(id);
     commit();
   }
   function categoryCount(id) { return db.products.filter((p) => p.categoryId === id && !p.archived).length; }
@@ -795,10 +1498,22 @@
     opts = opts || {};
     let list = db.products.filter((p) => opts.includeArchived ? true : !p.archived);
     if (opts.categoryId && opts.categoryId !== 'all') list = list.filter((p) => p.categoryId === opts.categoryId);
+    if (opts.marque && opts.marque !== 'all') {
+      const m = opts.marque.toLowerCase();
+      list = list.filter((p) => (p.marque || '').toLowerCase() === m);
+    }
+    if (opts.motif && opts.motif !== 'all') {
+      const mot = opts.motif.toLowerCase();
+      list = list.filter((p) => (p.motif || '').toLowerCase() === mot);
+    }
+    if (opts.format && opts.format !== 'all') list = list.filter((p) => (p.format || 'piece') === opts.format);
+    if (opts.fragile !== undefined) list = list.filter((p) => !!p.fragile === !!opts.fragile);
     if (opts.q) {
       const q = opts.q.toLowerCase();
       const byProd = groupVariants();   // une fois, pas une fois par produit
       list = list.filter((p) => p.name.toLowerCase().includes(q)
+        || (p.marque && p.marque.toLowerCase().includes(q))
+        || (p.motif && p.motif.toLowerCase().includes(q))
         || (catById(p.categoryId) && catById(p.categoryId).name.toLowerCase().includes(q))
         || (byProd[p.id] || []).some((v) => (v.barcodes || []).some((b) => String(b.code).toLowerCase().includes(q)) || (v.sku || '').toLowerCase().includes(q)));
     }
@@ -811,6 +1526,17 @@
       id: nextId('prod'), name: String(data.name || 'Nouvel article').trim() || 'Nouvel article',
       categoryId: data.categoryId || null, priceMAD: +data.priceMAD || 0, cost: +data.cost || 0,
       art: data.art || '', kind: data.kind || 'taille', flag: data.flag || '', grad: data.grad || null,
+      marque: String(data.marque || '').trim(),
+      format: (data.format === 'service' || data.format === 'piece') ? data.format : 'piece',
+      servicePieces: data.servicePieces != null ? Math.max(1, parseInt(data.servicePieces, 10) || 1) : null,
+      piecePriceMAD: data.piecePriceMAD != null ? (+data.piecePriceMAD || 0) : null,
+      motif: String(data.motif || '').trim(),
+      fragile: !!data.fragile,
+      /* Voir le commentaire dans seed() : 'consignment' = dépôt-vente, la
+       * marchandise est au déposant nommé par `consignor`. Toute autre valeur
+       * retombe sur 'outright' — on ne devine pas une propriété tierce. */
+      ownership: data.ownership === 'consignment' ? 'consignment' : 'outright',
+      consignor: String(data.consignor || '').trim(),
       /* La RÉFÉRENCE COMMUNE — ce qui dit que le jean de Casa et le jean de
        * Rabat sont le même article. Deux magasins d'un même compte tiennent
        * deux catalogues séparés : rien ne les relie sauf le code-barres, et un
@@ -825,22 +1551,45 @@
       // One medium per product: a video supersedes a photo and vice-versa.
       photo: String(data.photo || ''),
       video: String(data.video || ''),
-      createdAt: Date.now(), archived: false,
+      mediaAt: +data.mediaAt || ((data.photo || data.video) ? Date.now() : 0),
+      createdAt: Date.now(), archived: false, metaAt: now(),
     };
     db.products.push(p); ixAddProduct(p); commit(); return p;
   }
   function updateProduct(id, patch) {
     const p = prodById(id); if (!p) return null;
-    ['name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad', 'photo', 'video', 'sku'].forEach((k) => {
+    const mediaPatch = patch.photo !== undefined || patch.video !== undefined;
+    ['name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad', 'photo', 'video', 'sku',
+     'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership', 'consignor'].forEach((k) => {
       if (patch[k] !== undefined) {
-        p[k] = (k === 'priceMAD' || k === 'cost') ? (+patch[k] || 0)
-          : (k === 'sku' ? skuNorm(patch[k]) : patch[k]);
+        if (k === 'priceMAD' || k === 'cost' || k === 'piecePriceMAD') {
+          p[k] = patch[k] == null ? null : (+patch[k] || 0);
+        } else if (k === 'servicePieces') {
+          p[k] = patch[k] == null ? null : Math.max(1, parseInt(patch[k], 10) || 1);
+        } else if (k === 'fragile') {
+          p[k] = !!patch[k];
+        } else if (k === 'sku') {
+          p[k] = skuNorm(patch[k]);
+        } else if (k === 'format') {
+          p[k] = (patch[k] === 'service' || patch[k] === 'piece') ? patch[k] : 'piece';
+        } else {
+          p[k] = patch[k] == null ? '' : String(patch[k]).trim();
+        }
       }
     });
+    if (mediaPatch) p.mediaAt = Date.now();
+    p.metaAt = now();
     commit(); return p;
   }
-  function archiveProduct(id, val) { const p = prodById(id); if (p) { p.archived = val !== false; commit(); } return p; }
+  function archiveProduct(id, val) { const p = prodById(id); if (p) { p.archived = val !== false; p.metaAt = now(); commit(); } return p; }
   function deleteProduct(id) {
+    /* Les déclinaisons AUSSI, nommément. Le nettoyage par parent absent existe
+       plus bas dans mergeDocs, mais il ne peut agir que si le produit reste
+       supprimé — et une déclinaison non marquée revient avec son stock, ce qui
+       remettrait l'article en vente sous un produit fantôme. */
+    const vids = db.variants.filter((v) => v.productId === id).map((v) => v.id);
+    tomb(vids.concat([id]));
+    if (Array.isArray(db.moves)) db.moves = db.moves.filter((m) => !m || vids.indexOf(m.vid) < 0);
     db.variants = db.variants.filter((v) => v.productId !== id);
     db.products = db.products.filter((p) => p.id !== id);
     dropIndex();
@@ -848,25 +1597,29 @@
   }
 
   /* full product view for editors: product + variants + matrix helpers.
-     `colors` is one entry per DISTINCT FAMILY — what a person sees on the card
-     ("3 couleurs"). Two variants that both read Bleu count once here while
-     staying two separate rows in the matrix, which is exactly the point. */
+     `colors` is what the merchant actually chose: preset shades collapse to
+     their broad family, but an exact custom hex keeps its own swatch. `families`
+     remains the distinct broad set used by filters and reports. */
   function getProduct(id) {
     const p = prodById(id); if (!p) return null;
     const variants = variantsOf(id);
-    const colors = []; const sizes = [];
+    const colors = []; const families = []; const sizes = [];
     variants.forEach((v) => {
       const f = famOf(v);
-      if (!colors.some((c) => c.id === f)) {
-        const fam = COLOR_BY_ID(f) || { id: f, label: v.colorLabel, hex: v.colorHex };
-        colors.push({ id: fam.id, label: fam.label, hex: fam.hex });
+      if (!families.includes(f)) families.push(f);
+      const custom = /^custom-[0-9a-f]{6}$/i.test(String(v.colorId || ''));
+      const colorId = custom ? v.colorId : f;
+      if (!colors.some((c) => c.id === colorId)) {
+        const shown = custom
+          ? { id: v.colorId, label: v.colorLabel, hex: v.colorHex, custom: true }
+          : (COLOR_BY_ID(f) || { id: f, label: v.colorLabel, hex: v.colorHex });
+        colors.push({ id: shown.id, label: shown.label, hex: shown.hex, custom: !!shown.custom });
       }
       if (!sizes.includes(v.size)) sizes.push(v.size);
     });
     return {
       // copie : `variants` vient de l'index, et cet objet sort du module.
-      product: p, category: catById(p.categoryId), variants: variants.slice(), colors, sizes,
-      families: colors.map((c) => c.id),
+      product: p, category: catById(p.categoryId), variants: variants.slice(), colors, sizes, families,
       // le stock se somme sur le tableau qu'on vient de parcourir, pas en
       // redemandant les déclinaisons (getProduct est appelé PAR LIGNE de liste).
       stock: variants.reduce((s, v) => s + (v.stock || 0), 0),
@@ -882,7 +1635,7 @@
     // own stock and its own barcode. Merging them is a deliberate act, not a
     // side effect of picking the same swatch.
     const dup = db.variants.find((v) => v.productId === data.productId && v.colorId === data.colorId && v.size === String(data.size));
-    if (dup) { if (data.stock != null) { dup.stock = Math.max(0, data.stock | 0); commit(); } return dup; }
+    if (dup) { if (data.stock != null) { setAbsolute(dup, data.stock); commit(); } return dup; }
     const v = mkVariant(data.productId, data.colorId, data.size, data.stock || 0, {
       colorLabel: data.colorLabel, colorHex: data.colorHex,
     });
@@ -891,7 +1644,7 @@
   }
   function updateVariant(id, patch) {
     const v = varById(id); if (!v) return null;
-    if (patch.stock != null) v.stock = Math.max(0, patch.stock | 0);
+    if (patch.stock != null) setAbsolute(v, patch.stock);   // un champ de formulaire est un état, pas un delta
     if (patch.size != null) v.size = String(patch.size);
     if (patch.sku != null) v.sku = String(patch.sku);
     if (patch.note != null) v.note = String(patch.note).slice(0, 60);
@@ -905,18 +1658,54 @@
       if (had && !v.colorWas) v.colorWas = had;
       v.colorId = String(patch.colorId);
       v.colorFamily = n.family.id;
-      v.colorLabel = n.family.label;
-      v.colorHex = n.family.hex;
+      v.colorLabel = n.displayLabel;
+      v.colorHex = n.displayHex;
       v.colorSource = n.source;
       if (n.source && (patch.colorHex || v.colorSourceHex)) v.colorSourceHex = patch.colorHex || v.colorSourceHex;
       else delete v.colorSourceHex;
       if (!n.source) delete v.colorSource;
     }
+    if (patch.size != null || patch.sku != null || patch.note != null || patch.colorId) v.metaAt = now();
     commit(); return v;
   }
-  function setStock(id, n) { const v = varById(id); if (v) { v.stock = Math.max(0, n | 0); commit(); } return v; }
-  function adjustStock(id, d) { const v = varById(id); if (v) { v.stock = Math.max(0, (v.stock || 0) + (d | 0)); commit(); } return v; }
-  function deleteVariant(id) { db.variants = db.variants.filter((v) => v.id !== id); dropIndex(); commit(); }
+  /* Un nom de couleur personnalisee appartient a la couleur, pas a une taille.
+     Le meme `custom-rrggbb` peut etre porte par S, M, L et par plusieurs
+     produits : les renommer ensemble evite le catalogue contradictoire vu en
+     rayon, sans toucher a l'identite, au stock ni aux codes-barres. */
+  function renameColor(colorId, label) {
+    const id = String(colorId || '');
+    const clean = String(label || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+    if (!/^custom-[0-9a-f]{6}$/i.test(id) || !clean) return 0;
+    const stamp = now();
+    let matched = 0, changed = 0;
+    db.variants.forEach((v) => {
+      if (!v || String(v.colorId) !== id) return;
+      matched++;
+      if (v.colorLabel === clean && v.colorSource === clean) return;
+      v.colorLabel = clean;
+      v.colorSource = clean;
+      v.metaAt = stamp;
+      changed++;
+    });
+    if (changed) commit();
+    return matched;
+  }
+  /* TOUT changement de quantité passe par ici et s'horodate. C'est cet
+     horodatage, et lui seul, qui permet à la fusion de savoir lequel des deux
+     appareils a le compte le plus récent (voir mergeDocs). Une écriture de
+     stock qui oublie de le poser est une vente que le stock finira par oublier. */
+  /* setStock AFFIRME un état (saisie directe, inventaire physique) : il repose le
+     socle. adjustStock RACONTE un événement (vente, retour, ±1 au comptoir) : il
+     écrit un mouvement, et c'est ce qui permet à deux ventes simultanées de
+     s'additionner au lieu de s'écraser. La distinction n'est pas cosmétique —
+     c'est toute la différence entre « il y en a 8 » et « il en est parti 2 ». */
+  function setStock(id, n) { const v = varById(id); if (v) { setAbsolute(v, n); commit(); } return v; }
+  function adjustStock(id, d, why, extra) { const v = varById(id); if (v) { move(v, d, why || 'ajust', extra); commit(); } return v; }
+  function deleteVariant(id) {
+    db.variants = db.variants.filter((v) => v.id !== id);
+    if (Array.isArray(db.moves)) db.moves = db.moves.filter((m) => !m || m.vid !== id);
+    tomb(id); dropIndex(); commit();
+  }
 
   /* ─────────── les trois gestes d'inventaire, jamais confondus ───────────
    * Une reprise de stock existant se fait à la douchette, vite, et trois gestes
@@ -960,7 +1749,7 @@
     const n = Math.floor(Number(qty));
     if (!Number.isFinite(n) || n <= 0) return { ok: false, reason: 'quantite' };
     const before = v.stock || 0;
-    v.stock = before + n;
+    move(v, n, 'reception');   // une réception est un événement : elle s'additionne
     commit();
     return { ok: true, added: n, before, stock: v.stock };
   }
@@ -1020,7 +1809,8 @@
     if (v.barcodes.some((b) => b.primary)) return primaryBarcode(v); // already has one
     let code; let guard = 0;
     do { code = genEan(); } while (barcodeOwner(code) && guard++ < 50);
-    v.barcodes.push({ code, type: 'ean13', primary: true });
+    v.barcodes.push({ code, type: 'ean13', primary: true, at: now() });
+    v.metaAt = now();
     ixAddCode(v, code);
     commit(); return code;
   }
@@ -1053,7 +1843,9 @@
     if (owner) return { ok: false, reason: 'doublon', owner: { variant: owner, product: prodById(owner.productId) } };
     const sym = opts.sym || (KB && KB.detect ? KB.detect(code) : '');
     const isPrimary = !v.barcodes.some((b) => b.primary);
-    v.barcodes.push({ code, type: opts.type || 'imported', sym, primary: isPrimary });
+    v.barcodes.push({ code, type: opts.type || 'imported', sym, primary: isPrimary, at: now() });
+    if (v.barcodeRemoved) delete v.barcodeRemoved[code];
+    v.metaAt = now();
     ixAddCode(v, code);
     commit(); return { ok: true, code, sym };
   }
@@ -1062,6 +1854,9 @@
     const c = normCode(code); const wasPrimary = v.barcodes.some((b) => b.code === c && b.primary);
     v.barcodes = v.barcodes.filter((b) => b.code !== c);
     if (wasPrimary && v.barcodes.length) v.barcodes[0].primary = true;
+    if (!v.barcodeRemoved) v.barcodeRemoved = {};
+    v.barcodeRemoved[c] = now();
+    v.metaAt = now();
     dropIndex();
     commit();
   }
@@ -1112,15 +1907,30 @@
       // pos-boutique.js persistStock(), preferring an exact id then stock on hand.
       vs.forEach((v) => {
         sizes[v.size] = (sizes[v.size] || 0) + (v.stock || 0);
-        const f = famOf(v);
+        const f = /^custom-[0-9a-f]{6}$/i.test(String(v.colorId || '')) ? v.colorId : famOf(v);
         if (!colorSet.includes(f)) colorSet.push(f);
         (v.barcodes || []).forEach((b) => { BY_EAN[b.code] = p.id; });
       });
       const primaryV = vs.find((v) => v.barcodes && v.barcodes.length) || vs[0];
       const item = {
-        id: p.id, name: p.name, price: p.priceMAD, art: p.art, kind: p.kind, flag: p.flag, sku: p.sku || '',
+        id: p.id, name: p.name, price: p.priceMAD, art: p.art, photo: p.photo || '', video: p.video || '', kind: p.kind, flag: p.flag, sku: p.sku || '',
+        marque: p.marque || '',
+        format: p.format || 'piece',
+        servicePieces: p.servicePieces || null,
+        piecePriceMAD: p.piecePriceMAD || null,
+        motif: p.motif || '',
+        fragile: !!p.fragile,
+        ownership: p.ownership === 'consignment' ? 'consignment' : 'outright',
+        consignor: p.consignor || '',
         ean: primaryV ? primaryBarcode(primaryV) : '', sizes, colors: colorSet.length ? colorSet : ['gris'],
         rayon: p.categoryId, _variants: vs,
+        /* Deux champs que la vente ne dessine pas mais dont les PROMOTIONS ont
+           besoin (assets/promos.js) : `createdAt` porte la cible « tout ce qui
+           est entré avant telle date » — un déstockage vise l'ancienneté, pas
+           le rayon — et `cost` sert à prévenir le commerçant quand une remise
+           ferait passer un article sous son prix d'achat. Sans eux, la règle
+           « avant » ne viserait rien et l'alerte à perte serait muette. */
+        createdAt: p.createdAt || 0, cost: p.cost || 0,
       };
       P[p.id] = item;
       // Alias the seed's legacy id (e.g. 'caftan_ete') so the caisse's demo
@@ -1167,7 +1977,12 @@
         });
       });
     });
-    return rows.map((r) => r.map((c) => /[",;\n]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : c).join(',')).join('\n');
+    const cell = (c) => {
+      let s = String(c == null ? '' : c);
+      if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
+      return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    return rows.map((r) => r.map(cell).join(',')).join('\n');
   }
 
   function reset() { db = blank(); seed(); commit(); }
@@ -1192,6 +2007,18 @@
       return COLORS().concat(window.KiwiColors ? window.KiwiColors.all() : [])
         .filter((c, i, a) => seen.includes(c.id) && a.findIndex((x) => x.id === c.id) === i);
     },
+    listMarques: () => {
+      load();
+      const seen = new Set();
+      db.products.filter((p) => !p.archived && p.marque).forEach((p) => seen.add(p.marque));
+      return Array.from(seen).sort();
+    },
+    listMotifs: () => {
+      load();
+      const seen = new Set();
+      db.products.filter((p) => !p.archived && p.motif).forEach((p) => seen.add(p.motif));
+      return Array.from(seen).sort();
+    },
     sizePresets,
     // categories
     listCategories: () => (load(), listCategories()), addCategory: (...a) => (load(), addCategory(...a)),
@@ -1200,15 +2027,33 @@
     // products
     listProducts: (o) => (load(), listProducts(o)), getProduct: (id) => (load(), getProduct(id)),
     addProduct: (d) => (load(), addProduct(d)), updateProduct: (id, p) => (load(), updateProduct(id, p)),
+    /* Exposé pour tools/catalog-merge-test.js. La fusion est la pièce la plus
+       dangereuse de ce fichier : elle décide ce qui SURVIT quand deux appareils
+       ne sont pas d'accord, et une erreur là-dedans ne lève rien — elle rend
+       simplement au commerçant un stock qu'il croyait avoir corrigé. */
+    _merge: (mine, theirs) => mergeDocs(mine, theirs),
+    _doc: () => (load(), db),
+    /* Ce que la dernière fusion a appris, et de qui. Exposé pour que le garde-fou
+       puisse vérifier qu'un appareil sans rien à dire ne republie pas — la boucle
+       qui a porté le document d'un client à la révision 165. */
+    _ahead: () => ({ mine: ahead.mine, theirs: ahead.theirs }),
     archiveProduct: (id, v) => (load(), archiveProduct(id, v)), deleteProduct: (id) => (load(), deleteProduct(id)),
     productStock: (id) => (load(), productStock(id)),
+    variantStock: (id, size, color) => (load(), variantStock(id, size, color)),
+    adjustVariantStock: (id, size, color, delta, opts) => (load(), adjustVariantStock(id, size, color, delta, opts)),
+    reserveSale: (ref, lines) => reserveSale(ref, lines),
+    confirmSale: (ref) => (load(), confirmSale(ref)),
+    releaseSale: (ref) => (load(), releaseSale(ref)),
     // variants
     // .slice() : variantsOf() rend le tableau vivant de l'index (voir index()).
     // À l'intérieur du module on ne fait que le lire ; dehors, une copie, pour
     // qu'un appelant qui pousserait dedans ne fasse pas mentir l'index.
     listVariants: (pid) => (load(), variantsOf(pid).slice()), addVariant: (d) => (load(), addVariant(d)),
-    updateVariant: (id, p) => (load(), updateVariant(id, p)), setStock: (id, n) => (load(), setStock(id, n)),
-    adjustStock: (id, d) => (load(), adjustStock(id, d)), deleteVariant: (id) => (load(), deleteVariant(id)),
+    updateVariant: (id, p) => (load(), updateVariant(id, p)), renameColor: (id, label) => (load(), renameColor(id, label)),
+    setStock: (id, n) => (load(), setStock(id, n)),
+    // Le MOTIF fait partie de l'appel : sans lui, une vente arrive au journal
+    // étiquetée « ajust » et le journal cesse d'être lisible.
+    adjustStock: (id, d, why, extra) => (load(), adjustStock(id, d, why, extra)), deleteVariant: (id) => (load(), deleteVariant(id)),
     // intake — les trois gestes distincts (voir le bloc au-dessus de findVariant)
     findVariant: (pid, c, s) => (load(), findVariant(pid, c, s)),
     ensureVariant: (d) => (load(), ensureVariant(d)),

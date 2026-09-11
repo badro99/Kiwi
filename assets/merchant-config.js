@@ -2,7 +2,7 @@
  *
  * Reads the per-merchant config an operator set in kiwi-admin.html:
  *   • features — modules toggled OFF (pricing/tier control) are hidden here.
- *   • pins     — staff PINs the operator manages remotely.
+ *   • pins     — the staff ROSTER ({ name, role }), never the four-digit codes.
  *
  * Fail-safe by design: if /api/config is missing (GitHub Pages, local static
  * server) or the request errors, NOTHING changes — every app keeps its current
@@ -12,8 +12,18 @@
  * app; when the operator sets features[key] === false, every matching node is
  * hidden and  body.feat-off-<key>  is added (for CSS that needs it). Apps that
  * build nav dynamically can call  window.KiwiConfig.apply()  after rendering, or
- * listen for the  kiwi-config  event. PINs are exposed on window.KiwiConfig.pins
- * for the caisse/serveur to consult additively (never replacing their defaults).
+ * listen for the  kiwi-config  event. The roster is exposed on
+ * window.KiwiConfig.pins for the caisse/serveur to consult additively (never
+ * replacing their defaults).
+ *
+ * IL N'Y A PLUS DE CODE DANS CETTE RÉPONSE. `pins` portait autrefois le code à
+ * quatre chiffres lui-même, et chaque surface comparait dans le navigateur : le
+ * code qui ouvre le tiroir-caisse vivait donc en clair dans la mémoire de la
+ * page, à portée de n'importe quel script ou extension, et le service worker
+ * pouvait le déposer dans le cache HTTP au passage. Le nom garde son rôle —
+ * dire QUI est sur la liste — et « ce code est-il le bon ? » est désormais une
+ * question posée à POST /api/pin/verify, qui répond par une identité et jamais
+ * par un code. Ne remettez pas `pin`/`code` ici.
  * Vanilla, no deps, no innerHTML.
  */
 (function () {
@@ -37,9 +47,22 @@
    * session, elle, n'a pas bougé. */
   var urlScope = '';
   try { urlScope = new URLSearchParams(location.search).get('merchant') || ''; } catch (_) {}
+  // A query parameter is only a request. It becomes a trusted target after
+  // identity.js receives /api/me's operator-scoped response and calls
+  // confirmScope(). This distinction lets owner-side writes name the selected
+  // client without ever trusting a hand-written ?merchant= value.
+  var scopeConfirmed = false;
 
   function merchant() {
     if (urlScope) return urlScope;
+    try {
+      var h = JSON.parse(localStorage.getItem('kiwiPairHandoff') || 'null');
+      if (h && h.merchant) return h.merchant;
+    } catch (_) {}
+    try {
+      var pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+      if (pv && pv.merchant) return pv.merchant;
+    } catch (_) {}
     try { return localStorage.getItem('kiwiLiveMerchant') || 'cafe-atlas'; } catch (_) { return 'cafe-atlas'; }
   }
 
@@ -49,20 +72,22 @@
     var s = String(slug || urlScope || '').trim();
     if (!s) return false;
     urlScope = s;
+    scopeConfirmed = true;
     try { localStorage.setItem('kiwiLiveMerchant', s); } catch (_) {}
     return true;
   }
 
   /* `pins` is the ACTIVE store's staff list — the till pad's answer to "who is
-   * standing here". `seenPins` is every pin list this session has been handed,
-   * across every store of this account, deduped by code.
+   * standing here". `seenPins` is every roster this session has been handed,
+   * across every store of this account, restricted to account owners.
    *
-   * The dashboard needs the second one. It is the OWNER's surface and it spans
-   * all their shops, so the code that opens it cannot be scoped to whichever
-   * shop happens to be selected: once the staff list went per-store, an owner
-   * whose code was filed under their first shop could no longer open the
-   * dashboard from their second, while that second shop's cashier could. */
-  var cfg = { features: {}, pins: [], seenPins: [], type: '', loaded: false,
+   * The dashboard needs the second one, but only to COUNT it: "has this account
+   * configured anyone at all?", which is what decides whether its pad may refuse
+   * a code. Which code is correct is settled by /api/pin/verify — neither list
+   * carries one any more. */
+  var cfg = { features: {}, pins: [], seenPins: [], type: '', plan: '', planExplicit: false, loaded: false,
+    subscription: { state: 'unknown', active: true },
+    accountPinsReady: false,
     apply: applyFeatures, syncPins: syncPins, syncType: syncType,
     newStore: registerNewStore, off: featureOff,
     /* Le slug serveur du magasin à l'écran. menu-catalog.js le demandait déjà
@@ -83,16 +108,68 @@
    * absente veut dire ALLUMÉ (c'est ce qui laisse les clients d'avant
    * intacts), et une config jamais reçue — pas de backend, hors ligne — ne
    * doit fermer aucune porte. */
-  function featureOff(key) { return cfg.features[key] === false; }
+  /* Reservations and team planning became part of Kiwi's core operating layer
+   * in v1. Their public/financial capabilities can remain disabled, but their
+   * configuration doors must never disappear: old merchant rows were seeded
+   * with `reservations:false` and `payroll:false`, creating an impossible loop.
+   * assets/team.js still reads `payroll:false` to withhold pay figures; it no
+   * longer means "remove scheduling". */
+  var HANDLER_ALIASES = {
+    terminaux: ['nav-terminals'],
+    depenses: ['open-depenses'],
+    orderpro: ['orderpro-tags'],
+    crm: ['clients-directory', 'growth-crm'],
+    loyalty: ['loyalty'],
+    reservations: ['new-reservation'],
+    kds: ['nav-kds', 'open-kds'],
+    salle: ['tables'],
+    tables: ['salle'],
+    vrap: ['a-emporter', 'takeout'],
+    waitlist: ['attente'],
+    tableTransfer: ['table-transfer', 'caisse-transfer', 'deplacer-table'],
+    'table-transfer': ['tableTransfer', 'caisse-transfer', 'deplacer-table'],
+    tableMerge: ['table-merge', 'caisse-merge', 'fusionner-tables', 'fusionner'],
+    'table-merge': ['tableMerge', 'caisse-merge', 'fusionner-tables', 'fusionner'],
+    remboursement: ['refund', 'returns'],
+    refund: ['remboursement'],
+    cashMove: ['cash-move', 'mouvement-caisse'],
+    'cash-move': ['cashMove', 'mouvement-caisse'],
+    passation: ['shift-handoff'],
+    openDrawer: ['open-drawer'],
+    'open-drawer': ['openDrawer'],
+  };
+
+  function featureOff(key) {
+    if (key === 'reservations' || key === 'payroll') return false;
+    if (cfg.features && cfg.features[key] === false) return true;
+    var aliases = HANDLER_ALIASES[key];
+    if (aliases && cfg.features) {
+      for (var i = 0; i < aliases.length; i++) {
+        if (cfg.features[aliases[i]] === false) return true;
+      }
+    }
+    return false;
+  }
 
   var pinSeen = Object.create(null);
+  function ownerRole(role) {
+    var r = String(role || '').trim().toLowerCase();
+    try { r = r.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
+    return /^(owner|proprietaire|direction|patron)$/.test(r);
+  }
   function rememberPins(list) {
     if (!Array.isArray(list)) return;
     list.forEach(function (x) {
-      var code = String((x && (x.code || x.pin)) || '').trim();
-      if (!/^\d{4}$/.test(code) || pinSeen[code]) return;
-      pinSeen[code] = 1;
-      cfg.seenPins.push({ code: code, name: (x && x.name) || '', role: (x && x.role) || '' });
+      /* `seenPins` crosses store boundaries, so it must contain account owners
+       * only. Managers remain in cfg.pins, the active store's roster. */
+      if (!ownerRole(x && x.role)) return;
+      /* Dédoublonné par personne, plus par code : le code n'arrive plus. Un
+       * patron présent dans deux boutiques ne compte donc qu'une fois, ce qui
+       * est bien ce que « ce compte a-t-il quelqu'un de configuré ? » demande. */
+      var key = String((x && x.name) || '').trim().toLowerCase() + '|' + String((x && x.role) || '').trim().toLowerCase();
+      if (pinSeen[key]) return;
+      pinSeen[key] = 1;
+      cfg.seenPins.push({ name: (x && x.name) || '', role: (x && x.role) || '' });
     });
   }
 
@@ -127,7 +204,9 @@
       var KV = window.KiwiVenue;
       if (!KV || !KV.isCustom || !KV.isCustom() || !KV.getCurrentVenueData) return '';
       var v = KV.getCurrentVenueData();
-      if (!v || !v.custom || !v.name || TRANSIENT[v.id]) return '';
+      if (!v || !v.custom || !v.name) return '';
+      if (v.id === 'scoped') return scopeConfirmed && v.slug === urlScope ? String(v.name).trim() : '';
+      if (TRANSIENT[v.id]) return '';
       return String(v.name).trim();
     } catch (_) { return ''; }
   }
@@ -140,6 +219,10 @@
   function storeSlug() {
     try {
       var KV = window.KiwiVenue;
+      var v = KV && KV.getCurrentVenueData && KV.getCurrentVenueData();
+      if (v && v.id === 'scoped') {
+        return scopeConfirmed && v.slug && v.slug === urlScope ? String(v.slug) : '';
+      }
       if (KV && KV.slugOf && storeName()) { var s = KV.slugOf(); if (s) return s; }
     } catch (_) {}
     return slugMerchant(storeName());
@@ -202,6 +285,17 @@
     if (slug) { payload.merchant = slug; payload.name = name; freshAdd(slug); }
     if (opts.type) payload.type = String(opts.type);
     return postRaw(payload).then(function (r) {
+      if (r && r.status === 403) {
+        try {
+          r.json().then(function (d) {
+            if (d && d.error === 'plan-limit-exceeded') {
+              if (window.Kiwi && window.Kiwi.toast) {
+                window.Kiwi.toast("Votre forfait couvre un établissement. Kiwi Ultra en gère un nombre illimité.", 6000);
+              }
+            }
+          }).catch(function () {});
+        } catch (_) {}
+      }
       var ok = !!(r && r.ok);
       if (ok && slug) freshDrop(slug);
       return ok;
@@ -265,29 +359,22 @@
 
   var appliedOff = [];
   function applyFeatures() {
-    var features = cfg.features || {};
     if (!document.body) return;
-    // First, un-hide anything a PREVIOUS store had switched off. The venue
-    // switcher moves between shops that don't buy the same modules, so a hide
-    // left over from the boutique would blank a section the restaurant pays for.
-    appliedOff.forEach(function (key) {
-      if (features[key] === false) return;                 // still off — leave it
-      document.body.classList.remove('feat-off-' + key);
-      var was = document.querySelectorAll('[data-feature="' + key + '"]');
-      for (var j = 0; j < was.length; j++) { was[j].removeAttribute('hidden'); was[j].style.display = ''; }
-    });
     appliedOff = [];
-    Object.keys(features).forEach(function (key) {
-      if (features[key] === false) {
-        appliedOff.push(key);
-        document.body.classList.add('feat-off-' + key);
-        var nodes = document.querySelectorAll('[data-feature="' + key + '"]');
-        for (var i = 0; i < nodes.length; i++) {
-          nodes[i].setAttribute('hidden', '');
-          nodes[i].style.display = 'none';
-        }
+    var nodes = document.querySelectorAll('[data-feature]');
+    for (var i = 0; i < nodes.length; i++) {
+      var feat = nodes[i].getAttribute('data-feature');
+      if (featureOff(feat)) {
+        nodes[i].setAttribute('hidden', '');
+        nodes[i].style.display = 'none';
+        if (appliedOff.indexOf(feat) < 0) appliedOff.push(feat);
+        document.body.classList.add('feat-off-' + feat);
+      } else {
+        nodes[i].removeAttribute('hidden');
+        nodes[i].style.display = '';
+        document.body.classList.remove('feat-off-' + feat);
       }
-    });
+    }
     syncSectionHeaders();
     gateHandlers();
     watchLateNodes();
@@ -308,14 +395,6 @@
    * Les identifiants de nav SONT les clés de modules (venues.js), donc
    * `nav-<clé>` se déduit. Les alias sont les entrées qui portent un autre nom.
    */
-  var HANDLER_ALIASES = {
-    terminaux: ['nav-terminals'],
-    depenses: ['open-depenses'],
-    orderpro: ['orderpro-tags'],
-    crm: ['clients-directory', 'growth-crm'],
-    loyalty: ['loyalty'],
-    reservations: ['new-reservation'],
-  };
   function gateOne(H, name, key) {
     var fn = H[name];
     if (typeof fn !== 'function' || fn.__kiwiGate) return;
@@ -413,8 +492,10 @@
   }
 
   var lastSlug = null;
+  var lastMerchant = null;
   function fetchConfig() {
     lastSlug = storeSlug();
+    lastMerchant = merchant();
     return fetch(configUrl(), { headers: { Accept: 'application/json' } })
       .then(function (r) { return (r && r.ok) ? r.json() : null; })
       .then(function (data) {
@@ -423,6 +504,17 @@
         cfg.pins = Array.isArray(data.pins) ? data.pins : [];
         rememberPins(cfg.pins);
         cfg.type = data.type || '';
+        /* Server-authoritative entitlement. Empty means unresolved/offline and
+           must never be interpreted as a paid tier. planExplicit mirrors the
+           row: only an explicitly stored tier counts for venue-count gates
+           (ticket #0010) — legacy rows read as Basic for display only. */
+        cfg.plan = /^(basic|pro|ultra|ultimate)$/.test(String(data.plan || '').toLowerCase())
+          ? String(data.plan).toLowerCase()
+          : '';
+        cfg.planExplicit = data.planExplicit === true;
+        cfg.subscription = (data.subscription && typeof data.subscription === 'object')
+          ? { state: String(data.subscription.state || 'active'), active: data.subscription.active !== false }
+          : { state: 'active', active: true };
         cfg.loaded = true;
         applyFeatures();
         // Make the server-stored business type authoritative for the dashboard's
@@ -520,13 +612,33 @@
    * encore migrée, ou identity.js absent ⇒ la lecture nue d'avant, à l'identique.
    * Jamais sur une vue portée : là, l'opérateur entre par son propre code. */
   function readPinsFrom(url) {
-    fetch(url, { headers: { Accept: 'application/json' } })
+    return fetch(url, { headers: { Accept: 'application/json' } })
       .then(function (r) { return (r && r.ok) ? r.json() : null; })
-      .then(function (d) { if (d && Array.isArray(d.pins)) rememberPins(d.pins); })
-      .catch(function () {});
+      .then(function (d) {
+        if (!d || !Array.isArray(d.pins)) return false;
+        rememberPins(d.pins);
+        return true;
+      })
+      .catch(function () { return false; });
   }
   function fetchAccountPins() {
-    if (isScoped() || !onDashboard()) return;
+    if (isScoped() || !onDashboard()) { cfg.accountPinsReady = true; return; }
+    cfg.accountPinsReady = false;
+    function ready() {
+      cfg.accountPinsReady = true;
+      try { document.dispatchEvent(new CustomEvent('kiwi-account-pins-ready')); } catch (_) {}
+    }
+    /* The server can answer the account-wide question directly from the signed
+     * session and its store registry. This is the authoritative path: /api/me's
+     * browser-facing establishment list can omit a legacy store, which used to
+     * omit the owner's PIN with it. If an older backend does not expose the
+     * endpoint yet, retain the per-store fallback below. */
+    readPinsFrom('/api/config?accountPins=owners').then(function (ok) {
+      if (ok) { ready(); return; }
+      fallbackFromIdentity();
+    });
+
+    function fallbackFromIdentity() {
     /* On attend le portillon d'identité au lieu de le lire tout de suite : ce
      * fichier est chargé AVANT identity.js dans dashboard.html, et deux scripts
      * `defer` s'exécutent à la suite avant DOMContentLoaded — donc au moment où
@@ -539,7 +651,7 @@
       var gate = null;
       try { gate = window.KiwiIdentity && window.KiwiIdentity.ready; } catch (_) {}
       if (!gate || typeof gate.then !== 'function') {
-        if (++tries > 20) { readPinsFrom('/api/config'); return; }
+        if (++tries > 20) { readPinsFrom('/api/config').then(ready); return; }
         setTimeout(waitForIdentity, 50);
         return;
       }
@@ -547,19 +659,42 @@
         var stores = (st && Array.isArray(st.stores)) ? st.stores : [];
         // Compte d'un seul magasin, base pas encore migrée, ou rechargement en
         // cours après un changement de compte ⇒ la lecture nue d'avant.
-        if (!stores.length) { readPinsFrom('/api/config'); return; }
+        if (!stores.length) { readPinsFrom('/api/config').then(ready); return; }
         var asked = Object.create(null);
+        var reads = [];
         stores.forEach(function (s) {
           var m = String((s && s.merchant) || '').trim();
           if (!m || asked[m]) return;
           asked[m] = 1;
-          readPinsFrom('/api/config?merchant=' + encodeURIComponent(m));
+          reads.push(readPinsFrom('/api/config?merchant=' + encodeURIComponent(m)));
         });
-      }).catch(function () { readPinsFrom('/api/config'); });
+        Promise.all(reads).then(ready, ready);
+      }).catch(function () { readPinsFrom('/api/config').then(ready); });
     })();
+    }
   }
 
-  function boot() { fetchConfig(); fetchAccountPins(); watchStore(); }
+  function boot() {
+    fetchConfig();
+    fetchAccountPins();
+    watchStore();
+  }
+
+  window.addEventListener('focus', function () { fetchConfig(); });
+  document.addEventListener('kiwi-paired', function (e) {
+    if (e && e.detail && e.detail.merchant) {
+      try { localStorage.setItem('kiwiLiveMerchant', e.detail.merchant); } catch (_) {}
+    }
+    fetchConfig();
+  });
+  window.addEventListener('storage', function (e) {
+    /* Pairing identity is resolved in merchant(), through the shared tenant
+       boundary. Do not duplicate its storage-key allowlist here: comparing the
+       resolved tenant refreshes cross-tab pairing changes without giving this
+       feature module a second, divergent definition of "current merchant". */
+    if (e && merchant() !== lastMerchant) fetchConfig();
+  });
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();

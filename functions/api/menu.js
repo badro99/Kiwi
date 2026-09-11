@@ -26,10 +26,37 @@
 //     /api/config POST). No session / no DB ⇒ neutral no-op (503) so static hosts
 //     (GitHub Pages, local) are unaffected.
 
-import { json, readSession, readCookie, SESS_COOKIE, slugMerchant } from '../auth/_lib.js';
-import { storeSuspended } from './_private.js';
+import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator } from '../auth/_lib.js';
+import { storeSuspended, storeSubscriptionPending } from './_private.js';
+import { CORE, MENU_LANGS, normalizeMenuLangs } from './_menu-langs.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
+const MENU_ALLERGENS = [
+  'gluten', 'crustaces', 'oeufs', 'poissons', 'arachides', 'soja', 'lait',
+  'fruits_a_coque', 'celeri', 'moutarde', 'sesame', 'sulfites', 'lupin', 'mollusques',
+];
+const MENU_NUTRIENT_LIMITS = { kcal: 5000, protein: 500, carbs: 500, fat: 500, sugars: 500, salt: 500 };
+const OPTION_EMOJIS = new Set([
+  '🍏', '🍎', '🍐', '🍊', '🍋', '🍋‍🟩', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈',
+  '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🫒', '🥑', '🍆', '🥔', '🍠', '🥕',
+  '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅', '🥜', '🫘', '🌰', '🫛',
+  '🫚', '🍄', '🌿', '🍀', '🌱', '🌾', '🍚', '🧂', '🧈', '🍯', '🥛', '🧀',
+  '🍞', '🥐', '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🥚', '🍳', '🍖', '🍗',
+  '🥩', '🥓', '🐟', '🦐', '🦞', '🦀', '🦑', '🐙', '🦪', '🍤', '🍔', '🍟',
+  '🍕', '🌭', '🥪', '🌮', '🌯', '🫔', '🥙', '🧆', '🥘', '🍲', '🫕', '🥣',
+  '🥗', '🍿', '🥫', '🍝', '🍜', '🍛', '🍣', '🍱', '🥟', '🍙', '🍘', '🍥',
+  '🥠', '🥮', '🍢', '🍡', '🥡',
+  '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍩',
+  '🍪', '🍼', '🥤', '🧋', '🧃', '🧉', '🫖', '🍵', '☕', '🍶', '🍺', '🍻',
+  '🥂', '🍷', '🥃', '🍸', '🍹', '🍾', '🧊',
+  '✅', '❌', '🚫', '⛔', '⚠️', '➕', '➖', '🔥', '♨️', '❄️', '💧', '⏱️',
+  '🔪', '🥄', '🍴', '🥢', '🍽️', '📦', '🛍️', '🔔', '⭐', '❤️',
+  '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⚫', '⚪',
+]);
+const optionEmoji = (v) => {
+  const value = str(v, 16).trim();
+  return OPTION_EMOJIS.has(value) ? value : '';
+};
 
 // Media are stored as URLs (uploaded to R2 via /api/media), never as bytes. Only
 // same-origin /api/media/ paths are kept: a published menu is rendered on a
@@ -81,11 +108,83 @@ function sanitizeHours(raw) {
   return { v: 1, week, exceptions };
 }
 
+function sanitizeFormula(raw, blockedIds) {
+  if (!raw || typeof raw !== 'object') return null;
+  const rawSlots = Array.isArray(raw.slots) ? raw.slots.slice(0, 10) : [];
+  const slots = rawSlots.map((s, idx) => {
+    if (!s || typeof s !== 'object') return null;
+    const id = str(s.id, 40) || ('sl_' + (idx + 1));
+    const label = str(s.label, 60);
+    let min = Math.max(0, Math.min(10, Math.round(Number(s.min) || 0)));
+    let max = Math.max(1, Math.min(10, Math.round(Number(s.max) || 1)));
+    if (min > max) min = max;
+    const rawChoices = Array.isArray(s.choices) ? s.choices.slice(0, 20) : [];
+    const choices = rawChoices.map((c) => ({
+      itemId: str(c && c.itemId, 40),
+      extra: Math.max(0, Math.min(1e5, Number(c && c.extra) || 0)),
+    })).filter((c) => c.itemId && (!blockedIds || !blockedIds.has(c.itemId)));
+    return { id, label, min, max, choices };
+  }).filter((s) => s && s.id && s.choices.length);
+  if (!slots.length) return null;
+  return { slots };
+}
+
 // Keep the stored menu small and well-shaped. We trust the merchant (it's their
 // own carte) but still bound sizes so a runaway client can't bloat the row.
-function sanitizeMenu(raw) {
-  const out = { cats: [], items: [], stations: [], kitchenId: '', opts: [] };
+/* Les traductions d'une entité (assets/menu-i18n.js) : { fr|ar|en: {name,
+ * desc?, h, m?} }. Additif — une carte publiée avant n'en a pas et chaque
+ * surface retombe sur le libellé canonique. Bornes serrées : c'est du texte
+ * qui part dans le DOM de la page client. */
+function sanitizeI18n(raw, nameMax, descMax) {
+  if (!raw || typeof raw !== 'object') return null;
+  const out = {};
+  for (const lang of MENU_LANGS) {
+    const x = raw[lang];
+    if (!x || typeof x !== 'object') continue;
+    const name = str(x.name, nameMax).trim();
+    if (!name) continue;
+    const e = { name, h: str(x.h, 16) };
+    if (descMax && x.desc != null) e.desc = str(x.desc, descMax);
+    if (x.m) e.m = 1;
+    out[lang] = e;
+  }
+  return Object.keys(out).length ? out : null;
+}
+/* Pose `i18n` sur une entité assainie quand la source en porte une. */
+function withI18n(target, source, nameMax, descMax) {
+  const i18n = sanitizeI18n(source && source.i18n, nameMax, descMax);
+  if (i18n) target.i18n = i18n;
+  return target;
+}
+
+function sanitizeNutrition(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const out = {};
+  for (const [key, max] of Object.entries(MENU_NUTRIENT_LIMITS)) {
+    if (typeof raw[key] !== 'number' || !Number.isFinite(raw[key]) || raw[key] < 0 || raw[key] > max) return null;
+    out[key] = raw[key];
+  }
+  out.perPortion = true;
+  return out;
+}
+
+function withNutrition(target, source) {
+  target.hideNutrition = !!(source && source.hideNutrition);
+  target.nutritionComplete = false;
+  if (!source || source.nutritionComplete !== true || !Array.isArray(source.allergens)) return target;
+  const nutrition = sanitizeNutrition(source.nutrition);
+  if (!nutrition) return target;
+  const present = new Set(source.allergens.filter((key) => MENU_ALLERGENS.includes(key)));
+  target.nutrition = nutrition;
+  target.allergens = MENU_ALLERGENS.filter((key) => present.has(key));
+  target.nutritionComplete = true;
+  return target;
+}
+
+export function sanitizeMenu(raw) {
+  const out = { langs: CORE.slice(), cats: [], items: [], stations: [], kitchenId: '', opts: [], formulaTemplates: [] };
   if (!raw || typeof raw !== 'object') return out;
+  out.langs = normalizeMenuLangs(raw.langs);
   // La cuisine — le poste qui reçoit tout ce qu'aucune catégorie n'envoie
   // ailleurs. Le nommer est LE réglage de routage du restaurant ; le laisser
   // tomber ici ferait retomber la caisse sur « le premier de la liste », et
@@ -107,59 +206,108 @@ function sanitizeMenu(raw) {
   // verrait pas au tableau de bord — seulement au comptoir, où le produit
   // entrerait dans la note sans qu'on ait demandé quoi que ce soit.
   const opts = Array.isArray(raw.opts) ? raw.opts.slice(0, 40) : [];
-  out.opts = opts.map((g) => ({
+  out.opts = opts.map((g) => withI18n({
     id: str(g && g.id, 40),
     name: str(g && g.name, 60),
     // Deux règles seulement, et rien d'autre : un choix, ou plusieurs.
     kind: (g && g.kind) === 'many' ? 'many' : 'one',
     required: !!(g && g.required),
-    choices: (Array.isArray(g && g.choices) ? g.choices.slice(0, 40) : []).map((c) => ({
+    choices: (Array.isArray(g && g.choices) ? g.choices.slice(0, 40) : []).map((c) => withI18n({
       id: str(c && c.id, 40),
       name: str(c && c.name, 60),
+      // Repère visuel facultatif pour le KDS. Additif : toutes les cartes
+      // publiées avant cette clé continuent avec une chaîne vide.
+      emoji: optionEmoji(c && c.emoji),
       price: Math.max(0, Math.min(1e6, Number(c && c.price) || 0)),
-    })).filter((c) => c.id && c.name),
-  })).filter((g) => g.id && g.name);
+    }, c, 60, 0)).filter((c) => c.id && c.name),
+  }, g, 60, 0)).filter((g) => g.id && g.name);
   const cats = Array.isArray(raw.cats) ? raw.cats.slice(0, 60) : [];
-  out.cats = cats.map((c) => ({
+  out.cats = cats.map((c) => withI18n({
     id: str(c && c.id, 40),
     name: str(c && c.name, 80),
     // Le poste de la catégorie : c'est ICI que vit le routage de la cuisine.
     // Vide = la cuisine. Le perdre au passage renverrait toute la carte au
     // même écran dès la prochaine relecture depuis un autre appareil.
     station: str(c && c.station, 40),
-    sub: Array.isArray(c && c.sub) ? c.sub.slice(0, 40).map((s) => ({
+    sub: Array.isArray(c && c.sub) ? c.sub.slice(0, 40).map((s) => withI18n({
       id: str(s && s.id, 40),
       name: str(s && s.name, 80),
-    })) : [],
-  })).filter((c) => c.id);
+    }, s, 80, 0)) : [],
+  }, c, 80, 0)).filter((c) => c.id);
   const items = Array.isArray(raw.items) ? raw.items.slice(0, 1000) : [];
-  out.items = items.map((it) => ({
-    id: str(it && it.id, 40),
-    name: str(it && it.name, 120),
-    price: Math.max(0, Math.min(1e7, Number(it && it.price) || 0)),
-    catId: str(it && it.catId, 40) || null,
-    subId: str(it && it.subId, 40) || null,
-    desc: str(it && it.desc, 400),
-    avail: !(it && it.avail === false),
-    // Le poste de préparation (bar, cuisson, froid…). La caisse route le bon de
-    // cuisine dessus ; sans ce champ dans la liste blanche il était retiré
-    // silencieusement à la publication, et tous les plats d'un vrai restaurant
-    // retombaient sur « cuisson ». Additif : les cartes publiées avant lui
-    // renvoient une chaîne vide, et les deux pages client l'ignorent.
-    station: str(it && it.station, 40),
-    // Les groupes d'options portés par ce produit — des identifiants, pas des
-    // copies : le libellé vit une seule fois, dans out.opts. Un groupe supprimé
-    // laisse un identifiant orphelin, que la caisse écarte à la lecture.
-    opts: (Array.isArray(it && it.opts) ? it.opts.slice(0, 12) : [])
-      .map((x) => str(x, 40)).filter(Boolean),
-    // OrderPro additions — a dish photo or a short vertical clip. Absent for
-    // every menu published before they existed, and both pages fall back to
-    // their icon tile, so this is purely additive.
-    photo: mediaUrl(it && it.photo),
-    video: mediaUrl(it && it.video),
-  })).filter((it) => it.id && it.name);
+  out.items = items.map((it) => {
+    const item = {
+      id: str(it && it.id, 40),
+      name: str(it && it.name, 120),
+      price: Math.max(0, Math.min(1e7, Number(it && it.price) || 0)),
+      catId: str(it && it.catId, 40) || null,
+      subId: str(it && it.subId, 40) || null,
+      desc: str(it && it.desc, 400),
+      avail: !(it && it.avail === false),
+      formulaOnly: !!(it && it.formulaOnly),
+      // Explicit merchant opt-in: formula-only items are public by design, but
+      // their media should only become a visual choice in OrderPro when asked.
+      showPhotoInFormulas: !!(it && it.showPhotoInFormulas),
+      archived: !!(it && it.archived),
+      // Le poste de préparation (bar, cuisson, froid…). La caisse route le bon de
+      // cuisine dessus ; sans ce champ dans la liste blanche il était retiré
+      // silencieusement à la publication, et tous les plats d'un vrai restaurant
+      // retombaient sur « cuisson ». Additif : les cartes publiées avant lui
+      // renvoient une chaîne vide, et les deux pages client l'ignorent.
+      station: str(it && it.station, 40),
+      // Les groupes d'options portés par ce produit — des identifiants, pas des
+      // copies : le libellé vit une seule fois, dans out.opts. Un groupe supprimé
+      // laisse un identifiant orphelin, que la caisse écarte à la lecture.
+      opts: (Array.isArray(it && it.opts) ? it.opts.slice(0, 12) : [])
+        .map((x) => str(x, 40)).filter(Boolean),
+      // OrderPro additions — a dish photo or a short vertical clip. Absent for
+      // every menu published before they existed, and both pages fall back to
+      // their icon tile, so this is purely additive.
+      photo: mediaUrl(it && it.photo),
+      video: mediaUrl(it && it.video),
+    };
+    // Les traductions du plat (nom + description), voir sanitizeI18n.
+    withI18n(item, it, 120, 400);
+    withNutrition(item, it);
+    return item;
+  }).filter((it) => it.id && it.name);
+  const rawItemsById = new Map(items.filter((it) => it && it.id).map((it) => [str(it.id, 40), it]));
+  const archivedFormulaIds = new Set(out.items.filter((it) => it.archived).map((it) => it.id));
+  out.items.forEach((item) => {
+    const rawItem = rawItemsById.get(item.id);
+    const formula = sanitizeFormula(rawItem && rawItem.formula, archivedFormulaIds);
+    if (formula) item.formula = formula;
+  });
+  out.formulaTemplates = (Array.isArray(raw.formulaTemplates) ? raw.formulaTemplates.slice(0, 40) : []).map((t) => {
+    const formula = sanitizeFormula(t && t.formula, archivedFormulaIds);
+    return formula ? { id: str(t && t.id, 40), name: str(t && t.name, 80), formula } : null;
+  }).filter((t) => t && t.id && t.name);
   if (raw.hours) { const h = sanitizeHours(raw.hours); if (h) out.hours = h; }
   return out;
+}
+
+/* Public compatibility projection. Old clients only understand `items`, so
+ * formula-only products must not be placed there: otherwise an old grid could
+ * sell one standalone. Updated clients union `formulaItems` only while painting
+ * a formula picker. Archived products leave neither collection. */
+function publicMenu(menu, nutritionEnabled) {
+  if (!menu) return null;
+  const publicItem = (source) => {
+    const item = { ...source };
+    const showNutrition = nutritionEnabled !== false && item.nutritionComplete === true
+      && item.hideNutrition !== true && item.nutrition && Array.isArray(item.allergens);
+    delete item.hideNutrition;
+    if (!showNutrition) {
+      delete item.nutrition;
+      delete item.allergens;
+      delete item.nutritionComplete;
+    }
+    return item;
+  };
+  return Object.assign({}, menu, {
+    items: (menu.items || []).filter((it) => !it.archived && !it.formulaOnly).map(publicItem),
+    formulaItems: (menu.items || []).filter((it) => !it.archived && it.formulaOnly).map(publicItem),
+  });
 }
 
 // A boutique publishes stock, not a carte: products × colour × size, each with a
@@ -241,6 +389,26 @@ async function resolveMerchant(env, aid, accSlug, wanted, strict) {
   return strict ? '' : accSlug;
 }
 
+/* God Mode may edit a menu only from the scoped client dashboard the console
+ * opened. A named operator cookie alone is not enough: the same-origin Referer
+ * must name the identical merchant and that merchant must already exist in the
+ * store registry. This keeps an ordinary operator tab, a typo and a hand-built
+ * cross-tenant POST from creating or overwriting an unrelated menu row. */
+async function scopedOperatorMerchant(request, env, wanted) {
+  const merchant = str(wanted, 80).trim();
+  if (!merchant || !(await isOperator(request, env))) return '';
+  let ref;
+  try {
+    ref = new URL(request.headers.get('Referer') || '');
+    const here = new URL(request.url);
+    if (ref.origin !== here.origin || ref.searchParams.get('merchant') !== merchant || ref.searchParams.get('op') !== '1') return '';
+  } catch (_) { return ''; }
+  try {
+    const row = await env.DB.prepare('SELECT merchant FROM merchant_config WHERE merchant = ?').bind(merchant).first();
+    return row ? merchant : '';
+  } catch (_) { return ''; }
+}
+
 // Is the Order Pro add-on switched on for this merchant?
 //
 // NOTE this inverts the usual merchant_config rule. Everywhere else a MISSING
@@ -258,6 +426,31 @@ async function orderProEnabled(env, merchant) {
   } catch (_) { return false; }
 }
 
+// Langues supplémentaires de la carte : allumées par défaut, l'opérateur les
+// coupe pour le commerçant qui n'en veut pas (features.menuLangs === false).
+// L'inverse d'Order Pro, qui doit valoir explicitement true.
+async function menuLangsEnabled(env, merchant) {
+  try {
+    const row = await env.DB.prepare(
+      'SELECT features FROM merchant_config WHERE merchant = ?'
+    ).bind(merchant).first();
+    if (!row || !row.features) return true;
+    return (JSON.parse(row.features) || {}).menuLangs !== false;
+  } catch (_) { return true; }
+}
+
+// Valeurs nutritionnelles et allergènes : allumées par défaut, comme les
+// langues de carte. Une clé explicitement fausse coupe toute publication.
+async function menuNutritionEnabled(env, merchant) {
+  try {
+    const row = await env.DB.prepare(
+      'SELECT features FROM merchant_config WHERE merchant = ?'
+    ).bind(merchant).first();
+    if (!row || !row.features) return true;
+    return (JSON.parse(row.features) || {}).menuNutrition !== false;
+  } catch (_) { return true; }
+}
+
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -271,16 +464,21 @@ export async function onRequestGet(context) {
   const mine = url.searchParams.get('mine') === '1';
   if (mine) {
     if (!env.DB || !env.AUTH_SECRET) return json({ merchant: '', menu: null, shop: null, unreachable: true });
+    const operatorMerchant = await scopedOperatorMerchant(request, env, merchant);
     let sess = null;
-    try { sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET); } catch (_) {}
-    if (!sess || !sess.aid) return json({ error: 'unauthorized' }, 401);
-    const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
-    if (!acc) return json({ error: 'unauthorized' }, 401);
-    merchant = await resolveMerchant(env, sess.aid, slugMerchant(acc.business), merchant);
+    if (operatorMerchant) {
+      merchant = operatorMerchant;
+    } else {
+      try { sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET); } catch (_) {}
+      if (!sess || !sess.aid) return json({ error: 'unauthorized' }, 401);
+      const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
+      if (!acc) return json({ error: 'unauthorized' }, 401);
+      merchant = await resolveMerchant(env, sess.aid, slugMerchant(acc.business), merchant);
+    }
 
     let row = null;
     try {
-      row = await env.DB.prepare('SELECT name, type, data FROM menus WHERE merchant = ?').bind(merchant).first();
+      row = await env.DB.prepare('SELECT name, type, data, updated_ts FROM menus WHERE merchant = ?').bind(merchant).first();
     } catch (_) { return json({ merchant, menu: null, shop: null, unreachable: true }); }
 
     let parsed = null;
@@ -296,6 +494,7 @@ export async function onRequestGet(context) {
       menu: parsed && !isShop(type) ? sanitizeMenu(parsed) : null,
       shop: parsed && isShop(type) ? sanitizeShop(parsed) : null,
       published: !!row,
+      updatedTs: +(row && row.updated_ts) || 0,
     });
   }
 
@@ -325,10 +524,6 @@ export async function onRequestGet(context) {
     }
   } catch (_) { /* table missing / db error → neutral (menu stays null) */ }
 
-  // A published-but-empty menu is treated as "nothing to show yet" too.
-  if (menu && !(menu.items && menu.items.length)) menu = null;
-  if (shop && !(shop.products && shop.products.length)) shop = null;
-
   // `orderpro` is additive: kiwi-order.html (the QR page) ignores it and keeps
   // working for every merchant exactly as before. OrderPro.html — the NFC
   // white-label app — refuses to open unless it is true, and POST /api/order
@@ -338,35 +533,48 @@ export async function onRequestGet(context) {
    * après qu'un compte a cessé de payer ; laisser la carte se servir toute seule
    * ferait prendre des commandes que personne n'ira préparer. */
   if (await storeSuspended(env, merchant)) {
-    return json({ name, type, menu: null, shop: null, orderpro: false, suspended: true });
+    return json({ name, type, menu: null, shop: null, orderpro: false, menuLangs: false, menuNutrition: false, suspended: true });
   }
 
-  const orderpro = await orderProEnabled(env, merchant);
-  return json({ name, type, menu, shop, orderpro });
+  const [orderpro, menuLangs, menuNutrition] = await Promise.all([
+    orderProEnabled(env, merchant), menuLangsEnabled(env, merchant), menuNutritionEnabled(env, merchant),
+  ]);
+  if (menu) menu = publicMenu(menu, menuNutrition);
+  // A published-but-empty menu is treated as "nothing to show yet" too.
+  if (menu && !(menu.items && menu.items.length)) menu = null;
+  if (shop && !(shop.products && shop.products.length)) shop = null;
+  return json({ name, type, menu, shop, orderpro, menuLangs, menuNutrition });
 }
 
 export async function onRequestPost(context) {
   const { request, env } = context;
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
 
-  const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
-  if (!sess || !sess.aid) return json({ error: 'unauthorized' }, 401);
-
-  const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
-  if (!acc) return json({ error: 'unauthorized' }, 401);
-  const accSlug = slugMerchant(acc.business);
-
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
-  // Le corps peut nommer LEQUEL des établissements de ce compte publie — refusé
-  // et rabattu sur le slug du compte si la base ne confirme pas la propriété.
-  const merchant = await resolveMerchant(env, sess.aid, accSlug, body && body.merchant, true);
+  const operatorMerchant = await scopedOperatorMerchant(request, env, body && body.merchant);
+  let acc = null;
+  let merchant = operatorMerchant;
+  if (!merchant) {
+    const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+    if (!sess || !sess.aid) return json({ error: 'unauthorized' }, 401);
+    acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
+    if (!acc) return json({ error: 'unauthorized' }, 401);
+    const accSlug = slugMerchant(acc.business);
+    // Le corps peut nommer LEQUEL des établissements de ce compte publie — refusé
+    // si la base ne confirme pas la propriété.
+    merchant = await resolveMerchant(env, sess.aid, accSlug, body && body.merchant, true);
+  }
   if (!merchant) return json({ error: 'merchant-unknown' }, 404);
+  if (await storeSubscriptionPending(env, merchant)) {
+    return json({ error: 'subscription-required', merchant }, 402);
+  }
 
   // The display name defaults to the account's own business; a client may send a
   // trimmed override but never another merchant's identity (slug is session-bound).
-  const name = String((body && body.name) || acc.business || '').trim().slice(0, 80) || (acc.business || '');
+  const accountBusiness = (acc && acc.business) || '';
+  const name = String((body && body.name) || accountBusiness).trim().slice(0, 80) || accountBusiness;
   const type = String((body && body.type) || '').trim().slice(0, 24);
 
   // One row, two payload shapes — a restaurant publishes its carte, a boutique
@@ -389,6 +597,26 @@ export async function onRequestPost(context) {
 
   const data = shop ? sanitizeShop(raw) : sanitizeMenu(raw);
 
+  /* Restaurant menus use optimistic concurrency. A dashboard must publish the
+   * exact revision it read; otherwise a stale God Mode tab could re-save its
+   * old localStorage copy and resurrect sections deleted elsewhere. Boutique
+   * stock has a separate publisher and keeps its existing contract. */
+  let currentMenu = null;
+  let currentUpdatedTs = 0;
+  if (!shop) {
+    try {
+      const row = await env.DB.prepare('SELECT type, data, updated_ts FROM menus WHERE merchant = ?').bind(merchant).first();
+      if (row) {
+        currentUpdatedTs = +row.updated_ts || 0;
+        if (row.data && !isShop(row.type)) currentMenu = sanitizeMenu(JSON.parse(row.data));
+      }
+    } catch (_) { return json({ error: 'read-before-write-failed' }, 500); }
+    const expected = +(body && body.expectedUpdatedTs) || 0;
+    if (currentUpdatedTs && expected !== currentUpdatedTs) {
+      return json({ error: 'stale-menu', merchant, data: currentMenu, updatedTs: currentUpdatedTs }, 409);
+    }
+  }
+
   /* ═══ NE JAMAIS EFFACER UNE CARTE PUBLIÉE PAR DU VIDE ═══════════════════════
    * Le tableau de bord republie sa carte au démarrage. Tant que cette carte ne
    * vivait que dans le localStorage, ouvrir le tableau de bord dans un
@@ -404,19 +632,31 @@ export async function onRequestPost(context) {
    * Vider sa carte reste évidemment permis — mais il faut le dire (allowEmpty),
    * et seul un client qui a d'abord RELU la carte du serveur l'affirme. */
   const wasEmpty = shop ? shopEmpty(data) : menuEmpty(data);
-  if (wasEmpty && !(body && body.allowEmpty === true)) {
-    let cur = null;
+  if (wasEmpty) {
+    let cur = !shop ? currentMenu : null;
     try {
-      const row = await env.DB.prepare('SELECT type, data FROM menus WHERE merchant = ?').bind(merchant).first();
-      if (row && row.data) {
+      const row = shop ? await env.DB.prepare('SELECT type, data, updated_ts FROM menus WHERE merchant = ?').bind(merchant).first() : null;
+      if (row && row.data && shop) {
+        currentUpdatedTs = +row.updated_ts || 0;
         const parsed = JSON.parse(row.data);
         cur = isShop(row.type) ? sanitizeShop(parsed) : sanitizeMenu(parsed);
         if (isShop(row.type) ? shopEmpty(cur) : menuEmpty(cur)) cur = null;
       }
     } catch (_) { cur = null; }   // pas de table / base absente → rien à protéger
-    if (cur) return json({ error: 'refused-empty', merchant, data: cur }, 409);
+    if (cur) {
+      /* `allowEmpty:true` tout seul n'est pas une preuve : les anciennes
+       * versions l'envoyaient automatiquement au démarrage. Pour effacer une
+       * vraie carte, le navigateur doit nommer la révision exacte qu'il vient
+       * de lire. Un onglet neuf, ancien ou en retard ne peut donc plus vider la
+       * fiche du serveur. */
+      const expected = +(body && body.expectedUpdatedTs) || 0;
+      if (!(body && body.allowEmpty === true) || !expected || expected !== currentUpdatedTs) {
+        return json({ error: 'refused-empty', merchant, data: cur, updatedTs: currentUpdatedTs }, 409);
+      }
+    }
   }
 
+  const updatedTs = Date.now();
   try {
     await env.DB.prepare(
       `INSERT INTO menus (merchant, name, type, data, updated_ts)
@@ -424,10 +664,10 @@ export async function onRequestPost(context) {
        ON CONFLICT(merchant) DO UPDATE SET
          name = excluded.name, type = excluded.type,
          data = excluded.data, updated_ts = excluded.updated_ts`
-    ).bind(merchant, name, type, JSON.stringify(data), Date.now()).run();
+    ).bind(merchant, name, type, JSON.stringify(data), updatedTs).run();
   } catch (_) { return json({ error: 'write-failed' }, 500); }
 
   return shop
-    ? json({ ok: true, merchant, products: data.products.length, variants: data.variants.length })
-    : json({ ok: true, merchant, items: data.items.length, cats: data.cats.length });
+    ? json({ ok: true, merchant, products: data.products.length, variants: data.variants.length, updatedTs })
+    : json({ ok: true, merchant, items: data.items.length, cats: data.cats.length, updatedTs });
 }

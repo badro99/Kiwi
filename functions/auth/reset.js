@@ -35,9 +35,9 @@
  */
 
 import {
-  json, hashPassword, makeSession, sessionCookie,
+  PASSWORD_MAX, json, hashPassword, makeSession, sessionCookie,
   splitResetToken, resetVerifierHash,
-  limitCheck, limitFail, limitClear,
+  limitCheck, limitFail, limitClear, passwordProblem, rateLimitUnavailable,
 } from './_lib.js';
 
 /* Le seul motif renvoyé au monde extérieur. Voir l'en-tête : la précision
@@ -78,6 +78,11 @@ export async function onRequestPost(context) {
   const { request, env } = context;
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
 
+  let body;
+  try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
+  const password = String(body && body.password || '');
+  if (password.length > PASSWORD_MAX) return json({ error: 'weak', reason: 'long' }, 400);
+
   /* Le jeton fait 24 octets de hasard : le deviner est hors de portée. Le
      limiteur est là pour le reste — un script qui pilonne l'endpoint, et le
      coût CPU du PBKDF2 qu'il déclencherait. Même compteur partagé que
@@ -85,17 +90,25 @@ export async function onRequestPost(context) {
   const tooMany = await limitCheck(request, env, 'reset');
   if (tooMany) return tooMany;
 
-  let body;
-  try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
-
-  const password = String(body.password || '');
-  /* Le même plancher qu'à l'inscription (functions/auth/signup.js). Un seuil
-     plus bas ici ferait de la réinitialisation le chemin faible pour arriver à
-     un compte, ce qui viderait la règle de son sens. */
-  if (password.length < 8) return json({ error: 'weak' }, 400);
-
+  let accountEmail = '';
+  let accountBusiness = '';
   const row = await lookup(env, body.token);
-  if (!row) { await limitFail(request, env, 'reset'); return json({ error: 'invalid' }, 400); }
+  if (row && row.account_id) {
+    try {
+      const acc = await env.DB.prepare('SELECT email, business FROM accounts WHERE id = ?').bind(row.account_id).first();
+      if (acc) {
+        if (acc.email) accountEmail = acc.email;
+        if (acc.business) accountBusiness = acc.business;
+      }
+    } catch (_) {}
+  }
+  const problem = passwordProblem(password, { email: accountEmail, business: accountBusiness });
+  if (problem) return json({ error: 'weak', reason: problem }, 400);
+
+  if (!row) {
+    if (!await limitFail(request, env, 'reset')) return rateLimitUnavailable();
+    return json({ error: 'invalid' }, 400);
+  }
 
   /* La consommation D'ABORD, en un énoncé conditionnel : c'est elle qui décide
      qui gagne quand deux requêtes arrivent ensemble. Si elle ne change aucune
@@ -111,9 +124,11 @@ export async function onRequestPost(context) {
 
   const { salt, hash } = await hashPassword(password);
   try {
-    const r = await env.DB.prepare('UPDATE accounts SET salt = ?, hash = ? WHERE id = ?')
-      .bind(salt, hash, row.account_id).run();
-    if (!((r.meta && r.meta.changes) || 0)) return json({ error: 'invalid' }, 400);
+    const r = await env.DB.prepare(
+      'UPDATE accounts SET salt = ?, hash = ?, session_epoch = COALESCE(session_epoch, 0) + 1 WHERE id = ? RETURNING session_epoch'
+    ).bind(salt, hash, row.account_id).first();
+    if (!r || !Number.isFinite(Number(r.session_epoch))) return json({ error: 'invalid' }, 400);
+    row.session_epoch = Number(r.session_epoch);
   } catch (e) {
     return json({ error: 'update-failed' }, 500);
   }
@@ -125,7 +140,9 @@ export async function onRequestPost(context) {
     await env.DB.prepare(
       'UPDATE reset_tokens SET used_ts = ? WHERE account_id = ? AND used_ts IS NULL'
     ).bind(now, row.account_id).run();
-  } catch (_) {}
+  } catch (err) {
+    console.error('[reset] Failed to invalidate reset tokens for account', row.account_id);
+  }
 
   /* « La réinitialisation a-t-elle abouti ? » — la question que la console pose
      et à laquelle rien ne répondait. On l'inscrit, sans jeton et sans adresse. */
@@ -135,7 +152,9 @@ export async function onRequestPost(context) {
        VALUES (?,?,?,?,?,?,?,?,?,?)`
     ).bind(row.account_id, '', 'reset', '', '', '', 'client', '',
            JSON.stringify({ completed: true }), now).run();
-  } catch (_) {}
+  } catch (err) {
+    console.error('[reset] Failed to record account audit for reset on account', row.account_id);
+  }
 
   await limitClear(request, env, 'reset');
 
@@ -144,7 +163,7 @@ export async function onRequestPost(context) {
      sécurité et perd la moitié des gens qui viennent justement de galérer.
      La page renvoie ensuite vers le tableau de bord — l'entrée normale de Kiwi,
      celle qu'il aurait eue en se connectant. */
-  const token = await makeSession(row.account_id, env.AUTH_SECRET);
+  const token = await makeSession(row.account_id, env.AUTH_SECRET, row.session_epoch);
   return new Response(JSON.stringify({ ok: true }), {
     status: 200,
     headers: {

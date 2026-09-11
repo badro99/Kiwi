@@ -7,23 +7,22 @@
   <meta name="robots" content="noindex, nofollow, noarchive" />
   <title>Kiwi Tickets</title>
   <meta name="description" content="Kiwi's private-by-link problem tracker." />
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/tokens.css" />
-  <link rel="stylesheet" href="assets/tickets.css" />
+  <link rel="stylesheet" href="assets/tickets.css?v=2" />
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="/tickets" aria-label="Kiwi Tickets home">
-      <span class="brand-mark" aria-hidden="true">k</span>
-      <span>kiwi</span>
+      <img class="brand-logo" src="assets/kiwi-newlogo.svg" alt="Kiwi" />
       <span class="brand-divider" aria-hidden="true"></span>
       <span class="brand-product">tickets</span>
     </a>
     <button class="add-button" id="openComposer" type="button">
-      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" /></svg>
+      <span class="button-plus" aria-hidden="true">+</span>
       Add problem
     </button>
   </header>
@@ -55,7 +54,7 @@
             <div class="ticket-meta"><span class="ticket-number">#0012</span><span>Today, 10:42</span></div>
             <div class="copy-row"><p>The takeaway receipt prints without the customer name.</p><button type="button" class="copy-button" disabled>Copy text</button></div>
             <div class="photo-placeholder"><span>Screenshot</span><button type="button" class="copy-button" disabled>Copy image</button></div>
-            <button type="button" class="move-button" disabled>Fixed <span aria-hidden="true">→</span></button>
+            <button type="button" class="move-button" disabled>Fixed</button>
           </article>
         </div>
       </section>
@@ -70,7 +69,7 @@
           <article class="ticket-card preview-card">
             <div class="ticket-meta"><span class="ticket-number">#0011</span><span>Yesterday</span></div>
             <div class="copy-row"><p>Confirm the stock warning stays visible after reopening the till.</p><button type="button" class="copy-button" disabled>Copy text</button></div>
-            <button type="button" class="move-button move-testing" disabled>Tested <span aria-hidden="true">→</span></button>
+            <button type="button" class="move-button move-testing" disabled>Tested</button>
           </article>
         </div>
       </section>
@@ -85,7 +84,7 @@
           <article class="ticket-card preview-card ticket-done">
             <div class="ticket-meta"><span class="ticket-number">#0010</span><span>2 days ago</span></div>
             <p>Order totals now stay aligned on smaller iPhone screens.</p>
-            <div class="expiry"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.8"/></svg>Deletes in 18 days</div>
+            <div class="expiry"><img class="material-icon" src="assets/icons/material/schedule.svg" alt="" aria-hidden="true" />Deletes in 18 days</div>
           </article>
         </div>
       </section>
@@ -97,7 +96,7 @@
       <header class="composer-head">
         <div><p class="eyebrow">New ticket</p><h2 id="composerTitle">Add a problem</h2></div>
         <button class="icon-button" id="closeComposer" type="button" aria-label="Close">
-          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" /></svg>
+          <span aria-hidden="true">×</span>
         </button>
       </header>
       <label class="field-label" for="ticketBody">What is the problem?</label>
@@ -105,7 +104,7 @@
       <div class="upload-block">
         <div class="upload-heading"><span>Images</span><span id="imageCounter">0 / 6</span></div>
         <label class="upload-target" for="ticketImages">
-          <svg aria-hidden="true" width="23" height="23" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.7"/><path d="m6 16 4-4 3 3 2-2 3 3M15.5 9h.01" stroke="currentColor" stroke-width="1.7"/></svg>
+          <img class="material-icon upload-icon" src="assets/icons/material/photo_frame.svg" alt="" aria-hidden="true" />
           <span><strong>Add photos</strong><small>Choose from your library or take a photo</small></span>
         </label>
         <input id="ticketImages" name="images" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple />
@@ -115,6 +114,37 @@
       <footer class="composer-actions">
         <button class="cancel-button" id="cancelComposer" type="button">Cancel</button>
         <button class="publish-button" id="publishTicket" type="submit">Publish problem</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog class="composer" id="followupComposer" aria-labelledby="followupTitle">
+    <form class="composer-panel" id="followupForm" method="dialog">
+      <header class="composer-head">
+        <div>
+          <p class="eyebrow">Test failed · <span id="followupTicketNumber"></span></p>
+          <h2 id="followupTitle">What is still broken?</h2>
+        </div>
+        <button class="icon-button" id="closeFollowup" type="button" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </header>
+      <p class="followup-intro">Add what happened in this test. The note stays linked to the original problem and moves it back to Problems.</p>
+      <label class="field-label" for="followupBody">New test notes</label>
+      <textarea id="followupBody" name="note" rows="6" maxlength="4000" placeholder="Explain what still fails, where it happened, and what you expected…" required></textarea>
+      <div class="upload-block">
+        <div class="upload-heading"><span>More images <small>optional</small></span><span id="followupImageCounter">0 / 6</span></div>
+        <label class="upload-target" for="followupImages">
+          <img class="material-icon upload-icon" src="assets/icons/material/photo_frame.svg" alt="" aria-hidden="true" />
+          <span><strong>Add new photos</strong><small>Choose from your library or take a photo</small></span>
+        </label>
+        <input id="followupImages" name="images" class="hidden-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple />
+        <div class="selected-images" id="followupSelectedImages"></div>
+      </div>
+      <p class="form-error" id="followupError" role="alert"></p>
+      <footer class="composer-actions">
+        <button class="cancel-button" id="cancelFollowup" type="button">Cancel</button>
+        <button class="publish-button failed-submit" id="publishFollowup" type="submit">Send back as still broken</button>
       </footer>
     </form>
   </dialog>
@@ -129,6 +159,6 @@
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="assets/tickets.js" defer></script>
+  <script src="assets/tickets.js?v=2" defer></script>
 </body>
 </html>

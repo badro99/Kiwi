@@ -1,0 +1,50 @@
+#!/bin/sh
+# Kiwi · garde-fou pre-commit — refuse un commit dont les estampilles ?v= ont dérivé.
+#
+# Installé par `sh tools/install-hooks.sh` (le .git/hooks local n'est pas
+# versionné). Il ne MODIFIE rien et ne `git add` rien : plusieurs sessions
+# partagent ce checkout, un hook qui met à jour et stage des fichiers
+# absorberait leur travail. Il bloque, et dit quelle commande lancer.
+#
+# Il juge l'INDEX, pas l'arbre de travail : `git checkout-index` exporte ce qui
+# va réellement être commité dans un dossier jetable, et tools/stamp-drift-test.js
+# tourne là-dedans (accord des copies d'une estampille, couverture du manifeste,
+# contenu bougé ⇒ estampille bougée). Les modifications non stagées d'une autre
+# session ne peuvent donc ni le faire rougir ni le rassurer. pwa-shell-test reste
+# l'affaire de check.js : il a besoin du dépôt entier, pas d'un export.
+#
+#   KIWI_SKIP_STAMP_HOOK=1 git commit …   pour passer outre, en connaissance de cause.
+
+[ -n "$KIWI_SKIP_STAMP_HOOK" ] && exit 0
+
+# Rien d'estampillable dans ce commit → rien à vérifier (commits de docs, fonctions…).
+if ! git diff --cached --name-only --diff-filter=ACMR | grep -qE '^(assets/.*\.(js|css)|[^/]+\.html|kiwi-sw\.js|tools/asset-stamps\.json|assets/pos-dispatch\.js)$'; then
+  exit 0
+fi
+
+TMP="$(mktemp -d 2>/dev/null || mktemp -d -t kiwi-hook)"
+trap 'rm -rf "$TMP"' EXIT
+git checkout-index -a -f --prefix="$TMP/" || exit 0   # export impossible → on n'empêche pas le commit
+
+LOG="$TMP/.stamp-hook.log"
+if node "$TMP/tools/stamp-drift-test.js" >"$LOG" 2>&1; then
+  exit 0
+fi
+
+echo "✗ Estampilles ?v= incohérentes dans ce commit — refusé (tools/hooks/pre-commit)."
+grep -E '✗' "$LOG" | head -8
+# Cas fréquent dans un checkout partagé : bump-stamp scelle le manifeste depuis
+# l'ARBRE DE TRAVAIL, donc un asset modifié par une autre session et non stagé
+# entre dans le manifeste que l'on commite — avec un sha que le commit ne
+# contient pas. On le nomme, pour que personne ne cherche une heure.
+for a in $(grep -E '✗' "$LOG" | grep -oE '(assets/[A-Za-z0-9._/-]+|kiwi-sw\.js|[A-Za-z0-9._-]+\.html)' | sort -u); do
+  if [ -n "$(git diff --name-only -- "$a")" ]; then
+    echo "  · $a est modifié mais NON stagé (une autre session ?) — le manifeste l'a scellé quand même."
+    echo "    Stage-le si c'est à toi ; sinon laisse-le de côté et passe avec KIWI_SKIP_STAMP_HOOK=1."
+  fi
+done
+echo "  → node tools/bump-stamp.js --all          (ou un fichier précis)"
+echo "    node tools/bump-stamp.js --sw           (génération du service worker)"
+echo "    puis git add des fichiers touchés (dont tools/asset-stamps.json) et recommit."
+echo "    KIWI_SKIP_STAMP_HOOK=1 pour passer outre."
+exit 1

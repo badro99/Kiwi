@@ -84,10 +84,8 @@
   const blank = () => ({ items: {}, ingredients: [], recipes: {}, charges: [], targets: {}, seq: 0 });
 
   const store = window.KiwiStore.define('costs', {
-    /* Le miroir serveur. Tant que functions/api/store.js n'a pas `costs` dans sa
-     * liste blanche, le serveur refuse le document et il reste purement local —
-     * c'est le fail-soft documenté dans venue-store.js, et c'est la raison pour
-     * laquelle cette phase peut partir sans attendre un déploiement. */
+    /* Private cross-device mirror.  The public menu never receives costs; the
+     * authenticated /api/store contract now explicitly accepts this document. */
     cloud: 'costs',
     blank,
     isEmpty: (d) => !d || (!Object.keys(d.items || {}).length
@@ -116,6 +114,26 @@
         recipes[id] = (!y || (+x.at || 0) >= (+y.at || 0)) ? x : y;
       });
       out.recipes = recipes;
+      /* `ingredients` — le prix d'achat de chaque matière — était le seul bloc
+       * que ce fusionneur ne protégeait pas : l'Object.assign du début le
+       * remplaçait en bloc par celui de CE navigateur. Or la caisse ne charge
+       * pas restaurant-recipes.js, donc son document porte toujours
+       * `ingredients: []` ; le premier envoi du terminal effaçait sur le serveur
+       * les prix saisis au tableau de bord, et toutes les fiches techniques
+       * retombaient à un coût matière nul — sans rien signaler, puisqu'une
+       * fiche sans prix rend `null`, jamais une erreur. Même règle que pour les
+       * articles et les fiches : on garde les deux jeux, et pour un ingrédient
+       * touché des deux côtés, la saisie la plus récente. */
+      const ga = Array.isArray(mine && mine.ingredients) ? mine.ingredients : [];
+      const gb = Array.isArray(theirs && theirs.ingredients) ? theirs.ingredients : [];
+      const ing = new Map();
+      gb.forEach((x) => { if (x && x.id) ing.set(String(x.id), x); });
+      ga.forEach((x) => {
+        if (!x || !x.id) return;
+        const y = ing.get(String(x.id));
+        if (!y || (+x.at || 0) >= (+y.at || 0)) ing.set(String(x.id), x);
+      });
+      out.ingredients = Array.from(ing.values());
       return out;
     },
   });
@@ -126,6 +144,7 @@
 
   const num = (v) => { const n = +v; return Number.isFinite(n) && n >= 0 ? n : null; };
   const r2 = (n) => Math.round(n * 100) / 100;
+  const r4 = (n) => Math.round(n * 10000) / 10000;
   const norm = (s) => String(s == null ? '' : s).trim().toLowerCase();
 
   /* ─────────────────────────── la base TVA ─────────────────────────── */
@@ -195,6 +214,39 @@
     return { byId, byName };
   }
 
+  /* ─────────────────────── le carnet des fiches ─────────────────────── */
+  function recipeNameIndex(d) {
+    const by = new Map();
+    Object.keys((d && d.recipes) || {}).forEach((id) => {
+      const n = norm(d.recipes[id] && d.recipes[id].name);
+      if (n && !by.has(n)) by.set(n, String(id));
+    });
+    return by;
+  }
+
+  /* IDENTITÉ RETROUVÉE POUR UNE LIGNE QUI N'EN A PAS.
+   * Une part d'addition partagée, une vente d'avant la phase 5, une ligne
+   * saisie au libellé libre : le ticket ne porte que le nom du plat. Le grand
+   * livre repêche déjà exactement ce cas (inventory-consumption.js ·
+   * recipeByName) et sort la marchandise ; sans le même repêchage ici, le
+   * stock bougeait mais la marge restait vide — chez un restaurant dont toute
+   * la carte est chiffrée en fiches techniques, 94 % du chiffre d'affaires
+   * ressortait « non chiffré ».
+   * Ce repli ne se déclenche QUE quand l'identifiant est absent : quand une
+   * identité stable existe, elle reste souveraine (deux produits peuvent
+   * porter le même nom, et un renommage ne doit pas réécrire la marge passée). */
+  function aliasOf(name, d, ctx) {
+    const n = norm(name);
+    if (!n) return '';
+    const menu = (ctx && ctx.menu) || menuIndex();
+    const hit = menu.byName.get(n);
+    if (hit && hit.id) return String(hit.id);
+    const rx = ctx
+      ? (ctx.recipeByName || (ctx.recipeByName = recipeNameIndex(d)))
+      : recipeNameIndex(d);
+    return rx.get(n) || '';
+  }
+
   /* ═════════════════════════════ of() ═════════════════════════════
    * ref = { kind:'menu'|'shop'|'', id, name }
    * Rend { mad, src, at } — `mad` null quand rien n'est connu. */
@@ -202,9 +254,10 @@
     const r = ref || {};
     const d = ctx && ctx.doc ? ctx.doc : store.get();
     const id = r.id ? String(r.id) : '';
+    const key = id || aliasOf(r.name, d, ctx);
 
     // 1 · fiche technique (phase 6 — le crochet existe, le moteur viendra)
-    const rec = id && d.recipes ? d.recipes[id] : null;
+    const rec = key && d.recipes ? d.recipes[key] : null;
     if (rec && rec.status === 'complete') {
       const c = recipeCost(rec, d);
       if (c != null) return { mad: r2(c), src: 'recipe', at: +rec.at || 0 };
@@ -219,7 +272,7 @@
     }
 
     // 3 · le coût forfaitaire, tapé par le patron dans sa carte
-    let flat = id && d.items ? d.items[id] : null;
+    let flat = key && d.items ? d.items[key] : null;
     if (!flat && r.name) {
       /* Repli par NOM. Une vente d'avant la phase 5 ne porte pas l'identifiant
        * de l'article — seulement son libellé. Sans ce repli, un commerçant qui
@@ -313,6 +366,12 @@
         if (!qty || !tot) return;
         revenueDetailed += tot;
 
+        /* Sale-line v2 revient du serveur sous `itemId`; `id` reste le nom
+         * historique du champ local. Ne jamais retomber par libellé lorsque
+         * l'identité stable existe : deux produits peuvent porter le même nom,
+         * et un renommage ne doit pas réécrire la marge passée. */
+        const itemId = l.itemId || l.id || '';
+
         /* Le coût GELÉ sur la ligne au moment de la vente gagne toujours sur le
          * résolveur : c'est ce qui empêche une correction de prix d'achat de
          * réécrire le bénéfice de mars. Absent (toutes les ventes d'avant la
@@ -320,11 +379,11 @@
         const frozen = num(l.unitCost);
         const hit = frozen != null && frozen > 0
           ? { mad: frozen, src: 'frozen' }
-          : of({ kind: l.kind || '', id: l.id || '', name: l.name || '' }, ctx);
+          : of({ kind: l.kind || '', id: itemId, variantId: l.variantId || '', name: l.name || '' }, ctx);
 
         if (hit.mad == null) {
           const key = norm(l.name) || '?';
-          const m = missing.get(key) || { name: l.name || '', revenue: 0, units: 0, id: l.id || '' };
+          const m = missing.get(key) || { name: l.name || '', revenue: 0, units: 0, id: itemId };
           m.revenue += tot; m.units += qty;
           missing.set(key, m);
           return;
@@ -365,7 +424,9 @@
       d.items = d.items || {};
       const c = num(mad);
       if (c == null || c <= 0) delete d.items[id];
-      else d.items[id] = { cost: r2(c), at: Date.now(), by: String(who || '') };
+      /* Un coût unitaire est un taux : le centime détruit les ingrédients
+       * suivis au gramme (0,0045 MAD/g). Les montants restent arrondis en aval. */
+      else d.items[id] = { cost: r4(c), at: Date.now(), by: String(who || '') };
       return d;
     });
   }

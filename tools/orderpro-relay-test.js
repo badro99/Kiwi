@@ -32,10 +32,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
-import { makeSession, sessionCookie, SESS_COOKIE } from '../functions/auth/_lib.js';
+import { makeSession, sessionCookie, SESS_COOKIE, tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
+import { onRequestPost as verifyPin } from '../functions/api/pin/verify.js';
 import { onRequestPost as placeOrder, onRequestGet as readOrder } from '../functions/api/order/index.js';
 import { onRequestPost as openSession, onRequestGet as readSession } from '../functions/api/order/session.js';
 import { onRequestPost as queuePost, onRequestGet as queueGet } from '../functions/api/order/queue.js';
+import { startOfWeek } from '../functions/api/order/_lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SECRET = 'test-secret-not-a-real-key';
@@ -63,7 +65,20 @@ function makeDB() {
     };
     return st;
   };
-  return { prepare, _db: db };
+  const facade = { prepare, _db: db };
+  facade.batch = async (statements) => {
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const result = [];
+      for (const statement of statements) result.push(await statement.run());
+      db.exec('COMMIT');
+      return result;
+    } catch (error) {
+      try { db.exec('ROLLBACK'); } catch (_) {}
+      throw error;
+    }
+  };
+  return facade;
 }
 
 const DB = makeDB();
@@ -71,12 +86,23 @@ const env = { DB, AUTH_SECRET: SECRET };
 
 /* ── amorçage ─────────────────────────────────────────────────────────────── */
 const CARTE = {
-  cats: [{ id: 'c1', name: 'Plats', sub: [] }],
+  cats: [{ id: 'c1', name: 'Plats', station: 'cuisson', sub: [] }],
+  stations: [{ id: 'cuisson', name: 'Cuisine' }],
   items: [
     { id: 'i1', name: 'Tajine poulet', price: 90, catId: 'c1', avail: true },
     { id: 'i2', name: 'Thé à la menthe', price: 15, catId: 'c1', avail: true },
     { id: 'i3', name: 'Pastilla', price: 120, catId: 'c1', avail: false },
+    { id: 'i4', name: 'Continental', price: 68, catId: 'c1', avail: true, opts: ['egg-style'],
+      formula: { slots: [{ id: 'drink', label: 'Boisson', min: 1, max: 1, choices: [
+        { itemId: 'i5', extra: 0 }, { itemId: 'i6', extra: 20 },
+      ] }] } },
+    { id: 'i5', name: 'Carrot Juice', price: 28, catId: 'c1', avail: true, formulaOnly: true },
+    { id: 'i6', name: 'Coconut Matcha', price: 63, catId: 'c1', avail: true, formulaOnly: true },
+    { id: 'i7', name: 'Ancien dessert', price: 40, catId: 'c1', avail: true, archived: true },
   ],
+  opts: [{ id: 'egg-style', name: 'Œufs', kind: 'one', required: true, choices: [
+    { id: 'fried', name: 'Œufs au plat', price: 0, emoji: '🍳' },
+  ] }],
 };
 function seed() {
   const now = Date.now();
@@ -88,6 +114,10 @@ function seed() {
   }
   DB._db.prepare('INSERT INTO menus (merchant,name,type,data,updated_ts) VALUES (?,?,?,?,?)')
     .run(SLUG, 'Chez Nadia', 'restaurant', JSON.stringify(CARTE), now);
+  DB._db.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)')
+    .run(SLUG, 'floorplan', JSON.stringify({ tables: [{ id: 'T7', num: 'T7' }] }), 1, now);
+  DB._db.prepare('INSERT INTO staff_pins (id,merchant,pin,name,role,created_ts) VALUES (?,?,?,?,?,?)')
+    .run('pin-orderpro-relay', SLUG, '4826', 'Nadia', 'Caisse', now);
 }
 const deskAt = (ts) => DB._db.prepare(
   'INSERT INTO order_desk (merchant,seen_ts) VALUES (?,?) ON CONFLICT(merchant) DO UPDATE SET seen_ts=excluded.seen_ts'
@@ -113,34 +143,232 @@ async function get(fn, qs, headers = {}) {
   seed();
   const staff = sessionCookie(await makeSession(ACC, SECRET)).split(';')[0];
   const asStaff = { Cookie: staff };
+  const asTill = { Cookie: `${TILL_COOKIE}=${await tillToken(SECRET, SLUG)}` };
+  const pinResponse = await post(verifyPin, { merchant: SLUG, pin: '4826' }, asTill);
+  const actorProof = pinResponse.body && pinResponse.body.actorProof;
+  ok('le vérificateur PIN fournit une preuve d’acteur pour la remise comptoir', pinResponse.status === 200 && !!actorProof);
   const line = (id, qty = 1) => ({ id, qty });
+
+  const orderProPage = fs.readFileSync(path.join(ROOT, 'OrderPro.html'), 'utf8');
+  const publicOrderPage = fs.readFileSync(path.join(ROOT, 'kiwi-order.html'), 'utf8');
+  const caissePage = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+  const kitchenPage = fs.readFileSync(path.join(ROOT, 'kiwi-cuisine.html'), 'utf8');
+  ok('OrderPro affiche OPD sur le retrait',
+    /orderNumber\s*=\s*'OPD-'\s*\+\s*String\(res\.number/.test(orderProPage));
+  ok('la caisse distingue OP et OPD selon le mode OrderPro',
+    /o\.opChannel\s*===\s*'kiwi'[\s\S]{0,320}'OPD-'\s*:\s*'OP-'/.test(caissePage));
+  ok('la caisse donne aux commandes employé les initiales du serveur, pas OP',
+    /const employeePrefix = orderServerInitials\(o\.server\);[\s\S]{0,100}employeePrefix \+ '-' \+ n/.test(caissePage));
+  ok('une session OrderPro occupe la table dans la caisse sans redemander les couverts',
+    /function caisseTableId\(v\)/.test(caissePage)
+      && /const id = caisseTableId\(s\.table\);[\s\S]{0,180}tables\[id\]\.status = 'ka-yaklo'/.test(caissePage));
+  ok('les lignes OrderPro rejoignent une seule fois l’addition de leur table',
+    /function attachOrderProTable\(o\)/.test(caissePage)
+      && /orderProLine: marker/.test(caissePage)
+      && /attachOrderProTable\(o\);/.test(caissePage));
+  ok('l\'\u00e9cran cuisine distingue OP et OPD selon le mode OrderPro',
+    /o\.channel\s*===\s*'kiwi'[\s\S]{0,320}'OPD-'\s*:\s*'OP-'/.test(kitchenPage));
+  ok('l\'écran cuisine affiche les initiales sur un ticket employé',
+    /var employeePrefix = serverInitials\(o\.server\);[\s\S]{0,100}employeePrefix \+ '-' \+ n/.test(kitchenPage));
+  ok('le paiement employé envoie la référence commande au journal de caisse',
+    /const orderRef = serviceTableOrderRef\(id\);[\s\S]{0,2400}label: orderRef,[\s\S]{0,80}ref: orderRef/.test(
+      fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8')));
+  ok('le QR public ouvre une session de visite avant la commande',
+    /fetch\('\/api\/order\/session',\s*\{/.test(publicOrderPage)
+      && /ensureTableSession\(\)\.then/.test(publicOrderPage));
+  ok('le QR public joint la session à chaque commande à table',
+    /table:\s*tableNumber,\s*session:\s*session\s*\|\|\s*undefined/.test(publicOrderPage));
+  ok('le QR public sonde la révocation de sa session',
+    /setInterval\(check,\s*5000\)/.test(publicOrderPage)
+      && /d\.status\s*!==\s*'open'/.test(publicOrderPage));
+  ok('le QR ne montre pas un faux succès après un refus serveur',
+    /postOrderToTill\(totalNow,\s*linesCopy\)\.then/.test(publicOrderPage)
+      && /order_send_failed/.test(publicOrderPage));
+
+  /* ═══ 3b. TÉLÉPHONE · ni déconnexion fantôme ni rescan empoisonné ════════
+   * Un identifiant gardé d'une visite fermée faisait répondre « fermée » à
+   * chaque nouvel essai du même onglet — le « rescannez » qui ne marche
+   * jamais. On le jette et on se rassoit d'un geste (le serveur reprend la
+   * visite en cours ou en ouvre une neuve). Et la caisse endormie ne laisse
+   * plus le menu mort : message dédié en trois langues, réessai silencieux
+   * toutes les trente secondes, visite conservée même si l'OS jette l'onglet.
+   * Côté OrderPro, les écrans « fermé / désactivé » réessaient aussi seuls. */
+  ok('le QR jette l’identifiant mort au lieu de boucler sur « fermée »',
+    /existing\.status === 'closed'\) clearStoredTableSession\(\)/.test(publicOrderPage));
+  ok('…et la visite survit au jet d’onglet par l’OS',
+    /localStorage\.setItem\(tableSessionKey\(\)/.test(publicOrderPage)
+      && /localStorage\.getItem\(tableSessionKey\(\)/.test(publicOrderPage));
+  ok('…avec un mot dédié quand la caisse dort, en trois langues',
+    /service_closed: "La caisse semble endormie/.test(publicOrderPage)
+      && /service_closed: "The till looks asleep/.test(publicOrderPage)
+      && /service_closed: "/.test(publicOrderPage)
+      && /tableSessionErrKey\(err\)/.test(publicOrderPage));
+  ok('…et un réveil silencieux toutes les trente secondes',
+    /scheduleServiceRetry\(\)/.test(publicOrderPage)
+      && /30000/.test(publicOrderPage)
+      && /tableSessionStatus !== 'error'/.test(publicOrderPage));
+  ok('OrderPro réessaie seul sur « fermé / désactivé »',
+    /scheduleBootRetry\(kind\)/.test(orderProPage)
+      && /retry: true/.test(orderProPage)
+      && /screen-boot/.test(orderProPage));
+
+  /* ═══ 1b. À EMPORTER · ni disparition ni faux impayé ══════════════════════
+   * Le timbre « payé » ne voyageait que par un appel non attendu : un trou
+   * réseau, et l'argent était au journal pendant que la file disait « impayé ».
+   * La caisse repousse donc le timbre à chaque sondage tant que le serveur le
+   * nie (idempotent côté serveur, jamais sur une refusée). Et une commande
+   * tranchée par le TTL n'est plus un fantôme payable : le sondage expose ses
+   * refus récents, la caisse enterre ses `held` morts en le disant, prévient
+   * avant l'échéance, et propose la reprise en un geste. */
+  const inboxPage = fs.readFileSync(path.join(ROOT, 'assets/orderpro-inbox.js'), 'utf8');
+  ok('la caisse repousse le timbre payé tant que le serveur le nie',
+    /known\.paid && !o\.paid/.test(caissePage)
+      && /opPush\(known,[\s\S]{0,160}\{\s*paid:\s*true\s*\}\)/.test(caissePage));
+  ok('…mais jamais sur une commande refusée',
+    /o\.status !== 'rejected'[\s\S]{0,280}paid:\s*true/.test(caissePage));
+  ok('la caisse enterre ses tickets en attente quand le serveur les dit refusés',
+    /retireRejectedKitchenTicket/.test(caissePage)
+      && /o\.status === 'rejected'/.test(caissePage)
+      && /opTickets\.delete/.test(caissePage));
+  ok('…et propose la reprise en un geste, comme une vente neuve',
+    /data-exp-reprendre/.test(caissePage) && /function reprendreExpired\(id\)/.test(caissePage));
+  /* ── LE BOUTON ROUGE EST GARDÉ PAR UN CODE, ET LE CODE EST JUGÉ AILLEURS ──
+   * « Vider la commande » détruisait un panier · et, depuis la reprise d'une
+   * expirée, une vente déjà chiffrée · en un tap, sans autorisation et sans
+   * nommer personne. On extrait la branche vrap du gestionnaire pour vérifier
+   * la seule chose qui compte vraiment : que RIEN de destructeur ne s'exécute
+   * avant l'autorisation. Un gardien qu'on peut contourner par le haut n'est
+   * pas un gardien. */
+  const vrapCancel = (() => {
+    const at = caissePage.indexOf("else if (a === 'cancel-table')");
+    if (at < 0) return '';
+    const from = caissePage.indexOf("if (mode === 'vrap')", at);
+    return from < 0 ? '' : caissePage.slice(from, caissePage.indexOf('if (selectedId)', from));
+  })();
+  ok('« Vider la commande » réclame le code de l’employé',
+    /requireTillOperator\(/.test(vrapCancel), vrapCancel ? 'branche trouvée' : 'branche introuvable');
+  /* Le repli « panier déjà vide » a le droit de précéder le pavé : il ne perd
+     rien. On le retire donc de l'extrait, et TOUT ce qui détruit encore doit
+     se trouver après l'appel au gardien. */
+  const guarded = vrapCancel.replace(/if \(!liveOrder && !cart\.length\)[^\n]*\n/, '');
+  ok('…et ne détruit rien avant de l’avoir obtenu',
+    guarded.indexOf('requireTillOperator(') >= 0
+      && guarded.indexOf('requireTillOperator(') < guarded.indexOf('clearCart()')
+      && guarded.indexOf('requireTillOperator(') < guarded.indexOf('cancelOrderProTakeaway('),
+    `gardien@${guarded.indexOf('requireTillOperator(')} vider@${guarded.indexOf('clearCart()')} annuler@${guarded.indexOf('cancelOrderProTakeaway(')}`);
+  ok('…y compris pour annuler une commande déjà partie en cuisine',
+    /cancelOrderProTakeaway\(editingOrder,\s*who\)/.test(vrapCancel));
+  ok('…mais n’ennuie personne quand il n’y a rien à perdre',
+    /!liveOrder && !cart\.length/.test(vrapCancel));
+  ok('…et le code n’est jamais comparé dans le navigateur',
+    !/mgrBuffer\s*===|pin\s*===\s*|code\s*===\s*['"]\d/.test(vrapCancel)
+      && /authorizeTill/.test(fs.readFileSync(path.join(ROOT, 'assets/caisse-pairing.js'), 'utf8')));
+
+  /* cancelOrderProTakeaway protège la destruction par code opérateur quel que soit
+     le chemin d'appel (bouton vrap ou clic direct data-vrap-cancel sur le board). */
+  const cancelTakeawayFn = (() => {
+    const at = caissePage.indexOf('function cancelOrderProTakeaway(o, authorizedWho = null)');
+    if (at < 0) return '';
+    return caissePage.slice(at, caissePage.indexOf('function settleVrapPayment()', at));
+  })();
+  ok('cancelOrderProTakeaway requiert le code opérateur en son sein et n’utilise aucun confirm natif',
+    cancelTakeawayFn.includes('requireTillOperator(') && !cancelTakeawayFn.includes('confirm('));
+  ok('cancelOrderProTakeaway place la destruction (opPush, dismissExpired) dans le rappel d’approbation',
+    cancelTakeawayFn.indexOf('requireTillOperator(') > 0
+      && cancelTakeawayFn.indexOf('const proceed =') < cancelTakeawayFn.indexOf('dismissExpired(')
+      && cancelTakeawayFn.indexOf('dismissExpired(') < cancelTakeawayFn.indexOf('opPush('));
+  ok('le clic data-vrap-cancel sur le tableau passe par cancelOrderProTakeaway',
+    caissePage.includes('cancel.dataset.vrapCancel') && caissePage.includes('cancelOrderProTakeaway(kdsOrders.find('));
+
+  ok('le sondage transmet les refus récents à la caisse',
+    /state\.expired = j\.expired/.test(inboxPage)
+      && /ingest\(delta, all, state\.sessions, state\.closedSessions, state\.expired\)/.test(inboxPage));
+  ok('…et prévient avant l’échéance, une fois par commande',
+    /EXPIRY_WARN_MS = 20 \* 60 \* 1000/.test(inboxPage) && /state\.expiryWarned\[id\]/.test(inboxPage));
+  ok('…et dit quand la base non migrée rend les statuts de paiement non fiables',
+    /warnDegraded\(j\.degraded\)/.test(inboxPage) && /statuts de paiement non fiables/.test(inboxPage));
+
+  ok('la semaine restaurant commence lundi à minuit au Maroc',
+    startOfWeek(Date.parse('2026-08-03T12:00:00Z')) === Date.parse('2026-08-02T23:00:00Z'));
+  ok('le dimanche reste dans la semaine qui précède',
+    startOfWeek(Date.parse('2026-08-02T12:00:00Z')) === Date.parse('2026-07-26T23:00:00Z'));
 
   /* ═══ 1. PRIX ═══════════════════════════════════════════════════════════ */
   deskAt(Date.now());
+  const priceSession = (await post(openSession, { merchant: SLUG, mode: 'table', table: '7' })).body.session;
   let r = await post(placeOrder, {
-    merchant: SLUG, mode: 'table', table: '7',
+    merchant: SLUG, mode: 'table', table: '7', session: priceSession,
     total: 1,                                   // le mensonge
-    lines: [{ id: 'i1', qty: 1, name: 'Caviar', unitPrice: 1 }],
+    lines: [{ id: 'i1', qty: 1, name: 'Caviar', unitPrice: 1,
+      options: 'Tomate',
+      visuals: [{ emoji: '🍅', name: 'Tomate' }] }],
   });
   ok('une commande passe', r.status === 200 && r.body.ok, JSON.stringify(r.body));
   ok('le prix vient de la carte, pas du téléphone', r.body.total === 90, 'total=' + r.body.total);
   ok('le nom aussi', r.body.lines[0].name === 'Tajine poulet', r.body.lines[0].name);
+  ok('le poste de la catégorie voyage avec la ligne tarifée',
+    r.body.lines[0].station === 'cuisson', JSON.stringify(r.body.lines[0]));
+  ok('le repère visuel de l’option arrive avec la ligne',
+    r.body.lines[0].visuals[0].emoji === '🍅' && r.body.lines[0].visuals[0].name === 'Tomate',
+    JSON.stringify(r.body.lines[0].visuals));
+  ok('le libellé de l’option OrderPro arrive lui aussi avec la ligne',
+    r.body.lines[0].options === 'Tomate', JSON.stringify(r.body.lines[0]));
+  ok('OrderPro ouvre les options avec le même ajout en salle et à emporter',
+    /function handleAddClick\(itemId\)[\s\S]{0,220}item\.options && item\.options\.length > 0[\s\S]{0,80}openCustomizer\(item\)/.test(orderProPage)
+      && !/function handleAddClick\(itemId\)[\s\S]{0,220}orderMode\s*===/.test(orderProPage));
+  ok('OrderPro envoie le texte et les repères visuels choisis',
+    /options: describeOptionChoices\(l\)\.map/.test(orderProPage)
+      && /visuals: describeOptionVisuals\(l, true\)/.test(orderProPage));
+  ok('OrderPro envoie les formules comme parent et composants liés',
+    /kind: 'formula', formulaUid, formulaName: nameOf\(l\.id\)/.test(orderProPage)
+      && /kind: 'formula-part', formulaUid/.test(orderProPage)
+      && /formulaSlotId: slot\.formulaSlotId/.test(orderProPage));
+  ok('OrderPro garde un registre séparé pour refuser les ajouts directs périmés',
+    /const MENU_ALL = new Map\(\)/.test(orderProPage)
+      && /function standaloneMenuItem\(itemId\)[\s\S]{0,260}source\.archived \|\| source\.formulaOnly \|\| source\.avail === false/.test(orderProPage));
+  ok('OrderPro applique les bornes min/max des étapes et retire une formule devenue impossible',
+    /const minimum = opt\.formulaSlotId \? Math\.max\(0, Number\(opt\.min\)/.test(orderProPage)
+      && /arr\.length < Math\.max\(1, Number\(def\.max\)/.test(orderProPage)
+      && /if \(formulaBroken\) continue;/.test(orderProPage));
+  ok('OrderPro envoie les identifiants canoniques des options ordinaires',
+    /optionChoices: describeOptionChoices\(l\)/.test(orderProPage)
+      && /if \(opt\.formulaSlotId\) continue/.test(orderProPage));
   const priced = DB._db.prepare('SELECT total, priced_ts, menu_rev FROM orders WHERE id=?').get(r.body.id);
   ok('c\'est le prix recalculé qui est écrit', priced.total === 90);
   ok('la révision de carte est horodatée', !!priced.priced_ts && !!priced.menu_rev);
 
-  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', lines: [line('i1', 2), line('i2', 3)] });
+  r = await post(placeOrder, {
+    merchant: SLUG, mode: 'table', table: '7', session: priceSession,
+    lines: [{ id: 'i1', qty: 1, optionChoices: [{ group: 'absent', label: 'Option fantôme' }] }],
+  });
+  ok('OrderPro refuse une option invalide au lieu de supprimer silencieusement le plat parent',
+    r.status === 409 && r.body.error === 'menu-changed'
+      && r.body.invalidOptions && r.body.invalidOptions.length === 1,
+    JSON.stringify(r.body));
+
+  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', session: priceSession, lines: [line('i1', 2), line('i2', 3)] });
   ok('les quantités multiplient bien', r.body.total === 90 * 2 + 15 * 3, 'total=' + r.body.total);
 
-  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', lines: [line('inconnu')] });
+  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', session: priceSession, lines: [line('i5')] });
+  ok('un article réservé aux formules est refusé seul avec un motif distinct',
+    r.status === 409 && r.body.error === 'formula_only', JSON.stringify(r.body));
+  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', session: priceSession, lines: [line('i7')] });
+  ok('un article archivé est refusé partout avec un motif distinct',
+    r.status === 409 && r.body.error === 'archived', JSON.stringify(r.body));
+
+  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', session: priceSession, lines: [line('inconnu')] });
   ok('un plat qui n\'est pas à la carte est refusé', r.status === 409 && r.body.error === 'menu-changed');
   ok('…et on dit lequel', Array.isArray(r.body.unknown) && r.body.unknown[0] === 'inconnu');
 
-  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', lines: [line('i3')] });
+  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', session: priceSession, lines: [line('i3')] });
   ok('un plat épuisé est refusé', r.status === 409 && r.body.unavailable[0] === 'Pastilla');
 
-  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', lines: [] });
+  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', session: priceSession, lines: [] });
   ok('une commande vide est refusée', r.status === 400 && r.body.error === 'empty-order');
+
+  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', lines: [line('i1')] });
+  ok('une commande QR sans session de visite est refusée',
+    r.status === 409 && r.body.error === 'session-required', JSON.stringify(r.body));
 
   /* ═══ 2. PRÉSENCE DU COMPTOIR ═══════════════════════════════════════════ */
   deskAt(Date.now() - 30 * 60 * 1000);          // sondé il y a une demi-heure
@@ -172,6 +400,12 @@ async function get(fn, qs, headers = {}) {
     !r.body.orders.some((o) => o.id === staleId));
   ok('…elle est fermée durablement côté serveur',
     DB._db.prepare('SELECT status FROM orders WHERE id=?').get(staleId).status === 'rejected');
+  ok('…mais elle reste lisible comme expirée pour que le comptoir la retrouve',
+    Array.isArray(r.body.expired) && r.body.expired.some((o) => o.id === staleId));
+  ok('…avec de quoi la reprendre (numéro, lignes, total)',
+    r.body.expired.some((o) => o.id === staleId && o.number === 999 && o.total === 15));
+  ok('…et elle ne pollue pas la file des vivantes',
+    !r.body.orders.some((o) => o.id === staleId));
 
   /* ═══ 3. SESSION ════════════════════════════════════════════════════════ */
   r = await post(openSession, { merchant: SLUG, mode: 'table', table: 'T7' });
@@ -207,6 +441,26 @@ async function get(fn, qs, headers = {}) {
   r = await get(readSession, 'merchant=' + OTHER + '&session=' + sess);
   ok('…mais pas à travers le slug d\'un autre', r.body.status === 'closed');
 
+  r = await post(openSession, { merchant: SLUG, session: sess, action: 'call-server' });
+  let serviceDoc = JSON.parse(DB._db.prepare(
+    "SELECT data FROM store_docs WHERE merchant=? AND feature='service-events'"
+  ).get(SLUG).data);
+  ok('Appeler un serveur publie une notification liée à la table ouverte',
+    r.status === 200 && serviceDoc.events.some((event) => event.type === 'guest-call' && event.table === '7'));
+
+  r = await post(openSession, { merchant: SLUG, session: sess, action: 'ask-bill' });
+  serviceDoc = JSON.parse(DB._db.prepare(
+    "SELECT data FROM store_docs WHERE merchant=? AND feature='service-events'"
+  ).get(SLUG).data);
+  ok('Demander l’addition passe la table au statut rose dans serveur et caisse',
+    r.status === 200 && serviceDoc.states['7'].status === 'bgha-ykhlass'
+      && serviceDoc.states['7'].source === 'guest');
+  r = await post(openSession, {
+    merchant: SLUG, session: 'tsx-AAAAAAAAAAAAAAAAAAAAAA', action: 'call-server',
+  });
+  ok('une session inventée ne peut pas notifier le personnel',
+    r.status === 409 && r.body.error === 'session-closed');
+
   /* ═══ 4. TRANSITIONS ════════════════════════════════════════════════════ */
   r = await post(queuePost, { merchant: SLUG, id: tableOrderId, status: 'ready' }, asStaff);
   ok('on ne saute pas la cuisine (pending → ready)', r.status === 409 && r.body.error === 'bad-transition');
@@ -229,12 +483,44 @@ async function get(fn, qs, headers = {}) {
   r = await post(queuePost, { merchant: SLUG, id: tableOrderId, status: 'rejected' }, asStaff);
   ok('…ni ne se refuse après coup', r.status === 409);
 
+  /* ═══ 4b. FERMETURE · le robinet se coupe vraiment, et le dit ═══════════
+   * Encaisser fermait « en aveugle » : toute réponse HTTP valait succès, donc
+   * une fermeture perdue (réseau, 403, base non migrée) rallumait la table au
+   * sondage suivant, indéfiniment — sans jamais le dire. Le serveur compte
+   * honnêtement (`closed`), et la caisse ne croit que la preuve au sondage. */
+  /* Table 9, jamais utilisée ailleurs : la section 7 ferme encore sess (T7). */
+  const closeVisit = (await post(openSession, { merchant: SLUG, mode: 'table', table: '9' })).body.session;
+  r = await post(queuePost, { merchant: SLUG, closeSession: closeVisit, closedBy: 'settle' }, asStaff);
+  ok('fermer une visite ouverte rend closed:1', r.status === 200 && r.body.ok === true && r.body.closed === 1);
+  r = await post(queuePost, { merchant: SLUG, closeSession: closeVisit, closedBy: 'settle' }, asStaff);
+  ok('…refermer ne ment pas (closed:0, toujours ok pour rester idempotent)',
+    r.status === 200 && r.body.ok === true && r.body.closed === 0);
+  r = await get(readSession, 'merchant=' + SLUG + '&session=' + closeVisit);
+  ok('…le téléphone apprend la fermeture au sondage suivant',
+    r.status === 200 && r.body.status === 'closed');
+  r = await get(queueGet, 'merchant=' + SLUG + '&since=0', asStaff);
+  ok('…et la caisse la reçoit dans les fermetures durables',
+    Array.isArray(r.body.closedSessions) && r.body.closedSessions.some((s) => s.id === closeVisit));
+  ok('la caisse rejoue une fermeture non confirmée au lieu de la croire',
+    /pendingCloses/.test(inboxPage) && /CLOSE_ATTEMPTS = 5/.test(inboxPage)
+      && /Fermeture non confirmée/.test(inboxPage));
+
   r = await post(placeOrder, { merchant: SLUG, mode: 'takeout', session: t1, lines: [line('i2')] });
   const rejId = r.body.id;
   r = await post(queuePost, { merchant: SLUG, id: rejId, status: 'rejected' }, asStaff);
   ok('pending → rejected', r.status === 200);
   r = await post(queuePost, { merchant: SLUG, id: rejId, status: 'accepted' }, asStaff);
   ok('refusée, elle est terminale', r.status === 409);
+
+  let cancellable = await post(placeOrder, { merchant: SLUG, mode: 'takeout', lines: [line('i2')] });
+  await post(queuePost, { merchant: SLUG, id: cancellable.body.id, status: 'accepted' }, asStaff);
+  r = await post(queuePost, { merchant: SLUG, id: cancellable.body.id, status: 'rejected' }, asStaff);
+  ok('un doublon accepté mais non payé peut encore être annulé', r.status === 200 && r.body.status === 'rejected');
+
+  let paidOrder = await post(placeOrder, { merchant: SLUG, mode: 'takeout', lines: [line('i2')] });
+  await post(queuePost, { merchant: SLUG, id: paidOrder.body.id, status: 'accepted', paid: true }, asStaff);
+  r = await post(queuePost, { merchant: SLUG, id: paidOrder.body.id, status: 'rejected' }, asStaff);
+  ok('une commande déjà encaissée ne disparaît pas par annulation', r.status === 409);
 
   r = await post(queuePost, { merchant: SLUG, id: 'ord-nexistepas', status: 'accepted' }, asStaff);
   ok('une commande inconnue est un 404, pas un 409', r.status === 404);
@@ -250,11 +536,17 @@ async function get(fn, qs, headers = {}) {
   let tk = await post(placeOrder, { merchant: SLUG, mode: 'takeout', session: tkSess, lines: [line('i1')] });
   const tkId = tk.body.id;
   await post(queuePost, { merchant: SLUG, id: tkId, status: 'accepted', paid: true }, asStaff);
+  r = await post(queuePost, { merchant: SLUG, id: tkId, status: 'accepted', paid: true }, asStaff);
+  ok('encaisser après l’envoi cuisine estampille le paiement sans rejouer la transition',
+    r.status === 200 && r.body.paid === true && r.body.replayed === true
+      && !!DB._db.prepare('SELECT paid_ts FROM orders WHERE id=?').get(tkId).paid_ts);
   await post(queuePost, { merchant: SLUG, id: tkId, status: 'ready' }, asStaff);
-  r = await post(queuePost, { merchant: SLUG, id: tkId, status: 'served' }, asStaff);
+  r = await post(queuePost, { merchant: SLUG, id: tkId, status: 'served', actorProof }, asStaff);
   ok('la commande à emporter est remise', r.status === 200);
   r = await get(readSession, 'merchant=' + SLUG + '&session=' + tkSess);
-  ok('…et sa session se ferme avec elle', r.body.status === 'closed' && r.body.closedBy === 'served');
+  const handoverSession = DB._db.prepare('SELECT closed_actor_id, closed_actor_name FROM table_sessions WHERE id=?').get(tkSess);
+  ok('…et sa session se ferme avec elle', r.body.status === 'closed' && r.body.closedBy === 'takeout-handover'
+    && handoverSession.closed_actor_id === 'pin-orderpro-relay' && handoverSession.closed_actor_name === 'Nadia');
   r = await post(placeOrder, { merchant: SLUG, mode: 'takeout', session: tkSess, lines: [line('i1')] });
   ok('…donc on ne commande plus depuis le trottoir', r.status === 409 && r.body.error === 'session-closed');
 
@@ -306,6 +598,14 @@ async function get(fn, qs, headers = {}) {
     DB._db.prepare('SELECT COUNT(*) n FROM orders WHERE client_ref=?').get(ref).n === 1);
   ok('…avec un seul numéro', a.body.number === b.body.number);
 
+  DB._db.prepare('DELETE FROM orders WHERE id=?').run(a.body.id);
+  const afterDeleted = await post(placeOrder, {
+    merchant: SLUG, mode: 'takeout', ref: 'ref-after-deleted', lines: [line('i1')],
+  });
+  ok('supprimer une commande laisse un trou et ne réutilise jamais son numéro',
+    afterDeleted.body.number > a.body.number,
+    `avant=${a.body.number}, après=${afterDeleted.body.number}`);
+
   /* ═══ 7. L'ADDITION FERME LA SESSION ════════════════════════════════════ */
   r = await post(queuePost, { merchant: SLUG, closeSession: sess, closedBy: 'settle' }, asStaff);
   ok('la caisse ferme la session', r.status === 200 && r.body.closed === 1);
@@ -321,7 +621,7 @@ async function get(fn, qs, headers = {}) {
 
   /* fermer par numéro de table — c'est ce que markPaid() a sous la main */
   const sess2 = r.body.session;
-  r = await post(queuePost, { merchant: SLUG, closeTable: 'T7' }, asStaff);
+  r = await post(queuePost, { merchant: SLUG, closeTable: 'T7', expectedSession: sess2 }, asStaff);
   ok('on peut aussi fermer par table', r.status === 200 && r.body.closed === 1);
   r = await get(readSession, 'merchant=' + SLUG + '&session=' + sess2);
   ok('…même effet', r.body.status === 'closed');
@@ -468,21 +768,26 @@ async function get(fn, qs, headers = {}) {
      boucle — sans brider la salle entière, qui partage une seule adresse IP
      derrière le wifi du café. */
   const FLOOD = 'table-inondee';
+  const floodSession = (await post(openSession, { merchant: SLUG, mode: 'table', table: FLOOD })).body.session;
   for (let i = 0; i < 8; i++) {
     r = await post(placeOrder, {
-      merchant: SLUG, mode: 'table', table: FLOOD, ref: 'flood-' + i, lines: [line('i2')],
+      merchant: SLUG, mode: 'table', table: FLOOD, session: floodSession,
+      ref: 'flood-' + i, lines: [line('i2')],
     });
     ok(`commande ${i + 1}/8 sur une même table passe`, r.status === 200, JSON.stringify(r.body));
   }
   r = await post(placeOrder, {
-    merchant: SLUG, mode: 'table', table: FLOOD, ref: 'flood-9', lines: [line('i2')],
+    merchant: SLUG, mode: 'table', table: FLOOD, session: floodSession,
+    ref: 'flood-9', lines: [line('i2')],
   });
   ok('la neuvième est refusée', r.status === 429 && r.body.error === 'table-queue-full',
     r.status + ' ' + JSON.stringify(r.body));
 
   // …et une AUTRE table continue d'être servie normalement.
+  const neighborSession = (await post(openSession, { merchant: SLUG, mode: 'table', table: 'voisine' })).body.session;
   r = await post(placeOrder, {
-    merchant: SLUG, mode: 'table', table: 'voisine', ref: 'voisine-1', lines: [line('i2')],
+    merchant: SLUG, mode: 'table', table: 'voisine', session: neighborSession,
+    ref: 'voisine-1', lines: [line('i2')],
   });
   ok('la table d\'à côté commande toujours', r.status === 200, JSON.stringify(r.body));
 
@@ -492,7 +797,8 @@ async function get(fn, qs, headers = {}) {
   ).get(SLUG, FLOOD);
   await post(queuePost, { merchant: SLUG, id: stuck.id, status: 'accepted' }, asStaff);
   r = await post(placeOrder, {
-    merchant: SLUG, mode: 'table', table: FLOOD, ref: 'flood-10', lines: [line('i2')],
+    merchant: SLUG, mode: 'table', table: FLOOD, session: floodSession,
+    ref: 'flood-10', lines: [line('i2')],
   });
   ok('dès que le comptoir accepte, la table peut à nouveau commander', r.status === 200,
     JSON.stringify(r.body));
@@ -525,12 +831,26 @@ async function get(fn, qs, headers = {}) {
     .run(SALLE, 'Chez Brahim', 'restaurant', JSON.stringify(CARTE), Date.now());
   const asSalle = { Cookie: sessionCookie(await makeSession(ACC_SALLE, SECRET)).split(';')[0] };
 
+  /* La semaine restaurant est lundi–dimanche, heure Maroc. Un ancien numéro de
+   * la semaine courante compte ; celui de la semaine précédente ne compte plus. */
+  const thisWeek = startOfWeek(Date.now());
+  DB._db.prepare(
+    `INSERT INTO orders (id,merchant,number,mode,table_no,total,lines,status,created_ts,updated_ts)
+     VALUES (?,?,?,?,?,?,?,?,?,?)`
+  ).run('ord-week-current', SALLE, 41, 'table', 'OLD', 90, '[]', 'served', thisWeek + 1000, thisWeek + 1000);
+  DB._db.prepare(
+    `INSERT INTO orders (id,merchant,number,mode,table_no,total,lines,status,created_ts,updated_ts)
+     VALUES (?,?,?,?,?,?,?,?,?,?)`
+  ).run('ord-week-before', SALLE, 99, 'table', 'OLD', 90, '[]', 'served', thisWeek - 1000, thisWeek - 1000);
+
   r = await post(queuePost, {
     merchant: SALLE, create: true, mode: 'table', table: 'T7',
-    lines: [{ id: 'i1', qty: 2, note: 'sans olives' }, { id: 'i2', qty: 3 }],
+    lines: [{ id: 'i1', qty: 2, note: 'sans olives', visuals: [{ emoji: '🚫🫒', name: 'Sans olives' }] }, { id: 'i2', qty: 3 }],
   }, asSalle);
   ok('la salle envoie sa commande, Order Pro éteint', r.status === 200 && r.body.ok,
     r.status + ' ' + JSON.stringify(r.body));
+  ok('le numéro restaurant continue sur la semaine courante', r.body.number === 42,
+    'number=' + r.body.number);
   ok('le prix vient de la carte, pas de la tablette', r.body.total === 90 * 2 + 15 * 3,
     'total=' + r.body.total);
   const salleRow = DB._db.prepare('SELECT status, table_no, total, lines FROM orders WHERE id=?')
@@ -539,6 +859,52 @@ async function get(fn, qs, headers = {}) {
   ok('la table voyage avec', salleRow.table_no === 'T7', salleRow.table_no);
   ok('la note du convive aussi',
     JSON.parse(salleRow.lines)[0].note === 'sans olives', salleRow.lines);
+  ok('le repère visuel de la cuisine aussi',
+    JSON.parse(salleRow.lines)[0].visuals[0].emoji === '🚫🫒', salleRow.lines);
+
+  r = await post(queuePost, {
+    merchant: SALLE, create: true, mode: 'table', table: 'T7F',
+    lines: [
+      { id: 'i4', qty: 1, kind: 'formula', formulaUid: 'fml-included' },
+      { id: 'i5', qty: 1, kind: 'formula-part', formulaUid: 'fml-included', formulaSlotId: 'drink', lineId: 'fml-included-drink' },
+      { id: 'i4', qty: 1, kind: 'formula', formulaUid: 'fml-premium' },
+      { id: 'i6', qty: 1, kind: 'formula-part', formulaUid: 'fml-premium', formulaSlotId: 'drink', lineId: 'fml-premium-drink' },
+    ],
+  }, asSalle);
+  ok('les composants inclus restent gratuits après la tarification serveur',
+    r.status === 200 && r.body.total === 68 + 88, JSON.stringify(r.body));
+  const formulaRow = DB._db.prepare("SELECT lines FROM orders WHERE merchant=? AND table_no='T7F'").get(SALLE);
+  const formulaLines = formulaRow ? JSON.parse(formulaRow.lines) : [];
+  ok('les lignes enfants persistent à zéro et gardent leur type formule',
+    formulaLines.length === 4
+      && formulaLines[1].kind === 'formula-part' && formulaLines[1].unitPrice === 0
+      && formulaLines[3].kind === 'formula-part' && formulaLines[3].unitPrice === 0,
+    formulaRow && formulaRow.lines);
+  ok('le reçu garde le supplément exact de chaque choix sans le refacturer',
+    formulaLines[1] && formulaLines[1].formulaExtra === 0
+      && formulaLines[3] && formulaLines[3].formulaExtra === 20,
+    formulaRow && formulaRow.lines);
+  ok('seul le supplément configuré est ajouté au parent',
+    formulaLines[0] && formulaLines[0].unitPrice === 68
+      && formulaLines[2] && formulaLines[2].unitPrice === 88,
+    formulaRow && formulaRow.lines);
+
+  r = await post(queuePost, {
+    merchant: SALLE, create: true, mode: 'table', table: 'T7OP',
+    lines: [
+      { id: 'i4', qty: 1, kind: 'formula', formulaUid: 'orderpro-formula', formulaName: 'Continental',
+        optionChoices: [{ group: 'egg-style', label: 'Œufs au plat' }] },
+      { id: 'i5', qty: 1, kind: 'formula-part', formulaUid: 'orderpro-formula', formulaName: 'Continental',
+        formulaSlotId: 'drink', slotLabel: 'Boisson', lineId: 'orderpro-formula-drink-0' },
+    ],
+  }, asSalle);
+  const orderProFormula = r.body && r.body.lines;
+  ok('la formule OrderPro conserve son composant pour la cuisine',
+    r.status === 200 && orderProFormula.length === 2
+      && orderProFormula[1].kind === 'formula-part' && orderProFormula[1].name === 'Carrot Juice',
+    JSON.stringify(r.body));
+  ok('les options OrderPro restent sur le parent canonique pour le KDS',
+    orderProFormula[0].visuals.some(v => v.name === 'Œufs au plat'), JSON.stringify(orderProFormula[0]));
 
   // La caisse la voit. C'est tout l'objet : un ticket que la cuisine reçoit.
   r = await get(queueGet, 'merchant=' + SALLE + '&since=0', asSalle);
@@ -581,6 +947,15 @@ async function get(fn, qs, headers = {}) {
     JSON.stringify(again.body));
   ok('…et la cuisine n\'a qu\'un ticket',
     DB._db.prepare("SELECT COUNT(*) n FROM orders WHERE merchant=? AND table_no='T10'").get(SALLE).n === 1);
+  await post(queuePost, { merchant: SALLE, closeTable: 'T10', expectedSession: svFirst.body.session, closedBy: 'service' }, asSalle);
+  const lateReplay = await post(queuePost, {
+    merchant: SALLE, create: true, mode: 'table', table: 'T10', ref: REF,
+    lines: [{ id: 'i1', qty: 1 }],
+  }, asSalle);
+  ok('un retry Wi-Fi après paiement ne rouvre pas une nouvelle visite',
+    lateReplay.body.replayed === true
+      && DB._db.prepare("SELECT COUNT(*) n FROM table_sessions WHERE merchant=? AND table_no='T10' AND status='open'").get(SALLE).n === 0,
+    JSON.stringify(lateReplay.body));
 
   /* Tenancy. `entitledMerchant` ne REFUSE pas un slug étranger réclamé par un
    * commerçant connecté : il le ramène à SON établissement (voir le commentaire

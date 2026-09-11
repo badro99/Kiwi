@@ -74,7 +74,7 @@ ok('une commande COMMENCÉE garde son garde-fou',
 
 // Annuler doit réussir même sans mesa — c'était la dernière issue, et elle
 // partait en `return` silencieux.
-const cancelFn = (CAISSE.match(/function cancelNewOrder\(\)\s*\{[\s\S]{0,3400}?\n {4}\}/) || [''])[0];
+const cancelFn = (CAISSE.match(/function cancelNewOrder\(who = null\)\s*\{[\s\S]{0,3800}?\n {4}\}/) || [''])[0];
 ok('cancelNewOrder existe toujours', !!cancelFn);
 ok("cancelNewOrder ne renonce plus quand il n'y a pas de mesa",
   !/^\s*if \(!selectedId\) return;/m.test(cancelFn));
@@ -129,9 +129,9 @@ ok('orderInProgressCount ne compte que ce qui n’est pas encore parti',
 
 // L'empilement d'un article ne doit JAMAIS retomber sur une ligne déjà partie :
 // sinon l'addition monte et aucun bon ne part — facturé, jamais préparé.
-const addFn = (CAISSE.match(/function addToTableOrder\(tableId, itemId\)\s*\{[\s\S]{0,1800}?\n {4}\}/) || [''])[0];
+const addFn = (CAISSE.match(/function pushTableOrderLine\(tableId, item, opts\)\s*\{[\s\S]{0,2200}?\n {4}\}/) || [''])[0];
 ok("un ajout ne s'empile jamais sur une ligne déjà en cuisine",
-  /find\(l => l\.id === itemId && !l\.sent/.test(addFn));
+  /find\(l => l\.id === item\.id && !l\.sent/.test(addFn));
 
 // Et une ligne partie ne se décrémente pas depuis la caisse.
 const qtyFn = (CAISSE.match(/function changeTableOrderLineQty\(tableId, uid, delta\)\s*\{[\s\S]{0,900}?\n {4}\}/) || [''])[0];
@@ -143,10 +143,40 @@ ok("annuler sur une mesa servie ne jette que les ajouts",
   /tableSentCount\(selectedId\) > 0/.test(cancelFn)
   && /filter\(l => l\.sent\)/.test(cancelFn));
 
+/* ── 1 ter. ANNULER UNE TABLE ORDERPRO DEPUIS SALLE ────────────────────────
+ * Un client peut ouvrir la table via NFC, consulter la carte, puis partir sans
+ * commander. « Annuler mesa » doit rendre la table et fermer sa session, sans
+ * jamais effacer un repas déjà envoyé en cuisine. */
+const cancelTableStart = CAISSE.indexOf("else if (a === 'cancel-table')");
+const cancelTableEnd = CAISSE.indexOf('\n      });\n    });', cancelTableStart);
+const cancelTableWire = cancelTableStart >= 0 && cancelTableEnd > cancelTableStart
+  ? CAISSE.slice(cancelTableStart, cancelTableEnd)
+  : '';
+ok('le bouton Annuler mesa distingue une commande déjà envoyée',
+  /tableSentCount\(selectedId\) === 0/.test(cancelTableWire));
+ok('Annuler mesa remet une table sans commande à zéro',
+  /cancelOpenTable\(selectedId\)/.test(cancelTableWire));
+ok('Annuler mesa exige le code opérateur si des articles non envoyés existent',
+  /tableSentCount\(selectedId\) === 0[\s\S]*?hasItems[\s\S]*?requireTillOperator\(/.test(cancelTableWire));
+ok('Annuler mesa protège une table avec commande en cours',
+  /annulation impossible/.test(cancelTableWire));
+const cancelOpenFn = (CAISSE.match(/function cancelOpenTable\(id, who = null\)\s*\{[\s\S]{0,1600}?\n    \}/) || [''])[0];
+ok('cancelOpenTable existe et libère la session OrderPro',
+  /releasePhoneTable\(id, 'caisse', true, who.actorProof \|\| ''\)/.test(cancelOpenFn));
+ok('cancelOpenTable remet le statut à khawya',
+  /t\.status = 'khawya'/.test(cancelOpenFn));
+const releaseFn = (CAISSE.match(/function releasePhoneTable\(id, why, force, actorProof = ''\)\s*\{[\s\S]{0,1000}?\n    \}/) || [''])[0];
+ok('releasePhoneTable peut fermer une session sans pastille locale',
+  /!seat && !force/.test(releaseFn));
+
 // La cuisine ne reçoit que le neuf — la règle existait, elle doit tenir.
 const sendFn = (CAISSE.match(/function sendTableToKitchen\(tableId\)\s*\{[\s\S]{0,2600}?\n {4}\}/) || [''])[0];
 ok('sendTableToKitchen n’envoie que les lignes non parties', /!l\.sent/.test(sendFn));
 ok('sendTableToKitchen marque les lignes envoyées', /l\.sent = true/.test(sendFn));
+
+const retireRejectedFn = (CAISSE.match(/function retireRejectedKitchenTicket\(ticket\)\s*\{[\s\S]{0,1800}?\n    \}/) || [''])[0];
+ok('un ticket rejeté retire aussi son pont de ligne OrderPro de la table',
+  /orderProLine/.test(retireRejectedFn) && /ticket\.opId/.test(retireRejectedFn));
 
 /* ── 2. L'invariant, rejoué ───────────────────────────────────────────────
  * Un modèle réduit de l'état réel (mode, mesa sélectionnée, lignes saisies) et

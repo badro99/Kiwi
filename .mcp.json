@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "kiwi-tickets": {
+      "command": "node",
+      "args": ["tools/tickets-mcp/server.js"],
+      "env": {}
+    }
+  }
+}

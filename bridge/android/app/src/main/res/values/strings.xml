@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Kiwi Print Bridge</string>
+    <string name="channel_name">Pont d’impression Kiwi</string>
+    <string name="service_running">Le pont d’impression est actif</string>
+</resources>

@@ -5,12 +5,67 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <title>Kiwi · Console opérateur</title>
+<link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
+/* ══ LA VOIX DE LA CONSOLE ════════════════════════════════════════════════════
+   Quatre règles, les mêmes que la page d'accueil.
+
+   1. UNE SEULE VOIX — Inter Tight, partout.
+      La console ne chargeait aucune fonte et ouvrait sa pile par
+      -apple-system : sur un Mac elle s'affichait donc en San Francisco, et
+      ses chiffres en Menlo. Deux faces non choisies sur le même écran, plus
+      une troisième pour les libellés : c'est la première chose qu'on voit.
+
+   2. LES CHIFFRES SONT TABULAIRES, PAS MONOSPACÉS.
+      Une colonne de montants s'aligne avec font-variant-numeric, sans
+      changer de voix pour le dire. --mono ne sert plus qu'à ce qui est
+      vraiment une chaîne machine — le slug d'un marchand, un code.
+
+   3. PAS DE CAPITALES INTERLETTRÉES.
+      Vingt-sept micro-libellés étaient en capitales monospacées de 9,5 à
+      11 px avec .04 à .11em d'interlettrage. À cette taille ce n'est plus du
+      texte, c'est du grain. Bas de casse, 12 px, poids 600, --muted.
+
+   4. UNE ÉCHELLE, PAS DES VALEURS.
+      Type 12 / 13 / 15 / 17 / 20 / 32. Espace 4 / 8 / 12 / 16 / 22.
+      Rayon 10 pour un objet, 14 pour une section, 999 pour une pastille.
+      Un seul mouvement : --dur --ease. Aucune animation d'ambiance.
+
+   Les couleurs ne sont plus posées en dur. Tout passe par un jeton, ce qui
+   fait tenir le mode sombre en un bloc de jetons au lieu de quarante
+   surcharges — c'est ce bloc-là qui laissait passer, une fois sur deux, une
+   carte restée claire sous un titre devenu blanc.
+   ─────────────────────────────────────────────────────────────────────────── */
   :root{
+    /* la marque — verrouillée (assets/tokens.css) */
     --atlas:#0B6E4F; --riad:#053B2C; --mint:#7DF2B0;
-    --paper:#F7F5F0; --ink:#0A0F0D; --line:#e4e0d7; --muted:#5d6b63; --surface:#FFFDFA;
-    --warn:#b0402f; --ok:#0B6E4F;
+    --paper:#F7F5F0; --ink:#0A0F0D; --surface:#FFFDFA;
+    --line:#E4E0D7; --muted:#5D6B63;
+
+    /* l'accent qui doit se voir SUR la surface courante. En clair c'est
+       --atlas ; de nuit --atlas descend à 2,6:1 sur nos fonds sombres, donc
+       il s'éclaircit ici et nulle part ailleurs — la lentille de sélection,
+       elle, garde le dégradé de marque. */
+    --accent-lit:var(--atlas);
+
+    /* surfaces sourdes — survol de ligne, carte posée dans une carte,
+       ligne choisie, filet teinté */
+    --wash:#F1EFE9; --wash-2:#FAF8F3; --sel:#EEF7F1; --line-2:#DFE9E2;
+    --on-accent:#EAFFF4;
+
+    /* sémantique. L'ocre dit « il reste du travail », le rouge dit « c'est
+       cassé ». Les deux étaient écrits huit fois chacun en valeurs libres. */
+    --ok:#0B6E4F;
+    --ochre:#7A5200; --ochre-bg:#FDF6E6; --ochre-line:#E8D9B0;
+    --warn:#B0402F; --warn-bg:#FBEEEB; --warn-line:#E7CCC6;
+
+    --sans:"Inter Tight",Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     --mono:ui-monospace,"JetBrains Mono",SFMono-Regular,Menlo,monospace;
+    --r:10px; --r-lg:14px;
+    --dur:.15s; --ease:cubic-bezier(0,0,.2,1);
   }
 
 /* Emphasis is roman. <em>/<i>/<cite> default to italic in every browser, and a
@@ -24,25 +79,37 @@ em, i, cite, dfn, var { font-style: normal; }
   html,body{margin:0}
   body{
     background:var(--paper); color:var(--ink);
-    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Inter Tight",Inter,"Segoe UI",sans-serif;
+    font:400 15px/1.55 var(--sans);
+    -webkit-font-smoothing:antialiased;
     padding:0 0 60px;
+  }
+  /* Tout chiffre de cette console est une quantité comparée à une autre :
+     un CA à côté d'un CA, un compteur sous un compteur. Les tabulaires les
+     alignent sans changer de fonte. */
+  .num, td.num, .ov-v, .ov-axis, .ov-row .amt, .ov-top .city,
+  .tsrow .ts-amt, .tsrow .ts-when, .imp .fig .v, .sec-head .count,
+  .biz-row .inp.n, .addrow input.pin, .aud-row .at, .ts-detail .l .q{
+    font-variant-numeric:tabular-nums lining-nums;
   }
   a{color:var(--atlas)}
   .top{
     position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:14px;
-    padding:14px 22px; background:var(--riad); color:#eafff4;
+    padding:14px 22px; background:var(--riad); color:var(--on-accent);
     box-shadow:0 2px 12px -4px rgba(5,59,44,.5);
   }
-  .top h1{font-size:1.02rem; margin:0; font-weight:640; letter-spacing:-.01em}
-  .top .dot{width:8px;height:8px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 0 rgba(125,242,176,.5);animation:pulse 2.2s infinite}
-  @keyframes pulse{70%{box-shadow:0 0 0 7px rgba(125,242,176,0)}100%{box-shadow:0 0 0 0 rgba(125,242,176,0)}}
-  .badge{font:600 11px/1 var(--mono); letter-spacing:.08em; text-transform:uppercase; padding:5px 9px; border-radius:999px; background:rgba(255,255,255,.14)}
-  .badge.mock{background:rgba(255,196,120,.22); color:#ffd9a1}
+  .top h1{font-size:17px; margin:0; font-weight:600; letter-spacing:-.015em}
+  /* La pastille dit « la console parle à la base ». Elle le disait en
+     pulsant toutes les 2,2 s : un mouvement permanent, sans information,
+     dans le coin de l'œil pendant qu'on lit un tableau. Elle le dit
+     maintenant en étant allumée. */
+  .top .dot{width:7px;height:7px;border-radius:50%;background:var(--mint)}
+  .badge{font:600 12px/1 var(--sans); letter-spacing:0; padding:5px 10px; border-radius:999px; background:rgba(255,255,255,.14)}
+  .badge.mock{background:rgba(255,196,120,.22); color:#FFD9A1}
   .spacer{margin-left:auto}
-  .top button{font:inherit; font-size:.82rem; font-weight:600; border:0; border-radius:9px; padding:8px 13px; cursor:pointer; background:rgba(255,255,255,.16); color:#eafff4}
+  .top button{font:600 13px/1 var(--sans); border:0; border-radius:var(--r); padding:8px 13px; cursor:pointer; background:rgba(255,255,255,.16); color:var(--on-accent); transition:background var(--dur) var(--ease)}
   .top button:hover{background:rgba(255,255,255,.26)}
   .wrap{max-width:1120px; margin:0 auto; padding:22px}
-  section{background:var(--surface); border:1px solid var(--line); border-radius:14px; margin:0 0 20px; overflow:hidden}
+  section{background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); margin:0 0 20px; overflow:hidden}
   .sec-head{padding:13px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; flex-wrap:wrap}
   /* Everything in the management panel — trade, modules, staff codes — belongs to
      exactly ONE établissement, so when a client has several the panel has to say
@@ -55,12 +122,12 @@ em, i, cite, dfn, var { font-style: normal; }
      masqué d'un client à une seule boutique laissait quand même sa pastille vide
      — et la lentille de sélection avec elle — flotter dans l'en-tête. */
   .store-switch[hidden]{display:none}
-  .store-switch{display:flex; gap:2px; margin-left:auto; flex:0 0 auto; padding:3px; border-radius:999px; background:#eef2ee; max-width:100%; overflow-x:auto}
-  .store-switch button{font:inherit; font-size:.78rem; font-weight:600; border:0; border-radius:999px; padding:6px 13px; cursor:pointer; background:transparent; color:var(--muted); white-space:nowrap; transition:color .2s}
-  .store-switch button:hover{color:var(--riad)}
-  .store-switch button.on{color:#eafff4}
-  .sec-head h2{font-size:.86rem; margin:0; text-transform:uppercase; letter-spacing:.06em; color:var(--riad)}
-  .sec-head .count{font:600 11px/1 var(--mono); color:var(--muted)}
+  .store-switch{display:flex; gap:2px; margin-left:auto; flex:0 0 auto; padding:3px; border-radius:999px; background:var(--wash); max-width:100%; overflow-x:auto}
+  .store-switch button{font:600 13px/1 var(--sans); border:0; border-radius:999px; padding:7px 13px; cursor:pointer; background:transparent; color:var(--muted); white-space:nowrap; transition:color var(--dur) var(--ease)}
+  .store-switch button:hover{color:var(--ink)}
+  .store-switch button.on{color:var(--on-accent)}
+  .sec-head h2{font-size:15px; margin:0; font-weight:600; letter-spacing:-.01em; color:var(--ink)}
+  .sec-head .count{font:500 13px/1 var(--sans); color:var(--muted)}
   /* Refermer le panneau de gestion. Le titre pousse tout le reste à droite, ce
      qui garde la croix collée au bord que le sélecteur d'établissement soit
      affiché ou non — sans lui, un client à une seule boutique verrait la croix
@@ -68,54 +135,56 @@ em, i, cite, dfn, var { font-style: normal; }
   #manage .sec-head h2{margin-right:auto}
   .sec-close{flex:0 0 auto; width:28px; height:28px; display:grid; place-items:center; padding:0;
     border:1px solid var(--line); border-radius:8px; background:transparent; color:var(--muted);
-    font-family:inherit; font-size:1.05rem; font-weight:400; line-height:1;
-    cursor:pointer; transition:background .15s, color .15s}
-  .sec-close:hover{background:#eef2ee; color:var(--riad)}
-  .sec-close:focus-visible{outline:2px solid var(--atlas); outline-offset:2px}
-  table{width:100%; border-collapse:collapse; font-size:.9rem}
+    font-family:inherit; font-size:17px; font-weight:400; line-height:1;
+    cursor:pointer; transition:background var(--dur) var(--ease), color var(--dur) var(--ease)}
+  .sec-close:hover{background:var(--wash); color:var(--ink)}
+  .sec-close:focus-visible{outline:2px solid var(--accent-lit); outline-offset:2px}
+  table{width:100%; border-collapse:collapse; font-size:14px}
   th,td{text-align:left; padding:11px 18px; border-bottom:1px solid var(--line)}
-  th{font-size:.68rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:640}
+  th{font-size:12px; letter-spacing:0; color:var(--muted); font-weight:600}
   tr:last-child td{border-bottom:0}
-  tbody tr{cursor:pointer; transition:background .12s}
-  tbody tr:hover{background:#f4f1ea}
-  tbody tr.sel{background:#eef7f1}
-  td.num{font-family:var(--mono); text-align:right; white-space:nowrap}
-  .plan{font:600 10.5px/1 var(--mono); text-transform:uppercase; letter-spacing:.04em; padding:3px 7px; border-radius:6px; background:#eef2ee; color:var(--riad)}
-  .plan.basic{background:#eef2ee} .plan.pro{background:#e3f3ea} .plan.ultra{background:var(--riad); color:#bff5d6} .plan.ultimate{background:var(--ok); color:#eafff4}
-  .online{display:inline-flex; align-items:center; gap:6px; font-size:.8rem; color:var(--muted)}
-  .online .d{width:7px;height:7px;border-radius:50%;background:#c7cec9}
-  .online.live .d{background:#28c76f}
-  .mini{font:inherit; font-size:.78rem; font-weight:600; border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer; background:var(--surface); color:var(--riad)}
-  .mini:hover{border-color:var(--atlas)}
+  tbody tr{cursor:pointer; transition:background var(--dur) var(--ease)}
+  tbody tr:hover{background:var(--wash)}
+  tbody tr.sel{background:var(--sel)}
+  td.num{text-align:right; white-space:nowrap}
+  .plan{font:600 12px/1 var(--sans); letter-spacing:0; padding:3px 8px; border-radius:6px; background:var(--wash); color:var(--ink)}
+  .plan.basic{background:var(--wash)} .plan.pro{background:var(--sel)} .plan.ultra{background:var(--riad); color:#BFF5D6} .plan.ultimate{background:var(--ok); color:var(--on-accent)}
+  .online{display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--muted)}
+  .online .d{width:7px;height:7px;border-radius:50%;background:var(--line-2)}
+  .online.live .d{background:var(--accent-lit)}
+  .mini{font:600 13px/1.2 var(--sans); border:1px solid var(--line); border-radius:8px; padding:7px 11px; cursor:pointer; background:var(--surface); color:var(--ink);
+        transition:border-color var(--dur) var(--ease), background var(--dur) var(--ease), color var(--dur) var(--ease)}
+  .mini:hover{border-color:var(--accent-lit)}
   .mini.ghost{border-style:dashed}
-  .mini.danger{color:var(--warn); border-color:#e7ccc6}
-  .mini.danger:hover{background:#fbeeeb}
+  .mini.danger{color:var(--warn); border-color:var(--warn-line)}
+  .mini.danger:hover{background:var(--warn-bg)}
   /* Boîte de dialogue — voir modal(). Sombre par défaut comme le reste de la
      console : cet écran n'est pas fait pour être lisible par-dessus l'épaule. */
   .md-back{position:fixed; inset:0; background:rgba(8,12,10,.62); display:flex;
     align-items:center; justify-content:center; padding:20px; z-index:60}
   .md-card{position:relative; background:var(--surface); border:1px solid var(--line);
-    border-radius:14px; padding:20px 22px; width:min(460px,100%); box-shadow:0 24px 60px rgba(0,0,0,.34)}
-  .md-title{font-weight:640; font-size:1rem; margin:0 26px 6px 0}
-  .md-desc{color:var(--muted); font-size:.84rem; line-height:1.5}
-  .md-x{position:absolute; top:10px; right:12px; font:inherit; font-size:1.1rem; line-height:1;
+    border-radius:var(--r-lg); padding:20px 22px; width:min(460px,100%); box-shadow:0 26px 64px -28px rgba(5,32,24,.55)}
+  .md-title{font-weight:600; font-size:17px; letter-spacing:-.01em; margin:0 26px 6px 0}
+  .md-desc{color:var(--muted); font-size:14px; line-height:1.5}
+  .md-x{position:absolute; top:10px; right:12px; font:inherit; font-size:18px; line-height:1;
     border:0; background:transparent; color:var(--muted); cursor:pointer; padding:4px 6px}
-  .inp{font:inherit; font-size:.86rem; padding:9px 11px; border:1.5px solid var(--line);
-    border-radius:9px; background:var(--surface); color:var(--ink); box-sizing:border-box}
-  .inp:focus{outline:none; border-color:var(--riad)}
-  .mini.warn{color:#8a5a00; border-color:#e8d9b0; background:#fdf6e6}
-  .mini.warn:hover{background:#f6e8c2}
-  .sus-badge{display:inline-block; margin-left:8px; font:600 9.5px/1 var(--mono); text-transform:uppercase; letter-spacing:.05em; color:#8a5a00; background:#fbeecb; border:1px solid #e8d9b0; padding:3px 6px; border-radius:5px; vertical-align:middle}
+  .inp{font:400 14px/1.4 var(--sans); padding:9px 11px; border:1px solid var(--line);
+    border-radius:var(--r); background:var(--surface); color:var(--ink); box-sizing:border-box;
+    transition:border-color var(--dur) var(--ease)}
+  .inp:focus{outline:none; border-color:var(--accent-lit)}
+  .mini.warn{color:var(--ochre); border-color:var(--ochre-line); background:var(--ochre-bg)}
+  .mini.warn:hover{background:#F6E8C2}
+  .sus-badge{display:inline-block; margin-left:8px; font:600 12px/1 var(--sans); letter-spacing:0; color:var(--ochre); background:var(--ochre-bg); border:1px solid var(--ochre-line); padding:2px 7px; border-radius:6px; vertical-align:middle}
   tr.suspended{background:rgba(180,140,0,.06)}
   /* One client, several établissements. The band names the PERSON and totals the
      whole account; the rows under it are their individual shops, each with its
      own trade, its own key and its own money. A client with a single shop gets no
      band at all — the grouping only appears when there is something to tell apart. */
-  .owner-row td, .owner-row:hover td{background:#f1f5f2; cursor:default}
-  .owner-row .who{font-weight:640; color:var(--riad)}
-  .owner-row .mail{color:var(--muted); font-size:.78rem; margin-top:2px}
-  .count-chip{display:inline-block; font:600 9.5px/1 var(--mono); text-transform:uppercase; letter-spacing:.04em; color:var(--riad); background:#e3f3ea; border-radius:5px; padding:4px 7px; white-space:nowrap}
-  tr.store-row td:first-child{padding-left:30px; border-left:3px solid #dfe9e2}
+  .owner-row td, .owner-row:hover td{background:var(--wash); cursor:default}
+  .owner-row .who{font-weight:600; color:var(--ink)}
+  .owner-row .mail{color:var(--muted); font-size:13px; margin-top:2px}
+  .count-chip{display:inline-block; font:600 12px/1 var(--sans); letter-spacing:0; color:var(--ink); background:var(--sel); border-radius:6px; padding:4px 8px; white-space:nowrap}
+  tr.store-row td:first-child{padding-left:30px; border-left:3px solid var(--line-2)}
 
   /* ══ VUE D'ENSEMBLE ═══════════════════════════════════════════════════════
      Le premier écran de la console. Il ne parle pas d'UN client : il parle de
@@ -123,62 +192,71 @@ em, i, cite, dfn, var { font-style: normal; }
      ils sont. Chaque carte porte sa base de calcul juste dessous, parce qu'un
      grand chiffre sans période ni périmètre n'est pas un chiffre : « 1,2 M »
      ne veut rien dire tant qu'on ne sait pas sur combien de jours et sur
-     combien d'établissements. Les chiffres sont en chasse fixe pour qu'une
-     colonne de montants s'aligne à l'œil, et romains : aucune italique. */
+     combien d'établissements. Les chiffres sont tabulaires pour qu'une colonne
+     de montants s'aligne à l'œil, et romains : aucune italique. */
   .ov-grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1px; background:var(--line)}
-  .ov-card{background:var(--surface); padding:16px 18px 15px; min-width:0}
-  .ov-k{font:600 10px/1 var(--mono); text-transform:uppercase; letter-spacing:.11em; color:var(--muted)}
-  .ov-v{font-family:var(--mono); font-size:1.85rem; font-weight:500; letter-spacing:-.025em;
-        color:var(--riad); margin-top:10px; line-height:1.04; overflow-wrap:anywhere}
-  .ov-v .u{font-size:.72rem; font-weight:600; color:var(--muted); letter-spacing:.02em; margin-left:5px}
-  .ov-sub{font-size:.76rem; color:var(--muted); margin-top:7px; line-height:1.45}
-  .ov-sub b{font-weight:600; color:var(--riad)}
+  .ov-card{background:var(--surface); padding:18px 18px 16px; min-width:0}
+  .ov-k{font:600 12px/1.2 var(--sans); letter-spacing:0; color:var(--muted)}
+  .ov-v{font-size:32px; font-weight:500; letter-spacing:-.025em;
+        color:var(--ink); margin-top:10px; line-height:1.04; overflow-wrap:anywhere}
+  .ov-v .u{font-size:13px; font-weight:500; color:var(--muted); letter-spacing:0; margin-left:6px}
+  .ov-sub{font-size:13px; color:var(--muted); margin-top:8px; line-height:1.45}
+  .ov-sub b{font-weight:600; color:var(--ink)}
   /* Ce qui manque se dit en ocre — la couleur des « à renseigner » de la
      marque — et jamais en rouge : une ville pas encore saisie n'est pas une
      panne, c'est du travail qui reste. */
-  .ov-todo{color:#8a5a00}
-  .ov-body{padding:16px 18px 18px; border-top:1px solid var(--line)}
+  .ov-todo{color:var(--ochre)}
+  .ov-body{padding:18px; border-top:1px solid var(--line)}
   .ov-split{display:grid; grid-template-columns:1fr 1fr; gap:26px}
-  .ov-h{font:600 10px/1 var(--mono); text-transform:uppercase; letter-spacing:.11em;
-        color:var(--muted); margin:0 0 12px}
+  .ov-h{font:600 12px/1.2 var(--sans); letter-spacing:0; color:var(--muted); margin:0 0 12px}
   /* La courbe des trente jours. Des barres, pas une ligne : on lit « quel jour »
      et « combien » sur une barre, alors qu'une ligne lissée invente les jours
      creux qu'elle traverse. */
   .ov-spark{display:flex; align-items:flex-end; gap:2px; height:74px}
-  .ov-spark i{flex:1 1 0; min-width:0; background:#dfe9e2; border-radius:2px 2px 0 0;
-              min-height:2px; transition:background .15s}
-  .ov-spark i.on{background:var(--atlas)}
-  .ov-spark i:hover{background:var(--riad)}
-  .ov-axis{display:flex; justify-content:space-between; font:500 10.5px/1 var(--mono);
+  .ov-spark i{flex:1 1 0; min-width:0; border-radius:2px 2px 0 0; min-height:2px;
+              background:color-mix(in srgb, var(--accent-lit) 26%, var(--wash));
+              transition:background var(--dur) var(--ease)}
+  .ov-spark i.on{background:var(--accent-lit)}
+  .ov-spark i:hover{background:var(--ink)}
+  .ov-axis{display:flex; justify-content:space-between; font:500 12px/1 var(--sans);
            color:var(--muted); margin-top:8px}
   .ov-rows{display:flex; flex-direction:column; gap:9px}
   .ov-row{display:grid; grid-template-columns:1fr auto; gap:8px 12px; align-items:baseline}
-  .ov-row .nm{font-size:.86rem; color:var(--ink); min-width:0; overflow-wrap:anywhere}
-  .ov-row .amt{font-family:var(--mono); font-size:.8rem; color:var(--muted); white-space:nowrap}
-  .ov-bar{grid-column:1 / -1; height:5px; border-radius:3px; background:#eef2ee; overflow:hidden}
-  .ov-bar span{display:block; height:100%; background:var(--atlas); border-radius:3px}
-  .ov-empty{font-size:.82rem; color:var(--muted); line-height:1.5}
+  .ov-row .nm{font-size:14px; color:var(--ink); min-width:0; overflow-wrap:anywhere}
+  .ov-row .amt{font-size:13px; color:var(--muted); white-space:nowrap}
+  .ov-bar{grid-column:1 / -1; height:5px; border-radius:3px; background:var(--wash); overflow:hidden}
+  .ov-bar span{display:block; height:100%; background:var(--accent-lit); border-radius:3px}
+  .ov-empty{font-size:13px; color:var(--muted); line-height:1.5}
   .ov-top{margin-top:22px}
   .ov-top .ov-row{grid-template-columns:1fr auto auto; gap:8px 14px}
-  .ov-top .city{font:500 11px/1 var(--mono); color:var(--muted); white-space:nowrap}
-  .ov-note{font-size:.76rem; color:var(--muted); line-height:1.5; margin:16px 0 0;
+  .ov-top .city{font:500 13px/1 var(--sans); color:var(--muted); white-space:nowrap}
+  .ov-note{font-size:13px; color:var(--muted); line-height:1.5; margin:16px 0 0;
            padding-top:13px; border-top:1px solid var(--line)}
   /* Recherche du roster. Un back-office qui tient dix-huit clients se lit ; à
      cent, on cherche quelqu'un par son nom, sa ville ou son adresse. */
   .cli-search{margin-left:auto; display:flex; align-items:center; gap:8px}
-  .cli-search input{font:inherit; font-size:.82rem; padding:7px 11px; width:220px;
-    border:1.5px solid var(--line); border-radius:9px; background:var(--surface); color:var(--ink)}
-  .cli-search input:focus{outline:none; border-color:var(--riad)}
-  .cli-search .clr{font:inherit; font-size:.78rem; border:0; background:transparent;
+  .cli-search input{font:400 13px/1.4 var(--sans); padding:8px 11px; width:220px;
+    border:1px solid var(--line); border-radius:var(--r); background:var(--surface); color:var(--ink);
+    transition:border-color var(--dur) var(--ease)}
+  .cli-search input:focus{outline:none; border-color:var(--accent-lit)}
+  .cli-search .clr{font:400 13px/1.4 var(--sans); border:0; background:transparent;
     color:var(--muted); cursor:pointer; padding:4px 2px}
-  .cli-search .clr:hover{color:var(--riad)}
+  .cli-search .clr:hover{color:var(--ink)}
   /* La fiche commerciale d'un établissement : sa ville et ce qu'il nous verse.
      Deux champs d'opérateur, à côté des modules qu'ils financent. */
   .biz-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end}
-  .biz-row label{display:flex; flex-direction:column; gap:5px; font:600 10px/1 var(--mono);
-    text-transform:uppercase; letter-spacing:.09em; color:var(--muted)}
+  .biz-row label{display:flex; flex-direction:column; gap:6px; font:600 12px/1.2 var(--sans);
+    letter-spacing:0; color:var(--muted)}
+  .biz-row label[hidden]{display:none}
   .biz-row .inp{width:170px}
-  .biz-row .inp.n{width:120px; font-family:var(--mono)}
+  .biz-row .inp.n{width:120px}
+  .subscription-console{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(120deg,rgba(11,110,79,.08),transparent)}
+  .subscription-console strong{display:block;font-size:1rem}.subscription-console p{margin:5px 0 0;color:var(--muted);font-size:.84rem;line-height:1.45}.subscription-console .active{color:var(--ok)}.subscription-console .pending{color:var(--warn)}
+  .billing-alerts{margin:18px 0 4px;padding:16px 18px;border:1px solid rgba(224,153,26,.35);border-radius:16px;background:rgba(224,153,26,.08)}
+  .billing-alerts h3{margin:0 0 8px;font-size:.92rem}.billing-alerts-list{display:flex;flex-direction:column;gap:7px}
+  .billing-alert{display:flex;justify-content:space-between;gap:12px;font-size:.82rem;color:var(--muted)}.billing-alert b{color:var(--ink)}
+  .billing-alert.expired{color:var(--danger)}.billing-alert button{border:0;background:transparent;color:var(--accent-lit);cursor:pointer;font:inherit;padding:0;text-align:right}
+  .biz-row .wide{width:190px}.biz-kind{display:flex;gap:6px;align-items:center;min-height:38px}.biz-kind input{accent-color:var(--accent)}
   @media (max-width:880px){
     .ov-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .ov-split{grid-template-columns:1fr; gap:24px}
@@ -187,83 +265,93 @@ em, i, cite, dfn, var { font-style: normal; }
   }
   @media (max-width:460px){
     .ov-grid{grid-template-columns:minmax(0,1fr)}
-    .ov-v{font-size:1.6rem}
+    .ov-v{font-size:28px}
+    .top{padding:11px 12px; gap:8px; flex-wrap:wrap}
+    .top .dot{display:none}
+    .top h1{flex:1; min-width:150px; font-size:15px}
+    .top .spacer{display:none}
+    .top button{flex:1 1 calc(50% - 4px); min-height:44px}
   }
-  .op-toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(8px); background:var(--riad); color:#eafff4; padding:11px 18px; border-radius:11px; font-size:.86rem; font-weight:560; box-shadow:0 10px 30px rgba(5,59,44,.35); z-index:60; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s}
+  .op-toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(8px); background:var(--riad); color:var(--on-accent); padding:11px 18px; border-radius:var(--r); font-size:14px; font-weight:500; box-shadow:0 26px 64px -28px rgba(5,32,24,.7); z-index:60; opacity:0; pointer-events:none; transition:opacity .2s var(--ease), transform .2s var(--ease)}
   .op-toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
-  .type-field{display:flex; align-items:center; gap:10px; margin:0 0 14px; padding:0 0 14px; border-bottom:1px dashed var(--line)}
-  .type-lbl{font:600 .72rem/1 var(--mono); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); white-space:nowrap}
-  .type-select{flex:1; font:inherit; font-size:.86rem; font-weight:560; padding:8px 11px; border:1.5px solid var(--line); border-radius:9px; background:var(--surface); color:var(--ink); cursor:pointer}
-  .type-select:focus{outline:none; border-color:var(--atlas)}
-  .type-chip{display:inline-block; margin-top:2px; font:600 9.5px/1 var(--mono); text-transform:uppercase; letter-spacing:.04em; color:var(--riad); background:#e3f3ea; border-radius:5px; padding:3px 6px}
+  .type-field{display:flex; align-items:center; gap:10px; margin:0 0 14px; padding:0 0 14px; border-bottom:1px solid var(--line)}
+  .type-lbl{font:600 12px/1.2 var(--sans); letter-spacing:0; color:var(--muted); white-space:nowrap}
+  .type-select{flex:1; font:500 14px/1.4 var(--sans); padding:9px 11px; border:1px solid var(--line); border-radius:var(--r); background:var(--surface); color:var(--ink); cursor:pointer; transition:border-color var(--dur) var(--ease)}
+  .type-select:focus{outline:none; border-color:var(--accent-lit)}
+  .type-chip{display:inline-block; margin-top:2px; font:600 12px/1 var(--sans); letter-spacing:0; color:var(--ink); background:var(--sel); border-radius:6px; padding:3px 7px}
   /* La ville, à côté du métier. Sans fond : le métier est une catégorie fermée,
      la ville est une saisie libre — deux pastilles pleines côte à côte se
      liraient comme deux étiquettes de même nature. */
-  .city-chip{display:inline-block; margin:2px 0 0 6px; font:500 10px/1 var(--mono); letter-spacing:.03em; color:var(--muted)}
+  .city-chip{display:inline-block; margin:2px 0 0 6px; font:500 12px/1 var(--sans); letter-spacing:0; color:var(--muted)}
   .mini:disabled{opacity:.45; cursor:default}
   .mini:disabled:hover{background:var(--surface); border-color:var(--line)}
   .danger-zone{margin-top:22px; padding-top:18px; border-top:1px solid var(--line)}
-  .danger-zone .dz-desc{font-size:.85rem; color:var(--muted); margin:0 0 12px; max-width:660px}
-  .danger-zone .dz-desc b{color:var(--riad)}
-  .danger-zone .dz-input{font:inherit; font-size:.86rem; padding:9px 11px; border:1.5px solid var(--line); border-radius:9px; background:var(--surface); color:var(--ink); min-width:260px}
+  .danger-zone .dz-desc{font-size:14px; color:var(--muted); margin:0 0 12px; max-width:660px}
+  .danger-zone .dz-desc b{color:var(--ink)}
+  .danger-zone .dz-input{font:400 14px/1.4 var(--sans); padding:9px 11px; border:1px solid var(--line); border-radius:var(--r); background:var(--surface); color:var(--ink); min-width:260px; transition:border-color var(--dur) var(--ease)}
   .danger-zone .dz-input:focus{outline:none; border-color:var(--warn)}
   .row-actions{display:flex; gap:8px; justify-content:flex-end}
   .panel{padding:18px}
   .panel .grid2{display:grid; grid-template-columns:1fr 1fr; gap:20px}
   @media(max-width:720px){.panel .grid2{grid-template-columns:1fr}}
-  .sub{font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:0 0 10px; font-weight:640}
+  .sub{font:600 12px/1.2 var(--sans); letter-spacing:0; color:var(--muted); margin:0 0 10px}
   .pin-list, .op-list{display:flex; flex-direction:column; gap:8px; margin:0 0 12px}
-  .pin, .op-item{display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid var(--line); border-radius:10px; background:#faf8f3}
-  .pin b, .op-item b{font-family:var(--mono); font-size:.92rem}
+  .pin, .op-item{display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid var(--line); border-radius:var(--r); background:var(--wash-2)}
+  .pin b, .op-item b{font-size:15px; font-weight:600; font-variant-numeric:tabular-nums lining-nums; letter-spacing:.04em}
   /* Trade roles can be two words ("Pharmacien titulaire"), so the chip holds its
      line and the name beside it gives way instead of the badge breaking. */
-  .pin .role{font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); background:#eef2ee; padding:2px 7px; border-radius:5px; white-space:nowrap; flex:none}
+  .pin .role{font:500 12px/1.2 var(--sans); letter-spacing:0; color:var(--muted); background:var(--wash); padding:3px 8px; border-radius:6px; white-space:nowrap; flex:none}
   .pin .nm{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
-  .pin .nm, .op-item .nm{color:var(--muted); font-size:.85rem}
+  .pin .nm, .op-item .nm{color:var(--muted); font-size:14px}
   .pin .spacer, .op-item .spacer{margin-left:auto}
   .addrow{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
-  .addrow input, .addrow select{font:inherit; font-size:.86rem; padding:9px 11px; border:1.5px solid var(--line); border-radius:9px; background:var(--surface); color:var(--ink)}
-  .addrow input:focus, .addrow select:focus{outline:none; border-color:var(--atlas)}
-  .addrow input.pin{width:88px; font-family:var(--mono); letter-spacing:.14em}
+  .addrow input, .addrow select{font:400 14px/1.4 var(--sans); padding:9px 11px; border:1px solid var(--line); border-radius:var(--r); background:var(--surface); color:var(--ink); transition:border-color var(--dur) var(--ease)}
+  .addrow input:focus, .addrow select:focus{outline:none; border-color:var(--accent-lit)}
+  .addrow input.pin{width:88px; letter-spacing:.14em}
   .addrow input.nm{width:130px}
-  .add{font:inherit; font-size:.84rem; font-weight:640; border:0; border-radius:9px; padding:9px 15px; cursor:pointer; background:linear-gradient(135deg,var(--atlas),var(--riad)); color:#eafff4}
+  /* Le bouton d'ajout. Il était en dégradé 135° atlas→riad : deux verts de la
+     marque cousus l'un à l'autre pour faire « bouton important ». Un aplat
+     dit la même chose et ne se dégrade pas de travers sur 15 px de haut. */
+  .add{font:600 14px/1.2 var(--sans); border:0; border-radius:var(--r); padding:10px 16px; cursor:pointer; background:var(--atlas); color:var(--on-accent); transition:background var(--dur) var(--ease)}
+  .add:hover:not(:disabled){background:var(--riad)}
   .add:disabled{opacity:.5;cursor:default}
-  .feat{display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line)}
+  .feat{display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid var(--line)}
   .feat:last-child{border-bottom:0}
-  .feat .fl{font-size:.9rem}
+  .feat .fl{font-size:14px}
   /* L'état écrit en toutes lettres à côté de l'interrupteur. Un curseur seul se
      lit mal quand la liste fait quinze lignes : on cherche « est-ce que la
      Conformité est coupée chez ce client » et on compte des pastilles. */
-  .fst{font-family:var(--mono); font-size:.66rem; letter-spacing:.07em; text-transform:uppercase;
-       white-space:nowrap; padding:3px 9px; border-radius:999px; border:1px solid var(--line); color:var(--muted)}
-  .fst.on{color:var(--atlas); border-color:color-mix(in srgb, var(--atlas) 38%, transparent);
-          background:color-mix(in srgb, var(--atlas) 8%, transparent)}
+  .fst{font:600 12px/1.2 var(--sans); letter-spacing:0;
+       white-space:nowrap; padding:3px 10px; border-radius:999px; border:1px solid var(--line); color:var(--muted)}
+  .fst.on{color:var(--accent-lit); border-color:color-mix(in srgb, var(--accent-lit) 38%, transparent);
+          background:color-mix(in srgb, var(--accent-lit) 8%, transparent)}
   /* D'où vient la valeur : une décision prise pour CE client ne se lit pas comme
      un défaut hérité de la création de l'établissement. */
-  .fsrc{display:block; font-size:.72rem; color:var(--muted); margin-top:3px; font-weight:400}
+  .fsrc{display:block; font-size:12px; color:var(--muted); margin-top:3px; font-weight:400}
   /* Band header — "Modules communs" / the trade / "Options payantes". Keeps a
      15-row switch list readable instead of one undifferentiated column. */
-  .featgrp{margin:18px 0 4px}
+  .featgrp{margin:22px 0 8px;font:700 11px/1.2 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:10px}
+  .featgrp::after{content:"";flex:1;height:1px;background:var(--line)}
   .featgrp:first-child{margin-top:2px}
-  .feat .fl .fh{display:block; font-size:.74rem; color:var(--muted); margin-top:3px; line-height:1.4; font-weight:400}
-  .sw{position:relative; width:44px; height:26px; border-radius:999px; background:#cfd6d1; border:0; cursor:pointer; transition:background .2s; flex:none}
-  .sw::after{content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:var(--surface); transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.25)}
-  .sw[aria-checked="true"]{background:var(--atlas)}
+  .feat .fl .fh{display:block; font-size:13px; color:var(--muted); margin-top:3px; line-height:1.4; font-weight:400}
+  .sw{position:relative; width:44px; height:26px; border-radius:999px; background:var(--line-2); border:0; cursor:pointer; transition:background .2s var(--ease); flex:none}
+  .sw::after{content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:var(--surface); transition:transform .2s var(--ease); box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .sw[aria-checked="true"]{background:var(--accent-lit)}
   .sw[aria-checked="true"]::after{transform:translateX(18px)}
   /* Journal des modules — qui a coupé quoi, où, quand. Compact : c'est une
      référence qu'on consulte quand un client rappelle, pas un tableau de bord. */
   .audit{margin-top:16px; border-top:1px solid var(--line); padding-top:12px}
-  .aud-row{display:grid; grid-template-columns:auto 1fr auto; align-items:baseline; gap:10px; padding:6px 0; font-size:.8rem}
-  .aud-row .ab{font-family:var(--mono); font-size:.66rem; letter-spacing:.06em; text-transform:uppercase;
-                padding:2px 7px; border-radius:999px; border:1px solid var(--line); color:var(--muted); white-space:nowrap}
-  .aud-row .ab.on{color:var(--atlas); border-color:color-mix(in srgb, var(--atlas) 38%, transparent)}
+  .aud-row{display:grid; grid-template-columns:auto 1fr auto; align-items:baseline; gap:10px; padding:6px 0; font-size:13px}
+  .aud-row .ab{font:600 12px/1.2 var(--sans); letter-spacing:0;
+                padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); white-space:nowrap}
+  .aud-row .ab.on{color:var(--accent-lit); border-color:color-mix(in srgb, var(--accent-lit) 38%, transparent)}
   .aud-row .aw{color:var(--muted)}
   .aud-row .aw b{color:var(--ink); font-weight:600}
-  .aud-row .at{font-family:var(--mono); font-size:.7rem; color:var(--muted); white-space:nowrap}
-  .empty{color:var(--muted); font-size:.85rem; padding:6px 0}
-  .err{color:var(--warn); font-size:.8rem; min-height:1em; margin:4px 0 0}
-  .hint{color:var(--muted); font-size:.78rem; margin:10px 0 0}
-  .selname{font-weight:640; color:var(--riad)}
+  .aud-row .at{font-size:12px; color:var(--muted); white-space:nowrap}
+  .empty{color:var(--muted); font-size:14px; padding:6px 0}
+  .err{color:var(--warn); font-size:13px; min-height:1em; margin:4px 0 0}
+  .hint{color:var(--muted); font-size:13px; margin:10px 0 0}
+  .selname{font-weight:600; color:var(--ink)}
 
   /* ── Un bloc pleine largeur sous la grille à deux colonnes ─────────────────
      Les ventes de test et les adresses e-mail ne sont pas des réglages à côté
@@ -274,173 +362,396 @@ em, i, cite, dfn, var { font-style: normal; }
   .blk-head .sub{margin:0}
   .blk-head .spacer{margin-left:auto}
   .health-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:9px}
-  .health-card{border:1px solid var(--line); border-radius:10px; padding:10px 11px; background:#faf8f3}
-  .health-card b{display:block; font:650 .84rem/1.25 var(--sans); margin-bottom:4px}
-  .health-card span{display:block; color:var(--muted); font-size:.76rem; line-height:1.4}
-  .health-card.warn{border-color:#e1bd76; background:#fff8e9}
-  .health-card.bad{border-color:#d9a09a; background:#fff2f0}
+  .health-card{border:1px solid var(--line); border-radius:var(--r); padding:11px 12px; background:var(--wash-2)}
+  /* --sans n'était pas défini dans ce fichier : le raccourci `font:` entier
+     devenait invalide et le titre de la carte retombait sur la fonte du
+     corps, sans son poids. Le jeton existe maintenant. */
+  .health-card b{display:block; font:600 14px/1.25 var(--sans); margin-bottom:4px}
+  .health-card span{display:block; color:var(--muted); font-size:13px; line-height:1.4}
+  .health-card.warn{border-color:var(--ochre-line); background:var(--ochre-bg)}
+  .health-card.warn b{color:var(--ochre)}
+  .health-card.bad{border-color:var(--warn-line); background:var(--warn-bg)}
+  .health-card.bad b{color:var(--warn)}
 
   /* Le bandeau « vous pouvez regarder, pas agir ». Affiché quand la console est
      ouverte par le laissez-passer d'équipe : le geste demande un code opérateur
      nommé (functions/auth/_lib.js › isSeniorOperator). Dire pourquoi vaut mieux
      que griser un bouton et laisser chercher. */
-  .lock-note{display:flex; gap:9px; align-items:flex-start; font-size:.82rem; color:#8a5a00;
-             background:#fdf6e6; border:1px solid #e8d9b0; border-radius:10px; padding:10px 12px; margin:0 0 14px}
-  .lock-note b{color:#6b4600}
+  .lock-note{display:flex; gap:9px; align-items:flex-start; font-size:14px; color:var(--ochre);
+             background:var(--ochre-bg); border:1px solid var(--ochre-line); border-radius:var(--r); padding:11px 13px; margin:0 0 14px}
+  .lock-note b{color:var(--ochre)}
 
   /* Recherche de ventes — les critères d'un opérateur au téléphone : un montant
      lu sur un reçu, une plage de dates, un numéro de ticket. */
   .filters{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 12px}
-  .filters input, .filters select{font:inherit; font-size:.84rem; padding:8px 10px; border:1.5px solid var(--line);
-                                  border-radius:9px; background:var(--surface); color:var(--ink)}
-  .filters input:focus, .filters select:focus{outline:none; border-color:var(--atlas)}
+  .filters input, .filters select{font:400 14px/1.4 var(--sans); padding:9px 11px; border:1px solid var(--line);
+                                  border-radius:var(--r); background:var(--surface); color:var(--ink);
+                                  transition:border-color var(--dur) var(--ease)}
+  .filters input:focus, .filters select:focus{outline:none; border-color:var(--accent-lit)}
   .filters input.q{flex:1; min-width:170px}
   .filters input.d{width:150px} .filters input.n{width:96px}
-  .filters .fl-lbl{font:600 .68rem/1 var(--mono); text-transform:uppercase; letter-spacing:.05em; color:var(--muted)}
+  .filters .fl-lbl{font:600 12px/1.2 var(--sans); letter-spacing:0; color:var(--muted)}
 
-  .tslist{border:1px solid var(--line); border-radius:11px; overflow:hidden}
+  .tslist{border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
   .tsrow{display:grid; grid-template-columns:auto 128px 96px 78px 1fr auto; align-items:center; gap:10px;
-         padding:9px 12px; border-bottom:1px solid var(--line); font-size:.85rem; cursor:pointer}
+         padding:10px 12px; border-bottom:1px solid var(--line); font-size:14px; cursor:pointer;
+         transition:background var(--dur) var(--ease)}
   .tsrow:last-of-type{border-bottom:0}
-  .tsrow:hover{background:#f4f1ea}
-  .tsrow.on{background:#eef7f1}
+  .tsrow:hover{background:var(--wash)}
+  .tsrow.on{background:var(--sel)}
   .tsrow.void{opacity:.62}
-  .tsrow .ts-when{font-family:var(--mono); font-size:.76rem; color:var(--muted); white-space:nowrap}
-  .tsrow .ts-amt{font-family:var(--mono); text-align:right; font-weight:640; white-space:nowrap}
+  .tsrow .ts-when{font-size:13px; color:var(--muted); white-space:nowrap}
+  .tsrow .ts-amt{text-align:right; font-weight:600; white-space:nowrap}
   .tsrow .ts-lbl{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
-  .tsrow .ts-ref{font-family:var(--mono); font-size:.72rem; color:var(--muted)}
-  .tsrow input[type=checkbox]{width:16px; height:16px; accent-color:var(--atlas); cursor:pointer}
+  .tsrow .ts-ref{font-family:var(--mono); font-size:12px; color:var(--muted)}
+  .tsrow input[type=checkbox]{width:16px; height:16px; accent-color:var(--accent-lit); cursor:pointer}
   /* Le ticket complet, ouvert sous sa ligne. « Ouvrir la transaction avant
      d'agir » n'est pas une politesse : c'est ce qui distingue la vente d'essai
      à 1 MAD du vrai panier de 940 MAD passé la même minute. */
-  .ts-detail{padding:10px 14px 14px 44px; background:#faf8f3; border-bottom:1px solid var(--line); font-size:.82rem}
+  .ts-detail{padding:10px 14px 14px 44px; background:var(--wash-2); border-bottom:1px solid var(--line); font-size:14px}
   .ts-detail .l{display:flex; gap:10px; padding:3px 0; color:var(--muted)}
   .ts-detail .l b{color:var(--ink); font-weight:600; min-width:0; flex:1}
-  .ts-detail .l .q{font-family:var(--mono)}
-  .ts-detail .meta{font-family:var(--mono); font-size:.72rem; color:var(--muted); margin-top:8px}
+  .ts-detail .meta{font-size:12px; color:var(--muted); margin-top:8px}
   .ts-bar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:12px 0 0}
-  .ts-bar .n{font-weight:640; color:var(--riad); font-size:.86rem}
-  .vpill{font:600 9.5px/1 var(--mono); text-transform:uppercase; letter-spacing:.05em; padding:3px 6px;
-         border-radius:5px; background:#fbeecb; color:#8a5a00; border:1px solid #e8d9b0; white-space:nowrap}
+  .ts-bar .n{font-weight:600; color:var(--ink); font-size:14px}
+  .vpill{font:600 12px/1 var(--sans); letter-spacing:0; padding:3px 8px;
+         border-radius:6px; background:var(--ochre-bg); color:var(--ochre); border:1px solid var(--ochre-line); white-space:nowrap}
 
   /* L'écran de conséquences. Il n'est pas décoratif : c'est la seule chose qui
      sépare « je sors une vente d'essai » de « je viens de trouer un Z clôturé ». */
-  .imp{margin-top:14px; border:1.5px solid var(--atlas); border-radius:12px; padding:15px; background:#f3faf6}
-  .imp h4{margin:0 0 4px; font-size:.92rem; color:var(--riad)}
+  .imp{margin-top:14px; border:1px solid var(--accent-lit); border-radius:var(--r-lg); padding:16px; background:var(--sel)}
+  .imp h4{margin:0 0 4px; font-size:15px; font-weight:600; letter-spacing:-.01em; color:var(--ink)}
   .imp .figs{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin:12px 0}
-  .imp .fig{background:var(--surface); border:1px solid var(--line); border-radius:9px; padding:9px 11px}
-  .imp .fig .v{font-family:var(--mono); font-weight:660; font-size:1.02rem; color:var(--riad)}
-  .imp .fig .k{font-size:.7rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-top:2px}
-  .imp .lst{margin:0 0 10px; font-size:.83rem; color:var(--muted)}
+  .imp .fig{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:10px 12px}
+  .imp .fig .v{font-weight:600; font-size:17px; color:var(--ink)}
+  .imp .fig .k{font-size:12px; font-weight:600; color:var(--muted); margin-top:3px}
+  .imp .lst{margin:0 0 10px; font-size:14px; color:var(--muted)}
   .imp .lst b{color:var(--ink)}
-  .imp .box{border-radius:9px; padding:10px 12px; margin:0 0 10px; font-size:.83rem}
-  .imp .box.warn{background:#fdf6e6; border:1px solid #e8d9b0; color:#7a5200}
-  .imp .box.stop{background:#fbeeeb; border:1px solid #e7ccc6; color:#8e3324}
+  .imp .box{border-radius:var(--r); padding:11px 13px; margin:0 0 10px; font-size:14px}
+  .imp .box.warn{background:var(--ochre-bg); border:1px solid var(--ochre-line); color:var(--ochre)}
+  .imp .box.stop{background:var(--warn-bg); border:1px solid var(--warn-line); color:var(--warn)}
   .imp .box p{margin:0 0 5px} .imp .box p:last-child{margin:0}
-  .imp .box b{font-weight:660}
+  .imp .box b{font-weight:600}
   .imp .reason{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:12px 0 0}
-  .imp .reason select, .imp .reason input{font:inherit; font-size:.85rem; padding:9px 11px;
-        border:1.5px solid var(--line); border-radius:9px; background:var(--surface); color:var(--ink)}
+  .imp .reason select, .imp .reason input{font:400 14px/1.4 var(--sans); padding:9px 11px;
+        border:1px solid var(--line); border-radius:var(--r); background:var(--surface); color:var(--ink);
+        transition:border-color var(--dur) var(--ease)}
   .imp .reason input{flex:1; min-width:180px}
-  .imp .reason select:focus, .imp .reason input:focus{outline:none; border-color:var(--atlas)}
+  .imp .reason select:focus, .imp .reason input:focus{outline:none; border-color:var(--accent-lit)}
   .imp .acts{display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 0}
 
   /* Comptes & adresses. Une ligne par rôle, parce que les rôles ne se corrigent
      pas dans le même esprit — la clé de connexion n'est pas l'adresse du comptable. */
   .mailrow{display:grid; grid-template-columns:150px 1fr auto; align-items:center; gap:10px;
-           padding:10px 0; border-bottom:1px solid var(--line); font-size:.87rem}
+           padding:10px 0; border-bottom:1px solid var(--line); font-size:14px}
   .mailrow:last-of-type{border-bottom:0}
-  .mailrow .k{font:600 .7rem/1.3 var(--mono); text-transform:uppercase; letter-spacing:.05em; color:var(--muted)}
-  .mailrow .v{font-family:var(--mono); font-size:.84rem; overflow:hidden; text-overflow:ellipsis}
-  .mailrow .v.none{font-family:inherit; color:var(--muted); font-style:normal}
+  .mailrow .k{font:600 12px/1.3 var(--sans); letter-spacing:0; color:var(--muted)}
+  .mailrow .v{font-size:14px; overflow:hidden; text-overflow:ellipsis}
+  .mailrow .v.none{color:var(--muted); font-style:normal}
   .teamlist{margin-top:10px}
-  .teamlist .tm{display:flex; gap:10px; align-items:baseline; padding:5px 0; font-size:.82rem; color:var(--muted)}
+  .teamlist .tm{display:flex; gap:10px; align-items:baseline; padding:5px 0; font-size:14px; color:var(--muted)}
   .teamlist .tm b{color:var(--ink); font-weight:600}
-  .teamlist .tm .em{font-family:var(--mono); font-size:.78rem}
+  .teamlist .tm .em{font-size:13px}
   .rst{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:6px}
-  .rst .state{font-size:.82rem; color:var(--muted)}
+  .rst .state{font-size:14px; color:var(--muted)}
 
   /* Le journal, désormais commun aux trois panneaux : modules, ventes, comptes. */
-  .aud-row .ab.cut{color:var(--warn); border-color:#e7ccc6}
-  .aud-row .ab.acct{color:var(--riad); border-color:color-mix(in srgb, var(--riad) 34%, transparent)}
-  .aud-why{grid-column:2 / -1; font-size:.76rem; color:var(--muted); padding:0 0 4px}
+  .aud-row .ab.cut{color:var(--warn); border-color:var(--warn-line)}
+  .aud-row .ab.acct{color:var(--ink); border-color:color-mix(in srgb, var(--ink) 24%, transparent)}
+  .aud-why{grid-column:2 / -1; font-size:12px; color:var(--muted); padding:0 0 4px}
   @media(max-width:720px){
     .tsrow{grid-template-columns:auto 1fr auto; row-gap:2px}
     .tsrow .ts-ref, .tsrow .ts-when{grid-column:2 / -1}
     .mailrow{grid-template-columns:1fr; gap:4px}
   }
+
+  /* ══ MODE SOMBRE ══════════════════════════════════════════════════════════
+     La console est un outil d'opérateur : elle suit la préférence du système,
+     et c'est de nuit qu'elle sert le plus souvent. Tout ce bloc n'est plus
+     qu'un jeu de jetons — chaque surface, chaque filet, chaque encre ocre ou
+     rouge a déjà son nom au-dessus. Ne restent en bas que les quatre cas où
+     la nuit demande vraiment autre chose qu'une valeur permutée. */
   @media (prefers-color-scheme:dark){
-    :root{--paper:#0d1411; --ink:#e8efe9; --surface:#151b18; --line:#26302b; --muted:#93a89c}
-    tbody tr:hover{background:#1a221e} tbody tr.sel{background:#17241d}
-    .pin,.op-item{background:#111713}
-    .plan.basic,.plan.pro{background:#1c2420;color:#bfe8cf}
-    .mini{background:#151b18;color:#cfeeda} .plan{background:#1c2420;color:#bfe8cf}
-    .mini.warn{color:#f0cf8a; border-color:#3a3320; background:#211d10}
-    .mini.warn:hover{background:#2b2513}
-    /* La vue d'ensemble. Les jetons de :root suivent tout seuls ; ne restent
-       que les valeurs posées en dur, dont --riad, qui est un vert PROFOND :
-       posé sur une surface de nuit il donnait un chiffre noir sur noir — le
-       titre invisible qu'on avait déjà corrigé sur les cartes de diagnostic. */
-    .ov-v, .ov-sub b{color:#cfeeda}
-    .ov-spark i{background:#1c2420}
-    .ov-bar{background:#1c2420}
-    .ov-todo{color:#f0cf8a}
-    .sus-badge{color:#f0cf8a; background:#241f10; border-color:#3a3320}
+    :root{
+      --paper:#0B100E; --ink:#E9F0EA; --surface:#121815;
+      --line:#242E29; --muted:#93A89C;
+      --wash:#1A221E; --wash-2:#151C18; --sel:#152720; --line-2:#2A3630;
+      --accent-lit:#3CE0A0;
+      --ochre:#F0CF8A; --ochre-bg:#211D10; --ochre-line:#3A3320;
+      --warn:#F0B3A4; --warn-bg:#241412; --warn-line:#4A2A24;
+    }
+    /* --riad reste le vert PROFOND de la marque : c'est un fond (le bandeau,
+       le toast, la lentille), jamais une encre. Les titres et les chiffres
+       prennent --ink, qui a déjà basculé. */
+    .plan.ultra{background:var(--riad); color:#BFF5D6}
+    .plan.ultimate{background:var(--atlas); color:var(--on-accent)}
     tr.suspended{background:rgba(200,160,40,.08)}
-    .type-select{background:#151b18; color:#cfeeda}
-    .md-card{background:#151b18} .inp{background:#111713; color:#cfeeda; border-color:#26302b}
-    .type-chip{color:#bfe8cf; background:#1c2420}
-    .owner-row td, .owner-row:hover td{background:#141a17}
-    .owner-row .who{color:#cfeeda}
-    .count-chip{color:#bfe8cf; background:#1c2420}
-    tr.store-row td:first-child{border-left-color:#26302b}
-    .store-switch{background:#1c2420}
-    .store-switch button:hover{color:#cfeeda}
-    .sec-close{border-color:#26302b}
-    .sec-close:hover{background:#1c2420; color:#cfeeda}
-    .filters input, .filters select{background:#151b18; color:#cfeeda}
-    .tsrow:hover{background:#1a221e} .tsrow.on{background:#17241d}
-    .ts-detail{background:#111713}
-    .imp{background:#111a15; border-color:color-mix(in srgb, var(--atlas) 60%, transparent)}
-    .imp .fig{background:#151b18}
-    .imp .fig .v{color:#bfe8cf}
-    .imp h4{color:#cfeeda}
-    .imp .reason select, .imp .reason input{background:#151b18; color:#cfeeda}
-    .imp .box.warn{background:#211d10; border-color:#3a3320; color:#f0cf8a}
-    .imp .box.stop{background:#241412; border-color:#4a2a24; color:#f0b3a4}
-    .lock-note{background:#211d10; border-color:#3a3320; color:#f0cf8a}
-    .lock-note b{color:#ffe6b0}
-    .vpill{background:#241f10; color:#f0cf8a; border-color:#3a3320}
-    .tslist{border-color:#26302b}
-    /* Le diagnostic. Ces cartes n'avaient aucune version sombre : elles gardaient
-       le fond clair du mode jour pendant que le titre, lui, prenait la couleur du
-       texte de nuit — un en-tête presque blanc sur un fond presque blanc. La
-       console est un outil d'opérateur, elle reste sombre de bout en bout. */
-    .health-card{background:#111713}
-    .health-card b{color:#cfeeda}
-    .health-card.warn{background:#211d10; border-color:#3a3320}
-    .health-card.warn b{color:#f0cf8a}
-    .health-card.bad{background:#241412; border-color:#4a2a24}
-    .health-card.bad b{color:#f0b3a4}
-    /* Même oubli, en plus discret : la pastille de rôle d'un PIN et le survol du
-       bouton Supprimer viraient au blanc au milieu d'une ligne sombre. */
-    .pin .role{background:#1c2420; color:#bfe8cf}
-    .mini.danger{color:#f0b3a4; border-color:#4a2a24; background:#1a1210}
-    .mini.danger:hover{background:#241412}
+    /* Un aplat vert profond sur une surface de nuit ne se voit plus ; le
+       bouton d'ajout prend l'accent éclairci et une encre sombre dessus. */
+    .add{background:var(--accent-lit); color:#04241A}
+    .add:hover:not(:disabled){background:#5CEDB4}
+    .mini.danger{background:var(--warn-bg)}
+    .mini.danger:hover{background:#2E1A16}
+    .mini.warn:hover{background:#2B2513}
   }
+
+/* ── Focus ──────────────────────────────────────────────────────────────────
+   Nine rules on this page already handle focus, and every one of them does it
+   the same way: `outline:none` plus a border-colour change. That is a real
+   signal on a text input, where the border is a large shape the eye tracks —
+   but it is the only signal, and it is carried entirely by hue, so it is
+   invisible to anyone who cannot separate the two greens and it fails the 3:1
+   non-text contrast floor against several of this page's own fills.
+
+   This restores a ring on top of what is already there rather than replacing
+   it: the border-colour change stays (it is good affordance), and the ring
+   gives it a second, non-chromatic channel. :focus-visible so a mouse click
+   into a field is still silent.
+
+   This is the operator console — it revokes accounts and rotates merchant
+   PINs. It is exactly the surface where "which control am I about to press"
+   should never be a guess.
+
+   Une seule règle depuis que --accent-lit existe : le jeton s'éclaircit déjà
+   de nuit (--atlas mesurait 2,6:1 sur nos fonds sombres, sous le plancher de
+   3:1 d'un indicateur non textuel ; l'accent éclairci passe à 8:1), donc
+   l'anneau n'a plus besoin de sa surcharge nocturne. */
+:is(button, a, input, select, textarea, [tabindex]):focus-visible{
+  outline:2px solid var(--accent-lit);
+  outline-offset:2px;
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────────────
+   Les animations d'ambiance sont parties (la pastille qui pulsait, le dégradé
+   du bouton d'ajout) ; ne restent que des transitions d'état, qui portent une
+   information. Ce bloc les coupe quand le système le demande. */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration:0.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:0.01ms !important;
+    scroll-behavior:auto !important;
+  }
+}
+
+/* ══ CRM OPÉRATEUR ══════════════════════════════════════════════════════════
+   Le God Mode n'est plus une longue page technique. C'est un poste de travail :
+   une barre de commande stable, un résumé lisible, un portefeuille filtrable,
+   puis le dossier détaillé de l'établissement choisi. */
+body{
+  min-height:100vh; padding:0;
+  background:
+    radial-gradient(circle at 8% 0%, color-mix(in srgb,var(--accent-lit) 10%,transparent), transparent 27rem),
+    linear-gradient(180deg,color-mix(in srgb,var(--paper) 94%,var(--atlas)) 0,var(--paper) 28rem);
+}
+.top{
+  min-height:72px; padding:12px max(22px,calc((100vw - 1420px)/2)); gap:12px;
+  background:rgba(5,59,44,.97); border-bottom:1px solid rgba(125,242,176,.18);
+  backdrop-filter:blur(18px); box-shadow:0 16px 42px -30px rgba(5,59,44,.75);
+}
+.top-brand{display:flex;align-items:center;gap:12px;min-width:260px}
+.top-brand img{width:72px;height:40px;object-fit:contain;object-position:left center}
+.top-title{display:flex;flex-direction:column;gap:2px}
+.top-title h1{font-size:16px}
+.top-title small{color:rgba(234,255,244,.62);font-size:12px}
+.top-nav{display:flex;align-items:center;gap:4px;margin-left:22px}
+.top-nav a{color:rgba(234,255,244,.72);text-decoration:none;font-size:13px;font-weight:600;padding:9px 11px;border-radius:9px}
+.top-nav a:hover,.top-nav a:focus-visible{color:var(--on-accent);background:rgba(255,255,255,.09)}
+.top-actions{display:flex;align-items:center;gap:7px;margin-left:auto}
+.top .top-actions button{display:inline-flex;align-items:center;gap:7px;min-height:38px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.09)}
+.top .top-actions button:hover{background:rgba(255,255,255,.16)}
+.top .top-actions #quit{background:transparent}
+.wrap{max-width:1420px;margin:0 auto;padding:34px 28px 80px}
+.crm-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin:0 0 24px;padding:0 4px}
+.crm-eyebrow{margin:0 0 7px;color:var(--atlas);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.crm-hero h2{margin:0;font-size:clamp(32px,4vw,54px);line-height:.98;letter-spacing:-.055em;font-weight:650}
+.crm-hero p{max-width:650px;margin:12px 0 0;color:var(--muted);font-size:15px}
+.crm-time{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:13px;white-space:nowrap}
+.crm-time:before{content:"";width:8px;height:8px;border-radius:50%;background:#26C281;box-shadow:0 0 0 5px rgba(38,194,129,.12)}
+section{border-color:color-mix(in srgb,var(--accent-lit) 16%,var(--line));border-radius:22px;margin-bottom:22px;box-shadow:0 20px 60px -50px rgba(5,59,44,.5);background:color-mix(in srgb,var(--surface) 96%,transparent)}
+.sec-head{padding:18px 20px;gap:12px;background:linear-gradient(180deg,color-mix(in srgb,var(--surface) 88%,var(--wash)),var(--surface))}
+.sec-head h2{font-size:18px;letter-spacing:-.025em}
+.sec-head .count{padding:5px 9px;border-radius:999px;background:var(--wash);font-size:12px}
+#overview{overflow:visible}
+#overview .sec-head{border:0;padding-bottom:10px}
+.ov-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:0 18px 18px;background:transparent}
+.ov-card{position:relative;padding:18px;border:1px solid var(--line);border-radius:16px;background:var(--surface);overflow:hidden;min-height:142px}
+.ov-card:before{content:"";position:absolute;left:18px;top:0;width:32px;height:3px;border-radius:0 0 4px 4px;background:var(--atlas)}
+.ov-card:nth-child(2){background:linear-gradient(145deg,var(--riad),#0B513D);border-color:transparent;color:var(--on-accent)}
+.ov-card:nth-child(2):before{background:var(--mint)}
+.ov-card:nth-child(2) :is(.ov-k,.ov-sub,.ov-v .u){color:rgba(234,255,244,.68)}
+.ov-card:nth-child(2) :is(.ov-v,.ov-sub b){color:var(--on-accent)}
+.ov-v{font-size:34px;font-weight:650;margin-top:14px}
+.ov-body{padding:18px 20px 20px;border-top:1px solid var(--line);display:grid;grid-template-columns:minmax(0,1.25fr) minmax(340px,.75fr);gap:10px 28px;align-items:start}
+.ov-body>.ov-h:first-child,.ov-body>.ov-spark,.ov-body>.ov-axis{grid-column:1}
+.ov-spark{height:112px;padding-top:10px;border-bottom:1px solid var(--line);gap:5px}
+.ov-spark i{border-radius:5px 5px 0 0}
+.ov-body>.ov-split{grid-column:2;grid-row:1 / span 3;margin-top:0!important;grid-template-columns:1fr;gap:18px;padding:16px;border-radius:15px;background:var(--wash-2);border:1px solid var(--line)}
+.ov-top{grid-column:1 / -1;margin-top:10px;padding-top:16px;border-top:1px solid var(--line)}
+.ov-body>.ov-note{grid-column:1 / -1;margin-top:4px;font-size:12px}
+
+/* Customer 360 cockpit. It is deliberately derived from the authoritative
+   account roster: no invented lead score, no fake task count and no second
+   source of truth. As richer CRM objects arrive, these same lanes can consume
+   them without changing the operator's information architecture. */
+.crm-command{overflow:hidden}
+.crm-command>.sec-head{align-items:flex-start}
+.crm-command>.sec-head>div:first-child{margin-right:auto}
+.crm-command .sec-copy{margin:4px 0 0;color:var(--muted);font-size:13px}
+.crm-command .live-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:12px}
+.crm-command .live-chip:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 4px color-mix(in srgb,var(--mint) 15%,transparent)}
+.crm-cockpit{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(290px,.55fr);gap:14px;padding:0 18px 18px}
+.crm-card{border:1px solid var(--line);border-radius:16px;background:var(--surface);min-width:0}
+.crm-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 16px 12px}
+.crm-card-head h3{margin:0;font-size:15px;letter-spacing:-.015em}
+.crm-card-head span{color:var(--muted);font-size:12px}
+.crm-pipeline{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:0 12px 12px}
+.crm-lane{min-height:164px;padding:14px;border-radius:13px;background:var(--wash-2);border:1px solid var(--line)}
+.crm-lane-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:13px}
+.crm-lane-k{font-size:12px;font-weight:700;color:var(--muted)}
+.crm-lane-n{display:grid;place-items:center;min-width:25px;height:25px;padding:0 7px;border-radius:999px;background:var(--surface);font-weight:700;font-size:12px}
+.crm-lane-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:12px;min-width:0}
+.crm-lane-item:first-of-type{border-top:0}
+.crm-lane-item .signal{width:7px;height:7px;border-radius:50%;background:var(--atlas);flex:0 0 auto}
+.crm-lane-item.attention .signal{background:var(--ochre)}
+.crm-lane-item .label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.crm-lane-item .meta{margin-left:auto;color:var(--muted);white-space:nowrap}
+.crm-focus{padding:0 14px 14px}
+.crm-focus-item{display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:10px;padding:11px 4px;border-top:1px solid var(--line)}
+.crm-focus-item:first-child{border-top:0}
+.crm-focus-item .ico{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;background:var(--wash);color:var(--atlas);font-size:12px;font-weight:800}
+.crm-focus-item strong{display:block;font-size:13px;line-height:1.2}
+.crm-focus-item small{display:block;margin-top:3px;color:var(--muted);font-size:11px;line-height:1.3}
+.crm-focus-item button{border:0;background:transparent;color:var(--atlas);font:700 11px/1 var(--sans);cursor:pointer;padding:7px}
+.crm-empty{padding:16px;color:var(--muted);font-size:13px;text-align:center}
+.crm-stream{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;overflow:hidden}
+.crm-signal{padding:15px 17px;border-left:1px solid var(--line)}
+.crm-signal:first-child{border-left:0}
+.crm-signal .k{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-bottom:6px}
+.crm-signal .v{font-size:20px;font-weight:650;letter-spacing:-.025em}
+.crm-signal .s{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+
+.crm-directory>.sec-head{align-items:center}
+.crm-directory .directory-title{display:flex;align-items:center;gap:10px;min-width:210px}
+.crm-toolbar{display:flex;align-items:center;gap:10px;margin-left:auto;flex-wrap:wrap}
+.crm-filter{display:flex;gap:3px;padding:3px;border-radius:11px;background:var(--wash)}
+.crm-filter button{border:0;background:transparent;color:var(--muted);font:600 12px/1 var(--sans);padding:8px 10px;border-radius:8px;cursor:pointer}
+.crm-filter button.on{background:var(--surface);color:var(--ink);box-shadow:0 2px 8px rgba(5,59,44,.08)}
+.crm-sort{border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:500 13px/1 var(--sans);padding:10px 34px 10px 11px}
+.cli-search{position:relative;margin:0}
+.cli-search:before{content:"⌕";position:absolute;left:12px;top:50%;transform:translateY(-52%);color:var(--muted);font-size:19px;pointer-events:none}
+.cli-search input{width:260px;padding:10px 42px 10px 35px;border-radius:10px;background:var(--wash-2)}
+.cli-search .clr{position:absolute;right:10px;top:50%;transform:translateY(-50%)}
+.client-table-wrap{overflow-x:auto;padding:0 10px 10px}
+.client-table th:nth-child(2),.client-table td:nth-child(2){display:none}
+.client-table{border-collapse:separate;border-spacing:0 6px}
+.client-table thead th{border:0;padding:5px 12px 7px}
+.client-table tbody tr:not(.owner-row) td{background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 12px;vertical-align:middle}
+.client-table tbody tr:not(.owner-row) td:first-child{border-left:1px solid var(--line);border-radius:13px 0 0 13px}
+.client-table tbody tr:not(.owner-row) td:last-child{border-right:1px solid var(--line);border-radius:0 13px 13px 0}
+.client-table tbody tr:not(.owner-row):hover td{background:var(--wash-2);border-color:var(--line-2)}
+.client-table tbody tr.sel td{background:var(--sel)!important;border-color:rgba(11,110,79,.32)!important}
+.owner-row td{border:0;padding:14px 12px 4px;background:transparent!important}
+.owner-row .who{font-size:13px}.owner-row .mail{font-size:12px}
+tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!important}
+.merchant-title{font-weight:650;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.merchant-meta{display:flex;align-items:center;gap:6px;margin-top:5px;min-width:0;color:var(--muted);font-size:12px}
+.merchant-meta code{max-width:155px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 11px/1.2 var(--mono);color:var(--muted)}
+.type-chip,.plan{border-radius:999px;padding:4px 8px;background:var(--sel);color:var(--atlas)}
+.city-chip{margin:0}
+.online{font-size:12px}.online .d{width:8px;height:8px}.online.live .d{box-shadow:0 0 0 4px rgba(11,110,79,.09)}
+.row-actions{align-items:center;gap:6px;white-space:nowrap}
+.row-actions>.mini.crm-primary{background:var(--riad);border-color:var(--riad);color:var(--on-accent);padding:9px 13px}
+.row-actions>.mini.crm-manage{color:var(--atlas);background:var(--sel);border-color:transparent;padding:9px 13px}
+.action-menu{position:relative}
+.action-menu summary{list-style:none;width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--line);border-radius:10px;cursor:pointer;font-size:18px;font-weight:700;color:var(--muted);background:var(--surface)}
+.action-menu summary::-webkit-details-marker{display:none}
+.action-menu[open] summary{border-color:var(--atlas);color:var(--atlas)}
+.action-pop{position:absolute;z-index:15;right:0;top:44px;width:218px;padding:7px;border:1px solid var(--line);border-radius:13px;background:var(--surface);box-shadow:0 22px 54px -24px rgba(5,59,44,.5)}
+.action-pop .mini{display:flex;width:100%;border:0;padding:10px 11px;justify-content:flex-start;background:transparent}
+.action-pop .mini:hover{background:var(--wash)}
+.action-pop .mini.danger{margin-top:4px;border-top:1px solid var(--line);border-radius:5px;color:var(--warn)}
+#manage{scroll-margin-top:92px;border:1px solid rgba(11,110,79,.3);box-shadow:0 24px 80px -52px rgba(5,59,44,.7)}
+#manage>.sec-head{position:sticky;top:72px;z-index:4;background:color-mix(in srgb,var(--surface) 95%,transparent);backdrop-filter:blur(16px)}
+#manage>.sec-head h2:before{content:"Dossier client";display:block;margin-bottom:3px;color:var(--atlas);font-size:11px;text-transform:uppercase;letter-spacing:.12em}
+.panel{padding:20px}.panel .grid2{gap:14px}.panel .grid2>div,.blk{padding:18px;border:1px solid var(--line);border-radius:15px;background:var(--wash-2)}
+.blk{margin-top:14px}.panel .grid2+.blk{margin-top:14px}
+.danger-zone{background:var(--warn-bg)!important;border-color:var(--warn-line)!important}
+#operators .panel{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:start}
+#operators .hint,#operators .err{grid-column:1/-1}
+.op-list{min-width:0}
+
+@media(max-width:1080px){
+  .top-nav{display:none}.ov-body{grid-template-columns:1fr}.ov-body>.ov-split{grid-column:1;grid-row:auto;grid-template-columns:1fr 1fr}.crm-toolbar{width:100%;margin-left:0}.crm-directory>.sec-head{align-items:flex-start}.crm-directory .directory-title{width:100%}
+  .crm-cockpit{grid-template-columns:1fr}.crm-stream{grid-column:1}
+}
+@media(max-width:760px){
+  .top{padding:10px 14px;min-height:64px}.top-brand{min-width:0;flex:1}.top-brand img{width:56px}.top-title small{display:none}.top-actions button{font-size:0!important;padding:8px!important;width:38px;justify-content:center}.top-actions button:before{font-size:15px}.top-actions #support-console:before{content:"?"}.top-actions #refresh:before{content:"↻"}.top-actions #quit:before{content:"↗"}
+  .wrap{padding:24px 14px 60px}.crm-hero{align-items:flex-start;flex-direction:column}.crm-time{display:none}.ov-grid{grid-template-columns:1fr 1fr;padding:0 12px 12px}.ov-card{min-height:130px;padding:15px}.ov-v{font-size:28px}.ov-body{padding:15px}.ov-body>.ov-split{grid-template-columns:1fr}
+  .crm-filter{width:100%;overflow-x:auto}.crm-filter button{flex:1;white-space:nowrap}.crm-sort,.cli-search,.cli-search input{width:100%}.crm-toolbar{gap:8px}
+  .crm-pipeline{grid-template-columns:1fr}.crm-lane{min-height:auto}.crm-stream{grid-template-columns:1fr}.crm-signal{border-left:0;border-top:1px solid var(--line)}.crm-signal:first-child{border-top:0}
+  .client-table th:nth-child(3),.client-table td:nth-child(3),.client-table th:nth-child(5),.client-table td:nth-child(5),.client-table th:nth-child(6),.client-table td:nth-child(6){display:none}
+  .row-actions>.mini.crm-primary{display:none}.action-pop{position:fixed;left:14px;right:14px;top:auto;bottom:14px;width:auto}
+  #manage>.sec-head{top:64px}.panel .grid2{grid-template-columns:1fr}#operators .panel{grid-template-columns:1fr}
+}
+@media(max-width:480px){.ov-grid{grid-template-columns:1fr}.crm-hero h2{font-size:38px}.top-title h1{font-size:14px}.badge{display:none}}
 </style>
+<link rel="stylesheet" href="assets/admin-workspace.css?v=3" />
+<script src="assets/admin-policy.js?v=2"></script>
+<script src="assets/admin-workspace.js?v=8" defer></script>
 </head>
-<body>
+<body class="operator-workspace" data-workspace="today">
+  <aside class="op-sidebar" aria-label="Espace opérateur">
+    <a class="op-logo" href="#today"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi" /><span>Console opérateur<small>L’essentiel, à portée de main.</small></span></a>
+    <p class="op-nav-label">Votre espace de travail</p>
+    <nav class="op-navigation" aria-label="Navigation principale">
+      <a href="#today" data-op-route="today"><img src="assets/icons/material/check.svg" alt="" />Aujourd’hui</a>
+      <a href="#clients" data-op-route="clients"><img src="assets/icons/material/group.svg" alt="" />Clients</a>
+      <a href="#fleet" data-op-route="fleet"><img src="assets/icons/material/monitor.svg" alt="" />Parc &amp; incidents</a>
+      <a href="#revenue" data-op-route="revenue"><img src="assets/icons/material/bar_chart.svg" alt="" />Revenus &amp; activité</a>
+      <a href="#onboarding" data-op-route="onboarding"><img src="assets/icons/material/menu_book.svg" alt="" />Accompagnement</a>
+    </nav>
+    <div class="op-sidebar-bottom"><p>Un problème. Un responsable.<br />Une prochaine étape.</p><a href="#operators" data-op-route="operators">Équipe opérateur <span>↗</span></a></div>
+  </aside>
   <header class="top">
-    <span class="dot" aria-hidden="true"></span>
-    <h1>Kiwi · Console opérateur</h1>
-    <span class="badge" id="mode-badge">…</span>
-    <span class="spacer"></span>
-    <button type="button" id="refresh">Rafraîchir</button>
-    <button type="button" id="quit">Quitter</button>
+    <div class="top-brand">
+      <img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi" />
+      <div class="top-title"><h1 id="op-page-name">Aujourd’hui</h1><small>Console opérateur</small></div>
+      <span class="badge" id="mode-badge">…</span>
+    </div>
+    <button type="button" class="op-search-shortcut" id="op-search-shortcut">Rechercher un client <kbd>⌘ K</kbd></button>
+    <div class="top-actions">
+      <button type="button" id="support-console">Support</button>
+      <button type="button" id="refresh">Rafraîchir</button>
+      <button type="button" id="quit">Quitter</button>
+    </div>
   </header>
 
-  <div class="wrap">
+  <main class="wrap">
+    <div class="op-page-heading"><div><p class="op-eyebrow" id="op-eyebrow">Votre journée, en clair</p><h2 id="op-page-title">Faisons avancer vos clients.</h2><p id="op-page-copy">Les sujets à suivre, les faits pour décider et la prochaine étape.</p></div><button class="op-btn primary" id="op-new-task" type="button">+ Nouveau suivi</button></div>
+    <p class="op-freshness" id="op-freshness" role="status">Connexion aux données…</p>
+    <section id="op-workspace" aria-label="Travail opérateur"><p class="empty">Chargement de votre espace…</p></section>
+    <section class="billing-alerts" id="billing-alerts" hidden aria-live="polite">
+      <h3 id="billing-alerts-title">Échéances à suivre</h3>
+      <div class="billing-alerts-list" id="billing-alerts-list"></div>
+    </section>
+    <section id="crm-command" class="crm-command" hidden>
+      <div class="sec-head">
+        <div><h2>Centre de relation client</h2><p class="sec-copy">Ce qui avance, ce qui demande une décision et qui contacter aujourd’hui.</p></div>
+        <span class="live-chip">Calculé depuis le parc réel</span>
+      </div>
+      <div class="crm-cockpit">
+        <div class="crm-card">
+          <div class="crm-card-head"><h3>Cycle de vie</h3><span>De l’activation à la fidélisation</span></div>
+          <div class="crm-pipeline" id="crm-pipeline"></div>
+        </div>
+        <div class="crm-card">
+          <div class="crm-card-head"><h3>À traiter</h3><span id="crm-focus-count"></span></div>
+          <div class="crm-focus" id="crm-focus"></div>
+        </div>
+        <div class="crm-card crm-stream" id="crm-signals"></div>
+      </div>
+    </section>
     <!-- ══ VUE D'ENSEMBLE ═══════════════════════════════════════════════════
          La console ouvrait sur le tableau des clients : une ligne par
          établissement, le chiffre du jour de chacun. C'est l'écran qu'il faut
@@ -459,17 +770,27 @@ em, i, cite, dfn, var { font-style: normal; }
       <div class="ov-body" id="ov-body"></div>
     </section>
 
-    <section>
+    <section id="clients" class="crm-directory">
       <div class="sec-head">
-        <h2>Clients</h2><span class="count" id="cli-count"></span>
-        <div class="cli-search">
-          <input id="cli-q" type="search" autocomplete="off" placeholder="Nom, ville, e-mail, clé…"
-                 aria-label="Rechercher un client" />
-          <button type="button" class="clr" id="cli-clr" hidden>Effacer</button>
+        <div class="directory-title"><h2>Portefeuille clients</h2><span class="count" id="cli-count"></span></div>
+        <div class="crm-toolbar">
+          <div class="crm-filter" id="crm-filter" aria-label="Filtrer les établissements">
+            <button type="button" class="on" data-filter="all">Tous</button>
+            <button type="button" data-filter="active">Actifs</button>
+            <button type="button" data-filter="pending">À activer</button>
+            <button type="button" data-filter="suspended">Suspendus</button>
+          </div>
+          <select class="crm-sort" id="crm-sort" aria-label="Trier les établissements">
+            <option value="recent">Activité récente</option><option value="revenue">CA du jour</option><option value="name">Nom</option>
+          </select>
+          <div class="cli-search">
+            <input id="cli-q" type="search" autocomplete="off" placeholder="Rechercher un client…" aria-label="Rechercher un client" />
+            <button type="button" class="clr" id="cli-clr" hidden aria-label="Effacer la recherche">×</button>
+          </div>
         </div>
       </div>
-      <div style="overflow-x:auto">
-        <table>
+      <div class="client-table-wrap">
+        <table class="client-table">
           <thead><tr>
             <th>Établissement</th><th>Clé</th><th>Plan</th>
             <th style="text-align:right">CA du jour</th><th style="text-align:right">Ventes</th>
@@ -494,7 +815,9 @@ em, i, cite, dfn, var { font-style: normal; }
                 aria-label="Fermer la gestion de cet établissement" title="Fermer">×</button>
       </div>
       <div class="panel">
-        <div class="grid2">
+        <nav class="op-dossier-tabs" id="op-dossier-tabs" aria-label="Sections du dossier" data-lens-demo></nav>
+        <div id="op-dossier-summary" class="op-dossier-content"></div>
+        <div class="grid2" id="op-config-panel" data-dossier-panel="configuration">
           <div>
             <p class="sub">PINs du personnel</p>
             <div class="pin-list" id="pin-list"></div>
@@ -512,7 +835,14 @@ em, i, cite, dfn, var { font-style: normal; }
             <p class="sub">Fonctionnalités (autorité opérateur)</p>
             <div id="type-row"></div>
             <div id="feat-list"></div>
-            <p class="hint">Les modules affichés dépendent du type d’activité du client. Désactiver un module le masque partout dans son app — barre latérale, accueil, recherche, mobile, caisse et Kiwi AI — au prochain chargement. <b>Aucune donnée n’est effacée&nbsp;:</b> un module rallumé retrouve son contenu. Réservé à l’opérateur, lié à l’offre.</p>
+            <p class="hint">Les modules affichés dépendent du type d’activité du client. Désactiver un module le masque partout dans son app · barre latérale, accueil, recherche, mobile, caisse et Kiwi AI · au prochain chargement. <b>Aucune donnée n’est effacée&nbsp;:</b> un module rallumé retrouve son contenu. Réservé à l’opérateur, lié à l’offre.</p>
+          </div>
+        </div>
+
+        <div class="blk" data-dossier-panel="commercial">
+          <div class="subscription-console">
+            <div><strong id="subscription-title">Abonnement</strong><p id="subscription-copy"></p></div>
+            <button class="mini" id="subscription-action" type="button"></button>
           </div>
         </div>
 
@@ -526,19 +856,59 @@ em, i, cite, dfn, var { font-style: normal; }
              Le montant est FACULTATIF : laissé vide, le tarif public du palier
              s'applique. Il sert aux Ultimate, qui sont sur devis et n'ont donc
              pas de prix public, et aux remises consenties. -->
-        <div class="blk">
+        <div class="blk" data-dossier-panel="commercial">
           <div class="blk-head">
             <p class="sub">Fiche commerciale</p>
             <span class="count" id="biz-state"></span>
           </div>
-          <div class="biz-row">
+          <div class="biz-row" style="flex-wrap:wrap;gap:10px;">
+            <label>Offre commerciale
+              <select class="inp" id="biz-plan" aria-label="Offre commerciale">
+                <option value="">Conditions à renseigner</option>
+                <option value="basic">Kiwi Basic (199 MAD · 1 étab.)</option>
+                <option value="pro">Kiwi Pro (399 MAD · 1 étab.)</option>
+                <option value="ultra">Kiwi Ultra (1 499 MAD · illimité)</option>
+                <option value="ultimate">Kiwi Ultimate (sur devis)</option>
+              </select>
+            </label>
             <label>Ville
               <input class="inp" id="biz-city" placeholder="Casablanca" autocomplete="off"
                      aria-label="Ville de l’établissement" />
             </label>
             <label>Abonnement convenu
-              <input class="inp n" id="biz-mrr" type="number" min="0" step="1" placeholder="—"
+              <input class="inp n" id="biz-mrr" type="number" min="0" step="1" placeholder="·"
                      aria-label="Abonnement mensuel convenu en dirhams" />
+            </label>
+            <label>Statut commercial
+              <select class="inp" id="biz-kind" aria-label="Statut commercial">
+                <option value="paid">Abonnement payant</option>
+                <option value="trial">Période d’essai</option>
+              </select>
+            </label>
+            <label id="biz-cycle-label">Facturation
+              <select class="inp" id="biz-cycle" aria-label="Périodicité de facturation">
+                <option value="monthly">Mensuelle</option>
+                <option value="annual">Annuelle</option>
+              </select>
+            </label>
+            <label id="biz-sub-start-label">Début d’abonnement
+              <input class="inp" id="biz-sub-start" type="date" aria-label="Date de début de l’abonnement" />
+            </label>
+            <label id="biz-sub-end-label">Fin d’abonnement
+              <input class="inp" id="biz-sub-end" type="date" aria-label="Date de fin de l’abonnement" />
+            </label>
+            <label id="biz-trial-days-label" hidden>Durée de l’essai
+              <select class="inp" id="biz-trial-days" aria-label="Durée de la période d’essai">
+                <option value="7">7 jours</option><option value="14">14 jours</option>
+                <option value="15">15 jours</option><option value="30">30 jours</option>
+                <option value="60">60 jours</option><option value="90">90 jours</option>
+              </select>
+            </label>
+            <label id="biz-trial-start-label" hidden>Début de l’essai
+              <input class="inp" id="biz-trial-start" type="date" aria-label="Date de début de l’essai" />
+            </label>
+            <label id="biz-trial-end-label" hidden>Fin de l’essai
+              <input class="inp" id="biz-trial-end" type="date" aria-label="Date de fin de l’essai" />
             </label>
             <button class="mini" id="biz-save" type="button">Enregistrer</button>
           </div>
@@ -550,9 +920,9 @@ em, i, cite, dfn, var { font-style: normal; }
              Une installation, une formation, un essai d'imprimante laissent de
              vraies lignes dans les livres. On les sort des chiffres — on ne les
              efface jamais : la ligne reste en base et revient telle quelle. -->
-        <div class="blk" id="ts-blk">
+        <div class="blk" id="ts-blk" data-dossier-panel="sales">
           <div class="blk-head">
-            <p class="sub">Ventes de test</p>
+            <p class="sub">Ventes &amp; rapprochement</p>
             <span class="count" id="ts-count"></span>
           </div>
           <div id="ts-lock"></div>
@@ -582,11 +952,11 @@ em, i, cite, dfn, var { font-style: normal; }
           <div class="ts-bar" id="ts-bar" hidden></div>
           <div id="ts-impact"></div>
           <p class="err" id="ts-err"></p>
-          <p class="hint">Sortir une vente des livres la retire du chiffre d’affaires, du nombre de ventes, du panier moyen, du classement produits, de la répartition des encaissements, des exports et des réponses de Kiwi AI — sur tous les appareils du client. <b>La vente n’est jamais supprimée&nbsp;:</b> montant, panier et horodatage restent en base, et « Remettre dans les livres » la rétablit à l’identique.</p>
+          <p class="hint">Sortir une vente des livres la retire du chiffre d’affaires, du nombre de ventes, du panier moyen, du classement produits, de la répartition des encaissements, des exports et des réponses de Kiwi AI · sur tous les appareils du client. <b>La vente n’est jamais supprimée&nbsp;:</b> montant, panier et horodatage restent en base, et « Remettre dans les livres » la rétablit à l’identique.</p>
         </div>
 
         <!-- ══ COMPTE & ADRESSES ═══════════════════════════════════════════ -->
-        <div class="blk" id="acct-blk">
+        <div class="blk" id="acct-blk" data-dossier-panel="account">
           <div class="blk-head">
             <p class="sub">Compte &amp; adresses e-mail</p>
             <span class="count" id="acct-sub"></span>
@@ -596,7 +966,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <p class="err" id="acct-err"></p>
         </div>
 
-        <div class="blk">
+        <div class="blk" data-dossier-panel="diagnostics">
           <div class="blk-head">
             <p class="sub">Diagnostic établissement</p>
             <span class="count" id="health-checked"></span>
@@ -610,7 +980,7 @@ em, i, cite, dfn, var { font-style: normal; }
              Les trois panneaux écrivent dans trois tables ; ils racontent la
              même histoire, donc ils se lisent au même endroit, triés par
              l'horloge. -->
-        <div class="blk">
+        <div class="blk" data-dossier-panel="history">
           <div class="blk-head">
             <p class="sub">Historique administratif</p>
             <span class="count" id="aud-count"></span>
@@ -629,7 +999,7 @@ em, i, cite, dfn, var { font-style: normal; }
              sans savoir que ça ne marcherait jamais. Dire l'état réel vaut mieux
              qu'un bouton qui ne peut que rater, et la suspension EST le geste
              disponible : immédiate, et réversible. -->
-        <div class="danger-zone" id="danger-zone" hidden>
+        <div class="danger-zone" id="danger-zone" data-dossier-panel="account" hidden>
           <p class="sub" style="color:var(--warn); margin-top:0">Suppression du compte</p>
           <p class="dz-desc">La suppression de <b id="dz-name"></b> n'est pas disponible.
             Effacer un compte doit emporter TOUT ce qui lui appartient, documents, carnet clients,
@@ -642,7 +1012,7 @@ em, i, cite, dfn, var { font-style: normal; }
       </div>
     </section>
 
-    <section>
+    <section id="operators">
       <div class="sec-head"><h2>Opérateurs</h2><span class="count" id="op-count"></span></div>
       <div class="panel">
         <div class="op-list" id="op-list"></div>
@@ -655,16 +1025,18 @@ em, i, cite, dfn, var { font-style: normal; }
         <p class="hint">Ces codes ouvrent la console via l’appui long sur le logo de l’écran de connexion. Le premier code se crée depuis l’accès équipe.</p>
       </div>
     </section>
-  </div>
+  </main>
 
   <!-- The staff-role catalogue, shared with the staff apps: the console offers a
        role here and kiwi-serveur.html honours it there. Loaded synchronously —
        the panel reads it on first render. Missing file ⇒ legacy 4-role fallback. -->
-  <script src="assets/staff-roles.js"></script>
+  <script src="assets/staff-roles.js?v=1"></script>
   <!-- The brand's one selection motion, for the établissement switcher. Self-
        contained (injects its own CSS, reads --atlas/--riad) and fail-soft: if it
        does not load the pills still switch, just without the travelling lens. -->
-  <script src="assets/liquid-lens.js"></script>
+  <script src="assets/liquid-lens.js?v=1"></script>
+  <link rel="stylesheet" href="assets/admin-support.css?v=2" />
+  <script src="assets/admin-support.js?v=7" defer></script>
 
 <script>
 (function(){
@@ -721,7 +1093,7 @@ em, i, cite, dfn, var { font-style: normal; }
   }
   function fmt(n){ try { return (Math.round(n)||0).toLocaleString('fr-FR'); } catch(_) { return String(Math.round(n)||0); } }
   function ago(ts){
-    if (!ts) return '—';
+    if (!ts) return '·';
     var s = Math.max(0, Math.round((Date.now()-ts)/1000));
     if (s < 60) return 'à l’instant';
     var m = Math.round(s/60); if (m < 60) return 'il y a ' + m + ' min';
@@ -733,17 +1105,27 @@ em, i, cite, dfn, var { font-style: normal; }
   // base decides which module set the operator sees. Mirrors assets/onboarding.js
   // TYPES and assets/venues.js VERTICAL_SECTIONS — a boutique is NOT a relabeled
   // restaurant, so it shows boutique modules, never Plan de salle / KDS.
+  // CINQUIÈME copie du registre des métiers (les autres : trades.js, onboarding.js,
+  // interactive.js, hotel.js). Elle décide de deux choses ici : le libellé du métier
+  // et, par `base`, QUELS MODULES la console propose. Un métier absent retombe sur
+  // « restaurant » : le client « Maison » n'a longtemps eu ni son nom ni ses modules
+  // boutique dans cette console, sans une seule erreur. À synchroniser avec
+  // assets/trades.js — tools/pos-maison-test.mjs compare les deux listes.
   var TYPES = [
     { id:'restaurant', base:'restaurant', label:'Restaurant' },
     { id:'cafe',       base:'restaurant', label:'Café / Salon de thé' },
     { id:'fastfood',   base:'restaurant', label:'Fast-food / Snack' },
     { id:'bakery',     base:'restaurant', label:'Boulangerie / Pâtisserie' },
     { id:'pizzeria',   base:'restaurant', label:'Pizzeria' },
+    { id:'traiteur',   base:'restaurant', label:'Traiteur' },
     { id:'foodtruck',  base:'restaurant', label:'Food truck' },
     { id:'boutique',   base:'boutique',   label:'Boutique' },
     { id:'epicerie',   base:'boutique',   label:'Épicerie / Superette' },
     { id:'pharmacie',  base:'boutique',   label:'Pharmacie' },
+    { id:'librairie',  base:'boutique',   label:'Librairie / Papeterie' },
     { id:'fleuriste',  base:'boutique',   label:'Fleuriste' },
+    { id:'maison',     base:'boutique',   label:'Maison' },
+    { id:'pressing',   base:'boutique',   label:'Pressing / Blanchisserie' },
     { id:'spa',        base:'spa',        label:'Spa / Bien-être' },
     { id:'coiffure',   base:'spa',        label:'Salon de coiffure' },
     { id:'sport',      base:'spa',        label:'Salle de sport' },
@@ -790,10 +1172,9 @@ em, i, cite, dfn, var { font-style: normal; }
     { key:'terminaux',    label:'Terminaux' },
     { key:'conformite',   label:'Conformité' },
     { key:'equipe',       label:'Équipe' },
-    { key:'payroll',      label:'Paie & planning' },
+    { key:'payroll',      label:'Planning' },
     { key:'reservations', label:'Réservations & RDV' },
     { key:'loyalty',      label:'Fidélité' },
-    { key:'depenses',     label:'Dépenses & cartes' },
   ];
   // Modules per base vertical (the sidebar sections in venues.js).
   // A missing type ⇒ restaurant (the historic default).
@@ -801,7 +1182,8 @@ em, i, cite, dfn, var { font-style: normal; }
     restaurant: [
       { key:'tables',       label:'Plan de salle' },
       { key:'menu',         label:'Menu & modificateurs' },
-      { key:'kds',          label:'Écran cuisine (KDS)' },
+      { key:'kds',          label:'Écran cuisine (KDS)',
+        hint:'Affichage écran tablette du passe. Coupé, les imprimantes thermiques de cuisine continuent de fonctionner à l’identique.' },
       { key:'stock',        label:'Stock & approvisionnement' },
       { key:'finance',      label:'Marges & budget' },
     ],
@@ -822,6 +1204,7 @@ em, i, cite, dfn, var { font-style: normal; }
       { key:'chambres',     label:'Plan des chambres' },
       { key:'sejours',      label:'Réservations & séjours' },
       { key:'menage',       label:'Ménage' },
+      { key:'economat',     label:'Économat' },
       { key:'tarifs',       label:'Tarifs & occupation' },
       { key:'hotes',        label:'Clients & fidélité' },
       { key:'folios',       label:'Notes clients · folios' },
@@ -840,6 +1223,50 @@ em, i, cite, dfn, var { font-style: normal; }
   // merchant, so it must never appear by accident: the key has to be explicitly
   // true. functions/api/menu.js and functions/api/order/index.js enforce the same
   // rule server-side — this switch is the UI for it, not the guard.
+  // Options POSÉES À LA DEMANDE, par métier : des façons de travailler que tout
+  // le monde n'a pas. Deux régimes cohabitent ici. Celles marquées `off` suivent
+  // la règle des options payantes (la clé doit valoir explicitement true) : le
+  // dépôt-vente en est une : la boutique vend une partie de son rayon pour le
+  // compte de tiers, ses articles se marquent A (achetée ferme) ou B (au tiers),
+  // et les ventes B sortent de sa recette. Proposer ce choix à une boutique qui
+  // achète tout son stock, c'est une question de plus à chaque création
+  // d'article, pour rien. Les autres sont ALLUMÉES par défaut (clé absente ⇒
+  // on) et se coupent ici pour le commerçant qui n'en veut pas : les langues
+  // supplémentaires de la carte ne coûtent rien à qui ne s'en sert pas.
+  var OPTIN_MODULES = {
+    restaurant: [
+      { key:'menuLangs', label:'Menu en langues supplémentaires',
+        hint:'Allumé par défaut. Le commerçant ajoute lui-même des traductions pour la carte QR publique ; à couper ici s’il n’en veut pas. La caisse et les écrans équipe restent en français, arabe et anglais.' },
+      { key:'menuNutrition', label:'Valeurs nutritionnelles et allergènes sur la carte',
+        hint:'Allumé par défaut. N’apparaît que pour les plats dont la recette est complète.' },
+    ],
+    boutique: [
+      { key:'depotvente', label:'Catégories A / B', off:true,
+        hint:'Fait choisir une catégorie à chaque article : A pour la marchandise du magasin, B pour le dépôt-vente. Le client ne voit que les lettres.' },
+    ],
+  };
+  // Caisse · Modes de service (bandeau supérieur)
+  var CAISSE_MODES = [
+    { key:'salle',         label:'Mode Salle (service à table)',
+      hint:'Onglet Salle sur la caisse tactile. Coupé, la caisse masque le plan de salle et bascule vers la vente à emporter ou le comptoir direct.' },
+    { key:'vrap',          label:'Mode À emporter',
+      hint:'Onglet À emporter sur la caisse tactile pour la gestion des commandes à emporter et retraits comptoir.' },
+    { key:'waitlist',      label:'Mode File d’attente',
+      hint:'Onglet Attente sur la caisse pour enregistrer et appeler les clients en file d’attente de table.' },
+  ];
+
+  // Caisse · Actions rapides & tiroir (bandeau latéral)
+  var CAISSE_ACTIONS = [
+    { key:'remboursement', label:'Bouton Remboursement',
+      hint:'Bouton Remboursement sur le bandeau latéral de la caisse tactile pour restituer une vente passée.' },
+    { key:'cashMove',      label:'Bouton Mouvement caisse',
+      hint:'Bouton Mouvement de caisse (entrées et sorties d’espèces manuelles) sur le bandeau latéral.' },
+    { key:'passation',     label:'Bouton Passation caisse',
+      hint:'Bouton Passation de caisse (clôture de shift et passation de relais) sur le bandeau latéral.' },
+    { key:'openDrawer',    label:'Bouton Ouvrir le tiroir',
+      hint:'Bouton d’ouverture manuelle du tiroir-caisse sans vente.' },
+  ];
+
   var ADDON_MODULES = [
     { key:'orderpro', label:'Order Pro', off:true,
       hint:'Commande depuis le téléphone du client (tag NFC) · carte + stock en ligne.' },
@@ -850,10 +1277,14 @@ em, i, cite, dfn, var { font-style: normal; }
     var meta = typeMeta(typeId);
     var base = (meta && meta.base) || 'restaurant';
     return [
-      { title:'Modules communs', items:CORE_MODULES },
-      { title:VERTICAL_TITLES[base] || VERTICAL_TITLES.restaurant,
+      { title:'Modules communs (Tableau de bord)', items:CORE_MODULES },
+      { title:(VERTICAL_TITLES[base] || VERTICAL_TITLES.restaurant) + ' (Métier)',
         items:(VERTICAL_MODULES[base] || VERTICAL_MODULES.restaurant) },
-      { title:'Options payantes', items:ADDON_MODULES },
+      { title:'Caisse · Modes de service', items:CAISSE_MODES },
+      { title:'Caisse · Actions rapides & Tiroir', items:CAISSE_ACTIONS },
+      // Bande vide ⇒ non affichée (renderFeatures saute les groupes sans item).
+      { title:'Options à la demande', items:(OPTIN_MODULES[base] || []) },
+      { title:'Options payantes (Add-ons)', items:ADDON_MODULES }
     ];
   }
 
@@ -955,7 +1386,7 @@ em, i, cite, dfn, var { font-style: normal; }
       var listed = TIER_PRICE[plan] || null;
       var agreed = (c.mrr != null && +c.mrr > 0) ? +c.mrr : null;
       var amount = agreed != null ? agreed : listed;
-      var key = plan || '—';
+      var key = plan || '·';
       var t = tiers[key] || (tiers[key] = { plan:key, stores:0, amount:0, unit:listed, untariffed:0, suspended:0 });
       t.stores++;
       if (c.status === 'suspended' || c.store_status === 'suspended'){
@@ -1052,7 +1483,7 @@ em, i, cite, dfn, var { font-style: normal; }
       amount += s.amount; methods[s.method] = (methods[s.method]||0) + s.amount;
       (s.lines||[]).forEach(function(l){ stock.push({ name:l.name, qty:l.qty, cat:l.cat||'', sale:s.id }); });
       if (s.returnish) warnings.push({ code:'return', sale:s.id,
-        label:'Le libellé de cette vente évoque un retour ou un avoir. Sortir un remboursement des livres REMONTE le chiffre d’affaires au lieu de le baisser — vérifiez le ticket avant.' });
+        label:'Le libellé de cette vente évoque un retour ou un avoir. Sortir un remboursement des livres REMONTE le chiffre d’affaires au lieu de le baisser · vérifiez le ticket avant.' });
       if (s.ts < dayOld) blockers.push({ code:'day-closed', sale:s.id,
         label:'Journée du ' + new Date(s.ts).toISOString().slice(0,10) + ' déjà clôturée. Le Z de cette journée est un instantané : il gardera ses chiffres tant qu’il n’est pas rouvert et re-clôturé.' });
     });
@@ -1067,9 +1498,12 @@ em, i, cite, dfn, var { font-style: normal; }
   async function api(path, opts){
     var r = await fetch('/api/admin' + path, Object.assign({ headers:{ 'Content-Type':'application/json' } }, opts||{}));
     if (!r.ok) { var e = new Error('http'); e.status = r.status; try { e.body = await r.json(); } catch(_){} throw e; }
-    return r.json();
+    var data = await r.json();
+    if (opts && opts.method && opts.method !== 'GET') ROSTER_LOADED = false;
+    return data;
   }
 
+  var ROSTER_LOADED = false, ROSTER_AT = 0, OVERVIEW_DATA = null, REFRESH_BUSY = false;
   var store = {
     async clients(){
       if (LIVE) {
@@ -1079,6 +1513,7 @@ em, i, cite, dfn, var { font-style: normal; }
            code opérateur nommé. Voir isSeniorOperator() côté serveur. */
         if (typeof r.senior === 'boolean') SENIOR = r.senior;
         MAIL_OK = !!r.mail;
+        ROSTER_AT = r.now || Date.now();
         return r.clients;
       }
       /* En démo il n'y a pas de code opérateur du tout : on ne fait pas semblant
@@ -1089,6 +1524,10 @@ em, i, cite, dfn, var { font-style: normal; }
     async pins(merchant){
       if (LIVE) { return (await api('/pins?merchant=' + encodeURIComponent(merchant))).pins; }
       return (mock().pins[merchant] || []);
+    },
+    async attendanceLink(merchant){
+      if (LIVE) return api('/attendance-link?merchant=' + encodeURIComponent(merchant));
+      return { ok:true, merchant:merchant, link:location.origin + '/kiwi-serveur?pointage=demo-' + encodeURIComponent(merchant) };
     },
     async addPin(merchant, pin, name, role){
       if (LIVE) { return (await api('/pins', { method:'POST', body:JSON.stringify({ merchant:merchant, pin:pin, name:name, role:role }) })).pin; }
@@ -1134,28 +1573,41 @@ em, i, cite, dfn, var { font-style: normal; }
       if (LIVE) {
         var r = await api('/config?merchant=' + encodeURIComponent(merchant));
         return { city:r.city || '', mrr:(r.mrr == null ? null : +r.mrr),
-                 columns:r.columns || { city:true, mrr:true } };
+          subscriptionKind:r.subscriptionKind || 'paid', billingCycle:r.billingCycle || 'monthly',
+          subscriptionStart:r.subscriptionStart || '', subscriptionEnd:r.subscriptionEnd || '',
+          trialStart:r.trialStart || '', trialEnd:r.trialEnd || '', trialDays:r.trialDays || 15,
+          columns:r.columns || { city:true, mrr:true, lifecycle:true } };
       }
       var hit = (mock().clients || []).filter(function(c){ return c.merchant === merchant; })[0] || {};
       return { city:hit.city || '', mrr:(hit.mrr == null ? null : +hit.mrr),
-               columns:{ city:true, mrr:true } };
+        subscriptionKind:hit.subscription_kind || 'paid', billingCycle:hit.billing_cycle || 'monthly',
+        subscriptionStart:hit.subscription_start || '', subscriptionEnd:hit.subscription_end || '',
+        trialStart:hit.trial_start || '', trialEnd:hit.trial_end || '', trialDays:hit.trial_days || 15,
+        columns:{ city:true, mrr:true, lifecycle:true } };
     },
     /* On renvoie les modules et le palier courants avec : le PUT écrase la
        ligne entière, donc n'envoyer que la ville effacerait les interrupteurs.
        Même précaution que setType(), pour la même raison. */
-    async setBiz(merchant, city, mrr){
+    async setBiz(merchant, city, mrr, plan, lifecycle){
       if (LIVE) {
         var features = await store.config(merchant);
-        var plan = (selected && selected.merchant === merchant && selected.plan) || '';
-        return api('/config', { method:'PUT', body:JSON.stringify({
-          merchant:merchant, features:features, plan:plan, city:city, mrr:mrr }) });
+        var p = (plan !== undefined) ? plan : ((selected && selected.merchant === merchant && selected.plan) || '');
+        return api('/config', { method:'PUT', body:JSON.stringify(Object.assign({
+          merchant:merchant, features:features, plan:p, city:city, mrr:mrr }, lifecycle || {})) });
       }
       var m = mock();
       (m.clients || []).forEach(function(c){
-        if (c.merchant === merchant){ c.city = city; c.mrr = mrr; }
+        if (c.merchant === merchant){
+          c.city = city; c.mrr = mrr; if (plan !== undefined) c.plan = plan;
+          if (lifecycle) {
+            c.subscription_kind=lifecycle.subscriptionKind; c.billing_cycle=lifecycle.billingCycle;
+            c.subscription_start=lifecycle.subscriptionStart; c.subscription_end=lifecycle.subscriptionEnd;
+            c.trial_start=lifecycle.trialStart; c.trial_end=lifecycle.trialEnd; c.trial_days=lifecycle.trialDays;
+          }
+        }
       });
       saveMock(m);
-      return { ok:true, columns:{ city:true, mrr:true } };
+      return { ok:true, columns:{ city:true, mrr:true, lifecycle:true } };
     },
     /* Le journal des changements de modules. `merchant_config` ne garde que le
        dernier état : « les réservations sont coupées » ne dit ni depuis quand,
@@ -1355,6 +1807,28 @@ em, i, cite, dfn, var { font-style: normal; }
     window.open('/dashboard.html?op=1&merchant=' + encodeURIComponent(merchant), '_blank');
   }
 
+  function openPrivateDashboard(merchant){
+    window.open('/dashboard.html?op=1&privacy=1&merchant=' + encodeURIComponent(merchant), '_blank');
+  }
+
+  /* God-mode till access is a one-shot, store-scoped hand-off. The caisse still
+     verifies the live named-operator cookie with /api/me before skipping the
+     employee PIN; copying this localStorage record alone grants nothing. */
+  function openCaisse(c, opts){
+    var venue = {
+      merchant: c.merchant || '',
+      venueId: c.venue_id || c.venueId || '',
+      type: c.type || '', subtype: c.subtype || '',
+      name: c.business || c.merchant || '', location: c.city || ''
+    };
+    try { localStorage.setItem('kiwiPairHandoff', JSON.stringify(Object.assign({ ts:Date.now(), operator:true }, venue))); } catch(_){ }
+    /* Keep old direct links compatible, but the caisse now requires an
+       explicit opening gesture. Visiting a client is not opening its books. */
+    var direct = !!(opts && opts.direct);
+    window.open('/kiwi-caisse.html?pair=1&op=1' + (direct ? '&direct=1' : '')
+      + '&merchant=' + encodeURIComponent(venue.merchant), '_blank');
+  }
+
   // A client is a demo unless it came from a real signup. The server tags rows
   // with `demo`; if that field is ever absent we fall back to "no contact email
   // ⇒ demo", since the roster only ever fills email from the accounts table.
@@ -1370,17 +1844,141 @@ em, i, cite, dfn, var { font-style: normal; }
      table de correspondance. Sur un navigateur sans normalize (aucun
      aujourd'hui), on retombe sur la comparaison brute plutôt que d'échouer. */
   var CLI_Q = '';
+  var CRM_FILTER = 'all';
+  var CRM_SORT = 'recent';
+  var CRM_CLIENTS = [];
   function foldText(s){
     s = String(s == null ? '' : s).toLowerCase();
     try { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch(_) { return s; }
   }
-  function filterClients(rows){
-    if (!CLI_Q) return rows;
-    var q = foldText(CLI_Q);
-    return rows.filter(function(c){
-      return foldText([c.business, c.city, c.name, c.email, c.owner, c.owner_name,
-                       c.owner_business, c.merchant, c.plan].join(' ')).indexOf(q) >= 0;
+  function isoToday(){
+    var d=new Date(), pad=function(n){return String(n).padStart(2,'0');};
+    return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  }
+  function addDaysIso(iso, days){
+    if (!iso) return '';
+    var d = new Date(iso + 'T12:00:00Z');
+    if (isNaN(d.getTime())) return '';
+    d.setUTCDate(d.getUTCDate() + Number(days || 0));
+    return d.toISOString().slice(0,10);
+  }
+  function addCycleIso(iso, cycle){
+    if (!iso) return '';
+    var d = new Date(iso + 'T12:00:00Z');
+    if (isNaN(d.getTime())) return '';
+    cycle === 'annual' ? d.setUTCFullYear(d.getUTCFullYear() + 1) : d.setUTCMonth(d.getUTCMonth() + 1);
+    return d.toISOString().slice(0,10);
+  }
+  function daysUntil(iso){
+    if (!iso) return null;
+    var end = new Date(iso + 'T12:00:00Z').getTime();
+    var today = new Date(isoToday() + 'T12:00:00Z').getTime();
+    return isNaN(end) ? null : Math.ceil((end - today) / 86400000);
+  }
+  function renderBillingAlerts(rows){
+    var panel=document.getElementById('billing-alerts'), list=document.getElementById('billing-alerts-list'), title=document.getElementById('billing-alerts-title');
+    if(!panel||!list)return;
+    var alerts=[];
+    (rows||[]).filter(function(c){return !isDemoClient(c)&&c.store_status!=='suspended';}).forEach(function(c){
+      var trial=c.subscription_kind==='trial';
+      var end=trial?c.trial_end:c.subscription_end;
+      var left=daysUntil(end);
+      if(left==null||left>7)return;
+      alerts.push({c:c,left:left,end:end,trial:trial});
     });
+    alerts.sort(function(a,b){return a.left-b.left;});
+    clear(list); panel.hidden=!alerts.length;
+    if(!alerts.length)return;
+    title.textContent=alerts.length+' échéance'+(alerts.length>1?'s':'')+' à traiter';
+    alerts.forEach(function(a){
+      var wording=a.left<0?'expiré depuis '+Math.abs(a.left)+' j':a.left===0?'expire aujourd’hui':'expire dans '+a.left+' j';
+      var btn=h('button',{type:'button'},'Ouvrir la fiche'); btn.onclick=function(){select(a.c);};
+      list.appendChild(h('div',{class:'billing-alert'+(a.left<0?' expired':'')},
+        h('span',null,h('b',null,a.c.business||a.c.merchant),' · '+(a.trial?'Essai':'Abonnement')+' '+wording+' ('+stampDay(a.end)+')'),btn));
+    });
+  }
+  function filterClients(rows){
+    var filtered = rows.filter(function(c){
+      var pending = window.KiwiAdminPolicy.access(c) === 'pending';
+      var suspended = window.KiwiAdminPolicy.access(c) === 'suspended';
+      if (CRM_FILTER === 'pending' && !pending) return false;
+      if (CRM_FILTER === 'suspended' && !suspended) return false;
+      if (CRM_FILTER === 'active' && (pending || suspended)) return false;
+      if (!CLI_Q) return true;
+      var q = foldText(CLI_Q);
+      return foldText([c.business, c.city, c.name, c.email, c.owner, c.owner_name,
+                       c.owner_business, c.merchant, c.plan, typeLabel(c.type)].join(' ')).indexOf(q) >= 0;
+    });
+    filtered.sort(function(a,b){
+      if (CRM_SORT === 'name') return String(a.business || a.merchant).localeCompare(String(b.business || b.merchant), 'fr');
+      if (CRM_SORT === 'revenue') return (b.today_amount || 0) - (a.today_amount || 0);
+      return (b.last_ts || 0) - (a.last_ts || 0);
+    });
+    return filtered;
+  }
+
+  function renderCrmHub(rows){
+    window.dispatchEvent(new CustomEvent('kiwi:operator-data', {detail:{clients:rows,now:ROSTER_AT,live:LIVE}}));
+    if (window.KiwiOperatorWorkspace) return;
+    var pipeline = document.getElementById('crm-pipeline');
+    var focus = document.getElementById('crm-focus');
+    var focusCount = document.getElementById('crm-focus-count');
+    var signals = document.getElementById('crm-signals');
+    if (!pipeline || !focus || !signals) return;
+
+    var real = (rows || []).filter(function(c){ return !isDemoClient(c); });
+    var now = Date.now(), week = 7 * 24 * 60 * 60 * 1000;
+    function pending(c){ return window.KiwiAdminPolicy.access(c) === 'pending'; }
+    function suspended(c){ return c.store_status === 'suspended' || c.status === 'suspended'; }
+    function stale(c){ return !c.last_ts || now - c.last_ts > week; }
+
+    var lanes = [
+      { key:'activation', title:'À activer', rows:real.filter(function(c){ return pending(c) && !suspended(c); }) },
+      { key:'active', title:'En croissance', rows:real.filter(function(c){ return !pending(c) && !suspended(c) && !stale(c); }) },
+      { key:'attention', title:'À reconquérir', rows:real.filter(function(c){ return suspended(c) || (!pending(c) && stale(c)); }) }
+    ];
+    clear(pipeline);
+    lanes.forEach(function(lane){
+      var box = h('div', { class:'crm-lane' },
+        h('div', { class:'crm-lane-top' }, h('span', { class:'crm-lane-k', text:lane.title }), h('span', { class:'crm-lane-n', text:String(lane.rows.length) })));
+      lane.rows.slice(0,3).forEach(function(c){
+        var meta = lane.key === 'activation' ? (c.plan ? planName(c.plan) : 'sans offre') : ago(c.last_ts);
+        box.appendChild(h('div', { class:'crm-lane-item' + (lane.key === 'attention' ? ' attention' : '') },
+          h('span', { class:'signal' }), h('span', { class:'label', text:c.business || c.merchant }), h('span', { class:'meta', text:meta })));
+      });
+      if (!lane.rows.length) box.appendChild(h('p', { class:'crm-empty', text:'Rien à signaler' }));
+      if (lane.rows.length > 3) box.appendChild(h('p', { class:'crm-empty', text:'+' + (lane.rows.length - 3) + ' autres' }));
+      pipeline.appendChild(box);
+    });
+
+    var tasks = [];
+    real.forEach(function(c){
+      if (pending(c)) tasks.push({ rank:1, icon:'01', c:c, title:'Valider l’abonnement', copy:(c.business || c.merchant) + ' attend son activation' });
+      else if (suspended(c)) tasks.push({ rank:2, icon:'02', c:c, title:'Compte suspendu', copy:'Décider de la suite avec ' + (c.business || c.merchant) });
+      else if (!c.city) tasks.push({ rank:3, icon:'03', c:c, title:'Compléter la fiche', copy:'Localisation manquante · ' + (c.business || c.merchant) });
+      else if (stale(c)) tasks.push({ rank:4, icon:'04', c:c, title:'Reprendre contact', copy:'Aucune vente récente · ' + (c.business || c.merchant) });
+    });
+    tasks.sort(function(a,b){ return a.rank - b.rank; });
+    clear(focus);
+    tasks.slice(0,5).forEach(function(t){
+      focus.appendChild(h('div', { class:'crm-focus-item' },
+        h('span', { class:'ico', text:t.icon }),
+        h('span', null, h('strong', { text:t.title }), h('small', { text:t.copy })),
+        h('button', { type:'button', onClick:function(){ select(t.c); } }, 'Ouvrir')));
+    });
+    if (!tasks.length) focus.appendChild(h('p', { class:'crm-empty', text:'Tout est à jour. Aucun suivi prioritaire.' }));
+    focusCount.textContent = tasks.length ? plural(tasks.length, 'priorité', 'priorités') : 'à jour';
+
+    var groups = groupByOwner(real);
+    var live = real.filter(function(c){ return c.last_ts && now - c.last_ts < 15 * 60 * 1000; }).length;
+    var withEmail = groups.filter(function(g){ var c=g.head; return !!(c.owner || c.email); }).length;
+    var dayAmount = real.reduce(function(sum,c){ return sum + (+c.today_amount || 0); }, 0);
+    clear(signals);
+    [
+      ['Relations unifiées', String(groups.length), real.length + ' établissements · ' + withEmail + ' contacts joignables'],
+      ['Activité maintenant', String(live), live === 1 ? 'établissement actif sur 15 min' : 'établissements actifs sur 15 min'],
+      ['Encaissements du jour', fmt(dayAmount) + ' MAD', 'Signal portefeuille, jamais un revenu Kiwi']
+    ].forEach(function(x){ signals.appendChild(h('div', { class:'crm-signal' }, h('span', { class:'k', text:x[0] }), h('span', { class:'v', text:x[1] }), h('span', { class:'s', text:x[2] }))); });
   }
 
   /* Group the roster by CLIENT, not by store. One login can hold several
@@ -1421,7 +2019,7 @@ em, i, cite, dfn, var { font-style: normal; }
     var c = g.head;
     var live = g.last && (Date.now() - g.last < 1000*60*15);
     var mail = c.owner || c.email || '';
-    var who = c.owner_name || c.name || mail || c.owner_business || '—';
+    var who = c.owner_name || c.name || mail || c.owner_business || '·';
     var tr = h('tr', { class:'owner-row' + (c.status === 'suspended' ? ' suspended' : '') },
       h('td', { colspan:'3' },
         h('div', { class:'who' }, who,
@@ -1452,52 +2050,66 @@ em, i, cite, dfn, var { font-style: normal; }
        affichait celle du compte et proposait un bouton qui, lui, gelait tout :
        le geste ne correspondait pas à l'endroit où on le posait. */
     var storeOff = c.store_status === 'suspended';
+    var subscriptionPending = c.store_status === 'pending' || c.subscription === 'pending';
     var accountOff = c.status === 'suspended';
     var suspended = storeOff || accountOff;
     // Actions. Suspend/Réactiver only shows for real accounts — a demo has no
     // login to freeze. Reversible: suspend cuts access now, reactivate restores it.
     var open = !!(selected && selected.merchant === c.merchant);
-    var actions = [
-      h('button', { class:'mini', onClick:function(e){ e.stopPropagation(); openDashboard(c.merchant); } }, 'Ouvrir dashboard'),
-      // Le même bouton ouvre et referme, et il le dit. Un « Gérer » qui ne fait
-      // rien parce que la boutique est déjà ouverte laisse croire à une panne.
-      h('button', { class:'mini', onClick:function(e){ e.stopPropagation(); toggleSelect(c); } },
-        open ? 'Fermer' : 'Gérer')
+    var secondary = [
+      h('button', { class:'mini', title:'Chiffres masqués, aucune écriture', onClick:function(e){ e.stopPropagation(); openPrivateDashboard(c.merchant); } }, 'Vue confidentielle'),
+      h('button', { class:'mini', onClick:function(e){ e.stopPropagation(); openCaisse(c); } }, 'Accéder à la caisse'),
+      h('button', { class:'mini',
+        title:'Accès support : l’ouverture ou la reprise du service nécessite une confirmation dans la caisse.',
+        onClick:function(e){ e.stopPropagation(); openCaisse(c, { direct:true }); } }, 'Accès caisse')
     ];
     /* Le bouton de la LIGNE ferme la boutique de la ligne. Celui du compte est
        remonté sur la bande du propriétaire, où il désigne ce qu'il fait. */
-    actions.push(h('button', { class:'mini' + (storeOff ? ' warn' : ''),
+    secondary.push(h('button', { class:'mini' + (storeOff ? ' warn' : ''),
       disabled: SENIOR === false || accountOff,
-      title: accountOff ? 'Le compte entier est suspendu — réactivez-le d’abord.' : '',
+      title: accountOff ? 'Le compte entier est suspendu · réactivez-le d’abord.' : '',
       onClick:function(e){ e.stopPropagation(); toggleStoreSuspend(c); } },
       storeOff ? 'Rouvrir' : 'Fermer'));
+    if (subscriptionPending) secondary.unshift(h('button', { class:'mini', disabled:SENIOR === false,
+      onClick:function(e){ e.stopPropagation(); activateSubscription(c); } }, 'Activer abonnement'));
     /* La suppression d'un établissement existe désormais, et seulement celle-là :
        son périmètre est exactement ce que porte son slug, donc il se borne. Elle
        est irréversible, gardée par le code opérateur nommé, et demande de
        recopier le slug — voir functions/api/admin/clients.js › onRequestDelete. */
-    actions.push(h('button', { class:'mini danger', disabled: SENIOR === false,
+    secondary.push(h('button', { class:'mini danger', disabled: SENIOR === false,
       onClick:function(e){ e.stopPropagation(); askDeleteStore(c); } }, 'Supprimer'));
+
+    var actions = [
+      h('button', { class:'mini crm-primary', onClick:function(e){ e.stopPropagation(); openDashboard(c.merchant); } }, 'Ouvrir'),
+      h('button', { class:'mini crm-manage', onClick:function(e){ e.stopPropagation(); toggleSelect(c); } },
+        open ? 'Refermer' : 'Gérer'),
+      h('details', { class:'action-menu', onClick:function(e){ e.stopPropagation(); } },
+        h('summary', { title:'Plus d’actions', 'aria-label':'Plus d’actions pour ' + (c.business || c.merchant) }, '···'),
+        h.apply(null, ['div', { class:'action-pop' }].concat(secondary)))
+    ];
 
     var cls = (selected && selected.merchant === c.merchant) ? 'sel' : '';
     if (suspended) cls += (cls ? ' ' : '') + 'suspended';
     if (inGroup) cls += (cls ? ' ' : '') + 'store-row';
     var tr = h('tr', { class: cls },
-      h('td', null, h('div', { style:'font-weight:600' }, c.business || c.merchant,
+      h('td', null, h('div', { class:'merchant-title' }, c.business || c.merchant,
                       storeOff ? h('span', { class:'sus-badge' }, 'fermé') : null,
+                      subscriptionPending ? h('span', { class:'sus-badge' }, 'abonnement à valider') : null,
                       (accountOff && !inGroup) ? h('span', { class:'sus-badge' }, 'compte suspendu') : null),
                     /* Le métier, et la ville quand elle est renseignée. La ville
                        est ce sur quoi on cherche le plus souvent après le nom —
                        « qui avons-nous à Tanger » — donc elle se lit sur la
                        ligne, pas seulement dans le panneau de gestion. */
-                    (c.type || c.city) ? h('div', null,
+                    h('div', { class:'merchant-meta' },
                       c.type ? h('span', { class:'type-chip' }, typeLabel(c.type) || c.type) : null,
-                      c.city ? h('span', { class:'city-chip' }, c.city) : null) : null,
+                      c.city ? h('span', { class:'city-chip' }, c.city) : null,
+                      h('code', null, c.merchant)),
                     // The contact sits on the band when the client has several
                     // shops — repeating it on every row would bury the one thing
                     // that differs between them, which is the shop itself.
                     (!inGroup && c.name) ? h('div', { class:'nm', style:'color:var(--muted);font-size:.78rem' }, c.name + (c.email ? ' · ' + c.email : '')) : null),
       h('td', null, h('code', { style:'font-family:var(--mono);font-size:.82rem;color:var(--muted)' }, c.merchant)),
-      h('td', null, c.plan ? h('span', { class:'plan ' + c.plan }, c.plan) : h('span', { class:'plan' }, '—')),
+      h('td', null, c.plan ? h('span', { class:'plan ' + c.plan }, c.plan) : h('span', { class:'plan' }, '·')),
       h('td', { class:'num' }, fmt(c.today_amount) + ' MAD'),
       h('td', { class:'num' }, String(c.today_count || 0)),
       h('td', null, h('span', { class:'online' + (live?' live':'') }, h('span', { class:'d' }), ago(c.last_ts))),
@@ -1524,17 +2136,51 @@ em, i, cite, dfn, var { font-style: normal; }
     } catch(e){
       var err = (e && e.body && e.body.error) || (e && e.message) || 'erreur';
       notify(err === 'store-status-unavailable'
-        ? 'La base n’a pas encore la colonne `status` sur merchant_config — migration à passer.'
+        ? 'La fermeture d’un établissement demande une mise à niveau technique. Aucune donnée n’a été modifiée.'
         : 'Échec : ' + err);
     }
+  }
+
+  async function activateSubscription(c){
+    try {
+      await store.setStoreStatus(c.merchant, 'active');
+      c.store_status = 'active'; c.subscription = 'active';
+      if (selected && selected.merchant === c.merchant) selected = c;
+      renderSubscription(); await renderClients();
+      notify('Abonnement activé pour cet établissement. Les actions sont maintenant ouvertes.');
+    } catch(e){ notify('Échec : ' + ((e && e.body && e.body.error) || (e && e.message) || 'erreur')); }
+  }
+
+  async function pauseSubscription(c){
+    try {
+      await store.setStoreStatus(c.merchant, 'pending');
+      c.store_status = 'pending'; c.subscription = 'pending';
+      if (selected && selected.merchant === c.merchant) selected = c;
+      renderSubscription(); await renderClients();
+      notify('Abonnement remis en attente. Le client peut explorer sans agir.');
+    } catch(e){ notify('Échec : ' + ((e && e.body && e.body.error) || (e && e.message) || 'erreur')); }
+  }
+
+  function renderSubscription(){
+    var title=document.getElementById('subscription-title'), copy=document.getElementById('subscription-copy'), btn=document.getElementById('subscription-action');
+    if(!title||!copy||!btn||!selected)return;
+    var pending=selected.store_status==='pending'||selected.subscription==='pending';
+    title.className=pending?'pending':'active';
+    title.textContent=pending?'Abonnement en attente':'Abonnement actif';
+    copy.textContent=pending
+      ? 'Onboarding terminé. Le client peut explorer ; ajouts, exports et écritures restent verrouillés.'
+      : 'Cet établissement peut utiliser ses fonctionnalités et enregistrer des opérations.';
+    btn.disabled=SENIOR===false;
+    btn.textContent=pending?'Activer cet établissement':'Remettre en attente';
+    btn.onclick=function(){ pending?activateSubscription(selected):pauseSubscription(selected); };
   }
 
   /* Supprimer un établissement. Irréversible, donc on montre d'abord ce qui va
      disparaître et on fait recopier le slug — un clic seul ne suffit pas. */
   function askDeleteStore(c){
     var m = modal('Supprimer « ' + (c.business || c.merchant) + ' »',
-      'Cet établissement et TOUT ce qu’il contient — ventes, clôtures, catalogue, '
-      + 'carte, clients, codes équipe, appairages — seront effacés définitivement. '
+      'Cet établissement et TOUT ce qu’il contient · ventes, clôtures, catalogue, '
+      + 'carte, clients, codes équipe, appairages · seront effacés définitivement. '
       + 'Les journaux d’opérateur sont conservés. Recopiez son identifiant pour confirmer.');
     var input = h('input', { class:'inp', placeholder:c.merchant, style:'width:100%;margin:10px 0' });
     var go = h('button', { class:'mini danger', disabled:true }, 'Supprimer définitivement');
@@ -1546,7 +2192,7 @@ em, i, cite, dfn, var { font-style: normal; }
         m.close();
         await renderClients();
         var n = Object.keys((r && r.removed) || {}).length;
-        notify('« ' + c.merchant + ' » supprimé — ' + n + ' table(s) purgée(s).');
+        notify('« ' + c.merchant + ' » supprimé · ' + n + ' table(s) purgée(s).');
       } catch(e){
         go.disabled = false; go.textContent = 'Supprimer définitivement';
         notify('Échec : ' + ((e && e.body && e.body.error) || (e && e.message) || 'erreur'));
@@ -1628,6 +2274,8 @@ em, i, cite, dfn, var { font-style: normal; }
       return;
     }
 
+    OVERVIEW_DATA = o;
+    window.dispatchEvent(new CustomEvent('kiwi:operator-overview', {detail:o}));
     var c = o.clients || {}, g = o.gmv || {}, m = o.mrr || {}, cities = o.cities || [];
     var situated = (c.stores || 0) - (o.untagged || 0);
 
@@ -1640,8 +2288,8 @@ em, i, cite, dfn, var { font-style: normal; }
       (c.demo ? ' · ' + c.demo + ' démo' + (c.demo === 1 ? '' : 's') + ' hors comptes' : ''),
     ]));
     // 2 · Ce qu'ils nous versent.
-    cards.appendChild(ovCard('Notre MRR', big(m.total || 0), 'MAD / mois', [
-      'abonnements en cours',
+    cards.appendChild(ovCard('MRR configuré', big(m.total || 0), 'MAD / mois', [
+      'tarifs enregistrés, hors essais et accès en attente',
       (m.customStores ? ' · ' + m.customStores + ' sur devis' : ''),
       (m.untariffed ? ' · ' : ''),
       (m.untariffed ? todo(plural(m.untariffed, 'sans tarif')) : null),
@@ -1656,7 +2304,7 @@ em, i, cite, dfn, var { font-style: normal; }
     // 4 · Où nous sommes.
     cards.appendChild(ovCard('Villes', fmt(cities.length), '', [
       (o.columns && o.columns.city === false)
-        ? todo('colonne ville pas encore appliquée en base')
+        ? todo('localisation à compléter')
         : (o.untagged
             ? [strong(situated + '/' + (c.stores || 0)), ' situés · ', todo(o.untagged + ' à renseigner')]
             : [strong(situated + '/' + (c.stores || 0)), ' situés']),
@@ -1694,7 +2342,7 @@ em, i, cite, dfn, var { font-style: normal; }
     var left = h('div', null, h('p', { class:'ov-h', text:'Villes · par établissements' }));
     if (o.columns && o.columns.city === false){
       left.appendChild(h('p', { class:'ov-empty ov-todo', text:
-        'La colonne ville n’est pas encore appliquée sur cette base. Elle se pose une fois : ALTER TABLE merchant_config ADD COLUMN city TEXT;' }));
+        'Les localisations ne sont pas encore disponibles. Elles apparaîtront ici dès que les fiches commerciales pourront être complétées.' }));
     } else if (!cities.length){
       left.appendChild(h('p', { class:'ov-empty', text:
         'Aucun établissement situé pour l’instant. La ville se renseigne dans la fiche commerciale, en ouvrant « Gérer » sur un client.' }));
@@ -1706,7 +2354,7 @@ em, i, cite, dfn, var { font-style: normal; }
       if (o.untagged){
         left.appendChild(h('p', { class:'ov-note ov-todo', text:
           plural(o.untagged, 'établissement sans ville', 'établissements sans ville') +
-          ' — ce classement ne les compte pas.' }));
+          ' · ce classement ne les compte pas.' }));
       }
     }
     split.appendChild(left);
@@ -1737,7 +2385,7 @@ em, i, cite, dfn, var { font-style: normal; }
       o.top.forEach(function(t){
         rows.appendChild(h('div', { class:'ov-row' },
           h('span', { class:'nm', text:t.name }),
-          h('span', { class:'city', text:t.city || '—' }),
+          h('span', { class:'city', text:t.city || '·' }),
           h('span', { class:'amt', text:big(t.gmv30) + ' MAD' })));
       });
       top.appendChild(rows);
@@ -1749,7 +2397,7 @@ em, i, cite, dfn, var { font-style: normal; }
        une décision sur un périmètre qu'on n'avait pas compris. */
     var notes = ['Démos exclues.'];
     notes.push(o.voidAware ? 'Ventes sorties des livres exclues.'
-                           : 'Ventes de test NON exclues sur cette base (colonne void_ts absente).');
+                           : 'Les ventes de test ne peuvent pas encore être isolées sur cet environnement.');
     notes.push('MRR = montant convenu quand il est saisi, sinon le tarif du palier (basic 199 · pro 399 · ultra 1 499). Ultimate est sur devis : sans montant saisi, l’établissement est compté « sans tarif », pas zéro.');
     notes.push('Suspendus retirés du MRR.');
     body.appendChild(h('p', { class:'ov-note', text:notes.join(' ') }));
@@ -1765,14 +2413,18 @@ em, i, cite, dfn, var { font-style: normal; }
     catch(_) { return ''; }
   }
   function planName(p){
-    if (p === '—' || !p) return 'Sans palier';
+    if (p === '·' || !p) return 'Sans palier';
     return p.charAt(0).toUpperCase() + p.slice(1);
   }
 
   async function renderClients(){
     var body = document.getElementById('cli-body');
     clear(body);
-    var list = await store.clients();
+    var list = ROSTER_LOADED ? CRM_CLIENTS : await store.clients();
+    ROSTER_LOADED = true;
+    CRM_CLIENTS = list.slice();
+    renderCrmHub(CRM_CLIENTS);
+    renderBillingAlerts(CRM_CLIENTS);
     var allReal = list.filter(function(c){ return !isDemoClient(c); });
     var allDemos = list.filter(isDemoClient);
     /* La recherche. Un back-office qui tient dix-huit clients se lit d'un coup
@@ -1802,7 +2454,7 @@ em, i, cite, dfn, var { font-style: normal; }
       body.appendChild(h('tr', null, h('td', { colspan:'7', style:'padding:20px 12px;color:var(--muted)' },
         CLI_Q
           ? ('Aucun établissement ne correspond à « ' + CLI_Q +' ». La recherche porte sur l’enseigne, la ville, le nom du contact, l’adresse e-mail et la clé.')
-          : 'Aucun client réel pour l’instant, les comptes créés par vos clients apparaîtront ici.')));
+          : (allReal.length ? 'Aucun établissement pour ce filtre. Essayez « Tous ».' : 'Aucun client réel pour l’instant, les comptes créés par vos clients apparaîtront ici.'))));
     }
 
     // Demos are hidden by default under one collapsible band, so God-mode shows
@@ -1862,10 +2514,12 @@ em, i, cite, dfn, var { font-style: normal; }
       (c.siblings > 1 && owner) ? owner : (c.business || c.merchant);
     document.getElementById('manage').hidden = false;
     renderStoreSwitch(c);
+    window.dispatchEvent(new CustomEvent('kiwi:operator-select', {detail:c}));
     renderClients();
-    await Promise.all([renderPins(), renderFeatures(), renderBiz(), renderHealth(), renderAudit(), renderTestSales(), renderAccount()]);
+    renderSubscription();
+    await Promise.all([renderPins(), renderAttendanceLink(), renderFeatures(), renderBiz(), renderHealth(), renderAudit(), renderTestSales(), renderAccount()]);
     renderDanger();
-    document.getElementById('manage').scrollIntoView({ behavior:'smooth', block:'nearest' });
+    document.getElementById('manage').scrollIntoView({ behavior:'smooth', block:'start' });
   }
 
   /* Reposer le dossier. Rien n'est supprimé et rien n'est enregistré : on ferme
@@ -1877,6 +2531,7 @@ em, i, cite, dfn, var { font-style: normal; }
   function deselect(){
     if (!selected) return;
     selected = null;
+    window.dispatchEvent(new CustomEvent('kiwi:operator-close'));
     /* Les rendus déjà partis chercher leurs données reviendraient peindre dans
        un panneau fermé — et le prochain établissement ouvert hériterait des
        lignes du précédent, le temps d'un aller-retour serveur. */
@@ -1892,7 +2547,7 @@ em, i, cite, dfn, var { font-style: normal; }
      'acct-lock','acct-body','health-grid','aud-list'].forEach(function(id){
       var n = document.getElementById(id); if (n) clear(n);
     });
-    ['sel-name','ts-count','ts-err','pin-err','acct-sub','acct-err',
+    ['sel-name','ts-count','ts-err','pin-err','attendance-link','attendance-err','acct-sub','acct-err',
      'aud-count','health-checked','health-err'].forEach(function(id){
       var n = document.getElementById(id); if (n) n.textContent = '';
     });
@@ -1922,24 +2577,25 @@ em, i, cite, dfn, var { font-style: normal; }
     var grid = document.getElementById('health-grid'), err = document.getElementById('health-err');
     if (!grid || !selected) return;
     clear(grid); grid.appendChild(h('p', {class:'empty'}, 'Diagnostic en cours…')); err.textContent = '';
+    var target = selected;
     try {
-      var d = await store.health(selected.merchant);
-      if (!selected) return;   // refermé pendant le diagnostic
+      var d = await store.health(target.merchant);
+      if (selected !== target) return;
       clear(grid);
       document.getElementById('health-checked').textContent = 'vérifié ' + healthAge(d.checked_ts);
       var ac = d.account || {}, sa = d.sales || {}, od = d.orders || {}, ch = d.channels || {};
       grid.appendChild(healthCard('Compte', ac.status || 'introuvable', ac.name || selected.merchant, ac.status === 'suspended' ? 'bad' : (!d.account ? 'warn' : '')));
       grid.appendChild(healthCard('Ventes', (sa.last_24h || 0) + ' / 24 h', (sa.amount_24h || 0).toLocaleString('fr-FR') + ' MAD · dernière ' + healthAge(sa.last_ts), !d.sales ? 'bad' : (!sa.last_ts ? 'warn' : '')));
       grid.appendChild(healthCard('Données cloud', (d.documents && d.documents.total || 0) + ' documents', 'dernière synchro ' + healthAge(d.documents && d.documents.last_ts), !d.documents ? 'bad' : ''));
-      grid.appendChild(healthCard('Caisse', (d.pairing && d.pairing.total || 0) + ' appairage(s)', 'dernier ' + healthAge(d.pairing && d.pairing.last_ts), !d.pairing ? 'bad' : (!(d.pairing.total) ? 'warn' : '')));
-      grid.appendChild(healthCard('Commandes', (od.pending || 0) + ' en attente', od.pending ? 'plus ancienne ' + healthAge(od.oldest_pending) : 'aucune file bloquée', od.pending && Date.now() - od.oldest_pending > 900000 ? 'bad' : (od.pending ? 'warn' : '')));
+      grid.appendChild(healthCard('Historique d’appairage', d.pairing ? (d.pairing.total || 0) + ' appairage(s)' : 'Indisponible', 'Présence actuelle non mesurée · dernier ' + healthAge(d.pairing && d.pairing.last_ts), !d.pairing ? 'bad' : (!(d.pairing.total) ? 'warn' : '')));
+      grid.appendChild(healthCard('Commandes', d.orders ? (od.pending || 0) + ' en attente' : 'Indisponible', !d.orders ? 'Source non disponible' : od.pending ? 'plus ancienne ' + healthAge(od.oldest_pending) : 'aucune commande en attente reçue', !d.orders ? 'bad' : od.pending && Date.now() - od.oldest_pending > 900000 ? 'bad' : (od.pending ? 'warn' : '')));
       grid.appendChild(healthCard('Canaux', (ch.active || 0) + ' actif(s)', ch.last_error ? 'dernier refus : ' + ch.last_error : 'dernière commande ' + healthAge(ch.last_ts), ch.last_error ? 'bad' : ''));
       grid.appendChild(healthCard('Équipe & clients', (d.staff && d.staff.total || 0) + ' accès', (d.customers && d.customers.total || 0) + ' clients · catalogue rév. ' + (d.catalog && d.catalog.rev || 0), (!d.staff || !d.customers) ? 'warn' : ''));
       if (d.missing && d.missing.length) {
         grid.appendChild(healthCard('Migrations', d.missing.length + ' manque(s)', d.missing.map(function(x){ return x.area; }).join(', '), 'bad'));
       }
     } catch(e) {
-      if (!selected) return;   // refermé pendant le diagnostic : rien à annoncer
+      if (selected !== target) return;
       clear(grid); grid.appendChild(h('p', {class:'empty'}, 'Diagnostic indisponible.'));
       err.textContent = 'Le serveur n’a pas pu établir l’état de cet établissement.';
     }
@@ -1992,29 +2648,56 @@ em, i, cite, dfn, var { font-style: normal; }
     sel.value = (ids.indexOf(keep) >= 0) ? keep : ids[0];
   }
 
+  var pinsRenderGeneration = 0;
   async function renderPins(){
+    var generation = ++pinsRenderGeneration;
     renderPinRoles();
     document.getElementById('pin-add').disabled = SENIOR === false;
     var wrap = document.getElementById('pin-list'); clear(wrap);
-    var pins = await store.pins(selected.merchant);
-    if (!selected) return;   // refermé pendant la lecture
+    var target = selected;
+    if (!target) return;
+    var pins;
+    try { pins = await store.pins(target.merchant); }
+    catch(_){if(selected===target && generation===pinsRenderGeneration)wrap.appendChild(h('p',{class:'empty'},'Accès du personnel indisponibles. Réessayez.'));return;}
+    if (selected !== target || generation !== pinsRenderGeneration) return;
     if (!pins.length) { wrap.appendChild(h('p', { class:'empty' }, 'Aucun PIN, l’app utilise ses codes par défaut.')); return; }
     pins.forEach(function(p){
       wrap.appendChild(h('div', { class:'pin' },
-        h('b', null, p.pin),
+        h('b', null, '••••'),
+        h('button', {class:'mini', onClick:function(e){ var label=e.currentTarget.parentNode.querySelector('b'); var show=label.textContent==='••••'; label.textContent=show?p.pin:'••••'; e.currentTarget.textContent=show?'Masquer':'Afficher'; }}, 'Afficher'),
         h('span', { class:'role' }, roleLabel(p.role)),
         p.name ? h('span', { class:'nm' }, p.name) : null,
         h('span', { class:'spacer' }),
         h('button', { class:'mini danger', disabled:SENIOR === false,
-          onClick:async function(){ await store.delPin(selected.merchant, p.id); renderPins(); } }, 'Supprimer')
+          onClick:async function(){ await store.delPin(target.merchant, p.id); if(selected===target)renderPins(); } }, 'Supprimer')
       ));
     });
+  }
+
+  async function renderAttendanceLink(){
+    var input = document.getElementById('attendance-link');
+    var err = document.getElementById('attendance-err');
+    var copy = document.getElementById('attendance-copy');
+    if (!input || !err || !copy || !selected) return;
+    input.value = 'Chargement…'; err.textContent = ''; copy.disabled = true;
+    var merchant = selected.merchant;
+    try {
+      var data = await store.attendanceLink(merchant);
+      if (!selected || selected.merchant !== merchant) return;
+      input.value = data.link || '';
+      copy.disabled = !input.value;
+    } catch (_) {
+      if (!selected || selected.merchant !== merchant) return;
+      input.value = '';
+      err.textContent = 'Lien de pointage indisponible.';
+    }
   }
 
   // Business-type selector — sourced from the client's onboarding, overridable by
   // the operator (God mode). Changing it swaps the module list below to the right
   // vertical, so a boutique never shows restaurant modules.
   function renderTypeRow(){
+    var target = selected;
     var row = document.getElementById('type-row'); if (!row) return; clear(row);
     var sel = h('select', { class:'type-select', 'aria-label':'Type d’activité' });
     sel.appendChild(h('option', { value:'' }, 'Type non défini,'));
@@ -2024,8 +2707,9 @@ em, i, cite, dfn, var { font-style: normal; }
     sel.addEventListener('change', async function(){
       var v = sel.value;
       try {
-        await store.setType(selected.merchant, v);
-        selected.type = v;
+        await store.setType(target.merchant, v);
+        if(selected!==target)return;
+        target.type = v;
         renderClients();         // roster reflects the new type
         renderPinRoles();         // staff roles switch to the new trade
         await renderFeatures();   // module set switches to the new vertical
@@ -2056,41 +2740,64 @@ em, i, cite, dfn, var { font-style: normal; }
      Enregistrer passe par /api/admin/config, donc par le code opérateur nommé :
      ce sont nos chiffres commerciaux, pas un réglage d'affichage. */
   async function renderBiz(){
+    var target = selected;
     var city = document.getElementById('biz-city');
     var mrr = document.getElementById('biz-mrr');
+    var planSel = document.getElementById('biz-plan');
     var save = document.getElementById('biz-save');
     var state = document.getElementById('biz-state');
     var hint = document.getElementById('biz-hint');
     var err = document.getElementById('biz-err');
+    var kind = document.getElementById('biz-kind');
+    var cycle = document.getElementById('biz-cycle');
+    var subStart = document.getElementById('biz-sub-start');
+    var subEnd = document.getElementById('biz-sub-end');
+    var trialDays = document.getElementById('biz-trial-days');
+    var trialStart = document.getElementById('biz-trial-start');
+    var trialEnd = document.getElementById('biz-trial-end');
     if (!city || !mrr || !save || !selected) return;
     err.textContent = '';
 
     var b;
-    try { b = await store.biz(selected.merchant); }
-    catch (_) { b = { city:'', mrr:null, columns:{ city:true, mrr:true } }; }
-    if (!selected) return;
+    try { b = await store.biz(target.merchant); }
+    catch (_) { if(selected===target){err.textContent='Fiche indisponible. Réessayez avant de modifier les conditions.';save.disabled=true;}return; }
+    if (selected !== target) return;
 
     city.value = b.city || '';
     mrr.value = (b.mrr == null ? '' : String(b.mrr));
+    if (planSel) planSel.value = (selected.plan || '').toLowerCase();
+    kind.value = b.subscriptionKind || 'paid';
+    cycle.value = b.billingCycle || 'monthly';
+    subStart.value = b.subscriptionStart || '';
+    subEnd.value = b.subscriptionEnd || '';
+    trialDays.value = String(b.trialDays || 15);
+    trialStart.value = b.trialStart || '';
+    trialEnd.value = b.trialEnd || '';
+    syncLifecycleFields();
 
     var noColumn = b.columns && b.columns.city === false;
     var readOnly = SENIOR === false;
     city.disabled = mrr.disabled = save.disabled = noColumn || readOnly;
+    if (planSel) planSel.disabled = readOnly;
+    [kind,cycle,subStart,subEnd,trialDays,trialStart,trialEnd].forEach(function(el){el.disabled=noColumn||readOnly;});
 
     var plan = (selected.plan || '').toLowerCase();
     var listed = TIER_PRICE[plan] || null;
-    state.textContent = b.city
+    var vCount = selected.account_venues || 1;
+    var vText = vCount > 1 ? (' · ' + vCount + ' établissements') : '';
+    state.textContent = (b.city
       ? (b.city + (b.mrr != null ? ' · ' + fmt(b.mrr) + ' MAD/mois' : ''))
-      : 'ville non renseignée';
+      : 'ville non renseignée') + vText;
 
-    if (noColumn){
-      hint.textContent = 'Les colonnes ville et abonnement ne sont pas encore appliquées sur cette base. ' +
-        'Une seule fois : ALTER TABLE merchant_config ADD COLUMN city TEXT; ALTER TABLE merchant_config ADD COLUMN mrr INTEGER;';
+    if (noColumn || (b.columns && b.columns.lifecycle === false)){
+      hint.textContent = 'La fiche commerciale n’est pas encore disponible sur cet environnement. Une mise à niveau technique est nécessaire ; aucune donnée client n’a été modifiée.';
     } else if (readOnly){
       hint.textContent = 'Lecture seule : modifier la fiche commerciale demande un code opérateur personnel, pas l’accès équipe partagé.';
+    } else if (vCount > 1 && !plan) {
+      hint.innerHTML = '<span style="color:var(--amber,#b45309);font-weight:600;">⚠️ Compte multi-établissements (' + vCount + ' établissements actifs) sans offre explicite.</span> Définir son offre (ex: Ultra) pour formaliser son statut multi-sites.';
     } else if (listed){
       hint.textContent = 'La ville alimente le classement de la vue d’ensemble ; sans elle l’établissement y est compté « non situé », jamais rangé ailleurs. ' +
-        'Le montant est facultatif — laissé vide, le tarif du palier ' + planName(plan) + ' (' + fmt(listed) + ' MAD/mois) s’applique. Renseigné, il l’emporte : c’est là qu’on inscrit une remise.';
+        'Le montant est facultatif · laissé vide, le tarif du palier ' + planName(plan) + ' (' + fmt(listed) + ' MAD/mois) s’applique. Renseigné, il l’emporte : c’est là qu’on inscrit une remise.';
     } else {
       hint.textContent = 'La ville alimente le classement de la vue d’ensemble ; sans elle l’établissement y est compté « non situé ». ' +
         (plan === 'ultimate'
@@ -2101,17 +2808,37 @@ em, i, cite, dfn, var { font-style: normal; }
 
   async function saveBiz(){
     if (!selected) return;
+    var target = selected;
     var city = document.getElementById('biz-city');
     var mrr = document.getElementById('biz-mrr');
+    var planSel = document.getElementById('biz-plan');
     var err = document.getElementById('biz-err');
+    var kind = document.getElementById('biz-kind').value;
+    var cycle = document.getElementById('biz-cycle').value;
+    var lifecycle = {
+      subscriptionKind:kind, billingCycle:cycle,
+      subscriptionStart:document.getElementById('biz-sub-start').value,
+      subscriptionEnd:document.getElementById('biz-sub-end').value,
+      trialDays:Number(document.getElementById('biz-trial-days').value || 15),
+      trialStart:document.getElementById('biz-trial-start').value,
+      trialEnd:document.getElementById('biz-trial-end').value
+    };
     err.textContent = '';
     var raw = mrr.value.trim();
     var amount = raw === '' ? null : Number(raw);
+    var nextPlan = planSel ? planSel.value.trim() : (selected.plan || '');
     if (amount != null && (!isFinite(amount) || amount < 0)){
       err.textContent = 'Montant invalide.'; return;
     }
+    if (kind === 'paid' && (!lifecycle.subscriptionStart || !lifecycle.subscriptionEnd || lifecycle.subscriptionEnd < lifecycle.subscriptionStart)){
+      err.textContent = 'Choisissez des dates valides pour l’abonnement.'; return;
+    }
+    if (kind === 'trial' && (!lifecycle.trialStart || !lifecycle.trialEnd || lifecycle.trialEnd < lifecycle.trialStart)){
+      err.textContent = 'Choisissez des dates valides pour la période d’essai.'; return;
+    }
     try {
-      var r = await store.setBiz(selected.merchant, city.value.trim(), amount);
+      var r = await store.setBiz(target.merchant, city.value.trim(), amount, nextPlan, lifecycle);
+      if(selected!==target)return;
       /* Une base sans les colonnes accepte l'enregistrement des MODULES et
          laisse tomber la ville. Le dire : « enregistré » sur un geste à moitié
          fait est le mensonge le plus coûteux d'une console d'assistance. */
@@ -2120,6 +2847,11 @@ em, i, cite, dfn, var { font-style: normal; }
         return;
       }
       selected.city = city.value.trim();
+      selected.plan = nextPlan;
+      selected.subscription_kind=kind; selected.billing_cycle=cycle;
+      selected.subscription_start=lifecycle.subscriptionStart; selected.subscription_end=lifecycle.subscriptionEnd;
+      selected.trial_start=lifecycle.trialStart; selected.trial_end=lifecycle.trialEnd; selected.trial_days=lifecycle.trialDays;
+      // Commercial terms never silently activate an establishment.
       notify('Fiche commerciale enregistrée.');
       await Promise.all([renderBiz(), renderClients(), renderOverview()]);
     } catch (e) {
@@ -2129,6 +2861,28 @@ em, i, cite, dfn, var { font-style: normal; }
     }
   }
 
+  function syncLifecycleFields(){
+    var trial=document.getElementById('biz-kind').value==='trial';
+    ['biz-cycle-label','biz-sub-start-label','biz-sub-end-label'].forEach(function(id){document.getElementById(id).hidden=trial;});
+    ['biz-trial-days-label','biz-trial-start-label','biz-trial-end-label'].forEach(function(id){document.getElementById(id).hidden=!trial;});
+  }
+
+  document.getElementById('biz-kind').addEventListener('change', function(){
+    syncLifecycleFields();
+    if(this.value==='trial'&&!document.getElementById('biz-trial-start').value) document.getElementById('biz-trial-start').value=isoToday();
+    document.getElementById('biz-trial-end').value=addDaysIso(document.getElementById('biz-trial-start').value,document.getElementById('biz-trial-days').value);
+  });
+  function refreshSubscriptionEnd(){
+    document.getElementById('biz-sub-end').value=addCycleIso(document.getElementById('biz-sub-start').value,document.getElementById('biz-cycle').value);
+  }
+  function refreshTrialEnd(){
+    document.getElementById('biz-trial-end').value=addDaysIso(document.getElementById('biz-trial-start').value,document.getElementById('biz-trial-days').value);
+  }
+  document.getElementById('biz-sub-start').addEventListener('change',refreshSubscriptionEnd);
+  document.getElementById('biz-cycle').addEventListener('change',refreshSubscriptionEnd);
+  document.getElementById('biz-trial-start').addEventListener('change',refreshTrialEnd);
+  document.getElementById('biz-trial-days').addEventListener('change',refreshTrialEnd);
+
   function featState(feats, mod){
     var explicit = Object.prototype.hasOwnProperty.call(feats, mod.key);
     // Module standard : clé absente ⇒ ALLUMÉ. Option payante (mod.off) : l'inverse.
@@ -2136,11 +2890,17 @@ em, i, cite, dfn, var { font-style: normal; }
     return { on:on, explicit:explicit };
   }
 
+  var featuresRenderGeneration = 0;
   async function renderFeatures(){
+    var target = selected;
+    var generation = ++featuresRenderGeneration;
     renderTypeRow();
     var wrap = document.getElementById('feat-list'); clear(wrap);
-    var feats = await store.config(selected.merchant);
-    if (!selected) return;   // refermé pendant la lecture
+    if(!target)return;
+    var feats;
+    try { feats = await store.config(target.merchant); }
+    catch(_){if(selected===target && generation===featuresRenderGeneration)wrap.appendChild(h('p',{class:'empty'},'Configuration indisponible. Aucune modification possible.'));return;}
+    if (selected !== target || generation !== featuresRenderGeneration) return;
     modulesForType(selected.type).forEach(function(grp){
       if (!grp.items.length) return;
       wrap.appendChild(h('p', { class:'sub featgrp' }, grp.title));
@@ -2150,15 +2910,26 @@ em, i, cite, dfn, var { font-style: normal; }
         var sw = h('button', { class:'sw', role:'switch', disabled:SENIOR === false,
           'aria-checked': st.on ? 'true':'false', 'aria-label':mod.label });
         sw.addEventListener('click', async function(){
-          var cur = await store.config(selected.merchant);
-          var next = !featState(cur, mod).on;
-          cur[mod.key] = next;
-          sw.setAttribute('aria-checked', next ? 'true':'false');
-          pill.className = 'fst' + (next ? ' on' : '');
-          pill.textContent = next ? 'Activé' : 'Désactivé';
-          src.textContent = 'réglé pour ce client';
-          await store.setConfig(selected.merchant, cur, selected.plan || '');
-          renderAudit();                    // le geste apparaît dans le journal
+          if(selected!==target)return;
+          sw.disabled=true; pill.textContent='Enregistrement…';
+          try {
+            var snapshot = LIVE ? await api('/config?merchant='+encodeURIComponent(target.merchant)) : null;
+            var cur = snapshot ? snapshot.features : await store.config(target.merchant);
+            if(selected!==target)return;
+            // Preserve the operator's visible intent even if another device
+            // changed this flag before the fresh revision was read.
+            var next = sw.getAttribute('aria-checked') !== 'true';
+            cur[mod.key] = next;
+            if(LIVE) await api('/config',{method:'PATCH',body:JSON.stringify({merchant:target.merchant,feature:mod.key,enabled:next,revision:snapshot.revision})});
+            else await store.setConfig(target.merchant, cur, target.plan || '');
+            if(selected!==target)return;
+            sw.setAttribute('aria-checked', next ? 'true':'false');
+            pill.className = 'fst' + (next ? ' on' : '');
+            pill.textContent = next ? 'Activé' : 'Désactivé';
+            src.textContent = 'Enregistré · appliqué au prochain chargement';
+            renderAudit();
+          } catch(_){ if(selected===target){pill.textContent=sw.getAttribute('aria-checked')==='true'?'Activé':'Désactivé';notify('Enregistrement refusé. Le réglage affiché n’a pas changé.');} }
+          finally {sw.disabled=false;}
         });
         var src = h('small', { class:'fsrc' }, st.explicit ? 'réglé pour ce client' : 'valeur par défaut');
         var label = h('span', { class:'fl' }, mod.label,
@@ -2171,8 +2942,9 @@ em, i, cite, dfn, var { font-style: normal; }
   // Libellé lisible d'une clé de module, quel que soit le métier du client — le
   // journal peut contenir une clé d'un vertical que ce client n'a plus.
   function moduleLabel(key){
-    var all = [CORE_MODULES, ADDON_MODULES];
+    var all = [CORE_MODULES, CAISSE_MODES, CAISSE_ACTIONS, ADDON_MODULES];
     Object.keys(VERTICAL_MODULES).forEach(function(k){ all.push(VERTICAL_MODULES[k]); });
+    Object.keys(OPTIN_MODULES).forEach(function(k){ all.push(OPTIN_MODULES[k]); });
     for (var i=0;i<all.length;i++) for (var j=0;j<all[i].length;j++)
       if (all[i][j].key === key) return all[i][j].label;
     return key;
@@ -2194,7 +2966,7 @@ em, i, cite, dfn, var { font-style: normal; }
         tag: out ? 'Vente sortie' : 'Vente remise',
         what: fmt(r.amount) + ' MAD' + (r.ref ? ' · ' + r.ref : '') +
               (r.sale_ts ? ' du ' + new Date(r.sale_ts).toLocaleDateString('fr-FR') : ''),
-        why: (r.reason ? (MOCK_REASONS[r.reason] || r.reason) : '') + (r.note ? ' — ' + r.note : ''),
+        why: (r.reason ? (MOCK_REASONS[r.reason] || r.reason) : '') + (r.note ? ' · ' + r.note : ''),
       };
     }
     if (r.kind === 'account'){
@@ -2217,7 +2989,7 @@ em, i, cite, dfn, var { font-style: normal; }
       return {
         cls:'ab acct',
         tag: lbl[r.action] || 'Adresse',
-        what: (r.prev || '—') + ' → ' + (r.next || '—'),
+        what: (r.prev || '·') + ' → ' + (r.next || '·'),
         why: (r.reason || '') + (bad.length ? ' · avis non délivré (' + bad.join(', ') + ')' : ''),
       };
     }
@@ -2279,7 +3051,7 @@ em, i, cite, dfn, var { font-style: normal; }
     return isNaN(d) ? '' : d.getTime();
   }
   function stamp(ts){
-    if (!ts) return '—';
+    if (!ts) return '·';
     var d = new Date(ts);
     return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit' }) + ' ' +
            String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
@@ -2336,7 +3108,7 @@ em, i, cite, dfn, var { font-style: normal; }
     if (stale('ts', tok)) return;
     tsRows = (data && data.sales) || [];
     document.getElementById('ts-count').textContent =
-      tsRows.length + ' vente' + (tsRows.length === 1 ? '' : 's') + (data && data.truncated ? ' (affinez la recherche)' : '');
+      tsRows.length + ' opération' + (tsRows.length === 1 ? '' : 's') + (data && data.truncated ? ' (affinez la recherche)' : '');
     if (data && data.migration === 'needed'){
       err.textContent = 'Base pas encore migrée : la recherche fonctionne, l’annulation non. Relancez schema.sql.';
     }
@@ -2356,7 +3128,9 @@ em, i, cite, dfn, var { font-style: normal; }
 
   function tsRow(s){
     var voided = !!s.void_ts;
+    var refunded = Number(s.amount) < 0;
     var box = h('input', { type:'checkbox', 'aria-label':'Sélectionner la vente ' + (s.ref || s.id) });
+    box.disabled = refunded;
     box.checked = !!tsSel[s.id];
     box.addEventListener('click', function(e){
       e.stopPropagation();
@@ -2368,9 +3142,10 @@ em, i, cite, dfn, var { font-style: normal; }
       box,
       h('span', { class:'ts-when' }, stamp(s.ts)),
       h('span', { class:'ts-amt' }, fmt(s.amount) + ' MAD'),
-      h('span', { class:'ts-ref' }, METHOD_FR[s.method] || s.method || '—'),
-      h('span', { class:'ts-lbl' }, s.label || '—',
-        s.returnish ? h('span', { class:'vpill', style:'margin-left:8px' }, 'retour ?') : null),
+      h('span', { class:'ts-ref' }, METHOD_FR[s.method] || s.method || '·'),
+      h('span', { class:'ts-lbl' }, s.label || '·',
+        refunded ? h('span', { class:'vpill', style:'margin-left:8px' }, 'remboursement')
+          : (s.returnish ? h('span', { class:'vpill', style:'margin-left:8px' }, 'retour ?') : null)),
       voided ? h('span', { class:'vpill' }, 'sortie') : h('span', { class:'ts-ref' }, s.ref || ''));
     /* Cliquer la LIGNE ouvre le ticket ; cliquer la case sélectionne. Deux
        gestes distincts exprès : « ouvrir la transaction complète avant d'agir »
@@ -2488,7 +3263,7 @@ em, i, cite, dfn, var { font-style: normal; }
     if (!restore && imp.stock && imp.stock.length){
       var st = h('div', { class:'box warn' },
         h('p', null, h('b', null, 'Stock : rendu par la caisse, à vérifier ici. '),
-          'Le serveur ne peut pas le rendre lui-même — la ligne de vente porte le nom du produit, pas la déclinaison exacte (couleur × taille) qui a été décrémentée. La CAISSE qui a encaissé, elle, la connaît : elle remet la marchandise en rayon toute seule dès qu’elle apprend le retrait (au plus tard 90 s après, ou au bouton « Rafraîchir »). Ça ne marche que si elle tient encore la vente dans son journal — sept jours — et qu’elle n’a pas été réinstallée depuis. Au-delà, à reprendre à la main :'));
+          'Le serveur ne peut pas le rendre lui-même · la ligne de vente porte le nom du produit, pas la déclinaison exacte (couleur × taille) qui a été décrémentée. La CAISSE qui a encaissé, elle, la connaît : elle remet la marchandise en rayon toute seule dès qu’elle apprend le retrait (au plus tard 90 s après, ou au bouton « Rafraîchir »). Ça ne marche que si elle tient encore la vente dans son journal · sept jours · et qu’elle n’a pas été réinstallée depuis. Au-delà, à reprendre à la main :'));
       imp.stock.forEach(function(l){
         st.appendChild(h('p', null, '· ' + l.name + ' × ' + l.qty + (l.cat ? ' (' + l.cat + ')' : '')));
       });
@@ -2581,7 +3356,7 @@ em, i, cite, dfn, var { font-style: normal; }
     if (!acct){
       document.getElementById('acct-sub').textContent = '';
       host.appendChild(h('p', { class:'empty' },
-        'Cet établissement n’est rattaché à aucun compte de connexion — c’est une démo, ou une fiche qu’aucun client n’a encore réclamée.'));
+        'Cet établissement n’est rattaché à aucun compte de connexion · c’est une démo, ou une fiche qu’aucun client n’a encore réclamée.'));
       return;
     }
     document.getElementById('acct-sub').textContent =
@@ -2599,7 +3374,7 @@ em, i, cite, dfn, var { font-style: normal; }
     ].forEach(function(r){
       var row = h('div', { class:'mailrow' },
         h('span', { class:'k' }, r.k),
-        h('span', { class:'v' + (r.v ? '' : ' none') }, r.v || '— même que la connexion'),
+        h('span', { class:'v' + (r.v ? '' : ' none') }, r.v || '·même que la connexion'),
         h('button', { class:'mini', disabled: SENIOR === false,
           onClick:function(){ openEmailEditor(r, row); } }, 'Corriger'));
       row.title = r.why;
@@ -2611,7 +3386,7 @@ em, i, cite, dfn, var { font-style: normal; }
       tl.appendChild(h('p', { class:'sub', style:'margin:14px 0 4px' }, 'Adresses de l’équipe (lecture seule)'));
       data.team.forEach(function(t){
         tl.appendChild(h('div', { class:'tm' },
-          h('b', null, t.name || '—'), t.role ? h('span', null, t.role) : null,
+          h('b', null, t.name || '·'), t.role ? h('span', null, t.role) : null,
           h('span', { class:'em' }, t.email),
           h('span', null, t.merchant)));
       });
@@ -2653,7 +3428,7 @@ em, i, cite, dfn, var { font-style: normal; }
       } catch(e){
         var code = (e && e.body && e.body.error) || '';
         err.textContent =
-          code === 'mail-unconfigured' ? 'Aucune sortie e-mail configurée (MAIL_WEBHOOK). Rien n’a été envoyé, et aucun lien n’a été créé — l’ancien reste valable.' :
+          code === 'mail-unconfigured' ? 'Aucune sortie e-mail configurée (MAIL_WEBHOOK). Rien n’a été envoyé, et aucun lien n’a été créé · l’ancien reste valable.' :
           code === 'send-failed' ? 'L’e-mail n’est pas parti. Vérifiez l’adresse du compte.' :
           code === 'too-soon' ? 'Un lien vient d’être envoyé. Attendez avant d’en renvoyer un : chaque envoi périme le précédent.' :
           code === 'operator-code-required' ? 'Il faut un code opérateur personnel pour ce geste.' :
@@ -2683,16 +3458,16 @@ em, i, cite, dfn, var { font-style: normal; }
     var box = h('div', { class:'imp', id:'mail-editor' },
       h('h4', null, 'Corriger l’adresse · ' + r.k),
       h('p', { class:'lst' },
-        h('b', null, acct.business || selected.merchant), ' · ', acct.name || '—',
+        h('b', null, acct.business || selected.merchant), ' · ', acct.name || '·',
         ' · compte ', h('b', null, acct.login)));
 
     if (r.f === 'login'){
       box.appendChild(h('div', { class:'box warn' },
         h('p', null, h('b', null, 'La nouvelle adresse devient la connexion immédiatement. '),
-          'Kiwi n’a pas d’étape de vérification d’adresse : le client se connectera avec la nouvelle dès l’enregistrement, avec son mot de passe habituel. C’est volontaire — une vérification bloquante enfermerait dehors précisément le client qui a perdu l’accès à son ancienne boîte.'),
+          'Kiwi n’a pas d’étape de vérification d’adresse : le client se connectera avec la nouvelle dès l’enregistrement, avec son mot de passe habituel. C’est volontaire · une vérification bloquante enfermerait dehors précisément le client qui a perdu l’accès à son ancienne boîte.'),
         h('p', null, 'Un avis part à l’ancienne adresse, une confirmation à la nouvelle. Aucun mot de passe n’est transmis.'),
         h('p', null, h('b', null, 'Ne casse rien : '),
-          'la session, la propriété des établissements et les ventes sont rattachées à l’identifiant du compte, jamais à l’adresse. Pas de second compte, pas de réonboarding, pas de perte de droits — le client reste même connecté.')));
+          'la session, la propriété des établissements et les ventes sont rattachées à l’identifiant du compte, jamais à l’adresse. Pas de second compte, pas de réonboarding, pas de perte de droits · le client reste même connecté.')));
     }
     box.appendChild(h('div', { class:'reason' }, input, why));
     box.appendChild(h('div', { class:'acts' }, go,
@@ -2706,7 +3481,7 @@ em, i, cite, dfn, var { font-style: normal; }
     box.appendChild(h('p', { class:'hint' },
       'Le client conteste un changement précédent ? ',
       h('a', { href:'#', onClick:function(e){ e.preventDefault(); commitEmail(r, '', why.value.trim(), true, go, msg, box); } },
-        'Rétablir l’adresse précédente'), ' — le motif reste obligatoire.'));
+        'Rétablir l’adresse précédente'), ' · le motif reste obligatoire.'));
 
     row.parentNode.insertBefore(box, row.nextSibling);
     setTimeout(function(){ try { input.focus(); } catch(_){} }, 50);
@@ -2838,6 +3613,23 @@ em, i, cite, dfn, var { font-style: normal; }
     clr.addEventListener('click', function(){ q.value = ''; apply(); q.focus(); });
   })();
 
+  /* Filtres CRM — locaux, instantanés et sans nouvelle requête. La recherche,
+     l'état et le tri peuvent donc se combiner sans faire clignoter le roster. */
+  (function(){
+    var filters = document.getElementById('crm-filter');
+    var sort = document.getElementById('crm-sort');
+    if (filters){
+      filters.addEventListener('click', function(e){
+        var b = e.target && e.target.closest && e.target.closest('button[data-filter]');
+        if (!b) return;
+        CRM_FILTER = b.getAttribute('data-filter') || 'all';
+        [].slice.call(filters.querySelectorAll('button')).forEach(function(x){ x.classList.toggle('on', x === b); });
+        renderClients();
+      });
+    }
+    if (sort){ sort.addEventListener('change', function(){ CRM_SORT = sort.value || 'recent'; renderClients(); }); }
+  })();
+
   document.getElementById('manage-close').addEventListener('click', function(){ deselect(); });
 
   /* Cliquer à côté referme aussi — mais « à côté » veut dire le fond de page, et
@@ -2853,7 +3645,7 @@ em, i, cite, dfn, var { font-style: normal; }
     if (!selected) return;
     var t = e.target;
     if (!t || !t.closest) return;
-    if (t.closest('section, header, dialog, [role="dialog"]')) return;
+    if (t.closest('section, header, aside, nav, dialog, [role="dialog"], .ks-shell')) return;
     deselect();
   });
 
@@ -2872,9 +3664,14 @@ em, i, cite, dfn, var { font-style: normal; }
 
   // ── boot: probe live vs mock, then render ────────────────────────────────────
   async function boot(isRefresh){
+    if(REFRESH_BUSY)return;
+    REFRESH_BUSY=true;
+    try {
     if (LIVE === null || isRefresh){
       try {
-        await api('/clients');
+        var probe = await api('/clients');
+        CRM_CLIENTS = probe.clients || []; ROSTER_LOADED=true; ROSTER_AT=probe.now || Date.now();
+        SENIOR=probe.senior; MAIL_OK=!!probe.mail;
         if (BACKEND_DOWN) { location.reload(); return; }
         LIVE = true; BACKEND_DOWN = false;
       } catch(e){
@@ -2893,8 +3690,15 @@ em, i, cite, dfn, var { font-style: normal; }
        servir), donc elle ne peut pas faire tomber le démarrage. */
     await Promise.all([renderOverview(), renderClients()]);
     await renderOperators();
-    if (selected){ await Promise.all([renderPins(), renderFeatures(), renderBiz(), renderHealth(), renderAudit(), renderTestSales(), renderAccount()]); }
+    if (selected){ await Promise.all([renderPins(), renderAttendanceLink(), renderFeatures(), renderBiz(), renderHealth(), renderAudit(), renderTestSales(), renderAccount()]); }
+    } finally { REFRESH_BUSY=false; }
   }
+  window.KiwiOperator = {
+    snapshot:function(){return {clients:CRM_CLIENTS,now:ROSTER_AT,overview:OVERVIEW_DATA,live:LIVE};},
+    open:function(merchant){var c=CRM_CLIENTS.find(function(x){return x.merchant===merchant;});if(c)return select(c);},
+    close:deselect,refresh:function(){return boot(true);},api:api,
+    dashboard:openDashboard
+  };
   boot(false);
 })();
 </script>

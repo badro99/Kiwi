@@ -30,9 +30,11 @@
 // l'identifiant — ni les commandes, ni les totaux, ni les autres tables.
 
 import { json } from '../../auth/_lib.js';
+import { storeSubscriptionPending } from '../_private.js';
 import {
   orderProEnabled, normTable, newSessionId, SESSION_ID, deskOpen,
 } from './_lib.js';
+import { publishGuestServiceRequest } from '../service/events.js';
 
 /* Une session oubliée (le client est parti sans qu'on encaisse, la caisse a
  * planté) ne doit pas garder la table prise pour l'éternité : au-delà de ça
@@ -40,6 +42,11 @@ import {
  * client suivant. Six heures — plus long que n'importe quel service, plus
  * court qu'une nuit. */
 const SESSION_MAX_MS = 6 * 60 * 60 * 1000;
+
+async function hasOpenOrders(env, merchant, id) {
+  return !!await env.DB.prepare(`SELECT 1 FROM orders WHERE merchant = ? AND session_id = ?
+    AND paid_ts IS NULL AND status <> 'rejected' LIMIT 1`).bind(merchant, id).first();
+}
 
 function slug(v) {
   return String(v == null ? '' : v).trim().toLowerCase().slice(0, 64);
@@ -54,7 +61,30 @@ export async function onRequestPost(context) {
 
   const merchant = slug(b && b.merchant);
   if (!merchant) return json({ error: 'merchant-required' }, 400);
+  if (await storeSubscriptionPending(env, merchant)) return json({ error: 'subscription-required' }, 402);
   if (!(await orderProEnabled(env, merchant))) return json({ error: 'orderpro-off' }, 403);
+
+  /* Service buttons reuse the opaque table session already held by this
+   * phone. The table is read from that session, never trusted from the body. */
+  if (b && b.action) {
+    const action = String(b.action || '');
+    const session = String(b.session || '').trim();
+    if (!SESSION_ID.test(session)) return json({ error: 'session-required' }, 400);
+    let live = null;
+    try {
+      live = await env.DB.prepare(
+        `SELECT table_no, opened_ts FROM table_sessions
+          WHERE id = ? AND merchant = ? AND mode = 'table' AND status = 'open'`
+      ).bind(session, merchant).first();
+    } catch (_) {}
+    if (!live || ((Date.now() - Number(live.opened_ts || 0)) >= SESSION_MAX_MS
+        && !await hasOpenOrders(env, merchant, session))) {
+      return json({ error: 'session-closed' }, 409);
+    }
+    if (!(await deskOpen(env, merchant))) return json({ error: 'service-closed' }, 409);
+    const result = await publishGuestServiceRequest(env, merchant, live.table_no, action, session);
+    return result.ok ? json(result) : json({ error: result.error || 'service-request-failed' }, 503);
+  }
 
   const mode = (b && b.mode) === 'takeout' ? 'takeout' : 'table';
   const table = mode === 'table' ? normTable(b && b.table) : '';
@@ -75,26 +105,54 @@ export async function onRequestPost(context) {
     let live = null;
     try {
       live = await env.DB.prepare(
-        `SELECT id, opened_ts FROM table_sessions
+        `SELECT id, opened_ts, seen_ts FROM table_sessions
           WHERE merchant = ? AND table_no = ? AND status = 'open'`
       ).bind(merchant, table).first();
     } catch (_) { /* table pas encore migrée → on tentera l'insertion, qui dira la vérité */ }
 
-    if (live && (now - (live.opened_ts || 0)) < SESSION_MAX_MS) {
+    let allPaid = false;
+    let totalOrders = 0;
+    if (live) {
       try {
-        await env.DB.prepare('UPDATE table_sessions SET seen_ts = ? WHERE id = ?')
-          .bind(now, live.id).run();
+        const orderCounts = await env.DB.prepare(
+          `SELECT COUNT(*) AS total, SUM(CASE WHEN paid_ts IS NOT NULL THEN 1 ELSE 0 END) AS paid
+             FROM orders WHERE merchant = ? AND session_id = ?`
+        ).bind(merchant, live.id).first();
+        totalOrders = Number((orderCounts && orderCounts.total) || 0);
+        const paidOrders = Number((orderCounts && orderCounts.paid) || 0);
+        if (totalOrders > 0 && totalOrders === paidOrders) {
+          allPaid = true;
+        }
       } catch (_) {}
+    }
+
+    // Une session n'est reprise que si elle a été vue récemment :
+    // - tant qu'aucune commande n'a été passée (client qui choisit son repas), elle reste ouverte généreusement (6h / SESSION_MAX_MS)
+    // - si une commande a déjà été passée, elle expire après 30 minutes sans activité
+    const lastSeen = Number((live && (live.seen_ts || live.opened_ts)) || 0);
+    // A long meal or sleeping phones must not split an unpaid table into two
+    // visits. Staff settlement/closure, not phone activity, ends its bill.
+    const unpaid = live && await hasOpenOrders(env, merchant, live.id);
+    const isRecent = live && (unpaid || ((now - Number(live.opened_ts || 0)) < SESSION_MAX_MS && (totalOrders === 0 || (now - lastSeen) < 30 * 60 * 1000)));
+
+    if (isRecent && !allPaid) {
+      try {
+        const resumed = await env.DB.prepare("UPDATE table_sessions SET seen_ts = ? WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open'")
+          .bind(now, live.id, merchant, table).run();
+        if (!Number(resumed?.meta?.changes)) return json({ error: 'session-closed' }, 409);
+      } catch (_) { return json({ error: 'session-read-failed' }, 503); }
       return json({ ok: true, session: live.id, mode, table, status: 'open', resumed: true });
     }
-    /* Session vivante mais périmée : on la ferme d'abord, sinon l'index unique
-     * partiel refuserait la nouvelle et la table resterait inutilisable. */
+    /* Session vivante mais périmée, inactive ou déjà réglée : on la ferme d'abord,
+     * sinon l'index unique partiel refuserait la nouvelle et la table resterait inutilisable. */
     if (live) {
       try {
         await env.DB.prepare(
-          `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = 'expiry'
-            WHERE id = ? AND status = 'open'`
-        ).bind(now, live.id).run();
+          `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = ?
+            WHERE id = ? AND status = 'open'
+              AND NOT EXISTS (SELECT 1 FROM orders WHERE merchant = ? AND session_id = ?
+                AND paid_ts IS NULL AND status <> 'rejected')`
+        ).bind(now, allPaid ? 'settle' : 'expiry', live.id, merchant, live.id).run();
       } catch (_) {}
     }
   }
@@ -117,7 +175,7 @@ export async function onRequestPost(context) {
         if (other) return json({ ok: true, session: other.id, mode, table, status: 'open', resumed: true });
       } catch (_) {}
     }
-    return json({ error: 'write-failed', detail: String((e && e.message) || e) }, 500);
+    return json({ error: 'write-failed' }, 500);
   }
 
   return json({ ok: true, session: id, mode, table, status: 'open' });
@@ -150,7 +208,8 @@ export async function onRequestGet(context) {
   if (!row) return json({ ok: true, status: 'closed', closedBy: 'unknown' });
 
   const now = Date.now();
-  const stale = (now - (row.opened_ts || 0)) >= SESSION_MAX_MS;
+  const stale = (now - (row.opened_ts || 0)) >= SESSION_MAX_MS
+    && !await hasOpenOrders(env, merchant, id);
   if (row.status === 'open' && !stale) {
     try {
       await env.DB.prepare('UPDATE table_sessions SET seen_ts = ? WHERE id = ?').bind(now, id).run();

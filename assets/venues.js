@@ -254,41 +254,55 @@
 
   /* ═══════════════ VERTICAL → SIDEBAR SECTION ═══════════════ */
 
-  // Inline SVGs match the existing sidebar's rendering style (24x24 viewBox, stroke 2)
+  // Semantic names are rendered by the shared Google Material Symbols Rounded
+  // runtime. Keep navigation iconography consistent across every vertical.
   const ICONS = {
     // restaurant
-    tables: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
-    // Lucide clipboard-list — a menu is an itemised list, not a hamburger bar.
-    menu: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/>',
-    // Lucide monitor — the KDS is a kitchen *screen* (was a bare "+" placeholder).
-    kds: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
-    // Lucide package — stock is a box on a shelf (was funnel-like shrinking lines).
-    stock: '<path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.3 7L12 12l8.7-5"/><path d="M12 22V12"/>',
-    finance: '<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>',
+    tables: 'layout-grid',
+    menu: 'clipboard-list',
+    kds: 'monitor',
+    stock: 'package',
+    finance: 'trending-up',
     // boutique
-    // Lucide archive — a labelled stock bin (was a padlock, which read as "locked").
-    inventory: '<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 002 2h12a2 2 0 002-2V8"/><path d="M10 12h4"/>',
-    categories: '<path d="M3 6h7l2 2h9v10a2 2 0 01-2 2H5a2 2 0 01-2-2V6z"/>',
-    promos: '<circle cx="9" cy="9" r="1.5"/><circle cx="15" cy="15" r="1.5"/><path d="M5 19L19 5"/>',
-    returns: '<path d="M3 12a9 9 0 119 9 9 9 0 01-6.36-2.64L3 21l.36-2.64"/><path d="M3 12h6M3 21v-6"/>',
+    inventory: 'archive',
+    categories: 'folder',
+    promos: 'tag',
+    returns: 'rotate-ccw',
+    sold: 'bar-chart-3',
     // spa
-    appointments: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>',
-    // Lucide gift — "forfaits" = packages (was a star, which read as "favourite").
-    services: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 010-5C11 3 12 8 12 8M16.5 8a2.5 2.5 0 000-5C13 3 12 8 12 8"/>',
-    practitioners: '<circle cx="12" cy="7" r="4"/><path d="M4 21v-2a4 4 0 014-4h8a4 4 0 014 4v2"/><path d="M16 11l2 2 4-4"/>',
-    clients: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 14h6M9 18h6M9 10h2"/>',
+    appointments: 'calendar',
+    services: 'gift',
+    practitioners: 'user-check',
+    clients: 'contact',
+    operations: 'clipboard-list',
+    route: 'git-branch',
+    book: 'book-open',
+    card: 'credit-card',
+    alert: 'alert-triangle',
+    truck: 'truck',
+    usercheck: 'user-check',
     // hotel — onboarding vertical, reached only through the 0000 wizard
     // (no demo hotel venue ships)
-    reception: '<path d="M4 19h16"/><path d="M5 19v-4a7 7 0 0114 0v4"/><path d="M12 8V6"/><path d="M10 6h4"/>',
-    chambres: '<path d="M3 18v-7"/><path d="M3 16h18v-3a2 2 0 00-2-2h-9v5"/><circle cx="6.5" cy="11.5" r="1.5"/><path d="M21 18v-2"/>',
-    sejours: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/><path d="M7 13h4M13 16h4"/>',
-    menage: '<path d="M11 4l1.2 3.4L15.6 8.6 12.2 9.8 11 13.2 9.8 9.8 6.4 8.6 9.8 7.4z"/><path d="M18 13l.8 2.2L21 16l-2.2.8L18 19l-.8-2.2L15 16l2.2-.8z"/><path d="M5 16l.6 1.7L7.4 18.3 5.6 19 5 20.7 4.4 19 2.6 18.3 4.4 17.7z"/>',
-    tarifs: '<path d="M20.6 13.4L11 3.8A2 2 0 009.6 3H5a2 2 0 00-2 2v4.6c0 .5.2 1 .6 1.4l9.6 9.6a2 2 0 002.8 0l4.6-4.6a2 2 0 000-2.6z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
-    hotes: '<circle cx="12" cy="7" r="4"/><path d="M4 21v-2a4 4 0 014-4h8a4 4 0 014 4v2"/><path d="M17.5 10.5l1.5 1.5 3-3"/>',
-    folios: '<path d="M5 3h14v18l-2.3-1.5L14.4 21l-2.4-1.5L9.6 21l-2.3-1.5L5 21z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
-    canaux: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a13.5 13.5 0 010 18M12 3a13.5 13.5 0 000 18"/>',
-    // Lucide sparkles — the "IA" row now reads as intelligence (was a sun/rays).
-    intel: '<path d="M9.9 15.5A2 2 0 008.5 14.1l-6.1-1.6a.5.5 0 010-1L8.5 9.9A2 2 0 009.9 8.5l1.6-6.1a.5.5 0 011 0L14.1 8.5A2 2 0 0015.5 9.9l6.1 1.6a.5.5 0 010 1L15.5 14.1a2 2 0 00-1.4 1.4l-1.6 6.1a.5.5 0 01-1 0z"/><path d="M20 3v4M22 5h-4M4 17v2M5 18H3"/>',
+    reception: 'bell',
+    chambres: 'bed-double',
+    sejours: 'calendar-days',
+    menage: 'sparkles',
+    tarifs: 'tag',
+    hotes: 'user-check',
+    folios: 'receipt-text',
+    canaux: 'globe',
+    intel: 'sparkles',
+  };
+
+  /* Pressing navigation uses Google's current Material Symbols, not the old
+   * hand-drawn stroke approximations. Outlined 400 · 24px optical grid. */
+  const MATERIAL_PRESSING = {
+    orders: '<path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h168q13-36 43.5-58t68.5-22q38 0 68.5 22t43.5 58h168q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm80-80h280v-80H280v80Zm0-160h400v-80H280v80Zm0-160h400v-80H280v80Z"/>',
+    workshop: '<path d="M240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h480q33 0 56.5 23.5T800-800v640q0 33-23.5 56.5T720-80H240Zm0-80h480v-640H240v640Zm381.5-98.5Q680-317 680-400t-58.5-141.5Q563-600 480-600t-141.5 58.5Q280-483 280-400t58.5 141.5Q397-200 480-200t141.5-58.5ZM480-268q-26 0-50.5-9.5T386-306l188-188q19 19 28.5 43.5T612-400q0 55-38.5 93.5T480-268ZM320-680q17 0 28.5-11.5T360-720q0-17-11.5-28.5T320-760q-17 0-28.5 11.5T280-720q0 17 11.5 28.5T320-680Zm120 0q17 0 28.5-11.5T480-720q0-17-11.5-28.5T440-760q-17 0-28.5 11.5T400-720q0 17 11.5 28.5T440-680Z"/>',
+    pickup: '<path d="M120-160q-17 0-28.5-11.5T80-200q0-10 4-18.5T96-232l344-258v-70q0-17 12-28.5t29-11.5q25 0 42-18t17-43q0-25-17.5-42T480-720q-25 0-42.5 17.5T420-660h-80q0-58 41-99t99-41q58 0 99 40.5t41 98.5q0 47-27.5 84T520-526v36l344 258q8 5 12 13.5t4 18.5q0 17-11.5 28.5T840-160H120Zm120-80h480L480-420 240-240Z"/>',
+    services: '<path d="M856-390 570-104q-12 12-27 18t-30 6q-15 0-30-6t-27-18L103-457q-11-11-17-25.5T80-513v-287q0-33 23.5-56.5T160-880h287q16 0 31 6.5t26 17.5l352 353q12 12 17.5 27t5.5 30q0 15-5.5 29.5T856-390ZM513-160l286-286-353-354H160v286l353 354ZM260-640q25 0 42.5-17.5T320-700q0-25-17.5-42.5T260-760q-25 0-42.5 17.5T200-700q0 25 17.5 42.5T260-640Z"/>',
+    quality: '<path d="M480-80q-139-35-229.5-159.5T160-516v-244l320-120 320 120v244q0 132-90.5 256.5T480-80Zm-42-240 226-226-56-56-170 170-86-86-56 56 142 142Z"/>',
+    delivery: '<path d="M155-195q-35-35-35-85H40v-440q0-33 23.5-56.5T120-800h560v160h120l120 160v200h-80q0 50-35 85t-85 35q-50 0-85-35t-35-85H360q0 50-35 85t-85 35q-50 0-85-35Zm85-45q17 0 28.5-11.5T280-280q0-17-11.5-28.5T240-320q-17 0-28.5 11.5T200-280q0 17 11.5 28.5T240-240ZM120-360h32q17-18 39-29t49-11q27 0 49 11t39 29h272v-360H120v360Zm600 120q17 0 28.5-11.5T760-280q0-17-11.5-28.5T720-320q-17 0-28.5 11.5T680-280q0 17 11.5 28.5T720-240Zm-40-200h170l-90-120h-80v120Z"/>'
   };
 
   const VERTICAL_SECTIONS = {
@@ -309,8 +323,9 @@
       items: [
         { nav: 'inventory',  label: 'Inventaire produits', i18n: 'sidebar.boutique.inventory',  tag: 'LIVE', icon: ICONS.inventory },
         { nav: 'categories', label: 'Catégories',          i18n: 'sidebar.boutique.categories',              icon: ICONS.categories },
-        { nav: 'promos',     label: 'Promotions & offres', i18n: 'sidebar.boutique.promos',                  icon: ICONS.promos },
+        { nav: 'promos',     label: 'Promotions',          i18n: 'sidebar.boutique.promos',                  icon: ICONS.promos },
         { nav: 'returns',    label: 'Retours & échanges',  i18n: 'sidebar.boutique.returns',                 icon: ICONS.returns },
+        { nav: 'sold',       label: 'Vendus',              i18n: 'sidebar.boutique.sold',                    icon: ICONS.sold },
       ],
     },
     spa: {
@@ -333,8 +348,9 @@
         { nav: 'chambres',   label: 'Plan des chambres',      i18n: 'sidebar.hotel.chambres',               icon: ICONS.chambres },
         { nav: 'sejours',    label: 'Réservations & séjours', i18n: 'sidebar.hotel.sejours',                icon: ICONS.sejours },
         { nav: 'menage',     label: 'Ménage',                 i18n: 'sidebar.hotel.menage',                 icon: ICONS.menage },
-        { nav: 'tarifs',     label: 'Tarifs & occupation',    i18n: 'sidebar.hotel.tarifs',                 icon: ICONS.tarifs },
-        { nav: 'hotes',      label: 'Clients & fidélité',     i18n: 'sidebar.hotel.hotes',                  icon: ICONS.hotes },
+        { nav: 'economat',    label: 'Économat',               i18n: '',                                     icon: ICONS.stock },
+        { nav: 'tarifs',     label: 'Tarifs & occupation',    i18n: 'sidebar.hotel.tarifs',               icon: ICONS.tarifs },
+        { nav: 'points-vente', label: 'Points de vente',     i18n: '',                                     icon: 'store' },
         { nav: 'folios',     label: 'Notes clients · folios', i18n: 'sidebar.hotel.folios',                 icon: ICONS.folios },
         { nav: 'canaux',     label: 'Canaux & OTA',           i18n: 'sidebar.hotel.canaux',                 icon: ICONS.canaux },
         { nav: 'hotelintel', label: 'Intelligence hôtel',     i18n: 'sidebar.hotel.intel',     tag: 'IA',   icon: ICONS.intel },
@@ -367,11 +383,33 @@
        * de vrais sélecteurs — et de là tout le produit les lit. */
       { k: 'surface2', type: 'number', ph: 'Ex. 2',            label: { fr: 'Nombre de vendeurs', en: 'Sales staff', ar: 'عدد البائعين' } },
     ] },
-    spa: { base: 'spa', questions: [
+    spa: { base: 'spa',
+      header: { fr: 'Spa & bien-être', en: 'Spa & wellness', ar: 'السبا والعناية' },
+      items: [
+        { nav: 'appointments', tag: 'LIVE', label: { fr: 'Agenda & cabines', en: 'Diary & rooms', ar: 'المواعيد والغرف' } },
+        { nav: 'services', label: { fr: 'Soins & rituels', en: 'Treatments & rituals', ar: 'العلاجات والطقوس' } },
+        { nav: 'practitioners', label: { fr: 'Praticien·ne·s', en: 'Practitioners', ar: 'الممارسون' } },
+        { nav: 'clients', label: { fr: 'Parcours clients', en: 'Guest journeys', ar: 'مسار العملاء' } },
+        { nav: 'packages', icon: ICONS.card, label: { fr: 'Cures & cartes cadeaux', en: 'Packages & gift cards', ar: 'الباقات وبطاقات الهدايا' } },
+      ],
+      questions: [
       { k: 'cabins',  type: 'number', ph: 'Ex. 4',             label: { fr: 'Cabines de soin', en: 'Treatment rooms', ar: 'غرف العناية' } },
       { k: 'staff',   type: 'number', ph: 'Ex. 6',             label: { fr: 'Praticien·ne·s', en: 'Practitioners', ar: 'الممارسون' } },
       { k: 'signature', type: 'text', ph: 'Ex. Hammam + argan', label: { fr: 'Soins signature', en: 'Signature treatments', ar: 'علاجات مميزة' } },
     ] },
+    autre: { base: 'boutique',
+      header: { fr: 'Mon activité', en: 'My business', ar: 'نشاطي' },
+      items: [
+        { nav: 'inventory', tag: 'LIVE', label: { fr: 'Catalogue & inventaire', en: 'Catalogue & inventory', ar: 'الكتالوج والمخزون' } },
+        { nav: 'categories', label: { fr: 'Catégories', en: 'Categories', ar: 'الفئات' } },
+        { nav: 'promos', label: { fr: 'Offres', en: 'Offers', ar: 'العروض' } },
+        { nav: 'workflows', icon: ICONS.operations, label: { fr: 'Suivi d’activité', en: 'Work tracking', ar: 'تتبع النشاط' } },
+        { nav: 'returns', label: { fr: 'Retours & incidents', en: 'Returns & incidents', ar: 'المرتجعات والحوادث' } },
+      ],
+      questions: [
+        { k: 'activity', type: 'text', ph: 'Ex. Atelier, service, commerce', label: { fr: 'Votre activité', en: 'Your activity', ar: 'نوع نشاطك' } },
+        { k: 'workflow', type: 'text', ph: 'Ex. Commande → préparation → remise', label: { fr: 'Étapes principales', en: 'Main workflow', ar: 'المراحل الرئيسية' } },
+      ] },
     /* 4th primary trade — native sections (VERTICAL_SECTIONS.hotel) +
      * native KPI band (KPI_BY_TYPE.hotel); like the 3 base primaries it
      * only defines its step-2 questions. `rooms` sizes the starter room
@@ -422,6 +460,7 @@
         { nav: 'tables',  tag: 'LIVE', label: { fr: 'Comptoir & bornes', en: 'Counter & kiosks', ar: 'الكاونتر والأكشاك' } },
         { nav: 'menu',    label: { fr: 'Menu & combos', en: 'Menu & combos', ar: 'القائمة والكومبو' } },
         { nav: 'kds',     label: { fr: 'Écran cuisine (KDS)', en: 'Kitchen display (KDS)', ar: 'شاشة المطبخ' } },
+        { nav: 'channels', icon: ICONS.route, label: { fr: 'Livraison & canaux', en: 'Delivery & channels', ar: 'التوصيل والقنوات' } },
         { nav: 'stock',   label: { fr: 'Stock & surgelés', en: 'Stock & frozen', ar: 'المخزون والمجمدات' } },
         { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges & budget', en: 'Margins & budget', ar: 'الهوامش والميزانية' } },
       ],
@@ -457,6 +496,7 @@
         { nav: 'tables',  tag: 'LIVE', label: { fr: 'Comptoir & précommandes', en: 'Counter & pre-orders', ar: 'الكاونتر والطلبات المسبقة' } },
         { nav: 'menu',    label: { fr: 'Catalogue & fournées', en: 'Catalogue & batches', ar: 'الكتالوج والدفعات' } },
         { nav: 'kds',     label: { fr: 'Écran fournil', en: 'Bakehouse screen', ar: 'شاشة المخبز' } },
+        { nav: 'waste',   icon: ICONS.alert, label: { fr: 'Invendus & dons', en: 'Unsold & donations', ar: 'غير المباع والتبرعات' } },
         { nav: 'stock',   label: { fr: 'Farines & matières', en: 'Flour & ingredients', ar: 'الدقيق والمواد' } },
         { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges & budget', en: 'Margins & budget', ar: 'الهوامش والميزانية' } },
       ],
@@ -496,6 +536,7 @@
         { nav: 'tables',  tag: 'LIVE', label: { fr: 'Salle & livraison', en: 'Room & delivery', ar: 'القاعة والتوصيل' } },
         { nav: 'menu',    label: { fr: 'Carte & tailles', en: 'Menu & sizes', ar: 'القائمة والأحجام' } },
         { nav: 'kds',     label: { fr: 'Écran four', en: 'Oven screen', ar: 'شاشة الفرن' } },
+        { nav: 'delivery', icon: ICONS.route, label: { fr: 'Livraisons', en: 'Deliveries', ar: 'التوصيلات' } },
         { nav: 'stock',   label: { fr: 'Pâte & ingrédients', en: 'Dough & toppings', ar: 'العجين والمكونات' } },
         { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges & budget', en: 'Margins & budget', ar: 'الهوامش والميزانية' } },
       ],
@@ -531,6 +572,8 @@
         { nav: 'tables',  tag: 'LIVE', label: { fr: 'Événements & planning', en: 'Events & schedule', ar: 'الفعاليات والتخطيط' } },
         { nav: 'menu',    label: { fr: 'Menus & formules', en: 'Menus & packages', ar: 'القوائم والعروض' } },
         { nav: 'kds',     label: { fr: 'Production cuisine', en: 'Kitchen production', ar: 'إنتاج المطبخ' } },
+        { nav: 'quotes',   icon: ICONS.operations, label: { fr: 'Devis & événements', en: 'Quotes & events', ar: 'العروض والفعاليات' } },
+        { nav: 'deposits', icon: ICONS.card, label: { fr: 'Acomptes & soldes', en: 'Deposits & balances', ar: 'التسبيقات والأرصدة' } },
         { nav: 'stock',   label: { fr: 'Stock & commandes', en: 'Stock & purchasing', ar: 'المخزون والمشتريات' } },
         { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges & budget', en: 'Margins & budget', ar: 'الهوامش والميزانية' } },
       ],
@@ -569,6 +612,7 @@
         { nav: 'tables',  tag: 'LIVE', label: { fr: 'Emplacements & tournées', en: 'Spots & rounds', ar: 'المواقع والجولات' } },
         { nav: 'menu',    label: { fr: 'Carte du jour', en: 'Daily menu', ar: 'قائمة اليوم' } },
         { nav: 'kds',     label: { fr: 'Écran cuisine', en: 'Kitchen screen', ar: 'شاشة المطبخ' } },
+        { nav: 'vehicle',  icon: ICONS.truck, label: { fr: 'Camion & tournée', en: 'Truck & route', ar: 'الشاحنة والجولة' } },
         { nav: 'stock',   label: { fr: 'Stock embarqué', en: 'Onboard stock', ar: 'المخزون المحمول' } },
         { nav: 'finance', tag: 'LIVE', label: { fr: 'Marges & budget', en: 'Margins & budget', ar: 'الهوامش والميزانية' } },
       ],
@@ -608,6 +652,8 @@
         { nav: 'categories', label: { fr: 'Rayons & familles', en: 'Aisles & families', ar: 'الأرفف والعائلات' } },
         { nav: 'promos',     label: { fr: 'Promotions & paniers', en: 'Promos & bundles', ar: 'العروض والسلال' } },
         { nav: 'returns',    label: { fr: 'Retours & casse', en: 'Returns & breakage', ar: 'المرتجعات والتالف' } },
+        { nav: 'credit',      icon: ICONS.card, label: { fr: 'Carnet de crédit', en: 'Credit ledger', ar: 'دفتر الديون' } },
+        { nav: 'suppliers',   icon: ICONS.truck, label: { fr: 'Fournisseurs', en: 'Suppliers', ar: 'الموردون' } },
       ],
       kpis: [
         { key: 'tx',         label: { fr: 'Ventes', en: 'Sales', ar: 'المبيعات' } },
@@ -631,6 +677,37 @@
         productsEmpty: { fr: { manage: 'Gérer les rayons →' }, en: { manage: 'Manage aisles →' }, ar: { manage: 'إدارة الأرفف ←' } },
         askPlaceholder: { fr: 'Posez votre question sur votre épicerie...', en: 'Ask a question about your grocery...', ar: 'اطرح سؤالاً حول بقالتك...' },
       } },
+    pressing: { base: 'boutique',
+      header: { fr: 'Pressing', en: 'Dry cleaning', ar: 'المصبنة' },
+      items: [
+        { nav: 'pressing-orders',   tag: 'LIVE', icon: MATERIAL_PRESSING.orders,   material: true, label: { fr: 'Dépôts & commandes', en: 'Drop-offs & orders', ar: 'الإيداعات والطلبات' } },
+        { nav: 'pressing-workshop', icon: MATERIAL_PRESSING.workshop,               material: true, label: { fr: 'Atelier & flux', en: 'Workshop & workflow', ar: 'الورشة وسير العمل' } },
+        { nav: 'pressing-pickup',   icon: MATERIAL_PRESSING.pickup,                 material: true, label: { fr: 'Retraits & rack', en: 'Pick-up & rack', ar: 'الاستلام والتعليق' } },
+        { nav: 'pressing-services', icon: MATERIAL_PRESSING.services,               material: true, label: { fr: 'Services & tarifs', en: 'Services & pricing', ar: 'الخدمات والأسعار' } },
+        { nav: 'pressing-quality',  icon: MATERIAL_PRESSING.quality,                material: true, label: { fr: 'Qualité & incidents', en: 'Quality & issues', ar: 'الجودة والملاحظات' } },
+        { nav: 'pressing-delivery', icon: MATERIAL_PRESSING.delivery,               material: true, label: { fr: 'Collecte & livraison', en: 'Collection & delivery', ar: 'الجمع والتوصيل' } },
+      ],
+      kpis: [
+        { key: 'tx',         label: { fr: 'Dépôts', en: 'Drop-offs', ar: 'الإيداعات' } },
+        { key: 'panier',     label: { fr: 'Bon moyen', en: 'Avg order', ar: 'متوسط الطلب' } },
+        { key: 'regulars',   label: { fr: 'Clients réguliers', en: 'Regular clients', ar: 'الزبناء الدائمون' } },
+        { key: 'success',    label: { fr: 'Remises à l’heure', en: 'On-time handovers', ar: 'التسليم في الموعد' } },
+        { key: 'ratio',      label: { fr: 'Carte / espèces', en: 'Card / cash', ar: 'بطاقة / نقد' } },
+        { key: 'tauxRetour', label: { fr: 'Reprises qualité', en: 'Quality rework', ar: 'إعادة المعالجة' } },
+      ],
+      questions: [
+        { k: 'machines', type: 'number', ph: 'Ex. 4', label: { fr: 'Machines de traitement', en: 'Treatment machines', ar: 'آلات المعالجة' } },
+        { k: 'turnaround', type: 'text', ph: 'Ex. 48 h', label: { fr: 'Délai standard', en: 'Standard turnaround', ar: 'مدة الإنجاز العادية' } },
+        { k: 'delivery', type: 'text', ph: 'Ex. Tanger centre', label: { fr: 'Zone de collecte', en: 'Collection area', ar: 'منطقة الجمع' } },
+      ],
+      vocab: {
+        navOrders: { fr: 'Encaissements', en: 'Payments', ar: 'التحصيلات' },
+        feedEmpty: { fr: { badge: 'ATELIER OUVERT', title: 'Premier dépôt à venir', sub: 'Le flux démarre avec le premier vêtement confié.' },
+                     en: { badge: 'WORKSHOP OPEN', title: 'First drop-off coming up', sub: 'The workflow starts with the first garment received.' },
+                     ar: { badge: 'الورشة مفتوحة', title: 'أول إيداع قادم', sub: 'يبدأ سير العمل مع أول قطعة مستلمة.' } },
+        feedAwait: { fr: 'Atelier ouvert · en attente du premier dépôt', en: 'Workshop open · awaiting first drop-off', ar: 'الورشة مفتوحة · في انتظار أول إيداع' },
+        askPlaceholder: { fr: 'Posez votre question sur votre pressing...', en: 'Ask a question about your dry cleaner...', ar: 'اطرح سؤالاً حول المصبنة...' },
+      } },
     pharmacie: { base: 'boutique',
       header: { fr: 'Pharmacie', en: 'Pharmacy', ar: 'الصيدلية' },
       items: [
@@ -638,6 +715,10 @@
         { nav: 'categories', label: { fr: 'Familles & ordonnances', en: 'Families & prescriptions', ar: 'العائلات والوصفات' } },
         { nav: 'promos',     label: { fr: 'Parapharmacie & offres', en: 'Parapharmacy & offers', ar: 'الباراصيدلية والعروض' } },
         { nav: 'returns',    label: { fr: 'Retours laboratoires', en: 'Lab returns', ar: 'مرتجعات المختبرات' } },
+        { nav: 'prescriptions', icon: ICONS.operations, label: { fr: 'Ordonnances', en: 'Prescriptions', ar: 'الوصفات الطبية' } },
+        { nav: 'insurers',      icon: ICONS.card, label: { fr: 'Tiers payant', en: 'Third-party payer', ar: 'الدفع من طرف ثالث' } },
+        { nav: 'expiries',      icon: ICONS.alert, label: { fr: 'Lots à surveiller', en: 'Expiry watch', ar: 'مراقبة الصلاحية' } },
+        { nav: 'duty',          icon: ICONS.operations, label: { fr: 'Gardes & relève', en: 'Duty & handover', ar: 'الحراسة والتسليم' } },
       ],
       kpis: [
         { key: 'tx',         label: { fr: 'Ventes', en: 'Sales', ar: 'المبيعات' } },
@@ -673,6 +754,8 @@
         { nav: 'categories', label: { fr: 'Rayons & collections', en: 'Sections & collections', ar: 'الأقسام والمجموعات' } },
         { nav: 'promos',     label: { fr: 'Rentrée & sélections', en: 'Back-to-school & picks', ar: 'الدخول المدرسي والمختارات' } },
         { nav: 'returns',    label: { fr: 'Retours éditeurs', en: 'Publisher returns', ar: 'مرتجعات الناشرين' } },
+        { nav: 'bookorders',  icon: ICONS.book, label: { fr: 'Commandes spéciales', en: 'Special orders', ar: 'الطلبات الخاصة' } },
+        { nav: 'schoollists', icon: ICONS.operations, label: { fr: 'Listes scolaires', en: 'School lists', ar: 'اللوائح المدرسية' } },
       ],
       kpis: [
         { key: 'tx',         label: { fr: 'Ventes', en: 'Sales', ar: 'المبيعات' } },
@@ -705,6 +788,9 @@
         { nav: 'categories', label: { fr: 'Compositions & gammes', en: 'Arrangements & ranges', ar: 'التنسيقات والفئات' } },
         { nav: 'promos',     label: { fr: 'Occasions & fêtes', en: 'Occasions & holidays', ar: 'المناسبات والأعياد' } },
         { nav: 'returns',    label: { fr: 'Pertes & invendus', en: 'Waste & unsold', ar: 'الفاقد وغير المباع' } },
+        { nav: 'flowerorders', icon: ICONS.operations, label: { fr: 'Commandes & occasions', en: 'Orders & occasions', ar: 'الطلبات والمناسبات' } },
+        { nav: 'delivery',     icon: ICONS.route, label: { fr: 'Tournée livraisons', en: 'Delivery route', ar: 'جولة التوصيل' } },
+        { nav: 'freshness',    icon: ICONS.alert, label: { fr: 'Fraîcheur & pertes', en: 'Freshness & waste', ar: 'الطزاجة والفاقد' } },
       ],
       kpis: [
         { key: 'tx',         label: { fr: 'Ventes', en: 'Sales', ar: 'المبيعات' } },
@@ -742,6 +828,8 @@
         { nav: 'services',      label: { fr: 'Prestations & forfaits', en: 'Services & packages', ar: 'الخدمات والباقات' } },
         { nav: 'practitioners', label: { fr: 'Coiffeur·euse·s', en: 'Stylists', ar: 'المصففون' } },
         { nav: 'clients',       label: { fr: 'Fiches clients', en: 'Client records', ar: 'ملفات العملاء' } },
+        { nav: 'formulas',      icon: ICONS.book, label: { fr: 'Formules couleur', en: 'Colour formulas', ar: 'تركيبات الصبغة' } },
+        { nav: 'chairs',        icon: ICONS.operations, label: { fr: 'Fauteuils & flux', en: 'Chairs & flow', ar: 'الكراسي والتدفق' } },
       ],
       kpis: [
         { key: 'tx',        label: { fr: 'Rendez-vous', en: 'Appointments', ar: 'المواعيد' } },
@@ -776,6 +864,8 @@
         { nav: 'services',      label: { fr: 'Abonnements & cours', en: 'Memberships & classes', ar: 'الاشتراكات والحصص' } },
         { nav: 'practitioners', label: { fr: 'Coachs', en: 'Coaches', ar: 'المدربون' } },
         { nav: 'clients',       label: { fr: 'Adhérents', en: 'Members', ar: 'الأعضاء' } },
+        { nav: 'checkins',      icon: ICONS.usercheck, label: { fr: 'Contrôle d’accès', en: 'Access control', ar: 'مراقبة الدخول' } },
+        { nav: 'renewals',      icon: ICONS.card, label: { fr: 'Renouvellements', en: 'Renewals', ar: 'التجديدات' } },
       ],
       kpis: [
         { key: 'tx',         label: { fr: 'Passages', en: 'Check-ins', ar: 'الدخول' } },
@@ -1293,6 +1383,19 @@
   /* Build + register a venue from the wizard config. Returns the new id. */
   function createVenue(cfg) {
     cfg = cfg || {};
+    const plan = (isRealMerchant() ? (window.KiwiConfig?.plan || '') : currentPlan).toLowerCase();
+    /* Ticket #0010 · the one-venue gate fires only on an explicitly stored
+     * basic/pro tier. Legacy rows (plan unset server-side) read as Basic for
+     * display, but the server lets them create — the client must agree, or
+     * every second store is refused with "Création impossible". */
+    const planExplicit = !!window.KiwiConfig?.planExplicit;
+    const customCount = Object.keys(VENUES).filter(id => VENUES[id] && VENUES[id].custom && TRANSIENT_IDS.indexOf(id) < 0).length;
+    if (isRealMerchant() && planExplicit && (plan === 'basic' || plan === 'pro') && customCount >= 1) {
+      if (window.Kiwi && window.Kiwi.toast) {
+        window.Kiwi.toast("Votre forfait couvre un établissement. Kiwi Ultra en gère un nombre illimité.", 6000);
+      }
+      return null;
+    }
     const id = 'v' + Date.now().toString(36);
     const type = ['restaurant', 'boutique', 'spa', 'hotel'].includes(cfg.type) ? cfg.type : 'restaurant';
     const name = (cfg.name || 'Mon activité').trim();
@@ -1311,7 +1414,7 @@
        * displayed activity label, resolved per-language by typeLabelOf(). */
       subtype: cfg.subtype || '',
       profileInfo: cfg.profile || null,
-      siblings: '', status: 'En service', ice: '—',
+      siblings: '', status: 'En service', ice: '·',
       txCount: 0, staffCount: Math.max(0, +cfg.staffCount || 0), custom: true,
       hours: cfg.hours || '', methods: cfg.methods || '', goal: +cfg.goal || 0,
     };
@@ -1383,8 +1486,20 @@
   /* ═══════════════ STATE ═══════════════ */
 
   const getVenue = () => currentVenue;
-  const getVenueData = id => VENUES[id] || VENUES[currentVenue];
-  const getCurrentVenueData = () => VENUES[currentVenue];
+  /* Public venue metadata is also a data boundary. During the short identity /
+     pairing gap, currentVenue may still name Café Atlas; no consumer should be
+     able to obtain that demo identity simply because reconciliation has not
+     painted yet. */
+  const safeVenueData = (id) => {
+    const key = id || currentVenue;
+    if (isRealMerchant() && !isCustom(key)) {
+      if (!VENUES.own) ensureOwnEmptyVenue();
+      return VENUES.own;
+    }
+    return VENUES[key] || VENUES[currentVenue];
+  };
+  const getVenueData = id => safeVenueData(id);
+  const getCurrentVenueData = () => safeVenueData(currentVenue);
   // typeOverride: the authoritative business type for the ACTIVE venue, pushed in
   // from the server (merchant_config.type) via applyServerType. Transient — never
   // persisted — so it fixes what the operator sees when scoped into a client
@@ -1410,7 +1525,7 @@
   let scopedSiblings = [];
   const getVenueType = id => ((!id || id === currentVenue) && typeOverride)
     ? typeOverride
-    : (VENUES[id] || VENUES[currentVenue])?.type;
+    : safeVenueData(id)?.type;
 
   // Map an onboarding subtype (or a base) to its base vertical.
   const TYPE_BASES = ['restaurant', 'boutique', 'spa', 'hotel'];
@@ -1443,7 +1558,21 @@
     const base = SUBTYPE_BASE[subtypeOrBase] ||
       (TYPE_BASES.indexOf(subtypeOrBase) >= 0 ? subtypeOrBase : null);
     if (!base || currentVenue === 'fusion') return false;
-    if (base === getVenueType()) return false;      // already correct
+    const exactSubtype = SUBTYPE_PROFILES[subtypeOrBase] ? subtypeOrBase : '';
+    const active = VENUES[currentVenue];
+    /* The family alone is not enough for a specialist workspace. A server can
+       correctly say `pressing`, resolve it to family `boutique`, and still be
+       ignored here because the transient venue was already a boutique. That is
+       exactly how a pressing inherited retail returns/promotions forever. Keep
+       the precise trade on transient server-backed venues before the early exit. */
+    if (exactSubtype && active && (currentVenue === 'own' || currentVenue === 'scoped')) {
+      active.subtype = exactSubtype;
+    }
+    if (base === getVenueType() && (!exactSubtype || (active && active.subtype === exactSubtype))) {
+      try { renderVerticalSection({ skipFade: true }); } catch (_) {}
+      subscribers.forEach(fn => { try { fn(currentVenue); } catch (_) {} });
+      return false;
+    }
     typeOverride = base;
     // If the ACTIVE venue is a transient synthetic one (a real merchant's empty
     // "own" venue, or the operator 'scoped' venue), also correct its stored type
@@ -1453,6 +1582,7 @@
     // 'restaurant'. Transient venues only.
     if ((currentVenue === 'own' || currentVenue === 'scoped') && VENUES[currentVenue]) {
       VENUES[currentVenue].type = base;
+      if (exactSubtype) VENUES[currentVenue].subtype = exactSubtype;
     }
     try { renderVerticalSection({ skipFade: true }); } catch (_) {}
     subscribers.forEach(fn => { try { fn(currentVenue); } catch (_) {} });
@@ -1469,6 +1599,12 @@
    * sont qu'un cache de ce que le serveur détient. */
   const SCOPE_MARK = 'kiwiScopedSlug';
   const SCOPED_REC = /^kiwi:[^:]+:v1:scoped$/;
+  /* Le cache des ventes de la vue opérateur est nommé par locataire
+   * (`kiwiSales:scoped@<slug>`) : on garde CELUI du client regardé et on jette
+   * les autres. Sans ce ménage, un opérateur qui visite vingt magasins traîne
+   * vingt historiques et finit par saturer le quota du navigateur. */
+  const SCOPED_SALES = /^kiwiSales:scoped@(.+)$/;
+  const SCOPED_PDS = /^kiwiPlanDeSalle:scoped@(.+)$/;
   function resetScopedRecords(slug) {
     try {
       const mark = slug || '-';                       // '-' : magasin inconnu
@@ -1476,7 +1612,11 @@
       const doomed = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && SCOPED_REC.test(k)) doomed.push(k);
+        if (k && (SCOPED_REC.test(k) || k === 'kiwiPlanDeSalle:scoped' || k === 'kiwiPlanDeSalle:own')) { doomed.push(k); continue; }
+        const m = k && SCOPED_SALES.exec(k);
+        if (m && m[1] !== mark) { doomed.push(k); continue; }
+        const mp = k && SCOPED_PDS.exec(k);
+        if (mp && mp[1] !== mark) doomed.push(k);
       }
       doomed.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
       localStorage.setItem(SCOPE_MARK, mark);
@@ -1529,7 +1669,7 @@
       fullDisplay: location ? `${name} · ${location}` : name,
       type: base,
       subtype: subtypeOf(info.type), profileInfo: null,
-      siblings: '', status: 'En service', ice: '—',
+      siblings: '', status: 'En service', ice: '·',
       txCount: 0, staffCount: 0, custom: true,
       hours: '', methods: '', goal: 0,
     };
@@ -1555,15 +1695,22 @@
    * onboarding overwrite it once the store is set up. Returns the venue id. */
   function ensureOwnEmptyVenue() {
     const me = window.KiwiMe || {};
-    const name = String(me.business || me.name || '').trim() || 'Mon établissement';
-    const base = SUBTYPE_BASE[me.type] ||
-      (TYPE_BASES.indexOf(me.type) >= 0 ? me.type : 'restaurant');
+    let paired = null;
+    try {
+      paired = (window.KiwiPlatform && typeof window.KiwiPlatform.pairedVenue === 'function' && window.KiwiPlatform.pairedVenue())
+        || window.KiwiCaissePairing?.pairedVenue?.()
+        || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+    } catch (_) {}
+    const ownType = me.type || (paired && (paired.subtype || paired.type)) || '';
+    const name = String(me.business || me.name || (paired && paired.name) || '').trim() || 'Mon établissement';
+    const base = SUBTYPE_BASE[ownType] ||
+      (TYPE_BASES.indexOf(ownType) >= 0 ? ownType : 'restaurant');
     VENUES.own = {
       id: 'own', name, location: '',
       fullDisplay: name,
       type: base,
       subtype: '', profileInfo: null,
-      siblings: '', status: 'En service', ice: '—',
+      siblings: '', status: 'En service', ice: '·',
       txCount: 0, staffCount: 0, custom: true,
       hours: '', methods: '', goal: 0,
     };
@@ -1614,7 +1761,7 @@
         slug,
         type: base,
         subtype: (s && s.type) || '', profileInfo: null,
-        siblings: '', status: 'En service', ice: '—',
+        siblings: '', status: 'En service', ice: '·',
         txCount: 0, staffCount: 0, custom: true,
         hours: '', methods: '', goal: 0,
       };
@@ -1639,6 +1786,17 @@
     if (REAL_VENUES.includes(id) || customIds.has(id)) document.body.classList.remove('fusion-mode');
     currentVenue = id;
     try { localStorage.setItem(STORAGE_KEY, id); } catch (_) {}
+    /* A venue switch is a context change, not a deep link. Always return to
+       that venue's dashboard so a restaurant never inherits the previous
+       venue's Menu (or any other full-page module). */
+    try {
+      if (typeof eqCurrentPage !== 'undefined') eqCurrentPage = 'dashboard';
+      window.Kiwi?.pageShell?.();
+      window.Kiwi?.setActivePage?.('accueil');
+      const bc = document.querySelector('.breadcrumb');
+      if (bc) bc.innerHTML = 'Accueil <span class="sep">/</span> <b>Tableau de bord</b>';
+      window.scrollTo({ top: 0 });
+    } catch (_) {}
     renderAll();
     subscribers.forEach(fn => { try { fn(id); } catch (_) {} });
   }
@@ -1651,12 +1809,14 @@
   /* ═══════════════ RENDER: SIDEBAR LOC-SWITCH (top of sidebar) ═══════════════ */
 
   function renderLocSwitch() {
-    const v = VENUES[currentVenue];
+    const v = safeVenueData(currentVenue);
     const nameEl = document.querySelector('[data-loc-name]');
     const metaEl = document.querySelector('[data-loc-meta]');
     if (nameEl) nameEl.textContent = v.fullDisplay;
     const slang = window.KiwiI18n?.getLang?.() || 'fr';
-    if (metaEl) metaEl.textContent = SIBLINGS[slang]?.[currentVenue] || SIBLINGS.fr[currentVenue] || v.siblings;
+    if (metaEl) metaEl.textContent = (isRealMerchant() && !isCustom(currentVenue))
+      ? (v.siblings || '')
+      : (SIBLINGS[slang]?.[currentVenue] || SIBLINGS.fr[currentVenue] || v.siblings || '');
     // ✦ Kiwi Ultra · only visible when fusion + ultra plan
     const ultraEl = document.querySelector('[data-loc-ultra]');
     if (ultraEl) {
@@ -1666,51 +1826,67 @@
     // Chevron rotation tied to dropdownOpen handled in toggleDropdown()
   }
 
-  /* ═══════════════ RENDER: SIDEBAR UPSELL / PLAN STATUS ═══════════════
-   * Single-venue view keeps the original "Passer à Ultra" upsell — kept
-   * for demo / pitch surfaces. Fusion view (where the merchant has
-   * already paid for Ultra) surfaces plan status instead of selling. */
+  /* ═══════════════ RENDER: SIDEBAR APP INSTALL / PLAN STATUS ═══════════════
+   * The sidebar slot is the install card, not a price tag. dashboard-pwa.js
+   * enhances the same markup into the live browser install flow; writing it
+   * here too means a slow or cached PWA controller can never resurrect the
+   * retired "Passer à Ultra" promotion on a venue switch or a language change.
+   * The fusion + ultra branch below is the fail-soft path only: it is the
+   * billing-status card (not a sell), and it surfaces just when the PWA
+   * controller is absent — otherwise dashboard-pwa.js writes the install
+   * card over it, which is the same behaviour prod already had. */
   const UPSELL_STR = {
-    fr: { active: 'Actif · renouvellement 14.06.2026', manage: 'Gérer mon abonnement →', mo: '/mois', pitch: 'Multi-pays, API enterprise, account manager dédié. Upgrade depuis Pro 399 sans engagement.', cta: 'Passer à Ultra →' },
-    en: { active: 'Active · renews 14.06.2026', manage: 'Manage my subscription →', mo: '/mo', pitch: 'Multi-country, enterprise API, dedicated account manager. Upgrade from Pro 399, no commitment.', cta: 'Upgrade to Ultra →' },
-    ar: { active: 'نشط · يتجدد 14.06.2026', manage: 'إدارة اشتراكي ←', mo: '/شهر', pitch: 'متعدد البلدان، API للمؤسسات، مدير حساب مخصص. ترقية من Pro 399 دون التزام.', cta: 'الترقية إلى Ultra ←' },
+    fr: { active: 'Actif · renouvellement 14.06.2026', manage: 'Gérer mon abonnement →' },
+    en: { active: 'Active · renews 14.06.2026', manage: 'Manage my subscription →' },
+    ar: { active: 'نشط · يتجدد 14.06.2026', manage: 'إدارة اشتراكي ←' },
+  };
+  const APP_INSTALL_STR = {
+    fr: { eye: 'APPLICATION KIWI', title: 'Kiwi, toujours à portée de main.', body: 'Installez votre tableau de bord pour un accès rapide, même avec une connexion instable.', quick: 'Accès rapide', offline: 'Prêt hors ligne', cta: 'Installer Kiwi' },
+    en: { eye: 'KIWI APP', title: 'Kiwi, always within reach.', body: 'Install your dashboard for faster access, even when your connection is unreliable.', quick: 'Quick access', offline: 'Offline ready', cta: 'Install Kiwi' },
+    ar: { eye: 'تطبيق KIWI', title: 'Kiwi في متناول يدك دائماً.', body: 'ثبّت لوحة التحكم للوصول السريع حتى عندما يكون الاتصال غير مستقر.', quick: 'وصول سريع', offline: 'يعمل دون اتصال', cta: 'تثبيت Kiwi' },
   };
   function renderUpsell() {
     const wrap = document.querySelector('[data-upsell]');
     if (!wrap) return;
-    const U = UPSELL_STR[fusionLang()] || UPSELL_STR.fr;
-    const showStatus = currentVenue === 'fusion' && currentPlan === 'ultra';
-    if (showStatus) {
-      wrap.classList.add('upsell-status');
+    if (currentVenue === 'fusion' && currentPlan === 'ultra') {
+      const U = UPSELL_STR[fusionLang()] || UPSELL_STR.fr;
+      wrap.className = 'upsell upsell-status';
       wrap.innerHTML = `
         <div class="t">✦ KIWI ULTRA</div>
         <div class="us-line">${U.active}</div>
         <a href="#" class="us-manage" data-action="manage-billing">${U.manage}</a>
       `;
-    } else {
-      wrap.classList.remove('upsell-status');
-      wrap.innerHTML = `
-        <div class="t">KIWI ULTRA</div>
-        <h4>1 499 MAD${U.mo}</h4>
-        <p>${U.pitch}</p>
-        <button data-action="upgrade-pro">${U.cta}</button>
-      `;
+      return;
     }
+    const A = APP_INSTALL_STR[fusionLang()] || APP_INSTALL_STR.fr;
+    wrap.className = 'upsell kiwi-app-install-card';
+    wrap.innerHTML = `
+      <div class="kiwi-install-head"><span class="kiwi-install-mark" aria-hidden="true"><img src="assets/kiwi-favicon-new.svg" alt="" width="18" height="18"></span><span class="t">${A.eye}</span></div>
+      <h4>${A.title}</h4>
+      <p>${A.body}</p>
+      <div class="kiwi-install-benefits"><span><i></i>${A.quick}</span><span><i></i>${A.offline}</span></div>
+      <button type="button" data-pwa-install><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M5 21h14"/></svg><span>${A.cta}</span></button>
+    `;
   }
 
   /* ═══════════════ RENDER: SIDEBAR DROPDOWN ═══════════════ */
 
-  // Type-icon SVG used inside each dropdown row
-  // Lucide glyphs, round caps/joins baked in so they stay crisp at 16px.
-  const TYPE_ICONS = {
-    // utensils-crossed — reads as "dining venue" (was a plain fork + awkward hook).
-    restaurant: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 2-2.3 2.3a3 3 0 000 4.2l1.8 1.8a3 3 0 004.2 0L22 8"/><path d="M15 15 3.3 3.3a4.2 4.2 0 000 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7"/><path d="m2.1 21.8 6.4-6.3"/><path d="m19 5-7 7"/></svg>',
-    // shopping-bag — proper retail bag (was a rounded-rect box).
-    boutique:   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/></svg>',
-    // leaf — wellness/natural (was a star, which reads as "favourite").
-    spa:        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>',
-    hotel:      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7a2 2 0 012-2h10a2 2 0 012 2v14"/><path d="M9 9h2M13 9h2M9 13h2M13 13h2"/><path d="M10 21v-3h4v3"/></svg>',
-  };
+  /* One icon truth for every surface. The old switcher had a second, family-
+   * level Lucide table, so a pressing inherited Boutique's shopping bag and a
+   * café inherited Restaurant's cutlery. KiwiTrades already owns the precise
+   * Material Symbol for every trade; resolve the subtype first and use the
+   * broad family only as a fallback for older venue records. */
+  const MATERIAL_VENUE_FALLBACK = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="m260-520 220-360 220 360H260ZM700-80q-75 0-127.5-52.5T520-260q0-75 52.5-127.5T700-440q75 0 127.5 52.5T880-260q0 75-52.5 127.5T700-80Zm-580-20v-320h320v320H120Z"/></svg>';
+  function typeIconOf(v) {
+    const trades = window.KiwiTrades;
+    if (trades?.get) {
+      const exact = trades.get(v?.subtype || '');
+      if (exact?.icon) return exact.icon;
+      const family = trades.get(v?.type || '');
+      if (family?.icon) return family.icon;
+    }
+    return MATERIAL_VENUE_FALLBACK;
+  }
 
   const DROPDOWN_CTA = {
     fr: { exitT: 'Revenir à la vue simple', exitS: 'Repasser sur un seul emplacement', enterT: 'Go Ultra', enterS: 'Vue consolidée · données multi-sites', addT: 'Ajouter un établissement', addS: 'Une autre activité, un autre lieu' },
@@ -1732,7 +1908,7 @@
      * session flag alone isn't enough. */
     let persistedClient = false;
     try { persistedClient = localStorage.getItem('kiwiOnboarded') === '1'; } catch (_) {}
-    const onboard = !!window.__kiwiOnboard || persistedClient || !!(window.KiwiEnv && window.KiwiEnv.demosAllowed === false);
+    const onboard = !!window.__kiwiOnboard || persistedClient || isRealMerchant();
     // Operator-scoped (God mode): show ONLY the scoped client, never the
     // operator's own local venues (those are this browser's test cache). Les
     // autres établissements DU CLIENT s'ajoutent en dessous (scopeRows).
@@ -1753,7 +1929,7 @@
       const isActive = !inFusion && id === currentVenue;
       return `
         <button type="button" class="venue-row${isActive ? ' active' : ''}" data-action="venue-pick" data-venue="${escD(id)}">
-          <div class="venue-row-icon">${TYPE_ICONS[v.type] || TYPE_ICONS.restaurant}</div>
+          <div class="venue-row-icon">${typeIconOf(v)}</div>
           <div class="venue-row-body">
             <div class="venue-row-name">${escD(v.name)}${v.location ? ' · ' + escD(v.location) : ''}</div>
             <div class="venue-row-type">${escD(typeLabelOf(v))}</div>
@@ -1806,7 +1982,7 @@
      * un basculement à chaud en laisserait la moitié sur le magasin précédent. */
     const scopeRows = scopedActive ? scopedSiblings.map(s => `
         <button type="button" class="venue-row" data-action="venue-scope" data-scope-slug="${escD(s.slug)}">
-          <div class="venue-row-icon">${TYPE_ICONS[s.type] || TYPE_ICONS.restaurant}</div>
+          <div class="venue-row-icon">${typeIconOf(s)}</div>
           <div class="venue-row-body">
             <div class="venue-row-name">${escD(s.name)}${s.location ? ' · ' + escD(s.location) : ''}</div>
             <div class="venue-row-type">${escD(typeLabelOf({ type: s.type, subtype: s.subtype || '' }))}</div>
@@ -1871,7 +2047,7 @@
    * Returns the section resolved for the current language: an object for
    * card dicts ({title, head, msg…}), a string for one-liners. */
   function getVocab(section) {
-    const v = VENUES[currentVenue];
+    const v = safeVenueData(currentVenue);
     if (!v || !v.custom) return null;
     const prof = v.subtype && SUBTYPE_PROFILES[v.subtype];
     const fromProf = prof && prof.vocab && prof.vocab[section];
@@ -1891,6 +2067,10 @@
    * passages, a boutique ventes. Defaults mirror i18n.js dash.sidebar.orders
    * (this runs after i18n's langchange listener, so it has the last word). */
   const NAV_ORDERS_STR = { fr: 'Commandes', en: 'Orders', ar: 'الطلبات' };
+  /* The kitchen display is an operational caisse surface, not a dashboard
+   * workspace. Keep the KDS implementation available to the caisse while
+   * omitting its shortcut from every dashboard vertical/subtype sidebar. */
+  const DASHBOARD_HIDDEN_NAV = new Set(['kds']);
   function relabelOrdersNav() {
     const span = document.querySelector('[data-nav="transactions"] span[data-i18n="dash.sidebar.orders"]');
     if (!span) return;
@@ -1902,9 +2082,27 @@
     relabelOrdersNav();
     const wrap = document.querySelector('[data-vertical-section]');
     if (!wrap) return;
+    /* Hotels use the same client book as every other Kiwi store. The former
+     * `hotes` entry opened a second, hotel-only mock page, so a guest captured
+     * at reception and a client visible to the owner could become unrelated
+     * records. Keep one shared entry below Rapport journalier, and give it the
+     * hotel-facing Hospitality+ name while this venue is active. */
+    const crmLabel = document.querySelector('.sidebar nav a[data-action="clients-directory"] span');
+    if (crmLabel) {
+      const activeType = currentVenue === 'fusion' ? '' : (typeOverride || safeVenueData(currentVenue)?.type || '');
+      if (activeType === 'hotel') {
+        crmLabel.removeAttribute('data-i18n');
+        crmLabel.textContent = 'Hospitality+';
+      } else {
+        crmLabel.setAttribute('data-i18n', 'dash.sidebar.crm');
+        const labels = { fr: 'Clients & Marketing', en: 'Customers & Marketing', ar: 'العملاء والتسويق' };
+        crmLabel.textContent = labels[subLang()] || labels.fr;
+      }
+    }
     // In fusion mode: replace the per-vertical menu with the aggregated
     // portfolio KPI block. Same fade-in/out as the regular swap.
     if (currentVenue === 'fusion') {
+      if (isRealMerchant()) { wrap.innerHTML = ''; return; }
       const html = fusionSidebarHtml();
       if (opts.skipFade) { wrap.innerHTML = html; return; }
       wrap.classList.add('vert-fading');
@@ -1915,7 +2113,7 @@
       }, 150);
       return;
     }
-    const v = VENUES[currentVenue];
+    const v = safeVenueData(currentVenue);
     let sect = VERTICAL_SECTIONS[typeOverride || v.type];
     /* Subtype profile override — a custom venue created as e.g. a pharmacy
      * gets ITS trade's section labels (nav keys stay on the base family's
@@ -1932,9 +2130,15 @@
         i18nHeader: '',
         items: prof.items.map((pi) => {
           const b = baseItems.find((x) => x.nav === pi.nav) || {};
-          return { nav: pi.nav, label: pickL(pi.label), i18n: '', tag: pi.tag || '', icon: b.icon || '' };
+          return { nav: pi.nav, label: pickL(pi.label), i18n: '', tag: pi.tag || '', icon: pi.icon || b.icon || '', material: !!pi.material };
         }),
       };
+    }
+    /* Tous les sous-métiers boutique gardent la vue Vendus, même si leur
+       profil plus ancien remplace la liste de navigation de la base. */
+    if (sect && (typeOverride || v.type) === 'boutique' && v.subtype !== 'pressing' && !sect.items.some((x) => x.nav === 'sold')) {
+      const sold = VERTICAL_SECTIONS.boutique.items.find((x) => x.nav === 'sold');
+      sect = { ...sect, items: sect.items.concat(sold) };
     }
     if (!sect) return;
 
@@ -1951,11 +2155,13 @@
      * "Stock & péremptions" answers to the same `inventory` switch. */
     const html = `
       <div class="sect"${sect.i18nHeader ? ` data-i18n="${sect.i18nHeader}"` : ''}>${headerTxt}</div>
-      ${sect.items.map(it => {
+      ${sect.items.filter(it => !DASHBOARD_HIDDEN_NAV.has(it.nav)).map(it => {
         const lbl = (it.i18n && T[it.i18n]) || it.label;
         return `
           <a href="#" data-nav="${it.nav}" data-feature="${it.nav}"${it.i18n ? ` data-i18n-attr="aria-label:${it.i18n}"` : ` aria-label="${lbl}"`}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${it.icon}</svg>
+            ${it.material
+              ? `<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true">${it.icon}</svg>`
+              : `<i data-lucide="${it.icon}" aria-hidden="true"></i>`}
             <span${it.i18n ? ` data-i18n="${it.i18n}"` : ''}>${lbl}</span>
             ${it.tag ? `<span class="tag">${it.tag}</span>` : ''}
           </a>
@@ -1991,8 +2197,9 @@
   function renderHeaderSub() {
     const sub = document.querySelector('[data-header-sub]');
     if (!sub) return;
+    if (isRealMerchant() || isCustom(currentVenue)) { sub.textContent = ''; return; }
     const lang = window.KiwiI18n?.getLang?.() || 'fr';
-    sub.textContent = HEADER_SUB[lang]?.[currentVenue] || HEADER_SUB.fr[currentVenue];
+    sub.textContent = HEADER_SUB[lang]?.[currentVenue] || HEADER_SUB.fr[currentVenue] || '';
   }
 
   /* ═══════════════ RENDER: DEMO BAR + FOOTER ═══════════════ */
@@ -2001,10 +2208,14 @@
     const line = document.querySelector('[data-demo-line]');
     if (!line) {
       const el = document.querySelector('[data-demo-account]');
-      if (el) el.textContent = VENUES[currentVenue].name;
+      if (el) el.textContent = (isRealMerchant() && !isCustom(currentVenue))
+        ? String(safeVenueData(currentVenue).name || 'Mon établissement')
+        : VENUES[currentVenue].name;
       return;
     }
-    const name = VENUES[currentVenue].name;
+    const name = (isRealMerchant() && !isCustom(currentVenue))
+      ? String(safeVenueData(currentVenue).name || 'Mon établissement')
+      : VENUES[currentVenue].name;
     const lang = window.KiwiI18n?.getLang?.() || 'fr';
     const L = ({
       fr: { custom: 'Votre tableau de bord · ', prefix: 'Démo live · compte ', suffix: ' · données de démonstration mises à jour en temps réel' },
@@ -2015,7 +2226,7 @@
     const b = document.createElement('b');
     b.style.color = 'var(--paper)';
     b.textContent = name;
-    if (isCustom(currentVenue)) {
+    if (isCustom(currentVenue) || isRealMerchant()) {
       // A user-created venue isn't the synthetic demo account.
       line.appendChild(document.createTextNode(L.custom));
       line.appendChild(b);
@@ -2032,13 +2243,13 @@
     const v = VENUES[currentVenue];
     const lang = window.KiwiI18n?.getLang?.() || 'fr';
     const T = window.KiwiI18n?.T?.[lang] || {};
-    const help = T['dash.footer.help'] || 'aide WhatsApp';
+    const help = T['dash.footer.help'] || 'Centre d’aide';
     // The merchant name already sits in the demo bar — keep the footer to
     // legal / system info so the two bars don't echo each other.
     // No acquiring-sponsorship line: Kiwi holds no Bank Al-Maghrib licence,
     // and a demo footer is still a public claim. See mentions-legales.html.
-    const legal = isCustom(currentVenue) ? '' : `ICE ${v.ice} · `;
-    el['inner' + 'HTML'] = `${legal}Kiwi v2.38.1 · <a href="#" data-action="help-whatsapp">${help}</a>`;
+    const legal = (isCustom(currentVenue) || isRealMerchant()) ? '' : `ICE ${v.ice} · `;
+    el['inner' + 'HTML'] = `${legal}Kiwi v2.38.1 · <a href="#" data-action="account-help">${help}</a>`;
   }
 
   /* ═══════════════ RENDER: SIDEBAR COUNTS ═══════════════ */
@@ -2051,7 +2262,7 @@
       // (initial paint before the simulator's first tick), fall back to the
       // venue's end-of-day target so the badge isn't empty.
       // User-created venue → count its recorded sales; demo venue → demo clock.
-      const ownV = isCustom(currentVenue) || !!(window.KiwiEnv?.isReal?.());
+      const ownV = isCustom(currentVenue) || isRealMerchant();
       /* La MÊME fenêtre que la tuile « Commandes ». Cette pastille additionnait
        * tout l'historique du navigateur : au troisième jour elle affichait 47
        * en face d'une tuile qui affichait 6, sous le même mot. Deux compteurs
@@ -2061,20 +2272,20 @@
         try { return window.KiwiDateRange?.bounds?.() || []; } catch (_) { return []; }
       })();
       const live = ownV
-        ? ((window.KiwiSales && window.KiwiSales.totals(currentVenue, win[0], win[1]).count) || 0)
+        ? (isCustom(currentVenue) ? ((window.KiwiSales && window.KiwiSales.totals(currentVenue, win[0], win[1]).count) || 0) : 0)
         : window.KiwiDemoClock?.getSimState?.()?.cumTx;
       txCountEl.textContent = String(live != null ? live : (VENUES[currentVenue].txCount || 0));
     }
     // Terminals + compliance badges — a brand-new venue has neither yet.
-    const cv = isCustom(currentVenue);
+    const cv = isCustom(currentVenue) || isRealMerchant();
     const termEl = document.querySelector('a[data-nav="terminaux"] .count');
     if (termEl) termEl.textContent = cv ? '0' : '4';
     const confEl = document.querySelector('a[data-nav="conformite"] .tag');
-    if (confEl) confEl.textContent = cv ? '—' : 'AAA';
+    if (confEl) confEl.textContent = cv ? '·' : 'AAA';
     const staffCountEl = document.querySelector('a[data-nav="equipe"] .count');
     // Sidebar "Équipe" badge → number of staff currently clocked in (present),
     // scoped to the active venue (all 3 venues in fusion). See STAFF below.
-    if (staffCountEl) staffCountEl.textContent = String(eqPresentCount());
+    if (staffCountEl) staffCountEl.textContent = String(isRealMerchant() && !isCustom(currentVenue) ? 0 : eqPresentCount());
   }
 
   /* Keep the sidebar count in sync with each demo-clock tick (every 3 s). */
@@ -2176,7 +2387,7 @@
       <div class="fo-gloss"></div>
       <div class="fo-glow-frame"></div>
       <div class="fo-label">
-        <span class="fo-mark">kiwi</span>
+        <span class="fo-mark"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></span>
         <span class="fo-ultra">
           <span class="fo-ultra-r">✦</span>
           <span class="fo-ultra-b">✦</span>
@@ -2279,6 +2490,25 @@
     }, 3800);
   }
 
+  /* Le sombre est un CHOIX du commerçant (kiwiDashTheme, amorcé dans <head>
+   * avant la première peinture). L'attribut data-theme ne survit jamais à un
+   * rechargement, donc le retirer « défensivement » au boot ne nettoyait
+   * aucune fusion périmée — il peignait l'écran de verrouillage en blanc une
+   * seconde à chaque chargement, le temps que le choix soit ré-appliqué.
+   * Partout où la fusion rend l'antenne, on RESTAURE le choix au lieu de
+   * l'effacer : même chaîne de repli que le script de <head>. */
+  function themeChoiceIsDark() {
+    try {
+      const t = localStorage.getItem('kiwiDashTheme') || localStorage.getItem('kiwiTheme');
+      if (t) return t === 'dark';
+      return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    } catch (_) { return false; }
+  }
+  function restoreThemeChoice() {
+    if (themeChoiceIsDark()) document.documentElement.setAttribute('data-theme', 'dark');
+    else document.documentElement.removeAttribute('data-theme');
+  }
+
   function exitFusion(opts = {}) {
     if (fusionAnimating) return;
     if (currentVenue !== 'fusion') return;
@@ -2290,7 +2520,7 @@
     // Graceful fallback — no overlay element → soft swap.
     if (!overlay) {
       document.body.classList.remove('fusion-mode');
-      document.documentElement.removeAttribute('data-theme');
+      restoreThemeChoice();
       currentVenue = nextVenue;
       try { localStorage.setItem(STORAGE_KEY, currentVenue); } catch (_) {}
       renderAll();
@@ -2325,7 +2555,7 @@
 
     setTimeout(() => {
       document.body.classList.remove('fusion-mode');
-      document.documentElement.removeAttribute('data-theme');
+      restoreThemeChoice();
       currentVenue = nextVenue;
       try { localStorage.setItem(STORAGE_KEY, currentVenue); } catch (_) {}
       renderAll();
@@ -2554,7 +2784,7 @@
       transferToastD: 'En attente de leur confirmation WhatsApp. Yasmine est en copie.',
       callToast: 'Appel demandé, Yasmine vous rappelle',
       callToastD: 'Créneau confirmé par WhatsApp d\'ici 30 min.',
-      apiToast: 'docs.kiwi.ma/api',
+      apiToast: 'kiwi-os.com/api',
       apiToastD: 'Référence complète : endpoints, webhooks, exports SFTP.',
     },
     en: {
@@ -2575,7 +2805,7 @@
       transferToastD: 'Awaiting their WhatsApp confirmation. Yasmine is cc\'d.',
       callToast: 'Call requested, Yasmine will call you back',
       callToastD: 'Slot confirmed by WhatsApp within 30 min.',
-      apiToast: 'docs.kiwi.ma/api',
+      apiToast: 'kiwi-os.com/api',
       apiToastD: 'Full reference: endpoints, webhooks, SFTP exports.',
     },
     ar: {
@@ -2596,7 +2826,7 @@
       transferToastD: 'في انتظار تأكيدهما عبر واتساب. ياسمين في النسخة.',
       callToast: 'تم طلب المكالمة، ياسمين ستتصل بك',
       callToastD: 'تأكيد الموعد عبر واتساب خلال 30 دقيقة.',
-      apiToast: 'docs.kiwi.ma/api',
+      apiToast: 'kiwi-os.com/api',
       apiToastD: 'مرجع كامل: النقاط، الويبهوكس، تصدير SFTP.',
     },
   };
@@ -2613,21 +2843,16 @@
     return r === 'personnalise' ? 'aujourdhui' : r;
   }
 
-  // ── Type-icon SVG inline (24×24, stroke 2 — matches existing style) ──
-  const FUSION_TYPE_ICONS = {
-    restaurant: '<path d="m16 2-2.3 2.3a3 3 0 000 4.2l1.8 1.8a3 3 0 004.2 0L22 8"/><path d="M15 15 3.3 3.3a4.2 4.2 0 000 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7"/><path d="m2.1 21.8 6.4-6.3"/><path d="m19 5-7 7"/>', // UtensilsCrossed — matches the switcher mark
-    boutique:   '<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/>', // ShoppingBag
-    spa:        '<path d="M11 20A7 7 0 019.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/>', // Leaf — matches the switcher mark
-    fusion:     '<circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M8 8l3.5 7M16 8l-3.5 7"/>',
-  };
   const FUSION_INTEL_ICONS = {
     users:     '<path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>',
     pie:       '<path d="M21.21 15.89A10 10 0 118 2.83"/><path d="M22 12A10 10 0 0012 2v10z"/>',
     link:      '<path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>',
     alert:     '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/>',
   };
-  const fusionIcon = (key) => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${FUSION_INTEL_ICONS[key] || ''}</svg>`;
-  const fusionTypeIcon = (type) => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${FUSION_TYPE_ICONS[type] || FUSION_TYPE_ICONS.fusion}</svg>`;
+  const FUSION_MATERIAL_ICONS = { users: 'users', pie: 'pie-chart', link: 'link', alert: 'alert-triangle' };
+  const fusionIcon = (key) => `<i data-lucide="${FUSION_MATERIAL_ICONS[key] || 'help'}" style="width:14px;height:14px" aria-hidden="true"></i>`;
+  /* Portfolio rows use the same Material trade truth as the switcher. */
+  const fusionTypeIcon = (type) => typeIconOf({ type });
 
   // ── SVG sparkline (80×32) — line stroke only, no axes ──
   function fusionSparkPath(values) {
@@ -2751,6 +2976,13 @@
    * Reads:      VENUES.fusion.{snapshot,venueBreakdown,kpis,intelligence,
    *             portfolioTrend,alerts} + clock state if range=aujourdhui. */
   function renderFusionView() {
+    /* Fusion is a three-demo-venue portfolio, not a real multi-site source.
+       If identity or pairing resolves while it is open, leave it immediately
+       before reading a single snapshot. */
+    if (isRealMerchant()) {
+      if (currentVenue === 'fusion') pickOwnVenue();
+      return;
+    }
     const root = document.querySelector('[data-fusion-root]');
     if (!root) return;
     if (currentVenue !== 'fusion') {
@@ -2892,7 +3124,7 @@
               <div class="fs-venue-rev-v" data-fs-venue-revenue>${fusionFmtMad(liveRev)}</div>
               ${v.deltaVsHier != null
                 ? `<div class="fs-venue-rev-d ${isPositive ? 'up' : 'down'}">${fusionFmtPct(v.deltaVsHier)} <span>vs hier</span></div>`
-                : '<div class="fs-venue-rev-d muted">—</div>'}
+                : '<div class="fs-venue-rev-d muted">·</div>'}
             </div>
             <div class="fs-venue-spark-wrap" data-fs-venue-spark>${fusionSparkSvg(sparkTrend, isPositive)}</div>
             <div class="fs-venue-share">
@@ -3044,6 +3276,7 @@
    * Updates hero amount, NET, progress, top site, KPI cards, venue
    * rows, spark-lines, share bars, and intraday chart in place. */
   function renderFusionLiveUpdate(state, isReset) {
+    if (isRealMerchant()) return;
     const root = document.querySelector('[data-fusion-root]');
     if (!root) return;
     if (currentVenue !== 'fusion') return;
@@ -3193,8 +3426,20 @@
      venues (Café Atlas / Maison Mansour / Spa Bahia). */
   function isRealMerchant() {
     try {
-      if (window.KiwiEnv && window.KiwiEnv.demosAllowed === false) return true;
+      if (window.KiwiEnv?.isReal?.()) return true;
+      if (window.KiwiMe) return true;
       if (localStorage.getItem('kiwiOnboarded') === '1') return true;
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.isPaired === 'function') {
+        const pv = window.KiwiPlatform.pairedVenue();
+        if (window.KiwiPlatform.isPaired() && pv?.merchant) return true;
+      }
+      const P = window.KiwiCaissePairing;
+      const pv = P?.pairedVenue?.();
+      if (P?.isPaired?.() && pv?.merchant) return true;
+      if (localStorage.getItem('kiwiPaired') === '1') {
+        const saved = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+        if (saved?.merchant || localStorage.getItem('kiwiLiveMerchant')) return true;
+      }
     } catch (_) {}
     return false;
   }
@@ -3226,7 +3471,7 @@
       if (qs.has('op') || qs.has('merchant')) {
         currentVenue = ensureOwnEmptyVenue();
         document.body.classList.remove('fusion-mode', 'fusion-glass-melt', 'fusion-reconstruct');
-        document.documentElement.removeAttribute('data-theme');
+        restoreThemeChoice();
         registerHandlers();
         setupDropdownClosers();
         hookI18n();
@@ -3278,7 +3523,7 @@
     }
     // Defensive: strip any stale fusion classes + dark theme attribute.
     document.body.classList.remove('fusion-mode', 'fusion-glass-melt', 'fusion-reconstruct');
-    document.documentElement.removeAttribute('data-theme');
+    restoreThemeChoice();
 
     /* Une seule fois : cancelScope() rejoue ce bloc alors que le chemin porté a
        déjà branché les écouteurs, et les rebrancher les doublerait. */
@@ -3410,7 +3655,14 @@
     file:      '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/>',
     ban:       '<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>',
   };
-  const eqSvg = (k, sz = 14) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${EQ_IC[k] || ''}</svg>`;
+  const EQ_MATERIAL_ICONS = {
+    userCheck: 'user-check', clock: 'clock', coffee: 'coffee', timer: 'timer',
+    eye: 'eye', edit: 'pencil', more: 'more-vertical', plus: 'plus',
+    download: 'arrow-down-to-line', calendar: 'calendar', logout: 'log-out',
+    alert: 'alert-triangle', chevL: 'chevron-left', chevR: 'chevron-right',
+    file: 'file-text', ban: 'ban'
+  };
+  const eqSvg = (k, sz = 14) => `<i data-lucide="${EQ_MATERIAL_ICONS[k] || 'help'}" style="width:${sz}px;height:${sz}px" aria-hidden="true"></i>`;
 
   /* ── Helpers ──────────────────────────────────────────────────────────── */
   function eqEsc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
@@ -3429,6 +3681,7 @@
   function eqFindStaff(id) { return eqAllStaff().find(s => s.id === id) || null; }
   /* Staff in the active venue scope — fusion shows all three venues. */
   function eqScopedStaff() {
+    if (isRealMerchant() && !isCustom(currentVenue)) return [];
     return currentVenue === 'fusion' ? eqAllStaff() : (STAFF[currentVenue] || []).slice();
   }
   /* Scoped staff after the venue + department filters. */
@@ -3490,7 +3743,9 @@
     H['eq-edit-member']    = (_el, id) => eqOpenStaffModal(eqFindStaff(id));
     H['eq-view-profile']   = (_el, id) => eqOpenProfileModal(eqFindStaff(id));
     H['eq-plan-shifts']    = () => eqOpenPlannerModal();
-    H['eq-export-payroll'] = () => Kiwi.toast('Export paie généré', { type: 'success', desc: 'PDF envoyé au gérant' });
+    /* Rien n'était généré et rien n'était envoyé. Sur un compte réel, ce
+       bouton ouvre la console de paie (assets/operations-ui.js). */
+    H['eq-export-payroll'] = () => Kiwi.toast('Export paie · démonstration', { type: 'info', desc: 'Aucun bulletin calculé, aucun envoi. La console de paie s’ouvre sur un compte réel.' });
     H['eq-venue-filter']   = (el) => {
       eqVenueFilter = el.dataset.venue || 'all';
       const scope = eqVenueFilter === 'all' ? eqScopedStaff() : eqScopedStaff().filter(s => s.venue === eqVenueFilter);
@@ -3534,11 +3789,14 @@
   }
 
   function eqHeaderHtml() {
+    const serviceDate = isRealMerchant()
+      ? new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+      : 'jeudi 15 mai 2026';
     return `
       <div class="eq-head">
         <div>
           <div class="eq-title">Équipe</div>
-          <div class="eq-date">Service du jeudi 15 mai 2026</div>
+          <div class="eq-date">Service du ${serviceDate}</div>
         </div>
         <div class="eq-head-acts">
           <button class="btn-slim" data-action="eq-add-member">${eqSvg('plus', 13)}<span>Ajouter un membre</span></button>
@@ -3588,7 +3846,7 @@
 
     const tiles =
       tile('userCheck', 'En service', present, '', 'membres pointés aujourd\'hui',
-        '<div class="eq-stat-d">+2 vs hier</div>') +
+        isRealMerchant() ? '' : '<div class="eq-stat-d">+2 vs hier</div>') +
       tile('clock', 'En retard', late, late > 0 ? 'warn' : 'ok', 'shift commencé sans pointage') +
       tile('coffee', 'En congé / repos', off, '', 'jour de repos prévu') +
       tile('timer', 'Heures cumulées', eqHours(hours), '', 'heures travaillées ce mois',
@@ -3642,7 +3900,7 @@
   /* ── Section 2 · Staff table ──────────────────────────────────────────── */
   function eqStatusCell(s) {
     const map = {
-      present: ['s-present', 'En service · depuis ' + (s.clockedInAt || '—')],
+      present: ['s-present', 'En service · depuis ' + (s.clockedInAt || '·')],
       off:     ['s-off', 'Repos'],
       late:    ['s-late', 'En retard · shift à 11:00'],
       absent:  ['s-absent', 'Absent signalé'],
@@ -3672,12 +3930,12 @@
       const salary = eqSalary(s);
       const tipsCell = s.tipsThisMonth > 0
         ? `<div class="eq-tips-cell"><span class="eq-tips-v">${eqMad(s.tipsThisMonth)}</span>${eqSpark3(s.id)}</div>`
-        : '<div class="eq-cell-empty">—</div>';
+        : '<div class="eq-cell-empty">·</div>';
       const perfCell = s.rating != null
         ? `<div class="eq-perf-stars"><span class="st">★</span> ${s.rating.toFixed(1)}</div>
            <div class="eq-perf-sub">${eqMad(s.salesThisMonth)} CA</div>
            <div class="eq-perf-voids${s.voids > 2 ? ' bad' : ''}">${s.voids} annulation${s.voids === 1 ? '' : 's'}</div>`
-        : '<div class="eq-cell-empty">—</div>';
+        : '<div class="eq-cell-empty">·</div>';
       return `
         <tr class="eq-row-in">
           <td>
@@ -3707,9 +3965,9 @@
     /* Footer summary — every value computed from STAFF. */
     const all = eqScopedStaff();
     const payroll = eqPayroll(all);
-    const ratio = payroll / EQ_PORTFOLIO_REV_30D * 100;
+    const ratio = isRealMerchant() ? null : payroll / EQ_PORTFOLIO_REV_30D * 100;
     const ratioCls = ratio < 30 ? 'ok' : ratio <= 38 ? 'warn' : 'bad';
-    const ratioStr = ratio.toFixed(1).replace('.', ',');
+    const ratioStr = ratio == null ? '·' : ratio.toFixed(1).replace('.', ',');
     const presentAll = all.filter(s => s.status === 'present').length;
 
     return `
@@ -3730,7 +3988,7 @@
           <span>Masse salariale estimée ce mois : <b>${eqMad(payroll)}</b></span><span class="sep">·</span>
           <span>Ratio coût main d'œuvre :
             <span class="eq-ratio ${ratioCls}">${ratioStr}&nbsp;%
-              <span class="eq-tip">Dans la restauration F&amp;B au Maroc, une fourchette de 28–35&nbsp;% est considérée comme saine. En dessous = marge confortable.</span>
+              ${ratio == null ? '' : '<span class="eq-tip">Dans la restauration F&amp;B au Maroc, une fourchette de 28–35&nbsp;% est considérée comme saine. En dessous = marge confortable.</span>'}
             </span>
           </span>
         </div>
@@ -3799,9 +4057,12 @@
         <td class="r">${gross > 0 ? (r.salary / gross * 100).toFixed(1).replace('.', ',') : '0'} %</td>
       </tr>`).join('');
 
+    const monthLabel = isRealMerchant()
+      ? new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+      : 'Mai 2026';
     return `
       <div class="eq-section">
-        <div class="eq-section-head"><h3>Récapitulatif paie · Mai 2026</h3></div>
+        <div class="eq-section-head"><h3>Récapitulatif paie · ${monthLabel}</h3></div>
         <div class="eq-payroll-grid">
           <div>
             <div class="eq-payroll-stats">
@@ -3842,6 +4103,10 @@
 
   /* ── Section 4 · Performance ranking ──────────────────────────────────── */
   function eqRankingSectionHtml() {
+    if (isRealMerchant()) {
+      return `<div class="eq-section"><div class="eq-section-head"><h3>Classement performance · Salle &amp; Service</h3></div>
+        <div class="eq-clockempty">Aucune source ne relie encore le chiffre d’affaires et les pourboires à chaque membre de l’équipe.</div></div>`;
+    }
     const ranked = eqScopedStaff()
       .filter(s => EQ_REVENUE_DEPTS.includes(s.department))
       .slice()
@@ -4056,11 +4321,11 @@
       ['Shifts travaillés', s.shiftsThisMonth],
       ['Heures travaillées', eqHours(s.hoursThisMonth)],
       ['Salaire estimé', eqMad(eqSalary(s))],
-      ['Pourboires', s.tipsThisMonth > 0 ? eqMad(s.tipsThisMonth) : '—'],
+      ['Pourboires', s.tipsThisMonth > 0 ? eqMad(s.tipsThisMonth) : '·'],
     ];
     if (revenue) {
       tiles.push(['CA généré', eqMad(s.salesThisMonth)]);
-      tiles.push(['Note moyenne', s.rating != null ? '★ ' + s.rating.toFixed(1) : '—']);
+      tiles.push(['Note moyenne', s.rating != null ? '★ ' + s.rating.toFixed(1) : '·']);
       tiles.push(['Annulations', s.voids]);
     }
     const m = Kiwi.modal({
@@ -4482,13 +4747,23 @@
     eye:      '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
     sparkle:  '<path d="M12 3l1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5z"/><path d="M19 17l.7 2.3L22 20l-2.3.7L19 23l-.7-2.3L16 20l2.3-.7z"/>',
   };
-  const miSvg = (k, sz = 14) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${MI_IC[k] || ''}</svg>`;
+  const MI_MATERIAL_ICONS = {
+    menu: 'menu', trending: 'trending-up', clock: 'clock', alert: 'alert-circle',
+    compare: 'swap-vert', search: 'search', grid: 'layout-grid', list: 'list',
+    plus: 'plus', edit: 'pencil', copy: 'copy', trash: 'trash-2',
+    download: 'arrow-down-to-line', upload: 'arrow-up-from-line',
+    chev: 'chevron-right', info: 'info', sort: 'sort', station: 'cooking-pot',
+    printer: 'printer', kds: 'monitor', book: 'book-open', eye: 'eye',
+    sparkle: 'sparkles', x: 'x'
+  };
+  const miSvg = (k, sz = 14) => `<i data-lucide="${MI_MATERIAL_ICONS[k] || 'help'}" style="width:${sz}px;height:${sz}px" aria-hidden="true"></i>`;
 
   /* ── State (in-memory; resets on reload) ──────────────────────────────── */
   let miTab = 'menu';            // menu | stations | recettes | perf | hours | alerts | compare
   let miVenueFilter = 'cafeAtlas';
   let miSearch = '';
   let miCatFilter = 'all';
+  let miSubFilter = null; // sous-catégorie active DANS la sous-section ouverte ('__none' = non classés)
   let miView = 'grid';
   let miPeriod = 'midi';
   let miModsCollapsed = false;
@@ -4512,14 +4787,50 @@
 
   /* ── Helpers ──────────────────────────────────────────────────────────── */
   function miMenuVenue() {
+    // Identity/pairing can prove a real merchant one tick before pickOwnVenue()
+    // replaces the stale demo id. During that tick the safe menu is empty.
+    if (isRealMerchant() && !isCustom(currentVenue)) return 'own';
     if (currentVenue === 'fusion') return (miVenueFilter && miVenueFilter !== 'all') ? miVenueFilter : 'cafeAtlas';
     // A custom / operator-scoped venue keeps its OWN (empty) carte — never the
     // Café Atlas demo menu. Only a genuine demo venue falls back to cafeAtlas.
     if (isCustom(currentVenue)) return currentVenue;
     return REAL_VENUES.includes(currentVenue) ? currentVenue : 'cafeAtlas';
   }
-  function miItems(venue) { return MENU[venue || miMenuVenue()] || []; }
+  function miLiveStore(venue) {
+    const v = venue || miMenuVenue();
+    return isCustom(v) && window.KiwiMenuStore ? window.KiwiMenuStore : null;
+  }
+  function miLiveData(venue) {
+    const S = miLiveStore(venue);
+    return S ? (S.data(venue || miMenuVenue()) || { cats: [], items: [], stations: [], opts: [] }) : null;
+  }
+  function miItems(venue) {
+    const v = venue || miMenuVenue();
+    const d = miLiveData(v);
+    if (!d) return MENU[v] || [];
+    const stations = d.stations || [];
+    const kitchenId = window.KiwiMenuStore.kitchenId(v);
+    return (d.items || []).map((it) => {
+      const cat = (d.cats || []).find((c) => c.id === it.catId);
+      const stationId = (cat && cat.station) || kitchenId;
+      const station = stations.find((s) => s.id === stationId);
+      const sub = cat && it.subId ? (cat.sub || []).find((s) => s.id === it.subId) : null;
+      let cost = null;
+      try { cost = window.KiwiCost?.itemCost?.(it.id); } catch (_) {}
+      return {
+        id: it.id, name: it.name, desc: it.desc || '', category: it.catId,
+        subId: sub ? sub.id : null, subLabel: sub ? sub.name : null,
+        price: +it.price || 0, cost: cost == null ? null : +cost,
+        unitsThisMonth: null, station: stationId,
+        stationLabel: (station && station.name) || 'Cuisine',
+        tags: [], times: {}, venue: v, avail: it.avail !== false,
+        optionCount: Array.isArray(it.opts) ? it.opts.length : 0, live: true,
+      };
+    });
+  }
   function miFindItem(id) {
+    const current = miItems(miMenuVenue()).find(x => x.id === id);
+    if (current) return current;
     for (const v of REAL_VENUES) { const it = (MENU[v] || []).find(x => x.id === id); if (it) return it; }
     return null;
   }
@@ -4527,12 +4838,18 @@
   function miMarginVal(it) { return it.price - it.cost; }
   function miMarginPct(it) { return it.price > 0 ? (it.price - it.cost) / it.price * 100 : 0; }
   function miCustomCat(id) { return miCustomCats.find(c => c.id === id); }
-  function miCatColor(c) { const x = MI_CATS[c] || miCustomCat(c); return x ? x.color : 'var(--n-400)'; }
-  function miCatLabel(c) { const x = MI_CATS[c] || miCustomCat(c); return x ? x.label : c; }
+  function miLiveCat(c) {
+    const d = miLiveData();
+    return d && (d.cats || []).find(x => x.id === c);
+  }
+  function miCatColor(c) { const x = MI_CATS[c] || miCustomCat(c); return x ? x.color : (miLiveCat(c) ? 'var(--atlas)' : 'var(--n-400)'); }
+  function miCatLabel(c) { const x = MI_CATS[c] || miCustomCat(c); return x ? x.label : ((miLiveCat(c) || {}).name || c); }
   /* Ordered category ids for a venue — base categories present in the menu,
    * then any session-created subsections. */
   function miVenueCats(venue) {
     venue = venue || miMenuVenue();
+    const d = miLiveData(venue);
+    if (d) return (d.cats || []).map(c => c.id);
     const base = MI_CAT_ORDER.filter(c => (MENU[venue] || []).some(i => i.category === c));
     const custom = miCustomCats.filter(c => c.venue === venue).map(c => c.id);
     return [...base, ...custom];
@@ -4540,8 +4857,15 @@
   /* Session-mutable station list for a venue (lazy-init from the menu). */
   function miGetStations(venue) {
     venue = venue || miMenuVenue();
+    const d = miLiveData(venue);
+    if (d) return (d.stations || []).map(s => s.id);
     if (!miStations[venue]) miStations[venue] = [...new Set((MENU[venue] || []).map(i => i.station))];
     return miStations[venue];
+  }
+  function miStationLabel(id, venue) {
+    const d = miLiveData(venue || miMenuVenue());
+    const station = d && (d.stations || []).find(s => s.id === id);
+    return (station && station.name) || id;
   }
   /* The KDS uses a different (shorter) station vocabulary than the Menu
    * page — this maps KDS IDs onto Menu IDs so a single configuration in
@@ -4667,7 +4991,18 @@
   }
 
   /* ═══════════ NAVIGATION ═══════════ */
+  /* L'atelier restaurant (restaurant-menu-workspace.js) détient la page Menu
+   * pour les restaurants — il a pris nav-menu, mais les RAFRAÎCHISSEMENTS
+   * arrivent encore ici par KiwiVenue.showMenu/refreshMenu : le pull() du
+   * catalogue repart à CHAQUE retour d'onglet et repeignait l'écran hérité
+   * (emojis, sans les nouveautés) par-dessus l'atelier. Renvoi systématique. */
+  function miWorkspaceOwnsMenu() {
+    const W = window.KiwiRestaurantMenuWorkspace;
+    return W && typeof W.isRestaurant === 'function' && W.isRestaurant() ? W : null;
+  }
   function miShowPage() {
+    const W = miWorkspaceOwnsMenu();
+    if (W) { W.show(true); return; }
     miTab = 'menu';
     /* Clear any sibling full-page view so two page-* classes never coexist;
      * also reset the Équipe module's page flag so its clock/venue
@@ -4686,6 +5021,8 @@
     window.scrollTo({ top: 0 });
     renderMenu();
   }
+  function miNavHandler() { miShowPage(); }
+  miNavHandler.__kiwiMenuV2 = true;
   function miShowDashboard() {
     if (!document.body.classList.contains('page-menu')) return;
     document.body.classList.remove('page-menu');
@@ -4696,7 +5033,7 @@
   function miWireHandlers() {
     const H = window.Kiwi && window.Kiwi.handlers;
     if (!H) { setTimeout(miWireHandlers, 30); return; }
-    H['nav-menu'] = () => miShowPage();
+    H['nav-menu'] = miNavHandler;
     const origAccueil = H['nav-accueil'];
     H['nav-accueil'] = function () {
       try { if (origAccueil) origAccueil.apply(this, arguments); } catch (_) {}
@@ -4710,15 +5047,18 @@
       }
       miTab = t; renderMenu();
     };
-    H['mi-venue-filter'] = (el) => { miVenueFilter = el.dataset.venue || 'cafeAtlas'; miCatFilter = 'all'; miSearch = ''; renderMenu(); };
-    H['mi-cat-filter']   = (el) => { miCatFilter = el.dataset.cat || 'all'; miRenderTab1Body(); };
+    H['mi-venue-filter'] = (el) => { miVenueFilter = el.dataset.venue || 'cafeAtlas'; miCatFilter = 'all'; miSubFilter = null; miSearch = ''; renderMenu(); };
+    H['mi-cat-filter']   = (el) => { miCatFilter = el.dataset.cat || 'all'; miSubFilter = null; miRenderTab1Body(); };
+    H['mi-sub-filter']   = (el) => { miSubFilter = el.dataset.sub || null; miRenderTab1Body(); };
+    H['mi-add-subcat']   = (_el, cat) => miOpenAddSubcatModal(cat || miCatFilter);
+    H['mi-classify-subs'] = (_el, cat) => miOpenClassifyModal(cat || miCatFilter);
     H['mi-view']         = (el) => { miView = el.dataset.view || 'grid'; miRenderTab1Body(); };
     H['mi-period']       = (el) => { miPeriod = el.dataset.period || 'midi'; renderMenu(); };
-    H['mi-add-item']     = () => miOpenItemModal(null);
-    H['mi-edit-item']    = (_el, id) => miOpenItemModal(miFindItem(id));
-    H['mi-dup-item']     = (_el, id) => miDuplicateItem(id);
-    H['mi-del-item']     = (_el, id) => miDeleteItem(id);
-    H['mi-import']       = () => Kiwi.toast('Import lancé', { type: 'info', desc: '38 articles détectés' });
+    H['mi-add-item']     = () => miLiveStore()?.openItem ? miLiveStore().openItem() : miOpenItemModal(null);
+    H['mi-edit-item']    = (_el, id) => miLiveStore()?.openItem ? miLiveStore().openItem(id) : miOpenItemModal(miFindItem(id));
+    H['mi-dup-item']     = (_el, id) => miLiveStore()?.duplicateItem ? miLiveStore().duplicateItem(id) : miDuplicateItem(id);
+    H['mi-del-item']     = (_el, id) => miLiveStore()?.requestDeleteItem ? miLiveStore().requestDeleteItem(id) : miDeleteItem(id);
+    H['mi-import']       = () => miLiveStore()?.importMenu ? miLiveStore().importMenu() : Kiwi.toast('Import lancé', { type: 'info', desc: '38 articles détectés' });
     H['mi-export']       = () => Kiwi.toast('Menu exporté', { type: 'success', desc: 'PDF + Excel générés' });
     H['mi-sort']         = (el) => Kiwi.menu(el, [
       { head: 'Trier par' },
@@ -4728,10 +5068,10 @@
       { label: 'Nom (A→Z)', onClick: () => {} },
     ]);
     H['mi-mods-toggle']  = () => { miModsCollapsed = !miModsCollapsed; const c = document.querySelector('[data-mi-mods]'); if (c) c.classList.toggle('collapsed', miModsCollapsed); };
-    H['mi-add-group']    = () => miOpenGroupModal(null);
-    H['mi-edit-group']   = (_el, id) => miOpenGroupModal(miGroupById(id));
-    H['mi-dup-group']    = (_el, id) => miDuplicateGroup(id);
-    H['mi-del-group']    = (_el, id) => miConfirmDeleteGroup(id);
+    H['mi-add-group']    = () => miLiveStore()?.openOptions ? miLiveStore().openOptions() : miOpenGroupModal(null);
+    H['mi-edit-group']   = (_el, id) => miLiveStore()?.openOptions ? miLiveStore().openOptions() : miOpenGroupModal(miGroupById(id));
+    H['mi-dup-group']    = (_el, id) => miLiveStore()?.openOptions ? miLiveStore().openOptions() : miDuplicateGroup(id);
+    H['mi-del-group']    = (_el, id) => miLiveStore()?.openOptions ? miLiveStore().openOptions() : miConfirmDeleteGroup(id);
     /* Per-item toggle handler — driven from inside the item modal. The
      * itemId is read from a data-* on the row to keep the markup uncoupled
      * from the modal's lifecycle. */
@@ -4758,13 +5098,16 @@
       if (back) back.querySelector('.kiwi-modal-close')?.click();
       miOpenGroupModal(miGroupById(gid), { attachToItemId: itemId });
     };
-    H['mi-station']      = (_el, id) => miOpenEditStationModal(id);
-    H['mi-edit-station'] = (_el, id) => miOpenEditStationModal(id);
-    H['mi-add-station']  = () => miOpenAddStationModal();
-    H['mi-remove-station'] = (_el, id) => miRemoveStation(id);
-    H['mi-reroute-item'] = (el, id) => miRerouteItem(id, el);
-    H['mi-add-sub']      = () => miOpenAddSubModal();
-    H['mi-reroute-sub']  = (el, cat) => miRerouteSub(cat, el);
+    H['mi-station']      = (_el, id) => miLiveStore()?.openStations ? miLiveStore().openStations() : miOpenEditStationModal(id);
+    H['mi-edit-station'] = (_el, id) => miLiveStore()?.openStations ? miLiveStore().openStations() : miOpenEditStationModal(id);
+    H['mi-add-station']  = () => miLiveStore()?.openStations ? miLiveStore().openStations() : miOpenAddStationModal();
+    H['mi-remove-station'] = (_el, id) => miLiveStore()?.openStations ? miLiveStore().openStations() : miRemoveStation(id);
+    H['mi-reroute-item'] = (el, id) => {
+      const it = miFindItem(id);
+      return miLiveStore()?.openCategoryRoute && it ? miLiveStore().openCategoryRoute(it.category) : miRerouteItem(id, el);
+    };
+    H['mi-add-sub']      = () => miLiveStore()?.promptAddCategory ? miLiveStore().promptAddCategory() : miOpenAddSubModal();
+    H['mi-reroute-sub']  = (el, cat) => miLiveStore()?.openCategoryRoute ? miLiveStore().openCategoryRoute(cat) : miRerouteSub(cat, el);
     H['mi-howto']        = () => miOpenHowtoModal();
     H['mi-matrix-dot']   = (_el, id) => miOpenItemModal(miFindItem(id));
     H['mi-quad-action']  = (el) => miQuadAction(el.dataset.quad);
@@ -4788,6 +5131,8 @@
 
   /* ═══════════ RENDER ═══════════ */
   function renderMenu() {
+    const W = miWorkspaceOwnsMenu();
+    if (W) { W.render(); return; }
     const root = document.querySelector('[data-menu-root]');
     if (!root) return;
     root.innerHTML = miHeaderHtml() + miFiltersHtml() + `<div class="mi-panel" data-mi-panel>${miTabHtml()}</div>`;
@@ -4809,11 +5154,11 @@
       <div class="mi-head">
         <div>
           <div class="mi-title">Menu &amp; modificateurs</div>
-          <div class="mi-sub">${items.length} articles · ${catCount} sous-section${catCount > 1 ? 's' : ''} · ${eqEsc((VENUES[venue] || {}).name || '')}</div>
+          <div class="mi-sub">${items.length} articles · ${catCount} section${catCount > 1 ? 's' : ''} · ${eqEsc((VENUES[venue] || VENUES[currentVenue] || {}).name || '')}</div>
         </div>
         <div class="mi-head-acts">
           <button class="btn-slim" data-action="mi-import">${miSvg('upload', 13)}<span>Importer Excel</span></button>
-          <button class="btn-slim" data-action="mi-export">${miSvg('download', 13)}<span>Exporter le menu</span></button>
+          ${miLiveStore(venue) ? '' : `<button class="btn-slim" data-action="mi-export">${miSvg('download', 13)}<span>Exporter le menu</span></button>`}
         </div>
       </div>`;
   }
@@ -4826,7 +5171,7 @@
         `<button class="mi-pill${miMenuVenue() === id ? ' on' : ''}" data-action="mi-venue-filter" data-venue="${id}">${l}</button>`
       ).join('') + '</div>';
     }
-    const active86 = mi86.length;
+    const active86 = miLiveStore(miMenuVenue()) ? 0 : mi86.length;
     const tabs = [
       ['menu', 'Menu & modificateurs', 'menu'],
       ['stations', 'Stations cuisine', 'station'],
@@ -4847,6 +5192,16 @@
   }
 
   function miTabHtml() {
+    if (miLiveStore(miMenuVenue()) && !['menu', 'stations'].includes(miTab)) {
+      const labels = {
+        recettes: 'Recettes', perf: 'Performance',
+        hours: 'Heures de pointe', alerts: 'Alertes 86', compare: 'Comparaison sites',
+      };
+      return `<div class="mi-section"><div class="mi-section-head"><h3>${labels[miTab] || 'Menu'}</h3></div>
+        <div style="padding:34px 12px;text-align:center;color:var(--n-500);font-size:13px;line-height:1.55;">
+          Aucune donnée réelle n’est encore disponible pour cette vue.
+        </div></div>`;
+    }
     switch (miTab) {
       case 'stations': return miStationsTabHtml();
       case 'recettes': return miRenderRecettesTab(miMenuVenue());
@@ -4863,21 +5218,24 @@
     return (tags || []).map(t => `<span class="mi-tag ${t}">${MI_TAG_LABEL[t] || t}</span>`).join('');
   }
   function miItemCard(it) {
-    const pct = miMarginPct(it);
+    const pct = it.cost == null ? null : miMarginPct(it);
+    const liveMeta = it.live
+      ? `<span class="mi-card-units">${it.avail === false ? 'Indisponible' : `${it.optionCount || 0} groupe(s) d’options`}</span>`
+      : `<span class="mi-card-units">${eqFrInt(it.unitsThisMonth)} vendus</span>`;
     return `
       <div class="mi-card" data-mi-card="${it.id}" data-action="mi-edit-item" data-arg="${it.id}">
         <div class="mi-card-top">
-          <span class="mi-card-cat">${(MI_CATS[it.category]||{}).emoji||''} ${miCatLabel(it.category)}</span>
+          <span class="mi-card-cat">${(MI_CATS[it.category]||{}).emoji||''} ${miCatLabel(it.category)}${it.subLabel ? ` · ${eqEsc(it.subLabel)}` : ''}</span>
           <span class="mi-tags">${miTagPills(it.tags)}</span>
         </div>
         <div class="mi-card-name"><span class="mi-card-emoji" aria-hidden="true">${miItemEmoji(it)}</span>${eqEsc(it.name)}</div>
         <div class="mi-card-price-row">
           <span class="mi-card-price">${eqFrInt(it.price)}</span>
-          <button type="button" class="mi-card-station" data-action="mi-reroute-item" data-arg="${it.id}" aria-label="Rerouter vers une station">→ ${eqEsc(it.station)}</button>
+          <button type="button" class="mi-card-station" data-action="mi-reroute-item" data-arg="${it.id}" aria-label="Rerouter vers une station">→ ${eqEsc(it.stationLabel || it.station)}</button>
         </div>
         <div class="mi-card-foot">
-          <span class="mi-card-units">${eqFrInt(it.unitsThisMonth)} vendus</span>
-          <span class="mi-card-margin ${miMarginClass(pct)}">${Math.round(pct)} %</span>
+          ${liveMeta}
+          ${pct == null ? '' : `<span class="mi-card-margin ${miMarginClass(pct)}">${Math.round(pct)} %</span>`}
           <span class="mi-card-acts">
             <button class="mi-ic-btn" data-action="mi-edit-item" data-arg="${it.id}" aria-label="Modifier">${miSvg('edit', 13)}</button>
             <button class="mi-ic-btn" data-action="mi-dup-item" data-arg="${it.id}" aria-label="Dupliquer">${miSvg('copy', 13)}</button>
@@ -4889,9 +5247,19 @@
   function miFilteredItems() {
     let list = miItems();
     if (miCatFilter !== 'all') list = list.filter(i => i.category === miCatFilter);
+    if (miCatFilter !== 'all' && miSubFilter) {
+      list = miSubFilter === '__none' ? list.filter(i => !i.subId) : list.filter(i => i.subId === miSubFilter);
+    }
     const q = miSearch.trim().toLowerCase();
     if (q) list = list.filter(i => i.name.toLowerCase().includes(q));
     return list;
+  }
+  /* Sous-catégories déclarées sur une sous-section du magasin live (Cookies,
+   * Gâteaux… dans Sweets). Vide pour les menus de démo, qui n'en portent pas. */
+  function miSubsFor(catId) {
+    const d = miLiveData();
+    const cat = d && (d.cats || []).find(c => c.id === catId);
+    return cat ? (cat.sub || []) : [];
   }
   /* Subsection action bar — shown when one subsection is selected, hosts the
    * "reroute the whole subsection" control. */
@@ -4909,11 +5277,116 @@
         <button class="btn-slim" data-action="mi-reroute-sub" data-arg="${miCatFilter}">${miSvg('compare', 13)}<span>Rerouter la sous-section</span></button>
       </div>`;
   }
+  /* Rangée des sous-catégories de la sous-section ouverte — 36 sweets en
+   * une grille plate ne se lisent pas ; Cookies / Gâteaux / Cheesecakes si. */
+  function miSubChipsHtml() {
+    if (miCatFilter === 'all' || !miLiveStore()) return '';
+    const subs = miSubsFor(miCatFilter);
+    const all = miItems().filter(i => i.category === miCatFilter);
+    if (!subs.length && all.length < 2) return '';
+    const none = all.filter(i => !i.subId).length;
+    const chips = [
+      `<button class="mi-subchip${!miSubFilter ? ' on' : ''}" data-action="mi-sub-filter" data-sub="">Tout · ${all.length}</button>`,
+      ...subs.map(s => {
+        const n = all.filter(i => i.subId === s.id).length;
+        return `<button class="mi-subchip${miSubFilter === s.id ? ' on' : ''}" data-action="mi-sub-filter" data-sub="${s.id}">${eqEsc(s.name)} · ${n}</button>`;
+      }),
+    ];
+    if (subs.length && none) chips.push(`<button class="mi-subchip${miSubFilter === '__none' ? ' on' : ''}" data-action="mi-sub-filter" data-sub="__none">À classer · ${none}</button>`);
+    chips.push(`<button class="mi-subchip add" data-action="mi-add-subcat" data-arg="${miCatFilter}">+ Sous-catégorie</button>`);
+    if (subs.length && none) chips.push(`<button class="mi-subchip add" data-action="mi-classify-subs" data-arg="${miCatFilter}">${miSvg('edit', 12)} Classer ${none} article${none > 1 ? 's' : ''}</button>`);
+    return `<div class="mi-subchips">${chips.join('')}</div>`;
+  }
+  /* Grille groupée par sous-catégorie — un bandeau par groupe, les non
+   * classés en fin de page. Grille plate quand il n'y a rien à grouper. */
+  function miGridHtml(list) {
+    const flat = () => `<div class="mi-grid">${list.map(miItemCard).join('')}</div>`;
+    if (miCatFilter === 'all' || miSubFilter || miSearch.trim()) return flat();
+    const subs = miSubsFor(miCatFilter);
+    if (!subs.length) return flat();
+    const groups = subs
+      .map(s => ({ id: s.id, label: s.name, items: list.filter(i => i.subId === s.id) }))
+      .filter(g => g.items.length);
+    const rest = list.filter(i => !i.subId || !subs.some(s => s.id === i.subId));
+    if (rest.length) groups.push({ id: '__none', label: 'Sans sous-catégorie', items: rest, muted: true });
+    if (groups.length < 2) return flat();
+    return groups.map(g => `
+      <div class="mi-sub-head${g.muted ? ' muted' : ''}" data-action="mi-sub-filter" data-sub="${g.id}" role="button" tabindex="0">
+        <span>${eqEsc(g.label)}</span><small>${g.items.length} article${g.items.length > 1 ? 's' : ''}</small>
+      </div>
+      <div class="mi-grid">${g.items.map(miItemCard).join('')}</div>`).join('');
+  }
+  /* Créer une sous-catégorie dans la sous-section ouverte (magasin live). */
+  function miOpenAddSubcatModal(catId) {
+    const S = miLiveStore();
+    if (!S || !catId || catId === 'all') return;
+    const m = Kiwi.modal({
+      tag: 'SOUS-CATÉGORIE', title: `Nouvelle sous-catégorie · ${eqEsc(miCatLabel(catId))}`, width: 440,
+      body: `
+        <div class="kf-group"><label class="kf-label">Nom de la sous-catégorie</label><input class="kf-input" data-msc="name" placeholder="Ex. Cookies · Gâteaux · Classics"/></div>
+        <div class="kf-help">Les articles se rangent ensuite via « Classer » ou depuis la fiche de chaque article.</div>`,
+      foot: '<button class="kb ghost" data-mi-cancel>Annuler</button><button class="eq-cta-gradient" data-mi-save>Créer</button>',
+    });
+    m.el.querySelector('[data-mi-cancel]').onclick = m.close;
+    m.el.querySelector('[data-msc="name"]').focus();
+    m.el.querySelector('[data-mi-save]').onclick = () => {
+      const f = m.el.querySelector('[data-msc="name"]');
+      const name = f.value.trim();
+      if (!name) { f.classList.add('eq-invalid'); return; }
+      S.addSubcategory(catId, name);
+      m.close();
+      miSubFilter = null;
+      miRenderTab1Body();
+      Kiwi.toast(`Sous-catégorie « ${name} » créée`, { type: 'success', desc: 'Classez-y vos articles avec « Classer ».' });
+    };
+  }
+  /* Classement en masse — tous les articles non classés de la sous-section
+   * sur un seul écran, un select par article, une écriture par changement. */
+  function miOpenClassifyModal(catId) {
+    const S = miLiveStore();
+    if (!S || !catId || catId === 'all') return;
+    const subs = miSubsFor(catId);
+    if (!subs.length) { miOpenAddSubcatModal(catId); return; }
+    const pending = miItems().filter(i => i.category === catId && !i.subId);
+    if (!pending.length) { Kiwi.toast('Tout est classé', { type: 'success', desc: 'Aucun article sans sous-catégorie.' }); return; }
+    const opts = subs.map(s => `<option value="${s.id}">${eqEsc(s.name)}</option>`).join('');
+    const m = Kiwi.modal({
+      tag: 'CLASSEMENT', title: `Classer les articles · ${eqEsc(miCatLabel(catId))}`, width: 560,
+      body: `
+        <div class="kf-help" style="margin-bottom:10px;">${pending.length} article${pending.length > 1 ? 's' : ''} sans sous-catégorie. Chaque choix est enregistré immédiatement.</div>
+        <div class="mi-classify-list">${pending.map(it => `
+          <div class="mi-classify-row" data-mcr="${it.id}">
+            <span class="mi-classify-name">${eqEsc(it.name)}</span>
+            <select class="kf-input" data-mc-sub="${it.id}"><option value="">·Choisir·</option>${opts}</select>
+          </div>`).join('')}</div>`,
+      foot: '<button class="eq-cta-gradient" data-mi-done>Terminé</button>',
+    });
+    m.el.addEventListener('change', (e) => {
+      const sel = e.target.closest('[data-mc-sub]');
+      if (!sel || !sel.value) return;
+      S.updateItem(sel.dataset.mcSub, { subId: sel.value });
+      const row = sel.closest('[data-mcr]');
+      if (row) { row.classList.add('done'); }
+    });
+    m.el.querySelector('[data-mi-done]').onclick = () => { m.close(); miRenderTab1Body(); };
+  }
   function miTab1Html() {
     const venue = miMenuVenue();
     const allItems = miItems(venue);
     const cats = miVenueCats(venue);
     const list = miFilteredItems();
+    const liveGroups = miLiveStore(venue)?.optionGroups?.(venue);
+    const rawLiveItems = miLiveData(venue)?.items || [];
+    const menuGroups = liveGroups ? liveGroups.map(g => ({
+      id: g.id, name: g.name, required: !!g.required,
+      maxSel: g.kind === 'many' ? Math.max(2, (g.choices || []).length) : 1,
+      options: g.choices || [],
+      isGlobal: false, scope: { subsections: [], items: [] },
+      scopeLabel: `${allItems.filter(it => {
+        const raw = rawLiveItems.find(x => x.id === it.id);
+        return Array.isArray(raw?.opts) && raw.opts.includes(g.id);
+      }).length} article(s)`,
+    })) : MI_MOD_GROUPS;
 
     /* Subsection filter pills + the add-actions, on one bar — actions sit
      * with the subsections they create rather than up in the page header. */
@@ -4933,15 +5406,13 @@
       ? 'Sous-section vide, ajoutez un article avec « Nouvel article ».'
       : 'Aucun article pour cette recherche.';
     const body = list.length
-      ? (miView === 'grid'
-        ? `<div class="mi-grid">${list.map(miItemCard).join('')}</div>`
-        : miListHtml(list))
+      ? (miView === 'grid' ? miGridHtml(list) : miListHtml(list))
       : `<div style="text-align:center;color:var(--n-500);padding:36px;font-size:13px;">${emptyMsg}</div>`;
 
     /* Modifier option groups — polished cards instead of a flat table.
      * Each card shows mode/required pills, options with price deltas, and
      * a scope readout so the owner can see where the group applies. */
-    const groupsHtml = MI_MOD_GROUPS.length ? MI_MOD_GROUPS.map(g => {
+    const groupsHtml = menuGroups.length ? menuGroups.map(g => {
       const reqPill = g.required
         ? '<span class="mi-group-card-pill req">Obligatoire</span>'
         : '<span class="mi-group-card-pill opt">Optionnel</span>';
@@ -4962,7 +5433,7 @@
             ${reqPill}${modePill}${globalPill}
           </div>
           <div class="mi-group-card-opts">${optsHtml || '<span style="font-size:11.5px;color:var(--n-500);">Aucune option</span>'}</div>
-          <div class="mi-group-card-scope">Appliqué à : ${eqEsc(miGroupScopeLabel(g))}</div>
+          <div class="mi-group-card-scope">Appliqué à : ${eqEsc(g.scopeLabel || miGroupScopeLabel(g))}</div>
           <div class="mi-group-card-acts">
             <button class="btn-slim" data-action="mi-edit-group" data-arg="${g.id}">${miSvg('edit', 12)}<span>Modifier</span></button>
             <button class="btn-slim" data-action="mi-dup-group" data-arg="${g.id}">${miSvg('copy', 12)}<span>Dupliquer</span></button>
@@ -4970,9 +5441,9 @@
           </div>
         </div>`;
     }).join('') : `<div style="grid-column:1/-1;text-align:center;color:var(--n-500);padding:24px;font-size:13px;">Aucun groupe d'options, créez-en un avec « Nouveau groupe d'options ».</div>`;
-    const groupsApplied = MI_MOD_GROUPS.filter(g => g.isGlobal || (g.scope.subsections || []).length || (g.scope.items || []).length).length;
-    const groupsGlobal = MI_MOD_GROUPS.filter(g => g.isGlobal).length;
-    const groupsStats = `<div class="mi-section-sub">${MI_MOD_GROUPS.length} groupe${MI_MOD_GROUPS.length > 1 ? 's' : ''} · ${groupsApplied} appliqué${groupsApplied > 1 ? 's' : ''} · ${groupsGlobal} global${groupsGlobal > 1 ? 'aux' : ''}</div>`;
+    const groupsApplied = menuGroups.filter(g => g.isGlobal || (g.scope.subsections || []).length || (g.scope.items || []).length).length;
+    const groupsGlobal = menuGroups.filter(g => g.isGlobal).length;
+    const groupsStats = `<div class="mi-section-sub">${menuGroups.length} groupe${menuGroups.length > 1 ? 's' : ''}${liveGroups ? '' : ` · ${groupsApplied} appliqué${groupsApplied > 1 ? 's' : ''} · ${groupsGlobal} global${groupsGlobal > 1 ? 'aux' : ''}`}</div>`;
 
     /* Note: Routage cuisine section moved to its own "Stations cuisine"
      * tab — miStationsTabHtml. Lives at a top-level pill so it can carry
@@ -4991,6 +5462,7 @@
         </div>
         ${catBar}
         ${miSubbarHtml()}
+        ${miSubChipsHtml()}
         ${body}
       </div>
 
@@ -5016,7 +5488,7 @@
    * ═════════════════════════════════════════════════════════════════════ */
   function miStationsTabHtml() {
     const venue = miMenuVenue();
-    const items = MENU[venue] || [];
+    const items = miItems(venue);
     const stationIds = miGetStations(venue);
     const connected = stationIds.filter(s => miStationState(s).dot !== 'off').length;
     const totalRouted = items.length;
@@ -5051,7 +5523,7 @@
       return `
         <div class="mi-station mi-station-card" data-action="mi-station" data-arg="${s}">
           <button type="button" class="mi-station-x" data-action="mi-remove-station" data-arg="${s}" aria-label="Retirer la station">${miSvg('plus', 11)}</button>
-          <div class="mi-station-top"><span class="mi-st-dot ${st.dot}"></span><span class="mi-station-name">${eqEsc(s)}</span></div>
+          <div class="mi-station-top"><span class="mi-st-dot ${st.dot}"></span><span class="mi-station-name">${eqEsc(miStationLabel(s, venue))}</span></div>
           <div class="mi-station-meta">${eqEsc(st.meta)}</div>
           ${syncChip}
           <div class="mi-station-routed">${routed} article${routed > 1 ? 's' : ''} routé${routed > 1 ? 's' : ''}${sample ? ` · ${sample}${routed > 3 ? '…' : ''}` : ''}</div>
@@ -5063,7 +5535,7 @@
     const syncStations = stationIds.filter(s => miStationState(s).sync);
     const fastStations = stationIds.filter(s => !miStationState(s).sync);
     const slowest = syncStations
-      .map(s => ({ name: s, t: miStationState(s).avgPrepMin }))
+      .map(s => ({ name: miStationLabel(s, venue), t: miStationState(s).avgPrepMin }))
       .sort((a, b) => b.t - a.t)[0];
 
     return `
@@ -5095,17 +5567,17 @@
   }
   function miListHtml(list) {
     const rows = list.map(it => {
-      const pct = miMarginPct(it);
+      const pct = it.cost == null ? null : miMarginPct(it);
       return `
         <tr data-mi-card="${it.id}" data-action="mi-edit-item" data-arg="${it.id}">
           <td><b style="font-weight:600;"><span class="mi-card-emoji" aria-hidden="true">${miItemEmoji(it)}</span>${eqEsc(it.name)}</b></td>
-          <td>${(MI_CATS[it.category]||{}).emoji||''} ${miCatLabel(it.category)}</td>
+          <td>${(MI_CATS[it.category]||{}).emoji||''} ${miCatLabel(it.category)}${it.subLabel ? ` <span class="mi-list-sub">· ${eqEsc(it.subLabel)}</span>` : ''}</td>
           <td class="mono">${eqFrInt(it.price)} MAD</td>
-          <td class="mono">${eqFrInt(it.cost)} MAD</td>
-          <td><span class="mi-card-margin ${miMarginClass(pct)}">${Math.round(pct)} %</span></td>
-          <td class="mono">${eqFrInt(it.unitsThisMonth)}</td>
-          <td><button type="button" class="mi-card-station" data-action="mi-reroute-item" data-arg="${it.id}">→ ${eqEsc(it.station)}</button></td>
-          <td>${miTagPills(it.tags) || '<span style="color:var(--n-300);">—</span>'}</td>
+          <td class="mono">${it.cost == null ? '·' : eqFrInt(it.cost) + ' MAD'}</td>
+          <td>${pct == null ? '·' : `<span class="mi-card-margin ${miMarginClass(pct)}">${Math.round(pct)} %</span>`}</td>
+          <td class="mono">${it.unitsThisMonth == null ? '·' : eqFrInt(it.unitsThisMonth)}</td>
+          <td><button type="button" class="mi-card-station" data-action="mi-reroute-item" data-arg="${it.id}">→ ${eqEsc(it.stationLabel || it.station)}</button></td>
+          <td>${miTagPills(it.tags) || '<span style="color:var(--n-300);">·</span>'}</td>
           <td>
             <span class="mi-card-acts">
               <button class="mi-ic-btn" data-action="mi-edit-item" data-arg="${it.id}" aria-label="Modifier">${miSvg('edit', 13)}</button>
@@ -5122,6 +5594,12 @@
 
   /* ── TAB 2 · Performance matrix ───────────────────────────────────────── */
   function miTab2Html() {
+    if (isRealMerchant()) {
+      return `<div class="mi-section"><div class="mi-section-head"><h3>Performance des articles</h3></div>
+        <div style="padding:34px 12px;text-align:center;color:var(--n-500);font-size:13px;line-height:1.55;">
+          Aucune source ne relie encore les ventes réelles aux performances par article.
+        </div></div>`;
+    }
     const venue = miMenuVenue();
     const items = miItems(venue);
     const totalRev = items.reduce((a, i) => a + miRevenue(i), 0);
@@ -5131,7 +5609,7 @@
 
     const qcard = (q, metricHtml, btnLabel, btnCls) => {
       const list = buckets[q].slice().sort((a, b) => miRevenue(b) - miRevenue(a));
-      const top3 = list.slice(0, 3).map(i => i.name).join(' · ') || '—';
+      const top3 = list.slice(0, 3).map(i => i.name).join(' · ') || '·';
       return `
         <div class="mi-qcard ${q}">
           <div class="mi-qcard-h">${MI_QUAD[q].label.toUpperCase()}</div>
@@ -5233,6 +5711,12 @@
 
   /* ── TAB 3 · Peak hours ───────────────────────────────────────────────── */
   function miTab3Html() {
+    if (isRealMerchant()) {
+      return `<div class="mi-section"><div class="mi-section-head"><h3>Performance par moment de la journée</h3></div>
+        <div style="padding:34px 12px;text-align:center;color:var(--n-500);font-size:13px;line-height:1.55;">
+          Aucune source ne fournit encore les ventes par article et par heure.
+        </div></div>`;
+    }
     const venue = miMenuVenue();
     const items = miItems(venue);
     const p = miPeriod;
@@ -5275,7 +5759,7 @@
         <div class="mi-stats" style="margin-top:14px;">
           <div class="mi-stat"><div class="mi-stat-l">Articles vendus</div><div class="mi-stat-v">${eqFrInt(periodUnits)}</div><div class="mi-stat-s">${MI_PERIODS[p]}</div></div>
           <div class="mi-stat"><div class="mi-stat-l">CA généré</div><div class="mi-stat-v">${eqMad(periodRev)}</div><div class="mi-stat-s">sur la période</div></div>
-          <div class="mi-stat"><div class="mi-stat-l">Top article</div><div class="mi-stat-v" style="font-size:18px;">${eqEsc(top ? top.name : '—')}</div><div class="mi-stat-s">${top ? eqFrInt(top.times[p] || 0) + ' unités' : ''}</div></div>
+          <div class="mi-stat"><div class="mi-stat-l">Top article</div><div class="mi-stat-v" style="font-size:18px;">${eqEsc(top ? top.name : '·')}</div><div class="mi-stat-s">${top ? eqFrInt(top.times[p] || 0) + ' unités' : ''}</div></div>
         </div>
         <div class="mi-section-sub" style="margin-top:18px;">Top 10 articles · ${MI_PERIODS[p]}</div>
         <div class="mi-bars">${barRows}</div>
@@ -5294,6 +5778,12 @@
 
   /* ── TAB 4 · 86 alerts ────────────────────────────────────────────────── */
   function miTab4Html() {
+    if (isRealMerchant()) {
+      return `<div class="mi-section"><div class="mi-section-head"><h3>Alertes 86 · Articles indisponibles</h3></div>
+        <div style="padding:34px 12px;text-align:center;color:var(--n-500);font-size:13px;line-height:1.55;">
+          Aucune source d’alertes d’indisponibilité n’est connectée pour cet établissement.
+        </div></div>`;
+    }
     const rows = mi86.map(a => {
       const it = miFindItem(a.id);
       const cat = it ? it.category : 'boissons';
@@ -5427,13 +5917,13 @@
       { label: 'Eau minérale', ca: find(ca, 'eau minérale'), mm: find(mm, 'eau minérale'),
         ins: 'Écart de 3 MAD. Volume Café Atlas presque 10×, la restauration tire la vente d\'eau.' },
     ];
-    const cell = it => it ? `${eqFrInt(it.price)} MAD · ${eqFrInt(it.unitsThisMonth)} u` : '<span style="color:var(--n-300);">—</span>';
+    const cell = it => it ? `${eqFrInt(it.price)} MAD · ${eqFrInt(it.unitsThisMonth)} u` : '<span style="color:var(--n-300);">·</span>';
     const cmpRows = common.map(c => `
       <tr>
         <td><b style="font-weight:600;">${eqEsc(c.label)}</b></td>
         <td class="mono">${cell(c.ca)}</td>
         <td class="mono">${cell(c.mm)}</td>
-        <td class="mono"><span style="color:var(--n-300);">—</span></td>
+        <td class="mono"><span style="color:var(--n-300);">·</span></td>
         <td class="mi-cmp-ins">${eqEsc(c.ins)}</td>
       </tr>`).join('');
 
@@ -5604,7 +6094,7 @@
     }
     const v = window.KiwiRecipes.varianceByRecipe(it.id);
     const portionCost = window.KiwiRecipes.portionCost(recipe);
-    const fcTh = it.price > 0 ? (portionCost / it.price * 100).toFixed(1) : '—';
+    const fcTh = it.price > 0 ? (portionCost / it.price * 100).toFixed(1) : '·';
     const rows = (v ? v.ingredients : []).map(ing => {
       const qDisp = ing.perPortion < 0.01 ? ing.perPortion.toFixed(4) : ing.perPortion.toFixed(3);
       const sev = miRecSevClass(ing.deltaPct);
@@ -5844,7 +6334,7 @@
     const haveActual    = m && m.fcAct !== null;
     const actualCost    = haveActual ? (m.fcAct / 100) * price : portionCostTh;
     const marginActual  = price - actualCost;
-    const fcShown       = price > 0 ? (actualCost / price * 100).toFixed(1) : '—';
+    const fcShown       = price > 0 ? (actualCost / price * 100).toFixed(1) : '·';
     return `
       <div class="mi-rec-drawer-section">
         <h4>Combien ce plat vous rapporte vraiment</h4>
@@ -6542,7 +7032,7 @@
           <div class="info">
             <div class="n">${eqEsc(g.name)}</div>
             <div class="meta">${meta}</div>
-            <div class="opts-line">${optsLine || '<em style="color:var(--n-400);">Aucune option</em>'}</div>
+            <div class="opts-line">${optsLine || '<em style="color: var(--n-500);">Aucune option</em>'}</div>
             ${inheritBadge}
           </div>
           <div class="actions">
@@ -6614,7 +7104,7 @@
           </div>
         </div>
         <div class="kf-group">
-          <div class="mi-margin-readout"><span class="l">Marge calculée</span><span class="v" data-mi-margin>—</span></div>
+          <div class="mi-margin-readout"><span class="l">Marge calculée</span><span class="v" data-mi-margin>·</span></div>
         </div>
         <div class="kf-group"><label class="kf-label">Tags</label><div class="mi-chips" data-mi-tags>${MI_TAGS.map(t => chip(t, editing && (item.tags || []).includes(t))).join('')}</div></div>
         <div class="kf-group"><label class="kf-label">Description (optionnel)</label><textarea class="kf-input" data-mif="desc" rows="2" placeholder="Description courte affichée sur le menu…"></textarea></div>
@@ -6637,7 +7127,7 @@
         const pct = (p - c) / p * 100;
         out.textContent = `${Math.round(pct)} % · ${eqFrInt(p - c)} MAD`;
         out.className = 'v ' + miMarginClass(pct);
-      } else { out.textContent = '—'; out.className = 'v'; }
+      } else { out.textContent = '·'; out.className = 'v'; }
     }
     m.el.querySelectorAll('[data-mif="price"],[data-mif="cost"]').forEach(i => i.addEventListener('input', refreshMargin));
     refreshMargin();
@@ -7135,8 +7625,8 @@
      employees the merchant added on the Équipe page (team.js), so it starts
      EMPTY and never falls back to Café Atlas's demo staff. */
   function payStaff() {
+    if (isRealMerchant()) return isCustom(currentVenue) ? customPayStaff() : [];
     if (currentVenue === 'fusion') return payStaffAll();
-    if (isCustom(currentVenue)) return customPayStaff();
     return (STAFF[currentVenue] || STAFF.cafeAtlas).slice();
   }
   function customPayStaff() {
@@ -7235,6 +7725,21 @@
   function renderPayroll() {
     const root = document.querySelector('[data-payroll-root]');
     if (!root) return;
+    /* This legacy payroll surface has its own in-memory schedule model and no
+       stable public payroll API. Seeding that model for a real team invented
+       shifts, hours and salary totals. Keep the demo useful; refuse to compute
+       a merchant payroll from guesses. */
+    if (isRealMerchant()) {
+      const venueName = String((VENUES[currentVenue] && VENUES[currentVenue].name)
+        || (window.KiwiMe && (window.KiwiMe.business || window.KiwiMe.name))
+        || 'Mon établissement');
+      root.innerHTML = `<div class="pay-head"><div><div class="pay-title">Paie &amp; Planning</div>
+        <div class="pay-sub">${payEsc(venueName)}</div></div></div>
+        <div class="pay-section"><div style="padding:34px 12px;text-align:center;color:var(--n-500);font-size:13px;line-height:1.55;">
+          Données de paie indisponibles : cette vue n’est reliée à aucune source de paie fiable.
+        </div></div>`;
+      return;
+    }
     const staff = payStaff();
     root.innerHTML =
       payHeadHtml(staff) +
@@ -7328,7 +7833,7 @@
           <td class="r mono">${s.contractHours} h/sem</td>
           <td class="r mono">${s.hourlyRate} MAD/h</td>
           <td class="r mono">${payMad(gross)}</td>
-          <td class="r mono">${s.tipsThisMonth ? payMad(s.tipsThisMonth) : '—'}</td>
+          <td class="r mono">${s.tipsThisMonth ? payMad(s.tipsThisMonth) : '·'}</td>
           <td class="r mono pay-total">${payMad(tot)}</td>
         </tr>`;
     }).join('');
@@ -7362,6 +7867,12 @@
   }
 
   function payPlanningHtml(staff) {
+    if (isRealMerchant()) {
+      return `<div class="pay-section"><div class="pay-section-head"><h3>Planning de la semaine</h3></div>
+        <div style="padding:30px 12px;text-align:center;color:var(--n-500);font-size:13px;line-height:1.55;">
+          Ce module n’a pas de source de planning fiable. Utilisez la page Équipe pour saisir les services réels.
+        </div></div>`;
+    }
     const sched = payEnsureSched(staff);
     const cover = PAY_DOW.map(() => 0);
     const body = staff.map(s => {
@@ -7468,8 +7979,8 @@
       payOpenShiftModal(String(arg).slice(0, i), +String(arg).slice(i + 1));
     };
     H['pay-sort'] = (_el, key) => { paySort = key || 'salary'; renderPayroll(); };
-    H['pay-export'] = () => window.Kiwi.toast('Export paie généré', {
-      type: 'success', desc: 'Bulletin récapitulatif · PDF envoyé au gérant',
+    H['pay-export'] = () => window.Kiwi.toast('Export paie · démonstration', {
+      type: 'info', desc: 'Aucun bulletin calculé, aucun envoi. La console de paie s’ouvre sur un compte réel.',
     });
   }
   payWireHandlers();
@@ -7483,7 +7994,7 @@
     const H = window.Kiwi && window.Kiwi.handlers;
     if (!H) return;
     H['nav-equipe']  = () => eqShowPage();
-    H['nav-menu']    = () => miShowPage();
+    H['nav-menu']    = miNavHandler;
     H['nav-payroll'] = () => payShowPage();
     const origAccueil = H['nav-accueil'];
     H['nav-accueil'] = function () {
@@ -7498,78 +8009,76 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 
+  /* On localhost the page can begin as the sales demo, then /api/me proves a
+     real signed-in merchant a moment later. Reconcile after that proof: a real
+     account with no cached/custom venue must move to the transient empty venue,
+     never remain on Café Atlas. This closes the real-but-not-custom gap without
+     making the public localhost demo disappear before identity is known. */
+  function reconcileRealVenue() {
+    if (!isRealMerchant() || isCustom(currentVenue)) return;
+    pickOwnVenue();
+    subscribers.forEach(fn => { try { fn(currentVenue); } catch (_) {} });
+  }
+  const wireIdentity = () => {
+    try { window.KiwiIdentity?.ready?.then?.(reconcileRealVenue); } catch (_) {}
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireIdentity, { once: true });
+  else wireIdentity();
+  document.addEventListener('kiwi-paired', reconcileRealVenue);
+
   /* ═══════════════ SALES STORE (user-created venues) ═══════════════
    * A custom venue starts empty; the merchant rings up real sales via the
    * "Nouvelle vente" keypad. Each sale is persisted per-venue and the
    * dashboard (hero / KPI band / feed) recomputes from this store. */
   const salesSubs = new Set();
-  const SALES_KEY = id => 'kiwiSales:' + id;
+  /* `own` and `scoped` are shared browser placeholders, not tenant ids: a plain
+   * `kiwiSales:scoped` bucket leaked client A's takings into client B when one
+   * browser served both accounts. The answer is a namespace, not a wipe — the
+   * bucket is stamped with the merchant slug the view resolved to, so a cache
+   * can survive a reload without ever being readable by the next tenant. A
+   * transient id with no slug yet has no cache at all, which is the old
+   * fail-closed behaviour. */
+  function salesTenant(vid) {
+    let s = '';
+    try { s = slugOf(vid) || ''; } catch (_) { s = ''; }
+    if (s) return s;
+    /* `own` est le magasin de CE navigateur : à défaut de venue résolue, le
+     * locataire apparié fait foi. Jamais pour `scoped` — là, l'appareil est
+     * apparié à la caisse de l'opérateur, pas au client qu'il regarde, et se
+     * rabattre dessus rangerait les ventes du client sous le nom de
+     * l'opérateur. Sans slug servi par /api/me, `scoped` n'a pas de cache. */
+    if (vid === 'scoped') return '';
+    try { s = String(localStorage.getItem('kiwiLiveMerchant') || '').trim(); } catch (_) { s = ''; }
+    return s;
+  }
+  function SALES_KEY(id) {
+    const vid = id || currentVenue;
+    if (TRANSIENT_IDS.indexOf(vid) < 0) return 'kiwiSales:' + vid;
+    const slug = salesTenant(vid);
+    return slug ? 'kiwiSales:' + vid + '@' + slug : '';
+  }
   function salesList(id) {
-    try { const a = JSON.parse(localStorage.getItem(SALES_KEY(id || currentVenue)) || '[]'); return Array.isArray(a) ? a : []; }
+    const key = SALES_KEY(id || currentVenue);
+    if (!key) return [];
+    try { const a = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(a) ? a : []; }
     catch (_) { return []; }
   }
+  /* Pas de clé ⇒ pas d'écriture. `localStorage.setItem('', …)` est légal et
+   * rangerait les ventes d'un locataire non résolu sous une clé vide, partagée
+   * par tout le navigateur : exactement la fuite que le nommage évite. */
+  function salesWrite(id, list) {
+    const key = SALES_KEY(id || currentVenue);
+    if (!key) return false;
+    try { localStorage.setItem(key, JSON.stringify(list)); return true; } catch (_) { return false; }
+  }
 
-  /* Une vente encaissée pendant que le tableau de bord tenait encore un id
-   * transitoire — 'own', le placeholder d'une session réelle dont la venue
-   * n'est pas encore en cache — atterrissait dans kiwiSales:own. La vraie venue
-   * prenait ensuite la main, et cet argent disparaissait des livres : encaissé
-   * pour de bon, invisible partout. Ici on adopte ces ventes orphelines dans la
-   * venue réelle.
-   *
-   * Déduplication par `cursor` (le rowid du flux Live-Link, déjà persisté pour
-   * cette raison) et, pour une vente saisie à la main qui n'en a pas, par
-   * ts+montant. On efface ensuite la clé transitoire : l'adoption ne peut donc
-   * pas se rejouer et rien ne peut être compté deux fois. Ne tourne JAMAIS
-   * quand la venue courante est elle-même transitoire — ce sont alors les
-   * ventes de la session en cours, pas des orphelines. */
-  function adoptTransientSales(realId) {
-    if (!realId || TRANSIENT_IDS.indexOf(realId) >= 0) return 0;
-    let movedTotal = 0;
-    TRANSIENT_IDS.forEach((tid) => {
-      let orphans = [];
-      try { orphans = JSON.parse(localStorage.getItem(SALES_KEY(tid)) || '[]'); } catch (_) { orphans = []; }
-      if (!Array.isArray(orphans) || !orphans.length) return;
-      const target = salesList(realId);
-      const seenCursor = new Set(target.map((s) => s.cursor).filter((c) => c != null));
-      const seenStamp = new Set(target.map((s) => `${s.ts}|${s.amount}`));
-      let moved = 0;
-      orphans.forEach((o) => {
-        if (!o || !(+o.amount > 0)) return;
-        if (o.cursor != null) { if (seenCursor.has(o.cursor)) return; }
-        else if (seenStamp.has(`${o.ts}|${o.amount}`)) return;
-        target.push(o);
-        if (o.cursor != null) seenCursor.add(o.cursor);
-        seenStamp.add(`${o.ts}|${o.amount}`);
-        moved++;
-      });
-      if (moved) {
-        target.sort((a, b) => (+a.ts || 0) - (+b.ts || 0));
-        try { localStorage.setItem(SALES_KEY(realId), JSON.stringify(target)); } catch (_) {}
-        movedTotal += moved;
-      }
-      try { localStorage.removeItem(SALES_KEY(tid)); } catch (_) {}
-    });
-    if (movedTotal) salesSubs.forEach((fn) => { try { fn(realId); } catch (_) {} });
-    return movedTotal;
-  }
-  /* init() a déjà arrêté currentVenue plus haut (venues.js est `defer`, donc la
-   * branche synchrone a tourné). Le hook DOMContentLoaded couvre le cas où elle
-   * a été différée. */
-  try { adoptTransientSales(currentVenue); } catch (_) {}
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      try { adoptTransientSales(currentVenue); } catch (_) {}
-    });
-  }
-  /* …et de nouveau à CHAQUE changement de venue. L'identité réelle se résout
-   * après un aller-retour serveur : une vente encaissée dans cet intervalle —
-   * le pont Live Link, le pavé « Nouvelle vente » — atterrit sous l'id
-   * transitoire, et l'adoption au chargement était déjà passée. L'argent
-   * restait donc dans kiwiSales:own jusqu'au rechargement suivant : présent
-   * sur le serveur, absent du tableau de bord ET de l'assistant, c'est-à-dire
-   * exactement la contradiction que ce lot corrige ailleurs. Idempotent
-   * (dédup par cursor, puis la clé transitoire est effacée). */
-  subscribers.add((id) => { try { adoptTransientSales(id); } catch (_) {} });
+  /* Legacy un-namespaced placeholder buckets written by older builds. They are
+   * the unsafe shape this file used to delete on every load; heal them once. */
+  TRANSIENT_IDS.forEach((tid) => {
+    try { localStorage.removeItem('kiwiSales:' + tid); } catch (_) {}
+    try { localStorage.removeItem('kiwiRefunds:' + tid); } catch (_) {}
+    try { localStorage.removeItem('kiwiPlanDeSalle:' + tid); } catch (_) {}
+  });
   function salesAdd(id, sale) {
     id = id || currentVenue;
     const list = salesList(id);
@@ -7580,6 +8089,33 @@
     // Capped to match the server's own 80-char column.
     const lbl = String((sale && sale.label) || '').trim().slice(0, 80);
     if (lbl) entry.label = lbl;
+    const ref = String((sale && sale.ref) || '').trim().slice(0, 80);
+    const receiptRef = String((sale && sale.receiptRef) || '').trim().slice(0, 80);
+    const origin = String((sale && sale.origin) || '').trim().slice(0, 16);
+    const server = String((sale && sale.server) || '').trim().slice(0, 80);
+    const channel = String((sale && sale.channel) || '').trim().slice(0, 24);
+    const saleId = String((sale && (sale.saleId || sale.id)) || '').trim().slice(0, 80);
+    if (ref) entry.ref = ref;
+    if (receiptRef) entry.receiptRef = receiptRef;
+    if (origin) entry.origin = origin;
+    if (server) entry.server = server;
+    if (channel) entry.channel = channel;
+    if (saleId) entry.saleId = saleId;
+    /* Optional discount facts are server-validated and stay attached to the
+       immutable sale. Reject partial/code-shaped metadata at this second
+       boundary rather than teaching analytics to guess. */
+    if (sale && sale.discountAmountCents != null) {
+      const gross = Math.round(Number(sale.grossAmountCents));
+      const discount = Math.round(Number(sale.discountAmountCents));
+      const reason = String(sale.discountReason || '');
+      const actorId = String(sale.actorId || '').slice(0, 96);
+      if (Number.isFinite(gross) && gross > 0 && Number.isFinite(discount) && discount > 0 && discount <= gross
+        && /^(commercial|loyal-customer|kitchen-error|other)$/.test(reason)
+        && /^[A-Za-z0-9:_-]{1,96}$/.test(actorId) && !/^\d{4}$/.test(actorId)) {
+        entry.grossAmountCents = gross; entry.discountAmountCents = discount;
+        entry.discountReason = reason; entry.actorId = actorId;
+      }
+    }
     // Live-Link sales carry the feed rowid as `cursor` — persisted so the bridge
     // dedups against the store itself and can never double-count or drift below it.
     if (sale && sale.cursor) entry.cursor = sale.cursor;
@@ -7589,21 +8125,56 @@
        prétendant classer des produits. Absent ⇒ inconnu, jamais « panier vide ». */
     if (sale && Array.isArray(sale.lines) && sale.lines.length) {
       entry.lines = sale.lines.slice(0, 40).map(function (l) {
-        var o = { name: String((l && l.name) || 'Article').slice(0, 60), qty: Math.max(0, Math.round(+(l && l.qty) || 0)), total: Math.max(0, Math.round(+(l && l.total) || 0)) };
+        var qty = Math.round(Math.max(0, +(l && (l.qty ?? l.quantity)) || 0) * 1000) / 1000;
+        var total = Math.round(Math.max(0, +(l && l.total) || 0) * 100) / 100;
+        var o = { name: String((l && l.name) || 'Article').slice(0, 60), qty: qty, total: total };
         /* La catégorie, telle que la caisse la connaissait AU MOMENT de la vente.
            Sans elle, le rapport journalier d'une journée pas encore clôturée
            reclasse les ventes d'après le catalogue actuel — et se trompe dès
            qu'un rayon a été renommé depuis. Absente ⇒ inconnue, jamais inventée. */
         var c = String((l && (l.cat || l.category)) || '').slice(0, 40);
         if (c) o.cat = c;
+        var itemId = String((l && (l.itemId || l.id)) || '').slice(0, 80);
+        var variantId = String((l && l.variantId) || '').slice(0, 80);
+        var unit = String((l && l.unit) || '').slice(0, 24);
+        var kind = String((l && l.kind) || '').slice(0, 24);
+        var recipeVersionId = String((l && l.recipeVersionId) || '').slice(0, 80);
+        if (itemId) o.itemId = itemId;
+        if (variantId) o.variantId = variantId;
+        if (unit) o.unit = unit;
+        if (kind) o.kind = kind;
+        if (recipeVersionId) o.recipeVersionId = recipeVersionId;
+        var unitCost = +(l && l.unitCost);
+        if (Number.isFinite(unitCost) && unitCost >= 0) o.unitCost = Math.round(unitCost * 100) / 100;
+        if (Array.isArray(l && l.options)) o.options = l.options.slice(0, 16);
         return o;
       }).filter(function (l) { return l.qty > 0; });
       if (!entry.lines.length) delete entry.lines;
     }
     list.push(entry);
-    try { localStorage.setItem(SALES_KEY(id), JSON.stringify(list)); } catch (_) {}
+    salesWrite(id, list);
     salesSubs.forEach(fn => { try { fn(id); } catch (_) {} });
     return entry;
+  }
+  function salesAnnotate(id, cursor, meta) {
+    id = id || currentVenue;
+    cursor = Number(cursor) || 0;
+    if (!cursor) return false;
+    const list = salesList(id);
+    const entry = list.find((sale) => Number(sale && sale.cursor) === cursor);
+    if (!entry) return false;
+    let changed = false;
+    [['ref', 80], ['receiptRef', 80], ['origin', 16], ['server', 80], ['channel', 24], ['saleId', 80]].forEach(([key, limit]) => {
+      const value = String(meta && (meta[key] || (key === 'saleId' ? (meta.saleId || meta.id) : '')) || '').trim().slice(0, limit);
+      if (value && entry[key] !== value) { entry[key] = value; changed = true; }
+    });
+    if (!changed) return false;
+    /* Passe par salesWrite comme les autres écritures : la clé d'un locataire
+     * non résolu est vide, et `localStorage.setItem('', …)` rangerait la vente
+     * dans un seau partagé par tout le navigateur. */
+    if (!salesWrite(id, list)) return false;
+    salesSubs.forEach(fn => { try { fn(id); } catch (_) {} });
+    return true;
   }
   /* ═══ RETIRER UNE VENTE DU MAGASIN LOCAL ═══
    * Une vente de test sortie des livres par la console opérateur cesse d'être
@@ -7634,8 +8205,71 @@
     const kept = list.filter((s) => !(s && s.cursor && kill.has(Number(s.cursor))));
     const gone = list.length - kept.length;
     if (!gone) return 0;
-    try { localStorage.setItem(SALES_KEY(id), JSON.stringify(kept)); } catch (_) {}
+    salesWrite(id, kept);
     salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
+    return gone;
+  }
+  /* Repair devices contaminated before tenant isolation. After Live Link has
+   * replayed the complete authoritative feed, cursor-backed rows absent from
+   * that feed cannot belong to this store. Local/manual rows have no cursor and
+   * remain untouched. */
+  function salesRetainCursors(id, cursors) {
+    id = id || currentVenue;
+    const keep = new Set((cursors || []).map(Number).filter(Boolean));
+    const list = salesList(id);
+    const clean = list.filter((s) => !(s && s.cursor) || keep.has(Number(s.cursor)));
+    const gone = list.length - clean.length;
+    if (!gone) return 0;
+    salesWrite(id, clean);
+    salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
+    return gone;
+  }
+  /* Refunds are financial events, not sales. Keep them in a sibling store so
+     product rankings, units sold and cost coverage never count returned money
+     as another item sold, while revenue readers can subtract the same durable
+     events the till and God Mode see. */
+  const refundSubs = new Set();
+  function REFUNDS_KEY(id) {
+    const saleKey = SALES_KEY(id || currentVenue);
+    return saleKey ? saleKey.replace(/^kiwiSales:/, 'kiwiRefunds:') : '';
+  }
+  function refundsList(id) {
+    const key = REFUNDS_KEY(id || currentVenue); if (!key) return [];
+    try { const rows = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(rows) ? rows : []; }
+    catch (_) { return []; }
+  }
+  function refundsWrite(id, rows) {
+    const key = REFUNDS_KEY(id || currentVenue); if (!key) return false;
+    try { localStorage.setItem(key, JSON.stringify(rows)); return true; } catch (_) { return false; }
+  }
+  function refundsAdd(id, refund) {
+    id = id || currentVenue;
+    const rows = refundsList(id);
+    const cursor = Number(refund && refund.cursor) || 0;
+    const saleId = String((refund && (refund.saleId || refund.id)) || '').slice(0, 80);
+    if ((cursor && rows.some((r) => Number(r && r.cursor) === cursor))
+      || (saleId && rows.some((r) => String(r && r.saleId) === saleId))) return false;
+    const entry = {
+      ts: Number(refund && refund.ts) || Date.now(), amount: Math.abs(Number(refund && refund.amount) || 0),
+      method: String((refund && refund.method) || 'cash').slice(0, 16), kind: 'refund',
+      label: String((refund && refund.label) || 'Remboursement').slice(0, 80),
+      ref: String((refund && refund.ref) || '').slice(0, 80), cursor, saleId,
+    };
+    if (!(entry.amount > 0) || !refundsWrite(id, rows.concat(entry))) return false;
+    refundSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
+    salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
+    return true;
+  }
+  function refundsRetainCursors(id, cursors) {
+    id = id || currentVenue;
+    const keep = new Set((cursors || []).map(Number).filter(Boolean));
+    const rows = refundsList(id);
+    const clean = rows.filter((r) => !(r && r.cursor) || keep.has(Number(r.cursor)));
+    const gone = rows.length - clean.length;
+    if (gone && refundsWrite(id, clean)) {
+      refundSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
+      salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
+    }
     return gone;
   }
   /* Bornes FACULTATIVES. Sans elles le total reste ce qu'il a toujours été —
@@ -7647,120 +8281,35 @@
     const list = salesList(id);
     const lo = (from == null) ? -Infinity : from;
     const hi = (to == null) ? Infinity : to;
-    let revenue = 0, count = 0;
+    let revenue = 0, gross = 0, count = 0;
     list.forEach((x) => {
       const ts = +(x && x.ts) || 0;
       if (ts < lo || ts >= hi) return;
-      revenue += (x.amount || 0);
+      revenue += (x.amount || 0); gross += (x.amount || 0);
       count++;
     });
-    return { revenue, count, basket: count ? revenue / count : 0 };
-  }
-  /* Le pendant de miCustomHeroRec pour la bande sous la heatmap. Renvoie null
-   * seulement si la boutique n'a vraiment aucune vente — sinon on lit ses
-   * heures réelles. Annoncer « vos heures de pointe apparaîtront ici » au-dessus
-   * d'une heatmap qui affiche déjà trois barres, c'est apprendre au commerçant
-   * à ne plus croire la carte. */
-  function miCustomHeatmapRec(venueId) {
-    let list = [];
-    try { list = salesList(venueId) || []; } catch (_) { return null; }
-    if (!list.length) return null;
-    const t0 = (function () { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); })();
-    const today = list.filter((s) => (+s.ts || 0) >= t0);
-    const src = today.length ? today : list;
-    const isToday = today.length > 0;
-    const byHour = {};
-    let rev = 0;
-    src.forEach((s) => {
-      const amt = Math.max(0, +s.amount || 0);
-      if (!amt) return;
-      rev += amt;
-      const h = new Date(+s.ts || 0).getHours();
-      byHour[h] = (byHour[h] || 0) + amt;
+    refundsList(id).forEach((x) => {
+      const ts = +(x && x.ts) || 0;
+      if (ts >= lo && ts < hi) revenue -= Math.abs(x.amount || 0);
     });
-    const keys = Object.keys(byHour);
-    if (!keys.length || !rev) return null;
-    const peak = keys.reduce((b, k) => (byHour[k] > byHour[b] ? k : b), keys[0]);
-    const share = Math.round((byHour[peak] / rev) * 100);
-    const n = keys.length;
-    const num = (x) => String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    const W = {
-      fr: { title: `Votre pic : ${peak}h`,
-            obs: `${num(byHour[peak])} MAD encaissés à ${peak}h, soit ${share} % ${isToday ? 'de la journée' : 'du total'}, réparti sur ${n} heure${n > 1 ? 's' : ''} d'activité.`, cta: '' },
-      en: { title: `Your peak: ${peak}h`,
-            obs: `${num(byHour[peak])} MAD taken at ${peak}h — ${share} % of ${isToday ? 'the day' : 'the total'}, spread over ${n} active hour${n > 1 ? 's' : ''}.`, cta: '' },
-      ar: { title: `ذروتك: ${peak}h`,
-            obs: `${num(byHour[peak])} درهم عند الساعة ${peak}، أي ${share} % ${isToday ? 'من اليوم' : 'من المجموع'}، موزّعة على ${n} ساعة نشاط.`, cta: '' },
-    };
-    return W[fusionLang()] || W.fr;
+    return { revenue, count, basket: count ? gross / count : 0 };
   }
-
-  /* A real, data-derived hero recommendation for a merchant-created venue.
-   * Returns null when the store genuinely has no sales — the caller then keeps
-   * its welcome copy. Everything here is read off the merchant's OWN sales, so
-   * it can never contradict the hero figure sitting next to it. */
-  function miCustomHeroRec(venueId) {
-    let list = [];
-    try { list = salesList(venueId) || []; } catch (_) { return null; }
-    if (!list.length) return null;
-    const t0 = (function () { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); })();
-    const today = list.filter((s) => (+s.ts || 0) >= t0);
-    const src = today.length ? today : list;
-    const isToday = today.length > 0;
-
-    let rev = 0;
-    const byHour = {}, byMethod = {};
-    src.forEach((s) => {
-      const amt = Math.max(0, +s.amount || 0);
-      rev += amt;
-      const h = new Date(+s.ts || 0).getHours();
-      byHour[h] = (byHour[h] || 0) + amt;
-      const m = String((s && s.method) || 'card');
-      byMethod[m] = (byMethod[m] || 0) + amt;
-    });
-    if (!rev) return null;
-    const basket = Math.round(rev / src.length);
-    const top = (o) => Object.keys(o).reduce((b, k) => (o[k] > (o[b] === undefined ? -1 : o[b]) ? k : b), Object.keys(o)[0]);
-    const peakH = +top(byHour);
-    const topM = top(byMethod);
-    const share = Math.round((byMethod[topM] / rev) * 100);
-
-    const num = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    const M = {
-      fr: { cash: 'espèces', card: 'carte bancaire', tap: 'Kiwi Tap', qr: 'QR', wallet: 'wallet', link: 'lien de paiement' },
-      en: { cash: 'cash', card: 'bank card', tap: 'Kiwi Tap', qr: 'QR', wallet: 'wallet', link: 'payment link' },
-      ar: { cash: 'نقدًا', card: 'بطاقة بنكية', tap: 'Kiwi Tap', qr: 'QR', wallet: 'محفظة', link: 'رابط الدفع' },
-    };
-    const lang = fusionLang();
-    const mName = (M[lang] || M.fr)[topM] || (M[lang] || M.fr).card;
-    const n = src.length;
-
-    const W = {
-      fr: {
-        title: isToday ? 'Votre journée en cours' : 'Vos premières tendances',
-        obs: `${n} vente${n > 1 ? 's' : ''} ${isToday ? "aujourd'hui" : 'enregistrée' + (n > 1 ? 's' : '')} pour ${num(rev)} MAD, panier moyen ${num(basket)} MAD. Votre meilleure heure : ${peakH}h. ${share} % encaissé en ${mName}.`,
-        act: '→ Kiwi AI affine ses repères à chaque vente encaissée.',
-      },
-      en: {
-        title: isToday ? 'Your day so far' : 'Your first trends',
-        obs: `${n} sale${n > 1 ? 's' : ''} ${isToday ? 'today' : 'recorded'} for ${num(rev)} MAD, average basket ${num(basket)} MAD. Your best hour: ${peakH}:00. ${share}% taken by ${mName}.`,
-        act: '→ Kiwi AI sharpens its read with every sale you take.',
-      },
-      ar: {
-        title: isToday ? 'يومك حتى الآن' : 'اتجاهاتك الأولى',
-        obs: `${n} عملية بيع ${isToday ? 'اليوم' : 'مسجّلة'} بقيمة ${num(rev)} درهم, متوسط السلة ${num(basket)} درهم. أفضل ساعة: ${peakH}. ${share} % عبر ${mName}.`,
-        act: '→ يزداد تحليل Kiwi AI دقة مع كل عملية بيع.',
-      },
-    };
-    return W[lang] || W.fr;
-  }
+  /* Live dashboard recommendations are owned by KiwiDateRange. Keeping a
+   * second calculator here previously let the insight fall back to all-time
+   * sales while the KPI band showed today. */
 
   window.KiwiSales = {
     add: salesAdd,
+    annotate: salesAnnotate,
     list: salesList,
     remove: salesRemove,
+    retainCursors: salesRetainCursors,
     totals: salesTotals,
     subscribe: fn => { salesSubs.add(fn); return () => salesSubs.delete(fn); },
+  };
+  window.KiwiRefunds = {
+    add: refundsAdd, list: refundsList, retainCursors: refundsRetainCursors,
+    subscribe: fn => { refundSubs.add(fn); return () => refundSubs.delete(fn); },
   };
   // Keep the sidebar "Commandes" badge in lockstep with recorded sales.
   salesSubs.add(() => renderSidebarCounts());
@@ -8484,9 +9033,15 @@
      * innerHTML reset that follows. */
     miRecSearchHook,
     miRecSortHook,
+    showMenu: miShowPage,
+    refreshMenu: () => {
+      if (document.body.classList.contains('page-menu')) renderMenu();
+    },
     getVenue,
     setVenue,
-    getPlan: () => currentPlan,
+    /* Demo fixtures keep their Ultra showcase. Real stores use the plan D1
+     * returned through KiwiConfig; an unresolved/offline config is not Ultra. */
+    getPlan: () => isRealMerchant() ? (window.KiwiConfig?.plan || '') : currentPlan,
     subscribe,
     getVenueData,
     getCurrentVenueData,
@@ -8513,8 +9068,8 @@
     getSubtypeProfile: sid => SUBTYPE_PROFILES[sid] || null,
     getVocab,
     /* Stock & approvisionnement page data — see assets/stock.js */
-    getInventory: id => INVENTORY[id || currentVenue] || [],
-    getSuppliers: () => isCustom(currentVenue) ? [] : SUPPLIERS,
+    getInventory: id => (isRealMerchant() && !isCustom(id || currentVenue)) ? [] : (INVENTORY[id || currentVenue] || []),
+    getSuppliers: () => (isCustom(currentVenue) || isRealMerchant()) ? [] : SUPPLIERS,
     /* Kitchen station state — used by the KDS to compute fire schedules
      * so multi-station tickets finish together (avgPrepMin + sync flag,
      * configured from Menu › Stations cuisine). */
@@ -8529,7 +9084,7 @@
          * exist stops trusting every other number on the page. So: once there ARE
          * sales, read them and say something true; only a genuinely empty store
          * gets the welcome copy. */
-        const real = miCustomHeroRec(v);
+        const real = window.KiwiDateRange?.insights?.hero?.();
         if (real) return real;
         const W = {
           /* This used to promise margins. It cannot: a margin needs the cost of
@@ -8555,7 +9110,7 @@
        * compute anything, and handing them a stranger's recommendation is the
        * worst possible answer to that. Say nothing instead — renderHeroAi()
        * blanks the card. */
-      if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return null;
+      if (isRealMerchant()) return null;
       const L = HERO_AI_REC[fusionLang()] || HERO_AI_REC.fr; return L[v] || L.cafeAtlas;
     },
     getHeatmapAiRec: id => {
@@ -8563,7 +9118,7 @@
       if (isCustom(v)) {
         // Des ventes existent ⇒ on dit quelque chose de vrai. Seule une boutique
         // réellement vide garde le message d'accueil.
-        const real = miCustomHeatmapRec(v);
+        const real = window.KiwiDateRange?.insights?.heatmap?.();
         if (real) return real;
         const W = {
           /* "Kiwi AI" on what is an hour-by-hour count of the merchant's own
@@ -8579,13 +9134,13 @@
       }
       // Same rule as getHeroAiRec: the canned copy is Café Atlas's, so a real
       // session gets nothing rather than somebody else's peak hours.
-      if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return null;
+      if (isRealMerchant()) return null;
       const L = HEATMAP_AI_REC[fusionLang()] || HEATMAP_AI_REC.fr; return L[v] || L.cafeAtlas;
     },
     // Custom / scoped venues have no benchmark cohort — return empty so callers
     // show a neutral label (dateRange falls back), never Café Atlas's figures.
-    getMixCmiSavings: id => { const v = id || currentVenue; if (isCustom(v)) return ''; const L = MIX_CMI_SAVINGS[fusionLang()] || MIX_CMI_SAVINGS.fr; return L[v] || L.cafeAtlas; },
-    getBenchLabels: id => { const v = id || currentVenue; if (isCustom(v)) return undefined; const L = BENCH_LABELS[fusionLang()] || BENCH_LABELS.fr; return L[v] || L.cafeAtlas; },
+    getMixCmiSavings: id => { const v = id || currentVenue; if (isCustom(v) || isRealMerchant()) return ''; const L = MIX_CMI_SAVINGS[fusionLang()] || MIX_CMI_SAVINGS.fr; return L[v] || L.cafeAtlas; },
+    getBenchLabels: id => { const v = id || currentVenue; if (isCustom(v) || isRealMerchant()) return undefined; const L = BENCH_LABELS[fusionLang()] || BENCH_LABELS.fr; return L[v] || L.cafeAtlas; },
     isFusion: () => currentVenue === 'fusion',
     isCustom,
     createVenue,
@@ -8595,6 +9150,9 @@
      * cinq modules le faisaient, donc cinq occasions de changer d'identité au
      * prochain renommage. */
     slugOf,
+    tenantOf: salesTenant,
+    salesTenant,
+    TRANSIENT_IDS,
     enterFusion,
     exitFusion,
     REAL_VENUES,
@@ -8603,6 +9161,6 @@
     /* Menu items for the given venue (or current). Used by the live feed to
      * generate realistic order contents — items, qty, unit prices — that
      * match the venue's actual carte. */
-    getMenuItems: (venue) => miItems(venue || currentVenue),
+    getMenuItems: (venue) => (isRealMerchant() && !isCustom(venue || currentVenue)) ? [] : miItems(venue || currentVenue),
   };
 })();

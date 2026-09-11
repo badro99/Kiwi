@@ -35,6 +35,8 @@ body=$("$GH" api -X POST "repos/${FORK}/merge-upstream" -f branch=main 2>&1)
 status=$?
 
 if [ $status -eq 0 ]; then
+  # La synchro repasse : on réarme l'alerte pour la prochaine divergence.
+  rm -f "$HOME/.kiwi/.diverged-at"
   case "$body" in
     *fast-forward*)
       sha=$("$GH" api "repos/${FORK}/commits/main" --jq '.sha' 2>/dev/null | cut -c1-7)
@@ -53,7 +55,14 @@ fi
 if printf '%s' "$body" | grep -qi 'conflict\|diverged\|409'; then
   log "DIVERGENCE — le fork a des commits absents de badro99. Intervention manuelle requise."
   log "  $body"
-  osascript -e 'display notification "Le fork a divergé de badro99. La production ne se met plus à jour toute seule." with title "Kiwi · synchro Cloudflare bloquée"' 2>/dev/null
+  # Une seule notification par divergence, pas une toutes les deux minutes.
+  # Le drapeau porte le SHA du fork : si la situation change, on ré-alerte.
+  head=$("$GH" api "repos/${FORK}/commits/main" --jq '.sha' 2>/dev/null)
+  flag="$HOME/.kiwi/.diverged-at"
+  if [ "$(cat "$flag" 2>/dev/null)" != "$head" ]; then
+    printf '%s' "$head" > "$flag"
+    osascript -e 'display notification "Le fork a divergé de badro99. La production ne se met plus à jour toute seule." with title "Kiwi · synchro Cloudflare bloquée"' 2>/dev/null
+  fi
 else
   log "ÉCHEC — $body"
 fi

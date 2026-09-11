@@ -9,29 +9,50 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const CAISSE = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
 const INBOX = fs.readFileSync(path.join(ROOT, 'assets/orderpro-inbox.js'), 'utf8');
+const LIVE = fs.readFileSync(path.join(ROOT, 'assets/live-link.js'), 'utf8');
 let failed = 0;
 function ok(label, yes) {
   if (yes) console.log('  ✓ ' + label);
   else { failed++; console.log('  ✗ ' + label); }
 }
 
-const settle = CAISSE.slice(
-  CAISSE.indexOf('function settleVrapPayment()'),
-  CAISSE.indexOf('function openVrapOrder(', CAISSE.indexOf('function settleVrapPayment()'))
+const finalize = CAISSE.slice(
+  CAISSE.indexOf('function finalizeTender('),
+  CAISSE.indexOf('function updateRendu(', CAISSE.indexOf('function finalizeTender('))
 );
-ok('payer un nouveau retrait crée un bon avant clearCart',
-  settle.indexOf('kdsOrders.push(order)') >= 0 &&
-  settle.indexOf('kdsOrders.push(order)') < settle.lastIndexOf('clearCart()'));
-ok('le paiement imprime le bon cuisine', /printKitchenTickets\(order, items\)/.test(settle));
-ok('le paiement relaie le bon vers le KDS', /relayToKitchen\(order\)/.test(settle));
-ok('le bon payé reste marqué payé', /paid:\s*true/.test(settle));
+const dispatch = CAISSE.slice(
+  CAISSE.indexOf('function createTakeawayKitchenOrder('),
+  CAISSE.indexOf('function serverNameFor(', CAISSE.indexOf('function createTakeawayKitchenOrder('))
+);
+ok('payer un retrait envoie le bon avant d’enregistrer la vente',
+  finalize.indexOf('dispatchUnsentKitchenBeforePayment()') >= 0 &&
+  finalize.indexOf('dispatchUnsentKitchenBeforePayment()') < finalize.indexOf('recordSale('));
+ok('le paiement imprime le bon cuisine', /printKitchenTickets\(order, items\)/.test(dispatch));
+ok('le paiement relaie le bon vers le KDS', /relayToKitchen\(order\)/.test(dispatch));
+ok('un retrait OrderPro payé sort de held avec l’état paid',
+  /dispatchHeldTakeaway\(existing, true, true\)/.test(dispatch));
 
 ok('une arrivée OrderPro pending ne déclenche aucune impression',
   !/status === ['"]pending['"][\s\S]{0,300}printKitchenTickets/.test(CAISSE));
 ok('seul un accepted réussi appelle le crochet de confirmation',
   /if \(j && j\.ok\)[\s\S]{0,500}status === 'accepted'[\s\S]{0,300}confirmAccepted/.test(INBOX));
-ok('le crochet imprime une seule fois',
-  /if \(!ticket \|\| ticket\.kitchenPrinted\) return;[\s\S]{0,120}ticket\.kitchenPrinted = true;[\s\S]{0,120}printKitchenTickets/.test(CAISSE));
-
+ok('le crochet imprime localement avec l’identifiant OrderPro dédupliqué',
+  /confirmAccepted\(order\)[\s\S]{0,500}localKitchenAction: true/.test(CAISSE) &&
+  /sourceId: o\.id/.test(CAISSE));
+ok('envoyer en cuisine et encaisser restent deux gestes distincts sur OrderPro',
+  /data-kop-acc/.test(INBOX) && /data-kop-pay/.test(INBOX) &&
+  /data-vrap-send/.test(CAISSE));
+ok('le premier encaissement OrderPro possède une clé comptable stable',
+  /orderProSaleId[\s\S]{0,500}journal\.find\(row => row && row\.id === orderProSaleId\)/.test(CAISSE));
+ok('le statut payé est persisté après la confirmation, même si le modal est fermé',
+  /function settleVrapPayment\(\)[\s\S]{0,1800}opPush\(o, remoteStatus, \{ paid: true \}\)[\s\S]{0,400}persistShift\(\)/.test(CAISSE));
+ok('la vente cloud transporte l’identifiant OrderPro sans dépendre du libellé',
+  LIVE.includes('if (entry.orderId) body.orderId ='));
+ok('le reçu imprime le même numéro que la caisse et la cuisine',
+  /ref: vrapOrder \? ticketNo\(vrapOrder\)/.test(CAISSE));
+ok('une commande OrderPro non payée peut être annulée depuis son ticket',
+  /function cancelOrderProTakeaway\(o,\s*authorizedWho\s*=\s*null\)[\s\S]{0,900}opPush\(o,\s*'rejected'/.test(CAISSE)
+    && /data-vrap-cancel/.test(CAISSE)
+    && /mode === 'vrap'[\s\S]{0,1800}cancelOrderProTakeaway\(editingOrder,\s*who\)/.test(CAISSE));
 if (failed) process.exit(1);
 console.log('\n  Caisse takeout + OrderPro confirmation boundaries verified.\n');

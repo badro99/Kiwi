@@ -1,0 +1,64 @@
+# Cloudflare Pages headers.
+#
+# 1. The Open Graph images.
+#
+#    Next's metadata route emits `fr/opengraph-image` — a real 1200x630 PNG with
+#    NO file extension. Static hosts derive Content-Type from the extension, so
+#    without this rule the file goes out as application/octet-stream and every
+#    scraper that fetches it (WhatsApp, Facebook, iMessage, Slack, Twitter)
+#    silently drops the preview image. The link still shares; it just shares
+#    naked. That matters more than usual here because the site's own demo CTA
+#    is a wa.me link, so WhatsApp is the channel the page is most often pasted
+#    into.
+#
+#    Kept as three explicit paths rather than a wildcard: `/*/opengraph-image`
+#    would also match any future locale, which is the intent, but Pages matches
+#    a bare `*` greedily across slashes and the explicit form is unambiguous.
+
+/fr/opengraph-image
+  Content-Type: image/png
+/en/opengraph-image
+  Content-Type: image/png
+/ar/opengraph-image
+  Content-Type: image/png
+
+# 2. Next's fingerprinted bundles.
+#
+#    Everything under `_next/static` carries a content hash in its filename, so
+#    a given URL's bytes never change. Year-long immutable caching is the
+#    contract that filename is making; without it the CDN revalidates 2 MB of
+#    unchanged JavaScript on every visit.
+
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# 3. The app's own assets.
+#
+#    Sans règle, Cloudflare Pages sert `/assets/*` en
+#    `max-age=14400, must-revalidate`. Passé quatre heures, `must-revalidate`
+#    interdit au navigateur de réutiliser un fichier sans avoir redemandé au
+#    serveur — soit ~130 allers-retours bloquants avant que le tableau de bord
+#    démarre, plusieurs fois par jour, pour des octets qui n'ont pas bougé.
+#
+#    Pas d'`immutable` ici, contrairement à `_next/static` : 63 des fichiers
+#    que charge `dashboard.html` n'ont PAS d'estampille `?v=` (`auth-guard.js`,
+#    `kiwi-env.js`, `theme.css`…). Les figer un an, c'est se priver du moyen de
+#    corriger un bug d'authentification chez un client déjà venu.
+#
+#    `stale-while-revalidate` donne les deux : la copie en cache part
+#    immédiatement, sans attendre le réseau, et la mise à jour se fait derrière.
+#    Une estampille qui bouge reste servie tout de suite, puisque l'URL change.
+/assets/*
+  Cache-Control: public, max-age=3600, stale-while-revalidate=604800
+
+# 4. Link-only internal ticket board.
+#
+# The board is intentionally reachable without the account gate, but it must
+# not be indexed or retained by browsers/proxies. Ticket JSON and images also
+# send no-store from their Functions handlers.
+/tickets
+  Cache-Control: private, no-store
+  X-Robots-Tag: noindex, nofollow, noarchive
+/tickets.html
+  Cache-Control: private, no-store
+  X-Robots-Tag: noindex, nofollow, noarchive

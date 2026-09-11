@@ -1,5 +1,7 @@
 -- Kiwi Tickets · durable problem workflow + temporary image metadata.
 -- Apply to production once:
+--   node tools/d1-schema.mjs --apply --yes
+-- Direct Wrangler fallback:
 --   npx wrangler d1 execute kiwi-sales --remote \
 --     --file=migrations/2026-09-09-kiwi-tickets.sql
 

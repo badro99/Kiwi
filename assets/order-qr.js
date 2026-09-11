@@ -27,30 +27,30 @@
       title: 'QR de commande', sub: 'Le client scanne, ouvre votre carte et commande depuis sa table.',
       venueH: 'QR de l\'établissement', venueP: 'Une seule affiche à l\'entrée ou au comptoir. Le client choisit sa table sur la page.',
       copy: 'Copier le lien', copied: 'Lien copié', dl: 'Télécharger (PNG)', print: 'Imprimer',
-      tablesH: 'Une affiche par table', tablesP: 'Génère un QR par table — la page s\'ouvre directement sur le bon numéro.',
+      tablesH: 'Une affiche par table', tablesP: 'Génère un QR par table · la page s\'ouvre directement sur le bon numéro.',
       count: 'Nombre de tables', gen: 'Générer', printSheet: 'Imprimer la planche',
       table: 'Table', scanToOrder: 'Scannez pour commander', dlOne: 'Télécharger',
-      demoNote: 'Aperçu démo — en ligne, le QR portera l\'adresse de votre établissement.',
+      demoNote: 'Aperçu démo · en ligne, le QR portera l\'adresse de votre établissement.',
       noPrint: 'Impression bloquée par le navigateur. Autorisez les fenêtres pop-up.',
     },
     en: {
       title: 'Order QR', sub: 'The guest scans, opens your menu and orders from their table.',
       venueH: 'Venue QR', venueP: 'One poster at the door or counter. The guest picks their table on the page.',
       copy: 'Copy link', copied: 'Link copied', dl: 'Download (PNG)', print: 'Print',
-      tablesH: 'One poster per table', tablesP: 'Generate one QR per table — the page opens straight on the right number.',
+      tablesH: 'One poster per table', tablesP: 'Generate one QR per table · the page opens straight on the right number.',
       count: 'Number of tables', gen: 'Generate', printSheet: 'Print the sheet',
       table: 'Table', scanToOrder: 'Scan to order', dlOne: 'Download',
-      demoNote: 'Demo preview — online, the QR will carry your venue\'s address.',
+      demoNote: 'Demo preview · online, the QR will carry your venue\'s address.',
       noPrint: 'Printing blocked by the browser. Allow pop-ups.',
     },
     ar: {
       title: 'رمز الطلب', sub: 'الزبون يمسح الرمز، يفتح قائمتك ويطلب من طاولته.',
       venueH: 'رمز المحل', venueP: 'ملصق واحد عند الباب أو الكاونتر. يختار الزبون طاولته في الصفحة.',
       copy: 'نسخ الرابط', copied: 'تم نسخ الرابط', dl: 'تنزيل (PNG)', print: 'طباعة',
-      tablesH: 'ملصق لكل طاولة', tablesP: 'ولّد رمزاً لكل طاولة — تُفتح الصفحة مباشرة على الرقم الصحيح.',
+      tablesH: 'ملصق لكل طاولة', tablesP: 'ولّد رمزاً لكل طاولة · تُفتح الصفحة مباشرة على الرقم الصحيح.',
       count: 'عدد الطاولات', gen: 'توليد', printSheet: 'طباعة اللوحة',
       table: 'طاولة', scanToOrder: 'امسح للطلب', dlOne: 'تنزيل',
-      demoNote: 'معاينة تجريبية — على الإنترنت سيحمل الرمز عنوان محلك.',
+      demoNote: 'معاينة تجريبية · على الإنترنت سيحمل الرمز عنوان محلك.',
       noPrint: 'الطباعة محظورة من المتصفح. اسمح بالنوافذ المنبثقة.',
     },
   };
@@ -128,22 +128,23 @@
         ${c.label ? `<div class="tn">${esc(c.label)}</div>` : ''}
         <div class="q">${qrSvg(c.url, 260)}</div>
         <div class="cap">${esc(t.scanToOrder)}</div>
-        <div class="kiwi">kiwi<i></i></div>
+        <div class="kiwi"><img src="assets/kiwi-newlogo.svg" alt="Kiwi"></div>
       </div>`).join('');
-    win.document.write(`<!doctype html><html lang="${lang()}"><head><meta charset="utf-8"><title>${esc(b.name)} · QR</title>
+    win.document.write(`<!doctype html><html lang="${lang()}"><head><meta charset="utf-8"><base href="${esc(document.baseURI)}"><title>${esc(b.name)} · QR</title>
       <style>
         @page { size: A4; margin: 12mm; }
         * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        body { margin: 0; font-family: -apple-system, "Inter Tight", "Segoe UI", system-ui, sans-serif; color: #0A0F0D; }
+        html, body { color-scheme: light; background: #fff; color: #0A0F0D; }
+        body { margin: 0; font-family: -apple-system, "Inter Tight", "Segoe UI", system-ui, sans-serif; }
         .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10mm; }
-        .tent { border: 1.5px dashed #cbd3cd; border-radius: 14px; padding: 10mm 6mm; text-align: center; page-break-inside: avoid; }
+        .tent { border: 1.5px dashed #cbd3cd; border-radius: 14px; padding: 10mm 6mm; text-align: center; page-break-inside: avoid; background: #fff; color: #0A0F0D; }
         .v { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
         .tn { font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 13px; color: #0B6E4F; margin-top: 3px; }
         .q { margin: 8px auto 6px; width: 200px; height: 200px; }
         .q svg { width: 100%; height: 100%; }
         .cap { font-size: 12px; color: #4A4A4A; }
-        .kiwi { margin-top: 8px; font-weight: 700; font-size: 15px; letter-spacing: -0.05em; color: #0B6E4F; }
-        .kiwi i { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #7DF2B0; margin-left: 2px; vertical-align: 1px; }
+        .kiwi { display: flex; justify-content: center; margin-top: 8px; }
+        .kiwi img { display: block; width: auto; height: 20px; }
       </style></head>
       <body><div class="grid">${tiles}</div>
       <script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script>

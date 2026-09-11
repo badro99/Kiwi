@@ -244,6 +244,7 @@
   /* ───────────────────────── état ───────────────────────── */
   let saleSeq = 2480;
   let queuedSales = [];        /* ventes de garde déjà enregistrées ce soir */
+  let insurerReceivables = []; /* tiers payant réellement dû, jamais confondu avec la recette encaissée */
   const state = {
     view: 'vente',
     mode: 'libre',             /* libre | ordonnance */
@@ -268,7 +269,47 @@
   function freshTicket() {
     state.ticket = { num: posRef(`V-${saleSeq}`), lines: [], patient: null, medecin: null };
   }
+
+  const pharmacieOps = window.KiwiVerticalState && window.KiwiVerticalState.register({
+    vertical: 'pharmacie',
+    snapshot() {
+      return {
+        stock: STOCK,
+        lots: LOTS,
+        medecins: MEDECINS,
+        patients: PATIENTS,
+        saleSeq,
+        queuedSales,
+        insurerReceivables,
+        gross: state.gross,
+        night: state.night,
+        ticket: state.ticket,
+      };
+    },
+    restore(saved) {
+      if (!saved || typeof saved !== 'object') return;
+      if (saved.stock && typeof saved.stock === 'object') {
+        Object.keys(STOCK).forEach((id) => delete STOCK[id]);
+        Object.assign(STOCK, saved.stock);
+      }
+      if (Array.isArray(saved.lots)) LOTS.splice(0, LOTS.length, ...saved.lots);
+      LOTS.forEach((lot) => { if (lot.exp) lot.exp = new Date(lot.exp); });
+      if (Array.isArray(saved.medecins)) MEDECINS.splice(0, MEDECINS.length, ...saved.medecins);
+      Object.keys(MED).forEach((id) => delete MED[id]);
+      MEDECINS.forEach((doctor) => { MED[doctor.id] = doctor; });
+      if (Array.isArray(saved.patients)) PATIENTS.splice(0, PATIENTS.length, ...saved.patients);
+      Object.keys(PAT).forEach((id) => delete PAT[id]);
+      PATIENTS.forEach((patient) => { PAT[patient.id] = patient; });
+      if (Number.isFinite(saved.saleSeq)) saleSeq = saved.saleSeq;
+      if (Array.isArray(saved.queuedSales)) queuedSales = saved.queuedSales;
+      if (Array.isArray(saved.insurerReceivables)) insurerReceivables = saved.insurerReceivables;
+      if (saved.gross && typeof saved.gross === 'object') state.gross = saved.gross;
+      if (typeof saved.night === 'boolean') state.night = saved.night;
+      if (saved.ticket) state.ticket = saved.ticket;
+    },
+  });
   function queueIfOffline(label) {
+    if (pharmacieOps) pharmacieOps.save(label);
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -292,9 +333,21 @@
     try { return (window.KiwiPosSale && window.KiwiPosSale.isReal()) ? window.KiwiPosSale.stamp(n) : n; }
     catch (_) { return n; }
   }
-  function postDay(total, method, label, ref) {
+  function saleLines(t) {
+    return t.lines.map((ln) => {
+      const it = ITEMS[ln.itemId];
+      const split = lineSplit(ln);
+      const lot = LOTS.find((x) => x.id === ln.itemId);
+      return {
+        itemId: it.id, variantId: lot ? lot.lot : '', name: it.label,
+        category: it.cat, qty: ln.qty, unit: it.unit || 'piece', kind: 'product',
+        total: split.pat,
+      };
+    });
+  }
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('pharmacie', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('pharmacie', { total, method, label, ref, lines });
     } catch (_) {}
   }
   /* Le numéro de vente repart AU-DELÀ du dernier encaissé aujourd'hui : sans ça
@@ -306,10 +359,11 @@
   let root = null;
 
   function build(rootEl) {
+    if (pharmacieOps) pharmacieOps.hydrate();
     root = rootEl;
     root.innerHTML = `
       <aside class="ph-rail">
-        <div class="ph-brand">kiwi<i></i></div>
+        <div class="ph-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="ph-venue">
           <div class="ph-venue-name">${esc(pvName('Pharmacie Ibn Batouta') || 'Pharmacie')}
             <span class="ph-venue-night"><i data-lucide="moon"></i>Garde</span>
@@ -612,9 +666,12 @@
       </div>
       <div class="ph-tk-lines" id="ph-tk-lines">
         ${t.lines.length ? t.lines.map((ln, i) => lineRow(ln, i)).join('') : `
-          <div class="ph-tk-empty">
-            <i data-lucide="pill"></i>
-            <div>Aucun article.<br>Cherchez un médicament et touchez sa vignette pour l'ajouter.</div>
+          <div class="ph-tk-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">
+            <div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:4px;">
+              <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
+            </div>
+            <div style="font-weight:600; font-size:14px; color:var(--ink);">Aucun article.</div>
+            <div style="font-size:12.5px; color:var(--n-500); line-height:1.45;">Cherchez un médicament et touchez sa vignette pour l'ajouter.</div>
           </div>`}
       </div>
       <div class="ph-tk-foot">
@@ -825,7 +882,7 @@
           <div class="ph-pt-form">
             <input class="ph-in" id="ph-pt-name" placeholder="Nom et prénom" value="${esc(/^[\\d\\s.+-]*$/.test(q || '') ? '' : (q || ''))}" />
             <div class="ph-in-row">
-              <input class="ph-in" id="ph-pt-tel" inputmode="tel" placeholder="Téléphone" value="${esc(/^[\\d\\s.+-]+$/.test(q || '') ? q : '')}" />
+              <input class="ph-in" id="ph-pt-tel" inputmode="tel" autocomplete="tel" placeholder="06… / +33…" value="${esc(/^[\\d\\s.+-]+$/.test(q || '') ? q : '')}" />
               <select class="ph-select" id="ph-pt-mut">
                 ${MUT_LIST.map((id) => `<option value="${id}">${esc(MUTUELLES[id].label)}</option>`).join('')}
               </select>
@@ -942,7 +999,10 @@
     /* allergie croisée simple : si un antibiotique pénicilline + allergie connue */
     if (t.patient && (t.patient.allergies || []).some((a) => /pénicilline|penicilline/i.test(a))) {
       const pen = t.lines.find((l) => /amoxicilline|augmentin|clamoxyl/i.test(ITEMS[l.itemId].dci + ITEMS[l.itemId].label));
-      if (pen) toast(`Attention, ${t.patient.name} : allergie Pénicilline notée au dossier`, 3200);
+      if (pen) {
+        toast(`Vente bloquée, ${t.patient.name} a une allergie Pénicilline au dossier`, 4200);
+        return;
+      }
     }
     openReceipt(t);
   }
@@ -950,8 +1010,8 @@
   // Real store identity from the 6-digit pairing / hosted session. A real pharmacy
   // prints ITS OWN name + city (no demo "Pharmacie Ibn Batouta" / Bd Pasteur / the
   // demo pharmacist). Local demo (unpaired localhost) unchanged.
-  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
-  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvPaired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
   function pvName(demo) { const p = pvPaired(); return (p && p.name) || (pvReal() ? '' : demo); }
   function pvCity(demo) { const p = pvPaired(); return (p && p.location) || (pvReal() ? '' : demo); }
 
@@ -1000,7 +1060,22 @@
     openVeil('#ph-receipt-veil');
     icons();
     $$('[data-ph-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ph-receipt-veil'); });
-    $('#ph-rc-print', el).onclick = () => toast('Ticket envoyé à l’imprimante thermique (80 mm)');
+    $('#ph-rc-print', el).onclick = () => {
+      const K = window.KiwiReceipt;
+      if (!K || !K.build || !K.print) { toast('Impression indisponible sur cet appareil'); return; }
+      const gross = ticketSplit().gross;
+      const doc = K.build({
+        ref: t.num,
+        ts: Date.now(),
+        lines: t.lines.map((ln) => ({ qty: ln.qty, name: ITEMS[ln.itemId].label, total: ITEMS[ln.itemId].price * ln.qty })),
+        subtotal: gross,
+        total: gross,
+        customer: t.patient ? { name: t.patient.name, phone: t.patient.phone } : null,
+        pay: [],
+      });
+      toast('Impression du reçu…');
+      Promise.resolve(K.print(doc)).then((result) => toast(result && result.ok ? 'Reçu imprimé' : 'Impression non confirmée'), () => toast('Impression échouée'));
+    };
     $('#ph-rc-pay', el).onclick = () => { closeVeil('#ph-receipt-veil'); openPay(t); };
   }
 
@@ -1015,6 +1090,16 @@
       /* décrémenter le stock, consigner, repartir sur un ticket vierge */
       t.lines.forEach((ln) => { if (STOCK[ln.itemId] != null) STOCK[ln.itemId] = Math.max(0, STOCK[ln.itemId] - ln.qty); });
       if (split.mut && t.patient) {
+        insurerReceivables.unshift({
+          id: `${t.num}-${t.patient.id}`,
+          ticket: t.num,
+          patientId: t.patient.id,
+          insurer: t.patient.mut,
+          affiliation: t.patient.aff || '',
+          amount: split.mut,
+          status: 'a-facturer',
+          createdAt: Date.now(),
+        });
         toast(`Part mutuelle ${fmtMAD(split.mut)} · à facturer ${m.label}`, 2600);
       }
       if (state.night) {
@@ -1023,7 +1108,7 @@
       /* Seule la part patient rentre au comptoir. La part mutuelle est facturée
          au tiers payant plus tard : la journaliser ici gonflerait la recette du
          jour d'un encaissement qui n'a pas eu lieu. */
-      postDay(due, method, tkLabel(t), t.num);
+      postDay(due, method, tkLabel(t), t.num, saleLines(t));
       saleSeq++;
       const wasNum = t.num;
       freshTicket();
@@ -1080,7 +1165,7 @@
         <p class="modal-subtle">${t.num}${split.mut ? ' · part patient' : ''}</p>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="ph-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="ph-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="ph-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${Math.round(due)}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -1125,13 +1210,13 @@
       setTimeout(() => {
         const disc = $('#ph-reader-disc', el);
         if (!disc || !el.closest('.modal-veil').classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#ph-reader-status', el).textContent = 'Khlass! Paiement confirmé sur le lecteur';
-        $('#ph-reader-status', el).classList.add('is-success');
-        icons();
-        setTimeout(() => finalize('carte', 0), 900);
+        const status = $('#ph-reader-status', el);
+        const hw = window.KiwiHardware;
+        if (!hw || !hw.authorizeCard) { disc.classList.remove('is-pulsing'); status.textContent = 'Paiement non confirmé · lecteur indisponible'; return; }
+        hw.authorizeCard(due, disc, status).then((result) => {
+          icons();
+          if (result && result.approved) setTimeout(() => finalize('carte', 0), 900);
+        });
       }, 1900);
     };
 
@@ -1215,8 +1300,8 @@
         <div class="ph-ptd-sec-lbl"><i data-lucide="shield-check"></i>Couverture</div>
         <div class="ph-ptd-grid">
           <div class="ph-ptd-field"><div class="k">Mutuelle</div><div class="v">${esc(m.label)}</div></div>
-          <div class="ph-ptd-field"><div class="k">N° d'affiliation</div><div class="v mono">${esc(p.aff || '—')}</div></div>
-          <div class="ph-ptd-field"><div class="k">Taux de prise en charge</div><div class="v">${p.mut === 'sans' ? '—' : Math.round(m.rate * 100) + ' %'}</div></div>
+          <div class="ph-ptd-field"><div class="k">N° d'affiliation</div><div class="v mono">${esc(p.aff || '·')}</div></div>
+          <div class="ph-ptd-field"><div class="k">Taux de prise en charge</div><div class="v">${p.mut === 'sans' ? '·' : Math.round(m.rate * 100) + ' %'}</div></div>
           <div class="ph-ptd-field"><div class="k">Solde en attente</div><div class="v" style="${p.due ? 'color:var(--danger-mute);' : ''}">${p.due ? fmtNum(p.due) + ' MAD' : 'à jour'}</div></div>
         </div>
       </div>
@@ -1323,7 +1408,7 @@
                 return `<div class="ph-degarde-row ${ph.me ? 'is-me' : ''}">
                 <span class="ic"><i data-lucide="cross"></i></span>
                 <span class="l"><b>${esc(nm)} ${ph.me ? '<span class="ph-me-chip">VOUS</span>' : ''}</b><span>${esc(zn)}</span></span>
-                <span class="zone">${ph.me ? 'nuit' : '—'}</span>
+                <span class="zone">${ph.me ? 'nuit' : '·'}</span>
               </div>`;
               }).join('')}
             </div>
@@ -1398,7 +1483,7 @@
               </div>`;
             }).join('')}
             <button class="ph-gross-send" id="ph-gross-send" ${grossCount ? '' : 'disabled'}>
-              <i data-lucide="send"></i>Envoyer la commande${grossCount ? ` · ${grossCount} réf.` : ''}
+              <i data-lucide="file-plus-2"></i>Préparer le bon${grossCount ? ` · ${grossCount} réf.` : ''}
             </button>
           </div>
         </div>
@@ -1418,9 +1503,23 @@
       const refs = Object.entries(state.gross).filter(([, q]) => q > 0);
       if (!refs.length) return;
       const units = refs.reduce((s, [, q]) => s + q, 0);
-      refs.forEach(([id]) => { state.gross[id] = 0; });
-      queueIfOffline('Commande grossiste');
-      toast(`Commande envoyée à CoopharMa, ${refs.length} réf. · ${units} unités · livraison J+1`, 2800);
+      const lines = refs.map(([id, qty]) => ({ itemId: id, name: ITEMS[id].label, qty, unit: ITEMS[id].unit || 'boîte', unitCost: 0 }));
+      const P = window.KiwiProcurement;
+      let message = ['Bonjour,', 'Demande de disponibilité pharmacie', ...lines.map((line) => `• ${line.name} · ${line.qty} ${line.unit}`), 'Merci.'].join('\n');
+      let order = null;
+      if (P) {
+        let supplier = P.doc().suppliers.find((row) => row.name === 'CoopharMa');
+        if (!supplier) supplier = P.addSupplier({ name: 'CoopharMa', leadDays: 1 });
+        if (P.isUltra() && supplier) {
+          order = P.createOrder({ supplierId: supplier.id, lines, note: 'Commande pharmacie à confirmer au grossiste' });
+          if (order && !order.error) message = P.message(order.id) || message;
+        }
+      }
+      navigator.clipboard?.writeText?.(message).catch(() => {});
+      queueIfOffline(order ? `Brouillon ${order.number}` : 'Liste grossiste');
+      toast(order && !order.error
+        ? `${order.number} créé en brouillon, texte copié · ${refs.length} réf. · ${units} unités`
+        : `Liste grossiste copiée, ${refs.length} réf. · ${units} unités`, 3200);
       renderStock(); renderBadges(); icons();
     };
     icons();
@@ -1481,7 +1580,7 @@
   /* ═══════════════════════ register ═══════════════════════ */
   window.KiwiPosDispatch.register({
     id: 'pharmacie',
-    greet: { line1: 'Sba7 lkhir Dr Wafae,', em: 'marhba.', sub: 'Pharmacie Ibn Batouta <em>·</em> tiers payant prêt' },
+    greet: { line1: 'Bonjour Dr Wafae,', em: 'bienvenue.', sub: 'Pharmacie Ibn Batouta <em>·</em> tiers payant prêt' },
     mount(rootEl) { build(rootEl); },
     onShow() {
       if (!root) return;

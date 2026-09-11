@@ -1,0 +1,16 @@
+name = "kiwi-hotel-sync"
+main = "src/index.js"
+compatibility_date = "2026-08-31"
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+[vars]
+KIWI_BASE_URL = "https://kiwi-os.com"
+
+[observability]
+enabled = true
+
+# Set the same random value in this Worker and the kiwi-maroc Pages project:
+#   npx wrangler secret put HOTEL_CRON_SECRET --name kiwi-hotel-sync
+#   npx wrangler pages secret put HOTEL_CRON_SECRET --project-name kiwi-maroc

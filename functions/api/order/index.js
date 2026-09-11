@@ -40,8 +40,9 @@
 //    rejoue la même commande au lieu d'en fabriquer une seconde.
 
 import { json } from '../../auth/_lib.js';
+import { storeSubscriptionPending } from '../_private.js';
 import {
-  startOfDay, orderProEnabled, normTable, priceOrder, deskOpen, SESSION_ID,
+  startOfDay, nextOrderNumber, orderProEnabled, normTable, priceOrder, deskOpen, SESSION_ID,
 } from './_lib.js';
 
 const MAX_LINES = 60;              // one order, generously
@@ -59,6 +60,7 @@ export async function onRequestPost(context) {
 
   const merchant = String((b && b.merchant) || '').trim().toLowerCase().slice(0, 64);
   if (!merchant) return json({ error: 'merchant-required' }, 400);
+  if (await storeSubscriptionPending(env, merchant)) return json({ error: 'subscription-required' }, 402);
   if (!(await orderProEnabled(env, merchant))) return json({ error: 'orderpro-off' }, 403);
 
   /* Verrou d'ouverture. Il s'applique aussi à kiwi-order.html (le QR), qui ne
@@ -70,12 +72,11 @@ export async function onRequestPost(context) {
   const table = mode === 'table' ? normTable(b.table) : '';
   if (mode === 'table' && !table) return json({ error: 'table-required' }, 400);
 
-  /* La session, quand le téléphone en a une. OrderPro en ouvre toujours une ;
-   * le QR historique n'en a pas, et reste accepté — sa commande porte alors
-   * `session_id` NULL et ne bénéficie pas de la révocation à l'encaissement.
-   * Quand elle EST fournie, elle doit être vivante et désigner la même table :
-   * c'est ce qui fait qu'une addition encaissée coupe vraiment le robinet. */
+  /* Toute commande à table appartient à une visite révocable. Sans session,
+   * un ancien QR pouvait continuer à commander après l'encaissement et ouvrir
+   * une nouvelle dette sur la table libérée. Le retrait reste sans session. */
   const sessionId = String((b && b.session) || '').trim();
+  if (mode === 'table' && !sessionId) return json({ error: 'session-required' }, 409);
   let session = null;
   if (sessionId) {
     if (!SESSION_ID.test(sessionId)) return json({ error: 'bad-session' }, 400);
@@ -85,6 +86,17 @@ export async function onRequestPost(context) {
       ).bind(sessionId, merchant).first();
     } catch (_) { session = null; }
     if (!session || session.status !== 'open') return json({ error: 'session-closed' }, 409);
+    /* La garde ne s'armait QUE pour une session de table : une session « à
+     * emporter » sautait le contrôle et pouvait donc porter une commande
+     * déclarée sur une table. Le règlement, lui, ne rattrape que les commandes
+     * d'une session de table ouverte ou celles sans session du tout
+     * (sale.js › UPDATE orders … WHERE session_id IN (…) OR session_id IS NULL) :
+     * le ticket partait en cuisine, était servi, et paid_ts restait vide pour
+     * toujours. Le mode de la commande doit désormais correspondre à celui de
+     * sa session, et la table avec, quand c'en est une. */
+    if (session.mode !== mode) {
+      return json({ error: 'session-mode-mismatch' }, 409);
+    }
     if (session.mode === 'table' && normTable(session.table_no) !== table) {
       return json({ error: 'session-table-mismatch' }, 409);
     }
@@ -105,11 +117,17 @@ export async function onRequestPost(context) {
    * prix du téléphone — transformait une erreur de configuration réparable en
    * trente secondes en une commande où l'inconnu fixait le prix. */
   if (priced.noCatalogue) return json({ error: 'menu-not-published' }, 409);
-  if (priced.unknown.length || priced.unavailable.length) {
+  if (priced.archived.length) return json({ error: 'archived', archived: priced.archived }, 409);
+  if (priced.formulaOnly.length) return json({ error: 'formula_only', formulaOnly: priced.formulaOnly }, 409);
+  const unknown = (priced.unknown || []).filter(Boolean);
+  const unavailable = (priced.unavailable || []).filter(Boolean);
+  const invalidOptions = (priced.invalidOptions || []).filter(Boolean);
+  if (unknown.length || unavailable.length || invalidOptions.length) {
     return json({
       error: 'menu-changed',
-      unknown: priced.unknown,
-      unavailable: priced.unavailable,
+      unknown,
+      unavailable,
+      invalidOptions,
     }, 409);
   }
   if (!priced.lines.length) return json({ error: 'empty-order' }, 400);
@@ -126,11 +144,11 @@ export async function onRequestPost(context) {
   if (clientRef) {
     try {
       const dup = await env.DB.prepare(
-        `SELECT id, number, total FROM orders WHERE merchant = ? AND client_ref = ?`
+        `SELECT id, number, total, lines FROM orders WHERE merchant = ? AND client_ref = ?`
       ).bind(merchant, clientRef).first();
       if (dup) {
         return json({ ok: true, id: dup.id, number: dup.number, total: dup.total,
-                      lines: priced.lines, replayed: true });
+                      lines: (() => { try { const v = JSON.parse(dup.lines); return Array.isArray(v) ? v : []; } catch (_) { return []; } })(), replayed: true });
       }
     } catch (_) { /* colonne pas encore migrée → pas d'idempotence, comme avant */ }
   }
@@ -195,19 +213,22 @@ export async function onRequestPost(context) {
    * repli, livrer la session aurait ÉTEINT la commande client partout où le
    * partenaire n'a pas encore migré — casser ce qui marche pour livrer ce qui
    * n'existe pas encore. Même discipline que le SELECT de queue.js. */
-  const NUMBER = `COALESCE(MAX(number), 0) + 1`;
+  let orderNumber;
+  try { orderNumber = await nextOrderNumber(env, merchant, now); }
+  catch (_) { return json({ error: 'number-allocation-failed' }, 503); }
   let row = null;
   try {
     row = await env.DB.prepare(
       `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
                            created_ts, updated_ts, session_id, menu_rev, priced_ts, client_ref)
-       SELECT ?, ?, ${NUMBER}, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?
-         FROM orders WHERE merchant = ? AND created_ts >= ?
+       SELECT ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?
+       WHERE ? IS NULL OR EXISTS (SELECT 1 FROM table_sessions
+         WHERE id = ? AND merchant = ? AND status = 'open' AND mode = ? AND table_no = ?)
        RETURNING number`
     ).bind(
-      id, merchant, mode, table, total, linesJson, now, now,
+      id, merchant, orderNumber, mode, table, total, linesJson, now, now,
       session ? session.id : null, priced.menuRev, priced.priced ? now : null, clientRef,
-      merchant, today
+      session ? session.id : null, session ? session.id : null, merchant, mode, table
     ).first();
   } catch (_) {
     /* ── Avant de dégrader, vérifier que ce n'est pas l'unicité qui a parlé ───
@@ -230,29 +251,34 @@ export async function onRequestPost(context) {
     if (clientRef) {
       try {
         const raced = await env.DB.prepare(
-          `SELECT id, number, total FROM orders WHERE merchant = ? AND client_ref = ?`
+          `SELECT id, number, total, lines FROM orders WHERE merchant = ? AND client_ref = ?`
         ).bind(merchant, clientRef).first();
         if (raced) {
           return json({ ok: true, id: raced.id, number: raced.number, total: raced.total,
-                        lines: priced.lines, replayed: true });
+                        lines: (() => { try { const v = JSON.parse(raced.lines); return Array.isArray(v) ? v : []; } catch (_) { return []; } })(), replayed: true });
         }
       } catch (_) { /* colonne absente → c'était bien une base non migrée */ }
     }
+    /* A table order must never degrade to the legacy insert because that
+     * insert drops session_id and would recreate the revocation bypass. */
+    if (mode === 'table') return json({ error: 'session-storage-unavailable' }, 503);
     try {
       row = await env.DB.prepare(
         `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
                              created_ts, updated_ts)
-         SELECT ?, ?, ${NUMBER}, ?, ?, ?, ?, 'pending', ?, ?
-           FROM orders WHERE merchant = ? AND created_ts >= ?
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
          RETURNING number`
-      ).bind(id, merchant, mode, table, total, linesJson, now, now, merchant, today).first();
-    } catch (e) {
-      return json({ error: 'write-failed', detail: String((e && e.message) || e) }, 500);
+      ).bind(id, merchant, orderNumber, mode, table, total, linesJson, now, now).first();
+    } catch (_) {
+      // Public endpoint: do not expose database/schema details to an anonymous
+      // phone. The stable code is enough for the UI and support correlation.
+      return json({ error: 'write-failed' }, 500);
     }
   }
 
+  if (!row) return json({ error: 'session-closed' }, 409);
   return json({
-    ok: true, id, number: (row && row.number) || 1,
+    ok: true, id, number: row.number,
     total, lines: priced.lines,
   });
 }

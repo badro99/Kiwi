@@ -32,6 +32,7 @@ const vm = require('vm');
 const ROOT = path.join(__dirname, '..');
 const CAISSE = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
 const PAGES = fs.readFileSync(path.join(ROOT, 'assets', 'pages-pro.js'), 'utf8');
+const VENUES = fs.readFileSync(path.join(ROOT, 'assets', 'venues.js'), 'utf8');
 const STORE = fs.readFileSync(path.join(ROOT, 'functions', 'api', 'store.js'), 'utf8');
 
 let pass = 0;
@@ -202,7 +203,7 @@ function run(opts) {
   // Si un jour cloud-doc.js cesse d'être `defer`, la relance devient une
   // ceinture en plus d'une bretelle — pas une panne. Mais on veut le SAVOIR.
   ok('assets/cloud-doc.js est bien chargé en `defer` (d’où la relance)',
-    /<script src="assets\/cloud-doc\.js" defer><\/script>/.test(CAISSE));
+    /<script src="assets\/cloud-doc\.js(?:\?v=\d+)?" defer><\/script>/.test(CAISSE));
   ok('le lecteur du plan vit dans le script EN LIGNE (pas un module différé)',
     CAISSE.indexOf(BLOCK) > CAISSE.indexOf('<script>'));
 
@@ -217,9 +218,323 @@ function run(opts) {
     /localStorage\.setItem\(PDS_LS_KEY \+ ':slug:' \+ slug/.test(PAGES));
   ok('le tableau de bord pousse le plan au serveur à chaque enregistrement',
     /function pdsSave\(state\)\s*\{[\s\S]{0,160}pdsCloud\(\)[\s\S]{0,60}\.push\(\)/.test(PAGES));
+  ok('une table conserve jusqu’à trois serveurs et garde le premier pour les anciens clients',
+    /const PDS_MAX_TABLE_SERVERS = 3/.test(PAGES)
+    && /table\.servers = clean;[\s\S]{0,160}table\.server = clean\[0\] \|\| null/.test(PAGES));
+  ok("l'API employé résout les identifiants du plan vers les vrais comptes Équipe",
+    /function normalizedFloorStaff\(raw, members\)/.test(
+      fs.readFileSync(path.join(ROOT, 'functions', 'api', 'employee.js'), 'utf8')));
+  ok('l’inspecteur expose exactement trois emplacements de serveur',
+    /\$\{\[0,1,2\]\.map\(slot =>/.test(PAGES));
+  ok('glisser un serveur ajoute une affectation sans écraser les précédentes',
+    /pdsSetServerIds\(t, current\.concat\(sid\)\)/.test(PAGES));
+  ok('le plan ne propose que les rôles capables de prendre une section',
+    /function pdsIsFloorRole\(role\)/.test(PAGES)
+    && /filter\(m => m && m\.id && pdsIsFloorRole\(m\.role\)\)/.test(PAGES));
+  ok("un ancien membre Équipe qui n'est plus éligible disparaît du plan",
+    /s\.from !== 'team' \|\| byId\.has\(s\.id\)/.test(PAGES));
+  ok("le plan se resynchronise quand l'équipe distante finit de charger",
+    /addEventListener\('kiwi-team-ready', pdsRefreshLiveStaff\)/.test(PAGES)
+    && /addEventListener\('kiwi-team-changed', pdsRefreshLiveStaff\)/.test(PAGES));
+  ok('une copie serveur tardive est rapprochée du roster courant avant affichage',
+    /write: function \(d\) \{\s*d = pdsSyncStaff\(d\);/.test(PAGES));
   ok('la caisse préfère la copie serveur au miroir local',
     CAISSE.indexOf('window.KiwiFloorPlan && Array.isArray(window.KiwiFloorPlan.tables)')
     < CAISSE.indexOf("localStorage.getItem('kiwiPlanDeSalle:slug:' + slug)"));
+
+  // Règles de sécurité et nommage multi-locataires
+  ok('pdsKey nomme les identifiants transitoires par slug',
+    /PDS_LS_KEY \+ ':' \+ vid \+ '@' \+ slug/.test(PAGES));
+  ok('pdsKey retourne chaîne vide si aucun slug n’est résolu (fail-closed)',
+    /return slug \? PDS_LS_KEY \+ ':' \+ vid \+ '@' \+ slug : ''/.test(PAGES));
+  ok('pdsWriteLocal ne tente pas d’écrire si la clé est vide',
+    /const key = pdsKey\(\);[\s\S]{0,60}if \(key\) \{\s*try \{\s*localStorage\.setItem\(key/.test(PAGES));
+  ok('pdsRawState retourne un état vide sans clé',
+    /const key = pdsKey\(\);[\s\S]{0,60}if \(!key\) return \{ zones: \[\], tables: \[\], staff: \[\] \};/.test(PAGES));
+  ok('pdsCarryForward n’opère pas sur les identifiants transitoires',
+    /var transients =[\s\S]{0,100}if \(transients\.indexOf\(vid\) >= 0\) return;/.test(PAGES));
+  ok('venues.js nettoie les anciens seaux kiwiPlanDeSalle dans resetScopedRecords',
+    /SCOPED_PDS = \/\^kiwiPlanDeSalle:scoped@\(\.\+\)\$\//.test(VENUES)
+    && /SCOPED_REC\.test\(k\) \|\| k === 'kiwiPlanDeSalle:scoped' \|\| k === 'kiwiPlanDeSalle:own'/.test(VENUES));
+  ok('venues.js exporte tenantOf et TRANSIENT_IDS',
+    /tenantOf:\s*salesTenant/.test(VENUES) && /TRANSIENT_IDS/.test(VENUES));
+}
+
+/* ── 6. Isolation multi-locataires & Fail-closed (vue opérateur / God mode) ── */
+{
+  const store = Object.create(null);
+  const sandbox = {
+    window: {},
+    localStorage: {
+      getItem: (k) => (k in store ? store[k] : null),
+      setItem: (k, v) => { store[k] = String(v); },
+      removeItem: (k) => { delete store[k]; },
+      key: (i) => Object.keys(store)[i] || null,
+      get length() { return Object.keys(store).length; },
+    },
+    document: {
+      addEventListener: () => {},
+    },
+    JSON,
+  };
+  sandbox.globalThis = sandbox;
+  sandbox.window = sandbox;
+
+  let currentVenue = 'cafeAtlas';
+  let venueData = { id: 'cafeAtlas', name: 'Café Atlas', custom: false };
+  const venues = {
+    cafeAtlas: { id: 'cafeAtlas', name: 'Café Atlas', custom: false },
+    scoped: { id: 'scoped', name: 'Client A', custom: true, slug: 'client-a' },
+    own: { id: 'own', name: 'Mon commerce', custom: true, slug: '' },
+  };
+
+  const KiwiVenue = {
+    TRANSIENT_IDS: ['scoped', 'own'],
+    getVenue: () => currentVenue,
+    getCurrentVenueData: () => venueData,
+    slugOf: (vid) => {
+      const v = venues[vid || currentVenue];
+      return (v && v.slug) || '';
+    },
+    tenantOf: (vid) => {
+      const v = venues[vid || currentVenue];
+      if (v && v.slug) return v.slug;
+      if (vid === 'scoped') return '';
+      return sandbox.localStorage.getItem('kiwiLiveMerchant') || '';
+    },
+    isCustom: (vid) => {
+      const v = venues[vid || currentVenue];
+      return !!(v && v.custom);
+    },
+  };
+  sandbox.window.KiwiVenue = KiwiVenue;
+
+  const pdsCode = `
+    const PDS_LS_KEY = 'kiwiPlanDeSalle';
+    const PDS_TRANSIENT_IDS = ['scoped', 'own'];
+    function pdsTenant(vid) {
+      if (window.KiwiVenue && typeof window.KiwiVenue.tenantOf === 'function') {
+        return window.KiwiVenue.tenantOf(vid) || '';
+      }
+      if (window.KiwiVenue && typeof window.KiwiVenue.slugOf === 'function') {
+        const s = window.KiwiVenue.slugOf(vid);
+        if (s) return s;
+      }
+      if (vid === 'scoped') return '';
+      try { return String(localStorage.getItem('kiwiLiveMerchant') || '').trim(); } catch (_) { return ''; }
+    }
+    function pdsKey(id) {
+      const vid = id || (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || 'default';
+      const transients = (window.KiwiVenue && window.KiwiVenue.TRANSIENT_IDS) || PDS_TRANSIENT_IDS;
+      if (transients.indexOf(vid) < 0) return PDS_LS_KEY + ':' + vid;
+      const slug = pdsTenant(vid);
+      return slug ? PDS_LS_KEY + ':' + vid + '@' + slug : '';
+    }
+    function pdsNormalize(s) { return s; }
+    function pdsDefaultState() { return { zones: [{ id: 'z1' }], tables: [], staff: [] }; }
+    function pdsLoad() {
+      const key = pdsKey();
+      if (key) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.zones && parsed.tables && parsed.staff) return pdsNormalize(parsed);
+          }
+        } catch (e) {}
+      }
+      return pdsNormalize(pdsDefaultState());
+    }
+    function pdsWriteLocal(state) {
+      const key = pdsKey();
+      if (key) {
+        try { localStorage.setItem(key, JSON.stringify(state)); } catch (e) {}
+      }
+      try {
+        var vd = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
+        if (vd && vd.custom && vd.name) {
+          var vid = (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || '';
+          var transients = (window.KiwiVenue && window.KiwiVenue.TRANSIENT_IDS) || PDS_TRANSIENT_IDS;
+          if (transients.indexOf(vid) >= 0 && !key) return;
+          var slug = vd.slug || (window.KiwiVenue && window.KiwiVenue.slugOf && window.KiwiVenue.slugOf(vid)) || '';
+          if (slug) localStorage.setItem(PDS_LS_KEY + ':slug:' + slug, JSON.stringify(state));
+        }
+      } catch (e) {}
+    }
+    function pdsRawState() {
+      const key = pdsKey();
+      if (!key) return { zones: [], tables: [], staff: [] };
+      try {
+        var raw = localStorage.getItem(key);
+        var p = raw ? JSON.parse(raw) : null;
+        if (p && p.zones && p.tables) return p;
+      } catch (e) {}
+      return { zones: [], tables: [], staff: [] };
+    }
+    function pdsCarryForward() {
+      if (!window.KiwiCloudDoc) return;
+      var vid = (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || '';
+      var slug = window.KiwiCloudDoc.currentSlug();
+      if (!vid || !slug) return;
+      var transients = (window.KiwiVenue && window.KiwiVenue.TRANSIENT_IDS) || PDS_TRANSIENT_IDS;
+      if (transients.indexOf(vid) >= 0) return;
+      window.KiwiCloudDoc.carryForward('floorplan', vid, slug, function (raw) {
+        try { var d = JSON.parse(raw || 'null'); return !!(d && d.tables && d.tables.length); }
+        catch (e) { return false; }
+      }, PDS_LS_KEY + ':');
+    }
+  `;
+  vm.createContext(sandbox);
+  vm.runInContext(pdsCode, sandbox);
+
+  // 1. Établissement normal
+  currentVenue = 'cafeAtlas';
+  eq('pdsKey pour un établissement normal', sandbox.pdsKey(), 'kiwiPlanDeSalle:cafeAtlas');
+
+  // 2. Vue portée (God Mode / opérateur) avec slug résolu
+  currentVenue = 'scoped';
+  venueData = venues.scoped;
+  eq('pdsKey pour scoped avec slug résolu', sandbox.pdsKey(), 'kiwiPlanDeSalle:scoped@client-a');
+
+  // 3. Vue portée (scoped) SANS slug résolu -> Fail-closed
+  venues.scoped.slug = '';
+  eq('pdsKey pour scoped sans slug (fail-closed)', sandbox.pdsKey(), '');
+
+  // 4. Fail-closed n'écrit jamais sur clé vide
+  sandbox.pdsWriteLocal({ zones: [{ id: 'z1' }], tables: [{ id: 't1' }], staff: [] });
+  ok("pdsWriteLocal n'écrit rien si la clé est vide (fail-closed)", !('' in store));
+  ok("pdsWriteLocal n'écrit pas non plus sous kiwiPlanDeSalle:scoped", !('kiwiPlanDeSalle:scoped' in store));
+  ok("pdsWriteLocal n'écrit pas de miroir sans slug", !('kiwiPlanDeSalle:slug:' in store));
+
+  // 5. pdsRawState sur fail-closed retourne un état vide
+  const rawEmpty = sandbox.pdsRawState();
+  ok('pdsRawState sur clé vide retourne un état sans tables', rawEmpty && Array.isArray(rawEmpty.tables) && rawEmpty.tables.length === 0);
+
+  // 6. Bascule entre locataire A et locataire B : aucune contamination
+  venues.scoped.slug = 'client-a';
+  const planA = { zones: [{ id: 'z1', name: 'Salle' }], tables: [{ id: 't1', num: '1' }, { id: 't2', num: '2' }], staff: [] };
+  sandbox.pdsWriteLocal(planA);
+  eq('plan de client-a écrit sous son propre seau nommé', store['kiwiPlanDeSalle:scoped@client-a'], JSON.stringify(planA));
+  eq('plan de client-a écrit sous son miroir', store['kiwiPlanDeSalle:slug:client-a'], JSON.stringify(planA));
+
+  // Maintenant l'opérateur navigue vers client-b
+  venues.scoped.slug = 'client-b';
+  venueData = { id: 'scoped', name: 'Client B', custom: true, slug: 'client-b' };
+  eq('pdsKey pour client-b pointe vers son propre seau', sandbox.pdsKey(), 'kiwiPlanDeSalle:scoped@client-b');
+  const rawB = sandbox.pdsRawState();
+  eq('pdsRawState pour client-b est vide (pas de fuite de client-a)', rawB.tables.length, 0);
+
+  // 7. Nettoyage de l'ancien seau non nommé kiwiPlanDeSalle:scoped
+  store['kiwiPlanDeSalle:scoped'] = JSON.stringify({ tables: [{ id: 'legacy' }] });
+  ['scoped', 'own'].forEach((tid) => {
+    delete store['kiwiPlanDeSalle:' + tid];
+  });
+  ok('ancien seau kiwiPlanDeSalle:scoped purgé', !('kiwiPlanDeSalle:scoped' in store));
+}
+
+/* ── 7. Époque de réparation : une suppression qui doit s'imposer partout ───
+ * L'union par identifiant ne sait pas supprimer : un appareil qui garde le plan
+ * empoisonné en local le refusionne et le repousse. Un plan d'époque supérieure
+ * remplace l'autre copie EN BLOC — c'est le mécanisme de réparation. On exécute
+ * le VRAI pdsMerge de pages-pro.js contre le VRAI mergeDefault de cloud-doc.js. */
+{
+  const CLOUD = fs.readFileSync(path.join(ROOT, 'assets', 'cloud-doc.js'), 'utf8');
+  function extractFn(src, name) {
+    const at = src.indexOf('function ' + name + '(');
+    if (at < 0) throw new Error('introuvable : ' + name);
+    let i = src.indexOf('{', at), depth = 0;
+    for (let j = i; j < src.length; j++) {
+      if (src[j] === '{') depth++;
+      else if (src[j] === '}' && --depth === 0) return src.slice(at, j + 1);
+    }
+    throw new Error('accolades déséquilibrées : ' + name);
+  }
+  const mergeDefault = new Function(
+    extractFn(CLOUD, 'idOf') + '\n' + extractFn(CLOUD, 'mergeDefault') + '\nreturn mergeDefault;'
+  )();
+  const pdsMerge2 = new Function('window', extractFn(PAGES, 'pdsMerge') + '\nreturn pdsMerge;')(
+    { KiwiCloudDoc: { mergeDefault } }
+  );
+
+  const clean = { zones: [{ id: 'z1' }], tables: [{ id: 't1' }, { id: 't2' }], staff: [], mode: 'layout' };
+  const poisoned = { zones: [{ id: 'z1' }, { id: 'zRDC' }], tables: [{ id: 't1' }, { id: 't2' }, { id: 'tX' }], staff: [], mode: 'assign' };
+
+  // Époques égales (le quotidien) : l'union protège les saisies concurrentes —
+  // et, connu, une suppression ressuscite. C'est pour cela que l'époque existe.
+  const u = pdsMerge2(poisoned, clean);
+  eq('à époque égale, l’union ressuscite la table supprimée (comportement documenté)', u.tables.length, 3);
+
+  // Le serveur porte la réparation (époque 1) : l'appareil empoisonné ADOPTE en bloc…
+  const repaired = Object.assign({}, clean, { epoch: 1 });
+  const a = pdsMerge2(poisoned, repaired);
+  eq('époque serveur supérieure : adoption en bloc, la table étrangère disparaît', a.tables.length, 2);
+  eq('époque serveur supérieure : la zone étrangère disparaît aussi', a.zones.length, 1);
+  eq('époque adoptée avec le plan', a.epoch, 1);
+  // …mais garde ses préférences d'affichage locales (mode/snap/zone).
+  eq('les réglages scalaires locaux survivent à l’adoption', a.mode, 'assign');
+
+  // L'appareil réparateur (époque 1 locale) ne se fait pas réinfecter par un
+  // serveur encore à l'époque 0 : sa copie gagne en bloc.
+  const mineRepaired = Object.assign({}, clean, { epoch: 1 });
+  const b = pdsMerge2(mineRepaired, poisoned);
+  eq('époque locale supérieure : la copie réparée gagne en bloc', b.tables.length, 2);
+  eq('époque locale supérieure : l’époque est conservée', b.epoch, 1);
+
+  /* ── Pierres tombales (floorplan-core.js › pdsMergePlans) ─────────────────
+   * La fusion partagée : à époque égale, un identifiant enterré d'un côté
+   * disparaît des deux ; l'époque continue de gagner en bloc ; une tombale
+   * expirée ne retire plus rien ; et les deux surfaces passent bien par elle. */
+  const CORE = fs.readFileSync(path.join(ROOT, 'assets', 'floorplan-core.js'), 'utf8');
+  const Core = new Function(
+    'const PDS_GONE_TTL = 30 * 24 * 3600 * 1000;\n'
+    + extractFn(CORE, 'pdsBury') + '\n' + extractFn(CORE, 'pdsUnbury') + '\n'
+    + extractFn(CORE, 'pdsGoneOf') + '\n' + extractFn(CORE, 'pdsMergePlans')
+    + '\nreturn { pdsBury, pdsUnbury, pdsGoneOf, pdsMergePlans };'
+  )();
+  const mk = (ids, extra) => Object.assign({ zones: [{ id: 'z1' }], tables: ids.map(id => ({ id })), elements: [], staff: [] }, extra || {});
+
+  // Cet appareil a supprimé t2 : l'union ne la ressuscite plus depuis le serveur.
+  const local = mk(['t1']); Core.pdsBury(local, 't2');
+  const m1 = Core.pdsMergePlans(local, mk(['t1', 't2']), mergeDefault);
+  eq('tombale locale : la table supprimée ne revient pas du serveur', m1.tables.map(x => x.id).join(','), 't1');
+  ok('le registre voyage avec le plan fusionné', !!(m1.gone && m1.gone.t2));
+
+  // Le serveur porte la tombale : la copie locale périmée lâche la table.
+  const srv = mk(['t1']); Core.pdsBury(srv, 'tX');
+  const m2 = Core.pdsMergePlans(mk(['t1', 'tX']), srv, mergeDefault);
+  eq('tombale serveur : l’appareil périmé abandonne la table étrangère', m2.tables.map(x => x.id).join(','), 't1');
+
+  // Les éléments aussi ; les zones jamais (z1 du gabarit vierge).
+  const withEl = Object.assign(mk(['t1']), { elements: [{ id: 'e1' }, { id: 'e2' }], zones: [{ id: 'z1' }, { id: 'zT' }] });
+  const loc2 = mk(['t1']); Core.pdsBury(loc2, ['e2', 'zT']);
+  const m3 = Core.pdsMergePlans(loc2, withEl, mergeDefault);
+  eq('tombale : l’élément supprimé disparaît', (m3.elements || []).map(x => x.id).join(','), 'e1');
+  eq('les zones ne sont pas tombées (z1 du gabarit)', (m3.zones || []).map(z => z.id).join(','), 'z1,zT');
+
+  // Annuler une suppression retire la tombale.
+  const und = mk(['t1']); Core.pdsBury(und, 't2'); Core.pdsUnbury(und, 't2');
+  eq('pdsUnbury efface la tombale', Object.keys(und.gone).length, 0);
+
+  // Une tombale expirée ne retire plus rien et disparaît du registre.
+  const old = mk(['t1'], { gone: { t2: Date.now() - 31 * 24 * 3600 * 1000 } });
+  const m4 = Core.pdsMergePlans(old, mk(['t1', 't2']), mergeDefault);
+  eq('tombale expirée : la table revient, le registre est purgé', m4.tables.length + '/' + Object.keys(m4.gone).length, '2/0');
+
+  // L'époque gagne toujours en bloc, tombales ou non.
+  const m5 = Core.pdsMergePlans(mk(['t1', 'tX']), mk(['t1'], { epoch: 1 }), mergeDefault);
+  eq('époque supérieure : adoption en bloc (fusion partagée)', m5.tables.length + '@' + m5.epoch, '1@1');
+
+  // Les deux surfaces passent par la fusion partagée.
+  ok('pages-pro.js › pdsMerge délègue à pdsMergePlans', /function pdsMerge\(mine, theirs\) \{[\s\S]{0,900}pdsMergePlans\(mine, theirs, M\)/.test(PAGES));
+  ok('kiwi-caisse.html › l’attache floorplan passe par KiwiFloorCore.mergePlans', /feature: 'floorplan',[\s\S]{0,2500}mergePlans\(mine, theirs, M\)/.test(CAISSE));
+  ok('floorplan-core.js expose mergePlans / bury / unbury', /mergePlans: pdsMergePlans, bury: pdsBury, unbury: pdsUnbury/.test(CORE));
+  // Chaque chemin de suppression enterre ce qu'il retire.
+  ok('suppression unitaire : pdsBury', /state\.tables\.splice\(state\.tables\.findIndex\(o => o\.id === id\), 1\);\s*if \(typeof pdsBury === 'function'\) pdsBury\(state, id\);/.test(PAGES));
+  ok('suppression d’élément : pdsBury', /state\.elements\.splice\(state\.elements\.findIndex\(o => o\.id === id\), 1\);\s*if \(typeof pdsBury === 'function'\) pdsBury\(state, id\);/.test(PAGES));
+  ok('suppression groupée : pdsBury des retirés', /pdsBury\(state, state\.tables\.filter\(t => selection\.has\(t\.id\)\)\.map\(t => t\.id\)\)/.test(PAGES));
+  ok('suppression de zone : pdsBury de son contenu', /pdsBury\(state, state\.tables\.filter\(t => t\.zone === z\.id\)\.map\(t => t\.id\)/.test(PAGES));
+  ok('annuler : pdsUnbury', /pdsUnbury\(state, value\.id\)/.test(PAGES));
+  ok('Ctrl+Z : le registre fait partie de l’instantané', /gone: state\.gone \|\| \{\}/.test(PAGES) && /state\.gone = \(d\.gone && typeof d\.gone === 'object'\) \? d\.gone : \{\};/.test(PAGES));
 }
 
 /* ── Verdict ──────────────────────────────────────────────────────────────── */
@@ -232,5 +547,5 @@ if (fails.length) {
   process.exit(1);
 }
 console.log(`  \x1b[32m✓\x1b[0m plan de salle → caisse (${pass} contrôles : armement différé, `
-  + 'relance bornée, un seul écouteur, miroir par slug, forme serveur)');
+  + 'relance bornée, un seul écouteur, miroir par slug, isolation multi-locataires, fail-closed)');
 console.log(line);

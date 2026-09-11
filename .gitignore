@@ -24,9 +24,20 @@ Desktop.ini
 *.log
 npm-debug.log*
 
+# Local k6 summary exports (may contain tested URLs and environment metadata)
+capacity-*.json
+
 # Local preview / scratch
 /tmp-preview/
 *.pid
+
+# Supabase / Cloudflare credentials and local link state
+.env
+.env.*
+!.env.example
+.dev.vars
+supabase/.temp/
+.wrangler/
 
 # Local preview tooling (machine-specific dev server)
 .claude/launch.json
@@ -48,3 +59,25 @@ video/out/
 # Graphify knowledge graph — generated from the source by `graphify update .`,
 # ~8 Mo including its cache. Rebuild it locally, never commit it.
 graphify-out/
+
+# iCloud conflict copies. The repo lives on a synced Desktop, so iCloud
+# periodically drops "<name> 2.<ext>" duplicates next to real files. They are
+# never ours and must never be staged — a `git add -A` that swallows one has
+# shipped stale copies of dashboard.html and kiwi-caisse.html before.
+* 2.*
+* 3.*
+* copy.*
+* copie.*
+
+# Codex session hooks (machine-local agent config)
+.codex/
+
+# Photos de travail (jamais versionnées) et archive média hors dépôt
+/photos/
+
+# Sortie Gradle du plugin natif Android (app/plugins/*/android/build) — l'app
+# l'a déjà via app/android/.gitignore, le plugin compilé seul non.
+app/plugins/*/android/build/
+
+# Rapports d audit de securite · jamais commites (ils citent des chemins de credentials)
+.security-audit/

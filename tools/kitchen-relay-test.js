@@ -99,6 +99,7 @@ const deskSeen = () => {
 
 const CAISSE = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
 const RELAY = fs.readFileSync(path.join(ROOT, 'assets/kitchen-relay.js'), 'utf8');
+const PRINT_QUEUE = fs.readFileSync(path.join(ROOT, 'assets/kitchen-print-queue.js'), 'utf8');
 const INBOX = fs.readFileSync(path.join(ROOT, 'assets/orderpro-inbox.js'), 'utf8');
 const CUISINE = fs.readFileSync(path.join(ROOT, 'kiwi-cuisine.html'), 'utf8');
 const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
@@ -154,13 +155,56 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
   }, asStaff);
   ok('un DEUXIÈME bon prend le numéro suivant', second.body.number === 2, 'n°' + second.body.number);
 
-  /* ═══ 3. RETOUR ══════════════════════════════════════════════════════════ */
-  r = await post({ merchant: SLUG, id: TICKET.id, status: 'ready' }, asStaff);
-  ok('la cuisine peut marquer « prête »', r.status === 200 && r.body.status === 'ready',
+  /* Un geste `Accepter` oublié ne doit pas reconstruire le ticket au login du
+     lendemain. C'était le chemin exact du timer à 920 minutes observé en KDS. */
+  await post({ merchant: SLUG, create: {
+    id: 'ord-bench-hier-03', mode: 'table', table: 'T1',
+    lines: [{ name: 'Ancien tajine', qty: 1, unitPrice: 80, station: 'cuisson' }],
+  } }, asStaff);
+  DB._db.prepare('UPDATE orders SET created_ts=?, updated_ts=? WHERE id=?')
+    .run(now - 7 * 60 * 60 * 1000, now - 7 * 60 * 60 * 1000, 'ord-bench-hier-03');
+  q = await get('merchant=' + SLUG + '&since=0&role=kitchen', asStaff);
+  ok('un bon accepté oublié ne revient pas dans le KDS du service suivant',
+    !q.body.orders.some((o) => o.id === 'ord-bench-hier-03'));
+
+  /* ═══ 3. RETOUR, PAR POSTE ═══════════════════════════════════════════════ */
+  r = await post({ merchant: SLUG, id: TICKET.id, status: 'cooking', station: 'cuisson' }, asStaff);
+  ok('accepter au poste cuisson ne lance pas le poste boissons',
+    r.status === 200 && r.body.status === 'accepted'
+      && r.body.lines[0].stationAccepted === true && r.body.lines[1].stationAccepted !== true,
+    JSON.stringify(r.body));
+  q = await get('merchant=' + SLUG + '&since=0&role=kitchen', asStaff);
+  let acceptedBack = q.body.orders.find((o) => o.id === TICKET.id);
+  ok('la progression acceptée par poste revient sur toutes les tablettes KDS',
+    acceptedBack && acceptedBack.lines[0].stationAccepted === true
+      && acceptedBack.lines[1].stationAccepted !== true, JSON.stringify(acceptedBack));
+
+  r = await post({ merchant: SLUG, id: TICKET.id, status: 'cooking' }, asStaff);
+  ok('accepter depuis Tous lance toutes les sections du ticket',
+    r.status === 200 && r.body.lines.every((line) => line.stationAccepted === true),
+    JSON.stringify(r.body));
+
+  r = await post({ merchant: SLUG, id: TICKET.id, status: 'ready', station: 'cuisson' }, asStaff);
+  ok('la cuisine peut marquer seulement son poste prêt',
+    r.status === 200 && r.body.status === 'accepted' && r.body.station === 'cuisson',
     JSON.stringify(r.body));
   q = await get('merchant=' + SLUG + '&since=0', asStaff);
-  const back = q.body.orders.find((o) => o.id === TICKET.id);
-  ok('le comptoir apprend que c’est prêt', back && back.status === 'ready');
+  let back = q.body.orders.find((o) => o.id === TICKET.id);
+  ok('le poste cuisson est prêt sans terminer le bar ni toute la commande',
+    back && back.status === 'accepted'
+      && back.lines[0].stationReady === true && back.lines[1].stationReady !== true,
+    JSON.stringify(back));
+
+  r = await post({ merchant: SLUG, id: TICKET.id, status: 'ready', station: 'boissons' }, asStaff);
+  ok('le dernier poste prêt termine alors la commande entière',
+    r.status === 200 && r.body.status === 'ready', JSON.stringify(r.body));
+  q = await get('merchant=' + SLUG + '&since=0', asStaff);
+  back = q.body.orders.find((o) => o.id === TICKET.id);
+  ok('le comptoir apprend que toute la commande est prête', back && back.status === 'ready');
+
+  r = await post({ merchant: SLUG, id: 'ord-bench-cafe-02', status: 'ready' }, asStaff);
+  ok('depuis l’onglet Tous, le geste termine directement toute la commande',
+    r.status === 200 && r.body.status === 'ready', JSON.stringify(r.body));
 
   r = await post({ merchant: SLUG, id: TICKET.id, status: 'served' }, asStaff);
   ok('puis « servie »', r.status === 200 && r.body.status === 'served');
@@ -233,10 +277,14 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
    * Le transport peut être irréprochable et la caisse ne jamais l'appeler —
    * c'était exactement l'état d'avant. */
   ok('la caisse charge le relais', /assets\/kitchen-relay\.js/.test(CAISSE));
+  ok('…puis une file papier durable et dédupliquée',
+    /assets\/kitchen-print-queue\.js/.test(CAISSE)
+      && /DONE_PREFIX/.test(PRINT_QUEUE) && /function retryNow\(\)/.test(PRINT_QUEUE));
   ok('une mesa envoyée en cuisine part sur le réseau',
     /function sendTableToKitchen[\s\S]{0,2600}?relayToKitchen\(order\)/.test(CAISSE));
   ok('une vente à emporter aussi',
-    /function sendToKitchen\(\)[\s\S]{0,1600}?relayToKitchen\(order\)/.test(CAISSE));
+    /function createTakeawayKitchenOrder\(lines\)[\s\S]{0,1600}?relayToKitchen\(order\)/.test(CAISSE)
+      && /function sendToKitchen\(\)[\s\S]{0,2400}?createTakeawayKitchenOrder\(cart\)/.test(CAISSE));
   const relayFn = (CAISSE.match(/function relayToKitchen\(order\)\s*\{[\s\S]{0,2600}?\n {4}\}/) || [''])[0];
   ok('le bon porte le poste de chaque ligne', /station: \(i\.stations && i\.stations\[0\]\)/.test(relayFn));
   /* Sans cette inscription, le sondage retrouverait notre propre bon six
@@ -246,12 +294,47 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
     /opTickets\.set\(id, order\)/.test(relayFn));
   ok('un rechargement en plein service ne duplique pas les bons',
     /kdsOrders\.find\(t => t && t\.opId === o\.id\)/.test(CAISSE));
+  ok('un bon revenu de cette caisse ne double jamais la ligne de la table',
+    /if \(o\.channel !== 'caisse' \|\| canRecoverCaisseTable\(o\)\)\s*\{\s*attachOrderProTable\(o\)/.test(CAISSE)
+      && /function canRecoverCaisseTable\(o\)[\s\S]{0,1000}?\(orders\[id\] \|\| \[\]\)\.length \|\| \(tableOrders\[id\] \|\| \[\]\)\.some\(l => !l\.orderProLine\)\) return false/.test(CAISSE));
+  ok('la récupération caisse vérifie visite, paiement et montant canonique',
+    /function canRecoverCaisseTable\(o\)[\s\S]{0,550}?o\.paid[\s\S]{0,550}?String\(seat\.session\) !== String\(o\.session\)/.test(CAISSE)
+      && /Math\.round\(total \* 100\) === Math\.round\(o\.total \* 100\)/.test(CAISSE));
+  ok('le nettoyage ancien protège les lignes canoniques récupérées et exige une ligne locale envoyée correspondante',
+    /bill\.filter\(l => !l\.orderProLine && l\.sent && !l\.orderProPending\)/.test(CAISSE)
+      && /if \(line\.caisseRecovered \|\| !String\(line\.orderProLine/.test(CAISSE)
+      && /l\.name === line\.name && l\.qty === line\.qty && l\.price === line\.price/.test(CAISSE));
+  ok('une addition employé ne reçoit que la visite actuellement ouverte',
+    /o\.session[\s\S]{0,180}?activeSeat\.session/.test(CAISSE)
+      && /!o\.session && o\.server/.test(CAISSE)
+      && /orderSession: String\(o\.session/.test(CAISSE));
+  ok('les anciennes lignes sans visite sont nettoyées une fois puis reconstruites depuis la file',
+    /ORDER_BRIDGE_SYNC_VERSION = 2/.test(CAISSE)
+      && /saved\.orderBridgeSyncVersion[\s\S]{0,700}?line\.orderProLine/.test(CAISSE));
+  ok('une ancienne copie porteuse du même bon caisse est réparée précisément',
+    /o\.channel === 'caisse'[\s\S]{0,700}?line\.orderProLine[\s\S]{0,100}?startsWith\(String\(o\.id\) \+ ':'\)/.test(CAISSE));
+  ok('une nouvelle caisse ne recharge pas les tables du service précédent',
+    /shiftOpenedAt\.getTime\(\) - 30 \* 60 \* 1000/.test(CAISSE));
+  ok('le téléphone ne réaffiche pas un snapshot de service expiré',
+    /state\.ts[\s\S]{0,100}?Date\.now\(\) - 12 \* 60 \* 60 \* 1000/.test(fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8')));
   ok('la caisse sonde la file même sans Order Pro (sinon « prêt » ne revient jamais)',
     /!orderProOn\(\) && !hasKitchen\(\)/.test(INBOX));
   ok('…et « hasKitchen » désigne bien la caisse à écran cuisine',
     /function hasKitchen\(\) \{ return !!window\.KiwiCaisseKitchen; \}/.test(INBOX));
   ok('le poste porté par la ligne prime sur une re-déduction par le nom',
     /l\.station && kdsStations\(\)\.some/.test(CAISSE));
+  ok('la tablette envoie le poste actif avec son geste prête',
+    /KiwiKitchenRelay\.bump\(id, 'ready', station\)/.test(CUISINE));
+  ok('la tablette envoie aussi le poste actif avec son geste accepter',
+    /KiwiKitchenRelay\.bump\(takeId, 'cooking', takeStation\)/.test(CUISINE));
+  ok('le filtre Toutes garde le geste de commande entière',
+    /var station = S\.station === 'all' \? '' : S\.station/.test(CUISINE));
+  ok('la caisse conserve aussi la progression prête par poste',
+    /function kdsViewStatus\(o, sid\)/.test(CAISSE)
+      && /stationReady: l\.stationReady === true/.test(CAISSE));
+  ok('la caisse conserve la progression accepter par poste',
+    /stationAccepted: l\.stationAccepted === true/.test(CAISSE)
+      && /opPush\(o, 'cooking', station \? \{ station \} : \{\}\)/.test(CAISSE));
 
   ok('le relais rejoue les envois perdus', /function schedule\(\)/.test(RELAY) && /RETRY_MS/.test(RELAY));
   ok('un refus de fond n’est pas rejoué indéfiniment',
@@ -273,12 +356,17 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
     /pull\(S\.since, 'kitchen'\)/.test(CUISINE));
   ok('un bon oublié d’avant-hier ne rouvre pas le tableau du matin',
     /STALE_MS/.test(CUISINE));
+  ok('une tablette restée ouverte purge aussi les anciens bons déjà en mémoire',
+    /Object\.keys\(S\.orders\)[\s\S]{0,350}?delete S\.orders\[id\]/.test(CUISINE));
   ok('le rechargement ne fait pas carillonner la tablette', /firstPass/.test(CUISINE));
   ok('l’écran ne s’éteint pas en plein service', /wakeLock/.test(CUISINE));
   ok('le romain, même ici', /em, i, cite \{ font-style: normal; \}/.test(CUISINE));
 
   ok('la coquille hors-ligne embarque la page cuisine', /'\/kiwi-cuisine\.html'/.test(SW));
-  ok('…et le relais', /'\/assets\/kitchen-relay\.js'/.test(SW));
+  const stampMatch = CAISSE.match(/assets\/kitchen-print-queue\.js\?v=(\d+)/);
+  ok('la caisse charge la file des bons papier avec estampille', !!stampMatch);
+  ok('…ainsi que la file des bons papier (accord caisse/service-worker)',
+    !!(stampMatch && SW.includes(`'/assets/kitchen-print-queue.js?v=${stampMatch[1]}'`)));
   /* Un écran cuisine hors ligne qui se rouvre sur le tableau de bord du patron
      n'est pas un repli : sur une tablette murale sans clavier, personne n'en
      sort. */

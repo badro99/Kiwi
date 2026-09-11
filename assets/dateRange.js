@@ -283,6 +283,15 @@
     ar: { aujourdhui: 'مقابل أمس', hier: 'مقابل أول أمس', septJours: 'مقابل 7 أيام', trenteJours: 'مقابل 30 يومًا', moisDernier: 'مقابل الشهر', trimestre: 'مقابل الربع', annee: 'مقابل السنة', personnalise: 'مقابل السابق' },
   };
 
+  // Why « Comparer » is greyed out: this merchant has no takings in the window
+  // before the one on screen, so there is no second line to draw.
+  const CMP_EMPTY_TITLE = {
+    'Aucune période précédente à comparer': {
+      en: 'No previous period to compare against',
+      ar: 'لا توجد فترة سابقة للمقارنة',
+    },
+  };
+
   const HH_SUB = {
     // moisDernier/trimestre/annee reuse the 30-day hourly profile (buildHeatmap
     // maps them onto trenteJours), so their labels say "typical profile" rather
@@ -490,6 +499,8 @@
     en: { aujourdhui: 'DAILY GOAL', hier: 'DAILY GOAL', septJours: 'WEEKLY GOAL', trenteJours: 'MONTHLY GOAL', moisDernier: 'LAST MONTH GOAL', trimestre: 'QUARTERLY GOAL', annee: 'YEARLY GOAL', personnalise: 'PERIOD GOAL' },
     ar: { aujourdhui: 'هدف اليوم', hier: 'هدف اليوم', septJours: 'هدف الأسبوع', trenteJours: 'هدف الشهر', moisDernier: 'هدف الشهر الماضي', trimestre: 'هدف الربع', annee: 'هدف السنة', personnalise: 'هدف الفترة' },
   };
+  // Objectif non saisi : on le dit, on n'écrit pas « 0 MAD ».
+  const GOAL_UNSET = { fr: 'à définir', en: 'not set', ar: 'غير محدد' };
 
   const HH_HOURS = ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'];
   const HH_RAW_BY_VENUE = {
@@ -971,17 +982,17 @@
     cafeAtlas: {
     aujourdhui: [
       { t: '14:37', method: 'visa', primary: 'Visa •• 4291',   sub: 'Carte marocaine · Attijariwafa', flag: 'ma', ctx: 'Karim B. · T4',     amt: '240,00',  tip: '+24,00', neg: false, isNew: true },
-      { t: '14:32', method: 'tap',  primary: 'Kiwi Tap',        sub: 'Client #3412 · Kiwi Wallet',     flag: 'ma', ctx: 'Client #3412 · T7',amt: '180,00',  tip: '—',       neg: false },
+      { t: '14:32', method: 'tap',  primary: 'Kiwi Tap',        sub: 'Client #3412 · Kiwi Wallet',     flag: 'ma', ctx: 'Client #3412 · T7',amt: '180,00',  tip: '·',       neg: false },
       { t: '14:18', method: 'mc',   primary: 'Mastercard •• 7820', sub: 'Carte française · BNP Paribas', flag: 'fr', ctx: 'Sara L. · T2',  amt: '85,50',   tip: '+8,55',  neg: false },
-      { t: '14:03', method: 'qr',   primary: 'Kiwi Wallet QR',  sub: 'Nawal K. · abonnée',             flag: 'ma', ctx: 'Nawal K. · T6',    amt: '62,00',   tip: '—',       neg: false },
+      { t: '14:03', method: 'qr',   primary: 'Kiwi Wallet QR',  sub: 'Nawal K. · abonnée',             flag: 'ma', ctx: 'Nawal K. · T6',    amt: '62,00',   tip: '·',       neg: false },
       { t: '13:57', method: 'visa', primary: 'Visa •• 0043',   sub: 'Carte espagnole · CaixaBank',    flag: 'es', ctx: 'Youssef A. · T1',  amt: '312,00',  tip: '+30,00', neg: false },
-      { t: '13:41', method: 'mc',   primary: 'Mastercard •• 1209', sub: 'Remboursement · CMI',         flag: 'ma', ctx: 'Hassan J. · T3',   amt: '−155,00', tip: '—',       neg: true },
+      { t: '13:41', method: 'mc',   primary: 'Mastercard •• 1209', sub: 'Remboursement · CMI',         flag: 'ma', ctx: 'Hassan J. · T3',   amt: '−155,00', tip: '·',       neg: true },
     ],
     hier: [
       { t: '22:48', method: 'visa', primary: 'Visa •• 8841',   sub: 'Carte marocaine · BMCE',         flag: 'ma', ctx: 'Imane S. · T5',    amt: '276,00',  tip: '+27,60', neg: false },
-      { t: '22:14', method: 'tap',  primary: 'Kiwi Tap',        sub: 'Client #3287 · contactless',     flag: 'ma', ctx: 'Client #3287 · T8',amt: '142,00',  tip: '—',       neg: false },
+      { t: '22:14', method: 'tap',  primary: 'Kiwi Tap',        sub: 'Client #3287 · contactless',     flag: 'ma', ctx: 'Client #3287 · T8',amt: '142,00',  tip: '·',       neg: false },
       { t: '21:52', method: 'mc',   primary: 'Mastercard •• 4509', sub: 'Carte française · LCL',      flag: 'fr', ctx: 'Pierre D. · T2',   amt: '198,50',  tip: '+19,85', neg: false },
-      { t: '21:18', method: 'qr',   primary: 'Kiwi Wallet QR',  sub: 'Mehdi C. · régulier',            flag: 'ma', ctx: 'Mehdi C. · T6',    amt: '88,00',   tip: '—',       neg: false },
+      { t: '21:18', method: 'qr',   primary: 'Kiwi Wallet QR',  sub: 'Mehdi C. · régulier',            flag: 'ma', ctx: 'Mehdi C. · T6',    amt: '88,00',   tip: '·',       neg: false },
       { t: '20:42', method: 'visa', primary: 'Visa •• 6612',   sub: 'Carte américaine · Chase',       flag: 'us', ctx: 'Diana K. · T1',    amt: '384,00',  tip: '+38,40', neg: false },
       { t: '20:09', method: 'mc',   primary: 'Mastercard •• 8830', sub: 'Carte marocaine · CIH',      flag: 'ma', ctx: 'Anas L. · T3',     amt: '124,00',  tip: '+12,40', neg: false },
     ],
@@ -989,51 +1000,51 @@
       { t: 'Ven 23', method: 'visa', primary: 'Visa •• 2914',  sub: 'Top transaction de la semaine', flag: 'fr', ctx: 'Nicolas R. · T4', amt: '1 240,00', tip: '+124,00', neg: false },
       { t: 'Jeu 22', method: 'qr',   primary: 'Kiwi Wallet QR', sub: 'Soirée d\'anniversaire',        flag: 'ma', ctx: 'Hicham B. · T8', amt: '684,00',   tip: '+50,00',  neg: false },
       { t: 'Mer 21', method: 'mc',   primary: 'Mastercard •• 1456', sub: 'Carte espagnole · Sabadell', flag: 'es', ctx: 'Lucia G. · T2', amt: '420,00',   tip: '+42,00',  neg: false },
-      { t: 'Mar 20', method: 'tap',  primary: 'Kiwi Tap',       sub: 'Service midi · Tap',            flag: 'ma', ctx: 'Client #2945 · T6', amt: '208,00', tip: '—',       neg: false },
+      { t: 'Mar 20', method: 'tap',  primary: 'Kiwi Tap',       sub: 'Service midi · Tap',            flag: 'ma', ctx: 'Client #2945 · T6', amt: '208,00', tip: '·',       neg: false },
       { t: 'Lun 19', method: 'visa', primary: 'Visa •• 7740',  sub: 'Carte marocaine · BMCE',        flag: 'ma', ctx: 'Salma F. · T1',  amt: '162,00',   tip: '+16,20',  neg: false },
-      { t: 'Dim 18', method: 'mc',   primary: 'Mastercard •• 3308', sub: 'Annulation client',         flag: 'ma', ctx: 'Khalid A. · T3', amt: '−240,00',  tip: '—',       neg: true },
+      { t: 'Dim 18', method: 'mc',   primary: 'Mastercard •• 3308', sub: 'Annulation client',         flag: 'ma', ctx: 'Khalid A. · T3', amt: '−240,00',  tip: '·',       neg: true },
     ],
     trenteJours: [
       { t: 'S22 J1', method: 'visa', primary: 'Visa •• 0921',  sub: 'Réservation groupe · 12 couverts', flag: 'ma', ctx: 'Mariage Bensouda · T1-T4', amt: '4 280,00', tip: '+428,00', neg: false },
       { t: 'S21 J3', method: 'qr',   primary: 'Kiwi Wallet QR', sub: 'Soirée privée',                   flag: 'ma', ctx: 'Wissam · T7', amt: '1 920,00', tip: '+150,00', neg: false },
       { t: 'S20 J5', method: 'mc',   primary: 'Mastercard •• 6612', sub: 'Carte française · BNP',     flag: 'fr', ctx: 'Sophie M. · T2', amt: '780,00', tip: '+78,00', neg: false },
       { t: 'S19 J6', method: 'visa', primary: 'Visa •• 5544',  sub: 'Carte espagnole · La Caixa',    flag: 'es', ctx: 'Manuel V. · T5', amt: '512,00', tip: '+50,00', neg: false },
-      { t: 'S18 J2', method: 'tap',  primary: 'Kiwi Tap',       sub: 'Pic samedi · service du soir',  flag: 'ma', ctx: 'Client #1882 · T8', amt: '342,00', tip: '—',     neg: false },
-      { t: 'S17 J4', method: 'mc',   primary: 'Mastercard •• 9982', sub: 'Reversement Glovo',         flag: 'ma', ctx: 'Réconciliation', amt: '−380,00', tip: '—', neg: true },
+      { t: 'S18 J2', method: 'tap',  primary: 'Kiwi Tap',       sub: 'Pic samedi · service du soir',  flag: 'ma', ctx: 'Client #1882 · T8', amt: '342,00', tip: '·',     neg: false },
+      { t: 'S17 J4', method: 'mc',   primary: 'Mastercard •• 9982', sub: 'Reversement Glovo',         flag: 'ma', ctx: 'Réconciliation', amt: '−380,00', tip: '·', neg: true },
     ],
     },
     maisonMansour: {
       aujourdhui: [
-        { t: '14:38', method: 'visa', primary: 'Visa •• 5821',     sub: 'Carte allemande · Sparkasse', flag: 'fr', ctx: 'Anna M. · Caftan brodé',   amt: '1 890,00', tip: '—', neg: false, isNew: true },
-        { t: '14:14', method: 'mc',   primary: 'Mastercard •• 7714', sub: 'Carte française · LCL',     flag: 'fr', ctx: 'Sophie L. · Babouches',    amt: '450,00',   tip: '—', neg: false },
-        { t: '13:42', method: 'tap',  primary: 'Kiwi Tap',          sub: 'Client #4521 · Kiwi Wallet', flag: 'ma', ctx: 'Client #4521 · Coussin',   amt: '240,00',   tip: '—', neg: false },
-        { t: '13:18', method: 'visa', primary: 'Visa •• 0987',     sub: 'Carte espagnole · BBVA',     flag: 'es', ctx: 'Carmen R. · Théière',      amt: '680,00',   tip: '—', neg: false },
-        { t: '12:54', method: 'mc',   primary: 'Mastercard •• 3344', sub: 'Carte américaine · Chase',  flag: 'us', ctx: 'Karen B. · Tapis berbère', amt: '3 200,00', tip: '—', neg: false },
-        { t: '12:21', method: 'mc',   primary: 'Mastercard •• 8830', sub: 'Retour boutique · CIH',    flag: 'ma', ctx: 'Hassan J. · Babouches',    amt: '−450,00',  tip: '—', neg: true },
+        { t: '14:38', method: 'visa', primary: 'Visa •• 5821',     sub: 'Carte allemande · Sparkasse', flag: 'fr', ctx: 'Anna M. · Caftan brodé',   amt: '1 890,00', tip: '·', neg: false, isNew: true },
+        { t: '14:14', method: 'mc',   primary: 'Mastercard •• 7714', sub: 'Carte française · LCL',     flag: 'fr', ctx: 'Sophie L. · Babouches',    amt: '450,00',   tip: '·', neg: false },
+        { t: '13:42', method: 'tap',  primary: 'Kiwi Tap',          sub: 'Client #4521 · Kiwi Wallet', flag: 'ma', ctx: 'Client #4521 · Coussin',   amt: '240,00',   tip: '·', neg: false },
+        { t: '13:18', method: 'visa', primary: 'Visa •• 0987',     sub: 'Carte espagnole · BBVA',     flag: 'es', ctx: 'Carmen R. · Théière',      amt: '680,00',   tip: '·', neg: false },
+        { t: '12:54', method: 'mc',   primary: 'Mastercard •• 3344', sub: 'Carte américaine · Chase',  flag: 'us', ctx: 'Karen B. · Tapis berbère', amt: '3 200,00', tip: '·', neg: false },
+        { t: '12:21', method: 'mc',   primary: 'Mastercard •• 8830', sub: 'Retour boutique · CIH',    flag: 'ma', ctx: 'Hassan J. · Babouches',    amt: '−450,00',  tip: '·', neg: true },
       ],
       hier: [
-        { t: '19:52', method: 'visa', primary: 'Visa •• 4421',     sub: 'Carte française · BNP',      flag: 'fr', ctx: 'Camille D. · Caftan',      amt: '1 890,00', tip: '—', neg: false },
-        { t: '19:18', method: 'tap',  primary: 'Kiwi Tap',          sub: 'Client #4488 · contactless', flag: 'ma', ctx: 'Client #4488 · Théière',   amt: '680,00',   tip: '—', neg: false },
-        { t: '18:46', method: 'mc',   primary: 'Mastercard •• 2298', sub: 'Carte espagnole · Sabadell',flag: 'es', ctx: 'Marta G. · Coussin',       amt: '240,00',   tip: '—', neg: false },
-        { t: '18:14', method: 'visa', primary: 'Visa •• 6643',     sub: 'Carte américaine · Citi',    flag: 'us', ctx: 'David W. · Tapis',          amt: '3 200,00', tip: '—', neg: false },
-        { t: '17:32', method: 'mc',   primary: 'Mastercard •• 5512', sub: 'Carte marocaine · BMCE',    flag: 'ma', ctx: 'Yasmine F. · Lampe',       amt: '920,00',   tip: '—', neg: false },
-        { t: '16:48', method: 'visa', primary: 'Visa •• 8801',     sub: 'Carte française · Crédit Agricole', flag: 'fr', ctx: 'Léa M. · Babouches', amt: '450,00',   tip: '—', neg: false },
+        { t: '19:52', method: 'visa', primary: 'Visa •• 4421',     sub: 'Carte française · BNP',      flag: 'fr', ctx: 'Camille D. · Caftan',      amt: '1 890,00', tip: '·', neg: false },
+        { t: '19:18', method: 'tap',  primary: 'Kiwi Tap',          sub: 'Client #4488 · contactless', flag: 'ma', ctx: 'Client #4488 · Théière',   amt: '680,00',   tip: '·', neg: false },
+        { t: '18:46', method: 'mc',   primary: 'Mastercard •• 2298', sub: 'Carte espagnole · Sabadell',flag: 'es', ctx: 'Marta G. · Coussin',       amt: '240,00',   tip: '·', neg: false },
+        { t: '18:14', method: 'visa', primary: 'Visa •• 6643',     sub: 'Carte américaine · Citi',    flag: 'us', ctx: 'David W. · Tapis',          amt: '3 200,00', tip: '·', neg: false },
+        { t: '17:32', method: 'mc',   primary: 'Mastercard •• 5512', sub: 'Carte marocaine · BMCE',    flag: 'ma', ctx: 'Yasmine F. · Lampe',       amt: '920,00',   tip: '·', neg: false },
+        { t: '16:48', method: 'visa', primary: 'Visa •• 8801',     sub: 'Carte française · Crédit Agricole', flag: 'fr', ctx: 'Léa M. · Babouches', amt: '450,00',   tip: '·', neg: false },
       ],
       septJours: [
-        { t: 'Ven 23', method: 'mc',   primary: 'Mastercard •• 1144', sub: 'Top transaction de la semaine', flag: 'us', ctx: 'Karen B. · Tapis berbère', amt: '3 200,00', tip: '—', neg: false },
-        { t: 'Jeu 22', method: 'visa', primary: 'Visa •• 5821',      sub: 'Tax-free · Allemagne',          flag: 'fr', ctx: 'Anna M. · Caftan brodé',   amt: '1 890,00', tip: '—', neg: false },
-        { t: 'Mer 21', method: 'visa', primary: 'Visa •• 0987',      sub: 'Carte espagnole · BBVA',        flag: 'es', ctx: 'Carmen R. · Théière',      amt: '680,00',   tip: '—', neg: false },
-        { t: 'Mar 20', method: 'mc',   primary: 'Mastercard •• 7714', sub: 'Carte française · LCL',         flag: 'fr', ctx: 'Sophie L. · Babouches',    amt: '450,00',   tip: '—', neg: false },
-        { t: 'Lun 19', method: 'tap',  primary: 'Kiwi Tap',           sub: 'Client #4521 · contactless',    flag: 'ma', ctx: 'Client #4521 · Coussin',   amt: '240,00',   tip: '—', neg: false },
-        { t: 'Dim 18', method: 'mc',   primary: 'Mastercard •• 8830', sub: 'Retour boutique · CIH',         flag: 'ma', ctx: 'Hassan J. · Babouches',    amt: '−450,00',  tip: '—', neg: true },
+        { t: 'Ven 23', method: 'mc',   primary: 'Mastercard •• 1144', sub: 'Top transaction de la semaine', flag: 'us', ctx: 'Karen B. · Tapis berbère', amt: '3 200,00', tip: '·', neg: false },
+        { t: 'Jeu 22', method: 'visa', primary: 'Visa •• 5821',      sub: 'Tax-free · Allemagne',          flag: 'fr', ctx: 'Anna M. · Caftan brodé',   amt: '1 890,00', tip: '·', neg: false },
+        { t: 'Mer 21', method: 'visa', primary: 'Visa •• 0987',      sub: 'Carte espagnole · BBVA',        flag: 'es', ctx: 'Carmen R. · Théière',      amt: '680,00',   tip: '·', neg: false },
+        { t: 'Mar 20', method: 'mc',   primary: 'Mastercard •• 7714', sub: 'Carte française · LCL',         flag: 'fr', ctx: 'Sophie L. · Babouches',    amt: '450,00',   tip: '·', neg: false },
+        { t: 'Lun 19', method: 'tap',  primary: 'Kiwi Tap',           sub: 'Client #4521 · contactless',    flag: 'ma', ctx: 'Client #4521 · Coussin',   amt: '240,00',   tip: '·', neg: false },
+        { t: 'Dim 18', method: 'mc',   primary: 'Mastercard •• 8830', sub: 'Retour boutique · CIH',         flag: 'ma', ctx: 'Hassan J. · Babouches',    amt: '−450,00',  tip: '·', neg: true },
       ],
       trenteJours: [
-        { t: 'S22 J3', method: 'visa', primary: 'Visa •• 9912',     sub: 'Caftans haut de gamme · paire',   flag: 'fr', ctx: 'Marion K. · 2 caftans',    amt: '3 780,00', tip: '—', neg: false },
-        { t: 'S20 J5', method: 'mc',   primary: 'Mastercard •• 1144', sub: 'Tapis premium · Berbère',       flag: 'us', ctx: 'Karen B. · Tapis',          amt: '3 200,00', tip: '—', neg: false },
-        { t: 'S19 J2', method: 'visa', primary: 'Visa •• 5821',     sub: 'Caftan brodé Tax-free',          flag: 'fr', ctx: 'Anna M.',                   amt: '1 890,00', tip: '—', neg: false },
-        { t: 'S18 J6', method: 'tap',  primary: 'Kiwi Tap',          sub: 'Lampe artisanale · cliente VIP', flag: 'ma', ctx: 'Salma O. · Lampe',          amt: '920,00',   tip: '—', neg: false },
-        { t: 'S17 J4', method: 'visa', primary: 'Visa •• 0987',     sub: 'Théière argentée',               flag: 'es', ctx: 'Carmen R.',                 amt: '680,00',   tip: '—', neg: false },
-        { t: 'S16 J1', method: 'mc',   primary: 'Mastercard •• 4477', sub: 'Échange · taille différente',   flag: 'ma', ctx: 'Hicham B. · Caftan',        amt: '−1 890,00',tip: '—', neg: true },
+        { t: 'S22 J3', method: 'visa', primary: 'Visa •• 9912',     sub: 'Caftans haut de gamme · paire',   flag: 'fr', ctx: 'Marion K. · 2 caftans',    amt: '3 780,00', tip: '·', neg: false },
+        { t: 'S20 J5', method: 'mc',   primary: 'Mastercard •• 1144', sub: 'Tapis premium · Berbère',       flag: 'us', ctx: 'Karen B. · Tapis',          amt: '3 200,00', tip: '·', neg: false },
+        { t: 'S19 J2', method: 'visa', primary: 'Visa •• 5821',     sub: 'Caftan brodé Tax-free',          flag: 'fr', ctx: 'Anna M.',                   amt: '1 890,00', tip: '·', neg: false },
+        { t: 'S18 J6', method: 'tap',  primary: 'Kiwi Tap',          sub: 'Lampe artisanale · cliente VIP', flag: 'ma', ctx: 'Salma O. · Lampe',          amt: '920,00',   tip: '·', neg: false },
+        { t: 'S17 J4', method: 'visa', primary: 'Visa •• 0987',     sub: 'Théière argentée',               flag: 'es', ctx: 'Carmen R.',                 amt: '680,00',   tip: '·', neg: false },
+        { t: 'S16 J1', method: 'mc',   primary: 'Mastercard •• 4477', sub: 'Échange · taille différente',   flag: 'ma', ctx: 'Hicham B. · Caftan',        amt: '−1 890,00',tip: '·', neg: true },
       ],
     },
     spaBahia: {
@@ -1067,7 +1078,7 @@
         { t: 'S20 J1', method: 'visa', primary: 'Visa •• 4408',     sub: 'Forfait Argan · cliente VIP',     flag: 'ma', ctx: 'Yasmine T.',                     amt: '850,00',   tip: '+100,00', neg: false },
         { t: 'S19 J5', method: 'mc',   primary: 'Mastercard •• 3329', sub: 'Massage couple',                 flag: 'fr', ctx: 'Camille & Pierre R.',           amt: '1 100,00', tip: '+110,00', neg: false },
         { t: 'S18 J2', method: 'visa', primary: 'Visa •• 8826',     sub: 'Soin visage premium',             flag: 'es', ctx: 'Imane S.',                       amt: '650,00',   tip: '+65,00',  neg: false },
-        { t: 'S17 J4', method: 'mc',   primary: 'Mastercard •• 8821', sub: 'Annulation rendez-vous',         flag: 'ma', ctx: 'Anonyme',                        amt: '−550,00',  tip: '—',       neg: true },
+        { t: 'S17 J4', method: 'mc',   primary: 'Mastercard •• 8821', sub: 'Annulation rendez-vous',         flag: 'ma', ctx: 'Anonyme',                        amt: '−550,00',  tip: '·',       neg: true },
       ],
     },
   };
@@ -1387,28 +1398,28 @@
         { av: 'HJ', cls: 'b',        name: 'Hamid Jelloul',  role: 'Serveur · terrasse',                   shift: '5h 10', amt: '4 680 MAD', tx: '38 tx' },
         { av: 'SB', cls: 'c',        name: 'Sofia Belkadi',  role: 'Barista · comptoir',                   shift: '4h 48', amt: '3 920 MAD', tx: '54 tx' },
         { av: 'YA', cls: 'd',        name: 'Youssef Amrani', role: 'Serveur · pause depuis 14:12',          shift: '3h 22', amt: '2 110 MAD', tx: '25 tx' },
-        { av: 'MM', cls: 'offline',  name: 'Mehdi Mansouri', role: 'Cuisine · fini son service 14:00',      shift: '—',     amt: '—',         tx: '' },
+        { av: 'MM', cls: 'offline',  name: 'Mehdi Mansouri', role: 'Cuisine · fini son service 14:00',      shift: '·',     amt: '·',         tx: '' },
       ],
       hier: [
         { av: 'FK', cls: 'offline', name: 'Fatima Khalki',  role: 'Serveuse senior · service de hier',   shift: '8h 12', amt: '7 420 MAD', tx: '58 tx' },
         { av: 'HJ', cls: 'offline', name: 'Hamid Jelloul',  role: 'Serveur · terrasse',                   shift: '7h 48', amt: '6 980 MAD', tx: '52 tx' },
         { av: 'SB', cls: 'offline', name: 'Sofia Belkadi',  role: 'Barista · comptoir',                   shift: '6h 30', amt: '5 240 MAD', tx: '64 tx' },
         { av: 'YA', cls: 'offline', name: 'Youssef Amrani', role: 'Serveur · service du soir',            shift: '5h 50', amt: '3 240 MAD', tx: '38 tx' },
-        { av: 'MM', cls: 'offline', name: 'Mehdi Mansouri', role: 'Cuisine · fini 23:00',                  shift: '7h 00', amt: '—',         tx: '' },
+        { av: 'MM', cls: 'offline', name: 'Mehdi Mansouri', role: 'Cuisine · fini 23:00',                  shift: '7h 00', amt: '·',         tx: '' },
       ],
       septJours: [
         { av: 'FK', cls: '', name: 'Fatima Khalki',  role: 'Serveuse senior · 6 jours de service',   shift: '48h 20', amt: '36 800 MAD', tx: '298 tx' },
         { av: 'HJ', cls: 'b',name: 'Hamid Jelloul',  role: 'Serveur · 6 jours',                       shift: '46h 10', amt: '32 400 MAD', tx: '256 tx' },
         { av: 'SB', cls: 'c',name: 'Sofia Belkadi',  role: 'Barista · 7 jours',                       shift: '42h 00', amt: '28 700 MAD', tx: '342 tx' },
         { av: 'YA', cls: 'd',name: 'Youssef Amrani', role: 'Serveur · 5 jours',                       shift: '34h 40', amt: '18 200 MAD', tx: '184 tx' },
-        { av: 'MM', cls: 'd',name: 'Mehdi Mansouri', role: 'Cuisine · 6 jours',                       shift: '44h 30', amt: '—',          tx: '' },
+        { av: 'MM', cls: 'd',name: 'Mehdi Mansouri', role: 'Cuisine · 6 jours',                       shift: '44h 30', amt: '·',          tx: '' },
       ],
       trenteJours: [
         { av: 'FK', cls: '', name: 'Fatima Khalki',  role: 'Serveuse senior · 26 jours',              shift: '208h 40', amt: '152 600 MAD', tx: '1 240 tx' },
         { av: 'HJ', cls: 'b',name: 'Hamid Jelloul',  role: 'Serveur · 25 jours',                      shift: '198h 20', amt: '138 800 MAD', tx: '1 086 tx' },
         { av: 'SB', cls: 'c',name: 'Sofia Belkadi',  role: 'Barista · 28 jours',                      shift: '174h 00', amt: '118 400 MAD', tx: '1 458 tx' },
         { av: 'YA', cls: 'd',name: 'Youssef Amrani', role: 'Serveur · 21 jours',                      shift: '146h 20', amt: '76 400 MAD',  tx: '784 tx' },
-        { av: 'MM', cls: 'd',name: 'Mehdi Mansouri', role: 'Cuisine · 24 jours',                      shift: '184h 00', amt: '—',           tx: '' },
+        { av: 'MM', cls: 'd',name: 'Mehdi Mansouri', role: 'Cuisine · 24 jours',                      shift: '184h 00', amt: '·',           tx: '' },
       ],
     },
     maisonMansour: {
@@ -1504,7 +1515,7 @@
     if (id === 'hier')        return fmtDate(offsetDays(-1));
     if (id === 'septJours')   return `${fmtShort(offsetDays(-6))}, ${fmtDate(today)}`;
     if (id === 'trenteJours') return `${fmtShort(offsetDays(-30))}, ${fmtDate(today)}`;
-    return '—';
+    return '·';
   }
 
   const frInt = n => Math.floor(n).toLocaleString('fr-FR').replace(/,/g, ' ').replace(/ /g, ' ');
@@ -1525,12 +1536,14 @@
 
   function animateNumber(el, from, to, { duration = 800, format } = {}) {
     if (!el) return;
+    if (operatorLedgerPending()) { el.textContent = '…'; return; }
     // Hidden tabs freeze requestAnimationFrame — set the final value at once
     // so a background re-render never leaves a tile blank.
     if (document.hidden) { el['inner' + 'HTML'] = format(to); return; }
     const start = performance.now();
     const ease = t => 1 - Math.pow(1 - t, 3);
     function tick(now) {
+      if (operatorLedgerPending()) { el.textContent = '…'; return; }
       const p = Math.min(1, (now - start) / duration);
       const v = from + (to - from) * ease(p);
       el.innerHTML = format(v);
@@ -1637,54 +1650,264 @@
    *
    * Repli à minuit quand le module de rapport n'est pas chargé : c'est
    * exactement le comportement d'avant, donc rien ne peut se dégrader. */
-  function dayCutoffH() {
+  const DEFAULT_MERCHANT_TZ = 'Africa/Casablanca';
+  function activeMerchantSlug() {
+    try { return getCurrentVenue(); } catch (_) { return ''; }
+  }
+  function merchantTimeZone(slug) {
     try {
-      const h = window.KiwiDayReport?.cutoff?.();
+      const R = window.KiwiDayReport;
+      if (R?.timezone) return R.timezone(slug);
+    } catch (_) {}
+    try {
+      const vd = window.KiwiVenue?.getCurrentVenueData?.();
+      const zone = vd?.timezone || vd?.timeZone || vd?.tz || window.KiwiConfig?.timezone || window.KiwiConfig?.timeZone;
+      if (zone) { new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(); return zone; }
+    } catch (_) {}
+    return DEFAULT_MERCHANT_TZ;
+  }
+  function merchantParts(ts, slug) {
+    const f = new Intl.DateTimeFormat('en-CA', {
+      timeZone: merchantTimeZone(slug), year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+    });
+    const out = {};
+    f.formatToParts(new Date(ts)).forEach(p => { if (p.type !== 'literal') out[p.type] = p.value; });
+    return out;
+  }
+  function addMerchantDays(day, delta) {
+    const p = String(day || '').split('-');
+    return new Date(Date.UTC(+p[0], (+p[1] || 1) - 1, +p[2] || 1) + delta * 864e5).toISOString().slice(0, 10);
+  }
+  function merchantBoundary(day, hour, slug) {
+    const zone = merchantTimeZone(slug);
+    const target = Date.parse(String(day) + 'T00:00:00Z') + hour * 3600000;
+    let guess = target;
+    for (let i = 0; i < 6; i++) {
+      const p = merchantParts(guess, slug);
+      const observed = Date.parse(`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}Z`);
+      if (observed === target) return guess;
+      guess += target - observed;
+    }
+    return guess;
+  }
+  function merchantDayKey(ts, slug) {
+    try {
+      const R = window.KiwiDayReport;
+      if (R?.businessDay) return R.businessDay(ts, slug);
+    } catch (_) {}
+    const p = merchantParts(ts, slug);
+    const day = `${p.year}-${p.month}-${p.day}`;
+    return +p.hour < dayCutoffH(slug) ? addMerchantDays(day, -1) : day;
+  }
+  function merchantDayBounds(day, slug) {
+    try {
+      const R = window.KiwiDayReport;
+      if (R?.dayBounds) return R.dayBounds(day, slug);
+    } catch (_) {}
+    const h = dayCutoffH(slug);
+    return { from: merchantBoundary(day, h, slug), to: merchantBoundary(addMerchantDays(day, 1), h, slug) };
+  }
+  function dayCutoffH(slug) {
+    try {
+      const h = window.KiwiDayReport?.cutoff?.(slug);
       return (typeof h === 'number' && isFinite(h) && h >= 0 && h <= 12) ? h : 0;
     } catch (_) { return 0; }
   }
   function dayStartMs(t) {
-    const h = dayCutoffH();
-    // Reculer de la bascule avant de prendre la date, puis la remettre : une
-    // vente à 00 h 30 avec une bascule à 5 h retombe sur la veille 05 h 00.
-    const d = new Date(t - h * 3600000);
-    d.setHours(0, 0, 0, 0);
-    return d.getTime() + h * 3600000;
+    const slug = activeMerchantSlug();
+    return merchantDayBounds(merchantDayKey(t, slug), slug).from;
   }
   function realSalesList() {
     try { return (window.KiwiSales?.list?.(getCurrentVenue()) || []); } catch (_) { return []; }
   }
+  function realRefundList() {
+    try { return (window.KiwiRefunds?.list?.(getCurrentVenue()) || []); } catch (_) { return []; }
+  }
+  function realMoneyList() {
+    return realSalesList().concat(realRefundList().map((r) => ({ ...r, amount: -Math.abs(+r.amount || 0), kind: 'refund' })));
+  }
   // Window bounds [from, to) in ms for a range, relative to now.
   function rangeBounds(range) {
-    const today = dayStartMs(Date.now());
+    /* A merchant-picked range is exact. Demo tables may use a presentation
+     * bucket, but live ledgers must never turn "3–5 August" into "last 7
+     * days" while keeping the precise dates on screen. */
+    if ((range === 'personnalise' || (range == null && currentRange === 'personnalise')) && customRange) {
+      const slug = activeMerchantSlug();
+      const start = merchantDayBounds(dateToIso(customRange.start), slug).from;
+      const end = merchantDayBounds(dateToIso(customRange.end), slug).to;
+      return [start, end];
+    }
+    const slug = activeMerchantSlug();
+    const todayDay = merchantDayKey(Date.now(), slug);
+    const today = merchantDayBounds(todayDay, slug).from;
     if (range === 'aujourdhui') return [today, Infinity];
-    if (range === 'hier')       return [today - 864e5, today];
+    if (range === 'hier') {
+      const yesterday = merchantDayBounds(addMerchantDays(todayDay, -1), slug);
+      return [yesterday.from, yesterday.to];
+    }
     const days = RANGE_DAYS[range] || 1;
-    return [today - (days - 1) * 864e5, Infinity];
+    return [merchantDayBounds(addMerchantDays(todayDay, -(days - 1)), slug).from, Infinity];
   }
   // Windowed revenue / count / basket from the merchant's real sales.
   function realSalesTotals(range) {
-    const [from, to] = rangeBounds(range || effRange());
-    let revenue = 0, count = 0;
+    const [from, to] = rangeBounds(range == null ? currentRange : range);
+    let revenue = 0, gross = 0, refunds = 0, collected = 0, receivable = 0, count = 0;
     realSalesList().forEach(e => {
       const ts = +e.ts || 0;
-      if (ts >= from && ts < to) { revenue += Math.max(0, +e.amount || 0); count++; }
+      if (ts < from || ts >= to) return;
+      const amt = Math.max(0, +e.amount || 0);
+      revenue += amt; gross += amt; count++;
+      if (tenderBucket(e.method)) collected += amt;
+      else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e.method || '').trim().toLowerCase())) receivable += amt;
     });
-    return { revenue, count, basket: count ? revenue / count : 0 };
+    realRefundList().forEach(e => {
+      const ts = +e.ts || 0;
+      if (ts < from || ts >= to) return;
+      const amt = Math.abs(+e.amount || 0);
+      revenue -= Math.abs(+e.amount || 0); refunds += amt;
+      if (tenderBucket(e.method)) collected -= amt;
+      else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e.method || '').trim().toLowerCase())) receivable -= amt;
+    });
+    return { revenue, gross, refunds, collected, receivable, count, basket: count ? gross / count : 0 };
+  }
+  /* Keep tender attribution deliberately conservative. A value the ledger does
+   * not identify is "other", never a bank card; customer credit and delivery
+   * receivables are not collected money and therefore stay out of the payment
+   * donut entirely. */
+  function tenderBucket(method) {
+    const m = String(method || '').trim().toLowerCase();
+    if (['cash', 'especes', 'espèces'].includes(m)) return 'cash';
+    if (['card', 'carte', 'visa', 'mc', 'mastercard'].includes(m)) return 'card';
+    if (m === 'tap') return 'tap';
+    if (['qr', 'wallet'].includes(m)) return 'qr';
+    if (m === 'link') return 'link';
+    if (['virement', 'transfer', 'bank_transfer'].includes(m)) return 'transfer';
+    if (['split', 'partage', 'partagé'].includes(m)) return 'split';
+    if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(m)) return null;
+    return 'other';
   }
   /* Same numbers over an EXPLICIT window, plus the tender split. Every
    * real-venue comparison below is built on this one primitive so the KPI
    * band, the hero deltas and the card/cash tile can never disagree. */
   function realWindowStats(from, to) {
-    let revenue = 0, count = 0, card = 0, cash = 0;
+    let revenue = 0, gross = 0, refunds = 0, collected = 0, receivable = 0, count = 0, card = 0, cash = 0;
     realSalesList().forEach((e) => {
       const ts = +e.ts || 0;
       if (ts < from || ts >= to) return;
       const amt = Math.max(0, +e.amount || 0);
-      revenue += amt; count++;
-      if (String(e.method || 'card') === 'cash') cash += amt; else card += amt;
+      revenue += amt; gross += amt; count++;
+      const tender = tenderBucket(e.method);
+      if (tender) collected += amt;
+      else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e.method || '').trim().toLowerCase())) receivable += amt;
+      if (tender === 'cash') cash += amt;
+      if (tender === 'card' || tender === 'tap') card += amt;
     });
-    return { revenue, count, basket: count ? revenue / count : 0, card, cash };
+    realRefundList().forEach((e) => {
+      const ts = +e.ts || 0;
+      if (ts < from || ts >= to) return;
+      const amt = Math.abs(+e.amount || 0);
+      revenue -= Math.abs(+e.amount || 0); refunds += amt;
+      const tender = tenderBucket(e.method);
+      if (tender) collected -= amt;
+      else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e.method || '').trim().toLowerCase())) receivable -= amt;
+      if (tender === 'cash') cash -= amt;
+      if (tender === 'card' || tender === 'tap') card -= amt;
+    });
+    return { revenue, gross, refunds, collected, receivable, count, basket: count ? gross / count : 0, card, cash };
+  }
+
+  /* One read model for every headline and insight sentence. Nothing falls back
+   * to older rows when the selected period is empty: zero today means zero
+   * today, even when the venue sold yesterday. */
+  function realInsightSummary(range) {
+    const [from, to] = rangeBounds(range == null ? currentRange : range);
+    const rows = realSalesList().filter((e) => {
+      const ts = +e.ts || 0;
+      return ts >= from && ts < to;
+    });
+    let revenue = 0, gross = 0, refunds = 0, collected = 0, receivable = 0;
+    const byHour = {}, byTender = {};
+    rows.forEach((e) => {
+      const amount = Math.max(0, +e.amount || 0);
+      revenue += amount; gross += amount;
+      if (amount) {
+        const hour = new Date(+e.ts || 0).getHours();
+        byHour[hour] = (byHour[hour] || 0) + amount;
+      }
+      const tender = tenderBucket(e && e.method);
+      if (tender && amount) {
+        byTender[tender] = (byTender[tender] || 0) + amount;
+        collected += amount;
+      } else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e && e.method || '').trim().toLowerCase())) {
+        receivable += amount;
+      }
+    });
+    realRefundList().forEach((e) => {
+      const ts = +e.ts || 0;
+      if (ts < from || ts >= to) return;
+      const amount = Math.abs(+e.amount || 0);
+      revenue -= Math.abs(+e.amount || 0); refunds += amount;
+      const hour = new Date(ts).getHours();
+      byHour[hour] = (byHour[hour] || 0) - amount;
+      const tender = tenderBucket(e && e.method);
+      if (tender) { byTender[tender] = (byTender[tender] || 0) - amount; collected -= amount; }
+      else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e && e.method || '').trim().toLowerCase())) receivable -= amount;
+    });
+    const topKey = (obj) => Object.keys(obj).reduce((best, key) =>
+      best == null || obj[key] > obj[best] ? key : best, null);
+    const peakHour = topKey(byHour);
+    const topTender = topKey(byTender);
+    return {
+      from, to, count: rows.length, revenue, gross, refunds, collected, receivable,
+      basket: rows.length ? gross / rows.length : 0,
+      peakHour: peakHour == null ? null : +peakHour,
+      peakRevenue: peakHour == null ? 0 : byHour[peakHour],
+      activeHours: Object.keys(byHour).length,
+      topTender,
+      tenderAmount: topTender == null ? 0 : byTender[topTender],
+      collected,
+    };
+  }
+
+  const TENDER_NAME = {
+    fr: { cash: 'espèces', card: 'carte bancaire', tap: 'Kiwi Tap', qr: 'QR / wallet', link: 'lien de paiement', transfer: 'virement', split: 'paiement partagé', other: 'autre mode' },
+    en: { cash: 'cash', card: 'bank card', tap: 'Kiwi Tap', qr: 'QR / wallet', link: 'payment link', transfer: 'bank transfer', split: 'split payment', other: 'other tender' },
+    ar: { cash: 'نقدًا', card: 'بطاقة بنكية', tap: 'Kiwi Tap', qr: 'QR / محفظة', link: 'رابط دفع', transfer: 'تحويل بنكي', split: 'دفع مقسّم', other: 'طريقة أخرى' },
+  };
+  function buildRealHeroRec() {
+    const s = realInsightSummary();
+    if (!s.count || !s.revenue) return null;
+    const lang = getLang();
+    const today = currentRange === 'aujourdhui';
+    const num = (n) => frInt(Math.round(n));
+    const tender = s.topTender && s.collected ? Math.round((s.tenderAmount / s.collected) * 100) : null;
+    const tenderName = s.topTender ? (TENDER_NAME[lang] || TENDER_NAME.fr)[s.topTender] : '';
+    const peakFr = s.peakHour == null ? '' : ` Votre meilleure heure : ${s.peakHour}h.`;
+    const payFr = tender == null ? '' : ` ${tender} % des encaissements identifiés sont en ${tenderName}.`;
+    const peakEn = s.peakHour == null ? '' : ` Your best hour: ${s.peakHour}:00.`;
+    const payEn = tender == null ? '' : ` ${tender}% of identified payments are ${tenderName}.`;
+    const peakAr = s.peakHour == null ? '' : ` أفضل ساعة: ${s.peakHour}.`;
+    const payAr = tender == null ? '' : ` ${tender}٪ من المدفوعات المحددة عبر ${tenderName}.`;
+    const W = {
+      fr: { title: today ? 'Votre journée en cours' : 'La période sélectionnée', obs: `${s.count} vente${s.count > 1 ? 's' : ''} ${today ? "aujourd'hui" : 'sur la période'} pour ${num(s.revenue)} MAD, panier moyen ${num(s.basket)} MAD.${peakFr}${payFr}`, act: '→ Calculé à partir des ventes affichées sur cette période.', basisLabel: 'mesuré' },
+      en: { title: today ? 'Your day so far' : 'Selected period', obs: `${s.count} sale${s.count > 1 ? 's' : ''} ${today ? 'today' : 'in this period'} for ${num(s.revenue)} MAD, average basket ${num(s.basket)} MAD.${peakEn}${payEn}`, act: '→ Calculated from the sales shown for this period.', basisLabel: 'measured' },
+      ar: { title: today ? 'يومك حتى الآن' : 'الفترة المحددة', obs: `${s.count} عملية بيع ${today ? 'اليوم' : 'خلال هذه الفترة'} بقيمة ${num(s.revenue)} درهم، ومتوسط السلة ${num(s.basket)} درهم.${peakAr}${payAr}`, act: '← محسوب من المبيعات المعروضة لهذه الفترة.', basisLabel: 'مقاس' },
+    };
+    return W[lang] || W.fr;
+  }
+  function buildRealHeatmapRec() {
+    const s = realInsightSummary();
+    if (!s.count || !s.revenue || s.peakHour == null) return null;
+    const lang = getLang();
+    const share = Math.round((s.peakRevenue / s.revenue) * 100);
+    const num = (n) => frInt(Math.round(n));
+    const W = {
+      fr: { title: `Votre pic : ${s.peakHour}h`, obs: `${num(s.peakRevenue)} MAD de ventes nettes à ${s.peakHour}h, soit ${share} % de la période, réparties sur ${s.activeHours} heure${s.activeHours > 1 ? 's' : ''} d’activité.`, cta: '' },
+      en: { title: `Your peak: ${s.peakHour}:00`, obs: `${num(s.peakRevenue)} MAD in net sales at ${s.peakHour}:00, ${share}% of the period across ${s.activeHours} active hour${s.activeHours > 1 ? 's' : ''}.`, cta: '' },
+      ar: { title: `ذروتك: ${s.peakHour}`, obs: `${num(s.peakRevenue)} درهم من صافي المبيعات عند الساعة ${s.peakHour}، أي ${share}٪ من الفترة موزعة على ${s.activeHours} ساعة نشاط.`, cta: '' },
+    };
+    return W[lang] || W.fr;
   }
   /* Coût matière RÉEL — délégué à window.KiwiCost (assets/cost.js), qui est
    * désormais le seul endroit de l'application qui sache répondre « combien me
@@ -1723,8 +1946,16 @@
   /* rangeBounds leaves `to` open at Infinity for live ranges; a comparison
    * needs a closed window it can shift backwards, so pin the open end to now. */
   function closedBounds(range) {
-    const [from, to] = rangeBounds(range || effRange());
+    const [from, to] = rangeBounds(range == null ? currentRange : range);
     return [from, to === Infinity ? Date.now() + 1 : to];
+  }
+  function shiftedBusinessBounds(from, to, deltaDays) {
+    const slug = activeMerchantSlug();
+    const startDay = merchantDayKey(from + 1, slug);
+    const endDay = merchantDayKey((to === Infinity ? Date.now() : to - 1), slug);
+    const shiftedStart = addMerchantDays(startDay, -deltaDays);
+    const shiftedEnd = addMerchantDays(endDay, -deltaDays);
+    return [merchantDayBounds(shiftedStart, slug).from, merchantDayBounds(shiftedEnd, slug).to];
   }
   /* A percentage change needs something to change FROM. A merchant on their
    * first day has no yesterday, and printing « 0 % vs hier » beside their
@@ -1736,9 +1967,11 @@
    * full day it hasn't finished yet. */
   function realDeltaPct(range, pick, backDays) {
     const [from, to] = closedBounds(range);
-    const span = Math.max(1, to - from);
-    const off = backDays ? backDays * 864e5 : span;
-    const base = pick(realWindowStats(from - off, to - off));
+    const startDay = merchantDayKey(from + 1, activeMerchantSlug());
+    const endDay = merchantDayKey(to - 1, activeMerchantSlug());
+    const spanDays = Math.max(1, Math.round((Date.parse(endDay + 'T00:00:00Z') - Date.parse(startDay + 'T00:00:00Z')) / 864e5) + 1);
+    const baseBounds = shiftedBusinessBounds(from, to, backDays || spanDays);
+    const base = pick(realWindowStats(baseBounds[0], baseBounds[1]));
     if (!base) return null;
     const cur = pick(realWindowStats(from, to));
     return Math.round(((cur - base) / base) * 1000) / 10;
@@ -1752,54 +1985,152 @@
     return step * mag;
   }
   const DAY_ABBR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  /* One day, bucketed by hour and accumulated — 24 running totals. Shared by
+   * the plotted day and the day it is compared against so both curves are
+   * built by the same code and are readable point-for-point.
+   * Bucketing is relative to `base` (the business day start, e.g. 5:00 AM)
+   * so late-night sales after midnight are attributed to their service. */
+  function hourlyCumul(list, base, end) {
+    const hours = Math.max(1, Math.ceil((end - base) / 3600000));
+    const per = new Array(hours).fill(0);
+    list.forEach(e => {
+      const ts = +e.ts || 0;
+      if (ts >= base && ts < end) {
+        const idx = Math.floor((ts - base) / 3600000);
+        if (idx >= 0 && idx < 24) per[idx] += (+e.amount || 0);
+      }
+    });
+    const out = [];
+    let acc = 0;
+    for (let h = 0; h < hours; h++) { acc += per[h]; out.push(acc); }
+    return out;
+  }
+  // Same idea over N whole days: one total per day from `start`.
+  function dailyTotals(list, start, days) {
+    const out = new Array(days).fill(0);
+    const startDay = merchantDayKey(start, activeMerchantSlug());
+    list.forEach(e => {
+      const ts = +e.ts || 0;
+      if (ts >= start) {
+        const day = merchantDayKey(ts, activeMerchantSlug());
+        const idx = Math.round((Date.parse(day + 'T00:00:00Z') - Date.parse(startDay + 'T00:00:00Z')) / 864e5);
+        if (idx >= 0 && idx < days) out[idx] += (+e.amount || 0);
+      }
+    });
+    return out;
+  }
   // Build a REAL revenue-chart series for the active range from KiwiSales — the
   // custom-venue replacement for the zeroed demo clone (which plots a flat line
   // and leaks the demo legend total). Hourly-cumulative on day ranges, daily
   // totals on 7/30-day ranges; axis + legend computed from the real numbers.
+  //
+  // `revPrev` is the window immediately before this one, bucketed identically —
+  // this is what « Comparer » draws. It used to be `rev.map(() => 0)`, so on a
+  // real merchant the button faded in a flat line pinned to the axis with an
+  // empty legend: indistinguishable from a dead control. A window with no sale
+  // at all returns null, not zeros — same rule realDeltaPct states above: a
+  // fabricated baseline claims a comparison that was never possible.
   function realRevSeries(range) {
-    range = range || effRange();
-    const list = realSalesList();
+    range = range == null ? currentRange : range;
+    const list = realMoneyList();
     const hourly = (range === 'aujourdhui' || range === 'hier');
-    let rev = [], xLabels = [], visibleXIdx = [], sub = '', rangeBadge = '', total = 0;
+    let rev = [], prev = [], xLabels = [], visibleXIdx = [], sub = '', rangeBadge = '', cmpPrefix = '', total = 0, prevTotal = 0;
 
     if (hourly) {
-      const base = (range === 'hier') ? dayStartMs(Date.now()) - 864e5 : dayStartMs(Date.now());
-      const end = base + 864e5;
-      const per = new Array(24).fill(0);
-      list.forEach(e => { const ts = +e.ts || 0; if (ts >= base && ts < end) per[new Date(ts).getHours()] += Math.max(0, +e.amount || 0); });
-      let acc = 0;
-      for (let h = 0; h < 24; h++) { acc += per[h]; rev.push(acc); xLabels.push((h < 10 ? '0' : '') + h + 'h'); }
-      visibleXIdx = [0, 3, 6, 9, 12, 15, 18, 21];
-      total = acc;
+      const slug = activeMerchantSlug();
+      const todayDay = merchantDayKey(Date.now(), slug);
+      const day = addMerchantDays(todayDay, range === 'hier' ? -1 : 0);
+      const previousDay = addMerchantDays(day, -1);
+      const currentWindow = merchantDayBounds(day, slug);
+      const previousWindow = merchantDayBounds(previousDay, slug);
+      const base = currentWindow.from;
+      rev = hourlyCumul(list, currentWindow.from, currentWindow.to);
+      prev = hourlyCumul(list, previousWindow.from, previousWindow.to);
+      total = rev[rev.length - 1];
+      prevTotal = prev[prev.length - 1];
+      for (let h = 0; h < rev.length; h++) {
+        const hr = +merchantParts(base + h * 3600000, slug).hour;
+        xLabels.push((hr < 10 ? '0' : '') + hr + 'h');
+      }
+      visibleXIdx = Array.from({ length: rev.length }, (_, i) => i).filter(i => i % Math.max(1, Math.floor(rev.length / 8)) === 0);
+      // Today is unfinished. Truncate at current hour elapsed in this business window.
+      if (range === 'aujourdhui') {
+        const nowIdx = Math.min(rev.length - 1, Math.max(0, Math.floor((Date.now() - base) / 3600000)));
+        for (let i = nowIdx + 1; i < rev.length; i++) rev[i] = null;
+      }
       rangeBadge = (range === 'hier') ? 'HIER' : "AUJOURD'HUI";
       sub = (range === 'hier') ? 'Cumul horaire · hier' : 'Cumul horaire · aujourd\'hui';
+      cmpPrefix = (range === 'hier') ? 'Cumul avant-hier' : 'Cumul hier';
     } else {
-      const days = RANGE_DAYS[range] || 7;
-      const start = dayStartMs(Date.now()) - (days - 1) * 864e5;
-      const buckets = new Array(days).fill(0);
-      list.forEach(e => {
-        const ts = +e.ts || 0;
-        if (ts >= start) { const idx = Math.floor((dayStartMs(ts) - start) / 864e5); if (idx >= 0 && idx < days) buckets[idx] += Math.max(0, +e.amount || 0); }
-      });
-      rev = buckets;
-      for (let i = 0; i < days; i++) { const d = new Date(start + i * 864e5); xLabels.push(DAY_ABBR[d.getDay()] + ' ' + d.getDate()); }
+      const [start, end] = closedBounds(range);
+      const startDay = merchantDayKey(start + 1, activeMerchantSlug());
+      const endDay = merchantDayKey(end - 1, activeMerchantSlug());
+      const days = Math.max(1, Math.round((Date.parse(endDay + 'T00:00:00Z') - Date.parse(startDay + 'T00:00:00Z')) / 864e5) + 1);
+      rev = dailyTotals(list, start, days);
+      const previousStart = merchantDayBounds(addMerchantDays(startDay, -days), activeMerchantSlug()).from;
+      prev = dailyTotals(list, previousStart, days);
+      for (let i = 0; i < days; i++) { const d = new Date(Date.parse(addMerchantDays(startDay, i) + 'T12:00:00Z')); xLabels.push(DAY_ABBR[d.getUTCDay()] + ' ' + d.getUTCDate()); }
       const step = Math.max(1, Math.round(days / 6));
       for (let i = 0; i < days; i += step) visibleXIdx.push(i);
       if (visibleXIdx[visibleXIdx.length - 1] !== days - 1) visibleXIdx.push(days - 1);
-      total = buckets.reduce((s, x) => s + x, 0);
-      rangeBadge = days + ' DERNIERS JOURS';
-      sub = 'Total journalier · ' + days + ' derniers jours';
+      total = rev.reduce((s, x) => s + x, 0);
+      prevTotal = prev.reduce((s, x) => s + x, 0);
+      rangeBadge = range === 'personnalise' ? 'PÉRIODE PERSONNALISÉE' : days + ' DERNIERS JOURS';
+      sub = range === 'personnalise' ? 'Total journalier · période sélectionnée' : 'Total journalier · ' + days + ' derniers jours';
+      cmpPrefix = days + ' jours précédents';
     }
 
-    const top = niceCeil(Math.max(1, ...rev));
+    const hasPrev = prevTotal > 0;
+    // The ceiling has to clear BOTH curves, or a stronger previous period gets
+    // clipped off the top of the box the moment the comparison is switched on.
+    const top = niceCeil(Math.max(1, ...rev.filter(v => v != null), ...(hasPrev ? prev : [])));
     const yTicks = [0, top * 0.25, top * 0.5, top * 0.75, top].map(Math.round);
     const legendPrimary = (hourly ? 'Cumul' : ('Total ' + (RANGE_DAYS[range] || rev.length) + ' jours')) + ' · ' + frInt(total) + ' MAD';
-    return { rev, revPrev: rev.map(() => 0), yTicks, xLabels, visibleXIdx, sub, rangeBadge, legendPrimary, legendCompare: '' };
+    return {
+      rev, revPrev: hasPrev ? prev : null, total, prevTotal: hasPrev ? prevTotal : null,
+      yTicks, xLabels, visibleXIdx, sub, rangeBadge, legendPrimary,
+      legendCompare: hasPrev ? (cmpPrefix + ' · ' + frInt(prevTotal) + ' MAD') : '',
+    };
   }
 
   /* ═══════════════ RENDER: HERO ═══════════════ */
 
+  // dateRange loads before live-link. An operator URL starts unverified even
+  // before identity/feed initialization; cached or partial totals are not zero.
+  function operatorLedgerPending() {
+    if (!/[?&]op=1(?:&|$)/.test(location.search)) return false;
+    const live = window.KiwiLive;
+    const state = live?.snapshotStatus?.();
+    const requested = new URLSearchParams(location.search).get('merchant');
+    const venue = window.KiwiVenue?.getCurrentVenueData?.();
+    return !state || state.phase !== 'complete' || (requested && state.merchant !== requested) ||
+      !venue || (venue.slug && venue.slug !== state.merchant) ||
+      !state.venue || state.venue !== window.KiwiVenue?.getVenue?.();
+  }
+  function operatorUnavailableText() {
+    const state = window.KiwiLive?.snapshotStatus?.();
+    const loading = !state || state.phase === 'loading';
+    const lang = getLang();
+    return (loading
+      ? { fr: 'Chargement du journal…', en: 'Loading ledger…', ar: 'جارٍ تحميل السجل…' }
+      : { fr: 'Chiffres indisponibles · actualiser le journal', en: 'Figures unavailable · refresh the ledger', ar: 'الأرقام غير متاحة · حدّث السجل' })[lang] || 'Journal indisponible';
+  }
+  function guardOperatorFigures(selector) {
+    if (!operatorLedgerPending()) return false;
+    document.querySelectorAll(selector).forEach(el => { el.textContent = ''; });
+    return true;
+  }
+
   function renderHero() {
+    if (guardOperatorFigures('.hero-breakdown')) {
+      const amount = document.querySelector('[data-hero-amount]');
+      if (amount) { amount.textContent = '…'; amount.setAttribute('aria-label', operatorUnavailableText()); }
+      const label = document.querySelector('[data-hero-label]');
+      if (label) label.textContent = operatorUnavailableText();
+      const greet = document.querySelector('.hero-left-today .greet');
+      if (greet) greet.style.display = 'none';
+      return;
+    }
     const lang = getLang();
     const effective = effRange();
     let data = vData(heroDataByVenue, currentRange);
@@ -1828,9 +2159,9 @@
         ...data,
         amount: t.revenue,
         netAfterKiwi: Math.round(t.revenue * 0.839),
-        deltaHier:    realDeltaPct(effRange(), rev),
-        deltaSemaine: realDeltaPct(effRange(), rev, 7),
-        deltaMois:    realDeltaPct(effRange(), rev, 28),
+        deltaHier:    realDeltaPct(currentRange, rev),
+        deltaSemaine: realDeltaPct(currentRange, rev, 7),
+        deltaMois:    realDeltaPct(currentRange, rev, 28),
       };
     }
 
@@ -1841,10 +2172,11 @@
     // depuis 08h12") is a today-only concept — a ticking LIVE clock over a
     // 7-day or 30-day aggregate is misleading. Show it only on aujourd'hui.
     const greetEl = document.querySelector('.hero-left-today .greet');
-    if (greetEl) greetEl.style.display = (effective === 'aujourdhui') ? '' : 'none';
+    if (greetEl) greetEl.style.display = (effective === 'aujourdhui' && !/[?&]op=1(?:&|$)/.test(location.search)) ? '' : 'none';
 
     const amtEl = document.querySelector('[data-hero-amount]');
     if (amtEl) {
+      amtEl.removeAttribute('aria-label');
       const fromVal = parseAmountFromEl(amtEl);
       // Resize font to fit the wider of from/to so the number never wraps mid-animation.
       fitHeroAmount(amtEl, Math.max(fromVal, data.amount));
@@ -1864,9 +2196,9 @@
         if (v) existing[k] = parsePctFromEl(v);
       });
       const items = [];
-      if (data.deltaHier    != null) items.push({ key: 'hier',    value: data.deltaHier,    label: labels.hier });
-      if (data.deltaSemaine != null) items.push({ key: 'semaine', value: data.deltaSemaine, label: labels.semaine });
-      if (data.deltaMois    != null) items.push({ key: 'mois',    value: data.deltaMois,    label: labels.mois });
+      if (data.deltaHier    != null && labels && labels.hier)    items.push({ key: 'hier',    value: data.deltaHier,    label: labels.hier });
+      if (data.deltaSemaine != null && labels && labels.semaine) items.push({ key: 'semaine', value: data.deltaSemaine, label: labels.semaine });
+      if (data.deltaMois    != null && labels && labels.mois)    items.push({ key: 'mois',    value: data.deltaMois,    label: labels.mois });
 
       // "Net après Kiwi" removed by product decision — the dashboard is the
       // merchant's own takings; a "what's left after Kiwi's cut" line is an
@@ -1931,7 +2263,7 @@
       });
     }
 
-    const rec = window.KiwiVenue?.getHeroAiRec?.();
+    const rec = ownData() ? buildRealHeroRec() : window.KiwiVenue?.getHeroAiRec?.();
     const titleEl = document.querySelector('.hai-rec-title');
     const obsEl   = document.querySelector('.hai-rec-obs');
     const actEl   = document.querySelector('.hai-rec-act');
@@ -1962,7 +2294,7 @@
   /* ═══════════════ RENDER: HEATMAP AI HINT (per venue) ═══════════════ */
 
   function renderHeatmapAi() {
-    const rec = window.KiwiVenue?.getHeatmapAiRec?.();
+    const rec = ownData() ? buildRealHeatmapRec() : window.KiwiVenue?.getHeatmapAiRec?.();
     const titleEl = document.querySelector('.hh-ai-title');
     const obsEl   = document.querySelector('.hh-ai-obs');
     const ctaEl   = document.querySelector('.hh-ai-cta');
@@ -1984,6 +2316,11 @@
   /* ═══════════════ RENDER: HERO GOAL BAR ═══════════════ */
 
   function renderGoal() {
+    if (guardOperatorFigures('[data-goal-label], [data-goal-pct]')) {
+      const fill = document.querySelector('[data-goal-fill]');
+      if (fill) fill.style.width = '0%';
+      return;
+    }
     const lang = getLang();
     const effective = effRange();
     let data = vData(goalByVenue, currentRange);
@@ -1999,7 +2336,7 @@
     // from their recorded sales.
     if (ownData() && window.KiwiSales) {
       const vd = window.KiwiVenue.getCurrentVenueData?.() || {};
-      data = { ...data, goal: +vd.goal || 0, current: realSalesTotals().revenue };
+      data = { ...data, goal: +vd.goal || 0, current: realSalesTotals(currentRange).revenue };
     }
 
     // Settings → "Objectif journalier" override for the default demo venue: the
@@ -2014,18 +2351,35 @@
       } catch (_) {}
     }
 
+    /* Objectif jamais saisi. Un commerçant qui n'a rien fixé lisait
+     * « OBJECTIF JOUR · 0 MAD » puis « 0 % atteint » le jour où il avait fait
+     * 2 254 MAD : la division par un objectif nul retombait sur 0, ce qui se
+     * lit comme un échec au lieu d'une case vide. On dit ce qui est — aucun
+     * objectif — et on ne calcule pas un pourcentage qui n'existe pas. Le
+     * drapeau sur le libellé sert à la carte Vexel, qui recopie ce DOM. */
+    const unset = !(data.goal > 0);
     const labelTxt = GOAL_LABEL[lang]?.[currentRange] || GOAL_LABEL.fr[currentRange];
     const labelEl = document.querySelector('[data-goal-label]');
-    if (labelEl) labelEl.textContent = `${labelTxt} · ${frInt(data.goal)} MAD`;
+    if (labelEl) {
+      labelEl.textContent = unset
+        ? `${labelTxt} · ${GOAL_UNSET[lang] || GOAL_UNSET.fr}`
+        : `${labelTxt} · ${frInt(data.goal)} MAD`;
+      if (unset) labelEl.dataset.goalUnset = '1';
+      else delete labelEl.dataset.goalUnset;
+    }
 
-    const ratio = data.goal > 0 ? data.current / data.goal : 0;
+    const ratio = unset ? 0 : data.current / data.goal;
     const pctRound = Math.round(ratio * 100);
     const widthPct = Math.min(100, ratio * 100);
 
     const pctEl = document.querySelector('[data-goal-pct]');
     if (pctEl) {
-      const from = parseInt((pctEl.textContent || '').replace(/\D/g, ''), 10) || 0;
-      animateNumber(pctEl, from, pctRound, { duration: 700, format: v => `${Math.round(v)} %` });
+      if (unset) {
+        pctEl.textContent = '·';
+      } else {
+        const from = parseInt((pctEl.textContent || '').replace(/\D/g, ''), 10) || 0;
+        animateNumber(pctEl, from, pctRound, { duration: 700, format: v => `${Math.round(v)} %` });
+      }
     }
     const fillEl = document.querySelector('[data-goal-fill]');
     if (fillEl) fillEl.style.width = `${widthPct.toFixed(1)}%`;
@@ -2041,9 +2395,6 @@
     return 'i4';
   }
   function buildHeatmap(rng) {
-    // The hourly heatmap only carries the 4 base ranges; map the rest onto
-    // the closest one so it never crashes on moisDernier/trimestre/annee.
-    rng = ({ personnalise: 'aujourdhui', moisDernier: 'trenteJours', trimestre: 'trenteJours', annee: 'trenteJours' })[rng] || rng;
     const v = getCurrentVenue();
     /* A real merchant's peak hours come from their OWN tickets: every sale
      * carries a `ts`, so bucket the active window by hour of day. Before the
@@ -2102,6 +2453,8 @@
         hour: h, revenue: rev[i], covers: cov[i], intensity: max ? rev[i] / max : 0,
       }));
     }
+    // Demo fixtures only carry base ranges; mapping is confined to that path.
+    rng = ({ personnalise: 'aujourdhui', moisDernier: 'trenteJours', trimestre: 'trenteJours', annee: 'trenteJours' })[rng] || rng;
     const rev = HH_RAW_BY_VENUE[v]?.[rng] || HH_RAW_BY_VENUE.cafeAtlas[rng]
       || HH_RAW_BY_VENUE.cafeAtlas.trenteJours || HH_RAW_BY_VENUE.cafeAtlas.aujourdhui;
     const cov = HH_COVERS_BY_VENUE[v]?.[rng] || HH_COVERS_BY_VENUE.cafeAtlas[rng]
@@ -2114,7 +2467,7 @@
   }
   function renderHeatmap() {
     const lang = getLang();
-    const data = buildHeatmap(effRange());
+    const data = buildHeatmap(ownData() ? currentRange : effRange());
     // Determine sim cursor for past/current/future state on aujourdhui
     let simIdx = -1;
     if (isLiveDemo()) {
@@ -2153,7 +2506,7 @@
 
   /* ═══════════════ RENDER: KPI BAND ═══════════════ */
 
-  const arrowSvg = up => `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="${up ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'}"/></svg>`;
+  const arrowSvg = up => `<i data-lucide="${up ? 'arrow-up' : 'arrow-down'}" style="width:11px;height:11px" aria-hidden="true"></i>`;
 
   function fmtKpiVal(spec, v) {
     const unit = spec.unit ? `<span class="u">${spec.unit}</span>` : '';
@@ -2188,6 +2541,15 @@
     arrdep:       '<path d="M7 4v12"/><path d="M3 12l4 4 4-4"/><path d="M17 20V8"/><path d="M13 12l4-4 4 4"/>',
     menage:       '<path d="M11 4l1.2 3.4 3.4 1.2-3.4 1.2L11 13.2 9.8 9.8 6.4 8.6l3.4-1.2z"/><path d="M18 13l.8 2.2L21 16l-2.2.8L18 19l-.8-2.2L15 16l2.2-.8z"/>',
     mixRev:       '<path d="M21.21 15.89A10 10 0 118 2.83"/><path d="M22 12A10 10 0 0012 2v10z"/>',
+  };
+  const KPI_MATERIAL_ICONS = {
+    tx: 'credit-card', panier: 'shopping-bag', tips: 'hand-coins', marge: 'percent',
+    success: 'check-circle-2', ratio: 'pie-chart', regulars: 'users',
+    tauxRetour: 'rotate-ccw', revenue: 'banknote', profit: 'trending-up',
+    cogs: 'package', retention: 'heart', newClients: 'user-plus',
+    revPerDay: 'calendar', txPerDay: 'list', tempsTable: 'clock',
+    occupation: 'bed', adr: 'tag', revpar: 'trending-up',
+    arrdep: 'swap-vert', menage: 'sparkles', mixRev: 'pie-chart'
   };
   // One sparkline path per key. Colour stays atlas; deltas drive the up/down chip.
   const KPI_SPARKS = {
@@ -2277,8 +2639,12 @@
                   desc: 'Nombre de ventes sur la période', derive: (d) => d.tx || null },
     panier:     { labels: { default: 'Panier moyen' }, i18n: 'dash.kpi.basket',
                   desc: 'Montant moyen dépensé par vente', derive: (d) => d.panier || null },
-    revenue:    { labels: { default: 'Chiffre d’affaires' }, i18n: 'dash.kpi.revenue',
-                  desc: 'Total encaissé sur la période', derive: (d) => { const r = revOf(d); return r == null ? null : { value: r, unit: 'MAD', fmt: 'int', delta: revDelta(d) }; } },
+    revenue:    { labels: { default: 'Ventes nettes', en: 'Net sales', ar: 'صافي المبيعات' }, i18n: '',
+                  desc: 'Ventes enregistrées moins remboursements; le paiement est ventilé séparément', derive: (d) => { const r = revOf(d); return r == null ? null : { value: r, unit: 'MAD', fmt: 'int', delta: revDelta(d) }; } },
+    collected:  { labels: { default: 'Encaissé', en: 'Collected', ar: 'المقبوض' }, i18n: '',
+                  desc: 'Paiements identifiés comme encaissés, après remboursements', derive: (d) => d.collected ? { value: d.collected.value, unit: 'MAD', fmt: 'int', delta: d.collected.delta } : null },
+    receivable: { labels: { default: 'Créances', en: 'Receivable', ar: 'المستحق' }, i18n: '',
+                  desc: 'Ventes à crédit ou livraison non encore encaissées', derive: (d) => d.receivable ? { value: d.receivable.value, unit: 'MAD', fmt: 'int', delta: d.receivable.delta } : null },
     revPerDay:  { labels: { default: 'CA par jour' }, i18n: 'dash.kpi.revPerDay',
                   desc: 'Chiffre d’affaires moyen par jour', derive: (d, ctx) => { const r = revOf(d); return r == null ? null : { value: r / ctx.nbDays, unit: 'MAD', fmt: 'int', delta: revDelta(d) }; } },
     marge:      { labels: { default: 'Marge brute' }, i18n: 'dash.kpi.margin',
@@ -2345,10 +2711,15 @@
   function kpiLabel(key, venueType, lang) {
     const c = KPI_CATALOG[key]; if (!c) return key;
     const T = window.KiwiI18n?.T?.[lang] || {};
-    return T[c.i18n] || c.labels[venueType] || c.labels.default;
+    return T[c.i18n] || c.labels[lang] || c.labels[venueType] || c.labels.default;
   }
 
   function renderKpiBand() {
+    if (guardOperatorFigures('[data-kpi-band]')) {
+      const wrap = document.querySelector('[data-kpi-band]');
+      if (wrap) wrap.textContent = operatorUnavailableText();
+      return;
+    }
     const lang = getLang();
     let data = vData(kpiByVenue, currentRange);
     if (!data) return;
@@ -2375,7 +2746,7 @@
     // come from the merchant's recorded sales.
     if (ownData() && window.KiwiSales) {
       const t = realSalesTotals();
-      const rng = effRange();
+      const rng = currentRange;
       const [wFrom, wTo] = closedBounds(rng);
       const w = realWindowStats(wFrom, wTo);
       /* Le ratio se lit « card / cash ». Les deux parts sortent des ventes
@@ -2395,7 +2766,9 @@
          * ci-dessus et que le tableau de bord ne tombait jamais juste face au
          * rouleau de caisse (voir revOf). */
         revenue: { value: t.revenue, unit: 'MAD', fmt: 'int', delta: realDeltaPct(rng, (s) => s.revenue) },
-        ratio:    data.ratio    ? { ...data.ratio,    text: tender ? `${cardPct} / ${100 - cardPct}` : '—', unit: tender ? '%' : '', delta: realDeltaPct(rng, (s) => (s.card + s.cash ? (s.card / (s.card + s.cash)) * 100 : 0)) } : data.ratio,
+        collected: { value: t.collected, unit: 'MAD', fmt: 'int', delta: realDeltaPct(rng, (s) => s.collected) },
+        receivable: { value: t.receivable, unit: 'MAD', fmt: 'int', delta: realDeltaPct(rng, (s) => s.receivable) },
+        ratio:    data.ratio    ? { ...data.ratio,    text: tender ? `${cardPct} / ${100 - cardPct}` : '·', unit: tender ? '%' : '', delta: realDeltaPct(rng, (s) => (s.card + s.cash ? (s.card / (s.card + s.cash)) * 100 : 0)) } : data.ratio,
         regulars: data.regulars ? { ...data.regulars, value: 0, unit: '', delta: null } : data.regulars,
         /* ── Un tiret, pas un zéro ──────────────────────────────────────────
          * Ces deux taux n'ont encore aucune source chez un vrai commerçant :
@@ -2411,8 +2784,8 @@
          * Le tiret est déjà le vocabulaire de la maison pour « rien à
          * montrer » — c'est ce qu'affiche le ratio carte/espèces sans
          * encaissement, deux lignes plus haut. */
-        success:    data.success    ? { ...data.success,    text: '—', unit: '', delta: null } : data.success,
-        tauxRetour: data.tauxRetour ? { ...data.tauxRetour, text: '—', unit: '', delta: null } : data.tauxRetour,
+        success:    data.success    ? { ...data.success,    text: '·', unit: '', delta: null } : data.success,
+        tauxRetour: data.tauxRetour ? { ...data.tauxRetour, text: '·', unit: '', delta: null } : data.tauxRetour,
       };
 
       /* Bénéfice brut, Coût matière et Marge brute dérivent TOUS de `marge` via
@@ -2437,7 +2810,7 @@
          * « vous ne gagnez rien », ce qui est une affirmation, et fausse. Le
          * tiret est déjà le mot de la maison pour « rien à montrer » — c'est ce
          * qu'affichent « Taux succès » et le ratio carte/espèces plus haut. */
-        const dash = { text: '—', unit: '', delta: null };
+        const dash = { text: '·', unit: '', delta: null };
         data.marge = { ...dash };
         data.profit = { ...dash };
         data.cogs = { ...dash };
@@ -2454,7 +2827,7 @@
           revpar:     { value: 0, unit: 'MAD', fmt: 'int',  delta: null },
           arrdep:     { text: '0 / 0', unit: '', delta: null },
           menage:     { value: 0, unit: rooms ? `/ ${rooms}` : '', fmt: 'int', delta: null },
-          mixRev:     { text: '—', unit: '', delta: null },
+          mixRev:     { text: '·', unit: '', delta: null },
         };
       }
 
@@ -2478,15 +2851,69 @@
     // vertical default. Derived KPIs are merged into `data` so the tile
     // builder and value loop below keep working unchanged.
     const venueType = window.KiwiVenue?.getVenueType?.() || 'restaurant';
-    const layout = getKpiLayout(venueType) || defaultKpiKeys(venueType);
+    const savedLayout = getKpiLayout(venueType);
+    let layout = savedLayout || defaultKpiKeys(venueType);
     const ctx = { venueType, range: effRange(), nbDays: RANGE_DAYS[effRange()] || 1 };
+    const deriveTile = (k) => {
+      const c = KPI_CATALOG[k];
+      return c ? c.derive(data, ctx) : (data[k] || null);
+    };
     const derived = {};
     layout.forEach((k) => {
-      const c = KPI_CATALOG[k];
-      const t = c ? c.derive(data, ctx) : (data[k] || null);
+      const t = deriveTile(k);
       if (t) derived[k] = t;
     });
     data = { ...data, ...derived };
+
+    /* Une tuile qui ne PEUT rien afficher n'a pas sa place dans la bande.
+     *
+     * Chez un vrai commerçant, trois indicateurs de la grille par défaut n'ont
+     * aucune source : le taux de succès (Kiwi n'enregistre pas les refus de
+     * paiement), les clients réguliers (pas de carnet), et la marge tant que le
+     * catalogue n'est pas costé. Le tiret reste la bonne réponse — inventer un
+     * 0 mentirait — mais trois tirets alignés dans la bande donnent à lire
+     * « le tableau de bord est cassé » alors que les ventes, elles, sont là.
+     *
+     * On remplace donc les cases mortes par un indicateur qui, lui, a une
+     * valeur, et à défaut on rétrécit la bande. Deux garde-fous :
+     *   · seulement si la grille est celle par défaut (savedLayout === null) —
+     *     un commerçant qui a choisi ses six tuiles garde les siennes, tirets
+     *     compris, c'est sa décision ;
+     *   · le vivier est court. « CA/jour » et « ventes/jour » valent
+     *     exactement « CA » et « ventes » sur une journée : on ne les propose
+     *     que sur une plage multi-jours, sinon la bande afficherait deux fois
+     *     le même nombre sous deux titres. Pourboires (estimation), marge et
+     *     coût (marge inconnue), rétention et nouveaux clients (dérivés des
+     *     réguliers, donc de 0) sont exclus par construction.
+     *
+     * Auto-réparateur : le jour où le commerçant saisit ses coûts, `marge` a
+     * une valeur, n'est plus morte, et reprend sa place. */
+    const isDeadTile = (k) => {
+      const t = data[k];
+      return !t || (t.text != null && String(t.text).replace(/\s/g, '') === '·');
+    };
+    if (ownData() && !savedLayout && layout.some(isDeadTile)) {
+      const pool = (ctx.nbDays > 1 ? ['revenue', 'revPerDay', 'txPerDay'] : ['revenue'])
+        .filter((k) => !layout.includes(k));
+      const ready = [];
+      pool.forEach((k) => {
+        const t = deriveTile(k);
+        if (!t) return;
+        data[k] = t;
+        if (!isDeadTile(k)) ready.push(k);
+      });
+      const shrunk = layout
+        .map((k) => (isDeadTile(k) && ready.length ? ready.shift() : k))
+        .filter((k) => !isDeadTile(k));
+      if (shrunk.length) layout = shrunk;
+    }
+    /* La grille est figée à six colonnes (dashboard.html) : une bande plus
+     * courte laisserait des pistes vides à droite. On lui passe le compte
+     * réel — repeat() n'accepte pas min(), le clamp se fait donc ici. */
+    const nCols = Math.max(1, layout.length);
+    wrap.style.setProperty('--kpi-cols', String(nCols));
+    wrap.style.setProperty('--kpi-cols-md', String(Math.min(3, nCols)));
+    wrap.style.setProperty('--kpi-cols-sm', String(Math.min(2, nCols)));
     // A custom venue with a subtype profile speaks its trade's vocabulary:
     // getKpiSpec returns {key,label} pairs (no i18n field) already resolved
     // for the current language. Those labels win over the generic catalog,
@@ -2522,14 +2949,14 @@
       const sparkPath = ownData()
         ? 'M0 18 L120 18'
         : (KPI_SPARKS[s.key] || KPI_SPARKS.tx);
-      const iconPath = KPI_ICONS[s.key] || KPI_ICONS.tx;
+      const iconName = KPI_MATERIAL_ICONS[s.key] || 'credit-card';
       const i18nAttr = s.i18n ? ` data-i18n="${s.i18n}"` : '';
       // If a translation exists in T, use it as initial label; otherwise the FR label.
       const T = window.KiwiI18n?.T?.[lang] || {};
       const label = T[s.i18n] || s.label;
       return `
         <div class="kpi-m" data-kpi="${s.key}" tabindex="0" role="button">
-          <div class="l"><span${i18nAttr}>${label}</span><div class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${iconPath}</svg></div></div>
+          <div class="l"><span${i18nAttr}>${label}</span><div class="ico"><i data-lucide="${iconName}" style="width:13px;height:13px" aria-hidden="true"></i></div></div>
           <div class="v" data-kpi-val></div>
           <div class="d" data-kpi-delta></div>
           <svg class="sp" viewBox="0 0 120 22" preserveAspectRatio="none">
@@ -2563,13 +2990,15 @@
       }
       if (deltaEl) {
         const d = tileSpec.delta;
-        /* Pas de période précédente = pas de comparaison. On écrit le tiret
-         * plutôt qu'un « 0 % » qui affirmerait que rien n'a bougé, alors que
-         * c'est le premier jour du commerçant. Pas de flèche non plus : elle
-         * pointerait dans une direction inventée. */
+        /* Pas de période précédente = pas de comparaison. Ni « 0 % » (qui
+         * affirmerait que rien n'a bougé au premier jour du commerçant), ni
+         * flèche (elle pointerait dans une direction inventée) — et pas non
+         * plus « — vs hier », qui n'apprend rien et fait lire la tuile comme
+         * une panne. On laisse la ligne vide ; le CSS en réserve la hauteur
+         * (.kpi-m .d:empty) pour que les tuiles restent alignées. */
         if (d == null) {
           deltaEl.className = 'd neutral';
-          deltaEl.innerHTML = `— ${suffix}`;
+          deltaEl.innerHTML = '';
         } else {
           deltaEl.className = `d${d < 0 ? ' dn' : d === 0 ? ' neutral' : ''}`;
           deltaEl.innerHTML = `${arrowSvg(d >= 0)}${fmtPct(d)} ${suffix}`;
@@ -2601,7 +3030,7 @@
     // label + icon, the period value, its delta and a sparkline.
     const cardHtml = (k) => {
       const c = KPI_CATALOG[k];
-      const icon = KPI_ICONS[k] || KPI_ICONS.tx;
+      const iconName = KPI_MATERIAL_ICONS[k] || 'credit-card';
       const sparkPath = KPI_SPARKS[k] || KPI_SPARKS.tx;
       let tile = null;
       try { tile = c.derive(data, ctx); } catch (_) { tile = null; }
@@ -2612,7 +3041,7 @@
       return `
         <button class="kpi-pick" data-kc="${k}" type="button" aria-pressed="false">
           <span class="kc-badge"></span>
-          <span class="l"><span>${kpiLabel(k, venueType, lang)}</span><span class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icon}</svg></span></span>
+          <span class="l"><span>${kpiLabel(k, venueType, lang)}</span><span class="ico"><i data-lucide="${iconName}" style="width:13px;height:13px" aria-hidden="true"></i></span></span>
           <span class="v">${valHtml}</span>
           <span class="d${dCls}">${arrowSvg(dv >= 0)}${fmtPct(dv)} ${deltaSuffix}</span>
           <svg class="sp" viewBox="0 0 120 22" preserveAspectRatio="none"><path d="${sparkPath}" stroke="#0B6E4F" stroke-width="4" stroke-opacity="0.16" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${sparkPath}" stroke="#0B6E4F" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -2692,6 +3121,13 @@
   }
 
   function renderRevChart() {
+    if (guardOperatorFigures('[data-rev-svg], [data-rev-legend], [data-rev-hero-delta], [data-rev-range-badge], [data-rev-compare-caption]')) {
+      const value = document.querySelector('[data-rev-hero-val]');
+      if (value) value.textContent = '…';
+      const sub = document.querySelector('[data-rev-sub]');
+      if (sub) sub.textContent = operatorUnavailableText();
+      return;
+    }
     const lang = getLang();
     const effective = effRange();
     let data = vData(revChartByVenue, currentRange);
@@ -2703,7 +3139,7 @@
     // (bucketed from KiwiSales), replacing the zeroed demo clone that draws a
     // flat line AND leaks the demo legend total. Matches the hero / KPI window.
     if (ownData() && window.KiwiSales) {
-      data = { ...data, ...realRevSeries(effRange()) };
+      data = { ...data, ...realRevSeries(currentRange) };
     }
 
     // ─── Live-demo override on aujourdhui ────────────────────────────────
@@ -2873,10 +3309,35 @@
     // and for positioning the live pulse on the live-truncated curve.
     let lastIdx = -1;
     for (let i = 0; i < N; i++) { if (data.rev[i] != null) lastIdx = i; }
-    // Resting hero readout = the latest cumulative point vs the same point
-    // on the comparison curve.
-    const restingVal  = lastIdx >= 0 ? data.rev[lastIdx] : 0;
-    const restingPrev = (data.revPrev && lastIdx >= 0) ? data.revPrev[lastIdx] : null;
+    // True if the x-axis labels are hourly (e.g. "11h"). Hourly ranges
+    // get per-minute interpolation; daily ranges (7j / 30j) get per-hour
+    // interpolation so the hover feels equally fluid.
+    const isHourly = !!data.xLabels?.[0]?.endsWith('h');
+
+    // Resting hero readout:
+    // - On hourly ranges (aujourdhui / hier), points are cumulative so the last
+    //   non-null point is the day's total.
+    // - On daily/multi-day ranges (7j, 30j, personnalisé...), points are discrete
+    //   daily buckets. The hero number must show the full period's total revenue,
+    //   not just the revenue of the last single day.
+    let restingVal, restingPrev;
+    if (isHourly) {
+      restingVal = lastIdx >= 0 ? (data.rev[lastIdx] || 0) : 0;
+      restingPrev = (data.revPrev && lastIdx >= 0) ? (data.revPrev[lastIdx] || 0) : null;
+    } else {
+      if (data.total != null) {
+        restingVal = data.total;
+      } else {
+        restingVal = data.rev.reduce((s, x) => s + (x || 0), 0);
+      }
+      if (data.prevTotal != null) {
+        restingPrev = data.prevTotal;
+      } else if (data.revPrev) {
+        restingPrev = data.revPrev.reduce((s, x) => s + (x || 0), 0);
+      } else {
+        restingPrev = null;
+      }
+    }
     const linePath = smoothPath(data.rev);
     const cmpPath  = smoothPath(data.revPrev);
     // Area's right edge follows the line's actual tip — sim x in live mode.
@@ -2946,7 +3407,7 @@
       </g>
       <g class="rev-tip">
         <rect class="rev-tip-rect" rx="14" ry="14" fill="url(#rev-tip-gradient)" stroke="rgba(125,242,176,0.18)" stroke-width="1" filter="url(#rev-tip-shadow)"/>
-        <text class="rev-tip-label" x="0" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7DF2B0" letter-spacing="1.6" opacity="0.88"></text>
+        <text class="rev-tip-label" x="0" text-anchor="middle" font-family="Inter Tight" font-weight="600" font-size="10" fill="#7DF2B0" letter-spacing="0.1em" opacity="0.92"></text>
         <text class="rev-tip-value" x="0" text-anchor="middle" font-family="Inter Tight" font-weight="600" font-size="17" fill="#FFFFFF" letter-spacing="-0.01em"></text>
         <text class="rev-tip-cmp"   x="0" text-anchor="middle" font-family="Inter Tight" font-weight="500" font-size="11" letter-spacing="0"></text>
       </g>
@@ -2995,11 +3456,6 @@
         }
       }
     }
-
-    // True if the x-axis labels are hourly (e.g. "11h"). Hourly ranges
-    // get per-minute interpolation; daily ranges (7j / 30j) get per-hour
-    // interpolation so the hover feels equally fluid.
-    const isHourly = !!data.xLabels?.[0]?.endsWith('h');
 
     function move(evt) {
       const rect = svg.getBoundingClientRect();
@@ -3203,6 +3659,18 @@
     const sub = document.querySelector('[data-rev-sub]');
     if (sub) sub.textContent = trStr(data.sub, REV_SUB);
 
+    /* No previous period, no comparison to make. Left enabled the button reads
+     * as broken — you press it and the chart doesn't move. Disabled, with the
+     * reason on the tooltip, it reads as what it is: there is nothing yet to
+     * compare this period against. */
+    const cmpBtn = document.querySelector('[data-rev-compare-btn]');
+    if (cmpBtn) {
+      const canCompare = Array.isArray(data.revPrev) && data.revPrev.length > 0;
+      cmpBtn.disabled = !canCompare;
+      if (canCompare) cmpBtn.removeAttribute('title');
+      else cmpBtn.setAttribute('title', trStr('Aucune période précédente à comparer', CMP_EMPTY_TITLE));
+    }
+
     // Legend (revenue lines only — transactions count moved to KPI band)
     const legend = document.querySelector('[data-rev-legend]');
     if (legend) {
@@ -3241,6 +3709,9 @@
     { key: 'tap',  color: '#7DF2B0', fr: 'Kiwi Tap',         en: 'Kiwi Tap',     ar: 'Kiwi Tap' },
     { key: 'qr',   color: '#D99A2B', fr: 'QR / Wallet',      en: 'QR / Wallet',  ar: 'QR / محفظة' },
     { key: 'link', color: '#B08CC8', fr: 'Lien de paiement', en: 'Payment link', ar: 'رابط الدفع' },
+    { key: 'transfer', color: 'var(--n-500)', fr: 'Virement', en: 'Bank transfer', ar: 'تحويل بنكي' },
+    { key: 'split', color: 'var(--n-700)', fr: 'Paiement partagé', en: 'Split payment', ar: 'دفع مقسّم' },
+    { key: 'other', color: 'var(--n-300)', fr: 'Autre mode', en: 'Other tender', ar: 'طريقة أخرى' },
   ];
   const MIX_EMPTY = {
     fr: 'Aucun encaissement sur la période',
@@ -3256,7 +3727,7 @@
   const MIX_CENTER_ALL = { fr: 'MAD encaissé', en: 'MAD collected', ar: 'درهم محصّل' };
 
   function realMixRows(lang, range) {
-    const [from, to] = rangeBounds(range || effRange());
+    const [from, to] = rangeBounds(range == null ? currentRange : range);
     const by = {};
     let total = 0;
     realSalesList().forEach((e) => {
@@ -3264,13 +3735,12 @@
       if (ts < from || ts >= to) return;
       const amt = Math.max(0, +e.amount || 0);
       if (!amt) return;
-      let k = String((e && e.method) || 'card');
-      if (k === 'wallet') k = 'qr';                             // même rail côté client
-      if (!REAL_MIX.some((m) => m.key === k)) k = 'card';       // mode inconnu → carte, jamais une tranche fantôme
+      const k = tenderBucket(e && e.method);
+      if (!k) return; // crédit client / créance livraison ≠ argent encaissé
       by[k] = (by[k] || 0) + amt;
       total += amt;
     });
-    if (!total) return { rows: [], total: 0 };
+    if (!total) return { rows: [], total: 0, cardTotal: 0 };
     return {
       total,
       rows: REAL_MIX.filter((m) => by[m.key] > 0).map((m) => ({
@@ -3289,14 +3759,16 @@
      * exactement ses quatre rails carte. Tout ce qui suit (anneau + légende) lit
      * `rows`, donc les deux chemins partagent le même rendu. */
     const custom = !!(ownData() && window.KiwiSales);
-    const real = custom ? realMixRows(lang, effective) : null;
+    renderMixPlan(custom, lang);
+    const real = custom ? realMixRows(lang, currentRange) : null;
     const rows = custom ? real.rows : [
       { color: '#0B6E4F', label: 'Visa',       pct: data.visa },
       { color: '#46A878', label: 'Mastercard', pct: data.mc   },
       { color: '#7DF2B0', label: 'Kiwi Tap',   pct: data.tap  },
       { color: '#D99A2B', label: 'QR',         pct: data.qr   },
     ];
-    const centerMad = custom ? real.total : data.centerMad;
+    const rawCenterMad = custom ? real.total : data.centerMad;
+    const centerMad = Number.isFinite(Number(rawCenterMad)) ? Number(rawCenterMad) : 0;
 
     const donut = document.querySelector('[data-mix-donut]');
     if (donut) {
@@ -3306,7 +3778,7 @@
       // percentages; a hairline GAP between segments keeps them legible. A
       // light→deep green ramp + amber makes all four methods distinguishable.
       const GAP = 1.6;
-      const SW = 4.6;
+      const SW = 2.89;
       let acc = 0;
       const segs = rows.map((r) => {
         const pct = r.pct || 0;
@@ -3327,7 +3799,7 @@
 
       if (!built) {
         donut['inner' + 'HTML'] = `
-          <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="#EBE8E0" stroke-width="${SW}" pathLength="100"/>
+          <circle class="track" cx="21" cy="21" r="15.9155" fill="transparent" stroke="#EBE8E0" stroke-width="${SW}" pathLength="100"/>
           ${segs.map((s, i) => `
             <circle class="seg" data-seg="${i}"
               cx="21" cy="21" r="15.9155" fill="transparent"
@@ -3421,6 +3893,29 @@
         animateNumber(el, from, r.pct, { duration: 600, format: v => `${Math.round(v)} %` });
       });
     }
+  }
+
+  const PLAN_NAME = { basic: 'Basic', pro: 'Pro', ultra: 'Ultra', ultimate: 'Ultimate' };
+  const PLAN_ACTIVE = { fr: 'Plan en cours', en: 'Current plan', ar: 'الخطة الحالية' };
+  const PLAN_PENDING = { fr: 'Plan en cours de vérification', en: 'Plan being verified', ar: 'جارٍ التحقق من الخطة' };
+  function renderMixPlan(custom, lang) {
+    const label = document.querySelector('[data-mix-plan-name]');
+    const status = document.querySelector('[data-mix-plan-status]');
+    if (!label || !status) return;
+    if (!custom) {
+      label.setAttribute('data-i18n', 'dash.mix.subscription');
+      status.setAttribute('data-i18n', 'dash.mix.subscription.price');
+      label.textContent = 'Abonnement Kiwi Pro';
+      status.textContent = '399 MAD/mois · tout inclus';
+      return;
+    }
+    label.removeAttribute('data-i18n');
+    status.removeAttribute('data-i18n');
+    const raw = String(window.KiwiConfig?.plan || '').toLowerCase();
+    label.textContent = PLAN_NAME[raw] ? `Kiwi ${PLAN_NAME[raw]}` : 'Abonnement Kiwi';
+    status.textContent = PLAN_NAME[raw]
+      ? (PLAN_ACTIVE[lang] || PLAN_ACTIVE.fr)
+      : (PLAN_PENDING[lang] || PLAN_PENDING.fr);
   }
 
   /* ═══════════════ RENDER: LIVE FEED ═══════════════
@@ -3595,10 +4090,12 @@
      * comme les lignes ne portent que l'heure, rien ne trahissait leur date. Le
      * titre du panneau rendait la chose pire : ces ventes-là n'étaient ni en
      * direct, ni du jour. */
-    const [lo, hi] = rangeBounds(effRange());
-    const sales = (window.KiwiSales?.list?.(venue) || [])
+    const [lo, hi] = rangeBounds(currentRange);
+    const sales = (window.KiwiSales?.list?.(venue) || []).concat(
+      (window.KiwiRefunds?.list?.(venue) || []).map((r) => ({ ...r, amount: -Math.abs(+r.amount || 0), kind: 'refund' }))
+    )
       .filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; })
-      .slice(-8).reverse();
+      .sort((a, b) => (+a.ts || 0) - (+b.ts || 0)).slice(-8).reverse();
     const lang = getLang();
     /* Every method the till can actually record (see live-link METHOD_LABEL).
      * `cash` was missing, so `L[s.method] || L.card` relabelled EVERY cash sale
@@ -3606,31 +4103,35 @@
      * dominant tender, the owner could not tell cash from card on their own
      * feed. */
     const ML = {
-      fr: { cash: 'Espèces', card: 'Carte bancaire', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'Lien de paiement', delivery: 'Livraison · à recevoir', sub: 'Vente encaissée', deliverySub: 'Vente enregistrée · non encaissée' },
-      en: { cash: 'Cash', card: 'Bank card', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'Payment link', delivery: 'Delivery · receivable', sub: 'Sale recorded', deliverySub: 'Sale recorded · unpaid' },
-      ar: { cash: 'نقدًا', card: 'بطاقة بنكية', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'رابط الدفع', delivery: 'توصيل · مبلغ مستحق', sub: 'عملية بيع مسجّلة', deliverySub: 'بيع مسجّل · غير محصّل' },
+      fr: { cash: 'Espèces', card: 'Carte bancaire', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'Lien de paiement', split: 'Paiement partagé', credit: 'Crédit client', delivery: 'Livraison · à recevoir', sub: 'Vente encaissée', deliverySub: 'Vente enregistrée · non encaissée' },
+      en: { cash: 'Cash', card: 'Bank card', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'Payment link', split: 'Split payment', credit: 'Customer credit', delivery: 'Delivery · receivable', sub: 'Sale recorded', deliverySub: 'Sale recorded · unpaid' },
+      ar: { cash: 'نقدًا', card: 'بطاقة بنكية', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'رابط الدفع', split: 'دفع مقسّم', credit: 'دين العميل', delivery: 'توصيل · مبلغ مستحق', sub: 'عملية بيع مسجّلة', deliverySub: 'بيع مسجّل · غير محصّل' },
     };
     /* Chip art per method. The till records the TENDER, never the card network,
      * so a card sale gets the neutral card chip — printing a Visa or Mastercard
      * mark here would invent a fact the sale does not carry. */
-    const ICON_FOR = { cash: 'cash', card: 'cmi', tap: 'tap', qr: 'qr', wallet: 'qr', link: 'qr', delivery: 'qr' };
+    const ICON_FOR = { cash: 'cash', card: 'cmi', tap: 'tap', qr: 'qr', wallet: 'qr', link: 'qr', split: 'cmi', credit: 'qr', delivery: 'qr' };
     const L = ML[lang] || ML.fr;
     return sales.map((s, i) => {
       const d = new Date(s.ts);
       const t = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      const isRefund = s.kind === 'refund' || Number(s.amount) < 0;
       return {
         t,
         method: ICON_FOR[s.method] || 'cmi',
-        primary: L[s.method] || L.card,
+        primary: isRefund ? (lang === 'en' ? 'Refund' : lang === 'ar' ? 'استرداد' : 'Remboursement') : (L[s.method] || L.card),
         /* The "who/what" column. On a boutique the useful identifier is the item,
          * which the sale now carries — a row reading "Chemise en lin" is what the
          * owner needs to find the original sale when that customer returns. Falls
          * back to the generic subtitle only when the till sent no label. */
-        sub: s.method === 'delivery' ? L.deliverySub : L.sub, flag: '', ctx: s.label || '',
+        sub: isRefund ? (s.ref || '') : ((s.method === 'delivery' || s.method === 'credit') ? L.deliverySub : L.sub), flag: '', ctx: s.label || '',
         // Amount ONLY — the row template appends its own <span class="cur">MAD</span>,
         // so spelling the unit here too printed "450,00 MADMAD" on every real sale.
-        amt: (s.amount || 0).toFixed(2).replace('.', ','),
-        tip: '—', neg: false, isNew: i === 0,
+        amt: (isRefund ? '− ' : '') + Math.abs(s.amount || 0).toFixed(2).replace('.', ','),
+        tip: '·', neg: isRefund, isNew: i === 0,
+        saleId: String(s.id || ''),
+        ref: String(s.ref || s.receiptRef || s.id || '').trim(),
+        receiptNo: String(s.ref || s.receiptRef || '').trim(),
       };
     });
   }
@@ -3683,12 +4184,15 @@
         /* Empty state — start of hour, no orders yet. */
         const fe = tradeStr('feedEmpty', FEED_EMPTY[lang] || FEED_EMPTY.fr);
         wrap['inner' + 'HTML'] = `
-          <div style="padding: 36px 14px; text-align: center; color: var(--n-500); font-size: 13px;">
-            <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 14px; background:var(--paper-soft); border-radius:999px; font-family:var(--mono); font-size:11px; letter-spacing:0.06em; color:var(--n-600); margin-bottom:10px;">
-              <span class="pulse-dot" style="width:6px; height:6px; background:var(--atlas);"></span>${fe.badge}
+          <div style="padding: 38px 18px 42px; text-align: center; display: flex; flex-direction: column; align-items: center;">
+            <div style="width: 44px; height: 44px; border-radius: 13px; background: rgba(11,110,79,0.10); border: 1px solid rgba(11,110,79,0.18); color: var(--atlas); display: grid; place-items: center; margin-bottom: 14px;">
+              <svg width="22" height="22" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
             </div>
-            <div style="font-weight: 500; color: var(--ink); font-size: 14px;">${fe.title}</div>
-            <div style="margin-top: 4px; font-size: 12px;">${fe.sub}</div>
+            <div style="display:inline-flex; align-items:center; gap:8px; padding:4px 12px; background:var(--paper-soft); border-radius:999px; font-family:var(--mono); font-size:10.5px; letter-spacing:0.06em; color:var(--n-600); margin-bottom:8px; border:1px solid var(--n-200);">
+              <span class="pulse-dot" style="width:6px; height:6px; background:var(--atlas);"></span>${escTxt(fe.badge)}
+            </div>
+            <div style="font-weight: 600; color: var(--ink); font-size: 14.5px; letter-spacing: -0.01em;">${escTxt(fe.title)}</div>
+            <div style="margin-top: 4px; font-size: 12.5px; color: var(--n-500); max-width: 36ch; line-height: 1.45;">${escTxt(fe.sub)}</div>
           </div>
         `;
       } else {
@@ -3711,11 +4215,11 @@
             visa: `<img src="assets/icons/visa.svg" alt="Visa">`,
             mc:   `<img src="assets/icons/mastercard.png" alt="Mastercard">`,
             cash: `<img src="assets/icons/cash.webp" alt="Espèces">`,
-            tap:  `<svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M8.5 8a5 5 0 0 1 0 8M12 5a8 8 0 0 1 0 14M15.5 2a11 11 0 0 1 0 20"/></svg>`,
+            tap:  `<i data-lucide="contactless" aria-hidden="true"></i>`,
             qr:   `<img src="assets/icons/qr-code.png" alt="QR">`,
             /* Neutral card chip — used when we know a card was tapped/inserted
              * but not which network. Never substitute a Visa/MC mark here. */
-            cmi:  `<svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>`,
+            cmi:  `<i data-lucide="credit-card" aria-hidden="true"></i>`,
           };
           const chipInner = ICONS[r.method] || '';
 
@@ -3738,7 +4242,7 @@
             </div>
             <div class="ctx">${tableChip}<span class="who">${who}</span></div>
             <div class="amt"${r.neg ? ' style="color: var(--danger);"' : ''}>${r.amt}<span class="cur">MAD</span></div>
-            <div class="more" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div class="more" aria-hidden="true"><i data-lucide="chevron-right" width="14" height="14"></i></div>
           </div>
         `;
         }).join('');
@@ -3760,11 +4264,13 @@
          * printed "98 commandes aujourd'hui" on a store that had rung 2. */
         let cumTx;
         if (ownData() && window.KiwiSales) {
-          const start = new Date(); start.setHours(0, 0, 0, 0);
-          const t0 = start.getTime();
+          const [t0, t1] = rangeBounds('aujourdhui');
           let sales = [];
           try { sales = window.KiwiSales.list(getCurrentVenue()) || []; } catch (_) { sales = []; }
-          cumTx = sales.filter((s) => (s && s.ts) >= t0).length;
+          cumTx = sales.filter((s) => {
+            const ts = +(s && s.ts) || 0;
+            return ts >= t0 && ts < t1 && String(s.kind || '') !== 'refund' && Number(s.amount) > 0;
+          }).length;
         } else {
           const sim = window.KiwiDemoClock?.getSimState?.();
           cumTx = sim?.cumTx ?? 0;
@@ -3845,10 +4351,24 @@
     en: { sub: 'No sales recorded', msg: 'Your best sellers will appear here after the first order.' },
     ar: { sub: 'لا مبيعات مسجّلة', msg: 'ستظهر أفضل مبيعاتك هنا بعد أوّل طلب.' },
   };
-  /* ── Stock à recommander · boutique réelle ──────────────────────────────
-   * Le seuil reprend celui de boutique-catalog.stats() (0 = rupture, ≤ 5 = bas).
-   * Les deux doivent bouger ensemble : sinon l'Inventaire annonce « 1 stock bas »
-   * pendant que l'accueil jure n'avoir rien à recommander. */
+  const PRODUCTS_COVERAGE = {
+    fr: (items, covered, total) => `${items} article${items > 1 ? 's' : ''} · détail disponible sur ${covered}/${total} vente${total > 1 ? 's' : ''}`,
+    en: (items, covered, total) => `${items} item${items > 1 ? 's' : ''} · line detail available for ${covered}/${total} sale${total > 1 ? 's' : ''}`,
+    ar: (items, covered, total) => `${items} منتج · تفاصيل ${covered}/${total} عملية بيع متاحة`,
+  };
+  const PRODUCTS_NO_LINES = {
+    fr: (n) => `Aucune ligne article enregistrée dans ${n} vente${n > 1 ? 's' : ''}. Les totaux restent exacts, mais Kiwi ne peut pas classer les produits.`,
+    en: (n) => `No item lines were recorded in ${n} sale${n > 1 ? 's' : ''}. Totals remain accurate, but Kiwi cannot rank products.`,
+    ar: (n) => `لا توجد تفاصيل منتجات في ${n} عملية بيع. الإجماليات صحيحة، لكن لا يمكن ترتيب المنتجات.`,
+  };
+  const PRODUCT_SOLD = {
+    fr: (n) => `${n} vendu${n > 1 ? 's' : ''}`,
+    en: (n) => `${n} sold`,
+    ar: (n) => `${n} مبيع`,
+  };
+  /* ── Stock à recommander · inventaire réel ───────────────────────────────
+   * Boutique and restaurant use different stores and different thresholds;
+   * both adapters return the same small, auditable shape to the card. */
   const LOW_STOCK_SEUIL = 5;
   const STOCK_TITLE_STR = { fr: 'Stock à recommander', en: 'Stock to reorder', ar: 'مخزون لإعادة الطلب' };
   const RUPTURE_STR = { fr: 'Rupture · à racheter', en: 'Out of stock · reorder', ar: 'نفد المخزون · أعد الطلب' };
@@ -3863,37 +4383,72 @@
     ar: (n) => `${n} منتج تحت العتبة`,
   };
   const STOCK_OK_STR = {
-    fr: (n, s) => `Rien à racheter : vos ${n} article${n > 1 ? 's sont tous' : ' est'} au-dessus de ${s} unités.`,
-    en: (n, s) => `Nothing to reorder: all ${n} item${n > 1 ? 's are' : ' is'} above ${s} units.`,
-    ar: (n, s) => `لا شيء لإعادة طلبه: ${n} منتج فوق ${s} وحدة.`,
+    fr: (n) => `Rien à recommander : ${n} article${n > 1 ? 's sont' : ' est'} au-dessus de son seuil configuré.`,
+    en: (n) => `Nothing to reorder: ${n} item${n > 1 ? 's are' : ' is'} above its configured threshold.`,
+    ar: (n) => `لا شيء لإعادة طلبه: ${n} منتج فوق العتبة المحددة.`,
+  };
+  const STOCK_NO_THRESHOLDS = {
+    fr: (n) => `${n} article${n > 1 ? 's sont suivis' : ' est suivi'}, mais aucun seuil de réapprovisionnement n’est configuré.`,
+    en: (n) => `${n} item${n > 1 ? 's are' : ' is'} tracked, but no reorder threshold is configured.`,
+    ar: (n) => `يتم تتبع ${n} منتج، لكن لم يتم تحديد عتبة إعادة الطلب.`,
   };
   /* Les noms d'articles sont saisis par le commerçant : ils passent par du HTML,
    * donc ils s'échappent. dateRange.js n'avait pas d'esc() — les autres listes
    * n'affichent que des libellés de démo. */
   const escTxt = (s) => String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  /* Une vraie boutique a un catalogue, donc la carte peut dire quoi racheter.
-   * Avant, renderProducts faisait `isCustom ? []` et TOUT commerçant tombait sur
-   * « dès que vous suivez vos articles » — y compris celui qui en suivait un, à
-   * 5 unités, déjà sous le seuil. null = catalogue vide ou absent : le message
-   * d'origine redevient le bon. Le catalogue démarre sur la venue de démo, d'où
-   * le bind sur la clé canonique (même chemin que le coût matière). */
   function realLowStock() {
     try {
-      if (window.KiwiVenue?.getVenueType?.() !== 'boutique') return null;
-      const cat = window.KiwiBoutiqueCatalog;
-      if (!cat) return null;
-      const key = window.KiwiBoutiqueVenueKey && window.KiwiBoutiqueVenueKey();
-      if (key) cat.use(key);
-      const prods = cat.listProducts() || [];
-      if (!prods.length) return null;
-      const rows = prods
-        .map((p) => ({ name: p.name, stock: cat.productStock(p.id) }))
-        .filter((r) => r.stock <= LOW_STOCK_SEUIL)
-        .sort((a, b) => a.stock - b.stock)
-        .slice(0, 5);
-      return { rows, tracked: prods.length };
+      const type = window.KiwiVenue?.getVenueType?.();
+      if (type === 'restaurant' && window.KiwiRestaurantStock?.items) {
+        const items = window.KiwiRestaurantStock.items() || [];
+        if (!items.length) return null;
+        const configured = items.filter((it) => Number(it.reorderLevel) > 0);
+        const rows = configured.map((it) => {
+          const stock = Math.max(0, Number(it.currentStock) || 0);
+          const threshold = Math.max(0, Number(it.reorderLevel) || 0);
+          const par = Math.max(threshold, Number(it.parLevel) || threshold);
+          const suggested = Math.max(0, Math.round((par * 1.2 - stock) * 10) / 10);
+          return { id: it.id, name: it.name, stock, threshold, par, suggested,
+            unit: it.unit || 'unité', cost: Math.max(0, Number(it.costPerUnit) || 0) };
+        }).filter((r) => r.stock < r.threshold)
+          .sort((a, b) => (a.stock / a.threshold) - (b.stock / b.threshold))
+          .slice(0, 5);
+        return { rows, tracked: items.length, configured: configured.length, source: 'restaurant' };
+      }
+      if (type === 'boutique') {
+        const cat = window.KiwiBoutiqueCatalog;
+        if (!cat) return null;
+        const key = window.KiwiBoutiqueVenueKey && window.KiwiBoutiqueVenueKey();
+        if (key) cat.use(key);
+        const prods = cat.listProducts() || [];
+        if (!prods.length) return null;
+        const rows = prods.map((p) => ({ id: p.id, name: p.name, stock: cat.productStock(p.id), threshold: LOW_STOCK_SEUIL }))
+          .filter((r) => r.stock <= LOW_STOCK_SEUIL).sort((a, b) => a.stock - b.stock).slice(0, 5);
+        return { rows, tracked: prods.length, configured: prods.length, source: 'boutique' };
+      }
     } catch (_) { return null; }
+    return null;
+  }
+
+  function realTopProducts(range) {
+    const [from, to] = rangeBounds(range == null ? currentRange : range);
+    const sales = realSalesList().filter((e) => (+e.ts || 0) >= from && (+e.ts || 0) < to);
+    const by = new Map(); let covered = 0;
+    sales.forEach((sale) => {
+      const lines = Array.isArray(sale.lines) ? sale.lines.filter((l) => l && l.name && (+l.qty || 0) > 0) : [];
+      if (!lines.length) return;
+      covered++;
+      lines.forEach((line) => {
+        const key = String(line.itemId || line.variantId || line.name).trim().toLowerCase();
+        const qty = Math.max(0, Number(line.qty) || 0);
+        const revenue = Math.max(0, Number(line.total) || ((Number(line.price) || 0) * qty));
+        const row = by.get(key) || { name: line.name, qty: 0, revenue: 0 };
+        row.qty += qty; row.revenue += revenue; by.set(key, row);
+      });
+    });
+    const rows = [...by.values()].sort((a, b) => b.qty - a.qty || b.revenue - a.revenue).slice(0, 5);
+    return { rows, sales: sales.length, covered };
   }
 
   const STAFF_ONDUTY_STR = {
@@ -3915,16 +4470,17 @@
     en: { sub: 'No team members', msg: 'Add your team to track performance per person.' },
     ar: { sub: 'لا أعضاء فريق', msg: 'أضِف فريقك لتتبّع الأداء لكل شخص.' },
   };
-  const INTEG_TITLE = { fr: 'Intégrations actives', en: 'Active integrations', ar: 'عمليات الدمج النشطة' };
+  const INTEG_TITLE = { fr: 'Intégrations', en: 'Integrations', ar: 'عمليات الدمج' };
   const INTEG_SUB = {
-    fr: 'Connectez vos outils pour synchroniser ventes et paiements',
-    en: 'Connect your tools to sync sales and payments',
-    ar: 'اربط أدواتك لمزامنة المبيعات والمدفوعات',
+    fr: 'Aucune connexion active · choisissez un outil à connecter',
+    en: 'No active connection · choose a tool to connect',
+    ar: 'لا يوجد اتصال نشط · اختر أداة لربطها',
   };
   const INTEG_NOTCONN = { fr: 'Non connecté', en: 'Not connected', ar: 'غير متّصل' };
   const INTEG_LIST = [
     { n: 'Glovo', logo: 'G', bg: '#F29137' },
     { n: 'Yassir Express', logo: 'Y', bg: '#2B5AA8' },
+    { n: 'Shopify', logo: 'S', bg: '#5E8E3E', channel: 'shopify' },
     { n: 'Comptabilité', logo: 'A', bg: '#1D3F6B' },
     { n: 'Bank of Africa', logo: 'B', bg: '#00613E' },
   ];
@@ -3989,7 +4545,8 @@
       const notConn = INTEG_NOTCONN[lang] || INTEG_NOTCONN.fr;
       const addLbl = (window.KiwiI18n?.t?.('dash.integ.add')) || '+ Ajouter une intégration';
       const cards = INTEG_LIST.map(it =>
-        `<div class="integ-card" data-action="add-integration">` +
+        `<div class="integ-card" data-action="${it.channel ? 'integration-connect' : 'add-integration'}"` +
+        ` data-arg="${it.n}" data-channel="${it.channel || ''}">` +
         `<div class="logo" style="background:${it.bg};opacity:.55;">${it.logo}</div>` +
         `<div class="info"><div class="n">${it.n}</div>` +
         `<div class="s"><span class="dot warn"></span><span>${notConn}</span></div></div></div>`
@@ -4017,13 +4574,48 @@
     if (!el) return;
     if (_eveningOrig == null) _eveningOrig = el['inner' + 'HTML'];
     if (ownData()) {
-      const t = tradeStr('eveningEmpty', EVENING_EMPTY[getLang()] || EVENING_EMPTY.fr);
-      el['inner' + 'HTML'] =
-        `<div class="lbl">${t.lbl}</div>` +
-        `<div style="padding:28px 4px 8px;text-align:center;">` +
-        `<div style="font-size:14px;font-weight:600;color:var(--paper);">${t.head}</div>` +
-        `<div style="font-size:12px;color:#A8B0C8;margin-top:6px;line-height:1.5;">${t.msg}</div>` +
-        `</div>`;
+      const lang = getLang();
+      const t = tradeStr('eveningEmpty', EVENING_EMPTY[lang] || EVENING_EMPTY.fr);
+      let doc = null;
+      try { doc = window.KiwiReservations?.get?.(); } catch (_) {}
+      const now = Date.now(), currentDay = merchantDayKey(now, activeMerchantSlug()), currentWindow = merchantDayBounds(currentDay, activeMerchantSlug()), start = currentWindow.from, end = currentWindow.to;
+      const active = doc && Array.isArray(doc.bookings) ? doc.bookings.filter((b) =>
+        ['requested', 'confirmed', 'checked_in'].includes(b.status) && +b.startAt >= start && +b.startAt < end && +b.endAt >= now
+      ).sort((a, b) => +a.startAt - +b.startAt) : [];
+      if (active.length) {
+        const covers = active.reduce((n, b) => n + Math.max(1, +b.partySize || 1), 0);
+        const resource = new Map((doc.resources || []).map((r) => [String(r.id), r.name]));
+        const labels = {
+          fr: { lbl: 'RÉSERVATIONS À VENIR · AUJOURD’HUI', unit: 'couverts', sub: (n) => `${n} réservation${n > 1 ? 's actives' : ' active'}`, pending: 'À confirmer', confirmed: 'Confirmée', checked_in: 'Arrivé', open: 'Ouvrir Réservations', more: (n) => `+${n} autre${n > 1 ? 's' : ''}` },
+          en: { lbl: 'UPCOMING BOOKINGS · TODAY', unit: 'guests', sub: (n) => `${n} active booking${n > 1 ? 's' : ''}`, pending: 'Pending', confirmed: 'Confirmed', checked_in: 'Checked in', open: 'Open Reservations', more: (n) => `+${n} more` },
+          ar: { lbl: 'الحجوزات القادمة · اليوم', unit: 'ضيف', sub: (n) => `${n} حجوزات نشطة`, pending: 'في انتظار التأكيد', confirmed: 'مؤكد', checked_in: 'وصل', open: 'فتح الحجوزات', more: (n) => `+${n} أخرى` },
+        }[lang] || null;
+        const L = labels || { lbl: 'RÉSERVATIONS À VENIR · AUJOURD’HUI', unit: 'couverts', sub: (n) => `${n} réservations actives`, pending: 'À confirmer', confirmed: 'Confirmée', checked_in: 'Arrivé', open: 'Ouvrir Réservations', more: (n) => `+${n} autres` };
+        el['inner' + 'HTML'] = `<div class="lbl">${L.lbl}</div>` +
+          `<div class="big">${covers} <span style="font-size:.42em;opacity:.72;">${L.unit}</span></div>` +
+          `<div class="sub">${L.sub(active.length)}</div>` +
+          `<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--inverse-line);display:flex;flex-direction:column;gap:9px;">` +
+          active.slice(0, 3).map((b) => {
+            const status = b.status === 'requested' ? L.pending : (L[b.status] || L.confirmed);
+            const at = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(+b.startAt));
+            const place = resource.get(String(b.resourceId));
+            return `<div style="display:grid;grid-template-columns:48px 1fr auto;gap:9px;align-items:center;font-size:12px;">` +
+              `<span style="font-family:var(--mono);color:var(--mint);font-weight:600;">${escTxt(at)}</span>` +
+              `<div style="min-width:0;"><div style="font-weight:600;color:var(--inverse-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escTxt(b.customer?.name)}</div>` +
+              `<div style="color:var(--n-300);margin-top:1px;">${Math.max(1, +b.partySize || 1)} ${L.unit}${place ? ` · ${escTxt(place)}` : ''}</div></div>` +
+              `<span style="font-size:10px;color:var(--n-300);">${status}</span></div>`;
+          }).join('') + `</div>` +
+          `<div class="instant" data-action="nav-reservations"><div class="ico"><img src="assets/icons/material/schedule.svg" alt="" aria-hidden="true" style="width:16px;height:16px;filter:brightness(0) invert(1);"></div>` +
+          `<div style="font-weight:500;">${L.open}</div><div class="cost">${active.length > 3 ? L.more(active.length - 3) : ''}</div></div>`;
+      } else {
+        const configured = !!(doc && doc.settings && doc.services?.length && doc.resources?.length);
+        const head = configured ? t.head : ({ fr: 'Réservations non configurées', en: 'Bookings not configured', ar: 'الحجوزات غير مهيأة' }[lang]);
+        const msg = configured ? t.msg : ({ fr: 'Ajoutez vos tables et vos horaires pour recevoir des réservations.', en: 'Add tables and opening hours to accept bookings.', ar: 'أضف الطاولات وساعات العمل لاستقبال الحجوزات.' }[lang]);
+        el['inner' + 'HTML'] = `<div class="lbl">${t.lbl}</div><div style="padding:28px 4px 8px;text-align:center;">` +
+          `<div style="font-size:14px;font-weight:600;color:var(--inverse-ink);">${head}</div>` +
+          `<div style="font-size:12px;color:var(--n-300);margin-top:6px;line-height:1.5;">${msg}</div></div>` +
+          `<div class="instant" data-action="nav-reservations"><div style="font-weight:500;">${lang === 'en' ? 'Open Reservations' : lang === 'ar' ? 'فتح الحجوزات' : 'Ouvrir Réservations'}</div></div>`;
+      }
     } else if (el['inner' + 'HTML'] !== _eveningOrig) {
       el['inner' + 'HTML'] = _eveningOrig;
     }
@@ -4056,20 +4648,25 @@
               `<div style="font-size:13px;font-weight:500;color:var(--ink);overflow:hidden;` +
               `text-overflow:ellipsis;white-space:nowrap;">${escTxt(r.name)}</div>` +
               `<div style="font-size:11.5px;margin-top:2px;color:${dead ? 'var(--danger)' : 'var(--n-500)'};">` +
-              `${dead ? (RUPTURE_STR[lang] || RUPTURE_STR.fr) : (LOWSTK_STR[lang] || LOWSTK_STR.fr)(LOW_STOCK_SEUIL)}</div>` +
+              `${dead ? (RUPTURE_STR[lang] || RUPTURE_STR.fr) : (LOWSTK_STR[lang] || LOWSTK_STR.fr)(r.threshold)}</div>` +
               `</div>` +
-              `<div style="font-family:var(--mono);font-size:15px;font-weight:600;` +
-              `color:${dead ? 'var(--danger)' : 'var(--ink)'};">${r.stock}</div>` +
+              `<div style="text-align:right;font-family:var(--mono);color:${dead ? 'var(--danger)' : 'var(--ink)'};">` +
+              `<div style="font-size:14px;font-weight:600;">${r.stock} ${escTxt(r.unit || '')}</div>` +
+              `${r.suggested ? `<div style="font-size:10.5px;color:var(--n-500);">+${r.suggested} ${escTxt(r.unit)}${r.cost ? ` · ${frInt(r.suggested * r.cost)} MAD` : ''}</div>` : ''}</div>` +
               `</div>`;
           }).join('');
+        el['inner' + 'HTML'] += `<a href="#" data-action="nav-stock" style="display:block;margin-top:12px;text-align:center;font-size:12.5px;color:var(--atlas);font-weight:600;">${lang === 'en' ? 'Open inventory & purchasing →' : lang === 'ar' ? 'فتح المخزون والمشتريات ←' : 'Ouvrir Stock & approvisionnement →'}</a>`;
         return;
       }
       el['inner' + 'HTML'] =
         `<div class="block-head" style="margin-bottom:14px;"><div>` +
         `<div class="t">${t.title}</div></div></div>` +
-        `<div style="padding:20px 4px 8px;text-align:center;">` +
-        `<div style="font-size:13.5px;font-weight:600;color:var(--ink);">${t.head}</div>` +
-        `<div style="font-size:12px;color:var(--n-500);margin-top:6px;line-height:1.5;">${t.msg}</div>` +
+        `<div style="padding:16px 8px 12px;text-align:center;">` +
+        `<div style="width:36px;height:36px;border-radius:10px;background:rgba(63,182,122,0.12);color:var(--mint);display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px;">` +
+        `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>` +
+        `</div>` +
+        `<div style="font-size:14px;font-weight:600;color:var(--ink);">${t.head}</div>` +
+        `<div style="font-size:12px;color:var(--n-500);margin-top:6px;line-height:1.5;max-width:280px;margin-inline:auto;">${low && !low.configured ? (STOCK_NO_THRESHOLDS[lang] || STOCK_NO_THRESHOLDS.fr)(low.tracked) : low ? (STOCK_OK_STR[lang] || STOCK_OK_STR.fr)(low.tracked) : t.msg}</div>` +
         `</div>`;
     } else if (el['inner' + 'HTML'] !== _stockOrig) {
       el['inner' + 'HTML'] = _stockOrig;
@@ -4088,7 +4685,7 @@
      * quelqu'un d'autre affiché comme le sien. Une venue réelle additionne ses
      * propres ventes ; le tilde disparaît, ce total-là est exact. */
     if (ownData() && window.KiwiSales) {
-      totalEl.textContent = `${frInt(realSalesTotals(effective).revenue)} MAD`;
+      totalEl.textContent = `${frInt(realSalesTotals(currentRange).revenue)} MAD`;
       return;
     }
     const total = (timelineWeekTotalByVenue[getCurrentVenue()] || timelineWeekTotalByVenue.cafeAtlas)[effective];
@@ -4104,14 +4701,16 @@
     if (ownData()) {
       if (card) {
         const t = HEALTH_EMPTY[lang] || HEALTH_EMPTY.fr;
+        card.classList.add('is-empty-state');
         card['inner' + 'HTML'] =
           `<div class="block-head"><div><div class="t">${t.title}</div></div></div>` +
           emptyBlockBody(t.head, t.msg);
       }
       return;
     }
-    if (card && _healthOrig != null && card['inner' + 'HTML'] !== _healthOrig) {
-      card['inner' + 'HTML'] = _healthOrig;
+    if (card) {
+      card.classList.remove('is-empty-state');
+      if (_healthOrig != null && card['inner' + 'HTML'] !== _healthOrig) card['inner' + 'HTML'] = _healthOrig;
     }
     const effective = effRange();
     const data = vData(healthByVenue, currentRange);
@@ -4146,14 +4745,16 @@
     if (ownData() || window.KiwiEnv?.isReal?.()) {
       if (card) {
         const t = BENCH_EMPTY[lang] || BENCH_EMPTY.fr;
+        card.classList.add('is-empty-state');
         card['inner' + 'HTML'] =
           `<div class="block-head"><div><div class="t">${t.title}</div></div></div>` +
           emptyBlockBody(t.head, t.msg);
       }
       return;
     }
-    if (card && _benchOrig != null && card['inner' + 'HTML'] !== _benchOrig) {
-      card['inner' + 'HTML'] = _benchOrig;
+    if (card) {
+      card.classList.remove('is-empty-state');
+      if (_benchOrig != null && card['inner' + 'HTML'] !== _benchOrig) card['inner' + 'HTML'] = _benchOrig;
     }
     const effective = effRange();
     const data = vData(benchByVenue, currentRange);
@@ -4200,40 +4801,29 @@
     const isCustom = ownData();
     const data = isCustom ? [] : vData(productsByVenue, currentRange);
     const pe = tradeStr('productsEmpty', PRODUCTS_EMPTY[lang] || PRODUCTS_EMPTY.fr);
-    const lowEarly = isCustom ? realLowStock() : null;
+    const real = isCustom ? realTopProducts(currentRange) : null;
     const titleEl = document.querySelector('[data-products-title]');
-    /* Quand la carte liste ce qu'il faut racheter, elle doit le DIRE. Le titre
-     * retombait sur « Top articles » — l'en-tête des meilleures ventes — au-dessus
-     * d'une liste de stocks bas, soit exactement le contraire : une barre courte
-     * y veut dire « à racheter », pas « se vend mal ». */
-    if (titleEl) titleEl.textContent = (lowEarly && lowEarly.rows.length)
-      ? (STOCK_TITLE_STR[lang] || STOCK_TITLE_STR.fr)
-      : ((isCustom && pe.title) || PRODUCTS_TITLE[lang] || PRODUCTS_TITLE.fr);
+    if (titleEl) titleEl.textContent = (isCustom && pe.title) || PRODUCTS_TITLE[lang] || PRODUCTS_TITLE.fr;
     const manageEl = document.querySelector('[data-products-manage]');
     if (manageEl) manageEl.textContent = (isCustom && pe.manage) || PRODUCTS_MANAGE[lang] || PRODUCTS_MANAGE.fr;
     const list = document.querySelector('[data-products-list]');
-    const low = lowEarly;
-    if (list && low && low.rows.length) {
-      /* Le rang est le degré d'urgence : rupture d'abord, puis le stock le plus
-       * faible. La barre se lit « ce qu'il reste sur le seuil », donc une barre
-       * courte = à racheter — l'inverse des meilleures ventes, où longue = bien. */
-      const cap = Math.max(LOW_STOCK_SEUIL, ...low.rows.map((r) => r.stock));
-      list.innerHTML = low.rows.map((r, i) => `
+    const card = list?.closest('.block');
+    if (list && real && real.rows.length) {
+      const cap = Math.max(1, ...real.rows.map((r) => r.qty));
+      list.innerHTML = real.rows.map((r, i) => `
         <div class="prod-row" style="--i:${i};">
-          <div class="rank${r.stock === 0 ? ' top' : ''}">${i + 1}</div>
+          <div class="rank${i === 0 ? ' top' : ''}">${i + 1}</div>
           <div class="info">
             <div class="n">${escTxt(r.name)}</div>
-            <div class="r">${r.stock === 0 ? RUPTURE_STR[lang] || RUPTURE_STR.fr : (LOWSTK_STR[lang] || LOWSTK_STR.fr)(LOW_STOCK_SEUIL)}</div>
+            <div class="r">${frInt(r.revenue)} MAD</div>
           </div>
-          <div class="mini-bar"><div style="width: 0%;" data-grow="${Math.round((r.stock / cap) * 100)}%"></div></div>
-          <div class="sales">${r.stock}</div>
+          <div class="mini-bar"><div style="width: 0%;" data-grow="${Math.round((r.qty / cap) * 100)}%"></div></div>
+          <div class="sales">${(PRODUCT_SOLD[lang] || PRODUCT_SOLD.fr)(r.qty)}</div>
         </div>
       `).join('');
       growBars(list);
-    } else if (list && low) {
-      list.innerHTML = emptyListBody((STOCK_OK_STR[lang] || STOCK_OK_STR.fr)(low.tracked, LOW_STOCK_SEUIL));
     } else if (list && isCustom) {
-      list.innerHTML = emptyListBody(pe.msg);
+      list.innerHTML = emptyListBody(real && real.sales ? (PRODUCTS_NO_LINES[lang] || PRODUCTS_NO_LINES.fr)(real.sales) : pe.msg);
     } else if (list && data) {
       list.innerHTML = data.map((p, i) => `
         <div class="prod-row" style="--i:${i};">
@@ -4248,12 +4838,11 @@
       `).join('');
       growBars(list);
     }
+    if (card) card.classList.toggle('is-empty-state', !!list && !list.querySelector('.prod-row'));
     const sub = document.querySelector('[data-products-sub]');
-    if (sub) sub.textContent = (low && low.rows.length)
-      ? (STOCK_SUB_STR[lang] || STOCK_SUB_STR.fr)(low.rows.length)
-      : (isCustom
-        ? pe.sub
-        : (PRODUCTS_SUB[lang]?.[currentRange] || PRODUCTS_SUB.fr[currentRange]));
+    if (sub) sub.textContent = isCustom
+      ? (real && real.rows.length ? (PRODUCTS_COVERAGE[lang] || PRODUCTS_COVERAGE.fr)(real.rows.length, real.covered, real.sales) : pe.sub)
+      : (PRODUCTS_SUB[lang]?.[currentRange] || PRODUCTS_SUB.fr[currentRange]);
   }
 
   /* ═══════════════ RENDER: STAFF ═══════════════ */
@@ -4267,6 +4856,7 @@
     const titleEl = document.querySelector('[data-staff-title]');
     if (titleEl) titleEl.textContent = (isCustom && se.title) || STAFF_TITLE[lang] || STAFF_TITLE.fr;
     const list = document.querySelector('[data-staff-list]');
+    const card = list?.closest('.block');
     /* Une équipe existe dès qu'un membre est saisi côté Équipe — la carte ne peut
      * plus prétendre le contraire. Les heures viennent de la grille de Paie, donc
      * « en service » veut dire ici exactement ce qu'il veut dire là-bas.
@@ -4283,8 +4873,8 @@
             <div class="n">${escTxt(s.name)}</div>
             <div class="role">${escTxt(s.role)}</div>
           </div>
-          <div class="shift"${on ? '' : ' style="color: var(--n-400);"'}>${on ? fmtHeures(s.hoursToday) : '—'}</div>
-          <div class="tx-n" style="color: var(--n-400);">—</div>
+          <div class="shift"${on ? '' : ' style="color: var(--n-500);"'}>${on ? fmtHeures(s.hoursToday) : '·'}</div>
+          <div class="tx-n" style="color: var(--n-500);">·</div>
         </div>`;
       }).join('');
     } else if (list && isCustom) {
@@ -4297,11 +4887,12 @@
             <div class="n">${s.name}</div>
             <div class="role">${s.role}</div>
           </div>
-          <div class="shift"${s.shift === '—' ? ' style="color: var(--n-400);"' : ''}>${s.shift}</div>
-          <div class="tx-n"${s.amt === '—' ? ' style="color: var(--n-400);"' : ''}>${s.amt}${s.tx ? `<br/><span style="color: var(--success); font-size: 10.5px;">${s.tx}</span>` : ''}</div>
+          <div class="shift"${s.shift === '·' ? ' style="color: var(--n-500);"' : ''}>${s.shift}</div>
+          <div class="tx-n"${s.amt === '·' ? ' style="color: var(--n-500);"' : ''}>${s.amt}${s.tx ? `<br/><span style="color: var(--success); font-size: 10.5px;">${s.tx}</span>` : ''}</div>
         </div>
       `).join('');
     }
+    if (card) card.classList.toggle('is-empty-state', !!list && !list.querySelector('.staff-row'));
     const sub = document.querySelector('[data-staff-sub]');
     if (sub) sub.textContent = (roster && roster.length)
       ? (STAFF_ONDUTY_STR[lang] || STAFF_ONDUTY_STR.fr)(roster.filter((s) => s.hoursToday > 0).length, roster.length)
@@ -4532,7 +5123,7 @@
       if (ro) {
         if (lo && hi) ro.textContent = fmtHumanRange(lo, hi, lang);
         else if (selStart) ro.textContent = fmtHumanRange(selStart, selStart, lang);
-        else ro.textContent = '—';
+        else ro.textContent = '·';
         ro.classList.toggle('is-set', !!(lo || selStart));
       }
       const hint = pop.querySelector('[data-drp-hint]');
@@ -4556,7 +5147,7 @@
       const r = shiftMonth(view.y, view.m, 1);
       pop.innerHTML =
         `<div class="drp-head"><div><div class="drp-eyebrow">${dpEsc(S.title)}</div>`
-        + `<div class="drp-readout" data-drp-readout>—</div></div>`
+        + `<div class="drp-readout" data-drp-readout>·</div></div>`
         + `<button type="button" class="drp-x" data-drp-cancel aria-label="${dpEsc(S.cancel)}">`
         + `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" `
         + `stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`
@@ -4690,6 +5281,17 @@
     if (currentRange === 'personnalise' && !customRange) currentRange = DEFAULT_RANGE;
     try { showComparison = localStorage.getItem(CMP_KEY) === '1'; } catch (_) {}
 
+    // Own the custom-picker trigger at capture phase. The shared action router is
+    // intentionally extensible and can be registered or wrapped by later bundles;
+    // this control must still open even if that registry is temporarily unavailable.
+    document.addEventListener('click', (event) => {
+      const trigger = event.target.closest?.('.dr-pill-custom[data-action="open-date-picker"]');
+      if (!trigger) return;
+      event.preventDefault();
+      event.stopPropagation();
+      openCustomPicker();
+    }, true);
+
     registerHandler();
     hookI18n();
 
@@ -4810,17 +5412,50 @@
       if (window.KiwiSales?.subscribe) {
         window.KiwiSales.subscribe(() => {
           renderHero();
+          renderHeroAi();
           renderGoal();
           renderKpiBand();
           renderRevChart();
+          renderHeatmap();
+          renderHeatmapAi();
           renderFeed();
           renderMix();   // la ventilation par mode de paiement bouge avec chaque vente
+          renderProducts();
         });
         return;
       }
       setTimeout(subSales, 30);
     };
     subSales();
+
+    /* Operational cards repaint from their own domain stores. Previously they
+     * only refreshed after a page reload, which made a truthful source look
+     * stale immediately after a booking or stock count. */
+    window.addEventListener('kiwi-reservations-changed', renderEvening);
+    window.addEventListener('kiwi-reservations-ready', renderEvening);
+    window.addEventListener('kiwi-stock-changed', renderStock);
+    window.addEventListener('kiwi-stock-ready', renderStock);
+    const subInventory = () => {
+      if (window.KiwiInventory?.subscribe) window.KiwiInventory.subscribe(() => renderStock());
+      else setTimeout(subInventory, 80);
+    };
+    subInventory();
+    const subCatalog = () => {
+      if (window.KiwiBoutiqueCatalog?.subscribe) {
+        window.KiwiBoutiqueCatalog.subscribe(() => { renderStock(); renderProducts(); });
+      } else setTimeout(subCatalog, 80);
+    };
+    subCatalog();
+
+    /* day-report.js loads later because it depends on CloudDoc. Until it
+     * publishes the venue's business-day cutoff, midnight is only a temporary
+     * fallback. Repaint every time-sensitive card when that cutoff arrives. */
+    window.addEventListener('kiwi-day-report-ready', () => {
+      renderHero(); renderHeroAi(); renderGoal(); renderKpiBand();
+      renderRevChart(); renderHeatmap(); renderHeatmapAi(); renderMix();
+      renderFeed(); renderEvening(); renderProducts();
+    });
+    document.addEventListener('kiwi-config', () => renderMix());
 
     // Re-fit hero amount + re-flow chart on viewport resize
     let resizeTimer = null;
@@ -4861,8 +5496,25 @@
     renderStaff();
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  /* Publish before init. The truth reader remains available even if an optional
+   * dashboard renderer fails during first paint. */
+  window.KiwiDateRange = {
+    getDateRange, setDateRange, subscribe, tickLiveRevenue,
+    getShowComparison, setShowComparison,
+    bounds: (range) => rangeBounds(range == null ? currentRange : range),
+    insights: { summary: realInsightSummary, hero: buildRealHeroRec, heatmap: buildRealHeatmapRec },
+    _truth: { tenderBucket, realMixRows, realTopProducts, realLowStock, realInsightSummary, buildRealHeroRec, buildRealHeatmapRec },
+  };
+
+  function startDashboardRendering() {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
+    else init();
+  }
+  document.addEventListener('kiwi:operator-snapshot', () => {
+    renderHero(); renderGoal(); renderKpiBand(); renderRevChart();
+  });
+  if (window.KiwiDashboardBoot?.whenUnlocked) window.KiwiDashboardBoot.whenUnlocked(startDashboardRendering);
+  else startDashboardRendering();
 
   /* Ce fichier est `defer` : à son exécution readyState vaut déjà 'interactive',
    * donc init() part TOUT DE SUITE — avant pages-pro.js, chargé plus bas, qui
@@ -4935,9 +5587,4 @@
    *
    * Exporter la fonction plutôt que recopier ses quatre lignes : une borne
    * recopiée est une borne qu'on corrigera à un seul endroit sur trois. */
-  window.KiwiDateRange = {
-    getDateRange, setDateRange, subscribe, tickLiveRevenue,
-    getShowComparison, setShowComparison,
-    bounds: (range) => rangeBounds(range || effRange()),
-  };
 })();

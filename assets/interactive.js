@@ -376,20 +376,33 @@ ar: {
   /* ─────────── INJECTED STYLES ─────────── */
   const CSS = `
   /* Toasts */
-  .kiwi-toasts { position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: var(--z-toast, 400); pointer-events: none; max-width: 360px; }
-  .kiwi-toast { background: var(--surface); border: 1px solid var(--n-200); border-radius: 14px; padding: 14px 16px; min-width: 280px; display: flex; gap: 12px; align-items: flex-start; box-shadow: 0 20px 40px -20px rgba(10,15,13,0.25), 0 2px 4px rgba(10,15,13,0.04); pointer-events: all; opacity: 0; transform: translateY(-10px); transition: opacity 220ms, transform 220ms cubic-bezier(0.32,0.72,0,1); font-family: var(--sans); color: var(--ink); }
+  /* Action feedback must sit above full-page drawers/modals (z-9990). The old
+     token value (400) painted confirmations underneath the very surface whose
+     Save button was clicked, making a working action look inert. */
+  .kiwi-toasts { position: fixed; top: max(20px, env(safe-area-inset-top)); right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 10020; pointer-events: none; max-width: 390px; }
+  .kiwi-toast { position: relative; overflow: hidden; background: color-mix(in srgb, var(--surface) 96%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.12); backdrop-filter: blur(18px) saturate(1.12); border: 1px solid color-mix(in srgb, var(--n-200) 78%, var(--atlas)); border-radius: 16px; padding: 15px 16px 16px; min-width: 300px; display: flex; gap: 12px; align-items: flex-start; box-shadow: 0 24px 55px -24px rgba(10,15,13,0.38), 0 8px 18px -14px rgba(11,110,79,0.30), 0 1px 0 rgba(255,255,255,0.82) inset; pointer-events: all; opacity: 0; transform: translateY(-12px) scale(.985); transition: opacity 220ms, transform 260ms cubic-bezier(0.32,0.72,0,1); font-family: var(--sans); color: var(--ink); }
   .kiwi-toast.in { opacity: 1; transform: translateY(0); }
-  .kiwi-toast .ti { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .kiwi-toast .ti { width: 30px; height: 30px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .kiwi-toast.success .ti { background: color-mix(in srgb, var(--atlas) 14%, var(--surface)); color: var(--atlas); }
   .kiwi-toast.info .ti { background: color-mix(in srgb, var(--info) 14%, var(--surface)); color: var(--info); }
   .kiwi-toast.warn .ti { background: color-mix(in srgb, var(--warn-ink) 16%, var(--surface)); color: var(--warn-ink); }
   .kiwi-toast.danger .ti { background: color-mix(in srgb, var(--danger) 14%, var(--surface)); color: var(--danger); }
   .kiwi-toast .tb { flex: 1; min-width: 0; }
-  .kiwi-toast .tm { font-size: 14px; font-weight: 500; line-height: 1.35; letter-spacing: -0.005em; }
+  .kiwi-toast .tm { font-size: 14px; font-weight: 650; line-height: 1.35; letter-spacing: -0.008em; }
   .kiwi-toast .ts { font-size: 12.5px; color: var(--n-500); margin-top: 3px; line-height: 1.4; }
   .kiwi-toast .ta { margin-top: 8px; font-size: 12.5px; color: var(--atlas); font-weight: 500; cursor: pointer; background: none; border: 0; padding: 0; }
-  .kiwi-toast .tx { background: none; border: 0; color: var(--n-400); cursor: pointer; font-size: 18px; line-height: 1; padding: 0; margin-left: 4px; }
+  .kiwi-toast .tx { width: 28px; height: 28px; border-radius: 8px; background: transparent; border: 0; color: var(--n-500); cursor: pointer; font-size: 18px; line-height: 1; padding: 0; margin: -1px -3px 0 4px; display:flex; align-items:center; justify-content:center; }
   .kiwi-toast .tx:hover { color: var(--ink); }
+  .kiwi-toast .tp { position:absolute; left:0; right:0; bottom:0; height:3px; background:color-mix(in srgb,var(--atlas) 70%,var(--mint)); transform-origin:left; animation:kiwi-toast-life var(--toast-duration,3600ms) linear forwards; }
+  .kiwi-toast.info .tp { background:var(--info); }
+  .kiwi-toast.warn .tp,.kiwi-toast.pend .tp { background:var(--warn-ink); }
+  .kiwi-toast.danger .tp { background:var(--danger); }
+  .kiwi-toast.is-paused .tp { animation-play-state:paused; }
+  @keyframes kiwi-toast-life { from { transform:scaleX(1); } to { transform:scaleX(0); } }
+  .kb.is-feedback-pending { cursor:wait; opacity:.82; }
+  .kb.is-feedback-done { background:var(--atlas)!important; color:var(--paper)!important; border-color:var(--atlas)!important; }
+  .kiwi-button-spinner { width:14px; height:14px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:kiwi-spin 650ms linear infinite; }
+  @media (prefers-reduced-motion:reduce) { .kiwi-toast,.kiwi-toast .tp { transition:none!important; animation:none!important; } }
 
   /* Modal */
   .kiwi-backdrop { position: fixed; inset: 0; background: rgba(10,15,13,0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 9990; opacity: 0; transition: opacity 260ms; padding: 20px; }
@@ -426,12 +439,12 @@ ar: {
   /* Scroll-lock the underlying page while any drawer/modal is open.
    * Counter-tracked (window.__kiwiScrollLocks) so nested layers don\'t
    * unlock prematurely. We also pause the body\'s ambient-blob drift
-   * animation — without this, the drawer\'s backdrop-filter:blur has
+   * animation · without this, the drawer\'s backdrop-filter:blur has
    * to re-sample a moving target every frame, which Safari hates.
    *
    * IMPORTANT: lock ONLY <html> (the document scroller). Putting
    * overflow:hidden on <body> turns <body> into a scroll container,
-   * which captures the position:sticky desktop sidebar — it then
+   * which captures the position:sticky desktop sidebar · it then
    * re-anchors to body\'s unscrolled scrollport and renders far up the
    * page (only its lower portion stays visible). Locking the html
    * scroller alone freezes the page without breaking sticky children. */
@@ -491,12 +504,12 @@ ar: {
   .kp.in { opacity: 1; transform: translateX(-50%) scale(1); }
   .kp-head { padding: 16px 20px; border-bottom: 1px solid var(--n-200); display: flex; align-items: center; gap: 12px; }
   .kp-head input { flex: 1; border: 0; outline: 0; background: none; font-size: 16px; color: var(--ink); font-family: var(--sans); letter-spacing: -0.005em; }
-  .kp-head input::placeholder { color: var(--n-400); }
+  .kp-head input::placeholder { color: var(--n-500); }
   .kp-list { padding: 8px 0; max-height: 420px; overflow-y: auto; }
   .kp-head .kp-esc { font-family: var(--mono); font-size: 10.5px; background: var(--n-100); padding: 3px 8px; border-radius: 5px; color: var(--n-500); border: 1px solid var(--n-200); flex-shrink: 0; }
   .kp-sect { padding: 12px 20px 6px; font-size: 10.5px; font-weight: 500; color: var(--n-500); letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--mono);
              display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-  .kp-sect .n { text-transform: none; letter-spacing: 0; color: var(--n-400); }
+  .kp-sect .n { text-transform: none; letter-spacing: 0; color: var(--n-500); }
   .kp-item { margin: 1px 8px; padding: 10px 12px; border-radius: 10px; display: flex; align-items: center; gap: 14px; cursor: pointer; font-size: 13.5px; color: var(--ink); transition: background 160ms cubic-bezier(0.32,0.72,0,1); }
   .kp-item:hover, .kp-item.active { background: var(--mint-soft); }
   .kp-item:active { transform: scale(0.99); }
@@ -516,10 +529,10 @@ ar: {
   .kp-empty-t { font-size: 14px; font-weight: 500; color: var(--ink); }
   .kp-empty-s { margin-top: 6px; font-size: 12.5px; color: var(--n-500); max-width: 340px; margin-inline: auto; line-height: 1.5; }
   .kp-foot { padding: 10px 20px; border-top: 1px solid var(--n-200); display: flex; justify-content: space-between; align-items: center; background: var(--surface); font-size: 11px; color: var(--n-500); }
-  .kp-foot .kp-count { color: var(--n-400); font-variant-numeric: tabular-nums; }
+  .kp-foot .kp-count { color: var(--n-500); font-variant-numeric: tabular-nums; }
   /* « ⌘ » n'existe pas dans JetBrains Mono : sans repli système le navigateur
      dessine un tofu, et le raccourci se lit comme une croix. */
-  .kp-foot .kp-sc { font-family: var(--mono), -apple-system, BlinkMacSystemFont, "Segoe UI Symbol", sans-serif; color: var(--n-400); }
+  .kp-foot .kp-sc { font-family: var(--mono), -apple-system, BlinkMacSystemFont, "Segoe UI Symbol", sans-serif; color: var(--n-500); }
   .kp-foot span { display: inline-flex; align-items: center; gap: 6px; }
   .kp-foot kbd { font-family: var(--mono); background: var(--n-100); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--n-200); font-size: 10px; }
 
@@ -532,7 +545,7 @@ ar: {
   .notif .n-body { flex: 1; min-width: 0; }
   .notif .n-title { font-size: 13.5px; font-weight: 500; letter-spacing: -0.005em; }
   .notif .n-desc { font-size: 12.5px; color: var(--n-500); margin-top: 3px; line-height: 1.45; }
-  .notif .n-time { font-size: 11px; color: var(--n-400); font-family: var(--mono); margin-top: 6px; }
+  .notif .n-time { font-size: 11px; color: var(--n-500); font-family: var(--mono); margin-top: 6px; }
 
   /* Form input */
   .kf-label { display: block; font-size: 12px; font-weight: 500; color: var(--n-600); margin-bottom: 6px; letter-spacing: 0.02em; }
@@ -596,7 +609,7 @@ ar: {
   .tx-timeline-item .n { font-weight: 500; letter-spacing: -0.005em; }
   .tx-timeline-item .d { font-size: 12.5px; color: var(--n-500); margin-top: 2px; }
 
-  /* ─── Order detail drawer — opened from the live feed ─── */
+  /* ─── Order detail drawer · opened from the live feed ─── */
   .ord-hero { background: linear-gradient(135deg, var(--paper-soft) 0%, #EFEAE0 120%); border-radius: 14px; padding: 20px 22px; margin-bottom: 20px; position: relative; overflow: hidden; }
   .ord-hero::after { content: ""; position: absolute; right: -40px; top: -40px; width: 140px; height: 140px; background: radial-gradient(circle, rgba(11,110,79,0.10) 0%, transparent 65%); pointer-events: none; }
   .ord-hero .row1 { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
@@ -682,6 +695,7 @@ ar: {
       /* Live region — screen readers announce toasts instead of missing them. */
       c.setAttribute('role', 'status');
       c.setAttribute('aria-live', 'polite');
+      c.setAttribute('aria-atomic', 'true');
       document.body.appendChild(c);
     }
     return c;
@@ -714,7 +728,7 @@ ar: {
    *    drawer/modal — the button visibly worked, so the toast is just noise.
    *    Inert/stub buttons open nothing, so they still get their one toast.
    *  · Pass { force: true } for a toast that must always show. */
-  function toast(title, {desc = '', type = 'success', duration = 3000, action = null, force = false} = {}) {
+  function toast(title, {desc = '', type = 'success', duration = 3600, action = null, force = false} = {}) {
     const baseline = window.__kiwiOverlayBaseline || 0;
     const fromClick = (performance.now() - (window.__kiwiClickTs || -1e9)) < 1000;
     // Defer a frame so any drawer/modal this click opened is already in the DOM.
@@ -725,23 +739,70 @@ ar: {
       c.querySelectorAll('.kiwi-toast').forEach(el => el.remove());  // max one
       const t = document.createElement('div');
       const s = GENERAL_STR[kiwiLang()] || GENERAL_STR.fr;
+      duration = Math.max(2200, Number(duration) || 3600);
       t.className = `kiwi-toast ${type}`;
+      t.style.setProperty('--toast-duration', duration + 'ms');
+      if (type === 'danger') t.setAttribute('role', 'alert');
       t['inner' + 'HTML'] = `
-        <div class="ti">${I[type] || I.info}</div>
+        <div class="ti">${type === 'success' ? I.check : (I[type] || I.info)}</div>
         <div class="tb">
           <div class="tm">${escape(title)}</div>
           ${desc ? `<div class="ts">${escape(desc)}</div>` : ''}
           ${action ? `<button class="ta">${escape(action.label)}</button>` : ''}
         </div>
         <button class="tx" aria-label="${s.close}">×</button>
+        <div class="tp" aria-hidden="true"></div>
       `;
       c.appendChild(t);
       requestAnimationFrame(() => t.classList.add('in'));
       const dismiss = () => { t.classList.remove('in'); setTimeout(() => t.remove(), 280); };
-      const timer = setTimeout(dismiss, duration);
+      let remaining = duration, started = performance.now(), timer = null;
+      const schedule = () => { started = performance.now(); timer = setTimeout(dismiss, remaining); };
+      const pause = () => { if (!timer) return; clearTimeout(timer); timer = null; remaining = Math.max(0, remaining - (performance.now() - started)); t.classList.add('is-paused'); };
+      const resume = () => { if (timer || remaining <= 0) return; t.classList.remove('is-paused'); schedule(); };
+      schedule();
+      t.addEventListener('mouseenter', pause);
+      t.addEventListener('mouseleave', resume);
+      t.addEventListener('focusin', pause);
+      t.addEventListener('focusout', resume);
       t.querySelector('.tx').onclick = () => { clearTimeout(timer); dismiss(); };
       if (action) t.querySelector('.ta').onclick = () => { clearTimeout(timer); dismiss(); action.onClick?.(); };
+      try { window.dispatchEvent(new CustomEvent('kiwi:toast', { detail: { title: String(title || ''), desc: String(desc || ''), type } })); } catch (_) {}
     });
+  }
+
+  /* Visible state on the button itself. Toasts confirm the result; this closes
+     the immediate 100–300 ms gap after a click, when users otherwise click a
+     second time because nothing appears to have happened. */
+  function buttonFeedback(button, { pending = 'Enregistrement…', done = 'Enregistré', duration = 1500 } = {}) {
+    if (!button) return { success() {}, error() {} };
+    const original = button.innerHTML;
+    const wasDisabled = button.disabled;
+    let restoreTimer = null;
+    button.disabled = true;
+    button.classList.add('is-feedback-pending');
+    button.replaceChildren();
+    const spin = document.createElement('span'); spin.className = 'kiwi-button-spinner'; spin.setAttribute('aria-hidden', 'true');
+    const label = document.createElement('span'); label.textContent = pending;
+    button.append(spin, label);
+    const restore = () => {
+      clearTimeout(restoreTimer);
+      button.innerHTML = original;
+      button.disabled = wasDisabled;
+      button.classList.remove('is-feedback-pending', 'is-feedback-done');
+    };
+    return {
+      success(text = done) {
+        button.classList.remove('is-feedback-pending');
+        button.classList.add('is-feedback-done');
+        button.replaceChildren();
+        const check = document.createElement('span'); check.setAttribute('aria-hidden', 'true'); check.textContent = '✓';
+        const doneLabel = document.createElement('span'); doneLabel.textContent = text;
+        button.append(check, doneLabel);
+        restoreTimer = setTimeout(restore, duration);
+      },
+      error() { restore(); },
+    };
   }
 
   /* ═══════════════════════ MODAL ═══════════════════════ */
@@ -1599,19 +1660,19 @@ ar: {
         return `
           <div style="display:flex; flex-direction:column; gap:10px;">
             <div class="wiz-choice ${business==='resto'?'selected':''}" data-biz="resto">
-              <div class="wc-ic">🍽️</div>
+              <div class="wc-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3v7"/></svg></div>
               <div><div class="wc-t">${s.business_resto}</div><div class="wc-d">${s.business_resto_desc}</div></div>
             </div>
             <div class="wiz-choice ${business==='retail'?'selected':''}" data-biz="retail">
-              <div class="wc-ic">🛒</div>
+              <div class="wc-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div>
               <div><div class="wc-t">${s.business_retail}</div><div class="wc-d">${s.business_retail_desc}</div></div>
             </div>
             <div class="wiz-choice ${business==='services'?'selected':''}" data-biz="services">
-              <div class="wc-ic">✂️</div>
+              <div class="wc-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg></div>
               <div><div class="wc-t">${s.business_services}</div><div class="wc-d">${s.business_services_desc}</div></div>
             </div>
             <div class="wiz-choice ${business==='other'?'selected':''}" data-biz="other">
-              <div class="wc-ic">💼</div>
+              <div class="wc-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
               <div><div class="wc-t">${s.business_other}</div><div class="wc-d">${s.business_other_desc}</div></div>
             </div>
           </div>
@@ -1780,7 +1841,8 @@ ar: {
           </div>
         </div>
         <div class="notif">
-          <div class="n-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/></svg></div>
+          <!-- receipt_long.svg · un relevé de transactions, pas un rectangle vide -->
+          <div class="n-ico"><svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor"><path d="M240-80q-50 0-85-35t-35-85v-120h120v-560l60 60 60-60 60 60 60-60 60 60 60-60 60 60 60-60 60 60 60-60v680q0 50-35 85t-85 35H240Zm480-80q17 0 28.5-11.5T760-200v-560H320v440h360v120q0 17 11.5 28.5T720-160ZM360-600v-80h240v80H360Zm0 120v-80h240v80H360Zm320-120q-17 0-28.5-11.5T640-640q0-17 11.5-28.5T680-680q17 0 28.5 11.5T720-640q0 17-11.5 28.5T680-600Zm0 120q-17 0-28.5-11.5T640-520q0-17 11.5-28.5T680-560q17 0 28.5 11.5T720-520q0 17-11.5 28.5T680-480ZM240-160h360v-80H200v40q0 17 11.5 28.5T240-160Zm-40 0v-80 80Z"/></svg></div>
           <div class="n-body">
             <div class="n-title">${s.yesterday_tx_title}</div>
             <div class="n-desc">${s.yesterday_tx_desc}</div>
@@ -1806,16 +1868,10 @@ ar: {
       const lang = (I18 && I18.getLang && I18.getLang()) || 'fr';
       const LANGNAME = { fr: 'Français', en: 'English', ar: 'العربية' };
       const setOn = (k) => { try { return localStorage.getItem('kiwiSet:' + k) !== '0'; } catch (_) { return true; } };
-      const sec = (t) => `<div style="font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--n-500); font-weight:500; font-family:var(--mono); margin-bottom:10px;">${t}</div>`;
       const KV = window.KiwiVenue;
       const cv = !!(KV && KV.isCustom && KV.isCustom());
       const vd = (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
       const getSet = (k, def) => { try { return localStorage.getItem('kiwiSet:' + k) || def; } catch (_) { return def; } };
-      /* Ce que la ligne « Heures d'ouverture » affiche. Elle lit KiwiHours et
-       * RIEN d'autre : l'ancien texte libre (vd.hours, kiwiSet:hours) n'est
-       * plus une source, seulement un vestige à remplacer. Tant que la semaine
-       * n'est pas saisie on le dit — un horaire manquant qui se présente comme
-       * un horaire est ce qui a fait inventer des heures à tout le produit. */
       const hoursRowValue = (venueData) => {
         const KH = window.KiwiHours;
         const legacy = (venueData && venueData.hours) || getSet('hours', '');
@@ -1826,11 +1882,6 @@ ar: {
         }
         return KH.summary(Date.now()).text;
       };
-      /* Ce que la ligne « Reçu de caisse » affiche. Comme les horaires, elle
-       * LIT la fiche unique (KiwiReceipt) et ouvre l'unique écran de réglage —
-       * la caisse n'a pas le sien. Ce qu'un propriétaire vient vérifier, c'est
-       * si son ticket est en règle : on annonce donc les mentions légales
-       * manquantes, pas un « configuré / non configuré » qui ne dit rien. */
       const receiptRowValue = () => {
         const K = window.KiwiReceipt;
         if (!K) return tr({ fr: 'Ticket standard', en: 'Standard ticket', ar: 'وصل قياسي' });
@@ -1847,81 +1898,320 @@ ar: {
           : tr({ fr: 'Modèle par défaut', en: 'Default template', ar: 'نموذج افتراضي' });
       };
       const fmtN = (n) => (+n || 0).toLocaleString('fr-FR').replace(/[ , ]/g, ' ');
-      return drawer({
-      title: tr({ fr: 'Paramètres', en: 'Settings', ar: 'الإعدادات' }),
-      subtitle: tr({ fr: 'Compte · boutique · conformité', en: 'Account · store · compliance', ar: 'الحساب · المتجر · الامتثال' }),
-      width: 460,
-      body: `
-        <style>
-          .kset-card { background:var(--paper-elev, #FBFAF6); border-radius:14px; box-shadow:var(--elev-1); padding:2px 10px; }
-          .kset-row { display:flex; align-items:center; gap:12px; padding:12px 4px; cursor:pointer; transition:background 120ms; border-radius:10px; }
-          .kset-row + .kset-row { border-top:1px solid rgba(10,15,13,0.06); }
-          .kset-row:hover { background:var(--paper-soft); }
-          .kset-row:focus-visible { outline:2px solid var(--atlas); outline-offset:-2px; }
-          .kset-ico { width:30px; height:30px; flex-shrink:0; display:grid; place-items:center; border-radius:9px; color:var(--atlas); background:rgba(11,110,79,0.10); }
-          .kset-ico-txt { font-size:15px; }
-          .kset-chev { opacity:0.8; flex-shrink:0; }
-          .kset-toggle { width:36px; height:21px; background:var(--n-300); border-radius:999px; position:relative; transition:background 160ms; flex-shrink:0; }
-          .kset-toggle.on { background:var(--atlas); }
-          .kset-knob { position:absolute; top:2px; inset-inline-start:2px; width:17px; height:17px; background:var(--surface); border-radius:50%; transition:inset-inline-start 160ms; box-shadow:0 1px 3px rgba(10,15,13,0.28); }
-          .kset-toggle.on .kset-knob { inset-inline-start:17px; }
-          .kset-badge { font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:0.1em; color:var(--atlas); background:rgba(11,110,79,0.10); border:1px solid rgba(11,110,79,0.22); padding:4px 8px; border-radius:999px; flex-shrink:0; }
-        </style>
-        <div style="margin-bottom:20px;">
-          ${sec(tr({ fr: 'PRÉFÉRENCES', en: 'PREFERENCES', ar: 'التفضيلات' }))}
-          <div class="kset-card">
-            ${settingsRow('🌍', tr({ fr: 'Langue', en: 'Language', ar: 'اللغة' }), LANGNAME[lang] || 'Français', { action: 'settings-lang' })}
-            ${settingsRow('🔔', tr({ fr: 'Notifications WhatsApp', en: 'WhatsApp notifications', ar: 'إشعارات واتساب' }), tr({ fr: 'Résumé quotidien 19h', en: 'Daily summary 7pm', ar: 'ملخص يومي 19:00' }), { toggle: true, on: setOn('waNotif'), action: 'settings-toggle', arg: 'waNotif' })}
-            ${settingsRow('💰', tr({ fr: 'Devise d\'affichage', en: 'Display currency', ar: 'عملة العرض' }), escape(getSet('currency', 'MAD · Dirham marocain')), { action: 'settings-currency' })}
-            ${(window.KiwiDesignIOS27 && window.KiwiDesignIOS27.isOn()) ? settingsRow('🧊', 'Liquid Glass', ({ clear: tr({ fr: 'Clair', en: 'Clear', ar: 'شفاف' }), standard: tr({ fr: 'Standard', en: 'Standard', ar: 'قياسي' }), frosted: tr({ fr: 'Givré', en: 'Frosted', ar: 'مصنفر' }), opaque: tr({ fr: 'Opaque', en: 'Opaque', ar: 'معتم' }) })[window.KiwiDesignIOS27.getGlass()] || 'Standard', { action: 'glass-level' }) : ''}
-            ${(document.documentElement.getAttribute('data-theme') === 'dark')
-              ? settingsRow('🌙', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Activé · Kiwi Ultra', en: 'On · Kiwi Ultra', ar: 'مفعّل · Kiwi Ultra' }), { badge: '✓' })
-              : settingsRow('🌙', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Interface nuit · confort du soir', en: 'Night interface · easy on the eyes', ar: 'واجهة ليلية · مريحة للعين' }), { action: 'settings-dark-ultra', badge: 'ULTRA' })}
+
+      const venueTitle = escape((vd && (vd.fullDisplay || vd.name)) || (window.KiwiMe && window.KiwiMe.business) || (window.KiwiEnv?.isReal?.() ? 'Mon établissement' : 'Café Atlas · Maarif'));
+      const tradeLabel = escape((window.KiwiVenue?.getTypeLabel?.() || '') || tr({ fr: 'Restauration & Boissons', en: 'Food & Beverage', ar: 'المطاعم والمشروبات' }));
+
+      return appPage('settings', {
+        title: tr({ fr: 'Paramètres', en: 'Settings', ar: 'الإعدادات' }),
+        subtitle: tr({
+          fr: `${venueTitle} · Configuration · Matériel & Caisse · Sécurité · Intégrations`,
+          en: `${venueTitle} · Configuration · Hardware & POS · Security · Integrations`,
+          ar: `${venueTitle} · الإعدادات · الأجهزة والصندوق · الأمان · الربط`,
+        }),
+        body: `
+          <style>
+            .gp-settings-grid {
+              display: grid;
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+              gap: 20px;
+              margin-top: 10px;
+            }
+            @media (max-width: 920px) {
+              .gp-settings-grid { grid-template-columns: minmax(0, 1fr); }
+            }
+            .gp-set-card {
+              background: var(--surface, #FFFFFF);
+              border: 1px solid var(--n-200, #E5E7EB);
+              border-radius: 20px;
+              box-shadow: 0 1px 3px rgba(10, 15, 13, 0.04), 0 12px 32px -16px rgba(10, 15, 13, 0.08);
+              padding: 22px 24px;
+              display: flex;
+              flex-direction: column;
+              gap: 12px;
+            }
+            :root[data-theme="dark"] .gp-set-card {
+              background: rgba(14, 30, 23, 0.88);
+              border-color: rgba(255, 255, 255, 0.10);
+              box-shadow: 0 0 0 1px rgba(0, 255, 174, 0.05), 0 16px 40px -12px rgba(0, 0, 0, 0.5);
+            }
+            .gp-set-card-head {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding-bottom: 12px;
+              border-bottom: 1px solid var(--n-150, rgba(0,0,0,0.06));
+            }
+            :root[data-theme="dark"] .gp-set-card-head {
+              border-bottom-color: rgba(255, 255, 255, 0.08);
+            }
+            .gp-set-title {
+              font-size: 15px;
+              font-weight: 700;
+              letter-spacing: -0.015em;
+              color: var(--ink);
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            }
+            :root[data-theme="dark"] .gp-set-title { color: #F5FAF7; }
+            .gp-set-tag {
+              font-family: var(--mono);
+              font-size: 10px;
+              font-weight: 600;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              color: var(--atlas, #0C6B4E);
+              background: rgba(12, 107, 78, 0.10);
+              padding: 3px 8px;
+              border-radius: 999px;
+            }
+            :root[data-theme="dark"] .gp-set-tag {
+              color: #00FFAE;
+              background: rgba(0, 255, 174, 0.12);
+            }
+            .kset-row {
+              display: flex;
+              align-items: center;
+              gap: 14px;
+              padding: 10px 12px;
+              cursor: pointer;
+              transition: all 140ms ease;
+              border-radius: 12px;
+              border: 1px solid transparent;
+            }
+            .kset-row:hover {
+              background: var(--paper-soft, rgba(0,0,0,0.03));
+              border-color: var(--n-200, rgba(0,0,0,0.05));
+              transform: translateX(2px);
+            }
+            :root[data-theme="dark"] .kset-row:hover {
+              background: rgba(255, 255, 255, 0.05);
+              border-color: rgba(255, 255, 255, 0.08);
+            }
+            .kset-ico {
+              width: 34px; height: 34px;
+              flex-shrink: 0;
+              display: grid;
+              place-items: center;
+              border-radius: 10px;
+              color: var(--atlas, #0C6B4E);
+              background: rgba(12, 107, 78, 0.10);
+              border: 1px solid rgba(12, 107, 78, 0.14);
+            }
+            :root[data-theme="dark"] .kset-ico {
+              color: #00FFAE;
+              background: rgba(0, 255, 174, 0.12);
+              border-color: rgba(0, 255, 174, 0.20);
+            }
+            .kset-toggle {
+              width: 38px; height: 22px;
+              background: var(--n-300, #CBD5E1);
+              border-radius: 999px;
+              position: relative;
+              transition: background 160ms;
+              flex-shrink: 0;
+              cursor: pointer;
+            }
+            .kset-toggle.on { background: var(--atlas, #0C6B4E); }
+            :root[data-theme="dark"] .kset-toggle.on { background: #00FFAE; }
+            .kset-knob {
+              position: absolute;
+              top: 2px;
+              inset-inline-start: 2px;
+              width: 18px; height: 18px;
+              background: #FFFFFF;
+              border-radius: 50%;
+              transition: inset-inline-start 160ms;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+            }
+            .kset-toggle.on .kset-knob { inset-inline-start: 18px; }
+            :root[data-theme="dark"] .kset-toggle.on .kset-knob { background: #04140E; }
+            .kset-badge {
+              font-family: var(--mono);
+              font-size: 10px;
+              font-weight: 600;
+              letter-spacing: 0.08em;
+              color: var(--atlas, #0C6B4E);
+              background: rgba(12, 107, 78, 0.10);
+              border: 1px solid rgba(12, 107, 78, 0.20);
+              padding: 3px 9px;
+              border-radius: 999px;
+              flex-shrink: 0;
+            }
+            :root[data-theme="dark"] .kset-badge {
+              color: #00FFAE;
+              background: rgba(0, 255, 174, 0.14);
+              border-color: rgba(0, 255, 174, 0.28);
+            }
+          </style>
+
+          <div class="kx-kpi-strip">
+            <div class="kx-kpi">
+              <div class="l">${tr({ fr: 'Établissement', en: 'Location', ar: 'المنشأة' })}</div>
+              <div class="v" style="font-size:22px;">${venueTitle}</div>
+            </div>
+            <div class="kx-kpi">
+              <div class="l">${tr({ fr: 'Activité', en: 'Business type', ar: 'نوع النشاط' })}</div>
+              <div class="v" style="font-size:22px;">${tradeLabel}</div>
+            </div>
+            <div class="kx-kpi">
+              <div class="l">${tr({ fr: 'Reçu de caisse', en: 'Receipt state', ar: 'حالة الوصل' })}</div>
+              <div class="v" style="font-size:18px; color:var(--atlas);">${escape(receiptRowValue())}</div>
+            </div>
+            <div class="kx-kpi">
+              <div class="l">${tr({ fr: 'Sécurité & Données', en: 'Security & Data', ar: 'الأمان والبيانات' })}</div>
+              <div class="v" style="font-size:22px; color:var(--success, #0C6B4E);">${tr({ fr: 'Chiffrement actif', en: 'Encrypted', ar: 'مشفر' })}</div>
+            </div>
           </div>
-        </div>
-        <div style="margin-bottom:20px;">
-          ${sec(tr({ fr: 'BOUTIQUE', en: 'STORE', ar: 'المتجر' }))}
-          <div class="kset-card">
-            ${cv ? `
-            ${settingsRow('🏪', escape(vd.fullDisplay || vd.name || tr({ fr: 'Ma boutique', en: 'My store', ar: 'متجري' })), escape((window.KiwiVenue?.getTypeLabel?.() || '') || tr({ fr: 'Activité', en: 'Business', ar: 'النشاط' })), { action: 'settings-edit-venue' })}
-            ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(vd)), { action: 'settings-hours' })}
-            ${settingsRow('🧾', tr({ fr: 'Reçu de caisse', en: 'Sales receipt', ar: 'وصل الصندوق' }), escape(receiptRowValue()), { action: 'settings-receipt' })}
-            ${settingsRow('🎯', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), vd.goal ? fmtN(vd.goal) + ' MAD' : tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' }), { action: 'settings-edit-venue' })}
-            ${settingsRow('💳', tr({ fr: 'Méthodes acceptées', en: 'Accepted methods', ar: 'وسائل الدفع المقبولة' }), escape(vd.methods || tr({ fr: 'Toutes acceptées', en: 'All accepted', ar: 'الكل مقبول' })), { action: 'settings-edit-venue' })}
-            ` : `
-            ${settingsRow('🏪', escape(getSet('venueName', ((window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && (window.KiwiVenue.getCurrentVenueData() || {}).fullDisplay) || (window.KiwiMe && window.KiwiMe.business) || (window.KiwiEnv?.isReal?.() ? '' : 'Café Atlas · Maarif')))), escape(getSet('venueLoc', tr({ fr: 'Emplacement principal', en: 'Main location', ar: 'الموقع الرئيسي' }))), { action: 'settings-edit-store', arg: 'venue' })}
-            ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(null)), { action: 'settings-hours' })}
-            ${settingsRow('🧾', tr({ fr: 'Reçu de caisse', en: 'Sales receipt', ar: 'وصل الصندوق' }), escape(receiptRowValue()), { action: 'settings-receipt' })}
-            ${settingsRow('💳', tr({ fr: 'Méthodes acceptées', en: 'Accepted methods', ar: 'وسائل الدفع المقبولة' }), escape(getSet('methods', 'Visa · MC · Kiwi Tap · QR')), { action: 'settings-methods' })}
-            ${settingsRow('🎯', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), escape(getSet('goal', '28 000')) + ' MAD', { action: 'settings-edit-store', arg: 'goal' })}
-            `}
+
+          <div class="gp-settings-grid">
+            <!-- Card 1: Établissement -->
+            <div class="gp-set-card">
+              <div class="gp-set-card-head">
+                <div class="gp-set-title">
+                  ${materialSymbol('storefront')}
+                  <span>${tr({ fr: 'Établissement & Boutique', en: 'Store & Business', ar: 'المنشأة والمتجر' })}</span>
+                </div>
+                <span class="gp-set-tag">${tr({ fr: 'Identité', en: 'Identity', ar: 'الهوية' })}</span>
+              </div>
+              <div>
+                ${cv ? `
+                ${settingsRow('storefront', venueTitle, tradeLabel, { action: 'settings-edit-venue' })}
+                ${settingsRow('schedule', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(vd)), { action: 'settings-hours' })}
+                ${settingsRow('track_changes', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), vd.goal ? fmtN(vd.goal) + ' MAD' : tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' }), { action: 'settings-edit-venue' })}
+                ` : `
+                ${settingsRow('storefront', venueTitle, escape(getSet('venueLoc', tr({ fr: 'Emplacement principal', en: 'Main location', ar: 'الموقع الرئيسي' }))), { action: 'settings-edit-store', arg: 'venue' })}
+                ${settingsRow('schedule', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(null)), { action: 'settings-hours' })}
+                ${settingsRow('track_changes', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), escape(getSet('goal', '28 000')) + ' MAD', { action: 'settings-edit-store', arg: 'goal' })}
+                `}
+              </div>
+            </div>
+
+            <!-- Card 2: Caisse & Paiements -->
+            <div class="gp-set-card">
+              <div class="gp-set-card-head">
+                <div class="gp-set-title">
+                  ${materialSymbol('receipt_long')}
+                  <span>${tr({ fr: 'Caisse & Reçu', en: 'POS & Receipt', ar: 'الصندوق والوصل' })}</span>
+                </div>
+                <span class="gp-set-tag">${tr({ fr: 'Encaissement', en: 'Checkout', ar: 'الدفع' })}</span>
+              </div>
+              <div>
+                ${settingsRow('receipt_long', tr({ fr: 'Reçu de caisse & Mentions légales', en: 'Receipt & Legal details', ar: 'وصل الصندوق والبيانات القانونية' }), escape(receiptRowValue()), { action: 'settings-receipt' })}
+                ${settingsRow('credit_card', tr({ fr: 'Méthodes de paiement acceptées', en: 'Accepted payment methods', ar: 'وسائل الدفع المقبولة' }), escape(vd.methods || getSet('methods', 'Visa · Mastercard · Kiwi Tap · QR')), { action: cv ? 'settings-edit-venue' : 'settings-methods' })}
+                ${settingsRow('paid', tr({ fr: 'Devise d\'affichage', en: 'Display currency', ar: 'عملة العرض' }), escape(getSet('currency', 'MAD · Dirham marocain')), { action: 'settings-currency' })}
+              </div>
+            </div>
+
+            <!-- Card 3: Préférences d'affichage -->
+            <div class="gp-set-card">
+              <div class="gp-set-card-head">
+                <div class="gp-set-title">
+                  ${materialSymbol('language')}
+                  <span>${tr({ fr: 'Affichage & Interface', en: 'Display & Preferences', ar: 'العرض والتفضيلات' })}</span>
+                </div>
+                <span class="gp-set-tag">${tr({ fr: 'Personnalisation', en: 'Design', ar: 'التخصيص' })}</span>
+              </div>
+              <div>
+                ${settingsRow('language', tr({ fr: 'Langue de l\'application', en: 'App language', ar: 'لغة التطبيق' }), LANGNAME[lang] || 'Français', { action: 'settings-lang' })}
+                ${(window.KiwiDesignIOS27 && window.KiwiDesignIOS27.isOn()) ? settingsRow('layers', 'Liquid Glass', ({ clear: tr({ fr: 'Clair', en: 'Clear', ar: 'شفاف' }), standard: tr({ fr: 'Standard', en: 'Standard', ar: 'قياسي' }), frosted: tr({ fr: 'Givré', en: 'Frosted', ar: 'مصنفر' }), opaque: tr({ fr: 'Opaque', en: 'Opaque', ar: 'معتم' }) })[window.KiwiDesignIOS27.getGlass()] || 'Standard', { action: 'glass-level' }) : ''}
+                ${(document.documentElement.getAttribute('data-theme') === 'dark')
+                  ? settingsRow('dark_mode', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Activé · Kiwi Ultra', en: 'On · Kiwi Ultra', ar: 'مفعّل · Kiwi Ultra' }), { badge: '✓' })
+                  : settingsRow('dark_mode', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Interface nuit · confort du soir', en: 'Night interface · easy on the eyes', ar: 'واجهة ليلية · مريحة للعين' }), { action: 'settings-dark-ultra', badge: 'ULTRA' })}
+                ${settingsRow('notifications', tr({ fr: 'Notifications WhatsApp', en: 'WhatsApp notifications', ar: 'إشعارات واتساب' }), tr({ fr: 'Résumé quotidien 19h', en: 'Daily summary 7pm', ar: 'ملخص يومي 19:00' }), { toggle: true, on: setOn('waNotif'), action: 'settings-toggle', arg: 'waNotif' })}
+              </div>
+            </div>
+
+            <!-- Card 4: Sécurité & Intégrations -->
+            <div class="gp-set-card">
+              <div class="gp-set-card-head">
+                <div class="gp-set-title">
+                  ${materialSymbol('shield_lock')}
+                  <span>${tr({ fr: 'Sécurité & Intégrations', en: 'Security & Integrations', ar: 'الأمان والتكاملات' })}</span>
+                </div>
+                <span class="gp-set-tag">${tr({ fr: 'Protection', en: 'Protection', ar: 'الحماية' })}</span>
+              </div>
+              <div>
+                ${settingsRow('key', tr({ fr: 'Codes PIN de l\'équipe', en: 'Team PIN codes', ar: 'رموز الفريق' }), tr({ fr: 'Gérer les accès et rôles caisse', en: 'Manage till roles and access', ar: 'إدارة أدوار ووصول الصندوق' }), { action: 'nav-equipe' })}
+                ${settingsRow('shield_lock', tr({ fr: 'Chiffrement des données', en: 'Data encryption', ar: 'تشفير البيانات' }), tr({ fr: 'En transit (TLS 1.3) et au repos', en: 'In transit (TLS 1.3) and at rest', ar: 'أثناء النقل وفي التخزين' }), { badge: tr({ fr: 'Certifié', en: 'Certified', ar: 'معتمد' }) })}
+                ${settingsRow('file_upload', tr({ fr: 'Exporter mes données', en: 'Export my data', ar: 'تصدير بياناتي' }), tr({ fr: 'Ventes, produits, équipe · Fichier CSV', en: 'Sales, products, team · CSV file', ar: 'المبيعات والمنتجات والفريق · CSV' }), { action: 'export-csv' })}
+                ${settingsRow('person_remove', tr({ fr: 'Supprimer mon compte', en: 'Delete my account', ar: 'حذف حسابي' }), tr({ fr: 'Demande traitée sous 30 jours', en: 'Handled within 30 days', ar: 'تُعالج خلال 30 يوماً' }), { action: 'settings-delete-account' })}
+                ${cv ? settingsRow('local_shipping', tr({ fr: 'Canaux de livraison', en: 'Delivery channels', ar: 'قنوات التوصيل' }), tr({ fr: 'Connectez Glovo, Yassir et votre compta', en: 'Connect Glovo, Yassir and accounting', ar: 'اربط Glovo وYassir ومحاسبتك' }), { action: 'add-integration' }) : `
+                ${settingsRow('glovo', 'Glovo Delivery', tr({ fr: 'Connecté · Commandes en direct', en: 'Connected · Live orders', ar: 'متصل · طلبات مباشرة' }), { toggle: true, on: setOn('glovo'), action: 'settings-toggle', arg: 'glovo' })}
+                ${settingsRow('yassir', 'Yassir Express', tr({ fr: 'Connecté · 24 commandes', en: 'Connected · 24 orders', ar: 'متصل · 24 طلبًا' }), { toggle: true, on: setOn('yassir'), action: 'settings-toggle', arg: 'yassir' })}
+                ${settingsRow('accounting', tr({ fr: 'Comptabilité OCP', en: 'Accounting export', ar: 'المحاسبة' }), tr({ fr: 'Export automatique quotidien', en: 'Daily automatic export', ar: 'تصدير تلقائي يومي' }), { toggle: true, on: setOn('compta'), action: 'settings-toggle', arg: 'compta' })}
+                `}
+              </div>
+            </div>
           </div>
-        </div>
-        <div style="margin-bottom:20px;">
-          ${sec(tr({ fr: 'SÉCURITÉ & DONNÉES', en: 'SECURITY & DATA', ar: 'الأمان والبيانات' }))}
-          <div class="kset-card">
-            ${settingsRow('🔑', tr({ fr: 'Codes PIN de l\'équipe', en: 'Team PIN codes', ar: 'رموز الفريق' }), tr({ fr: 'Gérer les accès à la caisse', en: 'Manage till access', ar: 'إدارة الوصول إلى الصندوق' }), { action: 'nav-equipe' })}
-            ${settingsRow('🛡️', tr({ fr: 'Chiffrement', en: 'Encryption', ar: 'التشفير' }), tr({ fr: 'En transit et au repos', en: 'In transit and at rest', ar: 'أثناء النقل وفي التخزين' }), { badge: tr({ fr: 'Actif', en: 'On', ar: 'مفعّل' }) })}
-            ${settingsRow('📤', tr({ fr: 'Exporter mes données', en: 'Export my data', ar: 'تصدير بياناتي' }), tr({ fr: 'Ventes, produits, équipe · CSV', en: 'Sales, products, team · CSV', ar: 'المبيعات والمنتجات والفريق · CSV' }), { action: 'export-csv' })}
-          </div>
-        </div>
-        <div>
-          ${sec(tr({ fr: 'INTÉGRATIONS', en: 'INTEGRATIONS', ar: 'التكاملات' }))}
-          <div class="kset-card">
-            ${cv ? settingsRow('🔌', tr({ fr: 'Aucun canal connecté', en: 'No channel connected', ar: 'لا قناة متصلة' }), tr({ fr: 'Connectez Glovo, votre banque et votre compta', en: 'Connect Glovo, your bank and accounting', ar: 'اربط Glovo وبنكك ومحاسبتك' }), { action: 'add-integration' }) : `
-            ${settingsRow('🟠', 'Glovo', tr({ fr: 'Connecté · 1 420 MAD aujourd\'hui', en: 'Connected · 1,420 MAD today', ar: 'متصل · 1 420 درهم اليوم' }), { toggle: true, on: setOn('glovo'), action: 'settings-toggle', arg: 'glovo' })}
-            ${settingsRow('🔵', 'Yassir Express', tr({ fr: 'Connecté · 24 commandes', en: 'Connected · 24 orders', ar: 'متصل · 24 طلبًا' }), { toggle: true, on: setOn('yassir'), action: 'settings-toggle', arg: 'yassir' })}
-            ${settingsRow('📊', tr({ fr: 'Comptabilité', en: 'Accounting', ar: 'المحاسبة' }), tr({ fr: 'Export quotidien OCP', en: 'Daily OCP export', ar: 'تصدير يومي OCP' }), { toggle: true, on: setOn('compta'), action: 'settings-toggle', arg: 'compta' })}
-            ${settingsRow('🏦', 'Bank of Africa', tr({ fr: 'IBAN vérifié ••3291', en: 'IBAN verified ••3291', ar: 'IBAN موثق ••3291' }), { toggle: true, on: setOn('bmce'), action: 'settings-toggle', arg: 'bmce' })}
-            `}
-          </div>
-        </div>
-      `,
-    });
+        `,
+      });
     },
 
-    /* iOS-27 tier · Apple's transparency control, Kiwi edition. Four presets,
-     * persisted; the drawer is itself glass so the change reads instantly. */
+    /* Submit a durable owner-authenticated request, never an email-composer
+     * handoff or a client-selected merchant deletion. Processing stays manual. */
+    'settings-delete-account': () => {
+      const copy = {
+        loading: tr({ fr: 'Vérification du compte…', en: 'Checking account…', ar: 'جارٍ التحقق من الحساب…' }),
+        send: tr({ fr: 'Confirmer la demande', en: 'Confirm request', ar: 'تأكيد الطلب' }),
+        sending: tr({ fr: 'Enregistrement…', en: 'Recording request…', ar: 'جارٍ تسجيل الطلب…' }),
+        received: tr({ fr: 'Demande enregistrée', en: 'Request recorded', ar: 'تم تسجيل الطلب' }),
+        failed: tr({ fr: 'La demande n’a pas pu être enregistrée. Réessayez ; aucune suppression n’a été lancée.', en: 'The request could not be recorded. Try again; no deletion was started.', ar: 'تعذّر تسجيل الطلب. حاول مجدداً؛ لم تبدأ أي عملية حذف.' }),
+        signin: tr({ fr: 'Connectez-vous au compte propriétaire pour demander sa suppression.', en: 'Sign in to the owner account to request its deletion.', ar: 'سجّل الدخول إلى حساب المالك لطلب حذفه.' }),
+        password: tr({ fr: 'Confirmez avec votre mot de passe', en: 'Confirm with your password', ar: 'أكد باستخدام كلمة المرور' }),
+        wrong: tr({ fr: 'Mot de passe incorrect. Réessayez.', en: 'Incorrect password. Try again.', ar: 'كلمة المرور غير صحيحة. حاول مجدداً.' }),
+        limit: tr({ fr: 'Trop de tentatives. Réessayez dans 15 minutes.', en: 'Too many attempts. Try again in 15 minutes.', ar: 'محاولات كثيرة. أعد المحاولة بعد 15 دقيقة.' })
+      };
+      const m = modal({
+        title: tr({ fr: 'Supprimer mon compte', en: 'Delete my account', ar: 'حذف حسابي' }),
+        tag: tr({ fr: 'Compte', en: 'Account', ar: 'الحساب' }),
+        desc: tr({
+          fr: 'Cette demande concerne votre compte connecté et tous ses établissements, pas seulement l’écran affiché. Exportez vos données avant de confirmer. Notre équipe traite la suppression sous 30 jours et vous confirme par e-mail. Les données légalement requises peuvent être conservées ; nous vous préciserons lesquelles.',
+          en: 'This request covers your signed-in account and all its locations, not only the current screen. Export your data before confirming. Our team processes deletion within 30 days and confirms by email. Legally required records may be retained; we will explain which ones.',
+          ar: 'يشمل الطلب حسابك المتصل وجميع مؤسساته، وليس الشاشة الحالية فقط. صدّر بياناتك قبل التأكيد. يعالج فريقنا الحذف خلال 30 يوماً ويؤكده بالبريد. قد تُحتفظ بالسجلات المطلوبة قانونياً وسنوضح لك ما هي.',
+        }),
+        body: `<p data-delete-identity></p><label data-delete-form hidden>${copy.password}<input type="password" autocomplete="current-password" data-delete-password style="display:block;width:100%;min-height:44px;font-size:16px;margin-top:8px" /></label><p data-delete-status role="status" aria-live="polite">${copy.loading}</p>`,
+        foot: `<button class="kb ghost" type="button" data-close>${tr({ fr: 'Fermer', en: 'Close', ar: 'إغلاق' })}</button><button class="kb danger" type="button" data-delete-submit disabled>${copy.send}</button>`,
+        width: 480,
+      });
+      const status = m.el.querySelector('[data-delete-status]'), button = m.el.querySelector('[data-delete-submit]');
+      const form = m.el.querySelector('[data-delete-form]'), password = m.el.querySelector('[data-delete-password]');
+      let ready = false, sending = false;
+      const showRecorded = (request) => {
+        ready = false; form.hidden = true; button.hidden = true; password.value = '';
+        status.textContent = copy.received + ' · ' + request.reference + ' · ' + new Date(request.createdAt).toLocaleDateString(document.documentElement.lang || 'fr');
+      };
+      const api = async (options) => {
+        const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 15000);
+        try {
+          const response = await fetch('/api/account/deletion-request', { credentials: 'include', cache: 'no-store', ...options, signal: controller.signal });
+          const body = await response.json();
+          if (!response.ok) throw new Error(body.error || 'unavailable');
+          return body;
+        } finally { clearTimeout(timeout); }
+      };
+      api().then((body) => {
+        m.el.querySelector('[data-delete-identity]').textContent = body.account.email;
+        if (body.request) { showRecorded(body.request); return; }
+        ready = true; form.hidden = false; button.disabled = false; status.textContent = '';
+      }).catch((err) => { status.textContent = err.message === 'unauthenticated' ? copy.signin : copy.failed; });
+      const submit = async () => {
+        if (!ready || sending) return;
+        if (!password.value) { password.focus(); return; }
+        sending = true; button.disabled = true; button.textContent = copy.sending; status.textContent = '';
+        const body = JSON.stringify({ confirm: true, password: password.value }); password.value = '';
+        try { const result = await api({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body }); showRecorded(result.request); }
+        catch (err) {
+          status.textContent = err.message === 'bad-creds' ? copy.wrong : err.message === 'unauthenticated' ? copy.signin : err.message === 'too_many_attempts' ? copy.limit : copy.failed;
+          password.focus();
+        } finally { sending = false; button.disabled = !ready; button.textContent = copy.send; }
+      };
+      button.addEventListener('click', submit);
+      password.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); submit(); } });
+      m.el.querySelector('[data-close]').addEventListener('click', () => { password.value = ''; m.close(); });
+    },
+
     'glass-level': (el) => {
       const D = window.KiwiDesignIOS27;
       if (!D) return;
@@ -2123,7 +2413,13 @@ ar: {
           /* Le vestige a fini son office : il disparaît, pour qu'aucun écran ne
            * puisse plus afficher deux horaires différents du même commerce. */
           try { localStorage.removeItem('kiwiSet:hours'); } catch (_) {}
-          try { if (vd.hours && KV && KV.updateVenue) KV.updateVenue(KV.getVenue(), { hours: '' }); } catch (_) {}
+          try {
+            if (vd.hours && KV && KV.updateVenue) KV.updateVenue(KV.getVenue(), { hours: '' });
+          } catch (_) {
+            if (typeof Kiwi !== 'undefined' && Kiwi.toast) {
+              Kiwi.toast('Erreur de réinitialisation des horaires', { type: 'warn', force: true });
+            }
+          }
           document.querySelectorAll('.kiwi-drawer-backdrop').forEach((b) => b.__kiwiClose && b.__kiwiClose());
           setTimeout(() => { try { handlers.settings(); } catch (_) {} }, 110);
         },
@@ -2175,12 +2471,12 @@ ar: {
           <label style="${lbl}">${tr({ fr: "Type d'activité", en: 'Type of business', ar: 'نوع النشاط' })}</label>
           <select class="ev-field" data-ev-trade style="${fld}">${KT.options(curTrade)}</select>
           <p style="font-size:11.5px;color:var(--n-500);margin:6px 0 0;line-height:1.45;">${tr({
-            fr: 'Détermine les écrans de ce commerce — carte et tables, catalogue et codes-barres, prestations, chambres.',
-            en: 'Decides this business’s screens — menu and tables, catalogue and barcodes, treatments, rooms.',
+            fr: 'Détermine les écrans de ce commerce · carte et tables, catalogue et codes-barres, prestations, chambres.',
+            en: 'Decides this business’s screens · menu and tables, catalogue and barcodes, treatments, rooms.',
             ar: 'يحدّد شاشات هذا النشاط.' })}</p>` : ''}
           <label style="${lbl}">Ville</label>
           <input class="ev-field" data-ev-city style="${fld}" maxlength="30"/>
-          <label style="${lbl}">Objectif de chiffre d'affaires par jour <span style="color:var(--n-400);font-weight:400;">· MAD</span></label>
+          <label style="${lbl}">Objectif de chiffre d'affaires par jour <span style="color: var(--n-500);font-weight:400;">· MAD</span></label>
           <input class="ev-field" data-ev-goal type="number" inputmode="numeric" style="${fld}" min="0"/>
         `,
         foot: `<button class="kb atlas" data-ev-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">Enregistrer</button>`,
@@ -2214,7 +2510,10 @@ ar: {
      * Reached by entering PIN 0000 at the lock screen. ─── */
     'onboard': () => {
       let picked = 'restaurant';
-      const ic = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+      /* Material Symbols (Outlined, 400, grade 0, grille 24), recopiés depuis
+       * assets/icons/material/ — voir le README de ce dossier. Forme pleine,
+       * viewBox natif 0 -960 960 960 : la CSS pilote `color`, pas `stroke`. */
+      const mi = (d) => `<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="${d}"/></svg>`;
       // Each visible type maps to a data vertical (`base`); the specific label
       // is what the merchant sees. `primary` types show first. THE list is
       // assets/trades.js — this literal is the parachute, and it is also why
@@ -2222,21 +2521,22 @@ ar: {
       // assets/venues.js could not map to any vertical.
       const KT = window.KiwiTrades;
       const TYPES = (KT && KT.all().map((t) => ({ id: t.id, base: t.base, primary: t.primary, label: KT.label(t.id), icon: t.icon }))) || [
-        { id: 'restaurant', base: 'restaurant', primary: true, label: 'Restaurant',          icon: ic('<path d="M3 3v6a2 2 0 002 2h1v10M6 11V3M11 3c-1 0-2 1.6-2 4s1 4 2 4 2-1.6 2-4-1-4-2-4zM11 11v10"/>') },
-        { id: 'boutique',   base: 'boutique',   primary: true, label: 'Boutique',            icon: ic('<path d="M6 2 3 6v13a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/>') },
-        { id: 'spa',        base: 'spa',        primary: true, label: tr({fr:'Spa / Bien-être', en:'Spa / Wellness', ar:'سبا / عافية'}),     icon: ic('<path d="M11 20A7 7 0 019.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/>') },
-        { id: 'cafe',       base: 'restaurant',                label: tr({fr:'Café / Salon de thé', en:'Café / Tea room', ar:'مقهى / صالون شاي'}), icon: ic('<path d="M17 8h1a4 4 0 010 8h-1"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4z"/><path d="M6 2v2.5M10 2v2.5M14 2v2.5"/>') },
-        { id: 'fastfood',   base: 'restaurant',                label: tr({fr:'Fast-food / Snack', en:'Fast food / Snack', ar:'وجبات سريعة / سناك'}),   icon: ic('<path d="M3 11a9 9 0 0118 0"/><path d="M2 15h20"/><path d="M5 19h14a2 2 0 002-2H3a2 2 0 002 2z"/><path d="M7.5 7.6h.01M12 6.6h.01M16.5 7.6h.01"/>') },
-        { id: 'bakery',     base: 'restaurant',                label: tr({fr:'Boulangerie', en:'Bakery', ar:'مخبزة'}),         icon: ic('<path d="M4 13a8 4.5 0 0116 0v4.5A1.5 1.5 0 0118.5 19h-13A1.5 1.5 0 014 17.5z"/><path d="M9.5 13.5v5M14.5 13.5v5"/>') },
-        { id: 'pizzeria',   base: 'restaurant',                label: 'Pizzeria',            icon: ic('<path d="M3 7l9 14 9-14z"/><path d="M3 7a30 30 0 0118 0"/><path d="M9.5 11h.01M13 13.5h.01M11 16.5h.01"/>') },
-        { id: 'traiteur',   base: 'restaurant',                label: tr({fr:'Traiteur', en:'Caterer', ar:'خدمات تقديم الطعام'}),            icon: ic('<path d="M4 17a8 8 0 0116 0z"/><path d="M2 17h20"/><path d="M12 5v4"/><path d="M10.5 5h3"/>') },
-        { id: 'foodtruck',  base: 'restaurant',                label: 'Food truck',          icon: ic('<path d="M14 17V6a1 1 0 00-1-1H3a1 1 0 00-1 1v11h2"/><path d="M14 9h4l4 4v4h-2"/><path d="M9 17h2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>') },
-        { id: 'epicerie',   base: 'boutique',                  label: tr({fr:'Épicerie', en:'Grocery', ar:'بقالة'}),            icon: ic('<path d="M3 4h2l2.6 11.4a1 1 0 001 .8h8.8a1 1 0 001-.8L21 8H6"/><circle cx="9" cy="20" r="1.6"/><circle cx="17" cy="20" r="1.6"/>') },
-        { id: 'pharmacie',  base: 'boutique',                  label: 'Pharmacie',           icon: ic('<path d="M9.5 3h5a1 1 0 011 1v4.5H20a1 1 0 011 1v5a1 1 0 01-1 1h-4.5V20a1 1 0 01-1 1h-5a1 1 0 01-1-1v-4.5H4a1 1 0 01-1-1v-5a1 1 0 011-1h4.5V4a1 1 0 011-1z"/>') },
-        { id: 'librairie',  base: 'boutique',                  label: tr({fr:'Librairie', en:'Bookshop', ar:'مكتبة'}),           icon: ic('<path d="M12 7v14"/><path d="M3 18a1 1 0 01-1-1V4a1 1 0 011-1h5a3 3 0 013 3v14a3 3 0 00-3-3z"/><path d="M21 18a1 1 0 001-1V4a1 1 0 00-1-1h-5a3 3 0 00-3 3v14a3 3 0 013-3z"/>') },
-        { id: 'fleuriste',  base: 'boutique',                  label: tr({fr:'Fleuriste', en:'Florist', ar:'محل أزهار'}),           icon: ic('<path d="M12 22V12"/><path d="M12 12C9 12 7 9.5 7 6c4 0 5 2.5 5 6z"/><path d="M12 12c3 0 5-2.5 5-6-4 0-5 2.5-5 6z"/><path d="M8 22h8"/>') },
-        { id: 'coiffure',   base: 'spa',                       label: tr({fr:'Salon de coiffure', en:'Hair salon', ar:'صالون حلاقة'}),   icon: ic('<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88"/><path d="M14.47 14.48 20 20"/><path d="M8.12 8.12 12 12"/>') },
-        { id: 'sport',      base: 'spa',                       label: tr({fr:'Salle de sport', en:'Gym', ar:'صالة رياضية'}),      icon: ic('<path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/>') },
+        { id: 'restaurant', base: 'restaurant', primary: true, label: 'Restaurant',          /* restaurant.svg */ icon: mi('M280-80v-366q-51-14-85.5-56T160-600v-280h80v280h40v-280h80v280h40v-280h80v280q0 56-34.5 98T360-446v366h-80Zm400 0v-320H560v-280q0-83 58.5-141.5T760-880v800h-80Z') },
+        { id: 'boutique',   base: 'boutique',   primary: true, label: 'Boutique',            /* storefront.svg */ icon: mi('M841-518v318q0 33-23.5 56.5T761-120H201q-33 0-56.5-23.5T121-200v-318q-23-21-35.5-54t-.5-72l42-136q8-26 28.5-43t47.5-17h556q27 0 47 16.5t29 43.5l42 136q12 39-.5 71T841-518Zm-272-42q27 0 41-18.5t11-41.5l-22-140h-78v148q0 21 14 36.5t34 15.5Zm-180 0q23 0 37.5-15.5T441-612v-148h-78l-22 140q-4 24 10.5 42t37.5 18Zm-178 0q18 0 31.5-13t16.5-33l22-154h-78l-40 134q-6 20 6.5 43t41.5 23Zm540 0q29 0 42-23t6-43l-42-134h-76l22 154q3 20 16.5 33t31.5 13ZM201-200h560v-282q-5 2-6.5 2H751q-27 0-47.5-9T663-518q-18 18-41 28t-49 10q-27 0-50.5-10T481-518q-17 18-39.5 28T393-480q-29 0-52.5-10T299-518q-21 21-41.5 29.5T211-480h-4.5q-2.5 0-5.5-2v282Zm560 0H201h560Z') },
+        { id: 'spa',        base: 'spa',        primary: true, label: tr({fr:'Spa / Bien-être', en:'Spa / Wellness', ar:'سبا / عافية'}),     /* spa.svg */ icon: mi('M480-80q-73-9-145-39.5T206.5-207Q150-264 115-351T80-560v-40h40q51 0 105 13t101 39q12-86 54.5-176.5T480-880q57 65 99.5 155.5T634-548q47-26 101-39t105-13h40v40q0 122-35 209t-91.5 144q-56.5 57-128 87.5T480-80Zm-2-82q-11-166-98.5-251T162-518q11 171 101.5 255T478-162Zm2-254q15-22 36.5-45.5T558-502q-2-57-22.5-119T480-742q-35 59-55.5 121T402-502q20 17 42 40.5t36 45.5Zm78 236q37-12 77-35t74.5-62.5q34.5-39.5 59-98.5T798-518q-94 14-165 62.5T524-332q12 32 20.5 70t13.5 82Zm-78-236Zm78 236Zm-80 18Zm46-170ZM480-80Z') },
+        { id: 'cafe',       base: 'restaurant',                label: tr({fr:'Café / Salon de thé', en:'Café / Tea room', ar:'مقهى / صالون شاي'}), /* local_cafe.svg */ icon: mi('M160-120v-80h640v80H160Zm160-160q-66 0-113-47t-47-113v-400h640q33 0 56.5 23.5T880-760v120q0 33-23.5 56.5T800-560h-80v120q0 66-47 113t-113 47H320Zm0-80h240q33 0 56.5-23.5T640-440v-320H240v320q0 33 23.5 56.5T320-360Zm400-280h80v-120h-80v120ZM320-360h-80 400-320Z') },
+        { id: 'fastfood',   base: 'restaurant',                label: tr({fr:'Fast-food / Snack', en:'Fast food / Snack', ar:'وجبات سريعة / سناك'}),   /* lunch_dining.svg */ icon: mi('M160-120q-33 0-56.5-23.5T80-200v-120h800v120q0 33-23.5 56.5T800-120H160Zm0-120v40h640v-40H160Zm263-160q-21 20-77 20t-76-20q-20-20-56-20t-57 20q-21 20-77 20v-80q36 0 57-20t77-20q56 0 76 20t56 20q36 0 57-20t77-20q56 0 77 20t57 20q36 0 56-20t76-20q56 0 79 20t55 20v80q-56 0-75-20t-55-20q-36 0-58 20t-78 20q-56 0-77-20t-57-20q-36 0-57 20ZM80-560v-40q0-115 108.5-177.5T480-840q183 0 291.5 62.5T880-600v40H80Zm400-200q-124 0-207.5 31T166-640h628q-23-58-106.5-89T480-760Zm0 520Zm0-400Z') },
+        { id: 'bakery',     base: 'restaurant',                label: tr({fr:'Boulangerie', en:'Bakery', ar:'مخبزة'}),         /* bakery_dining.svg */ icon: mi('M804-282q17 9 30-4t4-30l-58-108-42 108 66 34Zm-200-38h48l96-238q3-8-1.5-13.5T736-580l-80-32q-9-3-17.5 2T628-596l-24 276Zm-296 0h48l-24-276q-2-11-10.5-15t-17.5-1l-80 32q-8 3-11.5 8.5T212-558l96 238Zm-152 38 66-34-42-108-58 108q-9 17 4 30t30 4Zm280-38h88l30-338q2-9-4.5-15.5T534-680H426q-8 0-14.5 6.5T406-658l30 338ZM138-200q-42 0-70-31.5T40-306q0-12 3.5-23.5T52-352l88-168q-14-40 1-79t53-55l80-32q14-5 28-7t28 1q14-29 39-48.5t57-19.5h108q32 0 57 19.5t39 48.5q14-2 28-.5t28 6.5l80 32q40 16 56 55t-2 77l88 168q6 11 9 23t3 25q0 45-30.5 75.5T814-200q-11 0-22-2.5t-22-7.5l-62-30H250l-56 30q-13 7-27.5 8.5T138-200Zm342-280Z') },
+        { id: 'pizzeria',   base: 'restaurant',                label: 'Pizzeria',            /* local_pizza.svg */ icon: mi('M480-80 80-680q85-72 186.5-116T480-840q112 0 213.5 43.5T880-680L480-80Zm0-144 292-438q-65-45-139-71.5T480-760q-79 0-152.5 26.5T188-662l292 438Zm-57.5-353.5Q440-595 440-620t-17.5-42.5Q405-680 380-680t-42.5 17.5Q320-645 320-620t17.5 42.5Q355-560 380-560t42.5-17.5Zm100 200Q540-395 540-420t-17.5-42.5Q505-480 480-480t-42.5 17.5Q420-445 420-420t17.5 42.5Q455-360 480-360t42.5-17.5ZM480-224Z') },
+        { id: 'traiteur',   base: 'restaurant',                label: tr({fr:'Traiteur', en:'Caterer', ar:'خدمات تقديم الطعام'}),            /* room_service.svg */ icon: mi('M80-200v-80h800v80H80Zm40-120v-40q0-128 78.5-226T400-710v-10q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720v10q124 26 202 124t78 226v40H120Zm82-80h556q-14-104-93-172t-185-68q-106 0-184.5 68T202-400Zm278 0Z') },
+        { id: 'foodtruck',  base: 'restaurant',                label: 'Food truck',          /* local_shipping.svg */ icon: mi('M155-195q-35-35-35-85H40v-440q0-33 23.5-56.5T120-800h560v160h120l120 160v200h-80q0 50-35 85t-85 35q-50 0-85-35t-35-85H360q0 50-35 85t-85 35q-50 0-85-35Zm113.5-56.5Q280-263 280-280t-11.5-28.5Q257-320 240-320t-28.5 11.5Q200-297 200-280t11.5 28.5Q223-240 240-240t28.5-11.5ZM120-360h32q17-18 39-29t49-11q27 0 49 11t39 29h272v-360H120v360Zm628.5 108.5Q760-263 760-280t-11.5-28.5Q737-320 720-320t-28.5 11.5Q680-297 680-280t11.5 28.5Q703-240 720-240t28.5-11.5ZM680-440h170l-90-120h-80v120ZM360-540Z') },
+        { id: 'epicerie',   base: 'boutique',                  label: tr({fr:'Épicerie', en:'Grocery', ar:'بقالة'}),            /* local_grocery_store.svg */ icon: mi('M223.5-103.5Q200-127 200-160t23.5-56.5Q247-240 280-240t56.5 23.5Q360-193 360-160t-23.5 56.5Q313-80 280-80t-56.5-23.5Zm400 0Q600-127 600-160t23.5-56.5Q647-240 680-240t56.5 23.5Q760-193 760-160t-23.5 56.5Q713-80 680-80t-56.5-23.5ZM246-720l96 200h280l110-200H246Zm-38-80h590q23 0 35 20.5t1 41.5L692-482q-11 20-29.5 31T622-440H324l-44 80h480v80H280q-45 0-68-39.5t-2-78.5l54-98-144-304H40v-80h130l38 80Zm134 280h280-280Z') },
+        { id: 'pharmacie',  base: 'boutique',                  label: 'Pharmacie',           /* local_pharmacy.svg */ icon: mi('M120-120v-80l80-240-80-240v-80h508l58-160 94 34-46 126h106v80l-80 240 80 240v80H120Zm320-160h80v-120h120v-80H520v-120h-80v120H320v80h120v120Zm-236 80h552l-80-240 80-240H204l80 240-80 240Zm276-240Z') },
+        { id: 'librairie',  base: 'boutique',                  label: tr({fr:'Librairie', en:'Bookshop', ar:'مكتبة'}),           /* menu_book.svg */ icon: mi('M560-564v-68q33-14 67.5-21t72.5-7q26 0 51 4t49 10v64q-24-9-48.5-13.5T700-600q-38 0-73 9.5T560-564Zm0 220v-68q33-14 67.5-21t72.5-7q26 0 51 4t49 10v64q-24-9-48.5-13.5T700-380q-38 0-73 9t-67 27Zm0-110v-68q33-14 67.5-21t72.5-7q26 0 51 4t49 10v64q-24-9-48.5-13.5T700-490q-38 0-73 9.5T560-454ZM260-320q47 0 91.5 10.5T440-278v-394q-41-24-87-36t-93-12q-36 0-71.5 7T120-692v396q35-12 69.5-18t70.5-6Zm260 42q44-21 88.5-31.5T700-320q36 0 70.5 6t69.5 18v-396q-33-14-68.5-21t-71.5-7q-47 0-93 12t-87 36v394Zm-40 118q-48-38-104-59t-116-21q-42 0-82.5 11T100-198q-21 11-40.5-1T40-234v-482q0-11 5.5-21T62-752q46-24 96-36t102-12q58 0 113.5 15T480-740q51-30 106.5-45T700-800q52 0 102 12t96 36q11 5 16.5 15t5.5 21v482q0 23-19.5 35t-40.5 1q-37-20-77.5-31T700-240q-60 0-116 21t-104 59ZM280-494Z') },
+        { id: 'fleuriste',  base: 'boutique',                  label: tr({fr:'Fleuriste', en:'Florist', ar:'محل أزهار'}),           /* local_florist.svg */ icon: mi('M480-600q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm-70.5 218.5Q378-403 364-438q-5 0-9 .5t-9 .5q-52 0-89-37t-37-89q0-21 7-40.5t21-36.5q-13-17-20-36.5t-7-40.5q0-52 36.5-89t88.5-37q5 0 9 .5t9 .5q14-35 45.5-56.5T480-920q39 0 70.5 21.5T596-842q5 0 9-.5t9-.5q52 0 88.5 37t36.5 89q0 21-6.5 40.5T712-640q13 17 20 36.5t7 40.5q0 52-36.5 89T614-437q-5 0-9-.5t-9-.5q-14 35-45.5 56.5T480-360q-39 0-70.5-21.5ZM480-80q0-74 28.5-139.5T586-334q49-49 114.5-77.5T840-440q0 74-28.5 139.5T734-186q-49 49-114.5 77.5T480-80Zm98-98q57-21 100-64t64-100q-57 21-100 64t-64 100Zm-98 98q0-74-28.5-139.5T374-334q-49-49-114.5-77.5T120-440q0 74 28.5 139.5T226-186q49 49 114.5 77.5T480-80Zm-98-98q-57-21-100-64t-64-100q57 21 100 64t64 100Zm196 0Zm-196 0Zm232-339q19 0 32.5-13.5T660-563q0-14-7.5-24.5T633-604l-35-17q-2 11-6 21.5t-9 19.5q-5 9-12 17t-15 15l32 23q5 4 11.5 6t14.5 2Zm-16-142 35-17q12-6 19-17t7-24q0-19-13-32.5T614-763q-8 0-14 2t-12 6l-33 23q8 7 15.5 15t12.5 17q5 9 9 19.5t6 21.5Zm-159-93q10-4 20-6t21-2q11 0 21 2t20 6l5-44q2-18-12.5-31T480-840q-19 0-33.5 13T434-796l5 44Zm41 312q19 0 33.5-13t12.5-31l-5-44q-10 4-20 6t-21 2q-11 0-21-2t-20-6l-5 44q-2 18 12.5 31t33.5 13ZM362-659q2-11 6-21.5t9-19.5q5-9 12-17t15-15l-32-23q-5-4-11.5-6t-14.5-2q-19 0-32.5 13.5T300-717q0 13 7.5 24t19.5 17l35 17Zm-16 141q8 0 14-1.5t12-6.5l33-22q-8-7-15.5-15T377-580q-5-9-9-19.5t-6-21.5l-35 17q-12 6-19 17t-7 24q1 19 13.5 32t31.5 13Zm237-62Zm0-120Zm-103-60Zm0 240ZM377-700Zm0 120Z') },
+        { id: 'maison',     base: 'boutique',                  label: tr({fr:'Maison', en:'Home', ar:'المنزل'}), /* home_and_garden.svg */ icon: mi('M160-160v-375l-72 55-47-63 439-337 440 336-48 64-392-300-240 184v356h160v80H160Zm540 95q-42 29-92.5 24.5T521-81q-36-36-40.5-86.5T505-260q-29-42-24.5-92.5T521-439q36-36 86.5-40.5T700-455q42-29 92.5-24.5T879-439q36 36 40.5 86.5T895-260q29 42 24.5 92.5T879-81q-36 36-86.5 40.5T700-65Zm0-98 46 32q18 13 39 11t37-18q16-16 18-37t-11-39l-32-46 32-46q13-18 11-39t-18-37q-16-16-37-18t-39 11l-46 32-46-32q-18-13-39-11t-37 18q-16 16-18 37t11 39l32 46-32 46q-13 18-11 39t18 37q16 16 37 18t39-11l46-32Zm35.5-61.5Q750-239 750-260t-14.5-35.5Q721-310 700-310t-35.5 14.5Q650-281 650-260t14.5 35.5Q679-210 700-210t35.5-14.5ZM480-470Zm220 210Z') },
+        { id: 'coiffure',   base: 'spa',                       label: tr({fr:'Salon de coiffure', en:'Hair salon', ar:'صالون حلاقة'}),   /* content_cut.svg */ icon: mi('M760-120 480-400l-94 94q8 15 11 32t3 34q0 66-47 113T240-80q-66 0-113-47T80-240q0-66 47-113t113-47q17 0 34 3t32 11l94-94-94-94q-15 8-32 11t-34 3q-66 0-113-47T80-720q0-66 47-113t113-47q66 0 113 47t47 113q0 17-3 34t-11 32l494 494v40H760ZM600-520l-80-80 240-240h120v40L600-520ZM296.5-663.5Q320-687 320-720t-23.5-56.5Q273-800 240-800t-56.5 23.5Q160-753 160-720t23.5 56.5Q207-640 240-640t56.5-23.5ZM494-466q6-6 6-14t-6-14q-6-6-14-6t-14 6q-6 6-6 14t6 14q6 6 14 6t14-6ZM296.5-183.5Q320-207 320-240t-23.5-56.5Q273-320 240-320t-56.5 23.5Q160-273 160-240t23.5 56.5Q207-160 240-160t56.5-23.5Z') },
+        { id: 'sport',      base: 'spa',                       label: tr({fr:'Salle de sport', en:'Gym', ar:'صالة رياضية'}),      /* fitness_center.svg */ icon: mi('m536-84-56-56 142-142-340-340-142 142-56-56 56-58-56-56 84-84-56-58 56-56 58 56 84-84 56 56 58-56 56 56-142 142 340 340 142-142 56 56-56 58 56 56-84 84 56 58-56 56-58-56-84 84-56-56-58 56Z') },
       ];
       const moreCount = TYPES.filter((t) => !t.primary).length;
       const fld = 'width:100%;padding:11px 13px;border:1px solid var(--n-200);border-radius:10px;font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--surface);outline:none;box-sizing:border-box;';
@@ -2252,8 +2552,8 @@ ar: {
               border:1px solid var(--n-200);border-radius:12px;background:var(--surface);cursor:pointer;
               font-family:var(--sans);font-size:12px;font-weight:500;color:var(--n-600);text-align:center;
               transition:border-color 140ms,background 140ms,color 140ms;}
-            .ob-type svg{width:22px;height:22px;}
-            .ob-type:hover{border-color:var(--n-400);}
+            .ob-type svg{width:24px;height:24px;}
+            .ob-type:hover{border-color: var(--n-400);}
             .ob-type.sel{border-color:var(--atlas);background:rgba(11,110,79,0.05);color:var(--atlas);}
             .ob-type.ob-more{display:none;}
             .ob-morebtn{margin-top:8px;width:100%;padding:9px;border:1px dashed var(--n-300);
@@ -2271,7 +2571,7 @@ ar: {
           <input class="ob-field" data-ob-name placeholder="Ex. Café des Oudayas" style="${fld}" maxlength="40"/>
           <label style="${lbl}">Ville</label>
           <input class="ob-field" data-ob-city placeholder="Ex. Rabat" style="${fld}" maxlength="30"/>
-          <label style="${lbl}">Objectif de chiffre d'affaires par jour <span style="color:var(--n-400);font-weight:400;">· optionnel</span></label>
+          <label style="${lbl}">Objectif de chiffre d'affaires par jour <span style="color: var(--n-500);font-weight:400;">· optionnel</span></label>
           <input class="ob-field" data-ob-goal type="number" inputmode="numeric" placeholder="Ex. 5000 MAD" style="${fld}" min="0"/>
         `,
         foot: `<button class="kb atlas" data-ob-create type="button" style="width:100%;justify-content:center;padding:13px;font-size:15px;">Créer mon tableau de bord →</button>`,
@@ -2342,7 +2642,7 @@ ar: {
             <div style="font-size:17px;font-weight:600;letter-spacing:-0.01em;">${tr({fr:'Parlez-nous de votre activité', en:'Tell us about your business', ar:'حدثنا عن نشاطك'})} · ${def.label}</div>
             <p style="font-size:13px;color:var(--n-500);margin:6px 0 2px;line-height:1.5;">${tr({fr:'30 secondes, Kiwi personnalise vos indicateurs et vos modules. Modifiable plus tard dans Paramètres.', en:'30 seconds, Kiwi tailors your indicators and modules. Editable later in Settings.', ar:'30 ثانية, يخصص كيوي مؤشراتك ووحداتك. قابل للتعديل لاحقًا في الإعدادات.'})}</p>
             ${prof.questions.map((q) => `
-              <label style="${lbl}">${tr(q.label)} <span style="color:var(--n-400);font-weight:400;">· ${optWord}</span></label>
+              <label style="${lbl}">${tr(q.label)} <span style="color: var(--n-500);font-weight:400;">· ${optWord}</span></label>
               <input class="ob-field" data-ob-q="${q.k}" ${q.type === 'number' ? 'type="number" inputmode="numeric" min="0"' : 'maxlength="60"'} placeholder="${q.ph}" style="${fld}"/>
             `).join('')}`;
           const foot = m.el.querySelector('.kiwi-modal-foot');
@@ -2364,6 +2664,18 @@ ar: {
       }, 1800);
     },
 
+    /* The prominent home-dashboard CTA must produce the same factual report
+     * as Rapport journalier.  Resolution lives with the exporter so this
+     * router never duplicates day boundaries, venue scoping or reconciliation. */
+    'day-report-export': (el) => {
+      const api = window.KiwiDayReportExport;
+      if (!api || typeof api.openCurrent !== 'function') {
+        toast(tr({fr:'Le rapport est encore en cours de chargement', en:'The report is still loading', ar:'لا يزال التقرير قيد التحميل'}), { type:'info' });
+        return;
+      }
+      api.openCurrent(el);
+    },
+
     'new-sale': () => {
       let amount = '';
       const m = modal({
@@ -2374,7 +2686,7 @@ ar: {
         body: `
           <div style="text-align:center; padding:20px 0 28px;">
             <div style="font-size:14px; color:var(--n-500); margin-bottom:6px;">MONTANT</div>
-            <div style="font-size:64px; font-weight:600; letter-spacing:-0.045em; font-feature-settings:'tnum' 1; line-height:1;" data-amt>0<span style="font-size:22px; color:var(--n-400); margin-left:6px;">MAD</span></div>
+            <div style="font-size:64px; font-weight:600; letter-spacing:-0.045em; font-feature-settings:'tnum' 1; line-height:1;" data-amt>0<span style="font-size:22px; color: var(--n-500); margin-left:6px;">MAD</span></div>
           </div>
           <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
             ${[1,2,3,4,5,6,7,8,9,',',0,'⌫'].map(n => `<button class="kb ghost" style="padding:18px; font-size:19px; font-weight:500; justify-content:center;" data-key="${n}">${n}</button>`).join('')}
@@ -2393,7 +2705,7 @@ ar: {
           if (v === '⌫') amount = amount.slice(0, -1);
           else if (v === ',' && !amount.includes(',')) amount += ',';
           else if (v !== ',') amount += v;
-          m.el.querySelector('[data-amt]').innerHTML = `${amount || '0'}<span style="font-size:22px; color:var(--n-400); margin-left:6px;">MAD</span>`;
+          m.el.querySelector('[data-amt]').innerHTML = `${amount || '0'}<span style="font-size:22px; color: var(--n-500); margin-left:6px;">MAD</span>`;
         }
         const met = e.target.closest('[data-method]');
         if (met) {
@@ -2410,8 +2722,17 @@ ar: {
             // Read BEFORE adding — the very first sale is a milestone, not a
             // routine toast. This is the moment onboarding literally promised.
             const first = (window.KiwiSales.totals(vid).count === 0);
+            const sale = {
+              id: 'dashboard-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10),
+              amount: num, method, label: 'Vente tableau de bord',
+              ref: 'WEB-' + Date.now(), time: new Date(), channel: 'dashboard'
+            };
+            const queued = window.KiwiLive?.postSale?.(sale);
+            if (!queued || queued.ok === false) {
+              toast(tr({fr:'Vente non enregistrée · vérifiez la connexion de la caisse', en:'Sale not recorded · check the register connection', ar:'لم يتم تسجيل البيع · تحقق من اتصال الصندوق'}), { type:'error', force:true });
+              return;
+            }
             m.close();
-            window.KiwiSales.add(vid, { amount: num, method });
             const ML = { card: 'carte', qr: 'QR Wallet', link: 'lien de paiement' };
             // Pulse the hero number so the merchant SEES their money land — a
             // spring scale via Web Animations (no CSS dependency).
@@ -2561,9 +2882,9 @@ ar: {
 
       const lang = kiwiLang();
       const T = {
-        fr: { tag: 'COMMANDE', status: 'Encaissée · règlement T+1', table: 'Table', server: 'Serveur', covers: 'Couverts', duration: 'Durée service', cover: 'couvert', covers_pl: 'couverts', minutes: 'min', items: 'Articles', payment: 'Paiement', subtotal: 'Sous-total', tva: 'TVA', total: 'Total encaissé', timeline: 'Chronologie', opened: 'Table ouverte', sent: 'Envoyé en cuisine', ready: 'Prêt', paid: 'Payé', closed: 'Table fermée', sendReceipt: 'Envoyer le reçu', refund: 'Rembourser', close: 'Fermer', receiptSent: 'Reçu envoyé par WhatsApp', refundPrompt: 'Choisir le montant à rembourser' },
-        en: { tag: 'ORDER', status: 'Captured · T+1 settlement', table: 'Table', server: 'Server', covers: 'Covers', duration: 'Service time', cover: 'cover', covers_pl: 'covers', minutes: 'min', items: 'Items', payment: 'Payment', subtotal: 'Subtotal', tva: 'VAT', total: 'Total paid', timeline: 'Timeline', opened: 'Table opened', sent: 'Sent to kitchen', ready: 'Ready', paid: 'Paid', closed: 'Table closed', sendReceipt: 'Send receipt', refund: 'Refund', close: 'Close', receiptSent: 'Receipt sent on WhatsApp', refundPrompt: 'Choose refund amount' },
-        ar: { tag: 'طلب', status: 'تمّ الدفع · تسوية T+1', table: 'الطاولة', server: 'النادل', covers: 'الضيوف', duration: 'مدة الخدمة', cover: 'ضيف', covers_pl: 'ضيوف', minutes: 'د', items: 'الأصناف', payment: 'الدفع', subtotal: 'الإجمالي', tva: 'الضريبة', total: 'المبلغ المدفوع', timeline: 'الجدول الزمني', opened: 'فُتحت الطاولة', sent: 'أُرسل للمطبخ', ready: 'جاهز', paid: 'مدفوع', closed: 'أُغلقت الطاولة', sendReceipt: 'إرسال الإيصال', refund: 'استرداد', close: 'إغلاق', receiptSent: 'تمّ إرسال الإيصال عبر واتساب', refundPrompt: 'اختر مبلغ الاسترداد' },
+        fr: { tag: 'COMMANDE', status: 'Encaissée · règlement T+1', table: 'Table', server: 'Serveur', covers: 'Couverts', duration: 'Durée service', cover: 'couvert', covers_pl: 'couverts', minutes: 'min', items: 'Articles', payment: 'Paiement', subtotal: 'Sous-total', tva: 'TVA', total: 'Total encaissé', timeline: 'Chronologie', opened: 'Table ouverte', sent: 'Envoyé en cuisine', ready: 'Prêt', paid: 'Payé', closed: 'Table fermée', sendReceipt: 'Envoyer le reçu', refund: 'Rembourser', cancel: 'Annuler la vente', cancelConfirm: 'Annuler cette vente ? Cette action sera journalisée.', cancelled: 'Vente annulée', cancelFailed: 'Annulation impossible. Vérifiez vos droits et réessayez.', close: 'Fermer', receiptSent: 'Reçu envoyé par WhatsApp', refundPrompt: 'Choisir le montant à rembourser' },
+        en: { tag: 'ORDER', status: 'Captured · T+1 settlement', table: 'Table', server: 'Server', covers: 'Covers', duration: 'Service time', cover: 'cover', covers_pl: 'covers', minutes: 'min', items: 'Items', payment: 'Payment', subtotal: 'Subtotal', tva: 'VAT', total: 'Total paid', timeline: 'Timeline', opened: 'Table opened', sent: 'Sent to kitchen', ready: 'Ready', paid: 'Paid', closed: 'Table closed', sendReceipt: 'Send receipt', refund: 'Refund', cancel: 'Cancel sale', cancelConfirm: 'Cancel this sale? This action will be logged.', cancelled: 'Sale cancelled', cancelFailed: 'Could not cancel the sale. Check your permissions and try again.', close: 'Close', receiptSent: 'Receipt sent on WhatsApp', refundPrompt: 'Choose refund amount' },
+        ar: { tag: 'طلب', status: 'تمّ الدفع · تسوية T+1', table: 'الطاولة', server: 'النادل', covers: 'الضيوف', duration: 'مدة الخدمة', cover: 'ضيف', covers_pl: 'ضيوف', minutes: 'د', items: 'الأصناف', payment: 'الدفع', subtotal: 'الإجمالي', tva: 'الضريبة', total: 'المبلغ المدفوع', timeline: 'الجدول الزمني', opened: 'فُتحت الطاولة', sent: 'أُرسل للمطبخ', ready: 'جاهز', paid: 'مدفوع', closed: 'أُغلقت الطاولة', sendReceipt: 'إرسال الإيصال', refund: 'استرداد', cancel: 'إلغاء البيع', cancelConfirm: 'إلغاء هذا البيع؟ سيتم تسجيل العملية.', cancelled: 'تم إلغاء البيع', cancelFailed: 'تعذر إلغاء البيع. تحقق من الصلاحيات وحاول مرة أخرى.', close: 'إغلاق', receiptSent: 'تمّ إرسال الإيصال عبر واتساب', refundPrompt: 'اختر مبلغ الاسترداد' },
       };
       const L = T[lang] || T.fr;
 
@@ -2609,6 +2930,7 @@ ar: {
         </div>
       `).join('');
 
+      const cancelFoot = o.saleId ? `<button class="kb ghost" data-ord-cancel>${L.cancel}</button>` : '';
       drawer({
         title: o.primary,
         subtitle: `${L.tag} · ${o.receiptNo || ''}`,
@@ -2626,7 +2948,7 @@ ar: {
           <div class="ord-stats">
             <div class="ord-stat">
               <div class="lbl">${L.table}</div>
-              <div class="val">T${o.table != null ? o.table : '—'}</div>
+              <div class="val">T${o.table != null ? o.table : '·'}</div>
             </div>
             <div class="ord-stat">
               <div class="lbl">${L.covers}</div>
@@ -2635,7 +2957,7 @@ ar: {
             </div>
             <div class="ord-stat">
               <div class="lbl">${L.server}</div>
-              <div class="val" style="font-size:13px;">${o.server || '—'}</div>
+              <div class="val" style="font-size:13px;">${o.server || '·'}</div>
             </div>
             <div class="ord-stat">
               <div class="lbl">${L.duration}</div>
@@ -2644,7 +2966,7 @@ ar: {
           </div>
 
           <div class="ord-section-lbl">${L.items}</div>
-          <div class="ord-items">${itemsHtml || `<div class="ord-item"><div class="qty">—</div><div><div class="nm">—</div></div><div class="ln">—</div></div>`}</div>
+          <div class="ord-items">${itemsHtml || `<div class="ord-item"><div class="qty">·</div><div><div class="nm">·</div></div><div class="ln">·</div></div>`}</div>
 
           <div class="ord-totals">
             <div class="k">${L.subtotal}</div><div class="v">${o.subtotal} MAD</div>
@@ -2664,13 +2986,14 @@ ar: {
 
           <div class="ord-section-lbl">${L.timeline}</div>
           <div class="tx-timeline">
-            <div class="tx-timeline-item"><div class="t">${tOpened}</div><div class="n">${L.opened}</div><div class="d">T${o.table != null ? o.table : '—'} · ${o.covers || 1} ${coversLbl} · ${o.server || '—'}</div></div>
-            <div class="tx-timeline-item"><div class="t">${tSent}</div><div class="n">${L.sent}</div><div class="d">${(o.items || []).map(i => `×${i.qty} ${i.name}`).join(' · ') || '—'}</div></div>
-            <div class="tx-timeline-item"><div class="t">${tReady}</div><div class="n">${L.ready}</div><div class="d">${L.server === 'Server' ? 'Picked up by' : (L.server === 'النادل' ? 'استلمه' : 'Récupéré par')} ${o.server || '—'}</div></div>
+            <div class="tx-timeline-item"><div class="t">${tOpened}</div><div class="n">${L.opened}</div><div class="d">T${o.table != null ? o.table : '·'} · ${o.covers || 1} ${coversLbl} · ${o.server || '·'}</div></div>
+            <div class="tx-timeline-item"><div class="t">${tSent}</div><div class="n">${L.sent}</div><div class="d">${(o.items || []).map(i => `×${i.qty} ${i.name}`).join(' · ') || '·'}</div></div>
+            <div class="tx-timeline-item"><div class="t">${tReady}</div><div class="n">${L.ready}</div><div class="d">${L.server === 'Server' ? 'Picked up by' : (L.server === 'النادل' ? 'استلمه' : 'Récupéré par')} ${o.server || '·'}</div></div>
             <div class="tx-timeline-item last"><div class="t">${tPaid}</div><div class="n">${L.paid} · ${L.closed}</div><div class="d">${o.primary} · ${o.sub || ''}</div></div>
           </div>
         `,
         foot: `
+          ${cancelFoot}
           <button class="kb ghost" data-ord-receipt>${L.sendReceipt}</button>
           <button class="kb ghost" data-ord-refund>${L.refund}</button>
           <button class="kb primary" data-dismiss>${L.close}</button>
@@ -2679,6 +3002,32 @@ ar: {
 
       /* Footer actions — light demo wiring, mirrors tx-detail's pattern. */
       document.body.addEventListener('click', function once(e) {
+        const cancelButton = e.target.closest('[data-ord-cancel]');
+        if (cancelButton && o.saleId) {
+          if (!window.confirm(L.cancelConfirm)) return;
+          cancelButton.disabled = true;
+          const url = new URL(location.href);
+          const venue = window.KiwiVenue?.getVenue?.() || {};
+          const merchant = url.searchParams.get('merchant') || venue.merchant || venue.id || '';
+          fetch('/api/sale/cancel', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ merchant: String(merchant), id: String(o.saleId), source: 'dashboard' }),
+          }).then(async (r) => {
+            const payload = await r.json().catch(() => ({}));
+            if (!r.ok || !payload.ok) throw new Error(payload.error || 'cancel-failed');
+            return payload;
+          }).then(() => {
+            toast(L.cancelled, { type: 'success' });
+            document.querySelector('.kiwi-drawer-backdrop .kiwi-drawer-close')?.click();
+            const targetRef = String(o.ref || o.receiptNo || o.saleId || '').trim();
+            document.dispatchEvent(new CustomEvent('kiwi-sales-voided', { detail: { refs: [targetRef], merchant } }));
+          }).catch(() => {
+            cancelButton.disabled = false;
+            toast(L.cancelFailed, { type: 'error' });
+          }).finally(() => document.body.removeEventListener('click', once));
+          return;
+        }
         if (e.target.closest('[data-ord-receipt]')) { toast(L.receiptSent + (o.customer ? ' · ' + o.customer : ''), { type: 'success' }); }
         if (e.target.closest('[data-ord-refund]'))  { document.querySelector('.kiwi-drawer-backdrop .kiwi-drawer-close')?.click(); setTimeout(() => toast(L.refundPrompt, { type: 'info' }), 220); }
         if (e.target.closest('[data-dismiss]'))     { document.querySelector('.kiwi-drawer-backdrop .kiwi-drawer-close')?.click(); }
@@ -2698,13 +3047,13 @@ ar: {
           `Appareils illimités · 1 établissement`,
           `S'intègre à votre caisse / TPE existant`,
           `Formation sur site + guides inclus`,
-          `Support WhatsApp 7j/7` ] },
-        { id: 'pro', name: 'KIWI PRO', price: '399 MAD', unit: '/mois', tagline: `Tout Basic + 1 caisse Kiwi offerte`, cta: 'Plan actuel', feats: [
+          `Demandes de support suivies` ] },
+        { id: 'pro', name: 'KIWI PRO', price: '399 MAD', unit: '/mois', tagline: `Tout Basic + support prioritaire + Kiwi IQ avancé`, cta: 'Plan actuel', feats: [
           `Tout Kiwi Basic inclus`,
-          `1 caisse Kiwi offerte · prêtée à vie`,
           `Règlement T+1 garanti`,
           `Jusqu'à 8 membres d'équipe`,
-          `Maintenance & remplacement matériel` ] },
+          `Support prioritaire · réponse plus rapide`,
+          `Kiwi IQ avancé` ] },
         { id: 'ultra', name: 'KIWI ULTRA', price: '1 499 MAD', unit: '/mois', tagline: `Sur-mesure · multi-pays · 24/7`, cta: 'Passer à Ultra →', feats: [
           `Tout Kiwi Pro inclus`,
           `Vue Portefeuille consolidée + IA cross-sites actionnable`,
@@ -2766,7 +3115,7 @@ ar: {
           </style>
           <div class="kup-grid">${PLANS.map(card).join('')}</div>
           <div class="kup-tip">
-            <div>💡</div>
+            <div style="color:var(--atlas); flex-shrink:0; margin-top:1px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7zM9 21h6"/></svg></div>
             <div style="flex:1;">${(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal())
               ? `<b>Votre recommandation :</b> <b>Ultra</b> ouvre les établissements illimités, le multi-pays et l'account manager dédié, au-delà du mono-site de Basic et Pro. Le palier exact se précise lors d'un court échange sur vos besoins.`
               : `<b>Votre recommandation :</b> ce compte gère 3 établissements (Café Atlas · Maison Mansour · Spa Bahia), au-delà du mono-site de Basic et Pro. <b>Ultra</b> ouvre les établissements illimités, le multi-pays et l'account manager dédié. Le palier exact se précise lors d'un court échange sur vos besoins.`}</div>
@@ -2820,8 +3169,8 @@ ar: {
     'profile-menu': (el) => menu(el, [
       { head: ((window.KiwiMe && window.KiwiMe.name) || (window.KiwiEnv?.isReal?.() ? '' : 'Rachid Benhima')).toUpperCase() },
       { label: tr({fr:'Mon profil', en:'My profile', ar:'ملفي الشخصي'}), icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M4 21v-2a4 4 0 014-4h8a4 4 0 014 4v2"/></svg>', onClick: () => handlers['account-profile'] && handlers['account-profile']() },
-      { label: 'Paramètres', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>', onClick: () => handlers.settings() },
-      { label: tr({fr:'Facturation', en:'Billing', ar:'الفواتير'}), icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>', onClick: () => handlers['account-billing'] && handlers['account-billing']() },
+      { label: tr({fr:'Paramètres', en:'Settings', ar:'الإعدادات'}), icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>', onClick: () => handlers.settings && handlers.settings() },
+      { label: tr({fr:'My Kiwi', en:'My Kiwi', ar:'My Kiwi'}), icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>', onClick: () => handlers['account-billing'] && handlers['account-billing']() },
       { sep: true },
       { label: tr({fr:'Centre d\'aide', en:'Help centre', ar:'مركز المساعدة'}), icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9 9a3 3 0 016 0c0 2-3 2-3 4M12 17h.01"/></svg>', onClick: () => handlers['account-help'] && handlers['account-help']() },
       { label: tr({fr:'Se déconnecter', en:'Sign out', ar:'تسجيل الخروج'}), danger: true, icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>', onClick: () => { toast(tr({fr:'Déconnexion…', en:'Signing out…', ar:'جارٍ تسجيل الخروج…'}), {type:'info'}); setTimeout(() => location.href = 'index.html', 800); } },
@@ -2946,7 +3295,7 @@ ar: {
       // Generic detail view for personalised / derived KPIs — reads the
       // clicked tile\'s live value + delta so it\'s never an empty drawer.
       const label = el?.querySelector('.l span, .l, .lbl')?.textContent?.trim() || 'Indicateur';
-      const value = el?.querySelector('.v')?.textContent?.trim() || '—';
+      const value = el?.querySelector('.v')?.textContent?.trim() || '·';
       const delta = el?.querySelector('.d')?.textContent?.trim() || '';
       const desc = KPI_DESC[arg] || (CP_STR[kiwiLang()] || CP_STR.fr).kpiDefaultDesc;
       const long = KPI_LONG[arg] || (CP_STR[kiwiLang()] || CP_STR.fr).kpiDefaultLong;
@@ -2961,6 +3310,28 @@ ar: {
         `,
         foot: `<button class="kb ghost" data-dismiss style="flex:1; justify-content:center;">${(CP_STR[kiwiLang()] || CP_STR.fr).close}</button><button class="kb atlas" data-action="open-assistant" style="flex:1; justify-content:center;">${(CP_STR[kiwiLang()] || CP_STR.fr).analyzeWithKiwiAI} →</button>`,
       });
+    },
+
+    'open-assistant': (el, arg) => {
+      const q = typeof arg === 'string' ? arg : (el && el.dataset ? el.dataset.prefill : null);
+      if (window.KiwiAgent && typeof window.KiwiAgent.open === 'function') {
+        window.KiwiAgent.open(q);
+        return;
+      }
+      if (window.__kiwiAgentOpen && typeof window.__kiwiAgentOpen === 'function') {
+        window.__kiwiAgentOpen(q);
+        return;
+      }
+      const checkAgent = (tries) => {
+        if (window.KiwiAgent && typeof window.KiwiAgent.open === 'function') {
+          window.KiwiAgent.open(q);
+        } else if (window.__kiwiAgentOpen && typeof window.__kiwiAgentOpen === 'function') {
+          window.__kiwiAgentOpen(q);
+        } else if (tries > 0) {
+          setTimeout(() => checkAgent(tries - 1), 50);
+        }
+      };
+      checkAgent(20);
     },
 
     'filter-tx': () => drawer({
@@ -3002,31 +3373,67 @@ ar: {
   // On-brand line-art icons for the settings rows, keyed by the legacy emoji so
   // call sites don't change. Unmapped keys fall back to the emoji in the chip.
   const KSET_ICONS = {
-    '🌍': '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/>',
-    '🔔': '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
-    '💰': '<circle cx="12" cy="12" r="9"/><path d="M12 7v10"/><path d="M14.5 9.3c-.4-.9-1.4-1.4-2.5-1.4-1.4 0-2.4.8-2.4 1.9 0 2.5 4.9 1.3 4.9 3.9 0 1.1-1 1.9-2.5 1.9-1.1 0-2.1-.5-2.5-1.4"/>',
-    '🧊': '<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>',
-    '🏪': '<path d="M4 4h16l1 5H3l1-5z"/><path d="M5 9v11h14V9"/><path d="M9 20v-6h6v6"/>',
+    'store': '<path d="M3 21h18M3 7v14M21 7v14M4 7l8-4 8 4M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/>',
+    'hours': '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/>',
+    'goal': '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
+    'receipt': '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1zM8 7h8M8 11h8M8 15h5"/>',
+    'payment': '<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/>',
+    'currency': '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M14.5 9.5c-.4-.9-1.4-1.5-2.5-1.5-1.4 0-2.5.9-2.5 2 0 2.6 5 1.4 5 4 0 1.1-1.1 2-2.5 2-1.1 0-2.1-.6-2.5-1.5"/>',
+    'lang': '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/>',
+    'glass': '<path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 18l9 5 9-5"/>',
+    'theme': '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+    'notifications': '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>',
+    'pin': '<circle cx="7.5" cy="15.5" r="4.5"/><path d="M11 12l9-9m0 0h4m-4 0v4m-3-1l2 2"/>',
+    'encryption': '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+    'export': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',
+    'delivery': '<path d="M18 13V6a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v7M6 9h12M10 21v-4M14 21v-4"/>',
+    'glovo': '<path d="M6 8h12l-1 12H7L6 8zM9 8V6a3 3 0 0 1 6 0v2"/>',
+    'yassir': '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+    'accounting': '<path d="M18 20V10M12 20V4M6 20v-6M3 20h18"/>',
+    '🏪': '<path d="M3 21h18M3 7v14M21 7v14M4 7l8-4 8 4M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/>',
     '⏰': '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/>',
     '🎯': '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
-    '💳': '<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19"/>',
-    '🛡️': '<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/>',
-    '🛡': '<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/>',
-    '🔐': '<rect x="4.5" y="10.5" width="15" height="9.5" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/>',
-    '📋': '<rect x="5" y="4.5" width="14" height="16" rx="2"/><path d="M9 4.5h6v3H9z"/><path d="M9 13l2 2 4-4"/>',
-    '🏛️': '<path d="M3 10l9-6 9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 21h18"/>',
-    '🏛': '<path d="M3 10l9-6 9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 21h18"/>',
-    '📊': '<path d="M4 20V11M9.3 20V5M14.6 20v-6M20 20H3.5"/>',
-    '🏦': '<path d="M3 10l9-6 9 6"/><path d="M4 10v9M20 10v9M8 10v9M16 10v9M12 10v9"/><path d="M3 21h18"/>',
-    '🟠': '<path d="M6.5 8h11l-1 11.5H7.5L6.5 8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>',
-    '🔴': '<path d="M6.5 8h11l-1 11.5H7.5L6.5 8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>',
-    '🌙': '<path d="M20.5 13.4A8.5 8.5 0 0 1 10.6 3.5 8.5 8.5 0 1 0 20.5 13.4z"/>'
+    '🧾': '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1zM8 7h8M8 11h8M8 15h5"/>',
+    '💳': '<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/>',
+    '💰': '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M14.5 9.5c-.4-.9-1.4-1.5-2.5-1.5-1.4 0-2.5.9-2.5 2 0 2.6 5 1.4 5 4 0 1.1-1.1 2-2.5 2-1.1 0-2.1-.6-2.5-1.5"/>',
+    '🌍': '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/>',
+    '🧊': '<path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 18l9 5 9-5"/>',
+    '🌙': '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+    '🔔': '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>',
+    '🔑': '<circle cx="7.5" cy="15.5" r="4.5"/><path d="M11 12l9-9m0 0h4m-4 0v4m-3-1l2 2"/>',
+    '🛡️': '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+    '🛡': '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+    '📤': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',
+    '🔌': '<path d="M18 13V6a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v7M6 9h12M10 21v-4M14 21v-4"/>',
+    '🟠': '<path d="M6 8h12l-1 12H7L6 8zM9 8V6a3 3 0 0 1 6 0v2"/>',
+    '🔵': '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+    '📊': '<path d="M18 20V10M12 20V4M6 20v-6M3 20h18"/>'
   };
+  /* Google Material Symbols · Outlined 400. Official paths from Google's
+     open-source Material Symbols set, kept inline so settings work offline. */
+  const MATERIAL_SETTINGS_ICONS = Object.freeze({
+    storefront: 'M841-518v318q0 33-23.5 56.5T761-120H201q-33 0-56.5-23.5T121-200v-318q-23-21-35.5-54t-.5-72l42-136q8-26 28.5-43t47.5-17h556q27 0 47 16.5t29 43.5l42 136q12 39-.5 71T841-518Zm-272-42q27 0 41-18.5t11-41.5l-22-140h-78v148q0 21 14 36.5t34 15.5Zm-180 0q23 0 37.5-15.5T441-612v-148h-78l-22 140q-4 24 10.5 42t37.5 18Zm-178 0q18 0 31.5-13t16.5-33l22-154h-78l-40 134q-6 20 6.5 43t41.5 23Zm540 0q29 0 42-23t6-43l-42-134h-76l22 154q3 20 16.5 33t31.5 13ZM201-200h560v-282q-5 2-6.5 2H751q-27 0-47.5-9T663-518q-18 18-41 28t-49 10q-27 0-50.5-10T481-518q-17 18-39.5 28T393-480q-29 0-52.5-10T299-518q-21 21-41.5 29.5T211-480h-4.5q-2.5 0-5.5-2v282Zm560 0H201h560Z',
+    schedule: 'm612-292 56-56-148-148v-184h-80v216l172 172ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-400Zm0 320q133 0 226.5-93.5T800-480q0-133-93.5-226.5T480-800q-133 0-226.5 93.5T160-480q0 133 93.5 226.5T480-160Z',
+    track_changes: 'M324-111.5Q251-143 197-197t-85.5-127Q80-397 80-480t31.5-156Q143-709 197-763t127-85.5Q397-880 480-880h40v331q18 11 29 28.5t11 40.5q0 33-23.5 56.5T480-400q-33 0-56.5-23.5T400-480q0-23 11-41t29-28v-86q-52 14-86 56.5T320-480q0 66 47 113t113 47q66 0 113-47t47-113q0-36-14.5-66.5T586-600l57-57q35 33 56 78.5t21 98.5q0 100-70 170t-170 70q-100 0-170-70t-70-170q0-90 57-156.5T440-717v-81q-119 15-199.5 105T160-480q0 134 93 227t227 93q134 0 227-93t93-227q0-69-27-129t-74-104l57-57q57 55 90.5 129.5T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80q-83 0-156-31.5Z',
+    receipt_long: 'M240-80q-50 0-85-35t-35-85v-120h120v-560l60 60 60-60 60 60 60-60 60 60 60-60 60 60 60-60v680q0 50-35 85t-85 35H240Zm480-80q17 0 28.5-11.5T760-200v-560H320v440h360v120q0 17 11.5 28.5T720-160ZM360-600v-80h240v80H360Zm0 120v-80h240v80H360Zm320-120q-17 0-28.5-11.5T640-640q0-17 11.5-28.5T680-680q17 0 28.5 11.5T720-640q0 17-11.5 28.5T680-600Zm0 120q-17 0-28.5-11.5T640-520q0-17 11.5-28.5T680-560q17 0 28.5 11.5T720-520q0 17-11.5 28.5T680-480ZM240-160h360v-80H200v40q0 17 11.5 28.5T240-160Zm-40 0v-80 80Z',
+    credit_card: 'M880-720v480q0 33-23.5 56.5T800-160H160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720Zm-720 80h640v-80H160v80Zm0 160v240h640v-240H160Zm0 240v-480 480Z',
+    paid: 'M444-200h70v-50q50-9 86-39t36-89q0-42-24-77t-96-61q-60-20-83-35t-23-41q0-26 18.5-41t53.5-15q32 0 50 15.5t26 38.5l64-26q-11-35-40.5-61T516-710v-50h-70v50q-50 11-78 44t-28 74q0 47 27.5 76t86.5 50q63 23 87.5 41t24.5 47q0 33-23.5 48.5T486-314q-33 0-58.5-20.5T390-396l-66 26q14 48 43.5 77.5T444-252v52Zm36 120q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z',
+    language: 'M325-111.5q-73-31.5-127.5-86t-86-127.5Q80-398 80-480.5t31.5-155q31.5-72.5 86-127t127.5-86Q398-880 480.5-880t155 31.5q72.5 31.5 127 86t86 127Q880-563 880-480.5T848.5-325q-31.5 73-86 127.5t-127 86Q563-80 480.5-80T325-111.5ZM480-162q26-36 45-75t31-83H404q12 44 31 83t45 75Zm-104-16q-18-33-31.5-68.5T322-320H204q29 50 72.5 87t99.5 55Zm208 0q56-18 99.5-55t72.5-87H638q-9 38-22.5 73.5T584-178ZM170-400h136q-3-20-4.5-39.5T300-480q0-21 1.5-40.5T306-560H170q-5 20-7.5 39.5T160-480q0 21 2.5 40.5T170-400Zm216 0h188q3-20 4.5-39.5T580-480q0-21-1.5-40.5T574-560H386q-3 20-4.5 39.5T380-480q0 21 1.5 40.5T386-400Zm268 0h136q5-20 7.5-39.5T800-480q0-21-2.5-40.5T790-560H654q3 20 4.5 39.5T660-480q0 21-1.5 40.5T654-400Zm-16-240h118q-29-50-72.5-87T584-782q18 33 31.5 68.5T638-640Zm-234 0h152q-12-44-31-83t-45-75q-26 36-45 75t-31 83Zm-200 0h118q9-38 22.5-73.5T376-782q-56 18-99.5 55T204-640Z',
+    layers: 'M480-118 120-398l66-50 294 228 294-228 66 50-360 280Zm0-202L120-600l360-280 360 280-360 280Zm0-280Zm0 178 230-178-230-178-230 178 230 178Z',
+    dark_mode: 'M480-120q-150 0-255-105T120-480q0-150 105-255t255-105q14 0 27.5 1t26.5 3q-41 29-65.5 75.5T444-660q0 90 63 153t153 63q55 0 101-24.5t75-65.5q2 13 3 26.5t1 27.5q0 150-105 255T480-120Zm0-80q88 0 158-48.5T740-375q-20 5-40 8t-40 3q-123 0-209.5-86.5T364-660q0-20 3-40t8-40q-78 32-126.5 102T200-480q0 116 82 198t198 82Zm-10-270Z',
+    notifications: 'M160-200v-80h80v-280q0-83 50-147.5T420-792v-28q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v28q80 20 130 84.5T720-560v280h80v80H160Zm320-300Zm0 420q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM320-280h320v-280q0-66-47-113t-113-47q-66 0-113 47t-47 113v280Z',
+    key: 'M223.5-423.5Q200-447 200-480t23.5-56.5Q247-560 280-560t56.5 23.5Q360-513 360-480t-23.5 56.5Q313-400 280-400t-56.5-23.5ZM280-240q-100 0-170-70T40-480q0-100 70-170t170-70q67 0 121.5 33t86.5 87h352l120 120-180 180-80-60-80 60-85-60h-47q-32 54-86.5 87T280-240Zm0-80q56 0 98.5-34t56.5-86h125l58 41 82-61 71 55 75-75-40-40H435q-14-52-56.5-86T280-640q-66 0-113 47t-47 113q0 66 47 113t113 47Z',
+    shield_lock: 'M480-80q-139-35-229.5-159.5T160-516v-244l320-120 320 120v244q0 152-90.5 276.5T480-80Zm0-84q104-33 172-132t68-220v-189l-240-90-240 90v189q0 121 68 220t172 132Zm0-316Zm-80 160h160q17 0 28.5-11.5T600-360v-120q0-17-11.5-28.5T560-520v-40q0-33-23.5-56.5T480-640q-33 0-56.5 23.5T400-560v40q-17 0-28.5 11.5T360-480v120q0 17 11.5 28.5T400-320Zm40-200v-40q0-17 11.5-28.5T480-600q17 0 28.5 11.5T520-560v40h-80Z',
+    file_upload: 'M440-320v-326L336-542l-56-58 200-200 200 200-56 58-104-104v326h-80ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z',
+    person_remove: 'M640-520v-80h240v80H640Zm-280 40q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM40-160v-112q0-34 17.5-62.5T104-378q62-31 126-46.5T360-440q66 0 130 15.5T616-378q29 15 46.5 43.5T680-272v112H40Zm80-80h480v-32q0-11-5.5-20T580-306q-54-27-109-40.5T360-360q-56 0-111 13.5T140-306q-9 5-14.5 14t-5.5 20v32Zm240-320q33 0 56.5-23.5T440-640q0-33-23.5-56.5T360-720q-33 0-56.5 23.5T280-640q0 33 23.5 56.5T360-560Zm0-80Zm0 400Z',
+    local_shipping: 'M155-195q-35-35-35-85H40v-440q0-33 23.5-56.5T120-800h560v160h120l120 160v200h-80q0 50-35 85t-85 35q-50 0-85-35t-35-85H360q0 50-35 85t-85 35q-50 0-85-35Zm113.5-56.5Q280-263 280-280t-11.5-28.5Q257-320 240-320t-28.5 11.5Q200-297 200-280t11.5 28.5Q223-240 240-240t28.5-11.5ZM120-360h32q17-18 39-29t49-11q27 0 49 11t39 29h272v-360H120v360Zm628.5 108.5Q760-263 760-280t-11.5-28.5Q737-320 720-320t-28.5 11.5Q680-297 680-280t11.5 28.5Q703-240 720-240t28.5-11.5ZM680-440h170l-90-120h-80v120ZM360-540Z'
+  });
+  function materialSymbol(name, className) {
+    const path = MATERIAL_SETTINGS_ICONS[name] || MATERIAL_SETTINGS_ICONS.storefront;
+    return `<svg${className ? ` class="${className}"` : ''} viewBox="0 -960 960 960" width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false"><path d="${path}"></path></svg>`;
+  }
   function ksetIco(key) {
-    const p = KSET_ICONS[key];
-    return p
-      ? '<span class="kset-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg></span>'
-      : '<span class="kset-ico kset-ico-txt">' + key + '</span>';
+    return `<span class="kset-ico">${materialSymbol(key)}</span>`;
   }
   function settingsRow(icon, label, value, opts) {
     if (opts === true) opts = { toggle: true, on: true };
@@ -3050,15 +3457,15 @@ ar: {
   /* ─── Demo data ─── */
   const txData = {
     'tx1': { id: 'TXN-28410398281', method: 'Visa •• 4291', amount: '240,00 MAD', status: 'Réglé · en attente de règlement', date: '24 avril 2026 14:32', network: 'Visa', customer: 'Karim B. (régulier)', table: 'T4', cart: 'Tajine kefta · Thé menthe × 2', tip: '24,00 MAD (10%)', fee: 'Inclus · abonnement Kiwi', net: '240,00 MAD', card: 'Visa •• 4291', issuer: 'Attijariwafa Bank', country: '🇲🇦 Maroc', staff: 'Fatima Khalki' },
-    'default': { id: 'TXN-0000', method: 'Paiement carte', amount: '180,00 MAD', status: 'Réglé', date: '24 avril 2026', network: 'Carte', customer: 'Client', table: '—', cart: '—', tip: '—', fee: 'Inclus · abonnement Kiwi', net: '180,00 MAD', card: '••••', issuer: '—', country: '—', staff: '—' }
+    'default': { id: 'TXN-0000', method: 'Paiement carte', amount: '180,00 MAD', status: 'Réglé', date: '24 avril 2026', network: 'Carte', customer: 'Client', table: '·', cart: '·', tip: '·', fee: 'Inclus · abonnement Kiwi', net: '180,00 MAD', card: '••••', issuer: '·', country: '·', staff: '·' }
   };
 
   /* ─── KPI detail drawer content (one rich view per metric) ─── */
   // Shared style helpers for inline composition
   const kpiHero = (big, sub, deltaTxt, deltaCls = 'good') => `
     <div style="display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:6px;">
-      <div style="font-size:42px; font-weight:600; letter-spacing:-0.035em; line-height:1; font-feature-settings:'tnum' 1;">${big}</div>
-      ${deltaTxt ? `<div style="font-size:13px; font-weight:500; color:var(--${deltaCls === 'good' ? 'success' : deltaCls === 'warn' ? 'warning' : 'n-500'});">${deltaTxt}</div>` : ''}
+      <div dir="ltr" style="font-size:42px; font-weight:600; letter-spacing:-0.035em; line-height:1; font-feature-settings:'tnum' 1; unicode-bidi:isolate;">${big}</div>
+      ${deltaTxt ? `<div style="min-width:0; max-width:100%; overflow-wrap:anywhere; font-size:13px; font-weight:500; color:var(--${deltaCls === 'good' ? 'success' : deltaCls === 'warn' ? 'warning' : 'n-500'});">${deltaTxt}</div>` : ''}
     </div>
     <div style="font-size:13px; color:var(--n-500); margin-bottom:22px;">${sub}</div>
   `;
@@ -3077,7 +3484,7 @@ ar: {
   const kpiRow = (left, right, sub = '') => `
     <div style="display:grid; grid-template-columns:1fr auto; gap:12px; padding:10px 0; border-top:1px solid var(--n-200); font-size:13.5px; align-items:center;">
       <div><div style="font-weight:500;">${left}</div>${sub ? `<div style="font-size:11.5px; color:var(--n-500); margin-top:2px;">${sub}</div>` : ''}</div>
-      <div style="font-family:var(--mono); font-weight:500; font-size:12.5px;">${right}</div>
+      <bdi dir="ltr" style="font-family:var(--mono); font-weight:500; font-size:12.5px;">${right}</bdi>
     </div>
   `;
   const kpiFootBtns = (ghostLabel, atlasLabel) => `
@@ -3389,7 +3796,7 @@ ar: {
       tx_foot_close: 'إغلاق',
       tx_foot_journal: 'عرض السجل الكامل →',
       tx_hero_pic: 'ذروة في الساعة 13:00 · 24 معاملة في الساعة',
-      tx_hero_delta: '↑ +24 مقابل أمس (+15%)',
+      tx_hero_delta: '↑ <bdi dir="ltr">+24</bdi> مقابل أمس <bdi dir="ltr">(+15%)</bdi>',
       tx_section_repartition: 'التوزيع بالساعة',
       tx_section_server: 'حسب النادل',
       tx_server_sofia: 'صوفيا بلقاضي',
@@ -3421,7 +3828,7 @@ ar: {
       tips_subtitle: 'الإجمالي اليومي · للتوزيع في نهاية الخدمة',
       tips_foot_distribute: 'التوزيع الآن →',
       tips_hero_avg: '7,6% من الإيرادات المحصلة · متوسط المعدل 8,2%',
-      tips_hero_delta: '↑ +32% مقابل الأسبوع',
+      tips_hero_delta: '↑ <bdi dir="ltr">+32%</bdi> مقابل الأسبوع',
       tips_section_prompt: 'طلب الإكرامية',
       tips_prompt_auto: 'طلب تلقائي +10%',
       tips_prompt_auto_sub: 'معروض على 78% من التذاكر اليوم · معدل القبول 64%',
@@ -3448,7 +3855,7 @@ ar: {
       marge_subtitle: 'الإيرادات ناقص تكلفة المواد · 30 يومًا',
       marge_foot_cogs: 'عرض تكلفة المواد →',
       marge_hero_cogs: 'تكلفة المواد 28,6% من الإيرادات · الهدف ≤ 30%',
-      marge_hero_delta: '↑ +1,8 نقطة مقابل 30 يومًا سابقًا',
+      marge_hero_delta: '↑ <bdi dir="ltr">+1,8</bdi> نقطة مقابل 30 يومًا سابقًا',
       marge_section_category: 'الهامش حسب الفئة',
       marge_cat_hot_drinks: 'المشروبات الساخنة',
       marge_cat_hot_drinks_sub: '28% من الإيرادات',
@@ -3468,7 +3875,7 @@ ar: {
       success_subtitle: 'امتثال الشبكة وبوابة بنك المغرب',
       success_foot_failures: 'عرض الإخفاقات →',
       success_hero_attempts: '184 محاولة · 183 نجاح · 1 فشل',
-      success_hero_delta: '↑ +0,2 نقطة مقابل أمس',
+      success_hero_delta: '↑ <bdi dir="ltr">+0,2</bdi> نقطة مقابل أمس',
       success_section_benchmark: 'مقارنة بالسوق',
       success_bench_you: 'مقهى أطلس (أنتم)',
       success_bench_avg: 'متوسط مقاهي الدار البيضاء',
@@ -3492,7 +3899,7 @@ ar: {
       ratio_subtitle: 'مزيج الدفع · آخر 24 ساعة',
       ratio_foot_disable_cash: 'تعطيل النقد →',
       ratio_hero_gain: 'البطاقة تكسب 4 نقاط مقابل الأسبوع الماضي · +12 نقطة منذ الإطلاق',
-      ratio_hero_delta: '↑ +4 نقاط بطاقة',
+      ratio_hero_delta: '↑ <bdi dir="ltr">+4</bdi> نقاط بطاقة',
       ratio_section_means: 'تفاصيل وسائل الدفع',
       ratio_means_cash: 'نقداً',
       ratio_section_hidden_cost: 'التكلفة الخفية للنقد',
@@ -3509,7 +3916,7 @@ ar: {
       regulars_subtitle: 'مُعرَّفون بالبطاقة المرمزة أو محفظة كيوي',
       regulars_foot_loyalty: 'إطلاق برنامج الولاء →',
       regulars_hero_base: '26٪ من قاعدة العملاء · معدل الاحتفاظ لمدة 30 يومًا = 72٪',
-      regulars_hero_delta: '↑ +9 جدد هذا الأسبوع',
+      regulars_hero_delta: '↑ <bdi dir="ltr">+9</bdi> جدد هذا الأسبوع',
       regulars_section_top5: 'أفضل 5 عملاء منتظمين · هذا الشهر',
       regulars_top5_1_sub: '12 زيارة · 18 قهوة · 6 طواجن',
       regulars_top5_2_sub: '10 زيارات · عضو منذ 2024',
@@ -3714,8 +4121,8 @@ ar: {
               <div style="display:grid; grid-template-columns:120px 1fr 50px 100px; gap:10px; align-items:center; padding:6px 0; font-size:12.5px;">
                 <div style="display:flex; align-items:center; gap:8px; color:var(--n-700);"><i style="width:10px; height:10px; border-radius:3px; background:${c}; display:inline-block;"></i>${lbl}</div>
                 <div style="height:8px; background:var(--surface); border-radius:4px; overflow:hidden;"><div style="width:${pct/48*100}%; height:100%; background:${c}; border-radius:4px;"></div></div>
-                <div style="font-family:var(--mono); text-align:end; font-weight:500;">${pct} %</div>
-                <div style="font-family:var(--mono); text-align:end; color:var(--n-500); font-size:11.5px;">${mad}</div>
+                <bdi dir="ltr" style="font-family:var(--mono); text-align:end; font-weight:500;">${pct} %</bdi>
+                <bdi dir="ltr" style="font-family:var(--mono); text-align:end; color:var(--n-500); font-size:11.5px;">${mad}</bdi>
               </div>
             `).join('')}
           </div>
@@ -3723,7 +4130,7 @@ ar: {
         ${kpiSection((KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_section_hidden_cost, [
           [(KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_bank, (KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_bank_sub, '180 MAD/sem'],
           [(KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_errors, (KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_errors_sub, '~ 31 MAD/jour'],
-          [(KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_risk, (KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_risk_sub, '—'],
+          [(KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_risk, (KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_risk_sub, '·'],
           [(KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_total, (KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_total_sub, '≈ 21 000 MAD'],
         ].map(([n, sub, v]) => kpiRow(n, v, sub)).join(''))}
         ${kpiInsight((KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_insight)}
@@ -3893,8 +4300,12 @@ ar: {
     // 14. Search bar
     if (e.target.closest('.search-big, .search')) { handlers.search(); return; }
 
-    // 15. AI button in topbar — opens command palette (Kiwi AI panel is now in the green hero block)
-    if (e.target.closest('.ai-btn')) { commandPalette(); return; }
+    // 15. AI button in topbar — opens Kiwi AI Agent
+    if (e.target.closest('.ai-btn')) {
+      if (typeof handlers['open-assistant'] === 'function') { handlers['open-assistant'](); return; }
+      if (window.KiwiAgent && typeof window.KiwiAgent.open === 'function') { window.KiwiAgent.open(); return; }
+      return;
+    }
 
     // 16. Team stack
     if (e.target.closest('.team-stack')) { handlers.notifications(); return; } // reuse drawer-style
@@ -3997,12 +4408,13 @@ ar: {
       body.page-genpage .dash-stock,
       body.page-genpage .dash-finance,
       body.page-genpage .dash-payroll { display: none !important; }
-      body.page-genpage .dash-genpage { display: block; animation: fade-in 220ms ease-out; }
-      .dash-genpage .genpage-head { padding: 8px 0 20px; }
-      .dash-genpage .genpage-head h1 { font-size: 34px; font-weight: 600; letter-spacing: -0.03em; color: var(--ink); margin: 0; line-height: 1.05; }
-      .dash-genpage .genpage-head p { font-family: var(--mono); font-size: 13px; color: var(--n-500); margin: 8px 0 0; }
-      .dash-genpage .genpage-body { max-width: 1080px; }
-      .dash-genpage .genpage-foot { max-width: 1080px; margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }`;
+      body.page-genpage .dash-genpage { display: block; animation: fade-in 220ms ease-out; }`;
+    /* Head/body/foot TYPOGRAPHY lives in assets/genpage.css, not here. This
+     * block is injected into <head> at runtime, so it sits after every <link>
+     * and would outrank the stylesheet on every tie — which is exactly how the
+     * old 34px/Arial head survived three attempts to restyle it from CSS. What
+     * stays here is the shell gating above (which page-* class hides which
+     * sibling), because that is structural and other modules depend on it. */
     const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
   })();
   function appPage(navKey, opts) {
@@ -4023,7 +4435,20 @@ ar: {
     // Head — plain text via textContent (native-escaped, no injection).
     const head = document.createElement('div'); head.className = 'genpage-head';
     const h1 = document.createElement('h1'); h1.textContent = o.title || ''; head.appendChild(h1);
-    if (o.subtitle) { const p = document.createElement('p'); p.textContent = o.subtitle; head.appendChild(p); }
+    /* Context line. Callers pass one " · "-joined string ("Maison Mansour ·
+     * Guéliz · 20 produits · base partagée avec la caisse"). Rendered flat, the
+     * separators carry the same weight as the words and the line reads as a
+     * run-on. Split into spans and the middots become 3px dots at n-300, so the
+     * eye gets the rhythm for free — and no caller has to change. Still
+     * textContent per segment, so this is native-escaped exactly as before. */
+    if (o.subtitle) {
+      const p = document.createElement('p');
+      String(o.subtitle).split(' · ').forEach((seg, i) => {
+        if (i) { const d = document.createElement('i'); d.className = 'dot'; d.setAttribute('aria-hidden', 'true'); p.appendChild(d); }
+        const s = document.createElement('span'); s.className = 'seg'; s.textContent = seg; p.appendChild(s);
+      });
+      head.appendChild(p);
+    }
     host.appendChild(head);
     // Body / foot — trusted app-rendered HTML (same contract as Kiwi.drawer's body).
     const bodyEl = document.createElement('div'); bodyEl.className = 'genpage-body';
@@ -4040,6 +4465,9 @@ ar: {
       const b = document.createElement('b'); b.textContent = o.title || ''; bc.appendChild(b);
     }
     setActivePage(navKey);
+    if (navKey !== 'payroll' && navKey !== 'equipe') {
+      try { window.__kiwiTeamDeactivate?.(); } catch (_) {}
+    }
     document.querySelectorAll('.sidebar nav a').forEach((a) => a.classList.remove('active'));
     const navEl = document.querySelector(`.sidebar nav a[data-nav="${navKey}"]`);
     if (navEl) navEl.classList.add('active');
@@ -4071,7 +4499,7 @@ ar: {
   }
 
   window.Kiwi = {
-    toast, modal, drawer, fullpage, appPage, menu, commandPalette, confetti, handlers,
+    toast, buttonFeedback, modal, drawer, fullpage, appPage, menu, commandPalette, confetti, handlers,
     setActivePage, syncSidebar, pageShell,
     get activePage() { return activePage; },
   };

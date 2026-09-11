@@ -29,6 +29,7 @@
 import {
   json, readSession, readCookie, SESS_COOKIE, slugMerchant, entitledMerchant,
 } from '../auth/_lib.js';
+import { reserveTicketRange } from './ticket-sequence.js';
 
 /* ── THE PRE-SPLIT BUCKET ─────────────────────────────────────────────────────
  * Before stores had their own tenant, every sale an account rang up landed under
@@ -61,7 +62,20 @@ export async function onRequestGet({ request, env }) {
   const asked = String(url.searchParams.get('merchant') || '').slice(0, 64);
   const since = Number(url.searchParams.get('since')) || 0;
 
-  const merchant = await entitledMerchant(request, env, asked);
+  /* `allowTill` — une caisse appairée lit les ventes de SA boutique.
+   *
+   * Elle avait déjà le droit de les ÉCRIRE (functions/api/sale.js passe la même
+   * option) ; il lui manquait celui de les relire, et ce manque avait un coût
+   * concret au comptoir : « Réimprimer » ne connaît que le journal de CET
+   * appareil. Une boutique à deux caisses vendait 28 tickets sur l'une et 2 sur
+   * l'autre, et aucune des deux ne pouvait ressortir le reçu de sa voisine —
+   * pendant que le tableau de bord, lui, affichait bien les trente.
+   *
+   * Ce n'est pas un élargissement : isTillFor() vérifie que cet appareil est
+   * appairé À CE COMMERÇANT-LÀ, exactement le contrôle qui autorise déjà
+   * l'écriture. Une caisse ne peut toujours lire que la boutique où elle est
+   * posée. */
+  const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
   if (!merchant) return json({ sales: [], cursor: since, merchant: '' });
 
   /* Which buckets this store reads: its own, plus the account's pre-split one
@@ -106,6 +120,36 @@ export async function onRequestGet({ request, env }) {
    * la liste des retraits, sans rejouer la journée entière toutes les minutes. */
   const voidsOnly = url.searchParams.get('voids') === '1';
 
+  /* `from=<ms>` — la lecture PAR JOURNÉE, pour le comptoir.
+   *
+   * Le flux normal est un curseur croissant : on le remonte depuis le début des
+   * temps. C'est ce qu'il faut au tableau de bord, qui ingère une fois puis
+   * suit. Ça ne convient pas à « Réimprimer », qui veut les ventes d'AUJOURD'HUI
+   * et rien d'autre : sur une boutique qui tourne depuis un an, il faudrait
+   * paginer des milliers de lignes pour arriver à ce matin.
+   *
+   * La borne vient du CLIENT et pas d'ici : c'est l'appareil qui sait où
+   * commence sa journée. Le serveur ne connaît ni le fuseau du commerce ni
+   * l'heure à laquelle il considère qu'une journée bascule, et deviner l'un ou
+   * l'autre produirait un rapport juste onze mois sur douze. */
+  const from = Number(url.searchParams.get('from')) || 0;
+  const byDay = from > 0;
+  const DAY_LIMIT = 2000;
+
+  /* Compatibility for tills that still have the previous service-worker bundle
+   * open during deployment. That client asks for a maximum then uses `seq + 1`;
+   * reserve a real range and describe its first value in the old protocol. New
+   * clients call /api/ticket-sequence directly. This can be removed after v206
+   * has aged out. */
+  if (url.searchParams.get('seq') === '1') {
+    try {
+      const lease = await reserveTicketRange(env, merchant, 500, 1000, new Date().getUTCFullYear());
+      return json({ seq: lease.start - 1, merchant, legacyLeaseEnd: lease.end });
+    } catch (e) {
+      return json({ error: 'ticket-sequence', detail: String((e && e.message) || e) }, 500);
+    }
+  }
+
   let rows = [];
   let voided = [];
   /* Une seule tentative par forme de schéma, de la plus récente à la plus
@@ -114,46 +158,56 @@ export async function onRequestGet({ request, env }) {
    * silence est le pire des messages d'erreur. */
   try {
     if (!voidsOnly) {
-      const rs = await env.DB.prepare(
-        'SELECT rowid AS cursor, id, amount, method, label, ref, ts, lines ' +
-        'FROM sales WHERE merchant IN (?, ?) AND rowid > ? AND void_ts IS NULL ORDER BY rowid ASC LIMIT 50'
-      ).bind(merchant, legacy || merchant, since).all();
+      const rs = byDay
+        ? await env.DB.prepare(
+          'SELECT rowid AS cursor, id, amount, amount_cents, gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id, method, label, ref, ts, lines, channel ' +
+          'FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND void_ts IS NULL ' +
+          `ORDER BY ts DESC LIMIT ${DAY_LIMIT}`
+        ).bind(merchant, legacy || merchant, from).all()
+        : await env.DB.prepare(
+          'SELECT rowid AS cursor, id, amount, amount_cents, gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id, method, label, ref, ts, lines, channel ' +
+          'FROM sales WHERE merchant IN (?, ?) AND rowid > ? AND void_ts IS NULL ORDER BY rowid ASC LIMIT 50'
+        ).bind(merchant, legacy || merchant, since).all();
       rows = (rs && rs.results) || [];
     }
     const vs = await env.DB.prepare(
-      'SELECT rowid AS cursor, ref FROM sales WHERE merchant IN (?, ?) AND void_ts IS NOT NULL ' +
+      'SELECT rowid AS cursor, id, ref, ts, void_ts FROM sales WHERE merchant IN (?, ?) AND void_ts IS NOT NULL ' +
       'ORDER BY void_ts DESC LIMIT 500'
     ).bind(merchant, legacy || merchant).all();
-    voided = ((vs && vs.results) || []).map((r) => ({ c: r.cursor, r: r.ref || '' }));
+    voided = ((vs && vs.results) || []).map((r) => Object.assign({ c: r.cursor, i: r.id || '', r: r.ref || '' }, {
+      vts: r.void_ts != null ? Number(r.void_ts) : null,
+      ts: r.ts != null ? Number(r.ts) : null,
+    }));
   } catch (e) {
     const msg = String((e && e.message) || e);
-    /* Base sans void_ts (migration pas encore passée) : on sert le flux comme
-     * avant, sans liste de retraits. Une console qui ne peut pas encore annuler
-     * est un manque ; un tableau de bord qui n'affiche plus aucune vente serait
-     * une panne. */
     const noVoid = msg.includes('void_ts');
-    /* Base sans `lines` : on sert les ventes sans le panier plutôt que rien —
-     * ne pas savoir classer les produits vaut mieux que ne pas voir sa recette. */
     const noLines = msg.includes('lines');
-    if (!noVoid && !noLines) {
+    const noChannel = msg.includes('channel');
+    const noAmountCents = msg.includes('amount_cents');
+    const noDiscount = /gross_amount_cents|discount_amount_cents|discount_reason|discount_actor_id/.test(msg);
+    if (!noVoid && !noLines && !noChannel && !noAmountCents && !noDiscount) {
       return json({ sales: [], cursor: since, error: 'db', detail: msg }, 500);
     }
-    /* La caisse ne demandait que les retraits : sans la colonne, il n'y en a
-       aucun à annoncer, et il n'y a rien d'autre à servir. */
     if (voidsOnly) return json({ sales: [], cursor: since, merchant, voided: [] });
-    const cols = 'rowid AS cursor, id, amount, method, label, ref, ts' + (noLines ? '' : ', lines');
+    const cols = 'rowid AS cursor, id, amount'
+      + (noAmountCents ? '' : ', amount_cents')
+      + (noDiscount ? '' : ', gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id')
+      + ', method, label, ref, ts'
+      + (noLines ? '' : ', lines') + (noChannel ? '' : ', channel');
+    const where = byDay ? 'ts >= ?' : 'rowid > ?';
+    const order = byDay ? `ts DESC LIMIT ${DAY_LIMIT}` : 'rowid ASC LIMIT 50';
+    const bound = byDay ? from : since;
     try {
       const rs = await env.DB.prepare(
-        `SELECT ${cols} FROM sales WHERE merchant IN (?, ?) AND rowid > ? ORDER BY rowid ASC LIMIT 50`
-      ).bind(merchant, legacy || merchant, since).all();
+        `SELECT ${cols} FROM sales WHERE merchant IN (?, ?) AND ${where} ORDER BY ${order}`
+      ).bind(merchant, legacy || merchant, bound).all();
       rows = (rs && rs.results) || [];
     } catch (e2) {
-      /* Il restait la combinaison des deux manques : ni void_ts, ni lines. */
       try {
         const rs = await env.DB.prepare(
           'SELECT rowid AS cursor, id, amount, method, label, ref, ts ' +
-          'FROM sales WHERE merchant IN (?, ?) AND rowid > ? ORDER BY rowid ASC LIMIT 50'
-        ).bind(merchant, legacy || merchant, since).all();
+          `FROM sales WHERE merchant IN (?, ?) AND ${where} ORDER BY ${order}`
+        ).bind(merchant, legacy || merchant, bound).all();
         rows = (rs && rs.results) || [];
       } catch (_) {
         return json({ sales: [], cursor: since, error: 'db', detail: msg }, 500);
@@ -173,16 +227,103 @@ export async function onRequestGet({ request, env }) {
        * repêche alors dans le catalogue actuel — jamais 'Divers' par défaut
        * ici, ce qui reviendrait à affirmer une classification qu'on n'a pas. */
       r.lines = Array.isArray(arr)
-        ? arr.map((l) => ({ name: l && l.n, qty: l && l.q, total: l && l.t, cat: (l && l.c) || '' }))
+        ? arr.map((l) => ({
+            name: l && l.n, qty: l && l.q, total: l && l.t,
+            cat: (l && l.c) || '', itemId: (l && l.i) || '',
+            variantId: (l && l.v) || '', unit: (l && l.u) || '',
+            kind: (l && l.kd) || '', unitCost: (l && l.k),
+            recipeVersionId: (l && l.r) || '',
+            formulaChoices: Array.isArray(l && l.fc)
+              ? l.fc.map((choice) => ({
+                  name: (choice && choice.n) || 'Choix', qty: (choice && choice.q) || 1,
+                  total: Math.max(0, Number(choice && choice.t) || 0),
+                }))
+              : [],
+            options: Array.isArray(l && l.o)
+              ? l.o.map((x) => ({ id: (x && x.i) || '', qty: x && x.q })).filter((x) => x.id)
+              : [],
+          }))
         : null;
     } catch (_) { r.lines = null; }
     return r;
+  });
+
+  /* Restaurant sales use the visit id as their durable payment identity. Join
+   * that identity back to the canonical order queue so the owner sees the same
+   * reference as caisse, plus who took the order and through which surface. No
+   * extra sales columns or migration are needed: old rows become richer too. */
+  /* Une addition partagée a une ligne financière par part :
+     visit-<session>-split-<index>-emp. Pour l'attribution serveur/canal, toutes
+     rejoignent pourtant la même visite et le même bon canonique. */
+  const visitFromSaleId = (value) => {
+    const id = String(value || '');
+    if (!id.startsWith('visit-') || (!id.endsWith('-emp') && !id.endsWith('-caisse'))) return '';
+    const core = id.endsWith('-emp') ? id.slice(6, -4) : id.slice(6, -7);
+    return core.replace(/-split-\d+$/, '');
+  };
+  const visitIds = Array.from(new Set(rows.map((r) => visitFromSaleId(r && r.id)).filter(Boolean)));
+  const orderByVisit = new Map();
+  for (let offset = 0; offset < visitIds.length; offset += 75) {
+    const batch = visitIds.slice(offset, offset + 75);
+    try {
+      const marks = batch.map(() => '?').join(',');
+      const rs = await env.DB.prepare(
+        `SELECT session_id, number, channel, server_name, created_ts FROM orders
+          WHERE merchant IN (?, ?) AND session_id IN (${marks})
+          ORDER BY created_ts ASC`
+      ).bind(merchant, legacy || merchant, ...batch).all();
+      (rs.results || []).forEach((order) => {
+        if (order && order.session_id && !orderByVisit.has(String(order.session_id))) {
+          orderByVisit.set(String(order.session_id), order);
+        }
+      });
+    } catch (_) { /* Optional order metadata never hides the financial feed. */ }
+  }
+  rows.forEach((sale) => {
+    if (!sale) return;
+    const cents = sale.amount_cents != null
+      ? Number(sale.amount_cents)
+      : Math.round(Number(sale.amount || 0) * 100);
+    sale.amountCents = cents;
+    sale.amount = cents / 100;
+    sale.grossAmountCents = sale.gross_amount_cents == null ? null : Number(sale.gross_amount_cents);
+    sale.discountAmountCents = sale.discount_amount_cents == null ? null : Number(sale.discount_amount_cents);
+    sale.discountReason = String(sale.discount_reason || '');
+    sale.actorId = String(sale.discount_actor_id || '');
+    const id = String(sale.id || '');
+    const visit = visitFromSaleId(id);
+    const order = visit ? orderByVisit.get(visit) : null;
+    const isSplit = /·\s*part\b/i.test(String(sale.label || '')) || /-split-\d+/i.test(id);
+    sale.orderRef = String(
+      (isSplit ? sale.label : '')
+      || (visit ? sale.label : sale.ref)
+      || sale.label
+      || sale.ref
+      || (order && order.number != null ? order.number : '')
+    ).slice(0, 80);
+    sale.receiptRef = String(sale.ref || '').slice(0, 80);
+    sale.server = String(order && order.server_name || '').slice(0, 80);
+    sale.origin = sale.server ? 'employee' : (order && order.channel === 'kiwi' ? 'orderpro' : 'caisse');
+    /* Channel truth for ledgers created before sales.channel existed. A visit
+     * is a table sale; OrderPro and explicit external order channels retain
+     * their source. Takeaway receipts are self-identifying in their frozen
+     * label. This enriches old rows without rewriting financial history. */
+    const storedChannel = String(sale.channel || '').toLowerCase();
+    const orderChannel = String(order && order.channel || '').toLowerCase();
+    const saleLabel = String(sale.label || '').toLowerCase();
+    sale.channel = storedChannel || (visit
+      ? (orderChannel === 'terrace' ? 'terrace' : 'dining')
+      : (/à emporter|a emporter|takeaway/.test(saleLabel) ? 'takeaway'
+        : (orderChannel === 'kiwi' ? 'orderpro' : (orderChannel || ''))));
   });
 
   /* `merchant` is the tenant actually SERVED, which is not always the one asked
    * for — an unclaimed store still snaps back to the account slug. Reporting it
    * makes a mis-scoped feed visible from the outside instead of something you
    * have to infer from whose sales showed up. */
-  const cursor = rows.length ? rows[rows.length - 1].cursor : since;
+  /* Une lecture par journée ne fait pas avancer le curseur : elle est triée à
+     l'envers, si bien que sa dernière ligne est la PLUS ANCIENNE. La rendre
+     comme curseur ferait reculer un tableau de bord qui appellerait les deux. */
+  const cursor = (!byDay && rows.length) ? rows[rows.length - 1].cursor : since;
   return json({ sales: rows, cursor, merchant, voided });
 }

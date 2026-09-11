@@ -20,8 +20,8 @@
   /* ───────────────────────── real-store gate ─────────────────────────
      A paired / real venue must never see demo customer names. Local demo
      (pvReal()===false) keeps every seed byte-identical. */
-  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
-  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvPaired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
   function pvName(demo) { const p = pvPaired(); return (p && p.name) || (pvReal() ? '' : demo); }
   function pvCity(demo) { const p = pvPaired(); return (p && p.location) || (pvReal() ? '' : demo); }
 
@@ -92,7 +92,7 @@
   const SPOT = Object.fromEntries(SPOTS.map((s) => [s.id, s]));
   /* rotation indicative de la semaine (dim → sam) */
   const ROTA = [
-    { day: 'dim', midi: 'Relâche', soir: '—' },
+    { day: 'dim', midi: 'Relâche', soir: '·' },
     { day: 'lun', midi: 'Marina Bay', soir: 'Plage Achakar' },
     { day: 'mar', midi: 'Gare routière', soir: 'Plage Achakar' },
     { day: 'mer', midi: 'Marina Bay', soir: 'Plage Achakar' },
@@ -162,6 +162,16 @@
     painWarned: false,
     offline: false, queued: 0,
   };
+  const truckOps = window.KiwiVerticalState?.open?.('foodtruck', {
+    schema: 1,
+    snapshot: () => ({ queue: QUEUE, served: SERVED, recette, sold, seq, ticket: state.ticket, spot: state.spot, vitals: state.vitals, waits: state.waits, painWarned: state.painWarned }),
+    restore: (d) => {
+      const revive = o => { o.at = new Date(o.at); o.readyAt = o.readyAt ? new Date(o.readyAt) : null; o.servedAt = o.servedAt ? new Date(o.servedAt) : null; return o; };
+      QUEUE.splice(0, QUEUE.length, ...((d.queue || []).map(revive))); SERVED.splice(0, SERVED.length, ...((d.served || []).map(revive)));
+      Object.keys(recette).forEach(k => delete recette[k]); Object.assign(recette, d.recette || {}); Object.keys(sold).forEach(k => delete sold[k]); Object.assign(sold, d.sold || {});
+      seq = Math.max(seq, +d.seq || 0); state.ticket = d.ticket || { lines: [], name: '' }; state.spot = d.spot || 'marina'; state.vitals = d.vitals || state.vitals; state.waits = d.waits || []; state.painWarned = !!d.painWarned;
+    },
+  });
 
   const GAZ = {
     ok:         { label: 'OK',           cls: '',     next: 'surveiller' },
@@ -182,19 +192,25 @@
 
   /* Point de passage unique de la recette : la vente éclair et l'encaissement
      au retrait finissent tous les deux ici, donc le journal partagé aussi. */
-  function addRecette(spotId, method, amount, ref) {
+  function orderLines(lines) {
+    return lines.map((l) => {
+      const it = ITEM[l.id];
+      return { itemId: it.id, name: it.label, category: it.cat || 'carte', qty: l.qty, unit: 'piece', kind: 'product', total: it.price * l.qty };
+    });
+  }
+  function addRecette(spotId, method, amount, ref, lines) {
     const r = recette[spotId] || recette.marina;
     r.orders++;
     if (method === 'carte') r.carte += amount;
     else r.especes += amount;
-    postDay(amount, method, `Camion · ${SPOT[spotId] ? SPOT[spotId].label : 'Emplacement'}`, ref);
+    postDay(amount, method, `Camion · ${SPOT[spotId] ? SPOT[spotId].label : 'Emplacement'}`, ref, orderLines(lines || []));
   }
   /* Journal partagé — serveur (tableau de bord) + reprise après rechargement.
      Le camion encaissait dans `recette` et rien d'autre : la recette du service
      disparaissait au premier refresh et le patron voyait 0 MAD. Démo : no-op. */
-  function postDay(total, method, label, ref) {
+  function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('foodtruck', { total, method, label, ref });
+      if (window.KiwiPosSale) window.KiwiPosSale.record('foodtruck', { total, method, label, ref, lines });
     } catch (_) {}
   }
   /* Reprise du service en cours. Le journal ne retient pas l'emplacement, donc
@@ -203,19 +219,25 @@
      restauré — c'est un compteur d'articles, pas d'argent. Le numéro d'appel
      repart au-delà du dernier encaissé, sinon deux clients sont appelés au même
      numéro. Démo : journal vide, aucun effet. */
-  (function restoreDay() {
+  function reconcileDay() {
     try {
       if (!window.KiwiPosSale) return;
-      const t = window.KiwiPosSale.totals('foodtruck');
-      if (!t.count) return;
-      recette.marina.especes += t.cash;
-      recette.marina.carte += t.card + t.other;
-      recette.marina.orders += t.count;
+      Object.keys(recette).forEach((id) => { recette[id].especes = 0; recette[id].carte = 0; recette[id].orders = 0; });
+      window.KiwiPosSale.today('foodtruck').forEach((sale) => {
+        const label = String(sale.label || '').toLowerCase();
+        const spotId = Object.keys(SPOT).find((id) => label.includes(String(SPOT[id].label || '').toLowerCase())) || 'marina';
+        const bucket = recette[spotId] || recette.marina;
+        bucket.orders++;
+        if (sale.method === 'cash') bucket.especes += +sale.total || 0;
+        else bucket.carte += +sale.total || 0;
+      });
       seq = window.KiwiPosSale.nextSeq('foodtruck', seq);
     } catch (_) {}
-  })();
+  }
+  reconcileDay();
 
   function queueIfOffline(label) {
+    truckOps?.save?.(label || 'operation');
     if (!state.offline) return false;
     state.queued++;
     renderNet();
@@ -227,10 +249,11 @@
   let root = null;
 
   function mount(rootEl) {
+    truckOps?.hydrate?.();
     root = rootEl;
     root.innerHTML = `
       <aside class="ft-rail">
-        <div class="ft-brand">kiwi<i></i></div>
+        <div class="ft-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
         <div class="ft-venue">
           <div class="ft-venue-name">${pvName('Karavan') || 'Mon food truck'}</div>
           <div class="ft-venue-sub">${pvReal() ? (pvCity('') || '') : 'Food truck · Tanger'}<br>Le même Kiwi, <b>un seul compte</b>.</div>
@@ -508,9 +531,12 @@
       </label>
       <div class="ft-lines" id="ft-lines">
         ${t.lines.length ? t.lines.map((ln, i) => lineRow(ln, i)).join('') : `
-          <div class="ft-empty">
-            <i data-lucide="zap"></i>
-            <div>Touchez un article,<br>il part direct dans la commande.</div>
+          <div class="ft-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">
+            <div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:4px;">
+              <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
+            </div>
+            <div style="font-weight:600; font-size:14px; color:var(--ink);">La commande est vide.</div>
+            <div style="font-size:12.5px; color:var(--n-500); line-height:1.45;">Touchez un article, il part direct dans la commande.</div>
           </div>`}
       </div>
       <div class="ft-foot">
@@ -542,7 +568,7 @@
       method,
       onPaid: (m, rendu) => {
         const o = createOrder(m);
-        toast(`Khlass, ${fmtMAD(total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+        toast(`${fmtMAD(total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
         toast(o.anon ? `Commande n° ${o.n}, en prépa` : `« ${o.name} » n° ${o.n}, en prépa`);
       },
     });
@@ -562,11 +588,21 @@
     };
     seq++;
     QUEUE.push(o);
-    addRecette(o.spot, method, total, o.id);
+    addRecette(o.spot, method, total, o.id, o.lines);
     o.lines.forEach((l) => { sold[l.id] = (sold[l.id] || 0) + l.qty; });
     consumeBread(o.lines);
     state.ticket = { lines: [], name: '' };
     queueIfOffline(`Commande ${o.id}`);
+    try {
+      if (window.KiwiFoodProductionPrint) KiwiFoodProductionPrint.enqueue({
+        trade: 'foodtruck', ref: o.id, at: o.at,
+        destination: `${SPOT[o.spot] ? SPOT[o.spot].label : 'Food truck'} · ${o.name}`,
+        lines: o.lines.map((l) => ({
+          qty: l.qty, name: ITEM[l.id].label,
+          station: ['jus', 'the', 'limonada'].includes(l.id) ? 'Boissons' : 'Cuisine',
+        })),
+      });
+    } catch (_) {}
     renderTicket(); renderBadges(); renderVenteQueue(); icons();
     if (state.view === 'file') renderFile();
     return o;
@@ -630,7 +666,7 @@
         <div class="modal-amount size-md">${fmtMAD(cfg.amount)}</div>
         <div class="cash-grid">
           <div class="cash-input-row">
-            <label class="cash-input-label" for="ft-cash-in">Flous reçu</label>
+            <label class="cash-input-label" for="ft-cash-in">Espèces reçues</label>
             <input class="cash-input mono" id="ft-cash-in" type="number" inputmode="numeric" min="0" step="1" value="${cfg.amount}" />
           </div>
           <div class="cash-presets" aria-label="Ajout rapide">
@@ -675,17 +711,18 @@
       setTimeout(() => {
         const disc = $('#ft-reader-disc', el);
         if (!disc || !veil.classList.contains('is-open')) return;
-        disc.classList.remove('is-pulsing');
-        disc.classList.add('is-success');
-        disc.innerHTML = '<i data-lucide="check"></i>';
-        $('#ft-reader-status', el).textContent = 'Khlass ! Paiement confirmé sur le lecteur';
-        $('#ft-reader-status', el).classList.add('is-success');
-        icons();
-        setTimeout(() => {
-          if (!veil.classList.contains('is-open')) return;
-          close();
-          cfg.onPaid('carte', 0);
-        }, 900);
+        const status = $('#ft-reader-status', el);
+        const hw = window.KiwiHardware;
+        if (!hw || !hw.authorizeCard) { disc.classList.remove('is-pulsing'); status.textContent = 'Paiement non confirmé · lecteur indisponible'; return; }
+        hw.authorizeCard(cfg.amount, disc, status).then((result) => {
+          icons();
+          if (!(result && result.approved)) return;
+          setTimeout(() => {
+            if (!veil.classList.contains('is-open')) return;
+            close();
+            cfg.onPaid('carte', 0);
+          }, 900);
+        });
       }, 1900);
     };
 
@@ -778,9 +815,9 @@
         method: null,
         onPaid: (m, rendu) => {
           o.pay = { method: m, paid: o.total };
-          addRecette(o.spot, m, o.total, o.id);
+          addRecette(o.spot, m, o.total, o.id, o.lines);
           o.lines.forEach((l) => { sold[l.id] = (sold[l.id] || 0) + l.qty; });
-          toast(`Khlass, ${fmtMAD(o.total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
+          toast(`${fmtMAD(o.total)} encaissé${rendu > 0 ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
           serveOrder(o);
         },
       });
@@ -950,7 +987,7 @@
           <div class="ft-split-row ${state.spot === 'achakar' ? '' : 'mut'}">
             <span class="who">${state.spot === 'achakar' ? '<i></i>' : ''}Plage Achakar <span>soir</span></span>
             <span class="ct">${recette.achakar.orders ? `${recette.achakar.orders} cmd` : 'dès 18:00'}</span>
-            <span class="amt">${recette.achakar.orders ? fmtMAD(recette.achakar.especes + recette.achakar.carte) : '—'}</span>
+            <span class="amt">${recette.achakar.orders ? fmtMAD(recette.achakar.especes + recette.achakar.carte) : '·'}</span>
           </div>
         </div>
 
@@ -1103,11 +1140,12 @@
   window.KiwiPosDispatch.register({
     id: 'foodtruck',
     greet: {
-      line1: 'Sba7 lkhir Mika,',
-      em: 'marhba.',
+      line1: 'Bonjour Mika,',
+      em: 'bienvenue.',
       sub: 'Karavan <em>·</em> service de midi, Marina Bay',
     },
     mount(rootEl) { mount(rootEl); },
+    onSalesSync() { reconcileDay(); if (root) renderAll(); },
     onShow() { if (root) renderAll(); },
   });
 })();

@@ -36,6 +36,7 @@
 // Jumia Food, encore listé dans plusieurs écrans, a quitté le Maroc fin 2023.
 
 import { json } from '../../auth/_lib.js';
+import { startOfWeek } from '../order/_lib.js';
 
 const MAX_LINES = 60;
 const MAX_TOTAL = 200000;          // 200 000 MAD — garde-fou, pas une règle
@@ -46,6 +47,12 @@ const TOKEN_RE = /^kwc\.([A-Za-z0-9-]{6,64})\.([A-Za-z0-9_-]{20,120})$/;
 const CHANNELS = { glovo: 1, yassir: 1, shopify: 1, generic: 1, kiwi: 1 };
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
+const money = (value) => {
+  if (value == null || value === '') return 0;
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return NaN;
+  return Math.round(amount * 100) / 100;
+};
 
 async function sha256Hex(s) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
@@ -60,13 +67,6 @@ function sameHex(a, b) {
   let d = 0;
   for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return d === 0;
-}
-
-function startOfDay(now) {
-  // Les numéros de ticket repartent chaque jour. Le Maroc est à UTC+1 toute
-  // l'année : une commande de 00h30 appartient au jour qui commence.
-  const shifted = now + 3600000;
-  return Math.floor(shifted / 86400000) * 86400000 - 3600000;
 }
 
 /* À qui appartient cette clé ? Renvoie la ligne, ou null. */
@@ -119,8 +119,8 @@ export async function onRequestPost(context) {
   const merchant = String(link.merchant || '').toLowerCase();
   const channel = CHANNELS[link.channel] ? link.channel : 'generic';
 
-  const total = Math.round(Number(b && b.total) || 0);
-  if (total <= 0 || total > MAX_TOTAL) {
+  const total = Math.round(Number(b && b.total) * 100) / 100;
+  if (!Number.isFinite(total) || total <= 0 || total > MAX_TOTAL) {
     await mark(env, link.id, false, 'total absent ou hors bornes');
     return json({ error: 'bad-total' }, 400);
   }
@@ -135,14 +135,28 @@ export async function onRequestPost(context) {
     return json({ error: 'too-many-lines' }, 400);
   }
 
-  const lines = rawLines.map((l) => ({
-    id: str(l && l.id, 40),
-    name: str(l && l.name, 80),
-    qty: Math.min(99, Math.max(1, Math.round(Number(l && l.qty) || 1))),
-    unitPrice: Math.max(0, Math.round(Number(l && l.unitPrice) || 0)),
-    options: str(l && l.options, 200),
-    note: str(l && l.note, 200),
-  }));
+  const lines = rawLines.map((l) => {
+    const item = {
+      id: str(l && l.id, 40),
+      name: str(l && l.name, 80),
+      qty: Math.min(99, Math.max(1, Math.round(Number(l && l.qty) || 1))),
+      unitPrice: Math.max(0, money(l && l.unitPrice)),
+      options: str(l && l.options, 200),
+      note: str(l && l.note, 200),
+    };
+    const rawVisuals = Array.isArray(l && l.visuals) ? l.visuals : [];
+    if (rawVisuals.length) {
+      item.visuals = rawVisuals.slice(0, 12).map((v) => ({
+        emoji: str((v && (v.emoji || v.e)) || '', 16),
+        name: str((v && (v.name || v.label || v.cn)) || '', 60),
+      })).filter((v) => v.name);
+    }
+    return item;
+  });
+  if (lines.some((line) => !Number.isFinite(line.unitPrice))) {
+    await mark(env, link.id, false, 'prix de ligne invalide');
+    return json({ error: 'bad-line-price' }, 400);
+  }
 
   /* Le coursier n'est pas le client. Un ticket de livraison sans adresse ni
    * téléphone renvoie le comptoir vers la tablette du prestataire, ce qui
@@ -201,9 +215,24 @@ export async function onRequestPost(context) {
     ).bind(
       id, merchant, mode, total, JSON.stringify(lines), now, now,
       channel, ref, JSON.stringify(customer),
-      merchant, startOfDay(now)
+      merchant, startOfWeek(now)
     ).first();
   } catch (e) {
+    /* The pre-read above is only an optimisation. Two provider retries can
+     * both pass it before either INSERT commits; the database uniqueness
+     * constraint is the authority. Re-read after any failed insert and turn a
+     * winning concurrent insert into an idempotent success. */
+    if (ref) {
+      try {
+        const raced = await env.DB.prepare(
+          'SELECT id, number FROM orders WHERE merchant = ? AND channel = ? AND ext_ref = ?'
+        ).bind(merchant, channel, ref).first();
+        if (raced) {
+          await mark(env, link.id, true);
+          return json({ ok: true, id: raced.id, number: raced.number, duplicate: true });
+        }
+      } catch (_) { /* preserve the original write error below */ }
+    }
     const detail = String((e && e.message) || e);
     await mark(env, link.id, false, detail);
     return json({ error: 'write-failed', detail }, 500);

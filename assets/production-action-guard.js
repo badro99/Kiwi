@@ -20,7 +20,7 @@
     'export-payroll',
     /* Stock : la commande fournisseur affichait même un montant et un
      * « WhatsApp confirmé » codés en dur. */
-    'stock-send-suggested', 'stock-wa-supplier', 'stock-program-shortfall',
+    'stock-send-suggested', 'stock-program-shortfall',
     /* Exports réglementaires et registres : aucun fichier n'est produit.
      * (« export », « bqx-export » et « margin-export » fabriquent un vrai
      * Blob téléchargeable : eux ne sont pas ici, ils tiennent leur promesse.) */

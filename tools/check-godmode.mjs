@@ -32,7 +32,14 @@ const DAY = 86400000;
 /* ── D1 → node:sqlite ─────────────────────────────────────────────────────── */
 function makeDB() {
   const db = new DatabaseSync(':memory:');
-  db.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+  const schema = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
+  db.exec(schema);
+  const migration = fs.readFileSync(path.join(ROOT, 'migrations/2026-09-08-auth-session-revocation.sql'), 'utf8');
+  for (const statement of migration.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) {
+    if (/^ALTER TABLE accounts ADD COLUMN session_epoch\b/i.test(statement)
+        && /\bsession_epoch\b/i.test(schema)) continue;
+    db.exec(statement);
+  }
   const prepare = (query) => {
     let args = [];
     const st = {
@@ -85,10 +92,20 @@ const R = {
      drapeaux de modules et les PIN de caisse à un tableau de bord ou à une
      caisse appairée. C'est par là que la fuite inter-locataires est sortie. */
   appConfig: await import(path.join(ROOT, 'functions/api/config.js')),
+  menu: await import(path.join(ROOT, 'functions/api/menu.js')),
 };
 
 /* ── amorce ───────────────────────────────────────────────────────────────── */
-const now = Date.now();
+/* L'HORLOGE DU BANC. Les ventes « du jour » sont posées jusqu'à cinq heures
+   avant `now`, et la journée CLÔTURÉE est celle de now-24 h. Entre minuit et
+   six heures UTC ces deux fenêtres se recouvrent : la vente d'onboarding tombe
+   dans la journée déjà close, sa sortie est LÉGITIMEMENT bloquée, et onze
+   contrôles tombaient — chaque nuit, sans qu'aucun défaut n'existe. On recule
+   l'horloge jusqu'à dix-huit heures la veille ; elle reste dans le passé, donc
+   rien de ce qui se compare à l'heure réelle ne change. */
+const wall = Date.now();
+const wallHour = new Date(wall).getUTCHours();
+const now = wallHour >= 6 ? wall : wall - (wallHour + 6) * 3600000;
 const acc = (id, email, business, ts) =>
   db.prepare('INSERT INTO accounts (id,email,name,business,salt,hash,created_ts) VALUES (?,?,?,?,?,?,?)')
     .bind(id, email, email.split('@')[0], business, 'ff', 'ff', ts).run();
@@ -180,12 +197,12 @@ const AS = {
   none: '',
 };
 
-async function call(mod, method, url, { as = 'operator', body } = {}) {
+async function call(mod, method, url, { as = 'operator', body, referer } = {}) {
   const fn = mod['onRequest' + method[0] + method.slice(1).toLowerCase()];
   if (!fn) throw new Error('no handler ' + method);
   const req = new Request('https://kiwi.test' + url, {
     method,
-    headers: { 'Content-Type': 'application/json', Cookie: AS[as] },
+    headers: Object.assign({ 'Content-Type': 'application/json', Cookie: AS[as] }, referer ? { Referer: referer } : {}),
     body: (method === 'GET' || method === 'HEAD') ? null : JSON.stringify(body || {}),
   });
   const res = await fn({ env, request: req });
@@ -270,6 +287,52 @@ G('1 · Droits — un client, un caissier, un gérant n’entrent jamais');
   ok(legacy.status === 403, 'ancien cookie opérateur sans identité : révoqué');
   const deleted = await call(R.sales, 'GET', '/api/admin/sales?merchant=amira-boutique', { as:'deletedOperator' });
   ok(deleted.status === 403, 'cookie d’un opérateur absent de la base : révoqué');
+}
+
+/* Menu setup is a real God Mode write, but only inside the exact scoped client
+ * dashboard opened by the console. This is the Browse pre-launch setup path. */
+G('1b · Carte client — God Mode sauvegarde uniquement sa portée confirmée');
+{
+  const ref = 'https://kiwi.test/dashboard?op=1&merchant=amira-cafe';
+  const data = {
+    cats: [{ id:'cat_1', name:'Sweets', sub:[{ id:'sub_1', name:'Cookies' }] }],
+    items: [{ id:'it_1', name:'Brookie', price:30, catId:'cat_1', subId:'sub_1', avail:true }],
+    stations: [], opts: [], kitchenId:'',
+  };
+  const saved = await call(R.menu, 'POST', '/api/menu', {
+    referer: ref, body: { merchant:'amira-cafe', name:'Amira Café', type:'cafe', data },
+  });
+  ok(saved.status === 200 && saved.json.ok && saved.json.items === 1,
+    'le dashboard God Mode ciblé publie la carte du client', JSON.stringify(saved.json));
+
+  const staleData = {
+    cats: data.cats.concat([{ id:'cat_old', name:'Section supprimée', sub:[] }]),
+    items: data.items, stations:[], opts:[], kitchenId:'',
+  };
+  const stale = await call(R.menu, 'POST', '/api/menu', {
+    referer: ref, body: { merchant:'amira-cafe', name:'Amira Café', type:'cafe', data:staleData },
+  });
+  ok(stale.status === 409 && stale.json.error === 'stale-menu' && stale.json.data.cats.length === 1,
+    'un ancien onglet God Mode ne peut pas ressusciter une section supprimée');
+
+  const read = await call(R.menu, 'GET', '/api/menu?mine=1&merchant=amira-cafe', { referer: ref });
+  ok(read.status === 200 && read.json.menu.items[0].name === 'Brookie' && read.json.menu.cats[0].sub[0].name === 'Cookies',
+    'un autre navigateur relit articles et sous-catégories depuis le serveur');
+
+  const unscoped = await call(R.menu, 'POST', '/api/menu', {
+    body: { merchant:'amira-cafe', name:'Amira Café', type:'cafe', data },
+  });
+  ok(unscoped.status === 401, 'le cookie opérateur seul ne peut pas écrire une carte hors dashboard ciblé');
+
+  const wrongTarget = await call(R.menu, 'POST', '/api/menu', {
+    referer: ref, body: { merchant:'snack-rif', name:'Snack Rif', type:'fastfood', data },
+  });
+  ok(wrongTarget.status === 401, 'la portée Amira Café ne peut pas être réutilisée pour écrire chez un autre client');
+
+  const sharedGate = await call(R.menu, 'POST', '/api/menu', {
+    as:'staff', referer:ref, body:{ merchant:'amira-cafe', name:'Amira Café', type:'cafe', data },
+  });
+  ok(sharedGate.status === 401, 'le simple accès équipe ne peut jamais publier la carte d’un client');
 }
 
 /* ═══ 2 · RECHERCHE ════════════════════════════════════════════════════════ */
@@ -378,8 +441,8 @@ G('4bis · Le voisin — un ?merchant= ne suffit jamais à ouvrir un autre comme
     JSON.stringify(leakFeed.sales || []));
 
   const leakPins = await cfgFor('snack-rif', 'merchantWithGate');
-  ok(!(leakPins.pins || []).some((p) => p.pin === '9876'),
-    'session commerçant + code d’équipe : les PIN de caisse du voisin restent fermés',
+  ok(!(leakPins.pins || []).some((p) => p.name === 'Youssef'),
+    'session commerçant + code d’équipe : le personnel du voisin reste fermé',
     JSON.stringify(leakPins.pins || []));
 
   /* c) Le code d'équipe SEUL, sans aucun compte : il n'ouvre plus rien non plus. */
@@ -390,14 +453,27 @@ G('4bis · Le voisin — un ?merchant= ne suffit jamais à ouvrir un autre comme
   /* d) …et l'on n'a rien cassé : chacun lit toujours CHEZ LUI, et l'opérateur
      nommé garde le God mode dont la console a besoin. */
   const own = await cfgFor('amira-boutique', 'merchant');
-  ok((own.pins || []).some((p) => p.pin === '1234'),
-    'le commerçant lit toujours les PIN de son propre magasin');
+  ok((own.pins || []).some((p) => p.name === 'Sara Idrissi'),
+    'le commerçant lit toujours le personnel de son propre magasin');
   const sibling = await cfgFor('amira-cafe', 'merchant');
   ok(sibling.type === 'cafe',
     '…et ceux de son second établissement (le registre dit qu’il lui appartient)');
   const godmode = await cfgFor('snack-rif', 'operator');
-  ok((godmode.pins || []).some((p) => p.pin === '9876'),
+  ok((godmode.pins || []).some((p) => p.name === 'Youssef'),
     'un opérateur NOMMÉ garde l’accès transversal — c’est à cela que sert la console');
+
+  /* Et le point de tout ceci : PERSONNE ne reçoit le code lui-même. Ni le
+     commerçant chez lui, ni l'opérateur en God mode. Le roster dit qui travaille
+     ici ; « ce code est-il le bon ? » est une question pour /api/pin/verify. */
+  for (const [label, res] of [['le commerçant chez lui', own],
+                              ['l’opérateur en God mode', godmode],
+                              ['le voisin', leakPins]]) {
+    const leaked = JSON.stringify(res.pins || []);
+    ok(!(res.pins || []).some((p) => p && (p.pin != null || p.code != null)),
+      `${label} : aucune ligne de roster ne porte de champ pin/code`);
+    ok(!/\b(1234|9876)\b/.test(leaked),
+      `${label} : aucun code à quatre chiffres dans la réponse /api/config`);
+  }
   const opFeed = await feedFor('snack-rif', 'operator');
   ok(opFeed.sales.some((s) => s.id === 's-rif'),
     '…et le flux d’un client s’ouvre bien depuis la console');
@@ -629,6 +705,15 @@ G('10 · Mot de passe — envoyer, renvoyer, une seule fois, expirer');
   const login = await call(R.login, 'POST', '/auth/login',
     { as: 'none', body: { email: 'amira@kiwi.test', password: 'nouveau-mot-de-passe' } });
   ok(login.status === 200, 'le client se connecte avec son nouveau mot de passe');
+  /* The reset above deliberately advances the account session epoch. Refresh
+     this fixture's browser cookie from the real login response before the
+     later feed/till assertions; continuing with SESS_A would test a revoked
+     browser, not the post-reset product flow. */
+  const freshSession = (login.res.headers.get('Set-Cookie') || '').match(/kiwi_sess=[^;]+/);
+  if (freshSession) {
+    AS.merchant = freshSession[0];
+    AS.merchantWithGate = `${freshSession[0]}; kiwi_gate=${STAFF}`;
+  }
 
   const oldPw = await call(R.login, 'POST', '/auth/login',
     { as: 'none', body: { email: 'amira@kiwi.test', password: 'ancien' } });
@@ -686,18 +771,18 @@ G('10 · Mot de passe — envoyer, renvoyer, une seule fois, expirer');
 G('11 · Le retrait atteint tous les appareils');
 {
   await call(R.sales, 'POST', '/api/admin/sales',
-    { body: { merchant: 'amira-boutique', ids: ['s-plain'], action: 'void', reason: 'installation' } });
+    { body: { merchant: 'amira-boutique', ids: ['s-plain'], action: 'void', reason: 'installation', force: true } });
 
   const dash = await feedFor('amira-boutique');
   ok(!dash.sales.some((s) => s.id === 's-plain'), 'tableau de bord : la vente a disparu du flux');
-  ok(dash.voided.some((v) => v.r === 'T-044-A7' && v.c),
-    'tableau de bord : la liste de retrait porte curseur + référence');
+  ok(dash && Array.isArray(dash.voided) && dash.voided.some((v) => v.r === 'T-044-A7' && v.c),
+    'tableau de bord : la liste de retrait porte curseur + référence', JSON.stringify(dash));
 
   /* La caisse ne demande QUE les retraits — requête minuscule, pas de rejeu. */
   const till = (await call(R.feed, 'GET', '/api/feed?voids=1&merchant=amira-boutique', { as: 'merchant' })).json;
   ok(till.sales.length === 0, 'caisse : le sondage « retraits seuls » ne rejoue aucune vente');
-  ok(till.voided.some((v) => v.r === 'T-044-A7'),
-    'caisse : elle reçoit la référence de ticket, la seule clé qu’elle connaît');
+  ok(till && Array.isArray(till.voided) && till.voided.some((v) => v.r === 'T-044-A7'),
+    'caisse : elle reçoit la référence de ticket, la seule clé qu’elle connaît', JSON.stringify(till));
 
   /* Une caisse qui rejoue sa file hors-ligne ne doit pas ressusciter la vente. */
   const saleMod = await import(path.join(ROOT, 'functions/api/sale.js'));
@@ -889,8 +974,60 @@ G('14bis · Vue d’ensemble — nos chiffres, et ce qu’on ne sait pas');
   db.prepare('DELETE FROM merchant_config WHERE merchant IN (?,?)').bind('demo-orpheline', 'rif-annexe').run();
 }
 
-/* ═══ 14 · MUTATIONS DANGEREUSES ET RÉVOCATION ════════════════════════════ */
-G('14 · Révocation — supprimer un droit coupe vraiment la session');
+/* ═══ 14 · ABONNEMENTS ET ESSAIS ══════════════════════════════════════════ */
+G('14 · Abonnements — cycles, essais et échéances restent attachés au magasin');
+{
+  const legacy = makeDB();
+  for (const col of ['trial_days','trial_end','trial_start','subscription_end','subscription_start','billing_cycle','subscription_kind','mrr','city']) {
+    legacy._db.exec(`ALTER TABLE merchant_config DROP COLUMN ${col}`);
+  }
+  legacy.prepare('INSERT INTO operators (id,label,salt,hash,created_ts) VALUES (?,?,?,?,?)')
+    .bind('op-1','Badr','ff','ff',now).run();
+  legacy.prepare('INSERT INTO merchant_config (merchant,features,plan,type,updated_ts) VALUES (?,?,?,?,?)')
+    .bind('legacy-shop','{}','pro','boutique',now).run();
+  const legacyReq = new Request('https://kiwi.test/api/admin/config?merchant=legacy-shop', {
+    headers:{ Cookie:AS.operator },
+  });
+  const legacyRes = await R.config.onRequestGet({ env:{ ...env, DB:legacy }, request:legacyReq });
+  const legacyBody = await legacyRes.json();
+  ok(legacyRes.status === 200 && legacyBody.columns.lifecycle === true &&
+     legacy._db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('merchant_config') WHERE name IN ('city','mrr','subscription_kind','billing_cycle','subscription_start','subscription_end','trial_start','trial_end','trial_days')").get().n === 9,
+    'la première ouverture répare une ancienne base sans commande Cloudflare manuelle');
+
+  const paid = await call(R.config, 'PUT', '/api/admin/config', { body: {
+    merchant:'amira-boutique', features:{}, plan:'pro', city:'Casablanca', mrr:399,
+    subscriptionKind:'paid', billingCycle:'annual',
+    subscriptionStart:'2026-08-27', subscriptionEnd:'2027-08-27',
+    trialStart:'', trialEnd:'', trialDays:15,
+  }});
+  ok(paid.status === 200 && paid.json.columns.lifecycle === true,
+    'un abonnement annuel est enregistré par la vraie route God Mode');
+  const paidRead = await call(R.config, 'GET', '/api/admin/config?merchant=amira-boutique');
+  ok(paidRead.json.subscriptionKind === 'paid' && paidRead.json.billingCycle === 'annual' &&
+     paidRead.json.subscriptionStart === '2026-08-27' && paidRead.json.subscriptionEnd === '2027-08-27',
+    'le cycle et ses deux dates sont relus sans mémoire locale');
+
+  const trial = await call(R.config, 'PUT', '/api/admin/config', { body: {
+    merchant:'amira-cafe', features:{}, plan:'basic',
+    subscriptionKind:'trial', billingCycle:'monthly', subscriptionStart:'', subscriptionEnd:'',
+    trialStart:'2026-08-27', trialEnd:'2026-09-11', trialDays:15,
+  }});
+  ok(trial.status === 200, 'une période d’essai à durée choisie est enregistrée');
+  const roster = await call(R.clients, 'GET', '/api/admin/clients');
+  const cafe = roster.json.clients.find((c) => c.merchant === 'amira-cafe');
+  ok(cafe && cafe.subscription_kind === 'trial' && cafe.trial_days === 15 && cafe.trial_end === '2026-09-11',
+    'le roster remonte l’essai et son échéance au bandeau de rappel');
+
+  const invalid = await call(R.config, 'PUT', '/api/admin/config', { body: {
+    merchant:'amira-cafe', features:{}, plan:'basic', subscriptionKind:'trial',
+    trialStart:'2026-09-11', trialEnd:'2026-08-27', trialDays:15,
+  }});
+  ok(invalid.status === 400 && invalid.json.error === 'invalid-trial-dates',
+    'le serveur refuse une échéance antérieure au début');
+}
+
+/* ═══ 15 · MUTATIONS DANGEREUSES ET RÉVOCATION ════════════════════════════ */
+G('15 · Révocation — supprimer un droit coupe vraiment la session');
 {
   /* Le contrôle visait `?merchant=…&email=…`, et il visait à côté depuis que la
      suppression d'UN établissement existe : avec un merchant, la route prend le

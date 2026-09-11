@@ -327,7 +327,7 @@
       const label = enc.format === 'ean13'
         ? enc.text.replace(/^(\d)(\d{6})(\d{6})$/, '$1 $2 $3')
         : enc.text;
-      txt = `<text x="${w / 2}" y="${height + textH - 3}" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="${opts.textSize || 11}" letter-spacing="1" fill="${color}">${escapeXml(label)}</text>`;
+      txt = `<text x="${w / 2}" y="${height + textH - 3}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${opts.textSize || 11}" letter-spacing="1" fill="${color}">${escapeXml(label)}</text>`;
     }
     const bgRect = opts.bg && opts.bg !== 'transparent' ? `<rect width="${w}" height="${h}" fill="${opts.bg}"/>` : '';
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="code-barres ${escapeXml(enc.text)}">${bgRect}${rects}${txt}</svg>`;
@@ -357,8 +357,8 @@
     st.setAttribute('data-size', stamp);
     // ONE label per page, the page sized to the label stock itself. This is what
     // makes a browser/PDF print look like a real étiquette instead of a small
-    // sticker lost on an A4 sheet (the "empty page" problem). Each label
-    // force-breaks to its own page, so "print all" yields a tidy multi-page job.
+    // sticker lost on an A4 sheet (the "empty page" problem). Every label after
+    // the first starts a new page, avoiding a trailing blank sticker.
     // Short stock (20 mm-class) has no room for a second title line — one line,
     // tighter padding. The bars are a fixed-height block STRETCHED to the full
     // label width (preserveAspectRatio="none" on the svg): bar widths are
@@ -368,38 +368,63 @@
     // below the bars, so it never scales with them.
     const short = L.h <= 24;
     const lines = short ? 1 : 2;
-    // Height budget in mm: padding + title line(s) + meta + number + margins;
-    // the bars take everything left, never less than 5 mm.
+    // Height budget in mm: padding + title line(s) + the largest meta glyph
+    // (the price is intentionally larger) + number + margins. Keeping a small
+    // guard prevents printer-driver rounding from scaling the whole 20 mm page.
     const PT = 0.3528;                                   // 1 pt in mm
-    const used = (short ? 2.0 : 3.5) + lines * 11 * 1.08 * PT + 9 * 1.2 * PT + 7 * 1.15 * PT + 1.4;
+    const titlePt = short ? 12 : 11;
+    const metaPt = short ? 10 : 9;
+    const pricePt = short ? 22 : 10.5;
+    const numberPt = short ? 6.5 : 7;
+    const used = (short ? 0.8 : 3.5)
+      + lines * titlePt * (short ? 1 : 1.05) * PT
+      + (short ? 0.1 : 0.4) + Math.max(metaPt, pricePt) * 0.95 * PT
+      + (short ? 0.2 : 0.3) + numberPt * 0.9 * PT
+      + 0.3;
     const barMM = Math.max(5, +(L.h - used).toFixed(1));
     st.textContent = `
       #kbl-print-root { display: none; }
       @media print {
-        html, body { background: var(--surface) !important; margin: 0 !important; padding: 0 !important; }
+        html, body { background: #fff !important; color: #0A0F0D !important; color-scheme: light !important; margin: 0 !important; padding: 0 !important; }
         body > *:not(#kbl-print-root) { display: none !important; }
-        #kbl-print-root { display: block !important; position: static; }
-        .kbl-sheet { display: block; }
+        #kbl-print-root { display: block !important; position: static; margin: 0; padding: 0; background: #fff !important; color: #0A0F0D !important; color-scheme: light !important; }
+        .kbl-sheet { display: block; margin: 0; padding: 0; }
         .kbl {
-          width: ${L.w}mm; height: ${L.h}mm; box-sizing: border-box; overflow: hidden;
-          padding: ${short ? '1.2mm 2mm 0.8mm' : '2mm 2.5mm 1.5mm'};
-          display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-          page-break-after: always; break-after: page; text-align: center;
-          font-family: 'Inter Tight', system-ui, sans-serif; color: #0A0F0D;
+          width: ${L.w}mm; height: calc(${L.h}mm - 0.2mm); box-sizing: border-box; overflow: hidden;
+          padding: ${short ? '0.45mm 0.35mm 0.35mm' : '2mm 2.5mm 1.5mm'};
+          display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+          page-break-inside: avoid; break-inside: avoid-page; text-align: center;
+          font-family: 'Inter Tight', system-ui, sans-serif; color: #0A0F0D; background: #fff;
         }
-        .kbl:last-child { page-break-after: auto; break-after: auto; }
+        .kbl + .kbl { page-break-before: always; break-before: page; }
         .kbl-head { width: 100%; }
         .kbl-t {
-          font-size: 11pt; font-weight: 700; line-height: 1.08;
+          font-size: ${titlePt}pt; font-weight: 700; line-height: ${short ? '1' : '1.05'};
           display: -webkit-box; -webkit-line-clamp: ${lines}; -webkit-box-orient: vertical; overflow: hidden;
         }
-        .kbl-m { font-size: 9pt; color: #444; margin-top: 0.4mm; }
-        .kbl-m b { color: #0A0F0D; font-size: 10.5pt; }
-        .kbl-bc { width: 100%; line-height: 0; margin-top: 0.4mm; }
-        .kbl-bc svg { width: 100%; height: ${barMM}mm; }
+        .kbl-m {
+          width: 100%; min-width: 0; display: flex; align-items: baseline; justify-content: center;
+          gap: 0.5mm; white-space: nowrap; overflow: hidden;
+          font-size: ${metaPt}pt; line-height: 0.95; color: #333; margin-top: ${short ? '0.1mm' : '0.4mm'};
+        }
+        .kbl-s { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .kbl-m.has-price .kbl-s { display: ${short ? 'none' : 'block'}; }
+        .kbl-m b { color: #0A0F0D; font-family: Arial, Helvetica, sans-serif; font-size: ${pricePt}pt; line-height: 0.95; flex: 0 0 auto; }
+        /* Le prix barré d'une promotion. Volontairement PLUS PETIT que le prix
+           courant : sur une étiquette de rayon, deux nombres de même taille se
+           lisent comme une hésitation, et c'est le nouveau prix qu'on vient
+           chercher. Le barré n'est pas décoratif · c'est lui qui dit « celui-ci
+           ne s'applique plus », sans quoi une cliente lit deux prix et demande
+           lequel est le bon. */
+        .kbl-m s { color: #6B7280; font-family: Arial, Helvetica, sans-serif;
+                   font-size: ${(pricePt * 0.5).toFixed(1)}pt; line-height: 0.95; flex: 0 0 auto; }
+        .kbl-bc {
+          width: ${short ? '86%' : '100%'}; line-height: 0; margin-top: auto; flex-shrink: 0;
+        }
+        .kbl-bc svg { display: block; width: 100%; height: ${barMM}mm; }
         .kbl-n {
-          font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 7pt;
-          letter-spacing: 0.5px; line-height: 1.15; margin-top: 0.3mm;
+          font-family: Arial, Helvetica, sans-serif; font-size: ${numberPt}pt;
+          letter-spacing: 0.5px; line-height: 0.9; margin-top: ${short ? '0.2mm' : '0.3mm'};
         }
         @page { size: ${L.w}mm ${L.h}mm; margin: 0; }
       }`;
@@ -410,8 +435,8 @@
    * WD8210 alone takes 110 mm-wide stock — and printing a 50 x 30 page onto it
    * scales or clips every sticker. So the size is a setting (kiwiPrinterCfg.label)
    * and BOTH renderers (browser @page and the PDF) read it from here, so they can
-   * never disagree. Falls back to the long-standing 50 x 30 default. */
-  const LABEL_DEFAULT = { w: 50, h: 30 };
+   * never disagree. Boutique stock defaults to the deployed 50 x 20 mm roll. */
+  const LABEL_DEFAULT = { w: 50, h: 20 };
   function labelSize() {
     try {
       const cfg = (window.KiwiPrinter && window.KiwiPrinter.getConfig && window.KiwiPrinter.getConfig()) || {};
@@ -440,8 +465,15 @@
     // Show a price only when it's a real, positive amount — a "0 MAD" on a shelf
     // label is noise, and it's exactly what read as broken on the empty sheet.
     const hasPrice = l.price != null && String(l.price).trim() !== '' && parseFloat(String(l.price).replace(',', '.')) > 0;
-    const priceStr = hasPrice ? ` · <b>${escapeXml(String(l.price))} MAD</b>` : '';
-    const meta = (l.sub || hasPrice) ? `<div class="kbl-m">${escapeXml(l.sub || '')}${priceStr}</div>` : '';
+    const priceStr = hasPrice ? `<b>${escapeXml(String(l.price))} MAD</b>` : '';
+    // `was` = l'ancien prix, barré, quand l'article est en promotion. On ne le
+    // pose que s'il est RÉELLEMENT plus haut que le prix imprimé : une étiquette
+    // qui barre un prix identique, ou plus bas, annonce une remise qui n'existe
+    // pas — et sur une vitrine, c'est un problème d'affichage des prix.
+    const wasNum = l.was == null ? NaN : parseFloat(String(l.was).replace(',', '.'));
+    const hasWas = hasPrice && Number.isFinite(wasNum) && wasNum > parseFloat(String(l.price).replace(',', '.'));
+    const wasStr = hasWas ? `<s>${escapeXml(String(l.was))}</s>` : '';
+    const meta = (l.sub || hasPrice) ? `<div class="kbl-m${hasPrice ? ' has-price' : ''}"><span class="kbl-s">${escapeXml(l.sub || '')}</span>${wasStr}${priceStr}</div>` : '';
     return `<div class="kbl">` +
              `<div class="kbl-head"><div class="kbl-t">${escapeXml(l.title || '')}</div>${meta}</div>` +
              `<div class="kbl-bc">${svg}</div>` +
@@ -477,7 +509,7 @@
     // WinAnsi-safe text: map common typographic chars to their WinAnsi byte, drop
     // anything else >255, escape PDF string metacharacters. (é/è/à… are ≤255 and
     // pass straight through since Latin-1 aligns with WinAnsi for them.)
-    const WA = { '—': '\x97', '–': '\x96', '‘': '\x91', '’': '\x92', '“': '\x93', '”': '\x94', '…': '\x85', '•': '\x95', '€': '\x80' };
+    const WA = { '·': '\x97', '–': '\x96', '‘': '\x91', '’': '\x92', '“': '\x93', '”': '\x94', '…': '\x85', '•': '\x95', '€': '\x80' };
     const tx = (s) => String(s == null ? '' : s).split('').map((c) => WA[c] || (c.charCodeAt(0) > 255 ? '?' : c)).join('').replace(/[\\()]/g, '\\$&');
     const clip = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '.' : s; };
     const wid = (s, sz, bold) => s.length * sz * (bold ? 0.56 : 0.52);   // rough Helvetica width
@@ -486,16 +518,30 @@
     flat.forEach((l) => {
       let enc = null; try { enc = encode(l.code, l.format); } catch (e) { enc = null; }
       let s = '';
-      const title = clip(l.title || '', 22);
-      if (title) s += 'BT /F2 11 Tf ' + cx(title, 11, true).toFixed(1) + ' ' + (PH - 13).toFixed(1) + ' Td (' + tx(title) + ') Tj ET\n';
+      const short = L.h <= 24;
+      const title = clip(l.title || '', short ? 20 : 22);
+      const titleSize = short ? 12 : 11;
+      const metaSize = short ? 22 : 9;
+      const numberSize = short ? 6.5 : 7;
+      if (title) s += 'BT /F2 ' + titleSize + ' Tf ' + cx(title, titleSize, true).toFixed(1) + ' ' + (PH - (short ? 9.5 : 13)).toFixed(1) + ' Td (' + tx(title) + ') Tj ET\n';
       const hasPrice = l.price != null && String(l.price).trim() !== '' && parseFloat(String(l.price).replace(',', '.')) > 0;
-      let meta = l.sub || '';
-      if (hasPrice) meta = meta ? (meta + '   ' + l.price + ' MAD') : (l.price + ' MAD');
-      if (meta) s += 'BT /F1 9 Tf ' + cx(meta, 9, false).toFixed(1) + ' ' + (PH - 25).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
+      /* Pas de barré possible ici (texte PDF nu), donc on l'écrit en toutes
+         lettres — et seulement sur les grandes étiquettes. Sur une 20 mm il n'y
+         a la place que d'UN nombre, et ce nombre doit être le prix à payer :
+         imprimer l'ancien à côté sans pouvoir le barrer serait pire que de ne
+         pas le mentionner du tout. */
+      const wasNum2 = l.was == null ? NaN : parseFloat(String(l.was).replace(',', '.'));
+      const hasWas2 = hasPrice && Number.isFinite(wasNum2) && wasNum2 > parseFloat(String(l.price).replace(',', '.'));
+      let meta = short && hasPrice ? (l.price + ' MAD') : (l.sub || '');
+      if (!short && hasPrice) meta = meta ? (meta + '   ' + l.price + ' MAD') : (l.price + ' MAD');
+      if (!short && hasWas2) meta += ' (au lieu de ' + l.was + ')';
+      if (meta) s += 'BT /F2 ' + metaSize + ' Tf ' + cx(meta, metaSize, true).toFixed(1) + ' ' + (PH - (short ? 30 : 25)).toFixed(1) + ' Td (' + tx(meta) + ') Tj ET\n';
       if (enc && enc.modules) {
         // Bars take whatever height the text leaves: a fixed 30 pt bar block
         // overlapped the text on 20 mm stock (pages only 56.7 pt tall).
-        const bits = enc.modules, pad = 8, mW = (PW - pad * 2) / bits.length, barY = 13.5, barH = Math.max(10, PH - 25 - 4 - barY);
+        const bits = enc.modules, pad = short ? 10 : 8, mW = (PW - pad * 2) / bits.length;
+        const barY = short ? 9 : 13.5;
+        const barH = short ? 12 : Math.max(10, PH - 29 - barY);
         s += '0 0 0 rg\n';
         let x = pad, run = 0;
         for (let i = 0; i <= bits.length; i++) {
@@ -503,7 +549,7 @@
           else { if (run > 0) { s += x.toFixed(2) + ' ' + barY + ' ' + (run * mW).toFixed(2) + ' ' + barH + ' re f\n'; x += run * mW; run = 0; } x += mW; }
         }
         const num = enc.format === 'ean13' ? enc.text.replace(/^(\d)(\d{6})(\d{6})$/, '$1 $2 $3') : enc.text;
-        s += 'BT /F1 7 Tf ' + cx(num, 7, false).toFixed(1) + ' 6 Td (' + tx(num) + ') Tj ET\n';
+        s += 'BT /F1 ' + numberSize + ' Tf ' + cx(num, numberSize, false).toFixed(1) + ' ' + (short ? '2' : '11') + ' Td (' + tx(num) + ') Tj ET\n';
       }
       const cNum = put('<< /Length ' + s.length + ' >>\nstream\n' + s + 'endstream');
       pageRefs.push(put('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + PW + ' ' + PH + '] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ' + cNum + ' 0 R >>'));
@@ -590,7 +636,9 @@
     }
   }
 
-  // labels: [{ title, sub, price, code, format }]. opts: { copies }
+  // labels: [{ title, sub, price, was, code, format }]. opts: { copies }
+  // `was` : ancien prix, barré, quand l'article part en promotion (ignoré s'il
+  // n'est pas strictement supérieur au prix imprimé).
   // When a printer is actively CONNECTED (Bluetooth or the network bridge) we send
   // ESC/POS straight to it. Otherwise clicking print opens the connect-a-printer
   // modal (with Imprimer / Enregistrer-en-PDF quick actions inside it).

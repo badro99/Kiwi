@@ -48,11 +48,11 @@ const catalogue = (products, variants) => JSON.stringify({ v: 1, products, varia
 
 const DB_ROWS = {
   merchant_config: [
-    { merchant: 'atlas-casa', name: 'Atlas Casa', type: 'boutique', account_id: ACC_A },
-    { merchant: 'atlas-marrakech', name: 'Atlas Marrakech', type: 'boutique', account_id: ACC_A },
-    { merchant: 'chez-rival', name: 'Chez Rival', type: 'boutique', account_id: ACC_B },
+    { merchant: 'atlas-casa', name: 'Atlas Casa', type: 'boutique', account_id: ACC_A, till_epoch: 0 },
+    { merchant: 'atlas-marrakech', name: 'Atlas Marrakech', type: 'boutique', account_id: ACC_A, till_epoch: 0 },
+    { merchant: 'chez-rival', name: 'Chez Rival', type: 'boutique', account_id: ACC_B, till_epoch: 0 },
     // Enregistré au compte A mais sans inventaire en base : le cas « je ne sais pas ».
-    { merchant: 'atlas-tanger', name: 'Atlas Tanger', type: 'boutique', account_id: ACC_A },
+    { merchant: 'atlas-tanger', name: 'Atlas Tanger', type: 'boutique', account_id: ACC_A, till_epoch: 0 },
   ],
   accounts: { [ACC_A]: { business: 'Atlas Casa' }, [ACC_B]: { business: 'Chez Rival' } },
   // God mode exige désormais une identité NOMMÉE et VIVANTE (auth/_lib.js →
@@ -106,8 +106,15 @@ function makeEnv() {
               const r = DB_ROWS.merchant_config.find((x) => x.merchant === args[0]);
               return r ? { account_id: r.account_id } : null;
             }
+            if (q.startsWith('SELECT till_epoch FROM merchant_config')) {
+              const r = DB_ROWS.merchant_config.find((x) => x.merchant === args[0]);
+              return r ? { till_epoch: r.till_epoch } : null;
+            }
             if (q.startsWith('SELECT business FROM accounts')) {
               return DB_ROWS.accounts[args[0]] || null;
+            }
+            if (q.startsWith('SELECT status, session_epoch FROM accounts')) {
+              return DB_ROWS.accounts[args[0]] ? { status: 'active', session_epoch: 0 } : null;
             }
             if (q.startsWith('SELECT id FROM operators')) {
               return DB_ROWS.operators.includes(args[0]) ? { id: args[0] } : null;

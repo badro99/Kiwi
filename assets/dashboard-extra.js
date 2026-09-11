@@ -395,11 +395,26 @@
       return;
     }
     const str = MARGINS_STR[trLang()] || MARGINS_STR.fr;
-    const header = `${str.product},${str.price},${str.cost},${str.marginHeader},${str.marginPctHeader},${str.sold}\n`;
+    /* Same cell treatment as every other CSV producer in the app. Two distinct
+     * hazards, both previously unhandled here:
+     *   1. A cell starting with = + - @ is executed as a formula by Excel and
+     *      Numbers. Prefixing an apostrophe neutralises it.
+     *   2. A product name containing a comma, quote or newline silently shifts
+     *      every following column. Quoting fixes it.
+     * The margins export predates the guard used elsewhere and never got it —
+     * the security test only checked that the *file* mentioned the pattern, and
+     * a different export in this same file happened to satisfy that. */
+    const cell = (c) => {
+      let s = String(c == null ? '' : c);
+      if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
+      return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const row = (arr) => arr.map(cell).join(',');
+    const header = row([str.product, str.price, str.cost, str.marginHeader, str.marginPctHeader, str.sold]) + '\n';
     const lines = PRODUCTS.map((p) => {
       const m = (p.price - p.cost).toFixed(2);
       const pct = Math.round(((p.price - p.cost) / p.price) * 100);
-      return `${p.name},${p.price},${p.cost},${m},${pct},${p.sold}`;
+      return row([p.name, p.price, p.cost, m, pct, p.sold]);
     }).join('\n');
     const blob = new Blob([header + lines], { type: 'text/csv' });
     const a = document.createElement('a');
@@ -689,35 +704,22 @@
   }
 
   /* ── tiny DOM builders ── */
-  const SVGNS = 'http://www.w3.org/2000/svg';
   function el(tag, cls, txt) {
     const e = document.createElement(tag);
     if (cls) e.className = cls;
     if (txt != null) e.textContent = txt;
     return e;
   }
-  function svg(size, sw, shapes) {
-    const s = document.createElementNS(SVGNS, 'svg');
-    s.setAttribute('width', size); s.setAttribute('height', size);
-    s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('fill', 'none');
-    s.setAttribute('stroke', 'currentColor'); s.setAttribute('stroke-width', sw);
-    s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round');
-    shapes.forEach((sh) => {
-      const node = document.createElementNS(SVGNS, sh.t);
-      Object.keys(sh).forEach((k) => { if (k !== 't') node.setAttribute(k, sh[k]); });
-      s.appendChild(node);
-    });
-    return s;
+  function icon(name, size, cls) {
+    const node = document.createElement('i');
+    node.setAttribute('data-lucide', name);
+    node.setAttribute('width', size);
+    node.setAttribute('height', size);
+    if (cls) node.setAttribute('class', cls);
+    return node;
   }
-  const calIcon = () => svg(15, 2, [
-    { t: 'rect', x: 3, y: 4, width: 18, height: 18, rx: 2 },
-    { t: 'path', d: 'M16 2v4M8 2v4M3 10h18' },
-  ]);
-  const checkIcon = () => {
-    const s = svg(16, 2.4, [{ t: 'path', d: 'M20 6L9 17l-5-5' }]);
-    s.setAttribute('class', 'ck');
-    return s;
-  };
+  const calIcon = () => icon('calendar', 15);
+  const checkIcon = () => icon('check', 16, 'ck');
 
   /* ── date helpers ── */
   const pad = (n) => String(n).padStart(2, '0');
@@ -948,7 +950,7 @@
         tipToastT: 'Prompt pourboire activé',
         tipToastD: '+10 % suggéré après 20h sur toutes les tables',
         helpToastT: 'Support Kiwi',
-        helpToastD: 'WhatsApp +212 5 20 80 80 80 · 7j/7'
+        helpToastD: "Ouvrez le Centre d'aide pour une demande suivie"
     },
     en: {
         exportToast: 'CSV export downloaded',
@@ -958,7 +960,7 @@
         tipToastT: 'Tip prompt enabled',
         tipToastD: '+10% suggested after 8pm on all tables',
         helpToastT: 'Kiwi Support',
-        helpToastD: 'WhatsApp +212 5 20 80 80 80 · 7/7'
+        helpToastD: 'Open the Help centre to create a tracked request'
     },
     ar: {
         exportToast: 'تم تنزيل تصدير CSV',
@@ -968,42 +970,50 @@
         tipToastT: 'تم تفعيل موجه الإكرامية',
         tipToastD: 'مقترح +10% بعد الساعة 8 مساءً على جميع الطاولات',
         helpToastT: 'دعم كيوي',
-        helpToastD: 'واتساب +212 5 20 80 80 80 · 7/7'
+        helpToastD: 'افتح مركز المساعدة لإنشاء طلب قابل للتتبع'
     }
   };
 
-
-  /* Export — download a real CSV summary of the dashboard's current period. */
-  handlers['export'] = () => {
-    const lang = trLang();
-    /* MARGINS_STR lives in the first IIFE — referencing it here threw a
-     * ReferenceError that silently killed the Export button. */
-    const miscStr = MISC_STR[lang] || MISC_STR.fr;
-
-    const txt = (sel) => ((document.querySelector(sel) || {}).textContent || '').replace(/\s+/g, ' ').trim();
-    // Derive the business name from the real session / venue (never the Café Atlas
-    // demo literal) so a real merchant's export isn't titled with the demo.
-    const bizName = ((window.KiwiMe && window.KiwiMe.business) || txt('[data-loc-name]') || '').trim();
-    const rows = [
-      [bizName ? `Kiwi, Tableau de bord · ${bizName}` : 'Kiwi, Tableau de bord'],
-      ['Période', txt('[data-dr-label]') || "Aujourd'hui"],
-      ['Encaissé', txt('[data-hero-amount]')],
-      ['Net après Kiwi', txt('.hero-breakdown .v') || txt('[data-hero-net]')],
-      [],
-      ['Indicateur', 'Valeur'],
-    ];
-    document.querySelectorAll('.kpi-m, .kpi-c').forEach((k) => {
-      const l = ((k.querySelector('.l') || {}).textContent || '').replace(/\s+/g, ' ').trim();
-      const v = ((k.querySelector('.v') || {}).textContent || '').replace(/\s+/g, ' ').trim();
-      if (l && v) rows.push([l, v]);
+  /* Le rapport est un module autonome chargé à l'exécution : dashboard.html
+   * reste intact et le coût du document imprimable ne bloque pas le premier
+   * rendu. On amorce tout de suite le chargement ; au clic, une fenêtre est
+   * néanmoins ouverte synchroniquement pour ne pas tomber sous le bloqueur de
+   * popups si le réseau local n'a pas encore livré le script. */
+  let reportReady = null;
+  const ensureReport = () => {
+    if (window.KiwiReport) return Promise.resolve(window.KiwiReport);
+    if (reportReady) return reportReady;
+    reportReady = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = new URL('/assets/report.js?v=2', document.baseURI).href;
+      script.async = true;
+      script.dataset.kiwiReport = '1';
+      script.onload = () => window.KiwiReport ? resolve(window.KiwiReport) : reject(new Error('KiwiReport unavailable'));
+      script.onerror = reject;
+      document.head.appendChild(script);
     });
-    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
-    a.download = miscStr.exportToastD;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    if (toast) toast(miscStr.exportToast, { type: 'success', desc: miscStr.exportToastD });
+    return reportReady;
+  };
+  ensureReport().catch(() => {});
+
+  handlers['export'] = (trigger) => {
+    /* pages.js utilise la même action dans le tiroir Transactions. Il
+     * garde donc son sens propre : CSV des ventes datées, pas rapport général. */
+    const transactionExport = !!(trigger && trigger.closest && trigger.closest('.kiwi-drawer') && trigger.closest('.kiwi-drawer').querySelector('.p-table'));
+    if (transactionExport) {
+      ensureReport().then((report) => report.downloadTransactions()).catch(() => {
+        const str = MISC_STR[trLang()] || MISC_STR.fr;
+        toast && toast(str.exportToast, { type: 'warn', desc: str.exportToastD });
+      });
+      return;
+    }
+
+    const popup = window.open('', '_blank');
+    ensureReport().then((report) => report.open(popup)).catch(() => {
+      try { if (popup) popup.close(); } catch (_) {}
+      const str = MISC_STR[trLang()] || MISC_STR.fr;
+      toast && toast(str.exportToast, { type: 'warn', desc: str.exportToastD });
+    });
   };
 
   /* Live-feed "Filtrer" + "Tout voir" → open the full Commandes drawer, which
@@ -1025,6 +1035,7 @@
     toast && toast(str.tipToastT, { type: 'success', desc: str.tipToastD });
   }
   handlers['help-whatsapp'] = () => {
+    if (window.KiwiHelp && window.KiwiHelp.openContact) { window.KiwiHelp.openContact('whatsapp'); return; }
     const str = MISC_STR[trLang()] || MISC_STR.fr;
     toast && toast(str.helpToastT, { type: 'info', desc: str.helpToastD });
   }

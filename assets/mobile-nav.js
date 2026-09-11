@@ -76,7 +76,7 @@
     topbarInner.insertAdjacentHTML('afterbegin',
       `<button class="kw-hamburger" type="button" aria-label="Ouvrir le menu"
                aria-controls="kw-sidebar" aria-expanded="false">${I.menu}</button>
-       <button class="kw-topbar-brand" type="button" aria-label="Revenir en haut du tableau de bord">kiwi<i></i></button>`);
+       <button class="kw-topbar-brand" type="button" aria-label="Revenir en haut du tableau de bord"><img src="assets/kiwi-newlogo-inverse.svg" alt=""></button>`);
     const hamburger = topbarInner.querySelector('.kw-hamburger');
     /* Tapping the centred wordmark returns to the home dashboard —
      * from any sub-page, not just a scroll-to-top. */

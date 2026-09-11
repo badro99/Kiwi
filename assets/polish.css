@@ -106,7 +106,7 @@ html[data-theme="dark"] .nav.scrolled { background: rgba(11,18,16,0.94); }
 .press-logos { display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 40px 60px; max-width: 1100px; margin: 0 auto; padding: 0 40px; }
 .press-logos .plogo { filter: grayscale(100%); opacity: 0.55; transition: transform 220ms, opacity 220ms, background-color 220ms, border-color 220ms, color 220ms, box-shadow 220ms; font-family: var(--sans); font-weight: 700; letter-spacing: -0.02em; color: var(--ink); display: flex; align-items: center; gap: 6px; }
 .press-logos .plogo:hover { filter: grayscale(0%); opacity: 1; }
-.press-logos .plogo.telquel { font-family: var(--serif); font-style: italic; font-size: 28px; }
+.press-logos .plogo.telquel { font-family: var(--serif); font-style:normal; font-size: 28px; }
 .press-logos .plogo.eco { font-size: 18px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 800; }
 .press-logos .plogo.hesp { font-size: 20px; font-weight: 900; letter-spacing: -0.03em; }
 .press-logos .plogo.wamda { font-size: 26px; font-weight: 700; color: #E5007A; letter-spacing: -0.04em; }

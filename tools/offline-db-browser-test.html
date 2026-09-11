@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Kiwi offline database browser test</title>
+<button id="run" type="button">Run offline database tests</button>
+<pre id="result">Not run</pre>
+<script src="../assets/vendor/dexie.min.js"></script>
+<script src="../assets/offline-db.js?v=3"></script>
+<script>
+(function () {
+  'use strict';
+  var output = document.getElementById('result');
+  var run = document.getElementById('run');
+  function assert(value, message) { if (!value) throw new Error(message); }
+  function line(message) { output.textContent += '\n✓ ' + message; }
+
+  run.addEventListener('click', async function () {
+    run.disabled = true;
+    output.textContent = 'Running';
+    var O = window.KiwiOffline;
+    var suffix = Date.now() + '-' + Math.random().toString(36).slice(2);
+    var tenantA = 'test-a-' + suffix;
+    var tenantB = 'test-b-' + suffix;
+    var idA = 'sale-a-' + suffix;
+    var idB = 'sale-b-' + suffix;
+    try {
+      assert(await O.ready(), 'database opens');
+      line('database opens');
+
+      var first = await O.enqueue('sale', tenantA, { id: idA, amount: 10 }, { id: idA });
+      var duplicate = await O.enqueue('sale', tenantA, { id: idA, amount: 99 }, { id: idA });
+      assert(first.ok && !first.duplicate && duplicate.duplicate, 'stable id deduplicates');
+      line('stable command ids deduplicate');
+
+      await O.enqueue('sale', tenantB, { id: idB, amount: 20 }, { id: idB });
+      var aRows = await O.list('sale', tenantA);
+      var bRows = await O.list('sale', tenantB);
+      assert(aRows.length === 1 && bRows.length === 1 && aRows[0].payload.amount === 10, 'tenant isolation');
+      line('merchant queues are isolated');
+
+      var lease = await O.claim('sale', tenantA);
+      var competing = await O.claim('sale', tenantA);
+      assert(lease && lease.id === idA && !competing, 'lease prevents double send');
+      line('a second tab cannot claim an in-flight receipt');
+
+      assert(!await O.acknowledge(idA, 'wrong-lease'), 'wrong lease rejected');
+      assert(await O.acknowledge(idA, lease.leaseToken), 'lease ack');
+      assert((await O.stats('sale', tenantA)).total === 0, 'ack removes');
+      line('only the lease owner can acknowledge delivery');
+
+      var blockedLease = await O.claim('sale', tenantB);
+      await O.reject(idB, blockedLease.leaseToken, { permanent: true, status: 422, error: 'test' });
+      var blocked = await O.stats('sale', tenantB);
+      assert(blocked.blocked === 1 && blocked.pending === 0, 'permanent rejection quarantined');
+      line('permanent API rejection is retained and quarantined');
+
+      var legacyKey = 'kiwiTestLegacy-' + suffix;
+      var legacyId = 'legacy-' + suffix;
+      localStorage.setItem(legacyKey, JSON.stringify([{ id: legacyId, merchant: tenantA, amount: 31, ts: Date.now() }]));
+      await O.migrateLegacy(legacyKey, 'sale', function (row) {
+        return { id: row.id, tenant: row.merchant, payload: row, createdAt: row.ts };
+      });
+      assert(localStorage.getItem(legacyKey) == null, 'legacy retired after commit');
+      assert((await O.list('sale', tenantA)).some(function (row) { return row.id === legacyId; }), 'legacy copied');
+      line('legacy localStorage queue migrates atomically');
+
+      output.dataset.status = 'passed';
+      output.textContent += '\n\nPASSED';
+    } catch (err) {
+      output.dataset.status = 'failed';
+      output.textContent += '\n\nFAILED: ' + (err && err.message || err);
+    } finally {
+      run.disabled = false;
+    }
+  });
+})();
+</script>
+</html>

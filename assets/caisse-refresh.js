@@ -75,6 +75,7 @@
   function real() {
     try {
       if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return true;
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.isPaired === 'function') return window.KiwiPlatform.isPaired();
       return !!JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
     } catch (_) { return false; }
   }
@@ -180,8 +181,8 @@
     var b = document.createElement('button');
     b.type = 'button';
     b.className = (className ? className + ' ' : '') + 'kx-refresh';
-    b.title = 'Recharger la caisse';
-    b.setAttribute('aria-label', 'Recharger la page de la caisse');
+    b.title = 'Recharger la caisse · dépannage uniquement, synchronisation automatique';
+    b.setAttribute('aria-label', 'Recharger la page de la caisse · dépannage');
     b.innerHTML = ICON + '<span>' + label + '</span>';
     b.addEventListener('click', function () { click(b); });
     return b;
@@ -215,4 +216,18 @@
   }
 
   window.KiwiCaisseRefresh = { run: run, mount: mount, message: message, reload: reloadPage };
+  var lastAutoRefresh = 0;
+  function autoRefresh() {
+    if (navigator.onLine === false || document.hidden || Date.now() - lastAutoRefresh < 10000) return;
+    // Do not turn a support inspection into service activity.
+    if (new URLSearchParams(location.search).get('op') === '1' && !window.KiwiTillServiceReady) return;
+    lastAutoRefresh = Date.now();
+    run(); // Reconcile in place: never reload a cashier's open basket.
+  }
+  window.addEventListener('online', autoRefresh);
+  window.addEventListener('focus', autoRefresh);
+  document.addEventListener('visibilitychange', autoRefresh);
+  document.addEventListener('kiwi-paired', autoRefresh);
+  document.addEventListener('kiwi:caisse-service-ready', autoRefresh);
+  window.setInterval(autoRefresh, 30000);
 })();
