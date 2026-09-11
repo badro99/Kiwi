@@ -13432,6 +13432,24 @@
 
         let matched = false;
 
+        /* A refund created locally can remain in this caisse journal even when
+           its upload never reached D1. If God Mode authoritatively removes the
+           original test receipt, that local counter-entry must follow it;
+           otherwise the drawer is reduced by money that never left it. The
+           complete void list is sent on every poll, so this is reversible when
+           the original receipt is restored too. */
+        let linkedRefundMatched = false;
+        if (e.kind === 'refund' && hit && e.refundOf) {
+          const originalRef = String(e.refundOf || '').trim();
+          if (originalRef && isFormattedFiscal(originalRef) && hit(originalRef)) {
+            const originalVoidTs = voidMapByRef.get(originalRef);
+            if (originalVoidTs == null || saleTs <= originalVoidTs + 60000) {
+              matched = true;
+              linkedRefundMatched = true;
+            }
+          }
+        }
+
         // 1. Exact unique ID match (authoritative: independent of untrusted client clock)
         if ((entryId && ids.has(entryId)) || (serverId && ids.has(serverId))) {
           matched = true;
@@ -13470,7 +13488,7 @@
             (entryId && voidMapById.has(entryId)) ||
             (serverId && voidMapById.has(serverId))
           );
-          const newAuthority = isServerConfirmed ? 'server' : 'ref';
+          const newAuthority = isServerConfirmed ? 'server' : (linkedRefundMatched ? 'linked-ref' : 'ref');
 
           if (!e.voided || (isServerConfirmed && !e.voidConfirmed)) {
             e.voided = true;
@@ -13483,13 +13501,28 @@
               if (entryId) activeCloudSaleIds.delete(entryId);
               if (serverId) activeCloudSaleIds.delete(serverId);
             }
-            try { window.KiwiInventoryConsumption?.reverse?.(e.ref, 'Vente sortie des livres'); } catch (_) {}
+            if (e.kind !== 'refund') {
+              try { window.KiwiInventoryConsumption?.reverse?.(e.ref, 'Vente sortie des livres'); } catch (_) {}
+            }
             touched++;
           }
           return;
         }
 
         // --- At this point, matched === false ---
+
+        /* Unlike an ordinary reference void, linked-ref represents the state
+           of the original receipt. Its disappearance from this complete list
+           is explicit restoration evidence for the local refund as well. */
+        if (e.voided && e.voidAuthority === 'linked-ref') {
+          e.voided = false;
+          delete e.voidConfirmed;
+          delete e.voidAuthority;
+          delete e.voidTs;
+          delete e.voidAt;
+          touched++;
+          return;
+        }
 
         // A confirmed server void MUST NEVER be cleared by an empty feed, partial feed, or feed omission.
         // It remains durable unless explicit restoration evidence is provided (restoredIds).

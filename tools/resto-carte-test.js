@@ -333,6 +333,12 @@ eq(runVoids(J, ['AB-1'], { real: false }).touched, 0, 'la démo ne réconcilie r
    rembourserait une vente qui n'existe plus. */
 ok(/if \((?:!e \|\| )?e\.voided\) continue;/.test(caisse), 'journalTotals() saute les ventes retirées');
 ok(/journal\.filter\(e => !e\.voided\)\.reverse\(\)/.test(caisse), 'le journal affiché les cache');
+ok(/e\.kind === 'refund'[\s\S]{0,500}?linkedRefundMatched = true/.test(caisse),
+  'un remboursement local suit la sortie God Mode de son ticket original');
+ok(/e\.voidAuthority === 'linked-ref'[\s\S]{0,240}?e\.voided = false/.test(caisse),
+  'la remise du ticket original restaure aussi son remboursement local');
+ok(/if \(e\.kind !== 'refund'\)[\s\S]{0,180}?KiwiInventoryConsumption/.test(caisse),
+  'neutraliser un remboursement local ne rend jamais le stock une deuxième fois');
 
 /* ── 6. les boutons d'impression impriment ─────────────────────────────────── */
 
