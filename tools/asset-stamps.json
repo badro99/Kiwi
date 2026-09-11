@@ -132,8 +132,8 @@
     "sha": "18979319d717bb43"
   },
   "assets/caisse-pwa.js": {
-    "v": "501",
-    "sha": "a7266457b570c387"
+    "v": "502",
+    "sha": "790e01d30757fc30"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -157,7 +157,7 @@
   },
   "assets/catalog-import.js": {
     "v": "4",
-    "sha": "f8afe9da84d5e66c"
+    "sha": "f0339e09b68cccff"
   },
   "assets/channel-link.js": {
     "v": "202608272301",
@@ -208,8 +208,8 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "495",
-    "sha": "c45b648c0ada50c3"
+    "v": "496",
+    "sha": "58c9825105d5a917"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -264,8 +264,8 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/employee-live.js": {
-    "v": "494",
-    "sha": "d557850872f53f62"
+    "v": "495",
+    "sha": "7b481879f6c1e8bb"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -673,7 +673,7 @@
   },
   "assets/pos-maison.js": {
     "v": "22",
-    "sha": "b6d1beb6d6b5e5a2"
+    "sha": "82ff96bc09f237f8"
   },
   "assets/pos-mobile.css": {
     "v": "3",

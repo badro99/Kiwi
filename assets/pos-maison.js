@@ -537,8 +537,8 @@
       motif: 'Retour cherbil perlé · 37', at: new Date(NOW - 26 * 3600 * 1000), until: new Date(NOW + 182 * 24 * 3600 * 1000), from: '1188' },
   ] : [];
   let avSeq = 2032;
-  /* Ticket #0019 · expiry is ENFORCED, not just displayed: expired bons never
-   * list, never apply, never deduct. Missing until = old bon = still valid. */
+  /* A voucher is spendable only while it has balance and is not expired. Keep
+     the rule in one function so list, selection and final deduction agree. */
   const avoirExpired = (a) => !!(a && a.until && new Date(a.until).getTime() < Date.now());
   const activeAvoirs = () => AVOIRS.filter((a) => a.balance > 0 && !avoirExpired(a));
 
@@ -1110,7 +1110,36 @@
   function promoFor(pid) {
     const p = P[pid];
     if (!p || !window.KiwiPromos) return null;
-    try { return window.KiwiPromos.priceFor(p, { stock: stockOf(p) }); } catch (_) { return null; }
+    try { return window.KiwiPromos.priceFor(p, { stock: promoStockOf(p) }); } catch (_) { return null; }
+  }
+
+  /* Promotions are authored against the catalogue unit. A service sold as one
+     loose piece has a different unit price, so convert the promotion using its
+     own kind instead of comparing a full-service price with a piece price. */
+  function pieceUnitPrice(p) {
+    if (!p) return 0;
+    return Number.isFinite(+p.piecePriceMAD)
+      ? +p.piecePriceMAD
+      : Math.round((+p.price || 0) / Math.max(1, +p.servicePieces || 12));
+  }
+  function promoForLine(ln) {
+    const live = promoFor(ln && ln.pid);
+    if (!live || !ln || !ln.isPiece) return live;
+    const p = P[ln.pid];
+    const base = Number.isFinite(+ln.customPrice) ? +ln.customPrice : pieceUnitPrice(p);
+    const per = Math.max(1, +(ln.servicePieces || (p && p.servicePieces)) || 12);
+    const rule = live.promo || {};
+    let price;
+    if (rule.kind === 'percent') price = Math.round(base * (100 - (+rule.value || 0)) / 100);
+    else if (rule.kind === 'amount') price = base - (+rule.value || 0) / per;
+    else if (rule.kind === 'fixed') price = live.price / per;
+    else price = base * (live.price / Math.max(1, live.was));
+    price = Math.max(0, Math.min(base, Math.round(price)));
+    return { ...live, was: base, price, off: base - price };
+  }
+  function promoStockOf(p) {
+    if (!p) return 0;
+    return stockOf(p) + sizesOf(p).reduce((sum, size) => sum + looseOf(p.id, size), 0);
   }
   /* ── LE PRIX D'UNE LIGNE : LE MEILLEUR DES DEUX ───────────────────────────
    * Le prix promo est estampillé sur la ligne quand elle entre sur le ticket
@@ -1132,15 +1161,13 @@
    * jours plus tard : la ligne de vente porte le prix réellement payé. */
   function lineDeal(ln) {
     const stamp = (ln && ln.promo && Number.isFinite(+ln.promo.price)) ? ln.promo : null;
-    const live = promoFor(ln.pid);
+    const live = promoForLine(ln);
     const p = P[ln.pid];
     const full = (ln.customPrice != null && Number.isFinite(+ln.customPrice))
       ? +ln.customPrice
       : (p ? p.price : (ln.unit || 0));
     let best = { price: full, promo: null };
     if (stamp && stamp.price < best.price) best = { price: stamp.price, promo: stamp };
-    /* Ticket #0017 · no isPiece carve-out: the sheet shows the live promo per
-     * piece, so the charge must use it too. Displayed price == charged price. */
     if (live && live.price < best.price) best = { price: live.price, promo: { price: live.price, badge: live.badge, name: live.promo.name, id: live.promo.id } };
     return best;
   }
@@ -1727,7 +1754,7 @@
   }
 
   function cardFlag(p) {
-    const st = stockOf(p);
+    const st = p && p.format === 'service' ? sellableStockOf(p) : stockOf(p);
     if (st === 0) return '<span class="mz-card-flag out">épuisé</span>';
     if (st <= 2) return '<span class="mz-card-flag low">stock bas</span>';
     if (p.flag) return `<span class="mz-card-flag">${esc(p.flag)}</span>`;
@@ -1770,7 +1797,7 @@
       <div class="mz-grid">${r.items.map((p) => {
         const pr = promoFor(p.id);
         return `
-        <button class="mz-card ${stockOf(p) === 0 ? 'is-out' : ''}${pr ? ' is-promo' : ''}" data-mz-item="${p.id}" style="--i:${i++}">
+        <button class="mz-card ${(p.format === 'service' ? sellableStockOf(p) : stockOf(p)) === 0 ? 'is-out' : ''}${pr ? ' is-promo' : ''}" data-mz-item="${p.id}" style="--i:${i++}">
           <span class="mz-card-art">${artOf(p.art)}</span>
           ${p.marque ? `<span class="mz-card-brand">${esc(p.marque)}</span>` : ''}
           ${isConsignedProduct(p) ? `<span class="mz-consign-tag" title="Catégorie B">B</span>` : ''}
@@ -2080,15 +2107,27 @@
     stockAdd(pid, size, qty);
     return qty;
   }
-  /* Ticket #0016 · the non-mutating mirror of holdStock: UI gates (sheet add,
-   * steppers, size picks) must ask the same question the take will ask, or
-   * loose pieces read as épuisé while takeLoose would succeed. */
+
+  function stockAvailable(pid, size, isPiece) {
+    const p = P[pid];
+    if (!p) return 0;
+    return sellsLoose(p, isPiece)
+      ? looseOf(pid, size) + (p.sizes[size] || 0) * piecesPerSet(p)
+      : (p.sizes[size] || 0);
+  }
+
+  function sellableStockOf(p) {
+    if (!p) return 0;
+    return sizesOf(p).reduce((sum, size) => sum + stockAvailable(p.id, size, true), 0);
+  }
+
+  /* UI mirror of holdStock. It must use the same loose-piece arithmetic or a
+     product with loose stock appears sold out even though the sale can work. */
   function canHoldStock(pid, size, qty, isPiece) {
     const p = P[pid];
     if (!p) return false;
     if (sellsLoose(p, isPiece)) {
-      const per = piecesPerSet(p);
-      return looseOf(pid, size) + (p.sizes[size] || 0) * per >= qty;
+      return looseOf(pid, size) + (p.sizes[size] || 0) * piecesPerSet(p) >= qty;
     }
     return (p.sizes[size] || 0) >= qty;
   }
@@ -2109,8 +2148,8 @@
       toast(`${p.name} · ${size}, stock insuffisant`);
       return false;
     }
-    const pr = promoFor(pid);
-    const stamp = (pr && !isPiece) ? { price: pr.price, badge: pr.badge, name: pr.promo.name, id: pr.promo.id } : null;
+    const pr = promoForLine({ pid, isPiece, customPrice, servicePieces: p.servicePieces });
+    const stamp = pr ? { price: pr.price, badge: pr.badge, name: pr.promo.name, id: pr.promo.id } : null;
     const same = state.ticket.lines.find((l) => l.pid === pid && l.size === size && l.color === color && l.remise === (cfg.remise || 0) && l.isPiece === isPiece && l.registryId === (cfg.registryId || null));
     if (same) {
       same.qty += qty;
@@ -2159,13 +2198,13 @@
   function renderSheet() {
     const p = P[sheet.pid];
     const c = ticketClient();
-    const shPromo = promoFor(sheet.pid);
-    let shBase = shPromo ? shPromo.price : p.price;
-    if (p.format === 'service' && sheet.format === 'piece') {
-      shBase = p.piecePriceMAD || Math.round(shBase / (p.servicePieces || 12));
-    }
-    const unit = Math.round(shBase * (100 - sheet.remise) / 100);
     const sheetPiece = p.format === 'service' && sheet.format === 'piece';
+    const pieceBase = sheetPiece ? pieceUnitPrice(p) : null;
+    const shPromo = promoForLine({ pid: sheet.pid, isPiece: sheetPiece, customPrice: pieceBase, servicePieces: p.servicePieces });
+    const servicePromo = promoForLine({ pid: sheet.pid, isPiece: false });
+    let shBase = shPromo ? shPromo.price : p.price;
+    if (sheetPiece && !shPromo) shBase = pieceBase;
+    const unit = Math.round(shBase * (100 - sheet.remise) / 100);
     const canAdd = canHoldStock(sheet.pid, sheet.size, 1, sheetPiece);
     const el = $('#mz-sheetm', root);
     el.innerHTML = `
@@ -2188,7 +2227,7 @@
           <span class="per ${sheet.remise ? 'rem' : ''}" id="mz-sheet-per">${sheet.remise ? `−${sheet.remise} % · accord gérante` : `${unit} MAD × ${sheet.qty}`}</span>
         </span>
       </div>
-      ${(shPromo && sheet.format !== 'piece') ? `
+      ${shPromo ? `
       <div class="mz-sheet-promo">
         <i data-lucide="tag"></i>
         <span class="l"><b>${esc(shPromo.promo.name)}</b><span>${esc(shPromo.badge)} · ${fmtMAD(shPromo.price)} au lieu de ${fmtMAD(shPromo.was)}</span></span>
@@ -2200,11 +2239,11 @@
         <div class="mz-seg" id="mz-format-seg">
           <button class="mz-seg-it ${sheet.format !== 'piece' ? 'on' : ''}" data-mz-format="service">
             Service complet (${p.servicePieces || 18} pcs)
-            <small>${fmtMAD(shPromo ? shPromo.price : p.price)}</small>
+            <small>${fmtMAD(servicePromo ? servicePromo.price : p.price)}</small>
           </button>
           <button class="mz-seg-it ${sheet.format === 'piece' ? 'on' : ''}" data-mz-format="piece">
             À la pièce (1 unité)
-            <small>${fmtMAD(p.piecePriceMAD || Math.round(p.price / (p.servicePieces || 12)))}</small>
+            <small>${fmtMAD(pieceUnitPrice(p))}</small>
           </button>
         </div>
         ${(() => {
@@ -2221,10 +2260,10 @@
         <div class="mz-f-lbl">${sizeWord(p)} <span class="opt">· stock par modèle en direct</span></div>
         <div class="mz-seg" data-lens-demo id="mz-size-seg">
           ${sizesOf(p).map((s) => {
-            const st = p.sizes[s];
+            const st = stockAvailable(p.id, s, sheetPiece);
             const usual = !sheet.exchange && c && p.kind === 'taille' && s === c.taille;
             return `<button class="mz-seg-it ${s === sheet.size ? 'on' : ''}" data-lens-item data-mz-size="${esc(s)}" ${st === 0 ? 'disabled' : ''}>
-              ${usual ? '<span class="mz-seg-usual">habituelle</span>' : ''}${esc(s)}<small>${st === 0 ? 'épuisé' : `${st} en stock`}</small></button>`;
+              ${usual ? '<span class="mz-seg-usual">habituelle</span>' : ''}${esc(s)}<small>${st === 0 ? 'épuisé' : `${st} ${sheetPiece ? 'pièce' + (st > 1 ? 's' : '') : 'en stock'}`}</small></button>`;
           }).join('')}
         </div>
       </div>
@@ -2262,10 +2301,10 @@
       </div>`;
 
     const refreshPrice = () => {
-      let bPrice = shPromo ? shPromo.price : p.price;
-      if (p.format === 'service' && sheet.format === 'piece') {
-        bPrice = p.piecePriceMAD || Math.round(bPrice / (p.servicePieces || 12));
-      }
+      const piece = p.format === 'service' && sheet.format === 'piece';
+      const base = piece ? pieceUnitPrice(p) : null;
+      const activePromo = promoForLine({ pid: sheet.pid, isPiece: piece, customPrice: base, servicePieces: p.servicePieces });
+      const bPrice = activePromo ? activePromo.price : (piece ? base : p.price);
       const u = Math.round(bPrice * (100 - sheet.remise) / 100);
       $('#mz-sheet-total', el).textContent = fmtMAD(u * sheet.qty);
       $('#mz-sheet-per', el).textContent = sheet.remise ? `−${sheet.remise} % · accord gérante` : `${u} MAD × ${sheet.qty}`;
@@ -2282,8 +2321,12 @@
         const b = e.target.closest('[data-mz-format]');
         if (!b) return;
         sheet.format = b.dataset.mzFormat;
-        $$('[data-mz-format]', fmtSeg).forEach((x) => x.classList.toggle('on', x === b));
-        refreshPrice();
+        const piece = p.format === 'service' && sheet.format === 'piece';
+        if (!canHoldStock(sheet.pid, sheet.size, 1, piece)) {
+          const next = sizesOf(p).find((s) => canHoldStock(sheet.pid, s, 1, piece));
+          if (next) sheet.size = next;
+        }
+        renderSheet(); icons(); lens();
       };
     }
 
@@ -2291,7 +2334,9 @@
       const b = e.target.closest('[data-mz-size]');
       if (!b || b.disabled) return;
       sheet.size = b.dataset.mzSize || b.dataset.mzSize;
-      if (sheet.qty > (p.sizes[sheet.size] || 0)) sheet.qty = Math.max(1, p.sizes[sheet.size]);
+      const piece = p.format === 'service' && sheet.format === 'piece';
+      const maxQty = stockAvailable(p.id, sheet.size, piece);
+      if (sheet.qty > maxQty) sheet.qty = Math.max(1, maxQty);
       $$('[data-mz-size]', el).forEach((x) => x.classList.toggle('on', x === b));
       refreshPrice();
     };
@@ -2300,14 +2345,8 @@
     if (qMinus) qMinus.onclick = () => { if (sheet.qty > 1) { sheet.qty--; refreshPrice(); } };
     const qPlus = $('#mz-qty-plus', el);
     if (qPlus) qPlus.onclick = () => {
-      /* Ticket #0016 · cap on loose-aware availability, not whole sets: with
-       * 0 sets but loose pieces (or 1 set for 2 wanted pieces) the + must work
-       * exactly while holdStock would succeed. */
       const piece = p.format === 'service' && sheet.format === 'piece';
-      const per = piece ? Math.max(1, +p.servicePieces || 1) : 1;
-      const maxQty = piece
-        ? looseOf(sheet.pid, sheet.size) + (p.sizes[sheet.size] || 0) * per
-        : (p.sizes[sheet.size] || 0);
+      const maxQty = stockAvailable(p.id, sheet.size, piece);
       if (sheet.qty >= maxQty) { toast(`${p.name} · ${sheet.size}, ${maxQty} en stock, pas plus`); return; }
       sheet.qty++; refreshPrice();
     };
@@ -3910,10 +3949,6 @@
     const oldP = P[ln.pid] || { name: ln.name || 'Article retiré du catalogue', art: '' };
     const newP = P[newPid];
     if (!newP) { toast('Article de remplacement introuvable'); return; }
-    /* Ticket #0018 · the replacement is priced at its EFFECTIVE price today
-     * (live promo included, like a new sale), not the raw catalogue figure —
-     * while the return side stays the frozen amount actually paid (ln.unit),
-     * exactly as the comment above requires. */
     const newEff = lineDeal({ pid: newPid, isPiece: false }).price;
     const diff = newEff - ln.unit;
     const c = saleClient(sale);
@@ -3951,10 +3986,6 @@
     let applied = false;
     const apply = () => {
       if (applied) return true;
-      /* Ticket #0015 · take the replacement FIRST, through the same checked
-       * holdStock the sale lane uses: if another till sold the last unit
-       * meanwhile, abort with everything untouched instead of overselling.
-       * (holdStock moves local P only; the catalogue push below is separate.) */
       if (holdStock(newPid, newSize, 1, false) === false) {
         toast(`${newP.name} · ${newSize}, stock insuffisant pour l'échange`);
         return false;
@@ -3972,9 +4003,6 @@
     };
 
     $('#mz-exch-go', el).onclick = () => {
-      /* Ticket #0015 · pre-check before any money moves: the apply() guard
-       * below stays as race insurance, but the normal path never opens
-       * payment for a replacement that is already gone. */
       if (!canHoldStock(newPid, newSize, 1, false)) {
         toast(`${newP.name} · ${newSize}, stock insuffisant pour l'échange`);
         return;
@@ -4000,11 +4028,14 @@
             doneLabel: 'Terminer',
             waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
             onPaid: (parts) => {
-              /* Race insurance: the replacement sold out between selection
-               * and payment. The collected difference is still recorded
-               * truthfully, but no swap happens — the toast says to settle
-               * the exchange manually rather than pretending it went through. */
               const swapped = apply();
+              if (swapped) {
+                /* The positive-difference path is still a return: close the
+                   original line and write the immutable exchange record too,
+                   otherwise the same old item can be exchanged repeatedly. */
+                markLineReturned(ln, 1, `échange ${sale.id}`);
+                recordReturn(sale, [ex.idx], ln.unit, `Échange ${sale.id}`, 'echange', exchangeNumber);
+              }
               const rec = {
                 id: exchangeNumber, syncId: newSaleId(), at: new Date(), clientId: sale.clientId, by: STAFF.caissiere.name, kind: 'echange',
                 methods: parts.map((x) => x.m).join(' + '),
@@ -4047,9 +4078,6 @@
       } else if (diff < 0) {
         closeVeil('#mz-exch-veil');
         if (!apply()) { refreshOps(); return; }
-        /* Ticket #0014 · the swapped unit must die on the old line and leave
-         * an immutable trace, like every other return path: otherwise the old
-         * line stays reusable and mints another avoir indefinitely. */
         markLineReturned(ln, 1, `échange ${sale.id}`);
         persistDay();
         const av = issueAvoir(-diff, c, `Différence échange ${sale.id}`, sale.id);
@@ -4396,8 +4424,6 @@
     let avoirPart = null;                   /* { m:'avoir', amount, code } */
     const settled = [];                     /* les règlements déjà posés */
     let committed = false;                  /* double tap must never book twice */
-    /* Ticket #0019 · several bons can cover one ticket: codes already posed
-     * (current bon + settled ones) are excluded from re-selection. */
     const appliedAvoirCodes = () => {
       const codes = [];
       if (avoirPart) codes.push(avoirPart.code);
@@ -4492,7 +4518,7 @@
           </button>` : `
           <button class="mz-pay-opt is-mute" data-mz-m="avoir-none">
             <span class="ic"><i data-lucide="ticket"></i></span>
-            <span class="l"><b>Avoir</b><span>${avs.length && !remAvoirs.length ? 'Tous les bons sont déjà posés' : 'Aucun avoir actif en caisse'}</span></span>
+            <span class="l"><b>Avoir</b><span>${avs.length ? 'Tous les bons sont déjà posés' : 'Aucun avoir actif en caisse'}</span></span>
           </button>`}
         </div>`;
       icons(); closeBtns();
@@ -4586,8 +4612,6 @@
              une cliente qui voulait garder du solde sur son avoir en sortait
              avec un bon vidé, et il n'y avait pas de retour en arrière. */
           const applied = Math.min(av.balance, portion());
-          /* Ticket #0019 · chaining: a previously posed bon moves to settled
-           * instead of being silently replaced, so several bons cover a ticket. */
           if (avoirPart) settled.push({ m: 'avoir', amount: avoirPart.amount, code: avoirPart.code });
           avoirPart = { m: 'avoir', amount: applied, code: av.code };
           share = 1; custom = 0;   /* la part est consommée, comme dans settle() */
@@ -4683,24 +4707,20 @@
     const commit = () => {
       if (committed) return;
       const parts = (avoirPart ? [avoirPart] : []).concat(settled);
-      /* Ticket #0019 · atomic re-validation: every bon must still exist,
-       * unexpired, with enough balance — otherwise abort BEFORE deducting. */
-      for (const p of parts) {
-        if (p.m !== 'avoir') continue;
-        const av = AVOIRS.find((a) => a.code === p.code);
-        if (!av || avoirExpired(av) || !(av.balance >= p.amount)) {
-          toast(`Avoir ${p.code} inutilisable`, !av ? 'Bon introuvable en caisse.' : avoirExpired(av) ? 'Bon expiré entre-temps.' : 'Solde insuffisant, montants recalculés.');
+      for (const part of parts) {
+        if (part.m !== 'avoir') continue;
+        const av = AVOIRS.find((a) => a.code === part.code);
+        if (!av || avoirExpired(av) || !(av.balance >= part.amount)) {
+          toast(`Avoir ${part.code} inutilisable`, !av ? 'Bon introuvable en caisse.' : avoirExpired(av) ? 'Bon expiré entre-temps.' : 'Solde insuffisant, montants recalculés.');
           return;
         }
       }
       committed = true;
-      /* Ticket #0019 · deduct EVERY bon part, not just the first: tickets can
-       * now be covered by several bons. */
-      for (const p of parts) {
-        if (p.m !== 'avoir') continue;
-        const av = AVOIRS.find((a) => a.code === p.code);
+      for (const part of parts) {
+        if (part.m !== 'avoir') continue;
+        const av = AVOIRS.find((a) => a.code === part.code);
         if (av) {                              // garde-fou : un code introuvable (bon d'une autre caisse) ne fait plus planter l'encaissement
-          av.balance -= p.amount;
+          av.balance -= part.amount;
           persistAvoirs();                     // le solde entamé survit au rechargement
           toast(av.balance > 0 ? `${av.code}, reste ${fmtMAD(av.balance)} dessus` : `${av.code} consommé en totalité`);
         }

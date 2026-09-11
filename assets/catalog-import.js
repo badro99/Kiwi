@@ -353,6 +353,7 @@
        confirmation screen are the numbers that will actually happen. */
     const products = [...groups.values()];
     let newVariants = 0, updatedVariants = 0, newCodes = 0, missingCodes = 0;
+    const priceIssueLines = new Set(issues.filter((x) => /prix (illisible|manquant)/i.test(x.msg)).map((x) => x.line));
     products.forEach((g) => {
       const have = g.existing ? CAT.listVariants(g.existing.id) : [];
       g.variants.forEach((v) => {
@@ -368,6 +369,9 @@
       const sizes = g.variants.map((v) => String(v.size).toUpperCase());
       g.kind = sizes.every((s) => /^\d{2}$/.test(s) && +s >= 35 && +s <= 48) ? 'pointure'
         : (sizes.every((s) => s === 'TU') ? 'tu' : 'taille');
+      if (!g.existing && !isFinite(g.priceMAD) && !g.lines.some((line) => priceIssueLines.has(line))) {
+        issues.push({ line: g.lines[0], level: 'warn', msg: 'prix manquant · produit refusé à l’import' });
+      }
     });
 
     return {
@@ -375,7 +379,8 @@
       headerRaw: parsed.headerRaw, products, newCategories, issues,
       counts: {
         rows: parsed.rows.length,
-        newProducts: products.filter((g) => !g.existing).length,
+        newProducts: products.filter((g) => !g.existing && isFinite(g.priceMAD)).length,
+        refusedProducts: products.filter((g) => !g.existing && !isFinite(g.priceMAD)).length,
         updatedProducts: products.filter((g) => g.existing).length,
         newVariants, updatedVariants, newCodes, missingCodes,
         newCategories: newCategories.length,
@@ -412,9 +417,7 @@
           if (wantCat && prod.categoryId !== wantCat) patch.categoryId = wantCat;
           if (Object.keys(patch).length) CAT.updateProduct(prod.id, patch);
         } else {
-          /* Ticket #0024 · a new product without a readable price is REFUSED,
-           * never created at 0 MAD. An explicit 0 in the file still passes
-           * (deliberate freebie); only missing/unreadable prices stop here. */
+          /* A missing price is not a free product. Explicit 0 remains valid. */
           if (!isFinite(g.priceMAD)) { res.failed.push(g.name + ' · prix manquant ou illisible, produit non créé'); return; }
           prod = CAT.addProduct({
             name: g.name,
@@ -695,6 +698,7 @@
       const c = p.counts;
       const kpis = kind === 'boutique' ? [
         ['new', c.newProducts, c.newProducts === 1 ? 'article créé' : 'articles créés'],
+        ['warn', c.refusedProducts || 0, (c.refusedProducts || 0) === 1 ? 'article refusé' : 'articles refusés'],
         ['', c.updatedProducts, c.updatedProducts === 1 ? 'article mis à jour' : 'articles mis à jour'],
         ['new', c.newVariants, c.newVariants === 1 ? 'variante' : 'variantes'],
         ['', c.newCodes, c.newCodes === 1 ? 'code-barres' : 'codes-barres'],
@@ -720,7 +724,7 @@
       const head = kind === 'boutique'
         ? '<tr><th>Article</th><th>Catégorie</th><th>Prix</th><th>Var.</th></tr>'
         : '<tr><th>Article</th><th>Catégorie</th><th>Prix</th><th>Dispo</th></tr>';
-      const total = kind === 'boutique' ? p.products.length : p.rows.length;
+      const total = kind === 'boutique' ? c.newProducts + c.updatedProducts : p.rows.length;
 
       const issues = p.issues.slice(0, 12);
       body.innerHTML = [
@@ -740,8 +744,8 @@
         '<p class="kci-hint">Rien n\'est encore enregistré. Les articles déjà présents sont mis à jour, jamais dupliqués.</p>',
       ].join('');
 
-      go.disabled = false; go.style.opacity = '1';
-      go.textContent = 'Importer ' + total + (total === 1 ? ' article' : ' articles');
+      go.disabled = total === 0; go.style.opacity = total ? '1' : '.5';
+      go.textContent = total ? 'Importer ' + total + (total === 1 ? ' article' : ' articles') : 'Aucun article importable';
     }
 
     const ERRORS = {

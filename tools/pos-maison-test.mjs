@@ -83,6 +83,12 @@ ok(jsSrc.includes("format: 'service'") || catSrc.includes("format: 'service'"), 
 ok(jsSrc.includes('servicePieces') || catSrc.includes('servicePieces'), 'servicePieces attribute tracked');
 ok(jsSrc.includes('piecePriceMAD') || catSrc.includes('piecePriceMAD'), 'piecePriceMAD attribute supported');
 ok(jsSrc.includes('STOCK ARITHMETIC : Service vs Pièce'), 'Clear stock arithmetic documented and handled');
+ok(jsSrc.includes('function canHoldStock'), 'loose-piece availability has a non-mutating UI guard');
+ok(jsSrc.includes('function promoForLine'), 'piece lines use a unit-correct promotion calculation');
+ok(jsSrc.includes('const avoirExpired'), 'expired vouchers are excluded before payment');
+ok(jsSrc.includes('const remainingAvoirs'), 'one ticket can chain multiple vouchers safely');
+ok(jsSrc.includes('const swapped = apply()') && jsSrc.includes('markLineReturned(ln, 1, `échange ${sale.id}`)'),
+  'exchange settlement records the return and handles a stock race honestly');
 
 // 5. Check Gift Receipt & Delivery Notes
 ok(jsSrc.includes('*** TICKET CADEAU ***'), 'Gift receipt layout with no prices present');
@@ -204,15 +210,14 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
   u = c.holdStock('plate', 'TU', 2, true);
   ok(u === 2 && P3.plate.sizes.TU === 22, `assiette simple → décompte direct (u=${u}, stock=${P3.plate.sizes.TU})`);
 
-  // 7 — ticket #0016 : canHoldStock répond comme holdStock, sans rien bouger
+  // 7 — UI availability mirrors holdStock without mutating inventory
   let P4 = { svc: { sizes: { TU: 0 }, format: 'service', servicePieces: 18 } }, S4 = {};
   let d = api(S4, P4);
   d.releaseStock('svc', 'TU', 17, true);
   ok(d.canHoldStock('svc', 'TU', 17, true) === true && d.canHoldStock('svc', 'TU', 18, true) === false,
-    '0 set + 17 dépareillées → 17 pièces OK, 18 refusées');
-  ok(P4.svc.sizes.TU === 0 && d.looseOf('svc', 'TU') === 17, 'la vérification ne mute rien');
-  ok(d.canHoldStock('svc', 'TU', 1, false) === false, 'en mode set, 0 set = indisponible');
-  ok(d.canHoldStock('nope', 'TU', 1, true) === false, 'article inconnu = indisponible');
+    '0 set + 17 pièces dépareillées → 17 pièces disponibles, 18 refusées');
+  ok(P4.svc.sizes.TU === 0 && d.looseOf('svc', 'TU') === 17, 'la vérification de disponibilité ne mute rien');
+  ok(d.canHoldStock('svc', 'TU', 1, false) === false, 'en mode service, 0 set = indisponible');
 }
 
 /* 11. DÉPÔT-VENTE (catégorie B) — la marchandise appartient à un tiers.

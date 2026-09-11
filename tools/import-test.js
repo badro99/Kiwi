@@ -275,9 +275,31 @@ section('Conflit de code-barres');
   // The same code twice in ONE file: second occurrence flagged, not applied.
   freshVenue();
   const dup = IMP.analyseBoutique(IMP.parse(
-    'produit,couleur,taille,code_barres\nA,Noir,TU,111222333444\nB,Noir,TU,111222333444\n'));
+    'produit,couleur,taille,prix_mad,code_barres\nA,Noir,TU,100,111222333444\nB,Noir,TU,200,111222333444\n'));
   truthy(dup.issues.some((i) => /deja utilise|déjà utilisé/i.test(i.msg)), 'doublon interne au fichier signalé');
   eq(dup.counts.newCodes, 1, 'un seul des deux codes retenu');
+}
+
+section('Prix manquant (refus, pas 0 MAD)');
+{
+  freshVenue();
+  const r = IMP.applyBoutique(IMP.analyseBoutique(IMP.parse(
+    'produit,couleur,taille,stock\nFoulard,Camel,TU,5\n')), {});
+  eq(CAT.listProducts().length, 0, 'article sans prix refusé, rien créé');
+  truthy(r.failed.some((f) => /prix manquant/.test(f)), 'motif nommé dans failed');
+
+  freshVenue();
+  IMP.applyBoutique(IMP.analyseBoutique(IMP.parse(
+    'produit,couleur,taille,prix_mad\nBonnet,Noir,TU,0\n')), {});
+  eq(CAT.listProducts().length, 1, '0 explicite accepté');
+  eq(CAT.listProducts()[0].priceMAD, 0, 'prix 0 conservé');
+
+  freshVenue();
+  const plan = IMP.analyseBoutique(IMP.parse(
+    'produit,couleur,taille,prix_mad\nGants,Noir,TU,??\n'));
+  truthy(plan.issues.some((i) => /prix illisible/.test(i.msg)), 'prix illisible signalé à l’analyse');
+  IMP.applyBoutique(plan, {});
+  eq(CAT.listProducts().length, 0, 'prix illisible refusé à l’écriture');
 }
 
 /* ── 10 · a real merchant's headers, not ours ── */
@@ -313,31 +335,6 @@ section('Fichier inexploitable');
   const p2 = IMP.analyseBoutique(IMP.parse('produit,prix\n,320\nRobe,450\n'));
   eq(p2.counts.skipped, 1, 'ligne sans nom comptée comme ignorée');
   eq(p2.counts.newProducts, 1, 'la ligne valide passe');
-}
-
-/* ── 12b · ticket #0024 — pas de prix = pas de produit (jamais 0 MAD par défaut) ── */
-section('Prix manquant (refus, pas 0 MAD)');
-{
-  freshVenue();
-  const r = IMP.applyBoutique(IMP.analyseBoutique(IMP.parse(
-    'produit,couleur,taille,stock\nFoulard,Camel,TU,5\n')), {});
-  eq(CAT.listProducts().length, 0, 'article sans prix refusé, rien créé');
-  truthy(r.failed.some((f) => /prix manquant/.test(f)), 'motif nommé dans failed');
-
-  // …mais un 0 explicite reste un choix marchand légitime (gratuité).
-  freshVenue();
-  IMP.applyBoutique(IMP.analyseBoutique(IMP.parse(
-    'produit,couleur,taille,prix_mad\nBonnet,Noir,TU,0\n')), {});
-  eq(CAT.listProducts().length, 1, '0 explicite accepté');
-  eq(CAT.listProducts()[0].priceMAD, 0, 'prix 0 conservé');
-
-  // Le prix illisible existant ne change rien au refus.
-  freshVenue();
-  const plan = IMP.analyseBoutique(IMP.parse(
-    'produit,couleur,taille,prix_mad\nGants,Noir,TU,??\n'));
-  truthy(plan.issues.some((i) => /prix illisible/.test(i.msg)), 'prix illisible signalé à l’analyse');
-  IMP.applyBoutique(plan, {});
-  eq(CAT.listProducts().length, 0, 'prix illisible refusé à l’écriture');
 }
 
 /* ── 12 · générer les codes manquants (option explicite) ── */
