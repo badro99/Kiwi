@@ -163,7 +163,7 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
     const P = __P;
     const stockAdd = (pid, size, d) => { P[pid].sizes[size] = Math.max(0, (P[pid].sizes[size] || 0) + d); };
   `;
-  const api = new Function('__store', '__P', shim + block + '\n; return { holdStock, releaseStock, looseOf, sellsLoose };');
+  const api = new Function('__store', '__P', shim + block + '\n; return { holdStock, releaseStock, looseOf, sellsLoose, canHoldStock };');
 
   const SET = () => ({ sizes: { TU: 4 }, format: 'service', servicePieces: 18 });
   const PLATE = () => ({ sizes: { TU: 24 }, format: 'piece', servicePieces: null });
@@ -203,6 +203,16 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
   ok(c.sellsLoose(P3.plate, true) === false, 'une assiette vendue seule n’est pas du dépareillé');
   u = c.holdStock('plate', 'TU', 2, true);
   ok(u === 2 && P3.plate.sizes.TU === 22, `assiette simple → décompte direct (u=${u}, stock=${P3.plate.sizes.TU})`);
+
+  // 7 — ticket #0016 : canHoldStock répond comme holdStock, sans rien bouger
+  let P4 = { svc: { sizes: { TU: 0 }, format: 'service', servicePieces: 18 } }, S4 = {};
+  let d = api(S4, P4);
+  d.releaseStock('svc', 'TU', 17, true);
+  ok(d.canHoldStock('svc', 'TU', 17, true) === true && d.canHoldStock('svc', 'TU', 18, true) === false,
+    '0 set + 17 dépareillées → 17 pièces OK, 18 refusées');
+  ok(P4.svc.sizes.TU === 0 && d.looseOf('svc', 'TU') === 17, 'la vérification ne mute rien');
+  ok(d.canHoldStock('svc', 'TU', 1, false) === false, 'en mode set, 0 set = indisponible');
+  ok(d.canHoldStock('nope', 'TU', 1, true) === false, 'article inconnu = indisponible');
 }
 
 /* 11. DÉPÔT-VENTE (catégorie B) — la marchandise appartient à un tiers.

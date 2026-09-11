@@ -537,7 +537,10 @@
       motif: 'Retour cherbil perlé · 37', at: new Date(NOW - 26 * 3600 * 1000), until: new Date(NOW + 182 * 24 * 3600 * 1000), from: '1188' },
   ] : [];
   let avSeq = 2032;
-  const activeAvoirs = () => AVOIRS.filter((a) => a.balance > 0);
+  /* Ticket #0019 · expiry is ENFORCED, not just displayed: expired bons never
+   * list, never apply, never deduct. Missing until = old bon = still valid. */
+  const avoirExpired = (a) => !!(a && a.until && new Date(a.until).getTime() < Date.now());
+  const activeAvoirs = () => AVOIRS.filter((a) => a.balance > 0 && !avoirExpired(a));
 
   /* Les avoirs (bons d'achat) d'une VRAIE boutique doivent survivre à un
      rechargement de la caisse — sinon un bon émis sur un retour disparaît au
@@ -1136,7 +1139,9 @@
       : (p ? p.price : (ln.unit || 0));
     let best = { price: full, promo: null };
     if (stamp && stamp.price < best.price) best = { price: stamp.price, promo: stamp };
-    if (live && live.price < best.price && !ln.isPiece) best = { price: live.price, promo: { price: live.price, badge: live.badge, name: live.promo.name, id: live.promo.id } };
+    /* Ticket #0017 · no isPiece carve-out: the sheet shows the live promo per
+     * piece, so the charge must use it too. Displayed price == charged price. */
+    if (live && live.price < best.price) best = { price: live.price, promo: { price: live.price, badge: live.badge, name: live.promo.name, id: live.promo.id } };
     return best;
   }
   const linePromo = (ln) => lineDeal(ln).promo;
@@ -2075,6 +2080,18 @@
     stockAdd(pid, size, qty);
     return qty;
   }
+  /* Ticket #0016 · the non-mutating mirror of holdStock: UI gates (sheet add,
+   * steppers, size picks) must ask the same question the take will ask, or
+   * loose pieces read as épuisé while takeLoose would succeed. */
+  function canHoldStock(pid, size, qty, isPiece) {
+    const p = P[pid];
+    if (!p) return false;
+    if (sellsLoose(p, isPiece)) {
+      const per = piecesPerSet(p);
+      return looseOf(pid, size) + (p.sizes[size] || 0) * per >= qty;
+    }
+    return (p.sizes[size] || 0) >= qty;
+  }
 
   function addToTicket(pid, cfg, opts) {
     const p = P[pid];
@@ -2148,7 +2165,8 @@
       shBase = p.piecePriceMAD || Math.round(shBase / (p.servicePieces || 12));
     }
     const unit = Math.round(shBase * (100 - sheet.remise) / 100);
-    const canAdd = (p.sizes[sheet.size] || 0) > 0;
+    const sheetPiece = p.format === 'service' && sheet.format === 'piece';
+    const canAdd = canHoldStock(sheet.pid, sheet.size, 1, sheetPiece);
     const el = $('#mz-sheetm', root);
     el.innerHTML = `
       <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -2282,7 +2300,15 @@
     if (qMinus) qMinus.onclick = () => { if (sheet.qty > 1) { sheet.qty--; refreshPrice(); } };
     const qPlus = $('#mz-qty-plus', el);
     if (qPlus) qPlus.onclick = () => {
-      if (sheet.qty >= (p.sizes[sheet.size] || 0)) { toast(`${p.name} · ${sheet.size}, ${p.sizes[sheet.size]} en stock, pas plus`); return; }
+      /* Ticket #0016 · cap on loose-aware availability, not whole sets: with
+       * 0 sets but loose pieces (or 1 set for 2 wanted pieces) the + must work
+       * exactly while holdStock would succeed. */
+      const piece = p.format === 'service' && sheet.format === 'piece';
+      const per = piece ? Math.max(1, +p.servicePieces || 1) : 1;
+      const maxQty = piece
+        ? looseOf(sheet.pid, sheet.size) + (p.sizes[sheet.size] || 0) * per
+        : (p.sizes[sheet.size] || 0);
+      if (sheet.qty >= maxQty) { toast(`${p.name} · ${sheet.size}, ${maxQty} en stock, pas plus`); return; }
       sheet.qty++; refreshPrice();
     };
     const remRow = $('#mz-remise', el);
@@ -3884,7 +3910,12 @@
     const oldP = P[ln.pid] || { name: ln.name || 'Article retiré du catalogue', art: '' };
     const newP = P[newPid];
     if (!newP) { toast('Article de remplacement introuvable'); return; }
-    const diff = newP.price - ln.unit;
+    /* Ticket #0018 · the replacement is priced at its EFFECTIVE price today
+     * (live promo included, like a new sale), not the raw catalogue figure —
+     * while the return side stays the frozen amount actually paid (ln.unit),
+     * exactly as the comment above requires. */
+    const newEff = lineDeal({ pid: newPid, isPiece: false }).price;
+    const diff = newEff - ln.unit;
     const c = saleClient(sale);
     const el = $('#mz-exchm', root);
     el.innerHTML = `
@@ -3899,7 +3930,7 @@
       <div class="mz-exch-row is-new">
         <span class="mz-line-art">${artOf(newP.art)}</span>
         <span class="mid"><b>${esc(newP.name)}</b><span>remplacement · ${esc(newSize)} · ${colorDot(newColor)} ${esc(colorLabel(newColor))}</span></span>
-        <span class="amt">+${fmtMAD(newP.price)}</span>
+        <span class="amt">+${fmtMAD(newEff)}</span>
       </div>
       <div class="mz-exch-diff ${diff > 0 ? 'pos' : diff < 0 ? 'neg' : 'zero'}">
         <span>${diff > 0 ? 'Différence à encaisser' : diff < 0 ? 'Différence en faveur de la cliente, part en avoir' : 'Aucun écart, échange direct'}</span>
@@ -3919,10 +3950,17 @@
 
     let applied = false;
     const apply = () => {
-      if (applied) return;
+      if (applied) return true;
+      /* Ticket #0015 · take the replacement FIRST, through the same checked
+       * holdStock the sale lane uses: if another till sold the last unit
+       * meanwhile, abort with everything untouched instead of overselling.
+       * (holdStock moves local P only; the catalogue push below is separate.) */
+      if (holdStock(newPid, newSize, 1, false) === false) {
+        toast(`${newP.name} · ${newSize}, stock insuffisant pour l'échange`);
+        return false;
+      }
       applied = true;
       const back = releaseStock(ln.pid, ln.size, 1, ln.isPiece);
-      stockAdd(newPid, newSize, -1);
       // Commit the swap to the shared inventory: rendered piece back in, replacement out.
       persistStock(ln.pid, ln.size, ln.color, back);
       persistStock(newPid, newSize, newColor, -1);
@@ -3930,9 +3968,17 @@
       persistDay();
       queueIfOffline(`Échange ${sale.id}`);
       renderExchNote(); renderGrid(); renderBadges();
+      return true;
     };
 
     $('#mz-exch-go', el).onclick = () => {
+      /* Ticket #0015 · pre-check before any money moves: the apply() guard
+       * below stays as race insurance, but the normal path never opens
+       * payment for a replacement that is already gone. */
+      if (!canHoldStock(newPid, newSize, 1, false)) {
+        toast(`${newP.name} · ${newSize}, stock insuffisant pour l'échange`);
+        return;
+      }
       if (diff > 0) {
         const go = $('#mz-exch-go', el);
         if (go) go.disabled = true;
@@ -3954,13 +4000,18 @@
             doneLabel: 'Terminer',
             waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
             onPaid: (parts) => {
-              apply();
+              /* Race insurance: the replacement sold out between selection
+               * and payment. The collected difference is still recorded
+               * truthfully, but no swap happens — the toast says to settle
+               * the exchange manually rather than pretending it went through. */
+              const swapped = apply();
               const rec = {
                 id: exchangeNumber, syncId: newSaleId(), at: new Date(), clientId: sale.clientId, by: STAFF.caissiere.name, kind: 'echange',
                 methods: parts.map((x) => x.m).join(' + '),
                 parts: parts.map((x) => ({ m: x.m, amount: Math.round((+x.amount || 0) * 100) / 100 })),
-                lines: [{ pid: newPid, size: newSize, color: newColor, qty: 1, remise: 0, unit: diff, returned: false, note: `différence échange ${sale.id}` }],
+                lines: swapped ? [{ pid: newPid, size: newSize, color: newColor, qty: 1, remise: 0, unit: diff, returned: false, note: `différence échange ${sale.id}` }] : [],
                 total: diff,
+                note: swapped ? '' : 'échange non appliqué (rupture entre-temps), différence encaissée à régulariser',
               };
               SALES.unshift(rec);
               persistDay();
@@ -3979,13 +4030,14 @@
                     label: `Différence échange ${sale.id}`,
                     ref: rec.id,
                     time: rec.at,
-                    lines: [{ name: newP.name + (newSize ? ' ' + newSize : ''), qty: 1, total: diff, cat: rayonOf(newPid) || '' }],
+                    lines: swapped ? [{ name: newP.name + (newSize ? ' ' + newSize : ''), qty: 1, total: diff, cat: rayonOf(newPid) || '' }] : [],
                   });
                 }
               } catch (_) {}
               $('#mz-today', root).textContent = headSubVente();
               refreshOps();
-              return { ref: rec.id, sale: rec, line: `Échange ${sale.id} réglé, différence ${fmtMAD(diff)}` };
+              if (!swapped) toast('Échange non appliqué (rupture entre-temps)', 'La différence est encaissée et tracée : régularisez l’échange manuellement.');
+              return { ref: rec.id, sale: rec, line: swapped ? `Échange ${sale.id} réglé, différence ${fmtMAD(diff)}` : `Différence ${sale.id} encaissée sans échange, à régulariser` };
             },
           });
         }).catch(() => {
@@ -3994,13 +4046,22 @@
         });
       } else if (diff < 0) {
         closeVeil('#mz-exch-veil');
-        apply();
+        if (!apply()) { refreshOps(); return; }
+        /* Ticket #0014 · the swapped unit must die on the old line and leave
+         * an immutable trace, like every other return path: otherwise the old
+         * line stays reusable and mints another avoir indefinitely. */
+        markLineReturned(ln, 1, `échange ${sale.id}`);
+        persistDay();
         const av = issueAvoir(-diff, c, `Différence échange ${sale.id}`, sale.id);
+        recordReturn(sale, [ex.idx], ln.unit, `Échange ${sale.id}`, 'echange', av.code);
         refreshOps();
         openVoucher(av, { mode: 'fresh' });
       } else {
         closeVeil('#mz-exch-veil');
-        apply();
+        if (!apply()) { refreshOps(); return; }
+        markLineReturned(ln, 1, `échange ${sale.id}`);
+        recordReturn(sale, [ex.idx], ln.unit, `Échange ${sale.id}`, 'echange', '');
+        persistDay();
         refreshOps();
         toast(`Échange ${sale.id}, ${oldP.name} ${ln.size} contre ${newP.name} ${newSize}`);
       }
@@ -4335,6 +4396,18 @@
     let avoirPart = null;                   /* { m:'avoir', amount, code } */
     const settled = [];                     /* les règlements déjà posés */
     let committed = false;                  /* double tap must never book twice */
+    /* Ticket #0019 · several bons can cover one ticket: codes already posed
+     * (current bon + settled ones) are excluded from re-selection. */
+    const appliedAvoirCodes = () => {
+      const codes = [];
+      if (avoirPart) codes.push(avoirPart.code);
+      for (const p of settled) if (p.m === 'avoir' && p.code) codes.push(p.code);
+      return codes;
+    };
+    const remainingAvoirs = () => {
+      const used = new Set(appliedAvoirCodes());
+      return activeAvoirs().filter((a) => !used.has(a.code));
+    };
     let share = 1;                          /* 1 = tout le reste ; 0.5 = la moitié */
     let custom = 0;                          /* un montant saisi à la main */
     const r2 = (n) => Math.round((+n || 0) * 100) / 100;
@@ -4387,6 +4460,7 @@
 
     const stepMethods = () => {
       const avs = activeAvoirs();
+      const remAvoirs = remainingAvoirs();
       el.innerHTML = `
         <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">${esc(opts.title)}</h3>
@@ -4410,15 +4484,15 @@
             <span class="l"><b>Livraison</b><span>Vente enregistrée, paiement à recevoir du transporteur</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
-          ${avoirPart ? '' : avs.length ? `
+          ${remAvoirs.length ? `
           <button class="mz-pay-opt" data-mz-m="avoir">
             <span class="ic"><i data-lucide="ticket"></i></span>
-            <span class="l"><b>Avoir</b><span>${avs.length === 1 ? `${avs[0].code} · ${fmtMAD(avs[0].balance)}, ${esc(avs[0].holderName)}` : `${avs.length} avoirs actifs, scanner ou choisir`}</span></span>
-            <span class="amt">−${fmtMAD(Math.min(avs[0].balance, portion()))}</span>
+            <span class="l"><b>Avoir</b><span>${remAvoirs.length === 1 && !avoirPart ? `${remAvoirs[0].code} · ${fmtMAD(remAvoirs[0].balance)}, ${esc(remAvoirs[0].holderName)}` : `${remAvoirs.length} bon${remAvoirs.length > 1 ? 's' : ''} disponible${remAvoirs.length > 1 ? 's' : ''}, scanner ou choisir`}</span></span>
+            <span class="amt">−${fmtMAD(Math.min(remAvoirs[0].balance, portion()))}</span>
           </button>` : `
           <button class="mz-pay-opt is-mute" data-mz-m="avoir-none">
             <span class="ic"><i data-lucide="ticket"></i></span>
-            <span class="l"><b>Avoir</b><span>Aucun avoir actif en caisse</span></span>
+            <span class="l"><b>Avoir</b><span>${avs.length && !remAvoirs.length ? 'Tous les bons sont déjà posés' : 'Aucun avoir actif en caisse'}</span></span>
           </button>`}
         </div>`;
       icons(); closeBtns();
@@ -4455,7 +4529,7 @@
           $$('[data-mz-m]', el).forEach((b) => {
             const a = $('.amt', b); if (!a) return;
             if (/^avoir/.test(b.dataset.mzM)) {
-              const bal = (activeAvoirs()[0] || {}).balance;
+              const bal = (remainingAvoirs()[0] || {}).balance;
               if (bal != null) a.textContent = '−' + fmtMAD(Math.min(bal, portion()));
               return;
             }
@@ -4486,7 +4560,7 @@
     };
 
     const stepAvoir = () => {
-      const avs = activeAvoirs();
+      const avs = remainingAvoirs();
       el.innerHTML = `
         <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Avoir en paiement</h3>
@@ -4505,12 +4579,16 @@
       $$('[data-mz-av-use]', el).forEach((b) => {
         b.onclick = () => {
           const av = AVOIRS.find((a) => a.code === b.dataset.mzAvUse);
+          if (!av || avoirExpired(av)) { toast('Bon indisponible', 'Bon introuvable ou expiré.'); stepMethods(); return; }
           /* `portion()`, pas `due()`. Sans part choisie les deux sont égaux et
              le bon se déduit entièrement, comme avant. Mais quand la caissière
              a explicitement demandé la moitié, le bon prenait quand même tout :
              une cliente qui voulait garder du solde sur son avoir en sortait
              avec un bon vidé, et il n'y avait pas de retour en arrière. */
           const applied = Math.min(av.balance, portion());
+          /* Ticket #0019 · chaining: a previously posed bon moves to settled
+           * instead of being silently replaced, so several bons cover a ticket. */
+          if (avoirPart) settled.push({ m: 'avoir', amount: avoirPart.amount, code: avoirPart.code });
           avoirPart = { m: 'avoir', amount: applied, code: av.code };
           share = 1; custom = 0;   /* la part est consommée, comme dans settle() */
           if (due() <= 0.009) commit();
@@ -4604,13 +4682,25 @@
 
     const commit = () => {
       if (committed) return;
-      committed = true;
       const parts = (avoirPart ? [avoirPart] : []).concat(settled);
-      const avp = parts.find((x) => x.m === 'avoir');
-      if (avp) {
-        const av = AVOIRS.find((a) => a.code === avp.code);
+      /* Ticket #0019 · atomic re-validation: every bon must still exist,
+       * unexpired, with enough balance — otherwise abort BEFORE deducting. */
+      for (const p of parts) {
+        if (p.m !== 'avoir') continue;
+        const av = AVOIRS.find((a) => a.code === p.code);
+        if (!av || avoirExpired(av) || !(av.balance >= p.amount)) {
+          toast(`Avoir ${p.code} inutilisable`, !av ? 'Bon introuvable en caisse.' : avoirExpired(av) ? 'Bon expiré entre-temps.' : 'Solde insuffisant, montants recalculés.');
+          return;
+        }
+      }
+      committed = true;
+      /* Ticket #0019 · deduct EVERY bon part, not just the first: tickets can
+       * now be covered by several bons. */
+      for (const p of parts) {
+        if (p.m !== 'avoir') continue;
+        const av = AVOIRS.find((a) => a.code === p.code);
         if (av) {                              // garde-fou : un code introuvable (bon d'une autre caisse) ne fait plus planter l'encaissement
-          av.balance -= avp.amount;
+          av.balance -= p.amount;
           persistAvoirs();                     // le solde entamé survit au rechargement
           toast(av.balance > 0 ? `${av.code}, reste ${fmtMAD(av.balance)} dessus` : `${av.code} consommé en totalité`);
         }

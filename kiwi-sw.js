@@ -241,7 +241,7 @@ var SHELL = [
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=68',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
-  '/assets/catalog-import.js?v=3',
+  '/assets/catalog-import.js?v=4',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.
   '/assets/menu-scan.js?v=2',
   '/assets/salle-scan.js?v=2',
@@ -260,7 +260,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=10',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=6',
-  '/assets/pos-dispatch.js?v=36',
+  '/assets/pos-dispatch.js?v=37',
   '/assets/retail-scan.css?v=7',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=6',
@@ -305,8 +305,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=5',
   '/assets/pos-autre.css?v=2',
   '/assets/pos-autre.js?v=2',
-  '/assets/pos-maison.css?v=21',
-  '/assets/pos-maison.js?v=21',
+  '/assets/pos-maison.css?v=22',
+  '/assets/pos-maison.js?v=22',
   '/assets/caisse-pairing.js?v=18',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

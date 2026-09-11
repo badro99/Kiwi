@@ -259,11 +259,11 @@ section('Conflit de code-barres');
 {
   freshVenue();
   IMP.applyBoutique(IMP.analyseBoutique(IMP.parse(
-    'produit,couleur,taille,code_barres\nSac,Camel,TU,3210000009999\n')), {});
+    'produit,couleur,taille,prix_mad,code_barres\nSac,Camel,TU,1200,3210000009999\n')), {});
   const sac = CAT.listProducts()[0];
 
   const plan = IMP.analyseBoutique(IMP.parse(
-    'produit,couleur,taille,code_barres\nCeinture,Noir,TU,3210000009999\n'));
+    'produit,couleur,taille,prix_mad,code_barres\nCeinture,Noir,TU,350,3210000009999\n'));
   truthy(plan.issues.some((i) => /appartient/.test(i.msg)), 'conflit signalé au commerçant');
   eq(plan.counts.newCodes, 0, 'le code n\'est pas réattribué');
 
@@ -315,12 +315,37 @@ section('Fichier inexploitable');
   eq(p2.counts.newProducts, 1, 'la ligne valide passe');
 }
 
+/* ── 12b · ticket #0024 — pas de prix = pas de produit (jamais 0 MAD par défaut) ── */
+section('Prix manquant (refus, pas 0 MAD)');
+{
+  freshVenue();
+  const r = IMP.applyBoutique(IMP.analyseBoutique(IMP.parse(
+    'produit,couleur,taille,stock\nFoulard,Camel,TU,5\n')), {});
+  eq(CAT.listProducts().length, 0, 'article sans prix refusé, rien créé');
+  truthy(r.failed.some((f) => /prix manquant/.test(f)), 'motif nommé dans failed');
+
+  // …mais un 0 explicite reste un choix marchand légitime (gratuité).
+  freshVenue();
+  IMP.applyBoutique(IMP.analyseBoutique(IMP.parse(
+    'produit,couleur,taille,prix_mad\nBonnet,Noir,TU,0\n')), {});
+  eq(CAT.listProducts().length, 1, '0 explicite accepté');
+  eq(CAT.listProducts()[0].priceMAD, 0, 'prix 0 conservé');
+
+  // Le prix illisible existant ne change rien au refus.
+  freshVenue();
+  const plan = IMP.analyseBoutique(IMP.parse(
+    'produit,couleur,taille,prix_mad\nGants,Noir,TU,??\n'));
+  truthy(plan.issues.some((i) => /prix illisible/.test(i.msg)), 'prix illisible signalé à l’analyse');
+  IMP.applyBoutique(plan, {});
+  eq(CAT.listProducts().length, 0, 'prix illisible refusé à l’écriture');
+}
+
 /* ── 12 · générer les codes manquants (option explicite) ── */
 section('Génération des codes-barres manquants');
 {
   freshVenue();
   const plan = IMP.analyseBoutique(IMP.parse(
-    'produit,couleur,taille,stock\nJupe,Noir,S,3\nJupe,Noir,M,4\n'));
+    'produit,couleur,taille,prix_mad,stock\nJupe,Noir,S,890,3\nJupe,Noir,M,890,4\n'));
   eq(plan.counts.missingCodes, 2, 'plan · 2 variantes sans code');
 
   IMP.applyBoutique(plan, {});
@@ -329,7 +354,7 @@ section('Génération des codes-barres manquants');
 
   freshVenue();
   const plan2 = IMP.analyseBoutique(IMP.parse(
-    'produit,couleur,taille,stock\nJupe,Noir,S,3\nJupe,Noir,M,4\n'));
+    'produit,couleur,taille,prix_mad,stock\nJupe,Noir,S,890,3\nJupe,Noir,M,890,4\n'));
   const r = IMP.applyBoutique(plan2, { generateMissing: true });
   eq(r.generated, 2, 'avec l\'option, 2 codes générés');
   coded = CAT.listVariants(CAT.listProducts()[0].id).filter((v) => v.barcodes.length).length;

@@ -156,8 +156,8 @@
     "sha": "34cd851dee77ae3a"
   },
   "assets/catalog-import.js": {
-    "v": "3",
-    "sha": "e1113593b46d0b3a"
+    "v": "4",
+    "sha": "f8afe9da84d5e66c"
   },
   "assets/channel-link.js": {
     "v": "202608272301",
@@ -604,8 +604,8 @@
     "sha": "3673be5ef49cb7de"
   },
   "assets/pos-dispatch.js": {
-    "v": "36",
-    "sha": "4965d15ee2f2ca56"
+    "v": "37",
+    "sha": "eab63b8e2e5eaae6"
   },
   "assets/pos-epicerie.css": {
     "v": "5",
@@ -668,12 +668,12 @@
     "sha": "782a2a019b86fc81"
   },
   "assets/pos-maison.css": {
-    "v": "21",
+    "v": "22",
     "sha": "ae3c4dedfa5d7971"
   },
   "assets/pos-maison.js": {
-    "v": "21",
-    "sha": "e88f29c978f1825b"
+    "v": "22",
+    "sha": "b6d1beb6d6b5e5a2"
   },
   "assets/pos-mobile.css": {
     "v": "3",

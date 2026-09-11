@@ -412,10 +412,14 @@
           if (wantCat && prod.categoryId !== wantCat) patch.categoryId = wantCat;
           if (Object.keys(patch).length) CAT.updateProduct(prod.id, patch);
         } else {
+          /* Ticket #0024 · a new product without a readable price is REFUSED,
+           * never created at 0 MAD. An explicit 0 in the file still passes
+           * (deliberate freebie); only missing/unreadable prices stop here. */
+          if (!isFinite(g.priceMAD)) { res.failed.push(g.name + ' · prix manquant ou illisible, produit non créé'); return; }
           prod = CAT.addProduct({
             name: g.name,
             categoryId: wantCat || null,
-            priceMAD: isFinite(g.priceMAD) ? g.priceMAD : 0,
+            priceMAD: g.priceMAD,
             cost: isFinite(g.cost) ? g.cost : 0,
             kind: g.kind || 'taille',
           });
@@ -613,6 +617,7 @@
       '.kci-tbl td{padding:5px 8px 5px 0;border-top:1px solid var(--n-200,#e7e3db);color:var(--ink,#0A0F0D);vertical-align:top;}',
       '.kci-tag{display:inline-block;font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:5px;background:var(--n-200,#e7e3db);color:var(--n-700,#544f48);}',
       '.kci-tag.new{background:color-mix(in srgb,var(--atlas,#0B6E4F) 14%,transparent);color:var(--atlas,#0B6E4F);}',
+      '.kci-tag.warn{background:color-mix(in srgb,#B0613F 16%,transparent);color:#8A4A22;}',
       '.kci-scroll{max-height:210px;overflow:auto;margin:0 0 4px;}',
       '.kci-iss{margin:14px 0 0;padding:11px 13px;border-radius:11px;background:color-mix(in srgb,#B0613F 8%,transparent);font-size:12.5px;color:var(--ink,#0A0F0D);line-height:1.6;}',
       '.kci-iss b{font-weight:600;}',
@@ -703,7 +708,8 @@
 
       const rowsHtml = kind === 'boutique'
         ? p.products.slice(0, 60).map((g) => '<tr><td>' + esc(g.name)
-            + (g.existing ? '' : ' <span class="kci-tag new">nouveau</span>') + '</td><td>'
+            + (g.existing ? '' : ' <span class="kci-tag new">nouveau</span>')
+            + (!g.existing && !isFinite(g.priceMAD) ? ' <span class="kci-tag warn">prix manquant — refusé</span>' : '') + '</td><td>'
             + esc(g.categoryName || '·') + '</td><td>' + esc(mad(g.priceMAD))
             + '</td><td>' + g.variants.length + '</td></tr>').join('')
         : p.rows.slice(0, 60).map((r) => '<tr><td>' + esc(r.name)
