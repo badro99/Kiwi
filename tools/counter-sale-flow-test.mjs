@@ -99,4 +99,49 @@ check('the server still accepts served straight from accepted', () => {
   assert.match(queue, /served:\s*\['ready', 'accepted'\],/);
 });
 
+
+/* ── 3 · annuler un article déjà en cuisine, sans remboursement ───────────── */
+
+check('removing a cooking takeaway line opens the cancellation reason instead of vanishing', () => {
+  /* Le défaut : `changeCartLineQty` retirait la ligne du panier sans rien dire.
+   * La brigade continuait de préparer un plat sorti de l'addition. */
+  assert.match(caisse, /if \(delta < 0 && editing && editing\.opId && editing\.status !== 'held'\) \{\s*\n\s*openCaisseVoidModal\(null, line, \{ orderId: editing\.opId, cart: true \}\);/);
+  /* `held` = pas encore payée donc pas encore partie en cuisine : rien à
+   * annuler, la ligne se retire comme dans un panier neuf. */
+  assert.match(caisse, /editing\.status !== 'held'/);
+});
+
+check('a takeaway void names its order, since it has no table', () => {
+  assert.match(caisse, /\.\.\.\(scope\.orderId \? \{ orderId: scope\.orderId \} : \{ table: tableId \}\)/);
+  /* Le serveur sait déjà viser une commande par son id — rien de neuf côté API. */
+  const queue = fs.readFileSync(new URL('../functions/api/order/queue.js', import.meta.url), 'utf8');
+  assert.match(queue, /if \(b\.voidLine\.orderId\) \{/);
+});
+
+check('the line leaves the cart only once the kitchen has been told', () => {
+  const confirm = caisse.slice(caisse.indexOf('async function confirmCaisseVoid()'));
+  const postAt = confirm.indexOf("fetch('/api/order/queue'");
+  const removeAt = confirm.indexOf('cart = applyGroupedLineQtyDelta(cart, line, -1);');
+  assert.ok(postAt > 0 && removeAt > postAt,
+    'the local removal must follow the server call, never precede it');
+  /* Un échec réseau rend la main AVANT de toucher au panier : l'addition ne
+   * doit jamais perdre une ligne que la cuisine n'a pas vue partir. */
+  assert.match(confirm, /catch \(err\) \{[\s\S]{0,220}?return;\s*\n\s*\}/);
+});
+
+check('cancelling an item is not a refund path', () => {
+  /* La garde qui rend tout cela vrai : `voidLine` ne vise que des commandes
+   * NON encaissées. Tant qu'aucun argent n'est pris, il n'y a rien à rendre —
+   * et une fois encaissé, rendre l'argent EST un remboursement, par
+   * définition. Ce contrôle fige la frontière plutôt que de la franchir. */
+  const queue = fs.readFileSync(new URL('../functions/api/order/queue.js', import.meta.url), 'utf8');
+  /* On vise les marqueurs UNIQUES du gestionnaire : le bloc d'autorisation,
+   * plus haut, commence par les mêmes mots et donnerait une tranche vide. */
+  const voidBlock = queue.slice(queue.indexOf("if (b && b.voidLine && typeof b.voidLine === 'object')"), queue.indexOf("if (b && b.editLine && typeof b.editLine === 'object')"));
+  assert.ok(voidBlock.includes('paid_ts IS NULL'),
+    'voidLine must stay scoped to unpaid orders');
+  assert.ok(!/rf-confirm|Rembourser/.test(voidBlock),
+    'the item cancellation must not reach into the refund modal');
+});
+
 console.log(`\nVente au comptoir : ${checks} contrôles passés.`);

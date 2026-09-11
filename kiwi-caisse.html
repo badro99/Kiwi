@@ -9905,6 +9905,28 @@
     function changeCartLineQty(uid, delta) {
       const line = cart.find(c => c.uid === uid);
       if (!line) return;
+      /* ── Le plat est DÉJÀ en cuisine ──────────────────────────────────────
+       * Retirer une ligne d'une commande à emporter déjà transmise se faisait
+       * EN SILENCE : la ligne quittait l'addition, et la brigade continuait de
+       * préparer un plat que plus personne n'attend ni ne paie. Aucun motif,
+       * aucune alerte, aucune trace dans `kitchen_voids` — donc rien à
+       * expliquer au stock en fin de journée.
+       *
+       * La salle avait déjà la bonne réponse (changeTableOrderLineQty ouvre le
+       * motif d'annulation) ; elle n'avait simplement jamais été branchée au
+       * comptoir. Le client change d'avis ou n'est pas satisfait : on annule
+       * l'article, on prévient la cuisine, et ça ne passe PAS par un
+       * remboursement — tant que la commande n'est pas encaissée, il n'y a
+       * aucun argent à rendre.
+       *
+       * `held` = pas encore payée, donc pas encore partie en cuisine : rien à
+       * annuler, la ligne se retire comme dans un panier neuf. */
+      const editing = vrapEditingNum != null
+        ? kdsOrders.find(x => x && x.num === vrapEditingNum) : null;
+      if (delta < 0 && editing && editing.opId && editing.status !== 'held') {
+        openCaisseVoidModal(null, line, { orderId: editing.opId, cart: true });
+        return;
+      }
       cart = applyGroupedLineQtyDelta(cart, line, delta);
       renderMenu();
       renderCart();
@@ -11781,8 +11803,13 @@
     let caisseSelectedVoidReason = 'client_change';
     let caisseSelectedVoidIsWaste = 0;
 
-    function openCaisseVoidModal(tableId, line) {
-      caisseVoidTarget = { tableId, line };
+    /* `scope` dit OÙ retirer la ligne une fois la cuisine prévenue :
+     *  · { tableId }            · une addition de salle (tableOrders)
+     *  · { orderId, cart: true } · une commande à emporter en cours d'édition
+     * Le motif, l'alerte cuisine et la trace `kitchen_voids` sont les mêmes
+     * dans les deux cas : c'est la même annulation, pas un remboursement. */
+    function openCaisseVoidModal(tableId, line, scope) {
+      caisseVoidTarget = { tableId, line, scope: scope || { tableId } };
       caisseSelectedVoidReason = 'client_change';
       caisseSelectedVoidIsWaste = 0;
       const dName = $('#cvoi-dish-name');
@@ -11797,6 +11824,7 @@
     async function confirmCaisseVoid() {
       if (!caisseVoidTarget) return;
       const { tableId, line } = caisseVoidTarget;
+      const scope = caisseVoidTarget.scope || { tableId };
       const confirmBtn = $('#cvoi-confirm');
       if (confirmBtn) confirmBtn.disabled = true;
 
@@ -11809,7 +11837,10 @@
             body: JSON.stringify({
               merchant: slug,
               voidLine: {
-                table: tableId,
+                /* Une commande à emporter n'a pas de table : elle se désigne
+                 * par son identifiant de file, que `voidLine` accepte déjà
+                 * (functions/api/order/queue.js · `if (b.voidLine.orderId)`). */
+                ...(scope.orderId ? { orderId: scope.orderId } : { table: tableId }),
                 lineId: line.id || line.uid,
                 qty: 1,
                 reason: caisseSelectedVoidReason,
@@ -11832,7 +11863,14 @@
         }
       }
 
-      tableOrders[tableId] = applyGroupedLineQtyDelta(tableOrders[tableId] || [], line, -1);
+      /* La cuisine est prévenue : on peut retirer la ligne là où elle vit. */
+      if (scope.cart) {
+        cart = applyGroupedLineQtyDelta(cart, line, -1);
+        renderMenu();
+        renderCart();
+      } else {
+        tableOrders[tableId] = applyGroupedLineQtyDelta(tableOrders[tableId] || [], line, -1);
+      }
       const modal = $('#caisse-void-modal');
       if (modal) modal.classList.remove('is-open');
       if (confirmBtn) confirmBtn.disabled = false;
