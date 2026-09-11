@@ -55,6 +55,36 @@ async function preSplitBucket(env, aid, merchant, accSlug) {
   } catch (_) { return ''; }
 }
 
+/* Repair the exact legacy split-brain that can exist when God Mode voided a
+ * positive test receipt but an already-linked refund counter-entry remained
+ * live. That orphan negative row would reduce revenue and the expected cash
+ * drawer even though the whole test operation should net to zero. New God Mode
+ * writes move both rows atomically; this scoped reconciliation heals existing
+ * stores (including an open till) on their next normal feed poll.
+ *
+ * This never deletes or rewrites an amount. It only applies the same reversible
+ * void marker already carried by the original, and only where sale_audit proves
+ * the refund relationship inside the same merchant. */
+async function reconcileLinkedTestRefunds(env, merchant, legacy) {
+  const ts = Date.now();
+  await env.DB.prepare(
+    `UPDATE sales AS refund
+        SET void_ts = ?, void_reason = 'linked-test-sale',
+            void_note = 'Réconciliation automatique du remboursement lié',
+            void_actor = 'Kiwi · réconciliation'
+      WHERE refund.merchant IN (?, ?) AND refund.void_ts IS NULL
+        AND COALESCE(refund.amount_cents, refund.amount * 100) < 0
+        AND EXISTS (
+          SELECT 1
+            FROM sale_audit a
+            JOIN sales original
+              ON original.merchant = a.merchant AND original.id = a.sale_id
+           WHERE a.merchant = refund.merchant AND a.action = 'refund'
+             AND a.note = refund.id AND original.void_ts IS NOT NULL
+        )`
+  ).bind(ts, merchant, legacy || merchant).run();
+}
+
 export async function onRequestGet({ request, env }) {
   if (!env || !env.DB) return json({ sales: [], cursor: 0 });
 
@@ -92,6 +122,13 @@ export async function onRequestGet({ request, env }) {
       }
     }
   } catch (_) { /* no session (operator / demo) → own bucket only */ }
+
+  try {
+    await reconcileLinkedTestRefunds(env, merchant, legacy);
+  } catch (_) {
+    /* Old schemas may lack centimes, audit or void columns. Their existing feed
+       fallback remains available; reconciliation will start after migration. */
+  }
 
   /* ── LES VENTES DE TEST NE SORTENT PAS D'ICI ──────────────────────────────
    * Une vente qu'un opérateur a sortie des livres (functions/api/admin/sales.js)
