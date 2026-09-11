@@ -1881,9 +1881,21 @@ export async function onRequestPost(context) {
   const server = String((b && b.server) || '').trim().slice(0, 40);
   const paid = b && b.paid === true;
 
-  /* A takeaway handover is an auditable staff action, not a table close. The
-   * actor must be the short-lived PIN proof minted by /api/pin/verify; a name
-   * in the request body (or the order's display server) is never sufficient. */
+  /* A takeaway handover is recorded, not gated.
+   *
+   * It used to demand the short-lived PIN proof minted by /api/pin/verify, and
+   * answered 403 `handover-identity-required` without one. That cost a 4-digit
+   * code at every single counter handover — the most repeated gesture of the
+   * rush — to protect a transition that moves no money: the order is already
+   * paid when it reaches `ready`, and `served` only files it into the day's
+   * history. The proof also lives five minutes, so it could never be taken once
+   * per shift; it had to be re-entered order after order.
+   *
+   * What is kept: when a proof IS supplied the actor is still verified server-
+   * side and written to the ledger, so a till that wants named handovers keeps
+   * them. Without one the event is still recorded, with an empty actor — the
+   * same shape as the sessions that predate the proof. Cancellation is
+   * untouched and remains nominative. */
   let takeoutHandover = null;
   if (status === 'served') {
     try {
@@ -1895,10 +1907,6 @@ export async function onRequestPost(context) {
     if (takeoutHandover && takeoutHandover.mode === 'takeout'
         && takeoutHandover.status === 'served') {
       return json({ ok: true, id, status: 'served', number: takeoutHandover.number, replayed: true });
-    }
-    if (takeoutHandover && takeoutHandover.mode === 'takeout'
-        && !pinActor) {
-      return json({ error: 'handover-identity-required' }, 403);
     }
   }
 
@@ -1984,7 +1992,11 @@ export async function onRequestPost(context) {
             closed_by = 'takeout-handover', closed_actor_id = ?, closed_actor_name = ?
           WHERE id = ? AND merchant = ? AND mode = 'takeout' AND status = 'open'
             AND EXISTS (SELECT 1 FROM orders WHERE id = ? AND merchant = ? AND status = 'served' AND updated_ts = ?)`,
-        now, pinActor.id, pinActor.name, takeoutHandover.session_id, merchant, id, merchant, now);
+        /* `pinActor` est désormais facultatif : sans lui ces deux colonnes
+         * restent vides, elles ne doivent surtout pas lever (le catch plus bas
+         * transformerait un simple passage de plat en `handover-write-failed`
+         * 503, c'est-à-dire en panne visible au comptoir). */
+        now, pinActor?.id || '', pinActor?.name || '', takeoutHandover.session_id, merchant, id, merchant, now);
       const batch = await atomicStatements(env, [orderUpdate, handoverUpdate]);
       const changes = Number(batch && batch[0] && batch[0].meta && batch[0].meta.changes) || 0;
       if (changes) row = await env.DB.prepare(

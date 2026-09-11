@@ -180,12 +180,26 @@
   function setStatus(id, status, extra) {
     var m = merchant();
     if (!m) return Promise.resolve(null);
-    var needsTillActor = (status === 'rejected' || (status === 'served' && state.orders[id] && state.orders[id].mode === 'takeout'))
+    /* Remettre la commande au client ne demande PLUS de code.
+     *
+     * Le geste arrive au coup de feu, une main tient le sachet, et il se répète
+     * à chaque commande : quatre chiffres à ce moment-là, c'est la caisse qui
+     * ralentit le comptoir sans rien protéger. Remettre ne déplace pas d'argent
+     * — la commande est déjà payée quand elle arrive ici — et n'efface rien :
+     * l'état avance de `ready` à `served`, la ligne descend dans l'historique,
+     * et le journal garde l'événement `takeout-handover` (avec l'acteur connu
+     * de la caisse s'il y en a un, vide sinon, exactement comme les sessions
+     * antérieures au proof).
+     *
+     * « Annuler » garde son code. C'est la vraie asymétrie : l'annulation fait
+     * disparaître une commande, produit des `kitchen_voids` et touche au
+     * paiement. Elle reste nominative. */
+    var needsTillActor = status === 'rejected'
       && !(extra && (extra.actorProof || extra.pinAuthorized));
     if (needsTillActor && !window.KiwiAuthorizeTillAction) return Promise.resolve(null);
     if (needsTillActor && window.KiwiAuthorizeTillAction) {
       return new Promise(function (resolve) {
-        var action = status === 'served' ? 'Remise de la commande au client' : 'Annuler la commande';
+        var action = 'Annuler la commande';
         window.KiwiAuthorizeTillAction(action, function (who) {
           resolve(setStatus(id, status, Object.assign({}, extra, { actorProof: who && who.actorProof || '', pinAuthorized: true })));
         });

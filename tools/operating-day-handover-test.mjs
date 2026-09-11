@@ -77,9 +77,32 @@ run(`INSERT INTO orders(id,merchant,number,mode,table_no,total,lines,status,crea
      VALUES (?, ?, 12, 'takeout', '', 79, ?, 'ready', ?, ?, ?)`,
   order, merchant, JSON.stringify([{ name: 'Pasta Corner', qty: 1, unitPrice: 79, total: 79 }]), now, now, session);
 
-const forged = await queuePost({ env, request: request({ merchant, id: order, status: 'served', actor: 'Forged cashier' }, till) });
+/* ── Remise sans code ──────────────────────────────────────────────────────
+ * Le comptoir remet le sachet sans rien taper. Ce que ce contrôle protège
+ * n'est PAS le fait que ça passe (c'est le but), mais ce qui est écrit : le
+ * nom envoyé par le client ne doit jamais devenir l'identité enregistrée.
+ * Sans proof on écrit vide, jamais « Forged cashier ». */
+const openSession = 'tsx-qa12-open-handover';
+const openOrder = 'ord-qa12-handover-nopin';
+run(`INSERT INTO table_sessions(id,merchant,mode,table_no,status,opened_ts,seen_ts)
+     VALUES (?,?,'takeout','', 'open', ?, ?)`, openSession, merchant, now, now);
+run(`INSERT INTO orders(id,merchant,number,mode,table_no,total,lines,status,created_ts,updated_ts,session_id)
+     VALUES (?, ?, 14, 'takeout', '', 60, ?, 'ready', ?, ?, ?)`,
+  openOrder, merchant, JSON.stringify([{ name: 'King Shawarma', qty: 1, unitPrice: 60, total: 60 }]), now, now, openSession);
+
+const unsigned = await queuePost({ env, request: request({ merchant, id: openOrder, status: 'served', actor: 'Forged cashier' }, till) });
+assert.equal(unsigned.status, 200, await unsigned.text());
+await new Promise(resolve => setImmediate(resolve));
+check('a takeaway handover goes through with no PIN, and never records a client-asserted name', () => {
+  assert.equal(raw('SELECT status FROM orders WHERE id=?', openOrder)[0].status, 'served');
+  const s = raw('SELECT status,closed_by,closed_actor_id,closed_actor_name FROM table_sessions WHERE id=?', openSession)[0];
+  assert.equal(s.status, 'closed'); assert.equal(s.closed_by, 'takeout-handover');
+  assert.equal(s.closed_actor_id, ''); assert.equal(s.closed_actor_name, '');
+});
+
+const forged = await queuePost({ env, request: request({ merchant, id: order, status: 'served', actorProof: 'not-a-real-proof' }, till) });
 assert.equal(forged.status, 403);
-check('served takeaway refuses a client-asserted identity', () => {
+check('a forged proof is still refused outright', () => {
   assert.equal(raw('SELECT status FROM orders WHERE id=?', order)[0].status, 'ready');
   assert.equal(raw('SELECT status FROM table_sessions WHERE id=?', session)[0].status, 'open');
 });
@@ -167,10 +190,35 @@ check('localized UI distinguishes handover from table closure and excludes it fr
 });
 
 const inbox = fs.readFileSync(new URL('../assets/orderpro-inbox.js', import.meta.url), 'utf8');
-check('OrderPro inbox requires the existing PIN authorization callback for takeaway handover', () => {
-  assert.match(inbox, /status === 'served' && state\.orders\[id\] && state\.orders\[id\]\.mode === 'takeout'/);
-  assert.match(inbox, /Remise de la commande au client/);
+check('takeaway handover no longer asks for a code, while cancellation still does', () => {
+  /* Le geste le plus répété du comptoir passe sans code. La garde ne doit
+   * mentionner QUE 'rejected' : si 'served' y revenait, la caisse
+   * redemanderait quatre chiffres à chaque sachet remis. */
+  assert.match(inbox, /var needsTillActor = status === 'rejected'/);
+  assert.ok(!/status === 'served' && state\.orders\[id\]/.test(inbox),
+    'handover must not be part of the PIN-gated transitions');
+  assert.ok(!/Remise de la commande au client/.test(inbox),
+    'the handover authorization prompt must be gone');
+  /* Annuler reste nominative — c'est elle qui détruit une commande. */
+  assert.match(inbox, /Annuler la commande/);
   assert.match(inbox, /extra\.actorProof/);
+});
+
+const queue = fs.readFileSync(new URL('../functions/api/order/queue.js', import.meta.url), 'utf8');
+check('the server stopped refusing an unsigned handover, and records it without an actor', () => {
+  /* On vise le `return`, pas la chaîne : le commentaire qui explique la levée
+   * mentionne l'ancien code d'erreur, et il doit pouvoir rester. */
+  assert.ok(!/return json\(\{ error: 'handover-identity-required' \}/.test(queue),
+    'the 403 that forced a PIN on every handover must be gone');
+  /* Le piège de cette levée : la même requête écrivait `pinActor.id` sans
+   * garde. Un accès direct lèverait, et le catch renverrait un 503 au
+   * comptoir — une panne, pour une commande parfaitement remise. */
+  assert.ok(!/now, pinActor\.id, pinActor\.name,/.test(queue),
+    'the handover write must not dereference a now-optional pinActor');
+  assert.match(queue, /now, pinActor\?\.id \|\| '', pinActor\?\.name \|\| '',/);
+  /* Fourni, le proof est toujours vérifié côté serveur : on n'a pas ouvert la
+   * porte à un nom d'acteur choisi par le client. */
+  assert.match(queue, /if \(b\.actorProof && !pinActor\) return json\(\{ error: 'invalid-action-identity' \}, 403\);/);
 });
 
 console.log(`QA12 handover: ${checks} checks passed.`);
