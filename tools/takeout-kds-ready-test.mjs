@@ -29,8 +29,17 @@ check('isKdsOff checks the shared kds feature gate',
 
 // 2. Readiness belongs to the order state. It must not depend on a merchant,
 // KDS setting, printer, or any other tenant-specific capability.
-check('vrapOrderCard exposes Marquer prêt for every accepted takeaway',
-  /const readyBtn = \(!ready && o\.status !== 'held'\)/.test(CAISSE));
+/* La règle d'origine — « la disponibilité est un état de COMMANDE, pas une
+ * capacité du commerçant » — tient toujours. Ce qui a changé, et qui n'est pas
+ * la même chose, c'est la PROVENANCE : une vente encaissée au comptoir n'a
+ * personne à prévenir, le client est devant la caisse. Le test reste donc
+ * strict sur ce qu'il protégeait (aucun terme de tenant, de KDS ou
+ * d'imprimante dans la garde) et n'admet QUE ce discriminant-là. */
+check('vrapOrderCard exposes Marquer prêt for every accepted OrderPro takeaway',
+  /const readyBtn = \(!ready && o\.status !== 'held' && !counterSale\)/.test(CAISSE));
+check('the only thing that removes it is the order coming from this counter',
+  /function vrapIsCounterSale\(o\)/.test(CAISSE)
+  && /if \(o\.opChannel\) return o\.opChannel !== 'kiwi';/.test(CAISSE));
 check('vrapOrderCard has no KDS/store restriction on the ready button',
   !/const readyBtn = \([^\n]*(?:kdsDisabled|merchant|slug|store)/i.test(CAISSE));
 check('Remettre au client is offered only after the ready action disappears',
@@ -67,14 +76,21 @@ check('Encaisser occupies its own full-width action row',
     const ready = order.status === 'ready';
     // Deliberately unused: changing this flag must never change the result.
     void kdsEnabled;
-    const readyBtn = (!ready && order.status !== 'held') ? 'Marquer prêt' : '';
+    const counterSale = order.opChannel ? order.opChannel !== 'kiwi' : order.opNum == null;
+    const readyBtn = (!ready && order.status !== 'held' && !counterSale) ? 'Marquer prêt' : '';
     if (!order.paid) return [order.status === 'held' ? 'Envoyer en cuisine' : '', readyBtn, 'Encaisser'].filter(Boolean);
-    if (!order.pickedUp) return [readyBtn || 'Remettre au client'];
+    if (!order.pickedUp && !counterSale) return [readyBtn || 'Remettre au client'];
     return [];
   }
 
-  const preparing = { status: 'new', paid: true, pickedUp: false };
-  const ready = { status: 'ready', paid: true, pickedUp: false };
+  /* Les commandes de référence sont OrderPro : c'est leur client qui est
+   * absent, et c'est pour lui que les deux étapes existent. */
+  const preparing = { status: 'new', paid: true, pickedUp: false, opChannel: 'kiwi', opNum: 12 };
+  const ready = { status: 'ready', paid: true, pickedUp: false, opChannel: 'kiwi', opNum: 12 };
+
+  const counterPreparing = { status: 'new', paid: true, pickedUp: false, opChannel: 'caisse', opNum: 14 };
+  check('a paid counter sale is finished · it asks for no further gesture',
+    actionFor(counterPreparing, true).length === 0 && actionFor(counterPreparing, false).length === 0);
   check('KDS-enabled and KDS-disabled merchants get the same preparation action',
     JSON.stringify(actionFor(preparing, true)) === JSON.stringify(actionFor(preparing, false)) &&
     actionFor(preparing, true)[0] === 'Marquer prêt');

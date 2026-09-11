@@ -19295,6 +19295,10 @@
       const items = kitchenItemsFromLines(source);
       const order = {
         num: ++kdsOrderSeq, type: 'takeaway', status: 'new',
+        /* Provenance connue DÈS la création, sans attendre que la file la
+           renvoie : c'est elle qui décide que cette vente n'a pas à passer par
+           « Marquer prêt » puis « Remettre au client » (voir vrapOrderCard). */
+        opChannel: 'caisse',
         readyAt: null, items, relayLines: relayLinesFromCaisse(source), sentAt: new Date(),
         kitchenDispatchedAt: Date.now(),
         paid: false, pickedUp: false, pickedUpAt: null, total,
@@ -19409,15 +19413,36 @@
       return o && Array.isArray(o.billItems) && o.billItems.length ? o.billItems : ((o && o.items) || []);
     }
 
+    /* ── Vente au comptoir ou commande à distance ? ────────────────────────
+     * Une commande OrderPro est passée par un client ABSENT : il faut pouvoir
+     * lui dire « c'est prêt », puis constater qu'il est venu la chercher. Ces
+     * deux étapes sont la raison d'être de « Marquer prêt » et « Remettre au
+     * client ».
+     *
+     * Une vente saisie AU COMPTOIR n'a ni l'une ni l'autre : le client est
+     * devant la caisse, il paie, il attend son sachet et il repart. Lui faire
+     * traverser les deux mêmes boutons n'informait personne — ça ajoutait deux
+     * gestes au coup de feu et laissait la carte traîner dans « EN COURS ».
+     *
+     * `opChannel` porte la provenance : 'kiwi' = OrderPro / téléphone, tout le
+     * reste = ce comptoir. Une commande purement locale (pas encore de numéro
+     * de file) est forcément du comptoir elle aussi. */
+    function vrapIsCounterSale(o) {
+      if (!o) return false;
+      if (o.opChannel) return o.opChannel !== 'kiwi';
+      return o.opNum == null;
+    }
+
     function vrapOrderCard(o) {
       const ready = o.status === 'ready';
+      const counterSale = vrapIsCounterSale(o);
       const savedSplit = savedTakeawaySplitFor(o);
       const splitRemaining = savedSplit ? splitRemainingTotal(savedSplit) : null;
       /* Readiness is an ORDER state, not a merchant or printer capability.
          The counter must be able to mark every accepted takeaway ready even
          when a KDS is configured: some restaurants run the pass from the
          caisse, and the same OrderPro workflow must work for every tenant. */
-      const readyBtn = (!ready && o.status !== 'held')
+      const readyBtn = (!ready && o.status !== 'held' && !counterSale)
         ? `<button class="vrap-act vrap-act-ready" data-vrap-ready="${o.num}" title="Prévenir le client que la commande est prête">Marquer prêt</button>`
         : '';
       const sendBtn = o.status === 'held'
@@ -19429,7 +19454,7 @@
       let action = '';
       if (!o.paid) {
         action = `<div class="vrap-order-acts">${cancelBtn}${sendBtn}${readyBtn}<button class="vrap-act vrap-act-pay">${savedSplit ? 'Reprendre le split · ' : 'Encaisser · '}${fmtMAD(splitRemaining != null ? splitRemaining : o.total)}</button></div>`;
-      } else if (!o.pickedUp) {
+      } else if (!o.pickedUp && !counterSale) {
         /* Do not offer handover while the card still says "En préparation".
            That shortcut silently marked the order ready and served in one
            click, hiding the readiness step from every KDS-enabled merchant. */
@@ -19694,6 +19719,28 @@
              correctly does nothing. Payment still has to cross the server
              boundary; the queue endpoint accepts this same-state paid stamp
              idempotently without replaying the kitchen transition. */
+          /* ── La vente au comptoir se termine en étant payée ────────────────
+           * Elle n'a plus « Marquer prêt » ni « Remettre au client » (voir
+           * vrapIsCounterSale) : sans cela elle resterait EN COURS pour le
+           * reste du service, et surtout sa session `takeout` resterait OUVERTE
+           * dans D1 — la journée d'exploitation se fermerait sur des sessions
+           * qui ne se refermeront jamais. Le paiement EST la fin : le client est
+           * devant la caisse, il repart avec son sachet.
+           *
+           * `served` emprunte exactement le chemin qu'empruntait « Remettre » —
+           * même transition, même fermeture de session, même événement
+           * `takeout-handover` au journal. Rien de neuf côté serveur. */
+          if (vrapIsCounterSale(o)) {
+            o.pickedUp = true;
+            o.pickedUpTs = Date.now();
+            o.pickedUpAt = vrapHandoverTime(o.pickedUpTs);
+            /* On ne force PAS `ready` au passage : le serveur accepte
+             * `served` depuis `accepted` autant que depuis `ready`
+             * (FROM.served = ['ready','accepted']), et mentir sur l'état
+             * cuisine ferait disparaître un plat encore à faire de l'écran de
+             * production. La cuisine garde son bon ; c'est la carte du
+             * comptoir qui se range. */
+          }
           if (o.opId) {
             const remoteStatus = o.pickedUp ? 'served' : (o.status === 'ready' ? 'ready' : 'accepted');
             opPush(o, remoteStatus, { paid: true });

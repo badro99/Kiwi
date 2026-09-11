@@ -36,9 +36,18 @@ const splitHelpers = between('    function splitPaidCount(saved) {', '    functi
 const splitCard = between('    function renderRpSplitCard(id) {', '    /* "Plus tard"');
 const splitPayment = between('    function markSplitPartPaid(partIdx, method) {', '    /* ---- events ---- */');
 const rightPanel = between('    function renderRightPanel(id) {', '    function openTable(id) {');
-const takeawayCard = between('    function vrapOrderCard(o) {', '    function vrapHandoverTimestamp(value) {');
+/* La tranche part de `vrapIsCounterSale`, pas de `vrapOrderCard` : la carte
+ * l'appelle, et une extraction qui s'arrête à la carte donne un
+ * ReferenceError dans le bac à sable — la fonction existe bien en production,
+ * elle est simplement définie un cran plus haut. */
+const takeawayCard = between('    function vrapIsCounterSale(o) {', '    function vrapHandoverTimestamp(value) {');
 const takeawayHistory = between('    function vrapHistoryRow(o) {', '    /* Une expirée');
 const takeawayFinalize = between('    function settleVrapPayment() {', '    /* Click a board order');
+/* La règle de provenance est partagée par la carte ET par l'encaissement.
+ * On l'injecte telle quelle plutôt que de la simuler : un bouchon dirait
+ * « oui » quoi qu'il arrive, et ce contrôle ne verrait plus la différence
+ * entre une vente au comptoir et une commande OrderPro. */
+const counterSaleRule = between('    function vrapIsCounterSale(o) {', '    function vrapOrderCard(o) {');
 const cashTerminal = between('    function cashTerminalId() {', '    function cashActorId');
 const dayReport = `${cashTerminal}\n${between('    function dayReportSession(counted) {', '    /* The local journal')}`;
 
@@ -219,10 +228,16 @@ section('Takeaway finalization and history path');
     vrapHandoverTime: () => '12:00',
     kdsEsc: (value) => String(value),
   });
-  vm.runInContext(`${takeawayFinalize}\n${takeawayHistory}`, context);
+  vm.runInContext(`${counterSaleRule}\n${takeawayFinalize}\n${takeawayHistory}`, context);
   context.settleVrapPayment();
   ok(order.paid === true && order.total === 60 && context.persisted && context.boardShown,
     'actual takeaway finalization marks the order paid and restores the original 60 MAD total');
+  /* Vente au comptoir (aucune provenance OrderPro) : l'encaissement EST la
+   * remise. Sans cela la carte resterait dans « EN COURS » pour le reste du
+   * service, et sa session takeout ne se refermerait jamais — puisque les deux
+   * boutons qui la fermaient ont disparu. */
+  ok(order.pickedUp === true && Number(order.pickedUpTs) > 0,
+    'paying a counter sale hands it over in the same gesture, leaving nothing open');
   const history = context.vrapHistoryRow(order);
   ok(history.includes('60.00') || history.includes('60,00'),
     'actual takeaway history row displays the final 60 MAD total');

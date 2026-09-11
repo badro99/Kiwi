@@ -1020,6 +1020,7 @@ section('Whole-project regressions');
     'operating-day-orders-integration-test.mjs',
     'operating-day-admin-test.mjs',
     'operating-day-handover-test.mjs',
+    'counter-sale-flow-test.mjs',
     'operating-day-inventory-cycle-test.mjs',
     'operating-day-split-session-test.mjs',
     'cash-sessions-auth-test.mjs',

@@ -135,8 +135,14 @@ assert.match(source, /confirmAccepted\(order\)[\s\S]{0,500}?opIngest\(Object\.as
   'successful OrderPro acceptance returns through the idempotent ingestion bridge');
 assert.match(source, /data-vrap-send[\s\S]{0,500}?dispatchHeldTakeaway\(order, false, true\)/,
   'an unpaid OrderPro takeaway exposes a separate kitchen action that keeps it unpaid');
-assert.match(source, /const readyBtn = \(!ready && o\.status !== 'held'\)/,
-  'every accepted takeaway exposes Marquer prêt regardless of merchant or KDS configuration');
+/* La garde n'admet qu'un seul discriminant en plus de l'état : la provenance.
+ * Une vente encaissée au comptoir n'a personne à prévenir ; une commande
+ * OrderPro, si — et toujours indépendamment du commerçant ou du KDS, ce que
+ * l'assertion suivante continue de vérifier. */
+assert.match(source, /const readyBtn = \(!ready && o\.status !== 'held' && !counterSale\)/,
+  'every accepted OrderPro takeaway exposes Marquer prêt regardless of merchant or KDS configuration');
+assert.match(source, /function vrapIsCounterSale\(o\)/,
+  'the counter-sale discriminant is a named, testable rule rather than an inline condition');
 assert.doesNotMatch(source, /const readyBtn = \(kdsDisabled/,
   'readiness is never restricted to stores without a KDS');
 assert.match(source, /action = readyBtn \|\| `<button class="vrap-act" data-vrap-handover=/,

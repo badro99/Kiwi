@@ -5786,6 +5786,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       'forbidden-merchant': 'tablette non appairée à ce commerce',
       'table-required':     'table introuvable',
       'empty-order':        'rien à envoyer',
+      'unsendable-lines':   'lignes non identifiées · commande NON envoyée, retirez-les et resaisissez',
       'not-configured':     'service indisponible · commande NON envoyée',
       'no-merchant':        'aucun commerce appairé · commande NON envoyée',
       'offline':            'hors ligne · commande NON envoyée, réessayez',
@@ -5819,9 +5820,23 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       const order = tableOrders[tableId] || [];
       let pending = svReadPending(tableId);
       const delta = [];
+      /* Combien de lignes ATTENDENT réellement de partir, avant tout filtrage.
+       * C'est la seule mesure qui permet de distinguer « il n'y avait rien à
+       * envoyer » de « il y avait quelque chose et on n'a pas su le
+       * construire » — deux situations que ce lot confondait, en annonçant la
+       * seconde comme un succès. */
+      let awaiting = 0;
+      let dropped = 0;
+      order.forEach((l) => { if (Math.max(0, (+l.qty || 0) - (+l.sentQty || 0)) > 0) awaiting++; });
       order.forEach((l, lineIndex) => {
         const dq = Math.max(0, (+l.qty || 0) - (+l.sentQty || 0));
-        if (!dq || !l.id) return;
+        if (!dq) return;
+        /* Une ligne sans `id` ne peut pas être tarifée par le serveur (le prix
+         * vient de la carte publiée, jamais de la tablette) : elle était
+         * SILENCIEUSEMENT sautée. Elle ne partait pas en cuisine, et le lot
+         * continuait comme si de rien n'était. On la compte pour pouvoir le
+         * dire. */
+        if (!l.id) { dropped++; return; }
         if (!l.uid) l.uid = 'svl-' + String(l.id) + '-' + lineIndex + '-' + Math.random().toString(36).slice(2, 9);
         const opts = Array.isArray(l.opts)
           ? l.opts.map(o => o && o.label).filter(Boolean).join(', ')
@@ -5864,7 +5879,25 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         };
         svWritePending(tableId, pending);
       }
-      if (!pending) return Promise.resolve({ ok: true, nothing: true });
+      /* ── LE FAUX SUCCÈS ───────────────────────────────────────────────────
+       * Ici, ce lot renvoyait `{ ok: true, nothing: true }` — et l'appelant ne
+       * regarde que `ok`. Résultat : « Table 4 · commande envoyée · cuisine »,
+       * drapeau « non envoyée » effacé, retour au plan de salle… et RIEN n'est
+       * parti. La cuisine n'a jamais vu le ticket, le serveur a la confirmation
+       * écrite du contraire, et personne ne l'apprend avant que le client
+       * réclame. C'est le défaut que le reste de ce fichier combat déjà pour
+       * « Lancer la commande » ; il survivait dans sa propre sortie anticipée.
+       *
+       * Deux cas, et ils n'ont pas la même réponse :
+       *  · des lignes attendaient mais aucune n'a pu être construite (pas
+       *    d'`id`) ⇒ c'est un ÉCHEC. La table reste marquée non envoyée.
+       *  · rien n'attendait ⇒ ce n'est pas un échec, mais ce n'est pas non plus
+       *    un envoi : `nothing` remonte, et l'appelant ne doit pas annoncer la
+       *    cuisine. */
+      if (!pending) {
+        if (dropped > 0) return Promise.resolve({ ok: false, error: 'unsendable-lines', dropped });
+        return Promise.resolve({ ok: true, nothing: true, awaiting });
+      }
       const slug = svSlug();
       if (!slug) return Promise.resolve({ ok: false, error: 'no-merchant' });
       return fetch('/api/order/queue', {
@@ -5918,7 +5951,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
             }
             if (svReadPending(tableId)?.ref === pending.ref) svForgetPending(tableId);
             const result = {
-              ok: true, number: j.number,
+              ok: true, number: j.number, dropped,
               reference: serviceOrderRef({
                 number: j.number, mode: 'table', channel: 'kiwi',
                 server: activeRole.fullName || activeRole.name || '',
@@ -7853,11 +7886,27 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
            serveur pressé tape deux fois et part avant la réponse. */
         btn.disabled = true;
         svSendOrder(sentId).then((res) => {
+          /* Rien n'est parti : on ne dit PAS « commande envoyée ». Le drapeau
+           * « non envoyée » reste, le serveur reste sur la table. Annoncer la
+           * cuisine ici était le faux succès que svSendOrderBatch vient de
+           * cesser de produire — la moitié appelante doit cesser de l'annoncer
+           * aussi, sinon le correctif ne se voit nulle part. */
+          if (res.ok && res.nothing) {
+            btn.disabled = false;
+            renderTableDetail();
+            toast(`Table ${sentId} · rien de nouveau à envoyer`, 3600);
+            return;
+          }
           if (res.ok) {
             publishServiceTableState(sentId, tables[sentId].status, tables[sentId].covers, false);
             dirtyOrders.delete(sentId);
             returnToFloor();
-            toast(res.reference ? `${msg} · ticket ${res.reference}` : msg);
+            const sentMsg = res.reference ? `${msg} · ticket ${res.reference}` : msg;
+            /* Envoi partiel : ce qui est parti est parti, mais le serveur doit
+             * savoir que des lignes sont restées à quai. */
+            toast(res.dropped > 0
+              ? `${sentMsg} · ${res.dropped} ligne(s) non identifiée(s) NON envoyée(s)`
+              : sentMsg, res.dropped > 0 ? 5200 : undefined);
           } else {
             /* On NE nettoie pas le drapeau : la table doit rester marquée « non
                envoyée », c'est tout l'objet de ce changement. Le serveur reste
