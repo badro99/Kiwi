@@ -2004,9 +2004,12 @@
     .pay-btn:hover { transform: translateY(-1px); }
     .pay-btn:active { transform: scale(0.97); transition: transform 70ms var(--spring, cubic-bezier(0.34, 1.45, 0.5, 1)); }
     .pay-btn:focus-visible { outline: 2px solid var(--emerald); outline-offset: 2px; }
-    /* card + cash share one row as compact icon-only buttons */
+    /* Card stays compact; the primary cash action occupies the two former
+       cash/QR slots without changing either payment handler. */
     .pay-row { display: flex; gap: 8px; }
     .pay-row .pay-btn { flex: 1; }
+    .pay-row-primary #pay-card { flex: 1; }
+    .pay-row-primary .pay-charge { flex: 2; min-width: 0; height: 56px; }
     .pay-icon {
       background: var(--gradient);
       color: #fff;
@@ -6238,22 +6241,16 @@
           </div>
           <!-- Normal payment buttons (salle read-to-pay + vrap) -->
           <div id="rp-pay-normal">
-            <!-- Le geste principal d'une caisse : encaisser. Total affiché sur
-                 le bouton (façon « Charge 47,50 ») ; ouvre le flux espèces ·
-                 la carte, le QR et le partage restent juste en dessous. -->
-            <button class="pay-btn pay-charge" id="pay-charge" title="Encaisser en espèces · F2">
-              <span class="pay-charge-lbl"><i data-lucide="banknote"></i>Encaisser</span>
-              <span class="pay-charge-total mono" id="pay-charge-total">0,00 MAD</span>
-            </button>
-            <div class="pay-row">
+            <!-- Carte à gauche ; le geste principal Encaisser remplace les deux
+                 raccourcis espèces/QR redondants à droite. Son identifiant et
+                 son flux de transaction restent inchangés. -->
+            <div class="pay-row pay-row-primary">
               <button class="pay-btn pay-icon" id="pay-card" aria-label="Payer par carte · F3" title="Payer par carte · F3">
                 <i data-lucide="credit-card"></i>
               </button>
-              <button class="pay-btn pay-icon" id="pay-cash" aria-label="Payer en espèces · F2" title="Payer en espèces · F2">
-                <i data-lucide="banknote"></i>
-              </button>
-              <button class="pay-btn pay-icon" id="pay-qr" aria-label="Payer par QR">
-                <i data-lucide="qr-code"></i>
+              <button class="pay-btn pay-charge" id="pay-charge" title="Encaisser en espèces · F2">
+                <span class="pay-charge-lbl"><i data-lucide="banknote"></i>Encaisser</span>
+                <span class="pay-charge-total mono" id="pay-charge-total">0,00 MAD</span>
               </button>
             </div>
             <div class="pay-row">
@@ -10843,7 +10840,8 @@
       restorePayBindings();
     }
     $('#pay-card').addEventListener('click', openCardModal);
-    $('#pay-qr').addEventListener('click', function () {
+    const payQrButton = $('#pay-qr');
+    if (payQrButton) payQrButton.addEventListener('click', function () {
       /* No QR provider/intent exists in the hardware bridge yet. Reusing the card
          authorizer painted a QR icon but charged the card path · a false success. */
       toast('Paiement QR indisponible · configurez un fournisseur QR');
@@ -10969,7 +10967,8 @@
       restorePayBindings();
       cashModal.classList.remove('is-open');
     }
-    $('#pay-cash').addEventListener('click', openCashModal);
+    const payCashButton = $('#pay-cash');
+    if (payCashButton) payCashButton.addEventListener('click', openCashModal);
     cashInput.addEventListener('input', updateRendu);
     /* « Encaisser » · le geste principal (Slice A). En vente rapide il ouvre
        le flux espèces ; en prise de commande il envoie d'abord les lignes en
