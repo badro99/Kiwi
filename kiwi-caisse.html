@@ -88,8 +88,8 @@
   <script src="assets/caisse-motion.js?v=1" defer></script>
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
-  <script src="assets/escpos.js?v=8" defer></script>
-  <script src="assets/printer-bridge.js?v=15" defer></script>
+  <script src="assets/escpos.js?v=10" defer></script>
+  <script src="assets/printer-bridge.js?v=16" defer></script>
   <script src="assets/caisse-hardware.js?v=2" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
@@ -15473,17 +15473,26 @@
       const row = (l, v) => `<div class="rp-r"><span class="rp-r-l">${rpEsc(l)}</span><span class="rp-r-v">${rpEsc(v)}</span></div>`;
       const M = { cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR', link: 'Lien' };
 
+      /* `gross` est le brut AVANT remboursements, `methods` les porte déjà en
+         négatif : afficher l'un au-dessus des autres faisait dire à l'écran
+         « Encaissé 12 651 » et « Espèces 12 321 » sur la même vue · l'écart
+         valait exactement les remboursements du service, et il a coûté une nuit
+         de recherche à un commerçant. Le chiffre annoncé est donc celui qui est
+         vraiment entré, et le brut se lit dans les ajustements. */
+      const refundAmt = (r.refunds && r.refunds.count) ? (+r.refunds.amount || 0) : 0;
+      const collected = money(r.gross - refundAmt);
+
       let html = '<div class="rp-kpis">'
         + kpi('Net du service', fmtMAD(r.net), '', true)
         + kpi('Transactions', String(r.txns))
         + kpi('Ticket moyen', fmtMAD(r.basket))
-        + kpi('Encaissé', fmtMAD(r.gross))
+        + kpi('Encaissé', fmtMAD(collected))
         + '</div>';
 
       const meth = Object.keys(r.methods || {}).filter(k => r.methods[k])
         .sort((a, b) => r.methods[b] - r.methods[a])
         .map(k => row(M[k] || k, fmtMAD(r.methods[k]))).join('');
-      if (meth) html += `<div class="rp-sec"><div class="rp-h"><span>Moyens de paiement</span><em>${rpEsc(fmtMAD(r.gross))}</em></div>${meth}</div>`;
+      if (meth) html += `<div class="rp-sec"><div class="rp-h"><span>Moyens de paiement</span><em>${rpEsc(fmtMAD(collected))}</em></div>${meth}</div>`;
 
       /* Le rythme du service. Utile au comptoir pour une raison très concrète :
          savoir si le coup de feu est passé avant d'envoyer quelqu'un en pause. */
@@ -15504,7 +15513,10 @@
       }
 
       let adj = '';
-      if (r.refunds && r.refunds.count) adj += row(`Remboursements (${r.refunds.count})`, '− ' + fmtMAD(r.refunds.amount));
+      if (refundAmt) {
+        adj += row('Ventes brutes', fmtMAD(r.gross));
+        adj += row(`Remboursements (${r.refunds.count})`, '− ' + fmtMAD(refundAmt));
+      }
       if (r.discounts && r.discounts.amount) adj += row('Remises accordées', '− ' + fmtMAD(r.discounts.amount));
       if (r.tips) adj += row('Pourboires', fmtMAD(r.tips));
       if (adj) html += `<div class="rp-sec"><div class="rp-h"><span>Ajustements</span></div>${adj}</div>`;
@@ -20248,6 +20260,24 @@
         return changed;
       }
       const activeSeat = phoneSeats.get(tableKey(id));
+      /* ── UNE TABLE RÉGLÉE NE SE ROUVRE PAS TOUTE SEULE ──────────────────
+       * Les trois gardes qui suivent protègent la note par la SESSION du
+       * téléphone. Une commande qui n'en porte pas · un QR client, un bon du
+       * canal public · les traverse toutes les trois et se raccroche à
+       * n'importe quelle table portant ce numéro, y compris une table
+       * encaissée trente secondes plus tôt. C'est la table 13 du ticket
+       * #0068 : réglée, puis retrouvée ouverte avec sa note, à côté d'une
+       * vente déjà au journal · et le caissier ne peut plus savoir laquelle
+       * des deux est vraie.
+       * `tableClosedAt` porte déjà l'heure de la fermeture locale (markPaid →
+       * releasePhoneTable) et se lève dès qu'une table légitime rouvre. Un bon
+       * créé AVANT cette heure appartient au service qu'on vient de payer.
+       * On exige un horodatage réel : sans lui on ne sait pas, et refuser une
+       * commande authentique coûte plus cher que d'en rouvrir une. */
+      const closedAt = Number(tableClosedAt[tableKey(id)] || 0);
+      const createdTs = Number(o.created_ts || 0);
+      if (closedAt && createdTs && createdTs <= closedAt
+        && !(activeSeat && Number(activeSeat.since || 0) > closedAt)) return false;
       /* A table is reused hundreds of times. Only tickets from its CURRENT
          session belong to this bill. Legacy employee rows have a server but no
          session; importing them is precisely how one new item became eight in
@@ -21438,9 +21468,56 @@
         });
         saved.orderBridgeSyncVersion = ORDER_BRIDGE_SYNC_VERSION;
       }
-      restoreShift(saved);
-      enterShellDirectly();
-      setTimeout(() => toast('Service restauré · ' + journal.length + ' transactions'), 500);
+      /* ── LA REPRISE NE DOIT PAS POUVOIR TUER LA CAISSE ────────────────────
+       * `restoreShift` puis `enterShellDirectly` étaient appelés à nu, au
+       * premier niveau du script en ligne. Ces deux fonctions relisent un
+       * instantané et PEIGNENT tout de suite avec (renderSalle, setMode,
+       * updateKdsCount) : un seul champ inattendu dans le snapshot · une ligne
+       * de table sans nom, un ticket cuisine à moitié écrit, un split d'une
+       * forme oubliée · et l'exception remontait hors de cette IIFE.
+       *
+       * Ce qui se trouve EN DESSOUS ne s'exécute alors jamais : l'autosave, le
+       * beforeunload, le sondage de salle, tous les écouteurs. La page reste
+       * blanche, sans un mot, et la caisse est morte pour de bon — c'est
+       * exactement ce qu'a vu Pasta Corner à 00h55 (ticket #0069). Puis on
+       * rouvre un service, et le premier autosave écrase l'instantané : les
+       * commandes de la soirée disparaissent pour de vrai.
+       *
+       * Un instantané qu'on ne sait pas relire est un problème de support, pas
+       * une raison de perdre le service. On en met donc une copie à l'abri, on
+       * note que CE service-là fait tomber la caisse, et on recharge une fois :
+       * la mémoire repart propre et le commerçant retrouve au moins une caisse
+       * qui fonctionne. Le drapeau est en sessionStorage · s'il ne peut pas
+       * s'écrire, on ne recharge pas, pour qu'aucune boucle ne soit possible. */
+      const RESTORE_FAIL_FLAG = 'kiwiCaisseRestoreFailed';
+      const restoreStamp = String(saved.savedAt || saved.openedAt || '');
+      let alreadyFailed = '';
+      try { alreadyFailed = sessionStorage.getItem(RESTORE_FAIL_FLAG) || ''; } catch (_) {}
+      if (alreadyFailed && alreadyFailed === restoreStamp) {
+        setTimeout(() => toast('Service non restauré · il est conservé, préviens le support', 'danger'), 800);
+        return;
+      }
+      try {
+        restoreShift(saved);
+        enterShellDirectly();
+        setTimeout(() => toast('Service restauré · ' + journal.length + ' transactions'), 500);
+      } catch (err) {
+        try { console.error('[kiwi] reprise du service impossible', err); } catch (_) {}
+        /* La copie de secours d'abord : elle doit exister AVANT que quoi que ce
+           soit puisse réécrire KC_STORE. Elle ne remplace pas l'original, elle
+           le double · un service rouvert écrase l'un, jamais l'autre. */
+        let stashed = false;
+        try {
+          const raw = localStorage.getItem(KC_STORE);
+          if (raw) { localStorage.setItem(KC_STORE + ':rescue', raw); stashed = true; }
+        } catch (_) {}
+        let flagged = false;
+        try { sessionStorage.setItem(RESTORE_FAIL_FLAG, restoreStamp); flagged = true; } catch (_) {}
+        if (flagged) { try { location.reload(); return; } catch (_) {} }
+        setTimeout(() => toast(stashed
+          ? 'Service non restauré · il est conservé, préviens le support'
+          : 'Service non restauré · préviens le support', 'danger'), 800);
+      }
     })();
 
     /* Autosave · covers refresh, tab close and crashes.

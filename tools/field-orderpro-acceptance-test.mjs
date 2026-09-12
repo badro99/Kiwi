@@ -124,6 +124,9 @@ function till(table, session) {
   const context = vm.createContext({
     Date, tables: { [table]: { status: 'ka-yaklo', elapsed: 0 } }, tableOrders: {}, orders: {},
     phoneSeats: new Map([[table, { session, since: now }]]), servers: {}, selectedId: '', mode: 'salle',
+    /* Les tombstones de fermeture locale · aucune table n'est encaissée ici,
+       donc le rattachement doit se comporter exactement comme avant. */
+    tableClosedAt: Object.create(null),
     caisseTableId: value => value, tableKey: value => value, ticketNo: value => String(value.opNum),
     menuLineFind: predicate => menu.items.find(predicate), newLineUid: () => 'synthetic-line',
     refreshTableNode() {}, renderRightPanel() {}, persistShift() {},

@@ -296,8 +296,8 @@
     "sha": "b30017496f9a5369"
   },
   "assets/escpos.js": {
-    "v": "8",
-    "sha": "b5ad3e18d61f498a"
+    "v": "10",
+    "sha": "b2c11d639c633af9"
   },
   "assets/features.js": {
     "v": "4",
@@ -768,8 +768,8 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "15",
-    "sha": "ea196f65904ce256"
+    "v": "16",
+    "sha": "eda39f2b908063a2"
   },
   "assets/procurement.js": {
     "v": "2",

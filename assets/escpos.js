@@ -115,6 +115,39 @@
     var cap = Math.max(1, Math.floor(cols(paper) / Math.max(1, widthMultiplier || 1)));
     return cell(v).slice(0, cap);
   }
+  /* `fit` COUPE. C'est le bon geste sur un en-tête ou une colonne de prix, et
+   * le mauvais sur le nom d'un plat : « 1× Spaghetti Fruits de Mer » sortait en
+   * cuisine comme « 1× Spaghetti Fruits de M » (24 colonnes en double largeur
+   * sur 80 mm), et un cuisinier qui lit un nom coupé envoie un autre plat.
+   * Ce qu'un humain doit LIRE passe donc à la ligne · mot par mot, avec un
+   * retrait sur les suites pour qu'on voie tout de suite que c'est le même
+   * article. Un mot plus large que le papier se coupe quand même : il n'y a
+   * pas d'autre issue, mais aucun texte ne disparaît. */
+  function wrap(v, paper, widthMultiplier, cont) {
+    var cap = Math.max(1, Math.floor(cols(paper) / Math.max(1, widthMultiplier || 1)));
+    var text = cell(v);
+    if (!text) return [];
+    if (text.length <= cap) return [text];
+    var indent = String(cont == null ? '' : cont);
+    if (indent.length >= cap) indent = '';
+    var out = [], cur = '', words = text.split(' ');
+    function room() { return out.length ? cap - indent.length : cap; }
+    function flush() { if (cur) { out.push(out.length ? indent + cur : cur); cur = ''; } }
+    while (words.length) {
+      var w = words.shift();
+      while (w.length > room()) {
+        if (cur) { flush(); continue; }
+        out.push((out.length ? indent : '') + w.slice(0, room()));
+        w = w.slice(room());
+      }
+      if (!w) continue;
+      if (!cur) cur = w;
+      else if (cur.length + 1 + w.length <= room()) cur += ' ' + w;
+      else { flush(); cur = w; }
+    }
+    flush();
+    return out;
+  }
   // "name .......... price" padded to the paper width.
   function row(left, right, paper) {
     var w = cols(paper);
@@ -167,7 +200,9 @@
     if (o.time) b.line(fit(o.time, paper));
     b.align('left').line(rule(paper));
     (o.items || []).forEach(function (it) {
-      b.bold(true).size(2, 2).line(fit((it.qty ? it.qty + '× ' : '') + (it.name || ''), paper, 2)).size(1, 1).bold(false);
+      b.bold(true).size(2, 2);
+      wrap((it.qty ? it.qty + '× ' : '') + (it.name || ''), paper, 2, '   ').forEach(function (l) { b.line(l); });
+      b.size(1, 1).bold(false);
       /* A composed menu is one kitchen instruction, not a row of unrelated
        * dishes. Its selected components are deliberately smaller than the
        * formula name and each starts with the same unmistakable `>` marker.
@@ -177,11 +212,15 @@
         var label = typeof choice === 'string' ? choice : (choice && choice.name);
         var detail = typeof choice === 'object' && choice ? choice.note : '';
         if (!label) return;
-        b.bold(false).size(1, 1)
-          .line(fit('> ' + label + (detail ? ' · ' + detail : ''), paper))
-          .size(1, 1);
+        b.bold(false).size(1, 1);
+        wrap('> ' + label + (detail ? ' · ' + detail : ''), paper, 1, '  ').forEach(function (l) { b.line(l); });
+        b.size(1, 1);
       });
-      if (it.note) b.bold(true).size(1, 2).line(fit('   > ' + it.note, paper)).size(1, 1).bold(false);
+      if (it.note) {
+        b.bold(true).size(1, 2);
+        wrap('   > ' + it.note, paper, 1, '     ').forEach(function (l) { b.line(l); });
+        b.size(1, 1).bold(false);
+      }
     });
     b.line(rule(paper)).feed(3).cut();
     return b.bytes();
@@ -282,7 +321,21 @@
          en compte, crédit) et « ENCAISSÉ » ment. On annonce FACTURÉ, on
          retranche, on redonne le net. Sans créance, sortie inchangée. */
       var recv = +r.receivable || 0;
-      b.bold(true).line(row(recv > 0 ? 'TOTAL FACTURÉ' : 'TOTAL ENCAISSÉ', money(r.gross), paper)).bold(false);
+      /* Un remboursement ne se range pas APRÈS le total : `gross` ne le porte
+         pas, `methods` le porte déjà en négatif. Imprimé plus bas, le ticket
+         annonçait « TOTAL ENCAISSÉ 12 651 » au-dessus d'un « Espèces 12 321 »
+         · son propre détail démentait son propre total, à l'exact montant des
+         remboursements, et le commerçant a passé la nuit à chercher les 330 MAD
+         qui manquaient. La déduction remonte donc AVANT le total, et le total
+         devient la somme de ce qui est listé dessous. Sans remboursement, pas
+         un octet ne change. */
+      var refundAmt = (r.refunds && r.refunds.count) ? (+r.refunds.amount || 0) : 0;
+      var collected = Math.round((r.gross - refundAmt) * 100) / 100;
+      if (refundAmt) {
+        b.line(row('Ventes brutes', money(r.gross), paper));
+        b.line(row('Remboursements (' + r.refunds.count + ')', '- ' + money(refundAmt), paper));
+      }
+      b.bold(true).line(row(recv > 0 ? 'TOTAL FACTURÉ' : 'TOTAL ENCAISSÉ', money(collected), paper)).bold(false);
       var M = o.methodLabels || {};
       Object.keys(r.methods || {}).forEach(function (k) {
         if (!r.methods[k]) return;
@@ -290,15 +343,12 @@
       });
       if (recv > 0) {
         b.line(row('dont à recevoir', '- ' + money(recv), paper));
-        b.bold(true).line(row('NET ENCAISSÉ', money(r.gross - recv), paper)).bold(false);
+        b.bold(true).line(row('NET ENCAISSÉ', money(Math.round((collected - recv) * 100) / 100), paper)).bold(false);
       }
       if (r.basket) b.line(row('Ticket moyen', money(r.basket), paper));
       if (r.tips) b.line(row('Pourboires', money(r.tips), paper));
       if (r.discounts && r.discounts.amount) {
         b.line(row('Remises accordées', '- ' + money(r.discounts.amount), paper));
-      }
-      if (r.refunds && r.refunds.count) {
-        b.line(row('Remboursements (' + r.refunds.count + ')', '- ' + money(r.refunds.amount), paper));
       }
       /* Hors du total encaissé, et imprimés quand même : un avoir sort de la
          marchandise sans faire sonner le tiroir. */

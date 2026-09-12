@@ -1113,7 +1113,16 @@
        créance, on redonne l'encaissé réel. Sans créance, pas un octet ne change
        · les autres métiers impriment à l'identique. */
     var recv = +r.receivable || 0;
-    R(recv > 0 ? 'TOTAL FACTURÉ' : 'TOTAL ENCAISSÉ', money(r.gross), 'kpr-b');
+    /* Le remboursement remonte AU-DESSUS du total · voir KiwiEscPos.dayReport :
+       listé après, il laissait le total contredire son propre détail du montant
+       exact des remboursements. Les deux encodeurs impriment le même Z. */
+    var refundAmt = (r.refunds && r.refunds.count) ? (+r.refunds.amount || 0) : 0;
+    var collected = Math.round((r.gross - refundAmt) * 100) / 100;
+    if (refundAmt) {
+      R('Ventes brutes', money(r.gross));
+      R('Remboursements (' + r.refunds.count + ')', '- ' + money(refundAmt));
+    }
+    R(recv > 0 ? 'TOTAL FACTURÉ' : 'TOTAL ENCAISSÉ', money(collected), 'kpr-b');
     var M = o.methodLabels || {};
     Object.keys(r.methods || {}).forEach(function (k) {
       if (!r.methods[k]) return;
@@ -1121,7 +1130,7 @@
     });
     if (recv > 0) {
       R('dont à recevoir', '- ' + money(recv));
-      R('NET ENCAISSÉ', money(r.gross - recv), 'kpr-b');
+      R('NET ENCAISSÉ', money(Math.round((collected - recv) * 100) / 100), 'kpr-b');
     }
     if (r.basket) R('Ticket moyen', money(r.basket));
     if (r.tips) R('Pourboires', money(r.tips));
@@ -1131,7 +1140,6 @@
        tiroir, et qu'un Z muet là-dessus ne se relit pas. */
     if (r.avoirs && r.avoirs.used) R('Réglé en avoir (' + (r.avoirs.usedCount || 0) + ')', money(r.avoirs.used));
     if (r.avoirs && r.avoirs.issued) R('Avoirs émis (' + (r.avoirs.issuedCount || 0) + ')', money(r.avoirs.issued));
-    if (r.refunds && r.refunds.count) R('Remboursements (' + r.refunds.count + ')', '- ' + money(r.refunds.amount));
     if (r.cancels) R('Annulations', String(r.cancels));
     }
 

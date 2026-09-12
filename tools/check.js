@@ -1198,6 +1198,10 @@ section('Whole-project regressions');
     'supplier-actions-test.mjs',
     'print-paper-test.mjs',
     'day-report-print-format-test.mjs',
+    'z-refund-total-coherence-test.mjs',
+    'caisse-boot-restore-guard-test.mjs',
+    'kitchen-ticket-wrap-test.mjs',
+    'settled-table-reopen-test.mjs',
     'station-printer-routing-test.mjs',
     'print-socket-test.mjs',
     /* l'iPad n'a ni pont local ni WebUSB : la caisse dépose le ticket sur

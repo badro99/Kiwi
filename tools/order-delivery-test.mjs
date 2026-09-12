@@ -205,6 +205,9 @@ async function main() {
       T4: [{ id: 'i1', name: 'Harira', qty: 1, price: 90, sent: true }] },
     orders: {}, tables: { T3: { status: 'ka-yaklo' }, T4: { status: 'ka-yaklo' }, T9: { status: 'ka-yaklo' } },
     phoneSeats: new Map(['T3', 'T4', 'T9'].map(id => [id, { session: 'ses-live', since: 0 }])),
+    /* Une table encaissée refuse désormais les bons antérieurs · aucune de ces
+       tables n'est fermée, le rattrapage doit donc se comporter comme avant. */
+    tableClosedAt: Object.create(null),
     servers: {}, selectedId: null, mode: 'salle',
     menuLineFind: () => null, newLineUid: () => 'test-line', ticketNo: () => 'test-ticket',
     refreshTableNode() {}, persistShift() {}, startTableTimer() {}, resetTableTimer() {},

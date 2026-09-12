@@ -106,6 +106,9 @@ async function fixture(t, opts = {}) {
       registerClosing: false, lastProvisional: 0, toast: message => events.push({ type: 'toast', message }),
       currentCashier: { id: 'cashier-local', name: 'Fixture cashier' },
       tables: { '5': { zone: 'salle' } }, tableOrders: {}, orders: {}, tableSplits: new Map(),
+      /* L'heure de fermeture locale des tables · persistShift l'écrit dans
+         l'instantané depuis qu'un bon payé ne doit plus rouvrir sa table. */
+      tableClosedAt: Object.create(null),
       vrapSplit: null, cart: [], vrapDiscount: null, selectedId: null,
       shiftOpenedAt: new Date(), shiftOpenedBy: 'Fixture cashier', openingFloat: 0,
       cashMovements: [], shift: { discounts: 0, refunds: 0, tablesPaid: 0 },
