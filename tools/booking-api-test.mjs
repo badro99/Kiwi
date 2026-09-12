@@ -114,6 +114,13 @@ check(db.doc.bookings.length === 1 && db.rev === 2, 'booking and document revisi
 response = await callPost(request); body = await response.json();
 check(response.status === 200 && body.replayed === true, 'same public reference is idempotent');
 check(db.doc.bookings.length === 1, 'idempotent replay does not duplicate the booking');
+check(!('manageToken' in body), 'a reference replay never discloses the management bearer token');
+response = await callPost({ ...request, startAt:slot.startAt + 3600000 }); body = await response.json();
+check(response.status === 409 && body.error === 'reference-conflict',
+  'a reused reference cannot substitute a different service time');
+response = await callPost({ ...request, customer:{ name:'Someone else', phone:'+49 179 5249999', email:'' } }); body = await response.json();
+check(response.status === 409 && body.error === 'reference-conflict' && !body.code && !body.manageToken,
+  'a caller with another guest contact cannot read the existing booking by reference');
 
 response = await callPost({ ...request, ref:'public-ref-0002' }); body = await response.json();
 check(response.status === 409 && body.error === 'slot-unavailable', 'double booking the same capacity is rejected');
@@ -161,7 +168,12 @@ check(atlas.available===2, 'an in-house multi-night stay is excluded without lea
 check(!body.hotel.categories.some((x)=>x.id==='type-hidden'), 'private room categories never appear publicly');
 response = await callGet(`merchant=test-shop&checkIn=${hotelIn}&checkOut=${hotelOut}&guests=3`); body = await response.json();
 check(body.hotel.categories.length===1 && body.hotel.categories[0].id==='type-family', 'guest count excludes categories that cannot accommodate the party');
-const hotelRequest={merchant:'test-shop',ref:'hotel-public-ref-0001',roomTypeId:'type-atlas',checkIn:hotelIn,checkOut:hotelOut,partySize:2,customer:{name:'Salma',phone:'0612345678',email:''}};
+const hotelRequest={merchant:'test-shop',ref:'hotel-public-ref-0001',roomTypeId:'type-atlas',checkIn:hotelIn,checkOut:hotelOut,partySize:2,expectedTotal:1700,customer:{name:'Salma',phone:'0612345678',email:''}};
+db.rooms.roomTypes[0].rate=900;
+response=await callPost(hotelRequest);body=await response.json();
+check(response.status===409&&body.error==='rate-changed'&&body.total===1800&&db.doc.bookings.length===0,
+  'a changed hotel rate refuses booking until the guest reviews the new total');
+db.rooms.roomTypes[0].rate=850;
 response=await callPost(hotelRequest);body=await response.json();
 check(response.status===200&&body.code.startsWith('H-')&&body.total===1700, 'hotel stay commits with a hotel reference and server-calculated total');
 check(db.doc.bookings[0].hotel.nights===2&&db.doc.bookings[0].resourceId==='room:101', 'booking stores the stay snapshot and assigns one hidden room atomically');
@@ -169,6 +181,13 @@ check(db.events.length===1&&db.events[0].eventType==='created'&&db.events[0].act
 check(!db.events[0].payload.includes('Salma')&&!db.events[0].payload.includes('0612345678'),'public shadow event excludes customer name and contact PII');
 response=await callPost(hotelRequest);body=await response.json();
 check(response.status===200&&body.replayed===true&&db.doc.bookings.length===1, 'hotel submission retry is idempotent');
+check(!('manageToken' in body), 'hotel replay does not leak the unused management bearer token');
+check(body.total===1700, 'hotel retry confirms the committed amount, never a now-stale browser amount');
+response=await callPost({...hotelRequest,checkOut:new Date(Date.now()+8*86400000).toISOString().slice(0,10)});body=await response.json();
+check(response.status===409&&body.error==='reference-conflict', 'hotel replay cannot silently substitute different dates');
+response=await callPost({...hotelRequest,customer:{name:'Unknown',phone:'0699999999',email:''}});body=await response.json();
+check(response.status===409&&body.error==='reference-conflict'&&!body.manageToken,
+  'another hotel guest cannot replay a public reference to recover booking details');
 check(db.events.length===1,'public booking replay does not duplicate the shadow event');
 response=await callPost({...hotelRequest,ref:'hotel-public-ref-0002',customer:{name:'Yasmine',phone:'0623456789',email:''}});
 check(response.status===200&&db.doc.bookings.length===2, 'a simultaneous stay consumes the next room in the category');

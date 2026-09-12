@@ -265,7 +265,21 @@ export async function onRequestPost({ request, env }) {
     let rows;try{rows=await readRows(env,merchant);}catch(_){return json({error:'unavailable'},503);}
     const doc=safeDoc(rows.reservation?.data), rev=+rows.reservation?.rev||0;
     if(!rows.merchant||!doc.settings.published)return json({error:'booking-closed'},409);
-    const prior=doc.bookings.find((x)=>x.publicRef===ref);if(prior){await limitClear(request,env,'booking');return json({ok:true,id:prior.id,code:prior.code,status:prior.status,startAt:prior.startAt,manageToken:prior.manageToken,replayed:true});}
+    const prior=doc.bookings.find((x)=>x.publicRef===ref);if(prior){
+      /* A publicRef is client-chosen and is only an idempotency key, never
+         proof of ownership. Do not disclose the booking or its management
+         bearer token to a caller replaying somebody else's reference. The
+         token is returned only with the original successful write. */
+      const samePhone=!!phone&&!!prior.customer.phone&&phoneKey(phone)===phoneKey(prior.customer.phone);
+      const sameEmail=!!email&&!!prior.customer.email&&email.toLowerCase()===String(prior.customer.email).toLowerCase();
+      const sameVisit=prior.hotel
+        ? prior.hotel.checkIn===str(b?.checkIn,10)&&prior.hotel.checkOut===str(b?.checkOut,10)
+        : prior.startAt===startAt;
+      if(name!==prior.customer.name||!(samePhone||sameEmail)||prior.serviceId!==sid
+        ||prior.partySize!==partySize||!sameVisit)return json({error:'reference-conflict'},409);
+      await limitClear(request,env,'booking');return json({ok:true,id:prior.id,code:prior.code,status:prior.status,
+        startAt:prior.startAt,total:prior.hotel?.total,replayed:true});
+    }
     const now=Date.now(), contactKey=(phoneKey(phone)||email).toLowerCase();
     const recentForContact=doc.bookings.filter((x)=>x.source==='public'&&x.createdAt>now-86400000&&((phone&&phoneKey(x.customer.phone)===contactKey)||String(x.customer.email||'').toLowerCase()===contactKey)).length;
     const activeFuture=doc.bookings.filter((x)=>ACTIVE.has(x.status)&&x.endAt>now).length;
@@ -287,6 +301,11 @@ export async function onRequestPost({ request, env }) {
       }
       const categories=hotelCategories(doc,rows.hotel,stay,partySize,sid,d1BusyRooms),category=categories[0];
       if(!category||!category.rooms.length)return json({error:'room-unavailable'},409);
+      /* The displayed quote is the guest's price agreement. A concurrent
+         rate edit must send them back to review, not silently book at the new
+         price. Older cached pages omit expectedTotal and remain compatible. */
+      if(b?.expectedTotal!==undefined&&(!Number.isSafeInteger(+b.expectedTotal)||+b.expectedTotal!==category.total))
+        return json({error:'rate-changed',total:category.total},409);
       const room=category.rooms[0],code='H-'+crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase(),token=crypto.randomUUID().replace(/-/g,'');
       const rec={id:'bk-'+crypto.randomUUID(),code,customer:{name,phone,email},serviceId:category.id,resourceId:room.id,startAt:stay.startAt,endAt:stay.endAt,partySize,status:doc.settings.confirmation==='request'?'requested':'confirmed',source:'public',note:str(b?.note,600),manageToken:token,publicRef:ref,hotel:{roomTypeName:category.name,checkIn:stay.checkIn,checkOut:stay.checkOut,nights:stay.nights,rate:category.rate,total:category.total,channel:'direct',externalRef:'',guestSegments:normalizeGuestSegments([],[],partySize,stay.checkIn,stay.checkOut),roomSegments:currentRoomSegment(room.id,stay.checkIn,stay.checkOut)},createdAt:now,updatedAt:now};
       doc.bookings.push(rec);
