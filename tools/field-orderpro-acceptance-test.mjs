@@ -465,6 +465,7 @@ await check('#3: actual transfer migration carries the anchor and clears the sou
     transferData: { movedSession: 'visit', revision: 1 },
     transferIntent: { since: now, destinationClosedAt: 0 },
     phoneMovedVisits: new Map(), phonePending: new Map(), window: {},
+    kdsOrders: [{ num: 41, type: 'dineIn', table: 'source', paid: false }],
     confirmCaisseTransfer() {}, publishServiceFloor() {},
   });
   vm.runInContext(slice(caisseSource, '    function applyCaisseMovedVisit(', '    function openCaisseTransferModal('), t.context);
@@ -473,6 +474,7 @@ await check('#3: actual transfer migration carries the anchor and clears the sou
   assert.equal(t.context.tables.target.elapsed, 20);
   assert.equal(t.context.tables.source.orderStartedAt, undefined);
   assert.equal(t.context.tables.source.elapsed, 0);
+  assert.equal(t.context.kdsOrders[0].table, 'target', 'the kitchen ticket follows the moved visit');
 });
 db.close();
 console.log(`\nField OrderPro acceptance: ${passed} passed, ${failed} failed.`);
