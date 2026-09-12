@@ -353,7 +353,7 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
   ok('un bon en attente du comptoir n’est pas montré à la cuisine',
     /o\.status === 'pending' \|\| o\.status === 'rejected'/.test(CUISINE));
   ok('la cuisine sonde en se déclarant cuisine (pas comptoir)',
-    /pull\(S\.since, 'kitchen'\)/.test(CUISINE));
+    /pullAll\(S\.since, 'kitchen'\)/.test(CUISINE));
   ok('un bon oublié d’avant-hier ne rouvre pas le tableau du matin',
     /STALE_MS/.test(CUISINE));
   ok('une tablette restée ouverte purge aussi les anciens bons déjà en mémoire',

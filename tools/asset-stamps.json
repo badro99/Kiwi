@@ -132,8 +132,8 @@
     "sha": "f6f321dd0339bcb0"
   },
   "assets/caisse-pwa.js": {
-    "v": "506",
-    "sha": "7f4009129ce1ef2e"
+    "v": "508",
+    "sha": "1f6ee2d629b9fc19"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -208,8 +208,8 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "499",
-    "sha": "dca557ccb36a6923"
+    "v": "501",
+    "sha": "61791807a036352b"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -264,8 +264,8 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/employee-live.js": {
-    "v": "498",
-    "sha": "ffa71e01ec429031"
+    "v": "500",
+    "sha": "fa10b4ad28f7ebf2"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -404,8 +404,8 @@
     "sha": "3d4ee68178d4c8a7"
   },
   "assets/kitchen-relay.js": {
-    "v": "4",
-    "sha": "d66f67e7bc8d4e4b"
+    "v": "5",
+    "sha": "d74d33562e7d0fd7"
   },
   "assets/kiwi-env.js": {
     "v": "1",
@@ -520,8 +520,8 @@
     "sha": "47b1d8a268c10551"
   },
   "assets/orderpro-inbox.js": {
-    "v": "21",
-    "sha": "b484138ced508239"
+    "v": "23",
+    "sha": "f057d50913e1254d"
   },
   "assets/orderpro-panel.js": {
     "v": "1",

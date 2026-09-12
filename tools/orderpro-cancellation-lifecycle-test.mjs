@@ -108,7 +108,7 @@ assert.match(inboxSource,
   /var terminal = cancelled\.map[\s\S]{0,240}status: 'rejected'[\s\S]{0,160}bridge\(delta\.concat\(terminal\)\)/,
   'mixed-version cancelled payloads are normalized and ingested once');
 const caisseSource = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
-const attach = caisseSource.match(/function attachOrderProTable\(o\)\s*\{[\s\S]{0,5600}?\n {4}\}/)?.[0] || '';
+const attach = caisseSource.match(/function attachOrderProTable\(o\)\s*\{[\s\S]{0,14000}?\n {4}\}/)?.[0] || '';
 assert.ok(attach.indexOf("o.status === 'rejected'") < attach.indexOf('const activeSeat ='),
   'terminal cleanup runs before current-session validation');
 assert.match(attach, /startsWith\(String\(o\.id\) \+ ':'\)/,

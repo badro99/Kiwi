@@ -4861,7 +4861,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/staff-roles.js?v=1" defer></script>
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/employee-live.js?v=498" defer></script>
+  <script src="assets/employee-live.js?v=500" defer></script>
   <script src="assets/employee-planning.js?v=8" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=2">
   <script src="assets/employee-trade-shell.js?v=2" defer></script>
@@ -6597,8 +6597,28 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         }
       } catch (_) {}
     }
+    async function pollServiceOrders(merchant, since) {
+      const orders = [];
+      let cursor = null;
+      for (let page = 0; page < 100; page++) {
+        if (merchant !== svSlug() || !shiftStart) return null;
+        const url = '/api/order/queue?merchant=' + encodeURIComponent(merchant)
+          + '&since=' + encodeURIComponent(since) + '&role=service'
+          + (cursor ? '&cursor=' + encodeURIComponent(JSON.stringify(cursor)) : '');
+        const response = await fetch(url, {
+          credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
+        });
+        if (!response.ok) return null;
+        const data = await response.json();
+        if (!data || !data.ok || data.ordersAvailable === false) return null;
+        orders.push(...(Array.isArray(data.orders) ? data.orders : []));
+        if (!data.nextCursor) return { ...data, orders };
+        cursor = data.nextCursor;
+      }
+      return null; // never present a partial queue as a complete one
+    }
     function ingestServiceOrders(data) {
-      if (!data || !data.ok) return;
+      if (!data || !data.ok || data.ordersAvailable === false) return;
       serviceOrderSince = data.now || serviceOrderSince;
       serviceCanonicalReady = true;
       serviceMineTables.clear();
@@ -6814,10 +6834,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       }).then((r) => r.ok ? r.json() : null).then((events) => {
         if (merchant !== svSlug() || !shiftStart) return null;
         ingestServiceEvents(events);
-        return fetch('/api/order/queue?merchant=' + encodeURIComponent(merchant) + '&since=' + serviceOrderSince + '&role=service', {
-          credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
-        });
-      }).then((r) => r && r.ok ? r.json() : null).then(ingestServiceOrders).catch(() => {});
+        return pollServiceOrders(merchant, serviceOrderSince);
+      }).then(ingestServiceOrders).catch(() => {});
       servicePlanTick++;
       /* Team, schedule and floor assignments share this six-second live loop.
          Eighteen seconds was long enough for a newly assigned table to look

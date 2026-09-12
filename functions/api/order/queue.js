@@ -42,7 +42,7 @@
 //    sans un deuxième sondage, et sans une deuxième horloge à désynchroniser.
 
 import { json, entitledMerchant, activeServiceEmployee, readTillActorProof } from '../../auth/_lib.js';
-import { startOfDay, nextOrderNumber, deskTouch, normTable, priceOrder, newSessionId, SESSION_ID, pollCursor } from './_lib.js';
+import { startOfDay, nextOrderNumber, deskTouch, normTable, priceOrder, newSessionId, SESSION_ID, CURSOR_LAG_MS, pollCursor } from './_lib.js';
 import { recordOrderCourse, closeOrderCourses } from './_course.js';
 import { kitchenLock, kitchenLocked } from './_table-mobility.js';
 
@@ -113,6 +113,20 @@ function floorMayAcceptOrder(b, orderRow, scope) {
   return !!(table && scope && scope.allTables && scope.allTables.has(table));
 }
 const MAX_ROWS = 100;
+/* The queue may contain more than one page after a disconnected service.
+ * A cursor needs both timestamp and id: many orders can share the same
+ * millisecond, and a timestamp-only continuation would skip the rest. */
+function readPageCursor(raw, now) {
+  if (!raw || raw.length > 300) return null;
+  try {
+    const value = JSON.parse(raw);
+    if (!value || value.v !== 1 || !Number.isSafeInteger(value.end)
+      || !Number.isSafeInteger(value.ts) || value.end > now + CURSOR_LAG_MS
+      || value.ts < 0 || value.ts > value.end
+      || typeof value.id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(value.id)) return null;
+    return value;
+  } catch (_) { return null; }
+}
 const PENDING_TTL_MS = 30 * 60 * 1000;
 const KITCHEN_TTL_MS = 6 * 60 * 60 * 1000;
 /* Combien de temps une commande refusée reste lisible comme « expirée » dans
@@ -297,6 +311,13 @@ export async function onRequestGet(context) {
     service ? Number(service.employee.attendance && service.employee.attendance.inTs) || 0 : 0,
   );
   const now = Date.now();
+  const rawPageCursor = url.searchParams.get('cursor');
+  const pageCursor = rawPageCursor ? readPageCursor(rawPageCursor, now) : null;
+  if (rawPageCursor && !pageCursor) return json({ ok: false, error: 'invalid-queue-cursor' }, 400);
+  /* A status update can receive a monotonic timestamp a millisecond ahead of
+   * Date.now() in the same request burst. Include that small future margin,
+   * while the completed client cursor still trails the ORIGINAL poll time. */
+  const pageEnd = pageCursor ? pageCursor.end : now + CURSOR_LAG_MS;
   const today = startOfDay(now);
   const kitchenCutoff = now - KITCHEN_TTL_MS;
 
@@ -352,11 +373,12 @@ export async function onRequestGet(context) {
    * ou un ancien état `ready` ne revienne les jours suivants. Les `pending`
    * ont leur règle plus stricte de trente minutes juste au-dessus. */
   const WHERE = `FROM orders
-        WHERE merchant = ? AND updated_ts > ?
+        WHERE merchant = ? AND updated_ts > ? AND updated_ts <= ?
+          ${pageCursor ? 'AND (updated_ts > ? OR (updated_ts = ? AND id > ?))' : ''}
           AND status IN ('pending','accepted','ready','served')
           AND (status = 'pending' OR created_ts >= ?)
           AND (status <> 'served' OR created_ts >= ?)
-        ORDER BY created_ts
+        ORDER BY updated_ts, id
         LIMIT ?`;
 
   let rows = null;
@@ -364,7 +386,9 @@ export async function onRequestGet(context) {
   for (let i = 0; i < COL_SETS.length; i++) {
     try {
       rows = await env.DB.prepare(`SELECT ${COL_SETS[i]} ${WHERE}`)
-        .bind(merchant, since, kitchenCutoff, today, MAX_ROWS).all();
+        .bind(merchant, since, pageEnd,
+          ...(pageCursor ? [pageCursor.ts, pageCursor.ts, pageCursor.id] : []),
+          kitchenCutoff, today, MAX_ROWS + 1).all();
       degraded = COL_SET_MISSING[i];
       break;
     } catch (_) { rows = null; }
@@ -373,11 +397,18 @@ export async function onRequestGet(context) {
   // aurait à gérer. Elle continue d'interroger et s'allume au déploiement.
   if (!rows) return json({ ok: true, orders: [], sessions: [], now: pollCursor(now), ordersAvailable: false });
 
+  const hasMore = (rows.results || []).length > MAX_ROWS;
+  const pageRows = (rows.results || []).slice(0, MAX_ROWS);
+  const lastRow = pageRows[pageRows.length - 1];
+  const nextCursor = hasMore && lastRow
+    ? { v: 1, end: pageEnd, ts: Number(lastRow.updated_ts), id: String(lastRow.id) }
+    : null;
+
   // Handover is an immutable course milestone, not updated_ts (payment replays
   // also move that clock). Keep the orders schema fallbacks independent of the
   // optional course table; legacy rows must expose an honest unknown timestamp.
   const servedById = new Map();
-  const servedIds = (rows.results || []).filter((r) => r.status === 'served').map((r) => r.id);
+  const servedIds = pageRows.filter((r) => r.status === 'served').map((r) => r.id);
   if (servedIds.length) {
     try {
       // D1 allows 100 bound values; reserve one for the merchant predicate.
@@ -395,7 +426,7 @@ export async function onRequestGet(context) {
     } catch (_) { degraded = [...degraded, 'order_course']; }
   }
 
-  let orders = (rows.results || []).map((r) => {
+  let orders = pageRows.map((r) => {
     let lines = [];
     try { lines = JSON.parse(r.lines) || []; } catch (_) { lines = []; }
     let customer = null;
@@ -568,7 +599,12 @@ export async function onRequestGet(context) {
     /* `now` EST le curseur du prochain sondage : il recule légèrement, sinon
        une commande écrite entre la prise de l'heure et la lecture n'est jamais
        présentée (voir pollCursor). */
-    ok: true, orders, sessions, closedSessions, now: pollCursor(now), ordersAvailable: true,
+    ok: true, orders, sessions, closedSessions,
+    /* Old cached clients only know `now`. On a partial page, advance them to
+     * just before its last timestamp instead of skipping unseen rows. New
+     * clients drain `nextCursor` and use the full window cursor only at end. */
+    now: hasMore ? Math.max(since, Number(lastRow.updated_ts) - 1) : pollCursor(pageEnd - CURSOR_LAG_MS),
+    nextCursor, ordersAvailable: true,
     /* Refus récents (TTL ou comptoir), lecture seule : invalider les fantômes
        locaux et proposer la reprise. Absent = rien n'a été refusé récemment. */
     expired: expired.length ? expired : undefined,

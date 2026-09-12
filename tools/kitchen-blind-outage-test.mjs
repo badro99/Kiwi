@@ -31,7 +31,7 @@ const wait = () => new Promise((r) => setTimeout(r, 10));
 ok('une lecture impossible répond « file indisponible », pas « file vide »',
   /if \(!rows\) return json\(\{ ok: true, orders: \[\], sessions: \[\], now: pollCursor\(now\), ordersAvailable: false \}\);/.test(queue));
 ok('une lecture réussie l’annonce disponible',
-  /ok: true, orders, sessions, closedSessions, now: pollCursor\(now\), ordersAvailable: true,/.test(queue));
+  /ok: true, orders, sessions, closedSessions,[\s\S]{0,600}ordersAvailable: true,/.test(queue));
 
 /* ── 2 · Le passe. On exécute sa vraie fonction `pull`. ─────────────────── */
 const slice = (start, end) => {
@@ -54,7 +54,7 @@ function pass(reply) {
     S, STALE_MS: 6 * 3600 * 1000,
     T: (k) => k,
     $: (id) => (id === 'link' ? linkEl : txtEl),
-    KiwiKitchenRelay: { pull: () => Promise.resolve(reply) },
+    KiwiKitchenRelay: { pullAll: () => Promise.resolve(reply) },
     paint() {}, announce() {}, announceVoid() {}, saveCooking() {}, saveSeen() {},
     setTimeout, Date, Object, Array, Promise, JSON, Math, String, Number,
     navigator: {}, window: {}, console: { log() {}, warn() {}, error() {} },

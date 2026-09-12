@@ -183,14 +183,33 @@
 
   /* Relever la file. `role: 'kitchen'` dit au serveur de NE PAS compter ce
      sondage comme une preuve que le comptoir est allumé — voir queue.js. */
-  function pull(since, role) {
+  function pull(since, role, cursor) {
     var m = merchant();
     if (!m) return Promise.resolve(null);
     var u = '/api/order/queue?merchant=' + encodeURIComponent(m) + '&since=' + (since || 0)
-      + (role ? '&role=' + encodeURIComponent(role) : '');
+      + (role ? '&role=' + encodeURIComponent(role) : '')
+      + (cursor ? '&cursor=' + encodeURIComponent(JSON.stringify(cursor)) : '');
     return fetch(u, { headers: { Accept: 'application/json' }, cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .catch(function () { return null; });
+  }
+
+  /* Advance the caller's `since` only after the whole window arrived. A
+   * 100-row partial response is not a completed poll; treating its `now` as
+   * final silently lost every remaining order after a busy reconnect. */
+  function pullAll(since, role) {
+    var all = [];
+    function page(cursor, count) {
+      if (count > 100) return Promise.resolve(null); // fail visibly, never return a partial queue
+      return pull(since, role, cursor).then(function (j) {
+        if (!j || !j.ok || j.ordersAvailable === false) return j;
+        all.push.apply(all, Array.isArray(j.orders) ? j.orders : []);
+        if (j.nextCursor) return page(j.nextCursor, count + 1);
+        j.orders = all;
+        return j;
+      });
+    }
+    return page(null, 0);
   }
 
   /* Annuler une ligne en cuisine (pré-cuisson immédiat ou alerte cuisson) */
@@ -249,6 +268,7 @@
     send: send,
     bump: bump,
     pull: pull,
+    pullAll: pullAll,
     pending: pending,
     voidLine: voidLine,
     ackVoid: ackVoid,

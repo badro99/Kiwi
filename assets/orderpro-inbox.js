@@ -20,7 +20,7 @@
   'use strict';
 
   var POLL_MS = 6000;
-  var state = { orders: {}, sessions: [], closedSessions: [], expired: [], since: 0, open: false, timer: null, seen: {}, expiryWarned: {} };
+  var state = { orders: {}, sessions: [], closedSessions: [], expired: [], since: 0, open: false, timer: null, seen: {}, expiryWarned: {}, updating: {} };
 
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
   function fmt(n) { try { return (Math.round(n) || 0).toLocaleString('fr-FR'); } catch (_) { return String(Math.round(n) || 0); } }
@@ -122,9 +122,8 @@
      * (window.KiwiCaisseKitchen). Une caisse boutique ou spa, elle, continue de
      * se taire : elle n'a ni cuisine ni commandes clients. */
     if (!orderProOn() && !hasKitchen()) { chip(); return Promise.resolve(-1); }
-    return fetch('/api/order/queue?merchant=' + encodeURIComponent(m) + '&since=' + state.since, {
-      headers: { Accept: 'application/json' }, cache: 'no-store',
-    }).then(function (r) { return r.ok ? r.json() : null; })
+    if (!window.KiwiKitchenRelay || !window.KiwiKitchenRelay.pullAll) return Promise.resolve(-1);
+    return window.KiwiKitchenRelay.pullAll(state.since)
       .then(function (j) {
         if (!j || !j.ok) return -1;
         /* Même règle qu'au passe (kiwi-cuisine.html) : `ordersAvailable:false`
@@ -188,6 +187,7 @@
   function setStatus(id, status, extra) {
     var m = merchant();
     if (!m) return Promise.resolve(null);
+    if (state.updating[id]) return Promise.resolve(null);
     /* Remettre la commande au client ne demande PLUS de code.
      *
      * Le geste arrive au coup de feu, une main tient le sachet, et il se répète
@@ -213,29 +213,11 @@
         });
       });
     }
-    var prev = state.orders[id];
-    // Optimistic, then reconciled by the next poll: the till must feel instant.
-    if (prev) {
-      if (status === 'rejected') delete state.orders[id];
-      else if (status === 'cooking') {
-        (prev.lines || []).forEach(function (line) {
-          if (!(extra && extra.station) || line.station === extra.station) line.stationAccepted = true;
-        });
-      }
-      else if (status === 'ready' && extra && extra.station) {
-        (prev.lines || []).forEach(function (line) {
-          if (line.station === extra.station) {
-            line.stationReady = true;
-          }
-        });
-        if ((prev.lines || []).length
-            && prev.lines.every(function (line) { return line.stationReady === true; })) {
-          prev.status = 'ready';
-        }
-      } else prev.status = status;
-      if (extra && extra.paid) prev.paid = true;
-      paint();
-    }
+    /* A request is not a kitchen ticket. Keep the pending card visible until
+     * the server confirms it. Mutating `prev` here made rollback impossible:
+     * it was the same object already stored in state.orders. */
+    state.updating[id] = true;
+    paint();
     var body = { merchant: m, id: id, status: status };
     // Le serveur affecté à la table, posé au moment de l'acceptation, et le
     // paiement d'un retrait au comptoir : deux informations que SEULE la caisse
@@ -244,6 +226,20 @@
     if (extra && extra.actorProof) body.actorProof = extra.actorProof;
     if (extra && extra.paid) body.paid = true;
     if (extra && extra.station) body.station = extra.station;
+    function warnUnconfirmed(httpStatus) {
+      if (status === 'rejected') return; // the refusal button shows its own detailed error
+      try {
+        var stack = document.getElementById('toast-stack');
+        if (!stack) return;
+        var el = document.createElement('div'); el.className = 'toast';
+        el.textContent = httpStatus === 403
+          ? 'Action refusée · vérifiez l’appairage de cette caisse'
+          : 'Action non confirmée · la commande reste en attente · réessayez';
+        stack.appendChild(el);
+        setTimeout(function () { el.classList.add('fade'); }, 5500);
+        setTimeout(function () { el.remove(); }, 5800);
+      } catch (_) {}
+    }
     return fetch('/api/order/queue', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -256,8 +252,24 @@
     })
       .then(function (j) {
         if (j && j.ok) {
-          if (prev && j.status) prev.status = j.status;
-          if (prev && Array.isArray(j.lines)) prev.lines = j.lines;
+          var current = state.orders[id];
+          if (current) {
+            if (status === 'cooking') {
+              (current.lines || []).forEach(function (line) {
+                if (!(extra && extra.station) || line.station === extra.station) line.stationAccepted = true;
+              });
+            } else if (status === 'ready' && extra && extra.station) {
+              (current.lines || []).forEach(function (line) {
+                if (line.station === extra.station) line.stationReady = true;
+              });
+              if ((current.lines || []).length
+                  && current.lines.every(function (line) { return line.stationReady === true; })) current.status = 'ready';
+            } else current.status = status;
+            if (j.status) current.status = j.status;
+            if (Array.isArray(j.lines)) current.lines = j.lines;
+            if (extra && extra.paid) current.paid = true;
+            if (status === 'rejected') delete state.orders[id];
+          }
           /* `pending` n'est pas encore un bon de cuisine. Le papier ne doit
            * sortir que sur l'appareil qui a réellement obtenu la transition
            * pending → accepted du serveur — pas sur chaque caisse qui sonde la
@@ -265,21 +277,20 @@
           if (status === 'accepted') {
             try {
               if (window.KiwiCaisseKitchen && window.KiwiCaisseKitchen.confirmAccepted) {
-                window.KiwiCaisseKitchen.confirmAccepted(prev, extra || {});
+                window.KiwiCaisseKitchen.confirmAccepted(current, extra || {});
               }
             } catch (_) {}
           }
-          bridge(prev ? [prev] : []);
+          bridge(current ? [current] : []);
           return j;
         }
-        /* Refus du serveur. Un 409 « bad-transition » n'est PAS une panne :
-         * c'est une autre caisse qui a fait le geste avant nous. Remettre
-         * l'état d'avant serait alors faux dans l'autre sens — le prochain
-         * sondage tranchera avec la vérité du serveur. */
-        if (prev) { state.orders[id] = prev; paint(); }
+        /* Failure leaves the card untouched. A concurrent poll may already
+         * have received a newer server state; never restore a stale object. */
+        warnUnconfirmed(j && j.httpStatus);
         return j;
       })
-      .catch(function () { if (prev) { state.orders[id] = prev; paint(); } return { error: 'network-error', httpStatus: 0 }; });
+      .catch(function () { warnUnconfirmed(0); return { error: 'network-error', httpStatus: 0 }; })
+      .finally(function () { delete state.updating[id]; paint(); });
   }
 
   /* ── L'addition est réglée : on coupe le téléphone ───────────────────────
@@ -620,7 +631,9 @@
           (o.status === 'pending' ? 'Refuser' : 'Annuler') + '</button>'
       : '';
 
-    var acts = o.status === 'pending'
+    var acts = state.updating[o.id]
+      ? '<div class="kop-acts"><button class="kop-btn" disabled>Enregistrement…</button></div>'
+      : o.status === 'pending'
       ? '<div class="kop-acts">' +
           cancel +
           '<button class="kop-btn send" data-kop-acc="' + esc(o.id) + '">Envoyer en cuisine</button>' + pay +
