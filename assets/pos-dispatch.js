@@ -55,10 +55,10 @@
      * vertical ordinaire, en tête de liste, et non plus une branche codée en
      * dur dans kiwi-caisse.html. */
     '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '40', label: 'Pressing · Pressing Marshan' },
-    '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '17', label: 'Boutique · Maison Mansour' },
+    '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '18', label: 'Boutique · Maison Mansour' },
     '0003': { id: 'spa',         file: 'pos-spa',         rev: '5', label: 'Spa · Spa Bahia' },
     '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '14', label: 'Hôtel / Riad' },
-    '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '5', label: 'Fast-food · Snack Chamal' },
+    '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '6', label: 'Fast-food · Snack Chamal' },
     '0006': { id: 'boulangerie', file: 'pos-boulangerie', rev: '7', label: 'Boulangerie · Bab Kasbah' },
     '0007': { id: 'pizzeria',    file: 'pos-pizzeria',    rev: '3', label: 'Pizzeria · La Marsa' },
     '0008': { id: 'traiteur',    file: 'pos-traiteur',    rev: '5', label: 'Traiteur · Dar Zellij' },
@@ -70,7 +70,7 @@
     '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '5', label: 'Coiffure · Salon Yasmine' },
     '0015': { id: 'gym',         file: 'pos-gym',         rev: '5', label: 'Salle de sport · Atlas Fitness' },
     '0016': { id: 'autre',       file: 'pos-autre',       rev: '2', label: 'Autre activité · caisse polyvalente' },
-    '0017': { id: 'maison',      file: 'pos-maison',      rev: '23', label: 'Maison · Vogue Home' },
+    '0017': { id: 'maison',      file: 'pos-maison',      rev: '24', label: 'Maison · Vogue Home' },
   };
 
   const apps = {};       /* id → registered spec */

@@ -98,7 +98,7 @@
   <!-- Journal de vente partagé · DOIT précéder les modules métier (pressing +
        tout ce que pos-dispatch charge à la volée) : c'est lui qui persiste la
        recette du jour et la renvoie au tableau de bord. -->
-  <script src="assets/pos-sale.js?v=6" defer></script>
+  <script src="assets/pos-sale.js?v=8" defer></script>
   <!-- Garment workflow snapshot shared with the pressing owner dashboard. -->
   <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
   <script src="assets/pressing-ops.js?v=8" defer></script>
@@ -5507,7 +5507,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=511" defer></script>
+  <script src="assets/caisse-pwa.js?v=512" defer></script>
   <script src="assets/live-link.js?v=35" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -6614,15 +6614,6 @@
         </div>
         <div class="reader-status" id="reader-status">Approchez la carte ou le téléphone<span class="ellipsis"></span></div>
         <div class="reader-method" id="reader-method">Kiwi Tap · NFC · QR</div>
-        <div class="reader-txn" id="reader-txn" hidden></div>
-      </div>
-      <div class="modal-actions" id="card-actions">
-        <button class="ma-btn primary" data-modal-action="print">
-          <i data-lucide="printer"></i><span>Imprimer ticket</span>
-        </button>
-        <button class="ma-btn secondary" data-modal-action="send">
-          <i data-lucide="message-square"></i><span>SMS / WhatsApp</span>
-        </button>
       </div>
       <div class="modal-foot is-visible" id="card-foot">
         <button class="ma-btn secondary modal-foot-btn" data-modal-action="close" type="button">Fermer</button>
@@ -6678,27 +6669,6 @@
         </div>
       </div>
 
-      <div class="cash-grid" id="cash-step-success" hidden>
-        <div class="reader-stage" style="min-height:140px;">
-          <div class="reader-disc is-success">
-            <i data-lucide="check"></i>
-          </div>
-          <div class="reader-status is-success">Espèces confirmées</div>
-        </div>
-        <div class="cash-success-label">Rendu au client</div>
-        <div class="cash-success-rendu mono" id="cash-success-rendu">0,00 MAD</div>
-        <div class="modal-actions is-visible">
-          <button class="ma-btn primary" data-modal-action="print">
-            <i data-lucide="printer"></i><span>Imprimer ticket</span>
-          </button>
-          <button class="ma-btn secondary" data-modal-action="send">
-            <i data-lucide="message-square"></i><span>SMS / WhatsApp</span>
-          </button>
-        </div>
-        <div class="modal-foot is-visible">
-          <button class="ma-btn secondary modal-foot-btn" data-modal-action="close" type="button">Fermer</button>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -10650,15 +10620,13 @@
       disc: $('#reader-disc'),
       status: $('#reader-status'),
       method: $('#reader-method'),
-      txn: $('#reader-txn'),
-      actions: $('#card-actions'),
       foot: $('#card-foot'),
     };
     let cardSuccessTimer = null;
-    let cardFootTimer = null;
     let cardAttemptSeq = 0;
     let cardPaymentCommitted = false;
     let cashPaymentCommitted = false;
+    let tenderInFlight = false;
 
     /* ---------- Pourboire (tip) on regular card / cash payments ----------
        Split parts keep their own tip (splitState) · this is only applied
@@ -10841,9 +10809,6 @@
       reader.status.classList.remove('is-success');
       reader.status.innerHTML = 'Approchez la carte ou le téléphone<span class="ellipsis"></span>';
       reader.method.style.display = '';
-      reader.txn.hidden = true;
-      reader.txn.textContent = '';
-      reader.actions.classList.remove('is-visible');
       reader.foot.classList.remove('is-visible');
       // Reset the tip so the figure opens on the base addition.
       resetPayTip();
@@ -10871,24 +10836,15 @@
     async function triggerCardSuccess(result) {
       if (cardPaymentCommitted) return;
       cardPaymentCommitted = true;
-      const settled = await finalizeTender(cardTenderMethod);
+      tenderInFlight = true;
+      let settled;
+      try { settled = await finalizeTender(cardTenderMethod); }
+      catch (_) { tenderInFlight = false; toast('Encaissement à vérifier dans le journal avant de réessayer'); return; }
+      tenderInFlight = false;
       if (settled === 'split') { closeCardModal(); return; }
-      reader.disc.classList.remove('is-pulsing');
-      reader.disc.classList.add('flash', 'is-success');
-      reader.disc.innerHTML = '<i data-lucide="check"></i>';
-      reader.status.classList.add('is-success');
-      window.CaisseFx && window.CaisseFx.confetti(document.querySelector('.reader-disc') || document.getElementById('rp-total'));
-      reader.status.textContent = ((document.getElementById('card-modal-title') || {}).textContent === 'Paiement QR')
-        ? 'Paiement QR confirmé' : 'Carte approuvée';
-      reader.method.style.display = 'none';
-      const truthRef = result && (result.transactionId || result.txn || result.ref || result.id);
-      const txn = truthRef ? ('TXN ' + String(truthRef)) : 'Transaction confirmée';
-      reader.txn.textContent = txn;
-      reader.txn.hidden = false;
-      reader.actions.classList.add('is-visible');
-      lucide.createIcons();
-      setTimeout(() => { reader.disc.classList.remove('flash'); }, 600);
-      cardFootTimer = setTimeout(() => { reader.foot.classList.add('is-visible'); }, 1000);
+      const sale = lastSaleEntry();
+      closeCardModal();
+      printSaleTicket(sale);
     }
     /* A settled row identifies the order, not the physical table. Keep the
        first kitchen ticket attached to this bill; later sends are additions. */
@@ -10939,10 +10895,10 @@
     }
 
     function closeCardModal() {
+      if (tenderInFlight) return;
       cardModal.classList.remove('is-open');
       cardAttemptSeq++;
       clearTimeout(cardSuccessTimer);
-      clearTimeout(cardFootTimer);
       cashAmountOverride = null;
       /* Le modal de paiement s'ouvre PAR-DESSUS le modal de partage : l'abandonner
          laissait `splitPayCallback` armé. Or `finalizeTender()` ne comptabilise une
@@ -10961,17 +10917,11 @@
       toast('Paiement QR indisponible · configurez un fournisseur QR');
     });
     cardModal.addEventListener('click', (e) => {
-      /* Toucher le fond validait l'encaissement. Le modal carte s'ouvre AVANT
-       * l'approbation · un doigt qui effleure le fond pendant que le lecteur
-       * tourne enregistrait donc une vente payée, poussée sur le Live Link,
-       * sans qu'un centime soit entré. Le modal espèces se garde déjà de ça
-       * (`!cashStepInput.hidden`) ; on applique la même règle : payé seulement
-       * si l'approbation est passée, ce que dit `reader.actions`. */
+      /* Toucher le fond ne valide jamais l'encaissement : seule l'approbation
+       * du lecteur déclenche finalizeTender(), puis le reçu et la fermeture. */
       if (e.target === cardModal) closeCardModal();
       const action = e.target.closest('[data-modal-action]')?.dataset.modalAction;
       if (action === 'close') closeCardModal();
-      if (action === 'print') { closeCardModal(); printSaleTicket(lastSaleEntry()); }
-      if (action === 'send')  { closeCardModal(); sendSaleTicket(lastSaleEntry()); }
     });
 
     /* ---------- CASH modal ---------- */
@@ -10981,8 +10931,6 @@
     const cashRenduVal = $('#cash-rendu-val');
     const cashConfirm = $('#cash-confirm');
     const cashStepInput = $('#cash-step-input');
-    const cashStepSuccess = $('#cash-step-success');
-    const cashSuccessRendu = $('#cash-success-rendu');
 
     // When a split part is being paid, this overrides currentTotal()
     let cashAmountOverride = null;
@@ -11061,8 +11009,6 @@
       cashPaymentCommitted = false;
       cashStepInput.hidden = false;
       cashStepInput.style.display = '';
-      cashStepSuccess.hidden = true;
-      cashStepSuccess.style.display = 'none';
       // Reset the tip so the figure opens on the base addition.
       resetPayTip();
       const total = currentTotal();
@@ -11073,6 +11019,7 @@
       updateRendu();
     }
     function closeCashModal() {
+      if (tenderInFlight) return;
       cashAmountOverride = null;
       cashPaymentCommitted = false;
       cashConfirm.disabled = false;
@@ -11127,28 +11074,26 @@
       const change = got - total;
       cashPaymentCommitted = true;
       cashConfirm.disabled = true;
-      const settled = await finalizeTender('cash');
+      tenderInFlight = true;
+      let settled;
+      try { settled = await finalizeTender('cash'); }
+      catch (_) { tenderInFlight = false; toast('Encaissement à vérifier dans le journal avant de réessayer'); return; }
+      tenderInFlight = false;
       if (settled === 'split') {
         if (change > 0) toast('Monnaie à rendre : ' + fmtMAD(change));
         closeCashModal();
         return;
       }
-      cashStepInput.hidden = true;
-      cashStepInput.style.display = 'none';
-      cashStepSuccess.hidden = false;
-      cashStepSuccess.style.display = 'flex';
-      cashSuccessRendu.textContent = fmtMADcents(change);
-      /* Le premier .reader-disc du DOM est celui du modal carte · viser
-         explicitement le disque du succès espèces. */
-      window.CaisseFx && window.CaisseFx.confetti(document.querySelector('#cash-step-success .reader-disc') || document.getElementById('rp-total'));
-      lucide.createIcons();
+      const sale = lastSaleEntry();
+      closeCashModal();
+      openCashDrawer();
+      if (change > 0) toast('Monnaie à rendre : ' + fmtMAD(change));
+      printSaleTicket(sale);
     });
     cashModal.addEventListener('click', (e) => {
       if (e.target === cashModal) closeCashModal();
       const action = e.target.closest('[data-modal-action]')?.dataset.modalAction;
       if (action === 'close') closeCashModal();
-      if (action === 'print') { closeCashModal(); openCashDrawer(); printSaleTicket(lastSaleEntry()); }
-      if (action === 'send')  { closeCashModal(); sendSaleTicket(lastSaleEntry()); }
     });
     function dismissModalVeil(veil) {
       if (!veil) return;

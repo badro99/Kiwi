@@ -4203,6 +4203,13 @@
       try {
         if (opts.sale) { opts.sale.rc = K.snapshot(doc); persistDay(); }
       } catch (_) {}
+      const queue = window.KiwiKitchenPrint;
+      if (opts.sale && queue && typeof queue.enqueueReceipt === 'function') {
+        try {
+          const queued = queue.enqueueReceipt('maison:' + opts.sale.id, doc, 'original');
+          if (queued && (queued.accepted || queued.pending)) return;
+        } catch (_) {}
+      }
       toast('Impression du reçu…');
       Promise.resolve(K.print(doc)).then(
         (r) => toast(r && r.ok
@@ -4731,11 +4738,12 @@
         }
       }
       const res = opts.onPaid(parts) || {};
-      stepSuccess(parts, res);
+      if (res.sale) opts.sale = res.sale;
+      if (res.delivery || parts.some((x) => x.m === 'livraison')) stepSuccess(parts, res);
+      else { closeVeil('#mz-pay-veil'); printReceiptNow(opts, parts); }
     };
 
     const stepSuccess = (parts, res) => {
-      if (res && res.sale) opts.sale = res.sale;
       const cash = parts.find((x) => x.m === 'espèces');
       const delivery = parts.some((x) => x.m === 'livraison') || (opts.sale && !!opts.sale.delivery);
       el.innerHTML = `

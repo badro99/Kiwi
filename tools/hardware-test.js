@@ -95,9 +95,10 @@ function ok(condition, label) {
   const main = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
   ok(main.includes('hw.authorizeCard(currentTotal() + payTipAmount()'),
     'restaurant checkout is hardware-gated');
-  ok(/const settled = await finalizeTender\(cardTenderMethod\)/.test(main) &&
-     main.includes("if (action === 'close') closeCardModal();"),
-    'card approval commits immediately; closing a rejected modal cannot mark it paid');
+  ok(/settled = await finalizeTender\(cardTenderMethod\)/.test(main) &&
+     main.includes("if (action === 'close') closeCardModal();") &&
+     /const sale = lastSaleEntry\(\);\s*closeCardModal\(\);\s*printSaleTicket\(sale\)/.test(main),
+    'card approval commits and prints once; closing a rejected modal cannot mark it paid');
   const boutique = fs.readFileSync(path.join(ROOT, 'assets', 'pos-boutique.js'), 'utf8');
   ok(boutique.includes("ok.onclick = () => settle({ m: 'carte', amount })"),
     'boutique external-reader flow requires explicit cashier confirmation');

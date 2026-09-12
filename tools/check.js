@@ -1040,6 +1040,7 @@ section('Whole-project regressions');
     'operator-snapshot-test.mjs',
     'caisse-support-entry-test.mjs',
     'caisse-payment-upload-test.mjs',
+    'caisse-auto-receipt-test.mjs',
     'dashboard-activity-test.mjs',
     'caisse-reconnect-test.mjs',
     'caisse-pairing-repair-test.mjs',

@@ -216,6 +216,35 @@
     return o;
   }
 
+  /* A settled caisse sale prints its customer receipt at the payment boundary.
+   * The print queue keeps the original job across a printer outage and dedupes
+   * it by sale identity; a dashboard reconciliation must never print again. */
+  function printCustomerReceipt(vertical, entry, sale, rows) {
+    if (!entry || !/^(cash|card|wallet|qr|tap|split)$/.test(entry.method)) return;
+    var K = window.KiwiReceipt;
+    if (!K || typeof K.build !== 'function') return;
+    var doc;
+    try {
+      doc = K.build({
+        ref: entry.ref, ts: entry.ts,
+        lines: entry.lines && entry.lines.length ? entry.lines : [{ name: entry.label, qty: 1, total: entry.total }],
+        total: entry.total, method: entry.method,
+        received: sale.received, change: sale.change,
+        customer: sale.customer || null,
+      });
+    } catch (_) { return; }
+    try { if (K.snapshot) { entry.rc = K.snapshot(doc); write(vertical, rows); } } catch (_) {}
+    try {
+      var queue = window.KiwiKitchenPrint;
+      if (queue && typeof queue.enqueueReceipt === 'function') {
+        var id = entry.saleId || ('pos:' + vertical + ':' + entry.ref + ':' + entry.ts);
+        queue.enqueueReceipt(id, doc, 'original');
+        return;
+      }
+      if (typeof K.print === 'function') Promise.resolve(K.print(doc)).catch(function () {});
+    } catch (_) { /* The paid sale remains in the local ledger for reprinting. */ }
+  }
+
   /* ─────────────────────────── l'API ─────────────────────────── */
 
   /* record(vertical, sale) → l'entrée journalisée, ou null si rien n'a été pris.
@@ -293,6 +322,8 @@
        movement IDs derive from the ticket reference, so a reload/replay can
        never consume the same item twice. Services are ignored by the engine. */
     try { window.KiwiInventoryConsumption?.record?.(entry); } catch (_) {}
+
+    printCustomerReceipt(vertical, entry, sale, rows);
 
     return entry;
   }

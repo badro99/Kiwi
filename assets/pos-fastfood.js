@@ -389,12 +389,12 @@
      Le comptoir encaissait tout le service dans `tally` et rien d'autre : la
      patronne voyait 0 MAD et un refresh effaçait la recette du midi.
      Démo : no-op. */
-  function postDay(total, method, label, ref, lines) {
+  function postDay(total, method, label, ref, lines, received, change) {
     try {
       if (window.KiwiPosSale) {
         const channel = state.ticket && state.ticket.channel === 'glovo' ? 'delivery'
           : (state.ticket && state.ticket.channel === 'surplace' ? 'counter' : 'takeaway');
-        window.KiwiPosSale.record('fastfood', { total, method, label, ref, lines, channel });
+        window.KiwiPosSale.record('fastfood', { total, method, label, ref, lines, channel, received, change });
       }
     } catch (_) {}
   }
@@ -1065,7 +1065,7 @@
         tally[method === 'carte' ? 'carte' : 'especes'] += amount;
         /* Le solde du « payer au retrait » est l'argent qui rentre vraiment :
            c'est ici qu'il devient une recette, pas au moment de la commande. */
-        postDay(amount, method, `Solde #${order.num} · ${ordLabel(order)}`, `#${order.num}`, saleLines(order, amount));
+        postDay(amount, method, `Solde #${order.num} · ${ordLabel(order)}`, `#${order.num}`, saleLines(order, amount), received, rendu);
         closeVeil('#ff-pay-veil');
         queueIfOffline('Encaissement');
         toast(`Solde encaissé, ${fmtMAD(amount)} en ${method === 'carte' ? 'carte' : 'espèces'}${rendu ? ` · rendu ${fmtMAD(rendu)}` : ''}`);
@@ -1077,9 +1077,10 @@
       if (method === 'especes') tally.especes += amount;
       else if (method === 'carte') tally.carte += amount;
       else if (method === 'glovo') tally.glovo += amount;
-      postDay(amount, method, ordLabel(order), `#${order.num}`, saleLines(order, amount));
+      postDay(amount, method, ordLabel(order), `#${order.num}`, saleLines(order, amount), received, rendu);
       postOrder(order);
-      success(order, rendu, received, null);
+      closeVeil('#ff-pay-veil');
+      toast(`#${order.num} en préparation${rendu ? `, rendu ${fmtMAD(rendu)}` : ''}`);
     };
 
     const success = (o, rendu, received, note) => {

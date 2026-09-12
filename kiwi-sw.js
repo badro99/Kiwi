@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v562';
+var CACHE = 'kiwi-app-v563';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -141,13 +141,13 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
   '/assets/oppo-cards.js?v=2',
-  '/assets/dashboard-pwa.js?v=504',
+  '/assets/dashboard-pwa.js?v=505',
   '/assets/dashboard-native.js?v=1',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js?v=1',
-  '/assets/caisse-pwa.js?v=511',
+  '/assets/caisse-pwa.js?v=512',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=5',
   '/assets/platform-kernel.js?v=5',
@@ -231,7 +231,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=503',
+  '/assets/employee-live.js?v=504',
   '/assets/employee-planning.js?v=8',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=2',
@@ -259,7 +259,7 @@ var SHELL = [
      cuisine à l'écran sans jamais sortir sur la thermique. */
   '/assets/kitchen-print-queue.js?v=12',
   '/assets/food-production-print.js?v=2',
-  '/assets/pos-sale.js?v=6',
+  '/assets/pos-sale.js?v=8',
   '/assets/pos-dispatch.js?v=38',
   '/assets/retail-scan.css?v=7',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -272,8 +272,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=17',
-  '/assets/pos-boutique.js?v=17',
+  '/assets/pos-boutique.css?v=18',
+  '/assets/pos-boutique.js?v=18',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -281,8 +281,8 @@ var SHELL = [
   '/assets/pos-spa.js?v=5',
   '/assets/pos-hotel.css?v=14',
   '/assets/pos-hotel.js?v=14',
-  '/assets/pos-fastfood.css?v=5',
-  '/assets/pos-fastfood.js?v=5',
+  '/assets/pos-fastfood.css?v=6',
+  '/assets/pos-fastfood.js?v=6',
   '/assets/pos-boulangerie.css?v=7',
   '/assets/pos-boulangerie.js?v=7',
   '/assets/pos-pizzeria.css?v=3',
@@ -305,8 +305,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=5',
   '/assets/pos-autre.css?v=2',
   '/assets/pos-autre.js?v=2',
-  '/assets/pos-maison.css?v=23',
-  '/assets/pos-maison.js?v=23',
+  '/assets/pos-maison.css?v=24',
+  '/assets/pos-maison.js?v=24',
   '/assets/caisse-pairing.js?v=22',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

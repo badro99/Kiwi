@@ -132,8 +132,8 @@
     "sha": "f6f321dd0339bcb0"
   },
   "assets/caisse-pwa.js": {
-    "v": "511",
-    "sha": "99b90ce54d0f9487"
+    "v": "512",
+    "sha": "20a4fd250fb3fba5"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -208,8 +208,8 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "504",
-    "sha": "1130df545ca7f94e"
+    "v": "505",
+    "sha": "ad71b055411357f0"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -264,8 +264,8 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/employee-live.js": {
-    "v": "503",
-    "sha": "3b07db400ad878f8"
+    "v": "504",
+    "sha": "eca967582daabe6c"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -588,12 +588,12 @@
     "sha": "530ff7c046c57b2c"
   },
   "assets/pos-boutique.css": {
-    "v": "17",
+    "v": "18",
     "sha": "7cfd14173d1efd82"
   },
   "assets/pos-boutique.js": {
-    "v": "17",
-    "sha": "8e0457af083f1f00"
+    "v": "18",
+    "sha": "07d28d5ec6e321ed"
   },
   "assets/pos-coiffure.css": {
     "v": "5",
@@ -605,7 +605,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "38",
-    "sha": "0d2511e126c17259"
+    "sha": "37c0ebda3edfdd06"
   },
   "assets/pos-epicerie.css": {
     "v": "5",
@@ -616,12 +616,12 @@
     "sha": "c9ae4bed2a3bf544"
   },
   "assets/pos-fastfood.css": {
-    "v": "5",
+    "v": "6",
     "sha": "339dff04cdb82825"
   },
   "assets/pos-fastfood.js": {
-    "v": "5",
-    "sha": "1dac1ed8062dbc87"
+    "v": "6",
+    "sha": "58d35273439181a9"
   },
   "assets/pos-fleuriste.css": {
     "v": "7",
@@ -668,12 +668,12 @@
     "sha": "782a2a019b86fc81"
   },
   "assets/pos-maison.css": {
-    "v": "23",
+    "v": "24",
     "sha": "ae3c4dedfa5d7971"
   },
   "assets/pos-maison.js": {
-    "v": "23",
-    "sha": "b075adf84199f545"
+    "v": "24",
+    "sha": "45403d339ef9a703"
   },
   "assets/pos-mobile.css": {
     "v": "3",
@@ -704,8 +704,8 @@
     "sha": "268d006746e8216d"
   },
   "assets/pos-sale.js": {
-    "v": "6",
-    "sha": "a5dbd12fd9522b46"
+    "v": "8",
+    "sha": "2e75aa7ec72ae864"
   },
   "assets/pos-spa.css": {
     "v": "5",
