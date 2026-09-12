@@ -25,6 +25,10 @@
   var MAX_AGE = 30 * 60 * 1000;
   var RETRY_MS = 1200;
   var RETRY_MAX_MS = 15000;
+  /* Le pont a douze secondes pour rendre son verdict (printer-bridge.js ·
+     watchRelayJob). Au-delà on ne sait plus, et « on ne sait pas » n'est ni
+     « imprimé » ni « à réimprimer » : voir relayVerdict. */
+  var RELAY_VERDICT_MS = 20000;
   var HUB_LEASE_MS = 45000;
   var HUB_RENEW_MS = 15000;
   var MAX_RECORDS = 120;
@@ -123,6 +127,9 @@
     return {
       hub: isHub(), pending: q.length, printerReady: printerReady(), running: running,
       pendingReceipts: q.filter(function (job) { return job.type === 'receipt'; }).length,
+      /* Ni imprimés ni réessayables tout seuls · ils attendent un humain. */
+      uncertain: q.filter(function (job) { return !!job.uncertain; }).length,
+      awaitingRelay: q.filter(function (job) { return !!job.relayId && !job.uncertain; }).length,
       leaseExpiresAt: Number(hubConfig().expiresAt || 0),
       lastSuccess: lastSuccess, lastError: lastError || (q[0] && q[0].lastError) || '',
     };
@@ -193,6 +200,76 @@
     notifyWaiting(lastError);
     emit(); schedule();
   }
+  /* ── « ACCEPTÉ PAR LE RELAIS » N'EST PAS « SORTI SUR LE PAPIER » ────────
+   * `relayEnqueue` rend `{ok:true, queued:true, id}` dès que le SERVEUR a pris
+   * le travail. L'impression physique vient après, et peut échouer ou expirer.
+   * La file lisait ce `ok` comme une réussite : elle soldait le travail, le
+   * retirait de la file et l'inscrivait au registre `done` — donc plus aucun
+   * moyen de le reprendre. Et comme un bon est découpé en un travail PAR
+   * POSTE, le ticket du bar pouvait sortir pendant que celui de la cuisine
+   * mourait en silence : « le ticket ne contenait pas toute la commande ».
+   *
+   * Un travail accepté attend donc son verdict, dans la file, sans compter de
+   * tentative. Le pont émet `kiwi:printer-relay-status` : `ok` le solde,
+   * un échec franc le remet en file (rien n'est sorti), et un verdict
+   * INCERTAIN ne fait ni l'un ni l'autre — réimprimer d'office peut doubler un
+   * plat, abandonner peut en perdre un. Le travail reste alors visible et
+   * arrêté : c'est au comptoir de trancher, avec le bouton de réimpression. */
+  function parkAwaitingRelay(job, relayId) {
+    var q = readQueue();
+    var hit = q.find(function (x) { return x.id === job.id; });
+    if (!hit) return;
+    hit.relayId = String(relayId || '');
+    hit.awaitingUntil = Date.now() + RELAY_VERDICT_MS;
+    hit.nextAt = hit.awaitingUntil;
+    hit.lastError = '';
+    writeQueue(q);
+    record('relay-accepted', job, { via: 'relay' });
+    emit(); schedule();
+  }
+  function patchJob(id, mutate) {
+    var q = readQueue();
+    var hit = q.find(function (x) { return x.id === id; });
+    if (!hit) return null;
+    mutate(hit);
+    writeQueue(q);
+    return hit;
+  }
+  function markUncertain(job, reason) {
+    patchJob(job.id, function (hit) {
+      hit.relayId = '';
+      hit.awaitingUntil = 0;
+      hit.uncertain = true;
+      hit.lastError = safeReason(reason || 'output-unknown');
+    });
+    lastError = safeReason(reason || 'output-unknown');
+    record('relay-uncertain', job, { error: lastError });
+    notifyWaiting(lastError);
+    emit();
+  }
+  function relayVerdict(detail) {
+    var id = detail && detail.id;
+    if (!id) return;
+    var job = readQueue().find(function (x) { return x && x.relayId && x.relayId === String(id); });
+    if (!job) return;
+    if (detail.ok) { complete(job, { via: 'relay' }); return; }
+    if (detail.uncertain) { markUncertain(job, detail.reason); return; }
+    /* Échec franc : le pont affirme que rien n'est sorti. On peut réessayer
+       sans risquer un doublon · c'est exactement ce pour quoi la file existe. */
+    patchJob(job.id, function (hit) { hit.relayId = ''; hit.awaitingUntil = 0; });
+    retry(job, detail.reason || 'relay-failed');
+  }
+  /* Le pont cesse de sonder après douze secondes alors que le serveur garde le
+     travail dix minutes : un silence n'est donc pas une réussite. Sans ce
+     balayage, un travail resterait en attente jusqu'à sa péremption. */
+  function sweepStaleAwaits() {
+    var now = Date.now();
+    readQueue().forEach(function (x) {
+      if (x && x.relayId && !x.uncertain && Number(x.awaitingUntil || 0) <= now) {
+        markUncertain(x, 'relay-no-verdict');
+      }
+    });
+  }
   function complete(job, result) {
     writeQueue(readQueue().filter(function (x) { return x.id !== job.id; }));
     markDone(job.id);
@@ -203,10 +280,18 @@
   }
   function flush() {
     if (running) return Promise.resolve(status());
+    sweepStaleAwaits();
     var q = readQueue();
     if (!q.length) { emit(); return Promise.resolve(status()); }
     var now = Date.now();
-    var job = q.find(function (x) { return !x.nextAt || Number(x.nextAt) <= now; });
+    var job = q.find(function (x) {
+      /* Un travail incertain attend une décision humaine · le réimprimer
+         d'office est exactement le doublon qu'on refuse. */
+      if (x.uncertain) return false;
+      /* Un travail accepté par le relais attend son verdict, pas une relance. */
+      if (x.relayId && Number(x.awaitingUntil || 0) > now) return false;
+      return !x.nextAt || Number(x.nextAt) <= now;
+    });
     if (!job) { schedule(); return Promise.resolve(status()); }
     running = true; emit();
     record('printing', job);
@@ -226,7 +311,8 @@
           : Promise.resolve({ ok: false, reason: 'printer-not-configured' }));
     return Promise.resolve(print).then(function (result) {
       running = false;
-      if (result && result.ok) complete(job, result);
+      if (result && result.ok && result.queued && result.id) parkAwaitingRelay(job, result.id);
+      else if (result && result.ok) complete(job, result);
       else retry(job, result && result.reason || 'print-failed');
       if (readQueue().length) setTimeout(flush, 120);
       return result || { ok: false };
@@ -238,7 +324,12 @@
   }
   function retryNow() {
     var q = readQueue();
-    q.forEach(function (job) { job.nextAt = 0; });
+    /* Relancer à la main, c'est trancher : on lève l'incertitude et l'attente
+       d'un verdict qui ne viendra plus. Personne d'autre que l'humain devant
+       l'imprimante ne peut décider qu'il manque vraiment du papier. */
+    q.forEach(function (job) {
+      job.nextAt = 0; job.uncertain = false; job.relayId = ''; job.awaitingUntil = 0;
+    });
     writeQueue(q);
     return flush();
   }
@@ -345,6 +436,9 @@
     return JSON.stringify({ exportedAt: Date.now(), merchant: merchant(), status: status(), transitions: records.slice(-MAX_RECORDS) }, null, 2);
   }
 
+  window.addEventListener('kiwi:printer-relay-status', function (e) {
+    try { relayVerdict((e && e.detail) || {}); } catch (_) {}
+  });
   window.addEventListener('online', retryNow);
   window.addEventListener('kiwi:printer-config', retryNow);
   window.addEventListener('kiwi:station-printers-config', retryNow);

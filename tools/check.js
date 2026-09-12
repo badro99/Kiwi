@@ -1205,6 +1205,7 @@ section('Whole-project regressions');
     'order-line-cap-test.mjs',
     'kitchen-reprint-test.mjs',
     'kitchen-blind-outage-test.mjs',
+    'relay-print-verdict-test.mjs',
     'station-printer-routing-test.mjs',
     'print-socket-test.mjs',
     /* l'iPad n'a ni pont local ni WebUSB : la caisse dépose le ticket sur
