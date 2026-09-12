@@ -292,6 +292,9 @@ async function routeRequest(context) {
   if (path === '/api/tickets' && (method === 'GET' || method === 'POST')) return next();
   if (/^\/api\/tickets\/\d+$/.test(path) && method === 'PATCH') return next();
   if (path === '/api/tickets/cleanup' && method === 'POST') return next();
+  // Private agent bearer endpoints authenticate and authorize their own
+  // merchant-bound keys. Never grant these keys access to other /api routes.
+  if ((path === '/api/agent/query' || path === '/api/agent/action') && method === 'POST') return next();
 
   /* Même raisonnement, pour les quatre fichiers que le navigateur va chercher
    * TOUT SEUL et qui, eux, ne peuvent pas vivre sous /assets.

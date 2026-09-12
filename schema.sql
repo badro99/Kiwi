@@ -1622,3 +1622,32 @@ CREATE TABLE IF NOT EXISTS kiwi_ticket_images (
 );
 CREATE INDEX IF NOT EXISTS idx_kiwi_ticket_images_ticket
   ON kiwi_ticket_images (ticket_id, created_ts);
+
+-- Private agent gateway. Tokens are shown once and stored only as SHA-256.
+-- A key is bound to its original owner/session epoch and ONE claimed merchant.
+CREATE TABLE IF NOT EXISTS agent_keys (
+  id TEXT PRIMARY KEY,
+  merchant TEXT NOT NULL,
+  account_id TEXT NOT NULL,
+  account_epoch INTEGER NOT NULL,
+  label TEXT NOT NULL,
+  token_hash TEXT NOT NULL,
+  scopes TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','paused','revoked')),
+  created_ts INTEGER NOT NULL,
+  expires_ts INTEGER NOT NULL,
+  last_used_ts INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_agent_keys_owner ON agent_keys (account_id, merchant);
+CREATE TABLE IF NOT EXISTS agent_audit (
+  id TEXT PRIMARY KEY,
+  key_id TEXT NOT NULL,
+  merchant TEXT NOT NULL,
+  action TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  request_id TEXT NOT NULL,
+  input_hash TEXT NOT NULL DEFAULT '',
+  created_ts INTEGER NOT NULL,
+  UNIQUE (key_id, request_id)
+);
+CREATE INDEX IF NOT EXISTS idx_agent_audit_merchant ON agent_audit (merchant, created_ts);

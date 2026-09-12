@@ -1,0 +1,79 @@
+#!/usr/bin/env node
+'use strict';
+// Local stdio MCP client for the PRIVATE agent gateway. This process never
+// accepts a merchant slug from the agent: the server derives it from the key.
+const BASE = String(process.env.KIWI_AGENT_BASE || 'https://kiwi-os.com').replace(/\/+$/, '');
+const TOKEN = process.env.KIWI_AGENT_TOKEN || '';
+const PROTOCOL = '2024-11-05';
+const read = (name, description, properties, required = []) => ({
+  name, description, inputSchema: { type: 'object', properties, required },
+});
+const str = description => ({ type: 'string', description });
+const TOOLS = [
+  read('merchant_overview', 'Merchant identity and plan only; no staff PINs or raw configuration.', {}),
+  read('sales_summary', 'Non-voided daily sales by payment method. UTC, up to 31 days.',
+    { from: str('YYYY-MM-DD'), to: str('YYYY-MM-DD') }, ['from','to']),
+  read('catalog_search', 'Find up to 25 products by name; no full catalog dump.',
+    { query: str('At least 2 characters'), limit: { type: 'integer', minimum: 1, maximum: 25 } }, ['query']),
+  read('hotel_stays', 'Read up to 25 stays overlapping a date range (guest names included). UTC, up to 31 days.',
+    { from: str('YYYY-MM-DD'), to: str('YYYY-MM-DD'), limit: { type: 'integer', minimum: 1, maximum: 25 } }, ['from','to']),
+  read('clients_search', 'Search up to 25 customer records by name, phone or email.',
+    { query: str('At least 2 characters'), limit: { type: 'integer', minimum: 1, maximum: 25 } }, ['query']),
+  read('create_client', 'Create a minimal customer record. Requires clients:create and a stable requestId for safe retries.',
+    { requestId: str('Stable 16-100 character idempotency ID. Reuse on retry.'),
+      name: str('Customer name'), phone: str('Phone or email required'), email: str('Email or phone required') },
+    ['requestId','name']),
+];
+let buffer = '';
+let pending = 0, ended = false;
+function send(msg) { process.stdout.write(JSON.stringify(msg) + '\n'); }
+function maybeExit() { if (ended && pending === 0) process.exit(0); }
+function respond(id, result) { if (id !== null && id !== undefined) send({ jsonrpc: '2.0', id, result }); }
+async function call(name, args) {
+  if (!TOOLS.some(t => t.name === name)) throw new Error('Unknown tool');
+  if (!TOKEN) throw new Error('KIWI_AGENT_TOKEN is not configured');
+  if (!/^https:\/\//.test(BASE) && !/^http:\/\/localhost(?::\d+)?$/.test(BASE)) throw new Error('Invalid KIWI_AGENT_BASE');
+  const isWrite = name === 'create_client';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(BASE + (isWrite ? '/api/agent/action' : '/api/agent/query'), {
+      method: 'POST', signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
+      body: JSON.stringify({ ...(args || {}), [isWrite ? 'action' : 'tool']: name }),
+    });
+    const data = await res.json().catch(() => ({ error: 'invalid-response' }));
+    if (!res.ok || !data.ok) throw new Error('Gateway ' + res.status + ': ' + (data.error || 'failed'));
+    return { content: [{ type: 'text', text: JSON.stringify(data) }] };
+  } finally { clearTimeout(timer); }
+}
+async function handle(line) {
+  let msg;
+  try { msg = JSON.parse(line); } catch (_) { return; }
+  const { id, method, params } = msg;
+  if (id !== null && id !== undefined) pending++;
+  try {
+    if (method === 'initialize') respond(id, { protocolVersion: params?.protocolVersion || PROTOCOL,
+      capabilities: { tools: {} }, serverInfo: { name: 'kiwi-agent', version: '0.1.0' } });
+    else if (method === 'ping') respond(id, {});
+    else if (method === 'tools/list') respond(id, { tools: TOOLS });
+    else if (method === 'tools/call') respond(id, await call(params?.name, params?.arguments));
+    else if (id !== null && id !== undefined) send({ jsonrpc: '2.0', id, error: { code: -32601, message: 'Method not found' } });
+  } catch (err) {
+    if (id !== null && id !== undefined) respond(id, { content: [{ type: 'text', text: String(err?.message || err) }], isError: true });
+  } finally {
+    if (id !== null && id !== undefined) pending--;
+    maybeExit();
+  }
+}
+process.stdin.setEncoding('utf8');
+process.stdin.on('data', chunk => {
+  buffer += chunk;
+  let idx;
+  while ((idx = buffer.indexOf('\n')) >= 0) {
+    const line = buffer.slice(0, idx).trim();
+    buffer = buffer.slice(idx + 1);
+    if (line) void handle(line);
+  }
+});
+process.stdin.on('end', () => { ended = true; maybeExit(); });

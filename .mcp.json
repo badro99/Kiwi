@@ -4,6 +4,11 @@
       "command": "node",
       "args": ["tools/tickets-mcp/server.js"],
       "env": {}
+    },
+    "kiwi-agent": {
+      "command": "node",
+      "args": ["tools/kiwi-agent-mcp/server.js"],
+      "env": {}
     }
   }
 }
