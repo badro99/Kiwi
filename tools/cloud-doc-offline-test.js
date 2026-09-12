@@ -62,6 +62,14 @@ function response(status, body) {
     gets++;
     return Promise.resolve(response(500, { error: 'down' }));
   });
+  const merge = first.window.KiwiCloudDoc.mergeDefault;
+  const combined = merge({ amenities: ['wifi', 'pool'] }, { amenities: ['wifi', 'parking'] });
+  ok(JSON.stringify(combined.amenities) === JSON.stringify(['wifi', 'pool', 'parking']),
+    'conflicting id-less lists preserve additions from both devices without duplicates');
+  const keyed = merge({ periods: [{ day: 'Mon', hours: '9-5' }] },
+    { periods: [{ hours: '9-5', day: 'Mon' }, { day: 'Tue', hours: '9-5' }] });
+  ok(keyed.periods.length === 2 && keyed.periods[1].day === 'Tue',
+    'id-less objects dedupe independently of property order');
   const h1 = first.window.KiwiCloudDoc.attach({
     feature: 'receipt', slug: () => 'shop', read: () => doc, write: (next) => { doc = next; },
   });

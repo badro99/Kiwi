@@ -296,17 +296,33 @@
    * exemple) passe son propre `merge`. */
   function idOf(e) { return e && typeof e === 'object' ? (e.id || e.key || e.code || '') : ''; }
 
+  /* A value-only array has no row identity, but dropping the remote side on a
+   * 409 loses another device's additions. Canonicalize JSON object keys so the
+   * same item is not doubled merely because the two devices serialized fields
+   * in a different order. */
+  function valueKey(e) {
+    if (Array.isArray(e)) return '[' + e.map(valueKey).join(',') + ']';
+    if (e && typeof e === 'object') return '{' + Object.keys(e).sort().map(function (k) {
+      return JSON.stringify(k) + ':' + valueKey(e[k]);
+    }).join(',') + '}';
+    return JSON.stringify(e);
+  }
+
   function mergeDefault(mine, theirs) {
     if (theirs == null) return mine;
     if (mine == null) return theirs;
     if (Array.isArray(mine) && Array.isArray(theirs)) {
       if (!mine.length) return theirs.slice();
-      if (!idOf(mine[0]) && !idOf(theirs[0])) return mine.slice();   // pas d'identité → le nôtre
       var seen = Object.create(null);
+      var seenValue = Object.create(null);
       var out = [];
       var take = function (e) {
         var id = idOf(e);
-        if (!id) { out.push(e); return; }
+        if (!id) {
+          var key = valueKey(e);
+          if (seenValue[key]) return;
+          seenValue[key] = 1; out.push(e); return;
+        }
         if (seen[id]) return;
         seen[id] = 1; out.push(e);
       };
