@@ -7,7 +7,7 @@
 // Requires a D1 binding named DB (see wrangler.toml / docs/ops/LIVE_LINK.md). If the
 // binding is missing the endpoint fails soft (503) so the app never breaks.
 
-import { entitledMerchant, activeServiceEmployee, isTillFor, isOperator, readSession, readCookie, SESS_COOKIE, storeOwner } from '../auth/_lib.js';
+import { entitledMerchant, activeServiceEmployee, isTillFor, isOperator, readSession, readCookie, SESS_COOKIE, TILL_COOKIE, storeOwner, tillVerification } from '../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
 import { startOfDay } from './order/_lib.js';
 import { settleServiceTable, serviceVisitGuard } from './service/events.js';
@@ -99,7 +99,20 @@ export async function onRequestPost({ request, env }) {
    * signed employee cookie alone is not enough, and an off-shift waiter still
    * cannot write money into the ledger. */
   const merchant = await entitledMerchant(request, env, asked, { allowTill: true, allowEmployee: true });
-  if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
+  if (!merchant) {
+    /* Un refus et une panne ne se disent pas de la même façon. La caisse lit un
+     * 403 comme « cet appareil n'est plus la caisse de ce magasin » : elle
+     * affiche « Appairage à vérifier » et cesse d'espérer. Si la seule chose qui
+     * a échoué est la LECTURE du millésime de révocation, rien ne prouve un
+     * dépairage — c'est une indisponibilité, elle doit se dire 503, et le
+     * comptoir la retente tout seul. La vente reste en file dans les deux cas,
+     * mais seul le 503 se répare sans que personne ne touche à la tablette. */
+    if (readCookie(request, TILL_COOKIE)) {
+      const till = await tillVerification(request, env, asked);
+      if (till && till.unavailable) return json({ error: 'auth-verification-unavailable' }, 503);
+    }
+    return json({ error: 'forbidden-merchant' }, 403);
+  }
 
   /* A waiter payment names its table. That turns this endpoint from a generic
    * ledger append into the single settlement boundary: only an on-shift floor

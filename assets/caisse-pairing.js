@@ -302,9 +302,89 @@
     document.head.appendChild(s);
   }
 
+  /* ── LE PAVÉ D'APPAIRAGE, QUE PLUS RIEN NE DESSINAIT ─────────────────────
+   * `feed`, `submit`, `dotsHtml`, `injectCss` et les deux gestionnaires
+   * délégués (#cp-pad [data-cp]) attendaient tous un écran `#cp-screen` que
+   * AUCUNE fonction de ce fichier ne construisait plus. pairFromAccount()
+   * ci-dessus répare la caisse SANS geste — mais seulement quand ce navigateur
+   * porte encore la session propriétaire du tableau de bord. Sur un comptoir,
+   * il ne la porte typiquement pas : c'est une caisse, pas un bureau. Ce
+   * terminal-là recevait un 401/403 et le conseil d'aller ouvrir un tableau de
+   * bord ailleurs, pendant que ses ventes s'empilaient. On lui redonne le seul
+   * geste qu'il puisse faire sur place : taper un code à six chiffres. */
+  function renderPairPad(opts) {
+    opts = opts || {};
+    injectCss();
+    var scr = document.getElementById('cp-screen');
+    if (!scr) {
+      scr = document.createElement('div');
+      scr.className = 'pin-screen';
+      scr.id = 'cp-screen';
+      scr.setAttribute('role', 'dialog');
+      scr.setAttribute('aria-modal', 'true');
+      scr.setAttribute('aria-label', 'Appairage de la caisse');
+      document.body.appendChild(scr);
+    }
+    scr.style.display = '';
+    buf = '';
+    var known = opts.venue && opts.venue.name;
+    scr.innerHTML =
+      '<div class="pin-card">' +
+        '<div class="pin-brand" aria-label="Kiwi"><img src="assets/kiwi-newlogo-inverse.svg" alt="" draggable="false"></div>' +
+        '<div class="pin-greet">' + esc(known ? opts.venue.name : 'Appairer cette caisse') + '</div>' +
+        '<div class="pin-prompt">' + esc(opts.prompt || 'CODE D\u2019APPAIRAGE · 6 CHIFFRES') + '</div>' +
+        '<div class="pin-dots" id="cp-dots" aria-hidden="true">' + dotsHtml() + '</div>' +
+        '<div class="pin-pad" id="cp-pad">' +
+          key(1) + key(2) + key(3) + key(4) + key(5) + key(6) + key(7) + key(8) + key(9) +
+          '<button class="pin-key is-action" data-cp="clear" aria-label="Effacer tout">C</button>' + key(0) +
+          '<button class="pin-key is-action" data-cp="back" aria-label="Effacer">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H7l-5 7 5 7h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="pin-foot">' + esc(opts.foot || 'G\u00e9n\u00e9rez un code depuis Tableau de bord \u203a Caisse') + '</div>' +
+      '</div>';
+    renderDots();
+  }
+
+  /* Réappairer n'est PAS dépairer. La tablette est toujours celle de ce
+   * magasin ; c'est sa preuve qui a disparu, pas son affectation. unpair()
+   * aurait purgé le locataire — service en cours, additions, journal — pour
+   * réparer un cookie. Les ventes déjà encaissées ne vivent pas dans les clés
+   * du locataire : elles restent en file et repartent seules. */
+  function repairWithCode() {
+    var pv = pairedVenue();
+    renderPairPad({
+      venue: pv,
+      prompt: 'R\u00c9APPAIRER · CODE \u00c0 6 CHIFFRES',
+      foot: pv && pv.name
+        ? 'Cet appareil a perdu sa preuve d\u2019appairage. Les ventes en attente sont conserv\u00e9es et repartiront seules.'
+        : 'G\u00e9n\u00e9rez un code depuis Tableau de bord \u203a Caisse',
+    });
+  }
+
+  /* Les deux chemins, dans l'ordre où ils coûtent au commerçant. Silencieux
+   * d'abord : si ce navigateur porte encore la session du tableau de bord,
+   * personne n'a rien à faire. Sinon — le cas d'un vrai comptoir — on ne rend
+   * la main sur un cul-de-sac QUE si le geste a été demandé : un pavé qui
+   * s'ouvrirait tout seul par-dessus la caisse en plein service serait pire
+   * que le problème qu'il répare. */
+  function repair(opts) {
+    return Promise.resolve()
+      .then(function () { return pairFromAccount(); })
+      .catch(function (err) {
+        if (!opts || !opts.interactive) throw err;
+        repairWithCode();
+        return { ok: true, pad: true };
+      });
+  }
+
   function showPad(force) {
     hidePad();
     var pv = isPaired() ? pairedVenue() : null;
+    /* Hébergé seulement. En local (démos autorisées) un pavé d'appairage
+       n'est satisfaisable par personne : dépairer y rendait la main à
+       l'application, et doit continuer de le faire. */
+    if (!pv && hosted()) { renderPairPad({}); return; }
     bootWithPin(pv);
   }
   function hidePad() { var s = document.getElementById('cp-screen'); if (s) s.style.display = 'none'; }
@@ -323,7 +403,14 @@
     pairSubmitting = true;
     var code = buf;
     redeem(code).then(function (res) {
-      if (res && res.ok) { pairSubmitting = false; hidePad(); bootWithPin(res.venue); return; }
+      if (res && res.ok) {
+        pairSubmitting = false; hidePad();
+        /* Le jeton est reposé : les ventes retenues par un 403 n'ont plus de
+           raison d'attendre le prochain battement. `true` lève le recul
+           d'authentification de soixante secondes. */
+        try { if (window.KiwiLive && window.KiwiLive.flush) window.KiwiLive.flush(true); } catch (_) {}
+        bootWithPin(res.venue); return;
+      }
       var scr = document.getElementById('cp-screen');
       if (scr) { scr.classList.add('is-error'); setTimeout(function () { scr.classList.remove('is-error'); }, 420); }
       /* "too_many_attempts" is the server's brute-force cap (429). Say so
@@ -703,7 +790,7 @@
 
   window.KiwiCaissePairing = {
     isPaired: isPaired, pairedVenue: pairedVenue, showPad: showPad, redeem: redeem,
-    repair: pairFromAccount,
+    repair: repair, repairFromAccount: pairFromAccount, repairWithCode: repairWithCode,
     unpair: unpair, bootVertical: bootVertical,
     // Who unlocked this till, for any surface that needs to name them.
     staff: function () { return window.KiwiStaff || null; }, setStaff: setStaff,

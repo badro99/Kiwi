@@ -118,6 +118,22 @@ export async function onRequestPost(context) {
   } catch (_) {
     return json({ error: 'auth-verification-unavailable' }, 503);
   }
+  /* Appairer, c'est inscrire la boutique au registre — et l'inscription est ce
+   * qui rend le millésime LISIBLE. Sans ligne dans merchant_config, tillEpoch()
+   * répond « indisponible » (il refuse, à raison, de convertir une absence en
+   * zéro), si bien qu'une boutique jamais configurée obtenait un jeton que rien
+   * ne pouvait ensuite vérifier : appairée en apparence, 403 sur chaque vente,
+   * et impossible à réappairer puisque le même millésime manquait ici aussi.
+   * On pose donc la ligne AVANT de lire, sans rien écraser : une boutique déjà
+   * configurée garde ses réglages, son plan et son millésime. */
+  if (pending && pending.merchant) {
+    try {
+      await env.DB.prepare(
+        `INSERT INTO merchant_config (merchant, features, updated_ts)
+         VALUES (?, '{}', ?) ON CONFLICT(merchant) DO NOTHING`
+      ).bind(pending.merchant, now).run();
+    } catch (_) { /* colonnes absentes ou course : la lecture ci-dessous tranche */ }
+  }
   let currentEpoch = 0;
   if (env.AUTH_SECRET) {
     currentEpoch = pending ? await tillEpoch(env, pending.merchant) : 0;

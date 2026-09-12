@@ -6,7 +6,7 @@
   if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) return;
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/kiwi-sw.js?v=555').then(function (reg) {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=557').then(function (reg) {
         try { reg.update(); } catch (_) {}
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
       }).catch(function () {});
@@ -81,7 +81,7 @@
   var refreshingStatus = false;
   var pairingRepairing = null;
   var pairingRepairAttemptedAt = 0;
-  function repairPairing(force) {
+  function repairPairing(force, interactive) {
     if (pairingRepairing) return pairingRepairing;
     if (!window.KiwiCaissePairing || typeof window.KiwiCaissePairing.repair !== 'function') {
       return Promise.reject(new Error('pairing-repair-unavailable'));
@@ -91,10 +91,60 @@
       return Promise.reject(new Error('pairing-repair-throttled'));
     }
     pairingRepairAttemptedAt = now;
-    pairingRepairing = Promise.resolve(window.KiwiCaissePairing.repair()).finally(function () {
-      pairingRepairing = null;
-    });
+    /* `interactive` n'est passé QUE sur un geste du caissier. La tentative
+       silencieuse doit le rester : un pavé à six chiffres qui s'ouvrirait seul
+       par-dessus la caisse en plein service serait pire que la panne. */
+    pairingRepairing = Promise.resolve(
+      window.KiwiCaissePairing.repair({ interactive: !!interactive })
+    ).finally(function () { pairingRepairing = null; });
     return pairingRepairing;
+  }
+
+  /* ── QUAND LE 403 N'EST PAS UNE PANNE, MAIS UNE IDENTITÉ PERDUE ──────────
+   * L'identité d'une caisse vit à deux endroits : `kiwiPairedVenue` dans le
+   * localStorage, et le cookie httpOnly `kiwi_till` que seul le serveur lit.
+   * Rien ne les tient ensemble, et iPadOS sait très bien effacer le second en
+   * gardant le premier. La tablette continue alors d'encaisser en se croyant
+   * appairée et chaque vente repart en 403 — la tablette photographiée en
+   * portait trente et une. La réparation silencieuse ci-dessus suppose une
+   * session propriétaire que ce navigateur n'a typiquement pas. On demande
+   * donc au serveur ce que la tablette ne peut pas savoir seule
+   * (GET /api/pair/state) : un refus AVÉRÉ cesse d'être un mur, il devient le
+   * bouton qui le répare. Les ventes restent en file pendant tout ce temps. */
+  var pairingLost = false, pairingProbeAt = 0, pairingProbing = false;
+  function pairedMerchant() {
+    try {
+      var cp = window.KiwiCaissePairing;
+      var pv = cp && cp.pairedVenue && cp.pairedVenue();
+      if (pv && pv.merchant) return String(pv.merchant);
+    } catch (_) {}
+    try {
+      var raw = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+      if (raw && raw.merchant) return String(raw.merchant);
+    } catch (_) {}
+    return '';
+  }
+  function probePairing() {
+    if (pairingProbing || Date.now() < pairingProbeAt || !navigator.onLine) return;
+    var m = pairedMerchant();
+    if (!m) return;
+    pairingProbing = true;
+    pairingProbeAt = Date.now() + 30000;
+    fetch('/api/pair/state?merchant=' + encodeURIComponent(m), { headers: { Accept: 'application/json' } })
+      .then(function (r) { return r && r.ok ? r.json() : null; })
+      .then(function (d) {
+        /* Seule une réponse EXPLICITE dépaire l'affichage. Un 503 (lecture de
+           révocation indisponible) ou une coupure réseau ne prouvent rien, et
+           envoyer un commerçant taper un code pour une panne de base serait
+           lui faire perdre son temps pendant le service. */
+        if (d && typeof d.paired === 'boolean') pairingLost = !d.paired;
+        pairingProbing = false;
+        status();
+      })
+      .catch(function () { pairingProbing = false; });
+  }
+  function canRepair() {
+    try { return !!(window.KiwiCaissePairing && window.KiwiCaissePairing.repairWithCode); } catch (_) { return false; }
   }
   function cashJournalStatus() {
     try { if (window.KiwiCashSessions && window.KiwiCashSessions.status) return window.KiwiCashSessions.status(); } catch (_) {}
@@ -147,9 +197,15 @@
       detail = q.pending ? 'Opérations protégées sur cet appareil' : 'La caisse continue normalement';
     } else if (q.pending && (q.lastStatus === 401 || q.lastStatus === 403)) {
       tone = '#9F3028';
-      label = 'Appairage à vérifier · ' + q.pending + ' en attente';
-      detail = pairingRepairing ? 'Réactivation sécurisée en cours · opérations conservées'
-        : 'Accès refusé (' + q.lastStatus + ') · toucher pour réactiver';
+      probePairing();
+      if (pairingLost && canRepair() && !pairingRepairing) {
+        label = 'Caisse à réappairer · ' + q.pending + ' en attente';
+        detail = 'Toucher pour saisir un code · rien n’est perdu';
+      } else {
+        label = 'Appairage à vérifier · ' + q.pending + ' en attente';
+        detail = pairingRepairing ? 'Réactivation sécurisée en cours · opérations conservées'
+          : 'Accès refusé (' + q.lastStatus + ') · toucher pour réactiver';
+      }
       /* One quiet attempt fixes the common case where this same browser still
          carries the dashboard owner session. Throttling prevents a denied
          terminal from creating a retry loop; a tap remains an explicit retry. */
@@ -219,7 +275,7 @@
            proof, then replay the exact same durable receipt IDs. */
         if (qNow.pending && (qNow.lastStatus === 401 || qNow.lastStatus === 403)) {
           if (sub) sub.textContent = 'Réactivation sécurisée de cette caisse…';
-          flushPromise = repairPairing(true).then(function () {
+          flushPromise = repairPairing(true, true).then(function () {
             return (window.KiwiLive && window.KiwiLive.flush) ? window.KiwiLive.flush(true) : Promise.resolve();
           });
         } else {
@@ -238,6 +294,7 @@
         } else if (!after.pending && !after.blocked && !after.storageError && journalAfter.pendingCount) {
           toast(journalAfter.pendingPairing ? 'Ventes transmises · journal caisse en attente d’appairage' : 'Ventes transmises · journal caisse encore en attente', 'warn');
         } else if (!after.pending && !after.blocked && !after.storageError) {
+          pairingLost = false;
           toast('Synchronisation réussie · opérations transmises');
         } else if (after.lastStatus === 401 || after.lastStatus === 403) {
           toast('Erreur d’authentification (' + after.lastStatus + ') · vérifiez l’appairage', 'danger');
@@ -250,7 +307,16 @@
       }).catch(function (err) {
         delete d.dataset.syncing;
         if (err && (err.status === 401 || err.status === 403)) {
-          toast('Réappairage requis · ouvrez cette caisse depuis le tableau de bord. Les opérations restent conservées.', 'danger');
+          /* « Ouvrez cette caisse depuis le tableau de bord » envoyait le
+             commerçant chercher un ordinateur pendant le service. Ce terminal
+             peut se réappairer tout seul avec un code à six chiffres : on
+             ouvre le pavé plutôt que de le renvoyer ailleurs. */
+          pairingLost = true;
+          if (canRepair()) {
+            try { window.KiwiCaissePairing.repairWithCode(); } catch (_) {}
+          } else {
+            toast('Réappairage requis · ouvrez cette caisse depuis le tableau de bord. Les opérations restent conservées.', 'danger');
+          }
         } else {
           toast('Échec de synchronisation · ' + (err && err.message || 'erreur réseau'), 'danger');
         }

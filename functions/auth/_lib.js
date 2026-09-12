@@ -262,6 +262,23 @@ function tillEpochCacheFor(db) {
   }
   return cache;
 }
+/* « La base ne SAIT pas révoquer » n'est pas « la base ne PEUT pas répondre ».
+ * La colonne `till_epoch` est posée par la seule écriture qui la fait bouger :
+ * POST /api/pair/revoke exécute son propre ALTER avant d'incrémenter. Donc une
+ * base où la colonne (ou la table) n'existe pas est une base où AUCUN dépairage
+ * n'a jamais pu être enregistré — le millésime y vaut zéro, non par défaut
+ * prudent mais par démonstration. Le traiter comme « indisponible » ne
+ * protégeait rien et coûtait tout : la production est régulièrement en retard
+ * sur schema.sql (CLAUDE.md §3), et sur une base sans la colonne CHAQUE caisse
+ * du parc se voyait refuser CHAQUE vente en 403, sans pouvoir se réappairer —
+ * /api/pair/redeem lisait le même millésime et répondait 503.
+ *
+ * Une vraie panne de lecture, elle, reste indisponible : c'est le seul cas où
+ * la base pourrait détenir un dépairage qu'on n'arrive pas à lire. */
+function missingSchema(err) {
+  const msg = String((err && (err.message || err.cause && err.cause.message)) || err || '').toLowerCase();
+  return msg.includes('no such column') || msg.includes('no such table') || msg.includes('has no column named');
+}
 export async function tillEpoch(env, merchant) {
   const key = String(merchant || '');
   if (!key || !env || !env.DB) return null;
@@ -276,7 +293,11 @@ export async function tillEpoch(env, merchant) {
     const value = Math.max(0, Math.round(Number(row.till_epoch) || 0));
     cache.set(key, { value, until: Date.now() + TILL_EPOCH_TTL_MS });
     return value;
-  } catch (_) { return null; }
+  } catch (err) {
+    if (!missingSchema(err)) return null;
+    cache.set(key, { value: 0, until: Date.now() + TILL_EPOCH_TTL_MS });
+    return 0;
+  }
 }
 export function forgetTillEpoch(merchant, db = null) {
   const key = String(merchant || '');

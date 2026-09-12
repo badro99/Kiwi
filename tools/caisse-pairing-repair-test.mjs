@@ -81,7 +81,11 @@ assert.equal(values.get('kiwiSales:scoped@pasta-corner'), '[{"id":"sale-1","tota
 assert.equal(JSON.parse(values.get('kiwiPairedVenue')).venueId, venue.venueId, 'display venue metadata survives API redemption');
 assert.ok(events.some((event) => event.type === 'kiwi-paired'), 'successful repair wakes the outbox sender');
 
-assert.match(pwaSource, /lastStatus === 401 \|\| qNow\.lastStatus === 403[\s\S]{0,500}repairPairing\(true\)\.then[\s\S]{0,500}KiwiLive\.flush\(true\)/,
+/* Ce que cette assertion protège — réparer AVANT de rejouer — est intact. Le
+ * second argument est né du terminal qui n'a pas de session tableau de bord :
+ * un geste du caissier autorise l'ouverture du pavé à six chiffres, la
+ * tentative silencieuse reste silencieuse. Voir caisse-pairing-recovery-test. */
+assert.match(pwaSource, /lastStatus === 401 \|\| qNow\.lastStatus === 403[\s\S]{0,500}repairPairing\(true, true\)\.then[\s\S]{0,500}KiwiLive\.flush\(true\)/,
   'manual auth recovery repairs pairing before replaying receipts');
 assert.match(pairingSource, /bootWithPin\(handed\);[\s\S]{0,180}pairFromAccount\(handed\)/,
   'same-device dashboard hand-off also mints the secure till proof');

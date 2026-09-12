@@ -140,7 +140,21 @@ const legacyEnv = { AUTH_SECRET: SECRET, DB: { prepare(sql) { let args = []; ret
 }; } } };
 const preservedTill = request('/api/private', { cookie: cookiePair(TILL_COOKIE, await tillToken(SECRET, 'migration-shop', 0)) });
 const { isTillFor } = await import('../functions/auth/_lib.js');
-check('pre-migration missing till epoch fails closed', !(await isTillFor(preservedTill, legacyEnv, 'migration-shop')));
+/* Cette assertion disait l'inverse, et c'est elle qui a coûté un parc entier.
+ * « La base ne SAIT pas révoquer » n'est pas « la base ne PEUT pas répondre » :
+ * la colonne `till_epoch` n'est posée que par POST /api/pair/revoke, qui
+ * exécute son propre ALTER avant d'incrémenter. Une base où la colonne n'existe
+ * pas est donc une base où AUCUN dépairage n'a jamais pu être enregistré — le
+ * millésime y vaut zéro par démonstration, pas par défaut prudent, et refuser
+ * ne protégeait aucun appairage révoqué. Ce que ça faisait, en revanche : la
+ * production est régulièrement en retard sur schema.sql (CLAUDE.md §3), donc
+ * chaque caisse du parc se voyait refuser chaque vente en 403 — sans recours,
+ * puisque /api/pair/redeem lisait le même millésime et répondait 503.
+ * Ce qui reste fermé, et que les deux contrôles suivants tiennent : une panne
+ * de LECTURE (la base est là, elle ne répond pas) et un millésime incrémenté. */
+check('a database that cannot record a revocation admits the existing pairing',
+  await isTillFor(preservedTill, legacyEnv, 'migration-shop'));
+forgetTillEpoch('migration-shop', legacyEnv.DB);
 legacyDb.exec(fs.readFileSync(path.join(ROOT, 'migrations/2026-09-08-till-epoch-prerequisite.sql'), 'utf8'));
 check('additive till prerequisite preserves the existing pairing', await isTillFor(preservedTill, legacyEnv, 'migration-shop'));
 const preservedConfig = legacyDb.prepare('SELECT * FROM merchant_config').get();
