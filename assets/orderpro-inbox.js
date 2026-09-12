@@ -143,7 +143,8 @@
         });
         delta.forEach(function (o) {
           if (!state.seen[o.id] && o.status === 'pending') { fresh++; state.seen[o.id] = 1; }
-          state.orders[o.id] = o;
+          if (o.status === 'archived') delete state.orders[o.id];
+          else state.orders[o.id] = o;
         });
         state.sessions = j.sessions || [];
         state.closedSessions = j.closedSessions || [];
@@ -268,7 +269,7 @@
             if (j.status) current.status = j.status;
             if (Array.isArray(j.lines)) current.lines = j.lines;
             if (extra && extra.paid) current.paid = true;
-            if (status === 'rejected') delete state.orders[id];
+            if (status === 'rejected' || status === 'archived') delete state.orders[id];
           }
           /* `pending` n'est pas encore un bon de cuisine. Le papier ne doit
            * sortir que sur l'appareil qui a réellement obtenu la transition

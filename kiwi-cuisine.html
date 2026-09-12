@@ -1111,7 +1111,9 @@
         if (!o || !o.id) return;
         /* Un bon `pending` appartient encore au comptoir : la cuisine ne doit
            pas lancer un plat que le caissier va peut-être refuser. */
-        if (o.status === 'pending' || o.status === 'rejected') { delete S.orders[o.id]; return; }
+        if (o.status === 'pending' || o.status === 'rejected' || o.status === 'archived') {
+          delete S.orders[o.id]; delete S.cooking[o.id]; return;
+        }
         // A served but unpaid dish can still carry a kitchen cancellation
         // request. Keep its alert actionable until the chef accepts/rejects
         // it; an ordinary served ticket still disappears immediately.

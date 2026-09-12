@@ -353,7 +353,7 @@ CREATE TABLE IF NOT EXISTS orders (
   table_no   TEXT,               -- table number for dine-in, empty for takeout
   total      INTEGER NOT NULL,   -- MAD, whole dirhams
   lines      TEXT NOT NULL,      -- JSON: [{id,name,qty,unitPrice,options,note}]
-  status     TEXT NOT NULL,      -- 'pending' | 'accepted' | 'ready' | 'served' | 'rejected'
+  status     TEXT NOT NULL,      -- 'pending' | 'accepted' | 'ready' | 'served' | 'rejected' | 'archived' (paid takeout, not a sale reversal)
   created_ts INTEGER NOT NULL,
   updated_ts INTEGER NOT NULL,
   -- ── OrderPro · session de table (voir table_sessions, plus bas) ───────────

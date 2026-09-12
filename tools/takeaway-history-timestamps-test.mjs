@@ -119,6 +119,7 @@ try {
     kdsEsc: (s) => String(s), ticketNo: (o) => `#${o.num}`,
     vrapItemsLine: (o) => o.items.map((i) => i.n).join(', '), fmtMAD: (n) => String(n),
     vrapOrderCard: (o) => `<active>${o.num}</active>`,
+    archivedTakeawaySet: () => new Set(), rememberArchivedTakeaway() {},
     opPush: (...args) => { pushes.push(args); return Promise.resolve(null); },
     persistShift: () => { persisted = JSON.stringify(context.kdsOrders); }, toast() {},
   });

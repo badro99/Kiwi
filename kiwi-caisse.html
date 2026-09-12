@@ -5137,6 +5137,10 @@
     .vrap-order.is-ready { border-left-color: var(--emerald); }
     .vrap-order.is-open { cursor: pointer; transition: box-shadow 150ms ease, transform 150ms ease; }
     .vrap-order.is-open:hover { box-shadow: var(--shadow-2); transform: translateY(-1px); }
+    .vrap-order.is-paid { cursor: pointer; }
+    .vrap-order.is-paid:hover { box-shadow: var(--shadow-2); }
+    .vrap-order-details { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--paper-soft); color: var(--ink-3); font-size: 12px; line-height: 1.45; }
+    .vrap-order-details strong { display: block; color: var(--ink); font-weight: 600; margin-bottom: 3px; }
     .vrap-order-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 9px; }
     .vrap-order-num { font-size: 18px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
     .vrap-order-time { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--ink-4); font-family: var(--mono); }
@@ -5203,6 +5207,8 @@
       border: 1px solid rgba(184,82,69,.28); box-shadow: none;
     }
     .vrap-act.vrap-act-cancel:hover { background: rgba(184,82,69,.08); }
+    .vrap-act.vrap-act-archive { background: var(--paper-soft); color: var(--ink-2); border: 1px solid var(--line); box-shadow: none; }
+    .vrap-act.vrap-act-archive:hover { background: var(--paper-mute); }
     .vrap-empty { text-align: center; padding: 46px 20px; color: var(--ink-4); }
     .vrap-empty svg { width: 30px; height: 30px; margin: 0 auto 8px; }
     .vrap-empty span { display: block; font-size: 13px; }
@@ -5507,7 +5513,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=512" defer></script>
+  <script src="assets/caisse-pwa.js?v=513" defer></script>
   <script src="assets/live-link.js?v=35" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -5583,7 +5589,7 @@
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=23" defer></script>
+  <script src="assets/orderpro-inbox.js?v=25" defer></script>
   <script src="assets/service-requests.js?v=1" defer></script>
   <script src="assets/caisse-menu-availability.js?v=4" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
@@ -19645,6 +19651,7 @@
        drop into the history.
        =========================================================== */
     let vrapView = 'board';  // 'board' | 'builder'
+    let vrapSelectedPaidNum = null;
 
     function setVrapView(v) {
       vrapView = v;
@@ -19716,11 +19723,15 @@
            That shortcut silently marked the order ready and served in one
            click, hiding the readiness step from every KDS-enabled merchant. */
         action = readyBtn || `<button class="vrap-act" data-vrap-handover="${o.num}">Remettre au client</button>`;
+        if (o.opId) action += `<button class="vrap-act vrap-act-archive" data-vrap-archive="${o.num}">Retirer du suivi</button>`;
       }
       const notes = o.items.filter(i => (i.note || '').trim())
         .map(i => `<div class="vrap-order-note"><i data-lucide="pencil-line"></i> <strong>${kdsEsc(i.n)}</strong> · ${kdsEsc(i.note)}</div>`)
         .join('');
-      return `<div class="vrap-order${ready ? ' is-ready' : ''}${o.paid ? '' : ' is-open'}" data-vrap-num="${o.num}">
+      const paidDetails = o.paid && vrapSelectedPaidNum === o.num
+        ? `<div class="vrap-order-details"><strong>Commande payée · ${kdsEsc(new Date(o.sentAt).toLocaleString('fr-FR'))}</strong>
+            ${o.pickedUp ? 'Remise au client.' : 'En attente de remise. « Retirer du suivi » ne modifie ni le paiement ni les ventes.'}</div>` : '';
+      return `<div class="vrap-order${ready ? ' is-ready' : ''}${o.paid ? ' is-paid' : ' is-open'}" data-vrap-num="${o.num}">
         <div class="vrap-order-head">
           <span class="vrap-order-num">${ticketNo(o)}</span>
           <span class="vrap-order-time"><i data-lucide="clock"></i> ${vrapElapsed(o)}</span>
@@ -19739,6 +19750,7 @@
         </div>
         <div class="vrap-order-items">${vrapItemsLine(o)}</div>
         ${notes}
+        ${paidDetails}
         <div class="vrap-order-foot">
           <span class="vrap-order-total">${fmtMAD(o.total)}</span>
           ${action}
@@ -20130,6 +20142,27 @@
       toast(`Commande ${ticketNo(o)} remise au client`);
     }
 
+    function vrapArchivePaid(num) {
+      const o = kdsOrders.find(x => x.num === num);
+      if (!o || !o.opId || !o.paid || o.pickedUp) return;
+      const label = ticketNo(o);
+      if (!window.confirm(`Retirer ${label} du suivi à emporter ?\n\nLa vente et le paiement restent enregistrés. Cette action ne signifie PAS « remise au client ». Elle ne crée aucune transaction aujourd'hui.`)) return;
+      requireTillOperator(`Retirer ${label} du suivi`, (who) => {
+        Promise.resolve(opPush(o, 'archived', { actorProof: who && who.actorProof || '' })).then((result) => {
+          if (!result || !result.ok) { toast(`Impossible de retirer ${label} · réessayez`); return; }
+          rememberArchivedTakeaway(o.opId);
+          // The inbox bridge also retires this ticket. Repeat safely if an old
+          // inbox version has not learned the new terminal state yet.
+          retireRejectedKitchenTicket(o);
+          if (vrapSelectedPaidNum === num) vrapSelectedPaidNum = null;
+          updateKdsCount();
+          if (kdsEl.classList.contains('is-open')) kdsPaint();
+          renderVrapBoard();
+          toast(`${label} retirée du suivi · vente conservée`);
+        });
+      });
+    }
+
     $('#vrap-board').addEventListener('click', (e) => {
       if (e.target.closest('#vrap-new-order')) {
         // Start a fresh order · drop any edit state and the working cart
@@ -20157,6 +20190,8 @@
       }
       const ho = e.target.closest('[data-vrap-handover]');
       if (ho) { vrapHandover(Number(ho.dataset.vrapHandover)); return; }
+      const archive = e.target.closest('[data-vrap-archive]');
+      if (archive) { vrapArchivePaid(Number(archive.dataset.vrapArchive)); return; }
       const exp = e.target.closest('[data-exp-reprendre]');
       if (exp) { reprendreExpired(exp.dataset.expReprendre); return; }
       const dismiss = e.target.closest('[data-exp-dismiss]');
@@ -20168,7 +20203,15 @@
       }
       // Any other click on an order card opens it (unpaid → edit + checkout).
       const card = e.target.closest('.vrap-order');
-      if (card) { openVrapOrder(Number(card.dataset.vrapNum)); return; }
+      if (card) {
+        const num = Number(card.dataset.vrapNum);
+        const order = kdsOrders.find(x => x.num === num);
+        if (order && order.paid) {
+          vrapSelectedPaidNum = vrapSelectedPaidNum === num ? null : num;
+          renderVrapBoard();
+        } else openVrapOrder(num);
+        return;
+      }
     });
 
     $('#vrap-back-board').addEventListener('click', () => {
@@ -20209,6 +20252,28 @@
        une vente au comptoir n°7 se seraient écrasées l'une l'autre. */
     const opTickets = new Map();   // id serveur → ticket local
     let expiredOrders = [];        // refus récents du serveur, lecture seule (reprise)
+    let archivedTakeawayScope = '';
+    let archivedTakeawayIds = new Set();
+
+    function archivedTakeawaySet() {
+      const merchant = currentMerchantSlug();
+      if (merchant !== archivedTakeawayScope) {
+        archivedTakeawayScope = merchant;
+        try {
+          const saved = JSON.parse(localStorage.getItem('kiwi-archived-takeaways:' + merchant) || '[]');
+          archivedTakeawayIds = new Set(Array.isArray(saved) ? saved.filter(id => typeof id === 'string').slice(-1000) : []);
+        } catch (_) { archivedTakeawayIds = new Set(); }
+      }
+      return archivedTakeawayIds;
+    }
+
+    function rememberArchivedTakeaway(id) {
+      if (!id || !currentMerchantSlug()) return;
+      const ids = archivedTakeawaySet();
+      ids.add(String(id));
+      try { localStorage.setItem('kiwi-archived-takeaways:' + archivedTakeawayScope,
+        JSON.stringify(Array.from(ids).slice(-1000))); } catch (_) {}
+    }
 
     function opMerchant() {
       try { return (window.KiwiOrderInbox && KiwiOrderInbox.merchant && KiwiOrderInbox.merchant()) || ''; }
@@ -20610,6 +20675,24 @@
 
     function opIngest(o) {
       if (!o || !o.id) return;
+      if (o.status === 'archived') {
+        rememberArchivedTakeaway(o.id);
+        const archived = opTickets.get(o.id) || kdsOrders.find(t => t && t.opId === o.id)
+          // Older saved shifts carried the server number but not its opaque id.
+          // Reconcile only an exact same-store number, amount and near-identical
+          // creation time: a recycled weekly number alone is not enough.
+          || kdsOrders.find(t => t && t.type === 'takeaway' && !t.opId
+            && String(t.opNum) === String(o.number)
+            && Math.abs(Number(t.total) - Number(o.total)) < 0.01
+            && Math.abs(new Date(t.sentAt).getTime() - Number(o.created_ts)) < 60 * 60000);
+        if (archived && archived.type === 'takeaway') {
+          archived.opId = o.id;
+          retireRejectedKitchenTicket(archived);
+        }
+        opTickets.delete(o.id);
+        return;
+      }
+      if (o.mode === 'takeout' && archivedTakeawaySet().has(String(o.id))) return;
       if (o.channel !== 'caisse') opRepairFormulaParents(o);
       /* La carte des tickets vit en mémoire ; le SERVICE, lui, survit au
          rechargement (persistShift). Après un F5 en plein service, `opTickets`
@@ -21178,6 +21261,7 @@
        la file serveur a correctement laissé dans le service précédent. */
     function staleQueuedServerTicket(o, now) {
       if (!o || o.opNum == null) return false;
+      if (o.opId && archivedTakeawaySet().has(String(o.opId))) return true;
       // Age is not cancellation or payment evidence. Keep active bills and
       // paid takeaway orders awaiting collection until a canonical terminal event.
       if (!o.pickedUp && (o.type === 'takeaway' || !o.paid)) return false;

@@ -1045,6 +1045,7 @@ section('Whole-project regressions');
     'caisse-reconnect-test.mjs',
     'caisse-pairing-repair-test.mjs',
     'takeaway-history-timestamps-test.mjs',
+    'takeaway-stale-archive-test.mjs',
     'floorplan-sync-test.js',
     'kitchen-relay-test.js',
     'takeout-kds-ready-test.mjs',

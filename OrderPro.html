@@ -3868,6 +3868,7 @@ em, i, cite, dfn, var { font-style: normal; }
         boot_closed_body: "L'établissement ne prend pas de commandes en ce moment. Repassez pendant le service.",
         order_closed: "Le service vient de fermer · commande non envoyée",
         order_refused: "Le comptoir n'a pas pu prendre cette commande",
+        order_archived: "Cette commande a été retirée du suivi au comptoir. Contactez l’équipe si vous attendez encore votre retrait.",
         order_served: "Servie · bon appétit",
         order_gone: "Plus disponible : {n}",
         order_options_changed: "Options à rechoisir pour {n}",
@@ -4050,6 +4051,7 @@ em, i, cite, dfn, var { font-style: normal; }
         boot_closed_body: "This venue isn't taking orders right now. Come back during service.",
         order_closed: "Service just closed · order not sent",
         order_refused: "The counter couldn't take this order",
+        order_archived: "This order was removed from counter tracking. Please contact the team if you are still waiting to collect it.",
         order_served: "Served · enjoy",
         order_gone: "No longer available: {n}",
         order_options_changed: "Please reselect options for {n}",
@@ -4231,6 +4233,7 @@ em, i, cite, dfn, var { font-style: normal; }
         boot_closed_body: "هاد المحل ماكيديش الطلبات دابا. رجع فوقت الخدمة.",
         order_closed: "الخدمة تسدّات · الطلب ماتصيفطش",
         order_refused: "الكونطوار ماقدرش ياخد هاد الطلب",
+        order_archived: "تحيدات هاد الطلبية من لائحة المتابعة. تواصل مع الفريق إلا مازال كتسنى تستلمها.",
         order_served: "تقدّم · بالصحة",
         order_gone: "ماكاينش: {n}",
         order_options_changed: "يرجى إعادة اختيار خيارات {n}",
@@ -5709,7 +5712,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const SLOW = 15000;     // simplement assis, la carte ouverte
       let timer = null, running = false;
 
-      const busy = () => !!currentOrderId && lastStatus !== 'served' && lastStatus !== 'rejected';
+      const busy = () => !!currentOrderId && lastStatus !== 'served' && lastStatus !== 'rejected' && lastStatus !== 'archived';
 
       async function tick() {
         if (!running || document.hidden) return;
@@ -5778,6 +5781,12 @@ em, i, cite, dfn, var { font-style: normal; }
       }
 
       if (status === 'rejected') { showToast(t('order_refused')); currentOrderId = ''; return; }
+      if (status === 'archived' && orderMode === 'takeout') {
+        showToast(t('order_archived'));
+        currentOrderId = '';
+        SESSION.markClosed('archived');
+        return;
+      }
 
       /* À emporter : c'est L'ENCAISSEMENT au comptoir qui fait avancer l'écran,
          pas un bouton que le client devrait penser à taper. Il annonce son

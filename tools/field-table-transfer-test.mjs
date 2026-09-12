@@ -59,6 +59,7 @@ function context() {
     kdsStations: () => [], kdsStationForName: () => 'kitchen', kdsNowHM: () => '12:00',
     kdsStationBar: () => '', kdsGroup: () => [], kdsEmpty: () => '',
     kdsOrderCard: () => '', kdsHistoryRow: () => '', opPush: () => Promise.resolve(null),
+    archivedTakeawaySet: () => new Set(), rememberArchivedTakeaway: noop,
     clearCart: () => { c.cart = []; }, setVrapView: v => { c.vrapView = v; },
     setMode: m => { c.mode = m; }, requireTillOperator: () => { throw Error('unexpected auth UI'); },
     fetch: () => { throw Error('unexpected network'); }, nodes, events, messages,

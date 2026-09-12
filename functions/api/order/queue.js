@@ -30,6 +30,7 @@
 //
 // Status flow:  pending → accepted → ready → served
 //                   └──→ rejected                      (staff declined; terminal)
+//                 accepted/ready → archived             (paid takeout removed from live follow-up; not a sale)
 //
 // ── Deux choses que ce GET fait en plus de lire ─────────────────────────────
 // 1. IL POINTE. Ce sondage est la seule preuve régulière et authentifiée que le
@@ -128,6 +129,9 @@ function readPageCursor(raw, now) {
 }
 const PENDING_TTL_MS = 30 * 60 * 1000;
 const KITCHEN_TTL_MS = 6 * 60 * 60 * 1000;
+// Archive changes are tombstones for tills with a saved shift. They must be
+// delivered even when the original order is older than the kitchen window.
+const ARCHIVED_TOMBSTONE_MS = 30 * 24 * 60 * 60 * 1000;
 /* Combien de temps une commande refusée reste lisible comme « expirée » dans
  * le sondage. Deux heures : assez pour qu'un client qui arrive avec du retard
  * retrouve sa commande au comptoir et la fasse reprendre, assez court pour ne
@@ -374,9 +378,10 @@ export async function onRequestGet(context) {
   const WHERE = `FROM orders
         WHERE merchant = ? AND updated_ts > ? AND updated_ts <= ?
           ${pageCursor ? 'AND (updated_ts > ? OR (updated_ts = ? AND id > ?))' : ''}
-          AND status IN ('pending','accepted','ready','served')
-          AND (status = 'pending' OR created_ts >= ?)
-          AND (status <> 'served' OR created_ts >= ?)
+          AND ((status = 'archived' AND updated_ts >= ?)
+            OR (status IN ('pending','accepted','ready','served')
+              AND (status = 'pending' OR created_ts >= ?)
+              AND (status <> 'served' OR created_ts >= ?)))
         ORDER BY updated_ts, id
         LIMIT ?`;
 
@@ -387,7 +392,7 @@ export async function onRequestGet(context) {
       rows = await env.DB.prepare(`SELECT ${COL_SETS[i]} ${WHERE}`)
         .bind(merchant, since, pageEnd,
           ...(pageCursor ? [pageCursor.ts, pageCursor.ts, pageCursor.id] : []),
-          kitchenCutoff, today, MAX_ROWS + 1).all();
+          now - ARCHIVED_TOMBSTONE_MS, kitchenCutoff, today, MAX_ROWS + 1).all();
       degraded = COL_SET_MISSING[i];
       break;
     } catch (_) { rows = null; }
@@ -1895,7 +1900,43 @@ export async function onRequestPost(context) {
   const id = String((b && b.id) || '').trim();
   const status = String((b && b.status) || '').trim();
   if (!ORDER_ID.test(id)) return json({ error: 'bad-request' }, 400);
-
+  /* A paid takeaway can outlive the six-hour kitchen window on a saved till.
+   * Filing it away is NOT a handover, cancellation, refund, or new sale. Keep
+   * the paid timestamp and order lines untouched and require a named till
+   * operator, so a stray tap cannot silently hide a customer's pickup. */
+  if (status === 'archived') {
+    if (!pinActor) return json({ error: 'operator-proof-required' }, 403);
+    let current;
+    try {
+      current = await env.DB.prepare(
+        'SELECT number, mode, status, paid_ts, updated_ts FROM orders WHERE id = ? AND merchant = ?'
+      ).bind(id, merchant).first();
+    } catch (_) { return json({ error: 'archive-read-failed' }, 503); }
+    if (!current) return json({ error: 'not-found' }, 404);
+    if (current.status === 'archived') return json({ ok: true, id, status, number: current.number, replayed: true });
+    if (current.mode !== 'takeout' || current.paid_ts == null || !['accepted', 'ready'].includes(current.status)) {
+      return json({ error: 'archive-not-eligible', status: current.status, number: current.number }, 409);
+    }
+    try {
+      const archivedAt = Math.max(now, Number(current.updated_ts || 0) + 1);
+      const update = statement(env,
+        `UPDATE orders SET status = 'archived', updated_ts = ?
+          WHERE id = ? AND merchant = ? AND mode = 'takeout' AND paid_ts IS NOT NULL
+            AND status IN ('accepted','ready') AND updated_ts = ?`,
+        archivedAt, id, merchant, current.updated_ts);
+      const audit = statement(env,
+        `INSERT OR IGNORE INTO operational_events (id,command_id,merchant,event,status,detail,created_ts)
+          SELECT ?, ?, ?, 'takeout-archived', 'ok', ?, ?
+            WHERE EXISTS (SELECT 1 FROM orders WHERE id = ? AND merchant = ?
+              AND status = 'archived' AND updated_ts = ?)`,
+        operationId(id + '-' + merchant, 'archive'), id, merchant,
+        JSON.stringify({ actorId: pinActor.id || '', actorName: pinActor.name || '', previousStatus: current.status }),
+        archivedAt, id, merchant, archivedAt);
+      const results = await atomicStatements(env, [update, audit]);
+      if (!Number(results?.[0]?.meta?.changes || 0)) return json({ error: 'concurrent-update', retry: true }, 409);
+      return json({ ok: true, id, status, number: current.number, archivedAt });
+    } catch (_) { return json({ error: 'archive-write-failed' }, 503); }
+  }
   /* "Accepter" is preparation progress, not an order-state transition: the
    * order already reached KDS as accepted. Store the progress on each line so
    * Bar accepting its drinks does not move Kitchen, and so every KDS device
