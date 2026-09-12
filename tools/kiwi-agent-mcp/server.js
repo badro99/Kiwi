@@ -19,10 +19,35 @@ const TOOLS = [
     { from: str('YYYY-MM-DD'), to: str('YYYY-MM-DD'), limit: { type: 'integer', minimum: 1, maximum: 25 } }, ['from','to']),
   read('clients_search', 'Search up to 25 customer records by name, phone or email.',
     { query: str('At least 2 characters'), limit: { type: 'integer', minimum: 1, maximum: 25 } }, ['query']),
+  read('orders_list', 'Merchant orders with item lines and status, paged within 31 UTC days; no customer contact or guest session token.',
+    { from: str('YYYY-MM-DD'), to: str('YYYY-MM-DD'), offset: { type: 'integer', minimum: 0, maximum: 1000 }, limit: { type: 'integer', minimum: 1, maximum: 25 } }, ['from','to']),
+  read('order_detail', 'Read one merchant order by exact ID, including its item lines and payment/cancellation state.',
+    { id: str('Exact order ID') }, ['id']),
+  read('table_sessions', 'Operational table sessions, without bearer session IDs; paged within 31 UTC days.',
+    { from: str('YYYY-MM-DD'), to: str('YYYY-MM-DD'), offset: { type: 'integer', minimum: 0, maximum: 1000 }, limit: { type: 'integer', minimum: 1, maximum: 25 } }, ['from','to']),
+  read('active_tables', 'Currently open tables and order counts, without guest bearer session IDs.',
+    { offset: { type: 'integer', minimum: 0, maximum: 1000 }, limit: { type: 'integer', minimum: 1, maximum: 25 } }),
+  read('payment_events', 'Individual sale/payment postings, including void status; not just daily totals.',
+    { from: str('YYYY-MM-DD'), to: str('YYYY-MM-DD'), offset: { type: 'integer', minimum: 0, maximum: 1000 }, limit: { type: 'integer', minimum: 1, maximum: 25 } }, ['from','to']),
+  read('refund_events', 'Refund reservation/settlement statuses; read-only, no refund initiation.',
+    { from: str('YYYY-MM-DD'), to: str('YYYY-MM-DD'), offset: { type: 'integer', minimum: 0, maximum: 1000 }, limit: { type: 'integer', minimum: 1, maximum: 25 } }, ['from','to']),
+  read('cash_events', 'Cash drawer opening, movements, handovers and closing events.',
+    { from: str('YYYY-MM-DD'), to: str('YYYY-MM-DD'), offset: { type: 'integer', minimum: 0, maximum: 1000 }, limit: { type: 'integer', minimum: 1, maximum: 25 } }, ['from','to']),
+  read('operations_notes', 'Read recent operational notes for this merchant.',
+    { from: str('YYYY-MM-DD'), to: str('YYYY-MM-DD'), offset: { type: 'integer', minimum: 0, maximum: 1000 }, limit: { type: 'integer', minimum: 1, maximum: 25 } }, ['from','to']),
+  read('operations_tasks', 'Read operational tasks, status and assignee for this merchant.',
+    { from: str('YYYY-MM-DD'), to: str('YYYY-MM-DD'), offset: { type: 'integer', minimum: 0, maximum: 1000 }, limit: { type: 'integer', minimum: 1, maximum: 25 } }, ['from','to']),
   read('create_client', 'Create a minimal customer record. Requires clients:create and a stable requestId for safe retries.',
     { requestId: str('Stable 16-100 character idempotency ID. Reuse on retry.'),
       name: str('Customer name'), phone: str('Phone or email required'), email: str('Email or phone required') },
     ['requestId','name']),
+  read('create_operations_note', 'Append an audited operational note. Requires operations:write and a stable requestId; cannot change orders, payments or stock.',
+    { requestId: str('Stable 16-100 character idempotency ID. Reuse on retry.'), note: str('3-1000 characters') },
+    ['requestId','note']),
+  read('create_task', 'Create an audited operational task. Requires operations:write and a stable requestId.',
+    { requestId: str('Stable 16-100 character idempotency ID. Reuse on retry.'), title: str('3-160 characters'),
+      detail: str('Optional detail, up to 1000 characters'), priority: { type: 'integer', minimum: 1, maximum: 4 } },
+    ['requestId','title']),
 ];
 let buffer = '';
 let pending = 0, ended = false;
@@ -33,7 +58,7 @@ async function call(name, args) {
   if (!TOOLS.some(t => t.name === name)) throw new Error('Unknown tool');
   if (!TOKEN) throw new Error('KIWI_AGENT_TOKEN is not configured');
   if (!/^https:\/\//.test(BASE) && !/^http:\/\/localhost(?::\d+)?$/.test(BASE)) throw new Error('Invalid KIWI_AGENT_BASE');
-  const isWrite = name === 'create_client';
+  const isWrite = name === 'create_client' || name === 'create_operations_note' || name === 'create_task';
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {

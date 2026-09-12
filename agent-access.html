@@ -44,6 +44,12 @@ button:disabled{opacity:.55;cursor:not-allowed}.row{display:flex;gap:10px;align-
     ['hotel:read','Séjours (noms des clients inclus)'],
     ['clients:read','Recherche clients (données personnelles)'],
     ['clients:create','Création de fiches clients'],
+    ['orders:read','Commandes individuelles et lignes (sans coordonnées client)'],
+    ['tables:read','Sessions de table (sans jetons de session)'],
+    ['payments:read','Événements de paiement et annulations'],
+    ['cash:read','Événements du tiroir-caisse'],
+    ['operations:read','Notes opérationnelles'],
+    ['operations:write','Ajouter des notes opérationnelles (sans mutation financière)'],
   ];
   for (const [scope,title] of defs) {
     const l = document.createElement('label'); l.className = 'scope';

@@ -1,7 +1,7 @@
-# Kiwi private agent access (MVP)
+# Kiwi private agent access
 
 This is **not** the public tickets MCP. The tickets server remains separate.
-The private agent gateway is at `/api/agent/*`; local stdio MCP maps six
+The private agent gateway is at `/api/agent/*`; local stdio MCP maps explicit,
 bounded tools to it without browser clicks, PIN entry, or a full-page dump.
 
 ## Owner setup
@@ -28,16 +28,20 @@ bounded tools to it without browser clicks, PIN entry, or a full-page dump.
    account suspension, merchant ownership transfer, expiry, or revocation
    immediately invalidates the key.
 
-The MCP tools are `merchant_overview`, `sales_summary`,
-`catalog_search`, `hotel_stays`, `clients_search`, and
-`create_client`. The only write needs `clients:create` and a stable,
-16–100-character `requestId` reused on retries. Read tools have independent
+The MCP tools include `orders_list`, `order_detail`, `table_sessions`,
+`active_tables`, `payment_events`, `refund_events`, `cash_events`, `operations_notes`, and `operations_tasks` as well as the original
+overview, sales summary, catalog, hotel and client reads. Payment events are
+individual sale postings including void state; cash events are drawer events.
+Order and session reads omit guest contact details and bearer session IDs.
+`create_client`, `create_operations_note`, and `create_task` are scoped writes.
+Each write requires a stable, 16–100-character `requestId` reused on retries.
+Read tools have independent
 scopes, at most 25 records and 31 days per call where applicable. Returned
 customer/guest data is personal data; grant those scopes only when needed.
 All actions are logged without search strings, result bodies or raw secrets.
 
 Agent keys deliberately **cannot** call ordinary Kiwi APIs, use staff PIN
-routes, take payments, edit stock, make reservations, issue refunds, or access
+routes, take payments, edit stock, change orders, make reservations, issue refunds, or access
 raw `store_docs` (which include staff codes). Do not add a generic proxy.
 Each future action needs its own explicit scope, validation, idempotency,
 auditing and tenant-isolation tests.

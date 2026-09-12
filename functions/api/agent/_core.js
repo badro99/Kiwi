@@ -1,6 +1,7 @@
 import { json, activeAccountSession } from '../../auth/_lib.js';
 
-export const SCOPES = ['overview:read', 'sales:read', 'catalog:read', 'hotel:read', 'clients:read', 'clients:create'];
+export const SCOPES = ['overview:read', 'sales:read', 'catalog:read', 'hotel:read', 'clients:read', 'clients:create',
+  'orders:read', 'tables:read', 'payments:read', 'cash:read', 'operations:read', 'operations:write'];
 export const response = (body, status = 200) => json(body, status);
 const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
 export const text = str;
@@ -90,7 +91,7 @@ export async function authorize(request, env, scope) {
       row.account_status === 'suspended' || row.current_owner !== row.account_id ||
       Number(row.account_epoch) !== Number(row.current_epoch) ||
       Number(row.expires_ts) <= Date.now()) return null;
-  if (scope.endsWith(':create') && row.merchant_status !== 'active') return null;
+  if ((scope.endsWith(':create') || scope.endsWith(':write')) && row.merchant_status !== 'active') return null;
   if (!equalHash(await hash(match[1]), row.token_hash)) return null;
   let scopes;
   try { scopes = JSON.parse(row.scopes); } catch (_) { return null; }
