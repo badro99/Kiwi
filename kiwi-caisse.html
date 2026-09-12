@@ -5503,6 +5503,60 @@
        Aucune surcharge thème ici · la scène ne change pas avec le thème. */
 </style>
   <link rel="stylesheet" href="assets/caisse-skin.css?v=3" />
+  <style>
+    /* Restaurant menu: keep every category within reach without a sideways swipe.
+       This picker is shared by table orders and takeaway orders. */
+    #cat-pills, #subcat-pills {
+      display: flex;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      gap: 8px;
+      overflow: visible;
+      padding: 2px 0 12px;
+    }
+    #subcat-pills {
+      border-top: 1px solid var(--line-soft);
+      padding-top: 10px;
+    }
+    #subcat-pills[hidden] { display: none; }
+    #cat-pills > .cat-pill, #subcat-pills > .cat-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-sizing: border-box;
+      max-width: 100%;
+      min-height: 44px;
+      padding: 9px 16px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--paper-elev, var(--paper-mute));
+      color: var(--ink-2);
+      font-size: 14px;
+      font-weight: 650;
+      line-height: 1.2;
+      text-align: center;
+      white-space: normal;
+      transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+    }
+    #cat-pills > .cat-pill:hover, #subcat-pills > .cat-pill:hover {
+      background: var(--mint-tint);
+      border-color: var(--mint-edge);
+    }
+    #cat-pills > .cat-pill.is-active, #subcat-pills > .cat-pill.is-active {
+      background: var(--forest-deep);
+      border-color: var(--forest-deep);
+      color: #fff;
+    }
+    #cat-pills > .cat-pill:focus-visible, #subcat-pills > .cat-pill:focus-visible {
+      outline: 3px solid var(--mint);
+      outline-offset: 2px;
+    }
+    #cat-pills .cat-pill .count, #subcat-pills .cat-pill .count {
+      margin-left: 0;
+      font-size: 12px;
+    }
+  </style>
   <link rel="stylesheet" href="assets/pos-mobile.css?v=3" />
   <link rel="stylesheet" href="assets/pos-workspaces.css?v=4" />
   <link rel="stylesheet" href="assets/kiwi-select.css?v=2" />
@@ -6108,7 +6162,7 @@
           <button class="vrap-back-btn" id="vrap-back-board">
             <i data-lucide="arrow-left"></i><span>Commandes à emporter</span>
           </button>
-          <div class="cat-pills" data-lens-demo id="cat-pills" role="tablist"></div>
+          <div class="cat-pills" id="cat-pills" role="tablist" aria-label="Catégories du menu"></div>
           <!-- Montant libre · le pavé numérique de vente rapide (façon SumUp) :
                tape un prix, « Ajouter », et une ligne « Article libre » sonne
                dans l'addition. Pour tout ce qui n'est pas au catalogue. -->
@@ -9319,7 +9373,7 @@
       menuItems.forEach(m => { counts[m.cat] = (counts[m.cat] || 0) + 1; });
       const cats = catOrder;
       $('#cat-pills').innerHTML = cats.map(c => `
-        <button class="cat-pill ${c === activeCat ? 'is-active' : ''}" data-lens-item data-cat="${c}">
+        <button type="button" role="tab" aria-selected="${c === activeCat}" class="cat-pill ${c === activeCat ? 'is-active' : ''}" data-cat="${c}">
           ${escTeam(catLabelL(c))}<span class="count mono">${counts[c] || 0}</span>
         </button>
       `).join('');
@@ -9328,6 +9382,8 @@
         subPills = document.createElement('div');
         subPills.id = 'subcat-pills';
         subPills.className = 'cat-pills';
+        subPills.setAttribute('role', 'tablist');
+        subPills.setAttribute('aria-label', 'Sous-catégories du menu');
         subPills.addEventListener('click', (e) => {
           const b = e.target.closest('[data-subcat]'); if (!b) return;
           activeSub = b.dataset.subcat || null; renderCatPills(); renderMenu();
@@ -9338,8 +9394,8 @@
       const subs = parent ? (parent.sub || []).filter(s => s && s.id) : [];
       subPills.hidden = activeCat === 'all' || !subs.length;
       subPills.innerHTML = subPills.hidden ? '' : [
-        `<button class="cat-pill ${!activeSub ? 'is-active' : ''}" data-subcat="">Tout</button>`,
-        ...subs.map(s => `<button class="cat-pill ${activeSub === s.id ? 'is-active' : ''}" data-subcat="${escTeam(s.id)}">${escTeam(window.KiwiMenuI18n ? window.KiwiMenuI18n.name(s, carteLang()) : s.name)}<span class="count mono">${menuItems.filter(m => m.cat === activeCat && m.subId === s.id).length}</span></button>`)
+        `<button type="button" role="tab" aria-selected="${!activeSub}" class="cat-pill ${!activeSub ? 'is-active' : ''}" data-subcat="">Tout</button>`,
+        ...subs.map(s => `<button type="button" role="tab" aria-selected="${activeSub === s.id}" class="cat-pill ${activeSub === s.id ? 'is-active' : ''}" data-subcat="${escTeam(s.id)}">${escTeam(window.KiwiMenuI18n ? window.KiwiMenuI18n.name(s, carteLang()) : s.name)}<span class="count mono">${menuItems.filter(m => m.cat === activeCat && m.subId === s.id).length}</span></button>`)
       ].join('');
       window.CaisseFx && window.CaisseFx.lens();
 
