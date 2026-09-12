@@ -1186,6 +1186,7 @@ section('Whole-project regressions');
     'push-registration-test.mjs',
     'security-regression-test.js',
     'kiwi-agent-access-test.mjs',
+    'kiwi-ui-qa-mcp-test.mjs',
     'sold-insights-test.js',
     'table-refresh-test.js',
     'table-transfer-merge-test.mjs',

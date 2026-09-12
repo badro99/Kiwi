@@ -23,7 +23,14 @@ downscaling, macOS `sips` (already present on this Mac).
 | `get_ticket({id})` | One ticket's full text + screenshot list. |
 | `view_ticket_image({id, index?, maxSize?, full?})` | See screenshot(s). Omit `index` for all. |
 | `create_ticket({body, imagePaths?})` | File a new problem (attach up to 6 local images). |
-| `submit_for_testing({id})` | Move a **solved** ticket to "Requiring testing" for a human to verify. |
+| `submit_for_testing({id,uiProofPath})` | Move a **solved** UI ticket to "Requiring testing" with a fresh, clean-commit rendered-UI proof from `kiwi-ui-qa`. |
+
+For a genuinely backend-only ticket, use
+`submit_for_testing({id,backendOnlyReason})` with a concrete explanation of
+why a browser check is inapplicable. Do not use this exception for an
+uncovered UI: add a synthetic UI fixture or leave the ticket for human testing.
+The proof gate checks local evidence; it does **not** prove a Pages deployment
+or merchant-device behavior. Confirm those separately before handing off.
 
 ### Agents never close a ticket
 

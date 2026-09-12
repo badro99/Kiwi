@@ -441,6 +441,29 @@ async function closeModal(page) {
 }
 
 /* ── launch ────────────────────────────────────────────────────────── */
+// Reuse the real dashboard/API/SQLite fixture for an interactive, isolated
+// ticket QA browser. Never expose a real merchant cookie or PIN: all values
+// below belong to this synthetic account and live only in the child process.
+if (process.argv.includes('--serve-ui-qa')) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-hotel-ui-qa-'));
+  const made = makeEnv(path.join(dir, 'fixture.db'));
+  seedMerchant(made, false);
+  const sessionValue = await makeSession(ACC, SECRET);
+  const { server, base } = await startOrigin(made.env);
+  console.log('KIWI_UI_QA_READY ' + JSON.stringify({
+    base, sessionValue, roomsDoc: clientRoomsDoc(false), merchant: MERCHANT,
+  }));
+  const stop = async () => {
+    const closed = new Promise(resolve => server.close(resolve));
+    server.closeAllConnections?.();
+    await closed;
+    made.sql.close();
+    process.exit(0);
+  };
+  process.once('SIGTERM', () => { void stop(); });
+  process.once('SIGINT', () => { void stop(); });
+  await new Promise(() => {});
+}
 console.log('\n■ launch · one browser, real dashboard for all scenarios');
 browser = await puppeteer.launch({
   executablePath: CHROME_BIN,
@@ -578,8 +601,18 @@ async function startOrigin(env, hooks = {}) {
         const out = await postCommercial({ env, request: toHandlerRequest(`https://hx.test${u.pathname}`, req, body) });
         return sendHandler(res, out);
       }
-      const file = path.join(ROOT, decodeURIComponent(u.pathname));
-      if (!file.startsWith(ROOT) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+      if (process.argv.includes('--serve-ui-qa') &&
+          u.pathname !== '/dashboard.html' &&
+          u.pathname !== '/dashboard.webmanifest' &&
+          u.pathname !== '/kiwi-sw.js' &&
+          !u.pathname.startsWith('/assets/')) {
+        res.writeHead(404); res.end('not a public fixture asset'); return;
+      }
+      const file = path.resolve(ROOT, '.' + decodeURIComponent(u.pathname));
+      const insideRoot = file.startsWith(ROOT + path.sep);
+      const insidePublicAssets = file.startsWith(path.join(ROOT, 'assets') + path.sep);
+      if (!insideRoot || (process.argv.includes('--serve-ui-qa') && u.pathname.startsWith('/assets/') && !insidePublicAssets) ||
+          !fs.existsSync(file) || !fs.statSync(file).isFile()) {
         res.writeHead(404); res.end('nope');
         return;
       }

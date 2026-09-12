@@ -30,6 +30,7 @@ const os = require('os');
 const path = require('path');
 const fs = require('fs');
 const { spawnSync } = require('child_process');
+const { validateUiProof } = require('./ui-proof.js');
 
 const BASE = String(process.env.KIWI_TICKETS_BASE || 'https://kiwi-os.com').replace(/\/+$/, '');
 const DEFAULT_MAXPX = clampInt(process.env.KIWI_TICKETS_MAXPX, 1024, 256, 4096);
@@ -155,12 +156,15 @@ const TOOLS = [
     name: 'submit_for_testing',
     description:
       'Move a ticket you have SOLVED into the "Requiring testing" column, so a human can verify it. ' +
+      'For UI-facing tickets pass a fresh synthetic rendered-UI proof from kiwi-ui-qa; for a genuinely backend-only ticket explain why no UI path applies. ' +
       'This is the only status move an agent may make: an agent never marks a ticket tested/done — ' +
       'only the person who verifies the fix does that, from the board itself.',
     inputSchema: {
       type: 'object',
       properties: {
         id: { type: 'number', description: 'Ticket id.' },
+        uiProofPath: { type: 'string', description: 'Absolute proof.json path returned by kiwi-ui-qa finish_ui_proof, captured after a clean commit.' },
+        backendOnlyReason: { type: 'string', description: 'For a truly non-UI ticket only: explain why browser verification is not applicable (30+ characters).' },
         note: { type: 'string', description: 'Optional short note on what was changed, for your own reply to the user. Not sent to the board.' },
       },
       required: ['id'],
@@ -306,6 +310,10 @@ async function createTicket(args) {
  */
 async function submitForTesting(args) {
   const id = intOrThrow(args.id, 'id');
+  if (args.uiProofPath) validateUiProof(args.uiProofPath, id);
+  else if (typeof args.backendOnlyReason !== 'string' || args.backendOnlyReason.trim().length < 30) {
+    throw new Error('UI-facing ticket: supply a fresh kiwi-ui-qa uiProofPath. For a truly backend-only issue, explain why in backendOnlyReason (30+ characters).');
+  }
   const res = await fetch(`${BASE}/api/tickets/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

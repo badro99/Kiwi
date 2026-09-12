@@ -9,6 +9,11 @@
       "command": "node",
       "args": ["tools/kiwi-agent-mcp/server.js"],
       "env": {}
+    },
+    "kiwi-ui-qa": {
+      "command": "node",
+      "args": ["tools/kiwi-ui-qa-mcp/server.js"],
+      "env": {}
     }
   }
 }
