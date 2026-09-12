@@ -1078,6 +1078,17 @@
     if (!window.KiwiKitchenRelay) return;
     KiwiKitchenRelay.pull(S.since, 'kitchen').then(function (j) {
       if (!j || !j.ok) { setLive(false); return; }
+      /* ── UNE BASE MUETTE N'EST PAS UNE CUISINE VIDE ─────────────────────
+       * Quand toutes les lectures de la table `orders` échouent, l'API répond
+       * 200 avec une liste vide et `ordersAvailable: false` · elle dit la
+       * vérité, mais personne ne l'écoutait. Le passe affichait donc « lien
+       * OK » au-dessus d'un écran vide : la panne ressemblait trait pour trait
+       * à un creux de service, et c'est le pire moment pour y croire.
+       * Pire encore, la liste vide passait ensuite dans le balayage des bons
+       * périmés · une panne de base effaçait les plats en cours de cuisson.
+       * On sort AVANT d'avoir touché à quoi que ce soit : le tableau garde ce
+       * qu'il a, et le bandeau dit que le lien est tombé. */
+      if (j.ordersAvailable === false) { setLive(false); return; }
       setLive(true);
       /* Premier tour après un chargement : on RELIT tout ce qui est encore
          ouvert, ce qui est exactement ce qu'on veut — mais ce n'est pas une

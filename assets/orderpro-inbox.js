@@ -127,6 +127,14 @@
     }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
         if (!j || !j.ok) return -1;
+        /* Même règle qu'au passe (kiwi-cuisine.html) : `ordersAvailable:false`
+           veut dire « la base n'a pas su répondre », pas « il n'y a rien ».
+           La différence coûte cher ici · `state.sessions` et `state.expired`
+           sont RECONSTRUITS à neuf à chaque tour, donc une lecture ratée
+           éteignait d'un coup toutes les places téléphone du comptoir. On
+           garde l'état précédent et on rend le même -1 qu'une réponse
+           illisible. */
+        if (j.ordersAvailable === false) return -1;
         state.since = j.now || state.since;
         var fresh = 0;
         var delta = j.orders || [];
