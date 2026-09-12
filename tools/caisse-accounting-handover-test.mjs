@@ -488,6 +488,22 @@ console.log('--- Test 6: Displayed Totals and Persisted Handover Record ---');
   env.$('#ho-verify').value = '1060';
   env.updateHandoverVerdict();
   ok(env.$('#ho-verify-confirm').disabled === false, 'Verification matches: confirm button enabled');
+  env.$('#ho-count').value = '1060.25';
+  env.updateHandoverEcart();
+  env.$('#ho-verify').value = '1060.25';
+  env.updateHandoverVerdict();
+  ok(env.handoverState.counted === 1060.25 && env.handoverState.verifyCount === 1060.25,
+    'Both handover counts preserve centimes');
+  ok(env.$('#ho-verify-confirm').disabled === false,
+    'Exact matching centime counts allow handover');
+  env.$('#ho-verify').value = '1060.24';
+  env.updateHandoverVerdict();
+  ok(env.$('#ho-verify-confirm').disabled === true,
+    'A one-centime mismatch blocks handover');
+  env.$('#ho-count').value = '1060';
+  env.updateHandoverEcart();
+  env.$('#ho-verify').value = '1060';
+  env.updateHandoverVerdict();
 
   // Step 3: Confirm handover
   env.confirmHandover();

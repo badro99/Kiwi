@@ -36,7 +36,9 @@ ok('markSplitPartPaid calls openCashDrawer on cash',
       CAISSE_SRC.indexOf('/* ---- events ---- */', CAISSE_SRC.indexOf('function markSplitPartPaid(partIdx, method)')))));
 
 ok('markSplitPartPaid calls printSaleTicket with entry',
-  /function markSplitPartPaid\(partIdx,\s*method\)[\s\S]{0,1200}printSaleTicket\(entry\s*\|\|\s*lastSaleEntry\(\)\);?/.test(CAISSE_SRC));
+  /printSaleTicket\(entry\s*\|\|\s*lastSaleEntry\(\)\);?/.test(CAISSE_SRC.slice(
+    CAISSE_SRC.indexOf('function markSplitPartPaid(partIdx, method)'),
+    CAISSE_SRC.indexOf('/* ---- events ---- */', CAISSE_SRC.indexOf('function markSplitPartPaid(partIdx, method)')))));
 
 // 2. Static Guards: Selected items & itemized line properties
 ok('launchSplitFlow article mode populates partLines with name, qty, unit, price, total',

@@ -265,5 +265,25 @@ const closed = await postCashSession({
 assert.equal(closed.status, 201, 'paired till with terminal proof can close the session');
 assert.equal(db.prepare("SELECT actor_id FROM cash_session_events WHERE id = 'cash-route-close'").get().actor_id,
   'cashier-pin-owner', 'cash-session route preserves the PIN-attributed actor');
+const blankClose = await postCashSession({
+  env,
+  request: request(validEvent({ id: 'cash-route-blank-close', eventType: 'close' }),
+    `kiwi_till=${till}; kiwi_terminal=${terminal}`),
+});
+assert.equal(blankClose.status, 422, 'a close without a counted drawer amount is refused');
+assert.equal(db.prepare("SELECT id FROM cash_session_events WHERE id = 'cash-route-blank-close'").get(), undefined,
+  'blank close does not enter the immutable cash-session ledger');
+const emptyDrawerClose = await postCashSession({
+  env,
+  request: request(validEvent({
+    id: 'cash-route-empty-drawer', eventType: 'close', expectedCents: 0, countedCents: 0, gapCents: 0,
+  }), `kiwi_till=${till}; kiwi_terminal=${terminal}`),
+});
+assert.equal(emptyDrawerClose.status, 201, 'an explicitly counted empty drawer is a valid close');
+const caisseSource = fs.readFileSync(path.join(root, 'kiwi-caisse.html'), 'utf8');
+const closeStart = caisseSource.indexOf('async function closeRegister()');
+const beforeCloseMutation = caisseSource.slice(closeStart, caisseSource.indexOf("$('#cloture-modal').classList.remove('is-open');", closeStart));
+assert.match(beforeCloseMutation, /countedRaw === ''[\s\S]*return;/,
+  'the cashier cannot dismiss the close sheet or clear the shift without a count');
 
 console.log('✓ cash-sessions auth: operator queue held, paired route accepted, PIN actor preserved');

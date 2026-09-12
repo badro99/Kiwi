@@ -126,6 +126,7 @@ export async function onRequestPost({ request, env }) {
     : !!(movementKind || movementAmount != null || movementReason);
   if (!id || !EVENT_TYPES.has(eventType) || !actorId || badMoney || badGap || badMovement
       || (eventType === 'handover' && !counterpartyActorId)
+      || (eventType === 'close' && (expected == null || counted == null || gap == null))
       || !Number.isInteger(openedAt) || !Number.isInteger(occurredAt)
       || openedAt <= 0 || occurredAt < openedAt || occurredAt > Date.now() + 600000) {
     return json({ error: 'invalid-event' }, 422);

@@ -5507,7 +5507,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=509" defer></script>
+  <script src="assets/caisse-pwa.js?v=510" defer></script>
   <script src="assets/live-link.js?v=35" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -6749,7 +6749,7 @@
         <div id="clo-drawer-lines"><!-- breakdown injected --></div>
         <div class="clo-count-row">
           <label for="clo-count">Espèces comptées</label>
-          <input class="clo-count-input" id="clo-count" type="number" inputmode="numeric" min="0" step="10" placeholder="·" />
+          <input class="clo-count-input" id="clo-count" type="number" inputmode="decimal" min="0" step="0.01" placeholder="·" required />
         </div>
         <div class="clo-ecart-line" id="clo-ecart-line">
           <span>Écart</span><span class="mono" id="clo-ecart">·</span>
@@ -7034,7 +7034,7 @@
         <div class="ho-recon" id="ho-recon"></div>
         <div class="cash-input-row" style="margin-bottom:10px;">
           <label class="cash-input-label" for="ho-count">Espèces comptées dans le tiroir</label>
-          <input class="cash-input mono" id="ho-count" type="number" inputmode="numeric" min="0" step="10" placeholder="0" />
+          <input class="cash-input mono" id="ho-count" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0" />
         </div>
         <div class="cash-presets" aria-label="Ajout rapide">
           <button class="cash-preset" data-ho-add="100">+100</button>
@@ -7062,7 +7062,7 @@
         </div>
         <div class="cash-input-row" style="margin-bottom:10px;">
           <label class="cash-input-label" for="ho-verify">Recompte les espèces</label>
-          <input class="cash-input mono" id="ho-verify" type="number" inputmode="numeric" min="0" step="10" placeholder="0" />
+          <input class="cash-input mono" id="ho-verify" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0" />
         </div>
         <div class="cash-presets" aria-label="Ajout rapide">
           <button class="cash-preset" data-ho-vadd="100">+100</button>
@@ -12899,6 +12899,14 @@
 
     /* ---- launch flow ---- */
     function launchSplitFlow() {
+      if (minor(splitState.total) <= 0) {
+        toast('Aucun montant à répartir · vérifiez la remise avant de clôturer la table');
+        return;
+      }
+      if (splitState.splitMode === 'egal' && minor(splitState.total) < splitState.numParts) {
+        toast('Trop de parts pour ce montant · chaque part doit avoir au moins 0,01 MAD');
+        return;
+      }
       if (splitState.splitMode !== 'egal') {
         const allocation = splitArticleAllocation();
         if (!allocation.ok) { toast(allocation.message); return; }
@@ -12976,6 +12984,10 @@
         });
       }
 
+      if (!parts.length || parts.some(part => minor(part.base) <= 0)) {
+        toast('Une part vaut 0 MAD · regroupez les articles ou ajustez la remise');
+        return;
+      }
       const flowSession = (splitState.tableId && phoneSessionOf(splitState.tableId)) || ('flow-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7));
       splitState.flow = { parts, paidCount: 0, session: flowSession };
       $('#split-setup').hidden = true;
@@ -13051,6 +13063,10 @@
       const entry = recordSale(base, method === 'carte' ? 'card' : 'cash',
         (splitState.sourceLabel || 'Table') + ' · part ' + (partIdx + 1), tip, p.lines,
         splitState.tableId || '', null, splitInfo);
+      if (!entry) {
+        toast('Encaissement non enregistré · la table reste ouverte');
+        return;
+      }
       if (entry) {
         /* `flow-*` is only the local split modal's resume key. A takeaway has
            no table visit; never send that UI token as a server session. Table
@@ -15425,6 +15441,15 @@
 
     async function closeRegister() {
       if (registerClosing) return;
+      const countInput = $('#clo-count');
+      const countedRaw = countInput ? countInput.value.trim() : '';
+      const counted = countedRaw === '' ? NaN : Number(countedRaw);
+      if (!Number.isFinite(counted) || counted < 0 ||
+          Math.abs(counted * 100 - Math.round(counted * 100)) > 0.000001) {
+        toast('Saisissez les espèces comptées (0 si le tiroir est vide)');
+        countInput?.focus();
+        return;
+      }
       $('#cloture-modal').classList.remove('is-open');
       registerClosing = true;
 
@@ -15433,8 +15458,6 @@
          rapport de la journée n'avait jamais existé nulle part. Les ventes,
          elles, ne sont pas touchées · ni ici ni ailleurs : une clôture produit
          un document, elle ne modifie pas le registre. */
-      const countedRaw = $('#clo-count') ? $('#clo-count').value : '';
-      const counted = (countedRaw === '' || countedRaw == null) ? null : parseFloat(countedRaw);
       let report = null;
       let reconciliation = { ok: false, complete: false, count: 0, reason: 'feed-not-read' };
       try {
@@ -15465,8 +15488,8 @@
       const tot = journalTotals();
       clotureExpected = major(minor(openingFloat) + tot.cashC + tot.cashTipsC + tot.movesInC - tot.movesOutC);
       const expectedCents = minor(clotureExpected);
-      const countedCents = counted == null ? null : minor(counted);
-      const gapCents = countedCents == null ? null : countedCents - expectedCents;
+      const countedCents = minor(counted);
+      const gapCents = countedCents - expectedCents;
       emitCashSession({
         sessionId: cashSessionId(), eventType: 'close',
         expectedCents: expectedCents,
@@ -17770,7 +17793,7 @@
       const vadd = e.target.closest('[data-ho-vadd]');
       if (vadd) {
         $('#ho-verify').value = (parseFloat($('#ho-verify').value) || 0) + parseFloat(vadd.dataset.hoVadd);
-        handoverState.verifyCount = Math.round(parseFloat($('#ho-verify').value) || 0);
+        handoverState.verifyCount = money(parseFloat($('#ho-verify').value) || 0);
         updateHandoverVerdict();
         return;
       }
@@ -17802,7 +17825,7 @@
     });
     $('#ho-count').addEventListener('input', updateHandoverEcart);
     $('#ho-verify').addEventListener('input', () => {
-      handoverState.verifyCount = Math.round(parseFloat($('#ho-verify').value) || 0);
+      handoverState.verifyCount = money(parseFloat($('#ho-verify').value) || 0);
       updateHandoverVerdict();
     });
 

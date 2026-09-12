@@ -68,6 +68,15 @@ check('Explicit equal splitting remains available', () => {
   const h = harness({ splitMode: 'egal', total: 90.01, numParts: 3 }); h.context.launchSplitFlow();
   assert.deepEqual(Array.from(h.state.flow.parts, p => p.amount), [30.01,30,30]);
 });
+check('Zero-value and sub-centime equal splits cannot enter payment flow', () => {
+  for (const total of [0, 0.01]) {
+    const h = harness({ splitMode: 'egal', total, numParts: 2 });
+    h.context.launchSplitFlow();
+    assert.equal(h.state.flow, null);
+    assert.equal(h.calls.render, 0);
+    assert.ok(h.calls.toast.length > 0);
+  }
+});
 check('Employee split also blocks unassigned dishes and preserves whole-item payment', () => {
   const employee = fs.readFileSync(new URL('../kiwi-serveur.html', import.meta.url), 'utf8');
   const h = harness({ perConvive: { 1: { Water: 1 }, 2: { Water: 1 } } });

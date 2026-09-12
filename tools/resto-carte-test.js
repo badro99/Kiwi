@@ -59,7 +59,11 @@ GATED.forEach(([src, re, what]) => ok(re.test(src), `${what} est derrière le dr
    appelé sans condition par l'addition, le partage de note et la remise. Sans
    sortie anticipée, une table réelle sans commande saisie sort une addition
    inventée — le pire bug possible sur une caisse. */
-ok(/function generateOrder\([\s\S]{0,900}?if \(!IS_DEMO\) return \[\];/.test(caisse),
+const generateOrderStart = caisse.indexOf('function generateOrder(');
+const generatedDemoLinesStart = caisse.indexOf('const seed = parseInt(tableId', generateOrderStart);
+const generateOrderBeforeDemo = generateOrderStart >= 0 && generatedDemoLinesStart > generateOrderStart
+  ? caisse.slice(generateOrderStart, generatedDemoLinesStart) : '';
+ok(/if \(!IS_DEMO\) return \[\];/.test(generateOrderBeforeDemo),
   'generateOrder() rend une liste vide chez un vrai commerçant');
 ok(/function buildInitialOrder\([\s\S]{0,700}?if \(!SV_DEMO\) return \[\];/.test(serveur),
   'buildInitialOrder() rend une liste vide chez un vrai commerçant (serveur)');
