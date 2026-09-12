@@ -207,7 +207,7 @@ async function main() {
     phoneSeats: new Map(['T3', 'T4', 'T9'].map(id => [id, { session: 'ses-live', since: 0 }])),
     /* Une table encaissée refuse désormais les bons antérieurs · aucune de ces
        tables n'est fermée, le rattrapage doit donc se comporter comme avant. */
-    tableClosedAt: Object.create(null),
+    tableClosedAt: Object.create(null), journal: [],
     servers: {}, selectedId: null, mode: 'salle',
     menuLineFind: () => null, newLineUid: () => 'test-line', ticketNo: () => 'test-ticket',
     refreshTableNode() {}, persistShift() {}, startTableTimer() {}, resetTableTimer() {},
@@ -227,7 +227,7 @@ async function main() {
   };
   const caisseSource = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
   const context = vm.createContext(world);
-  for (const name of ['canRecoverCaisseTable', 'attachOrderProTable']) {
+  for (const name of ['locallySettledVisit', 'canRecoverCaisseTable', 'attachOrderProTable']) {
     const match = caisseSource.match(new RegExp(`^    function ${name}\\([^]*?^    }`, 'm'));
     if (!match) throw new Error(`Missing production function: ${name}`);
     vm.runInContext(match[0], context);
@@ -241,7 +241,8 @@ async function main() {
 
   const touched = runReconciliation(block, world);
   check('la commande manquée est rattrapée', attached.includes('ord-missed'));
-  check('la commande déjà attachée n\'est pas ré-attachée', !attached.includes('ord-known'));
+  check('la commande déjà attachée ne double pas ses lignes',
+    world.tableOrders.T3.filter(l => l.orderProLine === 'ord-known:0').length === 1);
   check('une commande réglée est laissée tranquille', !attached.includes('ord-paid'));
   check('un bon de caisse ne double pas les lignes locales non identifiées',
     !attached.includes('ord-caisse') && world.tableOrders.T4.length === 1);

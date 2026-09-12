@@ -21,6 +21,8 @@ function slice(source, start, end) {
 const sendSource = slice(phoneSource, '    async function sendOrder()', '    /* Table mode gets');
 const sessionSource = slice(phoneSource, '    const SESSION = {', '    /* Le service est fini');
 const closedSource = slice(phoneSource, '    function onSessionClosed()', '    /* ═══════════════════════════════════════════════════════════════════════\n       LE DIRECT');
+const settledSource = slice(caisseSource, '    function locallySettledVisit(id, session)', '    /* Libérer la table côté téléphone');
+const phoneSessionSource = slice(caisseSource, '    function phoneSessionOf(id)', '    function locallySettledVisit(id, session)');
 const attachSource = slice(caisseSource, '    function attachOrderProTable(o)', '    /* Une commande du serveur');
 const timerSource = slice(caisseSource, '    /* ---------- Live elapsed minutes', '    /* ---------- Khlass-fade');
 let passed = 0, failed = 0;
@@ -126,13 +128,13 @@ function till(table, session) {
     phoneSeats: new Map([[table, { session, since: now }]]), servers: {}, selectedId: '', mode: 'salle',
     /* Les tombstones de fermeture locale · aucune table n'est encaissée ici,
        donc le rattachement doit se comporter exactement comme avant. */
-    tableClosedAt: Object.create(null),
+    tableClosedAt: Object.create(null), journal: [], kdsOrders: [],
     caisseTableId: value => value, tableKey: value => value, ticketNo: value => String(value.opNum),
     menuLineFind: predicate => menu.items.find(predicate), newLineUid: () => 'synthetic-line',
     refreshTableNode() {}, renderRightPanel() {}, persistShift() {},
     document: { querySelector() { return null; }, addEventListener() {} }, setInterval: callback => { tick = callback; },
   });
-  vm.runInContext(attachSource + timerSource + '\nglobalThis.attach = attachOrderProTable;', context);
+  vm.runInContext(phoneSessionSource + settledSource + attachSource + timerSource + '\nglobalThis.attach = attachOrderProTable;', context);
   return { context, attach: context.attach, tick: () => tick() };
 }
 

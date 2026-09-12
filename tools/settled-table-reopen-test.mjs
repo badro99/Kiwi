@@ -1,15 +1,8 @@
 #!/usr/bin/env node
-/* #0068 · « j'ai encaissé la table 13, et plus tard je la retrouve ouverte,
- * non encaissée ».
- *
- * `attachOrderProTable` protège la note par la SESSION du téléphone : trois
- * gardes, toutes conditionnées à `o.session` ou `o.server`. Un bon qui ne
- * porte NI l'un NI l'autre · une commande QR client, un bon du canal public ·
- * les traverse toutes les trois et se raccroche à la table par son seul
- * numéro. Une table encaissée à 23h40 rouvrait donc seule, avec la note qu'on
- * venait de régler, pendant que la vente était déjà au journal.
- *
- * On exécute la vraie fonction sur un vrai bon sans session.
+/* #0068 · The physical evidence is a cashier receipt for table 13 #154 at
+ * 00:04, the same 60 MAD still due on the tablet at 00:27, and the same
+ * reference in the journal at 00:52. OrderPro was not used. Exercise the
+ * cashier-origin visit before the first queue poll and after a reload.
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -31,7 +24,7 @@ const fn = source.slice(a, b);
 let passed = 0;
 const ok = (label, cond) => { assert.ok(cond, label); passed++; console.log(`  ✓ ${label}`); };
 
-function bench({ closedAt, seatSince }) {
+function bench({ closedAt, seatSince, journal = [] }) {
   const tables = { 13: { status: 'khawya', covers: 0 } };
   const tableOrders = {};
   const phoneSeats = new Map();
@@ -39,7 +32,7 @@ function bench({ closedAt, seatSince }) {
   const tableClosedAt = Object.create(null);
   if (closedAt) tableClosedAt['13'] = closedAt;
   const ctx = vm.createContext({
-    tables, tableOrders, phoneSeats, tableClosedAt,
+    tables, tableOrders, phoneSeats, tableClosedAt, journal,
     servers: {}, orders: {},
     selectedId: null, mode: 'salle',
     caisseTableId: (v) => String(v),
@@ -49,6 +42,8 @@ function bench({ closedAt, seatSince }) {
     newLineUid: () => 'uid-' + Math.random(),
     resetTableTimer() {}, startTableTimer() {},
     refreshTableNode() {}, renderRightPanel() {}, persistShift() {},
+    locallySettledVisit: (id, session) => !!session && journal.some(entry => entry.visitClosed === true
+      && entry.table === String(id) && entry.session === String(session)),
   });
   vm.runInContext(fn, ctx);
   return { ctx, tables, tableOrders };
@@ -121,5 +116,87 @@ ok('la fermeture reste hors de l’instantané · les transferts en dépendent',
   !/tableClosedAt: tableClosedAt,/.test(source));
 ok('la garde est bien en mémoire, dans la fonction de rattachement',
   /const closedAt = Number\(tableClosedAt\[tableKey\(id\)\] \|\| 0\);/.test(source));
+
+/* 7 · Cashier kitchen relay returns a visit even if OrderPro is not enabled.
+ * Payment must retain it before the first floor poll has populated seats. */
+{
+  const start = source.indexOf('    function relayToKitchen(order) {');
+  const end = source.indexOf('\n    /* ═══════ REVENIR', start);
+  assert.ok(start >= 0 && end > start, 'cashier relay is extractable');
+  const tables = { 13: { orderNo: '154' } };
+  const win = { KiwiKitchenRelay: {
+    merchant: () => 'mixmax', newId: () => 'ord-caisse-154',
+    send: async () => ({ ok: true, number: 154, session: 'ses-13-154' }),
+  } };
+  const ctx = vm.createContext({ window: win, KiwiKitchenRelay: win.KiwiKitchenRelay,
+    tables, opTickets: new Map(), ticketNo: () => '154', reconcileReceiptOrderNumber() {},
+    updateKdsCount() {}, kdsEl: { classList: { contains: () => false } },
+    persistShift() {}, mode: 'salle', vrapView: '',
+  });
+  vm.runInContext(source.slice(start, end), ctx);
+  const order = { type: 'dineIn', table: '13', num: 154, relayLines: [{ id: 'salad', name: 'Salade Maison', qty: 1 }] };
+  await ctx.relayToKitchen(order);
+  ok('cashier-origin queue response retains the canonical visit before the next poll',
+    order.session === 'ses-13-154' && tables[13].timerSession === 'ses-13-154');
+
+  const functionStart = source.indexOf('    function phoneSessionOf(id) {');
+  const functionEnd = source.indexOf('    /* ═══════════════════════════════════════════════════════════════════════', functionStart);
+  const paidStart = source.indexOf('    function markPaid(id) {');
+  const paidEnd = source.indexOf('    /* ===========================================================', paidStart);
+  assert.ok(functionStart >= 0 && functionEnd > functionStart && paidStart >= 0 && paidEnd > paidStart);
+  const events = [];
+  const receipt = { id: 'visit-ses-13-154-emp', table: '13', session: 'ses-13-154', amount: 60 };
+  const payCtx = vm.createContext({ tables, tableOrders: { 13: [{ id: 'salad', qty: 1 }] }, orders: {},
+    journal: [receipt], kdsOrders: [order], phoneSeats: new Map(), phonePending: new Map(),
+    tableClosedAt: Object.create(null), tableKey: String,
+    document: { dispatchEvent: event => events.push(event.detail) },
+    CustomEvent: class { constructor(_, options) { this.detail = options.detail; } },
+    resetTableTimer: table => { delete table.timerSession; }, refreshTableNode() {},
+    persistShift() {}, renderShiftStats() {}, shift: { tablesPaid: 0 }, setTimeout() {}, Date,
+  });
+  vm.runInContext(source.slice(functionStart, functionEnd) + '\n' + source.slice(paidStart, paidEnd), payCtx);
+  payCtx.markPaid('13');
+  ok('cashier payment closes by the exact visit even before a phone-seat poll',
+    events.length === 1 && events[0].session === 'ses-13-154' && events[0].why === 'settle');
+  ok('paid visit is marked durably on its receipt for reload recovery', receipt.visitClosed === true);
+
+  const stale = { id: 'ord-caisse-154', mode: 'table', table: '13', status: 'accepted',
+    channel: 'caisse', session: 'ses-13-154', created_ts: SETTLED_AT - 60000,
+    lines: [{ uid: 'line-salad', id: 'salad', name: 'Salade Maison', qty: 1, unitPrice: 60 }] };
+  const reloaded = bench({ journal: [receipt] });
+  ok('after reload, the paid CASHIER order cannot revive table 13',
+    reloaded.ctx.attachOrderProTable(stale) === false
+    && reloaded.tables[13].status === 'khawya' && !(reloaded.tableOrders[13] || []).length);
+  const nextParty = bench({ journal: [receipt], seatSince: SETTLED_AT + 30000 });
+  ok('the next visit at table 13 remains orderable', nextParty.ctx.attachOrderProTable({ ...stale,
+    id: 'ord-new-party', session: 'sess-new', created_ts: SETTLED_AT + 45000 }) === true);
+}
+
+/* A second cashier confirmation of the same visit must reuse its receipt.
+ * The server also deduplicates this visit ID, but the local journal/stock must
+ * not double-count before its response arrives. */
+{
+  const start = source.indexOf('    function recordSale(amount, method, label, tip, lines, settlementTable, tenderOrder, split) {');
+  const end = source.indexOf('    /* Every completed payment already exists', start);
+  assert.ok(start >= 0 && end > start, 'recordSale is extractable');
+  const journal = [];
+  let discountCalls = 0;
+  const saleCtx = vm.createContext({ journal, tables: { 13: { zone: 'salle' } }, mode: 'salle',
+    selectedId: '13', currentCashier: { name: 'Hafid' }, window: {},
+    money: Number, activeSaleDiscount: () => null, accountActiveDiscount: () => { discountCalls++; },
+    phoneSessionOf: () => 'ses-13-154', settledOrderLabel: () => 'Table 13 #154',
+    genRef: () => '154', attachReceipt() {}, persistShift() {}, creditSaleToClient() {},
+    renderShiftStats() {}, refreshOpenReconciliationModals() {},
+    $: () => ({ classList: { contains: () => false } }), Date,
+  });
+  vm.runInContext(source.slice(start, end), saleCtx);
+  const first = saleCtx.recordSale(60, 'cash', 'Table 13 #154', 0,
+    [{ id: 'salad', name: 'Salade Maison', qty: 1, price: 60, total: 60 }], '13');
+  const replay = saleCtx.recordSale(60, 'cash', 'Table 13 #154', 0,
+    [{ id: 'salad', name: 'Salade Maison', qty: 1, price: 60, total: 60 }], '13');
+  ok('a repeated cashier confirmation keeps one journal row for visit #154',
+    first === replay && journal.length === 1 && first.id === 'visit-ses-13-154-emp');
+  ok('a repeated confirmation does not account its discount twice', discountCalls === 1);
+}
 
 console.log(`\nsettled-table-reopen-test: ${passed} controls passed\n`);

@@ -7,8 +7,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
-import { employeeToken, EMPLOYEE_COOKIE } from '../functions/auth/_lib.js';
+import { employeeToken, EMPLOYEE_COOKIE, tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
 import * as queue from '../functions/api/order/queue.js';
+import { newSessionId } from '../functions/api/order/_lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const AUTH_SECRET = 'test-secret-kitchen-void-protocol';
@@ -43,6 +44,14 @@ function makeDB() {
     return st;
   };
   facade.prepare = prepare;
+  facade.batch = async (statements) => {
+    db.exec('BEGIN');
+    try {
+      const results = statements.map(statement => statement.run());
+      db.exec('COMMIT');
+      return results;
+    } catch (error) { db.exec('ROLLBACK'); throw error; }
+  };
   return facade;
 }
 
@@ -571,6 +580,91 @@ await envFallback.C.reverseVoid({
 const fbVoidMv = envFallback.I.history('patty-beef').find(r => r.refType === 'kitchen-void');
 check('Control B fallback: Offline fetch stamps costSource recipe-estimate @ 110 MAD',
   fbVoidMv && fbVoidMv.unitCost === 110 && fbVoidMv.meta && fbVoidMv.meta.costSource === 'recipe-estimate');
+
+// 8. Restaurant workflow with NO OrderPro: two staff tickets on one table.
+const secondVisit = newSessionId();
+exec(`INSERT INTO table_sessions (id, merchant, table_no, mode, status, opened_ts, seen_ts)
+  VALUES (?, ?, '2', 'table', 'open', ?, ?)`, secondVisit, MERCHANT, now - 1000, now - 1000);
+exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
+  VALUES ('ord-old-kitchen', ?, 301, 'table', '2', 140, ?, 'accepted', ?, ?, ?)`,
+  MERCHANT, JSON.stringify([{ id: 'item-burger', uid: 'uid-old', name: 'Burger', qty: 2, unitPrice: 70 }]),
+  secondVisit, now - 900, now - 900);
+exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
+  VALUES ('ord-new-kitchen', ?, 302, 'table', '2', 70, ?, 'accepted', ?, ?, ?)`,
+  MERCHANT, JSON.stringify([{ id: 'item-burger', uid: 'uid-new', name: 'Burger', qty: 1, unitPrice: 70 }]),
+  secondVisit, now - 800, now - 800);
+const olderLineVoid = await postQueue({ merchant: MERCHANT,
+  voidLine: { table: '2', lineId: 'uid-old', itemId: 'item-burger', qty: 1, actor: 'Hamza' } }, employeeCookie);
+check('Staff can cancel a sent line from the OLDER of two table tickets without OrderPro',
+  olderLineVoid.status === 200 && olderLineVoid.data.orderId === 'ord-old-kitchen');
+check('UID picks the older ticket even when both tickets contain the same product',
+  JSON.parse(db._db.prepare("SELECT lines FROM orders WHERE id='ord-old-kitchen'").get().lines)[0].qty === 1
+  && JSON.parse(db._db.prepare("SELECT lines FROM orders WHERE id='ord-new-kitchen'").get().lines)[0].qty === 1);
+const wholeVisit = await postQueue({ merchant: MERCHANT,
+  cancelTable: { table: '2', expectedSession: secondVisit } }, employeeCookie);
+check('Staff cancels the whole unpaid visit including both kitchen tickets',
+  wholeVisit.status === 200 && wholeVisit.data.ordersCancelled === 2);
+check('Cancelled visit closes with neither order marked paid',
+  db._db.prepare("SELECT COUNT(*) AS n FROM orders WHERE session_id=? AND status='rejected' AND paid_ts IS NULL").get(secondVisit).n === 2
+  && db._db.prepare('SELECT status FROM table_sessions WHERE id=?').get(secondVisit).status === 'closed');
+check('Every remaining kitchen line gets an auditable cancellation',
+  db._db.prepare("SELECT COUNT(*) AS n FROM kitchen_voids WHERE order_id IN ('ord-old-kitchen','ord-new-kitchen') AND reason='table_cancelled'").get().n === 2);
+const staleVisit = await postQueue({ merchant: MERCHANT,
+  cancelTable: { table: '2', expectedSession: secondVisit } }, employeeCookie);
+check('Old tablet cannot cancel the next party after this visit closes',
+  staleVisit.status === 409 && staleVisit.data.error === 'stale-table-visit');
+
+const partiallyPaidVisit = newSessionId();
+exec(`INSERT INTO table_sessions (id, merchant, table_no, mode, status, opened_ts, seen_ts)
+  VALUES (?, ?, '2', 'table', 'open', ?, ?)`, partiallyPaidVisit, MERCHANT, now, now);
+exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, paid_ts, created_ts, updated_ts)
+  VALUES ('ord-paid-part', ?, 303, 'table', '2', 70, ?, 'served', ?, ?, ?, ?)`, MERCHANT,
+  JSON.stringify([{ id: 'item-burger', uid: 'uid-paid-part', name: 'Burger', qty: 1, unitPrice: 70 }]),
+  partiallyPaidVisit, now, now, now);
+exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
+  VALUES ('ord-due-part', ?, 304, 'table', '2', 70, ?, 'accepted', ?, ?, ?)`, MERCHANT,
+  JSON.stringify([{ id: 'item-burger', uid: 'uid-due-part', name: 'Burger', qty: 1, unitPrice: 70 }]),
+  partiallyPaidVisit, now, now);
+const partialCancel = await postQueue({ merchant: MERCHANT,
+  cancelTable: { table: '2', expectedSession: partiallyPaidVisit } }, employeeCookie);
+check('Partly paid visits refuse whole-table cancellation and require refund workflow',
+  partialCancel.status === 409 && partialCancel.data.error === 'partially-paid-requires-refund');
+check('A rejected whole-table cancellation preserves the unpaid order and open visit',
+  db._db.prepare("SELECT status FROM orders WHERE id='ord-due-part'").get().status === 'accepted'
+  && db._db.prepare('SELECT status FROM table_sessions WHERE id=?').get(partiallyPaidVisit).status === 'open');
+
+exec("UPDATE table_sessions SET status='closed', closed_ts=? WHERE id=?", now, partiallyPaidVisit);
+const mixedStateVisit = newSessionId();
+exec(`INSERT INTO table_sessions (id, merchant, table_no, mode, status, opened_ts, seen_ts)
+  VALUES (?, ?, '2', 'table', 'open', ?, ?)`, mixedStateVisit, MERCHANT, now, now);
+for (const [id, status] of [['ord-mixed-live', 'accepted'], ['ord-mixed-unknown', 'held']]) {
+  exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
+    VALUES (?, ?, 306, 'table', '2', 70, ?, ?, ?, ?, ?)`, id, MERCHANT,
+    JSON.stringify([{ id: 'item-burger', name: 'Burger', qty: 1, unitPrice: 70 }]), status,
+    mixedStateVisit, now, now);
+}
+const mixedCancel = await postQueue({ merchant: MERCHANT,
+  cancelTable: { table: '2', expectedSession: mixedStateVisit } }, employeeCookie);
+check('Unsupported ticket state refuses whole-table cancellation before changing any ticket',
+  mixedCancel.status === 409 && mixedCancel.data.error === 'unsupported-order-state'
+  && db._db.prepare("SELECT status FROM orders WHERE id='ord-mixed-live'").get().status === 'accepted'
+  && db._db.prepare('SELECT status FROM table_sessions WHERE id=?').get(mixedStateVisit).status === 'open');
+const kitchenSource = fs.readFileSync(path.join(ROOT, 'kiwi-cuisine.html'), 'utf8');
+check('Kitchen retains a served ticket while its line-cancellation alert needs a decision',
+  /o\.status === 'served' && !\(o\.lines \|\| \[\]\)\.some\(function \(line\) \{ return line && line\.voidAlert; \}\)/.test(kitchenSource));
+
+exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
+  VALUES ('ord-one-cancel', ?, 305, 'table', '1', 45, ?, 'accepted', 'ses-v1', ?, ?)`, MERCHANT,
+  JSON.stringify([{ id: 'item-soup', uid: 'uid-one-cancel', name: 'Soupe', qty: 1, unitPrice: 45 }]), now, now);
+const tillCookie = `${TILL_COOKIE}=${await tillToken(AUTH_SECRET, MERCHANT)}`;
+const oneOrderCancel = await postQueue({ merchant: MERCHANT, id: 'ord-one-cancel',
+  status: 'rejected', server: 'Caisse' }, tillCookie);
+check('Caisse can cancel one sent kitchen order without closing the table',
+  oneOrderCancel.status === 200 && oneOrderCancel.data.status === 'rejected'
+  && db._db.prepare("SELECT status FROM orders WHERE id='ord-one-cancel'").get().status === 'rejected'
+  && db._db.prepare("SELECT status FROM table_sessions WHERE id='ses-v1'").get().status === 'open');
+check('Single-order cancellation leaves an immutable kitchen cancellation trace',
+  db._db.prepare("SELECT COUNT(*) AS n FROM kitchen_voids WHERE order_id='ord-one-cancel' AND reason='order_rejected' AND status='approved'").get().n === 1);
 
 console.log(failures ? `\n✗ ${failures} failure(s)\n` : `\n✓ All kitchen void protocol behavioural checks green.\n`);
 process.exitCode = failures ? 1 : 0;

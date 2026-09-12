@@ -165,7 +165,7 @@ ok('cancelOpenTable existe et libère la session OrderPro',
   /releasePhoneTable\(id, 'caisse', true, who.actorProof \|\| ''\)/.test(cancelOpenFn));
 ok('cancelOpenTable remet le statut à khawya',
   /t\.status = 'khawya'/.test(cancelOpenFn));
-const releaseFn = (CAISSE.match(/function releasePhoneTable\(id, why, force, actorProof = ''\)\s*\{[\s\S]{0,1000}?\n    \}/) || [''])[0];
+const releaseFn = (CAISSE.match(/function releasePhoneTable\(id, why, force, actorProof = '', alreadyClosed = false\)\s*\{[\s\S]{0,1000}?\n    \}/) || [''])[0];
 ok('releasePhoneTable peut fermer une session sans pastille locale',
   /!seat && !force/.test(releaseFn));
 

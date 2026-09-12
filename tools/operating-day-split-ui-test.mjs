@@ -142,6 +142,7 @@ section('Right-panel and takeaway-board display paths');
     discountAmountFor: () => 0,
     renderSaleClient() {},
     hasTables: () => false,
+    storeIsReal: () => false,
     caisseTableKitchenLocked: () => false,
     isFeatureOff: () => true,
     showPayButtons() {

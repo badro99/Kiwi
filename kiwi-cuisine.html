@@ -1112,7 +1112,12 @@
         /* Un bon `pending` appartient encore au comptoir : la cuisine ne doit
            pas lancer un plat que le caissier va peut-être refuser. */
         if (o.status === 'pending' || o.status === 'rejected') { delete S.orders[o.id]; return; }
-        if (o.status === 'served') { delete S.orders[o.id]; delete S.cooking[o.id]; return; }
+        // A served but unpaid dish can still carry a kitchen cancellation
+        // request. Keep its alert actionable until the chef accepts/rejects
+        // it; an ordinary served ticket still disappears immediately.
+        if (o.status === 'served' && !(o.lines || []).some(function (line) { return line && line.voidAlert; })) {
+          delete S.orders[o.id]; delete S.cooking[o.id]; return;
+        }
         /* Défense locale complémentaire à la borne de la file serveur. */
         if (o.created_ts && (Date.now() - o.created_ts) > STALE_MS) { delete S.orders[o.id]; return; }
         if (!S.seen[o.id] && o.status === 'accepted') { if (!firstPass) fresh++; S.seen[o.id] = 1; }

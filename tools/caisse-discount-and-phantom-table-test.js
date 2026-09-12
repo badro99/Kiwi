@@ -62,7 +62,7 @@ ok('click router handles remove-table-discount and remove-vrap-discount',
 
 // 3. Static Source Guards - Table Lifecycle & Discount Purge
 ok('markPaid deletes discount immediately and forces release',
-  /function markPaid\(id\) \{[\s\S]{0,1000}releasePhoneTable\(id, 'settle', true\);/.test(CAISSE_SRC) &&
+  /function markPaid\(id\) \{[\s\S]{0,1400}releasePhoneTable\(id, 'settle', true\);/.test(CAISSE_SRC) &&
   /delete t\.discount;/.test(CAISSE_SRC));
 
 ok('cancelNewOrder deletes discount and forces release',
@@ -86,10 +86,10 @@ ok('tableClosedAt registry tracks local closure timestamps',
   /const tableClosedAt = Object\.create\(null\);/.test(CAISSE_SRC));
 
 ok('releasePhoneTable records closure timestamp in tableClosedAt',
-  /function releasePhoneTable\(id, why, force, actorProof = ''\) \{[\s\S]{0,200}tableClosedAt\[k\] = Date\.now\(\);/.test(CAISSE_SRC));
+  /function releasePhoneTable\(id, why, force, actorProof = '', alreadyClosed = false\) \{[\s\S]{0,200}tableClosedAt\[k\] = Date\.now\(\);/.test(CAISSE_SRC));
 
 ok('KiwiCaisseKitchen.ingest checks tableClosedAt and prunes stale sessions',
-  /closedAt > 0 && \(\(openTs > 0 && openTs <= closedAt\) \|\| \(Date\.now\(\) - closedAt < 60000\)\)[\s\S]{0,300}why: 'prune-stale'/.test(CAISSE_SRC));
+  /closedAt > 0 && \(\(openTs > 0 && openTs <= closedAt\) \|\| \(Date\.now\(\) - closedAt < 60000\)\)[\s\S]{0,750}why: 'prune-stale'/.test(CAISSE_SRC));
 
 ok('KiwiCaisseKitchen.ingest prevents re-opening recently closed tables',
   /Date\.now\(\) - closedAt < 60000/.test(CAISSE_SRC));

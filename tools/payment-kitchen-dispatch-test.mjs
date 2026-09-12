@@ -125,6 +125,26 @@ assert.ok(tableHarness.ingested.every(x => x.localKitchenAction === true),
 assert.deepEqual(tableHarness.statuses.map(x => x.id), ['op-table-a', 'op-table-b'],
   'each acceptance is acknowledged to the server once');
 
+// A cashier-only table may already have a ticket in the kitchen. Its relay
+// must finish before a later cash tender records the visit, even when this
+// tender adds no new dish (the physical #0068 sequence).
+const lateRelay = new Function(`
+  let resolveRelay;
+  const pending = new Promise(resolve => { resolveRelay = resolve; });
+  const selectedId = '13', mode = 'salle';
+  const ticket = { type: 'dineIn', table: '13', paid: false, canonicalNumberPromise: pending };
+  const kdsOrders = [ticket];
+  async ${extractFunction('awaitCanonicalTicketNumber')}
+  return { wait: awaitCanonicalTicketNumber({ remote: null, local: null }), resolveRelay };
+`)();
+let relayFinished = false;
+lateRelay.wait.then(() => { relayFinished = true; });
+await Promise.resolve();
+assert.equal(relayFinished, false, 'cashier tender waits for an earlier kitchen relay');
+lateRelay.resolveRelay({ ok: true, session: 'visit-table-13' });
+await lateRelay.wait;
+assert.equal(relayFinished, true, 'cashier tender continues once the canonical visit is known');
+
 assert.match(source, /async function finalizeTender\(method\)\s*\{[\s\S]{0,900}?const tenderOrder = dispatchUnsentKitchenBeforePayment\(\);[\s\S]{0,500}?await awaitCanonicalTicketNumber\(tenderOrder\);[\s\S]{0,160}?const tenderBase = currentTotal\(\)/,
   'every confirmed tender dispatches and resolves its canonical number before sale settlement');
 assert.match(source, /tableKitchenPending[\s\S]{0,220}?kitchenBtn\.hidden = !tableKitchenPending/,

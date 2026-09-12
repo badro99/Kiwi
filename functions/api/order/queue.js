@@ -696,7 +696,7 @@ export async function onRequestPost(context) {
         if (ord && ord.table_no) employeeVoidTable = normTable(ord.table_no);
       } catch (_) {}
     }
-    const validVoid = b && b.voidLine && b.voidLine.orderId && employeeVoidTable && scope && scope.allTables.has(employeeVoidTable);
+    const validVoid = b && b.voidLine && employeeVoidTable && scope && scope.allTables.has(employeeVoidTable);
 
     let employeeEditTable = b && b.editLine ? normTable(b.editLine.tableNo || b.editLine.table) : '';
     if (b && b.editLine && b.editLine.orderId && !employeeEditTable && env.DB) {
@@ -705,7 +705,10 @@ export async function onRequestPost(context) {
         if (ord && ord.table_no) employeeEditTable = normTable(ord.table_no);
       } catch (_) {}
     }
-    const validEdit = b && b.editLine && b.editLine.orderId && employeeEditTable && scope && scope.allTables.has(employeeEditTable);
+    const validEdit = b && b.editLine && employeeEditTable && scope && scope.allTables.has(employeeEditTable);
+
+    const employeeCancelTable = b && b.cancelTable ? normTable(b.cancelTable.table || b.cancelTable) : '';
+    const validCancelTable = employeeCancelTable && scope && scope.allTables.has(employeeCancelTable);
 
     let employeeAckTable = b && b.ackVoid ? normTable(b.ackVoid.tableNo || b.ackVoid.table) : '';
     if (b && b.ackVoid && b.ackVoid.orderId && !employeeAckTable && env.DB) {
@@ -755,7 +758,7 @@ export async function onRequestPost(context) {
       return json({ error: 'settlement-is-till-only' }, 403);
     }
 
-    if (!validCreate && !validOpen && !validClose && !validTransfer && !validMerge && !validVoid && !validAck && !validEdit && !validStatus) {
+    if (!validCreate && !validOpen && !validClose && !validTransfer && !validMerge && !validVoid && !validAck && !validEdit && !validCancelTable && !validStatus) {
       return json({ error: 'floor-table-required' }, 403);
     }
     if (validCreate || validTransfer || validMerge || validVoid || validEdit || validStatus) {
@@ -775,6 +778,91 @@ export async function onRequestPost(context) {
     if (!session) return json({ error: 'service-session-unavailable' }, 503);
     return json({ ok: true, table: openTable, session: session.id, opened_ts: session.opened_ts,
       revision: Number(session.seen_ts) || 0 });
+  }
+
+  /* Cancel the CURRENT visit as one operation. A local bill may know only one
+   * of several kitchen tickets; cancelling that one and freeing the table
+   * leaves the others payable (or reappearing on the next queue poll). The
+   * expected session is mandatory so a stale device cannot cancel the next
+   * party seated at the same physical table. Payment is never inferred. */
+  if (b && b.cancelTable) {
+    const table = normTable(b.cancelTable.table || b.cancelTable);
+    const expectedSession = String(b.cancelTable.expectedSession || '').trim();
+    if (!table || !SESSION_ID.test(expectedSession)) return json({ error: 'session-required', retry: true }, 409);
+    if (!employee && !pinActor) return json({ error: 'operator-proof-required' }, 403);
+    const actorId = String(pinActor?.id || employee?.member?.id || '').slice(0, 80);
+    const actor = String(pinActor?.name || (employee && employeeName(employee.member)) || '').slice(0, 80);
+    try {
+      const visit = await env.DB.prepare(
+        `SELECT id FROM table_sessions WHERE id = ? AND merchant = ? AND table_no = ?
+         AND mode = 'table' AND status = 'open'`
+      ).bind(expectedSession, merchant, table).first();
+      if (!visit) return json({ error: 'stale-table-visit', retry: true }, 409);
+      const paid = await env.DB.prepare(
+        `SELECT COUNT(*) AS n FROM orders WHERE merchant = ? AND session_id = ? AND paid_ts IS NOT NULL`
+      ).bind(merchant, expectedSession).first();
+      if (Number(paid?.n) > 0) return json({ error: 'partially-paid-requires-refund' }, 409);
+      const unsupported = await env.DB.prepare(
+        `SELECT COUNT(*) AS n FROM orders WHERE merchant = ? AND session_id = ?
+           AND paid_ts IS NULL AND status NOT IN ('pending','accepted','ready','served','rejected')`
+      ).bind(merchant, expectedSession).first();
+      if (Number(unsupported?.n) > 0) return json({ error: 'unsupported-order-state' }, 409);
+      const batch = await atomicStatements(env, [
+        statement(env,
+          `INSERT INTO kitchen_voids
+             (id, merchant, order_id, table_no, item_id, item_name, qty, price,
+              reason, is_waste, actor, status, created_ts)
+           SELECT 'kvoid-' || lower(hex(randomblob(16))), o.merchant, o.id, o.table_no,
+             substr(COALESCE(json_extract(j.value,'$.id'), json_extract(j.value,'$.uid'), ''),1,80),
+             substr(COALESCE(json_extract(j.value,'$.name'), 'Article'),1,120),
+             MAX(1, CAST(COALESCE(json_extract(j.value,'$.qty'),1) AS INTEGER)),
+             MAX(0, CAST(COALESCE(json_extract(j.value,'$.unitPrice'),json_extract(j.value,'$.price'),0) AS REAL)),
+             'table_cancelled', CASE WHEN o.status IN ('ready','served') THEN 1 ELSE 0 END,
+             ?, 'approved', ?
+           FROM orders o, json_each(o.lines) j
+           WHERE o.merchant = ? AND o.session_id = ? AND o.table_no = ?
+             AND o.paid_ts IS NULL AND o.status IN ('accepted','ready','served')
+             AND EXISTS (SELECT 1 FROM table_sessions live WHERE live.id = o.session_id
+               AND live.merchant = o.merchant AND live.table_no = o.table_no AND live.status = 'open')
+             AND NOT EXISTS (SELECT 1 FROM orders paid WHERE paid.merchant = o.merchant
+               AND paid.session_id = o.session_id AND paid.paid_ts IS NOT NULL)
+             AND NOT EXISTS (SELECT 1 FROM orders other WHERE other.merchant = o.merchant
+               AND other.session_id = o.session_id AND other.paid_ts IS NULL
+               AND other.status NOT IN ('pending','accepted','ready','served','rejected'))
+             AND json_valid(o.lines) AND json_type(j.value) = 'object'`,
+          actor, now, merchant, expectedSession, table),
+        statement(env,
+          `UPDATE orders SET status = 'rejected', updated_ts = ?, cancel_ts = ?,
+             cancel_actor_id = ?, cancel_actor_name = ?
+           WHERE merchant = ? AND session_id = ? AND table_no = ? AND paid_ts IS NULL
+             AND status IN ('pending','accepted','ready','served')
+             AND EXISTS (SELECT 1 FROM table_sessions live WHERE live.id = orders.session_id
+               AND live.merchant = orders.merchant AND live.table_no = orders.table_no AND live.status = 'open')
+             AND NOT EXISTS (SELECT 1 FROM orders paid WHERE paid.merchant = orders.merchant
+               AND paid.session_id = orders.session_id AND paid.paid_ts IS NOT NULL)
+             AND NOT EXISTS (SELECT 1 FROM orders other WHERE other.merchant = orders.merchant
+               AND other.session_id = orders.session_id AND other.paid_ts IS NULL
+               AND other.status NOT IN ('pending','accepted','ready','served','rejected'))`,
+          now, now, actorId, actor, merchant, expectedSession, table),
+        statement(env,
+          `UPDATE table_sessions SET status = 'closed', closed_ts = ?,
+             closed_by = 'cancelled', closed_actor_id = ?, closed_actor_name = ?
+           WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open'
+             AND NOT EXISTS (SELECT 1 FROM orders paid WHERE paid.merchant = ?
+               AND paid.session_id = ? AND paid.paid_ts IS NOT NULL)
+             AND NOT EXISTS (SELECT 1 FROM orders WHERE merchant = ? AND session_id = ?
+               AND paid_ts IS NULL AND status <> 'rejected')`,
+          now, actorId, actor, expectedSession, merchant, table,
+          merchant, expectedSession, merchant, expectedSession),
+      ]);
+      if (!(Number(batch?.[2]?.meta?.changes) > 0)) return json({ error: 'table-operation-conflict', retry: true }, 409);
+      deferCourse(context, closeOrderCourses(env, { merchant, sessionId: expectedSession, table, closedAt: now }));
+      return json({ ok: true, table, sessionId: expectedSession,
+        ordersCancelled: Number(batch?.[1]?.meta?.changes) || 0, closed: true });
+    } catch (err) {
+      return json({ error: String(err?.message || '') === 'atomic-batch-required'
+        ? 'atomic-batch-required' : 'table-cancellation-failed' }, 503);
+    }
   }
 
   /* ── La commande prise EN SALLE ────────────────────────────────────────────
@@ -1312,15 +1400,32 @@ export async function onRequestPost(context) {
     let targetOrder = null;
     if (b.voidLine.orderId) {
       targetOrder = await env.DB.prepare(
-        `SELECT id, table_no, total, lines, status, updated_ts, number FROM orders WHERE id = ? AND merchant = ? AND paid_ts IS NULL`
+        `SELECT id, table_no, total, lines, status, updated_ts, number FROM orders
+         WHERE id = ? AND merchant = ? AND paid_ts IS NULL AND status <> 'rejected'`
       ).bind(b.voidLine.orderId, merchant).first();
     } else if (table) {
-      targetOrder = await env.DB.prepare(
-        `SELECT id, table_no, total, lines, status, updated_ts, number FROM orders WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL ORDER BY created_ts DESC LIMIT 1`
-      ).bind(merchant, table).first();
+      /* A table can have many kitchen tickets (initial meal + desserts).
+       * The newest ticket is NOT necessarily the one that owns this line. */
+      const candidates = await env.DB.prepare(
+        `SELECT o.id, o.table_no, o.total, o.lines, o.status, o.updated_ts, o.number
+         FROM orders o JOIN table_sessions s ON s.id = o.session_id AND s.merchant = o.merchant
+         WHERE o.merchant = ? AND o.table_no = ? AND o.paid_ts IS NULL
+           AND o.status <> 'rejected' AND s.status = 'open'
+         ORDER BY o.created_ts DESC LIMIT 100`
+      ).bind(merchant, table).all();
+      const orders = candidates.results || [];
+      // A product may appear in several kitchen tickets on the same table.
+      // The immutable line UID wins; product identity is a legacy fallback only.
+      const uidMatches = orders.filter(order => storedOrderLines(order)
+        .some(line => String(line.uid || '') === lineId));
+      const matches = uidMatches.length ? uidMatches : orders.filter(order => storedOrderLines(order)
+        .some(line => String(line.id || '') === (fallbackItemId || lineId)));
+      if (matches.length > 1) return json({ error: 'ambiguous-line', orderIdRequired: true }, 409);
+      targetOrder = matches[0] || null;
     }
 
     if (!targetOrder) return json({ error: 'order-not-found' }, 404);
+    if (table && normTable(targetOrder.table_no) !== table) return json({ error: 'wrong-table' }, 409);
 
     let lines = [];
     try { lines = JSON.parse(targetOrder.lines) || []; } catch (_) { lines = []; }
@@ -1333,6 +1438,10 @@ export async function onRequestPost(context) {
     const affectedLines = isFormula
       ? lines.filter(l => l.formulaUid === targetLine.formulaUid || l === targetLine)
       : [targetLine];
+
+    if (affectedLines.some(line => line.voidAlert)) {
+      return json({ error: 'pending-kitchen-approval', orderId: targetOrder.id }, 409);
+    }
 
     const isCooking = affectedLines.some(l => l.stationAccepted === true);
     const voidId = 'voi-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
@@ -1900,7 +2009,8 @@ export async function onRequestPost(context) {
    * s'écrivait en base — l'état des commandes n'a jamais été en jeu — mais un
    * corps malformé pouvait faire crier la caisse au lieu de se faire refuser
    * proprement, et c'est ce qu'un scanner trouve en premier. */
-  const from = Object.prototype.hasOwnProperty.call(FROM, status) ? FROM[status] : null;
+  const from = Object.prototype.hasOwnProperty.call(FROM, status)
+    ? (status === 'rejected' && pinActor ? [...FROM[status], 'served'] : FROM[status]) : null;
   if (!from) return json({ error: 'bad-status' }, 400);
 
   // Le serveur affecté à la table, posé au moment de l'acceptation : le ticket
@@ -1958,7 +2068,7 @@ export async function onRequestPost(context) {
     const actor = String(pinActor?.name || (employee ? employeeName(employee.member) : '') || server || 'caisse').slice(0, 80);
     const kitchenVoidIds = [];
     const voidStatements = [];
-    if (current.status === 'accepted' || current.status === 'ready') {
+    if (current.status === 'accepted' || current.status === 'ready' || current.status === 'served') {
       for (const [index, line] of currentLines.entries()) {
         if (!line || !line.name) continue;
         const voidId = 'kvoid-' + crypto.randomUUID();
@@ -1966,10 +2076,10 @@ export async function onRequestPost(context) {
         voidStatements.push(statement(env,
           `INSERT INTO kitchen_voids
              (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'order_rejected', ?, ?, 'pending', ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'order_rejected', ?, ?, 'approved', ?)`,
           voidId, merchant, id, current.table_no || null, String(line.id || `line-${index}`).slice(0, 80),
           String(line.name).slice(0, 120), Math.max(1, Math.round(Number(line.qty) || 1)),
-          Math.max(0, Math.round(Number(line.unitPrice) || 0)), current.status === 'ready' ? 1 : 0, actor, now));
+          displayMoney(line.unitPrice ?? line.price), ['ready','served'].includes(current.status) ? 1 : 0, actor, now));
       }
     }
     try {

@@ -6673,6 +6673,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         if (String(order.table) !== String(table)) return;
         (order.lines || []).forEach((line, index) => canonical.push({
           uid: 'order-' + order.id + '-' + index,
+          canonicalUid: line.uid || line.id || '',
           cloudKey: 'order:' + order.id + ':' + index,
           orderId: order.id,
           id: line.id || '', name: line.name || 'Article',
@@ -6691,6 +6692,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
             p: Math.max(0, Number(visual.price) || 0), emoji: visual.emoji || '',
           })) : [],
           sourceCanonical: true,
+          voidPending: !!line.voidAlert,
         }));
       });
       /* Keep only THIS phone's not-yet-sent draft. A line hydrated from caisse
@@ -7671,7 +7673,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
               ? `<div class="td-item-qty" style="justify-content:center;color:var(--ink-4);font-size:13px;">↳</div>`
               : `
                 <div class="td-item-qty">
-                  <button class="td-qty-btn minus" data-qty="dec" aria-label="Moins">−</button>
+                  <button class="td-qty-btn minus" data-qty="dec" aria-label="Annuler un ${esc(l.name)}" ${l.voidPending ? 'disabled title="En attente de la cuisine"' : ''}>−</button>
                   <span class="td-qty-num">${l.qty}</span>
                   <button class="td-qty-btn plus" data-qty="inc" aria-label="Plus">+</button>
                 </div>`;
@@ -7687,10 +7689,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
             `;
           } else {
             return `
-              <div class="td-item">
+              <div class="td-item" data-order-uid="${l.uid}">
                 <span style="font-weight:700;width:32px;text-align:center;font-feature-settings:'tnum' 1;">${l.qty}×</span>
                 <span class="td-item-name">${displayName}</span>
                 ${displayPrice}
+                ${!isPart && l.sentQty > 0 ? `<button type="button" class="td-qty-btn minus" data-qty="dec" aria-label="Annuler un ${esc(l.name)}" ${l.voidPending ? 'disabled title="En attente de la cuisine"' : ''}>−</button>` : ''}
                 ${optLine}
                 ${noteTxt ? `<span class="td-item-noteline">Note cuisine · ${esc(noteTxt)}</span>` : ''}
               </div>
@@ -7777,6 +7780,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       }
       if (t.status === 'a-commander' || t.status === 'ka-yaklo' || t.status === 'bgha-ykhlass') {
         fHTML += `
+          <button class="td-btn danger sm" data-action="cancel-table" type="button"><i data-lucide="x"></i> Annuler toute la table</button>
           <div class="td-extra-row">
             <button class="td-extra-btn" type="button" data-action="transfer-table"><i data-lucide="arrow-right-left"></i>Changer table</button>
             <button class="td-extra-btn" type="button" data-action="merge-table"><i data-lucide="merge"></i>Fusionner</button>
@@ -7963,13 +7967,33 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         toast('Impression de l\'addition…');
       } else if (action === 'cancel-table') {
         const id = activeTableId;
-        btn.disabled = true;
-        const result = await publishServiceTableState(id, 'khawya', 0, true);
-        btn.disabled = false;
-        if (!result.ok && !result.sessionClosed) {
-          toast(`Table ${id} · fermeture non transmise, réessayez`, 5200);
+        const expectedSession = serviceTableSessions.get(id) || '';
+        if (!SV_DEMO && !expectedSession) {
+          toast(`Table ${id} · visite non synchronisée, réessayez`, 5200);
           return;
         }
+        if (!confirm(`Annuler toute la table ${id} ? Les commandes envoyées seront retirées et la cuisine prévenue. Aucun paiement ne sera enregistré.`)) return;
+        btn.disabled = true;
+        let result;
+        if (!SV_DEMO) {
+          try {
+            const response = await fetch('/api/order/queue', {
+              method: 'POST', credentials: 'same-origin', cache: 'no-store',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ merchant: svSlug(), cancelTable: { table: id, expectedSession } }),
+            });
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data?.ok) throw new Error(data?.error || 'annulation non transmise');
+            result = await publishServiceTableState(id, 'khawya', 0, false);
+            result.cancelled = Number(data.ordersCancelled) || 0;
+            result.sessionClosed = true;
+          } catch (error) {
+            btn.disabled = false;
+            toast(`Table ${id} conservée · ${error.message || 'annulation impossible'}`, 5200);
+            return;
+          }
+        } else result = { ok: true, cancelled: 0, sessionClosed: true };
+        btn.disabled = false;
         tables[id].status = 'khawya';
         tables[id].covers = 0;
         tables[id].elapsed = 0;
@@ -7977,10 +8001,14 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         delete tables[id].orderNo;
         dirtyOrders.delete(id);
         tableSplits.delete(id);
+        serviceTableSessions.delete(id);
+        serviceTableSessionRevisions.delete(id);
+        Array.from(serviceCanonicalOrders.entries()).forEach(([orderId, order]) => {
+          if (String(order.table) === String(id)) serviceCanonicalOrders.delete(orderId);
+        });
         returnToFloor();
-        if (!result.ok) toast(`Table ${id} fermée · plan en cours de synchronisation`, 5200);
-        else if (result.unpaid) toast(`Table ${id} · libérée avec ${result.unpaid} commande${result.unpaid > 1 ? 's' : ''} non réglée${result.unpaid > 1 ? 's' : ''}`, 7000);
-        else toast(`Table ${id} fermée`);
+        if (!result.ok) toast(`Table ${id} annulée · cuisine prévenue · plan en cours de synchronisation`, 5200);
+        else toast(`Table ${id} annulée · ${result.cancelled} commande${result.cancelled > 1 ? 's' : ''} retirée${result.cancelled > 1 ? 's' : ''} · cuisine prévenue`);
       } else if (action === 'resume-split') {
         // Reopen the split modal directly on the flow screen
         openSplitModal(activeTableId);
@@ -8136,6 +8164,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     }
 
     function openVoidReasonModal(tableId, line) {
+      if (line.voidPending) { toast('Annulation déjà en attente de la cuisine'); return; }
       voidLineTarget = { tableId: tableId, line: line };
       selectedVoidReason = 'client_change';
       selectedVoidIsWaste = 0;
@@ -8161,7 +8190,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
               merchant: svSlug(),
               voidLine: {
                 table: tableId,
-                lineId: line.uid || line.id,
+                ...(line.orderId ? { orderId: line.orderId } : {}),
+                lineId: line.canonicalUid || line.uid || line.id,
                 qty: 1,
                 reason: selectedVoidReason,
                 isWaste: selectedVoidIsWaste,
@@ -8172,10 +8202,15 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           const data = await res.json().catch(() => null);
           if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'void-failed');
           if (data.alertSent) {
-            toast(`Alerte annulation envoyée en cuisine · ${line.name}`);
-          } else {
-            toast(`${line.name} annulé en cuisine`);
+            line.voidPending = true;
+            toast(`Annulation demandée · attente de la cuisine · ${line.name}`);
+            $('#void-reason-modal').classList.remove('is-open');
+            if (confirmBtn) confirmBtn.disabled = false;
+            voidLineTarget = null;
+            renderTableDetail();
+            return;
           }
+          toast(`${line.name} annulé en cuisine`);
         } catch (err) {
           toast(`Annulation : ${err.message || 'erreur réseau'}`);
           if (confirmBtn) confirmBtn.disabled = false;
@@ -8214,6 +8249,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       if (!order) return;
       const line = order.find(l => l.uid === uid);
       if (!line) return;
+      if (line.voidPending && delta < 0) { toast('Annulation déjà en attente de la cuisine'); return; }
       if (line.kind === 'formula-part') return;
 
       if (line.kind === 'formula' && delta > 0) {
@@ -8246,7 +8282,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
                 merchant: svSlug(),
                 editLine: {
                   table: tableId,
-                  lineId: line.uid || line.id,
+                  ...(line.orderId ? { orderId: line.orderId } : {}),
+                  lineId: line.canonicalUid || line.uid || line.id,
                   qty: newQty,
                   isWaste: 0,
                   actor: activeRole.fullName || activeRole.name || 'Serveur'
@@ -8259,10 +8296,12 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
               return;
             }
             if (data.alertSent || data.tier === 2) {
-              toast(`Réduction envoyée en cuisine · ${line.name}`);
-            } else {
-              toast(`${line.name} modifié (${newQty}×)`);
+              line.voidPending = true;
+              toast(`Réduction demandée · attente de la cuisine · ${line.name}`);
+              renderTableDetail();
+              return;
             }
+            toast(`${line.name} modifié (${newQty}×)`);
           } catch (err) {
             toast(`Erreur réseau : ${err.message || ''}`);
             return;
@@ -8285,7 +8324,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
                 merchant: svSlug(),
                 editLine: {
                   table: tableId,
-                  lineId: line.uid || line.id,
+                  ...(line.orderId ? { orderId: line.orderId } : {}),
+                  lineId: line.canonicalUid || line.uid || line.id,
                   qty: targetQty,
                   actor: activeRole.fullName || activeRole.name || 'Serveur'
                 }

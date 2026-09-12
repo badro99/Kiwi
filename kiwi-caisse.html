@@ -7461,12 +7461,13 @@
     ] : [];
     function generateOrder(tableId, t) {
       // A legacy transfer could leave an empty cache beside an intact bill.
-      if (orders[tableId] && (orders[tableId].length || !(tableOrders[tableId] || []).length)) return orders[tableId];
+      if (IS_DEMO && orders[tableId] && (orders[tableId].length || !(tableOrders[tableId] || []).length)) return orders[tableId];
       // Live order built by cashier · convert to {qty,name,total} format
       if (tableId in tableOrders) {
         return tableOrders[tableId].map(l => ({ id: l.id, uid: l.uid, qty: l.qty, name: lineLabel(l),
           price: l.price, total: l.price * l.qty, note: l.note || '', sent: !!l.sent,
-          orderProPending: !!l.orderProPending, kind: l.kind, formulaUid: l.formulaUid,
+          orderProPending: !!l.orderProPending, voidPending: !!l.voidPending,
+          kind: l.kind, formulaUid: l.formulaUid,
           formulaName: l.formulaName, slotLabel: l.slotLabel }));
       }
       /* Chez un vrai commerçant on s'arrête ici. Ce qui suit FABRIQUE des lignes
@@ -7888,6 +7889,7 @@
     const phoneMovedVisits = new Map(); // session → acknowledged destination and superseded close marker
     const phonePending = new Map();   // clé table → nombre de commandes en attente
     const tableClosedAt = Object.create(null); // clé table → horodatage de fermeture/annulation locale
+    const recoveredPaidVisits = new Set();
     if (!storeIsReal()) initDemoPlanes();
     renderSalle();
 
@@ -8021,7 +8023,13 @@
     }
     function phoneSessionOf(id) {
       const s = phoneSeats.get(tableKey(id));
-      return (s && s.session) || '';
+      // The queue create response may arrive before the next floor poll. The
+      // cashier must still settle that exact visit, not a reusable table no.
+      return (s && s.session) || String(tables[id]?.timerSession || '');
+    }
+    function locallySettledVisit(id, session) {
+      return !!session && journal.some(entry => entry && entry.visitClosed === true
+        && entry.table === String(id) && entry.session === String(session));
     }
 
     /* Libérer la table côté téléphone. Appelée quand l'addition est réglée, et
@@ -8029,18 +8037,19 @@
        resterait « assis » à une table libre et pourrait continuer à commander.
        L'état local part TOUT DE SUITE (la pastille s'éteint sous le doigt du
        caissier) et le réseau suit à son rythme, porté par orderpro-inbox.js. */
-    function releasePhoneTable(id, why, force, actorProof = '') {
+    function releasePhoneTable(id, why, force, actorProof = '', alreadyClosed = false) {
       const k = tableKey(id);
       tableClosedAt[k] = Date.now();
       const seat = phoneSeats.get(k);
+      const session = (seat && seat.session) || String(tables[id]?.timerSession || '');
       phoneSeats.delete(k);
       phonePending.delete(k);
       /* A caisse may not have observed the phone session yet. A forced
          release must still close the table remotely, otherwise OrderPro keeps
          the guest seated after the cashier has made the table free. */
-      if (!seat && !force) return;
+      if (alreadyClosed || (!seat && !force)) return;
       document.dispatchEvent(new CustomEvent('kiwi-table-released', {
-        detail: { table: String(id), session: seat ? seat.session : '', why: why || 'settle', actorProof },
+        detail: { table: String(id), session, why: why || 'settle', actorProof },
       }));
     }
 
@@ -8675,7 +8684,7 @@
       let itemsHTML = lines.map(l => `
         <div class="rp-item">
           <span class="rp-item-qty">${l.qty}×${l.sent && l.kind !== 'formula-part' && l.uid
-            ? `<button type="button" class="qty-btn" data-table-void="${kdsEsc(l.uid)}" aria-label="Annuler un ${kdsEsc(l.name)} envoyé en cuisine">−</button>` : ''}</span>
+            ? `<button type="button" class="qty-btn" data-table-void="${kdsEsc(l.uid)}" aria-label="Annuler un ${kdsEsc(l.name)} envoyé en cuisine" ${l.voidPending ? 'disabled title="En attente de la cuisine"' : ''}>−</button>` : ''}</span>
           <span class="rp-item-name">${lineName(l)}</span>
           <span class="rp-item-price mono">${fmtMAD(l.total)}</span>
           ${l.note && l.note.trim() ? `<span class="rp-item-noteline">Note cuisine · ${kdsEsc(l.note)}</span>` : ''}
@@ -8721,7 +8730,16 @@
       `;
         } catch (_) { lockBanner = ''; }
       }
-      $('#rp-items').innerHTML = lockBanner + itemsHTML;
+      const cancellableTickets = storeIsReal() ? canonicalOrdersForTable(id)
+        .filter(entry => !entry.order.session || !phoneSessionOf(id)
+          || String(entry.order.session) === String(phoneSessionOf(id))) : [];
+      const ticketActions = cancellableTickets.length ? `
+        <div class="rp-ticket-actions" style="border-top:1px solid var(--line,#ddd);padding:12px 0;display:grid;gap:8px;">
+          <strong style="font-size:12px;">Commandes de cette table</strong>
+          ${cancellableTickets.map(entry => `<button type="button" class="meta-btn danger" data-order-cancel="${kdsEsc(entry.id)}"
+            style="min-height:44px;text-align:left;">Annuler commande ${kdsEsc(ticketNo(entry.order) || entry.id)} · cuisine prévenue</button>`).join('')}
+        </div>` : '';
+      $('#rp-items').innerHTML = lockBanner + itemsHTML + ticketActions;
 
       $('#rp-subtotal').textContent = fmtMAD(total);
       $('#rp-total').textContent = fmtMAD(splitRemaining != null ? splitRemaining : net);
@@ -8878,8 +8896,20 @@
 
     function markPaid(id) {
       const t = tables[id];
+      const visit = phoneSessionOf(id);
+      if (visit) {
+        // A local receipt is durable even if /api/sale or the close request is
+        // still in the offline outbox. Never resurrect this paid visit on reload.
+        journal.forEach(entry => {
+          if (entry && entry.table === String(id) && entry.session === visit) entry.visitClosed = true;
+        });
+        try { persistShift(); } catch (_) {}
+        kdsOrders.forEach(order => {
+          if (order && order.type === 'dineIn' && String(order.table) === String(id)
+            && String(order.session || '') === visit) order.paid = true;
+        });
+      }
       t.status = 'khlass';
-      resetTableTimer(t);
       delete t.discount; // clear remise immédiatement à l'encaissement
       delete t.orderNo;
       tableOrders[id] = [];
@@ -8892,9 +8922,11 @@
          orderpro-inbox.js par un évènement : une vente ne doit jamais attendre
          le réseau, ni échouer parce qu'il est tombé. */
       releasePhoneTable(id, 'settle', true);
+      resetTableTimer(t);
       refreshTableNode(id);
       shift.tablesPaid += 1;
       renderShiftStats();
+      try { persistShift(); } catch (_) {}
       // Fade to khawya after 3s
       setTimeout(() => {
         if (tables[id] && tables[id].status === 'khlass') {
@@ -8904,6 +8936,7 @@
           delete tables[id].discount; // clear remise · table reset
           delete tables[id].orderNo; // next party gets its own order number
           refreshTableNode(id);
+          try { persistShift(); } catch (_) {}
         }
       }, 3000);
     }
@@ -10129,7 +10162,19 @@
       const tableVoidBtn = e.target.closest('[data-table-void]');
       if (tableVoidBtn && selectedId) {
         const line = (tableOrders[selectedId] || []).find(l => l.uid === tableVoidBtn.dataset.tableVoid);
-        if (line && line.sent) openCaisseVoidModal(selectedId, line);
+        if (line && line.sent && !line.voidPending) openCaisseVoidModal(selectedId, line);
+        return;
+      }
+
+      const orderCancelBtn = e.target.closest('[data-order-cancel]');
+      if (orderCancelBtn && selectedId) {
+        const tableId = selectedId;
+        const orderId = orderCancelBtn.dataset.orderCancel;
+        if (!canonicalOrdersForTable(tableId).some(entry => entry.id === orderId)) return;
+        requireTillOperator(`Annuler la commande ${orderId} de la table ${tableId}`, async (who) => {
+          try { await cancelOneTableOrder(tableId, orderId, who); }
+          catch (err) { toast(`Commande conservée · ${err.message || 'annulation non transmise'}`); }
+        });
         return;
       }
 
@@ -10534,6 +10579,14 @@
             return;
           }
           if (selectedId) {
+            if (storeIsReal()) {
+              const tid = selectedId;
+              requireTillOperator(`Annuler la table ${tid} et prévenir la cuisine`, async (who) => {
+                try { await cancelSentTable(tid, who); }
+                catch (err) { toast(`Table ${tid} conservée · ${err.message || 'annulation non transmise'}`); }
+              });
+              return;
+            }
             /* A guest can open a table from the NFC menu, browse, then leave
                without ordering. In that case this button clears the local
                table and closes its OrderPro session after identifying the actor.
@@ -11854,6 +11907,7 @@
      * Le motif, l'alerte cuisine et la trace `kitchen_voids` sont les mêmes
      * dans les deux cas : c'est la même annulation, pas un remboursement. */
     function openCaisseVoidModal(tableId, line, scope) {
+      if (line.voidPending) { toast('Annulation déjà en attente de la cuisine'); return; }
       caisseVoidTarget = { tableId, line, scope: scope || { tableId } };
       caisseSelectedVoidReason = 'client_change';
       caisseSelectedVoidIsWaste = 0;
@@ -11874,6 +11928,11 @@
       if (confirmBtn) confirmBtn.disabled = true;
 
       const slug = (window.KiwiCaissePairing && KiwiCaissePairing.merchant && KiwiCaissePairing.merchant()) || ls('kiwiLiveMerchant') || '';
+      if (storeIsReal() && !slug) {
+        toast('Annulation impossible · caisse non appairée, article conservé');
+        if (confirmBtn) confirmBtn.disabled = false;
+        return;
+      }
       if (slug) {
         try {
           const res = await fetch('/api/order/queue', {
@@ -11885,8 +11944,9 @@
                 /* Une commande à emporter n'a pas de table : elle se désigne
                  * par son identifiant de file, que `voidLine` accepte déjà
                  * (functions/api/order/queue.js · `if (b.voidLine.orderId)`). */
-                ...(scope.orderId ? { orderId: scope.orderId } : { table: tableId }),
-                lineId: line.uid || line.id,
+                ...(scope.orderId || line.canonicalOrderId ? { orderId: scope.orderId || line.canonicalOrderId } : {}),
+                ...(tableId ? { table: tableId } : {}),
+                lineId: line.canonicalUid || line.uid || line.id,
                 itemId: line.id || '',
                 qty: 1,
                 reason: caisseSelectedVoidReason,
@@ -11898,10 +11958,15 @@
           const data = await res.json().catch(() => null);
           if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'void-failed');
           if (data && data.alertSent) {
-            toast(`Alerte transmise en cuisine · ${line.name}`);
-          } else {
-            toast(`${line.name} annulé en cuisine`);
+            line.voidPending = true;
+            toast(`Annulation demandée · attente de la cuisine · ${line.name}`);
+            $('#caisse-void-modal')?.classList.remove('is-open');
+            if (confirmBtn) confirmBtn.disabled = false;
+            caisseVoidTarget = null;
+            if (tableId) renderRightPanel(tableId);
+            return;
           }
+          toast(`${line.name} annulé en cuisine`);
         } catch (err) {
           toast(`Annulation : ${err.message || 'erreur réseau'}`);
           if (confirmBtn) confirmBtn.disabled = false;
@@ -11922,7 +11987,11 @@
       if (confirmBtn) confirmBtn.disabled = false;
       caisseVoidTarget = null;
       renderMenu();
-      renderOrderPanel(tableId);
+      if (tableId) {
+        try { persistShift(); } catch (_) {}
+        if (mode === 'order') renderOrderPanel(tableId);
+        else renderRightPanel(tableId);
+      } else renderCart();
     }
 
     $('#cvoi-reasons-chips') && $('#cvoi-reasons-chips').addEventListener('click', (e) => {
@@ -11997,6 +12066,7 @@
       if (!line) return;
       /* Si le plat a déjà été transmis en cuisine, on ouvre le motif d'annulation pour avertir la brigade */
       if (line.sent) {
+        if (line.voidPending) { toast('Annulation déjà en attente de la cuisine'); return; }
         if (delta < 0) openCaisseVoidModal(tableId, line);
         return;
       }
@@ -12075,7 +12145,7 @@
         $('#rp-items').innerHTML = order.map(l => l.sent ? `
           <div class="rp-item rp-item--cart rp-item--sent" data-order-uid="${l.uid}">
             ${l.kind === 'formula-part' ? `<span class="rp-sent-qty">${l.qty}×</span>` : `<div class="qty-control">
-              <button type="button" class="qty-btn" data-cart-action="dec" aria-label="Annuler un ${kdsEsc(l.name)} envoyé en cuisine">−</button>
+              <button type="button" class="qty-btn" data-cart-action="dec" aria-label="Annuler un ${kdsEsc(l.name)} envoyé en cuisine" ${l.voidPending ? 'disabled title="En attente de la cuisine"' : ''}>−</button>
               <span class="qty-num mono">${l.qty}</span>
             </div>`}
             <span class="rp-item-name">${lineName(l)}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}</span>
@@ -12279,6 +12349,10 @@
              caissier a sous les yeux. */
           if (r && r.ok && r.number != null) {
             order.opNum = r.number;
+            if (order.table && r.session && tables[order.table]) {
+              order.session = String(r.session);
+              tables[order.table].timerSession = order.session;
+            }
             /* A fresh counter takeaway can be paid while this request is in
                flight. Its customer receipt was already snapshotted with the
                temporary local counter; replace that frozen reference as soon
@@ -12390,6 +12464,30 @@
       return Array.from(found.entries()).map(([id, order]) => ({ id, order }));
     }
 
+    async function cancelOneTableOrder(tableId, orderId, who) {
+      const entry = canonicalOrdersForTable(tableId).find(candidate => candidate.id === orderId);
+      if (!entry) throw new Error('commande introuvable · synchronisez et réessayez');
+      const response = await fetch('/api/order/queue', {
+        method: 'POST', credentials: 'same-origin', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchant: currentMerchantSlug(), id: orderId,
+          status: 'rejected', actorProof: who?.actorProof || '', server: who?.name || 'Caisse' }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.ok) throw new Error(result?.error || 'annulation non transmise');
+      const owned = new Set((entry.order.relayLines || []).map(line => String(line?.uid || '')).filter(Boolean));
+      tableOrders[tableId] = (tableOrders[tableId] || []).filter(line =>
+        !String(line.orderProLine || '').startsWith(orderId + ':') && !owned.has(String(line.uid || '')));
+      entry.order.status = 'rejected';
+      const kitchenTicket = kdsOrders.find(order => order && String(order.opId || '') === orderId);
+      if (kitchenTicket) retireRejectedKitchenTicket(kitchenTicket);
+      opTickets.delete(orderId);
+      try { persistShift(); publishServiceFloor(); } catch (_) {}
+      refreshTableNode(tableId);
+      if (selectedId === tableId) renderRightPanel(tableId);
+      toast(`Commande annulée · cuisine prévenue · table ${tableId} conservée`);
+    }
+
     async function cancelSentTable(id, who) {
       /* A whole-table cancellation is a terminal kitchen event, not a local
          reset. Wait for any in-flight relay, reject every unpaid canonical
@@ -12397,23 +12495,30 @@
       const localTickets = kdsOrders.filter(order => order && order.type === 'dineIn'
         && String(order.table) === String(id) && !order.paid && order.status !== 'rejected');
       await Promise.all(localTickets.map(order => Promise.resolve(order.canonicalNumberPromise).catch(() => null)));
-      const canonical = canonicalOrdersForTable(id);
-      if (!canonical.length && tableSentCount(id) > 0) throw new Error('commande en cours de synchronisation · réessayez');
-      for (const entry of canonical) {
-        const res = await fetch('/api/order/queue', {
-          method: 'POST', credentials: 'same-origin', cache: 'no-store',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            merchant: currentMerchantSlug(), id: entry.id, status: 'rejected',
-            server: (who && who.name) || (typeof cashierName !== 'undefined' && cashierName) || 'Caisse',
-            actorProof: (who && who.actorProof) || ''
-          })
-        });
-        const data = await res.json().catch(() => null);
-        if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'annulation non transmise');
-        entry.order.status = 'rejected';
-        entry.order.paid = false;
+      const expectedSession = phoneSessionOf(id) || String(tables[id]?.timerSession || '');
+      if (!expectedSession) {
+        if (localTickets.length || tableSentCount(id) > 0 || canonicalOrdersForTable(id).length) {
+          throw new Error('visite en cours de synchronisation · réessayez');
+        }
+        cancelOpenTable(id, who);
+        return;
       }
+      const res = await fetch('/api/order/queue', {
+        method: 'POST', credentials: 'same-origin', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchant: currentMerchantSlug(),
+          cancelTable: { table: id, expectedSession }, actorProof: (who && who.actorProof) || '' })
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'annulation non transmise');
+      canonicalOrdersForTable(id).forEach(entry => {
+        entry.order.status = 'rejected'; entry.order.paid = false;
+        const kitchenTicket = kdsOrders.find(order => order && String(order.opId || '') === entry.id);
+        if (kitchenTicket) retireRejectedKitchenTicket(kitchenTicket);
+        opTickets.delete(entry.id);
+      });
+      updateKdsCount();
+      if (kdsEl.classList.contains('is-open')) kdsPaint();
       delete tableOrders[id];
       delete orders[id];
       const t = tables[id];
@@ -12421,7 +12526,7 @@
         t.status = 'khawya'; t.covers = 0; resetTableTimer(t);
         delete t.orderNo; delete t.server; delete t.discount;
       }
-      releasePhoneTable(id, 'cancelled', true, (who && who.actorProof) || '');
+      releasePhoneTable(id, 'cancelled', true, (who && who.actorProof) || '', true);
       try { persistShift(); publishServiceFloor(); } catch (_) {}
       refreshTableNode(id);
       if (selectedId === id) selectedId = null;
@@ -12439,12 +12544,15 @@
       const t = tables[id];
       if (t) {
         t.status = 'khawya';
+        t.covers = 0;
         resetTableTimer(t);
         delete t.discount;
+        delete t.orderNo;
       }
       /* Force the event when this caisse missed the local phone-seat badge.
          orderpro-inbox.js safely falls back to closing by table number. */
       releasePhoneTable(id, 'caisse', true, who.actorProof || '');
+      try { persistShift(); publishServiceFloor(); } catch (_) {}
       refreshTableNode(id);
       if (selectedId === id) selectedId = null;
       backToSalle();
@@ -13915,7 +14023,6 @@
         if (existingSale) { lastSaleId = existingSale.id; return existingSale; }
       }
       const discount = activeSaleDiscount(amount, lines, settlementTable);
-      accountActiveDiscount(settlementTable);
       const entry = {
         id: orderProSaleId || ('sale-' + Date.now() + '-' + journal.length),
         time: new Date(),
@@ -13983,6 +14090,15 @@
           return saved;
         });
       }
+      const existingVisitSale = settlementTable && entry.session
+        ? journal.find(row => row && row.id === entry.id) : null;
+      if (existingVisitSale) {
+        // A stale bill or second confirmation may reach this point after cash
+        // was already recorded. Reconcile the UI, never count the visit twice.
+        lastSaleId = existingVisitSale.id;
+        return existingVisitSale;
+      }
+      accountActiveDiscount(settlementTable);
       /* Le reçu se fige ICI, au moment de la vente. Si le propriétaire change
          de raison sociale, de logo ou de pied de page en septembre, les tickets
          de juillet ne se réécrivent pas : une réimpression ressort celui qui a
@@ -20245,14 +20361,22 @@
     }
 
     async function awaitCanonicalTicketNumber(dispatched) {
-      if (!dispatched) return;
       /* Table dispatch returns {remote, local}; takeaway dispatch returns the
          order itself. Keep one gate for both paths so a fast payment can never
          overtake number allocation on any restaurant checkout surface. */
       const orders = [];
-      if (dispatched.canonicalNumberPromise) orders.push(dispatched);
-      if (dispatched.local && dispatched.local.canonicalNumberPromise) orders.push(dispatched.local);
-      if (dispatched.remote && dispatched.remote.canonicalNumberPromise) orders.push(dispatched.remote);
+      if (dispatched?.canonicalNumberPromise) orders.push(dispatched);
+      if (dispatched?.local?.canonicalNumberPromise) orders.push(dispatched.local);
+      if (dispatched?.remote?.canonicalNumberPromise) orders.push(dispatched.remote);
+      // #0068 can arise even with no new dish in this payment tap: an earlier
+      // cashier kitchen send may still be awaiting its canonical visit. Wait
+      // for every local ticket on this table before freezing the paid sale.
+      if (mode !== 'vrap' && selectedId) {
+        kdsOrders.forEach(order => {
+          if (order?.type === 'dineIn' && String(order.table) === String(selectedId)
+            && !order.paid && order.canonicalNumberPromise && !orders.includes(order)) orders.push(order);
+        });
+      }
       for (const order of orders) {
         try { await order.canonicalNumberPromise; } catch (_) {}
       }
@@ -20361,6 +20485,7 @@
       const id = caisseTableId(o.table);
       const t = id && tables[id];
       if (!t) return false;
+      if (locallySettledVisit(id, o.session)) return false;
       /* Rejection is terminal and its line marker is globally unique. Remove
          that exact order before checking the current phone session: the visit
          may already have closed or the physical table may already belong to a
@@ -20379,14 +20504,11 @@
       }
       const activeSeat = phoneSeats.get(tableKey(id));
       /* ── UNE TABLE RÉGLÉE NE SE ROUVRE PAS TOUTE SEULE ──────────────────
-       * Les trois gardes qui suivent protègent la note par la SESSION du
-       * téléphone. Une commande qui n'en porte pas · un QR client, un bon du
-       * canal public · les traverse toutes les trois et se raccroche à
-       * n'importe quelle table portant ce numéro, y compris une table
-       * encaissée trente secondes plus tôt. C'est la table 13 du ticket
-       * #0068 : réglée, puis retrouvée ouverte avec sa note, à côté d'une
-       * vente déjà au journal · et le caissier ne peut plus savoir laquelle
-       * des deux est vraie.
+       * This bridge handles cashier and staff tickets as well as customer
+       * orders. Ticket #0068 shows a cashier receipt for table 13 while the
+       * same bill stayed open; it does NOT establish an OrderPro cause.
+       * Session-bearing tickets are blocked by the durable paid receipt above.
+       * This timestamp guard covers older sessionless rows in the same tab.
        * `tableClosedAt` porte déjà l'heure de la fermeture locale (markPaid →
        * releasePhoneTable) et se lève dès qu'une table légitime rouvre. Un bon
        * créé AVANT cette heure appartient au service qu'on vient de payer.
@@ -20436,17 +20558,30 @@
         }
       }
       (o.lines || []).forEach((l, index) => {
-        const marker = String(o.id) + ':' + index;
+        const marker = String(o.id) + ':' + String(l.uid || l.lineId || index);
         const existing = lines.find(x => x.orderProLine === marker);
         if (existing) {
           const pending = o.status === 'pending';
           if (existing.orderProPending !== pending) { existing.orderProPending = pending; changed = true; }
+          const nextQty = Math.max(1, Number(l.qty) || 1);
+          if (existing.qty !== nextQty || existing.voidPending !== !!l.voidAlert
+            || existing.name !== (l.name || '') || existing.price !== (+l.unitPrice || 0)) {
+            existing.qty = nextQty;
+            existing.voidPending = !!l.voidAlert;
+            existing.canonicalUid = l.uid || l.id || '';
+            existing.canonicalOrderId = o.id;
+            existing.id = l.id || existing.id;
+            existing.name = l.name || existing.name;
+            existing.price = +l.unitPrice || 0;
+            changed = true;
+          }
           return;
         }
         const menuHit = menuLineFind(x => String(x.id) === String(l.id))
           || menuLineFind(x => String(x.name || '').toLowerCase() === String(l.name || '').toLowerCase());
         lines.push({
-          uid: newLineUid(), id: (menuHit && menuHit.id) || l.id || ('op-' + marker),
+          uid: newLineUid(), canonicalUid: l.uid || l.id || '', canonicalOrderId: o.id,
+          id: (menuHit && menuHit.id) || l.id || ('op-' + marker),
           name: l.name || (menuHit && menuHit.name) || '', price: +l.unitPrice || 0,
           qty: Math.max(1, +l.qty || 1), note: l.note || '', opts: [], optSig: '',
           options: l.options || '', visuals: Array.isArray(l.visuals) ? l.visuals.slice() : [],
@@ -20457,9 +20592,14 @@
           sent: true, orderProLine: marker, orderSession: String(o.session || ''),
           caisseRecovered: o.channel === 'caisse',
           orderProPending: o.status === 'pending',
+          voidPending: !!l.voidAlert,
         });
         changed = true;
       });
+      const activeMarkers = new Set((o.lines || []).map((l, index) => String(o.id) + ':' + String(l.uid || l.lineId || index)));
+      const kept = lines.filter(line => !String(line.orderProLine || '').startsWith(String(o.id) + ':')
+        || activeMarkers.has(String(line.orderProLine)));
+      if (kept.length !== lines.length) { tableOrders[id] = kept; changed = true; }
       if (changed) {
         if ((tableOrders[id] || []).length) startTableTimer(id, o.created_ts);
         refreshTableNode(id);
@@ -20538,6 +20678,36 @@
         known = kdsOrders.find(t => t && t.opId === o.id);
         if (known) opTickets.set(o.id, known);
       }
+      /* A cashier-created ticket has sent lines in the local bill as well as
+       * the canonical queue. Kitchen voids must reconcile that local copy by
+       * its immutable uid; otherwise an approved cancellation appears again
+       * after refresh (or the next poll) and can be charged twice. */
+      if (o.channel === 'caisse' && o.mode === 'table' && known?.relayLines?.length) {
+        const tableId = caisseTableId(o.table);
+        const localBill = tableId && tableOrders[tableId];
+        if (localBill) {
+          const owned = new Set(known.relayLines.map(line => String(line.uid || '')).filter(Boolean));
+          const current = new Map((o.lines || []).filter(line => line?.uid)
+            .map(line => [String(line.uid), line]));
+          let changed = false;
+          const next = localBill.filter(line => {
+            if (!line?.sent || line.orderProLine || !owned.has(String(line.uid || ''))) return true;
+            const remote = current.get(String(line.uid));
+            if (o.status === 'rejected' || !remote) { changed = true; return false; }
+            const qty = Math.max(1, Number(remote.qty) || 1);
+            if (line.qty !== qty || line.voidPending !== !!remote.voidAlert) {
+              line.qty = qty; line.voidPending = !!remote.voidAlert; changed = true;
+            }
+            return true;
+          });
+          if (changed) {
+            tableOrders[tableId] = next;
+            refreshTableNode(tableId);
+            if (selectedId === tableId) mode === 'order' ? renderOrderPanel(tableId) : renderRightPanel(tableId);
+            try { persistShift(); } catch (_) {}
+          }
+        }
+      }
       /* A ticket created by THIS cashier is already present in tableOrders.
          The queue returns it so remote KDS screens can see it; feeding that
          same ticket through the OrderPro/employee bill bridge added its lines
@@ -20597,6 +20767,7 @@
           known.type = type;
           known.table = o.mode === 'table' ? o.table : null;
         }
+        if (o.session) known.session = String(o.session);
       }
       if (!known) {
         if (o.mode === 'table' && o.status === 'pending') return;   // la pastille suffit
@@ -20608,6 +20779,7 @@
           opChannel: o.channel || 'kiwi',
           type: isTakeaway ? 'takeaway' : 'dineIn',
           table: o.mode === 'table' ? (o.table || '') : null,
+          session: o.session || '',
           server: o.server || (o.mode === 'table' ? serverNameFor(o.table) : ''),
           status: (isTakeaway && o.status === 'pending') ? 'held'
                 : (o.status === 'ready' ? 'ready' : 'new'),
@@ -20818,6 +20990,16 @@
         (sessions || []).forEach(s => {
           if (s.mode !== 'table' || !s.table) return;
           const k = tableKey(caisseTableId(s.table) || s.table);
+          const localId = caisseTableId(s.table);
+          if (localId && locallySettledVisit(localId, s.id)) {
+            if (!recoveredPaidVisits.has(String(s.id))) {
+              recoveredPaidVisits.add(String(s.id));
+              document.dispatchEvent(new CustomEvent('kiwi-table-released', {
+                detail: { table: localId, session: String(s.id), why: 'settle' },
+              }));
+            }
+            return;
+          }
           const closedAt = Number(tableClosedAt[k] || 0);
           const openTs = Number(s.opened_ts || 0);
           const move = phoneMovedVisits.get(String(s.id));
@@ -20827,6 +21009,12 @@
           // Si cette session a été ouverte à ou avant la fermeture/annulation locale de la table :
           if (!movedHere && closedAt > 0 && ((openTs > 0 && openTs <= closedAt) || (Date.now() - closedAt < 60000))) {
             if (openTs > 0 && openTs <= closedAt) {
+              // The first kitchen relay can populate timerSession before the
+              // floor poll supplies a seat. Once this visit is pruned, that
+              // fallback must not resurrect it after phoneSeats is rebuilt.
+              if (localId && tables[localId] && String(tables[localId].timerSession || '') === String(s.id)) {
+                delete tables[localId].timerSession;
+              }
               // Clore activement la session zombie côté serveur dans D1
               document.dispatchEvent(new CustomEvent('kiwi-table-released', {
                 detail: { table: String(s.table), session: String(s.id || ''), why: 'prune-stale' },

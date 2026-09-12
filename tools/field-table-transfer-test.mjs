@@ -40,7 +40,7 @@ function context() {
   const c = {
     console, Date, Map, Set, Promise, Object, Number, String, Array, JSON, crypto,
     IS_DEMO: false, tables: {}, tableOrders: {}, orders: {}, servers: {}, menu: [], menuItems: [],
-    phoneSeats: new Map(), phoneMovedVisits: new Map(), phonePending: new Map(), tableClosedAt: {}, tableSplits: new Map(),
+    phoneSeats: new Map(), phoneMovedVisits: new Map(), phonePending: new Map(), tableClosedAt: {}, tableSplits: new Map(), journal: [],
     opTickets: new Map(), opUnmatchedTables: new Set(), kdsOrders: [], kdsOrderSeq: 0,
     expiredOrders: [], dismissedExpiredIds: new Set(), vrapEditingNum: null, vrapDiscount: null,
     vrapSplit: null, splitState: {}, renderSplitSetup: noop, renderSplitFlow: noop,
@@ -66,7 +66,7 @@ function context() {
   c.window = c;
   c.KiwiOrderInbox = { orders: () => c.remoteOrders || {} };
   vm.createContext(c);
-  const names = ['tableKey', 'caisseTableId', 'phoneSessionOf', 'releasePhoneTable',
+  const names = ['tableKey', 'caisseTableId', 'phoneSessionOf', 'locallySettledVisit', 'releasePhoneTable',
     'caisseTableKitchenLocked', 'caisseMobilityIntent', 'applyCaisseMovedVisit',
     'confirmCaisseTransfer', 'confirmCaisseMerge', 'generateOrder', 'resetTableTimer', 'startTableTimer',
     'currentTotal', 'tableSentCount', 'cancelOpenTable', 'attachOrderProTable', 'opRepairFormulaParents',

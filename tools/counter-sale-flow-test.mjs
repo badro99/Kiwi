@@ -112,7 +112,8 @@ await check('removing a cooking takeaway line opens the cancellation reason inst
 });
 
 await check('a takeaway void names its order, since it has no table', () => {
-  assert.match(caisse, /\.\.\.\(scope\.orderId \? \{ orderId: scope\.orderId \} : \{ table: tableId \}\)/);
+  assert.match(caisse, /\.\.\.\(scope\.orderId \|\| line\.canonicalOrderId \? \{ orderId: scope\.orderId \|\| line\.canonicalOrderId \} : \{\}\)/);
+  assert.match(caisse, /\.\.\.\(tableId \? \{ table: tableId \} : \{\}\)/);
   /* Le serveur sait déjà viser une commande par son id — rien de neuf côté API. */
   const queue = fs.readFileSync(new URL('../functions/api/order/queue.js', import.meta.url), 'utf8');
   assert.match(queue, /if \(b\.voidLine\.orderId\) \{/);
