@@ -1202,6 +1202,8 @@ section('Whole-project regressions');
     'caisse-boot-restore-guard-test.mjs',
     'kitchen-ticket-wrap-test.mjs',
     'settled-table-reopen-test.mjs',
+    'order-line-cap-test.mjs',
+    'kitchen-reprint-test.mjs',
     'station-printer-routing-test.mjs',
     'print-socket-test.mjs',
     /* l'iPad n'a ni pont local ni WebUSB : la caisse dépose le ticket sur

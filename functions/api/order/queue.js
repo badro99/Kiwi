@@ -2149,6 +2149,19 @@ async function createTicket(context, env, merchant, c, now) {
   const id = String(c.id || '').trim();
   if (!ORDER_ID.test(id)) return json({ error: 'bad-id' }, 400);
 
+  /* `cleanLines` TRONQUE à MAX_LINES, et silencieusement : le comptoir
+   * recevait un `ok` franc, marquait chaque ligne envoyée, et l'écran cuisine
+   * distant ne voyait que les soixante premiers plats. Le reste de la table
+   * n'existait nulle part et personne ne l'apprenait. Le chemin employé
+   * (POST /order, plus haut) refuse déjà ce cas par `too-many-lines` ; le bon
+   * de caisse le refuse maintenant pareil, et le comptoir le DIT au caissier
+   * (relayToKitchen). Mieux vaut un bon qu'on envoie en deux qu'un bon amputé
+   * que personne ne voit. Le ticket local, lui, est déjà imprimé en entier :
+   * la commande n'est pas perdue, c'est la cuisine distante qu'il faut
+   * resservir. */
+  if (Array.isArray(c.lines) && c.lines.length > MAX_LINES) {
+    return json({ error: 'too-many-lines', max: MAX_LINES, sent: c.lines.length }, 400);
+  }
   const lines = cleanLines(c.lines);
   if (!lines.length) return json({ error: 'empty-order' }, 400);
 

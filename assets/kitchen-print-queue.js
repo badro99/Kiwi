@@ -258,6 +258,18 @@
        replays recent rows after a refresh; the done ledger handles refreshes,
        while this activation boundary handles the very first opt-in. */
     var activatedAt = options.remote === true ? Number(hubConfig().updatedAt || 0) : 0;
+    /* ── RÉIMPRIMER, C'EST UN GESTE HUMAIN ────────────────────────────────
+     * L'identifiant stable et le registre `done` sont ce qui empêche un même
+     * bon de sortir deux fois · c'est la garde qui protège la cuisine. Mais
+     * elle s'appliquait AUSSI quand le caissier demande expressément une
+     * réimpression : le bon était déjà « fait », donc rien ne repartait, et
+     * même quand le papier n'était jamais physiquement sorti (bourrage,
+     * imprimante éteinte, ticket perdu). Le caissier appuyait, la caisse
+     * répondait « Impression du bon envoyée », et il ne se passait rien.
+     * Une réimpression reçoit donc son PROPRE identifiant : le registre reste
+     * intact pour le chemin automatique · aucun sondage, aucun rechargement ne
+     * peut rejouer un bon · et le papier demandé à la main sort toujours. */
+    var force = options.force === true;
     var q = readQueue(), done = readDone(), accepted = 0;
     var doneIds = Object.create(null), queuedIds = Object.create(null);
     done.forEach(function (x) { if (x && x.id) doneIds[x.id] = 1; });
@@ -265,9 +277,11 @@
     (Array.isArray(plan) ? plan : []).forEach(function (raw) {
       if (!raw || !raw.payload) return;
       var createdAt = Number(raw.createdAt) || Date.now();
-      if (activatedAt && createdAt < activatedAt - 5000) return;
+      if (!force && activatedAt && createdAt < activatedAt - 5000) return;
       var id = cleanId(raw.id);
-      if (!id || doneIds[id] || queuedIds[id]) return;
+      if (!id) return;
+      if (force) id = cleanId(id + ':r' + Date.now().toString(36) + '-' + accepted);
+      else if (doneIds[id] || queuedIds[id]) return;
       q.push({
         id: id,
         type: raw.type === 'receipt' ? 'receipt' : 'kitchen',
