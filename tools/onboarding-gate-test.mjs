@@ -25,8 +25,8 @@ ok(/out\.onboarded = true;/.test(meSrc), '/api/me rend déjà le verdict d’ins
 ok(!/onboardingState|onboarding:/.test(cfgSrc),
   '/api/config n’en écrit pas un second : une seule vérité pour une seule question');
 
-/* ── 3 · Les deux listes de gestes, extraites d’entitlements.js ──────────── */
-const entSrc = fs.readFileSync(path.join(ROOT, 'assets/entitlements.js'), 'utf8');
+/* ── 3 · Les deux listes de gestes, extraites d’entitlements-v2.js ───────── */
+const entSrc = fs.readFileSync(path.join(ROOT, 'assets/entitlements-v2.js'), 'utf8');
 const blockedMatch = entSrc.match(/function blockedWord\(el\)\{[\s\S]*?\n  \}/);
 const moneyMatch = entSrc.match(/function moneyWord\(el\)\{[\s\S]*?\n  \}/);
 let blockedWord = null, moneyWord = null;

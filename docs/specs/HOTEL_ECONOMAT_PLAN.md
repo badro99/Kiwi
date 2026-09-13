@@ -6,7 +6,7 @@ Read that document first. This one is how to build it without breaking a live pr
 Twelve phases. Each is independently testable. Phase 8 is the first point at which stock
 may cross units.
 
-**There is no feature-flag system in this repository.** `assets/entitlements.js` is a
+**There is no feature-flag system in this repository.** `assets/entitlements-v2.js` is a
 subscription paywall (`KiwiSubscription.active()`), not a per-feature gate, and
 `pos-dispatch.js` selects a vertical by store type. Do not invent a flag framework for
 this project.

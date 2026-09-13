@@ -50,7 +50,7 @@ const menu = fs.readFileSync(new URL('../functions/api/menu.js', import.meta.url
 const team = fs.readFileSync(new URL('../functions/api/team/live.js', import.meta.url), 'utf8');
 const admin = fs.readFileSync(new URL('../kiwi-admin.html', import.meta.url), 'utf8');
 const dashboard = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
-const entitlement = fs.readFileSync(new URL('../assets/entitlements.js', import.meta.url), 'utf8');
+const entitlement = fs.readFileSync(new URL('../assets/entitlements-v2.js', import.meta.url), 'utf8');
 const liveLink = fs.readFileSync(new URL('../assets/live-link.js', import.meta.url), 'utf8');
 const sw = fs.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
 
@@ -74,18 +74,18 @@ ok(liveLink.includes("identity.ready.then(function (state)") && liveLink.include
 ok(/oneShot:\s*!!snapshot/.test(liveLink) && liveLink.includes('else if (oneShot) stop()'),
   'God Mode consumes a complete one-time snapshot instead of the merchant polling loop');
 const stamps = JSON.parse(fs.readFileSync(new URL('./asset-stamps.json', import.meta.url), 'utf8'));
-const entJsVer = stamps['assets/entitlements.js']?.v || '6';
+const entJsVer = stamps['assets/entitlements-v2.js']?.v || '1';
 const entCssVer = stamps['assets/entitlements.css']?.v || '5';
 const liveVer = stamps['assets/live-link.js']?.v || '26';
 const idVer = stamps['assets/identity.js']?.v || '2';
 
-ok(dashboard.includes(`assets/entitlements.js?v=${entJsVer}`) && dashboard.includes(`assets/entitlements.css?v=${entCssVer}`),
+ok(dashboard.includes(`assets/entitlements-v2.js?v=${entJsVer}`) && dashboard.includes(`assets/entitlements.css?v=${entCssVer}`),
   'the dashboard loads the entitlement layer with a cache-busting version');
 ok(dashboard.includes(`assets/identity.js?v=${idVer}`) &&
    dashboard.indexOf(`assets/identity.js?v=${idVer}`) < dashboard.indexOf(`assets/live-link.js?v=${liveVer}`) &&
-   dashboard.indexOf(`assets/identity.js?v=${idVer}`) < dashboard.indexOf(`assets/entitlements.js?v=${entJsVer}`),
+   dashboard.indexOf(`assets/identity.js?v=${idVer}`) < dashboard.indexOf(`assets/entitlements-v2.js?v=${entJsVer}`),
   'God Mode data and confidential mode consume a fresh, already-published identity gate');
-ok(sw.includes('assets/entitlements.js') && sw.includes('assets/entitlements.css'),
+ok(sw.includes('assets/entitlements-v2.js') && sw.includes('assets/entitlements.css'),
   'the entitlement layer is available through the dashboard PWA cache');
 
 console.log(`\nsubscription/privacy: ${n} controls passed`);

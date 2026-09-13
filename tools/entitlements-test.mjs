@@ -25,7 +25,7 @@ const ok = (cond, msg) => { if (cond) passed++; else { failures.push(msg); conso
 
 console.log('■ Panneau d’activation (entitlements)');
 
-const js = fs.readFileSync(path.join(ROOT, 'assets/entitlements.js'), 'utf8');
+const js = fs.readFileSync(path.join(ROOT, 'assets/entitlements-v2.js'), 'utf8');
 const css = fs.readFileSync(path.join(ROOT, 'assets/entitlements.css'), 'utf8');
 
 /* 1. LA FERMETURE — la règle qui a coûté la session. */
