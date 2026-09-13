@@ -173,6 +173,18 @@ console.log('\n1 · Client-side Live Link (assets/live-link.js)');
   const centPayload = envB.payloads.find((p) => p.body.label === 'Espresso + Croissant');
   check('12.50 MAD sale generates payload with amountCents = 1250 and legacy amount = 13',
     centPayload && centPayload.body.amountCents === 1250 && centPayload.body.amount === 13);
+
+  const envC = createLiveLinkContext('cafe-atlas');
+  envC.KiwiLive.postSale({
+    id: 'sale-complimentary', amount: 0, method: 'complimentary',
+    settlementKind: 'complimentary', grossAmountCents: 2500, discountAmountCents: 2500,
+    discountReason: 'commercial', actorId: 'manager-1',
+    lines: [{ name: 'Shawarma', qty: 1, total: 25 }],
+  });
+  const complimentaryPayload = envC.payloads.find((p) => p.body.settlementKind === 'complimentary');
+  check('audited complimentary close is queued with its full-discount proof',
+    complimentaryPayload && complimentaryPayload.body.amountCents === 0
+      && complimentaryPayload.body.settlementKind === 'complimentary');
 }
 
 /* ── 3. Server Ingestion (/api/sale) ── */
@@ -256,6 +268,28 @@ console.log('\n2 · Server Ingest (/api/sale)');
   // Ceiling and floor checks
   r = await callSale({ id: 'sale-zero', merchant: 'cafe-atlas', amountCents: 0 });
   check('ingest rejects 0 amountCents', r.status === 400);
+
+  r = await callSale({
+    id: 'sale-zero-forged', merchant: 'cafe-atlas', amountCents: 0,
+    settlementKind: 'complimentary', grossAmountCents: 2500, discountAmountCents: 2000,
+    discountReason: 'commercial', actorId: 'manager-1', method: 'complimentary',
+    lines: [{ n: 'Shawarma', q: 1, t: 25 }],
+  });
+  check('ingest rejects a forged or partial zero settlement', r.status === 400);
+
+  r = await callSale({
+    id: 'sale-zero-approved', merchant: 'cafe-atlas', amountCents: 0,
+    amount: 0, method: 'complimentary', settlementKind: 'complimentary',
+    grossAmountCents: 2500, discountAmountCents: 2500,
+    discountReason: 'commercial', actorId: 'manager-1',
+    lines: [{ n: 'Shawarma', q: 1, t: 25 }], ts: now,
+  });
+  check('ingest accepts an explicit fully-discounted complimentary settlement', r.status === 200);
+  const complimentaryRow = sqlite.prepare('SELECT amount_cents, method, gross_amount_cents, discount_amount_cents FROM sales WHERE id=?')
+    .get('sale-zero-approved');
+  check('D1 preserves the zero receipt and complete discount audit', complimentaryRow
+    && complimentaryRow.amount_cents === 0 && complimentaryRow.method === 'complimentary'
+    && complimentaryRow.gross_amount_cents === 2500 && complimentaryRow.discount_amount_cents === 2500);
 
   r = await callSale({ id: 'sale-over-max', merchant: 'cafe-atlas', amountCents: 20000001 });
   check('ingest rejects amountCents above 20,000,000 (200k MAD)', r.status === 400);

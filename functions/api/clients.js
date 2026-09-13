@@ -409,14 +409,20 @@ export async function onRequestPost(context) {
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
-  const merchant = await tenantFor(request, env, body && body.merchant, { strict: true });
+  /* Pending hotels may prepare ordinary Hospitality+ profiles before opening.
+   * Financial loyalty mutations still cross the normal operational gate below;
+   * this exception cannot spend points or record purchases. */
+  const merchant = await tenantFor(request, env, body && body.merchant, { strict: true, allowPending: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
+  const operational = await tenantFor(request, env, merchant, { strict: true }) === merchant;
 
   if (body && body.redemption) {
+    if (!operational) return json({ error: 'unauthorized' }, 401);
     try { return await applyRedemption(env, merchant, body.redemption); }
     catch (_) { return json({ error: 'reward-write-failed' }, 503); }
   }
   if (body && body.purchase) {
+    if (!operational) return json({ error: 'unauthorized' }, 401);
     try { return await applyPurchase(env, merchant, body.purchase); }
     catch (_) { return json({ error: 'purchase-write-failed' }, 503); }
   }
@@ -431,7 +437,7 @@ export async function onRequestPost(context) {
    * Deliberate data imports retain their supplied opening totals through the
    * explicit `financialImport` flag (or the existing `source: 'import'` label),
    * while every ordinary sync-created row starts from ledger-derived zeroes. */
-  const preserveImportedTotals = body && body.financialImport === true || c.source === 'import';
+  const preserveImportedTotals = operational && (body && body.financialImport === true || c.source === 'import');
   const initialPoints = preserveImportedTotals ? c.points : 0;
   const initialStamps = preserveImportedTotals ? c.stamps : 0;
   const initialVisits = preserveImportedTotals ? c.visits : 0;

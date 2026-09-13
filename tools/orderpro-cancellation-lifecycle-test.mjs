@@ -111,7 +111,7 @@ const caisseSource = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.
 const attach = caisseSource.match(/function attachOrderProTable\(o\)\s*\{[\s\S]{0,14000}?\n {4}\}/)?.[0] || '';
 assert.ok(attach.indexOf("o.status === 'rejected'") < attach.indexOf('const activeSeat ='),
   'terminal cleanup runs before current-session validation');
-assert.match(attach, /startsWith\(String\(o\.id\) \+ ':'\)/,
+assert.match(attach, /const orderId = String\(o\.id \|\| o\.opId \|\| ''\)\.trim\(\)[\s\S]*startsWith\(orderId \+ ':'\)/,
   'terminal cleanup removes only the cancelled OrderPro line markers');
 
 console.log('✓ OrderPro cancellation is terminal, clears the bill projection, and lets Annuler mesa close the visit');

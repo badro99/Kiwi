@@ -629,7 +629,12 @@
     var amountCents = entry.amountCents != null
       ? Math.round(Number(entry.amountCents))
       : Math.round(rawAmt * 100);
-    if (!Number.isFinite(amountCents) || amountCents <= 0) return;
+    var complimentary = entry.settlementKind === 'complimentary'
+      && amountCents === 0
+      && Number(entry.grossAmountCents) > 0
+      && Number(entry.grossAmountCents) === Number(entry.discountAmountCents)
+      && Array.isArray(entry.lines) && entry.lines.length > 0;
+    if (!Number.isFinite(amountCents) || amountCents < 0 || (amountCents === 0 && !complimentary)) return;
     var amt = Math.round(amountCents / 100);
     // No resolved tenant ⇒ don't post. The server refuses an unattributed sale
     // (it used to file it under a shared 'default' bucket other stores read), so
@@ -703,6 +708,7 @@
       ts: (entry.time && entry.time.getTime) ? entry.time.getTime() : Date.now(),
       lines: lines,                                           // null ⇒ unknown, never "empty basket"
     };
+    if (complimentary) body.settlementKind = 'complimentary';
     if (entry.channel) body.channel = String(entry.channel).slice(0, 24);
     if (entry.orderId) body.orderId = String(entry.orderId).slice(0, 64);
     var session = serverSession(entry);

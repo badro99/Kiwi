@@ -83,7 +83,8 @@ const caisse = source('kiwi-caisse.html');
 for (const type of ['open', 'movement', 'handover', 'close']) ok(caisse.includes("eventType: '" + type + "'"), type + ' emitted');
 ok(caisse.includes("movementReason: 'Ouverture sans vente'"), 'no-sale drawer opening motivated');
 ok(caisse.includes('counterpartyActorId:'), 'handover actors recorded');
-ok(caisse.includes('counterpartyActorId: cashActorRef(inc.id)'), 'incoming handover actor stays distinct');
+ok(caisse.includes('counterpartyActorId: cashActorRef((who && who.id) || inc.id)'),
+  'incoming handover actor stays distinct and uses the identity that actually confirmed');
 
 const schema = source('schema.sql');
 ok(schema.includes('CREATE TABLE IF NOT EXISTS cash_session_events'), 'additive schema mirrored');

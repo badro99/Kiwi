@@ -89,15 +89,15 @@ const clotureBlock = extractBody(
 // Extract drawerExpected
 const drawerBlock = extractBody(
   caisseHtml,
-  'function drawerExpected() {',
-  'return major(minor(openingFloat) + t.cashC + t.cashTipsC + t.movesInC - t.movesOutC);\n    }'
+  'function handoverGapCents() {',
+  'return major(minor(openingFloat) + t.cashC + t.cashTipsC + t.movesInC - t.movesOutC + handoverGapCents());\n    }'
 );
 
 // Extract handoverBlock
 const handoverBlock = extractBody(
   caisseHtml,
   'function fmtEcart(e) {',
-  'window.KiwiCaisseAccounting = Object.freeze({\n      rollupLedger,\n      journalTotals,\n      posteRollup,\n      drawerExpected,\n      renderHandoverCount,\n      confirmHandover,\n      renderCloture,\n      reconcileVoids,\n      refreshOpenReconciliationModals,\n    });'
+  'window.KiwiCaisseAccounting = Object.freeze({\n      rollupLedger,\n      journalTotals,\n      posteRollup,\n      handoverGapCents,\n      drawerExpected,\n      renderHandoverCount,\n      confirmHandover,\n      renderCloture,\n      reconcileVoids,\n      refreshOpenReconciliationModals,\n    });'
 );
 
 let controls = 0;

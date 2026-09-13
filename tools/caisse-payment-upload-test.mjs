@@ -309,7 +309,7 @@ test('restore preserves an exact legacy serverSaleId without inventing missing s
   f.ctx.restoreShift({ openedAt: new Date().toISOString(), journal: [original] });
   assert.equal(f.ctx.journal[0].serverSaleId, original.serverSaleId);
   assert.equal(f.ctx.journal[0].id, original.id);
-  for (const key of ['orderId', 'table', 'session', 'split', 'amountCents', 'grossAmountCents',
+  for (const key of ['orderId', 'table', 'session', 'split', 'settlementKind', 'amountCents', 'grossAmountCents',
     'discountAmountCents', 'discountReason', 'actorId', 'saleSyncPending', 'saleSyncError']) {
     assert.equal(Object.hasOwn(f.ctx.journal[0], key), false, 'absent legacy field remains absent: ' + key);
   }
@@ -317,6 +317,22 @@ test('restore preserves an exact legacy serverSaleId without inventing missing s
   // Leave that unknown state intact; never create or rekey a historical sale.
   assert.equal(f.ctx.reconcileJournalSales(true), 0); await drain();
   assert.equal(f.requests.length, 0); assert.equal(f.count(), 0);
+});
+
+test('restore keeps complimentary settlement proof so a reload can finish synchronization', async t => {
+  const f = await fixture(t);
+  f.ctx.restoreShift({ openedAt: new Date().toISOString(), journal: [{
+    id: 'complimentary-reload', time: new Date().toISOString(), label: 'Table 8 · offerte',
+    amount: 0, method: 'complimentary', kind: 'complimentary', settlementKind: 'complimentary',
+    grossAmountCents: 4500, discountAmountCents: 4500, discountReason: 'commercial',
+    actorId: 'manager-1', lines: [{ name: 'Salade marocaine', qty: 1, price: 45, total: 45 }],
+  }] });
+  assert.equal(f.ctx.journal[0].settlementKind, 'complimentary');
+  assert.equal(f.ctx.reconcileJournalSales(true), 1);
+  await drain();
+  const row = f.db.prepare("SELECT amount_cents, method FROM sales WHERE method='complimentary'").get();
+  assert.equal(row?.amount_cents, 0);
+  assert.equal(row?.method, 'complimentary');
 });
 
 test('synchronous enqueue exception remains durable in the journal and provisional recovery retries', async t => {

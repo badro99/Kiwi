@@ -230,10 +230,15 @@ export async function tenantFor(request, env, asked, opts) {
    * Le contrôle est ici, sur le magasin RÉSOLU, et pas sur celui qui a été
    * demandé : c'est le seul point par lequel toutes les branches repassent. */
   const strict = !!(opts && opts.strict);
+  /* A pending hotel still has to build its non-financial guest book before
+   * launch. `allowPending` is deliberately opt-in at the one profile endpoint
+   * that needs it; sales, rewards, deletes and every other strict write remain
+   * blocked until activation. Suspended stores are never exempted. */
+  const allowPending = !!(opts && opts.allowPending);
   const who = await resolveTenant(request, env, asked, strict);
   if (strict && who) {
     const state = await storeOperationalState(env, who);
-    if (!state.ok || state.suspended || state.pending) return '';
+    if (!state.ok || state.suspended || (state.pending && !allowPending)) return '';
   }
   return who;
 }

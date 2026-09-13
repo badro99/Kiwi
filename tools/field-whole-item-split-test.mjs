@@ -24,6 +24,7 @@ function harness(overrides = {}) {
   const context = vm.createContext({
     splitState: state, money, minor: v => Math.round(v * 100), major: v => v / 100,
     effectiveTipPct: () => overrides.tipPct || 0, phoneSessionOf: () => 'existing-visit',
+    activeSaleDiscount: () => null, recordSale: () => null, markPaid() {}, selectedId: 'T7',
     lineCat: () => 'meal', toast: s => calls.toast.push(s),
     $: id => { if (!elements.has(id)) elements.set(id, { hidden: false, disabled: false, textContent: '', title: '' }); return elements.get(id); },
     renderSplitFlow: () => calls.render++, lucide: { createIcons() {} },

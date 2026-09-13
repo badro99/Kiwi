@@ -5568,8 +5568,8 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=519" defer></script>
-  <script src="assets/live-link.js?v=35" defer></script>
+  <script src="assets/caisse-pwa.js?v=520" defer></script>
+  <script src="assets/live-link.js?v=36" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js?v=1" defer></script>
@@ -7494,16 +7494,24 @@
       { name: 'Pâtisserie maison',    unit: 45 },
     ] : [];
     function generateOrder(tableId, t) {
-      // A legacy transfer could leave an empty cache beside an intact bill.
-      if (IS_DEMO && orders[tableId] && (orders[tableId].length || !(tableOrders[tableId] || []).length)) return orders[tableId];
-      // Live order built by cashier · convert to {qty,name,total} format
-      if (tableId in tableOrders) {
-        return tableOrders[tableId].map(l => ({ id: l.id, uid: l.uid, qty: l.qty, name: lineLabel(l),
+      /* A cashier-built order is newer than the demo's generated bill cache.
+         The old predicate returned any non-empty `orders[tableId]` first, so a
+         stale Café Atlas demo bill could mask the real sent lines (including
+         their uid/sent flags). The amount looked right in the editor, but the
+         bill had no cancellation controls. Live lines win; the generated cache
+         is only a fallback when there is no cashier-built bill. */
+      const liveLines = tableOrders[tableId];
+      if (Array.isArray(liveLines) && liveLines.length) {
+        return liveLines.map(l => ({ id: l.id, uid: l.uid, qty: l.qty, name: lineLabel(l),
           price: l.price, total: l.price * l.qty, note: l.note || '', sent: !!l.sent,
           orderProPending: !!l.orderProPending, voidPending: !!l.voidPending,
           kind: l.kind, formulaUid: l.formulaUid,
           formulaName: l.formulaName, slotLabel: l.slotLabel }));
       }
+      // A legacy transfer can still leave an intact generated bill beside an
+      // empty live cache; preserve it only in that exact demo-only case.
+      if (IS_DEMO && Array.isArray(orders[tableId]) && orders[tableId].length) return orders[tableId];
+      if (tableId in tableOrders) return [];
       /* Chez un vrai commerçant on s'arrête ici. Ce qui suit FABRIQUE des lignes
          · un couscous royal par couvert · et c'est appelé sans condition par
          l'addition, le partage de note et la remise : une table réelle sans
@@ -10324,6 +10332,13 @@
               </div>
               <div class="or-item-price mono">${fmtMAD(l.price * l.qty)}</div>
               <div class="or-item-actions">
+                ${l.sent && l.kind !== 'formula-part' ? `
+                  <button class="or-item-del-btn or-item-void-btn" data-review-action="void"
+                    title="Annuler un article envoyé en cuisine"
+                    aria-label="Annuler un ${kdsEsc(l.name)} envoyé en cuisine">
+                    <i data-lucide="trash-2"></i>
+                  </button>
+                ` : ''}
                 ${!l.sent && l.kind === 'formula' ? `
                   <button class="or-item-edit-btn" data-review-action="edit-formula" aria-label="Modifier la formule">
                     Modifier
@@ -10401,6 +10416,20 @@
       if (editFormulaBtn) {
         const row = editFormulaBtn.closest('[data-review-uid]');
         if (row) editFormulaLine(row.dataset.reviewUid);
+        return;
+      }
+
+      // Sent lines are destructive, but they remain cancellable from the full
+      // bill where cashiers naturally look for item actions. Route through the
+      // same reason + audited kitchen-void flow as the compact bill control.
+      const voidBtn = e.target.closest('.or-item-void-btn[data-review-action="void"]');
+      if (voidBtn && selectedId) {
+        const row = voidBtn.closest('[data-review-uid]');
+        const line = row && (tableOrders[selectedId] || []).find(item => item.uid === row.dataset.reviewUid);
+        if (line && line.sent) {
+          closeOrderReviewModal();
+          openCaisseVoidModal(selectedId, line);
+        }
         return;
       }
 
@@ -12272,6 +12301,12 @@
          cuisine ne voyait rien, et le plat n'était lancé qu'au moment où
          quelqu'un s'en étonnait. */
       const sent = sendTableToKitchen(tableId);
+      /* `backToSalle(tableId)` rendered the bill before sendTableToKitchen()
+         marked its lines as sent. The destructive kitchen-void control is
+         intentionally shown only for sent lines, so it stayed invisible until
+         staff closed and reopened the table. Refresh the still-selected bill
+         after the flags and canonical kitchen ticket have been created. */
+      if (selectedId === tableId) renderRightPanel(tableId);
       const what = n > 0 ? `${n} article${n > 1 ? 's' : ''} en cuisine` : 'rien de neuf à envoyer';
       toast(`${wasAddition ? 'Ajout table ' + tableId : 'Table ' + tableId + ' ouverte'} · ${what}`
         + (sent && sent.num ? ` · bon #${sent.num}` : ''));
@@ -12751,6 +12786,7 @@
       isVrap: false,       // true when splitting an À emporter cart (no table)
       sourceLabel: null,   // modal label · 'T3' for a mesa, 'À emporter' for vrap
       total: 0,
+      sourceLines: [],     // immutable bill snapshot used by audited zero settlement
       itemTotals: {},      // { itemName: { totalQty, unitPrice } }
       splitMode: 'egal',   // 'egal' | 'article'
       numParts: 2,
@@ -12804,7 +12840,7 @@
       Object.assign(splitState, {
         tableId: isVrap ? null : tableId,
         isVrap, sourceLabel,
-        total, itemTotals,
+        total, sourceLines: lines.map(line => ({ ...line })), itemTotals,
         splitMode: 'egal',
         numParts: Math.max(2, covers),
         tipMode: '0', customTipPct: 0,
@@ -13072,7 +13108,25 @@
     /* ---- launch flow ---- */
     function launchSplitFlow() {
       if (minor(splitState.total) <= 0) {
-        toast('Aucun montant à répartir · vérifiez la remise avant de clôturer la table');
+        /* A fully-discounted table is not a cash/card payment, but it is still
+           a completed commercial event. Record the approved 100% reduction as
+           an auditable complimentary settlement before freeing the table.
+           Generic zero totals remain blocked. */
+        if (!splitState.isVrap && splitState.tableId) {
+          const lines = Array.isArray(splitState.sourceLines) ? splitState.sourceLines : [];
+          const discount = activeSaleDiscount(0, lines, splitState.tableId);
+          if (discount && discount.grossAmountCents === discount.discountAmountCents) {
+            const entry = recordSale(0, 'complimentary',
+              (splitState.sourceLabel || 'Table') + ' · offerte', 0, lines, splitState.tableId);
+            if (entry) {
+              $('#split-modal').classList.remove('is-open');
+              markPaid(splitState.tableId);
+              toast('Addition offerte enregistrée · table clôturée');
+              return;
+            }
+          }
+        }
+        toast('Montant nul non justifié · appliquez une remise de 100 % approuvée');
         return;
       }
       if (splitState.splitMode === 'egal' && minor(splitState.total) < splitState.numParts) {
@@ -13648,7 +13702,7 @@
         /* A refund changes net revenue and the tender balance, but it is not a
            second sale. Counting it in `txns` made one 100 MAD sale followed by
            a 20 MAD refund display 2 transactions and a 40 MAD average basket. */
-        if (e.amount > 0 && e.kind !== 'refund') txns++;
+        if ((e.amount > 0 || e.kind === 'complimentary') && e.kind !== 'refund') txns++;
         revenueC += minor(e.amount);
         if (e.method === 'cash') cashC += minor(e.amount); else cardC += minor(e.amount);
         const tip = e.tip || 0;
@@ -14067,7 +14121,13 @@
     }
     function recordSale(amount, method, label, tip, lines, settlementTable, tenderOrder, split) {
       amount = money(amount);
-      if (amount <= 0) return;
+      const discount = activeSaleDiscount(amount, lines, settlementTable);
+      const complimentary = amount === 0 && discount
+        && discount.grossAmountCents === discount.discountAmountCents
+        && /^[A-Za-z0-9:_-]{1,96}$/.test(discount.actorId || '')
+        && !/^\d{4}$/.test(discount.actorId || '')
+        && Array.isArray(lines) && lines.length > 0;
+      if (amount < 0 || (amount === 0 && !complimentary)) return;
       /* An OrderPro takeaway is one commercial event even if the success modal
          is closed, the PWA reloads, or the remote paid flag arrives late. Tie
          the ledger row to the immutable OrderPro id instead of minting a new
@@ -14086,7 +14146,6 @@
         const existingSale = journal.find(row => row && row.id === orderProSaleId);
         if (existingSale) { lastSaleId = existingSale.id; return existingSale; }
       }
-      const discount = activeSaleDiscount(amount, lines, settlementTable);
       const entry = {
         id: orderProSaleId || ('sale-' + Date.now() + '-' + journal.length),
         time: new Date(),
@@ -14100,6 +14159,10 @@
         tip: money(tip),
         cashier: currentCashier.name,
       };
+      if (complimentary) {
+        entry.kind = 'complimentary';
+        entry.settlementKind = 'complimentary';
+      }
       if (vrapOrder && vrapOrder.opId) entry.orderId = String(vrapOrder.opId);
       if (discount) Object.assign(entry, discount);
       if (settlementTable) {
@@ -15334,7 +15397,7 @@
 
       // Tiroir-caisse · full reconciliation (float + cash sales + cash tips ± movements).
       // Cash pourboires physically land in the till; card tips do not.
-      clotureExpected = major(minor(openingFloat) + tot.cashC + tot.cashTipsC + tot.movesInC - tot.movesOutC);
+      clotureExpected = drawerExpected();
       const dLines = [
         ["Fond d'ouverture",   fmtMAD(openingFloat),    ''],
         ['Espèces encaissées', '+ ' + fmtMAD(tot.cash), ''],
@@ -15435,7 +15498,8 @@
       let n = 0;
       let syncChanged = false;
       journal.forEach((entry) => {
-        if (!entry || entry.origin || entry.voided || entry.kind === 'refund' || !(Number(entry.amount) > 0)) return;
+        if (!entry || entry.origin || entry.voided || entry.kind === 'refund'
+          || (!(Number(entry.amount) > 0) && entry.kind !== 'complimentary')) return;
         if (onlyMissing && entry.serverSaleId && !entry.saleSyncPending) return;
         try {
           const queued = window.KiwiLive.postSale(entry);
@@ -15666,7 +15730,7 @@
 
       const closedAt = Date.now();
       const tot = journalTotals();
-      clotureExpected = major(minor(openingFloat) + tot.cashC + tot.cashTipsC + tot.movesInC - tot.movesOutC);
+      clotureExpected = drawerExpected();
       const expectedCents = minor(clotureExpected);
       const countedCents = minor(counted);
       const gapCents = countedCents - expectedCents;
@@ -16093,9 +16157,16 @@
     });
 
     /* ---- Fond de caisse · opening float + cash sales + cash tips + movements ---- */
+    function handoverGapCents() {
+      return handovers.reduce((sum, handover) => sum + minor(handover && handover.ecart), 0);
+    }
     function drawerExpected() {
       const t = journalTotals();
-      return major(minor(openingFloat) + t.cashC + t.cashTipsC + t.movesInC - t.movesOutC);
+      /* Once a signed handover has counted the physical drawer, its gap is no
+         longer the incoming cashier's responsibility. Carry every signed gap
+         into the final expected amount so the passation slips and Z reconcile
+         exactly, while the individual gaps remain visible in the report. */
+      return major(minor(openingFloat) + t.cashC + t.cashTipsC + t.movesInC - t.movesOutC + handoverGapCents());
     }
 
     const CM_REASONS = {
@@ -17887,12 +17958,27 @@
     }
     function closeHandover() { handoverModal.classList.remove('is-open'); }
 
-    function confirmHandover() {
+    function handoverIdentity(value) {
+      return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    }
+
+    function confirmHandover(who) {
       const inc = handoverState.incoming;
       if (!inc) { toast('Choisis le caissier entrant'); return; }
+      if (storeIsReal()) {
+        if (!who || !who.actorProof) {
+          toast('Le caissier entrant doit confirmer avec son code personnel');
+          return false;
+        }
+        if (!handoverIdentity(who.name) || handoverIdentity(who.name) !== handoverIdentity(inc.name)) {
+          toast(`Le code saisi doit être celui de ${inc.name}`);
+          return false;
+        }
+      }
       if ($('#ho-verify').value === '' ||
           minor(handoverState.verifyCount) !== minor(handoverState.counted)) {
-        toast('Les deux comptes doivent concorder'); return;
+        toast('Les deux comptes doivent concorder'); return false;
       }
       const now = new Date();
       const openedAt = posteOpenedAt || shiftOpenedAt || now;
@@ -17909,13 +17995,15 @@
         expected: freshExpected,
         counted: handoverState.counted,
         ecart: ecart,
+        confirmedById: (who && who.id) || inc.id,
+        confirmedByName: (who && who.name) || inc.name,
       };
       handovers.push(rec);
       emitCashSession({
         sessionId: cashSessionId(), eventType: 'handover',
         expectedCents: minor(rec.expected), countedCents: minor(rec.counted),
         gapCents: minor(rec.ecart), actorId: cashActorId(currentCashier.id),
-        counterpartyActorId: cashActorRef(inc.id), openedAt: shiftOpenedAt.getTime(), occurredAt: now.getTime()
+        counterpartyActorId: cashActorRef((who && who.id) || inc.id), openedAt: shiftOpenedAt.getTime(), occurredAt: now.getTime()
       });
       // The incoming cashier takes the counted drawer over as their float.
       currentCashier    = { id: inc.id, name: inc.name, role: inc.role };
@@ -17927,6 +18015,7 @@
       persistShift();
       if (window.lucide) lucide.createIcons();
       toast('Passation enregistrée · ' + inc.name + ' prend la caisse');
+      return true;
     }
 
     /* Operational accounting API exposed for verification and cross-module inspection */
@@ -17934,6 +18023,7 @@
       rollupLedger,
       journalTotals,
       posteRollup,
+      handoverGapCents,
       drawerExpected,
       renderHandoverCount,
       confirmHandover,
@@ -17993,7 +18083,12 @@
         showHandoverStep('count');
         return;
       }
-      if (e.target.closest('#ho-verify-confirm')) { confirmHandover(); return; }
+      if (e.target.closest('#ho-verify-confirm')) {
+        const inc = handoverState.incoming;
+        if (!inc) { toast('Choisis le caissier entrant'); return; }
+        requireTillOperator(`Confirmer la passation · ${inc.name}`, confirmHandover);
+        return;
+      }
 
       const pick = e.target.closest('[data-ho-cashier]');
       if (pick) {
@@ -20608,6 +20703,8 @@
        seule fois, sans les rendre modifiables ni les renvoyer en cuisine. */
     function attachOrderProTable(o) {
       if (!o || o.mode !== 'table' || !o.table) return false;
+      const orderId = String(o.id || o.opId || '').trim();
+      if (!orderId) return false;
       if (o.paid && o.status !== 'rejected') return false;
       const id = caisseTableId(o.table);
       const t = id && tables[id];
@@ -20620,7 +20717,7 @@
          This is deliberately narrower than clearing the table. */
       if (o.status === 'rejected') {
         const before = (tableOrders[id] || []).length;
-        tableOrders[id] = (tableOrders[id] || []).filter(l => !String(l.orderProLine || '').startsWith(String(o.id) + ':'));
+        tableOrders[id] = (tableOrders[id] || []).filter(l => !String(l.orderProLine || '').startsWith(orderId + ':'));
         const changed = tableOrders[id].length !== before;
         if (changed) {
           refreshTableNode(id);
@@ -20629,6 +20726,12 @@
         }
         return changed;
       }
+      const incomingLines = Array.isArray(o.lines)
+        ? o.lines.filter(line => line && Math.max(0, Number(line.qty) || 0) > 0) : [];
+      /* A queue shell with no billable line is not a table visit. Importing it
+         used to occupy the table, render “Annuler commande undefined”, and
+         leave a zero-MAD bill that could never be settled or cancelled. */
+      if (!incomingLines.length) return false;
       const activeSeat = phoneSeats.get(tableKey(id));
       /* ── UNE TABLE RÉGLÉE NE SE ROUVRE PAS TOUTE SEULE ──────────────────
        * This bridge handles cashier and staff tickets as well as customer
@@ -20684,8 +20787,8 @@
           changed = true;
         }
       }
-      (o.lines || []).forEach((l, index) => {
-        const marker = String(o.id) + ':' + String(l.uid || l.lineId || index);
+      incomingLines.forEach((l, index) => {
+        const marker = orderId + ':' + String(l.uid || l.lineId || index);
         const existing = lines.find(x => x.orderProLine === marker);
         if (existing) {
           const pending = o.status === 'pending';
@@ -20696,7 +20799,7 @@
             existing.qty = nextQty;
             existing.voidPending = !!l.voidAlert;
             existing.canonicalUid = l.uid || l.id || '';
-            existing.canonicalOrderId = o.id;
+            existing.canonicalOrderId = orderId;
             existing.id = l.id || existing.id;
             existing.name = l.name || existing.name;
             existing.price = +l.unitPrice || 0;
@@ -20707,7 +20810,7 @@
         const menuHit = menuLineFind(x => String(x.id) === String(l.id))
           || menuLineFind(x => String(x.name || '').toLowerCase() === String(l.name || '').toLowerCase());
         lines.push({
-          uid: newLineUid(), canonicalUid: l.uid || l.id || '', canonicalOrderId: o.id,
+          uid: newLineUid(), canonicalUid: l.uid || l.id || '', canonicalOrderId: orderId,
           id: (menuHit && menuHit.id) || l.id || ('op-' + marker),
           name: l.name || (menuHit && menuHit.name) || '', price: +l.unitPrice || 0,
           qty: Math.max(1, +l.qty || 1), note: l.note || '', opts: [], optSig: '',
@@ -20723,8 +20826,8 @@
         });
         changed = true;
       });
-      const activeMarkers = new Set((o.lines || []).map((l, index) => String(o.id) + ':' + String(l.uid || l.lineId || index)));
-      const kept = lines.filter(line => !String(line.orderProLine || '').startsWith(String(o.id) + ':')
+      const activeMarkers = new Set(incomingLines.map((l, index) => orderId + ':' + String(l.uid || l.lineId || index)));
+      const kept = lines.filter(line => !String(line.orderProLine || '').startsWith(orderId + ':')
         || activeMarkers.has(String(line.orderProLine)));
       if (kept.length !== lines.length) { tableOrders[id] = kept; changed = true; }
       if (changed) {
@@ -21719,7 +21822,7 @@
            Do not infer a visit, split or discount from today's mutable order;
            legacy receipts keep absent metadata absent. The API validates it. */
         if (e.serverSaleId)    entry.serverSaleId = e.serverSaleId;
-        ['orderId', 'table', 'session', 'split', 'amountCents', 'grossAmountCents',
+        ['orderId', 'table', 'session', 'split', 'settlementKind', 'amountCents', 'grossAmountCents',
           'discountAmountCents', 'discountReason', 'actorId', 'saleSyncPending', 'saleSyncError'].forEach((key) => {
           if (Object.prototype.hasOwnProperty.call(e, key)) entry[key] = e[key];
         });
@@ -21782,6 +21885,7 @@
         fromName: h.fromName, toName: h.toName,
         posteOpenedAt: new Date(h.posteOpenedAt),
         expected: h.expected, counted: h.counted, ecart: h.ecart,
+        confirmedById: h.confirmedById || '', confirmedByName: h.confirmedByName || '',
       }));
       if (d.tables) Object.keys(d.tables).forEach(id => {
         if (tables[id]) Object.assign(tables[id], d.tables[id]);

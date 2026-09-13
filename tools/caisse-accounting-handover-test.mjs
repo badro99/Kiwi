@@ -76,15 +76,15 @@ const clotureBlock = extractBody(
 // Extract drawerExpected
 const drawerBlock = extractBody(
   caisseHtml,
-  'function drawerExpected() {',
-  'return major(minor(openingFloat) + t.cashC + t.cashTipsC + t.movesInC - t.movesOutC);\n    }'
+  'function handoverGapCents() {',
+  'return major(minor(openingFloat) + t.cashC + t.cashTipsC + t.movesInC - t.movesOutC + handoverGapCents());\n    }'
 );
 
 // Extract handover block through window.KiwiCaisseAccounting definition
 const handoverBlock = extractBody(
   caisseHtml,
   'function fmtEcart(e) {',
-  'window.KiwiCaisseAccounting = Object.freeze({\n      rollupLedger,\n      journalTotals,\n      posteRollup,\n      drawerExpected,\n      renderHandoverCount,\n      confirmHandover,\n      renderCloture,\n      reconcileVoids,\n      refreshOpenReconciliationModals,\n    });'
+  'window.KiwiCaisseAccounting = Object.freeze({\n      rollupLedger,\n      journalTotals,\n      posteRollup,\n      handoverGapCents,\n      drawerExpected,\n      renderHandoverCount,\n      confirmHandover,\n      renderCloture,\n      reconcileVoids,\n      refreshOpenReconciliationModals,\n    });'
 );
 
 let controls = 0;
@@ -506,13 +506,18 @@ console.log('--- Test 6: Displayed Totals and Persisted Handover Record ---');
   env.updateHandoverVerdict();
 
   // Step 3: Confirm handover
-  env.confirmHandover();
+  ok(env.confirmHandover() === false, 'A handover without incoming cashier proof is blocked');
+  ok(env.confirmHandover({ id: 'samir', name: 'Samir K.', actorProof: 'proof-samir' }) === false,
+    'A different cashier cannot confirm the selected incoming cashier handover');
+  env.confirmHandover({ id: 'nora', name: 'Nora B.', actorProof: 'proof-nora' });
   ok(env.handovers.length === 1, 'Handover is recorded in handovers array');
   const hRec = env.handovers[0];
   ok(hRec.expected === 1060.00, 'Persisted handover expected amount is 1060.00 MAD');
   ok(hRec.counted === 1060.00, 'Persisted handover counted amount is 1060.00 MAD');
   ok(hRec.ecart === 0, 'Persisted handover ecart is 0');
   ok(hRec.fromName === 'Othmane N.' && hRec.toName === 'Nora B.', 'Handover records outgoing and incoming cashier names');
+  ok(hRec.confirmedById === 'nora' && hRec.confirmedByName === 'Nora B.',
+    'Handover stores the verified incoming cashier identity');
 
   // Check emitted cash session event
   ok(env.emittedSessions.length === 1, 'Cash session handover event was emitted');
@@ -521,6 +526,7 @@ console.log('--- Test 6: Displayed Totals and Persisted Handover Record ---');
   ok(evt.expectedCents === 106000, 'Emitted expected cents is 106000');
   ok(evt.countedCents === 106000, 'Emitted counted cents is 106000');
   ok(evt.gapCents === 0, 'Emitted gap cents is 0');
+  ok(evt.counterpartyActorId === 'nora', 'Emitted handover identifies the verified incoming cashier');
 
   // Incoming cashier took over
   ok(env.currentCashier.id === 'nora', 'Nora is now current cashier');
@@ -605,10 +611,26 @@ console.log('--- Test 8: confirmHandover Revalidates Stale Expected Drawer ---')
   sales.push({ id: 's2', time: new Date('2026-09-07T10:45:00Z'), amount: 50.00, method: 'cash', ref: 'KW-61' });
   // handoverState.expected is still 600.00 here
 
-  env.confirmHandover();
+  env.confirmHandover({ id: 'nora', name: 'Nora B.', actorProof: 'proof-nora' });
   const rec = env.handovers[0];
   ok(rec.expected === 650.00, 'confirmHandover revalidated fresh expected drawer (650.00, not stale 600.00)');
   ok(rec.ecart === -50.00, 'Persisted ecart accurately reflects recount against fresh expected (-50.00 MAD)');
+}
+
+console.log('--- Test 9: Signed Handover Gap Reconciles Final Z ---');
+{
+  const env = createCaisseEnvironment({
+    openingFloat: 1000,
+    posteOpeningFloat: 1100,
+    journal: [
+      { id: 's1', time: new Date('2026-09-07T10:00:00Z'), amount: 150, method: 'cash' },
+      { id: 's2', time: new Date('2026-09-07T12:00:00Z'), amount: 75, method: 'cash' },
+    ],
+    handovers: [{ id: 'ho-gap', time: new Date('2026-09-07T11:00:00Z'), ecart: -50 }],
+  });
+  ok(env.handoverGapCents() === -5000, 'Signed handover shortages remain explicit in centimes');
+  ok(env.drawerExpected() === 1175,
+    'Final drawer expectation carries the signed shortage instead of blaming the incoming cashier');
 }
 
 console.log(`\ncaisse-accounting-handover-test: ${controls} controls passed`);

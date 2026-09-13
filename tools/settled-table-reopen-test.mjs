@@ -67,6 +67,20 @@ const SETTLED_AT = 1757635200000;   // l'encaissement
     && tables['13'].status === 'ka-yaklo');
 }
 
+/* Queue shells are not orders and must never occupy a table or acquire the
+ * literal identity "undefined". */
+{
+  const { ctx, tableOrders, tables } = bench({});
+  const shell = { mode: 'table', table: '13', status: 'pending', lines: [] };
+  ok('an unidentified empty queue shell cannot create a zero-MAD ghost table',
+    ctx.attachOrderProTable(shell) === false
+      && tables['13'].status === 'khawya' && !(tableOrders['13'] || []).length);
+  const identifiedShell = { id: 'ord-empty', mode: 'table', table: '13', status: 'pending', lines: [] };
+  ok('an identified order with no billable lines also remains invisible',
+    ctx.attachOrderProTable(identifiedShell) === false
+      && tables['13'].status === 'khawya' && !(tableOrders['13'] || []).length);
+}
+
 /* 2 · Le bug : la même commande, après l'encaissement de la table. */
 {
   const { ctx, tableOrders, tables } = bench({ closedAt: SETTLED_AT });

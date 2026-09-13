@@ -132,8 +132,8 @@
     "sha": "110af8f00279e7e5"
   },
   "assets/caisse-pwa.js": {
-    "v": "519",
-    "sha": "1dd8c207587714b4"
+    "v": "520",
+    "sha": "d21619ef8a463abe"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -208,8 +208,8 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "512",
-    "sha": "412d4c70da883471"
+    "v": "513",
+    "sha": "ff292b584cbfebf8"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -264,8 +264,8 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/employee-live.js": {
-    "v": "511",
-    "sha": "496f9b81b98f5655"
+    "v": "512",
+    "sha": "99924c58711c8e9d"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -432,8 +432,8 @@
     "sha": "c9d6036ca657c76e"
   },
   "assets/live-link.js": {
-    "v": "35",
-    "sha": "6371911ba1c4c897"
+    "v": "36",
+    "sha": "02abbe033ec6a753"
   },
   "assets/live-socket.js": {
     "v": "4",

@@ -59,9 +59,13 @@ export async function onRequestPost({ request, env }) {
 
   // Legacy whole dirham column value (rounded for backward-compatibility)
   const amount = Math.round(amountCents / 100);
+  const settlementKind = String((b && b.settlementKind) || '').slice(0, 24);
+  const complimentary = settlementKind === 'complimentary';
 
-  // Validate floor (> 0) and ceiling (<= 20,000,000 cents) on centime level
-  if (amountCents <= 0 || amountCents > MAX_AMOUNT_CENTS) {
+  // Zero is legal only for an explicit, fully-discounted complimentary close.
+  if (amountCents < 0 || amountCents > MAX_AMOUNT_CENTS
+    || (amountCents === 0 && !complimentary)
+    || (settlementKind && !complimentary)) {
     return json({ error: 'bad-amount' }, 400);
   }
 
@@ -78,6 +82,10 @@ export async function onRequestPost({ request, env }) {
       || Math.abs((grossAmountCents - discountAmountCents) - amountCents) > 1) return json({ error: 'bad-discount-amount' }, 400);
     if (!DISCOUNT_REASONS.has(discountReason)) return json({ error: 'bad-discount-reason' }, 400);
     if (!/^[A-Za-z0-9:_-]{1,96}$/.test(discountActorId) || /^\d{4}$/.test(discountActorId)) return json({ error: 'bad-discount-actor' }, 400);
+  }
+  if (complimentary && (!hasDiscount || amountCents !== 0
+    || grossAmountCents !== discountAmountCents)) {
+    return json({ error: 'bad-complimentary-settlement' }, 400);
   }
 
   // A sale MUST name its store. The old fallback to a literal 'default' bucket
@@ -323,6 +331,9 @@ export async function onRequestPost({ request, env }) {
       }
     }
   } catch (_) { lines = null; }
+  if (complimentary && (!lines || method !== 'complimentary')) {
+    return json({ error: 'bad-complimentary-settlement' }, 400);
+  }
 
   let linesMode = 'stored';
   let stored = false;

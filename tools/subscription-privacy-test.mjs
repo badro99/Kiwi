@@ -40,6 +40,8 @@ ok(await tenantFor(ownerRequest, pendingEnv, 'amira-cafe') === 'amira-cafe',
   'a pending merchant retains read access to the full dashboard');
 ok(await tenantFor(ownerRequest, pendingEnv, 'amira-cafe', { strict: true }) === '',
   'the same pending merchant cannot cross a shared write boundary');
+ok(await tenantFor(ownerRequest, pendingEnv, 'amira-cafe', { strict: true, allowPending: true }) === 'amira-cafe',
+  'a pending merchant can cross only an explicitly opted-in setup write boundary');
 
 const config = fs.readFileSync(new URL('../functions/api/config.js', import.meta.url), 'utf8');
 const privateApi = fs.readFileSync(new URL('../functions/api/_private.js', import.meta.url), 'utf8');
