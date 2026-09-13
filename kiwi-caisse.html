@@ -3452,6 +3452,7 @@
     .jr-entry-ic svg { width: 16px; height: 16px; }
     .jr-entry-ic--card { background: rgba(63,182,122,0.12); color: var(--forest); }
     .jr-entry-ic--cash { background: rgba(212,159,46,0.16); color: #8a6411; }
+    .jr-entry-ic--complimentary { background: rgba(101,122,187,0.14); color: #40578e; }
     .jr-entry-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
     .jr-entry-label {
       font-size: 13.5px; font-weight: 600; color: var(--ink);
@@ -6916,6 +6917,7 @@
           <button class="jr-chip is-active" data-jr-filter="all">Tout</button>
           <button class="jr-chip" data-jr-filter="card">Carte</button>
           <button class="jr-chip" data-jr-filter="cash">Espèces</button>
+          <button class="jr-chip" data-jr-filter="complimentary">Offerte</button>
         </div>
       </div>
       <div class="drawer-body" id="journal-body"></div>
@@ -13650,7 +13652,7 @@
     /* ---- Journal des ventes · the shift's transaction ledger ---- */
     const journal = [];         // [{ id, time, label, amount, method, ref }]
     let journalSearch = '';
-    let journalFilter = 'all';  // all | card | cash
+    let journalFilter = 'all';  // all | card | cash | complimentary
     let lastSaleId    = null;   // flashes the freshest entry while the drawer is open
 
     /* Le numéro de ticket. C'était `'KW-' + random(28000..29999)` : deux ventes
@@ -15158,7 +15160,9 @@
       const cardPct = t.revenue > 0 ? Math.round(t.card / t.revenue * 100) : 0;
       const set = (id, txt) => { const el = $(id); if (el) el.textContent = txt; };
       set('#stat-txns',          String(t.txns));
-      set('#stat-txns-delta',    `Carte ${cardPct}% · Cash ${100 - cardPct}%`);
+      set('#stat-txns-delta',    t.revenue > 0
+        ? `Carte ${cardPct}% · Cash ${100 - cardPct}%`
+        : 'Aucun encaissement');
       set('#stat-avg',           fmtMAD(t.txns > 0 ? t.revenue / t.txns : 0));
       set('#stat-tables',        String(shift.tablesPaid));
       const scope = $('#stat-service-scope');
@@ -15935,7 +15939,10 @@
          pas : les laisser dans la liste, c'est laisser un caissier rendre de
          l'argent sur une vente qui n'existe plus. */
       let list = journal.filter(e => !e.voided).reverse();  // newest first
-      if (journalFilter !== 'all') list = list.filter(e => e.method === journalFilter);
+      if (journalFilter !== 'all') list = list.filter(e =>
+        journalFilter === 'complimentary'
+          ? (e.kind === 'complimentary' || e.settlementKind === 'complimentary' || e.method === 'complimentary')
+          : e.method === journalFilter);
       if (q) list = list.filter(e =>
         e.label.toLowerCase().includes(q) ||
         e.ref.toLowerCase().includes(q) ||
@@ -15952,9 +15959,10 @@
         const hh = String(e.time.getHours()).padStart(2, '0');
         const mm = String(e.time.getMinutes()).padStart(2, '0');
         const isRefund = e.kind === 'refund';
-        const icCls  = isRefund ? 'refund' : e.method;
-        const icon   = isRefund ? 'corner-up-left' : (e.method === 'cash' ? 'banknote' : 'credit-card');
-        const mLabel = e.method === 'cash' ? 'Espèces' : 'Carte';
+        const isComplimentary = e.kind === 'complimentary' || e.settlementKind === 'complimentary' || e.method === 'complimentary';
+        const icCls  = isRefund ? 'refund' : (isComplimentary ? 'complimentary' : e.method);
+        const icon   = isRefund ? 'corner-up-left' : (isComplimentary ? 'gift' : (e.method === 'cash' ? 'banknote' : 'credit-card'));
+        const mLabel = isComplimentary ? 'Offerte' : ({ cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR' }[e.method] || 'Autre');
         const fresh  = e.id === lastSaleId ? ' jr-entry--fresh' : '';
         const amtTxt = isRefund
           ? '− ' + fmtMAD(Math.abs(e.amount))
