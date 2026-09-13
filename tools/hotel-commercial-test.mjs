@@ -162,6 +162,46 @@ test('private preinvoice saves exact split snapshots, safely retries and blocks 
     assert.equal((await f.call(draftPost,command)).status,409);
   }finally{f.sql.close();}
 });
+test('group dossier preinvoice loads both room stays and their separate guest payers',async()=>{
+  const f=await fixture();try{
+    const dossierId='grp_test_dossier_001';
+    f.sql.prepare("UPDATE store_docs SET data=json_set(data,'$.rooms',json_array(json_extract(data,'$.rooms[0]'),json_object('id','room:102','n',102,'typeId','standard','status','libre'))) WHERE merchant=? AND feature='rooms'").run(f.merchant);
+    const first=await f.stay({clientRef:'group-room-101',dossierId,groupName:'Synthetic group',partySize:1,guests:[{name:'Guest One'}],customer:{name:'Guest One'}});
+    const second=await f.stay({clientRef:'group-room-102',resourceId:'room:102',dossierId,groupName:'Synthetic group',partySize:1,guests:[{name:'Guest Two'}],customer:{name:'Guest Two'}});
+    assert.equal(first.status,200,JSON.stringify(first.body));
+    assert.equal(second.status,200,JSON.stringify(second.body));
+    const result=await f.call(draftGet,null,true,'billing-draft?dossierId='+dossierId);
+    assert.equal(result.status,200,JSON.stringify(result.body));
+    assert.equal(result.body.source.rooms.length,2);
+    assert.equal(result.body.preview.lines.length,4);
+  }finally{f.sql.close();}
+});
+test('document-backed group preinvoice reads both rooms and rejects a changed reservation snapshot',async()=>{
+  const f=await fixture();try{
+    const dossierId='grp_document_001';
+    f.sql.prepare("UPDATE store_docs SET data=json_set(data,'$.rooms',json_array(json_extract(data,'$.rooms[0]'),json_object('id','room:102','n',102,'typeId','standard','status','libre'))) WHERE merchant=? AND feature='rooms'").run(f.merchant);
+    f.sql.exec('DROP TABLE hotel_reservations');
+    resetTableStateCacheForTests();
+    assert.equal((await f.stay({clientRef:'document-guest-101',dossierId,partySize:1,guests:[{name:'Guest One'}],customer:{name:'Guest One'}})).status,200);
+    assert.equal((await f.stay({clientRef:'document-guest-102',resourceId:'room:102',dossierId,partySize:1,guests:[{name:'Guest Two'}],customer:{name:'Guest Two'}})).status,200);
+    const url='billing-draft?dossierId='+dossierId;
+    const read=await f.call(draftGet,null,true,url);
+    assert.equal(read.status,200,JSON.stringify(read.body));
+    assert.equal(read.body.source.rooms.length,2);
+    assert.equal(read.body.preview.lines.length,4);
+    const input={extras:[],allocations:[],note:''};
+    f.draftRace(sql=>sql.prepare("UPDATE store_docs SET data=json_set(data,'$.bookings[0].customer.name','New name'),rev=rev+1 WHERE merchant=? AND feature='reservations'").run(f.merchant));
+    const stale=await f.call(draftPost,{action:'save-draft',dossierId,commandId:'draft-document-race',rev:read.body.rev,sourceDigest:read.body.sourceDigest,directoryRev:read.body.directoryRev,input});
+    assert.equal(stale.status,409);
+    assert.equal(stale.body.error,'draft-stale');
+    assert.equal(f.sql.prepare("SELECT data FROM store_docs WHERE feature=?").get('hotel-billing-draft:'+dossierId),undefined);
+    const fresh=await f.call(draftGet,null,true,url);
+    assert.equal(fresh.status,200);
+    const saved=await f.call(draftPost,{action:'save-draft',dossierId,commandId:'draft-document-fresh',rev:fresh.body.rev,sourceDigest:fresh.body.sourceDigest,directoryRev:fresh.body.directoryRev,input});
+    assert.equal(saved.status,200,JSON.stringify(saved.body));
+    assert.equal(saved.body.saved.draft.lines.length,4);
+  }finally{f.sql.close();resetTableStateCacheForTests();}
+});
 test('dossier reads list rooms despite broken billing material, writes stay closed',async()=>{
   const f=await fixture();try{
     await f.seed();

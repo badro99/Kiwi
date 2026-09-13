@@ -4847,6 +4847,7 @@
     const renderTravelers = () => {
       travelersContainer.innerHTML = travelers.map((t, idx) => travelerRowHtml(t, idx)).join('');
       travelersCountLabel.textContent = `${travelers.length} voyageur${travelers.length > 1 ? 's' : ''}`;
+      form.querySelector('[data-hx-rev-guests]').textContent = `${travelers.length} voyageur(s)`;
       cuWireNationalitySelectors(travelersContainer);
       validateCapacity();
     };

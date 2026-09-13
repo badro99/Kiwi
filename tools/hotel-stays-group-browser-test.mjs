@@ -507,6 +507,7 @@ async function twoRoomSetup(page, d, commercial) {
   await fillBasics(page, d);
   await selectRooms(page, 101, 102);
   await page.click('[data-action="hx-add-group-traveler"]');
+  assert.match(await page.$eval('[data-hx-rev-guests]', el=>el.textContent),/^2 voyageur/,'review count follows the added traveler');
   await fillTraveler(page, 0, { name: 'Karim Benchekroun', roomN: 101 });
   await fillTraveler(page, 1, { name: 'Salma El Fassi', roomN: 102 });
   if (commercial) await simulateAndAccept(page);
