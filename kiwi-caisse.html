@@ -11957,6 +11957,16 @@
     async function confirmCaisseVoid() {
       if (!caisseVoidTarget || $('#cvoi-confirm')?.disabled) return;
       const target = caisseVoidTarget;
+      // The paired venue is the authoritative merchant identity. This page
+      // has no `ls()` helper: resolving the old fallback after disabling the
+      // button threw synchronously, leaving the modal stuck on "en cours" and
+      // never sending the cancellation to the kitchen API.
+      const slug = currentMerchantSlug();
+      if (storeIsReal() && !slug) {
+        toast('Annulation impossible · caisse non appairée, article conservé');
+        $('#cvoi-status').textContent = 'Caisse non appairée. Article conservé.';
+        return;
+      }
       if (storeIsReal() && !target.who?.actorProof) {
         requireTillOperator(`Annuler un ${target.line.name}`, (who) => {
           if (caisseVoidTarget !== target) return;
@@ -11972,13 +11982,6 @@
       if (confirmBtn) confirmBtn.disabled = true;
       $('#cvoi-status').textContent = 'Annulation en cours…';
 
-      const slug = (window.KiwiCaissePairing && KiwiCaissePairing.merchant && KiwiCaissePairing.merchant()) || ls('kiwiLiveMerchant') || '';
-      if (storeIsReal() && !slug) {
-        toast('Annulation impossible · caisse non appairée, article conservé');
-        $('#cvoi-status').textContent = 'Caisse non appairée. Article conservé.';
-        if (confirmBtn) confirmBtn.disabled = false;
-        return;
-      }
       if (slug) {
         try {
           // Keep the operation identity across a lost response / retry.

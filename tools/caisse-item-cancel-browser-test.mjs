@@ -57,7 +57,7 @@ const server = http.createServer(async (req, res) => {
       const $ = s => document.querySelector(s);
       const $$ = s => [...document.querySelectorAll(s)];
       let cart = [], tableOrders = {}, mode = 'salle', cashierName = 'Test Cashier', picked, pickedTable;
-      const ls = () => ${JSON.stringify(MERCHANT)};
+      const currentMerchantSlug = () => ${JSON.stringify(MERCHANT)};
       const storeIsReal = () => true;
       const canonicalOrdersForTable = () => [];
       window.KiwiEnv = { isReal: () => true };
