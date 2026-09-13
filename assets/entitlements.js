@@ -7,7 +7,7 @@
   /* Query flags select a mode; they never authorize it. Identity is settled by
      /api/me and only its signed operator answer may lift the subscription gate. */
   var operator=false,privacy=false,privacyInstalled=false;
-  var pending=false, modal=null, pill=null;
+  var pending=false, modal=null, pill=null, pillTimer=null;
   var PAYWALL_COOLDOWN_MS=10*60*1000;
   var PAYWALL_COOLDOWN_KEY='kiwi:entitlement:next-prompt-at:v1';
   /* ── ON NE DEMANDE PAS L'ADDITION PENDANT QU'IL MONTE SA CARTE ────────────
@@ -57,17 +57,26 @@
    * ferme est un panneau qu'on essaie de fermer par tous les moyens : la croix,
    * la touche Échap, le fond. */
   var lastFocus=null;
-  function snoozePaywall(){
-    try{window.localStorage.setItem(PAYWALL_COOLDOWN_KEY,String(Date.now()+PAYWALL_COOLDOWN_MS));}catch(_){}
-  }
-  function paywallCoolingDown(){
+  function clearPillTimer(){if(pillTimer){clearTimeout(pillTimer);pillTimer=null;}}
+  function paywallCooldownRemaining(){
     try{
-      var until=Number(window.localStorage.getItem(PAYWALL_COOLDOWN_KEY)||0);
-      if(until>Date.now())return true;
+      var until=Number(window.localStorage.getItem(PAYWALL_COOLDOWN_KEY)||0),remaining=until-Date.now();
+      if(remaining>0)return remaining;
       if(until)window.localStorage.removeItem(PAYWALL_COOLDOWN_KEY);
     }catch(_){}
-    return false;
+    return 0;
   }
+  function schedulePillAfterCooldown(){
+    clearPillTimer();
+    var remaining=paywallCooldownRemaining();
+    if(remaining>0)pillTimer=setTimeout(function(){pillTimer=null;refreshPill();},remaining+50);
+  }
+  function snoozePaywall(){
+    try{window.localStorage.setItem(PAYWALL_COOLDOWN_KEY,String(Date.now()+PAYWALL_COOLDOWN_MS));}catch(_){}
+    if(pill){pill.remove();pill=null;}
+    schedulePillAfterCooldown();
+  }
+  function paywallCoolingDown(){return paywallCooldownRemaining()>0;}
   function closePaywall(snooze){
     if(!modal)return;
     if(snooze!==false)snoozePaywall();
@@ -79,13 +88,13 @@
     modal.classList.remove('is-off');modal.hidden=false;
     document.documentElement.classList.add('kiwi-entitlement-open');
   }
-  function showPaywall(force){
+  function showPaywall(){
     if(operator||!pending||!onboarded)return true;
     /* Un refus reste un refus, mais le grand panneau n'a aucune raison de
        recouvrir l'écran à chaque geste. Une sortie le met en veille dix
        minutes, même après une navigation ou un rechargement. La petite
        pastille reste disponible pour le rouvrir volontairement. */
-    if(!force&&paywallCoolingDown())return false;
+    if(paywallCoolingDown())return false;
     try{lastFocus=document.activeElement;}catch(_){lastFocus=null;}
     if(modal){openPaywall();focusFirst();return false;}
     modal=node('div','kiwi-entitlement-layer');modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label','Ouvrir votre établissement avec Kiwi');
@@ -130,7 +139,7 @@
      reçoit le focus (tabindex=-1), la lecture d'écran annonce le dialogue, et
      la première tabulation tombe sur la croix. */
   function focusFirst(){try{modal.querySelector('.kiwi-entitlement-card').focus({preventScroll:true});}catch(_){}}
-  function showPill(){if(pill||operator||!pending||!onboarded)return;pill=node('button','kiwi-entitlement-pill');pill.type='button';pill.append(node('i'),document.createTextNode('Prêt à ouvrir · en parler à Kiwi'));pill.onclick=function(){showPaywall(true);};document.body.append(pill);}
+  function showPill(){if(pill||operator||!pending||!onboarded)return;if(paywallCoolingDown()){schedulePillAfterCooldown();return;}pill=node('button','kiwi-entitlement-pill');pill.type='button';pill.append(node('i'),document.createTextNode('Prêt à ouvrir · en parler à Kiwi'));pill.onclick=showPaywall;document.body.append(pill);}
   function blockedWord(el){
     if(!el)return false;if(el.closest('nav,.sidebar,[role="tablist"],.kiwi-entitlement-layer,.kiwi-entitlement-pill'))return false;
     if(el.hasAttribute&&el.hasAttribute('download'))return true;
@@ -204,7 +213,7 @@
      choisit pas. Un seul endroit décide donc, rappelé par les deux. */
   function refreshPill(){
     if(pending&&onboarded&&identitySettled)showPill();
-    else{if(pill){pill.remove();pill=null;}if(modal&&!onboarded)closePaywall(false);}
+    else{clearPillTimer();if(pill){pill.remove();pill=null;}if(modal&&!onboarded)closePaywall(false);}
   }
   document.addEventListener('kiwi-config',function(e){acceptConfig(e.detail||window.KiwiConfig);});
   function confirmIdentity(state){

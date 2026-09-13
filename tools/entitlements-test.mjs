@@ -53,14 +53,16 @@ ok(/later\.onclick=function\(\)\{closePaywall\(\);\}/.test(js), '« Continuer à
 ok(/PAYWALL_COOLDOWN_MS=10\*60\*1000/.test(js), 'le grand panneau est limité à une apparition toutes les dix minutes');
 ok(/localStorage\.setItem\(PAYWALL_COOLDOWN_KEY,String\(Date\.now\(\)\+PAYWALL_COOLDOWN_MS\)\)/.test(js),
   'la fermeture mémorise le délai au-delà de la page courante');
-ok(/if\(!force&&paywallCoolingDown\(\)\)return false;/.test(js),
+ok(/if\(paywallCoolingDown\(\)\)return false;/.test(js),
   'les clics protégés restent refusés sans rouvrir le panneau pendant le délai');
-ok(/pill\.onclick=function\(\)\{showPaywall\(true\);\}/.test(js),
-  'la petite pastille peut rouvrir volontairement le panneau pendant le délai');
+ok(/if\(paywallCoolingDown\(\)\)\{schedulePillAfterCooldown\(\);return;\}/.test(js),
+  'la petite pastille disparaît elle aussi pendant le délai');
+ok(/pillTimer=setTimeout\(function\(\)\{pillTimer=null;refreshPill\(\);\},remaining\+50\)/.test(js),
+  'la petite pastille revient automatiquement une fois les dix minutes écoulées');
 ok(/cta\.onclick=function\(\)\{closePaywall\(\);\}/.test(js),
   'partir vers WhatsApp déclenche aussi le délai au retour');
 
-const cooldownSource = js.match(/var PAYWALL_COOLDOWN_MS=[\s\S]*?function paywallCoolingDown\(\)\{[\s\S]*?\n  \}/)?.[0];
+const cooldownSource = js.match(/var PAYWALL_COOLDOWN_MS=[\s\S]*?function paywallCoolingDown\(\)\{[^}]+\}/)?.[0];
 if (!cooldownSource) ok(false, 'les fonctions de délai sont exécutables depuis la source livrée');
 else {
   let now = 1_000_000;
@@ -70,8 +72,8 @@ else {
     getItem(key) { return values.get(key) || null; },
     removeItem(key) { values.delete(key); },
   };
-  const timing = new Function('window', 'Date', `${cooldownSource}; return { snoozePaywall, paywallCoolingDown };`)(
-    { localStorage: storage }, { now: () => now },
+  const timing = new Function('window', 'Date', 'setTimeout', 'clearTimeout', `var pill=null,pillTimer=null;function refreshPill(){}${cooldownSource}; return { snoozePaywall, paywallCoolingDown };`)(
+    { localStorage: storage }, { now: () => now }, () => 1, () => {},
   );
   ok(timing.paywallCoolingDown() === false, 'aucun délai fantôme avant la première fermeture');
   timing.snoozePaywall();
@@ -113,9 +115,9 @@ ok(/@media\(prefers-reduced-motion:reduce\)/.test(css) && /animation:none/.test(
    conditions supplémentaires. Épingler la chaîne exacte faisait tomber la
    suite sur un durcissement de la garde — un refus de PLUS lu comme une
    régression. */
-ok(/function showPaywall\(force\)\{\s*if\(operator\|\|!pending(\|\|[^)]+)?\)return true;/.test(js),
+ok(/function showPaywall\(\)\{\s*if\(operator\|\|!pending(\|\|[^)]+)?\)return true;/.test(js),
   'ni l’opérateur ni un abonnement actif ne voient le panneau');
-ok(/function showPaywall\(force\)\{\s*if\(operator\|\|!pending\|\|!onboarded\)return true;/.test(js),
+ok(/function showPaywall\(\)\{\s*if\(operator\|\|!pending\|\|!onboarded\)return true;/.test(js),
   'et le panneau reste fermé tant que l’installation n’est pas finie');
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
