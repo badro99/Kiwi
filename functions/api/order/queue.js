@@ -1361,7 +1361,7 @@ export async function onRequestPost(context) {
         await env.DB.prepare(
           `INSERT INTO kitchen_voids (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`
-        ).bind(voidId, merchant, targetOrder.id, targetOrder.table_no, tl.id || tl.uid || '', tl.name || '', voidQty, tl.unitPrice ?? tl.price ?? 0, reason || 'client_change', isWaste ? 1 : 0, actor, now).run();
+        ).bind(voidId, merchant, targetOrder.id, targetOrder.table_no || '', tl.id || tl.uid || '', tl.name || '', voidQty, tl.unitPrice ?? tl.price ?? 0, reason || 'client_change', isWaste ? 1 : 0, actor, now).run();
       } catch (err) {
         console.error('[queue] Failed to insert pending kitchen void alert', voidId, 'merchant', merchant);
       }
@@ -1515,7 +1515,11 @@ export async function onRequestPost(context) {
         statements.push(statement(env,
             `INSERT INTO kitchen_voids (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
              SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ? WHERE EXISTS (SELECT 1 FROM orders WHERE ${guard})`,
-          vId, merchant, targetOrder.id, targetOrder.table_no, affLine.id || affLine.uid || lineId,
+          /* Production databases created by the original kitchen-void migration
+           * still enforce `table_no NOT NULL`. A takeaway deliberately has no
+           * table, so persist the canonical empty table marker instead of NULL.
+           * Newer schemas accept either value, keeping this backward-compatible. */
+          vId, merchant, targetOrder.id, targetOrder.table_no || '', affLine.id || affLine.uid || lineId,
           affLine.name || lineId, directVoidQty.get(affLine) || qtyToVoid, affLine.unitPrice ?? affLine.price ?? 0,
           reason, isWaste, actor, now, ...guardArgs));
       }
@@ -2165,7 +2169,7 @@ export async function onRequestPost(context) {
           `INSERT INTO kitchen_voids
              (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'order_rejected', ?, ?, 'approved', ?)`,
-          voidId, merchant, id, current.table_no || null, String(line.id || `line-${index}`).slice(0, 80),
+          voidId, merchant, id, current.table_no || '', String(line.id || `line-${index}`).slice(0, 80),
           String(line.name).slice(0, 120), Math.max(1, Math.round(Number(line.qty) || 1)),
           displayMoney(line.unitPrice ?? line.price), ['ready','served'].includes(current.status) ? 1 : 0, actor, now));
       }

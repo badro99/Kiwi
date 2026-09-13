@@ -20792,13 +20792,20 @@
         const existing = lines.find(x => x.orderProLine === marker);
         if (existing) {
           const pending = o.status === 'pending';
+          const canonicalUid = l.uid || l.id || '';
           if (existing.orderProPending !== pending) { existing.orderProPending = pending; changed = true; }
           const nextQty = Math.max(1, Number(l.qty) || 1);
           if (existing.qty !== nextQty || existing.voidPending !== !!l.voidAlert
-            || existing.name !== (l.name || '') || existing.price !== (+l.unitPrice || 0)) {
+            || existing.name !== (l.name || '') || existing.price !== (+l.unitPrice || 0)
+            /* A caisse-created line and its canonical server line normally have
+             * identical display values. Identity must still converge: otherwise
+             * cancellation posts the temporary local uid and the API correctly
+             * answers line-not-on-order. */
+            || existing.canonicalUid !== canonicalUid
+            || existing.canonicalOrderId !== orderId) {
             existing.qty = nextQty;
             existing.voidPending = !!l.voidAlert;
-            existing.canonicalUid = l.uid || l.id || '';
+            existing.canonicalUid = canonicalUid;
             existing.canonicalOrderId = orderId;
             existing.id = l.id || existing.id;
             existing.name = l.name || existing.name;

@@ -666,6 +666,13 @@ check('Caisse can cancel one sent kitchen order without closing the table',
 check('Single-order cancellation leaves an immutable kitchen cancellation trace',
   db._db.prepare("SELECT COUNT(*) AS n FROM kitchen_voids WHERE order_id='ord-one-cancel' AND reason='order_rejected' AND status='approved'").get().n === 1);
 
+/* The live D1 table was created by the first migration, where table_no is
+ * NOT NULL. Keep the behavioural suite production-shaped even though a fresh
+ * schema now permits NULL. */
+exec(`CREATE TRIGGER legacy_kitchen_void_table_no
+  BEFORE INSERT ON kitchen_voids WHEN NEW.table_no IS NULL
+  BEGIN SELECT RAISE(ABORT, 'NOT NULL constraint failed: kitchen_voids.table_no'); END`);
+
 // A paired cashier may still have a service cookie from the same browser.
 // The employee floor restriction must not override the verified till identity.
 exec(`INSERT INTO orders (id, merchant, number, mode, total, lines, status, created_ts, updated_ts)
@@ -679,6 +686,17 @@ const sharedTabletVoid = await postQueue(takeawayVoid, `${employeeCookie}; ${til
 check('Paired till can void takeaway despite a lingering service cookie',
   sharedTabletVoid.status === 200 && sharedTabletVoid.data.directVoid
   && db._db.prepare("SELECT total FROM orders WHERE id='ord-shared-tablet'").get().total === 0);
+
+exec(`INSERT INTO orders (id, merchant, number, mode, total, lines, status, created_ts, updated_ts)
+  VALUES ('ord-takeaway-cancel', ?, 312, 'takeout', 35, ?, 'ready', ?, ?)`, MERCHANT,
+  JSON.stringify([{ id: 'item-dessert', uid: 'uid-takeaway-cancel', name: 'Dessert', qty: 1, unitPrice: 35 }]), now, now);
+const takeawayProof = await tillActorProof(AUTH_SECRET, MERCHANT,
+  { id: 'test-cashier', name: 'Test cashier', role: 'Caissier' });
+const takeawayCancel = await postQueue({ merchant: MERCHANT, actorProof: takeawayProof,
+  id: 'ord-takeaway-cancel', status: 'rejected', server: 'Caisse' }, tillCookie);
+check('Whole takeaway cancellation works against the legacy NOT NULL audit schema',
+  takeawayCancel.status === 200 && takeawayCancel.data.status === 'rejected'
+  && db._db.prepare("SELECT table_no FROM kitchen_voids WHERE order_id='ord-takeaway-cancel'").get()?.table_no === '');
 
 exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
   VALUES ('ord-multi-alert', ?, 308, 'table', '1', 130, ?, 'accepted', 'ses-v1', ?, ?)`, MERCHANT,
