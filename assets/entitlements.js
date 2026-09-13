@@ -8,6 +8,8 @@
      /api/me and only its signed operator answer may lift the subscription gate. */
   var operator=false,privacy=false,privacyInstalled=false;
   var pending=false, modal=null, pill=null;
+  var PAYWALL_COOLDOWN_MS=10*60*1000;
+  var PAYWALL_COOLDOWN_KEY='kiwi:entitlement:next-prompt-at:v1';
   /* ── ON NE DEMANDE PAS L'ADDITION PENDANT QU'IL MONTE SA CARTE ────────────
    * Le panneau d'activation s'ouvrait dès la première visite d'un compte en
    * attente. Or les premiers gestes d'un commerçant sont précisément ceux que
@@ -55,8 +57,20 @@
    * ferme est un panneau qu'on essaie de fermer par tous les moyens : la croix,
    * la touche Échap, le fond. */
   var lastFocus=null;
-  function closePaywall(){
+  function snoozePaywall(){
+    try{window.localStorage.setItem(PAYWALL_COOLDOWN_KEY,String(Date.now()+PAYWALL_COOLDOWN_MS));}catch(_){}
+  }
+  function paywallCoolingDown(){
+    try{
+      var until=Number(window.localStorage.getItem(PAYWALL_COOLDOWN_KEY)||0);
+      if(until>Date.now())return true;
+      if(until)window.localStorage.removeItem(PAYWALL_COOLDOWN_KEY);
+    }catch(_){}
+    return false;
+  }
+  function closePaywall(snooze){
     if(!modal)return;
+    if(snooze!==false)snoozePaywall();
     modal.classList.add('is-off');modal.hidden=true;
     document.documentElement.classList.remove('kiwi-entitlement-open');
     try{if(lastFocus&&lastFocus.focus)lastFocus.focus();else if(pill)pill.focus();}catch(_){}
@@ -65,14 +79,19 @@
     modal.classList.remove('is-off');modal.hidden=false;
     document.documentElement.classList.add('kiwi-entitlement-open');
   }
-  function showPaywall(){
+  function showPaywall(force){
     if(operator||!pending||!onboarded)return true;
+    /* Un refus reste un refus, mais le grand panneau n'a aucune raison de
+       recouvrir l'écran à chaque geste. Une sortie le met en veille dix
+       minutes, même après une navigation ou un rechargement. La petite
+       pastille reste disponible pour le rouvrir volontairement. */
+    if(!force&&paywallCoolingDown())return false;
     try{lastFocus=document.activeElement;}catch(_){lastFocus=null;}
     if(modal){openPaywall();focusFirst();return false;}
     modal=node('div','kiwi-entitlement-layer');modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label','Ouvrir votre établissement avec Kiwi');
     var card=node('section','kiwi-entitlement-card');card.tabIndex=-1;var head=node('div','kiwi-entitlement-head'),kick=node('div','kiwi-entitlement-kicker');kick.append(node('span'),document.createTextNode(' Prêt à ouvrir'));
     /* La croix : une sortie visible, avant même de lire les boutons du bas. */
-    var x=node('button','kiwi-entitlement-x');x.type='button';x.setAttribute('aria-label','Fermer et continuer à regarder');x.textContent='\u00d7';x.onclick=closePaywall;
+    var x=node('button','kiwi-entitlement-x');x.type='button';x.setAttribute('aria-label','Fermer et continuer à regarder');x.textContent='\u00d7';x.onclick=function(){closePaywall();};
     /* Ce panneau ne s'ouvre plus qu'une fois l'installation terminée : il peut
        donc parler d'un travail FAIT plutôt que d'un accès manquant. La première
        phrase reconnaît ce que le commerçant vient de monter ; le reste dit la
@@ -86,7 +105,8 @@
      ['Vous ouvrez le jour même','Dès l\u2019accord, votre établissement encaisse. Sans délai et sans technicien.']].forEach(function(x2,i){var d=node('div');d.append(node('em','',String(i+1)),node('b','',x2[0]),node('span','',x2[1]));benefits.append(d);});
     var actions=node('div','kiwi-entitlement-actions'),cta=node('a','',"En parler avec Kiwi"),later=node('button','',"Plus tard, je regarde encore");
     cta.href=WA;cta.target='_blank';cta.rel='noopener';
-    later.type='button';later.className='kiwi-entitlement-later';later.onclick=closePaywall;
+    cta.onclick=function(){closePaywall();};
+    later.type='button';later.className='kiwi-entitlement-later';later.onclick=function(){closePaywall();};
     actions.append(cta,later);
     var foot=node('div','kiwi-entitlement-foot','Aucune urgence : tout ce que vous avez préparé vous attend, aussi longtemps qu\u2019il le faudra.');
     card.append(x,head,benefits,actions,foot);modal.append(card);
@@ -110,7 +130,7 @@
      reçoit le focus (tabindex=-1), la lecture d'écran annonce le dialogue, et
      la première tabulation tombe sur la croix. */
   function focusFirst(){try{modal.querySelector('.kiwi-entitlement-card').focus({preventScroll:true});}catch(_){}}
-  function showPill(){if(pill||operator||!pending||!onboarded)return;pill=node('button','kiwi-entitlement-pill');pill.type='button';pill.append(node('i'),document.createTextNode('Prêt à ouvrir · en parler à Kiwi'));pill.onclick=showPaywall;document.body.append(pill);}
+  function showPill(){if(pill||operator||!pending||!onboarded)return;pill=node('button','kiwi-entitlement-pill');pill.type='button';pill.append(node('i'),document.createTextNode('Prêt à ouvrir · en parler à Kiwi'));pill.onclick=function(){showPaywall(true);};document.body.append(pill);}
   function blockedWord(el){
     if(!el)return false;if(el.closest('nav,.sidebar,[role="tablist"],.kiwi-entitlement-layer,.kiwi-entitlement-pill'))return false;
     if(el.hasAttribute&&el.hasAttribute('download'))return true;
@@ -184,7 +204,7 @@
      choisit pas. Un seul endroit décide donc, rappelé par les deux. */
   function refreshPill(){
     if(pending&&onboarded&&identitySettled)showPill();
-    else{if(pill){pill.remove();pill=null;}if(modal&&!onboarded)closePaywall();}
+    else{if(pill){pill.remove();pill=null;}if(modal&&!onboarded)closePaywall(false);}
   }
   document.addEventListener('kiwi-config',function(e){acceptConfig(e.detail||window.KiwiConfig);});
   function confirmIdentity(state){

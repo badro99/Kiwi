@@ -116,7 +116,7 @@ if (acceptMatch && refreshMatch && identityMatch) {
 
 /* ── 5 · Les écouteurs consultent la même question ───────────────────────── */
 ok(/function heldBack\(el\)\{/.test(entSrc), 'une seule question (heldBack) décide pour tous les écouteurs');
-ok(/showPaywall\(\)\{\s*\n?\s*if\(operator\|\|!pending\|\|!onboarded\)/.test(entSrc),
+ok(/showPaywall\(force\)\{\s*\n?\s*if\(operator\|\|!pending\|\|!onboarded\)/.test(entSrc),
   'le panneau lui-même refuse de s’ouvrir pendant l’installation');
 ok(/function showPill\(\)\{if\(pill\|\|operator\|\|!pending\|\|!onboarded\)/.test(entSrc),
   'la pastille aussi');
