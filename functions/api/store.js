@@ -77,7 +77,6 @@ const FEATURES = {
    * pas `cloud` sur le menu. */
   menu:         { keys: ['cats', 'items'],                        max: 600000 },
   recipes:      { keys: ['items'],                                max: 600000 },
-  costs:        { keys: ['items', 'ingredients', 'recipes', 'charges', 'targets'], max: 600000 },
   team:         { keys: ['members', 'hours', 'shifts'],            max: 600000 },
   attendance:   { keys: ['entries'],                               max: 600000 },
   fidelity:     { keys: ['model', 'visit', 'amount', 'product'],   max: 20000 },
@@ -89,7 +88,7 @@ const FEATURES = {
    * every real cross-device save fail with unknown-feature while the local UI
    * looked healthy.  This is the compatibility bridge until transactional
    * supplier prices and recipe versions move to normalized ledger tables. */
-  costs:        { keys: ['items', 'ingredients', 'recipes', 'charges'], max: 600000 },
+  costs:        { keys: ['items', 'ingredients', 'recipes', 'charges', 'targets'], max: 600000 },
   reservations: { keys: ['list', 'bookings', 'slots'],             max: 600000 },
   services:     { keys: ['list', 'cats', 'items'],                 max: 400000 },
   promotions:   { keys: ['list', 'rules'],                         max: 200000 },

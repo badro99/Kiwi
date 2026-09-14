@@ -299,6 +299,7 @@ const owner = sessionCookie(await makeSession('audit-owner', SECRET)).split(';')
     KiwiEnv: { isReal: () => true }, addEventListener: () => {} };
   let vmFetchMode = 'offline';
   let vmEnv;
+  let lostRedemptionWrite;
   const context = { window, KiwiStore: window.KiwiStore, KiwiEnv: window.KiwiEnv, localStorage,
     console, Math, Date, JSON, setInterval: () => 1, clearInterval: () => {},
     fetch: async (url, options = {}) => {
@@ -306,9 +307,10 @@ const owner = sessionCookie(await makeSession('audit-owner', SECRET)).split(';')
       const method = String(options.method || 'GET').toUpperCase();
       const payload = JSON.parse(options.body || '{}');
       if (vmFetchMode === 'lost' && method === 'POST' && payload.redemption) {
-        const response = await clientsPost({ env: vmEnv, request: new Request('https://kiwi.test' + url, {
+        lostRedemptionWrite = clientsPost({ env: vmEnv, request: new Request('https://kiwi.test' + url, {
           method: 'POST', headers: { cookie: owner, 'content-type': 'application/json' }, body: options.body,
         }) });
+        await lostRedemptionWrite;
         throw new Error('lost redemption acknowledgement');
       }
       if (vmFetchMode === 'lost' && method === 'GET' && String(url).indexOf('/api/clients?') === 0) {
@@ -360,6 +362,9 @@ const owner = sessionCookie(await makeSession('audit-owner', SECRET)).split(';')
   vmFetchMode = 'lost';
   context.window.KiwiClients.redeem(client.id, MERCHANT);
   await new Promise((resolve) => setTimeout(resolve, 0));
+  // A lost ACK is meaningful only after the server commit. Do not race the
+  // pull against the asynchronous POST and accidentally test a pre-commit read.
+  if (lostRedemptionWrite) await lostRedemptionWrite;
   const redemptionRequest = requests.map((entry) => JSON.parse(entry.options.body || '{}')).find((payload) => payload.redemption);
   check(!!redemptionRequest && redemptionRequest.redemption.clientId === client.id,
     'I05 client redemption sync sends an explicit additive redemption event');

@@ -133,7 +133,9 @@ const consumption = read('assets/inventory-consumption.js');
 ok('offline queue keeps stable item identity', /if \(i\) o\.i = i/.test(live));
 ok('feed expands v2 identity for consumers', /itemId: \(l && l\.i\)/.test(feed));
 ok('real config returns the server plan', /return json\(\{ features, pins, [\s\S]*?plan[\s\S]*?suspended/.test(config));
-ok('private costs are accepted by the server vault', /costs:\s*\{ keys: \['items', 'ingredients', 'recipes', 'charges'\]/.test(storeApi));
+ok('private costs and targets are accepted by one server vault declaration',
+  (storeApi.match(/^  costs:\s*\{ keys:/gm) || []).length === 1
+  && /costs:\s*\{ keys: \['items', 'ingredients', 'recipes', 'charges', 'targets'\]/.test(storeApi));
 ok('pressing allocates deposits without duplicating full order value', /function saleLines\(o, received\)/.test(pressing) && /factor = full > 0/.test(pressing));
 ok('margin engine consumes server-expanded stable identity',
   /const itemId = l\.itemId \|\| l\.id \|\| ''/.test(costs) && /id: itemId, variantId: l\.variantId/.test(costs));
