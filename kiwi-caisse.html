@@ -1921,23 +1921,13 @@
     }
 
     .rp-summary {
-      padding: 12px 20px 6px;
+      padding: 6px 20px 2px;
       border-top: 1px solid var(--line-soft);
     }
-    .rp-summary-row {
-      display: flex; justify-content: space-between; align-items: baseline;
-      font-size: 13px; color: var(--ink-2);
-      padding: 4px 0;
-    }
-    .rp-summary-row .lbl { color: var(--ink-3); }
-    .rp-summary-row .val { font-feature-settings: "tnum" 1; }
-    .rp-tva-note { font-size: 11px; color: var(--ink-4); padding: 4px 0 8px; }
 
     .rp-total {
       display: flex; justify-content: space-between; align-items: baseline;
-      padding: 6px 0 14px;
-      border-top: 1px solid var(--line);
-      margin-top: 6px;
+      padding: 4px 0 6px;
     }
     .rp-total .lbl {
       font-family: var(--serif); font-size: 16px; color: var(--ink-2);
@@ -1950,7 +1940,7 @@
 
     .rp-pay {
       padding: 0 20px 14px;
-      display: flex; flex-direction: column; gap: 8px;
+      display: flex; flex-direction: column; gap: 6px;
     }
     .rp-table-tools { display: flex; gap: 8px; margin-top: 4px; }
     .rp-table-tool-btn {
@@ -5058,7 +5048,7 @@
     #rp-send-kitchen[hidden] { display: none; }
     /* Client & fidélité sur la note · une seule ligne, discrète tant qu'elle est
        vide, marquée à l'atlas dès qu'un client est attaché. */
-    .rp-client { display: flex; align-items: center; gap: 9px; width: 100%; box-sizing: border-box; margin-bottom: 9px; padding: 10px 12px; border-radius: 12px; border: 1.5px dashed var(--line); background: transparent; color: var(--ink-2); font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; text-align: left; transition: background 140ms, border-color 140ms, color 140ms; }
+    .rp-client { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 44px; box-sizing: border-box; padding: 10px 12px; border-radius: 12px; border: 1.5px dashed var(--line); background: transparent; color: var(--ink-2); font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; text-align: left; transition: background 140ms, border-color 140ms, color 140ms; }
     .rp-client[hidden] { display: none; }
     .rp-client:hover { border-color: var(--atlas); color: var(--atlas); }
     .rp-client svg { width: 16px; height: 16px; flex: 0 0 16px; stroke-width: 1.9; }
@@ -6270,9 +6260,6 @@
         <div class="rp-items" id="rp-items"></div>
 
         <div class="rp-summary">
-          <div class="rp-summary-row"><span class="lbl">Sous-total</span><span class="val mono" id="rp-subtotal">530 MAD</span></div>
-          <div class="rp-summary-row"><span class="lbl">Service (0%)</span><span class="val mono">0 MAD</span></div>
-          <div class="rp-tva-note">TVA comprise dans les prix</div>
           <div class="rp-total"><span class="lbl">Total</span><span class="val mono" id="rp-total">530 MAD</span></div>
         </div>
 
@@ -8802,7 +8789,6 @@
         </div>` : '';
       $('#rp-items').innerHTML = lockBanner + itemsHTML + ticketActions;
 
-      $('#rp-subtotal').textContent = fmtMAD(total);
       $('#rp-total').textContent = fmtMAD(splitRemaining != null ? splitRemaining : net);
       window.CaisseFx && window.CaisseFx.countTotal();
 
@@ -8880,7 +8866,6 @@
          seul chiffre visible tant que la feuille n'est pas dépliée. Un montant
          faux en évidence sur un comptoir, c'est une erreur de caisse qui attend
          son tour. */
-      $('#rp-subtotal').textContent = fmtMAD(0);
       $('#rp-total').textContent = fmtMAD(0);
       window.CaisseFx && window.CaisseFx.countTotal();
       // Mode-aware prompt text
@@ -10112,7 +10097,6 @@
       }
       $('#rp-items').innerHTML = itemsHTML;
 
-      $('#rp-subtotal').textContent = fmtMAD(gross);
       $('#rp-total').textContent = fmtMAD(net);
       window.CaisseFx && window.CaisseFx.countTotal();
 
@@ -12289,7 +12273,6 @@
           </div>`).join('');
       }
 
-      $('#rp-subtotal').textContent = fmtMAD(total);
       $('#rp-total').textContent = fmtMAD(total);
       window.CaisseFx && window.CaisseFx.countTotal();
       showPayButtons(true);
