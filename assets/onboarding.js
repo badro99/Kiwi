@@ -595,7 +595,9 @@
   }
 
   /* ── Finish · persist + create venue + celebrate ─────────────────────── */
-  function finish() {
+  let finishing = false;
+  async function finish() {
+    if (finishing) return;
     capture();
     const finishErr = validate();
     if (finishErr) { flashErr(finishErr); return; }
@@ -604,6 +606,26 @@
       role: p.role, code: p.code,
       name: p.name || (p.role === 'owner' ? (S.ownerName || tr({ fr: 'Propriétaire', en: 'Owner', ar: 'المالك' })) : ''),
     }));
+    finishing = true;
+    const finishButton = root.querySelector('[data-finish]');
+    if (finishButton) finishButton.disabled = true;
+    let vid = null;
+    try {
+      vid = window.KiwiVenue && KiwiVenue.createVenue && await KiwiVenue.createVenue({
+        type: t.base, subtype: t.id,
+        name: S.bizName.trim() || tr({ fr: 'Mon activité', en: 'My business', ar: 'نشاطي' }),
+        location: S.city.trim(), pins: validPins,
+        goal: parsedDailyGoal() || 0,
+        staffCount: S.teamSize,
+        profile: { goals: S.goals, venueCount: S.venueCount, owner: S.ownerName.trim() },
+      });
+    } catch (_) {}
+    if (!vid) {
+      finishing = false;
+      if (finishButton) finishButton.disabled = false;
+      flashErr(tr({ fr: "Impossible d'enregistrer l'établissement. Vérifiez la connexion et réessayez.", en: 'Could not create the business. Check your connection and try again.', ar: 'تعذر إنشاء المؤسسة. تحقق من الاتصال وأعد المحاولة.' }));
+      return;
+    }
     LS.set('kiwiOwnerName', S.ownerName.trim());
     LS.set('kiwiBizName', S.bizName.trim());
     LS.set('kiwiBizType', S.typeId);
@@ -612,33 +634,12 @@
     LS.set('kiwiTeamSize', String(S.teamSize));
     LS.set('kiwiGoals', JSON.stringify(S.goals));
     LS.set('kiwiPins', JSON.stringify(validPins));
-    /* Mirror the client's PINs up to the server so the operator console can see
-     * and manage them (God mode). Fire-and-forget + fail-safe — a static host or
-     * offline session just keeps the local copy, nothing breaks. */
-    try { if (window.KiwiConfig && window.KiwiConfig.syncPins) window.KiwiConfig.syncPins(validPins); } catch (_) {}
-    /* Mirror the business type too, so the operator console shows this merchant's
-     * real modules (boutique ≠ restaurant). Same fire-and-forget contract. */
-    try { if (window.KiwiConfig && window.KiwiConfig.syncType) window.KiwiConfig.syncType(S.typeId); } catch (_) {}
+    // PINs and type were sent with the confirmed creation to the NEW slug.
     LS.set('kiwiRole', 'owner');
     LS.set('kiwiOnboarded', '1');
     LS.del('kiwiSkipOnboard');
 
-    let vid = null;
-    try {
-      vid = window.KiwiVenue && KiwiVenue.createVenue && KiwiVenue.createVenue({
-        type: t.base, subtype: t.id,
-        name: S.bizName.trim() || tr({ fr: 'Mon activité', en: 'My business', ar: 'نشاطي' }),
-        location: S.city.trim(),
-        goal: parsedDailyGoal() || 0,
-        staffCount: S.teamSize,
-        profile: { goals: S.goals, venueCount: S.venueCount, owner: S.ownerName.trim() },
-      });
-      if (vid && KiwiVenue.setVenue) KiwiVenue.setVenue(vid);
-    } catch (_) {
-      if (typeof Kiwi !== 'undefined' && Kiwi.toast) {
-        Kiwi.toast('Impossible d’enregistrer l’établissement', { type: 'warn', force: true });
-      }
-    }
+    try { if (KiwiVenue.setVenue) KiwiVenue.setVenue(vid); } catch (_) {}
 
     /* Seed the entered staff into the REAL per-venue roster (team.js) so they
      * persist and show on the Équipe page — not just the login-lock's kiwiPins. */

@@ -6223,17 +6223,17 @@
      Une URL neuve rate le cache et part au réseau tout de suite. À incrémenter
      à CHAQUE modification de ces deux fichiers, et à recopier à l'identique
      dans la liste de pré-cache de kiwi-sw.js. -->
-<script src="assets/venues.js?v=31" defer></script>
+<script src="assets/venues.js?v=34" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot. -->
 <script src="assets/pressing-ops.js?v=8" defer></script>
 <script src="assets/pressing-garment-icons.js?v=2" defer></script>
 <script src="assets/pressing-catalog.js?v=7" defer></script>
 <script src="assets/pressing-dashboard.js?v=14" defer></script>
 <script src="assets/demoClock.js?v=1" defer></script>
-<script src="assets/dateRange.js?v=19" defer></script>
+<script src="assets/dateRange.js?v=20" defer></script>
 <script src="assets/mobile-nav.js?v=2" defer></script>
 <script defer src="assets/pwa-update.js?v=359"></script>
-<script defer src="assets/dashboard-pwa.js?v=515"></script>
+<script defer src="assets/dashboard-pwa.js?v=516"></script>
 <script defer src="assets/dashboard-native.js?v=1"></script>
 <!-- Same durable outbox as the tills. It also lets this surface report the
      real device sync state instead of inferring it from navigator.onLine. -->
@@ -6245,12 +6245,12 @@
      data module starts. God Mode must never infer authority from ?op=1, and
      its one-shot snapshot must not miss the identity promise at boot. -->
 <script defer src="assets/tenant-purge.js?v=2"></script>
-<script defer src="assets/identity.js?v=3"></script>
+<script defer src="assets/identity.js?v=5"></script>
 <script defer src="assets/live-link.js?v=37"></script>
 <script defer src="assets/channel-sales.js?v=3"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
-<script defer src="assets/merchant-config.js?v=271"></script>
+<script defer src="assets/merchant-config.js?v=272"></script>
 <!-- Real logged-in identity · swaps the demo owner/business (Rachid · Café Atlas)
      for the account's own via /api/me. No-op for the local demo / staff / operator. -->
   <link rel="stylesheet" href="assets/entitlements.css?v=5">
@@ -6267,7 +6267,7 @@
 <!-- Global operator access · long-press any Kiwi logo to open the console. -->
 <script defer src="assets/operator-access.js?v=1"></script>
 <script src="assets/liquid-lens.js?v=1" defer></script>
-<script src="assets/onboarding.js?v=2081" defer></script>
+<script src="assets/onboarding.js?v=2082" defer></script>
 <!-- Connect-your-caisse: auto side-panel + 6-digit code that binds a till to this
      store (same-browser today, cross-device once /api/pair/* deploys). Real
      merchants only; the pitch demo never sees it. -->
@@ -6403,7 +6403,7 @@
 <script src="assets/staff-roles.js?v=1" defer></script>
 <link rel="stylesheet" href="assets/help-centre.css?v=4">
 <script src="assets/help-centre.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/account.js?v=17" defer fetchpriority="low"></script>
+<script src="assets/account.js?v=18" defer fetchpriority="low"></script>
 <script src="assets/design-2026.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/design-ios27.js?v=1" defer fetchpriority="low"></script>
 <!-- Default home composition: critical before the PIN overlay reveals the app.

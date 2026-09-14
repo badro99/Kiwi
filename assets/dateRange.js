@@ -2727,6 +2727,13 @@
 
     const wrap = document.querySelector('[data-kpi-band]');
     if (!wrap) return;
+    // A signed-in merchant on a fresh browser has a transient `own` venue
+    // until /api/me resolves. No restaurant KPIs may flash for a hotel/shop.
+    const activeVenue = window.KiwiVenue?.getCurrentVenueData?.();
+    if (activeVenue?.id === 'own' && !activeVenue.type) {
+      wrap.replaceChildren();
+      return;
+    }
 
     // Live-demo override: tx/panier/regulars all scale with sim time.
     // success and ratio stay near their static values (don't ramp from 0%).

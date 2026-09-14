@@ -460,6 +460,7 @@
         business: (me.business || '').trim(),
         email: (me.email || '').trim(),
         type: (me.type || '').trim(),
+        city: (me.city || '').trim(),
       };
       // Feed the keys the rest of the app already reads (account.js reads
       // kiwiSet:*, onboarding/personalize read kiwiOwnerName/kiwiBizName).
@@ -488,7 +489,7 @@
       // Put this merchant's real établissements back on a browser that has none
       // (new device, cleared data). No-op when they already have their stores
       // here — see KiwiVenue.adoptServerStores.
-      if (Array.isArray(me.stores) && me.stores.length) {
+      if (me.onboarded === true && Array.isArray(me.stores) && me.stores.length) {
         try {
           if (window.KiwiVenue && window.KiwiVenue.adoptServerStores) window.KiwiVenue.adoptServerStores(me.stores);
         } catch (_) {}

@@ -218,8 +218,9 @@ CREATE TABLE IF NOT EXISTS merchant_config (
   till_epoch INTEGER NOT NULL DEFAULT 0,
 
   -- ── LA VILLE, ET CE QUE CET ÉTABLISSEMENT NOUS RAPPORTE ───────────────────
-  -- Deux colonnes posées par l'OPÉRATEUR depuis la console, jamais par le
-  -- client. Elles n'existaient nulle part : ni le compte ni la fiche magasin ne
+  -- La ville peut être posée par le propriétaire à la création du magasin, si
+  -- elle est encore vide, puis complétée par l'opérateur. Le MRR reste réservé
+  -- à l'opérateur. Ces colonnes n'existaient nulle part : ni le compte ni la fiche magasin ne
   -- portaient de ville, et rien dans la base ne disait ce qu'un abonnement vaut.
   -- La vue d'ensemble en avait besoin pour répondre à « dans quelles villes
   -- sommes-nous » et « combien faisons-nous par mois » avec des chiffres réels

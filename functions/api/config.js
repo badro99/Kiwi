@@ -502,6 +502,17 @@ export async function onRequestPost(context) {
   }
   if (wantSeed) await seedBlankFeatures(env, merchant);
 
+  // City is supplied by the owner during creation, but never replaces an
+  // operator-entered location. Keep the write scoped to the claimed row.
+  const city = typeof (body && body.city) === 'string' ? body.city.trim().slice(0, 120) : '';
+  if (city && body.fresh === true) {
+    try {
+      await env.DB.prepare(
+        "UPDATE merchant_config SET city = ?, updated_ts = ? WHERE merchant = ? AND account_id = ? AND (city IS NULL OR TRIM(city) = '')"
+      ).bind(city, Date.now(), merchant, sess.aid).run();
+    } catch (_) { return json({ error: 'city-write-failed' }, 503); }
+  }
+
   const result = { ok: true, merchant };
 
   // ── PINs (only when the client actually sent a list) ───────────────────────

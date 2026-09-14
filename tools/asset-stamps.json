@@ -1,7 +1,7 @@
 {
   "assets/account.js": {
-    "v": "17",
-    "sha": "2554b2ecfe92bee3"
+    "v": "18",
+    "sha": "9790c429be9cc62f"
   },
   "assets/accounting.js": {
     "v": "1",
@@ -132,8 +132,8 @@
     "sha": "110af8f00279e7e5"
   },
   "assets/caisse-pwa.js": {
-    "v": "521",
-    "sha": "99b0c482f4d0bb7f"
+    "v": "523",
+    "sha": "55691c12fac8eba9"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -208,28 +208,28 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "514",
-    "sha": "cc9937a281a68034"
+    "v": "516",
+    "sha": "c44d071a6d3c9c15"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "19",
-    "sha": "106de73d3d04a60d"
+    "v": "20",
+    "sha": "84afad2f128e3c2e"
   },
   "assets/day-report-dash.js": {
     "v": "11",
-    "sha": "3030994fa434c421"
+    "sha": "c0d7d96a2fec83c1"
   },
   "assets/day-report-export.js": {
     "v": "7",
-    "sha": "bda0df7618b3eaa4"
+    "sha": "2a3b23d3664936a2"
   },
   "assets/day-report.js": {
-    "v": "10",
-    "sha": "ffac4e86a1af16da"
+    "v": "11",
+    "sha": "cd2f02b4303ac5c6"
   },
   "assets/demoClock.js": {
     "v": "1",
@@ -264,8 +264,8 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/employee-live.js": {
-    "v": "513",
-    "sha": "819a5cbbb89d050f"
+    "v": "515",
+    "sha": "59db77f5d7928f82"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -360,8 +360,8 @@
     "sha": "4c15205549dae860"
   },
   "assets/identity.js": {
-    "v": "3",
-    "sha": "f701650e300c6b89"
+    "v": "5",
+    "sha": "4ae34b8744b169aa"
   },
   "assets/idle-lock.js": {
     "v": "2",
@@ -432,8 +432,8 @@
     "sha": "c9d6036ca657c76e"
   },
   "assets/live-link.js": {
-    "v": "36",
-    "sha": "02abbe033ec6a753"
+    "v": "37",
+    "sha": "b97302190e5f897e"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -464,8 +464,8 @@
     "sha": "741c0a2e08bf8694"
   },
   "assets/merchant-config.js": {
-    "v": "271",
-    "sha": "c069152db11f050e"
+    "v": "272",
+    "sha": "b879d5adb54b77de"
   },
   "assets/mobile-nav.js": {
     "v": "2",
@@ -484,8 +484,8 @@
     "sha": "c3c197e314617547"
   },
   "assets/onboarding.js": {
-    "v": "2081",
-    "sha": "4bbbed2e2b454711"
+    "v": "2082",
+    "sha": "bdc1de3a31b20b3c"
   },
   "assets/operational-print.js": {
     "v": "1",
@@ -920,8 +920,8 @@
     "sha": "dfa3b4d5ebb25d51"
   },
   "assets/venues.js": {
-    "v": "30",
-    "sha": "d9e2aa0937554696"
+    "v": "34",
+    "sha": "6fe658c40dda1375"
   },
   "assets/vertical-state.js": {
     "v": "1",

@@ -1174,6 +1174,8 @@ section('Whole-project regressions');
     'trade-copy-test.mjs',
     'floor-accept-test.mjs',
     'onboarding-gate-test.mjs',
+    'store-creation-ack-test.mjs',
+    'store-creation-api-test.mjs',
     'api-boundaries-test.mjs',
     /* L'app native (app/, Capacitor) embarque les surfaces du dépôt : le bundle
        se construit, est déterministe, charge api-base.js en premier, et la

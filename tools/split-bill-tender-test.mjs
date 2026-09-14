@@ -48,7 +48,7 @@ ok('article split never silently divides unassigned items between convives',
   CAISSE_SRC.includes('const partLines = assignedLines;') && !CAISSE_SRC.includes('unassignedPerConv'));
 
 ok('openSplitModal stores itemId in itemTotals',
-  /itemTotals\[l\.name\]\s*=\s*\{\s*totalQty:\s*0,\s*unitPrice,\s*itemId:\s*l\.itemId\s*\|\|\s*l\.id\s*\|\|\s*''\s*\};/.test(CAISSE_SRC));
+  /itemTotals\[l\.name\]\s*=\s*\{\s*totalQty:\s*0,\s*unitPrice,\s*itemId:\s*l\.itemId\s*\|\|\s*l\.id\s*\|\|\s*''\s*,\s*baseName:\s*l\.baseName\s*\|\|\s*''\s*\};/.test(CAISSE_SRC));
 
 ok('recordSale preserves unit and price on saved entry lines',
   /const unitPrice = l\.price != null \? l\.price : \(l\.unit != null \? l\.unit : \(l\.qty \? money\(l\.total \/ l\.qty\) : l\.total\)\);[\s\S]{0,200}unit:\s*unitPrice,\s*price:\s*unitPrice/.test(CAISSE_SRC));

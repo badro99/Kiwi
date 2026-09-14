@@ -860,7 +860,7 @@
     });
     wireLogoPicker(m.el);
     setTimeout(() => { const a = m.el.querySelector('.acc-f'); if (a) a.focus(); }, 320);
-    m.el.addEventListener('click', (e) => {
+    m.el.addEventListener('click', async (e) => {
       if (!e.target.closest('[data-save]')) return;
       const v = readForm(m.el);
       if (!v.name) { Kiwi.toast(pick({ fr: 'Le nom est requis.', en: 'Name is required.', ar: 'الاسم مطلوب.' }), { type: 'info', force: true }); return; }
@@ -870,14 +870,21 @@
           Kiwi.toast(pick({ fr: "Choisissez le type d'activité.", en: 'Choose the activity type.', ar: 'اختر نوع النشاط.' }), { type: 'info', force: true });
           return;
         }
+        const saveButton = m.el.querySelector('[data-save]');
+        if (saveButton?.disabled) return;
+        if (saveButton) saveButton.disabled = true;
         let nid = null;
         try {
-          nid = KV.createVenue({
+          nid = await KV.createVenue({
             type: T.base(trade), subtype: trade,
             name: v.name, location: v.city || '',
           });
         } catch (_) {}
-        if (!nid) { Kiwi.toast(pick({ fr: 'Création impossible', en: 'Creation failed', ar: 'تعذّر الإنشاء' }), { type: 'warn', force: true }); return; }
+        if (!nid) {
+          if (saveButton) saveButton.disabled = false;
+          Kiwi.toast(pick({ fr: 'Création impossible. Vérifiez la connexion et réessayez.', en: 'Creation failed. Check your connection and try again.', ar: 'تعذر الإنشاء. تحقق من الاتصال وأعد المحاولة.' }), { type: 'warn', force: true });
+          return;
+        }
         /* Les mentions saisies vont dans la fiche du NOUVEL établissement —
          * per-établissement et mirrorée serveur, comme partout ailleurs. */
         if (KR()) {

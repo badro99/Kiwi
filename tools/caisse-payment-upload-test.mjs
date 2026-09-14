@@ -124,7 +124,9 @@ async function fixture(t, opts = {}) {
     };
     vm.createContext(context);
     vm.runInContext(live, context, { filename: 'assets/live-link.js' });
-    vm.runInContext(['activeSaleDiscount', 'recordSale', 'persistShift', 'restoreShift', 'reconcileJournalSales', 'saveProvisional', 'opPush'].map(extract).join('\n'), context, { filename: 'kiwi-caisse-payment-functions.js' });
+    vm.runInContext(['tableSaleLabel', 'paidReceiptForCurrentTable', 'resetTableTimer',
+      'activeSaleDiscount', 'recordSale', 'persistShift', 'restoreShift',
+      'reconcileJournalSales', 'saveProvisional', 'opPush'].map(extract).join('\n'), context, { filename: 'kiwi-caisse-payment-functions.js' });
     window.KiwiOrderInbox = context.KiwiOrderInbox = {
       setStatus: async (id, status, extra) => {
         const response = await call('/api/order/queue', { merchant, id, status, ...extra });

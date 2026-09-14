@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v575';
+var CACHE = 'kiwi-app-v576';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -91,7 +91,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=31',
+  '/assets/venues.js?v=34',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=4',
   '/assets/trade-workspaces.js?v=4',
@@ -129,25 +129,25 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=1',
-  '/assets/dateRange.js?v=19',
+  '/assets/dateRange.js?v=20',
   '/assets/mobile-nav.js?v=2',
   '/assets/liquid-lens.js?v=1',
   '/assets/pages.js?v=5',
   '/assets/help-centre.js?v=4',
-  '/assets/account.js?v=17',
+  '/assets/account.js?v=18',
   '/assets/production-action-guard.js?v=1',
   // Shared floor-plan vocabulary · the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
   '/assets/oppo-cards.js?v=2',
-  '/assets/dashboard-pwa.js?v=515',
+  '/assets/dashboard-pwa.js?v=516',
   '/assets/dashboard-native.js?v=1',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js?v=1',
-  '/assets/caisse-pwa.js?v=522',
+  '/assets/caisse-pwa.js?v=523',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=5',
   '/assets/platform-kernel.js?v=5',
@@ -179,7 +179,7 @@ var SHELL = [
   '/assets/receipt.js?v=3',
   '/assets/receipt-ui.js?v=1',
   '/assets/invoice.js?v=8',
-  '/assets/merchant-config.js?v=271',
+  '/assets/merchant-config.js?v=272',
   '/assets/entitlements.css?v=5',
   '/assets/entitlements-v2.js?v=1',
   '/assets/staff-roles.js?v=1',
@@ -191,7 +191,7 @@ var SHELL = [
      caisse ET l'écran cuisine passent par lui : absent, l'un des deux lierait un
      nouveau commerçant par-dessus les données de l'ancien. */
   '/assets/pairing-commit.js?v=2',
-  '/assets/identity.js?v=3',
+  '/assets/identity.js?v=5',
   '/assets/caisse-link.js?v=10',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
@@ -231,7 +231,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=514',
+  '/assets/employee-live.js?v=515',
   '/assets/employee-planning.js?v=8',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=2',

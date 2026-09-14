@@ -282,8 +282,10 @@
     var name = String(opts.name || '').trim();
     var slug = slugMerchant(name);
     var payload = { fresh: true };
-    if (slug) { payload.merchant = slug; payload.name = name; freshAdd(slug); }
+    if (slug) { payload.merchant = slug; payload.name = name; }
     if (opts.type) payload.type = String(opts.type);
+    if (opts.city) payload.city = String(opts.city).trim().slice(0, 120);
+    if (Array.isArray(opts.pins)) payload.pins = opts.pins;
     return postRaw(payload).then(function (r) {
       if (r && r.status === 403) {
         try {

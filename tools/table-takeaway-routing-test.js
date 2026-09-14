@@ -78,7 +78,7 @@ ok("pollEmployeeFloor protects actively edited table in order mode",
 
 // 9. recordSale always sets entry.table when settlementTable is passed
 const recordSaleIdx = CAISSE.indexOf("function recordSale(");
-const recordSaleSnippet = recordSaleIdx !== -1 ? CAISSE.slice(recordSaleIdx, recordSaleIdx + 3000) : "";
+const recordSaleSnippet = recordSaleIdx !== -1 ? CAISSE.slice(recordSaleIdx, recordSaleIdx + 4300) : "";
 ok("recordSale always sets entry.table on table settlements",
   /if \(settlementTable\) \{\s*entry\.table = String\(settlementTable\);[\s\S]*?const visit = phoneSessionOf/.test(recordSaleSnippet));
 

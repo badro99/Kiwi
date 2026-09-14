@@ -32,9 +32,17 @@ import { json, activeAccountSession, isOperator, slugMerchant } from '../auth/_l
  * that have always been there rather than losing the row entirely. */
 async function storeRow(env, slug) {
   try {
+    return await env.DB.prepare('SELECT merchant, name, type, city, status, account_id FROM merchant_config WHERE merchant = ?')
+      .bind(slug).first();
+  } catch (_) { /* older database without city */ }
+  try {
+    return await env.DB.prepare('SELECT merchant, name, type, status, account_id FROM merchant_config WHERE merchant = ?')
+      .bind(slug).first();
+  } catch (_) { /* older database without account_id or status */ }
+  try {
     return await env.DB.prepare('SELECT merchant, name, type FROM merchant_config WHERE merchant = ?')
       .bind(slug).first();
-  } catch (_) { /* no `name` column on this database */ }
+  } catch (_) { /* older database without name */ }
   try {
     return await env.DB.prepare('SELECT merchant, type FROM merchant_config WHERE merchant = ?')
       .bind(slug).first();
@@ -75,25 +83,44 @@ async function storeRow(env, slug) {
 async function establishments(env, aid, slug) {
   const out = { onboarded: false, stores: [] };
   const seen = new Set();
+  let incompleteOwn = false;
   const push = (r) => {
     const m = r && String(r.merchant || '').trim();
-    if (!m || seen.has(m)) return;
+    if (!m || seen.has(m)) return false;
+    // Fresh creation claims the row as pending before its PIN/type writes.
+    // Type is written last; until then a failed POST must not turn a partial
+    // row into a usable shop on a new browser or dismiss the setup wizard.
+    if (r.status === 'pending' && !String(r.type || '').trim()) {
+      if (m === slug) incompleteOwn = true;
+      return false;
+    }
     seen.add(m);
-    out.stores.push({ merchant: m, name: String(r.name || ''), type: String(r.type || '') });
+    out.stores.push({ merchant: m, name: String(r.name || ''), type: String(r.type || ''), city: String(r.city || '') });
+    return true;
   };
 
   try {
     const rs = await env.DB.prepare(
-      'SELECT merchant, name, type FROM merchant_config WHERE account_id = ?').bind(aid).all();
-    for (const r of (rs.results || [])) { push(r); out.onboarded = true; }
-  } catch (_) { /* registry not migrated → judge from the evidence below */ }
+      'SELECT merchant, name, type, city, status FROM merchant_config WHERE account_id = ?').bind(aid).all();
+    for (const r of (rs.results || [])) if (push(r)) out.onboarded = true;
+  } catch (_) {
+    try {
+      const rs = await env.DB.prepare(
+        'SELECT merchant, name, type, status FROM merchant_config WHERE account_id = ?').bind(aid).all();
+      for (const r of (rs.results || [])) if (push(r)) out.onboarded = true;
+    } catch (__) { /* registry not migrated → judge from the evidence below */ }
+  }
 
   if (!slug) return out;
 
   const own = await storeRow(env, slug);
-  if (own) push(own);
+  // The account-name slug can collide with another owner's registered shop,
+  // or be an unclaimed operator-prepared shell. Neither is a second owned
+  // establishment when this account already has real registered stores.
+  if (own && (!own.account_id || String(own.account_id) === String(aid))
+      && (own.account_id || out.stores.length === 0)) push(own);
 
-  if (!out.onboarded) {
+  if (!out.onboarded && !incompleteOwn) {
     try {
       const pin = await env.DB.prepare('SELECT 1 AS x FROM staff_pins WHERE merchant = ? LIMIT 1')
         .bind(slug).first();
@@ -177,7 +204,7 @@ export async function onRequestGet(context) {
       const ownStore = est.stores.find((s) => s.merchant === slug);
       const type = (ownStore && ownStore.type) || '';
       return json({
-        authenticated: true, scoped: false, type,
+        authenticated: true, scoped: false, type, city: (ownStore && ownStore.city) || '',
         name: acc.name || '', business: acc.business || '', email: acc.email || '',
         onboarded: est.onboarded, stores: est.stores,
       });

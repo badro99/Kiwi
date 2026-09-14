@@ -24,6 +24,7 @@ const closedSource = slice(phoneSource, '    function onSessionClosed()', '    /
 const settledSource = slice(caisseSource, '    function locallySettledVisit(id, session)', '    /* Libérer la table côté téléphone');
 const phoneSessionSource = slice(caisseSource, '    function phoneSessionOf(id)', '    function locallySettledVisit(id, session)');
 const attachSource = slice(caisseSource, '    function attachOrderProTable(o)', '    /* Une commande du serveur');
+const tableSaleLabelSource = slice(caisseSource, '    function tableSaleLabel(tableId, ref)', '    function settledOrderLabel(tableId)');
 const timerSource = slice(caisseSource, '    /* ---------- Live elapsed minutes', '    /* ---------- Khlass-fade');
 let passed = 0, failed = 0;
 async function check(name, run) {
@@ -134,7 +135,7 @@ function till(table, session) {
     refreshTableNode() {}, renderRightPanel() {}, persistShift() {},
     document: { querySelector() { return null; }, addEventListener() {} }, setInterval: callback => { tick = callback; },
   });
-  vm.runInContext(phoneSessionSource + settledSource + attachSource + timerSource + '\nglobalThis.attach = attachOrderProTable;', context);
+  vm.runInContext(tableSaleLabelSource + phoneSessionSource + settledSource + attachSource + timerSource + '\nglobalThis.attach = attachOrderProTable;', context);
   return { context, attach: context.attach, tick: () => tick() };
 }
 

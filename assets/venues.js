@@ -1424,46 +1424,38 @@
       }
       return null;
     }
-    const id = 'v' + Date.now().toString(36);
     const type = ['restaurant', 'boutique', 'spa', 'hotel'].includes(cfg.type) ? cfg.type : 'restaurant';
     const name = (cfg.name || 'Mon activité').trim();
     const location = (cfg.location || '').trim();
-    VENUES[id] = {
-      id, name, location,
-      fullDisplay: location ? `${name} · ${location}` : name,
-      /* L'identité réseau, gravée à la seconde où le magasin naît — c'est le
-       * seul instant où le nom et le slug sont sûrs de coïncider, et c'est ce
-       * slug-là que registerNewStore() va déclarer au serveur trois lignes plus
-       * bas. Il ne rebougera plus, quel que soit ce que devient le nom. */
-      slug: slugMerchant(name),
-      type,
-      /* The trade picked at onboarding — drives the subtype profile
-       * (own sidebar labels + own KPI band, not the base family's) AND the
-       * displayed activity label, resolved per-language by typeLabelOf(). */
-      subtype: cfg.subtype || '',
-      profileInfo: cfg.profile || null,
-      siblings: '', status: 'En service', ice: '·',
-      txCount: 0, staffCount: Math.max(0, +cfg.staffCount || 0), custom: true,
-      hours: cfg.hours || '', methods: cfg.methods || '', goal: +cfg.goal || 0,
+    const commit = () => {
+      const id = 'v' + Date.now().toString(36);
+      VENUES[id] = {
+        id, name, location,
+        fullDisplay: location ? `${name} · ${location}` : name,
+        /* L'identité réseau, gravée au même nom que la déclaration acceptée par
+         * le serveur. Elle ne suit plus les futurs changements de nom. */
+        slug: slugMerchant(name),
+        type,
+        /* The trade picked at onboarding drives the subtype profile and label. */
+        subtype: cfg.subtype || '',
+        profileInfo: cfg.profile || null,
+        siblings: '', status: 'En service', ice: '·',
+        txCount: 0, staffCount: Math.max(0, +cfg.staffCount || 0), custom: true,
+        hours: cfg.hours || '', methods: cfg.methods || '', goal: +cfg.goal || 0,
+      };
+      customIds.add(id);
+      persistCustomVenues();
+      /* The account switcher learns the new shop as soon as the server confirms
+       * it, including when the owner creates it from Mon profil. */
+      try { renderLocSwitch(); renderDropdown(); } catch (_) {}
+      return id;
     };
-    customIds.add(id);
-    persistCustomVenues();
-    /* Le sélecteur d'établissement doit connaître le nouveau magasin TOUT DE
-     * SUITE. L'assistant d'inscription masquait le problème en basculant
-     * dessus juste après (setVenue re-rend tout) ; « Ajouter un établissement »
-     * depuis Mon profil ne bascule pas — le propriétaire créait sa deuxième
-     * boutique et ne la trouvait dans le sélecteur qu'après un rechargement. */
-    try { renderLocSwitch(); renderDropdown(); } catch (_) {}
-    /* Déclarer l'établissement NEUF au serveur, tout de suite.
-     * C'est le seul instant où l'on sait qu'il s'agit d'une création et pas d'un
-     * simple bonjour : une minute plus tard, la boutique de ce matin et celle de
-     * l'an dernier envoient exactement le même POST. Cette déclaration décide de
-     * la configuration de départ (Terminaux, Conformité, Réservations, Dépenses
-     * et Order Pro coupés — functions/api/config.js), que l'opérateur rallume à
-     * la demande. Elle n'allume jamais rien et ne touche jamais une fiche déjà
-     * réglée. Sans backend l'appel échoue et rien ne change. */
-    try { window.KiwiConfig?.newStore?.({ name, type: cfg.subtype || type }); } catch (_) {}
-    return id;
+    // Never persist a new real shop until its server row is confirmed.
+    if (!isRealMerchant()) return commit();
+    if (!window.KiwiConfig?.newStore) return Promise.resolve(null);
+    return Promise.resolve(window.KiwiConfig.newStore({
+      name, type: cfg.subtype || type, city: location, pins: cfg.pins,
+    })).then((ok) => ok ? commit() : null).catch(() => null);
   }
 
   /* Patch an existing custom venue (name / location / trade / methods / goal)
@@ -1731,13 +1723,16 @@
     } catch (_) {}
     const ownType = me.type || (paired && (paired.subtype || paired.type)) || '';
     const name = String(me.business || me.name || (paired && paired.name) || '').trim() || 'Mon établissement';
+    // No trade is known before /api/me answers. A fresh hotel or boutique must
+    // not briefly render the restaurant workspace as if it were theirs.
     const base = SUBTYPE_BASE[ownType] ||
-      (TYPE_BASES.indexOf(ownType) >= 0 ? ownType : 'restaurant');
+      (TYPE_BASES.indexOf(ownType) >= 0 ? ownType : '');
+    const location = String(me.city || (paired && paired.location) || '').trim();
     VENUES.own = {
-      id: 'own', name, location: '',
-      fullDisplay: name,
+      id: 'own', name, location,
+      fullDisplay: location ? `${name} · ${location}` : name,
       type: base,
-      subtype: '', profileInfo: null,
+      subtype: ownType, profileInfo: null,
       siblings: '', status: 'En service', ice: '·',
       txCount: 0, staffCount: 0, custom: true,
       hours: '', methods: '', goal: 0,
@@ -1780,9 +1775,10 @@
         || slug.split('-').filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
       const base = SUBTYPE_BASE[s && s.type] ||
         (TYPE_BASES.indexOf(s && s.type) >= 0 ? s.type : 'restaurant');
+      const location = String((s && s.city) || '').trim();
       VENUES[id] = {
-        id, name, location: '',
-        fullDisplay: name,
+        id, name, location,
+        fullDisplay: location ? `${name} · ${location}` : name,
         /* Ici le slug ne se déduit pas, il se sait : il vient du registre du
          * serveur. C'est même la seule source qui ne peut pas se tromper — et
          * elle vaut mieux que le nom, qui n'est qu'un reflet. */
@@ -2168,7 +2164,7 @@
       const sold = VERTICAL_SECTIONS.boutique.items.find((x) => x.nav === 'sold');
       sect = { ...sect, items: sect.items.concat(sold) };
     }
-    if (!sect) return;
+    if (!sect) { wrap.innerHTML = ''; return; }
 
     const lang = window.KiwiI18n?.getLang?.() || 'fr';
     const T = window.KiwiI18n?.T?.[lang] || {};
@@ -9091,6 +9087,7 @@
        * language (labels resolve per-language; dateRange re-renders the band
        * on kiwi:langchange so they stay current). */
       const v = VENUES[currentVenue];
+      if (v && v.id === 'own' && !v.type && !v.subtype) return [];
       const prof = v && v.custom && v.subtype && SUBTYPE_PROFILES[v.subtype];
       if (prof && prof.kpis) return prof.kpis.map(k => ({ key: k.key, label: pickL(k.label) }));
       return KPI_BY_TYPE[type] || KPI_BY_TYPE.restaurant;
