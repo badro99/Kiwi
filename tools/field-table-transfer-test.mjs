@@ -67,7 +67,8 @@ function context() {
   c.window = c;
   c.KiwiOrderInbox = { orders: () => c.remoteOrders || {} };
   vm.createContext(c);
-  const names = ['tableKey', 'caisseTableId', 'phoneSessionOf', 'locallySettledVisit', 'releasePhoneTable',
+  const names = ['tableKey', 'caisseTableId', 'phoneSessionOf', 'locallySettledVisit',
+    'locallySettledOrder', 'paidReceiptForCurrentTable', 'tableSaleLabel', 'releasePhoneTable',
     'caisseTableKitchenLocked', 'caisseMobilityIntent', 'applyCaisseMovedVisit',
     'confirmCaisseTransfer', 'confirmCaisseMerge', 'generateOrder', 'resetTableTimer', 'startTableTimer',
     'currentTotal', 'tableSentCount', 'cancelOpenTable', 'attachOrderProTable', 'opRepairFormulaParents',
@@ -189,6 +190,23 @@ assert.equal(reloaded.currentTotal(), 40);
 assert.equal(reloaded.phoneSessionOf('2'), 'ses-field-source');
 assert.equal(reloaded.events.length, 0);
 evidence('actual persist/restore reload recovers moved 40 MAD visit; close tombstones are not persisted');
+
+const paidReload = context(); snapshotContext(paidReload);
+paidReload.tables = { '1': occupied() };
+vm.runInContext(fn('restoreShift'), paidReload);
+paidReload.restoreShift({ ...savedShift,
+  journal: [{ id: 'visit-ses-paid-emp', table: '1', session: 'ses-paid',
+    ref: 'Table 1 #17', label: 'Table 1 #17', amount: 40,
+    method: 'cash', time: new Date(now).toISOString(), visitClosed: true }],
+  tables: { '1': { ...occupied(), orderNo: '17', timerSession: 'ses-paid' } },
+  tableOrders: { '1': [{ id: 'tea', name: 'Tea', qty: 2, price: 20, sent: true }] },
+  orders: { '1': [{ id: 'tea', qty: 2 }] },
+});
+assert.equal(paidReload.journal[0].visitClosed, true);
+assert.equal(paidReload.tables['1'].status, 'khawya');
+assert.equal(paidReload.tableOrders['1'], undefined);
+assert.equal(paidReload.orders['1'], undefined);
+evidence('actual restore uses the paid receipt to clear a stranded table without duplicating cash');
 
 // The moved visit keeps its original opening time, which precedes a prior
 // destination close. Only the acknowledged moved visit may supersede it.

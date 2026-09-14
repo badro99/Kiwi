@@ -37,13 +37,15 @@ function bench({ closedAt, seatSince, journal = [] }) {
     selectedId: null, mode: 'salle',
     caisseTableId: (v) => String(v),
     tableKey: (v) => String(v),
-    ticketNo: () => 'N°1',
+    ticketNo: (o) => String(o.opNum || 1),
     menuLineFind: () => null,
     newLineUid: () => 'uid-' + Math.random(),
     resetTableTimer() {}, startTableTimer() {},
     refreshTableNode() {}, renderRightPanel() {}, persistShift() {},
     locallySettledVisit: (id, session) => !!session && journal.some(entry => entry.visitClosed === true
       && entry.table === String(id) && entry.session === String(session)),
+    locallySettledOrder: (id, number) => journal.some(entry => entry.table === String(id)
+      && entry.ref === `Table ${id} #${number}` && !entry.voided && !entry.split),
   });
   vm.runInContext(fn, ctx);
   return { ctx, tables, tableOrders };
@@ -116,20 +118,28 @@ const SETTLED_AT = 1757635200000;   // l'encaissement
     ctx.attachOrderProTable(t) === true && (tableOrders['13'] || []).length === 1);
 }
 
-/* 6 · CE QUE CETTE GARDE NE COUVRE PAS, ET POURQUOI.
- *     `tableClosedAt` vit en mémoire : un F5 l'efface, et le bon déjà réglé
- *     redevient recevable jusqu'au prochain encaissement. C'est délibéré, pas
- *     un oubli · field-table-transfer-test exige explicitement que ces pierres
- *     tombales NE SOIENT PAS dans l'instantané du service (« close tombstones
- *     are not persisted »), sans quoi une table transférée puis rechargée
- *     perdrait la visite qu'on vient d'y déplacer. Fermer cette fenêtre-là
- *     demande de faire porter la preuve au serveur, pas au blob local.
- *     On verrouille les deux faits pour que personne ne « répare » l'un en
- *     cassant l'autre sans le voir. */
+/* 6 · The ephemeral timestamp stays out of the snapshot; the paid receipt,
+ *     identified by the immutable visit/order, survives a reload instead. */
 ok('la fermeture reste hors de l’instantané · les transferts en dépendent',
   !/tableClosedAt: tableClosedAt,/.test(source));
 ok('la garde est bien en mémoire, dans la fonction de rattachement',
   /const closedAt = Number\(tableClosedAt\[tableKey\(id\)\] \|\| 0\);/.test(source));
+ok('la reprise conserve la preuve de fermeture de la visite',
+  /if \(e\.visitClosed === true\) entry\.visitClosed = true/.test(source));
+ok('la reprise libère une addition dont le reçu a déjà été écrit',
+  /Object\.keys\(tables\)\.forEach\(id => \{\s*const paid = paidReceiptForCurrentTable\(id\)/.test(source));
+ok('a normal tender cannot close a table when the ledger refused its sale',
+  /const sale = recordSale\(tenderBase,[\s\S]{0,180}if \(!sale\) throw new Error\('sale-not-recorded'\)/.test(source));
+{
+  const receipt = { table: '13', ref: 'Table 13 #41', amount: 95 };
+  const reloaded = bench({ journal: [receipt] });
+  ok('un ancien bon sans session ne revient pas après F5 quand son numéro a déjà été payé',
+    reloaded.ctx.attachOrderProTable(ticket(SETTLED_AT - 60000)) === false
+      && reloaded.tables[13].status === 'khawya');
+  const fresh = { ...ticket(SETTLED_AT + 60000), number: 42, id: 'op-13-new' };
+  ok('un nouveau numéro de commande reste encaissable après F5',
+    reloaded.ctx.attachOrderProTable(fresh) === true);
+}
 
 /* 7 · Cashier kitchen relay returns a visit even if OrderPro is not enabled.
  * Payment must retain it before the first floor poll has populated seats. */
@@ -198,6 +208,7 @@ ok('la garde est bien en mémoire, dans la fonction de rattachement',
   const saleCtx = vm.createContext({ journal, tables: { 13: { zone: 'salle' } }, mode: 'salle',
     selectedId: '13', currentCashier: { name: 'Hafid' }, window: {},
     money: Number, activeSaleDiscount: () => null, accountActiveDiscount: () => { discountCalls++; },
+    paidReceiptForCurrentTable: () => null,
     phoneSessionOf: () => 'ses-13-154', settledOrderLabel: () => 'Table 13 #154',
     genRef: () => '154', attachReceipt() {}, persistShift() {}, creditSaleToClient() {},
     renderShiftStats() {}, refreshOpenReconciliationModals() {},
@@ -211,6 +222,39 @@ ok('la garde est bien en mémoire, dans la fonction de rattachement',
   ok('a repeated cashier confirmation keeps one journal row for visit #154',
     first === replay && journal.length === 1 && first.id === 'visit-ses-13-154-emp');
   ok('a repeated confirmation does not account its discount twice', discountCalls === 1);
+  journal.length = 0;
+  saleCtx.creditSaleToClient = () => { throw Error('loyalty unavailable'); };
+  saleCtx.renderShiftStats = () => { throw Error('stats widget unavailable'); };
+  const committed = saleCtx.recordSale(60, 'cash', 'Table 13 #154', 0,
+    [{ id: 'salad', name: 'Salade Maison', qty: 1, price: 60, total: 60 }], '13');
+  ok('a failure in optional loyalty/stats UI cannot interrupt an already-journaled payment',
+    !!committed && journal.length === 1);
+}
+
+/* A cashier queue may be offline or its close request may be lost. With no
+ * session to dedupe, the canonical table order number still prevents a second
+ * journal entry for the same physical payment. A new number remains payable. */
+{
+  const helperStart = source.indexOf('    function paidReceiptForCurrentTable(id) {');
+  const helperEnd = source.indexOf('\n    /* Libérer la table', helperStart);
+  const saleStart = source.indexOf('    function recordSale(amount, method, label, tip, lines, settlementTable, tenderOrder, split) {');
+  const saleEnd = source.indexOf('    /* Every completed payment already exists', saleStart);
+  assert.ok(helperStart >= 0 && helperEnd > helperStart && saleEnd > saleStart);
+  const journal = [{ id: 'sale-first', table: '13', ref: 'Table 13 #154', amount: 60 }];
+  const tables = { 13: { zone: 'salle', orderNo: '154' } };
+  const ctx = vm.createContext({ journal, tables, mode: 'salle', selectedId: '13',
+    currentCashier: { name: 'Hafid' }, window: {}, money: Number,
+    phoneSessionOf: () => '', tableSaleLabel: (id, num) => `Table ${id} #${num}`,
+    activeSaleDiscount: () => null, accountActiveDiscount() {},
+    settledOrderLabel: () => 'Table 13 #154', genRef: () => '154',
+    attachReceipt() {}, persistShift() {}, creditSaleToClient() {}, renderShiftStats() {},
+    refreshOpenReconciliationModals() {}, $: () => ({ classList: { contains: () => false } }), Date,
+  });
+  vm.runInContext(source.slice(helperStart, helperEnd) + '\n' + source.slice(saleStart, saleEnd), ctx);
+  const replay = ctx.recordSale(60, 'cash', 'Table 13 #154', 0, [], '13');
+  ok('a sessionless repeat of #154 reuses its first receipt', replay === journal[0] && journal.length === 1);
+  tables[13].orderNo = '155';
+  ok('a genuinely new order number is not mistaken for #154', ctx.paidReceiptForCurrentTable('13') === null);
 }
 
 console.log(`\nsettled-table-reopen-test: ${passed} controls passed\n`);

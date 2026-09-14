@@ -8075,6 +8075,23 @@
       return !!session && journal.some(entry => entry && entry.visitClosed === true
         && entry.table === String(id) && entry.session === String(session));
     }
+    function locallySettledOrder(id, number) {
+      if (number == null || String(number).trim() === '') return false;
+      const ref = tableSaleLabel(id, String(number));
+      return journal.some(entry => entry && entry.table === String(id)
+        && entry.ref === ref && entry.kind !== 'refund' && !entry.voided && !entry.split);
+    }
+    function paidReceiptForCurrentTable(id) {
+      const table = tables[id];
+      if (!table) return null;
+      const session = phoneSessionOf(id);
+      const orderNo = String(table.orderNo || '').trim();
+      return journal.find(entry => entry && entry.table === String(id)
+        && entry.kind !== 'refund' && !entry.voided && !entry.split
+        && ((session && entry.session === session)
+          || (orderNo && entry.ref === tableSaleLabel(id, orderNo)
+            && (!session || !entry.session || entry.session === session)))) || null;
+    }
 
     /* Libérer la table côté téléphone. Appelée quand l'addition est réglée, et
        aussi quand la table est rendue sans encaissement · sinon un téléphone
@@ -11067,8 +11084,11 @@
           : (vrapEditingNum != null ? 'À emporter #' + vrapEditingNum : 'À emporter'))
         : settledOrderLabel(selectedId);
       const lines = currentSaleLines();
-      if (!splitPayCallback) recordSale(tenderBase, method, saleLabel, tenderTip, lines,
-        mode !== 'vrap' ? selectedId : '', tenderOrder);
+      if (!splitPayCallback) {
+        const sale = recordSale(tenderBase, method, saleLabel, tenderTip, lines,
+          mode !== 'vrap' ? selectedId : '', tenderOrder);
+        if (!sale) throw new Error('sale-not-recorded');
+      }
       if (splitPayCallback) {
         const cb = splitPayCallback;
         splitPayCallback = null;
@@ -14126,6 +14146,13 @@
     }
     function recordSale(amount, method, label, tip, lines, settlementTable, tenderOrder, split) {
       amount = money(amount);
+      /* A cashier ticket can temporarily have no server visit (offline relay).
+         Its immutable order number is still enough to recognize a second tap
+         on the same uncleared bill. Never book that money or stock twice. */
+      if (settlementTable && !split) {
+        const paid = paidReceiptForCurrentTable(settlementTable);
+        if (paid) { lastSaleId = paid.id; return paid; }
+      }
       const discount = activeSaleDiscount(amount, lines, settlementTable);
       const complimentary = amount === 0 && discount
         && discount.grossAmountCents === discount.discountAmountCents
@@ -14262,7 +14289,7 @@
          ne l'appelait ici : on pouvait inscrire un client, jamais lui compter
          un passage. Une note = un passage, même réglée en quatre parts · d'où
          le détachement immédiat (voir creditSaleToClient). */
-      creditSaleToClient(entry);
+      try { creditSaleToClient(entry); } catch (_) {}
       // Live Link (opt-in, off by default): mirror this sale to the owner's
       // dashboard via /api/sale. No-op unless kiwiLive is on. Never blocks the sale.
       try {
@@ -14290,9 +14317,11 @@
         try { persistShift(); } catch (_) {}
         toast('Échec de synchronisation de la vente · ne fermez pas cette caisse');
       }
-      renderShiftStats();
-      if ($('#journal-drawer').classList.contains('is-open')) renderJournal();
-      refreshOpenReconciliationModals();
+      /* Once the receipt is journaled, optional UI/loyalty failures must not
+         skip markPaid() and leave the same cash sale payable again. */
+      try { renderShiftStats(); } catch (_) {}
+      try { if ($('#journal-drawer').classList.contains('is-open')) renderJournal(); } catch (_) {}
+      try { refreshOpenReconciliationModals(); } catch (_) {}
       return entry;
     }
 
@@ -20734,6 +20763,8 @@
       const t = id && tables[id];
       if (!t) return false;
       if (locallySettledVisit(id, o.session)) return false;
+      if (o.number != null && locallySettledOrder(id, ticketNo({ opNum: o.number, opChannel: o.channel || 'kiwi',
+        type: 'dineIn', server: o.server || '' }))) return false;
       /* Rejection is terminal and its line marker is globally unique. Remove
          that exact order before checking the current phone session: the visit
          may already have closed or the physical table may already belong to a
@@ -21853,6 +21884,7 @@
            Do not infer a visit, split or discount from today's mutable order;
            legacy receipts keep absent metadata absent. The API validates it. */
         if (e.serverSaleId)    entry.serverSaleId = e.serverSaleId;
+        if (e.visitClosed === true) entry.visitClosed = true;
         ['orderId', 'table', 'session', 'split', 'settlementKind', 'amountCents', 'grossAmountCents',
           'discountAmountCents', 'discountReason', 'actorId', 'saleSyncPending', 'saleSyncError'].forEach((key) => {
           if (Object.prototype.hasOwnProperty.call(e, key)) entry[key] = e[key];
@@ -21929,6 +21961,21 @@
         Object.keys(orders).forEach(k => delete orders[k]);
         Object.assign(orders, d.orders);
       }
+      /* The payment receipt is the durable fact. A crash after recording cash
+         but before markPaid() must not restore that same bill as payable. The
+         order number/session ties this cleanup to this visit, not a later party
+         that happens to use the same physical table. */
+      Object.keys(tables).forEach(id => {
+        const paid = paidReceiptForCurrentTable(id);
+        if (!paid) return;
+        tables[id].status = 'khawya';
+        tables[id].covers = 0;
+        resetTableTimer(tables[id]);
+        delete tables[id].orderNo;
+        delete tables[id].discount;
+        delete tableOrders[id];
+        delete orders[id];
+      });
       tableSplits.clear();
       if (Array.isArray(d.tableSplits)) {
         d.tableSplits.forEach((pair) => {
