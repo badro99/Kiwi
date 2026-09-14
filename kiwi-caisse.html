@@ -778,6 +778,14 @@
     }
     .view.is-active { display: flex; }
     .view-salle { gap: 12px; overflow-y: auto; }
+    /* A paired store inserts its real plan after the demo canvases. The demo
+       floor counter must not reserve a row before that plan. */
+    .view-salle.has-real-plan { padding-top: 0; }
+    .view-salle.has-real-plan > .plan-footer { display: none; }
+    .view-salle.has-real-plan .plan-real { padding-top: 2px; }
+    .view-salle.has-real-plan .plan-real-zone-h { margin-bottom: 7px; }
+    .view-salle.has-real-plan .cplan-room { margin-top: 0; }
+    .main-head[data-mode-section="salle"] { padding-bottom: 8px; }
 
     /* ---------- Waitlist (liste d'attente) ---------- */
     .view-waitlist { gap: 0; }
@@ -8252,6 +8260,7 @@
       if (!storeIsReal()) return;                      // demo untouched
       const view = document.querySelector('.view-salle');
       if (!view) return;
+      view.classList.add('has-real-plan');
       view.querySelectorAll('.plan-canvas').forEach(c => { c.style.display = 'none'; });  // hide demo architecture
       let host = view.querySelector('.plan-real');
       if (!host) { host = document.createElement('div'); host.className = 'plan-real'; view.appendChild(host); }

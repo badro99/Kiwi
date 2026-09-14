@@ -24,7 +24,11 @@ const tableOrders = { '10': [{ name: 'Pasta', qty: 1, sent: true, orderProLine: 
 const phoneSeats = new Map([['10', { session: 'visit-10', since: 1700000000000 }]]);
 const phonePending = new Map([['10', 1]]);
 const host = { innerHTML: '' };
-const view = { querySelectorAll: () => [], querySelector: () => host, appendChild() {} };
+const viewClasses = new Set();
+const view = {
+  classList: { add: name => viewClasses.add(name) },
+  querySelectorAll: () => [], querySelector: () => host, appendChild() {},
+};
 const context = vm.createContext({
   tables, tableOrders, phoneSeats, phonePending, __realZoneOrder: [], __realPlan: null,
   storeIsReal: () => true,
@@ -41,6 +45,7 @@ const context = vm.createContext({
 });
 vm.runInContext(`${extractFunction('setupRealSalle')}\nsetupRealSalle();`, context);
 
+assert.ok(viewClasses.has('has-real-plan'), 'real plan hides the unused demo counter row');
 assert.equal(tables['10'].status, 'ka-yaklo', 'cloud plan refresh cannot mark an active OrderPro table empty');
 assert.equal(tables['10'].covers, 2, 'live party size survives designed-capacity refresh');
 assert.equal(tables['10'].elapsed, 7);
