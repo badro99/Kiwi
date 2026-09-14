@@ -15848,22 +15848,22 @@
          négatif : afficher l'un au-dessus des autres faisait dire à l'écran
          « Encaissé 12 651 » et « Espèces 12 321 » sur la même vue · l'écart
          valait exactement les remboursements du service, et il a coûté une nuit
-         de recherche à un commerçant. Le chiffre annoncé est donc celui qui est
-         vraiment entré, et le brut se lit dans les ajustements. */
+         de recherche à un commerçant. On nomme donc explicitement le brut et
+         le net ; les modes de paiement affichent leur total net. */
       const refundAmt = (r.refunds && r.refunds.count) ? (+r.refunds.amount || 0) : 0;
       const collected = money(r.gross - refundAmt);
 
       let html = '<div class="rp-kpis">'
-        + kpi('Net du service', fmtMAD(r.net), '', true)
+        + kpi('Net après remboursements', fmtMAD(r.net), '', true)
         + kpi('Transactions', String(r.txns))
         + kpi('Ticket moyen', fmtMAD(r.basket))
-        + kpi('Encaissé', fmtMAD(collected))
+        + kpi('Ventes avant remboursements', fmtMAD(r.gross))
         + '</div>';
 
       const meth = Object.keys(r.methods || {}).filter(k => r.methods[k])
         .sort((a, b) => r.methods[b] - r.methods[a])
         .map(k => row(M[k] || k, fmtMAD(r.methods[k]))).join('');
-      if (meth) html += `<div class="rp-sec"><div class="rp-h"><span>Moyens de paiement</span><em>${rpEsc(fmtMAD(collected))}</em></div>${meth}</div>`;
+      if (meth) html += `<div class="rp-sec"><div class="rp-h"><span>Moyens de paiement · net</span><em>${rpEsc(fmtMAD(collected))}</em></div>${meth}</div>`;
 
       /* Le rythme du service. Utile au comptoir pour une raison très concrète :
          savoir si le coup de feu est passé avant d'envoyer quelqu'un en pause. */

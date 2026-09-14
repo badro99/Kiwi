@@ -80,7 +80,7 @@
     net:       { fr: 'Net du jour', en: 'Net for the day', ar: 'صافي اليوم' },
     txns:      { fr: 'Transactions', en: 'Transactions', ar: 'المعاملات' },
     basket:    { fr: 'Ticket moyen', en: 'Average basket', ar: 'متوسط السلة' },
-    gross:     { fr: 'Total encaissé', en: 'Total taken', ar: 'إجمالي المقبوض' },
+    gross:     { fr: 'Ventes avant remboursements', en: 'Sales before refunds', ar: 'المبيعات قبل المبالغ المستردة' },
     payments:  { fr: 'Moyens de paiement', en: 'Payment methods', ar: 'طرق الدفع' },
     drawer:    { fr: 'Tiroir-caisse', en: 'Cash drawer', ar: 'درج النقد' },
     opening:   { fr: "Fond d'ouverture", en: 'Opening float', ar: 'رصيد الافتتاح' },
