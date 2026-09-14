@@ -5569,7 +5569,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=520" defer></script>
+  <script src="assets/caisse-pwa.js?v=521" defer></script>
   <script src="assets/live-link.js?v=36" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -15706,7 +15706,7 @@
          rapport de la journée n'avait jamais existé nulle part. Les ventes,
          elles, ne sont pas touchées · ni ici ni ailleurs : une clôture produit
          un document, elle ne modifie pas le registre. */
-      let report = null;
+      let report = null, reportSaved = false;
       let reconciliation = { ok: false, complete: false, count: 0, reason: 'feed-not-read' };
       try {
         /* Reconcile BEFORE freezing the Z. The synchronous write-ahead copy in
@@ -15724,13 +15724,22 @@
             reason: String(reconciliation.reason || '').slice(0, 32),
           };
           report.closed = true;
-          window.KiwiDayReport.save(report, { by: (currentCashier && currentCashier.name) || '' });
+          const saved = window.KiwiDayReport.save(report, { by: (currentCashier && currentCashier.name) || '' });
+          const persisted = window.KiwiDayReport.load(report.day, report.store?.slug);
+          reportSaved = !!saved && (!window.KiwiDayReport.isReal() ||
+            (persisted?.closedAt === report.closedAt && persisted?.sessionId === report.sessionId));
           /* La remontée serveur est débattue et la page se recharge dans une
              seconde : sans flush() le rapport partirait après la mort de
              l'onglet, c'est-à-dire jamais. */
           window.KiwiDayReport.flush();
         }
       } catch (_) {}
+      if (!report || !reportSaved) {
+        registerClosing = false;
+        $('#cloture-modal').classList.add('is-open');
+        toast('Clôture non enregistrée · poste conservé. Vérifiez le stockage puis réessayez.');
+        return;
+      }
 
       const closedAt = Date.now();
       const tot = journalTotals();
@@ -15772,12 +15781,14 @@
       if (print) print.addEventListener('click', () => {
         if (!closedReport) return finishClose();
         print.disabled = true;
-        doPrintDayReport(closedReport, '').then(() => {
+        doPrintDayReport(closedReport, '').then((res) => {
           print.disabled = false;
           /* « Réimprimer » n'apparaît qu'APRÈS un premier tirage : proposer de
              réimprimer ce qui n'a jamais été imprimé n'a pas de sens. */
-          if (reprint) reprint.hidden = false;
-          const lbl = print.querySelector('span'); if (lbl) lbl.textContent = 'Imprimer à nouveau';
+          if (res?.ok) {
+            if (reprint) reprint.hidden = false;
+            const lbl = print.querySelector('span'); if (lbl) lbl.textContent = 'Imprimer à nouveau';
+          }
         });
       });
       if (reprint) reprint.addEventListener('click', () => {

@@ -383,6 +383,34 @@
        * de vrais sélecteurs — et de là tout le produit les lit. */
       { k: 'surface2', type: 'number', ph: 'Ex. 2',            label: { fr: 'Nombre de vendeurs', en: 'Sales staff', ar: 'عدد البائعين' } },
     ] },
+    maison: { base: 'boutique',
+      header: { fr: 'Maison & décoration', en: 'Home & decor', ar: 'المنزل والديكور' },
+      items: [
+        { nav: 'inventory', tag: 'LIVE', label: { fr: 'Pièces & collections', en: 'Pieces & collections', ar: 'القطع والمجموعات' } },
+        { nav: 'categories', label: { fr: 'Rayons & matières', en: 'Departments & materials', ar: 'الأقسام والمواد' } },
+        { nav: 'promos', label: { fr: 'Offres & coffrets', en: 'Offers & gift sets', ar: 'العروض ومجموعات الهدايا' } },
+        { nav: 'returns', label: { fr: 'Retours & échanges', en: 'Returns & exchanges', ar: 'المرتجعات والاستبدالات' } },
+        { nav: 'sold', label: { fr: 'Pièces vendues', en: 'Pieces sold', ar: 'القطع المباعة' } },
+      ],
+      kpis: [
+        { key: 'tx', label: { fr: 'Ventes', en: 'Sales', ar: 'المبيعات' } },
+        { key: 'panier', label: { fr: 'Panier moyen', en: 'Average basket', ar: 'متوسط السلة' } },
+        { key: 'tauxRetour', label: { fr: 'Taux de retour', en: 'Return rate', ar: 'معدل الإرجاع' } },
+        { key: 'success', label: { fr: 'Taux succès', en: 'Success rate', ar: 'معدل النجاح' } },
+        { key: 'ratio', label: { fr: 'Carte / espèces', en: 'Card / cash', ar: 'بطاقة / نقد' } },
+        { key: 'regulars', label: { fr: 'Clients fidèles', en: 'Loyal customers', ar: 'العملاء الأوفياء' } },
+      ],
+      questions: [
+        { k: 'collections', type: 'number', ph: 'Ex. 12', label: { fr: 'Collections suivies', en: 'Collections tracked', ar: 'المجموعات المتابعة' } },
+        { k: 'fragile', type: 'text', ph: 'Ex. Vaisselle, luminaires', label: { fr: 'Pièces fragiles', en: 'Fragile pieces', ar: 'القطع الهشة' } },
+      ],
+      vocab: {
+        feedEmpty: { fr: { badge: 'MAISON OUVERTE', title: 'Première vente à venir', sub: 'Le flux s’active dès la première pièce encaissée.' },
+                     en: { badge: 'HOME STORE OPEN', title: 'First sale coming up', sub: 'The feed starts after the first piece is sold.' },
+                     ar: { badge: 'متجر المنزل مفتوح', title: 'أول عملية بيع قادمة', sub: 'يبدأ التدفق عند تحصيل أول قطعة.' } },
+        askPlaceholder: { fr: 'Posez votre question sur votre maison...', en: 'Ask about your home store...', ar: 'اسأل عن متجر المنزل...' },
+      },
+    },
     spa: { base: 'spa',
       header: { fr: 'Spa & bien-être', en: 'Spa & wellness', ar: 'السبا والعناية' },
       items: [

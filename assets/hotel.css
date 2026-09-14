@@ -163,6 +163,9 @@
 .hx-room { min-height:112px; padding:13px; border-color:var(--n-200); border-radius:14px; box-shadow:0 8px 24px -22px rgba(5,28,20,.45); }
 .hx-room:hover { border-color:var(--atlas); box-shadow:0 12px 28px -18px rgba(5,57,43,.36); }
 .hx-room-top,.hx-room-bottom { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+.hx-room-top { flex-wrap:wrap; justify-content:flex-start; }
+.hx-room-top .no { margin-right:auto; }
+.hx-room-top .hx-exc-chip { margin-left:0; }
 .hx-room .no { font-size:19px; letter-spacing:-.04em; }
 .hx-room .ty { margin-top:4px; font-size:11px; font-weight:600; opacity:.78; }
 .hx-room .gu { min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; margin:0; font-size:10.5px; }

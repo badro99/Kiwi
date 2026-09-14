@@ -1208,6 +1208,7 @@ section('Whole-project regressions');
     'day-report-print-format-test.mjs',
     'z-refund-total-coherence-test.mjs',
     'caisse-boot-restore-guard-test.mjs',
+    'close-register-durability-test.mjs',
     'kitchen-ticket-wrap-test.mjs',
     'settled-table-reopen-test.mjs',
     'order-line-cap-test.mjs',

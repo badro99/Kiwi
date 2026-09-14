@@ -118,7 +118,8 @@ for (const mode of ['document', 'd1', 'd1-pruned']) {
       assert.equal(first.status,200,JSON.stringify(first.body));
       assert.equal(first.body.booking.hotel.nights,0);
       assert.equal(first.body.booking.hotel.total,300.25);
-      assert.deepEqual(first.body.booking.hotel.guestSegments,[]);
+      assert.equal(first.body.booking.hotel.guestSegments.length,2,'day-use keeps both guest segments');
+      assert.deepEqual(first.body.booking.hotel.roomSegments,[{roomId:'room:101',fromDate:f.input.checkIn,toDate:f.input.checkIn}]);
       const before = f.snapshot();
       const clash = await f.post({...spec, clientRef:'day-use-conflict-001',arrivalTime:'13:00',departureTime:'16:00'});
       assert.equal(clash.status,409); assert.equal(f.snapshot(),before);
@@ -154,6 +155,33 @@ for (const mode of ['document', 'd1', 'd1-pruned']) {
       assert.equal(remaining.body.stays.find(b=>b.id===first.id).status,'confirmed');
       const bad = await f.post({linkedStayId:'another-tenant-stay',clientRef:'linked-not-in-tenant',resourceId:'room:102'});
       assert.equal(bad.status,404);
+    } finally { f.sql.close(); }
+  });
+  test(`${mode}: a feed-conflicted room admits only one overlapping check-in`, async () => {
+    const f = await fixture(mode);
+    try {
+      const first = (await f.post({})).body.booking;
+      const second = (await f.post({clientRef:'feed-conflict-second',resourceId:'room:102'})).body.booking;
+      // Model the OTA conflict path: both reservations remain confirmed, but
+      // their operational room assignment overlaps. This must not make both
+      // arrivals impossible, nor allow both into the same room.
+      const doc = f.savedDoc();
+      const rival = doc.bookings.find((stay) => stay.id === second.id) || { ...second, hotel: { ...second.hotel } };
+      rival.resourceId = first.resourceId;
+      rival.hotel.conflict = true;
+      f.sql.prepare("UPDATE store_docs SET data=?,rev=rev+1 WHERE merchant=? AND feature='reservations'")
+        .run(JSON.stringify(doc), f.input.merchant);
+      if (mode !== 'document') {
+        f.sql.prepare('UPDATE hotel_reservations SET room_id=?, raw_json=? WHERE merchant=? AND id=?')
+          .run(first.resourceId, JSON.stringify(rival), f.input.merchant, second.id);
+      }
+      const arrived = await f.post({action:'status',id:first.id,status:'checked_in'});
+      assert.equal(arrived.status,200,JSON.stringify(arrived.body));
+      const before = f.snapshot();
+      const refused = await f.post({action:'status',id:second.id,status:'checked_in'});
+      assert.equal(refused.status,409);
+      assert.equal(refused.body.error,'room-occupied');
+      assert.equal(f.snapshot(),before,'refused arrival cannot change reservations or events');
     } finally { f.sql.close(); }
   });
   test(`${mode}: stable clientRef retries return the original stay without another write`, async () => {

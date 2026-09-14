@@ -23,7 +23,9 @@ const segmentDates = (raw, checkIn, checkOut) => {
 };
 
 export function readGuestSegments(raw, checkIn, checkOut) {
-  if (!Array.isArray(raw) || !DATE.test(checkIn) || !DATE.test(checkOut) || checkOut <= checkIn) return [];
+  // Same-day day-use has zero *nights*, not zero guests. Equal dates retain
+  // the statistical identity segments while aggregateMonth counts no beds.
+  if (!Array.isArray(raw) || !DATE.test(checkIn) || !DATE.test(checkOut) || checkOut < checkIn) return [];
   return raw.slice(0, 20).map((item) => {
     const guestId = text(item?.guestId, 80);
     if (!GUEST_ID.test(guestId)) return null;
@@ -55,7 +57,7 @@ export function normalizeGuestSegments(raw, previous, partySize, checkIn, checkO
 }
 
 export function readRoomSegments(raw, checkIn, checkOut) {
-  if (!Array.isArray(raw) || !DATE.test(checkIn) || !DATE.test(checkOut) || checkOut <= checkIn) return [];
+  if (!Array.isArray(raw) || !DATE.test(checkIn) || !DATE.test(checkOut) || checkOut < checkIn) return [];
   return raw.slice(0, 40).map((item) => {
     const roomId = text(item?.roomId, 64);
     return roomId ? { roomId, ...segmentDates(item, checkIn, checkOut) } : null;

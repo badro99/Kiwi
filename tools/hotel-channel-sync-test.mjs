@@ -15,14 +15,19 @@ sql.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUE
 class Statement{constructor(text){this.text=text;this.args=[]}bind(...a){this.args=a;return this}async first(){return sql.prepare(this.text).get(...this.args)||null}async all(){return{results:sql.prepare(this.text).all(...this.args)}}async run(){const r=sql.prepare(this.text).run(...this.args);return{success:true,meta:{changes:Number(r.changes)}}}rows(){return{results:sql.prepare(this.text).all(...this.args)}}}
 const DB={prepare(text){return new Statement(text)},async batch(ss){const writing=ss.some((s)=>!/^\s*SELECT\b/i.test(s.text));if(!writing)return ss.map((s)=>s.rows());sql.exec('BEGIN IMMEDIATE');try{const out=[];for(const s of ss)out.push(/^\s*SELECT\b/i.test(s.text)?s.rows():await s.run());sql.exec('COMMIT');return out}catch(error){sql.exec('ROLLBACK');throw error}}};
 const cookie=sessionCookie(await makeSession('acc-h',secret)).split(';')[0];
-let calendar=`BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:airbnb-reservation-1\r\nDTSTART;VALUE=DATE:20260910\r\nDTEND;VALUE=DATE:20260913\r\nSUMMARY:Reserved\r\nEND:VEVENT\r\nEND:VCALENDAR`, clock=now;
+// Keep the fixture ahead of the clock: an expired stay is correctly excluded
+// from missing-feed cancellation detection, which used to make this test
+// fail as soon as its hard-coded September 2026 dates passed.
+const icalDay = (ms) => new Date(ms).toISOString().slice(0, 10).replace(/-/g, '');
+const fixtureStart = icalDay(now + 14 * 86400000), fixtureEnd = icalDay(now + 17 * 86400000);
+let calendar=`BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:airbnb-reservation-1\r\nDTSTART;VALUE=DATE:${fixtureStart}\r\nDTEND;VALUE=DATE:${fixtureEnd}\r\nSUMMARY:Reserved\r\nEND:VEVENT\r\nEND:VCALENDAR`, clock=now;
 const env={DB,AUTH_SECRET:secret,HOTEL_NOW:()=>clock,HOTEL_FEED_FETCH:async()=>new Response(calendar,{headers:{'Content-Type':'text/calendar'}})};
 const request=(body,auth=true)=>new Request('https://kiwi.test/api/hotel/channels',{method:'POST',headers:{'Content-Type':'application/json',...(auth?{Cookie:cookie}:{})},body:JSON.stringify(body)});
 let controls=0;const ok=(v,label)=>{assert.ok(v,label);controls++;console.log('  ✓ '+label)};
 
 ok(!normalizeFeedUrl('https://127.0.0.1/private.ics','airbnb')&&!normalizeFeedUrl('https://airbnb.com.attacker.test/x.ics','airbnb'),'calendar URL validation blocks private and lookalike SSRF targets');
 ok(normalizeFeedUrl('webcal://www.airbnb.com/calendar/ical/123.ics?s=secret','airbnb').startsWith('https://www.airbnb.com/'),'official webcal links are upgraded to HTTPS');
-ok(parseIcal(calendar).length===1&&parseIcal(calendar)[0].checkOut==='2026-09-13','fold-safe iCal parser reads exclusive hotel dates');
+ok(parseIcal(calendar).length===1&&parseIcal(calendar)[0].checkOut===new Date(now + 17 * 86400000).toISOString().slice(0, 10),'fold-safe iCal parser reads exclusive hotel dates');
 let response=await onRequestPost({env,request:request({action:'save',merchant:'riad-sync',channel:'airbnb',label:'Airbnb 101',roomId:'room:101',feedUrl:'https://www.airbnb.com/calendar/ical/123.ics?s=secret'},false)});
 ok(response.status===401,'a paired or anonymous terminal cannot manage OTA bearer URLs');
 response=await onRequestPost({env,request:request({action:'save',merchant:'riad-sync',channel:'airbnb',label:'Airbnb 101',roomId:'room:101',feedUrl:'https://evil.test/steal.ics'})});

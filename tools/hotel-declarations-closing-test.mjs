@@ -27,7 +27,7 @@ import {
   employeeToken, employeeCookie, operatorToken, operatorIdToken,
   OP_COOKIE, OPID_COOKIE,
 } from '../functions/auth/_lib.js';
-import { onRequestGet, onRequestPost, canonicalJson, sha256Hex } from '../functions/api/hotel/declarations.js';
+import { onRequestGet, onRequestPost, canonicalJson, sha256Hex, aggregateMonth } from '../functions/api/hotel/declarations.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sql = new DatabaseSync(':memory:');
@@ -105,6 +105,17 @@ function bookingFor(id, code, { status, checkIn, checkOut, roomId, partySize, gu
 }
 
 const HAPPY = '2025-06';
+{
+  const day = `${HAPPY}-01`;
+  const dayUse = aggregateMonth([{ stayId:'day-use-two', status:'completed', dayUse:true,
+    checkIn:day, checkOut:day, roomId:'room:101',
+    guestSegments:[seg('gst-day-1','MA',day,day),seg('gst-day-2','FR',day,day)],
+    roomSegments:[{roomId:'room:101',fromDate:day,toDate:day}],
+  }], `${HAPPY}-01`, '2025-07-01');
+  ok(dayUse.totalArrivals === 2, 'same-day day-use retains both arrivals on the first of the month');
+  ok(dayUse.totalBedNights === 0 && dayUse.occupiedRoomNightsCount === 0,
+    'day-use does not fabricate bed or occupied-room nights');
+}
 const happyBookings = [
   bookingFor('bk-a', 'H-AAA', { status: 'completed', checkIn: `${HAPPY}-05`, checkOut: `${HAPPY}-08`, roomId: 'room:R1', partySize: 2, guests: [guest('Canary Testname', 'FR', 'CANARY-DOC-007'), guest('Karim Bennani', 'MA', 'EE654321')] }),
   bookingFor('bk-b', 'H-BBB', { status: 'completed', checkIn: `${HAPPY}-07`, checkOut: `${HAPPY}-09`, roomId: 'room:R2', partySize: 1, guests: [guest('Lea Martin', 'FR', 'FR987654')] }),

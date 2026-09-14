@@ -62,7 +62,13 @@ const bootstrap = `<script>
       options,
     }),
   };
-  window.KiwiReservations = { get: () => ({ bookings: [] }) };
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const tomorrow = new Date(Date.parse(today + 'T00:00:00Z') + 86400000).toISOString().slice(0, 10);
+  window.KiwiReservations = { get: () => ({ bookings: [
+    { id: 'fixture-checked-in', resourceId: 'room:1', status: 'checked_in', updatedAt: 2000, customer: { name: 'Amina Test' }, hotel: { checkIn: today, checkOut: tomorrow } },
+    { id: 'fixture-arriving', resourceId: 'room:2', status: 'confirmed', updatedAt: 2001, customer: { name: 'Omar Test' }, hotel: { checkIn: today, checkOut: tomorrow } },
+    { id: 'fixture-checked-out', resourceId: 'room:3', status: 'completed', updatedAt: 2002, customer: { name: 'Leila Test' }, hotel: { checkIn: today, checkOut: today } },
+  ] }) };
   window.Kiwi = {
     handlers: {},
     toast: () => {},
@@ -119,6 +125,35 @@ try {
   await page.waitForSelector('.hx-room-workspace');
   check(await page.$$eval('[data-hx-room-card]', (x) => x.length) === 20, 'desktop renders all 20 fixture rooms');
   check(await page.$$eval('[data-hx-floor-section]', (x) => x.length) === 2, 'desktop renders both floor sections');
+  check(await page.$eval('[data-hx-room-card][data-arg="1"]', (card) => card.classList.contains('st-occ') && card.textContent.includes('Amina Test')),
+    'checked-in stay makes the room occupied and identifies its guest');
+  check(await page.$eval('[data-hx-room-card][data-arg="2"]', (card) => card.classList.contains('st-arrivee') && card.textContent.includes('Omar Test')),
+    'confirmed arrival is shown separately from an occupied room');
+  check(await page.$eval('[data-hx-room-card][data-arg="3"]', (card) => card.classList.contains('st-sale')),
+    'completed stay sends its room to housekeeping despite a stale clean room document');
+  check(await page.$eval('[data-action="hx-room-status"][data-arg="occ"] b', (b) => b.textContent.trim() === '1'),
+    'occupied KPI counts checked-in stays rather than stale room document state');
+  check(await page.$eval('[data-action="hx-room-status"][data-arg="libre"] b', (b) => b.textContent.trim() === '13'),
+    'available KPI excludes occupied, arriving, and unclean checked-out rooms');
+  await page.click('[data-action="hx-room-edit"][data-arg="3"]');
+  await page.waitForSelector('.kiwi-backdrop.in [data-hx-room-status]');
+  check(await page.$eval('[data-hx-room-status]', (select) => select.value === 'sale' && !select.disabled),
+    'editing a checked-out room shows its live dirty state rather than the stale clean document');
+  await page.click('[data-action="hx-room-save"]');
+  await page.waitForFunction(() => !document.querySelector('.kiwi-backdrop'));
+  check(await page.$eval('[data-hx-room-card][data-arg="3"]', (card) => card.classList.contains('st-sale')),
+    'an unrelated room edit does not silently clear the checkout cleaning task');
+  await page.click('[data-action="nav-menage"]');
+  check(await page.$('[data-action="hx-hk-done"][data-arg="3"]') !== null,
+    'checked-out room appears in the housekeeping queue');
+  await page.click('[data-action="hx-hk-done"][data-arg="3"]');
+  await page.click('[data-action="nav-chambres"]');
+  check(await page.$eval('[data-hx-room-card][data-arg="3"]', (card) => card.classList.contains('st-libre')),
+    'saving housekeeping clean after checkout restores room availability');
+  await page.click('[data-action="hx-room-status"][data-arg="occ"]');
+  check(await page.$$eval('[data-hx-room-card]', (x) => x.length) === 1,
+    'occupied filter agrees with the occupancy KPI');
+  await page.click('[data-action="hx-room-filter-reset"]');
 
   await page.click('[data-action="hx-room-filters-open"]');
   await page.waitForSelector('.hx-hotel-modal [data-hx-filter-floor]');
@@ -203,7 +238,9 @@ try {
     await page.setViewport(viewport); await page.evaluate((value) => document.documentElement.dir = value, dir);
     await page.screenshot({ path: path.join(screenshotDir, `${name}.png`), fullPage: true });
     check(await page.$('.hx-room-workspace') !== null, `${name} layout renders`);
-    check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${name} layout stays within viewport width`);
+    const overflow = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, viewport: innerWidth,
+      nodes: [...document.querySelectorAll('body *')].filter((el) => el.getBoundingClientRect().right > innerWidth + 1).slice(0, 8).map((el) => ({ tag: el.tagName, className: String(el.className).slice(0, 80), right: Math.round(el.getBoundingClientRect().right) })) }));
+    check(overflow.width <= overflow.viewport, `${name} layout stays within viewport width: ${JSON.stringify(overflow)}`);
   }
   check(errors.length === 0, 'Chromium page reported no runtime errors');
   console.log(`Screenshots: ${screenshotDir}`);

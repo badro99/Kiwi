@@ -6869,17 +6869,25 @@
     const raw = v ? v.querySelector('#bqclo-count').value : '';
     const counted = (raw === '' || raw == null) ? null : parseFloat(raw);
     if (v) v.classList.remove('is-open');
-    let report = null;
+    let report = null, reportSaved = false;
     try {
       report = bqBuildReport(counted, Date.now());
       if (report && window.KiwiDayReport) {
         report.closed = true;
-        window.KiwiDayReport.save(report, { by: (STAFF.caissiere && STAFF.caissiere.name) || '' });
+        const saved = window.KiwiDayReport.save(report, { by: (STAFF.caissiere && STAFF.caissiere.name) || '' });
+        const persisted = window.KiwiDayReport.load(report.day, report.store?.slug);
+        reportSaved = !!saved && (!window.KiwiDayReport.isReal() ||
+          (persisted?.closedAt === report.closedAt && persisted?.sessionId === report.sessionId));
         /* La page se recharge dans un instant : sans flush(), la remontée
            serveur débattue partirait après la mort de l'onglet — jamais. */
         window.KiwiDayReport.flush();
       }
     } catch (_) {}
+    if (!report || !reportSaved) {
+      if (v) v.classList.add('is-open');
+      toast('Clôture non enregistrée · poste conservé. Vérifiez le stockage puis réessayez.');
+      return;
+    }
     bqShift = null;
     bqShiftPersist();
     if (report) bqShowPostClose(report); else bqFinishClose();
@@ -6926,9 +6934,9 @@
     const doPrint = (btn) => {
       if (!bqClosedReport) return bqFinishClose();
       btn.disabled = true;
-      bqPrintReport(bqClosedReport, btn === reprint ? 'DUPLICATA' : '').then(() => {
+      bqPrintReport(bqClosedReport, btn === reprint ? 'DUPLICATA' : '').then((res) => {
         btn.disabled = false;
-        if (reprint) { reprint.hidden = false; icons(); }
+        if (res?.ok && reprint) { reprint.hidden = false; icons(); }
       });
     };
     print.onclick = () => doPrint(print);

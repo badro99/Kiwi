@@ -132,8 +132,8 @@
     "sha": "110af8f00279e7e5"
   },
   "assets/caisse-pwa.js": {
-    "v": "520",
-    "sha": "d21619ef8a463abe"
+    "v": "521",
+    "sha": "99b0c482f4d0bb7f"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -208,8 +208,8 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "513",
-    "sha": "ff292b584cbfebf8"
+    "v": "514",
+    "sha": "cc9937a281a68034"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -264,8 +264,8 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/employee-live.js": {
-    "v": "512",
-    "sha": "99924c58711c8e9d"
+    "v": "513",
+    "sha": "819a5cbbb89d050f"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -340,12 +340,12 @@
     "sha": "d85678a7afe63a1a"
   },
   "assets/hotel.css": {
-    "v": "36",
-    "sha": "b9d5816119929f67"
+    "v": "37",
+    "sha": "0a9af2febd7e9689"
   },
   "assets/hotel.js": {
-    "v": "61",
-    "sha": "31ee9af5f4e6884e"
+    "v": "64",
+    "sha": "cd69630adfc22f2c"
   },
   "assets/hours-ui.js": {
     "v": "1",
@@ -588,12 +588,12 @@
     "sha": "530ff7c046c57b2c"
   },
   "assets/pos-boutique.css": {
-    "v": "18",
+    "v": "19",
     "sha": "7cfd14173d1efd82"
   },
   "assets/pos-boutique.js": {
-    "v": "18",
-    "sha": "07d28d5ec6e321ed"
+    "v": "19",
+    "sha": "f1902d66f3c1642f"
   },
   "assets/pos-coiffure.css": {
     "v": "5",
@@ -605,7 +605,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "38",
-    "sha": "37c0ebda3edfdd06"
+    "sha": "8c110d512074cf12"
   },
   "assets/pos-epicerie.css": {
     "v": "5",
@@ -668,12 +668,12 @@
     "sha": "782a2a019b86fc81"
   },
   "assets/pos-maison.css": {
-    "v": "24",
+    "v": "25",
     "sha": "ae3c4dedfa5d7971"
   },
   "assets/pos-maison.js": {
-    "v": "24",
-    "sha": "45403d339ef9a703"
+    "v": "25",
+    "sha": "0928816e2eb4806c"
   },
   "assets/pos-mobile.css": {
     "v": "3",
@@ -920,8 +920,8 @@
     "sha": "dfa3b4d5ebb25d51"
   },
   "assets/venues.js": {
-    "v": "29",
-    "sha": "5e819e06132f3ce6"
+    "v": "30",
+    "sha": "d9e2aa0937554696"
   },
   "assets/vertical-state.js": {
     "v": "1",

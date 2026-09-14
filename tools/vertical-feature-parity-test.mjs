@@ -5,6 +5,7 @@ const team = fs.readFileSync(new URL('../assets/team.js', import.meta.url), 'utf
 const trades = fs.readFileSync(new URL('../assets/trades.js', import.meta.url), 'utf8');
 const sale = fs.readFileSync(new URL('../assets/pos-sale.js', import.meta.url), 'utf8');
 const dispatch = fs.readFileSync(new URL('../assets/pos-dispatch.js', import.meta.url), 'utf8');
+const venues = fs.readFileSync(new URL('../assets/venues.js', import.meta.url), 'utf8');
 
 const catalog = team.slice(team.indexOf('const CATALOG = {'), team.indexOf('function unionCatalog()'));
 const tradeIds = [...trades.matchAll(/\{ id: '([^']+)', base: '(?:restaurant|boutique|spa|hotel)'/g)].map((m) => m[1]);
@@ -14,6 +15,15 @@ for (const id of tradeIds) {
 }
 assert.match(team, /if \(venue\.subtype && CATALOG\[venue\.subtype\]\) return venue\.subtype/, 'custom venues resolve their real subtype');
 assert.doesNotMatch(catalog.match(/pressing: \{[\s\S]*?\n\s*\},/)?.[0] || '', /Cuisine|Coiffure|Manucure|Plonge/, 'pressing roles do not leak unrelated trades');
+const maisonProfile = venues.slice(venues.indexOf("    maison: { base: 'boutique',"), venues.indexOf("    spa: { base: 'spa',", venues.indexOf("    maison: { base: 'boutique',")));
+assert.ok(maisonProfile.length > 100, 'Maison has its own dashboard subtype profile');
+for (const nav of ['inventory', 'categories', 'promos', 'returns', 'sold']) {
+  assert.match(maisonProfile, new RegExp(`nav: '${nav}'`), `Maison keeps the real ${nav} module`);
+}
+for (const key of ['tx', 'panier', 'tauxRetour', 'success', 'ratio', 'regulars']) {
+  assert.match(maisonProfile, new RegExp(`key: '${key}'`), `Maison labels the supported ${key} KPI`);
+}
+assert.match(maisonProfile, /MAISON OUVERTE/, 'Maison empty state does not say Boutique');
 
 const specialistFiles = [
   'pressing-caisse.js', 'pos-spa.js', 'pos-hotel.js', 'pos-fastfood.js',

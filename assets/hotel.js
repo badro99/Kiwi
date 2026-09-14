@@ -1118,8 +1118,8 @@
     if (isCustomHotel()) {
       const rs = Object.values(R());
       return {
-        occToNight: rs.filter((r) => r.status === 'occ').length,
-        toClean: rs.filter((r) => r.status === 'sale').length,
+        occToNight: rs.filter((r) => cuRoomStatus(r).key === 'occ').length,
+        toClean: rs.filter((r) => cuRoomStatus(r).key === 'sale').length,
         arrDone: 0, depPending: 0,
       };
     }
@@ -1269,12 +1269,12 @@
             </div>
             <small style="color:var(--n-500);font-size:10.5px;">Chambre communicante vendue séparément. Non réservée automatiquement.</small>
           </div>` : ''}
-          ${r.status === 'sale' ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Ménage</span><b>${isCustomHotel() ? 'à remettre à blanc' : ((HK_QUEUE.find((q) => q.room === n) || {}).who || 'à assigner')}</b></div>` : ''}
+          ${liveStatus.key === 'sale' ? `<div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Ménage</span><b>${isCustomHotel() ? 'à remettre à blanc' : ((HK_QUEUE.find((q) => q.room === n) || {}).who || 'à assigner')}</b></div>` : ''}
         </div>
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap;">
           ${liveStatus.key === 'libre' ? `<button class="hx-btn atlas" data-action="hx-walkin-room" data-arg="${n}">Vendre ce soir · walk-in</button>` : ''}
           ${liveRoom && liveRoom.kind !== 'arrivee' ? `<button class="hx-btn ghost" data-action="hx-stay-edit" data-arg="${esc(liveRoom.stay.id)}">Ouvrir le dossier</button>` : ''}
-          ${r.status === 'sale' ? (isCustomHotel()
+          ${liveStatus.key === 'sale' ? (isCustomHotel()
             ? `<button class="hx-btn atlas" data-action="hx-hk-done" data-arg="${n}">Marquer propre · relouable</button>`
             : `<button class="hx-btn atlas" data-action="hx-hk-open">Ouvrir la file ménage</button>`) : ''}
           ${r.status === 'hs' ? `<button class="hx-btn ghost" data-action="hx-hs-fix" data-arg="${n}">Marquer réparée</button>` : ''}
@@ -1680,7 +1680,7 @@
   function cuStrip() {
     const c = counts();
     const total = totalRooms();
-    const free = Object.values(R()).filter((r) => r.status === 'libre').length;
+    const free = Object.values(R()).filter((r) => cuRoomStatus(r).key === 'libre').length;
     const pct = total ? (c.occToNight / total * 100).toFixed(1).replace('.', ',') : '0,0';
     return `<div class="hx-strip">
       <div class="hx-kpi"><div class="l">Occupation ce soir</div><div class="v">${c.occToNight} / ${total}</div><div class="d">${pct} % · se met à jour à chaque vente</div></div>
@@ -1958,8 +1958,9 @@
   function cuRoomEditor(n) {
     const room = cuState().rooms[+n];
     if (!room) return;
-    const locked = ['occ', 'depart', 'arrivee'].includes(room.status);
-    const status = room.status || 'libre';
+    const liveKey = cuRoomStatus(room).key;
+    const locked = liveKey === 'occ' || liveKey === 'arrivee';
+    const status = liveKey === 'sale' ? 'sale' : (room.status || 'libre');
     // Same floor only; already-linked rooms stay visible (flagged) so an old
     // cross-floor liaison can be reviewed and removed, never re-added.
     const linkedIds = new Set(room.connectingRoomIds || []);
@@ -2270,8 +2271,13 @@
     if (cuOccupancyMemo && cuOccupancyMemo.signature === signature) return cuOccupancyMemo.map;
     const today = cuToday();
     const map = new Map();
+    const completed = new Map();
     stays.forEach((b) => {
       if (!b?.hotel || !b.resourceId) return;
+      if (b.status === 'completed') {
+        const stamp = +b.updatedAt || 0;
+        if (stamp > (completed.get(b.resourceId) || 0)) completed.set(b.resourceId, stamp);
+      }
       if (['cancelled', 'no_show', 'completed'].includes(b.status)) return;
       const cin = b.hotel.checkIn, cout = b.hotel.checkOut;
       if (!cin || !cout) return;
@@ -2284,7 +2290,7 @@
         map.set(b.resourceId, { kind: 'arrivee', stay: b });
       }
     });
-    cuOccupancyMemo = { signature, map };
+    cuOccupancyMemo = { signature, map, completed };
     return map;
   }
   function cuRoomLive(room) {
@@ -2300,8 +2306,13 @@
     if (live) {
       if (live.kind === 'depart') return { key: 'occ', label: 'Départ aujourd’hui' };
       if (live.kind === 'occ') return { key: 'occ', label: 'Occupée' };
-      return { key: 'arrivee', label: 'Arrivée attendue' };
     }
+    // A completed stay is the authoritative checkout event. Until the room
+    // document is saved *after* that event as clean, it belongs in the
+    // housekeeping queue, even if its old manual status still says occupied.
+    const lastCheckout = isCustomHotel() && room.id ? (cuOccupancyMemo?.completed?.get(room.id) || 0) : 0;
+    if (lastCheckout > (+room.updatedAt || 0) || room.status === 'sale') return { key: 'sale', label: 'À nettoyer' };
+    if (live) return { key: 'arrivee', label: 'Arrivée attendue' };
     if (room.status === 'occ') return { key: 'occ', label: 'Occupée' };
     if (room.status === 'depart') return { key: 'occ', label: 'Départ aujourd’hui' };
     if (room.status === 'arrivee') return { key: 'arrivee', label: 'Arrivée attendue' };
@@ -2479,7 +2490,7 @@
       const haystack = [
         r.n,
         type?.name,
-        r.guest,
+        cuRoomLive(r)?.stay?.customer?.name || r.guest,
         r.meta,
         r.floor,
         r.view ? ('vue ' + r.view + ' ' + cuViewLabel(r.view)) : '',
@@ -2540,11 +2551,11 @@
     const all = Object.values(R());
     const counts = {
       all: all.length,
-      libre: all.filter((r) => r.status === 'libre').length,
-      occ: all.filter((r) => ['occ', 'depart'].includes(r.status)).length,
-      arrivee: all.filter((r) => r.status === 'arrivee').length,
-      sale: all.filter((r) => r.status === 'sale').length,
-      hs: all.filter((r) => r.status === 'hs').length,
+      libre: all.filter((r) => cuRoomStatus(r).key === 'libre').length,
+      occ: all.filter((r) => cuRoomStatus(r).key === 'occ').length,
+      arrivee: all.filter((r) => cuRoomStatus(r).key === 'arrivee').length,
+      sale: all.filter((r) => cuRoomStatus(r).key === 'sale').length,
+      hs: all.filter((r) => cuRoomStatus(r).key === 'hs').length,
     };
     const compactProperty = all.length <= 20;
     const floorRows = cuFloors();
@@ -2594,9 +2605,8 @@
       const roomCards = matchedRooms.map((r) => {
         const status = cuRoomStatus(r);
         const type = roomTypeOf(r.n);
-        const doc = window.KiwiReservations?.get?.() || { bookings: [] };
         const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-        const roomStay = (doc.bookings || []).find((b) => b.resourceId === r.id && b.status === 'checked_in');
+        const roomStay = cuRoomLive(r)?.stay || null;
         const roomErrs = roomStay ? cuEvaluateStayExceptions(roomStay, today) : [];
         const exChip = roomErrs.length ? `<span class="hx-exc-chip" title="${esc(roomErrs.map((e) => e.label).join(' · '))}">Incomplet</span>` : '';
         const isSelected = cuSelectedRooms.has(String(r.id));
@@ -2606,12 +2616,12 @@
 
         const selectCb = cuSelectionMode ? `<label class="hx-room-select-cb"><input type="checkbox" data-action="hx-room-check" data-arg="${r.n}" ${isSelected ? 'checked' : ''} aria-label="Sélectionner la chambre ${r.n}"></label>` : '';
 
-        return `<div class="hx-room st-${r.status} ${isSelected ? 'selected' : ''} ${cuSelectionMode ? 'selection-mode' : ''}" role="button" tabindex="0" aria-label="Chambre ${r.n}" data-action="hx-room" data-arg="${r.n}" data-hx-room-card>
+        return `<div class="hx-room st-${status.key} ${isSelected ? 'selected' : ''} ${cuSelectionMode ? 'selection-mode' : ''}" role="button" tabindex="0" aria-label="Chambre ${r.n}" data-action="hx-room" data-arg="${r.n}" data-hx-room-card>
           ${selectCb}
           ${cuSelectionMode ? '' : `<button class="hx-room-edit" type="button" data-action="hx-room-edit" data-arg="${r.n}" aria-label="Modifier la chambre ${r.n}" title="Modifier">✎</button>`}
           <div class="hx-room-top"><span class="no">${r.n}</span><span class="hx-room-state ${status.key}">${esc(status.label)}</span>${exChip}${connBadge}</div>
           <div class="ty" style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><span>${esc(type.name)}</span>${viewBadge}</div>
-          <div class="hx-room-bottom"><span class="gu">${esc(r.guest || (r.status === 'libre' ? 'Prête à vendre' : r.meta || status.label))}</span><span class="hx-room-price">${type.base == null ? '·' : fmt(type.base)}<small>${type.base == null ? '' : ' MAD'}</small></span></div>
+          <div class="hx-room-bottom"><span class="gu">${esc(roomStay?.customer?.name || (status.key === 'sale' ? 'Remise à blanc à faire' : r.guest || (status.key === 'libre' ? 'Prête à vendre' : r.meta || status.label)))}</span><span class="hx-room-price">${type.base == null ? '·' : fmt(type.base)}<small>${type.base == null ? '' : ' MAD'}</small></span></div>
         </div>`;
       }).join('');
 
@@ -2873,14 +2883,14 @@
     openModal = { el: m.el, close: m.close };
   }
   function cuMenageBody() {
-    const dirty = Object.values(R()).filter((r) => r.status === 'sale');
-    const clean = Object.values(R()).filter((r) => r.status === 'libre').length;
-    const occupied = Object.values(R()).filter((r) => ['occ', 'depart'].includes(r.status)).length;
-    const offline = Object.values(R()).filter((r) => r.status === 'hs').length;
+    const dirty = Object.values(R()).filter((r) => cuRoomStatus(r).key === 'sale');
+    const clean = Object.values(R()).filter((r) => cuRoomStatus(r).key === 'libre').length;
+    const occupied = Object.values(R()).filter((r) => cuRoomStatus(r).key === 'occ').length;
+    const offline = Object.values(R()).filter((r) => cuRoomStatus(r).key === 'hs').length;
     const rows = dirty.map((r) => `
       <div class="hx-q">
         <i class="dot" style="background:var(--warning);"></i>
-        <div><div class="nm">Ch. ${r.n} · ${esc(roomTypeOf(r.n).name)}</div><div class="nt">${esc(r.floor)} · ${esc(r.meta || 'À remettre à blanc')}</div></div>
+        <div><div class="nm">Ch. ${r.n} · ${esc(roomTypeOf(r.n).name)}</div><div class="nt">${esc(r.floor)} · ${esc(r.status === 'sale' ? (r.meta || 'À remettre à blanc') : 'Départ enregistré · remise à blanc à faire')}</div></div>
         <span class="hx-pill late">À FAIRE</span>
         <button class="hx-btn ghost" data-action="hx-hk-done" data-arg="${r.n}">Marquer propre</button>
       </div>`).join('');
@@ -5835,7 +5845,9 @@
           type: 'warn',
           desc: body.error === 'invalid-status-transition'
             ? 'Statut actuel : ' + (body.from || 'inconnu') + '. Ouvrez le dossier.'
-            : (body.error || 'Réessayez.'),
+            : body.error === 'room-occupied'
+              ? 'Cette chambre est déjà occupée par un autre séjour. Vérifiez le plan et attribuez une autre chambre.'
+              : (body.error || 'Réessayez.'),
         });
         return;
       }
@@ -5850,7 +5862,7 @@
         type: 'success',
         desc: arriving
           ? 'La chambre apparaît occupée dans le plan.'
-          : 'La chambre n’est plus occupée. Marquez-la à remettre à blanc si besoin.',
+          : 'La chambre passe à nettoyer dans le plan et la file ménage.',
       });
       rerender();
     } catch (_) {
@@ -7479,7 +7491,8 @@
         toast('Liaison impossible entre étages', { type: 'warn', desc: 'Seules les chambres du même étage peuvent être reliées. Retirez la sélection hors étage.' });
         return;
       }
-      const active = prior && ['occ', 'depart', 'arrivee'].includes(prior.status);
+      const liveKey = cuRoomStatus(prior).key;
+      const active = liveKey === 'occ' || liveKey === 'arrivee';
       const savedStatus = active ? prior.status : (['libre', 'sale', 'hs'].includes(status) ? status : 'libre');
       const now = cuStamp();
       const room = {

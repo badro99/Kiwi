@@ -15,6 +15,7 @@ const pairing = read('assets/caisse-pairing.js');
 const onboarding = read('assets/onboarding.js');
 const caisse = read('kiwi-caisse.html');
 const boutique = read('assets/pos-boutique.js');
+const maison = read('assets/pos-maison.js');
 const ranges = read('assets/dateRange.js');
 const vertical = read('assets/vertical-state.js');
 const sw = read('kiwi-sw.js');
@@ -59,6 +60,20 @@ ok('onboarding rejects missing owner and malformed goals', onboarding.includes("
 ok('onboarding success has no confetti', !onboarding.includes('Kiwi.confetti'));
 ok('zero-sale payment mix always has a finite center total', ranges.includes('return { rows: [], total: 0') && ranges.includes('Number.isFinite(Number(rawCenterMad))'));
 ok('boutique delivery receivables are excluded from money received', boutique.includes("x.m !== 'avoir' && x.m !== 'livraison'") && boutique.includes("if (p.m !== 'livraison') took += p.amount"));
+for (const [label, source, start, clear] of [
+  ['restaurant', caisse, 'async function closeRegister()', 'clearPersistedShift()'],
+  ['boutique', boutique, 'function bqCloseRegister()', 'bqShift = null'],
+  ['maison', maison, 'function bqCloseRegister()', 'bqShift = null'],
+]) {
+  const flow = source.slice(source.indexOf(start), source.indexOf(clear, source.indexOf(start)) + clear.length);
+  ok(`${label} closure keeps the shift if its day report cannot be read back`,
+    flow.includes('KiwiDayReport.load(report.day, report.store?.slug)')
+    && flow.includes('if (!report || !reportSaved)')
+    && flow.indexOf('if (!report || !reportSaved)') < flow.indexOf(clear));
+}
+ok('failed post-close print does not expose a duplicate button as if paper exists',
+  caisse.includes('if (res?.ok) {\n            if (reprint) reprint.hidden = false;')
+  && boutique.includes('if (res?.ok && reprint)') && maison.includes('if (res?.ok && reprint)'));
 ok('specialist state reads and writes with an explicit tenant', vertical.includes('store.get(activeVenue)') && vertical.includes('}, activeVenue);'));
 
 const cache = /var CACHE = '([^']+)'/.exec(sw)?.[1];

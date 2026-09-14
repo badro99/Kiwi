@@ -294,6 +294,22 @@ async function d1RoomFree(env, merchant, roomId, startAt, endAt, ignoreId) {
   return !row;
 }
 
+// A feed conflict can leave two *confirmed* reservations on one room. The
+// first arrival may be checked in, but a second overlapping occupant must
+// never be admitted. Checking all confirmed reservations here would strand
+// both guests, so only an already checked-in stay blocks this transition.
+async function checkedInRoomConflict(env, merchant, doc, stay, hasResTable) {
+  if (doc.bookings.some((other) => other.id !== stay.id && other.status === 'checked_in'
+    && other.resourceId === stay.resourceId
+    && overlaps(stay.startAt, stay.endAt, other.startAt, other.endAt))) return true;
+  if (!hasResTable) return false;
+  const row = await env.DB.prepare(
+    "SELECT id FROM hotel_reservations WHERE merchant = ? AND room_id = ? " +
+    "AND status = 'checked_in' AND start_at < ? AND end_at > ? AND id != ? LIMIT 1"
+  ).bind(merchant, stay.resourceId, stay.endAt, stay.startAt, stay.id).first();
+  return !!row;
+}
+
 async function d1BusyRoomsForType(env, merchant, roomTypeId, startAt, endAt, ignoreId) {
   const stmt = env.DB.prepare(
     "SELECT DISTINCT room_id FROM hotel_reservations " +
@@ -484,6 +500,13 @@ export async function onRequestPost({ request, env }) {
         return json({ error: 'invalid-status-transition', from: old.status, to: next }, 409);
       }
       if (old.status === next) return json({ ok: true, rev, booking: old });
+      if (next === 'checked_in') {
+        try {
+          if (await checkedInRoomConflict(env, merchant, doc, old, hasResTable)) {
+            return json({ error: 'room-occupied', roomId: old.resourceId }, 409);
+          }
+        } catch (_) { return json({ error: 'service-unavailable' }, 503); }
+      }
       const previous = { ...old, hotel: { ...old.hotel } };
       old.status = next; old.updatedAt = now;
       const indexInDoc = doc.bookings.findIndex((x) => x.id === old.id);
@@ -782,8 +805,8 @@ export async function onRequestPost({ request, env }) {
         channel, externalRef: externalRef || old?.hotel?.externalRef || '',
         feedId: old?.hotel?.feedId || '', syncedAt: old?.hotel?.syncedAt || 0,
         conflict: false,
-        guestSegments: dayUse ? [] : normalizeGuestSegments(b?.guestSegments, old?.hotel?.guestSegments, partySize, checkIn, checkOut),
-        roomSegments: dayUse ? [] : currentRoomSegment(room.id, checkIn, checkOut),
+        guestSegments: normalizeGuestSegments(b?.guestSegments, old?.hotel?.guestSegments, partySize, checkIn, checkOut),
+        roomSegments: currentRoomSegment(room.id, checkIn, checkOut),
       },
       createdAt: old?.createdAt || now, updatedAt: now,
     };

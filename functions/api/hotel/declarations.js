@@ -176,7 +176,7 @@ function staysFromEvents(eventRows) {
   });
 }
 
-function aggregateMonth(stays, monthStart, nextMonth) {
+export function aggregateMonth(stays, monthStart, nextMonth) {
   let totalArrivals = 0;
   let totalBedNights = 0;
   const occupiedRoomNights = new Set();
@@ -185,13 +185,16 @@ function aggregateMonth(stays, monthStart, nextMonth) {
   for (const stay of stays) {
     const checkIn = String(stay.checkIn || '');
     const checkOut = String(stay.checkOut || '');
-    if (!DATE_RE.test(checkIn) || !DATE_RE.test(checkOut) || checkOut <= checkIn) continue;
-    if (!(checkIn < nextMonth && checkOut > monthStart)) continue;
+    const dayUse = stay.dayUse === true;
+    if (!DATE_RE.test(checkIn) || !DATE_RE.test(checkOut) || checkOut < checkIn || (!dayUse && checkOut === checkIn)) continue;
+    if (!(checkIn < nextMonth && (dayUse ? checkIn >= monthStart : checkOut > monthStart))) continue;
     const status = String(stay.status || 'unknown');
     statusCounts[status] = (statusCounts[status] || 0) + 1;
     const segments = Array.isArray(stay.guestSegments) ? stay.guestSegments : [];
     const travelers = segments.length ? segments : [{ nationalityCountry: '' }];
     if (checkIn >= monthStart && checkIn < nextMonth) totalArrivals += travelers.length;
+    // Day-use contributes guest arrivals, but never bed/room *nights*.
+    if (dayUse) continue;
     const roomSegs = Array.isArray(stay.roomSegments) && stay.roomSegments.length
       ? stay.roomSegments
       : [{ roomId: String(stay.roomId || stay.stayId || ''), fromDate: checkIn, toDate: checkOut }];
@@ -332,7 +335,8 @@ export async function onRequestPost({ request, env }) {
     stays = staysFromEvents(eventRows).filter((stay) => {
       const checkIn = String(stay.checkIn || '');
       const checkOut = String(stay.checkOut || '');
-      return DATE_RE.test(checkIn) && DATE_RE.test(checkOut) && checkIn < nextMonth && checkOut > monthStart;
+      return DATE_RE.test(checkIn) && DATE_RE.test(checkOut) && checkIn < nextMonth
+        && (stay.dayUse === true ? checkIn >= monthStart : checkOut > monthStart);
     });
   } catch (_) {
     return json({ error: 'event-ledger-invalid', detail: 'Journal des séjours invalide : contrôle interne refusé.' }, 503);
