@@ -275,6 +275,8 @@ export async function onRequestPost({ request, env }) {
         };
         const c = String((l && (l.c ?? l.cat ?? l.category)) || '').slice(0, 40);
         if (c) o.c = c;
+        const baseName = String((l && (l.bn ?? l.baseName)) || '').slice(0, 60);
+        if (baseName) o.bn = baseName;
         /* Sale-line v2.  Names remain snapshots for receipts and old reports;
          * these stable identifiers are what stock, recipe and margin engines
          * need in order to avoid guessing against today's catalogue. */

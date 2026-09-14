@@ -62,13 +62,15 @@ const rich = await store({
   id: 'sale-v2-1', merchant: 'pressing-amira', amount: 75, method: 'cash',
   label: 'Chemise', ref: 'P-1', ts: Date.now(),
   lines: [{
-    itemId: 'chemise', variantId: 'blanc', name: 'Chemise', category: 'hauts',
+    itemId: 'chemise', variantId: 'blanc', name: 'Chemise (Blanc)', baseName: 'Chemise', category: 'hauts',
     quantity: 1.25, total: 75.5, unit: 'piece', kind: 'service', unitCost: 12.345,
     recipeVersionId: 'recipe-7', options: [{ id: 'lavage', qty: 1 }, 'repassage'],
   }],
   channel: 'counter',
 });
 ok('stable item identity survives', rich[0].i === 'chemise');
+ok('base menu name snapshot survives without altering receipt label',
+  rich[0].bn === 'Chemise' && rich[0].n === 'Chemise (Blanc)');
 ok('variant identity survives', rich[0].v === 'blanc');
 ok('fractional quantity survives to three decimals', rich[0].q === 1.25);
 ok('line money survives to cent precision', rich[0].t === 75.5);
@@ -131,7 +133,9 @@ const costs = read('assets/cost.js');
 const venues = read('assets/venues.js');
 const consumption = read('assets/inventory-consumption.js');
 ok('offline queue keeps stable item identity', /if \(i\) o\.i = i/.test(live));
+ok('offline queue keeps base menu name snapshot', /if \(baseName\) o\.bn = baseName/.test(live));
 ok('feed expands v2 identity for consumers', /itemId: \(l && l\.i\)/.test(feed));
+ok('feed expands base menu name for the Z report', /baseName: \(l && l\.bn\)/.test(feed));
 ok('real config returns the server plan', /return json\(\{ features, pins, [\s\S]*?plan[\s\S]*?suspended/.test(config));
 ok('private costs and targets are accepted by one server vault declaration',
   (storeApi.match(/^  costs:\s*\{ keys:/gm) || []).length === 1
@@ -141,6 +145,7 @@ ok('margin engine consumes server-expanded stable identity',
   /const itemId = l\.itemId \|\| l\.id \|\| ''/.test(costs) && /id: itemId, variantId: l\.variantId/.test(costs));
 ok('dashboard sales cache preserves v2 identity and fractional quantities',
   /if \(itemId\) o\.itemId = itemId/.test(venues) && /Math\.round\(Math\.max\(0, \+\(l && \(l\.qty/.test(venues));
+ok('dashboard sales cache keeps the base menu name snapshot', /if \(baseName\) o\.baseName = baseName/.test(venues));
 ok('accepted caisse sales feed the idempotent inventory consumer',
   /KiwiInventoryConsumption\?\.record/.test(read('assets/pos-sale.js')) && /inv-sale-/.test(consumption));
 ok('shared POS journal preserves and forwards an explicit channel',

@@ -374,6 +374,48 @@
     return idx;
   }
 
+  /* A receipt keeps chosen options in its label. The Z counts the menu item,
+     not every option combination. A new sale carries the name captured at
+     payment time; older open-day sales are matched only against an unambiguous
+     current menu item. Never guess from parentheses alone: those can be part
+     of a real product name. Closed reports are already saved snapshots. */
+  function restaurantMenuIndex() {
+    var byId = Object.create(null), names = [];
+    var add = function (item) {
+      var name = String(item && item.name || '').trim();
+      if (!name) return;
+      if (item.id != null) byId[String(item.id)] = name;
+      if (names.indexOf(name) < 0) names.push(name);
+    };
+    try {
+      var store = window.KiwiMenuStore;
+      var data = store && store.data && store.data();
+      if (data && Array.isArray(data.items)) data.items.forEach(add);
+    } catch (_) {}
+    try {
+      var menu = window.KiwiMenu;
+      if (menu && menu.items) (menu.items() || []).forEach(add);
+    } catch (_) {}
+    names.sort(function (a, b) { return b.length - a.length; });
+    return { byId: byId, names: names };
+  }
+  function reportItemName(line, menu) {
+    var label = String(line.name || 'Article').trim();
+    if (!menu) return label;
+    var base = String(line.baseName || '').trim();
+    if (base) return base;
+    var lower = label.toLowerCase();
+    /* Exact catalogue names (including legitimate parentheses) win. */
+    if (menu.names.some(function (name) { return name.toLowerCase() === lower; })) return label;
+    var candidate = menu.byId[line.itemId] || '';
+    var names = candidate ? [candidate] : menu.names;
+    for (var i = 0; i < names.length; i++) {
+      var prefix = names[i].toLowerCase();
+      if (lower.indexOf(prefix + ' (') === 0 || lower.indexOf(prefix + ' · 1/') === 0) return names[i];
+    }
+    return label;
+  }
+
   /* ──────────────────── construire le rapport ──────────────────── */
 
   /* Normalise une vente, d'où qu'elle vienne : le journal de la caisse
@@ -391,6 +433,8 @@
         if (!l) return null;
         return {
           name: String(l.name != null ? l.name : (l.n != null ? l.n : 'Article')).slice(0, 60),
+          baseName: String(l.baseName != null ? l.baseName : (l.bn != null ? l.bn : '')).slice(0, 60),
+          itemId: String(l.itemId != null ? l.itemId : (l.i != null ? l.i : '')).slice(0, 80),
           qty: num(l.qty != null ? l.qty : l.q) || 0,
           total: num(l.total != null ? l.total : l.t) || 0,
           cat: l.cat != null ? String(l.cat) : (l.c != null ? String(l.c) : ''),
@@ -428,6 +472,10 @@
     var b = dayBounds(day, slug);
     var sess = opts.session || {};
     var idx = opts.categoryIndex || categoryIndex();
+    var type = String((opts.store && opts.store.type) || businessType()).toLowerCase();
+    var menu = (type === 'resto' || type === 'snack' || type === 'bakery'
+      || type === 'restaurant' || BASE_OF[type] === 'restaurant')
+      ? restaurantMenuIndex() : null;
     var uncatLabel = vocab().uncat;
 
     /* Le filtre sur la journée commerciale. Dédoublonné par id : la caisse
@@ -502,7 +550,7 @@
       if (s.lines) {
         var sign = isRefund ? -1 : 1;
         s.lines.forEach(function (l) {
-          var name = l.name || 'Article';
+          var name = reportItemName(l, menu);
           var cat = l.cat || idx[name.trim().toLowerCase()] || UNCAT;
           var C = cats[cat] || (cats[cat] = { name: cat, qty: 0, total: 0, products: Object.create(null) });
           var P = C.products[name] || (C.products[name] = { name: name, qty: 0, total: 0 });

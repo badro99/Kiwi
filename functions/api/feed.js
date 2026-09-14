@@ -265,7 +265,7 @@ export async function onRequestGet({ request, env }) {
        * ici, ce qui reviendrait à affirmer une classification qu'on n'a pas. */
       r.lines = Array.isArray(arr)
         ? arr.map((l) => ({
-            name: l && l.n, qty: l && l.q, total: l && l.t,
+            name: l && l.n, baseName: (l && l.bn) || '', qty: l && l.q, total: l && l.t,
             cat: (l && l.c) || '', itemId: (l && l.i) || '',
             variantId: (l && l.v) || '', unit: (l && l.u) || '',
             kind: (l && l.kd) || '', unitCost: (l && l.k),

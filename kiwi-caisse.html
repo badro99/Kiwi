@@ -5569,8 +5569,8 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=521" defer></script>
-  <script src="assets/live-link.js?v=36" defer></script>
+  <script src="assets/caisse-pwa.js?v=522" defer></script>
+  <script src="assets/live-link.js?v=37" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js?v=1" defer></script>
@@ -5597,7 +5597,7 @@
        avec le tableau de bord. Après cloud-doc.js, dont il tient sa copie
        serveur · c'est ce qui fait qu'un Z clôturé sur l'iPad du comptoir
        s'ouvre le lendemain sur le téléphone du patron. -->
-  <script src="assets/day-report.js?v=10" defer></script>
+  <script src="assets/day-report.js?v=11" defer></script>
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js?v=3" defer></script>
@@ -7504,7 +7504,7 @@
          is only a fallback when there is no cashier-built bill. */
       const liveLines = tableOrders[tableId];
       if (Array.isArray(liveLines) && liveLines.length) {
-        return liveLines.map(l => ({ id: l.id, uid: l.uid, qty: l.qty, name: lineLabel(l),
+        return liveLines.map(l => ({ id: l.id, uid: l.uid, qty: l.qty, name: lineLabel(l), baseName: l.baseName || l.name,
           price: l.price, total: l.price * l.qty, note: l.note || '', sent: !!l.sent,
           orderProPending: !!l.orderProPending, voidPending: !!l.voidPending,
           kind: l.kind, formulaUid: l.formulaUid,
@@ -9631,8 +9631,8 @@
       const o = optText(l && l.opts), n = ((l && l.note) || '').trim();
       return (o && n) ? (o + ' · ' + n) : (o || n);
     }
-    /* Le nom tel qu'il doit apparaître au client, sur le ticket et dans le
-       rapport : « Café (Lait végétal) ». Sans les options, deux lignes au même
+    /* Le nom tel qu'il doit apparaître au client, sur le ticket :
+       « Café (Lait végétal) ». Le rapport Z regroupe par baseName. Sans les options, deux lignes au même
        nom mais pas au même prix seraient indistinguables sur le reçu. */
     function lineLabel(l) {
       const o = optText(l && l.opts);
@@ -10780,7 +10780,8 @@
         const qty = Math.max(1, +line.qty || 1);
         const total = line.total != null ? +line.total || 0 : (+line.price || +line.unitPrice || 0) * qty;
         const out = {
-          itemId: line.id || line.itemId || '', name: lineLabel(line), qty,
+          itemId: line.id || line.itemId || '', name: lineLabel(line),
+          baseName: line.baseName || line.name, qty,
           total, cat: lineCat(line.id || line.itemId, line.name),
           kind: line.kind || '', formulaUid: line.formulaUid || '',
         };
@@ -12811,7 +12812,8 @@
       const isVrap = (mode === 'vrap');
       let lines, covers, sourceLabel;
       if (isVrap) {
-        lines = cart.map(c => ({ name: lineLabel(c), qty: c.qty, total: c.price * c.qty }));
+        lines = cart.map(c => ({ name: lineLabel(c), baseName: c.baseName || c.name,
+          itemId: c.id || '', qty: c.qty, total: c.price * c.qty }));
         covers = 2;
         sourceLabel = vrapEditingNum != null ? ('À emporter #' + vrapEditingNum) : 'À emporter';
       } else {
@@ -12834,7 +12836,7 @@
       lines.forEach(l => {
         const unitPrice = l.qty > 0 ? (l.total / l.qty) : l.total;
         if (!itemTotals[l.name]) {
-          itemTotals[l.name] = { totalQty: 0, unitPrice, itemId: l.itemId || l.id || '' };
+          itemTotals[l.name] = { totalQty: 0, unitPrice, itemId: l.itemId || l.id || '', baseName: l.baseName || '' };
         }
         itemTotals[l.name].totalQty += l.qty;
       });
@@ -13156,6 +13158,7 @@
           const shareUnitPrice = money(unitPrice / splitState.numParts);
           return {
             name: `${name} · 1/${splitState.numParts}`,
+            baseName: info.baseName || '',
             qty: info.totalQty,
             unit: shareUnitPrice,
             price: shareUnitPrice,
@@ -13185,7 +13188,7 @@
             const info = splitState.itemTotals[name] || {};
             const unitPrice = info.unitPrice || 0;
             return {
-              name, qty,
+              name, baseName: info.baseName || '', qty,
               unit: unitPrice,
               price: unitPrice,
               total: money(qty * unitPrice),
@@ -14201,6 +14204,7 @@
           const saved = Object.assign(
             {
               name: l.name,
+              baseName: String(l.baseName || '').slice(0, 60),
               qty: l.qty,
               unit: unitPrice,
               price: unitPrice,
@@ -14316,7 +14320,8 @@
       };
       if (Array.isArray(sale.lines) && sale.lines.length) {
         entry.lines = sale.lines.map((line) => ({
-          name: String(line.name || 'Article'), qty: Math.max(1, Number(line.qty) || 1),
+          name: String(line.name || 'Article'), baseName: String(line.baseName || ''),
+          qty: Math.max(1, Number(line.qty) || 1),
           total: money(line.total), cat: String(line.cat || ''),
           itemId: String(line.itemId || ''),
           formulaChoices: Array.isArray(line.formulaChoices)

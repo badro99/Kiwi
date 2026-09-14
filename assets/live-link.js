@@ -662,6 +662,8 @@
            * hors-ligne pour ne rien dire de plus. */
           var c = String(l.cat || l.category || '').slice(0, 40);
           if (c) o.c = c;
+          var baseName = String(l.baseName || '').slice(0, 60);
+          if (baseName) o.bn = baseName;
           var i = String(l.itemId || l.item_id || '').slice(0, 80);
           var v = String(l.variantId || l.variant_id || '').slice(0, 80);
           var u = String(l.unit || '').slice(0, 24);

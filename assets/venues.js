@@ -8156,6 +8156,8 @@
         var qty = Math.round(Math.max(0, +(l && (l.qty ?? l.quantity)) || 0) * 1000) / 1000;
         var total = Math.round(Math.max(0, +(l && l.total) || 0) * 100) / 100;
         var o = { name: String((l && l.name) || 'Article').slice(0, 60), qty: qty, total: total };
+        var baseName = String((l && l.baseName) || '').slice(0, 60);
+        if (baseName) o.baseName = baseName;
         /* La catégorie, telle que la caisse la connaissait AU MOMENT de la vente.
            Sans elle, le rapport journalier d'une journée pas encore clôturée
            reclasse les ventes d'après le catalogue actuel — et se trompe dès

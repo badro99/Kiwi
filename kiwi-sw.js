@@ -91,7 +91,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=30',
+  '/assets/venues.js?v=31',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=4',
   '/assets/trade-workspaces.js?v=4',
@@ -141,13 +141,13 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
   '/assets/oppo-cards.js?v=2',
-  '/assets/dashboard-pwa.js?v=514',
+  '/assets/dashboard-pwa.js?v=515',
   '/assets/dashboard-native.js?v=1',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js?v=1',
-  '/assets/caisse-pwa.js?v=521',
+  '/assets/caisse-pwa.js?v=522',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=5',
   '/assets/platform-kernel.js?v=5',
@@ -155,13 +155,13 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=10',
   '/assets/operations-ui.js?v=13',
-  '/assets/live-link.js?v=36',
+  '/assets/live-link.js?v=37',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=10',
+  '/assets/day-report.js?v=11',
   '/assets/report.js?v=3',
   '/assets/day-report-dash.js?v=11',
   '/assets/day-report-export.js?v=7',
@@ -231,7 +231,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=513',
+  '/assets/employee-live.js?v=514',
   '/assets/employee-planning.js?v=8',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=2',
