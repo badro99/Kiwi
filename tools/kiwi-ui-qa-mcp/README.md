@@ -18,12 +18,15 @@ args = ["/Users/zaka/Developer/kiwi/tools/kiwi-ui-qa-mcp/server.js"]
 Other stdio MCP clients use that command too. The server is local; no ticket
 or merchant credential belongs in its configuration.
 
-The current interactive fixture covers the **hotel dashboard**: a real
+The interactive fixtures cover the **hotel dashboard** and the **Kiwi Tickets
+board**. The hotel fixture uses a real
 `dashboard.html`, real hotel API handlers, and a file-backed SQLite database
 for a clearly synthetic merchant. It starts in a fresh Chromium context,
 enters only the fixture PIN, and blocks **all non-loopback requests**. It
 cannot see or change a production merchant, enter a real PIN, or use the
-private agent API key. The prior test harness's handler fallbacks are **not**
+private agent API key. The tickets fixture uses the real `tickets.html`, CSS
+and JavaScript with an isolated in-memory ticket API, so filter and
+classification clicks never touch the live board. The prior test harness's handler fallbacks are **not**
 available here: clicks use visible elements in Chromium. If the target control
 is missing or obscured, the ticket test fails—this is the point.
 
@@ -32,7 +35,8 @@ is missing or obscured, the ticket test fails—this is the point.
 1. Read a ticket as text with `kiwi-tickets.get_ticket`; view its screenshots
    only when necessary. State the visible starting point and expected result.
 2. Reproduce the problem in a fixture. For hotel UI tickets call
-   `start_hotel_fixture`, `ui_snapshot`, then `ui_click`, `ui_fill`, or
+   `start_hotel_fixture`; for ticket-board work call `start_tickets_fixture`.
+   Then use `ui_snapshot`, `ui_click`, `ui_fill`, or
    `ui_select`, `ui_scroll`, or `ui_viewport` using the current `q` refs. A new snapshot follows every
    interaction. No arbitrary JavaScript, URL navigation, direct API call, or
    handler invocation is exposed by this MCP.
@@ -56,8 +60,8 @@ is missing or obscured, the ticket test fails—this is the point.
 
 ## Limits
 
-This first fixture covers hotel reception and related hotel pages, **not**
-the caisse, OrderPro, employee app, delivery, Shopify, or live owner UI. A
+These fixtures cover hotel reception, related hotel pages, and Kiwi Tickets,
+**not** the caisse, OrderPro, employee app, delivery, Shopify, or live owner UI. A
 hotel proof must not be used to claim one of those paths was browser-tested.
 Add a synthetic fixture and journey for each module before accepting a UI
 ticket there; until then report the UI coverage gap explicitly and keep the

@@ -56,5 +56,5 @@ export async function purgeExpired(env, now = Date.now()) {
 
 export function schemaError(error) {
   const message = String((error && error.message) || error || '');
-  return /no such table|no such column/i.test(message);
+  return /no such table|no such column|has no column named/i.test(message);
 }

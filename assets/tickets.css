@@ -45,11 +45,26 @@ body {
 button:disabled { cursor: default; opacity: .72; }
 
 .workspace { max-width: 1540px; margin: 0 auto; padding: 44px 28px 64px; }
-.workspace-head { display: flex; align-items: end; justify-content: space-between; gap: 32px; margin-bottom: 28px; }
+.workspace-head { padding: 0; display: flex; align-items: end; justify-content: space-between; gap: 32px; margin-bottom: 28px; }
 .workspace-head .eyebrow { margin: 0 0 7px; color: var(--atlas); }
 .workspace-head h1 { margin: 0; font-size: clamp(34px, 4.5vw, 58px); line-height: .98; letter-spacing: -.05em; font-weight: 500; }
 .workspace-head h1::after { content: ""; display: inline-block; width: .18em; height: .18em; margin-left: .12em; border-radius: 50%; background: var(--mint); }
 .workspace-note { max-width: 44ch; margin: 0; color: var(--n-500); font-size: 14px; text-align: right; }
+
+.ticket-filters { margin-bottom: 18px; padding: 16px; border: 1px solid var(--ticket-line); border-radius: 20px; background: color-mix(in srgb, var(--paper-elev) 86%, transparent); box-shadow: var(--ticket-shadow); }
+.filter-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 13px; }
+.filter-heading .eyebrow { margin: 0 0 2px; color: var(--atlas); font-size: 11px; }
+.filter-heading h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.025em; }
+.filter-reset { min-height: 34px; padding: 0 12px; border: 1px solid var(--n-300); border-radius: 999px; color: var(--n-600); font-size: 12px; font-weight: 600; }
+.filter-reset:not(:disabled):hover { border-color: var(--atlas); color: var(--atlas); }
+.filter-row { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 10px; align-items: start; }
+.filter-row + .filter-row { margin-top: 8px; }
+.filter-label { padding-top: 8px; color: var(--n-500); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.filter-pills { width: fit-content; max-width: 100%; padding: 3px; border: 1px solid var(--ticket-line); border-radius: 999px; display: flex; flex-wrap: wrap; gap: 3px; background: var(--paper-soft); }
+.filter-pills-wide { width: 100%; border-radius: 15px; }
+.filter-pill { min-height: 32px; padding: 0 11px; border-radius: 999px; color: var(--n-600); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.filter-pill.on { background: var(--riad); color: var(--paper); }
+.filter-pills[data-kw-lens] .filter-pill.on { background: transparent; box-shadow: none; color: var(--paper); }
 
 .board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
 .lane { min-width: 0; padding: 14px; border: 1px solid var(--ticket-line); border-radius: 22px; background: color-mix(in srgb, var(--paper-soft) 72%, transparent); }
@@ -66,6 +81,23 @@ button:disabled { cursor: default; opacity: .72; }
 .ticket-meta { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 13px; color: var(--n-500); font-size: 12px; }
 .ticket-number { color: var(--atlas); font-family: var(--mono); font-weight: 500; }
 .ticket-card p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 16px; line-height: 1.48; }
+.classification-summary { display: flex; align-items: start; justify-content: space-between; gap: 10px; margin: -3px 0 14px; }
+.classification-chips { min-width: 0; display: flex; flex-wrap: wrap; gap: 5px; }
+.classification-chip { min-height: 25px; padding: 0 8px; border: 1px solid var(--ticket-line); border-radius: 999px; display: inline-flex; align-items: center; color: var(--n-600); background: var(--paper-soft); font-size: 10px; font-weight: 600; line-height: 1; }
+.kind-chip { color: var(--riad); background: color-mix(in srgb, var(--mint) 9%, var(--paper-soft)); }
+.kind-unsorted { color: var(--n-500); background: var(--paper-soft); }
+.subkind-chip { color: var(--n-500); }
+.money-chip { border-color: color-mix(in srgb, var(--danger) 34%, var(--ticket-line)); color: var(--danger); background: color-mix(in srgb, var(--danger) 6%, var(--paper-elev)); }
+.classify-button { min-height: 28px; padding: 0 9px; border: 1px solid var(--n-300); border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; color: var(--n-600); font-size: 11px; font-weight: 600; }
+.classify-button:hover, .classify-button[aria-expanded="true"] { border-color: var(--atlas); color: var(--atlas); }
+.classify-button .material-icon { width: 14px; height: 14px; }
+.classification-editor { margin: -4px 0 15px; padding: 12px; border: 1px solid var(--ticket-line); border-radius: 13px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; background: var(--paper-soft); }
+.classification-editor[hidden], #ticketSubkindField[hidden] { display: none !important; }
+.classification-editor label { display: grid; gap: 5px; color: var(--n-600); font-size: 11px; font-weight: 600; }
+.classification-editor select, .classification-grid select { min-width: 0; width: 100%; height: 38px; padding: 0 30px 0 10px; border: 1px solid var(--n-300); border-radius: 9px; background: var(--paper-elev); color: var(--ink); font: inherit; font-size: 13px; }
+.editor-money-toggle { align-content: center; grid-template-columns: auto 1fr !important; display: flex !important; align-items: center; gap: 7px !important; }
+.editor-money-toggle input, .money-toggle input { width: 17px; height: 17px; accent-color: var(--danger); }
+.classification-save { min-height: 38px; padding: 0 12px; border-radius: 999px; background: var(--riad); color: var(--paper); font-size: 12px; font-weight: 600; }
 .copy-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 14px; align-items: start; }
 .copy-button { min-height: 34px; padding: 0 11px; border: 1px solid var(--n-300); border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: var(--paper); color: var(--n-700); font-size: 13px; font-weight: 500; white-space: nowrap; }
 .copy-button:not(:disabled):hover { border-color: var(--atlas); color: var(--atlas); }
@@ -114,6 +146,16 @@ button:disabled { cursor: default; opacity: .72; }
 textarea { width: 100%; min-height: 156px; resize: vertical; padding: 15px; border: 1px solid var(--n-300); border-radius: 14px; background: var(--paper); color: var(--ink); font: inherit; font-size: 16px; line-height: 1.5; outline: 0; }
 textarea:focus { border-color: var(--atlas); box-shadow: 0 0 0 3px rgba(11,110,79,.11); }
 textarea::placeholder { color: var(--n-500); }
+.classification-block { margin-top: 18px; padding: 15px; border: 1px solid var(--ticket-line); border-radius: 15px; background: var(--paper-soft); }
+.classification-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.classification-heading > div { display: flex; align-items: baseline; gap: 7px; }
+.classification-heading .field-label { margin: 0; }
+.classification-heading small, .classification-heading > span { color: var(--n-500); font-size: 11px; }
+.classification-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.classification-grid label { display: grid; gap: 6px; color: var(--n-600); font-size: 12px; font-weight: 600; }
+.money-toggle { margin-top: 12px; display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; color: var(--ink); font-size: 13px; font-weight: 600; }
+.money-toggle input { grid-row: span 2; }
+.money-toggle small { color: var(--n-500); font-size: 11px; font-weight: 400; }
 .followup-intro { margin: -10px 0 20px; color: var(--n-500); font-size: 14px; line-height: 1.45; }
 .upload-block { margin-top: 20px; }
 .upload-heading { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; font-weight: 600; }
@@ -148,6 +190,7 @@ textarea::placeholder { color: var(--n-500); }
   .workspace-head { align-items: start; }
   .workspace-note { max-width: 32ch; }
   .board { grid-template-columns: 1fr; }
+  .ticket-filters { margin-bottom: 12px; }
   .mobile-tabs { position: sticky; top: 72px; z-index: 20; margin: 0 -18px 14px; padding: 8px 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: color-mix(in srgb, var(--paper) 90%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
   .mobile-tab { min-width: 0; min-height: 42px; padding: 0 8px; border-radius: 999px; color: var(--n-500); font-size: 13px; font-weight: 500; white-space: nowrap; }
   .mobile-tab span { margin-left: 3px; font: 500 11px var(--mono); }
@@ -167,15 +210,24 @@ textarea::placeholder { color: var(--n-500); }
   .workspace-head { display: block; margin-bottom: 20px; }
   .workspace-note { margin-top: 12px; text-align: left; }
   .workspace-head h1 { font-size: 38px; max-width: 9ch; }
+  .ticket-filters { margin-inline: -8px; padding: 13px; border-radius: 17px; }
+  .filter-row { grid-template-columns: 1fr; gap: 4px; }
+  .filter-label { padding-top: 0; }
+  .filter-pills, .filter-pills-wide { width: 100%; flex-wrap: nowrap; overflow-x: auto; border-radius: 999px; scrollbar-width: none; }
+  .filter-pills::-webkit-scrollbar { display: none; }
   .mobile-tabs { top: 66px; }
   .lane { padding: 10px; border-radius: 18px; }
   .ticket-card { padding: 15px; }
   .copy-row { display: block; }
   .copy-row .copy-button { margin-top: 12px; }
+  .classification-summary { align-items: center; }
+  .classification-editor { grid-template-columns: 1fr; }
   .ticket-actions.has-failed-action { grid-template-columns: 1fr; }
   .composer { width: 100%; max-height: calc(100dvh - 10px); margin: auto 0 0; border-radius: 24px 24px 0 0; }
   .composer-panel { max-height: calc(100dvh - 10px); padding: 20px 18px calc(18px + env(safe-area-inset-bottom)); border-radius: 24px 24px 0 0; }
   .selected-images { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .classification-grid { grid-template-columns: 1fr; }
+  .classification-heading > span { display: none; }
   .composer-actions { position: sticky; bottom: calc(-18px - env(safe-area-inset-bottom)); margin: 0 -18px; padding: 14px 18px calc(14px + env(safe-area-inset-bottom)); background: var(--paper-elev); }
   .cancel-button { flex: 1; }
   .publish-button { flex: 1.4; min-width: 0; }

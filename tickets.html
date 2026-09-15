@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/tokens.css" />
-  <link rel="stylesheet" href="assets/tickets.css?v=2" />
+  <link rel="stylesheet" href="assets/tickets.css?v=4" />
 </head>
 <body>
   <header class="topbar">
@@ -34,6 +34,28 @@
         <h1 id="pageTitle">Problems, clearly handled.</h1>
       </div>
       <p class="workspace-note">Photos disappear after testing. Completed tickets disappear after 20 days.</p>
+    </section>
+
+    <section class="ticket-filters" aria-labelledby="filterTitle">
+      <div class="filter-heading">
+        <div>
+          <p class="eyebrow">Focus the board</p>
+          <h2 id="filterTitle">Filter tickets</h2>
+        </div>
+        <button class="filter-reset" id="resetFilters" type="button">Reset</button>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">Type</span>
+        <div class="filter-pills" id="kindFilters" data-lens-demo></div>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">Area</span>
+        <div class="filter-pills filter-pills-wide" id="areaFilters" data-lens-demo></div>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">Risk</span>
+        <div class="filter-pills" id="moneyFilters" data-lens-demo></div>
+      </div>
     </section>
 
     <nav class="mobile-tabs" id="mobileTabs" aria-label="Ticket status">
@@ -101,6 +123,18 @@
       </header>
       <label class="field-label" for="ticketBody">What is the problem?</label>
       <textarea id="ticketBody" name="body" rows="7" maxlength="4000" placeholder="Describe what happened, where you saw it, and what you expected…" required></textarea>
+      <section class="classification-block" aria-labelledby="classificationTitle">
+        <div class="classification-heading">
+          <div><span class="field-label" id="classificationTitle">Classification</span><small>Optional</small></div>
+          <span>Text-only filing still works</span>
+        </div>
+        <div class="classification-grid">
+          <label>Type<select id="ticketKind" name="kind"></select></label>
+          <label>Area<select id="ticketArea" name="area"></select></label>
+          <label id="ticketSubkindField" hidden>Sub-kind<select id="ticketSubkind" name="subkind"></select></label>
+        </div>
+        <label class="money-toggle"><input id="ticketMoneyRisk" name="money_at_risk" type="checkbox" value="1" /><span>Money at risk</span><small>Sales, cash, payments or refunds may be wrong</small></label>
+      </section>
       <div class="upload-block">
         <div class="upload-heading"><span>Images</span><span id="imageCounter">0 / 6</span></div>
         <label class="upload-target" for="ticketImages">
@@ -159,6 +193,7 @@
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="assets/tickets.js?v=2" defer></script>
+  <script src="assets/liquid-lens.js?v=1" defer></script>
+  <script src="assets/tickets.js?v=3" defer></script>
 </body>
 </html>

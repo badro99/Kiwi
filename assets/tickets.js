@@ -2,11 +2,23 @@
   'use strict';
 
   const API = '/api/tickets';
+  const FILTER_KEY = 'kiwi:tickets:filters:v1';
   const MAX_IMAGES = 6;
   const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+  function readFilters() {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(FILTER_KEY) || '{}');
+      return {
+        kind: typeof saved.kind === 'string' ? saved.kind : '',
+        area: typeof saved.area === 'string' ? saved.area : '',
+        money: saved.money === true,
+      };
+    } catch (_) { return { kind: '', area: '', money: false }; }
+  }
   const state = {
     tickets: [], files: [], followupFiles: [], followupTicketId: null,
-    loading: true, saving: false, savingFollowup: false,
+    taxonomy: null, filters: readFilters(),
+    loading: true, saving: false, savingFollowup: false, savingClassification: false,
   };
   const $ = (id) => document.getElementById(id);
   const board = $('ticketBoard');
@@ -25,6 +37,47 @@
     clock: '<img class="material-icon" src="assets/icons/material/schedule.svg" alt="" aria-hidden="true" />',
     photo: '<img class="material-icon" src="assets/icons/material/photo_frame.svg" alt="" aria-hidden="true" />',
   };
+
+  function saveFilters() {
+    try { window.localStorage.setItem(FILTER_KEY, JSON.stringify(state.filters)); } catch (_) {}
+  }
+
+  function labelOf(item) {
+    if (!item) return '';
+    const label = item.label || {};
+    return label.en || label.fr || item.id;
+  }
+
+  function taxonomyItem(group, id) {
+    if (!state.taxonomy || !id) return null;
+    const items = group === 'subkinds'
+      ? Object.values(state.taxonomy.subkinds || {}).flat()
+      : (state.taxonomy[group] || []);
+    return items.find((item) => item.id === id) || null;
+  }
+
+  function replaceSelectOptions(select, items, emptyLabel, selected) {
+    select.replaceChildren();
+    if (emptyLabel !== null) {
+      const empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = emptyLabel;
+      select.append(empty);
+    }
+    (items || []).forEach((item) => {
+      const option = document.createElement('option');
+      option.value = item.id;
+      option.textContent = labelOf(item);
+      select.append(option);
+    });
+    select.value = selected || '';
+  }
+
+  function subkindsFor(kind) {
+    return state.taxonomy && state.taxonomy.subkinds
+      ? (state.taxonomy.subkinds[kind] || [])
+      : [];
+  }
 
   function showToast(message, isError) {
     const toast = $('toast');
@@ -129,13 +182,84 @@
     return history;
   }
 
+  function classificationSummary(ticket) {
+    const wrap = make('div', 'classification-summary');
+    const chips = make('div', 'classification-chips');
+    const kind = taxonomyItem('kinds', ticket.kind || 'unsorted');
+    chips.append(make('span', 'classification-chip kind-chip kind-' + (ticket.kind || 'unsorted'), labelOf(kind) || 'Unsorted'));
+    const area = taxonomyItem('areas', ticket.area);
+    if (area) chips.append(make('span', 'classification-chip area-chip', labelOf(area)));
+    const subkind = taxonomyItem('subkinds', ticket.subkind);
+    if (subkind) chips.append(make('span', 'classification-chip subkind-chip', labelOf(subkind)));
+    if (ticket.moneyAtRisk) chips.append(make('span', 'classification-chip money-chip', 'Money at risk'));
+
+    const edit = make('button', 'classify-button');
+    edit.type = 'button';
+    edit.dataset.action = 'toggle-classification';
+    edit.dataset.id = String(ticket.id);
+    edit.setAttribute('aria-expanded', 'false');
+    edit.setAttribute('aria-label', `Classify ticket ${ticket.number}`);
+    const icon = document.createElement('img');
+    icon.className = 'material-icon';
+    icon.src = 'assets/icons/material/category.svg';
+    icon.alt = '';
+    icon.setAttribute('aria-hidden', 'true');
+    edit.append(icon, document.createTextNode('Classify'));
+    wrap.append(chips, edit);
+    return wrap;
+  }
+
+  function classificationEditor(ticket) {
+    const editor = make('form', 'classification-editor');
+    editor.hidden = true;
+    editor.dataset.classificationForm = String(ticket.id);
+
+    const kindLabel = make('label', '', 'Type');
+    const kind = document.createElement('select');
+    kind.name = 'kind';
+    kind.dataset.classificationKind = '';
+    replaceSelectOptions(kind, state.taxonomy.kinds, null, ticket.kind || 'unsorted');
+    kindLabel.append(kind);
+
+    const areaLabel = make('label', '', 'Area');
+    const area = document.createElement('select');
+    area.name = 'area';
+    replaceSelectOptions(area, state.taxonomy.areas, 'No area', ticket.area);
+    areaLabel.append(area);
+
+    const subkindLabel = make('label', '', 'Sub-kind');
+    subkindLabel.dataset.classificationSubkindField = '';
+    const subkind = document.createElement('select');
+    subkind.name = 'subkind';
+    subkindLabel.append(subkind);
+    const syncSubkind = (selected) => {
+      const items = subkindsFor(kind.value);
+      replaceSelectOptions(subkind, items, 'No sub-kind', items.some((item) => item.id === selected) ? selected : '');
+      subkindLabel.hidden = items.length === 0;
+    };
+    syncSubkind(ticket.subkind);
+    kind.addEventListener('change', () => syncSubkind(''));
+
+    const money = make('label', 'editor-money-toggle');
+    const moneyInput = document.createElement('input');
+    moneyInput.type = 'checkbox';
+    moneyInput.name = 'money_at_risk';
+    moneyInput.checked = Boolean(ticket.moneyAtRisk);
+    money.append(moneyInput, document.createTextNode('Money at risk'));
+
+    const save = make('button', 'classification-save', 'Save classification');
+    save.type = 'submit';
+    editor.append(kindLabel, areaLabel, subkindLabel, money, save);
+    return editor;
+  }
+
   function ticketCard(ticket) {
     const card = make('article', 'ticket-card' + (ticket.status === 'done' ? ' ticket-done' : ''));
     card.dataset.ticketId = String(ticket.id);
     const meta = make('div', 'ticket-meta');
     meta.append(make('span', 'ticket-number', ticket.number));
     meta.append(make('span', '', formatTime(ticket.createdAt)));
-    card.append(meta);
+    card.append(meta, classificationSummary(ticket), classificationEditor(ticket));
 
     if (ticket.status === 'done') {
       card.append(make('p', '', ticket.body));
@@ -174,9 +298,67 @@
     return empty;
   }
 
+  function filterButton(label, dimension, value, active) {
+    const button = make('button', 'filter-pill' + (active ? ' on' : ''), label);
+    button.type = 'button';
+    button.dataset.lensItem = '';
+    button.dataset.filterDimension = dimension;
+    button.dataset.filterValue = value;
+    button.setAttribute('aria-pressed', String(active));
+    return button;
+  }
+
+  function renderFilters() {
+    if (!state.taxonomy) return;
+    const kindWrap = $('kindFilters');
+    const areaWrap = $('areaFilters');
+    const moneyWrap = $('moneyFilters');
+    if (!kindWrap.dataset.ready) {
+      kindWrap.append(filterButton('All', 'kind', '', !state.filters.kind));
+      state.taxonomy.kinds.forEach((item) => {
+        kindWrap.append(filterButton(labelOf(item), 'kind', item.id, state.filters.kind === item.id));
+      });
+      kindWrap.dataset.ready = '1';
+    }
+    if (!areaWrap.dataset.ready) {
+      areaWrap.append(filterButton('All', 'area', '', !state.filters.area));
+      state.taxonomy.areas.forEach((item) => {
+        areaWrap.append(filterButton(labelOf(item), 'area', item.id, state.filters.area === item.id));
+      });
+      areaWrap.dataset.ready = '1';
+    }
+    if (!moneyWrap.dataset.ready) {
+      moneyWrap.append(
+        filterButton('All', 'money', '', !state.filters.money),
+        filterButton('Money at risk', 'money', '1', state.filters.money),
+      );
+      moneyWrap.dataset.ready = '1';
+    }
+    document.querySelectorAll('[data-filter-dimension]').forEach((button) => {
+      const dimension = button.dataset.filterDimension;
+      const value = button.dataset.filterValue || '';
+      const active = dimension === 'money'
+        ? state.filters.money === (value === '1')
+        : state.filters[dimension] === value;
+      button.classList.toggle('on', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+    $('resetFilters').disabled = !state.filters.kind && !state.filters.area && !state.filters.money;
+    if (window.KiwiLens) window.KiwiLens.rescan();
+  }
+
+  function ticketMatchesFilters(ticket) {
+    if (state.filters.kind && ticket.kind !== state.filters.kind) return false;
+    if (state.filters.area && ticket.area !== state.filters.area) return false;
+    if (state.filters.money && !ticket.moneyAtRisk) return false;
+    return true;
+  }
+
   function render() {
     ['problem', 'testing', 'done'].forEach((status) => {
-      const tickets = state.tickets.filter((ticket) => ticket.status === status);
+      const tickets = state.tickets
+        .filter((ticket) => ticket.status === status && ticketMatchesFilters(ticket))
+        .sort((a, b) => Number(b.moneyAtRisk) - Number(a.moneyAtRisk) || b.id - a.id);
       lists[status].replaceChildren();
       if (!tickets.length) lists[status].append(emptyState(status));
       else tickets.forEach((ticket) => lists[status].append(ticketCard(ticket)));
@@ -184,6 +366,7 @@
       $('count' + suffix).textContent = String(tickets.length);
       $('tabCount' + suffix).textContent = String(tickets.length);
     });
+    renderFilters();
   }
 
   function renderLoading() {
@@ -205,11 +388,29 @@
       'image-too-large': 'One image is larger than 10 MB.',
       'images-too-large': 'The selected images are too large together.',
       'bad-image-type': 'Use JPEG, PNG, WebP, or GIF images.',
+      'invalid-kind': 'Choose a valid ticket type.',
+      'invalid-area': 'Choose a valid product area.',
+      'invalid-subkind': 'Choose a valid sub-kind.',
+      'subkind-kind-mismatch': 'That sub-kind does not belong to the selected type.',
+      'invalid-money-at-risk': 'Choose a valid money-risk setting.',
       'wrong-status': 'That ticket was already moved on another device.',
       'changed-elsewhere': 'That ticket changed on another device. The board has been refreshed.',
       'not-found': 'That ticket no longer exists. The board has been refreshed.',
     };
     return errors[code] || 'Something went wrong. Please try again.';
+  }
+
+  function syncComposerSubkinds(selected) {
+    const kind = $('ticketKind').value || 'unsorted';
+    const items = subkindsFor(kind);
+    replaceSelectOptions($('ticketSubkind'), items, 'No sub-kind', selected || '');
+    $('ticketSubkindField').hidden = items.length === 0;
+  }
+
+  function configureComposerClassification() {
+    replaceSelectOptions($('ticketKind'), state.taxonomy.kinds, null, 'unsorted');
+    replaceSelectOptions($('ticketArea'), state.taxonomy.areas, 'No area', '');
+    syncComposerSubkinds('');
   }
 
   async function loadTickets(options) {
@@ -218,7 +419,21 @@
       const response = await fetch(API, { headers: { Accept: 'application/json' }, cache: 'no-store' });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw Object.assign(new Error(data.error || 'read-failed'), { code: data.error });
-      state.tickets = Array.isArray(data.tickets) ? data.tickets : [];
+      if (!data.taxonomy || !Array.isArray(data.taxonomy.kinds) || !Array.isArray(data.taxonomy.areas)) {
+        throw Object.assign(new Error('taxonomy-missing'), { code: 'taxonomy-missing' });
+      }
+      const taxonomyChanged = !state.taxonomy || state.taxonomy.version !== data.taxonomy.version;
+      state.taxonomy = data.taxonomy;
+      if (state.filters.kind && !state.taxonomy.kinds.some((item) => item.id === state.filters.kind)) state.filters.kind = '';
+      if (state.filters.area && !state.taxonomy.areas.some((item) => item.id === state.filters.area)) state.filters.area = '';
+      state.tickets = Array.isArray(data.tickets) ? data.tickets.map((ticket) => ({
+        ...ticket,
+        kind: ticket.kind || 'unsorted',
+        area: ticket.area || null,
+        subkind: ticket.subkind || null,
+        moneyAtRisk: Boolean(ticket.moneyAtRisk),
+      })) : [];
+      if (taxonomyChanged) configureComposerClassification();
       state.loading = false;
       render();
     } catch (error) {
@@ -244,6 +459,10 @@
 
   function resetComposer() {
     form.reset();
+    $('ticketKind').value = 'unsorted';
+    $('ticketArea').value = '';
+    $('ticketMoneyRisk').checked = false;
+    syncComposerSubkinds('');
     state.files = [];
     previewUrls.forEach((url) => URL.revokeObjectURL(url));
     previewUrls = [];
@@ -396,6 +615,10 @@
     $('formError').textContent = '';
     const data = new FormData();
     data.append('body', text);
+    data.append('kind', $('ticketKind').value || 'unsorted');
+    if ($('ticketArea').value) data.append('area', $('ticketArea').value);
+    if (!$('ticketSubkindField').hidden && $('ticketSubkind').value) data.append('subkind', $('ticketSubkind').value);
+    data.append('money_at_risk', $('ticketMoneyRisk').checked ? '1' : '0');
     state.files.forEach((file) => data.append('images', file, file.name));
     try {
       const response = await fetch(API, { method: 'POST', body: data });
@@ -403,7 +626,9 @@
       if (!response.ok) throw Object.assign(new Error(result.error || 'publish-failed'), { code: result.error });
       composer.close();
       resetComposer();
-      showToast(`${result.number} published`);
+      showToast(result.classificationStored === false
+        ? `${result.number} published; classification will be available after the database update`
+        : `${result.number} published`);
       await loadTickets({ quiet: true });
       activateTab('problem');
     } catch (error) {
@@ -558,6 +783,69 @@
     }
   }
 
+  function toggleClassification(ticket, button) {
+    const card = button.closest('.ticket-card');
+    const editor = card && card.querySelector('[data-classification-form]');
+    if (!editor) return;
+    const opening = editor.hidden;
+    editor.hidden = !opening;
+    button.setAttribute('aria-expanded', String(opening));
+    if (opening) editor.querySelector('select').focus();
+  }
+
+  async function saveClassification(event) {
+    event.preventDefault();
+    if (state.savingClassification) return;
+    const editor = event.target.closest('[data-classification-form]');
+    if (!editor) return;
+    const ticket = state.tickets.find((item) => item.id === Number(editor.dataset.classificationForm));
+    if (!ticket) return;
+    const data = new FormData(editor);
+    const button = editor.querySelector('.classification-save');
+    state.savingClassification = true;
+    button.disabled = true;
+    const oldLabel = button.textContent;
+    button.textContent = 'Saving…';
+    try {
+      const response = await fetch(`${API}/${ticket.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          action: 'classify',
+          kind: String(data.get('kind') || 'unsorted'),
+          area: String(data.get('area') || ''),
+          subkind: String(data.get('subkind') || ''),
+          money_at_risk: data.get('money_at_risk') === 'on',
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw Object.assign(new Error(result.error || 'update-failed'), { code: result.error });
+      if (result.classificationStored === false) {
+        showToast('Classification is waiting for the database update', true);
+      } else {
+        showToast(`${ticket.number} classified`);
+      }
+      await loadTickets({ quiet: true });
+    } catch (error) {
+      showToast(friendlyError(error.code), true);
+    } finally {
+      state.savingClassification = false;
+      if (button.isConnected) {
+        button.disabled = false;
+        button.textContent = oldLabel;
+      }
+    }
+  }
+
+  function applyFilter(button) {
+    const dimension = button.dataset.filterDimension;
+    const value = button.dataset.filterValue || '';
+    if (dimension === 'money') state.filters.money = value === '1';
+    else if (dimension === 'kind' || dimension === 'area') state.filters[dimension] = value;
+    saveFilters();
+    render();
+  }
+
   function activateTab(status) {
     board.dataset.mobileStatus = status;
     document.querySelectorAll('.mobile-tab').forEach((item) => {
@@ -571,6 +859,7 @@
   $('closeComposer').addEventListener('click', closeComposer);
   $('cancelComposer').addEventListener('click', closeComposer);
   form.addEventListener('submit', publish);
+  $('ticketKind').addEventListener('change', () => syncComposerSubkinds(''));
   fileInput.addEventListener('change', () => addFiles(fileInput.files));
   $('selectedImages').addEventListener('click', (event) => {
     const button = event.target.closest('[data-remove-file]');
@@ -592,6 +881,15 @@
     const tab = event.target.closest('[data-status]');
     if (tab) activateTab(tab.dataset.status);
   });
+  document.querySelector('.ticket-filters').addEventListener('click', (event) => {
+    const filter = event.target.closest('[data-filter-dimension]');
+    if (filter) applyFilter(filter);
+  });
+  $('resetFilters').addEventListener('click', () => {
+    state.filters = { kind: '', area: '', money: false };
+    saveFilters();
+    render();
+  });
   board.addEventListener('click', (event) => {
     const button = event.target.closest('[data-action]');
     if (!button) return;
@@ -600,8 +898,10 @@
     if (button.dataset.action === 'copy-text') copyText(ticket);
     else if (button.dataset.action === 'copy-image') copyImage(button.dataset.url, ticket, button);
     else if (button.dataset.action === 'test-failed') openFollowup(ticket);
+    else if (button.dataset.action === 'toggle-classification') toggleClassification(ticket, button);
     else moveTicket(ticket, button.dataset.action, button);
   });
+  board.addEventListener('submit', saveClassification);
   composer.addEventListener('click', (event) => { if (event.target === composer) closeComposer(); });
   followupComposer.addEventListener('click', (event) => { if (event.target === followupComposer) closeFollowup(); });
   $('closeImageFallback').addEventListener('click', () => $('imageCopyFallback').close());

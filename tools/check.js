@@ -1205,6 +1205,7 @@ section('Whole-project regressions');
     'plan-tier-test.mjs',
     'error-reporter-test.mjs',
     'tickets-retest-test.mjs',
+    'tickets-taxonomy-test.mjs',
     'error-redaction-test.mjs',
     'supplier-actions-test.mjs',
     'print-paper-test.mjs',

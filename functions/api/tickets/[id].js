@@ -2,6 +2,7 @@ import {
   IMAGE_EXTENSIONS, MAX_IMAGE_BYTES, MAX_IMAGES, MAX_TEXT, MAX_TOTAL_IMAGE_BYTES,
   json, RETENTION_MS, schemaError, ticketNumber,
 } from './_lib.js';
+import { validateTicketClassification } from './_taxonomy.js';
 
 export async function onRequestPatch({ request, env, params }) {
   if (!env.DB) return json({ error: 'not-configured' }, 503);
@@ -27,7 +28,19 @@ export async function onRequestPatch({ request, env, params }) {
   }
 
   const action = String(multipart ? payload.get('action') : ((payload && payload.action) || ''));
-  if (action !== 'fixed' && action !== 'tested' && action !== 'failed') return json({ error: 'bad-action' }, 400);
+  if (action !== 'fixed' && action !== 'tested' && action !== 'failed' && action !== 'classify') {
+    return json({ error: 'bad-action' }, 400);
+  }
+
+  const classification = action === 'classify' ? validateTicketClassification({
+    kind: multipart ? payload.get('kind') : payload.kind,
+    area: multipart ? payload.get('area') : payload.area,
+    subkind: multipart ? payload.get('subkind') : payload.subkind,
+    money_at_risk: multipart ? payload.get('money_at_risk') : payload.money_at_risk,
+  }) : null;
+  if (classification && !classification.ok) {
+    return json({ error: classification.error, field: classification.field }, 400);
+  }
 
   const note = action === 'failed'
     ? String(multipart ? payload.get('note') : ((payload && payload.note) || '')).trim()
@@ -54,6 +67,38 @@ export async function onRequestPatch({ request, env, params }) {
     if (!ticket) return json({ error: 'not-found' }, 404);
 
     const now = Date.now();
+    if (action === 'classify') {
+      try {
+        const result = await env.DB.prepare(
+          `UPDATE kiwi_tickets
+           SET kind = ?, area = ?, subkind = ?, money_at_risk = ?, updated_ts = ?
+           WHERE id = ?`
+        ).bind(
+          classification.value.kind, classification.value.area, classification.value.subkind,
+          classification.value.money_at_risk ? 1 : 0, now, id,
+        ).run();
+        if (!result.meta || result.meta.changes !== 1) return json({ error: 'changed-elsewhere' }, 409);
+        return json({
+          ok: true,
+          id,
+          number: ticketNumber(id),
+          status: ticket.status,
+          classificationStored: true,
+          classification: classification.value,
+        });
+      } catch (error) {
+        if (!schemaError(error)) throw error;
+        return json({
+          ok: true,
+          id,
+          number: ticketNumber(id),
+          status: ticket.status,
+          classificationStored: false,
+          classification: { kind: 'unsorted', area: null, subkind: null, money_at_risk: false },
+        });
+      }
+    }
+
     if (action === 'fixed') {
       if (ticket.status !== 'problem') return json({ error: 'wrong-status', status: ticket.status }, 409);
       const result = await env.DB.prepare(

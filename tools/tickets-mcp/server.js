@@ -35,7 +35,7 @@ const { validateUiProof } = require('./ui-proof.js');
 const BASE = String(process.env.KIWI_TICKETS_BASE || 'https://kiwi-os.com').replace(/\/+$/, '');
 const DEFAULT_MAXPX = clampInt(process.env.KIWI_TICKETS_MAXPX, 1024, 256, 4096);
 const SERVER_NAME = 'kiwi-tickets';
-const SERVER_VERSION = '1.0.0';
+const SERVER_VERSION = '1.1.0';
 const DEFAULT_PROTOCOL = '2024-11-05';
 
 const IMAGE_EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' };
@@ -105,6 +105,9 @@ const TOOLS = [
           enum: ['open', 'problem', 'testing', 'done', 'all'],
           description: "Filter. 'open' = problem+testing (default). 'done' tickets keep no screenshots and expire after 20 days.",
         },
+        kind: { type: 'string', description: 'Optional type id from the taxonomy returned by GET /api/tickets.' },
+        area: { type: 'string', description: 'Optional area id from the taxonomy returned by GET /api/tickets.' },
+        moneyAtRisk: { type: 'boolean', description: 'When true, return only tickets where merchant money may be at risk.' },
       },
     },
   },
@@ -148,8 +151,29 @@ const TOOLS = [
           items: { type: 'string' },
           description: 'Optional local file paths of screenshots to attach (png/jpg/webp/gif, up to 6, ≤10MB each).',
         },
+        kind: { type: 'string', description: 'Optional type id. Defaults to unsorted.' },
+        area: { type: 'string', description: 'Optional product area id.' },
+        subkind: { type: 'string', description: 'Optional sub-kind id allowed by the selected type.' },
+        moneyAtRisk: { type: 'boolean', description: 'Whether sales, cash, payments or refunds may be wrong.' },
       },
       required: ['body'],
+    },
+  },
+  {
+    name: 'classify_ticket',
+    description:
+      'Classify a ticket without changing its workflow status or retention. ' +
+      'Ids come from the single taxonomy returned by GET /api/tickets.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'number', description: 'Ticket id.' },
+        kind: { type: 'string', description: 'Required type id.' },
+        area: { type: 'string', description: 'Optional product area id.' },
+        subkind: { type: 'string', description: 'Optional sub-kind id allowed by kind.' },
+        moneyAtRisk: { type: 'boolean', description: 'Whether merchant money may be at risk.' },
+      },
+      required: ['id', 'kind'],
     },
   },
   {
@@ -181,6 +205,7 @@ async function callTool(id, params) {
       case 'get_ticket': return ok(id, text(await getTicket(args)));
       case 'view_ticket_image': return ok(id, await viewTicketImage(args));
       case 'create_ticket': return ok(id, text(await createTicket(args)));
+      case 'classify_ticket': return ok(id, text(await classifyTicket(args)));
       case 'submit_for_testing': return ok(id, text(await submitForTesting(args)));
       default: return ok(id, errText('Unknown tool: ' + name));
     }
@@ -203,18 +228,25 @@ async function fetchTickets() {
 
 async function listTickets(args) {
   const filter = String(args.status || 'open');
-  const { tickets, retentionDays } = await fetchTickets();
+  const { tickets, retentionDays, taxonomy } = await fetchTickets();
+  validateTaxonomyFilters(taxonomy, args);
   const keep = tickets.filter((t) => {
-    if (filter === 'all') return true;
-    if (filter === 'open') return t.status === 'problem' || t.status === 'testing';
-    return t.status === filter;
+    const statusMatches = filter === 'all'
+      || (filter === 'open' ? t.status === 'problem' || t.status === 'testing' : t.status === filter);
+    if (!statusMatches) return false;
+    if (args.kind && (t.kind || 'unsorted') !== args.kind) return false;
+    if (args.area && t.area !== args.area) return false;
+    if (typeof args.moneyAtRisk === 'boolean' && Boolean(t.moneyAtRisk) !== args.moneyAtRisk) return false;
+    return true;
   });
   if (!keep.length) return `No tickets matching "${filter}" on ${BASE}/tickets.`;
 
   const lines = keep.map((t) => {
     const shots = (t.images || []).length;
     const shotStr = shots ? `${shots} screenshot${shots > 1 ? 's' : ''}` : 'no screenshots';
-    const head = `${t.number} · ${t.status} · ${shotStr} · ${fmtTime(t.createdAt)}`;
+    const classification = `${t.kind || 'unsorted'} / ${t.area || 'no-area'}${t.subkind ? ` / ${t.subkind}` : ''}`;
+    const risk = t.moneyAtRisk ? ' · MONEY AT RISK' : '';
+    const head = `${t.number} · ${t.status} · ${classification}${risk} · ${shotStr} · ${fmtTime(t.createdAt)}`;
     const body = oneLine(t.body, 160);
     return `${head}\n  ${body}`;
   });
@@ -236,6 +268,8 @@ async function getTicket(args) {
     : '  (none)';
   return (
     `${t.number} · status: ${t.status}\n` +
+    `classification: ${t.kind || 'unsorted'} / ${t.area || 'no-area'}${t.subkind ? ` / ${t.subkind}` : ''}\n` +
+    `money at risk: ${t.moneyAtRisk ? 'yes' : 'no'}\n` +
     `created: ${fmtTime(t.createdAt)}   updated: ${fmtTime(t.updatedAt)}\n` +
     (t.completedAt ? `completed: ${fmtTime(t.completedAt)}   expires: ${fmtTime(t.expiresAt)}\n` : '') +
     `\n${t.body}\n\n` +
@@ -282,9 +316,15 @@ async function createTicket(args) {
   if (body.length > 4000) throw new Error('body too long (max 4000).');
   const paths = Array.isArray(args.imagePaths) ? args.imagePaths : [];
   if (paths.length > 6) throw new Error('too many images (max 6).');
+  const { taxonomy } = await fetchTickets();
+  validateClassification(taxonomy, args, false);
 
   const form = new FormData();
   form.append('body', body);
+  if (args.kind) form.append('kind', String(args.kind));
+  if (args.area) form.append('area', String(args.area));
+  if (args.subkind) form.append('subkind', String(args.subkind));
+  if (typeof args.moneyAtRisk === 'boolean') form.append('money_at_risk', args.moneyAtRisk ? '1' : '0');
   for (const p of paths) {
     const abs = path.resolve(p);
     if (!fs.existsSync(abs)) throw new Error('image not found: ' + p);
@@ -299,6 +339,29 @@ async function createTicket(args) {
   const data = await safeJson(res);
   if (!res.ok) throw new Error(`create failed (HTTP ${res.status}): ${data.error || 'unknown'}`);
   return `Filed ${data.number || '#' + data.id} on ${BASE}/tickets${paths.length ? ` with ${paths.length} screenshot(s)` : ''}.`;
+}
+
+async function classifyTicket(args) {
+  const id = intOrThrow(args.id, 'id');
+  const { taxonomy } = await fetchTickets();
+  validateClassification(taxonomy, args, true);
+  const res = await fetch(`${BASE}/api/tickets/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({
+      action: 'classify',
+      kind: args.kind,
+      area: args.area || '',
+      subkind: args.subkind || '',
+      money_at_risk: args.moneyAtRisk === true,
+    }),
+  });
+  const data = await safeJson(res);
+  if (!res.ok) throw new Error(`classify failed (HTTP ${res.status}): ${data.error || 'unknown'}`);
+  if (data.classificationStored === false) {
+    throw new Error('classification was not stored because the production schema is still updating; retry after the migration.');
+  }
+  return `${data.number || '#' + id} classified as ${args.kind} / ${args.area || 'no-area'}${args.subkind ? ` / ${args.subkind}` : ''}${args.moneyAtRisk ? ' · MONEY AT RISK' : ''}. Status remains ${data.status}.`;
 }
 
 /* A solved ticket goes to "Requiring testing", never straight to done.
@@ -333,6 +396,34 @@ async function submitForTesting(args) {
 }
 
 /* ── helpers ─────────────────────────────────────────────────────────────── */
+
+function taxonomyIds(taxonomy, group) {
+  if (!taxonomy || !Array.isArray(taxonomy[group])) {
+    throw new Error('ticket API did not return its classification taxonomy.');
+  }
+  return new Set(taxonomy[group].map((item) => item.id));
+}
+
+function validateTaxonomyFilters(taxonomy, args) {
+  if (args.kind && !taxonomyIds(taxonomy, 'kinds').has(args.kind)) throw new Error(`unknown kind: ${args.kind}`);
+  if (args.area && !taxonomyIds(taxonomy, 'areas').has(args.area)) throw new Error(`unknown area: ${args.area}`);
+}
+
+function validateClassification(taxonomy, args, requireKind) {
+  const kind = String(args.kind || (requireKind ? '' : 'unsorted'));
+  if (!kind) throw new Error('kind is required.');
+  if (!taxonomyIds(taxonomy, 'kinds').has(kind)) throw new Error(`unknown kind: ${kind}`);
+  if (args.area && !taxonomyIds(taxonomy, 'areas').has(args.area)) throw new Error(`unknown area: ${args.area}`);
+  const allowed = taxonomy && taxonomy.subkinds && Array.isArray(taxonomy.subkinds[kind])
+    ? taxonomy.subkinds[kind].map((item) => item.id)
+    : [];
+  if (args.subkind && !allowed.includes(args.subkind)) {
+    throw new Error(`subkind ${args.subkind} is not allowed for kind ${kind}.`);
+  }
+  if (args.moneyAtRisk !== undefined && typeof args.moneyAtRisk !== 'boolean') {
+    throw new Error('moneyAtRisk must be a boolean.');
+  }
+}
 
 function downscale(buf, mime, maxSize) {
   if (process.platform !== 'darwin' || !maxSize) return { buf, mime };

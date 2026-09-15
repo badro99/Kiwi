@@ -73,7 +73,7 @@ try {
   ok(init.result?.serverInfo?.name === 'kiwi-ui-qa', 'MCP initializes');
   const list = await rpc('tools/list');
   const names = list.result.tools.map(x => x.name);
-  ok(names.includes('start_hotel_fixture') && names.includes('finish_ui_proof'), 'interactive and evidence tools registered');
+  ok(names.includes('start_hotel_fixture') && names.includes('start_tickets_fixture') && names.includes('finish_ui_proof'), 'interactive and evidence tools registered');
   ok(!names.includes('evaluate') && !names.includes('open_url') && !names.includes('call_api'), 'no arbitrary browser bypass or production URL tool');
   const empty = await call('finish_ui_proof', { ticketId: 999001, expectedOutcome: 'Ordinary reservation opens from the sidebar' });
   ok(empty.isError, 'cannot claim proof before a real browser exists');

@@ -19,6 +19,7 @@ let stdinEnded = false;
 
 const TOOLS = [
   { name: 'start_hotel_fixture', description: 'Start a fresh real dashboard + real hotel API/SQLite on a synthetic merchant. Opens Chromium, enters only the fixture PIN, and returns visible UI. Never touches production.', inputSchema: { type: 'object', properties: {} } },
+  { name: 'start_tickets_fixture', description: 'Start the real Kiwi Tickets page against an isolated in-memory ticket API. Opens Chromium and never touches production.', inputSchema: { type: 'object', properties: {} } },
   { name: 'ui_snapshot', description: 'Compact visible text and interactive controls with temporary q-refs; no screenshot tokens. Call again after navigation.', inputSchema: { type: 'object', properties: {} } },
   { name: 'ui_click', description: 'Click a visible control through Chromium, not a JS handler or API. Use a q-ref from ui_snapshot.', inputSchema: { type: 'object', properties: { ref: { type: 'string' } }, required: ['ref'] } },
   { name: 'ui_fill', description: 'Fill a visible input through the rendered control. Use a q-ref from ui_snapshot.', inputSchema: { type: 'object', properties: { ref: { type: 'string' }, value: { type: 'string' } }, required: ['ref', 'value'] } },
@@ -69,6 +70,7 @@ async function handle(line) {
 async function call(name, args) {
   switch (name) {
     case 'start_hotel_fixture': return text(await startHotelFixture());
+    case 'start_tickets_fixture': return text(await startTicketsFixture());
     case 'ui_snapshot': return text(await snapshot());
     case 'ui_click': return text(await interact('click', args));
     case 'ui_fill': return text(await interact('fill', args));
@@ -136,6 +138,65 @@ function fixtureProcess() {
     child.stderr.on('data', buf => { stderr = (stderr + buf.toString()).slice(-2000); });
     child.once('exit', code => finish(new Error(`Hotel fixture exited ${code}: ${stderr}`)));
   });
+}
+
+function ticketsFixtureProcess() {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [path.join(ROOT, 'tools/tickets-ui-fixture.mjs')], {
+      cwd: ROOT, env: process.env, stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stdout = '', stderr = '', done = false;
+    const timer = setTimeout(() => finish(new Error('Tickets fixture did not start within 20 seconds')), 20000);
+    function finish(err, value) {
+      if (done) return;
+      done = true; clearTimeout(timer);
+      if (err) { child.kill('SIGTERM'); reject(err); } else resolve({ child, ...value });
+    }
+    child.stdout.on('data', buf => {
+      stdout += buf.toString();
+      let i;
+      while ((i = stdout.indexOf('\n')) >= 0) {
+        const line = stdout.slice(0, i); stdout = stdout.slice(i + 1);
+        if (line.startsWith('KIWI_TICKETS_UI_QA_READY ')) {
+          try { finish(null, JSON.parse(line.slice('KIWI_TICKETS_UI_QA_READY '.length))); } catch (e) { finish(e); }
+        }
+      }
+      if (stdout.length > 100000) stdout = stdout.slice(-10000);
+    });
+    child.stderr.on('data', buf => { stderr = (stderr + buf.toString()).slice(-2000); });
+    child.once('exit', code => finish(new Error(`Tickets fixture exited ${code}: ${stderr}`)));
+  });
+}
+
+async function startTicketsFixture() {
+  await closeSession();
+  const bin = chromiumBinary();
+  if (!bin) throw new Error('Chromium not found; set KIWI_CHROMIUM_BIN. UI proof cannot be skipped.');
+  const puppeteer = createRequire(path.join(ROOT, 'app/package.json'))('puppeteer-core');
+  const fixture = await ticketsFixtureProcess();
+  let browser;
+  try {
+    const origin = new URL(fixture.base);
+    if (origin.protocol !== 'http:' || origin.hostname !== '127.0.0.1') throw new Error('Fixture returned a non-loopback origin');
+    browser = await puppeteer.launch({ executablePath: bin, headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--proxy-server=http://127.0.0.1:9', '--proxy-bypass-list=127.0.0.1;localhost'], defaultViewport: { width: 1440, height: 1000 } });
+    const context = await browser.createBrowserContext();
+    const page = await context.newPage();
+    await page.setRequestInterception(true);
+    page.on('request', req => {
+      const u = req.url();
+      if (u.startsWith(fixture.base + '/') || u.startsWith('data:') || u.startsWith('blob:')) req.continue().catch(() => {});
+      else req.abort().catch(() => {});
+    });
+    await page.goto(fixture.base + '/tickets.html', { waitUntil: 'load', timeout: 60000 });
+    await page.waitForSelector('#kindFilters [data-filter-dimension]', { timeout: 15000 });
+    await page.waitForSelector('[data-ticket-id="9003"]', { timeout: 15000 });
+    session = { ...fixture, kind: 'tickets', browser, context, page, actions: [], assertions: [], refs: new Set(), startedAt: Date.now() };
+    return `Synthetic Kiwi Tickets board ready at ${origin.origin}; no live merchant access.\n${await snapshot()}`;
+  } catch (e) {
+    if (browser) await browser.close().catch(() => {});
+    fixture.child.kill('SIGTERM');
+    throw new Error(`start tickets fixture: ${e.message || e}`);
+  }
 }
 
 async function startHotelFixture() {
@@ -311,6 +372,11 @@ async function interact(kind, args) {
 async function reload() {
   const s = active();
   await s.page.reload({ waitUntil: 'load', timeout: 60000 });
+  if (s.kind === 'tickets') {
+    await s.page.waitForSelector('#kindFilters [data-filter-dimension]', { timeout: 15000 });
+    s.actions.push({ kind: 'reload', at: new Date().toISOString() });
+    return snapshot();
+  }
   await s.page.waitForSelector('[data-kiwi-pin-input]', { timeout: 20000 });
   const lock = await s.page.$('[data-kiwi-lock]');
   if (lock && await lock.isVisible()) {
@@ -353,6 +419,12 @@ async function viewport(args) {
   const s = active(), width = Number(args.width), height = Number(args.height);
   if (!Number.isInteger(width) || width < 320 || width > 1920 || !Number.isInteger(height) || height < 480 || height > 1400) throw new Error('Viewport must be 320–1920px wide and 480–1400px high.');
   await s.page.setViewport({ width, height, deviceScaleFactor: width < 768 ? 2 : 1, isMobile: width < 768, hasTouch: width < 768 });
+  if (s.kind === 'tickets') {
+    await s.page.waitForSelector('#kindFilters [data-filter-dimension]', { timeout: 15000 });
+    await new Promise(r => setTimeout(r, 350));
+    s.actions.push({ kind: 'viewport', width, height, at: new Date().toISOString() });
+    return snapshot();
+  }
   // Chromium reloads when mobile/touch emulation changes. The fixture gate is
   // typed through again, so viewport QA never works around the visible lock.
   await s.page.waitForSelector('[data-kiwi-pin-input]', { timeout: 20000 });
@@ -426,7 +498,7 @@ async function finishProof(args) {
   const dirty = execFileSync('git', ['status', '--porcelain'], { cwd: ROOT, encoding: 'utf8' }).trim();
   const manifest = {
     schema: 'kiwi-ui-proof-v1', passed: true, ticketId, expectedOutcome: args.expectedOutcome.trim(),
-    environment: 'synthetic-hotel-dashboard', merchant: s.merchant, origin: s.base,
+    environment: s.kind === 'tickets' ? 'synthetic-kiwi-tickets' : 'synthetic-hotel-dashboard', merchant: s.merchant, origin: s.base,
     path: new URL(s.page.url()).pathname, viewport: s.page.viewport(), startedAt: new Date(s.startedAt).toISOString(),
     finishedAt: new Date().toISOString(), gitHead: head, gitDirty: !!dirty,
     actions: s.actions, assertions: s.assertions, screenshot: image,

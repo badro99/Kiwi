@@ -2,6 +2,7 @@ import {
   IMAGE_EXTENSIONS, MAX_IMAGE_BYTES, MAX_IMAGES, MAX_TEXT, MAX_TOTAL_IMAGE_BYTES,
   json, purgeExpired, schemaError, ticketNumber,
 } from './_lib.js';
+import { TICKET_TAXONOMY, validateTicketClassification } from './_taxonomy.js';
 
 function publicImage(row) {
   return {
@@ -11,15 +12,29 @@ function publicImage(row) {
   };
 }
 
+async function readTicketRows(env) {
+  try {
+    return await env.DB.prepare(
+      `SELECT id, body, status, created_ts, updated_ts, completed_ts, expires_ts,
+              kind, area, subkind, money_at_risk
+       FROM kiwi_tickets ORDER BY id DESC`
+    ).all();
+  } catch (error) {
+    if (!schemaError(error)) throw error;
+    const legacy = await env.DB.prepare(
+      `SELECT id, body, status, created_ts, updated_ts, completed_ts, expires_ts
+       FROM kiwi_tickets ORDER BY id DESC`
+    ).all();
+    return { ...legacy, classificationSchemaReady: false };
+  }
+}
+
 export async function onRequestGet({ env }) {
   if (!env.DB) return json({ error: 'not-configured' }, 503);
   try {
     await purgeExpired(env);
     const [ticketRows, followupRows, imageRows] = await Promise.all([
-      env.DB.prepare(
-        `SELECT id, body, status, created_ts, updated_ts, completed_ts, expires_ts
-         FROM kiwi_tickets ORDER BY id DESC`
-      ).all(),
+      readTicketRows(env),
       env.DB.prepare(
         `SELECT id, ticket_id, body, created_ts
          FROM kiwi_ticket_followups
@@ -66,13 +81,22 @@ export async function onRequestGet({ env }) {
       updatedAt: Number(row.updated_ts),
       completedAt: row.completed_ts == null ? null : Number(row.completed_ts),
       expiresAt: row.expires_ts == null ? null : Number(row.expires_ts),
+      kind: row.kind || 'unsorted',
+      area: row.area || null,
+      subkind: row.subkind || null,
+      moneyAtRisk: Number(row.money_at_risk || 0) === 1,
       images: row.status === 'done' ? [] : (imagesByTicket.get(Number(row.id)) || []),
       followups: (followupsByTicket.get(Number(row.id)) || []).map((followup) => ({
         ...followup,
         images: row.status === 'done' ? [] : followup.images,
       })),
-    }));
-    return json({ tickets, retentionDays: 20 });
+    })).sort((a, b) => Number(b.moneyAtRisk) - Number(a.moneyAtRisk) || b.id - a.id);
+    return json({
+      tickets,
+      taxonomy: TICKET_TAXONOMY,
+      classificationSchemaReady: ticketRows.classificationSchemaReady !== false,
+      retentionDays: 20,
+    });
   } catch (error) {
     if (schemaError(error)) return json({ error: 'schema-not-ready' }, 503);
     return json({ error: 'read-failed' }, 500);
@@ -106,14 +130,37 @@ export async function onRequestPost({ request, env }) {
   if (total > MAX_TOTAL_IMAGE_BYTES) return json({ error: 'images-too-large', max: MAX_TOTAL_IMAGE_BYTES }, 413);
   if (files.length && !env.MEDIA) return json({ error: 'no-media' }, 503);
 
+  const classification = validateTicketClassification({
+    kind: form.get('kind'),
+    area: form.get('area'),
+    subkind: form.get('subkind'),
+    money_at_risk: form.get('money_at_risk'),
+  });
+  if (!classification.ok) return json({ error: classification.error, field: classification.field }, 400);
+
   const now = Date.now();
   let ticketId = null;
   const storedKeys = [];
   try {
-    const inserted = await env.DB.prepare(
-      `INSERT INTO kiwi_tickets (body, status, created_ts, updated_ts)
-       VALUES (?, 'problem', ?, ?)`
-    ).bind(body, now, now).run();
+    let inserted;
+    let classificationStored = true;
+    try {
+      inserted = await env.DB.prepare(
+        `INSERT INTO kiwi_tickets
+         (body, status, created_ts, updated_ts, kind, area, subkind, money_at_risk)
+         VALUES (?, 'problem', ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        body, now, now, classification.value.kind, classification.value.area,
+        classification.value.subkind, classification.value.money_at_risk ? 1 : 0,
+      ).run();
+    } catch (error) {
+      if (!schemaError(error)) throw error;
+      classificationStored = false;
+      inserted = await env.DB.prepare(
+        `INSERT INTO kiwi_tickets (body, status, created_ts, updated_ts)
+         VALUES (?, 'problem', ?, ?)`
+      ).bind(body, now, now).run();
+    }
     ticketId = Number(inserted.meta && inserted.meta.last_row_id);
     if (!Number.isInteger(ticketId) || ticketId < 1) throw new Error('Ticket number was not created');
 
@@ -136,7 +183,15 @@ export async function onRequestPost({ request, env }) {
     }
     if (imageStatements.length) await env.DB.batch(imageStatements);
 
-    return json({ ok: true, id: ticketId, number: ticketNumber(ticketId) }, 201);
+    return json({
+      ok: true,
+      id: ticketId,
+      number: ticketNumber(ticketId),
+      classificationStored,
+      classification: classificationStored ? classification.value : {
+        kind: 'unsorted', area: null, subkind: null, money_at_risk: false,
+      },
+    }, 201);
   } catch (error) {
     if (storedKeys.length && env.MEDIA) {
       try { await env.MEDIA.delete(storedKeys); } catch (_) {}

@@ -1594,6 +1594,10 @@ CREATE TABLE IF NOT EXISTS kiwi_tickets (
   body         TEXT NOT NULL CHECK (length(body) BETWEEN 1 AND 4000),
   status       TEXT NOT NULL DEFAULT 'problem'
                CHECK (status IN ('problem', 'testing', 'done')),
+  kind         TEXT NOT NULL DEFAULT 'unsorted',
+  area         TEXT,
+  subkind      TEXT,
+  money_at_risk INTEGER NOT NULL DEFAULT 0,
   created_ts   INTEGER NOT NULL,
   updated_ts   INTEGER NOT NULL,
   completed_ts INTEGER,
@@ -1601,6 +1605,8 @@ CREATE TABLE IF NOT EXISTS kiwi_tickets (
 );
 CREATE INDEX IF NOT EXISTS idx_kiwi_tickets_status_expiry
   ON kiwi_tickets (status, expires_ts);
+CREATE INDEX IF NOT EXISTS idx_kiwi_tickets_filters
+  ON kiwi_tickets (status, money_at_risk DESC, kind, area, id DESC);
 
 CREATE TABLE IF NOT EXISTS kiwi_ticket_followups (
   id         TEXT PRIMARY KEY,

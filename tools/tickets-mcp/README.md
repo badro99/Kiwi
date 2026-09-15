@@ -19,11 +19,15 @@ downscaling, macOS `sips` (already present on this Mac).
 
 | Tool | Purpose |
 |------|---------|
-| `list_tickets({status?})` | Board summary. `status`: `open` (default), `problem`, `testing`, `done`, `all`. |
+| `list_tickets({status?,kind?,area?,moneyAtRisk?})` | Board summary with classification and optional taxonomy filters. `status`: `open` (default), `problem`, `testing`, `done`, `all`. |
 | `get_ticket({id})` | One ticket's full text + screenshot list. |
 | `view_ticket_image({id, index?, maxSize?, full?})` | See screenshot(s). Omit `index` for all. |
-| `create_ticket({body, imagePaths?})` | File a new problem (attach up to 6 local images). |
+| `create_ticket({body,imagePaths?,kind?,area?,subkind?,moneyAtRisk?})` | File a new problem, optionally classified (attach up to 6 local images). |
+| `classify_ticket({id,kind,area?,subkind?,moneyAtRisk?})` | Classify any ticket without changing its status or retention. |
 | `submit_for_testing({id,uiProofPath})` | Move a **solved** UI ticket to "Requiring testing" with a fresh, clean-commit rendered-UI proof from `kiwi-ui-qa`. |
+
+The closed type, area and sub-kind lists come from `GET /api/tickets`. The MCP
+server validates against that response instead of keeping a second copy.
 
 For a genuinely backend-only ticket, use
 `submit_for_testing({id,backendOnlyReason})` with a concrete explanation of
