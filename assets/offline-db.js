@@ -115,7 +115,7 @@
               return db.outbox.update(id, {
                 payload: clone(payload), state: 'pending', attempts: 0,
                 updatedAt: refreshedAt, nextAt: refreshedAt,
-                leaseToken: '', leaseUntil: 0, lastStatus: 0, lastError: '',
+                leaseToken: '', leaseUntil: 0, lastStatus: 0, lastError: '', lastAttemptAt: 0,
               }).then(function () {
                 signal({ type: 'replace', tenant: scope.tenant, channel: scope.channel, id: id });
                 return { ok: true, duplicate: true, replaced: true, id: id };
@@ -138,6 +138,7 @@
             leaseUntil: 0,
             lastStatus: 0,
             lastError: '',
+            lastAttemptAt: 0,
           }).then(function () {
             signal({ type: 'enqueue', tenant: scope.tenant, channel: scope.channel, id: id });
             return { ok: true, duplicate: false, id: id };
@@ -166,10 +167,12 @@
           var lease = token();
           return db.outbox.update(row.id, {
             state: 'sending', leaseToken: lease, leaseUntil: at + LEASE_MS, updatedAt: at,
+            lastAttemptAt: at,
           }).then(function () {
             row.state = 'sending';
             row.leaseToken = lease;
             row.leaseUntil = at + LEASE_MS;
+            row.lastAttemptAt = at;
             return row;
           });
         });
@@ -242,10 +245,11 @@
         if (row.state === 'sending') out.sending++;
         if (row.lastStatus) out.lastStatus = row.lastStatus;
         if (row.lastError) out.lastError = row.lastError;
+        if ((+row.lastAttemptAt || 0) > out.lastAttemptAt) out.lastAttemptAt = +row.lastAttemptAt;
         return out;
-      }, { pending: 0, blocked: 0, sending: 0, total: 0, storageError: false, lastStatus: 0, lastError: '' });
+      }, { pending: 0, blocked: 0, sending: 0, total: 0, storageError: false, lastStatus: 0, lastError: '', lastAttemptAt: 0 });
     }).catch(function () {
-      return { pending: 0, blocked: 0, sending: 0, total: 0, storageError: true, lastStatus: 0, lastError: '' };
+      return { pending: 0, blocked: 0, sending: 0, total: 0, storageError: true, lastStatus: 0, lastError: '', lastAttemptAt: 0 };
     });
   }
 
@@ -276,6 +280,7 @@
           leaseToken: '', leaseUntil: 0,
           lastStatus: +(mapped.status || mapped._status) || 0,
           lastError: '',
+          lastAttemptAt: 0,
         };
       });
       return db.transaction('rw', db.outbox, function () {

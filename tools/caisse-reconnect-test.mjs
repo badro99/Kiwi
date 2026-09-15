@@ -3,9 +3,9 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 const source = fs.readFileSync(new URL('../assets/live-link.js', import.meta.url), 'utf8');
 const drain = async () => { for (let i = 0; i < 15; i++) await new Promise(r => setImmediate(r)); };
-function harness({ support = false, online = false } = {}) {
+function harness({ support = false, online = false, fetchFailure = false } = {}) {
   const requests = [], timers = new Map(), values = new Map(); let timer = 0, clock = 1000000;
-  const state = { status: 201, hold: null };
+  const state = { status: 201, hold: null, fetchFailure, xhrRequests: [] };
   const target = () => {
     const handlers = new Map();
     return { addEventListener(type, fn) { if (!handlers.has(type)) handlers.set(type, []); handlers.get(type).push(fn); },
@@ -17,13 +17,26 @@ function harness({ support = false, online = false } = {}) {
   const document = Object.assign(target(), { readyState: 'complete', hidden: false, createElement: () => ({}) });
   const window = Object.assign(target(), { localStorage, KiwiEnv: { isReal: () => true } });
   class Clock extends Date { static now() { return clock; } }
+  class FakeXHR {
+    open(_method, url) { this.url = url; }
+    setRequestHeader() {}
+    send(raw) {
+      state.xhrRequests.push({ url: this.url, body: JSON.parse(raw) });
+      this.status = state.status;
+      this.responseText = state.status === 201 ? JSON.stringify({ ok: true }) : '';
+      Promise.resolve().then(() => this.onload());
+    }
+    abort() { if (this.onabort) this.onabort(); }
+  }
   const context = vm.createContext({ window, document, localStorage, navigator: { onLine: online }, Date: Clock,
     location: { pathname: '/kiwi-caisse', hostname: 'kiwi.test', search: `?merchant=sync-fixture${support ? '&op=1' : ''}` },
-    URLSearchParams, AbortController, CustomEvent: class { constructor(type, init) { this.type=type; this.detail=init?.detail; } },
+    URLSearchParams, AbortController, XMLHttpRequest: FakeXHR, CustomEvent: class { constructor(type, init) { this.type=type; this.detail=init?.detail; } },
     setTimeout(fn, ms) { timers.set(++timer,{fn,ms}); return timer; }, clearTimeout: id => timers.delete(id),
     fetch: async (url, opts) => {
       if (url.startsWith('/api/feed')) return Response.json({ sales: [], voided: [] });
       requests.push(JSON.parse(opts.body));
+      state.lastFetchOptions = opts;
+      if (state.fetchFailure) throw new TypeError('Failed to fetch');
       if (state.hold) await state.hold;
       if (state.bodyHold) return { ok: true, status: 201, json: () => new Promise((_resolve,reject) => opts.signal.addEventListener('abort', () => reject(new Error('body-timeout')))) };
       return state.status === 201 ? Response.json({ ok: true }, { status: 201 }) : new Response('', { status: state.status });
@@ -71,5 +84,14 @@ h.state.bodyHold=false; h.wake('online'); await drain(); assert.equal(h.window.K
 h = harness(); h.state.status=422; h.online(); h.wake('online'); await drain(); h.wake('online'); await drain();
 check('structurally invalid commands stay retained and blocked across reconnects', () => {
   assert.equal(h.requests.length,1); assert.equal(h.window.KiwiLive.queueStatus().blocked,1);
+});
+h = harness({online:true,fetchFailure:true}); await drain();
+check('a tablet Fetch failure falls back to XHR and drains the same durable receipt', () => {
+  assert.equal(h.requests.length,1);
+  assert.equal(h.state.xhrRequests.length,1);
+  assert.equal(h.state.xhrRequests[0].body.id,'sale-offline');
+  assert.equal(h.window.KiwiLive.pending(),0);
+  assert.equal(h.state.lastFetchOptions.keepalive,undefined);
+  assert.equal(h.state.lastFetchOptions.credentials,'same-origin');
 });
 console.log(`Caisse reconnect: ${n} behavioral checks passed.`);

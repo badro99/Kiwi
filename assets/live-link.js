@@ -225,7 +225,7 @@
   var Q_KEY = 'kiwiSaleQueue';
   var OUTBOX_CHANNEL = 'sale';
   var outboxUsing = false;
-  var outboxStatus = { pending: 0, blocked: 0, sending: 0, total: 0, storageError: false };
+  var outboxStatus = { pending: 0, blocked: 0, sending: 0, total: 0, storageError: false, lastStatus: 0, lastError: '', lastAttemptAt: 0 };
   function qRead() {
     try { var a = JSON.parse(localStorage.getItem(Q_KEY) || '[]'); return Array.isArray(a) ? a : []; }
     catch (_) { return []; }
@@ -268,6 +268,7 @@
         engine: 'indexeddb',
         lastStatus: outboxStatus.lastStatus || lastSyncStatus || 0,
         lastError: queueStorageError ? 'queue-storage-full' : (outboxStatus.lastError || lastSyncError || ''),
+        lastAttemptAt: outboxStatus.lastAttemptAt || 0,
       };
     }
     var q = qRead();
@@ -282,6 +283,7 @@
       engine: 'localstorage',
       lastStatus: lastSyncStatus || 0,
       lastError: lastSyncError || '',
+      lastAttemptAt: current.reduce(function (latest, row) { return Math.max(latest, +(row && row._lastAttemptAt) || 0); }, 0),
     };
   }
 
@@ -376,6 +378,74 @@
     });
   }
 
+  /* A live queue flush is not an unload beacon. `keepalive:true` makes some
+     tablet browsers reject an otherwise valid POST at the Fetch layer (most
+     visibly as the useless "Failed to fetch"), especially once their global
+     keepalive budget is occupied. The durable outbox already survives a page
+     close, so use a normal credentialed request. If Fetch itself is broken on
+     an older WebView, retry the SAME idempotent receipt through XHR. A response
+     lost after the first POST is safe: /api/sale deduplicates that stable ID. */
+  function xhrMoneyRequest(url, payload, signal) {
+    if (typeof XMLHttpRequest === 'undefined') return Promise.reject(new Error('server-unreachable'));
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      var settled = false;
+      function cleanup() {
+        if (signal && signal.removeEventListener) signal.removeEventListener('abort', abort);
+      }
+      function finish(fn, value) {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        fn(value);
+      }
+      function abort() {
+        try { xhr.abort(); } catch (_) {}
+        finish(reject, Object.assign(new Error('timeout'), { name: 'AbortError' }));
+      }
+      try {
+        xhr.open('POST', url, true);
+        xhr.withCredentials = true;
+        xhr.timeout = 12000;
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onload = function () {
+          var text = String(xhr.responseText || '');
+          finish(resolve, {
+            ok: xhr.status >= 200 && xhr.status < 300,
+            status: xhr.status,
+            json: function () {
+              try { return Promise.resolve(JSON.parse(text)); }
+              catch (err) { return Promise.reject(err); }
+            },
+          });
+        };
+        xhr.onerror = function () { finish(reject, new Error('server-unreachable')); };
+        xhr.ontimeout = function () { finish(reject, Object.assign(new Error('timeout'), { name: 'AbortError' })); };
+        xhr.onabort = function () { finish(reject, Object.assign(new Error('timeout'), { name: 'AbortError' })); };
+        if (signal && signal.addEventListener) signal.addEventListener('abort', abort, { once: true });
+        if (signal && signal.aborted) return abort();
+        xhr.send(payload);
+      } catch (_) { finish(reject, new Error('server-unreachable')); }
+    });
+  }
+
+  function moneyRequest(body, controller) {
+    var url = body && body.kind === 'refund' ? '/api/sale/refund' : '/api/sale';
+    var payload = JSON.stringify(body);
+    var signal = controller ? controller.signal : undefined;
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload,
+      credentials: 'same-origin',
+      cache: 'no-store',
+      signal: signal,
+    }).catch(function (err) {
+      if (err && err.name === 'AbortError') throw err;
+      return xhrMoneyRequest(url, payload, signal);
+    });
+  }
+
   function flushLegacyQueue() {
     if (flushing || (typeof navigator !== 'undefined' && navigator.onLine === false)) return Promise.resolve(queueStatus());
     if (authRetryMerchant === merchant() && authRetryAt > Date.now()) { scheduleRecovery(); return Promise.resolve(queueStatus()); }
@@ -393,14 +463,16 @@
       queueSignal(); return Promise.resolve(queueStatus());
     }
     flushing = true;
+    var attemptedAt = Date.now();
     return new Promise(function (resolve) {
-      function done(settled, blocked, status, pending) {
+      function done(settled, blocked, status, pending, error) {
         flushing = false;
         lastSyncStatus = status || 0;
-        lastSyncError = settled ? '' : (pending ? 'settlement-pending' : (status ? 'HTTP ' + status : 'network'));
+        lastSyncError = settled ? '' : (error || (pending ? 'settlement-pending' : (status ? 'HTTP ' + status : 'server-unreachable')));
         if (status === 401 || status === 403) { authRetryAt = Date.now() + 60000; authRetryMerchant = body.merchant; }
         else if (settled) authRetryAt = 0;
         var current = qRead();
+        current.forEach(function (x) { if (x && x.id === body.id) x._lastAttemptAt = attemptedAt; });
         if (settled) {
           var rest = current.filter(function (x) { return x && x.id !== body.id; });
           qWrite(rest);
@@ -442,13 +514,7 @@
       try {
         var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
         var timeoutId = controller ? setTimeout(function () { controller.abort(); }, 12000) : null;
-        fetch(body && body.kind === 'refund' ? '/api/sale/refund' : '/api/sale', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-          keepalive: true,
-          signal: controller ? controller.signal : undefined,
-        }).then(function (r) {
+        moneyRequest(body, controller).then(function (r) {
           /* Only 2xx proves D1 accepted the sale. A structurally rejected body is
              quarantined for support, never deleted. Auth failures remain retryable:
              pairing/session repair can make the exact same sale valid later.
@@ -464,11 +530,11 @@
             if (timeoutId) clearTimeout(timeoutId);
             done(result.complete, !!(r && BLOCK[r.status]), r && r.status, result.pending);
           });
-        }).catch(function () {
+        }).catch(function (err) {
           if (timeoutId) clearTimeout(timeoutId);
-          done(false, false, 0);
+          done(false, false, 0, false, err && (err.name === 'AbortError' ? 'timeout' : err.message) || 'server-unreachable');
         });
-      } catch (_) { done(false, false, 0); }
+      } catch (_) { done(false, false, 0, false, 'server-unreachable'); }
     });
   }
 
@@ -516,13 +582,7 @@
       }
       var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
       var timeoutId = controller ? setTimeout(function () { controller.abort(); }, 12000) : null;
-      return fetch(body && body.kind === 'refund' ? '/api/sale/refund' : '/api/sale', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        keepalive: true,
-        signal: controller ? controller.signal : undefined,
-      }).then(function (response) {
+      return moneyRequest(body, controller).then(function (response) {
         var BLOCK = { 400: 1, 422: 1 };
         if (body && body.kind === 'refund') BLOCK[409] = 1;
         return paymentCompletion(response).then(function (result) {
