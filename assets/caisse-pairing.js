@@ -29,6 +29,8 @@
   'use strict';
 
   var TERMINAL_KEY = 'kiwi:caisse:terminal-id:v1';
+  var OFFLINE_PIN_KEY = 'kiwi:caisse:offline-pins:v1:';
+  var OFFLINE_PIN_TTL = 7 * 24 * 60 * 60 * 1000;
   function terminalId() {
     var current = '';
     try { current = localStorage.getItem(TERMINAL_KEY) || ''; } catch (_) {}
@@ -45,6 +47,56 @@
   function set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
   function del(k) { try { localStorage.removeItem(k); } catch (_) {} }
   function readMap() { try { return JSON.parse(ls('kiwiPairings') || '{}') || {}; } catch (_) { return {}; } }
+
+  /* A real till must keep authorizations usable during a network outage, but
+   * never bank the four-digit code itself. After the server proves a code, keep
+   * a tenant-scoped, salted SHA-256 verifier plus the proven identity for seven
+   * days. A candidate typed offline is hashed again and compared locally. The
+   * short TTL limits a revoked code's offline lifetime; the next successful
+   * online verification refreshes it. */
+  function offlinePinKey(merchant) { return OFFLINE_PIN_KEY + encodeURIComponent(String(merchant || '')); }
+  function offlinePinRows(merchant) {
+    try {
+      var rows = JSON.parse(ls(offlinePinKey(merchant)) || '[]');
+      var at = Date.now();
+      return Array.isArray(rows) ? rows.filter(function (row) {
+        return row && row.digest && Number(row.expiresAt || 0) > at;
+      }) : [];
+    } catch (_) { return []; }
+  }
+  function bytesHex(bytes) {
+    return Array.from(new Uint8Array(bytes)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+  }
+  function pinDigest(merchant, salt, code) {
+    if (!(window.crypto && window.crypto.subtle && window.TextEncoder)) return Promise.resolve('');
+    var material = new TextEncoder().encode(String(merchant) + ':' + String(salt) + ':' + String(code));
+    return window.crypto.subtle.digest('SHA-256', material).then(bytesHex, function () { return ''; });
+  }
+  function rememberOfflinePin(merchant, code, staff) {
+    if (!staff || !/^\d{4}$/.test(String(code || ''))) return Promise.resolve(staff);
+    var salt;
+    try { salt = bytesHex(window.crypto.getRandomValues(new Uint8Array(16))); }
+    catch (_) { salt = terminalId() + ':' + Date.now().toString(36); }
+    return pinDigest(merchant, salt, code).then(function (digest) {
+      if (!digest) return staff;
+      var rows = offlinePinRows(merchant).filter(function (row) {
+        return String(row.staff && row.staff.id || '') !== String(staff.id || '');
+      });
+      rows.push({ salt: salt, digest: digest, expiresAt: Date.now() + OFFLINE_PIN_TTL,
+        staff: { id: String(staff.id || '').slice(0, 80), name: String(staff.name || '').slice(0, 80),
+          role: String(staff.role || '').slice(0, 80) } });
+      set(offlinePinKey(merchant), JSON.stringify(rows.slice(-12)));
+      return staff;
+    });
+  }
+  function verifyOfflinePin(merchant, code) {
+    var rows = offlinePinRows(merchant);
+    return Promise.all(rows.map(function (row) {
+      return pinDigest(merchant, row.salt, code).then(function (digest) {
+        return digest && digest === row.digest ? row.staff : null;
+      });
+    })).then(function (matches) { return matches.find(Boolean) || null; });
+  }
 
   function isPaired() { return ls('kiwiPaired') === '1'; }
   function pairedVenue() { try { return JSON.parse(ls('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
@@ -140,11 +192,13 @@
       if (window.KiwiReportError) window.KiwiReportError(err, 'tenant:pairing_commit_missing');
       return { ok: false, error: 'commit-unavailable' };
     }
+    var previousVenue = pairedVenue();
     return commit(code, d, {
       // Re-binding to a DIFFERENT store: the cashier who unlocked the old till is
       // not standing at this one, and their code belongs to the other store's
       // roster. Forget them so the staff pad asks again.
       onTenantSwitch: function () {
+        if (previousVenue && previousVenue.merchant) del(offlinePinKey(previousVenue.merchant));
         setStaff(null);
         window.__kiwiPairedBoutiqueVenue = null;
         /* Le SERVICE de l'autre commerce, le JOURNAL DES VENTES, le catalogue,
@@ -248,7 +302,9 @@
     /* Unpairing used to delete only four binding keys. Pairing a different
        merchant afterwards then saw no `was` venue and skipped the cross-tenant
        purge, exposing the previous sales/menu/customers on the new till. */
+    var oldVenue = pairedVenue();
     purgeTenantData();
+    if (oldVenue && oldVenue.merchant) del(offlinePinKey(oldVenue.merchant));
     window.__kiwiPairedBoutiqueVenue = null;
     setStaff(null);                     // this device is nobody's till any more
     try {
@@ -524,7 +580,12 @@
       pinVenue = venue; pinList = pins; pinBuf = '';
       showPinPad(venue);
     }).catch(function () {
-      if (onNoPins) onNoPins();
+      /* No network must not turn a configured register into an unlocked till.
+       * A previously verified operator can still enter through the normal pad. */
+      if (offlinePinRows(merchant).length) {
+        pinVenue = venue; pinList = []; pinBuf = '';
+        showPinPad(venue);
+      } else if (onNoPins) onNoPins();
       else bootVertical(venue);
     });
   }
@@ -646,40 +707,15 @@
       if (scr) scr.style.display = 'none';
       bootVertical(venue);
     }
-    /* Le serveur est le SEUL juge. Il n'y a plus de liste de codes ici pour se
-     * rabattre dessus, et c'est le but : une comparaison locale suppose que le
-     * navigateur détient les codes. Quand la vérification n'aboutit pas — panne,
-     * coupure réseau — on le DIT au lieu d'ouvrir : une caisse dont on ne peut
-     * pas prouver qui l'ouvre reste fermée, exactement comme quand /api/config
-     * lui-même est injoignable (showPinLoadError plus haut). */
+    /* Online, the server remains the judge. A successful verdict also refreshes
+     * the short-lived local verifier used when this physical till loses Wi-Fi. */
     if (!merchant) { refuse('Caisse non appairée.'); return; }
-
-    fetch('/api/pin/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ merchant: merchant, pin: code }),
-    })
-      .then(function (r) {
-        if (r.status === 401 || r.status === 403) {
-          refuse('Code incorrect.');
-          return;
-        }
-        if (r.status === 429) {
-          refuse('Trop d’essais. Réessayez dans quelques instants.');
-          return;
-        }
-        if (!r.ok) {
-          refuse('Vérification impossible. Réessayez.');
-          return;
-        }
-        return r.json().then(function (d) {
-          if (d && d.ok && d.staff) acceptStaff(d.staff);
-          else refuse('Code incorrect.');
-        });
-      })
-      .catch(function () {
-        refuse('Vérification impossible. Réessayez.');
-      });
+    verifyCode(code).then(function (who) {
+      if (who) acceptStaff(who);
+      else refuse(navigator.onLine === false
+        ? 'Code non disponible hors ligne. Connectez-vous une fois avec ce code.'
+        : 'Code incorrect ou impossible à vérifier.');
+    });
   }
 
   // Delegated pad handling (survives re-renders of #cp-screen / #cp-pin-screen).
@@ -786,9 +822,10 @@
       .then(function (r) { return r && r.ok ? r.json() : null; })
       .then(function (d) {
         if (!(d && d.ok && d.staff)) return null;
-        return Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {});
+        var staff = Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {});
+        return rememberOfflinePin(merchant, code, staff);
       })
-      .catch(function () { return null; })
+      .catch(function () { return verifyOfflinePin(merchant, code); })
       .finally(function () { clearTimeout(timer); });
   }
 

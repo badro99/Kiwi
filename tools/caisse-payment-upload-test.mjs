@@ -109,6 +109,7 @@ async function fixture(t, opts = {}) {
       /* L'heure de fermeture locale des tables · persistShift l'écrit dans
          l'instantané depuis qu'un bon payé ne doit plus rouvrir sa table. */
       tableClosedAt: Object.create(null),
+      phoneMovedVisits: new Map(),
       vrapSplit: null, cart: [], vrapDiscount: null, selectedId: null,
       shiftOpenedAt: new Date(), shiftOpenedBy: 'Fixture cashier', openingFloat: 0,
       cashMovements: [], shift: { discounts: 0, refunds: 0, tablesPaid: 0 },

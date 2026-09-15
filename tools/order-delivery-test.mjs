@@ -207,7 +207,7 @@ async function main() {
     phoneSeats: new Map(['T3', 'T4', 'T9'].map(id => [id, { session: 'ses-live', since: 0 }])),
     /* Une table encaissée refuse désormais les bons antérieurs · aucune de ces
        tables n'est fermée, le rattrapage doit donc se comporter comme avant. */
-    tableClosedAt: Object.create(null), journal: [],
+    tableClosedAt: Object.create(null), phoneMovedVisits: new Map(), journal: [],
     servers: {}, selectedId: null, mode: 'salle',
     menuLineFind: () => null, newLineUid: () => 'test-line', ticketNo: () => 'test-ticket',
     refreshTableNode() {}, persistShift() {}, startTableTimer() {}, resetTableTimer() {},

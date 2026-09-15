@@ -5580,7 +5580,7 @@
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=2" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=23" defer></script>
+  <script src="assets/caisse-pairing.js?v=24" defer></script>
   <script src="assets/kiwi-select.js?v=2" defer></script>
   <script src="assets/cash-sessions.js?v=5" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
@@ -20793,7 +20793,10 @@
        * commande authentique coûte plus cher que d'en rouvrir une. */
       const closedAt = Number(tableClosedAt[tableKey(id)] || 0);
       const createdTs = Number(o.created_ts || 0);
-      if (closedAt && createdTs && createdTs <= closedAt
+      const acknowledgedMove = o.session && phoneMovedVisits.get(String(o.session));
+      const movedHere = acknowledgedMove && acknowledgedMove.to === tableKey(id)
+        && Number(acknowledgedMove.closedAt || 0) === closedAt;
+      if (!movedHere && closedAt && createdTs && createdTs <= closedAt
         && !(activeSeat && Number(activeSeat.since || 0) > closedAt)) return false;
       /* A table is reused hundreds of times. Only tickets from its CURRENT
          session belong to this bill. Legacy employee rows have a server but no
@@ -21767,6 +21770,14 @@
           posteOpenedAt: posteOpenedAt ? posteOpenedAt.toISOString() : null,
           posteOpeningFloat: posteOpeningFloat,
           handovers: handovers,
+          /* Offline settlement closes the physical table before the server can
+             acknowledge it. Persist that close tombstone so a reload/reconnect
+             cannot reattach an older kitchen row and charge it again. */
+          tableClosedAt: tableClosedAt,
+          /* A transfer may legitimately move an older visit onto a table that
+             has a close tombstone. Keep the acknowledgement alongside the
+             tombstone so reload does not mistake that moved visit for a ghost. */
+          phoneMovedVisits: Array.from(phoneMovedVisits.entries()),
           tables: tables,
           /* ── ON N'ENREGISTRE PAS CE QUE LA FILE SAIT DÉJÀ ──────────────────
            * Les lignes venues du relais portent le marqueur `orderProLine`.
@@ -21931,6 +21942,26 @@
           name: d.currentCashier.name,
           role: d.currentCashier.role || 'Caissier',
         };
+      }
+      Object.keys(tableClosedAt).forEach(key => delete tableClosedAt[key]);
+      if (d.tableClosedAt && typeof d.tableClosedAt === 'object') {
+        const oldestUseful = Date.now() - 12 * 3600 * 1000;
+        Object.keys(d.tableClosedAt).forEach(key => {
+          const at = Number(d.tableClosedAt[key] || 0);
+          if (at >= oldestUseful && at <= Date.now() + 60000) tableClosedAt[tableKey(key)] = at;
+        });
+      }
+      phoneMovedVisits.clear();
+      if (Array.isArray(d.phoneMovedVisits)) {
+        d.phoneMovedVisits.forEach(pair => {
+          if (!Array.isArray(pair) || pair.length !== 2 || !pair[0] || !pair[1]) return;
+          const move = pair[1];
+          if (!move.from || !move.to) return;
+          phoneMovedVisits.set(String(pair[0]), {
+            from: tableKey(move.from), to: tableKey(move.to),
+            revision: Number(move.revision || 0), closedAt: Number(move.closedAt || 0),
+          });
+        });
       }
       posteOpenedAt     = d.posteOpenedAt ? new Date(d.posteOpenedAt) : shiftOpenedAt;
       posteOpeningFloat = (typeof d.posteOpeningFloat === 'number') ? d.posteOpeningFloat : openingFloat;

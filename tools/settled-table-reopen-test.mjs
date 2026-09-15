@@ -28,11 +28,12 @@ function bench({ closedAt, seatSince, journal = [] }) {
   const tables = { 13: { status: 'khawya', covers: 0 } };
   const tableOrders = {};
   const phoneSeats = new Map();
+  const phoneMovedVisits = new Map();
   if (seatSince) phoneSeats.set('13', { session: 'sess-new', since: seatSince });
   const tableClosedAt = Object.create(null);
   if (closedAt) tableClosedAt['13'] = closedAt;
   const ctx = vm.createContext({
-    tables, tableOrders, phoneSeats, tableClosedAt, journal,
+    tables, tableOrders, phoneSeats, phoneMovedVisits, tableClosedAt, journal,
     servers: {}, orders: {},
     selectedId: null, mode: 'salle',
     caisseTableId: (v) => String(v),
@@ -118,16 +119,18 @@ const SETTLED_AT = 1757635200000;   // l'encaissement
     ctx.attachOrderProTable(t) === true && (tableOrders['13'] || []).length === 1);
 }
 
-/* 6 · The ephemeral timestamp stays out of the snapshot; the paid receipt,
- *     identified by the immutable visit/order, survives a reload instead. */
-ok('la fermeture reste hors de l’instantané · les transferts en dépendent',
-  !/tableClosedAt: tableClosedAt,/.test(source));
+/* 6 · The close timestamp survives an offline reload. The paid receipt remains
+ *     the stronger immutable proof when a canonical visit/order is known. */
+ok('la fermeture hors ligne est conservée dans l’instantané',
+  /tableClosedAt: tableClosedAt,/.test(source));
 ok('la garde est bien en mémoire, dans la fonction de rattachement',
   /const closedAt = Number\(tableClosedAt\[tableKey\(id\)\] \|\| 0\);/.test(source));
 ok('la reprise conserve la preuve de fermeture de la visite',
   /if \(e\.visitClosed === true\) entry\.visitClosed = true/.test(source));
 ok('la reprise libère une addition dont le reçu a déjà été écrit',
   /Object\.keys\(tables\)\.forEach\(id => \{\s*const paid = paidReceiptForCurrentTable\(id\)/.test(source));
+ok('la reprise restaure les tombstones avant le prochain sondage réseau',
+  /if \(d\.tableClosedAt && typeof d\.tableClosedAt === 'object'\)/.test(source));
 ok('a normal tender cannot close a table when the ledger refused its sale',
   /const sale = recordSale\(tenderBase,[\s\S]{0,180}if \(!sale\) throw new Error\('sale-not-recorded'\)/.test(source));
 {

@@ -1003,6 +1003,7 @@ section('Whole-project regressions');
     'audit-remediation-pressing-test.mjs',
     'audit-remediation-auth-test.mjs',
     'caisse-pairing-recovery-test.mjs',
+    'caisse-offline-pin-test.mjs',
     'audit-remediation-money-test.mjs',
     'audit-remediation-inventory-loyalty-test.mjs',
     'audit-remediation-dashboard-test.mjs',
