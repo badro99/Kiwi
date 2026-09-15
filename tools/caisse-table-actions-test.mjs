@@ -19,12 +19,17 @@ ok(!/openCaisseMergeModal\(tableId\)[\s\S]{0,180}caisseTableKitchenLocked/.test(
 ok(/data-action="transfer-table"/.test(serveur) && /data-action="merge-table"/.test(serveur)
   && !/data-action="(?:transfer-table|merge-table)"[^>]*disabled/.test(serveur), 'server-phone mobility controls remain tappable');
 ok(/uid: l\.uid[\s\S]{0,180}sent: !!l\.sent/.test(caisse), 'bill projection preserves sent-line identity');
-ok(/data-table-void/.test(caisse) && /openCaisseVoidModal\(selectedId, line\)/.test(caisse), 'sent bill line exposes the audited kitchen cancellation');
+ok(/data-table-void/.test(caisse) && /cancelCaisseLineImmediately\(selectedId, line\)/.test(caisse), 'sent bill line exposes the audited one-tap kitchen cancellation');
+const oneTapCancel = caisse.slice(caisse.indexOf('async function cancelCaisseLineImmediately('),
+  caisse.indexOf('    /* ---- table order management ---- */'));
+ok(oneTapCancel.includes("reason: 'item_cancelled'") && !oneTapCancel.includes('requireTillOperator'),
+  'one-item cancellation asks for neither reason nor PIN');
 ok(/const sent = sendTableToKitchen\(tableId\);[\s\S]{0,700}if \(selectedId === tableId\) renderRightPanel\(tableId\);/.test(caisse),
   'sending to kitchen immediately rerenders the bill with sent-item cancellation controls');
 ok(/or-item-void-btn[\s\S]{0,180}data-review-action="void"/.test(caisse)
-  && /closeOrderReviewModal\(\);[\s\S]{0,120}openCaisseVoidModal\(selectedId, line\)/.test(caisse),
+  && /closeOrderReviewModal\(\);[\s\S]{0,120}cancelCaisseLineImmediately\(selectedId, line\)/.test(caisse),
   'full bill exposes sent-item cancellation through the same audited void flow');
+ok(!/data-order-cancel/.test(caisse), 'bill no longer exposes cancellation by kitchen order number');
 ok(/const liveLines = tableOrders\[tableId\][\s\S]{0,120}liveLines\.length[\s\S]{0,420}sent: !!l\.sent/.test(caisse),
   'cashier-built Atlas lines win over stale generated demo bills and preserve cancellation identity');
 ok(/const canonicalUid = l\.uid \|\| l\.id \|\| ''[\s\S]{0,700}existing\.canonicalUid !== canonicalUid[\s\S]{0,300}existing\.canonicalUid = canonicalUid/.test(caisse),

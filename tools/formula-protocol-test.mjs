@@ -542,12 +542,12 @@ const caisseGroupedRemoveMatch = caisseSource.match(/function removeGroupedLine\
 const caisseInitialSelectionsMatch = caisseSource.match(/function formulaInitialSelections\(slots, groups, initial\) \{[\s\S]*?\n    \}/);
 const caisseBuildFormulaGroupMatch = caisseSource.match(/function buildCaisseFormulaGroup\(item, slots, groups, picked, optPicked, choiceItem, initial\) \{[\s\S]*?\n    \}/);
 const caisseReplaceFormulaGroupMatch = caisseSource.match(/function replaceFormulaGroup\(lines, formulaUid, replacement\) \{[\s\S]*?\n    \}/);
-const confirmCaisseVoidMatch = caisseSource.match(/async function confirmCaisseVoid\(\) \{[\s\S]*?\n    \}/);
+const cancelCaisseLineMatch = caisseSource.match(/async function cancelCaisseLineImmediately\(tableId, line, scope\) \{[\s\S]*?\n    \}/);
 
 if (!caisseFormulaGroupMatch || !caisseGroupedDeltaMatch || !caisseGroupedRemoveMatch
   || !caisseInitialSelectionsMatch || !caisseBuildFormulaGroupMatch || !caisseReplaceFormulaGroupMatch
-  || !confirmCaisseVoidMatch) {
-  ok(false, 'caisse formula group/edit helpers or confirmCaisseVoid missing');
+  || !cancelCaisseLineMatch) {
+  ok(false, 'caisse formula group/edit helpers or one-tap cancellation missing');
 } else {
   const caisseGroupHarness = new Function(`
     let idSeq = 0;
@@ -576,8 +576,8 @@ if (!caisseFormulaGroupMatch || !caisseGroupedDeltaMatch || !caisseGroupedRemove
   ok(caisseAfterDec.find(line => line.uid === 'cash-standalone').qty === 1, 'caisse formula decrement does not touch an identical standalone drink');
   ok(/cart = removeGroupedLine\(cart, uid\)/.test(caisseSource) && /tableOrders\[selectedId\] = removeGroupedLine\(tableOrders\[selectedId\], uid\)/.test(caisseSource), 'caisse review trash routes takeaway and table formulas through grouped removal');
   ok(/l\.sent \|\| l\.kind === 'formula-part' \? ''/.test(caisseSource) && /l\.kind === 'formula-part' \? `<span class="rp-sent-qty">/.test(caisseSource), 'caisse component rows expose no independent delete or quantity controls');
-  ok(/await postCaisseCancellation\(\{/.test(confirmCaisseVoidMatch[0])
-    && /catch \(err\) \{[\s\S]*?return;/.test(confirmCaisseVoidMatch[0])
+  ok(/await postCaisseCancellation\(\{/.test(cancelCaisseLineMatch[0])
+    && /catch \(err\) \{[\s\S]*?return;/.test(cancelCaisseLineMatch[0])
     && /if \(!res\.ok \|\| !data\?\.ok\) throw/.test(caisseSource),
   'caisse failed kitchen void preserves local formula group for retry');
 
@@ -732,6 +732,7 @@ if (!dispatchPendingVoidMatch || !voidLineServerBlockMatch) {
     const normTable = (t) => String(t || '');
     const json = (data, status = 200) => ({ data, status });
     const employee = { member: 'Hamza' };
+    const pairedTill = false;
     const pinActor = null;
     const statement = (env, sql, ...args) => env.DB.prepare(sql).bind(...args);
     const atomicStatements = (_env, statements) => Promise.all(statements.map(s => s.run()));

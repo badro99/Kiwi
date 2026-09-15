@@ -774,6 +774,7 @@ export async function onRequestPost(context) {
     }
   }
 
+  const pairedTill = await isTillFor(request, env, merchant);
   const pinActor = b.actorProof ? await readTillActorProof(b.actorProof, env.AUTH_SECRET, merchant) : null;
   if (b.actorProof && !pinActor) return json({ error: 'invalid-action-identity' }, 403);
 
@@ -1398,7 +1399,11 @@ export async function onRequestPost(context) {
     // remains informed through the audited void, but cannot indefinitely
     // block the guest's bill. Service-phone requests retain the two-tier flow.
     const immediate = b.voidLine.immediate === true;
-    if (immediate && !pinActor) return json({ error: 'operator-proof-required' }, 403);
+    /* A paired caisse may remove one unpaid item without asking for a PIN on
+     * every tap. The till credential still proves that this is the store's
+     * registered caisse; whole-table cancellation remains separately guarded
+     * by a short-lived operator proof above. */
+    if (immediate && !pinActor && !pairedTill) return json({ error: 'till-required' }, 403);
     const requestId = String(b.voidLine.requestId || '');
     if (immediate && !/^voi-[a-zA-Z0-9-]{16,80}$/.test(requestId)) return json({ error: 'void-request-id-required' }, 400);
     const table = normTable(b.voidLine.table);
@@ -1407,7 +1412,8 @@ export async function onRequestPost(context) {
     const qtyToVoid = Math.max(1, Number(b.voidLine.qty) || 1);
     const reason = String(b.voidLine.reason || 'client_change').trim();
     const isWaste = b.voidLine.isWaste ? 1 : 0;
-    const actor = String(pinActor?.name || b.voidLine.actor || (employee && employeeName(employee.member)) || 'Serveur').trim().slice(0, 40);
+    const actor = String(pinActor?.name || (pairedTill ? 'Caisse' : '')
+      || b.voidLine.actor || (employee && employeeName(employee.member)) || 'Serveur').trim().slice(0, 40);
 
     if (!lineId) return json({ error: 'line-id-required' }, 400);
     if (immediate) {

@@ -104,10 +104,10 @@ await check('the server still accepts served straight from accepted', () => {
 
 /* ── 3 · annuler un article déjà en cuisine, sans remboursement ───────────── */
 
-await check('removing a cooking takeaway line opens the cancellation reason instead of vanishing', () => {
+await check('removing a cooking takeaway line uses the audited one-tap cancellation', () => {
   /* Le défaut : `changeCartLineQty` retirait la ligne du panier sans rien dire.
    * La brigade continuait de préparer un plat sorti de l'addition. */
-  assert.match(caisse, /if \(delta < 0 && editing && editing\.opId && editing\.status !== 'held'\) \{\s*\n\s*openCaisseVoidModal\(null, line, \{ orderId: editing\.opId, cart: true \}\);/);
+  assert.match(caisse, /if \(delta < 0 && editing && editing\.opId && editing\.status !== 'held'\) \{\s*\n\s*cancelCaisseLineImmediately\(null, line, \{ orderId: editing\.opId, cart: true \}\);/);
   /* `held` = pas encore payée donc pas encore partie en cuisine : rien à
    * annuler, la ligne se retire comme dans un panier neuf. */
   assert.match(caisse, /editing\.status !== 'held'/);
@@ -122,7 +122,7 @@ await check('a takeaway void names its order, since it has no table', () => {
 });
 
 await check('the line leaves the cart only once the kitchen has been told', () => {
-  const confirm = caisse.slice(caisse.indexOf('async function confirmCaisseVoid()'));
+  const confirm = caisse.slice(caisse.indexOf('async function cancelCaisseLineImmediately('));
   const postAt = confirm.indexOf('await postCaisseCancellation({');
   const removeAt = confirm.indexOf('cart = applyGroupedLineQtyDelta(cart, line, -1);');
   assert.ok(postAt > 0 && removeAt > postAt,

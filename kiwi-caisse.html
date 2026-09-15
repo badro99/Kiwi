@@ -1976,20 +1976,6 @@
     .trf-target-card .trf-tname { font-size: 15px; font-weight: 700; color: var(--ink); }
     .trf-target-card .trf-tmeta { font-size: 11px; color: var(--ink-3); }
 
-    .void-reasons-grid { display: flex; flex-direction: column; gap: 8px; margin: 12px 0 18px; }
-    .void-reason-chip {
-      display: flex; align-items: center; gap: 12px; padding: 12px 14px;
-      border: 1px solid var(--line); border-radius: var(--r-md);
-      background: var(--surface); text-align: left; cursor: pointer;
-      transition: border-color 150ms, background 150ms, transform 100ms;
-    }
-    .void-reason-chip:hover { border-color: var(--forest); background: var(--mint-tint); }
-    .void-reason-chip.is-active { border-color: var(--forest); background: var(--mint-tint); box-shadow: 0 0 0 2px var(--forest); }
-    .void-reason-chip svg { width: 20px; height: 20px; color: var(--forest); flex: 0 0 20px; }
-    .void-reason-chip .vrc-text { display: flex; flex-direction: column; gap: 2px; }
-    .void-reason-chip .vrc-title { font-size: 14px; font-weight: 600; color: var(--ink); }
-    .void-reason-chip .vrc-sub { font-size: 11.5px; color: var(--ink-3); }
-
     .pay-btn {
       display: flex; align-items: center; justify-content: center; gap: 10px;
       height: 56px;
@@ -2111,7 +2097,6 @@
       animation: fade-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
     }
     .modal-veil.is-open { display: flex; }
-    #caisse-void-modal .modal { max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; }
     @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
     .modal {
@@ -5567,7 +5552,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=524" defer></script>
+  <script src="assets/caisse-pwa.js?v=525" defer></script>
   <script src="assets/live-link.js?v=39" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -6493,54 +6478,6 @@
         <button class="ma-btn secondary" id="cmrg-cancel" style="flex:1;">Annuler</button>
         <button class="ma-btn primary" id="cmrg-confirm" style="flex:2;" disabled>
           <i data-lucide="merge"></i> <span id="cmrg-btn-text">Fusionner</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============ CAISSE VOID REASON MODAL ============ -->
-  <div class="modal-veil" id="caisse-void-modal" role="dialog" aria-modal="true" aria-labelledby="cvoi-title">
-    <div class="modal modal-void" style="max-width:440px;">
-      <div class="split-badge">Cuisine &amp; Pertes</div>
-      <h3 class="modal-title" id="cvoi-title" style="margin-bottom:6px;">Annuler <span id="cvoi-dish-name">1× Plat</span></h3>
-      <p class="modal-subtle" style="margin-bottom:12px;">Retirer un exemplaire de l'addition, même après envoi en cuisine. Un code caisse sera demandé. Motif :</p>
-      <div class="void-reasons-grid" id="cvoi-reasons-chips">
-        <button class="void-reason-chip is-active" data-cvoi-reason="client_change" data-is-waste="0">
-          <i data-lucide="user-round-x"></i>
-          <div class="vrc-text">
-            <span class="vrc-title">Changement client</span>
-            <span class="vrc-sub">Le client change d'avis · pas de perte</span>
-          </div>
-        </button>
-        <button class="void-reason-chip" data-cvoi-reason="order_error" data-is-waste="0">
-          <i data-lucide="edit-3"></i>
-          <div class="vrc-text">
-            <span class="vrc-title">Erreur de saisie</span>
-            <span class="vrc-sub">Erreur caisse avant cuisson</span>
-          </div>
-        </button>
-        <button class="void-reason-chip" data-cvoi-reason="kitchen_waste" data-is-waste="1">
-          <i data-lucide="trash-2"></i>
-          <div class="vrc-text">
-            <span class="vrc-title">Perte cuisine</span>
-            <span class="vrc-sub">Déjà sur le feu / jeté · décompte stock</span>
-          </div>
-        </button>
-        <button class="void-reason-chip" data-cvoi-reason="quality_return" data-is-waste="1">
-          <i data-lucide="alert-triangle"></i>
-          <div class="vrc-text">
-            <span class="vrc-title">Retour qualité</span>
-            <span class="vrc-sub">Plat refusé ou non conforme · perte</span>
-          </div>
-        </button>
-      </div>
-      <label for="cvoi-note">Précision (facultatif)</label>
-      <input id="cvoi-note" type="text" maxlength="160" autocomplete="off" placeholder="Ex. le client ne souhaite plus ce plat" style="width:100%;box-sizing:border-box;min-height:44px;margin:6px 0 10px;">
-      <p id="cvoi-status" role="status" aria-live="polite" class="modal-subtle"></p>
-      <div class="nt-actions">
-        <button class="ma-btn secondary" id="cvoi-cancel" style="flex:1;">Conserver</button>
-        <button class="ma-btn primary" id="cvoi-confirm" style="flex:2;background:var(--danger-mute);border-color:var(--danger-mute);">
-          <i data-lucide="alert-circle"></i> Confirmer l'annulation
         </button>
       </div>
     </div>
@@ -8787,16 +8724,10 @@
       `;
         } catch (_) { lockBanner = ''; }
       }
-      const cancellableTickets = storeIsReal() ? canonicalOrdersForTable(id)
-        .filter(entry => !entry.order.session || !phoneSessionOf(id)
-          || String(entry.order.session) === String(phoneSessionOf(id))) : [];
-      const ticketActions = cancellableTickets.length ? `
-        <div class="rp-ticket-actions" style="border-top:1px solid var(--line,#ddd);padding:12px 0;display:grid;gap:8px;">
-          <strong style="font-size:12px;">Commandes de cette table</strong>
-          ${cancellableTickets.map(entry => `<button type="button" class="meta-btn danger" data-order-cancel="${kdsEsc(entry.id)}"
-            style="min-height:44px;text-align:left;">Annuler commande ${kdsEsc(ticketNo(entry.order) || entry.id)} · cuisine prévenue</button>`).join('')}
-        </div>` : '';
-      $('#rp-items').innerHTML = lockBanner + itemsHTML + ticketActions;
+      /* A table is managed as one bill, not as a stack of kitchen ticket
+         numbers the cashier has to remember. Whole-table cancellation lives
+         on “Annuler mesa”; individual corrections live on each line's −. */
+      $('#rp-items').innerHTML = lockBanner + itemsHTML;
 
       $('#rp-total').textContent = fmtMAD(splitRemaining != null ? splitRemaining : net);
       window.CaisseFx && window.CaisseFx.countTotal();
@@ -10005,9 +9936,9 @@
        * aucune alerte, aucune trace dans `kitchen_voids` — donc rien à
        * expliquer au stock en fin de journée.
        *
-       * La salle avait déjà la bonne réponse (changeTableOrderLineQty ouvre le
-       * motif d'annulation) ; elle n'avait simplement jamais été branchée au
-       * comptoir. Le client change d'avis ou n'est pas satisfait : on annule
+       * La salle avait déjà la bonne réponse (changeTableOrderLineQty prévient
+       * la cuisine) ; elle n'avait simplement jamais été branchée au comptoir.
+       * Le client change d'avis ou n'est pas satisfait : on annule
        * l'article, on prévient la cuisine, et ça ne passe PAS par un
        * remboursement — tant que la commande n'est pas encaissée, il n'y a
        * aucun argent à rendre.
@@ -10017,7 +9948,7 @@
       const editing = vrapEditingNum != null
         ? kdsOrders.find(x => x && x.num === vrapEditingNum) : null;
       if (delta < 0 && editing && editing.opId && editing.status !== 'held') {
-        openCaisseVoidModal(null, line, { orderId: editing.opId, cart: true });
+        cancelCaisseLineImmediately(null, line, { orderId: editing.opId, cart: true });
         return;
       }
       cart = applyGroupedLineQtyDelta(cart, line, delta);
@@ -10212,25 +10143,12 @@
         return;
       }
 
-      // A sent dining-room line stays cancellable from the bill itself. The
-      // kitchen reason modal is the only destructive path: it writes the
-      // canonical void before the local amount changes.
+      // One tap on − cancels exactly one sent item. The paired caisse is the
+      // authorization; no per-item reason dialog or PIN is required.
       const tableVoidBtn = e.target.closest('[data-table-void]');
       if (tableVoidBtn && selectedId) {
         const line = (tableOrders[selectedId] || []).find(l => l.uid === tableVoidBtn.dataset.tableVoid);
-        if (line && line.sent) openCaisseVoidModal(selectedId, line);
-        return;
-      }
-
-      const orderCancelBtn = e.target.closest('[data-order-cancel]');
-      if (orderCancelBtn && selectedId) {
-        const tableId = selectedId;
-        const orderId = orderCancelBtn.dataset.orderCancel;
-        if (!canonicalOrdersForTable(tableId).some(entry => entry.id === orderId)) return;
-        requireTillOperator(`Annuler la commande ${orderId} de la table ${tableId}`, async (who) => {
-          try { await cancelOneTableOrder(tableId, orderId, who); }
-          catch (err) { toast(`Commande conservée · ${err.message || 'annulation non transmise'}`); }
-        });
+        if (line && line.sent) cancelCaisseLineImmediately(selectedId, line);
         return;
       }
 
@@ -10431,16 +10349,14 @@
         return;
       }
 
-      // Sent lines are destructive, but they remain cancellable from the full
-      // bill where cashiers naturally look for item actions. Route through the
-      // same reason + audited kitchen-void flow as the compact bill control.
+      // The full bill follows the same one-tap rule as the compact bill.
       const voidBtn = e.target.closest('.or-item-void-btn[data-review-action="void"]');
       if (voidBtn && selectedId) {
         const row = voidBtn.closest('[data-review-uid]');
         const line = row && (tableOrders[selectedId] || []).find(item => item.uid === row.dataset.reviewUid);
         if (line && line.sent) {
           closeOrderReviewModal();
-          openCaisseVoidModal(selectedId, line);
+          cancelCaisseLineImmediately(selectedId, line);
         }
         return;
       }
@@ -11953,13 +11869,9 @@
       }
     });
 
-    let caisseVoidTarget = null;
-    let caisseSelectedVoidReason = 'client_change';
-    let caisseSelectedVoidIsWaste = 0;
-
-    /* Never leave a destructive confirmation locked behind a stalled network.
-       A timed-out write may still have committed: refresh the canonical order
-       before the operator decides whether another cancellation is needed. */
+    /* Never leave an item correction locked behind a stalled network. A timed
+       out write may still have committed, so the line keeps one stable request
+       id and the next tap verifies/replays that same operation. */
     async function postCaisseCancellation(body) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 12000);
@@ -11978,54 +11890,20 @@
       } finally { clearTimeout(timer); }
     }
 
-    /* `scope` dit OÙ retirer la ligne une fois la cuisine prévenue :
-     *  · { tableId }            · une addition de salle (tableOrders)
-     *  · { orderId, cart: true } · une commande à emporter en cours d'édition
-     * Le motif, l'alerte cuisine et la trace `kitchen_voids` sont les mêmes
-     * dans les deux cas : c'est la même annulation, pas un remboursement. */
-    function openCaisseVoidModal(tableId, line, scope) {
-      if ($('#cvoi-confirm')?.disabled) return;
-      caisseVoidTarget = { tableId, line, scope: scope || { tableId } };
-      caisseSelectedVoidReason = 'client_change';
-      caisseSelectedVoidIsWaste = 0;
-      const dName = $('#cvoi-dish-name');
-      if (dName) dName.textContent = `1× ${line.name}`;
-      $('#cvoi-note').value = '';
-      $('#cvoi-status').textContent = line.voidPending ? 'Une demande cuisine est en attente. La caisse peut confirmer le retrait.' : '';
-      const chips = document.querySelectorAll('#cvoi-reasons-chips .void-reason-chip');
-      chips.forEach(c => c.classList.toggle('is-active', c.dataset.cvoiReason === 'client_change'));
-      const modal = $('#caisse-void-modal');
-      if (modal) modal.classList.add('is-open');
-      if (window.lucide) lucide.createIcons();
-    }
-
-    async function confirmCaisseVoid() {
-      if (!caisseVoidTarget || $('#cvoi-confirm')?.disabled) return;
-      const target = caisseVoidTarget;
-      // The paired venue is the authoritative merchant identity. This page
-      // has no `ls()` helper: resolving the old fallback after disabling the
-      // button threw synchronously, leaving the modal stuck on "en cours" and
-      // never sending the cancellation to the kitchen API.
+    /* One tap on a sent line removes one unit from the unpaid bill and records
+       an approved kitchen void. The paired till is the authorization: unlike
+       a whole-table cancellation, this frequent correction has no PIN or
+       reason dialog. The amount changes only after the server confirms it. */
+    async function cancelCaisseLineImmediately(tableId, line, scope) {
+      if (!line || line.voidBusy) return;
+      scope = scope || { tableId };
       const slug = currentMerchantSlug();
       if (storeIsReal() && !slug) {
         toast('Annulation impossible · caisse non appairée, article conservé');
-        $('#cvoi-status').textContent = 'Caisse non appairée. Article conservé.';
         return;
       }
-      if (storeIsReal() && !target.who?.actorProof) {
-        requireTillOperator(`Annuler un ${target.line.name}`, (who) => {
-          if (caisseVoidTarget !== target) return;
-          target.who = who;
-          if (!who?.actorProof) { $('#cvoi-status').textContent = 'Identité caisse non vérifiée. Réessayez avec votre code.'; return; }
-          confirmCaisseVoid();
-        });
-        return;
-      }
-      const { tableId, line } = caisseVoidTarget;
-      const scope = caisseVoidTarget.scope || { tableId };
-      const confirmBtn = $('#cvoi-confirm');
-      if (confirmBtn) confirmBtn.disabled = true;
-      $('#cvoi-status').textContent = 'Annulation en cours…';
+      line.voidBusy = true;
+      toast(`Annulation de ${line.name}…`);
 
       if (slug) {
         try {
@@ -12035,7 +11913,6 @@
             (entry.order.relayLines || []).some(item => item.uid === line.uid));
           const data = await postCaisseCancellation({
               merchant: slug,
-              actorProof: target.who?.actorProof || '',
               voidLine: {
                 /* Une commande à emporter n'a pas de table : elle se désigne
                  * par son identifiant de file, que `voidLine` accepte déjà
@@ -12047,17 +11924,14 @@
                 lineId: line.canonicalUid || line.uid || line.id,
                 itemId: line.id || '',
                 qty: 1,
-                reason: caisseSelectedVoidReason + ($('#cvoi-note').value.trim() ? ' · ' + $('#cvoi-note').value.trim() : ''),
-                isWaste: caisseSelectedVoidIsWaste,
-                actor: (typeof cashierName !== 'undefined' && cashierName) || 'Caisse'
+                reason: 'item_cancelled',
+                isWaste: 0,
+                actor: 'Caisse'
               }
           });
           if (data && data.alertSent) {
             line.voidPending = true;
             toast(`Annulation demandée · attente de la cuisine · ${line.name}`);
-            $('#caisse-void-modal')?.classList.remove('is-open');
-            if (confirmBtn) confirmBtn.disabled = false;
-            caisseVoidTarget = null;
             if (tableId) renderRightPanel(tableId);
             return;
           }
@@ -12078,29 +11952,29 @@
           if (scope.cart) cart = reconcile(cart);
           else tableOrders[tableId] = reconcile(tableOrders[tableId]);
           try { persistShift(); } catch (_) {}
-          target.applied = true;
           delete line.cancelRequestId;
           toast(`${line.name} annulé en cuisine`);
-        } catch (err) {
-          toast(`Annulation : ${err.message || 'erreur réseau'}`);
-          $('#cvoi-status').textContent = `Annulation non confirmée · ${err.message || 'erreur réseau'}. Réessayez pour vérifier la même demande, ou fermez.`;
-          if (confirmBtn) confirmBtn.disabled = false;
           return;
+        } catch (err) {
+          toast(`Article conservé · ${err.message || 'annulation non transmise'} · touchez − pour réessayer`);
+          return;
+        } finally {
+          line.voidBusy = false;
+          renderMenu();
+          if (tableId) {
+            if (mode === 'order') renderOrderPanel(tableId);
+            else renderRightPanel(tableId);
+          } else renderCart();
         }
       }
 
-      /* La cuisine est prévenue : on peut retirer la ligne là où elle vit. */
-      if (!target.applied && scope.cart) {
+      /* Local demo: there is no kitchen server to notify. */
+      if (scope.cart) {
         cart = applyGroupedLineQtyDelta(cart, line, -1);
-        renderMenu();
-        renderCart();
-      } else if (!target.applied) {
+      } else {
         tableOrders[tableId] = applyGroupedLineQtyDelta(tableOrders[tableId] || [], line, -1);
       }
-      const modal = $('#caisse-void-modal');
-      if (modal) modal.classList.remove('is-open');
-      if (confirmBtn) confirmBtn.disabled = false;
-      caisseVoidTarget = null;
+      line.voidBusy = false;
       renderMenu();
       if (tableId) {
         try { persistShift(); } catch (_) {}
@@ -12108,25 +11982,6 @@
         else renderRightPanel(tableId);
       } else renderCart();
     }
-
-    $('#cvoi-reasons-chips') && $('#cvoi-reasons-chips').addEventListener('click', (e) => {
-      const chip = e.target.closest('.void-reason-chip');
-      if (!chip) return;
-      caisseSelectedVoidReason = chip.dataset.cvoiReason;
-      caisseSelectedVoidIsWaste = Number(chip.dataset.isWaste) || 0;
-      document.querySelectorAll('#cvoi-reasons-chips .void-reason-chip').forEach(c => c.classList.remove('is-active'));
-      chip.classList.add('is-active');
-    });
-
-    document.getElementById('caisse-void-modal') && document.getElementById('caisse-void-modal').addEventListener('click', (e) => {
-      if (e.target.closest('#cvoi-confirm')) { confirmCaisseVoid(); return; }
-      if (e.target.closest('#cvoi-cancel') || e.target === $('#caisse-void-modal')) {
-        if ($('#cvoi-confirm')?.disabled) { toast('Annulation en cours · attendez la réponse du serveur'); return; }
-        $('#caisse-void-modal').classList.remove('is-open');
-        caisseVoidTarget = null;
-        return;
-      }
-    });
 
     /* ---- table order management ---- */
     function pushTableOrderLine(tableId, item, opts) {
@@ -12180,9 +12035,9 @@
       if (!tableOrders[tableId]) return;
       const line = tableOrders[tableId].find(l => l.uid === uid);
       if (!line) return;
-      /* Si le plat a déjà été transmis en cuisine, on ouvre le motif d'annulation pour avertir la brigade */
+      /* Déjà transmis : le − retire immédiatement une unité et prévient la cuisine. */
       if (line.sent) {
-        if (delta < 0) openCaisseVoidModal(tableId, line);
+        if (delta < 0) cancelCaisseLineImmediately(tableId, line);
         return;
       }
       tableOrders[tableId] = applyGroupedLineQtyDelta(tableOrders[tableId], line, delta);
@@ -12582,24 +12437,6 @@
       try { opTickets.forEach(add); } catch (_) {}
       try { kdsOrders.forEach(add); } catch (_) {}
       return Array.from(found.entries()).map(([id, order]) => ({ id, order }));
-    }
-
-    async function cancelOneTableOrder(tableId, orderId, who) {
-      const entry = canonicalOrdersForTable(tableId).find(candidate => candidate.id === orderId);
-      if (!entry) throw new Error('commande introuvable · synchronisez et réessayez');
-      await postCaisseCancellation({ merchant: currentMerchantSlug(), id: orderId,
-        status: 'rejected', actorProof: who?.actorProof || '', server: who?.name || 'Caisse' });
-      const owned = new Set((entry.order.relayLines || []).map(line => String(line?.uid || '')).filter(Boolean));
-      tableOrders[tableId] = (tableOrders[tableId] || []).filter(line =>
-        !String(line.orderProLine || '').startsWith(orderId + ':') && !owned.has(String(line.uid || '')));
-      entry.order.status = 'rejected';
-      const kitchenTicket = kdsOrders.find(order => order && String(order.opId || '') === orderId);
-      if (kitchenTicket) retireRejectedKitchenTicket(kitchenTicket);
-      opTickets.delete(orderId);
-      try { persistShift(); publishServiceFloor(); } catch (_) {}
-      refreshTableNode(tableId);
-      if (selectedId === tableId) renderRightPanel(tableId);
-      toast(`Commande annulée · cuisine prévenue · table ${tableId} conservée`);
     }
 
     async function cancelSentTable(id, who) {

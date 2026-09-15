@@ -110,6 +110,7 @@ const validToken = await employeeToken(
   { memberId: STAFF_ID, staffId: STAFF_ID, merchant: MERCHANT, inTs: Date.now() - 3600000 }
 );
 const employeeCookie = `${EMPLOYEE_COOKIE}=${validToken}`;
+const tillCookie = `${TILL_COOKIE}=${await tillToken(AUTH_SECRET, MERCHANT)}`;
 
 const now = Date.now();
 exec(`INSERT INTO table_sessions (id, merchant, table_no, mode, status, opened_ts, seen_ts)
@@ -600,6 +601,10 @@ check('Staff can cancel a sent line from the OLDER of two table tickets without 
 check('UID picks the older ticket even when both tickets contain the same product',
   JSON.parse(db._db.prepare("SELECT lines FROM orders WHERE id='ord-old-kitchen'").get().lines)[0].qty === 1
   && JSON.parse(db._db.prepare("SELECT lines FROM orders WHERE id='ord-new-kitchen'").get().lines)[0].qty === 1);
+const unprovedWholeVisit = await postQueue({ merchant: MERCHANT,
+  cancelTable: { table: '2', expectedSession: secondVisit } }, tillCookie);
+check('Whole-table cancellation still requires a PIN proof on the paired caisse',
+  unprovedWholeVisit.status === 403 && unprovedWholeVisit.data.error === 'operator-proof-required');
 const wholeVisit = await postQueue({ merchant: MERCHANT,
   cancelTable: { table: '2', expectedSession: secondVisit } }, employeeCookie);
 check('Staff cancels the whole unpaid visit including both kitchen tickets',
@@ -656,7 +661,6 @@ check('Kitchen retains a served ticket while its line-cancellation alert needs a
 exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
   VALUES ('ord-one-cancel', ?, 305, 'table', '1', 45, ?, 'accepted', 'ses-v1', ?, ?)`, MERCHANT,
   JSON.stringify([{ id: 'item-soup', uid: 'uid-one-cancel', name: 'Soupe', qty: 1, unitPrice: 45 }]), now, now);
-const tillCookie = `${TILL_COOKIE}=${await tillToken(AUTH_SECRET, MERCHANT)}`;
 const oneOrderCancel = await postQueue({ merchant: MERCHANT, id: 'ord-one-cancel',
   status: 'rejected', server: 'Caisse' }, tillCookie);
 check('Caisse can cancel one sent kitchen order without closing the table',
@@ -741,15 +745,15 @@ exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, st
 const immediateBody = { merchant: MERCHANT, actorProof: proof, voidLine: {
   orderId: 'ord-immediate', lineId: 'uid-cancel-a', itemId: 'shawarma', qty: 1,
   immediate: true, requestId: 'voi-test-immediate-0001', reason: 'client_change · erreur client', actor: 'Spoofed' } };
-const unproved = await postQueue({ ...immediateBody, actorProof: undefined }, tillCookie);
-check('Immediate item cancellation requires a verified operator', unproved.status === 403);
-const immediateResult = await postQueue(immediateBody, tillCookie);
-check('Cashier cancels a cooking item immediately, without a kitchen approval', immediateResult.status === 200
+const unpaired = await postQueue({ ...immediateBody, actorProof: undefined }, employeeCookie);
+check('Immediate item cancellation still requires the paired caisse', unpaired.status === 403);
+const immediateResult = await postQueue({ ...immediateBody, actorProof: undefined }, tillCookie);
+check('Paired caisse cancels a cooking item immediately, without a PIN or kitchen approval', immediateResult.status === 200
   && immediateResult.data.directVoid && !immediateResult.data.alertSent && immediateResult.data.total === 50);
 check('Only the selected UID loses a unit', immediateResult.data.remainingLines?.every(l => l.qty === 1));
-check('Immediate cancellation records the verified cashier and typed reason',
-  db._db.prepare('SELECT actor, reason FROM kitchen_voids WHERE id=?').get(immediateBody.voidLine.requestId)?.actor === 'Test cashier');
-const repeatImmediate = await postQueue(immediateBody, tillCookie);
+check('PIN-free item cancellation records the paired caisse identity',
+  db._db.prepare('SELECT actor FROM kitchen_voids WHERE id=?').get(immediateBody.voidLine.requestId)?.actor === 'Caisse');
+const repeatImmediate = await postQueue({ ...immediateBody, actorProof: undefined }, tillCookie);
 check('Lost-response retry does not cancel another unit', repeatImmediate.data.replayed && repeatImmediate.data.total === 50);
 const staleUid = await postQueue({ ...immediateBody, voidLine: { ...immediateBody.voidLine,
   requestId: 'voi-test-stale-uid-0001', lineId: 'uid-missing' } }, tillCookie);
