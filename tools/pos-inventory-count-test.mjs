@@ -146,6 +146,27 @@ const maison = S.KPI._loadItems('maison');
 ok(maison.length === lines.length,
   'la caisse Maison compte les mêmes déclinaisons (elle passait par le moteur ingrédients et n’en trouvait aucune)');
 
+/* A saved count resumes only against the same stable product + variant identity.
+   A product name is deliberately insufficient because Shopify and Kiwi can
+   legitimately carry near-identical names for different variants. */
+const draftLines = maison.map((item) => ({ ...item }));
+const remembered = draftLines[0];
+S.window.localStorage.setItem('kiwi:inventoryCountDraft:local:maison', JSON.stringify({
+  version: 1, engine: 'maison', intentId: 'count:resume:0001', savedAt: Date.now(),
+  counted: [{ key: remembered.key, itemId: remembered.itemId, variantId: remembered.variantId, countedQty: 7, explanation: 'Comptage rayon' }],
+}));
+const restored = S.KPI._restoreDraft('maison', draftLines);
+ok(restored && draftLines[0].counted && draftLines[0].countedQty === 7,
+  'un brouillon reprend la quantité comptée avec le même identifiant de variante');
+const impostor = maison.map((item) => ({ ...item }));
+impostor[0].variantId += '-different';
+S.KPI._restoreDraft('maison', impostor);
+ok(!impostor[0].counted, 'un homonyme avec une autre variante ne reçoit jamais le comptage sauvegardé');
+ok(/data-cnt-dimension/.test(code) && ['category','brand','collection','supplier','locationId'].every((field) => code.includes(`'${field}'`)),
+  'catégorie, marque, collection, fournisseur et emplacement filtrent le comptage');
+ok(code.includes('saveDraft();') && code.includes('clearDraft(engine)'),
+  'le brouillon se sauvegarde pendant la saisie et disparaît seulement après transmission');
+
 /* ── 4. LE MOTEUR INGRÉDIENTS N'EST PAS TOUCHÉ ───────────────────────────── */
 S.window.stockItems = [
   { id: 'far', name: 'Farine', unit: 'kg', stock: 12, cost: 8 },

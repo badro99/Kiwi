@@ -49,6 +49,61 @@
     return { id: 'caisse-1', name: 'Caissier', role: 'Caissier' };
   }
 
+  function merchantScope() {
+    try {
+      const paired = window.KiwiPlatform?.pairedVenue?.()
+        || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+      return String((paired && paired.merchant) || localStorage.getItem('kiwiLiveMerchant') || 'local')
+        .replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64) || 'local';
+    } catch (_) { return 'local'; }
+  }
+
+  function draftKey(engine) { return `kiwi:inventoryCountDraft:${merchantScope()}:${engine}`; }
+
+  function saveDraft() {
+    if (!countState.isOpen || countState.step === 'submitted') return false;
+    try {
+      const counted = countState.items.filter((item) => item.counted).map((item) => ({
+        key: item.key, itemId: item.itemId, variantId: item.variantId,
+        countedQty: item.countedQty, explanation: item.explanation || '', note: item.note || ''
+      }));
+      localStorage.setItem(draftKey(countState.engine), JSON.stringify({
+        version: 1, engine: countState.engine, intentId: countState.intentId,
+        savedAt: Date.now(), counted
+      }));
+      countState.draftSavedAt = Date.now();
+      return true;
+    } catch (_) { return false; }
+  }
+
+  function restoreDraft(engine, items) {
+    let draft = null;
+    try { draft = JSON.parse(localStorage.getItem(draftKey(engine)) || 'null'); } catch (_) {}
+    if (!draft || draft.version !== 1 || !Array.isArray(draft.counted)) return null;
+    const byKey = new Map(items.map((item) => [item.key, item]));
+    draft.counted.forEach((saved) => {
+      const item = byKey.get(saved.key);
+      /* Never force-match by product name. A renamed/recreated variant is not
+         proof of identity and must remain untouched. */
+      if (!item || item.itemId !== saved.itemId || item.variantId !== saved.variantId) return;
+      const qty = Number(saved.countedQty);
+      if (!Number.isFinite(qty) || qty < 0) return;
+      item.counted = true; item.countedQty = qty;
+      item.explanation = String(saved.explanation || '').slice(0, 300);
+      item.note = String(saved.note || '').slice(0, 300);
+    });
+    return draft;
+  }
+
+  function clearDraft(engine) {
+    try { localStorage.removeItem(draftKey(engine)); } catch (_) {}
+  }
+
+  function uniqueValues(items, field) {
+    return Array.from(new Set(items.map((item) => String(item[field] || '').trim()).filter(Boolean)))
+      .sort((a, b) => a.localeCompare(b, 'fr'));
+  }
+
   function loadCountableItems(engine) {
     const items = [];
     if (usesCatalog(engine)) {
@@ -65,6 +120,7 @@
       try {
         const cat = window.KiwiBoutiqueCatalog;
         const products = cat.listProducts ? cat.listProducts({}) : [];
+        const categories = new Map((cat.listCategories ? cat.listCategories() : []).map((row) => [row.id, row.name]));
         products.forEach((p) => {
           if (!p || !p.id) return;
           const variants = cat.listVariants ? cat.listVariants(p.id) : [];
@@ -81,6 +137,10 @@
               variantId: v.id,
               locationId: 'magasin',
               productName: p.name || 'Article',
+              category: categories.get(p.categoryId) || p.category || p.categoryId || '',
+              brand: p.brand || p.marque || '',
+              collection: p.collection || p.collectionName || '',
+              supplier: p.supplier || p.supplierName || '',
               /* La NUANCE d'origine si le magasin en a saisi une, sinon la
                  famille : c'est ce que le caissier lit sur l'étiquette. */
               color: v.colorSource || v.colorLabel || v.colorId || '',
@@ -117,6 +177,10 @@
           variantId: '',
           locationId: ledgerLocation,
           productName: it.name,
+          category: it.category || it.cat || '',
+          brand: it.brand || '',
+          collection: it.collection || '',
+          supplier: it.supplier || '',
           color: '',
           size: '',
           sku: it.id,
@@ -142,6 +206,7 @@
     items: [],
     filter: 'all',
     search: '',
+    dimensions: { category: '', brand: '', collection: '', supplier: '', locationId: '' },
     blindMode: true,
     step: 'counting', // 'counting' | 'review' | 'submitted'
     submittedCountId: null,
@@ -161,9 +226,12 @@
     const filtered = items.filter(it => {
       if (countState.filter === 'counted' && !it.counted) return false;
       if (countState.filter === 'uncounted' && it.counted) return false;
+      for (const field of ['category', 'brand', 'collection', 'supplier', 'locationId']) {
+        if (countState.dimensions[field] && String(it[field] || '') !== countState.dimensions[field]) return false;
+      }
       if (countState.search) {
         const q = countState.search.toLowerCase();
-        const full = `${it.productName} ${it.color} ${it.size} ${it.sku} ${it.barcode}`.toLowerCase();
+        const full = `${it.productName} ${it.color} ${it.size} ${it.sku} ${it.barcode} ${it.category} ${it.brand} ${it.collection} ${it.supplier}`.toLowerCase();
         if (!full.includes(q)) return false;
       }
       return true;
@@ -261,6 +329,20 @@
             </div>
           </div>
 
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:7px;margin:-4px 0 12px;">
+            ${[
+              ['category', 'Catégorie'], ['brand', 'Marque'], ['collection', 'Collection'],
+              ['supplier', 'Fournisseur'], ['locationId', 'Emplacement']
+            ].map(([field, label]) => {
+              const values = uniqueValues(items, field);
+              if (!values.length) return '';
+              return `<label style="font-size:10px;color:var(--n-500);text-transform:uppercase;letter-spacing:.05em;">${label}
+                <select class="sk-input" data-cnt-dimension="${field}" style="display:block;width:100%;margin-top:3px;padding:6px 8px;font-size:12px;">
+                  <option value="">Tous</option>${values.map((value) => `<option value="${esc(value)}"${countState.dimensions[field] === value ? ' selected' : ''}>${esc(value)}</option>`).join('')}
+                </select></label>`;
+            }).join('')}
+          </div>
+
           <div class="sk-tbl-wrap" style="max-height:380px;overflow-y:auto;border:1px solid var(--n-200);border-radius:12px;">
             <table class="sk-tbl">
               <thead>
@@ -300,7 +382,10 @@
           </div>
 
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;">
-            <button class="ma-btn secondary" data-sk-cancel style="padding:10px 18px;">Annuler</button>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button class="ma-btn secondary" id="pos-cnt-save-btn" style="padding:10px 18px;">Enregistrer le brouillon</button>
+              <span style="font-size:11px;color:var(--n-500);">${countState.draftSavedAt ? `Sauvé à ${new Date(countState.draftSavedAt).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })}` : 'Sauvegarde locale hors ligne'}</span>
+            </div>
             <button class="ma-btn primary" id="pos-cnt-review-btn" style="padding:10px 24px;background:#059669;border-color:#047857;" ${countedCount === 0 ? 'disabled' : ''}>
               Vérifier et transmettre (${countedCount})
             </button>
@@ -369,6 +454,12 @@
         return;
       }
 
+      if (e.target.id === 'pos-cnt-save-btn') {
+        if (saveDraft() && window.toast) toast('Brouillon d’inventaire enregistré');
+        renderModal();
+        return;
+      }
+
       const stepBtn = e.target.closest('[data-cnt-step]');
       if (stepBtn) {
         const key = stepBtn.dataset.cntStep;
@@ -377,6 +468,7 @@
         if (item) {
           item.countedQty = Math.max(0, (item.counted ? item.countedQty : 0) + step);
           item.counted = true;
+          saveDraft();
           renderModal();
         }
         return;
@@ -406,6 +498,12 @@
     };
 
     modal.oninput = (e) => {
+      const dimension = e.target.closest('[data-cnt-dimension]');
+      if (dimension) {
+        countState.dimensions[dimension.dataset.cntDimension] = dimension.value;
+        renderModal();
+        return;
+      }
       const cntInput = e.target.closest('[data-cnt-input]');
       if (cntInput) {
         const key = cntInput.dataset.cntInput;
@@ -418,6 +516,7 @@
           } else {
             item.counted = false;
           }
+          saveDraft();
         }
         return;
       }
@@ -427,6 +526,7 @@
         const key = noteInput.dataset.cntNote;
         const item = countState.items.find(i => i.key === key);
         if (item) item.explanation = noteInput.value;
+        saveDraft();
         return;
       }
     };
@@ -476,6 +576,7 @@
       });
       const data = await resp.json();
       if (data && data.success) {
+        clearDraft(engine);
         countState.submitError = '';
         countState.submittedCountId = data.count.id;
         countState.step = 'submitted';
@@ -493,17 +594,21 @@
 
   function open(opts) {
     const engine = (opts && opts.engine) || detectEngine();
+    const items = loadCountableItems(engine);
+    const draft = restoreDraft(engine, items);
     countState = {
       isOpen: true,
       engine: engine,
-      items: loadCountableItems(engine),
+      items,
       filter: 'all',
       search: '',
+      dimensions: { category: '', brand: '', collection: '', supplier: '', locationId: '' },
       blindMode: true,
       step: 'counting',
       submittedCountId: null,
       submitError: '',
-      intentId: newCountIntentId()
+      intentId: (draft && draft.intentId) || newCountIntentId(),
+      draftSavedAt: draft && Number(draft.savedAt) || 0
     };
     renderModal();
   }
@@ -511,5 +616,5 @@
   /* `_loadItems` est exposé pour tools/pos-inventory-count-test.mjs : le
      défaut qu'il garde est une LISTE VIDE, et une liste vide ne se voit pas
      depuis l'extérieur du module. */
-  window.KiwiPosInventoryCount = { open, _loadItems: loadCountableItems };
+  window.KiwiPosInventoryCount = { open, _loadItems: loadCountableItems, _saveDraft: saveDraft, _restoreDraft: restoreDraft };
 })();

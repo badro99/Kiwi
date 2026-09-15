@@ -154,7 +154,7 @@ var SHELL = [
   '/assets/platform-ops.js?v=5',
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=10',
-  '/assets/operations-ui.js?v=13',
+  '/assets/operations-ui.js?v=14',
   '/assets/live-link.js?v=39',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
@@ -217,7 +217,7 @@ var SHELL = [
      document; quantities are append-only movements, both usable offline. */
   '/assets/inventory-ledger.js?v=10',
   '/assets/caisse-stock-sync.js?v=10',
-  '/assets/pos-inventory-count.js?v=7',
+  '/assets/pos-inventory-count.js?v=8',
   '/assets/stock.js?v=50',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
@@ -305,8 +305,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=5',
   '/assets/pos-autre.css?v=2',
   '/assets/pos-autre.js?v=2',
-  '/assets/pos-maison.css?v=25',
-  '/assets/pos-maison.js?v=25',
+  '/assets/pos-maison.css?v=26',
+  '/assets/pos-maison.js?v=26',
   '/assets/caisse-pairing.js?v=24',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

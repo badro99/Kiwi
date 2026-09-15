@@ -29,10 +29,10 @@
           pSubmitTitle:'Envoyer au fournisseur', pSubmitHint:'Un bon envoyé ne se renvoie pas : le second envoi serait une seconde commande.',
           pReceiveTitle:'Réception', pReceiveHint:'Saisissez ce qui est réellement entré. Rien n’est écrit si une seule ligne dépasse la quantité commandée.',
           pInvoice:'Montant facturé · MAD (facultatif)', pInvoiceHint:'Renseigné, il doit valoir exactement la marchandise reçue, sinon rien n’est reçu.',
-          pReturnTitle:'Retour fournisseur', pReturnHint:'On ne rend que ce qui est entré, et jamais deux fois.',
+          pReturnTitle:'Retour fournisseur', pReturnHint:'On ne rend que ce qui est entré, et jamais deux fois.', pCancel:'Annuler le bon',
           pRun:'Enregistrer', pDone:'Livre des achats mis à jour.', pLoading:'Lecture du livre des achats…',
           pNoOrders:'Aucun bon de commande ouvert.', pRefresh:'Rafraîchir', pOrderCreated:'Bon de commande créé',
-          pStatus:{ draft:'Brouillon', submitted:'Envoyé', partial:'Partiel', received:'Reçu' },
+          pStatus:{ draft:'Brouillon', submitted:'Envoyé', partial:'Partiel', received:'Reçu', cancelled:'Annulé' },
           payTitle:'Paie', paySub:'Bulletins calculés · CNSS, AMO, IGR · écriture au journal',
           payDenied:'Droit de paie requis', payDeniedD:'Les salaires ne se lisent pas avec une session de gérant. Seul le compte propriétaire · ou un opérateur Kiwi · ouvre la paie.',
           tabPrepare:'Calculer', tabBook:'Livre de paie',
@@ -200,10 +200,10 @@
           pSubmitTitle:'Send to the supplier', pSubmitHint:'A sent order is not sent twice: the second send would be a second order.',
           pReceiveTitle:'Receipt', pReceiveHint:'Enter what actually arrived. Nothing is written if a single line exceeds what was ordered.',
           pInvoice:'Invoiced amount · MAD (optional)', pInvoiceHint:'If given, it must match the goods received exactly, otherwise nothing is received.',
-          pReturnTitle:'Supplier return', pReturnHint:'Only what came in can go back, and never twice.',
+          pReturnTitle:'Supplier return', pReturnHint:'Only what came in can go back, and never twice.', pCancel:'Cancel order',
           pRun:'Record', pDone:'Purchase ledger updated.', pLoading:'Reading the purchase ledger…',
           pNoOrders:'No open purchase order.', pRefresh:'Refresh', pOrderCreated:'Purchase order created',
-          pStatus:{ draft:'Draft', submitted:'Sent', partial:'Partial', received:'Received' },
+          pStatus:{ draft:'Draft', submitted:'Sent', partial:'Partial', received:'Received', cancelled:'Cancelled' },
           payTitle:'Payroll', paySub:'Computed payslips · CNSS, AMO, income tax · journal entry',
           payDenied:'Payroll right required', payDeniedD:'Salaries are not read with a manager session. Only the owner account · or a Kiwi operator · opens payroll.',
           tabPrepare:'Compute', tabBook:'Payroll book',
@@ -368,10 +368,10 @@
           pSubmitTitle:'إرسال إلى المورد', pSubmitHint:'الأمر المرسل لا يُرسل مرتين: الإرسال الثاني طلب ثانٍ.',
           pReceiveTitle:'الاستلام', pReceiveHint:'أدخل ما دخل فعلًا. لا يُكتب شيء إذا تجاوز سطر واحد الكمية المطلوبة.',
           pInvoice:'المبلغ المفوتر · درهم (اختياري)', pInvoiceHint:'إن أدخلته وجب أن يساوي البضاعة المستلمة تمامًا، وإلا لن يُستلم شيء.',
-          pReturnTitle:'مرتجع إلى المورد', pReturnHint:'لا يُرد إلا ما دخل، ولا يُرد مرتين.',
+          pReturnTitle:'مرتجع إلى المورد', pReturnHint:'لا يُرد إلا ما دخل، ولا يُرد مرتين.', pCancel:'إلغاء الأمر',
           pRun:'تسجيل', pDone:'تم تحديث دفتر المشتريات.', pLoading:'جارٍ قراءة دفتر المشتريات…',
           pNoOrders:'لا يوجد أمر شراء مفتوح.', pRefresh:'تحديث', pOrderCreated:'تم إنشاء أمر الشراء',
-          pStatus:{ draft:'مسودة', submitted:'مُرسل', partial:'جزئي', received:'مستلم' },
+          pStatus:{ draft:'مسودة', submitted:'مُرسل', partial:'جزئي', received:'مستلم', cancelled:'ملغى' },
           payTitle:'الأجور', paySub:'كشوف محسوبة · الضمان الاجتماعي والتأمين الإجباري والضريبة على الدخل · قيد في اليومية',
           payDenied:'يلزم حق الأجور', payDeniedD:'الأجور لا تُقرأ بجلسة مدير. وحده حساب المالك · أو مشغّل Kiwi · يفتح الأجور.',
           tabPrepare:'الاحتساب', tabBook:'دفتر الأجور',
@@ -1086,6 +1086,10 @@
             '<p class="ops-proc-hint" style="margin:6px 0 0">' + esc(c.pInvoiceHint) + '</p>' +
             '<button class="kb atlas xs" style="margin-top:12px" type="button" data-po-run="receive-po">' + esc(c.pRun) + '</button></div>';
         }
+        if (o.status === 'draft' || o.status === 'submitted') {
+          act += '<div class="ops-proc-act" data-po-act>' + confirmBox +
+            '<button class="kb ghost xs" style="margin-top:12px" type="button" data-po-run="cancel-po">' + esc(c.pCancel) + '</button></div>';
+        }
         if (lines.some(function (l) { return (l.receivedQty || 0) - (l.returnedQty || 0) > 0; })) {
           act += '<div class="ops-proc-act" data-po-act><p class="ops-proc-actTitle">' + esc(c.pReturnTitle) + '</p>' +
             '<p class="ops-proc-hint">' + esc(c.pReturnHint) + '</p>' + qtyInputs(lines, 'return') + confirmBox +
@@ -1169,10 +1173,10 @@
         var button = event.target.closest('[data-po-run]');
         if (!button) return;
         var action = button.getAttribute('data-po-run'), block = button.closest('[data-po-act]'), order = button.closest('[data-po-card]');
-        var need = action === 'submit-po' || action === 'supplier-return';
+        var need = action === 'submit-po' || action === 'cancel-po' || action === 'supplier-return';
         if (need && !block.querySelector('[data-acct-confirm]').checked) return Kiwi.toast(c.confirmNeeded, { type:'warning' });
         var payload = { po:order.getAttribute('data-po-card') };
-        if (action !== 'submit-po') {
+        if (action !== 'submit-po' && action !== 'cancel-po') {
           payload.lines = Array.prototype.slice.call(block.querySelectorAll('[data-po-qty]')).map(function (input) {
             return { sku:input.getAttribute('data-po-qty'), qty:Number(input.value || 0) };
           }).filter(function (l) { return l.qty > 0; });

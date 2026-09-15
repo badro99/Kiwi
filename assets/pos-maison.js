@@ -540,7 +540,7 @@
   /* A voucher is spendable only while it has balance and is not expired. Keep
      the rule in one function so list, selection and final deduction agree. */
   const avoirExpired = (a) => !!(a && a.until && new Date(a.until).getTime() < Date.now());
-  const activeAvoirs = () => AVOIRS.filter((a) => a.balance > 0 && !avoirExpired(a));
+  const activeAvoirs = () => AVOIRS.filter((a) => a.balance > 0 && a.status !== 'cancelled' && a.status !== 'consumed' && !avoirExpired(a));
 
   /* Les avoirs (bons d'achat) d'une VRAIE boutique doivent survivre à un
      rechargement de la caisse — sinon un bon émis sur un retour disparaît au
@@ -554,7 +554,8 @@
   function persistAvoirs() {
     if (IS_DEMO) return;
     try {
-      const keep = AVOIRS.filter((a) => a && (a.balance > 0 || (a.until && new Date(a.until) > new Date())));
+      const keep = AVOIRS.filter((a) => a && a.balance > 0 && a.status !== 'cancelled'
+        && a.status !== 'consumed' && (!a.until || new Date(a.until) > new Date()));
       localStorage.setItem(AVOIR_KEY, JSON.stringify(keep));
     } catch (_) {}
   }
@@ -576,6 +577,62 @@
     });
     if (maxSeq >= avSeq) avSeq = maxSeq + 1;   // le prochain bon ne réutilise pas un code déjà restauré
   })();
+
+  function creditFromServer(row) {
+    return {
+      id: row.id, code: row.code, amount: Number(row.amountCents || 0) / 100,
+      balance: Number(row.balanceCents || 0) / 100, holderId: row.customerId || null,
+      holderName: row.customerName || 'Porteur du bon', motif: row.reason || 'Retour',
+      at: new Date(Number(row.createdAt || Date.now())), until: new Date(Number(row.expiresAt || 0)),
+      from: row.originalRef || row.originalSaleId || null, status: row.status || 'active',
+    };
+  }
+
+  async function creditRequest(body, query) {
+    const merchant = merchantSlug();
+    if (!merchant) throw new Error('merchant-unavailable');
+    const url = '/api/store-credits?merchant=' + encodeURIComponent(merchant) + (query || '');
+    const response = await fetch(url, body ? {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...body, merchant }),
+    } : { headers: { Accept: 'application/json' } });
+    let data = null;
+    try { data = await response.json(); } catch (_) {}
+    if (!response.ok || !data || data.error) {
+      const error = new Error((data && data.error) || `http-${response.status}`);
+      error.code = (data && data.error) || `http-${response.status}`;
+      throw error;
+    }
+    return data;
+  }
+
+  async function refreshRemoteAvoirs() {
+    if (IS_DEMO || typeof fetch !== 'function') return AVOIRS;
+    try {
+      const data = await creditRequest(null, '');
+      AVOIRS.splice(0, AVOIRS.length, ...(data.credits || []).map(creditFromServer));
+      persistAvoirs();
+      renderBadges();
+    } catch (_) { /* cached credits remain visible; redemption still fails closed server-side */ }
+    return AVOIRS;
+  }
+
+  function creditIntent(prefix) {
+    try { if (crypto && crypto.randomUUID) return `${prefix}:${crypto.randomUUID()}`; } catch (_) {}
+    return `${prefix}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 12)}`;
+  }
+
+  function stableCreditIssueId(sale, quantities, amountCents) {
+    const original = String((sale && (sale.serverId || sale.syncId || sale.id)) || 'sale')
+      .replace(/[^A-Za-z0-9:._-]/g, '').slice(0, 48);
+    const revision = Array.from(quantities.entries()).sort((a, b) => Number(a[0]) - Number(b[0])).map(([idx, qty]) => {
+      const line = sale && sale.lines && sale.lines[idx];
+      return `${idx}-${lineReturnedQty(line) + Number(qty || 0)}`;
+    }).join('_');
+    return `credit-issue:${original}:${revision}:${Math.round(Number(amountCents) || 0)}`.slice(0, 96);
+  }
+
+  refreshRemoteAvoirs();
 
   /* ───────────────────────── state ───────────────────────── */
   /* Le préfixe ne sert plus qu'à reconnaître les anciens journaux locaux lors
@@ -3693,7 +3750,7 @@
       const exch = e.target.closest('[data-mz-do-exch]');
       if (exch) { doExchange(); return; }
       const avoir = e.target.closest('[data-mz-do-avoir]');
-      if (avoir) { doAvoir(); return; }
+      if (avoir) { void doAvoir(); return; }
     };
     icons();
   }
@@ -3825,10 +3882,11 @@
     toast(`Échange ${sale.id}, choisissez l'article de remplacement dans la grille`);
   }
 
-  function doAvoir() {
+  async function doAvoir() {
     const ret = state.ret;
-    if (!ret) return;
+    if (!ret || state.retBusy) return;
     const sale = findSale(ret.saleId);
+    if (!sale) return;
     const idxs = Array.from(ret.picks);
     const quantities = new Map(idxs.map((i) => [i, pickedQty(ret, i, sale.lines[i])]));
     const amount = idxs.reduce((t, i) => t + sale.lines[i].unit * quantities.get(i), 0);
@@ -3836,13 +3894,35 @@
     /* `ret.motif` vaut null tant qu'aucune puce n'a été choisie : on l'écrit tel
        quel plutôt que d'inventer un motif que personne n'a donné. */
     const motif = ret.motif || 'Non précisé';
-    restoreLines(sale, idxs, quantities, `avoir (${motif.toLowerCase()})`);
     const c = saleClient(sale);
-    const av = issueAvoir(amount, c, `${motif}, retour ${sale.id}`, sale.id);
-    recordReturn(sale, idxs, amount, motif, 'avoir', av.code, quantities);
-    state.ret = null;
-    refreshOps();
-    openVoucher(av, { mode: 'fresh' });
+    const resellable = motif !== 'Défaut';
+    state.retBusy = true;
+    try {
+      /* The credit is booked before stock or the local sale changes.  A lost
+         connection therefore leaves the return untouched, not a free item in
+         stock with no liability recorded. */
+      const originalSaleId = sale.serverId || sale.syncId || sale.id;
+      const av = await issueAvoir(amount, c, `${motif}, retour ${sale.id}`, originalSaleId, {
+        requestId: stableCreditIssueId(sale, quantities, amount * 100),
+        originalRef: sale.num || sale.id, resellable,
+        lines: idxs.map((i) => ({
+          itemId: sale.lines[i].pid, variantId: sale.lines[i].variantId || '',
+          name: (P[sale.lines[i].pid] && P[sale.lines[i].pid].name) || sale.lines[i].name || 'Article',
+          size: sale.lines[i].size || '', qty: quantities.get(i), unitCents: Math.round((sale.lines[i].unit || 0) * 100),
+        })),
+      });
+      if (resellable) restoreLines(sale, idxs, quantities, `avoir (${motif.toLowerCase()})`);
+      else markDamagedLines(sale, idxs, quantities, `retour abîmé (${motif.toLowerCase()})`);
+      recordReturn(sale, idxs, amount, motif, resellable ? 'avoir' : 'avoir-damaged', av.code, quantities);
+      state.ret = null;
+      refreshOps();
+      openVoucher(av, { mode: 'fresh' });
+    } catch (error) {
+      const detail = error && error.code === 'sale-credit-exceeds-available'
+        ? 'Ce ticket n’est pas encore synchronisé, ou il a déjà été remboursé jusqu’à son montant disponible.'
+        : 'Connexion au registre des avoirs impossible. Rien n’a été remis en stock.';
+      toast('Avoir non émis', detail);
+    } finally { state.retBusy = false; }
   }
 
   function restoreLines(sale, idxs, quantities, note) {
@@ -3859,7 +3939,35 @@
     persistDay();  // le retour change la recette du jour, pas seulement l'affichage
   }
 
-  function issueAvoir(amount, cliente, motif, fromSaleId) {
+  function markDamagedLines(sale, idxs, quantities, note) {
+    idxs.forEach((i) => {
+      const ln = sale.lines[i];
+      const qty = Math.min(lineAvailableQty(ln), Number(quantities.get(i)) || 0);
+      if (qty) markLineReturned(ln, qty, note);
+    });
+    /* The unit physically came back but is not sellable.  The sale remains
+       reduced while catalogue stock stays unchanged; the return audit carries
+       resellable=false through the server credit event. */
+    persistDay();
+  }
+
+  async function issueAvoir(amount, cliente, motif, fromSaleId, context) {
+    if (!IS_DEMO) {
+      const data = await creditRequest({
+        action: 'issue', id: (context && context.requestId) || creditIntent('credit-issue'), originalSaleId: fromSaleId,
+        originalRef: context && context.originalRef, amountCents: Math.round(amount * 100),
+        customerId: cliente && cliente.id, customerName: cliente && cliente.name,
+        reason: motif, expiresAt: Date.now() + 182 * 24 * 3600 * 1000,
+        resellable: !context || context.resellable !== false,
+        lines: context && context.lines,
+      });
+      const av = creditFromServer(data.credit);
+      const old = AVOIRS.findIndex((item) => item.code === av.code);
+      if (old >= 0) AVOIRS.splice(old, 1, av); else AVOIRS.unshift(av);
+      persistAvoirs(); renderBadges();
+      toast(`${av.code} émis, ${fmtMAD(amount)}`);
+      return av;
+    }
     const av = {
       code: `AV-${avSeq++}`,
       amount, balance: amount,
@@ -4008,7 +4116,7 @@
       return true;
     };
 
-    $('#mz-exch-go', el).onclick = () => {
+    $('#mz-exch-go', el).onclick = async () => {
       /* Pre-check before any money moves (piece-aware like the take). */
       if (!canHoldStock(newPid, newSize, 1, newIsPiece)) {
         toast(`${newP.name} · ${newSize}, stock insuffisant pour l'échange`);
@@ -4081,14 +4189,40 @@
           toast('Numéro de ticket indisponible', 'Reconnectez cette caisse pour réserver sa prochaine série.');
         });
       } else if (diff < 0) {
-        closeVeil('#mz-exch-veil');
-        if (!apply()) { refreshOps(); return; }
-        markLineReturned(ln, 1, `échange ${sale.id}`);
-        persistDay();
-        const av = issueAvoir(-diff, c, `Différence échange ${sale.id}`, sale.id);
-        recordReturn(sale, [ex.idx], ln.unit, `Échange ${sale.id}`, 'echange', av.code);
-        refreshOps();
-        openVoucher(av, { mode: 'fresh' });
+        const quantities = new Map([[ex.idx, 1]]);
+        const originalSaleId = sale.serverId || sale.syncId || sale.id;
+        const go = $('#mz-exch-go', el);
+        if (go) go.disabled = true;
+        try {
+          /* Book the liability first. If the network or server refuses, the old
+             item and both stock positions remain untouched. The deterministic
+             request id makes a lost response safe to retry. */
+          const av = await issueAvoir(-diff, c, `Différence échange ${sale.id}`, originalSaleId, {
+            requestId: stableCreditIssueId(sale, quantities, -diff * 100),
+            originalRef: sale.num || sale.id,
+            resellable: true,
+            lines: [{
+              itemId: ln.pid, variantId: ln.variantId || '',
+              name: oldP.name || 'Article', size: ln.size || '', qty: 1,
+              unitCents: Math.round((ln.unit || 0) * 100),
+            }],
+          });
+          closeVeil('#mz-exch-veil');
+          if (!apply()) {
+            toast('Avoir émis, échange à régulariser', `${av.code} existe mais le remplacement est devenu indisponible.`);
+            refreshOps();
+            openVoucher(av, { mode: 'fresh' });
+            return;
+          }
+          markLineReturned(ln, 1, `échange ${sale.id}`);
+          persistDay();
+          recordReturn(sale, [ex.idx], ln.unit, `Échange ${sale.id}`, 'echange', av.code);
+          refreshOps();
+          openVoucher(av, { mode: 'fresh' });
+        } catch (_) {
+          if (go) go.disabled = false;
+          toast('Avoir non émis', 'Connexion au registre impossible. Aucun article ni stock n’a été modifié.');
+        }
       } else {
         closeVeil('#mz-exch-veil');
         if (!apply()) { refreshOps(); return; }
@@ -4436,6 +4570,7 @@
     let avoirPart = null;                   /* { m:'avoir', amount, code } */
     const settled = [];                     /* les règlements déjà posés */
     let committed = false;                  /* double tap must never book twice */
+    const creditCommitId = creditIntent('credit-redeem');
     const appliedAvoirCodes = () => {
       const codes = [];
       if (avoirPart) codes.push(avoirPart.code);
@@ -4603,6 +4738,10 @@
         <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Avoir en paiement</h3>
         <p class="modal-subtle">Scannez le bon, ou choisissez-le, il se déduit du total</p>
+        <form id="mz-av-code-form" style="display:flex;gap:8px;margin:12px 0;">
+          <input class="sk-input mono" id="mz-av-code" autocomplete="off" autocapitalize="characters" placeholder="Scanner ou saisir AV-…" aria-label="Code de l’avoir" style="flex:1;min-width:0;" />
+          <button class="mz-btn secondary" type="submit">Utiliser</button>
+        </form>
         <div class="mz-pay-opts">
           ${avs.map((a) => `
             <button class="mz-pay-opt" data-mz-av-use="${a.code}">
@@ -4614,22 +4753,40 @@
         <div class="mz-sheet-foot"><button class="mz-btn secondary" id="mz-av-back" style="flex:1;">Retour</button></div>`;
       icons(); closeBtns();
       $('#mz-av-back', el).onclick = stepMethods;
+      const applyCode = async (rawCode) => {
+        const code = String(rawCode || '').trim().toUpperCase();
+        if (!code) return;
+        let av = AVOIRS.find((item) => String(item.code).toUpperCase() === code);
+        if (!av && !IS_DEMO) {
+          try {
+            const data = await creditRequest(null, '&code=' + encodeURIComponent(code));
+            const row = data.credits && data.credits[0];
+            if (row) {
+              av = creditFromServer(row);
+              const old = AVOIRS.findIndex((item) => item.code === av.code);
+              if (old >= 0) AVOIRS.splice(old, 1, av); else AVOIRS.unshift(av);
+              persistAvoirs();
+            }
+          } catch (_) {}
+        }
+        if (!av || avoirExpired(av) || av.status !== 'active' || av.balance <= 0) {
+          toast('Bon indisponible', 'Code introuvable, expiré ou déjà consommé.');
+          return;
+        }
+        const applied = Math.min(av.balance, portion());
+        if (avoirPart) settled.push({ m: 'avoir', amount: avoirPart.amount, code: avoirPart.code });
+        avoirPart = { m: 'avoir', amount: applied, code: av.code };
+        share = 1; custom = 0;
+        if (due() <= 0.009) void commit();
+        else { toast(`${av.code} appliqué, reste ${fmtMAD(due())} à payer`); stepMethods(); }
+      };
+      $('#mz-av-code-form', el).onsubmit = (event) => {
+        event.preventDefault();
+        void applyCode($('#mz-av-code', el).value);
+      };
+      $('#mz-av-code', el).focus();
       $$('[data-mz-av-use]', el).forEach((b) => {
-        b.onclick = () => {
-          const av = AVOIRS.find((a) => a.code === b.dataset.mzAvUse);
-          if (!av || avoirExpired(av)) { toast('Bon indisponible', 'Bon introuvable ou expiré.'); stepMethods(); return; }
-          /* `portion()`, pas `due()`. Sans part choisie les deux sont égaux et
-             le bon se déduit entièrement, comme avant. Mais quand la caissière
-             a explicitement demandé la moitié, le bon prenait quand même tout :
-             une cliente qui voulait garder du solde sur son avoir en sortait
-             avec un bon vidé, et il n'y avait pas de retour en arrière. */
-          const applied = Math.min(av.balance, portion());
-          if (avoirPart) settled.push({ m: 'avoir', amount: avoirPart.amount, code: avoirPart.code });
-          avoirPart = { m: 'avoir', amount: applied, code: av.code };
-          share = 1; custom = 0;   /* la part est consommée, comme dans settle() */
-          if (due() <= 0.009) commit();
-          else { toast(`${av.code} appliqué, reste ${fmtMAD(due())} à payer`); stepMethods(); }
-        };
+        b.onclick = () => { void applyCode(b.dataset.mzAvUse); };
       });
     };
 
@@ -4716,7 +4873,7 @@
       }, 1400);
     };
 
-    const commit = () => {
+    const commit = async () => {
       if (committed) return;
       const parts = (avoirPart ? [avoirPart] : []).concat(settled);
       for (const part of parts) {
@@ -4728,14 +4885,36 @@
         }
       }
       committed = true;
-      for (const part of parts) {
-        if (part.m !== 'avoir') continue;
-        const av = AVOIRS.find((a) => a.code === part.code);
-        if (av) {                              // garde-fou : un code introuvable (bon d'une autre caisse) ne fait plus planter l'encaissement
-          av.balance -= part.amount;
-          persistAvoirs();                     // le solde entamé survit au rechargement
+      const creditParts = parts.filter((part) => part.m === 'avoir');
+      try {
+        let remote = null;
+        if (!IS_DEMO && creditParts.length) {
+          /* All vouchers are consumed by ONE server statement.  Either every
+             balance is still valid or none changes; a second caisse cannot
+             spend the same code between local validation and checkout. */
+          remote = await creditRequest({
+            action: 'redeem-batch', id: creditCommitId,
+            saleId: opts.sale && opts.sale.id,
+            detail: opts.title || 'Vente Maison',
+            credits: creditParts.map((part) => ({ code: part.code, amountCents: Math.round(part.amount * 100) })),
+          });
+        }
+        const remoteByCode = new Map(((remote && remote.credits) || []).map((row) => [row.code, creditFromServer(row)]));
+        for (const part of creditParts) {
+          const av = AVOIRS.find((a) => a.code === part.code);
+          if (!av) continue;
+          const saved = remoteByCode.get(part.code);
+          av.balance = saved ? saved.balance : Math.max(0, av.balance - part.amount);
+          av.status = saved ? saved.status : (av.balance > 0 ? 'active' : 'consumed');
           toast(av.balance > 0 ? `${av.code}, reste ${fmtMAD(av.balance)} dessus` : `${av.code} consommé en totalité`);
         }
+        persistAvoirs();
+      } catch (error) {
+        committed = false;
+        await refreshRemoteAvoirs();
+        toast('Avoir refusé par le registre', 'Le solde a changé, le bon a expiré ou une autre caisse vient de l’utiliser. Aucun encaissement n’a été enregistré.');
+        stepMethods();
+        return;
       }
       const res = opts.onPaid(parts) || {};
       if (res.sale) opts.sale = res.sale;

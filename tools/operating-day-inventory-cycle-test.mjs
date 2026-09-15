@@ -290,7 +290,8 @@ assert.match(caisseSource, /skWasteIntentId = stockIntentId\('waste'\)/, 'waste 
 assert.match(caisseSource, /operationId: wasteRef/, 'waste caller carries its modal intent');
 assert.match(caisseSource, /if \(!movement\) \{ failed = true; return; \}/, 'receive caller stops success on movement conflict');
 assert.match(caisseSource, /if \(!movement\) \{ toast\('Perte refusée/, 'waste caller surfaces movement conflict');
-assert.match(countSource, /intentId: newCountIntentId\(\)/, 'count intent is created with the dialog');
+assert.match(countSource, /intentId: \(draft && draft\.intentId\) \|\| newCountIntentId\(\)/,
+  'count intent is created with the dialog or restored with its saved draft');
 assert.match(countSource, /id: countState\.intentId/, 'count retry carries the dialog intent');
 assert.match(countApiSource, /existing\.status === 'submitted'/, 'count API replays the frozen submitted intent');
 assert.match(countApiSource, /replayed: true/, 'count API marks an idempotent replay');

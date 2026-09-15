@@ -200,8 +200,8 @@
     "sha": "d9d9ffc0deaae7a7"
   },
   "assets/dashboard-extra.js": {
-    "v": "7",
-    "sha": "44a4c6f0b56b8640"
+    "v": "8",
+    "sha": "0a0b48f1e10f3870"
   },
   "assets/dashboard-native.js": {
     "v": "1",
@@ -492,8 +492,8 @@
     "sha": "b24347182d9bcf25"
   },
   "assets/operations-ui.js": {
-    "v": "13",
-    "sha": "6884489d7631e914"
+    "v": "14",
+    "sha": "949b4dd942db546d"
   },
   "assets/operations.js": {
     "v": "10",
@@ -605,7 +605,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "38",
-    "sha": "8c110d512074cf12"
+    "sha": "78a79d7594f00dd6"
   },
   "assets/pos-epicerie.css": {
     "v": "5",
@@ -656,8 +656,8 @@
     "sha": "7ac81391d3454891"
   },
   "assets/pos-inventory-count.js": {
-    "v": "7",
-    "sha": "26cab7acf330fbf6"
+    "v": "8",
+    "sha": "26c7d63cea5ed54e"
   },
   "assets/pos-librairie.css": {
     "v": "5",
@@ -668,12 +668,12 @@
     "sha": "782a2a019b86fc81"
   },
   "assets/pos-maison.css": {
-    "v": "25",
+    "v": "26",
     "sha": "ae3c4dedfa5d7971"
   },
   "assets/pos-maison.js": {
-    "v": "25",
-    "sha": "0928816e2eb4806c"
+    "v": "26",
+    "sha": "20713d06c3149825"
   },
   "assets/pos-mobile.css": {
     "v": "3",

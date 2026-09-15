@@ -13,6 +13,7 @@ const uiSource = fs.readFileSync(new URL('../assets/operations-ui.js', import.me
 const apiSource = fs.readFileSync(new URL('../functions/api/operations.js', import.meta.url), 'utf8');
 const teamSource = fs.readFileSync(new URL('../assets/team.js', import.meta.url), 'utf8');
 const agentSource = fs.readFileSync(new URL('../assets/agent.js', import.meta.url), 'utf8');
+const dashboardExtraSource = fs.readFileSync(new URL('../assets/dashboard-extra.js', import.meta.url), 'utf8');
 const sw = fs.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
 const pages = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html']
   .map((name) => fs.readFileSync(new URL('../' + name, import.meta.url), 'utf8'));
@@ -40,6 +41,18 @@ const D1 = (db) => ({
       async all() { return { results: db.prepare(sql).all(...params) }; },
     };
     return stmt;
+  },
+  async batch(statements) {
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const results = [];
+      for (const statement of statements) results.push(await statement.run());
+      db.exec('COMMIT');
+      return results;
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
   },
 });
 
@@ -443,6 +456,9 @@ const proc = (id, action, payload) => command({ id, idempotencyKey: id, domain: 
 const confirmed = (body) => Object.assign(body, { confirmed: true });
 const poRow = (number) => db.prepare('SELECT * FROM purchase_orders WHERE merchant = ? AND number = ?').get(MERCHANT, number);
 const poLine = (number, sku) => db.prepare('SELECT * FROM purchase_order_lines WHERE merchant = ? AND number = ? AND sku = ?').get(MERCHANT, number, sku);
+const poStock = (number, reason) => db.prepare(
+  'SELECT COALESCE(SUM(qty_milli), 0) AS qty FROM inventory_movements WHERE merchant = ? AND ref_id = ? AND reason = ?'
+).get(MERCHANT, number, reason).qty;
 
 ok(poRow('BC-2026-000001').total_cents === 84000 && poLine('BC-2026-000001', 'FARINE-25').qty === 4,
   'the purchase order opened earlier persisted its supplier, its line and its value');
@@ -476,6 +492,17 @@ ok(unsentSubmit.status === 409 && unsentSubmit.data.error === 'confirmation-requ
 const submitted = await post(ownerCookie, confirmed(proc('op:po-submit-01', 'submit-po', { po: 'BC-2026-000002' })));
 ok(submitted.data.command.status === 'completed' && poRow('BC-2026-000002').status === 'submitted', 'the confirmed order leaves for the supplier');
 
+const cancellable = await post(ownerCookie, proc('op:po-cancel-base', 'create-po', {
+  supplier: 'Atlas Emballage', lines: [{ sku: 'SAC-01', label: 'Sac', qty: 10, unitPrice: 2 }],
+}));
+const cancelNumber = cancellable.data.command.result.number;
+const unconfirmedCancel = await post(ownerCookie, proc('op:po-cancel-no', 'cancel-po', { po: cancelNumber }));
+ok(unconfirmedCancel.status === 409 && poRow(cancelNumber).status === 'draft', 'purchase-order cancellation requires explicit confirmation');
+const cancelledPo = await post(ownerCookie, confirmed(proc('op:po-cancel-ok', 'cancel-po', { po: cancelNumber })));
+ok(cancelledPo.data.command.result.status === 'cancelled' && poRow(cancelNumber).status === 'cancelled', 'a confirmed unreceived order enters a durable cancelled state');
+ok(!db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'inventory_movements'").get(),
+  'creating, submitting or cancelling a purchase order does not change stock');
+
 const resubmit = await post(ownerCookie, confirmed(proc('op:po-submit-02', 'submit-po', { po: 'BC-2026-000002' })));
 ok(resubmit.data.command.status === 'failed' && resubmit.data.command.lastError === 'bad-transition:submitted',
   'a second send is refused — it would be a second order nobody decided');
@@ -497,12 +524,16 @@ const partial = await post(ownerCookie, proc('op:po-recv-001', 'receive-po', { p
 ok(partial.data.command.status === 'completed' && partial.data.command.result.status === 'partial' && partial.data.command.result.outstandingUnits === 18,
   'a half-delivered order stays partial and says what is still owed');
 ok(poRow('BC-2026-000002').invoiced_cents === 10200, 'the matched supplier invoice is booked against the order');
+ok(poStock('BC-2026-000002', 'receipt') === 12000,
+  'only the received quantity enters the durable stock ledger');
 
 const unknownLine = await post(ownerCookie, proc('op:po-line-001', 'receive-po', { po: 'BC-2026-000002', lines: [{ sku: 'SUCRE-1K', qty: 1 }] }));
 ok(unknownLine.data.command.status === 'failed' && unknownLine.data.command.lastError === 'line-not-found', 'a reference nobody ordered cannot be received against the order');
 
 const rest = await post(ownerCookie, proc('op:po-recv-002', 'receive-po', { po: 'BC-2026-000002', lines: [{ sku: 'LAIT-1L', qty: 12 }, { sku: 'BEURRE-500', qty: 6 }] }));
 ok(rest.data.command.result.status === 'received' && rest.data.command.result.outstandingUnits === 0, 'the closing delivery completes the order');
+ok(poStock('BC-2026-000002', 'receipt') === 30000,
+  'successive deliveries accumulate exactly once in stock');
 
 const settled = await post(ownerCookie, proc('op:po-recv-003', 'receive-po', { po: 'BC-2026-000002', lines: [{ sku: 'LAIT-1L', qty: 1 }] }));
 ok(settled.data.command.status === 'failed' && settled.data.command.lastError === 'not-submitted:received', 'a closed order takes no further delivery');
@@ -513,6 +544,8 @@ ok(overReturn.data.command.status === 'failed' && overReturn.data.command.lastEr
 const returned = await post(ownerCookie, confirmed(proc('op:po-ret-002', 'supplier-return', { po: 'BC-2026-000002', lines: [{ sku: 'BEURRE-500', qty: 2 }] })));
 ok(returned.data.command.result.creditCents === 8400 && returned.data.command.result.heldUnits === 28,
   'a return prices the credit at the ordered unit price and leaves what is still held');
+ok(poStock('BC-2026-000002', 'supplier-return') === -2000,
+  'a supplier return removes the returned quantity from the durable stock ledger');
 
 const doubleReturn = await post(ownerCookie, confirmed(proc('op:po-ret-003', 'supplier-return', { po: 'BC-2026-000002', lines: [{ sku: 'BEURRE-500', qty: 5 }] })));
 ok(doubleReturn.data.command.status === 'failed' && doubleReturn.data.command.lastError === 'exceeds-received', 'the same crate cannot be returned twice');
@@ -526,7 +559,7 @@ ok(apiSource.includes('CREATE UNIQUE INDEX IF NOT EXISTS idx_po_seq'), 'the data
    commerçant taperait le numéro et la référence de mémoire.  Le livre des achats
    se relit donc, ligne par ligne, avec le reste dû. */
 const book = await get(ownerCookie, `?merchant=${MERCHANT}&view=purchase-orders&limit=25`);
-ok(book.status === 200 && book.data.orders.map((o) => o.number).join(',') === 'BC-2026-000002,BC-2026-000001',
+ok(book.status === 200 && book.data.orders.map((o) => o.number).join(',') === 'BC-2026-000003,BC-2026-000002,BC-2026-000001',
   'the purchase book reads back, most recent order first');
 const closed = book.data.orders.find((o) => o.number === 'BC-2026-000002');
 const closedLine = closed.lines.find((l) => l.sku === 'BEURRE-500');
@@ -897,7 +930,7 @@ const aiPo = await post(managerAtTill, ai('op:ai-po-01', 'create-po', {
   said: 'commande 10 kg de café chez Atlas', supplier: 'Atlas Torréfaction',
   lines: [{ sku: 'CAFE-1KG', label: 'Café en grains 1 kg', qty: 10, unitPrice: 120 }],
 }));
-ok(aiPo.data.command.status === 'draft' && /^BC-\d{4}-000003$/.test(aiPo.data.command.result.number)
+ok(aiPo.data.command.status === 'draft' && /^BC-\d{4}-000004$/.test(aiPo.data.command.result.number)
   && aiPo.data.command.result.totalCents === 120000
   && poRow(aiPo.data.command.result.number).supplier === 'Atlas Torréfaction',
   'a purchase order dictated to the assistant takes the next rank in the same book as a typed one — and lands as a draft, not as an order already sent');
@@ -1170,7 +1203,7 @@ ok(uiSource.includes('window.KiwiProcurement') && uiSource.includes("O.create('p
 ok(uiSource.includes("currency:'MAD', lines:[]") && uiSource.includes('payload.lines.push({ sku:sku') && !uiSource.includes('purchaseOrderId'),
   'the purchase-order console sends a real supplier and real lines, not a flat identifier');
 ok(uiSource.includes("O.create('procurement', action, payload"), 'the procurement console dispatches the lifecycle through the durable command API');
-['submit-po', 'receive-po', 'supplier-return'].forEach((action) =>
+['submit-po', 'receive-po', 'cancel-po', 'supplier-return'].forEach((action) =>
   ok(uiSource.includes(`data-po-run="${action}"`), `the product can reach procurement ${action}`));
 ok(uiSource.includes('invoiceAmount') && uiSource.includes('data-po-invoice'),
   'the reception screen carries the supplier invoice, so the three-way match is reachable');
@@ -1181,6 +1214,8 @@ ok(uiSource.includes('O.purchaseOrders({ open:true') && browserSource.includes("
 ok(uiSource.includes("cmd.status !== 'completed' && cmd.status !== 'draft'"), 'a freshly opened purchase order is not reported as a failure');
 ok(uiSource.includes("H['supplier-new-po']") && uiSource.includes("openProcurement('create')") && uiSource.includes("openProcurement('orders')"),
   'both purchase-order entry points open the real console for a real merchant');
+ok(dashboardExtraSource.includes("KiwiOperationsUI?.openProcurement") && dashboardExtraSource.includes("openProcurement('orders')"),
+  'the Maison supplier tile opens the durable purchasing book instead of a dead starter drawer');
 /* Comptabilité — les quatre actions serveur doivent être atteignables depuis le
    produit, sinon le livre n'existe que dans les tests. */
 ok(uiSource.includes("O.create('accounting', action, payload"), 'the accounting console dispatches through the durable command API');

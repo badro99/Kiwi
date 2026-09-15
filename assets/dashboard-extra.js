@@ -127,22 +127,16 @@
     const lang = trLang();
     const str = SUPPLIER_STR[lang] || SUPPLIER_STR.fr;
 
-    /* A real / custom-venue merchant has no supplier history yet — show the
-     * starter state instead of leaking Café Atlas's demo supplier roster and POs
-     * (mirrors view-margins). */
+    /* Real merchants use the durable procurement workspace.  The former
+     * "your procurement will show here" drawer was a dead end: the purchase
+     * order engine already existed, but Maison owners could not reach it from
+     * the Fournisseurs tile.  Demo fixtures remain below for the sales demo. */
     if (window.KiwiVenue?.isCustom?.() || window.KiwiEnv?.isReal?.()) {
-      const T = ({
-        fr: { s: 'Compte en démarrage', h: 'Votre approvisionnement apparaîtra ici', d: 'Créez vos bons de commande et Kiwi suit vos fournisseurs, vos délais et vos dépenses d’achat, automatiquement.' },
-        en: { s: 'Account starting up', h: 'Your procurement will show here', d: 'Create your purchase orders and Kiwi tracks your suppliers, lead times and purchasing spend, automatically.' },
-        ar: { s: 'حساب في بدايته', h: 'سيظهر توريدك هنا', d: 'أنشئ أوامر الشراء وسيتابع Kiwi موردّيك وآجالك ومصاريف الشراء تلقائيًا.' },
-      })[lang] || { s: '', h: 'Your procurement will show here', d: '' };
-      drawer({
-        title: str.title, subtitle: T.s, width: 520,
-        body: `<div style="padding:26px 8px 14px;text-align:center;">` +
-          `<div style="font-size:14.5px;font-weight:600;color:var(--ink);">${T.h}</div>` +
-          `<div style="font-size:12.5px;color:var(--n-500);margin-top:7px;line-height:1.55;max-width:360px;margin-inline:auto;">${T.d}</div>` +
-          `</div>`,
-      });
+      if (window.KiwiOperationsUI?.openProcurement) {
+        window.KiwiOperationsUI.openProcurement('orders');
+      } else {
+        toast(str.title, { type: 'warning', desc: lang === 'fr' ? 'Le module achats est en cours de chargement. Réessayez dans un instant.' : 'The purchasing module is still loading. Try again in a moment.' });
+      }
       return;
     }
 

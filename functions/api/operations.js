@@ -14,7 +14,7 @@ import { tenantFor } from './_private.js';
 
 const ACTIONS = {
   notification: new Set(['send-email', 'send-whatsapp', 'send-sms', 'send-receipt', 'send-reminder', 'send-link', 'set-preferences']),
-  procurement: new Set(['create-po', 'submit-po', 'receive-po', 'supplier-return']),
+  procurement: new Set(['create-po', 'submit-po', 'receive-po', 'cancel-po', 'supplier-return']),
   payroll: new Set(['export-payroll', 'prepare-payslips', 'submit-cnss']),
   accounting: new Set(['export-journal', 'create-invoice', 'credit-note', 'lock-period']),
   payment: new Set(['create-link', 'cancel-link', 'refund-link', 'settle-link']),
@@ -22,7 +22,7 @@ const ACTIONS = {
   ai: new Set(['stock-adjust', 'reprint', 'update-order-status', 'message-customer', 'create-po']),
 };
 const CONFIRM = new Set([
-  'procurement:submit-po', 'procurement:supplier-return', 'payroll:submit-cnss',
+  'procurement:submit-po', 'procurement:cancel-po', 'procurement:supplier-return', 'payroll:submit-cnss',
   'accounting:credit-note', 'accounting:lock-period', 'payment:cancel-link',
   'payment:refund-link', 'ai:stock-adjust', 'ai:reprint', 'ai:update-order-status',
   'ai:message-customer', 'ai:create-po',
@@ -319,7 +319,7 @@ async function mayCommand(request, env, merchant, domain, action) {
    l'histoire entière d'une commande se voit quand même : la commande, elle,
    garde son compteur de tentatives et le vérificateur les compare. */
 async function seal(parts) {
-  const bytes = new TextEncoder().encode(parts.join(' '));
+  const bytes = new TextEncoder().encode(parts.join('\0'));
   const sum = await crypto.subtle.digest('SHA-256', bytes);
   return Array.from(new Uint8Array(sum)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
@@ -892,12 +892,66 @@ async function ensurePurchase(env) {
     `CREATE TABLE IF NOT EXISTS purchase_order_lines (
       id TEXT PRIMARY KEY, merchant TEXT NOT NULL, number TEXT NOT NULL,
       line_no INTEGER NOT NULL, sku TEXT NOT NULL, label TEXT NOT NULL DEFAULT '',
+      item_id TEXT NOT NULL DEFAULT '', variant_id TEXT NOT NULL DEFAULT '',
+      location_id TEXT NOT NULL DEFAULT 'principal',
       unit TEXT NOT NULL DEFAULT '', qty INTEGER NOT NULL, unit_cents INTEGER NOT NULL,
       received_qty INTEGER NOT NULL DEFAULT 0, returned_qty INTEGER NOT NULL DEFAULT 0,
       created_ts INTEGER NOT NULL
     )`
   ).run();
+  for (const column of [
+    "item_id TEXT NOT NULL DEFAULT ''",
+    "variant_id TEXT NOT NULL DEFAULT ''",
+    "location_id TEXT NOT NULL DEFAULT 'principal'",
+  ]) {
+    try { await env.DB.prepare(`ALTER TABLE purchase_order_lines ADD COLUMN ${column}`).run(); } catch (_) {}
+  }
   await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_po_line_sku ON purchase_order_lines (merchant, number, sku)').run();
+}
+
+async function ensurePurchaseStock(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS inventory_movements (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, item_id TEXT NOT NULL,
+      variant_id TEXT NOT NULL DEFAULT '', location_id TEXT NOT NULL DEFAULT 'principal',
+      qty_milli INTEGER NOT NULL, reason TEXT NOT NULL, unit_cost_cents INTEGER,
+      unit_cost_rate INTEGER, currency TEXT NOT NULL DEFAULT 'MAD', ref_type TEXT NOT NULL DEFAULT '',
+      ref_id TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', actor TEXT NOT NULL DEFAULT '',
+      occurred_ts INTEGER NOT NULL, srv_ts INTEGER NOT NULL, reversal_of TEXT NOT NULL DEFAULT '',
+      meta TEXT, payload_hash TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL
+    )`
+  ).run();
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS inventory_sync_sequences (merchant TEXT PRIMARY KEY, last_ts INTEGER NOT NULL)').run();
+}
+
+async function purchaseStockCursor(env, merchant) {
+  const at = now();
+  await env.DB.prepare('INSERT OR IGNORE INTO inventory_sync_sequences (merchant, last_ts) VALUES (?, 0)').bind(merchant).run();
+  const row = await env.DB.prepare(
+    'UPDATE inventory_sync_sequences SET last_ts = CASE WHEN last_ts >= ? THEN last_ts + 1 ELSE ? END WHERE merchant = ? RETURNING last_ts AS value'
+  ).bind(at, at, merchant).first();
+  return Number(row && row.value) || at;
+}
+
+async function purchaseStockStatement(env, row, order, line, move, direction) {
+  const at = now();
+  const id = `po:${row.id}:${direction}:${line.sku}`.replace(/[^A-Za-z0-9:._-]/g, '').slice(0, 80);
+  const qtyMilli = move.qty * 1000 * (direction === 'return' ? -1 : 1);
+  const reason = direction === 'return' ? 'supplier-return' : 'receipt';
+  const meta = JSON.stringify({ supplier: clean(order.supplier, 160), po: clean(order.number, 40), sku: clean(line.sku, 60) });
+  const payloadHash = await seal([id, row.merchant, line.item_id || line.sku, line.variant_id || '', line.location_id || 'principal', qtyMilli, reason, line.unit_cents, order.number]);
+  const cursor = await purchaseStockCursor(env, row.merchant);
+  return env.DB.prepare(
+    `INSERT OR IGNORE INTO inventory_movements
+      (id, merchant, item_id, variant_id, location_id, qty_milli, reason,
+       unit_cost_cents, unit_cost_rate, currency, ref_type, ref_id, note, actor,
+       occurred_ts, srv_ts, reversal_of, meta, payload_hash, created_ts)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'purchase-order', ?, ?, ?, ?, ?, '', ?, ?, ?)`
+  ).bind(id, row.merchant, line.item_id || line.sku, line.variant_id || '', line.location_id || 'principal',
+    qtyMilli, reason, Number(line.unit_cents || 0), Number(line.unit_cents || 0) * 100,
+    clean(order.currency, 3) || 'MAD', order.number,
+    direction === 'return' ? `Retour fournisseur ${order.number}` : `Réception ${order.number}`,
+    clean(row.actor_label, 100) || 'Propriétaire', at, cursor, meta, payloadHash, at);
 }
 
 /* Les quantités sont des entiers : une demi-bouteille commandée n'existe pas,
@@ -920,7 +974,9 @@ function poLines(payload) {
     if (!Number.isFinite(unitCents) || unitCents < 0) return { error: 'invalid-price' };
     lines.push({
       sku, qty, unitCents, label: clean(item.label, 160),
-      unit: clean(item.unit, 24),
+      unit: clean(item.unit, 24), itemId: clean(item.itemId || item.item_id, 80) || sku,
+      variantId: clean(item.variantId || item.variant_id, 80),
+      locationId: clean(item.locationId || item.location_id, 80) || 'principal',
     });
   }
   return { lines };
@@ -947,10 +1003,11 @@ async function writePurchaseOrder(env, order, lines) {
       for (let i = 0; i < lines.length; i += 1) {
         await env.DB.prepare(
           `INSERT INTO purchase_order_lines
-           (id, merchant, number, line_no, sku, label, unit, qty, unit_cents, received_qty, returned_qty, created_ts)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)`
+           (id, merchant, number, line_no, sku, label, item_id, variant_id, location_id, unit, qty, unit_cents, received_qty, returned_qty, created_ts)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)`
         ).bind(`${order.id}:${i}`, order.merchant, number, i + 1, lines[i].sku,
-          lines[i].label, lines[i].unit, lines[i].qty, lines[i].unitCents, now()).run();
+          lines[i].label, lines[i].itemId, lines[i].variantId, lines[i].locationId,
+          lines[i].unit, lines[i].qty, lines[i].unitCents, now()).run();
       }
       return { seq, number };
     } catch (_) { /* rang pris entre-temps — on recommence sur le suivant */ }
@@ -965,10 +1022,13 @@ function movement(payload) {
   if (!raw || !raw.length) return { error: 'no-lines' };
   if (raw.length > PO_MAX_LINES) return { error: 'too-many-lines' };
   const moves = [];
+  const seen = new Set();
   for (let i = 0; i < raw.length; i += 1) {
     const item = raw[i] || {};
     const sku = clean(item.sku || item.ref, 60);
     if (!sku) return { error: 'sku-required' };
+    if (seen.has(sku)) return { error: 'duplicate-sku' };
+    seen.add(sku);
     const qty = Number(item.qty);
     if (!Number.isSafeInteger(qty) || qty <= 0 || qty > 1000000) return { error: 'invalid-quantity' };
     moves.push({ sku, qty });
@@ -1024,8 +1084,22 @@ async function procurement(env, row, payload) {
     }, '');
   }
 
+  if (row.action === 'cancel-po') {
+    /* Cancelling stops an unreceived order. A partial receipt is not erased:
+       its stock and supplier liability already exist and must be completed or
+       returned explicitly, never hidden behind a "cancel" button. */
+    if (order.status !== 'draft' && order.status !== 'submitted') return fail(`bad-transition:${order.status}`);
+    await env.DB.prepare(
+      "UPDATE purchase_orders SET status = 'cancelled', updated_ts = ? WHERE merchant = ? AND number = ? AND status IN ('draft','submitted')"
+    ).bind(now(), merchant, number).run();
+    return update(env, row, 'completed', 'kiwi-procurement', {
+      number, status: 'cancelled', supplier: clean(order.supplier, 160),
+      totalCents: Number(order.total_cents || 0), expectedDate: clean(order.expected_date, 10),
+    }, '');
+  }
+
   const rows = await env.DB.prepare(
-    'SELECT sku, label, qty, unit_cents, received_qty, returned_qty FROM purchase_order_lines WHERE merchant = ? AND number = ? ORDER BY line_no'
+    'SELECT sku, label, item_id, variant_id, location_id, qty, unit_cents, received_qty, returned_qty FROM purchase_order_lines WHERE merchant = ? AND number = ? ORDER BY line_no'
   ).bind(merchant, number).all();
   const book = new Map((rows && rows.results || []).map((line) => [String(line.sku), line]));
 
@@ -1047,11 +1121,14 @@ async function procurement(env, row, payload) {
     const invoiced = payload && payload.invoiceAmount != null ? cents(payload.invoiceAmount) : null;
     if (invoiced != null && !Number.isFinite(invoiced)) return fail('invalid-amount');
     if (invoiced != null && invoiced !== receivedCents) return fail('invoice-mismatch');
+    await ensurePurchaseStock(env);
+    const statements = [];
     for (const move of read.moves) {
-      await env.DB.prepare(
-        'UPDATE purchase_order_lines SET received_qty = received_qty + ? WHERE merchant = ? AND number = ? AND sku = ?'
-      ).bind(move.qty, merchant, number, move.sku).run();
       const line = book.get(move.sku);
+      statements.push(await purchaseStockStatement(env, row, order, line, move, 'receipt'));
+      statements.push(env.DB.prepare(
+        'UPDATE purchase_order_lines SET received_qty = received_qty + ? WHERE merchant = ? AND number = ? AND sku = ?'
+      ).bind(move.qty, merchant, number, move.sku));
       line.received_qty = Number(line.received_qty || 0) + move.qty;
     }
     let outstanding = 0;
@@ -1061,9 +1138,10 @@ async function procurement(env, row, payload) {
       receivedUnits += Number(line.received_qty || 0);
     });
     const status = outstanding > 0 ? 'partial' : 'received';
-    await env.DB.prepare(
+    statements.push(env.DB.prepare(
       'UPDATE purchase_orders SET status = ?, invoiced_cents = invoiced_cents + ?, updated_ts = ? WHERE merchant = ? AND number = ?'
-    ).bind(status, invoiced != null ? invoiced : 0, now(), merchant, number).run();
+    ).bind(status, invoiced != null ? invoiced : 0, now(), merchant, number));
+    await env.DB.batch(statements);
     return update(env, row, 'completed', 'kiwi-procurement', {
       number, status, receivedCents, receivedUnits, outstandingUnits: outstanding,
       matched: invoiced != null, lines: read.moves.length,
@@ -1081,11 +1159,14 @@ async function procurement(env, row, payload) {
     if (move.qty > held) return fail('exceeds-received');
     creditCents += move.qty * Number(line.unit_cents || 0);
   }
+  await ensurePurchaseStock(env);
+  const statements = [];
   for (const move of read.moves) {
-    await env.DB.prepare(
-      'UPDATE purchase_order_lines SET returned_qty = returned_qty + ? WHERE merchant = ? AND number = ? AND sku = ?'
-    ).bind(move.qty, merchant, number, move.sku).run();
     const line = book.get(move.sku);
+    statements.push(await purchaseStockStatement(env, row, order, line, move, 'return'));
+    statements.push(env.DB.prepare(
+      'UPDATE purchase_order_lines SET returned_qty = returned_qty + ? WHERE merchant = ? AND number = ? AND sku = ?'
+    ).bind(move.qty, merchant, number, move.sku));
     line.returned_qty = Number(line.returned_qty || 0) + move.qty;
   }
   let heldUnits = 0;
@@ -1094,9 +1175,10 @@ async function procurement(env, row, payload) {
     heldUnits += Number(line.received_qty || 0) - Number(line.returned_qty || 0);
     returnedUnits += Number(line.returned_qty || 0);
   });
-  await env.DB.prepare(
+  statements.push(env.DB.prepare(
     'UPDATE purchase_orders SET updated_ts = ? WHERE merchant = ? AND number = ?'
-  ).bind(now(), merchant, number).run();
+  ).bind(now(), merchant, number));
+  await env.DB.batch(statements);
   return update(env, row, 'completed', 'kiwi-procurement', {
     number, status: clean(order.status, 20), creditCents, returnedUnits,
     heldUnits, lines: read.moves.length,
@@ -2160,7 +2242,7 @@ export async function onRequestGet({ request, env }) {
       const list = orders && orders.results || [];
       if (!list.length) return json({ merchant, orders: [] });
       const lines = await env.DB.prepare(
-        `SELECT number, sku, label, unit, qty, unit_cents, received_qty, returned_qty
+        `SELECT number, sku, label, item_id, variant_id, location_id, unit, qty, unit_cents, received_qty, returned_qty
            FROM purchase_order_lines WHERE merchant = ? AND number IN (${list.map(() => '?').join(',')})
           ORDER BY number, line_no`
       ).bind(merchant, ...list.map((order) => order.number)).all();
@@ -2168,7 +2250,8 @@ export async function onRequestGet({ request, env }) {
       (lines && lines.results || []).forEach((line) => {
         const bucket = byNumber.get(line.number);
         if (bucket) bucket.push({
-          sku: line.sku, label: clean(line.label, 160), unit: clean(line.unit, 24),
+          sku: line.sku, label: clean(line.label, 160), itemId: clean(line.item_id, 80),
+          variantId: clean(line.variant_id, 80), locationId: clean(line.location_id, 80), unit: clean(line.unit, 24),
           qty: Number(line.qty), unitCents: Number(line.unit_cents || 0),
           receivedQty: Number(line.received_qty || 0), returnedQty: Number(line.returned_qty || 0),
         });

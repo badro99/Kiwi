@@ -87,8 +87,27 @@ ok(jsSrc.includes('function canHoldStock'), 'loose-piece availability has a non-
 ok(jsSrc.includes('function promoForLine'), 'piece lines use a unit-correct promotion calculation');
 ok(jsSrc.includes('const avoirExpired'), 'expired vouchers are excluded before payment');
 ok(jsSrc.includes('const remainingAvoirs'), 'one ticket can chain multiple vouchers safely');
+ok(jsSrc.includes("'/api/store-credits?merchant='") && jsSrc.includes("action: 'redeem-batch'"),
+  'real Maison credits use the tenant-scoped server ledger and atomic multi-credit redemption');
+ok(jsSrc.indexOf('await issueAvoir') < jsSrc.indexOf('restoreLines(sale, idxs'),
+  'credit issuance succeeds before any returned stock is restored');
+ok(jsSrc.includes('function stableCreditIssueId') && jsSrc.includes('lineReturnedQty(line) + Number(qty || 0)'),
+  'a retry of the same partial return reuses its issuance id instead of minting a second credit');
+ok(jsSrc.includes('sale.serverId || sale.syncId || sale.id'),
+  'a return links to the canonical server sale id, not the display ticket number');
+ok(jsSrc.includes("motif !== 'Défaut'") && jsSrc.includes('markDamagedLines'),
+  'damaged returns are audited without returning them to sellable stock');
+ok(jsSrc.includes('mz-av-code-form') && jsSrc.includes("'&code=' + encodeURIComponent(code)"),
+  'walk-in credits can be scanned or entered and resolved against the shared register');
 ok(jsSrc.includes('const swapped = apply()') && jsSrc.includes('markLineReturned(ln, 1, `échange ${sale.id}`)'),
   'exchange settlement records the return and handles a stock race honestly');
+{
+  const cheaperExchange = jsSrc.slice(jsSrc.indexOf("} else if (diff < 0) {"), jsSrc.indexOf("} else {", jsSrc.indexOf("} else if (diff < 0) {")));
+  ok(jsSrc.includes("$('#mz-exch-go', el).onclick = async () =>")
+    && cheaperExchange.indexOf('const av = await issueAvoir(-diff') >= 0
+    && cheaperExchange.indexOf('const av = await issueAvoir(-diff') < cheaperExchange.indexOf('recordReturn(sale, [ex.idx]'),
+    'a cheaper exchange awaits its server credit before recording the return');
+}
 
 // 5. Check Gift Receipt & Delivery Notes
 ok(jsSrc.includes('*** TICKET CADEAU ***'), 'Gift receipt layout with no prices present');

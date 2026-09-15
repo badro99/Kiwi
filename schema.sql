@@ -1367,6 +1367,88 @@ CREATE TABLE IF NOT EXISTS inventory_counts (
 CREATE INDEX IF NOT EXISTS idx_inventory_counts_merchant_date ON inventory_counts (merchant, submitted_at);
 CREATE INDEX IF NOT EXISTS idx_inventory_counts_merchant_status ON inventory_counts (merchant, status);
 
+-- Supplier purchase orders are commitments until a receipt is recorded.  The
+-- line identities deliberately retain the catalogue item/variant/location so
+-- receiving can write the same append-only inventory ledger used by Maison.
+CREATE TABLE IF NOT EXISTS purchase_orders (
+  id TEXT PRIMARY KEY,
+  merchant TEXT NOT NULL,
+  seq INTEGER NOT NULL,
+  number TEXT NOT NULL,
+  supplier TEXT NOT NULL,
+  status TEXT NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'MAD',
+  expected_date TEXT NOT NULL DEFAULT '',
+  total_cents INTEGER NOT NULL DEFAULT 0,
+  invoiced_cents INTEGER NOT NULL DEFAULT 0,
+  command_id TEXT NOT NULL DEFAULT '',
+  created_ts INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_po_number ON purchase_orders (merchant, number);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_po_seq ON purchase_orders (merchant, seq);
+CREATE INDEX IF NOT EXISTS idx_po_status ON purchase_orders (merchant, status, updated_ts DESC);
+
+CREATE TABLE IF NOT EXISTS purchase_order_lines (
+  id TEXT PRIMARY KEY,
+  merchant TEXT NOT NULL,
+  number TEXT NOT NULL,
+  line_no INTEGER NOT NULL,
+  sku TEXT NOT NULL,
+  label TEXT NOT NULL DEFAULT '',
+  item_id TEXT NOT NULL DEFAULT '',
+  variant_id TEXT NOT NULL DEFAULT '',
+  location_id TEXT NOT NULL DEFAULT 'principal',
+  unit TEXT NOT NULL DEFAULT '',
+  qty INTEGER NOT NULL,
+  unit_cents INTEGER NOT NULL,
+  received_qty INTEGER NOT NULL DEFAULT 0,
+  returned_qty INTEGER NOT NULL DEFAULT 0,
+  created_ts INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_po_line_sku ON purchase_order_lines (merchant, number, sku);
+
+-- Maison store credit is a server-side liability ledger.  The current balance
+-- is materialized for fast checkout; store_credit_events is the immutable
+-- audit and idempotency boundary for issue/redeem/cancel.
+CREATE TABLE IF NOT EXISTS store_credits (
+  id TEXT PRIMARY KEY,
+  merchant TEXT NOT NULL,
+  code TEXT NOT NULL,
+  customer_id TEXT NOT NULL DEFAULT '',
+  customer_name TEXT NOT NULL DEFAULT '',
+  original_sale_id TEXT NOT NULL DEFAULT '',
+  original_ref TEXT NOT NULL DEFAULT '',
+  amount_cents INTEGER NOT NULL,
+  balance_cents INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  expires_ts INTEGER NOT NULL,
+  reason TEXT NOT NULL DEFAULT '',
+  issued_by TEXT NOT NULL DEFAULT '',
+  last_event_id TEXT NOT NULL DEFAULT '',
+  created_ts INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_store_credit_code ON store_credits (merchant, code);
+CREATE INDEX IF NOT EXISTS idx_store_credit_customer ON store_credits (merchant, customer_id, updated_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_store_credit_sale ON store_credits (merchant, original_sale_id);
+
+CREATE TABLE IF NOT EXISTS store_credit_events (
+  id TEXT PRIMARY KEY,
+  merchant TEXT NOT NULL,
+  credit_id TEXT NOT NULL,
+  code TEXT NOT NULL,
+  action TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL,
+  balance_after_cents INTEGER NOT NULL,
+  ref_id TEXT NOT NULL DEFAULT '',
+  actor TEXT NOT NULL DEFAULT '',
+  detail TEXT NOT NULL DEFAULT '',
+  ts INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_store_credit_events_credit ON store_credit_events (merchant, credit_id, ts);
+CREATE INDEX IF NOT EXISTS idx_store_credit_events_sale ON store_credit_events (merchant, ref_id, action);
+
 CREATE TABLE IF NOT EXISTS inventory_count_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   count_id TEXT NOT NULL,
