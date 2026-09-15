@@ -150,6 +150,14 @@
     try { if (window.KiwiCashSessions && window.KiwiCashSessions.status) return window.KiwiCashSessions.status(); } catch (_) {}
     return { pendingCount: 0, pendingPairing: false, storageError: false };
   }
+  function attemptTime(ts) {
+    if (!ts) return '';
+    try { return new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); }
+    catch (_) { return ''; }
+  }
+  function serverFailure(error) {
+    return error === 'server-unreachable' || error === 'Failed to fetch' || error === 'Load failed' || error === 'network';
+  }
   function status() {
     try {
       if (!refreshingStatus && window.KiwiLive?.refreshQueue) {
@@ -217,7 +225,13 @@
     } else if (q.pending) {
       tone = '#A56A16';
       label = q.pending + ' opération' + (q.pending > 1 ? 's' : '') + ' à synchroniser';
-      detail = q.sending ? 'Envoi sécurisé en cours' : 'Reprise automatique · toucher pour réessayer';
+      var attempted = attemptTime(q.lastAttemptAt);
+      detail = q.sending ? 'Envoi sécurisé en cours'
+        : serverFailure(q.lastError)
+          ? 'Serveur non joignable' + (attempted ? ' · dernier essai ' + attempted : '') + ' · nouvel essai automatique'
+          : q.lastError === 'timeout'
+            ? 'Serveur trop lent' + (attempted ? ' · dernier essai ' + attempted : '') + ' · nouvel essai automatique'
+            : 'En attente · toucher pour réessayer';
     } else if (cashJournal.pendingCount) {
       tone = '#A56A16';
       label = 'Journal caisse · synchronisation en attente';
@@ -300,6 +314,10 @@
           toast('Erreur d’authentification (' + after.lastStatus + ') · vérifiez l’appairage', 'danger');
         } else if (after.lastStatus >= 500) {
           toast('Serveur momentanément indisponible (' + after.lastStatus + ') · réessai automatique', 'warn');
+        } else if (serverFailure(after.lastError)) {
+          toast('Serveur non joignable · opérations conservées, nouvel essai automatique', 'warn');
+        } else if (after.lastError === 'timeout') {
+          toast('Serveur trop lent · opérations conservées, nouvel essai automatique', 'warn');
         } else if (after.lastError) {
           toast('Synchronisation en attente · ' + after.lastError, 'warn');
         }

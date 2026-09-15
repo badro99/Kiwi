@@ -132,8 +132,8 @@
     "sha": "ea596c3fbdbddccb"
   },
   "assets/caisse-pwa.js": {
-    "v": "523",
-    "sha": "d0ae0723efafa340"
+    "v": "524",
+    "sha": "80679676ee2ba6ab"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -208,7 +208,7 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "516",
+    "v": "517",
     "sha": "1c5e03ef1572b19b"
   },
   "assets/dashboard-startup-gate.js": {
@@ -264,7 +264,7 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/employee-live.js": {
-    "v": "515",
+    "v": "516",
     "sha": "3d72d873aafc62d7"
   },
   "assets/employee-planning.js": {
@@ -432,8 +432,8 @@
     "sha": "c9d6036ca657c76e"
   },
   "assets/live-link.js": {
-    "v": "37",
-    "sha": "b97302190e5f897e"
+    "v": "39",
+    "sha": "d0946027e11abf92"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -480,8 +480,8 @@
     "sha": "0a1f2bda4e9b0357"
   },
   "assets/offline-db.js": {
-    "v": "5",
-    "sha": "c3c197e314617547"
+    "v": "6",
+    "sha": "4597cf4c4448cfdd"
   },
   "assets/onboarding.js": {
     "v": "2082",

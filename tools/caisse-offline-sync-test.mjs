@@ -143,6 +143,10 @@ sqlite.prepare('INSERT INTO merchant_config (merchant, account_id, name, type, s
     liveSrc.includes('if (flushing || !navigator.onLine) return Promise.resolve(outboxStatus);') && !liveSrc.includes('if (force) {\n      flushing = false;'));
   ok('live-link flushOutbox uses AbortController timeout on fetch',
     liveSrc.includes('new AbortController()') && liveSrc.includes('controller.abort()'));
+  ok('active outbox delivery avoids fragile keepalive and has an idempotent XHR fallback',
+    liveSrc.includes('function xhrMoneyRequest(') &&
+    liveSrc.includes("credentials: 'same-origin'") &&
+    !/function moneyRequest[\s\S]*?keepalive:\s*true[\s\S]*?function flushLegacyQueue/.test(liveSrc));
   ok('live-link queueStatus exposes lastStatus and lastError',
     liveSrc.includes('lastStatus: outboxStatus.lastStatus || lastSyncStatus || 0') &&
     liveSrc.includes("lastError: queueStorageError ? 'queue-storage-full' : (outboxStatus.lastError || lastSyncError || '')"));
@@ -168,6 +172,10 @@ sqlite.prepare('INSERT INTO merchant_config (merchant, account_id, name, type, s
     pwaSrc.includes("toast('Erreur d’authentification (' + after.lastStatus + ') · vérifiez l’appairage', 'danger');"));
   ok('caisse-pwa click handler surfaces server error toast on 5xx',
     pwaSrc.includes("toast('Serveur momentanément indisponible (' + after.lastStatus + ') · réessai automatique', 'warn');"));
+  ok('caisse-pwa reports a network-layer failure in French with a visible retry time',
+    pwaSrc.includes("'Serveur non joignable'") &&
+    pwaSrc.includes("' · dernier essai '") &&
+    pwaSrc.includes("toast('Serveur non joignable · opérations conservées, nouvel essai automatique', 'warn');"));
   // Ensure user-facing strings in caisse-pwa contain no em dash
   const stringDashes = [...pwaSrc.matchAll(/'([^'\n\r]*—[^'\n\r]*)'/g)];
   ok('caisse-pwa string literals contain no U+2014 em dash', stringDashes.length === 0);
