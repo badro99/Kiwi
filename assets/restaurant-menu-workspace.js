@@ -224,6 +224,7 @@
       noSaleRecorded: 'No sales',
       hoursTitle: 'Performance by time of day',
       hoursSub: 'Which items sell when · Last {n} days · Real POS data',
+      hoursObserved: 'Actual sale hours · Opening hours not configured',
       setHoursPrompt: 'Enter restaurant operating hours',
       setHoursPromptDesc: 'Kiwi generates service moments from saved opening hours. No shifts are invented.',
       noServiceToAnalyze: 'No service to analyze',
@@ -541,6 +542,7 @@
       noSaleRecorded: 'لا توجد مبيعات',
       hoursTitle: 'الأداء حسب أوقات اليوم',
       hoursSub: 'ما المنتجات التي تباع ومتى · آخر {n} يوماً · بيانات حقيقية من الصندوق',
+      hoursObserved: 'ساعات المبيعات الفعلية · أوقات العمل غير محددة',
       setHoursPrompt: 'حدد أوقات عمل المطعم',
       setHoursPromptDesc: 'ينشئ Kiwi فترات اليوم بناءً على الأوقات المسجلة دون اختلاق أي فترة.',
       noServiceToAnalyze: 'لا توجد فترة للتحليل',
@@ -858,6 +860,7 @@
       noSaleRecorded: 'Aucune vente',
       hoursTitle: 'Performance par moment de la journée',
       hoursSub: 'Quels articles se vendent quand · {n} derniers jours · données réelles de la caisse',
+      hoursObserved: 'Heures réelles des ventes · horaires d’ouverture non renseignés',
       setHoursPrompt: 'Renseignez les horaires du restaurant',
       setHoursPromptDesc: 'Kiwi crée les moments de la journée à partir des horaires enregistrés. Aucun créneau n’est inventé.',
       noServiceToAnalyze: 'Aucun service à analyser',
@@ -1151,15 +1154,29 @@
   }
   function sales(){try{return window.KiwiSales?.list?.(venue())||[];}catch(_){return[];}}
   const norm=(v)=>String(v==null?'':v).trim().toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  /* IDs survive option labels and duplicate names (adult/kids menus). Never
+   * let a Map's last duplicate silently claim another dish's sales. */
+  function saleLineMatcher(rows){
+    const byId=new Map(rows.map(r=>[String(r.item.id),r]));
+    return line=>{
+      const id=line?.itemId??line?.id??line?.i;
+      if(id!=null&&byId.has(String(id)))return byId.get(String(id));
+      const name=norm(line?.baseName||line?.bn||line?.name||line?.n);
+      let candidates=rows.filter(r=>norm(r.item.name)===name);
+      if(!candidates.length)candidates=rows.filter(r=>name.startsWith(norm(r.item.name)+' ('));
+      const category=norm(line?.cat||line?.category||line?.c);
+      if(category&&candidates.length>1)candidates=candidates.filter(r=>category===norm(cat(r.item.catId)?.name)||category===norm(r.item.catId));
+      return candidates.length===1?candidates[0]:null;
+    };
+  }
   function median(values){if(!values.length)return 0;const a=[...values].sort((x,y)=>x-y),m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2;}
   function performanceData(days=30){
     const items=D().items.map(x=>({item:x,qty:0,revenue:0,unitCost:null,unitProfit:null,profit:null,marginPct:null,quadrant:null,costSource:null}));
-    const byId=new Map(items.map(x=>[String(x.item.id),x])),byName=new Map(items.map(x=>[norm(x.item.name),x]));
-    const since=Date.now()-days*864e5;
+    const match=saleLineMatcher(items),until=Date.now(),since=until-days*864e5;
     sales().forEach(s=>{
-      if((+s.ts||0)<since)return;
+      if((+s.ts||0)<since||+s.ts>until||s.void_ts||s.voided)return;
       (Array.isArray(s.lines)?s.lines:[]).forEach(line=>{
-        const row=(line?.id!=null&&byId.get(String(line.id)))||byName.get(norm(line?.name));
+        const row=match(line);
         if(!row)return;
         const qty=Math.max(0,+line.qty||0);
         if(!qty)return;
@@ -1215,6 +1232,7 @@
   const SERVICE_WINDOWS=[
     {id:'matin',name:'Matin',from:5*60,to:11*60},
     {id:'midi',name:'Midi',from:11*60,to:15*60},
+    {id:'apresmidi',name:'Après-midi',from:15*60,to:19*60},
     {id:'soir',name:'Soir',from:19*60,to:29*60},
   ];
   function minuteLabel(value){const m=((Math.round(value)%1440)+1440)%1440,h=Math.floor(m/60),mm=m%60;return `${String(h).padStart(2,'0')}h${mm?String(mm).padStart(2,'0'):''}`;}
@@ -1248,12 +1266,12 @@
   function minuteInService(ts,service){const d=new Date(ts),plain=d.getHours()*60+d.getMinutes(),m=service.to>1440&&plain<service.to-1440?plain+1440:plain;return m>=service.from&&m<service.to;}
   function lineRevenue(line,menuItem,qty){const total=Number(line?.total),unit=Number(line?.unitPrice??line?.unit??line?.price);return Number.isFinite(total)&&total>=0?total:(Number.isFinite(unit)&&unit>=0?unit*qty:(+menuItem.price||0)*qty);}
   function hoursData(periods,selected,days=30){
-    const rows=D().items.map(x=>({item:x,qty:0,revenue:0,byPeriod:{}})),byId=new Map(rows.map(x=>[String(x.item.id),x])),byName=new Map(rows.map(x=>[norm(x.item.name),x])),since=Date.now()-days*864e5;
+    const rows=D().items.map(x=>({item:x,qty:0,revenue:0,byPeriod:{}})),match=saleLineMatcher(rows),until=Date.now(),since=until-days*864e5;
     sales().forEach(s=>{
-      const ts=+s.ts||0;if(ts<since)return;
+      const ts=+s.ts||0;if(ts<since||ts>until||s.void_ts||s.voided)return;
       const service=periods.find(p=>minuteInService(ts,p));if(!service)return;
       (Array.isArray(s.lines)?s.lines:[]).forEach(line=>{
-        const row=(line?.id!=null&&byId.get(String(line.id)))||byName.get(norm(line?.name)),qty=Math.max(0,+line?.qty||0);
+        const row=match(line),qty=Math.max(0,+line?.qty||0);
         if(!row||!qty)return;
         row.byPeriod[service.id]=(row.byPeriod[service.id]||0)+qty;
         if(service.id===selected.id){row.qty+=qty;row.revenue+=lineRevenue(line,row.item,qty);}
@@ -1265,10 +1283,14 @@
   }
   function hoursPanel(){
     const api=window.KiwiHours;
-    if(!api?.isConfigured?.(venue()))return `<section class="mi-section"><div class="rmw-empty"><h3>${esc(ui('setHoursPrompt'))}</h3><p>${esc(ui('setHoursPromptDesc'))}</p></div></section>`;
-    const periods=servicePeriods();
-    if(!periods.length)return `<section class="mi-section"><div class="rmw-empty"><h3>${esc(ui('noServiceToAnalyze'))}</h3><p>${esc(ui('noServiceToAnalyzeDesc'))}</p></div></section>`;
-    if(!periods.some(x=>x.id===hoursPeriod))hoursPeriod=periods[0].id;
+    /* Missing configuration must not hide recorded sales. Hourly buckets
+     * describe timestamps, not assumed opening hours. */
+    const configured=api?.isConfigured?.(venue());
+    const until=Date.now(),since=until-30*864e5;
+    const recent=configured?[]:sales().filter(s=>+s.ts>=since&&+s.ts<=until&&!s.void_ts&&!s.voided&&s.lines?.length);
+    const periods=configured?servicePeriods():Array.from({length:24},(_,h)=>({id:'hour-'+h,name:minuteLabel(h*60),from:h*60,to:(h+1)*60,label:`${minuteLabel(h*60)}-${minuteLabel((h+1)*60)}`})).filter(p=>recent.some(s=>minuteInService(+s.ts,p)));
+    if(!periods.length)return `<section class="mi-section"><div class="rmw-empty"><h3>${esc(ui(configured?'noServiceToAnalyze':'noSalesYet'))}</h3><p>${esc(ui(configured?'noServiceToAnalyzeDesc':'noSalesYetDesc'))}</p></div></section>`;
+    if(!periods.some(x=>x.id===hoursPeriod))hoursPeriod=configured?periods[0].id:periods.map(p=>({id:p.id,qty:hoursData(periods,p).totalQty})).sort((a,b)=>b.qty-a.qty)[0].id;
     const selected=periods.find(x=>x.id===hoursPeriod)||periods[0],data=hoursData(periods,selected),max=Math.max(1,...data.ranked.slice(0,10).map(x=>x.qty));
     const pills=periods.map(p=>`<button class="mi-pill${p.id===selected.id?' on':''}" data-action="rmw-hours-period" data-period="${p.id}">${esc(p.label)}</button>`).join('');
     const bars=data.ranked.slice(0,10).map(row=>`<div class="rmw-hours-row"><div class="rmw-hours-name" title="${esc(t(row.item.name))}">${esc(t(row.item.name))}</div><div class="rmw-hours-track"><i style="width:${(row.qty/max*100).toFixed(1)}%"></i></div><b>${row.qty.toLocaleString('fr-FR')}</b></div>`).join('');
@@ -1276,7 +1298,7 @@
     const insight=data.top?`<div class="rmw-hours-insight"><span>${esc(ui('peakInsightTag', { label: selected.label }))}</span><h3>${esc(ui('peakInsightTitle', { item: t(data.top.item.name) }))}</h3><p>${esc(ui('peakInsightBody', { qty: data.top.qty.toLocaleString('fr-FR'), share: (data.top.qty/data.totalQty*100).toFixed(0), peakShare: topShare.toFixed(0), period: selected.name.toLowerCase() }))}</p></div>`:'';
     const notable=data.notable.map(x=>`<div class="rmw-hours-notable"><i></i><div><b>${esc(t(x.row.item.name))}</b><span>${esc(ui('peakNotableBody', { share: x.share.toFixed(0), total: x.total.toLocaleString('fr-FR'), period: x.best.name.toLowerCase(), hours: `${minuteLabel(x.best.from)}-${minuteLabel(x.best.to)}` }))}</span></div></div>`).join('');
     const topQtyStr = data.top ? `${data.top.qty.toLocaleString('fr-FR')} ${data.top.qty !== 1 ? ui('articles') : ui('article')}` : ui('noSaleRecorded');
-    return `<div class="rmw-hours-page"><section class="mi-section"><div class="mi-section-head"><div><h3>${esc(ui('hoursTitle'))}</h3><div class="mi-section-sub">${esc(ui('hoursSub', { n: data.days }))}</div></div></div><div class="mi-pill-row rmw-hours-pills">${pills}</div><div class="rmw-hours-kpis"><div><span>${esc(ui('itemsSold'))}</span><b>${data.totalQty.toLocaleString('fr-FR')}</b><small>${esc(selected.label)}</small></div><div><span>${esc(ui('generatedRevenue'))}</span><b>${cash(data.totalRevenue)}</b><small>${esc(ui('inPeriod'))}</small></div><div><span>${esc(ui('topItem'))}</span><b>${data.top?esc(t(data.top.item.name)):'·'}</b><small>${esc(topQtyStr)}</small></div></div><div class="rmw-hours-list-title">${esc(ui('top10Items', { label: selected.label }))}</div>${bars?`<div class="rmw-hours-bars">${bars}</div>`:`<div class="rmw-empty"><h3>${esc(ui('noSalesInPeriod'))}</h3><p>${esc(ui('noSalesInPeriodDesc'))}</p></div>`}</section>${insight}${notable?`<section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('itemsWithPeak'))}</h3></div><div class="rmw-hours-notables">${notable}</div></section>`:''}</div>`;
+    return `<div class="rmw-hours-page"><section class="mi-section"><div class="mi-section-head"><div><h3>${esc(ui('hoursTitle'))}</h3><div class="mi-section-sub">${esc(ui('hoursSub', { n: data.days }))}${configured?'':` · ${esc(ui('hoursObserved'))}`}</div></div></div><div class="mi-pill-row rmw-hours-pills">${pills}</div><div class="rmw-hours-kpis"><div><span>${esc(ui('itemsSold'))}</span><b>${data.totalQty.toLocaleString('fr-FR')}</b><small>${esc(selected.label)}</small></div><div><span>${esc(ui('generatedRevenue'))}</span><b>${cash(data.totalRevenue)}</b><small>${esc(ui('inPeriod'))}</small></div><div><span>${esc(ui('topItem'))}</span><b>${data.top?esc(t(data.top.item.name)):'·'}</b><small>${esc(topQtyStr)}</small></div></div><div class="rmw-hours-list-title">${esc(ui('top10Items', { label: selected.label }))}</div>${bars?`<div class="rmw-hours-bars">${bars}</div>`:`<div class="rmw-empty"><h3>${esc(ui('noSalesInPeriod'))}</h3><p>${esc(ui('noSalesInPeriodDesc'))}</p></div>`}</section>${insight}${notable?`<section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('itemsWithPeak'))}</h3></div><div class="rmw-hours-notables">${notable}</div></section>`:''}</div>`;
   }
   function alertsPanel(){
     const rows=D().items.filter(x=>x.avail===false).map(x=>`<div class="mi-group-card"><div class="mi-group-card-head"><span class="mi-group-card-name">${esc(t(x.name))}</span><span class="mi-group-card-pill req">${esc(ui('unavailableBadge'))}</span></div><button class="btn-slim primary" data-action="rmw-reactivate" data-arg="${x.id}">${esc(ui('reactivate'))}</button></div>`).join('');

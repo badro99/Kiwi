@@ -5,7 +5,7 @@ const fs = require('fs');
 const vm = require('vm');
 const assert = require('assert');
 
-const at = (hour, minute = 0) => { const d = new Date(); d.setHours(hour, minute, 0, 0); return d.getTime(); };
+const at = (hour, minute = 0) => { const d = new Date(); d.setDate(d.getDate()-1); d.setHours(hour, minute, 0, 0); return d.getTime(); };
 const items = [
   { id: 'shawarma', name: 'Shawarma poulet', price: 30, catId: 'plats', avail: true },
   { id: 'tajine', name: 'Tajine kefta', price: 50, catId: 'plats', avail: true },
@@ -32,7 +32,7 @@ const window = {
   KiwiHours: { DAYS: Object.keys(week), get: () => ({ week }), isConfigured: () => true, toMin, span, subscribe() {} },
   KiwiSales: { subscribe() {}, list: () => [
     { ts: at(13), lines: [{ id: 'shawarma', qty: 3, total: 90 }, { id: 'tajine', qty: 2, total: 100 }] },
-    { ts: at(20), lines: [{ id: 'shawarma', qty: 5, total: 150 }, { id: 'tajine', qty: 1, total: 50 }] },
+    { ts: at(20), lines: [{ itemId: 'shawarma', name: 'Shawarma poulet (Pita)', qty: 5, total: 150 }, { itemId: 'tajine', qty: 1, total: 50 }] },
     { ts: at(9), lines: [{ id: 'coffee', qty: 50, total: 500 }] },
   ] },
   KiwiRestaurantRecipes: { subscribe() {} },
@@ -61,5 +61,13 @@ assert.match(html, />6<\/b>/, 'evening includes the six detailed items sold in t
 assert.match(html, /200 MAD/, 'evening revenue comes from real sale lines');
 assert.match(html, /Shawarma poulet/);
 assert.match(html, /données réelles de la caisse/i);
+window.KiwiHours.isConfigured = () => false;
+window.Kiwi.handlers['rmw-tab']({ dataset: { tab: 'hours' } });
+html = root.innerHTML;
+assert.doesNotMatch(html, /Renseignez les horaires/, 'missing opening hours cannot hide recorded sales');
+assert.match(html, /09h-10h/);
+assert.match(html, /500 MAD/, 'fallback selects the busiest recorded hour');
+window.Kiwi.handlers['rmw-hours-period']({ dataset: { period: 'hour-20' } });
+assert.match(root.innerHTML, /200 MAD/, 'hourly fallback shares itemId matching');
 
 console.log('✓ restaurant peak hours follows opening hours, overnight closing and real cashier lines');

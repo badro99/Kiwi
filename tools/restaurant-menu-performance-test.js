@@ -12,6 +12,8 @@ const items = [
   { id: 'puzzle', name: 'Pastilla rentable', price: 100, catId: 'plats', avail: true },
   { id: 'dog', name: 'Soupe lente', price: 50, catId: 'plats', avail: true },
   { id: 'unknown', name: 'Recette absente', price: 40, catId: 'plats', avail: true },
+  { id: 'adult', name: 'Shawarma', price: 25, catId: 'plats' },
+  { id: 'kids', name: 'Shawarma', price: 30, catId: 'kids' },
 ];
 const costs = { star: 20, plow: 40, puzzle: 10, dog: 40 };
 const root = { hidden: true, innerHTML: '' };
@@ -23,7 +25,7 @@ const document = {
   querySelector: (s) => s === '[data-menu-root]' ? root : s === '.breadcrumb' ? breadcrumb : null,
   querySelectorAll: () => [], createElement: node, addEventListener() {},
 };
-const data = { cats: [{ id: 'plats', name: 'Plats' }], items, stations: [], opts: [] };
+const data = { cats: [{ id: 'plats', name: 'Plats' }, { id: 'kids', name: 'Menu Enfants' }], items, stations: [], opts: [] };
 const window = {
   Kiwi: { handlers: {}, pageShell() {}, setActivePage() {} },
   KiwiVenue: { getCurrentVenueData: () => ({ id: 'resto', name: 'Restaurant test', type: 'restaurant' }), getVenueType: () => 'restaurant', subscribe() {} },
@@ -35,8 +37,14 @@ const window = {
       { name: 'Pastilla rentable', qty: 5, total: 500 },
       { name: 'Soupe lente', qty: 5, total: 250 },
       { name: 'Recette absente', qty: 2, total: 80 },
+      { itemId: 'adult', name: 'Shawarma (Pain Pita · Fromage)', qty: 42, total: 1260 },
+      { itemId: 'adult', name: 'Shawarma', qty: 28, total: 760 },
+      { name: 'Shawarma (Baguette)', cat: 'Plats', qty: 2, total: 60 },
+      { name: 'Shawarma', qty: 999, total: 99900 }, // ambiguous: never assign to kids
     ] },
     { ts: now - 40 * 864e5, lines: [{ id: 'star', qty: 999, total: 99900 }] },
+    { ts: now + 864e5, lines: [{ itemId: 'adult', qty: 999, total: 99900 }] },
+    { ts: now, void_ts: now, lines: [{ itemId: 'adult', qty: 999, total: 99900 }] },
   ] },
   KiwiRestaurantRecipes: {
     get: (id) => costs[id] == null ? null : { itemId: id, ingredients: [{}] },
@@ -64,5 +72,7 @@ assert.match(html, /2[\s\u202f]?000 MAD/);
 assert.match(html, /Compléter la recette/);
 assert.doesNotMatch(html, /999[\s\u202f]?00 MAD/, 'sales older than 30 days must stay outside the analysis');
 assert.match(html, /données réelles de la caisse/i);
+assert.match(html, /<b>Shawarma<\/b><small>Plats<\/small><\/td><td>72<\/td>/, 'saved itemId includes options and distinguishes duplicate menu names');
+assert.match(html, /<b>Shawarma<\/b><small>Menu Enfants<\/small><\/td><td>0<\/td>/, 'no invented kids sales');
 
 console.log('✓ restaurant Performance uses real 30-day sales, recipe costs, margins and four-quadrant ranking');
