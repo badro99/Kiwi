@@ -13,6 +13,10 @@ import { startOfDay } from './order/_lib.js';
 import { settleServiceTable, serviceVisitGuard } from './service/events.js';
 import { poke } from './_live.js';
 
+/* See the visit lookup in onRequestPost: tolerance between a payment's device
+   timestamp and the server time its table visit was opened. */
+const VISIT_BIND_SKEW_MS = 2 * 60 * 1000;
+
 const MAX_AMOUNT_CENTS = 20000000; // 200,000 MAD in centimes
 const MAX_AMOUNT_DIRHAMS = 200000; // legacy ceiling
 const DISCOUNT_REASONS = new Set(['commercial', 'loyal-customer', 'kitchen-error', 'other']);
@@ -169,6 +173,10 @@ export async function onRequestPost({ request, env }) {
   }
 
   let serviceSession = null;
+  const paymentTsForVisit = (() => {
+    const t = Number(b && b.ts);
+    return Number.isFinite(t) && t > 0 && t <= Date.now() + 86400000 ? t : Date.now();
+  })();
   if (requestedSession || employeeTable) {
     try {
       serviceSession = requestedSession
@@ -176,11 +184,19 @@ export async function onRequestPost({ request, env }) {
             `SELECT id, table_no, status, opened_ts, closed_ts FROM table_sessions
               WHERE id = ? AND merchant = ? AND mode = 'table' LIMIT 1`
           ).bind(requestedSession, merchant).first()
+        /* The visit a payment settles cannot have been opened AFTER the
+           payment. A till replays its offline queue later — sometimes the next
+           evening — and "the table's open visit" is by then a NEW party. Binding
+           to it gave the replay a new idempotency id (a second ledger row: 320
+           MAD at Restaurant MixMax on 11–12 Sep 2026) and could close the new
+           party's table with an old payment. Two minutes absorb the till
+           opening the visit at payment time and ordinary clock drift. */
         : await env.DB.prepare(
             `SELECT id, table_no, status, opened_ts, closed_ts FROM table_sessions
               WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open'
+                AND opened_ts <= ?
               ORDER BY opened_ts DESC LIMIT 1`
-          ).bind(merchant, employeeTable).first();
+          ).bind(merchant, employeeTable, paymentTsForVisit + VISIT_BIND_SKEW_MS).first();
     } catch (_) { serviceSession = null; }
     if (requestedSession && (!serviceSession || !serviceSession.id)) {
       return json({ error: 'table-session-missing' }, 404);
@@ -386,6 +402,28 @@ export async function onRequestPost({ request, env }) {
       }, 409);
     }
     stored = true;
+  }
+
+  /* SAME SETTLEMENT, DIFFERENT ID. The id above is derived from the table
+     visit when the till names a table without a session, so a replay after
+     the visit closed (or after the table reopened) arrives with another id.
+     The receipt reference, the exact millisecond, the amount and the basket
+     together identify one payment; a second row with all four is a replay,
+     not a sale. Split parts legitimately share all four and are excluded.
+     A failed lookup changes nothing: the insert below still decides. */
+  if (!stored && !splitPrefix && ref) {
+    let sameSettlement = null;
+    try {
+      sameSettlement = await env.DB.prepare(
+        `SELECT id FROM sales
+          WHERE merchant = ? AND ts = ? AND ref = ? AND amount_cents = ? AND lines IS ?
+            AND void_ts IS NULL AND id <> ? AND id NOT LIKE '%-split-%'
+          LIMIT 1`
+      ).bind(merchant, ts, ref, amountCents, lines, id).first();
+    } catch (_) { sameSettlement = null; }
+    if (sameSettlement && sameSettlement.id) {
+      return json({ ok: true, id: sameSettlement.id, duplicateOf: sameSettlement.id, requestedId: id, stored: true });
+    }
   }
 
   if (hasDiscount) {

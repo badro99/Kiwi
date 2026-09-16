@@ -161,7 +161,7 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=11',
+  '/assets/day-report.js?v=12',
   '/assets/report.js?v=3',
   '/assets/day-report-dash.js?v=11',
   '/assets/day-report-export.js?v=7',
@@ -239,7 +239,7 @@ var SHELL = [
   '/assets/planning-ui.css?v=10',
   '/assets/team.js?v=283',
   '/assets/menu-i18n.js?v=5',
-  '/assets/restaurant-menu-workspace.js?v=69',
+  '/assets/restaurant-menu-workspace.js?v=70',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=5',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.

@@ -458,6 +458,40 @@
     };
   }
 
+  /* L'empreinte d'un règlement, indépendante de son id.
+   *
+   * Le 11 et le 12 septembre 2026, Restaurant MixMax a reçu le même
+   * encaissement sous deux ou trois ids différents (une id par session de
+   * table) : même ticket, même milliseconde, même montant, mêmes lignes. Le
+   * dédoublonnage par id les laissait tous passer, et le rapport comptait
+   * 320 MAD de ventes qui n'ont eu lieu qu'une fois. Le Z de la caisse, lui,
+   * n'en comptait qu'un.
+   *
+   * La clé n'écarte que ce qui ne peut PAS être deux ventes : un numéro de
+   * ticket identique à la milliseconde près, pour le même montant et le même
+   * panier. Deux commandes identiques passées à des moments différents restent
+   * deux ventes. Un paiement partagé (`-split-`) garde ses parts, même égales.
+   * Sans ticket, pas d'empreinte : on ne devine rien. */
+  function settlementKey(s) {
+    if (!s) return '';
+    var id = String(s.id || '');
+    if (/-split-/.test(id)) return '';
+    var ref = String(s.ref || '').trim();
+    var ts = num(s.ts != null ? s.ts : (s.time instanceof Date ? s.time.getTime() : 0));
+    if (!ref || !ts) return '';
+    var amount = num(s.amount != null ? s.amount : s.total);
+    var lines = (Array.isArray(s.lines) ? s.lines : []).map(function (l) {
+      if (!l) return '';
+      return [
+        String(l.itemId != null ? l.itemId : (l.i != null ? l.i : '')),
+        String(l.name != null ? l.name : (l.n != null ? l.n : '')),
+        num(l.qty != null ? l.qty : l.q),
+        num(l.total != null ? l.total : l.t),
+      ].join('~');
+    }).join('|');
+    return ref + '#' + ts + '#' + round2(amount) + '#' + lines;
+  }
+
   /* build({ day, sales, session, store }) → le rapport complet.
    *
    * `sales`   toutes les ventes connues (elles seront filtrées sur la journée)
@@ -482,6 +516,8 @@
        garde son journal ET reçoit l'écho serveur de ses propres ventes, et une
        vente comptée deux fois est exactement ce que ce rapport doit empêcher. */
     var seen = Object.create(null);
+    var seenSettlement = Object.create(null);
+    var dupN = 0, dupAmt = 0;
     var rows = [];
     (opts.sales || []).forEach(function (raw) {
       if (raw && (raw.voided || raw.void_ts)) return;
@@ -490,6 +526,11 @@
       var k = s.id || (s.ts + ':' + s.amount + ':' + s.ref);
       if (seen[k]) return;
       seen[k] = 1;
+      /* Même règlement, autre id : voir settlementKey(). Écarté du calcul,
+         mais compté et exposé — un doublon caché serait une autre erreur. */
+      var fk = settlementKey(s);
+      if (fk && seenSettlement[fk]) { dupN++; dupAmt += s.amount; return; }
+      if (fk) seenSettlement[fk] = 1;
       rows.push(s);
     });
     rows.sort(function (a, c) { return a.ts - c.ts; });
@@ -697,6 +738,7 @@
       revisions: [],
       builtAt: Date.now(),
       source: String(opts.source || 'caisse'),
+      duplicates: dupN ? { count: dupN, amount: round2(dupAmt) } : null,
     };
   }
 
@@ -725,6 +767,13 @@
     (r.categories || []).forEach(function (c) {
       n += 5 + (c.products || []).length * 4;
     });
+    /* La part des services précédents de la journée (voir addCarried). */
+    if (r.carried) {
+      n += 40 + (r.carried.sessionIds || []).length;
+      n += (r.carried.hours || []).length * 4 + (r.carried.cashiers || []).length * 4;
+      (r.carried.categories || []).forEach(function (c) { n += 5 + (c.products || []).length * 4; });
+    }
+    if (r.duplicates) n += 3;
     return n;
   }
   /* Élague les journées les plus ANCIENNES jusqu'à tenir dans le budget. On
@@ -907,6 +956,108 @@
     return keep;
   }
 
+  /* ── Plusieurs services dans la même journée commerciale ──
+   *
+   * Le 12 septembre 2026 (MixMax), un premier service a été clôturé à 23:24
+   * avec 89 ventes et 15 209 MAD. Un second service a été ouvert à 01:36, donc
+   * dans la MÊME journée commerciale (seuil 5 h), et clôturé à 01:43 avec
+   * 5 ventes et 587 MAD. Le journal de la caisse repart à zéro à chaque
+   * service ; le rapport du second service ne voyait donc que ses 5 ventes, et
+   * save() le rangeait à la place du premier : la journée affichait 587 MAD.
+   *
+   * Règle : quand le jour porte déjà un service CLÔTURÉ, et que le nouveau
+   * rapport vient d'un AUTRE service entièrement postérieur à cette clôture,
+   * les deux périmètres sont disjoints dans le temps — on les ADDITIONNE. Le
+   * rapport du jour garde, dans `carried`, la part des services précédents, si
+   * bien qu'une réouverture ou une sauvegarde intermédiaire du dernier service
+   * se recalcule sur la même base, sans jamais l'ajouter deux fois. Si les
+   * périmètres peuvent se chevaucher, on ne devine pas : remplacement, comme
+   * avant. */
+  var CARRY_KEYS = ['txns', 'gross', 'receivable', 'net', 'tips'];
+  function carryPart(r) {
+    if (!r) return null;
+    return {
+      sessionIds: (r.carried && r.carried.sessionIds || []).concat(r.sessionId ? [r.sessionId] : []),
+      openedAt: num(r.openedAt), dayOpenedAt: num(r.dayOpenedAt), openedBy: String(r.openedBy || ''),
+      firstSaleAt: num(r.firstSaleAt), lastSaleAt: num(r.lastSaleAt),
+      closedAt: num(r.closedAt),
+      txns: num(r.txns), gross: round2(r.gross), receivable: round2(r.receivable), net: round2(r.net), tips: round2(r.tips),
+      refunds: { count: num(r.refunds && r.refunds.count), amount: round2(r.refunds && r.refunds.amount) },
+      discounts: { count: num(r.discounts && r.discounts.count), amount: round2(r.discounts && r.discounts.amount) },
+      cancels: num(r.cancels),
+      duplicates: r.duplicates ? { count: num(r.duplicates.count), amount: round2(r.duplicates.amount) } : null,
+      methods: Object.assign({}, r.methods || {}),
+      categories: JSON.parse(JSON.stringify(r.categories || [])),
+      hours: JSON.parse(JSON.stringify(r.hours || [])),
+      cashiers: JSON.parse(JSON.stringify(r.cashiers || [])),
+      coverage: num(r.coverage), coverageBase: round2(r.gross),
+    };
+  }
+  function addCarried(report, carried) {
+    if (!report || !carried) return report;
+    var own = carryPart(report);
+    CARRY_KEYS.forEach(function (k) { report[k] = round2(num(carried[k]) + num(own[k])); });
+    report.txns = num(carried.txns) + num(own.txns);
+    report.basket = report.txns ? round2(report.gross / report.txns) : 0;
+    report.refunds = { count: carried.refunds.count + own.refunds.count, amount: round2(carried.refunds.amount + own.refunds.amount) };
+    report.discounts = { count: carried.discounts.count + own.discounts.count, amount: round2(carried.discounts.amount + own.discounts.amount) };
+    report.cancels = carried.cancels + own.cancels;
+    var dN = num(carried.duplicates && carried.duplicates.count) + num(own.duplicates && own.duplicates.count);
+    report.duplicates = dN ? { count: dN, amount: round2(num(carried.duplicates && carried.duplicates.amount) + num(own.duplicates && own.duplicates.amount)) } : null;
+    var methods = Object.assign({}, carried.methods);
+    Object.keys(own.methods).forEach(function (m) { methods[m] = round2(num(methods[m]) + num(own.methods[m])); });
+    report.methods = methods;
+    var cats = Object.create(null), order = [];
+    carried.categories.concat(own.categories).forEach(function (c) {
+      var C = cats[c.name];
+      if (!C) { C = cats[c.name] = { name: c.name, qty: 0, total: 0, products: [], _p: Object.create(null) }; if (c.uncat) C.uncat = true; order.push(c.name); }
+      C.qty = round2(C.qty + num(c.qty)); C.total = round2(C.total + num(c.total));
+      (c.products || []).forEach(function (p) {
+        var P = C._p[p.name];
+        if (!P) { P = C._p[p.name] = { name: p.name, qty: 0, total: 0 }; C.products.push(P); }
+        P.qty = round2(P.qty + num(p.qty)); P.total = round2(P.total + num(p.total));
+      });
+    });
+    report.categories = order.map(function (k) {
+      var C = cats[k]; delete C._p;
+      C.products.sort(function (a, c) { return c.total - a.total || c.qty - a.qty; });
+      return C;
+    }).sort(function (a, c) { if (!!a.uncat !== !!c.uncat) return a.uncat ? 1 : -1; return c.total - a.total; });
+    var hours = Object.create(null);
+    carried.hours.concat(own.hours).forEach(function (h) {
+      var H = hours[h.h] || (hours[h.h] = { h: h.h, net: 0, txns: 0 });
+      H.net = round2(H.net + num(h.net)); H.txns += num(h.txns);
+    });
+    /* Ordre de journée commerciale : les heures après le seuil d'abord. */
+    var cut = num(report.cutoff);
+    report.hours = Object.keys(hours).map(function (k) { return hours[k]; })
+      .sort(function (a, c) { return ((a.h - cut + 24) % 24) - ((c.h - cut + 24) % 24); });
+    var cashiers = Object.create(null);
+    carried.cashiers.concat(own.cashiers).forEach(function (c) {
+      var X = cashiers[c.name] || (cashiers[c.name] = { name: c.name, net: 0, txns: 0 });
+      X.net = round2(X.net + num(c.net)); X.txns += num(c.txns);
+    });
+    report.cashiers = Object.keys(cashiers).map(function (k) { return cashiers[k]; }).sort(function (a, c) { return c.net - a.net; });
+    var base = num(carried.coverageBase) + num(own.coverageBase);
+    report.coverage = base > 0 ? Math.round((num(carried.coverage) * num(carried.coverageBase) + num(own.coverage) * num(own.coverageBase)) / base) : report.coverage;
+    if (carried.firstSaleAt && (!report.firstSaleAt || carried.firstSaleAt < report.firstSaleAt)) report.firstSaleAt = carried.firstSaleAt;
+    if (carried.lastSaleAt > num(report.lastSaleAt)) report.lastSaleAt = carried.lastSaleAt;
+    /* `openedAt` reste celui de CE service : drawerSessions() en tire la
+       ligne de tiroir du service. Le début de la journée a son propre champ. */
+    var dayOpened = num(carried.dayOpenedAt) || num(carried.openedAt);
+    if (dayOpened && (!report.openedAt || dayOpened < report.openedAt)) report.dayOpenedAt = dayOpened;
+    report.carried = carried;
+    return report;
+  }
+  function laterDisjointService(prev, report) {
+    if (!prev || !report || !prev.closed || !num(prev.closedAt)) return false;
+    if (!prev.sessionId || !report.sessionId || prev.sessionId === report.sessionId) return false;
+    if (prev.carried && (prev.carried.sessionIds || []).indexOf(report.sessionId) !== -1) return false;
+    var opened = num(report.openedAt);
+    if (!opened || opened < num(prev.closedAt)) return false;
+    return !num(report.firstSaleAt) || num(report.firstSaleAt) >= num(prev.closedAt);
+  }
+
   /* save(report, {by, note, reopen}) — LA règle de la double clôture.
    *
    * Le rapport entrant a été RECALCULÉ depuis le journal : il est déjà juste.
@@ -923,6 +1074,12 @@
     var doc = readAll(slug);
     if (!doc.days) doc.days = {};
     var prev = doc.days[report.day] || null;
+
+    /* Plusieurs services, une journée : voir laterDisjointService(). */
+    if (laterDisjointService(prev, report)) addCarried(report, carryPart(prev));
+    else if (prev && prev.carried && prev.sessionId && prev.sessionId === report.sessionId && !report.carried) {
+      addCarried(report, prev.carried);
+    }
 
     report.drawerSessions = drawerSessions({ drawerSessions: drawerSessions(prev).concat(drawerSessions(report)) });
     var closedEvent = !!report.closedAt && meta.reopen !== false;
@@ -1018,7 +1175,7 @@
     /* langue du métier */
     vocab: vocab, businessType: businessType,
     /* calcul */
-    build: build, categoryIndex: categoryIndex, normSale: normSale,
+    build: build, categoryIndex: categoryIndex, normSale: normSale, settlementKey: settlementKey,
     drawerSessions: drawerSessions, closureRevisions: closureRevisions, inheritDrawers: inheritDrawers,
     mergeDaySnapshots: mergeDaySnapshots,
     /* classeur */
