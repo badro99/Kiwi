@@ -58,12 +58,17 @@ lance au démarrage et au boot. C'est précisément ce qui manquait à l'APK.
 
 ## B. Pont APK Android — seulement si c'est celui-là
 
-Demande **la clé de signature d'origine** (`.jks` + son mot de passe, créée le
-26 août 2026). Android refuse une mise à jour signée par une autre clé : il
-faudrait désinstaller d'abord, ce qui **efface l'appairage**.
+Demande **la clé de signature** (`~/.kiwi-signing/kiwi-print-bridge.jks` et son
+mot de passe dans `kiwi-print-bridge.pass`, créés le 16 septembre 2026 ; voir
+`bridge/android/README.md`). Android refuse une mise à jour signée par une autre clé.
 
-Empreinte de la clé attendue, à vérifier avant toute tournée :
-`28:A8:36:D7:D6:54:2E:30:65:65:DC:6B:82:00:26:F6:CC:A0:90:FA:C1:98:C3:4D:7E:AC:A7:1C:9E:24:42:D8`
+Empreinte attendue, à vérifier avant toute tournée :
+`B1:5C:8B:BF:B8:40:82:4A:92:6B:C8:E1:FC:16:7D:0F:68:16:31:01:44:53:A0:10:5E:F3:E7:B6:37:AB:D0:AA`
+
+⚠️ **Passage de 1.0.0 à 1.0.4 :** la clé d'août est perdue, la 1.0.4 est signée
+par la nouvelle. Sur une tablette qui a l'ancienne application : **désinstaller**,
+installer la 1.0.4, puis **ré-associer avec un code à six chiffres**. Ensuite, les
+mises à jour s'installent par-dessus sans perdre l'appairage.
 
 Prérequis, une seule fois, sur la machine qui a la clé :
 
@@ -86,7 +91,7 @@ git push https://github.com/badro99/Kiwi.git main
 ```
 
 Sur la tablette : télécharger l'APK depuis kiwi-os.com, **installer par-dessus**
-(jamais désinstaller), accepter « Ignorer les optimisations de batterie »,
+(sauf ce passage unique de 1.0.0 à 1.0.4), accepter « Ignorer les optimisations de batterie »,
 vérifier que l'application affiche **1.0.4**.
 
 ---

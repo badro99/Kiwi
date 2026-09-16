@@ -72,27 +72,31 @@ Android refuserait les mises à jour signées avec une autre clé.
 
 ### Où est la clé, et comment vérifier qu'on a la bonne
 
-**La clé qui a signé l'APK d'août n'est sur aucun poste retrouvé à ce jour.**
-Elle n'est ni dans ce dépôt (`.gitignore` l'exclut, c'est voulu) ni sur la
-machine de développement. Son empreinte, extraite de l'APK publié, est la
-suivante :
+**La clé d'août (empreinte `28:A8:36:…:42:D8`) n'a jamais été retrouvée.** Le
+16 septembre 2026, pour publier la 1.0.4, une **nouvelle clé** a été créée. Elle
+signe désormais toutes les versions :
+
+- fichier : `~/.kiwi-signing/kiwi-print-bridge.jks` sur le Mac de développement
+  (alias `kiwi-print-bridge`, PKCS12, RSA 4096) ;
+- mot de passe : `~/.kiwi-signing/kiwi-print-bridge.pass` (permissions 600) ;
+- **à sauvegarder** chiffré hors de ce Mac (gestionnaire de mots de passe) : une
+  clé perdue ne se régénère pas.
 
 ```
 CN=Kiwi Print Bridge, OU=Kiwi, O=Kiwi, L=Casablanca, C=MA
-SHA-256 28:A8:36:D7:D6:54:2E:30:65:65:DC:6B:82:00:26:F6:CC:A0:90:FA:C1:98:C3:4D:7E:AC:A7:1C:9E:24:42:D8
+SHA-256 B1:5C:8B:BF:B8:40:82:4A:92:6B:C8:E1:FC:16:7D:0F:68:16:31:01:44:53:A0:10:5E:F3:E7:B6:37:AB:D0:AA
 ```
 
-Avant toute publication, comparez l'empreinte de la clé qu'on s'apprête à
-utiliser à celle-ci :
+Construire sans jamais écrire le mot de passe dans le dépôt :
 
 ```bash
-keytool -list -v -keystore /chemin/vers/la.jks -alias kiwi-print-bridge | grep SHA256
+export KIWI_BRIDGE_KEYSTORE=~/.kiwi-signing/kiwi-print-bridge.jks KIWI_BRIDGE_KEY_ALIAS=kiwi-print-bridge
+export KIWI_BRIDGE_KEYSTORE_PASSWORD="$(cat ~/.kiwi-signing/kiwi-print-bridge.pass)" KIWI_BRIDGE_KEY_PASSWORD="$(cat ~/.kiwi-signing/kiwi-print-bridge.pass)"
+app/android/gradlew -p bridge/android assembleRelease
+$ANDROID_HOME/build-tools/35.0.0/apksigner verify --print-certs bridge/android/app/build/outputs/apk/release/app-release.apk | grep SHA-256
 ```
 
-Si elles diffèrent, les tablettes qui ont déjà l'APK devront désinstaller puis
-réinstaller, et **perdront leur association** (le jeton vit dans le stockage de
-l'application, que la désinstallation efface) : il faudra ré-associer avec un
-code à six chiffres. Les nouvelles installations, elles, ne sont pas concernées.
-
-Quand une clé est créée, notez ici où elle est gardée et par qui. Une clé perdue
-ne se régénère pas.
+L'empreinte doit être celle ci-dessus. **Changement de clé en 1.0.4 :** une
+tablette qui avait l'APK 1.0.0 (clé d'août) doit désinstaller, installer la 1.0.4,
+puis ré-associer avec un code à six chiffres. Les ponts Termux ne sont pas
+concernés, et les mises à jour suivantes s'installeront par-dessus.
