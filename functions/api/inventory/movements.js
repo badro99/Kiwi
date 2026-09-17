@@ -4,7 +4,7 @@
 // GET  ?merchant=slug&summary=1       → solde courant par article/lieu
 // POST { merchant, movements:[...] }  → écriture idempotente, jamais d'UPDATE
 
-import { json, entitledMerchant } from '../../auth/_lib.js';
+import { json, entitledMerchant, readManagerStockProof, stockProofScope } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { resolveInventoryUnitScope, scopeSql } from './_unit-scope.js';
 
@@ -332,11 +332,24 @@ export async function onRequestPost({ request, env }) {
 
   /* `entitledMerchant` SANS allowTill : la session du propriétaire ou un
    * opérateur nommé, comme pour l'approbation d'un écart dans counts.js. */
-  if (movements.some((m) => !AUTOMATIC_REASONS.has(m.reason))) {
+  const discretionary = movements.filter((m) => !AUTOMATIC_REASONS.has(m.reason));
+  if (discretionary.length) {
     let mayAdjust = false;
     try { mayAdjust = (await entitledMerchant(request, env, merchant)) === merchant; }
     catch (_) { mayAdjust = false; }
-    if (!mayAdjust) return json({ error: 'reason-forbidden' }, 403);
+    /* Le comptoir n'est pas pour autant condamné au tableau de bord : un
+     * responsable peut autoriser CES mouvements-là en frappant son code, que
+     * /api/pin/verify vérifie avant de délivrer une capacité signée. Elle porte
+     * la liste exacte des identifiants — elle ne peut donc pas être rejouée sur
+     * une autre sortie — et elle nomme l'auteur, qui remplace tout nom que le
+     * client aurait pu écrire lui-même. */
+    if (!mayAdjust) {
+      const proof = await readManagerStockProof(body && body.approval, env.AUTH_SECRET, merchant);
+      const covers = proof && proof.scope === stockProofScope(discretionary.map((m) => m.id));
+      if (!covers) return json({ error: 'reason-forbidden' }, 403);
+      const who = String(proof.staffName || proof.staffId || '').slice(0, 100);
+      discretionary.forEach((m) => { m.actor = who; });
+    }
   }
 
   try { await ensureSchema(env); } catch (_) { return json({ error: 'unmigrated' }, 503); }

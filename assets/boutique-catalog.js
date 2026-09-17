@@ -311,13 +311,41 @@
     });
   }
 
+  /* ── LE JOURNAL, S'IL Y EN A UN ────────────────────────────────────────────
+   * Le stock d'une boutique bouge par une dizaine de chemins : la caisse, un
+   * import CSV, un comptage, un ±1 sur une fiche, une fusion. Demander à chacun
+   * d'écrire aussi son mouvement au registre durable, c'est se garantir qu'un
+   * chemin oublié fera bouger le stock sans laisser de trace — et c'est
+   * exactement ce qu'il ne faut pas.
+   * On prévient donc ICI, au seul endroit par lequel un stock change vraiment.
+   * Le journal est OPTIONNEL : tant que personne ne le pose (assets/maison-stock-
+   * movements.js le fait pour le métier « maison »), rien ne change pour les
+   * autres métiers. Et il ne rend jamais la main au catalogue : ce qu'il écrit,
+   * il l'écrit ailleurs. */
+  function journal(entry) {
+    var J = typeof window !== 'undefined' && window.KiwiStockJournal;
+    if (!J || typeof J.record !== 'function') return;
+    try { J.record(entry); } catch (_) {}
+  }
+
   /* Un geste qui AFFIRME un état : comptage physique, saisie directe, création.
      Il repose le socle et rend caducs les mouvements d'avant. */
-  function setAbsolute(v, n) {
+  function setAbsolute(v, n, why) {
     if (!v) return v;
+    var was = Math.max(0, +v.stock || 0);
     v.base = Math.max(0, n | 0);
     v.baseAt = now();
     v.stock = v.base;
+    /* Poser un état EST un mouvement, même si l'arithmétique du catalogue ne le
+       range pas dans `moves` : quelqu'un a déclaré que le compte n'était pas le
+       bon. Sans cette ligne, un comptage physique restait le seul geste capable
+       de changer un stock sans rien raconter. */
+    if (v.stock !== was) {
+      journal({
+        id: 'abs-' + v.id + '-' + v.baseAt, variant: v, at: v.baseAt,
+        delta: v.stock - was, before: was, after: v.stock, why: why || 'comptage',
+      });
+    }
     /* Les mouvements de cette déclinaison antérieurs au comptage ne servent
        plus à rien ici — la règle de fusion les ignore déjà, autant ne pas les
        traîner. Ceux des AUTRES déclinaisons ne bougent pas. */
@@ -336,8 +364,14 @@
       if (extra.actor) entry.actor = String(extra.actor).slice(0, 64);
       if (extra.ref) entry.ref = String(extra.ref).slice(0, 64);
     }
+    const before = Math.max(0, +v.stock || 0);
     db.moves.push(entry);
     materialize(db, v.id);
+    journal({
+      id: entry.id, variant: v, at: entry.at, delta: d,
+      before: before, after: Math.max(0, +v.stock || 0),
+      why: entry.why, actor: entry.actor || '', ref: entry.ref || '',
+    });
     return v;
   }
 
@@ -1640,7 +1674,12 @@
       colorLabel: data.colorLabel, colorHex: data.colorHex,
     });
     if (data.note) v.note = String(data.note).slice(0, 60);
-    db.variants.push(v); ixAddVariant(v); commit(); return v;
+    db.variants.push(v); ixAddVariant(v);
+    /* Une déclinaison créée AVEC du stock fait apparaître de la marchandise. Le
+       registre l'apprend comme stock initial, sinon le premier état du magasin
+       serait le seul à n'avoir aucune origine. */
+    if (v.stock > 0) journal({ id: 'ini-' + v.id, variant: v, at: v.baseAt, delta: v.stock, before: 0, after: v.stock, why: 'initial' });
+    commit(); return v;
   }
   function updateVariant(id, patch) {
     const v = varById(id); if (!v) return null;
@@ -1699,7 +1738,7 @@
      écrit un mouvement, et c'est ce qui permet à deux ventes simultanées de
      s'additionner au lieu de s'écraser. La distinction n'est pas cosmétique —
      c'est toute la différence entre « il y en a 8 » et « il en est parti 2 ». */
-  function setStock(id, n) { const v = varById(id); if (v) { setAbsolute(v, n); commit(); } return v; }
+  function setStock(id, n, why) { const v = varById(id); if (v) { setAbsolute(v, n, why); commit(); } return v; }
   function adjustStock(id, d, why, extra) { const v = varById(id); if (v) { move(v, d, why || 'ajust', extra); commit(); } return v; }
   function deleteVariant(id) {
     db.variants = db.variants.filter((v) => v.id !== id);
@@ -1738,7 +1777,9 @@
       colorLabel: data.colorLabel, colorHex: data.colorHex,
     });
     if (data.note) v.note = String(data.note).slice(0, 60);
-    db.variants.push(v); ixAddVariant(v); commit();
+    db.variants.push(v); ixAddVariant(v);
+    if (v.stock > 0) journal({ id: 'ini-' + v.id, variant: v, at: v.baseAt, delta: v.stock, before: 0, after: v.stock, why: 'initial' });
+    commit();
     return { variant: v, created: true };
   }
 
@@ -2050,7 +2091,7 @@
     // qu'un appelant qui pousserait dedans ne fasse pas mentir l'index.
     listVariants: (pid) => (load(), variantsOf(pid).slice()), addVariant: (d) => (load(), addVariant(d)),
     updateVariant: (id, p) => (load(), updateVariant(id, p)), renameColor: (id, label) => (load(), renameColor(id, label)),
-    setStock: (id, n) => (load(), setStock(id, n)),
+    setStock: (id, n, why) => (load(), setStock(id, n, why)),
     // Le MOTIF fait partie de l'appel : sans lui, une vente arrive au journal
     // étiquetée « ajust » et le journal cesse d'être lisible.
     adjustStock: (id, d, why, extra) => (load(), adjustStock(id, d, why, extra)), deleteVariant: (id) => (load(), deleteVariant(id)),

@@ -165,6 +165,48 @@ export async function readManagerRefundProof(token, authSecret) {
   return body;
 }
 
+/* Le même principe, pour un MOUVEMENT DE STOCK décidé au comptoir.
+ * `/api/inventory/movements` refuse un motif discrétionnaire (perte, casse,
+ * réception, transfert, correction) à une simple caisse : un caissier pouvait
+ * sinon sortir de la marchandise et poster la perte au nom d'un collègue. Mais
+ * un magasin a besoin de déclarer une casse À LA CAISSE, sans aller chercher le
+ * tableau de bord. Le responsable frappe donc son code, le serveur le vérifie
+ * (verifyStaffPin) et délivre cette capacité, liée aux identifiants EXACTS des
+ * mouvements qu'elle autorise et valable dix minutes. Le code, lui, ne quitte
+ * jamais D1 et n'entre jamais dans la file locale. */
+export function stockProofScope(ids) {
+  return (Array.isArray(ids) ? ids : [])
+    .map((id) => String(id || '').slice(0, 80)).filter(Boolean).sort().join(',').slice(0, 2000);
+}
+
+export async function managerStockProof(authSecret, claims) {
+  const body = {
+    v: 1,
+    merchant: String(claims && claims.merchant || '').slice(0, 64),
+    staffId: String(claims && claims.staffId || '').slice(0, 96),
+    staffName: String(claims && claims.staffName || '').slice(0, 80),
+    staffRole: String(claims && claims.staffRole || '').slice(0, 80),
+    scope: stockProofScope(claims && claims.movementIds),
+    exp: Date.now() + 10 * 60 * 1000,
+  };
+  if (!authSecret || !body.merchant || !body.staffId || !body.scope) return '';
+  const payload = bytesToB64url(encoder.encode(JSON.stringify(body)));
+  return payload + '.' + await hmacHex(authSecret, 'kiwi-manager-stock-v1:' + payload);
+}
+
+export async function readManagerStockProof(token, authSecret, merchant) {
+  if (!token || !authSecret || typeof token !== 'string' || token.indexOf('.') < 1) return null;
+  const dot = token.indexOf('.');
+  const payload = token.slice(0, dot);
+  const expected = await hmacHex(authSecret, 'kiwi-manager-stock-v1:' + payload);
+  if (!timingSafeEqualHex(token.slice(dot + 1), expected)) return null;
+  let body;
+  try { body = JSON.parse(new TextDecoder().decode(b64urlToBytes(payload))); } catch (_) { return null; }
+  if (!body || body.v !== 1 || !Number.isFinite(body.exp) || body.exp < Date.now()) return null;
+  if (merchant && body.merchant !== merchant) return null;
+  return body;
+}
+
 // Identity attestation only: the receiving route still enforces merchant/till
 // authorization. Never trust a client-supplied display name as a PIN identity.
 export async function tillActorProof(secret, merchant, staff) {

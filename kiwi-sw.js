@@ -202,7 +202,7 @@ var SHELL = [
   '/assets/printer-bridge.js?v=16',
   '/assets/barcode.js?v=1',
   '/assets/color-palette.js?v=5',
-  '/assets/boutique-catalog.js?v=7',
+  '/assets/boutique-catalog.js?v=8',
   '/assets/store-templates.js?v=2',
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
@@ -215,7 +215,8 @@ var SHELL = [
   '/assets/venue-store.js?v=3',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
-  '/assets/inventory-ledger.js?v=10',
+  '/assets/inventory-ledger.js?v=11',
+  '/assets/maison-stock-movements.js?v=2',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=8',
   '/assets/stock.js?v=50',
@@ -305,8 +306,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=5',
   '/assets/pos-autre.css?v=2',
   '/assets/pos-autre.js?v=2',
-  '/assets/pos-maison.css?v=26',
-  '/assets/pos-maison.js?v=26',
+  '/assets/pos-maison.css?v=27',
+  '/assets/pos-maison.js?v=27',
   '/assets/caisse-pairing.js?v=24',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

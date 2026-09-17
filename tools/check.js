@@ -1088,6 +1088,7 @@ section('Whole-project regressions');
     'boutique-custom-color-test.js',
     'catalog-stock-transaction-test.mjs',
     'inventory-ledger-test.mjs',
+    'maison-stock-movements-test.mjs',
     'stock-costing-migration-test.mjs',
     'stock-category-management-test.mjs',
     'pairing-resolver-test.mjs',

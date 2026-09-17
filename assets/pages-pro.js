@@ -10228,6 +10228,7 @@ function _renderInventory() {
         <button class="kb ghost" data-action="bqx-export">${_ICN.upload}Exporter CSV</button>
         ${_bqxTemplatesOn() ? `<button class="kb ghost" data-action="bqx-templates">${window.KiwiStoreTemplates.mark(14)}Modèles de rayons</button>` : ''}
         ${_orderProOn() ? `<button class="kb ghost" data-action="orderpro-tags">Tags NFC</button>` : ''}
+        ${(window.KiwiMaisonStock && window.KiwiMaisonStock.isMaison()) ? `<button class="kb ghost" data-action="nav-stock-movements">Mouvements de stock</button>` : ''}
         <button class="kb primary" data-action="bqx-new">${_ICN.plus}Nouveau produit</button>
       </div>
 
@@ -10330,6 +10331,27 @@ function _variantRow(v, kind) {
   </tr>`;
 }
 
+/* L'HISTORIQUE DE LA FICHE PRODUIT.
+ * « Il en manque trois » se règle ici, sur la fiche elle-même : les vingt
+ * derniers mouvements de ce produit, tous types confondus, avec qui et quand.
+ * Absent pour un métier qui n'écrit pas ce registre — la fiche reste alors
+ * exactement ce qu'elle était. */
+function _bqxHistoryHtml(pid) {
+  const M = window.KiwiMaisonStock;
+  if (!M || !M.isMaison()) return '';
+  _mzCss();
+  const rows = M.productHistory(pid, 20);
+  if (!rows.length) {
+    return `<div class="mzs-hist"><h4>Historique du stock</h4><div class="mzs-sub">Aucun mouvement enregistré pour ce produit.</div></div>`;
+  }
+  return `
+    <div class="mzs-hist">
+      <h4>Historique du stock</h4>
+      <div class="mzs-wrap" style="max-height:280px;margin-top:0;">${_mzTableHtml(rows, { hideProduct: true })}</div>
+      <div style="margin-top:8px;"><button class="kb ghost xs" data-action="bqx-prod-movements" data-arg="${pid}">Voir tous les mouvements</button></div>
+    </div>`;
+}
+
 function _bqxProductBody(pid) {
   const data = CAT().getProduct(pid);
   if (!data) return '<p>Produit introuvable.</p>';
@@ -10361,7 +10383,8 @@ function _bqxProductBody(pid) {
     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
       <button class="kb atlas" data-action="bqx-var-add" data-arg="${pid}">${_ICN.plus}Ajouter une variante</button>
       <button class="kb ghost" data-action="bqx-prod-print" data-arg="${pid}">${_ICN.upload}Imprimer toutes les étiquettes</button>
-    </div>`;
+    </div>
+    ${_bqxHistoryHtml(pid)}`;
 }
 
 function _bqxOpenProduct(pid) {
@@ -10398,7 +10421,7 @@ function _bqxMountDrawer(pid) {
   const root = document.querySelector('.kiwi-drawer-backdrop');
   if (!root) return;
   root.querySelectorAll('[data-var-stock]').forEach((inp) => {
-    inp.addEventListener('change', () => { CAT().setStock(inp.getAttribute('data-var-stock'), parseInt(inp.value, 10) || 0); });
+    inp.addEventListener('change', () => { CAT().setStock(inp.getAttribute('data-var-stock'), parseInt(inp.value, 10) || 0, 'saisie'); });
   });
   if (window.lucide) try { window.lucide.createIcons(); } catch (e) {}
 }
@@ -10418,6 +10441,256 @@ function _bqxRefreshDrawer() {
 }
 
 handlers['bqx-open'] = (_el, arg) => { if (arg) _bqxOpenProduct(arg); };
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * MOUVEMENTS DE STOCK · Maison
+ *
+ * Le stock d'une maison de décoration bouge pour dix raisons différentes, et
+ * « il en manque trois » n'est une question répondable que si chaque pièce
+ * entrée ou sortie a laissé une ligne. Les lignes viennent du registre durable
+ * (assets/maison-stock-movements.js → /api/inventory/movements) : elles
+ * survivent au repli du journal de catalogue, portent l'employé, la source, la
+ * référence du ticket et l'état du stock avant/après.
+ *
+ * Cette page ne calcule rien : elle filtre et elle affiche. Le seul geste
+ * qu'elle offre est la saisie manuelle — et il passe par le même chemin que la
+ * caisse, donc il bouge le stock ET écrit son mouvement, jamais l'un sans
+ * l'autre. Rien ici ne s'affiche pour un restaurant ou un hôtel : la page n'est
+ * proposée que lorsque le métier est « maison ».
+ * ═══════════════════════════════════════════════════════════════════════════ */
+const MZS = () => window.KiwiMaisonStock;
+let _mzFilter = { type: '', categoryId: '', actor: '', supplier: '', days: 30, q: '', productId: '' };
+
+function _mzCss() {
+  if (document.getElementById('mzs-css')) return;
+  const st = document.createElement('style');
+  st.id = 'mzs-css';
+  st.textContent = `
+    .mzs-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .mzs-table th { text-align:left; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--n-500,#77807b); padding:8px 10px; background:var(--paper-soft,#f3f1ea); position:sticky; top:0; z-index:1; }
+    .mzs-table td { padding:10px; border-top:1px solid var(--line,#eee); vertical-align:middle; }
+    .mzs-table tr:hover td { background:rgba(11,110,79,0.035); }
+    .mzs-qty { font-variant-numeric:tabular-nums; font-weight:600; white-space:nowrap; }
+    .mzs-in { color:#0B6E4F; } .mzs-out { color:#9B2F22; }
+    .mzs-ba { font-variant-numeric:tabular-nums; color:var(--n-500,#77807b); white-space:nowrap; }
+    .mzs-chip { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; border:1px solid var(--line,#e7e3da); white-space:nowrap; }
+    .mzs-chip.in { background:rgba(11,110,79,0.08); border-color:rgba(11,110,79,0.25); color:#0B6E4F; }
+    .mzs-chip.out { background:rgba(155,47,34,0.07); border-color:rgba(155,47,34,0.22); color:#9B2F22; }
+    .mzs-wrap { margin-top:10px; border:1px solid var(--line,#e7e3da); border-radius:12px; overflow:auto; max-height:62vh; }
+    .mzs-filters { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; }
+    .mzs-filters select, .mzs-filters input { font:inherit; font-size:13px; padding:7px 9px; border:1px solid var(--line,#e7e3da); border-radius:9px; background:var(--paper,#F7F5F0); color:inherit; min-height:38px; }
+    .mzs-sub { color:var(--n-500,#77807b); font-size:11px; }
+    .mzs-pend { font-size:10px; color:#D99A2B; }
+    .mzs-hist { margin-top:14px; }
+    .mzs-hist h4 { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--n-500,#77807b); margin:0 0 6px; }
+    @media (max-width: 860px) { .mzs-table td, .mzs-table th { padding:8px 7px; } .mzs-hide-s { display:none; } }
+  `;
+  document.head.appendChild(st);
+}
+
+const _mzDate = (ts) => new Date(ts).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+const _mzSource = (s) => (s === 'caisse' ? 'Caisse' : s === 'dashboard' ? 'Tableau de bord' : s === 'import' ? 'Import' : (s || '—'));
+
+function _mzRows() {
+  const M = MZS();
+  if (!M) return [];
+  const f = Object.assign({}, _mzFilter);
+  if (f.days) f.from = Date.now() - f.days * 86400000;
+  delete f.days;
+  return M.list(f);
+}
+
+function _mzTableHtml(rows, opts) {
+  opts = opts || {};
+  if (!rows.length) {
+    return `<div style="padding:26px;text-align:center;color:var(--n-500,#99a);">Aucun mouvement sur cette période.</div>`;
+  }
+  const body = rows.map((m) => `
+    <tr>
+      <td class="mzs-ba">${_esc(_mzDate(m.at))}${m.pending ? '<div class="mzs-pend">en attente de synchro</div>' : ''}</td>
+      ${opts.hideProduct ? '' : `<td><strong>${_esc(m.product || '—')}</strong>${m.variant ? `<div class="mzs-sub">${_esc(m.variant)}</div>` : ''}</td>`}
+      ${opts.hideProduct ? `<td>${_esc(m.variant || '—')}</td>` : ''}
+      <td><span class="mzs-chip ${m.dir > 0 ? 'in' : 'out'}">${_esc(m.typeLabel)}</span></td>
+      <td class="mzs-qty ${m.dir > 0 ? 'mzs-in' : 'mzs-out'}">${m.dir > 0 ? '+' : '−'}${Math.abs(m.qty)}</td>
+      <td class="mzs-ba">${m.before == null ? '—' : `${m.before} → ${m.after}`}</td>
+      <td class="mzs-hide-s">${_esc(m.actor || '—')}</td>
+      <td class="mzs-hide-s mzs-sub">${_esc(_mzSource(m.source))}${m.supplier ? ` · ${_esc(m.supplier)}` : ''}</td>
+      <td class="mzs-hide-s mzs-sub">${_esc(m.ref || '—')}${m.note ? `<div>${_esc(m.note)}</div>` : ''}</td>
+    </tr>`).join('');
+  return `
+    <table class="mzs-table">
+      <thead><tr>
+        <th>Date</th>
+        <th>${opts.hideProduct ? 'Variante' : 'Produit'}</th>
+        <th>Type</th><th>Qté</th><th>Avant → après</th>
+        <th class="mzs-hide-s">Employé</th><th class="mzs-hide-s">Source</th><th class="mzs-hide-s">Référence · note</th>
+      </tr></thead>
+      <tbody>${body}</tbody>
+    </table>`;
+}
+
+function _mzRenderPage() {
+  const M = MZS();
+  if (!M) { toast('Registre indisponible', { type: 'warn' }); return; }
+  _mzCss();
+  const rows = _mzRows();
+  const tot = M.totals(rows);
+  const fac = M.facets();
+  const cats = (CAT() && CAT().listCategories()) || [];
+  const opt = (v, label, cur) => `<option value="${_esc(v)}"${String(cur) === String(v) ? ' selected' : ''}>${_esc(label)}</option>`;
+  window.Kiwi.appPage('stock-movements', {
+    title: 'Mouvements de stock',
+    subtitle: `Chaque entrée et chaque sortie, avec l'employé, la source et l'état du stock avant/après`,
+    body: `
+      <div class="kx-kpi-strip">
+        <div class="kx-kpi"><div class="l">MOUVEMENTS</div><div class="v">${tot.count}</div><div class="d">${_mzFilter.days ? `${_mzFilter.days} derniers jours` : 'tout l’historique'}</div></div>
+        <div class="kx-kpi"><div class="l">ENTRÉES</div><div class="v">+${tot.entries}</div><div class="d">pièces reçues, retournées, corrigées</div></div>
+        <div class="kx-kpi"><div class="l">SORTIES</div><div class="v">−${tot.exits}</div><div class="d">ventes, pertes, transferts</div></div>
+        <div class="kx-kpi"><div class="l">SOLDE</div><div class="v">${tot.entries - tot.exits >= 0 ? '+' : '−'}${Math.abs(tot.entries - tot.exits)}</div><div class="d">variation nette sur la période</div></div>
+      </div>
+
+      <div class="p-toolbar" style="margin-top:4px;">
+        <div class="p-search" style="flex:1;"><span style="display:inline-flex;align-items:center;">${_ICN.search}</span>
+          <input data-mz-search placeholder="Produit, employé, fournisseur, référence…" value="${_esc(_mzFilter.q)}" style="border:none;background:transparent;outline:none;margin-left:6px;font:inherit;color:inherit;flex:1;min-width:120px;" /></div>
+        <button class="kb ghost" data-action="mz-export">${_ICN.upload}Exporter CSV</button>
+        <button class="kb primary" data-action="mz-new">${_ICN.plus}Nouveau mouvement</button>
+      </div>
+
+      <div class="mzs-filters">
+        <select data-mz="days">${[['7', '7 jours'], ['30', '30 jours'], ['90', '90 jours'], ['365', '12 mois'], ['0', 'Tout']].map(([v, l]) => opt(v, l, _mzFilter.days)).join('')}</select>
+        <select data-mz="type">${opt('', 'Tous les types', _mzFilter.type)}${M.types().filter((t) => fac.types.indexOf(t.id) >= 0 || !fac.types.length).map((t) => opt(t.id, (t.dir > 0 ? '↑ ' : '↓ ') + t.label, _mzFilter.type)).join('')}</select>
+        <select data-mz="categoryId">${opt('', 'Toutes catégories', _mzFilter.categoryId)}${cats.map((c) => opt(c.id, c.name, _mzFilter.categoryId)).join('')}</select>
+        <select data-mz="actor">${opt('', 'Tous les employés', _mzFilter.actor)}${fac.actors.map((a) => opt(a, a, _mzFilter.actor)).join('')}</select>
+        <select data-mz="supplier">${opt('', 'Tous les fournisseurs', _mzFilter.supplier)}${fac.suppliers.map((a) => opt(a, a, _mzFilter.supplier)).join('')}</select>
+        ${_mzFilter.productId ? `<button class="kb ghost xs" data-action="mz-clear-product">Produit filtré · tout voir</button>` : ''}
+      </div>
+
+      <div class="mzs-wrap" id="mz-table">${_mzTableHtml(rows)}</div>
+
+      <div class="kx-foot-hint">
+        <div class="lh">Registre</div>
+        <div class="rh">Un stock ne peut pas bouger sans mouvement : ventes et remboursements de la caisse s'écrivent ici tout seuls, et les saisies manuelles demandent un code responsable au comptoir.</div>
+      </div>
+    `,
+  });
+  setTimeout(() => {
+    const root = document.querySelector('.dash-genpage');
+    if (!root) return;
+    root.querySelectorAll('[data-mz]').forEach((sel) => {
+      sel.addEventListener('change', () => {
+        const k = sel.getAttribute('data-mz');
+        _mzFilter[k] = k === 'days' ? (parseInt(sel.value, 10) || 0) : sel.value;
+        _mzRenderPage();
+      });
+    });
+    const s = root.querySelector('[data-mz-search]');
+    if (s) s.addEventListener('input', () => {
+      _mzFilter.q = s.value.trim();
+      const t = document.getElementById('mz-table');
+      if (t) t.innerHTML = _mzTableHtml(_mzRows());
+    });
+  }, 0);
+}
+
+handlers['nav-stock-movements'] = () => {
+  if (!_bqxReady() || !MZS()) { toast('Mouvements de stock indisponibles', { desc: 'Le registre n’est pas chargé, rechargez la page.', type: 'warn' }); return; }
+  MZS().enable();
+  _mzRenderPage();
+};
+handlers['mz-clear-product'] = () => { _mzFilter.productId = ''; _mzRenderPage(); };
+handlers['mz-export'] = () => {
+  const rows = _mzRows();
+  const head = ['date', 'produit', 'variante', 'categorie', 'type', 'sens', 'quantite', 'avant', 'apres', 'employe', 'source', 'fournisseur', 'reference', 'note'];
+  const cell = (c) => {
+    let v = String(c == null ? '' : c);
+    if (/^[\t\r ]*[=+\-@]/.test(v)) v = "'" + v;
+    return /[",;\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  };
+  const csv = [head.join(',')].concat(rows.map((m) => [
+    new Date(m.at).toISOString(), m.product, m.variant, m.category, m.typeLabel,
+    m.dir > 0 ? 'entree' : 'sortie', Math.abs(m.qty), m.before == null ? '' : m.before,
+    m.after == null ? '' : m.after, m.actor, _mzSource(m.source), m.supplier, m.ref, m.note,
+  ].map(cell).join(','))).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+  a.download = 'mouvements-stock.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  toast('Mouvements exportés', { desc: `${rows.length} ligne(s) au format CSV.`, type: 'success' });
+};
+
+/* ── La saisie manuelle, au tableau de bord ───────────────────────────────
+ * Le même appel que la caisse (KiwiMaisonStock.record) : le stock bouge et le
+ * mouvement s'écrit dans le même geste. On n'offre que les types qu'un humain
+ * décide — une « vente » ne se saisit pas à la main, elle se passe en caisse. */
+function _mzManualModal(preset) {
+  const M = MZS(); const cat = CAT();
+  if (!M || !cat) return;
+  preset = preset || {};
+  const products = cat.listProducts({}) || [];
+  const manual = M.types().filter((t) => t.manual);
+  const pOpts = products.map((p) => `<option value="${_esc(p.id)}"${p.id === preset.productId ? ' selected' : ''}>${_esc(p.name)}</option>`).join('');
+  const m = window.Kiwi.modal({
+    title: 'Nouveau mouvement de stock',
+    body: `
+      <div style="display:grid;gap:10px;">
+        <label style="display:grid;gap:4px;font-size:12px;">Type
+          <select data-mzm="type" style="font:inherit;padding:8px;border:1px solid var(--line,#e7e3da);border-radius:9px;">
+            ${manual.map((t) => `<option value="${_esc(t.id)}">${t.dir > 0 ? '↑ Entrée · ' : '↓ Sortie · '}${_esc(t.label)}</option>`).join('')}
+          </select></label>
+        <label style="display:grid;gap:4px;font-size:12px;">Produit
+          <select data-mzm="product" style="font:inherit;padding:8px;border:1px solid var(--line,#e7e3da);border-radius:9px;">${pOpts}</select></label>
+        <label style="display:grid;gap:4px;font-size:12px;">Variante (taille · couleur)
+          <select data-mzm="variant" style="font:inherit;padding:8px;border:1px solid var(--line,#e7e3da);border-radius:9px;"></select></label>
+        <label style="display:grid;gap:4px;font-size:12px;">Quantité
+          <input data-mzm="qty" type="number" min="1" step="1" value="1" style="font:inherit;padding:8px;border:1px solid var(--line,#e7e3da);border-radius:9px;" /></label>
+        <label style="display:grid;gap:4px;font-size:12px;">Fournisseur (facultatif)
+          <input data-mzm="supplier" placeholder="Nom du fournisseur" style="font:inherit;padding:8px;border:1px solid var(--line,#e7e3da);border-radius:9px;" /></label>
+        <label style="display:grid;gap:4px;font-size:12px;">Référence (bon de livraison, ticket…)
+          <input data-mzm="ref" style="font:inherit;padding:8px;border:1px solid var(--line,#e7e3da);border-radius:9px;" /></label>
+        <label style="display:grid;gap:4px;font-size:12px;">Note (facultatif)
+          <input data-mzm="note" maxlength="200" style="font:inherit;padding:8px;border:1px solid var(--line,#e7e3da);border-radius:9px;" /></label>
+        <div data-mzm="msg" style="font-size:12px;color:#9B2F22;"></div>
+      </div>`,
+    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb primary" data-mzm="save">Enregistrer le mouvement</button>`,
+  });
+  const root = m && m.el ? m.el : document;
+  root.querySelectorAll('[data-dismiss]').forEach((b) => b.addEventListener('click', () => m.close()));
+  const q = (k) => root.querySelector(`[data-mzm="${k}"]`);
+  const fillVariants = () => {
+    const pid = q('product').value;
+    const vs = cat.listVariants(pid) || [];
+    q('variant').innerHTML = vs.map((v) => `<option value="${_esc(v.id)}">${_esc([v.size, v.colorLabel].filter(Boolean).join(' · '))} — ${v.stock} en stock</option>`).join('')
+      || '<option value="">Aucune variante</option>';
+    if (preset.variantId) q('variant').value = preset.variantId;
+  };
+  fillVariants();
+  q('product').addEventListener('change', fillVariants);
+  q('save').addEventListener('click', () => {
+    const res = M.record({
+      productId: q('product').value, variantId: q('variant').value,
+      type: q('type').value, qty: parseInt(q('qty').value, 10) || 0,
+      supplier: q('supplier').value.trim(), ref: q('ref').value.trim(),
+      note: q('note').value.trim(), source: 'dashboard',
+      actor: (window.KiwiStaff && window.KiwiStaff.name) || '',
+    });
+    if (!res.ok) {
+      const why = res.reason === 'stock-insuffisant'
+        ? `Stock insuffisant : il n'y a que ${res.before} pièce(s).`
+        : res.reason === 'quantite' ? 'Indiquez une quantité.' : 'Mouvement impossible : ' + res.reason;
+      q('msg').textContent = why;
+      return;
+    }
+    m.close();
+    toast('Mouvement enregistré', { desc: `Stock ${res.before} → ${res.after}.`, type: 'success' });
+    _mzRenderPage();
+  });
+}
+handlers['mz-new'] = () => _mzManualModal({ productId: _mzFilter.productId });
+handlers['bqx-prod-movements'] = (_el, arg) => {
+  _mzFilter.productId = arg || '';
+  document.querySelectorAll('.kiwi-drawer-backdrop, .kiwi-backdrop').forEach((el) => el.remove());
+  handlers['nav-stock-movements']();
+};
 
 /* ─── variant actions (all persist via the catalog → subscribe re-renders) ─── */
 handlers['bqx-var-inc'] = (_el, arg) => CAT().adjustStock(arg, +1);

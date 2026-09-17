@@ -150,6 +150,7 @@
       reversalOf: String(raw.reversalOf || '').slice(0, 80),
       meta: raw.meta && typeof raw.meta === 'object' ? raw.meta : null,
       cursor: Math.max(0, +raw.cursor || 0),
+      blocked: raw.blocked ? 1 : 0,
     };
   }
   function add(raw) {
@@ -252,6 +253,24 @@
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin', body: JSON.stringify({ merchant: m, movements: movements, terminalId: terminalId() }),
     });
+    /* UN REFUS N'EST PAS UNE PANNE RÉSEAU.
+     * Le serveur refuse un motif discrétionnaire écrit depuis une caisse
+     * (movements.js : seul le propriétaire, un opérateur nommé ou un code
+     * responsable vérifié peut en poster). Relancer la même écriture toutes les
+     * vingt secondes ne la fera jamais passer : la file resterait bloquée, et
+     * avec elle les VENTES légitimes derrière. On sort donc ces lignes de la
+     * file en les marquant — le stock local et l'historique les gardent, elles
+     * portent simplement « à autoriser » au lieu de tourner en boucle. */
+    if (res.status === 403) {
+      var refused = null;
+      try { refused = await res.json(); } catch (_) { refused = null; }
+      if (refused && refused.error === 'reason-forbidden') {
+        d.rows.forEach(function (r) { if (set.has(r.id)) r.blocked = 1; });
+        d.queued = d.queued.filter(function (id) { return !set.has(id); });
+        return d;
+      }
+      throw new Error('inventory-push-403');
+    }
     if (!res.ok) throw new Error('inventory-push-' + res.status);
     var body = await res.json();
     retainScope(d, body.scope);

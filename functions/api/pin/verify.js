@@ -9,7 +9,7 @@
 // Both shapes are rate-limited and answer with an identity, never with a code.
 import {
   verifyStaffPin, verifyAccountPin, employeeRoleOpensDashboard,
-  managerRefundProof, tillActorProof, employeeRoleOpensTill, json,
+  managerRefundProof, managerStockProof, tillActorProof, employeeRoleOpensTill, json,
 } from '../../auth/_lib.js';
 
 export async function onRequestPost(context) {
@@ -42,6 +42,17 @@ export async function onRequestPost(context) {
     approval = await managerRefundProof(env.AUTH_SECRET, {
       merchant, staffId: verified.staff.id, staffName: verified.staff.name, staffRole: verified.staff.role,
       refundId: action.refundId, originalSaleId: action.originalSaleId, amountCents: action.amountCents,
+    });
+  }
+
+  /* Un mouvement de stock discrétionnaire déclaré au comptoir : la capacité est
+   * liée aux identifiants exacts des mouvements, donc elle n'autorise pas une
+   * autre sortie que celle qu'on vient de montrer au responsable. */
+  if (!approval && merchant && action && action.kind === 'inventory'
+      && employeeRoleOpensDashboard(verified.staff.role)) {
+    approval = await managerStockProof(env.AUTH_SECRET, {
+      merchant, staffId: verified.staff.id, staffName: verified.staff.name,
+      staffRole: verified.staff.role, movementIds: action.movementIds,
     });
   }
 

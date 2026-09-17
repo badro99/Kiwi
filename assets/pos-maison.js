@@ -284,8 +284,9 @@
      variante déjà vide pendant qu'une autre est pleine), sinon la même famille,
      sinon la taille seule. Un retour (delta > 0) revient de préférence sur une
      variante existante de la même famille. */
-  function persistStock(pid, size, color, delta) {
+  function persistStock(pid, size, color, delta, ctx) {
     if (!delta || !pvReal()) return;
+    ctx = ctx || {};
     try {
       const cat = window.KiwiBoutiqueCatalog;
       if (!cat || !cat.listVariants || !cat.adjustStock) return;
@@ -313,7 +314,12 @@
          (assets/boutique-catalog.js) : « vente » et « retour » distinguent une
          sortie au comptoir d'une reprise, ce qui rend le journal lisible le jour
          où quelqu'un demande où sont passées douze pièces. */
-      if (v) cat.adjustStock(v.id, delta, (delta < 0 ? 'vente' : 'retour') + (matched ? '' : ' · couleur non appariée'));
+      /* La RÉFÉRENCE du ticket suit le mouvement jusqu'au registre : c'est elle
+         qui permet, six mois plus tard, de relier une sortie de stock à la vente
+         qui l'a causée — et à l'employé qui l'a encaissée. */
+      if (v) cat.adjustStock(v.id, delta, (ctx.why || (delta < 0 ? 'vente' : 'retour')) + (matched ? '' : ' · couleur non appariée'), {
+        ref: ctx.ref || '', actor: ctx.actor || ((window.KiwiStaff && window.KiwiStaff.name) || ''),
+      });
     } catch (_) {}
   }
   /* ══════════ UNE VENTE SORTIE DES LIVRES REND SON STOCK ═══════════════════
@@ -368,7 +374,7 @@
         if (!ln) return;
         const remaining = lineAvailableQty(ln);
         if (!remaining) return;                  // déjà rendue au comptoir
-        persistStock(ln.pid, ln.size, ln.color, sign * remaining);
+        persistStock(ln.pid, ln.size, ln.color, sign * remaining, { ref: sale.num || sale.id, why: sign > 0 ? 'remb' : 'vente' });
       });
     };
     SALES.forEach((sale) => {
@@ -3934,7 +3940,7 @@
       /* Une pièce rendue retourne au dépareillé ; le catalogue ne rebouge que
          si le retour reconstitue un set entier. */
       const back = releaseStock(ln.pid, ln.size, qty, ln.isPiece);
-      persistStock(ln.pid, ln.size, ln.color, back);
+      persistStock(ln.pid, ln.size, ln.color, back, { ref: sale.num || sale.id, why: 'retour' });
     });
     persistDay();  // le retour change la recette du jour, pas seulement l'affichage
   }
@@ -4107,8 +4113,10 @@
       applied = true;
       const back = releaseStock(ln.pid, ln.size, 1, ln.isPiece);
       // Commit the swap to the shared inventory: rendered piece back in, replacement out.
-      persistStock(ln.pid, ln.size, ln.color, back);
-      persistStock(newPid, newSize, newColor, -held);
+      /* Un échange est DEUX mouvements, jamais un seul : la pièce rendue rentre,
+         la pièce emportée sort, et le registre le raconte dans les deux sens. */
+      persistStock(ln.pid, ln.size, ln.color, back, { ref: sale.num || sale.id, why: 'retour' });
+      persistStock(newPid, newSize, newColor, -held, { ref: sale.num || sale.id, why: 'vente' });
       state.exchange = null;
       persistDay();
       queueIfOffline(`Échange ${sale.id}`);
@@ -4467,7 +4475,7 @@
         persistDay();
         bqSaveProvisional();
         if (IS_DEMO) saleSeq++;
-        sale.lines.forEach((ln) => persistStock(ln.pid, ln.size, ln.color, -(ln.units != null ? ln.units : ln.qty)));
+        sale.lines.forEach((ln) => persistStock(ln.pid, ln.size, ln.color, -(ln.units != null ? ln.units : ln.qty), { ref: sale.num || sale.id, why: 'vente' }));
         if (typeof updateRegistryContribution === 'function') updateRegistryContribution(sale);
         try {
           if (window.KiwiLive && window.KiwiLive.isOn()) {
@@ -6263,6 +6271,79 @@
       el.querySelectorAll('[data-vgen]').forEach((b) => b.addEventListener('click', () => { const code = cat2.generateBarcode(b.dataset.vgen); if (code) toast(`EAN-13 ${code} généré`); openInvProduct(pid); }));
       el.querySelectorAll('[data-vprint]').forEach((b) => b.addEventListener('click', () => printVariantLabel(b.dataset.vprint)));
       el.querySelectorAll('[data-vreg]').forEach((b) => b.addEventListener('click', () => openRegisterOnVariant(b.dataset.vreg, pid)));
+      el.querySelectorAll('[data-vmove]').forEach((b) => b.addEventListener('click', () => openStockMove(pid, b.dataset.vmove)));
+    });
+  }
+
+  /* ── DÉCLARER UN MOUVEMENT DEPUIS LE COMPTOIR ─────────────────────────────
+   * Une pièce cassée en vitrine, un carton reçu du fournisseur, une pièce
+   * envoyée à l'autre magasin : ces gestes se font AU COMPTOIR, pas devant un
+   * ordinateur, et jusqu'ici ils n'avaient nulle part où aller — le stock se
+   * corrigeait à la main, sans rien raconter.
+   * Le mouvement bouge le stock partagé ET écrit sa ligne au registre dans le
+   * même geste (assets/maison-stock-movements.js). Si la personne qui tient la
+   * caisse n'est pas responsable, le pavé d'autorisation s'ouvre : le code du
+   * responsable est vérifié par le serveur, qui délivre une capacité liée à CE
+   * mouvement-là. Un refus remet la marchandise exactement où elle était. */
+  function openStockMove(pid, vid) {
+    const MZ = window.KiwiMaisonStock;
+    const cat = catDB(); const d = cat.getProduct(pid);
+    if (!MZ || !d) return;
+    MZ.enable();
+    const v = (d.variants || []).find((x) => x.id === vid);
+    if (!v) return;
+    const kinds = MZ.types().filter((t) => t.manual);
+    const html = `
+      <button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
+      <div class="mzi-modh">
+        <span class="mzi-art">${artOf(d.product.art)}</span>
+        <div><h3>Mouvement de stock</h3><span>${esc(d.product.name)} · ${esc(v.size)} ${esc(variantColor(v).label)} · ${v.stock} en stock</span></div>
+      </div>
+      <div class="mzi-form">
+        <div class="mzi-fg"><label>Type de mouvement</label>
+          <select id="mzm-type">${kinds.map((t) => `<option value="${t.id}">${t.dir > 0 ? '↑ Entrée · ' : '↓ Sortie · '}${esc(t.label)}</option>`).join('')}</select></div>
+        <div class="mzi-frow">
+          <div class="mzi-fg"><label>Quantité</label><input id="mzm-qty" type="number" min="1" step="1" value="1" /></div>
+          <div class="mzi-fg"><label>Fournisseur / destination</label><input id="mzm-sup" placeholder="Facultatif" /></div>
+        </div>
+        <div class="mzi-frow">
+          <div class="mzi-fg"><label>Référence</label><input id="mzm-ref" placeholder="Bon de livraison, ticket…" /></div>
+          <div class="mzi-fg"><label>Note</label><input id="mzm-note" maxlength="200" placeholder="Facultatif" /></div>
+        </div>
+        <div class="bqx-hint" id="mzm-hint">Le stock et le registre bougent ensemble : ce mouvement restera lisible dans l'historique du produit.</div>
+      </div>
+      <div class="mzi-modfoot">
+        <button class="mz-btn secondary" data-inv-back>Retour</button>
+        <button class="mz-btn" id="mzm-save">Enregistrer le mouvement</button>
+      </div>`;
+    invSetModal(html, (el) => {
+      $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
+      $('#mzm-save', el).addEventListener('click', () => {
+        const type = $('#mzm-type', el).value;
+        const qty = parseInt($('#mzm-qty', el).value, 10) || 0;
+        const btn = $('#mzm-save', el);
+        btn.disabled = true;
+        Promise.resolve(MZ.requestManual({
+          productId: pid, variantId: vid, type, qty,
+          supplier: $('#mzm-sup', el).value.trim(), ref: $('#mzm-ref', el).value.trim(),
+          note: $('#mzm-note', el).value.trim(), source: 'caisse',
+        })).then((res) => {
+          btn.disabled = false;
+          if (!res || !res.ok) {
+            const why = res && res.reason === 'stock-insuffisant'
+              ? `Stock insuffisant : il n'y a que ${res.before} pièce(s).`
+              : res && res.reason === 'quantite' ? 'Indiquez une quantité.'
+                : res && res.reason === 'non-autorise' ? 'Mouvement non autorisé · code responsable requis.'
+                  : res && res.reason === 'reseau' ? 'Réseau indisponible · réessayez pour faire autoriser ce mouvement.'
+                    : 'Mouvement impossible.';
+            const hint = $('#mzm-hint', el);
+            if (hint) { hint.textContent = why; hint.className = 'bqx-hint is-warn'; }
+            return;
+          }
+          toast(`${d.product.name} · ${v.size} : ${res.before} → ${res.after}`);
+          openInvProduct(pid);
+        });
+      });
     });
   }
 
@@ -6279,7 +6360,7 @@
       <td><span class="mzi-cbtn is-locked" aria-disabled="true" title="Modifier dans le tableau de bord">${colorDot(shown)} ${esc(shown.label)}</span>${v.colorSource ? `<em class="mzi-csrc">${esc(v.colorSource)}</em>` : ''} · <b>${esc(v.size)}</b></td>
       <td><span class="mzi-stk-val" style="font-weight:700;padding:4px 8px;border-radius:6px;background:var(--n-100);">${v.stock}</span></td>
       <td>${bc}</td>
-      <td class="mzi-vact">${genOrPrint}<button class="mzi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i></button><span class="mzi-mini is-locked danger" aria-disabled="true" title="Supprimer dans le tableau de bord"><i data-lucide="trash-2"></i></span></td>
+      <td class="mzi-vact">${genOrPrint}<button class="mzi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i></button><button class="mzi-mini" data-vmove="${v.id}" title="Déclarer un mouvement de stock"><i data-lucide="arrow-left-right"></i></button><span class="mzi-mini is-locked danger" aria-disabled="true" title="Supprimer dans le tableau de bord"><i data-lucide="trash-2"></i></span></td>
     </tr>`;
   }
 
@@ -7051,8 +7132,28 @@
       $('#bqx-qplus', el).onclick = () => nudge(1);
       const receive = () => {
         const n = parseInt(qty.value, 10) || 0;
+        /* Une réception EST un mouvement d'entrée : elle passe par le registre
+           quand il est actif (maison), et retombe sur receiveStock partout
+           ailleurs — les autres boutiques ne changent pas de comportement. */
+        const MZ = window.KiwiMaisonStock;
+        if (MZ && MZ.isMaison()) {
+          MZ.requestManual({ productId: pid, variantId: v.id, type: 'reception', qty: n, source: 'caisse' })
+            .then((out) => {
+              if (!out || !out.ok) {
+                toast(out && out.reason === 'quantite' ? 'Indiquez une quantité d\'au moins 1'
+                  : out && out.reason === 'non-autorise' ? 'Réception non autorisée · code responsable requis'
+                    : 'Réception impossible');
+                return;
+              }
+              afterReceive({ added: n, before: out.before, stock: out.after });
+            });
+          return;
+        }
         const res = cat.receiveStock(v.id, n);
         if (!res.ok) { toast(res.reason === 'quantite' ? 'Indiquez une quantité d\'au moins 1' : 'Réception impossible'); return; }
+        afterReceive(res);
+      };
+      const afterReceive = (res) => {
         /* Un réassort compte comme un article repris : sans ce `count++`, une
            session passée entièrement à remettre du stock sur des tailles déjà
            connues affichait « 0 article · 12 pièces » — un compteur qui se
