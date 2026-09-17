@@ -5624,7 +5624,7 @@
        pose le bon sur le serveur (file de secours hors ligne comprise) pour que
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
-  <script src="assets/kitchen-relay.js?v=6" defer></script>
+  <script src="assets/kitchen-relay.js?v=7" defer></script>
   <script src="assets/kitchen-print-queue.js?v=14" defer></script>
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
@@ -12323,8 +12323,17 @@
              compteur local de ce comptoir. Sans ça, un cuisinier annonçant
              « bon 7 prêt » aurait désigné un autre bon que celui que le
              caissier a sous les yeux. */
+          if (!(r && r.ok && r.number != null)) {
+            /* Pas de numéro canonique : la commande est partie en file de
+               secours (ou pas du tout). Ce qu'on imprime doit le DIRE. */
+            order.provisionalNumber = true;
+            if (order.table && tables[order.table] && !tables[order.table].orderNo) {
+              tables[order.table].orderNo = ticketNo(order);
+            }
+          }
           if (r && r.ok && r.number != null) {
             order.opNum = r.number;
+            order.provisionalNumber = false;
             if (order.table && r.session && tables[order.table]) {
               order.session = String(r.session);
               tables[order.table].timerSession = order.session;
@@ -12335,7 +12344,8 @@
                as the permanent number lands. */
             reconcileReceiptOrderNumber(order);
             if (order.table && tables[order.table]
-                && String(tables[order.table].orderNo) === String(order.num)) {
+                && (String(tables[order.table].orderNo) === String(order.num)
+                  || String(tables[order.table].orderNo) === 'L' + String(order.num))) {
               tables[order.table].orderNo = ticketNo(order);
               try { persistShift(); } catch (_) {}
             }
@@ -12348,6 +12358,32 @@
         });
       } catch (_) { return Promise.resolve(null); }
     }
+
+    /* La reprise de file a fini par obtenir le numéro canonique. C'est le
+       même bon — `opId` est son identité — et c'est le seul moment où l'on
+       peut encore faire converger le papier, la cuisine et la caisse. */
+    window.addEventListener('kiwi:kitchen-relay-number', (e) => {
+      const detail = (e && e.detail) || {};
+      const order = detail.id ? opTickets.get(String(detail.id)) : null;
+      if (!order || detail.number == null || order.opNum != null) return;
+      const was = ticketNo(order);
+      order.opNum = detail.number;
+      order.provisionalNumber = false;
+      if (order.table && detail.session && tables[order.table]) {
+        order.session = String(detail.session);
+        tables[order.table].timerSession = order.session;
+      }
+      reconcileReceiptOrderNumber(order);
+      if (order.table && tables[order.table] && String(tables[order.table].orderNo) === was) {
+        tables[order.table].orderNo = ticketNo(order);
+      }
+      updateKdsCount();
+      if (kdsEl.classList.contains('is-open')) kdsPaint();
+      try { persistShift(); } catch (_) {}
+      /* Le papier, lui, est déjà sorti avec « L64 ». On le dit, une fois : le
+         comptoir doit pouvoir rapprocher le ticket posé sur la planche. */
+      try { toast(`Bon ${was} · numéro définitif ${ticketNo(order)}`, 'ok'); } catch (_) {}
+    });
 
     /* ═══════ REVENIR À LA SALLE · LA SORTIE QUI N'EXISTAIT PAS ══════════════
      * `mode` et `selectedId` sont les deux moitiés d'un même état, et rien ne
@@ -18518,7 +18554,17 @@
       if (!parts.length) return '';
       return ((parts[0][0] || '') + (parts.length > 1 ? (parts[parts.length - 1][0] || '') : '')).toUpperCase();
     }
+    /* ── UN NUMÉRO LOCAL N'EST PAS UN NUMÉRO ──────────────────────────────
+     * Hors ligne, le relais ne peut pas attribuer le numéro canonique, et le
+     * bon sortait sur le papier avec le compteur LOCAL du comptoir — un « 64 »
+     * qui ressemble en tout point à un numéro de serveur. Au retour du réseau
+     * la commande recevait son vrai numéro, disons 3 : à partir de là le
+     * papier, la cuisine et la caisse désignaient trois choses différentes.
+     * Un numéro provisoire porte donc sa marque, « L », qu'aucun numéro
+     * serveur ne peut prendre. Il ne prétend pas être ce qu'il n'est pas, et
+     * il redevient le vrai numéro dès que celui-ci arrive. */
     function ticketNo(o) {
+      if (o && o.opNum == null && o.provisionalNumber) return 'L' + String(o.num);
       if (o && o.opNum != null) {
         const n = String(o.opNum);
         if (o.opChannel === 'kiwi') {

@@ -285,7 +285,7 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
   ok('une vente à emporter aussi',
     /function createTakeawayKitchenOrder\(lines\)[\s\S]{0,1600}?relayToKitchen\(order\)/.test(CAISSE)
       && /function sendToKitchen\(\)[\s\S]{0,2400}?createTakeawayKitchenOrder\(cart\)/.test(CAISSE));
-  const relayFn = (CAISSE.match(/function relayToKitchen\(order\)\s*\{[\s\S]{0,2600}?\n {4}\}/) || [''])[0];
+  const relayFn = (CAISSE.match(/function relayToKitchen\(order\)\s*\{[\s\S]{0,3600}?\n {4}\}/) || [''])[0];
   ok('le bon porte le poste de chaque ligne', /station: \(i\.stations && i\.stations\[0\]\)/.test(relayFn));
   /* Sans cette inscription, le sondage retrouverait notre propre bon six
      secondes plus tard, ne le reconnaîtrait pas, et en ferait un SECOND ticket

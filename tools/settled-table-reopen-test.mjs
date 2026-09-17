@@ -151,7 +151,7 @@ ok('a normal tender cannot close a table when the ledger refused its sale',
   const end = source.indexOf('\n    /* ═══════ REVENIR', start);
   assert.ok(start >= 0 && end > start, 'cashier relay is extractable');
   const tables = { 13: { orderNo: '154' } };
-  const win = { KiwiKitchenRelay: {
+  const win = { addEventListener() {}, dispatchEvent: () => true, KiwiKitchenRelay: {
     merchant: () => 'mixmax', newId: () => 'ord-caisse-154',
     send: async () => ({ ok: true, number: 154, session: 'ses-13-154' }),
   } };

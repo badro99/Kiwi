@@ -262,7 +262,7 @@ var SHELL = [
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */
-  '/assets/kitchen-relay.js?v=6',
+  '/assets/kitchen-relay.js?v=7',
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */

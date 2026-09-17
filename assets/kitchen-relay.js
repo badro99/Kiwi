@@ -141,7 +141,24 @@
       if (!r.ok) { if (!isRetry) enqueue(body); return { ok: false, retryLater: true }; }
       backendAbsent = false;
       dequeue(body.create.id);
-      return r.json().catch(function () { return { ok: true }; });
+      return r.json().catch(function () { return { ok: true }; }).then(function (j) {
+        /* ── LE NUMÉRO QUI ARRIVAIT TROP TARD POUR ÊTRE DIT ─────────────────
+         * Une reprise de file jetait la réponse du serveur. Le bon partait
+         * donc bien en cuisine au retour du réseau, mais le NUMÉRO définitif
+         * n'était annoncé à personne : la caisse gardait son compteur local,
+         * le papier déjà sorti aussi, et la cuisine appelait un autre numéro.
+         * Deux écrans, deux vérités, et un plat que personne ne réclame.
+         * L'appelant direct lit la promesse ; la reprise, elle, n'a plus
+         * d'appelant — d'où cet événement. */
+        if (isRetry && j && j.ok && j.number != null) {
+          try {
+            window.dispatchEvent(new CustomEvent('kiwi:kitchen-relay-number', {
+              detail: { id: body.create.id, number: j.number, session: j.session || '' },
+            }));
+          } catch (_) {}
+        }
+        return j;
+      });
     }).catch(function () {
       if (!isRetry) enqueue(body);
       return { ok: false, offline: true };

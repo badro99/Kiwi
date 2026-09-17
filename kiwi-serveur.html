@@ -5763,6 +5763,74 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       svPendingRef.set(id, pending.ref);
       try { localStorage.setItem(svPendingKey(id), JSON.stringify(pending)); } catch (_) {}
     }
+    /* ── LE PANIER QUI N'EXISTAIT QUE DANS LA MÉMOIRE DU TÉLÉPHONE ────────
+     * Les lignes saisies mais pas encore envoyées ne vivaient nulle part
+     * ailleurs que dans `tableOrders`. Un rechargement, un onglet que l'iOS
+     * recycle pour récupérer de la RAM, une tablette qui s'éteint : toute la
+     * commande en cours disparaissait, et le serveur devait la resaisir de
+     * mémoire devant le client. On l'écrit donc à chaque modification, sous
+     * une clé qui porte le commerce ET l'opérateur — la tablette est partagée,
+     * le brouillon de Yasmine n'est pas celui de Karim.
+     *
+     * Ne sont écrites que les lignes réellement en attente (`sourceLocal` et
+     * `sentQty < qty`) : ce qui vient du serveur sera rendu par la synchro, et
+     * réécrire un instantané périmé par-dessus, c'est fabriquer une commande
+     * fantôme. C'est exactement le filtre que la fusion canonique applique
+     * déjà. */
+    const SV_DRAFT_TTL = 12 * 60 * 60 * 1000;
+    let svDraftTimer = null;
+    function svDraftsKey() {
+      const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug() || 'store';
+      const operator = (liveEmployeeState && (liveEmployeeState.staffId || liveEmployeeState.employeeId)) || currentUser || 'employee';
+      return 'kiwi:service-drafts-v1:' + merchant + ':' + operator;
+    }
+    function svDraftLines(id) {
+      return (tableOrders[id] || []).filter((line) => line
+        && line.sourceLocal === true
+        && Number(line.sentQty || 0) < Number(line.qty || 0));
+    }
+    function svSaveDrafts() {
+      const tablesOut = {};
+      Object.keys(tableOrders).forEach((id) => {
+        const lines = svDraftLines(id);
+        if (lines.length) tablesOut[id] = lines;
+      });
+      try {
+        if (!Object.keys(tablesOut).length) { localStorage.removeItem(svDraftsKey()); return; }
+        localStorage.setItem(svDraftsKey(), JSON.stringify({ at: Date.now(), tables: tablesOut }));
+      } catch (_) {
+        /* Stockage saturé : le brouillon reste en mémoire et la saisie continue.
+           On ne casse pas un service pour un quota. */
+      }
+    }
+    function svTouchDrafts() {
+      clearTimeout(svDraftTimer);
+      svDraftTimer = setTimeout(svSaveDrafts, 400);
+    }
+    function svRestoreDrafts() {
+      let saved = null;
+      try { saved = JSON.parse(localStorage.getItem(svDraftsKey()) || 'null'); } catch (_) { saved = null; }
+      if (!saved || !saved.tables || typeof saved.tables !== 'object') return 0;
+      /* Un brouillon d'hier n'est plus une commande, c'est un piège : il
+         referait surgir des plats que personne n'attend. */
+      if (Date.now() - Number(saved.at || 0) > SV_DRAFT_TTL) {
+        try { localStorage.removeItem(svDraftsKey()); } catch (_) {}
+        return 0;
+      }
+      let restored = 0;
+      Object.keys(saved.tables).forEach((id) => {
+        const lines = Array.isArray(saved.tables[id]) ? saved.tables[id] : [];
+        const clean = lines.filter((line) => line && line.name && Number(line.qty) > 0)
+          .map((line) => ({ ...line, uid: line.uid || newLineUid(), sourceLocal: true }));
+        if (!clean.length) return;
+        const existing = tableOrders[id] || [];
+        const known = new Set(existing.map((line) => line && line.uid));
+        tableOrders[id] = existing.concat(clean.filter((line) => !known.has(line.uid)));
+        restored += clean.length;
+      });
+      return restored;
+    }
+
     function svForgetPending(id) {
       svPendingBatches.delete(id);
       svPendingRef.delete(id);
@@ -6863,8 +6931,52 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         if (merchant) KiwiLiveSocket.on(merchant, 'service', pollServiceSync);
       } catch (_) {}
     }
+    /* ── LE LOT PARTI À MOITIÉ ────────────────────────────────────────────
+     * Un lot enregistré ici est une commande que le serveur a validée devant
+     * le client mais dont la cuisine n'a pas encore accusé réception. Il était
+     * bien écrit sur le disque — et plus jamais relu tout seul : il fallait
+     * que quelqu'un rouvre CETTE table et appuie de nouveau sur envoyer. Une
+     * tablette qui se recharge au mauvais moment laissait donc une commande en
+     * suspens que personne ne savait en suspens.
+     *
+     * On les vide au démarrage, et dès que le réseau revient. `svSendOrderBatch`
+     * repart du lot stocké avec sa référence d'origine : c'est la même
+     * commande, pas une seconde. */
+    let svDrainAt = 0;
+    function svDrainPendingBatches() {
+      if (SV_DEMO) return;
+      const now = Date.now();
+      if (now - svDrainAt < 4000) return;
+      svDrainAt = now;
+      const prefix = 'kiwi:service-pending-v1:';
+      const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug() || 'store';
+      const operator = (liveEmployeeState && (liveEmployeeState.staffId || liveEmployeeState.employeeId)) || currentUser || 'employee';
+      const mine = prefix + merchant + ':' + operator + ':';
+      const ids = [];
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.indexOf(mine) === 0) ids.push(key.slice(mine.length));
+        }
+      } catch (_) { return; }
+      ids.forEach((id) => {
+        const pending = svReadPending(id);
+        if (!pending) return;
+        /* Un lot très ancien n'est plus une commande en cours : le rejouer
+           enverrait en cuisine des plats d'un service terminé. On le laisse
+           visible plutôt que de l'imprimer. */
+        if (Date.now() - Number(pending.createdAt || 0) > SV_DRAFT_TTL) return;
+        try {
+          svSendOrderBatch(id).then((r) => {
+            if (r && r.ok && !r.nothing) toast('Commande en attente envoyée · cuisine', 'ok');
+          }).catch(() => {});
+        } catch (_) {}
+      });
+    }
     function startServiceSync() {
       if (serviceSyncTimer || SV_DEMO) return;
+      try { svRestoreDrafts(); } catch (_) {}
+      try { svDrainPendingBatches(); } catch (_) {}
       pollServiceSync();
       const tick = () => {
         joinServiceSocket();
@@ -6876,6 +6988,13 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       };
       tick();
     }
+    window.addEventListener('online', () => { try { svDrainPendingBatches(); } catch (_) {} });
+    /* Le dernier instant où l'on peut encore écrire : l'onglet que l'iOS
+       recycle ne repasse pas par un événement plus tardif. */
+    window.addEventListener('pagehide', () => { try { svSaveDrafts(); } catch (_) {} });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') { try { svSaveDrafts(); } catch (_) {} }
+    });
     function stopServiceSync() {
       if (serviceSyncTimer) clearTimeout(serviceSyncTimer);
       try { if (window.KiwiLiveSocket) KiwiLiveSocket.stop(); } catch (_) {}
@@ -7595,6 +7714,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     }
 
     function renderTableDetail() {
+      svTouchDrafts();
       const id = activeTableId;
       if (!id) return;
       // Special path: if this table has a split in progress, show
@@ -8792,6 +8912,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     }
 
     function renderCartBar() {
+      svTouchDrafts();
       const bar = $('#menu-cart-bar');
       if (!menuContextId || currentTab !== 'menu') {
         bar.classList.remove('is-visible');
