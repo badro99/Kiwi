@@ -433,6 +433,22 @@
       b.line(row('Compté', o.notCounted || 'non compté', paper));
     }
 
+    /* Le Z du terminal est une source indépendante : le ticket nomme le côté
+       qui porte l'écart, au lieu d'imprimer un nombre signé à interpréter. */
+    var card = r.cardReconciliation || {};
+    b.line(rule(paper));
+    b.align('center').bold(true).line(o.cardTitle || 'RAPPROCHEMENT CARTE').bold(false).align('left');
+    b.line(row('Kiwi', money(card.kiwi != null ? card.kiwi : (r.methods && r.methods.card)), paper));
+    if (card.terminal == null) {
+      b.line(row('Z terminal', o.notEntered || 'non saisi', paper));
+    } else {
+      b.line(row('Z terminal', money(card.terminal), paper));
+      var cg = +card.gap || 0;
+      var cv = cg === 0 ? (o.cardMatched || 'RAPPROCHÉ')
+        : (cg > 0 ? 'TERMINAL + ' : 'KIWI + ') + money(Math.abs(cg));
+      b.bold(true).line(row('RÉSULTAT', cv, paper)).bold(false);
+    }
+
     /* Le net ferme le ticket : c'est le chiffre qu'on reporte. */
     b.line(rule(paper));
     b.bold(true).size(1, 2).line(row(o.netLabel || 'NET DU JOUR', money(r.net), paper)).size(1, 1).bold(false);

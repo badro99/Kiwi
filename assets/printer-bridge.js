@@ -1212,6 +1212,19 @@
       R('Compté', o.notCounted || 'non compté');
     }
 
+    var card = r.cardReconciliation || {};
+    rule();
+    out.push('<div class="kpr-c kpr-b">' + esc(o.cardTitle || 'RAPPROCHEMENT CARTE') + '</div>');
+    R('Kiwi', money(card.kiwi != null ? card.kiwi : (r.methods && r.methods.card)));
+    if (card.terminal == null) {
+      R('Z terminal', o.notEntered || 'non saisi');
+    } else {
+      R('Z terminal', money(card.terminal));
+      var cg = +card.gap || 0;
+      R('RÉSULTAT', cg === 0 ? (o.cardMatched || 'RAPPROCHÉ')
+        : (cg > 0 ? 'TERMINAL + ' : 'KIWI + ') + money(Math.abs(cg)), 'kpr-b');
+    }
+
     rule();
     R(o.netLabel || 'NET DU JOUR', money(r.net), 'kpr-tot');
 

@@ -228,8 +228,8 @@
     "sha": "2a3b23d3664936a2"
   },
   "assets/day-report.js": {
-    "v": "12",
-    "sha": "559dcf2b3cfcbeb5"
+    "v": "13",
+    "sha": "c735e8737953495f"
   },
   "assets/demoClock.js": {
     "v": "1",
@@ -296,8 +296,8 @@
     "sha": "b30017496f9a5369"
   },
   "assets/escpos.js": {
-    "v": "10",
-    "sha": "b2c11d639c633af9"
+    "v": "11",
+    "sha": "181c68735a2a7622"
   },
   "assets/features.js": {
     "v": "4",
@@ -772,8 +772,8 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "17",
-    "sha": "8dfabaf9fa3ccbe1"
+    "v": "18",
+    "sha": "a77e45eb1a328790"
   },
   "assets/procurement.js": {
     "v": "2",

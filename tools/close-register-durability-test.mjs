@@ -16,10 +16,11 @@ async function exercise(persist) {
   const calls = { cleared: 0, shown: 0, events: 0, toasts: [], sheetOpen: false };
   const report = { day: '2026-09-14', store: { slug: 'fixture-cafe' }, closedAt: 99, sessionId: 'fixture-shift', cash: {} };
   const count = { value: '100', focus() {} };
+  const cardZ = { value: '0', focus() {} };
   const sheet = { classList: { add() { calls.sheetOpen = true; }, remove() { calls.sheetOpen = false; } } };
   const ctx = vm.createContext({
     registerClosing: false, clotureExpected: 0, currentCashier: { name: 'Amira' }, shiftOpenedAt: new Date(1),
-    $: (selector) => selector === '#clo-count' ? count : sheet,
+    $: (selector) => selector === '#clo-count' ? count : (selector === '#clo-card-z' ? cardZ : sheet),
     reconcileJournalSales() {}, syncSettledBusinessDay: async () => ({ ok: true, complete: true, count: 0 }),
     buildDayReport: () => report,
     window: { KiwiDayReport: {
@@ -28,6 +29,7 @@ async function exercise(persist) {
       isReal: () => true, flush() {},
     } },
     toast: (msg) => calls.toasts.push(msg), journalTotals: () => ({}), drawerExpected: () => 100,
+    money: (n) => Math.round(Number(n) * 100) / 100, persistShift() {},
     minor: (n) => Math.round(n * 100), cashSessionId: () => 'fixture-shift', cashActorId: () => 'amira',
     emitCashSession: () => { calls.events++; }, clearPersistedShift: () => { calls.cleared++; },
     showPostClose: () => { calls.shown++; }, finishClose() {}, Date, Number, Math,

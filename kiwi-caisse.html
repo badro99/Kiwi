@@ -88,8 +88,8 @@
   <script src="assets/caisse-motion.js?v=1" defer></script>
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
-  <script src="assets/escpos.js?v=10" defer></script>
-  <script src="assets/printer-bridge.js?v=17" defer></script>
+  <script src="assets/escpos.js?v=11" defer></script>
+  <script src="assets/printer-bridge.js?v=18" defer></script>
   <script src="assets/caisse-hardware.js?v=4" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
@@ -3233,6 +3233,11 @@
       border-radius: 14px;
       opacity: 0; animation: clo-row-in 420ms cubic-bezier(0.32, 0.72, 0, 1) both;
     }
+    .clo-card-box { animation-duration: 440ms; }
+    .clo-card-help {
+      margin: 2px 0 0; font-size: 11px; line-height: 1.4;
+      color: rgba(247,245,240,0.4);
+    }
     .clo-drawer-title { font-size: 10px; font-weight: 600; color: rgba(247,245,240,0.45); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
     .clo-drawer-line { display: flex; justify-content: space-between; font-size: 13px; color: rgba(247,245,240,0.62); padding: 4px 0; }
     .clo-drawer-line .mono { font-family: var(--mono); color: var(--paper-cream); }
@@ -5580,7 +5585,7 @@
        avec le tableau de bord. Après cloud-doc.js, dont il tient sa copie
        serveur · c'est ce qui fait qu'un Z clôturé sur l'iPad du comptoir
        s'ouvre le lendemain sur le téléphone du patron. -->
-  <script src="assets/day-report.js?v=12" defer></script>
+  <script src="assets/day-report.js?v=13" defer></script>
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js?v=3" defer></script>
@@ -6721,6 +6726,20 @@
         </div>
         <div class="clo-ecart-line" id="clo-ecart-line">
           <span>Écart</span><span class="mono" id="clo-ecart">·</span>
+        </div>
+      </div>
+      <div class="clo-drawer-box clo-card-box" id="clo-card-box">
+        <div class="clo-drawer-title">Rapprochement carte · journée commerciale</div>
+        <div class="clo-drawer-line is-total">
+          <span>Total carte Kiwi</span><span class="mono" id="clo-card-kiwi">·</span>
+        </div>
+        <div class="clo-count-row">
+          <label for="clo-card-z">Total carte du Z terminal</label>
+          <input class="clo-count-input" id="clo-card-z" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00" required aria-describedby="clo-card-help" />
+        </div>
+        <p class="clo-card-help" id="clo-card-help">Recopiez le total carte imprimé par le terminal, même s'il est à zéro.</p>
+        <div class="clo-ecart-line" id="clo-card-ecart-line" aria-live="polite">
+          <span>Résultat</span><span class="mono" id="clo-card-ecart">À saisir</span>
         </div>
       </div>
       <div class="clo-highlight" id="clo-highlight">
@@ -15146,6 +15165,7 @@
       // 0 transactions) that fills from real encaissements.
       const _realStore = storeIsReal();
       shiftOpenedAt = _realStore ? new Date() : new Date(Date.now() - 128 * 60 * 1000);
+      terminalCardTotal = null;
       // Ce service naît chez CE commerçant · cf. la note sur shiftMerchant.
       shiftMerchant = currentMerchantSlug();
       /* Qui a ouvert. Figé maintenant et jamais réécrit : après une passation,
@@ -15241,6 +15261,8 @@
 
     /* ---- Clôture de caisse · end-of-service report ---- */
     let clotureExpected = 0;
+    let clotureCardExpected = 0;
+    let terminalCardTotal = null;
     function updateEcart() {
       const line = $('#clo-ecart-line'), out = $('#clo-ecart'), inp = $('#clo-count');
       if (!line || !out) return;
@@ -15252,6 +15274,31 @@
       const sign  = ecart > 0 ? '+ ' : (ecart < 0 ? '− ' : '');
       out.textContent = sign + fmtMAD(Math.abs(ecart));
       line.classList.add(Math.abs(ecart) <= 5 ? 'is-ok' : 'is-off');
+    }
+    function updateCardEcart() {
+      const line = $('#clo-card-ecart-line'), out = $('#clo-card-ecart'), inp = $('#clo-card-z');
+      if (!line || !out) return;
+      line.classList.remove('is-ok', 'is-off');
+      const raw = inp ? String(inp.value || '').trim() : '';
+      if (!raw) { out.textContent = 'À saisir'; return; }
+      const terminal = Number(raw);
+      if (!Number.isFinite(terminal) || terminal < 0 ||
+          Math.abs(terminal * 100 - Math.round(terminal * 100)) > 0.000001) {
+        out.textContent = 'Montant invalide';
+        line.classList.add('is-off');
+        return;
+      }
+      const gap = major(minor(terminal) - minor(clotureCardExpected));
+      if (gap === 0) {
+        out.textContent = 'Rapproché · ' + fmtMAD(0);
+        line.classList.add('is-ok');
+      } else if (gap > 0) {
+        out.textContent = 'Terminal + ' + fmtMAD(gap);
+        line.classList.add('is-off');
+      } else {
+        out.textContent = 'Kiwi + ' + fmtMAD(Math.abs(gap));
+        line.classList.add('is-off');
+      }
     }
     function openCloture() {
       renderCloture(false);
@@ -15317,6 +15364,20 @@
       if (!preserveCount && countEl) countEl.value = '';
       updateEcart();
 
+      /* `tot.card` ne couvre que le service courant. Le rapport prévisualisé
+         ajoute les services déjà clôturés de la même journée commerciale. */
+      let cardReport = null;
+      try { if (typeof buildDayReport === 'function') cardReport = buildDayReport(null, 0); } catch (_) {}
+      const reportCard = Number(cardReport && cardReport.methods && cardReport.methods.card);
+      clotureCardExpected = money(Number.isFinite(reportCard) ? reportCard : tot.card);
+      const cardKiwi = $('#clo-card-kiwi');
+      if (cardKiwi) cardKiwi.textContent = fmtMAD(clotureCardExpected);
+      const cardInput = $('#clo-card-z');
+      if (!preserveCount && cardInput) {
+        cardInput.value = terminalCardTotal == null ? '' : String(terminalCardTotal);
+      }
+      updateCardEcart();
+
       // Highlight · objectif d'lyoum progress
       const pct    = Math.round(tot.revenue / DAILY_OBJECTIF * 100);
       const hlIcon = $('#cloture-modal .clo-highlight-icon');
@@ -15329,7 +15390,7 @@
         if (hlText) hlText.innerHTML = `À <em>${pct}%</em> de l'objectif d'lyoum, ${fmtMAD(DAILY_OBJECTIF - tot.revenue)} restants.`;
       }
       // Re-trigger the entrance animation on the static blocks
-      [['#clo-drawer-box', rows.length * 70 + 30], ['#clo-highlight', rows.length * 70 + 60]].forEach(([sel, delay]) => {
+      [['#clo-drawer-box', rows.length * 70 + 30], ['#clo-card-box', rows.length * 70 + 60], ['#clo-highlight', rows.length * 70 + 90]].forEach(([sel, delay]) => {
         const el = $(sel);
         if (!el) return;
         el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
@@ -15365,6 +15426,8 @@
         discountsCount: shift.discountsCount,
         cancels: shift.cancels,
         countedCash: counted,
+        terminalCardTotal: typeof terminalCardTotal === 'number' ? terminalCardTotal : null,
+        cardReconciliationSource: 'manual-z',
       };
     }
     /* La journée commerciale d'un service : celle de son OUVERTURE. Un service
@@ -15384,13 +15447,14 @@
         sess.closedBy = (currentCashier && currentCashier.name) || '';
       }
       const pv = storePaired() || {};
-      return DR.build({
+      const report = DR.build({
         day: currentBusinessDay(),
         sales: journal.filter(isReportableJournalEntry),
         session: sess,
         store: { slug: DR.storeSlug(), name: storeName(), location: storeCity(), type: pv.type || '' },
         source: 'caisse',
       });
+      return DR.preview ? DR.preview(report) : report;
     }
     /* The local journal is the payment truth used by the printed Z. Before a
        snapshot or final close, replay every locally-created positive sale into
@@ -15575,6 +15639,12 @@
       if (report.cash && report.cash.ecart != null && Math.abs(report.cash.ecart) > 0.5) {
         bits.push(`écart ${fmtEcart(report.cash.ecart)}`);
       }
+      const card = report.cardReconciliation;
+      if (card && card.terminal != null) {
+        if (card.status === 'matched') bits.push('carte rapprochée');
+        else if (card.gap > 0) bits.push(`carte · Terminal + ${fmtMAD(card.gap)}`);
+        else if (card.gap < 0) bits.push(`carte · Kiwi + ${fmtMAD(Math.abs(card.gap))}`);
+      }
       $('#zs-sub').textContent = bits.join(' · ');
       $('#zs-reprint').hidden = true;
       veil.classList.add('is-open');
@@ -15598,6 +15668,17 @@
         countInput?.focus();
         return;
       }
+      const cardInput = $('#clo-card-z');
+      const cardRaw = cardInput ? cardInput.value.trim() : '';
+      const cardZ = cardRaw === '' ? NaN : Number(cardRaw);
+      if (!Number.isFinite(cardZ) || cardZ < 0 ||
+          Math.abs(cardZ * 100 - Math.round(cardZ * 100)) > 0.000001) {
+        toast('Saisissez le total carte du Z terminal (0 si aucune carte)');
+        cardInput?.focus();
+        return;
+      }
+      terminalCardTotal = money(cardZ);
+      try { persistShift(); } catch (_) {}
       $('#cloture-modal').classList.remove('is-open');
       registerClosing = true;
 
@@ -15625,6 +15706,7 @@
           };
           report.closed = true;
           const saved = window.KiwiDayReport.save(report, { by: (currentCashier && currentCashier.name) || '' });
+          if (saved) report = saved;
           const persisted = window.KiwiDayReport.load(report.day, report.store?.slug);
           reportSaved = !!saved && (!window.KiwiDayReport.isReal() ||
             (persisted?.closedAt === report.closedAt && persisted?.sessionId === report.sessionId));
@@ -15666,6 +15748,9 @@
        saisi à l'instant, pas avec un zéro : un aperçu qui n'a pas le même écart
        que l'écran ne sert à rien. Aucune écriture ici, c'est un tirage. */
     $('#clo-print').addEventListener('click', () => {
+      const cardRaw = $('#clo-card-z') ? $('#clo-card-z').value.trim() : '';
+      const cardValue = cardRaw === '' ? NaN : Number(cardRaw);
+      terminalCardTotal = Number.isFinite(cardValue) && cardValue >= 0 ? money(cardValue) : null;
       const raw = $('#clo-count') ? $('#clo-count').value : '';
       const r = buildDayReport((raw === '' || raw == null) ? null : parseFloat(raw), 0);
       if (!r) { toast('Rapport indisponible'); return; }
@@ -16359,6 +16444,14 @@
 
     /* Clôture cash-count écart */
     $('#clo-count').addEventListener('input', updateEcart);
+    $('#clo-card-z').addEventListener('input', () => {
+      const raw = $('#clo-card-z').value.trim();
+      const value = raw === '' ? NaN : Number(raw);
+      terminalCardTotal = Number.isFinite(value) && value >= 0 &&
+        Math.abs(value * 100 - Math.round(value * 100)) <= 0.000001 ? money(value) : null;
+      try { persistShift(); } catch (_) {}
+      updateCardEcart();
+    });
 
     const verticalDemoPins = new Set(['0000','0002','0003','0004','0005','0006','0007','0008','0009','0010','0011','0012','0013','0014','0015']);
     let pinRoutePending = false;
@@ -21647,6 +21740,7 @@
           openedAt: shiftOpenedAt.toISOString(),
           openedBy: shiftOpenedBy,
           openingFloat: openingFloat,
+          terminalCardTotal: typeof terminalCardTotal === 'number' ? terminalCardTotal : null,
           journal: journal,
           cashMovements: cashMovements,
           shift: shift,
@@ -21748,6 +21842,9 @@
          clôture. Depuis que la saisie libre accepte 0, il faut le distinguer
          d'une valeur absente. */
       openingFloat  = (Number.isFinite(d.openingFloat) && d.openingFloat >= 0) ? d.openingFloat : 500;
+      terminalCardTotal = (d.terminalCardTotal !== null && d.terminalCardTotal !== undefined &&
+        Number.isFinite(Number(d.terminalCardTotal)) && Number(d.terminalCardTotal) >= 0)
+        ? money(Number(d.terminalCardTotal)) : null;
       journal.length = 0;
       (d.journal || []).forEach(e => {
         const entry = {

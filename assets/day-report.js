@@ -492,6 +492,31 @@
     return ref + '#' + ts + '#' + round2(amount) + '#' + lines;
   }
 
+  /* Le rapprochement carte reste volontairement indépendant du matériel.
+   * `terminal` est le total recopié depuis le Z du TPE ; `kiwi` est la somme
+   * des règlements carte du rapport. Plus tard, un ECR pourra remplir le même
+   * champ automatiquement sans changer le contrôle de clôture ni l'archive. */
+  function cardReconciliation(methods, terminal, source) {
+    var kiwi = round2(num(methods && methods.card));
+    var hasTerminal = terminal !== null && terminal !== undefined && terminal !== ''
+      && isFinite(Number(terminal)) && Number(terminal) >= 0;
+    var tpe = hasTerminal ? round2(Number(terminal)) : null;
+    var gap = tpe == null ? null : round2(tpe - kiwi);
+    return {
+      kiwi: kiwi,
+      terminal: tpe,
+      gap: gap,
+      status: gap == null ? 'unverified' : (Math.abs(gap) < 0.005 ? 'matched' : 'gap'),
+      source: String(source || 'manual-z'),
+    };
+  }
+  function refreshCardReconciliation(report) {
+    if (!report) return report;
+    var prior = report.cardReconciliation || {};
+    report.cardReconciliation = cardReconciliation(report.methods, prior.terminal, prior.source);
+    return report;
+  }
+
   /* build({ day, sales, session, store }) → le rapport complet.
    *
    * `sales`   toutes les ventes connues (elles seront filtrées sur la journée)
@@ -708,6 +733,7 @@
       avoirs: avoirs,
       cancels: cancels,
       methods: methods,
+      cardReconciliation: cardReconciliation(methods, sess.terminalCardTotal, sess.cardReconciliationSource),
       tips: round2(tips),
       categories: categories,
       hours: hours.map(function (H) { return { h: H.h, net: round2(H.net), txns: H.txns }; }).filter(Boolean),
@@ -1007,6 +1033,9 @@
     var methods = Object.assign({}, carried.methods);
     Object.keys(own.methods).forEach(function (m) { methods[m] = round2(num(methods[m]) + num(own.methods[m])); });
     report.methods = methods;
+    /* `terminal` est le Z de la JOURNÉE ; après ajout d'un service précédent,
+       le montant Kiwi doit donc être recalculé sur la somme consolidée. */
+    refreshCardReconciliation(report);
     var cats = Object.create(null), order = [];
     carried.categories.concat(own.categories).forEach(function (c) {
       var C = cats[c.name];
@@ -1058,6 +1087,23 @@
     return !num(report.firstSaleAt) || num(report.firstSaleAt) >= num(prev.closedAt);
   }
 
+  /* Même consolidation que save(), sans aucune écriture. La clôture s'en sert
+     pour montrer le vrai total carte de la journée AVANT que l'opérateur ne
+     valide le Z terminal. */
+  function preview(report) {
+    if (!report || !report.day) return report;
+    var out;
+    try { out = JSON.parse(JSON.stringify(report)); } catch (_) { return report; }
+    if (!isReal()) return refreshCardReconciliation(out);
+    var slug = (out.store && out.store.slug) || storeSlug();
+    var prev = load(out.day, slug);
+    if (laterDisjointService(prev, out)) addCarried(out, carryPart(prev));
+    else if (prev && prev.carried && prev.sessionId && prev.sessionId === out.sessionId && !out.carried) {
+      addCarried(out, prev.carried);
+    }
+    return refreshCardReconciliation(out);
+  }
+
   /* save(report, {by, note, reopen}) — LA règle de la double clôture.
    *
    * Le rapport entrant a été RECALCULÉ depuis le journal : il est déjà juste.
@@ -1076,10 +1122,13 @@
     var prev = doc.days[report.day] || null;
 
     /* Plusieurs services, une journée : voir laterDisjointService(). */
-    if (laterDisjointService(prev, report)) addCarried(report, carryPart(prev));
+    /* preview() peut déjà avoir posé `carried` pour afficher le total journée
+       dans la modale. Ne jamais ré-ajouter ces mêmes services au save. */
+    if (!report.carried && laterDisjointService(prev, report)) addCarried(report, carryPart(prev));
     else if (prev && prev.carried && prev.sessionId && prev.sessionId === report.sessionId && !report.carried) {
       addCarried(report, prev.carried);
     }
+    refreshCardReconciliation(report);
 
     report.drawerSessions = drawerSessions({ drawerSessions: drawerSessions(prev).concat(drawerSessions(report)) });
     var closedEvent = !!report.closedAt && meta.reopen !== false;
@@ -1095,6 +1144,7 @@
       gross: report.gross,
       txns: report.txns,
       ecart: report.cash ? report.cash.ecart : null,
+      cardGap: report.cardReconciliation ? report.cardReconciliation.gap : null,
       /* « Réouverture » veut dire : on rouvre une journée DÉJÀ CLÔTURÉE. Pas
          « il existait un document ». Les autosauvegardes de mi-service en
          écrivent un dès l'ouverture du poste, si bien que la vraie première
@@ -1175,7 +1225,7 @@
     /* langue du métier */
     vocab: vocab, businessType: businessType,
     /* calcul */
-    build: build, categoryIndex: categoryIndex, normSale: normSale, settlementKey: settlementKey,
+    build: build, preview: preview, categoryIndex: categoryIndex, normSale: normSale, settlementKey: settlementKey,
     drawerSessions: drawerSessions, closureRevisions: closureRevisions, inheritDrawers: inheritDrawers,
     mergeDaySnapshots: mergeDaySnapshots,
     /* classeur */

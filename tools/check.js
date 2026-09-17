@@ -1021,6 +1021,7 @@ section('Whole-project regressions');
     'day-report-export-test.mjs',
     'day-report-paired-scope-test.mjs',
     'day-report-multi-service-test.mjs',
+    'card-z-reconciliation-test.mjs',
     'sale-replay-visit-binding-test.mjs',
     'operating-day-drawers-test.mjs',
     'operating-day-stock-test.mjs',
