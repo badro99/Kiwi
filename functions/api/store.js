@@ -47,6 +47,7 @@ import {
 } from './inventory/_economat-catalogue.js';
 import { hotelUnitDeactivationBlockers } from './inventory/_hotel-unit-deactivation.js';
 import { validateCommercialSync } from './hotel/_commercial.js';
+import { reservationOverlapConflict } from './hotel/_reservation-overlap.js';
 import { validateRoomsDocument } from './hotel/_rooms.js';
 
 /* Les fonctionnalités qui ont le droit d'exister ici, et ce qu'on sait de leur
@@ -669,6 +670,13 @@ export async function onRequestPost(context) {
   if (feature === 'reservations') {
     try { await validateCommercialSync(env, merchant, mine, clean.value); }
     catch (e) { return json({ error: e?.code || 'commercial-unavailable', feature }, e?.code === 'commercial-stays-use-api' ? 409 : 503); }
+    /* /api/booking et /api/hotel/stays refusent tous deux d'attribuer une
+       ressource déjà prise. Ce push générique ne vérifiait rien de tel : un
+       tableau de bord qui remontait son document pendant qu'une cliente
+       réservait en ligne franchissait la garde de révision, la fusion réunissait
+       les deux lignes actives, et la même chambre partait deux fois. */
+    const doubled = reservationOverlapConflict(mine, clean.value);
+    if (doubled) return json({ error: 'resource-double-booked', feature, ...doubled }, 409);
   }
 
   if (feature === HOTEL_UNITS_FEATURE) {

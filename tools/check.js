@@ -495,6 +495,7 @@ for (const test of [
   'booking-manage-test.mjs',
   'hotel-dossier-safety-test.mjs',
   'cloud-doc-quota-test.mjs',
+  'reservation-overlap-test.mjs',
   'd1-schema-test.mjs',
   'order-delivery-test.mjs',
   'order-queue-pagination-test.mjs',
