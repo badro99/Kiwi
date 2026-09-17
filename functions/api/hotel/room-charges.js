@@ -71,10 +71,25 @@ async function insertEvent(env, merchant, line) {
     line.cashierId, line.cashierName || '', line.amountCents, line.occurredTs,
     line.reversalOf || '', line.reversedById || '',
   ).run();
-  return {
-    created: Number(result && result.meta && result.meta.changes) > 0,
-    stored: await storedEvent(env, merchant, line.id),
-  };
+  const created = Number(result && result.meta && result.meta.changes) > 0;
+  const stored = await storedEvent(env, merchant, line.id);
+  /* ── UN RENVOI N'EST PAS UN ENREGISTREMENT ─────────────────────────────────
+   * `INSERT OR IGNORE` ne dit pas « déjà fait », il ne dit rien du tout. Une
+   * reprise de la MÊME vente avec un poste ou un montant corrigé repartait
+   * donc avec `ok:true` et l'ANCIENNE ligne : l'appelant lisait une réussite,
+   * et la charge restait attribuée au mauvais poste, au mauvais montant,
+   * définitivement. On compare ce qui est en base à ce qu'on voulait écrire :
+   * identique, c'est une reprise inoffensive ; différent, c'est un conflit, et
+   * il se dit. La correction passe par une contre-passation, jamais par une
+   * réécriture silencieuse d'un événement déjà comptabilisé. */
+  const differs = !created && !!stored && (
+    stored.outletId !== line.outletId ||
+    stored.shiftId !== line.shiftId ||
+    stored.cashierId !== line.cashierId ||
+    stored.amountCents !== line.amountCents ||
+    stored.kind !== line.kind
+  );
+  return { created, stored, differs };
 }
 async function hotelManager(request, env, merchant) {
   const actor = await resolveHotelActor(request, env, merchant);
@@ -171,6 +186,7 @@ export async function onRequestPost({ request, env }) {
     if (!reversed.ok) return json({ error: reversed.error }, 422);
     try {
       const saved = await insertEvent(env, merchant, reversed.line);
+      if (saved.differs) return json({ error: 'room-charge-conflict', charge: saved.stored }, 409);
       return saved.stored ? json({ ok: true, created: saved.created, charge: saved.stored }) : unavailable();
     } catch (_) { return unavailable(); }
   }
@@ -201,6 +217,10 @@ export async function onRequestPost({ request, env }) {
   if (!appended.ok) return json({ error: appended.error }, 422);
   try {
     const saved = await insertEvent(env, merchant, appended.line);
+    /* Le poste, le montant ou la caissière ont changé depuis le premier envoi :
+       on ne peut ni écraser (l'événement est déjà dans les comptes) ni prétendre
+       que c'est passé. On le dit, avec la ligne réellement stockée. */
+    if (saved.differs) return json({ error: 'room-charge-conflict', charge: saved.stored }, 409);
     return saved.stored ? json({ ok: true, created: saved.created, charge: saved.stored }) : unavailable();
   } catch (_) { return unavailable(); }
 }

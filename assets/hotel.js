@@ -1809,7 +1809,7 @@
       ${['inhouse', 'attention'].includes(filter.view) ? '<p class="hx-daily-note">Cette vue suit les statuts actuels, indépendamment de la date des mouvements choisie.</p>' : ''}
       <div class="hx-daily-list">${rows.map((b) => {
         const room = rooms.find((r) => r.id === b.resourceId);
-        return `<article class="hx-daily-row"><div class="hx-daily-room">${room ? 'Ch. ' + esc(room.n) : 'Non attribuée'}</div><div class="hx-daily-guest"><b>${esc(b.customer?.name || 'Client')}</b><span>${esc(b.code || '')} · ${esc(channels[b.hotel.channel] || 'Autre')} ${b.hotel.externalRef ? '· ' + esc(b.hotel.externalRef) : ''}</span><span>${esc(b.hotel.checkIn)} → ${esc(b.hotel.checkOut)} · ${esc(b.partySize || 1)} pers. · ${esc(b.hotel.roomTypeName || '')}</span>${b.note ? `<span class="hx-daily-note">${esc(b.note)}</span>` : ''}</div><span class="hx-daily-status">${esc(labels[b.status] || b.status)}</span>${b.status === 'confirmed' && b.hotel.checkIn <= today ? `<button class="hx-btn atlas" data-action="hx-stay-checkin" data-arg="${esc(b.id)}" aria-label="${esc('Enregistrer l’arrivée de ' + (b.customer?.name || 'client'))}">Check-in</button>` : ''}${b.status === 'checked_in' && b.hotel.checkOut <= today ? `<button class="hx-btn atlas" data-action="hx-stay-checkout" data-arg="${esc(b.id)}" aria-label="${esc('Enregistrer le départ de ' + (b.customer?.name || 'client'))}">Check-out</button>` : ''}<button class="hx-btn ghost" data-action="hx-stay-edit" data-arg="${esc(b.id)}" aria-label="${esc('Ouvrir le dossier ' + (b.code || b.customer?.name || 'client'))}">Ouvrir le dossier</button></article>`;
+        return `<article class="hx-daily-row"><div class="hx-daily-room">${room ? 'Ch. ' + esc(room.n) : 'Non attribuée'}</div><div class="hx-daily-guest"><b>${esc(b.customer?.name || 'Client')}</b><span>${esc(b.code || '')} · ${esc(channels[b.hotel.channel] || 'Autre')} ${b.hotel.externalRef ? '· ' + esc(b.hotel.externalRef) : ''}</span><span>${esc(b.hotel.checkIn)} → ${esc(b.hotel.checkOut)} · ${esc(b.partySize || 1)} pers. · ${esc(b.hotel.roomTypeName || '')}</span>${b.note ? `<span class="hx-daily-note">${esc(b.note)}</span>` : ''}</div><span class="hx-daily-status">${esc(labels[b.status] || b.status)}</span>${b.status === 'confirmed' && b.hotel.checkIn <= today ? `<button class="hx-btn atlas" data-action="hx-stay-checkin" data-arg="${esc(b.id)}" aria-label="${esc('Enregistrer l’arrivée de ' + (b.customer?.name || 'client'))}">Check-in</button>` : ''}${b.status === 'checked_in' && b.hotel.checkOut <= today ? `<button class="hx-btn atlas" data-action="hx-stay-checkout" data-arg="${esc(b.id)}" aria-label="${esc('Enregistrer le départ de ' + (b.customer?.name || 'client'))}">Check-out</button>` : ''}${b.status === 'checked_in' ? `<button class="hx-btn ghost" data-action="hx-stay-undo-checkin" data-arg="${esc(b.id)}" aria-label="${esc('Annuler l’arrivée enregistrée pour ' + (b.customer?.name || 'client'))}">Annuler l’arrivée</button>` : ''}${(b.status === 'confirmed' || b.status === 'requested') && b.hotel.checkIn <= today ? `<button class="hx-btn ghost" data-action="hx-stay-noshow" data-arg="${esc(b.id)}" aria-label="${esc('Marquer ' + (b.customer?.name || 'client') + ' comme non présenté')}">Non présenté</button>` : ''}<button class="hx-btn ghost" data-action="hx-stay-edit" data-arg="${esc(b.id)}" aria-label="${esc('Ouvrir le dossier ' + (b.code || b.customer?.name || 'client'))}">Ouvrir le dossier</button></article>`;
       }).join('') || '<p class="hx-empty">Aucun dossier dans cette vue. Vérifiez la date, les filtres et l’état de l’actualisation.</p>'}</div>
       <p class="hx-daily-note">Les walk-ins encaissés séparément restent accessibles dans le plan des chambres et les folios. Cette liste présente les dossiers de réservation.</p>
     </section>`;
@@ -5675,6 +5675,10 @@
     }
 
     const payload = { action: 'save', merchant: slug, id: booking?.id || '', clientRef: form.__hxClientRef, roomTypeId, resourceId: fd.get('resourceId'), checkIn: fd.get('checkIn'), checkOut: fd.get('checkOut'), partySize, channel: fd.get('channel'), status: fd.get('status'), externalRef: fd.get('externalRef'), note: fd.get('note'), guests, customer: { name: fd.get('name'), phone: fd.get('phone'), email: fd.get('email') } };
+    /* La version du dossier sur laquelle cette réception a travaillé. Le
+       serveur refuse d'écrire par-dessus une version plus récente : c'est ce
+       qui empêche deux réceptions d'effacer mutuellement leurs saisies. */
+    if (booking) payload.expectedUpdatedAt = +booking.updatedAt || 0;
     payload.linkedStayId = form.__hxLinkedStayId || '';
     payload.dayUse = form.elements.stayMode?.value === 'day_use';
     if (payload.dayUse) {
@@ -5775,8 +5779,26 @@
           'account-not-found': 'Le compte commercial sélectionné est introuvable pour cet établissement.',
           'invalid-formula': 'La tarification contractuelle couvre de 1 à 3 personnes. Ajustez le nombre d’occupants.',
           invalid: 'Complétez le nom, les dates et la catégorie.',
-          unauthorized: 'Votre session a expiré. Reconnectez-vous.'
+          unauthorized: 'Votre session a expiré. Reconnectez-vous.',
+          /* Le dossier a bougé sous nos yeux : on ne l'écrase pas. La version
+             fraîche revient avec le refus, on la remet en mémoire et on invite
+             à rouvrir — la collègue qui vient d'y saisir un téléphone ne le
+             perd pas. */
+          'stay-conflict': 'Ce dossier vient d’être modifié depuis un autre poste. Rouvrez-le pour voir la version à jour, puis refaites votre modification.',
+          'expected-updated-at-required': 'Cette page est trop ancienne pour enregistrer sans risque d’écraser une autre saisie. Rafraîchissez, puis refaites votre modification.'
         };
+        /* Le refus porte la version fraîche du serveur : on la range tout de
+           suite, pour que la réouverture du dossier montre la vérité. */
+        if (body.booking && (body.error === 'stay-conflict' || body.error === 'expected-updated-at-required')) {
+          try {
+            cache.set(body.booking.id, body.booking);
+            const live = window.KiwiReservations?.get?.();
+            if (live && Array.isArray(live.bookings)) {
+              const at = live.bookings.findIndex((x) => x.id === body.booking.id);
+              if (at >= 0) live.bookings[at] = body.booking;
+            }
+          } catch (_) {}
+        }
         error.textContent = messages[body.error] || cuCommercialError(body.error); return;
       }
       cache.set(body.booking.id, body.booking);
@@ -5832,7 +5854,17 @@
     const slug = cuMerchantSlug();
     if (!slug || !id) return;
     const scope = cuStayScope(), cache = cuStayCache();
-    const arriving = next === 'checked_in';
+    /* Quatre mouvements passent par ici, pas deux : arrivée, départ, annulation
+       d'une arrivée saisie par erreur, et non-présentation. Les messages les
+       nomment tous — « Départ non enregistré » sur une annulation d'arrivée
+       ferait douter la réception de ce qu'elle vient de faire. */
+    const WORDING = {
+      checked_in: { fail: 'Arrivée non enregistrée', done: 'Client arrivé', desc: 'La chambre apparaît occupée dans le plan.' },
+      completed: { fail: 'Départ non enregistré', done: 'Départ enregistré', desc: 'La chambre passe à nettoyer dans le plan et la file ménage.' },
+      confirmed: { fail: 'Arrivée non annulée', done: 'Arrivée annulée', desc: 'Le séjour repart de « confirmé » et la chambre est rendue. Le geste est tracé au journal.' },
+      no_show: { fail: 'Non-présentation non enregistrée', done: 'Client non présenté', desc: 'Le séjour est clos sans facturation de séjour. La chambre est libérée.' },
+    };
+    const words = WORDING[next] || WORDING.completed;
     if (button) button.disabled = true;
     try {
       const res = await fetch('/api/hotel/stays', {
@@ -5841,7 +5873,7 @@
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.booking) {
-        toast(arriving ? 'Arrivée non enregistrée' : 'Départ non enregistré', {
+        toast(words.fail, {
           type: 'warn',
           desc: body.error === 'invalid-status-transition'
             ? 'Statut actuel : ' + (body.from || 'inconnu') + '. Ouvrez le dossier.'
@@ -5858,12 +5890,7 @@
         const i = doc.bookings.findIndex((x) => x.id === body.booking.id);
         if (i >= 0) doc.bookings[i] = body.booking;
       }
-      toast(arriving ? 'Client arrivé' : 'Départ enregistré', {
-        type: 'success',
-        desc: arriving
-          ? 'La chambre apparaît occupée dans le plan.'
-          : 'La chambre passe à nettoyer dans le plan et la file ménage.',
-      });
+      toast(words.done, { type: 'success', desc: words.desc });
       rerender();
     } catch (_) {
       toast('Confirmation non reçue', { type: 'warn', desc: 'Actualisez le journal pour vérifier si le mouvement a été enregistré.' });
@@ -7271,6 +7298,14 @@
   }
   handlers['hx-stay-checkin'] = (el, arg) => { if (isCustomHotel()) cuMoveStayStatus(String(arg || ''), 'checked_in', el); };
   handlers['hx-stay-checkout'] = (el, arg) => { if (isCustomHotel()) cuMoveStayStatus(String(arg || ''), 'completed', el); };
+  /* Une arrivée enregistrée sur le mauvais dossier se défait : la chambre est
+     rendue et le séjour repart de « confirmé ». Sans ce geste, la réception
+     n'avait qu'une sortie — clôturer un séjour qui n'a jamais commencé, et le
+     facturer en entier. */
+  handlers['hx-stay-undo-checkin'] = (el, arg) => { if (isCustomHotel()) cuMoveStayStatus(String(arg || ''), 'confirmed', el); };
+  /* Le no-show passait par un enregistrement complet du dossier — donc par le
+     risque d'effacer un champ non renvoyé. Il ne touche plus que le statut. */
+  handlers['hx-stay-noshow'] = (el, arg) => { if (isCustomHotel()) cuMoveStayStatus(String(arg || ''), 'no_show', el); };
   handlers['hx-daily-refresh'] = () => { if (isCustomHotel()) cuRefreshReception(); };
   handlers['hx-monthly-closing'] = () => { if (isCustomHotel()) cuMonthlyClosingModal(); };
   handlers['hx-tape-prev'] = async () => {

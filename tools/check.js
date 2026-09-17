@@ -493,6 +493,7 @@ section('Réservations, planning, livraison, encaissement, schéma');
 for (const test of [
   'booking-api-test.mjs',
   'booking-manage-test.mjs',
+  'hotel-dossier-safety-test.mjs',
   'd1-schema-test.mjs',
   'order-delivery-test.mjs',
   'order-queue-pagination-test.mjs',

@@ -93,7 +93,25 @@ async function fixture() {
   }
   const post = b => call(onRequestPost, b);
   async function seed() { await post({ action: 'account', rev: 0, item: agency }); await post({ action: 'contract', rev: 1, item: low }); await post({ action: 'contract', rev: 2, item: high }); }
-  const stay = b => call(saveStay, { action: 'save', clientRef: 'test-stay-reference', roomTypeId: 'standard', resourceId: 'room:101', checkIn: input.checkIn, checkOut: input.checkOut, partySize: 2, channel: 'direct', status: 'confirmed', customer: { name: 'Synthetic Guest' }, ...b });
+  /* Depuis #0037, modifier un séjour exige la version sur laquelle on a
+     travaillé : le harnais la joint comme le formulaire de réception. */
+  const liveUpdatedAt = (id) => {
+    try {
+      const row = sql.prepare("SELECT data FROM store_docs WHERE merchant=? AND feature='reservations'").get(merchant);
+      const found = JSON.parse(row?.data || '{}').bookings?.find((x) => x.id === id);
+      if (found) return +found.updatedAt || 0;
+    } catch (_) {}
+    try {
+      const row = sql.prepare('SELECT updated_ts FROM hotel_reservations WHERE merchant=? AND id=?').get(merchant, id);
+      if (row) return +row.updated_ts || 0;
+    } catch (_) {}
+    return 0;
+  };
+  const stay = b => {
+    const body = { action: 'save', clientRef: 'test-stay-reference', roomTypeId: 'standard', resourceId: 'room:101', checkIn: input.checkIn, checkOut: input.checkOut, partySize: 2, channel: 'direct', status: 'confirmed', customer: { name: 'Synthetic Guest' }, ...b };
+    if (body.id && body.action === 'save' && body.expectedUpdatedAt === undefined) body.expectedUpdatedAt = liveUpdatedAt(body.id);
+    return call(saveStay, body);
+  };
   return { sql, env, merchant, post, call, seed, stay, race() { race = true; },draftRace(fn){draftRace=fn;} };
 }
 

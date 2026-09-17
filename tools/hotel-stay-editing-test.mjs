@@ -72,10 +72,30 @@ async function fixture(mode) {
     checkIn: day(offset), checkOut: day(offset + 2), partySize: 2,
     channel: 'direct', status: 'confirmed', customer: { name: 'Synthetic Guest' },
   };
+  /* Depuis le contrôle de concurrence (#0037), `save` sur un séjour existant
+     exige la version sur laquelle l'éditeur a travaillé — exactement ce que le
+     formulaire de réception envoie. Le harnais la joint donc comme lui, sauf
+     quand un test la fournit lui-même pour éprouver le refus. */
+  function liveUpdatedAt(id) {
+    try {
+      const fromDoc = savedDoc().bookings.find((b) => b.id === id);
+      if (fromDoc) return +fromDoc.updatedAt || 0;
+    } catch (_) {}
+    try {
+      const row = sql.prepare('SELECT updated_ts FROM hotel_reservations WHERE merchant=? AND id=?').get(merchant, id);
+      if (row) return +row.updated_ts || 0;
+    } catch (_) {}
+    return 0;
+  }
   async function post(body) {
+    const merged = { ...input, ...body };
+    if (merged.id && merged.action !== 'cancel' && merged.action !== 'status'
+        && merged.expectedUpdatedAt === undefined) {
+      merged.expectedUpdatedAt = liveUpdatedAt(merged.id);
+    }
     const response = await onRequestPost({ env, request: new Request('https://kiwi.test/api/hotel/stays', {
       method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...input, ...body }),
+      body: JSON.stringify(merged),
     }) });
     return { status: response.status, body: await response.json() };
   }

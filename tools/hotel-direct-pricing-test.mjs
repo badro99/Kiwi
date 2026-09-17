@@ -88,11 +88,28 @@ const DB = {
 };
 const cookie = sessionCookie(await makeSession(ACC, SECRET)).split(';')[0];
 const env = { DB, AUTH_SECRET: SECRET };
+/* Depuis le contrôle de concurrence (#0037), une modification exige la version
+   sur laquelle l'éditeur a travaillé — ce que le formulaire de réception joint
+   toujours. Le harnais fait de même, sauf quand un test la fournit lui-même. */
+const liveUpdatedAt = (id) => {
+  try {
+    const row = sql.prepare("SELECT data FROM store_docs WHERE merchant=? AND feature='reservations'").get(MERCHANT);
+    const found = JSON.parse(row?.data || '{}').bookings?.find((b) => b.id === id);
+    if (found) return +found.updatedAt || 0;
+  } catch (_) {}
+  try {
+    const row = sql.prepare('SELECT updated_ts FROM hotel_reservations WHERE merchant=? AND id=?').get(MERCHANT, id);
+    if (row) return +row.updated_ts || 0;
+  } catch (_) {}
+  return 0;
+};
 const post = (body) => saveStay({
   env,
   request: new Request('https://kiwi.test/api/hotel/stays', {
     method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: cookie },
-    body: JSON.stringify(body),
+    body: JSON.stringify(body && body.id && body.action !== 'cancel' && body.action !== 'status'
+      && body.expectedUpdatedAt === undefined
+      ? { ...body, expectedUpdatedAt: liveUpdatedAt(body.id) } : body),
   }),
 });
 const J = async (r) => ({ status: r.status, body: await r.json().catch(() => ({})) });

@@ -19,7 +19,14 @@ const STATUSES = new Set(['requested', 'confirmed', 'checked_in', 'completed', '
 const STATUS_TRANSITIONS = new Map([
   ['requested', new Set(['confirmed', 'cancelled', 'no_show'])],
   ['confirmed', new Set(['checked_in', 'cancelled', 'no_show'])],
-  ['checked_in', new Set(['completed'])],
+  /* UNE ARRIVÉE ENREGISTRÉE PAR ERREUR DOIT POUVOIR ÊTRE DÉFAITE.
+     `checked_in` n'avait qu'une seule sortie, `completed` : la réception qui
+     cliquait sur le mauvais dossier n'avait plus qu'un chemin — clôturer un
+     séjour qui n'a jamais commencé, et le facturer en entier. Le retour à
+     `confirmed` rend la chambre et laisse le dossier exactement où il était.
+     Il reste un geste tracé : `writeReservationWithEvents` l'inscrit au
+     journal avec son auteur, comme toute autre transition. */
+  ['checked_in', new Set(['completed', 'confirmed'])],
   ['completed', new Set()],
   ['cancelled', new Set()],
   ['no_show', new Set()],
@@ -495,7 +502,14 @@ export async function onRequestPost({ request, env }) {
     if (action === 'status') {
       if (!old) return json({ error: 'stay-not-found' }, 404);
       const next = str(b?.status, 24);
-      if (next !== 'checked_in' && next !== 'completed') return json({ error: 'bad-status' }, 400);
+      /* `no_show` et le retour à `confirmed` passent par ICI, pas par `save`.
+         Les y forcer obligeait la réception à renvoyer le dossier entier —
+         référence client, chambre, dates, voyageurs — pour un simple
+         changement d'état, et un envoi incomplet effaçait des champs réels.
+         Pire : faute de chemin, un no-show finissait souvent en `completed`,
+         c'est-à-dire facturé au tarif plein. Cette action ne touche que le
+         statut, et `canTransition` refuse toujours les sauts interdits. */
+      if (!['checked_in', 'completed', 'no_show', 'confirmed'].includes(next)) return json({ error: 'bad-status' }, 400);
       if (!canTransition(old.status, next)) {
         return json({ error: 'invalid-status-transition', from: old.status, to: next }, 409);
       }
@@ -557,6 +571,30 @@ export async function onRequestPost({ request, env }) {
       if (!replay) replay = doc.bookings.find((x) => x.publicRef === clientRef);
       if (replay) return json({ ok: true, rev, booking: replay, replayed: true });
     }
+    /* ── DEUX RÉCEPTIONS SUR LE MÊME DOSSIER ────────────────────────────────
+     * `save` reconstruit le séjour ENTIER à partir du corps de la requête :
+     * nom, téléphone, e-mail, note, voyageurs, dates. Sans contrôle de
+     * fraîcheur, la réception B qui a ouvert le dossier il y a dix minutes
+     * écrase en silence le téléphone que la réception A vient d'y saisir — et
+     * la boucle de reprise réappliquait ce corps périmé sur une copie fraîche,
+     * donc même un conflit de révision ne protégeait rien.
+     *
+     * On exige donc l'`updatedAt` sur lequel l'éditeur a travaillé, comme
+     * rooms-bulk.js le fait pour chaque chambre. Le dossier a bougé ? On
+     * refuse, et on RENVOIE la version fraîche : la réception voit ce que sa
+     * collègue a écrit au lieu de l'effacer. Un séjour jamais encore
+     * enregistré (updatedAt 0) et une création n'ont rien à comparer. */
+    if (old) {
+      const seen = b?.expectedUpdatedAt;
+      const live = +old.updatedAt || 0;
+      if (seen === undefined || seen === null) {
+        return json({ error: 'expected-updated-at-required', updatedAt: live, booking: old }, 409);
+      }
+      if (!Number.isSafeInteger(+seen) || +seen !== live) {
+        return json({ error: 'stay-conflict', updatedAt: live, booking: old }, 409);
+      }
+    }
+
     const type = hotel.types.find((x) => x.id === typeId && x.maxGuests >= partySize);
     if (!type) return json({ error: 'room-type-not-found' }, 409);
     if (old && !canTransition(old.status, status)) {
