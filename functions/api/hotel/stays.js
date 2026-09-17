@@ -27,7 +27,16 @@ const STATUS_TRANSITIONS = new Map([
      Il reste un geste tracé : `writeReservationWithEvents` l'inscrit au
      journal avec son auteur, comme toute autre transition. */
   ['checked_in', new Set(['completed', 'confirmed'])],
-  ['completed', new Set()],
+  /* RÉOUVERTURE : LA SORTIE DE SECOURS D'UN DOSSIER SUSPENDU.
+     Les termes commerciaux d'un séjour clos sont verrouillés — c'est la bonne
+     règle. Mais quand la matière de facturation d'un séjour casse AVANT le
+     départ, la clôture enfermait le dossier pour toujours : chambres listées,
+     aucun chemin de facturation, aucune action de réparation. Observé en
+     production (H-72A5FCBC). On rouvre donc vers `checked_in`, ce qui rend le
+     bloc commercial modifiable, puis on reclôture. Ce n'est pas une brèche
+     dans le verrou : la réouverture est réservée au propriétaire, exige un
+     geste explicite, et s'inscrit au journal comme toute autre transition. */
+  ['completed', new Set(['checked_in'])],
   ['cancelled', new Set()],
   ['no_show', new Set()],
 ]);
@@ -514,6 +523,15 @@ export async function onRequestPost({ request, env }) {
         return json({ error: 'invalid-status-transition', from: old.status, to: next }, 409);
       }
       if (old.status === next) return json({ ok: true, rev, booking: old });
+      /* La réouverture n'arrive JAMAIS par accident : elle se demande, et seul
+         le propriétaire peut la demander. Une caisse appairée ou un opérateur
+         nommé ne rouvre pas une facturation close. */
+      if (old.status === 'completed' && next === 'checked_in') {
+        if (b?.reopen !== true) return json({ error: 'reopen-required' }, 409);
+        if ((await entitledMerchant(request, env, merchant)) !== merchant) {
+          return json({ error: 'reopen-forbidden' }, 403);
+        }
+      }
       if (next === 'checked_in') {
         try {
           if (await checkedInRoomConflict(env, merchant, doc, old, hasResTable)) {

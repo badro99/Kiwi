@@ -1809,7 +1809,7 @@
       ${['inhouse', 'attention'].includes(filter.view) ? '<p class="hx-daily-note">Cette vue suit les statuts actuels, indépendamment de la date des mouvements choisie.</p>' : ''}
       <div class="hx-daily-list">${rows.map((b) => {
         const room = rooms.find((r) => r.id === b.resourceId);
-        return `<article class="hx-daily-row"><div class="hx-daily-room">${room ? 'Ch. ' + esc(room.n) : 'Non attribuée'}</div><div class="hx-daily-guest"><b>${esc(b.customer?.name || 'Client')}</b><span>${esc(b.code || '')} · ${esc(channels[b.hotel.channel] || 'Autre')} ${b.hotel.externalRef ? '· ' + esc(b.hotel.externalRef) : ''}</span><span>${esc(b.hotel.checkIn)} → ${esc(b.hotel.checkOut)} · ${esc(b.partySize || 1)} pers. · ${esc(b.hotel.roomTypeName || '')}</span>${b.note ? `<span class="hx-daily-note">${esc(b.note)}</span>` : ''}</div><span class="hx-daily-status">${esc(labels[b.status] || b.status)}</span>${b.status === 'confirmed' && b.hotel.checkIn <= today ? `<button class="hx-btn atlas" data-action="hx-stay-checkin" data-arg="${esc(b.id)}" aria-label="${esc('Enregistrer l’arrivée de ' + (b.customer?.name || 'client'))}">Check-in</button>` : ''}${b.status === 'checked_in' && b.hotel.checkOut <= today ? `<button class="hx-btn atlas" data-action="hx-stay-checkout" data-arg="${esc(b.id)}" aria-label="${esc('Enregistrer le départ de ' + (b.customer?.name || 'client'))}">Check-out</button>` : ''}${b.status === 'checked_in' ? `<button class="hx-btn ghost" data-action="hx-stay-undo-checkin" data-arg="${esc(b.id)}" aria-label="${esc('Annuler l’arrivée enregistrée pour ' + (b.customer?.name || 'client'))}">Annuler l’arrivée</button>` : ''}${(b.status === 'confirmed' || b.status === 'requested') && b.hotel.checkIn <= today ? `<button class="hx-btn ghost" data-action="hx-stay-noshow" data-arg="${esc(b.id)}" aria-label="${esc('Marquer ' + (b.customer?.name || 'client') + ' comme non présenté')}">Non présenté</button>` : ''}<button class="hx-btn ghost" data-action="hx-stay-edit" data-arg="${esc(b.id)}" aria-label="${esc('Ouvrir le dossier ' + (b.code || b.customer?.name || 'client'))}">Ouvrir le dossier</button></article>`;
+        return `<article class="hx-daily-row"><div class="hx-daily-room">${room ? 'Ch. ' + esc(room.n) : 'Non attribuée'}</div><div class="hx-daily-guest"><b>${esc(b.customer?.name || 'Client')}</b><span>${esc(b.code || '')} · ${esc(channels[b.hotel.channel] || 'Autre')} ${b.hotel.externalRef ? '· ' + esc(b.hotel.externalRef) : ''}</span><span>${esc(b.hotel.checkIn)} → ${esc(b.hotel.checkOut)} · ${esc(b.partySize || 1)} pers. · ${esc(b.hotel.roomTypeName || '')}</span>${b.note ? `<span class="hx-daily-note">${esc(b.note)}</span>` : ''}</div><span class="hx-daily-status">${esc(labels[b.status] || b.status)}</span>${b.status === 'confirmed' && b.hotel.checkIn <= today ? `<button class="hx-btn atlas" data-action="hx-stay-checkin" data-arg="${esc(b.id)}" aria-label="${esc('Enregistrer l’arrivée de ' + (b.customer?.name || 'client'))}">Check-in</button>` : ''}${b.status === 'checked_in' && b.hotel.checkOut <= today ? `<button class="hx-btn atlas" data-action="hx-stay-checkout" data-arg="${esc(b.id)}" aria-label="${esc('Enregistrer le départ de ' + (b.customer?.name || 'client'))}">Check-out</button>` : ''}${b.status === 'completed' ? `<button class="hx-btn ghost" data-action="hx-stay-reopen" data-arg="${esc(b.id)}" aria-label="${esc('Rouvrir le dossier de ' + (b.customer?.name || 'client') + ' pour corriger sa facturation')}">Rouvrir le dossier</button>` : ''}${b.status === 'checked_in' ? `<button class="hx-btn ghost" data-action="hx-stay-undo-checkin" data-arg="${esc(b.id)}" aria-label="${esc('Annuler l’arrivée enregistrée pour ' + (b.customer?.name || 'client'))}">Annuler l’arrivée</button>` : ''}${(b.status === 'confirmed' || b.status === 'requested') && b.hotel.checkIn <= today ? `<button class="hx-btn ghost" data-action="hx-stay-noshow" data-arg="${esc(b.id)}" aria-label="${esc('Marquer ' + (b.customer?.name || 'client') + ' comme non présenté')}">Non présenté</button>` : ''}<button class="hx-btn ghost" data-action="hx-stay-edit" data-arg="${esc(b.id)}" aria-label="${esc('Ouvrir le dossier ' + (b.code || b.customer?.name || 'client'))}">Ouvrir le dossier</button></article>`;
       }).join('') || '<p class="hx-empty">Aucun dossier dans cette vue. Vérifiez la date, les filtres et l’état de l’actualisation.</p>'}</div>
       <p class="hx-daily-note">Les walk-ins encaissés séparément restent accessibles dans le plan des chambres et les folios. Cette liste présente les dossiers de réservation.</p>
     </section>`;
@@ -5850,7 +5850,7 @@
    * enregistrer. On passe par l'action `status`, qui ne touche que le statut :
    * un `save` complet reconstruit le dossier à partir de ce qu'on envoie et
    * effacerait le téléphone, l'e-mail ou les voyageurs non renvoyés. */
-  async function cuMoveStayStatus(id, next, button) {
+  async function cuMoveStayStatus(id, next, button, reopen) {
     const slug = cuMerchantSlug();
     if (!slug || !id) return;
     const scope = cuStayScope(), cache = cuStayCache();
@@ -5864,12 +5864,17 @@
       confirmed: { fail: 'Arrivée non annulée', done: 'Arrivée annulée', desc: 'Le séjour repart de « confirmé » et la chambre est rendue. Le geste est tracé au journal.' },
       no_show: { fail: 'Non-présentation non enregistrée', done: 'Client non présenté', desc: 'Le séjour est clos sans facturation de séjour. La chambre est libérée.' },
     };
+    if (reopen) WORDING.checked_in = { fail: 'Dossier non rouvert', done: 'Dossier rouvert',
+      desc: 'La facturation redevient modifiable. Reclôturez le séjour une fois le dossier réparé.' };
     const words = WORDING[next] || WORDING.completed;
     if (button) button.disabled = true;
     try {
       const res = await fetch('/api/hotel/stays', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'status', merchant: slug, id, status: next }),
+        body: JSON.stringify({ action: 'status', merchant: slug, id, status: next,
+          /* Réouverture d'un dossier clos : un geste explicite, jamais un
+             effet de bord d'un changement de statut ordinaire. */
+          ...(reopen ? { reopen: true } : {}) }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.booking) {
@@ -5877,6 +5882,8 @@
           type: 'warn',
           desc: body.error === 'invalid-status-transition'
             ? 'Statut actuel : ' + (body.from || 'inconnu') + '. Ouvrez le dossier.'
+            : body.error === 'reopen-forbidden'
+              ? 'Seul le propriétaire du compte peut rouvrir un dossier clos.'
             : body.error === 'room-occupied'
               ? 'Cette chambre est déjà occupée par un autre séjour. Vérifiez le plan et attribuez une autre chambre.'
               : (body.error || 'Réessayez.'),
@@ -7306,6 +7313,10 @@
   /* Le no-show passait par un enregistrement complet du dossier — donc par le
      risque d'effacer un champ non renvoyé. Il ne touche plus que le statut. */
   handlers['hx-stay-noshow'] = (el, arg) => { if (isCustomHotel()) cuMoveStayStatus(String(arg || ''), 'no_show', el); };
+  /* Un dossier clos dont la matière de facturation a cassé n'était plus
+     réparable : chambres listées, aucun chemin de facturation, aucune action.
+     La réouverture rend le bloc commercial modifiable, puis on reclôture. */
+  handlers['hx-stay-reopen'] = (el, arg) => { if (isCustomHotel()) cuMoveStayStatus(String(arg || ''), 'checked_in', el, true); };
   handlers['hx-daily-refresh'] = () => { if (isCustomHotel()) cuRefreshReception(); };
   handlers['hx-monthly-closing'] = () => { if (isCustomHotel()) cuMonthlyClosingModal(); };
   handlers['hx-tape-prev'] = async () => {

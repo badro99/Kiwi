@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · Hôtel — le dossier ne perd rien, et rien ne se facture par erreur
- *                                            (tickets #0037, #0039, #0040)
+ *                                     (tickets #0037, #0039, #0040, #0056)
  *
  * #0037  `save` reconstruit le séjour ENTIER à partir de la requête, sans le
  *        moindre contrôle de fraîcheur. Deux réceptions sur le même dossier :
@@ -55,8 +55,11 @@ console.log('■ Hôtel · dossier partagé, statuts et charges chambre');
   ok(can('checked_in', 'completed'), 'le départ normal reste possible');
   ok(!can('checked_in', 'cancelled'),
     'mais un séjour commencé ne s\'annule toujours pas : il se clôture');
-  ok(!can('completed', 'confirmed'), 'un séjour terminé ne se rouvre pas par ce chemin');
-  ok(!can('completed', 'checked_in'), 'ni ne se ré-enregistre');
+  ok(!can('completed', 'confirmed'), 'un séjour terminé ne repasse pas directement en « confirmé »');
+  /* #0056 · la sortie de secours d'un dossier suspendu. */
+  ok(can('completed', 'checked_in'),
+    'un dossier clos peut être ROUVERT : sans cela, une facturation cassée l\'enfermait pour toujours');
+  ok(!can('completed', 'cancelled'), 'mais un séjour terminé ne s\'annule toujours pas');
   ok(!can('cancelled', 'confirmed'), 'une annulation reste définitive ici');
   ok(can('confirmed', 'no_show'), 'un no-show reste atteignable depuis confirmé');
   ok(can('requested', 'no_show'), 'et depuis une simple demande');
@@ -92,6 +95,29 @@ console.log('■ Hôtel · dossier partagé, statuts et charges chambre');
   ['checked_in', 'completed', 'confirmed', 'no_show'].forEach((s) => {
     ok(new RegExp(`${s}: \\{ fail:`).test(UI), `le mouvement ${s} a ses propres messages, pas ceux du départ`);
   });
+
+  /* ── #0056 · le dossier clos redevient réparable ─────────────────────── */
+  const statusBody = STAYS.slice(STAYS.indexOf("if (action === 'status')"), STAYS.indexOf("if (action !== 'save')"));
+  ok(/old\.status === 'completed' && next === 'checked_in'/.test(statusBody),
+    'la réouverture est traitée à part, pas confondue avec une arrivée ordinaire');
+  ok(/b\?\.reopen !== true/.test(statusBody) && /reopen-required/.test(statusBody),
+    'elle exige un geste explicite : elle n\'arrive jamais par accident');
+  ok(/entitledMerchant\(request, env, merchant\)\) !== merchant/.test(statusBody) && /reopen-forbidden/.test(statusBody),
+    'et seul le propriétaire du compte peut la demander — pas une caisse appairée');
+  ok(statusBody.indexOf('reopen-required') < statusBody.indexOf('checkedInRoomConflict'),
+    'le contrôle de réouverture passe avant la reprise de la chambre');
+  ok(/checkedInRoomConflict/.test(statusBody),
+    'et la chambre reprise est vérifiée libre, comme pour toute arrivée');
+  ok(/handlers\['hx-stay-reopen'\]/.test(UI), 'la réouverture est offerte depuis le journal de réception');
+  ok(/data-action="hx-stay-reopen"/.test(UI), 'par un bouton réellement dessiné');
+  ok(/b\.status === 'completed' \? `<button class="hx-btn ghost" data-action="hx-stay-reopen"/.test(UI),
+    'et seulement sur un séjour terminé');
+  ok(/cuMoveStayStatus\(String\(arg \|\| ''\), 'checked_in', el, true\)/.test(UI),
+    'le drapeau de réouverture est bien transmis');
+  ok(/\.\.\.\(reopen \? \{ reopen: true \} : \{\}\)/.test(UI),
+    'et n\'est envoyé QUE pour une réouverture');
+  ok(/reopen-forbidden/.test(UI), 'un refus de droits se lit en clair dans la réception');
+  ok(/done: 'Dossier rouvert'/.test(UI), 'et la réussite dit ce qui vient de se passer');
 }
 
 /* ═══ #0037 · deux réceptions, aucune saisie perdue ═══════════════════════ */
