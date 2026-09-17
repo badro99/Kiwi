@@ -400,8 +400,8 @@
     "sha": "a5fc283813e8f180"
   },
   "assets/kitchen-print-queue.js": {
-    "v": "12",
-    "sha": "3d4ee68178d4c8a7"
+    "v": "13",
+    "sha": "6e37700cf90ae0b3"
   },
   "assets/kitchen-relay.js": {
     "v": "6",
@@ -772,8 +772,8 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "16",
-    "sha": "eda39f2b908063a2"
+    "v": "17",
+    "sha": "8dfabaf9fa3ccbe1"
   },
   "assets/procurement.js": {
     "v": "2",

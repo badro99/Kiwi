@@ -25,6 +25,15 @@ import {
 } from './_relay.js';
 
 const KINDS = ['receipt', 'kitchen', 'label', 'test', 'drawer', 'report', 'wake', 'other'];
+
+/* L'identifiant dérive du commerce ET de la clé de l'appelant : deux commerces
+   qui choisissent la même clé ne se marchent pas dessus, et la clé elle-même
+   n'est pas lisible dans l'identifiant. */
+async function refDigest(merchant, clientRef) {
+  const bytes = new TextEncoder().encode(merchant + '\u0000' + clientRef);
+  const hash = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(hash)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 const RETRY_DELAY_MS = 10000;
 const CLAIM_LEASE_MS = 30000;
 const UNCERTAIN_OUTPUT = 'output-unknown-ack-timeout';
@@ -194,6 +203,18 @@ export async function onRequestPost(context) {
   if (!/^[A-Za-z0-9+/]+={0,2}$/.test(dataB64)) return relayJson({ ok: false, error: 'bad-base64' }, 400, request);
   const ttl = kind === 'wake' ? 60000 : JOB_TTL_MS;
   const bridgeId = /^pb_[0-9a-f]{16}$/.test(String(body.bridgeId || '')) ? String(body.bridgeId) : null;
+  /* ── DEUX FOIS LE MÊME TICKET, PARCE QUE LA RÉPONSE S'EST PERDUE ──────────
+   * La caisse dépose un ticket, le serveur le crée, et la réponse n'arrive
+   * jamais — wifi du comptoir, tablette qui s'endort. La caisse retente, et
+   * comme l'identifiant était tiré au hasard à chaque appel, un SECOND ticket
+   * entrait dans la file : le client repartait avec deux reçus, la cuisine
+   * avec deux bons. Une clé fournie par l'appelant rend la reprise inoffensive :
+   * le même dépôt retombe sur la même ligne, et on le dit. */
+  const clientRef = String(body.clientRef || '').trim().slice(0, 80);
+  if (clientRef && !/^[A-Za-z0-9_:.-]{8,80}$/.test(clientRef)) {
+    return relayJson({ ok: false, error: 'bad-client-ref' }, 400, request);
+  }
+  const id = clientRef ? 'pj_' + (await refDigest(merchant, clientRef)) : 'pj_' + randomHex(8);
 
   try {
     // Quelqu'un doit venir chercher le ticket : sans pont en ligne, dire non tout
@@ -204,15 +225,30 @@ export async function onRequestPost(context) {
     ).bind(...(bridgeId ? [merchant, t - BRIDGE_ONLINE_MS, bridgeId] : [merchant, t - BRIDGE_ONLINE_MS])).first();
     if (!seen || !Number(seen.n)) return relayJson({ ok: false, error: 'relay-offline' }, 409, request);
 
-    const id = 'pj_' + randomHex(8);
-    await env.DB.batch([
+    const written = await env.DB.batch([
       env.DB.prepare(
-        `INSERT INTO print_jobs (id, merchant, bridge_id, kind, target, data_b64, status, created_ts, expires_ts)
+        `INSERT OR IGNORE INTO print_jobs (id, merchant, bridge_id, kind, target, data_b64, status, created_ts, expires_ts)
          VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?)`
       ).bind(id, merchant, bridgeId, kind, JSON.stringify(target), dataB64, t, t + ttl),
       // Ménage opportuniste : les tickets de plus de 24 h ne servent plus à personne.
       env.DB.prepare('DELETE FROM print_jobs WHERE merchant = ? AND created_ts < ?').bind(merchant, t - 86400000),
     ]);
+    const created = Number(written && written[0] && written[0].meta && written[0].meta.changes) > 0;
+    if (!created) {
+      /* Reprise d'un dépôt déjà enregistré. On ne réimprime pas : on rend la
+         ligne existante, telle qu'elle est, avec son état réel. */
+      const prior = await env.DB.prepare(
+        'SELECT id, expires_ts, status FROM print_jobs WHERE merchant = ? AND id = ? LIMIT 1'
+      ).bind(merchant, id).first();
+      if (prior) {
+        return relayJson({ ok: true, id: String(prior.id), expires_ts: Number(prior.expires_ts) || (t + ttl),
+          status: String(prior.status || ''), duplicate: true }, 200, request);
+      }
+      /* Aucune ligne : l'insertion a été ignorée pour une autre raison (la même
+         clé sur un AUTRE commerce, par exemple). On refuse plutôt que de
+         prétendre avoir mis le ticket en file. */
+      return relayJson({ ok: false, error: 'write-failed' }, 500, request);
+    }
     return relayJson({ ok: true, id, expires_ts: t + ttl }, 200, request);
   } catch (e) {
     if (isMissingTable(e)) return relayJson({ ok: false, error: 'relay-not-provisioned' }, 503, request);

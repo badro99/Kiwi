@@ -95,13 +95,59 @@
     var q = json(qKey(), []);
     if (!Array.isArray(q)) q = [];
     var now = Date.now();
-    var fresh = q.filter(function (job) {
+    var kept = q.filter(function (job) {
       return job && job.id && job.payload && now - Number(job.createdAt || 0) < MAX_AGE;
-    }).slice(-MAX_JOBS);
-    if (fresh.length !== q.length) writeQueue(fresh);
+    });
+    var fresh = kept.slice(-MAX_JOBS);
+    if (fresh.length !== q.length) {
+      /* Une demi-heure sans imprimante, ou plus de cent vingt bons en attente,
+         et la file se purgeait SANS UN MOT : le bon le plus ancien disparaissait
+         pendant que la caisse affichait toujours « en attente ». La purge reste
+         nécessaire — un stockage n'est pas infini — mais elle se journalise, et
+         elle prévient, parce que ce qui part ici est un plat qui ne sortira pas. */
+      q.forEach(function (job) {
+        if (fresh.indexOf(job) >= 0) return;
+        if (!job || !job.id || !job.payload) return;
+        record(kept.indexOf(job) >= 0 ? 'dropped-overflow' : 'dropped-expired', job);
+      });
+      lastError = kept.length < q.length ? 'ticket-expired' : 'queue-overflow';
+      notifyWaiting(lastError);
+      writeQueue(fresh);
+    }
     return fresh;
   }
-  function writeQueue(q) { put(qKey(), JSON.stringify((q || []).slice(-MAX_JOBS))); persistNative(); }
+  /* ── UNE ÉCRITURE QUI ÉCHOUE N'EST PAS UNE ÉCRITURE ───────────────────
+   * `put` avale l'exception et rend `false` ; personne ne lisait ce `false`.
+   * Un stockage saturé (navigateur plein, mode privé, quota atteint) donnait
+   * donc exactement le scénario qu'on redoute en service : la caisse annonce
+   * « ticket en file », rien n'est écrit, et le bon disparaît au rechargement.
+   * On fait d'abord de la place là où c'est sans risque — le registre `done`
+   * est un anti-doublon, pas une donnée comptable, et ses entrées anciennes ne
+   * protègent plus rien — puis on réessaie. Si ça échoue encore, on le DIT. */
+  function trimDone(keep) {
+    var d = readDone();
+    if (d.length <= keep) return false;
+    return put(dKey(), JSON.stringify(d.slice(-keep)));
+  }
+  function storageFull(where) {
+    lastError = 'storage-full';
+    record('storage-write-failed', null, { error: where });
+    try { window.dispatchEvent(new CustomEvent('kiwi:kitchen-print-storage-full', { detail: { where: where } })); } catch (_) {}
+    try {
+      if (window.KiwiCaisseToast) window.KiwiCaisseToast(
+        'Mémoire de l’appareil saturée', 6000, 'warn',
+        'Le ticket n’a pas pu être mis en file : imprimez-le depuis l’aperçu.'
+      );
+    } catch (_) {}
+  }
+  function writeQueue(q) {
+    var body = JSON.stringify((q || []).slice(-MAX_JOBS));
+    var written = put(qKey(), body);
+    if (!written) { trimDone(50); written = put(qKey(), body); }
+    if (!written) storageFull('queue');
+    persistNative();
+    return written;
+  }
   function readDone() {
     var d = json(dKey(), []);
     return Array.isArray(d) ? d : [];
@@ -109,7 +155,12 @@
   function markDone(id) {
     var d = readDone().filter(function (x) { return x && x.id !== id; });
     d.push({ id: id, at: Date.now() });
-    put(dKey(), JSON.stringify(d.slice(-MAX_DONE)));
+    if (!put(dKey(), JSON.stringify(d.slice(-MAX_DONE)))) {
+      /* Le registre `done` est ce qui empêche un rechargement de rejouer un bon
+         déjà sorti. Ne pas pouvoir l'écrire est donc un risque de DOUBLON, pas
+         une perte : on le nomme, et le comptoir sait quoi surveiller. */
+      storageFull('done-ledger');
+    }
     persistNative();
   }
   function alreadyDone(id) { return readDone().some(function (x) { return x && x.id === id; }); }
@@ -307,7 +358,7 @@
           ? window.KiwiReceipt.print(job.payload)
           : Promise.resolve({ ok: false, reason: 'receipt-renderer-unavailable' }))
       : (window.KiwiPrinter && typeof window.KiwiPrinter.printKitchen === 'function'
-          ? window.KiwiPrinter.printKitchen(job.payload, { station: station })
+          ? window.KiwiPrinter.printKitchen(job.payload, { station: station, clientRef: 'kq.' + job.id })
           : Promise.resolve({ ok: false, reason: 'printer-not-configured' }));
     return Promise.resolve(print).then(function (result) {
       running = false;
@@ -387,7 +438,13 @@
       queuedIds[id] = 1; accepted++;
       record('queued', { id: id, type: raw.type });
     });
-    writeQueue(q); emit();
+    var stored = writeQueue(q);
+    emit();
+    if (!stored && accepted) {
+      /* Rien n'a été mis en file. L'appelant doit pouvoir le dire au caissier
+         au lieu d'annoncer une impression qui n'arrivera jamais. */
+      return { accepted: 0, skipped: 'storage-full', pending: readQueue().length };
+    }
     if (accepted) { schedule(); flush(); }
     return { accepted: accepted, pending: readQueue().length };
   }

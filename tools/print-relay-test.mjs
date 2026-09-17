@@ -368,7 +368,7 @@ if (DatabaseSync) {
   ok(/plugin\.probe\([^]*plugin\.scan\(/.test(pb), 'C2 · la dernière IP est sondée avant tout scan du sous-réseau');
   ok(/hosts\.length === 1[^]*setConfig\(\{ ip: hosts\[0\]\.host/.test(pb) && /multiple-printers/.test(pb), 'C2 · une seule imprimante est reprise automatiquement, plusieurs exigent un choix');
   ok(/local-network-denied[^]*probeOnly: true/.test(pb) && /Réglages > Kiwi Pro > Réseau local/.test(pb), 'C2 · permission réseau refusée : dernière IP seulement et explication visible');
-  ok(/function viaRelayOrFail/.test(pb) && /return j \? bridgePrintNow\(bytes, target\) : viaRelayOrFail\(bytes, target\);/.test(pb), 'C2 · sans pont local, bridgePrintBytes passe par le relais');
+  ok(/function viaRelayOrFail/.test(pb) && /return j \? bridgePrintNow\(bytes, target\) : viaRelayOrFail\(bytes, target, ref\);/.test(pb), 'C2 · sans pont local, bridgePrintBytes passe par le relais');
   ok(/reason === 'bridge-unreachable'\) \{ bridgePort = 0; return viaRelayOrFail/.test(pb), 'C2 · un pont local disparu bascule aussi sur le relais');
   ok(/credentials: 'same-origin'/.test(pb) && /RELAY_API = '\/api\/print'/.test(pb), 'C2 · le relais est appelé même origine avec le cookie de caisse');
   ok(/relayProbe: relayProbe, relayEnqueue: relayEnqueue, relayPairCode: relayPairCode, relayRevoke: relayRevoke/.test(pb), 'C2 · KiwiPrinter expose le relais');

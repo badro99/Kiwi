@@ -672,29 +672,29 @@
   /* `target` (optionnel) force la cible : { ip, port } imprime en TCP même si
    * un nom d'imprimante OS est enregistré. Sans lui, un « ticket test réseau »
    * partait vers l'imprimante système et validait une IP jamais essayée. */
-  function bridgePrintBytes(bytes, target) {
+  function bridgePrintBytes(bytes, target, ref) {
     var cfg = getConfig();
     if (!(target && (target.ip || target.osPrinter)) && !cfg.ip && !cfg.osPrinter) return Promise.resolve({ ok: false, reason: 'not-configured' });
     // Locate the bridge before the first job if we haven't yet (or if it moved
     // ports since · a restart on a busy 9110 lands somewhere else).
     if (!bridgePort || bridgeMode !== 'secure' || !bridgeCapability) {
       return ping().then(function (j) {
-        return j ? bridgePrintNow(bytes, target) : viaRelayOrFail(bytes, target);
+        return j ? bridgePrintNow(bytes, target) : viaRelayOrFail(bytes, target, ref);
       });
     }
     return bridgePrintNow(bytes, target).then(function (res) {
       // Le pont local a disparu entre deux tickets : on oublie son port et on
       // tente le relais · la prochaine impression re-sondera 127.0.0.1 d'abord.
-      if (res && res.reason === 'bridge-unreachable') { bridgePort = 0; return viaRelayOrFail(bytes, target); }
+      if (res && res.reason === 'bridge-unreachable') { bridgePort = 0; return viaRelayOrFail(bytes, target, ref); }
       return res;
     });
   }
-  function viaRelayOrFail(bytes, target) {
+  function viaRelayOrFail(bytes, target, ref) {
     /* POST /jobs already performs the authoritative "bridge seen recently"
        check.  Probing /bridges first was a redundant round-trip on the exact
        path used by tablets and remote caisses, and could add six seconds before
        the ticket even existed. */
-    return relayEnqueue(bytes, target, relayKind(bytes));
+    return relayEnqueue(bytes, target, relayKind(bytes), ref);
   }
   function bridgePrintNow(bytes, target) {
     var cfg = getConfig();
@@ -761,6 +761,13 @@
     });
     return relayState.pending;
   }
+  /* Le serveur n'accepte qu'un jeu de caractères restreint, de 8 à 80 signes
+     (functions/api/print/jobs.js). Une clé hors format ferait refuser le dépôt
+     tout entier : mieux vaut alors déposer sans clé que ne pas imprimer. */
+  function relayClientRef(ref) {
+    var clean = String(ref || '').replace(/[^A-Za-z0-9_:.-]/g, '-').slice(0, 80);
+    return clean.length >= 8 ? clean : '';
+  }
   function relayTargetOf(target) {
     var cfg = getConfig();
     if (target && target.ip) return { ip: target.ip, port: Number(target.port) || 9100 };
@@ -803,13 +810,22 @@
 
   /* Dépose le ticket. Dès que le serveur l'a accepté, rendre la main : le pont
    * le réclame de façon atomique et le job reste durable côté serveur. */
-  function relayEnqueue(bytes, target, kind) {
+  /* `ref` · la clé d'idempotence du dépôt. Un ticket cuisine qui repart après
+     un verdict incertain, une reprise de file au rechargement, un double clic
+     sur « réimprimer » : le serveur reconnaît la même clé et ne fabrique pas
+     un second travail. Sans elle, chaque reprise était un nouveau job, donc un
+     nouveau bout de papier. La file donne l'identifiant stable du travail ;
+     c'est exactement ce que cette clé doit être. */
+  function relayEnqueue(bytes, target, kind, ref) {
     var t = relayTargetOf(target);
     if (!t) return Promise.resolve({ ok: false, reason: 'not-configured' });
     var qs = relayMerchantQS();
     return relayFetch('/jobs' + qs, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ target: t, dataB64: window.KiwiEscPos.toB64(bytes), kind: kind || 'other' }),
+      body: JSON.stringify(Object.assign(
+        { target: t, dataB64: window.KiwiEscPos.toB64(bytes), kind: kind || 'other' },
+        relayClientRef(ref) ? { clientRef: relayClientRef(ref) } : {}
+      )),
     }, 10000).then(function (r) {
       if (!r.j || !r.j.ok) {
         var why = (r.j && r.j.error) || (r.status === 401 ? 'unauthorized' : 'relay-unreachable');
@@ -893,7 +909,7 @@
   }
 
   /* Imprime directement sur un profil ou une cible donnée ({ type, ip, port, osPrinter }). */
-  function printBytesToTarget(bytes, target) {
+  function printBytesToTarget(bytes, target, ref) {
     if (!target) return printBytes(bytes);
     var type = target.type || (target.ip ? 'ip' : target.osPrinter ? 'os' : '');
     if (type === 'bt') {
@@ -905,11 +921,11 @@
       return usbWrite(bytes).then(function () { return { ok: true, via: 'usb', bytes: bytes.length }; });
     }
     if (type === 'os' || target.osPrinter) {
-      return bridgePrintBytes(bytes, { osPrinter: target.osPrinter || target.name });
+      return bridgePrintBytes(bytes, { osPrinter: target.osPrinter || target.name }, ref);
     }
     if (type === 'ip' || target.ip) {
       var networkTarget = { ip: target.ip, port: Number(target.port) || 9100 };
-      return nativeSocketFirst(bytes, networkTarget, function () { return bridgePrintBytes(bytes, networkTarget); });
+      return nativeSocketFirst(bytes, networkTarget, function () { return bridgePrintBytes(bytes, networkTarget, ref); });
     }
     return printBytes(bytes);
   }
@@ -988,14 +1004,19 @@
     var target = stationId ? resolveStationTarget(stationId, options && options.merchant) : resolveStationTarget('cuisson', options && options.merchant);
     var paper = (target && target.paper) || withPaper(o).paper;
     var bytes = window.KiwiEscPos.kitchenTicket(Object.assign({}, o, { paper: paper }));
+    /* La file durable nous donne l'identifiant stable du travail : il devient la
+       clé d'idempotence du relais. Le repli caisse imprime un AUTRE papier sur
+       une AUTRE imprimante — il porte donc sa propre clé, sinon le serveur le
+       confondrait avec le dépôt qui vient d'échouer. */
+    var ref = (options && options.clientRef) || '';
     if (target) {
-      return printBytesToTarget(bytes, target).then(function (res) {
+      return printBytesToTarget(bytes, target, ref).then(function (res) {
         if (res && res.ok) return res;
         // Fail-soft fallback: attempt printing to caisse target or default printer
         var caisseTarget = resolveStationTarget('caisse', options && options.merchant);
         var stName = (o && o.title) || stationId || 'cuisine';
         fallbackNotice('Imprimante ' + stName + ' indisponible · ticket imprimé à la caisse');
-        return printBytesToTarget(bytes, caisseTarget || null).then(function (cRes) {
+        return printBytesToTarget(bytes, caisseTarget || null, ref ? ref + '.fb' : '').then(function (cRes) {
           if (cRes && cRes.ok) return Object.assign({}, cRes, { fallback: true, originalReason: res && res.reason });
           return printBytes(bytes);
         }, function () {
@@ -1005,7 +1026,7 @@
         var caisseTarget = resolveStationTarget('caisse', options && options.merchant);
         var stName = (o && o.title) || stationId || 'cuisine';
         fallbackNotice('Imprimante ' + stName + ' indisponible · ticket imprimé à la caisse');
-        return printBytesToTarget(bytes, caisseTarget || null).then(function (cRes) {
+        return printBytesToTarget(bytes, caisseTarget || null, ref ? ref + '.fb' : '').then(function (cRes) {
           if (cRes && cRes.ok) return Object.assign({}, cRes, { fallback: true, originalReason: err && err.message });
           return printBytes(bytes);
         }, function () {
