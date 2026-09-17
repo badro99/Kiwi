@@ -1060,6 +1060,7 @@ section('Whole-project regressions');
     'caisse-godmode-toggles-test.mjs',
     'kitchen-print-queue-test.mjs',
     'print-relay-idempotency-test.mjs',
+    'print-hub-lease-test.mjs',
     'payment-kitchen-dispatch-test.mjs',
     'food-production-print-test.mjs',
     'order-mode-exit-test.js',

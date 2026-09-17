@@ -48,6 +48,7 @@ import {
 import { hotelUnitDeactivationBlockers } from './inventory/_hotel-unit-deactivation.js';
 import { validateCommercialSync } from './hotel/_commercial.js';
 import { reservationOverlapConflict } from './hotel/_reservation-overlap.js';
+import { validateHubClaim } from './print/_hub-lease.js';
 import { validateRoomsDocument } from './hotel/_rooms.js';
 
 /* Les fonctionnalités qui ont le droit d'exister ici, et ce qu'on sait de leur
@@ -68,6 +69,17 @@ import { validateRoomsDocument } from './hotel/_rooms.js';
  * `max` = taille sérialisée maximale. Généreux : une carte avec photos ou un
  * planning au mois pèsent lourd, et refuser l'écriture d'un commerçant parce
  * qu'il a trop de salariés serait absurde. */
+/* Le bail du hub d'impression. Ce n'est pas un document qu'on fusionne, c'est un
+ * verrou qu'on arbitre : il passe donc par l'écriture conditionnelle
+ * (CAS_FEATURES) et par validateHubClaim. Voir print/_hub-lease.js. */
+const PRINT_HUB_FEATURE = 'printhub';
+
+/* Les documents dont l'écriture est CONDITIONNELLE à la révision lue (UPDATE …
+ * WHERE rev = ?) au lieu d'un upsert. Pour eux, « deux appareils à la fois »
+ * n'est pas une gêne d'affichage mais une faute : une chambre vendue deux fois,
+ * deux comptoirs qui impriment le même bon. */
+const CAS_FEATURES = new Set(['reservations', PRINT_HUB_FEATURE]);
+
 const FEATURES = {
   [HOTEL_UNITS_FEATURE]: { keys: ['units'],                       max: 80000 },
   [ECONOMAT_CATALOGUE_FEATURE]: { keys: ['items'],                max: 600000 },
@@ -76,6 +88,7 @@ const FEATURES = {
    * carte par GET /api/menu?mine=1, la ligne que la page client lit déjà. Deux
    * miroirs pour une même carte, c'est deux vérités qui divergent — ne câblez
    * pas `cloud` sur le menu. */
+  [PRINT_HUB_FEATURE]: { keys: ['hub'],                           max: 4000 },
   menu:         { keys: ['cats', 'items'],                        max: 600000 },
   recipes:      { keys: ['items'],                                max: 600000 },
   team:         { keys: ['members', 'hours', 'shifts'],            max: 600000 },
@@ -709,9 +722,21 @@ export async function onRequestPost(context) {
     text = JSON.stringify(clean.value);
     if (text.length > FEATURES[feature].max) return json({ error: 'too-large', why: 'byte-size', max: FEATURES[feature].max }, 413);
   }
+  if (feature === PRINT_HUB_FEATURE) {
+    const claim = validateHubClaim(mine, clean.value, now);
+    if (!claim.ok) return json({ error: claim.error, feature, holder: claim.holder || null }, claim.status || 409);
+    /* L'expiration est réécrite ici, avec l'horloge du serveur : une tablette
+       qui retarde s'attribuerait sinon un bail déjà mort, ou éternel. */
+    clean.value = claim.value;
+    text = JSON.stringify(clean.value);
+  }
+
   // Un premier envoi VIDE ne doit pas effacer un document déjà en ligne : c'est
   // la signature d'un navigateur neuf qui pousse avant d'avoir hydraté.
-  if (serverRev && isEmptyDoc(clean.value)) {
+  /* Rendre le bail du hub EST un document vide : c'est le geste normal quand
+     le comptoir cesse d'imprimer. validateHubClaim a déjà vérifié que celui qui
+     le rend est bien celui qui le tient. */
+  if (serverRev && isEmptyDoc(clean.value) && feature !== PRINT_HUB_FEATURE) {
     if (!isEmptyDoc(mine)) {
       return json({ error: 'refused-empty', feature, rev: serverRev, data: mine }, 409);
     }
@@ -736,7 +761,7 @@ export async function onRequestPost(context) {
       await poke(env, merchant, feature);
       return json({ ok: true, feature, merchant, rev, updated_ts: now, bytes: text.length, data: clean.value });
     }
-    const writeDoc = feature === 'reservations' ? (serverRev
+    const writeDoc = CAS_FEATURES.has(feature) ? (serverRev
       ? env.DB.prepare('UPDATE store_docs SET data=?,rev=?,updated_ts=? WHERE merchant=? AND feature=? AND rev=?').bind(text, rev, now, merchant, feature, serverRev)
       : env.DB.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?) ON CONFLICT(merchant,feature) DO NOTHING').bind(merchant, feature, text, rev, now)) : env.DB.prepare(
       feature === 'pressing-orders'
@@ -763,7 +788,7 @@ export async function onRequestPost(context) {
       await env.DB.batch([writeDoc, writeAccess]);
     } else {
       const written = await writeDoc.run();
-      if (feature === 'reservations' && Number(written.meta?.changes) !== 1) return json({ error: 'stale', feature }, 409);
+      if (CAS_FEATURES.has(feature) && Number(written.meta?.changes) !== 1) return json({ error: 'stale', feature }, 409);
       if (feature === 'pressing-orders' && Number(written.meta?.changes) !== 1) {
         let latest = null;
         try {

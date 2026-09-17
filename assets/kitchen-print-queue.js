@@ -71,9 +71,74 @@
       put(key, value); return value;
     } catch (_) { return 'unknown-device'; }
   }
+  /* ── LE BAIL EXCLUSIF L'ÉTAIT DANS CHAQUE NAVIGATEUR, PAS ENTRE EUX ─────
+   * Le bail ci-dessus vit dans le localStorage de CET appareil, et celui d'un
+   * iPad ne sait rien de celui de la caisse d'à côté : deux tills pouvaient
+   * donc chacune se croire LE hub et sortir deux fois le même bon en cuisine.
+   * L'arbitrage réel se fait maintenant côté serveur (functions/api/print/
+   * _hub-lease.js, écriture conditionnelle sur store_docs). Ce qu'on garde ici
+   * est la réponse du serveur, et elle ne sert qu'à DIRE NON : tant qu'on n'a
+   * rien appris, la caisse continue de fonctionner comme avant — un commerce
+   * hors ligne avec une seule caisse doit imprimer ses tickets. */
+  var HUB_FEATURE = 'printhub';
+  var remote = { checkedAt: 0, holder: null, rev: 0, pending: null };
+  function remoteDenies() {
+    var h = remote.holder;
+    return !!(h && h.deviceId && h.deviceId !== deviceId() && Number(h.expiresAt || 0) > Date.now());
+  }
   function isHub() {
     var c = hubConfig(), m = merchant();
+    if (remoteDenies()) return false;
     return !!(m && c.enabled === true && c.merchant === m && c.deviceId === deviceId() && Number(c.expiresAt || 0) > Date.now());
+  }
+  function hubQS() { var m = merchant(); return '?feature=' + HUB_FEATURE + (m ? '&merchant=' + encodeURIComponent(m) : ''); }
+  function claimRemote(enabled) {
+    if (remote.pending) return remote.pending;
+    var m = merchant();
+    if (!m || m === 'unpaired') return Promise.resolve({ arbitrated: false });
+    try { if (typeof fetch !== 'function') return Promise.resolve({ arbitrated: false }); } catch (_) { return Promise.resolve({ arbitrated: false }); }
+    remote.pending = fetch('/api/store' + hubQS(), { credentials: 'same-origin', cache: 'no-store' })
+      .then(function (r) { return r.json().catch(function () { return null; }); })
+      .then(function (read) {
+        var rev = Number(read && read.rev) || 0;
+        remote.rev = rev;
+        return fetch('/api/store', {
+          method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            feature: HUB_FEATURE, merchant: m, baseRev: rev,
+            data: { hub: enabled ? { deviceId: deviceId(), name: deviceName() } : null },
+          }),
+        }).then(function (r) {
+          return r.json().catch(function () { return null; }).then(function (j) { return { status: r.status, j: j }; });
+        });
+      })
+      .then(function (res) {
+        remote.checkedAt = Date.now();
+        var j = res.j;
+        if (j && j.ok) {
+          remote.holder = enabled ? { deviceId: deviceId(), expiresAt: Date.now() + HUB_LEASE_MS } : null;
+          return { arbitrated: true, granted: !!enabled };
+        }
+        if (j && (j.error === 'print-hub-taken' || j.error === 'print-hub-held')) {
+          remote.holder = j.holder || null;
+          return { arbitrated: true, granted: false, holder: j.holder || null };
+        }
+        /* `stale` : une autre caisse a écrit entre notre lecture et notre
+           écriture. C'est précisément la course qu'on cherchait à fermer — on
+           ne réessaie pas en boucle, on relira au prochain renouvellement. */
+        if (j && j.error === 'stale') { remote.holder = null; return { arbitrated: true, granted: false }; }
+        /* Serveur muet, migration pas passée, hors ligne : on n'arbitre pas, et
+           surtout on ne bloque pas. Mieux vaut un doublon possible dans un
+           commerce à deux caisses qu'aucun ticket dans tous les autres. */
+        remote.holder = null;
+        return { arbitrated: false };
+      })
+      .catch(function () { remote.holder = null; return { arbitrated: false }; })
+      .finally(function () { remote.pending = null; });
+    return remote.pending;
+  }
+  function deviceName() {
+    try { return String((window.KiwiNative && window.KiwiNative.deviceName) || document.title || '').slice(0, 60); } catch (_) { return ''; }
   }
   function setHub(enabled) {
     var m = merchant(), now = Date.now(), current = hubConfig(), id = deviceId();
@@ -82,6 +147,23 @@
     put(HUB_KEY, JSON.stringify({ enabled: !!enabled, merchant: m, deviceId: id, updatedAt: now, expiresAt: enabled ? now + HUB_LEASE_MS : 0 }));
     persistNative();
     if (takeover) try { if (window.KiwiCaisseToast) window.KiwiCaisseToast('Cette caisse imprime maintenant', 4200, 'success'); } catch (_) {}
+    /* L'arbitrage réel est distant et asynchrone : on rend la main tout de
+       suite (l'interface doit répondre), et si le serveur désigne une AUTRE
+       caisse, on se retire en le disant — c'est le seul moment où l'opérateur
+       peut encore comprendre pourquoi l'imprimante ne le suit pas. */
+    claimRemote(!!enabled).then(function (r) {
+      if (!r.arbitrated || r.granted !== false || !enabled) { emit(); return; }
+      var c2 = hubConfig();
+      put(HUB_KEY, JSON.stringify({ enabled: false, merchant: c2.merchant, deviceId: c2.deviceId, updatedAt: Date.now(), expiresAt: 0 }));
+      record('hub-refused', null, { error: 'print-hub-taken' });
+      try {
+        if (window.KiwiCaisseToast) window.KiwiCaisseToast(
+          'Une autre caisse imprime déjà', 5200, 'warn',
+          (r.holder && r.holder.name ? r.holder.name : 'Un autre appareil') + ' tient l’impression : désactivez-la là-bas d’abord.'
+        );
+      } catch (_) {}
+      emit();
+    });
     emit();
     if (enabled) flush();
     return isHub();
@@ -90,6 +172,10 @@
     if (!isHub()) return;
     var c = hubConfig(); c.updatedAt = Date.now(); c.expiresAt = c.updatedAt + HUB_LEASE_MS;
     put(HUB_KEY, JSON.stringify(c)); persistNative();
+    /* Renouveler, c'est aussi redemander : une caisse rallumée pendant le
+       service doit apprendre qu'elle n'est plus le hub, sans attendre qu'un
+       humain rouvre le panneau. */
+    claimRemote(true);
   }
   function readQueue() {
     var q = json(qKey(), []);
@@ -512,7 +598,7 @@
     isHub: isHub, setHub: setHub, pending: function () { return readQueue().length; },
     maxAge: MAX_AGE,
     /* Test seams: intentionally read-only outside the automated test harness. */
-    _readQueue: readQueue, _alreadyDone: alreadyDone,
+    _readQueue: readQueue, _alreadyDone: alreadyDone, _remote: remote, _claimRemote: claimRemote,
   };
   window.KiwiKitchenPrint.ready = restoreNative().then(function () { emit(); if (readQueue().length) { schedule(); flush(); } });
 })();
