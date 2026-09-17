@@ -70,7 +70,7 @@
     '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '5', label: 'Coiffure · Salon Yasmine' },
     '0015': { id: 'gym',         file: 'pos-gym',         rev: '5', label: 'Salle de sport · Atlas Fitness' },
     '0016': { id: 'autre',       file: 'pos-autre',       rev: '2', label: 'Autre activité · caisse polyvalente' },
-    '0017': { id: 'maison',      file: 'pos-maison',      rev: '27', label: 'Maison · Vogue Home' },
+    '0017': { id: 'maison',      file: 'pos-maison',      rev: '28', label: 'Maison · Vogue Home' },
   };
 
   const apps = {};       /* id → registered spec */
@@ -340,10 +340,15 @@
        is classified. Their original nodes and handlers remain untouched. */
     try { if (window.KiwiCaisseDna) window.KiwiCaisseDna.enhance(root, id); } catch (e) {}
     current = id;
-    /* Boutique owns a richer multi-day SALES journal and already imports the
-       tenant feed for returns. The shared day reconciler is for specialist
-       modules that use KiwiPosSale as their settled-sale ledger. */
-    try { if (id !== 'boutique' && window.KiwiPosSale && window.KiwiPosSale.activate) window.KiwiPosSale.activate(id); } catch (e) {}
+    /* Boutique AND maison own a richer multi-day SALES journal and already
+       import the tenant feed for returns. The shared day reconciler is for
+       specialist modules that use KiwiPosSale as their settled-sale ledger.
+       Activating it for a module that never records to it hands the till a
+       second, permanently empty day journal beside its real one — two answers
+       to "what did this counter take today", one of them always zero. Maison
+       was in exactly that position: it reads KiwiPosSale.refMatcher for
+       returns, but settles into its own SALES/KiwiDayReport. */
+    try { if (id !== 'boutique' && id !== 'maison' && window.KiwiPosSale && window.KiwiPosSale.activate) window.KiwiPosSale.activate(id); } catch (e) {}
     root.classList.add('is-on', 'is-entering');
     root.setAttribute('aria-hidden', 'false');
     setTimeout(() => root.classList.remove('is-entering'), 700);

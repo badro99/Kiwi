@@ -1089,6 +1089,8 @@ section('Whole-project regressions');
     'catalog-stock-transaction-test.mjs',
     'inventory-ledger-test.mjs',
     'maison-stock-movements-test.mjs',
+    'maison-ticket-offline-test.mjs',
+    'maison-counter-truth-test.mjs',
     'stock-costing-migration-test.mjs',
     'stock-category-management-test.mjs',
     'pairing-resolver-test.mjs',

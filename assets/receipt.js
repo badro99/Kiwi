@@ -1229,15 +1229,31 @@
     return rasterLogo(doc && doc.shop && doc.shop.logo, doc && doc.paper).then(function (logoRaster) {
       var renderOpts = Object.assign({}, o, { logoRaster: logoRaster });
       var bytes = escpos(doc, renderOpts);
+      /* UNE IMPRESSION THERMIQUE RATÉE N'EST PAS UNE IMPRESSION RÉUSSIE.
+         Le repli navigateur ouvre la boîte de dialogue système et renvoyait
+         `{ok:true}` : la caisse annonçait « Reçu imprimé · imprimante système »
+         alors que le ticket thermique, lui, n'était jamais sorti — et personne
+         n'était prévenu qu'il fallait réessayer. On imprime toujours le repli
+         (mieux vaut un reçu A4 que rien), mais le résultat DIT que le thermique
+         a échoué, avec sa raison, pour que l'appelant alerte et remette en file. */
       if (KP && bytes && (KP.isConnected ? KP.isConnected() : KP.isConfigured && KP.isConfigured())) {
         return KP.printBytes(bytes, 'caisse').then(function (r) {
           if (r && r.ok) return r;
-          return browser(doc, o);
-        }, function () { return browser(doc, o); });
+          return degraded(browser(doc, o), (r && r.reason) || 'imprimante injoignable');
+        }, function (e) {
+          return degraded(browser(doc, o), (e && e.message) || 'imprimante injoignable');
+        });
       }
       return browser(doc, o);
     });
   }
+  /* Le repli a bien produit quelque chose, mais pas ce qui était demandé. */
+  function degraded(result, reason) {
+    return Promise.resolve(result).then(function (r) {
+      return Object.assign({}, r || { ok: false }, { thermalFailed: true, reason: reason || 'inconnu' });
+    });
+  }
+
   function browser(doc, o) {
     var KP = window.KiwiPrinter;
     ensurePrintCSS(doc.paper);

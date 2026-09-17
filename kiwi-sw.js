@@ -176,7 +176,7 @@ var SHELL = [
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
      rapport journalier : un ticket s'imprime au comptoir, parfois sans réseau,
      et un client qui repart sans reçu ne revient pas le chercher. */
-  '/assets/receipt.js?v=3',
+  '/assets/receipt.js?v=4',
   '/assets/receipt-ui.js?v=1',
   '/assets/invoice.js?v=8',
   '/assets/merchant-config.js?v=272',
@@ -261,7 +261,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=12',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=8',
-  '/assets/pos-dispatch.js?v=38',
+  '/assets/pos-dispatch.js?v=39',
   '/assets/retail-scan.css?v=7',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=7',
@@ -306,8 +306,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=5',
   '/assets/pos-autre.css?v=2',
   '/assets/pos-autre.js?v=2',
-  '/assets/pos-maison.css?v=27',
-  '/assets/pos-maison.js?v=27',
+  '/assets/pos-maison.css?v=28',
+  '/assets/pos-maison.js?v=28',
   '/assets/caisse-pairing.js?v=24',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

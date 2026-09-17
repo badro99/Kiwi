@@ -55,6 +55,37 @@
   }
   function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
 
+  /* ── DEUX MAGASINS NE PARTAGENT PAS UN CATALOGUE ───────────────────────────
+   * Une session réelle SANS appairage n'a ni venueId ni slug marchand. L'ancien
+   * repli était le littéral 'boutique-live' — exactement celui de pos-boutique.js.
+   * Deux verticales, et potentiellement deux commerces, écrivaient donc leur
+   * stock et leurs prix dans la MÊME clé localStorage : le prêt-à-porter voyait
+   * la vaisselle, et une correction de stock d'un côté effaçait celle de
+   * l'autre. On se rabat maintenant sur l'identité du compte, et à défaut sur
+   * une clé propre à cette verticale — jamais sur un nom partagé. */
+  function realFallbackKey() {
+    let who = '';
+    try { who = String(localStorage.getItem('kiwiAccountKey') || '').trim().toLowerCase(); } catch (_) { who = ''; }
+    if (!who) { try { who = String((window.KiwiVenues && window.KiwiVenues.currentSlug && window.KiwiVenues.currentSlug()) || '').trim().toLowerCase(); } catch (_) {} }
+    const tag = who.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48);
+    return tag ? 'maison-' + tag : 'maison-live';
+  }
+
+  /* Reprise du catalogue laissé sous l'ancienne clé partagée. Une seule fois, et
+     seulement si la nouvelle clé est encore vierge : on ne recouvre jamais un
+     catalogue existant, et l'ancienne copie est laissée en place — si la caisse
+     revenait à une version antérieure, elle la retrouverait intacte. */
+  function adoptLegacySharedCatalogue(key) {
+    if (!key || key === 'boutique-live' || !/^maison-/.test(key)) return;
+    try {
+      const target = 'kiwiBoutiqueCatalog:v1:' + key;
+      if (localStorage.getItem(target)) return;
+      const legacy = localStorage.getItem('kiwiBoutiqueCatalog:v1:boutique-live');
+      if (!legacy) return;
+      localStorage.setItem(target, legacy);
+    } catch (_) {}
+  }
+
   function toast(msg, ms, kind, desc) {
     if (typeof window.KiwiCaisseToast === 'function') { window.KiwiCaisseToast(msg, ms, kind, desc); return; }
     const stack = $('#toast-stack');
@@ -977,8 +1008,12 @@
   /* 500 numbers = several busy offline days for a boutique, while staying well
      below the five-digit annual ceiling. The range is persisted immediately. */
   const TICKET_LEASE_SIZE = 500;
+  /* Sous ce seuil de numéros restants on réserve la plage suivante. 120 laisse
+     une journée chargée d'avance avant même de toucher la réserve. */
+  const TICKET_LEASE_LOW = 120;
   let ticketLease = null;
   let ticketLeaseRequest = null;
+  let ticketTopUpRequest = null;
 
   function ticketPeriod() { return new Date().getFullYear(); }
   function syncTicketPeriod() {
@@ -1000,6 +1035,24 @@
     return 'sale-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
   }
 
+  /* Une plage réservée est une provision, pas un jeton à usage unique : tant que
+     la caisse est en ligne, on garde toujours une plage d'avance en réserve.
+     Sans cela, la première panne de réseau qui tombe sur une plage épuisée
+     bloque la vente — alors que le hors-ligne est précisément ce que la plage
+     est censée couvrir. */
+  function cleanLeaseQueue(q) {
+    if (!Array.isArray(q)) return [];
+    return q.map((r) => (r && Number.isInteger(+r.start) && Number.isInteger(+r.end) && +r.start >= 1000 && +r.end >= +r.start && +r.end <= 99999
+      ? { start: +r.start, end: +r.end } : null)).filter(Boolean).slice(0, 4);
+  }
+
+  function leaseRemaining(lease) {
+    if (!lease) return 0;
+    let n = Math.max(0, lease.end - Math.max(+lease.next || 0, saleSeq, 1000) + 1);
+    (lease.queue || []).forEach((r) => { n += r.end - r.start + 1; });
+    return n;
+  }
+
   function readTicketLease() {
     const m = merchantSlug();
     const period = ticketPeriod();
@@ -1008,7 +1061,7 @@
     try {
       const x = JSON.parse(localStorage.getItem(TICKET_LEASE_KEY) || 'null');
       if (x && x.m === m && +x.period === period && Number.isInteger(+x.next) && Number.isInteger(+x.end) && +x.next <= +x.end) {
-        ticketLease = { m, period, next: +x.next, end: +x.end };
+        ticketLease = { m, period, next: +x.next, end: +x.end, queue: cleanLeaseQueue(x.queue) };
       }
     } catch (_) {}
     return ticketLease;
@@ -1030,10 +1083,23 @@
     syncTicketPeriod();
     const lease = readTicketLease();
     if (!lease) return '';
-    const n = Math.max(+lease.next || 0, saleSeq, 1000);
-    if (n > lease.end || n > 99999) return '';
+    let n = Math.max(+lease.next || 0, saleSeq, 1000);
     const previousNext = lease.next;
+    const previousEnd = lease.end;
+    const previousQueue = (lease.queue || []).slice();
     const previousSeq = saleSeq;
+    /* Plage épuisée : on bascule sur la suivante déjà réservée. C'est ce qui
+       permet de vendre hors ligne au-delà des 500 premiers numéros. */
+    while (n > lease.end && (lease.queue || []).length) {
+      const nextRange = lease.queue.shift();
+      lease.end = nextRange.end;
+      n = Math.max(nextRange.start, saleSeq, 1000);
+    }
+    if (n > lease.end || n > 99999) {
+      lease.end = previousEnd;
+      lease.queue = previousQueue;
+      return '';
+    }
     lease.next = n + 1;
     saleSeq = n + 1;
     /* The number is not claimed until its successor is durable. Otherwise a
@@ -1042,21 +1108,43 @@
        acceptable; reusing one of its numbers is not. */
     if (!saveTicketLease()) {
       lease.next = previousNext;
+      lease.end = previousEnd;
+      lease.queue = previousQueue;
       saleSeq = previousSeq;
       return '';
     }
+    topUpTicketLease();
     return String(n);
   }
 
-  function ensureTicketLease() {
-    if (IS_DEMO) return Promise.resolve(ticketLease);
-    syncTicketPeriod();
-    const existing = readTicketLease();
-    if (existing && Math.max(existing.next, saleSeq) <= existing.end) return Promise.resolve(existing);
-    if (ticketLeaseRequest) return ticketLeaseRequest;
+  /* Réserve la plage SUIVANTE pendant qu'on est encore en ligne. Appelée après
+     chaque numéro pris et à l'ouverture de la caisse : quand le réseau tombe,
+     la réserve est déjà sur la tablette. */
+  function topUpTicketLease() {
+    if (IS_DEMO) return;
+    try { if (navigator && navigator.onLine === false) return; } catch (_) {}
+    const lease = readTicketLease();
+    if (!lease) {
+      /* Aucune plage : on en réserve une tout de suite, sans attendre la
+         première cliente — sinon la panne de réseau arrive avant la plage. */
+      if (!ticketLeaseRequest) { try { ensureTicketLease().catch(() => {}); } catch (_) {} }
+      return;
+    }
+    if (leaseRemaining(lease) > TICKET_LEASE_LOW) return;
+    if ((lease.queue || []).length >= 2) return;
+    if (ticketLeaseRequest || ticketTopUpRequest) return;
+    ticketTopUpRequest = requestTicketRange().then((range) => {
+      const live = readTicketLease();
+      if (!live || !range) return;
+      live.queue = cleanLeaseQueue((live.queue || []).concat([range]));
+      saveTicketLease();
+    }).catch(() => {}).finally(() => { ticketTopUpRequest = null; });
+  }
+
+  function requestTicketRange() {
     const m = merchantSlug();
     if (!m || typeof fetch !== 'function') return Promise.reject(new Error('merchant-unavailable'));
-    ticketLeaseRequest = fetch('/api/ticket-sequence', {
+    return fetch('/api/ticket-sequence', {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
@@ -1069,7 +1157,20 @@
       if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1000 || end < start || end > 99999 || +j.period !== ticketPeriod()) {
         throw new Error('ticket-sequence-invalid');
       }
-      ticketLease = { m, period: ticketPeriod(), next: start, end };
+      return { start, end };
+    });
+  }
+
+  function ensureTicketLease() {
+    if (IS_DEMO) return Promise.resolve(ticketLease);
+    syncTicketPeriod();
+    const existing = readTicketLease();
+    if (existing && Math.max(existing.next, saleSeq) <= existing.end) return Promise.resolve(existing);
+    if (ticketLeaseRequest) return ticketLeaseRequest;
+    const m = merchantSlug();
+    ticketLeaseRequest = requestTicketRange().then(({ start, end }) => {
+      const carried = existing && existing.m === m ? cleanLeaseQueue(existing.queue) : [];
+      ticketLease = { m, period: ticketPeriod(), next: start, end, queue: carried };
       if (!saveTicketLease()) {
         ticketLease = null;
         throw new Error('ticket-lease-storage');
@@ -1104,9 +1205,55 @@
         const n = takeTicketNumber();
         if (!n) throw new Error('ticket-sequence-empty');
         return n;
+      }).catch((e) => {
+        /* LE PANIER N'EST JAMAIS OTAGE DU RÉSEAU.
+           Le serveur n'a pas pu réserver de plage : plutôt que d'interdire la
+           vente — ce que la bannière hors-ligne promet justement le contraire —
+           on émet une référence provisoire dans une bande qui ne peut PAS
+           entrer en collision avec une plage serveur (elle n'est pas
+           numérique). L'identité technique de la vente reste `syncId`, un UUID,
+           donc la synchronisation n'est pas affectée. La vente part au journal
+           avec sa marque « hors-ligne » et reste lisible par le comptoir. */
+        const fallback = takeOfflineRef();
+        if (fallback) return fallback;
+        throw e;
       });
     });
   }
+
+  const OFFLINE_REF_KEY = 'kiwi:bqTicketOffline';
+
+  function offlineDeviceTag() {
+    /* Deux comptoirs hors ligne ne doivent pas frapper la même référence. */
+    try {
+      let tag = localStorage.getItem(OFFLINE_REF_KEY + ':tag');
+      if (!tag || !/^[A-Z0-9]{3}$/.test(tag)) {
+        const pool = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        tag = '';
+        for (let i = 0; i < 3; i++) tag += pool[Math.floor(Math.random() * pool.length)];
+        localStorage.setItem(OFFLINE_REF_KEY + ':tag', tag);
+      }
+      return tag;
+    } catch (_) { return 'HL0'; }
+  }
+
+  function takeOfflineRef() {
+    if (IS_DEMO) return '';
+    const m = merchantSlug();
+    const period = ticketPeriod();
+    try {
+      let n = 1;
+      const raw = JSON.parse(localStorage.getItem(OFFLINE_REF_KEY) || 'null');
+      if (raw && raw.m === m && +raw.period === period && Number.isInteger(+raw.n)) n = +raw.n + 1;
+      localStorage.setItem(OFFLINE_REF_KEY, JSON.stringify({ m, period, n }));
+      return 'HL-' + offlineDeviceTag() + '-' + n;
+    } catch (_) {
+      state.ticketStorageError = true;
+      return '';
+    }
+  }
+
+  function isOfflineRef(ref) { return /^HL-/.test(String(ref || '')); }
 
   function assignTicketNumber(ticket) {
     if (!ticket || ticket.num) return Promise.resolve(ticket && ticket.num);
@@ -1384,6 +1531,12 @@
   function mount(rootEl) {
     root = rootEl;
     syncTillStaff();
+    /* On constitue la réserve de numéros DÈS l'ouverture, pendant que le réseau
+       est là : c'est ce qui rend la vente hors ligne possible plus tard. */
+    try { topUpTicketLease(); } catch (_) {}
+    try {
+      if (!IS_DEMO && window.addEventListener) window.addEventListener('online', () => { try { topUpTicketLease(); } catch (_) {} });
+    } catch (_) {}
     /* A PAIRED caisse shows the real store's name/city (from onboarding); the
        unpaired demo (PIN 0002) keeps the Maison Mansour identity. */
     const _pv = (function () { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } })();
@@ -1518,7 +1671,8 @@
       var _bqKey = (pvReal() && _bqPv && _bqPv.merchant)          /* real → merchant slug — SAME key the dashboard uses (pages-pro.js _bqxVenue) */
         || window.__kiwiPairedBoutiqueVenue
         || (_bqPv && (_bqPv.venueId || _bqPv.merchant))
-        || (pvReal() ? 'boutique-live' : 'vogueHome');
+        || (pvReal() ? realFallbackKey() : 'vogueHome');
+      adoptLegacySharedCatalogue(_bqKey);
       window.KiwiBoutiqueCatalog.use(_bqKey);
       /* Les promotions suivent EXACTEMENT la même clé que le catalogue : ce sont
          les prix de ce magasin-là. Une promotion rangée sous une autre clé que
@@ -1954,7 +2108,7 @@
     const el = $('#mz-ticket', root);
     el.innerHTML = `
       <div class="mz-tk-head">
-        <div><span class="mz-tk-title">Ticket</span> <span class="mz-tk-num${t.num ? '' : t.numError ? ' err' : ''}">· ${t.num || (t.numError ? 'numéro indisponible' : 'attribution…')} · par ${esc(STAFF.caissiere.name)}</span></div>
+        <div><span class="mz-tk-title">Ticket</span> <span class="mz-tk-num${t.num ? '' : t.numError ? ' err' : ''}">· ${t.num || (t.numError ? 'numéro indisponible' : 'attribution…')}${isOfflineRef(t.num) ? ' · hors-ligne' : ''} · par ${esc(STAFF.caissiere.name)}</span></div>
         ${!t.num && t.numError ? '<button class="mz-tk-retry" id="mz-tk-retry">Réessayer</button>' : ''}
         ${t.lines.length ? '<button class="mz-tk-reset" id="mz-tk-reset">Vider</button>' : ''}
       </div>
@@ -4244,6 +4398,18 @@
   }
 
   /* ═══════════════════════ ENCAISSEMENT ═══════════════════════ */
+  /* File d'impression durable : le comptoir garde le ticket jusqu'à ce qu'une
+     imprimante le prenne. Rien ici n'invente une file — on réutilise celle du
+     poste (KiwiKitchenPrint), la même qui sert déjà avant l'appel direct. */
+  function requeueReceipt(opts, doc) {
+    const queue = window.KiwiKitchenPrint;
+    if (!opts || !opts.sale || !queue || typeof queue.enqueueReceipt !== 'function') return false;
+    try {
+      const queued = queue.enqueueReceipt('maison:' + opts.sale.id + ':retry', doc, 'original');
+      return !!(queued && (queued.accepted || queued.pending));
+    } catch (_) { return false; }
+  }
+
   function printReceiptNow(opts, parts, printOpts) {
     printOpts = printOpts || {};
     const isGift = !!printOpts.gift;
@@ -4273,9 +4439,13 @@
       };
       if (KP && KP.isConnected && KP.isConnected()) {
         toast('Impression du ticket cadeau…');
+        /* Une promesse tenue n'est pas une impression réussie : `printReceipt`
+           résout aussi sur `{ok:false}`. On lit le résultat. */
         KP.printReceipt(giftDoc).then(
-          () => toast('Ticket cadeau imprimé'),
-          () => toast('Échec impression ticket cadeau')
+          (r) => toast(r && r.ok === false
+            ? ('Échec impression ticket cadeau : ' + ((r && r.reason) || 'inconnu'))
+            : 'Ticket cadeau imprimé'),
+          (e) => toast('Échec impression ticket cadeau : ' + ((e && e.message) || 'erreur'))
         );
         return;
       }
@@ -4354,10 +4524,21 @@
       }
       toast('Impression du reçu…');
       Promise.resolve(K.print(doc)).then(
-        (r) => toast(r && r.ok
-          ? ('Reçu imprimé · ' + (r.via === 'bluetooth' ? 'Bluetooth' : r.via === 'usb' ? 'USB' : r.via === 'browser' ? 'imprimante système' : 'réseau'))
-          : 'Impression échouée'),
-        () => toast('Impression échouée')
+        (r) => {
+          /* Le thermique a échoué et seul le repli navigateur est sorti : on le
+             dit, et on remet le ticket en file pour un vrai réessai — sinon la
+             vendeuse croit le reçu imprimé et la cliente repart sans rien. */
+          if (r && r.thermalFailed) {
+            const retried = requeueReceipt(opts, doc);
+            toast('Imprimante thermique injoignable', null, 'warn',
+              (retried ? 'Reçu remis en file d\'impression. ' : '') + 'Sortie de secours par l\'imprimante système.');
+            return;
+          }
+          toast(r && r.ok
+            ? ('Reçu imprimé · ' + (r.via === 'bluetooth' ? 'Bluetooth' : r.via === 'usb' ? 'USB' : r.via === 'browser' ? 'imprimante système' : 'réseau'))
+            : 'Impression échouée');
+        },
+        () => { requeueReceipt(opts, doc); toast('Impression échouée'); }
       );
       return;
     }
@@ -4445,6 +4626,9 @@
         const rewardUsed = !!(t.reward && c && c.id && t.reward.clientId === c.id);
         const sale = {
           id: t.num, syncId: t.syncId || newSaleId(), at: new Date(), clientId: c ? c.id : null, by: STAFF.caissiere.name, kind: 'vente',
+          /* Référence provisoire émise hors ligne : le journal doit le dire, la
+             vente elle-même est complète et synchronisable. */
+          offlineRef: isOfflineRef(t.num) || undefined,
           methods: parts.map((x) => x.m).join(' + '),
           parts: parts.map((x) => ({ m: x.m, amount: Math.round((+x.amount || 0) * 100) / 100 })),
           discount: Math.round(tot.remise + tot.reward),
@@ -7416,6 +7600,38 @@
       if (s && +s.openedAt > 0) bqShift = { openedAt: +s.openedAt, openedBy: String(s.openedBy || ''), float: +s.float || 0 };
     } catch (_) {}
   })();
+  /* ── LE RÉCONCILIATEUR DOIT VOIR CE COMPTOIR ───────────────────────────────
+   * La caisse maison tenait son poste entièrement pour elle : aucun événement
+   * de session n'était émis, donc `cash_session_events` restait vide pour ce
+   * commerce et le rapprochement de caisse regardait un terminal qui, pour lui,
+   * n'avait jamais ouvert ni fermé. On émet donc les deux bornes du poste —
+   * ouverture (fond) et clôture (attendu / compté / écart) — par le MÊME canal
+   * durable que les autres verticales (KiwiCashSessions, boîte d'envoi hors
+   * ligne comprise). Aucun chiffre n'est recalculé ici : ils viennent du
+   * rapport Z, le document qui fait foi. */
+  function bqSessionId() {
+    return 'bq-' + (bqShift && bqShift.openedAt ? bqShift.openedAt : 0);
+  }
+  function bqActorId() {
+    const s = (STAFF && STAFF.caissiere) || {};
+    return String(s.id || s.code || s.name || 'caisse');
+  }
+  function bqCashEvent(eventType, extra) {
+    if (IS_DEMO) return false;
+    const CS = window.KiwiCashSessions;
+    if (!CS || typeof CS.emit !== 'function' || !bqShift || !bqShift.openedAt) return false;
+    try {
+      return CS.emit(Object.assign({
+        sessionId: bqSessionId(),
+        eventType,
+        actorId: bqActorId(),
+        openedAt: bqShift.openedAt,
+        occurredAt: Date.now(),
+      }, extra || {}));
+    } catch (_) { return false; }
+  }
+  const bqCents = (v) => Math.round((+v || 0) * 100);
+
   function bqShiftPersist() {
     try {
       if (bqShift) localStorage.setItem(BQ_SHIFT_KEY, JSON.stringify(bqShift));
@@ -7725,6 +7941,8 @@
       icons();
       bqShift = { openedAt: Date.now(), openedBy: (STAFF.caissiere && STAFF.caissiere.name) || '', float: bqFloat };
       bqShiftPersist();
+      /* Le fond d'ouverture est le premier chiffre du rapprochement. */
+      bqCashEvent('open', { countedCents: bqCents(bqFloat) });
       bqSaveProvisional(true);
       setTimeout(() => el.classList.add('is-leaving'), 420);
       setTimeout(() => { clearInterval(timer); el.remove(); }, 940);
@@ -7890,6 +8108,16 @@
       toast('Clôture non enregistrée · poste conservé. Vérifiez le stockage puis réessayez.');
       return;
     }
+    /* Émis AVANT d'effacer le poste : l'événement porte openedAt et sessionId,
+       qui n'existent plus une fois bqShift remis à zéro. Un comptage laissé
+       vide reste un poste fermé — on annonce alors l'attendu comme compté, et
+       l'écart nul, plutôt que de ne rien dire du tout au rapprochement. */
+    const countedCash = counted == null ? bqCloExpected : counted;
+    bqCashEvent('close', {
+      expectedCents: bqCents(bqCloExpected),
+      countedCents: bqCents(countedCash),
+      gapCents: bqCents(countedCash) - bqCents(bqCloExpected),
+    });
     bqShift = null;
     bqShiftPersist();
     if (report) bqShowPostClose(report); else bqFinishClose();
