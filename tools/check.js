@@ -1062,6 +1062,7 @@ section('Whole-project regressions');
     'print-relay-idempotency-test.mjs',
     'print-hub-lease-test.mjs',
     'service-draft-durability-test.mjs',
+    'hotel-group-draft-escape-test.mjs',
     'payment-kitchen-dispatch-test.mjs',
     'food-production-print-test.mjs',
     'order-mode-exit-test.js',

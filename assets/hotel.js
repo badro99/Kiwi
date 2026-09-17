@@ -4180,6 +4180,15 @@
                 </div>
               </div>
             ` : ''}
+            ${(!hasSavedRooms && !committedTerms && (staged || pendingIntent)) ? `
+              <div class="hx-group-partial-alert" data-hx-group-resume-alert>
+                <b>Brouillon repris</b> : ce formulaire a été prérempli avec une saisie précédente${staged && staged.dossierId ? ` (dossier <code>${esc(staged.dossierId)}</code>)` : ''}.
+                <br>Aucune chambre n’a été enregistrée. Vous pouvez continuer, ou repartir d’un dossier vierge.
+                <div style="margin-top:6px;display:flex;gap:8px;">
+                  <button type="button" class="hx-link-btn" data-action="hx-discard-staged">Abandonner et nouveau dossier vierge</button>
+                </div>
+              </div>
+            ` : ''}
           </div>
 
           <div class="hx-commercial-hero">
@@ -5067,6 +5076,30 @@
       } else if (e.target.closest('[data-action="hx-discard-staged"]')) {
         localStorage.removeItem(stagedKey);
         try { localStorage.removeItem(intentKeyFor(groupDossierId)); } catch (_) {}
+        /* ── ABANDONNER DOIT VOULOIR DIRE ABANDONNER (ticket #0007) ────────
+         * On n'effaçait que la trace du dossier COURANT. Une tentative
+         * inachevée portant un AUTRE identifiant survivait donc au geste, et
+         * la fois suivante « nouvelle réservation » la réadoptait : le même
+         * essai revenait, avec ses champs verrouillés, sans qu'aucun bouton
+         * ne puisse plus s'en défaire. C'est très exactement le blocage
+         * décrit — « quand on ferme et qu'on reclique, on retombe sur le
+         * même dossier qui n'a pas pu se charger ».
+         *
+         * Ces enregistrements sont des aides à la reprise LOCALES : les
+         * chambres déjà enregistrées côté serveur le restent, et un dossier
+         * réellement en cours se relit depuis la liste des séjours. Les
+         * effacer sur un geste explicite ne perd donc aucune réservation. */
+        try {
+          const orphans = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key || !key.startsWith('kiwi_hx_intent_')) continue;
+            let raw = null;
+            try { raw = JSON.parse(localStorage.getItem(key) || 'null'); } catch (_) { raw = null; }
+            if (raw && raw.merchant === initialMerchant && raw.status !== 'complete') orphans.push(key);
+          }
+          orphans.forEach((key) => { try { localStorage.removeItem(key); } catch (_) {} });
+        } catch (_) {}
         savedRooms = {};
         failedRooms = {};
         quoteBreakdown = {};
