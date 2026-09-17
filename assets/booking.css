@@ -83,3 +83,13 @@
 .bk-room-card footer{display:grid;grid-template-columns:minmax(130px,1fr) minmax(130px,1fr) auto;gap:16px;align-items:end;margin-top:20px;padding-top:16px;border-top:1px solid var(--n-200)}.bk-room-card footer>div>strong{display:block;font-size:15px;color:var(--atlas)}.bk-room-card footer small,.bk-room-total span{display:block;margin-top:4px;color:var(--n-500);font-size:10.5px}.bk-room-total b{display:block;margin-top:4px;font-size:15px}
 @media(max-width:900px){.bk-hotel-search{grid-template-columns:1fr 1fr}.bk-hotel-search .bk-btn{grid-column:1/-1}.bk-room-card{grid-template-columns:120px minmax(0,1fr)}.bk-room-card footer{grid-template-columns:1fr 1fr}.bk-room-card footer .bk-btn{grid-column:1/-1}}
 @media(max-width:560px){.bk-hotel-search{grid-template-columns:1fr;padding:16px}.bk-hotel-search .bk-btn{grid-column:auto}.bk-stay-chip{align-items:flex-start;flex-wrap:wrap}.bk-stay-chip button{margin-inline-start:0}.bk-room-card{display:block}.bk-room-visual{min-height:108px}.bk-room-visual>span{font-size:40px}.bk-room-copy{padding:16px}.bk-room-title{display:block}.bk-room-stock{display:inline-block;margin-top:10px}.bk-room-card footer{grid-template-columns:1fr;gap:10px}.bk-room-card footer .bk-btn{grid-column:auto;width:100%}}
+
+/* Le lien de gestion : la seule chose que la cliente doit conserver. Il est
+   donc traité comme un objet à emporter — encadré, copiable d'un geste — et
+   non comme une mention en bas de page. */
+.bk-manage-link{margin-top:24px;padding:18px;border:1px solid var(--n-200);border-radius:16px;background:var(--paper-soft);display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.bk-manage-link p{flex:1 1 100%;margin:0 0 4px;color:var(--n-500);font-size:12.5px;line-height:1.5}
+.bk-manage-link a,.bk-manage-link button{min-height:42px;display:inline-flex;align-items:center;padding:0 16px;border-radius:12px;font-weight:600;font-size:13px;cursor:pointer;text-decoration:none}
+.bk-manage-link a{background:var(--atlas);color:#fff;border:1px solid var(--atlas)}
+.bk-manage-link button{background:var(--surface);color:var(--ink);border:1px solid var(--n-200)}
+.bk-manage-note{margin:18px 0 0;color:var(--n-500);font-size:12.5px;line-height:1.5}

@@ -492,6 +492,7 @@ section('Hôtel voyageur ordinaire · workflow navigateur (tools/hotel-direct-bo
 section('Réservations, planning, livraison, encaissement, schéma');
 for (const test of [
   'booking-api-test.mjs',
+  'booking-manage-test.mjs',
   'd1-schema-test.mjs',
   'order-delivery-test.mjs',
   'order-queue-pagination-test.mjs',

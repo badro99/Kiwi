@@ -1,5 +1,5 @@
 // Public Kiwi booking surface. It exposes availability, never another client's details.
-import { json, limitCheck, limitFail, limitClear } from '../auth/_lib.js';
+import { json, limitCheck, limitFail, limitClear, sendMail } from '../auth/_lib.js';
 import { storeSubscriptionPending } from './_private.js';
 import { poke } from './_live.js';
 import { currentRoomSegment, normalizeGuestSegments, readGuestSegments, readRoomSegments, writeReservationWithEvents, hotelReservationsTableExists } from './hotel/_stay-events.js';
@@ -14,6 +14,20 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const TZ = 'Africa/Casablanca';
 const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
+/* UNE ADRESSE QUI NE PEUT PAS RECEVOIR N'EST PAS UN CONTACT.
+ * `str(email,160)` acceptait « marie.dupont » ou « marie@gmail » : la
+ * réservation était enregistrée, l'établissement n'avait aucun moyen de
+ * joindre la cliente, et personne ne le découvrait avant le jour J. Le test
+ * reste volontairement large — il refuse ce qui ne peut PAS être délivré, pas
+ * ce qui est inhabituel — et une adresse absente reste permise tant qu'un
+ * téléphone est donné. */
+const EMAIL = /^[^\s@,;:<>()[\]\\"]+@[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*\.[A-Za-z]{2,24}$/;
+function normalizeEmail(value) {
+  const s = str(value, 160).toLowerCase();
+  if (!s) return '';
+  return EMAIL.test(s) ? s : '';
+}
+const TOKEN = /^[a-f0-9]{16,80}$/;
 const num = (v, min, max, fallback) => Number.isFinite(+v) ? Math.max(min, Math.min(max, +v)) : fallback;
 function normalizePhone(value) {
   let s = str(value, 32);
@@ -202,6 +216,64 @@ function hotelCategories(doc, hotel, stay, guests, onlyType='', d1BusyRooms = nu
   }).filter((t)=>t.rate != null);
 }
 function publicHotelCategory(x) { return { id:x.id,name:x.name,description:x.description,maxGuests:x.maxGuests,beds:x.beds,sizeM2:x.sizeM2,view:x.view,amenities:x.amenities,photos:x.photos,rate:x.rate,total:x.total,available:x.rooms.length }; }
+/* ── LE LIEN QUI REND LA RÉSERVATION RETROUVABLE ───────────────────────────
+ * Le jeton de gestion était frappé puis jeté : ni route serveur, ni lien pour
+ * la cliente. Fermer l'onglet suffisait à rendre la réservation inatteignable
+ * pour toujours — aucune consultation, aucune annulation. Le lien ci-dessous
+ * est la seule chose qu'il faut conserver ; il est envoyé par e-mail quand une
+ * adresse délivrable est donnée, et affiché à l'écran dans tous les cas. */
+function manageUrl(request, merchant, token) {
+  let origin = '';
+  try { origin = new URL(request.url).origin; } catch (_) { origin = ''; }
+  return origin + '/booking.html?merchant=' + encodeURIComponent(merchant) + '&manage=' + encodeURIComponent(token);
+}
+function publicBooking(rec) {
+  return {
+    id: rec.id, code: rec.code, status: rec.status, startAt: rec.startAt, endAt: rec.endAt,
+    partySize: rec.partySize, note: rec.note,
+    customer: { name: rec.customer.name },
+    hotel: rec.hotel ? {
+      roomTypeName: rec.hotel.roomTypeName, checkIn: rec.hotel.checkIn,
+      checkOut: rec.hotel.checkOut, nights: rec.hotel.nights, total: rec.hotel.total,
+    } : null,
+  };
+}
+/* Le délai d'annulation est celui que l'établissement a publié. Passé ce
+   délai, la cliente n'annule plus seule : elle appelle. On le dit clairement
+   plutôt que d'afficher un bouton qui échoue. */
+function cancellableAt(rec, settings) {
+  return rec.startAt - (num(settings.cancellationHours, 0, 720, 12) * 3600000);
+}
+async function confirmationMail(env, request, merchant, meta, rec) {
+  if (!rec.customer.email) return { ok: false, reason: 'no-recipient' };
+  const venue = str(meta?.name, 100) || 'Votre établissement';
+  const when = rec.hotel
+    ? `${rec.hotel.checkIn} → ${rec.hotel.checkOut} (${rec.hotel.nights} nuit${rec.hotel.nights > 1 ? 's' : ''})`
+    : new Date(rec.startAt).toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+  const requested = rec.status === 'requested';
+  const lines = [
+    `${venue}`,
+    '',
+    requested
+      ? 'Votre demande de réservation a bien été reçue. Elle vous sera confirmée par l\'établissement.'
+      : 'Votre réservation est confirmée.',
+    '',
+    `Référence : ${rec.code}`,
+    `Date : ${when}`,
+    rec.hotel ? `Chambre : ${rec.hotel.roomTypeName}` : `Personnes : ${rec.partySize}`,
+    '',
+    'Consulter ou annuler votre réservation :',
+    manageUrl(request, merchant, rec.manageToken),
+    '',
+    'Ce lien est personnel. Ne le transmettez pas.',
+  ];
+  return sendMail(env, {
+    to: rec.customer.email,
+    subject: `${venue} · ${requested ? 'demande reçue' : 'réservation confirmée'} · ${rec.code}`,
+    text: lines.join('\n'),
+  });
+}
+
 async function readRows(env, merchant) {
   const rows = await env.DB.batch([
     env.DB.prepare("SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = 'reservations'").bind(merchant),
@@ -222,6 +294,22 @@ export async function onRequestGet({ request, env }) {
   if (!ID.test(merchant)) return json({ error:'merchant-required' },400);
   let rows; try { rows = await readRows(env, merchant); } catch (_) { return json({ error:'unavailable' },503); }
   const doc = safeDoc(rows.reservation?.data);
+  /* Consultation par jeton. Elle précède le contrôle `published` : une
+     réservation déjà prise reste consultable même si l'établissement a depuis
+     fermé ses réservations en ligne — sinon fermer le formulaire effacerait
+     l'accès de toutes les clientes déjà engagées. */
+  const manage = str(u.searchParams.get('manage'), 80).toLowerCase();
+  if (manage) {
+    if (!TOKEN.test(manage)) return json({ error:'not-found' },404);
+    const rec = doc.bookings.find((x) => x.manageToken && x.manageToken === manage);
+    if (!rec) return json({ error:'not-found' },404);
+    return json({
+      ok:true, kind:'manage', merchant, name:str(rows.merchant?.name,100), trade:str(rows.merchant?.type,60),
+      booking:publicBooking(rec),
+      cancellableUntil:cancellableAt(rec, doc.settings),
+      cancellationHours:num(doc.settings.cancellationHours,0,720,12),
+    },200,{ 'Cache-Control':'no-store' });
+  }
   if (!rows.merchant || !doc.settings.published) return json({ error:'booking-closed' },404);
   if (hotelTrade(rows.merchant)) {
     const checkIn=str(u.searchParams.get('checkIn'),10), checkOut=str(u.searchParams.get('checkOut'),10), guests=num(u.searchParams.get('guests'),1,12,2);
@@ -253,13 +341,71 @@ export async function onRequestGet({ request, env }) {
   if (sid && DATE.test(date)) { const svc = doc.services.find((x)=>x.id===sid && x.active); if (!svc) return json({ error:'service-not-found' },404); slots = slotsFor(doc,svc,date,rows.hours,rid,partySize,rows.team); }
   return json(publicConfig(merchant, rows.merchant, doc, slots),200,{ 'Cache-Control':'no-store' });
 }
+/* Annulation par la cliente. Le jeton de gestion est le SEUL justificatif —
+ * il n'est jamais renvoyé par une consultation, il n'est pas devinable, et il
+ * ne donne accès qu'à cette réservation-là. On ne supprime rien : une
+ * réservation annulée passe au statut `cancelled`, et l'établissement garde
+ * l'historique. */
+export async function onRequestDelete({ request, env }) {
+  if (!env.DB) return json({ error:'not-configured' },503);
+  const limited = await limitCheck(request,env,'booking'); if (limited) return limited;
+  let b; try { b = await request.json(); } catch (_) { b = null; }
+  const u = new URL(request.url);
+  const merchant = str((b && b.merchant) || u.searchParams.get('merchant'),64).toLowerCase();
+  const token = str((b && b.manageToken) || u.searchParams.get('manage'),80).toLowerCase();
+  if (!ID.test(merchant) || !TOKEN.test(token)) { await limitFail(request,env,'booking'); return json({ error:'invalid' },400); }
+
+  for (let attempt = 0; attempt < 4; attempt++) {
+    let rows; try { rows = await readRows(env, merchant); } catch (_) { return json({ error:'unavailable' },503); }
+    const doc = safeDoc(rows.reservation?.data), rev = +rows.reservation?.rev || 0;
+    const index = doc.bookings.findIndex((x) => x.manageToken && x.manageToken === token);
+    if (index < 0) { await limitFail(request,env,'booking'); return json({ error:'not-found' },404); }
+    const rec = doc.bookings[index];
+    await limitClear(request,env,'booking');
+    /* Déjà annulée : on répond ok. Une cliente qui reclique sur son lien après
+       une coupure ne doit pas lire un message d'erreur pour un geste qui a
+       réussi. */
+    if (rec.status === 'cancelled') return json({ ok:true, status:'cancelled', already:true });
+    if (!ACTIVE.has(rec.status)) return json({ error:'not-cancellable', status:rec.status },409);
+    const deadline = cancellableAt(rec, doc.settings);
+    if (Date.now() > deadline) {
+      return json({ error:'cancellation-closed', cancellableUntil:deadline,
+        cancellationHours:num(doc.settings.cancellationHours,0,720,12) },409);
+    }
+    const now = Date.now();
+    const previous = JSON.parse(JSON.stringify(rec));
+    rec.status = 'cancelled';
+    rec.updatedAt = now;
+    try {
+      if (rec.hotel) {
+        const next = await writeReservationWithEvents(env, { merchant, doc, rev, now,
+          actor:{ id:'public-booking', role:'public' },
+          events:[{ previous, current:rec, action:'cancel' }] });
+        if (next) { await poke(env, merchant, 'reservations'); return json({ ok:true, status:'cancelled' }); }
+      } else {
+        const text = JSON.stringify(doc);
+        const result = await env.DB.prepare(
+          "UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = 'reservations' AND rev = ?"
+        ).bind(text, rev + 1, now, merchant, rev).run();
+        if ((result?.meta?.changes || 0) > 0) { await poke(env, merchant, 'reservations'); return json({ ok:true, status:'cancelled' }); }
+      }
+    } catch (_) { return json({ error:'write-failed' },503); }
+  }
+  return json({ error:'write-failed' },503);
+}
+
 export async function onRequestPost({ request, env }) {
   if (!env.DB) return json({ error:'not-configured' },503);
   const limited = await limitCheck(request,env,'booking'); if (limited) return limited;
   let b; try { b=await request.json(); } catch (_) { await limitFail(request,env,'booking'); return json({error:'bad-json'},400); }
   const merchant=str(b?.merchant,64).toLowerCase(), ref=str(b?.ref,80), sid=str(b?.serviceId||b?.roomTypeId,64), asked=str(b?.resourceId,64), startAt=+b?.startAt||0;
-  const name=str(b?.customer?.name,100), rawPhone=str(b?.customer?.phone,32), phone=normalizePhone(rawPhone), email=str(b?.customer?.email,160), partySize=num(b?.partySize,1,999,1);
-  if(!ID.test(merchant)||!REF.test(ref)||!name||(!rawPhone&&!email)||rawPhone&&!phone||!sid){await limitFail(request,env,'booking');return json({error:'invalid'},400);}
+  const name=str(b?.customer?.name,100), rawPhone=str(b?.customer?.phone,32), phone=normalizePhone(rawPhone);
+  const rawEmail=str(b?.customer?.email,160), email=normalizeEmail(rawEmail), partySize=num(b?.partySize,1,999,1);
+  if(!ID.test(merchant)||!REF.test(ref)||!name||(!rawPhone&&!rawEmail)||rawPhone&&!phone||!sid){await limitFail(request,env,'booking');return json({error:'invalid'},400);}
+  /* Une adresse saisie mais indélivrable est refusée AVANT l'écriture : mieux
+     vaut corriger une faute de frappe pendant que la cliente est encore devant
+     l'écran que découvrir le jour de l'arrivée qu'elle est injoignable. */
+  if(rawEmail&&!email){await limitFail(request,env,'booking');return json({error:'invalid-email'},400);}
   if(await storeSubscriptionPending(env,merchant))return json({error:'subscription-required'},402);
   for(let attempt=0;attempt<4;attempt++){
     let rows;try{rows=await readRows(env,merchant);}catch(_){return json({error:'unavailable'},503);}
@@ -314,7 +460,12 @@ export async function onRequestPost({ request, env }) {
          réservation confirmée au-delà de la fenêtre, et la chambre repartirait
          à la vente. La disponibilité retombe déjà sur le document dans ce cas. */
       if (d1BusyRooms !== null) pruneReservationsDoc(doc, now);
-      try{const next=await writeReservationWithEvents(env,{merchant,doc,rev,now,actor:{id:'public-booking',role:'public'},events:[{previous:null,current:rec,action:'create'}]});if(next){await poke(env,merchant,'reservations');await limitClear(request,env,'booking');return json({ok:true,id:rec.id,code,status:rec.status,checkIn:stay.checkIn,checkOut:stay.checkOut,nights:stay.nights,total:category.total,manageToken:token});}}catch(_){return json({error:'write-failed'},503);}
+      try{const next=await writeReservationWithEvents(env,{merchant,doc,rev,now,actor:{id:'public-booking',role:'public'},events:[{previous:null,current:rec,action:'create'}]});if(next){await poke(env,merchant,'reservations');await limitClear(request,env,'booking');
+        /* L'envoi ne conditionne JAMAIS la réservation : elle est écrite, elle
+           existe. On dit seulement si la confirmation est partie, pour que la
+           page n'annonce pas un e-mail qui n'a jamais quitté le serveur. */
+        const mail=await confirmationMail(env,request,merchant,rows.merchant,rec);
+        return json({ok:true,id:rec.id,code,status:rec.status,checkIn:stay.checkIn,checkOut:stay.checkOut,nights:stay.nights,total:category.total,manageToken:token,manageUrl:manageUrl(request,merchant,token),confirmationSent:!!(mail&&mail.ok)});}}catch(_){return json({error:'write-failed'},503);}
       continue;
     }
 
@@ -331,7 +482,9 @@ export async function onRequestPost({ request, env }) {
       let result;
       if(rev){result=await env.DB.prepare("UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = 'reservations' AND rev = ?").bind(text,next,now,merchant,rev).run();}
       else{result=await env.DB.prepare("INSERT OR IGNORE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, 'reservations', ?, 1, ?)").bind(merchant,text,now).run();}
-      if((result?.meta?.changes||0)>0){await poke(env,merchant,'reservations');await limitClear(request,env,'booking');return json({ok:true,id:rec.id,code,status:rec.status,startAt,manageToken:token});}
+      if((result?.meta?.changes||0)>0){await poke(env,merchant,'reservations');await limitClear(request,env,'booking');
+        const mail=await confirmationMail(env,request,merchant,rows.merchant,rec);
+        return json({ok:true,id:rec.id,code,status:rec.status,startAt,manageToken:token,manageUrl:manageUrl(request,merchant,token),confirmationSent:!!(mail&&mail.ok)});}
     }catch(_){return json({error:'write-failed'},503);}
   }
   return json({error:'slot-unavailable'},409);
