@@ -694,7 +694,17 @@
       && Number(entry.grossAmountCents) > 0
       && Number(entry.grossAmountCents) === Number(entry.discountAmountCents)
       && Array.isArray(entry.lines) && entry.lines.length > 0;
-    if (!Number.isFinite(amountCents) || amountCents < 0 || (amountCents === 0 && !complimentary)) return;
+    /* Une vente réglée ENTIÈREMENT en avoir ne fait entrer aucun argent — la
+       recette a été comptée à l'émission du bon — mais la marchandise est bien
+       sortie. Un montant nul la faisait taire ici : le serveur n'apprenait
+       jamais le panier, et le tableau de bord ne pouvait pas dire quels
+       articles étaient partis. Elle passe si elle dit ce qui l'a réglée. */
+    var storeCredit = entry.settlementKind === 'store-credit'
+      && amountCents === 0
+      && Number(entry.creditAmountCents) > 0
+      && Array.isArray(entry.lines) && entry.lines.length > 0;
+    if (!Number.isFinite(amountCents) || amountCents < 0
+      || (amountCents === 0 && !complimentary && !storeCredit)) return;
     var amt = Math.round(amountCents / 100);
     // No resolved tenant ⇒ don't post. The server refuses an unattributed sale
     // (it used to file it under a shared 'default' bucket other stores read), so
@@ -771,6 +781,10 @@
       lines: lines,                                           // null ⇒ unknown, never "empty basket"
     };
     if (complimentary) body.settlementKind = 'complimentary';
+    if (storeCredit) {
+      body.settlementKind = 'store-credit';
+      body.creditAmountCents = Math.round(Number(entry.creditAmountCents));
+    }
     if (entry.channel) body.channel = String(entry.channel).slice(0, 24);
     if (entry.orderId) body.orderId = String(entry.orderId).slice(0, 64);
     var session = serverSession(entry);

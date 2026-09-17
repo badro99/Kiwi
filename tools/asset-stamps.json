@@ -432,8 +432,8 @@
     "sha": "c9d6036ca657c76e"
   },
   "assets/live-link.js": {
-    "v": "39",
-    "sha": "d0946027e11abf92"
+    "v": "40",
+    "sha": "1ab7fdb04b358bb8"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -609,7 +609,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "39",
-    "sha": "d0586c6c1a8ad137"
+    "sha": "0c44767217664ff5"
   },
   "assets/pos-epicerie.css": {
     "v": "5",
@@ -672,12 +672,12 @@
     "sha": "782a2a019b86fc81"
   },
   "assets/pos-maison.css": {
-    "v": "28",
+    "v": "29",
     "sha": "ae3c4dedfa5d7971"
   },
   "assets/pos-maison.js": {
-    "v": "28",
-    "sha": "534aaf20feeff8f3"
+    "v": "29",
+    "sha": "bab63e183b092a52"
   },
   "assets/pos-mobile.css": {
     "v": "3",

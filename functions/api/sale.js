@@ -65,12 +65,28 @@ export async function onRequestPost({ request, env }) {
   const amount = Math.round(amountCents / 100);
   const settlementKind = String((b && b.settlementKind) || '').slice(0, 24);
   const complimentary = settlementKind === 'complimentary';
+  /* ── LA VENTE RÉGLÉE ENTIÈREMENT EN AVOIR ─────────────────────────────────
+   * Elle ne fait entrer AUCUN argent : la recette a été comptée le jour où
+   * l'avoir a été émis, et la recompter ici doublerait le chiffre d'affaires.
+   * Le montant est donc bien zéro, et il doit le rester. Mais la marchandise,
+   * elle, est sortie du magasin — et comme un montant nul était refusé, le
+   * serveur n'apprenait jamais l'existence du panier. La patronne ne pouvait
+   * pas savoir quels articles étaient partis. On accepte donc la vente à zéro
+   * quand elle DIT ce qui l'a réglée, avec le montant d'avoir consommé et ses
+   * lignes : zéro dirham de recette, un panier de vérité. */
+  const storeCredit = settlementKind === 'store-credit';
+  const creditAmountCents = Math.round(Number((b && b.creditAmountCents) || 0));
 
-  // Zero is legal only for an explicit, fully-discounted complimentary close.
+  // Zero is legal only for an explicit complimentary close or a full store-credit settlement.
   if (amountCents < 0 || amountCents > MAX_AMOUNT_CENTS
-    || (amountCents === 0 && !complimentary)
-    || (settlementKind && !complimentary)) {
+    || (amountCents === 0 && !complimentary && !storeCredit)
+    || (settlementKind && !complimentary && !storeCredit)) {
     return json({ error: 'bad-amount' }, 400);
+  }
+  if (storeCredit && (amountCents !== 0
+    || !Number.isSafeInteger(creditAmountCents) || creditAmountCents <= 0 || creditAmountCents > MAX_AMOUNT_CENTS
+    || !Array.isArray(b && b.lines) || !b.lines.length)) {
+    return json({ error: 'bad-store-credit-settlement' }, 400);
   }
 
   const hasDiscount = b && (b.grossAmountCents != null || b.discountAmountCents != null || b.discountReason != null || b.actorId != null);

@@ -163,7 +163,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=10',
   '/assets/operations-ui.js?v=14',
-  '/assets/live-link.js?v=39',
+  '/assets/live-link.js?v=40',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -314,8 +314,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=5',
   '/assets/pos-autre.css?v=2',
   '/assets/pos-autre.js?v=2',
-  '/assets/pos-maison.css?v=28',
-  '/assets/pos-maison.js?v=28',
+  '/assets/pos-maison.css?v=29',
+  '/assets/pos-maison.js?v=29',
   '/assets/caisse-pairing.js?v=24',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

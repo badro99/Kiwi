@@ -4703,7 +4703,12 @@
               unit: 'piece',
               kind: 'product',
             }));
-            window.KiwiLive.postSale({
+            /* Réglée entièrement en avoir : aucun argent n'entre, mais la
+               marchandise sort. On le DIT, avec le montant d'avoir consommé,
+               pour que le panier arrive quand même au serveur — sinon la vente
+               n'existe nulle part ailleurs que sur cette tablette. */
+            const creditIn = (parts || []).reduce((sum, x) => sum + (x && x.m === 'avoir' ? (+x.amount || 0) : 0), 0);
+            const payload = {
               id: sale.syncId,
               amount: cashIn,
               method: method,
@@ -4712,7 +4717,12 @@
               ref: sale.id,
               time: sale.at,
               lines: basket,
-            });
+            };
+            if (cashIn <= 0 && creditIn > 0 && basket.length) {
+              payload.settlementKind = 'store-credit';
+              payload.creditAmountCents = Math.round(creditIn * 100);
+            }
+            window.KiwiLive.postSale(payload);
           }
         } catch (_) {}
         let ptsLine = '';
