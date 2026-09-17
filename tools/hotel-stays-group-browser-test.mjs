@@ -546,6 +546,7 @@ async function apiUpdateBooking(ctx, id, mutate, label) {
   const b = cur.json.stays[0];
   const body = {
     merchant: MERCHANT, id: b.id, clientRef: b.publicRef, roomTypeId: b.serviceId, resourceId: b.resourceId,
+    expectedUpdatedAt: b.updatedAt,
     checkIn: b.hotel.checkIn, checkOut: b.hotel.checkOut, partySize: b.partySize,
     status: b.status, channel: b.hotel.channel,
     customer: { ...b.customer }, guests: b.guests.map((g) => ({ ...g })),
