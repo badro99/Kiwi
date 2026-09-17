@@ -40,7 +40,11 @@ shell.forEach((url) => ok(`${url} exists`, onDisk(url.split('?')[0].slice(1))));
    fichier au premier chargement après un déploiement. C'est exactement comme ça
    que la carte « Passer à Ultra » retirée est revenue dans la barre latérale
    d'un commerçant alors que le code déployé, lui, était bon. */
-const docs = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-cuisine.html']
+/* booking.html entre dans cette liste avec sa pré-mise en cache (#0055) : dès
+   qu'un document est servi par le service worker, ses estampilles doivent
+   s'accorder avec la coquille, sinon la page publique repart sur un vieux
+   script au premier chargement après un déploiement. */
+const docs = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-cuisine.html', 'booking.html']
   .map(read).join('\n');
 const workerVersion = (sw.match(/var CACHE = 'kiwi-app-v(\d+)'/) || [])[1];
 ['assets/dashboard-pwa.js', 'assets/caisse-pwa.js', 'assets/employee-live.js'].forEach((file) => {

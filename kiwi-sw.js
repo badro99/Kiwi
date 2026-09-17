@@ -30,6 +30,14 @@ var SHELL = [
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau
      quand le réseau tousse, au lieu d'une page blanche au milieu du service. */
   '/kiwi-cuisine.html',
+  /* La page publique de réservation. Elle vit sur le même domaine, donc CE
+     service worker la sert : sans elle dans la coquille, une cliente hors
+     ligne recevait le tableau de bord du patron. Elle est légère (une page,
+     un script, deux feuilles) et n'a pas de session à protéger. */
+  '/booking.html',
+  '/assets/booking.js?v=18',
+  '/assets/booking.css?v=13',
+  '/assets/phone.js?v=1',
   '/assets/err-reporter.js?v=1',
   '/assets/kiwi-env.js?v=1',
   '/dashboard.webmanifest',
@@ -63,7 +71,7 @@ var SHELL = [
   '/assets/agent-skin.css?v=15',
   '/assets/agent-skin.js?v=4',
   '/assets/dashboard-native.css',
-  '/assets/cloud-doc.js?v=6',
+  '/assets/cloud-doc.js?v=7',
   '/assets/agent-action-center.js?v=2',
   '/assets/cancellation-history.js?v=2',
   '/assets/briefing.js?v=17',
@@ -389,6 +397,31 @@ self.addEventListener('fetch', function (e) {
   // rejected by the browser for navigations and hard-fails the page (ERR_FAILED),
   // which is exactly what a cache-first strategy here caused. Documents change on
   // deploy anyway, so fetching fresh is also the correct freshness behaviour.
+  /* Une page hors ligne, en trois langues, sans dépendance : elle doit
+     s'afficher quand rien d'autre n'est joignable. Elle ne prétend rien
+     savoir — elle dit ce qui se passe et propose de réessayer. */
+  function offlineNotice(url) {
+    var lang = (url && url.searchParams && url.searchParams.get('lang')) || 'fr';
+    var copy = {
+      fr: { t: 'Vous êtes hors ligne', p: 'Cette page a besoin d\'une connexion pour s\'afficher. Reconnectez-vous, puis réessayez.', b: 'Réessayer' },
+      en: { t: 'You are offline', p: 'This page needs a connection to load. Reconnect, then try again.', b: 'Try again' },
+      ar: { t: 'أنت غير متصل', p: 'تحتاج هذه الصفحة إلى اتصال لعرضها. أعد الاتصال ثم حاول مجدداً.', b: 'إعادة المحاولة' },
+    };
+    var c = copy[lang] || copy.fr;
+    var rtl = lang === 'ar';
+    var html = '<!doctype html><html lang="' + lang + '" dir="' + (rtl ? 'rtl' : 'ltr') + '"><meta charset="utf-8">'
+      + '<meta name="viewport" content="width=device-width,initial-scale=1"><title>' + c.t + '</title>'
+      + '<style>:root{color-scheme:light dark}body{margin:0;min-height:100vh;display:grid;place-items:center;'
+      + 'background:#F7F5F0;color:#0A0F0D;font:400 16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px}'
+      + '@media(prefers-color-scheme:dark){body{background:#0A0F0D;color:#F7F5F0}}'
+      + 'main{max-width:30rem;text-align:center}h1{font-size:1.5rem;letter-spacing:-.02em;margin:0 0 .5rem}'
+      + 'p{margin:0 0 1.5rem;opacity:.72}button{min-height:48px;padding:0 22px;border:0;border-radius:12px;'
+      + 'background:#0B6E4F;color:#fff;font:600 15px system-ui,sans-serif;cursor:pointer}</style>'
+      + '<main><h1>' + c.t + '</h1><p>' + c.p + '</p>'
+      + '<button onclick="location.reload()">' + c.b + '</button></main></html>';
+    return new Response(html, { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+  }
+
   if (req.mode === 'navigate') {
     e.respondWith(
       fetch(req).then(function (res) { return put(req, res); }).catch(function () {
@@ -402,7 +435,25 @@ self.addEventListener('fetch', function (e) {
           if (p.indexOf('/kiwi-cuisine') === 0) return caches.match('/kiwi-cuisine.html');
           if (p.indexOf('/kiwi-caisse') === 0) return caches.match('/kiwi-caisse.html');
           if (p.indexOf('/kiwi-serveur') === 0) return caches.match('/kiwi-serveur');
-          return caches.match('/dashboard.html');
+          /* La page publique de réservation. Elle n'est pas « une page de
+             l'application » : elle est ouverte par une cliente, et le repli
+             lui servait la coquille du tableau de bord du PATRON — un écran
+             d'authentification qu'elle ne peut ni comprendre ni franchir. */
+          if (p.indexOf('/booking') === 0) {
+            return caches.match('/booking.html').then(function (page) {
+              return page || offlineNotice(url);
+            });
+          }
+          /* Et le repli par défaut cesse d'être le tableau de bord pour
+             N'IMPORTE QUELLE adresse. Une page publique inconnue, hors ligne,
+             doit dire qu'elle est hors ligne — pas ouvrir la porte de service
+             du commerçant devant un visiteur. */
+          if (p === '/' || p.indexOf('/dashboard') === 0 || p.indexOf('/app') === 0) {
+            return caches.match('/dashboard.html').then(function (page) {
+              return page || offlineNotice(url);
+            });
+          }
+          return caches.match(req).then(function (page) { return page || offlineNotice(url); });
         });
       })
     );

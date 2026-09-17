@@ -61,7 +61,76 @@
   var SAVE_TIMEOUT = 10000;
 
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
-  function lset(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
+
+  /* ── LE QUOTA QUI TUE LA SYNCHRO EN SILENCE ───────────────────────────────
+   * Chaque magasin consulté laisse ici trois clés : un signet de révision, et
+   * au besoin une marque « modifié » ou « refusé ». Rien ne les enlevait
+   * jamais. Une vue opérateur qui parcourt des centaines de commerces finissait
+   * par remplir le quota du navigateur — et `setItem` jetait, l'exception était
+   * avalée, et à partir de là PLUS AUCUNE remontée ne se marquait. La
+   * synchronisation mourait sans un mot, et la première saisie faite hors ligne
+   * ne repartait jamais.
+   *
+   * Deux réponses. D'abord, le signet de révision est un CACHE : le perdre coûte
+   * une relecture complète, jamais une donnée. On peut donc en jeter. Les
+   * marques « modifié » et « refusé », elles, portent du travail non remonté :
+   * on n'y touche pas, et le signet d'un magasin qui en porte une est gardé
+   * avec elles. Ensuite, une écriture qui échoue malgré le ménage ne se tait
+   * plus : elle le dit, pour que la surface au-dessus puisse alerter. */
+  var REV_KEEP = 200;
+
+  function docKeys(prefix) {
+    var out = [];
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf(prefix) === 0) out.push(k);
+      }
+    } catch (_) {}
+    return out;
+  }
+
+  /* Un signet porte « <révision> » ou « <révision>|<dernier contact> ». Les deux
+     se lisent avec parseInt, qui s'arrête à la barre : les signets écrits par
+     les versions précédentes restent valides, et les nouveaux datent. */
+  function touchedAt(value) {
+    var bar = String(value == null ? '' : value).indexOf('|');
+    return bar < 0 ? 0 : (parseInt(String(value).slice(bar + 1), 10) || 0);
+  }
+
+  function pending(tail) {
+    return !!(ls('kiwiDocDirty:v1:' + tail) || ls('kiwiDocRefused:v1:' + tail));
+  }
+
+  /* Rend de la place en jetant les signets les plus anciens qui ne gardent
+     aucun travail. Renvoie le nombre de clés retirées. */
+  function reclaim(keep) {
+    var rows = [];
+    docKeys(REV_PREFIX).forEach(function (k) {
+      var tail = k.slice(REV_PREFIX.length);
+      if (pending(tail)) return;             // du travail attend : on garde
+      rows.push({ key: k, at: touchedAt(ls(k)) });
+    });
+    if (rows.length <= keep) keep = Math.max(0, Math.floor(rows.length / 2));
+    rows.sort(function (a, b) { return a.at - b.at; });   // les plus anciens d'abord
+    var drop = rows.slice(0, Math.max(0, rows.length - keep));
+    drop.forEach(function (r) { try { localStorage.removeItem(r.key); } catch (_) {} });
+    return drop.length;
+  }
+
+  function lset(k, v) {
+    try { localStorage.setItem(k, v); return true; } catch (_) {}
+    /* Plein. On fait de la place, puis on réessaie UNE fois. */
+    try {
+      if (reclaim(REV_KEEP)) { localStorage.setItem(k, v); return true; }
+    } catch (_) {}
+    /* Toujours plein après le ménage : le stockage est réellement saturé par
+       autre chose. On ne peut pas l'écrire, mais on refuse de le taire. */
+    try {
+      window.dispatchEvent(new CustomEvent('kiwi:storage-full', { detail: { key: String(k).slice(0, 80) } }));
+    } catch (_) {}
+    return false;
+  }
 
   /* Deux documents sont-ils le même ? Sert uniquement à ne pas remonter une
    * fusion qui n'a rien changé. Prudent dans le bon sens : deux documents
@@ -415,7 +484,9 @@
       return REV_PREFIX + feature + ':' + slug + (lk && lk !== slug ? '@' + lk : '');
     }
     function readRev(slug) { var n = parseInt(ls(revKey(slug)) || '0', 10); return n > 0 ? n : 0; }
-    function writeRev(slug, r) { lset(revKey(slug), String(r || 0)); }
+    /* Le signet date son dernier contact : c'est ce qui permet de jeter les
+       plus anciens d'abord quand le quota se referme, plutôt qu'au hasard. */
+    function writeRev(slug, r) { lset(revKey(slug), String(r || 0) + '|' + Date.now()); }
 
     /* ── LA REMONTÉE REFUSÉE ────────────────────────────────────────────────
      * Un 413 (document hors bornes) laissait la copie locale intacte — c'est la
@@ -716,8 +787,17 @@
     })).then(function (rs) { return rs.some(Boolean); });
   }
 
+  /* Ne pas attendre d'être au bord du quota pour faire le ménage. Une fois par
+     ouverture de page suffit à contenir la croissance d'une vue opérateur qui
+     parcourt des centaines de commerces, et le travail en attente est
+     préservé — voir reclaim(). */
+  try { reclaim(REV_KEEP); } catch (_) {}
+
   window.KiwiCloudDoc = {
     attach: attach,
+    /* Exposés pour les tests et pour une surface qui voudrait afficher l'état
+       du stockage. `reclaim` ne touche jamais une copie non remontée. */
+    _storage: { reclaim: reclaim, keep: REV_KEEP, pending: pending, touchedAt: touchedAt },
     pullAll: pullAll,
     slugFor: slugFor,
     currentSlug: currentSlug,
