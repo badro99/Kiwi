@@ -20,16 +20,33 @@
 
   function failed(reason) { return Promise.resolve({ ok: false, reason: reason }); }
 
-  function readCard(amount) {
-    if (realTill()) return Promise.resolve({ approved: false, ok: false, amount: amount, reason: 'payment-terminal-not-configured' });
+  function readCard(amount, options) {
+    options = options || {};
+    if (realTill()) {
+      /* Kiwi does not yet drive a certified EMV terminal. For an ordinary sale,
+         choosing "Carte" is nevertheless a valid cashier declaration: the
+         customer paid on the merchant's standalone TPE, and Kiwi must record
+         that tender as card so it reaches sales/KPIs without entering the cash
+         drawer. This is deliberately labelled recordOnly — it is not a bank
+         authorization. Operations that truly require a terminal response
+         (notably a hotel pre-authorization) still fail closed. */
+      if (options.capture === false || options.requireAuthorization === true) {
+        return Promise.resolve({ approved: false, ok: false, amount: amount, reason: 'payment-terminal-not-configured' });
+      }
+      return Promise.resolve({
+        approved: true, ok: true, amount: amount,
+        recordOnly: true, externalTerminal: true,
+        reason: 'external-terminal-card-recorded',
+      });
+    }
     return Promise.resolve({ approved: true, ok: true, amount: amount, mock: true });
   }
 
-  /* One visual adapter for every POS vertical. It may paint success only after
-     readCard() returns approved=true; production therefore cannot manufacture
-     an approval with a timer. The caller still owns the actual sale commit. */
-  function authorizeCard(amount, disc, status) {
-    return readCard(amount).then(function (result) {
+  /* One visual adapter for every POS vertical. It distinguishes a confirmed
+     reader response from the cashier's external-terminal tender declaration;
+     the caller still owns the actual sale commit. */
+  function authorizeCard(amount, disc, status, options) {
+    return readCard(amount, options).then(function (result) {
       if (disc && disc.classList) disc.classList.remove('is-pulsing');
       if (disc && disc.replaceChildren && document.createElement) {
         var icon = document.createElement('i');
@@ -38,7 +55,12 @@
       }
       if (result && result.approved) {
         if (disc && disc.classList) disc.classList.add('is-success');
-        if (status) { status.textContent = 'Paiement confirmé sur le lecteur'; status.classList && status.classList.add('is-success'); }
+        if (status) {
+          status.textContent = result.recordOnly
+            ? 'Paiement carte enregistré · terminal externe'
+            : 'Paiement confirmé sur le lecteur';
+          status.classList && status.classList.add('is-success');
+        }
       } else {
         if (disc && disc.classList) disc.classList.remove('is-success');
         if (status) { status.textContent = 'Paiement non confirmé · lecteur indisponible'; status.classList && status.classList.remove('is-success'); }
@@ -127,8 +149,8 @@
       setTimeout(function () { cb && cb({ code: '000000000000', mock: true }); }, 250);
       return Promise.resolve({ ok: true, mock: true });
     },
-    // NO certified EMV provider is connected here. A real till gets an explicit
-    // rejection instead of a fabricated approval that could mark an unpaid sale paid.
+    // No certified EMV provider is connected here. Standard sales are recorded
+    // as external-terminal card tenders; authorization-only operations fail.
     readCard: readCard,
     authorizeCard: authorizeCard,
     // Pré-réchauffe le canal thermique dès qu'une intention d'encaissement apparaît,

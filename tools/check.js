@@ -286,9 +286,9 @@ section('Catalogue import (tools/import-test.js)');
 }
 
 /* ── 4c · hardware honesty ──────────────────────────────────────────────────
- * The POS must not convert missing devices into successful business events.
- * This gate executes the shipped hardware wrapper as a hosted real till and
- * rejects fake card approvals, barcodes, prints and drawer openings. */
+ * The POS distinguishes an external-terminal card declaration from a bank
+ * authorization. It still rejects authorization-only operations, fabricated
+ * barcodes, successful prints and drawer openings when hardware is absent. */
 section('Hardware honesty (tools/hardware-test.js)');
 {
   const { spawnSync } = require('child_process');
