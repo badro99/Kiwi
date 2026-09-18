@@ -223,8 +223,8 @@ var SHELL = [
   '/assets/venue-store.js?v=3',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
-  '/assets/inventory-ledger.js?v=11',
-  '/assets/maison-stock-movements.js?v=2',
+  '/assets/inventory-ledger.js?v=12',
+  '/assets/maison-stock-movements.js?v=3',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=8',
   '/assets/stock.js?v=50',
@@ -269,7 +269,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=14',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=8',
-  '/assets/pos-dispatch.js?v=40',
+  '/assets/pos-dispatch.js?v=41',
   '/assets/retail-scan.css?v=7',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=7',
@@ -314,8 +314,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=5',
   '/assets/pos-autre.css?v=2',
   '/assets/pos-autre.js?v=2',
-  '/assets/pos-maison.css?v=31',
-  '/assets/pos-maison.js?v=31',
+  '/assets/pos-maison.css?v=32',
+  '/assets/pos-maison.js?v=32',
   '/assets/caisse-pairing.js?v=24',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

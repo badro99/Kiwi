@@ -353,8 +353,12 @@
               actor: change.actor || pending.actor, refType: pending.refType,
             });
           }
-          return fromCatalog(change);
-          return null;
+          /* `record()` lit cette ligne juste après son adjustStock : c'est elle
+             que requestManual fait autoriser puis envoie. Rendue sans être
+             retenue, le comptoir ne demandait jamais le code responsable et
+             chaque mouvement déclaré restait refusé sur la tablette. */
+          lastRow = fromCatalog(change);
+          return lastRow;
         } catch (_) { return null; }
       },
     };

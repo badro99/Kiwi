@@ -315,8 +315,19 @@
      variante déjà vide pendant qu'une autre est pleine), sinon la même famille,
      sinon la taille seule. Un retour (delta > 0) revient de préférence sur une
      variante existante de la même famille. */
+  /* Le journal des mouvements (assets/maison-stock-movements.js) ne s'allume
+     que s'il reconnaît le métier « maison » — par la fiche du magasin ou le
+     métier d'onboarding, deux choses qu'une caisse appairée n'a pas en local.
+     Sur la tablette du comptoir il restait donc éteint : chaque vente bougeait
+     le stock sans écrire sa ligne, et la page « Mouvements de stock » du
+     tableau de bord n'affichait aucune sortie. Ce module n'est chargé QUE pour
+     une caisse maison : l'allumer ici est exact par construction. */
+  function ensureStockJournal() {
+    try { if (pvReal() && window.KiwiMaisonStock) window.KiwiMaisonStock.enable(); } catch (_) {}
+  }
   function persistStock(pid, size, color, delta, ctx) {
     if (!delta || !pvReal()) return;
+    ensureStockJournal();
     ctx = ctx || {};
     try {
       const cat = window.KiwiBoutiqueCatalog;
@@ -1530,6 +1541,7 @@
 
   function mount(rootEl) {
     root = rootEl;
+    ensureStockJournal();
     syncTillStaff();
     /* On constitue la réserve de numéros DÈS l'ouverture, pendant que le réseau
        est là : c'est ce qui rend la vente hors ligne possible plus tard. */
@@ -3371,7 +3383,32 @@
     const unitCost = +p.cost || Math.round(p.price * 0.55);
     const totalLoss = unitCost * qty;
     const why = 'casse · ' + (reason || 'Casse magasin');
-    
+
+    /* Une casse est un motif DISCRÉTIONNAIRE : le serveur ne l'accepte d'une
+       caisse qu'avec le code d'un responsable (functions/api/inventory/
+       movements.js). Écrite ici sans autorisation, elle bougeait le stock mais
+       sa ligne était refusée et restait sur la tablette — la page « Mouvements
+       de stock » du tableau de bord ne voyait jamais la pièce cassée. Elle
+       passe donc par le même geste que « Déclarer un mouvement » : le pavé du
+       responsable, puis l'envoi autorisé. Un refus remet la pièce en stock. */
+    const MZ = window.KiwiMaisonStock;
+    if (vid && MZ && MZ.requestManual && pvReal()) {
+      ensureStockJournal();
+      return Promise.resolve(MZ.requestManual({
+        productId: pid, variantId: vid, type: 'casse', qty,
+        note: reason || 'Casse magasin', source: 'caisse',
+      })).then((res) => {
+        if (!res || !res.ok) {
+          toast(res && res.reason === 'stock-insuffisant' ? `Stock insuffisant : il n'y a que ${res.before} pièce(s).`
+            : res && res.reason === 'non-autorise' ? 'Casse non autorisée · code responsable requis'
+              : res && res.reason === 'reseau' ? 'Réseau indisponible · réessayez pour faire autoriser la casse'
+                : 'Casse impossible');
+          return false;
+        }
+        return logCasse(p, pid, size, qty, unitCost, totalLoss, reason);
+      });
+    }
+
     if (vid && cat && cat.adjustStock) {
       cat.adjustStock(vid, -qty, why);
     } else {
@@ -3387,7 +3424,9 @@
         });
       }
     } catch (_) {}
-    
+    return logCasse(p, pid, size, qty, unitCost, totalLoss, reason);
+  }
+  function logCasse(p, pid, size, qty, unitCost, totalLoss, reason) {
     const entry = {
       id: `casse-${Date.now().toString(36)}`,
       ts: Date.now(),
@@ -3520,8 +3559,9 @@
         const reason = reasonSel.value;
         const p = P[pid];
         if (!p) return;
-        recordCasse(pid, sizesOf(p)[0] || 'TU', p.colors[0] || 'defaut', q, reason);
-        renderCasse(); icons();
+        submitBtn.disabled = true;   // le pavé du responsable peut rester ouvert : pas de double déclaration
+        Promise.resolve(recordCasse(pid, sizesOf(p)[0] || 'TU', p.colors[0] || 'defaut', q, reason))
+          .then(() => { submitBtn.disabled = false; renderCasse(); icons(); });
       };
     }
     icons();

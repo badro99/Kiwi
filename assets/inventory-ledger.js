@@ -7,6 +7,9 @@
   var PREFIX = 'kiwi:inventoryLedger:v1:';
   var subs = new Set();
   var syncing = false;
+  /* Les motifs qu'une caisse écrit sans autorisation : la même liste que
+   * AUTOMATIC_REASONS dans functions/api/inventory/movements.js. */
+  var AUTOMATIC = { 'sale': 1, 'sale-reversal': 1, 'production-input': 1, 'production-output': 1 };
   var cachedKey = '';
   var cachedRaw = null;
   var cachedDoc = null;
@@ -260,13 +263,20 @@
      * vingt secondes ne la fera jamais passer : la file resterait bloquée, et
      * avec elle les VENTES légitimes derrière. On sort donc ces lignes de la
      * file en les marquant — le stock local et l'historique les gardent, elles
-     * portent simplement « à autoriser » au lieu de tourner en boucle. */
+     * portent simplement « à autoriser » au lieu de tourner en boucle.
+     * Le serveur refuse le LOT ENTIER dès qu'une seule ligne est
+     * discrétionnaire. On ne sort donc que celles-là : une vente ou un retour
+     * du même lot n'a rien à se faire autoriser, et la bloquer avec elles la
+     * gardait pour toujours sur la tablette — la sortie n'arrivait jamais au
+     * tableau de bord. Elle repart au prochain passage, sans la ligne refusée. */
     if (res.status === 403) {
       var refused = null;
       try { refused = await res.json(); } catch (_) { refused = null; }
       if (refused && refused.error === 'reason-forbidden') {
-        d.rows.forEach(function (r) { if (set.has(r.id)) r.blocked = 1; });
-        d.queued = d.queued.filter(function (id) { return !set.has(id); });
+        var held = movements.filter(function (r) { return !AUTOMATIC[r.reason]; });
+        var out = new Set((held.length ? held : movements).map(function (r) { return r.id; }));
+        d.rows.forEach(function (r) { if (out.has(r.id)) r.blocked = 1; });
+        d.queued = d.queued.filter(function (id) { return !out.has(id); });
         return d;
       }
       throw new Error('inventory-push-403');

@@ -384,8 +384,8 @@
     "sha": "316e4d30ebc74858"
   },
   "assets/inventory-ledger.js": {
-    "v": "11",
-    "sha": "a00c911a83783327"
+    "v": "12",
+    "sha": "59945120582f82d0"
   },
   "assets/invoice.js": {
     "v": "8",
@@ -444,8 +444,8 @@
     "sha": "c4b051564898f5a5"
   },
   "assets/maison-stock-movements.js": {
-    "v": "2",
-    "sha": "9b90ba5ea4765eef"
+    "v": "3",
+    "sha": "f450178a91f9f078"
   },
   "assets/marketing-suite-tease.js": {
     "v": "1",
@@ -608,8 +608,8 @@
     "sha": "3673be5ef49cb7de"
   },
   "assets/pos-dispatch.js": {
-    "v": "40",
-    "sha": "5687269bcbdd35d2"
+    "v": "41",
+    "sha": "2b59ce97604dd66f"
   },
   "assets/pos-epicerie.css": {
     "v": "5",
@@ -672,12 +672,12 @@
     "sha": "782a2a019b86fc81"
   },
   "assets/pos-maison.css": {
-    "v": "31",
+    "v": "32",
     "sha": "121ead27874d75d5"
   },
   "assets/pos-maison.js": {
-    "v": "31",
-    "sha": "34a460ff34f9f0d3"
+    "v": "32",
+    "sha": "926b88def8e03e1e"
   },
   "assets/pos-mobile.css": {
     "v": "3",
