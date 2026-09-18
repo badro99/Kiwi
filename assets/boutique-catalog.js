@@ -1879,12 +1879,36 @@
       const val = KB.validate(code);
       if (!val.ok) return { ok: false, reason: val.reason };
     }
+    /* Un code réellement porté par l'article l'emporte sur celui que Kiwi a
+       fabriqué (`type: 'ean13'`, écrit par generateBarcode) : c'est lui que la
+       ligne affiche et que l'étiquette imprime. Il se rangeait en alias caché
+       derrière le généré, et le commerçant croyait n'avoir rien enregistré.
+       Le généré reste rattaché, en second : une étiquette déjà collée scanne
+       encore. Un code existant ne détrône jamais un autre code existant.
+       Les deux entrées prennent un `at` neuf — la fusion entre appareils garde,
+       code par code, l'entrée la plus récente ; sans cela une copie périmée de
+       la caisse ressusciterait le généré comme référence. */
+    const outrankGenerated = (entry) => {
+      if (!entry || entry.primary || entry.type === 'ean13') return false;
+      const cur = v.barcodes.find((b) => b.primary);
+      if (!cur || cur.type !== 'ean13') return false;
+      const t = now();
+      cur.primary = false; cur.at = t;
+      entry.primary = true; entry.at = t;
+      return true;
+    };
     const owner = barcodeOwner(code);
-    if (owner && owner.id === v.id) return { ok: true, code, already: true };
+    if (owner && owner.id === v.id) {
+      // Fiche enregistrée avant ce correctif : ressaisir le code le remet en tête.
+      if (outrankGenerated(v.barcodes.find((b) => b.code === code))) { v.metaAt = now(); commit(); }
+      return { ok: true, code, already: true };
+    }
     if (owner) return { ok: false, reason: 'doublon', owner: { variant: owner, product: prodById(owner.productId) } };
     const sym = opts.sym || (KB && KB.detect ? KB.detect(code) : '');
     const isPrimary = !v.barcodes.some((b) => b.primary);
-    v.barcodes.push({ code, type: opts.type || 'imported', sym, primary: isPrimary, at: now() });
+    const entry = { code, type: opts.type || 'imported', sym, primary: isPrimary, at: now() };
+    v.barcodes.push(entry);
+    outrankGenerated(entry);
     if (v.barcodeRemoved) delete v.barcodeRemoved[code];
     v.metaAt = now();
     ixAddCode(v, code);
