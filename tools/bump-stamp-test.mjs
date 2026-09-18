@@ -18,6 +18,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import crypto from 'crypto';
 import { execFileSync, spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
@@ -105,7 +106,23 @@ const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
   const c2 = commit('bumped');
   ok(c2.status === 0, 'commit accepté une fois l\'estampille déplacée partout');
 
-  /* 3 · du travail NON stagé d'une autre session ne fait pas rougir un commit propre */
+  /* 3 · re-sceller le manifeste sans bumper ne doit pas contourner le hook.
+     C'est exactement le faux vert qui a laissé pos-dispatch.js?v=39 en prod
+     alors que son registre local demandait Maison v31. */
+  fs.appendFileSync(path.join(dir, 'assets/venues.js'), 'window.KiwiVenue.y = 2;\n');
+  const resealed = JSON.parse(rd(dir, 'tools/asset-stamps.json'));
+  resealed['assets/venues.js'].sha = crypto.createHash('sha256')
+    .update(fs.readFileSync(path.join(dir, 'assets/venues.js'))).digest('hex').slice(0, 16);
+  fs.writeFileSync(path.join(dir, 'tools/asset-stamps.json'), JSON.stringify(resealed, null, 2) + '\n');
+  git('add', 'assets/venues.js', 'tools/asset-stamps.json');
+  const cResealed = commit('resealed without bump');
+  ok(cResealed.status !== 0, 'commit refusé : manifeste re-scellé mais estampille inchangée');
+  ok(/a change de contenu mais le manifeste a ete re-scelle/.test(cResealed.stdout + cResealed.stderr), 'le refus explique le faux vert et demande un bump');
+  ok(run(dir, ['assets/venues.js']).status === 0, 'bump-stamp corrige le re-scellement sans version');
+  git('add', 'assets/venues.js', 'dashboard.html', 'kiwi-sw.js', 'tools/asset-stamps.json');
+  ok(commit('bumped after reseal').status === 0, 'commit accepté après le vrai bump');
+
+  /* 4 · du travail NON stagé d'une autre session ne fait pas rougir un commit propre */
   fs.appendFileSync(path.join(dir, 'assets/pos-boutique.js'), '// autre session, pas stagé\n');
   fs.writeFileSync(path.join(dir, 'README.md'), 'hello\n');
   git('add', 'README.md');
@@ -120,10 +137,11 @@ const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
      rendrait faux. Le hook refuse — et NOMME le fichier et la cause. */
   ok(c4.status !== 0, 'un manifeste qui encode une dérive non stagée (pos-boutique.js) est refusé');
   ok(/pos-boutique\.js est modifié mais NON stagé/.test(c4.stdout + c4.stderr), 'le refus nomme le fichier non stagé et dit quoi faire');
-  git('add', 'assets/pos-boutique.js');
-  ok(commit('clean index, staged sibling').status === 0, 'une fois le frère stagé (ou le manifeste cohérent), le commit passe');
+  ok(run(dir, ['assets/pos-boutique.js']).status === 0, 'le frère modifié reçoit lui aussi une nouvelle estampille');
+  git('add', 'assets/pos-boutique.js', 'assets/pos-dispatch.js', 'tools/asset-stamps.json');
+  ok(commit('clean index, bumped sibling').status === 0, 'une fois le frère bumpé et stagé, le commit passe');
 
-  /* 4 · l'échappatoire explicite */
+  /* 5 · l'échappatoire explicite */
   fs.appendFileSync(path.join(dir, 'assets/venues.js'), '// v3\n');
   git('add', 'assets/venues.js');
   const c5 = spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'skip'], { cwd: dir, encoding: 'utf8', env: { ...process.env, KIWI_SKIP_STAMP_HOOK: '1' } });

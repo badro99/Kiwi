@@ -132,8 +132,8 @@
     "sha": "ea596c3fbdbddccb"
   },
   "assets/caisse-pwa.js": {
-    "v": "526",
-    "sha": "0476a034eeebc323"
+    "v": "527",
+    "sha": "741025b9d93611d2"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -208,8 +208,8 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "519",
-    "sha": "c8121ba125b3e072"
+    "v": "520",
+    "sha": "55610f10d4799b46"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -264,8 +264,8 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/employee-live.js": {
-    "v": "518",
-    "sha": "4691b6532903c603"
+    "v": "519",
+    "sha": "5a75b2bb66f09da3"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -608,7 +608,7 @@
     "sha": "3673be5ef49cb7de"
   },
   "assets/pos-dispatch.js": {
-    "v": "39",
+    "v": "40",
     "sha": "5687269bcbdd35d2"
   },
   "assets/pos-epicerie.css": {

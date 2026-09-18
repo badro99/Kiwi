@@ -29,6 +29,17 @@ const manifest = S.readManifest();
 const scanned = S.scan();
 const names = Object.keys(manifest);
 
+/* Le hook pre-commit fournit le manifeste de HEAD. Sans cette comparaison,
+   quelqu'un peut "reparer" une derive avec --sync (ou en editant le JSON) :
+   le nouveau hash est alors coherent avec le fichier, mais l'URL publique n'a
+   pas bouge et les navigateurs gardent l'ancienne copie. */
+const baselinePath = process.env.KIWI_STAMP_BASELINE;
+let baseline = null;
+if (baselinePath) {
+  try { baseline = JSON.parse(require('fs').readFileSync(baselinePath, 'utf8')); }
+  catch (_) { baseline = null; }
+}
+
 ok('le manifeste des estampilles existe et n’est pas vide', names.length > 0);
 if (!names.length) {
   console.error('  ✗ tools/asset-stamps.json est absent ou vide — `node tools/bump-stamp.js --sync`');
@@ -52,6 +63,19 @@ for (const asset of names) {
     failed.push(`${asset} a été bumpé (?v=${was.v} → ?v=${stamps.join('/')}) mais tools/asset-stamps.json n’a pas été re-scellé — \`node tools/bump-stamp.js --sync\``);
   } else {
     failed.push(`${asset} a changé de contenu en gardant ?v=${was.v} — le navigateur qui revient exécutera l’ancien fichier · \`node tools/bump-stamp.js ${asset}\``);
+  }
+}
+
+/* 1b · un manifeste re-scelle ne doit jamais masquer un changement de contenu
+   qui garde la meme estampille entre HEAD et l'index. */
+if (baseline) {
+  for (const [asset, now] of Object.entries(manifest)) {
+    const before = baseline[asset];
+    if (!before || before.sha === now.sha) continue;
+    ok(`${asset} a change de contenu et d'estampille depuis HEAD`, before.v !== now.v);
+    if (before.v === now.v) {
+      failed[failed.length - 1] = `${asset} a change de contenu mais le manifeste a ete re-scelle en gardant ?v=${now.v} — les navigateurs executeront l'ancienne copie · \`node tools/bump-stamp.js ${asset}\``;
+    }
   }
 }
 

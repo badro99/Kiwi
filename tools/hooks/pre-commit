@@ -26,8 +26,13 @@ TMP="$(mktemp -d 2>/dev/null || mktemp -d -t kiwi-hook)"
 trap 'rm -rf "$TMP"' EXIT
 git checkout-index -a -f --prefix="$TMP/" || exit 0   # export impossible → on n'empêche pas le commit
 
+# Le manifeste de HEAD permet de détecter un faux vert : asset modifié, hash du
+# manifeste mis à jour à la main/avec --sync, mais estampille publique inchangée.
+BASELINE="$TMP/.asset-stamps-head.json"
+git show HEAD:tools/asset-stamps.json >"$BASELINE" 2>/dev/null || rm -f "$BASELINE"
+
 LOG="$TMP/.stamp-hook.log"
-if node "$TMP/tools/stamp-drift-test.js" >"$LOG" 2>&1; then
+if KIWI_STAMP_BASELINE="$BASELINE" node "$TMP/tools/stamp-drift-test.js" >"$LOG" 2>&1; then
   exit 0
 fi
 
