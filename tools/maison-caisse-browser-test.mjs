@@ -43,6 +43,7 @@ const server = http.createServer((req, res) => {
     res.end(`<!doctype html><html><head>
       <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
       <link rel="stylesheet" href="/assets/tokens.css">
+      <link rel="stylesheet" href="/assets/caisse-dna.css">
       <link rel="stylesheet" href="/assets/pos-maison.css">
       <style>
         html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper,#f7f5f0);font-family:Arial,sans-serif}
@@ -51,7 +52,7 @@ const server = http.createServer((req, res) => {
       <script>window.KiwiEnv={isReal:()=>false,demosAllowed:true};window.KiwiPosDispatch={register:s=>window.__maisonSpec=s,lock:()=>{}};</script>
       <script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
       <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script src="/assets/pos-maison.js"></script>
-    </head><body><div id="toast-stack"></div><div class="vx-screen is-on" id="pos-maison"></div>
+    </head><body><div id="toast-stack"></div><div class="vx-screen kiwi-dna is-on" id="pos-maison"></div>
       <script>window.__maisonSpec.mount(document.getElementById('pos-maison'));</script>
     </body></html>`);
     return;

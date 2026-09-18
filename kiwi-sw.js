@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v580';
+var CACHE = 'kiwi-app-v582';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -149,13 +149,13 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
   '/assets/oppo-cards.js?v=2',
-  '/assets/dashboard-pwa.js?v=520',
+  '/assets/dashboard-pwa.js?v=522',
   '/assets/dashboard-native.js?v=1',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js?v=1',
-  '/assets/caisse-pwa.js?v=527',
+  '/assets/caisse-pwa.js?v=529',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=6',
   '/assets/platform-kernel.js?v=5',
@@ -240,7 +240,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=519',
+  '/assets/employee-live.js?v=521',
   '/assets/employee-planning.js?v=8',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=2',
@@ -269,7 +269,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=14',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=8',
-  '/assets/pos-dispatch.js?v=41',
+  '/assets/pos-dispatch.js?v=42',
   '/assets/retail-scan.css?v=7',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=7',
@@ -314,8 +314,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=5',
   '/assets/pos-autre.css?v=2',
   '/assets/pos-autre.js?v=2',
-  '/assets/pos-maison.css?v=32',
-  '/assets/pos-maison.js?v=32',
+  '/assets/pos-maison.css?v=33',
+  '/assets/pos-maison.js?v=33',
   '/assets/caisse-pairing.js?v=24',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
