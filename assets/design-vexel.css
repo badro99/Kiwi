@@ -5571,6 +5571,7 @@ body.design-vexel :is(
   .gft-amt.on,
   .chl-copy,
   .cd-exp.cd-camp,
+  .cd-exp.cd-new,
   .cd-segchip.on,
   .kr-btn.on,
   .fa-send,
@@ -5599,6 +5600,7 @@ body.design-vexel :is(
 body.design-vexel :is(
   .chl-copy,
   .cd-exp.cd-camp,
+  .cd-exp.cd-new,
   .fa-send,
   .fa-kp-use,
   .fa-llm-btn,
