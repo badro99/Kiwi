@@ -61,7 +61,7 @@ var SHELL = [
   '/assets/hotel-economat.js?v=3',
   '/assets/genpage.css?v=2',
   '/assets/mobile.css?v=4',
-  '/assets/sold-insights.js?v=3',
+  '/assets/sold-insights.js?v=4',
   '/assets/design-2026.css',
   '/assets/design-ios27.css',
   '/assets/design-vitrine.css',
