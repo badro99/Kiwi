@@ -314,8 +314,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=5',
   '/assets/pos-autre.css?v=2',
   '/assets/pos-autre.js?v=2',
-  '/assets/pos-maison.css?v=29',
-  '/assets/pos-maison.js?v=29',
+  '/assets/pos-maison.css?v=31',
+  '/assets/pos-maison.js?v=31',
   '/assets/caisse-pairing.js?v=24',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

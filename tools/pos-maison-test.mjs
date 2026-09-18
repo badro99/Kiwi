@@ -61,6 +61,10 @@ try {
   console.error('Syntax error in scripts:', e);
 }
 ok(syntaxOk, 'pos-maison.js and boutique-catalog.js parse as valid JavaScript without syntax errors');
+ok(/if \(b\) switchView\(b\.dataset\.mzView\);/.test(jsSrc),
+  'Maison sidebar delegates every navigation button to switchView');
+ok(/\.mz-view\s*\{[^}]*padding:\s*0\s*;/s.test(cssSrc),
+  'Maison application panels reset the global marketing section padding');
 
 // 3. Check specialized categories & products in boutique-catalog SEED_MAISON
 ok(catSrc.includes('SEED_MAISON'), 'SEED_MAISON declared in boutique-catalog.js');

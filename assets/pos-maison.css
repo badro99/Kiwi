@@ -133,7 +133,15 @@
 }
 .mz-offline-note b { font-family: var(--mono); font-weight: 600; margin-left: auto; }
 .mz-offline-note[hidden] { display: none; }
-.mz-view { display: none; flex: 1; min-height: 0; }
+.mz-view {
+  display: none;
+  flex: 1;
+  min-height: 0;
+  /* tokens.css gives every marketing <section> 96px of vertical rhythm.
+     Maison uses semantic sections as application panels, so that global rule
+     pushed the sale header and scanner underneath the fixed rail. */
+  padding: 0;
+}
 .mz-view.is-on { display: flex; }
 
 .mz-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; padding: 22px 22px 0; }

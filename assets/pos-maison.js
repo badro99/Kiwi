@@ -1615,7 +1615,7 @@
 
     $('#mz-nav', root).addEventListener('click', (e) => {
       const b = e.target.closest('[data-mz-view]');
-      if (b) switchViewb.dataset.mzView;
+      if (b) switchView(b.dataset.mzView);
     });
     $('#mz-lock', root).addEventListener('click', () => {
       /* La feuille de clôture vit au niveau du body (au-dessus du root) : la
