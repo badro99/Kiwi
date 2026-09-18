@@ -4,6 +4,8 @@ const html = fs.readFileSync(new URL('../kiwi-admin.html', import.meta.url), 'ut
 const workspace = fs.readFileSync(new URL('../assets/admin-workspace.js', import.meta.url), 'utf8');
 const css = fs.readFileSync(new URL('../assets/admin-workspace.css', import.meta.url), 'utf8');
 const policy = fs.readFileSync(new URL('../assets/admin-policy.js', import.meta.url), 'utf8');
+const clients = fs.readFileSync(new URL('../assets/clients-directory.js', import.meta.url), 'utf8');
+const design = fs.readFileSync(new URL('../assets/design-vexel.css', import.meta.url), 'utf8');
 let passed = 0;
 
 function check(name, condition){
@@ -39,6 +41,8 @@ check('dossier tools are separated into focused tabs', html.includes('data-dossi
 check('notes are append-only server requests', workspace.includes("request('/notes'") && workspace.includes('crypto.randomUUID()'));
 check('forms are protected from automatic polling', workspace.includes("state.route!=='merchant'") && workspace.includes("dialog[open]"));
 check('freshness is explicit', html.includes('id="op-freshness"') && workspace.includes('données anciennes'));
+check('portfolio revenue refreshes automatically from coherent roster and overview responses', html.includes('refreshPortfolioMetrics') && html.includes("Promise.all([api('/clients'), store.overview()])") && html.includes('setInterval(function(){ if (portfolioRefreshAllowed()) refreshPortfolioMetrics(); }, 30000)'));
+check('Hospitality+ new-client action has a visible label and late primary-button styling', clients.includes('id="cd-new"') && clients.includes("newClient: '+ Nouveau client'") && design.split('.cd-exp.cd-new').length >= 3);
 check('missing fleet coverage is never healthy', workspace.includes('Un résultat absent n’est pas un résultat sain'));
 check('keyboard search available', workspace.includes("e.key.toLowerCase()==='k'"));
 check('unattributed telemetry has an explicit diagnostic view', workspace.includes('errorList(m)') && workspace.includes('aucun client n’est deviné'));

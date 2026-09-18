@@ -227,6 +227,25 @@ try {
   await page.waitForFunction(() => !document.querySelector('.kiwi-backdrop'));
   const toastClose = await page.$('.kiwi-toast .tx');
   if (toastClose) await toastClose.click();
+  await page.click('[data-action="hx-views-manage-open"]');
+  await page.waitForSelector('.kiwi-modal.hx-attributes-modal');
+  await waitForModalAnimation(page);
+  check(await page.$$eval('.hx-attributes-modal .hx-attribute-panel', (nodes) => nodes.length) === 2, 'views and amenities render as two focused configuration panels');
+  check(await page.$eval('.hx-attributes-modal', (modal) => {
+    const buttons = [...modal.querySelectorAll('.hx-attribute-panel button, .hx-attribute-footer button')];
+    return buttons.length >= 4 && buttons.every((button) => button.getBoundingClientRect().height >= 34);
+  }), 'views and amenities actions keep practical touch targets');
+  check(await page.$eval('.hx-attributes-modal', (modal) => !modal.querySelector('[style]')), 'views and amenities dialog uses the dedicated stylesheet without inline layout patches');
+  await page.screenshot({ path: path.join(screenshotDir, 'desktop-views-amenities.png'), fullPage: false });
+  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
+  check(await page.$eval('.hx-attributes-modal', (modal) => {
+    const r = modal.getBoundingClientRect();
+    return r.left >= 0 && r.right <= innerWidth && modal.scrollWidth <= modal.clientWidth;
+  }), 'views and amenities dialog fits the phone viewport');
+  await page.screenshot({ path: path.join(screenshotDir, 'mobile-views-amenities.png'), fullPage: false });
+  await page.click('.hx-attributes-modal .kiwi-modal-close');
+  await page.waitForFunction(() => !document.querySelector('.kiwi-backdrop'));
+  await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
   check(await page.$('.hx-floor-section') !== null, 'rack viewport screenshots are captured after all modals close');
 
   await page.screenshot({ path: path.join(screenshotDir, 'desktop.png'), fullPage: true });

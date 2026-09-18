@@ -49,6 +49,7 @@ ok('dashboard nav sits after returns', /nav:\s*'returns'[\s\S]{0,300}nav:\s*'sol
 ok('cashier has Vendus panel', /data-bq-view="vendus"/.test(caisse) && /data-bq-panel="vendus"/.test(caisse));
 ok('dashboard keeps only its page-level Vendus title', /\(owner\?'':'<h1>Vendus<\/h1>'\)/.test(src));
 ok('recommendations are evidence gated', /pairs\[0\][\s\S]{0,80}count\s*>=\s*2/.test(src));
+ok('cashier component owns KPI and empty-state layout', /\.ksold \.kx-kpi-strip\{display:grid/.test(src) && /\.ksold \.kx-empty \.ico svg\{display:block;width:22px;height:22px/.test(src));
 
 if (fail.length) { fail.forEach(x => console.log('  ✗ '+x)); process.exit(1); }
 console.log('  ✓ Vendus ('+pass+' contrôles : historique existant, produits, catégories, paniers, stock, isolation, recommandations)');

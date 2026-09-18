@@ -254,7 +254,7 @@
       if (!Number.isFinite(n) || n < 1 || n > 9999 || ROOMS[n]) return;
       const type = TYPES[r.typeId] || { name: r.typeName || 'Chambre', rate: r.rate };
       const status = r.status === 'sale' ? 'menage' : ['occ', 'depart', 'hs', 'libre'].includes(r.status) ? r.status : 'libre';
-      ROOMS[n] = { n, type: r.typeId || '', name: type.name, rate: r.rate == null ? (type.rate == null ? doc.baseRate : type.rate) : r.rate, status, note: r.meta || '' };
+      ROOMS[n] = { id: String(r.id || ('room:' + n)), n, type: r.typeId || '', name: type.name, rate: r.rate == null ? (type.rate == null ? doc.baseRate : type.rate) : r.rate, status, note: r.meta || '' };
       let group = floorMap.get(String(r.floorId || ''));
       if (!group) {
         const name = String(r.floor || 'Vos chambres');
@@ -1260,7 +1260,8 @@
             });
           } catch (_) {}
           saleId = String(entry && entry.saleId || '');
-          if (!saleId || !enqueueRoomCharge({ merchant: ctx.merchant, terminalId: ctx.terminalId, saleId, shiftId: ctx.shiftId, cashierId: ctx.cashierId })) {
+          const roomId = String(ROOMS[roomN]?.id || ('room:' + roomN));
+          if (!saleId || !enqueueRoomCharge({ merchant: ctx.merchant, terminalId: ctx.terminalId, saleId, roomId, shiftId: ctx.shiftId, cashierId: ctx.cashierId })) {
             sheet.busy = false; render();
             toast('Impossible de sécuriser la charge · espace local indisponible', 4200);
             return;

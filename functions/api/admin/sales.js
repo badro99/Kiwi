@@ -518,9 +518,9 @@ export async function onRequestPost(context) {
         stmts.push(env.DB.prepare(
           `INSERT OR IGNORE INTO hotel_room_charge_events
             (merchant, id, kind, sale_id, outlet_id, shift_id, cashier_id, cashier_name,
-             amount_cents, occurred_ts, reversal_of, reversed_by_id)
+             stay_id, room_id, amount_cents, occurred_ts, reversal_of, reversed_by_id)
            SELECT merchant, ?, 'room-charge-reversal', sale_id, outlet_id, shift_id,
-                  cashier_id, cashier_name, -ABS(amount_cents), ?, id, ?
+                  cashier_id, cashier_name, stay_id, room_id, -ABS(amount_cents), ?, id, ?
              FROM hotel_room_charge_events
             WHERE merchant = ? AND id = ? AND kind = 'room-charge'`
         ).bind(roomChargeReversalId(r.id), ts, actor.id, merchant, roomChargeId(r.id)));

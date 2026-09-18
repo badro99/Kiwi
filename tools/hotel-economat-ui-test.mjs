@@ -37,10 +37,10 @@ await check('room charge transport is durable and retries after the sale queue',
   assert.match(pos, /kiwi:hotelRoomChargeOutbox:v1/);
   assert.match(pos, /sale-not-found[\s\S]*pending\.push/);
 });
-await check('the room-charge payload excludes guest and room identity', async () => {
+await check('the room-charge payload links the room but excludes guest identity', async () => {
   const enqueue = pos.match(/enqueueRoomCharge\(\{([^}]+)\}\)/)?.[1] || '';
-  assert.match(enqueue, /merchant[\s\S]*terminalId[\s\S]*saleId[\s\S]*shiftId[\s\S]*cashierId/);
-  assert.equal(/guest|room/i.test(enqueue), false);
+  assert.match(enqueue, /merchant[\s\S]*terminalId[\s\S]*saleId[\s\S]*roomId[\s\S]*shiftId[\s\S]*cashierId/);
+  assert.equal(/guest|customer|contact/i.test(enqueue), false);
 });
 await check('the dashboard reads both inventory and shift reports', async () => {
   assert.match(dash, /\/api\/inventory\/hotel-reports/);

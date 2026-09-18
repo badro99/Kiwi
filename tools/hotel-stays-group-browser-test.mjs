@@ -400,8 +400,8 @@ const SEL = {
   toasts: () => {},
 };
 
-async function openModal(page) {
-  await page.evaluate(() => window.Kiwi.handlers['hx-group-new']());
+async function openModal(page, mode = 'new') {
+  await page.evaluate((wanted) => window.Kiwi.handlers[wanted === 'resume' ? 'hx-group-resume' : 'hx-group-new'](), mode);
   await page.waitForSelector(SEL.form, { timeout: 15000 });
 }
 
@@ -616,6 +616,15 @@ await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx)
   step('reload, reopen, retry from the draft cache');
   await page.reload({ waitUntil: 'load' });
   await openModal(page);
+  const fresh = await page.$eval(SEL.form, (form) => ({
+    groupName: form.elements.groupName.value,
+    contactName: form.elements.contactName.value,
+    selected: form.querySelectorAll('[data-hx-group-cb]:checked').length,
+    disabled: form.elements.checkIn.disabled,
+  }));
+  ok(fresh.groupName === '' && fresh.contactName === '' && fresh.selected === 0 && fresh.disabled === false, 'new group reservation always opens a blank editable dossier');
+  await page.reload({ waitUntil: 'load' });
+  await openModal(page, 'resume');
   const restored = await page.$eval('input[name="checkIn"]', (el) => ({ value: el.value, disabled: el.disabled }));
   ok(restored.disabled && restored.value === d.checkIn, 'frozen dates restore visible and locked');
   const r2 = await submitAndSettle(page);
@@ -656,7 +665,7 @@ await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx)
   const r1 = await submitAndSettle(page);
   ok(String(r1).startsWith('settled:'), 'first attempt partially fails');
   await page.reload({ waitUntil: 'load' });
-  await openModal(page);
+  await openModal(page, 'resume');
   const stillAccepted = await page.$eval(SEL.accept, (el) => el.checked).catch(() => null);
   ok(stillAccepted === true, 'accepted quote position survives reload');
   const r2 = await submitAndSettle(page);
@@ -693,7 +702,7 @@ await withCtx({
   const intentKeys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('kiwi_hx_intent_')));
   ok(intentKeys.length === 1, 'the authoritative intent did persist');
   await page.reload({ waitUntil: 'load' });
-  await openModal(page);
+  await openModal(page, 'resume');
   const r2 = await submitAndSettle(page);
   ok(r2 === 'closed', 'intent-only retry completes');
   stays = await ctx.bookingsByDossier(dossier);
@@ -728,7 +737,7 @@ await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx)
   step('another device cancels room 101');
   await apiCancelStay(ctx, stays[0].id);
   await page.reload({ waitUntil: 'load' });
-  await openModal(page);
+  await openModal(page, 'resume');
   const r2 = await submitAndSettle(page);
   ok(String(r2).startsWith('settled:'), 'retry settles instead of confirming');
   ok(/annul/.test(await readError(page)), 'error reports the cancellation');
@@ -750,7 +759,7 @@ await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx)
   step('another device renames the traveler');
   await apiRenameGuest(ctx, stays[0].id, 'Karim Benchekroun', 'Karim Benali');
   await page.reload({ waitUntil: 'load' });
-  await openModal(page);
+  await openModal(page, 'resume');
   const r2 = await submitAndSettle(page);
   ok(String(r2).startsWith('settled:'), 'retry settles instead of adopting');
   ok(/oyageurs/.test(await readError(page)), 'error names the guest mismatch');
@@ -769,7 +778,7 @@ await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx)
   const before = await ctx.bookingsByDossier(dossier);
   ok(before.length === 1, 'room 101 saved');
   await page.reload({ waitUntil: 'load' });
-  await openModal(page);
+  await openModal(page, 'resume');
   const r2 = await submitAndSettle(page);
   ok(r2 === 'closed', 'retry completes');
   const after = await ctx.bookingsByDossier(dossier);
@@ -841,7 +850,7 @@ await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx)
     return false;
   };
   await page.reload({ waitUntil: 'load' });
-  await openModal(page);
+  await openModal(page, 'resume');
   const r2 = await submitAndSettle(page);
   ok(String(r2).startsWith('settled:'), 'retry settles instead of confirming');
   const err = await readError(page);
@@ -875,7 +884,7 @@ await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx)
     body.customer.phone = ''; body.customer.email = '';
   }, 'contact clearing lands');
   await page.reload({ waitUntil: 'load' });
-  await openModal(page);
+  await openModal(page, 'resume');
   ok((await readError(page)) === '', 'no stale error before retry');
   const r2 = await submitAndSettle(page);
   ok(String(r2).startsWith('settled:'), 'retry settles');
@@ -911,7 +920,7 @@ await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx)
     body.acceptQuote = true;
   }, 'account clearing lands');
   await page.reload({ waitUntil: 'load' });
-  await openModal(page);
+  await openModal(page, 'resume');
   const r2 = await submitAndSettle(page);
   ok(String(r2).startsWith('settled:'), 'retry settles');
   ok(/compte/.test(await readError(page)), 'cleared account reported with its field');
@@ -939,7 +948,7 @@ await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx)
   if (entry && entry.hotel) delete entry.hotel.groupName;
   sql.prepare("UPDATE store_docs SET data = ? WHERE merchant = ? AND feature = 'reservations'").run(JSON.stringify(doc), MERCHANT);
   await page.reload({ waitUntil: 'load' });
-  await openModal(page);
+  await openModal(page, 'resume');
   const r2 = await submitAndSettle(page);
   ok(String(r2).startsWith('settled:'), 'retry settles');
   ok(/nom du groupe/.test(await readError(page)), 'missing group name reported with its field');
@@ -976,7 +985,7 @@ await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx)
   step('reconciliation answers 200 with [null]');
   ctx.hooks.overrideStayGet = spoofStayGetOnce('room_101', 200, { stays: [null] });
   await page.reload({ waitUntil: 'load' });
-  await openModal(page);
+  await openModal(page, 'resume');
   const r2 = await submitAndSettle(page);
   ok(String(r2).startsWith('settled:'), 'retry settles instead of confirming');
   const err = await readError(page);
@@ -1004,7 +1013,7 @@ await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx)
   ok(stays.length === 1, 'room 101 saved');
   ctx.hooks.overrideStayGet = spoofStayGetOnce('room_101', 200, { stays: [42] });
   await page.reload({ waitUntil: 'load' });
-  await openModal(page);
+  await openModal(page, 'resume');
   const r2 = await submitAndSettle(page);
   ok(String(r2).startsWith('settled:'), 'retry settles instead of confirming');
   const err = await readError(page);
@@ -1023,7 +1032,7 @@ await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx)
   let stays = await ctx.bookingsByDossier(dossier);
   ok(stays.length === 1, 'room 101 saved');
   await page.reload({ waitUntil: 'load' });
-  await openModal(page);
+  await openModal(page, 'resume');
   const shapes = [
     ['object-not-list', { stays: { 0: { id: 'bk-x', status: 'confirmed' } } }],
     ['missing-status', { stays: [{ id: 'bk-x' }] }],
@@ -1063,7 +1072,7 @@ await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx)
   step('reconciliation lies empty; the POST replay must still be checked');
   ctx.hooks.overrideStayGet = spoofStayGetOnce('room_101', 200, { stays: [] });
   await page.reload({ waitUntil: 'load' });
-  await openModal(page);
+  await openModal(page, 'resume');
   const r2 = await submitAndSettle(page);
   ok(String(r2).startsWith('settled:'), 'retry settles instead of confirming');
   ok(/oyageurs/.test(await readError(page)), 'replayed booking mismatch reported');

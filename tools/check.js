@@ -1210,6 +1210,7 @@ section('Whole-project regressions');
     'kiwi-agent-access-test.mjs',
     'kiwi-ui-qa-mcp-test.mjs',
     'sold-insights-test.js',
+    'sold-insights-layout-test.mjs',
     'table-refresh-test.js',
     'table-transfer-merge-test.mjs',
     'kitchen-void-protocol-test.mjs',

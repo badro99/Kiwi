@@ -712,7 +712,8 @@ async function runAllTests() {
     // 5.6 Responsive and RTL style rules in hotel.css
     ok(styles.includes('[dir="rtl"]'), 'hotel.css defines [dir="rtl"] overrides for Arabic localization');
     ok(styles.includes('@media (max-width: 900px)'), 'hotel.css defines tablet responsive layout rules');
-    ok(styles.includes('.hx-views-config-list') && styles.includes('.hx-view-config-chip'), 'hotel.css contains styles for views configuration UI');
+    ok(styles.includes('.hx-attribute-settings') && styles.includes('.hx-attribute-panel') && styles.includes('.hx-view-config-chip'), 'hotel.css contains the structured responsive styles for views configuration UI');
+    ok(source.includes("'hx-hotel-modal', 'hx-attributes-modal'") && source.includes('hx-attribute-empty') && !source.includes('class="hx-views-config-list" style='), 'views and amenities use the dedicated accessible dialog layout');
     const floorManager = source.slice(source.indexOf('function cuFloorsManager'), source.indexOf('function cuViewsAndCharsManager'));
     ok(!floorManager.includes('hx-views-manage-open'), 'section manager contains only section organization actions');
     ok(source.includes('data-action="hx-views-manage-open">Gérer les vues & caractéristiques'), 'room-plan toolbar exposes views and characteristics as its own configuration action');

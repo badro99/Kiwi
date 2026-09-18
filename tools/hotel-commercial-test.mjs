@@ -125,6 +125,35 @@ test('preinvoice source conserves cents, separates same-day stays and keeps canc
   const p=monthlyProduction([{id:b.id,check_in:'2027-07-01',check_out:'2027-07-01',status:'confirmed',raw_json:JSON.stringify({hotel:{dayUse:true}})}],monthWindow('2027-07'));
   assert.equal(p.nights,0);
 });
+test('preinvoice includes linked room charges once and removes a fully reversed charge',()=>{
+  const b={id:'booking-charge',code:'H-CHARGE',status:'checked_in',partySize:2,resourceId:'room:101',customer:{name:'Guest'},hotel:{checkIn:'2027-07-01',checkOut:'2027-07-02',total:600,roomTypeName:'Standard'}};
+  const charge={id:'folio-charge:sale-extra',kind:'room-charge',saleId:'sale-extra',stayId:b.id,roomId:b.resourceId,amountCents:12500,occurredTs:Date.parse('2027-07-01T12:00:00Z'),reversalOf:'',label:'Dîner en chambre'};
+  const charged=draftSource([b],[],[charge]);
+  assert.equal(charged.lines.length,2);
+  assert.deepEqual(charged.lines[1],{id:'charge:'+charge.id,stayId:b.id,date:'2027-07-01',roomId:'room:101',occupants:0,label:'Dîner en chambre',quantity:1,amountCents:12500,kind:'room_charge',payer:'guest:'+b.id});
+  const reversed=draftSource([b],[],[charge,{...charge,id:'folio-charge-reversal:sale-extra',kind:'room-charge-reversal',amountCents:-12500,reversalOf:charge.id}]);
+  assert.equal(reversed.lines.length,1);
+});
+test('billing route surfaces linked charges and its CAS rejects a charge posted after review',async()=>{
+  const f=await fixture();try{
+    await f.seed();
+    const stay=(await f.stay({clientRef:'stay-room-charge-001',status:'checked_in'})).body.booking;
+    const occurred=Date.parse('2027-07-01T12:00:00Z');
+    f.sql.prepare('INSERT INTO sales (id,merchant,amount,amount_cents,method,label,ts) VALUES (?,?,?,?,?,?,?)').run('sale-charge-001',f.merchant,125,12500,'room','Dîner en chambre',occurred);
+    f.sql.prepare(`INSERT INTO hotel_room_charge_events (merchant,id,kind,sale_id,outlet_id,shift_id,cashier_id,cashier_name,stay_id,room_id,amount_cents,occurred_ts,reversal_of,reversed_by_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(f.merchant,'folio-charge:sale-charge-001','room-charge','sale-charge-001','outlet-test','shift-test','cashier-test','Test cashier',stay.id,'room:101',12500,occurred,'','');
+    const url='billing-draft?dossierId='+stay.id;
+    const read=await f.call(draftGet,null,true,url);
+    assert.equal(read.status,200,JSON.stringify(read.body));
+    const line=read.body.preview.lines.find(l=>l.kind==='room_charge');
+    assert.equal(line.label,'Dîner en chambre');
+    assert.equal(line.amountCents,12500);
+    f.sql.prepare('INSERT INTO sales (id,merchant,amount,amount_cents,method,label,ts) VALUES (?,?,?,?,?,?,?)').run('sale-charge-002',f.merchant,50,5000,'room','Minibar',occurred+1);
+    f.sql.prepare(`INSERT INTO hotel_room_charge_events (merchant,id,kind,sale_id,outlet_id,shift_id,cashier_id,cashier_name,stay_id,room_id,amount_cents,occurred_ts,reversal_of,reversed_by_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(f.merchant,'folio-charge:sale-charge-002','room-charge','sale-charge-002','outlet-test','shift-test','cashier-test','Test cashier',stay.id,'room:101',5000,occurred+1,'','');
+    const save=await f.call(draftPost,{action:'save-draft',dossierId:stay.id,commandId:'draft-charge-race-001',rev:read.body.rev,sourceDigest:read.body.sourceDigest,directoryRev:read.body.directoryRev,input:{extras:[],allocations:[]}});
+    assert.equal(save.status,409,JSON.stringify(save.body));
+    assert.equal(save.body.error,'draft-stale');
+  }finally{f.sql.close();}
+});
 test('generic document sync cannot erase day-use hours, dossier membership or change lodging dates',async()=>{
   const f=await fixture();try{
     const response=await f.stay({dayUse:true,checkOut:input.checkIn,arrivalTime:'09:00',departureTime:'14:00',dayUseAmountCents:35025});

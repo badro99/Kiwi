@@ -5,7 +5,7 @@ const cents = v => Number.isSafeInteger(v) && v >= 0 && v <= 10000000000;
 export async function digest(value) {
   return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
-export function draftSource(stays, accounts = []) {
+export function draftSource(stays, accounts = [], roomCharges = []) {
   const lines = [], payers = basePayers(accounts), rooms = [];
   for (const b of stays) {
     const h=b.hotel, total=Math.round(Number(h?.total)*100);
@@ -29,6 +29,17 @@ export function draftSource(stays, accounts = []) {
         board:b.commercial?.board||'room_only',quantity:r?.quantity||1,amountCents:amount,kind:h.dayUse?'day_use':'lodging',payer});
     }
     if (q && q.rows.reduce((s,r)=>s+r.amountCents,0)!==total) problem('billing-quote-mismatch');
+  }
+  const staysById = new Map(stays.map(b => [b.id, b]));
+  const reversed = new Set(roomCharges.filter(c => c?.kind === 'room-charge-reversal' && c.reversalOf).map(c => c.reversalOf));
+  for (const c of roomCharges) {
+    if (!c || c.kind !== 'room-charge' || reversed.has(c.id)) continue;
+    const b = staysById.get(c.stayId), amount = Number(c.amountCents), occurredTs = Number(c.occurredTs);
+    if (!b || !c.id || c.roomId !== b.resourceId || !cents(amount) || amount < 1 || !Number.isSafeInteger(occurredTs) || occurredTs < 1) problem('billing-bad-room-charge');
+    const payer = payerFor(payers, b);
+    const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(occurredTs));
+    lines.push({ id:'charge:'+c.id, stayId:b.id, date, roomId:b.resourceId, occupants:0,
+      label:text(c.label, 120)||'Consommation chambre', quantity:1, amountCents:amount, kind:'room_charge', payer });
   }
   if(lines.length>2000) problem('billing-limit');
   return {lines,payers:[...payers.values()],rooms};

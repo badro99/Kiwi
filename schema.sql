@@ -1536,6 +1536,8 @@ CREATE TABLE IF NOT EXISTS hotel_room_charge_events (
   shift_id TEXT NOT NULL,
   cashier_id TEXT NOT NULL,
   cashier_name TEXT NOT NULL DEFAULT '',
+  stay_id TEXT NOT NULL DEFAULT '',
+  room_id TEXT NOT NULL DEFAULT '',
   amount_cents INTEGER NOT NULL,
   occurred_ts INTEGER NOT NULL,
   reversal_of TEXT NOT NULL DEFAULT '',
@@ -1545,6 +1547,8 @@ CREATE TABLE IF NOT EXISTS hotel_room_charge_events (
 );
 CREATE INDEX IF NOT EXISTS idx_hotel_room_charge_shift
   ON hotel_room_charge_events (merchant, shift_id, occurred_ts);
+CREATE INDEX IF NOT EXISTS idx_hotel_room_charge_stay
+  ON hotel_room_charge_events (merchant, stay_id, occurred_ts);
 
 -- ── Enregistrement des jetons de notification Push ──────────────────────────
 -- Enregistrés par POST /api/push/register (Capacitor iOS, Android, PWA Web).

@@ -1797,7 +1797,7 @@
     }).sort((a, b) => String(a.customer?.name || '').localeCompare(String(b.customer?.name || ''), 'fr'));
     const load = cuStayLoads.get(cuStayScope());
     return `<section class="block hx-daily" aria-label="Journal de réception">
-      <div class="hx-daily-head"><div><span class="hx-kicker">JOURNAL DE RÉCEPTION</span><h3>${views[filter.view] || views.arrivals} · ${rows.length}</h3><p>Dates de séjour à l’heure du Maroc. Ouvrez un dossier pour modifier ses détails.</p></div><div class="hx-commercial-tools"><button type="button" class="hx-btn ghost" data-action="hx-commercial">Clients, agences & sociétés</button><button type="button" class="hx-btn ghost" data-action="hx-group-new">+ Réservation de groupe</button><button type="button" class="hx-btn atlas" data-action="hx-stay-new">+ Réservation</button></div></div>
+      <div class="hx-daily-head"><div><span class="hx-kicker">JOURNAL DE RÉCEPTION</span><h3>${views[filter.view] || views.arrivals} · ${rows.length}</h3><p>Dates de séjour à l’heure du Maroc. Ouvrez un dossier pour modifier ses détails.</p></div><div class="hx-commercial-tools"><button type="button" class="hx-btn ghost" data-action="hx-commercial">Clients, agences & sociétés</button>${cuHasGroupRecovery() ? '<button type="button" class="hx-btn ghost" data-action="hx-group-resume">Reprendre le dossier groupe</button>' : ''}<button type="button" class="hx-btn ghost" data-action="hx-group-new">+ Réservation de groupe</button><button type="button" class="hx-btn atlas" data-action="hx-stay-new">+ Réservation</button></div></div>
       <div class="hx-daily-controls">
         <label>Date des mouvements<input type="date" data-hx-daily-date value="${esc(day)}"></label>
         <label>Vue<select data-hx-daily-view>${Object.entries(views).map(([key, label]) => `<option value="${key}" ${filter.view === key ? 'selected' : ''}>${label} (${buckets[key].length})</option>`).join('')}</select></label>
@@ -2157,42 +2157,50 @@
         en: 'Customize view types and amenities offered for your rooms.',
         ar: 'تخصيص أنواع الإطلالات والمميزات المتوفرة لغرفك.',
       }),
-      width: 580,
-      body: `<div style="display:flex;flex-direction:column;gap:18px;font-size:13px;color:var(--ink);">
-        <section>
-          <b style="display:block;margin-bottom:6px;">${trL({ fr: 'Types de vues', en: 'View types', ar: 'أنواع الإطلالات' })}</b>
-          <div class="hx-views-config-list" style="margin-bottom:10px;">
+      width: 720,
+      body: `<div class="hx-attribute-settings">
+        <div class="hx-attribute-panel" role="group" aria-label="${trL({ fr: 'Types de vues', en: 'View types', ar: 'أنواع الإطلالات' })}">
+          <div class="hx-attribute-head">
+            <span class="hx-attribute-icon" aria-hidden="true">◌</span>
+            <div><b>${trL({ fr: 'Types de vues', en: 'View types', ar: 'أنواع الإطلالات' })}</b><small>${trL({ fr: 'Décrivez ce que le voyageur voit depuis la chambre.', en: 'Describe what guests see from the room.', ar: 'صف ما يراه الضيف من الغرفة.' })}</small></div>
+            <span class="hx-attribute-count">${views.length}</span>
+          </div>
+          <div class="hx-views-config-list">
             ${views.map((v) => `
               <span class="hx-view-config-chip">
-                Vue ${esc(cuViewLabel(v))}
+                <span>${trL({ fr: 'Vue', en: 'View', ar: 'إطلالة' })} ${esc(cuViewLabel(v))}</span>
                 <button type="button" data-action="hx-view-remove" data-arg="${esc(v)}" aria-label="${trL({ fr: 'Supprimer', en: 'Delete', ar: 'حذف' })}">×</button>
               </span>`).join('')}
           </div>
-          <div style="display:flex;gap:8px;">
-            <input data-hx-view-input type="text" maxlength="40" placeholder="${trL({ fr: 'Ex. Piscine intérieure, Montagne…', en: 'e.g. Mountain, Courtyard…', ar: 'مثال: جبل، فناء…' })}" style="flex:1;">
+          <div class="hx-attribute-add">
+            <label><span>${trL({ fr: 'Nouvelle vue', en: 'New view', ar: 'إطلالة جديدة' })}</span><input data-hx-view-input type="text" maxlength="40" placeholder="${trL({ fr: 'Ex. Piscine intérieure, Montagne…', en: 'e.g. Mountain, Courtyard…', ar: 'مثال: جبل، فناء…' })}"></label>
             <button class="hx-btn atlas" type="button" data-action="hx-view-add">${trL({ fr: '+ Ajouter une vue', en: '+ Add view', ar: '+ إضافة إطلالة' })}</button>
           </div>
-        </section>
-        <section>
-          <b style="display:block;margin-bottom:6px;">${trL({ fr: 'Équipements & caractéristiques personnalisés', en: 'Custom amenities & characteristics', ar: 'تجهيزات ومميزات مخصصة' })}</b>
-          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+        </div>
+        <div class="hx-attribute-panel" role="group" aria-label="${trL({ fr: 'Équipements personnalisés', en: 'Custom amenities', ar: 'تجهيزات مخصصة' })}">
+          <div class="hx-attribute-head">
+            <span class="hx-attribute-icon" aria-hidden="true">◇</span>
+            <div><b>${trL({ fr: 'Équipements personnalisés', en: 'Custom amenities', ar: 'تجهيزات مخصصة' })}</b><small>${trL({ fr: 'Ajoutez uniquement les équipements propres à votre établissement.', en: 'Add amenities specific to your property.', ar: 'أضف التجهيزات الخاصة بمنشأتك.' })}</small></div>
+            <span class="hx-attribute-count">${customs.length}</span>
+          </div>
+          <div class="hx-attribute-list">
             ${customs.length ? customs.map((c) => `
               <div class="hx-config-char-row">
                 <span><b>${esc(cuCharLabel(c))}</b></span>
-                <button class="hx-btn ghost" type="button" data-action="hx-char-remove" data-arg="${esc(c.id)}" style="color:var(--danger,#b91c1c);padding:2px 8px;font-size:12px;">${trL({ fr: 'Supprimer', en: 'Delete', ar: 'حذف' })}</button>
-              </div>`).join('') : `<p style="margin:0;font-size:12px;color:var(--n-500);">${trL({ fr: 'Aucun équipement personnalisé. Les 8 équipements standards sont toujours disponibles.', en: 'No custom amenities. The 8 standard amenities are always available.', ar: 'لا توجد تجهيزات مخصصة. التجهيزات الـ 8 الأساسية متوفرة دائماً.' })}</p>`}
+                <button type="button" data-action="hx-char-remove" data-arg="${esc(c.id)}">${trL({ fr: 'Supprimer', en: 'Delete', ar: 'حذف' })}</button>
+              </div>`).join('') : `<div class="hx-attribute-empty">${trL({ fr: 'Aucun équipement personnalisé. Les 8 équipements standards restent disponibles.', en: 'No custom amenities. The 8 standard amenities remain available.', ar: 'لا توجد تجهيزات مخصصة. التجهيزات الأساسية الثمانية تبقى متوفرة.' })}</div>`}
           </div>
-          <div style="display:flex;gap:8px;">
-            <input data-hx-char-input type="text" maxlength="50" placeholder="${trL({ fr: 'Ex. Jacuzzi privatif, Machine Nespresso…', en: 'e.g. Private hot tub, Espresso machine…', ar: 'مثال: جاكوزي خاص، آلة قهوة…' })}" style="flex:1;">
+          <div class="hx-attribute-add">
+            <label><span>${trL({ fr: 'Nouvel équipement', en: 'New amenity', ar: 'تجهيز جديد' })}</span><input data-hx-char-input type="text" maxlength="50" placeholder="${trL({ fr: 'Ex. Jacuzzi privatif, Machine Nespresso…', en: 'e.g. Private hot tub, Espresso machine…', ar: 'مثال: جاكوزي خاص، آلة قهوة…' })}"></label>
             <button class="hx-btn atlas" type="button" data-action="hx-char-add">${trL({ fr: '+ Ajouter un équipement', en: '+ Add amenity', ar: '+ إضافة ميزة' })}</button>
           </div>
-        </section>
+        </div>
       </div>
-      <div class="hx-room-form-actions">
+      <div class="hx-room-form-actions hx-attribute-footer">
         <button class="hx-btn ghost" data-action="hx-views-manage-close">${trL({ fr: 'Fermer', en: 'Close', ar: 'إغلاق' })}</button>
       </div>`,
     });
-    m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
+    m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal', 'hx-attributes-modal');
     openModal = { el: m.el, close: m.close };
   }
   function cuUpdateFloorsManagerModal() {
@@ -3008,7 +3016,7 @@
     return `<div class="hx-page">
       ${cuStrip()}
       <div class="hx-cu-tape block">
-        <div class="hx-cu-tape-head"><div><span class="hx-kicker">DISPONIBILITÉ UNIFIÉE</span><h3>Chambres × 14 jours</h3><p>Direct, saisie manuelle et OTA bloquent tous la même chambre.</p></div><div class="hx-cu-tape-actions"><button type="button" class="hx-btn ghost" data-action="hx-tape-prev" aria-label="14 jours précédents">←</button><button type="button" class="hx-btn ghost" data-action="hx-tape-today">Aujourd’hui</button><button type="button" class="hx-btn ghost" data-action="hx-tape-next" aria-label="14 jours suivants">→</button><button type="button" class="hx-btn ghost" data-action="hx-dispo">Disponibilités</button><button type="button" class="hx-btn ghost" data-action="hx-group-new">+ Réservation de groupe</button><button type="button" class="hx-btn atlas" data-action="hx-stay-new">+ Réservation</button></div></div>
+        <div class="hx-cu-tape-head"><div><span class="hx-kicker">DISPONIBILITÉ UNIFIÉE</span><h3>Chambres × 14 jours</h3><p>Direct, saisie manuelle et OTA bloquent tous la même chambre.</p></div><div class="hx-cu-tape-actions"><button type="button" class="hx-btn ghost" data-action="hx-tape-prev" aria-label="14 jours précédents">←</button><button type="button" class="hx-btn ghost" data-action="hx-tape-today">Aujourd’hui</button><button type="button" class="hx-btn ghost" data-action="hx-tape-next" aria-label="14 jours suivants">→</button><button type="button" class="hx-btn ghost" data-action="hx-dispo">Disponibilités</button>${cuHasGroupRecovery() ? '<button type="button" class="hx-btn ghost" data-action="hx-group-resume">Reprendre le dossier groupe</button>' : ''}<button type="button" class="hx-btn ghost" data-action="hx-group-new">+ Réservation de groupe</button><button type="button" class="hx-btn atlas" data-action="hx-stay-new">+ Réservation</button></div></div>
         <div class="hx-cu-legend">${Object.keys(channels).map((c) => `<span class="src-${c}"><i></i>${channels[c]}</span>`).join('')}</div>
         ${rooms.length ? `<div class="hx-cu-tape-scroll"><div class="hx-cu-tape-grid"><div class="hx-cu-date-row"><div class="hx-cu-room"><span>CHAMBRE</span></div><div class="hx-cu-date-days">${dateHead}</div></div>${rows}<div class="hx-cu-occupancy"><div class="hx-cu-room"><b>Occupation</b><span>vendues</span></div><div>${occupancy}</div></div></div></div>` : `<div class="hx-cu-tape-empty"><b>Ajoutez d’abord vos chambres</b><p>Le tape chart attribue chaque séjour à une chambre réelle.</p><button class="hx-btn atlas" data-action="hx-room-add">Configurer les chambres</button></div>`}
       </div>
@@ -3988,7 +3996,24 @@
     return parts;
   }
 
-  async function cuGroupReservationModal() {
+  function cuHasGroupRecovery() {
+    const merchant = cuMerchantSlug();
+    if (!merchant) return false;
+    try {
+      const staged = JSON.parse(localStorage.getItem('kiwi:hotel-group-staged:' + merchant) || 'null');
+      if (staged && staged.merchant === merchant) return true;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key || !key.startsWith('kiwi_hx_intent_')) continue;
+        const intent = JSON.parse(localStorage.getItem(key) || 'null');
+        if (intent && intent.merchant === merchant && intent.status !== 'complete') return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  async function cuGroupReservationModal(options = {}) {
+    const resume = options.resume === true;
     const initialScope = cuStayScope();
     const initialMerchant = cuMerchantSlug();
     const initialCache = cuStayCache();
@@ -4003,9 +4028,11 @@
 
     const stagedKey = 'kiwi:hotel-group-staged:' + initialMerchant;
     let staged = null;
-    try {
-      staged = JSON.parse(localStorage.getItem(stagedKey) || 'null');
-    } catch (_) {}
+    if (resume) {
+      try {
+        staged = JSON.parse(localStorage.getItem(stagedKey) || 'null');
+      } catch (_) {}
+    }
     if (!staged || staged.merchant !== initialMerchant) staged = null;
     /* Ticket #0007 · a stale staged draft must never wedge "new reservation".
      * The staged cache is UI progress only (server truth is untouched), so a
@@ -4068,7 +4095,7 @@
       localStorage.setItem(intentKeyFor(record.dossierId), JSON.stringify(record));
     };
 
-    const pendingIntent = readAnyUnresolvedIntent();
+    const pendingIntent = resume ? readAnyUnresolvedIntent() : null;
     const draftSavedCount = (staged && staged.savedRooms) ? Object.keys(staged.savedRooms).length : 0;
     // Adopt the in-flight dossier only when this draft holds no proven rooms.
     const adoptIntent = !!(pendingIntent && pendingIntent.dossierId
@@ -7406,7 +7433,8 @@
   };
   handlers['hx-dispo-refresh'] = (el) => { const host = cuDispoHost(el); if (host?.closest('.kiwi-modal')) cuDispoPaint(host, true); else cuDispoRefreshPage(); };
   handlers['hx-stay-new'] = () => { if (isCustomHotel()) cuStayEditor(null); };
-  handlers['hx-group-new'] = () => { if (isCustomHotel()) cuGroupReservationModal(); };
+  handlers['hx-group-new'] = () => { if (isCustomHotel()) cuGroupReservationModal({ resume: false }); };
+  handlers['hx-group-resume'] = () => { if (isCustomHotel()) cuGroupReservationModal({ resume: true }); };
     /* "Configurer ce tarif" beside a missing-rate warning: open the room-type
      * editor stacked above the stay editor. The stay form DOM is untouched,
      * so the reservation draft survives; when the type editor closes, the

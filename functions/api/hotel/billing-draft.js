@@ -11,12 +11,13 @@ const reply=(b,s=200)=>json(b,s,{'Cache-Control':'no-store'});
  * finds every member, while an exact reservation id is always accepted as a
  * safe fallback.  Keep the predicate identical in GET and the CAS write. */
 const snapshotSQL=`SELECT COALESCE(json_group_array(json_object('id',id,'code',code,'room_type_id',room_type_id,'room_id',room_id,'check_in',check_in,'check_out',check_out,'start_at',start_at,'end_at',end_at,'status',status,'party_size',party_size,'customer_name',customer_name,'rate',rate,'total',total,'updated_ts',updated_ts,'raw_json',raw_json)),'[]') FROM (SELECT * FROM hotel_reservations WHERE merchant=? AND (id=? OR COALESCE(NULLIF(CASE WHEN json_valid(raw_json) THEN json_extract(raw_json,'$.hotel.dossierId') END,''),id)=?) ORDER BY id LIMIT 201)`;
+const chargeSnapshotSQL=`SELECT COALESCE(json_group_array(json_object('id',id,'kind',kind,'saleId',sale_id,'stayId',stay_id,'roomId',room_id,'amountCents',amount_cents,'occurredTs',occurred_ts,'reversalOf',reversal_of,'label',label)),'[]') FROM (SELECT e.id,e.kind,e.sale_id,e.stay_id,e.room_id,e.amount_cents,e.occurred_ts,e.reversal_of,COALESCE(s.label,'') AS label FROM hotel_room_charge_events e LEFT JOIN sales s ON s.merchant=e.merchant AND s.id=e.sale_id WHERE e.merchant=? AND e.stay_id IN (SELECT id FROM hotel_reservations WHERE merchant=? AND (id=? OR COALESCE(NULLIF(CASE WHEN json_valid(raw_json) THEN json_extract(raw_json,'$.hotel.dossierId') END,''),id)=?)) ORDER BY e.occurred_ts,e.id LIMIT 2001)`;
 async function load(env,merchant,id){
   // Stays use the reservations document as their canonical store until the
   // relational migration is present. Read the same source here; otherwise a
   // successfully saved group can be invisible to billing on that deployment.
   const ledger=await hotelReservationsTableExists(env);
-  let raw,stays;
+  let raw,stays,chargeRaw='[]',roomCharges=[];
   if(ledger){
     const row=await env.DB.prepare(snapshotSQL).bind(merchant,id,id).first();
     raw=Object.values(row||{})[0];
@@ -24,6 +25,11 @@ async function load(env,merchant,id){
     const rows=JSON.parse(raw);
     if(rows.length>200)throw Object.assign(new Error(),{code:'billing-limit'});
     stays=rows.map(hydrateReservation);
+    const chargeRow=await env.DB.prepare(chargeSnapshotSQL).bind(merchant,merchant,id,id).first();
+    chargeRaw=Object.values(chargeRow||{})[0];
+    if(typeof chargeRaw!=='string')throw new Error('unavailable');
+    roomCharges=JSON.parse(chargeRaw);
+    if(roomCharges.length>2000)throw Object.assign(new Error(),{code:'billing-limit'});
   }else{
     const row=await env.DB.prepare("SELECT data FROM store_docs WHERE merchant=? AND feature='reservations'").bind(merchant).first();
     raw=row?.data;
@@ -47,9 +53,9 @@ async function load(env,merchant,id){
   let saved=null, savedWarning=null;
   if (stored) { try { saved=JSON.parse(stored.data); if(!saved?.draft||saved.draft.kind!=='preinvoice'||!saved.input) throw new Error('bad-shape'); } catch(_) { saved=null; savedWarning='saved-unreadable'; } }
   let source, billingError=directoryError;
-  try { source=draftSource(stays,directory.accounts); }
+  try { source=draftSource(stays,directory.accounts,roomCharges); }
   catch(e) { source=draftRooms(stays,directory.accounts); billingError=billingError||e.code||'billing-source-invalid'; }
-  return {raw,ledger,source,feature,rev:stored?Number(stored.rev):0,saved,savedWarning,sourceDigest:await digest(raw),directoryRev:directory.rev,billingError};
+  return {raw,chargeRaw,ledger,source,feature,rev:stored?Number(stored.rev):0,saved,savedWarning,sourceDigest:await digest(raw+'\n'+chargeRaw),directoryRev:directory.rev,billingError};
 }
 export async function onRequestGet({request,env}){
   try{
@@ -88,11 +94,11 @@ export async function onRequestPost({request,env}){
     const saved={draft,input:b.input,sourceDigest:d.sourceDigest,directoryRev:d.directoryRev,commandId:b.commandId,requestHash,updatedAt:now,actor};
     const data=JSON.stringify(saved);if(new TextEncoder().encode(data).length>1000000)return reply({error:'billing-limit'},400);
     const directoryCheck="COALESCE((SELECT rev FROM store_docs WHERE merchant=? AND feature='hotel-commercial'),0)=?";
-    const sourceCheck=d.ledger?`(${snapshotSQL})=?`:
+    const sourceCheck=d.ledger?`(${snapshotSQL})=? AND (${chargeSnapshotSQL})=?`:
       "(SELECT data FROM store_docs WHERE merchant=? AND feature='reservations')=? AND NOT EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='hotel_reservations')";
     const result=await env.DB.prepare(`INSERT INTO store_docs(merchant,feature,data,rev,updated_ts) SELECT ?,?,?,1,? WHERE ${sourceCheck} AND ${directoryCheck} AND (?=0 OR EXISTS(SELECT 1 FROM store_docs WHERE merchant=? AND feature=? AND rev=?))
       ON CONFLICT(merchant,feature) DO UPDATE SET data=excluded.data,rev=store_docs.rev+1,updated_ts=excluded.updated_ts WHERE store_docs.rev=?`)
-      .bind(merchant,d.feature,data,now,...(d.ledger?[merchant,b.dossierId,b.dossierId,d.raw]:[merchant,d.raw]),merchant,d.directoryRev,d.rev,merchant,d.feature,d.rev,d.rev).run();
+      .bind(merchant,d.feature,data,now,...(d.ledger?[merchant,b.dossierId,b.dossierId,d.raw,merchant,merchant,b.dossierId,b.dossierId,d.chargeRaw]:[merchant,d.raw]),merchant,d.directoryRev,d.rev,merchant,d.feature,d.rev,d.rev).run();
     if(Number(result.meta?.changes)!==1)return reply({error:'draft-stale'},409);
     return reply({ok:true,rev:d.rev+1,saved});
   }catch(e){return reply({error:e.code||'billing-unavailable'},e.code?400:503);}

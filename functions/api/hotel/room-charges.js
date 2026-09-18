@@ -24,6 +24,7 @@ function eventFromRow(row) {
     id: String(row.id || ''), kind: String(row.kind || ''), saleId: String(row.sale_id || ''),
     outletId: String(row.outlet_id || ''), shiftId: String(row.shift_id || ''),
     cashierId: String(row.cashier_id || ''), cashierName: String(row.cashier_name || ''),
+    stayId: String(row.stay_id || ''), roomId: String(row.room_id || ''),
     amountCents: Number(row.amount_cents) || 0, occurredTs: Number(row.occurred_ts) || 0,
     reversalOf: String(row.reversal_of || ''), reversedById: String(row.reversed_by_id || ''),
   };
@@ -54,7 +55,7 @@ async function cashierFor(env, merchant, cashierId) {
 }
 async function storedEvent(env, merchant, id) {
   const row = await env.DB.prepare(
-    `SELECT id, kind, sale_id, outlet_id, shift_id, cashier_id, cashier_name,
+    `SELECT id, kind, sale_id, outlet_id, shift_id, cashier_id, cashier_name, stay_id, room_id,
             amount_cents, occurred_ts, reversal_of, reversed_by_id
        FROM ${TABLE} WHERE merchant = ? AND id = ? LIMIT 1`
   ).bind(merchant, id).first();
@@ -64,11 +65,11 @@ async function insertEvent(env, merchant, line) {
   const result = await env.DB.prepare(
     `INSERT OR IGNORE INTO ${TABLE}
       (merchant, id, kind, sale_id, outlet_id, shift_id, cashier_id, cashier_name,
-       amount_cents, occurred_ts, reversal_of, reversed_by_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       stay_id, room_id, amount_cents, occurred_ts, reversal_of, reversed_by_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     merchant, line.id, line.kind, line.saleId, line.outletId, line.shiftId,
-    line.cashierId, line.cashierName || '', line.amountCents, line.occurredTs,
+    line.cashierId, line.cashierName || '', line.stayId || '', line.roomId || '', line.amountCents, line.occurredTs,
     line.reversalOf || '', line.reversedById || '',
   ).run();
   const created = Number(result && result.meta && result.meta.changes) > 0;
@@ -86,10 +87,24 @@ async function insertEvent(env, merchant, line) {
     stored.outletId !== line.outletId ||
     stored.shiftId !== line.shiftId ||
     stored.cashierId !== line.cashierId ||
+    stored.stayId !== (line.stayId || '') ||
+    stored.roomId !== (line.roomId || '') ||
     stored.amountCents !== line.amountCents ||
     stored.kind !== line.kind
   );
   return { created, stored, differs };
+}
+async function activeStayFor(env, merchant, roomId, occurredTs) {
+  const result = await env.DB.prepare(
+    `SELECT id, room_id FROM hotel_reservations
+      WHERE merchant = ? AND room_id = ?
+        AND status IN ('confirmed', 'checked_in')
+        AND start_at <= ? AND end_at > ?
+      ORDER BY CASE status WHEN 'checked_in' THEN 0 ELSE 1 END, updated_ts DESC
+      LIMIT 2`
+  ).bind(merchant, roomId, occurredTs, occurredTs).all();
+  const rows = (result && result.results) || [];
+  return rows.length === 1 ? { stayId: String(rows[0].id || ''), roomId: String(rows[0].room_id || '') } : null;
 }
 async function hotelManager(request, env, merchant) {
   const actor = await resolveHotelActor(request, env, merchant);
@@ -114,7 +129,7 @@ export async function onRequestGet({ request, env }) {
   try {
     if (mode === 'shifts') {
       const result = await env.DB.prepare(
-        `SELECT id, kind, sale_id, outlet_id, shift_id, cashier_id, cashier_name,
+        `SELECT id, kind, sale_id, outlet_id, shift_id, cashier_id, cashier_name, stay_id, room_id,
                 amount_cents, occurred_ts, reversal_of, reversed_by_id
            FROM ${TABLE}
           WHERE merchant = ? AND occurred_ts >= ? AND occurred_ts <= ?
@@ -139,7 +154,7 @@ export async function onRequestGet({ request, env }) {
       return json({ ok: true, shifts: [...grouped.values()].sort((a, b) => b.lastTs - a.lastTs).slice(0, 50) });
     }
     const result = await env.DB.prepare(
-      `SELECT id, kind, sale_id, outlet_id, shift_id, cashier_id, cashier_name,
+      `SELECT id, kind, sale_id, outlet_id, shift_id, cashier_id, cashier_name, stay_id, room_id,
               amount_cents, occurred_ts, reversal_of, reversed_by_id
          FROM ${TABLE}
         WHERE merchant = ? AND shift_id = ? AND occurred_ts >= ? AND occurred_ts <= ?
@@ -184,6 +199,8 @@ export async function onRequestPost({ request, env }) {
       actorId: scope.role === 'till' ? original.cashierId : 'manager',
     });
     if (!reversed.ok) return json({ error: reversed.error }, 422);
+    reversed.line.stayId = original.stayId;
+    reversed.line.roomId = original.roomId;
     try {
       const saved = await insertEvent(env, merchant, reversed.line);
       if (saved.differs) return json({ error: 'room-charge-conflict', charge: saved.stored }, 409);
@@ -204,6 +221,12 @@ export async function onRequestPost({ request, env }) {
   if (!outletId || !scope.activeUnitIds.has(outletId)) {
     return json({ error: 'active-outlet-required' }, 422);
   }
+  const roomId = token(body && body.roomId, 64);
+  if (!roomId) return json({ error: 'room-required' }, 400);
+  let stay;
+  try { stay = await activeStayFor(env, merchant, roomId, timestamp(sale.ts)); }
+  catch (_) { return unavailable(); }
+  if (!stay || !stay.stayId) return json({ error: 'active-stay-required' }, 409);
   let cashier;
   try { cashier = await cashierFor(env, merchant, cashierId); }
   catch (_) { return unavailable(); }
@@ -215,6 +238,8 @@ export async function onRequestPost({ request, env }) {
     amountCents, occurredTs: timestamp(sale.ts),
   });
   if (!appended.ok) return json({ error: appended.error }, 422);
+  appended.line.stayId = stay.stayId;
+  appended.line.roomId = stay.roomId;
   try {
     const saved = await insertEvent(env, merchant, appended.line);
     /* Le poste, le montant ou la caissière ont changé depuis le premier envoi :

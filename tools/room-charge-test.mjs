@@ -11,7 +11,7 @@ process.on('unhandledRejection', (error) => {
   process.exit(1);
 });
 
-const EXPECTED = 15;
+const EXPECTED = 16;
 let checks = 0;
 
 async function check(name, fn) {
@@ -179,6 +179,9 @@ function makeDb({ missingEvents = false } = {}) {
               }] }),
             }] };
           }
+          if (query.includes('FROM hotel_reservations')) {
+            return { results: args[1] === 'room:101' ? [{ id: 'stay-route', room_id: 'room:101' }] : [] };
+          }
           if (query.includes('FROM hotel_room_charge_events')) {
             if (missingEvents) throw new Error('no such table: hotel_room_charge_events');
             return { results: state.events.filter((event) => {
@@ -199,7 +202,7 @@ function makeDb({ missingEvents = false } = {}) {
           if (!exists) state.events.push({
             merchant: args[0], id: args[1], kind: args[2], sale_id: args[3],
             outlet_id: args[4], shift_id: args[5], cashier_id: args[6], cashier_name: args[7],
-            amount_cents: args[8], occurred_ts: args[9], reversal_of: args[10], reversed_by_id: args[11],
+            stay_id: args[8], room_id: args[9], amount_cents: args[10], occurred_ts: args[11], reversal_of: args[12], reversed_by_id: args[13],
           });
           return { success: true, meta: { changes: exists ? 0 : 1 } };
         },
@@ -226,6 +229,7 @@ async function tillRequest(body = null, method = 'POST') {
 const fixture = makeDb();
 const postBody = {
   merchant: MERCHANT, terminalId: 'terminal-rooftop', saleId: 'sale-route',
+  roomId: 'room:101',
   outletId: 'u-pool', shiftId: 'shift-route', cashierId: 'cashier-route',
   cashierName: 'Forged', amountCents: 1,
 };
@@ -239,6 +243,11 @@ await check('the route derives money and time from the sale and forces the signe
   assert.equal(postedBody.charge.occurredTs, 1100);
   assert.equal(postedBody.charge.outletId, 'u-rooftop');
   assert.equal(postedBody.charge.cashierName, 'Canonical Cashier');
+});
+await check('the route resolves the room to the active stay without copying guest identity', async () => {
+  assert.equal(postedBody.charge.stayId, 'stay-route');
+  assert.equal(postedBody.charge.roomId, 'room:101');
+  assert.equal(/guest|customer|name/i.test(JSON.stringify({ stayId: postedBody.charge.stayId, roomId: postedBody.charge.roomId })), false);
 });
 const replay = await roomChargeRoute.onRequestPost({
   request: await tillRequest(postBody), env: { AUTH_SECRET: SECRET, DB: fixture.db },

@@ -1503,7 +1503,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     return data;
   }
 
-  var ROSTER_LOADED = false, ROSTER_AT = 0, OVERVIEW_DATA = null, REFRESH_BUSY = false;
+  var ROSTER_LOADED = false, ROSTER_AT = 0, OVERVIEW_DATA = null, REFRESH_BUSY = false, METRICS_BUSY = false;
   var store = {
     async clients(){
       if (LIVE) {
@@ -2255,13 +2255,13 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     host.appendChild(box);
   }
 
-  async function renderOverview(){
+  async function renderOverview(nextOverview){
     var cards = document.getElementById('ov-cards');
     var body = document.getElementById('ov-body');
     var stamp = document.getElementById('ov-stamp');
     if (!cards || !body) return;
     var o;
-    try { o = await store.overview(); }
+    try { o = nextOverview || await store.overview(); }
     catch (e) {
       clear(cards); clear(body);
       /* Une route pas encore déployée n'est pas une panne de la console : le
@@ -3662,6 +3662,37 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   document.getElementById('health-refresh').addEventListener('click', function(){ if (selected) renderHealth(); });
   document.getElementById('quit').addEventListener('click', function(){ location.href = '/'; });
 
+  /* Revenue is operational data, so the portfolio cannot stay frozen at the
+     value from page load. Fetch the roster and overview as one snapshot and
+     publish it only when both requests succeed; a transient network failure
+     leaves the last coherent numbers visible. */
+  async function refreshPortfolioMetrics(){
+    if (!LIVE || REFRESH_BUSY || METRICS_BUSY) return;
+    METRICS_BUSY = true;
+    try {
+      var fresh = await Promise.all([api('/clients'), store.overview()]);
+      var roster = fresh[0] || {}, overview = fresh[1];
+      CRM_CLIENTS = roster.clients || [];
+      ROSTER_LOADED = true;
+      ROSTER_AT = roster.now || Date.now();
+      if (typeof roster.senior === 'boolean') SENIOR = roster.senior;
+      MAIL_OK = !!roster.mail;
+      await Promise.all([renderOverview(overview), renderClients()]);
+    } catch (_) {
+      /* Keep the last complete snapshot. The manual refresh still exposes
+         backend-down mode if the outage persists. */
+    } finally { METRICS_BUSY = false; }
+  }
+  function portfolioRefreshAllowed(){
+    var active = document.activeElement;
+    return !document.hidden && !document.querySelector('dialog[open]')
+      && !(active && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName));
+  }
+  setInterval(function(){ if (portfolioRefreshAllowed()) refreshPortfolioMetrics(); }, 30000);
+  document.addEventListener('visibilitychange', function(){
+    if (portfolioRefreshAllowed()) refreshPortfolioMetrics();
+  });
+
   // ── boot: probe live vs mock, then render ────────────────────────────────────
   async function boot(isRefresh){
     if(REFRESH_BUSY)return;
@@ -3696,7 +3727,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   window.KiwiOperator = {
     snapshot:function(){return {clients:CRM_CLIENTS,now:ROSTER_AT,overview:OVERVIEW_DATA,live:LIVE};},
     open:function(merchant){var c=CRM_CLIENTS.find(function(x){return x.merchant===merchant;});if(c)return select(c);},
-    close:deselect,refresh:function(){return boot(true);},api:api,
+    close:deselect,refresh:function(){return boot(true);},refreshMetrics:refreshPortfolioMetrics,api:api,
     dashboard:openDashboard
   };
   boot(false);
