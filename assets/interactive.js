@@ -884,6 +884,25 @@ ar: {
     window.__kiwiScrollLocks = n;
     if (n === 0) document.documentElement.classList.remove('kiwi-locked');
   }
+  /* Filet de sécurité. Une quinzaine d'appels retirent encore une couche par
+   * `.remove()` au lieu de passer par son close() : le compteur restait > 0,
+   * html.kiwi-locked restait posé, et la page ne défilait plus jusqu'au
+   * rechargement — dans plusieurs types de commerce. Règle : quand la dernière
+   * couche qui verrouille quitte le DOM, la page est libérée. Les trois seuls
+   * détenteurs du verrou sont listés ici (modal, drawer, fiche Conformité).
+   * Le verrou du code PIN (style inline sur <html>) n'est jamais touché. */
+  const LOCKING_LAYERS = '.kiwi-backdrop, .kiwi-drawer-backdrop, .cf-eq-detail-bd';
+  const isLayer = (n) => n.nodeType === 1
+    && ((n.matches && n.matches(LOCKING_LAYERS)) || (n.querySelector && n.querySelector(LOCKING_LAYERS)));
+  const watchLayers = () => new MutationObserver((records) => {
+    if (!window.__kiwiScrollLocks && !document.documentElement.classList.contains('kiwi-locked')) return;
+    if (!records.some((r) => Array.prototype.some.call(r.removedNodes, isLayer))) return;
+    if (document.querySelector(LOCKING_LAYERS)) return;
+    window.__kiwiScrollLocks = 0;
+    document.documentElement.classList.remove('kiwi-locked');
+  }).observe(document.body, { childList: true });
+  if (document.body) watchLayers();
+  else document.addEventListener('DOMContentLoaded', watchLayers, { once: true });
 
   /* ═══════════════════════ DRAWER ═══════════════════════
    * Standard mode: 420-px-wide right-side drawer slides in.

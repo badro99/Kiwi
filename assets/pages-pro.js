@@ -10688,7 +10688,15 @@ function _mzManualModal(preset) {
 handlers['mz-new'] = () => _mzManualModal({ productId: _mzFilter.productId });
 handlers['bqx-prod-movements'] = (_el, arg) => {
   _mzFilter.productId = arg || '';
-  document.querySelectorAll('.kiwi-drawer-backdrop, .kiwi-backdrop').forEach((el) => el.remove());
+  /* Fermer chaque couche par son propre close() : le `.remove()` direct sautait
+     unlockPageScroll(), laissait html.kiwi-locked posé, et la page des
+     mouvements ne défilait plus. Il abandonnait aussi l'écouteur Échap de la
+     fiche produit. */
+  document.querySelectorAll('.kiwi-drawer-backdrop').forEach((b) => (b.__kiwiClose ? b.__kiwiClose() : b.remove()));
+  document.querySelectorAll('.kiwi-backdrop').forEach((b) => {
+    const x = b.querySelector('.kiwi-modal-close');
+    if (x) x.click(); else b.remove();
+  });
   handlers['nav-stock-movements']();
 };
 
