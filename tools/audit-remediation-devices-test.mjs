@@ -63,7 +63,15 @@ async function bridgeBoundaryTest() {
       try { const r = await call('GET', '/kiwi/ping', { origin: 'https://kiwi-os.com' }); if (r.status === 200) ping = r.json; }
       catch (_) { await sleep(50); }
     }
-    check(ping && /^kbc_[0-9a-f]{64}$/.test(ping.capability) && ping.capabilityRequired === true && ping.version === '1.4.5', 'D01 bridge advertises secure protocol and issues a capability only through a trusted origin');
+    /* The remediation landed in 1.4.5, so that is the FLOOR — not a pin. Pinning
+       the exact string made every later bridge release fail this audit for a
+       reason that has nothing to do with the security property being audited. */
+    const atLeast = (v, min) => {
+      const a = String(v || '').split('.').map(Number), b = min.split('.').map(Number);
+      for (let i = 0; i < 3; i++) { if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0); }
+      return true;
+    };
+    check(ping && /^kbc_[0-9a-f]{64}$/.test(ping.capability) && ping.capabilityRequired === true && atLeast(ping.version, '1.4.5'), 'D01 bridge advertises secure protocol and issues a capability only through a trusted origin');
     const capability = ping.capability;
 
     const foreign = await call('POST', '/kiwi/print', {

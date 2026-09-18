@@ -88,7 +88,7 @@ cd bridge
 node server.js
 ```
 
-You should see `kiwi-printer-bridge v1.4.5 listening on http://127.0.0.1:9110`.
+You should see `kiwi-printer-bridge v1.4.6 listening on http://127.0.0.1:9110`.
 
 ### Security upgrade order (1.4.5)
 
@@ -138,6 +138,34 @@ Then publish `dist/*` as a GitHub Release and point the app's download links at 
   "Windows protected your PC" screen, click **More info → Run anyway** (the app is
   not yet code-signed). To auto-start at login: `Win+R` → `shell:startup` → drop a
   shortcut to the `.exe` there.
+- **Windows 7 — use the `win7` build, not the normal one.** A good number of
+  counters here still run Windows 7 with the reseller's USB thermal printer, and
+  the ordinary `.exe` cannot help them: it is compiled against Node 18, which does
+  not start on Windows 7 at all. Double-clicking it gets *"not a valid Win32
+  application"* — which reads like a corrupt download, so nobody ever suspects the
+  OS. Build that machine's copy with:
+
+  ```
+  npm run build:win7
+  ```
+
+  That produces `dist/win7/` with a 64-bit and a **32-bit** binary (Node 12 is the
+  last line supporting Windows 7; plenty of these tills are x86, where an x64
+  binary simply will not open). Everything else — pairing code, panel, RAW
+  printing — is identical.
+
+  Two Windows 7 specifics worth knowing when something looks wrong:
+  - It ships **PowerShell 2.0**, which has no CIM cmdlets. The bridge asks for the
+    printer list and the default queue through `Get-WmiObject` as a fallback, and
+    remembers which query the machine answered so each ticket does not pay three
+    PowerShell launches.
+  - `Add-Type` there compiles against .NET 3.5, so the inlined RawPrinterHelper
+    stays C# 2.0. Windows 7 SP1 has .NET 3.5 enabled out of the box; if it was
+    removed, RAW printing is the thing that breaks.
+
+  `tools/bridge-win7-test.mjs` (in `node tools/check.js`) holds all of this,
+  including a scan for any `?.`/`??`/`fetch` that would silently make the Windows 7
+  binary unbootable.
 - **macOS (Mac au comptoir) :**
   1. Glissez `Kiwi Printer.app` dans `/Applications`.
   2. Premier lancement : clic droit sur l'application → **Ouvrir**, ou dans **Réglages Système → Confidentialité et sécurité**, cliquez **Ouvrir quand même**.

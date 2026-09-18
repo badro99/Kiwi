@@ -49,7 +49,7 @@ const path = require('path');
 const { execFile, spawn } = require('child_process');
 
 const NAME = 'kiwi-printer-bridge';
-const VERSION = '1.4.5';
+const VERSION = '1.4.6';
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.KIWI_BRIDGE_PORT) || 9110; // bridge's own port
 const DEFAULT_PRINTER_PORT = 9100;                          // RAW/JetDirect
@@ -871,6 +871,8 @@ function run(cmd, args, opts) {
 /* Every installed printer, newest API first. Get-Printer is absent on older
  * boxes and Win32_Printer is absent on some hardened ones, so we try in order
  * and take the first that answers rather than assuming either exists. */
+let winPrinterQuery = -1;   // index of the enumeration that this machine answers
+
 async function listPrinters() {
   if (IS_WINDOWS) {
     const ps = (script) => run('powershell',
@@ -880,11 +882,20 @@ async function listPrinters() {
       'Get-CimInstance -ClassName Win32_Printer | ForEach-Object { $_.Name }',
       'Get-WmiObject -Class Win32_Printer | ForEach-Object { $_.Name }',
     ];
-    for (const a of attempts) {
+    /* On Windows 10 the first line answers. On Windows 7 the first two are
+     * cmdlets that do not exist, so the queue list costs three PowerShell
+     * launches — and this runs before EVERY job. Remember which line answered:
+     * the ladder still re-runs from the top if that one ever stops working, so
+     * a printer installed later is never hidden by the memo. */
+    const order = winPrinterQuery >= 0
+      ? [attempts[winPrinterQuery]].concat(attempts.filter((_, i) => i !== winPrinterQuery))
+      : attempts;
+    for (const a of order) {
       const r = await ps(a);
       const names = r.stdout.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
-      if (names.length) return names;
+      if (names.length) { winPrinterQuery = attempts.indexOf(a); return names; }
     }
+    winPrinterQuery = -1;
     return [];
   }
   // CUPS: "printer NAME is idle. enabled since…" — the queue name is field 2.
@@ -896,9 +907,23 @@ async function listPrinters() {
 
 async function defaultPrinter() {
   if (IS_WINDOWS) {
-    const r = await run('powershell', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-      '-Command', '(Get-CimInstance -ClassName Win32_Printer -Filter "Default=True").Name']);
-    return r.stdout.trim() || '';
+    /* Same ladder as listPrinters, and for the same reason: Get-CimInstance
+     * arrived with PowerShell 3.0. Windows 7 ships PowerShell 2.0, where the CIM
+     * cmdlets simply do not exist — so asking only for CIM answered "" on every
+     * Windows 7 till, and the panel showed no default queue on exactly the
+     * hardware most likely to have one USB printer and nothing else. */
+    const ps = (script) => run('powershell',
+      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script]);
+    const attempts = [
+      '(Get-CimInstance -ClassName Win32_Printer -Filter "Default=True").Name',
+      '(Get-WmiObject -Class Win32_Printer -Filter "Default=True").Name',
+    ];
+    for (const a of attempts) {
+      const r = await ps(a);
+      const name = r.stdout.split(/\r?\n/).map((s) => s.trim()).filter(Boolean)[0] || '';
+      if (name) return name;
+    }
+    return '';
   }
   const r = await run('lpstat', ['-d']);           // "system default destination: NAME"
   return (r.stdout.match(/:\s*(\S+)/) || [])[1] || '';

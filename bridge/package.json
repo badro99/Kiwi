@@ -1,19 +1,20 @@
 {
   "name": "kiwi-printer-bridge",
-  "version": "1.4.5",
+  "version": "1.4.6",
   "description": "Local helper that relays ESC/POS print jobs from the Kiwi web app to a networked thermal printer.",
   "bin": "server.js",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build": "pkg . --targets node18-win-x64,node18-macos-x64,node18-linux-x64 --out-path dist"
+    "build": "pkg . --targets node18-win-x64,node18-macos-x64,node18-linux-x64 --out-path dist",
+    "build:win7": "pkg . --targets node12-win-x64,node12-win-x86 --out-path dist/win7"
   },
   "pkg": {
     "assets": [],
     "outputPath": "dist"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=12"
   },
   "license": "UNLICENSED",
   "private": true,
