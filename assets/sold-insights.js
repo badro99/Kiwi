@@ -8,8 +8,44 @@
   var tillSales = [];
   var tillMerchant = '';
   var tillLoading = false;
+  var tillFetched = false;
+  var tillLoadedFrom = Infinity;
   var dashboardDays = 30;
   var tillDays = 7;
+  var dashboardRange = null;
+  var tillRange = null;
+
+  function dateKey(d) {
+    d = d instanceof Date ? d : new Date(d);
+    return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
+  }
+  function parseDateKey(value) {
+    var m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return null;
+    var d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return d.getFullYear() === Number(m[1]) && d.getMonth() === Number(m[2]) - 1 && d.getDate() === Number(m[3]) ? d : null;
+  }
+  function freshPicker() {
+    var today = dateKey(new Date());
+    return { open:false, mode:'day', day:today, from:today, to:today, error:'' };
+  }
+  var dashboardPicker = freshPicker();
+  var tillPicker = freshPicker();
+
+  function bounds(period) {
+    if (period && typeof period === 'object') {
+      var first = parseDateKey(period.from), last = parseDateKey(period.to || period.from);
+      if (first && last && first.getTime() <= last.getTime()) {
+        var from = first.getTime();
+        var to = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1).getTime();
+        var days = Math.round((Date.UTC(last.getFullYear(), last.getMonth(), last.getDate()) - Date.UTC(first.getFullYear(), first.getMonth(), first.getDate())) / DAY) + 1;
+        return { days:days, from:from, to:to, previousFrom:from-(to-from), custom:{from:dateKey(first),to:dateKey(last)} };
+      }
+    }
+    var count = Math.max(1, Math.round(Number(period) || 7));
+    var now = Date.now(), start = now - count * DAY;
+    return { days:count, from:start, to:Infinity, previousFrom:start-count*DAY, custom:null };
+  }
 
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]; }); }
   function fmt(v) { try { return Math.round(Number(v) || 0).toLocaleString('fr-FR'); } catch (_) { return String(Math.round(Number(v) || 0)); } }
@@ -67,16 +103,16 @@
     }).filter(function (l) { return l.name; }) : [];
     return { ts: ts, amount: Math.max(0, Number(raw && (raw.amount || raw.total)) || 0), ref: String(raw && (raw.ref || raw.id) || ''), lines: lines };
   }
-  function analyze(source, days) {
+  function analyze(source, period) {
     var cat = catalog();
-    var now = Date.now(), from = now - days * DAY, previousFrom = from - days * DAY;
+    var span = bounds(period), days = span.days, from = span.from, to = span.to, previousFrom = span.previousFrom;
     var seen = {};
     var all = (source || []).map(function (s) { return normalize(s, cat); }).filter(function (s) {
       if (!s.ts || !s.lines.length) return false;
       var key = s.ref || [s.ts,s.amount,s.lines.map(function(l){return l.name+':'+l.qty;}).join('|')].join(':');
       if (seen[key]) return false; seen[key] = 1; return true;
     });
-    var sales = all.filter(function (s) { return s.ts >= from; });
+    var sales = all.filter(function (s) { return s.ts >= from && s.ts < to; });
     var previous = all.filter(function (s) { return s.ts >= previousFrom && s.ts < from; });
     var products = {}, categories = {}, pairs = {}, revenue = 0, units = 0;
     function addLine(line, ts, target) {
@@ -108,7 +144,7 @@
     }).sort(function (a, b) { return b.qty - a.qty || b.revenue - a.revenue; });
     var pairRows = Object.keys(pairs).map(function (k) { var n = k.split('\u0000'); return { a:n[0], b:n[1], count:pairs[k] }; }).sort(function (a,b) { return b.count-a.count; });
     return {
-      days: days, sales: sales.sort(function(a,b){return b.ts-a.ts;}), tickets: sales.length, units: units, revenue: revenue,
+      days: days, custom: span.custom, from: from, to: to, sales: sales.sort(function(a,b){return b.ts-a.ts;}), tickets: sales.length, units: units, revenue: revenue,
       products: prod, categories: Object.keys(categories).map(function(k){return categories[k];}).sort(function(a,b){return b.qty-a.qty;}),
       pairs: pairRows, previousTickets: previous.length, catalogCount: cat.products.length,
     };
@@ -116,18 +152,35 @@
   function ensureStyle() {
     if (document.getElementById('kiwi-sold-style')) return;
     var s = document.createElement('style'); s.id = 'kiwi-sold-style';
-    s.textContent = '.ksold{padding:24px;max-width:1280px;margin:auto;color:var(--ink,#111)}.ksold-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;margin-bottom:18px}.ksold-head h1{margin:0;font-size:28px}.ksold-sub{font-size:12px;color:var(--n-500,#777);margin-top:5px}.ksold-days{display:flex;gap:6px}.ksold-days button{border:1px solid var(--n-200,#ddd);background:var(--surface,#fff);padding:8px 12px;border-radius:999px;font:600 11px var(--sans);cursor:pointer}.ksold-days button.on{background:var(--ink,#111);color:var(--paper,#fff);border-color:var(--ink,#111)}.ksold-card{border:1px solid var(--n-200,#e5e2dc);background:var(--surface,#fff);border-radius:16px}.ksold-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:12px}.ksold-card{padding:17px;min-width:0}.ksold-card h2{font-size:15px;font-weight:600;letter-spacing:-.015em;margin:0 0 4px}.ksold-note{font-size:12px;color:var(--n-500,#777);margin-bottom:12px}.ksold-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;padding:10px 0;border-top:1px solid var(--n-100,#eee)}.ksold-row:first-of-type{border-top:0}.ksold-name{font-size:13px;font-weight:600}.ksold-meta{font-size:11px;color:var(--n-500,#777);margin-top:3px}.ksold-val{text-align:right;font:600 12.5px var(--sans);letter-spacing:-.012em;font-variant-numeric:tabular-nums}.ksold-bar{height:4px;background:var(--n-100,#eee);border-radius:9px;margin-top:6px;overflow:hidden}.ksold-bar i{display:block;height:100%;background:var(--atlas,#087a5b);border-radius:9px}.ksold-ai{border-color:color-mix(in srgb,var(--atlas,#087a5b) 35%,transparent);background:color-mix(in srgb,var(--atlas,#087a5b) 5%,var(--surface,#fff))}.ksold-ai-tag{font:600 10px var(--sans);letter-spacing:.085em;text-transform:uppercase;color:var(--atlas,#087a5b);margin-bottom:10px}.ksold-rec{padding:11px 0;border-top:1px solid color-mix(in srgb,var(--atlas,#087a5b) 16%,transparent)}.ksold-rec b{display:block;font-size:13px;margin-bottom:4px}.ksold-rec p{font-size:12px;line-height:1.45;color:var(--n-600,#666);margin:0}.ksold-full{grid-column:1/-1}.ksold-time{font:11px var(--sans);font-variant-numeric:tabular-nums;color:var(--n-500,#777);margin-top:2px}@media(max-width:850px){.ksold{padding:16px}.ksold-head{align-items:flex-start;flex-direction:column}.ksold-grid{grid-template-columns:1fr}}';
+    s.textContent = '.ksold{padding:24px;max-width:1280px;margin:auto;color:var(--ink,#111)}.ksold-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;margin-bottom:18px}.ksold-head h1{margin:0;font-size:28px}.ksold-sub{font-size:12px;color:var(--n-500,#777);margin-top:5px}.ksold-days{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.ksold-days button{border:1px solid var(--n-200,#ddd);background:var(--surface,#fff);padding:8px 12px;border-radius:999px;font:600 11px var(--sans);cursor:pointer}.ksold-days button.on{background:var(--ink,#111);color:var(--paper,#fff);border-color:var(--ink,#111)}.ksold-picker{display:flex;justify-content:flex-end;margin:-8px 0 18px}.ksold-picker-box{width:min(100%,430px);padding:14px;border:1px solid var(--n-200,#ddd);border-radius:16px;background:var(--surface,#fff);box-shadow:0 18px 50px -24px rgba(10,15,13,.28)}.ksold-modes{display:flex;gap:5px;margin-bottom:12px}.ksold-modes button{flex:1;border:1px solid var(--n-200,#ddd);background:var(--paper-soft,#f5f3ef);padding:8px;border-radius:10px;font:600 11px var(--sans);cursor:pointer}.ksold-modes button.on{background:var(--ink,#111);color:var(--paper,#fff);border-color:var(--ink,#111)}.ksold-date-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.ksold-date-fields.one{grid-template-columns:1fr}.ksold-date-fields label{font:600 10px var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--n-500,#777)}.ksold-date-fields input{display:block;width:100%;margin-top:5px;border:1px solid var(--n-200,#ddd);border-radius:10px;background:var(--surface,#fff);color:var(--ink,#111);padding:9px;font:600 12px var(--sans);color-scheme:light}.ksold-picker-actions{display:flex;justify-content:flex-end;align-items:center;gap:7px;margin-top:12px}.ksold-picker-actions button{border:0;border-radius:10px;padding:8px 12px;font:600 11px var(--sans);cursor:pointer}.ksold-picker-actions [data-ksold-cancel]{background:transparent;color:var(--n-600,#666)}.ksold-picker-actions [data-ksold-apply]{background:var(--atlas,#087a5b);color:white}.ksold-date-error{margin-right:auto;font:600 11px var(--sans);color:#a13d2d}.ksold-card{border:1px solid var(--n-200,#e5e2dc);background:var(--surface,#fff);border-radius:16px}.ksold-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:12px}.ksold-card{padding:17px;min-width:0}.ksold-card h2{font-size:15px;font-weight:600;letter-spacing:-.015em;margin:0 0 4px}.ksold-note{font-size:12px;color:var(--n-500,#777);margin-bottom:12px}.ksold-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;padding:10px 0;border-top:1px solid var(--n-100,#eee)}.ksold-row:first-of-type{border-top:0}.ksold-name{font-size:13px;font-weight:600}.ksold-meta{font-size:11px;color:var(--n-500,#777);margin-top:3px}.ksold-val{text-align:right;font:600 12.5px var(--sans);letter-spacing:-.012em;font-variant-numeric:tabular-nums}.ksold-bar{height:4px;background:var(--n-100,#eee);border-radius:9px;margin-top:6px;overflow:hidden}.ksold-bar i{display:block;height:100%;background:var(--atlas,#087a5b);border-radius:9px}.ksold-ai{border-color:color-mix(in srgb,var(--atlas,#087a5b) 35%,transparent);background:color-mix(in srgb,var(--atlas,#087a5b) 5%,var(--surface,#fff))}.ksold-ai-tag{font:600 10px var(--sans);letter-spacing:.085em;text-transform:uppercase;color:var(--atlas,#087a5b);margin-bottom:10px}.ksold-rec{padding:11px 0;border-top:1px solid color-mix(in srgb,var(--atlas,#087a5b) 16%,transparent)}.ksold-rec b{display:block;font-size:13px;margin-bottom:4px}.ksold-rec p{font-size:12px;line-height:1.45;color:var(--n-600,#666);margin:0}.ksold-full{grid-column:1/-1}.ksold-time{font:11px var(--sans);font-variant-numeric:tabular-nums;color:var(--n-500,#777);margin-top:2px}@media(max-width:850px){.ksold{padding:16px}.ksold-head{align-items:flex-start;flex-direction:column}.ksold-days{justify-content:flex-start}.ksold-picker{justify-content:flex-start}.ksold-grid{grid-template-columns:1fr}}@media(max-width:520px){.ksold-date-fields{grid-template-columns:1fr}}';
     /* The till does not load genpage.css. Keep the shared KPI and empty-state
        primitives inside this component too, otherwise the figures collapse
        into plain text and the raw SVG expands across the whole caisse. */
     s.textContent += '.ksold .kx-kpi-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--n-200,#dedbd5);border:1px solid var(--n-200,#dedbd5);border-radius:18px;overflow:hidden;margin-bottom:18px;box-shadow:0 1px 2px rgba(10,15,13,.04),0 10px 26px -16px rgba(10,15,13,.1)}.ksold .kx-kpi{background:var(--surface,#fff);padding:15px 18px 16px;min-width:0}.ksold .kx-kpi .l{font:500 10px/1.3 var(--sans);letter-spacing:.075em;color:var(--n-500,#777);text-transform:uppercase}.ksold .kx-kpi .v{font:600 29px/1.02 var(--num,var(--sans));font-variant-numeric:tabular-nums;letter-spacing:-.032em;color:var(--ink,#111);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ksold .kx-kpi .v .u{font:500 12.5px/1.45 var(--sans);letter-spacing:0;color:var(--n-500,#777);margin-left:4px}.ksold .kx-empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:54px 24px 56px;border:1px dashed var(--n-200,#dedbd5);border-radius:18px;background:var(--paper-soft,#f5f3ef)}.ksold .kx-empty .ico{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:var(--surface,#fff);border:1px solid var(--n-200,#dedbd5);color:var(--atlas,#087a5b);margin-bottom:15px}.ksold .kx-empty .ico svg{display:block;width:22px;height:22px;fill:currentColor}.ksold .kx-empty h3{font:600 16.5px/1.3 var(--sans);letter-spacing:-.02em;color:var(--ink,#111);margin:0}.ksold .kx-empty p{font:400 13.5px/1.55 var(--sans);color:var(--n-500,#777);margin:8px 0 0;max-width:42ch}@media(max-width:760px){.ksold .kx-kpi-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:420px){.ksold .kx-kpi-strip{grid-template-columns:minmax(0,1fr)}}';
     document.head.appendChild(s);
   }
-  function dayControls(days, till) {
-    return [1,7,30,90].filter(function(d){ return !till || d <= 30; }).map(function (d) {
+  function rangeLabel(range) {
+    if (!range) return 'Dates';
+    var from = parseDateKey(range.from), to = parseDateKey(range.to);
+    var options = { day:'numeric', month:'short' };
+    if (range.from === range.to) return from.toLocaleDateString('fr-FR', options);
+    return from.toLocaleDateString('fr-FR', options) + ' – ' + to.toLocaleDateString('fr-FR', options);
+  }
+  function dayControls(days, till, custom) {
+    var quick = [1,7,30,90].filter(function(d){ return !till || d <= 30; }).map(function (d) {
       var label = d === 1 ? "Aujourd'hui" : d + ' jours';
-      return '<button type="button" class="' + (days === d ? 'on' : '') + '" data-ksold-days="' + d + '" data-ksold-till="' + (till?'1':'0') + '">' + label + '</button>';
+      return '<button type="button" class="' + (!custom && days === d ? 'on' : '') + '" data-ksold-days="' + d + '">' + label + '</button>';
     }).join('');
+    return quick + '<button type="button" class="' + (custom ? 'on' : '') + '" data-ksold-custom="1">' + esc(rangeLabel(custom)) + '</button>';
+  }
+  function pickerMarkup(till) {
+    var p = till ? tillPicker : dashboardPicker;
+    if (!p.open) return '';
+    var max = dateKey(new Date());
+    var fields = p.mode === 'day'
+      ? '<div class="ksold-date-fields one"><label>Jour exact<input type="date" max="'+max+'" value="'+esc(p.day)+'" data-ksold-day></label></div>'
+      : '<div class="ksold-date-fields"><label>Du<input type="date" max="'+max+'" value="'+esc(p.from)+'" data-ksold-from></label><label>Au<input type="date" max="'+max+'" value="'+esc(p.to)+'" data-ksold-to></label></div>';
+    return '<div class="ksold-picker"><div class="ksold-picker-box"><div class="ksold-modes"><button type="button" class="'+(p.mode==='day'?'on':'')+'" data-ksold-mode="day">Jour exact</button><button type="button" class="'+(p.mode==='range'?'on':'')+'" data-ksold-mode="range">Période</button></div>'+fields+'<div class="ksold-picker-actions"><span class="ksold-date-error">'+esc(p.error||'')+'</span><button type="button" data-ksold-cancel>Annuler</button><button type="button" data-ksold-apply>Appliquer</button></div></div></div>';
   }
   function recommendations(a) {
     var out = [];
@@ -146,7 +199,7 @@
    * Icon is Material Symbols (Outlined 400, viewBox="0 -960 960 960"), per the
    * icon rule in CLAUDE.md §4 — currentColor fill, no hand-drawn paths. */
   function emptyState(a) {
-    var per = a.days === 1 ? "aujourd’hui" : 'sur les ' + a.days + ' derniers jours';
+    var per = a.custom ? 'du ' + rangeLabel(a.custom) : (a.days === 1 ? "aujourd’hui" : 'sur les ' + a.days + ' derniers jours');
     return '<div class="kx-empty">'
       + '<div class="ico"><svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M280-80q-33 0-56.5-23.5T200-160v-480q0-33 23.5-56.5T280-720h80q0-83 58.5-141.5T560-920q83 0 141.5 58.5T760-720h80q33 0 56.5 23.5T920-640v480q0 33-23.5 56.5T840-80H280Zm0-80h560v-480h-80v80q0 17-11.5 28.5T720-520q-17 0-28.5-11.5T680-560v-80H440v80q0 17-11.5 28.5T400-520q-17 0-28.5-11.5T360-560v-80h-80v480Zm160-560h240q0-50-35-85t-85-35q-50 0-85 35t-35 85ZM280-160v-480 480Z"/></svg></div>'
       + '<h3>Aucune vente détaillée ' + esc(per) + '</h3>'
@@ -164,7 +217,7 @@
     return '<section class="ksold-card"><h2>Produits</h2><div class="ksold-note">Quantité, chiffre et dernière vente</div>'+productRows+'</section>'+ai+'<section class="ksold-card"><h2>Catégories</h2><div class="ksold-note">Contribution par rayon</div>'+catRows+'</section>'+(owner?'<section class="ksold-card"><h2>Produits vendus ensemble</h2><div class="ksold-note">Paniers réellement observés</div>'+pairRows+'</section>':'')+'<section class="ksold-card ksold-full"><h2>Historique détaillé</h2><div class="ksold-note">Quand et dans quel panier chaque produit a été vendu</div>'+timeline+'</section>';
   }
   function shell(a, owner, loading) {
-    return '<div class="ksold"><div class="ksold-head"><div>'+(owner?'':'<h1>Vendus</h1>')+'<div class="ksold-sub">'+(owner?'Période analysée':'Stock vendu, catégories et détail des tickets')+(loading?' · synchronisation…':'')+'</div></div><div class="ksold-days">'+dayControls(a.days,!owner)+'</div></div><div class="kx-kpi-strip"><div class="kx-kpi"><div class="l">Pièces vendues</div><div class="v">'+a.units+'</div></div><div class="kx-kpi"><div class="l">Produits actifs</div><div class="v">'+a.products.length+'</div></div><div class="kx-kpi"><div class="l">Tickets analysés</div><div class="v">'+a.tickets+'</div></div><div class="kx-kpi"><div class="l">Chiffre produits</div><div class="v">'+fmt(a.revenue)+'<span class="u">MAD</span></div></div></div><div class="ksold-grid">'+body(a,owner)+'</div></div>';
+    return '<div class="ksold"><div class="ksold-head"><div>'+(owner?'':'<h1>Vendus</h1>')+'<div class="ksold-sub">'+(owner?'Période analysée':'Stock vendu, catégories et détail des tickets')+(loading?' · synchronisation…':'')+'</div></div><div class="ksold-days">'+dayControls(a.days,!owner,a.custom)+'</div></div>'+pickerMarkup(!owner)+'<div class="kx-kpi-strip"><div class="kx-kpi"><div class="l">Pièces vendues</div><div class="v">'+a.units+'</div></div><div class="kx-kpi"><div class="l">Produits actifs</div><div class="v">'+a.products.length+'</div></div><div class="kx-kpi"><div class="l">Tickets analysés</div><div class="v">'+a.tickets+'</div></div><div class="kx-kpi"><div class="l">Chiffre produits</div><div class="v">'+fmt(a.revenue)+'<span class="u">MAD</span></div></div></div><div class="ksold-grid">'+body(a,owner)+'</div></div>';
   }
   function localTill() {
     try {
@@ -176,29 +229,46 @@
   function renderTill(panel) {
     if (!panel) return; ensureStyle();
     var source = localTill().concat(tillSales);
-    panel.innerHTML = shell(analyze(source,tillDays),false,tillLoading);
+    panel.innerHTML = shell(analyze(source,tillRange || tillDays),false,tillLoading);
     wire(panel, true);
     fetchTill(panel);
   }
   function fetchTill(panel) {
-    var m = slug(); if (!m || tillLoading || (tillMerchant === m && tillSales.length)) return;
+    var m = slug(); if (!m || tillLoading) return;
+    if (tillMerchant !== m) { tillMerchant=m; tillSales=[]; tillFetched=false; tillLoadedFrom=Infinity; }
+    var from = bounds(tillRange || tillDays).previousFrom;
+    if (tillFetched && tillLoadedFrom <= from) return;
     tillLoading = true; renderTillNoFetch(panel);
-    var from = Date.now() - 90 * DAY;
     fetch('/api/feed?merchant='+encodeURIComponent(m)+'&from='+from,{credentials:'same-origin',headers:{Accept:'application/json'}})
       .then(function(r){return r.ok?r.json():null;})
-      .then(function(j){tillSales=(j&&j.sales)||[];tillMerchant=m;})
+      .then(function(j){tillSales=(j&&j.sales)||[];tillLoadedFrom=from;tillFetched=true;})
       .catch(function(){}).finally(function(){tillLoading=false;renderTillNoFetch(panel);});
   }
-  function renderTillNoFetch(panel){ if(!panel)return;panel.innerHTML=shell(analyze(localTill().concat(tillSales),tillDays),false,tillLoading);wire(panel,true); }
+  function renderTillNoFetch(panel){ if(!panel)return;panel.innerHTML=shell(analyze(localTill().concat(tillSales),tillRange || tillDays),false,tillLoading);wire(panel,true); }
   function dashboardSales() { try { return (window.KiwiSales && KiwiSales.list && KiwiSales.list()) || []; } catch (_) { return []; } }
   function renderDashboard() {
-    ensureStyle(); var a = analyze(dashboardSales(),dashboardDays);
+    ensureStyle(); var a = analyze(dashboardSales(),dashboardRange || dashboardDays);
     if (!window.Kiwi || !Kiwi.appPage) return;
     Kiwi.appPage('sold',{title:'Vendus',subtitle:'Analyse de vos produits vendus · données de cette boutique',body:shell(a,true,false)});
     wire(document, false);
   }
   function wire(root, till) {
-    Array.prototype.forEach.call(root.querySelectorAll('[data-ksold-days]'),function(b){ b.onclick=function(){ var d=Number(b.dataset.ksoldDays)||7;if(till){tillDays=d;var p=b.closest('[data-bq-panel="vendus"]');renderTillNoFetch(p);}else{dashboardDays=d;renderDashboard();} }; });
+    var rerender = function(fetchMore){ if(till){renderTillNoFetch(root);if(fetchMore)fetchTill(root);}else{renderDashboard();} };
+    var picker = till ? tillPicker : dashboardPicker;
+    Array.prototype.forEach.call(root.querySelectorAll('[data-ksold-days]'),function(b){ b.onclick=function(){ var d=Number(b.dataset.ksoldDays)||7;picker.open=false;picker.error='';if(till){tillDays=d;tillRange=null;}else{dashboardDays=d;dashboardRange=null;}rerender(true); }; });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-ksold-custom]'),function(b){ b.onclick=function(){picker.open=!picker.open;picker.error='';rerender(false);}; });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-ksold-mode]'),function(b){ b.onclick=function(){picker.mode=b.dataset.ksoldMode;picker.error='';rerender(false);}; });
+    var cancel = root.querySelector('[data-ksold-cancel]'); if(cancel) cancel.onclick=function(){picker.open=false;picker.error='';rerender(false);};
+    var apply = root.querySelector('[data-ksold-apply]'); if(apply) apply.onclick=function(){
+      var from, to;
+      if(picker.mode==='day') { var one=root.querySelector('[data-ksold-day]');from=to=one&&one.value;picker.day=from||picker.day; }
+      else { var first=root.querySelector('[data-ksold-from]'),last=root.querySelector('[data-ksold-to]');from=first&&first.value;to=last&&last.value;picker.from=from||picker.from;picker.to=to||picker.to; }
+      var a=parseDateKey(from),z=parseDateKey(to),today=parseDateKey(dateKey(new Date()));
+      if(!a||!z){picker.error='Choisissez la date.';rerender(false);return;}
+      if(a>z){picker.error='La fin doit venir après le début.';rerender(false);return;}
+      if(z>today){picker.error='La période ne peut pas finir dans le futur.';rerender(false);return;}
+      var selected={from:dateKey(a),to:dateKey(z)};picker.open=false;picker.error='';if(till)tillRange=selected;else dashboardRange=selected;rerender(true);
+    };
   }
   function installDashboard() {
     var H = window.Kiwi && Kiwi.handlers; if (!H) { setTimeout(installDashboard,50); return; }

@@ -50,7 +50,7 @@ const server = http.createServer((req, res) => {
       </style>
       <script>window.KiwiEnv={isReal:()=>false,demosAllowed:true};window.KiwiPosDispatch={register:s=>window.__maisonSpec=s,lock:()=>{}};</script>
       <script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
-      <script src="/assets/boutique-catalog.js"></script><script src="/assets/pos-maison.js"></script>
+      <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script src="/assets/pos-maison.js"></script>
     </head><body><div id="toast-stack"></div><div class="vx-screen is-on" id="pos-maison"></div>
       <script>window.__maisonSpec.mount(document.getElementById('pos-maison'));</script>
     </body></html>`);
@@ -118,6 +118,14 @@ try {
     }), view);
     ok(state.activeNav && state.activePanel && state.visiblePanel === view, `rail opens ${view}`);
   }
+  await page.click('[data-mz-view="vendus"]');
+  await page.click('[data-ksold-custom]');
+  ok(await page.$eval('[data-ksold-mode="day"]', (el) => el.classList.contains('on')), 'Vendus opens the exact-day calendar inside Maison');
+  await page.click('[data-ksold-mode="range"]');
+  await page.$eval('[data-ksold-from]', (el) => { el.value = '2026-09-10'; });
+  await page.$eval('[data-ksold-to]', (el) => { el.value = '2026-09-11'; });
+  await page.click('[data-ksold-apply]');
+  ok(/10.*11/.test(await page.$eval('[data-ksold-custom]', (el) => el.textContent)), 'Vendus applies a custom period inside the real Maison panel');
   ok(errors.length === 0, 'all Maison navigation clicks complete without a browser error: ' + errors.join(' | '));
   console.log(`\n✓ ${checks} rendered Maison caisse checks passed.`);
 } finally {

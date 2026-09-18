@@ -54,6 +54,23 @@ try {
   assert.deepEqual(desktop.icon, [46, 46]);
   assert.deepEqual(desktop.svg, [22, 22]);
   assert.equal(desktop.pageWidth, 1440);
+  await page.click('[data-ksold-custom]');
+  const exactPicker = await page.evaluate(() => ({
+    visible: !!document.querySelector('.ksold-picker'),
+    mode: document.querySelector('[data-ksold-mode="day"]')?.classList.contains('on'),
+    dates: document.querySelectorAll('.ksold-picker input[type="date"]').length,
+  }));
+  assert.deepEqual(exactPicker, { visible:true, mode:true, dates:1 });
+  await page.click('[data-ksold-mode="range"]');
+  const rangePicker = await page.evaluate(() => ({
+    mode: document.querySelector('[data-ksold-mode="range"]')?.classList.contains('on'),
+    dates: document.querySelectorAll('.ksold-picker input[type="date"]').length,
+  }));
+  assert.deepEqual(rangePicker, { mode:true, dates:2 });
+  await page.$eval('[data-ksold-from]', (el) => { el.value = '2026-09-10'; });
+  await page.$eval('[data-ksold-to]', (el) => { el.value = '2026-09-11'; });
+  await page.click('[data-ksold-apply]');
+  assert.match(await page.$eval('[data-ksold-custom]', (el) => el.textContent), /10.*11/);
   await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
   const mobile = await page.evaluate(() => ({
     columns: getComputedStyle(document.querySelector('.kx-kpi-strip')).gridTemplateColumns.split(' ').length,

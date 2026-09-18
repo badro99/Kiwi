@@ -39,6 +39,16 @@ ok('maps product category', a.categories.some(c => c.name === 'Hauts' && c.qty =
 ok('finds products bought together', a.pairs.some(p => p.a === 'Chemise' && p.b === 'Jean' && p.count === 1));
 ok('carries current stock', a.products.find(p => p.name === 'Ceinture').stock === 1);
 
+const dated = [
+  { ref:'D1', ts:new Date(2026,8,10,9,30).getTime(), amount:100, lines:[{name:'Chemise',qty:1,total:100}] },
+  { ref:'D2', ts:new Date(2026,8,11,18,45).getTime(), amount:200, lines:[{name:'Jean',qty:1,total:200}] },
+  { ref:'D3', ts:new Date(2026,8,12,0,1).getTime(), amount:300, lines:[{name:'Ceinture',qty:1,total:300}] },
+];
+const exact = window.KiwiSoldInsights.analyze(dated, { from:'2026-09-11', to:'2026-09-11' });
+ok('exact calendar day includes the whole selected day', exact.tickets === 1 && exact.sales[0].ref === 'D2');
+const period = window.KiwiSoldInsights.analyze(dated, { from:'2026-09-10', to:'2026-09-11' });
+ok('calendar period includes both endpoints and excludes the next day', period.tickets === 2 && period.revenue === 300);
+
 const src = fs.readFileSync(path.join(ROOT,'assets','sold-insights.js'),'utf8');
 const venues = fs.readFileSync(path.join(ROOT,'assets','venues.js'),'utf8');
 const caisse = fs.readFileSync(path.join(ROOT,'assets','pos-boutique.js'),'utf8');
@@ -50,6 +60,8 @@ ok('cashier has Vendus panel', /data-bq-view="vendus"/.test(caisse) && /data-bq-
 ok('dashboard keeps only its page-level Vendus title', /\(owner\?'':'<h1>Vendus<\/h1>'\)/.test(src));
 ok('recommendations are evidence gated', /pairs\[0\][\s\S]{0,80}count\s*>=\s*2/.test(src));
 ok('cashier component owns KPI and empty-state layout', /\.ksold \.kx-kpi-strip\{display:grid/.test(src) && /\.ksold \.kx-empty \.ico svg\{display:block;width:22px;height:22px/.test(src));
+ok('Vendus exposes exact-day and period calendar modes', /data-ksold-mode="day"/.test(src) && /data-ksold-mode="range"/.test(src) && /type="date"/.test(src));
+ok('Maison and boutique tills rerender their actual panel root', /renderTillNoFetch\(root\)/.test(src) && !/closest\('\[data-bq-panel="vendus"\]'\)/.test(src));
 
 if (fail.length) { fail.forEach(x => console.log('  ✗ '+x)); process.exit(1); }
 console.log('  ✓ Vendus ('+pass+' contrôles : historique existant, produits, catégories, paniers, stock, isolation, recommandations)');
