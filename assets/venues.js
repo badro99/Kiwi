@@ -387,6 +387,7 @@
       header: { fr: 'Maison & décoration', en: 'Home & decor', ar: 'المنزل والديكور' },
       items: [
         { nav: 'inventory', tag: 'LIVE', label: { fr: 'Pièces & collections', en: 'Pieces & collections', ar: 'القطع والمجموعات' } },
+        { nav: 'stock', label: { fr: 'Fournisseurs & achats', en: 'Suppliers & purchasing', ar: 'الموردون والمشتريات' } },
         { nav: 'categories', label: { fr: 'Rayons & matières', en: 'Departments & materials', ar: 'الأقسام والمواد' } },
         { nav: 'promos', label: { fr: 'Offres & coffrets', en: 'Offers & gift sets', ar: 'العروض ومجموعات الهدايا' } },
         { nav: 'returns', label: { fr: 'Retours & échanges', en: 'Returns & exchanges', ar: 'المرتجعات والاستبدالات' } },

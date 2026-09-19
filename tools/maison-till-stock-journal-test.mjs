@@ -163,6 +163,10 @@ ok('« Déclarer Casse » passe par requestManual',
   /function recordCasse[\s\S]{0,1600}MZ\.requestManual\(\{\s*productId: pid, variantId: vid, type: 'casse'/.test(MAISON));
 ok('et l\'écran attend la réponse avant de se redessiner',
   /Promise\.resolve\(recordCasse\([\s\S]{0,120}\)\)\s*\.then\(/.test(MAISON));
+ok('les réceptions et retours fournisseurs ciblent une variante exacte',
+  /function procurementLine\([\s\S]{0,700}variantId:select\?\.value/.test(MAISON));
+ok('les mouvements fournisseurs de la caisse passent par le code responsable',
+  /function postMaisonProcurement[\s\S]{0,1600}MZ\.requestManual\(\{productId:line\.itemId,variantId:variant\.id,type:kind===\'return\'\?\'retour-fourn\':\'reception\'/.test(MAISON));
 
 /* ── verdict ─────────────────────────────────────────────────────────────── */
 if (fails.length) {

@@ -112,7 +112,8 @@ const FEATURES = {
   kds:          { keys: ['stations', 'list'],                      max: 200000 },
   payroll:      { keys: ['periods', 'list'],                       max: 400000 },
   suppliers:    { keys: ['list'],                                  max: 200000 },
-  procurement:  { keys: ['suppliers', 'orders', 'receipts', 'invoices', 'seq'], max: 900000 },
+  procurement:  { keys: ['suppliers', 'orders', 'receipts', 'returns', 'invoices', 'seq'], max: 900000 },
+  giftregistries:{ keys: ['list'],                                  max: 600000 },
   /* Operational state can contain a compact condition photo (pressing damage
    * proof). Keep the document cap authoritative while allowing one bounded
    * image string; the generic 4 kB string ceiling is appropriate for notes,

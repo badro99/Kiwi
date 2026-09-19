@@ -90,11 +90,12 @@ assert.equal(repaired, 1, 'a terminal with no dashboard session is handed the ke
 /* Quoi qu'il arrive pendant la réparation, la ligne continue de NOMMER les
    trente et une ventes. C'est la seule chose qu'un commerçant regarde. */
 for (let i = 0; i < 8; i++) await new Promise(resolve => setImmediate(resolve));
-/* Et le geste va jusqu'au bout : une fois la preuve reposée, la file repart
-   et les trente et une ventes quittent la tablette. C'est la seule fin qui
-   compte — le libellé n'était qu'un moyen d'y arriver. */
-assert.match(messages.at(-1)[0], /Synchronisation réussie/,
-  'the repaired till replays its queue instead of holding it');
-assert.equal(label.textContent, 'Synchronisé');
+/* Ouvrir le pavé n'est pas encore reposer la preuve httpOnly. La file doit
+   attendre la validation des six chiffres ; submit() dans caisse-pairing.js
+   la rejoue ensuite. Un flush ici reproduirait le second 403 du ticket #0077. */
+assert.doesNotMatch(messages.at(-1)[0], /Synchronisation réussie/,
+  'opening the keypad does not claim the queue was replayed');
+assert.equal(sales.pending, 31, 'all queued sales stay durable until the pairing code is redeemed');
+assert.match(label.textContent, /Caisse à réappairer · 31 en attente/);
 
 console.log('operating-day-sync-status: 18 checks passed');

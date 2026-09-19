@@ -7,11 +7,11 @@
 
   var store = window.KiwiStore.define('procurement', {
     cloud: 'procurement',
-    blank: function () { return { suppliers: [], orders: [], receipts: [], invoices: [], seq: 0 }; },
-    isEmpty: function (d) { return !d || !(d.suppliers?.length || d.orders?.length || d.receipts?.length || d.invoices?.length); },
+    blank: function () { return { suppliers: [], orders: [], receipts: [], returns: [], invoices: [], seq: 0 }; },
+    isEmpty: function (d) { return !d || !(d.suppliers?.length || d.orders?.length || d.receipts?.length || d.returns?.length || d.invoices?.length); },
     merge: function (mine, theirs) {
-      var out = { suppliers: [], orders: [], receipts: [], invoices: [], seq: Math.max(+(mine?.seq || 0), +(theirs?.seq || 0)) };
-      ['suppliers', 'orders', 'receipts', 'invoices'].forEach(function (key) {
+      var out = { suppliers: [], orders: [], receipts: [], returns: [], invoices: [], seq: Math.max(+(mine?.seq || 0), +(theirs?.seq || 0)) };
+      ['suppliers', 'orders', 'receipts', 'returns', 'invoices'].forEach(function (key) {
         var map = new Map();
         (theirs?.[key] || []).concat(mine?.[key] || []).forEach(function (row) {
           if (!row?.id) return; var old = map.get(row.id);
@@ -34,7 +34,7 @@
      * (inventory-ledger.js) : à 2 décimales, un ingrédient au gramme tombe à
      * 0,00 et fausse le coût matière. L'affichage arrondit en aval. */
     var cost = Math.round(Math.max(0, +(x?.unitCost || 0)) * 10000) / 10000;
-    return { itemId: String(x?.itemId || '').slice(0, 80), name: String(x?.name || '').slice(0, 120), qty: qty, unit: String(x?.unit || 'unité').slice(0, 24), unitCost: cost };
+    return { itemId: String(x?.itemId || '').slice(0, 80), variantId: String(x?.variantId || '').slice(0, 80), name: String(x?.name || '').slice(0, 120), qty: qty, unit: String(x?.unit || 'unité').slice(0, 24), unitCost: cost };
   }
   function next(prefix) {
     var out = '';
@@ -55,7 +55,10 @@
       if (fixedId && d.suppliers.some(function (s) { return s && s.id === fixedId; })) {
         row = d.suppliers.find(function (s) { return s && s.id === fixedId; }); return d;
       }
-      row = { id: fixedId || nextId(d, 'sup'), name: String(input.name || '').trim().slice(0, 120), phone: String(input.phone || '').trim().slice(0, 40), email: String(input.email || '').trim().slice(0, 120), leadDays: Math.max(0, Math.round(+input.leadDays || 0)), active: input.active !== false, createdAt: now, updatedAt: now };
+      row = { id: fixedId || nextId(d, 'sup'), name: String(input.name || '').trim().slice(0, 120), phone: String(input.phone || '').trim().slice(0, 40), email: String(input.email || '').trim().slice(0, 120),
+        address: String(input.address || '').trim().slice(0, 240), taxId: String(input.taxId || '').trim().slice(0, 80), paymentTerms: String(input.paymentTerms || '').trim().slice(0, 120),
+        categories: String(input.categories || '').trim().slice(0, 240), notes: String(input.notes || '').trim().slice(0, 500),
+        leadDays: Math.max(0, Math.round(+input.leadDays || 0)), active: input.active !== false, createdAt: now, updatedAt: now };
       if (!row.name) return d; d.suppliers.unshift(row); return d;
     });
     return row?.name ? row : null;
@@ -73,6 +76,18 @@
   function markSent(orderId) {
     if (!ultra()) return { error: 'ultra-required' }; var hit = null;
     store.update(function (d) { hit = d.orders.find(function (x) { return x.id === orderId; }); if (hit && hit.status === 'draft') { hit.status = 'sent'; hit.sentAt = Date.now(); hit.updatedAt = hit.sentAt; } return d; });
+    return hit;
+  }
+  function cancelOrder(orderId, reason) {
+    if (!ultra()) return { error: 'ultra-required' }; var hit = null;
+    store.update(function (d) {
+      hit = d.orders.find(function (x) { return x.id === orderId; });
+      if (hit && !['received', 'cancelled'].includes(hit.status)) {
+        hit.status = 'cancelled'; hit.cancelReason = String(reason || '').slice(0, 240);
+        hit.cancelledAt = Date.now(); hit.updatedAt = hit.cancelledAt;
+      }
+      return d;
+    });
     return hit;
   }
   function economatReceiptLocation() {
@@ -112,7 +127,7 @@
       /* skipMovements : l'appelant est le seul propriétaire des mouvements
        * (guichet unique — le registre déduplique sur l'id du mouvement). */
       if (!input.skipMovements) {
-        window.KiwiInventory?.add?.({ id: `inv-${row.id}-${idx}`, itemId: line.itemId, locationId: economatReceiptLocation(), qty: line.qty, reason: 'receipt', unitCost: line.unitCost || null, refType: 'receipt', refId: row.id, occurredTs: row.receivedAt, note: row.externalRef || row.number });
+        window.KiwiInventory?.add?.({ id: `inv-${row.id}-${idx}`, itemId: line.itemId, variantId: line.variantId, locationId: economatReceiptLocation(), qty: line.qty, reason: 'receipt', unitCost: line.unitCost || null, refType: 'receipt', refId: row.id, occurredTs: row.receivedAt, note: row.externalRef || row.number });
       }
       /* skipCosts : l'appelant applique ses propres règles (cases à cocher). */
       if (!input.skipCosts && line.unitCost > 0 && (!gate || gate[line.itemId])) window.KiwiCost?.setItemCost?.(line.itemId, line.unitCost, row.supplierId);
@@ -125,6 +140,25 @@
     var order = store.get().orders.find(function (x) { return x.id === orderId; });
     if (!order || ['cancelled', 'received'].includes(order.status)) return { error: 'invalid-order-state' };
     input = Object.assign({}, input || {}, { supplierId: order.supplierId }); return writeReceipt(input, order);
+  }
+  function returnToSupplier(input) {
+    input = input || {};
+    var lines = (input.lines || []).map(cleanLine).filter(function (x) { return x.itemId && x.qty > 0; });
+    if (!input.supplierId || !lines.length) return { error: 'invalid-return' };
+    var row;
+    store.update(function (d) {
+      var now = Date.now(); row = { id: nextId(d, 'ret'), number: 'RF-' + String(d.seq).padStart(5, '0'),
+        supplierId: String(input.supplierId), externalRef: String(input.externalRef || '').slice(0, 100), note: String(input.note || '').slice(0, 500),
+        lines: lines, returnedAt: +input.returnedAt || now, createdAt: now, updatedAt: now };
+      if (!Array.isArray(d.returns)) d.returns = [];
+      d.returns.unshift(row); return d;
+    });
+    lines.forEach(function (line, idx) {
+      if (input.skipMovements) return;
+      window.KiwiInventory?.add?.({ id: `inv-${row.id}-${idx}`, itemId: line.itemId, variantId: line.variantId, locationId: economatReceiptLocation(), qty: -line.qty,
+        reason: 'supplier-return', unitCost: line.unitCost || null, refType: 'supplier-return', refId: row.id, occurredTs: row.returnedAt, note: row.externalRef || row.number });
+    });
+    return row;
   }
   function attachInvoice(input) {
     if (!ultra()) return { error: 'ultra-required' };
@@ -167,5 +201,5 @@
     return [`Bonjour ${s?.name || ''},`, `Commande ${o.number}`, ...o.lines.map(function (x) { return `• ${x.name || x.itemId} · ${x.qty} ${x.unit}`; }), o.expectedDate ? `Livraison souhaitée : ${o.expectedDate}` : '', 'Merci.'].filter(Boolean).join('\n');
   }
 
-  window.KiwiProcurement = { store: store, isUltra: ultra, addSupplier: addSupplier, createOrder: createOrder, markSent: markSent, receiveDirect: receiveDirect, receiveOrder: receiveOrder, attachInvoice: attachInvoice, matchInvoice: matchInvoice, message: message, doc: function () { return store.get(); } };
+  window.KiwiProcurement = { store: store, isUltra: ultra, addSupplier: addSupplier, createOrder: createOrder, markSent: markSent, cancelOrder: cancelOrder, receiveDirect: receiveDirect, receiveOrder: receiveOrder, returnToSupplier: returnToSupplier, attachInvoice: attachInvoice, matchInvoice: matchInvoice, message: message, doc: function () { return store.get(); } };
 })();

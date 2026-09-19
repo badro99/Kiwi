@@ -85,8 +85,10 @@ assert.ok(events.some((event) => event.type === 'kiwi-paired'), 'successful repa
  * second argument est né du terminal qui n'a pas de session tableau de bord :
  * un geste du caissier autorise l'ouverture du pavé à six chiffres, la
  * tentative silencieuse reste silencieuse. Voir caisse-pairing-recovery-test. */
-assert.match(pwaSource, /lastStatus === 401 \|\| qNow\.lastStatus === 403[\s\S]{0,500}repairPairing\(true, true\)\.then[\s\S]{0,500}KiwiLive\.flush\(true\)/,
-  'manual auth recovery repairs pairing before replaying receipts');
+assert.match(pwaSource, /repairPairing\(true, true\)\.then\(function \(result\)[\s\S]{0,500}result && result\.pad[\s\S]{0,500}KiwiLive\.flush\(true\)/,
+  'manual auth recovery waits for a real pairing before replaying receipts');
+assert.match(pwaSource, /result && result\.waitingForPairCode[\s\S]{0,160}status\(\)[\s\S]{0,80}return/,
+  'opening the code pad releases the status spinner without showing another 403');
 assert.match(pairingSource, /bootWithPin\(handed\);[\s\S]{0,180}pairFromAccount\(handed\)/,
   'same-device dashboard hand-off also mints the secure till proof');
 

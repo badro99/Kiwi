@@ -132,8 +132,8 @@
     "sha": "ea596c3fbdbddccb"
   },
   "assets/caisse-pwa.js": {
-    "v": "529",
-    "sha": "e0b29150e26bb1ca"
+    "v": "531",
+    "sha": "cfd5b4c025bd2cd2"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -168,16 +168,16 @@
     "sha": "ec5fa6bd71818a12"
   },
   "assets/clients-book.js": {
-    "v": "10",
-    "sha": "6b257b5b2de1b441"
+    "v": "11",
+    "sha": "0e8eb08651af68c5"
   },
   "assets/clients-directory.js": {
     "v": "3",
     "sha": "ee0857960783f7c2"
   },
   "assets/clients-store.js": {
-    "v": "5",
-    "sha": "2e367fbc0e624a0a"
+    "v": "6",
+    "sha": "1c320d2de7d2cec5"
   },
   "assets/cloud-doc.js": {
     "v": "7",
@@ -208,8 +208,8 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "522",
-    "sha": "feaf77dee6814f9b"
+    "v": "523",
+    "sha": "1e0aecf56d07bca4"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -264,8 +264,8 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/employee-live.js": {
-    "v": "521",
-    "sha": "257a56704563133b"
+    "v": "522",
+    "sha": "7f6cb98ee9667617"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -609,7 +609,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "42",
-    "sha": "50e2d3de4a5f3470"
+    "sha": "cc2adb37b56143d5"
   },
   "assets/pos-epicerie.css": {
     "v": "5",
@@ -672,12 +672,12 @@
     "sha": "782a2a019b86fc81"
   },
   "assets/pos-maison.css": {
-    "v": "33",
+    "v": "34",
     "sha": "9071d911e6928917"
   },
   "assets/pos-maison.js": {
-    "v": "33",
-    "sha": "926b88def8e03e1e"
+    "v": "34",
+    "sha": "335ad816cdd5ce41"
   },
   "assets/pos-mobile.css": {
     "v": "3",
@@ -776,8 +776,8 @@
     "sha": "a77e45eb1a328790"
   },
   "assets/procurement.js": {
-    "v": "2",
-    "sha": "f0fe3e749b82f556"
+    "v": "3",
+    "sha": "d9efb9473a0a2cdb"
   },
   "assets/production-action-guard.js": {
     "v": "1",
@@ -828,8 +828,8 @@
     "sha": "d1333d22f26e3570"
   },
   "assets/retail-scan.css": {
-    "v": "7",
-    "sha": "60c57d3b95133a41"
+    "v": "8",
+    "sha": "37c5c4f2be50120f"
   },
   "assets/retail-scan.js": {
     "v": "7",
@@ -924,8 +924,8 @@
     "sha": "dfa3b4d5ebb25d51"
   },
   "assets/venues.js": {
-    "v": "34",
-    "sha": "6fe658c40dda1375"
+    "v": "35",
+    "sha": "9f40ed310a202f0a"
   },
   "assets/vertical-state.js": {
     "v": "1",

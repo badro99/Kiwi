@@ -45,6 +45,7 @@ const server = http.createServer((req, res) => {
       <link rel="stylesheet" href="/assets/tokens.css">
       <link rel="stylesheet" href="/assets/caisse-dna.css">
       <link rel="stylesheet" href="/assets/pos-maison.css">
+      <link rel="stylesheet" href="/assets/retail-scan.css">
       <style>
         html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper,#f7f5f0);font-family:Arial,sans-serif}
         button,input{font:inherit} button{border:0} .vx-screen{display:flex} .modal-veil{display:none}.modal-veil.is-open{display:flex}
@@ -52,8 +53,8 @@ const server = http.createServer((req, res) => {
       <script>window.KiwiEnv={isReal:()=>false,demosAllowed:true};window.KiwiPosDispatch={register:s=>window.__maisonSpec=s,lock:()=>{}};</script>
       <script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
       <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script src="/assets/pos-maison.js"></script>
-    </head><body><div id="toast-stack"></div><div class="vx-screen kiwi-dna is-on" id="pos-maison"></div>
-      <script>window.__maisonSpec.mount(document.getElementById('pos-maison'));</script>
+    </head><body class="is-pos-maison"><div id="toast-stack"></div><div class="vx-screen kiwi-dna is-on" id="pos-maison"></div>
+      <script>window.__maisonSpec.mount(document.getElementById('pos-maison'));document.getElementById('pos-maison').insertAdjacentHTML('beforeend','<button class="krs-launch">Scan continu</button>');</script>
     </body></html>`);
     return;
   }
@@ -108,8 +109,15 @@ try {
   ok(shell.paddingTop === '0px' && shell.paddingBottom === '0px', 'application panels ignore global marketing section padding');
   ok(shell.panelLeft >= shell.railRight && shell.headTop < 80, 'sale content starts beside the rail and at the top of the viewport');
   ok(shell.panelBottom <= shell.viewportHeight + 1, 'active Maison panel fits inside the viewport');
+  const launcher = await page.evaluate(() => {
+    const scan = document.querySelector('.krs-launch').getBoundingClientRect();
+    const ticket = document.querySelector('.mz-ticket').getBoundingClientRect();
+    return { scanRight: scan.right, ticketLeft: ticket.left, scanBottom: scan.bottom, viewportHeight: innerHeight };
+  });
+  ok(launcher.scanRight <= launcher.ticketLeft, 'continuous scan launcher does not cover the Maison checkout column');
+  ok(launcher.scanBottom <= launcher.viewportHeight, 'continuous scan launcher remains fully visible');
 
-  const views = ['vente', 'registries', 'casse', 'scan', 'inventaire', 'echanges', 'vendus', 'clientes'];
+  const views = ['vente', 'registries', 'casse', 'scan', 'inventaire', 'fournisseurs', 'echanges', 'vendus', 'clientes'];
   for (const view of views) {
     await page.click(`[data-mz-view="${view}"]`);
     const state = await page.evaluate((name) => ({
@@ -119,6 +127,33 @@ try {
     }), view);
     ok(state.activeNav && state.activePanel && state.visiblePanel === view, `rail opens ${view}`);
   }
+  await page.click('[data-mz-view="registries"]');
+  await page.click('#mz-reg-new');
+  await page.type('#mz-rn-title', 'Liste test navigateur');
+  await page.type('#mz-rn-who', 'Famille Test');
+  await page.click('#mz-rn-save');
+  ok((await page.$eval('[data-mz-panel="registries"]', (el) => el.textContent)).includes('Liste test navigateur'), 'gift registry can be created and appears in the real Maison panel');
+
+  await page.evaluate(() => { window.KiwiConfig = { ...(window.KiwiConfig || {}), features: { ...((window.KiwiConfig || {}).features || {}), caisseInventoryAdmin: true } }; });
+  await page.click('[data-mz-view="inventaire"]');
+  ok(!!(await page.$('#mzi-new')) && !!(await page.$('#mzi-category')), 'God Mode exposes full Maison inventory controls');
+  await page.click('#mzi-new');
+  await page.type('#mzi-n-name', 'Produit test navigateur');
+  await page.type('#mzi-n-price', '125');
+  await page.type('#mzi-n-cost', '50');
+  await page.type('#mzi-n-stock', '2');
+  await page.click('#mzi-n-save');
+  ok((await page.$eval('#mz-invmm', (el) => el.textContent)).includes('Produit test navigateur'), 'God Mode creates a Maison product and opens its inventory card');
+  await page.click('#mz-invmm [data-inv-x]');
+
+  await page.click('[data-mz-view="echanges"]');
+  await page.click('.mz-sline:not(.is-locked)');
+  await page.click('[data-mz-do-avoir]');
+  await page.waitForSelector('#mz-avoir-veil.is-open', { timeout: 3000 });
+  ok((await page.$eval('#mz-avoirmm', (el) => el.textContent)).includes('AV-'), 'store-credit action issues and opens a voucher');
+  await page.click('#mz-avoirmm [data-mz-close]');
+  ok((await page.$eval('[data-mz-panel="echanges"]', (el) => el.textContent)).includes('retournée'), 'issued credit marks the returned line in the sales journal');
+
   await page.click('[data-mz-view="vendus"]');
   await page.click('[data-ksold-custom]');
   ok(await page.$eval('[data-ksold-mode="day"]', (el) => el.classList.contains('on')), 'Vendus opens the exact-day calendar inside Maison');

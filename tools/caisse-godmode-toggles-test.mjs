@@ -12,6 +12,7 @@ const ROOT = path.resolve(__dirname, '..');
 const ADMIN = fs.readFileSync(path.join(ROOT, 'kiwi-admin.html'), 'utf8');
 const CONFIG_JS = fs.readFileSync(path.join(ROOT, 'assets/merchant-config.js'), 'utf8');
 const CAISSE = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const MAISON = fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8');
 
 let failed = 0;
 function check(label, ok) {
@@ -36,6 +37,13 @@ check('CAISSE_ACTIONS includes remboursement (Bouton Remboursement)', /key:'remb
 check('CAISSE_ACTIONS includes cashMove (Bouton Mouvement caisse)', /key:'cashMove'/.test(ADMIN));
 check('CAISSE_ACTIONS includes passation (Bouton Passation caisse)', /key:'passation'/.test(ADMIN));
 check('CAISSE_ACTIONS includes openDrawer (Bouton Ouvrir le tiroir)', /key:'openDrawer'/.test(ADMIN));
+check('Maison full inventory control is an explicit God Mode opt-in',
+  /key:'caisseInventoryAdmin'[\s\S]{0,120}off:true/.test(ADMIN));
+check('Maison treats only boolean true as inventory-admin authorization',
+  MAISON.includes('features.caisseInventoryAdmin === true'));
+check('Maison exposes product, category and variant tools only behind the authorization',
+  MAISON.includes("id=\"mzi-category\"") && MAISON.includes("id=\"mzi-new\"") &&
+  MAISON.includes('data-inv-addvar') && MAISON.includes('data-vdelete'));
 
 // Grouping clarity without confusing micro-switches
 check('modulesForType cleanly structures Modes de service and Actions rapides',

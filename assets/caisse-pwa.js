@@ -6,7 +6,7 @@
   if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) return;
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/kiwi-sw.js?v=582').then(function (reg) {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=583').then(function (reg) {
         try { reg.update(); } catch (_) {}
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
       }).catch(function () {});
@@ -289,7 +289,12 @@
            proof, then replay the exact same durable receipt IDs. */
         if (qNow.pending && (qNow.lastStatus === 401 || qNow.lastStatus === 403)) {
           if (sub) sub.textContent = 'Réactivation sécurisée de cette caisse…';
-          flushPromise = repairPairing(true, true).then(function () {
+          flushPromise = repairPairing(true, true).then(function (result) {
+            /* The interactive fallback has only OPENED the six-digit pad. It
+               has not restored the httpOnly till proof yet. Replaying the
+               queue here produced the second 403 visible in ticket #0077.
+               submit() in caisse-pairing owns replay after redemption. */
+            if (result && result.pad) return { waitingForPairCode: true };
             return (window.KiwiLive && window.KiwiLive.flush) ? window.KiwiLive.flush(true) : Promise.resolve();
           });
         } else {
@@ -298,8 +303,12 @@
       } catch (err) {
         flushPromise = Promise.reject(err);
       }
-      Promise.resolve(flushPromise).then(function () {
+      Promise.resolve(flushPromise).then(function (result) {
         delete d.dataset.syncing;
+        if (result && result.waitingForPairCode) {
+          status();
+          return;
+        }
         var after = { pending: 0, blocked: 0, storageError: false };
         try { if (window.KiwiLive && window.KiwiLive.queueStatus) after = window.KiwiLive.queueStatus(); } catch (_) {}
         var journalAfter = cashJournalStatus();

@@ -15,6 +15,20 @@
   font: 800 12px/1 var(--mono, monospace);
 }
 
+/* Maison keeps a permanent checkout column on the right.  The launcher used
+   the viewport edge, so it sat directly over “Encaisser” (ticket #0078).
+   Anchor it immediately before that column; the button remains reachable and
+   the amount/payment action stays fully visible. */
+body.is-pos-maison .krs-launch { right: calc(356px + 24px); }
+html[dir="rtl"] body.is-pos-maison .krs-launch,
+body.kiwi-rtl.is-pos-maison .krs-launch { right: auto; left: calc(356px + 24px); }
+
+@media (max-width: 1240px) and (min-width: 851px) {
+  body.is-pos-maison .krs-launch { right: calc(320px + 24px); }
+  html[dir="rtl"] body.is-pos-maison .krs-launch,
+  body.kiwi-rtl.is-pos-maison .krs-launch { right: auto; left: calc(320px + 24px); }
+}
+
 .krs-overlay {
   position: fixed; inset: 0; z-index: 10020; display: none;
   background: rgba(5,59,44,.52); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);

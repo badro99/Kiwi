@@ -215,11 +215,11 @@ const owner = sessionCookie(await makeSession('audit-owner', SECRET)).split(';')
   raw.prepare('INSERT INTO clients (merchant,id,name,points,stamps,visits,spend,updated_ts,srv_ts) VALUES (?,?,?,?,?,?,?,?,?)')
     .run(MERCHANT, 'client-1', 'Client', 0, 0, 0, 0, now, now);
   const env = { DB, AUTH_SECRET: SECRET };
-  const purchase = (ref, amount, clientId = 'client-1') => clientsPost({ env, request: new Request('https://kiwi.test/api/clients', {
+  const purchase = (ref, amount, clientId = 'client-1', details = {}) => clientsPost({ env, request: new Request('https://kiwi.test/api/clients', {
     method: 'POST', headers: { cookie: owner, 'content-type': 'application/json' },
-    body: JSON.stringify({ merchant: MERCHANT, purchase: { clientId, ref, amount } }),
+    body: JSON.stringify({ merchant: MERCHANT, purchase: { clientId, ref, amount, ...details } }),
   }) });
-  check((await purchase('offline-till-a', 10.25)).status === 200, 'I05 first additive purchase event preserves centime precision');
+  check((await purchase('offline-till-a', 10.25, 'client-1', { method: 'carte', saleRef: 'T-100', items: [{ name: 'Vase', qty: 1, total: 10.25 }] })).status === 200, 'I05 first additive purchase event preserves centime precision');
   check((await purchase('offline-till-b', 20)).status === 200, 'I05 second additive purchase event is accepted');
   check((await purchase('offline-till-a', 10.25)).status === 200, 'I05 purchase retry is idempotent');
   check((await purchase('offline-till-a', 11)).status === 409, 'I05 same purchase ref with a changed amount is rejected');
@@ -278,6 +278,9 @@ const owner = sessionCookie(await makeSession('audit-owner', SECRET)).split(';')
   const pulledClient = pulledBody.clients.find((row) => row.id === 'client-1');
   check(pulledClient && pulledClient.reward_refs.includes('reward-1'),
     'I05 client GET exposes acknowledged reward references for reconciliation');
+  const detailed = pulledClient && pulledClient.purchase_history.find((event) => event.ref === 'offline-till-a');
+  check(detailed && detailed.method === 'carte' && detailed.saleRef === 'T-100' && detailed.items[0].name === 'Vase',
+    'I05 client GET exposes sale date, payment, ticket and item details');
 }
 
 // I05 client surface — recordPurchase emits an additive event, not a mutable snapshot.

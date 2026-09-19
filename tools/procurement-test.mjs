@@ -25,9 +25,13 @@ const P = window.KiwiProcurement;
 const supplier = P.addSupplier({ name: 'Coopérative Atlas', phone: '0600000000', leadDays: 2 });
 ok('basic tier owns a real supplier directory', supplier && P.doc().suppliers.length === 1);
 ok('basic cannot create Ultra purchase orders', P.createOrder({ supplierId: supplier.id, lines: [{ itemId: 'flour', qty: 2 }] }).error === 'ultra-required');
-const direct = P.receiveDirect({ supplierId: supplier.id, externalRef: 'BL-7', lines: [{ itemId: 'flour', name: 'Farine', qty: 5.5, unit: 'kg', unitCost: 8 }] });
+const direct = P.receiveDirect({ supplierId: supplier.id, externalRef: 'BL-7', lines: [{ itemId: 'flour', variantId: 'flour-1kg', name: 'Farine', qty: 5.5, unit: 'kg', unitCost: 8 }] });
 ok('basic direct receipt creates a goods-received document', direct.number.startsWith('BR-') && P.doc().receipts.length === 1);
 ok('receipt writes stock truth and refreshes last cost', movements[0].qty === 5.5 && movements[0].reason === 'receipt' && costs[0].cost === 8);
+ok('receipt keeps the exact catalogue variant on the stock movement', movements[0].variantId === 'flour-1kg');
+const supplierReturn = P.returnToSupplier({ supplierId: supplier.id, externalRef: 'RF-7', lines: [{ itemId: 'flour', name: 'Farine', qty: 1.5, unit: 'kg', unitCost: 8 }] });
+ok('supplier return creates an auditable return document', supplierReturn.number.startsWith('RF-') && P.doc().returns.length === 1);
+ok('supplier return removes stock through the ledger', movements[1].qty === -1.5 && movements[1].reason === 'supplier-return');
 
 window.KiwiConfig.plan = 'ultra';
 const po = P.createOrder({ supplierId: supplier.id, expectedDate: '2026-08-15', lines: [{ itemId: 'flour', name: 'Farine', qty: 10, unit: 'kg', unitCost: 8 }] });
@@ -43,4 +47,4 @@ ok('three-way match exposes price and quantity exceptions', bad.match && !bad.ma
 ok('supplier message is generated from the actual PO lines', P.message(po.id).includes(po.number) && P.message(po.id).includes('Farine'));
 
 if (process.exitCode) process.exit(process.exitCode);
-console.log(`  ✓ procurement (${pass} controls: Basic receipts, Ultra PO lifecycle, ledger posting, three-way matching)`);
+console.log(`  ✓ procurement (${pass} controls: Basic receipts and returns, Ultra PO lifecycle, ledger posting, three-way matching)`);

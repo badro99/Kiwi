@@ -50,8 +50,11 @@ const money = (v, max = 1e9) => {
   return Math.max(0, Math.min(max, Math.round(n * 100) / 100));
 };
 const PAGE = 500;
+const purchaseSchemaReady = new WeakSet();
+const rewardSchemaReady = new WeakSet();
 
 async function ensurePurchaseEvents(env) {
+  if (purchaseSchemaReady.has(env.DB)) return;
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS client_purchase_events (
     merchant TEXT NOT NULL,
     ref TEXT NOT NULL,
@@ -66,9 +69,14 @@ async function ensurePurchaseEvents(env) {
   )`).run();
   try { await env.DB.prepare('ALTER TABLE client_purchase_events ADD COLUMN srv_ts INTEGER NOT NULL DEFAULT 0').run(); }
   catch (_) {}
+  try { await env.DB.prepare("ALTER TABLE client_purchase_events ADD COLUMN method TEXT NOT NULL DEFAULT ''").run(); } catch (_) {}
+  try { await env.DB.prepare("ALTER TABLE client_purchase_events ADD COLUMN items TEXT NOT NULL DEFAULT '[]'").run(); } catch (_) {}
+  try { await env.DB.prepare("ALTER TABLE client_purchase_events ADD COLUMN sale_ref TEXT NOT NULL DEFAULT ''").run(); } catch (_) {}
+  purchaseSchemaReady.add(env.DB);
 }
 
 async function ensureRewardEvents(env) {
+  if (rewardSchemaReady.has(env.DB)) return;
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS client_reward_events (
     merchant TEXT NOT NULL,
     ref TEXT NOT NULL,
@@ -81,6 +89,7 @@ async function ensureRewardEvents(env) {
   )`).run();
   try { await env.DB.prepare('ALTER TABLE client_reward_events ADD COLUMN srv_ts INTEGER NOT NULL DEFAULT 0').run(); }
   catch (_) {}
+  rewardSchemaReady.add(env.DB);
 }
 
 function hospitalityJson(value) {
@@ -138,6 +147,8 @@ function sanitize(raw) {
 export async function nextSrvTs(env, merchant) {
   const now = Date.now();
   try {
+    await ensurePurchaseEvents(env);
+    await ensureRewardEvents(env);
     // Kept here as well as schema.sql so an existing deployment heals before
     // its next explicit migration. The UPDATE is the serialized write: unlike
     // SELECT MAX() + Date.now(), concurrent tills cannot receive the same value.
@@ -207,6 +218,8 @@ export async function onRequestGet(context) {
   const since = Math.max(0, Number(url.searchParams.get('since')) || 0);
 
   try {
+    await ensurePurchaseEvents(env);
+    await ensureRewardEvents(env);
     const res = await env.DB.prepare(
       `SELECT id, name, phone, email, birthday, gender, city, address, notes, hospitality,
               points, stamps, visits, spend, consent, consent_email, source,
@@ -253,6 +266,28 @@ export async function onRequestGet(context) {
       list.push(row.ref); refsByClient.set(row.client_id, list);
     });
 
+    const page = JSON.stringify(rows.map((row) => ({ id: String(row.id) })));
+    const historyRows = rows.length ? await env.DB.prepare(
+      `WITH page AS (SELECT json_extract(value, '$.id') AS client_id FROM json_each(?)),
+            ranked AS (
+              SELECT event.client_id, event.ref, event.amount, event.method, event.items,
+                     event.sale_ref, event.created_ts,
+                     ROW_NUMBER() OVER (PARTITION BY event.client_id ORDER BY event.created_ts DESC) AS rn
+                FROM client_purchase_events AS event
+                JOIN page ON page.client_id = event.client_id
+               WHERE event.merchant = ?
+            )
+       SELECT client_id, ref, amount, method, items, sale_ref, created_ts
+         FROM ranked WHERE rn <= 50 ORDER BY created_ts DESC`
+    ).bind(page, merchant).all() : { results: [] };
+    const historyByClient = new Map();
+    ((historyRows && historyRows.results) || []).forEach((row) => {
+      const list = historyByClient.get(row.client_id) || [];
+      let items = []; try { items = JSON.parse(row.items || '[]'); } catch (_) {}
+      list.push({ ref: row.ref, saleRef: row.sale_ref || '', amount: Number(row.amount || 0), method: row.method || '', items, createdAt: Number(row.created_ts || 0) });
+      historyByClient.set(row.client_id, list);
+    });
+
     const rewardRefs = await pageEventRefs('client_reward_events');
     const rewardRefsByClient = new Map();
     rewardRefs.forEach((row) => {
@@ -265,6 +300,7 @@ export async function onRequestGet(context) {
       clients: rows.map((row) => ({ ...row,
         purchase_refs: refsByClient.get(row.id) || [],
         reward_refs: rewardRefsByClient.get(row.id) || [],
+        purchase_history: historyByClient.get(row.id) || [],
       })),
       cursor,
       // Le client rappelle tant que `more` est vrai : un carnet de 2 000 fiches
@@ -285,6 +321,11 @@ async function applyPurchase(env, merchant, raw) {
   const clientId = str(purchase.clientId || purchase.client_id, 64);
   const ref = str(purchase.ref, 120).replace(/[^A-Za-z0-9:_-]/g, '');
   const amount = money(purchase.amount, 1e9);
+  const method = str(purchase.method, 32);
+  const saleRef = str(purchase.saleRef || purchase.sale_ref, 80);
+  const items = JSON.stringify((Array.isArray(purchase.items) ? purchase.items : []).slice(0, 100).map((item) => ({
+    name: str(item && item.name, 120), qty: int(item && item.qty, 100000), total: money(item && item.total, 1e9),
+  })));
   if (!clientId || !ref) return json({ error: 'client-and-ref-required' }, 400);
   await ensurePurchaseEvents(env);
   const previous = await env.DB.prepare(
@@ -320,9 +361,9 @@ async function applyPurchase(env, merchant, raw) {
         AND NOT EXISTS (SELECT 1 FROM client_purchase_events WHERE merchant = ? AND ref = ?)`)
       .bind(points, stamps, amount, now, now, now, merchant, merchant, clientId, merchant, ref),
     env.DB.prepare(`INSERT OR IGNORE INTO client_purchase_events
-      (merchant, ref, client_id, amount, points, stamps, visits, created_ts, srv_ts)
-      SELECT ?, ?, ?, ?, ?, ?, 1, ?, ${cursor} WHERE changes() > 0`)
-      .bind(merchant, ref, clientId, amount, points, stamps, now, merchant),
+      (merchant, ref, client_id, amount, points, stamps, visits, created_ts, srv_ts, method, items, sale_ref)
+      SELECT ?, ?, ?, ?, ?, ?, 1, ?, ${cursor}, ?, ?, ? WHERE changes() > 0`)
+      .bind(merchant, ref, clientId, amount, points, stamps, now, merchant, method, items, saleRef),
   ]);
   if (!Number(results[2] && results[2].meta && results[2].meta.changes)) {
     const replay = await env.DB.prepare(

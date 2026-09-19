@@ -493,6 +493,16 @@
     var infoBlock = '<div class="kcb-info">' + infoRows.map(function (r) {
       return '<div class="kcb-inforow"><span class="k">' + esc(r[0]) + '</span><span class="v">' + esc(r[1]) + '</span></div>';
     }).join('') + '</div>';
+    var purchaseHistory = (Array.isArray(c.history) ? c.history : []).slice(0, 50);
+    var historyBlock = '<div class="kcb-section">Historique des achats</div>' + (purchaseHistory.length
+      ? '<div class="kcb-info">' + purchaseHistory.map(function (row) {
+          var when = row.ts ? new Date(row.ts).toLocaleString('fr-FR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Date inconnue';
+          var items = Array.isArray(row.items) && row.items.length
+            ? row.items.map(function (it) { return (it.qty || 1) + '× ' + (it.name || 'Article'); }).join(' · ')
+            : (row.ref || 'Achat enregistré');
+          return '<div class="kcb-inforow"><span class="k">' + esc(when) + '<small style="display:block;margin-top:3px">' + esc(row.method || 'Mode non renseigné') + '</small></span><span class="v"><b>' + esc(items) + '</b><small style="display:block;margin-top:3px">' + esc(row.ref ? 'Ticket ' + row.ref + ' · ' : '') + fmt(row.amount || 0) + ' MAD</small></span></div>';
+        }).join('') + '</div>'
+      : '<div class="kcb-empty" style="min-height:90px"><b>Aucun détail d’achat enregistré</b><div>Les prochains tickets attachés à ce client apparaîtront ici.</div></div>');
     sheet(
       '<div class="kcb-dhead"><div class="kcb-av">' + esc(initials(c.name)) + '</div>' +
         '<div style="flex:1"><h3 style="margin:0">' + esc(c.name || 'Sans nom') + '</h3>' +
@@ -510,6 +520,7 @@
         // traduire — collée au nombre elle se relisait « j3 » en arabe.
         '<div class="kcb-kpi"><div class="v">' + (KC.daysSince(c.lastSeen) === Infinity ? '·' : KC.daysSince(c.lastSeen) + ' j') + '</div><div class="l">Dernière visite</div></div></div>' +
       infoBlock +
+      historyBlock +
       recordBlock +
       (rewardReady ? '<button class="kcb-btn primary" id="kcb-redeem" style="margin-top:8px">Offrir la récompense · réinitialiser</button>' : '') +
       '<div class="kcb-actions"><button class="kcb-btn ghost" id="kcb-edit">Modifier</button>' +

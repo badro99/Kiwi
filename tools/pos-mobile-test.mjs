@@ -39,6 +39,7 @@ ok(js.includes('new MutationObserver(sync).observe(ticket'), 'ticket peek follow
 
 ok(scan.includes('.vx-root .krs-launch') && scan.includes('bottom: calc(74px'), 'continuous scan button clears the resting ticket');
 ok(scan.includes('.vx-root.vx-ticket-open .krs-launch'), 'scanner launcher yields to an open ticket');
+ok(scan.includes('body.is-pos-maison .krs-launch') && scan.includes('right: calc(356px + 24px)'), 'Maison continuous scan button clears the checkout column');
 ok(scan.includes('margin: 0; padding: 0; display: grid'), 'global landing-page section spacing cannot push the camera down');
 ok(scan.includes('grid-template-rows: clamp(210px,32dvh,260px) auto'), 'phone scanner camera is compact instead of consuming the viewport');
 ok(scan.includes('.krs-empty { min-height: 64px'), 'empty scan result collapses to a useful status strip');

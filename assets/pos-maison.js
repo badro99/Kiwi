@@ -509,7 +509,7 @@
     if (!c) return null;
     return { id: c.id, name: c.name || 'Sans nom', phone: c.phone || '', points: c.points || 0,
       taille: '', achats: c.visits || 0, spent: c.spend || 0,
-      vip: !!(window.KiwiClients && KiwiClients.segment(c) === 'vip'), prefs: c.notes ? [c.notes] : [], history: [] };
+      vip: !!(window.KiwiClients && KiwiClients.segment(c) === 'vip'), prefs: c.notes ? [c.notes] : [], history: Array.isArray(c.history) ? c.history : [] };
   }
   // A REAL store shows ONLY its own KiwiClients book (empty until captured) — NEVER
   // the demo CLIENTES. The pitch demo keeps the rich hard-coded set.
@@ -1568,6 +1568,7 @@
           <button class="mz-nav-it" data-mz-view="casse"><i data-lucide="shield-alert"></i><span>Déclarer Casse</span></button>
           <button class="mz-nav-it" data-mz-view="scan"><i data-lucide="scan-line"></i><span>Scan</span><b class="mz-nav-badge" id="mz-badge-scan"></b></button>
           <button class="mz-nav-it" data-mz-view="inventaire"><i data-lucide="package"></i><span>Inventaire</span><b class="mz-nav-badge" id="mz-badge-inv"></b></button>
+          <button class="mz-nav-it" data-mz-view="fournisseurs"><i data-lucide="truck"></i><span>Fournisseurs</span></button>
           <button class="mz-nav-it" data-mz-view="echanges"><i data-lucide="arrow-left-right"></i><span>Échanges &amp; avoirs</span><b class="mz-nav-badge" id="mz-badge-ret"></b></button>
           <button class="mz-nav-it" data-mz-view="vendus"><i data-lucide="chart-no-axes-column-increasing"></i><span>Vendus</span></button>
           <button class="mz-nav-it" data-mz-view="clientes"><i data-lucide="users"></i><span>Clients</span><b class="mz-nav-badge" id="mz-badge-cl"></b></button>
@@ -1611,6 +1612,7 @@
         <section class="mz-view" data-mz-panel="casse"></section>
         <section class="mz-view" data-mz-panel="scan"></section>
         <section class="mz-view" data-mz-panel="inventaire"></section>
+        <section class="mz-view" data-mz-panel="fournisseurs"></section>
         <section class="mz-view" data-mz-panel="echanges"></section>
         <section class="mz-view" data-mz-panel="vendus"></section>
         <section class="mz-view" data-mz-panel="clientes"></section>
@@ -1822,6 +1824,7 @@
     if (view === 'casse') renderCasse();
     if (view === 'scan') renderScan();
     if (view === 'inventaire') renderInventaire();
+    if (view === 'fournisseurs') renderSuppliers();
     if (view === 'echanges') renderEchanges();
     if (view === 'vendus') {
       const panel = $('[data-mz-panel="vendus"]', root);
@@ -2831,7 +2834,12 @@
       what: s.lines.map((l) => `${(P[l.pid] && P[l.pid].name) || l.name || 'Article'} · ${l.size}`).join(' + '),
       amt: s.total,
     }));
-    const hist = todays.concat(c.history || []);
+    const hist = todays.concat((c.history || []).map((h) => ({
+      when: h.when || whenLabel(h.ts || h.createdAt || 0),
+      what: h.what || (Array.isArray(h.items) && h.items.length ? h.items.map((it) => `${it.qty || 1}× ${it.name || 'Article'}`).join(' + ') : (h.ref || 'Achat')),
+      amt: h.amt != null ? h.amt : h.amount,
+      method: h.method || '', ref: h.ref || '',
+    })));
     const spent = (c.spent || 0) + todays.reduce((s, h) => s + h.amt, 0);
     el.innerHTML = `
       <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -2851,7 +2859,7 @@
       ${av ? `<button class="mz-favoir" id="mz-fiche-av"><i data-lucide="ticket"></i>Avoir actif <b>${av.code}</b> · ${fmtMAD(av.balance)}, utilisable en caisse<span class="see">Voir</span></button>` : ''}
       <div class="mz-f-lbl" style="margin-bottom:6px;">Historique</div>
       <div class="mz-fhist">
-        ${hist.length ? hist.map((h) => `<div class="mz-fhist-row"><span class="when">${esc(h.when)}</span><span class="what">${esc(h.what)}</span><span class="amt">${fmtMAD(h.amt)}</span></div>`).join('') : '<div class="mz-empty">Aucun achat enregistré.</div>'}
+        ${hist.length ? hist.map((h) => `<div class="mz-fhist-row"><span class="when">${esc(h.when)}${h.method ? `<small style="display:block;">${esc(h.method)}</small>` : ''}</span><span class="what">${esc(h.what)}${h.ref ? `<small style="display:block;">Ticket ${esc(h.ref)}</small>` : ''}</span><span class="amt">${fmtMAD(h.amt)}</span></div>`).join('') : '<div class="mz-empty">Aucun achat enregistré.</div>'}
       </div>
       <div class="mz-sheet-foot">
         <button class="mz-btn secondary" data-mz-close>Fermer</button>
@@ -3212,21 +3220,49 @@
   ];
 
   let REGISTRIES = null;
+  let REGISTRY_STORE = null;
+  function registryStore() {
+    if (REGISTRY_STORE || !window.KiwiStore?.define) return REGISTRY_STORE;
+    REGISTRY_STORE = window.KiwiStore.define('giftregistries', {
+      cloud: 'giftregistries',
+      blank: () => ({ list: [] }),
+      seedFor: () => IS_DEMO ? ({ list: JSON.parse(JSON.stringify(DEFAULT_REGISTRIES)) }) : null,
+      isEmpty: (d) => !d || !Array.isArray(d.list) || !d.list.length,
+      merge: (mine, theirs) => {
+        const map = new Map();
+        [].concat(theirs?.list || [], mine?.list || []).forEach((row) => {
+          if (!row?.id) return;
+          const old = map.get(row.id);
+          if (!old || +(row.updatedAt || 0) >= +(old.updatedAt || 0)) map.set(row.id, row);
+        });
+        return { list: Array.from(map.values()).filter((row) => !row.deletedAt).slice(0, 500) };
+      },
+    });
+    return REGISTRY_STORE;
+  }
   function loadRegistries() {
     if (REGISTRIES) return REGISTRIES;
+    const store = registryStore();
+    if (store) {
+      const doc = store.get(merchantSlug());
+      if (doc && Array.isArray(doc.list)) REGISTRIES = doc.list;
+    }
     try {
       const stored = localStorage.getItem(REGISTRY_KEY + ':' + merchantSlug());
-      if (stored) REGISTRIES = JSON.parse(stored);
+      /* One-time adoption of the pre-cloud list.  Prefer it only when the new
+         document is still empty, then save it through the shared store. */
+      if (stored && (!Array.isArray(REGISTRIES) || !REGISTRIES.length)) REGISTRIES = JSON.parse(stored);
     } catch (_) {}
-    if (!Array.isArray(REGISTRIES) || !REGISTRIES.length) {
-      REGISTRIES = JSON.parse(JSON.stringify(DEFAULT_REGISTRIES));
-    }
+    if (!Array.isArray(REGISTRIES)) REGISTRIES = IS_DEMO ? JSON.parse(JSON.stringify(DEFAULT_REGISTRIES)) : [];
+    if (store) store.set({ list: REGISTRIES }, merchantSlug());
     return REGISTRIES;
   }
   function saveRegistries() {
     try {
       localStorage.setItem(REGISTRY_KEY + ':' + merchantSlug(), JSON.stringify(REGISTRIES || []));
     } catch (_) {}
+    const store = registryStore();
+    if (store) store.set({ list: REGISTRIES || [] }, merchantSlug());
   }
   function updateRegistryContribution(sale) {
     if (!sale || !sale.lines) return;
@@ -3259,9 +3295,12 @@
             <h1>Listes Cadeaux &amp; Mariage</h1>
             <div class="mz-head-sub">Gestion des listes d'invités, contributions et suivi des pièces offertes</div>
           </div>
-          <div class="mz-search">
-            <i data-lucide="search"></i>
-            <input id="mz-reg-q" placeholder="Nom des mariés ou téléphone…" value="${esc(state.registriesQuery || '')}" />
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="mz-search">
+              <i data-lucide="search"></i>
+              <input id="mz-reg-q" placeholder="Nom ou téléphone…" value="${esc(state.registriesQuery || '')}" />
+            </div>
+            <button class="mz-btn primary" id="mz-reg-new"><i data-lucide="plus"></i>Nouvelle liste</button>
           </div>
         </header>
 
@@ -3308,11 +3347,18 @@
                   </div>`;
                 }).join('')}
               </div>
+              <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--line);">
+                <button class="mz-btn secondary sm" data-mz-reg-item-add="${reg.id}"><i data-lucide="plus"></i>Ajouter un article</button>
+                <button class="mz-btn secondary sm" data-mz-reg-delete="${reg.id}"><i data-lucide="trash-2"></i>Supprimer</button>
+              </div>
               ${reg.note ? `<div style="font-size:11.5px; color:var(--ink-3); border-top:1px solid var(--line); padding-top:8px;">📝 ${esc(reg.note)}</div>` : ''}
             </div>`;
-          }).join('')}
+          }).join('') || `<div class="mz-empty" style="grid-column:1/-1;min-height:240px;"><i data-lucide="gift"></i><b>Aucune liste cadeau</b><span>Créez une liste de mariage, naissance ou événement, puis ajoutez les articles du catalogue.</span></div>`}
         </div>
       </div>`;
+
+    const create = $('#mz-reg-new', panel);
+    if (create) create.onclick = openNewRegistry;
 
     const qInput = $('#mz-reg-q', panel);
     if (qInput) {
@@ -3343,9 +3389,152 @@
           switchView('vente');
           toast(`Article ajouté pour : ${reg.title}`);
         }
+        return;
+      }
+      const itemAdd = e.target.closest('[data-mz-reg-item-add]');
+      if (itemAdd) { openRegistryItem(itemAdd.dataset.mzRegItemAdd); return; }
+      const del = e.target.closest('[data-mz-reg-delete]');
+      if (del) {
+        const reg = regs.find((r) => r.id === del.dataset.mzRegDelete);
+        if (reg && confirm(`Supprimer « ${reg.title} » ?`)) {
+          REGISTRIES = regs.filter((r) => r.id !== reg.id);
+          saveRegistries(); renderRegistries(); renderBadges(); icons();
+          toast('Liste supprimée');
+        }
       }
     };
     icons();
+  }
+
+  function openNewRegistry() {
+    const html = `
+      <button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
+      <div class="mzi-modh"><div><h3>Nouvelle liste cadeau</h3><span>La liste sera disponible sur toutes les caisses du magasin.</span></div></div>
+      <div class="mzi-form">
+        <div class="mzi-frow"><div class="mzi-fg"><label>Type</label><select id="mz-rn-type"><option value="mariage">Mariage</option><option value="naissance">Naissance</option><option value="evenement">Événement</option></select></div><div class="mzi-fg"><label>Date</label><input id="mz-rn-date" type="date" /></div></div>
+        <div class="mzi-fg"><label>Titre</label><input id="mz-rn-title" placeholder="Ex. Mariage Sara &amp; Adam" /></div>
+        <div class="mzi-frow"><div class="mzi-fg"><label>Bénéficiaires</label><input id="mz-rn-who" placeholder="Sara &amp; Adam" /></div><div class="mzi-fg"><label>Téléphone</label><input id="mz-rn-phone" inputmode="tel" placeholder="06…" /></div></div>
+        <div class="mzi-fg"><label>Note</label><input id="mz-rn-note" maxlength="300" placeholder="Livraison, emballage, message…" /></div>
+      </div>
+      <div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-x>Annuler</button><button class="mz-btn primary" id="mz-rn-save">Créer la liste</button></div>`;
+    invSetModal(html, (el) => {
+      $('#mz-rn-save', el).onclick = () => {
+        const title = $('#mz-rn-title', el).value.trim();
+        const who = $('#mz-rn-who', el).value.trim();
+        if (!title || !who) { toast('Indiquez le titre et les bénéficiaires'); return; }
+        const type = $('#mz-rn-type', el).value;
+        const now = Date.now();
+        loadRegistries().unshift({ id: `reg-${now.toString(36)}-${Math.random().toString(36).slice(2,7)}`, type,
+          typeLabel: type === 'mariage' ? 'Liste de Mariage' : type === 'naissance' ? 'Liste de Naissance' : 'Liste Cadeau',
+          title, beneficiaries: who, phone: $('#mz-rn-phone', el).value.trim(), eventDate: $('#mz-rn-date', el).value,
+          note: $('#mz-rn-note', el).value.trim(), items: [], createdAt: now, updatedAt: now });
+        saveRegistries(); closeVeil('#mz-inv-veil'); renderRegistries(); renderBadges(); icons(); toast('Liste créée');
+      };
+    });
+  }
+
+  function openRegistryItem(registryId) {
+    const reg = loadRegistries().find((r) => r.id === registryId);
+    const products = catDB()?.listProducts?.({}) || [];
+    if (!reg) return;
+    const html = `
+      <button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
+      <div class="mzi-modh"><div><h3>Ajouter un article</h3><span>${esc(reg.title)}</span></div></div>
+      <div class="mzi-form">
+        <div class="mzi-fg"><label>Article du catalogue</label><select id="mz-ri-product">${products.map((p) => `<option value="${p.id}">${esc(p.name)} · ${fmtMAD(p.priceMAD)}</option>`).join('')}</select></div>
+        <div class="mzi-fg"><label>Quantité souhaitée</label><input id="mz-ri-qty" type="number" min="1" step="1" value="1" /></div>
+      </div>
+      <div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-x>Annuler</button><button class="mz-btn primary" id="mz-ri-save" ${products.length ? '' : 'disabled'}>Ajouter</button></div>`;
+    invSetModal(html, (el) => {
+      $('#mz-ri-save', el).onclick = () => {
+        const pid = $('#mz-ri-product', el).value;
+        const p = P[pid] || catDB()?.getProduct?.(pid)?.product;
+        if (!p) return;
+        const qty = Math.max(1, parseInt($('#mz-ri-qty', el).value, 10) || 1);
+        const old = reg.items.find((it) => it.pid === pid);
+        if (old) old.qtyRequested += qty;
+        else reg.items.push({ pid, name: p.name, marque: p.marque || '', format: p.format || 'piece', qtyRequested: qty, qtyPurchased: 0, price: p.priceMAD || p.price || 0, color: 'defaut', size: 'TU' });
+        reg.updatedAt = Date.now(); saveRegistries(); closeVeil('#mz-inv-veil'); renderRegistries(); icons(); toast('Article ajouté à la liste');
+      };
+    });
+  }
+
+  /* ═══════════════════════ FOURNISSEURS & ACHATS ═══════════════════════
+     The procurement ledger was already loaded, but Maison had no route to it.
+     This counter view reads and writes the same suppliers, orders, receipts and
+     returns as the dashboard. */
+  const procurement = () => window.KiwiProcurement || null;
+  function supplierName(doc, id) { return (doc.suppliers || []).find((s) => s.id === id)?.name || 'Fournisseur'; }
+  function renderSuppliers() {
+    const panel = $('[data-mz-panel="fournisseurs"]', root);
+    const api = procurement();
+    if (!panel) return;
+    if (!api) { panel.innerHTML = '<div class="mz-empty" style="margin:40px;">Approvisionnement indisponible.</div>'; return; }
+    const doc = api.doc() || {}, suppliers = (doc.suppliers || []).filter((s) => s.active !== false), orders = doc.orders || [];
+    panel.innerHTML = `<div class="bqi">
+      <header class="mz-head" style="padding:22px 22px 0;">
+        <div><h1>Fournisseurs &amp; achats</h1><div class="mz-head-sub">Annuaire, commandes, réceptions, retours et coûts · synchronisés avec le dashboard</div></div>
+        <div style="display:flex;gap:8px;"><button class="mz-btn secondary" id="mz-sup-receive"><i data-lucide="package-plus"></i>Réception directe</button><button class="mz-btn primary" id="mz-sup-new"><i data-lucide="plus"></i>Nouveau fournisseur</button></div>
+      </header>
+      <div class="mzi-kpis"><div class="mzi-kpi"><span class="l">Fournisseurs actifs</span><span class="v">${suppliers.length}</span></div><div class="mzi-kpi"><span class="l">Commandes ouvertes</span><span class="v">${orders.filter((o) => !['received','cancelled'].includes(o.status)).length}</span></div><div class="mzi-kpi"><span class="l">Réceptions</span><span class="v">${(doc.receipts || []).length}</span></div></div>
+      <div style="padding:0 22px 12px;display:flex;gap:8px;align-items:center;"><h3 style="margin:0 auto 0 0;">Annuaire</h3>${api.isUltra() ? '<button class="mz-btn" id="mz-po-new"><i data-lucide="file-plus"></i>Nouveau bon de commande</button>' : ''}</div>
+      <div class="mz-reg-grid" style="padding:0 22px 18px;">${suppliers.map((s) => `<div class="mz-reg-card"><div class="mz-reg-head"><div><h3 class="mz-reg-title">${esc(s.name)}</h3><div class="mz-reg-sub">${esc([s.phone,s.email].filter(Boolean).join(' · ') || 'Coordonnées à compléter')}</div></div><span class="mz-reg-badge">${s.leadDays || 0} j</span></div>
+        ${s.address ? `<div class="mz-reg-sub">${esc(s.address)}</div>` : ''}${s.taxId ? `<div class="mz-reg-sub">ICE / IF · ${esc(s.taxId)}</div>` : ''}${s.paymentTerms ? `<div class="mz-reg-sub">Conditions · ${esc(s.paymentTerms)}</div>` : ''}${s.categories ? `<div class="mz-reg-sub">Articles · ${esc(s.categories)}</div>` : ''}
+        <div style="display:flex;gap:8px;justify-content:flex-end;"><button class="mz-btn secondary sm" data-mz-sup-receive="${s.id}">Réception</button><button class="mz-btn secondary sm" data-mz-sup-return="${s.id}">Retour fournisseur</button></div></div>`).join('') || '<div class="mz-empty" style="grid-column:1/-1;min-height:180px;">Ajoutez votre premier fournisseur pour enregistrer les réceptions et les coûts.</div>'}</div>
+      <div style="padding:0 22px 22px;"><h3>Commandes</h3><div class="mzi-list">${orders.map((o) => `<div class="mzi-row"><span class="mzi-info"><b>${esc(o.number)}</b><span>${esc(supplierName(doc,o.supplierId))} · ${esc(o.status)}${o.expectedDate ? ' · '+esc(o.expectedDate) : ''}</span></span><span class="mzi-price">${fmtMAD((o.lines||[]).reduce((n,l)=>n+(+l.qty||0)*(+l.unitCost||0),0))}</span><span style="display:flex;gap:6px;">${o.status==='draft' ? `<button class="mzi-mini" data-mz-po-send="${o.id}" title="Marquer envoyée"><i data-lucide="send"></i></button>` : ''}${!['received','cancelled'].includes(o.status) ? `<button class="mzi-mini" data-mz-po-receive="${o.id}" title="Réceptionner"><i data-lucide="package-check"></i></button><button class="mzi-mini" data-mz-po-cancel="${o.id}" title="Annuler"><i data-lucide="x"></i></button>` : ''}</span></div>`).join('') || '<div class="mz-empty">Aucune commande.</div>'}</div></div>
+    </div>`;
+    $('#mz-sup-new', panel).onclick = openSupplierForm;
+    $('#mz-sup-receive', panel).onclick = () => openProcurementMove('receipt', '');
+    const poNew = $('#mz-po-new', panel); if (poNew) poNew.onclick = openPurchaseOrder;
+    panel.onclick = (e) => {
+      const receive = e.target.closest('[data-mz-sup-receive]'); if (receive) { openProcurementMove('receipt', receive.dataset.mzSupReceive); return; }
+      const ret = e.target.closest('[data-mz-sup-return]'); if (ret) { openProcurementMove('return', ret.dataset.mzSupReturn); return; }
+      const send = e.target.closest('[data-mz-po-send]'); if (send) { api.markSent(send.dataset.mzPoSend); renderSuppliers(); toast('Commande marquée envoyée'); return; }
+      const receivePo = e.target.closest('[data-mz-po-receive]'); if (receivePo) { openProcurementMove('order', receivePo.dataset.mzPoReceive); return; }
+      const cancel = e.target.closest('[data-mz-po-cancel]'); if (cancel && confirm('Annuler ce bon de commande ?')) { api.cancelOrder(cancel.dataset.mzPoCancel, 'Annulé depuis la caisse'); renderSuppliers(); toast('Commande annulée'); }
+    };
+    icons();
+  }
+
+  function openSupplierForm() {
+    const html = `<button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button><div class="mzi-modh"><div><h3>Nouveau fournisseur</h3><span>Coordonnées, fiscalité et conditions d'achat.</span></div></div><div class="mzi-form">
+      <div class="mzi-frow"><div class="mzi-fg"><label>Nom *</label><input id="mz-sf-name"></div><div class="mzi-fg"><label>Téléphone</label><input id="mz-sf-phone" inputmode="tel"></div></div><div class="mzi-frow"><div class="mzi-fg"><label>Email</label><input id="mz-sf-email" type="email"></div><div class="mzi-fg"><label>ICE / IF</label><input id="mz-sf-tax"></div></div><div class="mzi-fg"><label>Adresse</label><input id="mz-sf-address"></div><div class="mzi-frow"><div class="mzi-fg"><label>Délai (jours)</label><input id="mz-sf-lead" type="number" min="0" value="0"></div><div class="mzi-fg"><label>Conditions de paiement</label><input id="mz-sf-terms" placeholder="30 jours, comptant…"></div></div><div class="mzi-fg"><label>Marques / catégories</label><input id="mz-sf-cats"></div><div class="mzi-fg"><label>Notes</label><input id="mz-sf-notes" maxlength="500"></div></div><div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-x>Annuler</button><button class="mz-btn primary" id="mz-sf-save">Enregistrer</button></div>`;
+    invSetModal(html, (el) => { $('#mz-sf-save', el).onclick = () => { const name=$('#mz-sf-name',el).value.trim(); if(!name){toast('Le nom est requis');return;} procurement().addSupplier({name,phone:$('#mz-sf-phone',el).value,email:$('#mz-sf-email',el).value,address:$('#mz-sf-address',el).value,taxId:$('#mz-sf-tax',el).value,paymentTerms:$('#mz-sf-terms',el).value,categories:$('#mz-sf-cats',el).value,notes:$('#mz-sf-notes',el).value,leadDays:$('#mz-sf-lead',el).value}); closeVeil('#mz-inv-veil'); renderSuppliers(); toast('Fournisseur enregistré'); }; });
+  }
+  function procurementLineFields(doc, supplierId) {
+    const products = catDB()?.listProducts?.({}) || [];
+    const variants = products.flatMap((p) => (catDB()?.getProduct?.(p.id)?.variants || []).map((v) => ({ p, v })));
+    return `<div class="mzi-frow"><div class="mzi-fg"><label>Fournisseur</label><select id="mz-pm-sup">${(doc.suppliers||[]).map((s)=>`<option value="${s.id}" ${s.id===supplierId?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div><div class="mzi-fg"><label>Article · variante</label><select id="mz-pm-product">${variants.map(({p,v})=>`<option value="${v.id}" data-pid="${p.id}">${esc(p.name)} · ${esc(v.size || 'TU')} ${esc(v.colorLabel || '')}</option>`).join('')}</select></div></div><div class="mzi-frow"><div class="mzi-fg"><label>Quantité</label><input id="mz-pm-qty" type="number" min="1" value="1"></div><div class="mzi-fg"><label>Coût unitaire (MAD)</label><input id="mz-pm-cost" type="number" min="0" step="0.01"></div></div><div class="mzi-fg"><label>Référence / note</label><input id="mz-pm-ref" maxlength="100"></div>`;
+  }
+  function procurementLine(el) { const select=$('#mz-pm-product',el),opt=select?.selectedOptions?.[0],pid=opt?.dataset.pid||'',p=P[pid]||catDB()?.getProduct?.(pid)?.product; return {itemId:pid,variantId:select?.value||'',name:p?.name||'Article',qty:Math.max(1,+$('#mz-pm-qty',el).value||1),unit:'pièce',unitCost:Math.max(0,+$('#mz-pm-cost',el).value||0)}; }
+  function procurementVariant(line) {
+    const card = catDB()?.getProduct?.(line.itemId);
+    return (card?.variants || []).find((v) => v.id === line.variantId) || ((card?.variants || []).length === 1 ? card.variants[0] : null);
+  }
+  async function postMaisonProcurement(kind, lines, ref, supplierId) {
+    const MZ=window.KiwiMaisonStock, doc=procurement().doc(), supplier=supplierName(doc,supplierId), applied=[];
+    if (!MZ?.requestManual) return {error:'stock-journal-unavailable',lines:[]};
+    for (const line of lines) {
+      const variant=procurementVariant(line);
+      if (!variant) return {error:'variant-required',lines:applied};
+      const normalized={...line,variantId:variant.id};
+      const moved=await MZ.requestManual({productId:line.itemId,variantId:variant.id,type:kind==='return'?'retour-fourn':'reception',qty:line.qty,ref,note:ref,supplier,source:'caisse'});
+      if (!moved?.ok) return {error:moved?.reason||'stock-move-failed',lines:applied};
+      if (kind!=='return' && line.unitCost>0) catDB().updateProduct(line.itemId,{cost:line.unitCost});
+      applied.push(normalized);
+    }
+    return {lines:applied};
+  }
+  function openProcurementMove(kind, id) {
+    const api=procurement(),doc=api.doc(),order=kind==='order'?(doc.orders||[]).find((o)=>o.id===id):null,supplierId=order?.supplierId||id;
+    const title=kind==='return'?'Retour fournisseur':kind==='order'?'Réception de commande':'Réception directe';
+    const html=`<button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button><div class="mzi-modh"><div><h3>${title}</h3><span>Le mouvement et le coût sont inscrits dans l'historique de stock.</span></div></div><div class="mzi-form">${order?'':procurementLineFields(doc,supplierId)}${order?`<div class="mzi-fg"><label>Lignes à réceptionner</label>${order.lines.map((l)=>`<div>${esc(l.name)} · ${l.qty-(l.receivedQty||0)} restant(s)</div>`).join('')}</div><div class="mzi-fg"><label>Référence</label><input id="mz-pm-ref"></div>`:''}</div><div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-x>Annuler</button><button class="mz-btn primary" id="mz-pm-save">Enregistrer</button></div>`;
+    invSetModal(html,(el)=>{$('#mz-pm-save',el).onclick=async()=>{const save=$('#mz-pm-save',el);save.disabled=true;const ref=$('#mz-pm-ref',el).value;const supplier=order?.supplierId||$('#mz-pm-sup',el).value;const wanted=order?order.lines.map((l)=>({...l,qty:Math.max(0,l.qty-(l.receivedQty||0))})).filter((l)=>l.qty>0):[procurementLine(el)];const posted=await postMaisonProcurement(kind,wanted,ref,supplier);if(posted.error){save.disabled=false;toast('Opération refusée',5200,'danger',posted.error==='variant-required'?'Choisissez la variante exacte de chaque article.':'Le mouvement de stock n’a pas été autorisé.');return;}const input={supplierId:supplier,externalRef:ref,lines:posted.lines,skipMovements:true,skipCosts:true};const res=order?api.receiveOrder(order.id,input):kind==='return'?api.returnToSupplier(input):api.receiveDirect(input);if(res?.error){save.disabled=false;toast('Opération refusée',5200,'danger','Le document fournisseur n’a pas pu être enregistré.');return;}closeVeil('#mz-inv-veil');renderSuppliers();toast(kind==='return'?'Retour fournisseur enregistré':'Réception enregistrée');};});
+  }
+  function openPurchaseOrder() {
+    const api=procurement(),doc=api.doc();
+    const html=`<button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button><div class="mzi-modh"><div><h3>Nouveau bon de commande</h3><span>Créez le brouillon, puis marquez-le envoyé depuis la liste.</span></div></div><div class="mzi-form">${procurementLineFields(doc,'')}<div class="mzi-fg"><label>Date attendue</label><input id="mz-po-date" type="date"></div></div><div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-x>Annuler</button><button class="mz-btn primary" id="mz-po-save">Créer</button></div>`;
+    invSetModal(html,(el)=>{$('#mz-po-save',el).onclick=()=>{const res=api.createOrder({supplierId:$('#mz-pm-sup',el).value,expectedDate:$('#mz-po-date',el).value,note:$('#mz-pm-ref',el).value,lines:[procurementLine(el)]});if(res?.error){toast('Fournisseur et article requis');return;}closeVeil('#mz-inv-veil');renderSuppliers();toast(`Commande ${res.number} créée`);};});
   }
 
   /* ═══════════════════════ CASSE & GESTION DES PERTES ═══════════════════ */
@@ -4041,7 +4230,7 @@
         </div>
         <div class="mz-ret-actions">
           <button class="mz-btn secondary" data-mz-do-exch><i data-lucide="arrow-left-right"></i>Échanger la pièce</button>
-          <button class="mz-btn primary" data-mz-do-avoir><i data-lucide="ticket"></i>Émettre un avoir · ${fmtMAD(selVal)}</button>
+          <button class="mz-btn primary" data-mz-do-avoir ${state.retBusy ? 'disabled aria-busy="true"' : ''}><i data-lucide="ticket"></i>${state.retBusy ? 'Émission en cours…' : `Émettre un avoir · ${fmtMAD(selVal)}`}</button>
         </div>
       </div>` : ''}
     </div>`;
@@ -4097,6 +4286,7 @@
     const c = saleClient(sale);
     const resellable = motif !== 'Défaut';
     state.retBusy = true;
+    renderEchanges(); icons();
     try {
       /* The credit is booked before stock or the local sale changes.  A lost
          connection therefore leaves the return untouched, not a free item in
@@ -4121,8 +4311,11 @@
       const detail = error && error.code === 'sale-credit-exceeds-available'
         ? 'Ce ticket n’est pas encore synchronisé, ou il a déjà été remboursé jusqu’à son montant disponible.'
         : 'Connexion au registre des avoirs impossible. Rien n’a été remis en stock.';
-      toast('Avoir non émis', detail);
-    } finally { state.retBusy = false; }
+      toast('Avoir non émis', 5200, 'danger', detail);
+    } finally {
+      state.retBusy = false;
+      if (state.ret) { renderEchanges(); icons(); }
+    }
   }
 
   function restoreLines(sale, idxs, quantities, note) {
@@ -4382,13 +4575,13 @@
               } catch (_) {}
               $('#mz-today', root).textContent = headSubVente();
               refreshOps();
-              if (!swapped) toast('Échange non appliqué (rupture entre-temps)', 'La différence est encaissée et tracée : régularisez l’échange manuellement.');
+              if (!swapped) toast('Échange non appliqué (rupture entre-temps)', 5200, 'danger', 'La différence est encaissée et tracée : régularisez l’échange manuellement.');
               return { ref: rec.id, sale: rec, line: swapped ? `Échange ${sale.id} réglé, différence ${fmtMAD(diff)}` : `Différence ${sale.id} encaissée sans échange, à régulariser` };
             },
           });
         }).catch(() => {
           if (go) go.disabled = false;
-          toast('Numéro de ticket indisponible', 'Reconnectez cette caisse pour réserver sa prochaine série.');
+          toast('Numéro de ticket indisponible', 5200, 'danger', 'Reconnectez cette caisse pour réserver sa prochaine série.');
         });
       } else if (diff < 0) {
         const quantities = new Map([[ex.idx, 1]]);
@@ -4411,7 +4604,7 @@
           });
           closeVeil('#mz-exch-veil');
           if (!apply()) {
-            toast('Avoir émis, échange à régulariser', `${av.code} existe mais le remplacement est devenu indisponible.`);
+            toast('Avoir émis, échange à régulariser', 5200, 'warn', `${av.code} existe mais le remplacement est devenu indisponible.`);
             refreshOps();
             openVoucher(av, { mode: 'fresh' });
             return;
@@ -4423,7 +4616,7 @@
           openVoucher(av, { mode: 'fresh' });
         } catch (_) {
           if (go) go.disabled = false;
-          toast('Avoir non émis', 'Connexion au registre impossible. Aucun article ni stock n’a été modifié.');
+          toast('Avoir non émis', 5200, 'danger', 'Connexion au registre impossible. Aucun article ni stock n’a été modifié.');
         }
       } else {
         closeVeil('#mz-exch-veil');
@@ -4772,7 +4965,10 @@
           // store's sale must attach to the real client, not a throwaway in-memory
           // object. Real store only; the local demo keeps its in-memory client. F5.
           if (useKiwiCl() && window.KiwiClients && window.KiwiClients.recordPurchase && c.id) {
-            try { window.KiwiClients.recordPurchase(c.id, { amount: total }); } catch (_) {}
+            try { window.KiwiClients.recordPurchase(c.id, {
+              amount: total, method: sale.methods, saleRef: sale.id, createdAt: +sale.at,
+              items: sale.lines.map((ln) => ({ name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', qty: ln.qty, total: ln.unit * ln.qty })),
+            }); } catch (_) {}
             // La récompense est portée : on brûle les points (KiwiClients.redeem
             // retire le seuil / réinitialise la carte). Après recordPurchase, pour
             // que l'achat compte d'abord, la récompense se déduise ensuite.
@@ -6388,8 +6584,11 @@
   }
 
   /* ─── the inventory panel ─── */
+  function catalogueAdminEnabled() {
+    return !!(window.KiwiConfig && window.KiwiConfig.features && window.KiwiConfig.features.caisseInventoryAdmin === true);
+  }
   function catalogDashboardOnly() {
-    const msg = 'Articles et prix se gèrent dans le tableau de bord.';
+    const msg = 'La gestion complète sur caisse doit être activée dans God Mode.';
     if (typeof toast === 'function') toast(msg);
   }
 
@@ -6410,7 +6609,7 @@
           <div class="mzi-scan"><i data-lucide="scan-line"></i><input id="mzi-scan" placeholder="Scannez un article, ou tapez un code…" autocomplete="off" /></div>
           <button class="mz-btn primary" id="mzi-count" style="background:#059669;border-color:#047857;"><i data-lucide="clipboard-check"></i>Inventaire physique</button>
           <button class="mz-btn" id="mzi-intake"><i data-lucide="scan-barcode"></i>Reprendre le stock</button>
-          <span class="mzi-dashboard-only">Articles et prix se gèrent dans le tableau de bord</span>
+          ${catalogueAdminEnabled() ? '<button class="mz-btn" id="mzi-category"><i data-lucide="folders"></i>Catégories</button><button class="mz-btn primary" id="mzi-new"><i data-lucide="plus"></i>Nouvel article</button>' : '<span class="mzi-dashboard-only">Gestion complète désactivée par God Mode</span>'}
         </div>
         <div class="mzi-pills" id="mzi-pills">
           <button class="mzi-pill ${filter === 'all' ? 'on' : ''}" data-f="all">Tous · ${st.products}</button>
@@ -6436,6 +6635,8 @@
     if (scan) scan.onkeydown = (e) => { if (e.key === 'Enter') { const v = scan.value.trim(); scan.value = ''; if (v) invScanHandle(v); } };
     const cb = $('#mzi-count', panel); if (cb) cb.onclick = () => window.KiwiPosInventoryCount?.open?.({ engine: 'maison' });
     const ib = $('#mzi-intake', panel); if (ib) ib.onclick = () => openIntake();
+    const nb = $('#mzi-new', panel); if (nb) nb.onclick = openNewProduct;
+    const mb = $('#mzi-category', panel); if (mb) mb.onclick = openCategories;
     const pills = $('#mzi-pills', panel);
     if (pills) pills.addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (b) { state.invFilter = b.dataset.f; renderInventaire(); } });
     panel.querySelectorAll('[data-inv-open]').forEach((el) => el.addEventListener('click', () => openInvProduct(el.getAttribute('data-inv-open'))));
@@ -6481,6 +6682,7 @@
   function openInvProduct(pid) {
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
     const p = d.product;
+    const movements = window.KiwiMaisonStock?.productHistory?.(pid, 20) || [];
     const rows = d.variants.length
       ? d.variants.map((v) => invVarRow(v)).join('')
       : '<tr><td colspan="4" style="text-align:center;padding:18px;color:#99a;">Aucune variante, ajoutez une couleur × taille.</td></tr>';
@@ -6489,23 +6691,33 @@
       <div class="mzi-modh">
         <span class="mzi-art">${artOf(p.art)}</span>
         <div><h3>${esc(p.name)}</h3><span>${d.category ? esc(d.category.name) : 'Divers'} · ${fmtMAD(p.priceMAD)} · ${d.stock} en stock</span></div>
-        <span class="mzi-dashboard-only">Modifier dans le tableau de bord</span>
+        ${catalogueAdminEnabled() ? `<button class="mz-btn secondary sm" data-inv-edit="${p.id}"><i data-lucide="pencil"></i>Modifier</button>` : '<span class="mzi-dashboard-only">Gestion complète désactivée</span>'}
       </div>
       <div class="mzi-vtable-wrap"><table class="mzi-vtable">
         <thead><tr><th>Couleur · Taille</th><th>Stock</th><th>Code-barres</th><th></th></tr></thead>
         <tbody>${rows}</tbody></table></div>
+      <div class="mzi-form" style="padding-top:0;">
+        <div class="mzi-fg"><label>Historique des mouvements</label>
+          ${movements.length ? `<div class="mzi-vtable-wrap"><table class="mzi-vtable"><thead><tr><th>Date</th><th>Mouvement</th><th>Qté</th><th>Référence</th></tr></thead><tbody>${movements.map((m) => `<tr><td>${esc(whenLabel(m.at))}</td><td>${esc(m.typeLabel || m.reason || 'Mouvement')}${m.note ? `<div class="mzi-csrc">${esc(m.note)}</div>` : ''}</td><td><b>${m.qty > 0 ? '+' : ''}${m.qty}</b></td><td>${esc(m.ref || '—')}</td></tr>`).join('')}</tbody></table></div>` : '<div class="mzi-dashboard-only">Aucun mouvement enregistré pour cet article.</div>'}
+        </div>
+      </div>
       <div class="mzi-modfoot">
-        <span class="mzi-dashboard-only">Variantes dans le tableau de bord</span>
+        ${catalogueAdminEnabled() ? `<button class="mz-btn secondary" data-inv-addvar><i data-lucide="plus"></i>Ajouter une variante</button>` : '<span class="mzi-dashboard-only">Variantes dans le tableau de bord</span>'}
         <button class="mz-btn secondary" data-inv-printall><i data-lucide="printer"></i>Imprimer les étiquettes</button>
-        <span class="mzi-dashboard-only">Suppression dans le tableau de bord</span>
+        ${catalogueAdminEnabled() ? `<button class="mz-btn danger" data-inv-delete><i data-lucide="trash-2"></i>Supprimer</button>` : '<span class="mzi-dashboard-only">Suppression dans le tableau de bord</span>'}
       </div>`;
     invSetModal(html, (el) => {
       const cat2 = catDB();
       $('[data-inv-printall]', el).addEventListener('click', () => printProductLabels(pid));
+      const edit = $('[data-inv-edit]', el); if (edit) edit.addEventListener('click', () => openEditProduct(pid));
+      const addvar = $('[data-inv-addvar]', el); if (addvar) addvar.addEventListener('click', () => openAddVariant(pid));
+      const del = $('[data-inv-delete]', el); if (del) del.addEventListener('click', () => confirmDeleteProduct(pid));
       el.querySelectorAll('[data-vgen]').forEach((b) => b.addEventListener('click', () => { const code = cat2.generateBarcode(b.dataset.vgen); if (code) toast(`EAN-13 ${code} généré`); openInvProduct(pid); }));
       el.querySelectorAll('[data-vprint]').forEach((b) => b.addEventListener('click', () => printVariantLabel(b.dataset.vprint)));
       el.querySelectorAll('[data-vreg]').forEach((b) => b.addEventListener('click', () => openRegisterOnVariant(b.dataset.vreg, pid)));
       el.querySelectorAll('[data-vmove]').forEach((b) => b.addEventListener('click', () => openStockMove(pid, b.dataset.vmove)));
+      el.querySelectorAll('[data-vcolor]').forEach((b) => b.addEventListener('click', () => openVariantColor(b.dataset.vcolor, pid)));
+      el.querySelectorAll('[data-vdelete]').forEach((b) => b.addEventListener('click', () => confirmDeleteVariant(b.dataset.vdelete, pid)));
     });
   }
 
@@ -6591,10 +6803,10 @@
       : `<button class="mzi-mini" data-vgen="${v.id}" title="Générer un EAN-13"><i data-lucide="scan-line"></i></button>`;
     const shown = variantColor(v);
     return `<tr>
-      <td><span class="mzi-cbtn is-locked" aria-disabled="true" title="Modifier dans le tableau de bord">${colorDot(shown)} ${esc(shown.label)}</span>${v.colorSource ? `<em class="mzi-csrc">${esc(v.colorSource)}</em>` : ''} · <b>${esc(v.size)}</b></td>
+      <td>${catalogueAdminEnabled() ? `<button class="mzi-cbtn" data-vcolor="${v.id}">${colorDot(shown)} ${esc(shown.label)}</button>` : `<span class="mzi-cbtn is-locked" aria-disabled="true">${colorDot(shown)} ${esc(shown.label)}</span>`}${v.colorSource ? `<em class="mzi-csrc">${esc(v.colorSource)}</em>` : ''} · <b>${esc(v.size)}</b></td>
       <td><span class="mzi-stk-val" style="font-weight:700;padding:4px 8px;border-radius:6px;background:var(--n-100);">${v.stock}</span></td>
       <td>${bc}</td>
-      <td class="mzi-vact">${genOrPrint}<button class="mzi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i></button><button class="mzi-mini" data-vmove="${v.id}" title="Déclarer un mouvement de stock"><i data-lucide="arrow-left-right"></i></button><span class="mzi-mini is-locked danger" aria-disabled="true" title="Supprimer dans le tableau de bord"><i data-lucide="trash-2"></i></span></td>
+      <td class="mzi-vact">${genOrPrint}<button class="mzi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i></button><button class="mzi-mini" data-vmove="${v.id}" title="Déclarer un mouvement de stock"><i data-lucide="arrow-left-right"></i></button>${catalogueAdminEnabled() ? `<button class="mzi-mini danger" data-vdelete="${v.id}" title="Supprimer la variante"><i data-lucide="trash-2"></i></button>` : '<span class="mzi-mini is-locked danger" aria-disabled="true"><i data-lucide="trash-2"></i></span>'}</td>
     </tr>`;
   }
 
@@ -6609,13 +6821,22 @@
     return opts.map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('');
   }
   function openNewProduct() {
-    catalogDashboardOnly();
-    return;
+    if (!catalogueAdminEnabled()) { catalogDashboardOnly(); return; }
+    const cat = catDB(); if (!cat) return;
+    const html = `<button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button><div class="mzi-modh"><div><h3>Nouvel article</h3><span>Produit, prix, coût et première variante.</span></div></div><div class="mzi-form">
+      <div class="mzi-fg"><label>Nom</label><input id="mzi-n-name"></div><div class="mzi-frow"><div class="mzi-fg"><label>Catégorie</label><select id="mzi-n-cat">${catSelectOptions(state.invFilter !== 'all' ? state.invFilter : '')}</select></div><div class="mzi-fg"><label>Type</label><select id="mzi-n-kind">${kindSelectOptions('tu')}</select></div></div><div class="mzi-frow"><div class="mzi-fg"><label>Prix de vente (MAD)</label><input id="mzi-n-price" type="number" min="0" step="0.01"></div><div class="mzi-fg"><label>Coût d'achat (MAD)</label><input id="mzi-n-cost" type="number" min="0" step="0.01"></div></div><div class="mzi-frow"><div class="mzi-fg"><label>Marque / fournisseur</label><input id="mzi-n-brand"></div><div class="mzi-fg"><label>Stock initial</label><input id="mzi-n-stock" type="number" min="0" value="0"></div></div><div class="mzi-frow"><div class="mzi-fg"><label>Format / taille</label><input id="mzi-n-size" value="TU"></div><div class="mzi-fg"><label>Code-barres (facultatif)</label><input id="mzi-n-barcode"></div></div></div><div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-x>Annuler</button><button class="mz-btn primary" id="mzi-n-save">Créer l'article</button></div>`;
+    invSetModal(html, (el) => { $('#mzi-n-save', el).onclick = () => { const name=$('#mzi-n-name',el).value.trim(); if(!name){toast('Le nom est requis');return;} let p,v; cat.batch(()=>{p=cat.addProduct({name,categoryId:$('#mzi-n-cat',el).value||null,kind:$('#mzi-n-kind',el).value,priceMAD:bqMoney($('#mzi-n-price',el).value),cost:bqMoney($('#mzi-n-cost',el).value),marque:$('#mzi-n-brand',el).value.trim(),art:'tshirt'});v=cat.addVariant({productId:p.id,colorId:'noir',size:$('#mzi-n-size',el).value.trim()||'TU',stock:Math.max(0,parseInt($('#mzi-n-stock',el).value,10)||0)});const code=$('#mzi-n-barcode',el).value.trim();if(code)cat.attachBarcode(v.id,code);}); rebuildCatalog(); toast('Article créé'); openInvProduct(p.id); renderInventaire(); }; });
+  }
+
+  function openCategories() {
+    if (!catalogueAdminEnabled()) { catalogDashboardOnly(); return; }
+    const cat=catDB(), cats=cat.listCategories();
+    const html=`<button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button><div class="mzi-modh"><div><h3>Catégories</h3><span>Rayons partagés avec le dashboard et la grille de vente.</span></div></div><div class="mzi-form"><div class="mzi-frow"><div class="mzi-fg"><label>Nouvelle catégorie</label><input id="mzi-cat-name"></div><button class="mz-btn primary" id="mzi-cat-add" style="align-self:end;">Ajouter</button></div>${cats.map((c)=>`<div class="mzi-frow"><div class="mzi-fg"><label>${cat.categoryCount(c.id)} article(s)</label><input data-mzi-cat-name="${c.id}" value="${esc(c.name)}"></div><button class="mz-btn secondary" data-mzi-cat-save="${c.id}" style="align-self:end;">Renommer</button><button class="mz-btn danger" data-mzi-cat-delete="${c.id}" style="align-self:end;">Supprimer</button></div>`).join('')}</div>`;
+    invSetModal(html,(el)=>{ $('#mzi-cat-add',el).onclick=()=>{const name=$('#mzi-cat-name',el).value.trim();if(!name)return;cat.addCategory(name);openCategories();renderInventaire();}; el.querySelectorAll('[data-mzi-cat-save]').forEach((b)=>b.onclick=()=>{cat.renameCategory(b.dataset.mziCatSave,$(`[data-mzi-cat-name="${b.dataset.mziCatSave}"]`,el).value);openCategories();renderInventaire();});el.querySelectorAll('[data-mzi-cat-delete]').forEach((b)=>b.onclick=()=>{const res=cat.deleteCategory(b.dataset.mziCatDelete,{moveTo:null});if(res?.ok===false){toast('Déplacez d’abord les articles de cette catégorie');return;}openCategories();renderInventaire();});});
   }
 
   function openEditProduct(pid) {
-    catalogDashboardOnly();
-    return;
+    if (!catalogueAdminEnabled()) { catalogDashboardOnly(); return; }
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return; const p = d.product;
     const html = `
       <button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -6672,8 +6893,7 @@
   }
 
   function confirmDeleteProduct(pid) {
-    catalogDashboardOnly();
-    return;
+    if (!catalogueAdminEnabled()) { catalogDashboardOnly(); return; }
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
     const html = `
       <button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -6691,8 +6911,7 @@
      rayon et l'historique de mouvements de cette déclinaison disparaissaient
      ensemble, et la ligne d'à côté est le bouton « −1 ». On nomme ce qui part. */
   function confirmDeleteVariant(vid, pid) {
-    catalogDashboardOnly();
-    return;
+    if (!catalogueAdminEnabled()) { catalogDashboardOnly(); return; }
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
     const v = d.variants.find((x) => x.id === vid); if (!v) return;
     const codes = (v.barcodes || []).length;
@@ -6725,8 +6944,7 @@
   /* Changer la couleur d'une variante existante. La variante garde son stock,
      ses codes-barres et son identité : seule la famille affichée change. */
   function openVariantColor(vid, pid) {
-    catalogDashboardOnly();
-    return;
+    if (!catalogueAdminEnabled()) { catalogDashboardOnly(); return; }
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
     const v = d.variants.find((x) => x.id === vid); if (!v) return;
     const html = `
@@ -6752,8 +6970,7 @@
     });
   }
   function openAddVariant(pid) {
-    catalogDashboardOnly();
-    return;
+    if (!catalogueAdminEnabled()) { catalogDashboardOnly(); return; }
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
     const presets = cat.sizePresets(d.product.kind);
     const html = `

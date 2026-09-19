@@ -286,7 +286,7 @@
     return { id: '', name: '', phone: '', email: '', birthday: '', gender: '', city: '', address: '', notes: '', tags: [],
       hospitality: {},
       points: 0, stamps: 0, visits: 0, spend: 0, consent: false, consentEmail: false,
-      source: 'caisse', firstSeen: 0, lastSeen: 0, updated: 0 };
+      source: 'caisse', firstSeen: 0, lastSeen: 0, updated: 0, history: [] };
   }
 
   /* ── reads ─────────────────────────────────────────────────────────────── */
@@ -353,6 +353,17 @@
     rec.lastSeen = now();
     if (!rec.firstSeen) rec.firstSeen = now();
     if (amount > 0) rec.spend = (rec.spend || 0) + amount;
+    if (!Array.isArray(rec.history)) rec.history = [];
+    const detail = {
+      ref: String(opts.saleRef || ''), ts: +opts.createdAt || now(), amount,
+      method: String(opts.method || '').slice(0, 32),
+      items: (Array.isArray(opts.items) ? opts.items : []).slice(0, 100).map(function (item) {
+        return { name: String(item && item.name || '').slice(0, 120), qty: Math.max(0, Math.round(+item?.qty || 0)), total: money(item && item.total) };
+      }),
+    };
+    rec.history = [detail].concat(rec.history.filter(function (row) {
+      return !(detail.ref && row && row.ref === detail.ref);
+    })).slice(0, 50);
 
     var rewardReady = false;
     var delta = { points: 0, stamps: 0, visits: 1, spend: amount };
@@ -373,7 +384,8 @@
     writeBook(d, book);
     var ref = 'purchase:' + id + ':' + rec.updated + ':' + Math.abs(hash(String(Math.random()))).toString(36);
     var event = { kind: 'purchase', ref: ref, clientId: id, amount: amount, points: delta.points,
-      stamps: delta.stamps, visits: delta.visits, spend: delta.spend, created: rec.updated };
+      stamps: delta.stamps, visits: delta.visits, spend: delta.spend, created: rec.updated,
+      method: detail.method, items: detail.items, saleRef: detail.ref };
     purchaseAdd(book, event);
     purchasePush(book, event);
     return { client: rec, rewardReady: rewardReady };
@@ -524,6 +536,7 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
         body: JSON.stringify({ merchant: book, purchase: {
           clientId: event.clientId, ref: event.ref, amount: event.amount,
+          method: event.method || '', items: event.items || [], saleRef: event.saleRef || '',
         } }),
       }).then(function (r) { if (r && r.ok) purchaseDrop(book, event.ref); }).catch(function () {});
     } catch (_) {}
@@ -624,6 +637,9 @@
       firstSeen: r.first_seen || 0, lastSeen: r.last_seen || 0, updated: r.updated_ts || 0,
       purchaseRefs: Array.isArray(r.purchase_refs) ? r.purchase_refs.slice() : [],
       rewardRefs: Array.isArray(r.reward_refs) ? r.reward_refs.slice() : [],
+      history: (Array.isArray(r.purchase_history) ? r.purchase_history : []).map(function (row) {
+        return { ref: row.saleRef || row.ref || '', ts: +row.createdAt || 0, amount: money(row.amount), method: String(row.method || ''), items: Array.isArray(row.items) ? row.items : [] };
+      }),
     };
   }
   function pendingPurchaseDelta(book, id) {
@@ -679,6 +695,7 @@
         d.list.push(sc); byId[sc.id] = sc; changed = true;
         var mm = /^c(\d+)_/.exec(sc.id); if (mm) { var n = parseInt(mm[1], 10); if (n > (d.seq || 0)) d.seq = n; }
       } else if ((sc.updated || 0) >= (local.updated || 0)) {
+        if ((!sc.history || !sc.history.length) && Array.isArray(local.history)) sc.history = local.history;
         Object.assign(local, sc); changed = true;
       }
     });

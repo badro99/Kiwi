@@ -1650,6 +1650,8 @@ CREATE TABLE IF NOT EXISTS client_purchase_events (
   amount INTEGER NOT NULL DEFAULT 0, points INTEGER NOT NULL DEFAULT 0,
   stamps INTEGER NOT NULL DEFAULT 0, visits INTEGER NOT NULL DEFAULT 1,
   created_ts INTEGER NOT NULL, srv_ts INTEGER NOT NULL DEFAULT 0,
+  method TEXT NOT NULL DEFAULT '', items TEXT NOT NULL DEFAULT '[]',
+  sale_ref TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (merchant, ref)
 );
 CREATE INDEX IF NOT EXISTS idx_client_purchase_events_sync ON client_purchase_events(merchant, srv_ts);

@@ -311,17 +311,17 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
   ok(noCfg.depotOn() === false, 'sans /api/config (démo, Pages, backend injoignable) l’option est éteinte');
 }
 
-/* 12. CATÉGORIE A / B — le choix se pose là où les articles sont VRAIMENT créés.
- * La caisse ne crée plus d'article (openNewProduct/openEditProduct renvoient au
- * tableau de bord) : une case à cocher posée dans ce formulaire-là ne serait
- * jamais vue. Le contrôle vérifie donc les deux bouts — le choix côté tableau
- * de bord, le repère « B » côté caisse. */
+/* 12. CATÉGORIE A / B — le tableau de bord garde le choix A/B complet. La
+ * caisse ne peut créer qu'avec l'autorisation God Mode explicite ; sans elle,
+ * le garde bloque le chemin avant toute mutation du catalogue. */
 {
   const proSrc = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
 
-  // a) la caisse ne crée pas d'article : c'est ce qui rend le point b) obligatoire
-  ok(/function openNewProduct\(\)\s*\{\s*catalogDashboardOnly\(\);\s*return;/.test(jsSrc),
-    'la caisse renvoie la création d’article au tableau de bord (donc le choix A/B y vit)');
+  // a) l'édition caisse reste fermée par défaut, et ne s'ouvre que sur true
+  ok(/function openNewProduct\(\)\s*\{\s*if \(!catalogueAdminEnabled\(\)\) \{ catalogDashboardOnly\(\); return; \}/.test(jsSrc),
+    'la caisse bloque la création d’article tant que God Mode ne l’autorise pas');
+  ok(/features\.caisseInventoryAdmin === true/.test(jsSrc),
+    'seule la valeur booléenne true ouvre la gestion complète sur caisse');
 
   // b) le formulaire de création propose A et B, et n'en pré-coche aucune
   const abField = proSrc.slice(proSrc.indexOf('function _bqxAbField'), proSrc.indexOf('function _bqxWireAb'));
