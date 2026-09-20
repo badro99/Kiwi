@@ -60,31 +60,31 @@
       assert(accepted && accepted.ok && accepted.durable === 'indexeddb', 'uses IndexedDB');
       // Enqueued/pending is visible before the asynchronous first POST. Keep
       // the endpoint offline until a real failed attempt has happened.
-      await waitFor(async function () { return window.__failedPosts > 0 && (await KiwiOffline.stats('sale', window.__testTenant)).pending === 1; }, 3000);
+      await waitFor(async function () { return window.__failedPosts > 0 && (await KiwiOffline.stats('sale', window.__testTenant)).pending === 1; }, 10000);
       line('a failed POST remains durable in IndexedDB');
 
       window.__fetchMode = 'ok';
       window.dispatchEvent(new Event('online'));
-      await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).total === 0; }, 3000);
+      await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).total === 0; }, 10000);
       assert(window.__posts.length >= 2 && window.__posts.every(function (p) { return p.id === accepted.id; }), 'stable replay id');
       line('reconnect replays the same id and acknowledges it');
 
       window.__fetchMode = 'pending';
       var beforePending = window.__posts.length;
       KiwiLive.postSale({ id: ref + '-pending', amount: 60, method: 'cash', ref: ref + '-pending' });
-      await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).lastError === 'settlement-pending'; }, 3000);
+      await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).lastError === 'settlement-pending'; }, 10000);
       assert((await KiwiOffline.stats('sale', window.__testTenant)).total === 1, '200 pending stays durable');
       line('accepted money with pending settlement remains in real IndexedDB');
       window.__fetchMode = 'ok';
       // No manual flush: the transport must schedule recovery itself.
-      await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).total === 0; }, 9000);
+      await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).total === 0; }, 15000);
       var pendingPosts = window.__posts.slice(beforePending);
       assert(pendingPosts.length >= 2 && pendingPosts.every(function (p) { return p.id === pendingPosts[0].id; }), 'pending replay retains its identity');
       line('scheduled settlement retry uses the same receipt and acknowledges completion');
 
       window.__fetchMode = 'blocked';
       KiwiLive.postSale({ amount: 44, method: 'card', label: 'Invalid test', ref: ref + '-blocked' });
-      await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).blocked === 1; }, 3000);
+      await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).blocked === 1; }, 10000);
       assert(KiwiLive.queueStatus().blocked === 1, 'blocked status visible');
       line('a 422 response is retained and visible to the cashier');
 

@@ -32,7 +32,10 @@ try {
   page.on('request', req => req.url().startsWith(origin + '/') ? req.continue() : req.abort());
   await page.goto(origin + '/test');
   await page.click('#run');
-  await page.waitForFunction(() => document.querySelector('#result').dataset.status, { timeout: 20000 });
+  /* This test also runs inside the full repository gate beside several real
+   * Chromium suites. Keep its deadline above the fixture's retry windows so a
+   * busy machine cannot turn a correct IndexedDB replay into a false red. */
+  await page.waitForFunction(() => document.querySelector('#result').dataset.status, { timeout: 60000 });
   const result = await page.$eval('#result', el => ({ status: el.dataset.status, text: el.textContent }));
   console.log(result.text);
   if (result.status !== 'passed') process.exitCode = 1;

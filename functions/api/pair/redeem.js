@@ -177,13 +177,17 @@ export async function onRequestPost(context) {
   if (env.AUTH_SECRET) {
     /* Émis au millésime COURANT du commerçant : un dépairage ultérieur le
      * périmera, comme tous les autres. */
+    /* Some legacy kiosk/WebView paths have retained only the final Set-Cookie
+     * value. Put the terminal identity first and the sale-authorizing till
+     * proof last: an old client then heals on its next existing pairing retry,
+     * while current clients confirm/recover both proofs explicitly. */
+    if (terminalId) {
+      try { res.headers.append('Set-Cookie', terminalCookie(await terminalToken(env.AUTH_SECRET, row.merchant, terminalId, currentEpoch))); } catch (_) {}
+    }
     try {
       if (!Number.isFinite(currentEpoch)) return json({ error: 'auth-unavailable' }, 503);
       res.headers.append('Set-Cookie', tillCookie(await tillToken(env.AUTH_SECRET, row.merchant, currentEpoch)));
     } catch (_) { return json({ error: 'auth-unavailable' }, 503); }
-    if (terminalId) {
-      try { res.headers.append('Set-Cookie', terminalCookie(await terminalToken(env.AUTH_SECRET, row.merchant, terminalId, currentEpoch))); } catch (_) {}
-    }
   }
   return res;
 }

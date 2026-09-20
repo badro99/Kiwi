@@ -73,6 +73,8 @@ assert.equal(redeemed.status, 200);
 const issued = setCookies(redeemed);
 const terminalProof = cookieValue(issued, TERMINAL_COOKIE);
 assert.ok(terminalProof, 'pairing issues the stable terminal proof');
+assert.match(issued.at(-1) || '', new RegExp('^' + TILL_COOKIE + '='),
+  'the till proof is the final Set-Cookie value for legacy single-cookie kiosks');
 
 // Reproduce the field state: local pairing and terminal proof survived, while
 // the independent till cookie did not. This must not consume another code.
