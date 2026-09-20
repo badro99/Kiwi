@@ -46,6 +46,9 @@ ok('boutique sale workspace consumes the full height below the optional offline 
 ok('the generic caisse grid follows the enhanced rail width',
   css.includes('#pos-autre.kiwi-dna .ot-app') && css.includes('grid-template-columns: var(--kiwi-dna-rail-w)') &&
   css.includes('@media (max-width: 800px)'));
+ok('the long Maison movement label is contained inside its compact primary tile',
+  css.includes('[data-mz-view="mouvements"].kiwi-dna-primary > span') &&
+  css.includes('overflow-wrap: anywhere'));
 ok('specialist product pickers expose more choices on common laptop tills',
   css.includes('@media (min-width: 801px) and (max-width: 1366px)') &&
   css.includes('#pos-boutique.kiwi-dna .bq-grid') &&

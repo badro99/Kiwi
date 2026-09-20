@@ -56,11 +56,12 @@ const server = http.createServer((req, res) => {
         button,input{font:inherit} button{border:0} .vx-screen{display:flex} .modal-veil{display:none}.modal-veil.is-open{display:flex}
       </style>
       <script>window.KiwiEnv={isReal:()=>false,demosAllowed:true};window.KiwiPosDispatch={register:s=>window.__maisonSpec=s,lock:()=>{}};</script>
+      <script src="/assets/caisse-dna.js"></script>
       <script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
       <script src="/assets/inventory-ledger.js"></script><script src="/assets/maison-stock-movements.js"></script>
       <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script src="/assets/pos-maison.js"></script>
-    </head><body class="is-pos-maison"><div id="toast-stack"></div><div class="vx-screen kiwi-dna is-on" id="pos-maison"></div>
-      <script>window.__maisonSpec.mount(document.getElementById('pos-maison'));document.getElementById('pos-maison').insertAdjacentHTML('beforeend','<button class="krs-launch">Scan continu</button>');</script>
+    </head><body class="is-pos-maison"><div id="toast-stack"></div><div class="vx-screen is-on" id="pos-maison"></div>
+      <script>window.__maisonSpec.mount(document.getElementById('pos-maison'));window.KiwiCaisseDna.enhance(document.getElementById('pos-maison'),'maison');document.getElementById('pos-maison').insertAdjacentHTML('beforeend','<button class="krs-launch">Scan continu</button>');</script>
     </body></html>`);
     return;
   }
@@ -115,6 +116,17 @@ try {
   ok(shell.paddingTop === '0px' && shell.paddingBottom === '0px', 'application panels ignore global marketing section padding');
   ok(shell.panelLeft >= shell.railRight && shell.headTop < 80, 'sale content starts beside the rail and at the top of the viewport');
   ok(shell.panelBottom <= shell.viewportHeight + 1, 'active Maison panel fits inside the viewport');
+  const primaryLabels = await page.evaluate(() => [...document.querySelectorAll('.kiwi-dna-primary > span')].map((label) => {
+    const button = label.parentElement.getBoundingClientRect();
+    const text = label.getBoundingClientRect();
+    return {
+      name: label.textContent.trim(),
+      contained: text.left >= button.left - 0.5 && text.right <= button.right + 0.5 && label.scrollWidth <= label.clientWidth + 1,
+      textWidth: Math.round(text.width), scrollWidth: label.scrollWidth, buttonWidth: Math.round(button.width),
+    };
+  }));
+  ok(primaryLabels.every((item) => item.contained),
+    'every compact Maison primary label stays inside its tile: ' + JSON.stringify(primaryLabels));
   const launcher = await page.evaluate(() => {
     const scan = document.querySelector('.krs-launch').getBoundingClientRect();
     const ticket = document.querySelector('.mz-ticket').getBoundingClientRect();

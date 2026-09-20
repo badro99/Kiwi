@@ -207,6 +207,22 @@
   hyphens: none;
 }
 
+/* Maison's stock journal has the only primary label whose longest French word
+ * is wider than a third of the compact rail. Give that tile its full column
+ * width and tighten only this label; `overflow-wrap` is a last-resort guard for
+ * narrower embedded WebViews, so it can never paint over Déclarer Casse. */
+#pos-maison.kiwi-dna [data-mz-view="mouvements"].kiwi-dna-primary {
+  padding-inline: 0;
+}
+#pos-maison.kiwi-dna [data-mz-view="mouvements"].kiwi-dna-primary > span {
+  padding-inline: 1px;
+  box-sizing: border-box;
+  font-size: 10px;
+  line-height: 1.08;
+  letter-spacing: -.035em;
+  overflow-wrap: anywhere;
+}
+
 .vx-screen.kiwi-dna .kiwi-dna-primary > b {
   position: absolute;
   inset: 7px 7px auto auto;
