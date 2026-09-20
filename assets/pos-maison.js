@@ -2875,7 +2875,7 @@
     const q = state.clQuery;
     const hits = clienteHits(q);
     panel.innerHTML = `
-      <div class="mz-clients">
+      <div class="mz-clients mz-page">
         <header class="mz-head">
           <div><h1>Clientes</h1><div class="mz-head-sub">Le téléphone d'abord, la fiche suit la cliente, pas le ticket</div></div>
           <div class="mz-search"><i data-lucide="search"></i>
@@ -3601,19 +3601,25 @@
     const panel = $('[data-mz-panel="fournisseurs"]', root);
     const api = procurement();
     if (!panel) return;
-    if (!api) { panel.innerHTML = '<div class="mz-empty" style="margin:40px;">Approvisionnement indisponible.</div>'; return; }
+    if (!api) {
+      panel.innerHTML = `<div class="bqi mz-page">
+        <header class="mz-head"><div><h1>Fournisseurs &amp; achats</h1><div class="mz-head-sub">Annuaire, commandes, réceptions, retours et coûts · synchronisés avec le dashboard</div></div></header>
+        <div class="mz-empty mz-empty-room">Approvisionnement indisponible. Rechargez la caisse pour retrouver les fournisseurs et commandes.</div>
+      </div>`;
+      return;
+    }
     const doc = api.doc() || {}, suppliers = (doc.suppliers || []).filter((s) => s.active !== false), orders = doc.orders || [];
-    panel.innerHTML = `<div class="bqi">
-      <header class="mz-head" style="padding:22px 22px 0;">
+    panel.innerHTML = `<div class="bqi mz-page">
+      <header class="mz-head">
         <div><h1>Fournisseurs &amp; achats</h1><div class="mz-head-sub">Annuaire, commandes, réceptions, retours et coûts · synchronisés avec le dashboard</div></div>
-        <div style="display:flex;gap:8px;"><button class="mz-btn secondary" id="mz-sup-receive"><i data-lucide="package-plus"></i>Réception directe</button><button class="mz-btn primary" id="mz-sup-new"><i data-lucide="plus"></i>Nouveau fournisseur</button></div>
+        <div class="mz-head-actions"><button class="mz-btn secondary" id="mz-sup-receive"><i data-lucide="package-plus"></i>Réception directe</button><button class="mz-btn primary" id="mz-sup-new"><i data-lucide="plus"></i>Nouveau fournisseur</button></div>
       </header>
       <div class="mzi-kpis"><div class="mzi-kpi"><span class="l">Fournisseurs actifs</span><span class="v">${suppliers.length}</span></div><div class="mzi-kpi"><span class="l">Commandes ouvertes</span><span class="v">${orders.filter((o) => !['received','cancelled'].includes(o.status)).length}</span></div><div class="mzi-kpi"><span class="l">Réceptions</span><span class="v">${(doc.receipts || []).length}</span></div></div>
-      <div style="padding:0 22px 12px;display:flex;gap:8px;align-items:center;"><h3 style="margin:0 auto 0 0;">Annuaire</h3>${api.isUltra() ? '<button class="mz-btn" id="mz-po-new"><i data-lucide="file-plus"></i>Nouveau bon de commande</button>' : ''}</div>
-      <div class="mz-reg-grid" style="padding:0 22px 18px;">${suppliers.map((s) => `<div class="mz-reg-card"><div class="mz-reg-head"><div><h3 class="mz-reg-title">${esc(s.name)}</h3><div class="mz-reg-sub">${esc([s.phone,s.email].filter(Boolean).join(' · ') || 'Coordonnées à compléter')}</div></div><span class="mz-reg-badge">${s.leadDays || 0} j</span></div>
+      <div class="mz-section-head"><h2>Annuaire</h2>${api.isUltra() ? '<button class="mz-btn secondary" id="mz-po-new"><i data-lucide="file-plus"></i>Nouveau bon de commande</button>' : ''}</div>
+      <div class="mz-reg-grid">${suppliers.map((s) => `<div class="mz-reg-card"><div class="mz-reg-head"><div><h3 class="mz-reg-title">${esc(s.name)}</h3><div class="mz-reg-sub">${esc([s.phone,s.email].filter(Boolean).join(' · ') || 'Coordonnées à compléter')}</div></div><span class="mz-reg-badge">${s.leadDays || 0} j</span></div>
         ${s.address ? `<div class="mz-reg-sub">${esc(s.address)}</div>` : ''}${s.taxId ? `<div class="mz-reg-sub">ICE / IF · ${esc(s.taxId)}</div>` : ''}${s.paymentTerms ? `<div class="mz-reg-sub">Conditions · ${esc(s.paymentTerms)}</div>` : ''}${s.categories ? `<div class="mz-reg-sub">Articles · ${esc(s.categories)}</div>` : ''}
-        <div style="display:flex;gap:8px;justify-content:flex-end;"><button class="mz-btn secondary sm" data-mz-sup-receive="${s.id}">Réception</button><button class="mz-btn secondary sm" data-mz-sup-return="${s.id}">Retour fournisseur</button></div></div>`).join('') || '<div class="mz-empty" style="grid-column:1/-1;min-height:180px;">Ajoutez votre premier fournisseur pour enregistrer les réceptions et les coûts.</div>'}</div>
-      <div style="padding:0 22px 22px;"><h3>Commandes</h3><div class="mzi-list">${orders.map((o) => `<div class="mzi-row"><span class="mzi-info"><b>${esc(o.number)}</b><span>${esc(supplierName(doc,o.supplierId))} · ${esc(o.status)}${o.expectedDate ? ' · '+esc(o.expectedDate) : ''}</span></span><span class="mzi-price">${fmtMAD((o.lines||[]).reduce((n,l)=>n+(+l.qty||0)*(+l.unitCost||0),0))}</span><span style="display:flex;gap:6px;">${o.status==='draft' ? `<button class="mzi-mini" data-mz-po-send="${o.id}" title="Marquer envoyée"><i data-lucide="send"></i></button>` : ''}${!['received','cancelled'].includes(o.status) ? `<button class="mzi-mini" data-mz-po-receive="${o.id}" title="Réceptionner"><i data-lucide="package-check"></i></button><button class="mzi-mini" data-mz-po-cancel="${o.id}" title="Annuler"><i data-lucide="x"></i></button>` : ''}</span></div>`).join('') || '<div class="mz-empty">Aucune commande.</div>'}</div></div>
+        <div class="mz-card-actions"><button class="mz-btn secondary sm" data-mz-sup-receive="${s.id}">Réception</button><button class="mz-btn secondary sm" data-mz-sup-return="${s.id}">Retour fournisseur</button></div></div>`).join('') || '<div class="mz-empty mz-empty-room">Ajoutez votre premier fournisseur pour enregistrer les réceptions et les coûts.</div>'}</div>
+      <div class="mz-section-head"><h2>Commandes</h2></div><div class="mzi-list mz-section-surface">${orders.map((o) => `<div class="mzi-row"><span class="mzi-info"><b>${esc(o.number)}</b><span>${esc(supplierName(doc,o.supplierId))} · ${esc(o.status)}${o.expectedDate ? ' · '+esc(o.expectedDate) : ''}</span></span><span class="mzi-price">${fmtMAD((o.lines||[]).reduce((n,l)=>n+(+l.qty||0)*(+l.unitCost||0),0))}</span><span class="mz-row-actions">${o.status==='draft' ? `<button class="mzi-mini" data-mz-po-send="${o.id}" title="Marquer envoyée"><i data-lucide="send"></i></button>` : ''}${!['received','cancelled'].includes(o.status) ? `<button class="mzi-mini" data-mz-po-receive="${o.id}" title="Réceptionner"><i data-lucide="package-check"></i></button><button class="mzi-mini" data-mz-po-cancel="${o.id}" title="Annuler"><i data-lucide="x"></i></button>` : ''}</span></div>`).join('') || '<div class="mz-empty">Aucune commande.</div>'}</div>
     </div>`;
     $('#mz-sup-new', panel).onclick = openSupplierForm;
     $('#mz-sup-receive', panel).onclick = () => openProcurementMove('receipt', '');
@@ -3777,33 +3783,33 @@
     const totalCasseLoss = log.reduce((acc, row) => acc + (row.totalLoss || 0), 0);
 
     panel.innerHTML = `
-      <div class="mz-casse-view">
+      <div class="mz-casse-view mz-page">
         <header class="mz-head">
           <div>
             <h1>Déclaration de Casse &amp; Pertes</h1>
             <div class="mz-head-sub">Dépréciation immédiate, valorisation au coût d'achat et traçabilité inventaire</div>
           </div>
-          <div style="font-family:var(--mono); font-size:14px; font-weight:700; color:#BA1A1A; background:rgba(186,26,26,0.08); padding:8px 14px; border-radius:10px;">
+          <div class="mz-head-metric is-danger">
             Perte totale enregistrée : ${fmtMAD(totalCasseLoss)}
           </div>
         </header>
 
         <div class="mz-casse-box">
-          <h3 style="margin:0 0 10px; font-size:15px;">Déclarer un article cassé / détérioré</h3>
-          <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:12px;">
-            <div>
-              <label style="font-size:11.5px; font-weight:700; color:var(--ink-3); text-transform:uppercase;">Article</label>
-              <select id="mz-casse-pid" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--line); margin-top:4px; font:inherit; background:var(--paper);">
+          <h2 class="mz-section-title">Déclarer un article cassé / détérioré</h2>
+          <div class="mz-form-grid">
+            <div class="mz-field">
+              <label>Article</label>
+              <select id="mz-casse-pid">
                 ${allProducts.map((p) => `<option value="${p.id}">${p.marque ? '[' + esc(p.marque) + '] ' : ''}${esc(p.name)} (${fmtMAD(p.price)})</option>`).join('')}
               </select>
             </div>
-            <div>
-              <label style="font-size:11.5px; font-weight:700; color:var(--ink-3); text-transform:uppercase;">Quantité cassée</label>
-              <input id="mz-casse-qty" type="number" min="1" max="50" value="1" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--line); margin-top:4px; font:inherit; background:var(--paper);" />
+            <div class="mz-field">
+              <label>Quantité cassée</label>
+              <input id="mz-casse-qty" type="number" min="1" max="50" value="1" />
             </div>
-            <div>
-              <label style="font-size:11.5px; font-weight:700; color:var(--ink-3); text-transform:uppercase;">Motif</label>
-              <select id="mz-casse-reason" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--line); margin-top:4px; font:inherit; background:var(--paper);">
+            <div class="mz-field">
+              <label>Motif</label>
+              <select id="mz-casse-reason">
                 <option value="Chute lors du déballage en réserve">Chute déballage</option>
                 <option value="Manipulation client en rayon">Accident client en rayon</option>
                 <option value="Défaut d'émail / fêlure découverte">Fêlure / Défaut d'émail</option>
@@ -3818,15 +3824,15 @@
             <span>Perte financière magasin : <b id="mz-casse-preview-total">0 MAD</b></span>
           </div>
 
-          <div style="display:flex; justify-content:flex-end;">
-            <button class="mz-btn primary" id="mz-casse-submit" style="background:#BA1A1A; border-color:#BA1A1A; color:#fff;">
+          <div class="mz-card-actions">
+            <button class="mz-btn primary is-danger" id="mz-casse-submit">
               <i data-lucide="shield-alert"></i>Enregistrer la casse &amp; décrémenter le stock
             </button>
           </div>
         </div>
 
         <div class="mz-casse-box">
-          <h3 style="margin:0 0 10px; font-size:15px;">Historique des déclarations de casse</h3>
+          <h2 class="mz-section-title">Historique des déclarations de casse</h2>
           ${log.length ? `
           <table class="mz-casse-table">
             <thead>
@@ -4037,11 +4043,11 @@
   function renderScan() {
     const panel = $('[data-mz-panel="scan"]', root);
     panel.innerHTML = `
-      <div class="mz-scan">
-        <div class="mz-scan-inner">
-          <header class="mz-head" style="padding:22px 0 0;">
+      <div class="mz-scan mz-page">
+        <header class="mz-head">
             <div><h1>Scan produit</h1><div class="mz-head-sub">Scannez un article pour voir son prix, ses tailles et son stock. Rien n'est ajouté au ticket.</div></div>
-          </header>
+        </header>
+        <div class="mz-scan-inner mz-section-surface">
           <div class="mz-ean-in"><i data-lucide="scan-line"></i>
             <input id="mz-ean" placeholder="Scannez ou tapez un code-barres…" autocomplete="off" />
           </div>
@@ -4207,17 +4213,17 @@
     const hits = SALES.filter((s) => !s.voided && dateKey(s.at) === state.retDate && saleMatches(s, q));
     const ret = state.ret;
     panel.innerHTML = `
-      <div class="mz-ret">
+      <div class="mz-ret mz-page">
         <header class="mz-head">
           <div><h1>Retours, remboursements &amp; avoirs</h1><div class="mz-head-sub">Avoir boutique ou remboursement sur le moyen d’origine · remboursement protégé par un responsable</div></div>
           <div class="mz-search"><i data-lucide="search"></i>
             <input id="mz-ret-q" placeholder="N° de ticket ou téléphone…" value="${esc(q)}" /></div>
         </header>
-        <div class="mz-ret-bar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 0;">
+        <div class="mz-ret-bar mz-page-toolbar">
           <button class="mz-pill ${state.retDate === todayKey ? 'ok' : ''}" type="button" data-mz-ret-day="${todayKey}">Aujourd'hui</button>
           <button class="mz-pill ${state.retDate === yesterdayKey ? 'ok' : ''}" type="button" data-mz-ret-day="${yesterdayKey}">Hier</button>
-          <label class="mz-ret-bar-lbl" style="margin-left:4px;">Date
-            <input id="mz-ret-date" type="date" min="${oldestKey}" max="${todayKey}" value="${state.retDate}" style="margin-left:7px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);" />
+          <label class="mz-ret-bar-lbl">Date
+            <input id="mz-ret-date" type="date" min="${oldestKey}" max="${todayKey}" value="${state.retDate}" />
           </label>
         </div>
         <div class="mz-ret-scroll"><div class="mz-ret-inner">
@@ -6923,7 +6929,7 @@
     const facets = MZ.facets();
     const categories = cat.listCategories() || [];
     const option = (value, label, current) => `<option value="${esc(value)}"${String(value) === String(current) ? ' selected' : ''}>${esc(label)}</option>`;
-    panel.innerHTML = `<div class="mzm-view">
+    panel.innerHTML = `<div class="mzm-view mz-page">
       <header class="mz-head mzm-head">
         <div><h1>Mouvements de stock</h1><div class="mz-head-sub">Chaque entrée et chaque sortie, avec le stock avant et après${state.movementSyncing ? ' · synchronisation…' : ''}</div></div>
         <button class="mz-btn primary" id="mzm-new"><i data-lucide="plus"></i>Nouveau mouvement</button>
@@ -7017,8 +7023,8 @@
     const filter = state.invFilter || 'all';
     const products = cat.listProducts({ categoryId: filter, q: state.invQuery || '' });
     panel.innerHTML = `
-      <div class="bqi">
-        <header class="mz-head" style="padding:22px 22px 0;">
+      <div class="bqi mz-page">
+        <header class="mz-head">
           <div><h1>Inventaire</h1><div class="mz-head-sub">Douchette + imprimante étiquettes · ${st.products} produits · ${st.variants} variantes, base partagée avec le dashboard</div></div>
         </header>
         <div class="mzi-tools">

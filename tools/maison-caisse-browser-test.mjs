@@ -58,7 +58,7 @@ const server = http.createServer((req, res) => {
       <script>window.KiwiEnv={isReal:()=>false,demosAllowed:true};window.KiwiPosDispatch={register:s=>window.__maisonSpec=s,lock:()=>{}};</script>
       <script src="/assets/caisse-dna.js"></script>
       <script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
-      <script src="/assets/inventory-ledger.js"></script><script src="/assets/maison-stock-movements.js"></script>
+      <script src="/assets/inventory-ledger.js"></script><script src="/assets/maison-stock-movements.js"></script><script src="/assets/procurement.js"></script>
       <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script src="/assets/pos-maison.js"></script>
     </head><body class="is-pos-maison"><div id="toast-stack"></div><div class="vx-screen is-on" id="pos-maison"></div>
       <script>window.__maisonSpec.mount(document.getElementById('pos-maison'));window.KiwiCaisseDna.enhance(document.getElementById('pos-maison'),'maison');document.getElementById('pos-maison').insertAdjacentHTML('beforeend','<button class="krs-launch">Scan continu</button>');</script>
@@ -136,6 +136,9 @@ try {
   ok(launcher.scanBottom <= launcher.viewportHeight, 'continuous scan launcher remains fully visible');
 
   const views = ['vente', 'mouvements', 'casse', 'scan', 'inventaire', 'fournisseurs', 'echanges', 'vendus', 'clientes'];
+  const workspaceFrames = [];
+  const artifactDir = process.env.KIWI_TEST_ARTIFACT_DIR || '';
+  if (artifactDir) fs.mkdirSync(artifactDir, { recursive: true });
   for (const view of views) {
     await page.click(`[data-mz-view="${view}"]`);
     const state = await page.evaluate((name) => ({
@@ -144,7 +147,71 @@ try {
       visiblePanel: document.querySelector('#pos-maison .mz-view.is-on')?.dataset.mzPanel,
     }), view);
     ok(state.activeNav && state.activePanel && state.visiblePanel === view, `rail opens ${view}`);
+    const frame = await page.evaluate((name) => {
+      const panel = document.querySelector(`[data-mz-panel="${name}"]`);
+      const heading = panel?.querySelector('h1');
+      const rect = heading?.getBoundingClientRect();
+      return {
+        view: name,
+        left: rect?.left || 0,
+        top: rect?.top || 0,
+        fontSize: heading ? getComputedStyle(heading).fontSize : '',
+        pageShell: name === 'vente' || !!panel?.querySelector('.mz-page, .ksold'),
+        overflow: panel ? Math.max(0, panel.scrollWidth - panel.clientWidth) : 999,
+      };
+    }, view);
+    workspaceFrames.push(frame);
+    if (artifactDir) {
+      await new Promise((resolve) => setTimeout(resolve, 220));
+      await page.screenshot({ path: path.join(artifactDir, `maison-${view}.png`) });
+    }
   }
+  const headingLefts = workspaceFrames.map((frame) => Math.round(frame.left));
+  const headingTops = workspaceFrames.map((frame) => Math.round(frame.top));
+  ok(Math.max(...headingLefts) - Math.min(...headingLefts) <= 1,
+    'every Maison destination keeps the same title gutter: ' + JSON.stringify(workspaceFrames));
+  ok(Math.max(...headingTops) - Math.min(...headingTops) <= 1,
+    'every Maison destination keeps the same title baseline: ' + JSON.stringify(workspaceFrames));
+  ok(workspaceFrames.every((frame) => frame.fontSize === '24px' && frame.pageShell),
+    'every Maison destination uses the shared 24px workspace header and page shell');
+  ok(workspaceFrames.every((frame) => frame.overflow <= 1),
+    'every Maison destination stays inside the desktop canvas without horizontal overflow');
+
+  const visualSystem = await page.evaluate(() => {
+    const inventory = document.querySelector('[data-mz-panel="inventaire"]');
+    const page = inventory?.querySelector('.mz-page');
+    const button = inventory?.querySelector('.mz-btn');
+    const kpis = inventory?.querySelector('.mzi-kpis');
+    return {
+      pageGap: page ? getComputedStyle(page).gap : '',
+      buttonHeight: button ? getComputedStyle(button).minHeight : '',
+      buttonRadius: button ? getComputedStyle(button).borderRadius : '',
+      kpiRadius: kpis ? getComputedStyle(kpis).borderRadius : '',
+    };
+  });
+  ok(visualSystem.pageGap === '18px' && visualSystem.buttonHeight === '44px'
+    && visualSystem.buttonRadius === '12px' && visualSystem.kpiRadius === '16px',
+  'shared workspace spacing, controls and KPI surfaces use one design language: ' + JSON.stringify(visualSystem));
+
+  await page.setViewport({ width: 1024, height: 760, deviceScaleFactor: 1 });
+  const compactFrames = [];
+  for (const view of views) {
+    await page.click(`[data-mz-view="${view}"]`);
+    compactFrames.push(await page.evaluate((name) => {
+      const panel = document.querySelector(`[data-mz-panel="${name}"]`);
+      const heading = panel?.querySelector('h1')?.getBoundingClientRect();
+      const rail = document.querySelector('#pos-maison .mz-rail')?.getBoundingClientRect();
+      return {
+        view: name,
+        visible: !!heading && heading.left >= (rail?.right || 0) && heading.top >= 0 && heading.right <= innerWidth,
+        overflow: panel ? Math.max(0, panel.scrollWidth - panel.clientWidth) : 999,
+      };
+    }, view));
+  }
+  ok(compactFrames.every((frame) => frame.visible && frame.overflow <= 1),
+    'all Maison destinations preserve the shared shell on a 1024px caisse: ' + JSON.stringify(compactFrames));
+  await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
+
   await page.click('[data-mz-view="mouvements"]');
   ok((await page.$eval('[data-mz-view="mouvements"]', (el) => el.textContent)).includes('Mouvements de stock'),
     'the second Maison tile exposes stock movements');

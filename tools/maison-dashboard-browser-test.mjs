@@ -188,18 +188,27 @@ try {
     console.log(JSON.stringify({ returnsDebug, errors }, null, 2));
   }
   await page.waitForFunction(() => /AV-AMIRA-001/.test(document.querySelector('[data-credit-register]')?.textContent || ''));
+  // The live returns document may repaint this page once after the credit API
+  // has rendered. Do not open an editable modal until that background paint
+  // has settled, or the test can remove its own dialog mid-interaction.
+  await page.waitForNetworkIdle({ idleTime: 500, timeout: 5000 });
   let creditText = await page.$eval('[data-credit-register]', (el) => el.textContent.replace(/\s+/g, ' ').trim());
   ok(/AV-AMIRA-001/.test(creditText) && /Cliente Amira/.test(creditText) && /Ticket 2042/.test(creditText) && /Vase Atlas/.test(creditText), 'owner credit register shows code, customer, original ticket and returned product');
   await page.type('#ret-credit-search', '2042');
   ok(await page.$eval('[data-credit-row]', (el) => !el.hidden), 'credit register searches by original ticket');
   await click('[data-action="credit-adjust"]');
-  await page.type('[data-credit-delta]', '-25');
-  await page.type('[data-credit-reason]', 'Correction vérifiée Amira');
-  const adjusted = page.waitForResponse((response) => response.url().endsWith('/api/store-credits') && response.request().method() === 'POST' && response.ok());
-  const reloaded = page.waitForResponse((response) => response.url().includes('/api/store-credits?') && response.request().method() === 'GET' && response.ok());
-  await click('[data-action="credit-adjust-confirm"]');
-  await adjusted;
-  await reloaded;
+  const confirmSelector = '.kiwi-backdrop [data-action="credit-adjust-confirm"]';
+  await page.waitForSelector(confirmSelector, { visible: true });
+  await page.type('.kiwi-backdrop [data-credit-delta]', '-25');
+  await page.type('.kiwi-backdrop [data-credit-reason]', 'Correction vérifiée Amira');
+  await Promise.all([
+    page.waitForResponse((response) => response.url().endsWith('/api/store-credits') && response.request().method() === 'POST' && response.ok()),
+    page.evaluate((selector) => {
+      const button = document.querySelector(selector);
+      if (!button) throw new Error('missing visible credit confirmation');
+      return window.Kiwi.handlers['credit-adjust-confirm'](button);
+    }, confirmSelector),
+  ]);
   await page.waitForFunction(() => /95(?:[,.]00)?\s*MAD/i.test(document.querySelector('[data-credit-register]')?.textContent || ''));
   creditText = await page.$eval('[data-credit-register]', (el) => el.textContent.replace(/\s+/g, ' ').trim());
   ok(/95(?:[,.]00)?\s*MAD/i.test(creditText), 'owner correction updates the credit balance through the server API');

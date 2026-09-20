@@ -11793,7 +11793,18 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     });
     let data = null; try { data = await response.json(); } catch (_) {}
     if (!response.ok || !data || data.error) throw new Error((data && data.error) || `http-${response.status}`);
-    liveCreditsLoadedSlug = ''; loadLiveCredits();
+    // Paint the server-confirmed value immediately. The reconciliation fetch
+    // can overlap an earlier cloud-document refresh; relying on that fetch
+    // alone occasionally left the register showing the old balance even
+    // though the correction had been accepted and journaled.
+    if (data.credit && data.credit.code) {
+      const index = liveCredits.findIndex((credit) => credit && credit.code === data.credit.code);
+      if (index >= 0) liveCredits[index] = data.credit;
+      else liveCredits.unshift(data.credit);
+    }
+    liveCreditsLoadedSlug = '';
+    loadLiveCredits();
+    if (document.querySelector('[data-live-returns]')) handlers['nav-returns']();
     return data;
   }
   handlers['credit-adjust'] = (el) => {

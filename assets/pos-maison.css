@@ -1634,3 +1634,383 @@ body.is-pos .clockin-screen.mz-clockin { display: flex !important; }
 /* Case à cocher des fiches d'inventaire (propriété de la marchandise). */
 .mzi-check { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2, var(--ink)); cursor: pointer; }
 .mzi-check input { width: 15px; height: 15px; accent-color: var(--atlas); cursor: pointer; }
+
+/* ═══════════════ MAISON WORKSPACE SYSTEM ═══════════════════════════════
+   Every destination keeps the same frame: page gutter, header baseline,
+   command surface, KPI strip, section rhythm and empty-state language.
+   Individual tools can change; the application shell must not. */
+#pos-maison {
+  --mz-page-x: clamp(22px, 2.15vw, 32px);
+  --mz-page-y: 24px;
+  --mz-page-gap: 18px;
+  --mz-control-h: 44px;
+  --mz-surface-radius: 16px;
+  --mz-surface-shadow: 0 1px 2px rgba(10,15,13,.025), 0 12px 32px -28px rgba(10,15,13,.32);
+}
+
+#pos-maison .mz-view:not([data-mz-panel="vente"]) {
+  overflow: hidden;
+  background: var(--paper-cream, #f7f5f0);
+}
+
+#pos-maison .mz-page {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: var(--mz-page-y) var(--mz-page-x) 32px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mz-page-gap);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Stable title bar: every page title starts at the same x/y coordinate. */
+#pos-maison .mz-head {
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 54px;
+  padding: var(--mz-page-y) var(--mz-page-x) 0;
+  box-sizing: border-box;
+}
+#pos-maison .mz-page > .mz-head { padding: 0; }
+#pos-maison .mz-page > .mz-head,
+#pos-maison [data-mz-panel="vendus"] .ksold-head { align-items: flex-start; }
+#pos-maison .mz-head h1,
+#pos-maison .ksold-head h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -.032em;
+}
+#pos-maison .mz-head-sub,
+#pos-maison .ksold-sub {
+  margin-top: 6px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+#pos-maison .mz-head-actions,
+#pos-maison .mz-card-actions,
+#pos-maison .mz-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+#pos-maison .mz-head-actions { flex-wrap: wrap; }
+#pos-maison .mz-head-metric {
+  flex: 0 0 auto;
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper-elev);
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+#pos-maison .mz-head-metric.is-danger {
+  border-color: rgba(186,26,26,.18);
+  background: rgba(186,26,26,.07);
+  color: #9e2721;
+}
+
+/* Controls use one height, radius and weight across every destination. */
+#pos-maison .mz-btn {
+  flex: 0 0 auto;
+  width: auto;
+  min-height: var(--mz-control-h);
+  padding: 0 15px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  white-space: nowrap;
+  box-sizing: border-box;
+  font-size: 13px;
+  box-shadow: none;
+}
+#pos-maison .mz-btn.sm { min-height: 36px; padding-inline: 12px; font-size: 12px; }
+#pos-maison .mz-btn.primary { flex: 0 0 auto; background: var(--atlas, #0b6e4f); }
+#pos-maison .mz-btn.secondary { flex: 0 0 auto; background: var(--paper-elev); }
+#pos-maison .mz-btn.is-danger { background: #a9332b; border-color: #a9332b; color: #fff; }
+#pos-maison .mz-search {
+  min-height: var(--mz-control-h);
+  padding: 0 13px;
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+
+/* Reusable content primitives. */
+#pos-maison .mz-section-surface,
+#pos-maison .mz-casse-box,
+#pos-maison .mz-reg-card {
+  border: 1px solid var(--line);
+  border-radius: var(--mz-surface-radius);
+  background: var(--paper-elev);
+  box-shadow: var(--mz-surface-shadow);
+}
+#pos-maison .mz-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+}
+#pos-maison .mz-section-head h2,
+#pos-maison .mz-section-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -.015em;
+}
+#pos-maison .mz-empty {
+  margin: 0;
+  min-height: 128px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  box-sizing: border-box;
+  border: 1px dashed var(--line);
+  border-radius: var(--mz-surface-radius);
+  background: color-mix(in srgb, var(--paper-elev) 76%, transparent);
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+#pos-maison .mz-empty-room { grid-column: 1 / -1; min-height: 180px; }
+
+/* Sale keeps its two-column checkout, while sharing the header and gutters. */
+#pos-maison .mz-sell-scan { margin: 18px var(--mz-page-x) 0; min-height: 58px; box-sizing: border-box; }
+#pos-maison .mz-cats { padding: 14px var(--mz-page-x) 12px; }
+#pos-maison .mz-grid-scroll { padding-inline: var(--mz-page-x); }
+
+/* Inventory and supplier pages now use the same command and KPI surfaces. */
+#pos-maison .bqi.mz-page { height: 100%; padding-bottom: 32px; overflow-y: auto; }
+#pos-maison .mz-page .mzi-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--mz-surface-radius);
+  background: var(--paper-elev);
+  box-shadow: var(--mz-surface-shadow);
+}
+#pos-maison .mz-page .mzi-scan {
+  min-height: var(--mz-control-h);
+  padding: 0 13px;
+  border-width: 1px;
+  border-radius: 11px;
+  box-sizing: border-box;
+}
+#pos-maison .mz-page .mzi-dashboard-only {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mz-control-h);
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  color: var(--ink-3);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+#pos-maison .mz-page .mzi-pills { padding: 0; gap: 7px; }
+#pos-maison .mz-page .mzi-pill { min-height: 34px; padding: 0 13px; }
+#pos-maison .mz-page .mzi-kpis,
+#pos-maison .mzm-kpis,
+#pos-maison [data-mz-panel="vendus"] .kx-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--mz-surface-radius);
+  background: var(--paper-elev);
+  box-shadow: var(--mz-surface-shadow);
+}
+#pos-maison .mzm-kpis,
+#pos-maison [data-mz-panel="vendus"] .kx-kpi-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+#pos-maison .mz-page .mzi-kpi,
+#pos-maison .mzm-kpi,
+#pos-maison [data-mz-panel="vendus"] .kx-kpi {
+  min-width: 0;
+  padding: 16px 18px;
+  border: 0;
+  border-inline-end: 1px solid var(--line-soft);
+  border-radius: 0;
+  background: var(--paper-elev);
+  box-shadow: none;
+}
+#pos-maison .mz-page .mzi-kpi:last-child,
+#pos-maison .mzm-kpi:last-child,
+#pos-maison [data-mz-panel="vendus"] .kx-kpi:last-child { border-inline-end: 0; }
+#pos-maison .mz-page .mzi-kpi .l,
+#pos-maison .mzm-kpi > span,
+#pos-maison [data-mz-panel="vendus"] .kx-kpi .l {
+  color: var(--ink-3);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .065em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+#pos-maison .mz-page .mzi-kpi .v,
+#pos-maison .mzm-kpi > b,
+#pos-maison [data-mz-panel="vendus"] .kx-kpi .v {
+  margin-top: 7px;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -.025em;
+}
+#pos-maison .mz-page .mzi-list { padding: 0; gap: 9px; }
+#pos-maison .mz-page .mzi-list.mz-section-surface { padding: 10px; }
+#pos-maison .mz-page .mzi-row { border-radius: 12px; box-shadow: none; }
+#pos-maison .mz-reg-grid { padding: 0; gap: 12px; }
+#pos-maison .mz-reg-card { padding: 17px; }
+
+/* Scanner: same page shell, with one deliberate focused workbench. */
+#pos-maison .mz-scan-inner {
+  width: min(760px, 100%);
+  margin: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+#pos-maison .mz-ean-in { min-height: 60px; margin-top: 0; border-width: 1px; }
+#pos-maison .mz-scan-mock { min-height: 52px; border-width: 1px; border-radius: 12px; }
+#pos-maison .mz-scan-diag { margin: 12px 0 0; align-self: flex-start; }
+
+/* Returns use the same neutral command bar instead of becoming a mint page. */
+#pos-maison .mz-ret .mz-page-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--mz-surface-radius);
+  background: var(--paper-elev);
+  box-shadow: var(--mz-surface-shadow);
+}
+#pos-maison .mz-ret .mz-page-toolbar .mz-pill { min-height: 34px; padding-inline: 12px; cursor: pointer; }
+#pos-maison .mz-ret .mz-page-toolbar .mz-pill.ok { background: var(--atlas); color: #fff; }
+#pos-maison .mz-ret-bar-lbl { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 0 4px; }
+#pos-maison .mz-ret-bar-lbl input {
+  min-height: 34px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper-soft);
+  color: var(--ink);
+}
+#pos-maison .mz-ret-scroll { flex: 0 0 auto; overflow: visible; padding: 0; }
+#pos-maison .mz-ret-inner { width: 100%; margin: 0; }
+#pos-maison .mz-ret-inner > .mz-ret-bar { margin-top: 0; }
+
+/* Clients and movement history share the same content width and rhythm. */
+#pos-maison .mz-cl-scroll { flex: 0 0 auto; overflow: visible; padding: 0; }
+#pos-maison .mz-cl-grid { gap: 12px; }
+#pos-maison .mz-clcard { border-radius: var(--mz-surface-radius); box-shadow: var(--mz-surface-shadow); }
+#pos-maison .mzm-head { padding-bottom: 0; }
+#pos-maison .mzm-tools {
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--mz-surface-radius);
+  background: var(--paper-elev);
+  box-shadow: var(--mz-surface-shadow);
+}
+#pos-maison .mzm-tools select { min-height: var(--mz-control-h); border-radius: 11px; }
+#pos-maison .mzm-results { flex: 1 0 320px; min-height: 320px; margin: 0; border-radius: var(--mz-surface-radius); box-shadow: var(--mz-surface-shadow); }
+#pos-maison .mzm-foot { padding: 0 2px; }
+
+/* Loss declaration uses the same grid and field treatment as every modal. */
+#pos-maison .mz-casse-box { padding: 20px; gap: 17px; }
+#pos-maison .mz-form-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }
+#pos-maison .mz-field { min-width: 0; }
+#pos-maison .mz-field label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink-3);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .065em;
+  text-transform: uppercase;
+}
+#pos-maison .mz-field input,
+#pos-maison .mz-field select {
+  width: 100%;
+  min-height: var(--mz-control-h);
+  padding: 0 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--paper-soft);
+  color: var(--ink);
+  font: inherit;
+}
+#pos-maison .mz-casse-cost-preview { border-radius: 12px; }
+
+/* Vendus is shared with the dashboard, so normalize it only inside Maison. */
+#pos-maison [data-mz-panel="vendus"] .ksold {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  padding: var(--mz-page-y) var(--mz-page-x) 32px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+#pos-maison [data-mz-panel="vendus"] .ksold-head {
+  align-items: flex-start;
+  min-height: 54px;
+  margin: 0 0 var(--mz-page-gap);
+}
+#pos-maison [data-mz-panel="vendus"] .ksold-days button {
+  min-height: 34px;
+  padding: 0 13px;
+  border-radius: 10px;
+}
+#pos-maison [data-mz-panel="vendus"] .ksold-card { border-radius: var(--mz-surface-radius); box-shadow: var(--mz-surface-shadow); }
+#pos-maison [data-mz-panel="vendus"] .kx-empty { border-radius: var(--mz-surface-radius); }
+
+@media (max-width: 1050px) {
+  #pos-maison .mz-page .mzi-tools { align-items: stretch; flex-wrap: wrap; }
+  #pos-maison .mz-page .mzi-scan { flex: 1 1 100%; }
+  #pos-maison .mz-page .mzi-kpis,
+  #pos-maison .mzm-kpis,
+  #pos-maison [data-mz-panel="vendus"] .kx-kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #pos-maison .mz-page .mzi-kpi:nth-child(2n),
+  #pos-maison .mzm-kpi:nth-child(2n),
+  #pos-maison [data-mz-panel="vendus"] .kx-kpi:nth-child(2n) { border-inline-end: 0; }
+  #pos-maison .mz-form-grid { grid-template-columns: 1fr 1fr; }
+  #pos-maison .mz-form-grid > :first-child { grid-column: 1 / -1; }
+}
+
+@media (max-width: 760px) {
+  #pos-maison { --mz-page-x: 16px; --mz-page-y: 18px; --mz-page-gap: 14px; }
+  #pos-maison .mz-head { align-items: flex-start; flex-direction: column; }
+  #pos-maison .mz-head-actions { width: 100%; justify-content: flex-start; }
+  #pos-maison .mz-search { width: 100%; }
+  #pos-maison .mz-page .mzi-kpis,
+  #pos-maison .mzm-kpis,
+  #pos-maison [data-mz-panel="vendus"] .kx-kpi-strip { grid-template-columns: 1fr; }
+  #pos-maison .mz-page .mzi-kpi,
+  #pos-maison .mzm-kpi,
+  #pos-maison [data-mz-panel="vendus"] .kx-kpi { border-inline-end: 0; border-bottom: 1px solid var(--line-soft); }
+  #pos-maison .mz-page .mzi-kpi:last-child,
+  #pos-maison .mzm-kpi:last-child,
+  #pos-maison [data-mz-panel="vendus"] .kx-kpi:last-child { border-bottom: 0; }
+  #pos-maison .mz-form-grid { grid-template-columns: 1fr; }
+  #pos-maison .mz-form-grid > :first-child { grid-column: auto; }
+}
