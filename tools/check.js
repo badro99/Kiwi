@@ -1045,6 +1045,8 @@ section('Whole-project regressions');
     'check-godmode.mjs',
     'operator-workspace-test.mjs',
     'admin-crm-layout-test.mjs',
+    'maison-client-history-test.mjs',
+    'client-history-browser-test.mjs',
     'support-system-test.mjs',
     'operator-snapshot-test.mjs',
     'caisse-support-entry-test.mjs',

@@ -76,4 +76,18 @@ ok(caisse.includes('const syncedRefs = new Set') && caisse.includes('const spent
   'the caisse fiche deduplicates synced tickets and uses the canonical spend total');
 ok(caisse.includes('eventRef: sale.syncId'), 'checkout binds client history to the sale UUID');
 
-console.log(`\n✓ ${checks} Maison client-history checks passed`);
+const boutique = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
+ok(boutique.includes('history: Array.isArray(c.history) ? c.history.slice(0, 50) : []'),
+  'boutique client adapters preserve server purchase history');
+ok(boutique.includes('const syncedRefs = new Set') && boutique.includes('const spent = c.spent || 0'),
+  'boutique fiche deduplicates synced tickets and does not double-count spend');
+ok(boutique.includes('method: sale.methods') && boutique.includes('eventRef: sale.syncId') && boutique.includes('items: sale.lines.map'),
+  'boutique checkout records payment, stable ticket identity, and purchased items');
+
+const directory = fs.readFileSync(path.join(ROOT, 'assets/clients-directory.js'), 'utf8');
+ok(directory.includes('history: Array.isArray(c.history) ? c.history.slice(0, 50) : []'),
+  'dashboard directory preserves purchase history returned by the shared store');
+ok(directory.includes('class="cd-history-row"') && directory.includes('entry.method') && directory.includes('entry.items') && directory.includes('entry.ref'),
+  'dashboard customer detail renders date, payment, items, ticket reference, and amount');
+
+console.log(`\n✓ ${checks} cross-vertical client-history checks passed`);

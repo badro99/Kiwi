@@ -501,7 +501,8 @@
     if (!c) return null;
     return { id: c.id, name: c.name || 'Sans nom', phone: c.phone || '', points: c.points || 0,
       taille: '', achats: c.visits || 0, spent: c.spend || 0,
-      vip: !!(window.KiwiClients && KiwiClients.segment(c) === 'vip'), prefs: c.notes ? [c.notes] : [], history: [] };
+      vip: !!(window.KiwiClients && KiwiClients.segment(c) === 'vip'), prefs: c.notes ? [c.notes] : [],
+      history: Array.isArray(c.history) ? c.history.slice(0, 50) : [] };
   }
   // A REAL store shows ONLY its own KiwiClients book (empty until captured) — NEVER
   // the demo CLIENTES. The pitch demo keeps the rich hard-coded set.
@@ -2232,14 +2233,24 @@
     if (!c) return;
     const el = $('#bq-fichem', root);
     const av = clAvoirOf(c);
-    const todays = SALES.filter((s) => s.clientId === cid && !s.voided).map((s) => ({
+    const cloudHistory = (c.history || []).map((h) => ({
+      when: h.when || whenLabel(h.ts || h.createdAt || 0),
+      what: h.what || (Array.isArray(h.items) && h.items.length ? h.items.map((it) => `${it.qty || 1}× ${it.name || 'Article'}`).join(' + ') : (h.ref || 'Achat')),
+      amt: h.amt != null ? h.amt : h.amount,
+      method: h.method || '', ref: h.ref || '', ts: +(h.ts || h.createdAt || 0),
+    }));
+    const syncedRefs = new Set(cloudHistory.map((h) => String(h.ref || '')).filter(Boolean));
+    const localOnly = SALES.filter((s) => s.clientId === cid && !s.voided
+      && !syncedRefs.has(String(s.id || ''))).map((s) => ({
       when: whenLabel(s.at),
       // idem : une vente de la semaine peut porter un article supprimé depuis.
-      what: s.lines.map((l) => `${(P[l.pid] && P[l.pid].name) || l.name || 'Article'} · ${l.size}`).join(' + '),
-      amt: s.total,
+      what: s.lines.map((l) => `${(P[l.pid] && P[l.pid].name) || l.name || 'Article'}${l.size ? ' · ' + l.size : ''}`).join(' + '),
+      amt: s.total, method: s.methods || '', ref: s.id || '', ts: +s.at || 0,
     }));
-    const hist = todays.concat(c.history || []);
-    const spent = (c.spent || 0) + todays.reduce((s, h) => s + h.amt, 0);
+    const hist = localOnly.concat(cloudHistory).sort((a, b) => Number(b.ts || 0) - Number(a.ts || 0));
+    /* The shared client total already includes local purchases immediately.
+       Adding today's sales here counted the same ticket twice. */
+    const spent = c.spent || 0;
     el.innerHTML = `
       <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="bq-fiche-head">
@@ -2258,7 +2269,7 @@
       ${av ? `<button class="bq-favoir" id="bq-fiche-av"><i data-lucide="ticket"></i>Avoir actif <b>${av.code}</b> · ${fmtMAD(av.balance)}, utilisable en caisse<span class="see">Voir</span></button>` : ''}
       <div class="bq-f-lbl" style="margin-bottom:6px;">Historique</div>
       <div class="bq-fhist">
-        ${hist.length ? hist.map((h) => `<div class="bq-fhist-row"><span class="when">${esc(h.when)}</span><span class="what">${esc(h.what)}</span><span class="amt">${fmtMAD(h.amt)}</span></div>`).join('') : '<div class="bq-empty">Aucun achat enregistré.</div>'}
+        ${hist.length ? hist.map((h) => `<div class="bq-fhist-row"><span class="when">${esc(h.when)}${h.method ? `<small style="display:block;">${esc(h.method)}</small>` : ''}</span><span class="what">${esc(h.what)}${h.ref ? `<small style="display:block;">Ticket ${esc(h.ref)}</small>` : ''}</span><span class="amt">${fmtMAD(h.amt)}</span></div>`).join('') : '<div class="bq-empty">Aucun achat enregistré.</div>'}
       </div>
       <div class="bq-sheet-foot">
         <button class="bq-btn secondary" data-bq-close>Fermer</button>
@@ -3550,7 +3561,10 @@
           // store's sale must attach to the real client, not a throwaway in-memory
           // object. Real store only; the local demo keeps its in-memory client. F5.
           if (useKiwiCl() && window.KiwiClients && window.KiwiClients.recordPurchase && c.id) {
-            try { window.KiwiClients.recordPurchase(c.id, { amount: total }); } catch (_) {}
+            try { window.KiwiClients.recordPurchase(c.id, {
+              amount: total, method: sale.methods, saleRef: sale.id, saleId: sale.syncId, eventRef: sale.syncId, createdAt: +sale.at,
+              items: sale.lines.map((ln) => ({ name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', qty: ln.qty, total: ln.unit * ln.qty })),
+            }); } catch (_) {}
             // La récompense est portée : on brûle les points (KiwiClients.redeem
             // retire le seuil / réinitialise la carte). Après recordPurchase, pour
             // que l'achat compte d'abord, la récompense se déduise ensuite.

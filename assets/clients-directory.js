@@ -28,6 +28,7 @@
       tag: { reg: 'Régulier', vip: 'VIP', new: 'Nouveau', win: 'Dormant' }, none: '·', empty: 'Aucun client · créez la première fiche avec « Nouveau client ».',
       ago: function (d) { return d === 0 ? "aujourd'hui" : 'il y a ' + d + ' j'; }, close: 'Fermer',
       detail: 'Fiche client', birthday: 'Anniversaire', gender: 'Genre', address: 'Adresse', notes: 'Notes', consent: 'Consentement', consentWa: 'WhatsApp / SMS', consentEmail: 'Email', firstSeen: 'Client depuis',
+      history: 'Historique des achats', noHistory: 'Aucun détail d’achat enregistré.', noHistorySub: 'Les prochains tickets attachés à ce client apparaîtront ici.', ticket: 'Ticket', unknownDate: 'Date inconnue', unknownPayment: 'Mode non renseigné', purchase: 'Achat enregistré',
       form: { title: 'Nouveau client', sub: 'La fiche rejoint le carnet partagé, avec ou sans caisse.', save: 'Ajouter', cancel: 'Annuler',
         needNameOrPhone: 'Renseignez au moins un nom ou un numéro.', badPhone: 'Numéro invalide · pour l’étranger, ajoutez + et l’indicatif pays.',
         consentRequired: 'Le consentement est requis · cochez la case WhatsApp / SMS pour enregistrer.', alreadyExists: 'Client déjà enregistré', added: 'Client ajouté' } },
@@ -38,6 +39,7 @@
       tag: { reg: 'Regular', vip: 'VIP', new: 'New', win: 'Dormant' }, none: '·', empty: 'No customers yet · create the first record with “New customer”.',
       ago: function (d) { return d === 0 ? 'today' : d + 'd ago'; }, close: 'Close',
       detail: 'Customer', birthday: 'Birthday', gender: 'Gender', address: 'Address', notes: 'Notes', consent: 'Consent', consentWa: 'WhatsApp / SMS', consentEmail: 'Email', firstSeen: 'Customer since',
+      history: 'Purchase history', noHistory: 'No purchase details recorded.', noHistorySub: 'Future tickets attached to this customer will appear here.', ticket: 'Ticket', unknownDate: 'Unknown date', unknownPayment: 'Payment method unavailable', purchase: 'Recorded purchase',
       form: { title: 'New customer', sub: 'The record joins the shared book, with or without a till.', save: 'Add', cancel: 'Cancel',
         needNameOrPhone: 'Enter at least a name or a phone number.', badPhone: 'Invalid number · abroad, add + and the country code.',
         consentRequired: 'Consent is required · tick WhatsApp / SMS to save.', alreadyExists: 'Customer already on file', added: 'Customer added' } },
@@ -48,6 +50,7 @@
       tag: { reg: 'دائم', vip: 'كبير', new: 'جديد', win: 'خامل' }, none: '·', empty: 'لا يوجد عملاء بعد · أنشئ أول بطاقة بزر «عميل جديد».',
       ago: function (d) { return d === 0 ? 'اليوم' : 'منذ ' + d + ' ي'; }, close: 'إغلاق',
       detail: 'بطاقة العميل', birthday: 'الميلاد', gender: 'الجنس', address: 'العنوان', notes: 'ملاحظات', consent: 'الموافقة', consentWa: 'واتساب / SMS', consentEmail: 'بريد', firstSeen: 'عميل منذ',
+      history: 'سجل المشتريات', noHistory: 'لا توجد تفاصيل مشتريات مسجلة.', noHistorySub: 'ستظهر هنا التذاكر القادمة المرتبطة بهذا العميل.', ticket: 'التذكرة', unknownDate: 'تاريخ غير معروف', unknownPayment: 'طريقة الدفع غير مسجلة', purchase: 'عملية شراء مسجلة',
       form: { title: 'عميل جديد', sub: 'ينضم الملف إلى الدفتر المشترك، بالصندوق أو بدونه.', save: 'إضافة', cancel: 'إلغاء',
         needNameOrPhone: 'أدخل الاسم أو رقم الهاتف على الأقل.', badPhone: 'رقم غير صالح · للخارج أضف + ورمز البلد.',
         consentRequired: 'الموافقة مطلوبة · حدّد واتساب / SMS للحفظ.', alreadyExists: 'العميل مسجل مسبقاً', added: 'تمت إضافة العميل' } },
@@ -113,6 +116,7 @@
         return { id: c.id, name: c.name, phone: c.phone, email: c.email, city: c.city, address: c.address,
           birthday: c.birthday, gender: c.gender, notes: c.notes, hospitality: c.hospitality || {}, visits: c.visits, spend: c.spend,
           points: c.points, consent: c.consent, consentEmail: c.consentEmail, seg: KCl.segment(c),
+          history: Array.isArray(c.history) ? c.history.slice(0, 50) : [],
           last: daysSince(c.lastSeen) === Infinity ? 0 : daysSince(c.lastSeen), firstSeen: daysSince(c.firstSeen) };
       });
       return { rows: rows, real: true };
@@ -161,10 +165,18 @@
     '.cd-f-check{display:flex;align-items:center;gap:8px;font-size:13px;margin-top:12px;cursor:pointer;}',
     '.cd-f-check input{width:17px;height:17px;accent-color:var(--atlas);flex:none;}',
     '.cd-f-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}',
+    '.cd-history{margin-top:18px;}.cd-history-title{font:600 13px/1.2 inherit;margin-bottom:8px;color:var(--ink);}',
+    '.cd-history-list{border:1px solid var(--n-200);border-radius:14px;overflow:hidden;background:var(--surface);}',
+    '.cd-history-row{display:grid;grid-template-columns:minmax(112px,.7fr) minmax(180px,1.7fr) auto;gap:14px;align-items:start;padding:13px 14px;border-top:1px solid var(--n-200);font-size:13px;}',
+    '.cd-history-row:first-child{border-top:0;}.cd-history-date,.cd-history-meta{color:var(--n-500);font-size:12px;}.cd-history-method{display:block;margin-top:3px;color:var(--ink);font-weight:600;}',
+    '.cd-history-items{font-weight:600;line-height:1.4;overflow-wrap:anywhere;}.cd-history-meta{display:block;margin-top:4px;}.cd-history-amount{font-weight:700;white-space:nowrap;font-feature-settings:"tnum" 1;}',
+    '.cd-history-empty{padding:22px 16px;text-align:center;color:var(--n-500);font-size:13px;}.cd-history-empty b{display:block;color:var(--ink);margin-bottom:4px;}',
+    '@media(max-width:620px){.cd-history-row{grid-template-columns:1fr auto;}.cd-history-date{grid-column:1/-1}.cd-history-amount{grid-column:2;grid-row:2}.cd-history-items{grid-column:1;grid-row:2}.cd-f-grid{grid-template-columns:1fr;}}',
     'html[data-theme="dark"] .cd-tblwrap,html[data-theme="dark"] .cd-search,html[data-theme="dark"] .cd-exp,html[data-theme="dark"] .cd-segchip,html[data-theme="dark"] .cd-tbl{background:#131916;border-color:#26302b;color:var(--paper);}',
     'html[data-theme="dark"] .cd-tbl th{background:#0f1714;}html[data-theme="dark"] .cd-tbl td{border-color:#26302b;}',
     'html[data-theme="dark"] .cd-tbl tbody tr:hover td{background:#0f1714;}',
     'html[data-theme="dark"] .cd-segchip.on{background:var(--atlas);color:#fff;}',
+    'html[data-theme="dark"] .cd-history-list{background:#131916;border-color:#26302b;}html[data-theme="dark"] .cd-history-row{border-color:#26302b;}',
   ].join('');
   var st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
 
@@ -401,6 +413,30 @@
       row(H.nationality, h.nationality) + row(H.identity, [h.documentType, h.documentNumber].filter(Boolean).join(' · ')) +
       row(H.language, h.preferredLanguage) + row(H.room, h.roomPreferences) + row(H.food, h.foodPreferences) +
       row(H.allergies, h.allergies) + row(H.access, h.accessibilityNeeds) : '';
+    var locale = lang() === 'ar' ? 'ar-MA' : (lang() === 'en' ? 'en-GB' : 'fr-FR');
+    var payment = function (value) {
+      var key = String(value || '').toLowerCase();
+      var labels = lang() === 'ar'
+        ? { cash: 'نقداً', 'espèces': 'نقداً', card: 'بطاقة', carte: 'بطاقة', wallet: 'محفظة', delivery: 'عند التسليم', livraison: 'عند التسليم' }
+        : lang() === 'en'
+          ? { cash: 'Cash', 'espèces': 'Cash', card: 'Card', carte: 'Card', wallet: 'Wallet', delivery: 'Pay on delivery', livraison: 'Pay on delivery' }
+          : { cash: 'Espèces', 'espèces': 'Espèces', card: 'Carte', carte: 'Carte', wallet: 'Portefeuille', delivery: 'Livraison', livraison: 'Livraison' };
+      return labels[key] || value || T.unknownPayment;
+    };
+    var purchaseHistory = (Array.isArray(c.history) ? c.history : []).slice().sort(function (a, b) {
+      return Number((b && (b.ts || b.createdAt)) || 0) - Number((a && (a.ts || a.createdAt)) || 0);
+    }).slice(0, 50);
+    var historyBody = purchaseHistory.length ? purchaseHistory.map(function (entry) {
+      entry = entry || {};
+      var stamp = Number(entry.ts || entry.createdAt || 0);
+      var when = stamp ? new Date(stamp).toLocaleString(locale, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : T.unknownDate;
+      var items = Array.isArray(entry.items) && entry.items.length ? entry.items.map(function (item) {
+        return (item.qty || 1) + '× ' + (item.name || T.purchase);
+      }).join(' · ') : T.purchase;
+      return '<div class="cd-history-row"><span class="cd-history-date">' + esc(when) + '<span class="cd-history-method">' + esc(payment(entry.method)) + '</span></span>' +
+        '<span class="cd-history-items">' + esc(items) + (entry.ref ? '<span class="cd-history-meta">' + esc(T.ticket + ' ' + entry.ref) + '</span>' : '') + '</span>' +
+        '<span class="cd-history-amount">' + fmt(entry.amount || entry.amt || 0) + ' MAD</span></div>';
+    }).join('') : '<div class="cd-history-empty"><b>' + esc(T.noHistory) + '</b>' + esc(T.noHistorySub) + '</div>';
     var body = '<div style="margin-top:4px">' +
       row(T.th.phone, c.phone) + row(T.th.email, c.email) + row(T.th.city, c.city) + row(T.address, c.address) +
       row(T.birthday, c.birthday) + row(T.gender, c.gender) +
@@ -409,6 +445,7 @@
       '<div class="cd-drow"><span class="k">' + T.th.points + ' · ' + T.th.seg + '</span><span class="v">' + fmt(c.points) + ' · ' + SEG_LBL(T, c.seg) + '</span></div>' +
       row(T.notes, c.notes) +
       '<div class="cd-drow"><span class="k">' + T.consent + '</span><span class="v">' + esc(consent) + '</span></div>' +
+      '<div class="cd-history"><div class="cd-history-title">' + esc(T.history) + '</div><div class="cd-history-list">' + historyBody + '</div></div>' +
       '</div>';
     var m = window.Kiwi.modal({ tag: T.detail, title: c.name || T.none, width: 460, body: body + '<div style="display:flex;justify-content:flex-end;margin-top:18px"><button class="kb ghost" data-close>' + T.close + '</button></div>' });
     m.el.addEventListener('click', function (e) { if (e.target.closest('[data-close]')) m.close(); });
