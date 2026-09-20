@@ -13,7 +13,8 @@ function validateUiProof(file, ticketId, now = Date.now()) {
   const finished = Date.parse(p.finishedAt);
   if (p.schema !== 'kiwi-ui-proof-v1' || p.passed !== true || p.ticketId !== ticketId) throw new Error('UI proof does not match this ticket.');
   if (!Number.isFinite(finished) || finished > now + 60000 || now - finished > 24 * 3600000) throw new Error('UI proof must be from the last 24 hours.');
-  if (p.environment !== 'synthetic-hotel-dashboard' || !/^http:\/\/127\.0\.0\.1:\d+$/.test(p.origin || '')) throw new Error('UI proof must come from the isolated synthetic fixture.');
+  const approvedEnvironments = new Set(['synthetic-hotel-dashboard', 'synthetic-maison-caisse', 'synthetic-client-dashboard']);
+  if (!approvedEnvironments.has(p.environment) || !/^http:\/\/127\.0\.0\.1:\d+$/.test(p.origin || '')) throw new Error('UI proof must come from an approved isolated synthetic fixture.');
   if (p.gitDirty || !/^[a-f0-9]{40}$/.test(p.gitHead || '')) throw new Error('Capture UI proof after committing on a clean worktree.');
   if (!Array.isArray(p.actions) || !p.actions.some(x => x.kind === 'click') ||
       !Array.isArray(p.assertions) || !p.assertions.some(x => ['text_contains', 'value_equals'].includes(x.condition) && x.description && x.description.length >= 8)) {

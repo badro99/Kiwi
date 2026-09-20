@@ -20,6 +20,7 @@ let stdinEnded = false;
 const TOOLS = [
   { name: 'start_hotel_fixture', description: 'Start a fresh real dashboard + real hotel API/SQLite on a synthetic merchant. Opens Chromium, enters only the fixture PIN, and returns visible UI. Never touches production.', inputSchema: { type: 'object', properties: {} } },
   { name: 'start_tickets_fixture', description: 'Start the real Kiwi Tickets page against an isolated in-memory ticket API. Opens Chromium and never touches production.', inputSchema: { type: 'object', properties: {} } },
+  { name: 'start_retail_fixture', description: 'Start a real Maison caisse or client-directory module with synthetic Amira data. Opens Chromium on loopback only and never touches production.', inputSchema: { type: 'object', properties: { scenario: { type: 'string', enum: ['maison', 'clients'] } }, required: ['scenario'] } },
   { name: 'ui_snapshot', description: 'Compact visible text and interactive controls with temporary q-refs; no screenshot tokens. Call again after navigation.', inputSchema: { type: 'object', properties: {} } },
   { name: 'ui_click', description: 'Click a visible control through Chromium, not a JS handler or API. Use a q-ref from ui_snapshot.', inputSchema: { type: 'object', properties: { ref: { type: 'string' } }, required: ['ref'] } },
   { name: 'ui_fill', description: 'Fill a visible input through the rendered control. Use a q-ref from ui_snapshot.', inputSchema: { type: 'object', properties: { ref: { type: 'string' }, value: { type: 'string' } }, required: ['ref', 'value'] } },
@@ -71,6 +72,7 @@ async function call(name, args) {
   switch (name) {
     case 'start_hotel_fixture': return text(await startHotelFixture());
     case 'start_tickets_fixture': return text(await startTicketsFixture());
+    case 'start_retail_fixture': return text(await startRetailFixture(args));
     case 'ui_snapshot': return text(await snapshot());
     case 'ui_click': return text(await interact('click', args));
     case 'ui_fill': return text(await interact('fill', args));
@@ -166,6 +168,66 @@ function ticketsFixtureProcess() {
     child.stderr.on('data', buf => { stderr = (stderr + buf.toString()).slice(-2000); });
     child.once('exit', code => finish(new Error(`Tickets fixture exited ${code}: ${stderr}`)));
   });
+}
+
+function retailFixtureProcess() {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [path.join(ROOT, 'tools/retail-ui-fixture.mjs')], {
+      cwd: ROOT, env: process.env, stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stdout = '', stderr = '', done = false;
+    const timer = setTimeout(() => finish(new Error('Retail fixture did not start within 20 seconds')), 20000);
+    function finish(err, value) {
+      if (done) return;
+      done = true; clearTimeout(timer);
+      if (err) { child.kill('SIGTERM'); reject(err); } else resolve({ child, ...value });
+    }
+    child.stdout.on('data', buf => {
+      stdout += buf.toString();
+      let i;
+      while ((i = stdout.indexOf('\n')) >= 0) {
+        const line = stdout.slice(0, i); stdout = stdout.slice(i + 1);
+        if (line.startsWith('KIWI_RETAIL_UI_QA_READY ')) {
+          try { finish(null, JSON.parse(line.slice('KIWI_RETAIL_UI_QA_READY '.length))); } catch (e) { finish(e); }
+        }
+      }
+      if (stdout.length > 100000) stdout = stdout.slice(-10000);
+    });
+    child.stderr.on('data', buf => { stderr = (stderr + buf.toString()).slice(-2000); });
+    child.once('exit', code => finish(new Error(`Retail fixture exited ${code}: ${stderr}`)));
+  });
+}
+
+async function startRetailFixture(args) {
+  await closeSession();
+  const scenario = String(args.scenario || '');
+  if (!['maison', 'clients'].includes(scenario)) throw new Error('scenario must be maison or clients.');
+  const bin = chromiumBinary();
+  if (!bin) throw new Error('Chromium not found; set KIWI_CHROMIUM_BIN. UI proof cannot be skipped.');
+  const puppeteer = createRequire(path.join(ROOT, 'app/package.json'))('puppeteer-core');
+  const fixture = await retailFixtureProcess();
+  let browser;
+  try {
+    const origin = new URL(fixture.base);
+    if (origin.protocol !== 'http:' || origin.hostname !== '127.0.0.1') throw new Error('Fixture returned a non-loopback origin');
+    browser = await puppeteer.launch({ executablePath: bin, headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--proxy-server=http://127.0.0.1:9', '--proxy-bypass-list=127.0.0.1;localhost'], defaultViewport: { width: 1440, height: 900 } });
+    const context = await browser.createBrowserContext();
+    const page = await context.newPage();
+    await page.setRequestInterception(true);
+    page.on('request', req => {
+      const u = req.url();
+      if (u.startsWith(fixture.base + '/') || u.startsWith('data:') || u.startsWith('blob:')) req.continue().catch(() => {});
+      else req.abort().catch(() => {});
+    });
+    await page.goto(fixture.base + (scenario === 'maison' ? '/maison.html' : '/clients.html'), { waitUntil: 'load', timeout: 60000 });
+    await page.waitForSelector(scenario === 'maison' ? '#pos-maison.is-on .mz-view.is-on' : '[data-open-clients]', { visible: true, timeout: 15000 });
+    session = { ...fixture, kind: scenario === 'maison' ? 'retail-maison' : 'retail-clients', browser, context, page, actions: [], assertions: [], refs: new Set(), startedAt: Date.now() };
+    return `Synthetic ${scenario === 'maison' ? 'Maison caisse' : 'Amira client directory'} ready at ${origin.origin}; no live merchant access.\n${await snapshot()}`;
+  } catch (e) {
+    if (browser) await browser.close().catch(() => {});
+    fixture.child.kill('SIGTERM');
+    throw new Error(`start retail fixture: ${e.message || e}`);
+  }
 }
 
 async function startTicketsFixture() {
@@ -310,18 +372,18 @@ async function snapshot() {
     const visible = el => {
       const st = getComputedStyle(el), r = el.getBoundingClientRect();
       if (st.display === 'none' || st.visibility === 'hidden' || Number(st.opacity) <= 0 || r.width <= 0 || r.height <= 0 || el.closest('[hidden],[aria-hidden="true"]')) return false;
-      if (el.matches('button,a[href],input,select,textarea,[role="button"],[data-action]')) {
+      if (el.matches('button,a[href],input,select,textarea,[role="button"],[data-action],[data-cd-id]')) {
         const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
         return !!hit && (hit === el || el.contains(hit));
       }
       return true;
     };
     const out = [];
-    const selectors = 'h1,h2,h3,button,a[href],input,select,textarea,[role="button"],[data-action]';
+    const selectors = 'h1,h2,h3,button,a[href],input,select,textarea,[role="button"],[data-action],[data-cd-id]';
     for (const el of document.querySelectorAll(selectors)) {
       if (!visible(el) || out.length >= 100) continue;
       const tag = el.tagName.toLowerCase();
-      if (el.closest('button,a[href],[role="button"]') && !el.matches('button,a[href],[role="button"]')) continue;
+      if (el.closest('button,a[href],[role="button"],[data-cd-id]') && !el.matches('button,a[href],[role="button"],[data-cd-id]')) continue;
       const ref = 'q' + (out.length + 1);
       el.setAttribute('data-kiwi-qa-ref', ref);
       const name = (el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 110);
@@ -377,6 +439,11 @@ async function reload() {
     s.actions.push({ kind: 'reload', at: new Date().toISOString() });
     return snapshot();
   }
+  if (s.kind === 'retail-maison' || s.kind === 'retail-clients') {
+    await s.page.waitForSelector(s.kind === 'retail-maison' ? '#pos-maison.is-on .mz-view.is-on' : '[data-open-clients]', { visible: true, timeout: 15000 });
+    s.actions.push({ kind: 'reload', at: new Date().toISOString() });
+    return snapshot();
+  }
   await s.page.waitForSelector('[data-kiwi-pin-input]', { timeout: 20000 });
   const lock = await s.page.$('[data-kiwi-lock]');
   if (lock && await lock.isVisible()) {
@@ -421,6 +488,12 @@ async function viewport(args) {
   await s.page.setViewport({ width, height, deviceScaleFactor: width < 768 ? 2 : 1, isMobile: width < 768, hasTouch: width < 768 });
   if (s.kind === 'tickets') {
     await s.page.waitForSelector('#kindFilters [data-filter-dimension]', { timeout: 15000 });
+    await new Promise(r => setTimeout(r, 350));
+    s.actions.push({ kind: 'viewport', width, height, at: new Date().toISOString() });
+    return snapshot();
+  }
+  if (s.kind === 'retail-maison' || s.kind === 'retail-clients') {
+    await s.page.waitForSelector(s.kind === 'retail-maison' ? '#pos-maison.is-on .mz-view.is-on' : '[data-open-clients]', { visible: true, timeout: 15000 });
     await new Promise(r => setTimeout(r, 350));
     s.actions.push({ kind: 'viewport', width, height, at: new Date().toISOString() });
     return snapshot();
@@ -498,7 +571,10 @@ async function finishProof(args) {
   const dirty = execFileSync('git', ['status', '--porcelain'], { cwd: ROOT, encoding: 'utf8' }).trim();
   const manifest = {
     schema: 'kiwi-ui-proof-v1', passed: true, ticketId, expectedOutcome: args.expectedOutcome.trim(),
-    environment: s.kind === 'tickets' ? 'synthetic-kiwi-tickets' : 'synthetic-hotel-dashboard', merchant: s.merchant, origin: s.base,
+    environment: s.kind === 'tickets' ? 'synthetic-kiwi-tickets'
+      : s.kind === 'retail-maison' ? 'synthetic-maison-caisse'
+        : s.kind === 'retail-clients' ? 'synthetic-client-dashboard'
+          : 'synthetic-hotel-dashboard', merchant: s.merchant, origin: s.base,
     path: new URL(s.page.url()).pathname, viewport: s.page.viewport(), startedAt: new Date(s.startedAt).toISOString(),
     finishedAt: new Date().toISOString(), gitHead: head, gitDirty: !!dirty,
     actions: s.actions, assertions: s.assertions, screenshot: image,

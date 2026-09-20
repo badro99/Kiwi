@@ -35,7 +35,9 @@ is missing or obscured, the ticket test fails—this is the point.
 1. Read a ticket as text with `kiwi-tickets.get_ticket`; view its screenshots
    only when necessary. State the visible starting point and expected result.
 2. Reproduce the problem in a fixture. For hotel UI tickets call
-   `start_hotel_fixture`; for ticket-board work call `start_tickets_fixture`.
+   `start_hotel_fixture`; for ticket-board work call `start_tickets_fixture`;
+   for Maison caisse or client-directory work call `start_retail_fixture` with
+   `maison` or `clients`.
    Then use `ui_snapshot`, `ui_click`, `ui_fill`, or
    `ui_select`, `ui_scroll`, or `ui_viewport` using the current `q` refs. A new snapshot follows every
    interaction. No arbitrary JavaScript, URL navigation, direct API call, or

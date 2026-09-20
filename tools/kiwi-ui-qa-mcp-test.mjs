@@ -73,7 +73,7 @@ try {
   ok(init.result?.serverInfo?.name === 'kiwi-ui-qa', 'MCP initializes');
   const list = await rpc('tools/list');
   const names = list.result.tools.map(x => x.name);
-  ok(names.includes('start_hotel_fixture') && names.includes('start_tickets_fixture') && names.includes('finish_ui_proof'), 'interactive and evidence tools registered');
+  ok(names.includes('start_hotel_fixture') && names.includes('start_tickets_fixture') && names.includes('start_retail_fixture') && names.includes('finish_ui_proof'), 'interactive and evidence tools registered');
   ok(!names.includes('evaluate') && !names.includes('open_url') && !names.includes('call_api'), 'no arbitrary browser bypass or production URL tool');
   const empty = await call('finish_ui_proof', { ticketId: 999001, expectedOutcome: 'Ordinary reservation opens from the sidebar' });
   ok(empty.isError, 'cannot claim proof before a real browser exists');
@@ -138,6 +138,11 @@ try {
   const clean = { ...manifest, screenshot, gitDirty: false };
   fs.writeFileSync(proofFile, JSON.stringify(clean));
   ok(validateUiProof(proofFile, 999001).ticketId === 999001, 'ticket MCP accepts fresh matching clean-commit proof');
+  fs.writeFileSync(proofFile, JSON.stringify({ ...clean, environment: 'synthetic-maison-caisse' }));
+  ok(validateUiProof(proofFile, 999001).environment === 'synthetic-maison-caisse', 'ticket MCP accepts approved Maison caisse proof');
+  fs.writeFileSync(proofFile, JSON.stringify({ ...clean, environment: 'synthetic-client-dashboard' }));
+  ok(validateUiProof(proofFile, 999001).environment === 'synthetic-client-dashboard', 'ticket MCP accepts approved client dashboard proof');
+  fs.writeFileSync(proofFile, JSON.stringify(clean));
   assert.throws(() => validateUiProof(proofFile, 999002), /match/);
   count++; console.log('  ✓ ticket mismatch rejected');
   fs.writeFileSync(proofFile, JSON.stringify({ ...clean, gitDirty: true }));
