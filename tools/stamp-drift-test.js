@@ -20,6 +20,7 @@
 'use strict';
 
 const S = require('./stamps');
+const { execFileSync } = require('child_process');
 
 let passed = 0;
 const failed = [];
@@ -38,6 +39,18 @@ let baseline = null;
 if (baselinePath) {
   try { baseline = JSON.parse(require('fs').readFileSync(baselinePath, 'utf8')); }
   catch (_) { baseline = null; }
+}
+/* `check.js` is also a release gate and may run from a checkout where the
+   local pre-commit hook was never installed (notably a fresh worktree). Use
+   HEAD as the default baseline there, so re-sealing the manifest without a
+   public URL bump cannot turn the full gate green. The hook still supplies an
+   explicit index-safe baseline when it runs. */
+if (!baseline && !baselinePath) {
+  try {
+    baseline = JSON.parse(execFileSync('git', ['show', `HEAD:${S.MANIFEST}`], {
+      cwd: S.ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
+    }));
+  } catch (_) { baseline = null; }
 }
 
 ok('le manifeste des estampilles existe et n’est pas vide', names.length > 0);

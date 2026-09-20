@@ -93,6 +93,17 @@ const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
   ok(inst.status === 0 && fs.existsSync(path.join(dir, '.git/hooks/pre-commit')), 'install-hooks.sh pose .git/hooks/pre-commit');
   const commit = (msg) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', msg], { cwd: dir, encoding: 'utf8' });
 
+  /* 0 · le gate complet, même sans hook/env, compare au manifeste de HEAD. */
+  fs.appendFileSync(path.join(dir, 'assets/venues.js'), 'window.KiwiVenue.unbumped = 1;\n');
+  const silentlyResealed = JSON.parse(rd(dir, 'tools/asset-stamps.json'));
+  silentlyResealed['assets/venues.js'].sha = crypto.createHash('sha256')
+    .update(fs.readFileSync(path.join(dir, 'assets/venues.js'))).digest('hex').slice(0, 16);
+  fs.writeFileSync(path.join(dir, 'tools/asset-stamps.json'), JSON.stringify(silentlyResealed, null, 2) + '\n');
+  const directGate = spawnSync(process.execPath, [path.join(dir, 'tools/stamp-drift-test.js')], { cwd: dir, env: env(dir), encoding: 'utf8' });
+  ok(directGate.status !== 0, 'check direct refusé : manifeste re-scellé sans bump, même sans hook/env');
+  ok(/manifeste a ete re-scelle/.test(directGate.stdout + directGate.stderr), 'check direct explique le faux vert à partir de HEAD');
+  git('checkout', '--', 'assets/venues.js', 'tools/asset-stamps.json');
+
   /* 1 · un asset édité sans bump, stagé → refusé, avec la commande à lancer */
   fs.appendFileSync(path.join(dir, 'assets/venues.js'), 'window.KiwiVenue.x = 1;\n');
   git('add', 'assets/venues.js');
