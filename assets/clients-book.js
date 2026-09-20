@@ -647,6 +647,10 @@
         return Array.prototype.some.call(b.attributes, function (a) { return /view$/i.test(a.name) && /client/i.test(a.value); });
       })[0];
       if (existing) {
+        // Maison already owns a full Clients destination inside its workspace.
+        // Redirecting that button to this legacy fixed panel leaves "Vendus"
+        // active underneath and breaks the vertical's shared page shell.
+        if (existing.matches('[data-mz-view="clientes"]')) return;
         if (existing.getAttribute('data-kcb-redirect')) return;
         existing.setAttribute('data-kcb-redirect', '1');
         existing.addEventListener('click', function (e) { e.preventDefault(); e.stopImmediatePropagation(); open(existing); }, true);

@@ -59,6 +59,7 @@ const server = http.createServer((req, res) => {
       <script src="/assets/caisse-dna.js"></script>
       <script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
       <script src="/assets/inventory-ledger.js"></script><script src="/assets/maison-stock-movements.js"></script><script src="/assets/procurement.js"></script>
+      <script src="/assets/venue-store.js"></script><script src="/assets/clients-store.js"></script><script src="/assets/clients-book.js"></script>
       <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script src="/assets/pos-maison.js"></script>
     </head><body class="is-pos-maison"><div id="toast-stack"></div><div class="vx-screen is-on" id="pos-maison"></div>
       <script>window.__maisonSpec.mount(document.getElementById('pos-maison'));window.KiwiCaisseDna.enhance(document.getElementById('pos-maison'),'maison');document.getElementById('pos-maison').insertAdjacentHTML('beforeend','<button class="krs-launch">Scan continu</button>');</script>
@@ -139,6 +140,10 @@ try {
   const workspaceFrames = [];
   const artifactDir = process.env.KIWI_TEST_ARTIFACT_DIR || '';
   if (artifactDir) fs.mkdirSync(artifactDir, { recursive: true });
+  // Let the real clients-book MutationObserver wire the mounted vertical. The
+  // Maison Clients entry must remain owned by this workspace, not be captured
+  // by the legacy fixed client-book panel used by other caisse types.
+  await new Promise((resolve) => setTimeout(resolve, 220));
   for (const view of views) {
     await page.click(`[data-mz-view="${view}"]`);
     const state = await page.evaluate((name) => ({
@@ -166,6 +171,9 @@ try {
       await page.screenshot({ path: path.join(artifactDir, `maison-${view}.png`) });
     }
   }
+  ok(!(await page.$('[data-mz-view="clientes"][data-kcb-redirect]'))
+    && !(await page.$('#kcb-root:not([style*="display: none"])')),
+  'Maison keeps Clients inside the shared workspace instead of opening the legacy fixed panel');
   const headingLefts = workspaceFrames.map((frame) => Math.round(frame.left));
   const headingTops = workspaceFrames.map((frame) => Math.round(frame.top));
   ok(Math.max(...headingLefts) - Math.min(...headingLefts) <= 1,
