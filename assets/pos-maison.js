@@ -1021,6 +1021,11 @@
     clQuery: '',
     registriesQuery: '',
     activeRegistry: null,
+    movementDays: 0,
+    movementType: '',
+    movementCategory: '',
+    movementQuery: '',
+    movementSyncing: false,
     casseQuery: '',
     scanLog: [],                 /* journal des articles VÉRIFIÉS (onglet Scan) */
     lookup: null,                /* { pid, size, color, ean, at } — dernière vérif affichée */
@@ -1645,7 +1650,7 @@
         </div>
         <nav class="mz-nav" id="mz-nav">
           <button class="mz-nav-it on" data-mz-view="vente"><i data-lucide="shopping-bag"></i><span>Vente</span><b class="mz-nav-badge" id="mz-badge-vente"></b></button>
-          <button class="mz-nav-it" data-mz-view="registries"><i data-lucide="gift"></i><span>Listes Cadeaux</span><b class="mz-nav-badge" id="mz-badge-reg"></b></button>
+          <button class="mz-nav-it" data-mz-view="mouvements"><i data-lucide="history"></i><span>Mouvements de stock</span></button>
           <button class="mz-nav-it" data-mz-view="casse"><i data-lucide="shield-alert"></i><span>Déclarer Casse</span></button>
           <button class="mz-nav-it" data-mz-view="scan"><i data-lucide="scan-line"></i><span>Scan</span><b class="mz-nav-badge" id="mz-badge-scan"></b></button>
           <button class="mz-nav-it" data-mz-view="inventaire"><i data-lucide="package"></i><span>Inventaire</span><b class="mz-nav-badge" id="mz-badge-inv"></b></button>
@@ -1689,7 +1694,7 @@
           </div>
           <aside class="mz-ticket" id="mz-ticket"></aside>
         </section>
-        <section class="mz-view" data-mz-panel="registries"></section>
+        <section class="mz-view" data-mz-panel="mouvements"></section>
         <section class="mz-view" data-mz-panel="casse"></section>
         <section class="mz-view" data-mz-panel="scan"></section>
         <section class="mz-view" data-mz-panel="inventaire"></section>
@@ -1898,10 +1903,19 @@
     $$('.mz-view', root).forEach((p) => p.classList.toggle('is-on', p.dataset.mzPanel === view));
     renderView(view);
     icons();
+    /* Le registre local s'affiche tout de suite, puis se rapproche du serveur.
+       Une synchronisation lente ne doit jamais bloquer l'ouverture du rayon. */
+    if (view === 'mouvements' && !state.movementSyncing && window.KiwiInventory?.sync) {
+      state.movementSyncing = true;
+      Promise.resolve(window.KiwiInventory.sync()).catch(() => null).then(() => {
+        state.movementSyncing = false;
+        if (state.view === 'mouvements') { renderMovements(); icons(); }
+      });
+    }
   }
   function renderView(view) {
     if (view === 'vente') { renderCats(); renderTicket(); renderGrid(); renderExchNote(); }
-    if (view === 'registries') renderRegistries();
+    if (view === 'mouvements') renderMovements();
     if (view === 'casse') renderCasse();
     if (view === 'scan') renderScan();
     if (view === 'inventaire') renderInventaire();
@@ -1917,7 +1931,6 @@
   function renderBadges() {
     const items = state.ticket ? ticketCount(state.ticket) : 0;
     const avs = activeAvoirs().length;
-    const regs = (typeof loadRegistries === 'function') ? loadRegistries().length : 0;
     const set = (id, n) => {
       const el = $(id, root);
       if (!el) return;
@@ -1925,7 +1938,6 @@
       el.style.display = n ? '' : 'none';
     };
     set('#mz-badge-vente', items);
-    set('#mz-badge-reg', regs);
     set('#mz-badge-scan', state.scanLog.length);
     set('#mz-badge-ret', avs);
     set('#mz-badge-cl', (window.KiwiClients && KiwiClients.count && KiwiClients.count()) || CLIENTES.length);
@@ -6838,6 +6850,152 @@
     return d.kind === 'percent' ? `Tout le magasin −${d.value} %` : 'Promotion';
   }
 
+  /* ─── mouvements de stock ───────────────────────────────────────────────
+   * La caisse lit exactement le même registre durable que le dashboard. Elle
+   * ne possède pas un deuxième historique local : ventes, retours, casse,
+   * réceptions et corrections restent donc réconciliables au même endroit. */
+  function movementRows() {
+    const MZ = window.KiwiMaisonStock;
+    if (!MZ) return [];
+    const filter = {
+      q: state.movementQuery || '',
+      type: state.movementType || '',
+      categoryId: state.movementCategory || '',
+    };
+    if (state.movementDays) filter.from = Date.now() - state.movementDays * 86400000;
+    return MZ.list(filter);
+  }
+
+  function movementSource(source) {
+    if (source === 'caisse') return 'Caisse';
+    if (source === 'dashboard') return 'Tableau de bord';
+    if (source === 'import') return 'Import';
+    return source || '—';
+  }
+
+  function movementTable(rows) {
+    if (!rows.length) return `<div class="mz-empty mzm-empty">
+      <i data-lucide="history"></i><b>Aucun mouvement trouvé</b>
+      <span>Changez les filtres ou enregistrez une entrée ou une sortie.</span>
+    </div>`;
+    return `<div class="mzm-table-wrap"><table class="mzm-table">
+      <thead><tr><th>Date</th><th>Produit</th><th>Type</th><th>Qté</th><th>Avant → après</th><th>Employé</th><th>Source</th><th>Référence · note</th></tr></thead>
+      <tbody>${rows.map((m) => `<tr>
+        <td class="mzm-muted">${esc(new Date(m.at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }))}${m.pending ? '<small>En attente de synchro</small>' : ''}</td>
+        <td><b>${esc(m.product || '—')}</b>${m.variant ? `<small>${esc(m.variant)}</small>` : ''}</td>
+        <td><span class="mzm-chip ${m.dir > 0 ? 'in' : 'out'}">${esc(m.typeLabel || 'Mouvement')}</span></td>
+        <td class="mzm-qty ${m.dir > 0 ? 'in' : 'out'}">${m.dir > 0 ? '+' : '−'}${Math.abs(m.qty)}</td>
+        <td class="mzm-muted">${m.before == null ? '—' : `${m.before} → ${m.after}`}</td>
+        <td class="mzm-optional">${esc(m.actor || '—')}</td>
+        <td class="mzm-optional mzm-muted">${esc(movementSource(m.source))}${m.supplier ? `<small>${esc(m.supplier)}</small>` : ''}</td>
+        <td class="mzm-optional mzm-muted">${esc(m.ref || '—')}${m.note ? `<small>${esc(m.note)}</small>` : ''}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  }
+
+  function updateMovementResults(panel) {
+    const MZ = window.KiwiMaisonStock;
+    if (!MZ) return;
+    const rows = movementRows();
+    const totals = MZ.totals(rows);
+    const balance = totals.entries - totals.exits;
+    const kpis = $('#mzm-kpis', panel);
+    if (kpis) kpis.innerHTML = `
+      <div class="mzm-kpi"><span>Mouvements</span><b>${totals.count}</b><small>${state.movementDays ? `${state.movementDays} derniers jours` : 'Tout l’historique'}</small></div>
+      <div class="mzm-kpi"><span>Entrées</span><b class="in">+${totals.entries}</b><small>Pièces ajoutées</small></div>
+      <div class="mzm-kpi"><span>Sorties</span><b class="out">−${totals.exits}</b><small>Pièces sorties</small></div>
+      <div class="mzm-kpi"><span>Solde</span><b>${balance >= 0 ? '+' : '−'}${Math.abs(balance)}</b><small>Variation nette</small></div>`;
+    const table = $('#mzm-results', panel);
+    if (table) table.innerHTML = movementTable(rows);
+    icons();
+  }
+
+  function renderMovements() {
+    const panel = $('[data-mz-panel="mouvements"]', root);
+    const MZ = window.KiwiMaisonStock;
+    const cat = catDB();
+    if (!panel) return;
+    if (!MZ || !cat) {
+      panel.innerHTML = '<div class="mz-empty" style="margin:40px;">Registre des mouvements indisponible. Rechargez la caisse.</div>';
+      return;
+    }
+    MZ.enable();
+    const facets = MZ.facets();
+    const categories = cat.listCategories() || [];
+    const option = (value, label, current) => `<option value="${esc(value)}"${String(value) === String(current) ? ' selected' : ''}>${esc(label)}</option>`;
+    panel.innerHTML = `<div class="mzm-view">
+      <header class="mz-head mzm-head">
+        <div><h1>Mouvements de stock</h1><div class="mz-head-sub">Chaque entrée et chaque sortie, avec le stock avant et après${state.movementSyncing ? ' · synchronisation…' : ''}</div></div>
+        <button class="mz-btn primary" id="mzm-new"><i data-lucide="plus"></i>Nouveau mouvement</button>
+      </header>
+      <div class="mzm-kpis" id="mzm-kpis"></div>
+      <div class="mzm-tools">
+        <label class="mz-search mzm-search"><i data-lucide="search"></i><input id="mzm-search" value="${esc(state.movementQuery)}" placeholder="Produit, type, référence…" autocomplete="off" /></label>
+        <select id="mzm-days" aria-label="Période">
+          ${[['0', 'Tout'], ['7', '7 jours'], ['30', '30 jours'], ['90', '90 jours'], ['365', '12 mois']].map(([v, l]) => option(v, l, state.movementDays)).join('')}
+        </select>
+        <select id="mzm-kind" aria-label="Type de mouvement">
+          ${option('', 'Tous les types', state.movementType)}
+          ${MZ.types().filter((t) => !facets.types.length || facets.types.includes(t.id)).map((t) => option(t.id, `${t.dir > 0 ? '↑' : '↓'} ${t.label}`, state.movementType)).join('')}
+        </select>
+        <select id="mzm-category" aria-label="Catégorie">
+          ${option('', 'Toutes catégories', state.movementCategory)}
+          ${categories.map((c) => option(c.id, c.name, state.movementCategory)).join('')}
+        </select>
+      </div>
+      <div class="mzm-results" id="mzm-results"></div>
+      <div class="mzm-foot"><i data-lucide="shield-check"></i><span>Les ventes et retours s’écrivent ici automatiquement. Un mouvement manuel demande le code d’un responsable.</span></div>
+    </div>`;
+    updateMovementResults(panel);
+    const search = $('#mzm-search', panel);
+    search.addEventListener('input', () => { state.movementQuery = search.value.trim(); updateMovementResults(panel); });
+    $('#mzm-days', panel).addEventListener('change', (e) => { state.movementDays = parseInt(e.target.value, 10) || 0; updateMovementResults(panel); });
+    $('#mzm-kind', panel).addEventListener('change', (e) => { state.movementType = e.target.value; updateMovementResults(panel); });
+    $('#mzm-category', panel).addEventListener('change', (e) => { state.movementCategory = e.target.value; updateMovementResults(panel); });
+    $('#mzm-new', panel).addEventListener('click', openMovementPicker);
+    icons();
+  }
+
+  function openMovementPicker() {
+    const cat = catDB();
+    if (!cat || !window.KiwiMaisonStock) return;
+    const products = cat.listProducts({}) || [];
+    const html = `
+      <button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
+      <div class="mzi-modh"><span class="mzi-art"><i data-lucide="package-plus"></i></span><div><h3>Nouveau mouvement de stock</h3><span>Choisissez l’article exact avant de saisir l’entrée ou la sortie.</span></div></div>
+      <div class="mzi-form">
+        ${products.length ? `<div class="mzi-fg"><label>Rechercher un produit</label><input id="mzm-pick-search" placeholder="Nom du produit…" autocomplete="off" /></div>
+        <div class="mzi-fg"><label>Produit</label><select id="mzm-pick-product"></select></div>
+        <div class="mzi-fg"><label>Variante</label><select id="mzm-pick-variant"></select></div>` : '<div class="mz-empty">Aucun produit actif. Ajoutez d’abord un article dans Inventaire.</div>'}
+      </div>
+      <div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-x>Annuler</button><button class="mz-btn" id="mzm-pick-next"${products.length ? '' : ' disabled'}>Continuer</button></div>`;
+    invSetModal(html, (el) => {
+      const productSelect = $('#mzm-pick-product', el);
+      const variantSelect = $('#mzm-pick-variant', el);
+      const next = $('#mzm-pick-next', el);
+      if (!products.length || !productSelect || !variantSelect || !next) return;
+      const fillProducts = (query) => {
+        const q = String(query || '').trim().toLowerCase();
+        const matches = products.filter((p) => !q || String(p.name || '').toLowerCase().includes(q));
+        const previous = productSelect.value;
+        productSelect.innerHTML = matches.map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('') || '<option value="">Aucun produit trouvé</option>';
+        if (matches.some((p) => p.id === previous)) productSelect.value = previous;
+        fillVariants();
+      };
+      const fillVariants = () => {
+        const variants = productSelect.value ? (cat.listVariants(productSelect.value) || []) : [];
+        variantSelect.innerHTML = variants.map((v) => `<option value="${esc(v.id)}">${esc([v.size, variantColor(v).label].filter(Boolean).join(' · '))} — ${v.stock} en stock</option>`).join('') || '<option value="">Aucune variante</option>';
+        next.disabled = !productSelect.value || !variantSelect.value;
+      };
+      fillProducts('');
+      productSelect.addEventListener('change', fillVariants);
+      $('#mzm-pick-search', el).addEventListener('input', (e) => fillProducts(e.target.value));
+      next.addEventListener('click', () => {
+        if (productSelect.value && variantSelect.value) openStockMove(productSelect.value, variantSelect.value);
+      });
+    });
+  }
+
   /* ─── the inventory panel ─── */
   function catalogueAdminEnabled() {
     return !!(window.KiwiConfig && window.KiwiConfig.features && window.KiwiConfig.features.caisseInventoryAdmin === true);
@@ -7045,6 +7203,7 @@
             return;
           }
           toast(`${d.product.name} · ${v.size} : ${res.before} → ${res.after}`);
+          if (state.view === 'mouvements') renderMovements();
           openInvProduct(pid);
         });
       });

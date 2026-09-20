@@ -1515,6 +1515,58 @@ body.is-pos .clockin-screen.mz-clockin { display: flex !important; }
 }
 .mz-fragile-alert svg { width: 14px; height: 14px; flex-shrink: 0; color: #B25E00; }
 
+/* ── Mouvements de stock ─────────────────────────────────────────────── */
+.mzm-view { width: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.mzm-head { align-items: center; padding-bottom: 18px; }
+.mzm-head .mz-btn { flex-shrink: 0; }
+.mzm-kpis {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0 22px 14px; border: 1px solid var(--line); border-radius: 14px;
+  background: var(--paper-elev); overflow: hidden;
+}
+.mzm-kpi { min-width: 0; padding: 14px 16px; display: flex; flex-direction: column; gap: 3px; border-right: 1px solid var(--line-soft); }
+.mzm-kpi:last-child { border-right: 0; }
+.mzm-kpi > span { font-size: 9.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); }
+.mzm-kpi > b { font-family: var(--mono); font-size: 22px; line-height: 1.1; color: var(--ink); }
+.mzm-kpi > b.in { color: var(--forest); }
+.mzm-kpi > b.out { color: var(--danger-mute); }
+.mzm-kpi > small { color: var(--ink-4); font-size: 10.5px; }
+.mzm-tools { display: flex; align-items: center; gap: 8px; padding: 0 22px 14px; flex-wrap: wrap; }
+.mzm-search { flex: 1 1 260px; margin: 0; }
+.mzm-tools select {
+  min-height: 40px; max-width: 210px; padding: 0 30px 0 11px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--paper-elev);
+  color: var(--ink-2); font: inherit; font-size: 12px;
+}
+.mzm-results { flex: 1; min-height: 0; overflow: auto; margin: 0 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper-elev); }
+.mzm-table-wrap { min-width: 920px; }
+.mzm-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.mzm-table th { position: sticky; top: 0; z-index: 1; padding: 10px 11px; border-bottom: 1px solid var(--line); background: var(--paper-mute); color: var(--ink-3); text-align: left; text-transform: uppercase; letter-spacing: .045em; font-size: 9.5px; white-space: nowrap; }
+.mzm-table td { padding: 10px 11px; border-bottom: 1px solid var(--line-soft); color: var(--ink-2); vertical-align: top; }
+.mzm-table tbody tr:last-child td { border-bottom: 0; }
+.mzm-table td b { color: var(--ink); font-weight: 600; }
+.mzm-table small { display: block; margin-top: 2px; color: var(--ink-4); font-size: 10px; }
+.mzm-muted { color: var(--ink-3) !important; }
+.mzm-chip { display: inline-flex; padding: 3px 7px; border-radius: 999px; white-space: nowrap; font-weight: 600; background: var(--paper-mute); }
+.mzm-chip.in { background: var(--mint-tint); color: var(--forest); }
+.mzm-chip.out { background: rgba(184,82,69,.10); color: var(--danger-mute); }
+.mzm-qty { font-family: var(--mono); font-weight: 700; white-space: nowrap; }
+.mzm-qty.in { color: var(--forest); }
+.mzm-qty.out { color: var(--danger-mute); }
+.mzm-empty { margin: 18px; min-height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+.mzm-empty svg { width: 25px; height: 25px; color: var(--ink-4); }
+.mzm-empty b { color: var(--ink-2); font-size: 13px; }
+.mzm-foot { display: flex; align-items: center; gap: 7px; padding: 11px 22px 14px; color: var(--ink-3); font-size: 10.5px; }
+.mzm-foot svg { width: 14px; height: 14px; color: var(--forest); flex-shrink: 0; }
+
+@media (max-width: 1050px) {
+  .mzm-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mzm-kpi:nth-child(2) { border-right: 0; }
+  .mzm-kpi:nth-child(-n+2) { border-bottom: 1px solid var(--line-soft); }
+  .mzm-optional { display: none; }
+  .mzm-table-wrap { min-width: 650px; }
+}
+
 /* ── Registries View (Listes de Mariage / Naissance) ── */
 .mz-registries { padding: 24px; display: flex; flex-direction: column; gap: 18px; max-width: 1100px; margin: 0 auto; }
 .mz-reg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }

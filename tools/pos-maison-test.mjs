@@ -132,6 +132,22 @@ ok(jsSrc.includes('loadRegistries'), 'loadRegistries function defined');
 ok(jsSrc.includes('updateRegistryContribution'), 'updateRegistryContribution function defined');
 ok(jsSrc.includes('Mariage Sarah & Mehdi Benjelloun'), 'Demo wedding registry present');
 
+// 6b. Stock movement workspace replaces the gift-list rail tile
+ok(jsSrc.includes('data-mz-view="mouvements"') && jsSrc.includes('<span>Mouvements de stock</span>'),
+  'Maison rail exposes stock movements');
+ok(!jsSrc.includes('data-mz-view="registries"'), 'Maison rail no longer exposes the gift-list tile');
+ok(jsSrc.includes('data-mz-panel="mouvements"') && jsSrc.includes("if (view === 'mouvements') renderMovements()"),
+  'stock movement rail destination is wired to its panel renderer');
+ok(jsSrc.includes('MZ.list(filter)') && jsSrc.includes('MZ.totals(rows)') && jsSrc.includes('MZ.facets()'),
+  'caisse movement workspace reads the shared durable Maison ledger');
+ok(jsSrc.includes("[['0', 'Tout'], ['7', '7 jours'], ['30', '30 jours'], ['90', '90 jours'], ['365', '12 mois']]"),
+  'caisse movement period defaults to Tout and offers useful presets');
+ok(jsSrc.includes('id="mzm-days"') && jsSrc.includes('id="mzm-kind"') && jsSrc.includes('id="mzm-category"')
+  && !jsSrc.includes('id="mzm-actor"') && !jsSrc.includes('id="mzm-supplier"'),
+  'caisse history filters only by date, type and category');
+ok(jsSrc.includes('function openMovementPicker()') && jsSrc.includes('openStockMove(productSelect.value, variantSelect.value)'),
+  'new movement picker reaches the existing manager-approved stock flow');
+
 // 7. Check Breakage & Loss Management (Déclaration de casse)
 ok(jsSrc.includes('renderCasse'), 'renderCasse function defined');
 ok(jsSrc.includes('recordCasse'), 'recordCasse function defined');

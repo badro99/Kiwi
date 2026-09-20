@@ -57,6 +57,7 @@ const server = http.createServer((req, res) => {
       </style>
       <script>window.KiwiEnv={isReal:()=>false,demosAllowed:true};window.KiwiPosDispatch={register:s=>window.__maisonSpec=s,lock:()=>{}};</script>
       <script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
+      <script src="/assets/inventory-ledger.js"></script><script src="/assets/maison-stock-movements.js"></script>
       <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script src="/assets/pos-maison.js"></script>
     </head><body class="is-pos-maison"><div id="toast-stack"></div><div class="vx-screen kiwi-dna is-on" id="pos-maison"></div>
       <script>window.__maisonSpec.mount(document.getElementById('pos-maison'));document.getElementById('pos-maison').insertAdjacentHTML('beforeend','<button class="krs-launch">Scan continu</button>');</script>
@@ -122,7 +123,7 @@ try {
   ok(launcher.scanRight <= launcher.ticketLeft, 'continuous scan launcher does not cover the Maison checkout column');
   ok(launcher.scanBottom <= launcher.viewportHeight, 'continuous scan launcher remains fully visible');
 
-  const views = ['vente', 'registries', 'casse', 'scan', 'inventaire', 'fournisseurs', 'echanges', 'vendus', 'clientes'];
+  const views = ['vente', 'mouvements', 'casse', 'scan', 'inventaire', 'fournisseurs', 'echanges', 'vendus', 'clientes'];
   for (const view of views) {
     await page.click(`[data-mz-view="${view}"]`);
     const state = await page.evaluate((name) => ({
@@ -132,12 +133,24 @@ try {
     }), view);
     ok(state.activeNav && state.activePanel && state.visiblePanel === view, `rail opens ${view}`);
   }
-  await page.click('[data-mz-view="registries"]');
-  await page.click('#mz-reg-new');
-  await page.type('#mz-rn-title', 'Liste test navigateur');
-  await page.type('#mz-rn-who', 'Famille Test');
-  await page.click('#mz-rn-save');
-  ok((await page.$eval('[data-mz-panel="registries"]', (el) => el.textContent)).includes('Liste test navigateur'), 'gift registry can be created and appears in the real Maison panel');
+  await page.click('[data-mz-view="mouvements"]');
+  ok((await page.$eval('[data-mz-view="mouvements"]', (el) => el.textContent)).includes('Mouvements de stock'),
+    'the second Maison tile exposes stock movements');
+  ok(!(await page.$('[data-mz-view="registries"]')), 'the gift-list tile is removed from the Maison rail');
+  ok((await page.$eval('#mzm-days', (el) => ({ value: el.value, label: el.selectedOptions[0]?.textContent }))).value === '0',
+    'stock movement period defaults to the complete history');
+  ok((await page.$$('#mzm-days, #mzm-kind, #mzm-category')).length === 3
+    && !(await page.$('[data-mzm-actor], [data-mzm-supplier]')),
+  'caisse movement history offers date, type and category filters without employee or supplier filters');
+  await page.click('#mzm-new');
+  ok(!!(await page.$('#mzm-pick-product')) && !!(await page.$('#mzm-pick-variant')),
+    'new stock movement opens the exact product and variant picker');
+  ok(!(await page.$eval('#mzm-pick-next', (el) => el.disabled)),
+    'the movement picker can continue to the existing manager-approved stock flow');
+  await page.click('#mzm-pick-next');
+  ok(!!(await page.$('#mzm-type')) && !!(await page.$('#mzm-qty')) && !!(await page.$('#mzm-save')),
+    'the picker reaches the manual movement form without changing stock');
+  await page.click('#mz-invmm [data-inv-x]');
 
   await page.evaluate(() => { window.KiwiConfig = { ...(window.KiwiConfig || {}), features: { ...((window.KiwiConfig || {}).features || {}), caisseInventoryAdmin: true, depotvente: true } }; });
   await page.click('[data-mz-view="inventaire"]');
