@@ -229,7 +229,11 @@
     }).then(function (r) {
       if (r.status === 404 || r.status === 405) return localRedeem(code); // backend absent → same-browser
       return r.json().then(function (j) {
-        if (j && j.ok) return applyPairing(code, j);
+        if (j && j.ok) {
+          var committed = applyPairing(code, j);
+          if (!committed || !committed.ok) return committed;
+          return confirmTillProof(committed.venue || j, committed);
+        }
         return { ok: false, error: (j && j.error) || 'invalid' };        // 422 etc — real rejection
       });
     }).catch(function () { return localRedeem(code); });                 // network → same-browser
@@ -255,6 +259,50 @@
   }
   function jsonOrEmpty(response) {
     return response.json().catch(function () { return {}; });
+  }
+  function pairState(venue) {
+    return fetch('/api/pair/state?merchant=' + encodeURIComponent(venue.merchant), {
+      credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
+    }).then(function (r) {
+      return jsonOrEmpty(r).then(function (j) {
+        if (!r.ok) throw pairError((j && j.error) || 'pair-state-failed', r.status);
+        return j || {};
+      });
+    });
+  }
+  /* The stable terminal cookie is separate from the revocable till cookie.
+     Recover from it before minting a new one-time pairing: this is the path a
+     kiosk needs when its browser retained only one Set-Cookie value. The route
+     emits only kiwi_till, so the renewed proof cannot be hidden behind another
+     cookie in the same response. */
+  function recoverFromTerminal(venue) {
+    venue = venue || pairedVenue();
+    if (!venue || !venue.merchant) return Promise.reject(pairError('merchant-missing', 0));
+    return fetch('/api/pair/recover', {
+      method: 'POST', credentials: 'same-origin', cache: 'no-store',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ merchant: venue.merchant, terminalId: terminalId() }),
+    }).then(function (r) {
+      return jsonOrEmpty(r).then(function (j) {
+        if (!r.ok || !j || !j.ok || String(j.merchant || '') !== String(venue.merchant)) {
+          throw pairError((j && j.error) || 'terminal-recovery-failed', r.status);
+        }
+        try { document.dispatchEvent(new CustomEvent('kiwi-paired', { detail: { merchant: venue.merchant } })); } catch (_) {}
+        return { ok: true, recovered: true, venue: venue };
+      });
+    });
+  }
+  function confirmTillProof(venue, committed) {
+    /* After a fresh redeem, force a one-cookie recovery response when the
+       terminal proof survived. If that proof was the cookie a legacy kiosk
+       dropped, the till cookie may already be valid; the state probe proves it
+       before we accept the repair. */
+    return recoverFromTerminal(venue).then(function () { return committed; }, function (recoverError) {
+      return pairState(venue).then(function (state) {
+        if (state && state.paired === true) return committed;
+        throw recoverError;
+      });
+    });
   }
   function pairFromAccount(venue) {
     venue = venue || pairedVenue();
@@ -287,11 +335,12 @@
       }).then(function (r) {
         return jsonOrEmpty(r).then(function (j) {
           if (!r.ok || !j || !j.ok) throw pairError((j && j.error) || 'pair-redeem-failed', r.status);
+          if (String(j.merchant || '') !== String(venue.merchant)) throw pairError('pair-merchant-mismatch', 409);
           /* /api/pair/redeem owns merchant/type/name; the hand-off owns the
              display-only venueId/location, which the API intentionally omits. */
           var committed = applyPairing(code, Object.assign({}, venue, j));
           if (!committed || !committed.ok) throw pairError((committed && committed.error) || 'pair-commit-failed', 0);
-          return committed;
+          return confirmTillProof(committed.venue || venue, committed);
         });
       });
     }).finally(function () { repairPromise = null; });
@@ -426,7 +475,8 @@
    * que le problème qu'il répare. */
   function repair(opts) {
     return Promise.resolve()
-      .then(function () { return pairFromAccount(); })
+      .then(function () { return recoverFromTerminal(); })
+      .catch(function () { return pairFromAccount(); })
       .catch(function (err) {
         if (!opts || !opts.interactive) throw err;
         repairWithCode();
@@ -831,7 +881,8 @@
 
   window.KiwiCaissePairing = {
     isPaired: isPaired, pairedVenue: pairedVenue, showPad: showPad, redeem: redeem,
-    repair: repair, repairFromAccount: pairFromAccount, repairWithCode: repairWithCode,
+    repair: repair, recoverFromTerminal: recoverFromTerminal,
+    repairFromAccount: pairFromAccount, repairWithCode: repairWithCode,
     unpair: unpair, bootVertical: bootVertical,
     // Who unlocked this till, for any surface that needs to name them.
     staff: function () { return window.KiwiStaff || null; }, setStaff: setStaff,

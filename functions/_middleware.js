@@ -339,6 +339,12 @@ async function routeRequest(context) {
    * off-shift accounts remain limited to schedule, hours and pointage. */
   if ((path === '/api/order/queue' || path === '/api/service/events' || path === '/api/employee-clients')
       && authSecret && await activeServiceEmployee(request, env)) return next();
+  /* A paired terminal may restore its revocable till proof even when it has no
+   * account/staff session. The exact route authenticates the HttpOnly,
+   * merchant-and-device-bound `kiwi_terminal` cookie itself and exposes no
+   * data. This is what stops a kiosk with one lost cookie from minting a new
+   * pairing every minute forever. */
+  if (method === 'POST' && path === '/api/pair/recover') return next();
   /* Les écritures financières de caisse (/api/sale, /api/sale/refund, /api/sale/cancel).
    * Les caisses appairées détiennent un cookie `kiwi_till` (Max-Age 365j) mais
    * n'ont pas forcément de session commerçant `kiwi_sess` active. Les trois

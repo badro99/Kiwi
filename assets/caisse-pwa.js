@@ -6,7 +6,7 @@
   if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) return;
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/kiwi-sw.js?v=593').then(function (reg) {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=595').then(function (reg) {
         try { reg.update(); } catch (_) {}
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
       }).catch(function () {});
@@ -111,7 +111,7 @@
    * donc au serveur ce que la tablette ne peut pas savoir seule
    * (GET /api/pair/state) : un refus AVÉRÉ cesse d'être un mur, il devient le
    * bouton qui le répare. Les ventes restent en file pendant tout ce temps. */
-  var pairingLost = false, pairingProbeAt = 0, pairingProbing = false;
+  var pairingLost = null, pairingProbeAt = 0, pairingProbing = false;
   function pairedMerchant() {
     try {
       var cp = window.KiwiCaissePairing;
@@ -145,6 +145,10 @@
   }
   function canRepair() {
     try { return !!(window.KiwiCaissePairing && window.KiwiCaissePairing.repairWithCode); } catch (_) { return false; }
+  }
+  function pairingAuthFailure(q) {
+    return !!q && (q.lastStatus === 401
+      || (q.lastStatus === 403 && (q.lastError === 'forbidden-merchant' || /^HTTP 403$/i.test(q.lastError || ''))));
   }
   function cashJournalStatus() {
     try { if (window.KiwiCashSessions && window.KiwiCashSessions.status) return window.KiwiCashSessions.status(); } catch (_) {}
@@ -203,25 +207,34 @@
       tone = '#B85245';
       label = 'Hors ligne' + (q.pending ? ' · ' + q.pending + ' en attente' : '');
       detail = q.pending ? 'Opérations protégées sur cet appareil' : 'La caisse continue normalement';
-    } else if (q.pending && (q.lastStatus === 401 || q.lastStatus === 403)) {
+    } else if (q.pending && pairingAuthFailure(q)) {
       tone = '#9F3028';
       probePairing();
-      if (pairingLost && canRepair() && !pairingRepairing) {
+      if (pairingLost === true && canRepair() && !pairingRepairing) {
         label = 'Caisse à réappairer · ' + q.pending + ' en attente';
         detail = 'Toucher pour saisir un code · rien n’est perdu';
       } else {
         label = 'Appairage à vérifier · ' + q.pending + ' en attente';
         detail = pairingRepairing ? 'Réactivation sécurisée en cours · opérations conservées'
-          : 'Accès refusé (' + q.lastStatus + ') · toucher pour réactiver';
+          : pairingLost === false ? 'Preuve caisse valide · refus à diagnostiquer' : 'Vérification sécurisée en cours';
       }
-      /* One quiet attempt fixes the common case where this same browser still
-         carries the dashboard owner session. Throttling prevents a denied
-         terminal from creating a retry loop; a tap remains an explicit retry. */
-      if (!pairingRepairing && (!pairingRepairAttemptedAt || Date.now() - pairingRepairAttemptedAt >= 60 * 1000)) {
+      /* Repair only after the state endpoint explicitly proves the till cookie
+         is absent/stale. The stable terminal proof is tried first; throttling
+         prevents a denied terminal from creating another retry loop. */
+      if (pairingLost === true && !pairingRepairing
+          && (!pairingRepairAttemptedAt || Date.now() - pairingRepairAttemptedAt >= 60 * 1000)) {
         repairPairing(false).then(function () {
           if (window.KiwiLive && window.KiwiLive.flush) return window.KiwiLive.flush(true);
         }).then(status).catch(function () { status(); });
       }
+    } else if (q.pending && q.lastStatus === 403 && q.lastError === 'employee-on-pause') {
+      tone = '#A56A16';
+      label = 'Employé en pause · ' + q.pending + ' en attente';
+      detail = 'Reprenez le service pour transmettre · opérations conservées';
+    } else if (q.pending && q.lastStatus === 403 && q.lastError === 'on-shift-service-required') {
+      tone = '#A56A16';
+      label = 'Service requis · ' + q.pending + ' en attente';
+      detail = 'Ouvrez la caisse avec un employé en service';
     } else if (q.pending) {
       tone = '#A56A16';
       label = q.pending + ' opération' + (q.pending > 1 ? 's' : '') + ' à synchroniser';
@@ -287,7 +300,7 @@
       try {
         /* A 401/403 is not a connectivity problem. First renew the secure till
            proof, then replay the exact same durable receipt IDs. */
-        if (qNow.pending && (qNow.lastStatus === 401 || qNow.lastStatus === 403)) {
+        if (qNow.pending && pairingAuthFailure(qNow) && pairingLost === true) {
           if (sub) sub.textContent = 'Réactivation sécurisée de cette caisse…';
           flushPromise = repairPairing(true, true).then(function (result) {
             /* The interactive fallback has only OPENED the six-digit pad. It
@@ -319,8 +332,12 @@
         } else if (!after.pending && !after.blocked && !after.storageError) {
           pairingLost = false;
           toast('Synchronisation réussie · opérations transmises');
-        } else if (after.lastStatus === 401 || after.lastStatus === 403) {
-          toast('Erreur d’authentification (' + after.lastStatus + ') · vérifiez l’appairage', 'danger');
+        } else if (pairingAuthFailure(after)) {
+          toast('Autorisation caisse refusée · vérification de l’appairage', 'danger');
+        } else if (after.lastStatus === 403 && after.lastError === 'employee-on-pause') {
+          toast('Employé en pause · reprenez le service avant de transmettre', 'warn');
+        } else if (after.lastStatus === 403 && after.lastError === 'on-shift-service-required') {
+          toast('Employé en service requis pour transmettre cette vente', 'warn');
         } else if (after.lastStatus >= 500) {
           toast('Serveur momentanément indisponible (' + after.lastStatus + ') · réessai automatique', 'warn');
         } else if (serverFailure(after.lastError)) {

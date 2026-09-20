@@ -2,7 +2,8 @@
 /* tools/caisse-offline-sync-test.mjs — verify caisse synchronizer offline & retry fixes.
  *
  * Checks:
- * 1. functions/_middleware.js lets POST /api/sale, /api/sale/refund, /api/sale/cancel through
+ * 1. functions/_middleware.js lets POST /api/sale, /api/sale/refund, /api/sale/cancel and
+ *    device-authenticated /api/pair/recover through
  *    to handlers without requiring kiwi_sess session, while GET stays gated.
  * 2. An unauthenticated POST /api/sale reaches the handler and is rejected with 403 forbidden-merchant,
  *    proving security is preserved.
@@ -81,6 +82,11 @@ sqlite.prepare('INSERT INTO merchant_config (merchant, account_id, name, type, s
   ok('middleware lets POST /api/sale/cancel pass through to handler', nextCalled && resPostCancel.status === 200);
 
   nextCalled = false;
+  const reqPostRecover = new Request('https://kiwi-os.com/api/pair/recover', { method: 'POST', body: '{}' });
+  const resPostRecover = await gate({ request: reqPostRecover, env, next: () => { nextCalled = true; return new Response('next'); } });
+  ok('middleware lets POST /api/pair/recover reach its terminal-proof guard', nextCalled && resPostRecover.status === 200);
+
+  nextCalled = false;
   const reqGetCancel = new Request('https://kiwi-os.com/api/sale/cancel?merchant=pasta-corner', { method: 'GET' });
   const resGetCancel = await gate({ request: reqGetCancel, env, next: () => { nextCalled = true; return new Response('next'); } });
   ok('middleware blocks unauthenticated GET /api/sale/cancel with 401', !nextCalled && resGetCancel.status === 401);
@@ -150,6 +156,8 @@ sqlite.prepare('INSERT INTO merchant_config (merchant, account_id, name, type, s
   ok('live-link queueStatus exposes lastStatus and lastError',
     liveSrc.includes('lastStatus: outboxStatus.lastStatus || lastSyncStatus || 0') &&
     liveSrc.includes("lastError: queueStorageError ? 'queue-storage-full' : (outboxStatus.lastError || lastSyncError || '')"));
+  ok('live-link keeps the server error code instead of flattening every 403',
+    liveSrc.includes("error: String((data && data.error) || ('HTTP ' + response.status)).slice(0, 96)"));
   ok('live-link flushQueue returns promise chain',
     liveSrc.includes('return flushOutbox(force === true);'));
   ok('live-link treats 409 as retryable rather than permanent quarantine block',
@@ -168,8 +176,10 @@ sqlite.prepare('INSERT INTO merchant_config (merchant, account_id, name, type, s
     pwaSrc.includes("sub.textContent = 'Envoi des opérations au serveur…';"));
   ok('caisse-pwa click handler awaits flush and surfaces success toast',
     pwaSrc.includes("toast('Synchronisation réussie · opérations transmises');"));
-  ok('caisse-pwa click handler surfaces auth error toast on 401/403',
-    pwaSrc.includes("toast('Erreur d’authentification (' + after.lastStatus + ') · vérifiez l’appairage', 'danger');"));
+  ok('caisse-pwa distinguishes pairing, pause and off-shift 403 responses',
+    pwaSrc.includes("toast('Autorisation caisse refusée · vérification de l’appairage', 'danger');") &&
+    pwaSrc.includes("after.lastError === 'employee-on-pause'") &&
+    pwaSrc.includes("after.lastError === 'on-shift-service-required'"));
   ok('caisse-pwa click handler surfaces server error toast on 5xx',
     pwaSrc.includes("toast('Serveur momentanément indisponible (' + after.lastStatus + ') · réessai automatique', 'warn');"));
   ok('caisse-pwa reports a network-layer failure in French with a visible retry time',

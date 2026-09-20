@@ -182,7 +182,7 @@ export async function onRequestPost(context) {
       res.headers.append('Set-Cookie', tillCookie(await tillToken(env.AUTH_SECRET, row.merchant, currentEpoch)));
     } catch (_) { return json({ error: 'auth-unavailable' }, 503); }
     if (terminalId) {
-      try { res.headers.append('Set-Cookie', terminalCookie(await terminalToken(env.AUTH_SECRET, row.merchant, terminalId))); } catch (_) {}
+      try { res.headers.append('Set-Cookie', terminalCookie(await terminalToken(env.AUTH_SECRET, row.merchant, terminalId, currentEpoch))); } catch (_) {}
     }
   }
   return res;

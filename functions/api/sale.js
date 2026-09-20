@@ -177,11 +177,16 @@ export async function onRequestPost({ request, env }) {
   const employeeTable = String((b && b.table) || '').trim().replace(/^table\s*/i, '').replace(/^t(?=\d+$)/i, '').slice(0, 32);
   let employee = null;
   if (employeeTable) {
-    employee = await activeServiceEmployee(request, env, merchant);
-    if (!employee) {
-      const isTill = await isTillFor(request, env, merchant);
-      let isOwnerOrOp = false;
-      if (!isTill) {
+    /* A browser may still carry an employee cookie after that person pauses or
+     * clocks out. On a physical paired till, that stale secondary identity must
+     * not outrank the till's own authorization: doing so rejected every table
+     * payment as `employee-on-pause`, while counter/boutique sales (no table)
+     * continued normally. Check the strongest device proof first. */
+    const isTill = await isTillFor(request, env, merchant);
+    if (!isTill) {
+      employee = await activeServiceEmployee(request, env, merchant);
+      if (!employee) {
+        let isOwnerOrOp = false;
         const sess = await readSession(readCookie(request, SESS_COOKIE), env && env.AUTH_SECRET);
         if (sess && sess.aid) {
           isOwnerOrOp = (await storeOwner(env, merchant)) === sess.aid;
@@ -189,12 +194,10 @@ export async function onRequestPost({ request, env }) {
         if (!isOwnerOrOp) {
           isOwnerOrOp = await isOperator(request, env);
         }
+        if (!isOwnerOrOp) return json({ error: 'on-shift-service-required' }, 403);
+      } else if (employee.attendance && employee.attendance.pauseTs) {
+        return json({ error: 'employee-on-pause' }, 403);
       }
-      if (!isTill && !isOwnerOrOp) {
-        return json({ error: 'on-shift-service-required' }, 403);
-      }
-    } else if (employee.attendance && employee.attendance.pauseTs) {
-      return json({ error: 'employee-on-pause' }, 403);
     }
   }
 

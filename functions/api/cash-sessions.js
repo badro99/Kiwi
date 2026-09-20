@@ -1,6 +1,6 @@
 import {
   entitledMerchant, isTillFor, isTerminalFor, json, readCookie,
-  TERMINAL_COOKIE, terminalToken, terminalCookie
+  TERMINAL_COOKIE, terminalToken, terminalCookie, tillEpoch
 } from '../auth/_lib.js';
 
 const EVENT_TYPES = new Set(['open', 'movement', 'handover', 'close']);
@@ -182,7 +182,9 @@ export async function onRequestPost({ request, env }) {
         counterpartyActorId || null, openedAt, occurredAt).run();
     const response = json({ ok: true, id }, 201);
     if (bootstrapTerminal) {
-      response.headers.append('Set-Cookie', terminalCookie(await terminalToken(env.AUTH_SECRET, merchant, terminalId)));
+      const epoch = await tillEpoch(env, merchant);
+      if (!Number.isFinite(epoch)) return json({ error: 'auth-verification-unavailable' }, 503);
+      response.headers.append('Set-Cookie', terminalCookie(await terminalToken(env.AUTH_SECRET, merchant, terminalId, epoch)));
     }
     return response;
   } catch (_) {

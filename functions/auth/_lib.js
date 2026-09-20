@@ -351,7 +351,15 @@ export function forgetTillEpoch(merchant, db = null) {
   for (const cache of tillEpochCacheRefs) cache.delete(key);
 }
 
-export async function terminalToken(authSecret, merchant, terminalId) {
+export async function terminalToken(authSecret, merchant, terminalId, epoch = null) {
+  /* Passing an epoch emits the revocable form used by current pairing flows.
+   * The three-argument form remains the legacy v1 helper so existing epoch-0
+   * terminals and integrations keep working until the merchant explicitly
+   * revokes every till. */
+  if (Number.isFinite(epoch)) {
+    const n = Math.max(0, Math.round(Number(epoch) || 0));
+    return hmacHex(authSecret, 'kiwi-terminal-v2:' + String(merchant || '') + ':' + String(terminalId || '') + ':' + n);
+  }
   return hmacHex(authSecret, 'kiwi-terminal-v1:' + String(merchant || '') + ':' + String(terminalId || ''));
 }
 
@@ -393,7 +401,14 @@ export async function isTerminalFor(request, env, merchant, terminalId) {
   if (!secret || !merchant || !terminalId) return false;
   const got = readCookie(request, TERMINAL_COOKIE);
   if (!got) return false;
-  return timingSafeEqualHex(got, await terminalToken(secret, merchant, terminalId));
+  const epoch = await tillEpoch(env, merchant);
+  if (!Number.isFinite(epoch)) return false;
+  if (timingSafeEqualHex(got, await terminalToken(secret, merchant, terminalId, epoch))) return true;
+  /* A pre-recovery terminal cookie is accepted only before the merchant's
+   * first global unpair. Once the epoch moves, that old device proof cannot be
+   * promoted back into a valid till cookie. */
+  return epoch === 0
+    && timingSafeEqualHex(got, await terminalToken(secret, merchant, terminalId));
 }
 
 // ── Employee app session ─────────────────────────────────────────────────────

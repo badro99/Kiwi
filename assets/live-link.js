@@ -370,11 +370,28 @@
     recoveryTimer = setTimeout(function () { recoveryTimer = null; flushQueue(); }, 3000);
   }
   function paymentCompletion(response) {
-    if (!response || !response.ok) return Promise.resolve({ complete: false, pending: false });
-    // 2xx accepts the receipt, but only the body proves settlement completed.
-    // An unreadable acknowledgement stays retryable under the original ID.
+    if (!response) return Promise.resolve({ complete: false, pending: false, error: 'server-unreachable' });
+    if (typeof response.json !== 'function') {
+      return Promise.resolve({
+        complete: false, pending: false,
+        error: response.ok ? 'unverified-response' : ('HTTP ' + (response.status || 0)),
+      });
+    }
+    /* Read the JSON on failures too. `/api/sale` distinguishes a lost till
+       proof from a paused employee and an off-shift service account, but the
+       client used to flatten every 403 into `HTTP 403`. That made the caisse
+       mint and redeem another pairing every minute for errors pairing cannot
+       repair. */
     return response.json().then(function (data) {
-      return { complete: !!(data && data.ok && !data.settlementPending), pending: !!(data && data.ok && data.settlementPending) };
+      if (!response.ok) return {
+        complete: false, pending: false,
+        error: String((data && data.error) || ('HTTP ' + response.status)).slice(0, 96),
+      };
+      // 2xx accepts the receipt, but only the body proves settlement completed.
+      return { complete: !!(data && data.ok && !data.settlementPending), pending: !!(data && data.ok && data.settlementPending), error: '' };
+    }).catch(function () {
+      // An unreadable acknowledgement stays retryable under the original ID.
+      return { complete: false, pending: false, error: response.ok ? 'unverified-response' : ('HTTP ' + response.status) };
     });
   }
 
@@ -528,7 +545,7 @@
           if (body && body.kind === 'refund') BLOCK[409] = 1;
           return paymentCompletion(r).then(function (result) {
             if (timeoutId) clearTimeout(timeoutId);
-            done(result.complete, !!(r && BLOCK[r.status]), r && r.status, result.pending);
+            done(result.complete, !!(r && BLOCK[r.status]), r && r.status, result.pending, result.error);
           });
         }).catch(function (err) {
           if (timeoutId) clearTimeout(timeoutId);
@@ -588,7 +605,7 @@
         return paymentCompletion(response).then(function (result) {
           if (timeoutId) clearTimeout(timeoutId);
           return settle(result.complete, !!BLOCK[response.status], response.status,
-            result.pending ? 'settlement-pending' : (response.ok ? 'unverified-response' : 'HTTP ' + response.status));
+            result.pending ? 'settlement-pending' : (result.error || (response.ok ? 'unverified-response' : 'HTTP ' + response.status)));
         });
       }).catch(function (err) {
         if (timeoutId) clearTimeout(timeoutId);

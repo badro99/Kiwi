@@ -240,15 +240,13 @@ console.log('\n5 · la tablette peut se réappairer sans se vider');
 
   const repairBody = src.slice(src.indexOf('function repairWithCode()'), src.indexOf('function repairWithCode()') + 700);
   check('both repair paths are exported for the status line to choose from',
-    /repair: repair, repairFromAccount: pairFromAccount, repairWithCode: repairWithCode,/.test(src));
-  /* L'ordre compte, et il est celui du coût pour le commerçant : la réparation
-   * silencieuse d'abord (ce navigateur porte peut-être encore la session du
-   * tableau de bord, auquel cas personne n'a rien à faire), le pavé ensuite —
-   * et SEULEMENT si le geste a été demandé. Un pavé qui s'ouvrirait tout seul
-   * par-dessus la caisse en plein service serait pire que la panne. */
+    /repair: repair,[\s\S]{0,120}repairFromAccount: pairFromAccount, repairWithCode: repairWithCode,/.test(src));
+  /* L'ordre compte, et il est celui du coût pour le commerçant : preuve du
+   * terminal, session du compte, puis pavé — ce dernier seulement sur geste. */
   const combined = src.slice(src.indexOf('function repair(opts)'), src.indexOf('function showPad('));
-  check('the silent account repair is attempted before any keypad appears',
-    /pairFromAccount\(\)/.test(combined)
+  check('terminal recovery precedes account pairing and any keypad',
+    /recoverFromTerminal\(\)/.test(combined) && /pairFromAccount\(\)/.test(combined)
+    && combined.indexOf('recoverFromTerminal()') < combined.indexOf('pairFromAccount()')
     && combined.indexOf('pairFromAccount()') < combined.indexOf('repairWithCode()'));
   check('the keypad only opens on an explicit gesture',
     /if \(!opts \|\| !opts\.interactive\) throw err;/.test(combined));

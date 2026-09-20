@@ -32,6 +32,7 @@ const storage = {
 };
 const events = [];
 const requests = [];
+let recoveryCalls = 0;
 const document = {
   readyState: 'loading',
   addEventListener() {},
@@ -53,7 +54,13 @@ const context = vm.createContext({
   crypto: { randomUUID: () => '12345678-1234-1234-1234-123456789012' },
   CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init?.detail; } },
   fetch: async (url, options) => {
-    requests.push({ url, options, body: JSON.parse(options.body) });
+    requests.push({ url, options, body: options && options.body ? JSON.parse(options.body) : null });
+    if (url === '/api/pair/recover') {
+      recoveryCalls++;
+      return recoveryCalls === 1
+        ? Response.json({ error: 'forbidden-terminal' }, { status: 403 })
+        : Response.json({ ok: true, merchant: venue.merchant });
+    }
     if (url === '/api/pair/create') return Response.json({ ok: true, code: '314159' });
     if (url === '/api/pair/redeem') return Response.json({
       ok: true, merchant: venue.merchant, type: venue.type,
@@ -71,15 +78,29 @@ assert.equal(typeof window.KiwiCaissePairing?.repair, 'function', 'repair API is
 
 const result = await window.KiwiCaissePairing.repair();
 assert.equal(result.ok, true);
-assert.deepEqual(requests.map((request) => request.url), ['/api/pair/create', '/api/pair/redeem']);
-assert.equal(requests[0].body.merchant, venue.merchant, 'owner asks to pair the exact merchant');
-assert.equal(requests[1].body.code, '314159', 'fresh one-time code is redeemed immediately');
-assert.match(requests[1].body.terminalId, /^term_[A-Za-z0-9_-]{12,80}$/);
+assert.deepEqual(requests.map((request) => request.url),
+  ['/api/pair/recover', '/api/pair/create', '/api/pair/redeem', '/api/pair/recover']);
+assert.equal(requests[1].body.merchant, venue.merchant, 'owner asks to pair the exact merchant');
+assert.equal(requests[2].body.code, '314159', 'fresh one-time code is redeemed immediately');
+assert.match(requests[2].body.terminalId, /^term_[A-Za-z0-9_-]{12,80}$/);
 assert.ok(requests.every((request) => request.options.credentials === 'same-origin'));
 assert.equal(values.get('kiwiSaleQueue'), queue, 'legacy durable receipt queue is preserved byte-for-byte');
 assert.equal(values.get('kiwiSales:scoped@pasta-corner'), '[{"id":"sale-1","total":64}]', 'merchant sales stay intact');
 assert.equal(JSON.parse(values.get('kiwiPairedVenue')).venueId, venue.venueId, 'display venue metadata survives API redemption');
 assert.ok(events.some((event) => event.type === 'kiwi-paired'), 'successful repair wakes the outbox sender');
+
+const beforeTerminalRepair = requests.length;
+const recovered = await window.KiwiCaissePairing.repair();
+assert.equal(recovered.recovered, true);
+assert.deepEqual(requests.slice(beforeTerminalRepair).map((request) => request.url), ['/api/pair/recover'],
+  'a known terminal restores its till proof without minting another pairing');
+
+const beforeTypedCode = requests.length;
+const typed = await window.KiwiCaissePairing.redeem('314159');
+assert.equal(typed.ok, true);
+assert.deepEqual(requests.slice(beforeTypedCode).map((request) => request.url),
+  ['/api/pair/redeem', '/api/pair/recover'],
+  'a manually entered code also confirms the one-cookie till recovery before replay');
 
 /* Ce que cette assertion protège — réparer AVANT de rejouer — est intact. Le
  * second argument est né du terminal qui n'a pas de session tableau de bord :

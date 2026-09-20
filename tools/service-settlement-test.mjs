@@ -34,7 +34,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
-import { employeeToken, EMPLOYEE_COOKIE } from '../functions/auth/_lib.js';
+import { employeeToken, EMPLOYEE_COOKIE, tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
 import * as queue from '../functions/api/order/queue.js';
 import * as sale from '../functions/api/sale.js';
 
@@ -443,6 +443,20 @@ async function main() {
   const singleReplay = await post(sale.onRequestPost, { ...singleBody, id: 'another-device' }, cookie);
   check('le rejeu de la part unique conserve le reçu sans doubler la recette', singleReplay.status === 200
     && singleReplay.body.id === single.body.id && raw('SELECT COUNT(*) AS n FROM sales')[0].n === beforeSingle + 1);
+
+  console.log('\n8 · Une caisse reste une caisse même si un ancien serveur est en pause');
+  doc('attendance', { entries: [{
+    memberId: STAFF_ID, name: 'Lin Ilin', inTs: Date.now() - HOUR,
+    outTs: null, pauseTs: Date.now() - 60000,
+  }] });
+  const till = await tillToken(AUTH_SECRET, MERCHANT, 0);
+  const pairedAndPaused = `${cookie}; ${TILL_COOKIE}=${till}`;
+  const tillPayment = await post(sale.onRequestPost, {
+    merchant: MERCHANT, table: '8', amount: 10, amountCents: 1000,
+    method: 'cash', id: 'paired-till-ignores-stale-employee-pause', lines: [],
+  }, pairedAndPaused);
+  check('le cookie employé en pause ne peut pas bloquer une caisse appairée valide',
+    tillPayment.status === 200 && tillPayment.body.ok, JSON.stringify(tillPayment.body));
 
   console.log(failures ? `\n${failures} échec(s)\n` : '\nTout passe.\n');
   process.exitCode = failures ? 1 : 0;

@@ -74,7 +74,10 @@ context.window.KiwiCaissePairing = {
   pairedVenue: () => ({ merchant: 'shop-a' }),
 };
 journal = { pendingCount: 0, pendingPairing: false, storageError: false };
-sales = { pending: 31, blocked: 0, storageError: false, lastStatus: 403 };
+/* A queue written by the previous client generation has only the generic
+   status text. The new sender will replace it with the exact server code on
+   its next attempt. */
+sales = { pending: 31, blocked: 0, storageError: false, lastStatus: 403, lastError: 'HTTP 403' };
 context.status();
 assert.match(label.textContent, /Appairage à vérifier · 31 en attente/);
 assert.ok(probes.some(u => String(u).startsWith('/api/pair/state?merchant=shop-a')),

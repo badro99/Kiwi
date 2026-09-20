@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v593';
+var CACHE = 'kiwi-app-v595';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -149,13 +149,13 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
   '/assets/oppo-cards.js?v=2',
-  '/assets/dashboard-pwa.js?v=533',
+  '/assets/dashboard-pwa.js?v=535',
   '/assets/dashboard-native.js?v=1',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js?v=1',
-  '/assets/caisse-pwa.js?v=541',
+  '/assets/caisse-pwa.js?v=544',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=6',
   '/assets/platform-kernel.js?v=5',
@@ -163,7 +163,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=10',
   '/assets/operations-ui.js?v=14',
-  '/assets/live-link.js?v=41',
+  '/assets/live-link.js?v=43',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -240,7 +240,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=532',
+  '/assets/employee-live.js?v=534',
   '/assets/employee-planning.js?v=8',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=2',
@@ -316,7 +316,7 @@ var SHELL = [
   '/assets/pos-autre.js?v=2',
   '/assets/pos-maison.css?v=39',
   '/assets/pos-maison.js?v=39',
-  '/assets/caisse-pairing.js?v=24',
+  '/assets/caisse-pairing.js?v=25',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
