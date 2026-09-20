@@ -21,8 +21,8 @@
 //   ?name=<original filename>   → only used to pick the extension
 //   Content-Type: image/… | video/…
 
-import { json } from '../../auth/_lib.js';
-import { ownerMerchant } from '../_private.js';
+import { activeAccountSession, isTillFor, json } from '../../auth/_lib.js';
+import { ownerMerchant, storeSubscriptionPending, storeSuspended } from '../_private.js';
 
 // Le navigateur rétrécit la photo avant l'envoi (orderpro-publish.js shrinkPhoto :
 // ~300 Ko), donc ces plafonds sont un filet, pas la norme. 16 Mo couvre le JPEG
@@ -59,6 +59,28 @@ export async function onRequestPost(context) {
   let merchant = '';
   try { merchant = await ownerMerchant(request, env, asked, { strict: true }); }
   catch (_) { merchant = ''; }
+  /* A caisse employee may add product photos only when the owner explicitly
+   * enabled full catalogue administration for that paired till.  The signed
+   * till token is store-scoped, and the feature is read from the same server
+   * row God Mode writes; knowing a merchant slug or changing localStorage is
+   * therefore insufficient. Owner sessions keep the existing path above. */
+  if (!merchant && asked) {
+    let tillAllowed = false;
+    try {
+      /* Preserve the mixed-cookie boundary: a browser signed into account A
+       * cannot use a stale/compromised till-B cookie to write into B. */
+      const account = await activeAccountSession(request, env);
+      if (!account && await isTillFor(request, env, asked)) {
+        const row = await env.DB.prepare('SELECT features FROM merchant_config WHERE merchant = ?').bind(asked).first();
+        let features = {};
+        try { features = JSON.parse((row && row.features) || '{}') || {}; } catch (_) { features = {}; }
+        tillAllowed = features.caisseInventoryAdmin === true
+          && !await storeSuspended(env, asked)
+          && !await storeSubscriptionPending(env, asked);
+      }
+    } catch (_) { tillAllowed = false; }
+    if (tillAllowed) merchant = asked;
+  }
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
   const url = new URL(request.url), scope = url.searchParams.get('scope') === 'hotel-room' ? 'hotel-room' : '';

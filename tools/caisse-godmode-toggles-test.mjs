@@ -13,6 +13,7 @@ const ADMIN = fs.readFileSync(path.join(ROOT, 'kiwi-admin.html'), 'utf8');
 const CONFIG_JS = fs.readFileSync(path.join(ROOT, 'assets/merchant-config.js'), 'utf8');
 const CAISSE = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
 const MAISON = fs.readFileSync(path.join(ROOT, 'assets/pos-maison.js'), 'utf8');
+const BOUTIQUE = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
 
 let failed = 0;
 function check(label, ok) {
@@ -44,6 +45,20 @@ check('Maison treats only boolean true as inventory-admin authorization',
 check('Maison exposes product, category and variant tools only behind the authorization',
   MAISON.includes("id=\"mzi-category\"") && MAISON.includes("id=\"mzi-new\"") &&
   MAISON.includes('data-inv-addvar') && MAISON.includes('data-vdelete'));
+check('Maison product creation exposes A/B only through the strict depot-vente switch',
+  MAISON.includes("ownershipField(null, 'mzi-n')") &&
+  MAISON.includes("if (!depotOn()) return ''") &&
+  MAISON.includes('value="outright"') && MAISON.includes('value="consignment"'));
+check('Maison product creation persists the selected ownership in the shared catalogue',
+  MAISON.includes('ownership:owner.ownership,consignor:owner.consignor'));
+check('God Mode offers the stock-value visibility switch as a default-on boutique option',
+  /key:'caisseInventoryValue'[\s\S]{0,180}Allumé par défaut/.test(ADMIN) &&
+  !/key:'caisseInventoryValue'[^\n]*off:true/.test(ADMIN));
+check('Maison and Boutique hide inventory value only for the explicit boolean false',
+  MAISON.includes('features.caisseInventoryValue === false') &&
+  BOUTIQUE.includes('features.caisseInventoryValue === false') &&
+  MAISON.includes('inventoryValueVisible() ? `<div class="mzi-kpi"') &&
+  BOUTIQUE.includes('inventoryValueVisible() ? `<div class="bqi-kpi"'));
 
 // Grouping clarity without confusing micro-switches
 check('modulesForType cleanly structures Modes de service and Actions rapides',

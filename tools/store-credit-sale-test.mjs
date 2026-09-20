@@ -58,11 +58,12 @@ function gate(entry) {
   const sandbox = { Number, Math, Array, String, JSON, Object };
   vm.createContext(sandbox);
   const head = LIVE.indexOf('    var rawAmt = entry.amountCents != null');
-  const end = LIVE.indexOf('|| (amountCents === 0 && !complimentary && !storeCredit)) return;');
+  const guard = '|| (amountCents === 0 && !complimentary && !storeCredit && !consignment && !receivable)) return;';
+  const end = LIVE.indexOf(guard);
   vm.runInContext(`
     globalThis.run = function (entry) {
-${LIVE.slice(head, end + 70).replace(/return;/g, 'return { posted: false };')}
-      return { posted: true, complimentary: complimentary, storeCredit: storeCredit, amountCents: amountCents };
+${LIVE.slice(head, end + guard.length).replace(/return;/g, 'return { posted: false };')}
+      return { posted: true, complimentary: complimentary, storeCredit: storeCredit, consignment: consignment, receivable: receivable, amountCents: amountCents };
     };
   `, sandbox, { filename: 'live-link-slice.js' });
   return sandbox.run(entry);
@@ -89,6 +90,10 @@ const basket = [{ itemId: 'p1', name: 'Caftan', qty: 1, total: 1200 }];
     'ni sans aucune ligne du tout');
   ok(gate({ amountCents: 0, settlementKind: 'complimentary', grossAmountCents: 120000, discountAmountCents: 120000, lines: basket }).complimentary === true,
     'la vente offerte, elle, continue de passer par son propre chemin');
+  ok(gate({ amountCents: 0, settlementKind: 'consignment', ticketAmountCents: 120000, consignedAmountCents: 120000, lines: basket }).consignment === true,
+    'un ticket entièrement en dépôt-vente conserve son reçu sans créer de revenu propriétaire');
+  ok(gate({ amountCents: 0, settlementKind: 'receivable', ticketAmountCents: 120000, lines: basket }).receivable === true,
+    'une livraison à recevoir conserve également son panier et sa valeur de reçu');
 
   ok(/body\.settlementKind = 'store-credit'/.test(LIVE), 'le règlement est nommé dans le corps envoyé');
   ok(/body\.creditAmountCents = Math\.round\(Number\(entry\.creditAmountCents\)\)/.test(LIVE),
@@ -100,9 +105,9 @@ const basket = [{ itemId: 'p1', name: 'Caftan', qty: 1, total: 1200 }];
   const head = SALE.indexOf('const settlementKind = String(');
   const block = SALE.slice(head, SALE.indexOf('const hasDiscount =', head));
   ok(/storeCredit = settlementKind === 'store-credit'/.test(block), 'le serveur connaît ce règlement');
-  ok(/amountCents === 0 && !complimentary && !storeCredit/.test(block),
-    'et n\'accepte zéro que pour une vente offerte ou un règlement par avoir');
-  ok(/settlementKind && !complimentary && !storeCredit/.test(block),
+  ok(/amountCents === 0 && !complimentary && !storeCredit && !consignment && !receivable/.test(block),
+    'et n\'accepte zéro que pour une vente explicitement qualifiée');
+  ok(/settlementKind && !complimentary && !storeCredit && !consignment && !receivable/.test(block),
     'un règlement inventé reste refusé');
   ok(/bad-store-credit-settlement/.test(block), 'un règlement par avoir mal formé a son propre refus');
   ok(/amountCents !== 0/.test(block),

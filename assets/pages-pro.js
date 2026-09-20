@@ -10459,7 +10459,7 @@ handlers['bqx-open'] = (_el, arg) => { if (arg) _bqxOpenProduct(arg); };
  * proposée que lorsque le métier est « maison ».
  * ═══════════════════════════════════════════════════════════════════════════ */
 const MZS = () => window.KiwiMaisonStock;
-let _mzFilter = { type: '', categoryId: '', actor: '', supplier: '', days: 30, q: '', productId: '' };
+let _mzFilter = { type: '', categoryId: '', days: 0, q: '', productId: '' };
 
 function _mzCss() {
   if (document.getElementById('mzs-css')) return;
@@ -10551,17 +10551,15 @@ function _mzRenderPage() {
 
       <div class="p-toolbar" style="margin-top:4px;">
         <div class="p-search" style="flex:1;"><span style="display:inline-flex;align-items:center;">${_ICN.search}</span>
-          <input data-mz-search placeholder="Produit, employé, fournisseur, référence…" value="${_esc(_mzFilter.q)}" style="border:none;background:transparent;outline:none;margin-left:6px;font:inherit;color:inherit;flex:1;min-width:120px;" /></div>
+          <input data-mz-search placeholder="Produit, catégorie, type, référence…" value="${_esc(_mzFilter.q)}" style="border:none;background:transparent;outline:none;margin-left:6px;font:inherit;color:inherit;flex:1;min-width:120px;" /></div>
         <button class="kb ghost" data-action="mz-export">${_ICN.upload}Exporter CSV</button>
         <button class="kb primary" data-action="mz-new">${_ICN.plus}Nouveau mouvement</button>
       </div>
 
       <div class="mzs-filters">
-        <select data-mz="days">${[['7', '7 jours'], ['30', '30 jours'], ['90', '90 jours'], ['365', '12 mois'], ['0', 'Tout']].map(([v, l]) => opt(v, l, _mzFilter.days)).join('')}</select>
+        <select data-mz="days">${[['0', 'Tout'], ['7', '7 jours'], ['30', '30 jours'], ['90', '90 jours'], ['365', '12 mois']].map(([v, l]) => opt(v, l, _mzFilter.days)).join('')}</select>
         <select data-mz="type">${opt('', 'Tous les types', _mzFilter.type)}${M.types().filter((t) => fac.types.indexOf(t.id) >= 0 || !fac.types.length).map((t) => opt(t.id, (t.dir > 0 ? '↑ ' : '↓ ') + t.label, _mzFilter.type)).join('')}</select>
         <select data-mz="categoryId">${opt('', 'Toutes catégories', _mzFilter.categoryId)}${cats.map((c) => opt(c.id, c.name, _mzFilter.categoryId)).join('')}</select>
-        <select data-mz="actor">${opt('', 'Tous les employés', _mzFilter.actor)}${fac.actors.map((a) => opt(a, a, _mzFilter.actor)).join('')}</select>
-        <select data-mz="supplier">${opt('', 'Tous les fournisseurs', _mzFilter.supplier)}${fac.suppliers.map((a) => opt(a, a, _mzFilter.supplier)).join('')}</select>
         ${_mzFilter.productId ? `<button class="kb ghost xs" data-action="mz-clear-product">Produit filtré · tout voir</button>` : ''}
       </div>
 
@@ -10595,6 +10593,7 @@ function _mzRenderPage() {
 handlers['nav-stock-movements'] = () => {
   if (!_bqxReady() || !MZS()) { toast('Mouvements de stock indisponibles', { desc: 'Le registre n’est pas chargé, rechargez la page.', type: 'warn' }); return; }
   MZS().enable();
+  _mzFilter.days = 0;
   _mzRenderPage();
 };
 handlers['mz-clear-product'] = () => { _mzFilter.productId = ''; _mzRenderPage(); };
@@ -11365,6 +11364,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   'use strict';
   if (!window.Kiwi) return;
   const { toast, modal, drawer, handlers } = window.Kiwi;
+  const esc = (value) => String(value == null ? '' : value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
   /* ═══════════════════ Inline SVG icon set ═══════════════════ */
   /* Material Symbols (Outlined, 400) recopiées depuis assets/icons/material/.
@@ -11747,6 +11747,9 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   let liveReturns = [];
   let liveReturnsCloud = null;
   let liveReturnsSlug = '';
+  let liveCredits = [];
+  let liveCreditsLoadedSlug = '';
+  let liveCreditsLoading = false;
   function realReturnsStore() {
     try { return !!window.KiwiEnv?.isReal?.() || !!window.KiwiVenue?.isCustom?.(); } catch (_) { return false; }
   }
@@ -11767,9 +11770,66 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     }
     liveReturnsCloud.bind();
   }
+  function loadLiveCredits() {
+    if (!realReturnsStore() || liveCreditsLoading || typeof fetch !== 'function') return;
+    const slug = window.KiwiCloudDoc?.currentSlug?.() || window.KiwiVenue?.getCurrentVenueData?.()?.slug || '';
+    if (!slug || liveCreditsLoadedSlug === slug) return;
+    liveCreditsLoading = true;
+    fetch('/api/store-credits?merchant=' + encodeURIComponent(slug), { headers: { Accept: 'application/json' } })
+      .then((response) => response && response.ok ? response.json() : null)
+      .then((data) => {
+        liveCredits = data && Array.isArray(data.credits) ? data.credits : [];
+        liveCreditsLoadedSlug = slug;
+      }).catch(() => {}).finally(() => {
+        liveCreditsLoading = false;
+        if (document.querySelector('[data-live-returns]')) handlers['nav-returns']();
+      });
+  }
+  async function mutateLiveCredit(payload) {
+    const slug = window.KiwiCloudDoc?.currentSlug?.() || window.KiwiVenue?.getCurrentVenueData?.()?.slug || '';
+    const response = await fetch('/api/store-credits', {
+      method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ ...payload, merchant: slug }),
+    });
+    let data = null; try { data = await response.json(); } catch (_) {}
+    if (!response.ok || !data || data.error) throw new Error((data && data.error) || `http-${response.status}`);
+    liveCreditsLoadedSlug = ''; loadLiveCredits();
+    return data;
+  }
+  handlers['credit-adjust'] = (el) => {
+    const code = el.dataset.code || '';
+    const m = modal({
+      tag: 'AUTORISATION PROPRIÉTAIRE', title: `Corriger ${code}`,
+      desc: 'La correction est ajoutée au journal permanent avec votre motif.', width: 500,
+      body: `<div class="kf-group"><label class="kf-label">Variation du solde (MAD)</label><input class="kf-input" type="number" step="0.01" data-credit-delta placeholder="Ex. -50 ou 50" /></div><div class="kf-group"><label class="kf-label">Motif obligatoire</label><input class="kf-input" maxlength="500" data-credit-reason placeholder="Pourquoi ce solde doit être corrigé" /></div>`,
+      foot: `<button class="kb ghost" data-cancel>Annuler</button><button class="kb atlas" data-action="credit-adjust-confirm" data-code="${esc(code)}">Confirmer la correction</button>`,
+    });
+    m.el.querySelector('[data-cancel]')?.addEventListener('click', () => m.el.querySelector('.kiwi-modal-close')?.click());
+  };
+  handlers['credit-adjust-confirm'] = async (el) => {
+    const root = el.closest('.kiwi-backdrop') || document;
+    const delta = Number(root.querySelector('[data-credit-delta]')?.value || 0);
+    const reason = String(root.querySelector('[data-credit-reason]')?.value || '').trim();
+    if (!delta || !reason) { toast('Montant et motif obligatoires', { type: 'warning' }); return; }
+    el.disabled = true;
+    try {
+      await mutateLiveCredit({ action: 'adjust', id: `credit-adjust-${Date.now().toString(36)}`, code: el.dataset.code, deltaCents: Math.round(delta * 100), reason });
+      root.querySelector('.kiwi-modal-close')?.click(); toast('Solde corrigé et journalisé', { type: 'success' });
+    } catch (error) { el.disabled = false; toast('Correction refusée', { type: 'error', desc: error.message === 'manager-required' ? 'Compte propriétaire ou responsable requis.' : 'Vérifiez le solde et réessayez.' }); }
+  };
+  handlers['credit-cancel'] = async (el) => {
+    const code = el.dataset.code || '';
+    if (!window.confirm(`Annuler définitivement l’avoir ${code} ? Cette action sera journalisée.`)) return;
+    el.disabled = true;
+    try {
+      await mutateLiveCredit({ action: 'cancel', id: `credit-cancel-${Date.now().toString(36)}`, code, reason: 'Annulation depuis le registre propriétaire' });
+      toast('Avoir annulé', { type: 'success' });
+    } catch (error) { el.disabled = false; toast('Annulation refusée', { type: 'error', desc: error.message === 'manager-required' ? 'Compte propriétaire ou responsable requis.' : 'Cet avoir ne peut plus être annulé.' }); }
+  };
   handlers['nav-returns'] = () => {
     const real = realReturnsStore();
     bindLiveReturns();
+    loadLiveCredits();
     const demoPending = [
       { id: 'R-7821', d: '24/04', name: 'Caftan brodé taille S',         amt: 2450,  reason: 'Taille',                client: 'Anna M. (DE)',     status: 'pend',  emoji: 'C' },
       { id: 'R-7822', d: '23/04', name: 'Babouches cuir caramel',         amt: 380,   reason: 'Défaut · couture',      client: 'Sophie L. (FR)',   status: 'pend',  emoji: 'B' },
@@ -11798,6 +11858,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       { name: 'Diana K. (US)',  reason: '4 retours en 28 j · 2 sur articles soldés', amt: '4 280 MAD', risk: 'Élevé' },
       { name: 'Sofia A. (FR)',  reason: '3 retours en 30 j · pattern post-Instagram', amt: '2 940 MAD', risk: 'Modéré' },
     ];
+    const creditRows = real ? liveCredits : [];
 
     window.Kiwi.appPage('returns', {
       title: 'Retours & échanges',
@@ -11843,6 +11904,35 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
           `).join('')}
           ${real && !pending.length ? '<div style="padding:24px 4px;color:var(--n-500);">Aucun retour enregistré pour cette boutique.</div>' : ''}
         </div>
+
+        ${real ? `<div class="p-card" style="margin-top:18px;" data-credit-register>
+          <div class="head" style="gap:12px;flex-wrap:wrap;">
+            <div><h4>Registre des avoirs</h4><span class="meta">${creditRows.length} BON${creditRows.length > 1 ? 'S' : ''}</span></div>
+            <input id="ret-credit-search" class="kf-input" style="max-width:340px;" placeholder="Code, cliente ou vente d’origine…" />
+          </div>
+          <div style="font-size:12.5px;color:var(--n-500);margin-bottom:10px;">Émission, utilisation, solde restant, échéance et employé sont conservés dans le registre serveur.</div>
+          <div id="ret-credit-rows">
+            ${creditRows.map((credit) => {
+              const issued = (credit.events || []).find((event) => event.action === 'issue') || {};
+              const products = Array.isArray(issued.lines) && issued.lines.length
+                ? issued.lines.map((line) => `${line.qty || 1}× ${line.name || 'Article'}`).join(' · ') : (credit.reason || 'Retour');
+              const search = [credit.code, credit.customerName, credit.originalRef, credit.originalSaleId, products].join(' ').toLowerCase();
+              return `<div class="b-ret-row" data-credit-row data-credit-search="${esc(search)}">
+                <div class="b-ret-id">${esc(credit.code)}<br><span style="opacity:.7;font-size:10px;">${new Date(Number(credit.createdAt) || Date.now()).toLocaleDateString('fr-FR')}</span></div>
+                <div class="b-ret-thumb">${SVG.voucher}</div>
+                <div class="b-ret-body"><div class="n">${esc(credit.customerName || 'Porteur du bon')}</div>
+                  <div class="reason">Vente ${esc(credit.originalRef || credit.originalSaleId || '—')} · ${esc(products)}</div>
+                  <div class="who">${esc(issued.actor || credit.issuedBy || 'Caisse')} · expire ${new Date(Number(credit.expiresAt) || Date.now()).toLocaleDateString('fr-FR')}</div></div>
+                <div class="b-ret-amt">${fmtMAD(Number(credit.balanceCents || 0) / 100, 2)} MAD<br><small style="font-weight:400;color:var(--n-500);">sur ${fmtMAD(Number(credit.amountCents || 0) / 100, 2)}</small></div>
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+                  <span class="chip ${credit.status === 'active' ? 'ok' : credit.status === 'cancelled' ? 'ref' : 'neutral'}">${credit.status === 'active' ? 'Actif' : credit.status === 'consumed' ? 'Utilisé' : credit.status === 'cancelled' ? 'Annulé' : esc(credit.status)}</span>
+                  ${credit.status !== 'cancelled' ? `<button class="kb ghost" style="padding:5px 9px;font-size:11px;" data-action="credit-adjust" data-code="${esc(credit.code)}">Corriger</button>` : ''}
+                  ${credit.status === 'active' ? `<button class="kb ghost" style="padding:5px 9px;font-size:11px;color:var(--danger);" data-action="credit-cancel" data-code="${esc(credit.code)}">Annuler</button>` : ''}
+                </div>
+              </div>`;
+            }).join('') || (liveCreditsLoading ? '<div style="padding:20px 4px;color:var(--n-500);">Chargement du registre…</div>' : '<div style="padding:20px 4px;color:var(--n-500);">Aucun avoir émis pour cette boutique.</div>')}
+          </div>
+        </div>` : ''}
 
         <div class="p-grid-2" style="margin-top: 18px;">
           <div class="p-card" style="margin-bottom: 0;">
@@ -11934,6 +12024,16 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         </div>
       `,
     });
+    setTimeout(() => {
+      const search = document.querySelector('#ret-credit-search');
+      if (!search) return;
+      search.addEventListener('input', () => {
+        const q = search.value.trim().toLowerCase();
+        document.querySelectorAll('[data-credit-row]').forEach((row) => {
+          row.style.display = !q || String(row.dataset.creditSearch || '').includes(q) ? '' : 'none';
+        });
+      });
+    }, 0);
   };
 
   /* ═══════════════════ AUX · returns handlers ═══════════════════════════════ */
@@ -15621,7 +15721,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
      the nav first and swapped in the generic "Encore rien ici" starter. Their own
      empty state is strictly better: it names the register, keeps the tabs, and
      tells the merchant what will fill it. */
-  const REAL_FOR_CUSTOM = new Set(['inventory', 'categories', 'promos', 'equipe', 'menu', 'tables',
+  const REAL_FOR_CUSTOM = new Set(['inventory', 'categories', 'promos', 'returns', 'equipe', 'menu', 'tables',
     'conformite', 'stock', 'finance', 'payroll']);
 
   /* Data-conditional destinations: a module that builds a real per-venue page but

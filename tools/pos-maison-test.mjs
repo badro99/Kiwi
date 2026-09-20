@@ -93,14 +93,19 @@ ok(jsSrc.includes('const avoirExpired'), 'expired vouchers are excluded before p
 ok(jsSrc.includes('const remainingAvoirs'), 'one ticket can chain multiple vouchers safely');
 ok(jsSrc.includes("'/api/store-credits?merchant='") && jsSrc.includes("action: 'redeem-batch'"),
   'real Maison credits use the tenant-scoped server ledger and atomic multi-credit redemption');
-ok(jsSrc.indexOf('await issueAvoir') < jsSrc.indexOf('restoreLines(sale, idxs'),
-  'credit issuance succeeds before any returned stock is restored');
+{
+  const doAvoir = jsSrc.slice(jsSrc.indexOf('async function doAvoir()'), jsSrc.indexOf('function restoreLines('));
+  ok(doAvoir.indexOf('await issueAvoir') >= 0 && doAvoir.indexOf('await issueAvoir') < doAvoir.indexOf('restoreLines(sale, idxs'),
+    'credit issuance succeeds before any returned stock is restored');
+}
 ok(jsSrc.includes('function stableCreditIssueId') && jsSrc.includes('lineReturnedQty(line) + Number(qty || 0)'),
   'a retry of the same partial return reuses its issuance id instead of minting a second credit');
 ok(jsSrc.includes('sale.serverId || sale.syncId || sale.id'),
   'a return links to the canonical server sale id, not the display ticket number');
 ok(jsSrc.includes("motif !== 'Défaut'") && jsSrc.includes('markDamagedLines'),
   'damaged returns are audited without returning them to sellable stock');
+ok(jsSrc.includes("locationId: 'damaged'") && jsSrc.includes("refType: 'damaged-return'") && jsSrc.includes("stockStatus: 'damaged'"),
+  'damaged returns create a separate durable quarantine movement');
 ok(jsSrc.includes('mz-av-code-form') && jsSrc.includes("'&code=' + encodeURIComponent(code)"),
   'walk-in credits can be scanned or entered and resolved against the shared register');
 ok(jsSrc.includes('const swapped = apply()') && jsSrc.includes('markLineReturned(ln, 1, `échange ${sale.id}`)'),
@@ -341,6 +346,14 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
     'le choix voyage jusqu’au catalogue partagé, et l’option éteinte retombe sur « achetée ferme »');
   ok(/ownership: ab \? ab\.ownership : undefined/.test(proSrc),
     'à la modification, un formulaire sans choix laisse la valeur en base au lieu de la réécrire');
+
+  // e) la caisse propose aussi la photo et ne sauvegarde que l’URL R2
+  ok(/function productPhotoField\(photo\)/.test(jsSrc) && /data-mzi-photo-input/.test(jsSrc),
+    'le formulaire caisse propose une photo à la création et à la modification');
+  ok(/KiwiPlatformOps && window\.KiwiPlatformOps\.uploads/.test(jsSrc) && /uploader\.upload\(file, \{ merchant: merchantSlug\(\)/.test(jsSrc),
+    'la caisse envoie le fichier par le transport média partagé, dans le tenant appairé');
+  ok(/photo:media\.photo/.test(jsSrc) && /photo: media\.photo/.test(jsSrc),
+    'création et modification ne conservent que l’URL de la photo dans le catalogue');
 
   // d) le repère B, des deux côtés
   ok(/class="bqx-ab-b"[^`]*>B</.test(proSrc), 'la grille d’inventaire marque les articles B');

@@ -38,6 +38,11 @@ const TYPES = {
 const misses = [];
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+  if (pathname === '/api/media/media/test/product.png') {
+    res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'no-store' });
+    res.end(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2nksAAAAASUVORK5CYII=', 'base64'));
+    return;
+  }
   if (pathname === '/') {
     res.writeHead(200, { 'Content-Type': TYPES['.html'], 'Cache-Control': 'no-store' });
     res.end(`<!doctype html><html><head>
@@ -134,17 +139,56 @@ try {
   await page.click('#mz-rn-save');
   ok((await page.$eval('[data-mz-panel="registries"]', (el) => el.textContent)).includes('Liste test navigateur'), 'gift registry can be created and appears in the real Maison panel');
 
-  await page.evaluate(() => { window.KiwiConfig = { ...(window.KiwiConfig || {}), features: { ...((window.KiwiConfig || {}).features || {}), caisseInventoryAdmin: true } }; });
+  await page.evaluate(() => { window.KiwiConfig = { ...(window.KiwiConfig || {}), features: { ...((window.KiwiConfig || {}).features || {}), caisseInventoryAdmin: true, depotvente: true } }; });
   await page.click('[data-mz-view="inventaire"]');
   ok(!!(await page.$('#mzi-new')) && !!(await page.$('#mzi-category')), 'God Mode exposes full Maison inventory controls');
+  await page.click('#mzi-category');
+  ok(await page.$eval('#mz-invmm', (el) => !!el.querySelector('.mzi-cat-create') && !!el.querySelector('.mzi-cat-list')),
+    'category management uses a distinct create area and category list');
+  await page.type('#mzi-cat-name', 'Catégorie test navigateur');
+  await page.focus('#mzi-cat-name');
+  await page.keyboard.press('Enter');
+  ok((await page.$eval('#mz-invmm', (el) => el.textContent)).includes('Catégorie test navigateur'),
+    'category creation works from the keyboard and refreshes the organized list');
+  ok(await page.$eval('.mzi-cat-row', (el) => {
+    const actions = el.querySelector('.mzi-cat-actions');
+    const input = el.querySelector('input');
+    return !!actions && !!input && actions.getBoundingClientRect().width > 0 && input.getBoundingClientRect().width > 120;
+  }), 'category rows keep editable names and actions visibly separated');
+  await page.click('#mz-invmm [data-inv-x]');
   await page.click('#mzi-new');
   await page.type('#mzi-n-name', 'Produit test navigateur');
   await page.type('#mzi-n-price', '125');
   await page.type('#mzi-n-cost', '50');
   await page.type('#mzi-n-stock', '2');
+  ok((await page.$$('input[name="mzi-n-ownership"]')).length === 2,
+    'God Mode A/B option exposes both ownership choices in caisse product creation');
+  await page.click('input[name="mzi-n-ownership"][value="outright"]');
+  ok(!!(await page.$('[data-mzi-photo-pick]')) && !!(await page.$('[data-mzi-photo-input]')),
+    'caisse product creation offers a real image picker');
+  await page.evaluate(() => {
+    window.KiwiPlatformOps = window.KiwiPlatformOps || {};
+    window.KiwiPlatformOps.uploads = { upload: async () => ({ ok: true, url: '/api/media/media/test/product.png' }) };
+    const input = document.querySelector('[data-mzi-photo-input]');
+    Object.defineProperty(input, 'files', { configurable: true, value: [new File(['png'], 'product.png', { type: 'image/png' })] });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.waitForFunction(() => /Photo prête/.test(document.querySelector('[data-mzi-photo-status]')?.textContent || ''));
   await page.click('#mzi-n-save');
   ok((await page.$eval('#mz-invmm', (el) => el.textContent)).includes('Produit test navigateur'), 'God Mode creates a Maison product and opens its inventory card');
+  ok(await page.evaluate(() => window.KiwiBoutiqueCatalog.listProducts().some((p) => p.name === 'Produit test navigateur' && p.ownership === 'outright' && p.photo === '/api/media/media/test/product.png')),
+    'caisse product creation persists ownership and the uploaded photo in the shared catalogue');
   await page.click('#mz-invmm [data-inv-x]');
+  await page.evaluate(() => { window.KiwiConfig.features.caisseInventoryValue = false; });
+  await page.click('[data-mz-view="vente"]');
+  await page.click('[data-mz-view="inventaire"]');
+  ok(!(await page.$eval('[data-mz-panel="inventaire"]', (el) => el.textContent)).includes('Valeur de stock'),
+    'God Mode can hide the inventory value from the Maison caisse');
+  await page.evaluate(() => { delete window.KiwiConfig.features.caisseInventoryValue; });
+  await page.click('[data-mz-view="vente"]');
+  await page.click('[data-mz-view="inventaire"]');
+  ok((await page.$eval('[data-mz-panel="inventaire"]', (el) => el.textContent)).includes('Valeur de stock'),
+    'inventory value stays visible by default when the God Mode key is absent');
 
   await page.click('[data-mz-view="echanges"]');
   await page.click('.mz-sline:not(.is-locked)');
@@ -162,7 +206,7 @@ try {
   await page.$eval('[data-ksold-to]', (el) => { el.value = '2026-09-11'; });
   await page.click('[data-ksold-apply]');
   ok(/10.*11/.test(await page.$eval('[data-ksold-custom]', (el) => el.textContent)), 'Vendus applies a custom period inside the real Maison panel');
-  ok(errors.length === 0, 'all Maison navigation clicks complete without a browser error: ' + errors.join(' | '));
+  ok(errors.length === 0, 'all Maison navigation clicks complete without a browser error: ' + errors.join(' | ') + '; missing=' + misses.join(','));
   console.log(`\n✓ ${checks} rendered Maison caisse checks passed.`);
 } finally {
   await browser.close();

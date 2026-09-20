@@ -633,6 +633,7 @@
       holderName: row.customerName || 'Porteur du bon', motif: row.reason || 'Retour',
       at: new Date(Number(row.createdAt || Date.now())), until: new Date(Number(row.expiresAt || 0)),
       from: row.originalRef || row.originalSaleId || null, status: row.status || 'active',
+      events: Array.isArray(row.events) ? row.events : [],
     };
   }
 
@@ -678,6 +679,76 @@
       return `${idx}-${lineReturnedQty(line) + Number(qty || 0)}`;
     }).join('_');
     return `credit-issue:${original}:${revision}:${Math.round(Number(amountCents) || 0)}`.slice(0, 96);
+  }
+
+  function stableRefundId(sale, quantities, amountCents) {
+    const original = String((sale && (sale.serverId || sale.syncId || sale.id)) || 'sale')
+      .replace(/[^A-Za-z0-9:._-]/g, '').slice(0, 42);
+    const revision = Array.from(quantities.entries()).sort((a, b) => Number(a[0]) - Number(b[0])).map(([idx, qty]) => {
+      const line = sale && sale.lines && sale.lines[idx];
+      return `${idx}-${lineReturnedQty(line) + Number(qty || 0)}`;
+    }).join('_');
+    return `refund:${original}:${revision}:${Math.round(Number(amountCents) || 0)}`.slice(0, 64);
+  }
+
+  /* Rebuild the immutable cloud receipt from the frozen local sale. This is
+     also the migration path for tickets sold before gross receipt values were
+     stored separately from owner revenue. */
+  function originalSalePayload(sale) {
+    if (!sale) return null;
+    const parts = Array.isArray(sale.parts) ? sale.parts : [];
+    const received = parts.filter((part) => part && part.m !== 'avoir' && part.m !== 'livraison' && (+part.amount || 0) > 0);
+    const methods = received.map((part) => part.m);
+    const method = methods.includes('carte') ? 'card' : (methods.includes('espèces') ? 'cash' : 'wallet');
+    const creditIn = parts.reduce((sum, part) => sum + (part && part.m === 'avoir' ? (+part.amount || 0) : 0), 0);
+    const delivery = parts.some((part) => part && part.m === 'livraison');
+    const consigned = Math.max(0, Number(sale.consigned) || (sale.lines || []).reduce((sum, line) => sum + (line && line.consigned ? (+line.unit || 0) * (+line.qty || 0) : 0), 0));
+    const total = Math.max(0, Number(sale.total) || (sale.lines || []).reduce((sum, line) => sum + (+line.unit || 0) * (+line.qty || 0), 0));
+    const cashIn = sale.remote && sale.receivedAmount != null
+      ? Math.max(0, Number(sale.receivedAmount) || 0)
+      : Math.max(0, received.reduce((sum, part) => sum + (+part.amount || 0), 0) - consigned);
+    const lines = (sale.lines || []).slice(0, 40).map((line) => ({
+      itemId: line.pid || '', variantId: line.variantId || [line.pid || '', line.size || '', line.color || ''].join(':'),
+      name: line.name || (P[line.pid] && P[line.pid].name) || 'Article retiré du catalogue',
+      qty: Math.max(1, Number(line.qty) || 1), total: Math.round((+line.unit || 0) * Math.max(1, Number(line.qty) || 1)),
+      cat: line.category || rayonOf(line.pid) || '', unit: 'piece', kind: 'product',
+    }));
+    const payload = {
+      id: sale.serverId || sale.syncId || sale.id,
+      merchant: merchantSlug(), amount: cashIn, amountCents: Math.round(cashIn * 100),
+      ticketAmountCents: Math.round(total * 100), consignedAmountCents: Math.round(consigned * 100),
+      method, channel: delivery ? 'delivery' : 'counter', label: (lines[0] && lines[0].name) || 'Vente',
+      ref: sale.id, ts: +new Date(sale.at || Date.now()), lines,
+    };
+    if (cashIn <= 0 && creditIn > 0 && lines.length) {
+      payload.settlementKind = 'store-credit'; payload.creditAmountCents = Math.round(creditIn * 100);
+    } else if (cashIn <= 0 && consigned >= total && total > 0 && lines.length) {
+      payload.settlementKind = 'consignment';
+    } else if (cashIn <= 0 && delivery && lines.length) {
+      payload.settlementKind = 'receivable';
+    }
+    return payload;
+  }
+
+  async function ensureOriginalSale(sale) {
+    if (IS_DEMO) return sale && (sale.serverId || sale.syncId || sale.id);
+    const payload = originalSalePayload(sale);
+    if (!payload || !payload.id || !payload.merchant || !payload.lines.length) {
+      const error = new Error('sale-unavailable'); error.code = 'sale-unavailable'; throw error;
+    }
+    const response = await fetch('/api/sale', {
+      method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    let data = null; try { data = await response.json(); } catch (_) {}
+    if (!response.ok || !data || data.error) {
+      const error = new Error((data && data.error) || `http-${response.status}`);
+      error.code = (data && data.error) || `http-${response.status}`;
+      throw error;
+    }
+    sale.serverId = String(data.id || payload.id);
+    persistDay();
+    return sale.serverId;
   }
 
   refreshRemoteAvoirs();
@@ -884,7 +955,15 @@
         return low === n || low.indexOf(n + ' ') === 0;
       }).sort((a, b) => String(b.name || '').length - String(a.name || '').length)[0] || null;
     }
-    if (!item) return null;
+    if (!item) {
+      const qty = Math.max(1, Number(line.qty) || 1);
+      return {
+        pid: String(line.itemId || ''), variantId: String(line.variantId || ''), size: String(line.size || 'TU'),
+        color: String(line.color || ''), qty, remise: 0,
+        unit: Number(line.unit) || ((Number(line.total) || 0) / qty), returned: false, note: '',
+        name: raw || 'Article retiré du catalogue', category: String(line.cat || ''), catalogueMissing: true,
+      };
+    }
     const suffix = raw.slice(String(item.name || '').length).trim();
     const sizes = sizesOf(item);
     const size = String(line.size || (sizes.includes(suffix) ? suffix : '') || sizes[0] || 'TU');
@@ -914,7 +993,9 @@
         SALES.push({
           id: ref, serverId: String(row.id || ''), at: new Date(Number(row.ts) || Date.now()),
           clientId: null, by: 'Caisse', kind: 'vente', methods: srvMethod(row.method), lines,
-          total: lines.reduce((sum, l) => sum + l.unit * l.qty, 0), remote: true,
+          total: lines.reduce((sum, l) => sum + l.unit * l.qty, 0),
+          receivedAmount: Number(row.amountCents != null ? row.amountCents / 100 : row.amount) || 0,
+          remote: true,
         });
         added++;
       });
@@ -2823,24 +2904,60 @@
     icons();
   }
 
+  function creditHistoryRows(credits) {
+    const rows = Array.isArray(credits) ? credits : [];
+    if (!rows.length) return '<div class="mz-empty" style="padding:16px;">Aucun avoir enregistré.</div>';
+    return rows.map((credit) => {
+      const issued = (credit.events || []).find((event) => event.action === 'issue') || {};
+      const lines = Array.isArray(issued.lines) ? issued.lines : [];
+      const eventRows = (credit.events || []).filter((event) => event.action !== 'issue').map((event) =>
+        `<small style="display:block;margin-top:4px;color:var(--ink-3);">${event.action === 'redeem' ? 'Utilisé' : event.action === 'cancel' ? 'Annulé' : esc(event.action)} · ${fmtMAD((event.amountCents || 0) / 100)} · ${whenLabel(event.ts)} · ${esc(event.actor || 'Caisse')} · solde ${fmtMAD((event.balanceAfterCents || 0) / 100)}</small>`
+      ).join('');
+      return `<div class="mz-fhist-row" style="align-items:flex-start;">
+        <span class="when">${whenLabel(credit.at)}<small style="display:block;">expire ${fmtDayY(credit.until)}</small></span>
+        <span class="what"><b>${esc(credit.code)}</b> · vente ${esc(credit.from || '—')}<small style="display:block;">${lines.length ? esc(lines.map((line) => `${line.qty || 1}× ${line.name || 'Article'}`).join(' + ')) : esc(credit.motif || 'Retour')} · ${esc(issued.actor || 'Caisse')}</small>${eventRows}</span>
+        <span class="amt">${fmtMAD(credit.amount)}<small style="display:block;color:var(--ink-3);">reste ${fmtMAD(credit.balance)}</small></span>
+      </div>`;
+    }).join('');
+  }
+
+  async function fillClientCreditHistory(cid, host) {
+    if (!host) return;
+    try {
+      const credits = IS_DEMO ? AVOIRS.filter((item) => item.holderId === cid)
+        : (await creditRequest(null, '&customerId=' + encodeURIComponent(cid))).credits.map(creditFromServer);
+      if (!host.isConnected) return;
+      host.innerHTML = creditHistoryRows(credits);
+      icons();
+    } catch (_) {
+      if (host.isConnected) host.innerHTML = '<div class="mz-empty" style="padding:16px;">Historique des avoirs indisponible. Réessayez.</div>';
+    }
+  }
+
   function openFiche(cid) {
     const c = clById(cid);   // clById, pas CL[…] : sur une vraie boutique le carnet vit dans KiwiClients (CL est vide)
     if (!c) return;
     const el = $('#mz-fichem', root);
     const av = clAvoirOf(c);
-    const todays = SALES.filter((s) => s.clientId === cid && !s.voided).map((s) => ({
-      when: whenLabel(s.at),
-      // idem : une vente de la semaine peut porter un article supprimé depuis.
-      what: s.lines.map((l) => `${(P[l.pid] && P[l.pid].name) || l.name || 'Article'} · ${l.size}`).join(' + '),
-      amt: s.total,
-    }));
-    const hist = todays.concat((c.history || []).map((h) => ({
+    const cloudHistory = (c.history || []).map((h) => ({
       when: h.when || whenLabel(h.ts || h.createdAt || 0),
       what: h.what || (Array.isArray(h.items) && h.items.length ? h.items.map((it) => `${it.qty || 1}× ${it.name || 'Article'}`).join(' + ') : (h.ref || 'Achat')),
       amt: h.amt != null ? h.amt : h.amount,
-      method: h.method || '', ref: h.ref || '',
-    })));
-    const spent = (c.spent || 0) + todays.reduce((s, h) => s + h.amt, 0);
+      method: h.method || '', ref: h.ref || '', ts: +(h.ts || h.createdAt || 0),
+    }));
+    const syncedRefs = new Set(cloudHistory.map((h) => String(h.ref || '')).filter(Boolean));
+    const localOnly = SALES.filter((s) => s.clientId === cid && !s.voided
+      && !syncedRefs.has(String(s.id || '')) && !syncedRefs.has(String(s.num || ''))).map((s) => ({
+      when: whenLabel(s.at),
+      // idem : une vente de la semaine peut porter un article supprimé depuis.
+      what: s.lines.map((l) => `${(P[l.pid] && P[l.pid].name) || l.name || 'Article'} · ${l.size}`).join(' + '),
+      amt: s.total, method: s.methods || '', ref: s.id || s.num || '', ts: +s.at || 0,
+    }));
+    const hist = localOnly.concat(cloudHistory).sort((a, b) => Number(b.ts || 0) - Number(a.ts || 0));
+    /* c.spent already includes every locally recorded purchase immediately and
+       every acknowledged purchase after sync. Adding today's rows again made
+       the fiche double its turnover. */
+    const spent = c.spent || 0;
     el.innerHTML = `
       <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="mz-fiche-head">
@@ -2861,6 +2978,8 @@
       <div class="mz-fhist">
         ${hist.length ? hist.map((h) => `<div class="mz-fhist-row"><span class="when">${esc(h.when)}${h.method ? `<small style="display:block;">${esc(h.method)}</small>` : ''}</span><span class="what">${esc(h.what)}${h.ref ? `<small style="display:block;">Ticket ${esc(h.ref)}</small>` : ''}</span><span class="amt">${fmtMAD(h.amt)}</span></div>`).join('') : '<div class="mz-empty">Aucun achat enregistré.</div>'}
       </div>
+      <div class="mz-f-lbl" style="margin:16px 0 6px;">Avoirs et remboursements</div>
+      <div class="mz-fhist" id="mz-fiche-credits"><div class="mz-empty" style="padding:16px;">Chargement du registre…</div></div>
       <div class="mz-sheet-foot">
         <button class="mz-btn secondary" data-mz-close>Fermer</button>
         <button class="mz-btn primary" id="mz-fiche-sell"><i data-lucide="shopping-bag"></i>Nouvelle vente pour elle</button>
@@ -2876,6 +2995,7 @@
       switchView('vente');
       toast(`${firstName(c.name)} au comptoir, taille ${c.taille} pré-sélectionnée`);
     };
+    void fillClientCreditHistory(cid, $('#mz-fiche-credits', el));
   }
 
   /* ═══════════════════════ SCAN ═══════════════════════ */
@@ -4077,7 +4197,7 @@
     panel.innerHTML = `
       <div class="mz-ret">
         <header class="mz-head">
-          <div><h1>Échanges &amp; avoirs</h1><div class="mz-head-sub">Retour sous 7 jours avec ticket, échange ou avoir, jamais de remboursement espèces</div></div>
+          <div><h1>Retours, remboursements &amp; avoirs</h1><div class="mz-head-sub">Avoir boutique ou remboursement sur le moyen d’origine · remboursement protégé par un responsable</div></div>
           <div class="mz-search"><i data-lucide="search"></i>
             <input id="mz-ret-q" placeholder="N° de ticket ou téléphone…" value="${esc(q)}" /></div>
         </header>
@@ -4140,6 +4260,8 @@
       if (exch) { doExchange(); return; }
       const avoir = e.target.closest('[data-mz-do-avoir]');
       if (avoir) { void doAvoir(); return; }
+      const refund = e.target.closest('[data-mz-do-refund]');
+      if (refund) { void doRefund(); return; }
     };
     icons();
   }
@@ -4230,10 +4352,79 @@
         </div>
         <div class="mz-ret-actions">
           <button class="mz-btn secondary" data-mz-do-exch><i data-lucide="arrow-left-right"></i>Échanger la pièce</button>
+          <button class="mz-btn secondary" data-mz-do-refund ${state.retBusy ? 'disabled aria-busy="true"' : ''}><i data-lucide="credit-card"></i>Rembourser sur le moyen d’origine · ${fmtMAD(selVal)}</button>
           <button class="mz-btn primary" data-mz-do-avoir ${state.retBusy ? 'disabled aria-busy="true"' : ''}><i data-lucide="ticket"></i>${state.retBusy ? 'Émission en cours…' : `Émettre un avoir · ${fmtMAD(selVal)}`}</button>
         </div>
       </div>` : ''}
     </div>`;
+  }
+
+  async function doRefund() {
+    const ret = state.ret;
+    if (!ret || state.retBusy) return;
+    const sale = findSale(ret.saleId);
+    if (!sale) return;
+    const idxs = Array.from(ret.picks);
+    const quantities = new Map(idxs.map((i) => [i, pickedQty(ret, i, sale.lines[i])]));
+    const amount = idxs.reduce((sum, i) => sum + (+sale.lines[i].unit || 0) * quantities.get(i), 0);
+    if (!amount) return;
+    const consignedSelected = idxs.some((i) => sale.lines[i] && sale.lines[i].consigned);
+    if (consignedSelected) {
+      toast('Remboursement original indisponible pour la catégorie B', 5200, 'warn', 'Émettez un avoir boutique pour les articles en dépôt-vente.');
+      return;
+    }
+    const motif = ret.motif || 'Non précisé';
+    const resellable = motif !== 'Défaut';
+    state.retBusy = true; renderEchanges(); icons();
+    let originalSaleId;
+    try { originalSaleId = await ensureOriginalSale(sale); }
+    catch (_) {
+      state.retBusy = false; renderEchanges(); icons();
+      toast('Remboursement suspendu', 5200, 'danger', 'La vente d’origine n’a pas pu être vérifiée. Rien n’a été remis en stock.');
+      return;
+    }
+    const refundId = stableRefundId(sale, quantities, amount * 100);
+    state.retBusy = false; renderEchanges(); icons();
+    if (typeof window.requireManager !== 'function') {
+      toast('Autorisation responsable indisponible', 5200, 'danger');
+      return;
+    }
+    window.requireManager(`Remboursement ${fmtMAD(amount)} · ticket ${sale.id}`, async (manager) => {
+      state.retBusy = true; renderEchanges(); icons();
+      try {
+        if (!IS_DEMO) {
+          const response = await fetch('/api/sale/refund', {
+            method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({
+              merchant: merchantSlug(), id: refundId, originalSaleId, amountCents: Math.round(amount * 100),
+              ref: `REM-${sale.id}`, reason: motif, approval: manager && manager.approval,
+            }),
+          });
+          let data = null; try { data = await response.json(); } catch (_) {}
+          if (!response.ok || !data || data.error) {
+            const error = new Error((data && data.error) || `http-${response.status}`);
+            error.code = (data && data.error) || `http-${response.status}`; throw error;
+          }
+        }
+        if (resellable) restoreLines(sale, idxs, quantities, `remboursement (${motif.toLowerCase()})`);
+        else markDamagedLines(sale, idxs, quantities, `retour non revendable (${motif.toLowerCase()})`);
+        recordReturn(sale, idxs, amount, motif, resellable ? 'refund' : 'refund-damaged', refundId, quantities);
+        state.ret = null; refreshOps();
+        printReceiptNow({
+          ref: `REM-${sale.id}`, title: 'Remboursement', amount,
+          lines: idxs.map((i) => ({ qty: quantities.get(i), name: sale.lines[i].name || (P[sale.lines[i].pid] && P[sale.lines[i].pid].name) || 'Article', amount: (+sale.lines[i].unit || 0) * quantities.get(i), ref: sale.lines[i].pid })),
+          customer: saleClient(sale) ? { name: saleClient(sale).name, phone: saleClient(sale).phone } : null,
+        }, [{ m: String(sale.methods || '').includes('carte') ? 'carte' : 'espèces', amount }]);
+        toast('Remboursement enregistré', 4200, 'success', `${fmtMAD(amount)} · accord ${manager && manager.name ? manager.name : 'responsable'}`);
+      } catch (error) {
+        const detail = error && error.code === 'refund-exceeds-sale'
+          ? 'Le montant disponible sur cette vente a déjà été remboursé.'
+          : 'Le registre financier a refusé l’opération. Rien n’a été remis en stock.';
+        toast('Remboursement non effectué', 5200, 'danger', detail);
+      } finally {
+        state.retBusy = false; renderEchanges(); icons();
+      }
+    }, { kind: 'refund', refundId, originalSaleId, amountCents: Math.round(amount * 100) });
   }
 
   function togglePick(key) {
@@ -4294,7 +4485,7 @@
       const originalSaleId = sale.serverId || sale.syncId || sale.id;
       const av = await issueAvoir(amount, c, `${motif}, retour ${sale.id}`, originalSaleId, {
         requestId: stableCreditIssueId(sale, quantities, amount * 100),
-        originalRef: sale.num || sale.id, resellable,
+        originalRef: sale.num || sale.id, resellable, originalSale: sale,
         lines: idxs.map((i) => ({
           itemId: sale.lines[i].pid, variantId: sale.lines[i].variantId || '',
           name: (P[sale.lines[i].pid] && P[sale.lines[i].pid].name) || sale.lines[i].name || 'Article',
@@ -4336,7 +4527,22 @@
     idxs.forEach((i) => {
       const ln = sale.lines[i];
       const qty = Math.min(lineAvailableQty(ln), Number(quantities.get(i)) || 0);
-      if (qty) markLineReturned(ln, qty, note);
+      if (!qty) return;
+      const afterReturned = lineReturnedQty(ln) + qty;
+      markLineReturned(ln, qty, note);
+      /* Non revendable does not mean physically absent. Keep it out of the
+         sellable catalogue, but put the returned unit in a dedicated damaged
+         location in the durable movement ledger. The deterministic id makes a
+         retry harmless. */
+      try {
+        window.KiwiInventory?.add?.({
+          id: `damaged-${String(sale.serverId || sale.syncId || sale.id).replace(/[^A-Za-z0-9._-]/g, '').slice(0, 40)}-${i}-${afterReturned}`,
+          itemId: ln.pid, variantId: ln.variantId || '', locationId: 'damaged', qty,
+          reason: 'sale-reversal', refType: 'damaged-return', refId: sale.num || sale.id,
+          note: note || 'Retour non revendable', actor: (window.KiwiStaff && window.KiwiStaff.name) || 'Caisse',
+          meta: { stockStatus: 'damaged', resellable: false },
+        });
+      } catch (_) {}
     });
     /* The unit physically came back but is not sellable.  The sale remains
        reduced while catalogue stock stays unchanged; the return audit carries
@@ -4346,6 +4552,7 @@
 
   async function issueAvoir(amount, cliente, motif, fromSaleId, context) {
     if (!IS_DEMO) {
+      if (context && context.originalSale) fromSaleId = await ensureOriginalSale(context.originalSale);
       const data = await creditRequest({
         action: 'issue', id: (context && context.requestId) || creditIntent('credit-issue'), originalSaleId: fromSaleId,
         originalRef: context && context.originalRef, amountCents: Math.round(amount * 100),
@@ -4594,7 +4801,7 @@
              request id makes a lost response safe to retry. */
           const av = await issueAvoir(-diff, c, `Différence échange ${sale.id}`, originalSaleId, {
             requestId: stableCreditIssueId(sale, quantities, -diff * 100),
-            originalRef: sale.num || sale.id,
+            originalRef: sale.num || sale.id, originalSale: sale,
             resellable: true,
             lines: [{
               itemId: ln.pid, variantId: ln.variantId || '',
@@ -4875,6 +5082,9 @@
             pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, promo: linePromo(ln),
             unit: lineUnit(ln), returned: false, note: '', format: ln.format, isPiece: ln.isPiece,
             marque: ln.marque, motif: ln.motif, fragile: ln.fragile, registryId: ln.registryId,
+            name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article',
+            category: rayonOf(ln.pid) || '',
+            variantId: [ln.pid, ln.size || '', ln.color || ''].join(':'),
             /* Figé à l'encaissement : si l'article cesse d'être en dépôt-vente
                demain, le journal d'hier doit rester vrai. */
             consigned: isConsigned(ln)
@@ -4944,6 +5154,9 @@
             const payload = {
               id: sale.syncId,
               amount: cashIn,
+              amountCents: Math.round(cashIn * 100),
+              ticketAmountCents: Math.round(total * 100),
+              consignedAmountCents: Math.round(tot.consigned * 100),
               method: method,
               channel: (parts || []).some((x) => x && x.m === 'livraison') ? 'delivery' : 'counter',
               label: label,
@@ -4954,6 +5167,10 @@
             if (cashIn <= 0 && creditIn > 0 && basket.length) {
               payload.settlementKind = 'store-credit';
               payload.creditAmountCents = Math.round(creditIn * 100);
+            } else if (cashIn <= 0 && tot.consigned >= total && basket.length) {
+              payload.settlementKind = 'consignment';
+            } else if (cashIn <= 0 && (parts || []).some((x) => x && x.m === 'livraison') && basket.length) {
+              payload.settlementKind = 'receivable';
             }
             window.KiwiLive.postSale(payload);
           }
@@ -4966,7 +5183,7 @@
           // object. Real store only; the local demo keeps its in-memory client. F5.
           if (useKiwiCl() && window.KiwiClients && window.KiwiClients.recordPurchase && c.id) {
             try { window.KiwiClients.recordPurchase(c.id, {
-              amount: total, method: sale.methods, saleRef: sale.id, createdAt: +sale.at,
+              amount: total, method: sale.methods, saleRef: sale.id, saleId: sale.syncId, eventRef: sale.syncId, createdAt: +sale.at,
               items: sale.lines.map((ln) => ({ name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', qty: ln.qty, total: ln.unit * ln.qty })),
             }); } catch (_) {}
             // La récompense est portée : on brûle les points (KiwiClients.redeem
@@ -5554,6 +5771,44 @@
       .mzi-fg { margin-bottom: 14px; } .mzi-fg label { display: block; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #77807b; margin-bottom: 6px; }
       .mzi-fg input, .mzi-fg select { width: 100%; padding: 11px 13px; border: 1px solid rgba(10,15,13,.16); border-radius: 10px; font: inherit; font-size: 14px; background: var(--paper); color: var(--ink); }
       .mzi-frow { display: flex; gap: 12px; } .mzi-frow .mzi-fg { flex: 1; }
+      .mzi-cat-form { padding-bottom: 20px; }
+      .mzi-cat-create { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:end; padding:16px; border:1px solid rgba(11,110,79,.16); border-radius:14px; background:rgba(11,110,79,.045); }
+      .mzi-cat-create .mzi-fg { margin:0; }
+      .mzi-cat-create .mz-btn { min-height:42px; }
+      .mzi-cat-list { display:grid; gap:10px; margin-top:18px; }
+      .mzi-cat-empty { padding:24px 16px; border:1px dashed rgba(10,15,13,.14); border-radius:14px; color:#77807b; text-align:center; font-size:13px; }
+      .mzi-cat-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:14px; align-items:center; padding:14px 16px; border:1px solid rgba(10,15,13,.10); border-radius:14px; background:var(--paper); }
+      .mzi-cat-main { min-width:0; }
+      .mzi-cat-meta { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:7px; }
+      .mzi-cat-meta b { font-size:13px; color:var(--ink); }
+      .mzi-cat-count { padding:3px 8px; border-radius:999px; background:rgba(10,15,13,.06); color:#77807b; font-size:11px; white-space:nowrap; }
+      .mzi-cat-main input { width:100%; padding:10px 12px; border:1px solid rgba(10,15,13,.14); border-radius:9px; font:inherit; font-size:14px; background:var(--paper); color:var(--ink); }
+      .mzi-cat-actions { display:flex; gap:7px; align-items:center; }
+      .mzi-cat-actions .mz-btn { min-height:38px; padding:8px 11px; }
+      .mzi-cat-actions .mz-btn i { width:15px; height:15px; }
+      .mzi-ab { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+      .mzi-ab label { display:flex; align-items:center; gap:10px; min-height:54px; margin:0; padding:11px 13px; border:1px solid rgba(10,15,13,.13); border-radius:12px; background:var(--paper); cursor:pointer; text-transform:none; letter-spacing:0; color:var(--ink); }
+      .mzi-ab label:has(input:checked) { border-color:var(--atlas,#0b6e4f); box-shadow:0 0 0 2px rgba(11,110,79,.10); background:rgba(11,110,79,.045); }
+      .mzi-ab input { width:auto; margin:0; accent-color:var(--atlas,#0b6e4f); }
+      .mzi-ab b { display:block; font-size:13.5px; }
+      .mzi-ab span { display:block; margin-top:2px; color:#77807b; font-size:11.5px; line-height:1.25; }
+      .mzi-photo { display:grid; grid-template-columns:86px minmax(0,1fr); gap:12px; align-items:center; padding:12px; border:1px solid rgba(10,15,13,.12); border-radius:14px; background:rgba(10,15,13,.025); }
+      .mzi-photo-preview { width:86px; height:86px; border-radius:11px; border:1px dashed rgba(10,15,13,.18); background:var(--paper); display:grid; place-items:center; overflow:hidden; color:#9aa09d; }
+      .mzi-photo-preview img { width:100%; height:100%; object-fit:cover; }
+      .mzi-photo-preview i { width:24px; height:24px; }
+      .mzi-photo-copy { min-width:0; }
+      .mzi-photo-copy b { display:block; font-size:13px; margin-bottom:3px; }
+      .mzi-photo-status { min-height:16px; color:#77807b; font-size:11.5px; line-height:1.35; }
+      .mzi-photo-actions { display:flex; gap:7px; flex-wrap:wrap; margin-top:9px; }
+      .mzi-photo-actions .mz-btn { padding:7px 10px; min-height:36px; }
+      @media (max-width:700px) {
+        .mzi-cat-create, .mzi-cat-row { grid-template-columns:1fr; }
+        .mzi-cat-actions { justify-content:flex-end; }
+        .mzi-cat-create .mz-btn { width:100%; }
+        .mzi-ab { grid-template-columns:1fr; }
+        .mzi-photo { grid-template-columns:70px minmax(0,1fr); }
+        .mzi-photo-preview { width:70px; height:70px; }
+      }
       /* Le sélecteur de couleur vient de color-palette.js (.kc-*) · rien à
          redéfinir ici, c'est tout l'intérêt. Restent la pastille cliquable de la
          ligne variante et le rappel discret de la nuance d'origine. */
@@ -6587,6 +6842,9 @@
   function catalogueAdminEnabled() {
     return !!(window.KiwiConfig && window.KiwiConfig.features && window.KiwiConfig.features.caisseInventoryAdmin === true);
   }
+  function inventoryValueVisible() {
+    return !(window.KiwiConfig && window.KiwiConfig.features && window.KiwiConfig.features.caisseInventoryValue === false);
+  }
   function catalogDashboardOnly() {
     const msg = 'La gestion complète sur caisse doit être activée dans God Mode.';
     if (typeof toast === 'function') toast(msg);
@@ -6618,7 +6876,7 @@
         <div class="mzi-kpis">
           <!-- boutique réelle : ce que le stock a COÛTÉ (chiffre de compta / assurance).
                La démo garde sa valeur au prix de vente. Voir stats() dans boutique-catalog.js. -->
-          <div class="mzi-kpi"><span class="l">Valeur de stock</span><span class="v">${fmtNum(IS_DEMO ? st.stockValue : st.stockCost)} MAD</span></div>
+          ${inventoryValueVisible() ? `<div class="mzi-kpi"><span class="l">Valeur de stock</span><span class="v">${fmtNum(IS_DEMO ? st.stockValue : st.stockCost)} MAD</span></div>` : ''}
           <div class="mzi-kpi"><span class="l">Pièces en stock</span><span class="v">${st.totalStock}</span></div>
           <div class="mzi-kpi ${st.low || st.ruptures ? 'warn' : ''}"><span class="l">Stock bas / rupture</span><span class="v">${st.low} + ${st.ruptures}</span></div>
         </div>
@@ -6820,19 +7078,125 @@
     if (sel === 'pointure') opts.push(['pointure', 'Pointure']);
     return opts.map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('');
   }
+  function ownershipField(product, prefix) {
+    if (!depotOn()) return '';
+    const value = product ? (product.ownership === 'consignment' ? 'consignment' : 'outright') : '';
+    const consignor = product ? (product.consignor || '') : '';
+    return `<div class="mzi-fg">
+      <label>Catégorie A / B</label>
+      <div class="mzi-ab">
+        <label><input type="radio" name="${prefix}-ownership" value="outright" ${value === 'outright' ? 'checked' : ''}><div><b>Catégorie A</b><span>Marchandise achetée par le magasin</span></div></label>
+        <label><input type="radio" name="${prefix}-ownership" value="consignment" ${value === 'consignment' ? 'checked' : ''}><div><b>Catégorie B</b><span>Marchandise confiée par un déposant</span></div></label>
+      </div>
+    </div>
+    <div class="mzi-fg" data-mzi-consignor style="${value === 'consignment' ? '' : 'display:none'}">
+      <label>Propriétaire de la marchandise (option)</label>
+      <input data-mzi-consignor-input value="${esc(consignor)}" placeholder="Ex. Baobab Collection" maxlength="60">
+    </div>`;
+  }
+  function wireOwnershipField(el, prefix) {
+    const radios = $$(`input[name="${prefix}-ownership"]`, el);
+    const who = $('[data-mzi-consignor]', el);
+    radios.forEach((radio) => { radio.onchange = () => { if (who) who.style.display = radio.checked && radio.value === 'consignment' ? '' : 'none'; }; });
+  }
+  function readOwnershipField(el, prefix) {
+    if (!depotOn()) return { ownership: 'outright', consignor: '' };
+    const selected = $(`input[name="${prefix}-ownership"]:checked`, el);
+    if (!selected) return null;
+    return {
+      ownership: selected.value === 'consignment' ? 'consignment' : 'outright',
+      consignor: selected.value === 'consignment' ? ($('[data-mzi-consignor-input]', el)?.value.trim() || '') : '',
+    };
+  }
+  function productPhotoField(photo) {
+    return `<div class="mzi-fg">
+      <label>Photo du produit (option)</label>
+      <div class="mzi-photo">
+        <div class="mzi-photo-preview" data-mzi-photo-preview>${photo ? `<img src="${esc(photo)}" alt="">` : '<i data-lucide="image-plus"></i>'}</div>
+        <div class="mzi-photo-copy">
+          <b>Image de l’article</b>
+          <div class="mzi-photo-status" data-mzi-photo-status>JPG, PNG, WebP, AVIF ou GIF · 16 Mo maximum.</div>
+          <div class="mzi-photo-actions">
+            <button class="mz-btn secondary" type="button" data-mzi-photo-pick><i data-lucide="upload"></i>${photo ? 'Remplacer' : 'Ajouter une photo'}</button>
+            ${photo ? '<button class="mz-btn secondary" type="button" data-mzi-photo-remove>Retirer</button>' : ''}
+          </div>
+          <input type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif" data-mzi-photo-input hidden>
+        </div>
+      </div>
+    </div>`;
+  }
+  function photoUploadMessage(error) {
+    const detail = error && error.detail;
+    const code = (error && (error.code || error.message)) || 'upload-failed';
+    if (code === 'too-large') return `Photo trop lourde : ${Math.round(((detail && detail.size) || 0) / 104857.6) / 10} Mo · maximum 16 Mo.`;
+    if (code === 'bad-type') return 'Format non pris en charge · utilisez JPG, PNG, WebP, AVIF ou GIF.';
+    if (code === 'offline') return 'Réseau indisponible · reconnectez la caisse puis réessayez.';
+    if (code === 'unauthorized' || code === 'http-401') return 'Ajout de photo non autorisé pour cette caisse.';
+    if (code === 'no-media' || code === 'not-configured') return 'Stockage des photos indisponible sur ce compte.';
+    return `Envoi impossible (${code}) · réessayez.`;
+  }
+  function wireProductPhoto(el, initialPhoto, saveButton) {
+    const state = { photo: initialPhoto || '', busy: false };
+    const input = $('[data-mzi-photo-input]', el);
+    const preview = $('[data-mzi-photo-preview]', el);
+    const status = $('[data-mzi-photo-status]', el);
+    const actions = $('.mzi-photo-actions', el);
+    const paint = () => {
+      preview.innerHTML = state.photo ? `<img src="${esc(state.photo)}" alt="">` : '<i data-lucide="image-plus"></i>';
+      actions.innerHTML = `<button class="mz-btn secondary" type="button" data-mzi-photo-pick><i data-lucide="upload"></i>${state.photo ? 'Remplacer' : 'Ajouter une photo'}</button>${state.photo ? '<button class="mz-btn secondary" type="button" data-mzi-photo-remove>Retirer</button>' : ''}`;
+      icons();
+    };
+    actions.onclick = (event) => {
+      if (event.target.closest('[data-mzi-photo-pick]')) { input.click(); return; }
+      if (event.target.closest('[data-mzi-photo-remove]')) { state.photo = ''; status.textContent = 'Photo retirée · enregistrez pour confirmer.'; paint(); }
+    };
+    input.onchange = async () => {
+      const file = input.files && input.files[0];
+      if (!file || state.busy) return;
+      const uploader = window.KiwiPlatformOps && window.KiwiPlatformOps.uploads;
+      if (!uploader || typeof uploader.upload !== 'function') { status.textContent = 'Stockage des photos indisponible.'; return; }
+      state.busy = true; if (saveButton) saveButton.disabled = true; status.textContent = 'Envoi de la photo…';
+      try {
+        const uploaded = await uploader.upload(file, { merchant: merchantSlug(), progress: (pct) => { status.textContent = `Envoi de la photo… ${pct} %`; } });
+        if (!uploaded || !uploaded.url) throw new Error('upload-failed');
+        state.photo = uploaded.url; status.textContent = 'Photo prête · elle sera liée au produit à l’enregistrement.'; paint();
+      } catch (error) { status.textContent = photoUploadMessage(error); }
+      finally { state.busy = false; if (saveButton) saveButton.disabled = false; input.value = ''; }
+    };
+    return state;
+  }
   function openNewProduct() {
     if (!catalogueAdminEnabled()) { catalogDashboardOnly(); return; }
     const cat = catDB(); if (!cat) return;
     const html = `<button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button><div class="mzi-modh"><div><h3>Nouvel article</h3><span>Produit, prix, coût et première variante.</span></div></div><div class="mzi-form">
-      <div class="mzi-fg"><label>Nom</label><input id="mzi-n-name"></div><div class="mzi-frow"><div class="mzi-fg"><label>Catégorie</label><select id="mzi-n-cat">${catSelectOptions(state.invFilter !== 'all' ? state.invFilter : '')}</select></div><div class="mzi-fg"><label>Type</label><select id="mzi-n-kind">${kindSelectOptions('tu')}</select></div></div><div class="mzi-frow"><div class="mzi-fg"><label>Prix de vente (MAD)</label><input id="mzi-n-price" type="number" min="0" step="0.01"></div><div class="mzi-fg"><label>Coût d'achat (MAD)</label><input id="mzi-n-cost" type="number" min="0" step="0.01"></div></div><div class="mzi-frow"><div class="mzi-fg"><label>Marque / fournisseur</label><input id="mzi-n-brand"></div><div class="mzi-fg"><label>Stock initial</label><input id="mzi-n-stock" type="number" min="0" value="0"></div></div><div class="mzi-frow"><div class="mzi-fg"><label>Format / taille</label><input id="mzi-n-size" value="TU"></div><div class="mzi-fg"><label>Code-barres (facultatif)</label><input id="mzi-n-barcode"></div></div></div><div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-x>Annuler</button><button class="mz-btn primary" id="mzi-n-save">Créer l'article</button></div>`;
-    invSetModal(html, (el) => { $('#mzi-n-save', el).onclick = () => { const name=$('#mzi-n-name',el).value.trim(); if(!name){toast('Le nom est requis');return;} let p,v; cat.batch(()=>{p=cat.addProduct({name,categoryId:$('#mzi-n-cat',el).value||null,kind:$('#mzi-n-kind',el).value,priceMAD:bqMoney($('#mzi-n-price',el).value),cost:bqMoney($('#mzi-n-cost',el).value),marque:$('#mzi-n-brand',el).value.trim(),art:'tshirt'});v=cat.addVariant({productId:p.id,colorId:'noir',size:$('#mzi-n-size',el).value.trim()||'TU',stock:Math.max(0,parseInt($('#mzi-n-stock',el).value,10)||0)});const code=$('#mzi-n-barcode',el).value.trim();if(code)cat.attachBarcode(v.id,code);}); rebuildCatalog(); toast('Article créé'); openInvProduct(p.id); renderInventaire(); }; });
+      <div class="mzi-fg"><label>Nom</label><input id="mzi-n-name"></div><div class="mzi-frow"><div class="mzi-fg"><label>Catégorie</label><select id="mzi-n-cat">${catSelectOptions(state.invFilter !== 'all' ? state.invFilter : '')}</select></div><div class="mzi-fg"><label>Type</label><select id="mzi-n-kind">${kindSelectOptions('tu')}</select></div></div><div class="mzi-frow"><div class="mzi-fg"><label>Prix de vente (MAD)</label><input id="mzi-n-price" type="number" min="0" step="0.01"></div><div class="mzi-fg"><label>Coût d'achat (MAD)</label><input id="mzi-n-cost" type="number" min="0" step="0.01"></div></div><div class="mzi-frow"><div class="mzi-fg"><label>Marque / fournisseur</label><input id="mzi-n-brand"></div><div class="mzi-fg"><label>Stock initial</label><input id="mzi-n-stock" type="number" min="0" value="0"></div></div><div class="mzi-frow"><div class="mzi-fg"><label>Format / taille</label><input id="mzi-n-size" value="TU"></div><div class="mzi-fg"><label>Code-barres (facultatif)</label><input id="mzi-n-barcode"></div></div>${ownershipField(null, 'mzi-n')}${productPhotoField('')}</div><div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-x>Annuler</button><button class="mz-btn primary" id="mzi-n-save">Créer l'article</button></div>`;
+    invSetModal(html, (el) => { const save=$('#mzi-n-save',el); const media=wireProductPhoto(el,'',save); wireOwnershipField(el, 'mzi-n'); save.onclick = () => { if(media.busy)return; const name=$('#mzi-n-name',el).value.trim(); if(!name){toast('Le nom est requis');return;} const owner=readOwnershipField(el,'mzi-n'); if(!owner){toast('Choisissez la catégorie A ou B');return;} let p,v; cat.batch(()=>{p=cat.addProduct({name,categoryId:$('#mzi-n-cat',el).value||null,kind:$('#mzi-n-kind',el).value,priceMAD:bqMoney($('#mzi-n-price',el).value),cost:bqMoney($('#mzi-n-cost',el).value),marque:$('#mzi-n-brand',el).value.trim(),art:'tshirt',ownership:owner.ownership,consignor:owner.consignor,photo:media.photo});v=cat.addVariant({productId:p.id,colorId:'noir',size:$('#mzi-n-size',el).value.trim()||'TU',stock:Math.max(0,parseInt($('#mzi-n-stock',el).value,10)||0)});const code=$('#mzi-n-barcode',el).value.trim();if(code)cat.attachBarcode(v.id,code);}); rebuildCatalog(); toast('Article créé'); openInvProduct(p.id); renderInventaire(); }; });
   }
 
   function openCategories() {
     if (!catalogueAdminEnabled()) { catalogDashboardOnly(); return; }
     const cat=catDB(), cats=cat.listCategories();
-    const html=`<button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button><div class="mzi-modh"><div><h3>Catégories</h3><span>Rayons partagés avec le dashboard et la grille de vente.</span></div></div><div class="mzi-form"><div class="mzi-frow"><div class="mzi-fg"><label>Nouvelle catégorie</label><input id="mzi-cat-name"></div><button class="mz-btn primary" id="mzi-cat-add" style="align-self:end;">Ajouter</button></div>${cats.map((c)=>`<div class="mzi-frow"><div class="mzi-fg"><label>${cat.categoryCount(c.id)} article(s)</label><input data-mzi-cat-name="${c.id}" value="${esc(c.name)}"></div><button class="mz-btn secondary" data-mzi-cat-save="${c.id}" style="align-self:end;">Renommer</button><button class="mz-btn danger" data-mzi-cat-delete="${c.id}" style="align-self:end;">Supprimer</button></div>`).join('')}</div>`;
-    invSetModal(html,(el)=>{ $('#mzi-cat-add',el).onclick=()=>{const name=$('#mzi-cat-name',el).value.trim();if(!name)return;cat.addCategory(name);openCategories();renderInventaire();}; el.querySelectorAll('[data-mzi-cat-save]').forEach((b)=>b.onclick=()=>{cat.renameCategory(b.dataset.mziCatSave,$(`[data-mzi-cat-name="${b.dataset.mziCatSave}"]`,el).value);openCategories();renderInventaire();});el.querySelectorAll('[data-mzi-cat-delete]').forEach((b)=>b.onclick=()=>{const res=cat.deleteCategory(b.dataset.mziCatDelete,{moveTo:null});if(res?.ok===false){toast('Déplacez d’abord les articles de cette catégorie');return;}openCategories();renderInventaire();});});
+    const html=`<button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
+      <div class="mzi-modh"><div><h3>Catégories</h3><span>Rayons partagés avec le dashboard et la grille de vente.</span></div></div>
+      <div class="mzi-form mzi-cat-form">
+        <div class="mzi-cat-create">
+          <div class="mzi-fg"><label for="mzi-cat-name">Nouvelle catégorie</label><input id="mzi-cat-name" placeholder="Ex. Bougies, Vaisselle, Linge de maison" autocomplete="off"></div>
+          <button class="mz-btn primary" id="mzi-cat-add"><i data-lucide="plus"></i>Ajouter</button>
+        </div>
+        <div class="mzi-cat-list">
+          ${cats.length ? cats.map((c)=>`<div class="mzi-cat-row">
+            <div class="mzi-cat-main">
+              <div class="mzi-cat-meta"><b>${esc(c.name)}</b><span class="mzi-cat-count">${cat.categoryCount(c.id)} article(s)</span></div>
+              <input data-mzi-cat-name="${c.id}" value="${esc(c.name)}" aria-label="Nom de la catégorie ${esc(c.name)}">
+            </div>
+            <div class="mzi-cat-actions">
+              <button class="mz-btn secondary" data-mzi-cat-save="${c.id}"><i data-lucide="check"></i>Enregistrer</button>
+              <button class="mz-btn danger" data-mzi-cat-delete="${c.id}" aria-label="Supprimer ${esc(c.name)}"><i data-lucide="trash-2"></i></button>
+            </div>
+          </div>`).join('') : '<div class="mzi-cat-empty">Aucune catégorie pour le moment.</div>'}
+        </div>
+      </div>`;
+    invSetModal(html,(el)=>{ const add=()=>{const name=$('#mzi-cat-name',el).value.trim();if(!name){$('#mzi-cat-name',el).focus();return;}cat.addCategory(name);openCategories();renderInventaire();}; $('#mzi-cat-add',el).onclick=add; $('#mzi-cat-name',el).onkeydown=(event)=>{if(event.key==='Enter'){event.preventDefault();add();}}; el.querySelectorAll('[data-mzi-cat-save]').forEach((b)=>b.onclick=()=>{cat.renameCategory(b.dataset.mziCatSave,$(`[data-mzi-cat-name="${b.dataset.mziCatSave}"]`,el).value);openCategories();renderInventaire();});el.querySelectorAll('[data-mzi-cat-delete]').forEach((b)=>b.onclick=()=>{const res=cat.deleteCategory(b.dataset.mziCatDelete,{moveTo:null});if(res?.ok===false){toast('Déplacez d’abord les articles de cette catégorie');return;}openCategories();renderInventaire();});});
   }
 
   function openEditProduct(pid) {
@@ -6855,35 +7219,30 @@
           <div class="mzi-fg"><label>Marque</label><input id="mzi-e-marque" value="${esc(p.marque || '')}" placeholder="Baobab Collection" /></div>
           <div class="mzi-fg"><label>Motif / collection</label><input id="mzi-e-motif" value="${esc(p.motif || '')}" placeholder="Fès Bleu" /></div>
         </div>
+        ${productPhotoField(p.photo || '')}
         <div class="mzi-fg"><label>Icône du produit</label>${iconPickerHtml(p.art || 'tshirt')}</div>
-        <!-- Dépôt-vente : la marchandise appartient à un tiers. La vente reste
-             enregistrée normalement ; c'est l'argent qui ne lui appartient pas. -->
-        <div class="mzi-fg">
-          <label>Catégorie</label>
-          <label class="mzi-check"><input type="checkbox" id="mzi-e-depot" ${isConsignedProduct(p) ? 'checked' : ''} />
-            <span>Catégorie B</span></label>
-        </div>
-        <div class="mzi-fg" id="mzi-e-depot-who" style="${isConsignedProduct(p) ? '' : 'display:none'}">
-          <label>Déposant</label>
-          <input id="mzi-e-consignor" value="${esc(p.consignor || '')}" placeholder="Nom du propriétaire de la marchandise" />
-          
-        </div>
+        ${ownershipField(p, 'mzi-e')}
       </div>
       <div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-back>Retour</button><button class="mz-btn" id="mzi-e-save">Enregistrer</button></div>`;
     invSetModal(html, (el) => {
       let icon = p.art || 'tshirt';
+      const save = $('#mzi-e-save', el);
+      const media = wireProductPhoto(el, p.photo || '', save);
       wireIconPicker(el, (k) => { icon = k; });
+      wireOwnershipField(el, 'mzi-e');
       $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
-      $('#mzi-e-save', el).addEventListener('click', () => {
-        cat.updateProduct(pid, { name: $('#mzi-e-name', el).value.trim() || undefined, categoryId: $('#mzi-e-cat', el).value || null, kind: $('#mzi-e-kind', el).value, art: icon, priceMAD: bqMoney($('#mzi-e-price', el).value), cost: bqMoney($('#mzi-e-cost', el).value) });
+      save.addEventListener('click', () => {
+        if (media.busy) return;
+        cat.updateProduct(pid, { name: $('#mzi-e-name', el).value.trim() || undefined, categoryId: $('#mzi-e-cat', el).value || null, kind: $('#mzi-e-kind', el).value, art: icon, priceMAD: bqMoney($('#mzi-e-price', el).value), cost: bqMoney($('#mzi-e-cost', el).value), photo: media.photo });
         /* Écrit après le patch principal pour ne pas allonger une ligne déjà
            dense — même transaction côté catalogue (updateProduct commit à chaque
            appel), et les deux champs voyagent ensemble. */
+        const owner = readOwnershipField(el, 'mzi-e');
         cat.updateProduct(pid, {
           marque: $('#mzi-e-marque', el).value.trim(),
           motif: $('#mzi-e-motif', el).value.trim(),
-          ownership: $('#mzi-e-depot', el).checked ? 'consignment' : 'outright',
-          consignor: $('#mzi-e-depot', el).checked ? ($('#mzi-e-consignor', el).value.trim() || 'Déposant') : '',
+          ownership: owner ? owner.ownership : undefined,
+          consignor: owner ? owner.consignor : undefined,
         });
         rebuildCatalog();
         toast('Produit mis à jour');

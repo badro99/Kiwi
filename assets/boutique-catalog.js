@@ -733,7 +733,7 @@
             || String(kept.video || '') !== String(e.video || '');
           const fields = ['legacyId', 'name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad',
             'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership', 'consignor',
-            'sku', 'createdAt', 'archived', 'metaAt'];
+            'supplierId', 'parLevel', 'reorderLevel', 'sku', 'createdAt', 'archived', 'metaAt'];
           if (theirMetaAt > mineMetaAt) {
             fields.forEach((f) => {
               if (e[f] === undefined) delete kept[f]; else kept[f] = e[f];
@@ -1571,6 +1571,9 @@
        * retombe sur 'outright' — on ne devine pas une propriété tierce. */
       ownership: data.ownership === 'consignment' ? 'consignment' : 'outright',
       consignor: String(data.consignor || '').trim(),
+      supplierId: String(data.supplierId || '').trim().slice(0, 80),
+      parLevel: data.parLevel == null ? 0 : Math.max(0, +data.parLevel || 0),
+      reorderLevel: data.reorderLevel == null ? 0 : Math.max(0, +data.reorderLevel || 0),
       /* La RÉFÉRENCE COMMUNE — ce qui dit que le jean de Casa et le jean de
        * Rabat sont le même article. Deux magasins d'un même compte tiennent
        * deux catalogues séparés : rien ne les relie sauf le code-barres, et un
@@ -1594,9 +1597,10 @@
     const p = prodById(id); if (!p) return null;
     const mediaPatch = patch.photo !== undefined || patch.video !== undefined;
     ['name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad', 'photo', 'video', 'sku',
-     'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership', 'consignor'].forEach((k) => {
+     'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership', 'consignor',
+     'supplierId', 'parLevel', 'reorderLevel'].forEach((k) => {
       if (patch[k] !== undefined) {
-        if (k === 'priceMAD' || k === 'cost' || k === 'piecePriceMAD') {
+        if (k === 'priceMAD' || k === 'cost' || k === 'piecePriceMAD' || k === 'parLevel' || k === 'reorderLevel') {
           p[k] = patch[k] == null ? null : (+patch[k] || 0);
         } else if (k === 'servicePieces') {
           p[k] = patch[k] == null ? null : Math.max(1, parseInt(patch[k], 10) || 1);

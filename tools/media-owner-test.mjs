@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ═══════════════════════════════════════════════════════════════════════════
- * Kiwi · media owner test — l'upload reste owner-session-only, pour de vrai.
+ * Kiwi · media owner test — uploads owner + caisse catalogue, pour de vrai.
  *
  * functions/api/media/index.js documente un upload owner-session-only (une
  * caisse compromise ne doit pas remplir le seau R2), mais résolvait le tenant
@@ -16,7 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const EXPECTED = 7;
+const EXPECTED = 8;
 let checks = 0;
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
 async function check(name, fn) {
@@ -41,10 +41,10 @@ function makeWorld() {
     ['acc-owner-b', { business: 'Maison Rivale' }],
   ]);
   const merchants = new Map([
-    [A, { account_id: 'acc-owner-a', status: 'active', till_epoch: 0 }],
-    [A2, { account_id: 'acc-owner-a', status: 'active', till_epoch: 0 }],
-    [B, { account_id: 'acc-owner-b', status: 'active', till_epoch: 0 }],
-    [SUSP, { account_id: 'acc-owner-a', status: 'suspended', till_epoch: 0 }],
+    [A, { account_id: 'acc-owner-a', status: 'active', till_epoch: 0, features: '{}' }],
+    [A2, { account_id: 'acc-owner-a', status: 'active', till_epoch: 0, features: '{}' }],
+    [B, { account_id: 'acc-owner-b', status: 'active', till_epoch: 0, features: '{"caisseInventoryAdmin":true}' }],
+    [SUSP, { account_id: 'acc-owner-a', status: 'suspended', till_epoch: 0, features: '{}' }],
   ]);
   const r2 = new Map();
   const DB = {
@@ -69,6 +69,10 @@ function makeWorld() {
           if (q.startsWith('SELECT till_epoch FROM merchant_config')) {
             const row = merchants.get(String(stmt.args[0]));
             return row ? { till_epoch: row.till_epoch } : null;
+          }
+          if (q.startsWith('SELECT features FROM merchant_config')) {
+            const row = merchants.get(String(stmt.args[0]));
+            return row ? { features: row.features } : null;
           }
           if (q.startsWith('SELECT id FROM operators')) return null;
           if (q.startsWith('SELECT label FROM operators')) return null;
@@ -136,10 +140,18 @@ await check('suspended write stays blocked under the strict owner rule', async (
   assert.equal(w.r2.size, 0);
 });
 
-await check('till alone and operator alone are denied', async () => {
+await check('paired till may upload only when full caisse inventory administration is enabled', async () => {
   const w = makeWorld();
   const r1 = await postUpload(w.env, B, await tillCookie(B));
-  assert.equal(r1.status, 401);
+  assert.equal(r1.status, 200);
+  assert.equal(w.r2.size, 1);
+  const r2 = await postUpload(w.env, A2, await tillCookie(A2));
+  assert.equal(r2.status, 401);
+  assert.equal(w.r2.size, 1);
+});
+
+await check('operator alone is denied', async () => {
+  const w = makeWorld();
   const opCookie = `kiwi_op=${await auth.operatorToken(SECRET)}; kiwi_op_id=${await auth.operatorIdToken(SECRET, 'op1')}`;
   const r2 = await postUpload(w.env, B, opCookie);
   assert.equal(r2.status, 401);

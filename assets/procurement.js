@@ -63,6 +63,20 @@
     });
     return row?.name ? row : null;
   }
+  function updateSupplier(supplierId, patch) {
+    supplierId = String(supplierId || ''); patch = patch || {}; var row = null;
+    store.update(function (d) {
+      row = d.suppliers.find(function (s) { return s && s.id === supplierId; }) || null;
+      if (!row) return d;
+      ['name', 'phone', 'email', 'address', 'taxId', 'paymentTerms', 'categories', 'notes'].forEach(function (key) {
+        if (patch[key] !== undefined) row[key] = String(patch[key] == null ? '' : patch[key]).trim().slice(0, key === 'notes' ? 500 : key === 'address' || key === 'categories' ? 240 : 120);
+      });
+      if (patch.leadDays !== undefined) row.leadDays = Math.max(0, Math.round(+patch.leadDays || 0));
+      if (patch.active !== undefined) row.active = patch.active !== false;
+      row.updatedAt = Date.now(); return d;
+    });
+    return row;
+  }
   function nextId(d, prefix) { d.seq = (+d.seq || 0) + 1; return id(prefix, d.seq); }
   function createOrder(input) {
     if (!ultra()) return { error: 'ultra-required' };
@@ -201,5 +215,5 @@
     return [`Bonjour ${s?.name || ''},`, `Commande ${o.number}`, ...o.lines.map(function (x) { return `• ${x.name || x.itemId} · ${x.qty} ${x.unit}`; }), o.expectedDate ? `Livraison souhaitée : ${o.expectedDate}` : '', 'Merci.'].filter(Boolean).join('\n');
   }
 
-  window.KiwiProcurement = { store: store, isUltra: ultra, addSupplier: addSupplier, createOrder: createOrder, markSent: markSent, cancelOrder: cancelOrder, receiveDirect: receiveDirect, receiveOrder: receiveOrder, returnToSupplier: returnToSupplier, attachInvoice: attachInvoice, matchInvoice: matchInvoice, message: message, doc: function () { return store.get(); } };
+  window.KiwiProcurement = { store: store, isUltra: ultra, addSupplier: addSupplier, updateSupplier: updateSupplier, createOrder: createOrder, markSent: markSent, cancelOrder: cancelOrder, receiveDirect: receiveDirect, receiveOrder: receiveOrder, returnToSupplier: returnToSupplier, attachInvoice: attachInvoice, matchInvoice: matchInvoice, message: message, doc: function () { return store.get(); } };
 })();

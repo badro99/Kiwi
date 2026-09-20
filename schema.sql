@@ -59,6 +59,19 @@ CREATE TABLE IF NOT EXISTS sales (
   void_actor  TEXT,             -- libellé du code opérateur, ou 'equipe'
   void_actor_id TEXT            -- operators.id quand il est connu
 );
+
+-- Customer-facing receipt value is distinct from attributed merchant revenue.
+-- A Maison consignment sale can have 0 MAD of owner revenue while the customer
+-- still holds a valid 1,200 MAD receipt. Returns and credits validate against
+-- this immutable gross ticket amount without inflating sales reporting.
+CREATE TABLE IF NOT EXISTS sale_receipts (
+  merchant TEXT NOT NULL,
+  sale_id TEXT NOT NULL,
+  gross_ticket_cents INTEGER NOT NULL,
+  consigned_cents INTEGER NOT NULL DEFAULT 0,
+  created_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, sale_id)
+);
 -- Existing databases: add the column in place. SQLite has no
 -- ADD COLUMN IF NOT EXISTS, so this errors harmlessly ("duplicate column name")
 -- when re-run on a schema that already has it — the rest of the file still

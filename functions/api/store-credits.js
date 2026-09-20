@@ -18,9 +18,20 @@ const amount = (value) => {
   const n = Math.round(Number(value));
   return Number.isSafeInteger(n) && n > 0 && n <= MAX_CENTS ? n : 0;
 };
+const signedAmount = (value) => {
+  const n = Math.round(Number(value));
+  return Number.isSafeInteger(n) && n !== 0 && Math.abs(n) <= MAX_CENTS ? n : 0;
+};
 const now = () => Date.now();
 
 async function ensureSchema(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS sale_receipts (
+      merchant TEXT NOT NULL, sale_id TEXT NOT NULL,
+      gross_ticket_cents INTEGER NOT NULL, consigned_cents INTEGER NOT NULL DEFAULT 0,
+      created_ts INTEGER NOT NULL, PRIMARY KEY (merchant, sale_id)
+    )`
+  ).run();
   await env.DB.prepare(
     `CREATE TABLE IF NOT EXISTS store_credits (
       id TEXT PRIMARY KEY, merchant TEXT NOT NULL, code TEXT NOT NULL,
@@ -72,7 +83,7 @@ async function mayCancelCredit(request, env, merchant) {
   } catch (_) { return false; }
 }
 
-function view(row) {
+function view(row, events = []) {
   return {
     id: clean(row.id, 96), code: clean(row.code, 40), customerId: clean(row.customer_id, 96),
     customerName: clean(row.customer_name, 120), originalSaleId: clean(row.original_sale_id, 96),
@@ -81,6 +92,21 @@ function view(row) {
     expiresAt: Number(row.expires_ts || 0), reason: clean(row.reason, 160),
     issuedBy: clean(row.issued_by, 100), createdAt: Number(row.created_ts || 0),
     updatedAt: Number(row.updated_ts || 0),
+    events,
+  };
+}
+
+function eventView(row) {
+  let detail = {};
+  const rawDetail = clean(row.detail, 12000);
+  try { detail = JSON.parse(rawDetail || '{}') || {}; }
+  catch (_) { detail = rawDetail ? { note: rawDetail } : {}; }
+  return {
+    id: clean(row.id, 96), action: clean(row.action, 20), amountCents: Number(row.amount_cents || 0),
+    balanceAfterCents: Number(row.balance_after_cents || 0), refId: clean(row.ref_id, 96),
+    actor: clean(row.actor, 100), ts: Number(row.ts || 0),
+    lines: Array.isArray(detail.lines) ? detail.lines : [], resellable: detail.resellable !== false,
+    note: clean(detail.note || detail.reason || '', 500),
   };
 }
 
@@ -112,7 +138,18 @@ export async function onRequestGet({ request, env }) {
   const rows = await env.DB.prepare(
     `SELECT * FROM store_credits WHERE ${clauses.join(' AND ')} ORDER BY updated_ts DESC LIMIT 500`
   ).bind(...binds).all();
-  return json({ merchant, credits: ((rows && rows.results) || []).map(view) });
+  const credits = (rows && rows.results) || [];
+  let byCredit = new Map();
+  if (credits.length) {
+    const events = await env.DB.prepare(
+      'SELECT * FROM store_credit_events WHERE merchant = ? ORDER BY ts DESC LIMIT 5000'
+    ).bind(merchant).all();
+    ((events && events.results) || []).forEach((row) => {
+      const list = byCredit.get(row.credit_id) || [];
+      list.push(eventView(row)); byCredit.set(row.credit_id, list);
+    });
+  }
+  return json({ merchant, credits: credits.map((row) => view(row, byCredit.get(row.id) || [])) });
 }
 
 export async function onRequestPost({ request, env }) {
@@ -129,9 +166,10 @@ export async function onRequestPost({ request, env }) {
   const action = clean(body && body.action, 20);
   const requestId = cleanId(body && body.id, 96);
   const cents = amount(body && body.amountCents);
-  if (!requestId || !['issue', 'redeem', 'redeem-batch', 'cancel'].includes(action)) return json({ error: 'invalid-request' }, 400);
-  if (action === 'cancel' && !await mayCancelCredit(request, env, merchant)) return json({ error: 'manager-required' }, 403);
-  if (action !== 'cancel' && action !== 'redeem-batch' && !cents) return json({ error: 'bad-amount' }, 400);
+  const delta = signedAmount(body && body.deltaCents);
+  if (!requestId || !['issue', 'redeem', 'redeem-batch', 'cancel', 'adjust'].includes(action)) return json({ error: 'invalid-request' }, 400);
+  if ((action === 'cancel' || action === 'adjust') && !await mayCancelCredit(request, env, merchant)) return json({ error: 'manager-required' }, 403);
+  if (action === 'adjust' ? !delta : (action !== 'cancel' && action !== 'redeem-batch' && !cents)) return json({ error: 'bad-amount' }, 400);
   const eventId = `${requestId}:${action}`;
   const at = now();
   const actor = await actorName(request, env, merchant);
@@ -139,7 +177,8 @@ export async function onRequestPost({ request, env }) {
   const prior = action === 'redeem-batch' ? null
     : await env.DB.prepare('SELECT * FROM store_credit_events WHERE merchant = ? AND id = ?').bind(merchant, eventId).first();
   if (prior) {
-    if (action !== 'cancel' && Number(prior.amount_cents) !== cents) return json({ error: 'idempotency-conflict' }, 409);
+    const expectedAmount = action === 'adjust' ? delta : cents;
+    if (action !== 'cancel' && Number(prior.amount_cents) !== expectedAmount) return json({ error: 'idempotency-conflict' }, 409);
     const credit = await env.DB.prepare('SELECT * FROM store_credits WHERE merchant = ? AND id = ?').bind(merchant, prior.credit_id).first();
     return credit ? json({ ok: true, replay: true, credit: view(credit) }) : json({ error: 'ledger-incomplete' }, 503);
   }
@@ -164,7 +203,10 @@ export async function onRequestPost({ request, env }) {
            SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?
              FROM sales s
             WHERE s.merchant = ? AND s.id = ? AND s.void_ts IS NULL
-              AND ? <= COALESCE(s.amount_cents, s.amount * 100) - COALESCE((
+              AND ? <= COALESCE((
+                SELECT r.gross_ticket_cents FROM sale_receipts r
+                 WHERE r.merchant = s.merchant AND r.sale_id = s.id
+              ), COALESCE(s.amount_cents, s.amount * 100)) - COALESCE((
                 SELECT SUM(e.amount_cents) FROM store_credit_events e
                  WHERE e.merchant = ? AND e.ref_id = ? AND e.action = 'issue'
               ), 0)`
@@ -272,6 +314,26 @@ export async function onRequestPost({ request, env }) {
            FROM store_credits WHERE merchant = ? AND code = ? AND last_event_id = ?`
       ).bind(eventId, merchant, cents, cleanId(body && body.saleId, 96), actor, detail, at, merchant, code, eventId),
     ]);
+  } else if (action === 'adjust') {
+    const reason = clean(body && body.reason, 500);
+    if (!reason) return json({ error: 'reason-required' }, 400);
+    await env.DB.batch([
+      env.DB.prepare(
+        `UPDATE store_credits
+            SET balance_cents = balance_cents + ?,
+                status = CASE WHEN balance_cents + ? = 0 THEN 'consumed' ELSE 'active' END,
+                last_event_id = ?, updated_ts = ?
+          WHERE merchant = ? AND code = ? AND status IN ('active','consumed') AND expires_ts >= ?
+            AND balance_cents + ? BETWEEN 0 AND ?
+            AND NOT EXISTS (SELECT 1 FROM store_credit_events WHERE merchant = ? AND id = ?)`
+      ).bind(delta, delta, eventId, at, merchant, code, at, delta, MAX_CENTS, merchant, eventId),
+      env.DB.prepare(
+        `INSERT OR IGNORE INTO store_credit_events
+           (id, merchant, credit_id, code, action, amount_cents, balance_after_cents, ref_id, actor, detail, ts)
+         SELECT ?, ?, id, code, 'adjust', ?, balance_cents, ?, ?, ?, ?
+           FROM store_credits WHERE merchant = ? AND code = ? AND last_event_id = ?`
+      ).bind(eventId, merchant, delta, cleanId(body && body.refId, 96), actor, JSON.stringify({ reason }), at, merchant, code, eventId),
+    ]);
   } else {
     await env.DB.batch([
       env.DB.prepare(
@@ -285,7 +347,7 @@ export async function onRequestPost({ request, env }) {
          SELECT ?, ?, id, code, 'cancel', ?, 0, ?, ?, ?, ?
            FROM store_credits WHERE merchant = ? AND code = ? AND last_event_id = ?`
       ).bind(eventId, merchant, Number(credit.balance_cents || 0), cleanId(body && body.refId, 96), actor,
-        clean(body && body.reason, 500), at, merchant, code, eventId),
+        JSON.stringify({ reason: clean(body && body.reason, 500) }), at, merchant, code, eventId),
     ]);
   }
   const event = await env.DB.prepare('SELECT * FROM store_credit_events WHERE merchant = ? AND id = ?').bind(merchant, eventId).first();
@@ -295,6 +357,6 @@ export async function onRequestPost({ request, env }) {
       : credit.status !== 'active' ? `credit-${credit.status}` : 'insufficient-balance';
     return json({ error: reason }, 409);
   }
-  try { await poke(env, merchant, action === 'redeem' ? 'store-credit-redeemed' : 'store-credit-cancelled'); } catch (_) {}
+  try { await poke(env, merchant, action === 'redeem' ? 'store-credit-redeemed' : action === 'adjust' ? 'store-credit-adjusted' : 'store-credit-cancelled'); } catch (_) {}
   return json({ ok: true, credit: view(saved) });
 }

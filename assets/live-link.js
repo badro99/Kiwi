@@ -703,8 +703,17 @@
       && amountCents === 0
       && Number(entry.creditAmountCents) > 0
       && Array.isArray(entry.lines) && entry.lines.length > 0;
+    var consignment = entry.settlementKind === 'consignment'
+      && amountCents === 0
+      && Number(entry.ticketAmountCents) > 0
+      && Number(entry.consignedAmountCents) === Number(entry.ticketAmountCents)
+      && Array.isArray(entry.lines) && entry.lines.length > 0;
+    var receivable = entry.settlementKind === 'receivable'
+      && amountCents === 0
+      && Number(entry.ticketAmountCents) > 0
+      && Array.isArray(entry.lines) && entry.lines.length > 0;
     if (!Number.isFinite(amountCents) || amountCents < 0
-      || (amountCents === 0 && !complimentary && !storeCredit)) return;
+      || (amountCents === 0 && !complimentary && !storeCredit && !consignment && !receivable)) return;
     var amt = Math.round(amountCents / 100);
     // No resolved tenant ⇒ don't post. The server refuses an unattributed sale
     // (it used to file it under a shared 'default' bucket other stores read), so
@@ -784,6 +793,12 @@
     if (storeCredit) {
       body.settlementKind = 'store-credit';
       body.creditAmountCents = Math.round(Number(entry.creditAmountCents));
+    }
+    if (consignment) body.settlementKind = 'consignment';
+    if (receivable) body.settlementKind = 'receivable';
+    if (entry.ticketAmountCents != null) {
+      body.ticketAmountCents = Math.round(Number(entry.ticketAmountCents));
+      body.consignedAmountCents = Math.round(Number(entry.consignedAmountCents || 0));
     }
     if (entry.channel) body.channel = String(entry.channel).slice(0, 24);
     if (entry.orderId) body.orderId = String(entry.orderId).slice(0, 64);

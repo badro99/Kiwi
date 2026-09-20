@@ -79,16 +79,32 @@ const afterRefusal = sqlite.prepare('SELECT code, balance_cents FROM store_credi
 ok(afterRefusal.find((row) => row.code === codeA).balance_cents === 3000
   && afterRefusal.find((row) => row.code === codeB).balance_cents === 2000, 'failed batch leaves every balance unchanged');
 
+reply = await post({ action: 'adjust', id: 'adjust:credit:forbidden', code: codeA, deltaCents: 500, reason: 'Correction test' });
+ok(reply.status === 403 && reply.body.error === 'manager-required', 'a paired till alone cannot correct a store-credit balance');
+reply = await post({ action: 'adjust', id: 'adjust:credit:plus', code: codeA, deltaCents: 500, reason: 'Erreur de saisie documentée' }, ownerCookie);
+ok(reply.status === 200 && reply.body.credit.balanceCents === 3500, 'an owner can add a documented balance correction');
+reply = await post({ action: 'adjust', id: 'adjust:credit:minus', code: codeA, deltaCents: -250, reason: 'Rectification après contrôle' }, ownerCookie);
+ok(reply.status === 200 && reply.body.credit.balanceCents === 3250, 'an owner can subtract a documented balance correction');
+reply = await post({ action: 'adjust', id: 'adjust:credit:minus', code: codeA, deltaCents: -250, reason: 'Rectification après contrôle' }, ownerCookie);
+ok(reply.status === 200 && reply.body.replay && reply.body.credit.balanceCents === 3250, 'a repeated correction is idempotent');
+
 reply = await post({ action: 'cancel', id: 'cancel:credit:forbidden', code: codeB, reason: 'Correction gérant' });
 ok(reply.status === 403 && reply.body.error === 'manager-required', 'a paired till alone cannot cancel a store liability');
 reply = await post({ action: 'cancel', id: 'cancel:credit:0001', code: codeB, reason: 'Correction gérant' }, ownerCookie);
 ok(reply.status === 200 && reply.body.credit.status === 'cancelled' && reply.body.credit.balanceCents === 0, 'manager cancellation closes the liability with an audit event');
 const eventCount = sqlite.prepare('SELECT COUNT(*) AS n FROM store_credit_events WHERE merchant=?').get(MERCHANT).n;
-ok(eventCount === 5, 'immutable ledger contains two issues, two redemptions and one cancellation');
+ok(eventCount === 7, 'immutable ledger contains issues, redemptions, corrections and cancellation');
 
 const get = await onRequestGet({ request: new Request(`https://kiwi.test/api/store-credits?merchant=${MERCHANT}&active=1`, { headers: { cookie } }), env });
 const listed = await get.json();
-ok(get.status === 200 && listed.credits.length === 1 && listed.credits[0].code === codeA, 'active register excludes consumed or cancelled credits');
+ok(get.status === 200 && listed.credits.length === 1 && listed.credits[0].code === codeA && listed.credits[0].balanceCents === 3250, 'active register excludes cancelled credits and shows corrected balance');
+const correctionEvent = listed.credits[0].events.find((event) => event.action === 'adjust' && event.amountCents === -250);
+ok(correctionEvent && correctionEvent.note === 'Rectification après contrôle', 'credit register returns documented correction reasons');
+const getAll = await onRequestGet({ request: new Request(`https://kiwi.test/api/store-credits?merchant=${MERCHANT}`, { headers: { cookie } }), env });
+const allListed = await getAll.json();
+const cancelledCredit = allListed.credits.find((credit) => credit.code === codeB);
+const cancelEvent = cancelledCredit && cancelledCredit.events.find((event) => event.action === 'cancel');
+ok(getAll.status === 200 && cancelEvent && cancelEvent.note === 'Correction gérant', 'credit register returns documented cancellation reasons');
 reply = await post({ action: 'redeem', id: 'redeem:cross:0001', code: codeA, amountCents: 100 }, '');
 ok(reply.status === 401, 'an unpaired browser cannot spend a store credit');
 

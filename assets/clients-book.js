@@ -201,6 +201,49 @@
     return ((p[0] || '?')[0] + (p[1] ? p[1][0] : '')).toUpperCase();
   }
 
+  function creditMerchant() {
+    try {
+      var venue = window.KiwiVenue && KiwiVenue.getCurrentVenueData && KiwiVenue.getCurrentVenueData();
+      if (venue && (venue.slug || venue.merchant)) return venue.slug || venue.merchant;
+    } catch (_) {}
+    try { return localStorage.getItem('kiwiLiveMerchant') || ''; } catch (_) { return ''; }
+  }
+
+  function loadClientCredits(clientId, host) {
+    var merchant = creditMerchant();
+    if (!merchant || !host || typeof fetch !== 'function') return;
+    fetch('/api/store-credits?merchant=' + encodeURIComponent(merchant) + '&customerId=' + encodeURIComponent(clientId),
+      { headers: { Accept: 'application/json' } })
+      .then(function (response) { return response && response.ok ? response.json() : null; })
+      .then(function (data) {
+        if (!host.isConnected) return;
+        var credits = data && Array.isArray(data.credits) ? data.credits : [];
+        var active = credits.reduce(function (sum, credit) {
+          return sum + (credit.status === 'active' ? Number(credit.balanceCents || 0) : 0);
+        }, 0) / 100;
+        host.innerHTML = '<div class="kcb-section">Avoirs · solde ' + fmt(active) + ' MAD</div>' + (credits.length
+          ? '<div class="kcb-info">' + credits.map(function (credit) {
+              var issued = (credit.events || []).filter(function (event) { return event.action === 'issue'; })[0] || {};
+              var products = Array.isArray(issued.lines) && issued.lines.length
+                ? issued.lines.map(function (line) { return (line.qty || 1) + '× ' + (line.name || 'Article'); }).join(' · ')
+                : (credit.reason || 'Retour');
+              var movements = (credit.events || []).filter(function (event) { return event.action !== 'issue'; }).map(function (event) {
+                return '<small style="display:block;margin-top:4px">' + esc(event.action === 'redeem' ? 'Utilisé' : event.action === 'cancel' ? 'Annulé' : event.action)
+                  + ' · ' + fmt(Number(event.amountCents || 0) / 100) + ' MAD · ' + esc(event.actor || 'Caisse')
+                  + ' · solde ' + fmt(Number(event.balanceAfterCents || 0) / 100) + ' MAD</small>';
+              }).join('');
+              var issuedAt = credit.createdAt ? new Date(credit.createdAt).toLocaleString('fr-FR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Date inconnue';
+              var expiry = credit.expiresAt ? new Date(credit.expiresAt).toLocaleDateString('fr-FR') : 'sans échéance';
+              return '<div class="kcb-inforow"><span class="k">' + esc(credit.code) + '<small style="display:block;margin-top:3px">' + esc(issuedAt) + ' · expire ' + esc(expiry) + '</small></span>'
+                + '<span class="v"><b>' + fmt(Number(credit.amountCents || 0) / 100) + ' MAD · reste ' + fmt(Number(credit.balanceCents || 0) / 100) + ' MAD</b>'
+                + '<small style="display:block;margin-top:3px">Vente ' + esc(credit.originalRef || credit.originalSaleId || '—') + ' · ' + esc(products) + ' · ' + esc(issued.actor || credit.issuedBy || 'Caisse') + '</small>' + movements + '</span></div>';
+            }).join('') + '</div>'
+          : '<div class="kcb-empty" style="min-height:70px"><b>Aucun avoir</b><div>Les crédits boutique émis à ce client apparaîtront ici.</div></div>');
+      }).catch(function () {
+        if (host && host.isConnected) host.innerHTML = '<div class="kcb-section">Avoirs</div><div class="kcb-empty" style="min-height:70px">Registre indisponible. Réessayez.</div>';
+      });
+  }
+
   /* ── launcher chip ─────────────────────────────────────────────────────── */
   function ensureChip() {
     if (!shouldShow()) { var ex = document.getElementById('kcb-chip'); if (ex) ex.remove(); return; }
@@ -521,12 +564,14 @@
         '<div class="kcb-kpi"><div class="v">' + (KC.daysSince(c.lastSeen) === Infinity ? '·' : KC.daysSince(c.lastSeen) + ' j') + '</div><div class="l">Dernière visite</div></div></div>' +
       infoBlock +
       historyBlock +
+      '<div id="kcb-credit-history"><div class="kcb-section">Avoirs</div><div class="kcb-empty" style="min-height:70px">Chargement du registre…</div></div>' +
       recordBlock +
       (rewardReady ? '<button class="kcb-btn primary" id="kcb-redeem" style="margin-top:8px">Offrir la récompense · réinitialiser</button>' : '') +
       '<div class="kcb-actions"><button class="kcb-btn ghost" id="kcb-edit">Modifier</button>' +
         '<button class="kcb-btn ghost" id="kcb-d-back">Retour</button></div>'
     );
     var sh = document.getElementById('kcb-sheet');
+    loadClientCredits(c.id, sh.querySelector('#kcb-credit-history'));
     sh.querySelector('#kcb-d-close').onclick = closeSheet;
     sh.querySelector('#kcb-d-back').onclick = closeSheet;
     sh.querySelector('#kcb-edit').onclick = function () { openForm(c); };

@@ -233,6 +233,17 @@ ok('la réception au comptoir demande une autorisation',
 const BOUTIQUE_SRC = R('assets/pos-boutique.js');
 ok('la caisse boutique n\'est pas touchée', !/KiwiMaisonStock/.test(BOUTIQUE_SRC));
 
+/* ── XII · la page ouvre sur tout l'historique, sans filtres redondants ───── */
+const PAGES_SRC = R('assets/pages-pro.js');
+const MOVEMENTS_PAGE = PAGES_SRC.slice(PAGES_SRC.indexOf('const MZS ='), PAGES_SRC.indexOf('function _mzManualModal'));
+ok('la période initiale est Tout', /let _mzFilter = \{[^}]*days: 0/.test(MOVEMENTS_PAGE));
+ok('Tout est la première option de période', /\[\['0', 'Tout'\], \['7', '7 jours'\]/.test(MOVEMENTS_PAGE));
+ok('ouvrir la page rétablit toujours Tout', /handlers\['nav-stock-movements'\][\s\S]{0,300}_mzFilter\.days = 0/.test(MOVEMENTS_PAGE));
+ok('les filtres employé et fournisseur ne sont plus proposés',
+  !/data-mz="actor"/.test(MOVEMENTS_PAGE) && !/data-mz="supplier"/.test(MOVEMENTS_PAGE));
+ok('la recherche décrit seulement les dimensions encore visibles',
+  /placeholder="Produit, catégorie, type, référence…"/.test(MOVEMENTS_PAGE));
+
 /* ── verdict ─────────────────────────────────────────────────────────────── */
 if (fails.length) {
   console.error(`✗ mouvements de stock maison — ${fails.length} échec(s) sur ${pass + fails.length}`);

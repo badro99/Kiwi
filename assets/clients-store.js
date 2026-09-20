@@ -348,6 +348,16 @@
     if (!rec) return null;
     var cfg = config(book);
     var amount = money(opts.amount);
+    var saleRef = String(opts.saleRef || '');
+    var eventKey = String(opts.eventRef || opts.saleId || saleRef).replace(/[^A-Za-z0-9:._-]/g, '').slice(0, 96);
+    var ref = eventKey ? ('purchase:' + id + ':' + eventKey) : '';
+    /* A browser callback can be replayed after a slow payment close.  Refuse
+     * the duplicate before changing local totals; the API applies the same
+     * idempotency rule once the event reaches D1. */
+    if ((ref && purchaseRead(book).some(function (event) { return event.ref === ref; }))
+        || (saleRef && Array.isArray(rec.history) && rec.history.some(function (row) { return row && row.ref === saleRef; }))) {
+      return { client: rec, rewardReady: false, replayed: true };
+    }
 
     rec.visits = (rec.visits || 0) + 1;
     rec.lastSeen = now();
@@ -355,7 +365,7 @@
     if (amount > 0) rec.spend = (rec.spend || 0) + amount;
     if (!Array.isArray(rec.history)) rec.history = [];
     const detail = {
-      ref: String(opts.saleRef || ''), ts: +opts.createdAt || now(), amount,
+      ref: saleRef, ts: +opts.createdAt || now(), amount,
       method: String(opts.method || '').slice(0, 32),
       items: (Array.isArray(opts.items) ? opts.items : []).slice(0, 100).map(function (item) {
         return { name: String(item && item.name || '').slice(0, 120), qty: Math.max(0, Math.round(+item?.qty || 0)), total: money(item && item.total) };
@@ -382,7 +392,11 @@
     }
     rec.updated = now();
     writeBook(d, book);
-    var ref = 'purchase:' + id + ':' + rec.updated + ':' + Math.abs(hash(String(Math.random()))).toString(36);
+    /* The sale already has a durable UUID.  Reuse it as the purchase-event key
+     * so a checkout callback replay, a page refresh, or an offline retry cannot
+     * add the same visit/spend twice.  Older callers without a sale key retain
+     * the historical random fallback. */
+    ref = ref || ('purchase:' + id + ':' + rec.updated + ':' + Math.abs(hash(String(Math.random()))).toString(36));
     var event = { kind: 'purchase', ref: ref, clientId: id, amount: amount, points: delta.points,
       stamps: delta.stamps, visits: delta.visits, spend: delta.spend, created: rec.updated,
       method: detail.method, items: detail.items, saleRef: detail.ref };
@@ -529,7 +543,7 @@
   function purchaseDrop(book, ref) {
     purchaseWrite(book, purchaseRead(book).filter(function (e) { return e.ref !== ref; }));
   }
-  function purchasePush(book, event) {
+  function purchasePush(book, event, afterClientCreate) {
     if (!syncable(book) || !event || !event.ref) return;
     try {
       fetch('/api/clients', {
@@ -538,7 +552,21 @@
           clientId: event.clientId, ref: event.ref, amount: event.amount,
           method: event.method || '', items: event.items || [], saleRef: event.saleRef || '',
         } }),
-      }).then(function (r) { if (r && r.ok) purchaseDrop(book, event.ref); }).catch(function () {});
+      }).then(function (r) {
+        if (r && r.ok) { purchaseDrop(book, event.ref); return; }
+        /* A client created at checkout and its purchase used to be sent as two
+         * unrelated requests.  If the purchase won the race, D1 returned
+         * client-not-found and the history appeared only after a later poll.
+         * Create/refresh that exact profile first, then retry this same stable
+         * event once.  The server ledger keeps the retry idempotent. */
+        if (r && r.status === 404 && !afterClientCreate) {
+          var rec = get(event.clientId, book);
+          var created = pushClient(rec, book);
+          if (created && typeof created.then === 'function') {
+            created.then(function (ok) { if (ok) purchasePush(book, event, true); });
+          }
+        }
+      }).catch(function () {});
     } catch (_) {}
   }
   function flushPurchases(book) {
@@ -579,17 +607,18 @@
   }
 
   function pushClient(rec, book) {
-    if (!syncable(book) || !rec || !rec.id) return;
+    if (!syncable(book) || !rec || !rec.id) return Promise.resolve(false);
     var id = rec.id;
     try {
-      fetch('/api/clients', {
+      return fetch('/api/clients', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
         body: JSON.stringify(Object.assign({ merchant: book }, rec)),
       }).then(function (r) {
-        if (r && r.ok) { outDrop(book, id); return; }
+        if (r && r.ok) { outDrop(book, id); return true; }
         outAdd(book, id);                    // 401 / 503 / 500 → on retentera
-      }).catch(function () { outAdd(book, id); });
-    } catch (_) { outAdd(book, id); }
+        return false;
+      }).catch(function () { outAdd(book, id); return false; });
+    } catch (_) { outAdd(book, id); return Promise.resolve(false); }
   }
   function deleteRemote(id, book) {
     if (!syncable(book) || !id) return;

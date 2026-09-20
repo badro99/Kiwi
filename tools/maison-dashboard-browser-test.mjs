@@ -28,11 +28,39 @@ if (!executablePath) {
 }
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
+let liveCredit = {
+  code: 'AV-AMIRA-001', customerId: 'client-amira-1', customerName: 'Cliente Amira',
+  originalRef: 'Ticket 2042', originalSaleId: 'sale-amira-2042', amountCents: 12000,
+  balanceCents: 12000, status: 'active', reason: 'Retour', issuedBy: 'Amira',
+  createdAt: Date.now() - 86400000, expiresAt: Date.now() + 90 * 86400000,
+  events: [{ action: 'issue', actor: 'Amira', lines: [{ qty: 1, name: 'Vase Atlas' }] }],
+};
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+  if (process.env.KIWI_TEST_DEBUG && pathname === '/api/store-credits') console.log('store-credit request', req.method, req.url);
   // A newly installed worker intentionally reloads a young production tab.
   // This test owns first paint, so keep the run on one document.
   if (pathname === '/kiwi-sw.js') { res.writeHead(404); res.end('disabled in browser regression'); return; }
+  if (pathname === '/api/store-credits' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ credits: [liveCredit] }));
+    return;
+  }
+  if (pathname === '/api/store-credits' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; });
+    req.on('end', () => {
+      const input = JSON.parse(body || '{}');
+      if (input.action === 'adjust') {
+        liveCredit = { ...liveCredit, balanceCents: liveCredit.balanceCents + Number(input.deltaCents || 0), events: liveCredit.events.concat({ action: 'adjust', deltaCents: Number(input.deltaCents || 0), reason: input.reason, actor: 'Amira' }) };
+      } else if (input.action === 'cancel') {
+        liveCredit = { ...liveCredit, balanceCents: 0, status: 'cancelled', events: liveCredit.events.concat({ action: 'cancel', reason: input.reason, actor: 'Amira' }) };
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ credit: liveCredit }));
+    });
+    return;
+  }
   if (pathname.startsWith('/api/')) {
     res.writeHead(pathname === '/api/me' ? 200 : 404, { 'Content-Type': 'application/json' });
     res.end(pathname === '/api/me' ? '{"authenticated":false}' : '{"error":"not-found"}');
@@ -51,9 +79,22 @@ let checks = 0;
 const ok = (value, label) => { assert.ok(value, label); checks++; console.log('✓ ' + label); };
 try {
   const page = await browser.newPage();
+  const click = async (selector) => {
+    const found = await page.evaluate((query) => {
+      const element = document.querySelector(query);
+      if (!element) return false;
+      element.click();
+      return true;
+    }, selector);
+    assert.ok(found, `missing UI control: ${selector}`);
+  };
   await page.setViewport({ width: 1440, height: 1000 });
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
+  if (process.env.KIWI_TEST_DEBUG) {
+    page.on('response', (response) => { if (response.url().includes('/api/store-credits')) console.log('store-credit response', response.status(), response.url()); });
+    page.on('requestfailed', (request) => { if (request.url().includes('/api/store-credits')) console.log('store-credit failed', request.failure()?.errorText || '', request.url()); });
+  }
   await page.evaluateOnNewDocument(() => {
     const venue = {
       id: 'v-art-de-table-by-amira', name: 'art de table by amira', fullDisplay: 'art de table by amira',
@@ -91,6 +132,78 @@ try {
   ok(!/147|caf[ée]s|Café Atlas/i.test(state.bench), 'peer card contains no invented café cohort or Café Atlas data');
   ok(state.benchEmpty, 'real Maison benchmark renders an explicit empty state');
   ok(/Pièces|Rayons|Offres|Retours|vendues/i.test(state.nav) && !/Carte du restaurant|Cuisine/i.test(state.nav), 'sidebar exposes Maison operations');
+
+  const seeded = await page.evaluate(() => {
+    const cat = window.KiwiBoutiqueCatalog;
+    cat.use(window.KiwiBoutiqueVenueKey());
+    const supplier = window.KiwiProcurement.addSupplier({ name: 'Atelier Amira', phone: '0600000000', categories: 'Décoration', leadDays: 3 });
+    const category = cat.addCategory('Décoration', 'atlas');
+    const product = cat.addProduct({ name: 'Vase Atlas', categoryId: category.id, priceMAD: 240, cost: 80, supplierId: supplier.id, parLevel: 10, reorderLevel: 3 });
+    const variant = cat.addVariant({ productId: product.id, colorId: 'blanc', size: 'TU', stock: 7 });
+    window.KiwiProcurement.receiveDirect({ supplierId: supplier.id, externalRef: 'BL-AMIRA-7', receivedBy: 'Amira', skipMovements: true, lines: [{ itemId: product.id, variantId: variant.id, name: product.name, qty: 2, unit: 'pièce', unitCost: 80 }] });
+    return { productId: product.id, supplierId: supplier.id };
+  });
+  ok(!!seeded.productId && !!seeded.supplierId, 'Amira retail catalogue and supplier fixture are stored through production APIs');
+
+  await click('[data-vertical-section] a[data-nav="stock"]');
+  await page.waitForSelector('body.page-stock [data-stock-root] .st-title');
+  const stockOverview = await page.$eval('[data-stock-root]', (el) => el.textContent.replace(/\s+/g, ' ').trim());
+  if (process.env.KIWI_TEST_DEBUG) console.log(JSON.stringify({ stockOverview }, null, 2));
+  ok(/1 articles suivis/i.test(stockOverview) && /560 MAD/.test(stockOverview) && /160 MAD/.test(stockOverview) && !/Tomates|Boucherie|Marché Central/i.test(stockOverview), 'supplier workspace computes Amira retail stock and purchasing totals without restaurant fixtures');
+  await click('[data-action="stock-tab"][data-tab="items"]');
+  await page.waitForFunction(() => /Vase Atlas/.test(document.querySelector('.st-tab-body')?.textContent || ''));
+  const itemProjection = await page.evaluate((productId) => {
+    const row = window.KiwiStockOperatingDay.catalogue().find((item) => item.id === productId);
+    return row && { name: row.name, stock: row.currentStock, supplierId: row.supplierId };
+  }, seeded.productId);
+  if (process.env.KIWI_TEST_DEBUG) console.log(JSON.stringify({ itemProjection, seeded }, null, 2));
+  ok(itemProjection?.name === 'Vase Atlas' && itemProjection.stock === 7 && itemProjection.supplierId === seeded.supplierId, 'stock page projects the exact shared product, stock and supplier link');
+  await click('[data-action="stock-tab"][data-tab="suppliers"]');
+  await page.waitForFunction(() => /Atelier Amira/.test(document.querySelector('.st-tab-body')?.textContent || ''));
+  const supplierText = await page.$eval('.st-tab-body', (el) => el.textContent.replace(/\s+/g, ' ').trim());
+  ok(/Atelier Amira/.test(supplierText) && !/Boucherie|Marché Central/i.test(supplierText), 'supplier tab uses the current Maison procurement register');
+  await click('[data-action="stock-tab"][data-tab="orders"]');
+  const orderText = await page.$eval('.st-tab-body', (el) => el.textContent.replace(/\s+/g, ' ').trim());
+  ok(/BL-AMIRA-7|Atelier Amira|réception/i.test(orderText) && !/Boucherie|Marché Central/i.test(orderText), 'purchasing tab shows the Maison receipt instead of restaurant orders');
+
+  await page.evaluate(() => window.Kiwi.handlers['nav-stock-movements']());
+  await page.waitForSelector('.dash-genpage .mzs-filters');
+  const movementFilters = await page.evaluate(() => ({
+    selected: document.querySelector('[data-mz="days"]')?.value,
+    labels: [...document.querySelectorAll('.mzs-filters select')].map((el) => el.textContent.replace(/\s+/g, ' ').trim()),
+    keys: [...document.querySelectorAll('.mzs-filters [data-mz]')].map((el) => el.getAttribute('data-mz')),
+  }));
+  ok(movementFilters.selected === '0' && movementFilters.labels[0]?.startsWith('Tout'), 'movement history opens on Tout');
+  ok(!movementFilters.keys.includes('actor') && !movementFilters.keys.includes('supplier'), 'movement UI has no redundant employee or supplier filters');
+
+  await page.evaluate(() => window.Kiwi.handlers['nav-returns']());
+  if (process.env.KIWI_TEST_DEBUG) {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    const returnsDebug = await page.evaluate(async () => ({
+      custom: window.KiwiVenue?.isCustom?.(), venue: window.KiwiVenue?.getVenue?.(),
+      page: document.querySelector('.dash-genpage')?.textContent.replace(/\s+/g, ' ').trim().slice(0, 800) || '',
+      register: document.querySelector('[data-credit-register]')?.textContent.replace(/\s+/g, ' ').trim() || '',
+      direct: await fetch('/api/store-credits?merchant=art-de-table-by-amira').then((r) => r.json()),
+    }));
+    console.log(JSON.stringify({ returnsDebug, errors }, null, 2));
+  }
+  await page.waitForFunction(() => /AV-AMIRA-001/.test(document.querySelector('[data-credit-register]')?.textContent || ''));
+  let creditText = await page.$eval('[data-credit-register]', (el) => el.textContent.replace(/\s+/g, ' ').trim());
+  ok(/AV-AMIRA-001/.test(creditText) && /Cliente Amira/.test(creditText) && /Ticket 2042/.test(creditText) && /Vase Atlas/.test(creditText), 'owner credit register shows code, customer, original ticket and returned product');
+  await page.type('#ret-credit-search', '2042');
+  ok(await page.$eval('[data-credit-row]', (el) => !el.hidden), 'credit register searches by original ticket');
+  await click('[data-action="credit-adjust"]');
+  await page.type('[data-credit-delta]', '-25');
+  await page.type('[data-credit-reason]', 'Correction vérifiée Amira');
+  const adjusted = page.waitForResponse((response) => response.url().endsWith('/api/store-credits') && response.request().method() === 'POST' && response.ok());
+  const reloaded = page.waitForResponse((response) => response.url().includes('/api/store-credits?') && response.request().method() === 'GET' && response.ok());
+  await click('[data-action="credit-adjust-confirm"]');
+  await adjusted;
+  await reloaded;
+  await page.waitForFunction(() => /95(?:[,.]00)?\s*MAD/i.test(document.querySelector('[data-credit-register]')?.textContent || ''));
+  creditText = await page.$eval('[data-credit-register]', (el) => el.textContent.replace(/\s+/g, ' ').trim());
+  ok(/95(?:[,.]00)?\s*MAD/i.test(creditText), 'owner correction updates the credit balance through the server API');
+
   ok(errors.length === 0, 'Maison dashboard renders without uncaught browser errors: ' + errors.join(' | '));
   console.log(`\n✓ ${checks} rendered Maison dashboard checks passed.`);
 } finally {

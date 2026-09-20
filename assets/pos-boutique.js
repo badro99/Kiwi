@@ -5129,6 +5129,9 @@
     const msg = 'Articles et prix se gèrent dans le tableau de bord.';
     if (typeof toast === 'function') toast(msg);
   }
+  function inventoryValueVisible() {
+    return !(window.KiwiConfig && window.KiwiConfig.features && window.KiwiConfig.features.caisseInventoryValue === false);
+  }
 
   function renderInventaire() {
     const cat = catDB();
@@ -5156,7 +5159,7 @@
         <div class="bqi-kpis">
           <!-- boutique réelle : ce que le stock a COÛTÉ (chiffre de compta / assurance).
                La démo garde sa valeur au prix de vente. Voir stats() dans boutique-catalog.js. -->
-          <div class="bqi-kpi"><span class="l">Valeur de stock</span><span class="v">${fmtNum(IS_DEMO ? st.stockValue : st.stockCost)} MAD</span></div>
+          ${inventoryValueVisible() ? `<div class="bqi-kpi"><span class="l">Valeur de stock</span><span class="v">${fmtNum(IS_DEMO ? st.stockValue : st.stockCost)} MAD</span></div>` : ''}
           <div class="bqi-kpi"><span class="l">Pièces en stock</span><span class="v">${st.totalStock}</span></div>
           <div class="bqi-kpi ${st.low || st.ruptures ? 'warn' : ''}"><span class="l">Stock bas / rupture</span><span class="v">${st.low} + ${st.ruptures}</span></div>
         </div>

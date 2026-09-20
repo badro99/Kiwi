@@ -1445,6 +1445,12 @@
   const catLabel = (c) => {
     const built = t(`cat.${c}`);
     if (built && built !== `cat.${c}`) return built;
+    try {
+      if (isRetailStock() && window.KiwiBoutiqueCatalog) {
+        const retail = window.KiwiBoutiqueCatalog.listCategories().find((x) => String(x.id) === String(c));
+        if (retail) return retail.name || c;
+      }
+    } catch (_) {}
     const usr = stUserCategories.find(x => x.id === c);
     return usr ? usr.label : c;
   };
@@ -1457,6 +1463,48 @@
   }
   function currentVenueId() {
     return window.KiwiVenue?.getVenue?.() || 'cafeAtlas';
+  }
+  function isRetailStock() {
+    let type = '';
+    try { type = String(window.KiwiConfig?.type || window.KiwiVenue?.getVenueType?.() || '').toLowerCase(); } catch (_) {}
+    return ['boutique', 'maison', 'epicerie', 'pharmacie', 'librairie', 'fleuriste', 'pressing', 'autre'].includes(type);
+  }
+  function retailCatalog() {
+    const C = window.KiwiBoutiqueCatalog;
+    if (!C || !isRetailStock()) return null;
+    try {
+      const key = window.KiwiBoutiqueVenueKey?.() || stockBusinessSlug();
+      if (key && C.currentVenue?.() !== key) C.use(key);
+    } catch (_) {}
+    return C;
+  }
+  function retailProcurementDoc() {
+    try { return window.KiwiProcurement?.doc?.() || { suppliers: [], orders: [], receipts: [], returns: [], invoices: [] }; }
+    catch (_) { return { suppliers: [], orders: [], receipts: [], returns: [], invoices: [] }; }
+  }
+  function retailSupplierSpend(supplierId) {
+    const since = Date.now() - 30 * 86400000;
+    return (retailProcurementDoc().receipts || []).filter((r) => r.supplierId === supplierId && (+r.receivedAt || +r.createdAt || 0) >= since)
+      .reduce((sum, r) => sum + (r.lines || []).reduce((s, line) => s + (+line.qty || 0) * (+line.unitCost || 0), 0), 0);
+  }
+  function retailSetProductStock(productId, wanted, reason) {
+    const C = retailCatalog(); if (!C) return false;
+    wanted = Math.max(0, Math.round(+wanted || 0));
+    let variants = C.listVariants(productId) || [];
+    if (!variants.length) {
+      const created = C.addVariant({ productId, colorId: 'sans-couleur', colorLabel: 'Sans couleur', colorHex: '#A0A0A0', size: 'TU', stock: wanted });
+      return !!created;
+    }
+    let delta = wanted - variants.reduce((sum, v) => sum + (+v.stock || 0), 0);
+    if (!delta) return true;
+    if (delta > 0) { C.adjustStock(variants[0].id, delta, reason || 'ajust'); return true; }
+    let remove = -delta;
+    variants.slice().sort((a, b) => (+b.stock || 0) - (+a.stock || 0)).forEach((v) => {
+      if (!remove) return;
+      const qty = Math.min(remove, Math.max(0, +v.stock || 0));
+      if (qty) { C.adjustStock(v.id, -qty, reason || 'ajust'); remove -= qty; }
+    });
+    return remove === 0;
   }
   function stockBusinessSlug() {
     try {
@@ -1505,6 +1553,18 @@
     return filtered.map(it => (stItemOverrides[it.id] ? { ...it, ...stItemOverrides[it.id] } : it));
   }
   function getInv() {
+    const C = retailCatalog();
+    if (C) {
+      const suppliers = new Map((retailProcurementDoc().suppliers || []).map((s) => [String(s.id), s]));
+      return (C.listProducts() || []).map((p) => ({
+        id: p.id, name: p.name, category: p.categoryId || '_uncat', unit: 'pièce',
+        supplier: suppliers.get(String(p.supplierId || ''))?.name || '', supplierId: p.supplierId || '',
+        currentStock: C.productStock(p.id), parLevel: Math.max(0, +p.parLevel || 0),
+        reorderLevel: Math.max(0, +p.reorderLevel || 0), costPerUnit: Math.max(0, +p.cost || 0),
+        priceMAD: Math.max(0, +p.priceMAD || 0), usageThisWeek: 0, theoreticalUsage: 0,
+        lastDelivery: null, deliveryFrequency: '·', retail: true,
+      }));
+    }
     const V = window.KiwiVenue;
     if (!V?.getInventory) return [...stUserItems].map(normalizeStockItem);
     let base;
@@ -1521,6 +1581,14 @@
     return [...applyItemOverlay(base), ...applyItemOverlay(stUserItems)].map(normalizeStockItem);
   }
   function getSup() {
+    if (isRetailStock() && window.KiwiProcurement?.doc) {
+      return (retailProcurementDoc().suppliers || []).filter((s) => s && s.active !== false).map((s) => ({
+        id: s.id, name: s.name || 'Fournisseur', location: s.address || '', category: s.categories || '',
+        contact: s.phone || '', deliverySchedule: (+s.leadDays || 0) ? `${+s.leadDays} j` : '·',
+        paymentTerms: s.paymentTerms || '·', rating: null, monthlySpend: retailSupplierSpend(s.id),
+        priceChangeLast30d: 0, retail: true,
+      }));
+    }
     const base = window.KiwiVenue?.getSuppliers?.() || [];
     const filtered = base
       .filter(s => !stDeletedSups.has(s.id))
@@ -1528,6 +1596,8 @@
     return [...filtered, ...stUserSuppliers.filter(s => !stDeletedSups.has(s.id))];
   }
   function allCategories() {
+    const C = retailCatalog();
+    if (C) return (C.listCategories() || []).map((c) => ({ id: c.id, label: c.name || 'Catégorie' }));
     // Built-in slugs (mirror cat pill row + select options) + user-added.
     const builtin = [
       { id: 'viandes',      label: t('catViandes') },
@@ -1556,6 +1626,7 @@
     catch (_) { return ''; }
   }
   function ledgerOpeningFor(it) {
+    if (it?.retail) return +it.currentStock || 0;
     const legacy = stStockOverrides[it.id] != null ? stStockOverrides[it.id] : it.currentStock;
     try {
       const L = window.KiwiInventory;
@@ -1595,6 +1666,7 @@
 
   function moveStock(it, qty, reason, refType, refId, note, unitCost, meta) {
     if (!it || !qty) return null;
+    if (it.retail && retailCatalog()) return moveRetailStock(it, qty, reason, refType, refId);
     try {
       const L = window.KiwiInventory;
       if (stShowReal() && L && L.isReal && L.isReal()) {
@@ -1615,6 +1687,12 @@
     } catch (_) {}
     stStockOverrides[it.id] = currentStockFor(it) + qty;
     return null;
+  }
+
+  function moveRetailStock(it, qty, reason, refType, refId) {
+    const next = Math.max(0, currentStockFor(it) + (+qty || 0));
+    retailSetProductStock(it.id, next, reason || 'ajust');
+    return { itemId: it.id, qty: +qty || 0, reason: reason || 'ajust', refType: refType || 'manual', refId: refId || '' };
   }
 
   function countStock(it, counted, refId) {
@@ -1674,6 +1752,8 @@
     calendarDates: (ts, count) => stockCalendarDates(ts, count),
     alertState: stockAlertState,
     catalogue: () => { stEnsureOverlay(); return getInv(); },
+    suppliers: () => getSup(),
+    categories: () => allCategories(),
     overviewAlerts: (items) => overviewAlertRows(items),
     lastDelivery: actualLastDelivery,
   };
@@ -1868,7 +1948,7 @@
         ${tab('items',     'package',          t('tabItems'))}
         ${tab('suppliers', 'truck',            t('tabSuppliers'))}
         ${tab('orders',    'clipboardList',    t('tabOrders'))}
-        ${tab('forecast',  'sparkles',         t('tabForecast'), ultraPill)}
+        ${isRetailStock() ? '' : tab('forecast',  'sparkles',         t('tabForecast'), ultraPill)}
       </div>
     `;
   }
@@ -1935,6 +2015,21 @@
   function renderOverview() {
     const items = getInv();
     const { out, low, tierLow, alerts, totalAlertCount } = overviewAlertRows(items);
+    if (isRetailStock()) {
+      const d = retailProcurementDoc();
+      const since = Date.now() - 30 * 86400000;
+      const spend = (d.receipts || []).filter((r) => (+r.receivedAt || +r.createdAt || 0) >= since)
+        .reduce((sum, r) => sum + (r.lines || []).reduce((s, line) => s + (+line.qty || 0) * (+line.unitCost || 0), 0), 0);
+      const activeOrders = (d.orders || []).filter((o) => !['received', 'cancelled'].includes(o.status)).length;
+      return `
+        <div class="st-kpis">
+          <div class="st-kpi"><div class="st-kpi-l">${esc(t('kpiValueL'))}<span class="st-kpi-ico">${svg('wallet', 14)}</span></div><div class="st-kpi-v">${esc(fmtMad(totalValue(items)))}</div><div class="st-kpi-sub">${esc(t('kpiValueSub', items.length))}</div></div>
+          <div class="st-kpi"><div class="st-kpi-l">${esc(t('kpiAlertL'))}<span class="st-kpi-ico ${totalAlertCount ? 'warn' : 'ok'}">${svg('alertTriangle', 14)}</span></div><div class="st-kpi-v ${totalAlertCount ? 'warn' : 'ok'}">${totalAlertCount}</div><div class="st-kpi-sub">${esc(totalAlertCount ? t('kpiAlertSub', out.length, low.length + tierLow.length) : t('kpiAlertOk'))}</div></div>
+          <div class="st-kpi"><div class="st-kpi-l">ACHATS · 30 JOURS<span class="st-kpi-ico">${svg('receipt', 14)}</span></div><div class="st-kpi-v">${esc(fmtMad(spend))}</div><div class="st-kpi-sub">${(d.receipts || []).length} réception(s) enregistrée(s)</div></div>
+          <div class="st-kpi"><div class="st-kpi-l">COMMANDES EN COURS<span class="st-kpi-ico">${svg('truck', 14)}</span></div><div class="st-kpi-v">${activeOrders}</div><div class="st-kpi-sub">${getSup().length} fournisseur(s) actif(s)</div></div>
+        </div>
+        <div class="st-section"><div class="st-section-head"><h3>${esc(t('alertsT'))}</h3>${totalAlertCount ? `<span class="st-count-badge warn">${totalAlertCount}</span>` : ''}</div><div class="st-alerts">${alerts.length ? alerts.map(renderAlertCard).join('') : `<div style="padding:28px 16px;text-align:center;color:var(--n-500);font-size:13px;background:var(--paper-soft);border-radius:12px;border:1px solid var(--n-200);">${esc(t('alertsEmpty'))}</div>`}</div></div>`;
+    }
     const ok  = items.filter(it => statusOf(it) === 'ok');
     const totalVal = totalValue(items);
     const costMonth = foodCostMonth(items);
@@ -3544,10 +3639,20 @@
    * TAB 4 · Commandes
    * ═══════════════════════════════════════════════════════════════════════ */
   function renderOrders() {
-    /* Real / custom store → the demo purchase-orders (Boucherie Errazi, Centrale
-       Danone, "47 orders this month"…) are venue-independent hardcoded data, so
-       gate the whole tab to a clean empty state. Local demo keeps the fixtures. */
     if (stShowReal()) {
+      const d = retailProcurementDoc();
+      const suppliers = new Map((d.suppliers || []).map((s) => [String(s.id), s]));
+      const total = (row) => (row.lines || []).reduce((sum, line) => sum + (+line.qty || 0) * (+line.unitCost || 0), 0);
+      const statusLabel = (status) => ({ draft: 'Brouillon', sent: 'Envoyée', partial: 'Partielle', received: 'Reçue', cancelled: 'Annulée' }[status] || status || '·');
+      const active = (d.orders || []).filter((o) => !['received', 'cancelled'].includes(o.status));
+      const history = [
+        ...(d.orders || []).filter((o) => ['received', 'cancelled'].includes(o.status)).map((o) => ({
+          id: o.id, at: o.updatedAt || o.createdAt, supplierId: o.supplierId, total: total(o), status: statusLabel(o.status), number: o.number,
+        })),
+        ...(d.receipts || []).filter((r) => !r.orderId).map((r) => ({
+          id: r.id, at: r.receivedAt || r.createdAt, supplierId: r.supplierId, total: total(r), status: 'Reçue', number: r.number,
+        })),
+      ].sort((a, b) => (+b.at || 0) - (+a.at || 0));
       return `
       <div class="st-section">
         <div class="st-section-head" style="justify-content:space-between;">
@@ -3556,8 +3661,22 @@
           </div>
           <button class="st-btn primary" type="button" data-action="stock-new-order">${esc(t('ordNew'))}</button>
         </div>
-        <div style="color:var(--n-500); font-size:13px; padding:14px 2px;">${esc(t('ordEmpty'))}</div>
-      </div>`;
+        ${active.length ? `<div class="st-ord-list">${active.map((o) => `
+          <div class="st-ord-card">
+            <div class="st-ord-body">
+              <div class="st-ord-top"><span class="st-ord-id">${esc(o.number || o.id)}</span><span class="st-ord-when">${esc(o.expectedDate || '·')}</span><span class="st-ord-status ${o.status === 'partial' ? 'pending' : 'ok'}">${esc(statusLabel(o.status))}</span></div>
+              <div class="st-ord-items"><b>${esc(suppliers.get(String(o.supplierId))?.name || 'Fournisseur')}</b> · ${esc((o.lines || []).map((line) => `${line.name || line.itemId} ${line.qty} ${line.unit || ''}`).join(' · '))}</div>
+              <div class="st-ord-total">${esc(fmtMad(total(o)))}</div>
+            </div>
+          </div>`).join('')}</div>` : `<div style="color:var(--n-500); font-size:13px; padding:14px 2px;">${esc(t('ordEmpty'))}</div>`}
+      </div>
+      ${history.length ? `
+      <div class="st-section">
+        <div class="st-section-head"><h3>${esc(t('ordHistory'))}</h3></div>
+        <div class="st-tbl-wrap"><table class="st-sup-table"><thead><tr><th>DATE</th><th>${esc(t('colSupplier'))}</th><th class="r">${esc(t('mScanTotal'))}</th><th>${esc(t('colStatus'))}</th></tr></thead><tbody>
+          ${history.map((h) => `<tr><td>${esc(fmtDateShort(new Date(h.at || Date.now()).toISOString()))}</td><td><span class="st-sup-name">${esc(suppliers.get(String(h.supplierId))?.name || 'Fournisseur')}</span><div class="st-sup-deliv-sub">${esc(h.number || h.id)}</div></td><td class="r"><span class="st-sup-spend">${esc(fmtMad(h.total))}</span></td><td><span class="status-ok">${esc(h.status)}</span></td></tr>`).join('')}
+        </tbody></table></div>
+      </div>` : ''}`;
     }
     return `
       <div class="st-section">
@@ -6421,9 +6540,16 @@
     inlineBtn?.addEventListener('click', () => {
       const raw = (inlineInput?.value || '').trim();
       if (!raw) { inlineInput?.focus(); return; }
-      const id = 'usr-cat-' + raw.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 20) + '-' + Date.now().toString(36).slice(-4);
-      stUserCategories.push({ id, label: raw });
-      stSaveOverlay();
+      let id;
+      if (retailCatalog()) {
+        const created = retailCatalog().addCategory(raw, 'atlas');
+        id = created?.id;
+      } else {
+        id = 'usr-cat-' + raw.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 20) + '-' + Date.now().toString(36).slice(-4);
+        stUserCategories.push({ id, label: raw });
+        stSaveOverlay();
+      }
+      if (!id) return;
       // Rebuild the select preserving "+ Nouvelle…" option last, select new id.
       sel.innerHTML = renderCatOptions(id);
       inlineWrap.style.display = 'none';
@@ -6668,6 +6794,7 @@
         if (category === '__new__') category = existing?.category || 'legumes';
         const unit = stockUnit(scope.querySelector('[data-stock-add-unit]')?.value);
         const supplier = scope.querySelector('[data-stock-add-sup]')?.value || (existing?.supplier || '');
+        const supplierRow = getSup().find((s) => supplier === s.name || supplier.startsWith(`${s.name} ·`));
         const cur = parseFloat(scope.querySelector('[data-stock-add-current]')?.value);
         const par = parseFloat(scope.querySelector('[data-stock-add-par]')?.value);
         const reorder = parseFloat(scope.querySelector('[data-stock-add-reorder]')?.value);
@@ -6682,6 +6809,17 @@
 
         if (isEdit) {
           const before = currentStockFor(existing);
+          if (existing.retail && retailCatalog()) {
+            retailCatalog().updateProduct(existing.id, {
+              name, categoryId: category, cost: costPerUnit, supplierId: supplierRow?.id || '',
+              parLevel, reorderLevel,
+            });
+            retailSetProductStock(existing.id, currentStock, 'comptage');
+            closeTopModal();
+            window.Kiwi.toast(t('editItemToast', name), { type: 'success' });
+            if (stPageActive) render();
+            return;
+          }
           // Edit path: update overlay (or user item directly)
           if (existing.id.startsWith('usr-')) {
             const i = stUserItems.findIndex(x => x.id === existing.id);
@@ -6714,6 +6852,18 @@
           window.KiwiRestaurantRecipes?.recomputeForStock?.(existing.id, stOverlayScope());
           closeTopModal();
           window.Kiwi.toast(t('editItemToast', name) + stDemoNote(), { type: 'success' });
+          if (stPageActive) render();
+          return;
+        }
+
+        if (retailCatalog()) {
+          const product = retailCatalog().addProduct({
+            name, categoryId: category, cost: costPerUnit, priceMAD: 0,
+            supplierId: supplierRow?.id || '', parLevel, reorderLevel,
+          });
+          if (product) retailSetProductStock(product.id, currentStock, 'initial');
+          closeTopModal();
+          window.Kiwi.toast(t('addItemToast', name), { type: 'success' });
           if (stPageActive) render();
           return;
         }
@@ -6764,6 +6914,13 @@
     const scope = m?.el || topBackdrop();
     wireDismiss(scope);
     scope?.querySelector('[data-stock-delete-confirm]')?.addEventListener('click', () => {
+      if (it.retail && retailCatalog()) {
+        retailCatalog().archiveProduct(it.id, true);
+        closeTopModal();
+        window.Kiwi.toast(t('deleteItemToast', it.name), { type: 'info' });
+        if (stPageActive) render();
+        return;
+      }
       if (it.id.startsWith('usr-')) {
         stUserItems = stUserItems.filter(x => x.id !== it.id);
       } else {
@@ -6859,6 +7016,16 @@
       const monthlySpend = isNaN(spendRaw) ? 0 : spendRaw;
 
       if (isEdit) {
+        if (existing.retail && window.KiwiProcurement?.updateSupplier) {
+          window.KiwiProcurement.updateSupplier(existing.id, {
+            name, phone: contact, address: location, categories: category, paymentTerms,
+            leadDays: parseInt(deliverySchedule, 10) || 0,
+          });
+          closeTopModal();
+          window.Kiwi.toast(t('editSupToast', name), { type: 'success' });
+          if (stPageActive) render();
+          return;
+        }
         if (existing.id.startsWith('usr-')) {
           const i = stUserSuppliers.findIndex(x => x.id === existing.id);
           if (i >= 0) { stUserSuppliers[i] = { ...stUserSuppliers[i], name, category, contact, location, paymentTerms, deliverySchedule, rating, monthlySpend }; stSaveOverlay(); }
@@ -6868,6 +7035,14 @@
         }
         closeTopModal();
         window.Kiwi.toast(t('editSupToast', name) + stDemoNote(), { type: 'success' });
+        if (stPageActive) render();
+        return;
+      }
+
+      if (isRetailStock() && window.KiwiProcurement?.addSupplier) {
+        window.KiwiProcurement.addSupplier({ name, phone: contact, address: location, categories: category, paymentTerms, leadDays: parseInt(deliverySchedule, 10) || 0 });
+        closeTopModal();
+        window.Kiwi.toast(t('addSupToast', name), { type: 'success' });
         if (stPageActive) render();
         return;
       }
@@ -6902,6 +7077,13 @@
     const scope = m?.el || topBackdrop();
     wireDismiss(scope);
     scope?.querySelector('[data-stock-sup-delete-confirm]')?.addEventListener('click', () => {
+      if (s.retail && window.KiwiProcurement?.updateSupplier) {
+        window.KiwiProcurement.updateSupplier(s.id, { active: false });
+        closeTopModal();
+        window.Kiwi.toast(t('deleteSupToast', s.name), { type: 'info' });
+        if (stPageActive) render();
+        return;
+      }
       if (s.id.startsWith('usr-')) {
         stUserSuppliers = stUserSuppliers.filter(x => x.id !== s.id);
       } else {
@@ -6936,9 +7118,12 @@
     const submit = () => {
       const raw = (input?.value || '').trim();
       if (!raw) { input?.focus(); return; }
-      const id = 'usr-cat-' + raw.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 20) + '-' + Date.now().toString(36).slice(-4);
-      stUserCategories.push({ id, label: raw });
-      stSaveOverlay();
+      if (retailCatalog()) retailCatalog().addCategory(raw, 'atlas');
+      else {
+        const id = 'usr-cat-' + raw.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 20) + '-' + Date.now().toString(36).slice(-4);
+        stUserCategories.push({ id, label: raw });
+        stSaveOverlay();
+      }
       scope?.remove();
       window.Kiwi.toast(t('addCatToast', raw), { type: 'success' });
       if (stPageActive) render();
@@ -6984,6 +7169,13 @@
       if (allCategories().some(c => c.id !== categoryId && c.label.trim().toLocaleLowerCase() === name.toLocaleLowerCase())) {
         renameInput?.focus(); return;
       }
+      if (retailCatalog()) {
+        retailCatalog().renameCategory(categoryId, name);
+        closeTopModal();
+        window.Kiwi.toast(t('renameCatToast', name), { type: 'success' });
+        if (stPageActive) render();
+        return;
+      }
       stCategoryOverrides[categoryId] = { label: name, updatedAt: Date.now() };
       stSaveOverlay();
       closeTopModal();
@@ -6993,6 +7185,14 @@
     scope?.querySelector('[data-stock-cat-delete-confirm]')?.addEventListener('click', () => {
       const target = scope.querySelector('[data-stock-cat-replacement]')?.value || '';
       if (assigned.length && !target) return;
+      if (retailCatalog()) {
+        retailCatalog().deleteCategory(categoryId, { reassignTo: target || null });
+        if (stCatFilter === categoryId) stCatFilter = target || 'all';
+        closeTopModal();
+        window.Kiwi.toast(t('deleteCatToast', category.label), { type: 'info' });
+        if (stPageActive) render();
+        return;
+      }
       assigned.forEach((item) => {
         const userIndex = stUserItems.findIndex(candidate => candidate.id === item.id);
         if (userIndex >= 0) stUserItems[userIndex] = { ...stUserItems[userIndex], category: target, updatedAt: Date.now() };
@@ -7178,6 +7378,8 @@
       stockSyncPaint = setTimeout(() => { stockSyncPaint = 0; render(); }, 0);
     };
     window.KiwiInventory?.subscribe?.(repaintFromSharedStock);
+    window.KiwiBoutiqueCatalog?.subscribe?.(repaintFromSharedStock);
+    window.KiwiProcurement?.store?.subscribe?.(repaintFromSharedStock);
     window.addEventListener('storage', (e) => {
       if (e.key !== stOverlayKey()) return;
       stOverlayLoadedFor = null;

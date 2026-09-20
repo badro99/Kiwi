@@ -21,6 +21,14 @@ const MAX_AMOUNT_CENTS = 20000000; // 200,000 MAD in centimes
 const MAX_AMOUNT_DIRHAMS = 200000; // legacy ceiling
 const DISCOUNT_REASONS = new Set(['commercial', 'loyal-customer', 'kitchen-error', 'other']);
 
+async function ensureReceiptSchema(env) {
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS sale_receipts (
+    merchant TEXT NOT NULL, sale_id TEXT NOT NULL,
+    gross_ticket_cents INTEGER NOT NULL, consigned_cents INTEGER NOT NULL DEFAULT 0,
+    created_ts INTEGER NOT NULL, PRIMARY KEY (merchant, sale_id)
+  )`).run();
+}
+
 function json(obj, status) {
   return new Response(JSON.stringify(obj), {
     status: status || 200,
@@ -75,18 +83,38 @@ export async function onRequestPost({ request, env }) {
    * quand elle DIT ce qui l'a réglée, avec le montant d'avoir consommé et ses
    * lignes : zéro dirham de recette, un panier de vérité. */
   const storeCredit = settlementKind === 'store-credit';
+  const consignment = settlementKind === 'consignment';
+  const receivable = settlementKind === 'receivable';
   const creditAmountCents = Math.round(Number((b && b.creditAmountCents) || 0));
 
-  // Zero is legal only for an explicit complimentary close or a full store-credit settlement.
+  const hasTicketAmount = b && b.ticketAmountCents != null;
+  const ticketAmountCents = hasTicketAmount ? Math.round(Number(b.ticketAmountCents)) : null;
+  const consignedAmountCents = hasTicketAmount ? Math.round(Number(b.consignedAmountCents || 0)) : 0;
+  if (hasTicketAmount && (!Number.isSafeInteger(ticketAmountCents) || ticketAmountCents <= 0
+      || ticketAmountCents > MAX_AMOUNT_CENTS || !Number.isSafeInteger(consignedAmountCents)
+      || consignedAmountCents < 0 || consignedAmountCents > ticketAmountCents)) {
+    return json({ error: 'bad-ticket-amount' }, 400);
+  }
+
+  // Zero is legal only when the settlement explicitly explains why no revenue
+  // entered this ledger: gift, store credit, consignment, or receivable.
   if (amountCents < 0 || amountCents > MAX_AMOUNT_CENTS
-    || (amountCents === 0 && !complimentary && !storeCredit)
-    || (settlementKind && !complimentary && !storeCredit)) {
+    || (amountCents === 0 && !complimentary && !storeCredit && !consignment && !receivable)
+    || (settlementKind && !complimentary && !storeCredit && !consignment && !receivable)) {
     return json({ error: 'bad-amount' }, 400);
   }
   if (storeCredit && (amountCents !== 0
     || !Number.isSafeInteger(creditAmountCents) || creditAmountCents <= 0 || creditAmountCents > MAX_AMOUNT_CENTS
     || !Array.isArray(b && b.lines) || !b.lines.length)) {
     return json({ error: 'bad-store-credit-settlement' }, 400);
+  }
+  if (consignment && (amountCents !== 0 || !hasTicketAmount
+      || consignedAmountCents !== ticketAmountCents || !Array.isArray(b && b.lines) || !b.lines.length)) {
+    return json({ error: 'bad-consignment-settlement' }, 400);
+  }
+  if (receivable && (amountCents !== 0 || !hasTicketAmount
+      || !Array.isArray(b && b.lines) || !b.lines.length)) {
+    return json({ error: 'bad-receivable-settlement' }, 400);
   }
 
   const hasDiscount = b && (b.grossAmountCents != null || b.discountAmountCents != null || b.discountReason != null || b.actorId != null);
@@ -568,6 +596,30 @@ export async function onRequestPost({ request, env }) {
       expected: { amountCents: winningCents, method: winningMethod },
       received: { amountCents, method },
     }, 409);
+  }
+
+  /* Receipt value is a second immutable fact. It is deliberately outside the
+     sales amount: using gross ticket value as revenue would make consignment
+     and store-credit tickets overstate turnover. Existing deployments heal the
+     small table on first use. */
+  if (hasTicketAmount) {
+    try {
+      await ensureReceiptSchema(env);
+      const priorReceipt = await env.DB.prepare(
+        'SELECT gross_ticket_cents, consigned_cents FROM sale_receipts WHERE merchant = ? AND sale_id = ?'
+      ).bind(merchant, id).first();
+      if (priorReceipt && (Number(priorReceipt.gross_ticket_cents) !== ticketAmountCents
+          || Number(priorReceipt.consigned_cents || 0) !== consignedAmountCents)) {
+        return json({ error: 'sale-conflict', detail: 'conflicting-receipt-data', id }, 409);
+      }
+      if (!priorReceipt) {
+        await env.DB.prepare(
+          'INSERT OR IGNORE INTO sale_receipts (merchant, sale_id, gross_ticket_cents, consigned_cents, created_ts) VALUES (?, ?, ?, ?, ?)'
+        ).bind(merchant, id, ticketAmountCents, consignedAmountCents, ts).run();
+      }
+    } catch (error) {
+      return json({ error: 'receipt-write-failed', detail: String(error && error.message || error), id }, 503);
+    }
   }
 
   // ONLY after durable verification succeeds:
