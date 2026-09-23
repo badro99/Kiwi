@@ -120,5 +120,17 @@ assert.equal(settled[0].status, 200);
 assert.equal(settled[1].status, 200);
 assert.equal(settled[0].body.id, settled[1].body.id);
 assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM sales WHERE merchant=?').get(merchant).n, 11);
+// A voided payment releases its bill: the corrected payment is a new receipt,
+// and a replay of that correction stays one row.
+const voided = settled[0].body.id;
+sqlite.prepare("UPDATE sales SET void_ts=?, void_reason='erreur' WHERE id=?").run(at + 9000, voided);
+const correction = { ...concurrentBill, id: 'caisse-correction-87', ref: 'Table 6 #87', method: 'card', ts: at + 10000 };
+const corrected = await post(sale.onRequestPost, correction);
+assert.equal(corrected.status, 200, JSON.stringify(corrected.body));
+assert.equal(corrected.body.id, 'caisse-correction-87');
+assert.equal((await post(sale.onRequestPost, correction)).body.id, 'caisse-correction-87');
+const secondCorrection = await post(sale.onRequestPost, { ...correction, id: 'other-correction-87', method: 'cash', ts: at + 11000 });
+assert.equal(secondCorrection.status, 409, 'a live payment still holds the bill');
+assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM sales WHERE merchant=? AND void_ts IS NULL').get(merchant).n, 11);
 sqlite.close();
-console.log('✓ 11 distinct receipts: visit reuse, legacy recovery, two splits, concurrent cross-device and closed-visit replay');
+console.log('✓ 12 distinct receipts: visit reuse, legacy recovery, two splits, concurrent cross-device, closed-visit replay and re-payment after void');

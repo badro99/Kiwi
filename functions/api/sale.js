@@ -591,12 +591,24 @@ export async function onRequestPost({ request, env }) {
         .bind(merchant, claim.sale_id).first(); }
       catch (_) { return json({ error: 'settlement-in-flight' }, 503); }
       if (!first) return json({ error: 'settlement-in-flight' }, 503);
-      const firstCents = first.amount_cents == null ? Number(first.amount) * 100 : Number(first.amount_cents);
-      if (first.void_ts != null || firstCents !== amountCents || first.method !== method) {
-        await recordSaleConflict(env, merchant, id, amountCents, method);
-        return json({ error: 'sale-conflict', detail: 'same-bill-different-payment', id }, 409);
+      if (first.void_ts != null) {
+        /* A voided payment releases its bill: the cashier corrects the method
+           or amount and settles the same order number again. Only the voided
+           holder is replaced, so two corrections cannot both take the key. */
+        let moved = null;
+        try { moved = await env.DB.prepare(`UPDATE sale_settlement_keys SET sale_id = ?, created_ts = ?
+            WHERE merchant = ? AND session_id = ? AND order_number = ? AND business_day = ? AND sale_id = ?`)
+          .bind(id, Date.now(), merchant, effectiveSessionId, orderNumber(ref), businessDate(ts), first.id).run(); }
+        catch (_) { return json({ error: 'settlement-key-unavailable' }, 503); }
+        if (!Number(moved && moved.meta && moved.meta.changes)) return json({ error: 'settlement-in-flight' }, 503);
+      } else {
+        const firstCents = first.amount_cents == null ? Number(first.amount) * 100 : Number(first.amount_cents);
+        if (firstCents !== amountCents || first.method !== method) {
+          await recordSaleConflict(env, merchant, id, amountCents, method);
+          return json({ error: 'sale-conflict', detail: 'same-bill-different-payment', id }, 409);
+        }
+        return json({ ok: true, id: first.id, duplicateOf: first.id, requestedId: id, stored: true });
       }
-      return json({ ok: true, id: first.id, duplicateOf: first.id, requestedId: id, stored: true });
     }
   }
 
