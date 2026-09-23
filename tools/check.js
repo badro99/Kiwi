@@ -506,6 +506,7 @@ for (const test of [
   'serveur-menu-live-test.mjs',
   'menu-availability-test.mjs',
   'service-settlement-test.mjs',
+  'table-visit-reuse-test.mjs',
   'recipe-heal-test.js',
   'sale-line-v2-test.mjs',
   'sales-centime-precision-test.mjs',

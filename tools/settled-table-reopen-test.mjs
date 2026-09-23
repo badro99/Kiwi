@@ -156,7 +156,7 @@ ok('a normal tender cannot close a table when the ledger refused its sale',
     send: async () => ({ ok: true, number: 154, session: 'ses-13-154' }),
   } };
   const ctx = vm.createContext({ window: win, KiwiKitchenRelay: win.KiwiKitchenRelay,
-    tables, opTickets: new Map(), ticketNo: () => '154', reconcileReceiptOrderNumber() {},
+    tables, opTickets: new Map(), ticketNo: () => '154', reconcileReceiptOrderNumber() {}, settledVisitsFor: () => [],
     updateKdsCount() {}, kdsEl: { classList: { contains: () => false } },
     persistShift() {}, mode: 'salle', vrapView: '',
   });

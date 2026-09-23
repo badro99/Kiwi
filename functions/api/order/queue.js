@@ -2416,6 +2416,31 @@ async function createTicket(context, env, merchant, c, now) {
    * même les articles du comptoir, par l'autre chemin. En supprimant ce chemin,
    * il fallait réparer celui-ci. Un bon de caisse est une commande de la table
    * comme une autre ; il rejoint donc la même visite. */
+  /* ── MAIS PAS UNE VISITE DÉJÀ RÉGLÉE ─────────────────────────────────────
+   * « La visite ouverte de cette table » n'identifie pas une tablée. Quand la
+   * fermeture de la tablée précédente n'avait pas encore atteint le serveur
+   * (réseau du comptoir, rechargement), le premier bon de la tablée suivante
+   * rejoignait CETTE visite. Son règlement, rejoué ensuite par la caisse ou
+   * par la vente en attente, soldait le nouveau bon avec l'argent de l'ancien
+   * repas : la table disparaissait de la caisse et le bon n'existait plus
+   * nulle part comme dû (Pasta Corner, table 6, bon #86).
+   *
+   * La caisse sait quelles visites elle a encaissées ; elle les nomme. On les
+   * ferme ici SANS toucher `paid_ts` · fermer ne prouve aucun paiement, et la
+   * vente de l'ancienne tablée soldera ses propres bons en arrivant (sale.js
+   * ne solde que sa session quand une visite plus récente existe). */
+  const settledVisits = mode === 'table' && table && Array.isArray(c.settledSessions)
+    ? [...new Set(c.settledSessions.map((s) => String(s || '').trim()).filter((s) => SESSION_ID.test(s)))].slice(0, 20)
+    : [];
+  if (settledVisits.length && await isTillFor(context.request, env, merchant)) {
+    try {
+      await env.DB.prepare(
+        `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = 'settled-at-till'
+          WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open'
+            AND id IN (${settledVisits.map(() => '?').join(', ')})`
+      ).bind(now, merchant, table, ...settledVisits).run();
+    } catch (_) { /* never block a kitchen ticket on this repair */ }
+  }
   const ticketSession = mode === 'table' && table
     ? await ensureServiceTableSession(env, merchant, table, now) : null;
   const sessionId = ticketSession && ticketSession.id ? ticketSession.id : null;
@@ -2427,9 +2452,10 @@ async function createTicket(context, env, merchant, c, now) {
    * marquée prête en cuisine entre-temps, et un UPDATE la ferait reculer. */
   try {
     const dup = await env.DB.prepare(
-      'SELECT id, number, status FROM orders WHERE id = ? AND merchant = ?'
+      'SELECT * FROM orders WHERE id = ? AND merchant = ?'
     ).bind(id, merchant).first();
-    if (dup) return json({ ok: true, id: dup.id, number: dup.number, status: dup.status, replayed: true });
+    if (dup) return json({ ok: true, id: dup.id, number: dup.number, status: dup.status,
+      session: dup.session_id || undefined, replayed: true });
   } catch (_) { /* table absente → l'insertion ci-dessous tranchera */ }
 
   /* Même numérotation que le relais téléphone : un compteur durable par
@@ -2465,6 +2491,10 @@ async function createTicket(context, env, merchant, c, now) {
 
   let row = null;
   let lastErr = null;
+  /* La caisse attend la visite dans la réponse (relayToKitchen → timerSession)
+   * pour savoir à quelle tablée appartient l'addition avant le prochain
+   * sondage. On ne la rend que si la base l'a réellement enregistrée. */
+  let storedSession = null;
   for (const s of SHAPES) {
     try {
       row = await env.DB.prepare(`INSERT INTO orders (${s.cols}) SELECT ${s.vals}
@@ -2472,6 +2502,7 @@ async function createTicket(context, env, merchant, c, now) {
           WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open') ${RETURN_NUMBER}`)
         .bind(...head, ...s.mid, sessionId, sessionId, merchant, table).first();
       lastErr = null;
+      storedSession = s.cols.endsWith('session_id') ? sessionId : null;
       break;
     } catch (e) { lastErr = e; row = null; }
   }
@@ -2482,9 +2513,10 @@ async function createTicket(context, env, merchant, c, now) {
      * comme un renvoi tardif — jamais un deuxième bon. */
     try {
       const raced = await env.DB.prepare(
-        'SELECT id, number, status FROM orders WHERE id = ? AND merchant = ?'
+        'SELECT * FROM orders WHERE id = ? AND merchant = ?'
       ).bind(id, merchant).first();
-      if (raced) return json({ ok: true, id: raced.id, number: raced.number, status: raced.status, replayed: true });
+      if (raced) return json({ ok: true, id: raced.id, number: raced.number, status: raced.status,
+        session: raced.session_id || undefined, replayed: true });
     } catch (_) {}
     return json({ error: 'write-failed', detail: String((lastErr && lastErr.message) || lastErr) }, 500);
   }
@@ -2494,5 +2526,6 @@ async function createTicket(context, env, merchant, c, now) {
     merchant, orderId: id, orderNumber: (row && row.number) || 1,
     acceptedAt: now, sentAt: now,
   }));
-  return json({ ok: true, id, number: (row && row.number) || 1, status: 'accepted', total });
+  return json({ ok: true, id, number: (row && row.number) || 1, status: 'accepted', total,
+    session: (row && storedSession) || undefined });
 }

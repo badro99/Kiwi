@@ -182,6 +182,9 @@
         table: ticket.table || '',
         server: ticket.server || '',
         lines: lines,
+        /* Visites de cette table que la caisse a déjà encaissées : le serveur
+         * les ferme avant d'y rattacher le bon (voir createTicket, queue.js). */
+        settledSessions: Array.isArray(ticket.settledSessions) ? ticket.settledSessions.slice(0, 20) : undefined,
       },
     }, false);
   }

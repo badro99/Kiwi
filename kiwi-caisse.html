@@ -5629,7 +5629,7 @@
        pose le bon sur le serveur (file de secours hors ligne comprise) pour que
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
-  <script src="assets/kitchen-relay.js?v=7" defer></script>
+  <script src="assets/kitchen-relay.js?v=8" defer></script>
   <script src="assets/kitchen-print-queue.js?v=14" defer></script>
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
@@ -8026,6 +8026,28 @@
     function locallySettledVisit(id, session) {
       return !!session && journal.some(entry => entry && entry.visitClosed === true
         && entry.table === String(id) && entry.session === String(session));
+    }
+    /* The visits of this table already paid at this till. The first ticket of
+       a new party used to join the previous visit whenever that visit's close
+       had not reached the server yet; the old party's replayed settlement then
+       paid the new ticket and emptied the table (Pasta Corner, table 6, #86).
+       The queue closes these visits, without marking anything paid, before
+       it files the ticket. */
+    function settledVisitsFor(id) {
+      if (!id) return undefined;
+      return [...new Set(journal.filter(e => e && e.visitClosed === true && e.session
+        && e.table === String(id)).map(e => String(e.session)))].slice(-20);
+    }
+    /* A closed visit may only clear the bill it belonged to. The floor poll
+       hides a fresh visit for a minute after the previous party leaves, and a
+       poll read before "Envoyer en cuisine" can land after it: in both cases
+       the previous party's closure used to wipe the new party's bill. */
+    function billBelongsToOtherVisit(id, closedId) {
+      const own = String(tables[id]?.timerSession || '');
+      if (own && own !== String(closedId || '')) return true;
+      return kdsOrders.some(o => o && o.type === 'dineIn' && String(o.table) === String(id)
+        && !o.paid && o.opId && !o.session && o.opNum == null
+        && Date.now() - new Date(o.sentAt || 0).getTime() < 120000);
     }
     function locallySettledOrder(id, number) {
       if (number == null || String(number).trim() === '') return false;
@@ -12326,6 +12348,7 @@
           id: id,
           mode: order.type === 'dineIn' ? 'table' : 'takeout',
           table: order.table || '',
+          settledSessions: order.type === 'dineIn' ? settledVisitsFor(order.table) : undefined,
           server: order.server || '',
           lines: (order.relayLines || (order.items || []).map(i => ({
             /* Le relais doit porter la phrase d'options, pas seulement les
@@ -21329,6 +21352,7 @@
           const current = seats.get(tableKey(id));
           if (current && String(current.session) !== String(closed.id)) return;
           if (mode === 'order' && selectedId === id) return;
+          if (billBelongsToOtherVisit(id, closed.id)) return;
           tables[id].status = 'khawya';
           tables[id].covers = 0;
           resetTableTimer(tables[id]);
