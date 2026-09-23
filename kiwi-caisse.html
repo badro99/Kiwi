@@ -5586,6 +5586,7 @@
        serveur · c'est ce qui fait qu'un Z clôturé sur l'iPad du comptoir
        s'ouvre le lendemain sur le téléphone du patron. -->
   <script src="assets/day-report.js?v=13" defer></script>
+  <script src="assets/z-reconciliation.js?v=5" defer></script>
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js?v=3" defer></script>
@@ -15747,6 +15748,15 @@
         registerClosing = false;
         $('#cloture-modal').classList.add('is-open');
         toast('Clôture non enregistrée · poste conservé. Vérifiez le stockage puis réessayez.');
+        return;
+      }
+      const zQueued = !storeIsReal() ? { ok: true, demo: true } : await (window.KiwiZReconciliation
+        ? window.KiwiZReconciliation.queueClose(report, journal.filter(isReportableJournalEntry))
+        : Promise.resolve({ ok: false, reason: 'module-unavailable' }));
+      if (!zQueued || !zQueued.ok) {
+        registerClosing = false;
+        $('#cloture-modal').classList.add('is-open');
+        toast('Rapprochement Z non protégé · poste conservé. Vérifiez le stockage puis réessayez.');
         return;
       }
 

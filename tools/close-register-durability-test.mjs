@@ -23,9 +23,11 @@ async function exercise(persist) {
     $: (selector) => selector === '#clo-count' ? count : (selector === '#clo-card-z' ? cardZ : sheet),
     reconcileJournalSales() {}, syncSettledBusinessDay: async () => ({ ok: true, complete: true, count: 0 }),
     buildDayReport: () => report,
-    window: { KiwiDayReport: {
+    journal: [], isReportableJournalEntry: () => true,
+    storeIsReal: () => true,
+    window: { KiwiZReconciliation: { queueClose: async () => ({ ok: persist !== 'z-fails' }) }, KiwiDayReport: {
       save() { if (persist === 'throws') throw new Error('quota'); return report; },
-      load() { return persist === 'saved' ? report : null; },
+      load() { return persist === 'saved' || persist === 'z-fails' ? report : null; },
       isReal: () => true, flush() {},
     } },
     toast: (msg) => calls.toasts.push(msg), journalTotals: () => ({}), drawerExpected: () => 100,
@@ -39,7 +41,7 @@ async function exercise(persist) {
   return { calls, ctx };
 }
 
-for (const failure of ['not-written', 'throws']) {
+for (const failure of ['not-written', 'throws', 'z-fails']) {
   const { calls, ctx } = await exercise(failure);
   assert.equal(calls.cleared, 0, `${failure}: shift remains on disk`);
   assert.equal(calls.events, 0, `${failure}: no false close ledger event`);
@@ -51,4 +53,4 @@ const success = await exercise('saved');
 assert.equal(success.calls.cleared, 1, 'saved report permits shift cleanup');
 assert.equal(success.calls.events, 1, 'saved report emits one close event');
 assert.equal(success.calls.shown, 1, 'saved report opens the post-close print choice');
-console.log('close-register-durability-test: 13 checks passed');
+console.log('close-register-durability-test: 17 checks passed');
