@@ -21,7 +21,7 @@ button:disabled{opacity:.55;cursor:not-allowed}.row{display:flex;gap:10px;align-
 <h1>Accès agents</h1>
 <p>Créez des clés privées et limitées pour les agents qui travaillent sur Kiwi. Elles ne remplacent ni un compte propriétaire, ni une caisse, ni un code PIN.</p>
 <section><h2>Établissement</h2><label for="merchant">Choisir l’établissement</label><select id="merchant"></select>
-<p class="muted">Seul le propriétaire connecté peut créer ou révoquer ces clés.</p></section>
+<p class="muted" id="who">Le propriétaire connecté ou un opérateur God Mode nommé peut créer ces clés. Une clé opérateur dure 7 jours au plus et reste visible et révocable par le propriétaire.</p></section>
 <section><h2>Nouvelle clé</h2>
 <label for="label">Nom de l’agent</label><input id="label" maxlength="80" placeholder="Ex. Agent QA" autocomplete="off">
 <label for="days">Expiration</label><select id="days"><option value="7">7 jours</option><option value="30" selected>30 jours</option><option value="90">90 jours</option></select>
@@ -76,8 +76,12 @@ button:disabled{opacity:.55;cursor:not-allowed}.row{display:flex;gap:10px;align-
     if (!merchant) return;
     const result=await api('/api/agent/keys?merchant='+encodeURIComponent(merchant));
     $('keys').replaceChildren(); $('audit').replaceChildren();
+    // An operator may issue shorter keys than an owner; offer only what the server accepts.
+    for (const o of $('days').options) o.disabled = Number(o.value) > (Number(result.maxDays) || 90);
+    if ($('days').selectedOptions[0]?.disabled) $('days').value = '7';
+    if (result.as === 'operator') $('who').textContent = 'Mode opérateur God Mode · la clé expire en 7 jours au plus, le propriétaire la voit et peut la révoquer.';
     for (const k of result.keys) {
-      const box=item($('keys'), k.label+' · '+k.status, k.scopes.join(', ')+' · expire '+new Date(k.expires_ts).toLocaleDateString());
+      const box=item($('keys'), k.label+' · '+k.status+(k.issuer==='operator'?' · émise par God Mode':''), k.scopes.join(', ')+' · expire '+new Date(k.expires_ts).toLocaleDateString());
       const buttons=document.createElement('div'); buttons.className='row'; box.append(buttons);
       if (k.status !== 'revoked') for (const action of [k.status==='active'?'pause':'resume','revoke']) {
         const btn=document.createElement('button'); btn.type='button'; btn.className=action==='revoke'?'danger':'secondary';
@@ -113,9 +117,15 @@ button:disabled{opacity:.55;cursor:not-allowed}.row{display:flex;gap:10px;align-
   $('hide').onclick=()=>{clearTimeout(clearTokenTimer);$('token').value='';$('tokenBox').hidden=true;status('Clé effacée de l’écran.');};
   (async()=>{
     try {
-      const me=await api('/api/me');
-      if (!me.authenticated || !Array.isArray(me.stores) || !me.stores.length) throw new Error('Connectez-vous comme propriétaire d’un établissement.');
-      for (const s of me.stores) { const o=document.createElement('option');o.value=s.merchant;o.textContent=s.name||s.merchant;$('merchant').append(o); }
+      // God Mode opens this page with ?merchant=<slug>; the server decides whether
+      // the caller is that store's owner or a named operator.
+      const asked=(new URLSearchParams(location.search).get('merchant')||'').trim().slice(0,64);
+      const me=await api('/api/me').catch(()=>({}));
+      const stores=Array.isArray(me.stores)?me.stores.slice():[];
+      if (asked && !stores.some(s=>s.merchant===asked)) stores.unshift({merchant:asked,name:asked});
+      if (!stores.length) throw new Error('Connectez-vous comme propriétaire d’un établissement, ou ouvrez cette page depuis God Mode.');
+      for (const s of stores) { const o=document.createElement('option');o.value=s.merchant;o.textContent=s.name||s.merchant;$('merchant').append(o); }
+      if (asked) $('merchant').value=asked;
       await refresh();
     }catch(e){status(e.message);}
   })();

@@ -1,4 +1,4 @@
-import { json, activeAccountSession } from '../../auth/_lib.js';
+import { json, activeAccountSession, namedOperatorId } from '../../auth/_lib.js';
 
 export const SCOPES = ['overview:read', 'sales:read', 'catalog:read', 'hotel:read', 'clients:read', 'clients:create',
   'orders:read', 'tables:read', 'payments:read', 'cash:read', 'operations:read', 'operations:write'];
@@ -45,6 +45,9 @@ export async function ensureTables(env) {
     created_ts INTEGER NOT NULL, expires_ts INTEGER NOT NULL, last_used_ts INTEGER NOT NULL DEFAULT 0
   )`).run();
   await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_agent_keys_owner ON agent_keys (account_id, merchant)').run();
+  // Older D1 databases predate operator-issued keys. The column already exists
+  // on a fresh schema, so the ALTER fails there and that failure is expected.
+  try { await env.DB.prepare("ALTER TABLE agent_keys ADD COLUMN issuer TEXT NOT NULL DEFAULT 'owner'").run(); } catch (_) {}
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS agent_audit (
     id TEXT PRIMARY KEY, key_id TEXT NOT NULL, merchant TEXT NOT NULL,
     action TEXT NOT NULL, target_id TEXT NOT NULL, request_id TEXT NOT NULL,
@@ -65,6 +68,25 @@ export async function owner(request, env, merchant) {
     return { id: session.aid, epoch: Number(row.session_epoch) || 0, merchant };
   } catch (_) { return null; }
 }
+
+/* Who may issue keys for a store: its owner, or a NAMED God Mode operator.
+ * An operator key is held by the operator (account_id = operator id), not by
+ * the merchant's account: it works on a store with no owner account, it dies
+ * the moment that operator row is deleted, and it is capped at OPERATOR_DAYS.
+ * The owner still sees and can revoke it on agent-access.html. */
+export const OPERATOR_DAYS = 7;
+export async function issuer(request, env, merchant) {
+  const own = await owner(request, env, merchant);
+  if (own) return { kind: 'owner', ...own };
+  if (!env?.DB || !env?.AUTH_SECRET || !merchant) return null;
+  const op = await namedOperatorId(request, env);
+  if (!op) return null;
+  try {
+    const store = await env.DB.prepare('SELECT merchant FROM merchant_config WHERE merchant = ?').bind(merchant).first();
+    if (!store) return null;
+  } catch (_) { return null; }
+  return { kind: 'operator', id: op, epoch: 0, merchant };
+}
 export function sameOrigin(request) {
   const origin = request.headers.get('Origin');
   return !origin || origin === new URL(request.url).origin;
@@ -83,14 +105,19 @@ export async function authorize(request, env, scope) {
   let row;
   try {
     row = await env.DB.prepare(`SELECT k.*, m.account_id AS current_owner, m.status AS merchant_status,
-      a.status AS account_status, a.session_epoch AS current_epoch
+      a.status AS account_status, a.session_epoch AS current_epoch, o.id AS operator_id
       FROM agent_keys k JOIN merchant_config m ON m.merchant = k.merchant
-      JOIN accounts a ON a.id = k.account_id WHERE k.id = ?`).bind(parts[1]).first();
+      LEFT JOIN accounts a ON a.id = k.account_id
+      LEFT JOIN operators o ON o.id = k.account_id WHERE k.id = ?`).bind(parts[1]).first();
   } catch (_) { return null; }
   if (!row || row.status !== 'active' || row.merchant_status === 'suspended' ||
-      row.account_status === 'suspended' || row.current_owner !== row.account_id ||
-      Number(row.account_epoch) !== Number(row.current_epoch) ||
       Number(row.expires_ts) <= Date.now()) return null;
+  if (row.issuer === 'operator') {
+    // Deleting the operator in God Mode kills every key it issued.
+    if (!row.operator_id || row.operator_id !== row.account_id) return null;
+  } else if (row.account_status == null || row.account_status === 'suspended' ||
+      row.current_owner !== row.account_id ||
+      Number(row.account_epoch) !== Number(row.current_epoch)) return null;
   if ((scope.endsWith(':create') || scope.endsWith(':write')) && row.merchant_status !== 'active') return null;
   if (!equalHash(await hash(match[1]), row.token_hash)) return null;
   let scopes;

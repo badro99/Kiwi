@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { makeSession, sessionCookie } from '../functions/auth/_lib.js';
+import { makeSession, sessionCookie, operatorToken, operatorIdToken, OP_COOKIE, OPID_COOKIE } from '../functions/auth/_lib.js';
 import { onRequestGet as listKeys, onRequestPost as changeKeys } from '../functions/api/agent/keys.js';
 import { onRequestPost as query } from '../functions/api/agent/query.js';
 import { onRequestPost as action } from '../functions/api/agent/action.js';
@@ -180,6 +180,42 @@ sql.prepare('UPDATE accounts SET session_epoch=0 WHERE id=?').run(aid);
 check((await ownerKey({action:'revoke',merchant:'agent-shop',id})).status===200,'owner revokes');
 check((await runQuery({tool:'merchant_overview'},token)).status===403,'revocation effective');
 check((await ownerKey({action:'resume',merchant:'agent-shop',id})).status===404,'revocation irreversible');
+// God Mode: a NAMED operator may issue short keys for any existing store,
+// including one with no owner account; the owner sees and can revoke them.
+sql.prepare('INSERT INTO operators (id,label,salt,hash,created_ts) VALUES (?,?,?,?,?)').run('op-agent-test','QA op','s','h',now);
+sql.prepare('INSERT INTO merchant_config (merchant,features,name,status,updated_ts) VALUES (?,?,?,?,?)').run('legacy-shop','{}','legacy-shop','active',now);
+sql.prepare(`INSERT INTO orders (id,merchant,number,mode,table_no,total,lines,status,created_ts,updated_ts)
+  VALUES (?,?,?,?,?,?,?,?,?,?)`).run('order-legacy','legacy-shop',86,'table','6',120,'[]','accepted',now,now);
+const opGate=OP_COOKIE+'='+await operatorToken(secret);
+const opCookie=opGate+'; '+OPID_COOKIE+'='+await operatorIdToken(secret,'op-agent-test');
+const opKey=async(x,c=opCookie)=>out(await changeKeys({env,request:ownerReq('/api/agent/keys',x,c)}));
+check((await opKey({action:'create',merchant:'agent-shop',label:'Op agent',scopes:['orders:read'],expiresInDays:1},opGate)).status===401,
+  'unnamed operator cookie cannot mint');
+check((await opKey({action:'create',merchant:'agent-shop',label:'Op agent',scopes:['orders:read'],expiresInDays:8})).status===400,
+  'operator keys capped at 7 days');
+check((await opKey({action:'create',merchant:'ghost-shop',label:'Op agent',scopes:['orders:read'],expiresInDays:1})).status===401,
+  'operator cannot mint for an unknown store');
+const opMinted=await opKey({action:'create',merchant:'agent-shop',label:'Op agent',scopes:['orders:read','tables:read'],expiresInDays:7});
+check(opMinted.status===201 && opMinted.data.key.issuer==='operator','named operator mints for a store');
+check(sql.prepare('SELECT account_id FROM agent_keys WHERE id=?').get(opMinted.data.key.id).account_id==='op-agent-test',
+  'operator key held by the operator, not the owner');
+const opOrders=await runQuery({tool:'orders_list',from:day,to:day,merchant:'legacy-shop'},opMinted.data.token);
+check(opOrders.status===200 && opOrders.data.orders.length===1 && opOrders.data.orders[0].id==='order-own','operator key tenant-bound');
+check((await runQuery({tool:'sales_summary',from:day,to:day},opMinted.data.token)).status===403,'operator key keeps its scopes');
+const opList=await out(await listKeys({env,request:req('/api/agent/keys?merchant=agent-shop','GET',null,{Cookie:opCookie})}));
+check(opList.status===200 && opList.data.as==='operator' && opList.data.maxDays===7 &&
+  opList.data.keys.length===1 && opList.data.keys[0].issuer==='operator','operator lists only operator keys');
+const ownerList=await out(await listKeys({env,request:req('/api/agent/keys?merchant=agent-shop','GET',null,{Cookie:cookie})}));
+check(ownerList.data.keys.some(k=>k.id===opMinted.data.key.id && k.issuer==='operator'),'owner sees operator key');
+check((await ownerKey({action:'pause',merchant:'agent-shop',id:opMinted.data.key.id})).status===200,'owner can pause operator key');
+check((await runQuery({tool:'orders_list',from:day,to:day},opMinted.data.token)).status===403,'owner pause stops operator key');
+check((await opKey({action:'pause',merchant:'agent-shop',id})).status===404,'operator cannot touch owner keys');
+const legacy=await opKey({action:'create',merchant:'legacy-shop',label:'Legacy agent',scopes:['orders:read'],expiresInDays:3});
+check(legacy.status===201,'operator mints for a store without owner account');
+const legacyOrders=await runQuery({tool:'orders_list',from:day,to:day},legacy.data.token);
+check(legacyOrders.status===200 && legacyOrders.data.orders.length===1 && legacyOrders.data.orders[0].id==='order-legacy','legacy store readable');
+sql.prepare('DELETE FROM operators WHERE id=?').run('op-agent-test');
+check((await runQuery({tool:'orders_list',from:day,to:day},legacy.data.token)).status===403,'deleting the operator kills its keys');
 sql.prepare('UPDATE merchant_config SET account_id=? WHERE merchant=?').run(other,'agent-shop');
 sql.prepare('UPDATE agent_keys SET expires_ts=? WHERE id=?').run(now+86400000,readOnly.data.key.id);
 check((await runQuery({tool:'merchant_overview'},readOnly.data.token)).status===403,'ownership transfer denies old key');

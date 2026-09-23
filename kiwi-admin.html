@@ -2065,7 +2065,12 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       h('button', { class:'mini', onClick:function(e){ e.stopPropagation(); openCaisse(c); } }, 'Accéder à la caisse'),
       h('button', { class:'mini',
         title:'Accès support : l’ouverture ou la reprise du service nécessite une confirmation dans la caisse.',
-        onClick:function(e){ e.stopPropagation(); openCaisse(c, { direct:true }); } }, 'Accès caisse')
+        onClick:function(e){ e.stopPropagation(); openCaisse(c, { direct:true }); } }, 'Accès caisse'),
+      // Named operator only: the key is imputable, capped at 7 days, and the
+      // owner sees it on the same page (functions/api/agent/keys.js).
+      h('button', { class:'mini', disabled: SENIOR === false,
+        title:'Clé privée et limitée pour un agent (Claude, Codex) · 7 jours au plus',
+        onClick:function(e){ e.stopPropagation(); window.open('/agent-access.html?merchant=' + encodeURIComponent(c.merchant), '_blank'); } }, 'Clé agent')
     ];
     /* Le bouton de la LIGNE ferme la boutique de la ligne. Celui du compte est
        remonté sur la bande du propriétaire, où il désigne ce qu'il fait. */

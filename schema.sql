@@ -1744,7 +1744,10 @@ CREATE TABLE IF NOT EXISTS agent_keys (
   status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','paused','revoked')),
   created_ts INTEGER NOT NULL,
   expires_ts INTEGER NOT NULL,
-  last_used_ts INTEGER NOT NULL DEFAULT 0
+  last_used_ts INTEGER NOT NULL DEFAULT 0,
+  -- 'owner' (account_id = the store's owner account) or 'operator'
+  -- (account_id = a named God Mode operator id, key capped at 7 days).
+  issuer TEXT NOT NULL DEFAULT 'owner' CHECK(issuer IN ('owner','operator'))
 );
 CREATE INDEX IF NOT EXISTS idx_agent_keys_owner ON agent_keys (account_id, merchant);
 CREATE TABLE IF NOT EXISTS agent_audit (

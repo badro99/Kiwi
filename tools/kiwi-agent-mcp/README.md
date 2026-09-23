@@ -10,7 +10,14 @@ bounded tools to it without browser clicks, PIN entry, or a full-page dump.
    `https://kiwi-os.com/agent-access.html`. Choose a store, a label, scopes,
    and an expiry (maximum 90 days). Only a store with an explicit
    `merchant_config.account_id` matching the signed-in account can issue
-   keys. An operator or till cannot mint one.
+   keys this way. A till, staff PIN or the shared team passcode cannot mint one.
+
+   **From God Mode:** a named operator can use a store row's `··· → Clé agent`,
+   which opens `agent-access.html?merchant=<slug>`. Operator keys work on any
+   existing store (including one with no owner account), are capped at
+   **7 days**, are held by the operator's id, die when that operator is
+   deleted, and are listed on the owner's page, where the owner can pause or
+   revoke them.
 2. Copy the `kwa.` token **once**. Put it in a local secret manager. Never
    paste it into Git, a ticket, a screenshot, an agent chat, or a tracked MCP
    config. Losing it means revoke and rotate, not reveal.
