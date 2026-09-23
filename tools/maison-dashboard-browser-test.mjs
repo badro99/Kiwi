@@ -61,6 +61,13 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  if (pathname === '/api/z-reconciliation' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, rows: [{ business_day: '2026-09-21',
+      reported_cents: 150700, server_cents: 31400, missing_count: 9, status: 'mismatch' }],
+      conflicts: [] }));
+    return;
+  }
   if (pathname.startsWith('/api/')) {
     res.writeHead(pathname === '/api/me' ? 200 : 404, { 'Content-Type': 'application/json' });
     res.end(pathname === '/api/me' ? '{"authenticated":false}' : '{"error":"not-found"}');
@@ -88,6 +95,21 @@ try {
     }, selector);
     assert.ok(found, `missing UI control: ${selector}`);
   };
+  const waitForStable = async (selector) => {
+    await page.waitForSelector(selector);
+    await page.evaluate((query) => new Promise((resolve, reject) => {
+      const node = document.querySelector(query);
+      if (!node) return reject(new Error('missing stable UI: ' + query));
+      let quiet;
+      const observer = new MutationObserver(() => {
+        clearTimeout(quiet);
+        quiet = setTimeout(done, 300);
+      });
+      function done() { observer.disconnect(); resolve(); }
+      observer.observe(node, { childList: true, subtree: true, characterData: true });
+      quiet = setTimeout(done, 300);
+    }), selector);
+  };
   await page.setViewport({ width: 1440, height: 1000 });
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -107,12 +129,15 @@ try {
   });
   await page.goto(`http://localhost:${server.address().port}/dashboard.html`, { waitUntil: 'load', timeout: 30000 });
   await page.waitForFunction(() => window.KiwiVenue?.getCurrentVenueData?.()?.subtype === 'maison');
+  ok(!await page.$('#kiwi-z-reconciliation-alert'), 'closed-Z finances stay hidden before the dashboard PIN unlock');
   await page.evaluate(() => window.__kiwiLock.hide());
   await page.waitForFunction(() => /maison/i.test(document.querySelector('[data-hai-input]')?.placeholder || ''));
   await page.waitForFunction(() => document.querySelector('[data-bench-card]')?.classList.contains('is-empty-state'));
-  // Late language/account listeners must not repaint the original restaurant
-  // markup after the first correct Maison frame.
-  await new Promise((resolve) => setTimeout(resolve, 2200));
+  await page.waitForFunction(() => /1.?193,00 MAD/.test(document.querySelector('#kiwi-z-reconciliation-alert')?.textContent || ''));
+  ok(!!await page.$('#kiwi-z-reconciliation-alert'), 'Amira dashboard renders the synthetic closed-Z mismatch from the real UI module');
+  // Wait for the actual affected content to settle, not a fixed wall-clock
+  // delay that races a slow tab under the full check.js load.
+  await Promise.all(['[data-hai-input]', '[data-bench-card]', '[data-hero-amount]'].map(waitForStable));
 
   const state = await page.evaluate(() => ({
     venue: window.KiwiVenue.getCurrentVenueData(),
@@ -163,6 +188,7 @@ try {
   const supplierText = await page.$eval('.st-tab-body', (el) => el.textContent.replace(/\s+/g, ' ').trim());
   ok(/Atelier Amira/.test(supplierText) && !/Boucherie|Marché Central/i.test(supplierText), 'supplier tab uses the current Maison procurement register');
   await click('[data-action="stock-tab"][data-tab="orders"]');
+  await page.waitForFunction(() => /BL-AMIRA-7|Atelier Amira|réception/i.test(document.querySelector('.st-tab-body')?.textContent || ''));
   const orderText = await page.$eval('.st-tab-body', (el) => el.textContent.replace(/\s+/g, ' ').trim());
   ok(/BL-AMIRA-7|Atelier Amira|réception/i.test(orderText) && !/Boucherie|Marché Central/i.test(orderText), 'purchasing tab shows the Maison receipt instead of restaurant orders');
 
@@ -178,7 +204,7 @@ try {
 
   await page.evaluate(() => window.Kiwi.handlers['nav-returns']());
   if (process.env.KIWI_TEST_DEBUG) {
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    await page.waitForSelector('[data-credit-register]');
     const returnsDebug = await page.evaluate(async () => ({
       custom: window.KiwiVenue?.isCustom?.(), venue: window.KiwiVenue?.getVenue?.(),
       page: document.querySelector('.dash-genpage')?.textContent.replace(/\s+/g, ' ').trim().slice(0, 800) || '',
@@ -188,10 +214,9 @@ try {
     console.log(JSON.stringify({ returnsDebug, errors }, null, 2));
   }
   await page.waitForFunction(() => /AV-AMIRA-001/.test(document.querySelector('[data-credit-register]')?.textContent || ''));
-  // The live returns document may repaint this page once after the credit API
-  // has rendered. Do not open an editable modal until that background paint
-  // has settled, or the test can remove its own dialog mid-interaction.
-  await page.waitForNetworkIdle({ idleTime: 500, timeout: 5000 });
+  // The live returns document may repaint once after the credit API. Observe
+  // the actual register rather than unrelated network traffic or a fixed wait.
+  await waitForStable('[data-credit-register]');
   let creditText = await page.$eval('[data-credit-register]', (el) => el.textContent.replace(/\s+/g, ' ').trim());
   ok(/AV-AMIRA-001/.test(creditText) && /Cliente Amira/.test(creditText) && /Ticket 2042/.test(creditText) && /Vase Atlas/.test(creditText), 'owner credit register shows code, customer, original ticket and returned product');
   await page.type('#ret-credit-search', '2042');
@@ -199,19 +224,27 @@ try {
   await click('[data-action="credit-adjust"]');
   const confirmSelector = '.kiwi-backdrop [data-action="credit-adjust-confirm"]';
   await page.waitForSelector(confirmSelector, { visible: true });
-  await page.type('.kiwi-backdrop [data-credit-delta]', '-25');
-  await page.type('.kiwi-backdrop [data-credit-reason]', 'Correction vérifiée Amira');
-  await Promise.all([
-    page.waitForResponse((response) => response.url().endsWith('/api/store-credits') && response.request().method() === 'POST' && response.ok()),
-    page.evaluate((selector) => {
-      const button = document.querySelector(selector);
-      if (!button) throw new Error('missing visible credit confirmation');
-      return window.Kiwi.handlers['credit-adjust-confirm'](button);
-    }, confirmSelector),
-  ]);
+  // Fill the open dialog atomically. Slow per-keystroke typing can race the
+  // returns page's async repaint and leave the submit handler an empty input.
+  await page.evaluate(() => {
+    const root = document.querySelector('.kiwi-backdrop');
+    const delta = root.querySelector('[data-credit-delta]');
+    const reason = root.querySelector('[data-credit-reason]');
+    delta.value = '-25';
+    reason.value = 'Correction vérifiée Amira';
+    delta.dispatchEvent(new Event('input', { bubbles: true }));
+    reason.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  const correctionResponse = page.waitForResponse((response) => response.url().includes('/api/store-credits')
+    && response.request().method() === 'POST', { timeout: 15000 });
+  await click(confirmSelector);
+  ok((await correctionResponse).ok(), 'owner correction is submitted through the rendered confirmation control');
   await page.waitForFunction(() => /95(?:[,.]00)?\s*MAD/i.test(document.querySelector('[data-credit-register]')?.textContent || ''));
+  const remoteCredit = await page.evaluate(() => fetch('/api/store-credits?merchant=art-de-table-by-amira')
+    .then(response => response.json()).then(data => data.credits?.[0]?.balanceCents));
+  ok(remoteCredit === 9500, 'owner correction persisted the new balance in the server API');
   creditText = await page.$eval('[data-credit-register]', (el) => el.textContent.replace(/\s+/g, ' ').trim());
-  ok(/95(?:[,.]00)?\s*MAD/i.test(creditText), 'owner correction updates the credit balance through the server API');
+  ok(/95(?:[,.]00)?\s*MAD/i.test(creditText), 'owner correction updates the rendered credit balance');
 
   ok(errors.length === 0, 'Maison dashboard renders without uncaught browser errors: ' + errors.join(' | '));
   console.log(`\n✓ ${checks} rendered Maison dashboard checks passed.`);

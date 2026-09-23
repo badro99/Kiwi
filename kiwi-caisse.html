@@ -7220,10 +7220,15 @@
     /* ---------- Live clock ---------- */
     function tickClock() {
       const now = new Date();
-      const hh = String(now.getHours()).padStart(2, '0');
-      const mm = String(now.getMinutes()).padStart(2, '0');
-      const t = `${hh}:${mm}`;
-      const dateStr = `${dafrDays[now.getDay()]} ${now.getDate()} ${monthsEn[now.getMonth()]}`;
+      /* Never cache a numeric UTC offset: Casablanca switches civil time for
+         winter/Ramadan and the register must follow the same IANA zone as Z. */
+      const zone = window.KiwiDayReport?.timezone?.(currentMerchantSlug()) || 'Africa/Casablanca';
+      const t = new Intl.DateTimeFormat('fr-FR', {
+        timeZone: zone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+      }).format(now);
+      const dateStr = new Intl.DateTimeFormat('fr-FR', {
+        timeZone: zone, weekday: 'long', day: 'numeric', month: 'long'
+      }).format(now);
       $('#clock-time').textContent = t;
       $('#topbar-clock').textContent = t;
       $('#clock-date').textContent = dateStr;
