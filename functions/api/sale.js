@@ -12,6 +12,62 @@ import { storeSuspended, storeSubscriptionPending } from './_private.js';
 import { startOfDay } from './order/_lib.js';
 import { settleServiceTable, serviceVisitGuard } from './service/events.js';
 import { poke } from './_live.js';
+import { businessDate } from './_business-day.js';
+
+async function legacyPaymentId(merchant, legacyId, payment) {
+  const input = JSON.stringify([merchant, legacyId, payment.ref, payment.ts,
+    payment.amountCents, payment.method, payment.split || null]);
+  const bytes = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const suffix = Array.from(new Uint8Array(digest).slice(0, 12), b => b.toString(16).padStart(2, '0')).join('');
+  return legacyId.slice(0, 38) + '-' + suffix;
+}
+
+function orderNumber(ref) {
+  const text = String(ref || '').trim();
+  // A printed restaurant order number is a cross-device settlement key. A
+  // general receipt label is not: two independent payments may share one.
+  const match = text.match(/^(?:Table\s*\d+\s*#|(?:OP-)?#?)(\d+)$/i);
+  return match ? match[1] : '';
+}
+
+async function ensureVisitLink(env) {
+  const columns = await env.DB.prepare('PRAGMA table_info(sales)').all();
+  for (const name of ['session_id', 'split_flow_id']) {
+    if (!(columns.results || []).some(column => column.name === name)) {
+      try { await env.DB.prepare('ALTER TABLE sales ADD COLUMN ' + name + ' TEXT').run(); }
+      catch (error) { if (!/duplicate column/i.test(String(error))) throw error; }
+    }
+  }
+}
+async function recordSaleConflict(env, merchant, id, amountCents, method) {
+  try {
+    await env.DB.prepare(`CREATE TABLE IF NOT EXISTS sale_sync_conflicts (
+      merchant TEXT NOT NULL, sale_id TEXT NOT NULL, amount_cents INTEGER NOT NULL,
+      method TEXT NOT NULL, first_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL,
+      PRIMARY KEY (merchant, sale_id)
+    )`).run();
+    const at = Date.now();
+    await env.DB.prepare(`INSERT INTO sale_sync_conflicts
+      (merchant,sale_id,amount_cents,method,first_ts,updated_ts) VALUES(?,?,?,?,?,?)
+      ON CONFLICT(merchant,sale_id) DO UPDATE SET updated_ts=excluded.updated_ts`)
+      .bind(merchant, id, amountCents, method, at, at).run();
+  } catch (_) { /* The rejected receipt remains in the device outbox. */ }
+}
+async function claimRestaurantBill(env, merchant, sessionId, number, day, id) {
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS sale_settlement_keys (
+    merchant TEXT NOT NULL, session_id TEXT NOT NULL, order_number TEXT NOT NULL,
+    business_day TEXT NOT NULL,
+    sale_id TEXT NOT NULL, created_ts INTEGER NOT NULL,
+    PRIMARY KEY (merchant, session_id, order_number, business_day)
+  )`).run();
+  await env.DB.prepare(`INSERT OR IGNORE INTO sale_settlement_keys
+    (merchant,session_id,order_number,business_day,sale_id,created_ts) VALUES(?,?,?,?,?,?)`)
+    .bind(merchant, sessionId, number, day, id, Date.now()).run();
+  return await env.DB.prepare(`SELECT sale_id FROM sale_settlement_keys
+    WHERE merchant = ? AND session_id = ? AND order_number = ? AND business_day = ?`)
+    .bind(merchant, sessionId, number, day).first();
+}
 
 /* See the visit lookup in onRequestPost: tolerance between a payment's device
    timestamp and the server time its table visit was opened. */
@@ -201,9 +257,7 @@ export async function onRequestPost({ request, env }) {
     }
   }
 
-  /* A restaurant payment settles a VISIT, never a reusable table number.
-   * Both caisse and employee surfaces pass the same session id; deriving the
-   * ledger id from it makes a cross-device retry hit the same primary key. */
+  /* A visit links the payment to its table; it is never the payment key. */
   const rawSession = String((b && b.session) || '').trim().slice(0, 64);
   /* Older local split flows wrote `flow-*` into the queued sale as if it were
      a server table visit. Recover only that unmistakable client token when the
@@ -218,6 +272,11 @@ export async function onRequestPost({ request, env }) {
     || split.count < 1 || split.count > 50 || split.index < 0 || split.index >= split.count)) {
     return json({ error: 'bad-split' }, 400);
   }
+  if (split && split.flowId != null && !/^[A-Za-z0-9_-]{8,64}$/.test(String(split.flowId))) {
+    return json({ error: 'bad-split-flow' }, 400);
+  }
+  const splitFlowId = split && /^[A-Za-z0-9_-]{8,64}$/.test(String(split.flowId || ''))
+    ? String(split.flowId) : '';
 
   let serviceSession = null;
   const paymentTsForVisit = (() => {
@@ -299,12 +358,31 @@ export async function onRequestPost({ request, env }) {
   // assets/live-link.js) and INSERT OR IGNORE makes the retry a no-op. Callers
   // that send no id keep the old behaviour: a fresh row every time.
   const effectiveSessionId = (serviceSession && serviceSession.id) || requestedSession;
-  const splitPrefix = split && effectiveSessionId
-    ? ('visit-' + String(effectiveSessionId).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) + '-split-') : '';
-  const splitIds = splitPrefix ? Array.from({ length: split.count }, (_, i) => splitPrefix + i + '-emp') : [];
-  const id = splitPrefix ? splitIds[split.index] : (serviceSession
-    ? ('visit-' + String(serviceSession.id).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 52) + '-emp')
-    : (String((b && b.id) || '').slice(0, 64) || ('sale-' + ts + '-' + Math.random().toString(36).slice(2, 8))));
+  const legacyBase = effectiveSessionId
+    ? 'visit-' + String(effectiveSessionId).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 52) + '-emp' : '';
+  const legacySplit = split && effectiveSessionId
+    ? 'visit-' + String(effectiveSessionId).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) + '-split-' + split.index + '-emp' : '';
+  const splitIds = split && effectiveSessionId && !splitFlowId
+    ? Array.from({ length: split.count }, (_, i) => 'visit-' + String(effectiveSessionId).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) + '-split-' + i + '-emp') : [];
+  const suppliedId = String((b && b.id) || '').slice(0, 64);
+  const requestedId = splitIds.length ? legacySplit : (suppliedId || legacyBase || ('sale-' + ts + '-' + Math.random().toString(36).slice(2, 8)));
+  const isLegacyVisitId = requestedId === legacyBase || requestedId === legacySplit;
+  let id = requestedId;
+  if (isLegacyVisitId) {
+    // Deployed tills already have visit-keyed debts. Never mutate their queued
+    // payload. Map it to a permanent per-payment key on the server instead.
+    let anchor = null;
+    try { anchor = await env.DB.prepare(
+      'SELECT amount, amount_cents, method, ref, ts FROM sales WHERE merchant = ? AND id = ? LIMIT 1'
+    ).bind(merchant, requestedId).first(); }
+    catch (error) { return json({ error: 'db-verification-failed', detail: String(error) }, 503); }
+    const sameAnchor = anchor && (anchor.amount_cents != null ? Number(anchor.amount_cents) : Number(anchor.amount) * 100) === amountCents
+      && String(anchor.method || '') === method && String(anchor.ref || '') === ref
+      && (Number(anchor.ts) === ts || (!ref && (split && !splitFlowId || !Number.isFinite(rawTs))));
+    id = sameAnchor || (!anchor && (!suppliedId || suppliedId !== requestedId))
+      ? requestedId : await legacyPaymentId(merchant, requestedId,
+      { ref, ts: Number.isFinite(rawTs) && rawTs > 0 ? rawTs : ts, amountCents, method, split });
+  }
 
   /* The basket. Validated and re-serialised here rather than trusted: this is
    * client-supplied JSON going into a column the dashboard and the assistant
@@ -440,6 +518,7 @@ export async function onRequestPost({ request, env }) {
       : Math.round(Number(existing.amount || 0) * 100);
     const existingMethod = String(existing.method || '');
     if (existingCents !== amountCents || existingMethod !== method) {
+      await recordSaleConflict(env, merchant, id, amountCents, method);
       return json({
         error: 'sale-conflict',
         detail: 'conflicting-financial-data',
@@ -458,7 +537,7 @@ export async function onRequestPost({ request, env }) {
      together identify one payment; a second row with all four is a replay,
      not a sale. Split parts legitimately share all four and are excluded.
      A failed lookup changes nothing: the insert below still decides. */
-  if (!stored && !splitPrefix && ref) {
+  if (!stored && !split && ref) {
     let sameSettlement = null;
     try {
       sameSettlement = await env.DB.prepare(
@@ -473,12 +552,61 @@ export async function onRequestPost({ request, env }) {
     }
   }
 
+  // A waiter and a till can both submit the same printed bill under distinct
+  // IDs. The bill number plus the short concurrent settlement window catches
+  // that race without merging a later party or a different receipt on one visit.
+  if (!stored && !split && orderNumber(ref)) {
+    let candidates = [];
+    try { candidates = (await env.DB.prepare(
+      'SELECT id, ref FROM sales WHERE merchant = ? AND amount_cents = ? AND method = ? AND ts BETWEEN ? AND ? AND void_ts IS NULL LIMIT 30'
+    ).bind(merchant, amountCents, method, ts - 10000, ts + 10000).all()).results || []; }
+    catch (_) { /* old schema: exact-replay guard above still applies */ }
+    const duplicate = candidates.find(row => row.id !== id && orderNumber(row.ref) === orderNumber(ref));
+    if (duplicate) return json({ ok: true, id: duplicate.id, duplicateOf: duplicate.id, requestedId: id, stored: true });
+  }
+
+  if (!stored && !split && !ref && effectiveSessionId) {
+    try {
+      const duplicate = await env.DB.prepare(
+        `SELECT id FROM sales WHERE merchant = ? AND session_id = ? AND (ref IS NULL OR ref = '')
+          AND amount_cents = ? AND method = ? AND ts BETWEEN ? AND ? AND void_ts IS NULL LIMIT 1`
+      ).bind(merchant, effectiveSessionId, amountCents, method, ts - 10000, ts + 10000).first();
+      if (duplicate) return json({ ok: true, id: duplicate.id, duplicateOf: duplicate.id, requestedId: id, stored: true });
+    } catch (_) { /* absent on older schemas */ }
+  }
+
+  const hasVisitLink = !!(effectiveSessionId || splitFlowId);
+  if (hasVisitLink) {
+    try { await ensureVisitLink(env); }
+    catch (error) { return json({ error: 'db-visit-link-failed', detail: String(error) }, 503); }
+  }
+  if (!stored && !split && effectiveSessionId && orderNumber(ref)) {
+    let claim;
+    try { claim = await claimRestaurantBill(env, merchant, effectiveSessionId, orderNumber(ref), businessDate(ts), id); }
+    catch (_) { return json({ error: 'settlement-key-unavailable' }, 503); }
+    if (!claim || !claim.sale_id) return json({ error: 'settlement-key-unavailable' }, 503);
+    if (claim.sale_id !== id) {
+      let first = null;
+      try { first = await env.DB.prepare('SELECT id, amount_cents, amount, method, void_ts FROM sales WHERE merchant = ? AND id = ?')
+        .bind(merchant, claim.sale_id).first(); }
+      catch (_) { return json({ error: 'settlement-in-flight' }, 503); }
+      if (!first) return json({ error: 'settlement-in-flight' }, 503);
+      const firstCents = first.amount_cents == null ? Number(first.amount) * 100 : Number(first.amount_cents);
+      if (first.void_ts != null || firstCents !== amountCents || first.method !== method) {
+        await recordSaleConflict(env, merchant, id, amountCents, method);
+        return json({ error: 'sale-conflict', detail: 'same-bill-different-payment', id }, 409);
+      }
+      return json({ ok: true, id: first.id, duplicateOf: first.id, requestedId: id, stored: true });
+    }
+  }
+
   if (hasDiscount) {
     try {
       await env.DB.prepare(
-        'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents, gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-      ).bind(id, merchant, amount, method, label, ref, ts, lines, channel || null, amountCents,
-             grossAmountCents, discountAmountCents, discountReason, discountActorId).run();
+        `INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents, ${hasVisitLink ? 'session_id, split_flow_id, ' : ''}gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id) VALUES (${Array(hasVisitLink ? 16 : 14).fill('?').join(', ')})`
+      ).bind(...[id, merchant, amount, method, label, ref, ts, lines, channel || null, amountCents,
+             ...(hasVisitLink ? [effectiveSessionId || null, splitFlowId || null] : []),
+             grossAmountCents, discountAmountCents, discountReason, discountActorId]).run();
       stored = true;
     } catch (discountError) {
       const message = String((discountError && discountError.message) || discountError);
@@ -489,8 +617,9 @@ export async function onRequestPost({ request, env }) {
   }
   if (!stored) try {
     await env.DB.prepare(
-      'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).bind(id, merchant, amount, method, label, ref, ts, lines, channel || null, amountCents).run();
+      `INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents${hasVisitLink ? ', session_id, split_flow_id' : ''}) VALUES (${Array(hasVisitLink ? 12 : 10).fill('?').join(', ')})`
+    ).bind(...[id, merchant, amount, method, label, ref, ts, lines, channel || null, amountCents,
+      ...(hasVisitLink ? [effectiveSessionId || null, splitFlowId || null] : [])]).run();
   } catch (e) {
     const missing = String((e && e.message) || e);
     if (missing.includes('channel')) {
@@ -592,6 +721,7 @@ export async function onRequestPost({ request, env }) {
     : Math.round(Number(winning.amount || 0) * 100);
   const winningMethod = String(winning.method || '');
   if (winningCents !== amountCents || winningMethod !== method) {
+    await recordSaleConflict(env, merchant, id, amountCents, method);
     return json({
       error: 'sale-conflict',
       detail: 'conflicting-financial-data',
@@ -613,6 +743,7 @@ export async function onRequestPost({ request, env }) {
       ).bind(merchant, id).first();
       if (priorReceipt && (Number(priorReceipt.gross_ticket_cents) !== ticketAmountCents
           || Number(priorReceipt.consigned_cents || 0) !== consignedAmountCents)) {
+        await recordSaleConflict(env, merchant, id, amountCents, method);
         return json({ error: 'sale-conflict', detail: 'conflicting-receipt-data', id }, 409);
       }
       if (!priorReceipt) {
@@ -640,7 +771,14 @@ export async function onRequestPost({ request, env }) {
   let settlementPending = false;
   let splitComplete = !split;
   if (split) {
-    if (splitIds.length) {
+    if (splitFlowId) {
+      try {
+        const receipts = await env.DB.prepare(
+          'SELECT id FROM sales WHERE merchant = ? AND split_flow_id = ? AND void_ts IS NULL'
+        ).bind(merchant, splitFlowId).all();
+        splitComplete = new Set((receipts.results || []).map(row => row.id)).size === split.count;
+      } catch (_) { return json({ error: 'split-receipts-unavailable' }, 503); }
+    } else if (splitIds.length) {
       // Distinct, deterministic rows preserve each tender and make retries safe.
       // Closing depends on durable receipts, never on a client's pre-fetch count.
       try {

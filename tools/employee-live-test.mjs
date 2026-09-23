@@ -758,7 +758,7 @@ ok(liveLinkSource.includes("localStorage.getItem('kiwiEmployeeMerchant')")
 ok(!/markTablePaid\([^)]*['"]split['"]\)/.test(serviceSource)
   && /async\s+function\s+markSplitPartPaid\s*\(\s*partIdx\s*,\s*method\s*\)[\s\S]*?fetch\(\s*['"]\/api\/sale['"]/.test(serviceSource)
   && /employeePaymentId\([^)]*?:split:/.test(serviceSource)
-  && /split:\s*\{\s*index:\s*partIdx,\s*count:\s*flow\.parts\.length\s*\}/.test(serviceSource)
+  && /split:\s*\{\s*index:\s*partIdx,\s*count:\s*flow\.parts\.length,\s*flowId:\s*flow\.id\s*\}/.test(serviceSource)
   && /flow\.parts\.every\(part\s*=>\s*part\.paid\)/.test(serviceSource),
   "le partage d'addition employé enregistre chaque part avec sa vraie méthode (carte/cash) et préserve la ventilation");
 ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session de service expirée/.test(serviceSource),

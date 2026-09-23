@@ -432,8 +432,8 @@
     "sha": "c9d6036ca657c76e"
   },
   "assets/live-link.js": {
-    "v": "43",
-    "sha": "baf3c76dfbb14f70"
+    "v": "45",
+    "sha": "08a51a234d33802d"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -524,8 +524,8 @@
     "sha": "47b1d8a268c10551"
   },
   "assets/orderpro-inbox.js": {
-    "v": "25",
-    "sha": "f6c9a627a6991f92"
+    "v": "26",
+    "sha": "823e0b48d9899902"
   },
   "assets/orderpro-panel.js": {
     "v": "1",

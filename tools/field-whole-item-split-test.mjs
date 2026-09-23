@@ -22,6 +22,7 @@ function harness(overrides = {}) {
   };
   const calls = { toast: [], render: 0 };
   const context = vm.createContext({
+    window: { crypto: { randomUUID: () => 'fixture-split-flow' } },
     splitState: state, money, minor: v => Math.round(v * 100), major: v => v / 100,
     effectiveTipPct: () => overrides.tipPct || 0, phoneSessionOf: () => 'existing-visit',
     activeSaleDiscount: () => null, recordSale: () => null, markPaid() {}, selectedId: 'T7',

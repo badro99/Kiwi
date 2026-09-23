@@ -4853,7 +4853,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/platform-kernel.js?v=5" defer></script>
   <script src="assets/platform-ops.js?v=5" defer></script>
   <script src="assets/operations.js?v=10" defer></script>
-<script src="assets/live-link.js?v=43" defer></script>
+<script src="assets/live-link.js?v=45" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=272" defer></script>
   <!-- The staff-role catalogue the operator console files PINs against — it says
@@ -10342,6 +10342,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         total: state.total,
         parts: state.flow.parts,
         paidCount: state.flow.paidCount,
+        id: state.flow.id,
       });
     }
 
@@ -10354,6 +10355,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       splitState.flow = {
         parts: saved.parts,
         paidCount: saved.paidCount,
+        id: saved.id,
       };
       return true;
     }
@@ -10724,7 +10726,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           });
         }
       }
-      splitState.flow = { parts, paidCount: 0 };
+      splitState.flow = { parts, paidCount: 0, id: 'split-' + (window.crypto && window.crypto.randomUUID
+        ? window.crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2)) };
       $('#split-setup').hidden = true;
       $('#split-flow').hidden = false;
       renderSplitFlow();
@@ -10842,7 +10845,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
               merchant,
               table: tableId,
               session,
-              split: { index: partIdx, count: flow.parts.length },
+              split: { index: partIdx, count: flow.parts.length, flowId: flow.id },
               amount: Math.round(p.amount * 100) / 100,
               amountCents: Math.round(p.amount * 100),
               method: payMethod,

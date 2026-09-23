@@ -5558,7 +5558,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
   <script src="assets/caisse-pwa.js?v=544" defer></script>
-  <script src="assets/live-link.js?v=43" defer></script>
+  <script src="assets/live-link.js?v=45" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js?v=1" defer></script>
@@ -5634,7 +5634,7 @@
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=25" defer></script>
+  <script src="assets/orderpro-inbox.js?v=26" defer></script>
   <script src="assets/service-requests.js?v=1" defer></script>
   <script src="assets/caisse-menu-availability.js?v=4" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
@@ -13148,7 +13148,9 @@
         return;
       }
       const flowSession = (splitState.tableId && phoneSessionOf(splitState.tableId)) || ('flow-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7));
-      splitState.flow = { parts, paidCount: 0, session: flowSession };
+      splitState.flow = { parts, paidCount: 0, session: flowSession,
+        id: 'split-' + (window.crypto && window.crypto.randomUUID
+          ? window.crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2)) };
       $('#split-setup').hidden = true;
       $('#split-flow').hidden = false;
       renderSplitFlow();
@@ -13218,7 +13220,7 @@
       if (!p || p.paid) return;
       const tip = money(p.tip || 0);
       const base = money(p.base != null ? p.base : (p.amount - tip));
-      const splitInfo = { index: partIdx, count: splitState.flow.parts.length };
+      const splitInfo = { index: partIdx, count: splitState.flow.parts.length, flowId: splitState.flow.id };
       const entry = recordSale(base, method === 'carte' ? 'card' : 'cash',
         (splitState.sourceLabel || 'Table') + ' · part ' + (partIdx + 1), tip, p.lines,
         splitState.tableId || '', null, splitInfo);
@@ -14087,7 +14089,8 @@
         if (existingSale) { lastSaleId = existingSale.id; return existingSale; }
       }
       const entry = {
-        id: orderProSaleId || ('sale-' + Date.now() + '-' + journal.length),
+        id: orderProSaleId || ('sale-' + (window.crypto && window.crypto.randomUUID
+          ? window.crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2))),
         time: new Date(),
         label: label || 'Vente',
         /* Le reçu client, la caisse et la cuisine parlent du MÊME numéro de
@@ -14110,16 +14113,6 @@
         const visit = phoneSessionOf(settlementTable);
         if (visit) {
           entry.session = String(visit);
-          /* Match the server's visit-derived id before writing the local
-             journal. The employee feed then recognizes this caisse payment as
-             already present, while employee payments carry the same -emp id
-             and are imported exactly once. */
-          const splitIndex = (split && Number.isFinite(split.index)) ? Number(split.index) : null;
-          entry.id = splitIndex != null
-            ? ('visit-' + String(visit).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) + '-split-' + splitIndex + '-emp')
-            : ('visit-' + String(visit).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 52) + '-emp');
-        } else if (split && Number.isFinite(split.index)) {
-          entry.id = entry.id + '-split-' + Number(split.index);
         }
         entry.channel = tables[settlementTable] && tables[settlementTable].zone === 'terrasse' ? 'terrace' : 'dining';
       } else if (mode === 'vrap') {
@@ -14131,7 +14124,7 @@
         entry.id = entry.id + '-split-' + Number(split.index);
       }
       if (split && Number.isFinite(split.index) && Number.isFinite(split.count)) {
-        entry.split = { index: Number(split.index), count: Number(split.count) };
+        entry.split = { index: Number(split.index), count: Number(split.count), flowId: String(split.flowId || '') };
       }
       if (Array.isArray(lines) && lines.length) {
         entry.lines = lines.filter(l => l.kind !== 'formula-part').map(l => {
@@ -14157,14 +14150,6 @@
           }
           return saved;
         });
-      }
-      const existingVisitSale = settlementTable && entry.session
-        ? journal.find(row => row && row.id === entry.id) : null;
-      if (existingVisitSale) {
-        // A stale bill or second confirmation may reach this point after cash
-        // was already recorded. Reconcile the UI, never count the visit twice.
-        lastSaleId = existingVisitSale.id;
-        return existingVisitSale;
       }
       accountActiveDiscount(settlementTable);
       /* Le reçu se fige ICI, au moment de la vente. Si le propriétaire change
@@ -15538,6 +15523,25 @@
     }
     document.addEventListener('kiwi:money-sync', (event) => {
       const detail = event && event.detail || {};
+      if (detail.kind === 'sale' && detail.id) {
+        let changed = false;
+        journal.forEach((entry) => {
+          if (!entry || entry.kind === 'refund' || entry.origin) return;
+          const queuedId = String(entry.serverSaleId || window.KiwiLive?.saleIdFor?.(entry, currentMerchantSlug()) || '');
+          if (queuedId !== String(detail.id)) return;
+          if (detail.state === 'accepted') {
+            entry.serverSaleId = String(detail.serverId || detail.id);
+            delete entry.saleSyncPending;
+            delete entry.saleSyncError;
+          } else if (detail.state === 'blocked') {
+            entry.saleSyncPending = true;
+            entry.saleSyncError = 'sale-conflict';
+          }
+          changed = true;
+        });
+        if (changed) { try { persistShift(); } catch (_) {} }
+        return;
+      }
       if (detail.kind !== 'refund' || !detail.id) return;
       let changed = false;
       journal.forEach((entry) => {

@@ -80,7 +80,9 @@ const body = { merchant: MERCHANT, id: 'sale-ref-96-client', amount: 100, amount
 visit('tsx-original', '8', paidAt + 1000);
 const first = await post(body);
 check('the first delivery is stored', first.status === 200 && first.body && first.body.ok, JSON.stringify(first));
-check('it binds to the visit opened at payment time', first.body && first.body.id === 'visit-tsx-original-emp', first.body && first.body.id);
+check('it keeps its payment ID while linking to the visit opened at payment time',
+  first.body && first.body.id === body.id
+    && rows('SELECT session_id FROM sales WHERE id = ?', body.id)[0]?.session_id === 'tsx-original', first.body && first.body.id);
 
 /* 2. That visit closes. The next evening a NEW party sits at table 8, and the
       till replays its queue. */
@@ -88,7 +90,7 @@ exec("UPDATE table_sessions SET status = 'closed', closed_ts = ? WHERE id = 'tsx
 visit('tsx-next-evening', '8', now - 30 * MIN);
 const replay = await post(body);
 check('the replay is acknowledged', replay.status === 200 && replay.body && replay.body.ok, JSON.stringify(replay));
-check('the replay resolves to the ORIGINAL ledger row', replay.body && replay.body.id === 'visit-tsx-original-emp', JSON.stringify(replay.body));
+check('the replay resolves to the ORIGINAL ledger row', replay.body && replay.body.id === body.id, JSON.stringify(replay.body));
 const sameTicket = rows('SELECT id FROM sales WHERE merchant = ? AND ref = ?', MERCHANT, '96');
 check('the ledger still holds exactly one row for this payment', sameTicket.length === 1, JSON.stringify(sameTicket));
 const newParty = rows("SELECT status FROM table_sessions WHERE id = 'tsx-next-evening'")[0];

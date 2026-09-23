@@ -310,8 +310,8 @@
    * sondage suivant. Sinon on rejoue (la fermeture est idempotente), cinq fois
    * au plus, puis on le DIT au lieu de laisser la table se rallumer toute
    * seule toute la soirée. */
-  var pendingCloses = [];
-  var CLOSE_ATTEMPTS = 5;
+  var CLOSE_CHANNEL = 'restaurant-visit-close';
+  var closeSending = false;
   function normCloseTable(v) {
     return String(v == null ? '' : v).toLowerCase().replace(/^table\s*/, '').replace(/^t(?=\d+$)/, '');
   }
@@ -329,55 +329,62 @@
       key = 's:' + body.expectedSession;
     }
     else return;
-    var known = null;
-    pendingCloses.forEach(function (p) { if (p.key === key) known = p; });
-    if (!known) { known = { body: body, key: key, attempts: 0 }; pendingCloses.push(known); }
-    sendClose(known);
+    var offline = window.KiwiOffline;
+    if (!offline) return closeStorageWarning();
+    offline.enqueue(CLOSE_CHANNEL, m, body, { id: 'close:' + m + ':' + key })
+      .then(function () { return flushCloses(); })
+      .catch(closeStorageWarning);
   }
-  function sendClose(p) {
-    p.attempts++;
-    fetch('/api/order/queue', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(p.body),
-    /* `since = 0` REDEMANDE TOUT, volontairement. Fermer une table change des
-       lignes que le curseur n'aurait pas rapportées — une commande soldée ne
-       « change » pas au sens de updated_ts pour tout le monde — et la caisse
-       doit repartir d'une image complète plutôt que d'un delta qui la
-       laisserait avec une table éteinte d'un côté et vivante de l'autre.
-       C'est sûr parce que tout est idempotent : les tickets se reconnaissent
-       par `opId`, les lignes d'addition par leur marqueur `<id>:<rang>`. Ce
-       n'est donc pas une optimisation ratée, c'est une resynchronisation. */
-    }).then(function (r) { return r.ok ? r.json() : null; })
-      .then(function () { state.since = 0; return pull(); })
-      .then(function () { verifyCloses(); })
-      .catch(function () { /* le sondage régulier suivant re-vérifiera */ });
+  function closeStorageWarning() {
+    try { window.dispatchEvent(new CustomEvent('kiwi:outbox', { detail: { type: 'storage-error', channel: CLOSE_CHANNEL } })); } catch (_) {}
+    try {
+      var stack = document.getElementById('toast-stack');
+      if (stack) {
+        var el = document.createElement('div'); el.className = 'toast';
+        el.textContent = 'Fermeture de table non protégée · vérifiez le stockage de cette caisse';
+        stack.appendChild(el);
+      }
+    } catch (_) {}
   }
-  function verifyCloses() {
-    if (!pendingCloses.length) return;
+  function closeIsOpen(body) {
     var openIds = {}, seated = {};
     (state.sessions || []).forEach(function (s) {
       if (!s) return;
       if (s.id) openIds[String(s.id)] = 1;
       if (s.table) seated[normCloseTable(s.table)] = 1;
     });
-    pendingCloses = pendingCloses.filter(function (p) {
-      var done = p.body.closeSession
-        ? !openIds[String(p.body.closeSession)]
-        : !seated[normCloseTable(p.body.closeTable)];
-      if (done) return false;
-      if (p.attempts < CLOSE_ATTEMPTS) { sendClose(p); return true; }
-      try {
-        var stack = document.getElementById('toast-stack');
-        if (stack) {
-          var el = document.createElement('div'); el.className = 'toast';
-          el.textContent = 'Fermeture non confirmée par le serveur · la table peut se rallumer · réessaie de l’encaisser';
-          stack.appendChild(el);
-          setTimeout(function () { el.classList.add('fade'); }, 8000);
-          setTimeout(function () { el.remove(); }, 8300);
-        }
-      } catch (_) {}
-      return false;
-    });
+    return body.closeSession ? !!openIds[String(body.closeSession)]
+      : !!seated[normCloseTable(body.closeTable)];
+  }
+  function verifyCloses() {
+    var m = merchant(), offline = window.KiwiOffline;
+    if (!m || !offline) return;
+    offline.list(CLOSE_CHANNEL, m).then(function (rows) {
+      return Promise.all(rows.map(function (row) {
+        return closeIsOpen(row.payload) ? null : offline.acknowledge(row.id);
+      }));
+    }).then(function () { flushCloses(); }).catch(closeStorageWarning);
+  }
+  function flushCloses() {
+    var m = merchant(), offline = window.KiwiOffline;
+    if (!m || !offline || closeSending || navigator.onLine === false) return Promise.resolve();
+    closeSending = true;
+    return offline.claim(CLOSE_CHANNEL, m).then(function (row) {
+      if (!row) return;
+      return fetch('/api/order/queue', {
+        method: 'POST', credentials: 'same-origin', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(row.payload),
+      }).then(function (response) {
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        state.since = 0;
+        return pull().then(function (fresh) {
+          if (fresh < 0 || closeIsOpen(row.payload)) throw new Error('close-unconfirmed');
+          return offline.acknowledge(row.id, row.leaseToken);
+        });
+      }).catch(function (error) {
+        return offline.reject(row.id, row.leaseToken, { error: String(error.message || error) });
+      });
+    }).catch(closeStorageWarning).finally(function () { closeSending = false; });
   }
 
   /* ── attention: a new order must not be missable on a busy counter ────── */

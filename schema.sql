@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS sales (
   label    TEXT,               -- "À emporter #12", "Table 4", …
   ref      TEXT,               -- caisse receipt ref
   ts       INTEGER NOT NULL,   -- epoch ms of the sale
+  session_id TEXT,              -- restaurant visit link, never a payment identity
+  split_flow_id TEXT,           -- one bill split; distinct even when a stale visit is reused
   -- What was actually in the basket: JSON [{n:name, q:qty, t:total}], capped at
   -- 40 lines. NULL for every row written before this column existed, and for
   -- any surface that genuinely has no line detail (a payment link, a hotel
@@ -1762,3 +1764,42 @@ CREATE TABLE IF NOT EXISTS agent_audit (
   UNIQUE (key_id, request_id)
 );
 CREATE INDEX IF NOT EXISTS idx_agent_audit_merchant ON agent_audit (merchant, created_ts);
+
+-- Closed-register comparison only. It never creates sales or reconstructs receipts.
+CREATE TABLE IF NOT EXISTS z_reconciliations (
+  merchant TEXT NOT NULL,
+  business_day TEXT NOT NULL,
+  terminal_id TEXT NOT NULL,
+  reported_count INTEGER NOT NULL,
+  reported_cents INTEGER NOT NULL,
+  server_count INTEGER NOT NULL,
+  server_cents INTEGER NOT NULL,
+  missing_count INTEGER NOT NULL,
+  missing_cents INTEGER NOT NULL,
+  mismatch_count INTEGER NOT NULL,
+  extra_count INTEGER NOT NULL,
+  status TEXT NOT NULL,
+  result_json TEXT NOT NULL,
+  updated_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, business_day, terminal_id)
+);
+
+CREATE TABLE IF NOT EXISTS sale_sync_conflicts (
+  merchant TEXT NOT NULL,
+  sale_id TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL,
+  method TEXT NOT NULL,
+  first_ts INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, sale_id)
+);
+
+CREATE TABLE IF NOT EXISTS sale_settlement_keys (
+  merchant TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  order_number TEXT NOT NULL,
+  business_day TEXT NOT NULL,
+  sale_id TEXT NOT NULL,
+  created_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, session_id, order_number, business_day)
+);

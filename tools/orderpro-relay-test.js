@@ -501,9 +501,11 @@ async function get(fn, qs, headers = {}) {
   r = await get(queueGet, 'merchant=' + SLUG + '&since=0', asStaff);
   ok('…et la caisse la reçoit dans les fermetures durables',
     Array.isArray(r.body.closedSessions) && r.body.closedSessions.some((s) => s.id === closeVisit));
-  ok('la caisse rejoue une fermeture non confirmée au lieu de la croire',
-    /pendingCloses/.test(inboxPage) && /CLOSE_ATTEMPTS = 5/.test(inboxPage)
-      && /Fermeture non confirmée/.test(inboxPage));
+  ok('la caisse conserve et rejoue une fermeture non confirmée dans le durable outbox',
+    /CLOSE_CHANNEL = 'restaurant-visit-close'/.test(inboxPage)
+      && /offline\.enqueue\(CLOSE_CHANNEL/.test(inboxPage)
+      && /offline\.claim\(CLOSE_CHANNEL/.test(inboxPage)
+      && /closeIsOpen\(row\.payload\)/.test(inboxPage));
 
   r = await post(placeOrder, { merchant: SLUG, mode: 'takeout', session: t1, lines: [line('i2')] });
   const rejId = r.body.id;

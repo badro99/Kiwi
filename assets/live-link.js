@@ -203,12 +203,25 @@
     try { localStorage.setItem(PING_KEY, Date.now() + ':' + Math.random().toString(36).slice(2)); } catch (_) {}
     try { if (chan) chan.postMessage('sale'); } catch (_) {}
   }
-  function moneySignal(body, state, status) {
+  function canonicalSaleId(merchantId, requested) {
+    try { return JSON.parse(localStorage.getItem('kiwi:sale-aliases:' + merchantId) || '{}')[requested] || requested; }
+    catch (_) { return requested; }
+  }
+  function moneySignal(body, state, status, serverId) {
     if (!body || !body.id) return;
+    if (state === 'accepted' && body.kind !== 'refund' && serverId && serverId !== body.id) {
+      try {
+        var key = 'kiwi:sale-aliases:' + body.merchant;
+        var aliases = JSON.parse(localStorage.getItem(key) || '{}');
+        aliases[body.id] = String(serverId).slice(0, 64);
+        localStorage.setItem(key, JSON.stringify(aliases));
+      } catch (_) {}
+    }
     try {
       window.dispatchEvent(new CustomEvent('kiwi:money-sync', { detail: {
         id: String(body.id), kind: body.kind === 'refund' ? 'refund' : 'sale',
         state: String(state || ''), status: Number(status) || 0,
+        serverId: String(serverId || body.id),
       } }));
     } catch (_) {}
   }
@@ -388,7 +401,8 @@
         error: String((data && data.error) || ('HTTP ' + response.status)).slice(0, 96),
       };
       // 2xx accepts the receipt, but only the body proves settlement completed.
-      return { complete: !!(data && data.ok && !data.settlementPending), pending: !!(data && data.ok && data.settlementPending), error: '' };
+      return { complete: !!(data && data.ok && !data.settlementPending), pending: !!(data && data.ok && data.settlementPending),
+        error: '', id: String((data && data.id) || '') };
     }).catch(function () {
       // An unreadable acknowledgement stays retryable under the original ID.
       return { complete: false, pending: false, error: response.ok ? 'unverified-response' : ('HTTP ' + response.status) };
@@ -482,7 +496,7 @@
     flushing = true;
     var attemptedAt = Date.now();
     return new Promise(function (resolve) {
-      function done(settled, blocked, status, pending, error) {
+      function done(settled, blocked, status, pending, error, serverId) {
         flushing = false;
         lastSyncStatus = status || 0;
         lastSyncError = settled ? '' : (error || (pending ? 'settlement-pending' : (status ? 'HTTP ' + status : 'server-unreachable')));
@@ -493,7 +507,7 @@
         if (settled) {
           var rest = current.filter(function (x) { return x && x.id !== body.id; });
           qWrite(rest);
-          moneySignal(body, 'accepted', status);
+          moneySignal(body, 'accepted', status, serverId);
           pingLocal();                           // the row exists now — tell the dashboards
           if (rest.some(function (x) { return x && !x._blocked; })) return resolve(flushLegacyQueue());
           return resolve(queueStatus());
@@ -542,10 +556,10 @@
              transient sale-session race. Sales retain their existing 409
              retry behavior for session synchronization. */
           var BLOCK = { 400: 1, 422: 1 };
-          if (body && body.kind === 'refund') BLOCK[409] = 1;
           return paymentCompletion(r).then(function (result) {
             if (timeoutId) clearTimeout(timeoutId);
-            done(result.complete, !!(r && BLOCK[r.status]), r && r.status, result.pending, result.error);
+            done(result.complete, !!(r && (BLOCK[r.status] || r.status === 409
+              && (body.kind === 'refund' || result.error === 'sale-conflict'))), r && r.status, result.pending, result.error, result.id);
           });
         }).catch(function (err) {
           if (timeoutId) clearTimeout(timeoutId);
@@ -574,7 +588,7 @@
         });
       }
       var body = row.payload;
-      function settle(ok, permanent, status, error) {
+      function settle(ok, permanent, status, error, serverId) {
         lastSyncStatus = status || 0;
         lastSyncError = ok ? '' : (error || (status ? 'HTTP ' + status : 'network'));
         if (status === 401 || status === 403) { authRetryAt = Date.now() + 60000; authRetryMerchant = body.merchant; }
@@ -585,7 +599,7 @@
         return action.then(function () {
           flushing = false;
           flushStartedAt = 0;
-          if (ok) { moneySignal(body, 'accepted', status); pingLocal(); }
+          if (ok) { moneySignal(body, 'accepted', status, serverId); pingLocal(); }
           else {
             moneySignal(body, permanent ? 'blocked' : 'retry', status);
             if (!permanent) scheduleRecovery();
@@ -601,11 +615,11 @@
       var timeoutId = controller ? setTimeout(function () { controller.abort(); }, 12000) : null;
       return moneyRequest(body, controller).then(function (response) {
         var BLOCK = { 400: 1, 422: 1 };
-        if (body && body.kind === 'refund') BLOCK[409] = 1;
         return paymentCompletion(response).then(function (result) {
           if (timeoutId) clearTimeout(timeoutId);
-          return settle(result.complete, !!BLOCK[response.status], response.status,
-            result.pending ? 'settlement-pending' : (result.error || (response.ok ? 'unverified-response' : 'HTTP ' + response.status)));
+          return settle(result.complete, !!(BLOCK[response.status] || response.status === 409
+            && (body.kind === 'refund' || result.error === 'sale-conflict')), response.status,
+            result.pending ? 'settlement-pending' : (result.error || (response.ok ? 'unverified-response' : 'HTTP ' + response.status)), result.id);
         });
       }).catch(function (err) {
         if (timeoutId) clearTimeout(timeoutId);
@@ -824,6 +838,7 @@
     if (entry.table) body.table = String(entry.table).slice(0, 32);
     if (entry.split && Number.isInteger(Number(entry.split.index)) && Number.isInteger(Number(entry.split.count))) {
       body.split = { index: Number(entry.split.index), count: Number(entry.split.count) };
+      if (entry.split.flowId) body.split.flowId = String(entry.split.flowId).slice(0, 64);
     }
     if (entry.discountAmountCents != null) {
       body.grossAmountCents = Math.round(Number(entry.grossAmountCents));
@@ -1604,6 +1619,7 @@
     /* Unique identifier formula for sales rows in D1. Deterministic across all
        surfaces (dashboard, caisses, reprints) to guarantee 1 sale = 1 invoice. */
     saleIdFor: function (entry, m) { return stableId(m || merchant(), entry); },
+    canonicalSaleId: canonicalSaleId,
     status: function () {
       return {
         on: on(), merchant: merchant(), lastSync: lastSync,

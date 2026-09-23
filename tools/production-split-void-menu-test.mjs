@@ -625,6 +625,7 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
   db.prepare("INSERT INTO orders VALUES (?, ?, ?, ?, 'kiwi', 'Hafid', NULL, ?, ?)").run('ord-table-5', merchant, 'sess-table-5', '5', Date.now(), Date.now());
 
   const tillCookie = await tillToken(AUTH_SECRET, merchant, 7);
+  const splitPaidAt = Date.now();
 
   async function postSale(body) {
     const req = new Request('https://kiwi.test/api/sale', {
@@ -647,6 +648,7 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
     amount: 35,
     amountCents: 3500,
     method: 'card',
+    ts: splitPaidAt,
     label: 'Table 5 · part 1',
     split: { index: 0, count: 2 },
   });
@@ -659,19 +661,24 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
   const orderAfterPart1 = db.prepare('SELECT paid_ts FROM orders WHERE id = ?').all('ord-table-5');
   ok(orderAfterPart1[0].paid_ts === null, 'Table order remains unpaid after Part 1');
 
-  // 2. Conflicting retry of Part 1 (different amount)
+  // 2. A deployed legacy visit ID can represent a different payment. Recover
+  // it under a deterministic derived key instead of leaving a till at 409.
   const conflictRetry = await postSale({
     table: '5',
     session: 'sess-table-5',
     amount: 40,
     amountCents: 4000,
     method: 'card',
+    ts: splitPaidAt,
     label: 'Table 5 · part 1',
     split: { index: 0, count: 2 },
   });
-  ok(conflictRetry.status === 409, 'Conflicting retry with different amount is rejected with 409 Conflict');
-  ok(conflictRetry.data.error === 'sale-conflict', 'Error response reports sale-conflict');
-  ok(conflictRetry.data.detail === 'conflicting-financial-data', 'Error response details conflicting-financial-data');
+  ok(conflictRetry.status === 200, 'Different legacy visit payment is recovered with 200 OK');
+  ok(conflictRetry.data.id !== part1.data.id, 'Recovered legacy payment gets its own deterministic ID');
+  const recoveredAgain = await postSale({ table: '5', session: 'sess-table-5', amount: 40,
+    amountCents: 4000, method: 'card', ts: splitPaidAt,
+    label: 'Table 5 · part 1', split: { index: 0, count: 2 } });
+  ok(recoveredAgain.data.id === conflictRetry.data.id, 'Recovered legacy payment remains idempotent');
 
   // 3. Idempotent retry of Part 1 (identical financial data)
   const idempotentRetry = await postSale({
@@ -680,6 +687,7 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
     amount: 35,
     amountCents: 3500,
     method: 'card',
+    ts: splitPaidAt,
     label: 'Table 5 · part 1',
     split: { index: 0, count: 2 },
   });
@@ -705,9 +713,9 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
   ok(orderAfterPart2[0].paid_ts !== null, 'Table order is settled and marked paid after Part 2');
 
   const persistedSales = db.prepare('SELECT id, amount, amount_cents, method FROM sales WHERE merchant = ? ORDER BY id ASC').all(merchant);
-  ok(persistedSales.length === 2, 'Exactly 2 distinct sales persisted in D1 database');
+  ok(persistedSales.length === 3, 'Both split parts and the recovered legacy payment persist in D1');
   ok(persistedSales[0].amount_cents === 3500 && persistedSales[0].method === 'card', 'Part 1 persisted with 3500 cents card');
-  ok(persistedSales[1].amount_cents === 2500 && persistedSales[1].method === 'cash', 'Part 2 persisted with 2500 cents cash');
+  ok(persistedSales[2].amount_cents === 2500 && persistedSales[2].method === 'cash', 'Part 2 persisted with 2500 cents cash');
 
   // 5. 1-part split (split: { index: 0, count: 1 }) settles immediately
   db.prepare("INSERT INTO table_sessions VALUES (?, ?, 'table', ?, 'open', ?, NULL, NULL, NULL)").run('sess-table-9', merchant, '9', Date.now());
@@ -741,6 +749,8 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
       prepare(sql) {
         const stmt = db.prepare(sql);
         return {
+          async all() { return { results: stmt.all() }; },
+          async run() { return stmt.run(); },
           bind(...args) {
             return {
               async run() {
@@ -925,6 +935,8 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
       prepare(sql) {
         const stmt = db.prepare(sql);
         return {
+          async all() { return { results: stmt.all() }; },
+          async run() { return stmt.run(); },
           bind(...args) {
             return {
               async run() {
@@ -1062,6 +1074,8 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
       prepare(sql) {
         const stmt = db.prepare(sql);
         return {
+          async all() { return { results: stmt.all() }; },
+          async run() { return stmt.run(); },
           bind(...args) {
             return {
               async run() {
@@ -1116,6 +1130,7 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
     // d) Failed verification reads throwing DB errors -> returns 503 db-verification-failed, retains idempotency key, prevents reference mutation, prevents settlement
     injectVerifyDbError = true;
     const verifyFailPost = await postSaleVerify({
+      id: 'modern-pay-22',
       table: '22',
       session: 'sess-table-22',
       amount: 110,
@@ -1129,7 +1144,7 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
     ok(verifyFailPost.data.error === 'db-verification-failed', 'Error code is db-verification-failed');
 
     // Verify reference mutation was PREVENTED
-    const sale22AfterFail = db.prepare("SELECT ref FROM sales WHERE id = 'visit-sess-table-22-emp'").all();
+    const sale22AfterFail = db.prepare("SELECT ref FROM sales WHERE id = 'modern-pay-22'").all();
     if (sale22AfterFail.length > 0) {
       ok(sale22AfterFail[0].ref !== 'MUTATED-REF-SHOULD-NOT-BE-SAVED', 'Reference was NOT mutated on verification failure');
     }
@@ -1144,6 +1159,7 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
     injectVerifyDbError = false;
     injectWinningRowMissing = true;
     const missingWinningPost = await postSaleVerify({
+      id: 'modern-pay-22',
       table: '22',
       session: 'sess-table-22',
       amount: 110,
@@ -1158,6 +1174,7 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
     // f) Subsequent retry with identical data succeeds with 200 once DB recovers; conflicting data returns 409
     injectWinningRowMissing = false;
     const recoveredIdentical = await postSaleVerify({
+      id: 'modern-pay-22',
       table: '22',
       session: 'sess-table-22',
       amount: 110,
@@ -1173,6 +1190,7 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
 
     // Conflicting retry with different method fails 409
     const conflictingDataPost = await postSaleVerify({
+      id: 'modern-pay-22',
       table: '22',
       session: 'sess-table-22',
       amount: 110,

@@ -208,10 +208,11 @@ ok('a normal tender cannot close a table when the ledger refused its sale',
   assert.ok(start >= 0 && end > start, 'recordSale is extractable');
   const journal = [];
   let discountCalls = 0;
+  let firstReceipt = null;
   const saleCtx = vm.createContext({ journal, tables: { 13: { zone: 'salle' } }, mode: 'salle',
     selectedId: '13', currentCashier: { name: 'Hafid' }, window: {},
     money: Number, activeSaleDiscount: () => null, accountActiveDiscount: () => { discountCalls++; },
-    paidReceiptForCurrentTable: () => null,
+    paidReceiptForCurrentTable: () => firstReceipt,
     phoneSessionOf: () => 'ses-13-154', settledOrderLabel: () => 'Table 13 #154',
     genRef: () => '154', attachReceipt() {}, persistShift() {}, creditSaleToClient() {},
     renderShiftStats() {}, refreshOpenReconciliationModals() {},
@@ -220,12 +221,14 @@ ok('a normal tender cannot close a table when the ledger refused its sale',
   vm.runInContext(source.slice(start, end), saleCtx);
   const first = saleCtx.recordSale(60, 'cash', 'Table 13 #154', 0,
     [{ id: 'salad', name: 'Salade Maison', qty: 1, price: 60, total: 60 }], '13');
+  firstReceipt = first;
   const replay = saleCtx.recordSale(60, 'cash', 'Table 13 #154', 0,
     [{ id: 'salad', name: 'Salade Maison', qty: 1, price: 60, total: 60 }], '13');
-  ok('a repeated cashier confirmation keeps one journal row for visit #154',
-    first === replay && journal.length === 1 && first.id === 'visit-ses-13-154-emp');
+  ok('a repeated cashier confirmation keeps one journal row for order #154',
+    first === replay && journal.length === 1 && first.id.startsWith('sale-'));
   ok('a repeated confirmation does not account its discount twice', discountCalls === 1);
   journal.length = 0;
+  firstReceipt = null;
   saleCtx.creditSaleToClient = () => { throw Error('loyalty unavailable'); };
   saleCtx.renderShiftStats = () => { throw Error('stats widget unavailable'); };
   const committed = saleCtx.recordSale(60, 'cash', 'Table 13 #154', 0,
