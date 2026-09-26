@@ -8,8 +8,8 @@
     "sha": "6ef7c5da9e6ebf75"
   },
   "assets/admin-policy.js": {
-    "v": "2",
-    "sha": "d3376f98f0ff85b2"
+    "v": "3",
+    "sha": "fef2a97044cefdc7"
   },
   "assets/admin-support.css": {
     "v": "2",
@@ -20,12 +20,12 @@
     "sha": "47f6217b3932f467"
   },
   "assets/admin-workspace.css": {
-    "v": "3",
-    "sha": "16b009fb839f239f"
+    "v": "4",
+    "sha": "e41204f684cf668c"
   },
   "assets/admin-workspace.js": {
-    "v": "11",
-    "sha": "ea0f0158f6908ed2"
+    "v": "12",
+    "sha": "f19407913299e7f7"
   },
   "assets/agent-action-center.js": {
     "v": "2",

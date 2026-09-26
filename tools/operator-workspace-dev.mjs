@@ -16,6 +16,21 @@ db.prepare('INSERT INTO sales(id,merchant,amount,amount_cents,method,ts) VALUES(
 db.prepare('INSERT INTO print_bridges(id,merchant,name,token_hash,created_ts,last_seen_ts,platform,version) VALUES(?,?,?,?,?,?,?,?)').run('fixture-bridge','atelier-test','Relais test','non-secret-fixture',now,now,'android','fixture');
 db.prepare('INSERT INTO print_jobs(id,merchant,bridge_id,kind,target,data_b64,status,created_ts,expires_ts) VALUES(?,?,?,?,?,?,?,?,?)').run('fixture-job','atelier-test','fixture-bridge','receipt','fixture','fixture','failed',now,now+60000);
 db.prepare('INSERT INTO client_errors(id,merchant,message,file,version,count,first_seen_ts,last_seen_ts) VALUES(?,?,?,?,?,?,?,?)').run('fixture-error','cafe-test','Synthetic error','assets/test.js','fixture',3,now,now);
+// Store-health fixture: a restaurant whose till holds a refused sale and whose
+// Z disagrees with the server, a boutique that has gone quiet, and board tickets.
+db.prepare('INSERT INTO accounts(id,email,business,name,salt,hash,created_ts) VALUES(?,?,?,?,?,?,?)').run('boutique-test','boutique-test@example.test','Boutique test','Contact test','','',now-60*86400000);
+db.prepare('INSERT INTO merchant_config(merchant,account_id,name,features,type,plan,status,subscription_kind,city,updated_ts) VALUES(?,?,?,?,?,?,?,?,?,?)').run('boutique-test','boutique-test','Boutique test','{}','boutique','basic','active','paid','Tanger',now);
+for(let d=2;d<7;d++)db.prepare('INSERT INTO sales(id,merchant,amount,amount_cents,method,ts) VALUES(?,?,?,?,?,?)').run('fixture-bq-'+d,'boutique-test',120,12000,'card',now-d*86400000);
+for(let d=0;d<5;d++)db.prepare('INSERT INTO sales(id,merchant,amount,amount_cents,method,ts) VALUES(?,?,?,?,?,?)').run('fixture-cafe-'+d,'cafe-test',310,31000,'cash',now-d*86400000-3600000);
+const beat=(id,m,device,ts,sync)=>db.prepare('INSERT INTO operational_commands(id,merchant,domain,action,status,idempotency_key,payload,created_ts,updated_ts) VALUES(?,?,?,?,?,?,?,?,?)').run(id,m,'device','heartbeat','completed',id,JSON.stringify({deviceId:device,app:'caisse',sync}),ts,ts);
+for(let i=0;i<40;i++)beat('fixture-beat-a'+i,'cafe-test','caisse-comptoir',now-i*300000,{total:1,blocked:1,pending:0,oldestPendingAt:now-5400000,lastAcknowledgedAt:now-600000,lastStatus:403,lastError:'manager-required',blockedEntries:[{id:'fixture-refund',amountCents:4500,method:'cash',ts:now-5400000,reason:'manager-required'}]});
+beat('fixture-beat-b','cafe-test','caisse-terrasse',now-20*3600000,{total:0,blocked:0,pending:0,lastAcknowledgedAt:now-20*3600000});
+beat('fixture-beat-c','atelier-test','caisse-atelier',now-120000,{total:0,blocked:0,pending:0,lastAcknowledgedAt:now-120000});
+db.prepare('INSERT INTO z_reconciliations VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run('cafe-test','2026-09-25','caisse-comptoir',42,1320000,40,1275000,2,45000,0,0,'mismatch',JSON.stringify({blocked:[{id:'fixture-refund'}]}),now-3600000);
+db.prepare('INSERT INTO z_reconciliations VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run('atelier-test','2026-09-25','caisse-atelier',9,210000,9,210000,0,0,0,0,'matched','{"blocked":[]}',now-7200000);
+db.prepare("INSERT INTO kiwi_tickets(body,status,kind,money_at_risk,created_ts,updated_ts) VALUES(?,?,?,?,?,?)").run('Le tableau de bord du restaurant ne concorde pas avec le Z de la caisse.','problem','bug',1,now,now);
+db.prepare("INSERT INTO kiwi_tickets(body,status,kind,money_at_risk,created_ts,updated_ts) VALUES(?,?,?,?,?,?)").run('Masquer le bouton Campagne dans Clients pour tous les métiers.','problem','improvement',0,now,now);
+db.prepare("INSERT INTO kiwi_tickets(body,status,kind,money_at_risk,created_ts,updated_ts) VALUES(?,?,?,?,?,?)").run('Un article retourné revient en stock.','testing','unsorted',0,now,now);
 const cookie=`kiwi_op=${await auth.operatorToken(env.AUTH_SECRET)}; kiwi_op_id=${await auth.operatorIdToken(env.AUTH_SECRET,'fixture-operator')}`;
 const allowed=new Set(['workspace','clients','overview','operators','tasks','notes','health','config','pins','attendance-link','audit','sales','account','support','support-articles']);
 const mutable=new Set(['tasks','notes','config']);

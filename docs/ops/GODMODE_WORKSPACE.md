@@ -10,6 +10,17 @@
 - Safer controls: PINs hidden by default, response guards against switching merchants mid-request, confirmed feature writes with optimistic concurrency and atomic audit; saving trial terms does not activate access.
 - Design: compact sidebar, work-first home, responsive bottom navigation, keyboard search, focused dossier tabs, existing Kiwi light/dark tokens and reduced-motion support.
 
+## Store health (2026-09-26)
+
+Today opens on **État des établissements**: one row per active establishment with a verdict (à traiter, à surveiller, normal, inactif) and the facts behind it. The verdict is computed by `KiwiAdminPolicy.storeHealth` from:
+
+- the latest heartbeat of each till over 14 days (one row per device; tills append a heartbeat every few minutes, so the old "latest 500 rows" read showed one busy till repeated and hid quieter ones);
+- the latest `z_reconciliations` row (till Z against server sales) and `sale_sync_conflicts`;
+- 7-day sales activity, so "no sale received" is judged against the establishment's own rhythm (sold on at least 3 of the last 7 days, nothing for 26 h);
+- application errors, now with their first line (e-mails and long digit runs masked, stacks never sent).
+
+À traiter: a sale refused by the server and blocked on a till, sales unconfirmed for over 30 min, a Z that disagrees with the server, or a sale conflict. The same facts feed the work queue as priority-1 signals. The product board (`kiwi_tickets`, kiwi-os.com/tickets) is listed in the Today aside; it is loaded fleet-wide only.
+
 ## Routes and data
 
 `GET /api/admin/workspace[?merchant=slug]` is named-operator-only. Each source returns `available`, `rows` and `truncated`. A missing table is unavailable, not healthy zero. Fleet sources are capped at 200 rows, work at 500, notes/events at 100. The UI identifies partial results and supports merchant-scoped reads; it does not claim a complete fleet beyond these limits. Open work sorts ahead of resolved work in the bounded database query.

@@ -76,8 +76,32 @@ db.prepare('INSERT INTO print_jobs(id,merchant,kind,target,data_b64,status,creat
 db.prepare('INSERT INTO client_errors(id,merchant,message,stack,file,count,first_seen_ts,last_seen_ts) VALUES(?,?,?,?,?,?,?,?)').run('err1','shop-a','SECRET-MESSAGE','SECRET-STACK','app.js',2,now,now);
 const fleet=await call(workspace,'GET');
 check('fleet actual observations',fleet.sources.bridges.rows.length===1&&fleet.sources.print.rows[0].status==='failed'&&fleet.sources.errors.rows[0].count===2);
-check('fleet excludes credentials and raw content',!JSON.stringify(fleet).includes('SECRET-'));
+check('fleet excludes credentials, payloads and stacks',!/SECRET-(BRIDGE|TARGET|PAYLOAD|STACK)/.test(JSON.stringify(fleet)));
+check('error keeps its first line so an operator can act on it',fleet.sources.errors.rows[0].message==='SECRET-MESSAGE');
 check('physical output never claimed',fleet.physical_print_verified===false);
+// Store health: tills append a heartbeat every few minutes; the workspace must
+// return each till's latest one, not the latest 500 rows of one busy device.
+const beat=(id,m,device,ts,sync)=>db.prepare("INSERT INTO operational_commands(id,merchant,domain,action,status,idempotency_key,payload,created_ts,updated_ts) VALUES(?,?,'device','heartbeat','completed',?,?,?,?)").run(id,m,id,JSON.stringify({deviceId:device,app:'caisse',sync}),ts,ts);
+for(let i=0;i<600;i++)beat('hb-busy-'+i,'shop-a','till-busy',now-i*60000,{total:0,blocked:0});
+beat('hb-quiet','shop-a','till-quiet',now-20*3600000,{total:1,blocked:1,oldestPendingAt:now-21*3600000,blockedEntries:[{id:'refund-1',amountCents:4500,method:'cash',ts:now,reason:'manager-required'}]});
+beat('hb-old','shop-a','till-quiet',now-22*3600000,{total:0,blocked:0});
+db.prepare("INSERT INTO z_reconciliations VALUES('shop-a','2026-09-25','till-quiet',10,100000,9,95500,1,4500,0,0,'mismatch',?,?)").run(JSON.stringify({blocked:[{id:'refund-1'}]}),now);
+db.prepare("INSERT INTO client_errors(id,merchant,message,file,version,count,first_seen_ts,last_seen_ts) VALUES('err-code','shop-a',?,'assets/x.js','1',1,?,?)").run('Card 4111111111111111 refused for a@b.test\n    at stack (x.js:1)',now,now);
+db.prepare("INSERT INTO kiwi_tickets(body,status,kind,money_at_risk,created_ts,updated_ts) VALUES('Board ticket','problem','bug',1,?,?)").run(now,now);
+const ws=await call(workspace,'GET');
+const tills=ws.sources.caisseSync.rows.filter(r=>r.merchant==='shop-a');
+check('one heartbeat row per till, quiet till not crowded out',tills.length===2&&tills.some(r=>r.deviceId==='till-quiet'&&r.sync.blocked===1));
+check('each till keeps its latest heartbeat',tills.find(r=>r.deviceId==='till-quiet').updated_ts===now-20*3600000);
+check('Z comparison carries blocked count and gap',ws.sources.zChecks.rows[0].blocked_count===1&&ws.sources.zChecks.rows[0].reported_cents-ws.sources.zChecks.rows[0].server_cents===4500);
+const errMsg=ws.sources.errors.rows.find(r=>r.id==='err-code').message;
+check('error message: first line only, digits and e-mails masked',!errMsg.includes('4111')&&!errMsg.includes('a@b.test')&&!errMsg.includes('stack')&&errMsg.includes('refused'));
+check('product board loaded fleet-wide only',ws.sources.board.rows.length===1&&!(await call(workspace,'GET',{},'?merchant=shop-a')).sources.board);
+const health=policy.storeHealth({merchant:'shop-a',last_ts:now},{caisseSync:tills,zChecks:ws.sources.zChecks.rows,activity:[{active_days_7d:5,last_ts:now}],errors:[]},now);
+check('blocked sale and Z gap make the store « à traiter »',health.level==='bad'&&health.problems.some(p=>p.includes('bloquée'))&&health.problems.some(p=>p.includes('écart 45 MAD')));
+check('a blocked sale is not also counted as merely unconfirmed',!health.problems.some(p=>p.includes('non confirmée')));
+check('a regular store gone quiet is « à surveiller »',policy.storeHealth({merchant:'q',last_ts:now-3*86400000},{activity:[{active_days_7d:4,last_ts:now-3*86400000}]},now).level==='warn');
+check('a store without sales or tills is inactive, not alarming',policy.storeHealth({merchant:'i'},{},now).level==='idle');
+check('matched Z and confirmed sales are normal',policy.storeHealth({merchant:'n',last_ts:now},{caisseSync:[{app:'caisse',deviceId:'t',updated_ts:now,sync:{total:0,blocked:0}}],zChecks:[{status:'matched'}],activity:[{active_days_7d:6,last_ts:now}]},now).level==='good');
 db.exec('DROP TABLE client_errors');
 check('missing telemetry is unavailable',(await call(workspace,'GET')).sources.errors.available===false);
 const err=await call(errors,'GET');check('error route does not return healthy empty result',err.status===503&&err.errors===null);
