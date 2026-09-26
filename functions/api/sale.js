@@ -304,7 +304,7 @@ export async function onRequestPost({ request, env }) {
                 AND opened_ts <= ?
               ORDER BY opened_ts DESC LIMIT 1`
           ).bind(merchant, employeeTable, paymentTsForVisit + VISIT_BIND_SKEW_MS).first();
-    } catch (_) { serviceSession = null; visitLinkWarning = 'visit-lookup-unavailable'; }
+    } catch (_) { return json({ error: 'visit-lookup-unavailable' }, 503); }
     if (requestedSession && (!serviceSession || !serviceSession.id)) {
       visitLinkWarning ||= 'table-session-missing';
     }
@@ -325,8 +325,7 @@ export async function onRequestPost({ request, env }) {
           `SELECT id FROM orders WHERE merchant = ? AND session_id = ? AND paid_ts IS NULL LIMIT 1`
         ).bind(merchant, serviceSession.id).first();
       } catch (err) {
-        visitLinkWarning = 'visit-order-lookup-unavailable';
-        serviceSession = null;
+        return json({ error: 'visit-order-lookup-unavailable' }, 503);
       }
       if (serviceSession && (!sent || !sent.id)) {
         visitLinkWarning = 'send-order-before-payment';
@@ -544,7 +543,7 @@ export async function onRequestPost({ request, env }) {
      together identify one payment; a second row with all four is a replay,
      not a sale. Split parts legitimately share all four and are excluded.
      A failed lookup changes nothing: the insert below still decides. */
-  if (!stored && !split && ref) {
+  if (!stored && !split && ref && !(employeeTable && orderNumber(ref))) {
     let sameSettlement = null;
     try {
       sameSettlement = await env.DB.prepare(
@@ -562,7 +561,7 @@ export async function onRequestPost({ request, env }) {
   // A waiter and a till can both submit the same printed bill under distinct
   // IDs. The bill number plus the short concurrent settlement window catches
   // that race without merging a later party or a different receipt on one visit.
-  if (!stored && !split && orderNumber(ref)) {
+  if (!stored && !split && !employeeTable && orderNumber(ref)) {
     let candidates = [];
     try { candidates = (await env.DB.prepare(
       'SELECT id, ref FROM sales WHERE merchant = ? AND amount_cents = ? AND method = ? AND ts BETWEEN ? AND ? AND void_ts IS NULL LIMIT 30'
@@ -586,16 +585,15 @@ export async function onRequestPost({ request, env }) {
   if (hasVisitLink) {
     try { await ensureVisitLink(env); }
     catch (_) {
-      // Optional relation schema may lag the ledger. Never lose a paid receipt
-      // because the table metadata could not be written.
-      hasVisitLink = false;
-      serviceSession = null;
-      visitLinkWarning ||= 'visit-link-unavailable';
+      return json({ error: 'visit-link-unavailable' }, 503);
     }
   }
-  if (!stored && !split && hasVisitLink && effectiveSessionId && orderNumber(ref)) {
+  // An unlinked bill still has a stable identity across waiter/till uploads.
+  // This namespace can never be a real visit ID and never closes a table.
+  const settlementSessionId = effectiveSessionId || (employeeTable ? 'unlinked-table:' + employeeTable : '');
+  if (!stored && !split && settlementSessionId && orderNumber(ref)) {
     let claim;
-    try { claim = await claimRestaurantBill(env, merchant, effectiveSessionId, orderNumber(ref), businessDate(ts), id); }
+    try { claim = await claimRestaurantBill(env, merchant, settlementSessionId, orderNumber(ref), businessDate(ts), id); }
     catch (_) { return json({ error: 'settlement-key-unavailable' }, 503); }
     if (!claim || !claim.sale_id) return json({ error: 'settlement-key-unavailable' }, 503);
     if (claim.sale_id !== id) {
@@ -611,7 +609,7 @@ export async function onRequestPost({ request, env }) {
         let moved = null;
         try { moved = await env.DB.prepare(`UPDATE sale_settlement_keys SET sale_id = ?, created_ts = ?
             WHERE merchant = ? AND session_id = ? AND order_number = ? AND business_day = ? AND sale_id = ?`)
-          .bind(id, Date.now(), merchant, effectiveSessionId, orderNumber(ref), businessDate(ts), first.id).run(); }
+          .bind(id, Date.now(), merchant, settlementSessionId, orderNumber(ref), businessDate(ts), first.id).run(); }
         catch (_) { return json({ error: 'settlement-key-unavailable' }, 503); }
         if (!Number(moved && moved.meta && moved.meta.changes)) return json({ error: 'settlement-in-flight' }, 503);
       } else {

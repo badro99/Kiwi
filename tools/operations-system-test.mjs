@@ -113,7 +113,7 @@ const command = (extra) => Object.assign({ merchant: MERCHANT, payload: {} }, ex
 const anonymous = await post('', command({ id: 'op:anon-0001', idempotencyKey: 'op:anon-0001', domain: 'device', action: 'heartbeat' }));
 ok(anonymous.status === 401 && anonymous.data.error === 'unauthorized', 'an unsigned caller cannot write a command');
 
-const beat = await post(tillCookie, command({ id: 'op:till-beat-01', idempotencyKey: 'op:till-beat-01', domain: 'device', action: 'heartbeat', payload: { app: 'caisse', deviceId: 'dev-till-01', label: 'Caisse comptoir', printerConfigured: true, printerConnected: true, at: Date.now(), sync: { pending: 4, blocked: 2, total: 6, oldestPendingAt: Date.now() - 3600000, lastStatus: 409, lastError: 'table-session-missing', lastAcknowledgedAt: Date.now() - 7200000 } } }));
+const beat = await post(tillCookie, command({ id: 'op:till-beat-01', idempotencyKey: 'op:till-beat-01', domain: 'device', action: 'heartbeat', payload: { app: 'caisse', deviceId: 'dev-till-01', label: 'Caisse comptoir', printerConfigured: true, printerConnected: true, at: Date.now(), sync: { blockedEntries:[{id:'paid-blocked-1',amountCents:5700,method:'card',ts:Date.now()-1000,reason:'sale-conflict',customerName:'must-not-leak'}], pending: 4, blocked: 2, total: 6, oldestPendingAt: Date.now() - 3600000, lastStatus: 409, lastError: 'table-session-missing', lastAcknowledgedAt: Date.now() - 7200000 } } }));
 ok(beat.status === 200 && beat.data.command.status === 'completed' && beat.data.command.provider === 'kiwi-device', 'a paired till records its own heartbeat');
 
 const beatAnon = await post(tillCookie, command({ id: 'op:till-beat-02', idempotencyKey: 'op:till-beat-02', domain: 'device', action: 'heartbeat', payload: { app: 'caisse' } }));
@@ -269,6 +269,7 @@ const fleetFirst = await fleetOf(ownerCookie);
 ok(fleetFirst.status === 200 && fleetFirst.byId.get('dev-till-01') && fleetFirst.byId.get('dev-till-01').alert === ''
   && fleetFirst.byId.get('dev-till-01').label === 'Caisse comptoir' && fleetFirst.data.thresholds.beatMs === 300000,
   'the fleet reads back the till that beat, healthy, with the thresholds it is judged against');
+ok(fleetFirst.byId.get('dev-till-01').sync?.blockedEntries?.[0]?.amountCents === 5700 && !('customerName' in fleetFirst.byId.get('dev-till-01').sync.blockedEntries[0]), 'blocked receipt details retained without arbitrary payload fields');
 ok(fleetFirst.byId.get('dev-till-01').sync?.total === 6
   && fleetFirst.byId.get('dev-till-01').sync?.blocked === 2
   && fleetFirst.byId.get('dev-till-01').sync?.lastStatus === 409

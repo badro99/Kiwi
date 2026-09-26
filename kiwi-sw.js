@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v596';
+var CACHE = 'kiwi-app-v597';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -137,7 +137,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=1',
-  '/assets/dateRange.js?v=20',
+  '/assets/dateRange.js?v=21',
   '/assets/mobile-nav.js?v=2',
   '/assets/liquid-lens.js?v=1',
   '/assets/pages.js?v=5',
@@ -149,21 +149,21 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
   '/assets/oppo-cards.js?v=2',
-  '/assets/dashboard-pwa.js?v=536',
+  '/assets/dashboard-pwa.js?v=537',
   '/assets/dashboard-native.js?v=1',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js?v=1',
-  '/assets/caisse-pwa.js?v=546',
+  '/assets/caisse-pwa.js?v=547',
   '/assets/vendor/dexie.min.js?v=1',
-  '/assets/offline-db.js?v=7',
+  '/assets/offline-db.js?v=9',
   '/assets/platform-kernel.js?v=5',
   '/assets/platform-ops.js?v=5',
   '/assets/platform-ops.css?v=1',
-  '/assets/operations.js?v=11',
+  '/assets/operations.js?v=12',
   '/assets/operations-ui.js?v=15',
-  '/assets/live-link.js?v=46',
+  '/assets/live-link.js?v=49',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -240,7 +240,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=535',
+  '/assets/employee-live.js?v=536',
   '/assets/employee-planning.js?v=8',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=2',

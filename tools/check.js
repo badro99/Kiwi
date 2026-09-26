@@ -508,6 +508,7 @@ for (const test of [
   'service-settlement-test.mjs',
   'restaurant-payment-identity-test.mjs',
   'restaurant-visit-close-reload-test.mjs',
+  'restaurant-sync-release-test.mjs',
   'z-reconciliation-test.mjs',
   'z-reconciliation-client-test.mjs',
   'z-reconciliation-browser-test.mjs',

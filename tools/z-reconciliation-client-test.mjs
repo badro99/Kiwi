@@ -70,3 +70,8 @@ const offlineSource = instance(true);
 await offlineSource.flush();
 assert.equal(rows.size, 1, 'missing historical receipt without payload remains durable');
 console.log('✓ closed Z survives reload, repairs missing sales, waits for server proof and carries a second shift');
+
+const corrected = instance(false);
+assert.equal((await corrected.queueSnapshot({ ...report, txns: 1, gross: 57 }, [{ ...second, voided: true }])).ok, true);
+assert.equal([...rows.values()][0].payload.entries.length, 1, 'voided receipt removed from saved manifest, not counted at next close');
+assert.equal([...rows.values()][0].payload.entries[0].id, 'canonical-receipt-1');

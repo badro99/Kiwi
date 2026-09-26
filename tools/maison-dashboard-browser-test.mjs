@@ -65,7 +65,9 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true, rows: [{ business_day: '2026-09-21',
       reported_cents: 150700, server_cents: 31400, missing_count: 9, status: 'mismatch' }],
-      conflicts: [] }));
+      conflicts: [], daySummary: { day: new URL(req.url,'http://localhost').searchParams.get('day'),
+        source:'closed-z',referenceCents:150700,reportedCents:150700,recordedCents:31400,gapCents:119300,
+        missingCount:9,waitingCount:9,blocked:[],comparisonAvailable:true } }));
     return;
   }
   if (pathname.startsWith('/api/')) {
@@ -153,7 +155,9 @@ try {
   ok(state.venue.slug === 'art-de-table-by-amira' && state.venue.subtype === 'maison', 'dashboard keeps the Maison store identity and subtype');
   ok(/maison/i.test(state.placeholder) && !/restaurant/i.test(state.placeholder), 'AI question bar uses Maison vocabulary');
   ok(state.chips.length === 3 && state.chips.some((text) => /article/i.test(text)) && state.chips.every((text) => !/plat|carte/i.test(text)), 'AI starter questions describe retail sales, never restaurant dishes');
-  ok(/^0(?:[,.]00)?\s*MAD$/i.test(state.hero), 'new Maison store renders zero real revenue instead of Café Atlas demo revenue');
+  ok(/^1.?507[,.]00\s*MAD$/i.test(state.hero), 'Maison day headline renders the explicitly labelled till Z reference, not demo revenue');
+  ok(await page.$eval('[data-hero-label]',el=>el.textContent.includes('RAPPORT Z')), 'Z reference is not labelled recorded revenue');
+  ok(await page.evaluate(()=>!(window.KiwiSales.list(window.KiwiVenue.getVenue())||[]).length), 'Z reference has not fabricated local receipt rows');
   ok(!/147|caf[ée]s|Café Atlas/i.test(state.bench), 'peer card contains no invented café cohort or Café Atlas data');
   ok(state.benchEmpty, 'real Maison benchmark renders an explicit empty state');
   ok(/Pièces|Rayons|Offres|Retours|vendues/i.test(state.nav) && !/Carte du restaurant|Cuisine/i.test(state.nav), 'sidebar exposes Maison operations');

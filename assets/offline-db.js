@@ -232,7 +232,7 @@
    * Re-arm the SAME immutable command; never replace its money, tenant, channel
    * or id with a reconstruction from a report total. A live sender's lease is
    * not touched. This is deliberately separate from force-claiming due work. */
-  function reactivate(channel, tenant, id) {
+  function reactivate(channel, tenant, id, permit) {
     var scope = assertScope(tenant, channel);
     id = assertId(id);
     return ready().then(function (ok) {
@@ -244,9 +244,17 @@
             throw new Error('Outbox id already belongs to another scope');
           }
           if (row.state !== 'blocked') return false;
+          if (!permit || permit.id !== id || permit.merchant !== scope.tenant
+            || permit.changed !== 'visit-rule-relaxed' || !permit.comparisonId
+            || permit.reason !== row.lastError || Number(permit.status) !== Number(row.lastStatus)
+            || !['table-session-missing','service-session-table-mismatch','open-service-session-required','send-order-before-payment'].includes(permit.reason)
+            || ![404,409].includes(Number(permit.status))
+            || row.lastReactivatedComparison === permit.comparisonId
+            || !Number.isSafeInteger(permit.comparedAt) || permit.comparedAt <= (row.lastReactivatedAt || 0)) return false;
           var at = now();
           return db.outbox.update(id, {
             state: 'pending', nextAt: at, updatedAt: at,
+            lastReactivatedComparison: permit.comparisonId, lastReactivatedAt: permit.comparedAt,
             attempts: 0, lastStatus: 0, lastError: '',
           }).then(function () {
             signal({ type: 'reactivate', tenant: scope.tenant, channel: scope.channel, id: id });
@@ -269,7 +277,13 @@
     return list(channel, tenant).then(function (rows) {
       return rows.reduce(function (out, row) {
         out.total++;
-        if (row.state === 'blocked') out.blocked++;
+        if (row.state === 'blocked') {
+          out.blocked++;
+          var p = row.payload || {};
+          out.blockedEntries.push({ id: row.id, amountCents: Number(p.amountCents) || Math.round(Number(p.amount) * 100) || 0,
+            method: String(p.method || ''), ts: Number(p.ts) || row.createdAt,
+            reason: row.lastError || 'unknown', status: Number(row.lastStatus) || 0 });
+        }
         else out.pending++;
         if (row.state === 'sending') out.sending++;
         if (row.lastStatus) out.lastStatus = row.lastStatus;
@@ -277,9 +291,9 @@
         if ((+row.lastAttemptAt || 0) > out.lastAttemptAt) out.lastAttemptAt = +row.lastAttemptAt;
         if (!out.oldestPendingAt || (+row.createdAt || 0) < out.oldestPendingAt) out.oldestPendingAt = +row.createdAt || 0;
         return out;
-      }, { pending: 0, blocked: 0, sending: 0, total: 0, storageError: false, lastStatus: 0, lastError: '', lastAttemptAt: 0, oldestPendingAt: 0 });
+      }, { blockedEntries: [], pending: 0, blocked: 0, sending: 0, total: 0, storageError: false, lastStatus: 0, lastError: '', lastAttemptAt: 0, oldestPendingAt: 0 });
     }).catch(function () {
-      return { pending: 0, blocked: 0, sending: 0, total: 0, storageError: true, lastStatus: 0, lastError: '', lastAttemptAt: 0, oldestPendingAt: 0 };
+      return { blockedEntries: [], pending: 0, blocked: 0, sending: 0, total: 0, storageError: true, lastStatus: 0, lastError: '', lastAttemptAt: 0, oldestPendingAt: 0 };
     });
   }
 
@@ -309,7 +323,8 @@
           nextAt: mapped.blocked || mapped._blocked ? Number.MAX_SAFE_INTEGER : now(),
           leaseToken: '', leaseUntil: 0,
           lastStatus: +(mapped.status || mapped._status) || 0,
-          lastError: '',
+          lastError: cleanPart(mapped.error || mapped._error || '', 180),
+          lastReactivatedComparison: mapped.lastReactivatedComparison || '', lastReactivatedAt: Number(mapped.lastReactivatedAt) || 0,
           lastAttemptAt: 0,
         };
       });

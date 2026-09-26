@@ -63,6 +63,9 @@ export async function workspace(env, merchant = '') {
       return { merchant: row.merchant, deviceId: clean(beat.deviceId, 80), app: clean(beat.app, 24),
         updated_ts: Number(row.updated_ts) || 0,
         sync: s ? { total: count(s.total), blocked: count(s.blocked), pending: count(s.pending),
+          blockedEntries: (Array.isArray(s.blockedEntries) ? s.blockedEntries : []).filter(r => r && typeof r === 'object').slice(0,200).map(r => ({
+            id: String(r.id || '').slice(0,64), amountCents: Math.max(0,Math.min(20000000,Math.round(Number(r.amountCents)||0))),
+            method: String(r.method || '').slice(0,16), ts: time(r.ts), reason: String(r.reason || 'unknown').slice(0,96) })),
           oldestPendingAt: time(s.oldestPendingAt), lastAcknowledgedAt: time(s.lastAcknowledgedAt),
           lastStatus: count(s.lastStatus), lastError: clean(s.lastError, 96), storageError: !!s.storageError } : null };
     });

@@ -2293,6 +2293,9 @@ export async function onRequestGet({ request, env }) {
         const time = (value) => { const n = Number(value); return Number.isFinite(n) && n > 0 && n <= at + 60000 ? n : 0; };
         syncByDevice.set(id, {
           pending: count(s.pending), blocked: count(s.blocked), total: count(s.total),
+          blockedEntries: (Array.isArray(s.blockedEntries) ? s.blockedEntries : []).filter(r => r && typeof r === 'object').slice(0,200).map(r => ({
+            id: String(r.id || '').slice(0,64), amountCents: Math.max(0,Math.min(20000000,Math.round(Number(r.amountCents)||0))),
+            method: String(r.method || '').slice(0,16), ts: time(r.ts), reason: String(r.reason || 'unknown').slice(0,96) })),
           oldestPendingAt: time(s.oldestPendingAt), lastAttemptAt: time(s.lastAttemptAt),
           lastAcknowledgedAt: time(s.lastAcknowledgedAt), lastStatus: count(s.lastStatus),
           lastError: clean(s.lastError, 96), storageError: !!s.storageError,

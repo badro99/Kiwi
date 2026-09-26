@@ -19,7 +19,8 @@
         ok: true, id: window.__posts[window.__posts.length - 1].id,
         settlementPending: window.__fetchMode === 'pending'
       }), { status: 201 }));
-      if (window.__fetchMode === 'blocked') return Promise.resolve({ ok: false, status: 422 });
+      if (window.__fetchMode === 'blocked') return Promise.resolve(new Response(JSON.stringify({error:'bad-amount'}),{status:422}));
+      if (window.__fetchMode === 'relaxed') return Promise.resolve(new Response(JSON.stringify({error:'table-session-missing'}),{status:404}));
       window.__failedPosts++;
       return Promise.reject(new Error('offline test'));
     }
@@ -88,16 +89,40 @@
       await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).blocked === 1; }, 10000);
       assert(KiwiLive.queueStatus().blocked === 1, 'blocked status visible');
       line('a 422 response is retained and visible to the cashier');
-      // A normal postSale still deduplicates a blocked command. A proven Z
-      // mismatch must re-arm the SAME immutable ID before replaying it.
+      // Neither a missing receipt nor a click is evidence that 422 changed.
+      var postsBefore = window.__posts.length;
       window.__fetchMode = 'ok';
-      await KiwiLive.retrySale(blockedReceipt);
-      var replay = KiwiLive.postSale(blockedReceipt);
+      assert(await KiwiLive.retrySale(blockedReceipt) === false, 'no blind 422 replay');
+      await KiwiLive.retryBlockedSales(); await KiwiLive.flush(true);
+      assert(window.__posts.length === postsBefore, 'blocked 422 was not resent');
+      var debt = (await KiwiOffline.stats('sale',window.__testTenant)).blockedEntries[0];
+      assert(debt.amountCents === 4400 && debt.method === 'card' && debt.reason === 'bad-amount' && debt.ts > 0, 'support has amount, method, time and reason');
+      line('422 stays quarantined with inspectable receipt details');
+      // An old missing-visit rule was removed. A comparison-bound permit can
+      // rearm exactly once, and never changes the queued financial payload.
+      window.__fetchMode = 'relaxed';
+      var relaxedReceipt = {id:ref+'-relaxed',amount:33,method:'cash',ref:ref+'-relaxed'};
+      var relaxedResult = {id:KiwiLive.saleIdFor(relaxedReceipt,window.__testTenant)};
+      await KiwiOffline.enqueue('sale',window.__testTenant,{id:relaxedResult.id,merchant:window.__testTenant,amount:33,amountCents:3300,method:'cash',ts:Date.now(),ref:relaxedReceipt.ref},{id:relaxedResult.id});
+      var oldRow = await KiwiOffline.claim('sale',window.__testTenant,{force:true});
+      await KiwiOffline.reject(oldRow.id,oldRow.leaseToken,{permanent:true,status:404,error:'table-session-missing'});
+      var permit = {id:relaxedResult.id,merchant:window.__testTenant,reason:'table-session-missing',status:404,changed:'visit-rule-relaxed',comparisonId:'comparison-1',comparedAt:Date.now()};
+      assert(await KiwiLive.retrySale(relaxedReceipt,permit) === true, 'changed rule permits retry');
+      var again = await KiwiOffline.claim('sale',window.__testTenant,{force:true});
+      await KiwiOffline.reject(again.id,again.leaseToken,{permanent:true,status:404,error:'table-session-missing'});
+      assert(await KiwiLive.retrySale(relaxedReceipt,permit) === false, 'same comparison cannot rearm twice');
+      var oldPermit = Object.assign({},permit);
+      window.__fetchMode = 'ok'; permit.comparisonId = 'comparison-2'; permit.comparedAt++;
+      assert(await KiwiLive.retrySale(relaxedReceipt,permit) === true, 'new comparison can verify the changed rule');
+      var third = await KiwiOffline.claim('sale',window.__testTenant,{force:true});
+      await KiwiOffline.reject(third.id,third.leaseToken,{permanent:true,status:404,error:'table-session-missing'});
+      assert(await KiwiLive.retrySale(relaxedReceipt,oldPermit) === false, 'out-of-order old comparison cannot bypass retry cap');
+      permit.comparisonId='comparison-3';permit.comparedAt++;
+      assert(await KiwiLive.retrySale(relaxedReceipt,permit) === true, 'fresh evidence can retry');
       await KiwiLive.flush(true);
-      await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).total === 0; }, 10000);
-      assert(replay.id === blockedResult.id && window.__posts.at(-1).id === blockedResult.id,
-        'reactivation preserves payment identity');
-      line('a blocked receipt is reactivated and accepted under its original ID');
+      await waitFor(async function(){return (await KiwiOffline.stats('sale',window.__testTenant)).total === 1;},10000);
+      assert(window.__posts.at(-1).id === relaxedResult.id, 'immutable payment ID preserved');
+      line('changed rule retries once per comparison without erasing the blocked 422');
 
       output.dataset.status = 'passed';
       output.textContent += '\n\nPASSED';

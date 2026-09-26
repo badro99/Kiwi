@@ -41,7 +41,13 @@
     var terminalId = String(report.terminalId || 'terminal').slice(0, 64);
     var current = entriesFor(report, journal);
     var prior = manifest(slug, report.day, terminalId);
-    var entries = prior.slice();
+    var Live = window.KiwiLive;
+    function canonical(id) { return Live.canonicalSaleId ? Live.canonicalSaleId(slug,id) : id; }
+    var voided = new Set((journal || []).filter(function(e) { return e && e.voided; }).map(function(e) {
+      return canonical(String(e.serverSaleId || (e.origin ? e.id : Live.saleIdFor(e,slug)) || ''));
+    }));
+    var entries = prior.map(function(e) { return Object.assign({},e,{id:canonical(e.id)}); })
+      .filter(function(e) { return !voided.has(e.id); });
     var overlapConflict = false;
     (current || []).forEach(function (entry) {
       var previous = entries.find(function (row) { return row.id === entry.id; });
@@ -80,6 +86,7 @@
       var payload = row.payload;
       var body = { merchant: slug, day: payload.day, terminalId: payload.terminalId,
         closed: !!payload.closed,
+        blocked: window.KiwiLive && KiwiLive.queueStatus ? (KiwiLive.queueStatus().blockedEntries || []) : [],
         sales: payload.entries.map(function (entry) {
           var Live = window.KiwiLive;
           var id = Live && Live.canonicalSaleId ? Live.canonicalSaleId(slug, entry.id) : entry.id;
@@ -100,10 +107,10 @@
                   && KiwiLive.canonicalSaleId(slug, candidate.id) === id;
               });
               if (entry && entry.local && window.KiwiLive && KiwiLive.postSale) {
-                // A 400/422 may have quarantined the original command. Re-arm
-                // its immutable payload before enqueueing/replaying the same ID.
+                // Re-arm only with evidence that the original blocking rule changed.
+                // Permanent 400/422/conflicts remain visible for support.
                 repairs.push(Promise.resolve(KiwiLive.retrySale
-                  ? KiwiLive.retrySale(entry.local) : true).then(function (ready) {
+                  ? KiwiLive.retrySale(entry.local, (result.retryable || []).find(function (permit) { return permit.id === id; })) : true).then(function (ready) {
                   if (ready === false) return false;
                   var queued = KiwiLive.postSale(entry.local);
                   return !!(queued && queued.ok);
@@ -128,61 +135,92 @@
       });
     }).catch(function () {}).finally(function () { sending = false; });
   }
+  var dayReference = null, referenceMerchant = '', requestSequence = 0;
+  function selectedDay(range) {
+    var D = window.KiwiDateRange;
+    return D && D.selectedBusinessDay ? D.selectedBusinessDay(range == null && document.documentElement.getAttribute('data-mode') === 'simple' ? 'aujourdhui' : range) : null;
+  }
+  function reference(range) {
+    return dashboardUnlocked && (!window.__kiwiRole || window.__kiwiRole === 'owner')
+      && referenceMerchant === merchant() && dayReference && dayReference.day === selectedDay(range)
+      ? dayReference : null;
+  }
+  function amount(cents) { return (Number(cents)/100).toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' MAD'; }
+  function referenceText(s) {
+    if (!s) return '';
+    var text = s.source === 'closed-z'
+      ? 'Rapport Z de la caisse : ' + amount(s.reportedCents) + ' · enregistré : ' + amount(s.recordedCents)
+        + ' · écart : ' + amount(s.gapCents) + ' · ' + s.missingCount + ' reçu(s) manquant(s)'
+      : 'Enregistré : ' + amount(s.recordedCents) + (s.source === 'live-ledger'
+        ? (s.syncObserved === false ? ' · état de synchronisation de la caisse inconnu' : ' · synchronisation : ' + s.waitingCount + ' reçu(s) en attente (dernière déclaration)')
+        : s.comparisonAvailable ? ' · Z non clôturé : référence de caisse indisponible.'
+        : ' · Journée antérieure sans comparaison Z : impossible de vérifier avec la caisse.');
+    if (s.closedTerminals > 0 && s.closedTerminals < s.totalTerminals) text += ' · ' + s.closedTerminals + '/' + s.totalTerminals + ' caisses clôturées (Z partiel).';
+    if (s.ambiguous) text += ' · Plusieurs anciens Z sans détail : total Z non vérifiable.';
+    return text;
+  }
   function showDashboard() {
     if (!document.getElementById('kw-main')) return;
-    // Never fetch or paint financial reconciliation while the PIN gate is up.
-    // The dashboard's ready event also covers the short unlock animation.
-    if (!dashboardUnlocked || (window.__kiwiRole && window.__kiwiRole !== 'owner')) {
-      var hidden = document.getElementById('kiwi-z-reconciliation-alert');
-      if (hidden) hidden.remove();
+    var day = selectedDay(), slug = merchant(), sequence = ++requestSequence;
+    var old = document.getElementById('kiwi-z-reconciliation-alert');
+    if (!dashboardUnlocked || (window.__kiwiRole && window.__kiwiRole !== 'owner') || !day || !slug) {
+      dayReference = null;
+      if (old) old.remove();
       return;
     }
-    var slug = merchant();
-    if (!slug) return;
-    fetch('/api/z-reconciliation?merchant=' + encodeURIComponent(slug), { credentials: 'same-origin', cache: 'no-store' })
-      .then(function (response) { return response.ok ? response.json() : null; })
+    return fetch('/api/z-reconciliation?merchant=' + encodeURIComponent(slug) + '&day=' + encodeURIComponent(day),
+      { credentials: 'same-origin', cache: 'no-store' })
+      .then(function (response) { if (!response.ok) throw new Error('comparison-unavailable'); return response.json(); })
       .then(function (data) {
-        if (!dashboardUnlocked || (window.__kiwiRole && window.__kiwiRole !== 'owner')) return;
-        var mismatches = ((data && data.rows) || []).concat((data && data.dayReports) || [])
-          .filter(function (item) { return item.status === 'mismatch'; })
-          .sort(function (a, b) { return String(b.business_day).localeCompare(String(a.business_day))
-            || (a.source ? 1 : -1); });
-        var row = mismatches[0];
-        var conflicts = data && data.conflicts || [];
-        var old = document.getElementById('kiwi-z-reconciliation-alert');
-        if (!row && !conflicts.length && !(data && data.dayReportsUnavailable)) { if (old) old.remove(); return; }
-        var alert = old || document.createElement('div');
-        alert.id = 'kiwi-z-reconciliation-alert';
-        alert.setAttribute('role', 'status');
-        alert.style.cssText = 'position:fixed;bottom:18px;left:18px;right:18px;z-index:9990;padding:13px 17px;' +
-          'border-radius:12px;background:#9F3028;color:white;font:600 14px/1.4 "Inter Tight",system-ui;' +
-          'box-shadow:0 6px 24px #0003;pointer-events:none';
-        var gap = row ? Math.abs(Number(row.reported_cents || 0) - Number(row.server_cents || 0)) / 100 : 0;
-        alert.textContent = (row ? 'Données de ventes incomplètes · Z déclaré ' +
-          (Number(row.reported_cents || 0) / 100).toFixed(2).replace('.', ',') + ' MAD · ' +
-          (row.source === 'saved-day-report' ? 'ventes du jour au serveur ' : 'reçus de ce terminal au serveur ') +
-          (Number(row.server_cents || 0) / 100).toFixed(2).replace('.', ',') + ' MAD · écart ' + gap.toFixed(2).replace('.', ',') +
-          ' MAD · ' + (row.source === 'saved-day-report'
-            ? 'nombre de reçus manquants inconnu · ancien rapport sauvegardé'
-            : Number(row.missing_count || 0) + ' vente(s) non retrouvée(s)') + ' · ' + row.business_day +
-          (row.closed ? ' · Z clôturé' : ' · journée en cours') : '') +
-          (conflicts.length ? (row ? ' · ' : '') + conflicts.length + ' conflit(s) de vente à examiner dans la caisse' : '') +
-          (data && data.dayReportsUnavailable ? ((row || conflicts.length) ? ' · ' : '') + 'Rapprochement des anciens Z indisponible' : '');
-        if (!old) document.body.appendChild(alert);
-      }).catch(function () {});
+        if (sequence !== requestSequence || slug !== merchant() || day !== selectedDay()
+          || !dashboardUnlocked || (window.__kiwiRole && window.__kiwiRole !== 'owner')) return;
+        dayReference = data.daySummary; referenceMerchant = slug;
+        window.dispatchEvent(new CustomEvent('kiwi:z-reference'));
+        var alert = document.getElementById('kiwi-z-reconciliation-alert') || document.createElement('section');
+        alert.id = 'kiwi-z-reconciliation-alert'; alert.setAttribute('role','status');
+        alert.style.cssText = 'margin:16px 0;padding:14px;border:1px solid #a56a16;border-radius:12px;background:#fff8e8;color:#4c3820;font:500 14px/1.5 system-ui;overflow-wrap:anywhere';
+        alert.textContent = referenceText(dayReference);
+        var blocked = dayReference && dayReference.blocked || [];
+        if (blocked.length) {
+          var title = document.createElement('p');
+          title.textContent = blocked.length + ' reçu(s) payé(s) non enregistré(s) · contacter le support';
+          alert.appendChild(title);
+          var details = document.createElement('details'), heading = document.createElement('summary');
+          heading.textContent = 'Voir les reçus à examiner'; details.appendChild(heading);
+          blocked.forEach(function (b) {
+            var row = document.createElement('p');
+            row.textContent = b.id + ' · ' + amount(b.amountCents) + ' · ' + b.method
+              + ' · ' + new Date(b.ts).toLocaleString() + ' · ' + b.reason;
+            details.appendChild(row);
+          }); alert.appendChild(details);
+        }
+        var hero = document.querySelector('[data-hero-amount]');
+        if (!alert.parentNode) {
+          if (hero && hero.parentNode) hero.parentNode.appendChild(alert);
+          else document.getElementById('kw-main').prepend(alert);
+        }
+      }).catch(function () {
+        if (sequence !== requestSequence) return;
+        dayReference = null;
+        window.dispatchEvent(new CustomEvent('kiwi:z-reference'));
+        var alert = document.getElementById('kiwi-z-reconciliation-alert') || document.createElement('p');
+        alert.id = 'kiwi-z-reconciliation-alert'; alert.setAttribute('role','status');
+        alert.textContent = 'Comparaison Z indisponible · chiffres issus des ventes enregistrées, non vérifiés avec la caisse.';
+        if (!alert.parentNode) document.getElementById('kw-main').prepend(alert);
+      });
   }
   window.KiwiZReconciliation = {
     queueClose: function (report, journal) { return queueSnapshot(report, journal, true); },
     queueSnapshot: function (report, journal) { return queueSnapshot(report, journal, false); },
-    flush: flush, showDashboard: showDashboard,
+    flush: flush, showDashboard: showDashboard, reference: reference, referenceText: referenceText,
   };
   var dashboardUnlocked = false;
   function start() {
     if (location.pathname.indexOf('dashboard') >= 0) {
-      window.addEventListener('kiwi:dashboard-unlocked', function () {
-        dashboardUnlocked = true;
-        showDashboard();
-      });
+      function unlocked() { dashboardUnlocked = true; showDashboard(); }
+      window.addEventListener('kiwi:dashboard-unlocked', unlocked);
+      if (window.KiwiDashboardBoot && KiwiDashboardBoot.whenUnlocked) KiwiDashboardBoot.whenUnlocked(unlocked);
+      if (window.KiwiDateRange && KiwiDateRange.subscribe) KiwiDateRange.subscribe(showDashboard);
       document.addEventListener('kiwi:operator-snapshot', showDashboard);
       document.addEventListener('kiwi-config', showDashboard);
       setInterval(showDashboard, 60000);

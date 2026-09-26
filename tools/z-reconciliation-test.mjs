@@ -68,10 +68,7 @@ assert.equal(read.status, 200);
 const readBody = await read.json();
 assert.equal(readBody.rows[0].status, 'matched');
 assert.equal(readBody.rows[0].closed, false);
-assert.equal(readBody.dayReports[0].reported_cents, 15000);
-assert.equal(readBody.dayReports[0].server_cents, 12000);
-assert.equal(readBody.dayReports[0].status, 'mismatch');
-assert.equal(readBody.dayReports[0].closed, true);
+assert.equal(readBody.dayReports, undefined, 'legacy aggregate is not a comparison');
 const foreign = await endpoint.onRequestGet({ env, request: new Request(
   'https://kiwi.test/api/z-reconciliation?merchant=another-store', { headers: { Cookie: owner } }) });
 assert.equal(foreign.status, 403, 'owner cannot read another merchant Z');

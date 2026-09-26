@@ -2,7 +2,7 @@
 // Missing receipts are never fabricated here: only the originating till can
 // requeue their full, locally preserved payment payloads.
 import { entitledMerchant, isTillFor } from '../auth/_lib.js';
-import { businessBoundary, addBusinessDays } from './_business-day.js';
+import { businessDate, businessBoundary, addBusinessDays } from './_business-day.js';
 
 function json(value, status = 200) {
   return new Response(JSON.stringify(value), { status,
@@ -81,7 +81,22 @@ export async function onRequestPost({ request, env }) {
   for (const [id, row] of server) {
     if (!local.has(id)) extra.push(id);
   }
-  const result = { day, terminalId, reportedCount: body.count, reportedCents: sum,
+  // A missing receipt alone does NOT make a permanent rejection retryable.
+  // Only reasons removed by this release are eligible. Conflicting financial
+  // identities and malformed payloads stay quarantined for human resolution.
+  const comparisonId = crypto.randomUUID(), comparedAt = Date.now();
+  const blocked = (Array.isArray(body.blocked) ? body.blocked : []).slice(0, 200).filter(row =>
+    local.has(String(row?.id)) && Number.isSafeInteger(row.amountCents) && row.amountCents >= 0
+  ).map(row => ({ id: String(row.id).slice(0,64), amountCents: row.amountCents,
+    method: String(row.method || '').slice(0,16), ts: Number(row.ts) || 0,
+    reason: String(row.reason || 'unknown').slice(0,96), status: Number(row.status) || 0 }));
+  const relaxed = new Set(['table-session-missing', 'service-session-table-mismatch',
+    'open-service-session-required', 'send-order-before-payment']);
+  const retryable = blocked.filter(row => missing.includes(row.id) && relaxed.has(row.reason)
+    && [404,409].includes(row.status)).map(row => ({ id: row.id, reason: row.reason,
+      status: row.status, comparisonId, comparedAt, merchant, changed: 'visit-rule-relaxed' }));
+  const result = { comparisonId, blocked, retryable,
+    manifest: sales.map(row => ({ id: row.id, amountCents: row.amountCents, method: row.method })), day, terminalId, reportedCount: body.count, reportedCents: sum,
     serverCount, serverCents, missing, missingCents, mismatched, extra,
     closed: body.closed !== false,
     gapCents: sum - serverCents,
@@ -124,35 +139,69 @@ export async function onRequestGet({ request, env }) {
     const conflicts = (await env.DB.prepare(`SELECT sale_id, amount_cents, method, updated_ts
       FROM sale_sync_conflicts WHERE merchant = ? ORDER BY updated_ts DESC LIMIT 14`)
       .bind(merchant).all()).results || [];
-    // Existing cloud-backed day reports predate the receipt-ID Z protocol.
-    // Compare their aggregate gross with the merchant's real ledger, but do
-    // not invent receipt rows or claim a count of missing individual tickets.
-    const dayReports = [];
-    let saved = null, dayReportsUnavailable = false;
-    try { saved = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'dayreports'")
-      .bind(merchant).first(); }
-    catch (_) { dayReportsUnavailable = true; }
-    let days = {};
-    try { days = JSON.parse(saved?.data || '{}').days || {}; } catch (_) { days = {}; }
-    for (const day of Object.keys(days).filter(validDay).sort().reverse().slice(0, 14)) {
-      const report = days[day];
-      if (!report || typeof report !== 'object') continue;
-      const reportedCents = Math.round(Number(report.gross) * 100);
-      if (!Number.isSafeInteger(reportedCents) || reportedCents < 0) continue;
-      const cutoff = Number.isInteger(Number(report.cutoff)) && Number(report.cutoff) >= 0 && Number(report.cutoff) <= 12
-        ? Number(report.cutoff) : 5;
-      const from = businessBoundary(day, cutoff), to = businessBoundary(addBusinessDays(day, 1), cutoff);
-      const ledger = await env.DB.prepare(`SELECT COUNT(*) AS n,
-        COALESCE(SUM(COALESCE(amount_cents, CAST(ROUND(amount * 100) AS INTEGER))), 0) AS cents
-        FROM sales WHERE merchant = ? AND ts >= ? AND ts < ? AND void_ts IS NULL
-          AND COALESCE(amount_cents, amount * 100) > 0`).bind(merchant, from, to).first();
-      const serverCents = Number(ledger?.cents || 0);
-      dayReports.push({ business_day: day, source: 'saved-day-report',
-        reported_count: Number(report.txns) || 0, reported_cents: reportedCents,
-        server_count: Number(ledger?.n || 0), server_cents: serverCents,
-        closed: !!(Number(report.closedCount) || Number(report.closedAt)),
-        status: reportedCents === serverCents ? 'matched' : 'mismatch' });
+    const day = url.searchParams.get('day') || businessDate(Date.now());
+    if (!validDay(day)) return json({ error: 'bad-day' }, 400);
+    const dayRows = (await env.DB.prepare(`SELECT * FROM z_reconciliations
+      WHERE merchant = ? AND business_day = ? ORDER BY updated_ts DESC`).bind(merchant, day).all()).results || [];
+    const ledger = (await env.DB.prepare(`SELECT id, amount, amount_cents, method FROM sales
+      WHERE merchant = ? AND ts >= ? AND ts < ? AND void_ts IS NULL`)
+      .bind(merchant, businessBoundary(day), businessBoundary(addBusinessDays(day, 1))).all()).results || [];
+    const recordedCents = ledger.reduce((n,r) => n + Math.round(r.amount_cents == null ? Number(r.amount)*100 : Number(r.amount_cents)), 0);
+    const remote = new Map(ledger.map(r => [r.id,r]));
+    const reports = dayRows.map(row => ({ row, result: JSON.parse(row.result_json || '{}') }));
+    const closed = reports.filter(x => x.result.closed !== false);
+    // Manifests allow exact union across tills (imported receipts can overlap).
+    // Older single-terminal comparisons still carry their exact aggregate.
+    const union = new Map(), waiting = new Set(), blockedById = new Map();
+    let overlappingConflict = false;
+    for (const {result} of reports) {
+      for (const id of result.missing || []) if (!remote.has(id)) waiting.add(id);
+      for (const item of result.blocked || []) blockedById.set(item.id, item);
     }
-    return json({ ok: true, merchant, rows, dayReports, dayReportsUnavailable, conflicts });
+    // Heartbeats also expose blocked receipts when no valid Z can be queued.
+    // Latest observation per device; absence is not proof of synchronisation.
+    let pendingCount = 0, syncObserved = reports.length > 0;
+    try {
+      const beats = (await env.DB.prepare(`SELECT payload FROM operational_commands
+        WHERE merchant = ? AND domain = 'device' AND action = 'heartbeat'
+        ORDER BY updated_ts DESC LIMIT 1000`).bind(merchant).all()).results || [];
+      const devices = new Set();
+      for (const row of beats) {
+        let beat; try { beat = JSON.parse(row.payload); } catch (_) { continue; }
+        if (!beat.deviceId || devices.has(beat.deviceId)) continue;
+        devices.add(beat.deviceId);
+        if (beat.sync) syncObserved = true;
+        pendingCount += Math.max(0,Math.min(100000,Number(beat.sync?.pending)||0));
+        for (const r of (Array.isArray(beat.sync?.blockedEntries) ? beat.sync.blockedEntries : []).slice(0,200)) {
+          if (!r?.id) continue;
+          blockedById.set(String(r.id).slice(0,64), {id:String(r.id).slice(0,64),
+            amountCents:Math.max(0,Math.min(20000000,Math.round(Number(r.amountCents)||0))),
+            method:String(r.method||'').slice(0,16),ts:Number(r.ts)||0,reason:String(r.reason||'unknown').slice(0,96)});
+        }
+      }
+    } catch (_) { /* Older stores have no device telemetry yet. */ }
+    for (const [id,r] of blockedById) {
+      const stored = remote.get(id);
+      if (stored && Number(stored.amount_cents ?? Math.round(Number(stored.amount)*100)) === r.amountCents
+        && stored.method === r.method) blockedById.delete(id);
+    }
+    for (const {result} of closed) for (const item of result.manifest || []) {
+      const old = union.get(item.id);
+      if (old && (old.amountCents !== item.amountCents || old.method !== item.method)) overlappingConflict = true;
+      union.set(item.id,item);
+    }
+    const exactUnion = closed.length && closed.every(x => Array.isArray(x.result.manifest)) && !overlappingConflict;
+    const reportedCents = !closed.length ? null : exactUnion
+      ? [...union.values()].reduce((n,r) => n + r.amountCents,0)
+      : closed.length === 1 ? Number(closed[0].row.reported_cents) : null;
+    const missingCount = exactUnion ? [...union.keys()].filter(id => !remote.has(id)).length
+      : closed.length === 1 ? (closed[0].result.missing || []).filter(id => !remote.has(id)).length : null;
+    const source = reportedCents != null ? 'closed-z' : day === businessDate(Date.now()) ? 'live-ledger' : 'ledger-only';
+    const daySummary = { day, source, syncObserved, closedTerminals: closed.length, totalTerminals: reports.length, comparisonAvailable: reports.length > 0,
+      referenceCents: reportedCents == null ? recordedCents : reportedCents, reportedCents, recordedCents,
+      recordedCount: ledger.length, gapCents: reportedCents == null ? null : reportedCents - recordedCents,
+      missingCount, waitingCount: day === businessDate(Date.now()) ? Math.max(waiting.size,pendingCount) : waiting.size, blocked: [...blockedById.values()],
+      ambiguous: closed.length > 1 && reportedCents == null };
+    return json({ ok: true, merchant, rows, conflicts, daySummary });
   } catch (_) { return json({ error: 'db-read-failed' }, 503); }
 }

@@ -94,7 +94,8 @@
     const vid = window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue();
     const tot = ownTotals(vid, 'aujourdhui');
     const recent = real ? ownSales(vid, 'aujourdhui').slice(-5).reverse() : [];
-    const heroAmt = real ? Number(tot && tot.revenue || 0).toLocaleString('fr-FR').replace(/[  ]/g, ' ') : '24 380';
+    const zReference = real && window.KiwiZReconciliation?.reference?.('aujourdhui');
+    const heroAmt = zReference ? (zReference.referenceCents/100).toLocaleString('fr-FR', {minimumFractionDigits:2}) : real ? Number(tot && tot.revenue || 0).toLocaleString('fr-FR').replace(/[  ]/g, ' ') : '24 380';
     const heroCount = real ? Number(tot && tot.count || 0) : 182;
     const payoutMeta = real ? 'Aucune source de règlement disponible' : '23 091 MAD sur Bank of Africa •• 3291';
     const payoutWhen = real ? '·' : 'Demain matin, 9h';
@@ -114,9 +115,10 @@
       </div>
 
       <div class="lyoum-hero">
-        <div class="eyebrow">AUJOURD'HUI</div>
+        <div class="eyebrow">${zReference?.source === 'closed-z' ? 'RAPPORT Z DE LA CAISSE' : "ENREGISTRÉ AUJOURD’HUI"}</div>
         <div class="amount">${heroAmt}<span class="unit">MAD</span></div>
-        <div class="count">${heroCount} paiements</div>
+        <div class="count">${heroCount} paiements enregistrés</div>
+        ${zReference ? `<p>${window.KiwiZReconciliation.referenceText(zReference)}</p>` : ''}
       </div>
 
       <div class="lyoum-payout">
@@ -356,10 +358,25 @@
       document.body.appendChild(root);
     }
     root.innerHTML = SIMPLE_PAGES[tab]();
+    const z = tab === 'lyoum' && window.KiwiZReconciliation?.reference?.('aujourdhui');
+    if (z?.blocked?.length) {
+      const details = document.createElement('details'), heading = document.createElement('summary');
+      heading.textContent = z.blocked.length + ' reçu(s) payé(s) non enregistré(s) · contacter le support';
+      details.appendChild(heading);
+      for (const b of z.blocked) {
+        const p = document.createElement('p');
+        p.textContent = b.id + ' · ' + (Number(b.amountCents)/100).toFixed(2) + ' MAD · ' + b.method
+          + ' · ' + new Date(b.ts).toLocaleString() + ' · ' + b.reason;
+        details.appendChild(p);
+      }
+      root.querySelector('.lyoum-hero')?.appendChild(details);
+    }
     document.querySelector('.simple-tabs')?.remove();
     document.body.insertAdjacentHTML('beforeend', renderTabBar());
     window.scrollTo(0, 0);
   }
+
+  window.addEventListener('kiwi:z-reference', () => { if (getMode() === 'simple') renderTab(currentTab); });
 
   function getMode() { return localStorage.getItem('kiwiMode') || 'simple'; }
   function setMode(m) {
@@ -372,6 +389,7 @@
       document.querySelector('.simple-tabs')?.remove();
     }
     renderModeToggle();
+    window.KiwiZReconciliation?.showDashboard?.();
   }
 
   /* ═══ Actions ═══ */

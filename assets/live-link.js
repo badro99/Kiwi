@@ -266,6 +266,12 @@
       return false;
     }
   }
+  function blockedDetails(rows) {
+    return rows.filter(function (r) { return r && r._blocked; }).map(function (r) {
+      return { id: r.id, amountCents: Number(r.amountCents) || Math.round(Number(r.amount)*100) || 0,
+        method: String(r.method || ''), ts: Number(r.ts) || 0, reason: r._error || 'unknown', status: r._status || 0 };
+    });
+  }
   function queueStatus() {
     var ackAt = 0;
     try { ackAt = Number(localStorage.getItem('kiwi:sale-ack:' + merchant())) || 0; } catch (_) {}
@@ -279,6 +285,7 @@
       var oldest = Math.min(outboxStatus.oldestPendingAt || Infinity,
         localDebt.reduce(function (at, row) { return Math.min(at, Number(row.ts) || Infinity); }, Infinity));
       return {
+        blockedEntries: (outboxStatus.blockedEntries || []).concat(blockedDetails(localDebt)),
         pending: (outboxStatus.pending || 0) + localDebt.length - localBlocked,
         blocked: (outboxStatus.blocked || 0) + localBlocked,
         sending: outboxStatus.sending,
@@ -297,10 +304,11 @@
     var active = merchant();
     var current = active ? q.filter(function (x) { return x && x.merchant === active; }) : q;
     return {
-      pending: current.length,
+      blockedEntries: blockedDetails(current),
+      pending: current.filter(function (r) { return !r._blocked; }).length,
       blocked: current.filter(function (x) { return x && x._blocked; }).length,
       foreign: q.length - current.length,
-      total: q.length,
+      total: current.length,
       storageError: !!queueStorageError,
       engine: 'localstorage',
       lastStatus: lastSyncStatus || 0,
@@ -348,7 +356,7 @@
         tenant: row.merchant,
         payload: row,
         blocked: !!row._blocked,
-        status: row._status,
+        status: row._status, error: row._error, lastReactivatedComparison: row._lastReactivatedComparison, lastReactivatedAt: row._lastReactivatedAt,
         createdAt: row.ts,
       };
     }).then(function () {
@@ -536,7 +544,7 @@
         }
         if (blocked) {
           current.forEach(function (x) {
-            if (x && x.id === body.id) { x._blocked = true; x._status = status || 0; x._blockedAt = Date.now(); }
+            if (x && x.id === body.id) { x._blocked = true; x._error = lastSyncError || 'unknown'; x._status = status || 0; x._blockedAt = Date.now(); }
           });
           qWrite(current);                       // retained, visible, skipped on the next send
           moneySignal(body, 'blocked', status);
@@ -671,42 +679,47 @@
     return flushLegacyQueue();
   }
 
-  function reactivateLegacy(id, active) {
-    var rows = qRead(), changed = false;
-    rows.forEach(function (row) {
-      if (row && row.id === id && row.merchant === active && row._blocked) {
-        delete row._blocked; delete row._status; delete row._blockedAt;
-        delete row._retryAfter; changed = true;
-      }
-    });
-    return !changed || qWrite(rows);
-  }
-
-  // Only a Z mismatch or an explicit cashier retry calls this. Routine
-  // flush(true) must NOT resubmit every permanent 400 on every heartbeat.
-  function retrySale(entry) {
+  // The comparison may authorise a retry ONLY after a known rule changed.
+  // Missing remotely does not mean a conflicting/malformed receipt is valid.
+  function retrySale(entry, permit) {
     var active = merchant();
     if (!active || !entry) return Promise.resolve(false);
-    var id = stableId(active, entry);
-    if (!reactivateLegacy(id, active)) return Promise.resolve(false);
-    var O = window.KiwiOffline;
-    if (!O || !O.available() || !O.reactivate) return Promise.resolve(true);
-    return O.reactivate(OUTBOX_CHANNEL, active, id).then(function () { return true; });
-  }
+    var id = stableId(active, entry), rows = qRead();
+    var row = rows.find(function (r) { return r.id === id && r.merchant === active; });
+    if (row && row._blocked) {
+      if (!permit || permit.id !== id || permit.merchant !== active || !permit.comparisonId
+        || permit.changed !== 'visit-rule-relaxed' || permit.reason !== row._error
+        || Number(permit.status) !== Number(row._status)
+        || !['table-session-missing','service-session-table-mismatch','open-service-session-required','send-order-before-payment'].includes(permit.reason)
+        || ![404,409].includes(Number(permit.status))
+        || row._lastReactivatedComparison === permit.comparisonId
+        || !Number.isSafeInteger(permit.comparedAt) || permit.comparedAt <= (row._lastReactivatedAt || 0)) return Promise.resolve(false);
 
-  function retryBlockedSales() {
-    var active = merchant();
-    if (!active) return Promise.resolve(0);
-    var legacy = qRead().filter(function (row) { return row && row.merchant === active && row._blocked; });
-    if (legacy.some(function (row) { return !reactivateLegacy(row.id, active); })) return Promise.resolve(0);
+    }
     var O = window.KiwiOffline;
-    if (!O || !O.available() || !O.list || !O.reactivate) return Promise.resolve(legacy.length);
-    return O.list(OUTBOX_CHANNEL, active).then(function (rows) {
-      return Promise.all(rows.filter(function (row) { return row.state === 'blocked'; }).map(function (row) {
-        return O.reactivate(OUTBOX_CHANNEL, active, row.id);
-      }));
-    }).then(function (results) { return legacy.length + results.filter(Boolean).length; });
+    var ready = !O || !O.available() || !O.list ? Promise.resolve(true)
+      : O.list(OUTBOX_CHANNEL, active).then(function (all) {
+        var blocked = all.find(function (r) { return r.id === id && r.state === 'blocked'; });
+        return blocked ? O.reactivate(OUTBOX_CHANNEL, active, id, permit) : true;
+      });
+    return ready.then(function (allowed) {
+      if (!allowed) return false;
+      // Do not unblock the fallback before the durable copy has validated the
+      // same permit. Otherwise one copy could bypass the other's quarantine.
+      if (row && row._blocked) {
+        var fresh = qRead(), current = fresh.find(function(r) { return r.id === id && r.merchant === active; });
+        if (!current || !current._blocked) return true;
+        if (current._error !== row._error || current._status !== row._status
+          || permit.comparedAt <= (current._lastReactivatedAt || 0)) return false;
+        current._lastReactivatedComparison = permit.comparisonId; current._lastReactivatedAt = permit.comparedAt;
+        delete current._blocked; delete current._status; delete current._blockedAt; delete current._retryAfter;
+        return qWrite(fresh);
+      }
+      return true;
+    });
   }
+  // Kept for old shells: a user clicking Retry is not new server evidence.
+  function retryBlockedSales() { return Promise.resolve(0); }
 
   function enqueueMoneyBody(body, m, opts) {
     opts = opts || {};

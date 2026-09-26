@@ -2165,8 +2165,13 @@
       };
     }
 
+    const reference = ownData() && window.KiwiZReconciliation?.reference?.();
+    if (reference) {
+      data = { ...data, amount: reference.referenceCents / 100,
+        deltaHier: null, deltaSemaine: null, deltaMois: null };
+    }
     const labelEl = document.querySelector('[data-hero-label]');
-    if (labelEl) labelEl.textContent = HERO_LABEL[lang]?.[currentRange] || HERO_LABEL.fr[currentRange];
+    if (labelEl) labelEl.textContent = reference ? (reference.source === 'closed-z' ? 'RAPPORT Z DE LA CAISSE · ' : 'VENTES ENREGISTRÉES · ') + reference.day : (HERO_LABEL[lang]?.[currentRange] || HERO_LABEL.fr[currentRange]);
 
     // The live-session row ("LIVE · HH:MM · 24 heures · session continue
     // depuis 08h12") is a today-only concept — a ticking LIVE clock over a
@@ -5507,6 +5512,19 @@
    * dashboard renderer fails during first paint. */
   window.KiwiDateRange = {
     getDateRange, setDateRange, subscribe, tickLiveRevenue,
+    selectedBusinessDay: (range = currentRange) => {
+      // Same civil timezone/cutoff as functions/api/_business-day.js, including
+      // boutiques. This reference must not inherit a midnight chart cutoff.
+      const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+        timeZone:'Africa/Casablanca',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'
+      }).formatToParts(new Date()).map(p => [p.type,p.value]));
+      const civil = `${parts.year}-${parts.month}-${parts.day}`;
+      const today = +parts.hour < 5 ? addMerchantDays(civil,-1) : civil;
+      if (range === 'aujourdhui') return today;
+      if (range === 'hier') return addMerchantDays(today,-1);
+      return range === 'personnalise' && customRange && dateToIso(customRange.start) === dateToIso(customRange.end)
+        ? dateToIso(customRange.start) : null;
+    },
     getShowComparison, setShowComparison,
     bounds: (range) => rangeBounds(range == null ? currentRange : range),
     insights: { summary: realInsightSummary, hero: buildRealHeroRec, heatmap: buildRealHeatmapRec },
@@ -5517,6 +5535,7 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
     else init();
   }
+  window.addEventListener('kiwi:z-reference', () => { renderHero(); });
   document.addEventListener('kiwi:operator-snapshot', () => {
     renderHero(); renderGoal(); renderKpiBand(); renderRevChart();
   });

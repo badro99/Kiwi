@@ -6,7 +6,7 @@
   if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) return;
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/kiwi-sw.js?v=596').then(function (reg) {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=597').then(function (reg) {
         try { reg.update(); } catch (_) {}
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
       }).catch(function () {});
@@ -185,7 +185,7 @@
         host.appendChild(s);
       } else {
         s.style.cssText = 'position:fixed;right:18px;bottom:210px;z-index:9998;padding:7px 10px;border-radius:999px;' +
-          'font:600 11px/1.2 system-ui;color:white;box-shadow:0 4px 14px rgba(0,0,0,.18);pointer-events:none';
+          'font:600 11px/1.2 system-ui;color:white;box-shadow:0 4px 14px rgba(0,0,0,.18);pointer-events:auto';
         document.body.appendChild(s);
       }
       return s;
@@ -281,6 +281,24 @@
         else if (journalNow.pendingPairing) toast('Appairez cette caisse pour transmettre son journal · événements conservés', 'warn');
         else if (journalNow.pendingCount) toast('Journal caisse en attente · reprise automatique, événements conservés', 'warn');
         status();
+        return;
+      }
+      if (qNow.blocked) {
+        var dialog = document.createElement('dialog');
+        dialog.style.cssText = 'max-width:min(620px,90vw);max-height:80vh;overflow:auto;border:1px solid #9F3028;border-radius:16px;padding:24px';
+        var title = document.createElement('h2');
+        title.textContent = qNow.blocked + ' reçu(s) payé(s) non enregistré(s) · contacter le support';
+        dialog.appendChild(title);
+        (qNow.blockedEntries || []).forEach(function (b) {
+          var line = document.createElement('p');
+          line.textContent = b.id + ' · ' + (Number(b.amountCents)/100).toFixed(2) + ' MAD · ' + b.method
+            + ' · ' + new Date(b.ts).toLocaleString() + ' · ' + b.reason;
+          dialog.appendChild(line);
+        });
+        var close = document.createElement('button'); close.textContent = 'Fermer';
+        close.onclick = function () { dialog.close(); }; dialog.appendChild(close);
+        dialog.addEventListener('close', function () { dialog.remove(); });
+        document.body.appendChild(dialog); dialog.showModal();
         return;
       }
       if (!navigator.onLine) {
