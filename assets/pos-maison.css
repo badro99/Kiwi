@@ -1521,6 +1521,9 @@ body.is-pos .clockin-screen.mz-clockin { display: flex !important; }
 .mzm-head .mz-btn { flex-shrink: 0; }
 .mzm-kpis {
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* The result table has a 320px minimum. On a short caisse viewport flex
+     must scroll the page, not compress these four figures to a few pixels. */
+  flex: 0 0 auto;
   margin: 0 22px 14px; border: 1px solid var(--line); border-radius: 14px;
   background: var(--paper-elev); overflow: hidden;
 }

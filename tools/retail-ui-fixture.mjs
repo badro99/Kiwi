@@ -7,6 +7,7 @@ import http from 'node:http';
 import path from 'node:path';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
+const stamps = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/asset-stamps.json'), 'utf8'));
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8',
@@ -17,7 +18,7 @@ function maisonPage() {
   return `<!doctype html><html lang="fr"><head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Kiwi Caisse · Amira (preuve synthétique)</title>
-    <link rel="stylesheet" href="/assets/tokens.css"><link rel="stylesheet" href="/assets/caisse-skin.css"><link rel="stylesheet" href="/assets/caisse-dna.css"><link rel="stylesheet" href="/assets/pos-maison.css"><link rel="stylesheet" href="/assets/retail-scan.css">
+    <link rel="stylesheet" href="/assets/tokens.css"><link rel="stylesheet" href="/assets/caisse-skin.css"><link rel="stylesheet" href="/assets/caisse-dna.css"><link rel="stylesheet" href="/assets/pos-maison.css?v=${stamps['assets/pos-maison.css'].v}"><link rel="stylesheet" href="/assets/retail-scan.css">
     <style>
       html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper,#f7f5f0);font-family:Arial,sans-serif}button,input{font:inherit}button{border:0}.vx-screen{display:flex}
       .modal-veil{position:fixed;inset:0;background:rgba(4,14,10,.62);backdrop-filter:blur(16px) saturate(1.2);display:none;align-items:center;justify-content:center;z-index:100;padding:12px}.modal-veil.is-open{display:flex}
@@ -27,7 +28,7 @@ function maisonPage() {
     <script src="/assets/caisse-dna.js"></script><script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
     <script src="/assets/inventory-ledger.js"></script><script src="/assets/maison-stock-movements.js"></script><script src="/assets/procurement.js"></script>
     <script src="/assets/venue-store.js"></script><script src="/assets/clients-store.js"></script><script src="/assets/clients-book.js"></script>
-    <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script src="/assets/pos-maison.js"></script>
+    <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script src="/assets/pos-maison.js?v=${stamps['assets/pos-maison.js'].v}"></script>
   </head><body class="is-pos-maison"><div id="toast-stack"></div><div class="vx-screen is-on" id="pos-maison"></div>
     <script>window.__maisonSpec.mount(document.getElementById('pos-maison'));window.KiwiCaisseDna.enhance(document.getElementById('pos-maison'),'maison');</script>
   </body></html>`;
