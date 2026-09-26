@@ -5557,7 +5557,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=547" defer></script>
+  <script src="assets/caisse-pwa.js?v=554" defer></script>
   <script src="assets/live-link.js?v=49" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -5572,7 +5572,7 @@
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
   <script src="assets/caisse-pairing.js?v=25" defer></script>
   <script src="assets/kiwi-select.js?v=2" defer></script>
-  <script src="assets/cash-sessions.js?v=5" defer></script>
+  <script src="assets/cash-sessions.js?v=6" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
        caisse neuve doit retrouver le magasin, pas repartir vide. AVANT
        venue-store.js, qui s'y branche. -->
@@ -5651,7 +5651,7 @@
        journée avec son numéro d'origine et la mention de duplicata, sans jamais
        réencaisser. Après receipt.js, dont il compose les documents. -->
   <script src="assets/invoice.js?v=8" defer></script>
-  <script src="assets/pos-reprint.js?v=1" defer></script>
+  <script src="assets/pos-reprint.js?v=7" defer></script>
   <!-- Global operator access · long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js?v=1" defer></script>
   <!-- Auth guard: redirects to the auth page the moment the server signals
@@ -5943,6 +5943,10 @@
       </div>
 
       <div class="act-selector" aria-label="Actions caisse">
+        <button class="act-pill" data-action="cancel-sale" type="button">
+          <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M280-280 480-480 280-680l56-56 200 200 200-200 56 56-200 200 200 200-56 56-200-200-200 200-56-56Z"/></svg>
+          <span>Annuler une vente</span>
+        </button>
         <button class="act-pill" data-action="remboursement" data-feature="remboursement">
           <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M320-200q-17 0-28.5-11.5T280-240q0-17 11.5-28.5T320-280h244q63 0 109.5-40T720-420q0-60-46.5-100T564-560H312l76 76q11 11 11 28t-11 28q-11 11-28 11t-28-11L188-572q-6-6-8.5-13t-2.5-15q0-8 2.5-15t8.5-13l144-144q11-11 28-11t28 11q11 11 11 28t-11 28l-76 76h252q97 0 166.5 63T800-420q0 94-69.5 157T564-200H320Z"/></svg>
           <span>Remboursement</span>
@@ -8949,6 +8953,9 @@
       }
       t.status = 'khlass';
       delete t.discount; // clear remise immédiatement à l'encaissement
+      delete t.reopenedBill;
+      delete t.reopenRef;
+      delete t.reopenSessionId;
       delete t.orderNo;
       tableOrders[id] = [];
       delete orders[id];
@@ -10674,7 +10681,19 @@
         if (a === 'open-drawer' && (isFeatureOff('open-drawer') || isFeatureOff('openDrawer'))) return;
         if (a === 'cash-move' && (isFeatureOff('cash-move') || isFeatureOff('cashMove'))) return;
         if (a === 'passation' && isFeatureOff('passation')) return;
-        if (a === 'remboursement')   openRefund();
+        if (a === 'cancel-sale') {
+          window.KiwiPosReprint?.provide?.('restaurant', () => journal.filter(entry => entry
+            && entry.kind !== 'refund' && entry.amount > 0).map(entry => ({
+              saleId: String(entry.serverSaleId || window.KiwiLive?.saleIdFor?.(entry, currentMerchantSlug()) || entry.id || ''),
+              ts: entry.time instanceof Date ? entry.time.getTime() : new Date(entry.time).getTime(),
+              total: money(Number(entry.amount || 0) + Number(entry.tip || 0)),
+              ref: entry.ref || '', label: entry.label || '', method: entry.method || '',
+              lines: entry.lines || [], voided: !!entry.voided,
+              reopenSnapshot: entry.reopenSnapshot || null,
+            })));
+          window.KiwiPosReprint?.open?.('restaurant');
+        }
+        else if (a === 'remboursement')   openRefund();
         else if (a === 'open-drawer') openDrawerNoSale();
         else if (a === 'cash-move')  openCashMove();
         else if (a === 'passation')  openHandover();
@@ -13778,7 +13797,7 @@
            complete void list is sent on every poll, so this is reversible when
            the original receipt is restored too. */
         let linkedRefundMatched = false;
-        if (e.kind === 'refund' && hit && e.refundOf) {
+        if (e.kind === 'refund' && !e.refundOfId && hit && e.refundOf && refundOriginalFor(e)) {
           const originalRef = String(e.refundOf || '').trim();
           if (originalRef && isFormattedFiscal(originalRef) && hit(originalRef)) {
             const originalVoidTs = voidMapByRef.get(originalRef);
@@ -13901,16 +13920,8 @@
          second pass after originals have been reconciled and make that exact
          local relationship follow the original's state. */
       journal.forEach((refund) => {
-        if (!refund || refund.kind !== 'refund' || !refund.refundOf) return;
-        const link = String(refund.refundOf || '').trim();
-        if (!link) return;
-        const original = journal.find((sale) => {
-          if (!sale || sale.kind === 'refund') return false;
-          let cloudId = '';
-          try { cloudId = String(window.KiwiLive?.saleIdFor?.(sale, currentMerchantSlug()) || ''); } catch (_) {}
-          return [sale.ref, sale.id, sale.serverSaleId, cloudId]
-            .some((value) => String(value || '').trim() === link);
-        });
+        if (!refund || refund.kind !== 'refund' || !(refund.refundOfId || refund.refundOf)) return;
+        const original = refundOriginalFor(refund);
         if (!original) return;
         if (original.voided && !refund.voided) {
           refund.voided = true;
@@ -14108,7 +14119,7 @@
            humain imprimé et doit être le numéro opérationnel. */
         amount: amount, method: method,
         ref: vrapOrder ? ticketNo(vrapOrder)
-          : (settlementTable ? settledOrderLabel(settlementTable) : genRef()),
+          : (settlementTable ? (tables[settlementTable]?.reopenRef || settledOrderLabel(settlementTable)) : genRef()),
         tip: money(tip),
         cashier: currentCashier.name,
       };
@@ -14160,6 +14171,32 @@
           }
           return saved;
         });
+      }
+      if (settlementTable && tables[settlementTable]) {
+        /* markPaid() clears the table immediately after the final tender. Keep
+         * a bounded bill snapshot on the immutable local receipt so an audited
+         * void can restore the same note after a reload, not manufacture a new
+         * kitchen order or silently charge the whole split again. */
+        const table = tables[settlementTable];
+        const source = split && splitState && Array.isArray(splitState.sourceLines)
+          ? splitState.sourceLines : generateOrder(settlementTable, table);
+        entry.reopenSnapshot = {
+          table: String(settlementTable), covers: Math.max(1, Number(table.covers) || 1),
+          orderNo: String(table.orderNo || settledOrderRef(settlementTable) || ''),
+          ref: String(entry.ref || ''),
+          lines: source.slice(0, 40).map(line => ({
+            name: String(line.name || ''), qty: Math.max(1, Number(line.qty) || 1),
+            total: money(Number(line.total) || 0),
+            price: money(Number(line.price ?? line.unit) || ((Number(line.total) || 0) / (Number(line.qty) || 1))),
+          })),
+          split: split && splitState.flow ? {
+            id: String(splitState.flow.id || split.flowId || ''),
+            parts: splitState.flow.parts.slice(0, 50).map(part => ({
+              ...part, lines: Array.isArray(part.lines) ? part.lines.slice(0, 40).map(line => ({ ...line })) : [],
+            })),
+            total: splitState.total, mode: splitState.splitMode,
+          } : null,
+        };
       }
       accountActiveDiscount(settlementTable);
       /* Le reçu se fige ICI, au moment de la vente. Si le propriétaire change
@@ -15517,7 +15554,7 @@
       if (window.KiwiLive.postRefund) journal.forEach((entry) => {
         if (!entry || entry.origin || entry.voided || entry.kind !== 'refund' || !(Number(entry.amount) < 0)) return;
         if (onlyMissing && entry.serverSaleId) return;
-        const orig = journal.find((sale) => sale && sale.kind !== 'refund' && sale.ref === entry.refundOf);
+        const orig = refundOriginalFor(entry);
         if (!orig) return;
         const actor = entry.refundActor || null;
         /* A manager identity is not a manager authorization. Legacy rows and
@@ -16027,7 +16064,7 @@
           : (e.origin === 'orderpro' ? ' · OrderPro' : '');
         const tipMeta = (!isRefund && e.tip > 0)
           ? ` · pourboire ${fmtMAD(e.tip)}` : '';
-        return `<button class="jr-entry${fresh}" data-jr-ref="${e.ref}">`
+        return `<button class="jr-entry${fresh}" data-jr-id="${escTeam(e.id || '')}"${e.id ? '' : ' disabled'}>`
              + `<span class="jr-entry-ic jr-entry-ic--${icCls}"><i data-lucide="${icon}"></i></span>`
              + `<span class="jr-entry-main">`
              /* L'étiquette porte maintenant le nom de table, saisi par le
@@ -16036,8 +16073,8 @@
              +   `<span class="jr-entry-meta">${hh}:${mm} · ${mLabel} · ${e.ref}${sourceMeta}${tipMeta}</span>`
              + `</span>`
              + `<span class="jr-entry-amount${isRefund ? ' is-refund' : ''}">${amtTxt}</span>`
-             + `<span class="jr-entry-invoice" data-jr-invoice="${e.ref}" role="button" tabindex="0" aria-label="Facture A4 ${e.ref}"><i data-lucide="file-text"></i></span>`
-             + `<span class="jr-entry-reprint" data-jr-print="${e.ref}" role="button" tabindex="0" aria-label="Réimprimer le ticket ${e.ref}"><i data-lucide="printer"></i></span>`
+             + `<span class="jr-entry-invoice" data-jr-invoice="${escTeam(e.id || '')}" role="button" tabindex="0" aria-label="Facture A4 ${escTeam(e.ref)}"><i data-lucide="file-text"></i></span>`
+             + `<span class="jr-entry-reprint" data-jr-print="${escTeam(e.id || '')}" role="button" tabindex="0" aria-label="Réimprimer le ticket ${escTeam(e.ref)}"><i data-lucide="printer"></i></span>`
              + `</button>`;
       }).join('');
       if (window.lucide) lucide.createIcons();
@@ -16187,7 +16224,7 @@
       const inv = e.target.closest('[data-jr-invoice]');
       if (inv) {
         e.stopPropagation();
-        const entry = journal.find(en => en.ref === inv.dataset.jrInvoice);
+        const entry = journal.find(en => en.id === inv.dataset.jrInvoice);
         if (entry && window.KiwiInvoice && typeof window.KiwiInvoice.makeSaleInvoice === 'function') {
           window.KiwiInvoice.makeSaleInvoice(entry);
         }
@@ -16196,13 +16233,14 @@
       const pr = e.target.closest('[data-jr-print]');
       if (pr) {
         e.stopPropagation();
-        printSaleTicket(journal.find(en => en.ref === pr.dataset.jrPrint), { copy: true });
+        const entry = journal.find(en => en.id === pr.dataset.jrPrint);
+        if (entry) printSaleTicket(entry, { copy: true });
         return;
       }
-      const row = e.target.closest('[data-jr-ref]');
+      const row = e.target.closest('[data-jr-id]');
       if (row) {
-        const ref = row.dataset.jrRef;
-        openReceipt(journal.find(en => en.ref === ref));
+        const entry = journal.find(en => en.id === row.dataset.jrId);
+        if (entry) openReceipt(entry);
       }
     });
     $('#jr-search-input').addEventListener('input', (e) => {
@@ -17121,6 +17159,8 @@
           lines: Array.isArray(p.lines) ? p.lines.map(l => ({ ...l })) : [],
         })),
         paidCount: splitPaidCount(splitState.flow),
+        id: String(splitState.flow.id || ''),
+        session: String(splitState.flow.session || ''),
         sourceLabel: splitState.sourceLabel || '',
         orderNum: splitState.isVrap && vrapEditingNum != null ? Number(vrapEditingNum) : null,
       };
@@ -17140,7 +17180,8 @@
       Object.assign(splitState, {
         tableId: isVrap ? null : tableId,
         isVrap,
-        sourceLabel: isVrap ? (vrapEditingNum != null ? ('À emporter #' + vrapEditingNum) : 'À emporter') : tableId,
+        sourceLabel: isVrap ? (vrapEditingNum != null ? ('À emporter #' + vrapEditingNum) : 'À emporter')
+          : (saved.sourceLabel || tableId),
         total:     saved.total,
         lines,
         splitMode: saved.mode,
@@ -17149,6 +17190,8 @@
         numConvives: saved.parts.length,
         assignments: {},
         flow: {
+          id: String(saved.id || ''),
+          session: String(saved.session || ''),
           parts: saved.parts.map(p => ({
             ...p,
             lines: Array.isArray(p.lines) ? p.lines.map(l => ({ ...l })) : [],
@@ -17219,6 +17262,69 @@
       }
       _origOpenSplit(tableId);
     };
+
+    /* This bridge is deliberately table-specific. The shared reprint module
+     * authorizes the exact receipt; only the restaurant till can restore its
+     * bill snapshot and split progress without creating a second kitchen order. */
+    window.KiwiRestaurantReopen = {
+      originalTable(entry) {
+        return String(entry?.reopenSnapshot?.table || '').trim();
+      },
+      freeTables(original) {
+        return Object.keys(tables).filter(id => {
+          const t = tables[id];
+          return t && (t.status === 'khawya' || t.status === 'khlass')
+            && (!t.timerSession || !phoneSeats.has(tableKey(id)));
+        }).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+      },
+      apply(result, receipt) {
+        const snap = receipt && receipt.reopenSnapshot;
+        const target = String(result && result.table || '');
+        const table = tables[target];
+        if (!snap || !table || !result.sessionId || !Array.isArray(snap.lines)
+          || !(table.status === 'khawya' || table.status === 'khlass'
+            || table.timerSession === result.sessionId
+            || (table.reopenSessionId === result.sessionId
+              && !(tableOrders[target] || []).length && !(orders[target] || []).length))) return false;
+        const saleId = String(receipt.saleId || '');
+        const voided = journal.find(row => row && (
+          row.id === saleId || row.serverSaleId === saleId
+          || window.KiwiLive?.saleIdFor?.(row, currentMerchantSlug()) === saleId));
+        if (voided) { voided.voided = true; voided.voidConfirmed = true; voided.voidAuthority = 'sale-cancel'; }
+        table.status = 'bgha-ykhlass';
+        table.covers = Math.max(1, Number(snap.covers) || 1);
+        table.orderNo = String(snap.orderNo || '').trim();
+        table.reopenRef = String(result.ref || snap.ref || '').trim();
+        table.timerSession = String(result.sessionId);
+        delete table.reopenSessionId;
+        table.reopenedBill = saleId;
+        delete tableClosedAt[tableKey(target)];
+        delete orders[target];
+        tableOrders[target] = snap.lines.slice(0, 40).map((line, index) => {
+          const qty = Math.max(1, Number(line.qty) || 1);
+          return { id: 'reopen-' + index, name: String(line.name || 'Article'), qty,
+            price: Number(line.total || 0) / qty, sent: true, reopenedBill: true };
+        });
+        if (snap.split && Array.isArray(snap.split.parts)) {
+          const flowId = String(snap.split.id || result.splitFlowId || '');
+          const parts = snap.split.parts.map((part, index) => {
+            const live = journal.find(row => row && !row.voided && row.split
+              && String(row.split.flowId || '') === flowId && Number(row.split.index) === index);
+            return { ...part, paid: !!live, payMethod: live ? (live.method === 'card' ? 'carte' : 'cash') : null,
+              saleId: live ? live.id : null };
+          });
+          tableSplits.set(target, { id: flowId, session: String(result.sessionId),
+            mode: snap.split.mode || 'egal', total: Number(snap.split.total) || 0,
+            sourceLabel: table.reopenRef || tableSaleLabel(target, table.orderNo),
+            parts, paidCount: splitPaidCount({ parts }) });
+        } else tableSplits.delete(target);
+        refreshTableNode(target);
+        persistShift();
+        openTable(target);
+        return true;
+      },
+    };
+    /* End restaurant reopen bridge */
 
     // Allow backdrop click to background mid-flow (instead of locking)
     // Replace the lock with a save-and-close on the existing handler
@@ -17488,7 +17594,7 @@
     function applyAcceptedRefund(entry) {
       if (!entry || entry.refundSyncStatus !== 'accepted' || !entry.refundLedgerReversed) return;
       const amount = money(Math.abs(Number(entry.amount) || 0));
-      const original = journal.find((sale) => sale && sale.kind !== 'refund' && sale.ref === entry.refundOf);
+      const original = refundOriginalFor(entry);
       if (original) {
         original.refundedAmount = money(refundedSoFar(original) + amount);
         original.refunded = refundableLeft(original) <= 0;
@@ -17511,7 +17617,7 @@
       }
       if (entry.refundLedgerReversed) return;
       const amount = money(Math.abs(Number(entry.amount) || 0));
-      const original = journal.find((sale) => sale && sale.kind !== 'refund' && sale.ref === entry.refundOf);
+      const original = refundOriginalFor(entry);
       if (original) {
         original.refundedAmount = money(Math.max(0, refundedSoFar(original) - amount));
         original.refunded = refundableLeft(original) <= 0;
@@ -17535,7 +17641,7 @@
         + `<span class="rf-recovery-count mono">${rows.length}</span></div>`
         + `<p>Ils sont déjà déduits de cette caisse, mais pas encore des rapports. Un manager doit confirmer chaque montant.</p>`
         + rows.map((entry) => {
-          const original = journal.find((sale) => sale && sale.kind !== 'refund' && sale.ref === entry.refundOf);
+          const original = refundOriginalFor(entry);
           const label = original ? original.label : (entry.refundOf || 'Vente introuvable');
           return `<div class="rf-recovery-row"><span class="rf-recovery-main">`
             + `<b>${escTeam(label)}</b><span>${escTeam(entry.refundOf || '')} · <bdi dir="ltr">−${fmtMAD(Math.abs(Number(entry.amount) || 0))}</bdi></span></span>`
@@ -17545,7 +17651,7 @@
     }
 
     function recoverRefund(entry) {
-      const original = journal.find((sale) => sale && sale.kind !== 'refund' && sale.ref === entry.refundOf);
+      const original = refundOriginalFor(entry);
       if (!original) { toast('Ticket original introuvable · aucune écriture envoyée'); return; }
       const amountCents = Math.abs(Math.round(Number(entry.amount) * 100));
       const originalSaleId = String(original.serverSaleId || window.KiwiLive?.moneyId?.(original) || '');
@@ -17581,6 +17687,25 @@
     }
     function refundableLeft(entry) { return money(Math.max(0, money(entry.amount) - refundedSoFar(entry))); }
 
+    function refundOriginalFor(entry) {
+      if (!entry || entry.kind !== 'refund') return null;
+      const id = String(entry.refundOfId || '').trim();
+      if (id) return journal.find((sale) => sale && sale.kind !== 'refund' && sale.id === id) || null;
+      /* Legacy refunds kept only the printed ref. It is not a payment ID:
+         split parts share it, so never attach an ambiguous old refund to the
+         first matching receipt. */
+      const ref = String(entry.refundOf || '').trim();
+      if (!ref) return null;
+      const matches = journal.filter((sale) => {
+        if (!sale || sale.kind === 'refund') return false;
+        let cloudId = '';
+        try { cloudId = String(window.KiwiLive?.saleIdFor?.(sale, currentMerchantSlug()) || ''); } catch (_) {}
+        return [sale.ref, sale.id, sale.serverSaleId, cloudId]
+          .some((value) => String(value || '').trim() === ref);
+      });
+      return matches.length === 1 ? matches[0] : null;
+    }
+
     function refundableJournal() {
       // Newest first · only real sales (positive, not already refunded).
       return journal.slice().reverse()
@@ -17606,7 +17731,7 @@
         const icon   = e.method === 'cash' ? 'banknote' : 'credit-card';
         const mLabel = e.method === 'cash' ? 'Espèces'  : 'Carte';
         const done   = refundableLeft(e) <= 0;
-        return `<button class="rf-entry" data-rf-ref="${e.ref}"${done ? ' disabled' : ''}>`
+        return `<button class="rf-entry" data-rf-id="${escTeam(e.id || '')}"${done || !e.id ? ' disabled' : ''}>`
              + `<span class="rf-entry-ic rf-entry-ic--${e.method}"><i data-lucide="${icon}"></i></span>`
              + `<span class="rf-entry-main">`
              +   `<span class="rf-entry-label">${e.label}`
@@ -17706,6 +17831,7 @@
           ref: genRef(),
           kind: 'refund',
           refundOf: orig.ref,
+          refundOfId: orig.id,
           reason: refundState.reason,
           refundSyncStatus: 'pending',
           refundLedgerReversed: false,
@@ -17776,9 +17902,9 @@
         return;
       }
       if (e.target.closest('#rf-confirm')) { confirmRefund(); return; }
-      const entry = e.target.closest('[data-rf-ref]');
+      const entry = e.target.closest('[data-rf-id]');
       if (entry && !entry.disabled) {
-        const orig = journal.find(j => j.ref === entry.dataset.rfRef);
+        const orig = journal.find(j => j && j.kind !== 'refund' && j.id === entry.dataset.rfId);
         if (orig) openRefundConfirm(orig);
         return;
       }
@@ -21711,6 +21837,11 @@
           const statusChanged = tables[id].status !== state.status;
           const terminalHadLocalBill = terminalEmployeeState
             && (!!orders[id] || Array.isArray(tableOrders[id]) && tableOrders[id].length > 0);
+          if (state.status === 'bgha-ykhlass' && state.reopenSessionId
+            && (!tables[id].timerSession || String(tables[id].timerSession) === String(state.reopenSessionId))
+            && !(tableOrders[id] || []).length && !(orders[id] || []).length) {
+            tables[id].reopenSessionId = String(state.reopenSessionId);
+          } else if (terminalEmployeeState) delete tables[id].reopenSessionId;
           /* Remember even an already-matching free state. Otherwise opening a
              new party later would make that old close look new and close the
              freshly seated table. */
@@ -21911,6 +22042,7 @@
         };
         if (e.kind)            entry.kind     = e.kind;      // 'refund'
         if (e.refundOf)        entry.refundOf = e.refundOf;
+        if (e.refundOfId)      entry.refundOfId = e.refundOfId;
         if (e.refunded)        entry.refunded = true;
         if (e.refundedAmount != null) entry.refundedAmount = money(e.refundedAmount);
         if (e.reason)          entry.reason   = e.reason;
@@ -21926,6 +22058,7 @@
            Do not infer a visit, split or discount from today's mutable order;
            legacy receipts keep absent metadata absent. The API validates it. */
         if (e.serverSaleId)    entry.serverSaleId = e.serverSaleId;
+        if (e.reopenSnapshot && typeof e.reopenSnapshot === 'object') entry.reopenSnapshot = e.reopenSnapshot;
         if (e.visitClosed === true) entry.visitClosed = true;
         ['orderId', 'table', 'session', 'split', 'settlementKind', 'amountCents', 'grossAmountCents',
           'discountAmountCents', 'discountReason', 'actorId', 'saleSyncPending', 'saleSyncError'].forEach((key) => {

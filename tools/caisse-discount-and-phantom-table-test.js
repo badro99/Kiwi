@@ -62,7 +62,7 @@ ok('click router handles remove-table-discount and remove-vrap-discount',
 
 // 3. Static Source Guards - Table Lifecycle & Discount Purge
 ok('markPaid deletes discount immediately and forces release',
-  /function markPaid\(id\) \{[\s\S]{0,1400}releasePhoneTable\(id, 'settle', true\);/.test(CAISSE_SRC) &&
+  /function markPaid\(id\) \{[\s\S]{0,1900}releasePhoneTable\(id, 'settle', true\);/.test(CAISSE_SRC) &&
   /delete t\.discount;/.test(CAISSE_SRC));
 
 ok('cancelNewOrder deletes discount and forces release',

@@ -6,7 +6,7 @@
   if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) return;
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/kiwi-sw.js?v=597').then(function (reg) {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=603').then(function (reg) {
         try { reg.update(); } catch (_) {}
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
       }).catch(function () {});
@@ -199,6 +199,10 @@
       tone = '#9F3028';
       label = q.storageError || cashJournal.storageError ? 'Protection locale à vérifier' : q.blocked + ' opération' + (q.blocked > 1 ? 's' : '') + ' conservée' + (q.blocked > 1 ? 's' : '');
       detail = 'À vérifier avec le support · rien n’est supprimé';
+    } else if (cashJournal.repairRequired) {
+      tone = '#9F3028';
+      label = 'Journal caisse · preuve terminal refusée';
+      detail = cashJournal.pendingCount + ' événement(s) conservé(s) · toucher pour réparer';
     } else if (cashJournal.pendingPairing) {
       tone = '#9F3028';
       label = 'Journal caisse · appairage requis';
@@ -278,6 +282,16 @@
       var journalNow = cashJournalStatus();
       if (!qNow.pending && !qNow.blocked && !qNow.storageError) {
         if (journalNow.storageError) toast('Journal caisse non enregistré · stockage local à vérifier, gardez cette page ouverte', 'danger');
+        else if (journalNow.repairRequired) {
+          d.dataset.syncing = '1';
+          repairPairing(true, true).then(function (result) {
+            if (result && result.pad) return;
+            if (window.KiwiCashSessions && window.KiwiCashSessions.retry) return window.KiwiCashSessions.retry();
+          }).catch(function () {
+            toast('Réparation impossible · événements conservés, contactez le support', 'danger');
+          }).finally(function () { delete d.dataset.syncing; status(); });
+          return;
+        }
         else if (journalNow.pendingPairing) toast('Appairez cette caisse pour transmettre son journal · événements conservés', 'warn');
         else if (journalNow.pendingCount) toast('Journal caisse en attente · reprise automatique, événements conservés', 'warn');
         status();

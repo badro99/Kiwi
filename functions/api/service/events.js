@@ -71,8 +71,12 @@ async function append(env, merchant, event, statePatch) {
   return false;
 }
 
-function tableKey(value) {
+export function tableKey(value) {
   return String(value || '').trim().replace(/^table\s*/i, '').replace(/^t(?=\d+$)/i, '').slice(0, 32);
+}
+export function tableAliases(value) {
+  const key = tableKey(value);
+  return /^\d+$/.test(key) ? [key, 'T' + key, 't' + key, 'Table ' + key, 'table ' + key] : [key];
 }
 async function floorTargets(env, merchant) {
   const out = Object.create(null);
@@ -106,6 +110,11 @@ async function floorTargets(env, merchant) {
   } catch (_) {}
   return out;
 }
+export async function serviceTableExists(env, merchant, rawTable) {
+  const table = tableKey(rawTable);
+  const targets = await floorTargets(env, merchant);
+  return !!(table && targets[table]);
+}
 // Evaluated inside the mutating SQL statement, not merely before an await.
 // Closing an old visit can never grant ownership of a reused table.
 export function serviceVisitGuard(merchant, table, visit) {
@@ -119,6 +128,7 @@ export function serviceVisitGuard(merchant, table, visit) {
 
 async function syncTableSnapshot(env, merchant, rawTables, source, visit) {
   const targets = await floorTargets(env, merchant);
+  const reopening = !!(visit && visit.reopening);
   const incoming = Object.create(null);
   (Array.isArray(rawTables) ? rawTables : []).slice(0, 250).forEach((src) => {
     const table = tableKey(src && src.table);
@@ -128,12 +138,20 @@ async function syncTableSnapshot(env, merchant, rawTables, source, visit) {
       table, status,
       covers: Math.max(0, Math.min(99, Number(src.covers) || 0)),
       syncVersion: Math.max(0, Math.min(99, Number(src && src.syncVersion) || 0)),
+      ...(reopening ? { reopenSessionId: String(visit.id || '') } : {}),
     };
   });
   if (!Object.keys(incoming).length) return { ok: false, events: [] };
-  const guard = visit ? serviceVisitGuard(merchant, Object.keys(incoming)[0], visit) : null;
+  const aliases = reopening ? tableAliases(Object.keys(incoming)[0]) : [];
+  const guard = reopening ? {
+    sql: `EXISTS (SELECT 1 FROM table_sessions WHERE id = ? AND merchant = ?
+      AND table_no IN (${aliases.map(() => '?').join(',')}) AND mode = 'table' AND status = 'open')
+      AND NOT EXISTS (SELECT 1 FROM table_sessions WHERE merchant = ? AND table_no IN (${aliases.map(() => '?').join(',')})
+        AND id <> ? AND mode = 'table' AND status = 'open')`,
+    args: [visit.id, merchant, ...aliases, merchant, ...aliases, visit.id],
+  } : visit ? serviceVisitGuard(merchant, Object.keys(incoming)[0], visit) : null;
   for (let attempt = 0; attempt < 4; attempt++) {
-    if (visit) {
+    if (visit && !reopening) {
       try {
         const newer = await env.DB.prepare(`SELECT id FROM table_sessions
           WHERE merchant = ? AND table_no = ? AND id <> ? AND (status = 'open' OR opened_ts >= ?) LIMIT 1`)
@@ -171,7 +189,15 @@ async function syncTableSnapshot(env, merchant, rawTables, source, visit) {
       const changed = stateChanged || versionChanged || sourceChanged;
       if (!changed) return;
       const changedAt = Date.now();
-      states[table] = { ...next, ts: changedAt, source: source || 'caisse' };
+      /* Keep the server-authorized reopen identity through a matching caisse
+       * occupancy echo. A browser can crash after the atomic void and before
+       * its local bill restore; the till needs this marker to distinguish its
+       * own reopened visit from a different party on the same furniture. */
+      const reopenSessionId = next.reopenSessionId
+        || (source === 'caisse' && before && before.reopenSessionId && next.status === 'bgha-ykhlass'
+          ? before.reopenSessionId : '');
+      states[table] = { ...next, ...(reopenSessionId ? { reopenSessionId } : {}),
+        ts: changedAt, source: source || 'caisse' };
       if (!stateChanged || (!before && next.status === 'khawya')) return;
       const target = targets[table] || {};
       const event = {
@@ -277,6 +303,21 @@ export async function settleServiceTable(env, merchant, rawTable, visit) {
   const result = await syncTableSnapshot(env, merchant, [{
     table, status: 'khawya', covers: 0, syncVersion: 4,
   }], 'employee', visit);
+  if (!result.ok) return { ok: false, error: 'state-write-failed' };
+  await poke(env, merchant, FEATURE);
+  return { ok: true, table, events: result.events };
+}
+
+/* A reopened payment is a new operational visit. Publish occupancy for the
+ * waiter only while that precise visit is still open; an old retry must not
+ * resurrect a table that has already been settled or reused. */
+export async function reopenServiceTable(env, merchant, rawTable, sessionId, covers) {
+  const table = tableKey(rawTable);
+  const targets = await floorTargets(env, merchant);
+  if (!table || !targets[table] || !sessionId) return { ok: false, error: 'floor-table-required' };
+  const result = await syncTableSnapshot(env, merchant, [{
+    table, status: 'bgha-ykhlass', covers: Math.max(1, Math.min(99, Number(covers) || 1)), syncVersion: 4,
+  }], 'employee', { id: sessionId, reopening: true });
   if (!result.ok) return { ok: false, error: 'state-write-failed' };
   await poke(env, merchant, FEATURE);
   return { ok: true, table, events: result.events };

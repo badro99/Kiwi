@@ -55,7 +55,7 @@ assert.ok(journalListSource.includes('function renderJournalList'));
   ];
   const screen = vm.createContext({
     journal: entries, journalSearch: '', journalFilter: 'all', lastSaleId: null,
-    $: () => body, window: {}, rpEsc: (value) => value, fmtMAD: (value) => `${value} MAD`,
+    $: () => body, window: {}, rpEsc: (value) => value, escTeam: (value) => String(value), fmtMAD: (value) => `${value} MAD`,
     String, Math,
   });
   vm.runInContext(journalListSource, screen);

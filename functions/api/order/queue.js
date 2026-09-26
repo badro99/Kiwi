@@ -276,6 +276,43 @@ const COL_SET_MISSING = [
   ['channel', 'ext_ref', 'customer', 'session_id', 'server_name', 'paid_ts'],
 ];
 
+export async function reopenedFloorBills(env, merchant, sessions, now = Date.now()) {
+  if (!sessions.length) return [];
+  try {
+    const active = new Map(sessions.map(s => [String(s.id), s]));
+    const visitIds = sessions.map(s => String(s.id));
+    const where = `FROM sale_audit a WHERE a.merchant = ? AND a.action = 'reopen' AND a.ts > ?
+      AND json_valid(a.impact) AND json_extract(a.impact, '$.sessionId') IN (${visitIds.map(() => '?').join(',')})
+      ORDER BY a.ts DESC`;
+    let rows;
+    try {
+      rows = await env.DB.prepare(`SELECT a.sale_id, a.ref, a.amount, a.amount_cents, a.impact ${where}`)
+        .bind(merchant, now - 36 * 60 * 60 * 1000, ...visitIds).all();
+    } catch (_) {
+      rows = await env.DB.prepare(`SELECT a.sale_id, a.ref, a.amount, a.impact ${where}`)
+        .bind(merchant, now - 36 * 60 * 60 * 1000, ...visitIds).all();
+    }
+    const seen = new Set();
+    return (rows.results || []).flatMap(row => {
+      let impact;
+      try { impact = JSON.parse(row.impact || '{}'); } catch (_) { return []; }
+      const visit = active.get(String(impact.sessionId || ''));
+      if (!visit || seen.has(visit.id)) return [];
+      seen.add(visit.id);
+      const cents = row.amount_cents != null ? Number(row.amount_cents)
+        : impact.totals && impact.totals.amountCents != null && Number.isFinite(Number(impact.totals.amountCents))
+          ? Number(impact.totals.amountCents) : Math.round(Number(row.amount || 0) * 100);
+      return [{ session: visit.id, table: visit.table, saleId: row.sale_id,
+        ref: String(row.ref || '').slice(0, 96), amountCents: Math.max(0, Math.round(cents) || 0),
+        lines: Array.isArray(impact.lines) ? impact.lines.slice(0, 40).map(line => ({
+          name: String(line && line.name || 'Article').slice(0, 80),
+          qty: Math.max(0, Number(line && line.qty) || 0),
+          total: Math.max(0, Number(line && line.total) || 0),
+        })) : [] }];
+    });
+  } catch (_) { return null; }
+}
+
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -501,6 +538,13 @@ export async function onRequestGet(context) {
   if (service) sessions = sessions.filter((session) => service.allTables.has(normTable(session.table)));
   if (service) closedSessions = closedSessions.filter((session) => service.allTables.has(normTable(session.table)));
 
+  /* A void/reopen creates a payment visit, not a second kitchen order. Expose
+   * its outstanding receipt as read-only floor context. Otherwise the waiter
+   * sees an occupied table with an empty bill and is offered a 0-MAD payment.
+   * Never graft the old paid order onto this visit: split parts that remain
+   * paid would become payable twice. */
+  const reopenedBills = service ? await reopenedFloorBills(env, merchant, sessions, now) : [];
+
   /* ── CE QUE LE TTL A TUÉ, LA CAISSE DOIT LE VOIR ──────────────────────────
    * Le rejet automatique (trente minutes sans validation, plus haut) est
    * terminal et INVISIBLE : `rejected` ne figure pas dans le WHERE de la
@@ -604,6 +648,7 @@ export async function onRequestGet(context) {
        une commande écrite entre la prise de l'heure et la lecture n'est jamais
        présentée (voir pollCursor). */
     ok: true, orders, sessions, closedSessions,
+    reopenedBills: reopenedBills || [], reopenedBillsAvailable: reopenedBills !== null,
     /* Old cached clients only know `now`. On a partial page, advance them to
      * just before its last timestamp instead of skipping unseen rows. New
      * clients drain `nextCursor` and use the full window cursor only at end. */

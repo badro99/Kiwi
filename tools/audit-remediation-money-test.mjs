@@ -43,6 +43,7 @@ function cashFixture() {
     document: { readyState: 'loading', addEventListener() {} },
     crypto, Date, Math, JSON, CustomEvent,
     setTimeout() {},
+    setInterval() {},
     fetch(_url, options) {
       return new Promise((resolve) => pending.push({ resolve, event: JSON.parse(options.body) }));
     },

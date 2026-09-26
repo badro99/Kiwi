@@ -110,6 +110,8 @@ async function fixture(t, opts = {}) {
       registerClosing: false, lastProvisional: 0, toast: message => events.push({ type: 'toast', message }),
       currentCashier: { id: 'cashier-local', name: 'Fixture cashier' },
       tables: { '5': { zone: 'salle' } }, tableOrders: {}, orders: {}, tableSplits: new Map(),
+      splitState: { flow: null, sourceLines: [] }, generateOrder: () => [],
+      settledOrderRef: () => '5',
       /* L'heure de fermeture locale des tables · persistShift l'écrit dans
          l'instantané depuis qu'un bon payé ne doit plus rouvrir sa table. */
       tableClosedAt: Object.create(null),

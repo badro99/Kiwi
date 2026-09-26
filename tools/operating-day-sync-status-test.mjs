@@ -101,4 +101,21 @@ assert.doesNotMatch(messages.at(-1)[0], /Synchronisation réussie/,
 assert.equal(sales.pending, 31, 'all queued sales stay durable until the pairing code is redeemed');
 assert.match(label.textContent, /Caisse à réappairer · 31 en attente/);
 
+/* A cash-drawer-only 403 must not be mistaken for a sale queue or generic
+   network delay. The operator can repair the terminal proof with one tap. */
+let cashRetries = 0;
+sales = { pending: 0, blocked: 0, storageError: false };
+journal = { pendingCount: 1, repairRequired: true, lastStatus: 403, lastError: 'write-refused' };
+context.window.KiwiCashSessions = { status: () => journal,
+  retry: () => { cashRetries += 1; journal = { pendingCount: 0 }; } };
+context.window.KiwiCaissePairing.repair = async () => ({ ok: true, merchant: 'shop-a' });
+context.status();
+assert.match(label.textContent, /preuve terminal refusée/);
+assert.match(detail.textContent, /1 événement/);
+button.onclick();
+await new Promise(resolve => setImmediate(resolve));
+await new Promise(resolve => setImmediate(resolve));
+assert.equal(cashRetries, 1, 'repairing the terminal proof replays the retained cash event');
+assert.equal(label.textContent, 'Synchronisé');
+
 console.log('operating-day-sync-status: 18 checks passed');

@@ -132,8 +132,8 @@
     "sha": "7cf2970ff143a8a9"
   },
   "assets/caisse-pwa.js": {
-    "v": "547",
-    "sha": "7974e8a26f1c9a60"
+    "v": "554",
+    "sha": "dba5601964105005"
   },
   "assets/caisse-refresh.js": {
     "v": "2",
@@ -152,8 +152,8 @@
     "sha": "66f56a67823580af"
   },
   "assets/cash-sessions.js": {
-    "v": "5",
-    "sha": "34cd851dee77ae3a"
+    "v": "6",
+    "sha": "cf00c588586e3ed4"
   },
   "assets/catalog-import.js": {
     "v": "5",
@@ -208,8 +208,8 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "537",
-    "sha": "1fc9ec2a4a784358"
+    "v": "543",
+    "sha": "32cc7d89d672c306"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -264,8 +264,8 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/employee-live.js": {
-    "v": "536",
-    "sha": "8ba0f706138b3478"
+    "v": "542",
+    "sha": "9f67c90304449448"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -704,8 +704,8 @@
     "sha": "1d7afef595f08e96"
   },
   "assets/pos-reprint.js": {
-    "v": "1",
-    "sha": "268d006746e8216d"
+    "v": "7",
+    "sha": "c0f03e67e6731a2e"
   },
   "assets/pos-sale.js": {
     "v": "8",

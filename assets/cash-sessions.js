@@ -11,6 +11,9 @@
   var drainingPending = false;
   var pendingPairingCount = 0;
   var storageError = false;
+  var repairRequired = false;
+  var lastStatus = 0;
+  var lastError = '';
 
   function real() { try { return !!window.KiwiEnv.isReal(); } catch (_) { return false; } }
   function paired() {
@@ -160,7 +163,7 @@
     } catch (_) {}
   }
   function flush() {
-    if (flushing) return;
+    if (flushing || repairRequired) return;
     if (!paired()) { announcePendingPairing(); return; }
     var activeRows = activeOutboxRows();
     if (!activeRows.length) return;
@@ -180,16 +183,34 @@
          only the acknowledged ID from the CURRENT durable queue so a newer
          event emitted while this request was in flight cannot be erased by a
          stale snapshot. */
-      if (response.ok) return outboxLock(function () {
+      lastStatus = response.status;
+      if (response.ok) {
+        lastError = '';
+        repairRequired = false;
+        return outboxLock(function () {
         var current = readOutbox().filter(function (event) { return event && event.id !== acknowledgedId; });
         writeOutbox(current);
+        });
+      }
+      if (response.status === 403) return response.json().catch(function () { return {}; }).then(function (body) {
+        lastError = String(body && body.error || 'forbidden');
+        if (lastError === 'write-refused') {
+          repairRequired = true;
+          window.dispatchEvent(new CustomEvent('kiwi:cash-sessions', {
+            detail: { merchant: merchant(), pendingCount: activePendingCount(), repairRequired: true }
+          }));
+        }
       });
       if (response.status === 422) return outboxLock(function () {
         if (!recordRejected(activeRows[0], 422, 'schema-rejection')) return false;
         var current = readOutbox().filter(function (event) { return event && event.id !== acknowledgedId; });
         return writeOutbox(current);
       });
-    }).catch(function () {}).finally(function () { flushing = false; if (activeOutboxRows().length) setTimeout(flush, 1500); });
+      lastError = 'HTTP ' + response.status;
+    }).catch(function () { lastError = 'network'; }).finally(function () {
+      flushing = false;
+      if (!repairRequired && activeOutboxRows().length) setTimeout(flush, 1500);
+    });
   }
   function drainPending() {
     if (drainingPending) return Promise.resolve(false);
@@ -229,14 +250,28 @@
    * network restoration are the authoritative transport wake-ups, so a queue
    * held before either event is retried immediately without hiding the debt. */
   window.addEventListener('online', function () { pendingPairingCount = 0; drainPending(); });
-  document.addEventListener('kiwi-paired', function () { pendingPairingCount = 0; drainPending(); });
+  document.addEventListener('kiwi-paired', function () {
+    pendingPairingCount = 0;
+    repairRequired = false;
+    lastError = '';
+    drainPending();
+  });
+  /* A persisted event can be read before the merchant slug is hydrated. In
+   * that case boot sees no active rows, and neither online nor kiwi-paired is
+   * guaranteed to fire again. Recheck only while this merchant has debt so a
+   * drawer opening cannot remain silently stranded until the next reload. */
+  setInterval(function () {
+    if (paired() && !repairRequired && activePendingCount()) drainPending();
+  }, 10000);
   window.KiwiCashSessions = {
     emit: emit, refresh: refresh, list: function () { return events.slice(); },
+    retry: function () { repairRequired = false; return drainPending(); },
     ready: function () { return ready; }, terminalId: terminalId,
     status: function () {
       var slug = merchant();
       var count = activePendingCount();
-      return { merchant: slug, paired: paired(), pendingPairing: !paired() && count > 0, pendingCount: count, storageError: storageError };
+      return { merchant: slug, paired: paired(), pendingPairing: !paired() && count > 0, pendingCount: count,
+        storageError: storageError, repairRequired: repairRequired && count > 0, lastStatus: lastStatus, lastError: lastError };
     },
     _test: { merchant: merchant, readOutbox: readOutbox, readRejected: readRejected, flush: flush }
   };

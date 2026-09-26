@@ -168,21 +168,29 @@
 
     /* Le lot serveur vient compléter, jamais remplacer : une référence déjà
        connue localement garde sa version locale, seule porteuse du ticket figé. */
-    var seen = {}, remoteByRef = {};
-    (serverDay[String(vertical)] || []).forEach(function (e) {
-      if (e && e.ref) remoteByRef[String(e.ref)] = e;
+    var seen = {}, remoteByRef = {}, localByRef = {};
+    var remoteRows = serverDay[String(vertical)] || [];
+    remoteRows.forEach(function (e) {
+      if (e && e.ref) (remoteByRef[String(e.ref)] ||= []).push(e);
     });
     src.forEach(function (e) {
-      if (!e || !e.ref) return;
-      seen[String(e.ref)] = 1;
-      /* The local copy has the exact frozen receipt; the server copy has the
-         database id required to cancel it. Keep both advantages on one row. */
-      var remote = remoteByRef[String(e.ref)];
-      if (remote && remote.saleId) e.saleId = remote.saleId;
+      if (e && e.ref) localByRef[String(e.ref)] = (localByRef[String(e.ref)] || 0) + 1;
     });
-    src = src.concat((serverDay[String(vertical)] || []).filter(function (e) {
-      return e && e.ref && !seen[String(e.ref)];
-    }));
+    src.forEach(function (e) {
+      if (!e) return;
+      var id = String(e.saleId || e.serverSaleId || '');
+      var remote = id && remoteRows.find(function (row) { return row && row.saleId === id; });
+      /* A printed table ref is not payment identity. A split bill has two
+         receipts with the same ref; only a uniquely matching legacy ref may
+         borrow a server ID. Otherwise retain both rows rather than putting
+         the wrong payment behind an audited void button. */
+      var tableRef = /^(?:\d{1,4}|(?:table|mesa|طاولة|t)[\s-]*\d{1,4})$/i.test(String(e.ref || '').trim());
+      if (!remote && e.ref && !tableRef && localByRef[e.ref] === 1 && remoteByRef[e.ref] && remoteByRef[e.ref].length === 1) {
+        remote = remoteByRef[e.ref][0];
+      }
+      if (remote && remote.saleId) { e.saleId = remote.saleId; seen[remote.saleId] = true; }
+    });
+    src = src.concat(remoteRows.filter(function (e) { return e && e.saleId && !seen[e.saleId]; }));
 
     var now = new Date();
     return src.filter(function (e) {
@@ -194,7 +202,7 @@
       if (!sameDay(d, now) && !e.rc) return false;
       /* Un montant nul ou négatif n'a pas de ticket à ressortir : un différé
        * n'a rien encaissé, et un remboursement porte son propre reçu. */
-      return (+e.total || 0) > 0;
+      return (+e.total || 0) > 0 && !e.voided;
     }).sort(function (a, b) { return (+b.ts || 0) - (+a.ts || 0); });
   }
 
@@ -330,6 +338,8 @@
       '.kx-rp-pin { padding: 0 20px 18px; }',
       '.kx-rp-pin input { box-sizing:border-box;width:100%;padding:13px 14px;border:1px solid rgba(128,128,128,.3);',
       '  border-radius:11px;background:transparent;color:inherit;font:600 20px/1 monospace;text-align:center;letter-spacing:.32em; }',
+      '.kx-rp-pin select { box-sizing:border-box;width:100%;padding:12px 14px;border:1px solid rgba(128,128,128,.3);',
+      '  border-radius:11px;background:var(--surface,#fff);color:inherit;font:inherit; }',
       '.kx-rp-error { min-height:18px;margin:8px 0 0;color:#b53b31;font-size:12px; }',
     ].join('\n');
     document.head.appendChild(st);
@@ -378,6 +388,7 @@
           ref: String(s.ref || ''),
           label: String(s.label || ''),
           method: String(s.method || ''),
+          voided: !!(s.voided || s.voidedAt || s.void_ts),
           lines: Array.isArray(s.lines) ? s.lines : [],
           remote: true,                            /* recomposé : pas de ticket figé */
         };
@@ -391,7 +402,7 @@
 
   function close() { if (veil) veil.classList.remove('is-open'); }
 
-  function cancelSale(entry, pin) {
+  function cancelSale(entry, pin, opts) {
     var m = merchant();
     if (!m || !entry || !entry.saleId || typeof fetch !== 'function') {
       return Promise.reject(new Error('sale-unavailable'));
@@ -399,7 +410,8 @@
     return fetch('/api/sale/cancel', {
       method: 'POST', credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ merchant: m, id: entry.saleId, pin: String(pin || ''), source: 'cashier' }),
+      body: JSON.stringify({ merchant: m, id: entry.saleId, pin: String(pin || ''), source: 'cashier',
+        ...(opts && opts.reopen ? { reopen: true, reopenTable: opts.table, covers: opts.covers } : {}) }),
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (j) {
         if (!r.ok || !j.ok) { var err = new Error((j && j.error) || 'cancel-failed'); err.code = j && j.error; throw err; }
@@ -415,13 +427,17 @@
       return '<div class="kx-rp-ticket-line"><span>' + esc((l.qty || 1) + ' × ' + (l.name || 'Article'))
         + '</span><b>' + esc(mad(l.total || 0)) + '</b></div>';
     }).join('');
-    box.innerHTML = '<div class="kx-rp-head"><h3>' + esc(entry.ref || 'Ticket') + '</h3>'
-      + '<p>' + esc(dayLabel(entry.ts) + ' · ' + hm(entry.ts)) + ' · ' + esc(mad(entry.total)) + '</p></div>'
+    box.innerHTML = '<div class="kx-rp-head"><h3>' + esc(entry.label || entry.ref || 'Ticket') + '</h3>'
+      + '<p>' + esc(dayLabel(entry.ts) + ' · ' + hm(entry.ts) + ' · ' + (entry.method || 'mode inconnu'))
+      + ' · ' + esc(mad(entry.total)) + '</p><p>Ticket ' + esc(entry.saleId || entry.ref || 'identifiant indisponible') + '</p></div>'
       + '<div class="kx-rp-ticket"><div class="kx-rp-ticket-lines">' + (lines || '<div class="kx-rp-ticket-line">Détail indisponible</div>') + '</div>'
       + '<div class="kx-rp-ticket-actions"><button type="button" class="ma-btn" data-kx-rp-back>Retour</button>'
       + '<button type="button" class="ma-btn" data-kx-rp-print>Réimprimer</button>'
       + '<button type="button" class="ma-btn" data-kx-rp-invoice>Facture PDF</button>'
-      + '<button type="button" class="ma-btn kx-rp-cancel" data-kx-rp-cancel>Annuler la vente</button></div></div>';
+      + '<button type="button" class="ma-btn kx-rp-cancel" data-kx-rp-cancel>Annuler la vente</button>'
+      + (vertical === 'restaurant' && entry.reopenSnapshot
+        ? '<button type="button" class="ma-btn" data-kx-rp-reopen>Annuler et rouvrir la note</button>' : '')
+      + '</div></div>';
     box.querySelector('[data-kx-rp-back]').addEventListener('click', function () { open(vertical, { noFetch: true }); });
     box.querySelector('[data-kx-rp-print]').addEventListener('click', function () { close(); reprint(vertical, entry); });
     var invBtn = box.querySelector('[data-kx-rp-invoice]');
@@ -450,34 +466,73 @@
     if (!entry.saleId) {
       cancel.disabled = true;
       cancel.title = 'Synchronisation de la vente en cours';
-    } else cancel.addEventListener('click', function () { showPin(vertical, entry); });
+    } else cancel.addEventListener('click', function () { showPin(vertical, entry, false); });
+    var reopen = box.querySelector('[data-kx-rp-reopen]');
+    if (reopen) {
+      if (!entry.saleId) reopen.disabled = true;
+      else reopen.addEventListener('click', function () { showPin(vertical, entry, true); });
+    }
   }
 
-  function showPin(vertical, entry) {
+  function showPin(vertical, entry, reopening) {
     var box = veil && veil.querySelector('.modal');
     if (!box) return;
-    box.innerHTML = '<div class="kx-rp-head"><h3>Confirmer l’annulation</h3>'
-      + '<p>Entrez le code manager à 4 chiffres. Cette annulation sera journalisée avec votre nom, le ticket et le montant.</p></div>'
+    var bridge = window.KiwiRestaurantReopen;
+    var originalTable = reopening && bridge && bridge.originalTable ? bridge.originalTable(entry) : '';
+    var free = reopening && bridge && bridge.freeTables ? bridge.freeTables(originalTable) : [];
+    var candidates = (free || []).slice();
+    if (originalTable && candidates.indexOf(originalTable) < 0) candidates.push(originalTable);
+    var tableOptions = candidates.map(function (table) {
+      var occupied = free.indexOf(table) < 0;
+      return '<option value="' + esc(table) + '"' + (table === originalTable && !occupied ? ' selected' : '')
+        + '>Table ' + esc(table) + (occupied ? ' · occupée / reprise existante' : '') + '</option>';
+    }).join('');
+    box.innerHTML = '<div class="kx-rp-head"><h3>' + (reopening ? 'Annuler et rouvrir la note' : 'Confirmer l’annulation') + '</h3>'
+      + '<p>' + esc((entry.label || entry.ref || 'Ticket') + ' · ' + (entry.method || 'mode inconnu') + ' · ' + mad(entry.total))
+      + '<br>Ticket ' + esc(entry.saleId || 'identifiant indisponible')
+      + '<br>Entrez le code manager à 4 chiffres. Cette annulation sera journalisée avec votre nom, le ticket et le montant.</p></div>'
       + '<div class="kx-rp-pin"><input data-kx-rp-pin inputmode="numeric" maxlength="4" autocomplete="off" type="password" aria-label="Code manager à 4 chiffres">'
+      + (reopening ? '<p>Table pour la note rouverte</p><select data-kx-rp-table aria-label="Table pour la note rouverte">'
+        + tableOptions + '</select><p class="kx-rp-error" data-kx-rp-occupied>'
+        + (free.indexOf(originalTable) < 0 ? 'table occupée · rouvrir sur une autre table' : '') + '</p>' : '')
       + '<div class="kx-rp-error" data-kx-rp-error></div><div class="kx-rp-ticket-actions">'
       + '<button type="button" class="ma-btn" data-kx-rp-back>Retour</button>'
-      + '<button type="button" class="ma-btn kx-rp-cancel" data-kx-rp-confirm>Annuler définitivement</button></div></div>';
+      + '<button type="button" class="ma-btn kx-rp-cancel" data-kx-rp-confirm>'
+      + (reopening ? 'Annuler et rouvrir' : 'Annuler définitivement') + '</button></div></div>';
     var input = box.querySelector('[data-kx-rp-pin]');
     var error = box.querySelector('[data-kx-rp-error]');
     var confirm = box.querySelector('[data-kx-rp-confirm]');
     box.querySelector('[data-kx-rp-back]').addEventListener('click', function () { showTicket(vertical, entry); });
     function submit() {
       if (!/^\d{4}$/.test(input.value)) { error.textContent = 'Entrez le code manager à 4 chiffres.'; return; }
+      var picked = reopening && box.querySelector('[data-kx-rp-table]');
+      if (reopening && (!picked || !picked.value)) { error.textContent = 'Choisissez une table libre.'; return; }
       confirm.disabled = true; error.textContent = '';
-      cancelSale(entry, input.value).then(function () {
+      cancelSale(entry, input.value, reopening ? { reopen: true, table: picked.value,
+        covers: Number(entry.reopenSnapshot && entry.reopenSnapshot.covers) || 1 } : null).then(function (result) {
+        if (reopening && result.floorPending) {
+          confirm.disabled = false;
+          error.textContent = 'Vente annulée au serveur, mais la salle n’a pas confirmé la note rouverte. N’encaissez pas; réessayez la reprise.';
+          return;
+        }
+        if (reopening && !(bridge && bridge.apply && bridge.apply(result, entry))) {
+          confirm.disabled = false;
+          error.textContent = 'Vente annulée au serveur, note non restaurée ici. N’encaissez pas à nouveau; réessayez la reprise.';
+          return;
+        }
         serverDay[String(vertical)] = (serverDay[String(vertical)] || []).filter(function (e) { return e.saleId !== entry.saleId; });
         close();
         try { document.dispatchEvent(new CustomEvent('kiwi-sales-voided', { detail: { refs: [entry.ref], merchant: merchant() } })); } catch (_) {}
-        toast('Vente annulée · ' + (entry.ref || '') + ' · ' + mad(entry.total));
+        if (reopening) {
+          try { document.dispatchEvent(new CustomEvent('kiwi-sale-reopened', { detail: { ...result, entry: entry } })); } catch (_) {}
+          toast('Note rouverte · Table ' + result.table + ' · ' + mad(entry.total));
+        } else toast('Vente annulée · ' + (entry.ref || '') + ' · ' + mad(entry.total));
       }).catch(function (err) {
         confirm.disabled = false;
         error.textContent = err && err.code === 'bad-pin' ? 'Code manager incorrect.'
           : err && err.code === 'manager-required' ? 'Code manager requis. Un manager doit valider l’annulation.'
+          : err && err.code === 'table-occupied' ? 'table occupée · rouvrir sur une autre table'
+          : err && err.code === 'sale-not-current-business-day' ? 'Seules les ventes du jour peuvent rouvrir une note.'
           : err && err.code === 'sale-too-old' ? 'Cette vente est trop ancienne pour être annulée en caisse.'
           : err && err.code === 'already-cancelled' ? 'Cette vente est déjà annulée.'
           : 'Annulation impossible. Vérifiez la connexion et réessayez.';
@@ -513,7 +568,7 @@
         body += '<button type="button" class="kx-rp-row" data-kx-rp="' + i + '">'
           + '<span class="kx-rp-t">' + esc(hm(e.ts)) + '</span>'
           + '<span class="kx-rp-m"><span class="kx-rp-l">' + esc(e.label || 'Vente') + '</span>'
-          + '<span class="kx-rp-r">' + esc(e.ref || 'sans numéro') + '</span></span>'
+          + '<span class="kx-rp-r">' + esc((e.method || 'mode inconnu') + ' · ' + (e.saleId || e.ref || 'sans numéro')) + '</span></span>'
           + '<span class="kx-rp-a">' + esc(mad(e.total)) + '</span></button>';
       });
     } else {

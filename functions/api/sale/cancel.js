@@ -6,6 +6,8 @@
 // GET  — the signed-in owner reads those cancellations for the Ventes page.
 
 import { entitledMerchant, isTillFor, json, operatorActor, readCookie, readSession, SESS_COOKIE, verifyStaffPin } from '../../auth/_lib.js';
+import { businessDate, merchantZone } from '../_business-day.js';
+import { reopenServiceTable, serviceTableExists, tableKey, tableAliases } from '../service/events.js';
 
 const MANAGER_ROLES = new Set([
   'manager', 'owner', 'proprietaire', 'proprietary', 'admin', 'administrateur',
@@ -53,6 +55,124 @@ function cleanLines(raw) {
       recipeVersionId: String((l && (l.r ?? l.recipeVersionId)) || '').slice(0, 80),
     })) : [];
   } catch (_) { return []; }
+}
+
+async function reopenVisitId(env, merchant, saleId) {
+  /* The visit ID is a bearer capability on guest phones. Derive a stable,
+   * unguessable retry ID from the server secret, never from a printed receipt. */
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(String(env.AUTH_SECRET || '')),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(merchant + ':' + saleId + ':reopen-v1'));
+  return 'tsx-' + Array.from(new Uint8Array(sig).slice(0, 11), b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function existingReopen(env, merchant, saleId) {
+  const row = await env.DB.prepare("SELECT impact FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'reopen' ORDER BY id DESC LIMIT 1")
+    .bind(merchant, saleId).first();
+  if (!row) return null;
+  try { return JSON.parse(row.impact || '{}'); } catch (_) { return null; }
+}
+
+async function voidAndReopen(env, body, merchant, id, sale, actor, actorId, actorRole, reason,
+  saleAmountCents, legacyAmount, impact) {
+  const saleTime = Number(sale.ts) || 0;
+  if (!sale.session_id) return json({ error: 'table-visit-required' }, 409);
+  let visit;
+  try {
+    visit = await env.DB.prepare("SELECT id, table_no, status, closed_by FROM table_sessions WHERE id = ? AND merchant = ? AND mode = 'table'")
+      .bind(sale.session_id, merchant).first();
+  } catch (_) { return json({ error: 'visit-lookup-unavailable' }, 503); }
+  if (!visit) return json({ error: 'table-visit-required' }, 409);
+  const originalTable = tableKey(visit.table_no);
+  const target = tableKey(body.reopenTable || originalTable);
+  if (!/^[A-Za-z0-9_-]{1,32}$/.test(target)) return json({ error: 'bad-table' }, 400);
+  /* Old clients stored "T1" or "Table 1" while new tills use "1". Check
+   * every spelling inside the same transaction, not just in a preflight,
+   * or a newly seated party under an alias can be overwritten. */
+  const aliases = tableAliases(target);
+  const aliasMarks = aliases.map(() => '?').join(',');
+  if (sale.void_ts) {
+    const old = await existingReopen(env, merchant, id).catch(() => null);
+    if (!old || !old.table || !old.sessionId) return json({ error: 'already-cancelled' }, 409);
+    /* A previous floor notification may have failed after the atomic money
+     * transition. The picker may no longer offer that table after the floor
+     * learns it is occupied by THIS reopen, so the audit's table wins over
+     * a stale selection. A safe retry republishes only while its visit lives. */
+    const floor = await reopenServiceTable(env, merchant, old.table, old.sessionId, old.covers || 1)
+      .catch(() => ({ ok: false }));
+    return json({ ok: true, id, reopened: true, replayed: true, sessionId: old.sessionId,
+      table: old.table, originalTable, ref: sale.ref || '', amountCents: saleAmountCents,
+      lines: cleanLines(sale.lines), splitFlowId: sale.split_flow_id || '', floorPending: !floor.ok || undefined });
+  }
+  const zone = await merchantZone(env, merchant);
+  if (businessDate(saleTime, 5, zone) !== businessDate(Date.now(), 5, zone)) {
+    return json({ error: 'sale-not-current-business-day' }, 409);
+  }
+  if (!(await serviceTableExists(env, merchant, target))) return json({ error: 'floor-table-required' }, 409);
+  const sameOpenVisit = visit.status === 'open' && target === originalTable;
+  if (visit.status === 'open' && target !== originalTable) return json({ error: 'visit-still-open' }, 409);
+  if (visit.status !== 'open' && !['service-payment', 'settled-at-till'].includes(visit.closed_by)) {
+    return json({ error: 'visit-not-payment-closed' }, 409);
+  }
+  const covers = Math.max(1, Math.min(99, Math.trunc(Number(body.covers) || 1)));
+  const newVisitId = sameOpenVisit ? visit.id : await reopenVisitId(env, merchant, id);
+  let occupied;
+  try {
+    occupied = await env.DB.prepare(`SELECT id FROM table_sessions WHERE merchant = ? AND table_no IN (${aliasMarks})
+      AND id <> ? AND mode = 'table' AND status = 'open' LIMIT 1`)
+      .bind(merchant, ...aliases, sameOpenVisit ? visit.id : newVisitId).first();
+  } catch (_) { return json({ error: 'visit-lookup-unavailable' }, 503); }
+  if (occupied) {
+    return json({ error: 'table-occupied', message: 'table occupée · rouvrir sur une autre table', table: target }, 409);
+  }
+  const ts = Date.now();
+  const auditImpact = JSON.stringify({ ...JSON.parse(impact), fromSession: visit.id,
+    sessionId: newVisitId, table: target, originalTable, covers, splitFlowId: sale.split_flow_id || '' });
+  const insertVisit = sameOpenVisit ? null : env.DB.prepare(
+    `INSERT OR IGNORE INTO table_sessions (id,merchant,mode,table_no,status,opened_ts,seen_ts)
+     SELECT ?,?,'table',?,'open',?,? WHERE EXISTS
+       (SELECT 1 FROM sales WHERE id = ? AND merchant = ? AND void_ts IS NULL)
+       AND EXISTS (SELECT 1 FROM table_sessions WHERE id = ? AND merchant = ? AND status = 'closed')
+       AND NOT EXISTS (SELECT 1 FROM table_sessions WHERE merchant = ? AND table_no IN (${aliasMarks}) AND mode = 'table' AND status = 'open')`
+  ).bind(newVisitId, merchant, target, ts, ts, id, merchant, visit.id, merchant, merchant, ...aliases);
+  const update = env.DB.prepare(
+    `UPDATE sales SET void_ts = ?, void_reason = ?, void_note = '', void_actor = ?, void_actor_id = ?
+       WHERE id = ? AND merchant = ? AND void_ts IS NULL AND EXISTS
+         (SELECT 1 FROM table_sessions WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open')
+         AND NOT EXISTS (SELECT 1 FROM table_sessions WHERE merchant = ? AND table_no IN (${aliasMarks})
+           AND id <> ? AND mode = 'table' AND status = 'open')`
+  ).bind(ts, reason, actor, actorId, id, merchant, newVisitId, merchant,
+    sameOpenVisit ? String(visit.table_no) : target,
+    merchant, ...aliases, newVisitId);
+  function audit(withCents, action, condition) {
+    const cols = `merchant,sale_id,action,reason,note,actor,actor_id,amount,${withCents ? 'amount_cents,' : ''}method,ref,sale_ts,impact,ts`;
+    const values = withCents ? '?,?,?,?,?,?,?,?,?,?,?,?,?,?' : '?,?,?,?,?,?,?,?,?,?,?,?,?';
+    return env.DB.prepare(`INSERT INTO sale_audit (${cols}) SELECT ${values} WHERE ${condition}`)
+      .bind(merchant, id, action, reason, '', actor, actorId, legacyAmount,
+        ...(withCents ? [saleAmountCents] : []), sale.method || '', sale.ref || '', saleTime,
+        action === 'reopen' ? auditImpact : impact, ts);
+  }
+  try {
+    let result;
+    try { result = await env.DB.batch([...(insertVisit ? [insertVisit] : []), update,
+      audit(true, 'void', 'changes() = 1'), audit(true, 'reopen', 'changes() = 1')]); }
+    catch (_) { result = await env.DB.batch([...(insertVisit ? [insertVisit] : []), update,
+      audit(false, 'void', 'changes() = 1'), audit(false, 'reopen', 'changes() = 1')]); }
+    const changed = Number(result?.[insertVisit ? 1 : 0]?.meta?.changes || 0);
+    if (!changed) return json({ error: 'table-occupied', message: 'table occupée · rouvrir sur une autre table', table: target }, 409);
+  } catch (error) {
+    return json({ error: 'reopen-failed', detail: String(error && error.message || error) }, 503);
+  }
+  if (actorId) {
+    try { await env.DB.prepare(`INSERT OR IGNORE INTO sale_void_history
+      (id,merchant,sale_id,ref,voided_ts,reason,actor_id,amount_cents) VALUES(?,?,?,?,?,?,?,?)`)
+      .bind(`${merchant}:${id}`, merchant, id, sale.ref || '', ts, reason, actorId, saleAmountCents).run(); }
+    catch (_) { /* Secondary analytics cannot undo the atomic void. */ }
+  }
+  const floor = await reopenServiceTable(env, merchant, target, newVisitId, covers).catch(() => ({ ok: false }));
+  return json({ ok: true, id, reopened: true, sessionId: newVisitId,
+    table: target, originalTable, ref: sale.ref || '', amountCents: saleAmountCents,
+    lines: cleanLines(sale.lines), splitFlowId: sale.split_flow_id || '', floorPending: !floor.ok || undefined });
 }
 
 export async function onRequestGet({ request, env }) {
@@ -168,7 +288,7 @@ export async function onRequestPost({ request, env }) {
   let sale;
   try {
     sale = await env.DB.prepare(
-      `SELECT id, amount, amount_cents, method, label, ref, ts, lines, void_ts
+      `SELECT id, amount, amount_cents, method, label, ref, ts, lines, void_ts, session_id, split_flow_id
          FROM sales WHERE id = ? AND merchant = ? LIMIT 1`
     ).bind(id, merchant).first();
   } catch (e) {
@@ -182,13 +302,13 @@ export async function onRequestPost({ request, env }) {
     }
   }
   if (!sale) return json({ error: 'sale-not-found' }, 404);
-  if (sale.void_ts) return json({ error: 'already-cancelled' }, 409);
+  if (sale.void_ts && !body.reopen) return json({ error: 'already-cancelled' }, 409);
 
   // The reprint screen only offers today's sales. Keep a second server-side
   // boundary so a modified cashier client cannot cancel old accounting periods.
   // Dashboard owners may cancel a selected sale from the reporting period they
   // are reviewing, subject to the authenticated merchant entitlement above.
-  if (source === 'cashier' && Date.now() - Number(sale.ts || 0) > 36 * 60 * 60 * 1000) {
+  if (source === 'cashier' && !body.reopen && Date.now() - Number(sale.ts || 0) > 36 * 60 * 60 * 1000) {
     return json({ error: 'sale-too-old' }, 409);
   }
 
@@ -205,6 +325,11 @@ export async function onRequestPost({ request, env }) {
     totals: { amount: saleAmount, amountCents: saleAmountCents, count: 1 },
     lines: cleanLines(sale.lines), role: actorRole,
   });
+  if (body.reopen) {
+    if (source !== 'cashier') return json({ error: 'cashier-reopen-required' }, 403);
+    return voidAndReopen(env, body, merchant, id, sale, actor, actorId, actorRole, reason,
+      saleAmountCents, legacyAmount, impact);
+  }
   try {
     /* Money and its audit trail are one state transition. D1 batch() is the
        production transaction boundary: if either statement fails, neither the

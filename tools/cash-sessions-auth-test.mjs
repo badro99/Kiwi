@@ -26,11 +26,14 @@ async function clientRun(isPaired, outbox, pending = [], options = {}) {
   const windowListeners = new Map();
   const documentListeners = new Map();
   let pairing = isPaired;
+  let activeMerchant = options.merchantAtBoot === undefined ? MERCHANT : options.merchantAtBoot;
+  const intervals = [];
   const writes = [];
   let lockActive = 0;
   let maxLockActive = 0;
   let lockQueue = Promise.resolve();
   let failWrites = !!options.failWrites;
+  let postResponse = options.postResponse;
   const storage = {
     getItem: (key) => memory.get(key) || null,
     setItem: (key, value) => {
@@ -61,7 +64,7 @@ async function clientRun(isPaired, outbox, pending = [], options = {}) {
   const window = {
     localStorage: storage,
     KiwiEnv: { isReal: () => true },
-    KiwiCloudDoc: { currentSlug: () => MERCHANT },
+    KiwiCloudDoc: { currentSlug: () => activeMerchant },
     KiwiCaissePairing: { isPaired: () => pairing },
     __kiwiCashSessionPending: pending,
     addEventListener(type, handler) { listen(windowListeners, type, handler); },
@@ -74,11 +77,13 @@ async function clientRun(isPaired, outbox, pending = [], options = {}) {
   };
   const context = {
     console, Date, Map, JSON, Math, Promise, setTimeout,
+    setInterval: (callback) => { intervals.push(callback); return intervals.length; },
     localStorage: storage, navigator: options.locks ? { locks } : {}, document,
     CustomEvent: class CustomEvent { constructor(type, init) { this.type = type; this.detail = init && init.detail; } },
     window,
     fetch: async (url, options = {}) => {
       calls.push({ url, options });
+      if (options.method === 'POST' && postResponse) return postResponse;
       return { ok: true, status: 200, json: async () => ({ ready: true, events: [] }) };
     },
   };
@@ -87,7 +92,10 @@ async function clientRun(isPaired, outbox, pending = [], options = {}) {
   await new Promise((resolve) => setTimeout(resolve, 5));
   return { calls, storage, writes, api: window.KiwiCashSessions, pending,
     setPaired(value) { pairing = !!value; },
+    setMerchant(value) { activeMerchant = value; },
+    tickIntervals() { intervals.forEach((callback) => callback()); },
     setFailWrites(value) { failWrites = !!value; },
+    setPostResponse(value) { postResponse = value; },
     fireOnline() { fire(windowListeners, { type: 'online' }); },
     firePaired() { fire(documentListeners, { type: 'kiwi-paired' }); },
     lockStats: {
@@ -111,6 +119,7 @@ assert.ok(operator.calls.some((call) => call.event === 'kiwi:cash-sessions-pendi
   'unpaired operator/demo tab surfaces pending pairing status');
 assert.deepEqual(JSON.parse(JSON.stringify(operator.api.status())), {
   merchant: MERCHANT, paired: false, pendingPairing: true, pendingCount: 2, storageError: false,
+  repairRequired: false, lastStatus: 0, lastError: '',
 }, 'pending pairing is available through the public status API');
 assert.ok(operator.calls.some((call) => call.event === 'kiwi:cash-sessions'
   && call.detail && call.detail.pendingPairing === true),
@@ -136,6 +145,32 @@ assert.equal(pairingWake.calls.filter((call) => call.options && call.options.met
 const paired = await clientRun(true, [staleEvent]);
 assert.equal(paired.calls.filter((call) => call.options && call.options.method === 'POST').length, 1,
   'paired caisse still flushes cash telemetry');
+
+const refused = await clientRun(true, [staleEvent], [], {
+  postResponse: { ok: false, status: 403, json: async () => ({ error: 'write-refused' }) },
+});
+assert.equal(refused.api.status().repairRequired, true, 'terminal proof refusal is visible, not called a generic retry');
+assert.equal(refused.api.status().lastError, 'write-refused');
+assert.equal(refused.api.status().pendingCount, 1, 'refused event remains durable');
+refused.tickIntervals();
+await new Promise((resolve) => setTimeout(resolve, 5));
+assert.equal(refused.calls.filter((call) => call.options?.method === 'POST').length, 1,
+  'write-refused does not hammer the server every retry tick');
+refused.setPostResponse({ ok: true, status: 200 });
+refused.firePaired();
+await new Promise((resolve) => setTimeout(resolve, 5));
+assert.equal(refused.calls.filter((call) => call.options?.method === 'POST').length, 2,
+  'same event retries after repaired pairing');
+assert.equal(refused.api.status().pendingCount, 0, 'successful repair acknowledges the original event');
+
+const lateMerchant = await clientRun(true, [staleEvent], [], { merchantAtBoot: '' });
+assert.equal(lateMerchant.calls.filter((call) => call.options && call.options.method === 'POST').length, 0,
+  'cash event waits while the merchant identity is not yet available');
+lateMerchant.setMerchant(MERCHANT);
+lateMerchant.tickIntervals();
+await new Promise((resolve) => setTimeout(resolve, 5));
+assert.equal(lateMerchant.calls.filter((call) => call.options && call.options.method === 'POST').length, 1,
+  'a late merchant identity wakes a durable cash event without reload or another pairing event');
 
 const open = { ...staleEvent, id: 'cash-boot-open', eventType: 'open' };
 const movement = { ...staleEvent, id: 'cash-boot-movement', eventType: 'movement', amountCents: 2500 };

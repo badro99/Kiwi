@@ -277,6 +277,7 @@ function runVoids(journalRows, refs, opts) {
   };
   const fn = new Function('scope', `
     const { journal, storeIsReal, currentMerchantSlug, window, renderShiftStats, persistShift, saveProvisional, $ } = scope;
+    ${extract(caisse, 'refundOriginalFor')}
     ${extract(caisse, 'reconcileVoids')}
     return reconcileVoids(scope.__refs, scope.__ids, scope.__events, scope.__opts);
   `);

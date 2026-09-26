@@ -76,7 +76,7 @@ const transport = source('assets/cash-sessions.js');
 // comment matching the old synchronous implementation is not durability proof.
 await import('./cash-sessions-auth-test.mjs');
 ok(transport.includes('if (saved) flush();'), 'transport starts only after saved persistence');
-ok(transport.includes(".catch(function () {})"), 'transport fails soft');
+ok(transport.includes(".catch(function () { lastError = 'network'; })"), 'transport fails soft and records network failure');
 ok(!/return\s+[^;]*slice\(-200\)/.test(transport), 'unacknowledged outbox is not truncated');
 ok(transport.includes("credentials: 'same-origin'"), 'signed cookies sent');
 const caisse = source('kiwi-caisse.html');

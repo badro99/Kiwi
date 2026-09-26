@@ -205,6 +205,7 @@ sql.prepare("INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) V
 }
 
 /* ── D1-shaped shim over real SQLite ─────────────────────────────────────── */
+let rectifyRaceGate = null;
 class Statement {
   constructor(text) { this.text = text; this.args = []; }
   bind(...args) { this.args = args; return this; }
@@ -213,7 +214,20 @@ class Statement {
     const r = sql.prepare(this.text).run(...this.args);
     return { success: true, meta: { changes: Number(r.changes) } };
   }
-  async all() { return { results: sql.prepare(this.text).all(...this.args) }; }
+  async all() {
+    const results = sql.prepare(this.text).all(...this.args);
+    if (rectifyRaceGate && this.text.startsWith('SELECT * FROM hotel_monthly_declarations')
+      && this.args[0] === 'riad-test' && this.args[1] === '2025-04') {
+      /* Both requests must read rev1 before either is allowed to insert.
+       * Promise.all alone is not a race barrier: on a fast run, one request
+       * can finish rev2 before the other reads, so both correctly succeed as
+       * sequential rev2/rev3 and this test fails spuriously. */
+      rectifyRaceGate.reads++;
+      if (rectifyRaceGate.reads === 2) rectifyRaceGate.release();
+      await rectifyRaceGate.wait;
+    }
+    return { results };
+  }
 }
 const DB = { prepare(text) { return new Statement(text); } };
 const env = { DB, AUTH_SECRET: secret };
@@ -457,9 +471,12 @@ let raceRev1 = '';
 {
   const rows = sql.prepare("SELECT canonical_hash FROM hotel_monthly_declarations WHERE merchant='riad-test' AND month='2025-04'").all();
   raceRev1 = rows[0].canonical_hash;
+  let release;
+  rectifyRaceGate = { reads: 0, wait: new Promise(resolve => { release = resolve; }), release: () => release() };
   const a = post({ merchant: 'riad-test', month: '2025-04', action: 'rectify', rectificationReason: 'Première révision corrective concurrente', idempotencyKey: 'k-race-r1' }, ownerCookie);
   const b = post({ merchant: 'riad-test', month: '2025-04', action: 'rectify', rectificationReason: 'Seconde révision corrective concurrente', idempotencyKey: 'k-race-r2' }, ownerCookie);
   const [ra, rb] = await Promise.all([a, b]);
+  rectifyRaceGate = null;
   const winner = ra.status === 200 ? ra : rb;
   const loser = ra.status === 200 ? rb : ra;
   ok(winner.status === 200 && winner.body.declaration.revision === 2, 'one rectify lands rev2');

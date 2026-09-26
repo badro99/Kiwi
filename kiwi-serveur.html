@@ -4861,7 +4861,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/staff-roles.js?v=1" defer></script>
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/employee-live.js?v=536" defer></script>
+  <script src="assets/employee-live.js?v=542" defer></script>
   <script src="assets/employee-planning.js?v=8" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=2">
   <script src="assets/employee-trade-shell.js?v=2" defer></script>
@@ -6528,6 +6528,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
        a sent item that does not exist in /api/order/queue. */
     const serviceCanonicalOrders = new Map();
     const serviceTableSessions = new Map();
+    const serviceReopenedBills = new Map();
+    let serviceReopenedBillsAvailable = !!SV_DEMO;
     const serviceTableSessionRevisions = new Map();
     let serviceCanonicalReady = false;
     const serviceEventSeen = new Set();
@@ -6705,6 +6707,14 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         const canonical = serviceStateVersion.get(id);
         if (id && tables[id] && tables[id].status === 'khawya' && !(canonical && canonical.status === 'khawya')) {
           tables[id].status = 'ka-yaklo';
+        }
+      });
+      serviceReopenedBills.clear();
+      serviceReopenedBillsAvailable = data.reopenedBillsAvailable !== false;
+      (data.reopenedBills || []).forEach((bill) => {
+        const id = serviceTableId(bill && bill.table);
+        if (id && bill && String(bill.session || '') === serviceTableSessions.get(id)) {
+          serviceReopenedBills.set(id, bill);
         }
       });
       (data.orders || []).forEach((order) => {
@@ -7004,6 +7014,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       servicePlanTick = 0;
       serviceOrderStatus.clear();
       serviceCanonicalOrders.clear();
+      serviceReopenedBills.clear();
+      serviceReopenedBillsAvailable = !!SV_DEMO;
       serviceCanonicalReady = false;
       serviceEventSeen.clear();
       serviceStateVersion.clear();
@@ -7719,11 +7731,41 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       if (!id) return;
       // Special path: if this table has a split in progress, show
       // the resume/cancel view instead of the normal order detail.
-      if (tableSplits.has(id)) {
+      if (tableSplits.has(id) && serviceReopenedBillsAvailable && !serviceReopenedBills.has(id)) {
         return renderTableDetailSplit(id);
       }
       const t = tables[id];
       const order = ensureTableOrder(id);
+      if (!serviceReopenedBillsAvailable) {
+        $('#td-table-name').textContent = `${id} · ${employeeCoverCount(t.covers)}`;
+        $('#td-table-meta').textContent = 'Vérification des notes indisponible';
+        $('#td-body').innerHTML = '<div class="td-pending-banner"><div class="td-pending-copy"><strong>Vérification indisponible</strong><span>La caisse peut encaisser. Le serveur ne peut pas confirmer ici qu’une note rouverte est encore due.</span></div></div>';
+        $('#td-footer').innerHTML = '<button class="td-btn ghost" disabled>Vérification en cours · encaisser au comptoir</button>';
+        return;
+      }
+      const reopened = serviceReopenedBills.get(id);
+      if (reopened) {
+        /* A reopened payment is not an unsent kitchen order. Its original
+         * kitchen rows remain paid on the closed visit, so show the due part
+         * without offering a misleading zero-MAD employee payment or a second
+         * kitchen send. The cashier owns this split until it is settled. */
+        $('#td-table-name').textContent = `${id} · ${employeeCoverCount(t.covers)}`;
+        $('#td-table-meta').textContent = 'Note rouverte · règlement au comptoir';
+        const pill = $('#td-status-pill');
+        pill.dataset.status = 'bgha-ykhlass';
+        pill.textContent = 'Note rouverte';
+        const lines = (reopened.lines || []).map(line => `<div class="td-item">
+          <span style="font-weight:700;width:32px;text-align:center">${esc(line.qty)}×</span>
+          <span class="td-item-name">${esc(line.name)}</span>
+          <span class="td-item-price">${fmtMAD(line.total)}</span></div>`).join('');
+        $('#td-body').innerHTML = `<div class="td-pending-banner"><div class="td-pending-copy">
+          <strong>Note ${esc(reopened.ref || '')} rouverte en caisse</strong>
+          <span>Partie à régler : ${fmtMAD(reopened.amountCents / 100)}. Les autres parties déjà payées restent réglées.</span>
+          </div></div><div class="td-order-list">${lines}</div>`;
+        $('#td-footer').innerHTML = '<button class="td-btn ghost" disabled>Encaisser cette note au comptoir</button>';
+        lucide.createIcons();
+        return;
+      }
       const total = order.reduce((s, l) => s + l.price * l.qty, 0);
       const isDirty = dirtyOrders.has(id);
 
@@ -7991,6 +8033,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       const btn = e.target.closest('[data-action]');
       if (!btn) return;
       const action = btn.dataset.action;
+
+      if (activeTableId && (!serviceReopenedBillsAvailable || serviceReopenedBills.has(activeTableId))) {
+        toast(`Table ${activeTableId} · note rouverte, règlement au comptoir`, 4800);
+        return;
+      }
 
       if (action === 'take-order') {
         const t = tables[activeTableId];
