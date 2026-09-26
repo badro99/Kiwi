@@ -151,6 +151,7 @@
     var text = s.source === 'closed-z'
       ? 'Rapport Z de la caisse : ' + amount(s.reportedCents) + ' · enregistré : ' + amount(s.recordedCents)
         + ' · écart : ' + amount(s.gapCents) + ' · ' + s.missingCount + ' reçu(s) manquant(s)'
+        + ' · ' + (Array.isArray(s.blocked) ? s.blocked.length : 0) + ' reçu(s) bloqué(s)'
       : 'Enregistré : ' + amount(s.recordedCents) + (s.source === 'live-ledger'
         ? (s.syncObserved === false ? ' · état de synchronisation de la caisse inconnu' : ' · synchronisation : ' + s.waitingCount + ' reçu(s) en attente (dernière déclaration)')
         : s.comparisonAvailable ? ' · Z non clôturé : référence de caisse indisponible.'
@@ -194,11 +195,11 @@
             details.appendChild(row);
           }); alert.appendChild(details);
         }
-        var hero = document.querySelector('[data-hero-amount]');
-        if (!alert.parentNode) {
-          if (hero && hero.parentNode) hero.parentNode.appendChild(alert);
-          else document.getElementById('kw-main').prepend(alert);
-        }
+        // The first hero amount can live in a hidden layout layer. A Z alert
+        // attached there exists in the DOM but is invisible to the merchant.
+        // Keep it directly under the visible main container on every refresh.
+        var main = document.getElementById('kw-main');
+        if (alert.parentNode !== main) main.prepend(alert);
       }).catch(function () {
         if (sequence !== requestSequence) return;
         dayReference = null;
@@ -206,7 +207,8 @@
         var alert = document.getElementById('kiwi-z-reconciliation-alert') || document.createElement('p');
         alert.id = 'kiwi-z-reconciliation-alert'; alert.setAttribute('role','status');
         alert.textContent = 'Comparaison Z indisponible · chiffres issus des ventes enregistrées, non vérifiés avec la caisse.';
-        if (!alert.parentNode) document.getElementById('kw-main').prepend(alert);
+        var main = document.getElementById('kw-main');
+        if (alert.parentNode !== main) main.prepend(alert);
       });
   }
   window.KiwiZReconciliation = {

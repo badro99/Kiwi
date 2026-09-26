@@ -20,9 +20,9 @@ const server=http.createServer((req,res)=>{
   if(fail){res.writeHead(503);res.end('{}');return;}
   const day=url.searchParams.get('day');
   res.setHeader('Content-Type','application/json');
-  res.end(JSON.stringify({ok:true,daySummary:{day,source:mode==='closed'?'closed-z':mode==='open'?'live-ledger':'ledger-only',
-   referenceCents:mode==='closed'?150700:31400,recordedCents:31400,reportedCents:mode==='closed'?150700:null,
-   gapCents:119300,missingCount:9,waitingCount:9,comparisonAvailable:mode!=='history',
+  res.end(JSON.stringify({ok:true,daySummary:{day,source:mode==='closed'||mode==='zero'?'closed-z':mode==='open'?'live-ledger':'ledger-only',
+   referenceCents:mode==='closed'?150700:mode==='zero'?0:31400,recordedCents:mode==='zero'?0:31400,reportedCents:mode==='closed'?150700:mode==='zero'?0:null,
+   gapCents:mode==='zero'?0:119300,missingCount:mode==='zero'?0:9,waitingCount:9,comparisonAvailable:mode!=='history',
    blocked:mode==='closed'?[{id:'synthetic-blocked',amountCents:5700,method:'card',ts:Date.now(),reason:'sale-conflict'}]:[]}}));
  }else if(url.pathname==='/kiwi-caisse.html'){
   res.setHeader('Content-Type','text/html; charset=utf-8');
@@ -58,16 +58,27 @@ try{
   const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.setViewport({width:390,height:844});
   await page.goto(`http://127.0.0.1:${server.address().port}/dashboard.html?type=${type}`);
+  if (type === 'restaurant') await page.evaluate(() => {
+    document.querySelector('[data-hero-amount]').parentElement.style.display = 'none';
+  });
   assert.equal(await page.$('#kiwi-z-reconciliation-alert'),null,'no financial comparison before unlock');checks++;
   await page.evaluate(()=>window.dispatchEvent(new Event('kiwi:dashboard-unlocked')));
   await page.waitForFunction(()=>document.querySelector('[data-hero-amount]')?.textContent.replace(/\s/g,'')==='1507,00MAD',{timeout:5000});checks++;
   assert.match(await page.$eval('[data-hero-label]',n=>n.textContent),/RAPPORT Z/);checks++;
   let text=await page.$eval('#kiwi-z-reconciliation-alert',n=>n.textContent.replace(/\s/g,' '));
   assert.match(text,/314,00 MAD/);assert.match(text,/1.193,00 MAD/);assert.match(text,/9 reçu\(s\) manquant/);checks+=3;
+  assert.match(text,/1 reçu\(s\) bloqué/,'blocked count is explicit on the dashboard');checks++;
+  if (type === 'restaurant') {
+    assert.equal(await page.$eval('#kiwi-z-reconciliation-alert',n=>!!(n.offsetWidth||n.offsetHeight||n.getClientRects().length)),true,
+      'Z comparison stays visible when the first hero amount is in a hidden layer');checks++;
+  }
   await page.click('#kiwi-z-reconciliation-alert summary');
   assert.match(await page.$eval('#kiwi-z-reconciliation-alert details',n=>n.innerText),/57,00 MAD · card.*sale-conflict/);checks++;
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=390),true);checks++;
   if(process.env.KIWI_TEST_SCREENSHOT) await page.screenshot({path:process.env.KIWI_TEST_SCREENSHOT.replace('.png','-'+type+'.png'),fullPage:true});
+  mode='zero';await page.evaluate(()=>KiwiZReconciliation.showDashboard());
+  await page.waitForFunction(()=>document.querySelector('#kiwi-z-reconciliation-alert')?.textContent.includes('0 reçu(s) bloqué(s)'));checks++;
+  assert.match(await page.$eval('#kiwi-z-reconciliation-alert',n=>n.textContent),/0 reçu\(s\) manquant\(s\)/);checks++;
   mode='open';await page.evaluate(()=>KiwiZReconciliation.showDashboard());
   await page.waitForFunction(()=>document.querySelector('[data-hero-amount]')?.textContent.replace(/\s/g,'')==='314,00MAD');checks++;
   assert.match(await page.$eval('#kiwi-z-reconciliation-alert',n=>n.textContent),/9 reçu\(s\) en attente/);checks++;
