@@ -44,4 +44,38 @@ assert.match(caisse, /menu-art--library/,
 assert.match(tablerLicense, /MIT License[\s\S]*Paweł Kuna/,
   'the bundled Tabler-derived silhouettes retain their license notice');
 
-console.log('caisse-product-art-test: 27 controls passed');
+// Exercise the same resolver that renders merchant cards, rather than merely
+// checking that artwork names appear somewhere in the HTML source.
+const artStart = caisse.indexOf('    const _bowl = (x) =>');
+const artEnd = caisse.indexOf('    /* Une carte vide', artStart);
+assert.ok(artStart > 0 && artEnd > artStart, 'the card-art resolver is extractable');
+const resolveArt = new Function('catOrder', 'catLabels',
+  `${caisse.slice(artStart, artEnd)}; return menuArt;`)([], {
+    pasta: 'Choisissez vos Pâtes', signatures: 'Signatures', desserts: 'Desserts',
+    drinks: 'Boissons', soda: 'Soda+eau'
+  });
+const liveCards = [
+  ['Agnolotti del Pin', 'signatures'],
+  ['Ravioli Ricotta e Spinaci', 'signatures'],
+  ['Pappardelle aux champignons', 'signatures'],
+  ['Lasagna', 'signatures'],
+  ['Parmigiana Di Melanzane', 'signatures'],
+  ['Tiramisù', 'desserts'],
+  ['Bonet', 'desserts'],
+  ['Eau', 'soda'],
+  ['Coca-Cola', 'soda'],
+  ["Jus D'orange", 'drinks'],
+  ['Jus citron', 'drinks']
+];
+const liveArt = liveCards.map(([name, cat]) => resolveArt(`it_${name.length}`, cat, name));
+assert.equal(new Set(liveArt).size, liveCards.length,
+  'published pasta, desserts and drinks must not collapse to the same generic pictogram');
+assert.notEqual(resolveArt('it_x', 'desserts', 'Spécial maison'),
+  resolveArt('it_x', 'drinks', 'Spécial maison'),
+  'unknown products use a category-relevant silhouette, not category index modulo four');
+assert.match(resolveArt('it_x', 'pasta', 'Spécial maison'), /M17 12v16/,
+  'the pasta category uses a pasta silhouette for unnamed dishes');
+assert.match(resolveArt('it_x', 'signatures', 'Spécial maison'), /<circle[^>]+r="20"/,
+  'an unknown signature has a neutral plate rather than a misleading bowl or drink');
+
+console.log('caisse-product-art-test: 31 controls passed');
