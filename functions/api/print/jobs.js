@@ -36,6 +36,7 @@ async function refDigest(merchant, clientRef) {
 }
 const RETRY_DELAY_MS = 10000;
 const CLAIM_LEASE_MS = 30000;
+const ACTIVE_WINDOW_MS = 2 * 60 * 1000, ACTIVE_POLL_MS = 1000, IDLE_POLL_MS = 5000;
 const UNCERTAIN_OUTPUT = 'output-unknown-ack-timeout';
 const PERMANENT_BRIDGE_ERRORS = new Set(['printer-target-not-local', 'printer-target-not-saved']);
 
@@ -93,7 +94,18 @@ export async function onRequestGet(context) {
       const jobs = (rs.results || []).map((j) => ({
         id: j.id, kind: j.kind || 'other', target: safeJsonParse(j.target, {}), dataB64: j.data_b64,
       }));
-      return relayJson({ ok: true, merchant: bridge.merchant, jobs, poll: jobs.length ? 250 : 1000 }, 200, request);
+      /* Every bridge calls here around the clock, so its idle rate is most
+       * of the relay's cost. Stay at 1 s while the counter is printing (a job
+       * in the last two minutes), then ease to 5 s. The installed bridges
+       * already honour `poll` (200–5000 ms), so no bridge update is needed. */
+      let poll = 250;
+      if (!jobs.length) {
+        const recent = await env.DB.prepare(
+          'SELECT 1 AS hit FROM print_jobs WHERE merchant = ? AND created_ts > ? LIMIT 1'
+        ).bind(bridge.merchant, t - ACTIVE_WINDOW_MS).first();
+        poll = recent ? ACTIVE_POLL_MS : IDLE_POLL_MS;
+      }
+      return relayJson({ ok: true, merchant: bridge.merchant, jobs, poll }, 200, request);
     } catch (e) {
       if (isMissingTable(e)) return relayJson({ ok: false, error: 'relay-not-provisioned' }, 503, request);
       return relayJson({ ok: false, error: 'read-failed' }, 500, request);

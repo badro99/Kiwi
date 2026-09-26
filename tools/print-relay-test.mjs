@@ -172,6 +172,11 @@ if (DatabaseSync) {
       && r.j.jobs[0].target.ip === '192.168.11.199' && r.j.jobs[0].target.port === 9100, 'A6 · le pont réclame le ticket avec sa cible et ses octets');
     const again = await call(jobsRoute, 'GET', '/api/print/jobs', { bearer: token }, env);
     ok(again.status === 200 && again.j.jobs.length === 0, 'A6 · un second poll ne rend pas le même ticket (réclamation atomique)');
+    ok(r.j.poll === 250 && again.j.poll === 1000, 'A6 · pont actif : 250 ms avec du travail, 1 s juste après un ticket (reçu ' + r.j.poll + '/' + again.j.poll + ')');
+    db.prepare('UPDATE print_jobs SET created_ts = created_ts - ? WHERE merchant = ?').run(3 * 60 * 1000, 'browse');
+    const idle = await call(jobsRoute, 'GET', '/api/print/jobs', { bearer: token }, env);
+    ok(idle.status === 200 && idle.j.poll === 5000, 'A6 · pont au repos depuis 2 min : il revient toutes les 5 s (reçu ' + idle.j.poll + ')');
+    db.prepare('UPDATE print_jobs SET created_ts = created_ts + ? WHERE merchant = ?').run(3 * 60 * 1000, 'browse');
     const st = await call(jobsRoute, 'GET', '/api/print/jobs?merchant=browse&id=' + jobId, { cookie: till }, env);
     ok(st.status === 200 && st.j.job.status === 'claimed', 'A6 · la caisse voit le ticket « claimed »');
     const ack = await call(jobsRoute, 'POST', '/api/print/jobs', { bearer: token, body: { action: 'ack', id: jobId, ok: true, bytes: 11 } }, env);

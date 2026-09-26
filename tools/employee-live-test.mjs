@@ -623,8 +623,11 @@ ok(coldSocketRecovery.coldDelay >= 60000,
   'trois refus à froid passent sur un repli long au lieu de tuer la socket pour la page');
 ok(coldSocketRecovery.onlineOpened && coldSocketRecovery.visibilityWired,
   'le retour réseau et le retour au premier plan relancent immédiatement la socket froide');
-ok(caisseSource.includes('setInterval(pollLiveTeam, 1000)'),
-  'la caisse reflète en direct les employés pointés, en pause et sortis');
+ok(caisseSource.includes('const LIVE_TEAM_VISIBLE_MS = 5000, LIVE_TEAM_HIDDEN_MS = 30000;')
+  && caisseSource.includes('document.hidden ? LIVE_TEAM_HIDDEN_MS : LIVE_TEAM_VISIBLE_MS')
+  && caisseSource.includes('if (!document.hidden) pollLiveTeam();')
+  && !caisseSource.includes('setInterval(pollLiveTeam, 1000)'),
+  'la caisse reflète les employés pointés, en pause et sortis (5 s à l’écran, 30 s en arrière-plan, tout de suite au retour)');
 ok(caisseSource.includes('function startEmployeeSaleJournalSync()')
   && caisseSource.includes('function ingestSettledCloudSales(sales)')
   && caisseSource.includes('function syncSettledBusinessDay()')
