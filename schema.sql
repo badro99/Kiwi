@@ -36,6 +36,13 @@ CREATE TABLE IF NOT EXISTS sales (
   -- cases from their table visit / frozen receipt label.
   channel  TEXT,
 
+  -- The employee who actually rang the sale. This is deliberately separate
+  -- from discount_actor_id: approving a discount and owning the till receipt
+  -- are two different responsibilities. The id is the stable Team member id;
+  -- the name is a frozen display snapshot for audits after a rename.
+  seller_id   TEXT,
+  seller_name TEXT,
+
   -- ── VENTE DE TEST : annulée, jamais effacée ────────────────────────────────
   -- Une installation, une formation, un essai d'imprimante laissent de vraies
   -- lignes dans les livres d'un vrai commerçant. L'opérateur doit pouvoir les

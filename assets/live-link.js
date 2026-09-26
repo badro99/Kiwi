@@ -692,6 +692,16 @@
         });
       }
     } catch (_) { lines = null; }
+    var sellerId = String(entry.cashierId || '').trim();
+    var sellerName = String(entry.cashier || '').trim();
+    try {
+      var signedStaff = window.KiwiStaff || null;
+      if (!sellerId && signedStaff && signedStaff.id
+          && (!sellerName || String(signedStaff.name || '').trim().toLowerCase() === sellerName.toLowerCase())) {
+        sellerId = String(signedStaff.id || '').trim();
+        sellerName = String(signedStaff.name || sellerName || '').trim();
+      }
+    } catch (_) {}
     var body = {
       id: stableId(m, entry),                                 // stable receipt key = row PK
       merchant: m,
@@ -703,6 +713,10 @@
       ts: (entry.time && entry.time.getTime) ? entry.time.getTime() : Date.now(),
       lines: lines,                                           // null ⇒ unknown, never "empty basket"
     };
+    if (sellerId && !/^\d{4}$/.test(sellerId)) {
+      body.sellerId = sellerId.slice(0, 96);
+      body.sellerName = sellerName.slice(0, 100);
+    }
     if (entry.channel) body.channel = String(entry.channel).slice(0, 24);
     if (entry.orderId) body.orderId = String(entry.orderId).slice(0, 64);
     var session = serverSession(entry);

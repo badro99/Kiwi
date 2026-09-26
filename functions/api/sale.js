@@ -24,6 +24,48 @@ function json(obj, status) {
   });
 }
 
+function staffName(member) {
+  return [member && member.firstName, member && member.lastName].filter(Boolean).join(' ').trim()
+    || String(member && member.name || '').trim();
+}
+
+function sameStaffName(a, b) {
+  const clean = (value) => {
+    let text = String(value || '').trim().toLowerCase();
+    try { text = text.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
+    return text.replace(/\s+/g, ' ');
+  };
+  return !!clean(a) && clean(a) === clean(b);
+}
+
+async function resolvedSeller(env, merchant, body, employee) {
+  if (employee && employee.member) {
+    const id = String(employee.member.id || employee.session.staffId || '').slice(0, 96);
+    return id ? { id, name: staffName(employee.member) || id } : null;
+  }
+  const requestedId = String(body && body.sellerId || '').trim().slice(0, 96);
+  const requestedName = String(body && body.sellerName || '').trim().slice(0, 100);
+  if ((!requestedId && !requestedName) || /^\d{4}$/.test(requestedId)) return null;
+  try {
+    const rows = await env.DB.prepare(
+      "SELECT data FROM store_docs WHERE merchant = ? AND feature IN ('team', 'employee-access')"
+    ).bind(merchant).all();
+    const members = [];
+    for (const row of (rows.results || [])) {
+      let doc = {};
+      try { doc = JSON.parse((row && row.data) || '{}'); } catch (_) {}
+      if (Array.isArray(doc.members)) members.push(...doc.members);
+    }
+    /* Some older till identities use the private staff_pins id, which is not
+       the Team member id. A name match is still safe because it is checked
+       against this merchant's private roster; persist the canonical member id. */
+    const member = members.find((item) => item && String(item.id || '') === requestedId)
+      || members.find((item) => item && requestedName && sameStaffName(staffName(item), requestedName));
+    const id = String(member && member.id || '').slice(0, 96);
+    return id ? { id, name: staffName(member) || requestedName || id } : null;
+  } catch (_) { return null; }
+}
+
 export async function onRequestPost({ request, env }) {
   if (!env || !env.DB) return json({ error: 'no-db' }, 503);
 
@@ -207,6 +249,7 @@ export async function onRequestPost({ request, env }) {
   // valid; only non-finite/non-positive/future values are normalised.
   const now = Date.now();
   const ts = Number.isFinite(rawTs) && rawTs > 0 && rawTs <= now + 86400000 ? rawTs : now;
+  const seller = await resolvedSeller(env, merchant, b, employee);
 
   // The row id is the caller's idempotency key. A till that loses WiFi mid-POST
   // cannot know whether the sale landed, so it retries from its offline queue —
@@ -500,6 +543,17 @@ export async function onRequestPost({ request, env }) {
         'UPDATE sales SET ref = ? WHERE id = ? AND merchant = ? AND (ref IS NULL OR ref <> ?)'
       ).bind(ref, id, merchant, ref).run();
     } catch (_) { /* Older schemas still retain the successfully inserted sale. */ }
+  }
+  if (seller) {
+    try {
+      await env.DB.prepare(
+        `UPDATE sales SET seller_id = ?, seller_name = ?
+          WHERE id = ? AND merchant = ? AND (seller_id IS NULL OR seller_id = '')`
+      ).bind(seller.id, seller.name, id, merchant).run();
+    } catch (_) {
+      /* Additive migration compatibility: the verified sale remains durable
+         and its replay will attach attribution once the columns exist. */
+    }
   }
 
   let settlementPending = false;

@@ -13,6 +13,7 @@ import {
   findEmployeeCredential, employeeAuthRevision, limitCheck, limitFail, limitClear, targetKey, rateLimitUnavailable,
 } from '../auth/_lib.js';
 import { storeOperationalState } from './_private.js';
+import { startOfDay } from './order/_lib.js';
 
 const ATTENDANCE_FEATURE = 'attendance';
 const ATTENDANCE_CODE_FEATURE = 'attendance-code';
@@ -176,6 +177,34 @@ function safeProgress(raw) {
     updatedTs: Math.max(0, Number(value.updatedTs) || 0),
   };
 }
+
+async function employeeSalesSummary(env, merchant, employeeId) {
+  const from = startOfDay(Date.now());
+  try {
+    const row = await env.DB.prepare(
+      `SELECT COUNT(*) AS sales,
+              COALESCE(SUM(COALESCE(amount_cents, amount * 100)), 0) AS revenue_cents
+         FROM sales
+        WHERE merchant = ? AND seller_id = ? AND ts >= ? AND void_ts IS NULL`
+    ).bind(merchant, employeeId, from).first();
+    const sales = Math.max(0, Math.round(Number(row && row.sales) || 0));
+    const revenueCents = Math.max(0, Math.round(Number(row && row.revenue_cents) || 0));
+    return {
+      available: true,
+      from,
+      sales,
+      revenueCents,
+      revenue: revenueCents / 100,
+      ticket: sales ? revenueCents / 100 / sales : 0,
+    };
+  } catch (_) {
+    /* Rolling deploy: the employee app must keep working before the additive
+       seller columns have reached D1. The card falls back to its local tally
+       until the migration is present instead of turning a schema rollout into
+       a login outage. */
+    return { available: false, from, sales: 0, revenueCents: 0, revenue: 0, ticket: 0 };
+  }
+}
 function normalizedFloorStaff(raw, members) {
   const staff = Array.isArray(raw && raw.staff) ? raw.staff : [];
   const team = Array.isArray(members) ? members : [];
@@ -236,6 +265,7 @@ async function payloadFor(request, env) {
     const open = attendanceView(attendanceRow.data, auth.pin.id).open;
     colleagues.unshift({ ...me, status: open ? (open.pauseTs ? 'on-pause' : 'on-duty') : 'off-duty' });
   }
+  const salesSummary = await employeeSalesSummary(env, merchant, me.id);
   return {
     ok: true, merchant, store: { name: String((cfg && cfg.name) || merchant), type: String((cfg && cfg.type) || '') },
     employee: me,
@@ -250,6 +280,7 @@ async function payloadFor(request, env) {
     hours: (teamRow.data.hours && teamRow.data.hours[me.id]) || {},
     pointedHours: pointedHours(attendanceRow.data, me.id, auth.pin.id),
     progress: safeProgress(progressRow.data.members && progressRow.data.members[me.id]),
+    salesSummary,
     attendance: attendanceView(attendanceRow.data, auth.pin.id),
     colleagues,
     messages: (Array.isArray(messagesRow.data.messages) ? messagesRow.data.messages : [])

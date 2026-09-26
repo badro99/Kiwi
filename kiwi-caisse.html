@@ -5561,8 +5561,8 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=503" defer></script>
-  <script src="assets/live-link.js?v=35" defer></script>
+  <script src="assets/caisse-pwa.js?v=504" defer></script>
+  <script src="assets/live-link.js?v=36" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js?v=1" defer></script>
@@ -13748,6 +13748,7 @@
           : (settlementTable ? settledOrderLabel(settlementTable) : genRef()),
         tip: money(tip),
         cashier: currentCashier.name,
+        cashierId: String((currentCashier && currentCashier.id) || '').slice(0, 96),
       };
       if (vrapOrder && vrapOrder.opId) entry.orderId = String(vrapOrder.opId);
       if (discount) Object.assign(entry, discount);
@@ -15167,7 +15168,16 @@
          identity resolves. postSale() correctly refuses to guess a tenant, but
          the old code retried only at register close. Heal only entries that do
          not yet carry a stable server id on every report heartbeat/refund. */
-      try { reconcileJournalSales(true); } catch (_) {}
+      try {
+        const merchant = window.KiwiLive && window.KiwiLive.merchant && window.KiwiLive.merchant();
+        const replayKey = merchant ? ('kiwi:seller-attribution-replay:v1:' + merchant) : '';
+        const needsAttributionReplay = replayKey && localStorage.getItem(replayKey) !== 'done';
+        if (needsAttributionReplay) reconcileJournalSales(false);
+        else reconcileJournalSales(true);
+        if (needsAttributionReplay && !journal.some((entry) => entry && entry.saleSyncPending)) {
+          localStorage.setItem(replayKey, 'done');
+        }
+      } catch (_) {}
       if (!window.KiwiDayReport) return;
       if (!force && Date.now() - lastProvisional < 90000) return;
       lastProvisional = Date.now();

@@ -4853,7 +4853,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/platform-kernel.js?v=5" defer></script>
   <script src="assets/platform-ops.js?v=5" defer></script>
   <script src="assets/operations.js?v=10" defer></script>
-<script src="assets/live-link.js?v=35" defer></script>
+<script src="assets/live-link.js?v=36" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=271" defer></script>
   <!-- The staff-role catalogue the operator console files PINs against — it says
@@ -4861,7 +4861,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/staff-roles.js?v=1" defer></script>
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/employee-live.js?v=496" defer></script>
+  <script src="assets/employee-live.js?v=497" defer></script>
   <script src="assets/employee-planning.js?v=8" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=2">
   <script src="assets/employee-trade-shell.js?v=2" defer></script>
@@ -10920,12 +10920,15 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       /* --- live shift snapshot (computed; never mutates app state) --- */
       function kgSnapshot() {
         const durMin = shiftStart ? Math.max(0, Math.floor((Date.now() - shiftStart.getTime()) / 60000)) : 0;
-        const paid = tablesPaid;
+        const serverSales = !SV_DEMO && liveEmployeeState && liveEmployeeState.salesSummary
+          && liveEmployeeState.salesSummary.available ? liveEmployeeState.salesSummary : null;
+        const paid = serverSales ? Math.max(0, Number(serverSales.sales) || 0) : tablesPaid;
+        const revenue = serverSales ? Math.max(0, Number(serverSales.revenue) || 0) : kgShiftRevenue;
         const occupied = Object.values(tables).filter(t =>
           t.status === 'ka-yaklo' || t.status === 'bgha-ykhlass' || t.status === 'ka-tkhdam'
         ).length;
         const speed = paid > 0 ? Math.round(kgShiftTurnMin / paid) : null;
-        const shiftXP = Math.round(paid * 10 + kgShiftRevenue * 0.01);
+        const shiftXP = Math.round(paid * 10 + revenue * 0.01);
         const totalXP = kgState.lifetimeXP + shiftXP;
         const rankIdx = kgRankIdxFor(totalXP);
         const rank = rankIdx >= 0 ? KG_RANKS[rankIdx] : null;
@@ -10936,7 +10939,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           durMin: durMin, paid: paid, served: paid + occupied, occupied: occupied,
           speed: speed, shiftXP: shiftXP, totalXP: totalXP,
           rankIdx: rankIdx, rank: rank, next: next, progress: progress,
-          revenue: kgShiftRevenue, ticket: paid > 0 ? kgShiftRevenue / paid : 0,
+          revenue: revenue, ticket: paid > 0 ? revenue / paid : 0,
         };
       }
       function kgDefiProgress() {
@@ -11158,6 +11161,12 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         try {
           kgShiftRevenue += rev;
           kgShiftTurnMin += occ;
+          if (!SV_DEMO && liveEmployeeState && liveEmployeeState.salesSummary
+              && liveEmployeeState.salesSummary.available) {
+            liveEmployeeState.salesSummary.sales = Math.max(0, Number(liveEmployeeState.salesSummary.sales) || 0) + 1;
+            liveEmployeeState.salesSummary.revenue = Math.max(0, Number(liveEmployeeState.salesSummary.revenue) || 0) + rev;
+            liveEmployeeState.salesSummary.revenueCents = Math.round(liveEmployeeState.salesSummary.revenue * 100);
+          }
           if (shiftStart) kgRenderProfil();
           kgUpdateRankChip();
         } catch (e) {}

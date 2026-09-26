@@ -296,6 +296,16 @@ ok(generatedCodeResponse.status === 200 && /^\d{6}$/.test(generatedCode.code)
   'la caisse génère un code de pointage à six chiffres et limité dans le temps');
 const cin = await post({ action: 'clock-in', attendanceCode: generatedCode.code }, cookie);
 ok(cin.status === 200, 'le pointage d’arrivée est persisté');
+const todayStart = Math.floor((Date.now() + 3600000) / 86400000) * 86400000 - 3600000;
+const tillAttributed = await salePost({
+  id: 'sale-till-sara-today', merchant: 'amira-cafe', amount: 42, amountCents: 4200,
+  method: 'cash', ts: todayStart + 1000, label: 'Vente caisse Sara', ref: 'KH-ATTR',
+  sellerId: 'legacy-private-pin-id', sellerName: 'Sara Serveuse',
+}, tillCookie);
+const afterTillSaleRes = await get(cookie); const afterTillSale = await afterTillSaleRes.json();
+ok(tillAttributed.status === 200 && afterTillSale.salesSummary.available
+  && afterTillSale.salesSummary.sales === 1 && afterTillSale.salesSummary.revenueCents === 4200,
+  "la carte de fin de service compte la vente caisse attribuée à l'employée");
 const duringShiftReload = await get(cookie); const duringShiftState = await duringShiftReload.json();
 ok(duringShiftReload.status === 200 && duringShiftState.attendance.open,
   'recharger pendant un service conserve la session et le pointage ouvert');
@@ -336,6 +346,9 @@ const employeePaymentBody = {
 const employeePayment = await salePost(employeePaymentBody, cookie);
 ok(employeePayment.status === 200,
   "le paiement final de l'app employé est acquitté par le journal financier partagé");
+const afterOwnSaleRes = await get(cookie); const afterOwnSale = await afterOwnSaleRes.json();
+ok(afterOwnSale.salesSummary.sales === 2 && afterOwnSale.salesSummary.revenueCents === 12700,
+  "un paiement depuis l'app est attribué automatiquement à la session employé authentifiée");
 const afterEmployeePayment = await paidFeed(ledgerNow - 120000);
 const afterEmployeeRows = await afterEmployeePayment.json();
 const mirroredEmployeeSale = afterEmployeeRows.sales[0];
