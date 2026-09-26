@@ -5557,7 +5557,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=557" defer></script>
+  <script src="assets/caisse-pwa.js?v=558" defer></script>
   <script src="assets/live-link.js?v=49" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -15659,7 +15659,10 @@
         // A paid receipt must be compared with D1 during the shift, not only
         // after the cashier closes the register hours later.
         if (storeIsReal() && window.KiwiZReconciliation?.queueSnapshot) {
-          window.KiwiZReconciliation.queueSnapshot(r, journal.filter(isReportableJournalEntry))
+          /* Keep voided rows here: the Z manifest needs their IDs to remove
+             receipts previously snapshotted during this shift. The report
+             itself still excludes them via buildDayReport(). */
+          window.KiwiZReconciliation.queueSnapshot(r, journal)
             .then((result) => { if (!result?.ok) toast('Rapprochement des ventes en attente · conservez cette caisse'); });
         }
       } catch (_) {}
@@ -15817,7 +15820,7 @@
         return;
       }
       const zQueued = !storeIsReal() ? { ok: true, demo: true } : await (window.KiwiZReconciliation
-        ? window.KiwiZReconciliation.queueClose(report, journal.filter(isReportableJournalEntry))
+        ? window.KiwiZReconciliation.queueClose(report, journal)
         : Promise.resolve({ ok: false, reason: 'module-unavailable' }));
       if (!zQueued || !zQueued.ok) {
         registerClosing = false;

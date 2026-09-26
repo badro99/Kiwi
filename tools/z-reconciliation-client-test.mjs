@@ -75,3 +75,10 @@ const corrected = instance(false);
 assert.equal((await corrected.queueSnapshot({ ...report, txns: 1, gross: 57 }, [{ ...second, voided: true }])).ok, true);
 assert.equal([...rows.values()][0].payload.entries.length, 1, 'voided receipt removed from saved manifest, not counted at next close');
 assert.equal([...rows.values()][0].payload.entries[0].id, 'canonical-receipt-1');
+// A test shift can finish with every receipt voided. The close must replace a
+// prior non-empty manifest with an explicit zero, not stay open forever.
+const fullyVoided = instance(false);
+assert.equal((await fullyVoided.queueClose({ ...report, txns: 0, gross: 0 },
+  [{ ...receipt, voided: true }, { ...second, voided: true }])).ok, true);
+assert.equal([...rows.values()][0].payload.entries.length, 0,
+  'fully voided day closes with an empty durable Z manifest');
