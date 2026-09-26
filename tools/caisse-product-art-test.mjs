@@ -55,7 +55,7 @@ const resolveArt = new Function('catOrder', 'catLabels',
     drinks: 'Boissons', soda: 'Soda+eau'
   });
 const liveCards = [
-  ['Agnolotti del Pin', 'signatures'],
+  ['Agnollotti del Pin', 'signatures'],
   ['Ravioli Ricotta e Spinaci', 'signatures'],
   ['Pappardelle aux champignons', 'signatures'],
   ['Lasagna', 'signatures'],
@@ -77,5 +77,17 @@ assert.match(resolveArt('it_x', 'pasta', 'Spécial maison'), /M17 12v16/,
   'the pasta category uses a pasta silhouette for unnamed dishes');
 assert.match(resolveArt('it_x', 'signatures', 'Spécial maison'), /<circle[^>]+r="20"/,
   'an unknown signature has a neutral plate rather than a misleading bowl or drink');
+assert.equal(resolveArt('it_x', 'drinks', 'Jus de kiwi et pommes'),
+  resolveArt('it_x', 'drinks', 'Jus citron'),
+  'apple in a juice name cannot be misclassified as a canned soda');
+assert.equal(resolveArt('it_x', 'soda', 'Hawaii'),
+  resolveArt('it_x', 'soda', 'Coca-Cola'),
+  'the published Hawaii soda uses a can, not a generic juice glass');
+assert.notEqual(resolveArt('it_x', 'signatures', 'Supplément Fromage'),
+  resolveArt('it_x', 'signatures', 'Spécial maison'),
+  'cheese supplements have their own silhouette');
+assert.equal(resolveArt('it_x', 'desserts', 'Panacotta'),
+  resolveArt('it_x', 'desserts', 'Bonet'),
+  'the published panacotta renders as a moulded dessert');
 
-console.log('caisse-product-art-test: 31 controls passed');
+console.log('caisse-product-art-test: 35 controls passed');

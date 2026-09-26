@@ -5557,7 +5557,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=560" defer></script>
+  <script src="assets/caisse-pwa.js?v=561" defer></script>
   <script src="assets/live-link.js?v=49" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -9500,6 +9500,7 @@
       pasta: `<path d="M17 12v16a9 9 0 0 0 9 9h4M23 12v13M29 12v13M17 25h12M28 37c5-11 21-9 21 2 0 7-9 11-16 7-5-3-3-10 3-11 4-1 8 2 7 6"/><path class="thin" d="M26 46c-2 4-5 6-9 7M34 47c-1 4-3 7-7 9M44 46c2 3 5 5 8 6"/>`,
       lasagna: `<path class="fill" d="M12 38l31-17 9 7-30 18z"/><path d="M12 38l31-17 9 7-30 18zM12 38v9l10 7 30-18v-8M22 46v8M12 43l10 7 30-18M15 40l8 5 27-16"/><path class="thin" d="M27 33l5-3M35 29l5-3M24 47l26-15M25 52l25-15"/>`,
       eggplant: `<path class="fill" d="M24 26c-7 3-10 13-7 21 3 8 13 11 23 5 8-4 12-13 8-20-4-8-13-10-24-6z"/><path d="M24 26c-7 3-10 13-7 21 3 8 13 11 23 5 8-4 12-13 8-20-4-8-13-10-24-6zM22 27l-4-9 8 3 7-8 1 11 8 4-11 2zM31 21l-2-10"/><path class="thin" d="M24 42c1 5 5 8 10 7"/>`,
+      cheese: `<path class="fill" d="M13 36l30-20 9 33-39 5z"/><path d="M13 36l30-20 9 33-39 5zM13 36l39 13M13 36v18M26 31c4-2 7 0 7 4s-3 6-7 5M43 16l-3 20"/><circle class="fill" cx="37" cy="44" r="3"/><circle cx="37" cy="44" r="3"/>`,
       tiramisu: `<path class="fill" d="M14 29l29-7 8 9-29 8z"/><path d="M14 29l29-7 8 9-29 8zM14 29v18l8 9 29-8V31M22 39v17M14 38l8 9 29-8M14 43l8 9 29-8"/><path class="thin" d="M20 27l3-1M27 25l3-1M34 24l3-1M26 31l3-1M33 29l3-1M40 27l3-1"/>`,
       flan: `<path d="M11 49c7 4 35 4 42 0M15 46c5 3 29 3 34 0"/><path class="fill" d="M17 42l5-19c7-4 13-4 20 0l5 19c-7 5-23 6-30 0z"/><path d="M17 42l5-19c7-4 13-4 20 0l5 19c-7 5-23 6-30 0zM22 23c5 3 15 3 20 0"/><path class="thin" d="M23 33l-2 8M40 33l2 8"/>`,
       soda: `<path class="fill" d="M22 17h20l-2 35H24z"/><path d="M22 17h20l-2 35H24zM22 17l2-5h16l2 5M24 22h16M24 47h16"/><path class="thin" d="M29 30c3-3 7-3 10 0M27 35c3-2 5-2 7 0M35 39c2-2 4-2 6 0"/>`,
@@ -9519,17 +9520,19 @@
       pancake: '<path d="M5 10c0-2 3.134-3 7-3s7 1 7 3-3.134 3-7 3-7-1-7-3zM5 10v4c0 2 3.134 3 7 3s7-1 7-3v-4M7 17v1c0 1.657 2.239 3 5 3s5-1.343 5-3v-1"/><path d="m10 9 2-1 2 1-2 1z"/>',
     };
     const MENU_ART_RULES = [
-      [/agnolotti/, MENU_LIVE_ART.agnolotti],
+      [/agnol+otti/, MENU_LIVE_ART.agnolotti],
       [/ravioli|tortellini/, MENU_LIVE_ART.ravioli],
       [/lasagn/, MENU_LIVE_ART.lasagna],
       [/pappardelle|tagliatelle|spaghetti|linguine|penne|rigatoni|fusilli|pates?\b|pasta\b/, MENU_LIVE_ART.pasta],
       [/parmigiana|melanzane|aubergine/, MENU_LIVE_ART.eggplant],
+      [/fromage|cheese|mozzarella/, MENU_LIVE_ART.cheese],
       [/tiramisu/, MENU_LIVE_ART.tiramisu],
-      [/bonet|flan|creme caramel/, MENU_LIVE_ART.flan],
+      [/bonet|flan|creme caramel|pana\s*cotta/, MENU_LIVE_ART.flan],
       [/\b(eau|water)\b/, MENU_LIVE_ART.water],
-      [/\b(coca|cola|fanta|sprite|soda|pepsi|schweppes|pommes)\b/, MENU_LIVE_ART.soda],
+      [/\b(coca|cola|fanta|sprite|soda|pepsi|schweppes|hawaii)\b/, MENU_LIVE_ART.soda],
       [/orange|jus.*agrume/, _orangeJuice],
       [/\bjus\b|juice|limonade|citron/, MENU_LIVE_ART.juice],
+      [/^pommes?$/, MENU_LIVE_ART.soda],
       [/salade/, MENU_LIBRARY_ART.salad, '24'],
       [/harira|soupe/, MENU_LIBRARY_ART.soup, '24'],
       [/tajine.*(?:poulet|citron)/, MENU_ART['m-008']],
