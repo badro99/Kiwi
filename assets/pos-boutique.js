@@ -578,7 +578,8 @@
       motif: 'Retour cherbil perlé · 37', at: new Date(NOW - 26 * 3600 * 1000), until: new Date(NOW + 182 * 24 * 3600 * 1000), from: '1188' },
   ] : [];
   let avSeq = 2032;
-  const activeAvoirs = () => AVOIRS.filter((a) => a.balance > 0);
+  const avoirExpired = (a) => !!(a && a.until && new Date(a.until).getTime() < Date.now());
+  const activeAvoirs = () => AVOIRS.filter((a) => a.balance > 0 && a.status !== 'cancelled' && a.status !== 'consumed' && !avoirExpired(a));
 
   /* Les avoirs (bons d'achat) d'une VRAIE boutique doivent survivre à un
      rechargement de la caisse — sinon un bon émis sur un retour disparaît au
@@ -3181,6 +3182,7 @@
             closeVeil('#bq-exch-veil');
             openPay({
             amount: diff,
+            customerId: sale.clientId || null,
             title: 'Différence échange',
             subtitle: `${sale.id} · ${esc(oldP.name)} → ${esc(newP.name)}`,
             ref: exchangeNumber,
@@ -3430,6 +3432,7 @@
     };
     const beginPay = () => openPay({
       amount: total,
+      customerId: c ? c.id : null,
       title: 'Encaissement',
       subtitle: `${frozen.num} · ${c ? esc(c.name) : 'Cliente de passage'}`,
       // Real ticket contents, so the printed receipt itemises the sale instead
@@ -3611,6 +3614,8 @@
      couvert, ce qui donne gratuitement les partages à trois. */
   function openPay(opts) {
     const el = $('#bq-paym', root);
+    const ownAvoirs = () => opts.customerId
+      ? activeAvoirs().filter((a) => a.holderId === opts.customerId) : [];
     let avoirPart = null;                   /* { m:'avoir', amount, code } */
     const settled = [];                     /* les règlements déjà posés */
     let committed = false;                  /* double tap must never book twice */
@@ -3666,7 +3671,7 @@
       <p class="bq-split-note"${portion() < due() ? '' : ' hidden'}>Cette part : ${fmtMAD(portion())} · restera ${fmtMAD(r2(due() - portion()))}</p>`;
 
     const stepMethods = () => {
-      const avs = activeAvoirs();
+      const avs = ownAvoirs();
       el.innerHTML = `
         <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">${esc(opts.title)}</h3>
@@ -3696,9 +3701,9 @@
             <span class="l"><b>Avoir</b><span>${avs.length === 1 ? `${avs[0].code} · ${fmtMAD(avs[0].balance)}, ${esc(avs[0].holderName)}` : `${avs.length} avoirs actifs, scanner ou choisir`}</span></span>
             <span class="amt">−${fmtMAD(Math.min(avs[0].balance, portion()))}</span>
           </button>` : `
-          <button class="bq-pay-opt is-mute" data-bq-m="avoir-none">
+          <button class="bq-pay-opt" data-bq-m="avoir">
             <span class="ic"><i data-lucide="ticket"></i></span>
-            <span class="l"><b>Avoir</b><span>Aucun avoir actif en caisse</span></span>
+            <span class="l"><b>Code d’avoir</b><span>Scanner ou saisir le code du bon</span></span>
           </button>`}
         </div>`;
       icons(); closeBtns();
@@ -3735,7 +3740,7 @@
           $$('[data-bq-m]', el).forEach((b) => {
             const a = $('.amt', b); if (!a) return;
             if (/^avoir/.test(b.dataset.bqM)) {
-              const bal = (activeAvoirs()[0] || {}).balance;
+              const bal = (ownAvoirs()[0] || {}).balance;
               if (bal != null) a.textContent = '−' + fmtMAD(Math.min(bal, portion()));
               return;
             }
@@ -3774,11 +3779,15 @@
     };
 
     const stepAvoir = () => {
-      const avs = activeAvoirs();
+      const avs = ownAvoirs();
       el.innerHTML = `
         <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Avoir en paiement</h3>
         <p class="modal-subtle">Scannez le bon, ou choisissez-le, il se déduit du total</p>
+        <form id="bq-av-code-form" style="display:flex;gap:8px;margin:12px 0;">
+          <input class="bq-in mono" id="bq-av-code" autocomplete="off" autocapitalize="characters" placeholder="Scanner ou saisir AV-…" aria-label="Code de l’avoir" style="flex:1;min-width:0;" />
+          <button class="bq-btn secondary" type="submit">Utiliser</button>
+        </form>
         <div class="bq-pay-opts">
           ${avs.map((a) => `
             <button class="bq-pay-opt" data-bq-av-use="${a.code}">
@@ -3790,20 +3799,25 @@
         <div class="bq-sheet-foot"><button class="bq-btn secondary" id="bq-av-back" style="flex:1;">Retour</button></div>`;
       icons(); closeBtns();
       $('#bq-av-back', el).onclick = stepMethods;
+      const applyCode = (rawCode) => {
+        const code = String(rawCode || '').trim().toUpperCase();
+        const av = AVOIRS.find((a) => String(a.code).toUpperCase() === code);
+        if (!av || avoirExpired(av) || !activeAvoirs().includes(av)) {
+          toast('Bon indisponible', 'Code introuvable, expiré ou déjà consommé.');
+          return;
+        }
+        const applied = Math.min(av.balance, portion());
+        avoirPart = { m: 'avoir', amount: applied, code: av.code };
+        share = 1; custom = 0;
+        if (due() <= 0.009) commit();
+        else { toast(`${av.code} appliqué, reste ${fmtMAD(due())} à payer`); stepMethods(); }
+      };
+      $('#bq-av-code-form', el).onsubmit = (event) => {
+        event.preventDefault();
+        applyCode($('#bq-av-code', el).value);
+      };
       $$('[data-bq-av-use]', el).forEach((b) => {
-        b.onclick = () => {
-          const av = AVOIRS.find((a) => a.code === b.dataset.bqAvUse);
-          /* `portion()`, pas `due()`. Sans part choisie les deux sont égaux et
-             le bon se déduit entièrement, comme avant. Mais quand la caissière
-             a explicitement demandé la moitié, le bon prenait quand même tout :
-             une cliente qui voulait garder du solde sur son avoir en sortait
-             avec un bon vidé, et il n'y avait pas de retour en arrière. */
-          const applied = Math.min(av.balance, portion());
-          avoirPart = { m: 'avoir', amount: applied, code: av.code };
-          share = 1; custom = 0;   /* la part est consommée, comme dans settle() */
-          if (due() <= 0.009) commit();
-          else { toast(`${av.code} appliqué, reste ${fmtMAD(due())} à payer`); stepMethods(); }
-        };
+        b.onclick = () => applyCode(b.dataset.bqAvUse);
       });
     };
 

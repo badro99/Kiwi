@@ -1157,6 +1157,7 @@ section('Whole-project regressions');
     'pos-maison-test.mjs',
     'maison-caisse-browser-test.mjs',
     'maison-dashboard-browser-test.mjs',
+    'avoir-customer-scope-browser-test.mjs',
     'boutique-printer-settings-test.mjs',
     /* Le panneau d'activation : il doit pouvoir se fermer. Il ne le pouvait
        pas, et rien ne le disait — voir l'en-tête de la suite. */

@@ -581,8 +581,8 @@
 
   /* avoirs actifs — store credit. AV-2031 vient du retour cherbil d'hier. */
   const AVOIRS = IS_DEMO ? [
-    { code: 'AV-2031', amount: 350, balance: 350, holderId: 'c2', holderName: 'Salma Bennis',
-      motif: 'Retour cherbil perlé · 37', at: new Date(NOW - 26 * 3600 * 1000), until: new Date(NOW + 182 * 24 * 3600 * 1000), from: '1188' },
+    { code: 'AV-2031', amount: 350, balance: 350, holderId: 'c2', holderName: 'Mme Ghita Benjelloun',
+      motif: 'Retour verres Beldi · lot 6', at: new Date(NOW - 26 * 3600 * 1000), until: new Date(NOW + 182 * 24 * 3600 * 1000), from: '1188' },
   ] : [];
   let avSeq = 2032;
   /* A voucher is spendable only while it has balance and is not expired. Keep
@@ -4749,6 +4749,7 @@
           closeVeil('#mz-exch-veil');
           openPay({
             amount: diff,
+            customerId: sale.clientId || null,
             title: 'Différence échange',
             subtitle: `${sale.id} · ${esc(oldP.name)} → ${esc(newP.name)}`,
             ref: exchangeNumber,
@@ -5058,6 +5059,7 @@
     const c = ticketClient();
     openPay({
       amount: total,
+      customerId: c ? c.id : null,
       title: 'Encaissement',
       subtitle: `${t.num} · ${c ? esc(c.name) : 'Cliente de passage'}`,
       ref: t.num,
@@ -5240,6 +5242,8 @@
      couvert, ce qui donne gratuitement les partages à trois. */
   function openPay(opts) {
     const el = $('#mz-paym', root);
+    const ownAvoirs = () => opts.customerId
+      ? activeAvoirs().filter((a) => a.holderId === opts.customerId) : [];
     let avoirPart = null;                   /* { m:'avoir', amount, code } */
     const settled = [];                     /* les règlements déjà posés */
     let committed = false;                  /* double tap must never book twice */
@@ -5252,7 +5256,7 @@
     };
     const remainingAvoirs = () => {
       const used = new Set(appliedAvoirCodes());
-      return activeAvoirs().filter((a) => !used.has(a.code));
+      return ownAvoirs().filter((a) => !used.has(a.code));
     };
     let share = 1;                          /* 1 = tout le reste ; 0.5 = la moitié */
     let custom = 0;                          /* un montant saisi à la main */
@@ -5305,7 +5309,7 @@
       <p class="mz-split-note"${portion() < due() ? '' : ' hidden'}>Cette part : ${fmtMAD(portion())} · restera ${fmtMAD(r2(due() - portion()))}</p>`;
 
     const stepMethods = () => {
-      const avs = activeAvoirs();
+      const avs = ownAvoirs();
       const remAvoirs = remainingAvoirs();
       el.innerHTML = `
         <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -5336,9 +5340,9 @@
             <span class="l"><b>Avoir</b><span>${remAvoirs.length === 1 && !avoirPart ? `${remAvoirs[0].code} · ${fmtMAD(remAvoirs[0].balance)}, ${esc(remAvoirs[0].holderName)}` : `${remAvoirs.length} bon${remAvoirs.length > 1 ? 's' : ''} disponible${remAvoirs.length > 1 ? 's' : ''}, scanner ou choisir`}</span></span>
             <span class="amt">−${fmtMAD(Math.min(remAvoirs[0].balance, portion()))}</span>
           </button>` : `
-          <button class="mz-pay-opt is-mute" data-mz-m="avoir-none">
+          <button class="mz-pay-opt" data-mz-m="avoir">
             <span class="ic"><i data-lucide="ticket"></i></span>
-            <span class="l"><b>Avoir</b><span>${avs.length ? 'Tous les bons sont déjà posés' : 'Aucun avoir actif en caisse'}</span></span>
+            <span class="l"><b>Code d’avoir</b><span>${avs.length ? 'Tous les bons de cette cliente sont déjà posés · scanner ou saisir un autre code' : 'Scanner ou saisir le code du bon'}</span></span>
           </button>`}
         </div>`;
       icons(); closeBtns();
@@ -5442,7 +5446,7 @@
             }
           } catch (_) {}
         }
-        if (!av || avoirExpired(av) || av.status !== 'active' || av.balance <= 0) {
+        if (!av || !activeAvoirs().includes(av)) {
           toast('Bon indisponible', 'Code introuvable, expiré ou déjà consommé.');
           return;
         }
