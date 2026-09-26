@@ -354,6 +354,9 @@ async function routeRequest(context) {
    * d'audit (GET /api/sale/cancel) restent gardées derrière la session propriétaire. */
   if (method === 'POST' && (path === '/api/sale' || path === '/api/sale/refund' || path === '/api/sale/cancel'
     || path === '/api/pressing/cancel')) return next();
+  // The till reports its device time zone; the handler accepts only a till
+  // proven for that merchant (isTillFor) and writes nothing else.
+  if (method === 'POST' && path === '/api/timezone') return next();
   // La page de réinitialisation de mot de passe. Quelqu'un qui a perdu son mot
   // de passe n'a par définition AUCUNE session : la porte du site la lui
   // refuserait, et le lien qu'on vient de lui envoyer tomberait sur l'écran de

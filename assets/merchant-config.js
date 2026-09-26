@@ -495,6 +495,30 @@
 
   var lastSlug = null;
   var lastMerchant = null;
+  /* The paired till is the device physically at the store, so its clock
+   * defines the store's business day everywhere (dashboard abroad, waiter
+   * phones, server reports). When the device's zone differs from the one the
+   * server holds, tell it once per page life per zone. Any failure is silent:
+   * the till keeps using its own zone locally either way. */
+  var reportedZone = '';
+  function reportTillZone(stored) {
+    try {
+      // A God Mode support session (?op=1) runs on the operator's device, not at the store.
+      if (!/caisse/i.test(location.pathname) || /[?&]op=1(?:&|$)/.test(location.search)
+        || localStorage.getItem('kiwiPaired') !== '1') return;
+      var zone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+      var slug = merchant();
+      if (!zone || !slug || zone === stored || zone === reportedZone) return;
+      reportedZone = zone;
+      fetch('/api/timezone', {
+        method: 'POST', credentials: 'same-origin', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchant: slug, timeZone: zone })
+      }).then(function (r) { if (r && r.ok) cfg.timezone = zone; else reportedZone = ''; })
+        .catch(function () { reportedZone = ''; });
+    } catch (_) {}
+  }
+
   function fetchConfig() {
     lastSlug = storeSlug();
     lastMerchant = merchant();
@@ -506,6 +530,8 @@
         cfg.pins = Array.isArray(data.pins) ? data.pins : [];
         rememberPins(cfg.pins);
         cfg.type = data.type || '';
+        cfg.timezone = typeof data.timezone === 'string' ? data.timezone : '';
+        reportTillZone(data.timezone);
         /* Server-authoritative entitlement. Empty means unresolved/offline and
            must never be interpreted as a paid tier. planExplicit mirrors the
            row: only an explicitly stored tier counts for venue-count gates

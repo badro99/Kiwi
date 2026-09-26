@@ -2,7 +2,7 @@
 // Missing receipts are never fabricated here: only the originating till can
 // requeue their full, locally preserved payment payloads.
 import { entitledMerchant, isTillFor } from '../auth/_lib.js';
-import { businessDate, businessBoundary, addBusinessDays } from './_business-day.js';
+import { businessDate, businessBoundary, addBusinessDays, merchantZone } from './_business-day.js';
 
 function json(value, status = 200) {
   return new Response(JSON.stringify(value), { status,
@@ -55,8 +55,9 @@ export async function onRequestPost({ request, env }) {
     seen.add(id); sum += cents; local.set(id, { amountCents: cents, method });
   }
   if (sum !== body.totalCents) return json({ error: 'z-total-mismatch' }, 400);
-  const from = businessBoundary(day);
-  const to = businessBoundary(addBusinessDays(day, 1));
+  const zone = await merchantZone(env, merchant);
+  const from = businessBoundary(day, 5, zone);
+  const to = businessBoundary(addBusinessDays(day, 1), 5, zone);
   let remote;
   try {
     remote = (await env.DB.prepare(`SELECT id, amount, amount_cents, method FROM sales
@@ -125,6 +126,7 @@ export async function onRequestGet({ request, env }) {
   const asked = String(url.searchParams.get('merchant') || '').slice(0, 64);
   const merchant = asked && await entitledMerchant(request, env, asked);
   if (!merchant || merchant !== asked) return json({ error: 'forbidden-merchant' }, 403);
+  const zone = await merchantZone(env, merchant);
   try {
     await schema(env.DB);
     const rows = (await env.DB.prepare(`SELECT business_day, terminal_id, reported_count, reported_cents,
@@ -139,13 +141,13 @@ export async function onRequestGet({ request, env }) {
     const conflicts = (await env.DB.prepare(`SELECT sale_id, amount_cents, method, updated_ts
       FROM sale_sync_conflicts WHERE merchant = ? ORDER BY updated_ts DESC LIMIT 14`)
       .bind(merchant).all()).results || [];
-    const day = url.searchParams.get('day') || businessDate(Date.now());
+    const day = url.searchParams.get('day') || businessDate(Date.now(), 5, zone);
     if (!validDay(day)) return json({ error: 'bad-day' }, 400);
     const dayRows = (await env.DB.prepare(`SELECT * FROM z_reconciliations
       WHERE merchant = ? AND business_day = ? ORDER BY updated_ts DESC`).bind(merchant, day).all()).results || [];
     const ledger = (await env.DB.prepare(`SELECT id, amount, amount_cents, method FROM sales
       WHERE merchant = ? AND ts >= ? AND ts < ? AND void_ts IS NULL`)
-      .bind(merchant, businessBoundary(day), businessBoundary(addBusinessDays(day, 1))).all()).results || [];
+      .bind(merchant, businessBoundary(day, 5, zone), businessBoundary(addBusinessDays(day, 1), 5, zone)).all()).results || [];
     const recordedCents = ledger.reduce((n,r) => n + Math.round(r.amount_cents == null ? Number(r.amount)*100 : Number(r.amount_cents)), 0);
     const remote = new Map(ledger.map(r => [r.id,r]));
     const reports = dayRows.map(row => ({ row, result: JSON.parse(row.result_json || '{}') }));
@@ -196,11 +198,11 @@ export async function onRequestGet({ request, env }) {
       : closed.length === 1 ? Number(closed[0].row.reported_cents) : null;
     const missingCount = exactUnion ? [...union.keys()].filter(id => !remote.has(id)).length
       : closed.length === 1 ? (closed[0].result.missing || []).filter(id => !remote.has(id)).length : null;
-    const source = reportedCents != null ? 'closed-z' : day === businessDate(Date.now()) ? 'live-ledger' : 'ledger-only';
+    const source = reportedCents != null ? 'closed-z' : day === businessDate(Date.now(), 5, zone) ? 'live-ledger' : 'ledger-only';
     const daySummary = { day, source, syncObserved, closedTerminals: closed.length, totalTerminals: reports.length, comparisonAvailable: reports.length > 0,
       referenceCents: reportedCents == null ? recordedCents : reportedCents, reportedCents, recordedCents,
       recordedCount: ledger.length, gapCents: reportedCents == null ? null : reportedCents - recordedCents,
-      missingCount, waitingCount: day === businessDate(Date.now()) ? Math.max(waiting.size,pendingCount) : waiting.size, blocked: [...blockedById.values()],
+      missingCount, waitingCount: day === businessDate(Date.now(), 5, zone) ? Math.max(waiting.size,pendingCount) : waiting.size, blocked: [...blockedById.values()],
       ambiguous: closed.length > 1 && reportedCents == null };
     return json({ ok: true, merchant, rows, conflicts, daySummary });
   } catch (_) { return json({ error: 'db-read-failed' }, 503); }

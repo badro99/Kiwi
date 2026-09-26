@@ -49,7 +49,9 @@ ok(ctx1.window.KiwiDayReport.storeSlug() === 'merchant-slug-canonical',
 
 // 3. Runtime execution on Dashboard / where KiwiCaissePairing is absent
 const ctx2 = vm.createContext({
-  window: { localStorage: ls, addEventListener: () => {} }, // no KiwiCaissePairing
+  // no KiwiCaissePairing; the store's zone comes from the server config
+  // (learned from its till), otherwise the host machine's zone would decide.
+  window: { localStorage: ls, addEventListener: () => {}, KiwiConfig: { timezone: 'Africa/Casablanca' } },
   localStorage: ls,
   Date, Math, JSON, RegExp, Array, Object, String, Number,
 });

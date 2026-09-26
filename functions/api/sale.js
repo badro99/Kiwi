@@ -12,7 +12,7 @@ import { storeSuspended, storeSubscriptionPending } from './_private.js';
 import { startOfDay } from './order/_lib.js';
 import { settleServiceTable, serviceVisitGuard } from './service/events.js';
 import { poke } from './_live.js';
-import { businessDate } from './_business-day.js';
+import { businessDate, merchantZone } from './_business-day.js';
 
 async function legacyPaymentId(merchant, legacyId, payment) {
   const input = JSON.stringify([merchant, legacyId, payment.ref, payment.ts,
@@ -593,7 +593,8 @@ export async function onRequestPost({ request, env }) {
   const settlementSessionId = effectiveSessionId || (employeeTable ? 'unlinked-table:' + employeeTable : '');
   if (!stored && !split && settlementSessionId && orderNumber(ref)) {
     let claim;
-    try { claim = await claimRestaurantBill(env, merchant, settlementSessionId, orderNumber(ref), businessDate(ts), id); }
+    const billDay = businessDate(ts, 5, await merchantZone(env, merchant));
+    try { claim = await claimRestaurantBill(env, merchant, settlementSessionId, orderNumber(ref), billDay, id); }
     catch (_) { return json({ error: 'settlement-key-unavailable' }, 503); }
     if (!claim || !claim.sale_id) return json({ error: 'settlement-key-unavailable' }, 503);
     if (claim.sale_id !== id) {
@@ -609,7 +610,7 @@ export async function onRequestPost({ request, env }) {
         let moved = null;
         try { moved = await env.DB.prepare(`UPDATE sale_settlement_keys SET sale_id = ?, created_ts = ?
             WHERE merchant = ? AND session_id = ? AND order_number = ? AND business_day = ? AND sale_id = ?`)
-          .bind(id, Date.now(), merchant, settlementSessionId, orderNumber(ref), businessDate(ts), first.id).run(); }
+          .bind(id, Date.now(), merchant, settlementSessionId, orderNumber(ref), billDay, first.id).run(); }
         catch (_) { return json({ error: 'settlement-key-unavailable' }, 503); }
         if (!Number(moved && moved.meta && moved.meta.changes)) return json({ error: 'settlement-in-flight' }, 503);
       } else {

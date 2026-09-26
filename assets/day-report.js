@@ -105,11 +105,23 @@
   var DEFAULT_TIMEZONE = 'Africa/Casablanca';
 
   /* A browser may be in Berlin while the merchant's books are in Casablanca.
-     Never let Date's host-local calendar decide which business day a sale
-     belongs to.  The venue metadata is optional for old accounts; Morocco is
-     the safe historical default for Kiwi. */
+     The store's clock is the clock of the device AT the store: its paired till.
+     The till therefore uses its own device zone and reports it to the server
+     (merchant-config.js → /api/timezone); every other surface reads that stored
+     store zone. Only when nothing is known yet does a device fall back to its
+     own zone, and Morocco remains the last resort. */
+  function deviceTimezone() {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (_) { return ''; }
+  }
+  function onTill() {
+    try {
+      return /caisse/i.test(location.pathname) && !/[?&]op=1(?:&|$)/.test(location.search)
+        && localStorage.getItem('kiwiPaired') === '1';
+    } catch (_) { return false; }
+  }
   function merchantTimezone(slug) {
     var candidates = [];
+    if (onTill()) candidates.push(deviceTimezone());
     try {
       var vd = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
       if (vd && (!slug || vd.slug === slug || vd.merchant === slug || vd.id === slug)) candidates.push(vd.timezone, vd.timeZone, vd.tz);
@@ -119,6 +131,7 @@
       var pv = window.KiwiPlatform && window.KiwiPlatform.pairedVenue && window.KiwiPlatform.pairedVenue();
       candidates.push(pv && (pv.timezone || pv.timeZone || pv.tz));
     } catch (_) {}
+    candidates.push(deviceTimezone());
     for (var i = 0; i < candidates.length; i++) {
       var zone = String(candidates[i] || '').trim();
       if (!zone) continue;

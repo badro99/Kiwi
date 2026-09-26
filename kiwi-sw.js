@@ -137,7 +137,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=1',
-  '/assets/dateRange.js?v=21',
+  '/assets/dateRange.js?v=22',
   '/assets/mobile-nav.js?v=2',
   '/assets/liquid-lens.js?v=1',
   '/assets/pages.js?v=5',
@@ -169,8 +169,8 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=13',
-  '/assets/report.js?v=3',
+  '/assets/day-report.js?v=14',
+  '/assets/report.js?v=4',
   '/assets/day-report-dash.js?v=11',
   '/assets/day-report-export.js?v=7',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
@@ -187,7 +187,7 @@ var SHELL = [
   '/assets/receipt.js?v=4',
   '/assets/receipt-ui.js?v=1',
   '/assets/invoice.js?v=8',
-  '/assets/merchant-config.js?v=272',
+  '/assets/merchant-config.js?v=273',
   '/assets/entitlements.css?v=5',
   '/assets/entitlements-v2.js?v=1',
   '/assets/staff-roles.js?v=1',

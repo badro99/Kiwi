@@ -116,7 +116,7 @@
       var zone = vd && (vd.timezone || vd.timeZone || vd.tz);
       if (zone) { new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(); return zone; }
     } catch (_) {}
-    return 'Africa/Casablanca';
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Casablanca'; } catch (_) { return 'Africa/Casablanca'; }
   }
   function merchantParts(epoch) {
     var out = {};

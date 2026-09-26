@@ -28,6 +28,7 @@
 // SELECTs below are deliberately narrow and tools/config-pin-projection-test.mjs
 // fails the build if a code finds its way back in.
 
+import { validZone } from './_business-day.js';
 import {
   json, activeAccountSession, slugMerchant, isOperator, isTillFor,
   employeeRoleOpensTill,
@@ -277,6 +278,7 @@ export async function onRequestGet(context) {
    * mieux qu'un écran qui bugue. */
   let suspended = false;
   let subscription = 'active';
+  let timezone = '';
   try {
     let cfg;
     try {
@@ -302,6 +304,11 @@ export async function onRequestGet(context) {
     }
     if (cfg && String(cfg.status || '') === 'suspended') suspended = true;
     if (cfg && String(cfg.status || '') === 'pending') subscription = 'pending';
+    // Separate query: the column arrives lazily with the first till report.
+    try {
+      const tz = await env.DB.prepare('SELECT timezone FROM merchant_config WHERE merchant = ?').bind(merchant).first();
+      timezone = validZone(tz && tz.timezone);
+    } catch (_) {}
 
     if (mayReadPins) {
       const rows = await env.DB.prepare(
@@ -320,7 +327,7 @@ export async function onRequestGet(context) {
     }
   } catch (_) { /* table missing / db error → neutral config */ }
 
-  return json({ features, pins, pinGateConfigured, type, plan, planExplicit, suspended,
+  return json({ features, pins, pinGateConfigured, type, plan, planExplicit, suspended, timezone,
     subscription: { state: subscription, active: subscription === 'active' } });
 }
 

@@ -513,6 +513,7 @@ for (const test of [
   'z-reconciliation-client-test.mjs',
   'z-reconciliation-browser-test.mjs',
   'caisse-winter-clock-test.mjs',
+  'device-timezone-test.mjs',
   'table-visit-reuse-test.mjs',
   'recipe-heal-test.js',
   'sale-line-v2-test.mjs',

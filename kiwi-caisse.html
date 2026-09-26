@@ -5585,7 +5585,7 @@
        avec le tableau de bord. Après cloud-doc.js, dont il tient sa copie
        serveur · c'est ce qui fait qu'un Z clôturé sur l'iPad du comptoir
        s'ouvre le lendemain sur le téléphone du patron. -->
-  <script src="assets/day-report.js?v=13" defer></script>
+  <script src="assets/day-report.js?v=14" defer></script>
   <script src="assets/z-reconciliation.js?v=11" defer></script>
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
@@ -5639,7 +5639,7 @@
   <script src="assets/service-requests.js?v=1" defer></script>
   <script src="assets/caisse-menu-availability.js?v=4" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
-  <script src="assets/merchant-config.js?v=272" defer></script>
+  <script src="assets/merchant-config.js?v=273" defer></script>
   <!-- « Rafraîchir » · un bouton commun à toutes les caisses (restaurant,
        pressing, et les seize métiers de pos-dispatch) : il redemande au serveur
        l'inventaire, les documents du magasin, les commandes en ligne et les
@@ -7220,9 +7220,13 @@
     /* ---------- Live clock ---------- */
     function tickClock() {
       const now = new Date();
-      /* Never cache a numeric UTC offset: Casablanca switches civil time for
-         winter/Ramadan and the register must follow the same IANA zone as Z. */
-      const zone = window.KiwiDayReport?.timezone?.(currentMerchantSlug()) || 'Africa/Casablanca';
+      /* The register shows the time of the device it runs on, wherever it is.
+         Never cache a numeric UTC offset: the IANA zone follows winter/summer
+         and Ramadan changes. KiwiDayReport resolves the device zone on a paired
+         till, so the clock and the Z boundary agree. */
+      const zone = window.KiwiDayReport?.timezone?.(currentMerchantSlug())
+        || (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (_) { return ''; } })()
+        || 'Africa/Casablanca';
       const t = new Intl.DateTimeFormat('fr-FR', {
         timeZone: zone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
       }).format(now);

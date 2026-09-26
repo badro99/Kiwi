@@ -23,7 +23,11 @@ const storage = new Map([['kiwiPairedVenue', JSON.stringify({ merchant: 'audit-c
 const reportWindow = { localStorage: {
   getItem: (key) => storage.get(key) || null,
   setItem: (key, value) => storage.set(key, String(value)),
-}, addEventListener() {}, KiwiCaissePairing: {
+}, addEventListener() {},
+  // The store's zone as the server reports it (learned from its till). Without
+  // it the report falls back to the zone of whichever machine runs this test.
+  KiwiConfig: { timezone: 'Africa/Casablanca' },
+  KiwiCaissePairing: {
   pairedVenue: () => ({ merchant: 'audit-cutoff', timezone: 'Africa/Casablanca' }),
 } };
 reportWindow.window = reportWindow;

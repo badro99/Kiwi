@@ -1664,7 +1664,7 @@
       const zone = vd?.timezone || vd?.timeZone || vd?.tz || window.KiwiConfig?.timezone || window.KiwiConfig?.timeZone;
       if (zone) { new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(); return zone; }
     } catch (_) {}
-    return DEFAULT_MERCHANT_TZ;
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || DEFAULT_MERCHANT_TZ; } catch (_) { return DEFAULT_MERCHANT_TZ; }
   }
   function merchantParts(ts, slug) {
     const f = new Intl.DateTimeFormat('en-CA', {
@@ -5516,7 +5516,7 @@
       // Same civil timezone/cutoff as functions/api/_business-day.js, including
       // boutiques. This reference must not inherit a midnight chart cutoff.
       const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
-        timeZone:'Africa/Casablanca',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'
+        timeZone:merchantTimeZone(activeMerchantSlug()),year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'
       }).formatToParts(new Date()).map(p => [p.type,p.value]));
       const civil = `${parts.year}-${parts.month}-${parts.day}`;
       const today = +parts.hour < 5 ? addMerchantDays(civil,-1) : civil;

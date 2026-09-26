@@ -16141,7 +16141,8 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       return new Date(Date.UTC(+p[0], (+p[1] || 1) - 1, +p[2] || 1) + delta * 864e5).toISOString().slice(0, 10);
     };
     const zone = (() => {
-      const candidate = vd.timezone || vd.timeZone || vd.tz || window.KiwiConfig?.timezone || window.KiwiConfig?.timeZone || 'Africa/Casablanca';
+      const candidate = R?.timezone?.() || vd.timezone || vd.timeZone || vd.tz || window.KiwiConfig?.timezone || window.KiwiConfig?.timeZone
+        || (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (_) { return ''; } })() || 'Africa/Casablanca';
       try { new Intl.DateTimeFormat('en-CA', { timeZone: candidate }).format(); return candidate; } catch (_) { return 'Africa/Casablanca'; }
     })();
     const partsAt = (ts) => {
