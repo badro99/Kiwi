@@ -2277,10 +2277,33 @@ export async function onRequestGet({ request, env }) {
       const seen = await env.DB.prepare(
         'SELECT * FROM device_health WHERE merchant = ? AND last_seen_ts > ? ORDER BY last_seen_ts DESC LIMIT 200'
       ).bind(merchant, at - DEVICE_STALE_MS).all();
+      // A heartbeat proves reachability, not that receipts reached the ledger.
+      // Keep the latest self-reported queue state alongside each device without
+      // adding it to the authoritative device_health table.
+      const beats = await env.DB.prepare(
+        "SELECT payload FROM operational_commands WHERE merchant = ? AND domain = 'device' AND action = 'heartbeat' ORDER BY updated_ts DESC LIMIT 1000"
+      ).bind(merchant).all();
+      const syncByDevice = new Map();
+      for (const beat of (beats && beats.results) || []) {
+        const payload = parseJson(beat.payload) || {};
+        const id = clean(payload.deviceId, 80);
+        if (!id || syncByDevice.has(id) || !payload.sync || typeof payload.sync !== 'object') continue;
+        const s = payload.sync;
+        const count = (value) => Math.max(0, Math.min(100000, Math.trunc(Number(value) || 0)));
+        const time = (value) => { const n = Number(value); return Number.isFinite(n) && n > 0 && n <= at + 60000 ? n : 0; };
+        syncByDevice.set(id, {
+          pending: count(s.pending), blocked: count(s.blocked), total: count(s.total),
+          oldestPendingAt: time(s.oldestPendingAt), lastAttemptAt: time(s.lastAttemptAt),
+          lastAcknowledgedAt: time(s.lastAcknowledgedAt), lastStatus: count(s.lastStatus),
+          lastError: clean(s.lastError, 96), storageError: !!s.storageError,
+          reportedAt: time(payload.at), selfReported: true,
+        });
+      }
       const fleet = [];
       for (const device of (seen && seen.results) || []) {
         const code = deviceAlarm(device, at);
         const view = deviceView(device, code, at);
+        if (view.app === 'caisse') view.sync = syncByDevice.get(view.deviceId) || null;
         if (code !== clean(device.alert, 40)) {
           await reconcileAlert(env, merchant, clean(device.device_id, 80), clean(device.alert, 40), code, at);
           view.acknowledged = false; view.ackedBy = '';

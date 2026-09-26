@@ -85,8 +85,12 @@ async function fixture(t, opts = {}) {
   };
   function boot() {
     timers.clear();
+    const handlers = new Map();
     const document = { readyState: 'complete', hidden: false, addEventListener() {}, dispatchEvent(e) { events.push(e); }, createElement: () => ({}) };
-    const window = { localStorage: storage, document, KiwiEnv: { isReal: () => true }, addEventListener() {}, dispatchEvent(e) { events.push(e); }, ...(opts.indexed ? { KiwiOffline: offline } : {}) };
+    const window = { localStorage: storage, document, KiwiEnv: { isReal: () => true },
+      addEventListener(type, fn) { (handlers.get(type) || handlers.set(type, []).get(type)).push(fn); },
+      dispatchEvent(e) { events.push(e); (handlers.get(e.type) || []).forEach(fn => fn(e)); },
+      ...(opts.indexed ? { KiwiOffline: offline } : {}) };
     const context = {
       console, window, document, localStorage: storage, navigator: { onLine: true },
       location: { search: '', hostname: 'kiwi.test' }, URLSearchParams, Date, AbortController,
@@ -128,6 +132,11 @@ async function fixture(t, opts = {}) {
     vm.runInContext(['tableSaleLabel', 'paidReceiptForCurrentTable', 'resetTableTimer',
       'activeSaleDiscount', 'recordSale', 'persistShift', 'restoreShift',
       'reconcileJournalSales', 'saveProvisional', 'opPush'].map(extract).join('\n'), context, { filename: 'kiwi-caisse-payment-functions.js' });
+    // The real caisse installs this listener on window; document would miss
+    // KiwiLive's acknowledgement entirely.
+    const ack = page.match(/window\.addEventListener\('kiwi:money-sync',[\s\S]*?\n    \}\);/);
+    assert.ok(ack, 'caisse listens for money-sync on window');
+    vm.runInContext(ack[0], context, { filename: 'kiwi-caisse-money-sync.js' });
     window.KiwiOrderInbox = context.KiwiOrderInbox = {
       setStatus: async (id, status, extra) => {
         const response = await call('/api/order/queue', { merchant, id, status, ...extra });
@@ -169,13 +178,16 @@ test('recordSale -> Live Link -> middleware -> sale API -> SQLite preserves cent
 
 test('actual opPush can mark an order paid while receipt POST fails independently; replay recovers once', async t => {
   const f = await fixture(t, { networkDown: true });
-  f.record(); await drain();
+  const entry = f.record(); await drain();
+  assert.ok(entry.serverSaleId, 'stable server key assigned when queued');
+  assert.equal(entry.saleSyncPending, true, 'queued is not accepted');
   await f.ctx.opPush(f.order, 'ready', { paid: true });
   assert.ok(f.db.prepare('SELECT paid_ts FROM orders').get().paid_ts);
   assert.equal(f.count(), 0); assert.equal(f.queue().length, 1);
   assert.equal(f.saved().journal.length, 1);
   f.state.networkDown = false; await f.live.flush(true); await drain();
   assert.equal(f.count(), 1); assert.equal(f.queue().length, 0);
+  assert.equal(f.saved().journal[0].saleSyncPending, undefined, 'window ACK clears journal debt');
 });
 
 test('403 from actual receipt API retains retryable command until local fixture authorization restored', async t => {
@@ -186,14 +198,14 @@ test('403 from actual receipt API retains retryable command until local fixture 
   f.state.authenticated = true; await f.live.flush(true); await drain(); assert.equal(f.count(), 1);
 });
 
-test('missing explicit table session returns actual 404; queued receipt retains session across reload', async t => {
+test('missing explicit table session still stores the paid receipt and acknowledges it', async t => {
   const f = await fixture(t); f.state.session = 'missing-visit'; f.ctx.mode = 'salle';
   f.record(30, '5', null, null); await drain();
-  assert.equal(f.requests[0].status, 404); assert.equal(f.requests[0].response.error, 'table-session-missing');
-  assert.equal(f.count(), 0); assert.equal(f.queue()[0].session, 'missing-visit');
-  await f.reload(); assert.equal(f.queue()[0].session, 'missing-visit');
-  f.db.prepare("INSERT INTO table_sessions (id,merchant,table_no,opened_ts,seen_ts) VALUES ('missing-visit',?,'5',?,?)").run(merchant, Date.now(), Date.now());
-  await f.live.flush(true); await drain(); assert.equal(f.count(), 1);
+  assert.equal(f.requests[0].status, 200);
+  assert.equal(f.requests[0].response.visitLinkWarning, 'table-session-missing');
+  assert.equal(f.count(), 1); assert.equal(f.queue().length, 0);
+  assert.equal(f.saved().journal[0].saleSyncPending, undefined);
+  await f.reload(); f.ctx.reconcileJournalSales(false); await drain(); assert.equal(f.count(), 1);
 });
 
 test('queue quota failure stays visibly unsynced and provisional replay recovers after reload', async t => {

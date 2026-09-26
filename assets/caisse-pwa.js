@@ -6,7 +6,7 @@
   if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) return;
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/kiwi-sw.js?v=595').then(function (reg) {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=596').then(function (reg) {
         try { reg.update(); } catch (_) {}
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
       }).catch(function () {});
@@ -311,7 +311,11 @@
             return (window.KiwiLive && window.KiwiLive.flush) ? window.KiwiLive.flush(true) : Promise.resolve();
           });
         } else {
-          flushPromise = (window.KiwiLive && window.KiwiLive.flush) ? window.KiwiLive.flush(true) : Promise.resolve();
+          flushPromise = (window.KiwiLive && window.KiwiLive.flush)
+            ? (qNow.blocked && window.KiwiLive.retryBlockedSales
+              ? window.KiwiLive.retryBlockedSales().then(function () { return window.KiwiLive.flush(true); })
+              : window.KiwiLive.flush(true))
+            : Promise.resolve();
         }
       } catch (err) {
         flushPromise = Promise.reject(err);

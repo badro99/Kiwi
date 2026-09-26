@@ -17,18 +17,22 @@ const executablePath = process.env.KIWI_CHROMIUM_BIN || [
 ].find(fs.existsSync);
 if (!executablePath) { console.log('○ skip: Chromium unavailable'); process.exit(process.env.CI ? 1 : 0); }
 const asset = fs.readFileSync(path.join(ROOT, 'assets/z-reconciliation.js'));
+let legacyOnly = false;
 const server = http.createServer((req, res) => {
   if (req.url.startsWith('/api/z-reconciliation')) {
     res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ ok: true, rows: [{ business_day: '2026-09-21', reported_cents: 150700,
-      server_cents: 31400, missing_count: 9, status: 'mismatch' }],
-      conflicts: [{ sale_id: 'synthetic-conflict' }] }));
+    res.end(JSON.stringify(legacyOnly
+      ? { ok: true, rows: [], dayReports: [{ business_day: '2026-09-20', source: 'saved-day-report',
+          reported_cents: 222500, server_cents: 53100, status: 'mismatch', closed: true }], conflicts: [] }
+      : { ok: true, rows: [{ business_day: '2026-09-21', reported_cents: 150700,
+          server_cents: 31400, missing_count: 9, status: 'mismatch' }],
+          conflicts: [{ sale_id: 'synthetic-conflict' }] }));
   } else if (req.url.startsWith('/assets/')) {
     res.setHeader('Content-Type', 'text/javascript'); res.end(asset);
   } else {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.end(`<html><body><main id="kw-main"><h1>Tableau de bord · restaurant test</h1></main>
-      <script>window.KiwiLive={merchant:()=>"restaurant-ui-fixture"}</script>
+    res.end(`<html><body><main id="kw-main"><h1>Tableau de bord · Amira Café (fixture)</h1></main>
+      <script>window.KiwiLive={merchant:()=>"amira-cafe"}</script>
       <script src="/assets/z-reconciliation.js"></script></body></html>`);
   }
 });
@@ -43,9 +47,18 @@ try {
   await page.waitForSelector('#kiwi-z-reconciliation-alert');
   const alert = await page.$eval('#kiwi-z-reconciliation-alert', node => ({ text: node.textContent, role: node.getAttribute('role') }));
   assert.equal(alert.role, 'status');
+  assert.match(alert.text, /Données de ventes incomplètes/);
+  assert.match(alert.text, /Z déclaré 1507,00 MAD/);
+  assert.match(alert.text, /reçus de ce terminal au serveur 314,00 MAD/);
   assert.match(alert.text, /1.?193,00 MAD/);
-  assert.match(alert.text, /9 vente\(s\)/);
+  assert.match(alert.text, /9 vente\(s\) non retrouvée\(s\)/);
   assert.match(alert.text, /1 conflit\(s\)/);
+  legacyOnly = true;
+  await page.evaluate(() => window.KiwiZReconciliation.showDashboard());
+  await page.waitForFunction(() => document.querySelector('#kiwi-z-reconciliation-alert')?.textContent.includes('ancien rapport sauvegardé'));
+  const legacyText = await page.$eval('#kiwi-z-reconciliation-alert', node => node.textContent);
+  assert.match(legacyText, /2.?225,00 MAD/);
+  assert.match(legacyText, /nombre de reçus manquants inconnu/);
   if (process.env.KIWI_TEST_SCREENSHOT) await page.screenshot({ path: process.env.KIWI_TEST_SCREENSHOT });
   console.log('✓ 390px owner/God Mode UI renders Z gap, waiting receipts and sale conflict');
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }

@@ -45,11 +45,27 @@ export async function workspace(env, merchant = '') {
     errors:[`SELECT id,merchant,file,version,count,first_seen_ts,last_seen_ts FROM client_errors WHERE last_seen_ts>=?${where} ORDER BY last_seen_ts DESC LIMIT 201`,[now-7*86400000,...binds]],
     support:[`SELECT id,merchant,reference,summary,priority,status,assignee,created_ts,updated_ts FROM support_tickets WHERE status NOT IN ('closed','resolved')${where} ORDER BY updated_ts DESC LIMIT 201`,binds],
     integrations:[`SELECT id,merchant,status,attempt_count,domain,action,updated_ts FROM operational_commands WHERE status NOT IN ('succeeded','completed','cancelled')${where} ORDER BY updated_ts DESC LIMIT 201`,binds],
+    caisseSync:[`SELECT merchant,payload,updated_ts FROM operational_commands WHERE domain='device' AND action='heartbeat'${where} ORDER BY updated_ts DESC LIMIT 501`,binds,500],
     shopify:[`SELECT id,merchant,status,attempts,updated_ts FROM shopify_sync_outbox WHERE status!='done'${where} ORDER BY updated_ts DESC LIMIT 201`,binds],
     tasks:[`SELECT * FROM operator_tasks WHERE 1=1${where} ORDER BY (status='resolved'), priority, updated_ts DESC LIMIT 501`,binds,500],
     notes:[`SELECT id,merchant,body,actor,ts FROM operator_notes WHERE 1=1${where} ORDER BY ts DESC LIMIT 101`,binds,100],
     events:[`SELECT id,task_id,merchant,actor,action,detail,ts FROM operator_task_events WHERE 1=1${where} ORDER BY ts DESC LIMIT 101`,binds,100],
   };
   const entries = await Promise.all(Object.entries(definitions).map(async ([name,[sql,args,limit]]) => [name,await source(env,name,sql,args,limit)]));
-  return {now,merchant,sources:Object.fromEntries(entries),coverage:'cloud-relay',physical_print_verified:false};
+  const sources = Object.fromEntries(entries);
+  if (sources.caisseSync.available) {
+    sources.caisseSync.rows = sources.caisseSync.rows.map((row) => {
+      let beat = {};
+      try { beat = JSON.parse(row.payload || '{}'); } catch (_) {}
+      const s = beat.sync && typeof beat.sync === 'object' ? beat.sync : null;
+      const count = (value) => Math.max(0, Math.min(100000, Math.trunc(Number(value) || 0)));
+      const time = (value) => { const n = Number(value); return Number.isFinite(n) && n > 0 && n <= now + 60000 ? n : 0; };
+      return { merchant: row.merchant, deviceId: clean(beat.deviceId, 80), app: clean(beat.app, 24),
+        updated_ts: Number(row.updated_ts) || 0,
+        sync: s ? { total: count(s.total), blocked: count(s.blocked), pending: count(s.pending),
+          oldestPendingAt: time(s.oldestPendingAt), lastAcknowledgedAt: time(s.lastAcknowledgedAt),
+          lastStatus: count(s.lastStatus), lastError: clean(s.lastError, 96), storageError: !!s.storageError } : null };
+    });
+  }
+  return {now,merchant,sources,coverage:'cloud-relay',physical_print_verified:false};
 }

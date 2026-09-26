@@ -68,20 +68,24 @@ export async function onRequestPost({ request, env }) {
     amountCents: row.amount_cents == null ? Number(row.amount) * 100 : Number(row.amount_cents), method: row.method,
   }]));
   const missing = [], mismatched = [], extra = [];
-  let missingCents = 0, serverCents = 0;
+  let missingCents = 0, serverCents = 0, serverCount = 0;
   for (const [id, row] of local) {
     const stored = server.get(id);
     if (!stored) { missing.push(id); missingCents += row.amountCents; }
-    else if (stored.amountCents !== row.amountCents || stored.method !== row.method) mismatched.push(id);
+    else {
+      serverCount++;
+      serverCents += stored.amountCents;
+      if (stored.amountCents !== row.amountCents || stored.method !== row.method) mismatched.push(id);
+    }
   }
   for (const [id, row] of server) {
-    serverCents += row.amountCents;
     if (!local.has(id)) extra.push(id);
   }
   const result = { day, terminalId, reportedCount: body.count, reportedCents: sum,
-    serverCount: remote.length, serverCents, missing, missingCents, mismatched, extra,
+    serverCount, serverCents, missing, missingCents, mismatched, extra,
+    closed: body.closed !== false,
     gapCents: sum - serverCents,
-    status: missing.length || mismatched.length || extra.length || sum !== serverCents ? 'mismatch' : 'matched' };
+    status: missing.length || mismatched.length || sum !== serverCents ? 'mismatch' : 'matched' };
   try {
     await schema(env.DB);
     await env.DB.prepare(`INSERT INTO z_reconciliations
@@ -94,7 +98,7 @@ export async function onRequestPost({ request, env }) {
        missing_count=excluded.missing_count,missing_cents=excluded.missing_cents,
        mismatch_count=excluded.mismatch_count,extra_count=excluded.extra_count,
        status=excluded.status,result_json=excluded.result_json,updated_ts=excluded.updated_ts`)
-      .bind(merchant, day, terminalId, body.count, sum, remote.length, serverCents,
+      .bind(merchant, day, terminalId, body.count, sum, serverCount, serverCents,
         missing.length, missingCents, mismatched.length, extra.length, result.status, JSON.stringify(result), Date.now()).run();
   } catch (error) { return json({ error: 'db-write-failed' }, 503); }
   return json({ ok: true, ...result });
@@ -110,11 +114,45 @@ export async function onRequestGet({ request, env }) {
     await schema(env.DB);
     const rows = (await env.DB.prepare(`SELECT business_day, terminal_id, reported_count, reported_cents,
       server_count, server_cents, missing_count, missing_cents, mismatch_count, extra_count,
-      status, updated_ts FROM z_reconciliations WHERE merchant = ? ORDER BY business_day DESC, updated_ts DESC LIMIT 14`)
+      status, result_json, updated_ts FROM z_reconciliations WHERE merchant = ? ORDER BY business_day DESC, updated_ts DESC LIMIT 14`)
       .bind(merchant).all()).results || [];
+    for (const row of rows) {
+      try { row.closed = JSON.parse(row.result_json || '{}').closed !== false; }
+      catch (_) { row.closed = true; } // pre-upgrade jobs were close-only
+      delete row.result_json;
+    }
     const conflicts = (await env.DB.prepare(`SELECT sale_id, amount_cents, method, updated_ts
       FROM sale_sync_conflicts WHERE merchant = ? ORDER BY updated_ts DESC LIMIT 14`)
       .bind(merchant).all()).results || [];
-    return json({ ok: true, merchant, rows, conflicts });
+    // Existing cloud-backed day reports predate the receipt-ID Z protocol.
+    // Compare their aggregate gross with the merchant's real ledger, but do
+    // not invent receipt rows or claim a count of missing individual tickets.
+    const dayReports = [];
+    let saved = null, dayReportsUnavailable = false;
+    try { saved = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'dayreports'")
+      .bind(merchant).first(); }
+    catch (_) { dayReportsUnavailable = true; }
+    let days = {};
+    try { days = JSON.parse(saved?.data || '{}').days || {}; } catch (_) { days = {}; }
+    for (const day of Object.keys(days).filter(validDay).sort().reverse().slice(0, 14)) {
+      const report = days[day];
+      if (!report || typeof report !== 'object') continue;
+      const reportedCents = Math.round(Number(report.gross) * 100);
+      if (!Number.isSafeInteger(reportedCents) || reportedCents < 0) continue;
+      const cutoff = Number.isInteger(Number(report.cutoff)) && Number(report.cutoff) >= 0 && Number(report.cutoff) <= 12
+        ? Number(report.cutoff) : 5;
+      const from = businessBoundary(day, cutoff), to = businessBoundary(addBusinessDays(day, 1), cutoff);
+      const ledger = await env.DB.prepare(`SELECT COUNT(*) AS n,
+        COALESCE(SUM(COALESCE(amount_cents, CAST(ROUND(amount * 100) AS INTEGER))), 0) AS cents
+        FROM sales WHERE merchant = ? AND ts >= ? AND ts < ? AND void_ts IS NULL
+          AND COALESCE(amount_cents, amount * 100) > 0`).bind(merchant, from, to).first();
+      const serverCents = Number(ledger?.cents || 0);
+      dayReports.push({ business_day: day, source: 'saved-day-report',
+        reported_count: Number(report.txns) || 0, reported_cents: reportedCents,
+        server_count: Number(ledger?.n || 0), server_cents: serverCents,
+        closed: !!(Number(report.closedCount) || Number(report.closedAt)),
+        status: reportedCents === serverCents ? 'matched' : 'mismatch' });
+    }
+    return json({ ok: true, merchant, rows, dayReports, dayReportsUnavailable, conflicts });
   } catch (_) { return json({ error: 'db-read-failed' }, 503); }
 }

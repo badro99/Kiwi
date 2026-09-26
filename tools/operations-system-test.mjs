@@ -113,7 +113,7 @@ const command = (extra) => Object.assign({ merchant: MERCHANT, payload: {} }, ex
 const anonymous = await post('', command({ id: 'op:anon-0001', idempotencyKey: 'op:anon-0001', domain: 'device', action: 'heartbeat' }));
 ok(anonymous.status === 401 && anonymous.data.error === 'unauthorized', 'an unsigned caller cannot write a command');
 
-const beat = await post(tillCookie, command({ id: 'op:till-beat-01', idempotencyKey: 'op:till-beat-01', domain: 'device', action: 'heartbeat', payload: { app: 'caisse', deviceId: 'dev-till-01', label: 'Caisse comptoir', printerConfigured: true, printerConnected: true } }));
+const beat = await post(tillCookie, command({ id: 'op:till-beat-01', idempotencyKey: 'op:till-beat-01', domain: 'device', action: 'heartbeat', payload: { app: 'caisse', deviceId: 'dev-till-01', label: 'Caisse comptoir', printerConfigured: true, printerConnected: true, at: Date.now(), sync: { pending: 4, blocked: 2, total: 6, oldestPendingAt: Date.now() - 3600000, lastStatus: 409, lastError: 'table-session-missing', lastAcknowledgedAt: Date.now() - 7200000 } } }));
 ok(beat.status === 200 && beat.data.command.status === 'completed' && beat.data.command.provider === 'kiwi-device', 'a paired till records its own heartbeat');
 
 const beatAnon = await post(tillCookie, command({ id: 'op:till-beat-02', idempotencyKey: 'op:till-beat-02', domain: 'device', action: 'heartbeat', payload: { app: 'caisse' } }));
@@ -269,6 +269,11 @@ const fleetFirst = await fleetOf(ownerCookie);
 ok(fleetFirst.status === 200 && fleetFirst.byId.get('dev-till-01') && fleetFirst.byId.get('dev-till-01').alert === ''
   && fleetFirst.byId.get('dev-till-01').label === 'Caisse comptoir' && fleetFirst.data.thresholds.beatMs === 300000,
   'the fleet reads back the till that beat, healthy, with the thresholds it is judged against');
+ok(fleetFirst.byId.get('dev-till-01').sync?.total === 6
+  && fleetFirst.byId.get('dev-till-01').sync?.blocked === 2
+  && fleetFirst.byId.get('dev-till-01').sync?.lastStatus === 409
+  && fleetFirst.byId.get('dev-till-01').online === true,
+  'online register reports financial debt separately from device reachability');
 
 const beatTwice = await post(tillCookie, command({ id: 'op:till-beat-03', idempotencyKey: 'op:till-beat-03', domain: 'device', action: 'heartbeat', payload: { app: 'caisse', deviceId: 'dev-till-01', printerConfigured: true, printerConnected: true } }));
 ok(beatTwice.data.command.status === 'completed', 'a second beat from the same device updates the row it already owns');

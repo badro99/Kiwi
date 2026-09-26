@@ -13,11 +13,12 @@ const O = {
   acknowledge(id) { rows.delete(id); return Promise.resolve(true); },
   reject(id) { rows.get(id).state = 'pending'; return Promise.resolve(true); },
 };
-let serverHasSale = false, requests = 0, requeues = 0, alias = '';
+let serverHasSale = false, requests = 0, requeues = 0, reactivations = 0, alias = '';
 function instance(online) {
   const Live = {
     merchant: () => 'restaurant-fixture', saleIdFor: entry => entry.id,
     canonicalSaleId: (_slug, id) => id === 'receipt-1' ? (alias || id) : id,
+    retrySale: async () => { reactivations++; return true; },
     postSale: () => { requeues++; serverHasSale = true; alias = 'canonical-receipt-1'; return { ok: true }; },
     flush: () => Promise.resolve(),
   };
@@ -30,9 +31,10 @@ function instance(online) {
     fetch: async (_url, opts) => {
       requests++;
       const body = JSON.parse(opts.body);
-      assert.deepEqual(body.sales.map(row => row.id), [requests === 1 ? 'receipt-1' : 'canonical-receipt-1']);
+      assert.deepEqual(body.sales.map(row => row.id), requests === 1
+        ? ['receipt-1'] : requests === 2 ? ['canonical-receipt-1'] : ['canonical-receipt-1', 'receipt-2']);
       return { ok: true, json: async () => ({ ok: true,
-        missing: serverHasSale && body.sales[0].id === alias ? [] : ['receipt-1'] }) };
+        missing: requests === 1 ? ['receipt-1'] : requests === 2 ? [] : ['receipt-2'] }) };
     },
   });
   vm.runInContext(source, ctx);
@@ -51,6 +53,7 @@ while ((!requeues || [...rows.values()][0]?.state !== 'pending') && Date.now() <
 }
 await new Promise(resolve => setImmediate(resolve));
 assert.equal(requeues, 1, 'missing local receipt requeued through normal sale transport');
+assert.equal(reactivations, 1, 'blocked original command is reactivated before replay');
 assert.equal(rows.size, 1, 'Z obligation kept until server verifies repair');
 await after.flush();
 assert.equal(rows.size, 0, 'matched comparison acknowledges durable Z job');
@@ -59,4 +62,11 @@ const nextShift = instance(false);
 const second = { id: 'receipt-2', time: new Date('2026-02-14T22:00:00Z'), amount: 23, method: 'card' };
 assert.equal((await nextShift.queueClose({ ...report, txns: 2, gross: 80 }, [second])).ok, true);
 assert.equal([...rows.values()][0].payload.entries.length, 2, 'a second shift on the same day keeps the first Z manifest');
+// A missing receipt with no local payload is not "repaired" by deleting the Z
+// obligation. It must remain visible until a genuine receipt is recovered.
+const debt = [...rows.values()][0];
+debt.payload.entries.forEach(row => { row.local = null; });
+const offlineSource = instance(true);
+await offlineSource.flush();
+assert.equal(rows.size, 1, 'missing historical receipt without payload remains durable');
 console.log('✓ closed Z survives reload, repairs missing sales, waits for server proof and carries a second shift');

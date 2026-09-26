@@ -209,6 +209,9 @@
   }
   function moneySignal(body, state, status, serverId) {
     if (!body || !body.id) return;
+    if (state === 'accepted' && body.kind !== 'refund') {
+      try { localStorage.setItem('kiwi:sale-ack:' + body.merchant, String(Date.now())); } catch (_) {}
+    }
     if (state === 'accepted' && body.kind !== 'refund' && serverId && serverId !== body.id) {
       try {
         var key = 'kiwi:sale-aliases:' + body.merchant;
@@ -264,6 +267,8 @@
     }
   }
   function queueStatus() {
+    var ackAt = 0;
+    try { ackAt = Number(localStorage.getItem('kiwi:sale-ack:' + merchant())) || 0; } catch (_) {}
     if (outboxUsing) {
       // IndexedDB can be available while an individual enqueue fails. The
       // synchronous write-ahead/fallback queue remains debt, not an empty till.
@@ -271,6 +276,8 @@
       var activeTenant = merchant();
       var localDebt = fallback.filter(function (row) { return row && row.merchant === activeTenant; });
       var localBlocked = localDebt.filter(function (row) { return row._blocked; }).length;
+      var oldest = Math.min(outboxStatus.oldestPendingAt || Infinity,
+        localDebt.reduce(function (at, row) { return Math.min(at, Number(row.ts) || Infinity); }, Infinity));
       return {
         pending: (outboxStatus.pending || 0) + localDebt.length - localBlocked,
         blocked: (outboxStatus.blocked || 0) + localBlocked,
@@ -282,6 +289,8 @@
         lastStatus: outboxStatus.lastStatus || lastSyncStatus || 0,
         lastError: queueStorageError ? 'queue-storage-full' : (outboxStatus.lastError || lastSyncError || ''),
         lastAttemptAt: outboxStatus.lastAttemptAt || 0,
+        oldestPendingAt: oldest === Infinity ? 0 : oldest,
+        lastAcknowledgedAt: ackAt,
       };
     }
     var q = qRead();
@@ -297,6 +306,11 @@
       lastStatus: lastSyncStatus || 0,
       lastError: lastSyncError || '',
       lastAttemptAt: current.reduce(function (latest, row) { return Math.max(latest, +(row && row._lastAttemptAt) || 0); }, 0),
+      oldestPendingAt: (function () {
+        var oldest = current.reduce(function (at, row) { return Math.min(at, Number(row && row.ts) || Infinity); }, Infinity);
+        return oldest === Infinity ? 0 : oldest;
+      })(),
+      lastAcknowledgedAt: ackAt,
     };
   }
 
@@ -657,6 +671,43 @@
     return flushLegacyQueue();
   }
 
+  function reactivateLegacy(id, active) {
+    var rows = qRead(), changed = false;
+    rows.forEach(function (row) {
+      if (row && row.id === id && row.merchant === active && row._blocked) {
+        delete row._blocked; delete row._status; delete row._blockedAt;
+        delete row._retryAfter; changed = true;
+      }
+    });
+    return !changed || qWrite(rows);
+  }
+
+  // Only a Z mismatch or an explicit cashier retry calls this. Routine
+  // flush(true) must NOT resubmit every permanent 400 on every heartbeat.
+  function retrySale(entry) {
+    var active = merchant();
+    if (!active || !entry) return Promise.resolve(false);
+    var id = stableId(active, entry);
+    if (!reactivateLegacy(id, active)) return Promise.resolve(false);
+    var O = window.KiwiOffline;
+    if (!O || !O.available() || !O.reactivate) return Promise.resolve(true);
+    return O.reactivate(OUTBOX_CHANNEL, active, id).then(function () { return true; });
+  }
+
+  function retryBlockedSales() {
+    var active = merchant();
+    if (!active) return Promise.resolve(0);
+    var legacy = qRead().filter(function (row) { return row && row.merchant === active && row._blocked; });
+    if (legacy.some(function (row) { return !reactivateLegacy(row.id, active); })) return Promise.resolve(0);
+    var O = window.KiwiOffline;
+    if (!O || !O.available() || !O.list || !O.reactivate) return Promise.resolve(legacy.length);
+    return O.list(OUTBOX_CHANNEL, active).then(function (rows) {
+      return Promise.all(rows.filter(function (row) { return row.state === 'blocked'; }).map(function (row) {
+        return O.reactivate(OUTBOX_CHANNEL, active, row.id);
+      }));
+    }).then(function (results) { return legacy.length + results.filter(Boolean).length; });
+  }
+
   function enqueueMoneyBody(body, m, opts) {
     opts = opts || {};
     var q = outboxUsing ? [] : qRead();
@@ -817,7 +868,13 @@
       method: entry.method || 'cash',                         // cash|card|tap|qr|wallet
       label: entry.label || 'Vente',
       ref: entry.ref || '',
-      ts: (entry.time && entry.time.getTime) ? entry.time.getTime() : Date.now(),
+      // A Z job survives reload through IndexedDB, where Date becomes an ISO
+      // string on older browsers. Preserve the original business day on replay.
+      ts: (function () {
+        var value = entry.time && entry.time.getTime ? entry.time.getTime()
+          : (typeof entry.time === 'string' ? Date.parse(entry.time) : Number(entry.time));
+        return Number.isFinite(value) && value > 0 ? value : Date.now();
+      })(),
       lines: lines,                                           // null ⇒ unknown, never "empty basket"
     };
     if (complimentary) body.settlementKind = 'complimentary';
@@ -1596,7 +1653,8 @@
     isOn: on, merchant: merchant, postSale: postSale, postRefund: postRefund,
     snapshotStatus: function () { return operatorSnapshot ? Object.assign({}, operatorSnapshot) : null; },
     moneyId: function (entry) { var m = merchant(); return m && entry ? stableId(m, entry) : ''; }, watchFeed: watchFeed,
-    flush: flushQueue, pending: function () { return queueStatus().total; },
+    flush: flushQueue, retrySale: retrySale, retryBlockedSales: retryBlockedSales,
+    pending: function () { return queueStatus().total; },
     queueStatus: queueStatus, refreshQueue: refreshOutboxStatus,
     /* Le serveur a confirmé la portée opérateur : le slug de l'adresse peut
        enfin s'épingler. Seul identity.js appelle ceci, après /api/me. */

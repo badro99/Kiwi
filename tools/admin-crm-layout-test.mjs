@@ -2,6 +2,7 @@ import fs from 'node:fs';
 
 const html = fs.readFileSync(new URL('../kiwi-admin.html', import.meta.url), 'utf8');
 const workspace = fs.readFileSync(new URL('../assets/admin-workspace.js', import.meta.url), 'utf8');
+const workspaceApi = fs.readFileSync(new URL('../functions/api/admin/_workspace.js', import.meta.url), 'utf8');
 const css = fs.readFileSync(new URL('../assets/admin-workspace.css', import.meta.url), 'utf8');
 const policy = fs.readFileSync(new URL('../assets/admin-policy.js', import.meta.url), 'utf8');
 const clients = fs.readFileSync(new URL('../assets/clients-directory.js', import.meta.url), 'utf8');
@@ -46,5 +47,8 @@ check('Hospitality+ new-client action has a visible label and late primary-butto
 check('missing fleet coverage is never healthy', workspace.includes('Un résultat absent n’est pas un résultat sain'));
 check('keyboard search available', workspace.includes("e.key.toLowerCase()==='k'"));
 check('unattributed telemetry has an explicit diagnostic view', workspace.includes('errorList(m)') && workspace.includes('aucun client n’est deviné'));
+check('God Mode distinguishes caisse reachability from financial sync',
+  workspaceApi.includes("action='heartbeat'") && workspace.includes('financialFleet(m)')
+  && workspace.includes('connectée ≠ synchronisée') && workspace.includes('s.lastAcknowledgedAt'));
 
 console.log(`admin-crm-layout-test: ${passed} controls passed`);

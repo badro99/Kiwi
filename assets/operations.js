@@ -47,10 +47,23 @@
   }
   function beat() {
     var printer = printerState();
+    var sync = null;
+    if (appName() === 'caisse') {
+      try {
+        var q = window.KiwiLive && KiwiLive.queueStatus && KiwiLive.queueStatus();
+        if (q) sync = { pending: Number(q.pending) || 0, blocked: Number(q.blocked) || 0,
+          total: Number(q.total) || 0, oldestPendingAt: Number(q.oldestPendingAt) || 0,
+          lastStatus: Number(q.lastStatus) || 0, lastError: clean(q.lastError, 96),
+          lastAttemptAt: Number(q.lastAttemptAt) || 0,
+          lastAcknowledgedAt: Number(q.lastAcknowledgedAt) || 0,
+          storageError: !!q.storageError };
+      } catch (_) {}
+    }
     return create('device', 'heartbeat', {
       deviceId: deviceId(), app: appName(), at: Date.now(),
       online: navigator.onLine !== false, standalone: !!navigator.standalone,
       printerConfigured: printer.configured, printerConnected: printer.connected,
+      sync: sync,
     }, { idempotencyKey: 'heartbeat:' + K.tenant() + ':' + deviceId() + ':' + Math.floor(Date.now() / 300000) });
   }
   function needed(domain, action) {

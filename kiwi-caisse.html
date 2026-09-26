@@ -70,7 +70,7 @@
   <!-- Durable tenant-scoped command outbox. Dexie is vendored: the caisse can
        boot and bank transactions with no CDN and no build step. -->
   <script src="assets/vendor/dexie.min.js?v=1" defer></script>
-  <script src="assets/offline-db.js?v=6" defer></script>
+  <script src="assets/offline-db.js?v=7" defer></script>
   <script src="assets/platform-kernel.js?v=5" defer></script>
   <script src="assets/platform-ops.js?v=5" defer></script>
   <script src="assets/phone.js?v=1" defer></script>
@@ -5557,8 +5557,8 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=544" defer></script>
-  <script src="assets/live-link.js?v=45" defer></script>
+  <script src="assets/caisse-pwa.js?v=546" defer></script>
+  <script src="assets/live-link.js?v=46" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js?v=1" defer></script>
@@ -5586,7 +5586,7 @@
        serveur · c'est ce qui fait qu'un Z clôturé sur l'iPad du comptoir
        s'ouvre le lendemain sur le téléphone du patron. -->
   <script src="assets/day-report.js?v=13" defer></script>
-  <script src="assets/z-reconciliation.js?v=5" defer></script>
+  <script src="assets/z-reconciliation.js?v=8" defer></script>
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js?v=3" defer></script>
@@ -5621,7 +5621,7 @@
   <script src="assets/procurement.js?v=4" defer></script>
   <!-- Tenant-scoped operational outbox: receipt delivery and device health are
        server-confirmed or explicitly blocked, never presentation-only. -->
-  <script src="assets/operations.js?v=10" defer></script>
+  <script src="assets/operations.js?v=11" defer></script>
   <script src="assets/clients-store.js?v=7" defer></script>
   <script src="assets/clients-book.js?v=13" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
@@ -14196,7 +14196,9 @@
           const posted = window.KiwiLive.postSale(entry);
           if (posted && posted.ok === true && posted.queued === true && posted.id) {
             entry.serverSaleId = posted.id;
-            delete entry.saleSyncPending;
+            // Queue durability is not server acceptance. Only kiwi:money-sync
+            // with state=accepted may clear this debt from the local journal.
+            entry.saleSyncPending = true;
             delete entry.saleSyncError;
             /* The feed echoes this same sale under `posted.id`. Persist that
                bridge immediately: without it, a reload before the next
@@ -15487,7 +15489,8 @@
           const queued = window.KiwiLive.postSale(entry);
           if (queued && queued.ok === true && queued.queued === true && queued.id) {
             entry.serverSaleId = queued.id;
-            delete entry.saleSyncPending;
+            if (!entry.saleSyncPending) syncChanged = true;
+            entry.saleSyncPending = true;
             delete entry.saleSyncError;
             n++;
           } else {
@@ -15527,7 +15530,9 @@
       try { window.KiwiLive.flush(true); } catch (_) {}
       return n;
     }
-    document.addEventListener('kiwi:money-sync', (event) => {
+    // KiwiLive dispatches on window, not document. Listening on document
+    // silently lost every server acknowledgement (and refund recovery event).
+    window.addEventListener('kiwi:money-sync', (event) => {
       const detail = event && event.detail || {};
       if (detail.kind === 'sale' && detail.id) {
         let changed = false;
@@ -15601,6 +15606,12 @@
         if (!r) return;
         r.closed = false;
         window.KiwiDayReport.save(r, { reopen: false, note: 'en cours', by: shiftOpenedBy });
+        // A paid receipt must be compared with D1 during the shift, not only
+        // after the cashier closes the register hours later.
+        if (storeIsReal() && window.KiwiZReconciliation?.queueSnapshot) {
+          window.KiwiZReconciliation.queueSnapshot(r, journal.filter(isReportableJournalEntry))
+            .then((result) => { if (!result?.ok) toast('Rapprochement des ventes en attente · conservez cette caisse'); });
+        }
       } catch (_) {}
     }
 

@@ -1,5 +1,5 @@
-/* Closed-Z comparison. The report and full local receipts stay on the till;
-   only bounded receipt IDs, cents and methods go to the server. */
+/* Continuous day snapshot comparison. Full local receipts remain in the
+   durable Z job so missing IDs can replay through the normal sale endpoint. */
 (function () {
   'use strict';
   var CHANNEL = 'closed-z-reconciliation';
@@ -34,7 +34,7 @@
       }) : [];
     } catch (_) { return []; }
   }
-  function queueClose(report, journal) {
+  function queueSnapshot(report, journal, closed) {
     var O = window.KiwiOffline;
     var slug = report && report.store && report.store.slug;
     if (!O || !O.available() || !slug || merchant() !== slug) return Promise.resolve({ ok: false, reason: 'outbox-unavailable' });
@@ -61,7 +61,7 @@
     for (var i = 0; i < source.length; i++) { hash ^= source.charCodeAt(i); hash = Math.imul(hash, 16777619); }
     var id = 'z:' + (hash >>> 0).toString(16) + ':' + report.day;
     var payload = { id: id, merchant: slug, day: report.day,
-      terminalId: terminalId, entries: entries };
+      terminalId: terminalId, closed: !!closed, entries: entries };
     return O.enqueue(CHANNEL, slug, payload, { id: id, replaceExisting: true })
       .then(function () {
         try { localStorage.setItem(manifestKey(slug, report.day, terminalId), JSON.stringify(entries.map(function (row) {
@@ -79,6 +79,7 @@
       if (!row) return;
       var payload = row.payload;
       var body = { merchant: slug, day: payload.day, terminalId: payload.terminalId,
+        closed: !!payload.closed,
         sales: payload.entries.map(function (entry) {
           var Live = window.KiwiLive;
           var id = Live && Live.canonicalSaleId ? Live.canonicalSaleId(slug, entry.id) : entry.id;
@@ -91,7 +92,7 @@
       }).then(function (response) {
         return response.json().then(function (result) {
           if (!response.ok || !result.ok) throw new Error(result.error || 'z-server-rejected');
-          var repaired = 0;
+          var repairs = [];
           if (Array.isArray(result.missing)) {
             result.missing.forEach(function (id) {
               var entry = payload.entries.find(function (candidate) {
@@ -99,16 +100,28 @@
                   && KiwiLive.canonicalSaleId(slug, candidate.id) === id;
               });
               if (entry && entry.local && window.KiwiLive && KiwiLive.postSale) {
-                var queued = KiwiLive.postSale(entry.local);
-                if (queued && queued.ok) repaired++;
+                // A 400/422 may have quarantined the original command. Re-arm
+                // its immutable payload before enqueueing/replaying the same ID.
+                repairs.push(Promise.resolve(KiwiLive.retrySale
+                  ? KiwiLive.retrySale(entry.local) : true).then(function (ready) {
+                  if (ready === false) return false;
+                  var queued = KiwiLive.postSale(entry.local);
+                  return !!(queued && queued.ok);
+                }));
               }
             });
-            if (repaired && window.KiwiLive && KiwiLive.flush) KiwiLive.flush(true);
           }
-          // Recheck after the sales outbox drains. Until then the server's
-          // mismatch remains visible; a crash cannot erase this Z obligation.
-          return repaired ? O.reject(row.id, row.leaseToken, { error: 'missing-after-requeue' })
-            : O.acknowledge(row.id, row.leaseToken);
+          return Promise.all(repairs).then(function (queued) {
+            if (queued.some(Boolean) && window.KiwiLive && KiwiLive.flush) KiwiLive.flush(true);
+            // A Z mismatch is NEVER acknowledged merely because this device
+            // no longer has the receipt. Keep it durable and visible for audit.
+            var mismatch = result.status === 'mismatch'
+              || Array.isArray(result.missing) && result.missing.length
+              || Array.isArray(result.mismatched) && result.mismatched.length;
+            return mismatch ? O.reject(row.id, row.leaseToken, { error: queued.some(Boolean)
+              ? 'missing-after-requeue' : 'z-ledger-mismatch' })
+              : O.acknowledge(row.id, row.leaseToken);
+          });
         });
       }).catch(function (error) {
         return O.reject(row.id, row.leaseToken, { error: String(error.message || error) });
@@ -130,10 +143,14 @@
       .then(function (response) { return response.ok ? response.json() : null; })
       .then(function (data) {
         if (!dashboardUnlocked || (window.__kiwiRole && window.__kiwiRole !== 'owner')) return;
-        var row = data && data.rows && data.rows.find(function (item) { return item.status === 'mismatch'; });
+        var mismatches = ((data && data.rows) || []).concat((data && data.dayReports) || [])
+          .filter(function (item) { return item.status === 'mismatch'; })
+          .sort(function (a, b) { return String(b.business_day).localeCompare(String(a.business_day))
+            || (a.source ? 1 : -1); });
+        var row = mismatches[0];
         var conflicts = data && data.conflicts || [];
         var old = document.getElementById('kiwi-z-reconciliation-alert');
-        if (!row && !conflicts.length) { if (old) old.remove(); return; }
+        if (!row && !conflicts.length && !(data && data.dayReportsUnavailable)) { if (old) old.remove(); return; }
         var alert = old || document.createElement('div');
         alert.id = 'kiwi-z-reconciliation-alert';
         alert.setAttribute('role', 'status');
@@ -141,13 +158,24 @@
           'border-radius:12px;background:#9F3028;color:white;font:600 14px/1.4 "Inter Tight",system-ui;' +
           'box-shadow:0 6px 24px #0003;pointer-events:none';
         var gap = row ? Math.abs(Number(row.reported_cents || 0) - Number(row.server_cents || 0)) / 100 : 0;
-        alert.textContent = (row ? 'Rapport Z et tableau de bord différents de ' + gap.toFixed(2).replace('.', ',') +
-          ' MAD · ' + Number(row.missing_count || 0) + ' vente(s) en attente de synchronisation · ' + row.business_day : '') +
-          (conflicts.length ? (row ? ' · ' : '') + conflicts.length + ' conflit(s) de vente à examiner dans la caisse' : '');
+        alert.textContent = (row ? 'Données de ventes incomplètes · Z déclaré ' +
+          (Number(row.reported_cents || 0) / 100).toFixed(2).replace('.', ',') + ' MAD · ' +
+          (row.source === 'saved-day-report' ? 'ventes du jour au serveur ' : 'reçus de ce terminal au serveur ') +
+          (Number(row.server_cents || 0) / 100).toFixed(2).replace('.', ',') + ' MAD · écart ' + gap.toFixed(2).replace('.', ',') +
+          ' MAD · ' + (row.source === 'saved-day-report'
+            ? 'nombre de reçus manquants inconnu · ancien rapport sauvegardé'
+            : Number(row.missing_count || 0) + ' vente(s) non retrouvée(s)') + ' · ' + row.business_day +
+          (row.closed ? ' · Z clôturé' : ' · journée en cours') : '') +
+          (conflicts.length ? (row ? ' · ' : '') + conflicts.length + ' conflit(s) de vente à examiner dans la caisse' : '') +
+          (data && data.dayReportsUnavailable ? ((row || conflicts.length) ? ' · ' : '') + 'Rapprochement des anciens Z indisponible' : '');
         if (!old) document.body.appendChild(alert);
       }).catch(function () {});
   }
-  window.KiwiZReconciliation = { queueClose: queueClose, flush: flush, showDashboard: showDashboard };
+  window.KiwiZReconciliation = {
+    queueClose: function (report, journal) { return queueSnapshot(report, journal, true); },
+    queueSnapshot: function (report, journal) { return queueSnapshot(report, journal, false); },
+    flush: flush, showDashboard: showDashboard,
+  };
   var dashboardUnlocked = false;
   function start() {
     if (location.pathname.indexOf('dashboard') >= 0) {

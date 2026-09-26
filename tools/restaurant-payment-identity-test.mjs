@@ -132,5 +132,25 @@ assert.equal((await post(sale.onRequestPost, correction)).body.id, 'caisse-corre
 const secondCorrection = await post(sale.onRequestPost, { ...correction, id: 'other-correction-87', method: 'cash', ts: at + 11000 });
 assert.equal(secondCorrection.status, 409, 'a live payment still holds the bill');
 assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM sales WHERE merchant=? AND void_ts IS NULL').get(merchant).n, 11);
+// The customer has paid on the till. Missing or stale operational metadata
+// must never erase that financial event from the central ledger.
+const orphan = { merchant, table: '6', session: 'deleted-visit-for-paid-receipt',
+  id: 'paid-with-missing-visit', ref: 'paid-ticket-1', ts: at,
+  amount: 63, amountCents: 6300, method: 'cash', lines: [{ n: 'Penne', q: 1, t: 63 }] };
+const orphanResult = await post(sale.onRequestPost, orphan);
+assert.equal(orphanResult.status, 200, JSON.stringify(orphanResult));
+assert.equal(orphanResult.body.visitLinkWarning, 'table-session-missing');
+assert.equal(sqlite.prepare('SELECT amount_cents FROM sales WHERE merchant=? AND id=?')
+  .get(merchant, orphan.id)?.amount_cents, 6300);
+const orphanReplay = await post(sale.onRequestPost, orphan);
+assert.equal(orphanReplay.status, 200);
+assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM sales WHERE merchant=? AND id=?')
+  .get(merchant, orphan.id).n, 1);
+const wrongTable = await post(sale.onRequestPost, { ...orphan, id: 'paid-with-wrong-table',
+  session: visit, table: '7', ref: 'paid-ticket-2', ts: at + 20000 });
+assert.equal(wrongTable.status, 200, JSON.stringify(wrongTable));
+assert.equal(wrongTable.body.visitLinkWarning, 'service-session-table-mismatch');
+assert.equal(sqlite.prepare('SELECT session_id FROM sales WHERE merchant=? AND id=?')
+  .get(merchant, 'paid-with-wrong-table')?.session_id, null);
 sqlite.close();
-console.log('✓ 12 distinct receipts: visit reuse, legacy recovery, two splits, concurrent cross-device, closed-visit replay and re-payment after void');
+console.log('✓ restaurant payment identity and paid receipts with missing table visits');

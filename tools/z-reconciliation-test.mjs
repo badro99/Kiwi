@@ -52,11 +52,26 @@ result = await post(report);
 assert.equal(result.body.status, 'matched');
 assert.equal(result.body.missing.length, 0);
 assert.equal(db.prepare('SELECT status FROM z_reconciliations WHERE merchant=?').get(merchant).status, 'matched');
+// Another terminal's sale is not an "extra" against this terminal's Z.
+db.prepare("INSERT INTO sales(id,merchant,amount,amount_cents,method,ts) VALUES(?,?,23,2300,'cash',?)")
+  .run('other-terminal-sale', merchant, ts + 2000);
+result = await post({ ...report, closed: false });
+assert.equal(result.body.status, 'matched');
+assert.equal(result.body.serverCents, 9700);
+assert.equal(result.body.closed, false);
 const owner = `${SESS_COOKIE}=${await makeSession('z-owner', secret)}`;
+db.prepare("INSERT INTO store_docs(merchant,feature,data,rev,updated_ts) VALUES (?,'dayreports',?,1,?)")
+  .run(merchant, JSON.stringify({ days: { [day]: { gross: 150, txns: 4, cutoff: 5, closedCount: 1 } } }), Date.now());
 const read = await endpoint.onRequestGet({ env, request: new Request(
   'https://kiwi.test/api/z-reconciliation?merchant=' + merchant, { headers: { Cookie: owner } }) });
 assert.equal(read.status, 200);
-assert.equal((await read.json()).rows[0].status, 'matched');
+const readBody = await read.json();
+assert.equal(readBody.rows[0].status, 'matched');
+assert.equal(readBody.rows[0].closed, false);
+assert.equal(readBody.dayReports[0].reported_cents, 15000);
+assert.equal(readBody.dayReports[0].server_cents, 12000);
+assert.equal(readBody.dayReports[0].status, 'mismatch');
+assert.equal(readBody.dayReports[0].closed, true);
 const foreign = await endpoint.onRequestGet({ env, request: new Request(
   'https://kiwi.test/api/z-reconciliation?merchant=another-store', { headers: { Cookie: owner } }) });
 assert.equal(foreign.status, 403, 'owner cannot read another merchant Z');

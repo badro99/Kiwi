@@ -11,8 +11,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
-import { employeeToken, EMPLOYEE_COOKIE } from '../functions/auth/_lib.js';
+import { employeeToken, EMPLOYEE_COOKIE, tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
 import * as queue from '../functions/api/order/queue.js';
+import * as sale from '../functions/api/sale.js';
 import { parseSchema } from './d1-schema.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -262,6 +263,32 @@ const migrationTransfers = fs.existsSync(path.join(ROOT, 'migrations', '2026-08-
 const migrationVoids = fs.existsSync(path.join(ROOT, 'migrations', '2026-08-17-kitchen-voids.sql'));
 check('Migration file for table_transfers exists in migrations/', migrationTransfers);
 check('Migration file for kitchen_voids exists in migrations/', migrationVoids);
+
+/* ── 4. AMIRA PAYMENT LEDGER, INCLUDING A LOST TABLE LINK ────────────────── */
+console.log('\n■ 4. Amira paid receipts survive a missing table session');
+const tillCookie = `${TILL_COOKIE}=${await tillToken(AUTH_SECRET, MERCHANT)}`;
+async function pay(body) {
+  const request = new Request('https://kiwi-os.com/api/sale', { method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: tillCookie },
+    body: JSON.stringify({ merchant: MERCHANT, ...body }) });
+  const response = await sale.onRequestPost({ request, env });
+  return { status: response.status, data: await response.json() };
+}
+const lost = await pay({ id: 'amira-paid-lost-visit', table: '9', session: 'amira-visit-lost',
+  amount: 65, amountCents: 6500, method: 'card', label: 'Amira table 9',
+  ts: Date.now(), lines: [{ n: 'Shawarma Poulet', q: 1, t: 45 }, { n: 'Thé à la menthe', q: 1, t: 20 }] });
+const saved = db._db.prepare('SELECT amount_cents,method,lines,session_id FROM sales WHERE merchant=? AND id=?')
+  .get(MERCHANT, 'amira-paid-lost-visit');
+check('Missing visit does not reject Amira’s paid receipt', lost.status === 200 && lost.data.visitLinkWarning === 'table-session-missing', JSON.stringify(lost));
+check('D1 retains exact cents, tender and item lines without a false visit link',
+  saved && saved.amount_cents === 6500 && saved.method === 'card'
+    && JSON.parse(saved.lines).length === 2 && !saved.session_id, JSON.stringify(saved));
+const replay = await pay({ id: 'amira-paid-lost-visit', table: '9', session: 'amira-visit-lost',
+  amount: 65, amountCents: 6500, method: 'card', label: 'Amira table 9', ts: Date.now(),
+  lines: [{ n: 'Shawarma Poulet', q: 1, t: 45 }, { n: 'Thé à la menthe', q: 1, t: 20 }] });
+check('Amira retry cannot double-count the receipt', replay.status === 200
+  && db._db.prepare('SELECT COUNT(*) n FROM sales WHERE merchant=? AND id=?').get(MERCHANT, 'amira-paid-lost-visit').n === 1,
+  JSON.stringify(replay));
 
 console.log(failures ? `\n✗ ${failures} failure(s)\n` : `\n✓ All Amira integration checks green.\n`);
 process.exitCode = failures ? 1 : 0;

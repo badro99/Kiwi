@@ -163,8 +163,9 @@ async function main() {
   const visit = opened.body && opened.body.session;
   const premature = await post(sale.onRequestPost,
     { merchant: MERCHANT, table: '3', session: visit, amount: 10, method: 'cash' }, cookie);
-  check('une table sans commande envoyée ne peut pas être encaissée',
-    premature.status === 409 && premature.body.error === 'send-order-before-payment', JSON.stringify(premature.body));
+  check('un paiement saisi avant la commande reste comptabilisé sans fermer la table',
+    premature.status === 200 && premature.body.visitLinkWarning === 'send-order-before-payment'
+      && sessionsOf('3').some((row) => row.id === visit && row.status === 'open'), JSON.stringify(premature.body));
   const first = await post(queue.onRequestPost,
     { merchant: MERCHANT, create: true, mode: 'table', table: '3', lines: [{ id: 'i1', qty: 2 }] }, cookie);
   check('le serveur peut lancer une commande', first.status === 200 && first.body && first.body.ok,

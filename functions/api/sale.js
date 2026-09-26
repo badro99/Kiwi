@@ -279,6 +279,7 @@ export async function onRequestPost({ request, env }) {
     ? String(split.flowId) : '';
 
   let serviceSession = null;
+  let visitLinkWarning = '';
   const paymentTsForVisit = (() => {
     const t = Number(b && b.ts);
     return Number.isFinite(t) && t > 0 && t <= Date.now() + 86400000 ? t : Date.now();
@@ -303,14 +304,15 @@ export async function onRequestPost({ request, env }) {
                 AND opened_ts <= ?
               ORDER BY opened_ts DESC LIMIT 1`
           ).bind(merchant, employeeTable, paymentTsForVisit + VISIT_BIND_SKEW_MS).first();
-    } catch (_) { serviceSession = null; }
+    } catch (_) { serviceSession = null; visitLinkWarning = 'visit-lookup-unavailable'; }
     if (requestedSession && (!serviceSession || !serviceSession.id)) {
-      return json({ error: 'table-session-missing' }, 404);
+      visitLinkWarning ||= 'table-session-missing';
     }
     if (!serviceSession || !serviceSession.id) {
-      if (employee) return json({ error: 'open-service-session-required' }, 409);
+      if (employee) visitLinkWarning ||= 'open-service-session-missing';
     } else if (employeeTable && String(serviceSession.table_no) !== employeeTable) {
-      return json({ error: 'service-session-table-mismatch' }, 409);
+      visitLinkWarning = 'service-session-table-mismatch';
+      serviceSession = null; // Never close or pay orders on a different table.
     }
     /* Caisse persists its local receipt and closes the visit in parallel. The
        close request may arrive first; a closed visit must therefore still be
@@ -323,10 +325,13 @@ export async function onRequestPost({ request, env }) {
           `SELECT id FROM orders WHERE merchant = ? AND session_id = ? AND paid_ts IS NULL LIMIT 1`
         ).bind(merchant, serviceSession.id).first();
       } catch (err) {
-        console.error('[sale] Order verification query threw for session', serviceSession.id);
-        return json({ error: 'db-read-failed' }, 500);
+        visitLinkWarning = 'visit-order-lookup-unavailable';
+        serviceSession = null;
       }
-      if (!sent || !sent.id) return json({ error: 'send-order-before-payment' }, 409);
+      if (serviceSession && (!sent || !sent.id)) {
+        visitLinkWarning = 'send-order-before-payment';
+        serviceSession = null; // Keep the financial receipt, not the unsafe table link.
+      }
     }
   }
 
@@ -357,7 +362,9 @@ export async function onRequestPost({ request, env }) {
   // takings twice. The client now sends a stable id per sale (see the queue in
   // assets/live-link.js) and INSERT OR IGNORE makes the retry a no-op. Callers
   // that send no id keep the old behaviour: a fresh row every time.
-  const effectiveSessionId = (serviceSession && serviceSession.id) || requestedSession;
+  // A stale client-supplied visit is never a verified relationship. Its
+  // absence must not prevent the already-paid receipt entering the ledger.
+  const effectiveSessionId = (serviceSession && serviceSession.id) || '';
   const legacyBase = effectiveSessionId
     ? 'visit-' + String(effectiveSessionId).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 52) + '-emp' : '';
   const legacySplit = split && effectiveSessionId
@@ -575,12 +582,18 @@ export async function onRequestPost({ request, env }) {
     } catch (_) { /* absent on older schemas */ }
   }
 
-  const hasVisitLink = !!(effectiveSessionId || splitFlowId);
+  let hasVisitLink = !!(effectiveSessionId || splitFlowId);
   if (hasVisitLink) {
     try { await ensureVisitLink(env); }
-    catch (error) { return json({ error: 'db-visit-link-failed', detail: String(error) }, 503); }
+    catch (_) {
+      // Optional relation schema may lag the ledger. Never lose a paid receipt
+      // because the table metadata could not be written.
+      hasVisitLink = false;
+      serviceSession = null;
+      visitLinkWarning ||= 'visit-link-unavailable';
+    }
   }
-  if (!stored && !split && effectiveSessionId && orderNumber(ref)) {
+  if (!stored && !split && hasVisitLink && effectiveSessionId && orderNumber(ref)) {
     let claim;
     try { claim = await claimRestaurantBill(env, merchant, effectiveSessionId, orderNumber(ref), businessDate(ts), id); }
     catch (_) { return json({ error: 'settlement-key-unavailable' }, 503); }
@@ -928,6 +941,7 @@ export async function onRequestPost({ request, env }) {
   return json({
     ok: true, id, lines: linesMode, table: employeeTable || (serviceSession && serviceSession.table_no) || undefined,
     settlementPending: settlementPending || undefined,
+    visitLinkWarning: visitLinkWarning || undefined,
   });
 }
 

@@ -878,10 +878,10 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
       method: 'cash',
       label: 'Table 15',
     });
-    ok(badSessionPost.status === 404, 'Payment with nonexistent session ID is rejected with 404 Not Found');
-    ok(badSessionPost.data.error === 'table-session-missing', 'Rejection error is table-session-missing');
+    ok(badSessionPost.status === 200, 'Paid receipt with nonexistent session is retained in the ledger');
+    ok(badSessionPost.data.visitLinkWarning === 'table-session-missing', 'Missing table relationship is reported separately');
 
-    // Cross-merchant session ID is also rejected with 404
+    // A cross-merchant session can never settle that other merchant's visit.
     db.prepare("INSERT INTO table_sessions VALUES (?, ?, 'table', ?, 'open', ?, NULL, NULL, NULL)").run('sess-other-merchant', 'other-merchant', '15', tNow);
     const crossMerchantPost = await postSale({
       table: '15',
@@ -891,14 +891,14 @@ console.log('\n--- Section 2: Split Payments Persistence Protocol (node:sqlite) 
       method: 'cash',
       label: 'Table 15',
     });
-    ok(crossMerchantPost.status === 404, 'Cross-merchant session ID is rejected with 404 Not Found');
-    ok(crossMerchantPost.data.error === 'table-session-missing', 'Cross-merchant error is table-session-missing');
+    ok(crossMerchantPost.status === 200, 'Authenticated paid receipt is retained despite a foreign session');
+    ok(crossMerchantPost.data.visitLinkWarning === 'table-session-missing', 'Foreign session is not accepted as a table relationship');
 
     // Confirm real open session and its orders were NOT touched
     const realSession = db.prepare('SELECT status FROM table_sessions WHERE id = ?').all('sess-table-real');
-    ok(realSession[0].status === 'open', 'Real table session remains OPEN after rejected bad-session requests');
+    ok(realSession[0].status === 'open', 'Real table session remains OPEN after unlinked paid receipts');
     const realOrder = db.prepare('SELECT paid_ts FROM orders WHERE id = ?').all('ord-table-15');
-    ok(realOrder[0].paid_ts === null, 'Real table orders remain UNPAID after rejected bad-session requests');
+    ok(realOrder[0].paid_ts === null, 'Real table orders remain UNPAID after unlinked paid receipts');
 
     // Replay of an older closed visit must not close a newer visit on the same table
     db.prepare("INSERT INTO table_sessions VALUES (?, ?, 'table', ?, 'closed', ?, ?, 'service-payment', NULL)").run('sess-table-old', merchant, '15', tNow - 3600000, tNow - 1800000);

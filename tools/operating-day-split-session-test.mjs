@@ -83,9 +83,10 @@ assert.equal(db.prepare(`SELECT COUNT(*) n FROM table_sessions WHERE merchant=? 
 console.log('✓ new local 35+25 split parts persist as two receipts without closing/creating a server session');
 
 response = await post({ ...payload, id: 'sale-real-session-missing', session: 'tsx-genuine-missing', ref: '3' });
-assert.equal(response.status, 404);
-assert.equal(db.prepare("SELECT COUNT(*) n FROM sales WHERE id='sale-real-session-missing'").get().n, 0);
-console.log('✓ genuine missing server session remains fail-closed');
+assert.equal(response.status, 200);
+assert.equal((await response.json()).visitLinkWarning, 'table-session-missing');
+assert.equal(db.prepare("SELECT COUNT(*) n FROM sales WHERE id='sale-real-session-missing'").get().n, 1);
+console.log('✓ genuine missing server session cannot suppress a paid receipt');
 
 const source = fs.readFileSync(new URL('../assets/live-link.js', import.meta.url), 'utf8');
 assert.match(source, /function serverSession\(entry\)/);

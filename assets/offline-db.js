@@ -228,6 +228,35 @@
     });
   }
 
+  /* Z reconciliation may prove a blocked financial receipt is absent remotely.
+   * Re-arm the SAME immutable command; never replace its money, tenant, channel
+   * or id with a reconstruction from a report total. A live sender's lease is
+   * not touched. This is deliberately separate from force-claiming due work. */
+  function reactivate(channel, tenant, id) {
+    var scope = assertScope(tenant, channel);
+    id = assertId(id);
+    return ready().then(function (ok) {
+      if (!ok) throw openError || new Error('Offline database unavailable');
+      return db.transaction('rw', db.outbox, function () {
+        return db.outbox.get(id).then(function (row) {
+          if (!row) return false;
+          if (row.tenant !== scope.tenant || row.channel !== scope.channel) {
+            throw new Error('Outbox id already belongs to another scope');
+          }
+          if (row.state !== 'blocked') return false;
+          var at = now();
+          return db.outbox.update(id, {
+            state: 'pending', nextAt: at, updatedAt: at,
+            attempts: 0, lastStatus: 0, lastError: '',
+          }).then(function () {
+            signal({ type: 'reactivate', tenant: scope.tenant, channel: scope.channel, id: id });
+            return true;
+          });
+        });
+      });
+    });
+  }
+
   function list(channel, tenant) {
     var scope = assertScope(tenant, channel);
     return ready().then(function (ok) {
@@ -246,10 +275,11 @@
         if (row.lastStatus) out.lastStatus = row.lastStatus;
         if (row.lastError) out.lastError = row.lastError;
         if ((+row.lastAttemptAt || 0) > out.lastAttemptAt) out.lastAttemptAt = +row.lastAttemptAt;
+        if (!out.oldestPendingAt || (+row.createdAt || 0) < out.oldestPendingAt) out.oldestPendingAt = +row.createdAt || 0;
         return out;
-      }, { pending: 0, blocked: 0, sending: 0, total: 0, storageError: false, lastStatus: 0, lastError: '', lastAttemptAt: 0 });
+      }, { pending: 0, blocked: 0, sending: 0, total: 0, storageError: false, lastStatus: 0, lastError: '', lastAttemptAt: 0, oldestPendingAt: 0 });
     }).catch(function () {
-      return { pending: 0, blocked: 0, sending: 0, total: 0, storageError: true, lastStatus: 0, lastError: '', lastAttemptAt: 0 };
+      return { pending: 0, blocked: 0, sending: 0, total: 0, storageError: true, lastStatus: 0, lastError: '', lastAttemptAt: 0, oldestPendingAt: 0 };
     });
   }
 
@@ -316,6 +346,7 @@
     claim: claim,
     acknowledge: acknowledge,
     reject: reject,
+    reactivate: reactivate,
     list: list,
     stats: stats,
     migrateLegacy: migrateLegacy,

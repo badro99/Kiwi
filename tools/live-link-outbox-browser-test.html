@@ -83,10 +83,21 @@
       line('scheduled settlement retry uses the same receipt and acknowledges completion');
 
       window.__fetchMode = 'blocked';
-      KiwiLive.postSale({ amount: 44, method: 'card', label: 'Invalid test', ref: ref + '-blocked' });
+      var blockedReceipt = { amount: 44, method: 'card', label: 'Invalid test', ref: ref + '-blocked' };
+      var blockedResult = KiwiLive.postSale(blockedReceipt);
       await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).blocked === 1; }, 10000);
       assert(KiwiLive.queueStatus().blocked === 1, 'blocked status visible');
       line('a 422 response is retained and visible to the cashier');
+      // A normal postSale still deduplicates a blocked command. A proven Z
+      // mismatch must re-arm the SAME immutable ID before replaying it.
+      window.__fetchMode = 'ok';
+      await KiwiLive.retrySale(blockedReceipt);
+      var replay = KiwiLive.postSale(blockedReceipt);
+      await KiwiLive.flush(true);
+      await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).total === 0; }, 10000);
+      assert(replay.id === blockedResult.id && window.__posts.at(-1).id === blockedResult.id,
+        'reactivation preserves payment identity');
+      line('a blocked receipt is reactivated and accepted under its original ID');
 
       output.dataset.status = 'passed';
       output.textContent += '\n\nPASSED';

@@ -98,6 +98,7 @@
           dvApp:{ caisse:'Caisse', serveur:'Salle', dashboard:'Tableau de bord' },
           dvAlert:{ 'device-offline':'Muet depuis trop longtemps', 'printer-unreachable':'Imprimante injoignable', 'printer-unconfigured':'Imprimante non configurée' },
           dvOk:'Aucune alarme', dvSilent:'Silence', dvBeats:'Battements', dvFirst:'Premier contact', dvLast:'Dernier battement',
+          dvSync:'Ventes non confirmées', dvBlocked:'Bloquées', dvOldest:'Plus ancienne', dvAckSale:'Dernière vente confirmée', dvSyncUnknown:'État financier non communiqué', dvSyncWarning:'Connectée ne signifie pas synchronisée.', dvSyncSelf:'Déclaré par la caisse',
           dvThis:'Cet appareil', dvAck:'Faire taire', dvAcked:'Acquittée', dvAckedBy:'par',
           dvAckHint:'Faire taire n’éteint pas la cause : l’alarme se rouvre si le problème revient, et se referme seule quand il disparaît.',
           dvTest:'Ticket d’essai', dvTestHint:'Le ticket part vraiment sur l’imprimante de cet appareil. Kiwi rapporte ce que le pont répond, réussite comme échec.',
@@ -266,6 +267,7 @@
           dvApp:{ caisse:'Register', serveur:'Floor', dashboard:'Dashboard' },
           dvAlert:{ 'device-offline':'Silent for too long', 'printer-unreachable':'Printer unreachable', 'printer-unconfigured':'Printer not configured' },
           dvOk:'No alert', dvSilent:'Silence', dvBeats:'Heartbeats', dvFirst:'First seen', dvLast:'Last heartbeat',
+          dvSync:'Unconfirmed sales', dvBlocked:'Blocked', dvOldest:'Oldest', dvAckSale:'Last confirmed sale', dvSyncUnknown:'Financial sync state not reported', dvSyncWarning:'Online does not mean synchronized.', dvSyncSelf:'Reported by register',
           dvThis:'This device', dvAck:'Acknowledge', dvAcked:'Acknowledged', dvAckedBy:'by',
           dvAckHint:'Acknowledging does not fix the cause: the alert reopens if the problem returns, and closes itself once it is gone.',
           dvTest:'Test print', dvTestHint:'The slip really goes to this device’s printer. Kiwi reports what the bridge answers, success or failure.',
@@ -434,6 +436,7 @@
           dvApp:{ caisse:'الصندوق', serveur:'القاعة', dashboard:'لوحة القيادة' },
           dvAlert:{ 'device-offline':'صامت منذ وقت طويل', 'printer-unreachable':'الطابعة غير متاحة', 'printer-unconfigured':'الطابعة غير مهيّأة' },
           dvOk:'لا إنذار', dvSilent:'الصمت', dvBeats:'النبضات', dvFirst:'أول اتصال', dvLast:'آخر نبضة',
+          dvSync:'مبيعات غير مؤكدة', dvBlocked:'محظورة', dvOldest:'الأقدم', dvAckSale:'آخر بيع مؤكد', dvSyncUnknown:'حالة المزامنة المالية غير مُبلَّغ عنها', dvSyncWarning:'الاتصال لا يعني المزامنة.', dvSyncSelf:'مبلّغ عنها من الصندوق',
           dvThis:'هذا الجهاز', dvAck:'إسكات', dvAcked:'مُقرّ به', dvAckedBy:'بواسطة',
           dvAckHint:'الإسكات لا يطفئ السبب: يعود الإنذار إن عاد العطل، ويُغلق وحده حين يزول.',
           dvTest:'تذكرة اختبار', dvTestHint:'تخرج التذكرة فعلًا من طابعة هذا الجهاز. يبلّغ Kiwi بما يردّه الجسر، نجاحًا كان أو فشلًا.',
@@ -1908,6 +1911,17 @@
             '<div><span class="k">' + esc(c.dvLast) + '</span><span class="v">' + esc(stamp(device.lastSeen)) + '</span></div>' +
             '<div><span class="k">' + esc(c.dvFirst) + '</span><span class="v">' + esc(stamp(device.firstSeen)) + '</span></div>' +
           '</div>' +
+          (device.app === 'caisse' ? '<div class="ops-dv-meta" style="margin-top:8px;border-top:1px solid currentColor;padding-top:8px">' +
+            (device.sync ?
+              '<div><span class="k">' + esc(c.dvSync) + '</span><span class="v">' + esc(String(device.sync.total)) + '</span></div>' +
+              '<div><span class="k">' + esc(c.dvBlocked) + '</span><span class="v">' + esc(String(device.sync.blocked)) + '</span></div>' +
+              '<div><span class="k">' + esc(c.dvOldest) + '</span><span class="v">' + esc(stamp(device.sync.oldestPendingAt)) + '</span></div>' +
+              '<div><span class="k">' + esc(c.dvAckSale) + '</span><span class="v">' + esc(stamp(device.sync.lastAcknowledgedAt)) + '</span></div>' +
+              '<p class="ops-dv-hint">' + esc(c.dvSyncSelf) + ' · ' + esc(c.dvSyncWarning) +
+              (device.sync.storageError ? ' · ' + esc(device.sync.lastError || 'Storage error') : '') +
+              (device.sync.lastError && !device.sync.storageError ? ' · ' + esc(device.sync.lastError) : '') + '</p>'
+            : '<p class="ops-dv-hint">' + esc(c.dvSyncUnknown) + ' · ' + esc(c.dvSyncWarning) + '</p>') +
+          '</div>' : '') +
           /* Ce que le serveur refuserait n'est pas peint : pas d'alarme, pas de
              bouton pour la faire taire ; pas cet appareil-ci, pas de ticket. */
           ((device.alert && !device.acknowledged) || mine
