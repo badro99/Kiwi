@@ -54,3 +54,26 @@ Browser acceptance: create a follow-up from a printer signal, assign it, reload,
 ## Not built in this release
 
 The wider audit remains a roadmap, not a claim that all 120 ideas are implemented. This release does not add autonomous AI actions, automatic outbound campaigns, invoice collection, remote print retries, device management/MDM, a complete local-print heartbeat, full CRM integrations, role granularization, full-history fleet pagination, or official regulatory reporting. These need separate delivery and appropriate authority/data coverage. The briefing is deliberately deterministic and labelled as such.
+
+## Cross-store copies and document history
+
+Since 2026-09-26 the server refuses any write that adds another store's records
+(`functions/api/_tenant-guard.js`, used by `/api/store` and `/api/menu`). The
+device receives `409 foreign-document`, adopts the server copy and drops its
+local one. Each refusal is logged in `tenant_guard_events` and shows up in God
+Mode as a priority-1 signal, « Données d'un autre établissement refusées ».
+A signal means a device somewhere still holds a foreign copy: find which tab or
+till changed client, then reload or re-pair it.
+
+Before `/api/store` or `/api/menu` overwrites a document, the previous version
+is copied to `doc_history` (at most one per 10 minutes per document, 30 kept).
+To restore one client without rolling back the whole database:
+
+```sql
+-- 1. Pick the version (kind 'store' + feature, or kind 'menu' + 'menu')
+SELECT saved_ts, updated_ts, length(data) FROM doc_history
+ WHERE merchant = 'pasta-corner' AND kind = 'menu' AND feature = 'menu' ORDER BY saved_ts DESC;
+-- 2. Put it back (store_docs: also bump rev so devices re-read)
+UPDATE menus SET data = (SELECT data FROM doc_history WHERE merchant = 'pasta-corner'
+   AND kind = 'menu' AND saved_ts = <saved_ts>), updated_ts = <now_ms> WHERE merchant = 'pasta-corner';
+```

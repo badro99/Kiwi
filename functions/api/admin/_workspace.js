@@ -59,6 +59,11 @@ export async function workspace(env, merchant = '') {
     conflicts:[`SELECT merchant,sale_id AS id,amount_cents,method,first_ts,updated_ts FROM sale_sync_conflicts WHERE updated_ts>=?${where} ORDER BY updated_ts DESC LIMIT 201`,[now-14*86400000,...binds]],
     activity:[`SELECT merchant,COUNT(*) AS sales_7d,COUNT(DISTINCT CAST((ts-18000000)/86400000 AS INTEGER)) AS active_days_7d,MAX(ts) AS last_ts
       FROM sales WHERE ts>=? AND void_ts IS NULL AND COALESCE(amount_cents,amount*100)>0${where} GROUP BY merchant LIMIT 201`,[now-7*86400000,...binds]],
+    /* Writes refused because they carried another store's records
+     * (functions/api/_tenant-guard.js). Each group means a device still holds
+     * a foreign copy and keeps offering it. */
+    tenantGuard:[`SELECT merchant,feature,source_merchant,kind,COUNT(*) AS attempts,MIN(ts) AS first_ts,MAX(ts) AS updated_ts
+      FROM tenant_guard_events WHERE ts>=?${where} GROUP BY merchant,feature,source_merchant ORDER BY updated_ts DESC LIMIT 201`,[now-14*86400000,...binds]],
     shopify:[`SELECT id,merchant,status,attempts,updated_ts FROM shopify_sync_outbox WHERE status!='done'${where} ORDER BY updated_ts DESC LIMIT 201`,binds],
     tasks:[`SELECT * FROM operator_tasks WHERE 1=1${where} ORDER BY (status='resolved'), priority, updated_ts DESC LIMIT 501`,binds,500],
     notes:[`SELECT id,merchant,body,actor,ts FROM operator_notes WHERE 1=1${where} ORDER BY ts DESC LIMIT 101`,binds,100],

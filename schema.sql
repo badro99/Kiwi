@@ -616,6 +616,35 @@ CREATE TABLE IF NOT EXISTS store_docs (
   PRIMARY KEY (merchant, feature)
 );
 
+-- Versions précédentes des documents et des cartes, avant écrasement
+-- (functions/api/_tenant-guard.js › keepHistory) : une au plus toutes les
+-- 10 minutes par document, 30 gardées. Jamais servie par une route ; c'est la
+-- restauration d'un seul client sans remonter toute la base dans le temps.
+CREATE TABLE IF NOT EXISTS doc_history (
+  merchant   TEXT NOT NULL,
+  kind       TEXT NOT NULL,      -- 'store' | 'menu'
+  feature    TEXT NOT NULL,      -- fonctionnalité de store_docs, ou 'menu'
+  data       TEXT NOT NULL,
+  rev        INTEGER NOT NULL DEFAULT 0,
+  updated_ts INTEGER NOT NULL,   -- l'updated_ts de la version gardée
+  saved_ts   INTEGER NOT NULL    -- le moment où on l'a gardée
+);
+CREATE INDEX IF NOT EXISTS idx_doc_history ON doc_history(merchant, kind, feature, saved_ts);
+
+-- Écritures refusées parce qu'elles apportaient les enregistrements d'un autre
+-- établissement (functions/api/_tenant-guard.js). Chaque ligne veut dire qu'un
+-- appareil garde encore une copie étrangère ; God Mode les affiche.
+CREATE TABLE IF NOT EXISTS tenant_guard_events (
+  ts              INTEGER NOT NULL,
+  merchant        TEXT NOT NULL,   -- l'établissement qui a tenté d'écrire
+  feature         TEXT NOT NULL,
+  source_merchant TEXT NOT NULL,   -- celui dont les enregistrements venaient
+  kind            TEXT NOT NULL,   -- 'whole' | 'records'
+  matched         INTEGER NOT NULL,
+  sampled         INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_tenant_guard_ts ON tenant_guard_events(ts);
+
 -- Append-only, non-PII hotel stay history. `srv_cursor` reuses the monotonic
 -- reservations-document revision; gaps are valid and batch imports may use
 -- `event_ordinal` for several stay events committed under one revision.

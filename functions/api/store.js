@@ -35,6 +35,7 @@
 
 import { json, entitledMerchant } from '../auth/_lib.js';
 import { employeeAuthVersion, tenantFor } from './_private.js';
+import { foreignCopy, keepHistory } from './_tenant-guard.js';
 import { poke } from './_live.js';
 import {
   HOTEL_UNITS_FEATURE,
@@ -754,7 +755,11 @@ export async function onRequestPost(context) {
     text = JSON.stringify(clean.value);
   }
 
-  if (await quarantined(merchant, feature, text)) {
+  /* Les enregistrements d'un autre établissement ne deviennent jamais les
+   * nôtres, quel que soit le chemin qui les a apportés (functions/api/_tenant-guard.js).
+   * L'appareil reçoit foreign-document et abandonne sa copie (assets/cloud-doc.js). */
+  const foreign = await quarantined(merchant, feature, text) || await foreignCopy(env, { table: 'store', merchant, feature, next: clean.value, current: mine, text });
+  if (foreign) {
     return json({ error: 'foreign-document', feature, rev: serverRev, data: mine }, 409);
   }
 
@@ -768,6 +773,8 @@ export async function onRequestPost(context) {
       return json({ error: 'refused-empty', feature, rev: serverRev, data: mine }, 409);
     }
   }
+
+  if (current) await keepHistory(env, 'store', merchant, feature);
 
   const rev = serverRev + 1;
   try {

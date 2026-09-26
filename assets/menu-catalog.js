@@ -2410,7 +2410,9 @@
           .then(function (err) {
             /* A newer revision won. Replace this stale browser copy instead of
              * merging it and immediately attempting to resurrect old ids. */
-            if (r && r.status === 409 && err && err.error === 'stale-menu' && err.data) {
+            /* foreign-document : cette carte est celle d'un autre établissement
+             * (functions/api/_tenant-guard.js). On reprend la carte du serveur. */
+            if (r && r.status === 409 && err && (err.error === 'stale-menu' || err.error === 'foreign-document') && err.data) {
               c.updatedTs = +err.updatedTs || c.updatedTs;
               adoptServerMenu(err.data, targetVid);
             }

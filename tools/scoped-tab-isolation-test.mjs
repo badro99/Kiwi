@@ -90,7 +90,7 @@ const leaked = JSON.stringify({ bookings: [{ id: 'b1', name: 'fixture' }] });
 ok(await quarantined('pasta-corner', 'reservations', leaked) === false, 'an ordinary Pasta Corner reservations document is accepted');
 ok(await quarantined('amira-cafe', 'reservations', leaked) === false, 'quarantine is scoped to the affected merchant');
 const storeSrc2 = fs.readFileSync(path.join(ROOT, 'functions/api/store.js'), 'utf8');
-ok(/if \(await quarantined\(merchant, feature, text\)\) \{\s*return json\(\{ error: 'foreign-document'/.test(storeSrc2), 'the store route refuses a quarantined document before writing');
+ok(/const foreign = await quarantined\(merchant, feature, text\) \|\| await foreignCopy\([\s\S]{0,160}\);\s*if \(foreign\) \{\s*return json\(\{ error: 'foreign-document'/.test(storeSrc2), 'the store route refuses a quarantined document before writing');
 ok(/res\.j\.error === 'foreign-document'\) \{\s*opts\.write\(res\.j\.data != null \? res\.j\.data : null\);[\s\S]{0,200}clearDirty/.test(cloudSrc), 'a refused device drops its copy instead of retrying');
 
 if (failures.length) { console.log(`\n✗ ${failures.length} failure(s)`); process.exit(1); }

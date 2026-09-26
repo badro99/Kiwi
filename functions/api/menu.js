@@ -29,6 +29,7 @@
 import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator } from '../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
 import { CORE, MENU_LANGS, normalizeMenuLangs } from './_menu-langs.js';
+import { foreignCopy, keepHistory } from './_tenant-guard.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const MENU_ALLERGENS = [
@@ -656,6 +657,16 @@ export async function onRequestPost(context) {
     }
   }
 
+  /* Une carte faite des plats d'un autre établissement n'est pas publiée : le
+   * 26/09/2026, un onglet God Mode a remplacé la carte de Pasta Corner par celle
+   * d'Amira Café (functions/api/_tenant-guard.js). Le navigateur reçoit la
+   * carte serveur et l'adopte, comme pour stale-menu. */
+  const text = JSON.stringify(data);
+  if (!shop && await foreignCopy(env, { table: 'menu', merchant, feature: 'menu', next: data, current: currentMenu, text })) {
+    return json({ error: 'foreign-document', merchant, data: currentMenu, updatedTs: currentUpdatedTs }, 409);
+  }
+  await keepHistory(env, 'menu', merchant, 'menu');
+
   const updatedTs = Date.now();
   try {
     await env.DB.prepare(
@@ -664,7 +675,7 @@ export async function onRequestPost(context) {
        ON CONFLICT(merchant) DO UPDATE SET
          name = excluded.name, type = excluded.type,
          data = excluded.data, updated_ts = excluded.updated_ts`
-    ).bind(merchant, name, type, JSON.stringify(data), updatedTs).run();
+    ).bind(merchant, name, type, text, updatedTs).run();
   } catch (_) { return json({ error: 'write-failed' }, 500); }
 
   return shop

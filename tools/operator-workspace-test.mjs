@@ -95,6 +95,12 @@ check('each till keeps its latest heartbeat',tills.find(r=>r.deviceId==='till-qu
 check('Z comparison carries blocked count and gap',ws.sources.zChecks.rows[0].blocked_count===1&&ws.sources.zChecks.rows[0].reported_cents-ws.sources.zChecks.rows[0].server_cents===4500);
 const errMsg=ws.sources.errors.rows.find(r=>r.id==='err-code').message;
 check('error message: first line only, digits and e-mails masked',!errMsg.includes('4111')&&!errMsg.includes('a@b.test')&&!errMsg.includes('stack')&&errMsg.includes('refused'));
+db.prepare("INSERT INTO tenant_guard_events VALUES(?,?,?,?,?,?,?)").run(now-60000,'shop-a','costs','shop-b','records',6,6);
+db.prepare("INSERT INTO tenant_guard_events VALUES(?,?,?,?,?,?,?)").run(now,'shop-a','costs','shop-b','records',6,6);
+db.prepare("INSERT INTO tenant_guard_events VALUES(?,?,?,?,?,?,?)").run(now-20*86400000,'shop-a','menu','shop-b','whole',1,1);
+{const g=(await call(workspace,'GET')).sources.tenantGuard.rows;
+check('refused cross-store copies grouped per store, feature and source, 14 days',g.length===1&&g[0].attempts===2&&g[0].source_merchant==='shop-b'&&g[0].updated_ts===now);
+check('refused copies stay in the writing store dossier',!(await call(workspace,'GET',{},'?merchant=shop-b')).sources.tenantGuard.rows.length);}
 check('product board loaded fleet-wide only',ws.sources.board.rows.length===1&&!(await call(workspace,'GET',{},'?merchant=shop-a')).sources.board);
 const health=policy.storeHealth({merchant:'shop-a',last_ts:now},{caisseSync:tills,zChecks:ws.sources.zChecks.rows,activity:[{active_days_7d:5,last_ts:now}],errors:[]},now);
 check('blocked sale and Z gap make the store « à traiter »',health.level==='bad'&&health.problems.some(p=>p.includes('bloquée'))&&health.problems.some(p=>p.includes('écart 45 MAD')));

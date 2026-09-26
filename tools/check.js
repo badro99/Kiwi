@@ -1061,6 +1061,7 @@ section('Whole-project regressions');
     'check-godmode.mjs',
     'operator-workspace-test.mjs',
     'scoped-tab-isolation-test.mjs',
+    'cross-store-copy-test.mjs',
     'admin-crm-layout-test.mjs',
     'maison-client-history-test.mjs',
     'client-history-browser-test.mjs',

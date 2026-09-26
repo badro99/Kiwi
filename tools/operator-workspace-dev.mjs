@@ -28,6 +28,7 @@ beat('fixture-beat-b','cafe-test','caisse-terrasse',now-20*3600000,{total:0,bloc
 beat('fixture-beat-c','atelier-test','caisse-atelier',now-120000,{total:0,blocked:0,pending:0,lastAcknowledgedAt:now-120000});
 db.prepare('INSERT INTO z_reconciliations VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run('cafe-test','2026-09-25','caisse-comptoir',42,1320000,40,1275000,2,45000,0,0,'mismatch',JSON.stringify({blocked:[{id:'fixture-refund'}]}),now-3600000);
 db.prepare('INSERT INTO z_reconciliations VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run('atelier-test','2026-09-25','caisse-atelier',9,210000,9,210000,0,0,0,0,'matched','{"blocked":[]}',now-7200000);
+db.prepare('INSERT INTO tenant_guard_events VALUES(?,?,?,?,?,?,?)').run(now-900000,'cafe-test','reservations','atelier-test','records',4,6);
 db.prepare("INSERT INTO kiwi_tickets(body,status,kind,money_at_risk,created_ts,updated_ts) VALUES(?,?,?,?,?,?)").run('Le tableau de bord du restaurant ne concorde pas avec le Z de la caisse.','problem','bug',1,now,now);
 db.prepare("INSERT INTO kiwi_tickets(body,status,kind,money_at_risk,created_ts,updated_ts) VALUES(?,?,?,?,?,?)").run('Masquer le bouton Campagne dans Clients pour tous les métiers.','problem','improvement',0,now,now);
 db.prepare("INSERT INTO kiwi_tickets(body,status,kind,money_at_risk,created_ts,updated_ts) VALUES(?,?,?,?,?,?)").run('Un article retourné revient en stock.','testing','unsorted',0,now,now);

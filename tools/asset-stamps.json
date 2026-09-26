@@ -24,8 +24,8 @@
     "sha": "e41204f684cf668c"
   },
   "assets/admin-workspace.js": {
-    "v": "12",
-    "sha": "f19407913299e7f7"
+    "v": "13",
+    "sha": "6eeb2535cc562c3e"
   },
   "assets/agent-action-center.js": {
     "v": "2",
@@ -452,8 +452,8 @@
     "sha": "529acc4604d2e551"
   },
   "assets/menu-catalog.js": {
-    "v": "24",
-    "sha": "cf5a743323be8f92"
+    "v": "25",
+    "sha": "be5702a876e3a3b8"
   },
   "assets/menu-i18n.js": {
     "v": "5",
