@@ -436,6 +436,7 @@
       + '<button type="button" class="ma-btn" data-kx-rp-invoice>Facture PDF</button>'
       + '<button type="button" class="ma-btn kx-rp-cancel" data-kx-rp-cancel>Annuler la vente</button>'
       + (vertical === 'restaurant' && entry.reopenSnapshot
+        && Array.isArray(entry.reopenSnapshot.lines) && entry.reopenSnapshot.lines.length
         ? '<button type="button" class="ma-btn" data-kx-rp-reopen>Annuler et rouvrir la note</button>' : '')
       + '</div></div>';
     box.querySelector('[data-kx-rp-back]').addEventListener('click', function () { open(vertical, { noFetch: true }); });

@@ -5557,7 +5557,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=556" defer></script>
+  <script src="assets/caisse-pwa.js?v=557" defer></script>
   <script src="assets/live-link.js?v=49" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -5651,7 +5651,7 @@
        journée avec son numéro d'origine et la mention de duplicata, sans jamais
        réencaisser. Après receipt.js, dont il compose les documents. -->
   <script src="assets/invoice.js?v=8" defer></script>
-  <script src="assets/pos-reprint.js?v=7" defer></script>
+  <script src="assets/pos-reprint.js?v=8" defer></script>
   <!-- Global operator access · long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js?v=1" defer></script>
   <!-- Auth guard: redirects to the auth page the moment the server signals
@@ -14187,7 +14187,7 @@
          * void can restore the same note after a reload, not manufacture a new
          * kitchen order or silently charge the whole split again. */
         const table = tables[settlementTable];
-        const source = split && splitState && Array.isArray(splitState.sourceLines)
+        const source = split && splitState && Array.isArray(splitState.sourceLines) && splitState.sourceLines.length
           ? splitState.sourceLines : generateOrder(settlementTable, table);
         entry.reopenSnapshot = {
           table: String(settlementTable), covers: Math.max(1, Number(table.covers) || 1),
@@ -17181,6 +17181,8 @@
       const saved = {
         mode:      splitState.splitMode,
         total:     splitState.total,
+        sourceLines: Array.isArray(splitState.sourceLines)
+          ? splitState.sourceLines.slice(0, 40).map(line => ({ ...line })) : [],
         parts:     splitState.flow.parts.map(p => ({
           ...p,
           lines: Array.isArray(p.lines) ? p.lines.map(l => ({ ...l })) : [],
@@ -17201,16 +17203,21 @@
       const saved = isVrap ? vrapSplit : liveTableSplit(tableId);
       if (!saved) return false;
       const t = isVrap ? null : tables[tableId];
-      const lines = isVrap
+      const currentLines = isVrap
         ? cart.map(c => ({ name: lineLabel(c), qty: c.qty, total: c.price * c.qty }))
         : generateOrder(tableId, t);
+      /* The original bill, not the remaining amount or a freshly rendered
+         table, belongs on every split receipt. Keep it across backgrounding
+         and reloads so a later void can restore the exact bill lines. */
+      const sourceLines = Array.isArray(saved.sourceLines) && saved.sourceLines.length
+        ? saved.sourceLines : currentLines;
       Object.assign(splitState, {
         tableId: isVrap ? null : tableId,
         isVrap,
         sourceLabel: isVrap ? (vrapEditingNum != null ? ('À emporter #' + vrapEditingNum) : 'À emporter')
           : (saved.sourceLabel || tableId),
         total:     saved.total,
-        lines,
+        sourceLines: sourceLines.map(line => ({ ...line })),
         splitMode: saved.mode,
         numParts:  saved.parts.length,
         tipMode:   '0', customTipPct: 0,

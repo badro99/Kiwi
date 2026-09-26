@@ -510,6 +510,7 @@ for (const test of [
   'restaurant-reopen-test.mjs',
   'restaurant-reopen-ui-test.mjs',
   'restaurant-reopen-browser-test.mjs',
+  'restaurant-reopen-resume-test.mjs',
   'table-split-lifecycle-test.mjs',
   'refund-split-identity-test.mjs',
   'restaurant-visit-close-reload-test.mjs',
