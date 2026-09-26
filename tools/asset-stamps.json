@@ -152,8 +152,8 @@
     "sha": "66f56a67823580af"
   },
   "assets/cash-sessions.js": {
-    "v": "6",
-    "sha": "cf00c588586e3ed4"
+    "v": "7",
+    "sha": "a6823985ab39ae6d"
   },
   "assets/catalog-import.js": {
     "v": "5",
@@ -432,8 +432,8 @@
     "sha": "c9d6036ca657c76e"
   },
   "assets/live-link.js": {
-    "v": "49",
-    "sha": "e261f5009c8f42c4"
+    "v": "50",
+    "sha": "06db6385fb520beb"
   },
   "assets/live-socket.js": {
     "v": "4",

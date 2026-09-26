@@ -14,6 +14,10 @@
   var repairRequired = false;
   var lastStatus = 0;
   var lastError = '';
+  /* A refused event used to be resent every 1.5 s for as long as the till
+     stayed open. Back off (1.5 s doubling to 5 min) and reset on success. */
+  var RETRY_MIN_MS = 1500, RETRY_MAX_MS = 300000, retryMs = RETRY_MIN_MS;
+  var notOpenAttempts = {};
 
   function real() { try { return !!window.KiwiEnv.isReal(); } catch (_) { return false; } }
   function paired() {
@@ -187,6 +191,8 @@
       if (response.ok) {
         lastError = '';
         repairRequired = false;
+        retryMs = RETRY_MIN_MS;
+        delete notOpenAttempts[acknowledgedId];
         return outboxLock(function () {
         var current = readOutbox().filter(function (event) { return event && event.id !== acknowledgedId; });
         writeOutbox(current);
@@ -201,6 +207,29 @@
           }));
         }
       });
+      /* 409 session-not-open: the server never saw this session open. If the
+         open event is not waiting in this outbox either, nothing on this till
+         can ever make the event valid, and as the head of the queue it holds
+         back every later event. After three tries, park it in the durable
+         rejected queue (kept for support) and let the rest through. */
+      if (response.status === 409) return (typeof response.json === 'function' ? response.json() : Promise.resolve({}))
+        .catch(function () { return {}; }).then(function (body) {
+          lastError = String(body && body.error || 'HTTP 409');
+          if (lastError !== 'session-not-open') return;
+          var row = activeRows[0];
+          notOpenAttempts[acknowledgedId] = (notOpenAttempts[acknowledgedId] || 0) + 1;
+          var openQueued = activeOutboxRows().some(function (event) {
+            return event && event.eventType === 'open' && event.sessionId === row.sessionId && event.id !== row.id;
+          });
+          if (openQueued || notOpenAttempts[acknowledgedId] < 3) return;
+          return outboxLock(function () {
+            if (!recordRejected(row, 409, 'session-not-open')) return false;
+            delete notOpenAttempts[acknowledgedId];
+            retryMs = RETRY_MIN_MS;
+            var current = readOutbox().filter(function (event) { return event && event.id !== acknowledgedId; });
+            return writeOutbox(current);
+          });
+        });
       if (response.status === 422) return outboxLock(function () {
         if (!recordRejected(activeRows[0], 422, 'schema-rejection')) return false;
         var current = readOutbox().filter(function (event) { return event && event.id !== acknowledgedId; });
@@ -209,7 +238,11 @@
       lastError = 'HTTP ' + response.status;
     }).catch(function () { lastError = 'network'; }).finally(function () {
       flushing = false;
-      if (!repairRequired && activeOutboxRows().length) setTimeout(flush, 1500);
+      if (!repairRequired && activeOutboxRows().length) {
+        var wait = lastStatus >= 200 && lastStatus < 300 ? RETRY_MIN_MS : retryMs;
+        if (!(lastStatus >= 200 && lastStatus < 300)) retryMs = Math.min(RETRY_MAX_MS, retryMs * 2);
+        setTimeout(flush, wait);
+      }
     });
   }
   function drainPending() {

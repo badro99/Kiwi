@@ -404,6 +404,14 @@
     if (recoveryTimer != null) return;
     recoveryTimer = setTimeout(function () { recoveryTimer = null; flushQueue(); }, 3000);
   }
+  /* A refund carries a manager approval signed for ten minutes. Once a queued
+     refund outlives it, /api/sale/refund answers 403 manager-required forever:
+     no pairing repair can make that exact command valid again. Quarantine it
+     (visible, never deleted) instead of retrying it every few seconds and
+     pausing every real sale behind a 60-second auth back-off. */
+  function refundApprovalRefused(body, status, error) {
+    return !!(body && body.kind === 'refund' && status === 403 && error === 'manager-required');
+  }
   function paymentCompletion(response) {
     if (!response) return Promise.resolve({ complete: false, pending: false, error: 'server-unreachable' });
     if (typeof response.json !== 'function') {
@@ -522,7 +530,7 @@
         flushing = false;
         lastSyncStatus = status || 0;
         lastSyncError = settled ? '' : (error || (pending ? 'settlement-pending' : (status ? 'HTTP ' + status : 'server-unreachable')));
-        if (status === 401 || status === 403) { authRetryAt = Date.now() + 60000; authRetryMerchant = body.merchant; }
+        if ((status === 401 || status === 403) && !refundApprovalRefused(body, status, error)) { authRetryAt = Date.now() + 60000; authRetryMerchant = body.merchant; }
         else if (settled) authRetryAt = 0;
         var current = qRead();
         current.forEach(function (x) { if (x && x.id === body.id) x._lastAttemptAt = attemptedAt; });
@@ -581,7 +589,8 @@
           return paymentCompletion(r).then(function (result) {
             if (timeoutId) clearTimeout(timeoutId);
             done(result.complete, !!(r && (BLOCK[r.status] || r.status === 409
-              && (body.kind === 'refund' || result.error === 'sale-conflict'))), r && r.status, result.pending, result.error, result.id);
+              && (body.kind === 'refund' || result.error === 'sale-conflict')
+              || refundApprovalRefused(body, r.status, result.error))), r && r.status, result.pending, result.error, result.id);
           });
         }).catch(function (err) {
           if (timeoutId) clearTimeout(timeoutId);
@@ -613,7 +622,7 @@
       function settle(ok, permanent, status, error, serverId) {
         lastSyncStatus = status || 0;
         lastSyncError = ok ? '' : (error || (status ? 'HTTP ' + status : 'network'));
-        if (status === 401 || status === 403) { authRetryAt = Date.now() + 60000; authRetryMerchant = body.merchant; }
+        if ((status === 401 || status === 403) && !refundApprovalRefused(body, status, error)) { authRetryAt = Date.now() + 60000; authRetryMerchant = body.merchant; }
         else if (ok) authRetryAt = 0;
         var action = ok
           ? O.acknowledge(row.id, row.leaseToken)
@@ -640,7 +649,8 @@
         return paymentCompletion(response).then(function (result) {
           if (timeoutId) clearTimeout(timeoutId);
           return settle(result.complete, !!(BLOCK[response.status] || response.status === 409
-            && (body.kind === 'refund' || result.error === 'sale-conflict')), response.status,
+            && (body.kind === 'refund' || result.error === 'sale-conflict')
+            || refundApprovalRefused(body, response.status, result.error)), response.status,
             result.pending ? 'settlement-pending' : (result.error || (response.ok ? 'unverified-response' : 'HTTP ' + response.status)), result.id);
         });
       }).catch(function (err) {

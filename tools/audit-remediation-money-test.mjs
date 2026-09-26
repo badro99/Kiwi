@@ -27,6 +27,7 @@ const cashSource = fs.readFileSync(path.join(ROOT, 'assets/cash-sessions.js'), '
 function cashFixture() {
   const storage = new Map();
   const pending = [];
+  const timers = [];
   const window = {
     KiwiEnv: { isReal: () => true },
     KiwiCloudDoc: { currentSlug: () => 'audit-money' },
@@ -42,14 +43,14 @@ function cashFixture() {
     },
     document: { readyState: 'loading', addEventListener() {} },
     crypto, Date, Math, JSON, CustomEvent,
-    setTimeout() {},
+    setTimeout(_fn, ms) { timers.push(ms); },
     setInterval() {},
     fetch(_url, options) {
       return new Promise((resolve) => pending.push({ resolve, event: JSON.parse(options.body) }));
     },
   };
   vm.runInNewContext(cashSource, context, { filename: 'assets/cash-sessions.js' });
-  return { api: window.KiwiCashSessions, pending };
+  return { api: window.KiwiCashSessions, pending, timers };
 }
 
 for (const status of [403, 409]) {
@@ -63,6 +64,27 @@ for (const status of [403, 409]) {
   f.pending[1]?.resolve({ ok: true, status: 201 });
   await new Promise((resolve) => setImmediate(resolve));
   audit(`cash event retries with the same ID after HTTP ${status}`, f.pending.at(-1)?.event.id === `cash-${status}`);
+}
+
+{
+  const f = cashFixture();
+  const notOpen = () => ({ ok: false, status: 409, json: () => Promise.resolve({ error: 'session-not-open' }) });
+  f.api.emit({ id: 'cash-orphan', sessionId: 'shift-lost', eventType: 'movement', occurredAt: 5 });
+  f.api.emit({ id: 'cash-next', sessionId: 'shift-2', eventType: 'open', occurredAt: 6 });
+  for (let i = 0; i < 3; i += 1) {
+    f.pending.at(-1).resolve(notOpen());
+    await new Promise((resolve) => setImmediate(resolve));
+    await new Promise((resolve) => setImmediate(resolve));
+    if (i < 2) f.api._test.flush();
+  }
+  audit('a refused cash event backs off instead of retrying every 1.5 s',
+    f.timers.filter((ms) => ms >= 1500).slice(0, 2).join() === '1500,3000');
+  audit('an event for a session the server never saw open is parked after three tries',
+    f.api._test.readRejected().some((event) => event.id === 'cash-orphan' && event.rejectedStatus === 409
+      && event.rejectionReason === 'session-not-open')
+    && f.api._test.readOutbox().map((event) => event.id).join() === 'cash-next');
+  f.api._test.flush();
+  audit('the parked event no longer blocks the next cash event', f.pending.at(-1).event.id === 'cash-next');
 }
 
 {

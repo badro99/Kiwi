@@ -13,6 +13,10 @@
   window.__posts = [];
   window.__failedPosts = 0;
   window.fetch = function (url, opts) {
+    if (url === '/api/sale/refund') {
+      window.__refundPosts = (window.__refundPosts || 0) + 1;
+      return Promise.resolve(new Response(JSON.stringify({error:'manager-required'}),{status:403}));
+    }
     if (url === '/api/sale') {
       window.__posts.push(JSON.parse(opts.body));
       if (window.__fetchMode === 'ok' || window.__fetchMode === 'pending') return Promise.resolve(new Response(JSON.stringify({
@@ -123,6 +127,21 @@
       await waitFor(async function(){return (await KiwiOffline.stats('sale',window.__testTenant)).total === 1;},10000);
       assert(window.__posts.at(-1).id === relaxedResult.id, 'immutable payment ID preserved');
       line('changed rule retries once per comparison without erasing the blocked 422');
+
+      // A queued refund whose ten-minute manager approval lapsed is refused
+      // 403 manager-required forever. It must be quarantined after ONE try,
+      // and must not pause the next sale behind the 60 s auth back-off.
+      var refundId = ref + '-refund-expired';
+      await KiwiOffline.enqueue('sale',window.__testTenant,{id:refundId,kind:'refund',merchant:window.__testTenant,amountCents:500,originalSaleId:relaxedResult.id,approval:'expired',ts:Date.now()},{id:refundId});
+      await KiwiLive.flush(true);
+      await waitFor(async function(){return (await KiwiOffline.stats('sale',window.__testTenant)).blocked === 2;},10000);
+      await KiwiLive.flush(true); await KiwiLive.flush(false);
+      assert(window.__refundPosts === 1, 'expired refund sent once, not in a loop (' + window.__refundPosts + ')');
+      var afterRefund = window.__posts.length;
+      window.__fetchMode = 'ok';
+      KiwiLive.postSale({ id: ref + '-after-refund', amount: 21, method: 'cash', ref: ref + '-after-refund' });
+      await waitFor(function(){return window.__posts.length > afterRefund;},5000);
+      line('an expired refund approval is quarantined after one try and does not stall the next sale');
 
       output.dataset.status = 'passed';
       output.textContent += '\n\nPASSED';
