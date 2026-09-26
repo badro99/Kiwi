@@ -582,6 +582,28 @@ export async function onRequestGet(context) {
   }
 }
 
+/* Documents d'un autre établissement, identifiés à l'octet près. Le
+ * 26/09/2026, deux onglets God Mode partageant une clé locale ont déposé chez
+ * Pasta Corner les coûts, recettes et réservations d'Amira Café (clients
+ * compris). Supprimés du serveur, ils revenaient à la synchronisation suivante
+ * d'un appareil de Pasta Corner qui en gardait la copie. Refuser ces
+ * empreintes précises, et elles seules, fait converger l'appareil : il reçoit
+ * foreign-document et abandonne sa copie (assets/cloud-doc.js). */
+const QUARANTINE = {
+  'pasta-corner': {
+    costs: ['026a88027646ab906ce0960fd969dc1b529a856a05c0c99c108409fd30f6736a'],
+    recipes: ['ee5325713f3ca61291f472fda1f0cf0f93f449ea9f4f00c6f3436a574434d870'],
+    reservations: ['984743cb5a51f1495e64e8b83fe79b8d8f7276357dc9a59f0c30fec6adb5d9f3'],
+  },
+};
+export async function quarantined(merchant, feature, text) {
+  const list = QUARANTINE[merchant] && QUARANTINE[merchant][feature];
+  if (!list || !list.length) return false;
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  const hex = [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+  return list.includes(hex);
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
@@ -730,6 +752,10 @@ export async function onRequestPost(context) {
        qui retarde s'attribuerait sinon un bail déjà mort, ou éternel. */
     clean.value = claim.value;
     text = JSON.stringify(clean.value);
+  }
+
+  if (await quarantined(merchant, feature, text)) {
+    return json({ error: 'foreign-document', feature, rev: serverRev, data: mine }, 409);
   }
 
   // Un premier envoi VIDE ne doit pas effacer un document déjà en ligne : c'est

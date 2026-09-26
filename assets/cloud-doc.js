@@ -697,6 +697,17 @@
           // 409 : le serveur a bougé (ou a refusé un envoi vide). Il rend sa
           // copie -- on fusionne et on repropose, quelques fois au plus pour ne
           // jamais tourner en rond si l'autre appareil écrit en continu.
+          /* Ce document appartient à un autre établissement (quarantaine
+             serveur) : ne pas fusionner, ne pas retenter. On abandonne la copie
+             locale au profit de celle du serveur, ou d'aucune. */
+          if (res.status === 409 && res.j && res.j.error === 'foreign-document') {
+            opts.write(res.j.data != null ? res.j.data : null);
+            st.rev = +res.j.rev || 0;
+            writeRev(slug, st.rev);
+            clearDirty(slug, sentDirty || dirtyToken(slug));
+            clearRefused(slug);
+            return { ok: false, status: 409, error: 'foreign-document', rev: st.rev };
+          }
           if (res.status === 409) {
             if (!explicit && (!o || !o.noAutoMerge) && (!res.j || res.j.error !== 'room-conflict') && res.j && res.j.data && st.tries < 3) {
               st.tries++;

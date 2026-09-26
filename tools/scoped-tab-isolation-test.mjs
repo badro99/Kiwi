@@ -84,5 +84,14 @@ ok(as(pasta, () => pasta.win.KiwiStore.define('floorplan', {}).key('v-santos')) 
 ok(/const shown = \(KV && KV\.getCurrentVenueData && KV\.getCurrentVenueData\(\)\) \|\| \{\};\s*if \(vid && shown\.id && vid !== shown\.id\) return;/.test(menuSrc), 'menu publish refuses a venue other than the one on screen');
 ok(/if \(!slug \|\| !venueId \|\| venueId === 'scoped'\) return null;/.test(cloudSrc), 'God Mode never adopts orphaned local records');
 
+// The leaked Amira documents stay out of Pasta Corner even if a device re-sends them.
+const { quarantined } = await import(path.join(ROOT, 'functions/api/store.js'));
+const leaked = JSON.stringify({ bookings: [{ id: 'b1', name: 'fixture' }] });
+ok(await quarantined('pasta-corner', 'reservations', leaked) === false, 'an ordinary Pasta Corner reservations document is accepted');
+ok(await quarantined('amira-cafe', 'reservations', leaked) === false, 'quarantine is scoped to the affected merchant');
+const storeSrc2 = fs.readFileSync(path.join(ROOT, 'functions/api/store.js'), 'utf8');
+ok(/if \(await quarantined\(merchant, feature, text\)\) \{\s*return json\(\{ error: 'foreign-document'/.test(storeSrc2), 'the store route refuses a quarantined document before writing');
+ok(/res\.j\.error === 'foreign-document'\) \{\s*opts\.write\(res\.j\.data != null \? res\.j\.data : null\);[\s\S]{0,200}clearDirty/.test(cloudSrc), 'a refused device drops its copy instead of retrying');
+
 if (failures.length) { console.log(`\n✗ ${failures.length} failure(s)`); process.exit(1); }
 console.log(`\n✓ ${passed} controls green`);
