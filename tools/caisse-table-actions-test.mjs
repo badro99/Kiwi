@@ -140,7 +140,7 @@ const ticket = { opId: 'ord-table-13', num: 154, type: 'dineIn', table: 'T13', s
 let requested = null;
 const screen = vm.createContext({
   Promise, String, Number, Map,
-  kdsOrders: [ticket], opTickets: new Map([[ticket.opId, ticket]]),
+  kdsOrders: [ticket], opTickets: new Map([[ticket.opId, ticket]]), tableSplits: new Map(),
   tableOrders: { T13: [{ uid: 'item-13', sent: true }] }, orders: { T13: [] },
   tables: { T13: { status: 'ka-yaklo', covers: 2, timerSession: 'ses-table-13' } },
   selectedId: 'T13', mode: 'salle', vrapEditingNum: null,

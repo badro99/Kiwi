@@ -45,7 +45,8 @@ ok("menuCard handles order mode without falling back to addToCart on missing sel
 
 // 5. confirmNewTable stamps floor versions
 const confirmNewTableIdx = CAISSE.indexOf("function confirmNewTable()");
-const confirmNewTableFn = confirmNewTableIdx !== -1 ? CAISSE.slice(confirmNewTableIdx, confirmNewTableIdx + 800) : "";
+const confirmNewTableFn = confirmNewTableIdx !== -1 ? CAISSE.slice(confirmNewTableIdx,
+  CAISSE.indexOf("document.getElementById('new-table-modal')", confirmNewTableIdx)) : "";
 ok("confirmNewTable stamps local and remote floor version",
   /serviceFloorLocalVersion\[newTableId\] = Date\.now\(\);/.test(confirmNewTableFn) &&
   /serviceFloorRemoteVersion\[newTableId\] = Math\.max\(/.test(confirmNewTableFn));

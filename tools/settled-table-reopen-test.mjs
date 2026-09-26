@@ -173,7 +173,7 @@ ok('a normal tender cannot close a table when the ledger refused its sale',
   assert.ok(functionStart >= 0 && functionEnd > functionStart && paidStart >= 0 && paidEnd > paidStart);
   const events = [];
   const receipt = { id: 'visit-ses-13-154-emp', table: '13', session: 'ses-13-154', amount: 60 };
-  const payCtx = vm.createContext({ tables, tableOrders: { 13: [{ id: 'salad', qty: 1 }] }, orders: {},
+  const payCtx = vm.createContext({ tables, tableOrders: { 13: [{ id: 'salad', qty: 1 }] }, orders: {}, tableSplits: new Map(),
     journal: [receipt], kdsOrders: [order], phoneSeats: new Map(), phonePending: new Map(),
     tableClosedAt: Object.create(null), tableKey: String,
     document: { dispatchEvent: event => events.push(event.detail) },

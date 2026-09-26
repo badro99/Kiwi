@@ -5557,7 +5557,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=554" defer></script>
+  <script src="assets/caisse-pwa.js?v=556" defer></script>
   <script src="assets/live-link.js?v=49" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -8728,7 +8728,7 @@
       // Remise · recompute the discount amount against the current gross
       const discAmt = discountAmountFor(id, total);
       const net = Math.max(0, total - discAmt);
-      const savedSplit = tableSplits.get(id);
+      const savedSplit = liveTableSplit(id);
       const splitRemaining = savedSplit ? splitRemainingTotal(savedSplit) : null;
 
       let itemsHTML = lines.map(l => `
@@ -8953,6 +8953,10 @@
       }
       t.status = 'khlass';
       delete t.discount; // clear remise immédiatement à l'encaissement
+      /* The final tender ends this bill's split. A stale completed flow must
+         never make the next party's fresh order look already paid. The paid
+         receipt keeps its own immutable snapshot for an audited reopen. */
+      tableSplits.delete(id);
       delete t.reopenedBill;
       delete t.reopenRef;
       delete t.reopenSessionId;
@@ -11363,6 +11367,9 @@
       t.status  = 'ka-yaklo';
       resetTableTimer(t);
       delete t.discount; // Toute nouvelle table démarre sans remise
+      /* A former party's split can survive an older till snapshot. Starting a
+         genuinely new table invalidates it even if the old close was missed. */
+      tableSplits.delete(newTableId);
       delete tableClosedAt[tableKey(newTableId)]; // Nouvelle table légitime · lever le filtre de fermeture
       tableOrders[newTableId] = [];
       serviceFloorLocalVersion[newTableId] = Date.now();
@@ -12580,6 +12587,7 @@
       if (kdsEl.classList.contains('is-open')) kdsPaint();
       delete tableOrders[id];
       delete orders[id];
+      tableSplits.delete(id);
       const t = tables[id];
       if (t) {
         t.status = 'khawya'; t.covers = 0; resetTableTimer(t);
@@ -12600,6 +12608,7 @@
       if (!id || tableSentCount(id) > 0) return false;
       if (!who) { requireTillOperator(`Annuler la table ${id}`, actor => cancelOpenTable(id, actor)); return false; }
       delete tableOrders[id];
+      tableSplits.delete(id);
       const t = tables[id];
       if (t) {
         t.status = 'khawya';
@@ -17137,6 +17146,24 @@
       return saved.parts.filter((part) => part && part.paid === true).length;
     }
 
+    function liveTableSplit(id) {
+      const saved = tableSplits.get(id);
+      if (!saved) return null;
+      const visit = String(phoneSessionOf(id) || tables[id]?.timerSession || '');
+      /* A legacy till may have persisted a completed split before markPaid()
+         could clear it. A new waiter/phone visit can also reuse this table
+         without passing through the cashier's new-table modal. Neither may
+         inherit the previous party's paid parts. */
+      if (!Array.isArray(saved.parts) || !saved.parts.length
+        || splitPaidCount(saved) === saved.parts.length
+        || (saved.session && visit && String(saved.session) !== visit)) {
+        tableSplits.delete(id);
+        try { persistShift(); } catch (_) {}
+        return null;
+      }
+      return saved;
+    }
+
     function splitRemainingTotal(saved) {
       if (!saved || !Array.isArray(saved.parts)) return 0;
       return money(saved.parts.reduce((sum, part) => sum + (part && !part.paid ? Number(part.amount) || 0 : 0), 0));
@@ -17171,7 +17198,7 @@
 
     function loadSplitFlow(tableId) {
       const isVrap = mode === 'vrap';
-      const saved = isVrap ? vrapSplit : tableSplits.get(tableId);
+      const saved = isVrap ? vrapSplit : liveTableSplit(tableId);
       if (!saved) return false;
       const t = isVrap ? null : tables[tableId];
       const lines = isVrap
@@ -17205,7 +17232,7 @@
     function renderRpSplitCard(id) {
       const card = $('#rp-split-card');
       if (!card) return;
-      const saved = tableSplits.get(id);
+      const saved = liveTableSplit(id);
       if (!saved) { card.hidden = true; return; }
       const paidCount = splitPaidCount(saved);
       const remaining = splitRemainingTotal(saved);

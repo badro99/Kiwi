@@ -439,7 +439,8 @@ await check('#3: reconnect importing newest ticket first still uses the earliest
 });
 await check('#3: actual markPaid clears the anchor before a reused table receives an order', () => {
   const t = till('paid', 'visit');
-  Object.assign(t.context, { releasePhoneTable() {}, shift: { tablesPaid: 0 }, renderShiftStats() {}, setTimeout() {} });
+  Object.assign(t.context, { releasePhoneTable() {}, shift: { tablesPaid: 0 }, renderShiftStats() {},
+    tableSplits: new Map(), setTimeout() {} });
   vm.runInContext(slice(caisseSource, '    function markPaid(id)', '    /* ===========================================================\n       Vente rapida'), t.context);
   const o = { id: 'paid-order', session: 'visit', mode: 'table', table: 'paid', status: 'pending', created_ts: now,
     lines: [{ id: 'dish', qty: 1, unitPrice: 50 }] };
