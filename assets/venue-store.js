@@ -41,7 +41,22 @@
 
   const PREFIX = 'kiwi:';
   const VER = 'v1';
-  const keyFor = (feature, venueId) => PREFIX + feature + ':' + VER + ':' + venueId;
+  /* God Mode shows every client under the same transient id, 'scoped'. One
+   * key per feature for all of them meant two operator tabs on two different
+   * clients shared a single local record: on 2026-09-26 an edit in Amira
+   * Café's tab landed in that record, Pasta Corner's tab published it as its
+   * own, and Pasta Corner's menu, costs, recipes and reservations were
+   * replaced by Amira's. The scoped record is therefore filed under the
+   * client's server slug. An unknown slug gets its own inert bucket. */
+  function scopedSlug() {
+    try {
+      const KV = window.KiwiVenue;
+      const d = KV && KV.getVenueData && KV.getVenueData('scoped');
+      return d && d.id === 'scoped' && d.slug ? String(d.slug).trim() : '';
+    } catch (e) { return ''; }
+  }
+  const storageId = (venueId) => venueId === 'scoped' ? 'scoped@' + (scopedSlug() || '-') : venueId;
+  const keyFor = (feature, venueId) => PREFIX + feature + ':' + VER + ':' + storageId(venueId);
   const KEY_RE = /^kiwi:([^:]+):v1:(.+)$/;
 
   const subs = Object.create(null); // feature -> Set<fn(venueId)>
@@ -68,7 +83,14 @@
   window.addEventListener('storage', (e) => {
     if (!e.key || e.key.indexOf(PREFIX) !== 0) return;
     const m = e.key.match(KEY_RE);
-    if (m) notify(m[1], m[2]);
+    if (!m) return;
+    /* Another tab's God Mode client is not this tab's store: never hand its
+     * change to our subscribers, who would publish it under our slug. */
+    if (m[2] === 'scoped' || m[2].indexOf('scoped@') === 0) {
+      if (m[2] !== storageId('scoped') || m[2] === 'scoped@-') return;
+      return notify(m[1], 'scoped');
+    }
+    notify(m[1], m[2]);
   });
 
   /* La caisse ne charge pas venues.js — délibérément : le moteur de venues pèse

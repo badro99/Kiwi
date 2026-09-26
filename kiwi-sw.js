@@ -71,7 +71,7 @@ var SHELL = [
   '/assets/agent-skin.css?v=15',
   '/assets/agent-skin.js?v=4',
   '/assets/dashboard-native.css',
-  '/assets/cloud-doc.js?v=7',
+  '/assets/cloud-doc.js?v=8',
   '/assets/agent-action-center.js?v=2',
   '/assets/cancellation-history.js?v=2',
   '/assets/briefing.js?v=17',
@@ -220,7 +220,7 @@ var SHELL = [
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
   '/assets/caisse-lang.js?v=2',
-  '/assets/venue-store.js?v=3',
+  '/assets/venue-store.js?v=4',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
   '/assets/inventory-ledger.js?v=12',
@@ -236,7 +236,7 @@ var SHELL = [
   '/assets/clients-store.js?v=7',
   '/assets/clients-book.js?v=13',
   '/assets/clients-directory.js?v=4',
-  '/assets/menu-catalog.js?v=23',
+  '/assets/menu-catalog.js?v=24',
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',
   '/assets/restaurant-units.js?v=1',

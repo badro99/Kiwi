@@ -2359,6 +2359,12 @@
     const vd = (KV && KV.getVenueData && KV.getVenueData(vid)) ||
                (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
     const targetVid = vid || vd.id;
+    /* The cloud state below (slug, expected revision) belongs to the store on
+     * screen. A change notified for any other venue — another tab, another
+     * store of the account — is that venue's own tab's to publish; publishing
+     * it here would file its carte under this store's slug. */
+    const shown = (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
+    if (vid && shown.id && vid !== shown.id) return;
     if (isBoutiqueVenue(vd)) return;              // stock is published by orderpro-publish.js
     // RÈGLE 1 — rien ne part tant qu'on n'a pas lu. Sans ce verrou, un navigateur
     // neuf publiait sa carte vide par-dessus la vraie, quinze cents millisecondes

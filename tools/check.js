@@ -1060,6 +1060,7 @@ section('Whole-project regressions');
     'caisse-product-art-test.mjs',
     'check-godmode.mjs',
     'operator-workspace-test.mjs',
+    'scoped-tab-isolation-test.mjs',
     'admin-crm-layout-test.mjs',
     'maison-client-history-test.mjs',
     'client-history-browser-test.mjs',

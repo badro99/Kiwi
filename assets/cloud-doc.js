@@ -331,7 +331,8 @@
    * un sauvetage silencieusement inopérant, pire que pas de sauvetage.
    * Une chaîne vaut pour `{ prefix }`. */
   function carryForward(feature, venueId, slug, hasData, shape) {
-    if (!slug || !venueId) return null;
+    /* God Mode's view reads the server copy; it never adopts local orphans. */
+    if (!slug || !venueId || venueId === 'scoped') return null;
     if (typeof shape === 'string') shape = { prefix: shape };
     shape = shape || {};
     var pre = shape.prefix || (STORE_PREFIX + feature + ':v1:');
