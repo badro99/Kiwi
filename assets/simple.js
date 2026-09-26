@@ -118,7 +118,7 @@
         <div class="eyebrow">${zReference?.source === 'closed-z' ? 'RAPPORT Z DE LA CAISSE' : "ENREGISTRÉ AUJOURD’HUI"}</div>
         <div class="amount">${heroAmt}<span class="unit">MAD</span></div>
         <div class="count">${heroCount} paiements enregistrés</div>
-        ${zReference ? `<p>${window.KiwiZReconciliation.referenceText(zReference)}</p>` : ''}
+        ${zReference && window.KiwiZReconciliation.referenceText(zReference) ? `<p>${window.KiwiZReconciliation.referenceText(zReference)}</p>` : ''}
       </div>
 
       <div class="lyoum-payout">

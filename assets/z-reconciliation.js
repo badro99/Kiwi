@@ -146,8 +146,16 @@
       ? dayReference : null;
   }
   function amount(cents) { return (Number(cents)/100).toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' MAD'; }
+  // The merchant only hears about the Z when something needs a look: money
+  // the till counted that the server doesn't have, or a blocked receipt.
+  // A day that matches (or can't be compared yet) stays quiet.
+  function needsAttention(s) {
+    if (!s) return false;
+    if (Array.isArray(s.blocked) && s.blocked.length) return true;
+    return s.source === 'closed-z' && (Number(s.gapCents) !== 0 || Number(s.missingCount) > 0);
+  }
   function referenceText(s) {
-    if (!s) return '';
+    if (!needsAttention(s)) return '';
     var text = s.source === 'closed-z'
       ? 'Rapport Z de la caisse : ' + amount(s.reportedCents) + ' · enregistré : ' + amount(s.recordedCents)
         + ' · écart : ' + amount(s.gapCents) + ' · ' + s.missingCount + ' reçu(s) manquant(s)'
@@ -160,13 +168,59 @@
     if (s.ambiguous) text += ' · Plusieurs anciens Z sans détail : total Z non vérifiable.';
     return text;
   }
+  // A Z problem is a notification, not a banner: a badge on the bell, the
+  // detail in the notifications drawer, and one toast the first time a given
+  // problem shows up in this tab.
+  var toasted = '';
+  function currentAlert() {
+    var s = reference();
+    return needsAttention(s) ? { text: referenceText(s), blocked: s.blocked || [] } : null;
+  }
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function notificationHtml() {
+    var a = currentAlert();
+    if (!a) return '';
+    var rows = a.blocked.map(function (b) {
+      return '<div class="n-desc">' + esc(b.id + ' · ' + amount(b.amountCents) + ' · ' + b.method
+        + ' · ' + new Date(b.ts).toLocaleString() + ' · ' + b.reason) + '</div>';
+    }).join('');
+    return '<div class="notif unread" id="kiwi-z-reconciliation-alert" role="status">'
+      + '<div class="n-ico" style="background:color-mix(in srgb, var(--warn-ink) 16%, var(--surface));color:var(--warn-ink);">'
+      + '<svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="m40-120 440-760 440 760H40Zm138-80h604L480-720 178-200Zm330.5-51.5Q520-263 520-280t-11.5-28.5Q497-320 480-320t-28.5 11.5Q440-297 440-280t11.5 28.5Q463-240 480-240t28.5-11.5ZM440-360h80v-200h-80v200Zm40-100Z"/></svg></div>'
+      + '<div class="n-body"><div class="n-title">Écart avec le rapport Z de la caisse</div>'
+      + '<div class="n-desc">' + esc(a.text) + '</div>'
+      + (a.blocked.length ? '<div class="n-desc">' + a.blocked.length + ' reçu(s) payé(s) non enregistré(s) · contacter le support</div>' + rows : '')
+      + '</div></div>';
+  }
+  function updateBell() {
+    var bell = document.querySelector('button[aria-label="Notifications"]');
+    var a = currentAlert();
+    var badge = bell && bell.querySelector('[data-z-badge]');
+    if (bell && a && !badge) {
+      badge = document.createElement('span');
+      badge.className = 'badge'; badge.setAttribute('data-z-badge', '');
+      badge.textContent = '1';
+      bell.appendChild(badge);
+    }
+    if (badge && !a) badge.remove();
+    if (!a) return;
+    var key = merchant() + '|' + a.text + '|' + a.blocked.length;
+    if (key !== toasted && window.Kiwi && Kiwi.toast) {
+      toasted = key;
+      Kiwi.toast('Écart avec le rapport Z', { type: 'warn', desc: 'Le détail est dans les notifications.',
+        action: { label: 'Voir', onClick: function () { if (Kiwi.handlers && Kiwi.handlers.notifications) Kiwi.handlers.notifications(); } } });
+    }
+  }
   function showDashboard() {
     if (!document.getElementById('kw-main')) return;
     var day = selectedDay(), slug = merchant(), sequence = ++requestSequence;
-    var old = document.getElementById('kiwi-z-reconciliation-alert');
     if (!dashboardUnlocked || (window.__kiwiRole && window.__kiwiRole !== 'owner') || !day || !slug) {
       dayReference = null;
-      if (old) old.remove();
+      updateBell();
       return;
     }
     return fetch('/api/z-reconciliation?merchant=' + encodeURIComponent(slug) + '&day=' + encodeURIComponent(day),
@@ -177,44 +231,19 @@
           || !dashboardUnlocked || (window.__kiwiRole && window.__kiwiRole !== 'owner')) return;
         dayReference = data.daySummary; referenceMerchant = slug;
         window.dispatchEvent(new CustomEvent('kiwi:z-reference'));
-        var alert = document.getElementById('kiwi-z-reconciliation-alert') || document.createElement('section');
-        alert.id = 'kiwi-z-reconciliation-alert'; alert.setAttribute('role','status');
-        alert.style.cssText = 'margin:16px 0;padding:14px;border:1px solid #a56a16;border-radius:12px;background:#fff8e8;color:#4c3820;font:500 14px/1.5 system-ui;overflow-wrap:anywhere';
-        alert.textContent = referenceText(dayReference);
-        var blocked = dayReference && dayReference.blocked || [];
-        if (blocked.length) {
-          var title = document.createElement('p');
-          title.textContent = blocked.length + ' reçu(s) payé(s) non enregistré(s) · contacter le support';
-          alert.appendChild(title);
-          var details = document.createElement('details'), heading = document.createElement('summary');
-          heading.textContent = 'Voir les reçus à examiner'; details.appendChild(heading);
-          blocked.forEach(function (b) {
-            var row = document.createElement('p');
-            row.textContent = b.id + ' · ' + amount(b.amountCents) + ' · ' + b.method
-              + ' · ' + new Date(b.ts).toLocaleString() + ' · ' + b.reason;
-            details.appendChild(row);
-          }); alert.appendChild(details);
-        }
-        // The first hero amount can live in a hidden layout layer. A Z alert
-        // attached there exists in the DOM but is invisible to the merchant.
-        // Keep it directly under the visible main container on every refresh.
-        var main = document.getElementById('kw-main');
-        if (alert.parentNode !== main) main.prepend(alert);
+        updateBell();
       }).catch(function () {
         if (sequence !== requestSequence) return;
         dayReference = null;
         window.dispatchEvent(new CustomEvent('kiwi:z-reference'));
-        var alert = document.getElementById('kiwi-z-reconciliation-alert') || document.createElement('p');
-        alert.id = 'kiwi-z-reconciliation-alert'; alert.setAttribute('role','status');
-        alert.textContent = 'Comparaison Z indisponible · chiffres issus des ventes enregistrées, non vérifiés avec la caisse.';
-        var main = document.getElementById('kw-main');
-        if (alert.parentNode !== main) main.prepend(alert);
+        updateBell();
       });
   }
   window.KiwiZReconciliation = {
     queueClose: function (report, journal) { return queueSnapshot(report, journal, true); },
     queueSnapshot: function (report, journal) { return queueSnapshot(report, journal, false); },
     flush: flush, showDashboard: showDashboard, reference: reference, referenceText: referenceText,
+    notificationHtml: notificationHtml,
   };
   var dashboardUnlocked = false;
   function start() {

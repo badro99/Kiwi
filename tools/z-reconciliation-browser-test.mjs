@@ -41,8 +41,9 @@ const server=http.createServer((req,res)=>{
   res.setHeader('Content-Type','text/html; charset=utf-8');
   res.end(`<html><body style="margin:16px;font-family:system-ui"><main id="kw-main"><h1>Amira · synthetic merchant</h1>
   <div><div data-hero-label></div><div data-hero-amount>0,00 MAD</div></div></main>
+  <button aria-label="Notifications"></button><div id="drawer"></div>
   <script>
-  window.Kiwi={handlers:{}}; window.KiwiEnv={isReal:()=>true}; window.__kiwiRole='owner';
+  window.__toasts=[];window.Kiwi={handlers:{},toast:(t,o)=>window.__toasts.push(t)}; window.KiwiEnv={isReal:()=>true}; window.__kiwiRole='owner';
   window.KiwiLive={merchant:()=>"amira-fixture"};
   window.KiwiVenue={isCustom:()=>true,getVenue:()=>"amira-fixture",getCurrentVenueData:()=>({id:'amira-fixture',type:new URLSearchParams(location.search).get('type')||'cafe'}),subscribe:()=>{}};
   window.KiwiSales={list:()=>[],subscribe:()=>{}};
@@ -58,39 +59,38 @@ try{
   const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.setViewport({width:390,height:844});
   await page.goto(`http://127.0.0.1:${server.address().port}/dashboard.html?type=${type}`);
-  if (type === 'restaurant') await page.evaluate(() => {
-    document.querySelector('[data-hero-amount]').parentElement.style.display = 'none';
-  });
-  assert.equal(await page.$('#kiwi-z-reconciliation-alert'),null,'no financial comparison before unlock');checks++;
+  const badge=()=>page.$('button[aria-label="Notifications"] [data-z-badge]');
+  const drawerText=()=>page.evaluate(()=>{const d=document.getElementById('drawer');d.innerHTML=KiwiZReconciliation.notificationHtml();return d.innerText;});
+  assert.equal(await badge(),null,'no financial comparison before unlock');checks++;
   await page.evaluate(()=>window.dispatchEvent(new Event('kiwi:dashboard-unlocked')));
   await page.waitForFunction(()=>document.querySelector('[data-hero-amount]')?.textContent.replace(/\s/g,'')==='1507,00MAD',{timeout:5000});checks++;
   assert.match(await page.$eval('[data-hero-label]',n=>n.textContent),/RAPPORT Z/);checks++;
-  let text=await page.$eval('#kiwi-z-reconciliation-alert',n=>n.textContent.replace(/\s/g,' '));
+  await page.waitForSelector('button[aria-label="Notifications"] [data-z-badge]');checks++;
+  assert.equal(await page.$eval('#kw-main',n=>n.innerText.includes('reçu(s)')),false,'no Z banner inside the page');checks++;
+  let text=(await drawerText()).replace(/\s/g,' ');
   assert.match(text,/314,00 MAD/);assert.match(text,/1.193,00 MAD/);assert.match(text,/9 reçu\(s\) manquant/);checks+=3;
-  assert.match(text,/1 reçu\(s\) bloqué/,'blocked count is explicit on the dashboard');checks++;
-  if (type === 'restaurant') {
-    assert.equal(await page.$eval('#kiwi-z-reconciliation-alert',n=>!!(n.offsetWidth||n.offsetHeight||n.getClientRects().length)),true,
-      'Z comparison stays visible when the first hero amount is in a hidden layer');checks++;
-  }
-  await page.click('#kiwi-z-reconciliation-alert summary');
-  assert.match(await page.$eval('#kiwi-z-reconciliation-alert details',n=>n.innerText),/57,00 MAD · card.*sale-conflict/);checks++;
+  assert.match(text,/1 reçu\(s\) bloqué/,'blocked count is explicit in the notification');checks++;
+  assert.match(text,/57,00 MAD · card.*sale-conflict/);checks++;
+  assert.equal((await page.evaluate(()=>window.__toasts)).length,1,'one toast when the problem appears');checks++;
+  await page.evaluate(()=>KiwiZReconciliation.showDashboard());
+  assert.equal((await page.evaluate(()=>window.__toasts)).length,1,'no repeated toast for the same problem');checks++;
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=390),true);checks++;
-  if(process.env.KIWI_TEST_SCREENSHOT) await page.screenshot({path:process.env.KIWI_TEST_SCREENSHOT.replace('.png','-'+type+'.png'),fullPage:true});
   mode='zero';await page.evaluate(()=>KiwiZReconciliation.showDashboard());
-  await page.waitForFunction(()=>document.querySelector('#kiwi-z-reconciliation-alert')?.textContent.includes('0 reçu(s) bloqué(s)'));checks++;
-  assert.match(await page.$eval('#kiwi-z-reconciliation-alert',n=>n.textContent),/0 reçu\(s\) manquant\(s\)/);checks++;
+  await page.waitForFunction(()=>document.querySelector('[data-hero-amount]')?.textContent.replace(/\s/g,'')==='0,00MAD');
+  assert.equal(await badge(),null,'a matching Z clears the bell');checks++;
+  assert.equal(await page.evaluate(()=>KiwiZReconciliation.notificationHtml()),'','a matching Z has no notification');checks++;
   mode='open';await page.evaluate(()=>KiwiZReconciliation.showDashboard());
   await page.waitForFunction(()=>document.querySelector('[data-hero-amount]')?.textContent.replace(/\s/g,'')==='314,00MAD');checks++;
-  assert.match(await page.$eval('#kiwi-z-reconciliation-alert',n=>n.textContent),/9 reçu\(s\) en attente/);checks++;
+  assert.equal(await badge(),null,'an open day has no notification');checks++;
   mode='history';await page.evaluate(()=>KiwiDateRange.setDateRange('hier'));
-  await page.waitForFunction(()=>document.querySelector('#kiwi-z-reconciliation-alert')?.textContent.includes('impossible de vérifier'));checks++;
-  assert.match(await page.$eval('[data-hero-label]',n=>n.textContent),/VENTES ENREGISTRÉES/);checks++;
+  await page.waitForFunction(()=>/VENTES ENREGISTRÉES/.test(document.querySelector('[data-hero-label]')?.textContent||''));checks++;
+  assert.equal(await badge(),null,'a past day without Z has no notification');checks++;
   await page.evaluate(()=>KiwiDateRange.setDateRange('septJours'));
-  assert.equal(await page.$('#kiwi-z-reconciliation-alert'),null,'no single-day reference on aggregate range');checks++;
-  await page.evaluate(()=>KiwiDateRange.setDateRange('aujourdhui'));
-  await page.waitForSelector('#kiwi-z-reconciliation-alert');
+  assert.equal(await badge(),null,'no single-day reference on aggregate range');checks++;
+  mode='closed';await page.evaluate(()=>KiwiDateRange.setDateRange('aujourdhui'));
+  await page.waitForSelector('button[aria-label="Notifications"] [data-z-badge]');
   fail=true;await page.evaluate(()=>KiwiZReconciliation.showDashboard());
-  assert.match(await page.$eval('#kiwi-z-reconciliation-alert',n=>n.textContent),/indisponible/);checks++;
+  await page.waitForFunction(()=>!document.querySelector('[data-z-badge]'));checks++;
   assert.equal(await page.evaluate(()=>KiwiZReconciliation.reference()),null,'stale Z not shown after fetch failure');checks++;
   assert.deepEqual(errors,[]);checks++;
   await page.close();

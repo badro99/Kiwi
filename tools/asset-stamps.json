@@ -376,8 +376,8 @@
     "sha": "21040572d903f0b8"
   },
   "assets/interactive.js": {
-    "v": "31",
-    "sha": "0912b11357197fc9"
+    "v": "32",
+    "sha": "2b12e88c358feb26"
   },
   "assets/inventory-consumption.js": {
     "v": "12",
@@ -848,8 +848,8 @@
     "sha": "acfbe70ced4b8e86"
   },
   "assets/simple.js": {
-    "v": "5",
-    "sha": "5c306cc2e9c84816"
+    "v": "7",
+    "sha": "96b4a41d51ca0d63"
   },
   "assets/sold-insights.js": {
     "v": "5",
@@ -936,7 +936,7 @@
     "sha": "640ed8c4c8c5aec8"
   },
   "assets/z-reconciliation.js": {
-    "v": "12",
-    "sha": "9b446e58b97b5027"
+    "v": "14",
+    "sha": "ceaa442da4aafc0f"
   }
 }

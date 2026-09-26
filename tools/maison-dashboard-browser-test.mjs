@@ -131,12 +131,18 @@ try {
   });
   await page.goto(`http://localhost:${server.address().port}/dashboard.html`, { waitUntil: 'load', timeout: 30000 });
   await page.waitForFunction(() => window.KiwiVenue?.getCurrentVenueData?.()?.subtype === 'maison');
-  ok(!await page.$('#kiwi-z-reconciliation-alert'), 'closed-Z finances stay hidden before the dashboard PIN unlock');
+  ok(!await page.$('[data-z-badge]'), 'closed-Z finances stay hidden before the dashboard PIN unlock');
   await page.evaluate(() => window.__kiwiLock.hide());
   await page.waitForFunction(() => /maison/i.test(document.querySelector('[data-hai-input]')?.placeholder || ''));
   await page.waitForFunction(() => document.querySelector('[data-bench-card]')?.classList.contains('is-empty-state'));
+  await page.waitForSelector('button[aria-label="Notifications"] [data-z-badge]');
+  // The one-off toast sits over the bell; its « Voir » opens the same drawer.
+  await page.waitForSelector('.kiwi-toast.warn .ta');
+  await page.click('.kiwi-toast.warn .ta');
   await page.waitForFunction(() => /1.?193,00 MAD/.test(document.querySelector('#kiwi-z-reconciliation-alert')?.textContent || ''));
-  ok(!!await page.$('#kiwi-z-reconciliation-alert'), 'Amira dashboard renders the synthetic closed-Z mismatch from the real UI module');
+  ok(!!await page.$('#kiwi-z-reconciliation-alert'), 'Amira dashboard puts the synthetic closed-Z mismatch in the notifications drawer');
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.querySelector('#kiwi-z-reconciliation-alert'));
   // Wait for the actual affected content to settle, not a fixed wall-clock
   // delay that races a slow tab under the full check.js load.
   await Promise.all(['[data-hai-input]', '[data-bench-card]', '[data-hero-amount]'].map(waitForStable));

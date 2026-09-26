@@ -1812,6 +1812,11 @@ ar: {
         ar: { head: 'لا إشعارات', tail: 'ستظهر هنا.', and: ' و',
               src: [[null, 'تنبيهات التسوية'], ['terminaux', 'تنبيهات الأجهزة'], [null, 'اقتراحات Kiwi AI']] },
       };
+      // Real notifications first: a Z report that doesn't match the server.
+      const zNotif = (() => { try { return window.KiwiZReconciliation?.notificationHtml?.() || ''; } catch (_) { return ''; } })();
+      if (window.KiwiVenue?.isCustom?.() && zNotif) {
+        return drawer({ title: s.title, subtitle: '', body: zNotif });
+      }
       if (window.KiwiVenue?.isCustom?.()) {
         const b = NOTIF_EMPTY[kiwiLang()] || NOTIF_EMPTY.fr;
         const parts = b.src.filter(([k]) => !k || !featOff(k)).map(([, t]) => t);
