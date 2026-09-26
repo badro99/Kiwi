@@ -22,7 +22,7 @@ Analyse les logs de service et identifie les anomalies statistiques selon ce for
   "riskLevel": "faible | modere | eleve",
   "anomalyCount": 2,
   "flaggedStaff": [
-    { "name": "Yassine", "pin": "1234", "reason": "4 annulations de tickets après impression de l'addition", "amountMad": 340.0 }
+    { "name": "Yassine", "reason": "4 annulations de tickets après impression de l'addition", "amountMad": 340.0 }
   ],
   "patterns": [
     "Pic inhabituel d'ouvertures manuelles de tiroir-caisse sans vente enregistrée (6 fois)"
@@ -31,6 +31,7 @@ Analyse les logs de service et identifie les anomalies statistiques selon ce for
 }
 Règles :
 - Réponds UNIQUEMENT avec un objet JSON valide.
+- Identifie le personnel par son prénom uniquement. N'écris jamais un code personnel, un PIN ni aucun identifiant de connexion.
 - Ne lève d'alerte que sur des anomalies chiffrées réelles (ex: ratio d'annulation > 3x la moyenne).`;
 
 export function validateWatchdogData(raw) {
@@ -38,7 +39,6 @@ export function validateWatchdogData(raw) {
   const flaggedStaff = Array.isArray(raw.flaggedStaff)
     ? raw.flaggedStaff.map((s) => ({
       name: String(s.name || 'Staff').slice(0, 80).trim(),
-      pin: String(s.pin || '').slice(0, 10).trim(),
       reason: String(s.reason || '').slice(0, 150).trim(),
       amountMad: Math.max(0, Math.round((Number(s.amountMad) || 0) * 100) / 100),
     })).filter((s) => s.reason).slice(0, 10)

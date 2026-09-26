@@ -263,6 +263,15 @@ ok(/stream: round === 'answer'/.test(askSrc), 'tools round is non-streamed JSON,
 ok(/return json\(\{ ok: true, tool_calls: calls, text \}, 200, \{ 'x-kiwi-ai': 'cloud', 'x-kiwi-ai-model': usedModel \}\);/.test(askSrc), 'tools round answers {ok, tool_calls, text} with the model header');
 ok(/const MAX_TOOL_CALLS = 4;/.test(askSrc) && /const MAX_TOOL_RESULT = 2000;/.test(askSrc) && /const MAX_TOOLS = 12;/.test(askSrc), 'tool bounds pinned: 12 tools, 4 calls, 2000-char results');
 
+// ── 7b. Loss watchdog never carries a staff code ─────────────────────────────
+/* The report is read by the manager and can be stored or printed. A PIN in
+ * the prompt's example invites the model to echo one from the logs. */
+const wdSrc = fs.readFileSync(path.join(aiDir, 'loss-watchdog.js'), 'utf8');
+ok(!/"pin"\s*:/.test(wdSrc) && !/\bs\.pin\b/.test(wdSrc), 'loss-watchdog prompt and validator carry no pin field');
+const { validateWatchdogData } = await import(path.join(aiDir, 'loss-watchdog.js'));
+const wd = validateWatchdogData({ riskLevel: 'eleve', flaggedStaff: [{ name: 'Yassine', pin: '4821', code: '4821', reason: '4 annulations', amountMad: 340 }] });
+ok(wd && wd.flaggedStaff.length === 1 && !JSON.stringify(wd).includes('4821'), 'validateWatchdogData drops a code the model echoes back');
+
 // ── 8. Live execution test of all AI route handlers ──────────────────────────
 const routeFiles = fs.readdirSync(aiDir).filter(f => f.endsWith('.js') && !f.startsWith('_'));
 for (const file of routeFiles) {
@@ -290,7 +299,7 @@ for (const file of routeFiles) {
 }
 
 // ── 9. Hard Count Pinning ───────────────────────────────────────────────────
-const EXPECTED_COUNT = 55 + routeFiles.filter(f => !f.startsWith('_')).length;
+const EXPECTED_COUNT = 57 + routeFiles.filter(f => !f.startsWith('_')).length;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 if (failures.length) {
