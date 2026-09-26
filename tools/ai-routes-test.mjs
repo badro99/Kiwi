@@ -272,6 +272,23 @@ const { validateWatchdogData } = await import(path.join(aiDir, 'loss-watchdog.js
 const wd = validateWatchdogData({ riskLevel: 'eleve', flaggedStaff: [{ name: 'Yassine', pin: '4821', code: '4821', reason: '4 annulations', amountMad: 340 }] });
 ok(wd && wd.flaggedStaff.length === 1 && !JSON.stringify(wd).includes('4821'), 'validateWatchdogData drops a code the model echoes back');
 
+// ── 7c. Every route reads the model's text, never the envelope ───────────────
+/* GLM answers in choices[0].message.content. The old reader fell back to
+ * JSON.stringify(result), whose outer {} parsed as an empty report: the loss
+ * watchdog told the manager « faible, personne » while the model said « eleve,
+ * Yassine » (measured 2026-09-26). An empty reply must stay empty. */
+const { aiText } = await import(path.join(aiDir, '_run.js'));
+const glmReply = { choices: [{ finish_reason: 'stop', message: { content: '```json\n{"riskLevel":"eleve","flaggedStaff":[{"name":"Yassine","reason":"5 annulations après addition","amountMad":477}]}\n```' } }], usage: {} };
+const wdGlm = validateWatchdogData(JSON.parse(aiText(glmReply).match(/\{[\s\S]*\}/)[0]));
+ok(wdGlm.riskLevel === 'eleve' && wdGlm.flaggedStaff[0].name === 'Yassine', 'aiText reads a GLM reply: the watchdog report keeps « eleve, Yassine »');
+ok(aiText({ choices: [{ finish_reason: 'length', message: { content: '', reasoning_content: 'Let me analyze {"a":1}' } }] }) === '' && aiText({ response: 'ok', choices: [] }) === 'ok' && aiText({ response: { a: 1 } }) === '{"a":1}' && aiText(null) === '', 'aiText: truncated GLM reply is empty (no reasoning, no envelope); Qwen/Llama response and parsed objects pass through');
+const envelopeReaders = aiFiles.filter(f => /JSON\.stringify\(runRes\?\.result/.test(fs.readFileSync(path.join(aiDir, f), 'utf8')));
+ok(envelopeReaders.length === 0, 'no AI route falls back to stringifying the whole model envelope' + (envelopeReaders.length ? ' — ' + envelopeReaders.join(', ') : ''));
+/* GLM without reasoning_effort spent all 1200 tokens thinking on 8/12 runs
+ * and returned no content (2026-09-26); with 'low' it answered in ~5 s. */
+const glmNoEffort = aiFiles.filter(f => { const t = fs.readFileSync(path.join(aiDir, f), 'utf8'); return /MODEL = '@cf\/zai-org\/glm-5\.3-flash'/.test(t) && /max_tokens: MAX_TOKENS/.test(t) && t.split('max_tokens: MAX_TOKENS').length !== t.split("reasoning_effort: 'low'").length; });
+ok(glmNoEffort.length === 0, "every GLM route payload carries reasoning_effort: 'low'" + (glmNoEffort.length ? ' — ' + glmNoEffort.join(', ') : ''));
+
 // ── 8. Live execution test of all AI route handlers ──────────────────────────
 const routeFiles = fs.readdirSync(aiDir).filter(f => f.endsWith('.js') && !f.startsWith('_'));
 for (const file of routeFiles) {
@@ -299,7 +316,7 @@ for (const file of routeFiles) {
 }
 
 // ── 9. Hard Count Pinning ───────────────────────────────────────────────────
-const EXPECTED_COUNT = 57 + routeFiles.filter(f => !f.startsWith('_')).length;
+const EXPECTED_COUNT = 61 + routeFiles.filter(f => !f.startsWith('_')).length;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 if (failures.length) {

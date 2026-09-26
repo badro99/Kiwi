@@ -9,6 +9,17 @@ export async function runAiWithGateway(env, model, payload) {
   return env.AI.run(model, payload, GATEWAY_OPTS);
 }
 
+/* Texte d'une réponse Workers AI, quel que soit le modèle : `response` (Qwen,
+ * Llama) ou `choices[0].message.content` (GLM, gpt-oss). Jamais l'enveloppe
+ * entière : son JSON se parse comme un objet vide et le validateur en ferait un
+ * « rien à signaler ». Sans texte, la route doit répondre « illisible ». */
+export function aiText(result) {
+  if (typeof result === 'string') return result;
+  const r = result && (result.response ?? result.choices?.[0]?.message?.content ?? result.description);
+  if (typeof r === 'string') return r;
+  return r && typeof r === 'object' ? JSON.stringify(r) : '';
+}
+
 function policyFailure(error) {
   const status = Number(error && (error.status || error.statusCode || error.response?.status));
   return [401, 403, 429].includes(status)

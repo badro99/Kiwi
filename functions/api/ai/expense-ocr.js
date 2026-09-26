@@ -6,7 +6,7 @@
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { quotaOk } from './_quota.js';
-import { GATEWAY_OPTS, runAiWithGateway } from './_run.js';
+import { GATEWAY_OPTS, aiText, runAiWithGateway } from './_run.js';
 import { runWithPayloadFallback } from './_payload-fallback.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
@@ -46,7 +46,7 @@ async function runExpenseVision(env, dataUrl) {
         { type: 'image_url', image_url: { url: dataUrl } },
       ] },
     ],
-    max_tokens: MAX_TOKENS, temperature: TEMPERATURE, top_p: TOP_P,
+    max_tokens: MAX_TOKENS, temperature: TEMPERATURE, reasoning_effort: 'low', top_p: TOP_P,
   };
   return runWithPayloadFallback(env, VISION_MODEL, payload, VISION_FALLBACK_MODEL);
 }
@@ -97,7 +97,7 @@ export async function onRequestPost(context) {
     return json({ error: 'ai-vision-failed', details: String(err?.message || err) }, 502);
   }
 
-  const rawText = runRes?.result?.response || runRes?.result?.description || JSON.stringify(runRes?.result || '');
+  const rawText = aiText(runRes?.result);
   let parsed = null;
   try {
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);

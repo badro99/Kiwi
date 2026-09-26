@@ -6,7 +6,7 @@
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { quotaOk } from './_quota.js';
-import { GATEWAY_OPTS, runAiWithGateway, runWithFallback } from './_run.js';
+import { GATEWAY_OPTS, aiText, runAiWithGateway, runWithFallback } from './_run.js';
 export { GATEWAY_OPTS, runAiWithGateway };
 
 export const MODEL = '@cf/zai-org/glm-5.3-flash';
@@ -66,7 +66,7 @@ export async function onRequestPost(context) {
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: `Message reçu : ${text}` },
     ],
-    max_tokens: MAX_TOKENS, temperature: TEMPERATURE,
+    max_tokens: MAX_TOKENS, temperature: TEMPERATURE, reasoning_effort: 'low',
   };
 
   let runRes;
@@ -76,7 +76,7 @@ export async function onRequestPost(context) {
     return json({ error: 'ai-reservation-failed', details: String(err?.message || err) }, 502);
   }
 
-  const rawText = runRes?.result?.response || runRes?.result?.description || JSON.stringify(runRes?.result || '');
+  const rawText = aiText(runRes?.result);
   let parsed = null;
   try {
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);

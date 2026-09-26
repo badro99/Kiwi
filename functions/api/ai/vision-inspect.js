@@ -87,6 +87,7 @@ async function runVisionInspect(env, dataUrl, promptText) {
     max_tokens: MAX_TOKENS,
     temperature: TEMPERATURE,
     top_p: TOP_P,
+    reasoning_effort: 'low',
   };
 
   return runWithPayloadFallback(env, MODEL, payload, FALLBACK_MODEL);
