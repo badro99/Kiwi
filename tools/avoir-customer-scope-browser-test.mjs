@@ -131,8 +131,25 @@ try {
     await page.click(`#${prefix}-paym [data-${prefix}-close]`);
     await page.click(`#${prefix}-tk-client`);
     await page.waitForSelector(`#${prefix}-cl-guest`, { visible: true });
+    // The client veil animates its scale for 220 ms. Puppeteer can target the
+    // moving button before pointerup, swallowing the click without an error.
+    await page.waitForFunction((p) => {
+      const veil = document.querySelector(`#${p}-client-veil`);
+      const button = document.querySelector(`#${p}-cl-guest`);
+      const rect = button?.getBoundingClientRect();
+      return veil?.classList.contains('is-open')
+        && veil.getAnimations().every((animation) => animation.playState === 'finished')
+        && rect?.width > 0 && rect?.height > 0
+        && button.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
+    }, {}, prefix);
     await page.click(`#${prefix}-cl-guest`);
+    await page.waitForFunction((p) => {
+      const veil = document.querySelector(`#${p}-client-veil`);
+      return veil && getComputedStyle(veil).display === 'none';
+    }, {}, prefix);
+    await page.waitForSelector(`#${prefix}-validate:not([disabled])`, { visible: true });
     await page.click(`#${prefix}-validate`);
+    await page.waitForSelector(`#${prefix}-paym [data-${prefix}-m="avoir"]`, { visible: true });
     await page.click(`#${prefix}-paym [data-${prefix}-m="avoir"]`);
     await page.waitForSelector(`#${prefix}-av-code`, { visible: true });
     await page.type(`#${prefix}-av-code`, 'AV-2031');
