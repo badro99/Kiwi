@@ -38,7 +38,8 @@ try {
   await page.click('[data-action=profile-menu]');
   await page.click('[role=menuitem][data-idx="2"]');
   await page.click('[data-action=settings-discounts]');
-  for (const n of [10, 15, 20]) await page.click(`[data-discount-remove="${n}"]`);
+  for (const n of [10, 15, 20]) await page.click(`[data-discount-toggle="${n}"]`);
+  assert.deepEqual(await page.$$eval('[data-discount-toggle][aria-pressed=true]', els => els.map(e => e.dataset.discountToggle)), ['5'], 'only 5 % stays selected');
   await page.click('[data-discount-save]');
   await page.waitForFunction(() => window.KiwiDiscountPolicy?.percentages().join(',') === '5');
   await page.waitForFunction(() => !document.querySelector('[data-action=settings-discounts]')?.innerText.includes('10 %'));

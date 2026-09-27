@@ -2377,33 +2377,90 @@ ar: {
     'settings-discounts': () => {
       const policy = window.KiwiDiscountPolicy;
       if (!policy) { toast('Réglage indisponible, rechargez la page', { type: 'warn' }); return; }
+      const MAX = 8;
+      const PRESETS = [5, 10, 15, 20, 25, 30, 40, 50];
       const chosen = new Set(policy.percentages());
-      const m = modal({ tag: 'CAISSE', title: 'Pourcentages de remise autorisés', width: 440,
-        body: '<p>Seuls ces pourcentages seront proposés sur les trois caisses. Une remise déjà enregistrée ne change pas.</p>'
-          + '<div data-discount-choices style="display:flex;gap:8px;flex-wrap:wrap;margin:16px 0"></div>'
-          + '<label style="display:block;margin:16px 0 6px">Ajouter un pourcentage (1 à 100)</label>'
-          + '<div style="display:flex;gap:8px"><input data-discount-input type="number" min="1" max="100" step="1" inputmode="numeric" aria-label="Nouveau pourcentage" style="flex:1;min-width:0" />'
-          + '<button type="button" class="kb" data-discount-add>Ajouter</button></div>',
-        foot: '<button type="button" class="kb atlas" data-discount-save>Enregistrer</button>' });
+      // Tiles: the common values plus any custom value the owner already uses.
+      const tiles = new Set([...PRESETS, ...chosen]);
+      const check = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>';
+      const m = modal({ tag: 'CAISSE', title: 'Remises autorisées', width: 480,
+        body: `<style>
+            .dp-lead{margin:0;color:var(--n-600,#4b5563);line-height:1.5}
+            .dp-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:22px 0 10px}
+            .dp-label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--n-500,#6b7280)}
+            .dp-count{font-size:12px;color:var(--n-500,#6b7280);font-variant-numeric:tabular-nums}
+            .dp-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+            .dp-tile{position:relative;display:flex;align-items:center;justify-content:center;height:52px;border-radius:14px;
+              border:1px solid var(--n-200,#e5e7eb);background:var(--surface,#fff);color:inherit;font:inherit;font-size:17px;font-weight:600;
+              font-variant-numeric:tabular-nums;cursor:pointer;transition:border-color .15s,background-color .15s,transform .15s}
+            .dp-tile:hover{border-color:color-mix(in srgb,var(--atlas) 45%,var(--n-200,#e5e7eb))}
+            .dp-tile:active{transform:scale(.97)}
+            .dp-tile:focus-visible{outline:2px solid var(--atlas);outline-offset:2px}
+            .dp-tile[aria-pressed="true"]{border-color:var(--atlas);background:color-mix(in srgb,var(--atlas) 9%,var(--surface,#fff));color:var(--atlas)}
+            .dp-tile .dp-tick{position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;
+              background:var(--atlas);color:var(--paper,#f7f5f0);opacity:0;transform:scale(.6);transition:opacity .15s,transform .15s}
+            .dp-tile .dp-tick svg{width:12px;height:12px}
+            .dp-tile[aria-pressed="true"] .dp-tick{opacity:1;transform:none}
+            .dp-add{display:flex;gap:8px;margin-top:10px}
+            .dp-field{position:relative;flex:1;min-width:0}
+            .dp-field input{width:100%;box-sizing:border-box;height:44px;padding:0 34px 0 14px;border-radius:12px;border:1px solid var(--n-200,#e5e7eb);
+              background:var(--surface,#fff);color:inherit;font:inherit;font-variant-numeric:tabular-nums}
+            .dp-field input:focus{outline:none;border-color:var(--atlas)}
+            .dp-field span{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--n-500,#6b7280);pointer-events:none}
+            .dp-field input::-webkit-inner-spin-button,.dp-field input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+            .dp-field input{-moz-appearance:textfield;appearance:textfield}
+            .dp-add .kb{height:44px;padding:0 18px;border:1px solid var(--n-200,#e5e7eb);border-radius:12px}
+            .dp-add .kb:hover{border-color:var(--atlas)}
+            .dp-preview{margin-top:22px;padding:14px 16px;border-radius:14px;background:color-mix(in srgb,var(--atlas) 5%,transparent);
+              border:1px dashed color-mix(in srgb,var(--atlas) 30%,transparent)}
+            .dp-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+            .dp-chip{padding:5px 11px;border-radius:999px;background:var(--surface,#fff);border:1px solid var(--n-200,#e5e7eb);font-size:13px;font-variant-numeric:tabular-nums}
+            .dp-empty{font-size:13px;color:var(--n-500,#6b7280)}
+            @media (max-width:420px){.dp-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+          </style>
+          <p class="dp-lead">Choisissez les remises que vos équipes peuvent appliquer. Elles s'affichent sur toutes vos caisses. Les ventes déjà enregistrées ne changent pas.</p>
+          <div class="dp-head"><span class="dp-label">Remises proposées</span><span class="dp-count" data-discount-count></span></div>
+          <div class="dp-grid" data-discount-choices role="group" aria-label="Remises proposées"></div>
+          <div class="dp-head"><span class="dp-label">Autre pourcentage</span></div>
+          <div class="dp-add"><label class="dp-field"><input data-discount-input type="number" min="1" max="100" step="1" inputmode="numeric" placeholder="Ex. 12" aria-label="Autre pourcentage, de 1 à 100" /><span>%</span></label>
+            <button type="button" class="kb" data-discount-add>Ajouter</button></div>
+          <div class="dp-preview"><span class="dp-label">Sur la caisse</span><div class="dp-chips" data-discount-preview></div></div>`,
+        foot: '<button type="button" class="kb" data-discount-cancel>Annuler</button><button type="button" class="kb atlas" data-discount-save>Enregistrer</button>' });
       const draw = () => {
-        m.el.querySelector('[data-discount-choices]').innerHTML = [...chosen].sort((a,b) => a-b)
-          .map(n => `<button type="button" class="kb" data-discount-remove="${n}" aria-label="Retirer ${n} pour cent">${n} % · ×</button>`).join('');
+        const sorted = [...tiles].sort((a, b) => a - b);
+        m.el.querySelector('[data-discount-choices]').innerHTML = sorted.map(n =>
+          `<button type="button" class="dp-tile" data-discount-toggle="${n}" aria-pressed="${chosen.has(n)}" aria-label="${n} pour cent">${n} %<span class="dp-tick">${check}</span></button>`).join('');
+        m.el.querySelector('[data-discount-count]').textContent = `${chosen.size} sur ${MAX} maximum`;
+        const values = [...chosen].sort((a, b) => a - b);
+        m.el.querySelector('[data-discount-preview]').innerHTML = values.length
+          ? ['Sans', ...values.map(n => `−${n} %`)].map(t => `<span class="dp-chip">${t}</span>`).join('')
+          : '<span class="dp-empty">Choisissez au moins une remise.</span>';
+        m.el.querySelector('[data-discount-save]').disabled = !values.length;
+      };
+      const addCustom = () => {
+        const field = m.el.querySelector('[data-discount-input]');
+        const n = Number(field.value);
+        if (!Number.isInteger(n) || n < 1 || n > 100) { toast('Entrez un nombre entier de 1 à 100', { type: 'warn' }); field.focus(); return; }
+        if (!chosen.has(n) && chosen.size >= MAX) { toast(`${MAX} remises maximum, retirez-en une d'abord`, { type: 'warn' }); return; }
+        tiles.add(n); chosen.add(n); field.value = ''; draw();
       };
       draw();
+      m.el.querySelector('[data-discount-input]').addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); addCustom(); }
+      });
       m.el.addEventListener('click', async e => {
-        if (e.target.closest('[data-discount-remove]')) {
-          chosen.delete(Number(e.target.closest('[data-discount-remove]').dataset.discountRemove)); draw(); return;
+        const tile = e.target.closest('[data-discount-toggle]');
+        if (tile) {
+          const n = Number(tile.dataset.discountToggle);
+          if (chosen.has(n)) chosen.delete(n);
+          else if (chosen.size >= MAX) { toast(`${MAX} remises maximum, retirez-en une d'abord`, { type: 'warn' }); return; }
+          else chosen.add(n);
+          draw(); return;
         }
-        if (e.target.closest('[data-discount-add]')) {
-          const field = m.el.querySelector('[data-discount-input]');
-          const n = Number(field.value);
-          if (!Number.isInteger(n) || n < 1 || n > 100 || chosen.size >= 8 && !chosen.has(n)) {
-            toast('Choisissez 1 à 100 %, huit valeurs maximum', { type: 'warn' }); return;
-          }
-          chosen.add(n); field.value = ''; draw(); return;
-        }
+        if (e.target.closest('[data-discount-add]')) { addCustom(); return; }
+        if (e.target.closest('[data-discount-cancel]')) { m.close(); return; }
         if (!e.target.closest('[data-discount-save]')) return;
-        if (!chosen.size) { toast('Gardez au moins un pourcentage', { type: 'warn' }); return; }
+        if (!chosen.size) return;
         const button = e.target.closest('[data-discount-save]'); button.disabled = true;
         try {
           const result = await policy.save([...chosen]);
@@ -2411,9 +2468,9 @@ ar: {
             toast('Réglage conservé localement, synchronisation en attente', { type: 'warn' }); return;
           }
           m.close(); setTimeout(() => handlers.settings(), 90);
-          toast('Pourcentages mis à jour · rechargez les caisses', { type: 'success', force: true });
+          toast('Remises mises à jour sur toutes les caisses', { type: 'success', force: true });
         } catch (_) { toast('Réglage non enregistré, réessayez', { type: 'warn' }); }
-        finally { button.disabled = false; }
+        finally { button.disabled = !chosen.size; }
       });
     },
 
