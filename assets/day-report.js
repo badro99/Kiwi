@@ -176,10 +176,17 @@
       .replace(/^-+|-+$/g, '').slice(0, 64);
   }
   function storeSlug() {
-    /* 1) TABLEAU DE BORD : le magasin actuellement à l'écran. Il passe devant
-     *    kiwiLiveMerchant parce que ce global est unique — sur un compte à deux
-     *    boutiques il retient la dernière active, et le patron qui regarde le
-     *    restaurant verrait le rapport de la boutique. */
+    /* A paired till can retain the dashboard's last-selected venue from the
+     * same browser. Its Z belongs to the terminal's merchant, not that venue.
+     * The dashboard never loads caisse-pairing.js, so its own venue selection
+     * remains authoritative there. */
+    try {
+      var paired = window.KiwiCaissePairing && window.KiwiCaissePairing.pairedVenue
+        && window.KiwiCaissePairing.pairedVenue();
+      if (paired && paired.merchant) return paired.merchant;
+    } catch (_) {}
+    /* TABLEAU DE BORD : the venue currently on screen takes precedence over
+     * kiwiLiveMerchant, which is a single global across multiple venues. */
     try {
       var KV = window.KiwiVenue;
       if (KV && KV.isCustom && KV.isCustom() && KV.getCurrentVenueData) {
@@ -191,9 +198,9 @@
         if (s) return s;
       }
     } catch (_) {}
-    /* 2) la colonne vertébrale, écrite des deux côtés à l'appairage. */
+    /* The shared merchant fallback, written on both sides at pairing. */
     var m = ls('kiwiLiveMerchant'); if (m) return m;
-    /* 3) CAISSE : le magasin appairé. */
+    /* Additional caisse pairing fallbacks for older runtimes. */
     try {
       if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
         var pm = window.KiwiPlatform.pairedMerchant();

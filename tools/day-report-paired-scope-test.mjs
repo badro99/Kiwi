@@ -47,6 +47,16 @@ vm.runInContext(src, ctx1);
 ok(ctx1.window.KiwiDayReport.storeSlug() === 'merchant-slug-canonical',
   'primary path with KiwiCaissePairing resolves canonical merchant slug');
 
+// A browser may retain the dashboard's last-selected venue while its till is
+// paired to another store. The till's report must follow the terminal, never
+// the dashboard selection; otherwise Z close refuses to protect the journal.
+ctx1.window.KiwiVenue = {
+  isCustom: () => true,
+  getCurrentVenueData: () => ({ slug: 'other-store', name: 'Other store' }),
+};
+ok(ctx1.window.KiwiDayReport.storeSlug() === 'merchant-slug-canonical',
+  'paired till ignores a stale dashboard venue when selecting its Z merchant');
+
 // 3. Runtime execution on Dashboard / where KiwiCaissePairing is absent
 const ctx2 = vm.createContext({
   // no KiwiCaissePairing; the store's zone comes from the server config
