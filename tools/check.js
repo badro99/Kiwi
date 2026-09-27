@@ -1068,6 +1068,7 @@ section('Whole-project regressions');
     'maison-client-history-test.mjs',
     'client-history-browser-test.mjs',
     'clients-campaign-flag-test.mjs',
+    'dashboard-unoffered-actions-test.mjs',
     'support-system-test.mjs',
     'operator-snapshot-test.mjs',
     'caisse-support-entry-test.mjs',

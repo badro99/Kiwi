@@ -60,8 +60,8 @@
     "sha": "13799bff68c6aaec"
   },
   "assets/agent.js": {
-    "v": "23",
-    "sha": "17f2ae899e54d747"
+    "v": "24",
+    "sha": "cb484942437f2e28"
   },
   "assets/ai-telemetry.js": {
     "v": "1",
@@ -248,8 +248,8 @@
     "sha": "2443568851cf6ee1"
   },
   "assets/design-vexel-layout.js": {
-    "v": "2081",
-    "sha": "18051e4571afc538"
+    "v": "2082",
+    "sha": "19137813a992e56f"
   },
   "assets/design-vexel.css": {
     "v": "2105",
@@ -300,8 +300,8 @@
     "sha": "181c68735a2a7622"
   },
   "assets/features.js": {
-    "v": "4",
-    "sha": "5cfec93454a3a144"
+    "v": "5",
+    "sha": "4dff7e6fc9105bfb"
   },
   "assets/finance.js": {
     "v": "1",
@@ -376,8 +376,8 @@
     "sha": "21040572d903f0b8"
   },
   "assets/interactive.js": {
-    "v": "32",
-    "sha": "2b12e88c358feb26"
+    "v": "33",
+    "sha": "1250adad732aa69f"
   },
   "assets/inventory-consumption.js": {
     "v": "12",
@@ -496,8 +496,8 @@
     "sha": "b24347182d9bcf25"
   },
   "assets/operations-ui.js": {
-    "v": "15",
-    "sha": "4c592e84882f223f"
+    "v": "16",
+    "sha": "ed92d5ae9fed7a15"
   },
   "assets/operations.js": {
     "v": "12",
@@ -508,8 +508,8 @@
     "sha": "bfb67d0993b644f5"
   },
   "assets/oppo-cards.js": {
-    "v": "2",
-    "sha": "c538bbe259e5da8a"
+    "v": "3",
+    "sha": "98b02196302f45a7"
   },
   "assets/order-course.js": {
     "v": "2",
@@ -540,8 +540,8 @@
     "sha": "eff285d77e9b982f"
   },
   "assets/pages.js": {
-    "v": "5",
-    "sha": "1c16c2f7e5e3e5c4"
+    "v": "6",
+    "sha": "84a90ce525e0a59c"
   },
   "assets/pairing-commit.js": {
     "v": "2",
@@ -848,8 +848,8 @@
     "sha": "acfbe70ced4b8e86"
   },
   "assets/simple.js": {
-    "v": "7",
-    "sha": "96b4a41d51ca0d63"
+    "v": "8",
+    "sha": "167675f87ef80b77"
   },
   "assets/sold-insights.js": {
     "v": "5",

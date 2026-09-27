@@ -1961,7 +1961,6 @@
                 <span>Forfait Atlas Détente · 2 h 15</span>
                 <b>840 MAD</b>
               </div>
-              <button class="kb atlas" style="width:100%; justify-content:center; margin-top:10px;" data-action="payment-link">Envoyer un lien de paiement amont →</button>
             </div>
           </div>
 

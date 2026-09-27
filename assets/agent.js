@@ -1618,7 +1618,7 @@
       thanks: 'Avec plaisir. Je reste ouvert : une embauche, une hausse de prix, un investissement, votre seuil de rentabilité ou votre prévision du mois, dites-moi ce que vous voulez regarder.',
       identity: 'Non, je suis un logiciel, et je tourne sur cet appareil, pas ailleurs. C’est volontaire : vos chiffres ne partent nulle part. Je sais faire une chose, bien : calculer ce que vos décisions changent à votre résultat, à partir de vos ventes réelles.',
       outside: 'Ça, ce n’est pas de mon ressort, et je préfère vous le dire plutôt que de vous répondre approximativement. Je m’occupe des chiffres de votre commerce : marges, charges, seuil de rentabilité, embauche, prix, trésorerie, prévision.',
-      cantdo: 'Je ne peux pas agir en dehors de votre tableau de bord : ni appeler, ni envoyer un message, ni commander à votre place. À l’intérieur de Kiwi, en revanche, je peux ouvrir vos pages, créer un lien de paiement ou lancer une vente. Et pour tout ce qui est chiffré, je calcule.',
+      cantdo: 'Je ne peux pas agir en dehors de votre tableau de bord : ni appeler, ni envoyer un message, ni commander à votre place. À l’intérieur de Kiwi, en revanche, je peux ouvrir vos pages, lancer une vente. Et pour tout ce qui est chiffré, je calcule.',
       inject: 'Non. Je ne change pas de rôle et je n’annonce pas un chiffre que vos ventes ne montrent pas · c’est exactement ce que cet assistant ne doit jamais faire. Chaque montant que je donne vient de vos 30 derniers jours enregistrés dans Kiwi. Demandez-moi un calcul et vous aurez le vrai.',
       otherShop: 'Je ne vois que votre établissement, et c’est délibéré : les données d’un autre commerçant ne transitent pas par cet écran. Pour vos propres chiffres, demandez-les moi directement.',
       calcErr: 'Ce calcul n’a pas de résultat : une division par zéro, ou une expression que je ne sais pas lire. Réécrivez-la et je la refais.',
@@ -2412,7 +2412,6 @@
     { rx: /factures?\s+fournisseur|(?:lire|lis|scanner?|scanne|read|scan)\s+(?:une|ma|la|cette|a|my|the)?\s*facture|supplier\s+invoice|فاتورة\s+(?:مورد|الممون|المورد)/, h: 'stock-scan-invoice', key: 'stock', label: 'supplierInvoice', noun: true },
     { rx: /stock|inventaire|inventory|ingredient|مخزون/, h: 'nav-stock', key: 'stock' },
     { rx: /reservation|booking|\brdv\b|حجز|حجوزات/, h: 'nav-reservations', key: 'reservations' },
-    { rx: /lien de paiement|payment link|رابط دفع/, h: 'payment-link', key: 'paymentLink' },
     { rx: /nouvelle vente|new sale|بيع جديد/, h: 'new-sale', key: 'newSale' },
   ];
   /* Un module que l'opérateur n'a pas vendu à ce client n'est pas une
@@ -3593,7 +3592,7 @@
     ['prépare ma déclaration TVA', 'accounting'], ['generate the payslips', 'accounting'], ['دفتر الأستاذ', 'accounting'],
     ['augmente les prix de 8% et embauche un serveur', 'compound'], ['raise prices 10% and hire a cook', 'compound'],
     ['ouvre le menu', 'action'], ['montre les commandes', 'action'], ['open the kitchen screen', 'action'],
-    ['crée un lien de paiement', 'action'], ['افتح المخزون', 'action'], ['montre-moi les réservations', 'action'],
+    ['افتح المخزون', 'action'], ['montre-moi les réservations', 'action'],
     ['montre ma marge', 'margin'],
     ['donne-moi des recommandations', 'advice'], ['comment augmenter mes ventes', 'advice'], ['any tips to grow my sales', 'advice'], ['نصيحة لزيادة مبيعاتي', 'advice'],
     ['2500 * 1.2', 'math'], ['(842300-261000)/842300', 'math'],

@@ -386,7 +386,7 @@
   };
 
   /* ═══════════════════ PAYMENT LINK ═══════════════════ */
-  handlers['payment-link'] = () => {
+  const archivedPaymentLink = () => {
     let step = 'form';
     /* The generated link is `kiwi-os.com/p/<random>`, which nothing serves, the
      * "QR" is a CSS stripe pattern rather than a real code, and the WhatsApp /
@@ -1673,7 +1673,6 @@
   /* ═══════════════════ Extra command-palette entries ═══════════════════ */
   // Expose globals for palette to read
   window.KiwiFeatures = {
-    paymentLink: () => handlers['payment-link'](),
     zakat: () => handlers['zakat'](),
     sadaqa: () => handlers['sadaqa'](),
     compte: () => handlers['kiwi-compte'](),

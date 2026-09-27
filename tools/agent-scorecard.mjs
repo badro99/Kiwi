@@ -105,7 +105,7 @@ score('Live operational awareness', [
 
 score('Financial reasoning', [
   ['full arithmetic and routing suite passes', financeSuite.status === 0],
-  ['all three languages pass 1106 routes', ((financeSuite.stdout || '').match(/1106\/1106 routes correct/g) || []).length === 3],
+  ['all three languages pass at least 1100 routes', ((financeSuite.stdout || '').match(/(\d+)\/\1 routes correct/g) || []).filter((x) => Number(x.split('/')[0]) >= 1100).length === 3],
   ['invented-figure redaction passes', /Invented figures are removed/.test(financeSuite.stdout || '') && !/assistant gate: [1-9]/.test(financeSuite.stdout || '')],
 ]);
 

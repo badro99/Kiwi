@@ -1258,8 +1258,8 @@ ok(uiSource.includes('data-lk-confirm="cancel-link"') && uiSource.includes('data
    envoyer 0 se ferait refuser.  Le champ vide ne doit donc rien envoyer. */
 ok(uiSource.includes("if (asked !== '')") && uiSource.includes('payload.amount = Number(asked)'),
   'an empty refund amount means the whole refundable, never a zero the server would refuse');
-ok(uiSource.includes('openPayments:openPayments') && uiSource.includes("openPayments('link')") && browserSource.includes("view: 'payments'"),
-  'the payments console is exported, opened from the payment-link button and reads the book from the server');
+ok(uiSource.includes('openPayments:openPayments') && !uiSource.includes("H['payment-link'] =") && browserSource.includes("view: 'payments'"),
+  'the historical payments book remains readable without a dashboard link-creation handler');
 
 ok(uiSource.includes('openDevices:openDevices') && uiSource.includes("H['nav-terminaux']") && browserSource.includes("view: 'devices'"),
   'the parc console is exported, takes over the Terminaux destination and reads the fleet from the server');

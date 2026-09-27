@@ -89,8 +89,8 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=32',
-  '/assets/features.js?v=4',
+  '/assets/interactive.js?v=33',
+  '/assets/features.js?v=5',
   '/assets/invoicing.css?v=6',
   '/assets/invoicing.js?v=8',
   '/assets/order-qr.js?v=3',
@@ -140,7 +140,7 @@ var SHELL = [
   '/assets/dateRange.js?v=23',
   '/assets/mobile-nav.js?v=2',
   '/assets/liquid-lens.js?v=1',
-  '/assets/pages.js?v=5',
+  '/assets/pages.js?v=6',
   '/assets/help-centre.js?v=4',
   '/assets/account.js?v=18',
   '/assets/production-action-guard.js?v=1',
@@ -148,7 +148,7 @@ var SHELL = [
   // read it, so leaving it out of the shell meant the till could come up
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
-  '/assets/oppo-cards.js?v=2',
+  '/assets/oppo-cards.js?v=3',
   '/assets/dashboard-pwa.js?v=551',
   '/assets/dashboard-native.js?v=1',
   '/assets/pwa-update.js?v=359',
@@ -162,7 +162,7 @@ var SHELL = [
   '/assets/platform-ops.js?v=5',
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=12',
-  '/assets/operations-ui.js?v=15',
+  '/assets/operations-ui.js?v=16',
   '/assets/live-link.js?v=51',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne

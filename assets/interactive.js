@@ -1063,7 +1063,6 @@ ar: {
       sNav: 'NAVIGATION', sActions: 'ACTIONS RAPIDES', sSales: 'VENTES', sProducts: 'CATALOGUE', sClients: 'CLIENTS', sTeam: 'ÉQUIPE',
       sAi: 'Kiwi AI', executed: 'exécuté', title: 'Recherche Kiwi',
       newSale: 'Nouvelle vente', newSaleSub: 'Encaisser un montant',
-      payLink: 'Créer un lien de paiement', payLinkSub: 'À envoyer par WhatsApp ou SMS',
       exportTx: 'Exporter les transactions', exportTxSub: 'CSV de la période affichée',
       instant: 'Régler instantanément', instantSub: '1,50 MAD · ~10s',
       ai: 'Ouvrir Kiwi AI', aiSub: 'Poser une question sur vos chiffres',
@@ -1256,7 +1255,6 @@ ar: {
   function kpActionEntries(cp) {
     const want = [
       { k: 'new-sale', title: cp.newSale, sub: cp.newSaleSub },
-      { k: 'payment-link', title: cp.payLink, sub: cp.payLinkSub },
       { k: 'export', title: cp.exportTx, sub: cp.exportTxSub },
       { k: 'instant-settle', title: cp.instant, sub: cp.instantSub },
       { k: 'open-assistant', title: cp.ai, sub: cp.aiSub },
@@ -2718,7 +2716,6 @@ ar: {
           <div style="margin-top:18px; display:flex; flex-direction:column; gap:8px;">
             <button class="kb atlas" style="padding:14px; justify-content:center; font-size:15px;" data-method="card">Encaisser par carte · Tap ou dip</button>
             <button class="kb ghost" style="padding:14px; justify-content:center; font-size:15px;" data-method="qr">Afficher QR Kiwi Wallet</button>
-            <button class="kb ghost" style="padding:14px; justify-content:center; font-size:15px;" data-method="link">Envoyer un lien de paiement</button>
           </div>
         `
       });
@@ -2757,7 +2754,7 @@ ar: {
               return;
             }
             m.close();
-            const ML = { card: 'carte', qr: 'QR Wallet', link: 'lien de paiement' };
+            const ML = { card: 'carte', qr: 'QR Wallet' };
             // Pulse the hero number so the merchant SEES their money land — a
             // spring scale via Web Animations (no CSS dependency).
             const pulseHero = () => { try { const h = document.querySelector('[data-hero-amount]'); if (h && h.animate) h.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.055)' }, { transform: 'scale(1)' }], { duration: 720, easing: 'cubic-bezier(0.34, 1.45, 0.5, 1)' }); } catch (_) {} };
@@ -2782,7 +2779,6 @@ ar: {
           m.close();
           if (method === 'card') toast(`${tr({fr:'En attente de la carte', en:'Waiting for card', ar:'في انتظار البطاقة'})} · ${amount} MAD`, {type: 'info', desc: tr({fr:'Présentez la carte au terminal ou téléphone', en:'Present the card to the terminal or phone', ar:'قدّم البطاقة للطرفية أو الهاتف'})});
           if (method === 'qr') toast(`${tr({fr:'QR généré', en:'QR generated', ar:'تم إنشاء QR'})} · ${amount} MAD`, {type: 'info', desc: tr({fr:'Client scanne depuis Kiwi Wallet', en:'Customer scans from Kiwi Wallet', ar:'يمسح العميل الرمز من Kiwi Wallet'})});
-          if (method === 'link') toast(tr({fr:'Lien de paiement copié', en:'Payment link copied', ar:'تم نسخ رابط الدفع'}), {type: 'success', desc: tr({fr:'Envoyez-le par WhatsApp à votre client', en:'Send it via WhatsApp to your customer', ar:'أرسله عبر WhatsApp لعميلك'})});
         }
       });
     },

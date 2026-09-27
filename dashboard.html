@@ -5501,10 +5501,6 @@
           <h1 class="greeting"><span class="greet-text" data-i18n="dash.hello">Bonjour Rachid,</span> <em data-i18n="dash.day">bonne journée.</em></h1>
         </div>
         <div class="quick-acts">
-          <button class="btn-slim" data-action="payment-link">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 14a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 10a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-            <span data-i18n="dash.paymentLink">Lien de paiement</span>
-          </button>
           <button class="btn-slim" data-action="export">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M5 10l7 7 7-7M5 21h14"/></svg>
             <span data-i18n="dash.export">Exporter</span>
@@ -5980,47 +5976,6 @@
         </div><!-- /.dash-col B -->
       </div><!-- /.dash-cols even -->
 
-      <!-- ═══ INTEGRATIONS ═══ -->
-      <div class="block" data-integ-card>
-        <div class="block-head">
-          <div>
-            <div class="t">Intégrations</div>
-            <div class="s">Aucune connexion active · choisissez un outil à connecter</div>
-          </div>
-          <a href="#" data-action="add-integration" style="font-size: 13px; color: var(--atlas); font-weight: 500;" data-i18n="dash.integ.add">+ Ajouter une intégration</a>
-        </div>
-        <div class="integ-grid">
-          <div class="integ-card" data-venue-types="restaurant">
-            <div class="logo" style="background: #F29137;">G</div>
-            <div class="info">
-              <div class="n">Glovo</div>
-              <div class="s"><span class="dot"></span><span data-i18n="dash.integ.glovo.status">Payout réconcilié · 1 420 MAD</span></div>
-            </div>
-          </div>
-          <div class="integ-card" data-venue-types="restaurant">
-            <div class="logo" style="background: #E7611A;">J</div>
-            <div class="info">
-              <div class="n">Yassir Express</div>
-              <div class="s"><span class="dot"></span><span data-i18n="dash.integ.yassir.status">24 commandes aujourd'hui</span></div>
-            </div>
-          </div>
-          <div class="integ-card">
-            <div class="logo" style="background: #1D3F6B;">A</div>
-            <div class="info">
-              <div class="n" data-i18n="dash.integ.accounting.name">Comptabilité</div>
-              <div class="s"><span class="dot"></span><span data-i18n="dash.integ.accounting.status">Export comptable quotidien</span></div>
-            </div>
-          </div>
-          <div class="integ-card">
-            <div class="logo" style="background: #00613E;">B</div>
-            <div class="info">
-              <div class="n" data-i18n="dash.integ.bank.name">Bank of Africa</div>
-              <div class="s"><span class="dot"></span><span data-i18n="dash.integ.bank.status">IBAN vérifié · 3291</span></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       </div><!-- /.dash-more -->
       </div><!-- /.dash-more-clip -->
 
@@ -6194,12 +6149,12 @@
      d'inscription construisent leur grille pareil. Aucun DOM, ~7 Ko. -->
 <script src="assets/trades.js?v=6" defer></script>
 <script src="assets/lucide.min.js?v=4" defer></script>
-<script src="assets/interactive.js?v=32" defer></script>
-<script src="assets/features.js?v=4" defer></script>
+<script src="assets/interactive.js?v=33" defer></script>
+<script src="assets/features.js?v=5" defer></script>
 <script src="assets/invoice.js?v=8" defer></script>
 <script src="assets/invoicing.js?v=8" defer></script>
 <script src="assets/depenses.js?v=1" defer></script>
-<script src="assets/oppo-cards.js?v=2" defer></script>
+<script src="assets/oppo-cards.js?v=3" defer></script>
 <script src="assets/insights.js?v=1" defer></script>
 <script src="assets/qrcode.js?v=1" defer></script>
 <script src="assets/growth-kit.js?v=1" defer></script>
@@ -6213,7 +6168,7 @@
 <script src="assets/channel-link.js?v=202608272301" defer></script>
 <link rel="preload" href="assets/report.js?v=5" as="script">
 <script src="assets/dashboard-extra.js?v=8" defer></script>
-<script src="assets/simple.js?v=7" defer></script>
+<script src="assets/simple.js?v=8" defer></script>
 <script src="assets/ux.js?v=1" defer></script>
 <!-- venues.js et dateRange.js portent un ?v= depuis la migration v2. Sans lui,
      l'URL ne change jamais d'un déploiement à l'autre : le service worker sert
@@ -6282,12 +6237,12 @@
      loaded before the assistant router; the probed modules may load later and
      are resolved lazily at question time. -->
 <script src="assets/agent-truth.js?v=6" defer fetchpriority="low"></script>
-<script src="assets/agent.js?v=23" defer fetchpriority="low"></script>
+<script src="assets/agent.js?v=24" defer fetchpriority="low"></script>
 <script src="assets/agent-voice.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/agent-vision.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/agent-skin.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/accounting.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/pages.js?v=5" defer fetchpriority="low"></script>
+<script src="assets/pages.js?v=6" defer fetchpriority="low"></script>
 <!-- Boutique shared product database + real barcode engine (EAN-13 / Code 128).
      Same modules the caisse loads, so inventory stays in sync between the two. -->
 <script src="assets/barcode.js?v=1" defer fetchpriority="low"></script>
@@ -6410,7 +6365,7 @@
 <script src="assets/design-ios27.js?v=1" defer fetchpriority="low"></script>
 <!-- Default home composition: critical before the PIN overlay reveals the app.
      Low-priority + post-unlock scheduling painted the legacy dashboard first. -->
-<script src="assets/design-vexel-layout.js?v=2081" defer></script>
+<script src="assets/design-vexel-layout.js?v=2082" defer></script>
 <script src="assets/liquid-glass.js?v=1" defer fetchpriority="low"></script>
 <!-- Hotel vertical (assets/hotel.js) · powers 0000-onboarded hotels
      (wizard « Hôtel / Riad », starter pages on the live rack/folio
@@ -6428,7 +6383,7 @@
 <!-- Durable operational workflows. Loaded after every feature module and the
      production honesty guard so its real handlers win over legacy demo toasts. -->
 <script src="assets/operations.js?v=12" defer fetchpriority="low"></script>
-<script src="assets/operations-ui.js?v=15" defer fetchpriority="low"></script>
+<script src="assets/operations-ui.js?v=16" defer fetchpriority="low"></script>
 
 <!-- ═══════════════════════════════════════════════════════════════════
  *  ROLE GUARD · salary figures remain owner-only, while a manager may open

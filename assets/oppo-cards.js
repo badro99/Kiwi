@@ -90,14 +90,6 @@
   /* ─── Card pool — one feature per card, CTA = the feature's real handler ─── */
   const POOL = [
     {
-      id: 'paylink', art: 'paylink', action: 'payment-link',
-      t: { fr: 'Encaissez à distance', en: 'Get paid remotely', ar: 'حصّل عن بُعد' },
-      d: { fr: 'Envoyez un lien de paiement par WhatsApp, acomptes, commandes, réservations. L\'argent arrive avant le client.',
-           en: 'Send a payment link over WhatsApp, deposits, orders, bookings. The money arrives before the customer does.',
-           ar: 'أرسل رابط دفع عبر واتساب، عربون، طلبات، حجوزات. يصل المال قبل وصول العميل.' },
-      cta: { fr: 'Créer un lien', en: 'Create a link', ar: 'إنشاء رابط' },
-    },
-    {
       id: 'loyalty', art: 'loyalty', action: 'loyalty', feat: 'loyalty',
       t: { fr: 'Vos habitués valent de l\'or', en: 'Your regulars are gold', ar: 'زبناؤك الأوفياء ذهب' },
       d: { fr: 'Un programme de fidélité directement sur la caisse, points, récompenses, et des clients qui reviennent.',

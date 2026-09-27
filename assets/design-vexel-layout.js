@@ -734,7 +734,6 @@
     var pageHead = document.querySelector('#kw-main > .container > .page-head');
     var kpis = standard && standard.querySelector('[data-kpi-band]');
     var kpiHead = standard && standard.querySelector('.kpi-band-head');
-    var paymentLink = pageHead && pageHead.querySelector('[data-action="payment-link"]');
     var hero = standard && standard.querySelector('.hero-today');
     var mix = standard && standard.querySelector('[data-mix-block]');
     var dateControl = header && header.querySelector('.dr-control');
@@ -756,7 +755,6 @@
 
     root.appendChild(kpiSection);
     rememberMove(kpiHead, kpiSection);
-    rememberMove(paymentLink, kpiHead);
     rememberMove(kpis, kpiSection);
 
     root.appendChild(revenue);

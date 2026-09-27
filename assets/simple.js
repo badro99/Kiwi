@@ -138,12 +138,6 @@
       </button>
 
       <div class="mini-tiles">
-        <button class="mini-tile" data-simple-action="payment-link">
-          <div class="mini-ic">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 14a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 10a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-          </div>
-          <div class="mini-n">Envoyer un lien</div>
-        </button>
         <button class="mini-tile" data-simple-action="refund">
           <div class="mini-ic">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h10a5 5 0 015 5v2M3 10l4-4M3 10l4 4"/></svg>
@@ -399,7 +393,6 @@
 
     const routes = {
       'new-sale': 'new-sale',
-      'payment-link': 'payment-link',
       'compte': 'kiwi-compte',
     };
     if (routes[action] && handlers[routes[action]]) { handlers[routes[action]](); return; }

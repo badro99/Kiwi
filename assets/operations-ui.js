@@ -540,15 +540,6 @@
       Kiwi.toast(code === 'permission-denied' || code === 'owner-session-required' ? 'Accès refusé' : c.blocked, { type:'warning', desc:code });
     }
 
-    var legacyPayment = H['payment-link'];
-    /* Émettre un lien sans pouvoir le relire ensuite, c'était la moitié du
-       travail.  Le bouton ouvre maintenant la console : on émet dans un
-       onglet, on relit le livre dans l'autre. */
-    H['payment-link'] = function () {
-      if (!real() && legacyPayment) return legacyPayment.apply(this, arguments);
-      openPayments('link');
-    };
-
     var legacyPo = H['supplier-new-po'];
     H['supplier-new-po'] = function () {
       /* The demo store has no durable ledger behind it, and the permission check
