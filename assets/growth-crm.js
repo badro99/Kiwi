@@ -177,6 +177,12 @@
   }
 
   window.Kiwi.handlers['growth-crm'] = () => {
+    // Direct/legacy action links must not bypass the same Ultra visibility gate
+    // used by the Clients directory. This is a UI offer flag, not an entitlement.
+    if (window.KiwiConfig?.features?.ultraCampaigns !== true) {
+      window.Kiwi.handlers['clients-directory']?.();
+      return;
+    }
     const T = STR[lang()] || STR.fr;
     const KIT = window.KiwiKit;
     const RD = realData();

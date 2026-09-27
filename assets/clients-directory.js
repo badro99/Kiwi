@@ -18,6 +18,10 @@
   var lang = function () { try { return (window.KiwiI18n && KiwiI18n.getLang && KiwiI18n.getLang()) || 'fr'; } catch (_) { return 'fr'; } };
   var fmt = function (n) { try { return (Math.round(n) || 0).toLocaleString('fr-FR'); } catch (_) { return String(Math.round(n) || 0); } };
   var esc = function (x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+  // Campaign delivery is not offered to regular stores. Preserve the composer
+  // for a future Ultra rollout, but opt in explicitly rather than guessing
+  // eligibility from venue type or a marketing label.
+  var campaignsEnabled = function () { return window.KiwiConfig?.features?.ultraCampaigns === true; };
 
   var STR = {
     fr: { title: 'Clients', sub: 'Le carnet complet · coordonnées, fidélité et consentement.',
@@ -290,7 +294,7 @@
         '<input class="cd-search" id="cd-q" type="search" placeholder="' + esc(T.search) + '">' +
         '<button class="cd-exp" id="cd-exp"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' + T.export + '</button>' +
         '<button class="cd-exp" id="cd-loyalty" data-feature="loyalty"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>' + T.program + '</button>' +
-        '<button class="cd-exp cd-camp" id="cd-campaign"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>' + T.campaign + '</button>' +
+        (campaignsEnabled() ? '<button class="cd-exp cd-camp" id="cd-campaign"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>' + T.campaign + '</button>' : '') +
       '</div></div>' +
       '<div class="cd-segs" id="cd-segs">' + segChips() + '</div>' +
       '<div id="cd-table">' + tableHtml() + '</div></div>';
@@ -320,7 +324,7 @@
       if (e.target.closest('#cd-loyalty')) { if (window.Kiwi.handlers && Kiwi.handlers['loyalty']) Kiwi.handlers['loyalty'](); return; }
       // In-flow: growth-crm's appPage replaces this page's host, so no close() needed
       // (calling it would flash the home page in between).
-      if (e.target.closest('#cd-campaign')) { if (window.Kiwi.handlers && Kiwi.handlers['growth-crm']) Kiwi.handlers['growth-crm'](); else { try { d.close(); } catch (_) {} } return; }
+      if (e.target.closest('#cd-campaign')) { if (campaignsEnabled() && window.Kiwi.handlers && Kiwi.handlers['growth-crm']) Kiwi.handlers['growth-crm'](); return; }
       var tr = e.target.closest('[data-cd-id]');
       if (tr) { openDetail(all.filter(function (c) { return c.id === tr.getAttribute('data-cd-id'); })[0], T); }
     });

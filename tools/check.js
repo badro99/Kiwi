@@ -1067,6 +1067,7 @@ section('Whole-project regressions');
     'admin-crm-layout-test.mjs',
     'maison-client-history-test.mjs',
     'client-history-browser-test.mjs',
+    'clients-campaign-flag-test.mjs',
     'support-system-test.mjs',
     'operator-snapshot-test.mjs',
     'caisse-support-entry-test.mjs',
