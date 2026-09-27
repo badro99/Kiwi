@@ -1663,7 +1663,7 @@
           <button class="mz-nav-it" data-mz-view="echanges"><i data-lucide="arrow-left-right"></i><span>Échanges &amp; avoirs</span><b class="mz-nav-badge" id="mz-badge-ret"></b></button>
           <button class="mz-nav-it" data-mz-view="vendus"><i data-lucide="chart-no-axes-column-increasing"></i><span>Vendus</span></button>
           <button class="mz-nav-it" data-mz-view="clientes"><i data-lucide="users"></i><span>Clients</span><b class="mz-nav-badge" id="mz-badge-cl"></b></button>
-          <button class="mz-nav-it" data-mz-view="acomptes"><img src="assets/icons/material/payments.svg" alt=""><span>Acomptes</span></button>
+          <button class="mz-nav-it" data-mz-view="acomptes"><i data-lucide="hand-coins"></i><span>Acomptes</span></button>
         </nav>
         <div class="mz-rail-foot">
           <button class="mz-lock" data-action="printer-connect" title="Configurer les imprimantes"><i data-lucide="printer"></i><span>Imprimantes</span></button>

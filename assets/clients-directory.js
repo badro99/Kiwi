@@ -18,6 +18,8 @@
   var lang = function () { try { return (window.KiwiI18n && KiwiI18n.getLang && KiwiI18n.getLang()) || 'fr'; } catch (_) { return 'fr'; } };
   var fmt = function (n) { try { return (Math.round(n) || 0).toLocaleString('fr-FR'); } catch (_) { return String(Math.round(n) || 0); } };
   var esc = function (x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+  var ICON = { search: 'M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z', download: 'M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z', redeem: 'M160-280v80h640v-80H160Zm0-440h88q-5-9-6.5-19t-1.5-21q0-50 35-85t85-35q30 0 55.5 15.5T460-826l20 26 20-26q18-24 44-39t56-15q50 0 85 35t35 85q0 11-1.5 21t-6.5 19h88q33 0 56.5 23.5T880-640v440q0 33-23.5 56.5T800-120H160q-33 0-56.5-23.5T80-200v-440q0-33 23.5-56.5T160-720Zm0 320h640v-240H596l84 114-64 46-136-184-136 184-64-46 82-114H160v240Zm228.5-331.5Q400-743 400-760t-11.5-28.5Q377-800 360-800t-28.5 11.5Q320-777 320-760t11.5 28.5Q343-720 360-720t28.5-11.5ZM600-720q17 0 28.5-11.5T640-760q0-17-11.5-28.5T600-800q-17 0-28.5 11.5T560-760q0 17 11.5 28.5T600-720Z', personAdd: 'M720-400v-120H600v-80h120v-120h80v120h120v80H800v120h-80ZM247-527q-47-47-47-113t47-113q47-47 113-47t113 47q47 47 47 113t-47 113q-47 47-113 47t-113-47ZM40-160v-112q0-34 17.5-62.5T104-378q62-31 126-46.5T360-440q66 0 130 15.5T616-378q29 15 46.5 43.5T680-272v112H40Zm80-80h480v-32q0-11-5.5-20T580-306q-54-27-109-40.5T360-360q-56 0-111 13.5T140-306q-9 5-14.5 14t-5.5 20v32Zm296.5-343.5Q440-607 440-640t-23.5-56.5Q393-720 360-720t-56.5 23.5Q280-673 280-640t23.5 56.5Q327-560 360-560t56.5-23.5ZM360-640Zm0 400Z', group: 'M40-160v-112q0-34 17.5-62.5T104-378q62-31 126-46.5T360-440q66 0 130 15.5T616-378q29 15 46.5 43.5T680-272v112H40Zm720 0v-120q0-44-24.5-84.5T666-434q51 6 96 20.5t84 35.5q36 20 55 44.5t19 53.5v120H760ZM247-527q-47-47-47-113t47-113q47-47 113-47t113 47q47 47 47 113t-47 113q-47 47-113 47t-113-47Zm466 0q-47 47-113 47-11 0-28-2.5t-28-5.5q27-32 41.5-71t14.5-81q0-42-14.5-81T544-792q14-5 28-6.5t28-1.5q66 0 113 47t47 113q0 66-47 113ZM120-240h480v-32q0-11-5.5-20T580-306q-54-27-109-40.5T360-360q-56 0-111 13.5T140-306q-9 5-14.5 14t-5.5 20v32Zm296.5-343.5Q440-607 440-640t-23.5-56.5Q393-720 360-720t-56.5 23.5Q280-673 280-640t23.5 56.5Q327-560 360-560t56.5-23.5ZM360-240Zm0-400Z', campaign: 'M720-440v-80h160v80H720Zm48 280-128-96 48-64 128 96-48 64Zm-80-480-48-64 128-96 48 64-128 96ZM200-200v-160h-40q-33 0-56.5-23.5T80-440v-80q0-33 23.5-56.5T160-600h160l200-120v480L320-360h-40v160h-80Zm240-182v-196l-98 58H160v80h182l98 58Zm120 36v-268q27 24 43.5 58.5T620-480q0 41-16.5 75.5T560-346ZM300-480Z' };
+  var ico = function (k) { return '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="' + ICON[k] + '"/></svg>'; };
   // Campaign delivery is not offered to regular stores. Preserve the composer
   // for a future Ultra rollout, but opt in explicitly rather than guessing
   // eligibility from venue type or a marketing label.
@@ -33,6 +35,7 @@
       ago: function (d) { return d === 0 ? "aujourd'hui" : 'il y a ' + d + ' j'; }, close: 'Fermer',
       detail: 'Fiche client', birthday: 'Anniversaire', gender: 'Genre', address: 'Adresse', notes: 'Notes', consent: 'Consentement', consentWa: 'WhatsApp / SMS', consentEmail: 'Email', firstSeen: 'Client depuis',
       history: 'Historique des achats', noHistory: 'Aucun détail d’achat enregistré.', noHistorySub: 'Les prochains tickets attachés à ce client apparaîtront ici.', ticket: 'Ticket', unknownDate: 'Date inconnue', unknownPayment: 'Mode non renseigné', purchase: 'Achat enregistré',
+      newShort: 'Nouveau client', loyalty: 'Fidélité', emptyTitle: 'Votre carnet est encore vide', emptyText: 'Ajoutez une fiche ici, ou enregistrez un client sur la caisse : il apparaîtra automatiquement.', noMatch: 'Aucun client ne correspond', noMatchText: 'Essayez un autre nom, numéro ou segment.', clear: 'Tout afficher', noneYet: 'Aucun pour l’instant', ofBook: 'du carnet', shared: 'Partagé avec la caisse', currency: 'MAD',
       form: { title: 'Nouveau client', sub: 'La fiche rejoint le carnet partagé, avec ou sans caisse.', save: 'Ajouter', cancel: 'Annuler',
         needNameOrPhone: 'Renseignez au moins un nom ou un numéro.', badPhone: 'Numéro invalide · pour l’étranger, ajoutez + et l’indicatif pays.',
         consentRequired: 'Le consentement est requis · cochez la case WhatsApp / SMS pour enregistrer.', alreadyExists: 'Client déjà enregistré', added: 'Client ajouté' } },
@@ -44,6 +47,7 @@
       ago: function (d) { return d === 0 ? 'today' : d + 'd ago'; }, close: 'Close',
       detail: 'Customer', birthday: 'Birthday', gender: 'Gender', address: 'Address', notes: 'Notes', consent: 'Consent', consentWa: 'WhatsApp / SMS', consentEmail: 'Email', firstSeen: 'Customer since',
       history: 'Purchase history', noHistory: 'No purchase details recorded.', noHistorySub: 'Future tickets attached to this customer will appear here.', ticket: 'Ticket', unknownDate: 'Unknown date', unknownPayment: 'Payment method unavailable', purchase: 'Recorded purchase',
+      newShort: 'New customer', loyalty: 'Loyalty', emptyTitle: 'Your book is still empty', emptyText: 'Add a record here, or save a customer on the till: it shows up here automatically.', noMatch: 'No customer matches', noMatchText: 'Try another name, number or segment.', clear: 'Show all', noneYet: 'None yet', ofBook: 'of the book', shared: 'Shared with the till', currency: 'MAD',
       form: { title: 'New customer', sub: 'The record joins the shared book, with or without a till.', save: 'Add', cancel: 'Cancel',
         needNameOrPhone: 'Enter at least a name or a phone number.', badPhone: 'Invalid number · abroad, add + and the country code.',
         consentRequired: 'Consent is required · tick WhatsApp / SMS to save.', alreadyExists: 'Customer already on file', added: 'Customer added' } },
@@ -55,6 +59,7 @@
       ago: function (d) { return d === 0 ? 'اليوم' : 'منذ ' + d + ' ي'; }, close: 'إغلاق',
       detail: 'بطاقة العميل', birthday: 'الميلاد', gender: 'الجنس', address: 'العنوان', notes: 'ملاحظات', consent: 'الموافقة', consentWa: 'واتساب / SMS', consentEmail: 'بريد', firstSeen: 'عميل منذ',
       history: 'سجل المشتريات', noHistory: 'لا توجد تفاصيل مشتريات مسجلة.', noHistorySub: 'ستظهر هنا التذاكر القادمة المرتبطة بهذا العميل.', ticket: 'التذكرة', unknownDate: 'تاريخ غير معروف', unknownPayment: 'طريقة الدفع غير مسجلة', purchase: 'عملية شراء مسجلة',
+      newShort: 'عميل جديد', loyalty: 'الوفاء', emptyTitle: 'دفترك ما زال فارغاً', emptyText: 'أضف بطاقة هنا، أو سجّل عميلاً على الصندوق وسيظهر هنا تلقائياً.', noMatch: 'لا يوجد عميل مطابق', noMatchText: 'جرّب اسماً أو رقماً أو فئة أخرى.', clear: 'عرض الكل', noneYet: 'لا أحد بعد', ofBook: 'من الدفتر', shared: 'مشترك مع الصندوق', currency: 'درهم',
       form: { title: 'عميل جديد', sub: 'ينضم الملف إلى الدفتر المشترك، بالصندوق أو بدونه.', save: 'إضافة', cancel: 'إلغاء',
         needNameOrPhone: 'أدخل الاسم أو رقم الهاتف على الأقل.', badPhone: 'رقم غير صالح · للخارج أضف + ورمز البلد.',
         consentRequired: 'الموافقة مطلوبة · حدّد واتساب / SMS للحفظ.', alreadyExists: 'العميل مسجل مسبقاً', added: 'تمت إضافة العميل' } },
@@ -129,36 +134,58 @@
   }
 
   var CSS = [
-    '.cd-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px;}',
-    '.cd-stats{display:flex;gap:22px;flex-wrap:wrap;}',
-    '.cd-stat .v{font-size:28px;font-weight:600;line-height:1;letter-spacing:-.02em;font-feature-settings:"tnum" 1;}',
-    '.cd-stat .l{font-size:11px;color:var(--n-500);margin-top:3px;text-transform:uppercase;letter-spacing:.04em;font-family:var(--mono);}',
-    '.cd-tools{display:flex;gap:10px;align-items:center;margin-inline-start:auto;flex-wrap:wrap;}',
-    '.cd-search{width:min(340px,60vw);padding:11px 14px;border:1px solid var(--n-200);border-radius:11px;font-size:14px;background:var(--surface);color:var(--ink);}',
-    '.cd-search:focus{outline:none;border-color:var(--atlas);box-shadow:0 0 0 3px rgba(11,110,79,.12);}',
-    '.cd-exp{display:inline-flex;align-items:center;gap:7px;padding:11px 15px;border:1px solid var(--n-200);border-radius:11px;background:var(--surface);color:var(--ink);font:600 13px/1 inherit;cursor:pointer;}',
+    '.cd{display:flex;flex-direction:column;gap:16px;min-width:0;}',
+    '.cd-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;}',
+    '.cd-kpi{border:1px solid var(--n-200);border-radius:20px;background:var(--surface);padding:18px 20px;min-width:0;}',
+    '.cd-kpi .l{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--n-500);}',
+    '.cd-kpi .l i{width:6px;height:6px;border-radius:50%;background:var(--atlas);flex:none;}',
+    '.cd-kpi .v{font-size:32px;font-weight:600;line-height:1;letter-spacing:-.025em;margin-top:14px;font-variant-numeric:tabular-nums;color:var(--ink);}',
+    '.cd-kpi .h{font-size:12px;color:var(--n-500);margin-top:8px;font-variant-numeric:tabular-nums;}',
+    '.cd-kpi .h b{color:var(--atlas);font-weight:600;}',
+    '.cd-bar{display:flex;flex-direction:column;align-items:flex-start;gap:12px;}',
+    '.cd-segs{display:flex;gap:2px;padding:4px;border-radius:999px;background:var(--n-100);border:1px solid var(--n-200);overflow-x:auto;scrollbar-width:none;max-width:100%;}',
+    '.cd-segs::-webkit-scrollbar{display:none;}',
+    '.cd-seg{flex:none;border:0;background:transparent;color:var(--n-600);font:inherit;font-size:13px;font-weight:500;padding:7px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:color .2s;}',
+    '.cd-seg em{font-style:normal;color:var(--n-500);margin-inline-start:6px;font-variant-numeric:tabular-nums;}',
+    '.cd-seg.on{color:var(--ink);}',
+    '.cd-seg:not([data-kw-lens] *).on{background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.08);}',
+    '.genpage-body .cd-segs .kw-lens{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.10),inset 0 1px 0 rgba(255,255,255,.4);}',
+    '.cd-seg:focus-visible{outline:2px solid var(--atlas);outline-offset:1px;}',
+    '.cd-actions{display:flex;align-items:center;gap:8px;width:100%;flex-wrap:wrap;}',
+    '.cd-field{position:relative;display:flex;align-items:center;flex:1;min-width:220px;}',
+    '.cd-field svg{position:absolute;inset-inline-start:13px;width:18px;height:18px;color:var(--n-500);pointer-events:none;}',
+    '.cd-search{width:100%;height:42px;box-sizing:border-box;padding:0 14px 0 40px;border:1px solid var(--n-200);border-radius:999px;font:inherit;font-size:14px;background:var(--surface);color:var(--ink);}',
+    '[dir="rtl"] .cd-search{padding:0 40px 0 14px;}',
+    '.cd-search:focus{outline:none;border-color:var(--atlas);box-shadow:0 0 0 3px color-mix(in srgb,var(--atlas) 14%,transparent);}',
+    '.cd-exp{display:inline-flex;align-items:center;gap:7px;height:42px;box-sizing:border-box;padding:0 16px;border:1px solid var(--n-200);border-radius:999px;background:var(--surface);color:var(--ink);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap;}',
+    '.cd-exp svg{width:18px;height:18px;flex:none;}',
     '.cd-exp:hover{border-color:var(--atlas);color:var(--atlas);}',
-    '.cd-exp.cd-camp{background:var(--atlas);color:#fff;border-color:var(--atlas);}',
-    '.cd-exp.cd-new{background:var(--atlas);color:#fff;border-color:var(--atlas);}',
-    '.cd-exp.cd-new:hover{filter:brightness(1.07);color:#fff;}',
-    '.cd-exp.cd-camp:hover{filter:brightness(1.07);color:#fff;}',
-    '.cd-segs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px;}',
-    '.cd-segchip{font-size:12.5px;padding:7px 13px;border-radius:999px;border:1px solid var(--n-200);background:var(--surface,#fff);cursor:pointer;color:var(--ink);transition: transform .12s, opacity .12s, background-color .12s, border-color .12s, color .12s, box-shadow .12s;}',
-    '.cd-segchip:hover:not(.on){border-color:var(--n-300);}',
-    '.cd-segchip.on{background:var(--atlas);color:#fff;border-color:var(--atlas);}',
-    '.cd-tblwrap{overflow-x:auto;border:1px solid var(--n-200);border-radius:16px;background:var(--surface);}',
-    '.cd-tbl{width:100%;border-collapse:collapse;min-width:820px;}',
-    '.cd-tbl th{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);text-align:start;padding:12px 14px;background:var(--paper-soft);font-weight:500;white-space:nowrap;}',
-    '.cd-tbl td{padding:12px 14px;font-size:13px;border-top:1px solid var(--n-200);white-space:nowrap;}',
+    '.cd-exp:focus-visible{outline:2px solid var(--atlas);outline-offset:2px;}',
+    '.cd-exp.cd-new,.cd-exp.cd-camp{background:var(--atlas);color:#fff;border-color:var(--atlas);}',
+    '.cd-exp.cd-new:hover,.cd-exp.cd-camp:hover{filter:brightness(1.07);color:#fff;}',
+    '.cd-tblwrap{overflow-x:auto;border:1px solid var(--n-200);border-radius:20px;background:var(--surface);}',
+    '.cd-tbl{width:100%;border-collapse:collapse;min-width:860px;}',
+    '.cd-tbl th{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);text-align:start;padding:14px 16px;white-space:nowrap;border-bottom:1px solid var(--n-200);}',
+    '.cd-tbl th.num,.cd-tbl td.num{text-align:end;font-variant-numeric:tabular-nums;}',
+    '.cd-tbl td{padding:12px 16px;font-size:13.5px;border-top:1px solid var(--n-200);white-space:nowrap;color:var(--ink);}',
+    '.cd-tbl tbody tr:first-child td{border-top:0;}',
     '.cd-tbl tbody tr{cursor:pointer;transition:background-color .12s;}',
-    '.cd-tbl tbody tr:hover td{background:var(--paper-soft);}',
-    '.cd-tbl td.mono{font-family:var(--mono);font-size:12px;}',
+    '.cd-tbl tbody tr:hover td{background:color-mix(in srgb,var(--atlas) 5%,transparent);}',
+    '.cd-tbl td.mono{font-variant-numeric:tabular-nums;}',
+    '.cd-who{display:flex;align-items:center;gap:12px;}',
+    '.cd-av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:12.5px;font-weight:600;letter-spacing:.02em;background:color-mix(in srgb,var(--atlas) 12%,transparent);color:var(--atlas);}',
     '.cd-nm{font-weight:600;}',
+    '.cd-sub{display:block;font-size:12px;color:var(--n-500);font-weight:400;margin-top:2px;}',
     '.cd-muted{color:var(--n-500);}',
-    '.cd-tag{font-size:10.5px;font-family:var(--mono);padding:3px 9px;border-radius:999px;}',
+    '.cd-tag{display:inline-block;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:999px;}',
     '.cd-tag.reg{background:var(--mint-soft);color:#075238;}.cd-tag.vip{background:#FBF0D6;color:#8A6210;}.cd-tag.new{background:#E4ECF8;color:#3E78C9;}.cd-tag.win{background:#FBE3DD;color:#C0492F;}',
     '.cd-ok{color:var(--atlas);font-weight:700;}.cd-no{color: var(--n-500);}',
-    '.cd-empty{text-align:center;color:var(--n-500);padding:40px 14px;}',
+    '.cd-empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:56px 20px;border:1px dashed var(--n-200);border-radius:20px;background:var(--surface);}',
+    '.cd-empty-ic{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--atlas) 10%,transparent);color:var(--atlas);margin-bottom:4px;}',
+    '.cd-empty-ic svg{width:28px;height:28px;}',
+    '.cd-empty b{font-size:17px;font-weight:600;color:var(--ink);text-wrap:balance;}',
+    '.cd-empty p{margin:0;max-width:44ch;color:var(--n-500);font-size:14px;line-height:1.5;text-wrap:pretty;}',
+    '.cd-empty .cd-exp{margin-top:8px;}',
     '.cd-drow{display:flex;justify-content:space-between;gap:16px;padding:11px 0;border-top:1px solid var(--n-200);font-size:13.5px;}',
     '.cd-drow:first-child{border-top:0;}.cd-drow .k{color:var(--n-500);}.cd-drow .v{font-weight:600;text-align:end;word-break:break-word;}',
     '.cd-f-sub{color:var(--n-500);font-size:13px;margin:2px 0 14px;}',
@@ -175,12 +202,10 @@
     '.cd-history-row:first-child{border-top:0;}.cd-history-date,.cd-history-meta{color:var(--n-500);font-size:12px;}.cd-history-method{display:block;margin-top:3px;color:var(--ink);font-weight:600;}',
     '.cd-history-items{font-weight:600;line-height:1.4;overflow-wrap:anywhere;}.cd-history-meta{display:block;margin-top:4px;}.cd-history-amount{font-weight:700;white-space:nowrap;font-feature-settings:"tnum" 1;}',
     '.cd-history-empty{padding:22px 16px;text-align:center;color:var(--n-500);font-size:13px;}.cd-history-empty b{display:block;color:var(--ink);margin-bottom:4px;}',
+    '@media(max-width:760px){.cd-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}.cd-kpi{padding:14px 16px;border-radius:16px;}.cd-kpi .v{font-size:26px;margin-top:10px;}',
+    '  .cd-actions .cd-exp:not(.cd-new) span{display:none;}.cd-actions .cd-exp:not(.cd-new){width:42px;padding:0;justify-content:center;}.cd-field{flex-basis:100%;}.cd-actions .cd-new{flex:1;justify-content:center;}}',
     '@media(max-width:620px){.cd-history-row{grid-template-columns:1fr auto;}.cd-history-date{grid-column:1/-1}.cd-history-amount{grid-column:2;grid-row:2}.cd-history-items{grid-column:1;grid-row:2}.cd-f-grid{grid-template-columns:1fr;}}',
-    'html[data-theme="dark"] .cd-tblwrap,html[data-theme="dark"] .cd-search,html[data-theme="dark"] .cd-exp,html[data-theme="dark"] .cd-segchip,html[data-theme="dark"] .cd-tbl{background:#131916;border-color:#26302b;color:var(--paper);}',
-    'html[data-theme="dark"] .cd-tbl th{background:#0f1714;}html[data-theme="dark"] .cd-tbl td{border-color:#26302b;}',
-    'html[data-theme="dark"] .cd-tbl tbody tr:hover td{background:#0f1714;}',
-    'html[data-theme="dark"] .cd-segchip.on{background:var(--atlas);color:#fff;}',
-    'html[data-theme="dark"] .cd-history-list{background:#131916;border-color:#26302b;}html[data-theme="dark"] .cd-history-row{border-color:#26302b;}',
+    'html[data-theme="dark"] .cd-history-list{border-color:var(--n-200);}',
   ].join('');
   var st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
 
@@ -240,63 +265,83 @@
       });
     }
 
+    function initials(name) {
+      var parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+      return esc(((parts[0] || '·').charAt(0) + (parts.length > 1 ? parts[parts.length - 1].charAt(0) : '')).toUpperCase());
+    }
+    function whoCell(c, sub) {
+      return '<td><div class="cd-who"><span class="cd-av" aria-hidden="true">' + initials(c.name || c.phone) + '</span><span class="cd-nm">' +
+        esc(c.name || T.none) + (sub ? '<span class="cd-sub">' + esc(sub) + '</span>' : '') + '</span></div></td>';
+    }
     function rowHtml(c) {
       if (hotel) {
         var h = c.hospitality || {};
         var identity = [h.documentType, h.documentNumber].filter(Boolean).join(' · ') || T.none;
         return '<tr data-cd-id="' + esc(c.id) + '">' +
-          '<td class="cd-nm">' + esc(c.name || T.none) + '</td>' +
+          whoCell(c, h.preferredLanguage) +
           '<td class="mono">' + esc(c.phone || T.none) + '</td>' +
           '<td>' + esc(h.nationality || T.none) + '</td>' +
           '<td class="mono">' + esc(identity) + '</td>' +
           '<td>' + esc(h.roomPreferences || T.none) + '</td>' +
           '<td class="' + (h.allergies ? '' : 'cd-muted') + '">' + esc(h.allergies || T.none) + '</td>' +
-          '<td class="mono">' + (c.visits || 0) + '</td>' +
-          '<td class="mono">' + fmt(c.spend) + '</td>' +
+          '<td class="num">' + (c.visits || 0) + '</td>' +
+          '<td class="num">' + fmt(c.spend) + ' ' + T.currency + '</td>' +
           '<td class="cd-muted">' + T.ago(c.last) + '</td></tr>';
       }
       return '<tr data-cd-id="' + esc(c.id) + '">' +
-        '<td class="cd-nm">' + esc(c.name || T.none) + '</td>' +
+        whoCell(c, c.city) +
         '<td class="mono">' + esc(c.phone || T.none) + '</td>' +
         '<td class="' + (c.email ? '' : 'cd-muted') + '">' + esc(c.email || T.none) + '</td>' +
-        '<td>' + esc(c.city || T.none) + '</td>' +
-        '<td class="mono">' + (c.visits || 0) + '</td>' +
-        '<td class="mono">' + fmt(c.spend) + '</td>' +
-        '<td class="mono">' + fmt(c.points) + '</td>' +
+        '<td class="num">' + (c.visits || 0) + '</td>' +
+        '<td class="num">' + fmt(c.spend) + ' ' + T.currency + '</td>' +
+        '<td class="num">' + fmt(c.points) + '</td>' +
         '<td><span class="cd-tag ' + c.seg + '">' + SEG_LBL(T, c.seg) + '</span></td>' +
         '<td class="cd-muted">' + T.ago(c.last) + '</td></tr>';
     }
     function tableHtml() {
       var rows = filtered();
-      if (!rows.length) return '<div class="cd-empty">' + esc(T.empty) + '</div>';
+      if (!rows.length) {
+        if (!all.length) return '<div class="cd-empty"><span class="cd-empty-ic">' + ico('group') + '</span><b>' + esc(T.emptyTitle) + '</b><p>' + esc(T.emptyText) + '</p>' +
+          '<button type="button" class="cd-exp cd-new" data-cd-new>' + ico('personAdd') + '<span>' + esc(T.newShort) + '</span></button></div>';
+        return '<div class="cd-empty"><span class="cd-empty-ic">' + ico('search') + '</span><b>' + esc(T.noMatch) + '</b><p>' + esc(T.noMatchText) + '</p>' +
+          '<button type="button" class="cd-exp" data-cd-clear>' + esc(T.clear) + '</button></div>';
+      }
       if (hotel) return '<div class="cd-tblwrap"><table class="cd-tbl"><thead><tr>' +
-        [T.th.name, T.th.phone, H.nationality, H.identity, H.room, H.allergies, H.stays, T.th.spend, T.th.last].map(function (label) { return '<th>' + esc(label) + '</th>'; }).join('') +
+        [T.th.name, T.th.phone, H.nationality, H.identity, H.room, H.allergies, H.stays, T.th.spend, T.th.last].map(function (label, i) { return '<th' + (i === 6 || i === 7 ? ' class="num"' : '') + '>' + esc(label) + '</th>'; }).join('') +
         '</tr></thead><tbody>' + rows.map(rowHtml).join('') + '</tbody></table></div>';
       return '<div class="cd-tblwrap"><table class="cd-tbl"><thead><tr>' +
-        ['name', 'phone', 'email', 'city', 'visits', 'spend', 'points', 'seg', 'last'].map(function (k) { return '<th>' + T.th[k] + '</th>'; }).join('') +
+        ['name', 'phone', 'email', 'visits', 'spend', 'points', 'seg', 'last'].map(function (k) { return '<th' + (k === 'visits' || k === 'spend' || k === 'points' ? ' class="num"' : '') + '>' + T.th[k] + '</th>'; }).join('') +
         '</tr></thead><tbody>' + rows.map(rowHtml).join('') + '</tbody></table></div>';
     }
+    var SEGS = ['all', 'reg', 'vip', 'new', 'win'];
+    function segCount(id) { return id === 'all' ? all.length : all.filter(function (c) { return c.seg === id; }).length; }
     function segChips() {
-      return ['all', 'reg', 'vip', 'new', 'win'].map(function (id) {
-        var n = id === 'all' ? all.length : all.filter(function (c) { return c.seg === id; }).length;
-        return '<button class="cd-segchip' + (state.seg === id ? ' on' : '') + '" data-cd-seg="' + id + '">' + T.seg[id] + ' · ' + n + '</button>';
+      return SEGS.map(function (id) {
+        var on = state.seg === id;
+        return '<button type="button" class="cd-seg' + (on ? ' on' : '') + '" data-lens-item data-cd-seg="' + id + '" aria-pressed="' + on + '">' + T.seg[id] + '<em>' + segCount(id) + '</em></button>';
       }).join('');
     }
+    function share(n) { return all.length ? Math.round(n / all.length * 100) + ' % ' + T.ofBook : T.noneYet; }
+    function kpi(id, label, value, hint) {
+      return '<div class="cd-kpi cd-stat" data-cd-kpi="' + id + '"><div class="l"><i></i>' + esc(label) + '</div><div class="v">' + fmt(value) + '</div><div class="h">' + esc(hint) + '</div></div>';
+    }
+    function kpis() {
+      return kpi('total', T.total, all.length, T.shared) + kpi('phone', T.withPhone, withPhone(), share(withPhone())) +
+        kpi('email', T.withEmail, withEmail(), share(withEmail())) + kpi('ok', T.consented, contactable(), share(contactable()));
+    }
 
-    var body = '<div class="gk-reveal-root">' +
-      '<div class="cd-head"><div class="cd-stats" id="cd-stats">' +
-        '<div class="cd-stat"><div class="v">' + fmt(all.length) + '</div><div class="l">' + T.total + '</div></div>' +
-        '<div class="cd-stat"><div class="v">' + fmt(withPhone()) + '</div><div class="l">' + T.withPhone + '</div></div>' +
-        '<div class="cd-stat"><div class="v">' + fmt(withEmail()) + '</div><div class="l">' + T.withEmail + '</div></div>' +
-        '<div class="cd-stat"><div class="v">' + fmt(contactable()) + '</div><div class="l">' + T.consented + '</div></div>' +
-      '</div><div class="cd-tools">' +
-        '<button class="cd-exp cd-new" id="cd-new">' + esc(T.newClient) + '</button>' +
-        '<input class="cd-search" id="cd-q" type="search" placeholder="' + esc(T.search) + '">' +
-        '<button class="cd-exp" id="cd-exp"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' + T.export + '</button>' +
-        '<button class="cd-exp" id="cd-loyalty" data-feature="loyalty"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>' + T.program + '</button>' +
-        (campaignsEnabled() ? '<button class="cd-exp cd-camp" id="cd-campaign"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>' + T.campaign + '</button>' : '') +
-      '</div></div>' +
-      '<div class="cd-segs" id="cd-segs">' + segChips() + '</div>' +
+    var body = '<div class="gk-reveal-root cd">' +
+      '<div class="cd-kpis" id="cd-stats">' + kpis() + '</div>' +
+      '<div class="cd-bar">' +
+        '<div class="cd-actions">' +
+          '<label class="cd-field">' + ico('search') + '<input class="cd-search" id="cd-q" type="search" placeholder="' + esc(T.search) + '" aria-label="' + esc(T.search) + '"></label>' +
+          '<button type="button" class="cd-exp" id="cd-exp" title="' + esc(T.export) + '">' + ico('download') + '<span>' + T.export + '</span></button>' +
+          '<button type="button" class="cd-exp" id="cd-loyalty" data-feature="loyalty" title="' + esc(T.program) + '">' + ico('redeem') + '<span>' + T.loyalty + '</span></button>' +
+          (campaignsEnabled() ? '<button type="button" class="cd-exp cd-camp" id="cd-campaign">' + ico('campaign') + '<span>' + T.campaign + '</span></button>' : '') +
+          '<button type="button" class="cd-exp cd-new" id="cd-new">' + ico('personAdd') + '<span>' + esc(T.newShort) + '</span></button>' +
+        '</div>' +
+        '<div class="cd-segs" id="cd-segs" data-lens-demo role="group" aria-label="' + esc(T.th.seg) + '">' + segChips() + '</div>' +
+      '</div>' +
       '<div id="cd-table">' + tableHtml() + '</div></div>';
 
     // Render IN-FLOW like every other sidebar destination (Terminaux, Équipe…) —
@@ -312,14 +357,21 @@
     if (window.KiwiKit) KiwiKit.reveal(d.el.querySelector('.gk-reveal-root'));
     var root = d.el;
     function rerenderTable() { root.querySelector('#cd-table').innerHTML = tableHtml(); }
-    function rerenderSegs() { root.querySelector('#cd-segs').innerHTML = segChips(); }
+    function rerenderSegs() {
+      root.querySelectorAll('[data-cd-seg]').forEach(function (b) {
+        var id = b.getAttribute('data-cd-seg'), on = state.seg === id;
+        b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+        var em = b.querySelector('em'); if (em) em.textContent = segCount(id);
+      });
+    }
 
     var q = root.querySelector('#cd-q');
     q.addEventListener('input', function () { state.q = q.value; rerenderTable(); });
     root.addEventListener('click', function (e) {
       var sg = e.target.closest('[data-cd-seg]');
       if (sg) { state.seg = sg.getAttribute('data-cd-seg'); rerenderSegs(); rerenderTable(); return; }
-      if (e.target.closest('#cd-new')) { openNewClient(); return; }
+      if (e.target.closest('#cd-new,[data-cd-new]')) { openNewClient(); return; }
+      if (e.target.closest('[data-cd-clear]')) { state.seg = 'all'; state.q = ''; q.value = ''; rerenderSegs(); rerenderTable(); return; }
       if (e.target.closest('#cd-exp')) { csvExport(filtered(), T); Kiwi.toast && Kiwi.toast(T.export, { type: 'success', desc: fmt(filtered().length) + ' ' + T.total }); return; }
       if (e.target.closest('#cd-loyalty')) { if (window.Kiwi.handlers && Kiwi.handlers['loyalty']) Kiwi.handlers['loyalty'](); return; }
       // In-flow: growth-crm's appPage replaces this page's host, so no close() needed
@@ -390,9 +442,7 @@
     var offSub = null;
     function rerenderStats() {
       var s = root.querySelector('#cd-stats'); if (!s) return;
-      var vals = [all.length, withPhone(), withEmail(), contactable()];
-      var vs = s.querySelectorAll('.cd-stat .v');
-      for (var i = 0; i < vs.length && i < vals.length; i++) vs[i].textContent = fmt(vals[i]);
+      s.innerHTML = kpis();
     }
     function refreshData() {
       if (!root || !document.body.contains(root)) { if (offSub) { offSub(); offSub = null; } return; }

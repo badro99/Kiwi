@@ -99,15 +99,11 @@
   color: var(--ink);
   margin: 0;
 }
-/* appPage() moves focus to the h1 so the page change is announced. That is
-   correct for screen readers and wrong for a mouse click, which would otherwise
-   draw a ring around the title on every navigation. */
-.dash-genpage .genpage-head h1:focus { outline: none; }
-.dash-genpage .genpage-head h1:focus-visible {
-  outline: 2px solid var(--atlas);
-  outline-offset: 6px;
-  border-radius: 4px;
-}
+/* appPage() moves focus to the h1 so the page change is announced. The heading
+   is not a control, so it never draws a ring: Safari and iPadOS report that
+   programmatic focus as :focus-visible and boxed every page title (#102). */
+.dash-genpage .genpage-head h1:focus,
+.dash-genpage .genpage-head h1:focus-visible { outline: none; }
 
 /* The context line. Callers pass one " · "-joined string; appPage() splits it
    into .seg spans separated by .dot, so the separators stop competing with the

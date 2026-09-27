@@ -3542,7 +3542,7 @@ body.design-vexel[data-vexel-mode] :is(
   .resv-section, .resv-builder,
   .sh-section, .sh-tip-cfg, .sh-lvs, .wk,
   .dep-ledger, .dep-card,
-  .cd-tblwrap, .cd-exp,
+  .cd-tblwrap, .cd-kpi, .cd-exp,
   .crm-tbl, .crm-comp,
   .ord-feed, .ord-keep,
   .gft-stat, .gft-tbl,
@@ -3626,7 +3626,7 @@ body.design-vexel[data-vexel-mode] :is(
   .resv-section, .resv-builder,
   .sh-section, .sh-tip-cfg, .sh-lvs, .wk,
   .dep-ledger, .dep-card,
-  .cd-tblwrap, .cd-exp,
+  .cd-tblwrap, .cd-kpi, .cd-exp,
   .crm-tbl, .crm-comp,
   .ord-feed, .ord-keep,
   .gft-stat, .gft-tbl,
@@ -3660,7 +3660,7 @@ body.design-vexel[data-vexel-mode] :is(
   .resv-section, .resv-builder,
   .sh-section, .sh-tip-cfg, .sh-lvs, .wk,
   .dep-ledger, .dep-card,
-  .cd-tblwrap, .cd-exp,
+  .cd-tblwrap, .cd-kpi, .cd-exp,
   .crm-tbl, .crm-comp,
   .ord-feed, .ord-keep,
   .gft-stat, .gft-tbl,
@@ -3695,7 +3695,7 @@ body.design-vexel[data-vexel-mode="dark"] :is(
   .eq-section, .pay-section, .cf-card,
   .resv-section, .sh-section,
   .dep-ledger, .dep-card,
-  .cd-tblwrap, .crm-tbl, .crm-comp,
+  .cd-tblwrap, .cd-kpi, .crm-tbl, .crm-comp,
   .kt-plan-wrap, .kt-h-tablewrap,
   .kdr-strip, .kdr-top-c, .kdr-cat
 ) {
@@ -3710,7 +3710,7 @@ body.design-vexel[data-vexel-mode="dark"][class*=" page-"] main .container tbody
 body.design-vexel[data-vexel-mode="dark"] .kiwi-drawer tbody tr:hover,
 body.design-vexel[data-vexel-mode="dark"] :is(
   .dash-genpage, .dash-equipe,
-  .cd-tblwrap, .crm-tbl, .kt-h-tablewrap,
+  .cd-tblwrap, .cd-kpi, .crm-tbl, .kt-h-tablewrap,
   .pay-section, .dep-ledger, .sh-section, .resv-section,
   .kdr-cat, .kdr-top-c
 ) tbody tr:hover {
@@ -3725,7 +3725,7 @@ body.design-vexel[data-vexel-mode="dark"][class*=" page-"] main .container tbody
 body.design-vexel[data-vexel-mode="dark"] .kiwi-drawer tbody tr:hover > *:first-child,
 body.design-vexel[data-vexel-mode="dark"] :is(
   .dash-genpage, .dash-equipe,
-  .cd-tblwrap, .crm-tbl, .kt-h-tablewrap,
+  .cd-tblwrap, .cd-kpi, .crm-tbl, .kt-h-tablewrap,
   .pay-section, .dep-ledger, .sh-section, .resv-section,
   .kdr-cat, .kdr-top-c
 ) tbody tr:hover > *:first-child {
@@ -3800,7 +3800,7 @@ body.design-vexel[data-vexel-mode] .kit-order:hover {
     .resv-section, .resv-builder,
     .sh-section, .sh-tip-cfg, .sh-lvs, .wk,
     .dep-ledger, .dep-card,
-    .cd-tblwrap, .cd-exp,
+    .cd-tblwrap, .cd-kpi, .cd-exp,
     .crm-tbl, .crm-comp,
     .ord-feed, .ord-keep,
     .gft-stat, .gft-tbl,
@@ -3820,7 +3820,7 @@ body.design-vexel[data-vexel-mode] .kit-order:hover {
     .resv-section, .resv-builder,
     .sh-section, .sh-tip-cfg, .sh-lvs, .wk,
     .dep-ledger, .dep-card,
-    .cd-tblwrap, .cd-exp,
+    .cd-tblwrap, .cd-kpi, .cd-exp,
     .crm-tbl, .crm-comp,
     .ord-feed, .ord-keep,
     .gft-stat, .gft-tbl,
@@ -5572,7 +5572,6 @@ body.design-vexel :is(
   .chl-copy,
   .cd-exp.cd-camp,
   .cd-exp.cd-new,
-  .cd-segchip.on,
   .kr-btn.on,
   .fa-send,
   .fa-tool.on,

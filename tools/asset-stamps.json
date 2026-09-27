@@ -147,6 +147,10 @@
     "v": "10",
     "sha": "d4ce3014e68334fc"
   },
+  "assets/caisse-viewport.js": {
+    "v": "1",
+    "sha": "89304de9d28a946c"
+  },
   "assets/cancellation-history.js": {
     "v": "2",
     "sha": "66f56a67823580af"
@@ -172,8 +176,8 @@
     "sha": "a9acfbd7ee10ccc7"
   },
   "assets/clients-directory.js": {
-    "v": "5",
-    "sha": "962750ce5bdb7153"
+    "v": "6",
+    "sha": "6f8beb5f540e8c84"
   },
   "assets/clients-store.js": {
     "v": "7",
@@ -252,8 +256,8 @@
     "sha": "19137813a992e56f"
   },
   "assets/design-vexel.css": {
-    "v": "2105",
-    "sha": "728a1207ecb451c0"
+    "v": "2106",
+    "sha": "363f341fee6a6268"
   },
   "assets/design-vexel.js": {
     "v": "2078",
@@ -320,8 +324,8 @@
     "sha": "882eee0288f15d96"
   },
   "assets/genpage.css": {
-    "v": "2",
-    "sha": "c45b2fa6cbebc287"
+    "v": "3",
+    "sha": "08715259597b9cc5"
   },
   "assets/growth-crm.js": {
     "v": "2",
@@ -596,12 +600,12 @@
     "sha": "530ff7c046c57b2c"
   },
   "assets/pos-boutique.css": {
-    "v": "30",
+    "v": "31",
     "sha": "ef50e38d14947b4d"
   },
   "assets/pos-boutique.js": {
-    "v": "30",
-    "sha": "701d0c7437a488fe"
+    "v": "31",
+    "sha": "00a16f50c12afe8d"
   },
   "assets/pos-coiffure.css": {
     "v": "5",
@@ -612,8 +616,8 @@
     "sha": "3673be5ef49cb7de"
   },
   "assets/pos-dispatch.js": {
-    "v": "55",
-    "sha": "e26f8aef685eda86"
+    "v": "56",
+    "sha": "a89d2d00a13134c0"
   },
   "assets/pos-epicerie.css": {
     "v": "5",
@@ -676,12 +680,12 @@
     "sha": "782a2a019b86fc81"
   },
   "assets/pos-maison.css": {
-    "v": "47",
+    "v": "48",
     "sha": "1b1ee04756c7799e"
   },
   "assets/pos-maison.js": {
-    "v": "47",
-    "sha": "d3001b9439cff79c"
+    "v": "48",
+    "sha": "c6a99a4b59d1c37a"
   },
   "assets/pos-mobile.css": {
     "v": "3",

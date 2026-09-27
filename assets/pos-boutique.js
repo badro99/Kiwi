@@ -1300,7 +1300,7 @@
           <button class="bq-nav-it" data-bq-view="echanges"><i data-lucide="arrow-left-right"></i><span>Échanges &amp; avoirs</span><b class="bq-nav-badge" id="bq-badge-ret"></b></button>
           <button class="bq-nav-it" data-bq-view="vendus"><i data-lucide="chart-no-axes-column-increasing"></i><span>Vendus</span></button>
           <button class="bq-nav-it" data-bq-view="clientes"><i data-lucide="users"></i><span>Clientes</span><b class="bq-nav-badge" id="bq-badge-cl"></b></button>
-          <button class="bq-nav-it" data-bq-view="acomptes"><img src="assets/icons/material/payments.svg" alt=""><span>Acomptes</span></button>
+          <button class="bq-nav-it" data-bq-view="acomptes"><i data-lucide="hand-coins"></i><span>Acomptes</span></button>
         </nav>
         <div class="bq-rail-foot">
           <button class="bq-lock" data-action="printer-connect" title="Configurer les imprimantes"><i data-lucide="printer"></i><span>Imprimantes</span></button>
