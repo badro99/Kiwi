@@ -77,14 +77,21 @@ complétée avec RC, IF, TP, ICE.
 ## 2. Compte démo pour la revue (P5)
 
 Les deux revues exigent un compte qui marche. Le créer par le parcours normal
-d'inscription marchand, jamais à la main dans D1. Les identifiants ci-dessous
-décrivent le compte à préparer, pas un accès vérifié : le contrôle D1 du
-7 septembre 2026 ne trouvait ni ce compte ni son établissement. Valider ensuite
-la connexion dans le binaire candidat, sans utiliser les comptes des commerçants :
+d'inscription marchand, jamais à la main dans D1. Le 27 septembre 2026,
+`demo-review@kiwi-os.com` a été créé par l'inscription normale dans Chrome avec
+le nom « Kiwi App Review » et l'établissement « Kiwi Review Demo » (restaurant).
+**Ce n'est pas encore un compte de revue prêt** : l'onboarding s'est arrêté à
+la saisie obligatoire du code propriétaire, que seul le titulaire doit faire.
+L'alias mail, le marquage opérateur `demo`, la carte et le parcours du binaire
+candidat restent à vérifier. **Amira est aussi un espace de démonstration,
+pas un compte commerçant réel** : il peut servir aux contrôles non destructifs,
+mais ne vaut pas à lui seul un parcours App Review vérifié. Ne pas utiliser
+les comptes des commerçants réels. Le 27 septembre, une session Amira Boutique
+était visible dans Chrome ; cela ne vérifie pas la connexion dans le binaire iOS :
 
-- e-mail `demo-review@kiwi-os.com` (alias Zoho, gratuit), établissement
-  **« Kiwi Démo »**, activité restaurant, formule Pro, dépôt-vente et nutrition
-  activés pour montrer la carte complète.
+- e-mail `demo-review@kiwi-os.com`, établissement **« Kiwi Review Demo »**,
+  activité restaurant. Vérifier l'alias Zoho, la formule Pro et les fonctions
+  dépôt-vente/nutrition avant de les annoncer à la revue.
 - Publier une carte d'une vingtaine d'articles avec prix, une formule, deux
   recettes complètes (la nutrition s'affiche), trois employés avec codes. Tout
   est prêt dans `docs/ops/demo-review/` : le CSV de la carte (Menu → Importer)
@@ -242,7 +249,8 @@ Réponses à donner telles quelles ; elles découlent de `PrivacyInfo.xcprivacy`
 |---|---|---|---|---|
 | Adresse e-mail | Oui | Oui | Fonctionnement de l'app | identifiant de connexion du compte |
 | Nom | Oui | Oui | Fonctionnement | nom du contact et de l'établissement |
-| Identifiant utilisateur | Oui | Oui | Fonctionnement | id de compte et id d'appareil généré par Kiwi |
+| Identifiant utilisateur | Oui | Oui | Fonctionnement | id de compte |
+| Identifiant d'appareil | Oui | Oui | Fonctionnement | id d'appareil généré par Kiwi pour l'appairage |
 | Autres informations financières | Oui | Oui | Fonctionnement | ventes du commerçant (montant, mode, libellé) ; aucune carte bancaire |
 | Données de plantage · autres diagnostics | Oui | Oui | Fonctionnement | rapports expurgés vers /api/error |
 | Photos | Oui | Oui | Fonctionnement | uniquement la photo de bon choisie par le commerçant (stock) |
@@ -260,10 +268,10 @@ Permission `CAMERA` : déclarer « scan de codes-barres et photo de bons de livr
 > (created by Kiwi when they subscribe, outside the app). Sign in with the
 > demo account provided in the Sign-In Information fields.
 >
-> After sign-in the app opens the Dashboard. To see the till: Dashboard › Devices
-> › generate a 6-digit pairing code, then tap the Kiwi logo (or open
-> "Change role") › Till › enter the code. Kitchen pairs the same way. The Team
-> app signs in with an employee code shown in Dashboard › Team.
+> After sign-in, choose a role in native setup. Till and Kitchen pair with a
+> code generated under Dashboard › Devices. Kiwi Team uses an employee code
+> shown under Dashboard › Team. On a phone, the native More button in every
+> workspace opens Change role, Sign out and Delete my account.
 >
 > The app asks for Local Network access the first time you open Printer › Test:
 > it sends ESC/POS tickets to a thermal printer on the Wi-Fi (TCP port 9100). No
@@ -272,23 +280,25 @@ Permission `CAMERA` : déclarer « scan de codes-barres et photo de bons de livr
 > note.
 >
 > There are no in-app purchases, no subscriptions sold in the app, no ads, no
-> tracking, no third-party login. Account deletion: Settings › Security ›
-> "Supprimer mon compte" opens a pre-filled request to dpo@kiwi-os.com and Kiwi
-> deletes the account within 30 days; data export is next to it (CSV).
+> tracking, no third-party login. Account deletion: native More › Delete my
+> account opens an owner-authenticated request. It asks for the account password
+> and records the request server-side; Kiwi processes it within 30 days. The
+> same request is available under Dashboard › Settings › Security.
 
 Les trois points qu'Apple refuse le plus souvent sur ce genre d'app, et notre
 réponse :
 - **2.1 / compte qui ne marche pas** → compte démo testé la veille de l'envoi.
-- **4.2 fonctionnalités minimales (« c'est un site web emballé »)** → les notes
-  nomment ce qui est natif : impression TCP directe, Trousseau, hors ligne,
-  haptique, réseau local. Les captures montrent l'app, pas le site.
+- **4.2 fonctionnalités minimales (« c'est un site web emballé »)** → montrer dans
+  le binaire candidat la configuration SwiftUI, la navigation native avec libellés,
+  Face ID au déverrouillage, le retour haptique, la conservation locale des ventes
+  hors ligne et le test d'impression TCP sur le réseau local. Ne pas présenter une
+  capacité non vérifiée comme une démonstration réussie.
 - **5.1.1 (v) suppression de compte** → la règle s'applique dès qu'un compte sert
   à se connecter, même créé hors de l'app, et le chemin doit partir **de l'app**.
-  Fait : Paramètres › Sécurité & Intégrations › **Supprimer mon compte**
-  (`assets/interactive.js`, action `settings-delete-account`) explique le délai de
-  30 jours et ouvre le mail au DPO pré-rempli avec l'adresse du compte. La
-  suppression effective reste un geste de l'opérateur dans la console, sous
-  30 jours ; c'est le propriétaire qui s'y engage en répondant au mail.
+  Le parcours natif **Plus › Supprimer mon compte** et Paramètres › Sécurité &
+  Intégrations appellent `/api/account/deletion-request` après confirmation du mot
+  de passe propriétaire. La suppression effective reste un geste de l'opérateur
+  dans la console, sous 30 jours ; vérifier cette étape avant soumission.
 
 ## 6. TestFlight · « Quoi tester » (premier build)
 
