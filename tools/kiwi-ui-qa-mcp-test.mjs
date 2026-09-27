@@ -148,6 +148,8 @@ try {
   ok(validateUiProof(proofFile, 999001).environment === 'synthetic-restaurant-dashboard', 'ticket MCP accepts approved restaurant dashboard proof');
   fs.writeFileSync(proofFile, JSON.stringify({ ...clean, environment: 'synthetic-employee-clock' }));
   ok(validateUiProof(proofFile, 999001).environment === 'synthetic-employee-clock', 'ticket MCP accepts approved employee clock proof');
+  fs.writeFileSync(proofFile, JSON.stringify({ ...clean, environment: 'synthetic-dashboard-navigation' }));
+  ok(validateUiProof(proofFile, 999001).environment === 'synthetic-dashboard-navigation', 'ticket MCP accepts approved dashboard navigation proof');
   fs.writeFileSync(proofFile, JSON.stringify(clean));
   assert.throws(() => validateUiProof(proofFile, 999002), /match/);
   count++; console.log('  ✓ ticket mismatch rejected');
@@ -200,6 +202,31 @@ try {
     'clock proof records the isolated fixture and rendered action');
   const clockClosed = await call('close_session');
   ok(!clockClosed.isError, 'employee clock fixture closes without production access');
+  const navigation = await call('start_retail_fixture', { scenario: 'nav-stability' });
+  ok(!navigation.isError && body(navigation).includes('dashboard navigation'), 'isolated real dashboard navigation fixture starts');
+  const enter = await call('ui_click', { ref: refFor(body(navigation), 'Entrer dans la démo →') });
+  ok(!enter.isError, 'enter restaurant dashboard through visible control');
+  const commands = await call('ui_click', { ref: refFor(body(enter), 'Commandes') });
+  ok(!commands.isError, 'open Commandes through sidebar');
+  const home = await call('ui_click', { ref: refFor(body(commands), 'Accueil') });
+  ok(!home.isError, 'return to Accueil before incoming order');
+  const sale = await call('ui_click', { ref: refFor(body(home), 'Créer vente TEST KIWI (simulation)') });
+  ok(!sale.isError, 'create synthetic order through visible control');
+  const stable = await call('ui_assert', { selector: '#fixture-nav-state', condition: 'text_contains', expected: 'Accueil · TEST KIWI présent',
+    description: 'Incoming sale does not move dashboard away from Accueil', timeoutMs: 15000 });
+  ok(!stable.isError, 'incoming order remains on Accueil');
+  const backToCommands = await call('ui_click', { ref: refFor(body(await call('ui_snapshot')), 'Commandes') });
+  ok(!backToCommands.isError, 'cashier can still visit Commandes');
+  const retained = await call('ui_assert', { selector: '[data-real-tx]', condition: 'text_contains', expected: 'TEST KIWI',
+    description: 'New order remains visible in Commandes history', timeoutMs: 15000 });
+  ok(!retained.isError, 'new order still appears after normal navigation');
+  const navProof = await call('finish_ui_proof', { ticketId: 999098,
+    expectedOutcome: 'Incoming order leaves Accueil selected and remains visible in Commandes' });
+  const navPath = body(navProof).match(/UI proof saved: (\/[^\n]+proof\.json)/)?.[1];
+  ok(!navProof.isError && navPath && JSON.parse(fs.readFileSync(navPath, 'utf8')).environment === 'synthetic-dashboard-navigation',
+    'navigation proof records actual clicks against cleanly isolated dashboard');
+  const navClosed = await call('close_session');
+  ok(!navClosed.isError, 'navigation fixture closes without production access');
   console.log(`kiwi-ui-qa-mcp-test: ${count} controls passed`);
 } finally {
   child.stdin.end();

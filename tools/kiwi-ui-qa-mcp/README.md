@@ -36,9 +36,9 @@ is missing or obscured, the ticket test fails—this is the point.
    only when necessary. State the visible starting point and expected result.
 2. Reproduce the problem in a fixture. For hotel UI tickets call
    `start_hotel_fixture`; for ticket-board work call `start_tickets_fixture`;
-   for Maison caisse, client-directory, restaurant Z/dashboard, or employee
-   store-clock work call `start_retail_fixture` with `maison`, `clients`,
-   `restaurant`, or `employee-clock`.
+   for Maison caisse, client-directory, restaurant Z/dashboard, employee
+   store-clock, or dashboard navigation work call `start_retail_fixture` with
+   `maison`, `clients`, `restaurant`, `employee-clock`, or `nav-stability`.
    Then use `ui_snapshot`, `ui_click`, `ui_fill`, or
    `ui_select`, `ui_scroll`, or `ui_viewport` using the current `q` refs. A new snapshot follows every
    interaction. No arbitrary JavaScript, URL navigation, direct API call, or

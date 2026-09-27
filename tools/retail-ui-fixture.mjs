@@ -89,13 +89,38 @@ function employeeClockPage() {
   </body></html>`;
 }
 
+function navigationPage() {
+  /* Real dashboard and pages-pro code, with one visible synthetic sale control.
+     The browser is isolated on loopback; no merchant account or API is used. */
+  return fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8').replace('</body>', `
+    <div id="fixture-nav-controls" style="position:fixed;right:16px;bottom:16px;z-index:9999;background:#fff;padding:12px;border:2px solid #064329;border-radius:12px">
+      <button id="fixture-new-sale" type="button">Créer vente TEST KIWI (simulation)</button>
+      <strong id="fixture-nav-state" role="status">En attente</strong>
+    </div>
+    <script>(function(){
+      var id='fixture-test-kiwi-98';
+      document.getElementById('fixture-new-sale').onclick=function(){
+        window.KiwiSales.add('v-nav-stability',{amount:1,method:'cash',ts:Date.now(),label:'TEST KIWI',saleId:id});
+      };
+      setInterval(function(){
+        var page=window.Kiwi && window.Kiwi.activePage;
+        var found=!!(window.KiwiSales && window.KiwiSales.list('v-nav-stability').some(function(x){return x.saleId===id || x.label==='TEST KIWI';}));
+        document.getElementById('fixture-nav-state').textContent=(page==='accueil'?'Accueil':String(page||'chargement'))+' · '+(found?'TEST KIWI présent':'aucune vente test');
+      },200);
+    })();</script>
+  </body>`);
+}
+
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
-  if (pathname === '/maison.html' || pathname === '/clients.html' || pathname === '/dashboard.html' || pathname === '/employee-clock.html') {
+  if (pathname === '/maison.html' || pathname === '/clients.html' || pathname === '/dashboard.html' || pathname === '/employee-clock.html' || pathname === '/nav-stability.html') {
     res.writeHead(200, { 'Content-Type': TYPES['.html'], 'Cache-Control': 'no-store' });
     res.end(pathname === '/maison.html' ? maisonPage() : pathname === '/clients.html' ? clientsPage()
-      : pathname === '/dashboard.html' ? restaurantPage() : employeeClockPage()); return;
+      : pathname === '/dashboard.html' ? (new URL(req.url, 'http://localhost').searchParams.get('fixture') === 'nav-stability' ? navigationPage() : restaurantPage())
+        : pathname === '/employee-clock.html' ? employeeClockPage() : navigationPage()); return;
   }
+  if (pathname === '/kiwi-sw.js') { res.writeHead(404); res.end('fixture has no service worker'); return; }
+  if (pathname === '/api/me') { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end('{"authenticated":false}'); return; }
   if (pathname === '/api/z-reconciliation') {
     const day = new URL(req.url, 'http://localhost').searchParams.get('day');
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
