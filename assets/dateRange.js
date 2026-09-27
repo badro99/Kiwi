@@ -1617,7 +1617,7 @@
       if (labelEl) labelEl.textContent = RANGE_STR[lang]?.[currentRange] || RANGE_STR.fr[currentRange];
       if (subEl)   subEl.textContent = computeSubLine(currentRange);
     }
-    document.querySelectorAll('.dr-pill').forEach(p => {
+    document.querySelectorAll('.dash-date-range .dr-pill').forEach(p => {
       const on = p.dataset.range === currentRange;
       p.classList.toggle('on', on);
       p.setAttribute('aria-pressed', String(on));
@@ -5020,7 +5020,7 @@
          + `${e.getDate()} ${monthOnly(e, lang, 'short')} ${e.getFullYear()}`;
   }
 
-  let dpEl = null, dpOutside = null, dpKey = null;
+  let dpEl = null, dpOutside = null, dpKey = null, dpControl = null;
 
   function closeCustomPicker() {
     if (!dpEl) return;
@@ -5030,26 +5030,30 @@
     if (dpOutside) document.removeEventListener('mousedown', dpOutside);
     if (dpKey) document.removeEventListener('keydown', dpKey);
     dpOutside = dpKey = null;
-    const pill = document.querySelector('.dr-pill-custom');
+    const pill = dpControl?.querySelector('.dr-pill-custom');
     if (pill) pill.setAttribute('aria-expanded', 'false');
+    dpControl = null;
     let gone = false;
     const drop = () => { if (gone) return; gone = true; pop.remove(); };
     pop.addEventListener('transitionend', drop, { once: true });
     setTimeout(drop, 300);
   }
 
-  function openCustomPicker() {
+  function openCustomPicker(options) {
     if (dpEl) { closeCustomPicker(); return; }          // second click → toggle shut
-    const control = document.querySelector('.dr-control');
+    const dayMode = options?.mode === 'day';
+    const control = options?.control || document.querySelector('.dash-date-range .dr-control');
     if (!control) return;
+    dpControl = control;
     const lang = getLang();
     const S = PICKER_STR[lang] || PICKER_STR.fr;
-    const today = startOfDay(new Date());
+    const today = dayMode && isoToDate(options.maxDay) ? isoToDate(options.maxDay) : startOfDay(new Date());
     const monIdx = (y, m) => y * 12 + m;
     const maxLeft = monIdx(today.getFullYear(), today.getMonth()) - 1;  // right pane never future
 
-    let selStart = customRange ? startOfDay(customRange.start) : null;
-    let selEnd   = customRange ? startOfDay(customRange.end)   : null;
+    const selectedDay = dayMode ? isoToDate(options.selected) : null;
+    let selStart = dayMode ? selectedDay : customRange ? startOfDay(customRange.start) : null;
+    let selEnd   = dayMode ? selectedDay : customRange ? startOfDay(customRange.end)   : null;
     let hoverD   = null;
     let view = selEnd
       ? shiftMonth(selEnd.getFullYear(), selEnd.getMonth(), -1)
@@ -5061,7 +5065,8 @@
     pop.setAttribute('aria-label', S.title);
     if (lang === 'ar') pop.setAttribute('dir', 'rtl');
     dpEl = pop;
-    control.appendChild(pop);
+    if (dayMode) document.body.appendChild(pop);
+    else control.appendChild(pop);
 
     const presets = [['p7', S.p7], ['p14', S.p14], ['p30', S.p30],
                      ['pMonth', S.pMonth], ['pLast', S.pLast], ['p90', S.p90]];
@@ -5084,9 +5089,7 @@
       }
       return null;
     }
-    const chev = (dir) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-      + 'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="'
-      + (dir === 'prev' ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6') + '"/></svg>';
+    const chev = (dir) => `<span class="dr-icon dr-icon-${dir === 'prev' ? 'prev' : 'next'}" aria-hidden="true"></span>`;
 
     function weekdayRow() {
       const mon = addDays(today, -((today.getDay() + 6) % 7));
@@ -5167,7 +5170,7 @@
       }
       const apply = pop.querySelector('[data-drp-apply]');
       if (apply) apply.disabled = !(selStart && selEnd);
-      const ap = activePreset();
+      const ap = dayMode ? null : activePreset();
       pop.querySelectorAll('.drp-preset').forEach((p) => {
         p.classList.toggle('is-active', p.dataset.preset === ap);
       });
@@ -5176,16 +5179,15 @@
     function render() {
       const r = shiftMonth(view.y, view.m, 1);
       pop.innerHTML =
-        `<div class="drp-head"><div><div class="drp-eyebrow">${dpEsc(S.title)}</div>`
+        `<div class="drp-head"><div><div class="drp-eyebrow">${dpEsc(dayMode ? ({ fr: 'Choisir une date', en: 'Pick a date', ar: 'اختر تاريخاً' }[lang] || 'Choisir une date') : S.title)}</div>`
         + `<div class="drp-readout" data-drp-readout>·</div></div>`
         + `<button type="button" class="drp-x" data-drp-cancel aria-label="${dpEsc(S.cancel)}">`
-        + `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" `
-        + `stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`
-        + `<div class="drp-body"><div class="drp-presets">`
+        + `<span class="dr-icon dr-icon-close" aria-hidden="true"></span></button></div>`
+        + `<div class="drp-body">${dayMode ? '' : `<div class="drp-presets">`
         + `<div class="drp-presets-lbl">${dpEsc(S.presets)}</div>`
         + presets.map(([k, lbl]) =>
             `<button type="button" class="drp-preset" data-preset="${k}">${dpEsc(lbl)}</button>`).join('')
-        + `</div><div class="drp-cal"><div class="drp-months">`
+        + `</div>`}<div class="drp-cal"><div class="drp-months">`
         + monthCard(view.y, view.m, 'left') + monthCard(r.y, r.m, 'right')
         + `</div></div></div>`
         + `<div class="drp-foot"><div class="drp-hint" data-drp-hint></div>`
@@ -5199,6 +5201,7 @@
     function pickDay(iso) {
       const d = isoToDate(iso);
       if (!d) return;
+      if (dayMode) { selStart = d; selEnd = d; hoverD = null; render(); return; }
       if (!selStart || (selStart && selEnd)) { selStart = d; selEnd = null; }
       else if (ymdInt(d) < ymdInt(selStart)) { selEnd = selStart; selStart = d; }
       else { selEnd = d; }
@@ -5230,12 +5233,13 @@
       if (pre) { applyPreset(pre.dataset.preset); return; }
       if (e.target.closest('[data-drp-cancel]')) { closeCustomPicker(); return; }
       if (e.target.closest('[data-drp-apply]') && selStart && selEnd) {
-        commitCustomRange(selStart, selEnd);
+        if (dayMode) options.onApply(dateToIso(selStart));
+        else commitCustomRange(selStart, selEnd);
         closeCustomPicker();
       }
     });
     pop.addEventListener('mouseover', (e) => {
-      if (!selStart || selEnd) return;
+      if (dayMode || !selStart || selEnd) return;
       const day = e.target.closest('.drp-day');
       const nd = (day && day.dataset.day && !day.disabled) ? isoToDate(day.dataset.day) : null;
       if ((nd ? ymdInt(nd) : 0) === (hoverD ? ymdInt(hoverD) : 0)) return;
@@ -5247,13 +5251,23 @@
     });
 
     render();
+    if (dayMode) {
+      // Drawers clip their scrollable bodies with contain:paint. Portal the
+      // SAME calendar above them and anchor it to the shared pill.
+      const rect = control.getBoundingClientRect();
+      pop.style.position = 'fixed';
+      pop.style.insetInlineEnd = 'auto';
+      const anchorX = lang === 'ar' ? rect.right - pop.offsetWidth : rect.left;
+      pop.style.left = Math.max(8, Math.min(anchorX, innerWidth - pop.offsetWidth - 8)) + 'px';
+      pop.style.top = Math.max(8, Math.min(rect.bottom + 10, innerHeight - pop.offsetHeight - 8)) + 'px';
+    }
     requestAnimationFrame(() => requestAnimationFrame(() => {
       if (dpEl === pop) pop.classList.add('open');
     }));
 
     dpOutside = (e) => {
       if (pop.contains(e.target)) return;
-      if (e.target.closest('.dr-pill-custom')) return;   // the pill's own click toggles
+      if (control.contains(e.target)) return;   // the control's own click toggles
       closeCustomPicker();
     };
     dpKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); closeCustomPicker(); } };
@@ -5263,8 +5277,42 @@
       document.addEventListener('keydown', dpKey);
     }, 0);
 
-    const pill = document.querySelector('.dr-pill-custom');
+    const pill = control.querySelector('.dr-pill-custom');
     if (pill) pill.setAttribute('aria-expanded', 'true');
+  }
+
+  /* A business-day version of the SAME control and two-month calendar used on
+   * Accueil. Rapport journalier and restaurant Commandes supply only their
+   * relative-day choices; neither owns another native date input or picker. */
+  function mountDaySelector(host, options = {}) {
+    if (!host) return;
+    const report = window.KiwiDayReport;
+    const today = report?.today?.(options.merchant) || dateToIso(new Date());
+    const shift = (n) => report?.shiftDay?.(today, -n, options.merchant) || dateToIso(addDays(isoToDate(today), -n));
+    const chosen = isoToDate(options.value) ? options.value : today;
+    const offsets = options.offsets || [0, 1];
+    const lang = getLang();
+    const labels = {
+      fr: ["Aujourd'hui", 'Hier', 'Avant-hier', 'Choisir une date'],
+      en: ['Today', 'Yesterday', 'Day before yesterday', 'Pick a date'],
+      ar: ['اليوم', 'أمس', 'أول أمس', 'اختر تاريخاً'],
+    }[lang] || ["Aujourd'hui", 'Hier', 'Avant-hier', 'Choisir une date'];
+    const relative = offsets.find(n => shift(n) === chosen);
+    const custom = relative == null;
+    const customLabel = custom ? new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA' : lang,
+      { day: 'numeric', month: 'short', year: 'numeric' }).format(isoToDate(chosen)) : labels[3];
+    host.innerHTML = `<div class="dr-control dr-day-control"><div class="dr-pills" role="group" aria-label="${dpEsc(options.ariaLabel || labels[3])}">`
+      + offsets.map(n => `<button type="button" class="dr-pill${relative === n ? ' on' : ''}" data-dr-day-offset="${n}" aria-pressed="${relative === n}">${dpEsc(labels[n])}</button>`).join('')
+      + `<button type="button" class="dr-pill dr-pill-custom${custom ? ' on' : ''}" data-dr-day-custom aria-pressed="${custom}" aria-haspopup="dialog" aria-expanded="false">`
+      + `<span class="dr-icon dr-icon-calendar" aria-hidden="true"></span>${dpEsc(customLabel)}</button></div></div>`;
+    const control = host.querySelector('.dr-control');
+    host.querySelectorAll('[data-dr-day-offset]').forEach(button => {
+      button.addEventListener('click', () => options.onChange?.(shift(+button.dataset.drDayOffset)));
+    });
+    host.querySelector('[data-dr-day-custom]').addEventListener('click', () => openCustomPicker({
+      mode: 'day', control, selected: chosen, maxDay: today, onApply: day => options.onChange?.(day),
+    }));
+    window.KiwiLens?.rescan?.();
   }
 
   function registerHandler() {
@@ -5530,6 +5578,7 @@
    * dashboard renderer fails during first paint. */
   window.KiwiDateRange = {
     getDateRange, setDateRange, subscribe, tickLiveRevenue,
+    mountDaySelector: mountDaySelector,
     selectedBusinessDay: (range = currentRange) => {
       // Same civil timezone/cutoff as functions/api/_business-day.js, including
       // boutiques. This reference must not inherit a midnight chart cutoff.

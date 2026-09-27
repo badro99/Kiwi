@@ -15949,7 +15949,9 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     };
     H['sales-day'] = (_el, offset) => {
       const merchant = auditMerchant() || String(window.KiwiVenue?.getCurrentVenueData?.()?.id || 'venue');
-      salesDayByMerchant[merchant] = Math.max(0, Math.min(6, Number(offset) || 0));
+      const R = window.KiwiDayReport;
+      const today = R?.today?.(merchant);
+      if (today) salesDayByMerchant[merchant] = R.shiftDay(today, -Math.max(0, Math.min(2, Number(offset) || 0)), merchant);
       renderRealTransactions('transactions', STARTERS.transactions);
     };
     H['sales-kind'] = (_el, kind) => {
@@ -16001,9 +16003,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       '.rtx-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--n-200)}' +
       '.rtx-count{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--n-500)}' +
       '.rtx-total{font-size:14px;color:var(--ink)}.rtx-total b{font-family:var(--mono)}' +
-      '.rtx-days{display:flex;gap:7px;overflow-x:auto;padding:0 0 16px;scrollbar-width:thin}' +
-      '.rtx-day{border:1px solid var(--n-200);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 12px;white-space:nowrap;font:600 11px var(--sans);cursor:pointer}' +
-      '.rtx-day.on{background:var(--inverse-surface);border-color:var(--inverse-surface);color:var(--inverse-ink)}' +
+      '.rtx-day-host{padding:0 0 16px}' +
       '.rtx-methods{display:flex;gap:7px;flex-wrap:wrap;padding:0 0 16px}' +
       '.rtx-method{border:1px solid var(--n-200);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 12px;font:600 11px var(--sans);cursor:pointer}' +
       '.rtx-method.on{background:var(--atlas);border-color:var(--atlas);color:#fff}' +
@@ -16031,7 +16031,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       '.rtx-void-who{font-size:13px;font-weight:600}.rtx-void-lines{font-size:12px;color:var(--n-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
       '.rtx-void-amount{font-family:var(--mono);font-size:13px;font-weight:650;color:#b44338;white-space:nowrap}' +
       '.rtx-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0 24px}.rtx-summary>div{padding:18px;border:1px solid var(--n-200);border-radius:16px;background:var(--n-0,#fff)}.rtx-summary span{display:block;font-size:12px;color:var(--n-500)}.rtx-summary strong{display:block;font-size:26px;color:var(--g-700,#087454);margin-top:7px}.rtx-summary small{font-size:12px;font-weight:500}.rtx-summary .is-refund strong{color:#b44338}' +
-      '.rtx-activity-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;padding:18px 0;border-bottom:1px solid var(--n-100);align-items:start}.rtx-activity-tag{font-size:11px;font-weight:650;color:#81501a;background:#fcf0da;padding:5px 9px;border-radius:7px}.rtx-activity-value{text-align:end;font-weight:650;font-size:15px}.rtx-activity-value small{display:block;font-size:11px;font-weight:400;color:var(--n-500);margin-top:5px;max-width:200px}.rtx-detail{font-size:12px;color:var(--n-500);overflow-wrap:anywhere}.rtx-detail summary{cursor:pointer;min-height:44px;display:flex;align-items:center;text-decoration:underline;text-underline-offset:3px}.rtx-detail p{margin:6px 0}.rtx-notice{padding:12px 16px;border-radius:12px;background:#fcf0da;color:#81501a;font-size:13px}.rtx-method,.rtx-day{min-height:44px}.rtx button:focus-visible,.rtx summary:focus-visible{outline:2px solid var(--g-700,#087454);outline-offset:3px}' +
+      '.rtx-activity-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;padding:18px 0;border-bottom:1px solid var(--n-100);align-items:start}.rtx-activity-tag{font-size:11px;font-weight:650;color:#81501a;background:#fcf0da;padding:5px 9px;border-radius:7px}.rtx-activity-value{text-align:end;font-weight:650;font-size:15px}.rtx-activity-value small{display:block;font-size:11px;font-weight:400;color:var(--n-500);margin-top:5px;max-width:200px}.rtx-detail{font-size:12px;color:var(--n-500);overflow-wrap:anywhere}.rtx-detail summary{cursor:pointer;min-height:44px;display:flex;align-items:center;text-decoration:underline;text-underline-offset:3px}.rtx-detail p{margin:6px 0}.rtx-notice{padding:12px 16px;border-radius:12px;background:#fcf0da;color:#81501a;font-size:13px}.rtx-method{min-height:44px}.rtx button:focus-visible,.rtx summary:focus-visible{outline:2px solid var(--g-700,#087454);outline-offset:3px}' +
       '@media(max-width:600px){.rtx-summary{gap:6px}.rtx-summary>div{padding:12px 8px}.rtx-summary strong{font-size:19px}.rtx-summary span{font-size:11px}.rtx-activity-row{grid-template-columns:auto minmax(0,1fr);gap:10px}.rtx-activity-value{grid-column:2;text-align:start}.rtx-activity-value small{max-width:none}.rtx-identity{flex-wrap:wrap}.rtx-row{grid-template-columns:auto minmax(0,1fr) auto;gap:10px;padding:18px 0}.rtx-row>.rtx-t{grid-column:1;grid-row:1}.rtx-row>.rtx-m{grid-column:2;grid-row:1;justify-self:start}.rtx-row>.rtx-a{grid-column:3;grid-row:1}.rtx-row>.rtx-products{grid-column:1/-1;grid-row:2;width:100%}.rtx-row>.rtx-actions{grid-column:3;grid-row:3}.rtx-product-name{white-space:normal}.rtx-product{gap:12px}}';
     document.head.appendChild(s);
   }
@@ -16142,7 +16142,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
      * on date la ligne — sans quoi borner n'aurait fait que cacher le problème
      * au lieu de le dire. */
     const merchant = auditMerchant() || String(vd.id || vd.name || 'venue');
-    const dayOffset = Math.max(0, Math.min(6, Number(salesDayByMerchant[merchant]) || 0));
+    const rememberedDay = String(salesDayByMerchant[merchant] || '');
     const selectedMethods = (salesMethodsByMerchant[merchant] || []).filter((m) => ['cash', 'card', 'delivery'].includes(m));
     const now = Date.now();
     const R = window.KiwiDayReport;
@@ -16183,7 +16183,9 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       return { from: boundary(day), to: boundary(addDay(day, 1)) };
     };
     const todayKey = R?.businessDay ? R.businessDay(now, merchant) : fallbackDay(now);
-    const selectedKey = R?.shiftDay ? R.shiftDay(todayKey, -dayOffset, merchant) : addDay(todayKey, -dayOffset);
+    const selectedKey = /^\d{4}-\d{2}-\d{2}$/.test(rememberedDay) && rememberedDay <= todayKey ? rememberedDay : todayKey;
+    const dayOffset = selectedKey === todayKey ? 0
+      : selectedKey === (R?.shiftDay ? R.shiftDay(todayKey, -1, merchant) : addDay(todayKey, -1)) ? 1 : -1;
     const selectedWindow = R?.dayBounds ? R.dayBounds(selectedKey, merchant) : fallbackBounds(selectedKey);
     const lo = selectedWindow.from;
     const hi = selectedWindow.to;
@@ -16218,13 +16220,6 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const dayLabel = dayOffset === 0 ? T({ fr: "aujourd'hui", en: 'today', ar: 'اليوم' })
       : dayOffset === 1 ? T({ fr: 'hier', en: 'yesterday', ar: 'أمس' })
       : new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA' : lang, { timeZone: zone, weekday: 'long', day: 'numeric', month: 'short' }).format(selectedDay);
-    const dayButtons = Array.from({ length: 7 }, (_, offset) => {
-      const d = new Date(`${(R?.shiftDay ? R.shiftDay(todayKey, -offset, merchant) : addDay(todayKey, -offset))}T12:00:00Z`);
-      const label = offset === 0 ? T({ fr: "Aujourd'hui", en: 'Today', ar: 'اليوم' })
-        : offset === 1 ? T({ fr: 'Hier', en: 'Yesterday', ar: 'أمس' })
-        : new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA' : lang, { timeZone: zone, weekday: 'short', day: 'numeric', month: 'short' }).format(d);
-      return `<button class="rtx-day${offset === dayOffset ? ' on' : ''}" type="button" data-action="sales-day" data-arg="${offset}" aria-pressed="${offset === dayOffset}">${escS(label)}</button>`;
-    }).join('');
     const methodLabels = {
       all: T({ fr: 'Tout', en: 'All', ar: 'الكل' }),
       cash: L.cash, card: L.card, delivery: L.delivery,
@@ -16313,7 +16308,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const voidRows = renderActivityRows(voids.filter(v => v.kind !== 'takeout-handover'));
     const handoverRows = renderActivityRows(voids.filter(v => v.kind === 'takeout-handover'));
     const startingUp = T({ fr: 'Historique des opérations', en: 'Operations history', ar: 'سجل العمليات' });
-    window.Kiwi.appPage('transactions', {
+    const page = window.Kiwi.appPage('transactions', {
       title: T({ fr: 'Ventes & activité', en: 'Sales & activity', ar: 'المبيعات والنشاط' }),
       subtitle: `${vd.name || 'Votre établissement'} · ${startingUp}`,
       body: `
@@ -16327,7 +16322,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
             [T({ fr: 'Remboursements', en: 'Refunded', ar: 'المبالغ المستردة' }), -returned, 'is-refund'],
             [T({ fr: 'Net encaissé', en: 'Net collected', ar: 'صافي المقبوضات' }), total, ''],
           ].map(([label, value, cls]) => `<div class="${cls}"><span>${escS(label)}</span><strong>${fmt(value)} <small>MAD</small></strong></div>`).join('')}</div>
-          <div class="rtx-days" role="group" aria-label="${escS(T({ fr: 'Jour des ventes', en: 'Sales day', ar: 'يوم المبيعات' }))}">${dayButtons}</div>
+          <div class="rtx-day-host" data-rtx-day-selector></div>
           <div class="rtx-methods" role="group" aria-label="${escS(T({ fr: 'Activité', en: 'Activity', ar: 'النشاط' }))}">${kindButtons}</div>
           <div class="rtx-methods" role="group" aria-label="${escS(T({ fr: 'Type de vente', en: 'Sale type', ar: 'نوع البيع' }))}">${methodButtons}</div>
           ${cancelAuditLoading ? `<p class="rtx-notice" role="status">${escS(T({ fr: 'Chargement du journal…', en: 'Loading activity…', ar: 'جارٍ تحميل السجل…' }))}</p>` : ''}
@@ -16341,6 +16336,10 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
           ${handoverRows && ['all', 'handover'].includes(selectedKind) ? `<section class="rtx-voids"><h3 class="rtx-void-title">${escS(T({ fr:'Remises au client', en:'Customer handovers', ar:'تسليمات العملاء' }))}</h3>${handoverRows}</section>` : ''}
         </div>
       `,
+    });
+    window.KiwiDateRange?.mountDaySelector?.(page?.el?.querySelector('[data-rtx-day-selector]'), {
+      value: selectedKey, merchant, offsets: [0, 1, 2], ariaLabel: T({ fr: 'Jour des ventes', en: 'Sales day', ar: 'يوم المبيعات' }),
+      onChange: day => { salesDayByMerchant[merchant] = day; renderRealTransactions('transactions', STARTERS.transactions); },
     });
     loadCancelAudit();
   }

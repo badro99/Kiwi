@@ -216,12 +216,12 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "23",
-    "sha": "f020aec845804f81"
+    "v": "25",
+    "sha": "88a944610d590c53"
   },
   "assets/day-report-dash.js": {
-    "v": "12",
-    "sha": "28493e0e03565c3e"
+    "v": "13",
+    "sha": "9a20205598268bf0"
   },
   "assets/day-report-export.js": {
     "v": "7",
@@ -536,12 +536,12 @@
     "sha": "57b562b061dc24d0"
   },
   "assets/pages-pro.js": {
-    "v": "2106",
-    "sha": "eff285d77e9b982f"
+    "v": "2108",
+    "sha": "8297d698fc67b868"
   },
   "assets/pages.js": {
-    "v": "6",
-    "sha": "84a90ce525e0a59c"
+    "v": "7",
+    "sha": "a454174bd45dd48b"
   },
   "assets/pairing-commit.js": {
     "v": "2",

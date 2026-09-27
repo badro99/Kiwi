@@ -180,9 +180,6 @@
     s.textContent = [
       /* ── la barre de navigation ── */
       '.kdr-nav{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}',
-      '.kdr-arrow{width:34px;height:34px;border-radius:10px;border:1px solid var(--n-200);background:transparent;color:var(--ink);display:grid;place-items:center;cursor:pointer;font-size:15px;line-height:1;transition:background 140ms,border-color 140ms}',
-      '.kdr-arrow:hover:not(:disabled){background:color-mix(in srgb,var(--atlas) 8%,transparent);border-color:var(--atlas)}',
-      '.kdr-arrow:disabled{opacity:.32;cursor:default}',
       /* `kdr-day` et non `kdr-date` : le sélecteur de plage de dates
          (assets/dashboard-extra.js, où kdr = Kiwi Date Range) possède déjà un
          `.kdr-date`, et son `width:100%` — écrit pour un champ de formulaire —
@@ -191,15 +188,11 @@
          partagent ce préfixe : vérifier les deux avant d'ajouter une classe. */
       '.kdr-day{font-size:15px;font-weight:600;color:var(--ink);margin-inline-start:4px}',
       '.kdr-day b{font-weight:600}',
-      '.kdr-day i{font-style:normal;color:var(--n-500);font-weight:400}',
+      '.kdr-day span{color:var(--n-500);font-weight:400}',
       /* Le sélecteur natif affichait « 07/27/2026 » — la date américaine, à côté
          de « lundi 27 juillet 2026 » écrit juste avant. On garde le champ (c'est
          lui qui ouvre le calendrier du système) mais on le réduit à son icône :
          la date lisible est déjà là, deux fois c'était une de trop. */
-      '.kdr-pick{position:relative;display:inline-grid;place-items:center;width:34px;height:34px;border:1px solid var(--n-200);border-radius:10px;color:var(--n-500);cursor:pointer;transition:background 140ms,border-color 140ms,color 140ms}',
-      '.kdr-pick:hover{background:color-mix(in srgb,var(--atlas) 8%,transparent);border-color:var(--atlas);color:var(--atlas)}',
-      '.kdr-pick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;margin:0;cursor:pointer;font:inherit}',
-      '.kdr-pick input::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}',
       '.kdr-spacer{flex:1;min-width:8px}',
       '.kdr-chip{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:5px 11px;border-radius:999px;white-space:nowrap}',
       '.kdr-chip.is-closed{background:color-mix(in srgb,var(--atlas) 13%,transparent);color:var(--atlas)}',
@@ -316,10 +309,6 @@
     ].join('');
     document.head.appendChild(s);
   }
-
-  var CAL_SVG = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"'
-    + ' stroke-linecap="round" aria-hidden="true"><rect x="2" y="3.2" width="12" height="10.8" rx="2"/>'
-    + '<path d="M2 6.6h12M5.5 1.7v2.6M10.5 1.7v2.6"/></svg>';
 
   /* ─────────────────────── résoudre la journée ─────────────────────── */
 
@@ -679,11 +668,8 @@
     var closed = isClosed(r);
     var hasSales = !!(r && (r.txns || (r.refunds && r.refunds.count)));
     var nav = '<div class="kdr-nav">'
-      + '<button type="button" class="kdr-arrow" data-kdr="prev" aria-label="' + esc(T(L.prevDay)) + '">‹</button>'
-      + '<button type="button" class="kdr-arrow" data-kdr="next" aria-label="' + esc(T(L.nextDay)) + '"' + (isToday ? ' disabled' : '') + '>›</button>'
-      + '<label class="kdr-pick" title="' + esc(T(L.pickDay)) + '">' + CAL_SVG
-      + '<input type="date" data-kdr="pick" value="' + esc(current) + '" max="' + esc(todayD) + '" aria-label="' + esc(T(L.pickDay)) + '" /></label>'
-      + '<div class="kdr-day"><b>' + esc(dayLabel(current)) + '</b>' + (rel ? ' <i>· ' + esc(rel) + '</i>' : '') + '</div>'
+      + '<div data-kdr-day-selector></div>'
+      + '<div class="kdr-day"><b>' + esc(dayLabel(current)) + '</b>' + (rel ? ' <span>· ' + esc(rel) + '</span>' : '') + '</div>'
       + '<div class="kdr-spacer"></div>';
     if (hasSales) {
       var chip = closed ? 'is-closed' : (isToday ? 'is-live' : 'is-open');
@@ -873,18 +859,14 @@
 
   function bind(page, report) {
     if (!page || !page.el) return;
+    window.KiwiDateRange?.mountDaySelector?.(page.el.querySelector('[data-kdr-day-selector]'), {
+      value: current, offsets: [0, 1], ariaLabel: T(L.pickDay), onChange: render,
+    });
     page.el.addEventListener('click', function (e) {
       var b = e.target.closest('[data-kdr]');
       if (!b) return;
       var a = b.getAttribute('data-kdr');
       var d = DR(); if (!d) return;
-      if (a === 'prev') { render(d.shiftDay(current, -1)); return; }
-      if (a === 'next') {
-        var nxt = d.shiftDay(current, 1);
-        /* Jamais au-delà d'aujourd'hui : un rapport de demain n'existe pas. */
-        if (nxt > d.today()) return;
-        render(nxt); return;
-      }
       if (a === 'day') {
         var t = b.getAttribute('data-day');
         if (t && t <= d.today()) render(t);
@@ -897,21 +879,6 @@
         return;
       }
     });
-    var pick = page.el.querySelector('[data-kdr="pick"]');
-    if (pick) {
-      pick.addEventListener('change', function () {
-        var v = this.value; if (!v) return;
-        var d = DR(); if (d && v > d.today()) v = d.today();
-        render(v);
-      });
-      /* Le champ est invisible (l'icône tient sa place) : sur les navigateurs
-         qui l'exposent, on ouvre le calendrier explicitement plutôt que de
-         compter sur un clic dans un contrôle qu'on ne voit pas. */
-      var wrap = pick.closest('.kdr-pick');
-      if (wrap) wrap.addEventListener('click', function () {
-        try { if (pick.showPicker) pick.showPicker(); } catch (_) {}
-      });
-    }
   }
 
   /* Imprimer depuis le tableau de bord. Le patron n'a pas d'imprimante

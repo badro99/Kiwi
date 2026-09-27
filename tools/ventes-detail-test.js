@@ -8,8 +8,8 @@ const source = fs.readFileSync(path.join(__dirname, '..', 'assets', 'pages-pro.j
 const checks = [
   ["delivery: 'Livraison'", 'Livraison has an explicit payment label'],
   ["unknown: 'Non renseigné'", 'missing legacy payment methods are stated honestly'],
-  ["Array.from({ length: 7 }", 'the page exposes exactly seven day choices'],
-  ["Math.min(6, Number(offset)", 'the day selector cannot go beyond seven days'],
+  ['[data-rtx-day-selector]', 'the visible sales page mounts the shared day selector'],
+  ['offsets: [0, 1, 2]', 'the page offers today, yesterday and the day before'],
   ['Array.isArray(s.lines)', 'sales render their recorded product lines'],
   ['${qty} × ${escS(l.name)}', 'product quantity and name are rendered'],
   ['${fmt(lineAmount)} MAD', 'each product line renders its amount'],
@@ -31,4 +31,4 @@ if (source.includes('<span class="rtx-l">${escS(L.vente)}</span>')) {
   throw new Error('generic Vente label still replaces product details');
 }
 
-console.log(`  ✓ Ventes detail gate green (${checks.length + 1} checks: products, payment filters, filtered total, seven days)`);
+console.log(`  ✓ Ventes detail gate green (${checks.length + 1} checks: products, payment filters, filtered total, shared days)`);

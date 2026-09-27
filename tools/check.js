@@ -1164,8 +1164,10 @@ section('Whole-project regressions');
     'maison-dashboard-browser-test.mjs',
     'maison-movement-kpis-browser-test.mjs',
     'retail-return-stock-browser-test.mjs',
+    'shared-day-selector-test.mjs',
     'avoir-customer-scope-browser-test.mjs',
     'transactions-nav-stability-browser-test.mjs',
+    'shared-day-selector-browser-test.mjs',
     'boutique-printer-settings-test.mjs',
     /* Le panneau d'activation : il doit pouvoir se fermer. Il ne le pouvait
        pas, et rien ne le disait — voir l'en-tête de la suite. */

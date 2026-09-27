@@ -73,12 +73,12 @@
       </div>`,
     });
   }
-  function renderRealTransactions(T) {
+  function renderRealTransactions(T, requestedDay) {
     const lang = trLang();
     const L = {
-      fr: { empty: 'Aucune vente aujourd’hui.', unavailable: 'La source de ventes de cet établissement n’est pas disponible.', detail: 'DÉTAIL', sale: 'Vente', refund: 'Remboursement', status: 'Enregistrée', refunded: 'Remboursé', methods: { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Lien de paiement', delivery: 'Livraison' } },
-      en: { empty: 'No sales today.', unavailable: 'This venue’s sales source is unavailable.', detail: 'DETAIL', sale: 'Sale', refund: 'Refund', status: 'Recorded', refunded: 'Refunded', methods: { cash: 'Cash', card: 'Card', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Payment link', delivery: 'Delivery' } },
-      ar: { empty: 'لا توجد مبيعات اليوم.', unavailable: 'مصدر مبيعات هذا الفرع غير متوفر.', detail: 'التفاصيل', sale: 'بيع', refund: 'استرداد', status: 'مسجلة', refunded: 'مسترد', methods: { cash: 'نقدًا', card: 'بطاقة', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'رابط دفع', delivery: 'توصيل' } },
+      fr: { empty: 'Aucune vente ce jour-là.', unavailable: 'La source de ventes de cet établissement n’est pas disponible.', detail: 'DÉTAIL', sale: 'Vente', refund: 'Remboursement', status: 'Enregistrée', refunded: 'Remboursé', methods: { cash: 'Espèces', card: 'Carte', transfer: 'Virement / Versement', cheque: 'Chèque', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', delivery: 'Livraison' } },
+      en: { empty: 'No sales on this day.', unavailable: 'This venue’s sales source is unavailable.', detail: 'DETAIL', sale: 'Sale', refund: 'Refund', status: 'Recorded', refunded: 'Refunded', methods: { cash: 'Cash', card: 'Card', transfer: 'Bank transfer', cheque: 'Cheque', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', delivery: 'Delivery' } },
+      ar: { empty: 'لا توجد مبيعات في هذا اليوم.', unavailable: 'مصدر مبيعات هذا الفرع غير متوفر.', detail: 'التفاصيل', sale: 'بيع', refund: 'استرداد', status: 'مسجلة', refunded: 'مسترد', methods: { cash: 'نقدًا', card: 'بطاقة', transfer: 'تحويل بنكي', cheque: 'شيك', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', delivery: 'توصيل' } },
     }[lang] || null;
     const venue = (() => { try { return window.KiwiVenue?.getVenue?.(); } catch (_) { return undefined; } })();
     const hasSource = typeof window.KiwiSales?.list === 'function' || typeof window.KiwiRefunds?.list === 'function';
@@ -91,11 +91,16 @@
         })));
       } catch (_) { sales = []; }
     }
-    const start = new Date(); start.setHours(0, 0, 0, 0);
-    const end = start.getTime() + 86400000;
+    const dayReport = window.KiwiDayReport;
+    const today = dayReport?.today?.() || new Date().toISOString().slice(0, 10);
+    const day = /^\d{4}-\d{2}-\d{2}$/.test(requestedDay || '') ? requestedDay : today;
+    const bounds = dayReport?.dayBounds?.(day) || (() => {
+      const from = new Date(day + 'T00:00:00').getTime();
+      return { from, to: new Date(new Date(from).setDate(new Date(from).getDate() + 1)).getTime() };
+    })();
     const rows = sales.filter((s) => {
       const ts = +(s && s.ts) || 0;
-      return ts >= start.getTime() && ts < end && Number(s.amount) !== 0;
+      return ts >= bounds.from && ts < bounds.to && Number(s.amount) !== 0;
     }).slice().reverse();
     const total = rows.reduce((sum, s) => sum + (+s.amount || 0), 0);
     const positive = rows.filter((s) => Number(s.amount) > 0);
@@ -105,11 +110,11 @@
     const empty = hasSource ? L.empty : L.unavailable;
     const r = drawer({
       title: T.transactionsTitle,
-      subtitle: rows.length ? T.transactionsSubtitle(positive.length, fmt(total)) : empty,
+      subtitle: rows.length ? `${positive.length} · ${fmt(total)} MAD · ${day}` : empty,
       width: 920,
-      body: rows.length ? `
+      body: `<div data-tx-day-selector style="margin-bottom:16px;"></div>` + (rows.length ? `
         <div class="p-hero">
-          <div class="l">${pageEsc(T.transactionsHeroLabel)}</div>
+          <div class="l">${pageEsc(day === today ? T.transactionsHeroLabel : day)}</div>
           <div class="big">${pageEsc(fmt(total))} <span style="font-size:18px;opacity:.7;">MAD</span></div>
           <div class="sub">${pageEsc(T.transactionsHeroSub(positive.length, avg))}</div>
         </div>
@@ -129,9 +134,12 @@
         <div style="font-size:16px;font-weight:600;color:var(--ink);letter-spacing:-0.015em;">${pageEsc(empty)}</div>
         <div style="font-size:13px;color:var(--n-500);line-height:1.55;max-width:420px;margin:8px auto 18px;">${pageEsc(T.transactionsSubtitle(0, "0"))}</div>
         <button class="kb primary" data-action="new-sale"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>${pageEsc(T.transactionsNewSale)}</button>
-      </div>`,
+      </div>`),
     });
     r.el.querySelector('.kiwi-drawer').classList.add('page-xl');
+    window.KiwiDateRange?.mountDaySelector?.(r.el.querySelector('[data-tx-day-selector]'), {
+      value: day, offsets: [0, 1, 2], onChange: next => renderRealTransactions(T, next),
+    });
     return r;
   }
 

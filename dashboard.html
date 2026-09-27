@@ -1380,6 +1380,11 @@
   .dr-pill-custom { display: inline-flex; align-items: center; gap: 6px; }
   .dr-pill-custom svg { width: 14px; height: 14px; }
   .dr-pills.compact .dr-pill-custom svg { width: 12px; height: 12px; }
+  .dr-icon { display:inline-block; flex:none; width:16px; height:16px; background:currentColor; mask-position:center; mask-size:contain; mask-repeat:no-repeat; -webkit-mask-position:center; -webkit-mask-size:contain; -webkit-mask-repeat:no-repeat; }
+  .dr-icon-calendar { mask-image:url('assets/icons/material/calendar_month.svg'); -webkit-mask-image:url('assets/icons/material/calendar_month.svg'); }
+  .dr-icon-prev { mask-image:url('assets/icons/material/chevron_left.svg'); -webkit-mask-image:url('assets/icons/material/chevron_left.svg'); }
+  .dr-icon-next { mask-image:url('assets/icons/material/chevron_right.svg'); -webkit-mask-image:url('assets/icons/material/chevron_right.svg'); }
+  .dr-icon-close { mask-image:url('assets/icons/material/close.svg'); -webkit-mask-image:url('assets/icons/material/close.svg'); }
 
   .dr-popover {
     position: absolute; top: calc(100% + 10px); inset-inline-end: 0; z-index: 10000;
@@ -6185,7 +6190,7 @@
 <script src="assets/pressing-catalog.js?v=7" defer></script>
 <script src="assets/pressing-dashboard.js?v=14" defer></script>
 <script src="assets/demoClock.js?v=1" defer></script>
-<script src="assets/dateRange.js?v=23" defer></script>
+<script src="assets/dateRange.js?v=25" defer></script>
 <script src="assets/mobile-nav.js?v=2" defer></script>
 <script defer src="assets/pwa-update.js?v=359"></script>
 <script defer src="assets/dashboard-pwa.js?v=551"></script>
@@ -6242,7 +6247,7 @@
 <script src="assets/agent-vision.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/agent-skin.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/accounting.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/pages.js?v=6" defer fetchpriority="low"></script>
+<script src="assets/pages.js?v=7" defer fetchpriority="low"></script>
 <!-- Boutique shared product database + real barcode engine (EAN-13 / Code 128).
      Same modules the caisse loads, so inventory stays in sync between the two. -->
 <script src="assets/barcode.js?v=1" defer fetchpriority="low"></script>
@@ -6322,7 +6327,7 @@
 <!-- Floor-plan vocabulary shared with the caisse. MUST load before pages-pro.js,
      which reads its top-level declarations as globals. -->
 <script src="assets/floorplan-core.js?v=2050" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2106" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2108" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js?v=1" defer fetchpriority="low"></script>
@@ -6339,7 +6344,7 @@
 <script src="assets/day-report.js?v=18" defer fetchpriority="low"></script>
 <script src="assets/z-reconciliation.js?v=20" defer fetchpriority="low"></script>
 <script src="assets/day-report-export.js?v=7" defer fetchpriority="low"></script>
-<script src="assets/day-report-dash.js?v=12" defer fetchpriority="low"></script>
+<script src="assets/day-report-dash.js?v=13" defer fetchpriority="low"></script>
 <script src="assets/stock.js?v=52" defer fetchpriority="low"></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=10">
