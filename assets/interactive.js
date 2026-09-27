@@ -2379,73 +2379,176 @@ ar: {
       if (!policy) { toast('Réglage indisponible, rechargez la page', { type: 'warn' }); return; }
       const MAX = 8;
       const PRESETS = [5, 10, 15, 20, 25, 30, 40, 50];
+      const SAMPLE = 240; // example ticket used by the live preview
       const chosen = new Set(policy.percentages());
       // Tiles: the common values plus any custom value the owner already uses.
       const tiles = new Set([...PRESETS, ...chosen]);
+      let focus = [...chosen].sort((a, b) => a - b)[0] || 0; // chip lit in the preview
+      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      const money = n => n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const check = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>';
-      const m = modal({ tag: 'CAISSE', title: 'Remises autorisées', width: 480,
+      const minus = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M200-440v-80h560v80H200Z"/></svg>';
+      const plus = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/></svg>';
+      const m = modal({ tag: 'CAISSE', title: 'Remises autorisées', width: 500,
         body: `<style>
-            .dp-lead{margin:0;color:var(--n-600,#4b5563);line-height:1.5}
-            .dp-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:22px 0 10px}
-            .dp-label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--n-500,#6b7280)}
-            .dp-count{font-size:12px;color:var(--n-500,#6b7280);font-variant-numeric:tabular-nums}
+            .dp{--dp-spring:cubic-bezier(.34,1.45,.5,1);--dp-line:color-mix(in srgb,var(--n-200) 80%,transparent);display:grid;gap:18px}
+            .dp-lead{margin:0;color:var(--n-600);line-height:1.5;font-size:14px;text-wrap:pretty}
+            .dp-hero{position:relative;overflow:hidden;border-radius:22px;padding:20px 20px 16px;color:#F7F5F0;
+              background:radial-gradient(120% 90% at 100% 0%,color-mix(in srgb,#0B6E4F 70%,transparent) 0%,transparent 60%),#053B2C;
+              box-shadow:0 18px 40px -24px rgba(5,59,44,.7),inset 0 1px 0 rgba(255,255,255,.08)}
+            .dp-eyebrow{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:rgba(247,245,240,.62)}
+            .dp-live{display:inline-flex;align-items:center;gap:6px;letter-spacing:.04em;text-transform:none;font-weight:500}
+            .dp-live i{width:6px;height:6px;border-radius:50%;background:#7DF2B0;box-shadow:0 0 0 3px rgba(125,242,176,.18)}
+            .dp-total{display:flex;align-items:baseline;gap:8px;margin-top:14px;font-variant-numeric:tabular-nums}
+            .dp .dp-hero .dp-total b{font-size:40px;line-height:1;font-weight:600;letter-spacing:-.025em;color:#F7F5F0}
+            .dp-total span{font-size:15px;color:rgba(247,245,240,.62)}
+            .dp-was{font-size:13px;color:rgba(247,245,240,.5);text-decoration:line-through;margin-left:auto;align-self:center}
+            .dp-save{margin-top:6px;min-height:18px;font-size:13px;color:rgba(247,245,240,.72);font-variant-numeric:tabular-nums}
+            .dp-save em{color:#7DF2B0;font-weight:600;font-style:normal}
+            .dp-track{display:flex;gap:4px;margin-top:16px;padding:4px;border-radius:999px;background:rgba(247,245,240,.08);
+              overflow-x:auto;scrollbar-width:none}
+            .dp-track::-webkit-scrollbar{display:none}
+            .dp-pill{flex:0 0 auto;border:0;background:transparent;color:rgba(247,245,240,.78);font:inherit;font-size:13px;font-weight:500;
+              padding:8px 13px;border-radius:999px;cursor:pointer;font-variant-numeric:tabular-nums;transition:color .2s}
+            .dp-pill.on{color:#F7F5F0}
+            .dp-pill:not([data-kw-lens] *).on{background:#0B6E4F}
+            .dp-pill:focus-visible{outline:2px solid #7DF2B0;outline-offset:1px}
+            .dp .dp-hero .dp-track .kw-lens{background:rgba(247,245,240,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 6px 16px -8px rgba(0,0,0,.5)}
+            .dp-group{border-radius:20px;background:var(--surface);border:1px solid var(--dp-line);padding:16px}
+            .dp-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+            .dp-label{font-size:13px;font-weight:600;color:var(--ink)}
+            .dp-sub{font-size:12px;color:var(--n-500);margin-top:2px}
+            .dp-meter{display:flex;align-items:center;gap:8px;white-space:nowrap;flex:0 0 auto;font-size:12px;color:var(--n-500);font-variant-numeric:tabular-nums}
+            .dp-meter-bar{display:grid;grid-template-columns:repeat(${MAX},6px);gap:3px}
+            .dp-meter-bar i{height:14px;border-radius:3px;background:var(--n-200);transition:background-color .25s,transform .31s var(--dp-spring)}
+            .dp-meter-bar i.on{background:var(--atlas);transform:scaleY(1.12)}
+            .dp-meter.full{color:var(--atlas);font-weight:600}
             .dp-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-            .dp-tile{position:relative;display:flex;align-items:center;justify-content:center;height:52px;border-radius:14px;
-              border:1px solid var(--n-200,#e5e7eb);background:var(--surface,#fff);color:inherit;font:inherit;font-size:17px;font-weight:600;
-              font-variant-numeric:tabular-nums;cursor:pointer;transition:border-color .15s,background-color .15s,transform .15s}
-            .dp-tile:hover{border-color:color-mix(in srgb,var(--atlas) 45%,var(--n-200,#e5e7eb))}
-            .dp-tile:active{transform:scale(.97)}
+            .dp-tile{position:relative;display:flex;align-items:baseline;justify-content:center;gap:1px;height:64px;padding-top:20px;box-sizing:border-box;
+              border-radius:16px;border:1px solid var(--dp-line);background:var(--n-50);color:var(--ink);font:inherit;cursor:pointer;
+              font-variant-numeric:tabular-nums;transition:background-color .2s,border-color .2s,color .2s,box-shadow .2s,transform .31s var(--dp-spring);
+              -webkit-tap-highlight-color:transparent}
+            .dp .dp-grid .dp-tile b{font-size:24px;line-height:1;font-weight:600;letter-spacing:-.02em;color:inherit}
+            .dp-tile small{font-size:13px;font-weight:500;opacity:.55}
+            .dp-tile:hover{border-color:color-mix(in srgb,var(--atlas) 40%,var(--n-200))}
+            .dp-tile:active{transform:scale(.94)}
             .dp-tile:focus-visible{outline:2px solid var(--atlas);outline-offset:2px}
-            .dp-tile[aria-pressed="true"]{border-color:var(--atlas);background:color-mix(in srgb,var(--atlas) 9%,var(--surface,#fff));color:var(--atlas)}
-            .dp-tile .dp-tick{position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;
-              background:var(--atlas);color:var(--paper,#f7f5f0);opacity:0;transform:scale(.6);transition:opacity .15s,transform .15s}
-            .dp-tile .dp-tick svg{width:12px;height:12px}
+            .dp-tile[aria-pressed="true"]{background:var(--atlas);border-color:var(--atlas);color:#F7F5F0;
+              box-shadow:0 10px 22px -14px color-mix(in srgb,var(--atlas) 90%,transparent),inset 0 1px 0 rgba(255,255,255,.14)}
+            .dp-tile[aria-pressed="true"] small{opacity:.7}
+            html[data-theme="dark"] .dp-tile[aria-pressed="true"]{color:#03251A}
+            html[data-theme="dark"] .dp-tick{background:#03251A;color:var(--atlas)}
+            .dp-tile.pop{animation:dp-pop .38s var(--dp-spring)}
+            @keyframes dp-pop{0%{transform:scale(.9)}100%{transform:scale(1)}}
+            .dp-tick{position:absolute;top:7px;right:7px;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;
+              background:#F7F5F0;color:var(--atlas);opacity:0;transform:scale(.4);transition:opacity .2s,transform .31s var(--dp-spring)}
+            .dp-tick svg{width:13px;height:13px}
             .dp-tile[aria-pressed="true"] .dp-tick{opacity:1;transform:none}
-            .dp-add{display:flex;gap:8px;margin-top:10px}
-            .dp-field{position:relative;flex:1;min-width:0}
-            .dp-field input{width:100%;box-sizing:border-box;height:44px;padding:0 34px 0 14px;border-radius:12px;border:1px solid var(--n-200,#e5e7eb);
-              background:var(--surface,#fff);color:inherit;font:inherit;font-variant-numeric:tabular-nums}
-            .dp-field input:focus{outline:none;border-color:var(--atlas)}
-            .dp-field span{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--n-500,#6b7280);pointer-events:none}
-            .dp-field input::-webkit-inner-spin-button,.dp-field input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
-            .dp-field input{-moz-appearance:textfield;appearance:textfield}
-            .dp-add .kb{height:44px;padding:0 18px;border:1px solid var(--n-200,#e5e7eb);border-radius:12px}
-            .dp-add .kb:hover{border-color:var(--atlas)}
-            .dp-preview{margin-top:22px;padding:14px 16px;border-radius:14px;background:color-mix(in srgb,var(--atlas) 5%,transparent);
-              border:1px dashed color-mix(in srgb,var(--atlas) 30%,transparent)}
-            .dp-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-            .dp-chip{padding:5px 11px;border-radius:999px;background:var(--surface,#fff);border:1px solid var(--n-200,#e5e7eb);font-size:13px;font-variant-numeric:tabular-nums}
-            .dp-empty{font-size:13px;color:var(--n-500,#6b7280)}
-            @media (max-width:420px){.dp-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+            .dp-custom{display:flex;align-items:center;gap:12px}
+            .dp-custom .dp-text{flex:1;min-width:0}
+            .dp-stepper{display:flex;align-items:center;gap:2px;padding:4px;border-radius:999px;background:var(--n-100)}
+            .dp-step{width:34px;height:34px;border-radius:50%;border:0;background:var(--surface);color:var(--ink);display:grid;place-items:center;cursor:pointer;
+              box-shadow:0 1px 2px rgba(0,0,0,.08);transition:transform .31s var(--dp-spring)}
+            .dp-step:active{transform:scale(.88)}
+            .dp-step svg{width:18px;height:18px}
+            .dp-step:focus-visible{outline:2px solid var(--atlas);outline-offset:2px}
+            .dp-num{display:flex;align-items:baseline;justify-content:center;width:62px}
+            .dp-num input{width:36px;border:0;background:transparent;color:var(--ink);font:inherit;font-size:20px;font-weight:600;text-align:right;
+              padding:0;font-variant-numeric:tabular-nums;-moz-appearance:textfield;appearance:textfield}
+            .dp-num input::placeholder{color:var(--n-500);opacity:.6}
+            .dp-num input:focus{outline:none}
+            .dp-num input::-webkit-inner-spin-button,.dp-num input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+            .dp-num span{font-size:14px;color:var(--n-500);margin-left:2px}
+            .dp-addbtn{height:42px;padding:0 18px;border-radius:999px;border:0;background:color-mix(in srgb,var(--atlas) 12%,transparent);color:var(--atlas);font:inherit;font-size:14px;font-weight:600;
+              cursor:pointer;transition:transform .31s var(--dp-spring),opacity .2s}
+            .dp-addbtn:active{transform:scale(.94)}
+            .dp-addbtn:focus-visible{outline:2px solid var(--atlas);outline-offset:2px}
+            .dp-note{margin:0;font-size:12px;color:var(--n-500);line-height:1.45;display:flex;gap:8px;align-items:flex-start}
+            .dp-note svg{flex:0 0 16px;width:16px;height:16px;margin-top:1px;color:var(--atlas)}
+            @media (max-width:440px){.dp-hero{padding:18px 16px 14px}.dp .dp-hero .dp-total b{font-size:34px}.dp-group{padding:14px}.dp-tile{height:58px;padding-top:17px}.dp .dp-grid .dp-tile b{font-size:21px}.dp-tick{display:none}
+              .dp-custom{flex-wrap:wrap}.dp-custom .dp-text{flex-basis:100%}.dp-stepper{flex:1;justify-content:space-between}}
+            @media (prefers-reduced-motion:reduce){.dp *{transition:none!important;animation:none!important}}
           </style>
-          <p class="dp-lead">Choisissez les remises que vos équipes peuvent appliquer. Elles s'affichent sur toutes vos caisses. Les ventes déjà enregistrées ne changent pas.</p>
-          <div class="dp-head"><span class="dp-label">Remises proposées</span><span class="dp-count" data-discount-count></span></div>
-          <div class="dp-grid" data-discount-choices role="group" aria-label="Remises proposées"></div>
-          <div class="dp-head"><span class="dp-label">Autre pourcentage</span></div>
-          <div class="dp-add"><label class="dp-field"><input data-discount-input type="number" min="1" max="100" step="1" inputmode="numeric" placeholder="Ex. 12" aria-label="Autre pourcentage, de 1 à 100" /><span>%</span></label>
-            <button type="button" class="kb" data-discount-add>Ajouter</button></div>
-          <div class="dp-preview"><span class="dp-label">Sur la caisse</span><div class="dp-chips" data-discount-preview></div></div>`,
+          <div class="dp">
+            <p class="dp-lead">Choisissez les remises que vos équipes peuvent appliquer. Elles arrivent sur toutes vos caisses en quelques secondes.</p>
+            <section class="dp-hero" aria-label="Aperçu sur la caisse">
+              <div class="dp-eyebrow"><span>Aperçu caisse</span><span class="dp-live"><i></i>Ticket exemple</span></div>
+              <div class="dp-total"><b data-discount-total>${money(SAMPLE)}</b><span>MAD</span><s class="dp-was" data-discount-was hidden>${money(SAMPLE)} MAD</s></div>
+              <div class="dp-save" data-discount-saving></div>
+              <div data-discount-preview></div>
+            </section>
+            <section class="dp-group">
+              <div class="dp-head"><div><div class="dp-label">Remises proposées</div><div class="dp-sub">Touchez pour activer ou retirer</div></div>
+                <div class="dp-meter" data-discount-count></div></div>
+              <div class="dp-grid" data-discount-choices role="group" aria-label="Remises proposées"></div>
+            </section>
+            <section class="dp-group dp-custom">
+              <div class="dp-text"><div class="dp-label">Autre pourcentage</div><div class="dp-sub">Un nombre entier de 1 à 100</div></div>
+              <div class="dp-stepper">
+                <button type="button" class="dp-step" data-discount-step="-1" aria-label="Diminuer">${minus}</button>
+                <label class="dp-num"><input data-discount-input type="number" min="1" max="100" step="1" inputmode="numeric" placeholder="12" aria-label="Autre pourcentage, de 1 à 100" /><span>%</span></label>
+                <button type="button" class="dp-step" data-discount-step="1" aria-label="Augmenter">${plus}</button>
+              </div>
+              <button type="button" class="dp-addbtn" data-discount-add>Ajouter</button>
+            </section>
+            <p class="dp-note"><svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M480-80q-139-35-229.5-159.5T160-516v-244l320-120 320 120v244q0 152-90.5 276.5T480-80Z"/></svg>Les ventes déjà enregistrées ne changent pas. Une remise hors réglage reste encaissée et vous est signalée.</p>
+          </div>`,
         foot: '<button type="button" class="kb" data-discount-cancel>Annuler</button><button type="button" class="kb atlas" data-discount-save>Enregistrer</button>' });
-      const draw = () => {
-        const sorted = [...tiles].sort((a, b) => a - b);
-        m.el.querySelector('[data-discount-choices]').innerHTML = sorted.map(n =>
-          `<button type="button" class="dp-tile" data-discount-toggle="${n}" aria-pressed="${chosen.has(n)}" aria-label="${n} pour cent">${n} %<span class="dp-tick">${check}</span></button>`).join('');
-        m.el.querySelector('[data-discount-count]').textContent = `${chosen.size} sur ${MAX} maximum`;
-        const values = [...chosen].sort((a, b) => a - b);
-        m.el.querySelector('[data-discount-preview]').innerHTML = values.length
-          ? ['Sans', ...values.map(n => `−${n} %`)].map(t => `<span class="dp-chip">${t}</span>`).join('')
-          : '<span class="dp-empty">Choisissez au moins une remise.</span>';
-        m.el.querySelector('[data-discount-save]').disabled = !values.length;
+      const $ = sel => m.el.querySelector(sel);
+      let shown = SAMPLE, raf = 0;
+      const tween = to => {
+        cancelAnimationFrame(raf);
+        const el = $('[data-discount-total]'), from = shown, t0 = performance.now(), dur = reduce ? 0 : 420;
+        const step = now => {
+          const k = dur ? Math.min(1, (now - t0) / dur) : 1, e = 1 - Math.pow(1 - k, 3);
+          shown = from + (to - from) * e; el.textContent = money(shown);
+          if (k < 1) raf = requestAnimationFrame(step);
+        };
+        raf = requestAnimationFrame(step);
       };
+      const paintTotal = () => {
+        const off = SAMPLE * focus / 100;
+        tween(SAMPLE - off);
+        $('[data-discount-was]').hidden = !focus;
+        $('[data-discount-saving]').innerHTML = focus
+          ? `Remise −${focus} % · <em>−${money(off)} MAD</em> accordés`
+          : 'Aucune remise appliquée';
+        m.el.querySelectorAll('[data-discount-pick]').forEach(b => {
+          const on = Number(b.dataset.discountPick) === focus;
+          b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+        });
+      };
+      const drawPreview = () => {
+        const values = [...chosen].sort((a, b) => a - b);
+        if (!values.includes(focus)) focus = 0;
+        // A fresh row each time so the liquid lens re-attaches to the new chips.
+        $('[data-discount-preview]').innerHTML = `<div class="dp-track" data-lens-demo role="group" aria-label="Boutons de remise sur la caisse">${
+          [0, ...values].map(n => `<button type="button" class="dp-pill" data-lens-item data-discount-pick="${n}">${n ? `−${n} %` : 'Sans'}</button>`).join('')}</div>`;
+        paintTotal();
+      };
+      const draw = popped => {
+        const sorted = [...tiles].sort((a, b) => a - b);
+        $('[data-discount-choices]').innerHTML = sorted.map(n =>
+          `<button type="button" class="dp-tile${n === popped ? ' pop' : ''}" data-discount-toggle="${n}" aria-pressed="${chosen.has(n)}" aria-label="${n} pour cent"><b>${n}</b><small>%</small><span class="dp-tick">${check}</span></button>`).join('');
+        const meter = $('[data-discount-count]');
+        meter.className = 'dp-meter' + (chosen.size >= MAX ? ' full' : '');
+        meter.innerHTML = `<span>${chosen.size} sur ${MAX}</span><span class="dp-meter-bar" aria-hidden="true">${
+          Array.from({ length: MAX }, (_, i) => `<i class="${i < chosen.size ? 'on' : ''}"></i>`).join('')}</span>`;
+        const save = $('[data-discount-save]');
+        save.disabled = !chosen.size;
+        save.textContent = chosen.size ? `Enregistrer ${chosen.size} remise${chosen.size > 1 ? 's' : ''}` : 'Choisissez une remise';
+        drawPreview();
+      };
+      const full = () => toast(`${MAX} remises maximum, retirez-en une d'abord`, { type: 'warn' });
       const addCustom = () => {
-        const field = m.el.querySelector('[data-discount-input]');
+        const field = $('[data-discount-input]');
         const n = Number(field.value);
-        if (!Number.isInteger(n) || n < 1 || n > 100) { toast('Entrez un nombre entier de 1 à 100', { type: 'warn' }); field.focus(); return; }
-        if (!chosen.has(n) && chosen.size >= MAX) { toast(`${MAX} remises maximum, retirez-en une d'abord`, { type: 'warn' }); return; }
-        tiles.add(n); chosen.add(n); field.value = ''; draw();
+        if (!field.value || !Number.isInteger(n) || n < 1 || n > 100) { toast('Entrez un nombre entier de 1 à 100', { type: 'warn' }); field.focus(); return; }
+        if (!chosen.has(n) && chosen.size >= MAX) { full(); return; }
+        tiles.add(n); chosen.add(n); focus = n; field.value = ''; draw(n);
       };
       draw();
-      m.el.querySelector('[data-discount-input]').addEventListener('keydown', e => {
+      $('[data-discount-input]').addEventListener('keydown', e => {
         if (e.key === 'Enter') { e.preventDefault(); addCustom(); }
       });
       m.el.addEventListener('click', async e => {
@@ -2453,9 +2556,18 @@ ar: {
         if (tile) {
           const n = Number(tile.dataset.discountToggle);
           if (chosen.has(n)) chosen.delete(n);
-          else if (chosen.size >= MAX) { toast(`${MAX} remises maximum, retirez-en une d'abord`, { type: 'warn' }); return; }
-          else chosen.add(n);
-          draw(); return;
+          else if (chosen.size >= MAX) { full(); return; }
+          else { chosen.add(n); focus = n; }
+          draw(chosen.has(n) ? n : null); return;
+        }
+        const pick = e.target.closest('[data-discount-pick]');
+        if (pick) { focus = Number(pick.dataset.discountPick); paintTotal(); return; }
+        const stepBtn = e.target.closest('[data-discount-step]');
+        if (stepBtn) {
+          const field = $('[data-discount-input]');
+          const base = field.value === '' ? Number(field.placeholder) - Number(stepBtn.dataset.discountStep) : Number(field.value);
+          field.value = String(Math.min(100, Math.max(1, Math.round(base) + Number(stepBtn.dataset.discountStep))));
+          return;
         }
         if (e.target.closest('[data-discount-add]')) { addCustom(); return; }
         if (e.target.closest('[data-discount-cancel]')) { m.close(); return; }
