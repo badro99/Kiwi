@@ -167,18 +167,19 @@ check('iOS publishes real safe-area insets and sizes its tab host to content plu
   sceneDelegate.includes('nativeShell.updateSafeAreaInsets(bridgeViewController.view.safeAreaInsets)') &&
   swiftNativeShell.includes("setProperty('--kiwi-host-safe-top'") &&
   swiftNativeShell.includes('Self.tabContentHeight + insets.bottom') &&
-  swiftNativeShell.includes('private static let tabContentHeight: CGFloat = 66') &&
+  swiftNativeShell.includes('private static let tabContentHeight: CGFloat = 72') &&
   !swiftNativeShell.includes('heightAnchor.constraint(equalToConstant: 100)') &&
   !swiftNativeShell.includes('.padding(.bottom, 34)') &&
   nativeRuntimeCss.includes('--kiwi-safe-top:max(env(safe-area-inset-top,0px),var(--kiwi-host-safe-top))') &&
-  nativeRuntimeCss.includes('html.kiwi-native.kiwi-native-ios{--kiwi-native-tabs:calc(66px + var(--kiwi-safe-bottom))}') &&
+  nativeRuntimeCss.includes('--kiwi-host-tab-height,calc(72px + var(--kiwi-safe-bottom))') &&
   runtime.includes("root.classList.add('kiwi-native-' + platform)"));
 check('iOS till navigation uses an icon-first floating glass capsule instead of a full-width opaque shelf',
   swiftNativeShell.includes('@Namespace private var selectionLens') &&
   swiftNativeShell.includes('.matchedGeometryEffect(id: "kiwi-tab-selection"') &&
   swiftNativeShell.includes('.glassEffect(.regular.tint(kiwiInk.opacity(0.42)).interactive(), in: Capsule())') &&
   swiftNativeShell.includes('.accessibilityLabel(Text(tab.label))') &&
-  swiftNativeShell.includes('tabs.view.widthAnchor.constraint(equalToConstant: 264)') &&
+  swiftNativeShell.includes('tabs.view.widthAnchor.constraint(equalToConstant: 350)') &&
+  swiftNativeShell.includes('Text(tab.label)') &&
   !swiftNativeShell.includes('kiwiPaper.opacity(0.98).ignoresSafeArea()'));
 check('iOS bridge accepts only main-frame messages from the bundled Capacitor origin',
   swiftNativeShell.includes('message.frameInfo.isMainFrame') &&

@@ -13,7 +13,7 @@ const binary = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.ap
 if (!binary) throw new Error('Chromium required for native device layout verification');
 const browser = await puppeteer.launch({ executablePath: binary, headless: true, args: ['--no-sandbox'] });
 const source = read('kiwi-caisse.html');
-const styles = [...source.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1]).join('\n') + '\n' + read('app/src/native-runtime.css');
+const styles = [...source.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1]).join('\n') + '\n' + read('assets/caisse-skin.css') + '\n' + read('app/src/native-runtime.css');
 let checks = 0;
 const shots = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-native-devices-'));
 try {
@@ -43,6 +43,14 @@ try {
     checks++;
     console.log('  ✓ opening shift remains reachable: ' + name);
     await page.screenshot({ path: path.join(shots, name + '.png') });
+    await page.evaluate(() => { document.documentElement.style.setProperty('--type-scale', '1.35'); });
+    const accessible = await page.evaluate(() => {
+      const screen = document.getElementById('clockin-screen');
+      const button = screen.querySelector('.clockin-btn'); button.scrollIntoView({ block: 'end' });
+      const rect = button.getBoundingClientRect();
+      return { horizontal: screen.scrollWidth > screen.clientWidth + 1, reachable: rect.top >= 0 && rect.bottom <= innerHeight + 1, height: rect.height };
+    });
+    assert.ok(!accessible.horizontal && accessible.reachable && accessible.height >= 44, `${name}: AX5 opening shift stays reachable: ${JSON.stringify(accessible)}`); checks++;
     const pinLayout = await page.evaluate((html) => {
       document.getElementById('clockin-screen').remove();
       const pin = new DOMParser().parseFromString(html, 'text/html').getElementById('pin-screen');
@@ -58,11 +66,25 @@ try {
   await page.setViewport({ width: 390, height: 844, isMobile: false, hasTouch: true });
   await page.evaluate(() => {
     document.getElementById('pin-screen').remove();
-    document.body.innerHTML = '<div class="menu-grid"><div class="menu-item"><button class="menu-item-add">Ajouter</button><button class="qty-btn">+</button></div></div>';
+    document.body.innerHTML = '<div class="cat-pills" style="width:300px">' + Array.from({length:8}, (_,i) => '<button class="cat-pill">Category '+i+'</button>').join('') + '</div><div class="menu-grid" style="width:370px;height:490px">' + Array.from({length:8}, (_,i) => '<div class="menu-item" role="button" tabindex="0"><span class="menu-item-name">Product '+i+'</span><span class="menu-item-foot"><span class="menu-item-price">45 MAD</span></span></div>').join('') + '</div><aside class="rightpanel"><button class="rp-peek"><span>1 article</span><span>45 MAD</span></button></aside>';
+    document.documentElement.style.setProperty('--kiwi-host-tab-height', '100px');
   });
-  const targets = await page.evaluate(() => Array.from(document.querySelectorAll('button'), button => ({ height: button.getBoundingClientRect().height, width: button.getBoundingClientRect().width })));
-  assert.ok(targets.every(target => target.height >= 44 && target.width >= 44), 'native product and quantity controls must measure at least 44px'); checks++;
+  const layout = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('.menu-item')].map(node => node.getBoundingClientRect());
+    const pills = document.querySelector('.cat-pills'), peek = document.querySelector('.rp-peek').getBoundingClientRect();
+    return { cards:cards.map(({top,bottom,height,width}) => ({top,bottom,height,width})), chipHeight:pills.getBoundingClientRect().height, chipScroll:pills.scrollWidth > pills.clientWidth, peekBottom:peek.bottom };
+  });
+  assert.ok(layout.cards.length === 8 && layout.cards.every(card => card.height >= 44 && card.width >= 44 && card.bottom <= layout.cards[0].top + 490), 'eight entire product cards remain tappable in the phone viewport'); checks++;
+  assert.ok(layout.chipScroll && layout.chipHeight <= 48, 'category chips remain in one horizontally scrolling row'); checks++;
+  assert.ok(layout.peekBottom <= 844 - 100, 'collapsed bill stays above the published native capsule inset'); checks++;
   await page.keyboard.press('Tab');
   assert.ok(await page.evaluate(() => parseFloat(getComputedStyle(document.activeElement).outlineWidth) >= 3), 'keyboard navigation must have a visible focus indicator'); checks++;
+  await page.setViewport({ width: 1032, height: 1376, isMobile: false, hasTouch: true });
+  await page.setContent('<!doctype html><html class="kiwi-native"><head><style>' + styles + '</style></head><body class="kiwi-native-till kiwi-native-cart-empty"><div class="shell"><aside class="sidebar"></aside><main class="main"><div class="menu-grid">' + Array.from({length:8}, (_,i) => '<div class="menu-item">Product '+i+'</div>').join('') + '</div></main><aside class="rightpanel"></aside></div></body></html>');
+  const ipad = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('.menu-item')].map(node => node.getBoundingClientRect());
+    return { bill: getComputedStyle(document.querySelector('.rightpanel')).display, firstRow: cards.filter(rect => Math.abs(rect.top - cards[0].top) < 1).length };
+  });
+  assert.ok(ipad.bill === 'none' && ipad.firstRow >= 4, `empty iPad bill yields room for at least four product columns: ${JSON.stringify(ipad)}`); checks++;
   console.log(`native-device-layout-test: ${checks} controls passed; screenshots: ${shots}`);
 } finally { await browser.close(); }

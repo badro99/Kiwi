@@ -24,6 +24,12 @@
   call(app, 'getInfo').then(function (info) {
     if (!info || !info.version) return;
     window.__KIWI_APP_VERSION = 'pro/' + platform + '/' + info.version + (info.build ? ' (' + info.build + ')' : '') + bundleTag;
+    if (!document.querySelectorAll) return;
+    document.querySelectorAll('[data-footer-line]').forEach(function (line) {
+      Array.prototype.forEach.call(line.childNodes, function (child) {
+        if (child.nodeType === 3) child.nodeValue = child.nodeValue.replace(/Kiwi v\d+(?:\.\d+)*/g, 'Kiwi Pro ' + info.version + (info.build ? ' (' + info.build + ')' : ''));
+      });
+    });
   });
 
   function call(plugin, method, args) {
@@ -136,6 +142,13 @@
   function hapticLight() { return call(haptics, 'impact', { style: 'LIGHT' }); }
   function hapticNotice(kind) { return call(haptics, 'notification', { type: kind === 'danger' ? 'ERROR' : 'SUCCESS' }); }
   function nativeBlockingLayer() {
+    if (openNativeLayers().length) return true;
+    if (document.body && (document.body.classList.contains('nav-open') || document.body.classList.contains('kw-menu-open'))) return true;
+    var dashboardLock = document.querySelector('[data-kiwi-lock]');
+    if (dashboardLock) {
+      var paintedLock = getComputedStyle(dashboardLock);
+      if (paintedLock.display !== 'none' && paintedLock.visibility !== 'hidden') return true;
+    }
     return [document.getElementById('pin-screen'), document.getElementById('clockin-screen'), document.querySelector('[data-kiwi-greet]')].some(function (node) {
       if (!node || node.hidden) return false;
       if (node.id !== 'pin-screen' && !node.classList.contains('is-visible')) return false;
@@ -149,7 +162,9 @@
   function paintStatusBar() {
     // SwiftUI setup has an ink background regardless of the web/system theme.
     var setup = document.body && document.body.classList.contains('native-shell-page');
-    var dark = setup || nativeBlockingLayer() || root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark' || (appearance && appearance.matches && !root.getAttribute('data-theme'));
+    var kitchen = /kiwi-cuisine\.html$/i.test(location.pathname);
+    var till = /kiwi-caisse\.html$/i.test(location.pathname);
+    var dark = setup || kitchen || nativeBlockingLayer() || (till ? root.getAttribute('data-caisse-theme') === 'dark' : root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark');
     var nextStyle = dark ? 'DARK' : 'LIGHT';
     if (nextStyle === lastStatusBarStyle) return;
     lastStatusBarStyle = nextStyle;
@@ -219,7 +234,7 @@
 
   function openNativeLayers() {
     return Array.prototype.slice.call(document.querySelectorAll(
-      '.modal-veil.is-open,.drawer-veil.is-open,.cloture-veil.is-open,.kds-screen.is-open,#stock-screen.is-open'
+      '.modal-veil.is-open,.drawer-veil.is-open,.cloture-veil.is-open,.kds-screen.is-open,#stock-screen.is-open,#cp-pin-screen,.kiwi-native-account.is-open'
     )).filter(function (node) {
       try { return getComputedStyle(node).display !== 'none' && getComputedStyle(node).visibility !== 'hidden'; }
       catch (_) { return true; }
@@ -281,6 +296,63 @@
     return { label: 'Navigation principale', salle: 'Salle', vrap: 'À emporter', waitlist: 'Attente', more: 'Plus', actions: 'Autres actions', less: 'Masquer les actions', close: 'Replier l’addition' };
   }
 
+  function nativeAccountDeletion() {
+    if (document.querySelector('.kiwi-native-account')) return;
+    var lang = String(root.lang || 'fr').slice(0, 2);
+    var words = lang === 'en'
+      ? { title:'Delete my account', detail:'This requests deletion of your account and all its establishments. Export your data first. Kiwi handles requests within 30 days.', password:'Account password', submit:'Confirm request', close:'Close', checking:'Checking account…', signin:'Sign in with the owner account first.', failed:'The request could not be recorded.', received:'Request recorded', wrong:'Incorrect password.' }
+      : lang === 'ar'
+      ? { title:'حذف حسابي', detail:'يشمل الطلب حسابك وجميع مؤسساته. صدّر بياناتك أولاً. يعالج Kiwi الطلب خلال 30 يوماً.', password:'كلمة مرور الحساب', submit:'تأكيد الطلب', close:'إغلاق', checking:'جارٍ التحقق…', signin:'سجّل الدخول إلى حساب المالك أولاً.', failed:'تعذّر تسجيل الطلب.', received:'تم تسجيل الطلب', wrong:'كلمة المرور غير صحيحة.' }
+      : { title:'Supprimer mon compte', detail:'Cette demande concerne votre compte et tous ses établissements. Exportez vos données avant de confirmer. Kiwi traite la demande sous 30 jours.', password:'Mot de passe du compte', submit:'Confirmer la demande', close:'Fermer', checking:'Vérification du compte…', signin:'Connectez-vous au compte propriétaire.', failed:'La demande n’a pas pu être enregistrée.', received:'Demande enregistrée', wrong:'Mot de passe incorrect.' };
+    var overlay = document.createElement('div');
+    overlay.className = 'kiwi-native-account is-open';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', words.title);
+    overlay.innerHTML = '<div class="kiwi-native-account-card"><h2></h2><p></p><div class="kiwi-native-account-email"></div><label><span></span><input type="password" autocomplete="current-password"></label><div class="kiwi-native-account-status" role="status"></div><div class="kiwi-native-account-actions"><button type="button" data-close></button><button type="button" data-submit disabled></button></div></div>';
+    var card = overlay.firstElementChild, password = card.querySelector('input');
+    card.querySelector('h2').textContent = words.title;
+    card.querySelector('p').textContent = words.detail;
+    card.querySelector('label span').textContent = words.password;
+    card.querySelector('[data-close]').textContent = words.close;
+    var submit = card.querySelector('[data-submit]'); submit.textContent = words.submit;
+    var status = card.querySelector('[role="status"]'); status.textContent = words.checking;
+    card.querySelector('[data-close]').addEventListener('click', function () { password.value = ''; overlay.remove(); if (window.KiwiNativeHostRequestState) window.KiwiNativeHostRequestState(); });
+    overlay.addEventListener('click', function (event) { if (event.target === overlay) card.querySelector('[data-close]').click(); });
+    document.body.appendChild(overlay);
+    if (window.KiwiNativeHostRequestState) window.KiwiNativeHostRequestState();
+    fetch('/api/account/deletion-request', { credentials:'include', cache:'no-store' }).then(function (res) {
+      return res.json().then(function (body) { if (!res.ok) throw new Error(body.error || 'unavailable'); return body; });
+    }).then(function (body) {
+      card.querySelector('.kiwi-native-account-email').textContent = body.account && body.account.email || '';
+      if (body.request) { status.textContent = words.received + ' · ' + body.request.reference; return; }
+      status.textContent = ''; submit.disabled = false;
+    }).catch(function (error) { status.textContent = error.message === 'unauthenticated' ? words.signin : words.failed; });
+    submit.addEventListener('click', function () {
+      if (submit.disabled || !password.value) { password.focus(); return; }
+      submit.disabled = true; status.textContent = words.checking;
+      var body = JSON.stringify({ confirm:true, password:password.value }); password.value = '';
+      fetch('/api/account/deletion-request', { method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:body }).then(function (res) {
+        return res.json().then(function (result) { if (!res.ok) throw new Error(result.error || 'unavailable'); return result; });
+      }).then(function (result) { status.textContent = words.received + ' · ' + result.request.reference; card.querySelector('label').hidden = true; submit.hidden = true; })
+        .catch(function (error) { status.textContent = error.message === 'bad-creds' ? words.wrong : words.failed; submit.disabled = false; });
+    });
+  }
+
+  function nativeWorkspaceAction(payload) {
+    if (!payload) return false;
+    if (payload.action === 'change-role') { location.href = 'index.html?choose=1'; return true; }
+    if (payload.action === 'delete-account') { nativeAccountDeletion(); return true; }
+    if (payload.action === 'sign-out') {
+      fetch('/auth/logout', { credentials:'include', redirect:'manual' }).then(function () {
+        localStorage.removeItem('kiwiAppRole');
+        call(socket, 'secureRemove', { key:'app-role' }).then(function () { location.href = 'index.html?setup=1'; });
+      }).catch(function () { window.alert(root.lang === 'fr' ? 'Déconnexion impossible hors ligne.' : 'Sign out needs a network connection.'); });
+      return true;
+    }
+    return false;
+  }
+
   function initNativeTillUx() {
     if (!/kiwi-caisse\.html$/i.test(location.pathname) || !document.body) return;
     document.body.classList.add('kiwi-native-till');
@@ -316,7 +388,7 @@
       });
       nativeHostPost({
         version:1, screen:'workspace', role:'caisse', locale:String(root.lang || 'fr'), rtl:root.dir === 'rtl', selected:selected,
-        tabs:nativeBlockingLayer() ? [] : tabItems.map(function (item) { return { id:item[0], label:item[1] }; })
+        tabs:nativeBlockingLayer() || window.innerWidth > 900 ? [] : tabItems.map(function (item) { return { id:item[0], label:item[1] }; })
       });
     }
     function activateNativeTab(mode) {
@@ -339,7 +411,7 @@
       if (!button) return;
       activateNativeTab(button.getAttribute('data-native-tab'));
     });
-    window.KiwiNativeHostAction = function (payload) { if (payload && payload.action === 'navigate') activateNativeTab(String(payload.id || '')); };
+    window.KiwiNativeHostAction = function (payload) { if (nativeWorkspaceAction(payload)) return; if (payload && payload.action === 'navigate') activateNativeTab(String(payload.id || '')); };
     window.KiwiNativeHostRequestState = syncTabs;
     new MutationObserver(syncTabs).observe(document.body, { attributes: true, attributeFilter: ['data-mode', 'class'] });
     syncTabs();
@@ -402,17 +474,28 @@
           if (document.body.classList.contains('kiwi-native-cart-actions')) document.body.classList.remove('kiwi-native-cart-actions');
           if (more) {
             more.setAttribute('aria-expanded', 'false');
-            more.textContent = copy.actions;
+            if (more.textContent !== copy.actions) more.textContent = copy.actions;
           }
         }
         if (empty && document.body.classList.contains('ticket-open')) document.body.classList.remove('ticket-open');
         if (peek) {
           peek.setAttribute('aria-controls', 'rp-active');
           peek.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+          var rows = activeCart ? activeCart.querySelectorAll('#rp-items .rp-item:not(.rp-item--discount)') : [];
+          var count = Array.prototype.reduce.call(rows, function (sum, row) {
+            var quantity = row.querySelector('.qty-num,.rp-item-qty,.rp-sent-qty');
+            return sum + (quantity ? (parseInt(quantity.textContent, 10) || 1) : 1);
+          }, 0);
+          var label = peek.firstElementChild;
+          var total = peek.querySelector('#rp-peek-total');
+          var liveTotal = activeCart && activeCart.querySelector('#rp-total');
+          var nextLabel = count + ' ' + (root.lang === 'en' ? (count === 1 ? 'item' : 'items') : root.lang === 'ar' ? 'عناصر' : (count === 1 ? 'article' : 'articles'));
+          if (label && label.textContent !== nextLabel) label.textContent = nextLabel;
+          if (total && liveTotal && total.textContent !== liveTotal.textContent) total.textContent = liveTotal.textContent;
         }
         grabber.setAttribute('aria-expanded', expanded ? 'true' : 'false');
       }
-      if (activeCart) new MutationObserver(syncCartSheet).observe(activeCart, { attributes: true, attributeFilter: ['hidden', 'style'] });
+      if (activeCart) new MutationObserver(syncCartSheet).observe(activeCart, { attributes: true, childList: true, characterData: true, subtree: true, attributeFilter: ['hidden', 'style'] });
       new MutationObserver(syncCartSheet).observe(document.body, { attributes: true, attributeFilter: ['class'] });
       syncCartSheet();
     }
@@ -445,10 +528,16 @@
     if (/kiwi-caisse\.html$/i.test(location.pathname)) return;
     var role = /kiwi-serveur\.html$/i.test(location.pathname) ? 'equipe' : /kiwi-cuisine\.html$/i.test(location.pathname) ? 'cuisine' : /dashboard\.html$/i.test(location.pathname) ? 'dashboard' : '';
     if (!role) return;
-    var push = function () { nativeHostPost({ version:1, screen:'workspace', role:role, locale:String(root.lang || 'fr'), rtl:root.dir === 'rtl', selected:'', tabs:[] }); };
+    var push = function () { nativeHostPost({ version:1, screen:'workspace', role:role, locale:String(root.lang || 'fr'), rtl:root.dir === 'rtl', selected:'', tabs:nativeBlockingLayer() || window.innerWidth > 900 ? [] : [{ id:'more', label:nativeTillCopy().more }] }); };
     window.KiwiNativeHostRequestState = push;
-    window.KiwiNativeHostAction = function () {};
+    window.KiwiNativeHostAction = function (payload) { nativeWorkspaceAction(payload); };
     push(); setTimeout(push, 300); setTimeout(push, 1200);
+  }
+
+  function polishNativeWorkspaceCopy() {
+    if (!/dashboard\.html$/i.test(location.pathname) || !String(root.lang || 'fr').startsWith('fr')) return;
+    var help = document.querySelector('.kiwi-lock-help[data-i18n="dash.lock.help"]');
+    if (help) help.innerHTML = 'Entrez votre <b>code à 4 chiffres</b> pour ouvrir le tableau de bord';
   }
 
   function checkBiometrics() {
@@ -516,30 +605,6 @@
     });
   }
 
-  function registerPushToken(token, role) {
-    if (!token) return Promise.resolve(null);
-    var merchant = '';
-    try {
-      var venue = JSON.parse(localStorage.getItem('kiwiPairedVenue') || '{}');
-      merchant = (venue && venue.merchant) || localStorage.getItem('kiwiLiveMerchant') || '';
-    } catch (_) {}
-    if (!merchant) return Promise.resolve(null);
-    var body = {
-      merchant: merchant,
-      token: token,
-      role: role || 'caisse',
-      platform: cap.getPlatform ? cap.getPlatform() : 'ios',
-      deviceId: (window.KiwiNative && window.KiwiNative.deviceId) ? window.KiwiNative.deviceId : null
-    };
-    return fetch('/api/push/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    }).then(function (res) {
-      return res.ok ? res.json() : null;
-    }).catch(function () { return null; });
-  }
-
   window.KiwiNative = {
     secureGet: secureGet,
     secureSet: secureSet,
@@ -550,7 +615,6 @@
     authenticateBiometric: authenticateBiometric,
     handleNativeAppState: handleNativeAppState,
     maybePromptBiometricUnlock: maybePromptBiometricUnlock,
-    registerPushToken: registerPushToken,
     handleBackButton: handleNativeBack,
     deviceIdentity: function () { return call(socket, 'deviceIdentity').then(function (r) { return r && r.id || ''; }); }
   };
@@ -578,7 +642,7 @@
     if (window.KiwiNativeHostRequestState) window.KiwiNativeHostRequestState();
   }
   function isBlockingNode(node) {
-    return node && (node.id === 'pin-screen' || node.id === 'clockin-screen' || (node.hasAttribute && node.hasAttribute('data-kiwi-greet')));
+    return node && (node.id === 'pin-screen' || node.id === 'cp-pin-screen' || node.id === 'clockin-screen' || (node.hasAttribute && (node.hasAttribute('data-kiwi-greet') || node.hasAttribute('data-kiwi-lock'))) || (node.matches && node.matches('.modal-veil,.drawer-veil,.cloture-veil,.kds-screen,#stock-screen,.kiwi-native-account')) || node === document.body);
   }
   if (document.body) new MutationObserver(function (records) {
     if (records.some(function (record) {
@@ -604,10 +668,11 @@
     app.addListener('backButton', handleNativeBack);
   }
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { initNativeTillUx(); initNativeHostWorkspace(); maybePromptBiometricUnlock(); });
+    document.addEventListener('DOMContentLoaded', function () { initNativeTillUx(); initNativeHostWorkspace(); polishNativeWorkspaceCopy(); maybePromptBiometricUnlock(); });
   } else {
     initNativeTillUx();
     initNativeHostWorkspace();
+    polishNativeWorkspaceCopy();
     maybePromptBiometricUnlock();
   }
 })();

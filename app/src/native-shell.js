@@ -11,7 +11,7 @@
   var ROLE_KEY = 'kiwiAppRole';
   var TERMINAL_KEY = 'kiwi:caisse:terminal-id:v1';
   var PRINTER_KEY = 'kiwiPrinterCfg';
-  var lang = String((navigator.languages && navigator.languages[0]) || navigator.language || 'fr').toLowerCase().split('-')[0];
+  var lang = String(localStorage.getItem('kiwiNativeLocale') || (navigator.languages && navigator.languages[0]) || navigator.language || 'fr').toLowerCase().split('-')[0];
   if (lang !== 'ar' && lang !== 'en') lang = 'fr';
   var COPY = {
     fr: {

@@ -95,6 +95,7 @@ function runtimeHarness({
       if (selector === '.kiwi-native-offline') return hasOffline ? offline : null;
       return null;
     },
+    querySelectorAll() { return []; },
     createElement: element,
     getElementById(id) { return id === 'pin-screen' ? pin : null; },
     addEventListener(name, callback) { (listeners['document:' + name] ||= []).push(callback); },
@@ -130,6 +131,7 @@ function runtimeHarness({
     Date: FakeDate, MutationObserver: class { observe() {} },
     URLSearchParams, Event, Error, Promise, JSON, Math, String, Number,
     setTimeout: window.setTimeout, clearTimeout: window.clearTimeout,
+    getComputedStyle: () => ({ display: 'none', visibility: 'visible' }),
   });
   new vm.Script(nativeRuntime, { filename: 'app/src/native-runtime.js' }).runInContext(context);
 

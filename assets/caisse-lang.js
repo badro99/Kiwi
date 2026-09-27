@@ -48,6 +48,10 @@
      pas. C'est la bonne défaillance pour une caisse. */
   var DICT = {
     en: {
+      /* Native opening screen uses the same chosen language as setup. */
+      'version commerçant': 'merchant edition', '· version commerçant': '· merchant edition', 'Bonjour': 'Hello',
+      'Caissier': 'Cashier', 'Fond d’ouverture': 'Opening float',
+      "Fond d'ouverture": 'Opening float', 'Ouvrir la caisse': 'Open till',
       /* ── rail ── */
       'Vente': 'Sale', 'Scan': 'Scan', 'Inventaire': 'Stock',
       'Échanges & avoirs': 'Returns & credit', 'Clientes': 'Customers',
@@ -269,6 +273,9 @@
     },
 
     ar: {
+      'version commerçant': 'نسخة التاجر', '· version commerçant': '· نسخة التاجر', 'Bonjour': 'مرحباً',
+      'Caissier': 'أمين الصندوق', 'Fond d’ouverture': 'رصيد الافتتاح',
+      "Fond d'ouverture": 'رصيد الافتتاح', 'Ouvrir la caisse': 'افتح الصندوق',
       /* ── rail ── */
       'Vente': 'البيع', 'Scan': 'المسح', 'Inventaire': 'المخزون',
       'Échanges & avoirs': 'التبديل والأرصدة', 'Clientes': 'الزبونات',
@@ -793,7 +800,9 @@
         var b = e.target.closest && e.target.closest('[data-kcl]');
         if (!b) return;
         e.preventDefault(); e.stopPropagation();
-        set(b.getAttribute('data-kcl'));
+        var selected = b.getAttribute('data-kcl');
+        try { if (document.documentElement.classList.contains('kiwi-native')) localStorage.setItem('kiwiNativeLocale', selected); } catch (_) {}
+        set(selected);
       });
     });
   }

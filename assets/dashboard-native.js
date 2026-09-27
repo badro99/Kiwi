@@ -93,6 +93,7 @@
    *    (self-contained demo data) — real push notifications need the backend
    *    horizon. Tapping routes to the Transactions destination. ── */
   (function toasts() {
+    if (document.documentElement.classList.contains('kiwi-native')) return;
     /* This is demo scenery, never merchant activity. Real/custom venues must
      * not receive fabricated restaurant sales (especially on non-food stores). */
     try {

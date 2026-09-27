@@ -1,7 +1,7 @@
 {
   "assets/account.js": {
-    "v": "18",
-    "sha": "9790c429be9cc62f"
+    "v": "20",
+    "sha": "4f7d902b0673368f"
   },
   "assets/accounting.js": {
     "v": "1",
@@ -112,8 +112,8 @@
     "sha": "1014ed01ce090f7b"
   },
   "assets/caisse-lang.js": {
-    "v": "2",
-    "sha": "067afd813f547b10"
+    "v": "5",
+    "sha": "72bc39dbe0291bd9"
   },
   "assets/caisse-link.js": {
     "v": "10",
@@ -208,8 +208,8 @@
     "sha": "0a0b48f1e10f3870"
   },
   "assets/dashboard-native.js": {
-    "v": "1",
-    "sha": "cd751f73c0180449"
+    "v": "3",
+    "sha": "af0244365422a41f"
   },
   "assets/dashboard-pwa.js": {
     "v": "553",
@@ -364,8 +364,8 @@
     "sha": "b45b0260ef0d82b2"
   },
   "assets/i18n.js": {
-    "v": "7",
-    "sha": "4c15205549dae860"
+    "v": "9",
+    "sha": "dc3978cbf2bbedc1"
   },
   "assets/identity.js": {
     "v": "5",
@@ -384,8 +384,8 @@
     "sha": "21040572d903f0b8"
   },
   "assets/interactive.js": {
-    "v": "36",
-    "sha": "997bda63484897e0"
+    "v": "38",
+    "sha": "82f7a0eb5e74b444"
   },
   "assets/inventory-consumption.js": {
     "v": "12",

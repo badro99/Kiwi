@@ -81,7 +81,7 @@ var SHELL = [
   '/assets/agent-truth.js?v=6',
   '/assets/agent-voice.js?v=5',
   '/assets/agent-vision.js?v=1',
-  '/assets/i18n.js?v=7',
+  '/assets/i18n.js?v=9',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -89,7 +89,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=36',
+  '/assets/interactive.js?v=38',
   '/assets/features.js?v=5',
   '/assets/invoicing.css?v=6',
   '/assets/invoicing.js?v=8',
@@ -142,7 +142,7 @@ var SHELL = [
   '/assets/liquid-lens.js?v=1',
   '/assets/pages.js?v=7',
   '/assets/help-centre.js?v=4',
-  '/assets/account.js?v=18',
+  '/assets/account.js?v=20',
   '/assets/production-action-guard.js?v=1',
   // Shared floor-plan vocabulary · the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
@@ -150,7 +150,7 @@ var SHELL = [
   '/assets/floorplan-core.js?v=2050',
   '/assets/oppo-cards.js?v=3',
   '/assets/dashboard-pwa.js?v=553',
-  '/assets/dashboard-native.js?v=1',
+  '/assets/dashboard-native.js?v=3',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
@@ -220,7 +220,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=5',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=2',
+  '/assets/caisse-lang.js?v=5',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/retail-balances.js?v=4',

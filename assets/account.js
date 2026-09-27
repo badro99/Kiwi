@@ -1038,7 +1038,7 @@
     };
 
     const T = {
-      title: "My Kiwi",
+      title: document.documentElement.classList.contains('kiwi-native') ? pick({ fr: 'Mon Kiwi', en: 'My Kiwi', ar: 'Kiwi الخاص بي' }) : "My Kiwi",
       sub: pick({
         fr: `Compte & exploitation · ${biz}`,
         en: `Account & operations · ${biz}`,

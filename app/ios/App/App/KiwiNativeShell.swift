@@ -4,7 +4,7 @@ import UIKit
 import WebKit
 
 private let kiwiInk = Color(red: 10 / 255, green: 15 / 255, blue: 13 / 255)
-private let kiwiMint = Color(red: 0, green: 1, blue: 174 / 255)
+private let kiwiMint = Color(red: 125 / 255, green: 242 / 255, blue: 176 / 255)
 private let kiwiPaper = Color(red: 247 / 255, green: 245 / 255, blue: 240 / 255)
 private let kiwiAtlas = Color(red: 11 / 255, green: 110 / 255, blue: 79 / 255)
 
@@ -110,12 +110,15 @@ private final class KiwiNativeShellModel: ObservableObject {
     @Published var revision = 0
     weak var bridge: CAPBridgeViewController?
     var didChangeLayout: ((KiwiHostContext) -> Void)?
+    private var lastContextData: Data?
 
     func accept(_ value: Any) {
         guard JSONSerialization.isValidJSONObject(value),
               let data = try? JSONSerialization.data(withJSONObject: value),
               let next = try? JSONDecoder().decode(KiwiHostContext.self, from: data) else { return }
         DispatchQueue.main.async {
+            guard data != self.lastContextData else { return }
+            self.lastContextData = data
             self.context = next
             self.revision += 1
             self.didChangeLayout?(next)
@@ -133,7 +136,7 @@ private final class KiwiNativeShellModel: ObservableObject {
 }
 
 final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
-    private static let tabContentHeight: CGFloat = 66
+    private static let tabContentHeight: CGFloat = 72
     private let model = KiwiNativeShellModel()
     private var setupHost: UIHostingController<KiwiNativeSetupRoot>?
     private var tabHost: UIHostingController<KiwiNativeTabRoot>?
@@ -165,7 +168,7 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
         bridge.addChild(tabs)
         bridge.view.addSubview(tabs.view)
         let tabHeightConstraint = tabs.view.heightAnchor.constraint(equalToConstant: Self.tabContentHeight)
-        let tabWidthConstraint = tabs.view.widthAnchor.constraint(equalToConstant: 264)
+        let tabWidthConstraint = tabs.view.widthAnchor.constraint(equalToConstant: 350)
         tabWidthConstraint.priority = .defaultHigh
         NSLayoutConstraint.activate([
             tabs.view.centerXAnchor.constraint(equalTo: bridge.view.centerXAnchor),
@@ -193,7 +196,7 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
 
     private func apply(_ context: KiwiHostContext) {
         setupHost?.view.isHidden = context.screen == "workspace"
-        tabHost?.view.isHidden = context.screen != "workspace" || context.tabs.isEmpty
+        tabHost?.view.isHidden = context.screen != "workspace" || context.tabs.isEmpty || (model.bridge?.view.bounds.width ?? 0) > 900
         if let setupView = setupHost?.view, !setupView.isHidden { setupView.superview?.bringSubviewToFront(setupView) }
         if let tabView = tabHost?.view, !tabView.isHidden { tabView.superview?.bringSubviewToFront(tabView) }
         publishSafeAreaInsets()
@@ -202,7 +205,8 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
     private func publishSafeAreaInsets() {
         let values = [safeAreaInsets.top, safeAreaInsets.right, safeAreaInsets.bottom, safeAreaInsets.left]
             .map { String(format: "%.2f", Double($0)) + "px" }
-        bridgeEvaluate("document.documentElement.style.setProperty('--kiwi-host-safe-top','\(values[0])');document.documentElement.style.setProperty('--kiwi-host-safe-right','\(values[1])');document.documentElement.style.setProperty('--kiwi-host-safe-bottom','\(values[2])');document.documentElement.style.setProperty('--kiwi-host-safe-left','\(values[3])')")
+        let tabHeight = tabHost?.view.isHidden == false ? Self.tabContentHeight + safeAreaInsets.bottom : 0
+        bridgeEvaluate("document.documentElement.style.setProperty('--kiwi-host-safe-top','\(values[0])');document.documentElement.style.setProperty('--kiwi-host-safe-right','\(values[1])');document.documentElement.style.setProperty('--kiwi-host-safe-bottom','\(values[2])');document.documentElement.style.setProperty('--kiwi-host-safe-left','\(values[3])');document.documentElement.style.setProperty('--kiwi-host-tab-height','\(String(format: "%.2f", Double(tabHeight)))px')")
     }
 
     private func requestState() {
@@ -235,6 +239,15 @@ private struct KiwiMark: View {
             .clipShape(RoundedRectangle(cornerRadius: size * 0.23, style: .continuous))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Kiwi Pro")
+    }
+}
+
+private struct KiwiPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.78 : 1)
+            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
     }
 }
 
@@ -280,7 +293,7 @@ private struct KiwiNativeSetupRoot: View {
     }
 
     private var setup: some View {
-        ScrollView {
+        GeometryReader { geometry in ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 KiwiMark(size: 76)
                 progress
@@ -298,10 +311,11 @@ private struct KiwiNativeSetupRoot: View {
             }
             .frame(maxWidth: 640)
             .frame(maxWidth: .infinity)
+            .frame(minHeight: geometry.size.height, alignment: .center)
             .padding(.horizontal, 18)
             .padding(.top, 14)
             .padding(.bottom, 28)
-        }
+        }.id(model.context.kind) }
     }
 
     @ViewBuilder private var progress: some View {
@@ -404,18 +418,28 @@ private struct KiwiNativeSetupRoot: View {
             else if choice.group == "paper" { paper = choice.id; model.send("select-paper", id: choice.id) }
             else if choice.group == "printer" { host = choice.id; model.send("select-printer", id: choice.id) }
         } label: {
-            HStack(spacing: 14) {
-                Image(systemName: symbol(choice.id)).font(.title3.weight(.semibold)).frame(width: 28).foregroundStyle(choice.selected ? kiwiAtlas : kiwiInk.opacity(0.62)).accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(choice.title).font(.headline).foregroundStyle(kiwiInk).fixedSize(horizontal: false, vertical: true)
-                    if !choice.subtitle.isEmpty { Text(choice.subtitle).font(.subheadline).foregroundStyle(kiwiInk.opacity(0.68)).fixedSize(horizontal: false, vertical: true) }
+            Group {
+                if dynamicTypeSize.isAccessibilitySize && choice.group == "role" {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Image(systemName: symbol(choice.id)).font(.title3.weight(.semibold)).foregroundStyle(kiwiAtlas).accessibilityHidden(true)
+                        Text(choice.title).font(.headline).foregroundStyle(kiwiInk)
+                        if !choice.subtitle.isEmpty { Text(choice.subtitle).font(.subheadline).foregroundStyle(kiwiInk.opacity(0.68)) }
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    HStack(spacing: 14) {
+                        Image(systemName: symbol(choice.id)).font(.title3.weight(.semibold)).frame(width: 28).foregroundStyle(choice.selected ? kiwiAtlas : kiwiInk.opacity(0.62)).accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(choice.title).font(.headline).foregroundStyle(kiwiInk).fixedSize(horizontal: false, vertical: true)
+                            if !choice.subtitle.isEmpty { Text(choice.subtitle).font(.subheadline).foregroundStyle(kiwiInk.opacity(0.68)).fixedSize(horizontal: false, vertical: true) }
+                        }
+                        Spacer()
+                        if choice.selected || (choice.group == "paper" && paper == choice.id) { Image(systemName: "checkmark.circle.fill").foregroundStyle(kiwiInk) }
+                    }
                 }
-                Spacer()
-                if choice.selected || (choice.group == "paper" && paper == choice.id) { Image(systemName: "checkmark.circle.fill").foregroundStyle(kiwiInk) }
             }
-            .padding(15).background(choice.selected ? kiwiMint.opacity(0.12) : Color.white.opacity(0.55), in: RoundedRectangle(cornerRadius: 18))
+            .padding(15).background(choice.selected ? kiwiMint.opacity(0.12) : kiwiPaper, in: RoundedRectangle(cornerRadius: 18))
             .overlay(RoundedRectangle(cornerRadius: 18).stroke(choice.selected ? kiwiMint.opacity(0.8) : kiwiInk.opacity(0.08), lineWidth: 1))
-        }.buttonStyle(.plain)
+        }.buttonStyle(KiwiPressStyle())
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(choice.selected ? .isSelected : [])
     }
@@ -461,6 +485,7 @@ private struct KiwiNativeSetupRoot: View {
 private struct KiwiNativeTabRoot: View {
     @ObservedObject var model: KiwiNativeShellModel
     @Namespace private var selectionLens
+    @State private var showingMore = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -468,13 +493,28 @@ private struct KiwiNativeTabRoot: View {
             .padding(.top, 4)
             .padding(.bottom, 4)
             .environment(\.layoutDirection, model.context.rtl ? .rightToLeft : .leftToRight)
+            .sheet(isPresented: $showingMore) {
+                NavigationView {
+                    List {
+                        Button(copy("Changer de rôle", "Change role", "تغيير الدور")) { showingMore = false; model.send("change-role") }
+                        Button(copy("Supprimer mon compte", "Delete my account", "حذف حسابي"), role: .destructive) { showingMore = false; model.send("delete-account") }
+                        Button(copy("Se déconnecter", "Sign out", "تسجيل الخروج")) { showingMore = false; model.send("sign-out") }
+                    }
+                    .navigationTitle(copy("Plus", "More", "المزيد"))
+                    .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button(copy("Fermer", "Close", "إغلاق")) { showingMore = false } } }
+                }
+            }
+    }
+
+    private func copy(_ fr: String, _ en: String, _ ar: String) -> String {
+        model.context.locale.hasPrefix("ar") ? ar : (model.context.locale.hasPrefix("en") ? en : fr)
     }
 
     private var tabs: some View {
         HStack(spacing: 2) {
             ForEach(model.context.tabs) { tab in
                 let active = model.context.selected == tab.id
-                Button { model.send("navigate", id: tab.id) } label: {
+                Button { if tab.id == "more" { showingMore = true } else { model.send("navigate", id: tab.id) } } label: {
                     ZStack {
                         if active {
                             Capsule()
@@ -482,12 +522,15 @@ private struct KiwiNativeTabRoot: View {
                                 .overlay(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 0.75))
                                 .matchedGeometryEffect(id: "kiwi-tab-selection", in: selectionLens)
                         }
-                        Image(systemName: symbol(tab.id))
-                            .font(.system(size: 21, weight: .semibold))
-                            .symbolVariant(active ? .fill : .none)
-                            .foregroundStyle(active ? kiwiMint : Color.white.opacity(0.70))
+                        VStack(spacing: 2) {
+                            Image(systemName: symbol(tab.id))
+                                .font(.system(size: 19, weight: .semibold))
+                                .symbolVariant(active ? .fill : .none)
+                            Text(tab.label).font(.system(size: 10, weight: active ? .semibold : .medium)).lineLimit(1)
+                        }
+                        .foregroundStyle(active ? kiwiMint : Color.white.opacity(0.85))
                     }
-                    .frame(width: 56, height: 46)
+                    .frame(width: model.context.tabs.count == 1 ? 78 : 76, height: 50)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

@@ -76,7 +76,7 @@ check(L.tr('Ticket · MM-1208 · par Salma') === 'Sale · MM-1208 · by Salma', 
 check(L.tr('par Yasmine El Fassi') === 'by Yasmine El Fassi', 'un nom composé traverse entier');
 /* Un segment inconnu ne doit pas empêcher les autres de passer, et surtout ne
    doit RIEN inventer. */
-check(L.tr('Bonjour · Total') === 'Bonjour · Total', 'une phrase dont aucun morceau n\'est connu reste intacte');
+check(L.tr('Mot inconnu · valeur inconnue') === 'Mot inconnu · valeur inconnue', 'une phrase dont aucun morceau n\'est connu reste intacte');
 check(L.tr('Aïcha · Total') === 'Aïcha · Total', 'un prénom ne devient jamais un mot du dictionnaire');
 check(L.tr('12 400 pts') === '12 400 pts', 'un nombre suivi d\'un mot inconnu reste tel quel');
 

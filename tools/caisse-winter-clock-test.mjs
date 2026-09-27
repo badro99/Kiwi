@@ -11,9 +11,11 @@ assert.ok(start > 0 && end > start);
 const code = source.slice(start, end);
 const fields = new Map();
 let now = '2026-02-15T01:30:00Z';
+let nativeLocale = false;
 class FixedDate extends Date { constructor(...args) { super(...(args.length ? args : [now])); } }
 const context = vm.createContext({
   Date: FixedDate, Intl, window: { KiwiDayReport: { timezone: () => 'Africa/Casablanca' } },
+  document: { documentElement: { classList: { contains: () => nativeLocale }, lang: 'en' } },
   dafrDays: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'],
   monthsEn: ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'],
   currentMerchantSlug: () => 'fixture', $: selector => {
@@ -31,5 +33,8 @@ assert.equal(fields.get('#clock-date').textContent, 'dimanche 15 février');
 now = '2026-03-22T02:30:00Z';
 context.tickClock();
 assert.equal(fields.get('#clock-time').textContent, '03:30', 'spring jump uses the new civil offset');
+nativeLocale = true;
+context.tickClock();
+assert.equal(fields.get('#clock-date').textContent, 'Sunday 22 March', 'native date follows the device language without changing the business clock');
 assert.equal(businessDate(businessBoundary('2026-02-15')), '2026-02-15');
 console.log('✓ till clock follows Casablanca winter/spring transitions and the 05:00 Z boundary');

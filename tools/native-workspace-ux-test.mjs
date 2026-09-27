@@ -39,15 +39,17 @@ const root = element(); root.lang = 'fr';
 const body = element();
 const layers = [];
 const namedElements = new Map();
+let dashboardLock = null;
 const observers = [];
 const docListeners = {};
 const document = {
   documentElement: root, body, readyState: 'complete',
   querySelector(selector) {
     if (selector === 'meta[name="kiwi-bundle"]' || selector === '.kiwi-native-offline') return null;
+    if (selector === '[data-kiwi-lock]') return dashboardLock;
     return null;
   },
-  querySelectorAll(selector) { return selector.includes('.modal-veil.is-open') ? layers.filter((node) => node.classList.contains('is-open')) : []; },
+  querySelectorAll(selector) { return selector.includes('.modal-veil.is-open') ? layers.filter((node) => node.classList.contains('is-open') || node.id === 'cp-pin-screen') : []; },
   getElementById(id) { return namedElements.get(id) || null; }, createElement() { return element(); },
   addEventListener(type, handler) { (docListeners[type] ||= []).push(handler); }
 };
@@ -55,6 +57,7 @@ const windowListeners = {};
 const appListeners = {};
 const hapticCalls = [];
 const statusBarCalls = [];
+const hostContexts = [];
 const appearanceListeners = [];
 const appearance = { matches: false, addEventListener(type, handler) { if (type === 'change') appearanceListeners.push(handler); } };
 let exits = 0, backs = 0, confirms = true;
@@ -63,6 +66,8 @@ const sessionStorage = { values: new Map(), getItem(k) { return this.values.get(
 const location = { pathname: '/dashboard.html', reload() {} };
 const history = { length: 2, back() { backs++; } };
 const window = {
+  innerWidth: 390,
+  webkit: { messageHandlers: { kiwiShell: { postMessage(value) { hostContexts.push(value); } } } },
   Capacitor: {
     isNativePlatform: () => true, getPlatform: () => 'android',
     Plugins: {
@@ -107,9 +112,14 @@ ok(exits === 1, 'confirmed terminal Back exits only after every dismissible laye
 ok(hapticCalls.some((call) => call[0] === 'notification' && call[1] === 'ERROR'), 'operational error toasts trigger native error feedback');
 ok(hapticCalls.some((call) => call[0] === 'impact' && call[1] === 'LIGHT'), 'item and navigation taps trigger light impact feedback');
 ok(hapticCalls.some((call) => call[0] === 'notification' && call[1] === 'SUCCESS'), 'completed payments can trigger native success feedback');
+location.pathname = '/dashboard.html';
 appearance.matches = true;
 appearanceListeners.forEach((handler) => handler({ matches: true }));
-ok(statusBarCalls.at(-1) === 'DARK', 'a live system appearance change repaints status-bar content for a dark surface');
+ok(statusBarCalls.at(-1) === 'LIGHT', 'system dark appearance does not hide dark status text over the light dashboard');
+root.setAttribute('data-theme', 'dark');
+appearanceListeners.forEach((handler) => handler({ matches: true }));
+ok(statusBarCalls.at(-1) === 'DARK', 'the painted dark dashboard requests light status text');
+root.setAttribute('data-theme', 'light');
 appearance.matches = false;
 body.classList.add('native-shell-page');
 appearanceListeners.forEach((handler) => handler({ matches: false }));
@@ -129,11 +139,49 @@ ok(statusBarCalls.at(-1) === 'DARK', 'PIN overlay also overrides the workspace s
 namedElements.delete(pin.id);
 observers.forEach((callback) => callback([{ target: body, removedNodes: [pin] }]));
 ok(statusBarCalls.at(-1) === 'LIGHT', 'removing a PIN overlay restores the underlying status style');
+location.pathname = '/kiwi-cuisine.html';
+appearanceListeners.forEach((handler) => handler({ matches: false }));
+ok(statusBarCalls.at(-1) === 'DARK', 'kitchen keeps light status text over its dark surface');
+location.pathname = '/dashboard.html';
+appearanceListeners.forEach((handler) => handler({ matches: false }));
+ok(hostContexts.at(-1)?.tabs?.[0]?.id === 'more', 'every compact workspace has a native More route');
+dashboardLock = element();
+window.KiwiNativeHostRequestState();
+ok(hostContexts.at(-1).tabs.length === 0, 'dashboard PIN lock removes the native capsule');
+dashboardLock = null;
+window.KiwiNativeHostRequestState();
+const pairingPin = element(); pairingPin.id = 'cp-pin-screen'; layers.push(pairingPin);
+window.KiwiNativeHostRequestState();
+ok(hostContexts.at(-1).tabs.length === 0, 'the pairing PIN also removes the native capsule');
+layers.pop();
+modal.classList.add('is-open');
+window.KiwiNativeHostRequestState();
+ok(hostContexts.at(-1).tabs.length === 0, 'an open payment modal removes the native capsule');
+modal.classList.remove('is-open');
+window.KiwiNativeHostRequestState();
+ok(hostContexts.at(-1).tabs.length === 1, 'closing the modal restores native navigation');
 const styleCount = statusBarCalls.length;
 observers.forEach((callback) => callback([{ target: body }]));
 ok(statusBarCalls.length === styleCount, 'unchanged style does not repeatedly cross the native bridge');
 ok(root.style.getPropertyValue('--type-scale') === '1.3', 'Dynamic Type scale reaches workspace pages, not only onboarding');
 ok((source.match(/!document\.body\.classList\.contains\('kiwi-native-hosted'\)/g) || []).length === 2,
   'native host publication cannot retrigger its own body-class observer on iOS or Android');
+ok(source.includes('if (more.textContent !== copy.actions) more.textContent = copy.actions'),
+  'cart observer does not rewrite its own observed action label on every mutation');
+const tokens = fs.readFileSync(new URL('../assets/tokens.css', import.meta.url), 'utf8');
+const swift = fs.readFileSync(new URL('../app/ios/App/App/KiwiNativeShell.swift', import.meta.url), 'utf8');
+const till = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+ok(till.includes("const activeSource = (mode !== 'vrap' && selectedId)") && till.includes("if (document.documentElement.classList.contains('kiwi-native')) renderMenu();"),
+  'product quantities come from the selected table and refresh when the table changes');
+ok(/function renderCart\(\)\s*\{[^]*?persistShift\(\)/.test(till) && /function renderOrderPanel\(tableId\)\s*\{[^]*?persistShift\(\)/.test(till),
+  'native takeaway and table drafts persist when their visible bill changes');
+ok((till.match(/class="pay-covers-meta"/g) || []).length === 2 && fs.readFileSync(new URL('../app/src/native-runtime.css', import.meta.url), 'utf8').includes('[data-mode="vrap"] .pay-covers-meta{display:none}'),
+  'native takeaway payment title never shows a meaningless covers count');
+const kitchen = fs.readFileSync(new URL('../kiwi-cuisine.html', import.meta.url), 'utf8');
+ok(source.includes('Entrez votre <b>code à 4 chiffres</b>') && kitchen.includes("Entrez le code d'appairage à six chiffres du tableau de bord"),
+  'native French PIN and kitchen pairing prompts use vous on a phone');
+const mint = tokens.match(/--mint:\s*#([0-9a-f]{6})/i)?.[1].toUpperCase();
+const nativeMint = swift.match(/private let kiwiMint = Color\(red: (\d+) \/ 255, green: (\d+) \/ 255, blue: (\d+) \/ 255\)/);
+ok(!!mint && !!nativeMint && nativeMint.slice(1).map(part => Number(part).toString(16).padStart(2, '0').toUpperCase()).join('') === mint, 'Swift mint stays equal to the locked brand token');
 
 console.log(`native-workspace-ux-test: ${controls} controls passed`);

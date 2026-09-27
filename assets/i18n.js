@@ -1333,7 +1333,7 @@
         // a11y — make each language a real, keyboard-operable control
         s.setAttribute('role', 'button');
         if (!s.hasAttribute('tabindex')) s.setAttribute('tabindex', '0');
-        const pick = (e) => { e.preventDefault(); e.stopPropagation(); setLang(l); };
+        const pick = (e) => { e.preventDefault(); e.stopPropagation(); if (document.documentElement.classList.contains('kiwi-native')) localStorage.setItem('kiwiNativeLocale', l); setLang(l); };
         s.addEventListener('click', pick);
         s.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') pick(e); });
       });

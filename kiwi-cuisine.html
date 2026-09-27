@@ -784,14 +784,16 @@
     fr: {
       'app.name': 'Cuisine',
       'pair.aria': "Appairer l'écran cuisine",
-      'pair.sub': "Entre le code d'appairage à six chiffres généré depuis le tableau de bord pour lier cette tablette à ta cuisine.",
+      'pair.sub': document.documentElement.classList.contains('kiwi-native')
+        ? "Entrez le code d'appairage à six chiffres du tableau de bord pour relier cet appareil à votre cuisine."
+        : "Entre le code d'appairage à six chiffres généré depuis le tableau de bord pour lier cette tablette à ta cuisine.",
       'pair.clear': 'Effacer',
       'pair.ok': 'Valider',
-      'pair.err.attempts': 'Trop d’essais. Réessaie dans un quart d’heure.',
+      'pair.err.attempts': document.documentElement.classList.contains('kiwi-native') ? 'Trop d’essais. Réessayez dans un quart d’heure.' : 'Trop d’essais. Réessaie dans un quart d’heure.',
       'pair.err.code': 'Code invalide ou expiré.',
-      'pair.err.incomplete': 'Écran incomplet. Recharge la page.',
-      'pair.err.commit': 'Appairage impossible. Recharge la page.',
-      'pair.err.net': 'Connexion impossible. Vérifie le wifi.',
+      'pair.err.incomplete': document.documentElement.classList.contains('kiwi-native') ? 'Écran incomplet. Relancez l’application.' : 'Écran incomplet. Recharge la page.',
+      'pair.err.commit': document.documentElement.classList.contains('kiwi-native') ? 'Appairage impossible. Relancez l’application.' : 'Appairage impossible. Recharge la page.',
+      'pair.err.net': document.documentElement.classList.contains('kiwi-native') ? 'Connexion impossible. Vérifiez le Wi-Fi.' : 'Connexion impossible. Vérifie le wifi.',
       'link.wait': 'Connexion…',
       'link.up': 'Comptoir lié',
       'link.down': 'Hors ligne',
