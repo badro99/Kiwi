@@ -1168,6 +1168,10 @@ section('Whole-project regressions');
     'avoir-customer-scope-browser-test.mjs',
     'transactions-nav-stability-browser-test.mjs',
     'shared-day-selector-browser-test.mjs',
+    'discount-policy-test.mjs',
+    'discount-policy-api-test.mjs',
+    'discount-policy-browser-test.mjs',
+    'discount-policy-cloud-test.mjs',
     'boutique-printer-settings-test.mjs',
     /* Le panneau d'activation : il doit pouvoir se fermer. Il ne le pouvait
        pas, et rien ne le disait — voir l'en-tête de la suite. */

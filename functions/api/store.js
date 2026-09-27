@@ -95,6 +95,7 @@ const FEATURES = {
   team:         { keys: ['members', 'hours', 'shifts'],            max: 600000 },
   attendance:   { keys: ['entries'],                               max: 600000 },
   fidelity:     { keys: ['model', 'visit', 'amount', 'product'],   max: 20000 },
+  discountpolicy: { keys: ['percentages'], max: 2000 },
   floorplan:    { keys: ['rooms', 'tables', 'zones', 'objects'],   max: 400000 },
   stock:        { keys: ['items', 'lines', 'movements', 'suppliers'], max: 600000 },
   /* Private cost truth.  assets/cost.js deliberately keeps purchase prices,
@@ -473,7 +474,7 @@ function stripBriefing() { return { days: [] }; }
 
 /* Quelles fonctionnalités cachent un secret à qui ne l'écrit pas. */
 const REDACT = { team: stripTeamCodes, agentactions: stripAgentActions, briefing: stripBriefing };
-const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE]);
+const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'discountpolicy']);
 
 /* Celui-ci tient-il la fiche, ou ne fait-il que la consulter ?
  * `entitledMerchant` SANS `allowTill` répond exactement à ça : la session du
@@ -642,6 +643,12 @@ export async function onRequestPost(context) {
   // silencieusement le vrai. Un document honnêtement vide (le commerçant a tout
   // supprimé) porte quand même ses clés, donc il passe.
   if (!shapeOk(feature, raw)) return json({ error: 'shape-mismatch', expected: feature }, 409);
+  if (feature === 'discountpolicy') {
+    const p = raw.percentages;
+    if (!Array.isArray(p) || p.length < 1 || p.length > 8
+      || p.some(n => !Number.isInteger(n) || n < 1 || n > 100)
+      || new Set(p).size !== p.length) return json({ error: 'bad-discount-policy' }, 400);
+  }
 
   const clean = bounded(raw, FEATURES[feature].maxStr);
   // Refus plutôt que troncature : voir la note de `bounded`. Le client garde sa

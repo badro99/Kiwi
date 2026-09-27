@@ -206,6 +206,8 @@
   ];
   function valid(d) {
     if (!d.value) return 'Choisissez de combien vous baissez le prix';
+    if (d.kind === 'percent' && window.KiwiDiscountPolicy?.configured(venueKey())
+        && !window.KiwiDiscountPolicy.allowed(d.value, venueKey())) return 'Pourcentage non autorisé dans les réglages';
     var sc = d.scope || {};
     if ((sc.type === 'rayon' || sc.type === 'produits') && !(sc.ids || []).length) return 'Choisissez au moins un élément à viser';
     if (sc.type === 'avant' && !sc.before) return 'Choisissez la date avant laquelle les articles sont visés';
@@ -240,7 +242,7 @@
     var prev = preview(ctx, d);
     var problem = valid(d);
     var sc = d.scope || {};
-    var quick = d.kind === 'percent' ? [10,20,30,50] : d.kind === 'amount' ? [20,50,100,200] : [49,99,149,199];
+    var quick = d.kind === 'percent' ? (window.KiwiDiscountPolicy?.percentages(venueKey(), [10,20,30,50]) || [10,20,30,50]) : d.kind === 'amount' ? [20,50,100,200] : [49,99,149,199];
     return '<div class="bpd-modal" data-bpd-host><div class="bpd-compose"><div class="bpd-form">' +
       '<section class="bpd-step"><header><span>1</span><div><b>Définir l’offre</b><small>Le nom et la baisse de prix</small></div></header><div class="bpd-step-body">' +
       '<div class="bpd-field"><label>Nom <span>· visible sur le reçu</span></label><input class="bpd-input" id="bpd-name" maxlength="80" placeholder="Soldes d’été, Déstockage…" value="' + esc(d.name) + '"></div>' +

@@ -587,6 +587,39 @@ export async function onRequestPost({ request, env }) {
     } catch (_) { /* absent on older schemas */ }
   }
 
+  /* The owner can remove a percentage in Settings. The till still renders the
+   * local policy for speed/offline use, but the server must refuse a forged or
+   * stale percentage before claiming a restaurant bill or inserting money.
+   * Receipts timestamped before the setting changed remain replayable: the
+   * outbox must never lose legitimate offline takings after an owner edit. */
+  const retailPercents = b && b.discountPercents;
+  if (retailPercents != null && (!Array.isArray(retailPercents) || retailPercents.length > 8
+      || retailPercents.some(n => !Number.isInteger(n) || n < 1 || n > 100))) {
+    return json({ error: 'bad-discount-percent' }, 400);
+  }
+  if (!stored && (hasDiscount || retailPercents?.length)) {
+    let policyRow = null;
+    try {
+      policyRow = await env.DB.prepare("SELECT data, updated_ts FROM store_docs WHERE merchant = ? AND feature = 'discountpolicy'")
+        .bind(merchant).first();
+    } catch (error) {
+      if (!/no such table/i.test(String(error))) return json({ error: 'discount-policy-unavailable' }, 503);
+    }
+    if (policyRow && ts >= Number(policyRow.updated_ts || 0)) {
+      let allowed = [];
+      try { allowed = JSON.parse(policyRow.data).percentages; } catch (_) {}
+      if (!Array.isArray(allowed) || !allowed.length) return json({ error: 'discount-policy-unavailable' }, 503);
+      if (hasDiscount) {
+        const kind = String(b.discountKind || '');
+        if (kind !== 'amount' && kind !== 'percent') return json({ error: 'discount-proof-required' }, 409);
+        if (kind === 'percent' && (!Number.isInteger(b.discountPercent) || !allowed.includes(b.discountPercent))) {
+          return json({ error: 'discount-not-allowed', allowed }, 409);
+        }
+      }
+      if (retailPercents?.some(n => !allowed.includes(n))) return json({ error: 'discount-not-allowed', allowed }, 409);
+    }
+  }
+
   let hasVisitLink = !!(effectiveSessionId || splitFlowId);
   if (hasVisitLink) {
     try { await ensureVisitLink(env); }

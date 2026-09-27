@@ -930,7 +930,10 @@
       body.discountAmountCents = Math.round(Number(entry.discountAmountCents));
       body.discountReason = String(entry.discountReason || '').slice(0, 32);
       body.actorId = String(entry.actorId || '').slice(0, 96);
+      body.discountKind = String(entry.discountKind || '').slice(0, 12);
+      if (entry.discountPercent != null) body.discountPercent = Number(entry.discountPercent);
     }
+    if (Array.isArray(entry.discountPercents)) body.discountPercents = entry.discountPercents.slice(0, 8).map(Number);
     return enqueueMoneyBody(body, m);
   }
 

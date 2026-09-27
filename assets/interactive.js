@@ -2122,6 +2122,7 @@ ar: {
               <div>
                 ${settingsRow('receipt_long', tr({ fr: 'Reçu de caisse & Mentions légales', en: 'Receipt & Legal details', ar: 'وصل الصندوق والبيانات القانونية' }), escape(receiptRowValue()), { action: 'settings-receipt' })}
                 ${settingsRow('credit_card', tr({ fr: 'Méthodes de paiement acceptées', en: 'Accepted payment methods', ar: 'وسائل الدفع المقبولة' }), escape(vd.methods || getSet('methods', 'Visa · Mastercard · Kiwi Tap · QR')), { action: cv ? 'settings-edit-venue' : 'settings-methods' })}
+                ${settingsRow('percent', tr({ fr: 'Pourcentages de remise', en: 'Discount percentages', ar: 'نسب التخفيض' }), escape((window.KiwiDiscountPolicy?.percentages?.(vd?.id) || [5,10,15,20]).map(n => n + ' %').join(' · ')), { action: 'settings-discounts' })}
                 ${settingsRow('paid', tr({ fr: 'Devise d\'affichage', en: 'Display currency', ar: 'عملة العرض' }), escape(getSet('currency', 'MAD · Dirham marocain')), { action: 'settings-currency' })}
               </div>
             </div>
@@ -2370,6 +2371,49 @@ ar: {
         if (which === 'goal' && window.KiwiDateRange) { try { window.KiwiDateRange.setDateRange(window.KiwiDateRange.getDateRange()); } catch (_) {} }
         setTimeout(() => handlers.settings(), 90);
         toast(tr({ fr: 'Réglage enregistré', en: 'Setting saved', ar: 'تم حفظ الإعداد' }), { type: 'success', force: true });
+      });
+    },
+
+    'settings-discounts': () => {
+      const policy = window.KiwiDiscountPolicy;
+      if (!policy) { toast('Réglage indisponible, rechargez la page', { type: 'warn' }); return; }
+      const chosen = new Set(policy.percentages());
+      const m = modal({ tag: 'CAISSE', title: 'Pourcentages de remise autorisés', width: 440,
+        body: '<p>Seuls ces pourcentages seront proposés sur les trois caisses. Une remise déjà enregistrée ne change pas.</p>'
+          + '<div data-discount-choices style="display:flex;gap:8px;flex-wrap:wrap;margin:16px 0"></div>'
+          + '<label style="display:block;margin:16px 0 6px">Ajouter un pourcentage (1 à 100)</label>'
+          + '<div style="display:flex;gap:8px"><input data-discount-input type="number" min="1" max="100" step="1" inputmode="numeric" aria-label="Nouveau pourcentage" style="flex:1;min-width:0" />'
+          + '<button type="button" class="kb" data-discount-add>Ajouter</button></div>',
+        foot: '<button type="button" class="kb atlas" data-discount-save>Enregistrer</button>' });
+      const draw = () => {
+        m.el.querySelector('[data-discount-choices]').innerHTML = [...chosen].sort((a,b) => a-b)
+          .map(n => `<button type="button" class="kb" data-discount-remove="${n}" aria-label="Retirer ${n} pour cent">${n} % · ×</button>`).join('');
+      };
+      draw();
+      m.el.addEventListener('click', async e => {
+        if (e.target.closest('[data-discount-remove]')) {
+          chosen.delete(Number(e.target.closest('[data-discount-remove]').dataset.discountRemove)); draw(); return;
+        }
+        if (e.target.closest('[data-discount-add]')) {
+          const field = m.el.querySelector('[data-discount-input]');
+          const n = Number(field.value);
+          if (!Number.isInteger(n) || n < 1 || n > 100 || chosen.size >= 8 && !chosen.has(n)) {
+            toast('Choisissez 1 à 100 %, huit valeurs maximum', { type: 'warn' }); return;
+          }
+          chosen.add(n); field.value = ''; draw(); return;
+        }
+        if (!e.target.closest('[data-discount-save]')) return;
+        if (!chosen.size) { toast('Gardez au moins un pourcentage', { type: 'warn' }); return; }
+        const button = e.target.closest('[data-discount-save]'); button.disabled = true;
+        try {
+          const result = await policy.save([...chosen]);
+          if (!result.ok || result.localOnly && window.KiwiEnv?.isReal?.()) {
+            toast('Réglage conservé localement, synchronisation en attente', { type: 'warn' }); return;
+          }
+          m.close(); setTimeout(() => handlers.settings(), 90);
+          toast('Pourcentages mis à jour · rechargez les caisses', { type: 'success', force: true });
+        } catch (_) { toast('Réglage non enregistré, réessayez', { type: 'warn' }); }
+        finally { button.disabled = false; }
       });
     },
 

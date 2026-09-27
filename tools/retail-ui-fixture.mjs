@@ -27,7 +27,7 @@ function maisonPage() {
     <script>window.KiwiEnv={isReal:()=>false,demosAllowed:true};window.KiwiConfig={features:{caisseInventoryAdmin:true,depotvente:true,caisseInventoryValue:false}};window.KiwiPosDispatch={register:s=>window.__maisonSpec=s,lock:()=>{}};</script>
     <script src="/assets/caisse-dna.js"></script><script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
     <script src="/assets/inventory-ledger.js"></script><script src="/assets/maison-stock-movements.js"></script><script src="/assets/procurement.js"></script>
-    <script src="/assets/venue-store.js"></script><script src="/assets/clients-store.js"></script><script src="/assets/clients-book.js"></script>
+    <script src="/assets/venue-store.js"></script><script src="/assets/discount-policy.js"></script><script src="/assets/clients-store.js"></script><script src="/assets/clients-book.js"></script>
     <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script src="/assets/pos-maison.js?v=${stamps['assets/pos-maison.js'].v}"></script>
   </head><body class="is-pos-maison"><div id="toast-stack"></div><div class="vx-screen is-on" id="pos-maison"></div>
     <script>window.__maisonSpec.mount(document.getElementById('pos-maison'));window.KiwiCaisseDna.enhance(document.getElementById('pos-maison'),'maison');</script>

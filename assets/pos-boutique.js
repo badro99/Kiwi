@@ -54,6 +54,9 @@
     return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0;
   }
   function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  // Product sheet and promotion composer are siblings of mount(), not children.
+  // Keep the selected catalogue/policy identity in their shared closure.
+  let _bqKey = null;
 
   function toast(msg, ms, kind, desc) {
     if (typeof window.KiwiCaisseToast === 'function') { window.KiwiCaisseToast(msg, ms, kind, desc); return; }
@@ -1407,7 +1410,7 @@
          the pairing record carries no venueId (a non-custom merchant). Only the unpaired
          local demo (PIN 0002) stays on Maison Mansour. */
       var _bqPv = pvPaired();
-      var _bqKey = (pvReal() && _bqPv && _bqPv.merchant)          /* real → merchant slug — SAME key the dashboard uses (pages-pro.js _bqxVenue) */
+      _bqKey = (pvReal() && _bqPv && _bqPv.merchant)          /* real → merchant slug — SAME key the dashboard uses (pages-pro.js _bqxVenue) */
         || window.__kiwiPairedBoutiqueVenue
         || (_bqPv && (_bqPv.venueId || _bqPv.merchant))
         || (pvReal() ? 'boutique-live' : 'maisonMansour');
@@ -1955,7 +1958,7 @@
         <div class="bq-f">
           <div class="bq-f-lbl">Remise <span class="opt">· accord gérante</span></div>
           <div class="bq-chips" id="bq-remise">
-            ${[0, 5, 10, 15, 20].map((r) => `<button class="bq-chip ${sheet.remise === r ? 'on' : ''}" data-bq-rem="${r}">${r === 0 ? 'Sans' : `−${r} %`}${r > 0 && !state.ticket.remiseAuth ? ' <i data-lucide="lock"></i>' : ''}</button>`).join('')}
+            ${[0, ...(window.KiwiDiscountPolicy?.percentages(_bqKey) || [5, 10, 15, 20])].map((r) => `<button class="bq-chip ${sheet.remise === r ? 'on' : ''}" data-bq-rem="${r}">${r === 0 ? 'Sans' : `−${r} %`}${r > 0 && !state.ticket.remiseAuth ? ' <i data-lucide="lock"></i>' : ''}</button>`).join('')}
           </div>
         </div>
       </div>`}
@@ -2010,6 +2013,7 @@
       const b = e.target.closest('[data-bq-rem]');
       if (!b) return;
       const r = +b.dataset.bqRem;
+      if (r > 0 && window.KiwiDiscountPolicy && !window.KiwiDiscountPolicy.allowed(r, _bqKey)) { toast('Pourcentage non autorisé'); return; }
       if (r > 0 && !state.ticket.remiseAuth) { openApprove(r, () => { sheet.remise = r; renderSheet(); icons(); lens(); }); return; }
       sheet.remise = r;
       $$('[data-bq-rem]', el).forEach((x) => x.classList.toggle('on', +x.dataset.bqRem === r));
@@ -3557,6 +3561,7 @@
               amount: cashIn,
               method: method,
               paymentParts: bqPaymentParts(parts), ticketAmountCents: Math.round(total * 100),
+              discountPercents: [...new Set(frozen.lines.map(ln => Number(ln.remise)).filter(n => n > 0))],
               channel: (parts || []).some((x) => x && x.m === 'livraison') ? 'delivery' : 'counter',
               label: label,
               ref: sale.id,
@@ -4928,6 +4933,8 @@
 
   function promoDraftValid(d) {
     if (!d.value) return 'Choisissez de combien vous baissez le prix';
+    if (d.kind === 'percent' && window.KiwiDiscountPolicy?.configured(_bqKey)
+        && !window.KiwiDiscountPolicy.allowed(d.value, _bqKey)) return 'Pourcentage non autorisé dans les réglages';
     const sc = d.scope || {};
     if ((sc.type === 'rayon' || sc.type === 'produits') && !(sc.ids || []).length) return 'Choisissez au moins un élément à viser';
     if (sc.type === 'avant' && !sc.before) return 'Choisissez la date avant laquelle les articles sont visés';
@@ -4969,7 +4976,7 @@
               <input class="bq-input" id="bq-prc-value" type="number" min="0" inputmode="numeric" value="${d.value}" />
               <span class="unit">${d.kind === 'percent' ? '%' : 'MAD'}</span>
               <div class="bq-chips" id="bq-prc-quick">
-                ${(d.kind === 'percent' ? [10, 20, 30, 50] : d.kind === 'amount' ? [20, 50, 100, 200] : [49, 99, 149, 199]).map((v) =>
+                ${(d.kind === 'percent' ? (window.KiwiDiscountPolicy?.percentages(_bqKey, [10, 20, 30, 50]) || [10, 20, 30, 50]) : d.kind === 'amount' ? [20, 50, 100, 200] : [49, 99, 149, 199]).map((v) =>
                   `<button class="bq-chip ${d.value === v ? 'on' : ''}" data-prv="${v}">${d.kind === 'percent' ? `−${v} %` : d.kind === 'amount' ? `−${v}` : v}</button>`).join('')}
               </div>
             </div>

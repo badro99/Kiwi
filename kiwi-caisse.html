@@ -130,7 +130,7 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=52" defer></script>
+  <script src="assets/pos-dispatch.js?v=53" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=5" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=2" defer></script>
@@ -5560,7 +5560,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
   <script src="assets/caisse-pwa.js?v=562" defer></script>
-  <script src="assets/live-link.js?v=51" defer></script>
+  <script src="assets/live-link.js?v=52" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js?v=1" defer></script>
@@ -5592,6 +5592,7 @@
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js?v=4" defer></script>
+  <script src="assets/discount-policy.js?v=2" defer></script>
   <script src="assets/vertical-state.js?v=1" defer></script>
   <script src="assets/image-proof.js?v=1" defer></script>
   <script src="assets/operational-print.js?v=1" defer></script>
@@ -14134,6 +14135,8 @@
       if (!(gross > 0) || !(discount > 0) || discount > gross) return null;
       return {
         grossAmountCents: minor(gross), discountAmountCents: minor(discount),
+        discountKind: d.kind === 'pct' ? 'percent' : 'amount',
+        discountPercent: d.kind === 'pct' ? Number(d.value) : null,
         discountReason: discountReasonCode(d.reason),
         actorId: String(d.actorId || (currentCashier && currentCashier.id) || '').slice(0, 96)
       };
@@ -17465,6 +17468,20 @@
 
     const remiseModal = $('#remise-modal');
     const remiseState = { target: 'table', tableId: null, gross: 0, kind: 'pct', value: 0, reason: 'Geste commercial' };
+    function renderRemiseChips() {
+      const values = window.KiwiDiscountPolicy?.percentages() || [5, 10, 15, 20];
+      $('#rm-pct-chips').innerHTML = values.map(n => `<button class="rm-pct-chip" data-rm-pct="${n}">${n} %</button>`).join('');
+    }
+    window.addEventListener('DOMContentLoaded', () => {
+      const policy = window.KiwiDiscountPolicy;
+      policy?.percentages(); // bind the paired merchant and fetch the owner's server copy
+      policy?.subscribe(() => {
+        if (!remiseModal.classList.contains('is-open')) return;
+        renderRemiseChips();
+        $$('#rm-pct-chips .rm-pct-chip').forEach(c => c.classList.toggle('is-active',
+          remiseState.kind === 'pct' && Number(c.dataset.rmPct) === remiseState.value));
+      });
+    });
 
     function remiseCutPreview() {
       const g = remiseState.gross;
@@ -17517,6 +17534,7 @@
         remiseState.reason = 'Geste commercial';
       }
       $('#rm-subtle').innerHTML = `Table ${id} · addition <span class="mono">${fmtMAD(gross)}</span>`;
+      renderRemiseChips();
       $('#rm-amount').value = (remiseState.kind === 'amount' && remiseState.value) ? remiseState.value : '';
       $$('#rm-pct-chips .rm-pct-chip').forEach(c => {
         c.classList.toggle('is-active', remiseState.kind === 'pct' && parseFloat(c.dataset.rmPct) === remiseState.value);
@@ -17541,6 +17559,9 @@
       const targetKind = remiseState.kind;
       const targetValue = remiseState.value;
       const targetReason = remiseState.reason;
+      if (targetKind === 'pct' && window.KiwiDiscountPolicy?.configured() && !window.KiwiDiscountPolicy.allowed(targetValue)) {
+        toast('Pourcentage non autorisé · rechargez la remise'); return;
+      }
       const cut = remiseCutPreview();
       if (cut <= 0) { toast('Choisis une remise'); return; }
 
@@ -17632,7 +17653,11 @@
       }
       const pctChip = e.target.closest('[data-rm-pct]');
       if (pctChip) {
-        remiseState.value = parseFloat(pctChip.dataset.rmPct) || 0;
+        const next = parseFloat(pctChip.dataset.rmPct) || 0;
+        if (window.KiwiDiscountPolicy?.configured() && !window.KiwiDiscountPolicy.allowed(next)) {
+          toast('Pourcentage non autorisé'); return;
+        }
+        remiseState.value = next;
         $$('#rm-pct-chips .rm-pct-chip').forEach(c => c.classList.toggle('is-active', c === pctChip));
         renderRemisePreview();
         return;
@@ -20599,6 +20624,7 @@
         remiseState.reason = 'Geste commercial';
       }
       $('#rm-subtle').innerHTML = `À emporter · addition <span class="mono">${fmtMAD(gross)}</span>`;
+      renderRemiseChips();
       $('#rm-amount').value = (remiseState.kind === 'amount' && remiseState.value) ? remiseState.value : '';
       $$('#rm-pct-chips .rm-pct-chip').forEach(c => {
         c.classList.toggle('is-active', remiseState.kind === 'pct' && parseFloat(c.dataset.rmPct) === remiseState.value);

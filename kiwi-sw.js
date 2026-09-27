@@ -89,7 +89,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=33',
+  '/assets/interactive.js?v=34',
   '/assets/features.js?v=5',
   '/assets/invoicing.css?v=6',
   '/assets/invoicing.js?v=8',
@@ -163,7 +163,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=12',
   '/assets/operations-ui.js?v=16',
-  '/assets/live-link.js?v=51',
+  '/assets/live-link.js?v=52',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -216,11 +216,12 @@ var SHELL = [
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
   '/assets/promos.js?v=1',
-  '/assets/boutique-promos-dashboard.js?v=4',
+  '/assets/boutique-promos-dashboard.js?v=5',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
   '/assets/caisse-lang.js?v=2',
   '/assets/venue-store.js?v=4',
+  '/assets/discount-policy.js?v=2',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
   '/assets/inventory-ledger.js?v=12',
@@ -269,7 +270,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=14',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=9',
-  '/assets/pos-dispatch.js?v=52',
+  '/assets/pos-dispatch.js?v=53',
   '/assets/retail-scan.css?v=8',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=7',
@@ -281,8 +282,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=26',
-  '/assets/pos-boutique.js?v=26',
+  '/assets/pos-boutique.css?v=28',
+  '/assets/pos-boutique.js?v=28',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -314,8 +315,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=5',
   '/assets/pos-autre.css?v=2',
   '/assets/pos-autre.js?v=2',
-  '/assets/pos-maison.css?v=43',
-  '/assets/pos-maison.js?v=43',
+  '/assets/pos-maison.css?v=45',
+  '/assets/pos-maison.js?v=45',
   '/assets/caisse-pairing.js?v=25',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
