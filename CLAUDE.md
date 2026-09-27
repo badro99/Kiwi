@@ -305,8 +305,14 @@ false-pass.
 
 ## 6. Tenant and client-data safety
 
-Merchant books in this repo are **real**. Santos Store and Amira's venue carry live
-figures; treat them as production data.
+Merchant books in this repo can contain **real hosted records**. Santos Store and
+other merchants are production data. **Amira Cafe** (the restaurant venue only)
+is owner-designated as a testing account as of 2026-09-27: use it for explicitly
+requested end-to-end tests, including test orders and register operations.
+Its hosted figures are still persistent records, not a disposable local fixture:
+label test orders `TEST KIWI`, reverse/cancel test payments and orders through the
+product flow, verify cleanup, and never reset or hand-edit its books. Do not
+assume the designation extends to Amira's Boutique, Maison, or other venues.
 
 - **Client state is account-scoped** via `kiwiAccountKey`. A cache namespaced per
   tenant (`kiwiSales:scoped@<slug>`) is the safety mechanism — **namespace, don't
@@ -345,9 +351,12 @@ figures; treat them as production data.
   three; it does not write its own comparison. If you find yourself wanting the
   code list in the browser to compare it there, that is the bug this design exists
   to prevent — `tools/config-pin-projection-test.mjs` fails the build for it.
-- **Never enter merchant PINs, staff PINs, caisse personal codes, or pairing codes**,
-  and never bypass the account gate programmatically. Enter demo surfaces through
-  the demo entry points.
+- **Never record or commit merchant PINs, staff PINs, caisse personal codes, or
+  pairing codes**, and never bypass the account gate programmatically. For real
+  merchants, leave code entry to their staff. For the owner-designated Amira Cafe
+  testing account only, the agent may enter a code through the normal UI when
+  the owner explicitly supplies and authorizes it for the current task; do not
+  infer that permission for any other merchant or venue.
 
 ---
 
