@@ -14,6 +14,7 @@ import { settleServiceTable, serviceVisitGuard } from './service/events.js';
 import { poke } from './_live.js';
 import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
 import { validateRetailTenders, retailTenderMethod } from './_retail-tenders.js';
+import { claimRetailBalance, confirmRetailBalance } from './_retail-balances.js';
 
 async function legacyPaymentId(merchant, legacyId, payment) {
   const input = JSON.stringify([merchant, legacyId, payment.ref, payment.ts,
@@ -549,7 +550,7 @@ export async function onRequestPost({ request, env }) {
      together identify one payment; a second row with all four is a replay,
      not a sale. Split parts legitimately share all four and are excluded.
      A failed lookup changes nothing: the insert below still decides. */
-  if (!stored && !split && ref && !(employeeTable && orderNumber(ref))) {
+  if (!stored && !split && !b.retailBalance && ref && !(employeeTable && orderNumber(ref))) {
     let sameSettlement = null;
     try {
       sameSettlement = await env.DB.prepare(
@@ -567,7 +568,7 @@ export async function onRequestPost({ request, env }) {
   // A waiter and a till can both submit the same printed bill under distinct
   // IDs. The bill number plus the short concurrent settlement window catches
   // that race without merging a later party or a different receipt on one visit.
-  if (!stored && !split && !employeeTable && orderNumber(ref)) {
+  if (!stored && !split && !b.retailBalance && !employeeTable && orderNumber(ref)) {
     let candidates = [];
     try { candidates = (await env.DB.prepare(
       'SELECT id, ref FROM sales WHERE merchant = ? AND amount_cents = ? AND method = ? AND ts BETWEEN ? AND ? AND void_ts IS NULL LIMIT 30'
@@ -577,7 +578,7 @@ export async function onRequestPost({ request, env }) {
     if (duplicate) return json({ ok: true, id: duplicate.id, duplicateOf: duplicate.id, requestedId: id, stored: true });
   }
 
-  if (!stored && !split && !ref && effectiveSessionId) {
+  if (!stored && !split && !b.retailBalance && !ref && effectiveSessionId) {
     try {
       const duplicate = await env.DB.prepare(
         `SELECT id FROM sales WHERE merchant = ? AND session_id = ? AND (ref IS NULL OR ref = '')
@@ -661,6 +662,15 @@ export async function onRequestPost({ request, env }) {
         return json({ ok: true, id: first.id, duplicateOf: first.id, requestedId: id, stored: true });
       }
     }
+  }
+
+  // Reserve capacity before the sale row is written. A concurrent till may
+  // not claim the same remaining amount; a failed write remains pending and
+  // the device outbox retries this same id until it can be confirmed.
+  if (b.retailBalance != null) {
+    const claimError = await claimRetailBalance(env.DB, merchant, b.retailBalance,
+      id, amountCents, method, ts);
+    if (claimError) return claimError;
   }
 
   if (hasDiscount) {
@@ -995,6 +1005,10 @@ export async function onRequestPost({ request, env }) {
         if (!complete || complete.status !== 'closed' || complete.closed_by !== 'service-payment') settlementPending = true;
       } catch (_) { settlementPending = true; }
     }
+  }
+  if (b.retailBalance != null) {
+    try { await confirmRetailBalance(env.DB, merchant, id); }
+    catch (_) { return json({ error: 'retail-balance-confirm-pending', id }, 503); }
   }
   await poke(env, merchant, 'sales');
   return json({

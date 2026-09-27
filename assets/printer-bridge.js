@@ -1161,6 +1161,8 @@
        tiroir, et qu'un Z muet là-dessus ne se relit pas. */
     if (r.avoirs && r.avoirs.used) R('Réglé en avoir (' + (r.avoirs.usedCount || 0) + ')', money(r.avoirs.used));
     if (r.avoirs && r.avoirs.issued) R('Avoirs émis (' + (r.avoirs.issuedCount || 0) + ')', money(r.avoirs.issued));
+    if (r.acomptes && r.acomptes.received) R('Acomptes reçus', money(r.acomptes.received));
+    if (r.acomptes && r.acomptes.outstanding) R('Soldes restant à régler', money(r.acomptes.outstanding));
     if (r.cancels) R('Annulations', String(r.cancels));
     }
 

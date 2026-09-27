@@ -507,7 +507,7 @@
   function settlementKey(s) {
     if (!s) return '';
     var id = String(s.id || '');
-    if (/-split-/.test(id)) return '';
+    if (/-split-/.test(id) || /^(?:Acompte|Règlement acompte)/i.test(String(s.label || ''))) return '';
     var ref = String(s.ref || '').trim();
     var ts = num(s.ts != null ? s.ts : (s.time instanceof Date ? s.time.getTime() : 0));
     if (!ref || !ts) return '';
@@ -603,7 +603,7 @@
        Un remboursement est une vente de montant négatif OU une entrée marquée
        kind:'refund'. Les deux existent dans le journal : on compte la MAGNITUDE
        dans `refunds` et on laisse le montant signé peser sur le net. */
-    var gross = 0, refundAmt = 0, refundN = 0, txns = 0;
+    var gross = 0, refundAmt = 0, refundN = 0, txns = 0, acompteReceived = 0;
     var methods = Object.create(null);
     var tips = 0, cashTips = 0;
     var withLines = 0, totalForCoverage = 0;
@@ -625,6 +625,7 @@
       var mag = Math.abs(s.amount);
       if (isRefund) { refundAmt += mag; refundN++; }
       else { gross += s.amount; txns++; }
+      if (!isRefund && /^(?:Acompte|Règlement acompte)/i.test(s.label)) acompteReceived += s.amount;
       if (!first || s.ts < first) first = s.ts;
       if (s.ts > last) last = s.ts;
 
@@ -775,6 +776,10 @@
       refunds: { count: refundN, amount: round2(refundAmt) },
       discounts: { count: discountsN, amount: discounts },
       avoirs: avoirs,
+      acomptes: (sess.acomptes || acompteReceived) ? {
+        received: round2(acompteReceived || num(sess.acomptes && sess.acomptes.received)),
+        outstanding: round2(num(sess.acomptes && sess.acomptes.outstanding)),
+      } : null,
       cancels: cancels,
       methods: methods,
       cardReconciliation: cardReconciliation(methods, sess.terminalCardTotal, sess.cardReconciliationSource),
@@ -1054,6 +1059,7 @@
       txns: num(r.txns), gross: round2(r.gross), receivable: round2(r.receivable), net: round2(r.net), tips: round2(r.tips),
       refunds: { count: num(r.refunds && r.refunds.count), amount: round2(r.refunds && r.refunds.amount) },
       discounts: { count: num(r.discounts && r.discounts.count), amount: round2(r.discounts && r.discounts.amount) },
+      acomptes: r.acomptes ? { received: round2(r.acomptes.received), outstanding: round2(r.acomptes.outstanding) } : null,
       cancels: num(r.cancels),
       duplicates: r.duplicates ? { count: num(r.duplicates.count), amount: round2(r.duplicates.amount) } : null,
       methods: Object.assign({}, r.methods || {}),
@@ -1071,6 +1077,10 @@
     report.basket = report.txns ? round2(report.gross / report.txns) : 0;
     report.refunds = { count: carried.refunds.count + own.refunds.count, amount: round2(carried.refunds.amount + own.refunds.amount) };
     report.discounts = { count: carried.discounts.count + own.discounts.count, amount: round2(carried.discounts.amount + own.discounts.amount) };
+    if (carried.acomptes || own.acomptes) report.acomptes = {
+      received: round2(num(carried.acomptes && carried.acomptes.received) + num(own.acomptes && own.acomptes.received)),
+      outstanding: round2(num(own.acomptes && own.acomptes.outstanding)),
+    };
     report.cancels = carried.cancels + own.cancels;
     var dN = num(carried.duplicates && carried.duplicates.count) + num(own.duplicates && own.duplicates.count);
     report.duplicates = dN ? { count: dN, amount: round2(num(carried.duplicates && carried.duplicates.amount) + num(own.duplicates && own.duplicates.amount)) } : null;

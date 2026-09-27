@@ -18,16 +18,16 @@ function maisonPage() {
   return `<!doctype html><html lang="fr"><head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Kiwi Caisse · Amira (preuve synthétique)</title>
-    <link rel="stylesheet" href="/assets/tokens.css"><link rel="stylesheet" href="/assets/caisse-skin.css"><link rel="stylesheet" href="/assets/caisse-dna.css"><link rel="stylesheet" href="/assets/pos-maison.css?v=${stamps['assets/pos-maison.css'].v}"><link rel="stylesheet" href="/assets/retail-scan.css">
+    <link rel="stylesheet" href="/assets/tokens.css"><link rel="stylesheet" href="/assets/caisse-skin.css"><link rel="stylesheet" href="/assets/caisse-dna.css"><link rel="stylesheet" href="/assets/pos-maison.css?v=${stamps['assets/pos-maison.css'].v}"><link rel="stylesheet" href="/assets/retail-balances.css"><link rel="stylesheet" href="/assets/retail-scan.css">
     <style>
       html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper,#f7f5f0);font-family:Arial,sans-serif}button,input{font:inherit}button{border:0}.vx-screen{display:flex}
       .modal-veil{position:fixed;inset:0;background:rgba(4,14,10,.62);backdrop-filter:blur(16px) saturate(1.2);display:none;align-items:center;justify-content:center;z-index:100;padding:12px}.modal-veil.is-open{display:flex}
       .modal{width:480px;max-width:calc(100vw - 48px);max-height:calc(100vh - 24px);overflow-y:auto;box-sizing:border-box;background:var(--surface,#fff);border:1px solid rgba(0,0,0,.08);border-radius:24px;box-shadow:0 24px 64px -12px rgba(0,0,0,.28);padding:28px 28px 24px}
     </style>
-    <script>window.KiwiEnv={isReal:()=>false,demosAllowed:true};window.KiwiConfig={features:{caisseInventoryAdmin:true,depotvente:true,caisseInventoryValue:false}};window.KiwiPosDispatch={register:s=>window.__maisonSpec=s,lock:()=>{}};</script>
+    <script>localStorage.setItem('kiwiLiveMerchant','synthetic-retail-acompte');window.KiwiEnv={isReal:()=>false,demosAllowed:true};window.KiwiConfig={features:{caisseInventoryAdmin:true,depotvente:true,caisseInventoryValue:false}};window.KiwiPosDispatch={register:s=>window.__maisonSpec=s,lock:()=>{}};</script>
     <script src="/assets/caisse-dna.js"></script><script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
     <script src="/assets/inventory-ledger.js"></script><script src="/assets/maison-stock-movements.js"></script><script src="/assets/procurement.js"></script>
-    <script src="/assets/venue-store.js"></script><script src="/assets/discount-policy.js"></script><script src="/assets/clients-store.js"></script><script src="/assets/clients-book.js"></script>
+    <script src="/assets/venue-store.js"></script><script src="/assets/discount-policy.js"></script><script src="/assets/retail-balances.js"></script><script src="/assets/clients-store.js"></script><script src="/assets/clients-book.js"></script>
     <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script src="/assets/pos-maison.js?v=${stamps['assets/pos-maison.js'].v}"></script>
   </head><body class="is-pos-maison"><div id="toast-stack"></div><div class="vx-screen is-on" id="pos-maison"></div>
     <script>window.__maisonSpec.mount(document.getElementById('pos-maison'));window.KiwiCaisseDna.enhance(document.getElementById('pos-maison'),'maison');</script>

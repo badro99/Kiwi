@@ -911,6 +911,16 @@
       body.ticketAmountCents = Math.round(Number(entry.ticketAmountCents));
       body.consignedAmountCents = Math.round(Number(entry.consignedAmountCents || 0));
     }
+    if (entry.retailBalance && typeof entry.retailBalance === 'object') {
+      var rb = entry.retailBalance;
+      body.retailBalance = {
+        id: String(rb.id || '').slice(0, 64),
+        customerId: String(rb.customerId || '').slice(0, 64),
+        ticketRef: String(rb.ticketRef || '').slice(0, 64),
+        totalCents: Math.round(Number(rb.totalCents)),
+        stage: rb.stage === 'open' ? 'open' : 'payment',
+      };
+    }
     if (Array.isArray(entry.paymentParts) && entry.paymentParts.length) {
       body.paymentParts = entry.paymentParts.slice(0, 8).map(function (part) {
         return { method: String(part.method || '').slice(0, 16), amountCents: Math.round(Number(part.amountCents)) };

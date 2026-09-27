@@ -141,7 +141,7 @@ ok('la caisse réserve une plage dédiée', boutique.includes("fetch('/api/ticke
 ok('le ticket attend son numéro avant encaissement', boutique.includes('t.lines.length && t.num') && boutique.includes('assignTicketNumber(t)'));
 ok('la vente envoie un UUID distinct de sa référence',
   boutique.includes('syncId: t.syncId || newSaleId()')
-    && /const payload = \{[\s\S]{0,120}id:\s*sale\.syncId,[\s\S]{0,1000}window\.KiwiLive\.postSale\(payload\)/.test(boutique));
+    && /const payload = \{[\s\S]{0,160}id:\s*sale\.syncId,[\s\S]{0,3000}window\.KiwiLive\.postSale\(payload\)/.test(boutique));
 ok('la nouvelle caisse ne demande plus un maximum au flux de ventes', !boutique.includes('/api/feed?seq=1'));
 ok('la compatibilité de déploiement réserve elle aussi une vraie plage',
   feed.includes('reserveTicketRange(env, merchant, 500, 1000,'));

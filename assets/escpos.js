@@ -358,6 +358,8 @@
       if (r.avoirs && r.avoirs.issued) {
         b.line(row('Avoirs émis (' + (r.avoirs.issuedCount || 0) + ')', money(r.avoirs.issued), paper));
       }
+      if (r.acomptes && r.acomptes.received) b.line(row('Acomptes reçus', money(r.acomptes.received), paper));
+      if (r.acomptes && r.acomptes.outstanding) b.line(row('Soldes restant à régler', money(r.acomptes.outstanding), paper));
       if (r.cancels) b.line(row('Annulations', String(r.cancels), paper));
     }
 

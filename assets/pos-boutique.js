@@ -1300,6 +1300,7 @@
           <button class="bq-nav-it" data-bq-view="echanges"><i data-lucide="arrow-left-right"></i><span>Échanges &amp; avoirs</span><b class="bq-nav-badge" id="bq-badge-ret"></b></button>
           <button class="bq-nav-it" data-bq-view="vendus"><i data-lucide="chart-no-axes-column-increasing"></i><span>Vendus</span></button>
           <button class="bq-nav-it" data-bq-view="clientes"><i data-lucide="users"></i><span>Clientes</span><b class="bq-nav-badge" id="bq-badge-cl"></b></button>
+          <button class="bq-nav-it" data-bq-view="acomptes"><img src="assets/icons/material/payments.svg" alt=""><span>Acomptes</span></button>
         </nav>
         <div class="bq-rail-foot">
           <button class="bq-lock" data-action="printer-connect" title="Configurer les imprimantes"><i data-lucide="printer"></i><span>Imprimantes</span></button>
@@ -1341,6 +1342,7 @@
         <section class="bq-view" data-bq-panel="echanges"></section>
         <section class="bq-view" data-bq-panel="vendus"></section>
         <section class="bq-view" data-bq-panel="clientes"></section>
+        <section class="bq-view" data-bq-panel="acomptes"></section>
       </main>
       <div class="modal-veil" id="bq-sheet-veil"><div class="modal bq-sheet bq-rel" id="bq-sheetm"></div></div>
       <div class="modal-veil" id="bq-approve-veil"><div class="modal bq-approve bq-rel" id="bq-approvem"></div></div>
@@ -1556,6 +1558,7 @@
       else panel.innerHTML = '<div class="bq-empty" style="margin:40px;">Analyse des ventes indisponible.</div>';
     }
     if (view === 'clientes') renderClientes();
+    if (view === 'acomptes') renderAcomptes();
   }
   function renderBadges() {
     const items = state.ticket ? ticketCount(state.ticket) : 0;
@@ -2889,6 +2892,7 @@
         <span class="bq-sale-when">${whenLabel(s.at)} · par ${esc(s.by)}</span>
         <span class="bq-pill ${s.kind === 'echange' ? 'warn' : 'ok'}">${s.kind === 'echange' ? 'échange' : esc(s.methods)}</span>
         ${hasRet ? '<span class="bq-pill warn">retour</span>' : ''}
+        ${s.kind === 'acompte' ? '<span class="bq-pill warn">Acompte · retour suspendu, contacter le responsable</span>' : ''}
         <span class="bq-sale-who"><i data-lucide="${c ? 'user' : 'users'}"></i>${c ? esc(c.name) : 'Cliente de passage'} · ${fmtMAD(s.total)}</span>
       </div>
       <div class="bq-sale-lines">
@@ -2948,6 +2952,9 @@
 
   function togglePick(key) {
     const [saleId, idxS] = key.split(':');
+    if (findSale(saleId)?.kind === 'acompte') {
+      toast('Retour suspendu : cette vente a plusieurs reçus d’acompte. Contacter le responsable.'); return;
+    }
     const idx = +idxS;
     /* Pas de motif par défaut. Le champ démarrait sur « Taille » : une vendeuse
        qui ne touchait aucune puce classait quand même le retour en problème de
@@ -2968,6 +2975,7 @@
     if (ret.picks.size !== 1) { toast('L\'échange se fait pièce par pièce, gardez une seule ligne cochée'); return; }
     const idx = ret.picks.values().next().value;
     const sale = findSale(ret.saleId);
+    if (sale?.kind === 'acompte') { toast('Retour suspendu sur un acompte'); return; }
     const ln = sale.lines[idx];
     const qty = pickedQty(ret, idx, ln);
     if (qty !== 1) { toast('L\'échange se fait une pièce à la fois, choisissez la quantité 1'); return; }
@@ -2985,6 +2993,7 @@
     const ret = state.ret;
     if (!ret) return;
     const sale = findSale(ret.saleId);
+    if (sale?.kind === 'acompte') { toast('Retour suspendu sur un acompte'); return; }
     const idxs = Array.from(ret.picks);
     const quantities = new Map(idxs.map((i) => [i, pickedQty(ret, i, sale.lines[i])]));
     const amount = idxs.reduce((t, i) => t + sale.lines[i].unit * quantities.get(i), 0);
@@ -3311,6 +3320,7 @@
         promo: opts.promo || null,
         discount: opts.discount,
         total: opts.amount,
+        acompte: opts.acompte || null,
         customer: opts.customer || null,
         pay: (parts || []).map((x) => ({ label: x.m === 'avoir' ? ('Avoir ' + (x.code || '')) : x.m, amount: x.amount })),
         /* Le « reçu » du ticket, c'est ce que la main du client a posé sur le
@@ -3479,13 +3489,18 @@
         state.checkoutBusy = false;
       },
       waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
-      onPaid: (parts) => {
+      onPaid: (parts, paymentContext) => {
         state.checkoutBusy = false;
+        const isAcompte = !!(paymentContext && paymentContext.partial);
+        const receivedNow = isAcompte ? paymentContext.paidNow : total;
+        if (isAcompte && (!c || !c.id || !window.KiwiRetailBalances)) {
+          toast('Attachez une cliente avant de prendre un acompte'); return { error: 'customer-required' };
+        }
         // Récompense fidélité effectivement portée sur ce ticket (attachée à cette
         // cliente) — on la débite des points APRÈS avoir enregistré l'achat.
         const rewardUsed = !!(frozen.reward && c && c.id && frozen.reward.clientId === c.id);
         const sale = {
-          id: frozen.num, syncId: frozen.syncId, tenderVersion: 2, at: new Date(), clientId: frozen.clientId, by: STAFF.caissiere.name, kind: 'vente',
+          id: frozen.num, syncId: frozen.syncId, tenderVersion: 2, at: new Date(), clientId: frozen.clientId, by: STAFF.caissiere.name, kind: isAcompte ? 'acompte' : 'vente',
           methods: parts.map((x) => x.m).join(' + '),
           /* Les parts de règlement, figées : c'est elles qui rendent le tiroir
              de la clôture exact quand un ticket est réglé moitié carte moitié
@@ -3506,11 +3521,26 @@
              et n'a aucun moyen de trancher. */
           lines: frozen.lines.map((ln) => ({ pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, promo: ln.promo, unit: ln.unit, name: ln.name, returned: false, note: '' })),
           reward: rewardUsed ? frozen.reward.label : null,
-          total,
+          total: receivedNow,
+          balanceTotal: isAcompte ? total : null,
+          balanceDue: isAcompte ? Math.round((total - receivedNow) * 100) / 100 : 0,
         };
+        const balanceId = isAcompte ? 'rb-' + sale.syncId : '';
+        if (isAcompte) {
+          const savedBalance = window.KiwiRetailBalances.record(merchantSlug(), {
+            id: balanceId, customerId: c.id, ticketRef: sale.id,
+            totalCents: Math.round(total * 100), receipt: {
+              id: sale.syncId, amountCents: Math.round(receivedNow * 100),
+              method: bqPaymentMethod(parts), ts: +sale.at,
+            },
+          });
+          if (!savedBalance) { toast('Acompte non conservé : stockage local indisponible'); return { error: 'balance-storage-failed' }; }
+          bqOutstandingCents = window.KiwiRetailBalances.read(merchantSlug())
+            .reduce((sum, row) => sum + window.KiwiRetailBalances.due(row), 0);
+        }
         SALES.unshift(sale);
         persistDay();
-        bqSaveProvisional();              // le Z provisoire suit la vente (voir day-report.js)
+        bqSaveProvisional(isAcompte);      // le Z provisoire suit la vente (voir day-report.js)
         if (IS_DEMO) saleSeq++;
         // Draw the sold pieces down from the SHARED inventory — a real sale must move
         // stock through to the base (the in-memory ticket holds alone evaporate on the
@@ -3560,13 +3590,17 @@
               id: sale.syncId,
               amount: cashIn,
               method: method,
-              paymentParts: bqPaymentParts(parts), ticketAmountCents: Math.round(total * 100),
+              paymentParts: bqPaymentParts(parts), ticketAmountCents: Math.round(receivedNow * 100),
               discountPercents: [...new Set(frozen.lines.map(ln => Number(ln.remise)).filter(n => n > 0))],
               channel: (parts || []).some((x) => x && x.m === 'livraison') ? 'delivery' : 'counter',
-              label: label,
+              label: isAcompte ? 'Acompte · ' + label : label,
               ref: sale.id,
               time: sale.at,
               lines: basket,
+            };
+            if (isAcompte) payload.retailBalance = {
+              id: balanceId, customerId: c.id, ticketRef: sale.id,
+              totalCents: Math.round(total * 100), stage: 'open',
             };
             if (cashIn <= 0 && (parts || []).some(x => x.m === 'livraison')) payload.settlementKind = 'receivable';
             else if (cashIn <= 0 && (parts || []).some(x => x.m === 'avoir')) {
@@ -3585,7 +3619,7 @@
           // object. Real store only; the local demo keeps its in-memory client. F5.
           if (useKiwiCl() && window.KiwiClients && window.KiwiClients.recordPurchase && c.id) {
             try { window.KiwiClients.recordPurchase(c.id, {
-              amount: total, method: sale.methods, saleRef: sale.id, saleId: sale.syncId, eventRef: sale.syncId, createdAt: +sale.at,
+              amount: receivedNow, method: sale.methods, saleRef: sale.id, saleId: sale.syncId, eventRef: sale.syncId, createdAt: +sale.at,
               items: sale.lines.map((ln) => ({ name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', qty: ln.qty, total: ln.unit * ln.qty })),
             }); } catch (_) {}
             // La récompense est portée : on brûle les points (KiwiClients.redeem
@@ -3595,7 +3629,7 @@
               try { window.KiwiClients.redeem(c.id); } catch (_) {}
             }
           }
-          const pts = Math.round(total / 10);
+          const pts = Math.round(receivedNow / 10);
           c.points += pts;
           c.achats += 1;
           ptsLine = ` · +${pts} pts pour ${firstName(c.name)}` + (rewardUsed ? ` · récompense ${frozen.reward.label}` : '');
@@ -3632,6 +3666,61 @@
      `settled` porte ce qui est déjà réglé ; `share` la part que le prochain
      mode prendra. Le reste retourne à l'écran des modes tant qu'il n'est pas
      couvert, ce qui donne gratuitement les partages à trois. */
+  function renderAcomptes() {
+    const panel = $('[data-bq-panel="acomptes"]', root);
+    const R = window.KiwiRetailBalances;
+    if (!R) { panel.textContent = 'Registre des acomptes indisponible'; return; }
+    void R.render(panel, {
+      merchant: merchantSlug(), prefix: 'bq',
+      customerName: id => (clById(id) || {}).name || id,
+      customerIdForName: query => (clientList().find(c => c.name.toLowerCase().includes(query.toLowerCase())) || {}).id,
+      onSelect: payExistingBalance,
+    });
+  }
+  function payExistingBalance(row) {
+    const R = window.KiwiRetailBalances;
+    if (!R || row.pendingCents > 0) { toast('Synchronisation de l’acompte en attente'); return; }
+    const remaining = R.due(row) / 100;
+    if (!(remaining > 0)) { toast('Cette note est déjà réglée'); renderAcomptes(); return; }
+    const client = clById(row.customerId);
+    openPay({
+      amount: remaining, balanceExisting: true, balanceTotal: row.totalCents / 100,
+      balancePaid: row.paidCents / 100, customerId: row.customerId,
+      title: 'Régler un acompte', subtitle: `${row.ticketRef} · ${client ? esc(client.name) : 'Cliente'}`,
+      ref: row.ticketRef, lines: [], customer: client ? { name: client.name, phone: client.phone } : null,
+      waName: client ? firstName(client.name) : '', waPhone: client ? client.phone : '',
+      onPaid: (parts, context) => {
+        const amount = context.paidNow;
+        const at = new Date();
+        const syncId = newSaleId();
+        const method = bqPaymentMethod(parts);
+        const sale = {
+          id: row.ticketRef + '-P' + at.getTime(), syncId, tenderVersion: 2, at,
+          clientId: row.customerId, by: STAFF.caissiere.name, kind: 'acompte-reglement',
+          methods: parts[0].m, parts: [{ m: parts[0].m, amount }], lines: [], total: amount,
+          balanceTotal: row.totalCents / 100,
+          balanceDue: Math.max(0, (R.due(row) / 100) - amount),
+        };
+        const saved = R.record(merchantSlug(), {
+          id: row.id, customerId: row.customerId, ticketRef: row.ticketRef,
+          totalCents: row.totalCents, basePaidCents: row.paidCents,
+          receipt: { id: syncId, amountCents: Math.round(amount * 100), method, ts: +at },
+        });
+        if (!saved) { toast('Règlement non conservé : stockage local indisponible'); return { error: 'balance-storage-failed' }; }
+        bqOutstandingCents = R.read(merchantSlug()).reduce((sum, item) => sum + R.due(item), 0);
+        SALES.unshift(sale); persistDay(); bqSaveProvisional(true);
+        try { if (window.KiwiLive && window.KiwiLive.isOn()) window.KiwiLive.postSale({
+          id: syncId, amount, amountCents: Math.round(amount * 100), method,
+          paymentParts: bqPaymentParts(parts), ticketAmountCents: Math.round(amount * 100),
+          label: 'Règlement acompte', ref: row.ticketRef, time: at, channel: 'counter',
+          retailBalance: { id: row.id, customerId: row.customerId, ticketRef: row.ticketRef,
+            totalCents: row.totalCents, stage: 'payment' },
+        }); } catch (_) { /* the local journal remains readable */ }
+        renderAcomptes(); renderAll();
+        return { sale, line: `Reçu ${fmtMAD(amount)} · reste ${fmtMAD(sale.balanceDue)}` };
+      },
+    });
+  }
   function openPay(opts) {
     const el = $('#bq-paym', root);
     const ownAvoirs = () => opts.customerId
@@ -3699,6 +3788,9 @@
         <div class="modal-amount size-md">${fmtMAD(due())}</div>
         ${appliedBanner()}
         ${due() > 0.01 ? splitBar() : ''}
+        ${settled.length === 1 && due() > 0.009 && opts.customerId
+          && ['espèces','carte','virement','chèque'].includes(settled[0].m)
+          ? `<button class="bq-btn secondary" id="bq-save-acompte">Acompte reçu · garder ${fmtMAD(due())} à régler</button>` : ''}
         <div class="bq-pay-opts">
           <button class="bq-pay-opt" data-bq-m="especes">
             <span class="ic"><i data-lucide="banknote"></i></span>
@@ -3737,6 +3829,8 @@
           </button>`}
         </div>`;
       icons(); closeBtns();
+      const saveAcompte = $('#bq-save-acompte', el);
+      if (saveAcompte) saveAcompte.onclick = () => commit(true);
       const inp = $('#bq-split-in', el);
       $$('[data-bq-share]', el).forEach((b) => {
         b.onclick = () => {
@@ -3805,7 +3899,8 @@
     const settle = (part) => {
       settled.push(part);
       share = 1; custom = 0;
-      if (due() > 0.009) { toast(`Reste ${fmtMAD(due())} à régler`); stepMethods(); }
+      if (opts.balanceExisting) commit(due() > 0.009);
+      else if (due() > 0.009) { toast(`Reste ${fmtMAD(due())} à régler`); stepMethods(); }
       else commit();
     };
 
@@ -3954,10 +4049,15 @@
       $('#bq-external-ok', el).onclick = () => settle({ m: cheque ? 'chèque' : 'virement', amount });
     };
 
-    const commit = () => {
+    const commit = (partial) => {
       if (committed) return;
+      if (partial && (!opts.customerId || settled.length !== 1 || avoirPart
+          || !['espèces','carte','virement','chèque'].includes(settled[0].m))) {
+        toast('Acompte : une cliente et un seul règlement sont requis'); return;
+      }
       committed = true;
       const parts = (avoirPart ? [avoirPart] : []).concat(settled);
+      const paidNow = Math.round(parts.reduce((sum, part) => sum + (+part.amount || 0), 0) * 100) / 100;
       const avp = parts.find((x) => x.m === 'avoir');
       if (avp) {
         const av = AVOIRS.find((a) => a.code === avp.code);
@@ -3967,8 +4067,16 @@
           toast(av.balance > 0 ? `${av.code}, reste ${fmtMAD(av.balance)} dessus` : `${av.code} consommé en totalité`);
         }
       }
-      const res = opts.onPaid(parts) || {};
+      const res = opts.onPaid(parts, { partial: !!partial, paidNow }) || {};
+      if (res.error) { committed = false; stepMethods(); return; }
       if (res.sale) opts.sale = res.sale;
+      if (partial || opts.balanceExisting) {
+        opts.acompte = { total: opts.balanceTotal || opts.amount,
+          paid: (opts.balancePaid || 0) + paidNow,
+          remaining: Math.max(0, (opts.balanceTotal || opts.amount) - (opts.balancePaid || 0) - paidNow) };
+        opts.amount = paidNow;
+        opts.title = partial ? 'Acompte' : 'Solde de l’acompte';
+      }
       if (res.delivery || parts.some((x) => x.m === 'livraison')) stepSuccess(parts, res);
       else { closeVeil('#bq-pay-veil'); printReceiptNow(opts, parts); }
     };
@@ -6536,7 +6644,7 @@
   }
 
   function bqDayTotals() {
-    const t = { moneyIn: 0, cash: 0, card: 0, transfer: 0, cheque: 0, delivery: 0, other: 0, txns: 0, paidTxns: 0, items: 0, discounts: 0, discountsN: 0, promoOff: 0, avoirUsed: 0, avoirUsedN: 0, avoirIssued: 0, avoirIssuedN: 0 };
+    const t = { moneyIn: 0, cash: 0, card: 0, transfer: 0, cheque: 0, delivery: 0, other: 0, txns: 0, paidTxns: 0, items: 0, discounts: 0, discountsN: 0, promoOff: 0, avoirUsed: 0, avoirUsedN: 0, avoirIssued: 0, avoirIssuedN: 0, acompteReceived: 0, outstanding: 0 };
     salesToday().forEach((s) => {
       let took = 0;
       /* L'avoir consommé, compté À PART du reste. bqMoneyParts l'écarte — à
@@ -6557,6 +6665,7 @@
         else t.other += p.amount;
       });
       if (took > 0) { t.moneyIn += took; t.paidTxns++; }
+      if (s.kind === 'acompte' || s.kind === 'acompte-reglement') t.acompteReceived += took;
       /* DEUX compteurs, parce qu'il y a deux questions. `paidTxns` ne retient
          que les tickets qui ont fait entrer de l'argent — c'est le diviseur du
          ticket moyen. `txns` compte TOUS les tickets du jour, y compris celui
@@ -6582,7 +6691,8 @@
       const v = +a.amount || 0;
       if (v > 0) { t.avoirIssued += v; t.avoirIssuedN++; }
     });
-    ['moneyIn', 'cash', 'card', 'transfer', 'cheque', 'delivery', 'other', 'discounts', 'promoOff', 'avoirUsed', 'avoirIssued'].forEach((k) => { t[k] = Math.round(t[k] * 100) / 100; });
+    t.outstanding = bqOutstandingCents / 100;
+    ['moneyIn', 'cash', 'card', 'transfer', 'cheque', 'delivery', 'other', 'discounts', 'promoOff', 'avoirUsed', 'avoirIssued', 'acompteReceived'].forEach((k) => { t[k] = Math.round(t[k] * 100) / 100; });
     return t;
   }
 
@@ -6608,7 +6718,7 @@
           amount: taken.reduce((sum, part) => sum + part.amount, 0),
           method: bqPaymentMethod(s.parts),
           parts: bqPaymentParts(taken),
-          label: s.kind === 'echange' ? 'Différence échange' : 'Vente',
+          label: s.kind === 'echange' ? 'Différence échange' : s.kind === 'acompte' ? 'Acompte' : s.kind === 'acompte-reglement' ? 'Règlement acompte' : 'Vente',
           ref: s.id, cashier: s.by || '', lines: lines.length ? lines : null });
         return;
       }
@@ -6619,7 +6729,7 @@
           ts: at,
           amount: p.amount,
           method: BQ_SRV_METHOD[p.m] || 'wallet',
-          label: s.kind === 'echange' ? 'Différence échange' : 'Vente',
+          label: s.kind === 'echange' ? 'Différence échange' : s.kind === 'acompte' ? 'Acompte' : s.kind === 'acompte-reglement' ? 'Règlement acompte' : 'Vente',
           ref: s.id,
           cashier: s.by || '',
           lines: first && lines.length ? lines : null,
@@ -6642,6 +6752,7 @@
       /* L'avoir voyage jusqu'au rapport, sinon il ne sort que sur l'écran de
          clôture et disparaît du Z imprimé — le seul document qui reste. */
       avoirs: { issued: t.avoirIssued, issuedCount: t.avoirIssuedN, used: t.avoirUsed, usedCount: t.avoirUsedN },
+      acomptes: { received: t.acompteReceived, outstanding: t.outstanding },
       countedCash: counted,
     };
   }
@@ -6858,7 +6969,12 @@
     out.textContent = (ecart > 0 ? '+ ' : (ecart < 0 ? '− ' : '')) + fmtMAD(Math.abs(ecart));
     line.classList.add(Math.abs(ecart) <= 5 ? 'is-ok' : 'is-off');
   }
-  function bqOpenCloture() {
+  let bqOutstandingCents = 0;
+  async function bqOpenCloture() {
+    if (window.KiwiRetailBalances) {
+      const open = await window.KiwiRetailBalances.list(merchantSlug());
+      bqOutstandingCents = open.reduce((sum, row) => sum + window.KiwiRetailBalances.due(row), 0);
+    }
     if (!bqCloVeil) {
       bqCloVeil = document.createElement('div');
       bqCloVeil.className = 'cloture-veil';
@@ -6888,6 +7004,8 @@
     if (t.other > 0) rows.push(['dont Autres', fmtMAD(t.other), true, 'sub']);
     if (t.transfer > 0) rows.push(['dont Virement / Versement', fmtMAD(t.transfer), true, 'sub']);
     if (t.cheque > 0) rows.push(['dont Chèque', fmtMAD(t.cheque), true, 'sub']);
+    if (t.acompteReceived > 0) rows.push(['Acomptes reçus', fmtMAD(t.acompteReceived), true, '']);
+    if (t.outstanding > 0) rows.push(['Soldes restant à régler', fmtMAD(t.outstanding), true, '']);
     /* HORS du bloc « dont » : une livraison n'est pas encaissée, elle est à
        recevoir. Nichée en sous-ligne du total, elle se lisait comme une de ses
        composantes — alors qu'aucun dirham correspondant n'est dans le tiroir. */

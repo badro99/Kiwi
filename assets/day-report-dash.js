@@ -396,6 +396,7 @@
       countedCash: c.counted,
       discounts: snap.discounts && snap.discounts.amount,
       discountsCount: snap.discounts && snap.discounts.count,
+      acomptes: snap.acomptes || null,
       cancels: snap.cancels,
       handovers: snap.handovers || [],
     };
@@ -741,6 +742,10 @@
       .sort(function (a, b) { return r.methods[b] - r.methods[a]; })
       .map(function (k) { return row(methodLabel(k), money(r.methods[k]) + ' MAD'); }).join('');
     var payBlock = mRows ? '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.payments)) + '</span><em>' + esc(money(r.gross)) + ' MAD</em></div>' + mRows + '</div>' : '';
+    var acompteBlock = r.acomptes && (r.acomptes.received || r.acomptes.outstanding)
+      ? '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T({fr:'Acomptes',en:'Down payments',ar:'الدفعات المقدمة'})) + '</span></div>'
+        + row(T({fr:'Acomptes reçus',en:'Received today',ar:'دفعات مستلمة اليوم'}), money(r.acomptes.received) + ' MAD')
+        + row(T({fr:'Soldes restant à régler',en:'Outstanding balances',ar:'الأرصدة المتبقية'}), money(r.acomptes.outstanding) + ' MAD') + '</div>' : '';
 
     /* ── le tiroir ── */
     var cashBlock = '';
@@ -847,7 +852,7 @@
       subtitle: (st.name || '') + (st.name ? ' · ' : '') + dayLabel(current),
       body: nav + strip + idBlock + kpis
         + hourlyHtml(r)
-        + '<div class="kdr-two">' + payBlock + cashBlock + '</div>'
+        + '<div class="kdr-two">' + payBlock + cashBlock + '</div>' + acompteBlock
         + topHtml(r, V)
         + catBlock
         + '<div class="kdr-two">' + adj + cshBlock + '</div>'

@@ -580,6 +580,9 @@
       cash: (sale.received != null || sale.change != null)
         ? { received: Math.abs(num(sale.received)), change: Math.abs(num(sale.change)) } : null,
       customer: customerBlock(sale, cfg),
+      acompte: sale.acompte && Number(sale.acompte.total) > 0
+        ? { total: Math.abs(num(sale.acompte.total)), paid: Math.abs(num(sale.acompte.paid)),
+            remaining: Math.abs(num(sale.acompte.remaining)) } : null,
       refund: refund ? { of: str(sale.of, 40), reason: str(sale.reason, 80) } : null,
       foot: {
         thanks: cfg.msg.thanks,
@@ -835,6 +838,7 @@
     doc.shop.legal.forEach(function (l) { b.line(l); });
     if (doc.welcome) b.feed(1).line(doc.welcome);
     if (refund) b.feed(1).bold(true).size(2, 2).line(T.refund).size(1, 1).bold(false);
+    if (doc.acompte) b.feed(1).bold(true).line(doc.acompte.remaining > 0 ? 'ACOMPTE' : 'SOLDE DE L’ACOMPTE').bold(false);
     /* Le bandeau du récapitulatif. En gras et en grand, pour la même raison que
        celui du remboursement : ce papier ne doit pas pouvoir passer pour un
        ticket de vente. */
@@ -909,6 +913,11 @@
       b.align('center').bold(true).line(T.saved + ' ' + moneyMAD(t.promo + t.discount, doc)).bold(false).align('left');
     }
     doc.pay.forEach(function (p) { row(p.label, moneyMAD(p.amount, doc)); });
+    if (doc.acompte) {
+      row('Total de la note', moneyMAD(doc.acompte.total, doc));
+      row('Payé à ce jour', moneyMAD(doc.acompte.paid, doc));
+      row('Reste à régler', moneyMAD(doc.acompte.remaining, doc), true);
+    }
     if (doc.cash) { row(T.received, moneyMAD(doc.cash.received, doc)); row(T.change, moneyMAD(doc.cash.change, doc)); }
 
     /* — le pied — */
@@ -986,6 +995,7 @@
     doc.shop.legal.forEach(function (l) { P('kr-c kr-xs', l); });
     if (doc.welcome) P('kr-c kr-welcome', doc.welcome);
     if (refund) P('kr-banner', T.refund);
+    if (doc.acompte) P('kr-banner', doc.acompte.remaining > 0 ? 'ACOMPTE' : 'SOLDE DE L’ACOMPTE');
     if (doc.summary) P('kr-banner', doc.summary.title);
     if (doc.copy) P('kr-c kr-copy', '·' + doc.copy + '·');
 
@@ -1049,6 +1059,11 @@
     R(refund ? T.totalRefund : T.total, (refund ? '- ' : '') + moneyMAD(t.total + t.tip, doc), 'kr-total');
     if (!refund && (t.promo + t.discount) > 0) P('kr-saved', T.saved + ' ' + moneyMAD(t.promo + t.discount, doc));
     doc.pay.forEach(function (p) { R(p.label, moneyMAD(p.amount, doc)); });
+    if (doc.acompte) {
+      R('Total de la note', moneyMAD(doc.acompte.total, doc));
+      R('Payé à ce jour', moneyMAD(doc.acompte.paid, doc));
+      R('Reste à régler', moneyMAD(doc.acompte.remaining, doc), 'kr-total');
+    }
     if (doc.cash) { R(T.received, moneyMAD(doc.cash.received, doc)); R(T.change, moneyMAD(doc.cash.change, doc)); }
 
     out.push('<div class="kr-rule"></div>');
@@ -1127,6 +1142,7 @@
     doc.shop.contact.forEach(function (c) { out.push(c); });
     doc.shop.legal.forEach(function (l) { out.push(l); });
     if (doc.kind === 'refund') out.push(T.refund);
+    if (doc.acompte) out.push(doc.acompte.remaining > 0 ? 'ACOMPTE' : 'SOLDE DE L’ACOMPTE');
     if (doc.summary) out.push(doc.summary.title);
     if (doc.copy) out.push('·' + doc.copy + '·');
     out.push(new Array(cols + 1).join('-'));
@@ -1154,6 +1170,11 @@
     out.push(row(refunded ? T.totalRefund : T.total,
       (refunded ? '- ' : '') + moneyMAD(doc.totals.total + doc.totals.tip, doc)));
     doc.pay.forEach(function (p) { out.push(row(p.label, moneyMAD(p.amount, doc))); });
+    if (doc.acompte) {
+      out.push(row('Total de la note', moneyMAD(doc.acompte.total, doc)));
+      out.push(row('Payé à ce jour', moneyMAD(doc.acompte.paid, doc)));
+      out.push(row('Reste à régler', moneyMAD(doc.acompte.remaining, doc)));
+    }
     /* Reçu / Rendu. Le thermique (escpos) et l'écran (html) les portaient déjà ;
        cette sortie-ci les oubliait, et c'est elle qui part à l'imprimante
        système. Un ticket sans le rendu est précisément celui qu'on rouvre pour

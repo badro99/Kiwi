@@ -274,8 +274,9 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
   const saleBlock = jsSrc.slice(jsSrc.indexOf('          lines: t.lines.map((ln) => ({'), jsSrc.indexOf('          reward: rewardUsed'));
   ok(saleBlock.length > 0 && !/filter\s*\(/.test(saleBlock),
     'le journal des ventes enregistre toutes les lignes, sans filtrer le dépôt-vente');
-  ok(/consigned: Math\.round\(tot\.consigned\)/.test(jsSrc) && /own: Math\.round\(tot\.own\)/.test(jsSrc),
-    'la vente écrit les trois montants : total payé, part des déposants, recette propre');
+  ok(/consigned: Math\.round\(tot\.consigned\)/.test(jsSrc)
+    && /own: isAcompte \? receivedNow : Math\.round\(tot\.own\)/.test(jsSrc),
+    'la vente écrit la part des déposants et la recette propre, limitée au reçu pour un acompte');
 
   // b) la recette du jour exclut le dépôt-vente, avec repli pour l'historique
   ok(/caToday = \(\) => salesToday\(\)\.reduce\(\(s, x\) => s \+ \(x\.own != null \? x\.own : x\.total\)/.test(jsSrc),
