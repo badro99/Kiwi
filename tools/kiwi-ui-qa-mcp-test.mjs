@@ -84,6 +84,7 @@ try {
   const first = await call('finish_ui_proof', { ticketId: 999001, expectedOutcome: 'Ordinary reservation opens from the sidebar' });
   ok(first.isError, 'proof refuses code-only/no-click claim');
   const mobile = await call('ui_viewport', { width: 390, height: 844 });
+  if (mobile.isError) console.log('MOBILE ERROR:', body(mobile));
   ok(!mobile.isError, 'mobile responsive viewport renders');
   const desktop = await call('ui_viewport', { width: 1365, height: 900 });
   ok(!desktop.isError, 'desktop viewport restores the workstation UI');
@@ -117,6 +118,7 @@ try {
   const current = await call('ui_snapshot');
   ok(body(current).includes('QA Normal Guest'), 'saved guest appears on the reception screen');
   const reloaded = await call('ui_reload');
+  if (reloaded.isError) console.log('RELOAD ERROR:', body(reloaded));
   ok(!reloaded.isError, 'real page reload succeeds');
   const back = await call('ui_click', { ref: refFor(body(reloaded), 'Réception') });
   ok(!back.isError, 'reception still reachable after reload');
@@ -144,6 +146,8 @@ try {
   ok(validateUiProof(proofFile, 999001).environment === 'synthetic-client-dashboard', 'ticket MCP accepts approved client dashboard proof');
   fs.writeFileSync(proofFile, JSON.stringify({ ...clean, environment: 'synthetic-restaurant-dashboard' }));
   ok(validateUiProof(proofFile, 999001).environment === 'synthetic-restaurant-dashboard', 'ticket MCP accepts approved restaurant dashboard proof');
+  fs.writeFileSync(proofFile, JSON.stringify({ ...clean, environment: 'synthetic-employee-clock' }));
+  ok(validateUiProof(proofFile, 999001).environment === 'synthetic-employee-clock', 'ticket MCP accepts approved employee clock proof');
   fs.writeFileSync(proofFile, JSON.stringify(clean));
   assert.throws(() => validateUiProof(proofFile, 999002), /match/);
   count++; console.log('  ✓ ticket mismatch rejected');
@@ -177,6 +181,25 @@ try {
     'restaurant proof names only the isolated synthetic merchant');
   const restaurantClosed = await call('close_session');
   ok(!restaurantClosed.isError, 'restaurant fixture closes without production access');
+  const clock = await call('start_retail_fixture', { scenario: 'employee-clock' });
+  ok(!clock.isError && body(clock).includes('employee store clock'), 'employee clock fixture starts');
+  const phoneClock = await call('ui_viewport', { width: 390, height: 844 });
+  ok(!phoneClock.isError, 'employee clock proof uses phone-width rendered UI');
+  const beforeRollover = await call('ui_assert', { selector: '#kep-card .kep-metric b', condition: 'text_contains', expected: '1',
+    description: 'Only the Auckland store-day shift remains before rollover', timeoutMs: 15000 });
+  ok(!beforeRollover.isError, 'employee schedule follows store day before rollover');
+  const advance = await call('ui_click', { ref: refFor(body(await call('ui_snapshot')), 'Avancer au lendemain (simulation)') });
+  ok(!advance.isError, 'clock advance clicked through visible synthetic control');
+  const afterRollover = await call('ui_assert', { selector: '#kep-card .kep-metric b', condition: 'text_contains', expected: '0',
+    description: 'Employee planning drops yesterday after store midnight without reload', timeoutMs: 15000 });
+  ok(!afterRollover.isError, 'employee schedule rolls forward without reload');
+  const clockProof = await call('finish_ui_proof', { ticketId: 999092,
+    expectedOutcome: 'Employee planning refreshes at merchant midnight while the page stays open' });
+  const clockPath = body(clockProof).match(/UI proof saved: (\/[^\n]+proof\.json)/)?.[1];
+  ok(!clockProof.isError && clockPath && JSON.parse(fs.readFileSync(clockPath, 'utf8')).environment === 'synthetic-employee-clock',
+    'clock proof records the isolated fixture and rendered action');
+  const clockClosed = await call('close_session');
+  ok(!clockClosed.isError, 'employee clock fixture closes without production access');
   console.log(`kiwi-ui-qa-mcp-test: ${count} controls passed`);
 } finally {
   child.stdin.end();

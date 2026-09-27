@@ -75,11 +75,26 @@ function restaurantPage() {
   </body></html>`;
 }
 
+function employeeClockPage() {
+  return `<!doctype html><html lang="fr"><head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Kiwi Employé · horloge synthétique</title>
+    <style>:root{--surface:white;--surface-2:#f5f6f4;--ink:#14231b;--ink-2:#3b5345;--ink-3:#666;--line:#dce5df;--r-xl:16px;--r-lg:12px;--r-md:8px;--rim:0 2px 12px #ddd;--shadow-2:0 20px 60px #0004;--tint:#e6f7ed;--forest-ink:#064329;--fill-strong:#064329;--on-strong:white}body{font:16px system-ui;margin:16px;background:#f5f6f4;color:var(--ink)}button{font:inherit;cursor:pointer}#kg-sched-card{padding:18px;background:white;border-radius:14px}#advance-store-day{margin-top:20px;padding:10px 14px}</style>
+    <script>const RealDate=Date;window.__now=Date.parse('2026-09-26T12:30:00Z');window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[window.__now]));}static now(){return window.__now;}};
+      window.KiwiEmployeeLive={refresh:async()=>({store:{timezone:'Pacific/Auckland'},schedule:{'2026-09-26':{start:'09:00',end:'17:00'},'2026-09-27':{start:'09:00',end:'17:00'}},planning:{requests:[],openShifts:[],swapRequests:[],notices:[]}})};
+    </script>
+  </head><body><div id="kg-sched-card">Mon planning</div><button id="advance-store-day">Avancer au lendemain (simulation)</button>
+    <script src="/assets/employee-planning.js?v=${stamps['assets/employee-planning.js'].v}"></script>
+    <script>document.getElementById('advance-store-day').onclick=()=>{window.__now=Date.parse('2026-09-27T12:30:00Z');window.dispatchEvent(new Event('focus'));};</script>
+  </body></html>`;
+}
+
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
-  if (pathname === '/maison.html' || pathname === '/clients.html' || pathname === '/dashboard.html') {
+  if (pathname === '/maison.html' || pathname === '/clients.html' || pathname === '/dashboard.html' || pathname === '/employee-clock.html') {
     res.writeHead(200, { 'Content-Type': TYPES['.html'], 'Cache-Control': 'no-store' });
-    res.end(pathname === '/maison.html' ? maisonPage() : pathname === '/clients.html' ? clientsPage() : restaurantPage()); return;
+    res.end(pathname === '/maison.html' ? maisonPage() : pathname === '/clients.html' ? clientsPage()
+      : pathname === '/dashboard.html' ? restaurantPage() : employeeClockPage()); return;
   }
   if (pathname === '/api/z-reconciliation') {
     const day = new URL(req.url, 'http://localhost').searchParams.get('day');

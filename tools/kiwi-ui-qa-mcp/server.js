@@ -20,7 +20,7 @@ let stdinEnded = false;
 const TOOLS = [
   { name: 'start_hotel_fixture', description: 'Start a fresh real dashboard + real hotel API/SQLite on a synthetic merchant. Opens Chromium, enters only the fixture PIN, and returns visible UI. Never touches production.', inputSchema: { type: 'object', properties: {} } },
   { name: 'start_tickets_fixture', description: 'Start the real Kiwi Tickets page against an isolated in-memory ticket API. Opens Chromium and never touches production.', inputSchema: { type: 'object', properties: {} } },
-  { name: 'start_retail_fixture', description: 'Start a real Maison caisse, client-directory, or restaurant dashboard module with synthetic data. Opens Chromium on loopback only and never touches production.', inputSchema: { type: 'object', properties: { scenario: { type: 'string', enum: ['maison', 'clients', 'restaurant'] } }, required: ['scenario'] } },
+  { name: 'start_retail_fixture', description: 'Start a real Maison caisse, client-directory, restaurant dashboard, or employee clock module with synthetic data. Opens Chromium on loopback only and never touches production.', inputSchema: { type: 'object', properties: { scenario: { type: 'string', enum: ['maison', 'clients', 'restaurant', 'employee-clock'] } }, required: ['scenario'] } },
   { name: 'ui_snapshot', description: 'Compact visible text and interactive controls with temporary q-refs; no screenshot tokens. Call again after navigation.', inputSchema: { type: 'object', properties: {} } },
   { name: 'ui_click', description: 'Click a visible control through Chromium, not a JS handler or API. Use a q-ref from ui_snapshot.', inputSchema: { type: 'object', properties: { ref: { type: 'string' } }, required: ['ref'] } },
   { name: 'ui_fill', description: 'Fill a visible input through the rendered control. Use a q-ref from ui_snapshot.', inputSchema: { type: 'object', properties: { ref: { type: 'string' }, value: { type: 'string' } }, required: ['ref', 'value'] } },
@@ -201,7 +201,7 @@ function retailFixtureProcess() {
 async function startRetailFixture(args) {
   await closeSession();
   const scenario = String(args.scenario || '');
-  if (!['maison', 'clients', 'restaurant'].includes(scenario)) throw new Error('scenario must be maison, clients or restaurant.');
+  if (!['maison', 'clients', 'restaurant', 'employee-clock'].includes(scenario)) throw new Error('scenario must be maison, clients, restaurant or employee-clock.');
   const bin = chromiumBinary();
   if (!bin) throw new Error('Chromium not found; set KIWI_CHROMIUM_BIN. UI proof cannot be skipped.');
   const puppeteer = createRequire(path.join(ROOT, 'app/package.json'))('puppeteer-core');
@@ -219,12 +219,16 @@ async function startRetailFixture(args) {
       if (u.startsWith(fixture.base + '/') || u.startsWith('data:') || u.startsWith('blob:')) req.continue().catch(() => {});
       else req.abort().catch(() => {});
     });
-    await page.goto(fixture.base + (scenario === 'maison' ? '/maison.html' : scenario === 'clients' ? '/clients.html' : '/dashboard.html'), { waitUntil: 'load', timeout: 60000 });
-    await page.waitForSelector(scenario === 'maison' ? '#pos-maison.is-on .mz-view.is-on' : scenario === 'clients' ? '[data-open-clients]' : '#kw-main [data-hero-amount]', { visible: true, timeout: 15000 });
-    session = { ...fixture, merchant: scenario === 'restaurant' ? 'restaurant-fixture' : fixture.merchant,
-      kind: scenario === 'maison' ? 'retail-maison' : scenario === 'clients' ? 'retail-clients' : 'retail-restaurant',
+    await page.goto(fixture.base + (scenario === 'maison' ? '/maison.html' : scenario === 'clients' ? '/clients.html'
+      : scenario === 'restaurant' ? '/dashboard.html' : '/employee-clock.html'), { waitUntil: 'load', timeout: 60000 });
+    await page.waitForSelector(scenario === 'maison' ? '#pos-maison.is-on .mz-view.is-on' : scenario === 'clients' ? '[data-open-clients]'
+      : scenario === 'restaurant' ? '#kw-main [data-hero-amount]' : '#kep-card .kep-metric', { visible: true, timeout: 15000 });
+    session = { ...fixture, merchant: scenario === 'restaurant' ? 'restaurant-fixture' : scenario === 'employee-clock' ? 'employee-clock-fixture' : fixture.merchant,
+      kind: scenario === 'maison' ? 'retail-maison' : scenario === 'clients' ? 'retail-clients'
+        : scenario === 'restaurant' ? 'retail-restaurant' : 'retail-employee-clock',
       browser, context, page, actions: [], assertions: [], refs: new Set(), startedAt: Date.now() };
-    return `Synthetic ${scenario === 'maison' ? 'Maison caisse' : scenario === 'clients' ? 'Amira client directory' : 'restaurant dashboard'} ready at ${origin.origin}; no live merchant access.\n${await snapshot()}`;
+    return `Synthetic ${scenario === 'maison' ? 'Maison caisse' : scenario === 'clients' ? 'Amira client directory'
+      : scenario === 'restaurant' ? 'restaurant dashboard' : 'employee store clock'} ready at ${origin.origin}; no live merchant access.\n${await snapshot()}`;
   } catch (e) {
     if (browser) await browser.close().catch(() => {});
     fixture.child.kill('SIGTERM');
@@ -441,8 +445,11 @@ async function reload() {
     s.actions.push({ kind: 'reload', at: new Date().toISOString() });
     return snapshot();
   }
-  if (s.kind === 'retail-maison' || s.kind === 'retail-clients') {
-    await s.page.waitForSelector(s.kind === 'retail-maison' ? '#pos-maison.is-on .mz-view.is-on' : '[data-open-clients]', { visible: true, timeout: 15000 });
+  if (s.kind && s.kind.startsWith('retail-')) {
+    await s.page.waitForSelector(s.kind === 'retail-maison' ? '#pos-maison.is-on .mz-view.is-on'
+      : s.kind === 'retail-clients' ? '[data-open-clients]'
+      : s.kind === 'retail-restaurant' ? '#kw-main [data-hero-amount]' : '#kep-card .kep-metric',
+    { visible: true, timeout: 15000 });
     s.actions.push({ kind: 'reload', at: new Date().toISOString() });
     return snapshot();
   }
@@ -494,8 +501,11 @@ async function viewport(args) {
     s.actions.push({ kind: 'viewport', width, height, at: new Date().toISOString() });
     return snapshot();
   }
-  if (s.kind === 'retail-maison' || s.kind === 'retail-clients') {
-    await s.page.waitForSelector(s.kind === 'retail-maison' ? '#pos-maison.is-on .mz-view.is-on' : '[data-open-clients]', { visible: true, timeout: 15000 });
+  if (s.kind && s.kind.startsWith('retail-')) {
+    await s.page.waitForSelector(s.kind === 'retail-maison' ? '#pos-maison.is-on .mz-view.is-on'
+      : s.kind === 'retail-clients' ? '[data-open-clients]'
+      : s.kind === 'retail-restaurant' ? '#kw-main [data-hero-amount]' : '#kep-card .kep-metric',
+    { visible: true, timeout: 15000 });
     await new Promise(r => setTimeout(r, 350));
     s.actions.push({ kind: 'viewport', width, height, at: new Date().toISOString() });
     return snapshot();
@@ -577,6 +587,7 @@ async function finishProof(args) {
       : s.kind === 'retail-maison' ? 'synthetic-maison-caisse'
         : s.kind === 'retail-clients' ? 'synthetic-client-dashboard'
           : s.kind === 'retail-restaurant' ? 'synthetic-restaurant-dashboard'
+          : s.kind === 'retail-employee-clock' ? 'synthetic-employee-clock'
           : 'synthetic-hotel-dashboard', merchant: s.merchant, origin: s.base,
     path: new URL(s.page.url()).pathname, viewport: s.page.viewport(), startedAt: new Date(s.startedAt).toISOString(),
     finishedAt: new Date().toISOString(), gitHead: head, gitDirty: !!dirty,

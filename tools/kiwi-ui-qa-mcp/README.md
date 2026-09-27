@@ -36,8 +36,9 @@ is missing or obscured, the ticket test fails—this is the point.
    only when necessary. State the visible starting point and expected result.
 2. Reproduce the problem in a fixture. For hotel UI tickets call
    `start_hotel_fixture`; for ticket-board work call `start_tickets_fixture`;
-   for Maison caisse, client-directory, or restaurant Z/dashboard work call
-   `start_retail_fixture` with `maison`, `clients`, or `restaurant`.
+   for Maison caisse, client-directory, restaurant Z/dashboard, or employee
+   store-clock work call `start_retail_fixture` with `maison`, `clients`,
+   `restaurant`, or `employee-clock`.
    Then use `ui_snapshot`, `ui_click`, `ui_fill`, or
    `ui_select`, `ui_scroll`, or `ui_viewport` using the current `q` refs. A new snapshot follows every
    interaction. No arbitrary JavaScript, URL navigation, direct API call, or
@@ -63,8 +64,9 @@ is missing or obscured, the ticket test fails—this is the point.
 ## Limits
 
 These fixtures cover hotel reception, related hotel pages, Kiwi Tickets,
-Maison caisse, client directory, and the restaurant Z/dashboard module,
-**not** the full restaurant caisse, OrderPro, employee app, delivery, Shopify, or live owner UI. A
+Maison caisse, client directory, the restaurant Z/dashboard module, and the
+employee planning store-day rollover. They do **not** cover the full restaurant
+caisse, OrderPro, employee app authentication, delivery, Shopify, or live owner UI. A
 hotel proof must not be used to claim one of those paths was browser-tested.
 Add a synthetic fixture and journey for each module before accepting a UI
 ticket there; until then report the UI coverage gap explicitly and keep the
