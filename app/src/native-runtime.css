@@ -86,6 +86,10 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-till .kiwi-native-tabbar i{width:21px;height:21px;background:currentColor;-webkit-mask:var(--native-tab-icon) center/contain no-repeat;mask:var(--native-tab-icon) center/contain no-repeat}
   html.kiwi-native[dir="rtl"] body.kiwi-native-till .kiwi-native-tabbar button{font-family:"IBM Plex Sans Arabic","Inter Tight",sans-serif}
   html.kiwi-native body.kiwi-native-till .rightpanel{bottom:calc(var(--kiwi-native-tabs) + 8px);max-height:calc(88dvh - var(--kiwi-native-tabs));--rp-peek-h:56px}
+  /* The collapsed sheet is moved down with a transform, so the rest of it still painted
+     under the native tab capsule. Clip it to the peek until it opens. */
+  html.kiwi-native body.kiwi-native-till .rightpanel{clip-path:inset(0 0 calc(100% - var(--rp-peek-h)) 0 round 18px 18px 0 0);transition:transform .32s var(--spring),clip-path .32s var(--spring)}
+  html.kiwi-native body.kiwi-native-till.ticket-open .rightpanel{clip-path:inset(0 0 0 0 round 18px 18px 0 0)}
   html.kiwi-native body.kiwi-native-till .rp-peek{box-sizing:border-box;height:56px;min-height:56px;padding:7px 20px;gap:8px;white-space:nowrap}
   html.kiwi-native body.kiwi-native-till .rp-peek::after{content:'⌃';font-size:22px;line-height:1;color:var(--atlas)}
   html.kiwi-native body.kiwi-native-till #toast-stack{bottom:calc(var(--kiwi-native-tabs) + 72px)}
@@ -95,7 +99,9 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-till :is(#cash-modal,#card-modal) .pay-tip-chips{display:flex;flex-wrap:nowrap;overflow-x:auto}
   html.kiwi-native body.kiwi-native-till :is(#cash-modal,#card-modal) .pay-tip-chips>*{flex:0 0 auto}
   html.kiwi-native body.kiwi-native-till[data-mode="vrap"] .pay-table-prefix,html.kiwi-native body.kiwi-native-till[data-mode="vrap"] .pay-covers-meta{display:none}
-  html.kiwi-native body.kiwi-native-till.kiwi-native-cart-empty .rightpanel{transform:translateY(100%);pointer-events:none;box-shadow:none}
+  html.kiwi-native body.kiwi-native-till.kiwi-native-cart-empty .rightpanel{transform:translateY(100%);pointer-events:none;box-shadow:none;visibility:hidden;transition:transform .32s var(--spring),visibility 0s .32s}
+  /* The till tools drawer owns the screen while open; the bill shelf covered its last rows. */
+  html.kiwi-native body.kiwi-native-till.nav-open .rightpanel{visibility:hidden}
   html.kiwi-native body.kiwi-native-till.kiwi-native-cart-empty .main{padding-bottom:calc(16px + var(--kiwi-native-tabs))}
   html.kiwi-native body.kiwi-native-till .rp-active{padding-bottom:12px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
   html.kiwi-native body.kiwi-native-till.ticket-open .rp-peek{display:none}
@@ -110,6 +116,10 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-till.ticket-open .rp-meta{gap:8px;padding-bottom:12px;flex-wrap:wrap}
   html.kiwi-native body.kiwi-native-till.ticket-open .meta-btn{min-width:44px;padding:10px 8px}
   html.kiwi-native body.kiwi-native-till.ticket-open .meta-btn.danger{flex-basis:100%;justify-content:center;margin-left:0;border:1px solid currentColor;border-radius:10px}
+  /* One primary per bill: on a takeaway, payment leads and the kitchen send is secondary. */
+  html.kiwi-native body.kiwi-native-till[data-mode="vrap"] #rp-send-kitchen{background:var(--paper-elev,#FFFDFA);color:#0B6E4F;border:1.5px solid #0B6E4F;box-shadow:none}
+  html.kiwi-native body.kiwi-native-till #pay-card{display:flex;align-items:center;justify-content:center;gap:8px}
+  html.kiwi-native body.kiwi-native-till #pay-card .kiwi-native-pay-label{font:600 calc(15px * var(--type-scale,1))/1 "Inter Tight",sans-serif}
   html.kiwi-native body.kiwi-native-till .menu-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(104px,auto);gap:7px}
   html.kiwi-native body.kiwi-native-till .menu-item{height:auto;min-height:104px;overflow:hidden;padding:8px 10px}
   html.kiwi-native body.kiwi-native-till .menu-item-art{display:none}
@@ -118,6 +128,8 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-till .menu-item-add{display:none}
   html.kiwi-native body.kiwi-native-till .menu-item-stepper{display:none}
   html.kiwi-native body.kiwi-native-till .menu-item-badge{display:grid}
+  /* The badge sits at the inline end; in Arabic the category label ran under it. */
+  html.kiwi-native body.kiwi-native-till .menu-item-cat{padding-inline-end:30px}
   html.kiwi-native body.kiwi-native-till.kiwi-native-category-filtered .menu-item-cat{visibility:hidden;height:0;margin:0}
   html.kiwi-native body.kiwi-native-till #vrap-builder{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:44px minmax(0,1fr);gap:5px 6px}
   html.kiwi-native body.kiwi-native-till #vrap-builder[hidden]{display:none}
@@ -125,6 +137,10 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-till .vrap-back-btn span{display:none}
   html.kiwi-native body.kiwi-native-till .cat-pills{grid-column:2;min-width:0;display:flex;flex-wrap:nowrap;overflow-x:auto;padding:0;align-items:center;scrollbar-width:none}
   html.kiwi-native body.kiwi-native-till .cat-pill{flex:0 0 auto}
+  /* kiwi-caisse.html styles the row by id (#cat-pills: wrap, overflow visible), which outranks
+     the class rule above; without this the extra pills wrap into a column behind the grid. */
+  html.kiwi-native body.kiwi-native-till #cat-pills{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding:0;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+  html.kiwi-native body.kiwi-native-till #cat-pills::-webkit-scrollbar{display:none}
   html.kiwi-native body.kiwi-native-till .mlibre-bar{grid-column:3;margin:0}
   html.kiwi-native body.kiwi-native-till .mlibre-toggle{padding:8px 10px}
   html.kiwi-native body.kiwi-native-till .mlibre-toggle span{display:none}
@@ -135,3 +151,24 @@ html.kiwi-native [data-dr-label]{display:none!important}
 @media (min-width:901px){html.kiwi-native body.kiwi-native-till.kiwi-native-cart-empty .rightpanel{display:none}}
 @media(prefers-color-scheme:dark){html.kiwi-native body.kiwi-native-till .kiwi-native-tabbar{background:rgba(10,15,13,.96);border-top-color:rgba(247,245,240,.12)}html.kiwi-native body.kiwi-native-till .kiwi-native-tabbar button{color:rgba(247,245,240,.6)}}
 @media(prefers-reduced-motion:reduce){html.kiwi-native body.kiwi-native-till .rightpanel,html.kiwi-native body.kiwi-native-till .menu-item{transition:none!important}}
+
+/* Phone floor: list first, map on request (see initNativeFloorList). */
+.kiwi-native-floor{display:none}
+@media (max-width:600px){
+  html.kiwi-native body.kiwi-native-till .kiwi-native-floor{display:grid;gap:10px;margin:4px 0 10px}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-floor-switch{display:grid;grid-template-columns:1fr 1fr;padding:3px;border-radius:12px;background:var(--paper-mute,#EFEDE7)}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-floor-switch button{min-height:40px;border:0;border-radius:9px;background:transparent;color:var(--ink-2,#3A413D);font:600 calc(14px * var(--type-scale,1))/1 "Inter Tight",sans-serif}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-floor-switch button.is-active{background:var(--paper-elev,#FFFDFA);color:var(--ink,#0A0F0D);box-shadow:0 1px 3px rgba(10,15,13,.12)}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-table-list{display:none}
+  html.kiwi-native body.kiwi-native-till.kiwi-native-floor-list .kiwi-native-table-list{display:grid;gap:8px}
+  html.kiwi-native body.kiwi-native-till.kiwi-native-floor-list[data-mode="salle"] :is(.view-salle .plan-canvas,.view-salle .plan-real,.legend){display:none!important}
+  html.kiwi-native body.kiwi-native-till.kiwi-native-floor-list .view-salle{overflow-x:hidden}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-table-row{display:grid;grid-template-columns:52px 14px minmax(0,1fr) auto auto;align-items:center;gap:10px;min-height:56px;padding:8px 14px;border:1px solid var(--line,rgba(10,15,13,.1));border-radius:14px;background:var(--paper-elev,#FFFDFA);color:var(--ink,#0A0F0D);text-align:start;font:500 calc(15px * var(--type-scale,1))/1.2 "Inter Tight",sans-serif}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-table-row .legend-swatch{width:12px;height:12px;border-radius:50%}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-table-row .legend-swatch.st-khawya{border-color:rgba(10,15,13,.35)}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-table-row .legend-swatch.st-khlass{border-color:rgba(10,15,13,.45)}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-table-id{font-weight:700;font-variant-numeric:tabular-nums}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-table-covers{color:var(--ink-3,#59615D);font-size:calc(13px * var(--type-scale,1));white-space:nowrap}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-table-server{min-width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:var(--paper-mute,#EFEDE7);font:700 11px/1 "Inter Tight",sans-serif}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-table-empty{margin:24px 0;text-align:center;color:var(--ink-3,#59615D)}
+}

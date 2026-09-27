@@ -66,17 +66,21 @@ try {
   await page.setViewport({ width: 390, height: 844, isMobile: false, hasTouch: true });
   await page.evaluate(() => {
     document.getElementById('pin-screen').remove();
-    document.body.innerHTML = '<div class="cat-pills" style="width:300px">' + Array.from({length:8}, (_,i) => '<button class="cat-pill">Category '+i+'</button>').join('') + '</div><div class="menu-grid" style="width:370px;height:490px">' + Array.from({length:8}, (_,i) => '<div class="menu-item" role="button" tabindex="0"><span class="menu-item-name">Product '+i+'</span><span class="menu-item-foot"><span class="menu-item-price">45 MAD</span></span></div>').join('') + '</div><aside class="rightpanel"><button class="rp-peek"><span>1 article</span><span>45 MAD</span></button></aside>';
+    /* kiwi-caisse.html styles the row by id; without it this check passed while the real till wrapped. */
+    const pageRule = document.createElement('style'); pageRule.textContent = '#cat-pills{display:flex;flex-wrap:wrap;overflow:visible}'; document.head.appendChild(pageRule);
+    document.body.innerHTML = '<div class="cat-pills" id="cat-pills" style="width:300px">' + Array.from({length:8}, (_,i) => '<button class="cat-pill">Category '+i+'</button>').join('') + '</div><div class="menu-grid" style="width:370px;height:490px">' + Array.from({length:8}, (_,i) => '<div class="menu-item" role="button" tabindex="0"><span class="menu-item-name">Product '+i+'</span><span class="menu-item-foot"><span class="menu-item-price">45 MAD</span></span></div>').join('') + '</div><aside class="rightpanel"><button class="rp-peek"><span>1 article</span><span>45 MAD</span></button><div class="rp-below-peek" style="height:320px">Takeaway · 1 item</div></aside>';
     document.documentElement.style.setProperty('--kiwi-host-tab-height', '100px');
   });
   const layout = await page.evaluate(() => {
     const cards = [...document.querySelectorAll('.menu-item')].map(node => node.getBoundingClientRect());
     const pills = document.querySelector('.cat-pills'), peek = document.querySelector('.rp-peek').getBoundingClientRect();
-    return { cards:cards.map(({top,bottom,height,width}) => ({top,bottom,height,width})), chipHeight:pills.getBoundingClientRect().height, chipScroll:pills.scrollWidth > pills.clientWidth, peekBottom:peek.bottom };
+    const under = document.elementFromPoint(195, 844 - 50);
+    return { cards:cards.map(({top,bottom,height,width}) => ({top,bottom,height,width})), chipHeight:pills.getBoundingClientRect().height, chipScroll:pills.scrollWidth > pills.clientWidth, peekBottom:peek.bottom, sheetUnderCapsule: !!(under && under.closest('.rightpanel')) };
   });
   assert.ok(layout.cards.length === 8 && layout.cards.every(card => card.height >= 44 && card.width >= 44 && card.bottom <= layout.cards[0].top + 490), 'eight entire product cards remain tappable in the phone viewport'); checks++;
   assert.ok(layout.chipScroll && layout.chipHeight <= 48, 'category chips remain in one horizontally scrolling row'); checks++;
   assert.ok(layout.peekBottom <= 844 - 100, 'collapsed bill stays above the published native capsule inset'); checks++;
+  assert.ok(!layout.sheetUnderCapsule, 'nothing of the collapsed bill paints or catches taps under the native capsule'); checks++;
   await page.keyboard.press('Tab');
   assert.ok(await page.evaluate(() => parseFloat(getComputedStyle(document.activeElement).outlineWidth) >= 3), 'keyboard navigation must have a visible focus indicator'); checks++;
   await page.setViewport({ width: 1032, height: 1376, isMobile: false, hasTouch: true });

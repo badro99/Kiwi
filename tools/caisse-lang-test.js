@@ -172,5 +172,11 @@ const lazyAr = arKeys.filter((k) => AR[k] === k);
 check(!lazyAr.length, `aucune traduction arabe oubliée${lazyAr.length ? ' — ' + lazyAr.slice(0, 5).join(', ') : ''}`);
 check(enKeys.length >= 100, `le dictionnaire couvre le comptoir (${enKeys.length} phrases)`);
 
+/* La caisse restaurant du téléphone (app native) : ce qu'un serveur touche en
+   premier ne doit plus rester en français sur un appareil réglé en anglais. */
+for (const fr of ['À emporter', 'Tout', 'Plan de salle', 'Libre', 'Envoyer en cuisine', 'Payer en espèces', 'Pourboire', 'Confirmer', 'Nouvelle table', 'Ouvrir la table', 'Combien de couverts?', "Liste d'attente", 'Vider la commande']) {
+  check(EN[fr] && EN[fr] !== fr && AR[fr], `caisse restaurant traduite : « ${fr} »`);
+}
+check(EN['En cours'] === 'In progress', '« En cours » se lit « In progress » (une table n\'est pas « Running »)');
 if (failed) { console.error(`\n✗ ${failed} vérification(s) de langue en échec.`); process.exit(1); }
 console.log(`\n✓ ${ran} règles de langue vérifiées (${enKeys.length} phrases × 2 langues).`);

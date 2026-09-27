@@ -220,7 +220,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=5',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=5',
+  '/assets/caisse-lang.js?v=6',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/retail-balances.js?v=4',

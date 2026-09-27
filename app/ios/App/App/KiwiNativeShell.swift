@@ -496,10 +496,30 @@ private struct KiwiNativeTabRoot: View {
             .sheet(isPresented: $showingMore) {
                 NavigationView {
                     List {
-                        Button(copy("Changer de rôle", "Change role", "تغيير الدور")) { showingMore = false; model.send("change-role") }
-                        Button(copy("Supprimer mon compte", "Delete my account", "حذف حسابي"), role: .destructive) { showingMore = false; model.send("delete-account") }
-                        Button(copy("Se déconnecter", "Sign out", "تسجيل الخروج")) { showingMore = false; model.send("sign-out") }
+                        if model.context.role == "caisse" {
+                            Section {
+                                Button { showingMore = false; model.send("open-tools") } label: {
+                                    Label(copy("Outils de la caisse", "Till tools", "أدوات الصندوق"), systemImage: "wrench.and.screwdriver")
+                                }
+                            } footer: {
+                                Text(copy("Remboursement, tiroir, équipe, menu, fin de service.", "Refunds, drawer, team, menu, end of shift.", "الاسترداد، الدرج، الفريق، القائمة، نهاية الخدمة."))
+                            }
+                        }
+                        Section {
+                            Button { showingMore = false; model.send("change-role") } label: {
+                                Label(copy("Changer de rôle", "Change role", "تغيير الدور"), systemImage: "arrow.left.arrow.right")
+                            }
+                            Button { showingMore = false; model.send("sign-out") } label: {
+                                Label(copy("Se déconnecter", "Sign out", "تسجيل الخروج"), systemImage: "rectangle.portrait.and.arrow.right")
+                            }
+                        }
+                        Section {
+                            Button(role: .destructive) { showingMore = false; model.send("delete-account") } label: {
+                                Label(copy("Supprimer mon compte", "Delete my account", "حذف حسابي"), systemImage: "trash")
+                            }
+                        }
                     }
+                    .tint(kiwiAtlas)
                     .navigationTitle(copy("Plus", "More", "المزيد"))
                     .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button(copy("Fermer", "Close", "إغلاق")) { showingMore = false } } }
                 }
@@ -545,7 +565,8 @@ private struct KiwiNativeTabRoot: View {
     @ViewBuilder private var capsule: some View {
         if #available(iOS 26.0, *) {
             tabs
-                .glassEffect(.regular.tint(kiwiInk.opacity(0.42)).interactive(), in: Capsule())
+                // A light till sits behind the capsule: 0.42 read as grey and washed out the labels.
+                .glassEffect(.regular.tint(kiwiInk.opacity(0.78)).interactive(), in: Capsule())
                 .shadow(color: kiwiInk.opacity(0.24), radius: 18, x: 0, y: 8)
         } else {
             tabs

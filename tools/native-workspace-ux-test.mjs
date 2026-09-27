@@ -184,4 +184,13 @@ const mint = tokens.match(/--mint:\s*#([0-9a-f]{6})/i)?.[1].toUpperCase();
 const nativeMint = swift.match(/private let kiwiMint = Color\(red: (\d+) \/ 255, green: (\d+) \/ 255, blue: (\d+) \/ 255\)/);
 ok(!!mint && !!nativeMint && nativeMint.slice(1).map(part => Number(part).toString(16).padStart(2, '0').toUpperCase()).join('') === mint, 'Swift mint stays equal to the locked brand token');
 
+const caisseHtml = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+const buildScript = fs.readFileSync(new URL('./build-app-www.mjs', import.meta.url), 'utf8');
+ok(!/(?:>|['"`])\s*(?:Nouvelle mesa|Ouvrir la mesa|Annuler mesa|Encaisser la mesa)/.test(caisseHtml.replace(/<!--[\s\S]*?-->/g, '')), 'the till says "table", never the Spanish "mesa", on screen');
+ok(/function enterShellDirectly\(\)[\s\S]{0,900}renderMenu\(\); renderCart\(\);/.test(caisseHtml), 'a restored draft repaints its tile badges, not only the bill');
+ok(/function carteLang\(\)[\s\S]{0,400}localStorage\.getItem\('kiwiCaisseLang'\)/.test(caisseHtml), 'category pills start in the saved language before caisse-lang.js loads');
+ok(buildScript.includes("localStorage.setItem('kiwiCuisineLang',lang)"), 'the kitchen screen follows the app language');
+ok(source.includes("payload.action === 'open-tools'") && swift.includes('model.send("open-tools")'), 'the native More sheet reaches the till tools (refund, drawer, end of shift)');
+ok(source.includes('function initNativeFloorList()'), 'phones get the floor as a list with the map one tap away');
+
 console.log(`native-workspace-ux-test: ${controls} controls passed`);

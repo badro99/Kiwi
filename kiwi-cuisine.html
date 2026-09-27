@@ -829,7 +829,9 @@
     en: {
       'app.name': 'Kitchen',
       'pair.aria': 'Pair the kitchen screen',
-      'pair.sub': 'Enter the six-digit pairing code generated from the dashboard to link this tablet to your kitchen.',
+      'pair.sub': document.documentElement.classList.contains('kiwi-native')
+        ? 'Enter the six-digit pairing code from the dashboard to link this device to your kitchen.'
+        : 'Enter the six-digit pairing code generated from the dashboard to link this tablet to your kitchen.',
       'pair.clear': 'Clear',
       'pair.ok': 'Confirm',
       'pair.err.attempts': 'Too many tries. Come back in fifteen minutes.',
@@ -1497,6 +1499,7 @@
     $('lang').addEventListener('click', function () {
       var next = LANGS[(LANGS.indexOf(lang()) + 1) % LANGS.length];
       put(LANG_KEY, next);
+      if (document.documentElement.classList.contains('kiwi-native')) put('kiwiNativeLocale', next);
       applyLang();
     });
     $('full').addEventListener('click', function () {

@@ -50,7 +50,7 @@ const NATIVE_LOCALE_TAG = `<script>(function(){
   var lang=/^(fr|en|ar)$/.test(saved)?saved:(/^(fr|en|ar)$/.test(device)?device:'fr');
   document.documentElement.classList.add('kiwi-native');
   document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';
-  try{localStorage.setItem('kiwiLang',lang);localStorage.setItem('kiwiCaisseLang',lang)}catch(_e){}
+  try{localStorage.setItem('kiwiLang',lang);localStorage.setItem('kiwiCaisseLang',lang);localStorage.setItem('kiwiCuisineLang',lang)}catch(_e){}
 })()</script>`;
 const NATIVE_RUNTIME = ['native-runtime.js', 'native-runtime.css'];
 const NATIVE_FONTS = {

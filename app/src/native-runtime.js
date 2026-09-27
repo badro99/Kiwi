@@ -291,9 +291,9 @@
 
   function nativeTillCopy() {
     var lang = String(root.lang || 'fr').toLowerCase();
-    if (lang.indexOf('ar') === 0) return { label: 'التنقل الرئيسي', salle: 'الصالة', vrap: 'طلبات خارجية', waitlist: 'الانتظار', more: 'المزيد', actions: 'إجراءات أخرى', less: 'إخفاء الإجراءات', close: 'طي الفاتورة' };
-    if (lang.indexOf('en') === 0) return { label: 'Primary navigation', salle: 'Floor', vrap: 'Takeaway', waitlist: 'Waiting', more: 'More', actions: 'More actions', less: 'Hide actions', close: 'Collapse bill' };
-    return { label: 'Navigation principale', salle: 'Salle', vrap: 'À emporter', waitlist: 'Attente', more: 'Plus', actions: 'Autres actions', less: 'Masquer les actions', close: 'Replier l’addition' };
+    if (lang.indexOf('ar') === 0) return { label: 'التنقل الرئيسي', salle: 'الصالة', vrap: 'طلبات خارجية', waitlist: 'الانتظار', more: 'المزيد', card: 'بطاقة', actions: 'إجراءات أخرى', less: 'إخفاء الإجراءات', close: 'طي الفاتورة' };
+    if (lang.indexOf('en') === 0) return { label: 'Primary navigation', salle: 'Floor', vrap: 'Takeaway', waitlist: 'Waiting', more: 'More', card: 'Card', actions: 'More actions', less: 'Hide actions', close: 'Collapse bill' };
+    return { label: 'Navigation principale', salle: 'Salle', vrap: 'À emporter', waitlist: 'Attente', more: 'Plus', card: 'Carte', actions: 'Autres actions', less: 'Masquer les actions', close: 'Replier l’addition' };
   }
 
   function nativeAccountDeletion() {
@@ -343,6 +343,7 @@
     if (!payload) return false;
     if (payload.action === 'change-role') { location.href = 'index.html?choose=1'; return true; }
     if (payload.action === 'delete-account') { nativeAccountDeletion(); return true; }
+    if (payload.action === 'open-tools') { if (document.body) document.body.classList.add('nav-open'); hapticLight(); if (window.KiwiNativeHostRequestState) window.KiwiNativeHostRequestState(); return true; }
     if (payload.action === 'sign-out') {
       fetch('/auth/logout', { credentials:'include', redirect:'manual' }).then(function () {
         localStorage.removeItem('kiwiAppRole');
@@ -353,10 +354,107 @@
     return false;
   }
 
+
+  /* Phones get the floor as a list first. The plan is held at 640px on purpose
+     (caisse-skin.css: squeezing it puts the server chip on the table number), so
+     on a 390px screen a third of the room sat off-screen with nothing saying it
+     pans. Each row taps the real table node, so the till's own flow runs. */
+  function initNativeFloorList() {
+    var view = document.querySelector('.view-salle');
+    if (!view || view.querySelector('.kiwi-native-floor')) return;
+    var lang = String(root.lang || 'fr').slice(0, 2);
+    var words = lang === 'en' ? { list: 'List', map: 'Map', view: 'Floor view', empty: 'No tables on this floor.' }
+      : lang === 'ar' ? { list: 'قائمة', map: 'المخطط', view: 'عرض القاعة', empty: 'لا توجد طاولات في هذا الطابق.' }
+      : { list: 'Liste', map: 'Plan', view: 'Affichage de la salle', empty: 'Aucune table à cet étage.' };
+    var STATUS = { 'khawya': ['Libre', 'st-khawya'], 'a-commander': ['À commander', 'st-acmd'], 'ka-yaklo': ['En cours', 'st-yaklo'], 'bgha-ykhlass': ['Addition', 'st-bill'], 'khlass': ['Réglée', 'st-khlass'] };
+    var tr = function (fr) { try { return window.KiwiCaisseLang ? window.KiwiCaisseLang.tr(fr) : fr; } catch (_) { return fr; } };
+    var box = document.createElement('div');
+    box.className = 'kiwi-native-floor';
+    box.innerHTML = '<div class="kiwi-native-floor-switch" role="tablist"><button type="button" role="tab" data-floor-view="list"></button><button type="button" role="tab" data-floor-view="map"></button></div><div class="kiwi-native-table-list" role="list"></div>';
+    box.setAttribute('data-nolang', '');
+    box.firstChild.setAttribute('aria-label', words.view);
+    box.querySelector('[data-floor-view="list"]').textContent = words.list;
+    box.querySelector('[data-floor-view="map"]').textContent = words.map;
+    var anchor = view.querySelector('.legend');
+    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(box, anchor); else view.insertBefore(box, view.firstChild);
+    var list = box.querySelector('.kiwi-native-table-list');
+    var mode = 'list';
+    try { mode = localStorage.getItem('kiwiNativeFloorView') === 'map' ? 'map' : 'list'; } catch (_) {}
+    function tablesOnFloor() {
+      return Array.prototype.filter.call(view.querySelectorAll('.cplan-tbl[data-table]'), function (node) {
+        var canvas = node.closest('.plan-canvas');
+        if (canvas && !canvas.classList.contains('is-active')) return false;
+        var real = node.closest('.plan-real');
+        return !(real && real.hidden);
+      });
+    }
+    function paint() {
+      var rows = tablesOnFloor().map(function (node) {
+        var status = STATUS[node.getAttribute('data-status')] || STATUS.khawya;
+        var parts = String(node.getAttribute('aria-label') || '').split(', ');
+        var server = node.querySelector('.tbl-server, .cplan-server');
+        return '<button type="button" role="listitem" class="kiwi-native-table-row" data-row-table="' + String(node.getAttribute('data-table')).replace(/"/g, '') + '">' +
+          '<span class="kiwi-native-table-id"></span><span class="legend-swatch ' + status[1] + '" aria-hidden="true"></span>' +
+          '<span class="kiwi-native-table-status"></span><span class="kiwi-native-table-covers"></span>' +
+          (server && server.textContent.trim() ? '<span class="kiwi-native-table-server"></span>' : '') + '</button>';
+      });
+      list.innerHTML = rows.length ? rows.join('') : '<p class="kiwi-native-table-empty"></p>';
+      var empty = list.querySelector('.kiwi-native-table-empty'); if (empty) empty.textContent = words.empty;
+      tablesOnFloor().forEach(function (node, index) {
+        var row = list.children[index]; if (!row) return;
+        var status = STATUS[node.getAttribute('data-status')] || STATUS.khawya;
+        var parts = String(node.getAttribute('aria-label') || '').split(', ');
+        row.querySelector('.kiwi-native-table-id').textContent = node.getAttribute('data-table');
+        row.querySelector('.kiwi-native-table-status').textContent = tr(status[0]);
+        row.querySelector('.kiwi-native-table-covers').textContent = parts[2] ? tr(parts[2]) : '';
+        var server = node.querySelector('.tbl-server, .cplan-server'), chip = row.querySelector('.kiwi-native-table-server');
+        if (chip && server) chip.textContent = server.textContent.trim();
+        row.setAttribute('aria-label', (node.getAttribute('data-table') || '') + ', ' + tr(status[0]) + (parts[2] ? ', ' + tr(parts[2]) : ''));
+      });
+    }
+    function setMode(next) {
+      mode = next;
+      try { localStorage.setItem('kiwiNativeFloorView', next); } catch (_) {}
+      document.body.classList.toggle('kiwi-native-floor-list', next === 'list');
+      box.querySelectorAll('[data-floor-view]').forEach(function (button) {
+        var on = button.getAttribute('data-floor-view') === next;
+        button.classList.toggle('is-active', on); button.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      if (next === 'list') paint();
+    }
+    box.addEventListener('click', function (event) {
+      var toggle = event.target.closest('[data-floor-view]');
+      if (toggle) { setMode(toggle.getAttribute('data-floor-view')); hapticLight(); return; }
+      var row = event.target.closest('[data-row-table]');
+      if (!row) return;
+      var node = Array.prototype.filter.call(view.querySelectorAll('.cplan-tbl[data-table]'), function (n) { return n.getAttribute('data-table') === row.getAttribute('data-row-table'); })[0];
+      if (node) { hapticLight(); node.click(); }
+    });
+    var pending = false;
+    new MutationObserver(function (records) {
+      if (mode !== 'list' || pending) return;
+      if (records.every(function (r) { return box.contains(r.target); })) return;
+      pending = true;
+      setTimeout(function () { pending = false; paint(); }, 60);
+    }).observe(view, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-status', 'class', 'aria-label', 'hidden'] });
+    setMode(mode);
+  }
+
   function initNativeTillUx() {
     if (!/kiwi-caisse\.html$/i.test(location.pathname) || !document.body) return;
     document.body.classList.add('kiwi-native-till');
+    if (window.innerWidth <= 600) { try { initNativeFloorList(); } catch (_) {} }
     var copy = nativeTillCopy();
+    /* The card button is icon-only on the web till. On a phone it sits beside the
+       labelled primary and read as an unexplained black block. */
+    var cardButton = document.getElementById('pay-card');
+    if (cardButton && !cardButton.querySelector('.kiwi-native-pay-label')) {
+      var cardLabel = document.createElement('span');
+      cardLabel.className = 'kiwi-native-pay-label';
+      cardLabel.setAttribute('data-nolang', '');
+      cardLabel.textContent = copy.card;
+      cardButton.appendChild(cardLabel);
+    }
     var nav = document.createElement('nav');
     nav.className = 'kiwi-native-tabbar';
     nav.setAttribute('aria-label', copy.label);
@@ -466,6 +564,9 @@
          duplicated here. */
       function syncCartSheet() {
         var empty = !activeCart || activeCart.hidden || activeCart.style.display === 'none';
+        /* An empty takeaway has nothing to show: a "0 items · 0 MAD" shelf only hid products.
+           A table with no lines keeps its sheet, which carries the table and its cancel action. */
+        if (!empty && document.body.getAttribute('data-mode') === 'vrap' && !activeCart.querySelector('#rp-items .rp-item')) empty = true;
         var expanded = !empty && document.body.classList.contains('ticket-open');
         if (document.body.classList.contains('kiwi-native-cart-empty') !== empty) {
           document.body.classList.toggle('kiwi-native-cart-empty', empty);
@@ -496,7 +597,7 @@
         grabber.setAttribute('aria-expanded', expanded ? 'true' : 'false');
       }
       if (activeCart) new MutationObserver(syncCartSheet).observe(activeCart, { attributes: true, childList: true, characterData: true, subtree: true, attributeFilter: ['hidden', 'style'] });
-      new MutationObserver(syncCartSheet).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      new MutationObserver(syncCartSheet).observe(document.body, { attributes: true, attributeFilter: ['class', 'data-mode'] });
       syncCartSheet();
     }
 

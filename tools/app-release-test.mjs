@@ -176,7 +176,7 @@ check('iOS publishes real safe-area insets and sizes its tab host to content plu
 check('iOS till navigation uses an icon-first floating glass capsule instead of a full-width opaque shelf',
   swiftNativeShell.includes('@Namespace private var selectionLens') &&
   swiftNativeShell.includes('.matchedGeometryEffect(id: "kiwi-tab-selection"') &&
-  swiftNativeShell.includes('.glassEffect(.regular.tint(kiwiInk.opacity(0.42)).interactive(), in: Capsule())') &&
+  swiftNativeShell.includes('.glassEffect(.regular.tint(kiwiInk.opacity(0.78)).interactive(), in: Capsule())') &&
   swiftNativeShell.includes('.accessibilityLabel(Text(tab.label))') &&
   swiftNativeShell.includes('tabs.view.widthAnchor.constraint(equalToConstant: 350)') &&
   swiftNativeShell.includes('Text(tab.label)') &&

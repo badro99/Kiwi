@@ -127,7 +127,7 @@
   <script src="assets/retail-scan.js?v=7" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
-  <script src="assets/caisse-lang.js?v=5" defer></script>
+  <script src="assets/caisse-lang.js?v=6" defer></script>
   <script src="assets/menu-i18n.js?v=5" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
@@ -6328,7 +6328,7 @@
                disponible pendant la prise de commande : il envoie d'abord les
                lignes non parties en cuisine, puis ouvre l'encaissement. -->
           <div id="rp-pay-order" hidden>
-            <button class="pay-btn pay-charge" id="pay-charge-order" title="Encaisser la mesa">
+            <button class="pay-btn pay-charge" id="pay-charge-order" title="Encaisser la table">
               <span class="pay-charge-lbl"><i data-lucide="banknote"></i>Encaisser</span>
               <span class="pay-charge-total mono" id="pay-charge-order-total">0,00 MAD</span>
             </button>
@@ -6351,7 +6351,7 @@
             <i data-lucide="rotate-ccw"></i><span>Réimprimer</span>
           </button>
           <button class="meta-btn danger" data-action="cancel-table">
-            <i data-lucide="x"></i><span data-cancel-label>Annuler mesa</span>
+            <i data-lucide="x"></i><span data-cancel-label>Annuler la table</span>
           </button>
         </div>
       </div>
@@ -6437,14 +6437,14 @@
   <!-- ============ NEW TABLE MODAL ============ -->
   <div class="modal-veil" id="new-table-modal" role="dialog" aria-modal="true" aria-labelledby="nt-title">
     <div class="modal modal-new-table">
-      <div class="split-badge">Nouvelle mesa</div>
+      <div class="split-badge">Nouvelle table</div>
       <h3 class="modal-title" id="nt-title" style="margin-bottom:4px;">Ouvrir <span id="nt-table-id">T3</span></h3>
       <p class="modal-subtle" style="margin-bottom:0;">Combien de couverts?</p>
       <div class="nt-chips" id="nt-covers-chips"></div>
       <div class="nt-actions">
         <button class="ma-btn secondary" id="nt-cancel" style="flex:1;">Annuler</button>
         <button class="ma-btn primary" id="nt-confirm" style="flex:2;">
-          <i data-lucide="door-open"></i> Ouvrir la mesa
+          <i data-lucide="door-open"></i> Ouvrir la table
         </button>
       </div>
     </div>
@@ -8599,7 +8599,7 @@
       const cancelLabel = $('[data-cancel-label]');
       if (cancelLabel) {
         cancelLabel.textContent = newMode === 'vrap' ? "Vider la commande"
-          : newMode === 'order' ? 'Annuler commande' : 'Annuler mesa';
+          : newMode === 'order' ? 'Annuler commande' : 'Annuler la table';
       }
 
       // Reset right panel · persist any À emporter edit, drop the edit state
@@ -9615,7 +9615,15 @@
        Le libellé du patron reste `name` ; on ne localise qu'à l'affichage :
        tuiles, pastilles de catégorie, lignes de la note. Les tickets et le
        bon de cuisine continuent d'écrire le libellé canonique. */
-    function carteLang() { try { return window.KiwiCaisseLang ? window.KiwiCaisseLang.get() : 'fr'; } catch (_) { return 'fr'; } }
+    /* caisse-lang.js is deferred: the first renders run before it exists. Read the
+       saved choice so the pills and the tiles start in the same language. */
+    function carteLang() {
+      try {
+        if (window.KiwiCaisseLang) return window.KiwiCaisseLang.get();
+        const saved = localStorage.getItem('kiwiCaisseLang');
+        return saved === 'en' || saved === 'ar' ? saved : 'fr';
+      } catch (_) { return 'fr'; }
+    }
     function menuName(m) { const M = window.KiwiMenuI18n; return (M && m) ? M.name(m, carteLang()) : ((m && m.name) || ''); }
     function catLabelL(id) {
       const raw = catLabels[id] || id, M = window.KiwiMenuI18n;
@@ -9625,7 +9633,20 @@
     }
     function subLabelL(m) { const M = window.KiwiMenuI18n; if (!m || !m.subLabel) return ''; return M ? M.name({ name: m.subLabel, i18n: m.subI18n || null }, carteLang()) : m.subLabel; }
     function lineName(l) { const M = window.KiwiMenuI18n; return (M && l) ? M.t(String(l.name || ''), carteLang()) : ((l && l.name) || ''); }
-    try { if (window.KiwiCaisseLang && window.KiwiCaisseLang.subscribe) window.KiwiCaisseLang.subscribe(function () { try { renderCatPills(); renderMenu(); renderCart(); } catch (_) {} }); } catch (_) {}
+    /* The language module loads deferred, after this script: subscribe once it exists. */
+    (function subscribeCarteLang() {
+      const hook = () => {
+        try {
+          if (!window.KiwiCaisseLang || !window.KiwiCaisseLang.subscribe) return false;
+          window.KiwiCaisseLang.subscribe(function () { try { renderCatPills(); renderMenu(); renderCart(); } catch (_) {} });
+          /* The menu translations (menu-i18n.js) are deferred as well: the first
+             paint named the categories in French. Repaint once both are here. */
+          if (carteLang() !== 'fr') { try { renderCatPills(); renderMenu(); } catch (_) {} }
+          return true;
+        } catch (_) { return false; }
+      };
+      if (!hook()) document.addEventListener('DOMContentLoaded', hook, { once: true });
+    })();
 
     function renderMenu() {
       if (!menuItems.length) {
@@ -12242,7 +12263,7 @@
       const sub = $('#rp-substatus');
       sub.dataset.flag = 'ka-yaklo';
       sub.textContent = order.length === 0
-        ? 'Nouvelle mesa, en attente de commande'
+        ? 'Nouvelle table, en attente de commande'
         : orderProPendingQty > 0
           ? `${orderProPendingQty} OrderPro à accepter · ${fmtMAD(total)}`
         : sentQty > 0
@@ -12568,7 +12589,7 @@
         el.classList.toggle('is-active', m === 'salle');
       });
       const cancelLabel = $('[data-cancel-label]');
-      if (cancelLabel) cancelLabel.textContent = 'Annuler mesa';
+      if (cancelLabel) cancelLabel.textContent = 'Annuler la table';
       showPayButtons(false);
       if (keepId && tables[keepId]) {
         selectedId = keepId;
@@ -22355,6 +22376,8 @@
       /* Slice D · même atterrissage qu'après l'animation : le registre. */
       setMode('vrap');
       setVrapView('builder');
+      /* A restored draft must show on the tiles too, not only in the bill. */
+      try { renderMenu(); renderCart(); } catch (_) {}
       renderShiftStats();
       renderCashierCard();
       if (window.lucide) lucide.createIcons();
