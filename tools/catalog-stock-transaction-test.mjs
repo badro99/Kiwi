@@ -79,8 +79,8 @@ ok(pos.includes('state.checkoutBusy = true;\n    beginPay();')
     && !pos.includes('cat.reserveSale(frozen.syncId, reserveLines)'),
   'aucun aller-retour réseau ne peut bloquer l’ouverture du paiement');
 ok(pos.includes('stockCheck: () => ticketStockIssue({ lines: frozen.lines })')
-    && pos.includes("persistStock(ln.pid, ln.size, ln.color, -ln.qty, sale.syncId, 'vente')"),
-  'la variante exacte est revérifiée au paiement puis débitée avec la référence idempotente de la vente');
+    && pos.includes("persistStock(ln.pid, ln.size, ln.color, -ln.qty, sale.id, 'vente')"),
+  'la variante exacte est revérifiée au paiement puis débitée avec la référence du ticket imprimé');
 const client = fs.readFileSync(path.join(ROOT, 'assets/boutique-catalog.js'), 'utf8');
 ok(client.includes("reason === 'catalog-missing'") && client.includes("reason === 'unmigrated'"),
   'les réponses explicites sans écriture serveur ne sont pas confondues avec une réservation ambiguë');

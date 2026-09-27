@@ -444,8 +444,8 @@
     "sha": "c4b051564898f5a5"
   },
   "assets/maison-stock-movements.js": {
-    "v": "3",
-    "sha": "f450178a91f9f078"
+    "v": "4",
+    "sha": "596d047b5cd9f697"
   },
   "assets/marketing-suite-tease.js": {
     "v": "1",
@@ -592,12 +592,12 @@
     "sha": "530ff7c046c57b2c"
   },
   "assets/pos-boutique.css": {
-    "v": "25",
+    "v": "26",
     "sha": "ef50e38d14947b4d"
   },
   "assets/pos-boutique.js": {
-    "v": "25",
-    "sha": "7524b9e2f225144d"
+    "v": "26",
+    "sha": "d45e4dcf9b774019"
   },
   "assets/pos-coiffure.css": {
     "v": "5",
@@ -608,8 +608,8 @@
     "sha": "3673be5ef49cb7de"
   },
   "assets/pos-dispatch.js": {
-    "v": "51",
-    "sha": "448a0f4b96e8e2c3"
+    "v": "52",
+    "sha": "0f3d05abd268a034"
   },
   "assets/pos-epicerie.css": {
     "v": "5",

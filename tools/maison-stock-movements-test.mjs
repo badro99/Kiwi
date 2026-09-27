@@ -231,7 +231,8 @@ ok('la caisse maison passe ses ventes avec la référence du ticket',
 ok('la réception au comptoir demande une autorisation',
   /requestManual\(\{ productId: pid, variantId: v\.id, type: 'reception'/.test(MAISON_SRC));
 const BOUTIQUE_SRC = R('assets/pos-boutique.js');
-ok('la caisse boutique n\'est pas touchée', !/KiwiMaisonStock/.test(BOUTIQUE_SRC));
+ok('la caisse boutique journalise ses mouvements dans son propre métier',
+  /KiwiMaisonStock\?\.enable\('boutique'\)/.test(BOUTIQUE_SRC));
 
 /* ── XII · la page ouvre sur tout l'historique, sans filtres redondants ───── */
 const PAGES_SRC = R('assets/pages-pro.js');

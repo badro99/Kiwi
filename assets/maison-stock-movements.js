@@ -31,6 +31,9 @@
 
   var LEDGER = function () { return window.KiwiInventory || null; };
   var CAT = function () { return window.KiwiBoutiqueCatalog || null; };
+  // The same catalog callback also journals Boutique sales and returns. The
+  // module field identifies the vertical; it must never label clothing as Maison.
+  var moduleType = 'maison';
 
   /* ── LE VOCABULAIRE ───────────────────────────────────────────────────────
    * Chaque type dit trois choses : le SENS (entrée/sortie), le motif du registre
@@ -149,7 +152,7 @@
    * supprimé six mois plus tard laisse quand même une ligne lisible. */
   function metaFor(entry) {
     var meta = {
-      module: 'maison', type: entry.type, before: entry.before, after: entry.after,
+      module: moduleType, type: entry.type, before: entry.before, after: entry.after,
       source: entry.source || 'dashboard',
     };
     if (entry.product) meta.product = String(entry.product).slice(0, 80);
@@ -266,7 +269,7 @@
     var L = LEDGER();
     if (!L) return [];
     return L.history().filter(function (r) {
-      return r && r.meta && r.meta.module === 'maison';
+      return r && r.meta && r.meta.module === moduleType;
     }).map(decorate);
   }
 
@@ -364,7 +367,10 @@
     };
     return true;
   }
-  function enable() { return attach(); }
+  function enable(vertical) {
+    moduleType = vertical === 'boutique' ? 'boutique' : 'maison';
+    return attach();
+  }
   function autoAttach() { if (isMaison()) attach(); }
 
   /* ── LE COMPTOIR QUI DÉCLARE UNE CASSE ────────────────────────────────────

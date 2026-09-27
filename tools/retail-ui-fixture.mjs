@@ -42,6 +42,17 @@ function boutiquePage() {
     .replaceAll('Maison caisse', 'Boutique caisse');
 }
 
+function stockProofPage(kind) {
+  // Initialise the normal seeded till first, then make only its stock journal
+  // behave like a paired register. This is loopback-only and creates no sale
+  // on a merchant account, but exercises the production stock/movement path.
+  const page = kind === 'maison' ? maisonPage() : boutiquePage();
+  return page.replace('window.KiwiEnv={isReal:()=>false,demosAllowed:true}',
+    `window.__fixtureLiveStock=false;window.KiwiEnv={isReal:()=>window.__fixtureLiveStock,demosAllowed:true};window.KiwiLive={merchant:()=>"fixture-${kind}-stock",isOn:()=>false}`)
+    .replace(`window.KiwiCaisseDna.enhance(document.getElementById('pos-${kind}'),'${kind}');`,
+      `window.KiwiCaisseDna.enhance(document.getElementById('pos-${kind}'),'${kind}');window.__fixtureLiveStock=true;`);
+}
+
 function clientsPage() {
   return `<!doctype html><html lang="fr"><head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -121,9 +132,9 @@ function navigationPage() {
 
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
-  if (pathname === '/maison.html' || pathname === '/boutique.html' || pathname === '/clients.html' || pathname === '/dashboard.html' || pathname === '/employee-clock.html' || pathname === '/nav-stability.html') {
+  if (pathname === '/maison.html' || pathname === '/boutique.html' || pathname === '/maison-stock.html' || pathname === '/boutique-stock.html' || pathname === '/clients.html' || pathname === '/dashboard.html' || pathname === '/employee-clock.html' || pathname === '/nav-stability.html') {
     res.writeHead(200, { 'Content-Type': TYPES['.html'], 'Cache-Control': 'no-store' });
-    res.end(pathname === '/maison.html' ? maisonPage() : pathname === '/boutique.html' ? boutiquePage() : pathname === '/clients.html' ? clientsPage()
+    res.end(pathname === '/maison.html' ? maisonPage() : pathname === '/boutique.html' ? boutiquePage() : pathname === '/maison-stock.html' ? stockProofPage('maison') : pathname === '/boutique-stock.html' ? stockProofPage('boutique') : pathname === '/clients.html' ? clientsPage()
       : pathname === '/dashboard.html' ? (new URL(req.url, 'http://localhost').searchParams.get('fixture') === 'nav-stability' ? navigationPage() : restaurantPage())
         : pathname === '/employee-clock.html' ? employeeClockPage() : navigationPage()); return;
   }

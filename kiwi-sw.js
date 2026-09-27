@@ -224,7 +224,7 @@ var SHELL = [
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
   '/assets/inventory-ledger.js?v=12',
-  '/assets/maison-stock-movements.js?v=3',
+  '/assets/maison-stock-movements.js?v=4',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=8',
   '/assets/stock.js?v=52',
@@ -269,7 +269,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=14',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=9',
-  '/assets/pos-dispatch.js?v=51',
+  '/assets/pos-dispatch.js?v=52',
   '/assets/retail-scan.css?v=8',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=7',
@@ -281,8 +281,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=25',
-  '/assets/pos-boutique.js?v=25',
+  '/assets/pos-boutique.css?v=26',
+  '/assets/pos-boutique.js?v=26',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */

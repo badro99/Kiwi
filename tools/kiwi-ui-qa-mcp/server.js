@@ -20,7 +20,7 @@ let stdinEnded = false;
 const TOOLS = [
   { name: 'start_hotel_fixture', description: 'Start a fresh real dashboard + real hotel API/SQLite on a synthetic merchant. Opens Chromium, enters only the fixture PIN, and returns visible UI. Never touches production.', inputSchema: { type: 'object', properties: {} } },
   { name: 'start_tickets_fixture', description: 'Start the real Kiwi Tickets page against an isolated in-memory ticket API. Opens Chromium and never touches production.', inputSchema: { type: 'object', properties: {} } },
-  { name: 'start_retail_fixture', description: 'Start a real Maison or Boutique caisse, client-directory, restaurant dashboard, employee clock, or navigation module with synthetic data. Opens Chromium on loopback only and never touches production.', inputSchema: { type: 'object', properties: { scenario: { type: 'string', enum: ['maison', 'boutique', 'clients', 'restaurant', 'employee-clock', 'nav-stability'] } }, required: ['scenario'] } },
+  { name: 'start_retail_fixture', description: 'Start a real Maison or Boutique caisse, client-directory, restaurant dashboard, employee clock, or navigation module with synthetic data. Opens Chromium on loopback only and never touches production.', inputSchema: { type: 'object', properties: { scenario: { type: 'string', enum: ['maison', 'boutique', 'maison-stock', 'boutique-stock', 'clients', 'restaurant', 'employee-clock', 'nav-stability'] } }, required: ['scenario'] } },
   { name: 'ui_snapshot', description: 'Compact visible text and interactive controls with temporary q-refs; no screenshot tokens. Call again after navigation.', inputSchema: { type: 'object', properties: {} } },
   { name: 'ui_click', description: 'Click a visible control through Chromium, not a JS handler or API. Use a q-ref from ui_snapshot.', inputSchema: { type: 'object', properties: { ref: { type: 'string' } }, required: ['ref'] } },
   { name: 'ui_fill', description: 'Fill a visible input through the rendered control. Use a q-ref from ui_snapshot.', inputSchema: { type: 'object', properties: { ref: { type: 'string' }, value: { type: 'string' } }, required: ['ref', 'value'] } },
@@ -201,7 +201,7 @@ function retailFixtureProcess() {
 async function startRetailFixture(args) {
   await closeSession();
   const scenario = String(args.scenario || '');
-  if (!['maison', 'boutique', 'clients', 'restaurant', 'employee-clock', 'nav-stability'].includes(scenario)) throw new Error('scenario must be maison, boutique, clients, restaurant, employee-clock or nav-stability.');
+  if (!['maison', 'boutique', 'maison-stock', 'boutique-stock', 'clients', 'restaurant', 'employee-clock', 'nav-stability'].includes(scenario)) throw new Error('Unknown retail fixture scenario.');
   const bin = chromiumBinary();
   if (!bin) throw new Error('Chromium not found; set KIWI_CHROMIUM_BIN. UI proof cannot be skipped.');
   const puppeteer = createRequire(path.join(ROOT, 'app/package.json'))('puppeteer-core');
@@ -225,7 +225,7 @@ async function startRetailFixture(args) {
       if (u.startsWith(fixture.base + '/') || u.startsWith('data:') || u.startsWith('blob:')) req.continue().catch(() => {});
       else req.abort().catch(() => {});
     });
-    await page.goto(fixture.base + (scenario === 'maison' ? '/maison.html' : scenario === 'boutique' ? '/boutique.html' : scenario === 'clients' ? '/clients.html'
+    await page.goto(fixture.base + (scenario === 'maison' ? '/maison.html' : scenario === 'boutique' ? '/boutique.html' : scenario === 'maison-stock' ? '/maison-stock.html' : scenario === 'boutique-stock' ? '/boutique-stock.html' : scenario === 'clients' ? '/clients.html'
       : scenario === 'restaurant' ? '/dashboard.html' : scenario === 'employee-clock' ? '/employee-clock.html' : '/dashboard.html?fixture=nav-stability'), { waitUntil: 'load', timeout: 60000 });
     if (scenario === 'nav-stability') {
       await page.evaluate(async () => {
@@ -235,13 +235,13 @@ async function startRetailFixture(args) {
       await page.reload({ waitUntil: 'load', timeout: 60000 });
       await page.waitForFunction(() => window.KiwiVenue?.getCurrentVenueData?.()?.id === 'v-nav-stability', { timeout: 15000 });
     }
-    await page.waitForSelector(scenario === 'maison' ? '#pos-maison.is-on .mz-view.is-on' : scenario === 'boutique' ? '#pos-boutique.is-on .bq-view.is-on' : scenario === 'clients' ? '[data-open-clients]'
+    await page.waitForSelector(scenario.startsWith('maison') ? '#pos-maison.is-on .mz-view.is-on' : scenario.startsWith('boutique') ? '#pos-boutique.is-on .bq-view.is-on' : scenario === 'clients' ? '[data-open-clients]'
       : scenario === 'restaurant' ? '#kw-main [data-hero-amount]' : scenario === 'employee-clock' ? '#kep-card .kep-metric' : '.kiwi-lock-skip', { visible: true, timeout: 15000 });
     session = { ...fixture, merchant: scenario === 'restaurant' ? 'restaurant-fixture' : scenario === 'employee-clock' ? 'employee-clock-fixture' : scenario === 'nav-stability' ? 'nav-stability' : fixture.merchant,
-      kind: scenario === 'maison' ? 'retail-maison' : scenario === 'boutique' ? 'retail-boutique' : scenario === 'clients' ? 'retail-clients'
+      kind: scenario.startsWith('maison') ? 'retail-maison' : scenario.startsWith('boutique') ? 'retail-boutique' : scenario === 'clients' ? 'retail-clients'
         : scenario === 'restaurant' ? 'retail-restaurant' : scenario === 'employee-clock' ? 'retail-employee-clock' : 'retail-nav-stability',
       browser, context, page, actions: [], assertions: [], refs: new Set(), startedAt: Date.now() };
-    return `Synthetic ${scenario === 'maison' ? 'Maison caisse' : scenario === 'boutique' ? 'Boutique caisse' : scenario === 'clients' ? 'Amira client directory'
+    return `Synthetic ${scenario.startsWith('maison') ? 'Maison caisse' : scenario.startsWith('boutique') ? 'Boutique caisse' : scenario === 'clients' ? 'Amira client directory'
       : scenario === 'restaurant' ? 'restaurant dashboard' : scenario === 'employee-clock' ? 'employee store clock' : 'dashboard navigation'} ready at ${origin.origin}; no live merchant access.\n${await snapshot()}`;
   } catch (e) {
     if (browser) await browser.close().catch(() => {});

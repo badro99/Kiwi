@@ -1163,6 +1163,7 @@ section('Whole-project regressions');
     'maison-caisse-browser-test.mjs',
     'maison-dashboard-browser-test.mjs',
     'maison-movement-kpis-browser-test.mjs',
+    'retail-return-stock-browser-test.mjs',
     'avoir-customer-scope-browser-test.mjs',
     'transactions-nav-stability-browser-test.mjs',
     'boutique-printer-settings-test.mjs',

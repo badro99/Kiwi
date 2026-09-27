@@ -344,6 +344,10 @@
   function persistStock(pid, size, color, delta, ref, why) {
     if (!delta || !pvReal()) return true;
     try {
+      // Retail stock and its durable movement line are one operation. Without
+      // this bridge the catalogue changed but the owner's movement book stayed
+      // empty, making a returned item impossible to audit by ticket.
+      window.KiwiMaisonStock?.enable('boutique');
       const cat = window.KiwiBoutiqueCatalog;
       if (!cat || !cat.adjustVariantStock) return false;
       const id = canonicalPid(pid);
@@ -3001,7 +3005,7 @@
       if (!qty) return;
       // Returned pieces go back into the real inventory too, not just the display.
       const restored = persistStock(ln.pid, ln.size, ln.color, qty,
-        `ret-${sale.syncId || sale.id}-${i}-${lineReturnedQty(ln) + qty}`, 'retour');
+        sale.id, 'retour');
       stockAdd(ln.pid, ln.size, qty);
       markLineReturned(ln, qty, restored ? note : `${note} · stock à rapprocher`);
       if (!restored) unresolved += qty;
@@ -3507,7 +3511,7 @@
         // Draw the sold pieces down from the SHARED inventory — a real sale must move
         // stock through to the base (the in-memory ticket holds alone evaporate on the
         // next catalogue sync). Real/paired store only; the local demo stays in-memory.
-        sale.lines.forEach((ln) => persistStock(ln.pid, ln.size, ln.color, -ln.qty, sale.syncId, 'vente'));
+        sale.lines.forEach((ln) => persistStock(ln.pid, ln.size, ln.color, -ln.qty, sale.id, 'vente'));
         // Mirror the sale to the owner/operator dashboard (Live Link) so the
         // boutique's real sales show up on the "En direct" feed + running total —
         // the main caisse does the same via recordSale(). No-op unless live is on;
@@ -5287,6 +5291,7 @@
   function openInvProduct(pid) {
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
     const p = d.product;
+    const movements = window.KiwiMaisonStock?.productHistory?.(pid, 8) || [];
     const rows = d.variants.length
       ? d.variants.map((v) => invVarRow(v)).join('')
       : '<tr><td colspan="4" style="text-align:center;padding:18px;color:#99a;">Aucune variante, ajoutez une couleur × taille.</td></tr>';
@@ -5300,6 +5305,12 @@
       <div class="bqi-vtable-wrap"><table class="bqi-vtable">
         <thead><tr><th>Couleur · Taille</th><th>Stock</th><th>Code-barres</th><th></th></tr></thead>
         <tbody>${rows}</tbody></table></div>
+      ${movements.length ? `<div class="bqi-movements" style="padding:12px 20px;">
+        <b>Mouvements de stock</b>
+        ${movements.map(m => `<div class="bqi-movement" style="display:flex;gap:10px;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--n-100);">
+          <span>${esc(m.typeLabel)} · ${esc(m.variant)}</span><span>Ticket ${esc(m.ref || '—')}</span><strong>${m.qty > 0 ? '+' : ''}${m.qty}</strong>
+        </div>`).join('')}
+      </div>` : ''}
       <div class="bqi-modfoot">
         <span class="bqi-dashboard-only">Variantes dans le tableau de bord</span>
         <button class="bq-btn secondary" data-inv-printall><i data-lucide="printer"></i>Imprimer les étiquettes</button>
