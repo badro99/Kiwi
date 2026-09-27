@@ -911,6 +911,11 @@
       body.ticketAmountCents = Math.round(Number(entry.ticketAmountCents));
       body.consignedAmountCents = Math.round(Number(entry.consignedAmountCents || 0));
     }
+    if (Array.isArray(entry.paymentParts) && entry.paymentParts.length) {
+      body.paymentParts = entry.paymentParts.slice(0, 8).map(function (part) {
+        return { method: String(part.method || '').slice(0, 16), amountCents: Math.round(Number(part.amountCents)) };
+      });
+    }
     if (entry.channel) body.channel = String(entry.channel).slice(0, 24);
     if (entry.orderId) body.orderId = String(entry.orderId).slice(0, 64);
     var session = serverSession(entry);
@@ -1337,6 +1342,7 @@
           ref: s.orderRef || s.ref || '', receiptRef: s.receiptRef || s.ref || '',
           origin: s.origin || '', server: s.server || '', channel: s.channel || '',
           saleId: s.id || s.saleId || '',
+          paymentParts: s.paymentParts || null,
         };
         /* annotate() rereads and searches the persisted ledger. Calling it for
            every already-current row turns a full replay into quadratic work. */
@@ -1364,6 +1370,7 @@
         amount: amt, amountCents: amtCents, method: s.method || 'cash', cursor: cur, ts: s.ts,
         label: s.label, ref: s.orderRef || s.ref || '', receiptRef: s.receiptRef || s.ref || '', origin: s.origin || '',
         server: s.server || '', channel: s.channel || '', lines: s.lines,
+        paymentParts: s.paymentParts || null,
         saleId: s.id || s.saleId || '', grossAmountCents: s.grossAmountCents,
         discountAmountCents: s.discountAmountCents, discountReason: s.discountReason || '', actorId: s.actorId || '',
       }); have[cur] = 1; } catch (_) {}

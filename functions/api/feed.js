@@ -285,6 +285,25 @@ export async function onRequestGet({ request, env }) {
     return r;
   });
 
+  // The receipt cursor remains one sale. Tender detail lives on that row and
+  // can be absent on old deployments/receipts without hiding the money feed.
+  if (rows.length) {
+    try {
+      const ids = rows.map(row => String(row.id || '')).filter(Boolean);
+      const marks = ids.map(() => '?').join(',');
+      const details = await env.DB.prepare(
+        `SELECT id, payment_parts FROM sales WHERE merchant IN (?, ?) AND id IN (${marks})`
+      ).bind(merchant, legacy || merchant, ...ids).all();
+      const byId = new Map((details.results || []).map(row => [String(row.id), row.payment_parts]));
+      rows.forEach(row => {
+        try {
+          const parts = JSON.parse(byId.get(String(row.id)) || 'null');
+          if (Array.isArray(parts)) row.paymentParts = parts;
+        } catch (_) { /* Corrupt attribution cannot hide a receipt. */ }
+      });
+    } catch (_) { /* Old schema without payment_parts keeps its legacy feed. */ }
+  }
+
   /* Restaurant sales use the visit id as their durable payment identity. Join
    * that identity back to the canonical order queue so the owner sees the same
    * reference as caisse, plus who took the order and through which surface. No

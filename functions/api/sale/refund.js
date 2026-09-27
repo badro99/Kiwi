@@ -35,6 +35,7 @@ export async function onRequestPost({ request, env }) {
   const refundId = cleanId(body && body.id, 64);
   const originalSaleId = cleanId(body && body.originalSaleId, 64);
   const amountCents = Math.round(Number(body && body.amountCents));
+  const requestedMethod = String((body && body.refundMethod) || '').slice(0, 16);
   const approval = String((body && body.approval) || '').slice(0, 1400);
   const reason = String((body && body.reason) || 'refund').trim().slice(0, 80);
   const refundRef = String((body && body.ref) || '').trim().slice(0, 40);
@@ -53,6 +54,7 @@ export async function onRequestPost({ request, env }) {
   const proof = await readManagerRefundProof(approval, env.AUTH_SECRET);
   if (!proof || proof.merchant !== merchant || proof.refundId !== refundId
       || proof.originalSaleId !== originalSaleId || Number(proof.amountCents) !== amountCents
+      || ((requestedMethod || proof.refundMethod) && proof.refundMethod !== requestedMethod)
       || !proof.staffId || !proof.staffName || !employeeRoleOpensDashboard(proof.staffRole)) {
     return json({ error: 'manager-required' }, 403);
   }
@@ -74,6 +76,20 @@ export async function onRequestPost({ request, env }) {
      make the refund reach this endpoint first; 404 remains retryable in the
      outbox and cannot create an unattributed negative entry. */
   if (!original) return json({ error: 'sale-not-found' }, 404);
+
+  let originalMethods = [String(original.method || 'cash')];
+  try {
+    const detail = await env.DB.prepare('SELECT payment_parts FROM sales WHERE merchant = ? AND id = ?')
+      .bind(merchant, originalSaleId).first();
+    const parts = JSON.parse((detail && detail.payment_parts) || 'null');
+    if (Array.isArray(parts) && parts.length) originalMethods = parts
+      .filter(part => part && part.method !== 'credit' && part.method !== 'delivery')
+      .map(part => String(part.method || ''));
+  } catch (_) { /* Older schema: original single method remains authoritative. */ }
+  const refundMethod = requestedMethod || String(original.method || 'cash');
+  if (requestedMethod && (!originalMethods.includes(requestedMethod) || !/^(cash|card|transfer|cheque)$/.test(requestedMethod))) {
+    return json({ error: 'bad-refund-method' }, 400);
+  }
 
   const originalCents = original.amount_cents != null
     ? Math.round(Number(original.amount_cents)) : Math.round(Number(original.amount || 0) * 100);
@@ -104,7 +120,7 @@ export async function onRequestPost({ request, env }) {
             SELECT SUM(COALESCE(amount_cents, amount * 100)) FROM sale_audit
              WHERE merchant = ? AND sale_id = ? AND action = 'refund'
           ), 0)`
-      ).bind(refundId, merchant, storedAmount, -amountCents, String(original.method || 'cash').slice(0, 16),
+      ).bind(refundId, merchant, storedAmount, -amountCents, refundMethod,
              label, refundRef, ts, merchant, refundId, amountCents, originalCents, merchant, originalSaleId),
       env.DB.prepare(
         `INSERT INTO sale_audit
@@ -116,7 +132,7 @@ export async function onRequestPost({ request, env }) {
               SELECT 1 FROM sale_audit WHERE merchant = ? AND action = 'refund' AND note = ?
             )`
       ).bind(merchant, originalSaleId, reason, refundId, actor, actorId,
-             Math.round(amountCents / 100), amountCents, String(original.method || 'cash').slice(0, 16),
+             Math.round(amountCents / 100), amountCents, refundMethod,
              refundRef, Number(original.ts) || 0, impact, ts,
              merchant, refundId, -amountCents, merchant, refundId),
     ]);
@@ -128,16 +144,17 @@ export async function onRequestPost({ request, env }) {
   let audit = null;
   try {
     saved = await env.DB.prepare(
-      `SELECT id, amount_cents FROM sales WHERE merchant = ? AND id = ? AND channel = 'refund' LIMIT 1`
+      `SELECT id, amount_cents, method FROM sales WHERE merchant = ? AND id = ? AND channel = 'refund' LIMIT 1`
     ).bind(merchant, refundId).first();
     audit = await env.DB.prepare(
-      `SELECT sale_id, amount_cents FROM sale_audit
+      `SELECT sale_id, amount_cents, method FROM sale_audit
         WHERE merchant = ? AND action = 'refund' AND note = ? ORDER BY id DESC LIMIT 1`
     ).bind(merchant, refundId).first();
   } catch (_) {}
   if (!saved || !audit) return json({ error: 'refund-exceeds-sale' }, 409);
-  if (Number(saved.amount_cents) !== -amountCents
+  if (Number(saved.amount_cents) !== -amountCents || String(saved.method) !== refundMethod
       || Number(audit.amount_cents) !== amountCents
+      || String(audit.method) !== refundMethod
       || String(audit.sale_id || '') !== originalSaleId) {
     return json({ error: 'refund-id-conflict' }, 409);
   }

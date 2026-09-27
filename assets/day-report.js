@@ -463,11 +463,22 @@
       }).filter(Boolean);
       if (!lines.length) lines = null;
     }
+    /* Server rows already carry only money received in amount; credit and
+       delivery parts must not be subtracted again as receivables. Local till
+       snapshots carry their own accounting basis in parts and stay intact. */
+    var paymentSource = Array.isArray(s.parts) ? s.parts :
+      (Array.isArray(s.paymentParts) ? s.paymentParts.filter(function (p) {
+        return p && p.method !== 'credit' && p.method !== 'delivery';
+      }) : null);
     return {
       id: String(s.id || s.ref || ('s' + ts)),
       ts: ts,
       amount: amount,
       method: String(s.method || 'cash').toLowerCase(),
+      parts: paymentSource ? paymentSource.slice(0, 8).map(function (p) {
+        return { method: String((p && (p.method || p.m)) || '').toLowerCase(),
+          amountCents: p && p.amountCents != null ? Math.round(Number(p.amountCents)) : Math.round(num(p && p.amount) * 100) };
+      }).filter(function (p) { return p.method && p.amountCents > 0; }) : null,
       label: String(s.label || ''),
       ref: String(s.ref || ''),
       kind: String(s.kind || ''),
@@ -618,7 +629,12 @@
       if (s.ts > last) last = s.ts;
 
       var m = s.method || 'cash';
-      methods[m] = round2(num(methods[m]) + (isRefund ? -mag : s.amount));
+      var tenderParts = !isRefund && s.parts && s.parts.length ? s.parts : null;
+      if (tenderParts) tenderParts.forEach(function (p) {
+        var method = p.method === 'avoir' ? 'credit' : p.method;
+        methods[method] = round2(num(methods[method]) + p.amountCents / 100);
+      });
+      else methods[m] = round2(num(methods[m]) + (isRefund ? -mag : s.amount));
       tips += s.tip;
       if (m === 'cash') cashTips += s.tip;
 

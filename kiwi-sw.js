@@ -99,7 +99,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=35',
+  '/assets/venues.js?v=36',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=4',
   '/assets/trade-workspaces.js?v=4',
@@ -137,7 +137,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=1',
-  '/assets/dateRange.js?v=22',
+  '/assets/dateRange.js?v=23',
   '/assets/mobile-nav.js?v=2',
   '/assets/liquid-lens.js?v=1',
   '/assets/pages.js?v=5',
@@ -163,15 +163,15 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=12',
   '/assets/operations-ui.js?v=15',
-  '/assets/live-link.js?v=50',
+  '/assets/live-link.js?v=51',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=16',
-  '/assets/report.js?v=4',
-  '/assets/day-report-dash.js?v=11',
+  '/assets/day-report.js?v=18',
+  '/assets/report.js?v=5',
+  '/assets/day-report-dash.js?v=12',
   '/assets/day-report-export.js?v=7',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.
@@ -268,8 +268,8 @@ var SHELL = [
      cuisine à l'écran sans jamais sortir sur la thermique. */
   '/assets/kitchen-print-queue.js?v=14',
   '/assets/food-production-print.js?v=2',
-  '/assets/pos-sale.js?v=8',
-  '/assets/pos-dispatch.js?v=50',
+  '/assets/pos-sale.js?v=9',
+  '/assets/pos-dispatch.js?v=51',
   '/assets/retail-scan.css?v=8',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=7',
@@ -281,8 +281,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=23',
-  '/assets/pos-boutique.js?v=23',
+  '/assets/pos-boutique.css?v=25',
+  '/assets/pos-boutique.js?v=25',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -314,8 +314,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=5',
   '/assets/pos-autre.css?v=2',
   '/assets/pos-autre.js?v=2',
-  '/assets/pos-maison.css?v=41',
-  '/assets/pos-maison.js?v=41',
+  '/assets/pos-maison.css?v=43',
+  '/assets/pos-maison.js?v=43',
   '/assets/caisse-pairing.js?v=25',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

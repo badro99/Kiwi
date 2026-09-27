@@ -3200,7 +3200,7 @@
             onPaid: (parts) => {
               if (!apply(reserved)) return { line: 'Échange non enregistré · stock insuffisant' };
               const rec = {
-                id: exchangeNumber, syncId: newSaleId(), at: new Date(), clientId: sale.clientId, by: STAFF.caissiere.name, kind: 'echange',
+                id: exchangeNumber, syncId: newSaleId(), tenderVersion: 2, at: new Date(), clientId: sale.clientId, by: STAFF.caissiere.name, kind: 'echange',
                 methods: parts.map((x) => x.m).join(' + '),
                 parts: parts.map((x) => ({ m: x.m, amount: Math.round((+x.amount || 0) * 100) / 100 })),
                 lines: [{ pid: newPid, size: newSize, color: newColor, qty: 1, remise: 0, unit: diff, returned: false, note: `différence échange ${sale.id}` }],
@@ -3217,12 +3217,15 @@
                 if (window.KiwiLive && window.KiwiLive.isOn()) {
                   const pm = (parts || []).map((x) => x.m);
                   const isDelivery = pm.indexOf('livraison') >= 0;
-                  const method = isDelivery ? 'delivery' : (pm.indexOf('carte') >= 0 ? 'card' : (pm.indexOf('espèces') >= 0 ? 'cash' : 'wallet'));
-                  const cashIn = isDelivery ? diff : (parts || []).reduce((s, x) => s + (x.m === 'avoir' ? 0 : (+x.amount || 0)), 0);
+                  const method = bqPaymentMethod(parts);
+                  const cashIn = (parts || []).reduce((s, x) => s + (x.m === 'avoir' || x.m === 'livraison' ? 0 : (+x.amount || 0)), 0);
                   window.KiwiLive.postSale({
                     id: rec.syncId,
                     amount: cashIn,
                     method,
+                    paymentParts: bqPaymentParts(parts), ticketAmountCents: Math.round(diff * 100),
+                    ...(cashIn <= 0 ? { settlementKind: isDelivery ? 'receivable' : 'store-credit',
+                      creditAmountCents: Math.round((parts || []).filter(x => x.m === 'avoir').reduce((sum, x) => sum + (+x.amount || 0), 0) * 100) } : {}),
                     channel: isDelivery ? 'delivery' : 'counter',
                     label: `Différence échange ${sale.id}`,
                     ref: rec.id,
@@ -3341,7 +3344,7 @@
     /* Sans assets/receipt.js (navigateur où il n'a pas chargé) : l'ancien
        chemin, inchangé. */
     const pv = pvPaired();
-    const label = { 'carte': 'Carte', 'avoir': 'Avoir', 'espèces': 'Espèces', 'livraison': 'Livraison · à recevoir' };
+    const label = { 'carte': 'Carte', 'avoir': 'Avoir', 'espèces': 'Espèces', 'virement': 'Virement / Versement', 'chèque': 'Chèque', 'livraison': 'Livraison · à recevoir' };
     const lines = (opts.lines || []).map((l) => ({ qty: l.qty, name: l.name, price: fmtMAD(l.amount) }));
     const doc = {
       shop: (pv && pv.name) || 'Kiwi',
@@ -3474,7 +3477,7 @@
         // cliente) — on la débite des points APRÈS avoir enregistré l'achat.
         const rewardUsed = !!(frozen.reward && c && c.id && frozen.reward.clientId === c.id);
         const sale = {
-          id: frozen.num, syncId: frozen.syncId, at: new Date(), clientId: frozen.clientId, by: STAFF.caissiere.name, kind: 'vente',
+          id: frozen.num, syncId: frozen.syncId, tenderVersion: 2, at: new Date(), clientId: frozen.clientId, by: STAFF.caissiere.name, kind: 'vente',
           methods: parts.map((x) => x.m).join(' + '),
           /* Les parts de règlement, figées : c'est elles qui rendent le tiroir
              de la clôture exact quand un ticket est réglé moitié carte moitié
@@ -3513,7 +3516,7 @@
           if (window.KiwiLive && window.KiwiLive.isOn()) {
             const received = (parts || []).filter((x) => x && x.m !== 'avoir' && x.m !== 'livraison' && (+x.amount || 0) > 0);
             const receivedMethods = received.map((x) => x.m);
-            const method = receivedMethods.indexOf('carte') >= 0 ? 'card' : (receivedMethods.indexOf('espèces') >= 0 ? 'cash' : 'wallet');
+            const method = bqPaymentMethod(parts);
             const first = frozen.lines[0];
             const pieces = frozen.lines.reduce((n, ln) => n + ln.qty, 0);
             const name = first ? first.name : 'Vente';
@@ -3545,16 +3548,24 @@
               unit: 'piece',
               kind: 'product',
             }));
-            window.KiwiLive.postSale({
+            const payload = {
               id: sale.syncId,
               amount: cashIn,
               method: method,
+              paymentParts: bqPaymentParts(parts), ticketAmountCents: Math.round(total * 100),
               channel: (parts || []).some((x) => x && x.m === 'livraison') ? 'delivery' : 'counter',
               label: label,
               ref: sale.id,
               time: sale.at,
               lines: basket,
-            });
+            };
+            if (cashIn <= 0 && (parts || []).some(x => x.m === 'livraison')) payload.settlementKind = 'receivable';
+            else if (cashIn <= 0 && (parts || []).some(x => x.m === 'avoir')) {
+              payload.settlementKind = 'store-credit';
+              payload.creditAmountCents = Math.round((parts || []).filter(x => x.m === 'avoir')
+                .reduce((sum, x) => sum + (+x.amount || 0), 0) * 100);
+            }
+            window.KiwiLive.postSale(payload);
           }
         } catch (_) {}
         let ptsLine = '';
@@ -3646,7 +3657,7 @@
       };
     });
 
-    const mLabel = (m) => (m === 'espèces' ? 'Espèces' : m === 'carte' ? 'Carte' : m === 'livraison' ? 'Livraison' : m === 'avoir' ? 'Avoir' : m);
+    const mLabel = (m) => (m === 'espèces' ? 'Espèces' : m === 'carte' ? 'Carte' : m === 'virement' ? 'Virement / Versement' : m === 'chèque' ? 'Chèque' : m === 'livraison' ? 'Livraison' : m === 'avoir' ? 'Avoir' : m);
 
     const appliedBanner = () => {
       const rows = [];
@@ -3688,6 +3699,16 @@
           <button class="bq-pay-opt" data-bq-m="carte">
             <span class="ic"><i data-lucide="credit-card"></i></span>
             <span class="l"><b>Carte</b><span>Lecteur partenaire, V1 sans encaissement Kiwi</span></span>
+            <span class="amt">${fmtMAD(portion())}</span>
+          </button>
+          <button class="bq-pay-opt" data-bq-m="virement">
+            <span class="ic"><img src="assets/icons/material/account_balance.svg" alt=""></span>
+            <span class="l"><b>Virement / Versement</b><span>Confirmer uniquement après réception en banque</span></span>
+            <span class="amt">${fmtMAD(portion())}</span>
+          </button>
+          <button class="bq-pay-opt" data-bq-m="cheque">
+            <span class="ic"><img src="assets/icons/material/receipt_long.svg" alt=""></span>
+            <span class="l"><b>Chèque</b><span>Confirmer après réception du chèque</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
           <button class="bq-pay-opt" data-bq-m="livraison">
@@ -3761,6 +3782,7 @@
           const m = b.dataset.bqM;
           if (m === 'especes') stepCash(portion());
           else if (m === 'carte') stepCard(portion());
+          else if (m === 'virement' || m === 'cheque') stepExternal(m, portion());
           else if (m === 'livraison') settle({ m: 'livraison', amount: portion() });
           else if (m === 'avoir') stepAvoir();
           else toast('Aucun avoir actif, émettez-en un depuis Échanges & avoirs');
@@ -3907,6 +3929,22 @@
       }, 1400);
     };
 
+    const stepExternal = (method, amount) => {
+      const cheque = method === 'cheque';
+      const label = cheque ? 'Chèque' : 'Virement / Versement';
+      el.innerHTML = `
+        <button class="bq-modal-x" data-bq-close aria-label="Fermer">×</button>
+        <h3 class="modal-title">${label} · ${fmtMAD(amount)}</h3>
+        <p class="modal-subtle">${cheque ? 'Le chèque a-t-il été remis au comptoir ?' : 'Les fonds sont-ils visibles sur le compte bancaire ?'} Aucun montant ne sera attendu dans le tiroir.</p>
+        <div class="bq-sheet-foot">
+          <button class="bq-btn secondary" id="bq-external-back">Retour</button>
+          <button class="cash-confirm" id="bq-external-ok">${cheque ? 'Chèque reçu' : 'Versement reçu'} · confirmer</button>
+        </div>`;
+      closeBtns();
+      $('#bq-external-back', el).onclick = stepMethods;
+      $('#bq-external-ok', el).onclick = () => settle({ m: cheque ? 'chèque' : 'virement', amount });
+    };
+
     const commit = () => {
       if (committed) return;
       committed = true;
@@ -3938,7 +3976,7 @@
           <div class="cash-success-label">rendu à la cliente</div>` : `
           <div class="modal-amount size-md">${fmtMAD(opts.amount)}</div>`}
         <div class="bq-pay-break">
-          ${parts.map((x) => `<div class="row"><span>${x.m === 'avoir' ? `Avoir ${x.code}` : x.m === 'carte' ? 'Carte, lecteur partenaire' : x.m === 'livraison' ? 'Livraison · à recevoir' : 'Espèces'}</span><b>${fmtMAD(x.amount)}</b></div>`).join('')}
+          ${parts.map((x) => `<div class="row"><span>${x.m === 'avoir' ? `Avoir ${x.code}` : x.m === 'carte' ? 'Carte, lecteur partenaire' : x.m === 'livraison' ? 'Livraison · à recevoir' : mLabel(x.m)}</span><b>${fmtMAD(x.amount)}</b></div>`).join('')}
         </div>
         <div class="modal-actions is-visible">
           <button class="ma-btn secondary" id="bq-pay-print"><i data-lucide="printer"></i>Reçu 80 mm</button>
@@ -3963,7 +4001,7 @@
           ...(opts.lines || []).map((l) => `${l.qty ? l.qty + '× ' : ''}${l.name} · ${fmtMAD(l.amount)}`),
           '',
           `TOTAL ${fmtMAD(opts.amount)}`,
-          (parts || []).map((x) => x.m === 'carte' ? 'Carte' : x.m === 'avoir' ? 'Avoir' : x.m === 'livraison' ? 'Livraison · à recevoir' : 'Espèces').join(' + '),
+          (parts || []).map((x) => x.m === 'avoir' ? 'Avoir' : x.m === 'livraison' ? 'Livraison · à recevoir' : mLabel(x.m)).join(' + '),
           '',
           'Merci !',
         ].filter((x) => x !== undefined).join('\n');
@@ -6466,10 +6504,21 @@
     const names = String(s.methods || '').split(' + ').filter((m) => m && m !== 'avoir');
     return names.length && +s.total > 0 ? [{ m: names[0], amount: +s.total }] : [];
   }
-  const BQ_SRV_METHOD = { 'espèces': 'cash', 'carte': 'card', 'livraison': 'delivery' };
+  const BQ_SRV_METHOD = { 'espèces': 'cash', 'carte': 'card', 'virement': 'transfer', 'chèque': 'cheque', 'avoir': 'credit', 'livraison': 'delivery' };
+  function bqPaymentParts(parts) {
+    return (parts || []).filter((part) => part && +part.amount > 0).map((part) => ({
+      method: BQ_SRV_METHOD[part.m] || 'wallet', amountCents: Math.round((+part.amount || 0) * 100),
+    }));
+  }
+  function bqPaymentMethod(parts) {
+    const methods = bqPaymentParts(parts);
+    if (methods.length === 1) return methods[0].method;
+    if (methods.some((part) => part.method !== 'credit' && part.method !== 'delivery')) return 'split';
+    return methods.some((part) => part.method === 'delivery') ? 'delivery' : 'credit';
+  }
 
   function bqDayTotals() {
-    const t = { moneyIn: 0, cash: 0, card: 0, delivery: 0, other: 0, txns: 0, paidTxns: 0, items: 0, discounts: 0, discountsN: 0, promoOff: 0, avoirUsed: 0, avoirUsedN: 0, avoirIssued: 0, avoirIssuedN: 0 };
+    const t = { moneyIn: 0, cash: 0, card: 0, transfer: 0, cheque: 0, delivery: 0, other: 0, txns: 0, paidTxns: 0, items: 0, discounts: 0, discountsN: 0, promoOff: 0, avoirUsed: 0, avoirUsedN: 0, avoirIssued: 0, avoirIssuedN: 0 };
     salesToday().forEach((s) => {
       let took = 0;
       /* L'avoir consommé, compté À PART du reste. bqMoneyParts l'écarte — à
@@ -6484,6 +6533,8 @@
         if (p.m !== 'livraison') took += p.amount;
         if (p.m === 'espèces') t.cash += p.amount;
         else if (p.m === 'carte') t.card += p.amount;
+        else if (p.m === 'virement') t.transfer += p.amount;
+        else if (p.m === 'chèque') t.cheque += p.amount;
         else if (p.m === 'livraison') t.delivery += p.amount;
         else t.other += p.amount;
       });
@@ -6513,7 +6564,7 @@
       const v = +a.amount || 0;
       if (v > 0) { t.avoirIssued += v; t.avoirIssuedN++; }
     });
-    ['moneyIn', 'cash', 'card', 'delivery', 'other', 'discounts', 'promoOff', 'avoirUsed', 'avoirIssued'].forEach((k) => { t[k] = Math.round(t[k] * 100) / 100; });
+    ['moneyIn', 'cash', 'card', 'transfer', 'cheque', 'delivery', 'other', 'discounts', 'promoOff', 'avoirUsed', 'avoirIssued'].forEach((k) => { t[k] = Math.round(t[k] * 100) / 100; });
     return t;
   }
 
@@ -6533,8 +6584,18 @@
         total: Math.round((+ln.unit || 0) * lineAvailableQty(ln)),
         cat: rayonOf(ln.pid) || '',
       }));
+      const taken = bqMoneyParts(s);
+      if (s.syncId && taken.length) {
+        out.push({ id: s.syncId, ts: at,
+          amount: taken.reduce((sum, part) => sum + part.amount, 0),
+          method: bqPaymentMethod(s.parts),
+          parts: bqPaymentParts(taken),
+          label: s.kind === 'echange' ? 'Différence échange' : 'Vente',
+          ref: s.id, cashier: s.by || '', lines: lines.length ? lines : null });
+        return;
+      }
       let first = true;
-      bqMoneyParts(s).forEach((p, i) => {
+      taken.forEach((p, i) => {
         out.push({
           id: s.id + (i ? '#' + i : ''),
           ts: at,
@@ -6625,7 +6686,7 @@
       notCounted: 'non compté',
       handoverWord: 'Passation',
       reopenWord: 'Clôture n°',
-      methodLabels: { cash: 'Espèces', card: 'Carte', wallet: 'Virement', tap: 'Kiwi Tap', qr: 'QR', delivery: 'Livraison · à recevoir' },
+      methodLabels: { cash: 'Espèces', card: 'Carte', transfer: 'Virement / Versement', cheque: 'Chèque', wallet: 'Wallet', tap: 'Kiwi Tap', qr: 'QR', delivery: 'Livraison · à recevoir' },
       fmt: (n) => fmtMAD(n).replace(/\s*MAD\s*$/, ''),
     }).then((res) => {
       if (res && res.ok) toast(res.via === 'browser' ? 'Rapport envoyé au pilote système' : 'Rapport imprimé');
@@ -6807,6 +6868,8 @@
       ['dont Espèces', fmtMAD(t.cash), true, 'sub'],
     ];
     if (t.other > 0) rows.push(['dont Autres', fmtMAD(t.other), true, 'sub']);
+    if (t.transfer > 0) rows.push(['dont Virement / Versement', fmtMAD(t.transfer), true, 'sub']);
+    if (t.cheque > 0) rows.push(['dont Chèque', fmtMAD(t.cheque), true, 'sub']);
     /* HORS du bloc « dont » : une livraison n'est pas encaissée, elle est à
        recevoir. Nichée en sous-ligne du total, elle se lisait comme une de ses
        composantes — alors qu'aucun dirham correspondant n'est dans le tiroir. */

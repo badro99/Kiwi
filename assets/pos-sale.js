@@ -158,9 +158,9 @@
   var METHOD_MAP = {
     especes: 'cash', espece: 'cash', cash: 'cash', liquide: 'cash',
     carte: 'card', card: 'card', tpe: 'card', cb: 'card',
-    virement: 'wallet', transfer: 'wallet', wallet: 'wallet',
+    virement: 'transfer', versement: 'transfer', transfer: 'transfer', wallet: 'wallet',
     glovo: 'wallet', online: 'wallet', enligne: 'wallet',
-    cheque: 'wallet', qr: 'qr', tap: 'tap',
+    cheque: 'cheque', qr: 'qr', tap: 'tap',
     split: 'split', mixed: 'split', partage: 'split',
     credit: 'credit', ardoise: 'credit', acompte: 'credit',
     room: 'room', folio: 'room', chambre: 'room',

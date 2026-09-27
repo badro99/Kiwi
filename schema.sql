@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS sales (
   discount_amount_cents INTEGER,   -- nullable: bounded, never greater than gross
   discount_reason TEXT,            -- nullable enum: commercial|loyal-customer|kitchen-error|other
   discount_actor_id TEXT,          -- nullable staff/account id, never a PIN or code
-  method       TEXT NOT NULL,      -- cash | card | tap | qr | wallet
+  method       TEXT NOT NULL,      -- cash | card | transfer | cheque | split | tap | qr | wallet
+  payment_parts TEXT,             -- immutable JSON tender split for one retail receipt
   label    TEXT,               -- "À emporter #12", "Table 4", …
   ref      TEXT,               -- caisse receipt ref
   ts       INTEGER NOT NULL,   -- epoch ms of the sale

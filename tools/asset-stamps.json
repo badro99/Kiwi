@@ -216,20 +216,20 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "22",
-    "sha": "2d573f2346a79a01"
+    "v": "23",
+    "sha": "f020aec845804f81"
   },
   "assets/day-report-dash.js": {
-    "v": "11",
-    "sha": "c0d7d96a2fec83c1"
+    "v": "12",
+    "sha": "28493e0e03565c3e"
   },
   "assets/day-report-export.js": {
     "v": "7",
     "sha": "2a3b23d3664936a2"
   },
   "assets/day-report.js": {
-    "v": "16",
-    "sha": "51a94246a4b73658"
+    "v": "18",
+    "sha": "2eedd8689e1d5fb3"
   },
   "assets/demoClock.js": {
     "v": "1",
@@ -432,8 +432,8 @@
     "sha": "c9d6036ca657c76e"
   },
   "assets/live-link.js": {
-    "v": "50",
-    "sha": "06db6385fb520beb"
+    "v": "51",
+    "sha": "a2af760e184972f6"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -592,12 +592,12 @@
     "sha": "530ff7c046c57b2c"
   },
   "assets/pos-boutique.css": {
-    "v": "23",
-    "sha": "7cfd14173d1efd82"
+    "v": "25",
+    "sha": "ef50e38d14947b4d"
   },
   "assets/pos-boutique.js": {
-    "v": "23",
-    "sha": "66f7fbbc4b9b1056"
+    "v": "25",
+    "sha": "7524b9e2f225144d"
   },
   "assets/pos-coiffure.css": {
     "v": "5",
@@ -608,8 +608,8 @@
     "sha": "3673be5ef49cb7de"
   },
   "assets/pos-dispatch.js": {
-    "v": "50",
-    "sha": "4e2755d5d799c298"
+    "v": "51",
+    "sha": "448a0f4b96e8e2c3"
   },
   "assets/pos-epicerie.css": {
     "v": "5",
@@ -672,12 +672,12 @@
     "sha": "782a2a019b86fc81"
   },
   "assets/pos-maison.css": {
-    "v": "41",
-    "sha": "f40904fdae32e9eb"
+    "v": "43",
+    "sha": "1b1ee04756c7799e"
   },
   "assets/pos-maison.js": {
-    "v": "41",
-    "sha": "339482b8562be39e"
+    "v": "43",
+    "sha": "f485ddf8965eb407"
   },
   "assets/pos-mobile.css": {
     "v": "3",
@@ -708,8 +708,8 @@
     "sha": "2653726866dd2396"
   },
   "assets/pos-sale.js": {
-    "v": "8",
-    "sha": "2e75aa7ec72ae864"
+    "v": "9",
+    "sha": "110dc8670931c10e"
   },
   "assets/pos-spa.css": {
     "v": "5",
@@ -804,8 +804,8 @@
     "sha": "14b0b658189c5771"
   },
   "assets/report.js": {
-    "v": "4",
-    "sha": "187ce348e5aa537f"
+    "v": "5",
+    "sha": "4e42ba6726baa3ba"
   },
   "assets/reservations.css": {
     "v": "5",
@@ -924,8 +924,8 @@
     "sha": "210e095896fcc506"
   },
   "assets/venues.js": {
-    "v": "35",
-    "sha": "9f40ed310a202f0a"
+    "v": "36",
+    "sha": "7c4c774056d4938b"
   },
   "assets/vertical-state.js": {
     "v": "1",

@@ -13,6 +13,7 @@ import { startOfDay } from './order/_lib.js';
 import { settleServiceTable, serviceVisitGuard } from './service/events.js';
 import { poke } from './_live.js';
 import { businessDate, merchantZone, merchantCutoff } from './_business-day.js';
+import { validateRetailTenders, retailTenderMethod } from './_retail-tenders.js';
 
 async function legacyPaymentId(merchant, legacyId, payment) {
   const input = JSON.stringify([merchant, legacyId, payment.ref, payment.ts,
@@ -345,6 +346,11 @@ export async function onRequestPost({ request, env }) {
     return json({ error: 'subscription-required', merchant }, 402);
   }
   const method = String((b && b.method) || 'cash').slice(0, 16);
+  const paymentParts = validateRetailTenders(b && b.paymentParts, amountCents,
+    ticketAmountCents, consignedAmountCents);
+  if (paymentParts === false || (paymentParts && method !== retailTenderMethod(paymentParts))) {
+    return json({ error: 'bad-payment-parts' }, 400);
+  }
   const label = String((b && b.label) || 'Vente').slice(0, 80);
   const ref = String((b && b.ref) || '').slice(0, 40);
   const channel = String((b && b.channel) || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 24);
@@ -753,6 +759,27 @@ export async function onRequestPost({ request, env }) {
       expected: { amountCents: winningCents, method: winningMethod },
       received: { amountCents, method },
     }, 409);
+  }
+
+  if (paymentParts) {
+    try {
+      const columns = await env.DB.prepare('PRAGMA table_info(sales)').all();
+      if (!(columns.results || []).some(column => column.name === 'payment_parts')) {
+        try { await env.DB.prepare('ALTER TABLE sales ADD COLUMN payment_parts TEXT').run(); }
+        catch (error) { if (!/duplicate column/i.test(String(error))) throw error; }
+      }
+      const encoded = JSON.stringify(paymentParts);
+      await env.DB.prepare('UPDATE sales SET payment_parts = ? WHERE merchant = ? AND id = ? AND payment_parts IS NULL')
+        .bind(encoded, merchant, id).run();
+      const saved = await env.DB.prepare('SELECT payment_parts FROM sales WHERE merchant = ? AND id = ?')
+        .bind(merchant, id).first();
+      if (!saved || saved.payment_parts !== encoded) {
+        await recordSaleConflict(env, merchant, id, amountCents, method);
+        return json({ error: 'sale-conflict', detail: 'conflicting-payment-parts', id }, 409);
+      }
+    } catch (error) {
+      return json({ error: 'payment-parts-write-failed', detail: String(error && error.message || error), id }, 503);
+    }
   }
 
   /* Receipt value is a second immutable fact. It is deliberately outside the

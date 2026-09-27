@@ -20,7 +20,7 @@ let stdinEnded = false;
 const TOOLS = [
   { name: 'start_hotel_fixture', description: 'Start a fresh real dashboard + real hotel API/SQLite on a synthetic merchant. Opens Chromium, enters only the fixture PIN, and returns visible UI. Never touches production.', inputSchema: { type: 'object', properties: {} } },
   { name: 'start_tickets_fixture', description: 'Start the real Kiwi Tickets page against an isolated in-memory ticket API. Opens Chromium and never touches production.', inputSchema: { type: 'object', properties: {} } },
-  { name: 'start_retail_fixture', description: 'Start a real Maison caisse, client-directory, restaurant dashboard, employee clock, or navigation module with synthetic data. Opens Chromium on loopback only and never touches production.', inputSchema: { type: 'object', properties: { scenario: { type: 'string', enum: ['maison', 'clients', 'restaurant', 'employee-clock', 'nav-stability'] } }, required: ['scenario'] } },
+  { name: 'start_retail_fixture', description: 'Start a real Maison or Boutique caisse, client-directory, restaurant dashboard, employee clock, or navigation module with synthetic data. Opens Chromium on loopback only and never touches production.', inputSchema: { type: 'object', properties: { scenario: { type: 'string', enum: ['maison', 'boutique', 'clients', 'restaurant', 'employee-clock', 'nav-stability'] } }, required: ['scenario'] } },
   { name: 'ui_snapshot', description: 'Compact visible text and interactive controls with temporary q-refs; no screenshot tokens. Call again after navigation.', inputSchema: { type: 'object', properties: {} } },
   { name: 'ui_click', description: 'Click a visible control through Chromium, not a JS handler or API. Use a q-ref from ui_snapshot.', inputSchema: { type: 'object', properties: { ref: { type: 'string' } }, required: ['ref'] } },
   { name: 'ui_fill', description: 'Fill a visible input through the rendered control. Use a q-ref from ui_snapshot.', inputSchema: { type: 'object', properties: { ref: { type: 'string' }, value: { type: 'string' } }, required: ['ref', 'value'] } },
@@ -201,7 +201,7 @@ function retailFixtureProcess() {
 async function startRetailFixture(args) {
   await closeSession();
   const scenario = String(args.scenario || '');
-  if (!['maison', 'clients', 'restaurant', 'employee-clock', 'nav-stability'].includes(scenario)) throw new Error('scenario must be maison, clients, restaurant, employee-clock or nav-stability.');
+  if (!['maison', 'boutique', 'clients', 'restaurant', 'employee-clock', 'nav-stability'].includes(scenario)) throw new Error('scenario must be maison, boutique, clients, restaurant, employee-clock or nav-stability.');
   const bin = chromiumBinary();
   if (!bin) throw new Error('Chromium not found; set KIWI_CHROMIUM_BIN. UI proof cannot be skipped.');
   const puppeteer = createRequire(path.join(ROOT, 'app/package.json'))('puppeteer-core');
@@ -225,7 +225,7 @@ async function startRetailFixture(args) {
       if (u.startsWith(fixture.base + '/') || u.startsWith('data:') || u.startsWith('blob:')) req.continue().catch(() => {});
       else req.abort().catch(() => {});
     });
-    await page.goto(fixture.base + (scenario === 'maison' ? '/maison.html' : scenario === 'clients' ? '/clients.html'
+    await page.goto(fixture.base + (scenario === 'maison' ? '/maison.html' : scenario === 'boutique' ? '/boutique.html' : scenario === 'clients' ? '/clients.html'
       : scenario === 'restaurant' ? '/dashboard.html' : scenario === 'employee-clock' ? '/employee-clock.html' : '/dashboard.html?fixture=nav-stability'), { waitUntil: 'load', timeout: 60000 });
     if (scenario === 'nav-stability') {
       await page.evaluate(async () => {
@@ -235,13 +235,13 @@ async function startRetailFixture(args) {
       await page.reload({ waitUntil: 'load', timeout: 60000 });
       await page.waitForFunction(() => window.KiwiVenue?.getCurrentVenueData?.()?.id === 'v-nav-stability', { timeout: 15000 });
     }
-    await page.waitForSelector(scenario === 'maison' ? '#pos-maison.is-on .mz-view.is-on' : scenario === 'clients' ? '[data-open-clients]'
+    await page.waitForSelector(scenario === 'maison' ? '#pos-maison.is-on .mz-view.is-on' : scenario === 'boutique' ? '#pos-boutique.is-on .bq-view.is-on' : scenario === 'clients' ? '[data-open-clients]'
       : scenario === 'restaurant' ? '#kw-main [data-hero-amount]' : scenario === 'employee-clock' ? '#kep-card .kep-metric' : '.kiwi-lock-skip', { visible: true, timeout: 15000 });
     session = { ...fixture, merchant: scenario === 'restaurant' ? 'restaurant-fixture' : scenario === 'employee-clock' ? 'employee-clock-fixture' : scenario === 'nav-stability' ? 'nav-stability' : fixture.merchant,
-      kind: scenario === 'maison' ? 'retail-maison' : scenario === 'clients' ? 'retail-clients'
+      kind: scenario === 'maison' ? 'retail-maison' : scenario === 'boutique' ? 'retail-boutique' : scenario === 'clients' ? 'retail-clients'
         : scenario === 'restaurant' ? 'retail-restaurant' : scenario === 'employee-clock' ? 'retail-employee-clock' : 'retail-nav-stability',
       browser, context, page, actions: [], assertions: [], refs: new Set(), startedAt: Date.now() };
-    return `Synthetic ${scenario === 'maison' ? 'Maison caisse' : scenario === 'clients' ? 'Amira client directory'
+    return `Synthetic ${scenario === 'maison' ? 'Maison caisse' : scenario === 'boutique' ? 'Boutique caisse' : scenario === 'clients' ? 'Amira client directory'
       : scenario === 'restaurant' ? 'restaurant dashboard' : scenario === 'employee-clock' ? 'employee store clock' : 'dashboard navigation'} ready at ${origin.origin}; no live merchant access.\n${await snapshot()}`;
   } catch (e) {
     if (browser) await browser.close().catch(() => {});
@@ -460,7 +460,7 @@ async function reload() {
     return snapshot();
   }
   if (s.kind && s.kind.startsWith('retail-')) {
-    await s.page.waitForSelector(s.kind === 'retail-maison' ? '#pos-maison.is-on .mz-view.is-on'
+    await s.page.waitForSelector(s.kind === 'retail-maison' ? '#pos-maison.is-on .mz-view.is-on' : s.kind === 'retail-boutique' ? '#pos-boutique.is-on .bq-view.is-on'
       : s.kind === 'retail-clients' ? '[data-open-clients]'
       : s.kind === 'retail-restaurant' ? '#kw-main [data-hero-amount]' : s.kind === 'retail-employee-clock' ? '#kep-card .kep-metric' : '#fixture-nav-controls',
     { visible: true, timeout: 15000 });
@@ -516,7 +516,7 @@ async function viewport(args) {
     return snapshot();
   }
   if (s.kind && s.kind.startsWith('retail-')) {
-    await s.page.waitForSelector(s.kind === 'retail-maison' ? '#pos-maison.is-on .mz-view.is-on'
+    await s.page.waitForSelector(s.kind === 'retail-maison' ? '#pos-maison.is-on .mz-view.is-on' : s.kind === 'retail-boutique' ? '#pos-boutique.is-on .bq-view.is-on'
       : s.kind === 'retail-clients' ? '[data-open-clients]'
       : s.kind === 'retail-restaurant' ? '#kw-main [data-hero-amount]' : s.kind === 'retail-employee-clock' ? '#kep-card .kep-metric' : '#fixture-nav-controls',
     { visible: true, timeout: 15000 });
@@ -599,6 +599,7 @@ async function finishProof(args) {
     schema: 'kiwi-ui-proof-v1', passed: true, ticketId, expectedOutcome: args.expectedOutcome.trim(),
     environment: s.kind === 'tickets' ? 'synthetic-kiwi-tickets'
       : s.kind === 'retail-maison' ? 'synthetic-maison-caisse'
+        : s.kind === 'retail-boutique' ? 'synthetic-boutique-caisse'
         : s.kind === 'retail-clients' ? 'synthetic-client-dashboard'
           : s.kind === 'retail-restaurant' ? 'synthetic-restaurant-dashboard'
           : s.kind === 'retail-employee-clock' ? 'synthetic-employee-clock'

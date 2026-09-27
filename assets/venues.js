@@ -8126,6 +8126,12 @@
     if (server) entry.server = server;
     if (channel) entry.channel = channel;
     if (saleId) entry.saleId = saleId;
+    if (sale && Array.isArray(sale.paymentParts) && sale.paymentParts.length) {
+      entry.paymentParts = sale.paymentParts.slice(0, 8).map(part => ({
+        method: String((part && part.method) || '').slice(0, 16),
+        amountCents: Math.round(Number(part && part.amountCents)),
+      })).filter(part => /^[a-z-]{1,16}$/.test(part.method) && Number.isSafeInteger(part.amountCents) && part.amountCents > 0);
+    }
     /* Optional discount facts are server-validated and stay attached to the
        immutable sale. Reject partial/code-shaped metadata at this second
        boundary rather than teaching analytics to guess. */
@@ -8195,6 +8201,12 @@
       const value = String(meta && (meta[key] || (key === 'saleId' ? (meta.saleId || meta.id) : '')) || '').trim().slice(0, limit);
       if (value && entry[key] !== value) { entry[key] = value; changed = true; }
     });
+    if (meta && Array.isArray(meta.paymentParts) && meta.paymentParts.length && !entry.paymentParts) {
+      entry.paymentParts = meta.paymentParts.slice(0, 8).map(part => ({
+        method: String((part && part.method) || '').slice(0, 16), amountCents: Math.round(Number(part && part.amountCents)),
+      })).filter(part => /^[a-z-]{1,16}$/.test(part.method) && Number.isSafeInteger(part.amountCents) && part.amountCents > 0);
+      changed = true;
+    }
     if (!changed) return false;
     /* Passe par salesWrite comme les autres écritures : la clé d'un locataire
      * non résolu est vide, et `localStorage.setItem('', …)` rangerait la vente

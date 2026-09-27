@@ -1783,9 +1783,20 @@
     if (['qr', 'wallet'].includes(m)) return 'qr';
     if (m === 'link') return 'link';
     if (['virement', 'transfer', 'bank_transfer'].includes(m)) return 'transfer';
+    if (['chèque', 'cheque', 'check'].includes(m)) return 'cheque';
     if (['split', 'partage', 'partagé'].includes(m)) return 'split';
     if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(m)) return null;
     return 'other';
+  }
+  function tenderAmounts(entry) {
+    const amount = Math.max(0, +entry.amount || 0);
+    const parts = Array.isArray(entry.paymentParts) ? entry.paymentParts.filter(part =>
+      part && tenderBucket(part.method) && Number.isSafeInteger(+part.amountCents) && +part.amountCents > 0) : [];
+    if (!parts.length) return [{ key: tenderBucket(entry.method), amount }];
+    const received = parts.reduce((sum, part) => sum + +part.amountCents, 0);
+    // Dashboard revenue excludes consigned liability; preserve that measure
+    // while attributing its received part to the actual tender(s).
+    return parts.map(part => ({ key: tenderBucket(part.method), amount: amount * +part.amountCents / received }));
   }
   /* Same numbers over an EXPLICIT window, plus the tender split. Every
    * real-venue comparison below is built on this one primitive so the KPI
@@ -1800,8 +1811,10 @@
       const tender = tenderBucket(e.method);
       if (tender) collected += amt;
       else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e.method || '').trim().toLowerCase())) receivable += amt;
-      if (tender === 'cash') cash += amt;
-      if (tender === 'card' || tender === 'tap') card += amt;
+      tenderAmounts(e).forEach(part => {
+        if (part.key === 'cash') cash += part.amount;
+        if (part.key === 'card' || part.key === 'tap') card += part.amount;
+      });
     });
     realRefundList().forEach((e) => {
       const ts = +e.ts || 0;
@@ -1837,7 +1850,9 @@
       }
       const tender = tenderBucket(e && e.method);
       if (tender && amount) {
-        byTender[tender] = (byTender[tender] || 0) + amount;
+        tenderAmounts(e).forEach(part => {
+          if (part.key) byTender[part.key] = (byTender[part.key] || 0) + part.amount;
+        });
         collected += amount;
       } else if (['credit', 'crédit', 'compte', 'delivery', 'livraison', 'avoir', 'unpaid'].includes(String(e && e.method || '').trim().toLowerCase())) {
         receivable += amount;
@@ -1871,9 +1886,9 @@
   }
 
   const TENDER_NAME = {
-    fr: { cash: 'espèces', card: 'carte bancaire', tap: 'Kiwi Tap', qr: 'QR / wallet', link: 'lien de paiement', transfer: 'virement', split: 'paiement partagé', other: 'autre mode' },
-    en: { cash: 'cash', card: 'bank card', tap: 'Kiwi Tap', qr: 'QR / wallet', link: 'payment link', transfer: 'bank transfer', split: 'split payment', other: 'other tender' },
-    ar: { cash: 'نقدًا', card: 'بطاقة بنكية', tap: 'Kiwi Tap', qr: 'QR / محفظة', link: 'رابط دفع', transfer: 'تحويل بنكي', split: 'دفع مقسّم', other: 'طريقة أخرى' },
+    fr: { cash: 'espèces', card: 'carte bancaire', tap: 'Kiwi Tap', qr: 'QR / wallet', link: 'lien de paiement', transfer: 'virement', cheque: 'chèque', split: 'paiement partagé', other: 'autre mode' },
+    en: { cash: 'cash', card: 'bank card', tap: 'Kiwi Tap', qr: 'QR / wallet', link: 'payment link', transfer: 'bank transfer', cheque: 'cheque', split: 'split payment', other: 'other tender' },
+    ar: { cash: 'نقدًا', card: 'بطاقة بنكية', tap: 'Kiwi Tap', qr: 'QR / محفظة', link: 'رابط دفع', transfer: 'تحويل بنكي', cheque: 'شيك', split: 'دفع مقسّم', other: 'طريقة أخرى' },
   };
   function buildRealHeroRec() {
     const s = realInsightSummary();
@@ -3722,6 +3737,7 @@
     { key: 'qr',   color: '#D99A2B', fr: 'QR / Wallet',      en: 'QR / Wallet',  ar: 'QR / محفظة' },
     { key: 'link', color: '#B08CC8', fr: 'Lien de paiement', en: 'Payment link', ar: 'رابط الدفع' },
     { key: 'transfer', color: 'var(--n-500)', fr: 'Virement', en: 'Bank transfer', ar: 'تحويل بنكي' },
+    { key: 'cheque', color: 'var(--n-300)', fr: 'Chèque', en: 'Cheque', ar: 'شيك' },
     { key: 'split', color: 'var(--n-700)', fr: 'Paiement partagé', en: 'Split payment', ar: 'دفع مقسّم' },
     { key: 'other', color: 'var(--n-300)', fr: 'Autre mode', en: 'Other tender', ar: 'طريقة أخرى' },
   ];
@@ -3749,7 +3765,9 @@
       if (!amt) return;
       const k = tenderBucket(e && e.method);
       if (!k) return; // crédit client / créance livraison ≠ argent encaissé
-      by[k] = (by[k] || 0) + amt;
+      tenderAmounts(e).forEach(part => {
+        if (part.key) by[part.key] = (by[part.key] || 0) + part.amount;
+      });
       total += amt;
     });
     if (!total) return { rows: [], total: 0, cardTotal: 0 };
@@ -4115,14 +4133,14 @@
      * dominant tender, the owner could not tell cash from card on their own
      * feed. */
     const ML = {
-      fr: { cash: 'Espèces', card: 'Carte bancaire', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'Lien de paiement', split: 'Paiement partagé', credit: 'Crédit client', delivery: 'Livraison · à recevoir', sub: 'Vente encaissée', deliverySub: 'Vente enregistrée · non encaissée' },
-      en: { cash: 'Cash', card: 'Bank card', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'Payment link', split: 'Split payment', credit: 'Customer credit', delivery: 'Delivery · receivable', sub: 'Sale recorded', deliverySub: 'Sale recorded · unpaid' },
-      ar: { cash: 'نقدًا', card: 'بطاقة بنكية', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'رابط الدفع', split: 'دفع مقسّم', credit: 'دين العميل', delivery: 'توصيل · مبلغ مستحق', sub: 'عملية بيع مسجّلة', deliverySub: 'بيع مسجّل · غير محصّل' },
+      fr: { cash: 'Espèces', card: 'Carte bancaire', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'Lien de paiement', transfer: 'Virement / Versement', cheque: 'Chèque', split: 'Paiement partagé', credit: 'Crédit client', delivery: 'Livraison · à recevoir', sub: 'Vente encaissée', deliverySub: 'Vente enregistrée · non encaissée' },
+      en: { cash: 'Cash', card: 'Bank card', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'Payment link', transfer: 'Bank transfer', cheque: 'Cheque', split: 'Split payment', credit: 'Customer credit', delivery: 'Delivery · receivable', sub: 'Sale recorded', deliverySub: 'Sale recorded · unpaid' },
+      ar: { cash: 'نقدًا', card: 'بطاقة بنكية', tap: 'Kiwi Tap', qr: 'QR Kiwi Wallet', wallet: 'Kiwi Wallet', link: 'رابط الدفع', transfer: 'تحويل بنكي', cheque: 'شيك', split: 'دفع مقسّم', credit: 'دين العميل', delivery: 'توصيل · مبلغ مستحق', sub: 'عملية بيع مسجّلة', deliverySub: 'بيع مسجّل · غير محصّل' },
     };
     /* Chip art per method. The till records the TENDER, never the card network,
      * so a card sale gets the neutral card chip — printing a Visa or Mastercard
      * mark here would invent a fact the sale does not carry. */
-    const ICON_FOR = { cash: 'cash', card: 'cmi', tap: 'tap', qr: 'qr', wallet: 'qr', link: 'qr', split: 'cmi', credit: 'qr', delivery: 'qr' };
+    const ICON_FOR = { cash: 'cash', card: 'cmi', tap: 'tap', qr: 'qr', wallet: 'qr', link: 'qr', transfer: 'qr', cheque: 'qr', split: 'cmi', credit: 'qr', delivery: 'qr' };
     const L = ML[lang] || ML.fr;
     return sales.map((s, i) => {
       const d = new Date(s.ts);

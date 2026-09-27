@@ -1256,6 +1256,8 @@ section('Whole-project regressions');
     'supplier-actions-test.mjs',
     'print-paper-test.mjs',
     'day-report-print-format-test.mjs',
+    'retail-tender-methods-test.mjs',
+    'retail-tender-browser-test.mjs',
     'z-refund-total-coherence-test.mjs',
     'caisse-boot-restore-guard-test.mjs',
     'close-register-durability-test.mjs',

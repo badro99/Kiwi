@@ -144,6 +144,7 @@ export async function managerRefundProof(authSecret, claims) {
     refundId: String(claims && claims.refundId || '').slice(0, 64),
     originalSaleId: String(claims && claims.originalSaleId || '').slice(0, 64),
     amountCents: Math.round(Number(claims && claims.amountCents) || 0),
+    refundMethod: String(claims && claims.refundMethod || '').slice(0, 16),
     exp: Date.now() + 10 * 60 * 1000,
   };
   if (!authSecret || !body.merchant || !body.staffId || !body.refundId

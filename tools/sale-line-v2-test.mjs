@@ -22,6 +22,10 @@ const storeSubscriptionPending = async () => false;
 const startOfDay = () => 0;
 const settleServiceTable = async () => ({ ok: true });
 const poke = async () => {};
+// This harness exercises legacy sale baskets without tender detail. The new
+// retail tender validator has its own end-to-end D1 test in check.js.
+const validateRetailTenders = () => null;
+const retailTenderMethod = () => '';
 
 const MAX_AMOUNT_CENTS`);
 const mod = await import('data:text/javascript;base64,' + Buffer.from(api).toString('base64'));

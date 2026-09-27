@@ -34,6 +34,14 @@ function maisonPage() {
   </body></html>`;
 }
 
+function boutiquePage() {
+  return maisonPage()
+    .replaceAll('pos-maison', 'pos-boutique')
+    .replaceAll('__maisonSpec', '__boutiqueSpec')
+    .replaceAll("'maison'", "'boutique'")
+    .replaceAll('Maison caisse', 'Boutique caisse');
+}
+
 function clientsPage() {
   return `<!doctype html><html lang="fr"><head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -113,9 +121,9 @@ function navigationPage() {
 
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
-  if (pathname === '/maison.html' || pathname === '/clients.html' || pathname === '/dashboard.html' || pathname === '/employee-clock.html' || pathname === '/nav-stability.html') {
+  if (pathname === '/maison.html' || pathname === '/boutique.html' || pathname === '/clients.html' || pathname === '/dashboard.html' || pathname === '/employee-clock.html' || pathname === '/nav-stability.html') {
     res.writeHead(200, { 'Content-Type': TYPES['.html'], 'Cache-Control': 'no-store' });
-    res.end(pathname === '/maison.html' ? maisonPage() : pathname === '/clients.html' ? clientsPage()
+    res.end(pathname === '/maison.html' ? maisonPage() : pathname === '/boutique.html' ? boutiquePage() : pathname === '/clients.html' ? clientsPage()
       : pathname === '/dashboard.html' ? (new URL(req.url, 'http://localhost').searchParams.get('fixture') === 'nav-stability' ? navigationPage() : restaurantPage())
         : pathname === '/employee-clock.html' ? employeeClockPage() : navigationPage()); return;
   }

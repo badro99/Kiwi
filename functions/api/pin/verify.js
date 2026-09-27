@@ -42,6 +42,7 @@ export async function onRequestPost(context) {
     approval = await managerRefundProof(env.AUTH_SECRET, {
       merchant, staffId: verified.staff.id, staffName: verified.staff.name, staffRole: verified.staff.role,
       refundId: action.refundId, originalSaleId: action.originalSaleId, amountCents: action.amountCents,
+      refundMethod: action.refundMethod,
     });
   }
 
