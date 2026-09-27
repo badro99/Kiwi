@@ -256,6 +256,12 @@
 
       /* ── clientes / carnet ── */
       'Carnet clients': 'Customer book', 'Nouveau client': 'New customer',
+      'Joignables': 'Reachable', 'Récompenses prêtes': 'Rewards ready', 'Dépensé': 'Spent',
+      'Réguliers': 'Regulars', 'Nouveaux': 'New', 'Dormants': 'Dormant', 'Client': 'Customer',
+      'Profil': 'Profile', 'Fidélité': 'Loyalty', 'Hier': 'Yesterday', 'Retourné': 'Returned',
+      'Échangé': 'Exchanged', 'avoir': 'credit', 'remboursé': 'refunded', 'utilisé': 'used', 'annulé': 'cancelled',
+      'Aucun résultat': 'No result',
+      'Essayez un autre nom, un autre numéro ou un autre segment.': 'Try another name, number or segment.',
       'Rechercher un nom ou 06…': 'Search a name or 06…', '06… ou nom': '06… or name',
       'Aucun client pour l’instant': 'No customer yet',
       'Ajoutez votre premier client · il apparaîtra aussitôt sur le tableau de bord.':
@@ -505,6 +511,12 @@
 
       /* ── clientes / carnet ── */
       'Carnet clients': 'دفتر الزبناء', 'Nouveau client': 'زبون جديد',
+      'Joignables': 'يمكن التواصل معهم', 'Récompenses prêtes': 'مكافآت جاهزة', 'Dépensé': 'المصروف',
+      'Réguliers': 'دائمون', 'Nouveaux': 'جدد', 'Dormants': 'غائبون', 'Client': 'الزبون',
+      'Profil': 'الفئة', 'Fidélité': 'الولاء', 'Hier': 'أمس', 'Retourné': 'مُرجع',
+      'Échangé': 'مُستبدل', 'avoir': 'قسيمة', 'remboursé': 'مُسترد', 'utilisé': 'مستعمل', 'annulé': 'ملغى',
+      'Aucun résultat': 'لا توجد نتيجة',
+      'Essayez un autre nom, un autre numéro ou un autre segment.': 'جرّب اسماً أو رقماً أو فئة أخرى.',
       'Rechercher un nom ou 06…': 'ابحث باسم أو 06…', '06… ou nom': '06… أو الاسم',
       'Aucun client pour l’instant': 'لا يوجد زبون بعد',
       'Ajoutez votre premier client · il apparaîtra aussitôt sur le tableau de bord.':

@@ -1,6 +1,6 @@
 import {
   IMAGE_EXTENSIONS, MAX_IMAGE_BYTES, MAX_IMAGES, MAX_TEXT, MAX_TOTAL_IMAGE_BYTES,
-  json, purgeExpired, schemaError, ticketNumber,
+  json, purgeExpired, schemaError, sweepOrphanMedia, ticketNumber,
 } from './_lib.js';
 import { TICKET_TAXONOMY, validateTicketClassification } from './_taxonomy.js';
 
@@ -33,6 +33,7 @@ export async function onRequestGet({ env }) {
   if (!env.DB) return json({ error: 'not-configured' }, 503);
   try {
     await purgeExpired(env);
+    try { await sweepOrphanMedia(env); } catch (_) { /* the board still loads; the next visit retries */ }
     const [ticketRows, followupRows, imageRows] = await Promise.all([
       readTicketRows(env),
       env.DB.prepare(

@@ -398,7 +398,7 @@ function testRetailScan(withPlatform) {
   if (withPlatform) vm.runInContext(src, ctx);
   vm.runInContext(readAsset('assets/retail-scan.js'), ctx);
   const root = { isConnected: true, appendChild: () => {}, querySelector: () => makeEl(), querySelectorAll: () => [] };
-  win.KiwiRetailScan.mount(root, 'boutique');
+  win.KiwiRetailScan.mount(root, 'epicerie');
   return queriedKey;
 }
 ok(testRetailScan(true) === 'kiwi:retailScan:v1:santos-store', 'retail-scan.js mounts on santos-store key with KiwiPlatform present');

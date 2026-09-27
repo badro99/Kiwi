@@ -577,8 +577,12 @@
       var badge = $('.krs-launch-count', b); if (badge) { badge.textContent = count; badge.hidden = !count; }
     });
   }
+  /* #104 · Boutique and Maison already carry « Scan » in their left rail; a
+     second floating « Scan continu » sat on top of « Encaisser » and did the
+     same job. Those two keep the rail entry only. */
+  var OWN_SCAN_ENTRY = { boutique: 1, maison: 1 };
   function mount(root, vertical) {
-    if (!root || !ELIGIBLE[vertical]) return false;
+    if (!root || !ELIGIBLE[vertical] || OWN_SCAN_ENTRY[vertical]) return false;
     if (mounted[vertical] && mounted[vertical].isConnected) return true;
     var b = document.createElement('button'); b.type = 'button'; b.className = 'krs-launch'; b.setAttribute('aria-label', 'Ouvrir le scan continu');
     b.innerHTML = '<i data-lucide="scan-barcode"></i><span>Scan continu</span><b class="krs-launch-count" hidden>0</b>';

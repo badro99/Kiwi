@@ -2127,7 +2127,7 @@
                   <span class="bq-cl-name">${esc(c.name)} ${c.vip ? '<span class="bq-vip-chip">VIP</span>' : ''}</span>
                   <span class="bq-cl-sub">${esc(c.phone) || '·'}${c.taille ? ' · taille ' + esc(c.taille) : ''}</span>
                 </span>
-                <span class="bq-cl-right"><b>${c.points} pts</b>${av ? `<span class="av">avoir ${fmtMAD(av.balance)}</span>` : `${c.achats} achats`}</span>
+                <span class="bq-cl-right"><b>${c.points} pts</b>${c.achats} achats${av ? `<span class="av"><i data-lucide="ticket"></i>Avoir ${fmtMAD(av.balance)}</span>` : ''}</span>
               </button>`;
             }).join('') || `<div class="bq-empty">Aucune fiche pour « ${esc(q)} »</div>`}
           </div>
@@ -3005,6 +3005,12 @@
     restoreLines(sale, idxs, quantities, `avoir (${motif.toLowerCase()})`);
     const c = saleClient(sale);
     const av = issueAvoir(amount, c, `${motif}, retour ${sale.id}`, sale.id);
+    // La fiche client liste les pièces rendues sous l'avoir (#105).
+    av.lines = idxs.map((i) => {
+      const ln = sale.lines[i];
+      return ln ? { name: (P[ln.pid] && P[ln.pid].name) || ln.name || 'Article', qty: Number(quantities.get(i)) || 1 } : null;
+    }).filter(Boolean);
+    persistAvoirs();
     recordReturn(sale, idxs, amount, motif, 'avoir', av.code, quantities);
     state.ret = null;
     refreshOps();

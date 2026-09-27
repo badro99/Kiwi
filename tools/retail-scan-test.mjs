@@ -96,4 +96,19 @@ ok(storeApi.includes("retailcredit: { keys: ['entries', 'seq']"), 'store endpoin
 ok(sale.includes("split: 'split'") && sale.includes("credit: 'credit'"), 'sales ledger preserves split and credit methods');
 ok(sale.includes('entry.parts = sale.parts'), 'sales journal retains sanitized payment parts');
 
+{
+  // #104 · Boutique and Maison own a « Scan » rail entry, so no floating launcher there.
+  const appended = [];
+  const el = () => ({ className: '', innerHTML: '', setAttribute() {}, addEventListener() {}, querySelector: () => null });
+  const doc = { createElement: el, querySelector: () => null, querySelectorAll: () => [], getElementById: () => null, addEventListener() {}, body: { appendChild() {} } };
+  const mem = new Map();
+  const win = { document: doc, localStorage: { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, v) }, addEventListener() {} };
+  win.window = win;
+  vm.runInContext(source, vm.createContext({ window: win, document: doc, localStorage: win.localStorage, console, JSON, Math, Date, setTimeout: () => 0, clearTimeout() {} }));
+  const root = () => ({ isConnected: true, appendChild: (n) => appended.push(n), querySelector: () => null, querySelectorAll: () => [] });
+  ok(win.KiwiRetailScan.mount(root(), 'boutique') === false && win.KiwiRetailScan.mount(root(), 'maison') === false && appended.length === 0,
+    'boutique and maison get no floating Scan continu launcher (#104)');
+  ok(win.KiwiRetailScan.mount(root(), 'epicerie') === true && appended.length === 1, 'other retail verticals keep the launcher');
+}
+
 console.log('retail scan: ' + checks + ' controls passed');

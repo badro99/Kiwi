@@ -54,6 +54,32 @@ export async function purgeExpired(env, now = Date.now()) {
   return ids.length;
 }
 
+/* A screenshot is written to R2 before its row lands in D1. If the worker dies
+   between the two, the file has no row, so neither "Tested" nor the 20-day
+   purge will ever find it. Sweep those: any object under kiwi-tickets/ that no
+   row points at, once it is older than an in-flight upload could be. R2 has
+   no versioning here, so a delete is final. */
+export const ORPHAN_GRACE_MS = 60 * 60 * 1000;
+
+export async function sweepOrphanMedia(env, now = Date.now()) {
+  if (!env.MEDIA || typeof env.MEDIA.list !== 'function') return 0;
+  const rows = await env.DB.prepare('SELECT object_key FROM kiwi_ticket_images').all();
+  const known = new Set((rows.results || []).map((row) => row.object_key).filter(Boolean));
+  const orphans = [];
+  let cursor;
+  for (let page = 0; page < 5; page += 1) {
+    const listed = await env.MEDIA.list({ prefix: 'kiwi-tickets/', limit: 1000, cursor });
+    for (const object of listed.objects || []) {
+      const uploaded = object.uploaded ? new Date(object.uploaded).getTime() : 0;
+      if (!known.has(object.key) && uploaded && now - uploaded > ORPHAN_GRACE_MS) orphans.push(object.key);
+    }
+    if (!listed.truncated) break;
+    cursor = listed.cursor;
+  }
+  for (let i = 0; i < orphans.length; i += 1000) await env.MEDIA.delete(orphans.slice(i, i + 1000));
+  return orphans.length;
+}
+
 export function schemaError(error) {
   const message = String((error && error.message) || error || '');
   return /no such table|no such column|has no column named/i.test(message);

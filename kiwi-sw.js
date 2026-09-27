@@ -163,7 +163,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=12',
   '/assets/operations-ui.js?v=16',
-  '/assets/live-link.js?v=53',
+  '/assets/live-link.js?v=54',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -220,7 +220,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=5',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=6',
+  '/assets/caisse-lang.js?v=8',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/retail-balances.js?v=4',
@@ -237,7 +237,7 @@ var SHELL = [
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=4',
   '/assets/clients-store.js?v=7',
-  '/assets/clients-book.js?v=13',
+  '/assets/clients-book.js?v=15',
   '/assets/clients-directory.js?v=6',
   '/assets/menu-catalog.js?v=25',
   '/assets/stock-identity.js?v=2',
@@ -272,11 +272,11 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=14',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=9',
-  '/assets/pos-dispatch.js?v=56',
+  '/assets/pos-dispatch.js?v=57',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
-  '/assets/retail-scan.js?v=7',
+  '/assets/retail-scan.js?v=8',
   '/assets/caisse-dna.css?v=5',
   '/assets/caisse-dna.js?v=2',
   '/assets/pos-mobile.js?v=3',
@@ -285,8 +285,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=31',
-  '/assets/pos-boutique.js?v=31',
+  '/assets/pos-boutique.css?v=33',
+  '/assets/pos-boutique.js?v=33',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */

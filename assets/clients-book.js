@@ -102,33 +102,65 @@
       'font-family:"Inter Tight",Inter,system-ui,sans-serif;color:var(--ink,#0A0F0D);animation:kcb-fade .2s ease;}',
       '@keyframes kcb-fade{from{opacity:0}to{opacity:1}}',
       '@keyframes kcb-up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}',
-      '#kcb-root .kcb-head{display:flex;align-items:center;gap:14px;padding:18px 22px;border-bottom:1px solid rgba(10,15,13,.08);background:var(--surface);}',
-      '#kcb-root .kcb-head h2{margin:0;font-size:1.15rem;font-weight:700;letter-spacing:-.01em;}',
-      '#kcb-root .kcb-x{width:44px;height:44px;min-width:44px;min-height:44px;border-radius:12px;border:1px solid rgba(10,15,13,.1);background:var(--surface);cursor:pointer;display:grid;place-items:center;color:var(--ink,#0A0F0D);touch-action:manipulation;-webkit-tap-highlight-color:transparent;}',
-      '#kcb-root .kcb-x svg{width:22px;height:22px;}',
-      '#kcb-root .kcb-tools{display:flex;gap:10px;padding:16px 22px;align-items:center;}',
-      '#kcb-root .kcb-searchwrap{flex:1;position:relative;}',
-      '#kcb-root .kcb-searchwrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:rgba(10,15,13,.4);}',
-      '#kcb-root .kcb-search{width:100%;box-sizing:border-box;padding:13px 14px 13px 40px;border:1px solid rgba(10,15,13,.14);border-radius:12px;font-size:1rem;background:var(--surface);color:var(--ink,#0A0F0D);}',
+      /* #102 · the Clients page speaks the same language as Vendus / Échanges :
+         a titled page, one KPI strip, one toolbar, one list card. */
+      '#kcb-root .kcb-scroll{flex:1;overflow-y:auto;}',
+      '#kcb-root .kcb-page{padding:24px;max-width:1280px;margin:0 auto;box-sizing:border-box;}',
+      '#kcb-root .kcb-top{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:18px;}',
+      '#kcb-root .kcb-top h2{margin:0;font-size:28px;font-weight:700;letter-spacing:-.01em;line-height:1.3;}',
+      '#kcb-root .kcb-prog{display:block;font-size:12px;color:var(--n-500,#6f6c65);margin-top:5px;}',
+      '#kcb-root .kcb-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--n-200,#dedbd5);border:1px solid var(--n-200,#dedbd5);border-radius:18px;overflow:hidden;margin-bottom:18px;box-shadow:0 1px 2px rgba(10,15,13,.04),0 10px 26px -16px rgba(10,15,13,.1);}',
+      '#kcb-root .kcb-strip .kx-kpi{background:var(--surface,#fff);padding:15px 18px 16px;min-width:0;}',
+      '#kcb-root .kcb-strip .l{font-size:10px;line-height:1.3;font-weight:500;letter-spacing:.075em;color:var(--n-500,#6f6c65);text-transform:uppercase;}',
+      '#kcb-root .kcb-strip .v{font-size:29px;line-height:1.02;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.032em;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      '#kcb-root .kcb-strip .v .u{font-size:12.5px;font-weight:500;letter-spacing:0;color:var(--n-500,#6f6c65);margin-left:4px;}',
+      '#kcb-root .kcb-tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}',
+      '#kcb-root .kcb-searchwrap{flex:1 1 260px;position:relative;min-width:0;}',
+      '#kcb-root .kcb-searchwrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:var(--n-500,#6f6c65);}',
+      '#kcb-root .kcb-search{width:100%;box-sizing:border-box;height:44px;padding:0 14px 0 40px;border:1px solid var(--n-200,#dedbd5);border-radius:12px;font-size:.95rem;background:var(--surface);color:var(--ink,#0A0F0D);}',
       '#kcb-root .kcb-search:focus{outline:none;border-color:var(--atlas,#0B6E4F);box-shadow:0 0 0 3px rgba(11,110,79,.12);}',
-      '#kcb-root .kcb-add{display:inline-flex;align-items:center;gap:8px;background:var(--atlas,#0B6E4F);color:#fff;border:0;border-radius:12px;padding:13px 18px;font:600 .92rem/1 inherit;cursor:pointer;white-space:nowrap;}',
+      '#kcb-root .kx-tabs{display:inline-flex;gap:2px;padding:3px;border-radius:12px;background:var(--n-100,#efece3);flex-wrap:wrap;}',
+      '#kcb-root .kx-tab{border:0;background:transparent;color:var(--n-600,#55524c);font-family:inherit;font-size:12px;font-weight:600;line-height:1;padding:0 12px;height:36px;border-radius:9px;cursor:pointer;white-space:nowrap;touch-action:manipulation;}',
+      '#kcb-root .kx-tab.on{background:var(--surface);color:var(--ink,#0A0F0D);box-shadow:0 1px 2px rgba(0,0,0,.05);}',
+      '#kcb-root .kx-tabs[data-kw-lens] .kx-tab.on{background:transparent;box-shadow:none;}',  /* liquid-lens.js carries the fill */
+      '#kcb-root .kx-tab b{font-weight:600;color:var(--n-500,#6f6c65);margin-left:5px;font-variant-numeric:tabular-nums;}',
+      '#kcb-root .kcb-add{display:inline-flex;align-items:center;gap:8px;background:var(--atlas,#0B6E4F);color:#fff;border:0;border-radius:12px;height:44px;padding:0 18px;font-family:inherit;font-size:.92rem;font-weight:600;line-height:1;cursor:pointer;white-space:nowrap;touch-action:manipulation;}',
       '#kcb-root .kcb-add svg{width:18px;height:18px;}',
-      '#kcb-root .kcb-list{flex:1;overflow-y:auto;padding:4px 22px 22px;}',
-      '#kcb-root .kcb-empty{text-align:center;color:rgba(10,15,13,.5);padding:70px 20px;}',
-      '#kcb-root .kcb-empty svg{width:44px;height:44px;color:rgba(10,15,13,.22);margin-bottom:14px;}',
-      '#kcb-root .kcb-empty b{display:block;font-size:1.05rem;color:var(--ink,#0A0F0D);margin-bottom:6px;font-weight:600;}',
+      '#kcb-root .kcb-list{background:var(--surface);border:1px solid var(--n-200,#dedbd5);border-radius:18px;overflow:hidden;}',
+      '#kcb-root .kcb-list:has(.kcb-empty){background:transparent;border:0;}',
+      '#kcb-root .kcb-cols,.kcb-row{display:grid;grid-template-columns:minmax(0,2.2fr) 110px 90px 120px 120px minmax(0,1.3fr);align-items:center;gap:14px;padding:0 18px;}',
+      '#kcb-root .kcb-cols{height:38px;font-size:10px;font-weight:600;letter-spacing:.075em;text-transform:uppercase;color:var(--n-500,#6f6c65);border-bottom:1px solid var(--n-200,#dedbd5);background:var(--paper-soft,#f5f3ef);}',
+      '#kcb-root .kcb-cols .r,.kcb-row .r{text-align:right;}',
+      '#kcb-root .kcb-empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:54px 24px 56px;border:1px dashed var(--n-200,#dedbd5);border-radius:18px;background:var(--paper-soft,#f5f3ef);color:var(--n-500,#6f6c65);}',
+      '#kcb-root .kcb-empty .ico{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:var(--surface);border:1px solid var(--n-200,#dedbd5);color:var(--atlas,#0B6E4F);margin-bottom:15px;}',
+      '#kcb-root .kcb-empty .ico svg{width:22px;height:22px;}',
+      '#kcb-root .kcb-empty b{display:block;font-size:16.5px;letter-spacing:-.02em;color:var(--ink,#0A0F0D);margin-bottom:8px;font-weight:600;}',
+      '#kcb-root .kcb-empty div{font-size:13.5px;line-height:1.55;max-width:42ch;}',
       /* client row */
-      '.kcb-row{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--surface);border:1px solid rgba(10,15,13,.07);border-radius:14px;margin-bottom:9px;cursor:pointer;transition:border-color .12s,box-shadow .12s;}',
-      '.kcb-row:hover{border-color:rgba(11,110,79,.4);box-shadow:0 6px 18px -12px rgba(5,59,44,.4);}',
+      '.kcb-row{min-height:64px;border-top:1px solid var(--n-100,#efece3);cursor:pointer;transition:background .12s;}',
+      '.kcb-row:first-of-type{border-top:0;}',
+      '.kcb-row:hover{background:color-mix(in srgb,var(--atlas,#0B6E4F) 5%,transparent);}',
+      '.kcb-row:focus-visible{outline:2px solid var(--atlas,#0B6E4F);outline-offset:-2px;}',
+      '.kcb-who{display:flex;align-items:center;gap:12px;min-width:0;}',
       '.kcb-av{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:700;font-size:1rem;color:#fff;background:var(--atlas,#0B6E4F);}',
-      '.kcb-row .kcb-nm{font-weight:600;font-size:.98rem;}',
-      '.kcb-row .kcb-ph{font-size:.82rem;color:rgba(10,15,13,.5);margin-top:2px;font-variant-numeric:tabular-nums;}',
-      '.kcb-row .kcb-meta{margin-left:auto;text-align:right;}',
+      '.kcb-row .kcb-av{width:36px;height:36px;font-size:.8rem;color:var(--riad,#053B2C);background:color-mix(in srgb,var(--atlas,#0B6E4F) 13%,var(--surface,#fff));}',
+      '.kcb-row .kcb-nm{font-weight:600;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      '.kcb-row .kcb-ph{font-size:.8rem;color:var(--n-500,#6f6c65);margin-top:2px;font-variant-numeric:tabular-nums;}',
+      '.kcb-num{font-size:.9rem;font-weight:600;font-variant-numeric:tabular-nums;}',
+      '.kcb-num small{font-weight:500;color:var(--n-500,#6f6c65);font-size:.72rem;margin-left:3px;}',
+      '.kcb-muted{color:var(--n-500,#6f6c65);font-weight:500;}',
+      '.kcb-fid{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:0;}',
+      '.kcb-fid .kcb-minibar{width:100%;max-width:140px;height:4px;border-radius:9px;background:var(--n-100,#efece3);overflow:hidden;}',
+      '.kcb-fid .kcb-minibar i{display:block;height:100%;background:var(--atlas,#0B6E4F);border-radius:9px;}',
+      '.kcb-ready{font-size:.68rem;font-weight:600;color:#075238;background:var(--mint-soft,#E6FbEF);padding:2px 8px;border-radius:999px;}',
+      '.kcb-credit{display:inline-block;font-size:.72rem;font-weight:600;color:#8A6210;background:#FBF0D6;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:1px;}',
       '.kcb-pts{font-weight:700;font-size:1rem;color:var(--atlas,#0B6E4F);}',
       '.kcb-pts small{font-weight:500;color:rgba(10,15,13,.45);font-size:.72rem;}',
-      '.kcb-seg{display:inline-block;font-size:.68rem;font-weight:600;padding:2px 9px;border-radius:999px;margin-top:5px;}',
+      '.kcb-seg{display:inline-block;font-size:.68rem;font-weight:600;padding:2px 9px;border-radius:999px;}',
       '.kcb-seg.reg{background:#E6FbEF;color:#075238;}.kcb-seg.vip{background:#FBF0D6;color:#8A6210;}',
       '.kcb-seg.new{background:#E4ECF8;color:#3E78C9;}.kcb-seg.win{background:#FBE3DD;color:#C0492F;}',
+      '@media (max-width:900px){#kcb-root .kcb-page{padding:16px;}#kcb-root .kcb-top{align-items:flex-start;}#kcb-root .kcb-strip{grid-template-columns:repeat(2,minmax(0,1fr));}',
+        '#kcb-root .kcb-cols{display:none;}.kcb-row{grid-template-columns:minmax(0,1fr) auto;padding:10px 14px;}.kcb-row .kcb-c-seg,.kcb-row .kcb-c-visits,.kcb-row .kcb-c-last,.kcb-row .kcb-c-spend{display:none;}}',
       /* sheet (add/edit/detail) */
       '#kcb-sheet{position:fixed;inset:0;z-index:945;background:rgba(5,20,14,.42);display:flex;align-items:flex-end;justify-content:center;animation:kcb-fade .18s ease;}',
       '@media (min-width:640px){#kcb-sheet{align-items:center;}}',
@@ -136,6 +168,10 @@
       '@media (min-width:640px){#kcb-sheet .kcb-card{border-radius:22px;}}',
       '#kcb-sheet h3{margin:0 0 4px;font-size:1.2rem;font-weight:700;}',
       '#kcb-sheet .kcb-sub{color:rgba(10,15,13,.55);font-size:.86rem;margin-bottom:18px;}',
+      '.kcb-x{width:44px;height:44px;min-width:44px;border-radius:12px;border:1px solid rgba(10,15,13,.1);background:var(--surface);cursor:pointer;display:grid;place-items:center;color:var(--ink,#0A0F0D);touch-action:manipulation;}',
+      '.kcb-x svg{width:20px;height:20px;}',
+      '.kcb-ret{display:block;margin-top:5px;font-size:.78rem;font-weight:600;color:#8A6210;}',
+      '.kcb-struck{text-decoration:line-through;text-decoration-thickness:1px;color:rgba(10,15,13,.45);}',
       '.kcb-field{margin-bottom:14px;}',
       '.kcb-field label{display:block;font-size:.78rem;font-weight:600;color:rgba(10,15,13,.6);margin-bottom:6px;}',
       '.kcb-field input{width:100%;box-sizing:border-box;padding:13px 14px;border:1px solid rgba(10,15,13,.14);border-radius:12px;font-size:1rem;background:var(--surface);color:var(--ink,#0A0F0D);}',
@@ -156,7 +192,7 @@
       '.kcb-consent input{margin-top:2px;width:18px;height:18px;flex:none;accent-color:var(--atlas,#0B6E4F);}',
       '.kcb-consent span{font-size:.82rem;color:rgba(10,15,13,.7);line-height:1.45;}',
       '.kcb-actions{display:flex;gap:10px;margin-top:20px;}',
-      '.kcb-btn{flex:1;padding:14px;border-radius:12px;font:600 .95rem/1 inherit;cursor:pointer;border:1px solid transparent;}',
+      '.kcb-btn{flex:1;padding:14px;border-radius:12px;font-family:inherit;font-size:.95rem;font-weight:600;line-height:1;cursor:pointer;border:1px solid transparent;}',
       '.kcb-btn.primary{background:var(--atlas,#0B6E4F);color:#fff;}',
       '.kcb-btn.ghost{background:var(--surface);border-color:rgba(10,15,13,.14);color:var(--ink,#0A0F0D);}',
       '.kcb-btn.danger{background:var(--surface);border-color:rgba(192,73,47,.4);color:#C0492F;flex:none;width:52px;display:grid;place-items:center;}',
@@ -178,11 +214,14 @@
       '.kcb-record .rl{font-size:.78rem;font-weight:600;color:rgba(10,15,13,.6);margin-bottom:10px;}',
       '.kcb-recrow{display:flex;gap:10px;align-items:center;}',
       '.kcb-recrow input{flex:1;box-sizing:border-box;padding:13px 14px;border:1px solid rgba(10,15,13,.14);border-radius:12px;font-size:1.05rem;background:var(--surface);font-variant-numeric:tabular-nums;}',
-      '.kcb-big{background:var(--atlas,#0B6E4F);color:#fff;border:0;border-radius:12px;padding:14px 20px;font:600 1rem/1 inherit;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;}',
+      '.kcb-big{background:var(--atlas,#0B6E4F);color:#fff;border:0;border-radius:12px;padding:14px 20px;font-family:inherit;font-size:1rem;font-weight:600;line-height:1;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;}',
       '.kcb-big svg{width:18px;height:18px;}',
       /* dark */
       'html[data-theme="dark"] #kcb-root{background:#0d1512;color:#eafff3;border-color:rgba(255,255,255,.07);}',
-      'html[data-theme="dark"] #kcb-root .kcb-head,html[data-theme="dark"] .kcb-row,html[data-theme="dark"] .kcb-stat,html[data-theme="dark"] .kcb-kpi,html[data-theme="dark"] .kcb-record,html[data-theme="dark"] .kcb-field input,html[data-theme="dark"] #kcb-root .kcb-search{background:#141d19;border-color:#26302b;color:#eafff3;}',
+      'html[data-theme="dark"] #kcb-root .kcb-strip .kx-kpi,html[data-theme="dark"] #kcb-root .kcb-list,html[data-theme="dark"] .kcb-stat,html[data-theme="dark"] .kcb-kpi,html[data-theme="dark"] .kcb-record,html[data-theme="dark"] .kcb-field input,html[data-theme="dark"] #kcb-root .kcb-search{background:#141d19;border-color:#26302b;color:#eafff3;}',
+      'html[data-theme="dark"] #kcb-root .kcb-strip,html[data-theme="dark"] #kcb-root .kcb-cols,html[data-theme="dark"] #kcb-root .kcb-empty{background:#101915;border-color:#26302b;}',
+      'html[data-theme="dark"] #kcb-root .kx-tabs{background:#141d19;}html[data-theme="dark"] #kcb-root .kx-tab.on{background:#1c2420;color:#eafff3;}',
+      'html[data-theme="dark"] .kcb-row{border-color:#26302b;}html[data-theme="dark"] .kcb-row .kcb-av{background:#1b2a23;color:#7DF2B0;}',
       'html[data-theme="dark"] #kcb-sheet .kcb-card{background:#0d1512;}',
       'html[data-theme="dark"] .kcb-consent,html[data-theme="dark"] .kcb-btn.ghost,html[data-theme="dark"] .kcb-recrow input{background:#141d19;border-color:#26302b;color:#eafff3;}',
     ].join('');
@@ -209,39 +248,78 @@
     try { return localStorage.getItem('kiwiLiveMerchant') || ''; } catch (_) { return ''; }
   }
 
+  /* #105 · La boutique garde ses avoirs et son journal des retours sur la caisse
+     (kiwi:bqAvoirs, kiwi:bqReturns ; le journal des retours est aussi poussé au
+     cloud). La fiche client ne lisait que le registre serveur : un avoir émis
+     au comptoir n'y apparaissait pas, et l'achat retourné restait affiché
+     comme s'il ne l'avait jamais été. On lit donc aussi ces deux journaux. */
+  function localAvoirs() {
+    try { var a = JSON.parse(localStorage.getItem('kiwi:bqAvoirs') || '[]'); return Array.isArray(a) ? a.filter(Boolean) : []; }
+    catch (_) { return []; }
+  }
+  function localReturns() {
+    try {
+      var d = JSON.parse(localStorage.getItem('kiwi:bqReturns') || 'null');
+      var m = creditMerchant();
+      if (!d || !Array.isArray(d.list) || (d.m && m && d.m !== m)) return [];
+      return d.list.filter(Boolean);
+    } catch (_) { return []; }
+  }
+  function localCreditView(a) {
+    var at = a.at ? new Date(a.at).getTime() : 0;
+    return {
+      code: a.code, status: a.status || (a.balance > 0 ? 'active' : 'consumed'),
+      amountCents: Math.round((+a.amount || 0) * 100), balanceCents: Math.round((+a.balance || 0) * 100),
+      createdAt: at, expiresAt: a.until ? new Date(a.until).getTime() : 0,
+      originalRef: a.from || '', reason: a.motif || 'Retour', issuedBy: 'Caisse',
+      events: Array.isArray(a.lines) && a.lines.length ? [{ action: 'issue', lines: a.lines }] : [],
+    };
+  }
+  function clientLocalCredits(clientId) {
+    return localAvoirs().filter(function (a) { return a.holderId && a.holderId === clientId; }).map(localCreditView);
+  }
+
   function loadClientCredits(clientId, host) {
+    if (!host) return;
+    var local = clientLocalCredits(clientId);
+    function paint(remote) {
+      if (!host.isConnected) return;
+      var seen = {};
+      var credits = (remote || []).concat(local).filter(function (credit) {
+        if (!credit || !credit.code || seen[credit.code]) return false;
+        seen[credit.code] = 1; return true;
+      });
+      var active = credits.reduce(function (sum, credit) {
+        return sum + (credit.status === 'active' ? Number(credit.balanceCents || 0) : 0);
+      }, 0) / 100;
+      host.innerHTML = '<div class="kcb-section">Avoirs · solde ' + fmt(active) + ' MAD</div>' + (credits.length
+        ? '<div class="kcb-info">' + credits.map(function (credit) {
+            var issued = (credit.events || []).filter(function (event) { return event.action === 'issue'; })[0] || {};
+            var products = Array.isArray(issued.lines) && issued.lines.length
+              ? issued.lines.map(function (line) { return (line.qty || 1) + '× ' + (line.name || 'Article'); }).join(' · ')
+              : (credit.reason || 'Retour');
+            var movements = (credit.events || []).filter(function (event) { return event.action !== 'issue'; }).map(function (event) {
+              return '<small style="display:block;margin-top:4px">' + esc(event.action === 'redeem' ? 'Utilisé' : event.action === 'cancel' ? 'Annulé' : event.action)
+                + ' · ' + fmt(Number(event.amountCents || 0) / 100) + ' MAD · ' + esc(event.actor || 'Caisse')
+                + ' · solde ' + fmt(Number(event.balanceAfterCents || 0) / 100) + ' MAD</small>';
+            }).join('');
+            var issuedAt = credit.createdAt ? new Date(credit.createdAt).toLocaleString('fr-FR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Date inconnue';
+            var expiry = credit.expiresAt ? new Date(credit.expiresAt).toLocaleDateString('fr-FR') : 'sans échéance';
+            var used = credit.status === 'active' ? '' : ' · ' + (credit.status === 'cancelled' ? 'annulé' : 'utilisé');
+            return '<div class="kcb-inforow"><span class="k">' + esc(credit.code) + '<small style="display:block;margin-top:3px">' + esc(issuedAt) + ' · expire ' + esc(expiry) + '</small></span>'
+              + '<span class="v"><b>' + fmt(Number(credit.amountCents || 0) / 100) + ' MAD · reste ' + fmt(Number(credit.balanceCents || 0) / 100) + ' MAD' + esc(used) + '</b>'
+              + '<small style="display:block;margin-top:3px">Vente ' + esc(credit.originalRef || credit.originalSaleId || '·') + ' · ' + esc(products) + ' · ' + esc(issued.actor || credit.issuedBy || 'Caisse') + '</small>' + movements + '</span></div>';
+          }).join('') + '</div>'
+        : '<div class="kcb-empty" style="min-height:70px"><b>Aucun avoir</b><div>Les crédits boutique émis à ce client apparaîtront ici.</div></div>');
+    }
+    paint([]);
     var merchant = creditMerchant();
-    if (!merchant || !host || typeof fetch !== 'function') return;
+    if (!merchant || typeof fetch !== 'function') return;
     fetch('/api/store-credits?merchant=' + encodeURIComponent(merchant) + '&customerId=' + encodeURIComponent(clientId),
       { headers: { Accept: 'application/json' } })
       .then(function (response) { return response && response.ok ? response.json() : null; })
-      .then(function (data) {
-        if (!host.isConnected) return;
-        var credits = data && Array.isArray(data.credits) ? data.credits : [];
-        var active = credits.reduce(function (sum, credit) {
-          return sum + (credit.status === 'active' ? Number(credit.balanceCents || 0) : 0);
-        }, 0) / 100;
-        host.innerHTML = '<div class="kcb-section">Avoirs · solde ' + fmt(active) + ' MAD</div>' + (credits.length
-          ? '<div class="kcb-info">' + credits.map(function (credit) {
-              var issued = (credit.events || []).filter(function (event) { return event.action === 'issue'; })[0] || {};
-              var products = Array.isArray(issued.lines) && issued.lines.length
-                ? issued.lines.map(function (line) { return (line.qty || 1) + '× ' + (line.name || 'Article'); }).join(' · ')
-                : (credit.reason || 'Retour');
-              var movements = (credit.events || []).filter(function (event) { return event.action !== 'issue'; }).map(function (event) {
-                return '<small style="display:block;margin-top:4px">' + esc(event.action === 'redeem' ? 'Utilisé' : event.action === 'cancel' ? 'Annulé' : event.action)
-                  + ' · ' + fmt(Number(event.amountCents || 0) / 100) + ' MAD · ' + esc(event.actor || 'Caisse')
-                  + ' · solde ' + fmt(Number(event.balanceAfterCents || 0) / 100) + ' MAD</small>';
-              }).join('');
-              var issuedAt = credit.createdAt ? new Date(credit.createdAt).toLocaleString('fr-FR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Date inconnue';
-              var expiry = credit.expiresAt ? new Date(credit.expiresAt).toLocaleDateString('fr-FR') : 'sans échéance';
-              return '<div class="kcb-inforow"><span class="k">' + esc(credit.code) + '<small style="display:block;margin-top:3px">' + esc(issuedAt) + ' · expire ' + esc(expiry) + '</small></span>'
-                + '<span class="v"><b>' + fmt(Number(credit.amountCents || 0) / 100) + ' MAD · reste ' + fmt(Number(credit.balanceCents || 0) / 100) + ' MAD</b>'
-                + '<small style="display:block;margin-top:3px">Vente ' + esc(credit.originalRef || credit.originalSaleId || '—') + ' · ' + esc(products) + ' · ' + esc(issued.actor || credit.issuedBy || 'Caisse') + '</small>' + movements + '</span></div>';
-            }).join('') + '</div>'
-          : '<div class="kcb-empty" style="min-height:70px"><b>Aucun avoir</b><div>Les crédits boutique émis à ce client apparaîtront ici.</div></div>');
-      }).catch(function () {
-        if (host && host.isConnected) host.innerHTML = '<div class="kcb-section">Avoirs</div><div class="kcb-empty" style="min-height:70px">Registre indisponible. Réessayez.</div>';
-      });
+      .then(function (data) { paint(data && Array.isArray(data.credits) ? data.credits : []); })
+      .catch(function () { /* le registre local reste affiché */ });
   }
 
   /* ── launcher chip ─────────────────────────────────────────────────────── */
@@ -259,7 +337,7 @@
   }
 
   /* ── root panel ────────────────────────────────────────────────────────── */
-  var state = { q: '' };
+  var state = { q: '', seg: 'all' };
   /* Inset the panel to the caisse working area — right of the nav rail, below the
    * top bar — so the caisse sidebar + top bar stay visible (the "Plan d'sala" look
    * the owner asked for) instead of a full-viewport takeover. Café/resto exposes a
@@ -334,11 +412,16 @@
     positionRoot(root);
     markNav(entry);
     root.innerHTML =
-      '<div class="kcb-head"><h2>' + (hospitalityMode() ? 'Hospitality+' : 'Carnet clients') + '</h2><span class="kcb-prog">' + esc(progLabel()) + '</span></div>' +
-      '<div class="kcb-tools"><div class="kcb-searchwrap">' + ICON.search +
-        '<input class="kcb-search" id="kcb-q" inputmode="search" placeholder="Rechercher un nom ou 06…" value="' + esc(state.q) + '"></div>' +
-        '<button class="kcb-add" id="kcb-add">' + ICON.userplus + '<span>Nouveau client</span></button></div>' +
-      '<div class="kcb-list" id="kcb-list"></div>';
+      '<div class="kcb-scroll"><div class="kcb-page">' +
+        '<div class="kcb-top"><div><h2>' + (hospitalityMode() ? 'Hospitality+' : 'Clients') + '</h2>' +
+          '<span class="kcb-prog">' + esc(progLabel()) + '</span></div>' +
+          '<button class="kcb-add" id="kcb-add">' + ICON.userplus + '<span>Nouveau client</span></button></div>' +
+        '<div class="kcb-strip" id="kcb-strip"></div>' +
+        '<div class="kcb-tools"><div class="kcb-searchwrap">' + ICON.search +
+          '<input class="kcb-search" id="kcb-q" inputmode="search" placeholder="Rechercher un nom ou 06…" value="' + esc(state.q) + '"></div>' +
+          '<div class="kx-tabs" id="kcb-segs" role="tablist" aria-label="Profils"></div></div>' +
+        '<div class="kcb-list" id="kcb-list"></div>' +
+      '</div></div>';
     renderList();
     if (KC.pull) KC.pull(function (ch) { if (ch) { renderList(); ensureChip(); } }); // cross-device refresh
     root.querySelector('#kcb-add').onclick = function () { openForm(null); };
@@ -358,27 +441,92 @@
     q = q.trim().toLowerCase(); if (!q) return true;
     return (c.name || '').toLowerCase().indexOf(q) >= 0 || KC.normPhone(c.phone).indexOf(KC.normPhone(q)) >= 0;
   }
+  var SEG_TABS = [['all', 'Tous'], ['reg', 'Réguliers'], ['vip', 'VIP'], ['new', 'Nouveaux'], ['win', 'Dormants']];
+  function lastSeenTxt(c) {
+    var d = KC.daysSince(c.lastSeen);
+    if (d === Infinity) return '·';
+    return d === 0 ? 'Aujourd’hui' : (d === 1 ? 'Hier' : d + ' j');
+  }
+  function renderStrip(all, cfg) {
+    var host = document.getElementById('kcb-strip'); if (!host) return;
+    var reachable = 0, ready = 0, spend = 0;
+    all.forEach(function (c) {
+      if (c.consent || c.consentEmail) reachable++;
+      if (KC.progress(c, cfg) >= 1) ready++;
+      spend += Number(c.spend) || 0;
+    });
+    function kpi(label, value, unit) {
+      return '<div class="kx-kpi"><div class="l">' + label + '</div><div class="v">' + value + (unit ? '<span class="u">' + unit + '</span>' : '') + '</div></div>';
+    }
+    host.innerHTML = kpi('Clients', fmt(all.length)) + kpi('Joignables', fmt(reachable)) +
+      kpi('Récompenses prêtes', fmt(ready)) + kpi('Dépensé', fmt(spend), 'MAD');
+  }
+  function renderSegs(all) {
+    var host = document.getElementById('kcb-segs'); if (!host) return;
+    var counts = { all: all.length, reg: 0, vip: 0, new: 0, win: 0 };
+    all.forEach(function (c) { counts[KC.segment(c)]++; });
+    if (!host.querySelector('.kx-tab')) {
+      host.innerHTML = SEG_TABS.map(function (t) {
+        return '<button type="button" class="kx-tab" role="tab" data-seg="' + t[0] + '"><span>' + t[1] + '</span><b></b></button>';
+      }).join('');
+      Array.prototype.forEach.call(host.querySelectorAll('.kx-tab'), function (b) {
+        b.onclick = function () { state.seg = b.getAttribute('data-seg'); renderList(); };
+      });
+      // liquid-lens only scans the first mutation batch of a frame; ask it to find this row.
+      setTimeout(function () { try { if (window.KiwiLens) window.KiwiLens.rescan(); } catch (_) {} }, 0);
+    }
+    Array.prototype.forEach.call(host.querySelectorAll('.kx-tab'), function (b) {
+      var k = b.getAttribute('data-seg');
+      b.querySelector('b').textContent = counts[k];
+      var on = (state.seg || 'all') === k;
+      b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+  }
+  function localCreditsByHolder() {
+    var out = {};
+    localAvoirs().forEach(function (a) {
+      if (!a.holderId || !(a.balance > 0) || a.status === 'cancelled' || a.status === 'consumed') return;
+      if (a.until && new Date(a.until).getTime() < Date.now()) return;
+      out[a.holderId] = (out[a.holderId] || 0) + Number(a.balance);
+    });
+    return out;
+  }
   function renderList() {
     var host = document.getElementById('kcb-list'); if (!host) return;
+    var cfg = KC.config();
     var all = KC.list().sort(function (a, b) { return (b.lastSeen || 0) - (a.lastSeen || 0); });
-    var rows = all.filter(function (c) { return matches(c, state.q); });
+    renderStrip(all, cfg);
+    renderSegs(all);
+    var seg = state.seg || 'all';
+    var rows = all.filter(function (c) { return matches(c, state.q) && (seg === 'all' || KC.segment(c) === seg); });
     if (!rows.length) {
-      host.innerHTML = '<div class="kcb-empty">' + ICON.users +
-        (all.length ? '<b>Aucun résultat</b><div>Essayez un autre nom ou numéro.</div>'
+      host.innerHTML = '<div class="kcb-empty"><span class="ico">' + ICON.users + '</span>' +
+        (all.length ? '<b>Aucun résultat</b><div>Essayez un autre nom, un autre numéro ou un autre segment.</div>'
                     : '<b>Aucun client pour l’instant</b><div>Ajoutez votre premier client · il apparaîtra aussitôt sur le tableau de bord.</div>') + '</div>';
       return;
     }
-    var cfg = KC.config();
-    host.innerHTML = rows.map(function (c) {
-      var seg = KC.segment(c);
-      var ptsTxt = cfg.model === 'amount' ? (fmt(c.points) + ' <small>pts</small>') : ((c.stamps || 0) + '<small>/' + (cfg.model === 'product' ? cfg.product.target : cfg.visit.target) + '</small>');
-      return '<div class="kcb-row" data-id="' + esc(c.id) + '">' +
-        '<div class="kcb-av">' + esc(initials(c.name)) + '</div>' +
-        '<div><div class="kcb-nm">' + esc(c.name || 'Sans nom') + '</div><div class="kcb-ph">' + esc(c.phone || '·') + '</div></div>' +
-        '<div class="kcb-meta"><div class="kcb-pts">' + ptsTxt + '</div><span class="kcb-seg ' + seg + '">' + SEG_LBL[seg] + '</span></div></div>';
-    }).join('');
+    var credits = localCreditsByHolder();
+    var target = cfg.model === 'product' ? cfg.product.target : cfg.visit.target;
+    host.innerHTML = '<div class="kcb-cols"><span>Client</span><span>Profil</span><span class="r">Visites</span><span class="r">Dernière visite</span><span class="r">Dépensé</span><span class="r">Fidélité</span></div>' +
+      rows.map(function (c) {
+        var s = KC.segment(c);
+        var prog = KC.progress(c, cfg);
+        var ptsTxt = cfg.model === 'amount' ? (fmt(c.points) + '<small>pts</small>') : ((c.stamps || 0) + '<small>/ ' + target + '</small>');
+        return '<div class="kcb-row" data-id="' + esc(c.id) + '" tabindex="0" role="button">' +
+          '<div class="kcb-who"><div class="kcb-av">' + esc(initials(c.name)) + '</div>' +
+            '<div style="min-width:0"><div class="kcb-nm">' + esc(c.name || 'Sans nom') +
+              (credits[c.id] ? '<span class="kcb-credit">avoir ' + fmt(credits[c.id]) + ' MAD</span>' : '') + '</div>' +
+            '<div class="kcb-ph">' + esc(c.phone || '·') + '</div></div></div>' +
+          '<div class="kcb-c-seg"><span class="kcb-seg ' + s + '">' + SEG_LBL[s] + '</span></div>' +
+          '<div class="kcb-c-visits r kcb-num">' + (c.visits || 0) + '</div>' +
+          '<div class="kcb-c-last r kcb-num kcb-muted">' + lastSeenTxt(c) + '</div>' +
+          '<div class="kcb-c-spend r kcb-num">' + fmt(c.spend) + '<small>MAD</small></div>' +
+          '<div class="kcb-fid">' + (prog >= 1 ? '<span class="kcb-ready">Récompense prête</span>' : '<span class="kcb-num">' + ptsTxt + '</span>') +
+            '<span class="kcb-minibar"><i style="width:' + Math.round(Math.min(1, prog) * 100) + '%"></i></span></div></div>';
+      }).join('');
     Array.prototype.forEach.call(host.querySelectorAll('.kcb-row'), function (row) {
       row.onclick = function () { openDetail(row.getAttribute('data-id')); };
+      row.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(row.getAttribute('data-id')); } };
     });
   }
 
@@ -537,13 +685,29 @@
       return '<div class="kcb-inforow"><span class="k">' + esc(r[0]) + '</span><span class="v">' + esc(r[1]) + '</span></div>';
     }).join('') + '</div>';
     var purchaseHistory = (Array.isArray(c.history) ? c.history : []).slice(0, 50);
+    var returns = localReturns();
     var historyBlock = '<div class="kcb-section">Historique des achats</div>' + (purchaseHistory.length
       ? '<div class="kcb-info">' + purchaseHistory.map(function (row) {
           var when = row.ts ? new Date(row.ts).toLocaleString('fr-FR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Date inconnue';
+          var rets = row.ref ? returns.filter(function (r) { return String(r.saleRef) === String(row.ref); }) : [];
+          var back = {};
+          rets.forEach(function (r) { (r.items || []).forEach(function (it) { back[it.name] = (back[it.name] || 0) + (Number(it.qty) || 1); }); });
           var items = Array.isArray(row.items) && row.items.length
-            ? row.items.map(function (it) { return (it.qty || 1) + '× ' + (it.name || 'Article'); }).join(' · ')
-            : (row.ref || 'Achat enregistré');
-          return '<div class="kcb-inforow"><span class="k">' + esc(when) + '<small style="display:block;margin-top:3px">' + esc(row.method || 'Mode non renseigné') + '</small></span><span class="v"><b>' + esc(items) + '</b><small style="display:block;margin-top:3px">' + esc(row.ref ? 'Ticket ' + row.ref + ' · ' : '') + fmt(row.amount || 0) + ' MAD</small></span></div>';
+            ? row.items.map(function (it) {
+                var qty = it.qty || 1, gone = Math.min(qty, back[it.name] || 0);
+                if (gone) back[it.name] -= gone;
+                var label = esc(qty + '× ' + (it.name || 'Article'));
+                return gone >= qty ? '<span class="kcb-struck">' + label + '</span>' : label;
+              }).join(' · ')
+            : esc(row.ref || 'Achat enregistré');
+          var retLine = rets.map(function (r) {
+            var what = (r.items || []).map(function (it) { return (it.qty || 1) + '× ' + (it.name || 'Article'); }).join(' · ');
+            var kind = String(r.kind || '');
+            var verb = kind === 'echange' ? 'Échangé' : 'Retourné';
+            var how = kind.indexOf('avoir') === 0 ? 'avoir ' + (r.reference || '') : (kind.indexOf('refund') === 0 ? 'remboursé' : '');
+            return '<span class="kcb-ret">' + verb + ' · ' + esc(what) + (how.trim() ? ' · ' + esc(how.trim()) : '') + ' · ' + fmt(r.amount || 0) + ' MAD</span>';
+          }).join('');
+          return '<div class="kcb-inforow"><span class="k">' + esc(when) + '<small style="display:block;margin-top:3px">' + esc(row.method || 'Mode non renseigné') + '</small></span><span class="v"><b>' + items + '</b><small style="display:block;margin-top:3px">' + esc(row.ref ? 'Ticket ' + row.ref + ' · ' : '') + fmt(row.amount || 0) + ' MAD</small>' + retLine + '</span></div>';
         }).join('') + '</div>'
       : '<div class="kcb-empty" style="min-height:90px"><b>Aucun détail d’achat enregistré</b><div>Les prochains tickets attachés à ce client apparaîtront ici.</div></div>');
     sheet(

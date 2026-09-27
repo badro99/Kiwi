@@ -400,6 +400,22 @@
   var lastSyncStatus = 0, lastSyncError = '';
   var recoveryTimer = null;
   var authRetryAt = 0, authRetryMerchant = '';
+  /* #77 · A restaurant iPad kept its local pairing but lost the httpOnly
+     kiwi_till cookie, so every queued sale came back 403 while the status pill
+     waited for its own probe loop to notice. The device still carries its
+     terminal proof: ask the server to reissue the till cookie the moment a sale
+     is refused for it. Success fires `kiwi-paired`, which already re-flushes the
+     same receipts; a refused recovery leaves the 60 s auth back-off in charge. */
+  var terminalRecoveryAt = 0;
+  function recoverTillProof(status, error) {
+    if (status !== 401 && status !== 403) return;
+    if (error && error !== 'forbidden-merchant' && error !== 'unauthorized' && !/^HTTP 40[13]$/.test(error)) return;
+    var cp = window.KiwiCaissePairing;
+    if (!cp || typeof cp.recoverFromTerminal !== 'function') return;
+    if (terminalRecoveryAt && Date.now() - terminalRecoveryAt < 60000) return;
+    terminalRecoveryAt = Date.now();
+    try { Promise.resolve(cp.recoverFromTerminal()).catch(function () {}); } catch (_) {}
+  }
   function scheduleRecovery() {
     if (recoveryTimer != null) return;
     recoveryTimer = setTimeout(function () { recoveryTimer = null; flushQueue(); }, 3000);
@@ -530,7 +546,7 @@
         flushing = false;
         lastSyncStatus = status || 0;
         lastSyncError = settled ? '' : (error || (pending ? 'settlement-pending' : (status ? 'HTTP ' + status : 'server-unreachable')));
-        if ((status === 401 || status === 403) && !refundApprovalRefused(body, status, error)) { authRetryAt = Date.now() + 60000; authRetryMerchant = body.merchant; }
+        if ((status === 401 || status === 403) && !refundApprovalRefused(body, status, error)) { authRetryAt = Date.now() + 60000; authRetryMerchant = body.merchant; recoverTillProof(status, lastSyncError); }
         else if (settled) authRetryAt = 0;
         var current = qRead();
         current.forEach(function (x) { if (x && x.id === body.id) x._lastAttemptAt = attemptedAt; });
@@ -622,7 +638,7 @@
       function settle(ok, permanent, status, error, serverId) {
         lastSyncStatus = status || 0;
         lastSyncError = ok ? '' : (error || (status ? 'HTTP ' + status : 'network'));
-        if ((status === 401 || status === 403) && !refundApprovalRefused(body, status, error)) { authRetryAt = Date.now() + 60000; authRetryMerchant = body.merchant; }
+        if ((status === 401 || status === 403) && !refundApprovalRefused(body, status, error)) { authRetryAt = Date.now() + 60000; authRetryMerchant = body.merchant; recoverTillProof(status, lastSyncError); }
         else if (ok) authRetryAt = 0;
         var action = ok
           ? O.acknowledge(row.id, row.leaseToken)

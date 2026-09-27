@@ -70,6 +70,18 @@ h.state.status=201; h.wake('kiwi-paired',h.document); await drain();
 check('pairing repair retries immediately and never changes receipt identity', () => {
   assert.equal(h.window.KiwiLive.pending(),0); assert.ok(h.requests.every(r=>r.id==='sale-offline'));
 });
+h = harness(); h.state.status=403; let recoveries = 0;
+h.window.KiwiCaissePairing = { recoverFromTerminal: async () => { recoveries++; h.state.status = 201; h.document.dispatchEvent({ type: 'kiwi-paired' }); return { ok: true }; } };
+h.online(); h.wake('online'); await drain();
+check('#77 a 403 on a sale reissues the till cookie from the terminal proof and drains the queue at once', () => {
+  assert.equal(recoveries, 1); assert.equal(h.window.KiwiLive.pending(), 0); assert.ok(h.requests.every(r => r.id === 'sale-offline'));
+});
+h = harness(); h.state.status=403; recoveries = 0;
+h.window.KiwiCaissePairing = { recoverFromTerminal: async () => { recoveries++; throw new Error('forbidden-terminal'); } };
+h.online(); h.wake('online'); await drain(); h.window.KiwiLive.flush(true); await drain();
+check('#77 a refused terminal recovery is not retried in a loop', () => {
+  assert.equal(recoveries, 1); assert.equal(h.window.KiwiLive.pending(), 1);
+});
 h = harness(); let release; h.state.hold=new Promise(r=>release=r); h.online(); h.wake('online'); await drain();
 h.wake('online'); h.window.KiwiLive.flush(true); await drain();
 check('reconnect plus manual retry cannot steal an in-flight send lock', () => assert.equal(h.requests.length,1));
