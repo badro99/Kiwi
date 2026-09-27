@@ -2514,6 +2514,7 @@
   }
 
   function openSheet(pid, opts) {
+    window.KiwiDiscountPolicy?.refresh?.(); // the owner may have changed the allowed percentages
     const p = P[pid];
     Object.assign(sheet, {
       pid,

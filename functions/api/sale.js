@@ -588,36 +588,40 @@ export async function onRequestPost({ request, env }) {
     } catch (_) { /* absent on older schemas */ }
   }
 
-  /* The owner can remove a percentage in Settings. The till still renders the
-   * local policy for speed/offline use, but the server must refuse a forged or
-   * stale percentage before claiming a restaurant bill or inserting money.
-   * Receipts timestamped before the setting changed remain replayable: the
-   * outbox must never lose legitimate offline takings after an owner edit. */
+  /* The owner can remove a percentage in Settings, and the tills only offer
+   * the allowed ones. By the time a sale reaches this route, though, the
+   * customer has already paid: refusing it would not undo the discount, it
+   * would only keep real takings out of the books. A till that loaded the
+   * policy before the owner changed it keeps offering the old percentages
+   * until it re-reads it, and a 409 here stays in its outbox forever. So the
+   * sale is booked, and a percentage outside the policy is recorded in
+   * sale_audit ('discount-policy'), which God Mode surfaces to the operator.
+   * Receipts timestamped before the setting changed are not flagged. */
   const retailPercents = b && b.discountPercents;
   if (retailPercents != null && (!Array.isArray(retailPercents) || retailPercents.length > 8
       || retailPercents.some(n => !Number.isInteger(n) || n < 1 || n > 100))) {
     return json({ error: 'bad-discount-percent' }, 400);
   }
+  let discountFlag = null;
   if (!stored && (hasDiscount || retailPercents?.length)) {
     let policyRow = null;
     try {
       policyRow = await env.DB.prepare("SELECT data, updated_ts FROM store_docs WHERE merchant = ? AND feature = 'discountpolicy'")
         .bind(merchant).first();
-    } catch (error) {
-      if (!/no such table/i.test(String(error))) return json({ error: 'discount-policy-unavailable' }, 503);
-    }
+    } catch (_) { /* no policy readable: nothing to compare against */ }
     if (policyRow && ts >= Number(policyRow.updated_ts || 0)) {
       let allowed = [];
       try { allowed = JSON.parse(policyRow.data).percentages; } catch (_) {}
-      if (!Array.isArray(allowed) || !allowed.length) return json({ error: 'discount-policy-unavailable' }, 503);
-      if (hasDiscount) {
-        const kind = String(b.discountKind || '');
-        if (kind !== 'amount' && kind !== 'percent') return json({ error: 'discount-proof-required' }, 409);
-        if (kind === 'percent' && (!Number.isInteger(b.discountPercent) || !allowed.includes(b.discountPercent))) {
-          return json({ error: 'discount-not-allowed', allowed }, 409);
+      if (Array.isArray(allowed) && allowed.length) {
+        const used = [];
+        if (hasDiscount && String(b.discountKind || '') === 'percent') used.push(b.discountPercent);
+        if (retailPercents?.length) used.push(...retailPercents);
+        const outside = used.filter(n => !allowed.includes(n));
+        if (outside.length) discountFlag = { percents: [...new Set(outside)], allowed };
+        else if (hasDiscount && !['amount', 'percent'].includes(String(b.discountKind || ''))) {
+          discountFlag = { percents: [], allowed, unproved: true };
         }
       }
-      if (retailPercents?.some(n => !allowed.includes(n))) return json({ error: 'discount-not-allowed', allowed }, 409);
     }
   }
 
@@ -802,6 +806,21 @@ export async function onRequestPost({ request, env }) {
       expected: { amountCents: winningCents, method: winningMethod },
       received: { amountCents, method },
     }, 409);
+  }
+
+  if (discountFlag) {
+    /* One audit row per sale: a till retrying the same receipt must not add a
+     * second one. A failed audit write never un-books the money. */
+    try {
+      await env.DB.prepare(
+        `INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id, amount, amount_cents, method, ref, sale_ts, impact, ts)
+         SELECT ?, ?, 'discount-policy', ?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?
+          WHERE NOT EXISTS (SELECT 1 FROM sale_audit WHERE merchant = ? AND sale_id = ? AND action = 'discount-policy')`
+      ).bind(merchant, id, discountFlag.unproved ? 'discount-unproved' : 'discount-not-allowed',
+        discountFlag.unproved ? 'Remise sans type déclaré' : 'Remise ' + discountFlag.percents.map(n => n + ' %').join(', ') + ' hors réglage (' + discountFlag.allowed.map(n => n + ' %').join(', ') + ')',
+        String(discountActorId || ''), Math.round(amountCents / 100), amountCents, method, ref, ts,
+        JSON.stringify(discountFlag), Date.now(), merchant, id).run();
+    } catch (_) { /* the sale stands; the flag is best effort */ }
   }
 
   if (paymentParts) {

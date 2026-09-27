@@ -64,6 +64,11 @@ export async function workspace(env, merchant = '') {
      * a foreign copy and keeps offering it. */
     tenantGuard:[`SELECT merchant,feature,source_merchant,kind,COUNT(*) AS attempts,MIN(ts) AS first_ts,MAX(ts) AS updated_ts
       FROM tenant_guard_events WHERE ts>=?${where} GROUP BY merchant,feature,source_merchant ORDER BY updated_ts DESC LIMIT 201`,[now-14*86400000,...binds]],
+    /* Paid sales booked with a discount percentage the owner had removed
+     * (functions/api/sale.js, action 'discount-policy'). The money is in the
+     * books; the signal is about who applied it and whether a till is stale. */
+    discountPolicy:[`SELECT merchant,sale_id AS id,reason,note,amount_cents,method,ref,sale_ts,ts AS updated_ts
+      FROM sale_audit WHERE action='discount-policy' AND ts>=?${where} ORDER BY ts DESC LIMIT 201`,[now-14*86400000,...binds]],
     shopify:[`SELECT id,merchant,status,attempts,updated_ts FROM shopify_sync_outbox WHERE status!='done'${where} ORDER BY updated_ts DESC LIMIT 201`,binds],
     tasks:[`SELECT * FROM operator_tasks WHERE 1=1${where} ORDER BY (status='resolved'), priority, updated_ts DESC LIMIT 501`,binds,500],
     notes:[`SELECT id,merchant,body,actor,ts FROM operator_notes WHERE 1=1${where} ORDER BY ts DESC LIMIT 101`,binds,100],

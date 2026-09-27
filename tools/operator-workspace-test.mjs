@@ -101,6 +101,11 @@ db.prepare("INSERT INTO tenant_guard_events VALUES(?,?,?,?,?,?,?)").run(now-20*8
 {const g=(await call(workspace,'GET')).sources.tenantGuard.rows;
 check('refused cross-store copies grouped per store, feature and source, 14 days',g.length===1&&g[0].attempts===2&&g[0].source_merchant==='shop-b'&&g[0].updated_ts===now);
 check('refused copies stay in the writing store dossier',!(await call(workspace,'GET',{},'?merchant=shop-b')).sources.tenantGuard.rows.length);}
+db.prepare("INSERT INTO sale_audit (merchant,sale_id,action,reason,note,amount_cents,method,ref,sale_ts,ts) VALUES (?,?,?,?,?,?,?,?,?,?)").run('shop-a','sale-disc','discount-policy','discount-not-allowed','Remise 20 % hors réglage (5 %)',950,'cash','T-12',now-5000,now);
+db.prepare("INSERT INTO sale_audit (merchant,sale_id,action,reason,note,amount_cents,method,ref,sale_ts,ts) VALUES (?,?,?,?,?,?,?,?,?,?)").run('shop-a','sale-void','void','erreur','',950,'cash','T-13',now-5000,now);
+{const d=(await call(workspace,'GET')).sources.discountPolicy.rows;
+check('out-of-policy discounts listed from sale_audit, other audit actions excluded',d.length===1&&d[0].id==='sale-disc'&&d[0].note.includes('20 %'));
+check('out-of-policy discounts stay in their store dossier',!(await call(workspace,'GET',{},'?merchant=shop-b')).sources.discountPolicy.rows.length);}
 check('product board loaded fleet-wide only',ws.sources.board.rows.length===1&&!(await call(workspace,'GET',{},'?merchant=shop-a')).sources.board);
 const health=policy.storeHealth({merchant:'shop-a',last_ts:now},{caisseSync:tills,zChecks:ws.sources.zChecks.rows,activity:[{active_days_7d:5,last_ts:now}],errors:[]},now);
 check('blocked sale and Z gap make the store « à traiter »',health.level==='bad'&&health.problems.some(p=>p.includes('bloquée'))&&health.problems.some(p=>p.includes('écart 45 MAD')));

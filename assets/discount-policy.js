@@ -40,5 +40,20 @@
     const result = await cloud.save({ percentages: next });
     return { ...result, percentages: next };
   }
-  window.KiwiDiscountPolicy = { percentages, allowed, configured, save, subscribe: store.subscribe, defaults: [...DEFAULT] };
+  /* A till screen stays open all day, so reading the owner's copy only at
+   * load (or on a tab switch) left removed percentages on offer for hours.
+   * Re-read it when a discount is about to be chosen and once a minute while
+   * the screen is visible. Subscribers re-render the chips when it changes. */
+  let lastRefresh = 0;
+  function refresh(force) {
+    const cloud = store.cloud();
+    if (!cloud || !window.KiwiEnv?.isReal?.()) return Promise.resolve(false);
+    if (!force && Date.now() - lastRefresh < 15000) return Promise.resolve(false);
+    lastRefresh = Date.now();
+    return cloud.pull(false).catch(() => false);
+  }
+  if (typeof setInterval === 'function' && typeof document !== 'undefined') {
+    setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 60000);
+  }
+  window.KiwiDiscountPolicy = { percentages, allowed, configured, save, refresh, subscribe: store.subscribe, defaults: [...DEFAULT] };
 })();

@@ -1172,6 +1172,7 @@ section('Whole-project regressions');
     'discount-policy-api-test.mjs',
     'discount-policy-browser-test.mjs',
     'discount-policy-cloud-test.mjs',
+    'discount-policy-live-browser-test.mjs',
     'boutique-printer-settings-test.mjs',
     /* Le panneau d'activation : il doit pouvoir se fermer. Il ne le pouvait
        pas, et rien ne le disait — voir l'en-tête de la suite. */
