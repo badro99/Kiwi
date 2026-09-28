@@ -4862,7 +4862,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=359" defer></script>
   <script src="assets/employee-live.js?v=552" defer></script>
-  <script src="assets/employee-planning.js?v=11" defer></script>
+  <script src="assets/employee-planning.js?v=13" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=2">
   <script src="assets/employee-trade-shell.js?v=4" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
@@ -9820,6 +9820,16 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         </div>`;
       }).join('');
 
+      if (!svReal()) {
+        const schedule = {};
+        for (let i = 0; i < 14; i++) {
+          const d = new Date(today); d.setDate(today.getDate() + i);
+          const shift = sched.week[(d.getDay() + 6) % 7];
+          if (shift) schedule[d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0')] = { start:shift.in, end:shift.out };
+        }
+        window.KiwiTeamDemoSchedule = () => svReal() ? null : schedule;
+        document.dispatchEvent(new CustomEvent('kiwi-demo-schedule', {detail:{schedule}}));
+      }
       // "Prochain service" — the next non-rest day after today.
       let nextIdx = -1, wrap = false;
       for (let i = todayIdx + 1; i < 7; i++) {

@@ -1,27 +1,11 @@
-/* ═══════════════════════════════════════════════════════════════════════════
- * Kiwi · Demo Clock
- *
- * Compresses the restaurant's full operating day (11h → 02h, 16 simulated
- * hours) into ONE real-world hour. So the dashboard's "live" data progresses
- * from "start of day" at minute :00 to "end of day" at minute :59 of every
- * real hour — then hard-resets at the top of the next hour and replays.
- *
- *   real-world second within hour ──→ fraction f ∈ [0, 1]
- *   sim hour position              ──→ f × 16     (11h .. 02h)
- *   cumulative metric              ──→ ∑ hour-weights × daily target
- *
- * Only the `aujourdhui` range pulls from the clock. Historical ranges
- * (hier / septJours / trenteJours) stay static.
- *
- * Public API on window.KiwiDemoClock:
- *   getSimState()  → current snapshot (cumRevenue, cumTx, cumTips, simIdx, …)
- *   subscribe(fn)  → fn(state, isReset) called every tick
- *   isActive()     → boolean
- * ─────────────────────────────────────────────────────────────────────────── */
+/* Kiwi demo ledger: deterministic business-day sales shared by Home, Orders
+ * and Reports. No writes, no merchant data, and no future timestamps.
+ * The legacy clock shape remains for chart consumers; totals are sums of sales.
+ */
 (() => {
   'use strict';
 
-  const TICK_MS = 3000;        // re-render cadence — fast enough to feel live, slow enough to read
+  const TICK_MS = 3000;
   const HOURS = ['11h','12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h','00h','01h','02h'];
   const N = HOURS.length;      // 16
 
@@ -62,10 +46,60 @@
   let lastFraction = 0;
   let started = false;
 
+  // One deterministic, read-only rehearsal ledger. Never persisted or uploaded.
+  // Use the report engine's merchant-time 05:00 business boundary everywhere.
+  const ledgerCache = new Map();
+  function dayContext(day) {
+    const dr = window.KiwiDayReport;
+    if (!dr) return null;
+    const key = day || dr.today();
+    return { day: key, ...dr.dayBounds(key) };
+  }
+  function demoVenue() {
+    if (!simulationAllowed()) return null;
+    const venue = window.KiwiVenue?.getVenue?.() || 'cafeAtlas';
+    return TARGETS[venue] ? venue : null;
+  }
+  function getDaySales(day) {
+    const venue = demoVenue(), context = dayContext(day);
+    if (!venue || !context) return [];
+    const { from, to } = context, target = TARGETS[venue];
+    const key = venue + ':' + context.day + ':' + from + ':' + to;
+    if (!ledgerCache.has(key)) {
+      const rows = [], cents = Math.round(target.revenue * 100);
+      const names = ['Menu Atlas', 'Menu du jour', 'Menu dégustation'];
+      const weights = Array.from({length:target.tx}, (_, i) => 1 + (i * 37 % 9));
+      const weightTotal = weights.reduce((sum, value) => sum + value, 0);
+      let used = 0;
+      for (let i = 0; i < target.tx; i++) {
+        const next = used + weights[i];
+        const amount = (Math.floor(cents * next / weightTotal) - Math.floor(cents * used / weightTotal)) / 100;
+        used = next;
+        const ts = from + Math.floor((to - from) * (i + 1) / (target.tx + 1));
+        const method = i % 4 === 0 ? 'cash' : i % 4 === 1 ? 'wallet' : 'card';
+        const line = { name: names[i % names.length], qty: 1, total: amount, price: amount, cat: 'demo' };
+        rows.push({ id: 'DEMO-' + context.day + '-' + (i + 1), ref: 'D-' + (i + 1), ts,
+          amount, method, tip: 0, table: String(i % 12 + 1), staff: 'Yassir K.',
+          customer: 'Client ' + (i % 25 + 1), lines: [line] });
+      }
+      ledgerCache.set(key, rows);
+      if (ledgerCache.size > 64) ledgerCache.delete(ledgerCache.keys().next().value);
+    }
+    return ledgerCache.get(key).filter(row => row.ts <= Date.now()).map(row => ({...row, lines: row.lines.map(line => ({...line}))}));
+  }
+  function getSales(days = 30) {
+    const context = dayContext();
+    if (!demoVenue() || !context) return [];
+    let rows = [];
+    for (let i = 0; i < Math.min(30, Math.max(1, days)); i++) {
+      const day = new Date(Date.parse(context.day + 'T12:00:00Z') - i * 86400000).toISOString().slice(0,10);
+      rows = rows.concat(getDaySales(day));
+    }
+    return rows;
+  }
   function getRealFraction() {
-    const now = new Date();
-    const m = now.getMinutes(), s = now.getSeconds(), ms = now.getMilliseconds();
-    return ((m * 60) + s + ms / 1000) / 3600;  // 0..1 with sub-second precision
+    const context = dayContext();
+    return context ? Math.max(0, Math.min(1, (Date.now() - context.from) / (context.to - context.from))) : 0;
   }
 
   /* Cumulative weight at sim position (0..N), linear-interpolated within an hour. */
@@ -127,9 +161,10 @@
     const wTx   = cumulativeAt(weights.tx,   f);
     const wTips = cumulativeAt(weights.tips, f);
 
-    const cumRevenue = wRev * target.revenue;
-    const cumTx      = Math.round(wTx * target.tx);
-    const cumTips    = wTips * target.tips;
+    const sales = getDaySales();
+    const cumRevenue = sales.reduce((sum, row) => sum + Math.round(row.amount * 100), 0) / 100;
+    const cumTx = sales.length;
+    const cumTips = sales.reduce((sum, row) => sum + row.tip, 0);
 
     // Derived KPIs
     const panierMoyen = cumTx > 0 ? Math.round(cumRevenue / cumTx) : 0;
@@ -186,6 +221,7 @@
 
   window.KiwiDemoClock = {
     getSimState,
+    getDaySales, getSales,
     subscribe,
     isActive: () => started,
     HOURS,

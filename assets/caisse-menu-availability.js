@@ -31,7 +31,7 @@
     button.className = 'team-trigger';
     button.id = 'open-menu-availability';
     button.type = 'button';
-    button.innerHTML = '<i data-lucide="utensils"></i><span>Menu</span><span class="count" id="menu-unavailable-count">0</span>';
+    button.innerHTML = '<i data-lucide="utensils"></i><span>Menu</span><span class="count" id="menu-unavailable-count" hidden></span>';
     rail.insertBefore(button, rail.querySelector('#open-kds'));
 
     const screen = document.createElement('div');
@@ -71,13 +71,17 @@
   }
 
   async function refreshBadge() {
-    if (!restaurant() || !merchant()) return;
+    if (!restaurant()) return;
+    updateBadge();
+    if (!merchant()) return;
     try { await fetchMenu(); updateBadge(); } catch (_) {}
   }
   function updateBadge() {
     const badge = document.getElementById('menu-unavailable-count');
-    if (!badge || !menu) return;
-    badge.textContent = String(managedItems().filter((x) => x && x.avail === false).length);
+    if (!badge) return;
+    const count = menu ? managedItems().length : window.KiwiCaisseCarte?.itemCount?.();
+    badge.hidden = count == null;
+    badge.textContent = count == null ? '' : String(count);
   }
   async function open() {
     const screen = document.getElementById('menu-availability-screen');

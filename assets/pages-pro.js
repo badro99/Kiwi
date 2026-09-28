@@ -241,81 +241,6 @@ handlers['nav-transactions'] = () => {
   const lang = trLang();
   const T = TX_STR[lang] || TX_STR.fr;
 
-  /* Deterministic PRNG (Mulberry32 + FNV-1a seed). Keeps the day's order
-   * pool stable across drawer opens — closing and reopening shows the same
-   * commandes you saw before. */
-  function makeRng(seedStr) {
-    let h = 2166136261;
-    for (let i = 0; i < seedStr.length; i++) { h ^= seedStr.charCodeAt(i); h = Math.imul(h, 16777619); }
-    return () => {
-      h |= 0; h = (h + 0x6D2B79F5) | 0;
-      let t = Math.imul(h ^ (h >>> 15), 1 | h);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-
-  const METHODS = {
-    [T.cards]:    [{ n: 'Visa', mask: '4291' }, { n: 'Mastercard', mask: '7820' }, { n: 'Visa', mask: '0043' }, { n: 'Visa', mask: '8124' }, { n: 'Mastercard', mask: '1209' }, { n: 'Mastercard', mask: '6670' }],
-    [T.mobile]:    [{ n: 'Kiwi Tap', mask: 'NFC' }, { n: 'Kiwi Wallet', mask: 'QR' }, { n: 'Apple Pay', mask: 'NFC' }, { n: 'Google Pay', mask: 'NFC' }],
-    [T.cash]: [{ n: T.cash, mask: '·' }],
-  };
-  const CUSTOMERS = ['Karim B.', 'Sara L.', 'Youssef A.', 'Nawal K.', 'Hassan J.', 'Imane M.', 'Mehdi R.', 'Fatima Z.', 'Rachid O.', 'Lina S.', 'Ahmed T.', 'Yasmine H.', 'Omar F.', 'Naima Z.', 'Tarik B.', 'Aïcha M.', 'Walid K.', 'Soukaina A.', 'Reda H.', 'Salma F.', 'Hicham D.', 'Mariam S.', 'Brahim K.', 'Latifa O.', 'Khalid R.'];
-
-  /* Build a chronologically sorted pool. simIdx (0..15 == 11h..02h) lets us
-   * slice "the first N orders of the day" deterministically against cumTx. */
-  function buildPool(salt, size) {
-    const today = new Date();
-    const rng = makeRng(`${venue}-${today.getFullYear()}-${today.getMonth()}-${today.getDate()}-${salt}`);
-    const pool = [];
-    for (let i = 0; i < size; i++) {
-      const r = rng();
-      const cat = r < 0.66 ? T.cards : r < 0.92 ? T.mobile : T.cash;
-      const opts = METHODS[cat];
-      const m = opts[Math.floor(rng() * opts.length)];
-      const amt = Math.round((40 + rng() * 360) * 100) / 100;
-      const tip = rng() > 0.6 ? Math.round(amt * 0.1 * 100) / 100 : 0;
-      const simIdx = Math.floor(rng() * 16);
-      const minute = Math.floor(rng() * 60);
-      const realHour = (11 + simIdx) % 24;
-      pool.push({
-        id: `KW-${(70000 + i + Math.floor(rng() * 9999)).toString().padStart(5, '0')}`,
-        t: `${realHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-        simIdx,
-        n: m.n, mask: m.mask, cat,
-        c: CUSTOMERS[Math.floor(rng() * CUSTOMERS.length)],
-        amt, tip,
-        status: rng() > 0.95 ? 'pend' : 'ok',
-      });
-    }
-    pool.sort((a, b) => a.simIdx - b.simIdx || a.t.localeCompare(b.t));
-    return pool;
-  }
-
-  function buildRefunds(sourcePool, n) {
-    const rng = makeRng(`${venue}-ref-${n}`);
-    const out = [];
-    for (let i = 0; i < n; i++) {
-      const src = sourcePool[Math.floor(rng() * sourcePool.length)] || sourcePool[0];
-      if (!src) break;
-      out.push({
-        id: `KW-RB-${(40000 + i).toString().padStart(5, '0')}`,
-        t: src.t, n: src.n, mask: src.mask, c: src.c,
-        amt: -Math.round(src.amt * (0.4 + rng() * 0.5) * 100) / 100,
-        tip: 0, status: 'ref', cat: T.refunds, simIdx: src.simIdx,
-      });
-    }
-    return out;
-  }
-
-  /* Pre-build all four range pools so opening the drawer is instant. */
-  const POOL = {
-    aujourdhui: buildPool('today', DAILY_TARGET + 40),
-    hier:       buildPool('y1',    DAILY_TARGET),
-    sept:       buildPool('w1',    DAILY_TARGET * 7),
-    trente:     buildPool('m1',    DAILY_TARGET * 30),
-  };
-
   const fmt2 = (n) => Math.abs(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmt0 = (n) => Math.round(n).toLocaleString('fr-FR').replace(/,/g, ' ');
 
@@ -326,23 +251,19 @@ handlers['nav-transactions'] = () => {
   let expanded     = false;
   let unsub        = null;
 
-  function getCumTx() {
-    return window.KiwiDemoClock?.getSimState?.()?.cumTx ?? Math.round(DAILY_TARGET * 0.7);
-  }
   function rangeRows() {
-    if (activeRange === 'aujourdhui') return POOL.aujourdhui.slice(0, getCumTx());
-    if (activeRange === 'hier')       return POOL.hier;
-    if (activeRange === 'sept')       return POOL.sept;
-    return POOL.trente;
+    const clock = window.KiwiDemoClock;
+    const today = window.KiwiDayReport?.today();
+    const yesterday = today && new Date(Date.parse(today + 'T12:00:00Z') - 86400000).toISOString().slice(0,10);
+    const sales = activeRange === 'aujourdhui' ? clock?.getDaySales?.()
+      : activeRange === 'hier' ? clock?.getDaySales?.(yesterday)
+      : clock?.getSales?.(activeRange === 'sept' ? 7 : 30);
+    return (sales || []).map(s => ({ ...s, sale:s, t: new Date(s.ts).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',timeZone:window.KiwiDayReport?.timezone?.()}),
+      simIdx:s.ts, n:s.method === 'cash' ? T.cash : s.method === 'wallet' ? 'Kiwi Wallet' : T.cards,
+      mask:'', cat:s.method === 'cash' ? T.cash : s.method === 'wallet' ? T.mobile : T.cards,
+      c:s.customer, amt:s.amount, status:'ok' }));
   }
-  function rangeRefunds() {
-    const base = rangeRows();
-    const n    = activeRange === 'aujourdhui' ? Math.max(1, Math.floor(getCumTx() / 40))
-                : activeRange === 'hier'       ? 8
-                : activeRange === 'sept'       ? 28
-                : 115;
-    return buildRefunds(base.length ? base : POOL.aujourdhui, n);
-  }
+  function rangeRefunds() { return []; }
 
   const RANGE_LABEL = RANGE_LABEL_STR[lang] || RANGE_LABEL_STR.fr;
   const FILTERS     = [T.all, T.cards, T.mobile, T.cash, T.refunds];

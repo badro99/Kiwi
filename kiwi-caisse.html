@@ -5644,7 +5644,7 @@
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
   <script src="assets/orderpro-inbox.js?v=26" defer></script>
   <script src="assets/service-requests.js?v=1" defer></script>
-  <script src="assets/caisse-menu-availability.js?v=4" defer></script>
+  <script src="assets/caisse-menu-availability.js?v=6" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=276" defer></script>
   <!-- « Rafraîchir » · un bouton commun à toutes les caisses (restaurant,
@@ -9284,7 +9284,7 @@
         .catch(() => false);
     }
     /* « Rafraîchir » au comptoir doit ramener la carte comme il ramène le reste. */
-    window.KiwiCaisseCarte = { fetch: () => fetchCarte(true), rebuild: rebuildCarte };
+    window.KiwiCaisseCarte = { fetch: () => fetchCarte(true), rebuild: rebuildCarte, itemCount: () => menuItems.length };
 
     /* Les relances sont posées au bootstrap du menu, plus bas : rebuildCarte()
        touche `activeCat` et `cart`, déclarés après ce bloc · les appeler ici

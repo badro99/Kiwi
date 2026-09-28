@@ -135,7 +135,11 @@
       });
       return { rows: rows, real: true };
     }
-    return { rows: DEMO.map(function (c, i) { return Object.assign({ id: 'demo' + i, address: '', notes: '' }, c); }), real: false };
+    return { rows: DEMO.map(function (c, i) { const history = Array.from({length:c.visits}, function (_, visit) {
+        const amount = Math.floor(c.spend * (visit + 1) / c.visits) - Math.floor(c.spend * visit / c.visits);
+        return { ts: Date.now() - (c.last + visit * 7) * DAY, amount:amount, method:visit % 2 ? 'card' : 'cash', ref:'DEMO-C' + i + '-' + (visit + 1), items:[] };
+      });
+      return Object.assign({ id: 'demo' + i, address: '', notes: '', history:history }, c); }), real: false };
   }
 
   var CSS = [

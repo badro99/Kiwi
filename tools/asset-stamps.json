@@ -120,8 +120,8 @@
     "sha": "722476147c908ce3"
   },
   "assets/caisse-menu-availability.js": {
-    "v": "4",
-    "sha": "0d4c9dd46996d6ac"
+    "v": "6",
+    "sha": "7a81070d032c1d93"
   },
   "assets/caisse-motion.js": {
     "v": "1",
@@ -176,8 +176,8 @@
     "sha": "7ef220487b465911"
   },
   "assets/clients-directory.js": {
-    "v": "7",
-    "sha": "5c2ebe9ed6e5f6ff"
+    "v": "9",
+    "sha": "0016e4f9c655efef"
   },
   "assets/clients-store.js": {
     "v": "7",
@@ -220,12 +220,12 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "31",
-    "sha": "6a43ab4dc36765cd"
+    "v": "35",
+    "sha": "eb73b853ce3a4f8b"
   },
   "assets/day-report-dash.js": {
-    "v": "14",
-    "sha": "bcbd464e0a854275"
+    "v": "16",
+    "sha": "fc2c09ba30691f46"
   },
   "assets/day-report-export.js": {
     "v": "7",
@@ -236,8 +236,8 @@
     "sha": "d8303dc60b46f11e"
   },
   "assets/demoClock.js": {
-    "v": "1",
-    "sha": "7790e1702d19278d"
+    "v": "3",
+    "sha": "9623ea0f0e5e22da"
   },
   "assets/depenses.js": {
     "v": "1",
@@ -276,8 +276,8 @@
     "sha": "6c40f4465a3e6d2d"
   },
   "assets/employee-planning.js": {
-    "v": "11",
-    "sha": "ba6510c56b538786"
+    "v": "13",
+    "sha": "bd94d56079267826"
   },
   "assets/employee-pwa.js": {
     "v": "1",
@@ -544,8 +544,8 @@
     "sha": "57b562b061dc24d0"
   },
   "assets/pages-pro.js": {
-    "v": "2109",
-    "sha": "bead301fc18769f8"
+    "v": "2111",
+    "sha": "387c4185915d8193"
   },
   "assets/pages.js": {
     "v": "7",

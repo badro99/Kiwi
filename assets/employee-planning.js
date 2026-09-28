@@ -78,7 +78,7 @@
   }
   function todayKey() { try { return new Intl.DateTimeFormat('en-CA',{timeZone:lastData && lastData.store && lastData.store.timezone || 'Africa/Casablanca',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()); } catch (_) { return new Date().toISOString().slice(0,10); } }
   function futureSchedule() {
-    const today=todayKey(), schedule=lastData && lastData.schedule || {};
+    const today=todayKey(), schedule=lastData?.schedule || window.KiwiTeamDemoSchedule?.() || {};
     return Object.keys(schedule).filter((day)=>day>=today && schedule[day] && !schedule[day].off).sort().map((day)=>({ day, ...schedule[day] }));
   }
   function prettyDay(day) { try { return new Date(day+'T12:00:00').toLocaleDateString(document.documentElement.lang === 'ar' ? 'ar-MA' : document.documentElement.lang === 'en' ? 'en-GB' : 'fr-FR',{weekday:'short',day:'numeric',month:'short'}); } catch (_) { return day; } }
@@ -174,6 +174,11 @@
     if (!api()) return;
     try { lastData=await api().refresh(); mount(); render(); } catch (_) {}
   }
+  document.addEventListener('kiwi-demo-schedule', (event) => {
+    if (window.KiwiEnv?.isReal?.() || window.KiwiMe || window.KiwiVenue?.isCustom?.()) return;
+    lastData = {schedule:event.detail.schedule, planning:{}}; mount(); render();
+  });
+  if (typeof MutationObserver === 'function') new MutationObserver(() => render()).observe(document.documentElement, {attributes:true, attributeFilter:['lang']});
   document.addEventListener('kiwi-employee-authenticated', refresh);
   window.addEventListener('load', () => { mount(); refresh(); });
   function redrawOnDayChange() {

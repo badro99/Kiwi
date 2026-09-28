@@ -328,6 +328,8 @@
 
   /* Les ventes que le tableau de bord connaît, pour le repli sans instantané. */
   function dashSales() {
+    // The source enforces the real/custom tenant fence, including mid-session login.
+    if (window.KiwiDemoClock?.getSimState?.()) return window.KiwiDemoClock.getSales(30);
     try {
       var sales = (window.KiwiSales && window.KiwiSales.list && window.KiwiSales.list()) || [];
       var refunds = (window.KiwiRefunds && window.KiwiRefunds.list && window.KiwiRefunds.list()) || [];

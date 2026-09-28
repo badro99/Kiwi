@@ -201,8 +201,49 @@
       // If every slice was null/undefined fallback gracefully.
       return merged ?? table?.cafeAtlas?.[eff] ?? table?.cafeAtlas?.trenteJours;
     }
-    return table?.[v]?.[eff] ?? table?.cafeAtlas?.[eff] ?? table?.[v]?.trenteJours ?? table?.cafeAtlas?.trenteJours;
+    const shape = table?.[v]?.[eff] ?? table?.cafeAtlas?.[eff] ?? table?.[v]?.trenteJours ?? table?.cafeAtlas?.trenteJours;
+    return demoLedgerProjection(table, eff, shape);
+
   }
+  function demoLedgerProjection(table, range, shape) {
+    const clock = window.KiwiDemoClock, dr = window.KiwiDayReport;
+    if (!shape || !dr || !['aujourdhui','hier','septJours','trenteJours'].includes(range)
+      || ![heroDataByVenue,goalByVenue,kpiByVenue,revChartByVenue].includes(table) || !clock?.getSimState?.()) return shape;
+    const day = dr.today(), days = range === 'septJours' ? 7 : range === 'trenteJours' ? 30 : 1;
+    const selected = range === 'hier' ? dr.shiftDay(day,-1) : day;
+    const rows = days === 1 ? clock.getDaySales(selected) : clock.getSales(days);
+    const sum = rows => rows.reduce((s,r)=>s+Math.round(r.amount*100),0)/100;
+    const total = sum(rows), count = rows.length;
+    if (table === heroDataByVenue) return {...shape,amount:total,netAfterKiwi:total,deltaHier:null,deltaSemaine:null,deltaMois:null};
+    if (table === goalByVenue) return {...shape,current:total};
+    if (table === kpiByVenue) return {...shape,
+      tx:shape.tx && {...shape.tx,value:count,delta:0},
+      panier:shape.panier && {...shape.panier,value:count ? total/count : 0,delta:0}};
+    let rev, revPrev, xLabels, visibleXIdx, cursor = {};
+    if (days > 1) {
+      const keys = Array.from({length:days},(_,i)=>dr.shiftDay(day,i-days+1));
+      rev = keys.map(key=>sum(clock.getDaySales(key)));
+      revPrev = keys.map(key=>sum(clock.getDaySales(dr.shiftDay(key,-days))));
+      xLabels = keys.map(key=>new Date(key+'T12:00:00').toLocaleDateString(getLang()==='ar'?'ar-MA':getLang()==='en'?'en-GB':'fr-FR',{weekday:'short',day:'numeric'}));
+      visibleXIdx = keys.map((_,i)=>i).filter(i=>days===7 || i%5===0 || i===days-1);
+    } else {
+      const bounds=dr.dayBounds(selected), before=dr.shiftDay(selected,-1), prior=clock.getDaySales(before), old=dr.dayBounds(before);
+      const progress = range==='aujourdhui' ? Math.min(24,(Date.now()-bounds.from)/(bounds.to-bounds.from)*24) : 24;
+      const index=Math.min(23,Math.floor(progress));
+      rev = Array.from({length:25},(_,i)=>i>Math.ceil(progress)?null:sum(rows.filter(r=>r.ts<=bounds.from+Math.min(i,progress)/24*(bounds.to-bounds.from))));
+      revPrev = Array.from({length:25},(_,i)=>sum(prior.filter(r=>r.ts<=old.from+i/24*(old.to-old.from))));
+      xLabels=Array.from({length:25},(_,i)=>String((5+i)%24).padStart(2,'0')+'h');
+      visibleXIdx=xLabels.map((_,i)=>i);
+      if(range==='aujourdhui') cursor={_simIdx:index,_simWithin:progress-index};
+    }
+    const maximum=Math.max(1,...rev.filter(v=>v!=null),...revPrev);
+    const ceiling=Math.ceil(maximum/4000)*4000;
+    return {...shape,...cursor,_demoLedger:true,rev,revPrev,xLabels,visibleXIdx,total,
+      yTicks:[0,.25,.5,.75,1].map(n=>Math.round(n*ceiling)),
+      legendPrimary:shape.legendPrimary.split(' · ')[0]+' · '+frInt(total)+' MAD',
+      legendCompare:shape.legendCompare.split(' · ')[0]+' · '+frInt(days>1?sum(revPrev.map(amount=>({amount}))):revPrev.at(-1))+' MAD'};
+  }
+
   // True only on the live "today" range, with the demo clock active.
   function isLiveDemo() {
     const eff = effRange();
@@ -217,6 +258,12 @@
   // breakdown kept a fixed +3.2% while the chart used a future hour boundary.
   // Called only from the demo branch; merchant sales/reconciliation stay intact.
   function demoPreviousAt(sim) {
+    const dr=window.KiwiDayReport, clock=window.KiwiDemoClock;
+    if (sim && dr && clock?.getDaySales) {
+      const day=dr.shiftDay(dr.today(),-1), bounds=dr.dayBounds(day);
+      const before=bounds.from+sim.fraction*(bounds.to-bounds.from);
+      return clock.getDaySales(day).filter(r=>r.ts<=before).reduce((s,r)=>s+Math.round(r.amount*100),0)/100;
+    }
     const series = vData(revChartByVenue, currentRange)?.revPrev;
     if (!sim || !series?.length) return null;
     const index = Math.min(series.length - 1, Math.max(0, sim.simIdx));
@@ -1529,7 +1576,7 @@
     return '·';
   }
 
-  const frInt = n => Math.floor(n).toLocaleString('fr-FR').replace(/,/g, ' ').replace(/ /g, ' ');
+  const frInt = n => Math.round(n).toLocaleString('fr-FR').replace(/,/g, ' ').replace(/ /g, ' ');
 
   function fmtHeroAmount(v) {
     const int = Math.floor(v);
@@ -3202,7 +3249,7 @@
     // the current sim position; pulse + tooltip anchor at that live point.
     let liveSimIdx = -1;     // -1 = no live cursor
     let liveSimWithin = 0;   // 0..1 within liveSimIdx hour
-    if (isLiveDemo()) {
+    if (isLiveDemo() && !data._demoLedger) {
       const sim = getSim();
       if (sim) {
         liveSimIdx = sim.simIdx;
@@ -4122,37 +4169,19 @@
 
   /* Pull the last 6 orders from the simulator's current cumTx. */
   function buildLiveFeed(venue) {
-    const sim = window.KiwiDemoClock?.getSimState?.();
-    if (!sim) return [];
-    const cumTx = sim.cumTx || 0;
-    if (cumTx === 0) return [];
-
-    const simHour = (11 + sim.simIdx) % 24;
-    const simMin  = sim.simMinute || 0;
-    const nowSimMins = simHour * 60 + simMin;
-
-    /* Time offsets (sim minutes ago) — the latest order is right now,
-     * the next a couple of sim-minutes back, etc. Up to 10 rows so the
-     * feed fills the column height alongside the right-side widgets. */
-    const offsets = [0, 2, 4, 7, 10, 14, 18, 23, 28, 34];
-    const today = new Date();
-    const dateKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
-    const count = Math.min(offsets.length, cumTx);
-
-    const out = [];
-    for (let slot = 0; slot < count; slot++) {
-      const orderIdx = cumTx - slot; // latest first
-      const o = buildOrder(venue, dateKey, orderIdx);
-
-      let tsMins = nowSimMins - offsets[slot];
-      if (tsMins < 0) tsMins += 24 * 60;
-      const th = Math.floor(tsMins / 60) % 24;
-      const tm = Math.round(tsMins % 60);
-      o.t = `${String(th).padStart(2, '0')}:${String(tm).padStart(2, '0')}`;
-      o.isNew = (slot === 0);
-      out.push(o);
-    }
-    return out;
+    const rows = window.KiwiDemoClock?.getDaySales?.() || [];
+    const fmt = n => n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    return rows.slice(-10).reverse().map((sale, slot) => ({
+      method:sale.method === 'card' ? 'visa' : sale.method === 'wallet' ? 'qr' : 'cash',
+      primary:sale.method === 'card' ? 'Visa' : sale.method === 'wallet' ? 'Kiwi Wallet QR' : ({en:'Cash',ar:'نقداً'}[(window.KiwiI18n?.getLang?.() || 'fr')] || 'Espèces'),
+      sub:'', flag:'ma', customer:sale.customer, table:sale.table,
+      ctx:sale.customer + ' · T' + sale.table,
+      amt:fmt(sale.amount), amtRaw:sale.amount, neg:false, receiptNo:sale.ref,
+      server:sale.staff, covers:1, serviceMinutes:0,
+      items:sale.lines.map(line => ({n:line.name, name:line.name, q:line.qty, qty:line.qty, p:line.price, price:line.price, total:line.total})),
+      subtotal:fmt(sale.amount), tva:fmt(0), tvaRate:0, total:fmt(sale.amount),
+      t:new Date(sale.ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:window.KiwiDayReport?.timezone?.()}), isNew:slot===0
+    }));
   }
 
   // Feed rows for a user-created venue — newest 8 of the merchant's sales.
