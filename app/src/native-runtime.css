@@ -506,3 +506,16 @@ html.kiwi-native[lang="ar"] .kiwi-native-account-card,html.kiwi-native[lang="ar"
 
 /* Companion app: web subscription offers do not become in-app purchasing. */
 html.kiwi-native [data-action="upgrade-pro"],html.kiwi-native [data-action="upgrade-plan"]{display:none!important}
+
+/* Pass 3: escape routes remain part of each gate's scrollable content. */
+@media (max-width:600px){
+  html.kiwi-native :is(#pin-screen,#clockin-screen,.screen-table){overflow-y:auto;overscroll-behavior:contain;scroll-padding-block:var(--kiwi-safe-top) var(--kiwi-safe-bottom)}
+  html.kiwi-native :is(.clockin-bottom,.ci-bottom) .kiwi-native-role-back{display:flex;margin:8px auto 0;position:relative;z-index:1}
+  html.kiwi-native .screen-pin>.kiwi-native-role-back{margin-top:12px;margin-bottom:12px}
+}
+
+@media(max-width:600px){
+  html.kiwi-native body.kiwi-native-team:not(#kno) .screen-clockin{gap:24px;justify-content:flex-start}
+  html.kiwi-native body.kiwi-native-team:not(#kno) .screen-clockin>*{flex-shrink:0}
+  html.kiwi-native .screen-clockin>.kiwi-native-role-back{position:sticky;top:0;align-self:flex-start;margin:0 48px 0 0;background:var(--surface);border-radius:24px;z-index:2}
+}

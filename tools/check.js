@@ -1244,6 +1244,7 @@ section('Whole-project regressions');
     'native-workspace-ux-test.mjs',
     'native-device-layout-test.mjs',
     'native-pass2-browser-test.mjs',
+    'native-pass3-gates-test.mjs',
     'native-store-readiness-test.mjs',
     'native-host-bridge-test.mjs',
     'account-deletion-test.mjs',

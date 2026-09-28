@@ -158,6 +158,33 @@
   }
   function hapticLight() { return call(haptics, 'impact', { style: 'LIGHT' }); }
   function hapticNotice(kind) { return call(haptics, 'notification', { type: kind === 'danger' ? 'ERROR' : 'SUCCESS' }); }
+  // Every full-screen entry gate has its own escape route. The host capsule
+  // is intentionally hidden here, so it must never be the only way out.
+  function initNativeGateExits() {
+    var gates = '#pair,.screen-pin,.screen-clockin,.screen-table,#pin-screen,#clockin-screen,[data-kiwi-lock],[data-kiwi-greet]';
+    function sync() {
+      document.querySelectorAll(gates).forEach(function (gate) {
+        var exit = gate.querySelector('.kiwi-native-role-back');
+        if (!exit) {
+          exit = document.createElement('a');
+          exit.className = 'kiwi-native-role-back';
+          exit.href = 'index.html?choose=1';
+          exit.addEventListener('click', function (event) {
+            event.preventDefault();
+            nativeWorkspaceAction({action:'change-role'});
+          });
+          var content = gate.querySelector('.kiwi-lock-inner,.pin-card,.clockin-bottom,.ci-bottom') || gate;
+          if (gate.id === 'screen-clockin') gate.insertBefore(exit, gate.firstChild);
+          else content.appendChild(exit);
+        }
+        var label = root.lang === 'ar' ? 'تغيير الدور' : root.lang === 'en' ? 'Change role' : 'Changer de rôle';
+        if (exit.textContent !== label) exit.textContent = label;
+      });
+    }
+    sync();
+    new MutationObserver(sync).observe(document.body, {childList:true,subtree:true});
+    new MutationObserver(sync).observe(root, {attributes:true,attributeFilter:['lang']});
+  }
   function nativeBlockingLayer() {
     if (openNativeLayers().length) return true;
     if (document.querySelector('#pair.on,.screen-pin.is-active,.screen-clockin.is-active,.screen-table.is-active')) return true;
@@ -1124,8 +1151,9 @@
     app.addListener('backButton', handleNativeBack);
   }
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { initNativeTillUx(); initNativeHostWorkspace(); polishNativeWorkspaceCopy(); maybePromptBiometricUnlock(); });
+    document.addEventListener('DOMContentLoaded', function () { initNativeGateExits(); initNativeTillUx(); initNativeHostWorkspace(); polishNativeWorkspaceCopy(); maybePromptBiometricUnlock(); });
   } else {
+    initNativeGateExits();
     initNativeTillUx();
     initNativeHostWorkspace();
     polishNativeWorkspaceCopy();
