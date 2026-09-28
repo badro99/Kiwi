@@ -306,9 +306,9 @@
 
   function nativeTillCopy() {
     var lang = String(root.lang || 'fr').toLowerCase();
-    if (lang.indexOf('ar') === 0) return { label: 'التنقل الرئيسي', salle: 'الصالة', vrap: 'طلبات خارجية', waitlist: 'الانتظار', more: 'المزيد', card: 'بطاقة', actions: 'إجراءات أخرى', less: 'إخفاء الإجراءات', close: 'طي الفاتورة', view: 'عرض الفاتورة', clear: 'إفراغ الطلب' };
-    if (lang.indexOf('en') === 0) return { label: 'Primary navigation', salle: 'Floor', vrap: 'Takeaway', waitlist: 'Waiting', more: 'More', card: 'Card', actions: 'More actions', less: 'Hide actions', close: 'Collapse bill', view: 'View bill', clear: 'Clear order' };
-    return { label: 'Navigation principale', salle: 'Salle', vrap: 'À emporter', waitlist: 'Attente', more: 'Plus', card: 'Carte', actions: 'Autres actions', less: 'Masquer les actions', close: 'Replier l’addition', view: 'Voir la note', clear: 'Vider la commande' };
+    if (lang.indexOf('ar') === 0) return { label: 'التنقل الرئيسي', salle: 'الصالة', vrap: 'طلبات خارجية', waitlist: 'الانتظار', more: 'المزيد', card: 'بطاقة', actions: 'إجراءات أخرى', less: 'إخفاء الإجراءات', close: 'طي الفاتورة', view: 'عرض الفاتورة' };
+    if (lang.indexOf('en') === 0) return { label: 'Primary navigation', salle: 'Floor', vrap: 'Takeaway', waitlist: 'Waiting', more: 'More', card: 'Card', actions: 'More actions', less: 'Hide actions', close: 'Collapse bill', view: 'View bill' };
+    return { label: 'Navigation principale', salle: 'Salle', vrap: 'À emporter', waitlist: 'Attente', more: 'Plus', card: 'Carte', actions: 'Autres actions', less: 'Masquer les actions', close: 'Replier l’addition', view: 'Voir la note' };
   }
 
   function nativeAccountDeletion() {
@@ -540,6 +540,11 @@
       grabber.setAttribute('aria-controls', 'rp-active');
       grabber.addEventListener('click', function () { document.body.classList.remove('ticket-open'); });
       cart.insertBefore(grabber, cart.firstChild);
+      var scrim = document.createElement('div');
+      scrim.className = 'kiwi-native-sheet-scrim';
+      scrim.setAttribute('aria-hidden', 'true');
+      scrim.addEventListener('click', function () { document.body.classList.remove('ticket-open'); });
+      cart.parentNode.insertBefore(scrim, cart);
       var startY = 0, dragY = 0;
       grabber.addEventListener('touchstart', function (event) {
         startY = event.touches && event.touches[0] ? event.touches[0].clientY : 0;
@@ -574,31 +579,19 @@
 
       /* On a phone the bill is a sheet, and the X at the top of a sheet means
          "put it away". In takeaway the caisse wired that X to clearCart(), so
-         one tap meant to peek back at the menu threw the order away. Here the
-         X only folds the sheet; emptying the order is an explicit, labelled
-         action inside "More actions". */
-      var clearing = false;
+         one tap meant to glance back at the menu threw the order away. Here the
+         X only folds the sheet; emptying the order stays the explicit, red
+         "Vider la commande" under More actions. */
       var closeX = cart.querySelector('#rp-close');
       if (closeX) {
         document.addEventListener('click', function (event) {
-          if (clearing || event.target.closest('#rp-close') !== closeX) return;
+          if (event.target.closest('#rp-close') !== closeX) return;
           if (document.body.getAttribute('data-mode') !== 'vrap' || !document.body.classList.contains('ticket-open')) return;
           event.preventDefault();
           event.stopPropagation();
           document.body.classList.remove('ticket-open');
         }, true);
         closeX.setAttribute('aria-label', copy.close);
-        if (more) {
-          var clear = document.createElement('button');
-          clear.type = 'button';
-          clear.className = 'kiwi-native-cart-clear';
-          clear.textContent = copy.clear;
-          clear.addEventListener('click', function () {
-            clearing = true;
-            try { closeX.click(); } finally { clearing = false; }
-          });
-          more.parentNode.insertBefore(clear, more.nextSibling);
-        }
       }
 
       /* On phones the bill is a bottom sheet. Do not reserve a second bottom

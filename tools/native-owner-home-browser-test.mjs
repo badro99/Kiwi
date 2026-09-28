@@ -251,6 +251,12 @@ try {
        takeaway, so a tap meant to glance back at the menu discarded the order. */
     await click(page, '.rp-peek');
     await sleep(700);
+    const sheet = await page.evaluate(() => {
+      const scrim = document.querySelector('.kiwi-native-sheet-scrim');
+      const charge = document.getElementById('pay-charge');
+      return { scrim: !!scrim && getComputedStyle(scrim).opacity === '1', amount: /MAD/.test(charge ? charge.textContent : '') && getComputedStyle(charge.querySelector('.pay-charge-total')).display !== 'none' };
+    });
+    check(sheet.scrim && sheet.amount, 'the open bill dims the menu and its one filled button names the amount');
     await page.evaluate(() => document.getElementById('rp-close').click());
     await sleep(700);
     const folded = await page.evaluate(() => ({ open: document.body.classList.contains('ticket-open'),
@@ -260,11 +266,9 @@ try {
     await sleep(700);
     await click(page, '.kiwi-native-cart-more');
     await sleep(400);
-    const clearShown = await page.evaluate(() => { const b = document.querySelector('.kiwi-native-cart-clear'); return !!(b && b.offsetParent); });
-    await page.evaluate(() => document.querySelector('.kiwi-native-cart-clear').click());
-    await sleep(900);
-    const cleared = await page.evaluate(() => document.body.classList.contains('kiwi-native-cart-empty'));
-    check(clearShown && cleared, 'emptying the order is an explicit “Vider la commande” under More actions');
+    const clearShown = await page.evaluate(() => { const b = document.querySelector('.rp-meta [data-action="cancel-table"]'); return !!(b && b.offsetParent); });
+    /* That button is guarded by a server-checked staff code; the old X skipped the guard. */
+    check(clearShown, 'emptying the order stays the guarded “Vider la commande” under More actions');
     check(errors.length === 0, `no page errors on the till${errors.length ? ` (${errors[0]})` : ''}`);
     await ctx.close();
   }

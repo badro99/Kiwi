@@ -75,15 +75,15 @@ These are the patterns behind Revolut's reputation, stated as rules we can check
   - The cart is a floating ink "Voir la note" pill with a mint count badge and the live total.
   - Tiles show the name first and the price second, never clip, and compress on press.
   - The title is a large title, the opening float is one row of capsules, and the clock uses a 600 weight.
-  - The X on the open bill folds the sheet. In takeaway it used to empty the order, so a glance back at the menu lost the sale. Emptying is now an explicit "Vider la commande" under More actions.
+  - The X on the open bill folds the sheet. In takeaway it used to call `clearCart()` directly, so a glance back at the menu lost the sale, and it also skipped the staff-code check that guards "Vider la commande". Emptying now only goes through that guarded button under More actions.
+  - The open bill is a real sheet: a scrim dims the menu and folds the sheet on tap, and the sheet has a 24 pt top edge. It has one filled capsule, "Encaisser · 80 MAD". Card is tonal, the kitchen send is a tonal capsule under it, and "Autres actions" is a quiet text link.
 
-Guarded by `tools/native-owner-home-browser-test.mjs` (26 checks, wired in
+Guarded by `tools/native-owner-home-browser-test.mjs` (27 checks, wired in
 `tools/check.js`). It fails on the previous commit.
 
 ## Still open, in priority order
 
 1. **Code entry:** the dashboard code uses the system keyboard and its accessory bar. A native keypad, as Revolut uses for its passcode, would remove both.
-2. **Bill sheet:** the bill sheet still stacks three full-width buttons ("Send to kitchen", "Card", "Take payment") plus "More actions". Revolut would show one primary action with the rest in a menu.
-3. **Kitchen and Team roles:** neither has had this pass yet.
-4. **Demo data:** the demo hero delta and the goal card disagree ("−16 % vs yesterday" beside "+3.2 % vs yesterday"). That is demo data, but an owner reading it would lose trust.
-5. **Order row glyphs:** order rows use one generic payment glyph. Per-method glyphs (card, cash, QR) would match Revolut's merchant logos.
+2. **Kitchen and Team roles:** neither has had this pass yet.
+3. **Demo data:** the demo hero delta and the goal card disagree ("−16 % vs yesterday" beside "+3.2 % vs yesterday"). That is demo data, but an owner reading it would lose trust.
+4. **Order row glyphs:** order rows use one generic payment glyph. Per-method glyphs (card, cash, QR) would match Revolut's merchant logos.
