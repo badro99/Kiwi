@@ -91,6 +91,7 @@ try {
   await page.evaluate(()=>window.KiwiNativeHostAction({action:"navigate",id:"transactions"})); await sleep(500);
   const orders=await page.$eval('[data-tx-host] .p-hero',e=>e.textContent);
   check(orders.includes(String(stats.count)), 'Orders renders ledger count');
+  check(!/refresh|clock sync|horloge|ثوان/.test(orders), 'Orders never exposes a developer polling caption');
   await page.screenshot({path:path.join(work,'orders.png')});
   await page.evaluate(()=>window.KiwiNativeHostAction({action:"navigate",id:"clients"})); await sleep(500);
   await page.click('[data-cd-id]'); await sleep(250);

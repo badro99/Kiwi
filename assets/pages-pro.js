@@ -82,7 +82,6 @@ handlers['nav-transactions'] = () => {
         order: 'commande',
         orders: 'commandes',
         avgBasket: 'panier moyen',
-        liveSync: 'sync horloge démo · refresh 3 s',
         consolidated: 'données consolidées',
         all: 'Toutes',
         cards: 'Cartes',
@@ -133,7 +132,6 @@ handlers['nav-transactions'] = () => {
         order: 'order',
         orders: 'orders',
         avgBasket: 'avg basket',
-        liveSync: 'demo clock sync · refresh 3s',
         consolidated: 'consolidated data',
         all: 'All',
         cards: 'Cards',
@@ -184,7 +182,6 @@ handlers['nav-transactions'] = () => {
         order: 'طلب',
         orders: 'طلبات',
         avgBasket: 'متوسط السلة',
-        liveSync: 'مزامنة مع الساعة التجريبية · تحديث كل 3 ثوانٍ',
         consolidated: 'بيانات موحدة',
         all: 'الكل',
         cards: 'البطاقات',
@@ -301,7 +298,7 @@ handlers['nav-transactions'] = () => {
       <div class="p-hero">
         <div class="l">${live ? T.heroLive : T.heroVolume + RANGE_LABEL[activeRange].toUpperCase()}</div>
         <div class="big">${fmt0(Math.abs(heroSum))} <span style="font-size:18px; opacity:0.7;">MAD</span></div>
-        <div class="sub">${heroTotal} ${heroTotal > 1 ? T.orders : T.order} · ${T.avgBasket} ${heroAvg} MAD · ${live ? T.liveSync : T.consolidated}</div>
+        <div class="sub">${heroTotal} ${heroTotal > 1 ? T.orders : T.order} · ${T.avgBasket} ${heroAvg} MAD${live ? '' : ' · ' + T.consolidated}</div>
       </div>
 
       <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center;">
