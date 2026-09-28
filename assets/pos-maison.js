@@ -789,9 +789,18 @@
      dernier numéro restauré, sinon le ticket suivant réutiliserait un numéro déjà
      encaissé. La démo garde ses ventes en mémoire, inchangée. */
   const DAY_KEY = 'kiwi:bqDay';
+  /* « Aujourd'hui » = la journée commerciale (bascule à 5 h), la même que le
+     tableau de bord et le rapport journalier. Minuit coupait en deux un service
+     de soirée : à 0 h 30 la caisse affichait une vente, le rapport cinq. */
+  function businessDayKey(ts) {
+    const R = window.KiwiDayReport;
+    try { if (R && R.businessDay) return R.businessDay(ts); } catch (_) {}
+    const x = new Date(ts - 5 * 3600000);
+    return x.getFullYear() + '-' + x.getMonth() + '-' + x.getDate();
+  }
   function isToday(d) {
-    const x = new Date(d), n = new Date();
-    return x.getFullYear() === n.getFullYear() && x.getMonth() === n.getMonth() && x.getDate() === n.getDate();
+    const t = +new Date(d);
+    return !isNaN(t) && businessDayKey(t) === businessDayKey(Date.now());
   }
 
   /* ── « Retour sous 7 jours » — encore faut-il retrouver la vente ────────────
