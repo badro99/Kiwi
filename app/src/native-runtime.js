@@ -188,7 +188,7 @@
   function nativeBlockingLayer() {
     if (openNativeLayers().length) return true;
     if (document.querySelector('#pair.on,.screen-pin.is-active,.screen-clockin.is-active,.screen-table.is-active')) return true;
-    if (document.body && (document.body.classList.contains('nav-open') || document.body.classList.contains('kw-menu-open'))) return true;
+    if (document.body && (document.body.classList.contains('nav-open') || document.body.classList.contains('kw-menu-open') || document.body.classList.contains('kiwi-native-menu-open'))) return true;
     var onboarding = document.querySelector('.kob-root');
     if (onboarding && !onboarding.classList.contains('kob-out')) return true;
     var dashboardLock = document.querySelector('[data-kiwi-lock]');
@@ -330,8 +330,8 @@
       document.body.classList.remove('ticket-open');
       return true;
     }
-    if (document.body.classList.contains('nav-open')) {
-      document.body.classList.remove('nav-open');
+    if (document.body.classList.contains('nav-open') || document.body.classList.contains('kiwi-native-menu-open')) {
+      closeNativeMenus();
       return true;
     }
     var builder = document.getElementById('vrap-builder');
@@ -424,6 +424,105 @@
       return true;
     }
     return false;
+  }
+
+  /* One menu in every role. A header ☰ opens a drawer, and the drawer ends
+     with the account actions the native More sheet used to hold. The owner
+     and the till reuse their own drawers; Team and Kitchen get this one. */
+  function nativeMenuCopy() {
+    var lang = String(root.lang || 'fr');
+    if (lang.indexOf('ar') === 0) return { open:'فتح القائمة', close:'إغلاق القائمة', label:'الحساب', role:'تغيير الدور', out:'تسجيل الخروج', ai:'خصوصية Kiwi AI', del:'حذف حسابي', team:'فريق Kiwi', kitchen:'المطبخ' };
+    if (lang.indexOf('en') === 0) return { open:'Open menu', close:'Close menu', label:'Account', role:'Change role', out:'Sign out', ai:'Kiwi AI privacy', del:'Delete my account', team:'Kiwi Team', kitchen:'Kitchen' };
+    return { open:'Ouvrir le menu', close:'Fermer le menu', label:'Compte', role:'Changer de rôle', out:'Se déconnecter', ai:'Confidentialité Kiwi AI', del:'Supprimer mon compte', team:'Kiwi Équipe', kitchen:'Cuisine' };
+  }
+  function closeNativeMenus() {
+    var burger = document.querySelector('.kw-hamburger');
+    if (document.body.classList.contains('kw-menu-open') && burger) burger.click();
+    document.body.classList.remove('nav-open', 'kiwi-native-menu-open');
+  }
+  function mountNativeAccountGroup(container, before) {
+    if (!container) return;
+    var words = nativeMenuCopy();
+    var box = container.querySelector('.kno-account');
+    if (box && box.getAttribute('data-lang') === root.lang) return;
+    if (box) box.remove();
+    box = document.createElement('div');
+    box.className = 'kno-account';
+    box.setAttribute('role', 'group');
+    box.setAttribute('aria-label', words.label);
+    box.setAttribute('data-lang', root.lang || '');
+    box.innerHTML = [['change-role', words.role, 'swap_horiz.svg', ''], ['sign-out', words.out, 'logout.svg', ''], ['ai-privacy', words.ai, 'shield.svg', ''], ['delete-account', words.del, 'delete.svg', 'is-danger']].map(function (item) {
+      return '<button type="button" data-kno-account="' + item[0] + '" class="' + item[3] + '"><i style="--kno-icon:url(assets/icons/material/' + item[2] + ')" aria-hidden="true"></i><span>' + item[1] + '</span></button>';
+    }).join('');
+    box.addEventListener('click', function (event) {
+      var button = event.target.closest('[data-kno-account]');
+      if (!button) return;
+      hapticLight();
+      closeNativeMenus();
+      nativeWorkspaceAction({ action:button.getAttribute('data-kno-account') });
+    });
+    if (before && before.parentNode === container) container.insertBefore(box, before);
+    else container.appendChild(box);
+  }
+  function nativeMenuButton(open) {
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'kiwi-native-burger';
+    button.innerHTML = '<i aria-hidden="true"></i>';
+    var label = function () { button.setAttribute('aria-label', nativeMenuCopy().open); };
+    label();
+    new MutationObserver(label).observe(root, { attributes:true, attributeFilter:['lang'] });
+    button.addEventListener('click', function (event) { event.stopPropagation(); hapticLight(); open(); });
+    return button;
+  }
+  function nativeSideMenu(kind) {
+    var menu = document.querySelector('.kiwi-native-menu');
+    if (!menu) {
+      var scrim = document.createElement('div');
+      scrim.className = 'kiwi-native-menu-scrim';
+      scrim.addEventListener('click', closeNativeMenus);
+      menu = document.createElement('aside');
+      menu.className = 'kiwi-native-menu';
+      menu.id = 'kiwi-native-menu';
+      menu.innerHTML = '<div class="kiwi-native-menu-head"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"><span class="kiwi-native-menu-role"></span><button type="button" class="kiwi-native-menu-close"><i aria-hidden="true"></i></button></div>';
+      menu.querySelector('.kiwi-native-menu-close').addEventListener('click', closeNativeMenus);
+      document.body.appendChild(scrim);
+      document.body.appendChild(menu);
+    }
+    var paint = function () {
+      var words = nativeMenuCopy();
+      menu.setAttribute('aria-label', words[kind] || 'Kiwi');
+      menu.querySelector('.kiwi-native-menu-role').textContent = words[kind] || '';
+      menu.querySelector('.kiwi-native-menu-close').setAttribute('aria-label', words.close);
+      mountNativeAccountGroup(menu);
+    };
+    paint();
+    new MutationObserver(paint).observe(root, { attributes:true, attributeFilter:['lang'] });
+    return function () { paint(); document.body.classList.add('kiwi-native-menu-open'); if (window.KiwiNativeHostRequestState) window.KiwiNativeHostRequestState(); };
+  }
+
+  /* Light and dark follow the phone in every role. Each surface keeps its own
+     switch on the web; inside the app the system decides and the switches
+     are hidden (native-runtime.css). */
+  function followSystemTheme(role) {
+    var media = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+    if (!media) return;
+    var apply = function () {
+      var next = media.matches ? 'dark' : 'light';
+      if (role === 'caisse') {
+        var till = window.KiwiCaisseTheme;
+        if (till && till.current() !== next) till.set(next);
+      } else if (role === 'dashboard') {
+        var dash = window.KiwiDashTheme;
+        if (dash && (dash.get() !== next || root.getAttribute('data-theme') !== next)) dash.set(next);
+      } else {
+        try { localStorage.removeItem('kiwiTheme'); } catch (_) {}
+        if (typeof window.__kiwiApplyTheme === 'function') window.__kiwiApplyTheme();
+      }
+      if (typeof paintStatusBar === 'function') paintStatusBar();
+    };
+    if (typeof media.addEventListener === 'function') media.addEventListener('change', apply);
+    apply();
   }
 
 
@@ -534,8 +633,7 @@
     var tabItems = [
       ['salle', copy.salle, 'table_restaurant.svg'],
       ['vrap', copy.vrap, 'lunch_dining.svg'],
-      ['waitlist', copy.waitlist, 'group.svg'],
-      ['more', copy.more, 'category.svg']
+      ['waitlist', copy.waitlist, 'group.svg']
     ];
     nav.innerHTML = tabItems.map(function (item) {
       return '<button type="button" data-lens-item data-native-tab="' + item[0] + '"><i style="--native-tab-icon:url(assets/icons/material/' + item[2] + ')" aria-hidden="true"></i><span>' + item[1] + '</span></button>';
@@ -585,6 +683,16 @@
     window.KiwiNativeHostRequestState = syncTabs;
     new MutationObserver(syncTabs).observe(document.body, { attributes: true, attributeFilter: ['data-mode', 'class'] });
     syncTabs();
+
+    var openTillMenu = function () { document.body.classList.add('nav-open'); syncTabs(); };
+    document.querySelectorAll('.main-head').forEach(function (head) {
+      if (head.querySelector('.main-title') && !head.querySelector(':scope > .kiwi-native-burger')) head.insertBefore(nativeMenuButton(openTillMenu), head.firstChild);
+    });
+    var tillSidebar = document.querySelector('.sidebar');
+    var mountTillAccount = function () { mountNativeAccountGroup(tillSidebar); };
+    mountTillAccount();
+    new MutationObserver(mountTillAccount).observe(root, { attributes:true, attributeFilter:['lang'] });
+    followSystemTheme('caisse');
 
     var cart = document.querySelector('.rightpanel');
     if (cart) {
@@ -744,15 +852,20 @@
       }).observe(pairingGate, { attributes:true, attributeFilter:['class'], attributeOldValue:true });
     }
     document.body.classList.add('kiwi-native-' + (role === 'equipe' ? 'team' : role === 'cuisine' ? 'kitchen' : 'owner'));
+    followSystemTheme(role);
+    if (role === 'equipe' || role === 'cuisine') {
+      var openSideMenu = nativeSideMenu(role === 'equipe' ? 'team' : 'kitchen');
+      var header = document.querySelector(role === 'equipe' ? '#screen-main header.topbar' : 'header.top .brand');
+      if (header && !header.querySelector('.kiwi-native-burger')) header.insertBefore(nativeMenuButton(openSideMenu), header.firstChild);
+    }
     var teamButtons = function () { return Array.from(document.querySelectorAll('#screen-main .bottom-tabs button[data-tab]')); };
     var teamReady = function () { return role === 'equipe' && document.querySelector('#screen-main.is-active') && !document.body.classList.contains('is-browse-mode'); };
     var lastPushed = '';
     var push = function () {
-      var tabs = nativeBlockingLayer() || window.innerWidth > 900 ? [] : owner ? owner.tabs() : [{ id:'more', label:nativeTillCopy().more }];
+      var tabs = nativeBlockingLayer() || window.innerWidth > 900 || !owner ? [] : owner.tabs();
       var selected = owner ? owner.selected() : '';
       if (teamReady() && !nativeBlockingLayer() && window.innerWidth <= 600) {
         tabs = teamButtons().map(function (b) { return { id:b.dataset.tab, label:b.getAttribute('aria-label') || b.textContent.trim() }; });
-        tabs.push({ id:'more', label:nativeTillCopy().more });
         var active = teamButtons().filter(function (b) { return b.getAttribute('aria-pressed') === 'true'; })[0];
         selected = active ? active.dataset.tab : '';
       }
@@ -767,6 +880,7 @@
     window.KiwiNativeHostRequestState = function () { lastPushed = ''; push(); };
     window.KiwiNativeHostAction = function (payload) {
       if (owner && payload && payload.action === 'open-tools') { owner.openMenu(); return; }
+      if (!owner && payload && payload.action === 'open-tools') { var sideOpen = document.querySelector('.kiwi-native-burger'); if (sideOpen) sideOpen.click(); return; }
       if (nativeWorkspaceAction(payload)) return;
       if (owner && payload && payload.action === 'navigate') owner.go(String(payload.id || ''));
       if (teamReady() && payload && payload.action === 'navigate' && !nativeBlockingLayer()) {
@@ -953,69 +1067,12 @@
     var main = document.querySelector('main.main');
     if (main) new MutationObserver(mountQuickActions).observe(main, { childList:true, subtree:true });
 
-    /* An iPhone app follows the system appearance until the owner picks one
-       with the moon button. `kiwiNativeThemeAuto` marks a stored theme as
-       ours, so a real choice is never overridden. */
-    (function followSystemAppearance() {
-      var theme = window.KiwiDashTheme, media = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
-      if (!theme || !media) return;
-      var applying = false;
-      var auto = function () { try { return localStorage.getItem('kiwiDashTheme') === null || localStorage.getItem('kiwiNativeThemeAuto') === '1'; } catch (_) { return false; } };
-      var apply = function () {
-        if (!auto()) return;
-        var next = media.matches ? 'dark' : 'light';
-        try { localStorage.setItem('kiwiNativeThemeAuto', '1'); } catch (_) {}
-        if (theme.get() === next && root.getAttribute('data-theme') === next) return;
-        applying = true;
-        try { theme.set(next); } finally { applying = false; }
-      };
-      window.addEventListener('kiwi:themechange', function () {
-        if (!applying) { try { localStorage.removeItem('kiwiNativeThemeAuto'); } catch (_) {} }
-        paintStatusBar();
-      });
-      if (typeof media.addEventListener === 'function') media.addEventListener('change', apply);
-      apply();
-    })();
+    /* The status bar follows every theme change; the theme itself follows
+       the phone (followSystemTheme). */
+    window.addEventListener('kiwi:themechange', function () { paintStatusBar(); });
 
-    /* The drawer is the one menu: the full dashboard, then the account. These
-       run the same host actions the old More sheet sent. */
-    function accountCopy() {
-      var lang = String(root.lang || 'fr');
-      if (lang.indexOf('ar') === 0) return { label:'الحساب', role:'تغيير الدور', out:'تسجيل الخروج', ai:'خصوصية Kiwi AI', del:'حذف حسابي' };
-      if (lang.indexOf('en') === 0) return { label:'Account', role:'Change role', out:'Sign out', ai:'Kiwi AI privacy', del:'Delete my account' };
-      return { label:'Compte', role:'Changer de rôle', out:'Se déconnecter', ai:'Confidentialité Kiwi AI', del:'Supprimer mon compte' };
-    }
-    function closeDrawer() {
-      var burger = document.querySelector('.kw-hamburger');
-      if (document.body.classList.contains('kw-menu-open') && burger) burger.click();
-      document.body.classList.remove('nav-open');
-    }
-    function mountAccountMenu() {
-      var s = sidebar();
-      if (!s) return;
-      var words = accountCopy();
-      var box = s.querySelector('.kno-account');
-      if (box && box.getAttribute('data-lang') === root.lang) return;
-      if (box) box.remove();
-      box = document.createElement('div');
-      box.className = 'kno-account';
-      box.setAttribute('role', 'group');
-      box.setAttribute('aria-label', words.label);
-      box.setAttribute('data-lang', root.lang || '');
-      box.innerHTML = [['change-role', words.role, 'swap_horiz.svg', ''], ['sign-out', words.out, 'logout.svg', ''], ['ai-privacy', words.ai, 'shield.svg', ''], ['delete-account', words.del, 'delete.svg', 'is-danger']].map(function (item) {
-        return '<button type="button" data-kno-account="' + item[0] + '" class="' + item[3] + '"><i style="--kno-icon:url(assets/icons/material/' + item[2] + ')" aria-hidden="true"></i><span>' + item[1] + '</span></button>';
-      }).join('');
-      box.addEventListener('click', function (event) {
-        var button = event.target.closest('[data-kno-account]');
-        if (!button) return;
-        hapticLight();
-        closeDrawer();
-        nativeWorkspaceAction({ action:button.getAttribute('data-kno-account') });
-      });
-      var logout = s.querySelector('.merchant-logout');
-      if (logout && logout.parentNode) logout.parentNode.insertBefore(box, logout);
-      else s.appendChild(box);
-    }
+    /* The drawer is the one menu: the full dashboard, then the account. */
+    var mountAccountMenu = function () { var s = sidebar(); mountNativeAccountGroup(s, s && s.querySelector('.merchant-logout')); };
     mountAccountMenu();
     setTimeout(mountAccountMenu, 1200);
     new MutationObserver(mountAccountMenu).observe(root, { attributes:true, attributeFilter:['lang'] });
