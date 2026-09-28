@@ -275,6 +275,7 @@
 
   function dismissNativeLayer(layer) {
     if (!layer) return false;
+    if (layer.classList.contains('kiwi-native-privacy')) { layer.querySelector('[data-deny]').click(); return true; }
     if (layer.matches && layer.matches('.modal-veil,.drawer-veil,.cloture-veil,.kiwi-backdrop,.kiwi-drawer-backdrop')) {
       try { layer.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); } catch (_) {}
       if (layer.classList.contains('is-open')) {
@@ -354,12 +355,22 @@
     document.body.appendChild(overlay);
     if (window.KiwiNativeHostRequestState) window.KiwiNativeHostRequestState();
     fetch('/api/account/deletion-request', { credentials:'include', cache:'no-store' }).then(function (res) {
+      if (res.status === 401) throw new Error('unauthenticated');
       return res.json().then(function (body) { if (!res.ok) throw new Error(body.error || 'unavailable'); return body; });
     }).then(function (body) {
       card.querySelector('.kiwi-native-account-email').textContent = body.account && body.account.email || '';
-      if (body.request) { status.textContent = words.received + ' · ' + body.request.reference; return; }
+      if (body.request) { status.textContent = words.received + ' · ' + body.request.reference; card.querySelector('label').hidden = true; submit.hidden = true; return; }
       status.textContent = ''; submit.disabled = false;
-    }).catch(function (error) { status.textContent = error.message === 'unauthenticated' ? words.signin : words.failed; });
+    }).catch(function (error) {
+      status.textContent = error.message === 'unauthenticated' ? words.signin : words.failed;
+      card.querySelector('label').hidden = true; submit.hidden = true;
+      if (error.message === 'unauthenticated') {
+        var signin = document.createElement('button'); signin.type = 'button';
+        signin.textContent = lang === 'ar' ? 'تسجيل الدخول' : lang === 'en' ? 'Sign in' : 'Se connecter';
+        signin.onclick = function () { location.href = 'index.html?setup=1'; };
+        card.querySelector('.kiwi-native-account-actions').appendChild(signin);
+      }
+    });
     submit.addEventListener('click', function () {
       if (submit.disabled || !password.value) { password.focus(); return; }
       submit.disabled = true; status.textContent = words.checking;
@@ -374,9 +385,11 @@
   function nativeWorkspaceAction(payload) {
     if (!payload) return false;
     if (payload.action === 'change-role') { location.href = 'index.html?choose=1'; return true; }
+    if (payload.action === 'ai-privacy') { if (window.KiwiNativePrivacy) window.KiwiNativePrivacy.show(); return true; }
     if (payload.action === 'delete-account') { nativeAccountDeletion(); return true; }
     if (payload.action === 'open-tools') { if (document.body) document.body.classList.add('nav-open'); hapticLight(); if (window.KiwiNativeHostRequestState) window.KiwiNativeHostRequestState(); return true; }
     if (payload.action === 'sign-out') {
+      if (window.KiwiNativePrivacy) window.KiwiNativePrivacy.reset();
       fetch('/auth/logout', { credentials:'include', redirect:'manual' }).then(function () {
         localStorage.removeItem('kiwiAppRole');
         call(socket, 'secureRemove', { key:'app-role' }).then(function () { location.href = 'index.html?setup=1'; });

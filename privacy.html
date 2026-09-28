@@ -104,8 +104,8 @@
       établissement de paiement.
     </p>
     <div class="meta">
-      <span><b>Dernière mise à jour</b> : 23 août 2026</span>
-      <span><b>Version</b> : 2.2</span>
+      <span><b>Dernière mise à jour</b> : 28 septembre 2026</span>
+      <span><b>Version</b> : 2.3</span>
       <span><b>Déclaration CNDP</b> : n° en cours d'attribution</span>
     </div>
 
@@ -177,13 +177,25 @@
       <li><b>Appareil photo</b> : demandée uniquement quand le commerçant lance
         le scan d'un code-barres à la caisse ou photographie un bon de livraison
         pour son stock. Le flux vidéo est traité sur l'appareil ; seule la photo
-        de bon choisie par le commerçant est conservée dans son espace, jamais
-        revendue ni partagée.</li>
+        ou le document choisi par le commerçant peut être envoyé à Kiwi et à son
+        prestataire Cloudflare pour stockage et, si demandé, traitement par IA.</li>
     </ul>
     <p class="note">
       Aucun achat intégré, aucun abonnement vendu dans l'app : la facturation se fait
       entre Kiwi et le commerçant, hors des boutiques d'applications.
     </p>
+
+    <h2>Kiwi AI et dictée</h2>
+    <p>Les fonctions IA traitent les messages, le contexte d’activité pertinent et les
+      photos, documents ou enregistrements audio sélectionnés via <b>Cloudflare Workers AI</b>
+      et sa passerelle AI Gateway. Ces données peuvent inclure des informations sur les
+      clients ou les employés. Ne transmettez que les données que vous êtes autorisé à partager.
+      Les résultats peuvent être inexacts et doivent être vérifiés avant toute action.</p>
+    <p>Dans Kiwi Pro, une autorisation distincte est demandée avant l’envoi à l’IA.
+      Vous pouvez refuser et continuer à utiliser la caisse, ou modifier votre choix
+      dans <b>Plus → Confidentialité Kiwi AI</b>. Ce choix vaut pour la session en cours.
+      Le texte dicté reste modifiable avant l’envoi du message à l’assistant.
+      Retirer l’autorisation bloque les nouveaux envois, sans rappeler les données déjà transmises.</p>
 
     <h2>3. Finalités du traitement</h2>
     <ul>

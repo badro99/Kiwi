@@ -1,3 +1,5 @@
+> Release gate: see `docs/audits/2026-09-28-app-store-release.md`. This runbook is not proof of submission readiness.
+
 # Kiwi Pro · fiche App Store et Google Play, prête avant le paiement
 
 *Créé le 2026-08-23. Complète `docs/ops/APP.md` (construire, signer, TestFlight,
@@ -116,8 +118,8 @@ les comptes des commerçants réels. Le 27 septembre, une session Amira Boutique
 | URL marketing | https://kiwi-os.com/fr |
 | URL confidentialité | https://kiwi-os.com/privacy.html |
 | Copyright | © 2026 *entité des mentions légales* |
-| Classification | **4+** (toutes les questions : Non ; pas de contenu généré par les utilisateurs visible d'autres utilisateurs, pas d'achats, pas d'accès web non filtré) |
-| Droits sur le contenu | Aucun contenu tiers |
+| Classification | À calculer avec le questionnaire Apple actuel sur le binaire final. Examiner notamment l’assistant IA, les liens web et le contenu partagé ; ne pas répondre Non par défaut. |
+| Droits sur le contenu | Vérifier les droits et licences des icônes, polices et contenus embarqués avant attestation. |
 | Chiffrement | Exempt (HTTPS uniquement ; `ITSAppUsesNonExemptEncryption = NO`, rien à téléverser) |
 | Sign in with Apple | Non requis : aucune connexion via un tiers, comptes créés par Kiwi hors de l'app |
 | Version · build | `MARKETING_VERSION` 1.0 · `CURRENT_PROJECT_VERSION` 1, incrémentés à chaque archive |
@@ -134,7 +136,7 @@ FR : Kiwi Pro met la caisse, la cuisine, l'équipe et le tableau de bord de votr
 établissement sur iPad et iPhone. Hors ligne, tickets imprimés en direct, chiffres
 à jour.
 EN : Kiwi Pro puts your till, kitchen screen, team app and dashboard on iPad and
-iPhone. Works offline, prints tickets instantly, keeps your numbers live.
+iPhone. Record sales offline, use a compatible receipt printer and follow your business.
 
 ### Description (4000)
 
@@ -149,12 +151,12 @@ Caisse
   synchronisent dès que la connexion revient.
 · Impression directe des tickets et reçus sur l'imprimante thermique du comptoir,
   en Wi-Fi, sans boîtier ni ordinateur. Les tickets en attente partent d'eux-mêmes
-  quand l'imprimante répond, sans doublon.
+  quand l’imprimante répond. Vérifiez les reçus après toute interruption.
 · Codes personnels pour chaque membre de l'équipe.
 
 Cuisine
-· Les commandes arrivent sur l'écran cuisine et l'imprimante de la cuisine à la
-  seconde où elles sont encaissées.
+· Suivez les commandes synchronisées sur l’écran cuisine et imprimez les bons
+  de préparation sur une imprimante compatible et configurée.
 
 Équipe
 · Pointage, horaires, heures travaillées, un code par employé.
@@ -180,12 +182,12 @@ Till
   is back.
 · Prints tickets and receipts straight to the counter's thermal printer over
   Wi-Fi, with no box and no computer. Pending tickets print themselves when the
-  printer answers, never twice.
+  printer is available. Check receipts after an interruption.
 · A personal code for every member of staff.
 
 Kitchen
-· Orders reach the kitchen screen and the kitchen printer the second they are
-  rung up.
+· Follow synchronized orders on the kitchen screen and print preparation tickets
+  with a configured, compatible printer.
 
 Team
 · Clock-in, schedules, hours worked, one code per employee.
@@ -208,11 +210,11 @@ merchant. Discover Kiwi at kiwi-os.com.
 · تحصيل سريع، أصناف، عروض، تخفيضات، طرق الدفع.
 · يعمل بدون إنترنت: تُحفظ المبيعات على الجهاز وتتزامن فور عودة الاتصال.
 · طباعة مباشرة للتذاكر والإيصالات على الطابعة الحرارية عبر الواي فاي، بدون علبة
-  ولا حاسوب. التذاكر المعلقة تُطبع تلقائياً عند استجابة الطابعة، دون تكرار.
+  ولا حاسوب. تُرسل التذاكر المعلقة عند توفر الطابعة. تحقّق من الإيصالات بعد أي انقطاع.
 · رمز شخصي لكل عضو في الفريق.
 
 المطبخ
-· تصل الطلبات إلى شاشة المطبخ وطابعة المطبخ لحظة تسجيلها.
+· تابع الطلبات المتزامنة على شاشة المطبخ واطبع تذاكر التحضير بطابعة متوافقة ومهيأة.
 
 الفريق
 · تسجيل الحضور، الجداول، ساعات العمل، رمز لكل موظف.
@@ -242,7 +244,7 @@ la capture nue suffit et évite le rejet « métadonnées trompeuses ».
 
 ## 4. App Privacy (étiquettes) · et Data safety Google
 
-Réponses à donner telles quelles ; elles découlent de `PrivacyInfo.xcprivacy`, de
+Inventaire technique à confirmer dans App Store Connect pour le binaire final ; voir `PrivacyInfo.xcprivacy`,
 `assets/err-reporter.js` et de `privacy.html` §2. **Aucun suivi (tracking) : Non.**
 
 | Donnée | Collectée | Liée à l'utilisateur | Finalité | Pourquoi |
@@ -253,13 +255,16 @@ Réponses à donner telles quelles ; elles découlent de `PrivacyInfo.xcprivacy`
 | Identifiant d'appareil | Oui | Oui | Fonctionnement | id d'appareil généré par Kiwi pour l'appairage |
 | Autres informations financières | Oui | Oui | Fonctionnement | ventes du commerçant (montant, mode, libellé) ; aucune carte bancaire |
 | Données de plantage · autres diagnostics | Oui | Oui | Fonctionnement | rapports expurgés vers /api/error |
-| Photos | Oui | Oui | Fonctionnement | uniquement la photo de bon choisie par le commerçant (stock) |
+| Photos et documents | Oui | Oui | Fonctionnement | médias choisis pour stock, menu et assistant IA |
+| Numéro de téléphone | Oui | Oui | Fonctionnement | coordonnées des clients et contacts enregistrés |
+| Audio | Oui | Oui | Fonctionnement | dictée et traitement vocal via Cloudflare Workers AI |
+| Autre contenu utilisateur | Oui | Oui | Fonctionnement | messages, documents et contexte envoyés à l’assistant |
 | Localisation, contacts, historique de navigation, identifiants publicitaires, santé | Non | | | |
 
 Google, en plus : données chiffrées en transit **Oui** ; l'utilisateur peut demander
 la suppression **Oui** (dpo@kiwi-os.com, et le formulaire de §5) ; partage avec des
-tiers **Non** ; l'app est destinée aux **professionnels, 18 ans et plus** ; pas de
-publicité ; questionnaire IARC : application utilitaire → **Tous publics / PEGI 3**.
+prestataires à déclarer selon les définitions de la boutique, dont Cloudflare Workers AI ; l'app est destinée aux **professionnels, 18 ans et plus** ; pas de
+publicité ; questionnaire IARC à compléter honnêtement sur les fonctions du binaire final.
 Permission `CAMERA` : déclarer « scan de codes-barres et photo de bons de livraison ».
 
 ## 5. Notes pour la revue (à coller dans App Review Information · App access)

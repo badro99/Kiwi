@@ -573,6 +573,9 @@ private struct KiwiNativeTabRoot: View {
                             }
                         }
                         Section {
+                            Button { showingMore = false; model.send("ai-privacy") } label: {
+                                Label(copy("Confidentialité Kiwi AI", "Kiwi AI privacy", "خصوصية Kiwi AI"), systemImage: "hand.raised")
+                            }
                             Button(role: .destructive) { showingMore = false; model.send("delete-account") } label: {
                                 Label(copy("Supprimer mon compte", "Delete my account", "حذف حسابي"), systemImage: "trash")
                             }

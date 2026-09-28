@@ -3269,6 +3269,10 @@ ar: {
     },
 
     'upgrade-pro': () => {
+      if (document.documentElement.classList.contains('kiwi-native')) {
+        toast(tr({fr:'La gestion des formules n’est pas disponible dans cette app.', en:'Plan changes are not available in this app.', ar:'تغيير الباقة غير متاح في هذا التطبيق.'}));
+        return;
+      }
       /* Four-tier model. The recommended tier is contextual to the account: a
        * multi-établissement account needs Ultra (Basic/Pro are mono-site); the
        * exact palier is confirmed in a short discovery chat (so it's not fixed). */
@@ -3359,6 +3363,7 @@ ar: {
     },
 
     'upgrade-plan': (el, plan) => {
+      if (document.documentElement.classList.contains('kiwi-native')) return;
       const MSG = {
         basic: { fr: 'Kiwi Basic sélectionné · notre équipe vous contacte pour l\'intégration à votre caisse et la formation.', en: 'Kiwi Basic selected · our team will reach out to integrate it into your till and train you.', ar: 'تم اختيار Kiwi Basic · سيتواصل فريقنا لدمجه في صندوقك وتقديم التدريب.' },
         ultra: { fr: 'Demande Ultra envoyée · votre account manager vous appelle sous 24 h.', en: 'Ultra request sent · your account manager will call within 24h.', ar: 'تم إرسال طلب Ultra · سيتصل بك مدير حسابك خلال 24 ساعة.' },

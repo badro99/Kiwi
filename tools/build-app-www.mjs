@@ -52,7 +52,7 @@ const NATIVE_LOCALE_TAG = `<script>(function(){
   document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';
   try{localStorage.setItem('kiwiLang',lang);localStorage.setItem('kiwiCaisseLang',lang);localStorage.setItem('kiwiCuisineLang',lang)}catch(_e){}
 })()</script>`;
-const NATIVE_RUNTIME = ['native-runtime.js', 'native-runtime.css'];
+const NATIVE_RUNTIME = ['native-runtime.js', 'native-runtime.css', 'native-privacy.js'];
 const NATIVE_FONTS = {
   'native-fonts/inter-tight-latin.woff2': 'node_modules/@fontsource-variable/inter-tight/files/inter-tight-latin-wght-normal.woff2',
   'native-fonts/ibm-plex-sans-arabic-400.woff2': 'node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff2',
@@ -111,7 +111,7 @@ export function transformPage(html, opts) {
   const inject = []
     .concat(o.apiBase ? [`<script>window.KIWI_API_BASE=${JSON.stringify(String(o.apiBase))};</script>`] : [])
     .concat(o.bundle ? [`<meta name="kiwi-bundle" content="${o.bundle}" />`] : [])
-    .concat([API_BASE_TAG, NATIVE_LOCALE_TAG]);
+    .concat([API_BASE_TAG, NATIVE_LOCALE_TAG, '<script src="native-privacy.js"></script>']);
   out = out.replace(HEAD_RE, (m) => `${m}\n${inject.join('\n')}`);
   out = out.replace(/<\/head>/i, `${NATIVE_RUNTIME_TAGS}\n</head>`);
   return out;

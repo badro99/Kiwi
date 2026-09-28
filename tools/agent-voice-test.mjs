@@ -23,7 +23,7 @@ const controls = [
   ['the mic reaches both the hero box and the assistant drawer', voice.includes(".querySelectorAll('.fa-inputwrap')") && voice.includes(".querySelectorAll('.hai-input')")],
   ['the transcript is delivered to the input for client review', voice.includes('ctx.input.value =') && voice.includes('ctx.input.focus()') && !voice.includes('ctx.send.click()')],
   ['browser speech recognition is the fallback path', voice.includes('webkitSpeechRecognition') && voice.includes('browserDictate')],
-  ['a dead endpoint flips later dictations to the browser', voice.includes('preferBrowser = true')],
+  ['a dead endpoint only uses a disclosed browser fallback', voice.includes('preferBrowser = !!speechCtor()') && voice.includes("if (document.documentElement.classList.contains('kiwi-native')) return null;")],
   ['recording is capped so a stuck mic cannot upload forever', voice.includes('MAX_RECORD_MS')],
   ['the drawer composer born after load is still wired', voice.includes('MutationObserver')],
   ['the toast does not depend on window.Kiwi.toast', voice.includes('function toast(') && voice.includes('document.createElement')],

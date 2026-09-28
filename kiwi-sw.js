@@ -79,7 +79,7 @@ var SHELL = [
   '/assets/agent-data.js?v=1',
   '/assets/agent-features.js?v=4',
   '/assets/agent-truth.js?v=6',
-  '/assets/agent-voice.js?v=5',
+  '/assets/agent-voice.js?v=8',
   '/assets/agent-vision.js?v=1',
   '/assets/i18n.js?v=9',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
@@ -89,7 +89,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=38',
+  '/assets/interactive.js?v=39',
   '/assets/features.js?v=5',
   '/assets/invoicing.css?v=6',
   '/assets/invoicing.js?v=8',
@@ -137,12 +137,12 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=1',
-  '/assets/dateRange.js?v=30',
+  '/assets/dateRange.js?v=31',
   '/assets/mobile-nav.js?v=2',
   '/assets/liquid-lens.js?v=1',
   '/assets/pages.js?v=7',
   '/assets/help-centre.js?v=4',
-  '/assets/account.js?v=20',
+  '/assets/account.js?v=21',
   '/assets/production-action-guard.js?v=1',
   // Shared floor-plan vocabulary · the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up

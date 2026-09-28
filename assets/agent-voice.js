@@ -47,6 +47,8 @@
   }
 
   function speechCtor() {
+    // Native consent names Cloudflare, never silently switch to another provider.
+    if (document.documentElement.classList.contains('kiwi-native')) return null;
     return window.SpeechRecognition || window.webkitSpeechRecognition || null;
   }
   function canRecord() {
@@ -158,15 +160,16 @@
         /* L'endpoint nomme sa panne ; on choisit le secours en connaissance
          * de cause plutôt que de réessayer un mur toute la journée. */
         if (code === 'unbound' || code === 'quota') {
-          preferBrowser = true;
+          preferBrowser = !!speechCtor();
           toast(speechCtor() ? 'Transcription Kiwi indisponible · le micro passe par le navigateur, réessayez' : 'Transcription indisponible pour le moment');
         } else if (code === 'auth') {
           toast('Session expirée · reconnectez-vous');
         } else {
           toast('Transcription en échec · réessayez');
         }
-      }).catch(function () {
+      }).catch(function (error) {
         setState(btn, '');
+        if (error && error.name === 'NotAllowedError') return;
         toast('Hors ligne · la dictée a besoin du réseau');
       });
     };
@@ -182,6 +185,11 @@
       return;
     }
     if (btn.classList.contains('busy')) return;
+    if (window.KiwiNativePrivacy) {
+      if (!canRecord()) { browserDictate(ctx, btn); return; }
+      window.KiwiNativePrivacy.request().then(function (allowed) { if (allowed && !active) startRecording(ctx, btn); });
+      return;
+    }
     if (preferBrowser || !canRecord()) { browserDictate(ctx, btn); return; }
     startRecording(ctx, btn);
   }

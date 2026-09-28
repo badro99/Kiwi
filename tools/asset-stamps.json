@@ -1,7 +1,7 @@
 {
   "assets/account.js": {
-    "v": "20",
-    "sha": "4f7d902b0673368f"
+    "v": "21",
+    "sha": "9cbbd536f1ecef6b"
   },
   "assets/accounting.js": {
     "v": "1",
@@ -56,8 +56,8 @@
     "sha": "dc3ea68b7b50bc5a"
   },
   "assets/agent-voice.js": {
-    "v": "5",
-    "sha": "13799bff68c6aaec"
+    "v": "8",
+    "sha": "ff959b20a33063a8"
   },
   "assets/agent.js": {
     "v": "24",
@@ -220,8 +220,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "30",
-    "sha": "6a9881bf90486fec"
+    "v": "31",
+    "sha": "6a43ab4dc36765cd"
   },
   "assets/day-report-dash.js": {
     "v": "14",
@@ -384,8 +384,8 @@
     "sha": "21040572d903f0b8"
   },
   "assets/interactive.js": {
-    "v": "38",
-    "sha": "82f7a0eb5e74b444"
+    "v": "39",
+    "sha": "69a88c482c286a90"
   },
   "assets/inventory-consumption.js": {
     "v": "12",

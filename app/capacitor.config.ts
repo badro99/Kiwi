@@ -31,6 +31,9 @@ const config: CapacitorConfig = {
   plugins: {
     CapacitorHttp: { enabled: true },
     CapacitorCookies: { enabled: true },
+    // Resize the WKWebView when typing; keep the accessory Done control for
+    // numeric fields, which have no Return key.
+    Keyboard: { resize: 'native' },
     // The OS launch screen now hands off to the native SwiftUI/Compose shell,
     // which stays above the WebView until setup or the remembered workspace is
     // ready. Auto-hide must remain enabled: otherwise the system splash masks

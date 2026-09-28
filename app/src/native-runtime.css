@@ -497,3 +497,12 @@ html.kiwi-native [data-dr-label]{display:none!important}
 @media(prefers-reduced-motion:reduce){
   html.kiwi-native body:not(#kno) :is(.kiwi-native-owner-keypad button,#pair,#pair .dot,#pair .pad button,.kiwi-lock-pin,.kiwi-pin-cell,.rightpanel,.kiwi-native-sheet-scrim){animation:none!important;transition:none!important}
 }
+
+/* Consent must remain legible at accessibility sizes in every workspace. */
+html.kiwi-native .kiwi-native-privacy .kiwi-native-account-actions{margin-top:20px;flex-wrap:wrap}
+html.kiwi-native .kiwi-native-privacy button{white-space:normal;padding:12px;min-width:140px}
+html.kiwi-native .kiwi-native-privacy a{display:inline-flex;align-items:center;min-height:44px;color:#0B6E4F;text-decoration:underline}
+html.kiwi-native[lang="ar"] .kiwi-native-account-card,html.kiwi-native[lang="ar"] .kiwi-native-account-card h2,html.kiwi-native[lang="ar"] .kiwi-native-account-card button{font-family:"IBM Plex Sans Arabic",sans-serif}
+
+/* Companion app: web subscription offers do not become in-app purchasing. */
+html.kiwi-native [data-action="upgrade-pro"],html.kiwi-native [data-action="upgrade-plan"]{display:none!important}

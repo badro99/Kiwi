@@ -3971,6 +3971,12 @@
     const label = document.querySelector('[data-mix-plan-name]');
     const status = document.querySelector('[data-mix-plan-status]');
     if (!label || !status) return;
+    if (document.documentElement.classList.contains('kiwi-native')) {
+      label.removeAttribute('data-i18n'); status.removeAttribute('data-i18n');
+      label.textContent = 'Kiwi Pro';
+      status.textContent = ({fr:'Votre espace de travail', en:'Your workspace', ar:'مساحة عملك'})[lang] || 'Kiwi Pro';
+      return;
+    }
     if (!custom) {
       label.setAttribute('data-i18n', 'dash.mix.subscription');
       status.setAttribute('data-i18n', 'dash.mix.subscription.price');

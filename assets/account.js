@@ -651,7 +651,9 @@
         </div>`;
     };
     const biz = allBiz();
-    const subscriptionBlock = isReal()
+    const subscriptionBlock = document.documentElement.classList.contains('kiwi-native')
+      ? `<div class="acc-card span2"><div class="acc-eyebrow">Kiwi Pro</div><p>${esc(pick({fr:'Votre espace de travail Kiwi.', en:'Your Kiwi workspace.', ar:'مساحة عملك في Kiwi.'}))}</p></div>`
+      : isReal()
       ? `<div class="acc-card span2"><div class="acc-eyebrow">${esc(T.subscription)}</div><div class="acc-row"><span>${esc(T.curPlanLabel)}</span><b>·</b></div><div style="font-size:12.5px;color:var(--n-500);margin-top:8px;">${esc(pick({ fr: 'Données d’abonnement indisponibles.', en: 'Subscription data is unavailable.', ar: 'بيانات الاشتراك غير متاحة.' }))}</div></div>`
       : `<div class="acc-plan">
           <div>
@@ -1195,7 +1197,7 @@
             </div>
           </div>
           <div>
-            <button class="acc-cta ghost" data-action="upgrade-pro">${esc(T.changePlan)}</button>
+            ${document.documentElement.classList.contains('kiwi-native') ? '' : `<button class="acc-cta ghost" data-action="upgrade-pro">${esc(T.changePlan)}</button>`}
           </div>
         </div>
 
