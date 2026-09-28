@@ -47,6 +47,7 @@ const document = {
   querySelector(selector) {
     if (selector === 'meta[name="kiwi-bundle"]' || selector === '.kiwi-native-offline') return null;
     if (selector === '[data-kiwi-lock]') return dashboardLock;
+    if (selector.includes('#pair.on') && namedElements.get('pair')?.classList.contains('on')) return namedElements.get('pair');
     return null;
   },
   querySelectorAll(selector) { return selector.includes('.modal-veil.is-open') ? layers.filter((node) => node.classList.contains('is-open') || node.id === 'cp-pin-screen') : []; },
@@ -141,7 +142,15 @@ observers.forEach((callback) => callback([{ target: body, removedNodes: [pin] }]
 ok(statusBarCalls.at(-1) === 'LIGHT', 'removing a PIN overlay restores the underlying status style');
 location.pathname = '/kiwi-cuisine.html';
 appearanceListeners.forEach((handler) => handler({ matches: false }));
-ok(statusBarCalls.at(-1) === 'DARK', 'kitchen keeps light status text over its dark surface');
+ok(statusBarCalls.at(-1) === 'LIGHT', 'light kitchen production keeps dark status text');
+root.setAttribute('data-theme', 'dark');
+appearanceListeners.forEach((handler) => handler({ matches: true }));
+ok(statusBarCalls.at(-1) === 'DARK', 'dark kitchen production keeps light status text');
+root.setAttribute('data-theme', 'light');
+const kitchenPair = element('on'); kitchenPair.id = 'pair'; namedElements.set('pair', kitchenPair);
+appearanceListeners.forEach((handler) => handler({ matches: false }));
+ok(statusBarCalls.at(-1) === 'DARK', 'kitchen pairing remains an ink gate in light appearance');
+namedElements.delete('pair');
 location.pathname = '/dashboard.html';
 appearanceListeners.forEach((handler) => handler({ matches: false }));
 ok((hostContexts.at(-1)?.tabs || []).some((tab) => tab.id === 'more'), 'every compact workspace has a native More route');

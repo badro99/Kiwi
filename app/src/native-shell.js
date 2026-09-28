@@ -238,8 +238,25 @@
   }
 
   var ERRORS = { 'bad-creds':tr('badCreds'),'bad-json':tr('badJson'),'not-configured':tr('notConfigured'),'too-many':tr('tooMany'),network:tr('network') };
+  function validateLogin() {
+    var email = login.email, password = login.password;
+    var missing = !email.value.trim() || !password.value;
+    var invalid = email.validity && email.validity.typeMismatch;
+    if (!missing && !invalid) return true;
+    var message = invalid
+      ? ({fr:'Saisissez une adresse e-mail valide.',en:'Enter a valid email address.',ar:'أدخل بريداً إلكترونياً صالحاً.'})[lang]
+      : ({fr:'Saisissez votre e-mail et votre mot de passe.',en:'Enter your email and password.',ar:'أدخل بريدك الإلكتروني وكلمة المرور.'})[lang];
+    setLoginError(message, false);
+    [email,password].forEach(function (field) {
+      if (!field.value || (field === email && invalid)) { field.setAttribute('aria-invalid','true'); field.setAttribute('aria-describedby','login-err'); }
+    });
+    window.dispatchEvent(new CustomEvent('kiwi:native-haptic', {detail:{kind:'danger'}}));
+    scheduleNativeSetupState(0);
+    return false;
+  }
   login.addEventListener('submit', function (e) {
     e.preventDefault();
+    if (!validateLogin()) return;
     var email = login.email.value.trim(), password = login.password.value;
     if (!email || !password) return;
     loginBtn.disabled = true; loginErr.hidden = true;
@@ -622,6 +639,7 @@
     var id = String(payload.action || '');
     if (id === 'login') {
       fillNativeField('#login-email', payload.email); fillNativeField('#login-password', payload.password);
+      if (!validateLogin()) return;
       if (login.requestSubmit) login.requestSubmit(); else login.dispatchEvent(new Event('submit', { cancelable:true }));
     } else if (id === 'account-next' && state.account === 'connected') acctNext.click();
     else if (id === 'retry-account') refreshAccount();

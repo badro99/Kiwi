@@ -38,6 +38,10 @@
 	<string>Kiwi utilise l'appareil photo pour scanner un code-barres à la caisse ou photographier un bon de livraison.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Kiwi utilise Face ID pour déverrouiller rapidement votre caisse et vos écrans en toute sécurité.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Kiwi utilise le microphone pour dicter votre message à l’assistant.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Kiwi transcrit votre voix pour préparer un message modifiable avant son envoi.</string>
 
 	<key>CFBundleLocalizations</key>
 	<array>

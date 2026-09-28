@@ -5168,7 +5168,13 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       try {
         const saved = localStorage.getItem(EMPLOYEE_LANGUAGE_KEY);
         if (saved === 'ary') return 'ar';
-        return saved === 'en' || saved === 'ar' ? saved : 'fr';
+        if (['fr','en','ar'].includes(saved)) return saved;
+        // Native setup owns the initial locale; a saved venue preference wins.
+        if (window.Capacitor?.isNativePlatform?.()) {
+          const locale = String(localStorage.getItem('kiwiNativeLocale') || navigator.language || 'fr').toLowerCase().split('-')[0];
+          return locale === 'en' || locale === 'ar' ? locale : 'fr';
+        }
+        return 'fr';
       } catch (_) { return 'fr'; }
     })();
     /* Une ligne de commande garde le libellé du patron (c'est ce que la cuisine

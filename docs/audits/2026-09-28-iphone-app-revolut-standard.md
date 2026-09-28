@@ -87,3 +87,173 @@ Guarded by `tools/native-owner-home-browser-test.mjs` (27 checks, wired in
 2. **Kitchen and Team roles:** the Kitchen pairing keypad is now an iOS-passcode keypad (round keys, hollow dots that fill with a spring, one filled Confirm). The kitchen production screen and the Team role still need the full pass. See `docs/handoffs/2026-09-28-iphone-million-dollar-pass.md`.
 3. **Demo data:** the demo hero delta and the goal card disagree ("−16 % vs yesterday" beside "+3.2 % vs yesterday"). That is demo data, but an owner reading it would lose trust.
 4. **Order row glyphs:** order rows use one generic payment glyph. Per-method glyphs (card, cash, QR) would match Revolut's merchant logos.
+
+## Pass 2 · review and execution checklist
+
+Implementation baseline: `00ef8a83`, reviewed 2026-09-28. Later documentation-only
+upstream findings were fast-forwarded through `38ada0a9`. The supplied handoff predates the
+Kitchen pairing keypad commit; preserve that implementation. Work is isolated
+in `codex/kiwi-ios-review`, fast-forwarded from the clean attached checkout.
+No merchant credentials, PINs, pairing codes or real transactions may be used.
+
+Evidence labels: **pending**, **browser** (local bundled demo), **simulator**
+(installed iOS build), **code** (not exercised), **gated** (requires human).
+These labels are not interchangeable; a build is not App Review acceptance.
+
+| Surface / checks | Before | Pass 2 status |
+|---|---|---|
+| Setup: four roles, entry/back, validation, loading, keyboard, safe areas | Full-bleed native setup exists | browser: FR/EN/AR empty/invalid native login gives inline host status without auth requests; release interaction suite; device keyboard retest pending |
+| Owner lock: accessible keypad, no system keyboard, demo entry remains reachable | System keyboard obscures secondary controls | browser FR/EN/AR × light/dark; simulator initial gate observed; no code entered |
+| Owner home: period/chart, report/invoice/export/customize, demo delta consistency | Demo comparison sources disagree | browser: comparisons agree, four actions survive locale hydration, report forwarding and chart geometry; simulator home observed, not tap-tested |
+| Owner Orders: filters/search/detail, cash/card/QR rows | Generic payment glyph | browser: semantic glyphs and rows; full detail/filter interaction matrix not repeated |
+| Owner Report, Clients: PDF, list/detail, new/open/cancel | Phone rows exist | browser Clients navigation/rows; PDF sharing and create/cancel remain device checks |
+| Owner More: destinations, theme/language, sign-out/delete open/close only | Native account sheet exists | code/bridge tests; all destination sheets not manually walked |
+| Till: demo clock-in, floor/list/table, takeaway/menu/search, waiting | Demo path exists | browser demo clock-in/takeaway/products; exhaustive floor and waiting interactions not repeated |
+| Till: bill, cash/card/split/discount/transfer/merge; kitchen send | X folds rather than clears; retain regression | browser bill/scrim/total/More/X retains two items; protected settlement remains gated |
+| Till More: refund/drawer/team/menu/end shift/printer | Code-gated actions must remain gated | code/bridge tests; no protected actions executed |
+| Till scroll beneath capsule; sheets, keyboard, safe area | Main bottom padding reserves a solid band | browser: 0 parent bottom padding, scroller inside viewport, 126px empty-cart clearance; sheet grabber 44px |
+| Kitchen: pairing empty/error, key geometry/haptics; production cards/timers/bump/recall | Pairing keypad already styled | browser gate and Change role exit without code; script-free production fixtures show all queues and long tickets; live bump/recall gated; haptics code-only |
+| Team: sign-in, floor, schedule, attendance/clock-in/out | Native host publishes only More | browser gate inherits native EN/AR locale; isolated adapter fixture verifies Tables/Menu/Notifications/Profile/More; planning/attendance remain authenticated device checks |
+| FR/EN/AR RTL; light/dark; empty/populated/long/error/offline | Existing owner FR/EN guard only | Owner six combinations; Kitchen/Team script-free geometry fixtures FR-light/EN-dark/AR-dark; no claim of translated fixture content or complete state matrix |
+| Large text, portrait/landscape/iPad, 44pt targets, contrast, VO labels | No complete evidence matrix | small Owner gate 320×568 at 1.35 scale; existing 21 device layout controls; no full contrast/VoiceOver or physical AX5 sign-off |
+| Motion: reduced-motion, press, sheet dismiss, tabs, chart, success | Mixed web/native implementations | reduced-motion keypad/indicators/sheets; native selection guard; finger-tracking, pull-refresh, edge-back and success choreography not added or device-certified |
+| Build, focused guards, full check, mirror equality | Not run for this pass | iOS Debug build/install green; full final frozen-source gate green with one existing style warning; mirror publication recorded in artifact handoff |
+
+Simulator is booted, but the currently exposed computer-control surface does
+not list Simulator (`getApp("Simulator")` returned Invalid app). Build/install
+and screenshot evidence will be reported separately from interactive checks.
+
+### Pass 2 changes and evidence
+
+- Owner: compact round keypad and hollow indicators, screen-reader digit-count
+  announcement without exposing digits, hardware-keyboard support, empty delete,
+  original verification handler preserved. Delete glyph inherits the readable key
+  foreground; title stays at 600 and the demo entry is a distinct tonal button.
+  No Swift/host payload contains a PIN.
+  The hosted demo link remains hidden. The keypad is a **native-container web
+  control**, not a new Swift authentication implementation.
+- Demo: both live comparison cards now use yesterday at the same simulated
+  time and snapshot. Percentage updates no longer animate out of step, and
+  number animation respects reduced motion. This fixes TODAY only, not the
+  wider cross-tab/historical demo-ledger inconsistencies. Real sales and
+  reconciliation branches were not changed. Goal labels
+  follow FR/EN/AR. Arabic numeric runs are isolated from surrounding RTL text.
+- Home actions remount after delayed locale layout hydration. Period buttons
+  meet 44px; long action labels can wrap. Native Owner labels update with locale.
+- Orders: closed-set cash/card/QR/other metadata chooses vendored Material
+  Symbols. QR and backspace SVGs are unmodified Google Outlined assets covered
+  by the existing Apache 2.0 license.
+- Till: remove the parent's solid reserved band and the extra viewport-height
+  shell below the status inset; keep end clearance within the scrolling grid.
+  The expanded bill's dismiss grabber is 44px; X still never clears a sale.
+- Kitchen: pairing hides native navigation; status text follows the light/dark
+  production surface; pairing stays ink. On phones, all three queues stack
+  instead of silently hiding preparation below 600px. Haptic hooks added for
+  pairing taps/error. A 44px Change role link exits the unpaired screen without
+  a code; no pairing request was made during this pass.
+- Team: reuse existing four web routes in the Swift capsule, plus More. Hide
+  duplicate web tabs only on the hosted phone main screen; keep code and detail
+  gates clear. Native locale seeds the first visit without overriding a saved
+  employee/venue preference. Existing profile owns planning/attendance, no
+  invented routes.
+
+The subsequent simulator report supplied additional defects; these changes
+were validated locally rather than marked device-accepted:
+
+- Onboarding: the outer gate scrolls, including a long step 6 with added blank
+  team rows. Continue and Back are reachable; no code or final creation is used.
+  A sticky header plus status-strip backdrop stays below the safe inset.
+  Only required empty name/business fields autofocus. Empty business name now
+  produces an inline alert, field annotation and error-haptic request.
+- Native sign-in: validate empty/invalid email before calling the hidden form's
+  native constraint validation. Publish translated error status and annotate
+  the fields. The password remains empty in these checks; no auth request fires.
+  The Done toolbar is restricted to printer fields, avoiding the password eye.
+- Microphone/speech usage purposes added. Camera, Face ID and local-network
+  purposes also localized in FR/EN/AR and compiled into the app. This is bundle
+  evidence only; actual iOS permission prompts need a physical-device check.
+- Shared modal/drawer backdrops now hide the capsule. A transparent hit shield
+  at the capsule's exact published footprint absorbs web touches below it and
+  hides with it. Browser hit-testing and real browser touch are covered; final
+  native-device click-through regression acceptance remains pending.
+
+Local evidence directory:
+`/Users/zaka/.codex/artifacts/kiwi-iphone-pass2-2026-09-28/`.
+`owner-*.png` are local bundled browser demos; `team-fixture-*.png` and
+`kitchen-fixture-*.png` are **script-free synthetic geometry fixtures** (not
+authenticated product flows and not translation acceptance). `till-grid.png`
+is the local demo. `kiwi-pass2-simulator-final.png` is an earlier observed installed
+iPhone 17 Pro demo home with the native capsule; this session did not tap its
+controls. `kiwi-pass2-simulator-lock-release.png` captures the final installed
+lock screen. Do not infer a tapped navigation sequence from either screenshot.
+
+Focused results: 147 Pass 2 browser controls; 40 native workspace controls;
+21 device layout controls; 7 native bridge controls. The existing Owner/Till
+suite was extended with computed scroller geometry. Debug iOS build succeeded
+with signing disabled, installed and launched on the booted iPhone 17 Pro. The compiled FR/EN/AR privacy resources were linted, and
+compiled runtime JS/CSS and setup JS match the edited sources byte-for-byte.
+
+Full-gate investigation: the first run failed the immediate reservation-editor
+snapshot assertion in `kiwi-ui-qa-mcp-test.mjs`. Both a clean detached baseline
+at `00ef8a83` and the working version opened that editor on standalone reruns.
+No failure was waived as pre-existing. The test now waits up to five seconds
+for the real rendered form, then takes a fresh snapshot and retains its title,
+content, negative-assertion and real-click checks. A second run caught the demo
+comparison being sampled while one card animated. The implementation now uses
+one same-time snapshot, updates demo percentages together, and honors reduced
+motion; the browser assertion was tightened from 0.11 to 0.01 percentage points.
+No failure was waived. Final gate outcome is recorded below when complete.
+
+### Deliberately not certified
+
+This is a completed implementation slice, **not completion of the entire
+million-dollar acceptance matrix or App Review approval**. Remaining work:
+authenticated Team planning/attendance, Kitchen production bump/recall,
+Owner PDF/share and all modal paths, printer/physical haptics, true VoiceOver,
+largest system text (the existing runtime still caps scaling at 1.35), full
+contrast audit, and the requested new edge-back/pull-refresh/finger-following
+sheet/payment-success motion. These require further implementation and/or a
+human/device session that can legitimately pass the code gates. No account,
+merchant data, sale, customer or credential was created/changed to obtain QA.
+
+
+### Remaining release blockers from the parallel simulator report
+
+The report at `docs/audits/2026-09-28-simulator-qa-findings.md` remains the
+backlog, not an acceptance certificate. Besides the gated checks above:
+
+- Home/Orders/Report/historical ranges still need one coherent demo ledger;
+  Report demo emptiness and order-row detail/refresh behavior remain open.
+- Keyboard avoidance/accessory behavior needs a device pass throughout; the
+  onboarding sticky strip is not a complete keyboard-plugin implementation.
+- Full Team/Till translation gaps, centered secondary sheets and drawer polish,
+  client-detail actions/history, demo delete-account messaging, native pricing
+  presentation and developer-facing demo labels are not certified fixed.
+- Kitchen now has an exit, but all other gate/back/forgot-password routes,
+  landscape and true largest accessibility size still need the complete sweep.
+- No App Store submission, signed archive, review-account lifecycle, physical
+  microphone/printer/haptic, VoiceOver or merchant-data acceptance was performed.
+
+The newer repository notes allow designated demo testing, but this execution
+kept the supplied handoff's stricter no-code/no-password boundary. No exception
+was used to obtain authenticated UI evidence.
+
+
+### Final validation · 2026-09-28
+
+- `node tools/check.js`: **all checks passed**, no exclusions; one existing
+  `background:var(--ink)` debt warning. The final run started after runtime,
+  HTML and test changes were frozen. Log: `kiwi-pass2-check-frozen.log` in the
+  evidence directory. An earlier complete run also passed.
+- Within that gate: native Pass 2 suite green (147 focused controls on the
+  standalone final run), native setup 209, Owner/Till 28, workspace 40,
+  device-layout 21, host bridge 7. The existing shared-day browser suite passed;
+  the handoff's historical failure was not waived.
+- Stamp guard: 722 controls, 239 sealed assets. Generated Capacitor Swift package
+  path changes restored; no dependency, credential or merchant-data changes.
+- Final iOS Debug build succeeded with signing disabled; installed/launched on
+  iPhone 17 Pro. Source/bundle equality verified for runtime JS/CSS and setup JS.
+  Final lock screenshot is in the evidence folder; interactive native taps and
+  physical permission prompts remain unverified.
+- This work is a validated implementation slice, not a claim that the entire
+  requested every-control/device acceptance matrix is complete.

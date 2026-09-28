@@ -531,7 +531,7 @@
       <div class="kob-body">${def.body}</div>
       <div class="kob-foot">${def.foot}</div>`;
     const first = root.querySelector('.kob-body input[type="text"], .kob-body input:not([type])');
-    if (first) setTimeout(() => { try { first.focus(); } catch (_) {} }, 340);
+    if (first && !first.value && (S.step === 1 || S.step === 2)) setTimeout(() => { try { first.focus(); } catch (_) {} }, 340);
   }
 
   /* ── Read inputs of the current step into state ──────────────────────── */
@@ -589,8 +589,16 @@
     render();
   }
   function flashErr(msg) {
-    const box = root.querySelector('[data-acc-err]');
-    if (box) box.textContent = msg;
+    let box = root.querySelector('[data-acc-err]');
+    if (!box) {
+      box = document.createElement('div'); box.className = 'kob-err';
+      box.setAttribute('data-acc-err',''); root.querySelector('.kob-body').appendChild(box);
+    }
+    box.id = 'kiwi-onboarding-error'; box.setAttribute('role','alert'); box.textContent = msg;
+    box.scrollIntoView({block:'nearest'});
+    const field = root.querySelector(S.step === 1 ? '[data-f="ownerName"]' : S.step === 2 ? '[data-f="bizName"]' : '[data-f="dailyGoal"]');
+    if (field) { field.setAttribute('aria-invalid','true'); field.setAttribute('aria-describedby',box.id); }
+    window.dispatchEvent(new CustomEvent('kiwi:native-haptic', {detail:{kind:'danger'}}));
     try { if (window.Kiwi && Kiwi.toast) Kiwi.toast(msg, { type: 'warn', force: true }); } catch (_) {}
   }
 
@@ -801,6 +809,7 @@
     });
 
     root.addEventListener('input', (e) => {
+      if (e.target.matches('[data-f]')) { e.target.removeAttribute('aria-invalid'); e.target.removeAttribute('aria-describedby'); }
       const code = e.target.closest('[data-pin-code]');
       if (code) {
         code.value = code.value.replace(/\D/g, '').slice(0, 4);

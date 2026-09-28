@@ -300,8 +300,10 @@ private struct KiwiNativeSetupRoot: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button(copy("Terminé", "Done", "تم")) { focusedField = nil }
+                if focusedField == "host" || focusedField == "port" {
+                    Spacer()
+                    Button(copy("Terminé", "Done", "تم")) { focusedField = nil }
+                }
             }
         }
     }
@@ -446,7 +448,7 @@ private struct KiwiNativeSetupRoot: View {
             .keyboardType(keyboard)
             .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 56)
             .background(kiwiPaper.opacity(focusedField == id ? 0.11 : 0.07), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(focusedField == id ? kiwiMint.opacity(0.9) : kiwiPaper.opacity(0.06), lineWidth: focusedField == id ? 1.5 : 1))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(model.context.statusKind == "error" ? Color(red: 1, green: 0.62, blue: 0.55) : focusedField == id ? kiwiMint.opacity(0.9) : kiwiPaper.opacity(0.06), lineWidth: focusedField == id || model.context.statusKind == "error" ? 1.5 : 1))
             .animation(.easeOut(duration: 0.15), value: focusedField)
         }
     }
@@ -639,6 +641,7 @@ private struct KiwiNativeTabRoot: View {
 
     private func symbol(_ id: String) -> String {
         ["salle":"table.furniture", "vrap":"takeoutbag.and.cup.and.straw", "waitlist":"person.2", "more":"square.grid.2x2",
-         "accueil":"house", "transactions":"list.bullet.rectangle.portrait", "rapport":"doc.text", "clients":"person.2"][id] ?? "circle"
+         "accueil":"house", "transactions":"list.bullet.rectangle.portrait", "rapport":"doc.text", "clients":"person.2",
+         "tables":"table.furniture", "menu":"menucard", "notifications":"bell", "profil":"person.crop.circle"][id] ?? "circle"
     }
 }

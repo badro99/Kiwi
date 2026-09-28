@@ -1,0 +1,5 @@
+"NSMicrophoneUsageDescription" = "Kiwi utilise le microphone pour dicter votre message à l’assistant.";
+"NSSpeechRecognitionUsageDescription" = "Kiwi transcrit votre voix pour préparer un message modifiable avant son envoi.";
+"NSCameraUsageDescription" = "Kiwi utilise l’appareil photo pour scanner les codes-barres ou photographier les bons de livraison.";
+"NSFaceIDUsageDescription" = "Kiwi utilise Face ID pour déverrouiller votre espace en toute sécurité.";
+"NSLocalNetworkUsageDescription" = "Kiwi envoie les tickets à l’imprimante thermique de votre réseau local.";

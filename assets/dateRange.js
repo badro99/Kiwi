@@ -211,7 +211,18 @@
     if (ownData(getCurrentVenue())) return false;
     return eff === 'aujourdhui' && !!window.KiwiDemoClock?.isActive?.();
   }
-  function getSim() { return window.KiwiDemoClock?.getSimState?.() || null; }
+  let demoRenderSim = null, demoHeroSim = null;
+  function getSim() { return demoRenderSim || window.KiwiDemoClock?.getSimState?.() || null; }
+  // One same-time yesterday comparator for both demo cards. The old goal
+  // breakdown kept a fixed +3.2% while the chart used a future hour boundary.
+  // Called only from the demo branch; merchant sales/reconciliation stay intact.
+  function demoPreviousAt(sim) {
+    const series = vData(revChartByVenue, currentRange)?.revPrev;
+    if (!sim || !series?.length) return null;
+    const index = Math.min(series.length - 1, Math.max(0, sim.simIdx));
+    const next = Math.min(series.length - 1, index + 1);
+    return series[index] + (series[next] - series[index]) * sim.simWithin;
+  }
   // Set true while a demoClock tick is fanning out renders — used to suppress
   // entrance animations on the chart (would otherwise replay every 3s).
   let liveTickInProgress = false;
@@ -1539,7 +1550,7 @@
     if (operatorLedgerPending()) { el.textContent = '…'; return; }
     // Hidden tabs freeze requestAnimationFrame — set the final value at once
     // so a background re-render never leaves a tile blank.
-    if (document.hidden) { el['inner' + 'HTML'] = format(to); return; }
+    if (document.hidden || duration === 0 || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { el['inner' + 'HTML'] = format(to); return; }
     const start = performance.now();
     const ease = t => 1 - Math.pow(1 - t, 3);
     function tick(now) {
@@ -2150,6 +2161,7 @@
   }
 
   function renderHero() {
+    demoHeroSim = null;
     if (guardOperatorFigures('.hero-breakdown')) {
       const amount = document.querySelector('[data-hero-amount]');
       if (amount) { amount.textContent = '…'; amount.setAttribute('aria-label', operatorUnavailableText()); }
@@ -2169,7 +2181,10 @@
     if (isLiveDemo()) {
       const sim = getSim();
       if (sim) {
-        data = { ...data, amount: sim.cumRevenue, netAfterKiwi: Math.round(sim.cumRevenue * 0.839) };
+        demoHeroSim = sim;
+        const previous = demoPreviousAt(sim);
+        data = { ...data, amount: sim.cumRevenue, netAfterKiwi: Math.round(sim.cumRevenue * 0.839),
+          deltaHier: previous > 0 ? (sim.cumRevenue - previous) / previous * 100 : null };
       }
     }
     // User-created venue — hero figures come from the merchant's real sales,
@@ -2248,7 +2263,7 @@
         if (!valEl) return;
         const from = existing[it.key] ?? 0;
         animateNumber(valEl, from, it.value, {
-          duration: 600,
+          duration: isLiveDemo() ? 0 : 600,
           format: v => `${fmtPct(v)} <span class="d${v < 0 ? ' dn' : ''}">${arrowSvg(v >= 0)}</span>`,
         });
       });
@@ -3366,6 +3381,12 @@
     if (isHourly) {
       restingVal = lastIdx >= 0 ? (data.rev[lastIdx] || 0) : 0;
       restingPrev = (data.revPrev && lastIdx >= 0) ? (data.revPrev[lastIdx] || 0) : null;
+      if (isLiveDemo()) {
+        // Resize and hydration must reuse the goal card snapshot, not sample
+        // a later sub-second demo time and round to a different percentage.
+        const sim = demoHeroSim?.venue === getCurrentVenue() ? demoHeroSim : getSim();
+        if (sim) { restingVal = sim.cumRevenue; restingPrev = demoPreviousAt(sim); }
+      }
     } else {
       if (data.total != null) {
         restingVal = data.total;
@@ -5481,6 +5502,7 @@
           const eff = effRange();
           if (eff !== 'aujourdhui') return;
           liveTickInProgress = true;
+          demoRenderSim = state;
           try {
             renderHero();
             renderGoal();
@@ -5490,6 +5512,7 @@
             renderFeed();
           } finally {
             liveTickInProgress = false;
+            demoRenderSim = null;
           }
         });
         return;

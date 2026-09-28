@@ -91,7 +91,14 @@ try {
   const reception = await call('ui_click', { ref: refFor(body(desktop), 'Réception') });
   if (reception.isError || !body(reception).includes('hx-stay-new')) console.log('RECEPTION:', body(reception));
   ok(!reception.isError && body(reception).includes('Réception'), 'real sidebar click reaches reception');
-  const booking = await call('ui_click', { ref: refFor(body(reception), '+ Réservation') });
+  const bookingClick = await call('ui_click', { ref: refFor(body(reception), '+ Réservation') });
+  ok(!bookingClick.isError, 'reservation control accepts the real click');
+  // Opening this editor is asynchronous. A click snapshot can precede its
+  // entrance frame on a busy release Mac; wait for the actual rendered form,
+  // not a fixed delay, and keep the title/content assertions below intact.
+  const editor = await call('ui_assert', { selector: '[data-hx-stay-form]', condition: 'visible', timeoutMs: 5000, description: 'Reservation editor becomes visible after its real control is clicked' });
+  ok(!editor.isError, 'reservation editor becomes visible within five seconds');
+  const booking = await call('ui_snapshot');
   ok(!booking.isError && body(booking).includes('Ajouter une réservation'), 'real reservation control opens visible editor');
   const bad = await call('ui_assert', { selector: '[data-hx-stay-form] button[type=submit]', condition: 'text_contains', expected: 'Impossible', description: 'Impossible word should fail' });
   ok(bad.isError, 'negative rendered assertion fails');

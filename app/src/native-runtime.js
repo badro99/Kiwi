@@ -47,6 +47,7 @@
            produces an attribute mutation in WKWebView, which called syncTabs
            again until WebKit killed the runaway content process. */
         if (document.body && !document.body.classList.contains('kiwi-native-hosted')) document.body.classList.add('kiwi-native-hosted');
+        syncNativeTouchShield(payload);
         return true;
       }
       if (window.KiwiShellHost && typeof window.KiwiShellHost.postMessage === 'function') {
@@ -56,6 +57,22 @@
       }
     } catch (_) {}
     return false;
+  }
+  // The native capsule is above WKWebView. Absorb any synthesized web click
+  // beneath its bounds instead of opening a KPI/client sheet under a tab tap.
+  function syncNativeTouchShield(payload) {
+    if (!document.body || payload.screen !== 'workspace') return;
+    var shield = document.querySelector('.kiwi-native-touch-shield');
+    if (!shield) {
+      shield = document.createElement('div'); shield.className = 'kiwi-native-touch-shield';
+      shield.setAttribute('aria-hidden','true');
+      ['click','pointerdown','pointerup','touchstart','touchend'].forEach(function (kind) {
+        shield.addEventListener(kind, function (event) { event.preventDefault(); event.stopPropagation(); }, {passive:false});
+      });
+      document.body.appendChild(shield);
+    }
+    shield.hidden = !payload.tabs || !payload.tabs.length;
+    shield.style.width = 'min(calc(100% - 24px), ' + ((payload.tabs || []).length * 74 + 12) + 'px)';
   }
   var splashHidden = false;
   var splashFallback = setTimeout(hideLaunchSplash, 8000);
@@ -143,6 +160,7 @@
   function hapticNotice(kind) { return call(haptics, 'notification', { type: kind === 'danger' ? 'ERROR' : 'SUCCESS' }); }
   function nativeBlockingLayer() {
     if (openNativeLayers().length) return true;
+    if (document.querySelector('#pair.on,.screen-pin.is-active,.screen-clockin.is-active,.screen-table.is-active')) return true;
     if (document.body && (document.body.classList.contains('nav-open') || document.body.classList.contains('kw-menu-open'))) return true;
     var onboarding = document.querySelector('.kob-root');
     if (onboarding && !onboarding.classList.contains('kob-out')) return true;
@@ -175,11 +193,10 @@
   function paintStatusBar() {
     // SwiftUI setup has an ink background regardless of the web/system theme.
     var setup = document.body && document.body.classList.contains('native-shell-page');
-    var kitchen = /kiwi-cuisine\.html$/i.test(location.pathname);
     var till = /kiwi-caisse\.html$/i.test(location.pathname);
-    // The dashboard's lock and first-run questions follow its light/dark
-    // theme; every other gate (clock-in, PIN, greeting) is always dark.
-    var dark = setup || kitchen || (nativeBlockingLayer() && !themedDashboardGate()) || (till ? root.getAttribute('data-caisse-theme') === 'dark' : root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark');
+    // Owner and Team follow the painted appearance. Till code/clock-in and
+    // Kitchen pairing are ink gates, but Kitchen production can be light.
+    var dark = setup || !!document.querySelector('#pair.on') || (nativeBlockingLayer() && !themedDashboardGate() && !document.querySelector('.screen-pin.is-active,.screen-clockin.is-active,.screen-table.is-active')) || (till ? root.getAttribute('data-caisse-theme') === 'dark' : root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark');
     var nextStyle = dark ? 'DARK' : 'LIGHT';
     if (nextStyle === lastStatusBarStyle) return;
     lastStatusBarStyle = nextStyle;
@@ -249,7 +266,7 @@
 
   function openNativeLayers() {
     return Array.prototype.slice.call(document.querySelectorAll(
-      '.modal-veil.is-open,.drawer-veil.is-open,.cloture-veil.is-open,.kds-screen.is-open,#stock-screen.is-open,#cp-pin-screen,.kiwi-native-account.is-open'
+      '.modal-veil.is-open,.drawer-veil.is-open,.cloture-veil.is-open,.kds-screen.is-open,#stock-screen.is-open,#cp-pin-screen,.kiwi-native-account.is-open,.kiwi-backdrop,.kiwi-drawer-backdrop'
     )).filter(function (node) {
       try { return getComputedStyle(node).display !== 'none' && getComputedStyle(node).visibility !== 'hidden'; }
       catch (_) { return true; }
@@ -258,7 +275,7 @@
 
   function dismissNativeLayer(layer) {
     if (!layer) return false;
-    if (layer.matches && layer.matches('.modal-veil,.drawer-veil,.cloture-veil')) {
+    if (layer.matches && layer.matches('.modal-veil,.drawer-veil,.cloture-veil,.kiwi-backdrop,.kiwi-drawer-backdrop')) {
       try { layer.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); } catch (_) {}
       if (layer.classList.contains('is-open')) {
         var close = layer.querySelector('[data-modal-action="close"],.modal-close,.drawer-close,[aria-label="Fermer"],[aria-label="Close"]');
@@ -670,10 +687,38 @@
     var role = /kiwi-serveur\.html$/i.test(location.pathname) ? 'equipe' : /kiwi-cuisine\.html$/i.test(location.pathname) ? 'cuisine' : /dashboard\.html$/i.test(location.pathname) ? 'dashboard' : '';
     if (!role) return;
     var owner = role === 'dashboard' ? initNativeOwnerUx() : null;
+    if (role === 'dashboard') initNativeOwnerKeypad();
+    if (role === 'cuisine') {
+      var pairingPad = document.getElementById('pair-pad');
+      if (pairingPad) pairingPad.addEventListener('click', function (event) { if (event.target.closest('button')) hapticLight(); });
+      var pairingGate = document.getElementById('pair');
+      if (pairingGate && !pairingGate.querySelector('.kiwi-native-role-back')) {
+        var roleBack = document.createElement('a');
+        roleBack.className = 'kiwi-native-role-back'; roleBack.href = 'index.html?choose=1';
+        var updateRoleBack = function () { roleBack.textContent = root.lang === 'ar' ? 'تغيير الدور' : root.lang === 'en' ? 'Change role' : 'Changer de rôle'; };
+        updateRoleBack(); pairingGate.appendChild(roleBack);
+        new MutationObserver(updateRoleBack).observe(root, {attributes:true, attributeFilter:['lang']});
+      }
+      if (pairingGate) new MutationObserver(function (records) {
+        if (pairingGate.classList.contains('err') && records.some(function (r) { return !(r.oldValue || '').split(' ').includes('err'); })) hapticNotice('danger');
+      }).observe(pairingGate, { attributes:true, attributeFilter:['class'], attributeOldValue:true });
+    }
+    document.body.classList.add('kiwi-native-' + (role === 'equipe' ? 'team' : role === 'cuisine' ? 'kitchen' : 'owner'));
+    var teamButtons = function () { return Array.from(document.querySelectorAll('#screen-main .bottom-tabs button[data-tab]')); };
+    var teamReady = function () { return role === 'equipe' && document.querySelector('#screen-main.is-active') && !document.body.classList.contains('is-browse-mode'); };
     var lastPushed = '';
     var push = function () {
       var tabs = nativeBlockingLayer() || window.innerWidth > 900 ? [] : owner ? owner.tabs() : [{ id:'more', label:nativeTillCopy().more }];
-      var payload = { version:1, screen:'workspace', role:role, locale:String(root.lang || 'fr'), rtl:root.dir === 'rtl', selected:owner ? owner.selected() : '', tabs:tabs };
+      var selected = owner ? owner.selected() : '';
+      if (teamReady() && !nativeBlockingLayer() && window.innerWidth <= 600) {
+        tabs = teamButtons().map(function (b) { return { id:b.dataset.tab, label:b.getAttribute('aria-label') || b.textContent.trim() }; });
+        tabs.push({ id:'more', label:nativeTillCopy().more });
+        var active = teamButtons().filter(function (b) { return b.getAttribute('aria-pressed') === 'true'; })[0];
+        selected = active ? active.dataset.tab : '';
+      }
+      var showTeamTabs = !!(teamReady() && tabs.length > 1);
+      if (document.body.classList.contains('kiwi-native-team-tabs') !== showTeamTabs) document.body.classList.toggle('kiwi-native-team-tabs', showTeamTabs);
+      var payload = { version:1, screen:'workspace', role:role, locale:String(root.lang || 'fr'), rtl:root.dir === 'rtl', selected:selected, tabs:tabs };
       var key = JSON.stringify(payload);
       if (key === lastPushed) return;
       lastPushed = key;
@@ -684,9 +729,91 @@
       if (owner && payload && payload.action === 'open-tools') { owner.openMenu(); return; }
       if (nativeWorkspaceAction(payload)) return;
       if (owner && payload && payload.action === 'navigate') owner.go(String(payload.id || ''));
+      if (teamReady() && payload && payload.action === 'navigate' && !nativeBlockingLayer()) {
+        var button = teamButtons().filter(function (b) { return b.dataset.tab === payload.id; })[0];
+        if (button) { button.click(); push(); }
+      }
     };
     if (owner) owner.onChange(push);
+    if (role === 'equipe') {
+      var team = document.getElementById('screen-main');
+      if (team) new MutationObserver(push).observe(team, { subtree:true, attributes:true, attributeFilter:['aria-pressed','aria-label','class'] });
+    }
+    window.addEventListener('resize', push);
+    new MutationObserver(push).observe(root, { attributes:true, attributeFilter:['lang','dir'] });
     push(); setTimeout(push, 300); setTimeout(push, 1200);
+  }
+
+  /* Presentation only: keep the dashboard's original input event and server
+     verification intact. Never copy, store or publish the code to the host. */
+  function initNativeOwnerKeypad() {
+    var lock = document.querySelector('[data-kiwi-lock]');
+    var input = document.querySelector('[data-kiwi-pin-input]');
+    if (!lock || !input || !window.matchMedia) return;
+    var media = window.matchMedia('(max-width:600px)');
+    var pad = document.createElement('div');
+    pad.className = 'kiwi-native-owner-keypad';
+    pad.setAttribute('role', 'group');
+    var ar = String(root.lang).startsWith('ar'), en = String(root.lang).startsWith('en');
+    pad.setAttribute('aria-label', ar ? 'رمز الدخول' : en ? 'Passcode keypad' : 'Clavier du code');
+    var back = ar ? 'حذف آخر رقم' : en ? 'Delete last digit' : 'Effacer le dernier chiffre';
+    pad.innerHTML = ['1','2','3','4','5','6','7','8','9','', '0','back'].map(function (key) {
+      if (!key) return '<span aria-hidden="true"></span>';
+      return '<button type="button" data-key="' + key + '"' + (key === 'back' ? ' aria-label="' + back + '"' : '') + '>' + (key === 'back' ? '<i class="kiwi-native-backspace" aria-hidden="true"></i>' : key) + '</button>';
+    }).join('');
+    var help = lock.querySelector('.kiwi-lock-help');
+    (help || input).insertAdjacentElement('afterend', pad);
+    var progress = document.createElement('span');
+    progress.className = 'kiwi-native-code-progress';
+    progress.setAttribute('role', 'status');
+    progress.setAttribute('aria-live', 'polite');
+    pad.appendChild(progress);
+    var pinRow = lock.querySelector('[data-kiwi-pin]');
+    if (pinRow) pinRow.setAttribute('aria-hidden', 'true');
+    function announce() {
+      var count = input.value.length;
+      progress.textContent = ar ? 'تم إدخال ' + count + ' من 4 أرقام' : en ? count + ' of 4 digits entered' : count + ' chiffres saisis sur 4';
+    }
+    input.addEventListener('input', announce);
+    announce();
+    if (pinRow) new MutationObserver(function () {
+      announce();
+      if (pinRow.classList.contains('is-wrong')) hapticNotice('danger');
+    }).observe(pinRow, { attributes:true, attributeFilter:['class'] });
+    var original = { readOnly:input.readOnly, inputMode:input.inputMode, tab:input.getAttribute('tabindex'), aria:input.getAttribute('aria-hidden') };
+    function apply() {
+      pad.hidden = !media.matches;
+      input.readOnly = media.matches || original.readOnly;
+      input.inputMode = media.matches ? 'none' : original.inputMode;
+      ['tabindex','aria-hidden'].forEach(function (attr) {
+        var value = media.matches ? (attr === 'tabindex' ? '-1' : 'true') : original[attr === 'tabindex' ? 'tab' : 'aria'];
+        if (value == null) input.removeAttribute(attr); else input.setAttribute(attr, value);
+      });
+      lock.classList.toggle('kiwi-native-keypad-lock', media.matches);
+      if (media.matches) input.blur();
+    }
+    function enter(key) {
+      if (!media.matches || !lock.isConnected || getComputedStyle(lock).display === 'none' || input.disabled) return;
+      if (key === 'back') input.value = input.value.slice(0, -1);
+      else if (/^\d$/.test(key) && input.value.length < input.maxLength) input.value += key;
+      else return;
+      input.dispatchEvent(new Event('input', { bubbles:true }));
+      hapticLight();
+    }
+    pad.addEventListener('click', function (event) {
+      var button = event.target.closest('[data-key]');
+      if (!button) return;
+      event.stopPropagation();
+      enter(button.dataset.key);
+    });
+    lock.addEventListener('keydown', function (event) {
+      if (!media.matches) return;
+      if (/^\d$/.test(event.key) || event.key === 'Backspace') {
+        event.preventDefault(); event.stopPropagation(); enter(event.key === 'Backspace' ? 'back' : event.key);
+      } else if (event.target.closest('.kiwi-native-owner-keypad') && ['Enter',' '].includes(event.key)) event.stopPropagation();
+    }, true);
+    if (media.addEventListener) media.addEventListener('change', apply);
+    apply();
   }
 
   /* Owner home on a phone. The dashboard is the desktop page; on an iPhone the
@@ -782,6 +909,10 @@
     }
     mountQuickActions();
     setTimeout(mountQuickActions, 1200);
+    // Locale/layout hydration may replace the compose tree after the first
+    // frame (notably Arabic). Restore actions without polling or duplicates.
+    var main = document.querySelector('main.main');
+    if (main) new MutationObserver(mountQuickActions).observe(main, { childList:true, subtree:true });
 
     /* An iPhone app follows the system appearance until the owner picks one
        with the moon button. `kiwiNativeThemeAuto` marks a stored theme as
@@ -809,6 +940,14 @@
 
     /* Inner pages get their name as the navigation title; home keeps the mark. */
     var titles = { accueil:'', transactions:copy.orders, rapport:copy.report, clients:copy.clients };
+    new MutationObserver(function () {
+      copy = nativeOwnerCopy();
+      titles = { accueil:'', transactions:copy.orders, rapport:copy.report, clients:copy.clients };
+      var actions = document.querySelector('.kiwi-native-owner-actions');
+      if (actions) actions.remove();
+      mountQuickActions();
+      notify();
+    }).observe(root, { attributes:true, attributeFilter:['lang'] });
     function syncTitle() {
       var inner = document.querySelector('.topbar-inner');
       if (!inner) return;
@@ -944,6 +1083,8 @@
     if (window.KiwiNativeHostRequestState) window.KiwiNativeHostRequestState();
   }
   function isBlockingNode(node) {
+    if (node && node.matches && node.matches('.kiwi-backdrop,.kiwi-drawer-backdrop')) return true;
+    if (node && (node.id === 'pair' || node.id === 'screen-pin' || node.id === 'screen-clockin' || node.id === 'screen-table')) return true;
     return node && (node.id === 'pin-screen' || node.id === 'cp-pin-screen' || node.id === 'clockin-screen' || (node.hasAttribute && (node.hasAttribute('data-kiwi-greet') || node.hasAttribute('data-kiwi-lock'))) || (node.matches && node.matches('.modal-veil,.drawer-veil,.cloture-veil,.kds-screen,#stock-screen,.kiwi-native-account,.kob-root')) || node === document.body);
   }
   if (document.body) new MutationObserver(function (records) {

@@ -230,6 +230,14 @@ try {
     await sleep(2200);
     await click(page, '.mode-pill[data-mode="vrap"]');
     await sleep(800);
+    const scrollWell = await page.evaluate(() => {
+      const grid = document.querySelector('.menu-grid');
+      const main = document.querySelector('.main');
+      return { bottom:grid.getBoundingClientRect().bottom, mainPadding:parseFloat(getComputedStyle(main).paddingBottom), clearance:parseFloat(getComputedStyle(grid).paddingBottom) };
+    });
+    check(scrollWell.mainPadding === 0 && scrollWell.bottom > 874 - 106 && scrollWell.bottom <= 874 && scrollWell.clearance >= 106,
+      'products scroll behind the native capsule, with last-row clearance inside the scroller: ' + JSON.stringify(scrollWell));
+    if (process.env.KIWI_NATIVE_EVIDENCE) await page.screenshot({path:path.join(process.env.KIWI_NATIVE_EVIDENCE,'till-grid.png')});
     const clipped = await page.evaluate(() => [...document.querySelectorAll('.menu-item')].filter((e) => e.offsetParent)
       .filter((e) => e.scrollHeight > e.getBoundingClientRect().height + 1).map((e) => e.querySelector('.menu-item-name')?.textContent.trim()));
     check(clipped.length === 0, `no product tile clips its price${clipped.length ? ` (${clipped.slice(0, 3).join(', ')})` : ''}`);

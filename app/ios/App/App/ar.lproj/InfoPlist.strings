@@ -1,0 +1,5 @@
+"NSMicrophoneUsageDescription" = "يستخدم Kiwi الميكروفون لإملاء رسالتك إلى المساعد.";
+"NSSpeechRecognitionUsageDescription" = "يحوّل Kiwi صوتك إلى رسالة يمكنك تعديلها قبل إرسالها.";
+"NSCameraUsageDescription" = "يستخدم Kiwi الكاميرا لمسح الرموز الشريطية أو تصوير إيصالات التسليم.";
+"NSFaceIDUsageDescription" = "يستخدم Kiwi بصمة الوجه لفتح مساحة العمل بأمان.";
+"NSLocalNetworkUsageDescription" = "يرسل Kiwi الإيصالات إلى الطابعة الحرارية على شبكتك المحلية.";

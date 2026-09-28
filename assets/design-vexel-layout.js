@@ -679,17 +679,18 @@
   function updateGoalRangeLabel(range) {
     var target = document.querySelector('[data-vexel-goal-label]');
     if (!target) return;
+    var locale = lang();
 
     if (range === 'aujourdhui') {
-      setText(target, 'Objectif du jour');
+      setText(target, locale === 'ar' ? 'هدف اليوم' : locale === 'en' ? "Today's goal" : 'Objectif du jour');
       return;
     }
     if (range === 'hier') {
-      setText(target, "Objectif d'hier");
+      setText(target, locale === 'ar' ? 'هدف أمس' : locale === 'en' ? "Yesterday's goal" : "Objectif d'hier");
       return;
     }
     if (range === 'personnalise') {
-      setText(target, 'Objectif · période');
+      setText(target, locale === 'ar' ? 'هدف الفترة' : locale === 'en' ? 'Period goal' : 'Objectif · période');
       return;
     }
 
@@ -703,7 +704,7 @@
       text = headline ? headline.textContent : '';
     }
     text = String(text || '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('fr-FR');
-    setText(target, text ? 'Objectif · ' + text : '');
+    setText(target, text ? (locale === 'ar' ? 'الهدف · ' : locale === 'en' ? 'Goal · ' : 'Objectif · ') + text : '');
   }
 
   function bindRangeLabel() {

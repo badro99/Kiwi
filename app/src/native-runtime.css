@@ -427,3 +427,73 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native #pair .pad button.wide.ok:active{background:#053B2C}
   html.kiwi-native #pair .sub{max-width:300px;text-wrap:balance}
 }
+
+/* Pass 2: phone-only presentation, no changes to web/iPad or code verification. */
+.kiwi-native-owner-keypad[hidden]{display:none!important}
+.kiwi-native-touch-shield{position:fixed;z-index:2147483643;bottom:0;left:50%;transform:translateX(-50%);height:var(--kiwi-host-tab-height,0px);background:transparent;touch-action:none}
+.kiwi-native-role-back{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:12px;padding:0 20px;color:inherit;font-size:15px;text-decoration:underline;text-underline-offset:4px;flex-shrink:0}
+.kiwi-native-touch-shield[hidden]{display:none!important}
+.kiwi-native-code-progress{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.kiwi-native-backspace{display:inline-block;width:26px;height:26px;vertical-align:middle;background:currentColor;mask:url(assets/icons/material/backspace.svg) center/contain no-repeat;-webkit-mask:url(assets/icons/material/backspace.svg) center/contain no-repeat}
+@media (max-width:600px){
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kob-root{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scroll-padding-block:var(--kiwi-safe-top) var(--kiwi-safe-bottom)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kob-root::before{content:"";position:fixed;inset:0 0 auto;height:var(--kiwi-safe-top);background:var(--kno-bg);z-index:3;pointer-events:none}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kob-card{flex-shrink:0;height:max-content;min-height:100%}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kob-top{position:sticky;top:0;z-index:2;background:var(--kno-bg);padding-block:12px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kob-err{color:var(--kno-ink);font-size:14px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kob-body [aria-invalid="true"]{outline:2px solid var(--danger);outline-offset:2px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-keypad-lock{overflow-y:auto;overscroll-behavior:contain;scroll-padding-block:calc(var(--kiwi-safe-top) + 12px) calc(var(--kiwi-safe-bottom) + 16px)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-keypad-lock .kiwi-lock-inner{min-height:0;padding-top:8px!important;align-items:center}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-keypad-lock .kiwi-lock-pin{margin:28px 0 24px;gap:18px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-keypad-lock .kiwi-pin-cell{width:13px;height:13px;min-width:13px;min-height:13px;border:1.5px solid var(--kno-ink-2);border-radius:50%;background:transparent;color:transparent;box-shadow:none;transform:none;transition:transform 310ms cubic-bezier(.34,1.45,.5,1),background 180ms ease}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-keypad-lock .kiwi-pin-cell.is-filled{background:var(--kno-ink);border-color:var(--kno-ink);transform:scale(1.08)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-keypad-lock .kiwi-lock-help{margin:0;text-align:center;text-wrap:balance}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-owner-keypad{display:grid;direction:ltr;grid-template-columns:repeat(3,72px);gap:12px 24px;margin:20px auto}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-owner-keypad button{width:72px;height:72px;min-height:72px;border:0;border-radius:50%;background:var(--kno-fill);color:var(--kno-ink);font:400 28px/1 var(--sans,"Inter Tight",sans-serif);font-variant-numeric:tabular-nums;transition:transform 310ms cubic-bezier(.34,1.45,.5,1)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-owner-keypad .kiwi-native-backspace{color:inherit!important;background:currentColor!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-keypad-lock .kiwi-lock-title{font-weight:600!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-keypad-lock .kiwi-lock-sub{font-family:var(--sans);font-size:15px;letter-spacing:0;text-transform:none;color:var(--kno-ink-2)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-keypad-lock .kiwi-lock-skip{box-sizing:border-box;width:min(100%,288px);padding:0 16px;border-radius:999px;background:var(--kno-fill);color:var(--kno-ink)!important;text-align:center}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-owner-keypad button:active{transform:scale(.97)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-keypad-lock :is(.kiwi-lock-skip,.kiwi-lock-switch){min-height:44px;line-height:44px;margin:0 auto;flex-shrink:0}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr[data-payment-kind="card"]::after{background-image:url(assets/icons/material/credit_card.svg)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr[data-payment-kind="qr"]::after{background-image:url(assets/icons/material/qr_code.svg)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr[data-payment-kind="cash"]::after{background-image:url(assets/icons/material/payments.svg)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr:not([data-payment-kind])::after{content:none}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kno-lbl{white-space:normal;text-wrap:balance;overflow:visible;font-size:calc(12px * var(--type-scale,1))}
+  html.kiwi-native[dir="rtl"] body.kiwi-native-owner:not(#kno) :is([data-rev-hero-val],[data-rev-hero-delta]>span:not(.lbl),[data-hero-delta-val],.kpi-m .d,.vexel-goal-cmp b){direction:ltr;unicode-bidi:isolate}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill{min-height:44px!important}
+  html.kiwi-native body.kiwi-native-team:not(#kno) .screen{padding-top:var(--kiwi-safe-top);padding-bottom:var(--kiwi-safe-bottom);box-sizing:border-box}
+  html.kiwi-native body.kiwi-native-team:not(#kno) .topbar{height:auto;min-height:64px;padding:8px 20px;background:color-mix(in srgb,var(--surface) 85%,transparent)}
+  html.kiwi-native body.kiwi-native-team:not(#kno).kiwi-native-team-tabs .bottom-tabs{display:none!important}
+  html.kiwi-native body.kiwi-native-team:not(#kno).kiwi-native-team-tabs .content{padding-bottom:calc(var(--kiwi-host-tab-height) + 20px);scroll-padding-bottom:calc(var(--kiwi-host-tab-height) + 20px)}
+  html.kiwi-native body.kiwi-native-team:not(#kno) :is(.table-card,.kg-card){border-radius:22px;box-shadow:none}
+  html.kiwi-native body.kiwi-native-team:not(#kno) :is(.bt-btn,.icon-btn,.tab-btn){min-height:44px;min-width:44px}
+  html.kiwi-native body.kiwi-native-team:not(#kno) :is(.screen-pin,.screen-clockin){overflow-y:auto}
+  html.kiwi-native body.kiwi-native-team:not(#kno) .screen-table{padding-bottom:calc(var(--kiwi-safe-bottom) + 16px)}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) #pair{box-sizing:border-box;overflow-y:auto;padding:calc(var(--kiwi-safe-top) + 20px) 20px calc(var(--kiwi-safe-bottom) + 20px)}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) #screen{height:calc(100dvh - var(--kiwi-safe-top));padding-bottom:0}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) .top{flex-wrap:wrap;padding:12px 16px;gap:8px}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) .top .brand{flex-basis:100%;min-width:0}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) .tool{width:44px;height:44px;border-radius:50%;border:0}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) #full{display:none}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) .cols{display:flex;flex-direction:column;overflow-y:auto;gap:16px;padding:16px 16px calc(var(--kiwi-host-tab-height) + 24px);background:var(--paper)}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) .col{flex-shrink:0}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) .cols:not(.show-pass) .col{display:flex}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) .stack{overflow:visible;padding:0;display:flex;flex-direction:column}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) .tk{border:0;border-radius:22px;box-shadow:0 1px 2px rgba(10,15,13,.06)}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) .col-head{padding:8px 0 12px;font-size:15px;font-weight:600;text-transform:none;letter-spacing:0}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) :is(.clock,.tk-timer){font-variant-numeric:tabular-nums;font-weight:600}
+}
+@media (max-width:900px){
+  /* Clearance belongs INSIDE each scrolling view, never on its parent. */
+  html.kiwi-native body.kiwi-native-till:not(#kno) .shell{height:auto;min-height:0;flex:1 1 auto}
+  html.kiwi-native body.kiwi-native-till:not(#kno).ticket-open .kiwi-native-sheet-grabber{height:44px;min-height:44px}
+  html.kiwi-native body.kiwi-native-till:not(#kno).ticket-open .kiwi-native-sheet-grabber::after{top:19px}
+  html.kiwi-native body.kiwi-native-till:not(#kno) .main{padding-bottom:0!important}
+  html.kiwi-native body.kiwi-native-till:not(#kno) :is(.view-salle,.view-waitlist,#vrap-board,.menu-grid){padding-bottom:calc(var(--kiwi-native-tabs) + 92px)!important;scroll-padding-bottom:calc(var(--kiwi-native-tabs) + 92px)}
+  html.kiwi-native body.kiwi-native-till:not(#kno).kiwi-native-cart-empty :is(.view-salle,.view-waitlist,#vrap-board,.menu-grid){padding-bottom:calc(var(--kiwi-native-tabs) + 20px)!important}
+}
+@media(prefers-reduced-motion:reduce){
+  html.kiwi-native body:not(#kno) :is(.kiwi-native-owner-keypad button,#pair,#pair .dot,#pair .pad button,.kiwi-lock-pin,.kiwi-pin-cell,.rightpanel,.kiwi-native-sheet-scrim){animation:none!important;transition:none!important}
+}

@@ -413,7 +413,7 @@ handlers['nav-transactions'] = () => {
             <thead><tr><th>${T.hour.toUpperCase()}</th><th>${T.method.toUpperCase()}</th><th>${T.client.toUpperCase()}</th><th class="right">${T.amount.toUpperCase()}</th><th class="right">${T.tip.toUpperCase()}</th><th>${T.status.toUpperCase()}</th></tr></thead>
             <tbody>
               ${display.map(r => `
-                <tr data-action="tx-detail" data-arg="${r.id}" style="cursor:pointer;">
+                <tr data-action="tx-detail" data-arg="${r.id}" data-payment-kind="${r.cat === T.cash ? 'cash' : r.mask === 'QR' ? 'qr' : r.cat === T.cards || r.cat === T.mobile ? 'card' : 'other'}" style="cursor:pointer;">
                   <td class="mono">${r.t}</td>
                   <td><b>${r.n}</b> <span style="color:var(--n-500);">${r.mask}</span></td>
                   <td style="color:var(--n-600);">${r.c}</td>
