@@ -168,6 +168,7 @@
     <a href="#typo">03. Typographie</a>
     <a href="#voix">04. Voix</a>
     <a href="#icones">05. Iconographie</a>
+    <a href="#mascotte">05b. Personnage</a>
     <a href="#grille">06. Grille & spacing</a>
     <a href="#motion">07. Motion</a>
     <a href="#regles">08. Règles</a>
@@ -546,6 +547,43 @@
       <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="7" y="3" width="10" height="18" rx="2"/></svg></div>
       <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
       <div class="icon-cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
+    </div>
+  </div>
+</section>
+
+<!-- 05B. PERSONNAGE OFFICIEL -->
+<section id="mascotte" style="background: var(--paper-soft);">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="num">05B · PERSONNAGE OFFICIEL</div>
+      <h2>Un compagnon, pas un logo.</h2>
+      <p>La mascotte Kiwi est un petit fruit en peluche, curieux et serviable. Elle accompagne les moments d'accueil, de découverte et d'aide. Le logo Kiwi reste toujours la signature principale.</p>
+    </div>
+    <style>
+      .mascot-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+      .mascot-card { overflow: hidden; border: 1px solid var(--n-200); border-radius: 18px; background: var(--surface); }
+      .mascot-art { display: flex; align-items: center; justify-content: center; height: 300px; background: radial-gradient(circle at 50% 65%, #dfe9df 0 39%, transparent 39.5%); }
+      .mascot-art img { display: block; height: 275px; width: auto; max-width: 100%; object-fit: contain; }
+      .mascot-card .caption { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 16px 20px; border-top: 1px solid var(--n-200); }
+      .mascot-card .caption strong { font-size: 17px; color: var(--ink); }
+      .mascot-card .caption span { font-family: var(--mono); font-size: 11px; color: var(--n-500); letter-spacing: .06em; text-transform: uppercase; }
+      .mascot-rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+      .mascot-rules p { margin: 0; padding: 19px 22px; border: 1px solid var(--n-200); border-radius: 14px; line-height: 1.5; color: var(--n-600); background: var(--surface); }
+      .mascot-rules strong { color: var(--ink); }
+      @media (max-width: 800px) { .mascot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+      @media (max-width: 520px) { .mascot-grid, .mascot-rules { grid-template-columns: 1fr; } }
+    </style>
+    <div class="mascot-grid">
+      <div class="mascot-card"><a class="mascot-art" href="assets/mascot/01-neutral.png" download="kiwi-character-01-neutral.png"><picture><source srcset="assets/mascot/01-neutral.webp" type="image/webp"><img src="assets/mascot/01-neutral.png" alt="Mascotte Kiwi, sourire doux et main levée" loading="lazy"></picture></a><div class="caption"><strong>Accueil</strong><span>Neutre</span></div></div>
+      <div class="mascot-card"><a class="mascot-art" href="assets/mascot/02-thoughtful.png" download="kiwi-character-02-thoughtful.png"><picture><source srcset="assets/mascot/02-thoughtful.webp" type="image/webp"><img src="assets/mascot/02-thoughtful.png" alt="Mascotte Kiwi, pose réfléchie" loading="lazy"></picture></a><div class="caption"><strong>Question</strong><span>Réfléchit</span></div></div>
+      <div class="mascot-card"><a class="mascot-art" href="assets/mascot/03-wave.png" download="kiwi-character-03-wave.png"><picture><source srcset="assets/mascot/03-wave.webp" type="image/webp"><img src="assets/mascot/03-wave.png" alt="Mascotte Kiwi, sourire et salut de la main" loading="lazy"></picture></a><div class="caption"><strong>Bonjour</strong><span>Salue</span></div></div>
+      <div class="mascot-card"><a class="mascot-art" href="assets/mascot/04-aha.png" download="kiwi-character-04-aha.png"><picture><source srcset="assets/mascot/04-aha.webp" type="image/webp"><img src="assets/mascot/04-aha.png" alt="Mascotte Kiwi, expression de découverte" loading="lazy"></picture></a><div class="caption"><strong>Découverte</strong><span>Étonnée</span></div></div>
+      <div class="mascot-card"><a class="mascot-art" href="assets/mascot/05-listening.png" download="kiwi-character-05-listening.png"><picture><source srcset="assets/mascot/05-listening.webp" type="image/webp"><img src="assets/mascot/05-listening.png" alt="Mascotte Kiwi, assise et à l'écoute" loading="lazy"></picture></a><div class="caption"><strong>Écoute</strong><span>Assise</span></div></div>
+      <div class="mascot-card"><a class="mascot-art" href="assets/mascot/06-celebrate.png" download="kiwi-character-06-celebrate.png"><picture><source srcset="assets/mascot/06-celebrate.webp" type="image/webp"><img src="assets/mascot/06-celebrate.png" alt="Mascotte Kiwi, bras levés pour célébrer" loading="lazy"></picture></a><div class="caption"><strong>Réussite</strong><span>Célèbre</span></div></div>
+    </div>
+    <div class="mascot-rules">
+      <p><strong>À utiliser.</strong> Marketing, accueil, pédagogie et aide. Préserver sa feuille, son visage vert, son tablier et l'emblème Kiwi exact cousu sur l'écusson. Les PNG transparents ci-dessus sont les fichiers maîtres.</p>
+      <p><strong>À éviter.</strong> Ne pas remplacer le logo par la mascotte, la déformer, la recolorer ou la placer sur des montants, des contrôles de caisse ou des écrans où elle pourrait être prise pour une réponse réelle de Kiwi IQ.</p>
     </div>
   </div>
 </section>
