@@ -84,6 +84,6 @@ Guarded by `tools/native-owner-home-browser-test.mjs` (27 checks, wired in
 ## Still open, in priority order
 
 1. **Code entry:** the dashboard code uses the system keyboard and its accessory bar. A native keypad, as Revolut uses for its passcode, would remove both.
-2. **Kitchen and Team roles:** neither has had this pass yet.
+2. **Kitchen and Team roles:** the Kitchen pairing keypad is now an iOS-passcode keypad (round keys, hollow dots that fill with a spring, one filled Confirm). The kitchen production screen and the Team role still need the full pass. See `docs/handoffs/2026-09-28-iphone-million-dollar-pass.md`.
 3. **Demo data:** the demo hero delta and the goal card disagree ("−16 % vs yesterday" beside "+3.2 % vs yesterday"). That is demo data, but an owner reading it would lose trust.
 4. **Order row glyphs:** order rows use one generic payment glyph. Per-method glyphs (card, cash, QR) would match Revolut's merchant logos.
