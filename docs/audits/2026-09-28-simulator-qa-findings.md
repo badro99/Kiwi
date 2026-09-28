@@ -305,6 +305,80 @@ change made while the app is in the background applies on resume.
   simulator (runningboard: `installcoordinationd`). **The tester now uses the iPhone 17 Pro
   Max simulator (CFFD750C…) so installs don't collide. The executor keeps the 17 Pro.**
 
+## Retest of `f922df3f` (Pro Max, fresh install, English)
+
+### Fixed and verified on device
+- P0-2 sign-in feedback: empty submit shows "Enter your email and password.", a bad address
+  shows "Enter a valid email address.", both fields outline red. Return key moves email →
+  password → submit, and the web accessory bar is gone on this screen.
+- K1 Kitchen dead end: "Change role" sits under the pairing keypad and still works after a
+  terminate and relaunch. Dots fill with the spring.
+- P0-5 tab tap-through: tapping Clients over the Card/cash card no longer opens anything behind.
+- P1 "Choose a role without setup" now opens on the first tap.
+- "Explore the demo first" now shows an "Enter the demo" button on the code screen.
+- Kiwi Team home, after entry, is English (schedule, hours, language section).
+- Till drawer ("Till tools") is English.
+
+### New P0
+- **R1. Kiwi Team lock screen is a dead end, same class as K1.** Change role → Kiwi Team shows
+  the "Bonjour Yassir / Entrez votre code" keypad with only a refresh button: no Change role,
+  no More capsule. A reviewer or a new employee without a code cannot leave the role. Add the
+  same "Change role" link the kitchen keypad got, and apply it to every full-screen gate
+  (Team code, Team till code "000000" step, till "Open till" float screen).
+
+### Still open from the first pass
+- **E1 language, now narrower:** the Team lock screen (ÉQUIPE, Bonjour, Entrez votre code,
+  VOTRE COMPTE EST CRÉÉ PAR…), the till-code step (SAISISSEZ LE CODE DE LA CAISSE…, Pointer
+  l'arrivée, Consulter sans pointer) and the Team "Apparence · Jour · Nuit · Système" row are
+  French on an English phone, and the till-code step mixes in English ("Hello Yassir",
+  "SERVER · CAFÉ ATLAS", "Monday 28 September").
+- **T1/T3 till Refund:** subtitle is Darija/French ("Khtar la transaction à rembourser,
+  journal d'lyoum."), the placeholder is French ("Rechercher, table, montant, réf"), the search
+  still auto-focuses and raises the keyboard with the web accessory bar (up/down/check) and a
+  square green focus rectangle inside the rounded field. Turn off auto-capitalisation too.
+- **Report tab empty in the demo:** Today and Yesterday both say "No sales that day" and the
+  14-day strip is 0 MAD, while Home says 30 868 MAD today and "+6 158 MAD vs yest.".
+- **Demo numbers disagree:** Home 30 868 MAD / 207 orders; Orders 49 895 MAD / 214 orders.
+  At 12:00 the Orders list shows today's orders at 00:00 and 23:44. The till drawer shows
+  "Menu 0" while the till lists 35 items.
+- **"demo clock sync · refresh 3s"** still shows under Today's volume, in mint on white that
+  is barely readable.
+- **Order rows** still open nothing when tapped.
+- **Client detail** is still a centred card with both an X and a Close button. Gender shows
+  "Femme" in English, birthday is raw ISO "1988-03-14", and a VIP with 31 visits and
+  11780 MAD spent says "No purchase details recorded." The phone number is not tappable.
+- **Delete my account** in the demo opens with "The request could not be recorded." before
+  anything is typed. In the demo, say that deletion applies to a real signed-in account.
+
+### New P1
+- **R2. Onboarding welcome header band:** the Kiwi logo sits in a flat grey rectangle, and
+  the status-bar strip is a solid colour that doesn't match the gradient below. The same solid
+  strip shows on the Kiwi Team screens, plus a ~60 pt empty band above the Team header when
+  scrolled.
+- **R3. Kiwi Team data contradiction:** the week strip shows 6 h, 6 h, Off, 6 h, 12 h, 12 h,
+  8 h and "Next shift Tomorrow 17:00 → 23:00", but "Schedule & requests" says 0 shifts and
+  "My upcoming shifts · Nothing to show."
+- **R4. The Team lock greets "Bonjour Yassir" on a fresh install** before anyone has signed
+  in. Either show the venue, or add "Not you? Switch employee".
+- **R5. Kitchen Confirm with fewer than 6 digits does nothing.** Disable it until the code is
+  complete, or shake the dots. Consider a backspace key next to Clear.
+
+### New P2
+- Sign-in: the error banner stays after the user edits the fields, and both fields go red
+  when only the email is wrong.
+- Still no "Forgot password?" link on the native sign-in.
+- Clients list: "11780 MAD" has no thousands space while "6 210 MAD" does (same in client
+  detail). The page is titled both "Clients" (nav) and "Customers" (heading).
+- Filled black (ink) primary buttons: "New customer", "Request leave", till "View bill".
+  The brand primary is atlas.
+- Orders list: "Cash ·" ends in a dangling separator, and amounts have no currency.
+- Till open screen: "· merchant edition" starts with an orphan dot.
+- Till drawer: "Leave" and "End of shift" use the same icon, the "TILL ID" pill does nothing
+  visible, and the Kitchen printing badge is a lone mint dot.
+- Till category labels use terracotta and amber (Tajines, Couscous, Pastillas). These are
+  accent colours outside the brand palette.
+- The owner avatar "RB" is mint on near-white, which fails contrast.
+
 ## Not tested yet (next tester pass)
 
 - Code-gated flows. The tester does not type codes into a build that talks to the live
