@@ -54,6 +54,20 @@ check('Android v1 requests camera and notifications',
 check('Android v1 does not request Bluetooth', !manifest.includes('android.permission.BLUETOOTH'));
 check('Apple privacy manifest declares no tracking and diagnostic collection',
   privacy.includes('<key>NSPrivacyTracking</key>') && privacy.includes('NSPrivacyCollectedDataTypeCrashData'));
+// Customer/guest fields are explicit collection, not merely hypothetical free text.
+for (const type of ['PhysicalAddress', 'Health', 'SensitiveInfo', 'PurchaseHistory',
+  'OtherDataTypes', 'CustomerSupport', 'PaymentInfo', 'SearchHistory', 'ProductInteraction',
+  'PhoneNumber', 'AudioData', 'OtherUserContent']) {
+  check('privacy manifest discloses ' + type, privacy.includes('NSPrivacyCollectedDataType' + type + '</string>'));
+}
+const publicPrivacy = read('privacy.html');
+check('public policy discloses optional guest health fields and server sync',
+  publicPrivacy.includes('allergies') && publicPrivacy.includes('besoins d’accessibilité') &&
+  publicPrivacy.includes('synchronisés') && !publicPrivacy.includes('ne quitte pas son appareil'));
+const publicLegal = read('mentions-legales.html');
+check('publisher and postal address are complete using owner supplied details',
+  publicLegal.includes('Badr-Eddin Bakkioui Oufrassi') &&
+  publicLegal.includes('4 avenue Prince Héritier, 90000 Tanger, Maroc') && !publicLegal.includes('à compléter'));
 check('Apple required-reason APIs are declared',
   privacy.includes('NSPrivacyAccessedAPICategoryUserDefaults') && privacy.includes('CA92.1') && privacy.includes('C617.1'));
 check('privacy manifest is bundled in the iOS target',

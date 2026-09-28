@@ -245,7 +245,7 @@ la capture nue suffit et évite le rejet « métadonnées trompeuses ».
 ## 4. App Privacy (étiquettes) · et Data safety Google
 
 Inventaire technique à confirmer dans App Store Connect pour le binaire final ; voir `PrivacyInfo.xcprivacy`,
-`assets/err-reporter.js` et de `privacy.html` §2. **Aucun suivi (tracking) : Non.**
+`assets/err-reporter.js` et de `privacy.html` §2. **Utilisation pour le suivi publicitaire (tracking) : Non.**
 
 | Donnée | Collectée | Liée à l'utilisateur | Finalité | Pourquoi |
 |---|---|---|---|---|
@@ -259,7 +259,24 @@ Inventaire technique à confirmer dans App Store Connect pour le binaire final ;
 | Numéro de téléphone | Oui | Oui | Fonctionnement | coordonnées des clients et contacts enregistrés |
 | Audio | Oui | Oui | Fonctionnement | dictée et traitement vocal via Cloudflare Workers AI |
 | Autre contenu utilisateur | Oui | Oui | Fonctionnement | messages, documents et contexte envoyés à l’assistant |
-| Localisation, contacts, historique de navigation, identifiants publicitaires, santé | Non | | | |
+| Adresse physique | Oui | Oui | Fonctionnement | adresse de la fiche client / voyageur |
+| Informations de paiement | Oui | Oui | Fonctionnement | mode de règlement enregistré, pas de numéro de carte |
+| Historique d’achats | Oui | Oui | Fonctionnement | achats, visites, dépenses et fidélité des clients |
+| Santé | Oui | Oui | Fonctionnement | allergies facultatives dans la fiche voyageur, pas de HealthKit |
+| Informations sensibles | Oui | Oui | Fonctionnement | besoins d’accessibilité facultatifs pouvant révéler un handicap |
+| Assistance client | Oui | Oui | Fonctionnement | demandes, réponses, pièces jointes et diagnostic |
+| Autres types de données | Oui | Oui | Fonctionnement | anniversaire, genre, nationalité, référence de document d’identité |
+| Historique de recherche | Oui | Oui (déclaration conservatrice) | Fonctionnement, analyse | recherches dans l’aide enregistrées après masquage e-mail / chiffres |
+| Interaction avec le produit | Oui | Oui (déclaration conservatrice) | Fonctionnement, analyse | avis utile / inutile sur les articles d’aide |
+| Position GPS, carnet de contacts de l’appareil, historique de navigation externe, identifiants publicitaires | Non | | | |
+
+Sources : `functions/api/clients.js` (champs explicitement persistés),
+`functions/api/support/tickets.js`, `attachments.js`, `articles.js` (recherches et avis),
+les ventes et la fidélité. Les champs facultatifs de santé ne sont pas une permission
+HealthKit. Les textes libres ne justifient pas à eux seuls toutes les catégories possibles.
+Le serveur d’aide ne stocke pas d’identifiant de compte dans ses tables de recherches
+et avis ; le manifeste garde une déclaration « liée » conservatrice tant que les
+journaux et possibilités de rapprochement côté hébergeur ne sont pas audités.
 
 Google, en plus : données chiffrées en transit **Oui** ; l'utilisateur peut demander
 la suppression **Oui** (dpo@kiwi-os.com, et le formulaire de §5) ; partage avec des

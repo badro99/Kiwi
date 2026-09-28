@@ -8,7 +8,8 @@ Status: release candidate preparation, not submission approval. Base: f922df3f.
 - [x] Deletion sheet distinguishes signed-out, pending, failure and success.
 - [x] Release archive uses an explicit build number and clean checked source.
 - [x] Privacy manifest matches uploaded content and customer data.
-- [ ] Focused regression tests and full repository gate.
+- [x] Focused regression tests and full repository gate on f7855757 (all checks passed, 1 warning).
+- [ ] Repeat gate and signed export after final legal/privacy inventory corrections.
 - [x] iOS Release compilation and App Store distribution export smoke test under
   the user-confirmed publisher, Team H74H42538F. Final export must follow the
   frozen-source gate, not reuse the earlier smoke-test IPA.
@@ -46,13 +47,24 @@ prove account membership, app ownership, a valid profile or App Store acceptance
 - Consent is session-scoped and cleared at authentication boundaries. No request
   bodies or passwords are saved by the consent layer. Revocation blocks future
   transmissions, not data already sent.
-- iOS privacy manifest now includes phone numbers, audio and other user content;
+- iOS privacy manifest includes phone, audio, user content, physical addresses,
+  optional guest allergies/accessibility, identity-reference fields, purchase/payment
+  records, support requests and help searches/feedback;
   App Store Connect labels and Cloudflare retention settings still need operator review.
 - Production dependency audit: zero reported vulnerabilities. Development-tool
   audit reports 6 existing advisories; no blind breaking dependency upgrade applied.
-- Public support URL returned HTTP 200 after its canonical redirect. The legal page
-  still has publisher/address/publication-director placeholders; the support phone
-  is already present and was requested for confirmation, not invented.
+- Public support URL returned HTTP 200 after its canonical redirect. User confirmed
+  publisher Badr-Eddin Bakkioui Oufrassi and address 4 avenue Prince Héritier,
+  90000 Tanger, Maroc. Legal placeholders replaced; existing support phone retained.
+- App Store Connect record 6807952061 matches com.kiwios.pro and Badr’s account.
+  French, English (US) and Arabic draft descriptions/promotional text/keywords/URLs
+  saved. Categories Business / Food & Drink and localized subtitles saved.
+  Primary privacy URL saved. No screenshots, selected build, age rating or final
+  privacy labels yet. DSA status and reviewer credentials remain owner steps.
+- Signed distribution build 4 at f7855757 passed the full gate and local export,
+  but is superseded by the later legal/privacy inventory correction. No upload.
+- Simulator Release app launched on iPhone 17 Pro; a screenshot proves the welcome
+  screen only. Browser fixture checks do not establish full device acceptance.
 - Release evidence is saved outside the checkout in
   `/Users/zaka/.codex/artifacts/kiwi-store-release-2026-09-28/`.
 - `tools/app-archive.sh` now requires clean committed source and an explicit build,

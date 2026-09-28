@@ -105,7 +105,7 @@
     </p>
     <div class="meta">
       <span><b>Dernière mise à jour</b> : 28 septembre 2026</span>
-      <span><b>Version</b> : 2.3</span>
+      <span><b>Version</b> : 2.4</span>
       <span><b>Déclaration CNDP</b> : n° en cours d'attribution</span>
     </div>
 
@@ -133,8 +133,10 @@
       <li>Mot de passe, jamais conservé en clair : seule une empreinte PBKDF2 salée est stockée.</li>
     </ul>
     <p class="note">
-      Kiwi ne demande ni CIN, ni pièce d'identité, ni photographie, ni IBAN, et ne
-      pratique aucune vérification biométrique.
+      La création du compte commerçant ne demande pas de pièce d’identité. Les fiches
+      clients et voyageurs peuvent toutefois contenir les informations décrites ci-dessous.
+      Le déverrouillage biométrique facultatif utilise le système de l’appareil ;
+      Kiwi ne reçoit pas les empreintes ni les données faciales.
     </p>
     <h3>2.2 Données d'exploitation</h3>
     <ul>
@@ -143,23 +145,33 @@
       <li>Commandes passées par les clients via le QR de table, le temps de leur préparation.</li>
     </ul>
     <p class="note">
-      Aucune géolocalisation, aucun identifiant matériel (IMEI, numéro de série)
-      n'est collecté. Une partie des données (catalogue, équipe, stock) reste
-      stockée dans le navigateur du commerçant et ne quitte pas son appareil.
+      Kiwi ne demande pas la position GPS ni les identifiants matériels IMEI ou numéro
+      de série. Le catalogue, l’équipe, le stock et les opérations peuvent être
+      conservés localement pour le fonctionnement hors connexion et synchronisés
+      avec les serveurs Kiwi selon les modules et l’état de connexion.
     </p>
     <h3>2.3 Client final du commerçant</h3>
     <p>
-      Une commande passée par QR contient les articles, la table et le montant.
-      Elle n'est associée à aucune identité : Kiwi ne demande au client final ni
-      nom, ni téléphone, ni e-mail, ni moyen de paiement.
+      Les données dépendent du parcours utilisé. Une commande QR peut contenir les articles,
+      la table et le montant. Les fiches clients, la fidélité et les réservations peuvent
+      aussi enregistrer le nom, le téléphone, l’e-mail, l’adresse, la date de naissance,
+      le genre, les notes et l’historique d’achats, de visites et de fidélité.
+    </p>
+    <p>
+      Dans les modules d’hébergement, le commerçant peut renseigner le type et le numéro
+      de document d’identité, la nationalité, la langue, les préférences de chambre et
+      alimentaires, les allergies et les besoins d’accessibilité d’un voyageur.
+      Ces deux derniers champs peuvent contenir des données de santé ou de handicap.
+      Kiwi ne lit pas HealthKit ni les dossiers médicaux de l’appareil. Le commerçant
+      doit limiter ces informations au nécessaire et disposer des autorisations requises.
     </p>
 
     <h3>2.4 Application Kiwi Pro (iPad, iPhone, Android)</h3>
     <p>
       Kiwi Pro est la même caisse, le même tableau de bord et la même cuisine,
-      installés sur l'appareil du commerçant. Elle ne collecte rien de plus que le
-      site, et ne contient aucun traceur publicitaire ni aucun SDK d'analyse
-      d'audience.
+      installés sur l’appareil du commerçant. Les données fonctionnelles décrites ici
+      concernent aussi l’application, avec les permissions et diagnostics ci-dessous.
+      Elle ne contient pas de traceur publicitaire.
     </p>
     <ul>
       <li><b>Réseau local</b> : l'app demande l'accès au réseau local uniquement pour
@@ -185,6 +197,14 @@
       entre Kiwi et le commerçant, hors des boutiques d'applications.
     </p>
 
+    <h3>2.5 Assistance</h3>
+    <p>Les demandes d’assistance enregistrent les coordonnées de réponse, le message,
+      les pièces jointes choisies, les échanges et un diagnostic technique de l’incident.
+      Les recherches dans l’aide et les avis sur les articles peuvent être enregistrés
+      pour améliorer l’assistance, avec la langue et le type d’établissement.
+      Les adresses e-mail et suites de chiffres sont masquées dans les termes de recherche
+      avant enregistrement ; évitez néanmoins d’y saisir des informations personnelles.</p>
+
     <h2>Kiwi AI et dictée</h2>
     <p>Les fonctions IA traitent les messages, le contexte d’activité pertinent et les
       photos, documents ou enregistrements audio sélectionnés via <b>Cloudflare Workers AI</b>
@@ -201,7 +221,7 @@
     <ul>
       <li><b>Fourniture du service</b> : faire fonctionner la caisse, le tableau de bord et la prise de commande.</li>
       <li><b>Sécurité des comptes</b> : authentification, limitation des tentatives de connexion, cloisonnement entre commerçants.</li>
-      <li><b>Support</b> : diagnostic d'un incident signalé par le commerçant.</li>
+      <li><b>Support</b> : diagnostic d’un incident signalé par le commerçant et amélioration des articles d’aide à partir des recherches et avis.</li>
     </ul>
     <p class="note">
       Kiwi ne revend aucune donnée, ne fait aucune publicité ciblée et ne partage
@@ -240,7 +260,7 @@
       <li>Droit d'accès aux données vous concernant.</li>
       <li>Droit de rectification.</li>
       <li>Droit à l'effacement, dans les limites des obligations légales de conservation.</li>
-      <li>Droit à la portabilité (export CSV / PDF de l'intégralité de vos données en un clic depuis l'application).</li>
+      <li>Droit à la portabilité : utilisez les exports disponibles dans l’application ou contactez-nous pour demander les autres données vous concernant.</li>
       <li>Droit d'opposition au traitement à des fins commerciales.</li>
     </ul>
     <p>
