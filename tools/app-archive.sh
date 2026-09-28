@@ -31,7 +31,11 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 cd "$ROOT"
 # Gate the exact commit, and preserve its output with the archive evidence.
+SOURCE=$(git rev-parse HEAD)
 node tools/check.js > "$RUN/check.log" 2>&1 || { tail -60 "$RUN/check.log"; exit 1; }
+if [ "$(git rev-parse HEAD)" != "$SOURCE" ] || [ -n "$(git status --porcelain --untracked-files=normal)" ]; then
+  echo 'Source changed during validation; restart the release from a clean commit.' >&2; exit 1
+fi
 cd "$ROOT/app"
 npm run build > "$RUN/bundle.log" 2>&1
 npx --no-install cap sync ios > "$RUN/sync.log" 2>&1

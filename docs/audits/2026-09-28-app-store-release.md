@@ -36,7 +36,7 @@ Xcode 27.0 / iOS SDK 27.0 verified locally. A local signing certificate alone do
 prove account membership, app ownership, a valid profile or App Store acceptance.
 
 ## Evidence and implementation
-- New `tools/native-store-readiness-test.mjs`: 73 checks for all three languages,
+- New `tools/native-store-readiness-test.mjs`: 78 checks for all three languages,
   including request refusal, affirmative choice, revoke, abort, account change,
   non-JSON 401, pending deletion, unavailable service, real bundled account and
   upgrade handlers. All API responses in this test are local fixtures.

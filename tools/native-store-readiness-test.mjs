@@ -40,9 +40,10 @@ try {
       window.webkit={messageHandlers:{kiwiShell:{postMessage(v){window.__host=v;}}}};
       localStorage.setItem('kiwiNativeLocale',lang);
       document.addEventListener('DOMContentLoaded',()=>{document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';});
-      const original=window.fetch;window.__sends=0;window.__deletionStatus=401;window.__pendingDeletion=false;
+      const original=window.fetch;window.__sends=0;window.__registryReads=0;window.__deletionStatus=401;window.__pendingDeletion=false;
       window.fetch=(input,init)=>{
         const url=String(input?.url||input);
+        if(/\/api\/ai\/(intake|intake-archive)(?:[?]|$)/.test(url)) {window.__registryReads++;return Promise.resolve(new Response('{}',{status:200}));}
         if(url.includes('/api/ai/')) {window.__sends++;return Promise.resolve(new Response('{"ok":true}',{status:200}));}
         if(url.includes('/api/account/deletion-request')) {
           if(init?.method==='POST') throw Error('Deletion POST forbidden in test');
@@ -66,6 +67,7 @@ try {
     check(await page.evaluate(async()=>{try{await fetch('/api/ai/voice');return false;}catch(e){return e.name==='NotAllowedError'&&!document.querySelector('.kiwi-native-privacy');}}),lang+': refusal is remembered without nagging');
     check(await page.evaluate(()=>{const x=new XMLHttpRequest();x.open('POST','/api/ai/voice');try{x.send('fixture');return false;}catch(e){return e.name==='NotAllowedError';}}),lang+': XHR cannot bypass refusal');
     check(await page.evaluate(()=>navigator.sendBeacon('/api/ai/ask','fixture')===false),lang+': beacon cannot bypass refusal');
+    check(await page.evaluate(async()=>{await fetch('/api/ai/intake?docId=fixture');await fetch('/api/ai/intake-archive?docId=fixture');return __registryReads===2&&__sends===0&&!document.querySelector('.kiwi-native-privacy');}),lang+': existing documents remain available after AI refusal');
     await page.evaluate(()=>KiwiNativeHostAction({action:'ai-privacy'}));
     await page.click('[data-submit]');
     await page.evaluate(()=>fetch(new Request(location.origin+'/api/ai/ask',{method:'POST',body:'fixture'})));
@@ -123,6 +125,10 @@ try {
   for(const file of ['dashboard.html','kiwi-caisse.html','kiwi-serveur.html','kiwi-cuisine.html','index.html']) {
     const html=fs.readFileSync(path.join(dir,file),'utf8');
     check(html.indexOf('native-privacy.js')>html.indexOf('assets/api-base.js')&&html.indexOf('native-privacy.js')<html.indexOf('native-runtime.js'),file+': consent loaded before workspace clients');
+  }
+  for(const name of ['intake','intake-archive']) {
+    const route=fs.readFileSync(path.join(root,'functions/api/ai/'+name+'.js'),'utf8');
+    check(!/runAiWithGateway|runWithFallback|runWithPayloadFallback|env\.AI/.test(route),name+': consent exemption contains no AI inference');
   }
   const voice=fs.readFileSync(path.join(root,'assets/agent-voice.js'),'utf8');
   check(voice.includes("if (document.documentElement.classList.contains('kiwi-native')) return null;"),'native dictation never silently falls back to an undisclosed provider');

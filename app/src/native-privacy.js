@@ -61,7 +61,13 @@
     try { return new URL(input && input.url || String(input), location.href).pathname; }
     catch (_) { return ''; }
   }
-  function aiURL(input) { return /^\/api\/ai(?:\/|$)/.test(requestPath(input)); }
+  function aiURL(input) {
+    var path = requestPath(input);
+    // These two authenticated routes only save/read the document registry and
+    // its stored media. Refusing AI must not prevent access to existing records.
+    if (/^\/api\/ai\/(?:intake|intake-archive)\/?$/.test(path)) return false;
+    return /^\/api\/ai(?:\/|$)/.test(path);
+  }
   function reset() {
     revision++; save('denied');
     var decline = document.querySelector('.kiwi-native-privacy [data-deny]');
