@@ -2000,6 +2000,19 @@
     return step * mag;
   }
   const DAY_ABBR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  /* Day ticks are built in French ("Sam 18"), including the demo series.
+   * Translate the weekday at paint time so an English or Arabic dashboard
+   * does not show "Sam 18 … Ven 24". */
+  const DAY_ABBR_BY_LANG = {
+    en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    ar: ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
+  };
+  function localDayTick(label) {
+    const table = DAY_ABBR_BY_LANG[getLang()];
+    if (!table || typeof label !== 'string') return label;
+    const m = /^(Dim|Lun|Mar|Mer|Jeu|Ven|Sam)(\s.*)$/.exec(label);
+    return m ? table[DAY_ABBR.indexOf(m[1])] + m[2] : label;
+  }
   /* One day, bucketed by hour and accumulated — 24 running totals. Shared by
    * the plotted day and the day it is compared against so both curves are
    * built by the same code and are readable point-for-point.
@@ -3232,7 +3245,9 @@
     // Height is flex-driven (the chart fills its column) — measure it live.
     const H = Math.max(150, Math.round(svg.clientHeight || 240));
     const measured = Math.round(svg.clientWidth || svg.parentElement?.clientWidth || 820);
-    const W = Math.max(620, measured);
+    // Phones draw at their real width: a 620-unit floor scaled a 375px chart
+    // down to 60 %, shrinking the hour labels to 7px and letterboxing the curve.
+    const W = measured < 620 ? Math.max(300, measured) : measured;
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
@@ -3380,9 +3395,12 @@
     const liveX = showLive ? xForIdx(liveIdx) : 0;
     const liveY = (showLive && data.rev[liveIdx] != null) ? yScale(data.rev[liveIdx]) : 0;
 
-    const visibleIdx = data.visibleXIdx || data.rev.map((_, i) => i);
+    const allIdx = data.visibleXIdx || data.rev.map((_, i) => i);
+    // Keep at least ~34px per label so hour ticks never touch on a phone.
+    const labelStep = Math.max(1, Math.ceil(allIdx.length / Math.max(1, Math.floor(W / 34))));
+    const visibleIdx = labelStep === 1 ? allIdx : allIdx.filter((_, k) => k % labelStep === 0);
     const xLabelsHtml = visibleIdx.map(i =>
-      `<text x="${xs[i].toFixed(1)}" y="${(H - 14).toFixed(1)}" text-anchor="middle">${data.xLabels[i] || ''}</text>`
+      `<text x="${xs[i].toFixed(1)}" y="${(H - 14).toFixed(1)}" text-anchor="middle">${localDayTick(data.xLabels[i] || '')}</text>`
     ).join('');
     // Robinhood-clean: no y-axis labels — the hero readout + scrubber carry
     // the exact figures, so the line floats free of gridline clutter.

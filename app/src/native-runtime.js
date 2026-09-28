@@ -144,6 +144,8 @@
   function nativeBlockingLayer() {
     if (openNativeLayers().length) return true;
     if (document.body && (document.body.classList.contains('nav-open') || document.body.classList.contains('kw-menu-open'))) return true;
+    var onboarding = document.querySelector('.kob-root');
+    if (onboarding && !onboarding.classList.contains('kob-out')) return true;
     var dashboardLock = document.querySelector('[data-kiwi-lock]');
     if (dashboardLock) {
       var paintedLock = getComputedStyle(dashboardLock);
@@ -158,13 +160,26 @@
       return style.display !== 'none' && style.visibility !== 'hidden';
     });
   }
+  function themedDashboardGate() {
+    if (!/dashboard\.html$/i.test(location.pathname)) return false;
+    var visible = function (node) {
+      if (!node || node.hidden) return false;
+      var style = getComputedStyle(node);
+      return style.display !== 'none' && style.visibility !== 'hidden';
+    };
+    var onboarding = document.querySelector('.kob-root');
+    if (onboarding && !onboarding.classList.contains('kob-out')) return true;
+    return visible(document.querySelector('[data-kiwi-lock]'));
+  }
   var lastStatusBarStyle = '';
   function paintStatusBar() {
     // SwiftUI setup has an ink background regardless of the web/system theme.
     var setup = document.body && document.body.classList.contains('native-shell-page');
     var kitchen = /kiwi-cuisine\.html$/i.test(location.pathname);
     var till = /kiwi-caisse\.html$/i.test(location.pathname);
-    var dark = setup || kitchen || nativeBlockingLayer() || (till ? root.getAttribute('data-caisse-theme') === 'dark' : root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark');
+    // The dashboard's lock and first-run questions follow its light/dark
+    // theme; every other gate (clock-in, PIN, greeting) is always dark.
+    var dark = setup || kitchen || (nativeBlockingLayer() && !themedDashboardGate()) || (till ? root.getAttribute('data-caisse-theme') === 'dark' : root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark');
     var nextStyle = dark ? 'DARK' : 'LIGHT';
     if (nextStyle === lastStatusBarStyle) return;
     lastStatusBarStyle = nextStyle;
@@ -291,9 +306,9 @@
 
   function nativeTillCopy() {
     var lang = String(root.lang || 'fr').toLowerCase();
-    if (lang.indexOf('ar') === 0) return { label: 'التنقل الرئيسي', salle: 'الصالة', vrap: 'طلبات خارجية', waitlist: 'الانتظار', more: 'المزيد', card: 'بطاقة', actions: 'إجراءات أخرى', less: 'إخفاء الإجراءات', close: 'طي الفاتورة' };
-    if (lang.indexOf('en') === 0) return { label: 'Primary navigation', salle: 'Floor', vrap: 'Takeaway', waitlist: 'Waiting', more: 'More', card: 'Card', actions: 'More actions', less: 'Hide actions', close: 'Collapse bill' };
-    return { label: 'Navigation principale', salle: 'Salle', vrap: 'À emporter', waitlist: 'Attente', more: 'Plus', card: 'Carte', actions: 'Autres actions', less: 'Masquer les actions', close: 'Replier l’addition' };
+    if (lang.indexOf('ar') === 0) return { label: 'التنقل الرئيسي', salle: 'الصالة', vrap: 'طلبات خارجية', waitlist: 'الانتظار', more: 'المزيد', card: 'بطاقة', actions: 'إجراءات أخرى', less: 'إخفاء الإجراءات', close: 'طي الفاتورة', view: 'عرض الفاتورة', clear: 'إفراغ الطلب' };
+    if (lang.indexOf('en') === 0) return { label: 'Primary navigation', salle: 'Floor', vrap: 'Takeaway', waitlist: 'Waiting', more: 'More', card: 'Card', actions: 'More actions', less: 'Hide actions', close: 'Collapse bill', view: 'View bill', clear: 'Clear order' };
+    return { label: 'Navigation principale', salle: 'Salle', vrap: 'À emporter', waitlist: 'Attente', more: 'Plus', card: 'Carte', actions: 'Autres actions', less: 'Masquer les actions', close: 'Replier l’addition', view: 'Voir la note', clear: 'Vider la commande' };
   }
 
   function nativeAccountDeletion() {
@@ -557,6 +572,35 @@
         meta.parentNode.insertBefore(more, meta);
       }
 
+      /* On a phone the bill is a sheet, and the X at the top of a sheet means
+         "put it away". In takeaway the caisse wired that X to clearCart(), so
+         one tap meant to peek back at the menu threw the order away. Here the
+         X only folds the sheet; emptying the order is an explicit, labelled
+         action inside "More actions". */
+      var clearing = false;
+      var closeX = cart.querySelector('#rp-close');
+      if (closeX) {
+        document.addEventListener('click', function (event) {
+          if (clearing || event.target.closest('#rp-close') !== closeX) return;
+          if (document.body.getAttribute('data-mode') !== 'vrap' || !document.body.classList.contains('ticket-open')) return;
+          event.preventDefault();
+          event.stopPropagation();
+          document.body.classList.remove('ticket-open');
+        }, true);
+        closeX.setAttribute('aria-label', copy.close);
+        if (more) {
+          var clear = document.createElement('button');
+          clear.type = 'button';
+          clear.className = 'kiwi-native-cart-clear';
+          clear.textContent = copy.clear;
+          clear.addEventListener('click', function () {
+            clearing = true;
+            try { closeX.click(); } finally { clearing = false; }
+          });
+          more.parentNode.insertBefore(clear, more.nextSibling);
+        }
+      }
+
       /* On phones the bill is a bottom sheet. Do not reserve a second bottom
          shelf when no table/cart is selected, and keep the sheet's expanded
          state truthful for VoiceOver as the existing caisse code opens/closes
@@ -590,8 +634,11 @@
           var label = peek.firstElementChild;
           var total = peek.querySelector('#rp-peek-total');
           var liveTotal = activeCart && activeCart.querySelector('#rp-total');
-          var nextLabel = count + ' ' + (root.lang === 'en' ? (count === 1 ? 'item' : 'items') : root.lang === 'ar' ? 'عناصر' : (count === 1 ? 'article' : 'articles'));
+          var nextLabel = nativeTillCopy().view;
           if (label && label.textContent !== nextLabel) label.textContent = nextLabel;
+          if (label && label.getAttribute('data-count') !== String(count)) label.setAttribute('data-count', String(count));
+          var spoken = count + ' ' + (root.lang === 'en' ? (count === 1 ? 'item' : 'items') : root.lang === 'ar' ? 'عناصر' : (count === 1 ? 'article' : 'articles'));
+          if (peek.getAttribute('aria-description') !== spoken) peek.setAttribute('aria-description', spoken);
           if (total && liveTotal && total.textContent !== liveTotal.textContent) total.textContent = liveTotal.textContent;
         }
         grabber.setAttribute('aria-expanded', expanded ? 'true' : 'false');
@@ -629,10 +676,171 @@
     if (/kiwi-caisse\.html$/i.test(location.pathname)) return;
     var role = /kiwi-serveur\.html$/i.test(location.pathname) ? 'equipe' : /kiwi-cuisine\.html$/i.test(location.pathname) ? 'cuisine' : /dashboard\.html$/i.test(location.pathname) ? 'dashboard' : '';
     if (!role) return;
-    var push = function () { nativeHostPost({ version:1, screen:'workspace', role:role, locale:String(root.lang || 'fr'), rtl:root.dir === 'rtl', selected:'', tabs:nativeBlockingLayer() || window.innerWidth > 900 ? [] : [{ id:'more', label:nativeTillCopy().more }] }); };
-    window.KiwiNativeHostRequestState = push;
-    window.KiwiNativeHostAction = function (payload) { nativeWorkspaceAction(payload); };
+    var owner = role === 'dashboard' ? initNativeOwnerUx() : null;
+    var lastPushed = '';
+    var push = function () {
+      var tabs = nativeBlockingLayer() || window.innerWidth > 900 ? [] : owner ? owner.tabs() : [{ id:'more', label:nativeTillCopy().more }];
+      var payload = { version:1, screen:'workspace', role:role, locale:String(root.lang || 'fr'), rtl:root.dir === 'rtl', selected:owner ? owner.selected() : '', tabs:tabs };
+      var key = JSON.stringify(payload);
+      if (key === lastPushed) return;
+      lastPushed = key;
+      nativeHostPost(payload);
+    };
+    window.KiwiNativeHostRequestState = function () { lastPushed = ''; push(); };
+    window.KiwiNativeHostAction = function (payload) {
+      if (owner && payload && payload.action === 'open-tools') { owner.openMenu(); return; }
+      if (nativeWorkspaceAction(payload)) return;
+      if (owner && payload && payload.action === 'navigate') owner.go(String(payload.id || ''));
+    };
+    if (owner) owner.onChange(push);
     push(); setTimeout(push, 300); setTimeout(push, 1200);
+  }
+
+  /* Owner home on a phone. The dashboard is the desktop page; on an iPhone the
+     owner opens it to answer one question, "how is today going", so the
+     revenue card leads, the period switch sits under it and the four pages an
+     owner checks from a phone become native tabs. Every tab and quick action
+     clicks the page's own control, so no figure is computed twice. */
+  function nativeOwnerCopy() {
+    var lang = String(root.lang || 'fr');
+    if (lang.indexOf('ar') === 0) return { home:'الرئيسية', orders:'الطلبات', report:'التقرير', clients:'الزبناء', more:'المزيد', label:'التنقل', report2:'تقرير اليوم', invoice:'الفواتير', export:'تصدير', customize:'تخصيص' };
+    if (lang.indexOf('en') === 0) return { home:'Home', orders:'Orders', report:'Report', clients:'Clients', more:'More', label:'Navigation', report2:'Day report', invoice:'Invoicing', export:'Export', customize:'Customize' };
+    return { home:'Accueil', orders:'Commandes', report:'Rapport', clients:'Clients', more:'Plus', label:'Navigation', report2:'Rapport du jour', invoice:'Facturation', export:'Exporter', customize:'Personnaliser' };
+  }
+  function initNativeOwnerUx() {
+    if (!document.body) return null;
+    document.body.classList.add('kiwi-native-owner');
+    var copy = nativeOwnerCopy();
+    var listeners = [];
+    var lastPage = 'accueil';
+    var sidebar = function () { return document.getElementById('kw-sidebar'); };
+    var navLink = function (id) { var s = sidebar(); return s && s.querySelector('[data-nav="' + id + '"]'); };
+    var notify = function () { listeners.forEach(function (fn) { try { fn(); } catch (_) {} }); };
+    var clientsOpen = function () {
+      var layer = document.getElementById('cd-table');
+      return !!(layer && layer.offsetParent !== null);
+    };
+
+    function selected() {
+      if (document.body.classList.contains('kw-menu-open') || document.body.classList.contains('nav-open')) return 'more';
+      if (clientsOpen()) return 'clients';
+      var s = sidebar();
+      var active = s && s.querySelector('[data-nav].active');
+      if (active) lastPage = active.getAttribute('data-nav');
+      return ({ accueil:'accueil', transactions:'transactions', rapport:'rapport' })[lastPage] || '';
+    }
+    function tabs() {
+      return [
+        { id:'accueil', label:copy.home },
+        { id:'transactions', label:copy.orders },
+        { id:'rapport', label:copy.report },
+        { id:'clients', label:copy.clients },
+        { id:'more', label:copy.more }
+      ];
+    }
+    function openMenu() {
+      var burger = document.querySelector('.kw-hamburger');
+      if (burger) burger.click();
+      hapticLight();
+      setTimeout(notify, 60);
+    }
+    function go(id) {
+      if (nativeBlockingLayer() && id !== 'more') return;
+      if (id === 'more') { openMenu(); return; }
+      if (id === 'clients') {
+        var directory = document.querySelector('#kw-sidebar [data-action="clients-directory"]') || document.querySelector('[data-action="clients-directory"]');
+        if (directory) directory.click();
+      } else {
+        var link = navLink(id);
+        if (link) link.click();
+        try { window.scrollTo({ top:0, behavior:'smooth' }); } catch (_) { window.scrollTo(0, 0); }
+      }
+      hapticLight();
+      setTimeout(notify, 60);
+      setTimeout(notify, 400);
+    }
+
+    /* Quick actions, Revolut-style: one row of round buttons under the
+       revenue, each forwarding to the dashboard's existing control. */
+    function mountQuickActions() {
+      var anchor = document.querySelector('.vexel-compose .dash-date-range');
+      if (!anchor || document.querySelector('.kiwi-native-owner-actions')) return;
+      var items = [
+        ['report', copy.report2, 'description.svg', '.vexel-report-btn'],
+        ['invoice', copy.invoice, 'receipt_long.svg', '.kpi-customize.invoice-pill'],
+        ['export', copy.export, 'download.svg', '.page-head [data-action="export"]'],
+        ['customize', copy.customize, 'tune.svg', '.kpi-customize:not(.invoice-pill)']
+      ].filter(function (item) { return document.querySelector(item[3]); });
+      if (!items.length) return;
+      var row = document.createElement('div');
+      row.className = 'kiwi-native-owner-actions';
+      row.setAttribute('role', 'group');
+      row.innerHTML = items.map(function (item) {
+        return '<button type="button" data-owner-action="' + item[0] + '"><span class="kno-ico" aria-hidden="true"><i style="--kno-icon:url(assets/icons/material/' + item[2] + ')"></i></span><span class="kno-lbl">' + item[1] + '</span></button>';
+      }).join('');
+      row.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-owner-action]');
+        if (!button) return;
+        var item = items.filter(function (entry) { return entry[0] === button.getAttribute('data-owner-action'); })[0];
+        var target = item && document.querySelector(item[3]);
+        if (target) { hapticLight(); target.click(); }
+      });
+      anchor.parentNode.insertBefore(row, anchor.nextSibling);
+    }
+    mountQuickActions();
+    setTimeout(mountQuickActions, 1200);
+
+    /* An iPhone app follows the system appearance until the owner picks one
+       with the moon button. `kiwiNativeThemeAuto` marks a stored theme as
+       ours, so a real choice is never overridden. */
+    (function followSystemAppearance() {
+      var theme = window.KiwiDashTheme, media = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+      if (!theme || !media) return;
+      var applying = false;
+      var auto = function () { try { return localStorage.getItem('kiwiDashTheme') === null || localStorage.getItem('kiwiNativeThemeAuto') === '1'; } catch (_) { return false; } };
+      var apply = function () {
+        if (!auto()) return;
+        var next = media.matches ? 'dark' : 'light';
+        try { localStorage.setItem('kiwiNativeThemeAuto', '1'); } catch (_) {}
+        if (theme.get() === next && root.getAttribute('data-theme') === next) return;
+        applying = true;
+        try { theme.set(next); } finally { applying = false; }
+      };
+      window.addEventListener('kiwi:themechange', function () {
+        if (!applying) { try { localStorage.removeItem('kiwiNativeThemeAuto'); } catch (_) {} }
+        paintStatusBar();
+      });
+      if (typeof media.addEventListener === 'function') media.addEventListener('change', apply);
+      apply();
+    })();
+
+    /* Inner pages get their name as the navigation title; home keeps the mark. */
+    var titles = { accueil:'', transactions:copy.orders, rapport:copy.report, clients:copy.clients };
+    function syncTitle() {
+      var inner = document.querySelector('.topbar-inner');
+      if (!inner) return;
+      var title = inner.querySelector('.kno-title');
+      if (!title) {
+        title = document.createElement('span');
+        title.className = 'kno-title';
+        title.setAttribute('role', 'heading');
+        title.setAttribute('aria-level', '1');
+        var brand = inner.querySelector('.kw-topbar-brand');
+        inner.insertBefore(title, brand ? brand.nextSibling : inner.firstChild);
+      }
+      var page = selected();
+      var text = titles[page] || '';
+      if (title.textContent !== text) title.textContent = text;
+      var key = text ? 'page' : 'home';
+      if (document.body.getAttribute('data-kno-page') !== key) document.body.setAttribute('data-kno-page', key);
+    }
+    listeners.push(syncTitle);
+    syncTitle();
+
+    var s = sidebar();
+    if (s) new MutationObserver(notify).observe(s, { attributes:true, subtree:true, attributeFilter:['class'] });
+    new MutationObserver(notify).observe(document.body, { attributes:true, attributeFilter:['class'] });
+    return { tabs:tabs, selected:selected, go:go, openMenu:openMenu, onChange:function (fn) { listeners.push(fn); } };
   }
 
   function polishNativeWorkspaceCopy() {
@@ -743,7 +951,7 @@
     if (window.KiwiNativeHostRequestState) window.KiwiNativeHostRequestState();
   }
   function isBlockingNode(node) {
-    return node && (node.id === 'pin-screen' || node.id === 'cp-pin-screen' || node.id === 'clockin-screen' || (node.hasAttribute && (node.hasAttribute('data-kiwi-greet') || node.hasAttribute('data-kiwi-lock'))) || (node.matches && node.matches('.modal-veil,.drawer-veil,.cloture-veil,.kds-screen,#stock-screen,.kiwi-native-account')) || node === document.body);
+    return node && (node.id === 'pin-screen' || node.id === 'cp-pin-screen' || node.id === 'clockin-screen' || (node.hasAttribute && (node.hasAttribute('data-kiwi-greet') || node.hasAttribute('data-kiwi-lock'))) || (node.matches && node.matches('.modal-veil,.drawer-veil,.cloture-veil,.kds-screen,#stock-screen,.kiwi-native-account,.kob-root')) || node === document.body);
   }
   if (document.body) new MutationObserver(function (records) {
     if (records.some(function (record) {

@@ -141,6 +141,7 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
     private var setupHost: UIHostingController<KiwiNativeSetupRoot>?
     private var tabHost: UIHostingController<KiwiNativeTabRoot>?
     private var tabHeightConstraint: NSLayoutConstraint?
+    private var tabWidthConstraint: NSLayoutConstraint?
     private var safeAreaInsets = UIEdgeInsets.zero
 
     func attach(to bridge: CAPBridgeViewController) {
@@ -181,6 +182,7 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
         tabs.didMove(toParent: bridge)
         tabHost = tabs
         self.tabHeightConstraint = tabHeightConstraint
+        self.tabWidthConstraint = tabWidthConstraint
 
         model.didChangeLayout = { [weak self] context in self?.apply(context) }
         apply(model.context)
@@ -195,6 +197,8 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
     }
 
     private func apply(_ context: KiwiHostContext) {
+        // One slot per tab; the ≥12pt side margins still win on narrow phones.
+        tabWidthConstraint?.constant = CGFloat(max(context.tabs.count, 1)) * 74 + 12
         setupHost?.view.isHidden = context.screen == "workspace"
         tabHost?.view.isHidden = context.screen != "workspace" || context.tabs.isEmpty || (model.bridge?.view.bounds.width ?? 0) > 900
         if let setupView = setupHost?.view, !setupView.isHidden { setupView.superview?.bringSubviewToFront(setupView) }
@@ -242,12 +246,22 @@ private struct KiwiMark: View {
     }
 }
 
+private extension View {
+    @ViewBuilder func kiwiSheetDetents() -> some View {
+        if #available(iOS 16.0, *) { self.presentationDetents([.medium, .large]).presentationDragIndicator(.visible) } else { self }
+    }
+
+    @ViewBuilder func scrollDismissesKeyboardIfAvailable() -> some View {
+        if #available(iOS 16.0, *) { self.scrollDismissesKeyboard(.interactively) } else { self }
+    }
+}
+
 private struct KiwiPressStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .opacity(configuration.isPressed ? 0.78 : 1)
-            .scaleEffect(configuration.isPressed ? 0.985 : 1)
-            .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
+            .opacity(configuration.isPressed ? 0.82 : 1)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.spring(response: 0.28, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }
 
@@ -261,7 +275,7 @@ private struct KiwiNativeSetupRoot: View {
     @State private var passwordVisible = false
     @FocusState private var focusedField: String?
     @AccessibilityFocusState private var headingFocused: Bool
-    @ScaledMetric(relativeTo: .largeTitle) private var titleSize = 30
+    @ScaledMetric(relativeTo: .largeTitle) private var titleSize = 32
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
@@ -293,40 +307,64 @@ private struct KiwiNativeSetupRoot: View {
     }
 
     private var setup: some View {
-        GeometryReader { geometry in ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                KiwiMark(size: 76)
-                progress
-                VStack(alignment: .leading, spacing: 18) {
-                    if !model.context.eyebrow.isEmpty { Text(model.context.eyebrow.uppercased()).font(.caption.weight(.bold)).tracking(1.6).foregroundStyle(kiwiInk.opacity(0.58)) }
-                    Text(model.context.title).font(.system(size: titleSize, weight: .semibold)).foregroundStyle(kiwiInk).fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAddTraits(.isHeader).accessibilityFocused($headingFocused)
-                    if !model.context.message.isEmpty { Text(model.context.message).font(.body).foregroundStyle(kiwiInk.opacity(0.66)).fixedSize(horizontal: false, vertical: true) }
-                    content
-                    status
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(alignment: .center, spacing: 14) {
+                        KiwiMark(size: 44)
+                        progress
+                    }
+                    .padding(.bottom, dynamicTypeSize.isAccessibilitySize ? 24 : 36)
+                    VStack(alignment: .leading, spacing: 12) {
+                        if !model.context.eyebrow.isEmpty && model.context.kind != "account" {
+                            Text(model.context.eyebrow).font(.subheadline.weight(.semibold)).foregroundStyle(kiwiMint.opacity(0.9))
+                        }
+                        Text(model.context.title).font(.system(size: titleSize, weight: .semibold)).tracking(-0.4).foregroundStyle(kiwiPaper).fixedSize(horizontal: false, vertical: true)
+                            .accessibilityAddTraits(.isHeader).accessibilityFocused($headingFocused)
+                        if !model.context.message.isEmpty {
+                            Text(model.context.message).font(.body).foregroundStyle(kiwiPaper.opacity(0.62)).fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .padding(.bottom, 28)
+                    VStack(alignment: .leading, spacing: 16) {
+                        content
+                        status
+                    }
+                    Spacer(minLength: 28)
                     actions
                 }
-                .padding(dynamicTypeSize.isAccessibilitySize ? 18 : 24)
-                .background(kiwiPaper, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
+                .frame(maxWidth: 560, alignment: .leading)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: geometry.size.height, alignment: .top)
+                .padding(.horizontal, 22)
+                .padding(.top, 12)
+                .padding(.bottom, 12)
             }
-            .frame(maxWidth: 640)
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: geometry.size.height, alignment: .center)
-            .padding(.horizontal, 18)
-            .padding(.top, 14)
-            .padding(.bottom, 28)
-        }.id(model.context.kind) }
+            .scrollDismissesKeyboardIfAvailable()
+            .id(model.context.kind)
+        }
+        .background(
+            ZStack {
+                kiwiInk
+                RadialGradient(colors: [kiwiAtlas.opacity(0.55), .clear], center: .topTrailing, startRadius: 10, endRadius: 520)
+                RadialGradient(colors: [kiwiMint.opacity(0.08), .clear], center: .bottomLeading, startRadius: 10, endRadius: 420)
+            }.ignoresSafeArea()
+        )
     }
 
     @ViewBuilder private var progress: some View {
-        if model.context.progressTotal > 0 {
-            HStack(spacing: 7) {
+        if model.context.progressTotal > 0 && model.context.kind != "account" {
+            HStack(spacing: 5) {
                 ForEach(1...model.context.progressTotal, id: \.self) { index in
-                    Capsule().fill(index <= model.context.progress ? kiwiMint : kiwiPaper.opacity(0.2)).frame(maxWidth: .infinity).frame(height: 4)
+                    Capsule().fill(index <= model.context.progress ? kiwiMint : kiwiPaper.opacity(0.16)).frame(maxWidth: .infinity).frame(height: 4)
                 }
-            }.accessibilityElement(children: .ignore)
-                .accessibilityLabel(copy("Étape", "Step", "الخطوة"))
-                .accessibilityValue("\(model.context.progress) / \(model.context.progressTotal)")
+            }
+            .frame(maxWidth: 180)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: model.context.progress)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(copy("Étape", "Step", "الخطوة"))
+            .accessibilityValue("\(model.context.progress) / \(model.context.progressTotal)")
         }
     }
 
@@ -346,13 +384,13 @@ private struct KiwiNativeSetupRoot: View {
             VStack(spacing: 0) {
                 ForEach(model.context.summary) { item in
                     VStack(alignment: .leading, spacing: 5) {
-                        Text(item.label).font(.subheadline.weight(.semibold))
-                        Text(item.value).foregroundStyle(kiwiInk.opacity(0.72)).fixedSize(horizontal: false, vertical: true)
+                        Text(item.label).font(.subheadline).foregroundStyle(kiwiPaper.opacity(0.58))
+                        Text(item.value).font(.body.weight(.medium)).foregroundStyle(kiwiPaper).fixedSize(horizontal: false, vertical: true)
                     }.frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 13).accessibilityElement(children: .combine)
-                    if item.id != model.context.summary.last?.id { Divider().overlay(kiwiInk.opacity(0.08)) }
+                    if item.id != model.context.summary.last?.id { Rectangle().fill(kiwiPaper.opacity(0.08)).frame(height: 0.5) }
                 }
-            }.padding(.horizontal, 16).background(kiwiInk.opacity(0.04), in: RoundedRectangle(cornerRadius: 18))
+            }.padding(.horizontal, 16).background(kiwiPaper.opacity(0.06), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
     }
 
@@ -372,14 +410,15 @@ private struct KiwiNativeSetupRoot: View {
 
     private func nativeField(id: String, label: String, text: Binding<String>, secure: Bool, keyboard: UIKeyboardType) -> some View {
         VStack(alignment: .leading, spacing: 7) {
-            Text(label).font(.subheadline.weight(.semibold)).foregroundStyle(kiwiInk.opacity(0.65))
+            Text(label).font(.footnote.weight(.semibold)).foregroundStyle(kiwiPaper.opacity(0.58))
                 .accessibilityHidden(true)
             HStack(spacing: 4) {
                 Group {
-                    if secure && !passwordVisible { SecureField(label, text: text) }
-                    else { TextField(label, text: text) }
+                    if secure && !passwordVisible { SecureField(text: text, prompt: Text(label).foregroundColor(kiwiPaper.opacity(0.34))) { Text(label) } }
+                    else { TextField(text: text, prompt: Text(label).foregroundColor(kiwiPaper.opacity(0.34))) { Text(label) } }
                 }
-                .foregroundStyle(kiwiInk)
+                .foregroundStyle(kiwiPaper)
+                .tint(kiwiMint)
                 .focused($focusedField, equals: id)
                 .textContentType(id == "email" ? .username : (secure ? .password : nil))
                 .submitLabel(id == "email" || id == "host" ? .next : .go)
@@ -397,7 +436,7 @@ private struct KiwiNativeSetupRoot: View {
                     } label: {
                         Image(systemName: passwordVisible ? "eye.slash" : "eye")
                             .frame(minWidth: 44, minHeight: 44)
-                    }.buttonStyle(.plain).foregroundStyle(kiwiAtlas)
+                    }.buttonStyle(.plain).foregroundStyle(kiwiPaper.opacity(0.7))
                         .accessibilityLabel(passwordVisible ? copy("Masquer le mot de passe", "Hide password", "إخفاء كلمة المرور") : copy("Afficher le mot de passe", "Show password", "إظهار كلمة المرور"))
                         .accessibilityIdentifier("kiwi-password-toggle")
                 }
@@ -405,9 +444,10 @@ private struct KiwiNativeSetupRoot: View {
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             .keyboardType(keyboard)
-            .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 54)
-            .background(kiwiPaper, in: RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(focusedField == id ? kiwiAtlas : kiwiInk.opacity(0.20), lineWidth: focusedField == id ? 2 : 1))
+            .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 56)
+            .background(kiwiPaper.opacity(focusedField == id ? 0.11 : 0.07), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(focusedField == id ? kiwiMint.opacity(0.9) : kiwiPaper.opacity(0.06), lineWidth: focusedField == id ? 1.5 : 1))
+            .animation(.easeOut(duration: 0.15), value: focusedField)
         }
     }
 
@@ -421,24 +461,31 @@ private struct KiwiNativeSetupRoot: View {
             Group {
                 if dynamicTypeSize.isAccessibilitySize && choice.group == "role" {
                     VStack(alignment: .leading, spacing: 8) {
-                        Image(systemName: symbol(choice.id)).font(.title3.weight(.semibold)).foregroundStyle(kiwiAtlas).accessibilityHidden(true)
-                        Text(choice.title).font(.headline).foregroundStyle(kiwiInk)
-                        if !choice.subtitle.isEmpty { Text(choice.subtitle).font(.subheadline).foregroundStyle(kiwiInk.opacity(0.68)) }
+                        Image(systemName: symbol(choice.id)).font(.title3.weight(.semibold)).foregroundStyle(kiwiMint).accessibilityHidden(true)
+                        Text(choice.title).font(.headline).foregroundStyle(kiwiPaper)
+                        if !choice.subtitle.isEmpty { Text(choice.subtitle).font(.subheadline).foregroundStyle(kiwiPaper.opacity(0.6)) }
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     HStack(spacing: 14) {
-                        Image(systemName: symbol(choice.id)).font(.title3.weight(.semibold)).frame(width: 28).foregroundStyle(choice.selected ? kiwiAtlas : kiwiInk.opacity(0.62)).accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(choice.title).font(.headline).foregroundStyle(kiwiInk).fixedSize(horizontal: false, vertical: true)
-                            if !choice.subtitle.isEmpty { Text(choice.subtitle).font(.subheadline).foregroundStyle(kiwiInk.opacity(0.68)).fixedSize(horizontal: false, vertical: true) }
+                        Image(systemName: symbol(choice.id)).font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(choice.selected ? kiwiInk : kiwiMint)
+                            .frame(width: 44, height: 44)
+                            .background(choice.selected ? kiwiMint : kiwiMint.opacity(0.12), in: Circle())
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(choice.title).font(.headline).foregroundStyle(kiwiPaper).fixedSize(horizontal: false, vertical: true)
+                            if !choice.subtitle.isEmpty { Text(choice.subtitle).font(.subheadline).foregroundStyle(kiwiPaper.opacity(0.58)).fixedSize(horizontal: false, vertical: true) }
                         }
-                        Spacer()
-                        if choice.selected || (choice.group == "paper" && paper == choice.id) { Image(systemName: "checkmark.circle.fill").foregroundStyle(kiwiInk) }
+                        Spacer(minLength: 8)
+                        if choice.selected || (choice.group == "paper" && paper == choice.id) { Image(systemName: "checkmark.circle.fill").font(.title3).foregroundStyle(kiwiMint) }
+                        else { Image(systemName: "chevron.forward").font(.footnote.weight(.semibold)).foregroundStyle(kiwiPaper.opacity(0.35)) }
                     }
                 }
             }
-            .padding(15).background(choice.selected ? kiwiMint.opacity(0.12) : kiwiPaper, in: RoundedRectangle(cornerRadius: 18))
-            .overlay(RoundedRectangle(cornerRadius: 18).stroke(choice.selected ? kiwiMint.opacity(0.8) : kiwiInk.opacity(0.08), lineWidth: 1))
+            .padding(.horizontal, 14).padding(.vertical, 12)
+            .background(kiwiPaper.opacity(choice.selected ? 0.12 : 0.06), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(choice.selected ? kiwiMint.opacity(0.55) : kiwiPaper.opacity(0.05), lineWidth: 1))
+            .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         }.buttonStyle(KiwiPressStyle())
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(choice.selected ? .isSelected : [])
@@ -450,22 +497,23 @@ private struct KiwiNativeSetupRoot: View {
                 Image(systemName: model.context.statusKind == "ok" ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
                 Text(model.context.status).fixedSize(horizontal: false, vertical: true)
             }
-            .font(.subheadline.weight(.medium)).foregroundStyle(kiwiInk.opacity(0.72))
+            .font(.subheadline.weight(.medium)).foregroundStyle(model.context.statusKind == "ok" ? kiwiMint : Color(red: 1, green: 0.62, blue: 0.55))
             .padding(14).frame(maxWidth: .infinity, alignment: .leading)
-            .background(kiwiInk.opacity(0.05), in: RoundedRectangle(cornerRadius: 15))
+            .background((model.context.statusKind == "ok" ? kiwiMint : Color(red: 1, green: 0.42, blue: 0.34)).opacity(0.1), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }
 
     private var actions: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 6) {
             ForEach(model.context.actions) { action in
                 Button { perform(action) } label: {
                     Text(action.label).font(.headline).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 14).padding(.vertical, 12).frame(maxWidth: .infinity).frame(minHeight: 54)
-                        .foregroundStyle(!action.enabled ? kiwiInk.opacity(0.65) : (action.style == "primary" ? kiwiPaper : kiwiInk))
-                        .background(!action.enabled ? kiwiInk.opacity(0.08) : (action.style == "primary" ? kiwiAtlas : Color.clear), in: RoundedRectangle(cornerRadius: 17))
-                        .overlay(RoundedRectangle(cornerRadius: 17).stroke(kiwiInk.opacity(action.style == "primary" ? 0 : 0.18), lineWidth: 1))
-                }.buttonStyle(.plain).disabled(!action.enabled).accessibilityIdentifier("kiwi-action-\(action.id)")
+                        .padding(.horizontal, 18).padding(.vertical, 12).frame(maxWidth: .infinity).frame(minHeight: action.style == "primary" ? 56 : 48)
+                        .foregroundStyle(!action.enabled ? kiwiPaper.opacity(0.4) : (action.style == "primary" ? kiwiInk : kiwiPaper))
+                        .background(!action.enabled ? kiwiPaper.opacity(0.08) : (action.style == "primary" ? kiwiPaper : Color.clear), in: Capsule())
+                        .contentShape(Capsule())
+                }.buttonStyle(KiwiPressStyle()).disabled(!action.enabled).accessibilityIdentifier("kiwi-action-\(action.id)")
             }
         }
     }
@@ -496,6 +544,15 @@ private struct KiwiNativeTabRoot: View {
             .sheet(isPresented: $showingMore) {
                 NavigationView {
                     List {
+                        if model.context.role == "dashboard" {
+                            Section {
+                                Button { showingMore = false; model.send("open-tools") } label: {
+                                    Label(copy("Tout le tableau de bord", "Full dashboard menu", "كل لوحة القيادة"), systemImage: "square.grid.2x2")
+                                }
+                            } footer: {
+                                Text(copy("Équipe, menu, stock, réservations, terminaux, marges.", "Team, menu, stock, bookings, terminals, margins.", "الفريق، القائمة، المخزون، الحجوزات، الأجهزة، الهوامش."))
+                            }
+                        }
                         if model.context.role == "caisse" {
                             Section {
                                 Button { showingMore = false; model.send("open-tools") } label: {
@@ -521,8 +578,10 @@ private struct KiwiNativeTabRoot: View {
                     }
                     .tint(kiwiAtlas)
                     .navigationTitle(copy("Plus", "More", "المزيد"))
-                    .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button(copy("Fermer", "Close", "إغلاق")) { showingMore = false } } }
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button(copy("Fermer", "Close", "إغلاق")) { showingMore = false }.font(.body.weight(.semibold)) } }
                 }
+                .kiwiSheetDetents()
             }
     }
 
@@ -546,16 +605,17 @@ private struct KiwiNativeTabRoot: View {
                             Image(systemName: symbol(tab.id))
                                 .font(.system(size: 19, weight: .semibold))
                                 .symbolVariant(active ? .fill : .none)
+                                .frame(height: 24)
                             Text(tab.label).font(.system(size: 10, weight: active ? .semibold : .medium)).lineLimit(1)
                         }
                         .foregroundStyle(active ? kiwiMint : Color.white.opacity(0.85))
                     }
-                    .frame(width: model.context.tabs.count == 1 ? 78 : 76, height: 50)
+                    .frame(minWidth: 60, maxWidth: model.context.tabs.count == 1 ? 78 : .infinity, minHeight: 50, maxHeight: 50)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text(tab.label))
-                .accessibilityAddTraits(active ? .isSelected : [])
+                .accessibilityAddTraits(active ? [.isSelected, .isButton] : .isButton)
             }
         }
         .padding(6)
@@ -578,6 +638,7 @@ private struct KiwiNativeTabRoot: View {
     }
 
     private func symbol(_ id: String) -> String {
-        ["salle":"table.furniture", "vrap":"takeoutbag.and.cup.and.straw", "waitlist":"person.2", "more":"ellipsis"][id] ?? "circle"
+        ["salle":"table.furniture", "vrap":"takeoutbag.and.cup.and.straw", "waitlist":"person.2", "more":"square.grid.2x2",
+         "accueil":"house", "transactions":"list.bullet.rectangle.portrait", "rapport":"doc.text", "clients":"person.2"][id] ?? "circle"
     }
 }

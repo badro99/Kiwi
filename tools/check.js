@@ -1364,6 +1364,22 @@ section('Native setup shell interaction (tools/app-interaction-test.mjs)');
   }
 }
 
+/* iPhone owner home and till, rendered: header over the status bar, revenue
+ * first, native owner tabs, list rows, a phone-width chart, the bill pill.
+ * Skips green without Chromium, like the setup-shell suite above. */
+section('Native owner home and till on a phone (tools/native-owner-home-browser-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'native-owner-home-browser-test.mjs')], { encoding: 'utf8', timeout: 300000 });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && out.includes('○ skip')) warn('native owner home suite skipped (no Chromium — browser assertions not executed)');
+  else if (r.status === 0) ok(`native owner home green (${(out.match(/✓/g) || []).length} controls)`);
+  else {
+    out.split('\n').filter((line) => line.includes('✗')).forEach((line) => fail(line.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`native-owner-home-browser-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 14 · text contrast tokens ────────────────────────────────────────────
  * Low-contrast neutrals are valid borders and decoration, never body copy.
  * Keep the semantic distinction enforceable after the rendered theme audit. */

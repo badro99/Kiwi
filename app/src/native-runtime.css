@@ -109,6 +109,9 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-till.ticket-open .kiwi-native-sheet-grabber{position:sticky;top:0;z-index:3;width:100%;height:28px;min-height:28px;display:block;border:0;background:var(--paper-elev);touch-action:pan-y}
   html.kiwi-native body.kiwi-native-till.ticket-open .kiwi-native-sheet-grabber::after{content:"";position:absolute;left:50%;top:10px;width:40px;height:5px;transform:translateX(-50%);border-radius:999px;background:var(--line)}
   html.kiwi-native body.kiwi-native-till .kiwi-native-cart-more{display:none}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-cart-clear{display:none}
+  html.kiwi-native body.kiwi-native-till.ticket-open.kiwi-native-cart-actions[data-mode="vrap"] .kiwi-native-cart-clear{width:calc(100% - 40px);min-height:44px;margin:0 20px 8px;display:block;border:0;border-radius:12px;background:transparent;color:#B42318;font:600 calc(14px * var(--type-scale,1))/1 "Inter Tight",sans-serif}
+  html.kiwi-native[data-caisse-theme="dark"] body.kiwi-native-till .kiwi-native-cart-clear{color:#FF8A80}
   html.kiwi-native body.kiwi-native-till.ticket-open .kiwi-native-cart-more{width:calc(100% - 40px);min-height:44px;margin:0 20px 8px;display:block;border:1px solid var(--line);border-radius:12px;background:var(--paper-mute);color:var(--ink-2);font:600 calc(13px * var(--type-scale,1))/1 "Inter Tight",sans-serif}
   html.kiwi-native body.kiwi-native-till.ticket-open:not(.kiwi-native-cart-actions) .rp-pay .pay-row:not(.pay-row-primary),html.kiwi-native body.kiwi-native-till.ticket-open:not(.kiwi-native-cart-actions) .rp-meta{display:none}
   html.kiwi-native body.kiwi-native-till.ticket-open .rp-summary-row,html.kiwi-native body.kiwi-native-till.ticket-open .rp-tva-note{display:none}
@@ -171,4 +174,215 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-till .kiwi-native-table-covers{color:var(--ink-3,#59615D);font-size:calc(13px * var(--type-scale,1));white-space:nowrap}
   html.kiwi-native body.kiwi-native-till .kiwi-native-table-server{min-width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:var(--paper-mute,#EFEDE7);font:700 11px/1 "Inter Tight",sans-serif}
   html.kiwi-native body.kiwi-native-till .kiwi-native-table-empty{margin:24px 0;text-align:center;color:var(--ink-3,#59615D)}
+}
+
+/* ── Owner home on a phone ─────────────────────────────────────────────────
+   The dashboard is a desktop page. On an iPhone it becomes one scrolling
+   home: revenue first, the period as a segmented control, four round quick
+   actions, then the figures as grouped cards. Tabs are native (SwiftUI). */
+@media (max-width:600px){
+  html.kiwi-native body.kiwi-native-owner:not(#kno){--kno-bg:#F2F1EC;--kno-card:#FFFDFA;--kno-ink:#0A0F0D;--kno-ink-2:#59615D;--kno-line:rgba(10,15,13,.07);--kno-fill:rgba(10,15,13,.055);--kno-accent:#0B6E4F;background:var(--kno-bg)!important;padding-bottom:calc(var(--kiwi-native-tabs,106px) + 12px)!important}
+  html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) body.kiwi-native-owner:not(#kno){--kno-bg:#0A0F0D;--kno-card:#151B18;--kno-ink:#F7F5F0;--kno-ink-2:rgba(247,245,240,.62);--kno-line:rgba(247,245,240,.08);--kno-fill:rgba(247,245,240,.08);--kno-accent:#7DF2B0}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) :is(main.main,.app){background:transparent!important}
+
+  /* Header: a translucent bar that owns the status-bar strip, so the page no
+     longer scrolls visibly behind the clock. */
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar{top:0!important;margin-top:calc(-1 * var(--kiwi-safe-top))!important;padding:var(--kiwi-safe-top) 16px 0!important;background:color-mix(in srgb,var(--kno-bg) 82%,transparent)!important;-webkit-backdrop-filter:saturate(1.8) blur(22px);backdrop-filter:saturate(1.8) blur(22px);border-bottom:.5px solid var(--kno-line)!important;box-shadow:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar-inner{min-height:52px;height:52px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kw-hamburger{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar-inner{justify-content:flex-start!important;gap:8px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kw-topbar-brand{position:static!important;transform:none!important;margin:0 auto 0 0!important;padding:0!important}
+  html.kiwi-native[dir="rtl"] body.kiwi-native-owner:not(#kno) .kw-topbar-brand{margin:0 0 0 auto!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar .icon-btn{width:40px;height:40px;min-width:40px;border-radius:50%;background:var(--kno-fill)!important;color:var(--kno-ink)!important;border:0!important;box-shadow:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar .icon-btn svg{width:19px;height:19px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar .kw-topbar-brand img{filter:none}
+  html.kiwi-native:not([data-theme="dark"]):not([data-vexel-mode="dark"]) body.kiwi-native-owner:not(#kno) .topbar .kw-topbar-brand img{filter:brightness(0) saturate(100%) invert(8%) sepia(9%) saturate(900%) hue-rotate(110deg)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) [class*="scroll-progress"],html.kiwi-native body.kiwi-native-owner:not(#kno) .kw-progress{display:none!important}
+
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .container{padding:14px 16px 24px!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .vexel-compose{display:flex!important;flex-direction:column;gap:14px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .vexel-compose>*{margin:0!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .vexel-revenue-row{display:contents!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .vexel-revenue-row>.hero-today{order:-3}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .vexel-compose>.dash-date-range{order:-2}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .vexel-compose>.kiwi-native-owner-actions{order:-1}
+
+  /* The revenue is the balance: no card, a big number, the curve under it. */
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .hero-today{background:transparent!important;border:0!important;box-shadow:none!important;padding:6px 2px 0!important;overflow:visible}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .hero-today::before,html.kiwi-native body.kiwi-native-owner:not(#kno) .hero-today::after{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .hero-today .block-head{display:flex!important;align-items:flex-start;justify-content:space-between;gap:12px;margin:0!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .hero-today .block-head .t{font:500 15px/1.3 "Inter Tight",sans-serif!important;color:var(--kno-ink-2)!important;letter-spacing:0!important;text-transform:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .hero-today .block-head .t :is(.dot,i,.pill,.badge,.live-pill){display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .hero-today .rev-hero-val{margin-top:6px!important;font:600 46px/1.02 "Inter Tight",sans-serif!important;letter-spacing:-.035em!important;color:var(--kno-ink)!important;font-variant-numeric:tabular-nums}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .hero-today .rev-hero-val :is(.u,small,span){font-size:20px!important;font-weight:500!important;letter-spacing:0!important;color:var(--kno-ink-2)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .hero-today .rev-hero-delta{margin-top:10px!important;padding:5px 10px!important;border-radius:999px!important;font:600 13px/1.2 "Inter Tight",sans-serif!important;border:0!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .hero-today .block-head .s,html.kiwi-native body.kiwi-native-owner:not(#kno) .hero-today .block-head .t .chip{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .hero-today .right-actions{position:absolute!important;top:2px;inset-inline-end:2px;margin:0!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .hero-today .hero-left-chart{gap:6px!important;min-height:0!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .hero-today .cmp-btn{min-height:34px!important;height:34px;padding:0 12px!important;border-radius:999px!important;border:0!important;background:var(--kno-fill)!important;color:var(--kno-ink)!important;font:600 13px/1 "Inter Tight",sans-serif!important;box-shadow:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .hero-today svg.chart-wrap{display:block!important;flex:none!important;width:100%!important;height:170px!important;min-height:0!important;margin-top:10px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .hero-today .hero-left-chart{display:block!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .hero-today .hero-view-toggle{display:none!important}
+
+  /* Period: an iOS segmented control, not a card. */
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .vexel-compose>.dash-date-range{display:block!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;min-height:0!important;z-index:5}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range::before,html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range::after{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range>div:first-child:not(.dr-control),html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .vexel-report-btn{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-control{margin:0!important;width:100%}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pills{display:grid!important;grid-auto-flow:column;grid-auto-columns:1fr;width:100%;padding:2px!important;border-radius:10px!important;background:var(--kno-fill)!important;border:0!important;box-shadow:none!important;gap:0!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill{width:100%!important;min-width:0!important;display:flex!important;align-items:center;justify-content:center;text-align:center;min-height:32px!important;padding:0 4px!important;border-radius:8px!important;font:600 13px/1 "Inter Tight",sans-serif!important;color:var(--kno-ink)!important;background:transparent!important;border:0!important;box-shadow:none!important;white-space:nowrap}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill.on{background:var(--kno-card)!important;box-shadow:0 3px 8px rgba(10,15,13,.12),0 1px 1px rgba(10,15,13,.04)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill-custom{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pills [data-lens-pill],html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pills .kw-lens{display:none!important}
+
+  /* Quick actions */
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-owner-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:4px 0 2px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-owner-actions button{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;padding:0;border:0;background:none;color:var(--kno-ink);font:500 12px/1.2 "Inter Tight",sans-serif;text-align:center;-webkit-tap-highlight-color:transparent}
+  html.kiwi-native[dir="rtl"] body.kiwi-native-owner:not(#kno) .kiwi-native-owner-actions button{font-family:"IBM Plex Sans Arabic","Inter Tight",sans-serif}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kno-ico{width:52px;height:52px;display:grid;place-items:center;border-radius:50%;background:var(--kno-card);box-shadow:0 1px 2px rgba(10,15,13,.06),inset 0 0 0 .5px var(--kno-line);transition:transform .18s cubic-bezier(.34,1.45,.5,1)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-owner-actions button:active .kno-ico{transform:scale(.92)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kno-ico i{width:24px;height:24px;background:var(--kno-accent);-webkit-mask:var(--kno-icon) center/contain no-repeat;mask:var(--kno-icon) center/contain no-repeat}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kno-lbl{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  html.kiwi-native body.kiwi-native-owner:not(#kno) :is(.hero-today,.hero-today .hero-grid,.hero-today .hero-left,.hero-today .hero-left-chart){min-height:0!important;height:auto!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) :is(.vexel-rail-label,.vexel-client-label,.hai-eyebrow,.hh-ai-eyebrow,.settle .lbl){font:600 15px/1.3 "Inter Tight",sans-serif!important;letter-spacing:-.005em!important;text-transform:none!important;color:var(--kno-ink)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) :is(.vexel-rail-label,.vexel-client-label)::before{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .block-head .t{letter-spacing:-.01em!important}
+  /* Figures: grouped cards, quiet labels, the number carries the weight. */
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kpi-band-head{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kpi-band{gap:10px!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) :is(.kpi-m,.vexel-goals-card,.vexel-bottom-row>.block,.vexel-rail-card,.vexel-insights-row,.settle,.oppo-card,.dash-cols .block){background:var(--kno-card)!important;border:0!important;border-radius:22px!important;box-shadow:0 1px 2px rgba(10,15,13,.04)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) :is(.kpi-m,.vexel-goals-card,.vexel-bottom-row>.block,.vexel-rail-card,.vexel-insights-row,.settle,.oppo-card,.dash-cols .block)::before{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kpi-m{padding:14px 14px 13px!important;min-height:0!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kpi-m .l{font:500 13px/1.25 "Inter Tight",sans-serif!important;letter-spacing:0!important;text-transform:none!important;color:var(--kno-ink-2)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kpi-m .l::before{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kpi-m .vexel-kpi-baseline{margin-top:8px!important;flex-wrap:wrap;align-items:baseline;gap:4px 8px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kpi-m .v{font:600 26px/1.05 "Inter Tight",sans-serif!important;letter-spacing:-.025em!important;color:var(--kno-ink)!important;font-variant-numeric:tabular-nums}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kpi-m .v .u{font-size:14px!important;font-weight:500!important;color:var(--kno-ink-2)!important;letter-spacing:0!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kpi-m .d{font:600 12px/1 "Inter Tight",sans-serif!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kpi-m .vexel-kpi-comparison{margin-top:4px!important;font:400 12px/1.2 "Inter Tight",sans-serif!important;color:var(--kno-ink-2)!important}
+}
+
+/* Entry gates (dashboard lock, first-run questions) on a phone: the same
+   full-screen stage as the native setup, not a floating card on a mesh. */
+@media (max-width:600px){
+  html.kiwi-native body:not(#kno) :is(.kob-root,.kiwi-lock){box-sizing:border-box;align-items:stretch!important;justify-content:stretch!important;padding:calc(var(--kiwi-safe-top) + 12px) 22px calc(var(--kiwi-safe-bottom) + 16px)!important;background-size:100% 100%}
+  html.kiwi-native body:not(#kno) :is(.kob-card,.kiwi-lock-inner){box-sizing:border-box;width:100%!important;max-width:none!important;max-height:none!important;min-height:100%;margin:0!important;padding:8px 0 0!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+  html.kiwi-native body:not(#kno) .kob-card{display:flex!important;flex-direction:column}
+  html.kiwi-native body:not(#kno) .kob-body{display:flex;flex-direction:column;flex:1;overflow:visible}
+  html.kiwi-native body:not(#kno) .kob-body>*{flex-shrink:0}
+  html.kiwi-native body:not(#kno) .kob-h{font-size:32px!important;line-height:1.08!important;letter-spacing:-.02em!important;margin-top:18px!important}
+  html.kiwi-native body:not(#kno) .kob-eyebrow{font:600 14px/1.2 "Inter Tight",sans-serif!important;letter-spacing:0!important;text-transform:none!important}
+  html.kiwi-native body:not(#kno) .kob-config-label{display:none!important}
+  html.kiwi-native body:not(#kno) .kob-foot{margin-top:auto!important;padding-top:24px}
+  html.kiwi-native body:not(#kno) .kob-btn{min-height:56px;border-radius:999px!important}
+  html.kiwi-native body:not(#kno) .kob-btn.primary{flex:1 1 100%}
+  html.kiwi-native body:not(#kno) .kob-explore{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:10px}
+  html.kiwi-native body:not(#kno) .kob-explore .kob-sep{display:none}
+  html.kiwi-native body:not(#kno) .kob-skip{min-height:44px;text-decoration:none!important;font-size:15px!important;font-weight:600!important;color:var(--ink,#0A0F0D)!important}
+  html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) body:not(#kno) .kob-skip{color:#F7F5F0!important}
+  /* Top-aligned: the code keyboard rises on open and used to cover the help and the demo link. */
+  html.kiwi-native body:not(#kno) .kiwi-lock-inner{display:flex!important;flex-direction:column;justify-content:flex-start;padding-top:clamp(8px,6vh,56px)!important}
+}
+@media (max-width:600px){
+  html.kiwi-native body:not(#kno) .kob-btn.primary{background:#0B6E4F!important;color:#F7F5F0!important;box-shadow:none!important;font-weight:600!important}
+  html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) body:not(#kno) .kob-btn.primary{background:#F7F5F0!important;color:#0A0F0D!important}
+}
+
+/* Till on a phone, second pass: a floating "view bill" pill instead of a flat
+   shelf, and product tiles that read name first, price second. */
+@media (max-width:900px),(orientation:landscape) and (max-width:1024px) and (max-height:600px){
+  html.kiwi-native body.kiwi-native-till:not(#kno):not(.ticket-open) .rightpanel{--rp-peek-h:68px;background:transparent!important;border-color:transparent!important;box-shadow:none!important;clip-path:inset(0 0 calc(100% - var(--rp-peek-h)) 0)!important}
+  html.kiwi-native body.kiwi-native-till:not(#kno):not(.ticket-open) .rp-peek{box-sizing:border-box;display:flex!important;align-items:center;gap:12px;height:56px;min-height:56px;margin:4px 12px 8px;padding:0 20px 0 8px;border:0;border-radius:999px;background:#0A0F0D;color:#F7F5F0;box-shadow:0 12px 28px -10px rgba(10,15,13,.55),0 2px 6px rgba(10,15,13,.18);font:600 calc(16px * var(--type-scale,1))/1 "Inter Tight",sans-serif;transition:transform .18s cubic-bezier(.34,1.45,.5,1)}
+  html.kiwi-native body.kiwi-native-till:not(#kno):not(.ticket-open) .rp-peek:active{transform:scale(.97)}
+  html.kiwi-native body.kiwi-native-till:not(#kno) .rp-peek::after{content:none!important}
+  html.kiwi-native body.kiwi-native-till:not(#kno) .rp-peek>span:first-child{display:inline-flex;align-items:center;gap:10px;flex:1;min-width:0;color:inherit}
+  html.kiwi-native body.kiwi-native-till:not(#kno) .rp-peek>span:first-child::before{content:attr(data-count);min-width:40px;height:40px;padding:0 6px;box-sizing:border-box;display:grid;place-items:center;border-radius:999px;background:#7DF2B0;color:#0A0F0D;font:700 15px/1 "Inter Tight",sans-serif;font-variant-numeric:tabular-nums}
+  html.kiwi-native body.kiwi-native-till:not(#kno) #rp-peek-total{color:inherit;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+  html.kiwi-native[dir="rtl"] body.kiwi-native-till:not(#kno) .rp-peek{padding:0 8px 0 20px;font-family:"IBM Plex Sans Arabic","Inter Tight",sans-serif}
+  html.kiwi-native:is([data-caisse-theme="dark"]) body.kiwi-native-till:not(#kno):not(.ticket-open) .rp-peek{background:#F7F5F0;color:#0A0F0D}
+
+  html.kiwi-native body.kiwi-native-till:not(#kno) .main-head .main-title{font:600 calc(28px * var(--type-scale,1))/1.1 "Inter Tight",sans-serif!important;letter-spacing:-.02em}
+  html.kiwi-native body.kiwi-native-till:not(#kno) .menu-grid{gap:8px!important;grid-auto-rows:max-content!important;align-content:start!important;padding:2px 2px 12px!important}
+  html.kiwi-native body.kiwi-native-till:not(#kno) .menu-item{height:auto!important;max-height:none!important;min-height:92px!important;padding:11px 12px 10px!important;border-radius:18px!important;border:0!important;background:var(--paper-elev,#FFFDFA)!important;box-shadow:0 1px 2px rgba(10,15,13,.05),0 0 0 .5px rgba(10,15,13,.06)!important;transition:transform .16s cubic-bezier(.34,1.45,.5,1),background-color .16s}
+  html.kiwi-native body.kiwi-native-till:not(#kno) .menu-item>*{flex-shrink:0}
+  html.kiwi-native body.kiwi-native-till:not(#kno) .menu-item-name{flex:1 0 auto!important}
+  html.kiwi-native body.kiwi-native-till:not(#kno) .menu-item:active{transform:scale(.965)}
+  html.kiwi-native body.kiwi-native-till:not(#kno) .menu-item-cat{font:500 calc(11.5px * var(--type-scale,1))/1.2 "Inter Tight",sans-serif!important;letter-spacing:0!important;text-transform:none!important;opacity:.9}
+  html.kiwi-native body.kiwi-native-till:not(#kno) .menu-item-name{font:600 calc(15px * var(--type-scale,1))/1.22 "Inter Tight",sans-serif!important;color:var(--ink,#0A0F0D)!important;letter-spacing:-.01em;margin-top:2px}
+  html.kiwi-native body.kiwi-native-till:not(#kno) .menu-item-price{font:500 calc(15px * var(--type-scale,1))/1 "Inter Tight",sans-serif!important;color:var(--ink-2,#3A413D)!important;font-variant-numeric:tabular-nums}
+  html.kiwi-native body.kiwi-native-till:not(#kno) .menu-item-badge{background:#0A0F0D!important;color:#F7F5F0!important;font-weight:700!important;box-shadow:none!important}
+  html.kiwi-native body.kiwi-native-till:not(#kno) .menu-item.in-cart,html.kiwi-native body.kiwi-native-till:not(#kno) .menu-item.is-in-cart,html.kiwi-native body.kiwi-native-till:not(#kno) .menu-item[data-qty]:not([data-qty="0"]){background:rgba(125,242,176,.18)!important;box-shadow:0 0 0 1.5px rgba(11,110,79,.55)!important}
+  html.kiwi-native[data-caisse-theme="dark"] body.kiwi-native-till:not(#kno) .menu-item{background:#151B18!important;box-shadow:0 0 0 .5px rgba(247,245,240,.08)!important}
+  html.kiwi-native[data-caisse-theme="dark"] body.kiwi-native-till:not(#kno) .menu-item-name{color:#F7F5F0!important}
+  html.kiwi-native[data-caisse-theme="dark"] body.kiwi-native-till:not(#kno) .menu-item-price{color:rgba(247,245,240,.72)!important}
+  html.kiwi-native[data-caisse-theme="dark"] body.kiwi-native-till:not(#kno) .menu-item-badge{background:#7DF2B0!important;color:#0A0F0D!important}
+}
+/* Opening float: one row of equal chips, not three plus an orphan. */
+@media (max-width:600px){
+  html.kiwi-native body:not(#kno) .clockin-float-chips{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px;width:100%;max-width:420px;flex-wrap:nowrap}
+  html.kiwi-native body:not(#kno) .clockin-float-chips button{min-width:0;padding-inline:6px;white-space:nowrap}
+}
+
+/* Owner pages on a phone: desktop tables become list rows, Revolut-style,
+   one leading glyph, two lines, the amount on the trailing edge. */
+@media (max-width:600px){
+  html.kiwi-native body.kiwi-native-owner:not(#kno) :is(table.p-table,table.cd-tbl){display:block!important;width:100%!important;min-width:0!important;border:0!important;background:var(--kno-card)!important;border-radius:22px;overflow:hidden}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) :is(table.p-table,table.cd-tbl) thead{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) :is(table.p-table,table.cd-tbl) tbody{display:block!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) :is(.cd-tblwrap,.p-table-wrap){overflow:visible!important;border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) :is(table.p-table,table.cd-tbl) tr{position:relative;display:grid!important;grid-template-columns:40px minmax(0,1fr) auto;column-gap:12px;row-gap:2px;align-items:center;padding:12px 16px!important;border:0!important;background:transparent!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) :is(table.p-table,table.cd-tbl) tr+tr::before{content:"";position:absolute;top:0;inset-inline:68px 0;height:.5px;background:var(--kno-line)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) :is(table.p-table,table.cd-tbl) td{display:block;padding:0!important;border:0!important;background:none!important;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr::after{content:"";grid-column:1;grid-row:1/3;order:-1;width:40px;height:40px;border-radius:50%;background:var(--kno-fill) center/20px no-repeat;-webkit-mask:none}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr>td:nth-child(2){grid-column:2;grid-row:1;color:var(--kno-ink)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr>td:nth-child(2) b{font-weight:600}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr>td:nth-child(3){grid-column:2;grid-row:2;font-size:13px!important;color:var(--kno-ink-2)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr>td:nth-child(4){grid-column:3;grid-row:1;justify-self:end;font:600 15px/1.2 "Inter Tight",sans-serif!important;color:var(--kno-ink)!important;font-variant-numeric:tabular-nums}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr>td:nth-child(1){grid-column:3;grid-row:2;justify-self:end;font:400 13px/1.2 "Inter Tight",sans-serif!important;color:var(--kno-ink-2)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr>td:nth-child(5){display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr>td:nth-child(6){grid-column:2;grid-row:1;justify-self:end;overflow:visible}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr>td:nth-child(6) .chip.ok{display:none}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr>td:nth-child(6) .chip{font-size:11px;padding:2px 8px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cd-tbl tr>td:nth-child(1){grid-column:1/3;grid-row:1/3;overflow:visible}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cd-tbl .cd-who{display:grid!important;grid-template-columns:40px minmax(0,1fr);column-gap:12px;align-items:center}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cd-tbl .cd-av{width:40px!important;height:40px!important;font-size:14px!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cd-tbl .cd-nm{display:flex!important;flex-direction:column;gap:2px;min-width:0;font:600 15px/1.25 "Inter Tight",sans-serif!important;color:var(--kno-ink)!important;overflow:hidden;text-overflow:ellipsis}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cd-tbl .cd-sub{font:400 13px/1.2 "Inter Tight",sans-serif!important;color:var(--kno-ink-2)!important;margin:0!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cd-tbl tr>td:nth-child(5){grid-column:3;grid-row:1;justify-self:end;font:600 15px/1.2 "Inter Tight",sans-serif!important;color:var(--kno-ink)!important;font-variant-numeric:tabular-nums}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cd-tbl tr>td:nth-child(7){grid-column:3;grid-row:2;justify-self:end;overflow:visible}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.cd-tbl tr>td:is(:nth-child(2),:nth-child(3),:nth-child(4),:nth-child(6),:nth-child(8)){display:none!important}
+}
+@media (max-width:600px){
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr::after{background-image:url(assets/icons/material/payments.svg);opacity:.9}
+  html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) body.kiwi-native-owner:not(#kno) table.p-table tr::after{filter:invert(1)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) :is(.p-hero,.cd-kpi,.kdr-strip){background:var(--kno-card)!important;border:0!important;border-radius:22px!important;box-shadow:0 1px 2px rgba(10,15,13,.04)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) :is(.p-hero,.cd-kpi,.kdr-strip)::before,html.kiwi-native body.kiwi-native-owner:not(#kno) :is(.p-hero,.cd-kpi,.kdr-strip)::after{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) :is(.p-hero,.cd-kpi) .l{font:500 13px/1.25 "Inter Tight",sans-serif!important;letter-spacing:0!important;text-transform:none!important;color:var(--kno-ink-2)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) :is(.p-hero,.cd-kpi) .l::before{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .cd-new{background:var(--kno-ink)!important;color:var(--kno-bg)!important;box-shadow:none!important;border:0!important;border-radius:999px!important;font-weight:600!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .cd-exp:not(.cd-new){border-radius:50%!important;background:var(--kno-fill)!important;border:0!important;color:var(--kno-ink)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .cd-search{border-radius:12px!important;border:0!important;background:var(--kno-fill)!important;min-height:44px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .cd-segs{border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;overflow-x:auto;scrollbar-width:none}
+}
+@media (max-width:600px){
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kno-title{display:none;margin-inline-end:auto;font:600 22px/1.1 "Inter Tight",sans-serif;letter-spacing:-.02em;color:var(--kno-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html.kiwi-native body.kiwi-native-owner:not(#kno)[data-kno-page="page"] .kno-title{display:block}
+  html.kiwi-native body.kiwi-native-owner:not(#kno)[data-kno-page="page"] .kw-topbar-brand{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .cd-kpi .l::first-letter{text-transform:uppercase}
+}
+@media (max-width:600px){
+  /* The full menu drawer starts under the status bar, not behind the clock. */
+  html.kiwi-native body.kiwi-native-owner:not(#kno) #kw-sidebar{padding-top:calc(var(--kiwi-safe-top) + 6px)!important;padding-bottom:calc(var(--kiwi-safe-bottom) + 12px)!important;box-sizing:border-box}
+}
+@media (max-width:600px){
+  /* Inner pages clip main on the x axis; that made the sticky header park
+     under the status bar instead of owning it. Clip the page, not main. */
+  html.kiwi-native body.kiwi-native-owner:not(#kno) main.main{overflow:visible!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno){overflow-x:clip}
+}
+@media (max-width:600px){
+  html.kiwi-native body:not(#kno) .clockin-clock{font-weight:600!important;letter-spacing:-.035em!important;font-variant-numeric:tabular-nums}
+  html.kiwi-native body:not(#kno) .clockin-btn{border-radius:999px!important}
+  html.kiwi-native body:not(#kno) .clockin-float-chips button{border-radius:999px!important}
 }
