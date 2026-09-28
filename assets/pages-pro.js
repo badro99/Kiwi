@@ -265,12 +265,15 @@ handlers['nav-transactions'] = () => {
   const RANGE_LABEL = RANGE_LABEL_STR[lang] || RANGE_LABEL_STR.fr;
   const FILTERS     = [T.all, T.cards, T.mobile, T.cash, T.refunds];
 
+  let renderedSignature = "";
+  const signature = rows => rows.map(r=>r.id+":"+r.amt).join("|");
   let host;
   const dr = window.Kiwi.appPage('transactions', { title: T.title, subtitle: '…', body: `<div data-tx-host></div>` });
   host = dr.el.querySelector('[data-tx-host]');
 
   function render() {
     const baseRows = rangeRows();
+    renderedSignature = signature(baseRows);
     const refunds  = rangeRefunds();
     /* ─── HERO = always the unfiltered total for the active range.
      * The hero number is what should match the dashboard's Commandes KPI tile.
@@ -323,6 +326,7 @@ handlers['nav-transactions'] = () => {
         }).join('')}
       </div>
 
+      <button type="button" class="kb ghost tx-update" data-action="tx-refresh" data-tx-refresh disabled>${({en:'Orders up to date',ar:'الطلبات محدثة'})[lang] || 'Commandes à jour'}</button>
       <div data-tx-pane="flux" style="display:${activeTab === 'flux' ? '' : 'none'};">
         ${display.length === 0 ? `
           <div style="padding:40px 16px; text-align:center; color:var(--n-500); font-size:13px;">${T.noOrders}</div>
@@ -331,7 +335,7 @@ handlers['nav-transactions'] = () => {
             <thead><tr><th>${T.hour.toUpperCase()}</th><th>${T.method.toUpperCase()}</th><th>${T.client.toUpperCase()}</th><th class="right">${T.amount.toUpperCase()}</th><th class="right">${T.tip.toUpperCase()}</th><th>${T.status.toUpperCase()}</th></tr></thead>
             <tbody>
               ${display.map(r => `
-                <tr data-action="tx-detail" data-arg="${r.id}" data-payment-kind="${r.cat === T.cash ? 'cash' : r.mask === 'QR' ? 'qr' : r.cat === T.cards || r.cat === T.mobile ? 'card' : 'other'}" style="cursor:pointer;">
+                <tr tabindex="0" role="button" data-action="tx-detail" data-arg="${r.id}" data-payment-kind="${r.cat === T.cash ? 'cash' : r.mask === 'QR' ? 'qr' : r.cat === T.cards || r.cat === T.mobile ? 'card' : 'other'}" style="cursor:pointer;">
                   <td class="mono">${r.t}</td>
                   <td><b>${r.n}</b> <span style="color:var(--n-500);">${r.mask}</span></td>
                   <td style="color:var(--n-600);">${r.c}</td>
@@ -429,7 +433,39 @@ handlers['nav-transactions'] = () => {
     ]);
   };
   handlers['tx-show-all'] = () => { expanded = true; render(); };
-  handlers['tx-detail']   = (_el, id) => toast(`${T.title} · ${id || ''}`, { type: 'info', duration: 1500 });
+  host.addEventListener('keydown', event => {
+    const row=event.target.closest('[data-action="tx-detail"]');
+    if(row && (event.key==='Enter' || event.key===' ')){event.preventDefault();row.click();}
+  });
+  handlers['tx-refresh'] = () => render();
+  handlers['tx-detail'] = (_el, id) => {
+    const row = rangeRows().find(r=>r.id===id);
+    if (!row || !window.KiwiDemoClock?.getSimState?.()) return;
+    const sale=row.sale;
+    const L=({
+      en:{items:'Items',payment:'Payment',time:'Time',table:'Table',staff:'Staff',refund:'Refund',print:'Print',demo:'Demo order',refundInfo:'No money was charged for this sample order. To refund a payment, open Till, then Refunds, and select the original receipt.',printing:'Sending to printer…',printed:'Sent to printer.',printerMissing:'No printer is connected. Connect a receipt printer in device setup and try again.'},
+      fr:{items:'Articles',payment:'Paiement',time:'Heure',table:'Table',staff:'Équipe',refund:'Rembourser',print:'Imprimer',demo:'Commande de démonstration',refundInfo:'Aucun montant n’a été encaissé pour cet exemple. Pour rembourser un paiement, ouvrez Caisse puis Remboursements et sélectionnez le ticket d’origine.',printing:'Envoi à l’imprimante…',printed:'Envoyé à l’imprimante.',printerMissing:'Aucune imprimante connectée. Configurez une imprimante de tickets puis réessayez.'},
+      ar:{items:'الأصناف',payment:'الدفع',time:'الوقت',table:'الطاولة',staff:'الموظف',refund:'استرداد',print:'طباعة',demo:'طلب تجريبي',refundInfo:'لم يُحصّل أي مبلغ لهذا الطلب التجريبي. لاسترداد دفعة افتح الصندوق ثم الاستردادات واختر الإيصال الأصلي.',printing:'جارٍ الإرسال للطابعة…',printed:'أُرسل إلى الطابعة.',printerMissing:'لا توجد طابعة متصلة. اربط طابعة إيصالات في إعداد الجهاز ثم أعد المحاولة.'}
+    })[lang] || {};
+    const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const sheet=modal({title:sale.ref,tag:L.demo,body:`
+      <div class="tx-detail-hero"><div class="amt">${fmt2(sale.amount)} MAD</div></div>
+      <dl class="tx-detail-grid"><dt>${L.payment}</dt><dd>${esc(row.n)}</dd><dt>${L.time}</dt><dd>${esc(new Date(sale.ts).toLocaleString(lang==='en'?'en-GB':lang==='ar'?'ar-MA':'fr-FR',{timeZone:window.KiwiDayReport?.timezone?.()}))}</dd><dt>${L.table}</dt><dd>${esc(sale.table)}</dd><dt>${L.staff}</dt><dd>${esc(sale.staff)}</dd></dl>
+      <h4>${L.items}</h4>${sale.lines.map(line=>`<p>${line.qty} × ${esc(line.name)} <b>${fmt2(line.total)} MAD</b></p>`).join('')}
+      <p role="status" data-tx-detail-status></p>`,foot:`<button type="button" class="kb ghost" data-tx-refund>${L.refund}</button><button type="button" class="kb atlas" data-tx-print>${L.print}</button>`});
+    sheet.el.classList.add('kiwi-native-order-sheet');
+    const status=sheet.el.querySelector('[data-tx-detail-status]');
+    sheet.el.querySelector('[data-tx-refund]').onclick=()=>{status.textContent=L.refundInfo;};
+    sheet.el.querySelector('[data-tx-print]').onclick=async event=>{
+      const button=event.currentTarget; button.disabled=true;status.textContent=L.printing;
+      try {
+        const result=await window.KiwiPrinter?.printReceipt?.({shop:'Kiwi · '+L.demo,ref:sale.ref,date:row.t,lines:sale.lines.map(l=>({name:l.name,qty:l.qty,price:fmt2(l.total)+' MAD'})),total:fmt2(sale.amount)+' MAD',method:row.n,openDrawer:false});
+        status.textContent=result?.ok?L.printed:L.printerMissing;
+        window.dispatchEvent(new CustomEvent('kiwi:native-haptic',{detail:{kind:result?.ok?'success':'danger'}}));
+      } catch (_) {status.textContent=L.printerMissing;}
+      finally {button.disabled=false;}
+    };
+  };
   if (!handlers['fra-investigate']) handlers['fra-investigate'] = () => toast(T.dossierOuvert, { type: 'info', duration: 1800 });
   if (!handlers['fra-allow'])       handlers['fra-allow']       = () => toast(T.marqueLegitime, { type: 'success', duration: 1600 });
   if (!handlers['fra-block'])       handlers['fra-block']       = () => toast(T.carteBloquee, { type: 'success', duration: 1800 });
@@ -441,7 +477,15 @@ handlers['nav-transactions'] = () => {
       // persists and is shared, so guard on the active page, not isConnected).
       if (!dr.el || !dr.el.isConnected || (window.Kiwi && window.Kiwi.activePage !== 'transactions')) { unsub?.(); unsub = null; return; }
       if (activeRange !== 'aujourdhui') return;
-      render();
+      // A tick never destroys the row the finger or keyboard is using.
+      // New data is offered explicitly; filtering/refreshing are user actions.
+      const update=host.querySelector('[data-tx-refresh]');
+      if(update) {
+        const current=signature(rangeRows())===renderedSignature;
+        update.disabled=current;
+        update.textContent=current ? ({en:'Orders up to date',ar:'الطلبات محدثة'})[lang] || 'Commandes à jour'
+          : ({en:'Show updated orders',ar:'عرض الطلبات المحدثة'})[lang] || 'Afficher les nouvelles commandes';
+      }
     });
   }
   const origClose = dr.close || (() => {});

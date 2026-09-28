@@ -519,3 +519,20 @@ html.kiwi-native [data-action="upgrade-pro"],html.kiwi-native [data-action="upgr
   html.kiwi-native body.kiwi-native-team:not(#kno) .screen-clockin>*{flex-shrink:0}
   html.kiwi-native .screen-clockin>.kiwi-native-role-back{position:sticky;top:0;align-self:flex-start;margin:0 48px 0 0;background:var(--surface);border-radius:24px;z-index:2}
 }
+
+html.kiwi-native .kiwi-native-order-sheet{align-items:flex-end;padding:0}
+html.kiwi-native .kiwi-native-order-sheet .kiwi-modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;max-height:calc(100dvh - var(--kiwi-safe-top) - 12px);padding-bottom:calc(20px + var(--kiwi-safe-bottom));overflow-y:auto}
+
+html.kiwi-native .kiwi-native-order-sheet .kiwi-modal{transform:translateY(100%);transition:transform .42s var(--spring)}
+html.kiwi-native .kiwi-native-order-sheet.in .kiwi-modal{transform:translateY(0)}
+html.kiwi-native .tx-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:20px 0}
+html.kiwi-native .tx-detail-grid dt{color:var(--n-500)}
+html.kiwi-native .tx-detail-grid dd{margin:0;text-align:end;overflow-wrap:anywhere}
+html.kiwi-native .tx-update{height:44px;white-space:nowrap;margin-bottom:8px}
+@media(prefers-reduced-motion:reduce){html.kiwi-native .kiwi-native-order-sheet .kiwi-modal{transition:none}}
+/* The web glass skin must not override the native receipt sheet. */
+html.kiwi-native body .kiwi-native-order-sheet{align-items:flex-end!important;padding:0!important}
+html.kiwi-native body .kiwi-native-order-sheet .kiwi-modal{box-sizing:border-box;width:100%!important;max-width:none!important;border-radius:28px 28px 0 0!important;background:var(--kno-card,#FFFDFA)!important;color:var(--kno-ink,#0A0F0D)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.kiwi-native body .kiwi-native-order-sheet .kiwi-modal-foot{border-radius:0!important;background:transparent!important}
+html.kiwi-native body .kiwi-native-order-sheet [data-tx-print]{background:#0B6E4F!important;color:#FFFFFF!important;border-color:transparent!important;box-shadow:none!important}
+html.kiwi-native body .kiwi-native-order-sheet .tag{background:var(--kno-fill)!important;color:var(--kno-ink)!important}
