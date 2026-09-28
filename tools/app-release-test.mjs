@@ -57,7 +57,7 @@ check('Apple privacy manifest declares no tracking and diagnostic collection',
 // Customer/guest fields are explicit collection, not merely hypothetical free text.
 for (const type of ['PhysicalAddress', 'Health', 'SensitiveInfo', 'PurchaseHistory',
   'OtherDataTypes', 'CustomerSupport', 'PaymentInfo', 'SearchHistory', 'ProductInteraction',
-  'PhoneNumber', 'AudioData', 'OtherUserContent']) {
+  'PhoneNumber', 'AudioData', 'OtherUserContent', 'EmailsOrTextMessages']) {
   check('privacy manifest discloses ' + type, privacy.includes('NSPrivacyCollectedDataType' + type + '</string>'));
 }
 const publicPrivacy = read('privacy.html');

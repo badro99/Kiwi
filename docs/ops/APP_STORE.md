@@ -264,6 +264,7 @@ Inventaire technique à confirmer dans App Store Connect pour le binaire final ;
 | Historique d’achats | Oui | Oui | Fonctionnement | achats, visites, dépenses et fidélité des clients |
 | Santé | Oui | Oui | Fonctionnement | allergies facultatives dans la fiche voyageur, pas de HealthKit |
 | Informations sensibles | Oui | Oui | Fonctionnement | besoins d’accessibilité facultatifs pouvant révéler un handicap |
+| E-mails ou messages texte | Oui | Oui | Fonctionnement | messages d’équipe transmis aux employés (`functions/api/employee.js`, document `team-messages`) |
 | Assistance client | Oui | Oui | Fonctionnement | demandes, réponses, pièces jointes et diagnostic |
 | Autres types de données | Oui | Oui | Fonctionnement | anniversaire, genre, nationalité, référence de document d’identité |
 | Historique de recherche | Oui | Oui (déclaration conservatrice) | Fonctionnement, analyse | recherches dans l’aide enregistrées après masquage e-mail / chiffres |
