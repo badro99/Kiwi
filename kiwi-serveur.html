@@ -4944,6 +4944,41 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     const EMPLOYEE_LANGUAGE_KEY = 'kiwi-employee-language:' + (svMerchant() || 'demo');
     const EMPLOYEE_TRANSLATIONS = {
       en: {
+        "Cet établissement est suspendu": "This establishment is suspended",
+        "Service momentanément indisponible": "Service temporarily unavailable",
+        "Code de pointage incorrect ou expiré": "Clock-in code is incorrect or expired",
+        "Trop d'essais · réessayez plus tard": "Too many attempts · try again later",
+        "Email ou code personnel incorrect": "Incorrect email or personal code",
+        "Équipe": "Team",
+        "Bonjour": "Hello",
+        "Entrez votre code": "Enter your code",
+        "Votre compte est créé par votre responsable dans Équipe": "Your manager creates your account in Team",
+        "Connexion équipe": "Team sign in",
+        "Email professionnel": "Work email",
+        "Code personnel": "Personal code",
+        "Se connecter": "Sign in",
+        "Saisissez le code affiché dans la caisse": "Enter the code displayed on the till",
+        "Saisissez le code de la caisse pour ouvrir le service": "Enter the till code to start your shift",
+        "Saisissez le code de la caisse pour terminer le service": "Enter the till code to end your shift",
+        "Pointer l'arrivée": "Clock in",
+        "Pointer l’arrivée": "Clock in",
+        "Pointer le départ": "Clock out",
+        "Consulter sans pointer": "View without clocking in",
+        "Consulter l'application sans pointer": "View without clocking in",
+        "Apparence": "Appearance",
+        "Jour": "Light",
+        "Nuit": "Dark",
+        "Système": "System",
+        "Apparence de l'application": "App appearance",
+        "Apparence : jour": "Appearance: light",
+        "Apparence : nuit": "Appearance: dark",
+        "Apparence : suivre le système": "Appearance: system",
+        "Connexion PIN": "Code sign in",
+        "Clavier numérique": "Number pad",
+        "Effacer": "Delete",
+        "Code de pointage à six chiffres": "Six-digit clock-in code",
+        "Application équipe": "Team app",
+        "Rafraîchir": "Refresh",
         'Notifications': 'Notifications',
         'Tables': 'Tables',
         "Rafraîchir l'application": 'Refresh app',
@@ -5054,6 +5089,41 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         ,'Annulée':'Cancelled'
       },
       ar: {
+        "Cet établissement est suspendu": "هذا الفرع موقوف",
+        "Service momentanément indisponible": "الخدمة غير متاحة مؤقتاً",
+        "Code de pointage incorrect ou expiré": "رمز بدء الوردية غير صحيح أو منتهي الصلاحية",
+        "Trop d'essais · réessayez plus tard": "محاولات كثيرة · أعد المحاولة لاحقاً",
+        "Email ou code personnel incorrect": "البريد الإلكتروني أو الرمز الشخصي غير صحيح",
+        "Équipe": "الفريق",
+        "Bonjour": "مرحباً",
+        "Entrez votre code": "أدخل رمزك",
+        "Votre compte est créé par votre responsable dans Équipe": "ينشئ مديرك حسابك في قسم الفريق",
+        "Connexion équipe": "تسجيل دخول الفريق",
+        "Email professionnel": "البريد الإلكتروني للعمل",
+        "Code personnel": "الرمز الشخصي",
+        "Se connecter": "تسجيل الدخول",
+        "Saisissez le code affiché dans la caisse": "أدخل الرمز المعروض على الصندوق",
+        "Saisissez le code de la caisse pour ouvrir le service": "أدخل رمز الصندوق لبدء الوردية",
+        "Saisissez le code de la caisse pour terminer le service": "أدخل رمز الصندوق لإنهاء الوردية",
+        "Pointer l'arrivée": "بدء الوردية",
+        "Pointer l’arrivée": "بدء الوردية",
+        "Pointer le départ": "إنهاء الوردية",
+        "Consulter sans pointer": "عرض دون بدء الوردية",
+        "Consulter l'application sans pointer": "عرض دون بدء الوردية",
+        "Apparence": "المظهر",
+        "Jour": "فاتح",
+        "Nuit": "داكن",
+        "Système": "النظام",
+        "Apparence de l'application": "مظهر التطبيق",
+        "Apparence : jour": "المظهر: فاتح",
+        "Apparence : nuit": "المظهر: داكن",
+        "Apparence : suivre le système": "المظهر: النظام",
+        "Connexion PIN": "تسجيل الدخول بالرمز",
+        "Clavier numérique": "لوحة الأرقام",
+        "Effacer": "مسح",
+        "Code de pointage à six chiffres": "رمز بدء الوردية من ستة أرقام",
+        "Application équipe": "تطبيق الفريق",
+        "Rafraîchir": "تحديث",
         'Notifications': 'الإشعارات',
         'Tables': 'الطاولات',
         "Rafraîchir l'application": 'تحديث التطبيق',
@@ -5166,15 +5236,14 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     };
     let employeeLanguage = (() => {
       try {
-        const saved = localStorage.getItem(EMPLOYEE_LANGUAGE_KEY);
-        if (saved === 'ary') return 'ar';
-        if (['fr','en','ar'].includes(saved)) return saved;
-        // Native setup owns the initial locale; a saved venue preference wins.
+        // On iOS the app locale wins over old venue defaults. Web remains venue-scoped.
         if (window.Capacitor?.isNativePlatform?.()) {
           const locale = String(localStorage.getItem('kiwiNativeLocale') || navigator.language || 'fr').toLowerCase().split('-')[0];
           return locale === 'en' || locale === 'ar' ? locale : 'fr';
         }
-        return 'fr';
+        const saved = localStorage.getItem(EMPLOYEE_LANGUAGE_KEY);
+        if (saved === 'ary') return 'ar';
+        return ['fr','en','ar'].includes(saved) ? saved : 'fr';
       } catch (_) { return 'fr'; }
     })();
     /* Une ligne de commande garde le libellé du patron (c'est ce que la cuisine
@@ -5185,6 +5254,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     const employeeI18nAttrs = new WeakMap();
     function employeeTranslation(value) {
       if (employeeLanguage === 'fr') return value;
+      if (/^Bonjour(?:\s|$)/.test(value)) return value.replace(/^Bonjour/, employeeLanguage === 'en' ? 'Hello' : 'مرحباً');
       return (EMPLOYEE_TRANSLATIONS[employeeLanguage] || {})[value] || value;
     }
     function employeeLocale() {
@@ -5245,6 +5315,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     function setEmployeeLanguage(language) {
       if (!['fr', 'en', 'ar'].includes(language)) return;
       employeeLanguage = language;
+      if (window.Capacitor?.isNativePlatform?.()) { try { localStorage.setItem('kiwiNativeLocale', language); } catch (_) {} }
       try { localStorage.setItem(EMPLOYEE_LANGUAGE_KEY, language); } catch (_) {}
       renderEmployeeLanguage();
       renderSchedule();

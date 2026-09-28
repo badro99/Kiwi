@@ -48,6 +48,9 @@
      pas. C'est la bonne défaillance pour une caisse. */
   var DICT = {
     en: {
+      "Khtar la transaction à rembourser, journal d'lyoum.": "Choose a transaction to refund from today’s journal.",
+      "Rechercher, table, montant, réf": "Search table, amount or reference",
+      "Rechercher une transaction": "Search transactions",
       /* Native opening screen uses the same chosen language as setup. */
       'version commerçant': 'merchant edition', '· version commerçant': '· merchant edition', 'Bonjour': 'Hello',
       'Caissier': 'Cashier', 'Fond d’ouverture': 'Opening float',
@@ -323,6 +326,9 @@
     },
 
     ar: {
+      "Khtar la transaction à rembourser, journal d'lyoum.": "اختر معاملة لاستردادها من سجل اليوم.",
+      "Rechercher, table, montant, réf": "ابحث بالطاولة أو المبلغ أو المرجع",
+      "Rechercher une transaction": "البحث في المعاملات",
       'version commerçant': 'نسخة التاجر', '· version commerçant': '· نسخة التاجر', 'Bonjour': 'مرحباً',
       'Caissier': 'أمين الصندوق', 'Fond d’ouverture': 'رصيد الافتتاح',
       "Fond d'ouverture": 'رصيد الافتتاح', 'Ouvrir la caisse': 'افتح الصندوق',

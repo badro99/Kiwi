@@ -65,6 +65,11 @@
         consentRequired: 'الموافقة مطلوبة · حدّد واتساب / SMS للحفظ.', alreadyExists: 'العميل مسجل مسبقاً', added: 'تمت إضافة العميل' } },
   };
 
+  function genderLabel(value) {
+    var values = { en:{Femme:'Woman',Homme:'Man',Autre:'Other'}, ar:{Femme:'أنثى',Homme:'ذكر',Autre:'آخر'} };
+    return (values[lang()] || {})[value] || value;
+  }
+
   var SEG_LBL = function (T, id) { return T.tag[id] || id; };
   var DAY = 86400000;
   function daysSince(ts) { return ts ? Math.floor((Date.now() - ts) / DAY) : Infinity; }
@@ -404,7 +409,7 @@
         fld('cdn-email', T.th.email, inp('cdn-email', '', '', 'email')) +
         fld('cdn-city', T.th.city, inp('cdn-city', '', '')) +
         fld('cdn-birthday', T.birthday, inp('cdn-birthday', '', '', 'date')) +
-        '<label class="cd-f"><span>' + esc(T.gender) + '</span><select id="cdn-gender"><option value=""></option><option>Femme</option><option>Homme</option><option>Autre</option></select></label>' +
+        '<label class="cd-f"><span>' + esc(T.gender) + '</span><select id="cdn-gender"><option value=""></option>' + ['Femme','Homme','Autre'].map(function (g) { return '<option value="' + g + '">' + esc(genderLabel(g)) + '</option>'; }).join('') + '</select></label>' +
         hotelBox +
         fld('cdn-notes', T.notes, inp('cdn-notes', '', '')) +
         '</div><label class="cd-f-check"><input type="checkbox" id="cdn-consent"' + (hotel ? '' : ' checked') + '><span>' + esc(T.consentWa) + (hotel ? '' : ' · requis CNDP 09-08') + '</span></label>' +
@@ -493,7 +498,7 @@
     }).join('') : '<div class="cd-history-empty"><b>' + esc(T.noHistory) + '</b>' + esc(T.noHistorySub) + '</div>';
     var body = '<div style="margin-top:4px">' +
       row(T.th.phone, c.phone) + row(T.th.email, c.email) + row(T.th.city, c.city) + row(T.address, c.address) +
-      row(T.birthday, c.birthday) + row(T.gender, c.gender) +
+      row(T.birthday, c.birthday) + row(T.gender, genderLabel(c.gender)) +
       hospitalityRows +
       '<div class="cd-drow"><span class="k">' + T.th.visits + ' · ' + T.th.spend + '</span><span class="v">' + (c.visits || 0) + ' · ' + fmt(c.spend) + ' MAD</span></div>' +
       '<div class="cd-drow"><span class="k">' + T.th.points + ' · ' + T.th.seg + '</span><span class="v">' + fmt(c.points) + ' · ' + SEG_LBL(T, c.seg) + '</span></div>' +

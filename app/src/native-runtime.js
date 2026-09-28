@@ -420,7 +420,7 @@
       fetch('/auth/logout', { credentials:'include', redirect:'manual' }).then(function () {
         localStorage.removeItem('kiwiAppRole');
         call(socket, 'secureRemove', { key:'app-role' }).then(function () { location.href = 'index.html?setup=1'; });
-      }).catch(function () { window.alert(root.lang === 'fr' ? 'Déconnexion impossible hors ligne.' : 'Sign out needs a network connection.'); });
+      }).catch(function () { window.alert(root.lang === 'ar' ? 'يتطلب تسجيل الخروج اتصالاً بالشبكة.' : root.lang === 'en' ? 'Sign out needs a network connection.' : 'Déconnexion impossible hors ligne.'); });
       return true;
     }
     return false;
@@ -1028,7 +1028,7 @@
   }
 
   function authenticateBiometric(reason) {
-    return call(socket, 'authenticateBiometric', { reason: reason || 'Déverrouiller Kiwi Pro' }).then(function (r) {
+    return call(socket, 'authenticateBiometric', { reason: reason || (root.lang === 'ar' ? 'فتح Kiwi Pro' : root.lang === 'en' ? 'Unlock Kiwi Pro' : 'Déverrouiller Kiwi Pro') }).then(function (r) {
       return r || { authenticated: false, fallback: true };
     });
   }
@@ -1064,7 +1064,7 @@
         try { sessionStorage.removeItem('kiwi:native:biometric-pending'); } catch (_) {}
         return false;
       }
-      return authenticateBiometric('Déverrouiller Kiwi Pro').then(function (res) {
+      return authenticateBiometric().then(function (res) {
         try {
           sessionStorage.removeItem('kiwi:native:biometric-pending');
           sessionStorage.removeItem('kiwiIdleLockReason');
