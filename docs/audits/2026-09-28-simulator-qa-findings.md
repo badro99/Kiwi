@@ -211,6 +211,52 @@ Verified OK on the till: clock-in with an "Other" float (it gets a decimal pad),
 list and open table, the table bill sheet, Waiting list add/remove, Refund list, and Night
 mode toggles the whole till to dark. The status bar follows the theme.
 
+## Kitchen and Team roles (Pro Max)
+
+- **K1 (P0) · Kitchen is a dead end.** Picking Kitchen without a pairing code leaves the user
+  on the six-digit keypad with no Back, no More capsule and no way to change role. The edge
+  swipe does nothing, and relaunching reopens the keypad ("Kiwi will open this role
+  automatically"). The only way out is deleting the app, which fails App Review guideline
+  2.1 the moment a reviewer taps Kitchen.
+  - Cause: `#pair` in `kiwi-cuisine.html` is `role="dialog"`. `nativeBlockingLayer()`
+    treats it as a modal, so `initNativeHostWorkspace` sends `tabs: []` and the More
+    capsule, the only route to Change role, disappears.
+  - Fix: exempt `#pair` from the blocking check and/or add a visible "Change role" text
+    button under the keypad.
+  - Test: every role's entry screen must offer a route back to the role picker without a
+    code.
+- **E1 (P1) · Kiwi Team ignores the device and app language.** On an English device the lock
+  ("ÉQUIPE", "Bonjour Yassir", "Entrez votre code"), the clock-in ("Saisissez le code de la
+  caisse…", "Pointer l'arrivée", "Consulter sans pointer") and even the native More sheet
+  ("Plus", "Changer de rôle", "Se déconnecter", "Supprimer mon compte") are French. The app
+  has its own `kiwi-employee-language` key that defaults to French. It should default to
+  the device/app locale.
+- **E2 (P1) · The in-app language switch is incomplete:**
+  - EN leaves "OPPORTUNITÉS", "Mes prochains services", "Mes demandes", "Aucun élément
+    pour le moment", "Apparence", "Jour", "Nuit" and "Système";
+  - AR leaves the same, plus "SERVICES".
+  - In RTL, Latin strings lose bidi isolation, so full stops jump to the wrong end
+    (".Yassir K", ".Aucun élément…"). Use `dir="auto"`/`<bdi>` on names and mixed
+    strings.
+- **E3 (P1) · Team home has the old dashboard problems:**
+  - an empty ~60 pt band between the status bar and the header (the header does not own
+    the status-bar strip);
+  - a lone "More" capsule instead of tabs;
+  - caps tracked labels ("CETTE SEMAINE", "HEURES TRAVAILLÉES", "SAISISSEZ LE CODE…");
+  - an 800-weight clock.
+
+  Apply the owner-home treatment: a header that owns the strip, tabs (Today · Schedule ·
+  Hours · More), sentence-case labels, and a 600 weight.
+- **E4 (P2) · Team demo data contradicts itself:**
+  - "Prochain service · Demain 17:00" next to "Mes prochains services 0";
+  - "142h 30 ce mois" while "cette semaine 0h00".
+- **E5 (P2) · The Team lock keypad** matches the passcode style, but its footer is an all-caps
+  paragraph, and the refresh button floats alone at the top right with no label.
+
+Verified OK: the Team demo code path works (any code except 0000 opens the waiter
+view), view-only mode, the language switch applies live, RTL mirrors the layout, and the
+Kitchen keypad renders in the new passcode style.
+
 ## Verified OK
 
 - Fresh install shows the splash, then sign-in. There is no crash, and no white flash between
