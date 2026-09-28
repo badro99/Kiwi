@@ -22,9 +22,12 @@ const server = http.createServer((req,res) => {
 });
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const browser = await puppeteer.launch({executablePath,headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+let page;
 let checks=0;
+// Resolves once the host node has stayed the same element for 800 ms.
+async function settled(sel){ await page.waitForFunction((q)=>{ const el=document.querySelector(q); const now=performance.now(); if(!el) return false; if(window.__settleEl!==el){ window.__settleEl=el; window.__settleAt=now; return false; } return now-window.__settleAt>800; },{polling:100},sel); }
 try {
-  const page=await browser.newPage();
+  page=await browser.newPage();
   await page.setViewport({width:1440,height:900});
   await page.evaluateOnNewDocument(()=>{
     const venue={id:'v-date-selector',name:'Date selector fixture',slug:'date-selector',type:'restaurant',custom:true,status:'En service',txCount:0,staffCount:0};
@@ -33,12 +36,16 @@ try {
   await page.goto(`http://127.0.0.1:${server.address().port}/dashboard.html`,{waitUntil:'load',timeout:30000});
   await page.waitForSelector('.kiwi-lock-skip',{visible:true}); await page.click('.kiwi-lock-skip');
   await page.waitForSelector('.sidebar nav a[data-nav="transactions"]');
+  // pages-pro.js wraps nav handlers at load+150 ms; a click before that opens the demo page.
+  await page.waitForFunction(()=>window.Kiwi?.handlers?.['nav-transactions']?.__kiwiStarter===true);
   await page.click('.sidebar nav a[data-nav="transactions"]');
   await page.waitForSelector('[data-rtx-day-selector] [data-dr-day-offset="2"]',{visible:true}); checks++;
   assert.ok(await page.$('[data-rtx-day-selector] .dr-pills[data-kw-lens]'),'Commandes uses the shared liquid lens'); checks++;
   assert.equal(await page.$eval('[data-rtx-day-selector]',el=>[...el.querySelectorAll('button')].map(x=>x.textContent.trim()).join('|')),"Aujourd'hui|Hier|Avant-hier|Choisir une date"); checks++;
   await page.click('[data-rtx-day-selector] [data-dr-day-offset="2"]');
   await page.waitForFunction(()=>document.querySelector('[data-rtx-day-selector] [data-dr-day-offset="2"]')?.getAttribute('aria-pressed')==='true'); checks++;
+  // Choosing a day re-renders the page (sales, then the activity fetch). Click once it has settled.
+  await settled('[data-rtx-day-selector]');
   await page.click('[data-rtx-day-selector] [data-dr-day-custom]');
   await page.waitForSelector('.dr-popover.open [data-drp-apply]',{visible:true}); checks++;
   assert.ok((await page.$$('.dr-popover.open .drp-month')).length >= 1); checks++;
