@@ -353,10 +353,11 @@ assume the designation extends to Amira's Boutique, Maison, or other venues.
   to prevent — `tools/config-pin-projection-test.mjs` fails the build for it.
 - **Never record or commit merchant PINs, staff PINs, caisse personal codes, or
   pairing codes**, and never bypass the account gate programmatically. For real
-  merchants, leave code entry to their staff. For the owner-designated Amira Cafe
-  testing account only, the agent may enter a code through the normal UI when
-  the owner explicitly supplies and authorizes it for the current task; do not
-  infer that permission for any other merchant or venue.
+  merchants, leave code entry to their staff. **Demo surfaces and the
+  owner-designated Amira Cafe testing account are standing exceptions (owner,
+  2026-09-28, repeated many times): agents may enter their codes through the
+  normal UI for testing without asking again.** Still never print, log or commit
+  those codes. Do not infer that permission for any other merchant or venue.
 
 ---
 
