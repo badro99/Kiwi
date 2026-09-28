@@ -34,7 +34,7 @@ day one. P2 is polish.
    empty name: Continue is silently ignored. Same fix: an inline message under the field,
    the field ringed, and a warning haptic.
 
-4. **Tapping the mic in the AI box will crash the app on a real iPhone.** `assets/agent-voice.js:117`
+P0-4. **Tapping the mic in the AI box will crash the app on a real iPhone.** `assets/agent-voice.js:117`
    calls `getUserMedia({audio:true})`, and Info.plist has no `NSMicrophoneUsageDescription`.
    iOS kills an app that touches the mic without it (the simulator does not enforce this; it
    silently showed a "recording" state). A reviewer tapping the mic means an automatic
@@ -42,7 +42,7 @@ day one. P2 is polish.
    if speech recognition is used) in FR/EN/AR, and check the other `getUserMedia` callers
    (`pos-boutique.js`, `pos-maison.js`, `pressing-caisse.js`, `retail-scan.js`: the camera
    string exists, the mic string does not). Then verify on a physical device.
-5. **Taps on the native tab bar also reach the page underneath.** On Home, the Gross margin
+P0-5. **Taps on the native tab bar also reach the page underneath.** On Home, the Gross margin
    KPI card sits under the tab capsule; tapping the Clients tab selected Clients *and* opened
    the "Gross Margin" sheet. Make the web content under the capsule non-interactive (or
    stop the touch in Swift) so a tab tap never clicks through.
@@ -172,6 +172,44 @@ day one. P2 is polish.
 28. The AI-suggestion notification icon is blue, and the QR payment segment is brown/orange:
     neither is in the brand palette.
 29. The Report footer (ICE number · Kiwi Pro 1.0 (3) · Help centre) sits under the tab capsule.
+
+## Till role (Pro Max, 440 × 956 pt, build `kiwi-pass2`)
+
+- **T1 (P1) · Several till screens are still in French in the EN UI:**
+  - the waiting-list form ("File d'attente", "Nom du client", "Combien de personnes?",
+    "Préférence d'installation", "Intérieur", "Peu importe");
+  - the waiting-list card ("2 pers.", "Attabler", "Retirer", "à l'instant");
+  - the drawer's theme toggle, which becomes "Mode jour" once Night mode is on;
+  - the takeaway history header "HISTORIQUE · DATE DE REMISE INCONNUE";
+  - the refund search placeholder.
+
+  The refund subtitle mixes Darija and French: "Khtar la transaction à rembourser, journal
+  d'lyoum."
+- **T2 (P1) · Till modals are centred cards, not bottom sheets:** waiting-list add, Refund,
+  and Till authorisation. On a phone they should be bottom sheets with a grabber and
+  swipe-to-dismiss, and the keyboard must not hide their buttons (waiting-list Add/Cancel
+  sat under the keyboard).
+- **T3 (P1) · Refund auto-focuses its search.** The keyboard covers the transaction list you
+  came to pick from. Don't auto-focus. The field also shows a square focus ring inside its
+  rounded shape.
+- **T4 (P1) · The Till tools drawer is a web left panel, not iOS.** It has an orphan
+  "Open drawer" tile alone on its row, and a "Menu 0" badge while the menu has 35 items.
+  "Kitchen printing" carries a "·" badge, and "Leave" and "End of shift" share an icon. On a
+  phone it should be a grouped list sheet.
+- **T5 (P2) · The "Till authorisation" keypad** (cancel table) uses square keys, in a different
+  style from the new round passcode keys, and shows "LOCAL DEMO · ANY CODE WORKS" in caps.
+  Its subtitle is French ("Annuler la table T22").
+- **T6 (P2) · An empty table bill** shows "Take payment" as the primary action at 0 MAD. It
+  should be disabled, or the primary should be "Send to kitchen" until items exist.
+- **T7 (P2) · Takeaway board cards use a mint left accent bar.** That is the "accent rail on
+  rounded card" pattern the brand audit calls an AI tell. Use a status chip only. Order
+  51 shows "Ready · Paid" but still sits under "In progress".
+- **T8 (P2) · Floor plan:** the list rows are fine. The "1st floor" pill uses a superscript
+  "st" that renders oddly, and the "5 / 9 occupied" footer has a leading "·".
+
+Verified OK on the till: clock-in with an "Other" float (it gets a decimal pad), Floor
+list and open table, the table bill sheet, Waiting list add/remove, Refund list, and Night
+mode toggles the whole till to dark. The status bar follows the theme.
 
 ## Verified OK
 
