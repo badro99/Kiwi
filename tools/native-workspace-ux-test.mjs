@@ -153,7 +153,7 @@ ok(statusBarCalls.at(-1) === 'DARK', 'kitchen pairing remains an ink gate in lig
 namedElements.delete('pair');
 location.pathname = '/dashboard.html';
 appearanceListeners.forEach((handler) => handler({ matches: false }));
-ok((hostContexts.at(-1)?.tabs || []).some((tab) => tab.id === 'more'), 'every compact workspace has a native More route');
+ok((hostContexts.at(-1)?.tabs || []).length > 0 && !(hostContexts.at(-1)?.tabs || []).some((tab) => tab.id === 'more'), 'the owner workspace publishes its routes; the full menu lives behind the header hamburger, not a More tab');
 dashboardLock = element();
 window.KiwiNativeHostRequestState();
 ok(hostContexts.at(-1).tabs.length === 0, 'dashboard PIN lock removes the native capsule');
@@ -168,7 +168,7 @@ window.KiwiNativeHostRequestState();
 ok(hostContexts.at(-1).tabs.length === 0, 'an open payment modal removes the native capsule');
 modal.classList.remove('is-open');
 window.KiwiNativeHostRequestState();
-ok(hostContexts.at(-1).tabs.length > 0 && hostContexts.at(-1).tabs.some((tab) => tab.id === 'more'), 'closing the modal restores native navigation');
+ok(hostContexts.at(-1).tabs.length > 0 && hostContexts.at(-1).tabs.some((tab) => tab.id === 'accueil'), 'closing the modal restores native navigation');
 const styleCount = statusBarCalls.length;
 observers.forEach((callback) => callback([{ target: body }]));
 ok(statusBarCalls.length === styleCount, 'unchanged style does not repeatedly cross the native bridge');

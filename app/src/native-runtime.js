@@ -894,8 +894,7 @@
         { id:'accueil', label:copy.home },
         { id:'transactions', label:copy.orders },
         { id:'rapport', label:copy.report },
-        { id:'clients', label:copy.clients },
-        { id:'more', label:copy.more }
+        { id:'clients', label:copy.clients }
       ];
     }
     function openMenu() {
@@ -977,6 +976,49 @@
       if (typeof media.addEventListener === 'function') media.addEventListener('change', apply);
       apply();
     })();
+
+    /* The drawer is the one menu: the full dashboard, then the account. These
+       run the same host actions the old More sheet sent. */
+    function accountCopy() {
+      var lang = String(root.lang || 'fr');
+      if (lang.indexOf('ar') === 0) return { label:'الحساب', role:'تغيير الدور', out:'تسجيل الخروج', ai:'خصوصية Kiwi AI', del:'حذف حسابي' };
+      if (lang.indexOf('en') === 0) return { label:'Account', role:'Change role', out:'Sign out', ai:'Kiwi AI privacy', del:'Delete my account' };
+      return { label:'Compte', role:'Changer de rôle', out:'Se déconnecter', ai:'Confidentialité Kiwi AI', del:'Supprimer mon compte' };
+    }
+    function closeDrawer() {
+      var burger = document.querySelector('.kw-hamburger');
+      if (document.body.classList.contains('kw-menu-open') && burger) burger.click();
+      document.body.classList.remove('nav-open');
+    }
+    function mountAccountMenu() {
+      var s = sidebar();
+      if (!s) return;
+      var words = accountCopy();
+      var box = s.querySelector('.kno-account');
+      if (box && box.getAttribute('data-lang') === root.lang) return;
+      if (box) box.remove();
+      box = document.createElement('div');
+      box.className = 'kno-account';
+      box.setAttribute('role', 'group');
+      box.setAttribute('aria-label', words.label);
+      box.setAttribute('data-lang', root.lang || '');
+      box.innerHTML = [['change-role', words.role, 'swap_horiz.svg', ''], ['sign-out', words.out, 'logout.svg', ''], ['ai-privacy', words.ai, 'shield.svg', ''], ['delete-account', words.del, 'delete.svg', 'is-danger']].map(function (item) {
+        return '<button type="button" data-kno-account="' + item[0] + '" class="' + item[3] + '"><i style="--kno-icon:url(assets/icons/material/' + item[2] + ')" aria-hidden="true"></i><span>' + item[1] + '</span></button>';
+      }).join('');
+      box.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-kno-account]');
+        if (!button) return;
+        hapticLight();
+        closeDrawer();
+        nativeWorkspaceAction({ action:button.getAttribute('data-kno-account') });
+      });
+      var logout = s.querySelector('.merchant-logout');
+      if (logout && logout.parentNode) logout.parentNode.insertBefore(box, logout);
+      else s.appendChild(box);
+    }
+    mountAccountMenu();
+    setTimeout(mountAccountMenu, 1200);
+    new MutationObserver(mountAccountMenu).observe(root, { attributes:true, attributeFilter:['lang'] });
 
     /* Inner pages get their name as the navigation title; home keeps the mark. */
     var titles = { accueil:'', transactions:copy.orders, rapport:copy.report, clients:copy.clients };

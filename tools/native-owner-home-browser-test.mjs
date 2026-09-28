@@ -155,8 +155,30 @@ try {
     check(home.actions.join(',') === 'report,invoice,export,customize' && home.actionIcon.every((h) => h >= 44), 'four round quick actions, each at least 44pt');
     check(home.overflow <= 0, 'the owner home never scrolls sideways');
     const context = await host(page);
-    check((context.tabs || []).map((t) => t.id).join(',') === 'accueil,transactions,rapport,clients,more' && context.selected === 'accueil',
-      'the native tab bar carries five owner routes with Home selected');
+    check((context.tabs || []).map((t) => t.id).join(',') === 'accueil,transactions,rapport,clients' && context.selected === 'accueil',
+      'the native tab bar carries four owner routes with Home selected, no More tab');
+
+    const header = await page.evaluate(() => {
+      const shown = (q) => { const e = document.querySelector(q); return !!(e && e.offsetParent !== null && e.getBoundingClientRect().width > 0); };
+      const ai = document.querySelector('.topbar .ai-btn');
+      return { burger: shown('.kw-hamburger'), theme: shown('.topbar .theme-toggle'), ai: shown('.topbar .ai-btn'), aiLabel: ai ? getComputedStyle(ai, '::after').content : '' };
+    });
+    check(header.burger && !header.theme && header.ai && header.aiLabel === '"Kiwi AI"',
+      'the header carries the menu and the Kiwi AI pill, not the moon button');
+    await click(page, '.kw-hamburger');
+    await sleep(700);
+    const drawer = await page.evaluate(() => ({
+      open: document.body.classList.contains('kw-menu-open'),
+      nav: document.querySelectorAll('#kw-sidebar nav a[data-nav]').length,
+      account: [...document.querySelectorAll('#kw-sidebar .kno-account [data-kno-account]')].map((b) => b.getAttribute('data-kno-account')).join(','),
+      webLogout: !!(document.querySelector('#kw-sidebar .merchant-logout') || {}).offsetParent,
+    }));
+    check(drawer.open && drawer.nav >= 8, 'the menu opens the full dashboard drawer');
+    check(drawer.account === 'change-role,sign-out,ai-privacy,delete-account' && !drawer.webLogout,
+      'the drawer ends with the account actions and hides the web-only sign-out link');
+    check((await host(page)).tabs?.length === 0, 'the tab bar steps aside while the drawer is open');
+    await click(page, '.kw-hamburger');
+    await sleep(500);
 
     const fired = await page.evaluate(() => new Promise((resolve) => {
       const target = document.querySelector('.vexel-report-btn');

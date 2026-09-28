@@ -186,7 +186,24 @@ html.kiwi-native [data-dr-label]{display:none!important}
      longer scrolls visibly behind the clock. */
   html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar{top:0!important;margin-top:calc(-1 * var(--kiwi-safe-top))!important;padding:var(--kiwi-safe-top) 16px 0!important;background:color-mix(in srgb,var(--kno-bg) 82%,transparent)!important;-webkit-backdrop-filter:saturate(1.8) blur(22px);backdrop-filter:saturate(1.8) blur(22px);border-bottom:.5px solid var(--kno-line)!important;box-shadow:none!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar-inner{min-height:52px;height:52px}
-  html.kiwi-native body.kiwi-native-owner:not(#kno) .kw-hamburger{display:none!important}
+  /* Header: menu, mark, Kiwi AI, notifications. The menu opens the full
+     dashboard drawer, which also carries the account actions; the app follows
+     the system appearance, so the moon button is gone. */
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kw-hamburger{display:grid!important;place-items:center;position:static!important;width:44px;height:44px;min-width:44px;padding:0!important;border-radius:50%;background:var(--kno-fill)!important;color:var(--kno-ink)!important;border:0!important;box-shadow:none!important;order:-2}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kw-hamburger svg{width:20px;height:20px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar .theme-toggle,html.kiwi-native body.kiwi-native-owner:not(#kno) .merchant-logout{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar .ai-btn{display:inline-flex!important;align-items:center;gap:6px;height:36px!important;min-height:36px!important;padding:0 14px 0 11px!important;margin:0!important;border-radius:999px!important;font:600 14px/1 "Inter Tight",sans-serif!important;letter-spacing:0!important;white-space:nowrap;transform:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar .ai-btn .ai-btn-ico{width:16px!important;height:20px!important;flex:0 0 auto}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar .ai-btn>span{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar .ai-btn::after{content:"Kiwi AI"}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar .kw-topbar-brand{display:flex!important;align-items:center;height:40px}
+  /* The drawer is dark in both appearances, so its account group is too. */
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kno-account{margin:12px 12px 8px;padding:6px 0;border-radius:18px;background:rgba(247,245,240,.05)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kno-account button{display:flex;align-items:center;gap:14px;width:100%;min-height:48px;padding:0 16px;border:0;background:none;color:#F7F5F0;font:500 15px/1.2 "Inter Tight",sans-serif;text-align:start;-webkit-tap-highlight-color:transparent}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kno-account button:active{background:rgba(125,242,176,.08)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kno-account i{width:22px;height:22px;flex:0 0 auto;background:rgba(91,226,178,.74)!important;-webkit-mask:var(--kno-icon) center/contain no-repeat;mask:var(--kno-icon) center/contain no-repeat}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kno-account .is-danger{color:#E5484D}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kno-account .is-danger i{background:#E5484D!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar-inner{justify-content:flex-start!important;gap:8px}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .kw-topbar-brand{position:static!important;transform:none!important;margin:0 auto 0 0!important;padding:0!important}
   html.kiwi-native[dir="rtl"] body.kiwi-native-owner:not(#kno) .kw-topbar-brand{margin:0 0 0 auto!important}
