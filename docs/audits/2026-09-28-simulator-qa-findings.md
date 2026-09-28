@@ -257,6 +257,33 @@ Verified OK: the Team demo code path works (any code except 0000 opens the waite
 view), view-only mode, the language switch applies live, RTL mirrors the layout, and the
 Kitchen keypad renders in the new passcode style.
 
+## Accessibility, lifecycle, and App Review readiness
+
+- **A1 (P2) · Native setup at the largest accessibility text size:** it reflows and scrolls,
+  and the role rows stack their icon above the text (good). Scrolled content passes under
+  the clock with no status-bar backdrop.
+- **A2 (P2) · The web till at the largest accessibility size:**
+  - The tiles scale and never clip (good).
+  - The opening-float chips overflow: "1 000 MAD" touches its chip's edge, and the four
+    chips no longer fit one row. Allow the row to wrap to 2 × 2 at large type.
+  - The category chips and tab labels do not scale (acceptable for tab bars, not for
+    chips).
+- **A3 (P1) · Before submitting, write App Review notes that explain every role:**
+  - the demo path ("Choose a role without setup" → Dashboard → "Explore the demo first" →
+    "Enter the demo");
+  - the Kiwi Team demo (any code except 0000);
+  - that Kitchen and a real till need a pairing code from the dashboard.
+
+  Also supply a working review account where "Delete my account" completes. Reviewers
+  reject apps whose roles they cannot reach.
+- **A4 (P1) · Landscape on iPhone is enabled** (`UISupportedInterfaceOrientations` lists
+  landscape), but none of the phone layouts were designed for it. Either restrict iPhone
+  to portrait or run a landscape pass. This was not tested here because the simulator could
+  not be rotated from this session.
+
+Verified OK: backgrounding (Settings) and resuming keeps the till state, and a text-size
+change made while the app is in the background applies on resume.
+
 ## Verified OK
 
 - Fresh install shows the splash, then sign-in. There is no crash, and no white flash between
