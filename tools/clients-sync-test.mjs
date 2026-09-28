@@ -29,28 +29,46 @@ const failed = [];
 const ok = (label, condition) => condition ? (passed++, console.log('  ✓ ' + label)) : failed.push(label);
 const env = { DB: makeDB() };
 
-const values = await Promise.all(Array.from({ length: 40 }, () => nextSrvTs(env, 'atlas')));
-ok('concurrent allocations are all unique', new Set(values).size === values.length);
-ok('concurrent allocations are strictly contiguous',
-  Math.max(...values) - Math.min(...values) === values.length - 1);
+// Cursor isolation must not depend on a loaded laptop finishing in <40 ms.
+// Freeze only this isolated in-memory test, then explicitly exercise clock jumps.
+const realNow = Date.now;
+const fixedNow = realNow();
+try {
+  Date.now = () => fixedNow;
+  const values = await Promise.all(Array.from({ length: 40 }, () => nextSrvTs(env, 'atlas')));
+  ok('concurrent allocations are all unique', new Set(values).size === values.length);
+  ok('concurrent allocations are strictly contiguous',
+    Math.max(...values) - Math.min(...values) === values.length - 1);
 
-const other = await nextSrvTs(env, 'rif');
-ok('each merchant has an independent cursor', other <= Math.max(...values));
+  const other = await nextSrvTs(env, 'rif');
+  ok('each merchant has an independent cursor', other === fixedNow);
+  Date.now = () => fixedNow - 1000;
+  const backward = await nextSrvTs(env, 'atlas');
+  ok('a backward clock cannot reverse a merchant cursor', backward === Math.max(...values) + 1);
+  Date.now = () => fixedNow + 1000;
+  const forward = await nextSrvTs(env, 'atlas');
+  ok('a forward clock advances only the selected merchant', forward === fixedNow + 1000 &&
+    sqlite.prepare('SELECT last_ts FROM client_sync_sequences WHERE merchant=?').get('rif').last_ts === other);
+  Date.now = () => fixedNow;
 
-const future = Date.now() + 60_000;
-sqlite.prepare(`INSERT INTO clients
-  (merchant,id,name,updated_ts,srv_ts,deleted) VALUES (?,?,?,?,?,0)`)
-  .run('atlas', 'future-clock', 'Client', future, Math.max(...values));
-const deletionCursor = await nextSrvTs(env, 'atlas');
-sqlite.prepare(`UPDATE clients
-  SET deleted=1,
-      updated_ts=CASE WHEN updated_ts >= ? THEN updated_ts + 1 ELSE ? END,
-      srv_ts=? WHERE merchant=? AND id=?`)
-  .run(Date.now(), Date.now(), deletionCursor, 'atlas', 'future-clock');
-const tombstone = sqlite.prepare('SELECT updated_ts, deleted FROM clients WHERE merchant=? AND id=?')
-  .get('atlas', 'future-clock');
-ok('deletion outranks a client whose device clock is in the future',
-  tombstone.deleted === 1 && tombstone.updated_ts > future);
+  const future = Date.now() + 60_000;
+  sqlite.prepare(`INSERT INTO clients
+    (merchant,id,name,updated_ts,srv_ts,deleted) VALUES (?,?,?,?,?,0)`)
+    .run('atlas', 'future-clock', 'Client', future, Math.max(...values));
+  const deletionCursor = await nextSrvTs(env, 'atlas');
+  sqlite.prepare(`UPDATE clients
+    SET deleted=1,
+        updated_ts=CASE WHEN updated_ts >= ? THEN updated_ts + 1 ELSE ? END,
+        srv_ts=? WHERE merchant=? AND id=?`)
+    .run(Date.now(), Date.now(), deletionCursor, 'atlas', 'future-clock');
+  const tombstone = sqlite.prepare('SELECT updated_ts, deleted FROM clients WHERE merchant=? AND id=?')
+    .get('atlas', 'future-clock');
+  ok('deletion outranks a client whose device clock is in the future',
+    tombstone.deleted === 1 && tombstone.updated_ts > future);
+} finally {
+  Date.now = realNow;
+  sqlite.close();
+}
 
 if (failed.length) {
   failed.forEach((label) => console.error('  ✗ ' + label));
