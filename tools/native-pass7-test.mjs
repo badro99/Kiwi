@@ -61,4 +61,6 @@ ok(/\.topbar \.ai-btn\{[^}]*height:44px!important;min-height:44px!important/.tes
 ok(runtime.includes("var dark = setup || inkLock ||"), "ink lock screens keep readable status text in light appearance");
 ok(read("assets/mobile-nav.js").includes("if (!sidebar.contains(e.target)) return;"), "window capture dismisses navigation before document-level destination interception");
 ok(read("assets/conformite.js").includes("window.KiwiNumber?.number(Math.round(n))") && read("assets/conformite.js").includes('<bdi dir="ltr">${n >= 0'), "cash-close display groups English figures and isolates signed RTL amounts without touching fiscal output");
+ok(read("assets/mobile-nav.js").includes("new MutationObserver(syncNavLabels)") && read("assets/mobile-nav.js").includes("Return to dashboard"), "navigation accessibility names follow the selected language");
+ok(read("assets/mobile-nav.js").includes("notifications.setAttribute('data-action', 'notifications')") && read("assets/z-reconciliation.js").includes('button[data-mobile-notifications]'), "translated notification labels retain a stable click action and alert badge selector");
 console.log(`native-pass7-test: ${checks} checks passed`);

@@ -239,7 +239,7 @@
       + '</div></div>';
   }
   function updateBell() {
-    var bell = document.querySelector('button[aria-label="Notifications"]');
+    var bell = document.querySelector('button[data-mobile-notifications], button[aria-label="Notifications"]');
     var a = currentAlert();
     var badge = bell && bell.querySelector('[data-z-badge]');
     if (bell && a && !badge) {

@@ -86,6 +86,20 @@
                aria-controls="kw-sidebar" aria-expanded="false">${I.menu}</button>
        <button class="kw-topbar-brand" type="button" aria-label="Revenir en haut du tableau de bord"><img src="assets/kiwi-newlogo-inverse.svg" alt=""></button>`);
     const hamburger = topbarInner.querySelector('.kw-hamburger');
+    function syncNavLabels() {
+      const l = document.documentElement.lang;
+      const words = l === 'ar' ? ['فتح القائمة', 'العودة إلى لوحة التحكم', 'القائمة الرئيسية', 'الإشعارات']
+        : l === 'en' ? ['Open menu', 'Return to dashboard', 'Main menu', 'Notifications']
+        : ['Ouvrir le menu', 'Revenir en haut du tableau de bord', 'Menu principal', 'Notifications'];
+      hamburger.setAttribute('aria-label', words[0]);
+      topbarInner.querySelector('.kw-topbar-brand').setAttribute('aria-label', words[1]);
+      sidebar?.setAttribute('aria-label', words[2]);
+      const notifications = topbarInner.querySelector('.icon-btn[aria-label="Notifications"], .icon-btn[data-mobile-notifications]');
+      if (notifications) { notifications.setAttribute('data-mobile-notifications', ''); notifications.setAttribute('data-action', 'notifications'); notifications.setAttribute('aria-label', words[3]); }
+    }
+    syncNavLabels();
+    new MutationObserver(syncNavLabels).observe(document.documentElement, { attributes:true, attributeFilter:['lang'] });
+
     /* Tapping the centred wordmark returns to the home dashboard —
      * from any sub-page, not just a scroll-to-top. */
     topbarInner.querySelector('.kw-topbar-brand').addEventListener('click', () => goHome());
