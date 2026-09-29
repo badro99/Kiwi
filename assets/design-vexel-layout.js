@@ -853,7 +853,8 @@
   }
 
   function numberFrom(text) {
-    var cleaned = String(text || '').replace(/[^0-9,.-]/g, '').replace(',', '.');
+    var cleaned = String(text || '').replace(/[^0-9,.-]/g, '');
+    cleaned = lang() === 'en' ? cleaned.replace(/,/g, '') : cleaned.replace(',', '.');
     var value = parseFloat(cleaned);
     return Number.isFinite(value) ? value : 0;
   }
@@ -891,8 +892,8 @@
       known: Number.isFinite(current) && Number.isFinite(total) && total > 0,
       current: current,
       total: total,
-      currentText: (parts[0] || '').trim(),
-      totalText: (parts[1] || '').trim()
+      currentText: window.KiwiNumber ? window.KiwiNumber.number(current) : (parts[0] || '').trim(),
+      totalText: window.KiwiNumber ? window.KiwiNumber.number(total) : (parts[1] || '').trim()
     };
   }
 
@@ -1016,6 +1017,8 @@
     setText(clientValue, read.known ? read.currentText : '·');
     setText(document.querySelector('[data-vexel-client-caption]'),
       read.known ? clientCopy.of.replace('{n}', read.totalText) : '');
+    if (clientDelta) clientDelta.dir = 'ltr';
+    if (clientValue) clientValue.dir = 'ltr';
     setText(clientDelta, clientDeltaText);
     renderClientRing(read);
   }

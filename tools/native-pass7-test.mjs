@@ -30,4 +30,7 @@ ok(['kiwiNativeLocale','kiwiLang','kiwiCaisseLang','kiwiCuisineLang'].every(k=>d
 root.lang='en';localeChanged();
 ok(data.get('kiwiNativeLocale')==='en', 'Team and Kitchen locale changes persist for relaunch');
 ok(read('assets/caisse-lang.js').includes('window.KiwiNativeLocale.set(id)') && read('assets/i18n.js').includes('window.KiwiNativeLocale.set(lang)'), 'till and dashboard setters use the same native source');
+const vexel = read('assets/design-vexel-layout.js');
+ok(vexel.includes('window.KiwiNumber.number(current)') && vexel.includes('window.KiwiNumber.number(total)'), 'regulars format both values through KiwiNumber');
+ok(vexel.includes("clientDelta.dir = 'ltr'") && vexel.includes("cleaned.replace(/,/g, '')"), 'regulars isolate signed deltas and parse English grouped values without losing magnitude');
 console.log(`native-pass7-test: ${checks} checks passed`);
