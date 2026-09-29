@@ -287,6 +287,9 @@ Permission `CAMERA` : déclarer « scan de codes-barres et photo de bons de livr
 
 ## 5. Notes pour la revue (à coller dans App Review Information · App access)
 
+**Remplacé le 2026-09-29 par `docs/ops/app-review-notes.md`** : le texte ci-dessous
+décrit encore le bouton More natif, retiré de tous les rôles (menu ☰ désormais).
+
 > Kiwi Pro is a business app for merchants who already have a Kiwi account
 > (created by Kiwi when they subscribe, outside the app). Sign in with the
 > demo account provided in the Sign-In Information fields.
