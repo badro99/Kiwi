@@ -79,4 +79,7 @@ ok(/:is\(\.fin-page,\.cf-page\)\{[^}]*padding:0 0 32px!important/.test(css), 'fi
 ok(/\.fin-pnl-row\{grid-template-columns:minmax\(0,1fr\) auto auto!important/.test(css), 'result rows keep the sign, label, amount and percent on one line');
 ok(/\.cf-tabs\)/.test(css) && /\.cf-tab,\.chip/.test(css), 'compliance tabs join the one-line swipeable chip system');
 
+// #0121 · Arabic joining takes precedence over uppercase-label tracking.
+ok(/html\.kiwi-native\[lang="ar"\] \*\{letter-spacing:0!important\}/.test(css), 'all native Arabic labels use untracked joining');
+
 console.log(`\nnative-pass5-test · ${checks} checks green`);

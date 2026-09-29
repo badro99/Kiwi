@@ -5,6 +5,8 @@
 html.kiwi-native{--kiwi-host-safe-top:0px;--kiwi-host-safe-right:0px;--kiwi-host-safe-bottom:0px;--kiwi-host-safe-left:0px;--kiwi-safe-top:max(env(safe-area-inset-top,0px),var(--kiwi-host-safe-top));--kiwi-safe-right:max(env(safe-area-inset-right,0px),var(--kiwi-host-safe-right));--kiwi-safe-bottom:max(env(safe-area-inset-bottom,0px),var(--kiwi-host-safe-bottom));--kiwi-safe-left:max(env(safe-area-inset-left,0px),var(--kiwi-host-safe-left));--kiwi-keyboard:0px;overscroll-behavior:none;background:#F7F5F0}
 html.kiwi-native,html.kiwi-native body{min-height:100%;font-family:"Inter Tight",sans-serif;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
 html.kiwi-native[lang="ar"],html.kiwi-native[dir="rtl"]{font-family:"IBM Plex Sans Arabic","Inter Tight",sans-serif}
+/* #0121 · Latin tracking breaks Arabic joins, including caisse labels. */
+html.kiwi-native[lang="ar"] *{letter-spacing:0!important}
 /* Shared pages need a safe content inset. The setup shell paints its own
    edge-to-edge stage and applies the insets inside each panel; padding its body
    here would expose top/bottom gutters and apply the safe area twice. */
