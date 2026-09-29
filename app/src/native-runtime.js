@@ -269,7 +269,10 @@
       var painted = paintedDarkAt(72, 32);
       if (painted !== null) blocking = painted;
     }
-    var dark = setup || !!document.querySelector('#pair.on') || blocking || (till ? root.getAttribute('data-caisse-theme') === 'dark' : root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark');
+    // The invariant launch/lock canvas stays ink even in a light workspace.
+    var lockCanvas = document.querySelector('[data-kiwi-lock],.screen-pin.is-active');
+    var inkLock = !!(lockCanvas && !lockCanvas.hidden && getComputedStyle(lockCanvas).display !== 'none');
+    var dark = setup || inkLock || !!document.querySelector('#pair.on') || blocking || (till ? root.getAttribute('data-caisse-theme') === 'dark' : root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark');
     var nextStyle = dark ? 'DARK' : 'LIGHT';
     if (nextStyle === lastStatusBarStyle) return;
     lastStatusBarStyle = nextStyle;
