@@ -28,44 +28,46 @@ let checks=0;
 async function settled(sel){ await page.waitForFunction((q)=>{ const el=document.querySelector(q); const now=performance.now(); if(!el) return false; if(window.__settleEl!==el){ window.__settleEl=el; window.__settleAt=now; return false; } return now-window.__settleAt>800; },{polling:100},sel); }
 try {
   page=await browser.newPage();
+  // Locator clicks reacquire controls if a live report render replaces their nodes.
+  // Keep trusted mouse events and all post-click assertions; never use DOM .click().
   await page.setViewport({width:1440,height:900});
   await page.evaluateOnNewDocument(()=>{
     const venue={id:'v-date-selector',name:'Date selector fixture',slug:'date-selector',type:'restaurant',custom:true,status:'En service',txCount:0,staffCount:0};
     localStorage.setItem('kiwiCustomVenues',JSON.stringify([venue])); localStorage.setItem('kiwiVenue',venue.id); localStorage.setItem('kiwiOnboarded','1');
   });
   await page.goto(`http://127.0.0.1:${server.address().port}/dashboard.html`,{waitUntil:'load',timeout:30000});
-  await page.waitForSelector('.kiwi-lock-skip',{visible:true}); await page.click('.kiwi-lock-skip');
+  await page.waitForSelector('.kiwi-lock-skip',{visible:true}); await page.locator('.kiwi-lock-skip').click();
   await page.waitForSelector('.sidebar nav a[data-nav="transactions"]');
   // pages-pro.js wraps nav handlers at load+150 ms; a click before that opens the demo page.
   await page.waitForFunction(()=>window.Kiwi?.handlers?.['nav-transactions']?.__kiwiStarter===true);
-  await page.click('.sidebar nav a[data-nav="transactions"]');
+  await page.locator('.sidebar nav a[data-nav="transactions"]').click();
   await page.waitForSelector('[data-rtx-day-selector] [data-dr-day-offset="2"]',{visible:true}); checks++;
   assert.ok(await page.$('[data-rtx-day-selector] .dr-pills[data-kw-lens]'),'Commandes uses the shared liquid lens'); checks++;
   assert.equal(await page.$eval('[data-rtx-day-selector]',el=>[...el.querySelectorAll('button')].map(x=>x.textContent.trim()).join('|')),"Aujourd'hui|Hier|Avant-hier|Choisir une date"); checks++;
-  await page.click('[data-rtx-day-selector] [data-dr-day-offset="2"]');
+  await page.locator('[data-rtx-day-selector] [data-dr-day-offset="2"]').click();
   await page.waitForFunction(()=>document.querySelector('[data-rtx-day-selector] [data-dr-day-offset="2"]')?.getAttribute('aria-pressed')==='true'); checks++;
   // Choosing a day re-renders the page (sales, then the activity fetch). Click once it has settled.
   await settled('[data-rtx-day-selector]');
-  await page.click('[data-rtx-day-selector] [data-dr-day-custom]');
+  await page.locator('[data-rtx-day-selector] [data-dr-day-custom]').click();
   await page.waitForSelector('.dr-popover.open [data-drp-apply]',{visible:true}); checks++;
   assert.ok((await page.$$('.dr-popover.open .drp-month')).length >= 1); checks++;
   const past=await page.evaluate(()=>[...document.querySelectorAll('.dr-popover.open .drp-day[data-day]:not(:disabled)')].map(x=>x.dataset.day).sort()[0]);
-  await page.click(`.dr-popover.open .drp-day[data-day="${past}"]`);
-  await page.click('.dr-popover.open [data-drp-apply]');
+  await page.locator(`.dr-popover.open .drp-day[data-day="${past}"]`).click();
+  await page.locator('.dr-popover.open [data-drp-apply]').click();
   await page.waitForFunction(()=>document.querySelector('[data-rtx-day-selector] [data-dr-day-custom]')?.getAttribute('aria-pressed')==='true'); checks++;
   if (process.env.KIWI_TEST_SCREENSHOT) await page.screenshot({path:process.env.KIWI_TEST_SCREENSHOT.replace(/\.png$/,'-orders-light.png'),fullPage:true});
-  await page.click('.sidebar nav a[data-nav="rapport"]');
+  await page.locator('.sidebar nav a[data-nav="rapport"]').click();
   await page.waitForSelector('[data-kdr-day-selector] [data-dr-day-offset="1"]',{visible:true}); checks++;
   assert.ok(await page.$('[data-kdr-day-selector] .dr-pills[data-kw-lens]'),'Rapport uses the shared liquid lens'); checks++;
-  await page.click('[data-kdr-day-selector] [data-dr-day-offset="1"]');
+  await page.locator('[data-kdr-day-selector] [data-dr-day-offset="1"]').click();
   await page.waitForFunction(()=>document.querySelector('[data-kdr-day-selector] [data-dr-day-offset="1"]')?.getAttribute('aria-pressed')==='true'); checks++;
-  await page.click('[data-kdr-day-selector] [data-dr-day-custom]');
+  await page.locator('[data-kdr-day-selector] [data-dr-day-custom]').click();
   await page.waitForSelector('.dr-popover.open [data-drp-apply]',{visible:true}); checks++;
   const reportPast=await page.evaluate(()=>[...document.querySelectorAll('.dr-popover.open .drp-day[data-day]:not(:disabled)')].map(x=>x.dataset.day).sort()[0]);
-  await page.click(`.dr-popover.open .drp-day[data-day="${reportPast}"]`);
-  await page.click('.dr-popover.open [data-drp-apply]');
+  await page.locator(`.dr-popover.open .drp-day[data-day="${reportPast}"]`).click();
+  await page.locator('.dr-popover.open [data-drp-apply]').click();
   await page.waitForFunction(()=>document.querySelector('[data-kdr-day-selector] [data-dr-day-custom]')?.getAttribute('aria-pressed')==='true'); checks++;
-  await page.click('[data-kdr-day-selector] [data-dr-day-custom]');
+  await page.locator('[data-kdr-day-selector] [data-dr-day-custom]').click();
   await page.waitForSelector('.dr-popover.open [data-drp-apply]',{visible:true});
   if (process.env.KIWI_TEST_SCREENSHOT) await page.screenshot({path:process.env.KIWI_TEST_SCREENSHOT.replace(/\.png$/,'-report-light.png'),fullPage:true});
   await page.evaluate(()=>{document.documentElement.setAttribute('data-theme','dark');document.body.setAttribute('data-theme','dark');});
