@@ -726,19 +726,32 @@ html.kiwi-native #caisse-terminal-id{position:relative}
 html.kiwi-native #caisse-terminal-id::after{content:"";position:absolute;inset:-9px -4px}
 
 /* Filter and tab rows: one swipeable line on a phone, never 2 to 4 wrapped rows inside a capsule (ticket #0111). */
-html.kiwi-native :is(.mi-pill-row,.st-tabs,.eq-pill-row,.st-item-subtabs,.sc-pills),
+html.kiwi-native :is(.mi-pill-row,.st-tabs,.eq-pill-row,.st-item-subtabs,.sc-pills,.cf-tabs),
 html.kiwi-native :is(div,nav):has(> .st-cat-pill,> .mi-pill,> .eq-pill,> .st-tab,> .chip[data-action="tx-filter"]){
   display:flex!important;flex-wrap:nowrap!important;justify-content:flex-start!important;align-items:center;
   overflow-x:auto!important;overflow-y:hidden!important;max-width:100%;min-width:0;position:relative;
   scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scroll-snap-type:x proximity;
   scroll-padding-inline:12px;padding-inline-end:22px!important;
   -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent)}
-html.kiwi-native[dir="rtl"] :is(.mi-pill-row,.st-tabs,.eq-pill-row,.st-item-subtabs,.sc-pills),
+html.kiwi-native[dir="rtl"] :is(.mi-pill-row,.st-tabs,.eq-pill-row,.st-item-subtabs,.sc-pills,.cf-tabs),
 html.kiwi-native[dir="rtl"] :is(div,nav):has(> .st-cat-pill,> .mi-pill,> .eq-pill,> .st-tab,> .chip[data-action="tx-filter"]){
   -webkit-mask-image:linear-gradient(270deg,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(270deg,#000 calc(100% - 26px),transparent)}
-html.kiwi-native :is(.mi-pill-row,.st-tabs,.eq-pill-row,.st-item-subtabs,.sc-pills)::-webkit-scrollbar,
+html.kiwi-native :is(.mi-pill-row,.st-tabs,.eq-pill-row,.st-item-subtabs,.sc-pills,.cf-tabs)::-webkit-scrollbar,
 html.kiwi-native :is(div,nav):has(> .st-cat-pill,> .mi-pill,> .eq-pill,> .st-tab,> .chip[data-action="tx-filter"])::-webkit-scrollbar{display:none}
-html.kiwi-native :is(.st-cat-pill,.mi-pill,.eq-pill,.st-tab,.sc-pill,.chip[data-action="tx-filter"]){flex:0 0 auto!important;white-space:nowrap!important;scroll-snap-align:start}
+html.kiwi-native :is(.st-cat-pill,.mi-pill,.eq-pill,.st-tab,.sc-pill,.cf-tab,.chip[data-action="tx-filter"]){flex:0 0 auto!important;white-space:nowrap!important;scroll-snap-align:start}
+
+/* #0119 · Finance and compliance use the same single phone gutter as owner pages. */
+@media(max-width:600px){
+  html.kiwi-native body.kiwi-native-owner:not(#kno) :is(.fin-page,.cf-page){box-sizing:border-box;width:100%;max-width:none;padding:0 0 32px!important;margin:0!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .fin-card{padding:16px!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .fin-pnl-row{grid-template-columns:minmax(0,1fr) auto auto!important;gap:6px!important;align-items:center!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .fin-pnl-row :is(.fin-pnl-l,.fin-pnl-v,.fin-pnl-p){white-space:nowrap!important;min-width:0}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .fin-pnl-row .fin-pnl-l{font-size:12px!important;overflow:hidden;text-overflow:ellipsis}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .fin-pnl-row .fin-pnl-v{font-size:13px!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .fin-pnl-row .fin-pnl-p{font-size:11px!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .fin-pnl-row .fin-pip{grid-column:1/-1;grid-row:2;justify-self:start}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .fin-pnl-total{margin-inline:-16px!important;padding-inline:16px!important}
+}
 
 /* Edit and create forms (menu item, option group, section, ...): an opaque bottom sheet on a phone.
    The glass modal was 72 % transparent, 290 pt wide and centred, so the page bled through the

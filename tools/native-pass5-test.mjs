@@ -38,7 +38,7 @@ ok(!/toast\(NAV_ACCUEIL_STR/.test(pagesPro), 'going home no longer shows a toast
 ok(!/toast\(T\.accueilTitle/.test(pages), 'the legacy home handler no longer shows a toast');
 
 // #0111 · filter rows are one swipeable line
-ok(/\.eq-pill-row,\.st-item-subtabs,\.sc-pills\)/.test(css) && /flex-wrap:nowrap!important/.test(css), 'filter pill rows scroll sideways instead of wrapping');
+ok(/\.eq-pill-row,\.st-item-subtabs,\.sc-pills,\.cf-tabs\)/.test(css) && /flex-wrap:nowrap!important/.test(css), 'filter pill rows scroll sideways instead of wrapping');
 
 // #0112 · planning day view
 ok(/function initPlanningDayView\(/.test(runtime) && /kt-phone-day/.test(css), 'planning has a one-day view on a phone');
@@ -73,5 +73,10 @@ ok(/classList\.add\('has-count'\)/.test(stock) && /\.st-pc-blind tr\[data-stock-
 
 // #0118 · fleet cards are compact and the native bundle has the actual photos.
 ok(/\.term-device-main\{display:grid!important;grid-template-columns:72px minmax\(0,1fr\)/.test(css) && /\.term-device-actions\{grid-column:1\/-1/.test(css), 'terminal cards place actions on one phone row');
+
+// #0119 · finance/compliance use one gutter and a non-wrapping P&L.
+ok(/:is\(\.fin-page,\.cf-page\)\{[^}]*padding:0 0 32px!important/.test(css), 'finance and compliance shed their nested phone gutter');
+ok(/\.fin-pnl-row\{grid-template-columns:minmax\(0,1fr\) auto auto!important/.test(css), 'result rows keep the sign, label, amount and percent on one line');
+ok(/\.cf-tabs\)/.test(css) && /\.cf-tab,\.chip/.test(css), 'compliance tabs join the one-line swipeable chip system');
 
 console.log(`\nnative-pass5-test · ${checks} checks green`);
