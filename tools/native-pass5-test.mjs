@@ -55,4 +55,9 @@ ok(/u\('stepCount'/.test(menu) && /u\('availableOpt'\)/.test(menu), 'menu card f
 ok(/\.mi-grid>\.mi-card\{[^}]*grid-template-areas/.test(css), 'menu items are compact rows on a phone');
 ok(/\.kiwi-backdrop:not\(\.kiwi-native-order-sheet\) \.kiwi-modal\{[^}]*backdrop-filter:none/.test(css), 'create and edit sheets are opaque on a phone');
 
+// #0115 · the roster retains desktop detail but becomes a phone-first person list.
+ok(/\.eq-table td\{display:none!important\}/.test(css) && /\.eq-table td:first-child\{display:block!important/.test(css), 'team roster hides desktop columns on a phone');
+ok(/eq-member-phone-role/.test(team) && /eq-member-phone-meta/.test(team) && /eq-member-open/.test(team), 'phone roster shows role, department and status with a profile action');
+ok(/liveOffDuty: 'Off duty'/.test(team) && /liveOffDuty: 'خارج الخدمة'/.test(team), 'team duty status follows the selected language');
+
 console.log(`\nnative-pass5-test · ${checks} checks green`);

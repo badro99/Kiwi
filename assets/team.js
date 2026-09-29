@@ -62,6 +62,9 @@
       colLanguages: 'Langues',
       colSalary: 'Salaire base',
       colActions: 'Actions',
+      livePaused: 'En pause',
+      liveOnDuty: 'En service',
+      liveOffDuty: 'Hors service',
       // Profile modal
       viewProfile: 'Voir le profil',
       editBtn:   'Modifier',
@@ -219,6 +222,9 @@
       colLanguages: 'Languages',
       colSalary: 'Base salary',
       colActions: 'Actions',
+      livePaused: 'On break',
+      liveOnDuty: 'On duty',
+      liveOffDuty: 'Off duty',
       viewProfile: 'View profile',
       editBtn:   'Edit',
       deleteBtn: 'Remove',
@@ -374,6 +380,9 @@
       colLanguages: 'اللغات',
       colSalary: 'الراتب الأساسي',
       colActions: 'إجراءات',
+      livePaused: 'في استراحة',
+      liveOnDuty: 'في الخدمة',
+      liveOffDuty: 'خارج الخدمة',
       viewProfile: 'عرض الملف',
       editBtn:   'تعديل',
       deleteBtn: 'حذف',
@@ -1567,8 +1576,8 @@
         : 'kt-tag kt-tag-neutral';
       const langChips = (m.languages || []).slice(0, 3).map(l => `<span class="kt-langchip">${esc(l)}</span>`).join('') + ((m.languages || []).length > 3 ? `<span class="kt-langchip">+${(m.languages || []).length - 3}</span>` : '');
       const live = liveMember(m.id);
-      const liveText = live && live.status === 'on-pause' ? 'En pause'
-        : live && live.status === 'on-duty' ? 'En service' : 'Hors service';
+      const liveText = live && live.status === 'on-pause' ? T.livePaused
+        : live && live.status === 'on-duty' ? T.liveOnDuty : T.liveOffDuty;
       const liveColor = live && live.status === 'on-pause' ? '#B26B0F'
         : live && live.status === 'on-duty' ? 'var(--atlas)' : 'var(--n-500)';
       return `
@@ -1579,8 +1588,11 @@
               <div>
                 <div class="eq-member-name">${esc(memberFullName(m))}</div>
                 <div class="eq-member-role">${esc(m.email || '·')} · <span style="color:${liveColor};font-weight:600;">${liveText}</span></div>
+                <div class="eq-member-phone-role">${esc(m.function)}</div>
+                <div class="eq-member-phone-meta"><span class="eq-venue-badge">${esc(m.department)}</span><span class="eq-member-phone-status" style="color:${liveColor}">${esc(liveText)}</span></div>
               </div>
             </div>
+            <button class="eq-member-open" type="button" data-action="kt-view-profile" data-arg="${esc(m.id)}" aria-label="${esc(T.viewProfile)}: ${esc(memberFullName(m))}"></button>
           </td>
           <td><div class="kt-cell-strong">${esc(m.function)}</div></td>
           <td><span class="eq-venue-badge">${esc(m.department)}</span></td>
