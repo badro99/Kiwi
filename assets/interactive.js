@@ -313,7 +313,7 @@ ar: {
       fr: {
           title: 'Notifications',
           subtitle: '3 non lues',
-          settlement_ready_title: 'Virement de 23 091 MAD prêt',
+          settlement_ready_title: (amount) => `Virement de ${amount} prêt`,
           settlement_ready_desc: 'Votre règlement T+1 est prêt et sera viré demain à 9h.',
           time_12_min: 'il y a 12 min',
           terminal_offline_title: 'Terminal T2 hors ligne',
@@ -323,7 +323,7 @@ ar: {
           ai_suggestion_desc: 'Le taux de pourboire du soir est 3x celui du midi. Pensez à activer un prompt +15% après 20h.',
           time_2_hr: 'il y a 2 h',
           yesterday_tx_title: 'Résumé transactions hier',
-          yesterday_tx_desc: 'Vous avez encaissé 45 310 MAD sur 251 transactions.',
+          yesterday_tx_desc: (amount) => `Vous avez encaissé ${amount} sur 251 transactions.`,
           time_yesterday_2345: 'Hier, 23:45',
           fatima_signed_title: 'Fatima Khalki a signé son contrat',
           fatima_signed_desc: 'Le document est disponible dans votre espace RH.',
@@ -333,7 +333,7 @@ ar: {
       en: {
           title: 'Notifications',
           subtitle: '3 unread',
-          settlement_ready_title: 'Settlement of 23,091 MAD ready',
+          settlement_ready_title: (amount) => `Settlement of ${amount} ready`,
           settlement_ready_desc: 'Your D+1 settlement is ready and will be transferred tomorrow at 9am.',
           time_12_min: '12 min ago',
           terminal_offline_title: 'Terminal T2 offline',
@@ -343,7 +343,7 @@ ar: {
           ai_suggestion_desc: 'The evening tip rate is 3x the lunch rate. Consider activating a +15% prompt after 8pm.',
           time_2_hr: '2 hr ago',
           yesterday_tx_title: 'Yesterday\'s transaction summary',
-          yesterday_tx_desc: 'You collected 45,310 MAD from 251 transactions.',
+          yesterday_tx_desc: (amount) => `You collected ${amount} from 251 transactions.`,
           time_yesterday_2345: 'Yesterday, 11:45 PM',
           fatima_signed_title: 'Fatima Khalki signed her contract',
           fatima_signed_desc: 'The document is available in your HR space.',
@@ -353,7 +353,7 @@ ar: {
       ar: {
           title: 'الإشعارات',
           subtitle: '3 غير مقروءة',
-          settlement_ready_title: 'تسوية بقيمة 23,091 درهم جاهزة',
+          settlement_ready_title: (amount) => `تسوية بقيمة ${amount} جاهزة`,
           settlement_ready_desc: 'تسوية ي+1 جاهزة وسيتم تحويلها غدًا الساعة 9 صباحًا.',
           time_12_min: 'قبل 12 دقيقة',
           terminal_offline_title: 'الجهاز T2 غير متصل',
@@ -363,7 +363,7 @@ ar: {
           ai_suggestion_desc: 'معدل الإكرامية المسائية هو 3 أضعاف معدل الغداء. فكر في تفعيل مطالبة +15% بعد الساعة 8 مساءً.',
           time_2_hr: 'قبل ساعتين',
           yesterday_tx_title: 'ملخص معاملات الأمس',
-          yesterday_tx_desc: 'لقد حصّلت 45,310 درهم من 251 معاملة.',
+          yesterday_tx_desc: (amount) => `لقد حصّلت ${amount} من 251 معاملة.`,
           time_yesterday_2345: 'أمس، 23:45',
           fatima_signed_title: 'فاطمة خالقي وقعت عقدها',
           fatima_signed_desc: 'المستند متوفر في قسم الموارد البشرية الخاص بك.',
@@ -1798,6 +1798,7 @@ ar: {
 
     'notifications': () => {
       const s = (NOTIFICATIONS_STR[kiwiLang()] || NOTIFICATIONS_STR.fr);
+      const money = (value) => window.KiwiNumber?.money(value) || `${value.toLocaleString('fr-FR')} MAD`;
       /* L'écran vide annonce ce qui viendra s'y ranger. Nommer « les alertes de
        * terminaux » à un client dont l'opérateur n'a pas ouvert le module
        * Terminaux, c'est lui promettre une page qu'il ne verra jamais — alors on
@@ -1843,7 +1844,7 @@ ar: {
         <div class="notif unread">
           <div class="n-ico" style="background:color-mix(in srgb, var(--atlas) 14%, var(--surface)); color:var(--atlas);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg></div>
           <div class="n-body">
-            <div class="n-title">${s.settlement_ready_title}</div>
+            <div class="n-title">${s.settlement_ready_title(money(23091))}</div>
             <div class="n-desc">${s.settlement_ready_desc}</div>
             <div class="n-time">${s.time_12_min}</div>
           </div>
@@ -1869,7 +1870,7 @@ ar: {
           <div class="n-ico"><svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor"><path d="M240-80q-50 0-85-35t-35-85v-120h120v-560l60 60 60-60 60 60 60-60 60 60 60-60 60 60 60-60 60 60 60-60v680q0 50-35 85t-85 35H240Zm480-80q17 0 28.5-11.5T760-200v-560H320v440h360v120q0 17 11.5 28.5T720-160ZM360-600v-80h240v80H360Zm0 120v-80h240v80H360Zm320-120q-17 0-28.5-11.5T640-640q0-17 11.5-28.5T680-680q17 0 28.5 11.5T720-640q0 17-11.5 28.5T680-600Zm0 120q-17 0-28.5-11.5T640-520q0-17 11.5-28.5T680-560q17 0 28.5 11.5T720-520q0 17-11.5 28.5T680-480ZM240-160h360v-80H200v40q0 17 11.5 28.5T240-160Zm-40 0v-80 80Z"/></svg></div>
           <div class="n-body">
             <div class="n-title">${s.yesterday_tx_title}</div>
-            <div class="n-desc">${s.yesterday_tx_desc}</div>
+            <div class="n-desc">${s.yesterday_tx_desc(money(45310))}</div>
             <div class="n-time">${s.time_yesterday_2345}</div>
           </div>
         </div>

@@ -339,9 +339,9 @@
   }
 
   /* ─────────────── FORMATTING ─────────────── */
-  const fmt = (n) => Math.round(n).toLocaleString('fr-FR');
+  const fmt = (n) => window.KiwiNumber?.number(Math.round(n)) || Math.round(n).toLocaleString('fr-FR');
   const fmtMad = (n) => fmt(n) + ' MAD';
-  const fmt1 = (n) => n.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const fmt1 = (n) => window.KiwiNumber?.number(n, 1) || n.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   /* Typographic apostrophes fold to ASCII: a merchant's keyboard (and our own
    * UI copy) emits ’, so a pattern written with ' would silently miss
    * "réduire l’effectif" while matching "reduire l'effectif". */
@@ -4135,7 +4135,7 @@
     if (orders.length) {
       /* Compact per-order line: time · customer/table · server · payment ·
        * total · 1–2 items. Keeps the prompt readable even with 10 orders. */
-      const fmt2 = (n) => Number(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const fmt2 = (n) => window.KiwiNumber?.number(n, 2) || Number(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const recent = orders.slice(0, 8).map(o => {
         const items = (o.items || []).slice(0, 2).map(it => `×${it.qty} ${it.name}`).join(', ');
         const more = (o.items || []).length > 2 ? ` (+${o.items.length - 2})` : '';

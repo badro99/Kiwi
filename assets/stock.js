@@ -1418,7 +1418,7 @@
   const localeFor = () => (lang() === 'en' ? 'en-US' : 'fr-FR');
   const fmtNum = (n, dec = 0) => {
     if (n == null || isNaN(n)) return '0';
-    return new Intl.NumberFormat(localeFor(), { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(n);
+    return window.KiwiNumber?.number(n, dec) || new Intl.NumberFormat(localeFor(), { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(n);
   };
   const fmtMad = (n) => `${fmtNum(Math.round(n))} MAD`;
   const fmtUnit = (q, u) => {

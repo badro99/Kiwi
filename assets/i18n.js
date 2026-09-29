@@ -1334,6 +1334,23 @@
   function getLang() { return localStorage.getItem('kiwiLang') || 'fr'; }
   function getTheme() { return localStorage.getItem('kiwiTheme') || 'light'; }
 
+  /* One merchant-facing number rule. EN uses 15,765.38; FR and AR use
+   * 15 765,38 with Latin digits. Receipts keep their own fiscal formatter. */
+  const numberLocale = () => getLang() === 'en' ? 'en-GB' : 'fr-FR';
+  const number = (value, digits = 0) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '·';
+    return new Intl.NumberFormat(numberLocale(), {
+      minimumFractionDigits: digits, maximumFractionDigits: digits,
+    }).format(n);
+  };
+  window.KiwiNumber = {
+    locale: numberLocale,
+    number,
+    money: (value, digits = 0) => `${number(value, digits)} MAD`,
+    percent: (value, digits = 1) => `${number(value, digits)} %`,
+  };
+
   /* ─── Initialize ─── */
   function init() {
     captureOriginals();

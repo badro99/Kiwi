@@ -1593,19 +1593,21 @@
     return '·';
   }
 
-  const frInt = n => Math.round(n).toLocaleString('fr-FR').replace(/,/g, ' ').replace(/ /g, ' ');
+  const frInt = n => window.KiwiNumber?.number(Math.round(n)) || Math.round(n).toLocaleString('fr-FR');
 
   function fmtHeroAmount(v) {
     const int = Math.floor(v);
     const cents = Math.round((v - int) * 100);
-    return `${frInt(int)}<span class="cents">,${String(cents).padStart(2,'0')}</span><span class="currency">MAD</span>`;
+    const separator = getLang() === 'en' ? '.' : ',';
+    return `${frInt(int)}<span class="cents">${separator}${String(cents).padStart(2,'0')}</span><span class="currency">MAD</span>`;
   }
   const fmtNetAmount = v => `${frInt(v)} MAD`;
   const fmtSettleAmount = v => `${frInt(v)} <span style="font-size:0.42em; opacity: 0.7;">MAD</span>`;
   const fmtPct = v => {
     const sign = v > 0 ? '+' : v < 0 ? '−' : '';
     const abs = Math.abs(v);
-    const formatted = (Math.abs(abs - Math.round(abs)) < 0.001) ? String(Math.round(abs)) : abs.toFixed(1).replace('.', ',');
+    const formatted = window.KiwiNumber?.number(abs, Math.abs(abs - Math.round(abs)) < 0.001 ? 0 : 1)
+      || ((Math.abs(abs - Math.round(abs)) < 0.001) ? String(Math.round(abs)) : abs.toFixed(1).replace('.', ','));
     return `${sign}${formatted} %`;
   };
 
@@ -2623,8 +2625,8 @@
   function fmtKpiVal(spec, v) {
     const unit = spec.unit ? `<span class="u">${spec.unit}</span>` : '';
     if (spec.text) return spec.text + unit;
-    if (spec.fmt === 'pct2') return v.toFixed(2).replace('.', ',') + unit;
-    if (spec.fmt === 'pct1') return v.toFixed(1).replace('.', ',') + unit;
+    if (spec.fmt === 'pct2') return (window.KiwiNumber?.number(v, 2) || v.toFixed(2).replace('.', ',')) + unit;
+    if (spec.fmt === 'pct1') return (window.KiwiNumber?.number(v, 1) || v.toFixed(1).replace('.', ',')) + unit;
     return frInt(v) + unit;
   }
 

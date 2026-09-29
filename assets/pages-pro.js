@@ -238,8 +238,8 @@ handlers['nav-transactions'] = () => {
   const lang = trLang();
   const T = TX_STR[lang] || TX_STR.fr;
 
-  const fmt2 = (n) => Math.abs(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const fmt0 = (n) => Math.round(n).toLocaleString('fr-FR').replace(/,/g, ' ');
+  const fmt2 = (n) => window.KiwiNumber?.number(Math.abs(n), 2) || Math.abs(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmt0 = (n) => window.KiwiNumber?.number(Math.round(n)) || Math.round(n).toLocaleString('fr-FR');
 
   /* Drawer state */
   let activeFilter = T.all;
@@ -502,16 +502,17 @@ handlers['nav-transactions'] = () => {
  *
  * "Ajouter" and "Demander un terminal" both open the new catalog drawer.
  * ─────────────────────────────────────────────────────────────────────────── */
+const termPct = (value, digits = 1) => window.KiwiNumber?.percent(value, digits) || `${value.toFixed(digits)} %`;
 const TERMINAUX_STR = {
     fr: {
         loaned: 'Prêté · Kiwi Pro',
         purchased: 'Acheté · 03/2025',
         replacement: 'Remplacement dû',
         title: 'Parc terminaux',
-        subtitle: (active, total) => `${active} / ${total} actifs · uptime 24h 94,2 % · 273 tx aujourd'hui`,
+        subtitle: (active, total) => `${active} / ${total} actifs · uptime 24h ${termPct(94.2)} · 273 tx aujourd'hui`,
         heroTitle: 'ÉTAT DU PARC · CAFÉ ATLAS',
         online: 'en ligne',
-        heroSubtitle: 'Batterie moy. 78 % · firmware à jour majoritaire · 1 mise à jour disponible',
+        heroSubtitle: () => `Batterie moy. ${termPct(78, 0)} · firmware à jour majoritaire · 1 mise à jour disponible`,
         deployedDevices: 'Appareils déployés',
         add: 'Ajouter',
         updateAvailable: 'MAJ disponible',
@@ -575,10 +576,10 @@ const TERMINAUX_STR = {
         purchased: 'Purchased · 03/2025',
         replacement: 'Replacement due',
         title: 'Terminal Fleet',
-        subtitle: (active, total) => `${active} / ${total} active · 24h uptime 94.2% · 273 tx today`,
+        subtitle: (active, total) => `${active} / ${total} active · 24h uptime ${termPct(94.2)} · 273 tx today`,
         heroTitle: 'FLEET STATUS · CAFÉ ATLAS',
         online: 'online',
-        heroSubtitle: 'Avg. battery 78% · majority firmware up-to-date · 1 update available',
+        heroSubtitle: () => `Avg. battery ${termPct(78, 0)} · majority firmware up-to-date · 1 update available`,
         deployedDevices: 'Deployed Devices',
         add: 'Add',
         updateAvailable: 'Update available',
@@ -642,10 +643,10 @@ const TERMINAUX_STR = {
         purchased: 'تم الشراء · 03/2025',
         replacement: 'يجب استبداله',
         title: 'أسطول الأجهزة',
-        subtitle: (active, total) => `${active} / ${total} نشط · وقت التشغيل 24 ساعة 94.2% · 273 معاملة اليوم`,
+        subtitle: (active, total) => `${active} / ${total} نشط · وقت التشغيل 24 ساعة ${termPct(94.2)} · 273 معاملة اليوم`,
         heroTitle: 'حالة الأسطول · مقهى أطلس',
         online: 'متصل',
-        heroSubtitle: 'متوسط البطارية 78% · معظم البرامج الثابتة محدثة · 1 تحديث متوفر',
+        heroSubtitle: () => `متوسط البطارية ${termPct(78, 0)} · معظم البرامج الثابتة محدثة · 1 تحديث متوفر`,
         deployedDevices: 'الأجهزة المنشورة',
         add: 'إضافة',
         updateAvailable: 'تحديث متوفر',
@@ -771,7 +772,7 @@ handlers['nav-terminaux'] = () => {
       <div class="p-hero">
         <div class="l">${T.heroTitle}</div>
         <div class="big">${activeCount()} / ${fleet.length} <span style="font-size:18px; opacity:0.7;">${T.online}</span></div>
-        <div class="sub">${T.heroSubtitle}</div>
+        <div class="sub">${T.heroSubtitle()}</div>
       </div>
 
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -813,13 +814,13 @@ handlers['nav-terminaux'] = () => {
               ${spark(beat(t.id, t.state === 'on' ? t.pulse : 0.05), sparkColor)}
             </div>
             <div>
-              <div style="font-size:10px; letter-spacing:0.08em; color:var(--n-500); font-family:var(--mono); margin-bottom:4px;">${T.battery} · ${t.batt} %</div>
+              <div style="font-size:10px; letter-spacing:0.08em; color:var(--n-500); font-family:var(--mono); margin-bottom:4px;">${T.battery} · ${termPct(t.batt, 0)}</div>
               ${battCurve(t.battStart / 100, t.batt / 100)}
             </div>
             <div>
               <div style="font-size:10px; letter-spacing:0.08em; color:var(--n-500); font-family:var(--mono); margin-bottom:4px;">${T.lastTx}</div>
               <div style="font-family:var(--mono); font-weight:500; font-size:13px;">${t.state === 'on' ? '14:' + (28 + Math.floor(demoUnit(`${t.id}:minute`) * 9)) : '09:18'}</div>
-              <div style="font-size:11px; color:var(--n-500); margin-top:2px;">${t.state === 'on' ? Math.round(40 + demoUnit(`${t.id}:amount`) * 200) + ',00 MAD' : T.beforeDisconnect}</div>
+              <div style="font-size:11px; color:var(--n-500); margin-top:2px;">${t.state === 'on' ? (window.KiwiNumber?.money(Math.round(40 + demoUnit(`${t.id}:amount`) * 200), 2) || Math.round(40 + demoUnit(`${t.id}:amount`) * 200) + ',00 MAD') : T.beforeDisconnect}</div>
             </div>
           </div>
         </div>`;
@@ -1144,7 +1145,7 @@ handlers['terminal-catalog'] = () => {
       <div class="p-hero">
         <div class="l">${T.heroTitle}</div>
         <div class="big" style="font-size:26px;">${T.heroModels} <span style="font-size:16px; opacity:0.75;">· ${T.heroKds}</span></div>
-        <div class="sub">${T.heroSubtitle}</div>
+        <div class="sub">${T.heroSubtitle()}</div>
       </div>
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">

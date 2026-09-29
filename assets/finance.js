@@ -216,13 +216,13 @@
     return typeof v === 'function' ? v(...args) : (v == null ? k : v);
   };
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const fmtMad = (n) => `${Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} MAD`;
-  const fmtInt = (n) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const fmtInt = (n) => window.KiwiNumber?.number(Math.round(n)) || Math.round(n).toLocaleString('fr-FR');
+  const fmtMad = (n) => `${fmtInt(n)} MAD`;
   /* locPeriod() et ses tables de mois vivaient ici pour traduire « Mai 2026 » et
      « 30 juin 2026 » sur la déclaration de TVA. La déclaration est partie
      (section 6), et rien d'autre n'affichait de mois : elles partent avec elle
      plutôt que de rester à attendre un appelant qui n'existe plus. */
-  const fmtPct = (n, d = 1) => `${(n).toFixed(d)} %`;
+  const fmtPct = (n, d = 1) => window.KiwiNumber?.percent(n, d) || `${(n).toFixed(d)} %`;
 
   /* ─────────────── Per-venue demo data (in MAD) ─────────────── */
   /* Fixed monthly costs — rent, fixed salaries (cuisine + permanent staff),

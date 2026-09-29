@@ -81,7 +81,7 @@ var SHELL = [
   '/assets/agent-truth.js?v=6',
   '/assets/agent-voice.js?v=9',
   '/assets/agent-vision.js?v=1',
-  '/assets/i18n.js?v=10',
+  '/assets/i18n.js?v=11',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -89,7 +89,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=40',
+  '/assets/interactive.js?v=41',
   '/assets/features.js?v=6',
   '/assets/invoicing.css?v=7',
   '/assets/invoicing.js?v=9',
@@ -137,7 +137,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/dateRange.js?v=38',
+  '/assets/dateRange.js?v=40',
   '/assets/mobile-nav.js?v=3',
   '/assets/liquid-lens.js?v=1',
   '/assets/pages.js?v=8',
@@ -230,7 +230,7 @@ var SHELL = [
   '/assets/maison-stock-movements.js?v=4',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=8',
-  '/assets/stock.js?v=55',
+  '/assets/stock.js?v=56',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le

@@ -4,6 +4,7 @@
 // tester's phone. Static reads only: no browser, no network, no credentials.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 
 const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 let checks = 0;
@@ -85,5 +86,22 @@ ok(/html\.kiwi-native\[lang="ar"\] \*\{letter-spacing:0!important\}/.test(css), 
 // #0122 · stock overview fits in a compact 2x2 phone grid.
 ok(/\.st-kpis\{display:grid!important;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/.test(css), 'stock overview has two KPI columns on phone');
 ok(/\.st-head-acts\{display:flex!important;width:100%;flex-wrap:nowrap!important;overflow-x:auto!important/.test(css), 'stock actions remain a single swipeable row');
+
+// #0120 · the merchant surfaces share one kiwiLang-backed number rule.
+const numberScope = {
+  window: {}, document: { readyState: 'loading', addEventListener() {} },
+  localStorage: { getItem(key) { return key === 'kiwiLang' ? this.lang : null; }, lang: 'en' },
+};
+vm.runInNewContext(read('assets/i18n.js'), numberScope);
+ok(numberScope.window.KiwiNumber.number(15765.38, 2) === '15,765.38', 'English numbers use comma grouping and dot decimals');
+numberScope.localStorage.lang = 'fr';
+ok(numberScope.window.KiwiNumber.number(15765.38, 2) === '15\u202f765,38', 'French numbers use narrow-space grouping and comma decimals');
+numberScope.localStorage.lang = 'ar';
+ok(numberScope.window.KiwiNumber.percent(70.2) === '70,2 %', 'Arabic keeps Latin digits with joined-script-safe number punctuation');
+ok(['assets/stock.js', 'assets/finance.js', 'assets/pages-pro.js', 'assets/dateRange.js', 'assets/interactive.js', 'assets/agent.js']
+  .every((file) => read(file).includes('KiwiNumber')), 'stock, finance, orders, terminals, home, notifications and AI use the shared rule');
+ok(/if \(spec\.fmt === 'pct2'\) return \(window\.KiwiNumber\?\.number\(v, 2\)/.test(dateRange)
+  && /if \(spec\.fmt === 'pct1'\) return \(window\.KiwiNumber\?\.number\(v, 1\)/.test(dateRange)
+  && /function serviceAmount\(value\) \{[\s\S]*?KiwiNumber\?\.number\(value\)/.test(read('assets/design-vexel-layout.js')), 'home KPI rates and service amounts follow the shared locale rule');
 
 console.log(`\nnative-pass5-test · ${checks} checks green`);

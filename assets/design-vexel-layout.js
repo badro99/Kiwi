@@ -572,11 +572,7 @@
 
   function serviceAmount(value) {
     if (!(value >= 0)) return '·';
-    var locale = 'fr-FR';
-    /* Intl groupe en fr-FR avec une espace fine insécable (U+202F) ; le reste
-     * du tableau de bord sépare ses milliers par une espace normale. Deux
-     * largeurs pour le même chiffre se voient dès qu'on empile les cartes. */
-    return Math.round(value).toLocaleString(locale).replace(/\u202F/g, ' ');
+    return window.KiwiNumber?.number(value) || Math.round(value).toLocaleString('fr-FR');
   }
 
   function servicePeriodLabel(range, l) {
@@ -963,7 +959,7 @@
     }
     if (restTarget) {
       var remaining = goalUnset ? 0 : Math.max(0, numberFrom(targetText) - numberFrom(amountText));
-      setText(restTarget, remaining ? (GOAL_STR[lang()] || GOAL_STR.fr).rest + ' ' + Math.round(remaining).toLocaleString('fr-FR') + ' MAD' : '');
+      setText(restTarget, remaining ? (GOAL_STR[lang()] || GOAL_STR.fr).rest + ' ' + (window.KiwiNumber?.number(remaining) || Math.round(remaining).toLocaleString('fr-FR')) + ' MAD' : '');
     }
 
     /* Miroir des comparaisons du panneau masqué. On recopie le libellé et la

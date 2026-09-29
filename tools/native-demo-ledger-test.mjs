@@ -68,7 +68,10 @@ try {
       const dr=KiwiDayReport, clock=KiwiDemoClock;
       const rows=range==='aujourdhui'?clock.getDaySales():range==='hier'?clock.getDaySales(dr.shiftDay(dr.today(),-1)):clock.getSales(range==='septJours'?7:30);
       const amount=Math.round(rows.reduce((s,r)=>s+Math.round(r.amount*100),0)/100);
-      const shown=document.querySelector('[data-rev-hero-val]').textContent.replace(/[^0-9,.-]/g,'').replace(',','.');
+      const text=document.querySelector('[data-rev-hero-val]').textContent.replace(/[^0-9,.\u202f\u00a0 -]/g,'');
+      const shown=KiwiNumber.locale()==='en-GB'
+        ? Number(text.replace(/,/g,''))
+        : Number(text.replace(/[\s\u202f\u00a0]/g,'').replace(',','.'));
       return {amount,shown};
     },range);
     check(Math.round(Number(values.shown))===values.amount, 'visible home '+range+' total matches ledger');
