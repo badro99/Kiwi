@@ -42,4 +42,16 @@ for (const file of ['team','restaurant-menu-workspace','account','simple','clien
 }
 ok(read("assets/dateRange.js").includes("i < xs.length && Number.isFinite(xs[i])"), "partial chart series cannot abort locale rendering on a stale tick");
 ok(read("assets/restaurant-menu-workspace.js").includes("if(!d.cats.length){openCategory(null);return;}"), "empty-menu New item opens section creation instead of a dead button");
+// Execute the shared formatter itself in each supported locale.
+const i18nSource = read('assets/i18n.js');
+const numberStart = i18nSource.indexOf('  const numberLocale =');
+const numberEnd = i18nSource.indexOf('\n  };', i18nSource.indexOf('window.KiwiNumber =', numberStart)) + 5;
+for (const language of ['en', 'fr', 'ar']) {
+  const ctx = {window:{},getLang:()=>language,Intl,Number};
+  vm.runInNewContext(i18nSource.slice(numberStart, numberEnd), ctx);
+  const f = ctx.window.KiwiNumber;
+  ok(f.number(1240) === (language === 'en' ? '1,240' : '1\u202f240'), language+' groups regulars without magnitude loss');
+  ok(f.format(15765.38,{minimumFractionDigits:2,maximumFractionDigits:2}) === (language === 'en' ? '15,765.38' : '15\u202f765,38'), language+' preserves precision and separators');
+  ok(f.number(NaN) === '·', language+' rejects non-finite display values');
+}
 console.log(`native-pass7-test: ${checks} checks passed`);
