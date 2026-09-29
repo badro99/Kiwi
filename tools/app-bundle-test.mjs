@@ -53,7 +53,8 @@ if (first) {
   assert(first.manifest.files.some((f) => f.path === 'native-runtime.js'), 'le runtime natif partagé est dans le bundle');
   assert(first.manifest.files.filter((f) => f.path.startsWith('native-fonts/')).length === 4, 'Inter Tight et IBM Plex Sans Arabic sont embarquées localement');
   assert(!first.manifest.files.some((f) => / \d+\.[a-z]+$/i.test(f.path)), 'aucune copie de conflit iCloud « fichier 2.js » dans le bundle');
-  assert(!first.manifest.files.some((f) => f.path.startsWith('assets/media/')), 'assets/media/ (marketing) n’est pas embarqué');
+  const hardware = first.manifest.files.filter((f) => f.path.startsWith('assets/media/'));
+  assert(hardware.length === 6 && hardware.every((f) => f.path.startsWith('assets/media/hardware/')), 'seules les six photos de terminaux utilisées sont embarquées');
 
   for (const page of PAGES.concat(['index.html'])) {
     const html = fs.readFileSync(path.join(first.out, page), 'utf8');

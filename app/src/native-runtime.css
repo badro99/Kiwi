@@ -661,6 +661,20 @@ html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) body .kiwi-dra
   html.kiwi-native .st-pc-blind tr[data-stock-pc-row].has-count [data-pc-var]{visibility:visible!important}
   html.kiwi-native .st-pc-tbl tr[data-stock-pc-row]>td:nth-child(5){display:none!important}
 }
+/* #0118 · Device fleet remains legible without a desktop three-column card. */
+@media(max-width:600px){
+  html.kiwi-native .term-device{padding:16px!important}
+  html.kiwi-native .term-device-main{display:grid!important;grid-template-columns:72px minmax(0,1fr)!important;gap:10px 12px!important;align-items:start!important}
+  html.kiwi-native .term-device-photo{box-sizing:border-box;width:72px!important;height:72px!important;grid-column:1;grid-row:1}
+  html.kiwi-native .term-device-info{grid-column:2;grid-row:1;min-width:0}
+  html.kiwi-native .term-device-info>div:first-child{font-size:14px!important;line-height:1.25;overflow-wrap:normal;word-break:normal}
+  html.kiwi-native .term-device-info>div:nth-child(2){overflow-wrap:anywhere;font-size:10px!important}
+  html.kiwi-native .term-device-info>div:nth-child(3){gap:6px!important;margin-top:7px!important;font-size:11px!important}
+  html.kiwi-native .term-device-actions{grid-column:1/-1;grid-row:2;display:grid!important;grid-template-columns:1fr 1fr;gap:8px!important;width:100%;align-items:stretch!important}
+  html.kiwi-native .term-device-actions .kb{min-height:44px;justify-content:center!important;font-size:12px!important}
+  html.kiwi-native .term-device-diagnostics{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+  html.kiwi-native .term-device-diagnostics>div{min-width:0;overflow:hidden}
+}
 html.kiwi-native .kiwi-fullpage .kiwi-drawer-head{top:0}
 html.kiwi-native .kiwi-backdrop{padding-top:max(20px,calc(var(--kiwi-safe-top) + 8px))!important;padding-bottom:max(20px,calc(var(--kiwi-safe-bottom) + 8px))!important}
 html.kiwi-native .kiwi-modal{max-height:calc(100dvh - var(--kiwi-safe-top) - var(--kiwi-safe-bottom) - 24px)}

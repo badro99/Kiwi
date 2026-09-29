@@ -788,12 +788,12 @@ handlers['nav-terminaux'] = () => {
         const statusTxt = t.state === 'on' ? `${T.onlineStatus} · ${netName(t.net)}` : off ? `${T.offlineStatus} · 09:18` : T.disabledStatus;
         const sparkColor = t.state === 'on' ? 'var(--atlas)' : off ? 'var(--danger)' : 'var(--n-400)';
         return `
-        <div class="p-card" style="margin-bottom:10px; ${bg}">
-          <div style="display:grid; grid-template-columns:104px 1fr auto; gap:14px; align-items:center; margin-bottom:12px;">
-            <div style="width:104px; height:80px; border-radius:11px; background:var(--surface); border:1px solid var(--n-200); display:flex; align-items:center; justify-content:center; padding:6px; ${dim ? 'opacity:0.55;' : ''}">
+        <div class="p-card term-device" style="margin-bottom:10px; ${bg}">
+          <div class="term-device-main" style="display:grid; grid-template-columns:104px 1fr auto; gap:14px; align-items:center; margin-bottom:12px;">
+            <div class="term-device-photo" style="width:104px; height:80px; border-radius:11px; background:var(--surface); border:1px solid var(--n-200); display:flex; align-items:center; justify-content:center; padding:6px; ${dim ? 'opacity:0.55;' : ''}">
               <img src="${t.img}" alt="${esc(t.model)}" style="max-width:100%; max-height:100%; object-fit:contain; display:block;" loading="lazy">
             </div>
-            <div>
+            <div class="term-device-info">
               <div style="font-weight:600; font-size:14.5px; letter-spacing:-0.005em;">${esc(t.model)} · ${esc(locName(t.loc))}</div>
               <div style="font-family:var(--mono); font-size:11px; color:var(--n-500); margin-top:2px;">S/N ${esc(t.id)} · firmware ${t.fw}${t.fwUpdate ? ` · <span class="chip pend" style="padding:1px 7px; font-size:10px; margin-left:4px;">${T.updateAvailable}</span>` : ''}</div>
               <div style="display:flex; gap:14px; margin-top:8px; font-size:11.5px; color:var(--n-600); flex-wrap:wrap;">
@@ -802,12 +802,12 @@ handlers['nav-terminaux'] = () => {
                 <span class="chip ${lifeChip[t.life] || 'neutral'}" style="padding:1px 8px; font-size:10px;">${lifeText[t.life] || ''}</span>
               </div>
             </div>
-            <div style="display:flex; flex-direction:column; gap:5px; align-items:flex-end;">
+            <div class="term-device-actions" style="display:flex; flex-direction:column; gap:5px; align-items:flex-end;">
               <button class="kb ghost" data-action="term-test" data-arg="${t.id}" style="padding:5px 10px; font-size:11.5px; gap:5px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l5 5L20 7"/></svg>${T.testTx}</button>
               <button class="kb ${off ? 'atlas' : 'ghost'}" data-action="term-manage" data-arg="${t.id}" style="padding:5px 10px; font-size:11.5px;">${T.manage}</button>
             </div>
           </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; padding-top:12px; border-top:1px solid var(--n-200);">
+          <div class="term-device-diagnostics" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; padding-top:12px; border-top:1px solid var(--n-200);">
             <div>
               <div style="font-size:10px; letter-spacing:0.08em; color:var(--n-500); font-family:var(--mono); margin-bottom:4px;">${T.beats}</div>
               ${spark(beat(t.id, t.state === 'on' ? t.pulse : 0.05), sparkColor)}

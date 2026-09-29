@@ -64,9 +64,13 @@ const NATIVE_FONTS = {
  * l'icône d'app et les icônes de navigation qu'une surface référence), les
  * médias marketing (assets/media/), et les copies de conflit iCloud « foo 2.js »
  * qui n'ont rien à faire nulle part. */
+const NATIVE_HARDWARE_IMAGES = new Set([
+  'Hardware_gamefication4.png', 'Hardware_gamefication2.png', 'Hardware_KDSgamefication1.png',
+  'Hardware_4.png', 'Hardware_2.png', 'Hardware_KDS1.png',
+].map((name) => `assets/media/hardware/${name}`));
 function excluded(rel) {
   if (/(^|\/)[^/]* \d+\.[^/]+$/.test(rel)) return true;           // "fichier 2.js"
-  if (rel.startsWith('assets/media/')) return true;
+  if (rel.startsWith('assets/media/')) return !NATIVE_HARDWARE_IMAGES.has(rel);
   if (rel.startsWith('assets/landing/')) {
     return !(rel === 'assets/landing/kiwi-mark-app-icon.png' || rel.startsWith('assets/landing/icons/'));
   }

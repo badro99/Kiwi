@@ -71,4 +71,7 @@ ok(/tr\[data-stock-pc-row\]\{display:grid!important/.test(css) && /grid-template
 ok(/inputmode="decimal"/.test(stock) && !/placeholder="·" data-pc-real/.test(stock), 'count input summons the decimal keypad without a dot placeholder');
 ok(/classList\.add\('has-count'\)/.test(stock) && /\.st-pc-blind tr\[data-stock-pc-row\]\.has-count \[data-pc-var\]\{visibility:visible!important/.test(css), 'variance appears after a blind-count entry');
 
+// #0118 · fleet cards are compact and the native bundle has the actual photos.
+ok(/\.term-device-main\{display:grid!important;grid-template-columns:72px minmax\(0,1fr\)/.test(css) && /\.term-device-actions\{grid-column:1\/-1/.test(css), 'terminal cards place actions on one phone row');
+
 console.log(`\nnative-pass5-test · ${checks} checks green`);
