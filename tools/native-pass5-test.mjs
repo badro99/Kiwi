@@ -115,4 +115,7 @@ ok(/kpiComparisonLabel: \(\) => KPI_DELTA_SUFFIX/.test(dateRange) && /selectedCo
 ok(/kpi\(T\(L\.net\), money\(r\.net\), 'lead', 'MAD'/.test(read('assets/day-report-dash.js')) && /\.kdr-kpi\.is-lead \.kdr-kpi-v\{[^}]*white-space:nowrap!important/.test(css), 'day report keeps net amount and smaller MAD unit on one line');
 ok(/\.kdr-nav \.kdr-day span\{display:none!important/.test(css), 'day report does not repeat Today or Yesterday beside the selected date');
 
+// #0125 · New item should lead into New section when there are no sections.
+ok(/data-action="rmw-item-add">/.test(menu) && /if\(!d\.cats\.length\)\{openCategory\(null\);return;\}/.test(menu), 'New item opens section creation when no section exists');
+
 console.log(`\nnative-pass5-test · ${checks} checks green`);
