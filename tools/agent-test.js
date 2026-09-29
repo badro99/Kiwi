@@ -810,7 +810,8 @@ section('Server-model fallback, no in-browser download');
   t('no download-offer strings remain in the llm dictionaries',
     !/offerSize|unfitAdapter|unfitSpace|unfitMemory|loadFailMsg/.test(code));
   t('routeToLlm: declined → private, accepted → server, otherwise consent offer',
-    /function routeToLlm\(question\) \{\s*if \(cloudDeclined\(\)\) \{ deterministicOnly\('private'\); return; \}\s*if \(cloudAccepted\(\)\) \{ runLlm\(question\); return; \}\s*offerCloud\(question\);\s*\}/.test(code));
+    /function routeToLlm\(question\) \{[\s\S]*?if \(window\.KiwiNativePrivacy\) \{ runLlm\(question\); return; \}\s*if \(cloudDeclined\(\)\) \{ deterministicOnly\('private'\); return; \}\s*if \(cloudAccepted\(\)\) \{ runLlm\(question\); return; \}\s*offerCloud\(question\);\s*\}/.test(code));
+  t('routeToLlm: a signed-out 401 is remembered, so the demo is told once and not asked again', /if \(LLM\.needsSignIn\) \{ deterministicOnly\('auth'\); return; \}/.test(code));
   t('runLlm has a single transport: llmAnswerStream → cloudToolRound / cloudDeltas', /const run = await llmAnswerStream\(messages\);/.test(code) && /await cloudToolRound\(messages\)/.test(code) && /await cloudDeltas\(\[\.\.\.messages, \.\.\.toolMsgs\]\)/.test(code) && !/localDeltas\(/.test(code));
   t('the panel carries a mode toggle wired to setCloud', /data-fa-mode-toggle/.test(code) && /\[data-fa-mode-toggle\]'\)\) \{ setCloud\(!cloudAccepted\(\)\); refreshTrustLine\(\); return; \}/.test(code));
 

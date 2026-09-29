@@ -141,7 +141,7 @@ var SHELL = [
   '/assets/mobile-nav.js?v=3',
   '/assets/liquid-lens.js?v=1',
   '/assets/pages.js?v=7',
-  '/assets/help-centre.js?v=4',
+  '/assets/help-centre.js?v=5',
   '/assets/account.js?v=23',
   '/assets/production-action-guard.js?v=1',
   // Shared floor-plan vocabulary · the dashboard designer AND the caisse both
@@ -238,7 +238,7 @@ var SHELL = [
   '/assets/cost.js?v=4',
   '/assets/clients-store.js?v=7',
   '/assets/clients-book.js?v=15',
-  '/assets/clients-directory.js?v=10',
+  '/assets/clients-directory.js?v=11',
   '/assets/menu-catalog.js?v=25',
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',

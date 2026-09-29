@@ -897,8 +897,11 @@
       arc.setAttribute('stroke-dasharray', '0 ' + circumference.toFixed(2));
       setText(pctNode, '·');
       setText(title, '');
+      /* An image with no name is worse than none: hide the empty ring. */
+      if (title && title.ownerSVGElement) title.ownerSVGElement.setAttribute('aria-hidden', 'true');
       return;
     }
+    if (title && title.ownerSVGElement) title.ownerSVGElement.removeAttribute('aria-hidden');
 
     var share = Math.min(1, read.current / read.total);
     arc.setAttribute('stroke-dasharray', (share * circumference).toFixed(2) + ' ' + circumference.toFixed(2));

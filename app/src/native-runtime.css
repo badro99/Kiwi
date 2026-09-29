@@ -630,3 +630,13 @@ html.kiwi-native .fa-input::placeholder{text-overflow:ellipsis}
 html.kiwi-native :is(.acts .approve,.acts .dismiss,.cd-exp,.eq-icon-btn){min-height:44px;min-width:44px}
 html.kiwi-native .kiwi-toast .tx{min-width:44px;min-height:44px}
 html.kiwi-native [data-footer-line] a{text-decoration:underline;text-underline-offset:2px}
+/* Accessibility pass 2 (2026-09-29): touch targets grown with an invisible hit
+   area (no layout shift), and the help centre's primary button on atlas, which
+   reads 4.9:1 with white text where the dark-theme mint read 2.5:1. */
+html.kiwi-native :is(.oppo-cta,.hh-ai-cta,.dkfix-text,[data-action="view-suppliers"],[data-action="account-help"],[data-action="feed-view-all"]){position:relative}
+html.kiwi-native :is(.oppo-cta,.hh-ai-cta,.dkfix-text,[data-action="view-suppliers"],[data-action="account-help"],[data-action="feed-view-all"])::after{content:"";position:absolute;inset:-12px -6px}
+html.kiwi-native :is(.hai-chip,.cd-seg,.eq-pill){position:relative}
+html.kiwi-native :is(.hai-chip,.cd-seg,.eq-pill)::after{content:"";position:absolute;inset:-7px 0}
+html.kiwi-native :is(.kv-mic,.kv-attach,.hai-send){position:relative}
+html.kiwi-native :is(.kv-mic,.kv-attach,.hai-send)::after{content:"";position:absolute;inset:-4px}
+html.kiwi-native .kh-btn.atlas{background:#0B6E4F;color:#fff;border-color:#0B6E4F}

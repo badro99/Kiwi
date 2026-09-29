@@ -535,6 +535,8 @@
         cloudActivate: 'Répondre depuis les serveurs Kiwi',
         cloudDecline: 'Non merci, garder mes calculs seuls',
         cloudQuota: 'L’assistant serveur a atteint sa limite du jour pour votre établissement. Il repart demain ; d’ici là mes calculs restent entiers.',
+        cloudAuth: 'Cette question sort de mes calculs. Les réponses du serveur demandent un compte Kiwi connecté, la démo ne les propose pas.',
+        privateNative: 'Cette question sort de mes calculs et Kiwi AI est désactivé. Réactivez-le dans le menu ☰ › Confidentialité Kiwi AI.',
       },
       acct: {
         hub: 'Je suis aussi votre comptable, teneur de livres, fiscaliste et gestionnaire de paie, tout est réuni dans votre Comptabilité : livre, états financiers, TVA & impôts, et paie.',
@@ -703,6 +705,8 @@
         cloudActivate: 'Answer from Kiwi’s servers',
         cloudDecline: 'No thanks, keep my calculations only',
         cloudQuota: 'The server assistant has reached today’s limit for your business. It resets tomorrow; until then my calculations are untouched.',
+        cloudAuth: 'This question is outside my calculations. Server answers need a signed-in Kiwi account, and the demo does not offer them.',
+        privateNative: 'This question is outside my calculations and Kiwi AI is off. Turn it on in the ☰ menu › Kiwi AI privacy.',
       },
       acct: {
         hub: 'I\'m also your accountant, bookkeeper, tax adviser and payroll manager, it\'s all together in your Accounting: ledger, financial statements, VAT & tax, and payroll.',
@@ -873,6 +877,8 @@
         cloudActivate: 'الإجابة من خوادم Kiwi',
         cloudDecline: 'لا، شكراً · الاكتفاء بحساباتي',
         cloudQuota: 'بلغ المساعد على الخادم حدّه اليومي لمحلّك. يُستأنف غداً، وحساباتي تبقى كاملة حتى ذلك الحين.',
+        cloudAuth: 'هذا السؤال خارج حساباتي. إجابات الخادم تتطلب حساب Kiwi مسجّل الدخول، والعرض التجريبي لا يوفرها.',
+        privateNative: 'هذا السؤال خارج حساباتي والذكاء الاصطناعي متوقف. فعّله من القائمة ☰ › خصوصية Kiwi AI.',
       },
       acct: {
         hub: 'أنا أيضاً محاسبك وماسك دفاترك ومستشارك الضريبي ومدير أجورك، كل ذلك مجتمع في قسم المحاسبة: الدفتر، القوائم المالية، الضريبة والرسوم، والأجور.',
@@ -2961,7 +2967,7 @@
   /* …but "puis-je investir 80 000 dans du stock" is an investment question
    * that merely names stock. An affordability verb with a real amount wins. */
   const BUY_RX = /\bpuis.?je\b|\bpeux.?je\b|\binvestir\b|\bacheter\b|\bcan\s+i\b|\bafford\b|\binvest\b|\bbuy\b/;
-  const OVERVIEW_RX = /fais\s+le\s+point|fait\s+le\s+point|\bfais\s+un\s+point\b|resume(?:z|\s+moi)?\s+(?:ma|mon|la)\b|\bun\s+resume\b|\bbilan\s+(?:rapide|global|general)\b|comment\s+va\s+(?:mon|le|la|l[' ])\s*(?:business|commerce|cafe|affaire|boite|restaurant|boutique)|ou\s+j[' ]?en\s+suis|\bou\s+en\s+suis[- ]?je\b|ou\s+en\s+est\s+(?:mon|ma|le|la)\s+(?:commerce|business|boutique|cafe|affaire)|situation\s+general|tout\s+va\s+bien|etat\s+des\s+lieux|how\s+is\s+my\s+(?:business|shop|cafe)|\boverview\b|\bsummary\s+of\b|\bsummary\b|how\s+are\s+we\s+doing|where\s+do\s+i\s+stand|health\s+check|\bkhdmti\b|\bnadra\s+3ama\b|kolchi\s+mzyan|كيف\s*حال|ملخص|نظرة\s*عامة/;
+  const OVERVIEW_RX = /fais\s+le\s+point|fait\s+le\s+point|\bfais\s+un\s+point\b|resume(?:z|\s+moi)?\s+(?:ma|mon|la)\b|\bun\s+resume\b|\bbilan\s+(?:rapide|global|general)\b|comment\s+va\s+(?:mon|le|la|l[' ])\s*(?:business|commerce|cafe|affaire|boite|restaurant|boutique)|ou\s+j[' ]?en\s+suis|\bou\s+en\s+suis[- ]?je\b|ou\s+en\s+est\s+(?:mon|ma|le|la)\s+(?:commerce|business|boutique|cafe|affaire)|situation\s+general|tout\s+va\s+bien|etat\s+des\s+lieux|how(?:\s+is|['’]?s)\s+(?:my|our|the)\s+(?:business|shop|store|cafe|restaurant|boutique|day|week|month|year)\b|how(?:\s+is|['’]?s)\s+business\b|how\s+am\s+i\s+doing|how\s+are\s+things|how\s+is\s+everything|\boverview\b|\bsummary\s+of\b|\bsummary\b|how\s+are\s+we\s+doing|where\s+do\s+i\s+stand|health\s+check|\bkhdmti\b|\bnadra\s+3ama\b|kolchi\s+mzyan|كيف\s*حال|ملخص|نظرة\s*عامة/;
 
   /* A bank refusal is answerable: the four figures a bank actually reads are
    * all figures we hold. Silence here was the assistant at its least useful. */
@@ -3716,6 +3722,8 @@
     ['quelle est ma marge et mon seuil de rentabilité', 'overview'],
     ['fais le point', 'overview'],
     ['comment va mon commerce', 'overview'],
+    ['how is my store doing', 'overview'], ["how's business", 'overview'], ['how am I doing', 'overview'],
+    ['how is my shop doing this week', 'overview'], ['how are things going', 'overview'],
     // answerable hardship, and hardship that is not a simulation
     ['la banque me refuse le crédit', 'financing'],
     ['mes employés volent, je fais quoi', 'theft'],
@@ -4827,6 +4835,8 @@
       background:var(--atlas); color:#fff; cursor:pointer; transition:transform 150ms var(--fa-ease), background 150ms;
       box-shadow:0 10px 24px -12px rgba(11,110,79,.6); }
     .fa-llm-btn:hover { background:var(--riad); transform:translateY(-1px); }
+    .fa-llm-btn[data-fa-cloud-no] { background:transparent; color:var(--atlas); box-shadow:inset 0 0 0 1.5px var(--atlas); }
+    .fa-llm-btn[data-fa-cloud-no]:hover { background:rgba(11,110,79,.08); color:var(--riad); }
     .fa-rate { background:none; border:1px solid var(--n-200); border-radius:999px; padding:3px 9px;
                font-size:13px; cursor:pointer; line-height:1.4; opacity:0.55; transition:opacity 140ms, border-color 140ms; }
     .fa-rate:hover { opacity:1; border-color:var(--atlas); }
@@ -4874,6 +4884,7 @@
     html[data-theme="dark"] .fa-llm-btn {
       background:var(--paper-muted); color:var(--ink); box-shadow:none; }
     html[data-theme="dark"] .fa-llm-btn:hover { background:var(--n-200); }
+    html[data-theme="dark"] .fa-llm-btn[data-fa-cloud-no] { background:transparent; color:var(--ink-on-dark, #F7F5F0); box-shadow:inset 0 0 0 1.5px currentColor; }
     html[data-theme="dark"] .fa-drawer :focus-visible { outline-color:var(--n-500); }
     `;
     document.head.appendChild(s);
@@ -5189,7 +5200,8 @@
      * marche toujours — jamais un haussement d'épaules. */
     function deterministicOnly(why) {
       const m = tr().llm;
-      const lead = why === 'private' ? m.privateLead : m.unavailable;
+      const lead = why === 'private' ? (window.KiwiNativePrivacy ? m.privateNative : m.privateLead)
+        : why === 'auth' ? m.cloudAuth : m.unavailable;
       pushAgent(replyHtml({
         text: lead + ' ' + m.unfitTail,
         follow: [tr().chips.charges, tr().chips.breakeven],
@@ -5224,6 +5236,13 @@
     }
 
     function routeToLlm(question) {
+      /* Signed-out (the demo): the server answers 401 to every ask, so say so
+       * once instead of asking for consent to a request that cannot succeed. */
+      if (LLM.needsSignIn) { deterministicOnly('auth'); return; }
+      /* In the iOS app the system consent sheet (native-privacy.js) is THE
+       * consent, asked before any byte leaves. A second in-chat card asking the
+       * same thing was a double prompt, so ask the server and let the sheet gate it. */
+      if (window.KiwiNativePrivacy) { runLlm(question); return; }
       if (cloudDeclined()) { deterministicOnly('private'); return; }
       if (cloudAccepted()) { runLlm(question); return; }
       offerCloud(question);
@@ -5246,7 +5265,8 @@
       try { j = await res.json(); } catch (_) { j = null; }
       if (!res.ok || !j || !j.ok) {
         const err = new Error('cloud:' + ((j && j.error) || res.status));
-        err.kiwiCode = (j && j.error) || '';
+        /* The gate answers a missing session with an HTML page, not JSON. */
+        err.kiwiCode = (j && j.error) || (res.status === 401 ? 'auth' : '');
         throw err;
       }
       return j;
@@ -5265,6 +5285,7 @@
          * d'afficher une erreur brute. */
         let code = '';
         try { const j = await res.json(); code = (j && j.error) || ''; } catch (_) {}
+        if (!code && res.status === 401) code = 'auth';
         const err = new Error('cloud:' + (code || res.status));
         err.kiwiCode = code;
         throw err;
@@ -5464,9 +5485,14 @@
          * simplement la réponse déterministe qu'il avait avant que cette route
          * existe. Le quota, lui, se dit : c'est temporaire et il repart demain. */
         const code = e && e.kiwiCode;
+        try { console.warn('[kiwi-ai] server answer failed', e && e.name, e && e.message); } catch (_) {}
+        if (e && e.name === 'NotAllowedError') { deterministicOnly('private'); return; }
+        if (code === 'auth') LLM.needsSignIn = true;
         if (code === 'quota') {
           pushAgent(replyHtml({ text: tr().llm.cloudQuota }));
-        } else if (code === 'unbound' || code === 'auth' || code === 'model' || code === 'messages' || code === 'body') {
+        } else if (code === 'auth') {
+          deterministicOnly('auth');
+        } else if (code === 'unbound' || code === 'model' || code === 'messages' || code === 'body') {
           deterministicOnly('unavailable');
         } else {
           pushAgent(replyHtml({ text: tr().llm.runErr }));

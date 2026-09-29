@@ -322,10 +322,10 @@
         return '<div class="cd-empty"><span class="cd-empty-ic">' + ico('search') + '</span><b>' + esc(T.noMatch) + '</b><p>' + esc(T.noMatchText) + '</p>' +
           '<button type="button" class="cd-exp" data-cd-clear>' + esc(T.clear) + '</button></div>';
       }
-      if (hotel) return '<div class="cd-tblwrap"><table class="cd-tbl"><thead><tr>' +
+      if (hotel) return '<div class="cd-tblwrap" tabindex="0" role="region" aria-label="' + esc(T.title) + '"><table class="cd-tbl"><thead><tr>' +
         [T.th.name, T.th.phone, H.nationality, H.identity, H.room, H.allergies, H.stays, T.th.spend, T.th.last].map(function (label, i) { return '<th' + (i === 6 || i === 7 ? ' class="num"' : '') + '>' + esc(label) + '</th>'; }).join('') +
         '</tr></thead><tbody>' + rows.map(rowHtml).join('') + '</tbody></table></div>';
-      return '<div class="cd-tblwrap"><table class="cd-tbl"><thead><tr>' +
+      return '<div class="cd-tblwrap" tabindex="0" role="region" aria-label="' + esc(T.title) + '"><table class="cd-tbl"><thead><tr>' +
         ['name', 'phone', 'email', 'visits', 'spend', 'points', 'seg', 'last'].map(function (k) { return '<th' + (k === 'visits' || k === 'spend' || k === 'points' ? ' class="num"' : '') + '>' + T.th[k] + '</th>'; }).join('') +
         '</tr></thead><tbody>' + rows.map(rowHtml).join('') + '</tbody></table></div>';
     }

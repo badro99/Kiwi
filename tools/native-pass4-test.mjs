@@ -122,4 +122,22 @@ ok(!/exitApp|history\.back/.test(swipe), 'swipe back never leaves the app or the
 ok(/td-back/.test(swipe) && /vrap-back-board/.test(swipe) && /SWIPE_STEP_BACK = .#rf-back,#ho-verify-back,#or-btn-back./.test(runtime), 'swipe back covers Team table detail, the takeaway builder and in-sheet steps');
 ok(/dir'\) === 'rtl'/.test(swipe) && /prefers-reduced-motion: reduce/.test(swipe), 'swipe back mirrors in Arabic and respects Reduce Motion');
 
+// Kiwi AI in the app (tester report: "How is my store doing" ended in an error)
+const helpCentre = read('assets/help-centre.js');
+const clientsDir = read('assets/clients-directory.js');
+const OVERVIEW = new RegExp(agent.match(/const OVERVIEW_RX = \/(.*)\/;/)[1]);
+ok(['how is my store doing', "how's business", 'how am i doing', 'how are things going', 'how is my shop doing this week'].every((q) => OVERVIEW.test(q)), '"how is my store doing" and its everyday variants are answered locally, never sent to the server');
+ok(!OVERVIEW.test('how is the weather') && !OVERVIEW.test('how is stock'), 'the overview pattern does not swallow unrelated questions');
+ok(/res\.status === 401 \? 'auth'/.test(agent) && /if \(!code && res\.status === 401\) code = 'auth'/.test(agent), 'a 401 (HTML sign-in page, not JSON) is read as "sign in", not "something went wrong"');
+ok(/if \(LLM\.needsSignIn\) \{ deterministicOnly\('auth'\)/.test(agent) && /cloudAuth: 'This question is outside my calculations\. Server answers need a signed-in Kiwi account/.test(agent), 'the demo says once that server answers need an account, then stops asking');
+ok(/if \(window\.KiwiNativePrivacy\) \{ runLlm\(question\); return; \}/.test(agent), 'in the app the system consent sheet is the only consent, no second in-chat card');
+ok(/e\.name === 'NotAllowedError'\) \{ deterministicOnly\('private'\)/.test(agent) && /privateNative: 'This question is outside my calculations and Kiwi AI is off/.test(agent), 'refusing the consent sheet gives a calm answer pointing to the menu, not an error');
+ok(/\.fa-llm-btn\[data-fa-cloud-no\] \{ background:transparent/.test(agent), 'the decline choice is visibly secondary to the accept button');
+
+// Accessibility pass 2
+ok(/setAttribute\('aria-hidden', 'true'\);\s*return;/.test(read('assets/design-vexel-layout.js')), 'an unnamed client ring is hidden from screen readers');
+ok(/retry:'Try again'/.test(helpCentre) && !/>Réessayer</.test(helpCentre), 'help centre retry is translated');
+ok(/class="cd-tblwrap" tabindex="0" role="region" aria-label="' \+ esc\(T\.title\)/.test(clientsDir), 'the customers table scrolls from the keyboard and has a name');
+ok(/\.kh-btn\.atlas\{background:#0B6E4F/.test(runtimeCss) && /\.hai-chip,\.cd-seg,\.eq-pill\)::after\{[^}]*inset:-7px 0/.test(runtimeCss), 'help button contrast and small pills get 44 pt hit areas');
+
 console.log(`\nnative-pass4-test · ${checks} checks green`);

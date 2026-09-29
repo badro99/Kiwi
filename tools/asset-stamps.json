@@ -60,8 +60,8 @@
     "sha": "386089492099db84"
   },
   "assets/agent.js": {
-    "v": "25",
-    "sha": "3c4fda7f5b309cc9"
+    "v": "26",
+    "sha": "a25433cc2cb78075"
   },
   "assets/ai-telemetry.js": {
     "v": "1",
@@ -176,8 +176,8 @@
     "sha": "7ef220487b465911"
   },
   "assets/clients-directory.js": {
-    "v": "10",
-    "sha": "90fe84d29473a02f"
+    "v": "11",
+    "sha": "465dcd39d750edcb"
   },
   "assets/clients-store.js": {
     "v": "7",
@@ -252,8 +252,8 @@
     "sha": "2443568851cf6ee1"
   },
   "assets/design-vexel-layout.js": {
-    "v": "2084",
-    "sha": "3fbc3600b5d1e27f"
+    "v": "2085",
+    "sha": "0da8d3d23c7b22e7"
   },
   "assets/design-vexel.css": {
     "v": "2107",
@@ -340,8 +340,8 @@
     "sha": "a137abe50eebab42"
   },
   "assets/help-centre.js": {
-    "v": "4",
-    "sha": "7a0b181ecedf5f85"
+    "v": "5",
+    "sha": "3e1df2a5b20d8085"
   },
   "assets/hotel-economat.js": {
     "v": "3",
