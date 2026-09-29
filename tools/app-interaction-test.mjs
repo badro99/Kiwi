@@ -1049,11 +1049,14 @@ for (const viewport of ['small320', 'ipadPortrait', 'ipadLandscape']) {
   await p.waitForFunction(() => typeof window.__releaseSecureGet === 'function');
   const frozen = await p.evaluate(() => {
     const ring = document.querySelector('.boot-ring');
-    if (!ring) return 'no-boot';
+    if (!ring) {
+      const mark = document.querySelector('.boot-logo');
+      return mark && getComputedStyle(mark).animationName === 'none' ? 'frozen' : 'no-boot';
+    }
     const d = parseFloat(getComputedStyle(ring).animationDuration) || 0;
     return d < 0.01 ? 'frozen' : `animating:${d}s`;
   });
-  frozen === 'frozen' ? ok('boot ring freezes under reduced motion') : bad(`boot ring state under reduced motion: ${frozen}`);
+  frozen === 'frozen' ? ok('static launch mark stays still under reduced motion') : bad(`boot ring state under reduced motion: ${frozen}`);
   await p.evaluate(() => window.__releaseSecureGet({ value: '' }));
   await waitShell(p);
   const tileDur = await p.evaluate(() => {
