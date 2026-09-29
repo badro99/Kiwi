@@ -81,7 +81,7 @@ var SHELL = [
   '/assets/agent-truth.js?v=6',
   '/assets/agent-voice.js?v=9',
   '/assets/agent-vision.js?v=3',
-  '/assets/i18n.js?v=14',
+  '/assets/i18n.js?v=15',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',

@@ -1271,7 +1271,7 @@
   /* ─── setLang ─── */
   function setLang(lang) {
     if (!['fr','en','ar'].includes(lang)) lang = 'fr';
-    document.documentElement?.lang = lang;
+    document.documentElement.lang = lang;
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
     localStorage.setItem('kiwiLang', lang);
     if (window.KiwiNativeLocale) window.KiwiNativeLocale.set(lang);
