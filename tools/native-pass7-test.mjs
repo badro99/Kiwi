@@ -41,4 +41,5 @@ for (const file of ['team','restaurant-menu-workspace','account','simple','clien
   ok(read('assets/'+file+'.js').includes('window.KiwiNumber?.format') || read('assets/'+file+'.js').includes('window.KiwiNumber?.number'), file+' routes display figures through KiwiNumber');
 }
 ok(read("assets/dateRange.js").includes("i < xs.length && Number.isFinite(xs[i])"), "partial chart series cannot abort locale rendering on a stale tick");
+ok(read("assets/restaurant-menu-workspace.js").includes("if(!d.cats.length){openCategory(null);return;}"), "empty-menu New item opens section creation instead of a dead button");
 console.log(`native-pass7-test: ${checks} checks passed`);
