@@ -323,7 +323,7 @@ async function nativeRevocationTest() {
     addEventListener(name, fn) { (listeners[name] ||= []).push(fn); },
   };
   window.window = window;
-  const context = vm.createContext({ window, document, localStorage, sessionStorage, location: window.location, Promise, Date, JSON, Math, String, Number, Error, MutationObserver: class { observe() {} }, setTimeout, clearTimeout, CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init && init.detail; } }, getComputedStyle: () => ({ display: 'block', visibility: 'visible' }) });
+  const context = vm.createContext({ window, document, localStorage, sessionStorage, location: window.location, Promise, Date, JSON, Math, String, Number, Error, MutationObserver: class { observe() {} }, requestAnimationFrame: fn => setTimeout(fn, 0), setTimeout, clearTimeout, CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init && init.detail; } }, getComputedStyle: () => ({ display: 'block', visibility: 'visible' }) });
   new vm.Script(nativeSource, { filename: 'app/src/native-runtime.js' }).runInContext(context);
   await sleep(0);
   check(secureRemoves >= 1 && secure.get('pairing-v1') === undefined, 'D03 native revocation removes secure pairing-v1');
