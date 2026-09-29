@@ -1274,6 +1274,7 @@
     document.documentElement.lang = lang;
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
     localStorage.setItem('kiwiLang', lang);
+    if (window.KiwiNativeLocale) window.KiwiNativeLocale.set(lang);
     /* Keep the edge-rendered account gate in the same language as the app.
        localStorage is invisible to Cloudflare's middleware, so the cookie is
        the server-readable half of the locale handoff. */

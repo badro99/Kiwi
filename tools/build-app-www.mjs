@@ -44,15 +44,8 @@ export const PAGES = ['kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-cuisine.htm
 export const SHELL = ['index.html', 'native-shell.js', 'native-shell.css'];
 export const API_BASE_TAG = '<script src="assets/api-base.js"></script>';
 export const NATIVE_RUNTIME_TAGS = '<link rel="stylesheet" href="native-runtime.css" />\n<script src="native-runtime.js" defer></script>';
-const NATIVE_LOCALE_TAG = `<script>(function(){
-  var saved='';try{saved=localStorage.getItem('kiwiNativeLocale')||''}catch(_e){}
-  var device=String((navigator.languages&&navigator.languages[0])||navigator.language||'fr').toLowerCase().split('-')[0];
-  var lang=/^(fr|en|ar)$/.test(saved)?saved:(/^(fr|en|ar)$/.test(device)?device:'fr');
-  document.documentElement.classList.add('kiwi-native');
-  document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';
-  try{localStorage.setItem('kiwiLang',lang);localStorage.setItem('kiwiCaisseLang',lang);localStorage.setItem('kiwiCuisineLang',lang)}catch(_e){}
-})()</script>`;
-const NATIVE_RUNTIME = ['native-runtime.js', 'native-runtime.css', 'native-privacy.js'];
+const NATIVE_LOCALE_TAG = '<script src="native-locale.js"></script>';
+const NATIVE_RUNTIME = ['native-runtime.js', 'native-runtime.css', 'native-privacy.js', 'native-locale.js'];
 const NATIVE_FONTS = {
   'native-fonts/inter-tight-latin.woff2': 'node_modules/@fontsource-variable/inter-tight/files/inter-tight-latin-wght-normal.woff2',
   'native-fonts/ibm-plex-sans-arabic-400.woff2': 'node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff2',

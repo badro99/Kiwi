@@ -81,7 +81,7 @@ var SHELL = [
   '/assets/agent-truth.js?v=6',
   '/assets/agent-voice.js?v=9',
   '/assets/agent-vision.js?v=1',
-  '/assets/i18n.js?v=11',
+  '/assets/i18n.js?v=12',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -220,7 +220,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=5',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=10',
+  '/assets/caisse-lang.js?v=11',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/retail-balances.js?v=4',

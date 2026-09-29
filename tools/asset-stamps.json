@@ -112,8 +112,8 @@
     "sha": "1014ed01ce090f7b"
   },
   "assets/caisse-lang.js": {
-    "v": "10",
-    "sha": "23ce3055672663eb"
+    "v": "11",
+    "sha": "781e47d79b81a10b"
   },
   "assets/caisse-link.js": {
     "v": "10",
@@ -364,8 +364,8 @@
     "sha": "b45b0260ef0d82b2"
   },
   "assets/i18n.js": {
-    "v": "11",
-    "sha": "1f2579e7191930a7"
+    "v": "12",
+    "sha": "306e5df1cbcc245d"
   },
   "assets/identity.js": {
     "v": "5",

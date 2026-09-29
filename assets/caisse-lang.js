@@ -1096,6 +1096,7 @@
   function set(id) {
     if (!LANGS.some(function (x) { return x.id === id; })) return;
     cur = id;
+    if (window.KiwiNativeLocale) window.KiwiNativeLocale.set(id);
     try { localStorage.setItem(KEY, id); } catch (_) {}
     paintDir();
     watch();                 // crée l'observateur au premier changement de langue
