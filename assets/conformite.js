@@ -263,8 +263,10 @@
     return v == null ? k : v;
   };
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const fmtMad = (n) => `${Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} MAD`;
-  const fmtMadSign = (n) => `${n >= 0 ? '+' : '−'}${Math.abs(Math.round(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} MAD`;
+  // Display only. Cash counts, stored Z totals, receipts and exports stay numeric.
+  const displayNumber = (n) => window.KiwiNumber?.number(Math.round(n)) ?? Math.round(n).toLocaleString(lang() === 'en' ? 'en-GB' : 'fr-FR');
+  const fmtMad = (n) => `<bdi dir="ltr">${displayNumber(n)} MAD</bdi>`;
+  const fmtMadSign = (n) => `<bdi dir="ltr">${n >= 0 ? '+' : '−'}${displayNumber(Math.abs(n))} MAD</bdi>`;
 
   /* ─────────── State ─────────── */
   let pageActive = false;
