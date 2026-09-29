@@ -248,7 +248,11 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pills{display:grid!important;grid-auto-flow:column;grid-auto-columns:1fr;width:100%;padding:2px!important;border-radius:10px!important;background:var(--kno-fill)!important;border:0!important;box-shadow:none!important;gap:0!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill{width:100%!important;min-width:0!important;display:flex!important;align-items:center;justify-content:center;text-align:center;min-height:32px!important;padding:0 4px!important;border-radius:8px!important;font:600 13px/1 "Inter Tight",sans-serif!important;color:var(--kno-ink)!important;background:transparent!important;border:0!important;box-shadow:none!important;white-space:nowrap}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill.on{background:var(--kno-card)!important;box-shadow:0 3px 8px rgba(10,15,13,.12),0 1px 1px rgba(10,15,13,.04)!important}
-  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill-custom{display:none!important}
+  /* The custom range is a fifth, icon-only segment: hiding it left no way to pick dates on a phone (ticket #0107). */
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pills{grid-template-columns:repeat(4,minmax(0,1fr)) 40px!important;grid-auto-columns:auto!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill-custom{display:flex!important;padding:0!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill-custom span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill-custom svg{width:17px;height:17px;display:block}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pills [data-lens-pill],html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pills .kw-lens{display:none!important}
 
   /* Quick actions */
@@ -665,3 +669,159 @@ html.kiwi-native .fa-tool::after{content:"";position:absolute;inset:-6px}
 /* Terminal ID chip in the till drawer: 26pt tall, give it a 44pt touch area without changing its look. */
 html.kiwi-native #caisse-terminal-id{position:relative}
 html.kiwi-native #caisse-terminal-id::after{content:"";position:absolute;inset:-9px -4px}
+
+/* Filter and tab rows: one swipeable line on a phone, never 2 to 4 wrapped rows inside a capsule (ticket #0111). */
+html.kiwi-native :is(.mi-pill-row,.st-tabs,.eq-pill-row,.st-item-subtabs,.sc-pills),
+html.kiwi-native :is(div,nav):has(> .st-cat-pill,> .mi-pill,> .eq-pill,> .st-tab,> .chip[data-action="tx-filter"]){
+  display:flex!important;flex-wrap:nowrap!important;justify-content:flex-start!important;align-items:center;
+  overflow-x:auto!important;overflow-y:hidden!important;max-width:100%;min-width:0;position:relative;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scroll-snap-type:x proximity;
+  scroll-padding-inline:12px;padding-inline-end:22px!important;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent)}
+html.kiwi-native[dir="rtl"] :is(.mi-pill-row,.st-tabs,.eq-pill-row,.st-item-subtabs,.sc-pills),
+html.kiwi-native[dir="rtl"] :is(div,nav):has(> .st-cat-pill,> .mi-pill,> .eq-pill,> .st-tab,> .chip[data-action="tx-filter"]){
+  -webkit-mask-image:linear-gradient(270deg,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(270deg,#000 calc(100% - 26px),transparent)}
+html.kiwi-native :is(.mi-pill-row,.st-tabs,.eq-pill-row,.st-item-subtabs,.sc-pills)::-webkit-scrollbar,
+html.kiwi-native :is(div,nav):has(> .st-cat-pill,> .mi-pill,> .eq-pill,> .st-tab,> .chip[data-action="tx-filter"])::-webkit-scrollbar{display:none}
+html.kiwi-native :is(.st-cat-pill,.mi-pill,.eq-pill,.st-tab,.sc-pill,.chip[data-action="tx-filter"]){flex:0 0 auto!important;white-space:nowrap!important;scroll-snap-align:start}
+
+/* Edit and create forms (menu item, option group, section, ...): an opaque bottom sheet on a phone.
+   The glass modal was 72 % transparent, 290 pt wide and centred, so the page bled through the
+   fields and long forms hid their Save button (ticket #0114). */
+@media (max-width:640px){
+  html.kiwi-native .kiwi-backdrop{align-items:flex-end!important;justify-content:stretch!important;padding:calc(var(--kiwi-safe-top,0px) + 10px) 0 0!important}
+  html.kiwi-native .kiwi-backdrop:not(.kiwi-native-order-sheet) .kiwi-modal{width:100%!important;max-width:none!important;margin:0!important;
+    max-height:calc(100dvh - var(--kiwi-safe-top,0px) - 10px)!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;
+    border-radius:24px 24px 0 0!important;background:#FBFAF7!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+    box-shadow:0 -12px 40px rgba(10,15,13,.18)!important}
+  html.kiwi-native .kiwi-backdrop .kiwi-modal::before{content:"";flex:0 0 auto;align-self:center;width:36px;height:5px;border-radius:3px;margin:8px 0 0;background:rgba(10,15,13,.18)}
+  html.kiwi-native .kiwi-backdrop .kiwi-modal-head{flex:0 0 auto}
+  html.kiwi-native .kiwi-backdrop .kiwi-modal-body{flex:1 1 auto!important;min-height:0;overflow-y:auto!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  html.kiwi-native .kiwi-backdrop .kiwi-modal-foot{flex:0 0 auto;background:inherit!important;border-radius:0!important;padding-bottom:calc(14px + var(--kiwi-safe-bottom,0px))!important;box-shadow:0 -1px 0 rgba(10,15,13,.08)}
+  html.kiwi-native .kiwi-backdrop .kiwi-modal .kf-input,html.kiwi-native .kiwi-backdrop .kiwi-modal select,html.kiwi-native .kiwi-backdrop .kiwi-modal textarea{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:#F1EFE9!important}
+  html.kiwi-native[data-theme="dark"] .kiwi-backdrop:not(.kiwi-native-order-sheet) .kiwi-modal{background:#131A17!important;box-shadow:0 -12px 40px rgba(0,0,0,.5)!important}
+  html.kiwi-native[data-theme="dark"] .kiwi-backdrop .kiwi-modal::before{background:rgba(255,255,255,.22)}
+  html.kiwi-native[data-theme="dark"] .kiwi-backdrop .kiwi-modal-foot{box-shadow:0 -1px 0 rgba(255,255,255,.07)}
+  html.kiwi-native[data-theme="dark"] .kiwi-backdrop .kiwi-modal :is(.kf-input,select,textarea){background:#1C2420!important}
+}
+
+/* Menu items: a two-line row on a phone (name and price, then section, badges, actions and
+   availability) instead of a 180 pt card, so a ten-item menu fits on about two screens (ticket #0114). */
+@media (max-width:640px){
+  html.kiwi-native .mi-grid{grid-template-columns:minmax(0,1fr)!important;gap:8px!important}
+  html.kiwi-native .mi-grid>.mi-card{display:grid!important;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name price" "top foot";align-items:center;gap:6px 12px;padding:12px 12px 10px 14px!important;border-radius:14px!important;min-height:0!important}
+  html.kiwi-native .mi-grid>.mi-card>.rmw-media{display:none!important}
+  html.kiwi-native .mi-grid>.mi-card>.mi-card-name{grid-area:name;margin:0!important;font-size:15px!important;line-height:1.25!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  html.kiwi-native .mi-grid>.mi-card>.mi-card-price-row{grid-area:price;margin:0!important;justify-self:end}
+  html.kiwi-native .mi-grid>.mi-card .mi-card-price{font-size:15px!important;line-height:1.25!important}
+  html.kiwi-native .mi-grid>.mi-card .mi-card-station{display:none!important}
+  html.kiwi-native .mi-grid>.mi-card>.mi-card-top{grid-area:top;min-width:0;align-items:center!important;justify-content:flex-start!important;gap:6px!important;flex-wrap:nowrap;overflow:hidden}
+  html.kiwi-native .mi-grid>.mi-card .mi-card-cat{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  html.kiwi-native .mi-grid>.mi-card>.mi-card-foot{grid-area:foot;margin:0!important;padding:0!important;border:0!important;justify-content:flex-end}
+  html.kiwi-native .mi-grid>.mi-card>.mi-card-foot>span:first-child{display:none}
+  html.kiwi-native .mi-grid>.mi-card .rmw-card-menu{order:9;margin-inline-start:auto}
+}
+
+/* Customers on a phone (ticket #0109): the tab bar and the top bar already name the page, so drop the
+   desktop page head; four compact counters in one row instead of four half-screen cards; badge colours
+   that belong to the dark theme. */
+@media (max-width:640px){
+  html.kiwi-native body.kiwi-native-owner .dash-genpage:has(.cd) .genpage-head{display:none!important}
+  html.kiwi-native body.kiwi-native-owner .cd-kpis{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;margin-top:4px}
+  html.kiwi-native body.kiwi-native-owner .cd-kpi.cd-stat{padding:10px 8px 9px!important;border-radius:14px!important;min-height:0!important;text-align:center}
+  html.kiwi-native body.kiwi-native-owner .cd-kpi.cd-stat .v{order:-1;font-size:22px!important;line-height:1.1!important;margin:0 0 3px!important;font-variant-numeric:tabular-nums}
+  html.kiwi-native body.kiwi-native-owner .cd-kpi.cd-stat{display:flex!important;flex-direction:column;align-items:center}
+  html.kiwi-native body.kiwi-native-owner .cd-kpi.cd-stat .l{font-size:11px!important;line-height:1.2!important;justify-content:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  html.kiwi-native body.kiwi-native-owner .cd-kpi.cd-stat .l i{display:none!important}
+  html.kiwi-native body.kiwi-native-owner .cd-kpi.cd-stat .h{display:none!important}
+}
+html.kiwi-native[data-theme="dark"] .cd-tag.win{background:rgba(255,120,95,.14)!important;color:#FF9A85!important}
+html.kiwi-native[data-theme="dark"] .cd-tag.vip{background:rgba(240,196,90,.14)!important;color:#F1C865!important}
+html.kiwi-native[data-theme="dark"] .cd-tag.new{background:rgba(125,242,176,.12)!important;color:#7DF2B0!important}
+
+/* Planning, one day at a time on a phone (ticket #0112). */
+@media (max-width:640px){
+  html.kiwi-native .kt-plan-wrap.kt-phone-hidden{display:none!important}
+  html.kiwi-native .kt-phone-day{display:flex;flex-direction:column;gap:10px;margin:4px 0 12px}
+  html.kiwi-native .kt-pd-strip{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;padding:2px 2px 4px}
+  html.kiwi-native .kt-pd-strip::-webkit-scrollbar{display:none}
+  html.kiwi-native .kt-pd-day{flex:0 0 auto;min-width:54px;min-height:64px;padding:6px 8px;border-radius:14px;border:1px solid var(--n-200,rgba(10,15,13,.1));background:var(--surface,#fff);color:var(--ink,#0A0F0D);display:flex;flex-direction:column;align-items:center;gap:1px;scroll-snap-align:center;font:inherit}
+  html.kiwi-native .kt-pd-day small{font-size:11px;text-transform:capitalize;color:var(--n-600)}
+  html.kiwi-native .kt-pd-day b{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+  html.kiwi-native .kt-pd-day i{font-style:normal;font-size:10px;color:var(--n-500);white-space:nowrap;max-width:74px;overflow:hidden;text-overflow:ellipsis}
+  html.kiwi-native .kt-pd-day.today b{color:var(--atlas,#0B6E4F)}
+  html.kiwi-native .kt-pd-day.closed{opacity:.55}
+  html.kiwi-native .kt-pd-day.on{background:var(--atlas,#0B6E4F);border-color:var(--atlas,#0B6E4F);color:#fff}
+  html.kiwi-native .kt-pd-day.on small,html.kiwi-native .kt-pd-day.on i,html.kiwi-native .kt-pd-day.on b{color:#fff}
+  html.kiwi-native .kt-pd-list{display:flex;flex-direction:column;border-radius:16px;overflow:hidden;background:var(--surface,#fff);box-shadow:inset 0 0 0 1px var(--n-200,rgba(10,15,13,.1))}
+  html.kiwi-native .kt-pd-row{display:flex;align-items:center;gap:12px;min-height:58px;padding:9px 14px;border:0;border-top:1px solid var(--n-200,rgba(10,15,13,.08));background:none;color:inherit;text-align:start;font:inherit}
+  html.kiwi-native .kt-pd-row:first-child{border-top:0}
+  html.kiwi-native .kt-pd-row:active{background:rgba(11,110,79,.06)}
+  html.kiwi-native .kt-pd-who{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+  html.kiwi-native .kt-pd-who b{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html.kiwi-native .kt-pd-who small{font-size:12px;color:var(--n-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html.kiwi-native .kt-pd-shift{flex:0 0 auto;display:flex;gap:4px;align-items:center;padding:6px 10px;border-radius:10px;background:rgba(10,15,13,.05);font:500 13px/1.2 "JetBrains Mono",monospace;color:var(--n-600)}
+  html.kiwi-native .kt-pd-shift .kt-sh-t.end::before{content:"–";margin-inline-end:4px}
+  html.kiwi-native .kt-pd-row.is-on .kt-pd-shift{background:rgba(11,110,79,.12);color:var(--atlas,#0B6E4F)}
+  html.kiwi-native .kt-pd-row.is-off .kt-pd-shift{font-family:inherit}
+  html.kiwi-native[data-theme="dark"] .kt-pd-shift{background:rgba(255,255,255,.06)}
+  html.kiwi-native[data-theme="dark"] .kt-pd-row.is-on .kt-pd-shift{background:rgba(125,242,176,.12);color:#7DF2B0}
+  /* KPI tiles two by two instead of a full-width stack. */
+  html.kiwi-native .dash-equipe .eq-stats{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+  html.kiwi-native .dash-equipe .eq-stat{padding:12px 12px 11px!important;min-height:0!important}
+  html.kiwi-native .dash-equipe .eq-stat-v,html.kiwi-native .dash-equipe .eq-stat .v{font-size:22px!important}
+}
+@media (max-width:640px){
+  /* The day's schedule comes right after the period, before the tools and counters (ticket #0112). */
+  html.kiwi-native .eq-section:has(> .kt-phone-day){display:flex!important;flex-direction:column}
+  html.kiwi-native .eq-section:has(> .kt-phone-day)>*{order:3}
+  html.kiwi-native .eq-section:has(> .kt-phone-day)>:is(.eq-section-head,.kt-hbar,.kt-period-nav){order:1}
+  html.kiwi-native .eq-section:has(> .kt-phone-day)>.kt-phone-day{order:2}
+  html.kiwi-native .eq-section:has(> .kt-phone-day)>.kt-plan-hint{display:none!important}
+  html.kiwi-native .kt-plan-intelligence{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+  html.kiwi-native .kt-plan-intelligence>div{padding:12px!important;min-height:0!important}
+  html.kiwi-native .kt-plan-intelligence>div strong{font-size:22px!important}
+}
+html.kiwi-native .kt-pd-add{font-family:"Inter Tight",sans-serif;font-weight:600;color:var(--atlas,#0B6E4F)}
+html.kiwi-native[data-theme="dark"] .kt-pd-add{color:#7DF2B0}
+@media (max-width:640px){
+  /* The shift editor is anchored to a grid cell on desktop; on a phone it is a bottom sheet (ticket #0112). */
+  html.kiwi-native .kt-shpop{position:fixed!important;left:0!important;right:0!important;top:auto!important;bottom:0!important;width:auto!important;max-width:none!important;
+    border-radius:24px 24px 0 0!important;padding:20px 18px calc(16px + var(--kiwi-safe-bottom,0px))!important;background:#FBFAF7!important;
+    -webkit-backdrop-filter:none!important;backdrop-filter:none!important;box-shadow:0 0 0 100vmax rgba(5,10,8,.42),0 -12px 40px rgba(10,15,13,.2)!important;z-index:10050!important}
+  html.kiwi-native[data-theme="dark"] .kt-shpop{background:#131A17!important;box-shadow:0 0 0 100vmax rgba(0,0,0,.55),0 -12px 40px rgba(0,0,0,.5)!important}
+  html.kiwi-native .kt-shpop input{min-height:44px;font-size:17px!important}
+  html.kiwi-native .kt-shpop .kt-shpop-b{min-height:44px}
+}
+@media (max-width:640px){
+  html.kiwi-native .kt-shpop .kt-shpop-times{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:10px!important;width:100%}
+  html.kiwi-native .kt-shpop .kt-shpop-times>*{min-width:0}
+  html.kiwi-native .kt-shpop .kt-shpop-times input{width:100%!important;max-width:100%!important;box-sizing:border-box;display:block}
+  html.kiwi-native .kt-shpop .kt-shpop-foot{display:grid!important;grid-template-columns:1fr 1fr 1.3fr;gap:8px}
+}
+@media (max-width:640px){
+  /* iOS gives time inputs an intrinsic width that ignores width:100% until the native appearance is dropped. */
+  html.kiwi-native .kt-shpop .kt-shpop-times input[type="time"]{-webkit-appearance:none!important;appearance:none!important;min-width:0!important;padding:0 14px!important;text-align:start}
+  html.kiwi-native .kt-shpop .kt-shpop-times input[type="time"]::-webkit-date-and-time-value{text-align:start}
+}
+
+/* Customer directory on a phone (ticket #0109): the spa's five-column table joins the grouped-list look
+   of the other tables, with its own columns (name and tier on top, last visit, staff member and
+   lifetime value underneath), and the
+   toolbar keeps search on one line with the create button beside it. */
+@media (max-width:640px){
+  html.kiwi-native .dash-genpage .p-toolbar{display:flex;flex-wrap:nowrap;gap:8px;align-items:stretch}
+  html.kiwi-native .dash-genpage .p-toolbar>.p-search{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html.kiwi-native .dash-genpage .p-toolbar>.kb{flex:0 0 auto;white-space:nowrap}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table.sc-table tr{grid-template-columns:auto minmax(0,1fr) auto;row-gap:4px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table.sc-table tr::after{content:none}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table.sc-table tr>td:nth-child(1){grid-column:1/3;grid-row:1;justify-self:stretch;display:flex;justify-content:flex-start;align-items:center;gap:6px;overflow:hidden;font:400 15px/1.25 "Inter Tight",sans-serif!important;color:var(--kno-ink)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table.sc-table tr>td:nth-child(1) b{font-weight:600;color:var(--kno-ink)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table.sc-table tr>td:nth-child(1) .sc-bday{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table.sc-table tr>td:nth-child(5){display:block!important;grid-column:3;grid-row:1;justify-self:end;overflow:visible}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table.sc-table tr>td:nth-child(2){grid-column:1;grid-row:2;font-size:13px!important;color:var(--kno-ink-2)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table.sc-table tr>td:nth-child(4){grid-column:2;grid-row:2;justify-self:start;font:400 13px/1.2 "Inter Tight",sans-serif!important;color:var(--kno-ink-2)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table.sc-table tr>td:nth-child(4)::before{content:"· "}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table.sc-table tr>td:nth-child(3){grid-column:3;grid-row:2;justify-self:end;font:600 14px/1.2 "Inter Tight",sans-serif!important;color:var(--kno-ink)!important;font-variant-numeric:tabular-nums}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table.sc-table tr.sc-hide{display:none!important}
+}

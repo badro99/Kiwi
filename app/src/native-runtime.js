@@ -326,7 +326,7 @@
 
   function openNativeLayers() {
     return Array.prototype.slice.call(document.querySelectorAll(
-      '.modal-veil.is-open,.drawer-veil.is-open,.cloture-veil.is-open,.kds-screen.is-open,#stock-screen.is-open,#cp-pin-screen,.kiwi-native-account.is-open,.kiwi-backdrop,.kiwi-drawer-backdrop,.kiwi-menu,[aria-modal="true"]'
+      '.modal-veil.is-open,.drawer-veil.is-open,.cloture-veil.is-open,.kds-screen.is-open,#stock-screen.is-open,#cp-pin-screen,.kiwi-native-account.is-open,.kiwi-backdrop,.kiwi-drawer-backdrop,.kiwi-menu,.kt-shpop,[aria-modal="true"]'
     )).filter(function (node) {
       try { return getComputedStyle(node).display !== 'none' && getComputedStyle(node).visibility !== 'hidden'; }
       catch (_) { return true; }
@@ -384,6 +384,133 @@
     if (builder && !builder.hidden && builderBack) return { panel: builder, run: function () { builderBack.click(); } };
     return null;
   }
+  /* Swipe sideways across the period control or the Home chart to step
+     Today → Yesterday → 7 days → 30 days (ticket #0107). Starts away from the
+     screen edge so the edge swipe-back keeps working. */
+  function initPeriodSwipe() {
+    var ORDER = ['aujourdhui', 'hier', 'septJours', 'trenteJours'];
+    var sx = null, sy = 0;
+    document.addEventListener('touchstart', function (e) {
+      sx = null;
+      if (e.touches.length !== 1 || !document.body.classList.contains('kiwi-native-owner')) return;
+      var t = e.touches[0];
+      if (t.clientX < 28 || t.clientX > innerWidth - 28) return;
+      if (!e.target.closest || !e.target.closest('.dash-date-range .dr-pills,.hero-left-chart')) return;
+      if (openNativeLayers().length) return;
+      sx = t.clientX; sy = t.clientY;
+    }, { passive: true });
+    document.addEventListener('touchend', function (e) {
+      if (sx == null) return;
+      var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+      sx = null;
+      if (Math.abs(dx) < 56 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      var cur = document.querySelector('.dash-date-range .dr-pill.on[data-range]');
+      var i = ORDER.indexOf(cur ? cur.getAttribute('data-range') : 'aujourdhui');
+      if (i < 0) i = 0;
+      var rtl = document.documentElement.getAttribute('dir') === 'rtl';
+      var step = (dx < 0) !== rtl ? 1 : -1;
+      var next = ORDER[i + step];
+      if (!next) return;
+      var btn = document.querySelector('.dash-date-range .dr-pill[data-range="' + next + '"]');
+      if (btn) btn.click();
+    }, { passive: true });
+  }
+
+  /* After a tap in a swipeable filter row, keep the chosen pill in view even
+     when the row re-renders and resets its scroll (ticket #0111). */
+  function initChipRowFollow() {
+    var PILL = '.st-cat-pill,.mi-pill,.eq-pill,.st-tab,.chip[data-action="tx-filter"]';
+    document.addEventListener('click', function (e) {
+      var pill = e.target.closest && e.target.closest(PILL);
+      if (!pill || !pill.parentElement) return;
+      var cls = String(pill.className).split(/\s+/)[0];
+      setTimeout(function () {
+        var on = document.querySelector('.' + cls + '.on,.' + cls + '[aria-selected="true"],.' + cls + '.is-active');
+        if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'center' });
+      }, 80);
+    }, true);
+  }
+
+  /* Planning on a phone (ticket #0112): the desktop grid is people × days with
+     44 pt cells, unreadable on 400 pt. Show one day at a time: a day strip,
+     then one row per person with that day's shift. Every row taps the grid's
+     own shift button, so editing, rules and publishing stay exactly as they
+     are; the grid is only hidden, never replaced. */
+  function initPlanningDayView() {
+    var mq = window.matchMedia ? window.matchMedia('(max-width: 640px)') : null;
+    var chosen = null, pending = 0, lastTable = null, lastHtml = '', lastChosen = null;
+    function build(force) {
+      pending = 0;
+      var cell = document.querySelector('.kt-plan-table .kt-plan-cell');
+      var old = document.querySelector('.kt-phone-day');
+      if (!cell || !(mq && mq.matches)) { if (old) old.remove(); return; }
+      var table = cell.closest('table'), wrap = table.closest('.kt-plan-wrap') || table.parentElement;
+      /* Rebuild only when the grid or the chosen day changed: a live ticker
+         elsewhere on the page must never rebuild the rows under a finger. */
+      if (!force && old && table === lastTable && chosen === lastChosen && table.innerHTML === lastHtml) return;
+      lastTable = table; lastHtml = table.innerHTML;
+      var heads = table.querySelectorAll('thead .kt-day-head');
+      var rows = table.querySelectorAll('tbody tr');
+      if (!heads.length || !rows.length) return;
+      var days = [];
+      var first = rows[0].querySelectorAll('.kt-plan-cell');
+      for (var i = 0; i < first.length; i++) days.push((first[i].getAttribute('data-kt-cell') || '').split('|')[1]);
+      var today = new Date(); var tISO = today.getFullYear() + '-' + ('0' + (today.getMonth() + 1)).slice(-2) + '-' + ('0' + today.getDate()).slice(-2);
+      if (days.indexOf(chosen) < 0) chosen = days.indexOf(tISO) >= 0 ? tISO : days[0];
+      var idx = days.indexOf(chosen);
+      lastChosen = chosen;
+      var box = document.createElement('div');
+      box.className = 'kt-phone-day';
+      var strip = '<div class="kt-pd-strip" role="tablist">';
+      for (var d = 0; d < heads.length; d++) {
+        var h = heads[d];
+        var dd = h.querySelector('.d'), mm = h.querySelector('.m'), hh = h.querySelector('.kt-day-hours');
+        strip += '<button type="button" role="tab" class="kt-pd-day' + (d === idx ? ' on' : '') + (days[d] === tISO ? ' today' : '') + (h.classList.contains('is-closed') ? ' closed' : '') +
+          '" aria-selected="' + (d === idx) + '" data-kt-pd="' + days[d] + '"><small>' + (mm ? mm.textContent : '') + '</small><b>' + (dd ? dd.textContent : '') + '</b><i>' + (hh ? hh.textContent : '') + '</i></button>';
+      }
+      strip += '</div>';
+      var lang = (document.documentElement.getAttribute('lang') || 'fr').slice(0, 2);
+      var addLbl = { en: 'Add', ar: 'إضافة' }[lang] || 'Ajouter';
+      var list = '<div class="kt-pd-list">';
+      for (var r = 0; r < rows.length; r++) {
+        var mem = rows[r].querySelector('.kt-h-member');
+        var c = rows[r].querySelectorAll('.kt-plan-cell')[idx];
+        if (!mem || !c) continue;
+        var btn = c.querySelector('.kt-sh');
+        var av = mem.querySelector('.eq-av'), n = mem.querySelector('.n'), role = mem.querySelector('.r');
+        var state = c.classList.contains('on') ? 'on' : c.classList.contains('off') ? 'off' : 'none';
+        list += '<button type="button" class="kt-pd-row is-' + state + '" data-kt-pd-cell="' + c.getAttribute('data-kt-cell') + '"' + (btn && btn.disabled ? ' disabled' : '') + '>' +
+          (av ? av.outerHTML : '') + '<span class="kt-pd-who"><b>' + (n ? n.innerHTML : '') + '</b><small>' + (role ? role.innerHTML : '') + '</small></span>' +
+          '<span class="kt-pd-shift">' + (state === 'none' ? '<span class="kt-pd-add">+ ' + addLbl + '</span>' : (btn ? btn.innerHTML : '')) + '</span></button>';
+      }
+      list += '</div>';
+      box.innerHTML = strip + list;
+      if (old) old.replaceWith(box); else wrap.parentElement.insertBefore(box, wrap);
+      wrap.classList.add('kt-phone-hidden');
+      var on = box.querySelector('.kt-pd-day.on');
+      if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'center' });
+    }
+    function schedule() { if (!pending) pending = setTimeout(build, 60); }
+    document.addEventListener('click', function (e) {
+      var day = e.target.closest && e.target.closest('[data-kt-pd]');
+      if (day) { chosen = day.getAttribute('data-kt-pd'); build(true); return; }
+      var row = e.target.closest && e.target.closest('[data-kt-pd-cell]');
+      if (row) {
+        var want = row.getAttribute('data-kt-pd-cell');
+        var cells = document.querySelectorAll('.kt-plan-table [data-kt-cell]');
+        for (var i = 0; i < cells.length; i++) if (cells[i].getAttribute('data-kt-cell') === want) { var b = cells[i].querySelector('.kt-sh'); if (b) b.click(); break; }
+      }
+    });
+    new MutationObserver(function (muts) {
+      for (var i = 0; i < muts.length; i++) {
+        var t = muts[i].target;
+        if (t.closest && t.closest('.kt-phone-day')) continue;
+        schedule(); return;
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+    if (mq && mq.addEventListener) mq.addEventListener('change', schedule);
+  }
+
   function initNativeSwipeBack() {
     if (!cap || !cap.getPlatform || cap.getPlatform() !== 'ios') return;
     var reduce = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
@@ -1441,6 +1568,9 @@
     app.addListener('backButton', handleNativeBack);
   }
   initNativeSwipeBack();
+  initPeriodSwipe();
+  initChipRowFollow();
+  initPlanningDayView();
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () { initNativeGateExits(); initNativeTillUx(); initNativeHostWorkspace(); polishNativeWorkspaceCopy(); maybePromptBiometricUnlock(); });
   } else {

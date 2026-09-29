@@ -1398,6 +1398,17 @@
   }
   .dr-popover.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
   .dr-popover[dir="rtl"] { transform-origin: top left; }
+  /* Phone: the picker is a bottom sheet (ticket #0108). */
+  .dr-sheet-veil { position: fixed; inset: 0; z-index: 10000; background: rgba(5,10,8,0.42); opacity: 0; transition: opacity 220ms ease; }
+  .dr-sheet-veil.in { opacity: 1; }
+  .dr-popover.dr-sheet { position: fixed !important; inset: auto 0 0 0 !important; top: auto !important; width: auto; max-width: none;
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 20px); display: flex; flex-direction: column; z-index: 10001;
+    border-radius: 22px 22px 0 0; border-bottom: 0; transform: translateY(28px); transform-origin: bottom center; }
+  .dr-popover.dr-sheet.open { transform: none; }
+  .dr-popover.dr-sheet .drp-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  .dr-popover.dr-sheet .drp-foot { flex: 0 0 auto; padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+  .dr-popover.dr-sheet .drp-btn { min-height: 44px; }
+  @media (prefers-reduced-motion: reduce) { .dr-popover.dr-sheet { transform: none; } }
 
   .drp-head { display: flex; align-items: flex-start; justify-content: space-between;
     gap: 16px; padding: 15px 18px 13px; }
@@ -6190,7 +6201,7 @@
 <script src="assets/pressing-catalog.js?v=7" defer></script>
 <script src="assets/pressing-dashboard.js?v=14" defer></script>
 <script src="assets/demoClock.js?v=4" defer></script>
-<script src="assets/dateRange.js?v=37" defer></script>
+<script src="assets/dateRange.js?v=38" defer></script>
 <script src="assets/mobile-nav.js?v=3" defer></script>
 <script defer src="assets/pwa-update.js?v=359"></script>
 <script defer src="assets/dashboard-pwa.js?v=553"></script>
@@ -6247,7 +6258,7 @@
 <script src="assets/agent-vision.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/agent-skin.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/accounting.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/pages.js?v=7" defer fetchpriority="low"></script>
+<script src="assets/pages.js?v=8" defer fetchpriority="low"></script>
 <!-- Boutique shared product database + real barcode engine (EAN-13 / Code 128).
      Same modules the caisse loads, so inventory stays in sync between the two. -->
 <script src="assets/barcode.js?v=1" defer fetchpriority="low"></script>
@@ -6328,7 +6339,7 @@
 <!-- Floor-plan vocabulary shared with the caisse. MUST load before pages-pro.js,
      which reads its top-level declarations as globals. -->
 <script src="assets/floorplan-core.js?v=2050" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2114" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2117" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js?v=1" defer fetchpriority="low"></script>
@@ -6337,7 +6348,7 @@
 <script src="assets/restaurant-recipes.js?v=8" defer fetchpriority="low"></script>
 <script src="assets/menu-i18n.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/kiwi-select.js?v=2" defer></script>
-<script src="assets/restaurant-menu-workspace.js?v=70" defer fetchpriority="low"></script>
+<script src="assets/restaurant-menu-workspace.js?v=71" defer fetchpriority="low"></script>
 <script src="assets/sold-insights.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/boutique-promos-dashboard.js?v=5" defer fetchpriority="low"></script>
 <!-- Rapport journalier : le calcul (partagé avec la caisse) puis la page.
@@ -6349,7 +6360,7 @@
 <script src="assets/stock.js?v=54" defer fetchpriority="low"></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=10">
-<script src="assets/team.js?v=285" defer fetchpriority="low"></script>
+<script src="assets/team.js?v=286" defer fetchpriority="low"></script>
 <!-- Deterministic, tenant-scoped morning briefing. Loaded after the ledgers it
      will inspect; Phase 1b deliberately ships with no active signal rules. -->
 <script src="assets/cancellation-history.js?v=2" defer fetchpriority="low"></script>

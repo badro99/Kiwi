@@ -1204,7 +1204,7 @@
     const lang = trLang();
     const T = pageTranslations[lang] || pageTranslations.fr;
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    toast(T.accueilTitle, { type: 'info', duration: 1400 });
+    // No toast here: it fired on every tab switch and read as a notification (ticket #0110).
   };
 
   /* ═══════════════════ TRANSACTIONS ═══════════════════ */

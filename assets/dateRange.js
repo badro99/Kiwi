@@ -5118,6 +5118,9 @@
     const pop = dpEl;
     dpEl = null;
     pop.classList.remove('open');
+    pop.removeAttribute('aria-modal');
+    const veil = pop.__veil;
+    if (veil) { veil.classList.remove('in'); setTimeout(() => veil.remove(), 260); }
     if (dpOutside) document.removeEventListener('mousedown', dpOutside);
     if (dpKey) document.removeEventListener('keydown', dpKey);
     dpOutside = dpKey = null;
@@ -5156,7 +5159,20 @@
     pop.setAttribute('aria-label', S.title);
     if (lang === 'ar') pop.setAttribute('dir', 'rtl');
     dpEl = pop;
-    if (dayMode) document.body.appendChild(pop);
+    // On a phone the two-month popover is taller than the screen and its
+    // Apply button ends up under the tab bar (ticket #0108): present it as a
+    // bottom sheet instead, with a scrolling calendar and a pinned footer.
+    const asSheet = window.matchMedia && matchMedia('(max-width: 640px)').matches;
+    if (asSheet) {
+      const veil = document.createElement('div');
+      veil.className = 'dr-sheet-veil';
+      document.body.appendChild(veil);
+      pop.__veil = veil;
+      pop.classList.add('dr-sheet');
+      pop.setAttribute('aria-modal', 'true');
+      document.body.appendChild(pop);
+      requestAnimationFrame(() => veil.classList.add('in'));
+    } else if (dayMode) document.body.appendChild(pop);
     else control.appendChild(pop);
 
     const presets = [['p7', S.p7], ['p14', S.p14], ['p30', S.p30],
@@ -5341,8 +5357,24 @@
       if (selStart && !selEnd && hoverD) { hoverD = null; decorate(); }
     });
 
+    // Swipe the calendar sideways to change month, like the iOS date picker.
+    let swipeX = null, swipeY = 0;
+    pop.addEventListener('touchstart', (e) => {
+      if (!e.target.closest('.drp-cal') || e.touches.length !== 1) { swipeX = null; return; }
+      swipeX = e.touches[0].clientX; swipeY = e.touches[0].clientY;
+    }, { passive: true });
+    pop.addEventListener('touchend', (e) => {
+      if (swipeX == null) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - swipeX, dy = t.clientY - swipeY;
+      swipeX = null;
+      if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
+      const forward = lang === 'ar' ? dx > 0 : dx < 0;
+      shiftView(forward ? 1 : -1);
+    }, { passive: true });
+
     render();
-    if (dayMode) {
+    if (dayMode && !asSheet) {
       // Drawers clip their scrollable bodies with contain:paint. Portal the
       // SAME calendar above them and anchor it to the shared pill.
       const rect = control.getBoundingClientRect();

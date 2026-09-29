@@ -2180,7 +2180,9 @@
     document.addEventListener('keydown', onPopKey, true);
     window.addEventListener('resize', placeShiftPop);
     window.addEventListener('scroll', placeShiftPop, true);
-    try { $start.focus(); } catch (_) {}
+    /* On a touch screen focusing the field opens the iOS time wheel before the
+       sheet has even appeared; let the person tap the field they mean. */
+    try { if (!(window.matchMedia && matchMedia('(pointer: coarse)').matches)) $start.focus(); } catch (_) {}
   }
 
   handlers['kt-shift-edit'] = (el) => {
