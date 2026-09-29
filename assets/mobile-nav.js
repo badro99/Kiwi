@@ -278,10 +278,10 @@
     /* Tapping a destination inside the menu closes the menu. */
     if (sidebar) {
       sidebar.addEventListener('click', (e) => {
-        if (e.target.closest('nav a[data-nav]') || e.target.closest('.merchant')) {
+        if (e.target.closest('nav a[data-nav], [data-action="clients-directory"]') || e.target.closest('.merchant')) {
           setTimeout(() => { closeMenu(); syncMenuAria(); }, 60);
         }
-      });
+      }, true); // Capture before destination handlers stop propagation.
     }
 
     /* Esc closes the menu. */

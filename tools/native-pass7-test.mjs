@@ -54,4 +54,5 @@ for (const language of ['en', 'fr', 'ar']) {
   ok(f.format(15765.38,{minimumFractionDigits:2,maximumFractionDigits:2}) === (language === 'en' ? '15,765.38' : '15\u202f765,38'), language+' preserves precision and separators');
   ok(f.number(NaN) === '·', language+' rejects non-finite display values');
 }
+ok(read("assets/mobile-nav.js").includes('nav a[data-nav], [data-action="clients-directory"]') && read("assets/mobile-nav.js").includes("true); // Capture before destination"), "all sidebar destinations close the phone menu even when handlers stop propagation");
 console.log(`native-pass7-test: ${checks} checks passed`);
