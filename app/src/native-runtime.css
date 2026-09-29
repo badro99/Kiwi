@@ -754,6 +754,20 @@ html.kiwi-native :is(.st-cat-pill,.mi-pill,.eq-pill,.st-tab,.sc-pill,.cf-tab,.ch
   html.kiwi-native body.kiwi-native-owner:not(#kno) .fin-pnl-row .fin-pip{grid-column:1/-1;grid-row:2;justify-self:start}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .fin-pnl-total{margin-inline:-16px!important;padding-inline:16px!important}
 }
+/* #0122 · Four stock signals fit above the fold, with one swipeable action rail. */
+@media(max-width:600px){
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .st-kpis{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .st-kpi{box-sizing:border-box;min-width:0;min-height:126px;padding:12px!important;overflow:hidden}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .st-kpi-l{font-size:10px!important;line-height:1.2;align-items:start}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .st-kpi-ico{width:24px;height:24px;flex:0 0 24px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .st-kpi-v{font-size:clamp(18px,5vw,24px)!important;line-height:1.12;overflow-wrap:anywhere;margin-top:10px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .st-kpi-v .u{font-size:11px!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .st-kpi-sub{font-size:11px!important;line-height:1.25;margin-top:5px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .st-kpi-trend{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .st-head-acts{display:flex!important;width:100%;flex-wrap:nowrap!important;overflow-x:auto!important;gap:8px;scrollbar-width:none;scroll-padding-inline:12px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .st-head-acts .st-btn{flex:0 0 auto;white-space:nowrap;min-height:44px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .st-head-acts .st-btn.primary{order:-1}
+}
 
 /* Edit and create forms (menu item, option group, section, ...): an opaque bottom sheet on a phone.
    The glass modal was 72 % transparent, 290 pt wide and centred, so the page bled through the

@@ -82,4 +82,8 @@ ok(/\.cf-tabs\)/.test(css) && /\.cf-tab,\.chip/.test(css), 'compliance tabs join
 // #0121 · Arabic joining takes precedence over uppercase-label tracking.
 ok(/html\.kiwi-native\[lang="ar"\] \*\{letter-spacing:0!important\}/.test(css), 'all native Arabic labels use untracked joining');
 
+// #0122 · stock overview fits in a compact 2x2 phone grid.
+ok(/\.st-kpis\{display:grid!important;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/.test(css), 'stock overview has two KPI columns on phone');
+ok(/\.st-head-acts\{display:flex!important;width:100%;flex-wrap:nowrap!important;overflow-x:auto!important/.test(css), 'stock actions remain a single swipeable row');
+
 console.log(`\nnative-pass5-test · ${checks} checks green`);
