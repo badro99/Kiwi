@@ -56,4 +56,5 @@ for (const language of ['en', 'fr', 'ar']) {
 }
 ok(read("assets/mobile-nav.js").includes('nav a[data-nav], [data-action="clients-directory"]') && read("assets/mobile-nav.js").includes("true); // Capture before destination"), "all sidebar destinations close the phone menu even when handlers stop propagation");
 ok(!css.includes("border-radius:20.24px") && swift.includes("Match the unmasked LaunchScreen asset"), "all launch marks preserve the same source-image corners");
+ok(read("assets/day-report-dash.js").includes("window.KiwiNumber?.format(v") && read("assets/day-report-dash.js").includes('<bdi dir="ltr"><b>'), "daily report uses shared display money and isolates signed percentages");
 console.log(`native-pass7-test: ${checks} checks passed`);

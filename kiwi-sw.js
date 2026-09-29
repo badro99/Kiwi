@@ -171,7 +171,7 @@ var SHELL = [
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=19',
   '/assets/report.js?v=5',
-  '/assets/day-report-dash.js?v=18',
+  '/assets/day-report-dash.js?v=19',
   '/assets/day-report-export.js?v=8',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.

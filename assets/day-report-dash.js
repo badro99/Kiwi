@@ -60,7 +60,7 @@
   };
   function money(n) {
     var v = Math.round((+n || 0) * 100) / 100;
-    try { return v.toLocaleString(LANG() === 'ar' ? 'ar-MA' : 'fr-FR', { maximumFractionDigits: 2 }); }
+    try { return window.KiwiNumber?.format(v, { maximumFractionDigits: 2 }) ?? v.toLocaleString(LANG() === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 2 }); }
     catch (_) { return String(v); }
   }
   /* Le format machine, pour le CSV : point décimal, pas d'espace insécable.
@@ -516,7 +516,7 @@
     var pct = Math.round(((now - base) / Math.abs(base)) * 100);
     var cls = pct > 0 ? ' up' : pct < 0 ? ' down' : '';
     var sign = pct > 0 ? '+' : pct < 0 ? '−' : '';
-    return '<span class="kdr-d' + cls + '"><b>' + sign + Math.abs(pct) + '&nbsp;%</b> '
+    return '<span class="kdr-d' + cls + '"><bdi dir="ltr"><b>' + sign + Math.abs(pct) + '&nbsp;%</b></bdi> '
       + esc(T(L.vsPrev).replace('{d}', name)) + '</span>';
   }
 
