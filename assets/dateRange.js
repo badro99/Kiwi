@@ -2623,7 +2623,8 @@
   const arrowSvg = up => `<i data-lucide="${up ? 'arrow-up' : 'arrow-down'}" style="width:11px;height:11px" aria-hidden="true"></i>`;
 
   function fmtKpiVal(spec, v) {
-    const unit = spec.unit ? `<span class="u">${spec.unit}</span>` : '';
+    /* A "/ 5320" denominator is data too: group it like the value beside it. */
+    const unit = spec.unit ? `<span class="u">${String(spec.unit).replace(/\d{4,}/g, n => frInt(Number(n)))}</span>` : '';
     if (spec.text) return spec.text + unit;
     if (spec.fmt === 'pct2') return (window.KiwiNumber?.number(v, 2) || v.toFixed(2).replace('.', ',')) + unit;
     if (spec.fmt === 'pct1') return (window.KiwiNumber?.number(v, 1) || v.toFixed(1).replace('.', ',')) + unit;
