@@ -131,6 +131,43 @@
   .grid-demo .block { background: var(--atlas); color: var(--paper); padding: 20px 26px; border-radius: 10px; font-weight: 500; font-size: 14px; }
 
   footer { background: var(--ink); color: #8a8f8d; padding: 40px 0; font-size: 13px; text-align: center; margin-top: 60px; }
+
+  /* ── Polish pass ───────────────────────────────────────────── */
+  .brand-hero { position: relative; overflow: hidden; padding: 96px 0 64px; }
+  .brand-hero::before { content:""; position:absolute; inset:-20% -10% auto auto; width:640px; height:640px; border-radius:50%;
+    background: radial-gradient(closest-side, rgba(11,110,79,0.16), rgba(125,242,176,0.07) 55%, transparent 72%); pointer-events:none; }
+  .brand-hero .wrap { position: relative; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 56px; align-items: end; }
+  .hero-mark { width: 168px; height: 168px; border-radius: 38px; box-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 30px 60px -24px rgba(5,59,44,.45), 0 0 0 1px rgba(5,59,44,.08); }
+  @media (max-width: 900px) { .brand-hero .wrap { grid-template-columns: 1fr; gap: 32px; } .hero-mark { width: 96px; height: 96px; border-radius: 24px; order: -1; } }
+  .hero-swatches { grid-column: 1 / -1; display: flex; height: 10px; border-radius: 999px; overflow: hidden; margin-top: 36px; box-shadow: 0 0 0 1px rgba(10,15,13,.06); }
+  .hero-swatches i { display:block; height:100%; }
+  .hero-facts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px 28px; font-family: var(--mono); font-size: 12px; color: var(--n-600); letter-spacing: .04em; }
+  .hero-facts b { color: var(--ink); font-weight: 500; }
+
+  .index-nav-inner a { position: relative; padding: 6px 0; }
+  .index-nav-inner a::after { content:""; position:absolute; left:0; right:0; bottom:-15px; height:2px; background: var(--atlas); transform: scaleX(0); transform-origin: left; transition: transform .35s cubic-bezier(0.32,1.45,0.5,1); }
+  .index-nav-inner a.is-active { color: var(--ink); }
+  .index-nav-inner a.is-active::after { transform: scaleX(1); }
+
+  .logo-cell, .color, .rule { transition: transform .35s cubic-bezier(0.32,0.72,0,1), box-shadow .35s cubic-bezier(0.32,0.72,0,1); }
+  .logo-cell:hover, .rule:hover { transform: translateY(-3px); box-shadow: 0 24px 40px -28px rgba(5,59,44,.35); }
+  .color { cursor: copy; }
+  .color:hover { transform: translateY(-3px) scale(1.012); box-shadow: 0 22px 36px -22px rgba(5,59,44,.45); }
+  .color:focus-visible, .index-nav-inner a:focus-visible, .nav a:focus-visible { outline: 2px solid var(--atlas); outline-offset: 3px; }
+  .color .h { letter-spacing: .02em; }
+
+  .bk-toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 16px); background: var(--riad); color: var(--paper); padding: 11px 18px; border-radius: 999px;
+    font-size: 13px; font-weight: 500; opacity: 0; pointer-events: none; z-index: 200; transition: opacity .25s, transform .35s cubic-bezier(0.34,1.45,0.5,1); display:flex; gap:10px; align-items:center; }
+  .bk-toast.on { opacity: 1; transform: translate(-50%, 0); }
+  .bk-toast i { width: 10px; height: 10px; border-radius: 50%; background: var(--sw, var(--mint)); box-shadow: 0 0 0 2px rgba(255,255,255,.25); }
+
+  .final-actions { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+  .btn-ghost-line { display:inline-flex; align-items:center; justify-content:center; padding: 16px 28px; border-radius: 999px; border: 1px solid var(--n-300, rgba(10,15,13,.18)); color: var(--ink); font-weight: 500; font-size: 16px; transition: background .2s, border-color .2s; }
+  .btn-ghost-line:hover { background: rgba(10,15,13,.04); border-color: var(--ink); }
+
+  html.js-rv .rv { opacity: 0; transform: translateY(16px); transition: opacity .6s cubic-bezier(0.32,0.72,0,1), transform .6s cubic-bezier(0.32,0.72,0,1); transition-delay: var(--d, 0ms); }
+  html.js-rv .rv.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { html.js-rv .rv { opacity:1; transform:none; transition:none; } .logo-cell, .color, .rule { transition:none; } .index-nav-inner a::after { transition:none; } }
 </style>
 </head>
 <body>
@@ -146,7 +183,7 @@
       <a href="pitch.html" class="link">Pitch</a>
     </div>
     <div>
-      <a href="#" data-action="download-kit" class="btn btn-primary" style="padding:10px 18px; font-size:14px;">Télécharger le kit</a>
+      <a href="assets/kiwi-newlogo.svg" download="kiwi-logo.svg" class="btn btn-primary" style="padding:10px 18px; font-size:14px;">Télécharger le logo</a>
     </div>
   </div>
 </nav>
@@ -154,9 +191,14 @@
 <!-- HERO -->
 <section class="brand-hero">
   <div class="wrap">
-    <span class="eyebrow">Kiwi Design System · v1.0 · 2026</span>
-    <h1>Une <em>identité</em><br/>qui mérite d'être dans un musée.</h1>
-    <p>Le système de design de Kiwi est construit sur une règle : chaque décision visuelle doit renforcer la confiance bancaire, sans jamais trahir nos racines marocaines. Ce guide est vivant, il est votre permis d'expression.</p>
+    <div>
+      <span class="eyebrow">Kiwi Design System · v1.0 · 2026</span>
+      <h1>Une <em>identité</em><br/>qui mérite d'être dans un musée.</h1>
+      <p>Le système de design de Kiwi est construit sur une règle : chaque décision visuelle doit renforcer la confiance bancaire, sans jamais trahir nos racines marocaines. Ce guide est vivant, il est votre permis d'expression.</p>
+    </div>
+    <img class="hero-mark" src="assets/landing/kiwi-mark-app-icon.png" alt="Icône de l'app Kiwi" width="168" height="168">
+    <div class="hero-swatches" aria-hidden="true"><i style="flex:5;background:var(--atlas)"></i><i style="flex:3;background:var(--riad)"></i><i style="flex:1;background:var(--mint)"></i><i style="flex:4;background:var(--paper);box-shadow:inset 0 0 0 1px rgba(10,15,13,.08)"></i><i style="flex:2;background:var(--ink)"></i></div>
+    <div class="hero-facts"><span><b>4</b> couleurs de marque</span><span><b>Inter Tight</b> · IBM Plex Sans Arabic · JetBrains Mono</span><span><b>Material Symbols</b> uniquement</span><span>Cliquez une couleur pour copier son code</span></div>
   </div>
 </section>
 
@@ -1065,9 +1107,9 @@
 <!-- FINAL -->
 <section id="final" style="background: var(--paper-soft); text-align: center; padding: 100px 0;">
   <div class="wrap-sm">
-    <h2 style="font-size: clamp(36px, 5vw, 60px); font-weight: 600; letter-spacing: -0.035em; line-height: 1.05; margin: 0 0 22px;">Télécharger le kit de marque.</h2>
-    <p style="font-size: 17px; color: var(--n-600); max-width: 520px; margin: 0 auto 32px;">Logo, palette Figma, tokens CSS, typographies, mockups. Tout ce qu'il faut pour parler Kiwi correctement.</p>
-    <a href="#" data-action="download-kit" class="btn btn-primary btn-lg">Télécharger le brand kit (24 Mo)</a>
+    <h2 style="font-size: clamp(36px, 5vw, 60px); font-weight: 600; letter-spacing: -0.035em; line-height: 1.05; margin: 0 0 22px;">Prenez le kit de marque.</h2>
+    <p style="font-size: 17px; color: var(--n-600); max-width: 520px; margin: 0 auto 32px;">Le logo en deux versions et les tokens CSS, tels qu'ils tournent dans le produit. Tout ce qu'il faut pour parler Kiwi correctement.</p>
+    <div class="final-actions"><a href="assets/kiwi-newlogo.svg" download="kiwi-logo.svg" class="btn btn-primary btn-lg">Logo (SVG)</a><a href="assets/kiwi-newlogo-inverse.svg" download="kiwi-logo-inverse.svg" class="btn-ghost-line">Logo blanc (SVG)</a><a href="assets/tokens.css" download="kiwi-tokens.css" class="btn-ghost-line">Tokens CSS</a></div>
   </div>
 </section>
 
@@ -1088,6 +1130,37 @@
     p.parentElement.querySelectorAll('[data-lens-item]').forEach((b) => b.classList.remove('on'));
     p.classList.add('on');
   });
+</script>
+<script>
+(function(){
+  var root=document.documentElement, reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* colour cards: real hex, click to copy */
+  function hex(c){var m=c.match(/\d+(\.\d+)?/g);if(!m)return'';return'#'+m.slice(0,3).map(function(n){return('0'+Math.round(+n).toString(16)).slice(-2)}).join('').toUpperCase();}
+  var toast=document.createElement('div');toast.className='bk-toast';toast.setAttribute('role','status');document.body.appendChild(toast);var tt;
+  function say(t,sw){toast.textContent='';var i=document.createElement('i');if(sw)i.style.setProperty('--sw',sw);toast.appendChild(i);toast.appendChild(document.createTextNode(t));toast.classList.add('on');clearTimeout(tt);tt=setTimeout(function(){toast.classList.remove('on')},1800);}
+  document.querySelectorAll('.color').forEach(function(el){
+    var h=hex(getComputedStyle(el).backgroundColor);if(!h)return;
+    el.tabIndex=0;el.setAttribute('role','button');el.setAttribute('aria-label',(el.querySelector('.n')||{textContent:'Couleur'}).textContent+' '+h+', copier le code');
+    var hh=el.querySelector('.h');if(hh&&/^var\(/.test(hh.textContent.trim()))hh.textContent=h+' · '+hh.textContent.trim();
+    function copy(){var done=function(){say(h+' copié',h)};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(h).then(done,done)}else{done()}}
+    el.addEventListener('click',copy);el.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();copy()}});
+  });
+  /* index nav follows the section in view */
+  var links=[].slice.call(document.querySelectorAll('.index-nav-inner a[href^="#"]')),map={};
+  links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a});
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(!e.isIntersecting)return;links.forEach(function(a){a.classList.remove('is-active')});var a=map[e.target.id];if(a){a.classList.add('is-active');a.scrollIntoView({block:'nearest',inline:'center',behavior:reduce?'auto':'smooth'})}})},{rootMargin:'-35% 0px -60% 0px'});
+    Object.keys(map).forEach(function(id){var n=document.getElementById(id);if(n)io.observe(n)});
+    /* gentle reveal */
+    if(!reduce){
+      root.classList.add('js-rv');
+      var sel='.sec-head,.logo-cell,.color,.rule,.type-row';var items=[].slice.call(document.querySelectorAll(sel));
+      items.forEach(function(n){var sib=[].indexOf.call(n.parentNode.children,n);n.classList.add('rv');n.style.setProperty('--d',Math.min(sib,6)*45+'ms')});
+      var ro=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');ro.unobserve(e.target)}})},{rootMargin:'0px 0px -8% 0px'});
+      items.forEach(function(n){ro.observe(n)});
+    }
+  }
+})();
 </script>
 </body>
 </html>
