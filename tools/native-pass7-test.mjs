@@ -40,4 +40,5 @@ ok(read('assets/i18n.js').includes('format: formatNumber'), 'KiwiNumber accepts 
 for (const file of ['team','restaurant-menu-workspace','account','simple','clients-book','operations-ui','briefing','pages-pro']) {
   ok(read('assets/'+file+'.js').includes('window.KiwiNumber?.format') || read('assets/'+file+'.js').includes('window.KiwiNumber?.number'), file+' routes display figures through KiwiNumber');
 }
+ok(read("assets/dateRange.js").includes("i < xs.length && Number.isFinite(xs[i])"), "partial chart series cannot abort locale rendering on a stale tick");
 console.log(`native-pass7-test: ${checks} checks passed`);

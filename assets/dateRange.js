@@ -3484,7 +3484,10 @@
     const liveX = showLive ? xForIdx(liveIdx) : 0;
     const liveY = (showLive && data.rev[liveIdx] != null) ? yScale(data.rev[liveIdx]) : 0;
 
-    const allIdx = data.visibleXIdx || data.rev.map((_, i) => i);
+    // Demo/partial series can have fewer points than the template's tick list.
+    // Ignore stale ticks rather than aborting every language-change subscriber.
+    const allIdx = (data.visibleXIdx || data.rev.map((_, i) => i))
+      .filter(i => Number.isInteger(i) && i >= 0 && i < xs.length && Number.isFinite(xs[i]));
     // Keep at least ~34px per label so hour ticks never touch on a phone.
     const labelStep = Math.max(1, Math.ceil(allIdx.length / Math.max(1, Math.floor(W / 34))));
     const visibleIdx = labelStep === 1 ? allIdx : allIdx.filter((_, k) => k % labelStep === 0);
