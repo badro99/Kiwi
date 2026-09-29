@@ -199,7 +199,7 @@ const buildScript = fs.readFileSync(new URL('./build-app-www.mjs', import.meta.u
 ok(!/(?:>|['"`])\s*(?:Nouvelle mesa|Ouvrir la mesa|Annuler mesa|Encaisser la mesa)/.test(caisseHtml.replace(/<!--[\s\S]*?-->/g, '')), 'the till says "table", never the Spanish "mesa", on screen');
 ok(/function enterShellDirectly\(\)[\s\S]{0,900}renderMenu\(\); renderCart\(\);/.test(caisseHtml), 'a restored draft repaints its tile badges, not only the bill');
 ok(/function carteLang\(\)[\s\S]{0,400}localStorage\.getItem\('kiwiCaisseLang'\)/.test(caisseHtml), 'category pills start in the saved language before caisse-lang.js loads');
-ok(buildScript.includes("localStorage.setItem('kiwiCuisineLang',lang)"), 'the kitchen screen follows the app language');
+ok(buildScript.includes("native-locale.js") && fs.readFileSync(new URL("../app/src/native-locale.js", import.meta.url), "utf8").includes("kiwiCuisineLang"), 'the kitchen screen follows the shared app language');
 ok(source.includes("payload.action === 'open-tools'"), 'the runtime still opens the till tools (refund, drawer, end of shift) when the host asks');
 ok(!/showingMore|navigationTitle\(copy\("Plus"/.test(swift) && !swift.includes('"more":'), 'the dead SwiftUI More sheet is gone; every role reaches its tools through the header menu');
 ok(source.includes('function initNativeFloorList()'), 'phones get the floor as a list with the map one tap away');
