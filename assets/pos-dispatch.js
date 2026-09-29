@@ -69,7 +69,7 @@
     '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   rev: '7', label: 'Fleuriste · Fleurs du Détroit' },
     '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '5', label: 'Coiffure · Salon Yasmine' },
     '0015': { id: 'gym',         file: 'pos-gym',         rev: '5', label: 'Salle de sport · Atlas Fitness' },
-    '0016': { id: 'autre',       file: 'pos-autre',       rev: '2', label: 'Autre activité · caisse polyvalente' },
+    '0016': { id: 'autre',       file: 'pos-autre',       rev: '5', label: 'Autre activité · caisse polyvalente' },
     '0017': { id: 'maison',      file: 'pos-maison',      rev: '50', label: 'Maison · Vogue Home' },
   };
 

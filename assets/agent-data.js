@@ -31,7 +31,7 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
     });
   };
-  var fmt = function (n) { return Math.round(n).toLocaleString('fr-FR'); };
+  var fmt = function (n) { return (window.KiwiNumber?.format(Math.round(n), {}) ?? Math.round(n).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})); };
   var fmtMad = function (n) { return fmt(n) + ' MAD'; };
   var norm = function (s) {
     return String(s == null ? '' : s).toLowerCase().normalize('NFD')

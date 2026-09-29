@@ -61,7 +61,7 @@ var SHELL = [
   '/assets/hotel-economat.js?v=3',
   '/assets/genpage.css?v=3',
   '/assets/mobile.css?v=4',
-  '/assets/sold-insights.js?v=5',
+  '/assets/sold-insights.js?v=8',
   '/assets/design-2026.css',
   '/assets/design-ios27.css',
   '/assets/design-vitrine.css',
@@ -74,14 +74,14 @@ var SHELL = [
   '/assets/cloud-doc.js?v=9',
   '/assets/agent-action-center.js?v=2',
   '/assets/cancellation-history.js?v=2',
-  '/assets/briefing.js?v=17',
+  '/assets/briefing.js?v=19',
   '/assets/ai-telemetry.js?v=1',
-  '/assets/agent-data.js?v=1',
+  '/assets/agent-data.js?v=3',
   '/assets/agent-features.js?v=4',
   '/assets/agent-truth.js?v=6',
   '/assets/agent-voice.js?v=9',
-  '/assets/agent-vision.js?v=1',
-  '/assets/i18n.js?v=12',
+  '/assets/agent-vision.js?v=3',
+  '/assets/i18n.js?v=14',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -89,8 +89,8 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=41',
-  '/assets/features.js?v=6',
+  '/assets/interactive.js?v=43',
+  '/assets/features.js?v=8',
   '/assets/invoicing.css?v=7',
   '/assets/invoicing.js?v=9',
   '/assets/order-qr.js?v=3',
@@ -99,7 +99,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=36',
+  '/assets/venues.js?v=38',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=4',
   '/assets/trade-workspaces.js?v=4',
@@ -107,7 +107,7 @@ var SHELL = [
   '/assets/pressing-ops.js?v=8',
   '/assets/pressing-garment-icons.js?v=2',
   '/assets/pressing-catalog.js?v=7',
-  '/assets/pressing-dashboard.js?v=14',
+  '/assets/pressing-dashboard.js?v=16',
   '/assets/pressing-products/chemise.png',
   '/assets/pressing-products/tshirt.png',
   '/assets/pressing-products/pull.png',
@@ -137,12 +137,12 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/dateRange.js?v=42',
+  '/assets/dateRange.js?v=45',
   '/assets/mobile-nav.js?v=3',
   '/assets/liquid-lens.js?v=1',
-  '/assets/pages.js?v=8',
+  '/assets/pages.js?v=10',
   '/assets/help-centre.js?v=5',
-  '/assets/account.js?v=23',
+  '/assets/account.js?v=25',
   '/assets/production-action-guard.js?v=1',
   // Shared floor-plan vocabulary · the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
@@ -162,8 +162,8 @@ var SHELL = [
   '/assets/platform-ops.js?v=5',
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=12',
-  '/assets/operations-ui.js?v=16',
-  '/assets/live-link.js?v=54',
+  '/assets/operations-ui.js?v=18',
+  '/assets/live-link.js?v=57',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -237,8 +237,8 @@ var SHELL = [
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=4',
   '/assets/clients-store.js?v=7',
-  '/assets/clients-book.js?v=15',
-  '/assets/clients-directory.js?v=12',
+  '/assets/clients-book.js?v=18',
+  '/assets/clients-directory.js?v=14',
   '/assets/menu-catalog.js?v=25',
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',
@@ -249,18 +249,18 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=4',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=10',
-  '/assets/team.js?v=287',
+  '/assets/team.js?v=290',
   '/assets/menu-i18n.js?v=5',
-  '/assets/restaurant-menu-workspace.js?v=72',
+  '/assets/restaurant-menu-workspace.js?v=74',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
-  '/assets/catalog-import.js?v=5',
+  '/assets/catalog-import.js?v=7',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.
   '/assets/menu-scan.js?v=2',
   '/assets/salle-scan.js?v=2',
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=6',
   '/assets/orderpro-panel.js?v=1',
-  '/assets/orderpro-inbox.js?v=26',
+  '/assets/orderpro-inbox.js?v=29',
   '/assets/service-requests.js?v=1',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
@@ -272,7 +272,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=15',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=9',
-  '/assets/pos-dispatch.js?v=59',
+  '/assets/pos-dispatch.js?v=60',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -316,8 +316,8 @@ var SHELL = [
   '/assets/pos-coiffure.js?v=5',
   '/assets/pos-gym.css?v=5',
   '/assets/pos-gym.js?v=5',
-  '/assets/pos-autre.css?v=2',
-  '/assets/pos-autre.js?v=2',
+  '/assets/pos-autre.css?v=5',
+  '/assets/pos-autre.js?v=5',
   '/assets/pos-maison.css?v=50',
   '/assets/pos-maison.js?v=50',
   '/assets/caisse-pairing.js?v=25',

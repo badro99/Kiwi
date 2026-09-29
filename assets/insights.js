@@ -23,8 +23,8 @@
 (() => {
   'use strict';
 
-  const fmt  = (n) => Math.round(n).toLocaleString('fr-FR');             // 1 234
-  const pct1 = (n) => (Math.round(n * 10) / 10).toLocaleString('fr-FR'); // 22,3
+  const fmt  = (n) => (window.KiwiNumber?.format(Math.round(n), {}) ?? Math.round(n).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));             // 1 234
+  const pct1 = (n) => (window.KiwiNumber?.format((Math.round(n * 10) / 10), {}) ?? (Math.round(n * 10) / 10).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})); // 22,3
   const uiLang = () => (window.KiwiI18n?.getLang?.() || 'fr');
 
   /* ── Provenance ────────────────────────────────────────────────────────────

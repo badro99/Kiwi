@@ -6155,7 +6155,7 @@
 <script src="assets/err-reporter.js?v=1" defer></script>
 <!-- Env gate (demos local-only) · must run before venues.js and the app. -->
 <script src="assets/kiwi-env.js?v=1" defer></script>
-<script src="assets/i18n.js?v=12" defer></script>
+<script src="assets/i18n.js?v=14" defer></script>
 <!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
      « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" · le français et
@@ -6166,26 +6166,26 @@
      d'inscription construisent leur grille pareil. Aucun DOM, ~7 Ko. -->
 <script src="assets/trades.js?v=6" defer></script>
 <script src="assets/lucide.min.js?v=5" defer></script>
-<script src="assets/interactive.js?v=41" defer></script>
-<script src="assets/features.js?v=6" defer></script>
+<script src="assets/interactive.js?v=43" defer></script>
+<script src="assets/features.js?v=8" defer></script>
 <script src="assets/invoice.js?v=8" defer></script>
 <script src="assets/invoicing.js?v=9" defer></script>
-<script src="assets/depenses.js?v=1" defer></script>
+<script src="assets/depenses.js?v=3" defer></script>
 <script src="assets/oppo-cards.js?v=3" defer></script>
-<script src="assets/insights.js?v=1" defer></script>
+<script src="assets/insights.js?v=3" defer></script>
 <script src="assets/qrcode.js?v=1" defer></script>
 <script src="assets/growth-kit.js?v=1" defer></script>
 <script src="assets/order-qr.js?v=3" defer></script>
 <!-- growth-ordering / growth-qr / growth-giftcards ont été supprimés du dépôt :
      morts depuis le chantier, aucun point d'entrée sur le tableau de bord. growth-crm reste · le
      bouton « Campagne » du vrai Clients & Marketing l'ouvre. -->
-<script src="assets/growth-crm.js?v=2" defer></script>
+<script src="assets/growth-crm.js?v=4" defer></script>
 <script src="assets/dark-fixes.js?v=2" defer></script>
-<script src="assets/polish.js?v=1" defer></script>
+<script src="assets/polish.js?v=3" defer></script>
 <script src="assets/channel-link.js?v=202608272301" defer></script>
 <link rel="preload" href="assets/report.js?v=5" as="script">
-<script src="assets/dashboard-extra.js?v=8" defer></script>
-<script src="assets/simple.js?v=8" defer></script>
+<script src="assets/dashboard-extra.js?v=10" defer></script>
+<script src="assets/simple.js?v=10" defer></script>
 <script src="assets/ux.js?v=1" defer></script>
 <!-- venues.js et dateRange.js portent un ?v= depuis la migration v2. Sans lui,
      l'URL ne change jamais d'un déploiement à l'autre : le service worker sert
@@ -6195,14 +6195,14 @@
      Une URL neuve rate le cache et part au réseau tout de suite. À incrémenter
      à CHAQUE modification de ces deux fichiers, et à recopier à l'identique
      dans la liste de pré-cache de kiwi-sw.js. -->
-<script src="assets/venues.js?v=36" defer></script>
+<script src="assets/venues.js?v=38" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot. -->
 <script src="assets/pressing-ops.js?v=8" defer></script>
 <script src="assets/pressing-garment-icons.js?v=2" defer></script>
 <script src="assets/pressing-catalog.js?v=7" defer></script>
-<script src="assets/pressing-dashboard.js?v=14" defer></script>
+<script src="assets/pressing-dashboard.js?v=16" defer></script>
 <script src="assets/demoClock.js?v=4" defer></script>
-<script src="assets/dateRange.js?v=42" defer></script>
+<script src="assets/dateRange.js?v=45" defer></script>
 <script src="assets/mobile-nav.js?v=3" defer></script>
 <script defer src="assets/pwa-update.js?v=359"></script>
 <script defer src="assets/dashboard-pwa.js?v=553"></script>
@@ -6218,7 +6218,7 @@
      its one-shot snapshot must not miss the identity promise at boot. -->
 <script defer src="assets/tenant-purge.js?v=2"></script>
 <script defer src="assets/identity.js?v=5"></script>
-<script defer src="assets/live-link.js?v=54"></script>
+<script defer src="assets/live-link.js?v=57"></script>
 <script defer src="assets/channel-sales.js?v=3"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
@@ -6246,7 +6246,7 @@
 <script src="assets/caisse-link.js?v=10" defer></script>
 <!-- Below: user-triggered surfaces · not needed for first paint. -->
 <script src="assets/ai-telemetry.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/agent-data.js?v=1" defer fetchpriority="low"></script>
+<script src="assets/agent-data.js?v=3" defer fetchpriority="low"></script>
 <!-- Product truth for Kiwi AI: derives the active merchant's capabilities
      from the same trade/profile/workspace registries as the dashboard. -->
 <script src="assets/agent-features.js?v=4" defer fetchpriority="low"></script>
@@ -6256,10 +6256,10 @@
 <script src="assets/agent-truth.js?v=6" defer fetchpriority="low"></script>
 <script src="assets/agent.js?v=27" defer fetchpriority="low"></script>
 <script src="assets/agent-voice.js?v=9" defer fetchpriority="low"></script>
-<script src="assets/agent-vision.js?v=1" defer fetchpriority="low"></script>
+<script src="assets/agent-vision.js?v=3" defer fetchpriority="low"></script>
 <script src="assets/agent-skin.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/accounting.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/pages.js?v=8" defer fetchpriority="low"></script>
+<script src="assets/accounting.js?v=3" defer fetchpriority="low"></script>
+<script src="assets/pages.js?v=10" defer fetchpriority="low"></script>
 <!-- Boutique shared product database + real barcode engine (EAN-13 / Code 128).
      Same modules the caisse loads, so inventory stays in sync between the two. -->
 <script src="assets/barcode.js?v=1" defer fetchpriority="low"></script>
@@ -6325,12 +6325,12 @@
 <!-- Fidélité · client book read live into the Clients & Marketing surface (growth-crm.js). -->
 <script src="assets/clients-store.js?v=7" defer fetchpriority="low"></script>
 <!-- Clients · the owner's directory (contacts, fidélité, consent) · sidebar « Clients ». -->
-<script src="assets/clients-directory.js?v=12" defer fetchpriority="low"></script>
+<script src="assets/clients-directory.js?v=14" defer fetchpriority="low"></script>
 <script src="assets/menu-catalog.js?v=25" defer fetchpriority="low"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
-<script src="assets/catalog-import.js?v=5" defer fetchpriority="low"></script>
+<script src="assets/catalog-import.js?v=7" defer fetchpriority="low"></script>
 <script src="assets/menu-scan.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/salle-scan.js?v=2" defer fetchpriority="low"></script>
 <!-- OrderPro · publishes boutique stock + owns media upload (menu-catalog.js
@@ -6340,7 +6340,7 @@
 <!-- Floor-plan vocabulary shared with the caisse. MUST load before pages-pro.js,
      which reads its top-level declarations as globals. -->
 <script src="assets/floorplan-core.js?v=2050" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2121" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2123" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js?v=1" defer fetchpriority="low"></script>
@@ -6349,8 +6349,8 @@
 <script src="assets/restaurant-recipes.js?v=8" defer fetchpriority="low"></script>
 <script src="assets/menu-i18n.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/kiwi-select.js?v=2" defer></script>
-<script src="assets/restaurant-menu-workspace.js?v=72" defer fetchpriority="low"></script>
-<script src="assets/sold-insights.js?v=5" defer fetchpriority="low"></script>
+<script src="assets/restaurant-menu-workspace.js?v=74" defer fetchpriority="low"></script>
+<script src="assets/sold-insights.js?v=8" defer fetchpriority="low"></script>
 <script src="assets/boutique-promos-dashboard.js?v=5" defer fetchpriority="low"></script>
 <!-- Rapport journalier : le calcul (partagé avec la caisse) puis la page.
      Après pages-pro.js, dont il emprunte la coquille Kiwi.appPage. -->
@@ -6361,13 +6361,13 @@
 <script src="assets/stock.js?v=57" defer fetchpriority="low"></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=10">
-<script src="assets/team.js?v=287" defer fetchpriority="low"></script>
+<script src="assets/team.js?v=290" defer fetchpriority="low"></script>
 <!-- Deterministic, tenant-scoped morning briefing. Loaded after the ledgers it
      will inspect; Phase 1b deliberately ships with no active signal rules. -->
 <script src="assets/cancellation-history.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/cash-sessions.js?v=7" defer fetchpriority="low"></script>
 <script src="assets/order-course.js?v=2" defer fetchpriority="low"></script>
-<script src="assets/briefing.js?v=17" defer fetchpriority="low"></script>
+<script src="assets/briefing.js?v=19" defer fetchpriority="low"></script>
 <script src="assets/finance.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/conformite.js?v=2" defer fetchpriority="low"></script>
 <!-- Final production boundary for presentation-only actions. -->
@@ -6378,7 +6378,7 @@
 <script src="assets/staff-roles.js?v=1" defer></script>
 <link rel="stylesheet" href="assets/help-centre.css?v=4">
 <script src="assets/help-centre.js?v=5" defer fetchpriority="low"></script>
-<script src="assets/account.js?v=23" defer fetchpriority="low"></script>
+<script src="assets/account.js?v=25" defer fetchpriority="low"></script>
 <script src="assets/design-2026.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/design-ios27.js?v=1" defer fetchpriority="low"></script>
 <!-- Default home composition: critical before the PIN overlay reveals the app.
@@ -6389,7 +6389,7 @@
      (wizard « Hôtel / Riad », starter pages on the live rack/folio
      engine). No demo hotel venue ships: the Riad Yasmina fixture went
      with dashboard2.html when that fork was deleted. -->
-<script src="assets/hotel.js?v=69" defer fetchpriority="low"></script>
+<script src="assets/hotel.js?v=72" defer fetchpriority="low"></script>
 <script src="assets/hotel-economat.js?v=3" defer fetchpriority="low"></script>
 <!-- Exact-trade operational boards. Loaded after the specialist modules so it
      only replaces the generic placeholders; Accueil and Hotel stay untouched. -->
@@ -6401,7 +6401,7 @@
 <!-- Durable operational workflows. Loaded after every feature module and the
      production honesty guard so its real handlers win over legacy demo toasts. -->
 <script src="assets/operations.js?v=12" defer fetchpriority="low"></script>
-<script src="assets/operations-ui.js?v=16" defer fetchpriority="low"></script>
+<script src="assets/operations-ui.js?v=18" defer fetchpriority="low"></script>
 
 <!-- ═══════════════════════════════════════════════════════════════════
  *  ROLE GUARD · salary figures remain owner-only, while a manager may open

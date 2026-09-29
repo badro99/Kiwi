@@ -95,7 +95,7 @@
     const tot = ownTotals(vid, 'aujourdhui');
     const recent = real ? ownSales(vid, 'aujourdhui').slice(-5).reverse() : [];
     const zReference = real && window.KiwiZReconciliation?.reference?.('aujourdhui');
-    const heroAmt = zReference ? (zReference.referenceCents/100).toLocaleString('fr-FR', {minimumFractionDigits:2}) : real ? Number(tot && tot.revenue || 0).toLocaleString('fr-FR').replace(/[  ]/g, ' ') : '24 380';
+    const heroAmt = zReference ? (window.KiwiNumber?.format((zReference.referenceCents/100), {minimumFractionDigits:2}) ?? (zReference.referenceCents/100).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:2})) : real ? (window.KiwiNumber?.format(Number(tot && tot.revenue || 0), {}) ?? Number(tot && tot.revenue || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})) : '24 380';
     const heroCount = real ? Number(tot && tot.count || 0) : 182;
     const payoutMeta = real ? 'Aucune source de règlement disponible' : '23 091 MAD sur Bank of Africa •• 3291';
     const payoutWhen = real ? '·' : 'Demain matin, 9h';
@@ -160,7 +160,7 @@
         ${real ? (recent.length ? recent.map((s) => {
           const method = ({ cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR', wallet: 'Kiwi Wallet', link: 'Lien de paiement' })[String(s.method || '')] || 'Paiement';
           const when = new Date(+s.ts || 0).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-          const amount = Math.max(0, +s.amount || 0).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+          const amount = (window.KiwiNumber?.format(Math.max(0, +s.amount || 0), { maximumFractionDigits: 2 }) ?? Math.max(0, +s.amount || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 2 }));
           return `<div class="simple-tx">
             <div class="av">P</div>
             <div class="body"><div class="name">Paiement</div><div class="meta">${method} · ${when}</div></div>
@@ -207,7 +207,7 @@
       return {
         date: offset === 0 ? "Aujourd'hui" : offset === 1 ? 'Hier' : d.toLocaleDateString('fr-FR', { weekday: 'long' }),
         sub: d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }),
-        amt: amount.toLocaleString('fr-FR', { maximumFractionDigits: 2 }),
+        amt: (window.KiwiNumber?.format(amount, { maximumFractionDigits: 2 }) ?? amount.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 2 })),
         pending: offset === 0,
       };
     }) : [
@@ -234,7 +234,7 @@
 
         <div class="lyoum-hero">
           <div class="eyebrow">TOTAL CETTE SEMAINE</div>
-          <div class="amount" style="font-size: 60px;">${total.toLocaleString('fr-FR').replace(/[  ]/g,' ')}<span class="unit">MAD</span></div>
+          <div class="amount" style="font-size: 60px;">${(window.KiwiNumber?.format(total, {}) ?? total.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))}<span class="unit">MAD</span></div>
           ${real ? '' : '<div class="count">+18 % vs semaine dernière</div>'}
         </div>
 

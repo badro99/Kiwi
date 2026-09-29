@@ -238,7 +238,7 @@
   const ownerEmail = () => meVal('email') || ownSetting('ownerEmail', OWNER.email) || (isReal() ? '' : OWNER.email);
   const ownerPhone = () => ownSetting('ownerPhone', OWNER.phone) || (isReal() ? '' : OWNER.phone);
   const ownerLang = () => pick({ fr: 'Français', en: 'English', ar: 'العربية' });
-  const fmtMAD = (n) => Number(n).toLocaleString('fr-FR').replace(/[  ,]/g, ' ');
+  const fmtMAD = (n) => (window.KiwiNumber?.format(Number(n), {}) ?? Number(n).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
 
   /* ── Subscription ladder (mirrors the 4-tier model) ── */
   const PLAN_LADDER = ['basic', 'pro', 'ultra', 'ultimate'];

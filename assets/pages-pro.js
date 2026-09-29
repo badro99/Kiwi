@@ -1390,7 +1390,7 @@ handlers['nav-reglements'] = () => {
             <div style="font-size:13px; color:var(--n-600); margin-top:3px;">Historique 14 j · projection IA 16 j à venir</div>
           </div>
           <div style="text-align:right;">
-            <div style="font-family:var(--mono); font-size:18px; font-weight:600; color:var(--atlas); letter-spacing:-0.015em;">+${totalProj.toLocaleString('fr-FR').replace(/,/g, ' ')} MAD</div>
+            <div style="font-family:var(--mono); font-size:18px; font-weight:600; color:var(--atlas); letter-spacing:-0.015em;">+${(window.KiwiNumber?.format(totalProj, {}) ?? totalProj.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} MAD</div>
             <div style="font-size:11px; color:var(--n-500);">à venir 16 j</div>
           </div>
         </div>
@@ -9229,7 +9229,7 @@ handlers['nav-menu'] = () => {
       <div class="menu-row ${is86 ? 'is-86' : ''}" data-row="${id}">
         <div class="photo">${name.includes('Tajine') ? '◉' : name.includes('Couscous') ? '◓' : name.includes('Café') || name.includes('Thé') ? '☕' : name.includes('Pastilla') ? '✦' : name.includes('Salade') ? '◴' : '●'}</div>
         <div class="nm">${name}<div class="desc">${desc}</div><div class="tags">${stockChip(is86 ? 'out' : st)} ${mod ? `<span class="tg">${mod.split(' · ').length} modif.</span>` : ''} ${tagsHtml('', free)}</div></div>
-        <div class="pr">${price.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace('.', ',')} MAD</div>
+        <div class="pr">${(window.KiwiNumber?.format(price, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? price.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))} MAD</div>
         <div class="rk"><b>#${rank}</b><div style="font-size:10px; color:var(--n-500);">${sold} vendus</div></div>
         <div class="menu-cat-actions" style="justify-content:flex-end;">
           <button class="ord-arrow" data-row-act="up" data-id="${id}" ${idx === 0 ? 'disabled style="opacity:0.3;"' : ''} aria-label="Monter">▲</button>
@@ -9432,7 +9432,7 @@ function openItemEdit(it) {
         <div class="head"><h4 style="font-size:13px;">Performance · 30 derniers jours</h4><span class="meta">RANG #${rank}</span></div>
         <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px; font-size:12.5px;">
           <div><div style="color:var(--n-500); font-size:11px;">Vendus</div><div class="mono" style="font-size:18px; font-weight:600;">${sold}</div></div>
-          <div><div style="color:var(--n-500); font-size:11px;">CA</div><div class="mono" style="font-size:18px; font-weight:600;">${(price * sold).toLocaleString('fr-FR')} MAD</div></div>
+          <div><div style="color:var(--n-500); font-size:11px;">CA</div><div class="mono" style="font-size:18px; font-weight:600;">${(window.KiwiNumber?.format((price * sold), {}) ?? (price * sold).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} MAD</div></div>
           <div><div style="color:var(--n-500); font-size:11px;">Marge brute</div><div class="mono" style="font-size:18px; font-weight:600; color:var(--atlas);">66 %</div></div>
         </div>
       </div>
@@ -9861,8 +9861,8 @@ const _ICN = {
 };
 
 /* ─── French money formatter ─── */
-const _mad = (n) => n.toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}).replace(/,/g, ' ');
-const _mad2 = (n) => n.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}).replace(/,/g, ' ').replace(/ /g, ' ');
+const _mad = (n) => (window.KiwiNumber?.format(n, {minimumFractionDigits: 0, maximumFractionDigits: 0}) ?? n.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}));
+const _mad2 = (n) => (window.KiwiNumber?.format(n, {minimumFractionDigits: 2, maximumFractionDigits: 2}) ?? n.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · BOUTIQUE vertical · Maison Mansour, Gueliz · S2 sidebar handlers
@@ -11554,8 +11554,8 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   };
 
   /* ═══════════════════ Number formatters ═══════════════════ */
-  const fmtMAD = (n, dec = 2) => n.toLocaleString('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec }).replace(/ | /g, ' ');
-  const fmtInt = (n) => n.toLocaleString('fr-FR').replace(/ | /g, ' ');
+  const fmtMAD = (n, dec = 2) => (window.KiwiNumber?.format(n, { minimumFractionDigits: dec, maximumFractionDigits: dec }) ?? n.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec }));
+  const fmtInt = (n) => (window.KiwiNumber?.format(n, {}) ?? n.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
 
   /* ═══════════════════ NAV-PROMOS ═══════════════════════════════════════════
    * Promotions & offres pour Maison Mansour Gueliz.
@@ -12455,7 +12455,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   ];
 
   /* ─── Helpers ─── */
-  const fmt = (n) => Math.round(n).toLocaleString('fr-FR').replace(/,/g, ' ');
+  const fmt = (n) => (window.KiwiNumber?.format(Math.round(n), {}) ?? Math.round(n).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
   const SVG = (name, sz = 14) => `<i data-lucide="${name}" style="width:${sz}px;height:${sz}px" aria-hidden="true"></i>`;
   const ICN = {
     plus: SVG('plus'), cal: SVG('calendar'), user: SVG('user'),
@@ -13324,7 +13324,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     },
   ];
 
-  const fmt = (n) => n.toLocaleString('fr-FR').replace(/,/g, ' ');
+  const fmt = (n) => (window.KiwiNumber?.format(n, {}) ?? n.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
   const dows = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
   function renderCard(p) {
@@ -13824,7 +13824,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     { id: 30, fn: 'Pablo', ln: 'C.', flag: 'es', ltv: 2300, fav: 'Yasmine', last: 'Il y a 1 mois', tier: 'bronze', bday: false, allergies: [] },
   ];
 
-  const fmtMAD = (n) => n.toLocaleString('fr-FR').replace(/ /g, ' ');
+  const fmtMAD = (n) => (window.KiwiNumber?.format(n, {}) ?? n.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
   const tierLabel = { bronze: 'Bronze', argent: 'Argent', or: 'Or', platine: 'Platine' };
   const isNew = (c) => c.last === "Aujourd'hui" || c.last === 'Hier';
   const isFidele = (c) => c.ltv >= 5000 && c.ltv < 30000;
@@ -14441,7 +14441,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
             </button>
             <div class="st-chips" data-st-row="${it.id}">${stationChips}</div>
           </div>
-          <div class="price">${it.p.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace('.', ',')} MAD<span class="rk">#${it.rank} · ${it.sold} vendus</span></div>
+          <div class="price">${(window.KiwiNumber?.format(it.p, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? it.p.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))} MAD<span class="rk">#${it.rank} · ${it.sold} vendus</span></div>
           <span class="sw ${is86 ? '' : 'on'}" data-row-act="86" data-id="${it.id}" title="${is86 ? '86 (rupture)' : 'En stock, cliquer pour 86'}" role="switch" aria-checked="${!is86}"></span>
         </div>`;
     };
@@ -14522,7 +14522,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
             <div class="kind">${stationKindLabel(s.kind)}${s.custom ? ' · personnalisée' : ''}</div>
             <div class="stats">
               <div><b>${stats.items}</b>item${stats.items > 1 ? 's' : ''} routé${stats.items > 1 ? 's' : ''}</div>
-              <div><b>${stats.sold.toLocaleString('fr-FR')}</b>vendus / 30 j</div>
+              <div><b>${(window.KiwiNumber?.format(stats.sold, {}) ?? stats.sold.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))}</b>vendus / 30 j</div>
             </div>
             <div class="row-actions">
               ${s.custom
@@ -14841,7 +14841,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
           <div class="head"><h4 style="font-size:13px;">Performance · 30 derniers jours</h4><span class="meta">RANG #${it.rank}</span></div>
           <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px; font-size:12.5px;">
             <div><div style="color:var(--n-500); font-size:11px;">Vendus</div><div class="mono" style="font-size:18px; font-weight:600;">${it.sold}</div></div>
-            <div><div style="color:var(--n-500); font-size:11px;">CA</div><div class="mono" style="font-size:18px; font-weight:600;">${(it.p * it.sold).toLocaleString('fr-FR')} MAD</div></div>
+            <div><div style="color:var(--n-500); font-size:11px;">CA</div><div class="mono" style="font-size:18px; font-weight:600;">${(window.KiwiNumber?.format((it.p * it.sold), {}) ?? (it.p * it.sold).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} MAD</div></div>
             <div><div style="color:var(--n-500); font-size:11px;">Marge brute</div><div class="mono" style="font-size:18px; font-weight:600; color:var(--atlas);">66 %</div></div>
           </div>
         </div>

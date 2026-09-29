@@ -1242,7 +1242,7 @@
       body: `
         <div class="p-hero">
           <div class="l">${T.transactionsHeroLabel}</div>
-          <div class="big">${tot.toLocaleString('fr-FR', {maximumFractionDigits: 0})} <span style="font-size:18px; opacity:0.7;">MAD</span></div>
+          <div class="big">${(window.KiwiNumber?.format(tot, {maximumFractionDigits: 0}) ?? tot.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {maximumFractionDigits: 0}))} <span style="font-size:18px; opacity:0.7;">MAD</span></div>
           <div class="sub">${T.transactionsHeroSub(rows.length, Math.round(tot / rows.length))}</div>
         </div>
         <div class="p-toolbar">
@@ -1262,8 +1262,8 @@
                 <td class="mono">${r.t}</td>
                 <td><b>${r.n}</b> <span style="color:var(--n-500);">${r.mask}</span></td>
                 <td style="color:var(--n-600);">${r.c}</td>
-                <td class="mono right">${r.amt.toFixed(2).replace('.', ',')}</td>
-                <td class="mono right" style="color:${r.tip > 0 ? 'var(--success)' : 'var(--n-400)'};">${r.tip > 0 ? '+' + r.tip.toFixed(2).replace('.', ',') : '·'}</td>
+                <td class="mono right">${(window.KiwiNumber?.number(r.amt, 2) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:2,maximumFractionDigits:2}).format(r.amt))}</td>
+                <td class="mono right" style="color:${r.tip > 0 ? 'var(--success)' : 'var(--n-400)'};">${r.tip > 0 ? '+' + (window.KiwiNumber?.number(r.tip, 2) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:2,maximumFractionDigits:2}).format(r.tip)) : '·'}</td>
                 <td><span class="chip ${r.status === 'ok' ? 'ok' : 'pend'}">${r.status === 'ok' ? T.transactionsStatusSettled : T.transactionsStatusPending}</span></td>
               </tr>
             `).join('')}
@@ -1376,7 +1376,7 @@
       body: `
         <div class="p-hero" style="background: linear-gradient(135deg, var(--atlas), #053B2C);">
           <div class="l">${T.settlementsHeroLabel}</div>
-          <div class="big">${thisMonth.toLocaleString('fr-FR').replace(/,/g,' ')} <span style="font-size:18px; opacity:0.7;">MAD</span></div>
+          <div class="big">${(window.KiwiNumber?.format(thisMonth, {}) ?? thisMonth.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} <span style="font-size:18px; opacity:0.7;">MAD</span></div>
           <div class="sub">${T.settlementsHeroSub(22, '99,2')}</div>
         </div>
 

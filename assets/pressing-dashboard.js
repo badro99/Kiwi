@@ -41,7 +41,7 @@
     return '<i data-lucide="' + (MATERIAL_ICONS[name] || 'shirt') + '" aria-hidden="true"></i>';
   }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
-  function num(n) { return Math.round(Number(n) || 0).toLocaleString('fr-FR'); }
+  function num(n) { return (window.KiwiNumber?.format(Math.round(Number(n) || 0), {}) ?? Math.round(Number(n) || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})); }
   function when(s) {
     if (!s) return 'Échéance non définie';
     var d = new Date(s); if (!Number.isFinite(d.getTime())) return 'Échéance non définie';

@@ -1314,7 +1314,7 @@
   function isCustomVenue() { const KV = window.KiwiVenue; return !!(KV && KV.isCustom && KV.isCustom()); }
 
   function fmtMad(n) {
-    return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Math.round(n || 0)) + ' MAD';
+    return (window.KiwiNumber?.number(Math.round(n || 0)) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }).format(Math.round(n || 0))) + ' MAD';
   }
 
   function memberMatchesFilters(m) {
@@ -1598,7 +1598,7 @@
           <td><span class="eq-venue-badge">${esc(m.department)}</span></td>
           <td><span class="${contractCls}">${esc(m.contract || '·')}</span></td>
           <td><div class="kt-chips">${langChips || '<span class="eq-cell-empty">·</span>'}</div></td>
-          <td><div class="eq-salary-v">${fmtMad(m.baseSalary)}</div><div class="eq-salary-sub">${(m.hourlyRate || 0).toLocaleString('fr-FR')} MAD/h</div></td>
+          <td><div class="eq-salary-v">${fmtMad(m.baseSalary)}</div><div class="eq-salary-sub">${(window.KiwiNumber?.format((m.hourlyRate || 0), {}) ?? (m.hourlyRate || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} MAD/h</div></td>
           <td>
             <div class="eq-actions">
               <button class="eq-icon-btn" type="button" data-action="kt-view-profile" data-arg="${esc(m.id)}" aria-label="${esc(T.viewProfile)}" title="${esc(T.viewProfile)}">${svgIcon(IC.eye, 14)}</button>
@@ -1676,7 +1676,7 @@
           </td>
           ${cells}
           <td class="kt-h-total mono"><b>${fmtHours(total)}</b></td>
-          <td class="kt-h-pay mono"><b>${pay.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>
+          <td class="kt-h-pay mono"><b>${(window.KiwiNumber?.format(pay, { maximumFractionDigits: 0 }) ?? pay.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }))}</b><span>MAD</span></td>
         </tr>
       `;
     }).join('');
@@ -1719,7 +1719,7 @@
                 <td class="kt-h-foot-label">${esc(T.hFooterLabel)}</td>
                 <td colspan="${period.days.length}"></td>
                 <td class="kt-h-foot-tot mono"><b>${fmtHours(grandHours)}</b></td>
-                <td class="kt-h-foot-tot mono"><b>${grandPay.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>
+                <td class="kt-h-foot-tot mono"><b>${(window.KiwiNumber?.format(grandPay, { maximumFractionDigits: 0 }) ?? grandPay.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }))}</b><span>MAD</span></td>
               </tr>
             </tfoot>
           </table>
@@ -1908,9 +1908,9 @@
     const hours=result.hoursByMember.map((row)=>row.hours);const low=hours.length?Math.min(...hours):0,high=hours.length?Math.max(...hours):0;
     const openDays=ctx.period.days.length-result.closedDays.length;
     const issues=[];if(result.unresolved.length)issues.push(`<div class="kt-plan-issue is-blocker"><b>!</b><span>${esc(copy.shortage(result.unresolved.length))}</span></div>`);if(result.closedDays.length)issues.push(`<div class="kt-plan-issue is-warning"><b>i</b><span>${esc(copy.closed(result.closedDays.length))}</span></div>`);
-    const rows=result.hoursByMember.filter((row)=>row.hours>0).map((row)=>{const member=ctx.members.find((item)=>String(item.id)===row.memberId);return `<div class="kt-fair-review-row"><b>${esc(member?memberFullName(member):row.memberId)}</b><span>${row.hours.toLocaleString('fr-FR',{maximumFractionDigits:1})} h</span></div>`;}).join('');
+    const rows=result.hoursByMember.filter((row)=>row.hours>0).map((row)=>{const member=ctx.members.find((item)=>String(item.id)===row.memberId);return `<div class="kt-fair-review-row"><b>${esc(member?memberFullName(member):row.memberId)}</b><span>${(window.KiwiNumber?.format(row.hours, {maximumFractionDigits:1}) ?? row.hours.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {maximumFractionDigits:1}))} h</span></div>`;}).join('');
     pending.mdl.close();
-    const mdl=modal({title:copy.reviewTitle,width:620,body:`<div class="kt-opt-summary"><strong>${esc(copy.review(result.assignments.length,openDays))}</strong><p>${esc(copy.balance(low.toLocaleString('fr-FR',{maximumFractionDigits:1}),high.toLocaleString('fr-FR',{maximumFractionDigits:1})))}</p><p>${esc(copy.reviewNote)}</p></div><div class="kt-fair-review">${rows}</div>${issues.join('')}`,foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button class="kb atlas" data-action="kt-plan-fair-confirm"${result.assignments.length?'':' disabled'}>${esc(copy.apply)}</button>`});
+    const mdl=modal({title:copy.reviewTitle,width:620,body:`<div class="kt-opt-summary"><strong>${esc(copy.review(result.assignments.length,openDays))}</strong><p>${esc(copy.balance((window.KiwiNumber?.format(low, {maximumFractionDigits:1}) ?? low.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {maximumFractionDigits:1})),(window.KiwiNumber?.format(high, {maximumFractionDigits:1}) ?? high.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {maximumFractionDigits:1}))))}</p><p>${esc(copy.reviewNote)}</p></div><div class="kt-fair-review">${rows}</div>${issues.join('')}`,foot:`<button class="kb ghost" data-dismiss>${esc(t().cancel)}</button><button class="kb atlas" data-action="kt-plan-fair-confirm"${result.assignments.length?'':' disabled'}>${esc(copy.apply)}</button>`});
     mdl.el.addEventListener('click',(event)=>{if(event.target.closest('[data-dismiss]'))mdl.close();});window.__kiwiPlanningFair={mdl,key:ctx.key,result};
   };
   handlers['kt-plan-fair-confirm'] = () => {const pending=window.__kiwiPlanningFair;if(!pending?.mdl?.el||!pending.result)return;window.__kiwiTeamV2.shiftsByVenue[pending.key]=pending.result.shifts;saveCustomTeams();pending.mdl.close();window.__kiwiPlanningFair=null;render();toast(fairScheduleCopy().done,{type:'success'});};
@@ -2227,11 +2227,11 @@
       const tb = tr.querySelector('.kt-h-total b');
       if (tb) tb.textContent = fmtHours(h);
       const pb = tr.querySelector('.kt-h-pay b');
-      if (pb) pb.textContent = cost.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
+      if (pb) pb.textContent = (window.KiwiNumber?.format(cost, { maximumFractionDigits: 0 }) ?? cost.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }));
     });
     const foot = root.querySelectorAll('tfoot .kt-h-foot-tot b');
     if (foot[0]) foot[0].textContent = fmtHours(grandH);
-    if (foot[1]) foot[1].textContent = grandC.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
+    if (foot[1]) foot[1].textContent = (window.KiwiNumber?.format(grandC, { maximumFractionDigits: 0 }) ?? grandC.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }));
   }
 
   handlers['kt-filter-dept']     = (_el, v) => { activeFilters.dept = v || ''; render(); };
@@ -2297,12 +2297,12 @@
         const totalCell = tr.querySelector('.kt-h-total b');
         const payCell   = tr.querySelector('.kt-h-pay b');
         if (totalCell) totalCell.textContent = fmtHours(tot);
-        if (payCell)   payCell.textContent   = pay.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
+        if (payCell)   payCell.textContent   = (window.KiwiNumber?.format(pay, { maximumFractionDigits: 0 }) ?? pay.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }));
       }
     });
     const footTot = root.querySelectorAll('table.kt-h-table tfoot .kt-h-foot-tot b');
     if (footTot[0]) footTot[0].textContent = fmtHours(grandH);
-    if (footTot[1]) footTot[1].textContent = grandP.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
+    if (footTot[1]) footTot[1].textContent = (window.KiwiNumber?.format(grandP, { maximumFractionDigits: 0 }) ?? grandP.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }));
 
     // On Paie & planning the band above the grid is the headline the owner reads
     // ("à payer · période"). Keep it in step with the cell they just typed in,
@@ -2686,8 +2686,8 @@
           ])}
 
           ${profileSection(T.secComp, [
-            [T.baseSalary, `<span class="mono">${(m.baseSalary || 0).toLocaleString('fr-FR')} MAD</span>`],
-            [T.hourlyRate, `<span class="mono">${(m.hourlyRate || 0).toLocaleString('fr-FR')} MAD</span>`],
+            [T.baseSalary, `<span class="mono">${(window.KiwiNumber?.format((m.baseSalary || 0), {}) ?? (m.baseSalary || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} MAD</span>`],
+            [T.hourlyRate, `<span class="mono">${(window.KiwiNumber?.format((m.hourlyRate || 0), {}) ?? (m.hourlyRate || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} MAD</span>`],
           ], true)}
 
           ${profileSection(T.cin, [['', m.cin || '·']], true)}
@@ -3109,7 +3109,7 @@
           </td>
           ${cells}
           <td class="kt-h-total mono"><b>${fmtHours(h)}</b></td>
-          ${showCosts ? `<td class="kt-h-pay mono"><b>${cost.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>` : ''}
+          ${showCosts ? `<td class="kt-h-pay mono"><b>${(window.KiwiNumber?.format(cost, { maximumFractionDigits: 0 }) ?? cost.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }))}</b><span>MAD</span></td>` : ''}
         </tr>`;
     }).join('');
 
@@ -3193,7 +3193,7 @@
                 <td class="kt-h-foot-label">${esc(T.plFooter)}</td>
                 <td colspan="${view.length}"></td>
                 <td class="kt-h-foot-tot mono"><b>${fmtHours(grandH)}</b></td>
-                ${showCosts ? `<td class="kt-h-foot-tot mono"><b>${grandCost.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}</b><span>MAD</span></td>` : ''}
+                ${showCosts ? `<td class="kt-h-foot-tot mono"><b>${(window.KiwiNumber?.format(grandCost, { maximumFractionDigits: 0 }) ?? grandCost.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { maximumFractionDigits: 0 }))}</b><span>MAD</span></td>` : ''}
               </tr>
             </tfoot>
           </table>

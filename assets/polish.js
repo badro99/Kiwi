@@ -44,9 +44,9 @@
     requestAnimationFrame(tick);
   }
   function formatNumber(v, target) {
-    if (target >= 1000) return Math.round(v).toLocaleString('fr-FR').replace(/,/g, ' ');
+    if (target >= 1000) return (window.KiwiNumber?.format(Math.round(v), {}) ?? Math.round(v).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
     if (Number.isInteger(target)) return Math.round(v).toString();
-    return v.toFixed(target < 10 ? 2 : 1).replace('.', ',');
+    return (window.KiwiNumber?.number(v, target < 10 ? 2 : 1) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:target < 10 ? 2 : 1,maximumFractionDigits:target < 10 ? 2 : 1}).format(v));
   }
   // Trigger counters when their container reveals
   const counterIo = new IntersectionObserver((entries) => {
@@ -165,8 +165,8 @@
           </div>
         </div>
         <div class="ctx">${item.ctx}</div>
-        <div class="amt">${item.amt.toFixed(2).replace('.', ',')}</div>
-        <div class="tip">${item.tip > 0 ? '+' + item.tip.toFixed(2).replace('.', ',') : '·'}</div>
+        <div class="amt">${(window.KiwiNumber?.number(item.amt, 2) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:2,maximumFractionDigits:2}).format(item.amt))}</div>
+        <div class="tip">${item.tip > 0 ? '+' + (window.KiwiNumber?.number(item.tip, 2) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:2,maximumFractionDigits:2}).format(item.tip)) : '·'}</div>
         <div class="more"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></div>
       `;
       feed.insertBefore(row, feed.firstChild);

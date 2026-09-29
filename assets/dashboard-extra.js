@@ -19,7 +19,7 @@
 
   const trLang = () => (window.KiwiI18n?.getLang?.() || 'fr');
 
-  const money = (n) => n.toLocaleString('fr-FR') + ' MAD';
+  const money = (n) => (window.KiwiNumber?.format(n, {}) ?? n.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})) + ' MAD';
 
   /* ═══════════════════════════════════════════════════════════════════════
    * 1 · FOURNISSEURS & COMMANDES

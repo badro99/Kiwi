@@ -25,7 +25,7 @@
   'use strict';
 
   /* ═══════════════ HELPERS ═══════════════ */
-  const fmt = (n) => Math.round(n).toLocaleString('fr-FR');
+  const fmt = (n) => (window.KiwiNumber?.format(Math.round(n), {}) ?? Math.round(n).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
   const MAD = (n) => fmt(n) + ' MAD';
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -1158,7 +1158,7 @@
     const inHouse = Object.values(ROOMS).filter((r) => r.status === 'occ');
     return `<div class="hx-page">
       <div class="hx-strip">
-        <div class="hx-kpi"><div class="l">Occupation ce soir</div><div class="v">${c.occToNight} / 24</div><div class="d up">${(c.occToNight / 24 * 100).toFixed(1).replace('.', ',')} % · +2,4 pts vs hier</div></div>
+        <div class="hx-kpi"><div class="l">Occupation ce soir</div><div class="v">${c.occToNight} / 24</div><div class="d up">${(window.KiwiNumber?.number((c.occToNight / 24 * 100), 1) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:1,maximumFractionDigits:1}).format((c.occToNight / 24 * 100)))} % · +2,4 pts vs hier</div></div>
         <div class="hx-kpi"><div class="l">Arrivées</div><div class="v">${ARRIVALS.length} <small>· ${c.arrDone} faites</small></div><div class="d">premier ETA 15h30</div></div>
         <div class="hx-kpi"><div class="l">Départs</div><div class="v">5 <small>· ${5 - c.depPending} soldés</small></div><div class="d ${c.depPending ? 'warn' : 'up'}">${c.depPending ? '1 en retard · Ch. 9' : 'tous soldés ✓'}</div></div>
         <div class="hx-kpi"><div class="l">À nettoyer</div><div class="v">${c.toClean} <small>/ 24</small></div><div class="d">ménage en cours · Ch. 12</div></div>
@@ -1681,7 +1681,7 @@
     const c = counts();
     const total = totalRooms();
     const free = Object.values(R()).filter((r) => cuRoomStatus(r).key === 'libre').length;
-    const pct = total ? (c.occToNight / total * 100).toFixed(1).replace('.', ',') : '0,0';
+    const pct = total ? (window.KiwiNumber?.number((c.occToNight / total * 100), 1) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:1,maximumFractionDigits:1}).format((c.occToNight / total * 100))) : '0,0';
     return `<div class="hx-strip">
       <div class="hx-kpi"><div class="l">Occupation ce soir</div><div class="v">${c.occToNight} / ${total}</div><div class="d">${pct} % · se met à jour à chaque vente</div></div>
       <div class="hx-kpi"><div class="l">Libres · propres</div><div class="v">${free}</div><div class="d">prêtes à vendre</div></div>
@@ -3130,7 +3130,7 @@
 
   function cuLang() {
     try {
-      return (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || document.documentElement.lang || 'fr';
+      return (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || document.documentElement?.lang || 'fr';
     } catch (_) { return 'fr'; }
   }
 
@@ -3822,7 +3822,7 @@
     openModal = { el: m.el, close: m.close };
   }
 
-  const cuDraftMoney = n => (n / 100).toLocaleString('fr-FR', {minimumFractionDigits:2,maximumFractionDigits:2});
+  const cuDraftMoney = n => (window.KiwiNumber?.format((n / 100), {minimumFractionDigits:2,maximumFractionDigits:2}) ?? (n / 100).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:2,maximumFractionDigits:2}));
   const cuDraftStatus = v => ({requested:'Demandée',confirmed:'Confirmée',checked_in:'En séjour',completed:'Terminée',cancelled:'Annulée',no_show:'Non présenté'})[v] || v;
   function cuDraftRoom(id) { const room=Object.values(cuState().rooms||{}).find(r=>r.id===id);return room?'Ch. '+room.n:/^room:\d+$/.test(id)?'Ch. '+id.slice(5):id?'Chambre attribuée':'Supplément proposé'; }
   function cuBillingLine(l, payers) {
@@ -6596,9 +6596,9 @@
     };
   }
   function cuQty(milli) {
-    return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 3 }).format((Number(milli) || 0) / 1000);
+    return (window.KiwiNumber?.format((Number(milli) || 0) / 1000, {maximumFractionDigits:3}) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {maximumFractionDigits:3}).format((Number(milli) || 0) / 1000));
   }
-  function cuMoney(cents) { return new Intl.NumberFormat('fr-FR').format((Number(cents) || 0) / 100) + ' MAD'; }
+  function cuMoney(cents) { return (window.KiwiNumber?.format((Number(cents) || 0) / 100) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR').format((Number(cents) || 0) / 100)) + ' MAD'; }
   function cuCaptureEconomatDraft() {
     if (!openDrawer || !['hotelintel', 'points-vente'].includes(openDrawer.page) || !cuEconomatState.draft) return;
     const host = openDrawer.el.querySelector('[data-hx-economat]');

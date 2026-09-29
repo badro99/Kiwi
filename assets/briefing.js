@@ -45,7 +45,7 @@
   };
 
   function lang(wanted) {
-    var v = String(wanted || document.documentElement.lang || localStorage.getItem('kiwiLang') || 'fr').slice(0, 2);
+    var v = String(wanted || document.documentElement?.lang || localStorage.getItem('kiwiLang') || 'fr').slice(0, 2);
     return COPY[v] ? v : 'fr';
   }
   function tr(wanted) { return COPY[lang(wanted)]; }
@@ -195,9 +195,9 @@
     var day = businessDay(now);
     var end = new Date(currentBounds.from + elapsed);
     var time = String(end.getHours()).padStart(2, '0') + ':' + String(end.getMinutes()).padStart(2, '0');
-    var cur = Math.round(current.revenue).toLocaleString('fr-FR');
-    var wd = Math.round(weekdayMedian).toLocaleString('fr-FR');
-    var tr7 = Math.round(trailingMedian).toLocaleString('fr-FR');
+    var cur = (window.KiwiNumber?.format(Math.round(current.revenue), {}) ?? Math.round(current.revenue).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
+    var wd = (window.KiwiNumber?.format(Math.round(weekdayMedian), {}) ?? Math.round(weekdayMedian).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
+    var tr7 = (window.KiwiNumber?.format(Math.round(trailingMedian), {}) ?? Math.round(trailingMedian).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
     return {
       id: 'sales-drop:' + day, kind: 'sales-drop', tone: 'warn', roles: ['owner', 'manager', 'staff'],
       copy: {

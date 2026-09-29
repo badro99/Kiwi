@@ -1606,8 +1606,9 @@
   const fmtPct = v => {
     const sign = v > 0 ? '+' : v < 0 ? '−' : '';
     const abs = Math.abs(v);
-    const formatted = window.KiwiNumber?.number(abs, Math.abs(abs - Math.round(abs)) < 0.001 ? 0 : 1)
-      || ((Math.abs(abs - Math.round(abs)) < 0.001) ? String(Math.round(abs)) : abs.toFixed(1).replace('.', ','));
+    const digits = Math.abs(abs - Math.round(abs)) < 0.001 ? 0 : 1;
+    const formatted = window.KiwiNumber?.number(abs, digits)
+      ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:digits,maximumFractionDigits:digits}).format(abs);
     return `${sign}${formatted} %`;
   };
 
@@ -3237,7 +3238,7 @@
 
   function fmtYTick(v) {
     if (v === 0) return '0';
-    if (v >= 1000000) return (v / 1000000).toFixed(v >= 10000000 ? 0 : 1).replace('.', ',') + 'M';
+    if (v >= 1000000) return (window.KiwiNumber?.number((v / 1000000), v >= 10000000 ? 0 : 1) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:v >= 10000000 ? 0 : 1,maximumFractionDigits:v >= 10000000 ? 0 : 1}).format((v / 1000000))) + 'M';
     if (v >= 1000) return Math.round(v / 1000) + 'k';
     return String(v);
   }
@@ -3564,7 +3565,7 @@
       const pct = ((now - prev) / prev) * 100;
       const sign = pct > 0 ? '+' : pct < 0 ? '−' : '';
       const abs = Math.abs(pct);
-      const txt = (Math.abs(abs - Math.round(abs)) < 0.05) ? String(Math.round(abs)) : abs.toFixed(1).replace('.', ',');
+      const txt = (Math.abs(abs - Math.round(abs)) < 0.05) ? String(Math.round(abs)) : (window.KiwiNumber?.number(abs, 1) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:1,maximumFractionDigits:1}).format(abs));
       return `${sign}${txt} %`;
     }
 
@@ -4169,7 +4170,7 @@
     /* Service duration — 12–75 min, longer for tables with more covers. */
     const serviceMinutes = 12 + Math.floor(rnd() * 50) + covers * 4;
 
-    const fmt = (n) => n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmt = (n) => (window.KiwiNumber?.format(n, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? n.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     return {
       method, primary, sub, flag,
       customer, table: tableNum,
@@ -4190,7 +4191,7 @@
   /* Pull the last 6 orders from the simulator's current cumTx. */
   function buildLiveFeed(venue) {
     const rows = window.KiwiDemoClock?.getDaySales?.() || [];
-    const fmt = n => n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    const fmt = n => (window.KiwiNumber?.format(n, {minimumFractionDigits:2, maximumFractionDigits:2}) ?? n.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}));
     return rows.slice(-10).reverse().map((sale, slot) => ({
       method:sale.method === 'card' ? 'visa' : sale.method === 'wallet' ? 'qr' : 'cash',
       primary:sale.method === 'card' ? 'Visa' : sale.method === 'wallet' ? 'Kiwi Wallet QR' : ({en:'Cash',ar:'نقداً'}[(window.KiwiI18n?.getLang?.() || 'fr')] || 'Espèces'),
@@ -4251,7 +4252,7 @@
         sub: isRefund ? (s.ref || '') : ((s.method === 'delivery' || s.method === 'credit') ? L.deliverySub : L.sub), flag: '', ctx: s.label || '',
         // Amount ONLY — the row template appends its own <span class="cur">MAD</span>,
         // so spelling the unit here too printed "450,00 MADMAD" on every real sale.
-        amt: (isRefund ? '− ' : '') + Math.abs(s.amount || 0).toFixed(2).replace('.', ','),
+        amt: (isRefund ? '− ' : '') + (window.KiwiNumber?.number(Math.abs(s.amount || 0), 2) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:2,maximumFractionDigits:2}).format(Math.abs(s.amount || 0))),
         tip: '·', neg: isRefund, isNew: i === 0,
         saleId: String(s.id || ''),
         ref: String(s.ref || s.receiptRef || s.id || '').trim(),
@@ -4580,7 +4581,7 @@
     en: (n, tot) => `${n} of ${tot} on shift today`,
     ar: (n, tot) => `${n} من ${tot} في الخدمة اليوم`,
   };
-  const fmtHeures = (h) => `${h.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} h`;
+  const fmtHeures = (h) => `${(window.KiwiNumber?.format(h, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) ?? h.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }))} h`;
   /* team.js se charge APRÈS ce fichier : au premier rendu KiwiTeam n'existe pas
    * encore et on renvoie null, ce qui laisse l'état vide d'origine. Le listener
    * 'kiwi-team-ready' plus bas repeint la carte dès que le roster est publié. */

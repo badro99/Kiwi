@@ -542,7 +542,7 @@
     const m = modal({
       tag: T.tag,
       title: T.title,
-      desc: T.desc(nisab.toLocaleString('fr-FR')),
+      desc: T.desc((window.KiwiNumber?.format(nisab, {}) ?? nisab.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))),
       width: 560,
       body: render()
     });

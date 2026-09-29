@@ -48,7 +48,7 @@
   }
 
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]; }); }
-  function fmt(v) { try { return Math.round(Number(v) || 0).toLocaleString('fr-FR'); } catch (_) { return String(Math.round(Number(v) || 0)); } }
+  function fmt(v) { try { return (window.KiwiNumber?.format(Math.round(Number(v) || 0), {}) ?? Math.round(Number(v) || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})); } catch (_) { return String(Math.round(Number(v) || 0)); } }
   function slug() {
     try {
       if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {

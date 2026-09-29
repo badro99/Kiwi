@@ -240,8 +240,8 @@
     if (ent.supplier) detailsHtml += '<div class="kv-card-kv"><span>Fournisseur</span><b>' + ent.supplier + '</b></div>';
     if (ent.date) detailsHtml += '<div class="kv-card-kv"><span>Date</span><b>' + ent.date + '</b></div>';
     if (ent.invoiceNumber) detailsHtml += '<div class="kv-card-kv"><span>N° Pièce</span><b>' + ent.invoiceNumber + '</b></div>';
-    if (ent.totalMad > 0) detailsHtml += '<div class="kv-card-kv hl"><span>Montant Total</span><b class="kv-price">' + ent.totalMad.toLocaleString('fr-FR') + ' MAD</b></div>';
-    if (ent.tpeTotal > 0) detailsHtml += '<div class="kv-card-kv hl"><span>Total TPE</span><b class="kv-price">' + ent.tpeTotal.toLocaleString('fr-FR') + ' MAD (' + ent.tpeCount + ' tx)</b></div>';
+    if (ent.totalMad > 0) detailsHtml += '<div class="kv-card-kv hl"><span>Montant Total</span><b class="kv-price">' + (window.KiwiNumber?.format(ent.totalMad, {}) ?? ent.totalMad.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})) + ' MAD</b></div>';
+    if (ent.tpeTotal > 0) detailsHtml += '<div class="kv-card-kv hl"><span>Total TPE</span><b class="kv-price">' + (window.KiwiNumber?.format(ent.tpeTotal, {}) ?? ent.tpeTotal.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})) + ' MAD (' + ent.tpeCount + ' tx)</b></div>';
     if (ent.tablesCount > 0) detailsHtml += '<div class="kv-card-kv"><span>Tables détectées</span><b>' + ent.tablesCount + ' tables</b></div>';
 
     var itemsHtml = '';

@@ -1271,7 +1271,7 @@
   /* ─── setLang ─── */
   function setLang(lang) {
     if (!['fr','en','ar'].includes(lang)) lang = 'fr';
-    document.documentElement.lang = lang;
+    document.documentElement?.lang = lang;
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
     localStorage.setItem('kiwiLang', lang);
     if (window.KiwiNativeLocale) window.KiwiNativeLocale.set(lang);
@@ -1338,15 +1338,17 @@
   /* One merchant-facing number rule. EN uses 15,765.38; FR and AR use
    * 15 765,38 with Latin digits. Receipts keep their own fiscal formatter. */
   const numberLocale = () => getLang() === 'en' ? 'en-GB' : 'fr-FR';
-  const number = (value, digits = 0) => {
+  const formatNumber = (value, options = {}) => {
     const n = Number(value);
     if (!Number.isFinite(n)) return '·';
-    return new Intl.NumberFormat(numberLocale(), {
-      minimumFractionDigits: digits, maximumFractionDigits: digits,
-    }).format(n);
+    return new Intl.NumberFormat(numberLocale(), options).format(n);
   };
+  const number = (value, digits = 0) => formatNumber(value, {
+    minimumFractionDigits: digits, maximumFractionDigits: digits,
+  });
   window.KiwiNumber = {
     locale: numberLocale,
+    format: formatNumber,
     number,
     money: (value, digits = 0) => `${number(value, digits)} MAD`,
     percent: (value, digits = 1) => `${number(value, digits)} %`,

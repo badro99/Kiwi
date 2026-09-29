@@ -73,7 +73,7 @@
   function mad(n) {
     if (!isFinite(n)) return '·';
     const dec = Math.round(n * 100) % 100 === 0 ? 0 : 2;
-    return n.toLocaleString('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + ' MAD';
+    return (window.KiwiNumber?.format(n, { minimumFractionDigits: dec, maximumFractionDigits: dec }) ?? n.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec })) + ' MAD';
   }
 
   /* oui / non as every till and spreadsheet writes it. */

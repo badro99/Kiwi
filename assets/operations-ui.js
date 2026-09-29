@@ -888,7 +888,7 @@
           if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
           return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
         };
-        var num = function (v) { return (Number(v || 0) / 100).toFixed(2).replace('.', ','); };
+        var num = function (v) { return (window.KiwiNumber?.number((Number(v || 0) / 100), 2) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:2,maximumFractionDigits:2}).format((Number(v || 0) / 100))); };
         var lines = (data.lines || []).map(function (l) { return [cell(l.number), cell(l.date), cell(l.account), cell(l.label), num(l.debitCents), num(l.creditCents)].join(';'); });
         var blob = new Blob(['﻿' + [head].concat(lines).join('\r\n')], { type:'text/csv;charset=utf-8' });
         var url = URL.createObjectURL(blob), a = document.createElement('a');
@@ -1341,7 +1341,7 @@
           if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
           return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
         };
-        var amount = function (v) { return (Number(v || 0) / 100).toFixed(2).replace('.', ','); };
+        var amount = function (v) { return (window.KiwiNumber?.number((Number(v || 0) / 100), 2) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:2,maximumFractionDigits:2}).format((Number(v || 0) / 100))); };
         var head = [c.payId, c.payMember, c.payGross, c.payCnss, c.payAmo, c.payIgr, c.payAdvance, c.payEmployer, c.payNet].map(cell).join(';');
         var body = loaded.payslips.map(function (p) {
           return [cell(p.memberId), cell(p.name), amount(p.grossCents), amount(p.cnssCents), amount(p.amoCents),

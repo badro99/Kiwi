@@ -23,7 +23,7 @@
   const lang = () => (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
   const pick = (o) => (o == null ? '' : (o[lang()] ?? o.fr ?? ''));
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const mad = (n) => Math.round(n).toLocaleString('fr-FR').replace(/ |,/g, ' ');
+  const mad = (n) => (window.KiwiNumber?.format(Math.round(n), {}) ?? Math.round(n).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
 
   /* ─────────────── STRINGS ─────────────── */
   const T = {

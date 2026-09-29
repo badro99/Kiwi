@@ -1195,7 +1195,7 @@ ar: {
 
   function kpMoney(n) {
     const v = Math.round(+n || 0);
-    try { return v.toLocaleString('fr-FR') + ' MAD'; } catch (_) { return v + ' MAD'; }
+    try { return (window.KiwiNumber?.format(v, {}) ?? v.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})) + ' MAD'; } catch (_) { return v + ' MAD'; }
   }
 
   /* « aujourd'hui 14:05 », « hier 09:12 », sinon « 14/07 · 18:40 ». Une vente se
@@ -1922,7 +1922,7 @@ ar: {
           ? tr({ fr: 'Personnalisé · prêt à imprimer', en: 'Customised · ready to print', ar: 'مخصّص · جاهز للطبع' })
           : tr({ fr: 'Modèle par défaut', en: 'Default template', ar: 'نموذج افتراضي' });
       };
-      const fmtN = (n) => (+n || 0).toLocaleString('fr-FR').replace(/[ , ]/g, ' ');
+      const fmtN = (n) => (window.KiwiNumber?.format((+n || 0), {}) ?? (+n || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
 
       const venueTitle = escape((vd && (vd.fullDisplay || vd.name)) || (window.KiwiMe && window.KiwiMe.business) || (window.KiwiEnv?.isReal?.() ? 'Mon établissement' : 'Café Atlas · Maarif'));
       const tradeLabel = escape((window.KiwiVenue?.getTypeLabel?.() || '') || tr({ fr: 'Restauration & Boissons', en: 'Food & Beverage', ar: 'المطاعم والمشروبات' }));
@@ -2206,7 +2206,7 @@ ar: {
       let ready = false, sending = false;
       const showRecorded = (request) => {
         ready = false; form.hidden = true; button.hidden = true; password.value = '';
-        status.textContent = copy.received + ' · ' + request.reference + ' · ' + new Date(request.createdAt).toLocaleDateString(document.documentElement.lang || 'fr');
+        status.textContent = copy.received + ' · ' + request.reference + ' · ' + new Date(request.createdAt).toLocaleDateString(document.documentElement?.lang || 'fr');
       };
       const api = async (options) => {
         const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 15000);
@@ -2388,7 +2388,7 @@ ar: {
       const tiles = new Set([...PRESETS, ...chosen]);
       let focus = [...chosen].sort((a, b) => a - b)[0] || 0; // chip lit in the preview
       const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-      const money = n => n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const money = n => (window.KiwiNumber?.format(n, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? n.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
       const check = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>';
       const minus = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M200-440v-80h560v80H200Z"/></svg>';
       const plus = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/></svg>';
@@ -3136,7 +3136,7 @@ ar: {
       const chip = ICONS[o.method] || '';
 
       /* Format helpers — only used here, kept local. */
-      const fmtNum = (n) => Number(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const fmtNum = (n) => (window.KiwiNumber?.format(Number(n), { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? Number(n).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
       const coversLbl = o.covers === 1 ? L.cover : L.covers_pl;
 
       /* Timeline — back-derive 3 prep moments from the paid time so the
@@ -4317,7 +4317,7 @@ ar: {
               <div style="display:grid; grid-template-columns:160px 1fr 50px; gap:10px; align-items:center; padding:6px 0; font-size:12.5px;">
                 <div style="color:var(--n-600);">${lbl}</div>
                 <div style="height:8px; background:var(--surface); border-radius:4px; overflow:hidden;"><div style="width:${(pct - 97) / 2.5 * 100}%; height:100%; background:${c}; border-radius:4px;"></div></div>
-                <div style="font-family:var(--mono); text-align:end; font-weight:500;">${pct.toFixed(2).replace('.',',')} %</div>
+                <div style="font-family:var(--mono); text-align:end; font-weight:500;">${(window.KiwiNumber?.number(pct, 2) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:2,maximumFractionDigits:2}).format(pct))} %</div>
               </div>
             `).join('')}
           </div>

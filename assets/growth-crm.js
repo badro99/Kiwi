@@ -5,7 +5,7 @@
   if (!window.Kiwi) { console.warn('growth-crm.js loaded before interactive.js'); return; }
   const { drawer, toast, confetti } = window.Kiwi;
   const lang = () => (window.KiwiI18n?.getLang?.() || 'fr');
-  const fmt = (n) => Math.round(n).toLocaleString('fr-FR');
+  const fmt = (n) => (window.KiwiNumber?.format(Math.round(n), {}) ?? Math.round(n).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
 
   const SEG = [
     { id: 'reg', n: 218, c: 'var(--atlas)', reach: 218, lift: 9200 },

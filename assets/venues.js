@@ -2760,7 +2760,7 @@
   }
 
   // ── French number formatters (mirror dateRange.js style) ──
-  const fusionFrInt = n => Math.floor(n).toLocaleString('fr-FR').replace(/,/g, ' ').replace(/ /g, ' ');
+  const fusionFrInt = n => (window.KiwiNumber?.format(Math.floor(n), {}) ?? Math.floor(n).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
   const fusionFmtMad = v => `${fusionFrInt(v)} MAD`;
   const fusionFmtMadCents = v => {
     const int = Math.floor(v);
@@ -2770,7 +2770,7 @@
   const fusionFmtPct = v => {
     const sign = v > 0 ? '+' : v < 0 ? '−' : '';
     const abs = Math.abs(v);
-    const formatted = (Math.abs(abs - Math.round(abs)) < 0.001) ? String(Math.round(abs)) : abs.toFixed(1).replace('.', ',');
+    const formatted = (Math.abs(abs - Math.round(abs)) < 0.001) ? String(Math.round(abs)) : (window.KiwiNumber?.number(abs, 1) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:1,maximumFractionDigits:1}).format(abs));
     return `${sign}${formatted} %`;
   };
 
@@ -3118,7 +3118,7 @@
         <div class="fs-kpi" data-fs-kpi="${c.key}">
           <div class="fs-kpi-l">${c.label.toUpperCase()}</div>
           <div class="fs-kpi-v">
-            <span data-fs-kpi-val>${c.isString ? c.value : (c.isPct ? c.value.toFixed(2).replace('.', ',') : fusionFrInt(c.value))}</span>
+            <span data-fs-kpi-val>${c.isString ? c.value : (c.isPct ? (window.KiwiNumber?.number(c.value, 2) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:2,maximumFractionDigits:2}).format(c.value)) : fusionFrInt(c.value))}</span>
             ${c.unit ? `<span class="fs-kpi-u">${c.unit}</span>` : ''}
           </div>
           <div class="fs-kpi-d ${c.delta >= 0 ? 'up' : 'down'}">${fusionFmtPct(c.delta)} <span class="fs-kpi-dlbl">${lbl}</span></div>
@@ -3221,7 +3221,7 @@
         </div>
         <div class="fs-intel-tile">
           <div class="fs-intel-ico">${fusionIcon('pie')}</div>
-          <div class="fs-intel-v"><span class="${concClass}">${conc.toFixed(1).replace('.', ',')} %</span></div>
+          <div class="fs-intel-v"><span class="${concClass}">${(window.KiwiNumber?.number(conc, 1) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:1,maximumFractionDigits:1}).format(conc))} %</span></div>
           <div class="fs-intel-l">du CA généré par Café Atlas</div>
           <div class="fs-intel-n ${concClass}">${conc > 55 ? '⚠ Concentration à diversifier' : conc < 40 ? '✓ Portefeuille équilibré' : 'Équilibre modéré'}</div>
         </div>
@@ -3992,7 +3992,7 @@
     const payroll = eqPayroll(all);
     const ratio = isRealMerchant() ? null : payroll / EQ_PORTFOLIO_REV_30D * 100;
     const ratioCls = ratio < 30 ? 'ok' : ratio <= 38 ? 'warn' : 'bad';
-    const ratioStr = ratio == null ? '·' : ratio.toFixed(1).replace('.', ',');
+    const ratioStr = ratio == null ? '·' : (window.KiwiNumber?.number(ratio, 1) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:1,maximumFractionDigits:1}).format(ratio));
     const presentAll = all.filter(s => s.status === 'present').length;
 
     return `
@@ -4079,7 +4079,7 @@
         <td class="r">${r.members}</td>
         <td class="r">${eqHours(r.hours)}</td>
         <td class="r">${eqMad(r.salary)}</td>
-        <td class="r">${gross > 0 ? (r.salary / gross * 100).toFixed(1).replace('.', ',') : '0'} %</td>
+        <td class="r">${gross > 0 ? (window.KiwiNumber?.number((r.salary / gross * 100), 1) ?? new Intl.NumberFormat(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {minimumFractionDigits:1,maximumFractionDigits:1}).format((r.salary / gross * 100))) : '0'} %</td>
       </tr>`).join('');
 
     const monthLabel = isRealMerchant()
@@ -7641,7 +7641,7 @@
     return String(s == null ? '' : s).replace(/[&<>"]/g,
       c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   }
-  function payNum(n) { return Math.round(n || 0).toLocaleString('fr-FR').replace(/[ ,]/g, ' '); }
+  function payNum(n) { return (window.KiwiNumber?.format(Math.round(n || 0), {}) ?? Math.round(n || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})); }
   function payMad(n) { return payNum(n) + ' MAD'; }
 
   function payStaffAll() { return [].concat(STAFF.cafeAtlas, STAFF.maisonMansour, STAFF.spaBahia); }

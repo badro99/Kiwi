@@ -435,7 +435,7 @@
   }
 
   /* ─────────────── FORMATTING ─────────────── */
-  const fmt = (n) => Math.round(n).toLocaleString('fr-FR');
+  const fmt = (n) => (window.KiwiNumber?.format(Math.round(n), {}) ?? Math.round(n).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
   const fmtMad = (n) => fmt(n) + ' MAD';
   const sum = (arr, i) => arr.reduce((a, r) => a + r[i], 0);
 

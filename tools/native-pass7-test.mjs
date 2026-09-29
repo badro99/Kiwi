@@ -36,4 +36,8 @@ ok(vexel.includes("clientDelta.dir = 'ltr'") && vexel.includes("cleaned.replace(
 ok(vexel.includes("document.createElement('bdi')") && vexel.includes('class="vexel-goal-values" dir="ltr"'), 'goal percentages and amount pairs isolate numeric runs');
 ok(css.includes('.vexel-revenue-rail>.vexel-rail-card{height:auto!important'), 'phone goal cards grow from their content instead of stretching an empty band');
 ok(css.includes('.kpi-m[data-kpi="ratio"] .v{direction:ltr!important;unicode-bidi:isolate'), 'card and cash retain their order together with the percent unit in RTL');
+ok(read('assets/i18n.js').includes('format: formatNumber'), 'KiwiNumber accepts precision options for display without changing fiscal output');
+for (const file of ['team','restaurant-menu-workspace','account','simple','clients-book','operations-ui','briefing','pages-pro']) {
+  ok(read('assets/'+file+'.js').includes('window.KiwiNumber?.format') || read('assets/'+file+'.js').includes('window.KiwiNumber?.number'), file+' routes display figures through KiwiNumber');
+}
 console.log(`native-pass7-test: ${checks} checks passed`);
