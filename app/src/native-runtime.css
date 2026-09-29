@@ -686,6 +686,13 @@ html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) body .kiwi-dra
   html.kiwi-native .term-device-diagnostics>div{min-width:0;overflow:hidden}
 }
 html.kiwi-native .kiwi-fullpage .kiwi-drawer-head{top:0}
+/* #0127 · Kiwi AI's title and close action share the same 24pt phone gutter
+   as its conversation. The desktop stylesheet otherwise restores a 48pt inset. */
+@media(max-width:600px){
+  html.kiwi-native .fa-drawer .kiwi-drawer-head{box-sizing:border-box;display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:12px;padding-inline:24px!important}
+  html.kiwi-native .fa-drawer .kiwi-drawer-head>div{min-width:0;flex:1}
+  html.kiwi-native .fa-drawer .kiwi-drawer-close{flex:none;align-self:flex-start;margin-inline-start:auto}
+}
 html.kiwi-native .kiwi-backdrop{padding-top:max(20px,calc(var(--kiwi-safe-top) + 8px))!important;padding-bottom:max(20px,calc(var(--kiwi-safe-bottom) + 8px))!important}
 html.kiwi-native .kiwi-modal{max-height:calc(100dvh - var(--kiwi-safe-top) - var(--kiwi-safe-bottom) - 24px)}
 /* Close controls meet the 44 pt minimum touch target. */

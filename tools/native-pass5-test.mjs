@@ -124,4 +124,7 @@ const reservationsCss = read('assets/reservations.css');
 ok(/upcoming\.length \? '<small>' \+ esc\(dateLabel/.test(reservations) && /requested\.length \? '<small>' \+ esc\(requested\[0\]\.customer\.name\)/.test(reservations), 'empty reservation cards omit the subtitle element');
 ok(/@media\(max-width:560px\)[\s\S]*\.kr-command\{[^}]*border-radius:18px/.test(reservationsCss) && /\.kr-steps\{flex-direction:column;flex-wrap:nowrap/.test(reservationsCss), 'reservations hero is rounded and setup steps stack on phone');
 
+// #0127 · AI's full-page sheet uses the same conversation inset, not desktop padding.
+ok(/\.fa-drawer \.kiwi-drawer-head\{[^}]*padding-inline:24px!important/.test(css) && /\.fa-drawer \.kiwi-drawer-close\{[^}]*margin-inline-start:auto/.test(css), 'Kiwi AI title aligns with the thread and close control stays at the outer corner');
+
 console.log(`\nnative-pass5-test · ${checks} checks green`);
