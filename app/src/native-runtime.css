@@ -640,6 +640,9 @@ html.kiwi-native .st-locked-cta{display:none!important}
    and its composer on the home indicator. Every drawer and modal gets the
    insets here, once. */
 html.kiwi-native .kiwi-drawer{box-sizing:border-box;padding-top:var(--kiwi-safe-top)!important;padding-bottom:var(--kiwi-safe-bottom)!important}
+/* #0116 · Sheets must be fully opaque over the owner workspace. */
+html.kiwi-native body .kiwi-drawer{background:#FBFAF7!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) body .kiwi-drawer{background:#131A17!important}
 html.kiwi-native .kiwi-fullpage .kiwi-drawer-head{top:0}
 html.kiwi-native .kiwi-backdrop{padding-top:max(20px,calc(var(--kiwi-safe-top) + 8px))!important;padding-bottom:max(20px,calc(var(--kiwi-safe-bottom) + 8px))!important}
 html.kiwi-native .kiwi-modal{max-height:calc(100dvh - var(--kiwi-safe-top) - var(--kiwi-safe-bottom) - 24px)}

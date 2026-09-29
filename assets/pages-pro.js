@@ -4828,8 +4828,6 @@ const PDS_PHONE_CSS = `
 .pdsp-sum b{font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums}
 .pdsp-empty{padding:28px 18px;border-radius:16px;background:var(--surface);text-align:center;font-size:14px;line-height:1.45;color:var(--n-600)}
 .pdsp-list{display:flex;flex-direction:column;gap:8px}
-.kiwi-drawer:has(.pdsp){background:var(--paper)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
-html[data-theme="dark"] .kiwi-drawer:has(.pdsp){background:#0E1412!important}
 .pdsp-srv{min-height:0;margin:0;padding:0;border-radius:16px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--n-200);overflow:hidden}
 .pdsp-srv.open{box-shadow:inset 0 0 0 1.5px var(--c)}
 .pdsp-head{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:10px 14px 4px;border:0;background:none;color:inherit;text-align:start;font:inherit;cursor:pointer}

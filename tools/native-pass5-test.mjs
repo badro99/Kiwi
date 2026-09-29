@@ -60,4 +60,9 @@ ok(/\.eq-table td\{display:none!important\}/.test(css) && /\.eq-table td:first-c
 ok(/eq-member-phone-role/.test(team) && /eq-member-phone-meta/.test(team) && /eq-member-open/.test(team), 'phone roster shows role, department and status with a profile action');
 ok(/liveOffDuty: 'Off duty'/.test(team) && /liveOffDuty: 'خارج الخدمة'/.test(team), 'team duty status follows the selected language');
 
+// #0116 · all owner drawers share the opaque phone surface.
+ok(/html\.kiwi-native body \.kiwi-drawer\{background:#FBFAF7!important;[^}]*backdrop-filter:none!important/.test(css), 'light-mode native drawers are opaque');
+ok(/html\.kiwi-native:is\(\[data-theme="dark"\],\[data-vexel-mode="dark"\]\) body \.kiwi-drawer\{background:#131A17!important/.test(css), 'dark-mode native drawers are opaque');
+ok(!/\.kiwi-drawer:has\(\.pdsp\)/.test(pagesPro), 'table assignment no longer carries a local drawer-paint patch');
+
 console.log(`\nnative-pass5-test · ${checks} checks green`);
