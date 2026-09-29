@@ -130,6 +130,7 @@ function runtimeHarness({
     window, document, localStorage, sessionStorage, location: window.location,
     Date: FakeDate, MutationObserver: class { observe() {} },
     URLSearchParams, Event, Error, Promise, JSON, Math, String, Number,
+    requestAnimationFrame: fn => setTimeout(fn, 0),
     setTimeout: window.setTimeout, clearTimeout: window.clearTimeout,
     getComputedStyle: () => ({ display: 'none', visibility: 'visible' }),
   });

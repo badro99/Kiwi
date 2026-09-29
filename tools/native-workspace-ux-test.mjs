@@ -85,10 +85,11 @@ const window = {
   setTimeout, clearTimeout
 };
 window.window = window;
-const context = vm.createContext({ window, document, location, history, localStorage, sessionStorage, navigator: {}, console, Promise, Date, JSON, Math, Error, String, Number, Array, Object, RegExp, Map, Set, URL, setTimeout, clearTimeout,
+const context = vm.createContext({ window, document, location, history, localStorage, sessionStorage, navigator: {}, console, Promise, Date, JSON, Math, Error, String, Number, Array, Object, RegExp, Map, Set, URL, requestAnimationFrame: fn => setTimeout(fn, 0), setTimeout, clearTimeout,
   MutationObserver: class { constructor(callback) { observers.push(callback); } observe() {} }, MouseEvent: class { constructor(type) { this.type = type; } }, getComputedStyle: (node) => ({ display: node.hidden ? 'none' : 'block', visibility: 'visible', opacity: node.opacity || '1' }) });
 new vm.Script(source, { filename: 'app/src/native-runtime.js' }).runInContext(context);
-await new Promise((resolve) => setTimeout(resolve, 0));
+// Workspace context is intentionally withheld until the two launch-paint frames.
+for (let i = 0; i < 40 && !hostContexts.length; i++) await new Promise(resolve => setTimeout(resolve, 5));
 
 ok(appListeners.backButton && appListeners.backButton.length === 1, 'Android Back is registered once with the Capacitor App plugin');
 const back = appListeners.backButton[0];
