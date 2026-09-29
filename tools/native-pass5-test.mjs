@@ -71,6 +71,7 @@ ok(!/\.kiwi-drawer:has\(\.pdsp\)/.test(pagesPro), 'table assignment no longer ca
 ok(/tr\[data-stock-pc-row\]\{display:grid!important/.test(css) && /grid-template-columns:minmax\(0,1fr\) 112px/.test(css), 'physical count uses a phone list with a large quantity field');
 ok(/inputmode="decimal"/.test(stock) && !/placeholder="·" data-pc-real/.test(stock), 'count input summons the decimal keypad without a dot placeholder');
 ok(/classList\.add\('has-count'\)/.test(stock) && /\.st-pc-blind tr\[data-stock-pc-row\]\.has-count \[data-pc-var\]\{visibility:visible!important/.test(css), 'variance appears after a blind-count entry');
+ok(!/· \$\{esc\(it\.unit\)\}/.test(stock) && /\[dir="rtl"\] \.kiwi-modal:has\(\.st-pc-wrap\) \.kiwi-modal-close\{right:auto!important;left:18px!important/.test(css), 'physical count has no stray unit dot and keeps its RTL close button clear of the title');
 
 // #0118 · fleet cards are compact and the native bundle has the actual photos.
 ok(/\.term-device-main\{display:grid!important;grid-template-columns:72px minmax\(0,1fr\)/.test(css) && /\.term-device-actions\{grid-column:1\/-1/.test(css), 'terminal cards place actions on one phone row');

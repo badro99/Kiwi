@@ -5851,7 +5851,7 @@
                 const cur = currentStockFor(it);
                 return `
                   <tr data-stock-pc-row="${esc(it.id)}">
-                    <td><b>${esc(it.name)}</b> <span style="color:var(--n-500); font-size:11px;">· ${esc(it.unit)}</span></td>
+                    <td><b>${esc(it.name)}</b> <span style="color:var(--n-500); font-size:11px;">${esc(it.unit)}</span></td>
                     <td class="r mono"><span data-pc-theo>${esc(fmtUnit(cur, it.unit))}</span></td>
                     <td class="r"><input class="st-pc-input" type="number" inputmode="decimal" step="0.1" min="0" aria-label="${esc(t('mCountColReal'))}: ${esc(it.name)}" data-pc-real="${esc(it.id)}" data-pc-theo-val="${cur}" data-pc-cost="${it.costPerUnit}" data-pc-unit="${esc(it.unit)}" /></td>
                     <td class="r"><span class="st-pc-var" data-pc-var></span></td>

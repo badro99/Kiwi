@@ -670,6 +670,7 @@ html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) body .kiwi-dra
   html.kiwi-native .st-pc-tbl tr[data-stock-pc-row]:not(.has-count)>td:nth-child(4){display:none!important}
   html.kiwi-native .st-pc-blind tr[data-stock-pc-row].has-count [data-pc-var]{visibility:visible!important}
   html.kiwi-native .st-pc-tbl tr[data-stock-pc-row]>td:nth-child(5){display:none!important}
+  html.kiwi-native[dir="rtl"] .kiwi-modal:has(.st-pc-wrap) .kiwi-modal-close{right:auto!important;left:18px!important}
 }
 /* #0118 · Device fleet remains legible without a desktop three-column card. */
 @media(max-width:600px){
