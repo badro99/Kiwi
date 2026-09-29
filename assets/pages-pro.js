@@ -326,7 +326,7 @@ handlers['nav-transactions'] = () => {
         }).join('')}
       </div>
 
-      <button type="button" class="kb ghost tx-update" data-action="tx-refresh" data-tx-refresh disabled>${({en:'Orders up to date',ar:'الطلبات محدثة'})[lang] || 'Commandes à jour'}</button>
+      <span class="tx-update-status" data-tx-refresh role="status">${({en:'Orders up to date',ar:'الطلبات محدثة'})[lang] || 'Commandes à jour'}</span>
       <div data-tx-pane="flux" style="display:${activeTab === 'flux' ? '' : 'none'};">
         ${display.length === 0 ? `
           <div style="padding:40px 16px; text-align:center; color:var(--n-500); font-size:13px;">${T.noOrders}</div>
@@ -335,9 +335,9 @@ handlers['nav-transactions'] = () => {
             <thead><tr><th>${T.hour.toUpperCase()}</th><th>${T.method.toUpperCase()}</th><th>${T.client.toUpperCase()}</th><th class="right">${T.amount.toUpperCase()}</th><th class="right">${T.tip.toUpperCase()}</th><th>${T.status.toUpperCase()}</th></tr></thead>
             <tbody>
               ${display.map(r => `
-                <tr tabindex="0" role="button" data-action="tx-detail" data-arg="${r.id}" data-payment-kind="${r.cat === T.cash ? 'cash' : r.mask === 'QR' ? 'qr' : r.cat === T.cards || r.cat === T.mobile ? 'card' : 'other'}" style="cursor:pointer;">
+                <tr tabindex="0" role="button" data-action="tx-detail" data-arg="${r.id}" data-payment-kind="${r.sale?.method === 'wallet' ? 'wallet' : r.cat === T.cash ? 'cash' : r.mask === 'QR' ? 'qr' : r.cat === T.cards || r.cat === T.mobile ? 'card' : 'other'}" style="cursor:pointer;">
                   <td class="mono">${r.t}</td>
-                  <td><b>${r.n}</b> <span style="color:var(--n-500);">${r.mask}</span></td>
+                  <td><b>${r.sale?.method === 'wallet' ? '<i data-lucide="wallet" aria-hidden="true" style="width:16px;height:16px;vertical-align:-3px;margin-inline-end:4px;"></i>' : ''}${r.n}</b> <span style="color:var(--n-500);">${r.mask}</span></td>
                   <td style="color:var(--n-600);">${r.c}</td>
                   <td class="mono right" style="${r.amt < 0 ? 'color:var(--danger);' : ''}">${r.amt < 0 ? '−' : ''}${fmt2(r.amt)} MAD</td>
                   <td class="mono right" style="color:${r.tip > 0 ? 'var(--success)' : 'var(--n-400)'};">${r.tip > 0 ? '+' + fmt2(r.tip) : '·'}</td>
@@ -482,9 +482,18 @@ handlers['nav-transactions'] = () => {
       const update=host.querySelector('[data-tx-refresh]');
       if(update) {
         const current=signature(rangeRows())===renderedSignature;
-        update.disabled=current;
-        update.textContent=current ? ({en:'Orders up to date',ar:'الطلبات محدثة'})[lang] || 'Commandes à jour'
-          : ({en:'Show updated orders',ar:'عرض الطلبات المحدثة'})[lang] || 'Afficher les nouvelles commandes';
+        if (current && update.tagName === 'BUTTON') {
+          const status=document.createElement('span');
+          status.className='tx-update-status'; status.dataset.txRefresh=''; status.setAttribute('role','status');
+          status.textContent=({en:'Orders up to date',ar:'الطلبات محدثة'})[lang] || 'Commandes à jour';
+          update.replaceWith(status);
+        } else if (!current && update.tagName !== 'BUTTON') {
+          const button=document.createElement('button');
+          button.type='button'; button.className='kb ghost tx-update';
+          button.dataset.action='tx-refresh'; button.dataset.txRefresh='';
+          button.textContent=({en:'Show updated orders',ar:'عرض الطلبات المحدثة'})[lang] || 'Afficher les nouvelles commandes';
+          update.replaceWith(button);
+        }
       }
     });
   }

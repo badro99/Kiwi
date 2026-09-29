@@ -104,4 +104,10 @@ ok(/if \(spec\.fmt === 'pct2'\) return \(window\.KiwiNumber\?\.number\(v, 2\)/.t
   && /if \(spec\.fmt === 'pct1'\) return \(window\.KiwiNumber\?\.number\(v, 1\)/.test(dateRange)
   && /function serviceAmount\(value\) \{[\s\S]*?KiwiNumber\?\.number\(value\)/.test(read('assets/design-vexel-layout.js')), 'home KPI rates and service amounts follow the shared locale rule');
 
+// #0123 · an inner navigation title should not be repeated in page content.
+ok(/data-kno-page="page"\] \.dash-genpage \.genpage-head\{display:none!important/.test(css), 'Orders and other named tabs omit the duplicate page heading');
+ok(/\[data-action="tx-daterange"\]\{[^}]*border-radius:999px!important/.test(css), 'the Today filter shares the round chip shape');
+ok(/data-payment-kind="\$\{r\.sale\?\.method === 'wallet' \? 'wallet'/.test(pagesPro) && /account_balance_wallet\.svg/.test(css), 'wallet transactions have a Material wallet icon on phone');
+ok(/class="tx-update-status" data-tx-refresh role="status"/.test(pagesPro) && /button\.dataset\.action='tx-refresh'/.test(pagesPro), 'current orders are status text and only changed orders create a refresh action');
+
 console.log(`\nnative-pass5-test · ${checks} checks green`);

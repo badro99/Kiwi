@@ -176,7 +176,7 @@ try {
     await page.evaluate(()=>window.KiwiNativeHostAction({action:'navigate',id:'transactions'}));
     await sleep(700);
     const rows = await page.evaluate(()=>[...document.querySelectorAll('[data-payment-kind]')].map(r=>({kind:r.dataset.paymentKind,image:getComputedStyle(r,'::after').backgroundImage})));
-    check(rows.length>0 && rows.every(r=>r.image.includes(({card:'credit_card',cash:'payments',qr:'qr_code',other:'payments'})[r.kind]+'.svg')),'order rows use semantic payment glyphs');
+    check(rows.length>0 && rows.every(r=>r.image.includes(({card:'credit_card',wallet:'account_balance_wallet',cash:'payments',qr:'qr_code',other:'payments'})[r.kind]+'.svg')),'order rows use semantic payment glyphs');
     await context.close();
   }
   // Real pairing/login screens, inspected without entering a code.

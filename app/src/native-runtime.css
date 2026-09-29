@@ -504,6 +504,8 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-owner-keypad button:active{transform:scale(.97)}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-keypad-lock :is(.kiwi-lock-skip,.kiwi-lock-switch){min-height:44px;line-height:44px;margin:0 auto;flex-shrink:0}
   html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr[data-payment-kind="card"]::after{background-image:url(assets/icons/material/credit_card.svg)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr[data-payment-kind="wallet"]::after{background-image:url(assets/icons/material/account_balance_wallet.svg)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr[data-payment-kind="wallet"] td [data-lucide="wallet"]{display:none}
   html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr[data-payment-kind="qr"]::after{background-image:url(assets/icons/material/qr_code.svg)}
   html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr[data-payment-kind="cash"]::after{background-image:url(assets/icons/material/payments.svg)}
   html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr:not([data-payment-kind])::after{content:none}
@@ -580,6 +582,9 @@ html.kiwi-native .tx-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:
 html.kiwi-native .tx-detail-grid dt{color:var(--n-500)}
 html.kiwi-native .tx-detail-grid dd{margin:0;text-align:end;overflow-wrap:anywhere}
 html.kiwi-native .tx-update{height:44px;white-space:nowrap;margin-bottom:8px}
+html.kiwi-native .tx-update-status{box-sizing:border-box;display:flex;align-items:center;width:max-content;min-height:44px;margin:0 0 8px;padding:0;color:var(--n-500);font-size:12.5px;line-height:1.4}
+html.kiwi-native body.kiwi-native-owner[data-kno-page="page"] .dash-genpage .genpage-head{display:none!important}
+html.kiwi-native [data-action="tx-daterange"]{flex:0 0 auto!important;border-radius:999px!important;border:1px solid var(--n-200)!important;background:var(--paper-soft)!important;box-shadow:none!important;min-height:36px!important;white-space:nowrap!important}
 @media(prefers-reduced-motion:reduce){html.kiwi-native .kiwi-native-order-sheet .kiwi-modal{transition:none}}
 /* The web glass skin must not override the native receipt sheet. */
 html.kiwi-native body .kiwi-native-order-sheet{align-items:flex-end!important;padding:0!important}
