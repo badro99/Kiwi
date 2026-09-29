@@ -39,6 +39,74 @@
     { id: 'adjustments', title: 'Ajustements & traçabilité', desc: 'Remboursements, remises, annulations, passations et réouvertures.' },
   ];
 
+
+  /* L'interface de l'export suit la langue du tableau de bord ; le document
+   * produit (PDF, CSV) reste rédigé en français, langue comptable du Maroc. */
+  var UI = {
+    fr: {
+      title: 'Composer le rapport détaillé', desc: 'Choisissez le format et exactement ce que le rapport doit contenir.',
+      pdfT: 'Rapport professionnel · PDF', pdfD: 'Mise en page Kiwi, lisible, paginée et prête à imprimer ou envoyer.',
+      csvT: 'Données brutes · CSV', csvD: 'Pour Excel, Numbers, la comptabilité ou une analyse personnalisée.',
+      pSales: 'Ventes uniquement', pProfit: 'Ventes + marges', pOps: 'Opérations complètes', pAll: 'Tout sélectionner',
+      note: 'Kiwi exporte uniquement les faits disponibles pour cette journée. Les coûts, matières, heures ou mouvements manquants seront signalés comme non configurés ou non tracés · jamais remplacés par zéro.',
+      cancel: 'Annuler', goPdf: 'Créer le rapport PDF', goCsv: 'Télécharger les données CSV',
+      count: function (n) { return n + ' section' + (n > 1 ? 's' : '') + ' sélectionnée' + (n > 1 ? 's' : ''); },
+      okCsv: 'Données CSV téléchargées', okPdf: 'Rapport prêt à imprimer ou enregistrer en PDF',
+      none: 'Le rapport du jour n’est pas encore disponible', popup: 'Autorisez les fenêtres pour ouvrir le rapport'
+    },
+    en: {
+      title: 'Build the detailed report', desc: 'Choose the format and exactly what the report should contain.',
+      pdfT: 'Professional report · PDF', pdfD: 'Kiwi layout, readable, paginated and ready to print or send.',
+      csvT: 'Raw data · CSV', csvD: 'For Excel, Numbers, accounting or your own analysis.',
+      pSales: 'Sales only', pProfit: 'Sales + margins', pOps: 'Full operations', pAll: 'Select all',
+      note: 'Kiwi only exports the facts available for this day. Missing costs, materials, hours or movements are flagged as not configured or not tracked, never replaced by zero. The document itself is written in French, the accounting language in Morocco.',
+      cancel: 'Cancel', goPdf: 'Create the PDF report', goCsv: 'Download the CSV data',
+      count: function (n) { return n + ' section' + (n === 1 ? '' : 's') + ' selected'; },
+      okCsv: 'CSV data downloaded', okPdf: 'Report ready to print or save as PDF',
+      none: 'Today’s report is not available yet', popup: 'Allow pop-ups to open the report'
+    },
+    ar: {
+      title: 'إعداد التقرير المفصّل', desc: 'اختر الصيغة وما يجب أن يتضمنه التقرير بالضبط.',
+      pdfT: 'تقرير احترافي · PDF', pdfD: 'تنسيق كيوي، واضح ومرقّم وجاهز للطباعة أو الإرسال.',
+      csvT: 'بيانات خام · CSV', csvD: 'لبرنامج Excel أو Numbers أو المحاسبة أو تحليل خاص بك.',
+      pSales: 'المبيعات فقط', pProfit: 'المبيعات + الهوامش', pOps: 'العمليات كاملة', pAll: 'تحديد الكل',
+      note: 'يصدّر كيوي الوقائع المتوفرة لهذا اليوم فقط. التكاليف أو المواد أو الساعات أو الحركات الناقصة تُعلَّم على أنها غير مضبوطة أو غير مُتتبَّعة ولا تُستبدل بالصفر. المستند نفسه محرّر بالفرنسية، لغة المحاسبة في المغرب.',
+      cancel: 'إلغاء', goPdf: 'إنشاء تقرير PDF', goCsv: 'تنزيل بيانات CSV',
+      count: function (n) { return n + ' ' + (n === 1 ? 'قسم محدد' : 'أقسام محددة'); },
+      okCsv: 'تم تنزيل بيانات CSV', okPdf: 'التقرير جاهز للطباعة أو الحفظ بصيغة PDF',
+      none: 'تقرير اليوم غير متاح بعد', popup: 'اسمح بالنوافذ المنبثقة لفتح التقرير'
+    }
+  };
+  var KIND_TEXT = {
+    en: {
+      summary: ['Day summary', 'Opening, closing, takings, transactions and average ticket.'],
+      sales: ['Detailed sales', 'Every ticket with its time, payment method, channel and basket.'],
+      payments: ['Payments & cash drawer', 'Breakdown, float, movements, expected, counted and variance.'],
+      products: ['Items sold', 'Quantities and revenue by category and item.'],
+      materials: ['Materials used', 'Consumption computed from recipe cards and stock withdrawals.'],
+      margins: ['Margins by item', 'Net revenue, cost, margin in MAD and %, with costing coverage.'],
+      team: ['Team & hours', 'Schedule, hours worked, takings and responsibilities for the day.'],
+      stock: ['Stock movements', 'Receipts, consumption, corrections and other real movements.'],
+      reservations: ['Reservations', 'Slots, customers, services, resources and statuses for the day.'],
+      adjustments: ['Adjustments & audit trail', 'Refunds, discounts, voids, handovers and reopenings.']
+    },
+    ar: {
+      summary: ['ملخص اليوم', 'الافتتاح والإغلاق والمقبوضات والمعاملات ومتوسط التذكرة.'],
+      sales: ['المبيعات بالتفصيل', 'كل تذكرة مع وقتها ووسيلة الدفع والقناة والسلة.'],
+      payments: ['المدفوعات والصندوق', 'التوزيع والرصيد الافتتاحي والحركات والمتوقع والمعدود والفارق.'],
+      products: ['المنتجات المباعة', 'الكميات ورقم المعاملات حسب الفئة والمنتج.'],
+      materials: ['المواد المستعملة', 'الاستهلاك المحسوب من بطاقات الوصفات وسحوبات المخزون.'],
+      margins: ['الهوامش حسب المنتج', 'صافي المبيعات والتكلفة والهامش بالدرهم وبالنسبة، مع تغطية التكلفة.'],
+      team: ['الفريق والساعات', 'الجدول وساعات العمل والمقبوضات ومسؤوليات اليوم.'],
+      stock: ['حركات المخزون', 'الاستلامات والاستهلاك والتصحيحات وحركات فعلية أخرى.'],
+      reservations: ['الحجوزات', 'الفترات والعملاء والخدمات والموارد وحالات اليوم.'],
+      adjustments: ['التعديلات وسجل التتبع', 'المبالغ المستردة والخصومات والإلغاءات والتسليمات وإعادة الفتح.']
+    }
+  };
+  function uiLang() { try { return (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'; } catch (_) { return 'fr'; } }
+  function U() { return UI[uiLang()] || UI.fr; }
+  function kindText(x) { var t = (KIND_TEXT[uiLang()] || {})[x.id]; return t ? { title: t[0], desc: t[1] } : { title: x.title, desc: x.desc }; }
+
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]; }); }
   function num(v) { v = +v; return Number.isFinite(v) ? v : 0; }
   function r2(v) { return Math.round(num(v) * 100) / 100; }
@@ -290,7 +358,7 @@
     return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Rapport Kiwi · '+esc(store)+' · '+esc(report.day)+'</title><style>'+css+'</style></head><body><main class="kr-page"><header class="kr-hero"><div class="kr-brand"><img src="/assets/kiwi-newlogo-inverse.svg" alt="Kiwi"><span class="kr-status">'+(closed?'Journée clôturée':'Rapport provisoire')+'</span></div><span class="kr-eyebrow">RAPPORT JOURNALIER DÉTAILLÉ</span><h1>'+esc(store)+'</h1><p>'+esc(dayLabel(report.day))+' · généré le '+esc(new Date().toLocaleString('fr-FR'))+'</p></header>'+parts.join('')+'<div class="kr-note"><b>Fiabilité des données.</b> Ce rapport utilise uniquement les faits disponibles dans les journaux Kiwi. Toute donnée absente reste indiquée comme non renseignée, non configurée ou non mesurable.</div><footer class="kr-footer"><span><b>Kiwi OS</b> · rapport opérationnel</span><span>'+esc(report.day)+' · '+esc((report.store&&report.store.slug)||'')+'</span></footer></main></body></html>';
   }
   function printReport(report, chosen) {
-    var w=window.open('','_blank');if(!w){try{window.Kiwi.toast('Autorisez les fenêtres pour ouvrir le rapport',{type:'error'});}catch(_){}return false;}
+    var w=window.open('','_blank');if(!w){try{window.Kiwi.toast(U().popup,{type:'error'});}catch(_){}return false;}
     w.document.open();w.document.write(reportHtml(report,chosen));w.document.close();
     w.addEventListener('load',function(){setTimeout(function(){w.focus();w.print();},250);},{once:true});return true;
   }
@@ -302,20 +370,21 @@
   }
   function open(report) {
     if(!report||!window.Kiwi||!window.Kiwi.modal)return;styles();
-    var body='<div class="kdx-format"><label><input type="radio" name="kdx-format" value="pdf" checked><span><b>Rapport professionnel · PDF</b><small>Mise en page Kiwi, lisible, paginée et prête à imprimer ou envoyer.</small></span></label><label><input type="radio" name="kdx-format" value="csv"><span><b>Données brutes · CSV</b><small>Pour Excel, Numbers, la comptabilité ou une analyse personnalisée.</small></span></label></div><div class="kdx-presets"><button class="kdx-preset" data-kdx-preset="sales">Ventes uniquement</button><button class="kdx-preset" data-kdx-preset="profit">Ventes + marges</button><button class="kdx-preset" data-kdx-preset="ops">Opérations complètes</button><button class="kdx-preset" data-kdx-preset="all">Tout sélectionner</button></div><div class="kdx-list">'+KINDS.map(function(x){return '<label class="kdx-opt"><input type="checkbox" value="'+x.id+'"'+(x.on?' checked':'')+'><span><b>'+esc(x.title)+'</b><small>'+esc(x.desc)+'</small></span></label>';}).join('')+'</div><div class="kdx-note">Kiwi exporte uniquement les faits disponibles pour cette journée. Les coûts, matières, heures ou mouvements manquants seront signalés comme non configurés ou non tracés · jamais remplacés par zéro.</div>';
-    var m=window.Kiwi.modal({title:'Composer le rapport détaillé',desc:'Choisissez le format et exactement ce que le rapport doit contenir.',width:820,body:body,foot:'<span class="kdx-count" data-kdx-count></span><button type="button" class="kb ghost" data-kdx-cancel>Annuler</button><button type="button" class="kdx-export" data-kdx-export>Créer le rapport PDF</button>'});
+    var u=U();
+    var body='<div class="kdx-format"><label><input type="radio" name="kdx-format" value="pdf" checked><span><b>'+esc(u.pdfT)+'</b><small>'+esc(u.pdfD)+'</small></span></label><label><input type="radio" name="kdx-format" value="csv"><span><b>'+esc(u.csvT)+'</b><small>'+esc(u.csvD)+'</small></span></label></div><div class="kdx-presets"><button class="kdx-preset" data-kdx-preset="sales">'+esc(u.pSales)+'</button><button class="kdx-preset" data-kdx-preset="profit">'+esc(u.pProfit)+'</button><button class="kdx-preset" data-kdx-preset="ops">'+esc(u.pOps)+'</button><button class="kdx-preset" data-kdx-preset="all">'+esc(u.pAll)+'</button></div><div class="kdx-list">'+KINDS.map(function(x){var k=kindText(x);return '<label class="kdx-opt"><input type="checkbox" value="'+x.id+'"'+(x.on?' checked':'')+'><span><b>'+esc(k.title)+'</b><small>'+esc(k.desc)+'</small></span></label>';}).join('')+'</div><div class="kdx-note">'+esc(u.note)+'</div>';
+    var m=window.Kiwi.modal({title:u.title,desc:u.desc,width:820,body:body,foot:'<span class="kdx-count" data-kdx-count></span><button type="button" class="kb ghost" data-kdx-cancel>'+esc(u.cancel)+'</button><button type="button" class="kdx-export" data-kdx-export>'+esc(u.goPdf)+'</button>'});
     var checks=[].slice.call(m.el.querySelectorAll('.kdx-opt input')),count=m.el.querySelector('[data-kdx-count]'),go=m.el.querySelector('[data-kdx-export]');
-    function update(){var n=checks.filter(function(x){return x.checked;}).length,format=(m.el.querySelector('input[name="kdx-format"]:checked')||{}).value||'pdf';count.textContent=n+' section'+(n>1?'s':'')+' sélectionnée'+(n>1?'s':'');go.textContent=format==='csv'?'Télécharger les données CSV':'Créer le rapport PDF';go.disabled=!n;}
+    function update(){var n=checks.filter(function(x){return x.checked;}).length,format=(m.el.querySelector('input[name="kdx-format"]:checked')||{}).value||'pdf';count.textContent=u.count(n);go.textContent=format==='csv'?u.goCsv:u.goPdf;go.disabled=!n;}
     var sets={sales:['summary','sales','products'],profit:['summary','sales','products','margins'],ops:['summary','sales','payments','products','materials','team','stock','reservations','adjustments'],all:KINDS.map(function(x){return x.id;})};
     m.el.addEventListener('change',update);m.el.querySelectorAll('[data-kdx-preset]').forEach(function(b){b.onclick=function(){var wanted=sets[b.dataset.kdxPreset]||[];checks.forEach(function(x){x.checked=wanted.indexOf(x.value)>=0;});update();};});
-    m.el.querySelector('[data-kdx-cancel]').onclick=m.close;go.onclick=function(){var chosen={},format=(m.el.querySelector('input[name="kdx-format"]:checked')||{}).value||'pdf';checks.forEach(function(x){if(x.checked)chosen[x.value]=true;});if(format==='csv')downloadCsv(report,chosen);else printReport(report,chosen);m.close();try{window.Kiwi.toast(format==='csv'?'Données CSV téléchargées':'Rapport prêt à imprimer ou enregistrer en PDF',{type:'success'});}catch(_){}};update();
+    m.el.querySelector('[data-kdx-cancel]').onclick=m.close;go.onclick=function(){var chosen={},format=(m.el.querySelector('input[name="kdx-format"]:checked')||{}).value||'pdf';checks.forEach(function(x){if(x.checked)chosen[x.value]=true;});if(format==='csv')downloadCsv(report,chosen);else printReport(report,chosen);m.close();try{window.Kiwi.toast(format==='csv'?u.okCsv:u.okPdf,{type:'success'});}catch(_){}};update();
   }
   function openCurrent(trigger) {
     var wasDisabled=!!(trigger&&trigger.disabled);
     if(trigger){trigger.disabled=true;trigger.setAttribute('aria-busy','true');}
     try {
       var report=resolveCurrent();
-      if(!report){try{window.Kiwi.toast('Le rapport du jour n\'est pas encore disponible',{type:'info'});}catch(_){}return false;}
+      if(!report){try{window.Kiwi.toast(U().none,{type:'info'});}catch(_){}return false;}
       open(report);return true;
     } finally {
       if(trigger){trigger.disabled=wasDisabled;trigger.removeAttribute('aria-busy');}

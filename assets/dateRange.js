@@ -2793,7 +2793,7 @@
                   desc: 'Répartition du revenu : chambres / restaurant / hammam', derive: (d) => d.mixRev || null },
     tauxRetour: { labels: { default: 'Taux retour' }, i18n: 'dash.kpi.returnRate',
                   desc: 'Part des articles retournés', derive: (d) => d.tauxRetour || null },
-    tempsTable: { labels: { default: 'Temps moyen à table', spa: 'Temps moyen en cabine' }, i18n: 'dash.kpi.tableTime',
+    tempsTable: { labels: { default: 'Temps moyen à table', spa: 'Temps moyen en cabine', 'en:spa': 'Average time in treatment room', 'ar:spa': 'متوسط المدة في غرفة العلاج' }, i18n: 'dash.kpi.tableTime',
                   desc: 'Durée moyenne d\'occupation d\'une table par couvert', derive: (d) => d.tempsTable || null },
   };
 
@@ -2823,7 +2823,7 @@
   function kpiLabel(key, venueType, lang) {
     const c = KPI_CATALOG[key]; if (!c) return key;
     const T = window.KiwiI18n?.T?.[lang] || {};
-    return T[c.i18n] || c.labels[lang] || c.labels[venueType] || c.labels.default;
+    return c.labels[lang + ':' + venueType] || T[c.i18n] || c.labels[lang] || c.labels[venueType] || c.labels.default;
   }
 
   function renderKpiBand() {

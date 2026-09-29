@@ -339,7 +339,7 @@
     }
     function share(n) { return all.length ? Math.round(n / all.length * 100) + ' % ' + T.ofBook : T.noneYet; }
     function kpi(id, label, value, hint) {
-      return '<div class="cd-kpi cd-stat" data-cd-kpi="' + id + '"><div class="l"><i></i>' + esc(label) + '</div><div class="v">' + fmt(value) + '</div><div class="h">' + esc(hint) + '</div></div>';
+      return '<div class="cd-kpi cd-stat" data-cd-kpi="' + id + '"><div class="l"><i></i>' + esc(String(label).charAt(0).toUpperCase() + String(label).slice(1)) + '</div><div class="v">' + fmt(value) + '</div><div class="h">' + esc(hint) + '</div></div>';
     }
     function kpis() {
       return kpi('total', T.total, all.length, T.shared) + kpi('phone', T.withPhone, withPhone(), share(withPhone())) +

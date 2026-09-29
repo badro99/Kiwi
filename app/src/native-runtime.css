@@ -136,8 +136,8 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-till.kiwi-native-category-filtered .menu-item-cat{visibility:hidden;height:0;margin:0}
   html.kiwi-native body.kiwi-native-till #vrap-builder{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:44px minmax(0,1fr);gap:5px 6px}
   html.kiwi-native body.kiwi-native-till #vrap-builder[hidden]{display:none}
-  html.kiwi-native body.kiwi-native-till .vrap-back-btn{grid-column:1;margin:0;padding:8px 10px}
-  html.kiwi-native body.kiwi-native-till .vrap-back-btn span{display:none}
+  html.kiwi-native body.kiwi-native-till .vrap-back-btn{grid-column:1;margin:0;padding:8px 10px;position:relative}
+  html.kiwi-native body.kiwi-native-till .vrap-back-btn span{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
   html.kiwi-native body.kiwi-native-till .cat-pills{grid-column:2;min-width:0;display:flex;flex-wrap:nowrap;overflow-x:auto;padding:0;align-items:center;scrollbar-width:none}
   html.kiwi-native body.kiwi-native-till .cat-pill{flex:0 0 auto}
   /* kiwi-caisse.html styles the row by id (#cat-pills: wrap, overflow visible), which outranks
@@ -145,8 +145,8 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-till #cat-pills{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding:0;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
   html.kiwi-native body.kiwi-native-till #cat-pills::-webkit-scrollbar{display:none}
   html.kiwi-native body.kiwi-native-till .mlibre-bar{grid-column:3;margin:0}
-  html.kiwi-native body.kiwi-native-till .mlibre-toggle{padding:8px 10px}
-  html.kiwi-native body.kiwi-native-till .mlibre-toggle span{display:none}
+  html.kiwi-native body.kiwi-native-till .mlibre-toggle{padding:8px 10px;position:relative}
+  html.kiwi-native body.kiwi-native-till .mlibre-toggle span{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
   html.kiwi-native body.kiwi-native-till .mlibre-pad{grid-column:1/-1;margin:0;max-width:none}
   html.kiwi-native body.kiwi-native-till .menu-grid{grid-column:1/-1}
 }
@@ -640,3 +640,28 @@ html.kiwi-native :is(.hai-chip,.cd-seg,.eq-pill)::after{content:"";position:abso
 html.kiwi-native :is(.kv-mic,.kv-attach,.hai-send){position:relative}
 html.kiwi-native :is(.kv-mic,.kv-attach,.hai-send)::after{content:"";position:absolute;inset:-4px}
 html.kiwi-native .kh-btn.atlas{background:#0B6E4F;color:#fff;border-color:#0B6E4F}
+/* Invoicing opens as a bottom sheet 12 px below the screen top: on a phone that
+   is under the Dynamic Island, with the title beneath the clock. */
+html.kiwi-native .inv-shell{max-height:calc(100dvh - var(--kiwi-safe-top) - 8px)!important;padding-bottom:var(--kiwi-safe-bottom)}
+/* Accessibility pass 3: the Kiwi AI pill (36 pt, its label is its ::after) and
+   Compare (34 pt) get an invisible 44 pt hit area; the reorder button a real one. */
+html.kiwi-native .ai-btn::before{content:"";position:absolute;inset:-5px -2px}
+html.kiwi-native .cmp-btn{position:relative}
+html.kiwi-native .cmp-btn::after{content:"";position:absolute;inset:-5px -2px}
+html.kiwi-native .stock-reorder-cta{min-height:44px}
+/* Accessibility pass 3 (continued): pills, tabs and toolbar buttons that measure
+   33 to 38 pt keep their look and gain an invisible 44 pt hit area. */
+html.kiwi-native :is(.tx-tab,.cf-tab,.mi-pill,.st-tab,.st-btn,.kdr-btn,.kt-period-arrow,.kt-sh){position:relative}
+html.kiwi-native :is(.tx-tab,.cf-tab,.mi-pill,.st-tab,.st-btn,.kdr-btn,.kt-period-arrow,.kt-sh)::after{content:"";position:absolute;inset:-6px}
+html.kiwi-native .chip[data-action="tx-filter"]{position:relative}
+html.kiwi-native .chip[data-action="tx-filter"]::after{content:"";position:absolute;inset:-9px -3px}
+html.kiwi-native :is([data-action="tx-show-all"],[data-action="tx-view-all"]){position:relative}
+html.kiwi-native :is([data-action="tx-show-all"],[data-action="tx-view-all"])::after{content:"";position:absolute;inset:-14px -8px}
+html.kiwi-native :is(.fa-send,.fa-tool){position:relative}
+html.kiwi-native .fa-send::after{content:"";position:absolute;inset:-3px}
+html.kiwi-native .fa-tool::after{content:"";position:absolute;inset:-6px}
+
+
+/* Terminal ID chip in the till drawer: 26pt tall, give it a 44pt touch area without changing its look. */
+html.kiwi-native #caisse-terminal-id{position:relative}
+html.kiwi-native #caisse-terminal-id::after{content:"";position:absolute;inset:-9px -4px}

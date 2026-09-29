@@ -1011,6 +1011,7 @@
       fixedFee: 'Frais fixes (6 %)',
       totalToRepay: 'Total à rembourser',
       dailyDeduction: 'Prélèvement quotidien',
+      ofCardSales: 'des ventes carte',
       estimatedDuration: 'Durée estimée',
       durationDays: (days) => `~${days} jours`,
       durationMonths: (months, days) => `~${months} mois (${days} jours)`,
@@ -1030,6 +1031,7 @@
       fixedFee: 'Fixed fee (6%)',
       totalToRepay: 'Total to repay',
       dailyDeduction: 'Daily deduction',
+      ofCardSales: 'of card sales',
       estimatedDuration: 'Estimated duration',
       durationDays: (days) => `~${days} days`,
       durationMonths: (months, days) => `~${months} months (${days} days)`,
@@ -1049,6 +1051,7 @@
       fixedFee: 'رسوم ثابتة (6%)',
       totalToRepay: 'المجموع للسداد',
       dailyDeduction: 'الخصم اليومي',
+      ofCardSales: 'من مبيعات البطاقات',
       estimatedDuration: 'المدة المقدرة',
       durationDays: (days) => `~${days} يومًا`,
       durationMonths: (months, days) => `~${months} أشهر (${days} يومًا)`,
@@ -1107,14 +1110,14 @@
       return `
         <div class="cap-slider">
           <div class="cap-amount"><span style="color:var(--atlas); font-weight:700;">${amount.toLocaleString(numLocale)}</span> <span style="font-size:16px; color:var(--n-500);">MAD</span></div>
-          <input type="range" min="${min}" max="${max}" step="1000" value="${amount}" data-amt />
+          <input type="range" min="${min}" max="${max}" step="1000" value="${amount}" data-amt aria-label="${T.amountReceived}" />
           <div class="cap-range"><span>${min.toLocaleString(numLocale)} MAD</span><span>${T.prequalified(max.toLocaleString(numLocale))}</span></div>
         </div>
         <div style="background: var(--paper-soft); border-radius: 12px; padding: 16px 20px;">
           <div class="cap-metric"><span style="color: var(--n-600);">${T.amountReceived}</span><span class="v">${amount.toLocaleString(numLocale)} MAD</span></div>
           <div class="cap-metric"><span style="color: var(--n-600);">${T.fixedFee}</span><span class="v">${fee.toLocaleString(numLocale,{maximumFractionDigits:0})} MAD</span></div>
           <div class="cap-metric"><span style="color: var(--n-600);">${T.totalToRepay}</span><span class="v">${(amount+fee).toLocaleString(numLocale,{maximumFractionDigits:0})} MAD</span></div>
-          <div class="cap-metric"><span style="color: var(--n-600);">${T.dailyDeduction}</span><span class="v">${dailyPct} % des ventes carte</span></div>
+          <div class="cap-metric"><span style="color: var(--n-600);">${T.dailyDeduction}</span><span class="v">${dailyPct} % ${T.ofCardSales}</span></div>
           <div class="cap-metric"><span style="color: var(--n-600);">${T.estimatedDuration}</span><span class="v" style="color: var(--atlas);">${durationLabel}</span></div>
         </div>
         <div style="margin-top:18px; padding: 14px 16px; background: var(--mint-soft); border-radius: 10px; font-size: 12.5px; color: var(--riad); display:flex; gap:10px;">
@@ -1425,23 +1428,23 @@
         </div>
         <div data-mgroup="visit" ${cfg.model === 'visit' ? '' : 'hidden'} style="margin-top:16px;">
           <div class="kf-row">
-            <div class="kf-group"><label class="kf-label">${C.visitTarget}</label><input class="kf-input" data-loy="visit.target" type="number" min="1" inputmode="numeric" value="${escAttr(cfg.visit.target)}"></div>
-            <div class="kf-group"><label class="kf-label">${C.reward}</label><input class="kf-input" data-loy="visit.reward" value="${escAttr(cfg.visit.reward)}" placeholder="1 offert"></div>
+            <div class="kf-group"><label class="kf-label">${C.visitTarget}</label><input aria-label="${C.visitTarget}" class="kf-input" data-loy="visit.target" type="number" min="1" inputmode="numeric" value="${escAttr(cfg.visit.target)}"></div>
+            <div class="kf-group"><label class="kf-label">${C.reward}</label><input aria-label="${C.reward}" class="kf-input" data-loy="visit.reward" value="${escAttr(cfg.visit.reward)}" placeholder="1 offert"></div>
           </div>
         </div>
         <div data-mgroup="amount" ${cfg.model === 'amount' ? '' : 'hidden'} style="margin-top:16px;">
           <div class="kf-row">
-            <div class="kf-group"><label class="kf-label">${C.perMad}</label><input class="kf-input" data-loy="amount.perMad" type="number" min="1" inputmode="numeric" value="${escAttr(cfg.amount.perMad)}"></div>
-            <div class="kf-group"><label class="kf-label">${C.threshold}</label><input class="kf-input" data-loy="amount.threshold" type="number" min="1" inputmode="numeric" value="${escAttr(cfg.amount.threshold)}"></div>
+            <div class="kf-group"><label class="kf-label">${C.perMad}</label><input aria-label="${C.perMad}" class="kf-input" data-loy="amount.perMad" type="number" min="1" inputmode="numeric" value="${escAttr(cfg.amount.perMad)}"></div>
+            <div class="kf-group"><label class="kf-label">${C.threshold}</label><input aria-label="${C.threshold}" class="kf-input" data-loy="amount.threshold" type="number" min="1" inputmode="numeric" value="${escAttr(cfg.amount.threshold)}"></div>
           </div>
-          <div class="kf-group"><label class="kf-label">${C.reward}</label><input class="kf-input" data-loy="amount.reward" value="${escAttr(cfg.amount.reward)}" placeholder="−10 %"></div>
+          <div class="kf-group"><label class="kf-label">${C.reward}</label><input aria-label="${C.reward}" class="kf-input" data-loy="amount.reward" value="${escAttr(cfg.amount.reward)}" placeholder="−10 %"></div>
         </div>
         <div data-mgroup="product" ${cfg.model === 'product' ? '' : 'hidden'} style="margin-top:16px;">
           <div class="kf-row">
-            <div class="kf-group"><label class="kf-label">${C.item}</label><input class="kf-input" data-loy="product.item" value="${escAttr(cfg.product.item)}" placeholder="Café"></div>
-            <div class="kf-group"><label class="kf-label">${C.productTarget}</label><input class="kf-input" data-loy="product.target" type="number" min="1" inputmode="numeric" value="${escAttr(cfg.product.target)}"></div>
+            <div class="kf-group"><label class="kf-label">${C.item}</label><input aria-label="${C.item}" class="kf-input" data-loy="product.item" value="${escAttr(cfg.product.item)}" placeholder="Café"></div>
+            <div class="kf-group"><label class="kf-label">${C.productTarget}</label><input aria-label="${C.productTarget}" class="kf-input" data-loy="product.target" type="number" min="1" inputmode="numeric" value="${escAttr(cfg.product.target)}"></div>
           </div>
-          <div class="kf-group"><label class="kf-label">${C.reward}</label><input class="kf-input" data-loy="product.reward" value="${escAttr(cfg.product.reward)}" placeholder="1 offert"></div>
+          <div class="kf-group"><label class="kf-label">${C.reward}</label><input aria-label="${C.reward}" class="kf-input" data-loy="product.reward" value="${escAttr(cfg.product.reward)}" placeholder="1 offert"></div>
         </div>
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:22px;">
           <button class="kb ghost" data-close>${T.close}</button>

@@ -51,6 +51,7 @@
       zVarianceWarn: 'écart à expliquer',
       zVarianceBad: 'écart majeur, vérifier maintenant',
       zReasonPlaceholder: 'Cause de l\'écart (oubli ticket, rendu monnaie erroné, ...)',
+      zReasonLabel: 'Cause de l\'écart',
       zClose: 'Clôturer la journée → générer le Z',
       zCloseLocked: '✓ Journée clôturée · Z imprimé',
       zCloseToast: (n) => `Z #${n} archivé · transmis au comptable`,
@@ -136,6 +137,7 @@
       zVarianceWarn: 'needs explaining',
       zVarianceBad: 'major variance, verify now',
       zReasonPlaceholder: 'Reason for variance (missed receipt, wrong change, ...)',
+      zReasonLabel: 'Reason for the variance',
       zClose: 'Close the day → generate Z',
       zCloseLocked: '✓ Day closed · Z printed',
       zCloseToast: (n) => `Z #${n} archived · sent to accountant`,
@@ -203,6 +205,7 @@
       zVarianceWarn: 'يحتاج تبرير',
       zVarianceBad: 'فارق كبير، تحقق فورًا',
       zReasonPlaceholder: 'سبب الفارق...',
+      zReasonLabel: 'سبب الفارق',
       zClose: 'إغلاق اليوم → توليد Z',
       zCloseLocked: '✓ اليوم مُغلَق · طُبع Z',
       zCloseToast: (n) => `Z رقم ${n} مؤرشَف · أُرسل للمحاسب`,
@@ -365,7 +368,7 @@
         <div class="cf-z-denom" data-denom="${dn.id}">
           <span class="cf-z-denom-val">${esc(valLbl)}</span>
           <span class="cf-z-denom-x">×</span>
-          <input type="number" class="cf-z-denom-input" data-cf-z-count="${dn.id}" min="0" value="${zCounts[dn.id] || 0}" inputmode="numeric" pattern="[0-9]*" oninput="window.KiwiConformite?.zCountHook?.(this)" ${zClosed ? 'disabled' : ''} />
+          <input type="number" class="cf-z-denom-input" data-cf-z-count="${dn.id}" aria-label="${esc(valLbl)}" min="0" value="${zCounts[dn.id] || 0}" inputmode="numeric" pattern="[0-9]*" oninput="window.KiwiConformite?.zCountHook?.(this)" ${zClosed ? 'disabled' : ''} />
           <span class="cf-z-denom-eq">=</span>
           <span class="cf-z-denom-sub">${fmtMad(subtotal)}</span>
         </div>`;
@@ -374,7 +377,7 @@
     const reasonNeeded = Math.abs(variance) > 20;
     const reasonBlock = reasonNeeded && !zClosed ? `
       <div class="cf-z-reason">
-        <label class="cf-z-reason-l">Cause de l'écart</label>
+        <label class="cf-z-reason-l">${esc(t('zReasonLabel'))}</label>
         <textarea class="cf-z-reason-input" data-cf-z-reason placeholder="${esc(t('zReasonPlaceholder'))}" rows="2" oninput="window.KiwiConformite?.zReasonHook?.(this)">${esc(zReason)}</textarea>
       </div>` : '';
 

@@ -81,7 +81,7 @@ var SHELL = [
   '/assets/agent-truth.js?v=6',
   '/assets/agent-voice.js?v=9',
   '/assets/agent-vision.js?v=1',
-  '/assets/i18n.js?v=9',
+  '/assets/i18n.js?v=10',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -89,10 +89,10 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=39',
-  '/assets/features.js?v=5',
-  '/assets/invoicing.css?v=6',
-  '/assets/invoicing.js?v=8',
+  '/assets/interactive.js?v=40',
+  '/assets/features.js?v=6',
+  '/assets/invoicing.css?v=7',
+  '/assets/invoicing.js?v=9',
   '/assets/order-qr.js?v=3',
   /* Ces deux-là sont estampillées ?v= dans dashboard.html. La chaîne doit être
      RIGOUREUSEMENT identique : c'est l'URL qui sert de clé de cache, et une
@@ -137,7 +137,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/dateRange.js?v=36',
+  '/assets/dateRange.js?v=37',
   '/assets/mobile-nav.js?v=3',
   '/assets/liquid-lens.js?v=1',
   '/assets/pages.js?v=7',
@@ -172,7 +172,7 @@ var SHELL = [
   '/assets/day-report.js?v=19',
   '/assets/report.js?v=5',
   '/assets/day-report-dash.js?v=17',
-  '/assets/day-report-export.js?v=7',
+  '/assets/day-report-export.js?v=8',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.
      Sans eux le contrôle « ouvre-t-on maintenant ? » ne peut pas se faire, et
@@ -230,7 +230,7 @@ var SHELL = [
   '/assets/maison-stock-movements.js?v=4',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=8',
-  '/assets/stock.js?v=53',
+  '/assets/stock.js?v=54',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
@@ -238,7 +238,7 @@ var SHELL = [
   '/assets/cost.js?v=4',
   '/assets/clients-store.js?v=7',
   '/assets/clients-book.js?v=15',
-  '/assets/clients-directory.js?v=11',
+  '/assets/clients-directory.js?v=12',
   '/assets/menu-catalog.js?v=25',
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',
@@ -249,7 +249,7 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=4',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=10',
-  '/assets/team.js?v=284',
+  '/assets/team.js?v=285',
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=70',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
@@ -328,7 +328,7 @@ var SHELL = [
   '/assets/pos-reprint.js?v=8',
   '/assets/pressing-caisse.js?v=40',
   '/assets/pressing-caisse.css?v=40',
-  '/assets/lucide.min.js?v=4',
+  '/assets/lucide.min.js?v=5',
   '/assets/kiwi-favicon-new.svg',
   '/assets/kiwi-newlogo.svg',
   '/assets/kiwi-newlogo.svg?v=2',

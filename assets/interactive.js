@@ -413,6 +413,7 @@ ar: {
   .kiwi-modal-head h3 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.025em; }
   .kiwi-modal-head p { margin: 5px 0 0; font-size: 14px; color: var(--n-500); line-height: 1.45; }
   .kiwi-modal-head .tag { display: inline-block; margin-bottom: 10px; padding: 4px 10px; background: var(--mint-soft); color: var(--riad); border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; }
+  html[data-theme="dark"] .kiwi-modal-head .tag { color: var(--mint, #7DF2B0); background: rgba(125,242,176,0.14); }
   .kiwi-modal-body { padding: 0 28px 24px; overscroll-behavior: contain; }
   .kiwi-modal-foot { padding: 16px 28px; border-top: 1px solid var(--n-200); display: flex; justify-content: flex-end; gap: 10px; background: color-mix(in srgb, var(--surface) 50%, transparent); border-radius: 0 0 22px 22px; }
   .kiwi-modal-close { position: absolute; top: 18px; right: 18px; width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--n-200); background: var(--surface); color: var(--n-500); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 150ms, opacity 150ms, background-color 150ms, border-color 150ms, color 150ms, box-shadow 150ms; z-index: 2; }
@@ -610,7 +611,8 @@ ar: {
   .tx-timeline-item .d { font-size: 12.5px; color: var(--n-500); margin-top: 2px; }
 
   /* ─── Order detail drawer · opened from the live feed ─── */
-  .ord-hero { background: linear-gradient(135deg, var(--paper-soft) 0%, #EFEAE0 120%); border-radius: 14px; padding: 20px 22px; margin-bottom: 20px; position: relative; overflow: hidden; }
+  .ord-hero { background: linear-gradient(135deg, var(--paper-soft) 0%, var(--ord-hero-end, #EFEAE0) 120%); border-radius: 14px; padding: 20px 22px; margin-bottom: 20px; position: relative; overflow: hidden; }
+  html[data-theme="dark"] .ord-hero { --ord-hero-end: rgba(255,255,255,0.06); }
   .ord-hero::after { content: ""; position: absolute; right: -40px; top: -40px; width: 140px; height: 140px; background: radial-gradient(circle, rgba(11,110,79,0.10) 0%, transparent 65%); pointer-events: none; }
   .ord-hero .row1 { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
   .ord-hero .ticket { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--n-500); text-transform: uppercase; }

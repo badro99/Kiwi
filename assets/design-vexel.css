@@ -1338,7 +1338,7 @@ body.design-vexel :is(.kb.ghost, .kw-menu-action, .pds-tool, .pds-mode, .pds-zon
   color: var(--ink);
 }
 
-body.design-vexel :is(.kb.atlas, .kb.primary) {
+body.design-vexel :is(.kb.atlas, .kb.primary, .kdx-export, .inv-btn.primary) {
   background: var(--vx-accent) !important;
   border-color: var(--vx-transparent) !important;
   color: var(--vx-primary-ink) !important;
@@ -2431,7 +2431,7 @@ body.design-vexel[data-vexel-mode] .dash-more .integ-card {
   --n-200: rgba(10, 15, 13, 0.08);
   --n-300: rgba(10, 15, 13, 0.14);
   --n-400: rgba(10, 15, 13, 0.34);
-  --n-500: rgba(10, 15, 13, 0.58);
+  --n-500: rgba(10, 15, 13, 0.64);
   --n-600: rgba(10, 15, 13, 0.72);
   --n-700: rgba(10, 15, 13, 0.86);
   --n-800: #0A0F0D;
@@ -2452,7 +2452,7 @@ body.design-vexel[data-vexel-mode] .dash-more .integ-card {
   --inverse-line: rgba(247, 245, 240, 0.14);
   --brand-deep: #053B2C;
   --success: #0B6E4F;
-  --warning: #B26A00;
+  --warning: #9A5A00;
   --danger: #C2402F;
   --info: #216A93;
   --warn-soft: rgba(178, 106, 0, 0.12);
@@ -5625,4 +5625,11 @@ body.design-vexel :is(
 body.design-vexel .fa-kpdisplay {
   background: var(--vx-inverse-surface) !important;
   color: var(--vx-inverse-ink) !important;
+}
+
+/* Orders / Terminals / Payouts hero. The shared page CSS paints the subtitle
+ * pale mint for the dark gradient card; Vexel light swaps the card to a white
+ * wash and left the subtitle mint on white (about 1.3:1, unreadable). */
+:is(html[data-theme="light"][data-vexel-mode="light"], body[data-vexel-mode="light"]:not([data-vexel-mode="dark"])) .p-hero .sub {
+  color: #4C5A53;
 }

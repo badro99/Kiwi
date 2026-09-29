@@ -3065,7 +3065,7 @@
     const headDays = view.map((d) => {
       const dt = fromISO(d);
       const dayLbl = dt.toLocaleDateString(dateLocale(), { weekday: 'short' });
-      const meta=calendarMeta[d],hours=!meta.configured?'À configurer':meta.closed?'Fermé':compactPeriods(meta.periods);
+      const meta=calendarMeta[d],hours=!meta.configured?({fr:'À configurer',en:'Not set',ar:'غير مضبوط'}[trLang()]||'À configurer'):meta.closed?({fr:'Fermé',en:'Closed',ar:'مغلق'}[trLang()]||'Fermé'):compactPeriods(meta.periods);
       const special=meta.exception?.label||meta.holiday?.label||'';
       return `<th class="kt-day-head${meta.closed?' is-closed':''}${meta.holiday?' is-holiday':''}" title="${esc([special,hours].filter(Boolean).join(' · '))}"><span class="d">${pad(dt.getDate())}</span><span class="m">${dayLbl}</span><span class="kt-day-hours">${esc(hours)}</span>${special?`<span class="kt-day-special">${esc(special)}</span>`:''}</th>`;
     }).join('');

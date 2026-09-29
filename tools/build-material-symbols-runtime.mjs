@@ -92,7 +92,13 @@ const aliases = {
   'utensils': 'restaurant', 'utensils-crossed': 'restaurant',
   'volume-2': 'volume_up', 'wallet': 'account_balance_wallet',
   'wand-2': 'auto_fix_high', 'wheat': 'grass', 'x': 'close',
-  'x-circle': 'cancel', 'zap': 'bolt'
+  'x-circle': 'cancel', 'zap': 'bolt',
+  'cloud-download': 'cloud_download', 'file-plus': 'note_add', 'folders': 'folder_copy',
+  'heart-handshake': 'volunteer_activism', 'image-plus': 'add_photo_alternate',
+  'maximize-2': 'fullscreen', 'task_alt': 'task_alt', 'pending_actions': 'pending_actions',
+  'arrow-up': 'arrow_upward', 'arrow-down': 'arrow_downward', 'pie-chart': 'pie_chart',
+  'menu': 'menu', 'sort': 'sort', 'settings': 'settings', 'trending-down': 'trending_down',
+  'x-octagon': 'dangerous'
 };
 
 async function sourceFiles() {

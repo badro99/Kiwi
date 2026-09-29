@@ -154,6 +154,13 @@
     en: { title: 'Sales by channel', share: 'Share of revenue', unavailable: 'Channel breakdown unavailable', unclassified: 'unclassified', goalUnavailable: 'Goal unavailable', goalUnset: 'No goal set', noData: 'Data unavailable' },
     ar: { title: 'المبيعات حسب القناة', share: 'حصة رقم المعاملات', unavailable: 'التوزيع حسب القناة غير متاح', unclassified: 'غير مصنف', goalUnavailable: 'الهدف غير متاح', goalUnset: 'لم يُحدَّد أي هدف', noData: 'البيانات غير متاحة' }
   };
+  /* « atteint » et « Reste » étaient écrits en français quelle que soit la
+   * langue : l'interface anglaise affichait « 53 % atteint · Reste 14 837 MAD ». */
+  var GOAL_STR = {
+    fr: { reached: 'atteint', rest: 'Reste' },
+    en: { reached: 'reached', rest: 'Left' },
+    ar: { reached: 'تم تحقيقه', rest: 'المتبقي' }
+  };
   var RANGE_STR = {
     fr: { aujourdhui: "Aujourd'hui", hier: 'Hier', septJours: '7 derniers jours', trenteJours: '30 derniers jours', moisDernier: 'Mois dernier', trimestre: 'Ce trimestre', annee: 'Cette année', personnalise: 'Période personnalisée' },
     en: { aujourdhui: 'Today', hier: 'Yesterday', septJours: 'Last 7 days', trenteJours: 'Last 30 days', moisDernier: 'Last month', trimestre: 'This quarter', annee: 'This year', personnalise: 'Custom period' },
@@ -565,7 +572,7 @@
 
   function serviceAmount(value) {
     if (!(value >= 0)) return '·';
-    var locale = lang() === 'en' ? 'en-GB' : 'fr-FR';
+    var locale = 'fr-FR';
     /* Intl groupe en fr-FR avec une espace fine insécable (U+202F) ; le reste
      * du tableau de bord sépare ses milliers par une espace normale. Deux
      * largeurs pour le même chiffre se voient dès qu'on empile les cartes. */
@@ -949,14 +956,14 @@
     setText(targetTarget, goalUnset ? '' : (targetText ? '/ ' + targetText : ''));
     setText(pctTarget, goalUnset
       ? (SERVICE_STR[lang()] || SERVICE_STR.fr).goalUnset
-      : pctText + ' atteint');
+      : pctText + ' ' + (GOAL_STR[lang()] || GOAL_STR.fr).reached);
     if (fillTarget) {
       var width = goalUnset ? '0%' : (goalFill ? goalFill.style.width : pctText);
       if (fillTarget.style.width !== width) fillTarget.style.width = width;
     }
     if (restTarget) {
       var remaining = goalUnset ? 0 : Math.max(0, numberFrom(targetText) - numberFrom(amountText));
-      setText(restTarget, remaining ? 'Reste ' + Math.round(remaining).toLocaleString('fr-FR') + ' MAD' : '');
+      setText(restTarget, remaining ? (GOAL_STR[lang()] || GOAL_STR.fr).rest + ' ' + Math.round(remaining).toLocaleString('fr-FR') + ' MAD' : '');
     }
 
     /* Miroir des comparaisons du panneau masqué. On recopie le libellé et la

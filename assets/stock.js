@@ -1939,7 +1939,7 @@
   function renderTabs() {
     const tab = (id, ico, label, extra = '') => {
       const on = stCurrentTab === id;
-      return `<button class="st-tab${on ? ' on' : ''}" type="button" data-action="stock-tab" data-tab="${id}">${svg(ico, 14)}<span>${esc(label)}</span>${extra}</button>`;
+      return `<button class="st-tab${on ? ' on' : ''}" type="button" role="tab" aria-selected="${on}" data-action="stock-tab" data-tab="${id}">${svg(ico, 14)}<span>${esc(label)}</span>${extra}</button>`;
     };
     const ultraPill = `<span class="st-ultra-pill">${esc(t('ultra'))}</span>`;
     return `
@@ -2155,9 +2155,15 @@
     `;
   }
 
+  const TIER_LOW = {
+    fr: { status: (q) => `Fournisseur principal bas · ${q} restant`, main: 'Lot principal', next: 'Lot suivant', buffer: 'Seuil tampon', basis: 'calculé sur 3j d\'usage', trans: 'Transition prochaine vers tarif secondaire.', order: 'Commander chez principal' },
+    en: { status: (q) => `Main supplier running low · ${q} left`, main: 'Main lot', next: 'Next lot', buffer: 'Buffer threshold', basis: 'based on 3 days of use', trans: 'Switching to the secondary price soon.', order: 'Order from main supplier' },
+    ar: { status: (q) => `المورّد الرئيسي منخفض · ${q} متبقٍ`, main: 'الدفعة الرئيسية', next: 'الدفعة التالية', buffer: 'حد الأمان', basis: 'محسوب على 3 أيام استهلاك', trans: 'الانتقال قريبًا إلى السعر الثانوي.', order: 'اطلب من المورّد الرئيسي' }
+  };
   function renderAlertCard(it) {
     if (it.alertKind === 'tierLow') {
       const priceDiff = it.p2Cost != null ? (it.p2Cost - it.p1Cost) : null;
+      const L = TIER_LOW[lang()] || TIER_LOW.fr;
       return `
         <div class="st-alert tier-low">
           <div class="st-alert-ico" style="color:var(--warning);">${svg('alertTriangle', 18)}</div>
@@ -2165,17 +2171,17 @@
             <div class="st-alert-top">
               <span class="st-alert-name">${esc(it.name)}</span>
               <span class="st-alert-cat">${esc(catLabel(it.category))}</span>
-              <span class="st-alert-status low">Fournisseur principal bas · ${esc(fmtUnit(it.r1Qty, it.unit))} restant</span>
+              <span class="st-alert-status low">${esc(L.status(fmtUnit(it.r1Qty, it.unit)))}</span>
             </div>
             <div class="st-alert-meta">
-              Lot principal : ${esc(fmtMad(it.p1Cost))}/${esc(it.unit)}${it.p2Cost != null ? ` · Lot suivant : ${esc(it.p2SupName)} (${esc(fmtMad(it.p2Cost))}/${esc(it.unit)}${priceDiff > 0 ? ` +${esc(fmtMad(priceDiff))}` : ''})` : ''}
+              ${esc(L.main)} : ${esc(fmtMad(it.p1Cost))}/${esc(it.unit)}${it.p2Cost != null ? ` · ${esc(L.next)} : ${esc(it.p2SupName)} (${esc(fmtMad(it.p2Cost))}/${esc(it.unit)}${priceDiff > 0 ? ` +${esc(fmtMad(priceDiff))}` : ''})` : ''}
             </div>
             <div class="st-alert-impact">
-              Seuil tampon : <b>${esc(fmtUnit(it.t1Threshold, it.unit))}</b> (calculé sur 3j d'usage) · Transition prochaine vers tarif secondaire.
+              ${esc(L.buffer)} : <b>${esc(fmtUnit(it.t1Threshold, it.unit))}</b> (${esc(L.basis)}) · ${esc(L.trans)}
             </div>
           </div>
           <div class="st-alert-acts">
-            <button class="st-btn primary" type="button" data-action="stock-reorder" data-item-id="${esc(it.id)}">Commander chez principal</button>
+            <button class="st-btn primary" type="button" data-action="stock-reorder" data-item-id="${esc(it.id)}">${esc(L.order)}</button>
           </div>
         </div>
       `;

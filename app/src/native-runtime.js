@@ -216,6 +216,33 @@
     if (onboarding && !onboarding.classList.contains('kob-out')) return true;
     return visible(document.querySelector('[data-kiwi-lock]'));
   }
+  /* What is painted under the clock decides the status bar text. Overlays were
+   * assumed dark, so the full-page Kiwi AI sheet in a light workspace (white)
+   * got white clock, signal and battery on white. Composite the backgrounds
+   * under a point next to the clock until one is opaque; null means nothing
+   * conclusive (gradients, images), and the caller keeps its old answer. */
+  function paintedDarkAt(x, y) {
+    var stack;
+    try { stack = document.elementsFromPoint(x, y); } catch (_) { return null; }
+    var layers = [];
+    for (var i = 0; i < stack.length; i++) {
+      var m = /^rgba?\(([^)]+)\)$/.exec(getComputedStyle(stack[i]).backgroundColor || '');
+      if (!m) continue;
+      var v = m[1].split(',').map(parseFloat);
+      var a = v.length > 3 ? v[3] : 1;
+      if (!(a > 0)) continue;
+      layers.push({ r: v[0], g: v[1], b: v[2], a: a });
+      if (a >= 0.98) break;
+    }
+    if (!layers.length || layers[layers.length - 1].a < 0.98) return null;
+    var base = layers.pop(), r = base.r, g = base.g, b = base.b;
+    while (layers.length) {
+      var top = layers.pop();
+      r = top.r * top.a + r * (1 - top.a); g = top.g * top.a + g * (1 - top.a); b = top.b * top.a + b * (1 - top.a);
+    }
+    function lin(c) { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b) < 0.179;
+  }
   var lastStatusBarStyle = '';
   function paintStatusBar() {
     // SwiftUI setup has an ink background regardless of the web/system theme.
@@ -223,7 +250,13 @@
     var till = /kiwi-caisse\.html$/i.test(location.pathname);
     // Owner and Team follow the painted appearance. Till code/clock-in and
     // Kitchen pairing are ink gates, but Kitchen production can be light.
-    var dark = setup || !!document.querySelector('#pair.on') || (nativeBlockingLayer() && !themedDashboardGate() && !document.querySelector('.screen-pin.is-active,.screen-clockin.is-active,.screen-table.is-active')) || (till ? root.getAttribute('data-caisse-theme') === 'dark' : root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark');
+    var gateActive = !!document.querySelector('.screen-pin.is-active,.screen-clockin.is-active,.screen-table.is-active');
+    var blocking = nativeBlockingLayer() && !themedDashboardGate() && !gateActive;
+    if (blocking && !setup && openNativeLayers().length) {
+      var painted = paintedDarkAt(72, 32);
+      if (painted !== null) blocking = painted;
+    }
+    var dark = setup || !!document.querySelector('#pair.on') || blocking || (till ? root.getAttribute('data-caisse-theme') === 'dark' : root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark');
     var nextStyle = dark ? 'DARK' : 'LIGHT';
     if (nextStyle === lastStatusBarStyle) return;
     lastStatusBarStyle = nextStyle;
@@ -293,7 +326,7 @@
 
   function openNativeLayers() {
     return Array.prototype.slice.call(document.querySelectorAll(
-      '.modal-veil.is-open,.drawer-veil.is-open,.cloture-veil.is-open,.kds-screen.is-open,#stock-screen.is-open,#cp-pin-screen,.kiwi-native-account.is-open,.kiwi-backdrop,.kiwi-drawer-backdrop,.kiwi-menu'
+      '.modal-veil.is-open,.drawer-veil.is-open,.cloture-veil.is-open,.kds-screen.is-open,#stock-screen.is-open,#cp-pin-screen,.kiwi-native-account.is-open,.kiwi-backdrop,.kiwi-drawer-backdrop,.kiwi-menu,[aria-modal="true"]'
     )).filter(function (node) {
       try { return getComputedStyle(node).display !== 'none' && getComputedStyle(node).visibility !== 'hidden'; }
       catch (_) { return true; }
@@ -1373,10 +1406,14 @@
   // their changes: native tab publication itself mutates unrelated body nodes.
   function syncBlockingLayer() {
     paintStatusBar();
+    // Sheets and drawers slide in; the first paint samples the page under them.
+    setTimeout(paintStatusBar, 420);
     if (window.KiwiNativeHostRequestState) window.KiwiNativeHostRequestState();
   }
   function isBlockingNode(node) {
     if (node && node.matches && node.matches('.kiwi-backdrop,.kiwi-drawer-backdrop')) return true;
+    // Full-page dialogs (invoicing, compliance) declare themselves modal.
+    if (node && node.matches && (node.matches('[aria-modal="true"]') || (node.querySelector && node.querySelector('[aria-modal="true"]')))) return true;
     if (node && (node.id === 'pair' || node.id === 'screen-pin' || node.id === 'screen-clockin' || node.id === 'screen-table')) return true;
     return node && (node.id === 'pin-screen' || node.id === 'cp-pin-screen' || node.id === 'clockin-screen' || (node.hasAttribute && (node.hasAttribute('data-kiwi-greet') || node.hasAttribute('data-kiwi-lock'))) || (node.matches && node.matches('.modal-veil,.drawer-veil,.cloture-veil,.kds-screen,#stock-screen,.kiwi-native-account,.kob-root')) || node === document.body);
   }

@@ -5206,7 +5206,7 @@
      Inert unless body.design-vexel. ON by default for every merchant since the
      v2 design migration · ?skin=off or KiwiDesignVexel.disable() opts out.
      Loads LAST of the three skins so it wins where they overlap. -->
-<link rel="stylesheet" href="assets/design-vexel.css?v=2107" />
+<link rel="stylesheet" href="assets/design-vexel.css?v=2108" />
 <!-- Pressing owner workspace · exact-trade layer, inert for every other venue. -->
 <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
 <link rel="stylesheet" href="assets/pressing-dashboard.css?v=10" />
@@ -5217,7 +5217,7 @@
      glow if this never loads. -->
 <script src="assets/vexel-neon.js?v=2047" defer></script>
 <!-- Facturation · loaded after skins so its dialog cannot inherit page-section spacing. -->
-<link rel="stylesheet" href="assets/invoicing.css?v=6" />
+<link rel="stylesheet" href="assets/invoicing.css?v=7" />
 <!-- Read the persisted Vexel climate while the document is still in <head>.
      The first line after <body> applies it before any visible markup exists. -->
 <script src="assets/dashboard-startup-gate.js?v=1"></script>
@@ -5492,7 +5492,7 @@
       <button class="icon-btn" data-action="settings" aria-label="Paramètres" title="Paramètres">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
       </button>
-      <button class="ai-btn" data-action="open-assistant">
+      <button class="ai-btn" data-action="open-assistant" aria-label="Kiwi AI · Agent" data-i18n-attr="aria-label:dash.agent">
         <svg class="ai-btn-ico" viewBox="0 0 1080 1350" fill="none" aria-hidden="true"><path d="M935.32 688.15c7.49 10.9 1.04 23.35-5.46 31.05l-18.53 21.95-32.55 33.68-11.99 12.06-25.55 24.66-72.05 70.94c-36.74 36.17-86.58 56.73-139.14 58.85l-159.05-.12-117.34-1.35c-26.98-.31-49.32-16.3-67.68-34.09l-37.86-36.7-41.1-41.08-11.8-12.48-64.54-65.74-12.13-14.02c-14.8-17.1-23.36-39.67-25.36-62.46l-1.95-22.13-2.21-32.47-.1-543.27c15.03 9.71 23.85 20.45 34.68 31.06l29.32 28.72 30.18 28.17 38.22 35.99 35.86 34.37 14.11 14.09 35.47 36.73c25.93 29.94 44 64.11 51.17 103.79l-.48 394.96c-.02 15.61-4.1 29.66.16 44.71l.3 59.29 3.94 5.99c1.09 1.66 6.66.3 8.42-.62l61.71-63.11 112.24-111.95c19.39-19.34 45.03-30.72 70.76-37.56l18.27-4.86 274.4-.07c9.66 0 22.46 5.41 27.67 12.99Z" fill="currentColor"/><path d="m736.88 1266.87-47.59-2.35-23.23-4.44c-37.93-7.25-67.6-29.39-94.33-56.27l-144.88-145.68c-7.58-7.62-14.23-18.07-16.71-27.03-3.73-13.47 3.05-24.5 15.69-26.92l18.49-3.53 213.01.15c51.57 8.68 96.13 29.19 130.36 67.51l13.01 11 65.63 65.13 119.03 119.89-153.08 2.04-95.41.5Z" fill="#8ff4cf"/></svg>
         <span data-i18n="dash.agent">Kiwi AI · Agent</span>
       </button>
@@ -6143,7 +6143,7 @@
 <script src="assets/err-reporter.js?v=1" defer></script>
 <!-- Env gate (demos local-only) · must run before venues.js and the app. -->
 <script src="assets/kiwi-env.js?v=1" defer></script>
-<script src="assets/i18n.js?v=9" defer></script>
+<script src="assets/i18n.js?v=10" defer></script>
 <!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
      « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" · le français et
@@ -6153,11 +6153,11 @@
      sa table métier→famille à l'évaluation, et les trois assistants
      d'inscription construisent leur grille pareil. Aucun DOM, ~7 Ko. -->
 <script src="assets/trades.js?v=6" defer></script>
-<script src="assets/lucide.min.js?v=4" defer></script>
-<script src="assets/interactive.js?v=39" defer></script>
-<script src="assets/features.js?v=5" defer></script>
+<script src="assets/lucide.min.js?v=5" defer></script>
+<script src="assets/interactive.js?v=40" defer></script>
+<script src="assets/features.js?v=6" defer></script>
 <script src="assets/invoice.js?v=8" defer></script>
-<script src="assets/invoicing.js?v=8" defer></script>
+<script src="assets/invoicing.js?v=9" defer></script>
 <script src="assets/depenses.js?v=1" defer></script>
 <script src="assets/oppo-cards.js?v=3" defer></script>
 <script src="assets/insights.js?v=1" defer></script>
@@ -6190,7 +6190,7 @@
 <script src="assets/pressing-catalog.js?v=7" defer></script>
 <script src="assets/pressing-dashboard.js?v=14" defer></script>
 <script src="assets/demoClock.js?v=4" defer></script>
-<script src="assets/dateRange.js?v=36" defer></script>
+<script src="assets/dateRange.js?v=37" defer></script>
 <script src="assets/mobile-nav.js?v=3" defer></script>
 <script defer src="assets/pwa-update.js?v=359"></script>
 <script defer src="assets/dashboard-pwa.js?v=553"></script>
@@ -6313,7 +6313,7 @@
 <!-- Fidélité · client book read live into the Clients & Marketing surface (growth-crm.js). -->
 <script src="assets/clients-store.js?v=7" defer fetchpriority="low"></script>
 <!-- Clients · the owner's directory (contacts, fidélité, consent) · sidebar « Clients ». -->
-<script src="assets/clients-directory.js?v=11" defer fetchpriority="low"></script>
+<script src="assets/clients-directory.js?v=12" defer fetchpriority="low"></script>
 <script src="assets/menu-catalog.js?v=25" defer fetchpriority="low"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
@@ -6344,12 +6344,12 @@
      Après pages-pro.js, dont il emprunte la coquille Kiwi.appPage. -->
 <script src="assets/day-report.js?v=19" defer fetchpriority="low"></script>
 <script src="assets/z-reconciliation.js?v=20" defer fetchpriority="low"></script>
-<script src="assets/day-report-export.js?v=7" defer fetchpriority="low"></script>
+<script src="assets/day-report-export.js?v=8" defer fetchpriority="low"></script>
 <script src="assets/day-report-dash.js?v=17" defer fetchpriority="low"></script>
-<script src="assets/stock.js?v=53" defer fetchpriority="low"></script>
+<script src="assets/stock.js?v=54" defer fetchpriority="low"></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=10">
-<script src="assets/team.js?v=284" defer fetchpriority="low"></script>
+<script src="assets/team.js?v=285" defer fetchpriority="low"></script>
 <!-- Deterministic, tenant-scoped morning briefing. Loaded after the ledgers it
      will inspect; Phase 1b deliberately ships with no active signal rules. -->
 <script src="assets/cancellation-history.js?v=2" defer fetchpriority="low"></script>
@@ -6357,7 +6357,7 @@
 <script src="assets/order-course.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/briefing.js?v=17" defer fetchpriority="low"></script>
 <script src="assets/finance.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/conformite.js?v=1" defer fetchpriority="low"></script>
+<script src="assets/conformite.js?v=2" defer fetchpriority="low"></script>
 <!-- Final production boundary for presentation-only actions. -->
 <script src="assets/production-action-guard.js?v=1" defer fetchpriority="low"></script>
 <!-- The shared staff-role catalogue: the login gate needs it to tell an owner
@@ -6371,7 +6371,7 @@
 <script src="assets/design-ios27.js?v=1" defer fetchpriority="low"></script>
 <!-- Default home composition: critical before the PIN overlay reveals the app.
      Low-priority + post-unlock scheduling painted the legacy dashboard first. -->
-<script src="assets/design-vexel-layout.js?v=2085" defer></script>
+<script src="assets/design-vexel-layout.js?v=2086" defer></script>
 <script src="assets/liquid-glass.js?v=1" defer fetchpriority="low"></script>
 <!-- Hotel vertical (assets/hotel.js) · powers 0000-onboarded hotels
      (wizard « Hôtel / Riad », starter pages on the live rack/folio

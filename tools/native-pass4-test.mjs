@@ -140,4 +140,20 @@ ok(/retry:'Try again'/.test(helpCentre) && !/>Réessayer</.test(helpCentre), 'he
 ok(/class="cd-tblwrap" tabindex="0" role="region" aria-label="' \+ esc\(T\.title\)/.test(clientsDir), 'the customers table scrolls from the keyboard and has a name');
 ok(/\.kh-btn\.atlas\{background:#0B6E4F/.test(runtimeCss) && /\.hai-chip,\.cd-seg,\.eq-pill\)::after\{[^}]*inset:-7px 0/.test(runtimeCss), 'help button contrast and small pills get 44 pt hit areas');
 
+// Audit pass 3 (walk of every screen with axe + a hit-area and icon scan)
+const lucide = read('assets/lucide.min.js');
+const invCss = read('assets/invoicing.css');
+ok(/function paintedDarkAt\(/.test(runtime) && /openNativeLayers\(\)\.length/.test(runtime), 'the status bar follows what is painted under it while a full-page sheet is open');
+ok(/aria-modal="true"/.test(runtime), 'aria-modal sheets count as native layers (tab bar hides, status bar repaints)');
+ok(/\.inv-shell\{max-height:calc\(100dvh - var\(--kiwi-safe-top\)/.test(runtimeCss), 'the invoicing sheet stays clear of the Dynamic Island');
+ok(/\.ai-btn::before/.test(runtimeCss) && /\.stock-reorder-cta\{min-height:44px/.test(runtimeCss), 'the Kiwi AI pill and the reorder button reach 44 pt');
+ok(/kiwi-native-till \.vrap-back-btn span\{position:absolute/.test(runtimeCss) && /kiwi-native-till \.mlibre-toggle span\{position:absolute/.test(runtimeCss) && !/vrap-back-btn span\{display:none/.test(runtimeCss), 'icon-only till buttons keep their label for screen readers');
+ok(/class="ai-btn"[^>]*aria-label="Kiwi AI/.test(read('dashboard.html')), 'the Kiwi AI pill has an accessible name');
+ok(/data-i18n-attr="aria-label:cols\.aria"/.test(cuisine) && /'cols\.aria': 'Kitchen tickets'/.test(cuisine), 'the kitchen columns are a named, keyboard-reachable region');
+ok(/inv-date/.test(read('assets/invoicing.js')) && /grid-template-areas:\s*"cust money"/.test(invCss.replace(/\s+/g, ' ')), 'invoice rows become cards on a phone instead of clipping');
+for (const g of ['task_alt', 'pending_actions', 'cloud_download', 'folder_copy', 'volunteer_activism', 'add_photo_alternate', 'arrow_upward', 'arrow_downward', 'pie_chart', 'trending_down', 'dangerous']) {
+  ok(lucide.includes(g), 'icon shim carries ' + g);
+}
+ok(/"arrow-up": "arrow_upward"/.test(lucide) && /"arrow-down": "arrow_downward"/.test(lucide) && /"x-octagon": "dangerous"/.test(lucide), 'the delta pill arrows and the octagon resolve instead of falling back to the help glyph');
+
 console.log(`\nnative-pass4-test · ${checks} checks green`);
