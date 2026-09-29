@@ -217,7 +217,7 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .kw-hamburger{display:grid!important;place-items:center;position:static!important;width:44px;height:44px;min-width:44px;padding:0!important;border-radius:50%;background:var(--kno-fill)!important;color:var(--kno-ink)!important;border:0!important;box-shadow:none!important;order:-2}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .kw-hamburger svg{width:20px;height:20px}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar .theme-toggle,html.kiwi-native body.kiwi-native-owner:not(#kno) .merchant-logout{display:none!important}
-  html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar .ai-btn{display:inline-flex!important;align-items:center;gap:6px;height:36px!important;min-height:36px!important;padding:0 14px 0 11px!important;margin:0!important;border-radius:999px!important;font:600 14px/1 "Inter Tight",sans-serif!important;letter-spacing:0!important;white-space:nowrap;transform:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar .ai-btn{display:inline-flex!important;align-items:center;gap:6px;height:44px!important;min-height:44px!important;padding:0 14px 0 11px!important;margin:0!important;border-radius:999px!important;font:600 14px/1 "Inter Tight",sans-serif!important;letter-spacing:0!important;white-space:nowrap;transform:none!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar .ai-btn .ai-btn-ico{width:16px!important;height:20px!important;flex:0 0 auto}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar .ai-btn>span{display:none!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .topbar .ai-btn::after{content:"Kiwi AI"}
