@@ -5853,9 +5853,9 @@
                   <tr data-stock-pc-row="${esc(it.id)}">
                     <td><b>${esc(it.name)}</b> <span style="color:var(--n-500); font-size:11px;">· ${esc(it.unit)}</span></td>
                     <td class="r mono"><span data-pc-theo>${esc(fmtUnit(cur, it.unit))}</span></td>
-                    <td class="r"><input class="st-pc-input" type="number" step="0.1" min="0" placeholder="·" data-pc-real="${esc(it.id)}" data-pc-theo-val="${cur}" data-pc-cost="${it.costPerUnit}" data-pc-unit="${esc(it.unit)}" /></td>
-                    <td class="r"><span class="st-pc-var" data-pc-var>·</span></td>
-                    <td class="r"><span class="st-pc-var" data-pc-cost-out>·</span></td>
+                    <td class="r"><input class="st-pc-input" type="number" inputmode="decimal" step="0.1" min="0" aria-label="${esc(t('mCountColReal'))}: ${esc(it.name)}" data-pc-real="${esc(it.id)}" data-pc-theo-val="${cur}" data-pc-cost="${it.costPerUnit}" data-pc-unit="${esc(it.unit)}" /></td>
+                    <td class="r"><span class="st-pc-var" data-pc-var></span></td>
+                    <td class="r"><span class="st-pc-var" data-pc-cost-out></span></td>
                   </tr>
                 `;
               }).join('')}
@@ -5887,6 +5887,7 @@
           const costDiff = diff * cost;
           const varCell = inp.closest('tr').querySelector('[data-pc-var]');
           const costCell = inp.closest('tr').querySelector('[data-pc-cost-out]');
+          inp.closest('tr').classList.add('has-count');
           const absDiff = Math.abs(diff);
           const pctDiff = theo > 0 ? Math.abs(diff / theo) * 100 : 0;
           const cls = pctDiff < 2 ? 'ok' : pctDiff < 10 ? 'warn' : 'bad';
@@ -5896,9 +5897,10 @@
           costCell.textContent = `${costDiff > 0 ? '+' : ''}${fmtMad(costDiff)}`;
         } else {
           const tr = inp.closest('tr');
-          tr.querySelector('[data-pc-var]').textContent = '·';
+          tr.classList.remove('has-count');
+          tr.querySelector('[data-pc-var]').textContent = '';
           tr.querySelector('[data-pc-var]').className = 'st-pc-var';
-          tr.querySelector('[data-pc-cost-out]').textContent = '·';
+          tr.querySelector('[data-pc-cost-out]').textContent = '';
           tr.querySelector('[data-pc-cost-out]').className = 'st-pc-var';
         }
       });

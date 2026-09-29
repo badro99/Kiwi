@@ -17,6 +17,7 @@ const pages = read('assets/pages.js');
 const pagesPro = read('assets/pages-pro.js');
 const menu = read('assets/restaurant-menu-workspace.js');
 const team = read('assets/team.js');
+const stock = read('assets/stock.js');
 
 // #0107 · date range reachable and swipeable
 ok(/function initPeriodSwipe\(/.test(runtime) && /initPeriodSwipe\(\)/.test(runtime.replace(/function initPeriodSwipe\(/, '')), 'the period pills and hero chart step through ranges on a horizontal swipe');
@@ -64,5 +65,10 @@ ok(/liveOffDuty: 'Off duty'/.test(team) && /liveOffDuty: 'خارج الخدمة'
 ok(/html\.kiwi-native body \.kiwi-drawer\{background:#FBFAF7!important;[^}]*backdrop-filter:none!important/.test(css), 'light-mode native drawers are opaque');
 ok(/html\.kiwi-native:is\(\[data-theme="dark"\],\[data-vexel-mode="dark"\]\) body \.kiwi-drawer\{background:#131A17!important/.test(css), 'dark-mode native drawers are opaque');
 ok(!/\.kiwi-drawer:has\(\.pdsp\)/.test(pagesPro), 'table assignment no longer carries a local drawer-paint patch');
+
+// #0117 · counted stock is a real one-row-per-item form on iPhone.
+ok(/tr\[data-stock-pc-row\]\{display:grid!important/.test(css) && /grid-template-columns:minmax\(0,1fr\) 112px/.test(css), 'physical count uses a phone list with a large quantity field');
+ok(/inputmode="decimal"/.test(stock) && !/placeholder="·" data-pc-real/.test(stock), 'count input summons the decimal keypad without a dot placeholder');
+ok(/classList\.add\('has-count'\)/.test(stock) && /\.st-pc-blind tr\[data-stock-pc-row\]\.has-count \[data-pc-var\]\{visibility:visible!important/.test(css), 'variance appears after a blind-count entry');
 
 console.log(`\nnative-pass5-test · ${checks} checks green`);
