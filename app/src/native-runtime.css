@@ -946,3 +946,12 @@ html.kiwi-native:not(.kiwi-launch-ready){background:#0A1612}
   html.kiwi-native body:not(#kno) #pair .kw::before{content:"";display:block;width:88px;height:88px;background:url(native-brand.png) center/88px 88px no-repeat;border-radius:20.24px}
   html.kiwi-native body:not(#kno) #pair .kw img{display:none}
 }
+
+/* Pass 7: goal content owns its height; numeric phrases keep LTR order in AR. */
+@media(max-width:600px){
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .vexel-revenue-rail{display:flex!important;flex-direction:column;gap:16px;height:auto!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .vexel-revenue-rail>.vexel-rail-card{height:auto!important;min-height:0!important;flex:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .vexel-goal-values{direction:ltr;unicode-bidi:isolate;justify-content:flex-start}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .vexel-goal-foot{white-space:normal;flex-wrap:wrap}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .vexel-goal-compare:empty{display:none}
+}

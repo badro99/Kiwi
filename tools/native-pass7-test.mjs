@@ -33,4 +33,6 @@ ok(read('assets/caisse-lang.js').includes('window.KiwiNativeLocale.set(id)') && 
 const vexel = read('assets/design-vexel-layout.js');
 ok(vexel.includes('window.KiwiNumber.number(current)') && vexel.includes('window.KiwiNumber.number(total)'), 'regulars format both values through KiwiNumber');
 ok(vexel.includes("clientDelta.dir = 'ltr'") && vexel.includes("cleaned.replace(/,/g, '')"), 'regulars isolate signed deltas and parse English grouped values without losing magnitude');
+ok(vexel.includes("document.createElement('bdi')") && vexel.includes('class="vexel-goal-values" dir="ltr"'), 'goal percentages and amount pairs isolate numeric runs');
+ok(css.includes('.vexel-revenue-rail>.vexel-rail-card{height:auto!important'), 'phone goal cards grow from their content instead of stretching an empty band');
 console.log(`native-pass7-test: ${checks} checks passed`);

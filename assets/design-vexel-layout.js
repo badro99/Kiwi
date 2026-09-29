@@ -27,6 +27,20 @@
     if (node && node.textContent !== value) node.textContent = value;
   }
 
+  function setNumericPhrase(node, value, words, prefix) {
+    if (!node) return;
+    var signature = [value, words, prefix].join('|');
+    if (node.dataset.numericPhrase === signature) return;
+    node.dataset.numericPhrase = signature;
+    node.textContent = '';
+    var run = document.createElement('bdi');
+    run.dir = 'ltr';
+    run.textContent = value;
+    if (prefix) node.appendChild(document.createTextNode(words + ' '));
+    node.appendChild(run);
+    if (!prefix) node.appendChild(document.createTextNode(' ' + words));
+  }
+
   function rememberMove(node, parent) {
     if (!node || !parent) return;
     var marker = document.createComment('vexel-layout-origin');
@@ -106,7 +120,7 @@
     rail.innerHTML =
       '<section class="vexel-rail-card vexel-day-goal">' +
         '<div class="vexel-rail-label" data-vexel-goal-label></div>' +
-        '<div class="vexel-goal-values"><strong data-vexel-goal-current>·</strong><span data-vexel-goal-target></span></div>' +
+        '<div class="vexel-goal-values" dir="ltr"><strong data-vexel-goal-current>·</strong><span data-vexel-goal-target></span></div>' +
         '<div class="vexel-goal-track"><i data-vexel-goal-fill></i></div>' +
         '<div class="vexel-goal-foot"><span data-vexel-goal-pct>·</span><span data-vexel-goal-rest></span></div>' +
         /* Les deux comparaisons (vs période précédente, vs mois) vivaient dans
@@ -959,16 +973,18 @@
     var goalUnset = !!(goalLabel && goalLabel.dataset && goalLabel.dataset.goalUnset);
     setText(currentTarget, amountText);
     setText(targetTarget, goalUnset ? '' : (targetText ? '/ ' + targetText : ''));
-    setText(pctTarget, goalUnset
-      ? (SERVICE_STR[lang()] || SERVICE_STR.fr).goalUnset
-      : pctText + ' ' + (GOAL_STR[lang()] || GOAL_STR.fr).reached);
+    if (goalUnset) {
+      if (pctTarget) delete pctTarget.dataset.numericPhrase;
+      setText(pctTarget, (SERVICE_STR[lang()] || SERVICE_STR.fr).goalUnset);
+    } else setNumericPhrase(pctTarget, pctText, (GOAL_STR[lang()] || GOAL_STR.fr).reached, false);
     if (fillTarget) {
       var width = goalUnset ? '0%' : (goalFill ? goalFill.style.width : pctText);
       if (fillTarget.style.width !== width) fillTarget.style.width = width;
     }
     if (restTarget) {
       var remaining = goalUnset ? 0 : Math.max(0, numberFrom(targetText) - numberFrom(amountText));
-      setText(restTarget, remaining ? (GOAL_STR[lang()] || GOAL_STR.fr).rest + ' ' + (window.KiwiNumber?.number(remaining) || Math.round(remaining).toLocaleString('fr-FR')) + ' MAD' : '');
+      if (remaining) setNumericPhrase(restTarget, (window.KiwiNumber?.number(remaining) || String(Math.round(remaining))) + ' MAD', (GOAL_STR[lang()] || GOAL_STR.fr).rest, true);
+      else { delete restTarget.dataset.numericPhrase; setText(restTarget, ''); }
     }
 
     /* Miroir des comparaisons du panneau masqué. On recopie le libellé et la
