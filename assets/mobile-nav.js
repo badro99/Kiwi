@@ -277,7 +277,8 @@
 
     /* Tapping a destination inside the menu closes the menu. */
     if (sidebar) {
-      sidebar.addEventListener('click', (e) => {
+      window.addEventListener('click', (e) => {
+        if (!sidebar.contains(e.target)) return;
         if (e.target.closest('nav a[data-nav], [data-action="clients-directory"]') || e.target.closest('.merchant')) {
           setTimeout(() => { closeMenu(); syncMenuAria(); }, 60);
         }

@@ -59,4 +59,5 @@ ok(!css.includes("border-radius:20.24px") && swift.includes("Match the unmasked 
 ok(read("assets/day-report-dash.js").includes("window.KiwiNumber?.format(v") && read("assets/day-report-dash.js").includes('<bdi dir="ltr"><b>'), "daily report uses shared display money and isolates signed percentages");
 ok(/\.topbar \.ai-btn\{[^}]*height:44px!important;min-height:44px!important/.test(css), "Kiwi AI header entry meets the 44 point touch target");
 ok(runtime.includes("var dark = setup || inkLock ||"), "ink lock screens keep readable status text in light appearance");
+ok(read("assets/mobile-nav.js").includes("if (!sidebar.contains(e.target)) return;"), "window capture dismisses navigation before document-level destination interception");
 console.log(`native-pass7-test: ${checks} checks passed`);
