@@ -114,4 +114,12 @@ ok(/\.acts \.approve,\.acts \.dismiss,\.cd-exp,\.eq-icon-btn\)\{min-height:44px/
 ok(!/maximum-scale/.test(serveur) && !/maximum-scale/.test(cuisine), 'Team and Kitchen allow pinch zoom');
 ok(/class="mode-selector" role="group"/.test(caisse), 'till mode pills are a group of toggles, not a tablist');
 
+// iOS swipe from the leading edge = back
+const swipe = runtime.slice(runtime.indexOf('function swipeBackTarget'), runtime.indexOf('function nativeExitCopy'));
+ok(/cap\.getPlatform\(\) !== 'ios'\) return;/.test(swipe) && /initNativeSwipeBack\(\);/.test(runtime), 'edge swipe back is wired on iOS only (Android keeps its back button)');
+ok(/kiwi-native-privacy/.test(swipe) && /#cp-pin-screen,\.kiwi-menu/.test(swipe) && /kw-menu-open/.test(swipe), 'swipe back never dismisses the AI consent, a PIN gate or the menu');
+ok(!/exitApp|history\.back/.test(swipe), 'swipe back never leaves the app or the page');
+ok(/td-back/.test(swipe) && /vrap-back-board/.test(swipe) && /SWIPE_STEP_BACK = .#rf-back,#ho-verify-back,#or-btn-back./.test(runtime), 'swipe back covers Team table detail, the takeaway builder and in-sheet steps');
+ok(/dir'\) === 'rtl'/.test(swipe) && /prefers-reduced-motion: reduce/.test(swipe), 'swipe back mirrors in Arabic and respects Reduce Motion');
+
 console.log(`\nnative-pass4-test · ${checks} checks green`);

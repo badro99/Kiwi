@@ -316,6 +316,109 @@
     return true;
   }
 
+  /* iOS edge swipe = back. Android has the system back button (handleNativeBack);
+     iOS has no such key, so a pushed screen or a sheet needs the gesture people
+     expect: drag from the leading edge, the panel follows the finger, release
+     past a third of the width (or with a flick) to go back, otherwise it springs
+     home. Only where "back" has a meaning: the top drawer, modal or full-screen
+     layer (a step inside it first, when it shows its own back button), the Team
+     table detail and the takeaway order builder. Never on a gate, a PIN screen,
+     the AI consent sheet or the menu, and never to leave the app. */
+  var SWIPE_EDGE = 24;
+  var SWIPE_STEP_BACK = '#rf-back,#ho-verify-back,#or-btn-back';
+  function visibleNode(node) {
+    if (!node || node.hidden) return false;
+    var style = getComputedStyle(node);
+    return style.display !== 'none' && style.visibility !== 'hidden' && node.getClientRects().length > 0;
+  }
+  function swipeBackTarget() {
+    var body = document.body;
+    if (!body || document.querySelector('.kiwi-native-privacy')) return null;
+    if (body.classList.contains('nav-open') || body.classList.contains('kw-menu-open') || body.classList.contains('kiwi-native-menu-open')) return null;
+    var layers = openNativeLayers().filter(function (node) { return !node.matches('#cp-pin-screen,.kiwi-menu'); });
+    if (layers.length) {
+      var layer = layers[layers.length - 1];
+      var step = Array.prototype.slice.call(layer.querySelectorAll(SWIPE_STEP_BACK)).filter(visibleNode)[0];
+      var panel = layer.querySelector('.kiwi-drawer,.kiwi-modal,.modal,.drawer') || layer;
+      if (step) return { panel: panel, step: true, run: function () { step.click(); } };
+      return { panel: panel, run: function () { dismissNativeLayer(layer); } };
+    }
+    var table = document.querySelector('#screen-table.is-active');
+    var tableBack = document.getElementById('td-back');
+    if (table && visibleNode(tableBack)) return { panel: table, run: function () { tableBack.click(); } };
+    var builder = document.getElementById('vrap-builder');
+    var builderBack = document.getElementById('vrap-back-board');
+    if (builder && !builder.hidden && builderBack) return { panel: builder, run: function () { builderBack.click(); } };
+    return null;
+  }
+  function initNativeSwipeBack() {
+    if (!cap || !cap.getPlatform || cap.getPlatform() !== 'ios') return;
+    var reduce = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+    var g = null;
+    function reset(panel, animate) {
+      if (!panel) return;
+      if (animate && !(reduce && reduce.matches)) {
+        panel.style.transition = 'transform 310ms cubic-bezier(0.34, 1.45, 0.5, 1)';
+        panel.style.transform = 'translate3d(0,0,0)';
+        setTimeout(function () { panel.style.removeProperty('transition'); panel.style.removeProperty('transform'); }, 330);
+      } else {
+        panel.style.removeProperty('transition');
+        panel.style.removeProperty('transform');
+      }
+    }
+    document.addEventListener('touchstart', function (event) {
+      g = null;
+      if (!event.touches || event.touches.length !== 1) return;
+      var t = event.touches[0];
+      var rtl = root.getAttribute('dir') === 'rtl';
+      if (rtl ? t.clientX < window.innerWidth - SWIPE_EDGE : t.clientX > SWIPE_EDGE) return;
+      var target = swipeBackTarget();
+      if (!target) return;
+      g = { x: t.clientX, y: t.clientY, t: Date.now(), sign: rtl ? -1 : 1, dx: 0, engaged: false, target: target };
+    }, { passive: true, capture: true });
+    document.addEventListener('touchmove', function (event) {
+      if (!g || !event.touches || !event.touches[0]) return;
+      var t = event.touches[0];
+      var dx = (t.clientX - g.x) * g.sign;
+      var dy = t.clientY - g.y;
+      if (!g.engaged) {
+        if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) { g = null; return; }
+        if (dx < 10) return;
+        g.engaged = true;
+        g.target.panel.style.transition = 'none';
+      }
+      if (event.cancelable) event.preventDefault();
+      g.dx = Math.max(0, dx);
+      g.target.panel.style.transform = 'translate3d(' + (g.dx * g.sign) + 'px,0,0)';
+    }, { passive: false, capture: true });
+    function finish() {
+      if (!g) return;
+      var s = g; g = null;
+      if (!s.engaged) return;
+      var panel = s.target.panel;
+      var width = panel.getBoundingClientRect().width || window.innerWidth;
+      var speed = s.dx / Math.max(1, Date.now() - s.t);
+      var commit = s.dx > width / 3 || (speed > 0.5 && s.dx > 40);
+      if (!commit || s.target.step) {
+        reset(panel, true);
+        if (commit) s.target.run();
+        return;
+      }
+      call(haptics, 'impact', { style: 'LIGHT' });
+      if (reduce && reduce.matches) { reset(panel, false); s.target.run(); return; }
+      panel.style.transition = 'transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1)';
+      panel.style.transform = 'translate3d(' + (width * s.sign) + 'px,0,0)';
+      setTimeout(function () {
+        s.target.run();
+        /* Drawers remove themselves; screens and veils stay in the DOM and
+           must not keep the off-screen transform for their next opening. */
+        setTimeout(function () { reset(panel, false); }, 320);
+      }, 190);
+    }
+    document.addEventListener('touchend', finish, { passive: true, capture: true });
+    document.addEventListener('touchcancel', function () { if (g && g.engaged) reset(g.target.panel, true); g = null; }, { passive: true, capture: true });
+  }
+
   function nativeExitCopy() {
     var lang = String(root.lang || 'fr').toLowerCase();
     if (lang.indexOf('ar') === 0) return 'هل تريد إغلاق Kiwi Pro؟';
@@ -1300,6 +1403,7 @@
     });
     app.addListener('backButton', handleNativeBack);
   }
+  initNativeSwipeBack();
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () { initNativeGateExits(); initNativeTillUx(); initNativeHostWorkspace(); polishNativeWorkspaceCopy(); maybePromptBiometricUnlock(); });
   } else {
