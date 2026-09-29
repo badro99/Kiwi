@@ -582,6 +582,9 @@ html.kiwi-native .tx-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:
 html.kiwi-native .tx-detail-grid dt{color:var(--n-500)}
 html.kiwi-native .tx-detail-grid dd{margin:0;text-align:end;overflow-wrap:anywhere}
 html.kiwi-native .tx-update{height:44px;white-space:nowrap;margin-bottom:8px}
+html.kiwi-native .kdr-kpi.is-lead .kdr-kpi-v{font-size:clamp(17px,4.8vw,21px)!important;white-space:nowrap!important;letter-spacing:-.035em!important}
+html.kiwi-native .kdr-kpi.is-lead .kdr-kpi-v small{font-size:.52em!important;margin-inline-start:3px!important;white-space:nowrap!important}
+html.kiwi-native .kdr-nav .kdr-day span{display:none!important}
 html.kiwi-native .tx-update-status{box-sizing:border-box;display:flex;align-items:center;width:max-content;min-height:44px;margin:0 0 8px;padding:0;color:var(--n-500);font-size:12.5px;line-height:1.4}
 html.kiwi-native body.kiwi-native-owner[data-kno-page="page"] .dash-genpage .genpage-head{display:none!important}
 html.kiwi-native [data-action="tx-daterange"]{flex:0 0 auto!important;border-radius:999px!important;border:1px solid var(--n-200)!important;background:var(--paper-soft)!important;box-shadow:none!important;min-height:36px!important;white-space:nowrap!important}

@@ -731,7 +731,7 @@
     var baseBasket = base.txns ? base.gross / base.txns : 0;
     var ec = r.cash && r.cash.ecart;
     var kpis = '<div class="kdr-kpis">'
-      + kpi(T(L.net), money(r.net) + ' MAD', 'lead', '', delta(r.net, base.net, baseDay, base.has))
+      + kpi(T(L.net), money(r.net), 'lead', 'MAD', delta(r.net, base.net, baseDay, base.has))
       + kpi(T(L.txns), String(r.txns), null, '', delta(r.txns, base.txns, baseDay, base.has))
       + kpi(T(L.basket), money(r.basket), null, 'MAD', delta(r.basket, baseBasket, baseDay, base.has && base.txns > 0))
       + (r.cash && r.cash.counted != null

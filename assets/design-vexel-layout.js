@@ -802,7 +802,15 @@
     var source = card.querySelector(':scope > .d');
     if (!source) return;
     var baseline = card.querySelector('.vexel-kpi-baseline');
-    if (baseline) return;
+    /* The range selector owns the comparison period. A Vexel-decorated tile
+     * can outlive a range repaint, so refresh its caption even when the
+     * value/delta have already been moved into the baseline wrapper. */
+    var selectedComparison = window.KiwiDateRange?.kpiComparisonLabel?.() || '';
+    if (baseline) {
+      var existingCaption = card.querySelector('.vexel-kpi-comparison');
+      setText(existingCaption, source.textContent.trim() ? selectedComparison : '');
+      return;
+    }
 
     var text = (source.textContent || '').replace(/\s+/g, ' ').trim();
     var match = text.match(/^([^\s]+(?:\s*%)?|—)(?:\s+(.*))?$/);
@@ -823,7 +831,7 @@
     /* Delta vide = aucune période de comparaison (dateRange.js laisse la ligne
      * blanche). La légende par défaut annoncerait alors une comparaison qui n'a
      * pas eu lieu, sous une valeur absente. */
-    setText(compareNode, text ? (comparison || 'par rapport à la période précédente') : '');
+    setText(compareNode, text ? (selectedComparison || comparison || 'par rapport à la période précédente') : '');
     card.insertBefore(compareNode, card.querySelector(':scope > .sp'));
   }
 

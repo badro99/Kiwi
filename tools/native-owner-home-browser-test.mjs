@@ -238,6 +238,9 @@ try {
     await sleep(2400);
     await click(page, '.dr-pill[data-range="septJours"]');
     await sleep(1400);
+    const comparisons = await page.evaluate(() => [...document.querySelectorAll('.vexel-kpi-comparison')]
+      .map((node) => node.textContent.trim()).filter(Boolean));
+    check(comparisons.length > 0 && comparisons.every((label) => label === 'vs previous 7 days'), 'KPI comparison captions follow the selected 7-day range');
     const ticks = await page.evaluate(() => [...document.querySelectorAll('.hero-today svg.chart-wrap text')].map((t) => t.textContent.trim()).filter(Boolean));
     check(ticks.length > 0 && !ticks.some((t) => /^(Dim|Lun|Mar|Mer|Jeu|Ven|Sam)\b/.test(t)), `English 7-day ticks are English (${ticks.slice(0, 3).join(', ')})`);
     await ctx.close();

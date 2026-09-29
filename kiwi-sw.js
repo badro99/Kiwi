@@ -137,7 +137,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/dateRange.js?v=40',
+  '/assets/dateRange.js?v=41',
   '/assets/mobile-nav.js?v=3',
   '/assets/liquid-lens.js?v=1',
   '/assets/pages.js?v=8',
@@ -171,7 +171,7 @@ var SHELL = [
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=19',
   '/assets/report.js?v=5',
-  '/assets/day-report-dash.js?v=17',
+  '/assets/day-report-dash.js?v=18',
   '/assets/day-report-export.js?v=8',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.

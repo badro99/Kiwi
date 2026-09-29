@@ -341,7 +341,7 @@
 
   const KPI_DELTA_SUFFIX = {
     fr: { aujourdhui: 'vs hier', hier: 'vs avant-hier', septJours: 'vs 7 jours préc.', trenteJours: 'vs 30 jours préc.', moisDernier: 'vs mois préc.', trimestre: 'vs trimestre préc.', annee: 'vs année préc.', personnalise: 'vs hier' },
-    en: { aujourdhui: 'vs yesterday', hier: 'vs day before', septJours: 'vs prev. 7 days', trenteJours: 'vs prev. 30 days', moisDernier: 'vs prev. month', trimestre: 'vs prev. quarter', annee: 'vs prev. year', personnalise: 'vs yesterday' },
+    en: { aujourdhui: 'vs yesterday', hier: 'vs day before', septJours: 'vs previous 7 days', trenteJours: 'vs previous 30 days', moisDernier: 'vs previous month', trimestre: 'vs previous quarter', annee: 'vs previous year', personnalise: 'vs previous period' },
     ar: { aujourdhui: 'مقابل أمس', hier: 'مقابل أول أمس', septJours: 'مقابل 7 أيام السابقة', trenteJours: 'مقابل 30 يومًا السابقة', moisDernier: 'مقابل الشهر السابق', trimestre: 'مقابل الربع السابق', annee: 'مقابل السنة السابقة', personnalise: 'مقابل أمس' },
   };
 
@@ -5705,6 +5705,7 @@
    * dashboard renderer fails during first paint. */
   window.KiwiDateRange = {
     getDateRange, setDateRange, subscribe, tickLiveRevenue,
+    kpiComparisonLabel: () => KPI_DELTA_SUFFIX[getLang()]?.[currentRange] || KPI_DELTA_SUFFIX.fr[currentRange],
     mountDaySelector: mountDaySelector,
     selectedBusinessDay: (range = currentRange) => {
       // Same civil timezone/cutoff as functions/api/_business-day.js, including

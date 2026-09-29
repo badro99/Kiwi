@@ -110,4 +110,9 @@ ok(/\[data-action="tx-daterange"\]\{[^}]*border-radius:999px!important/.test(css
 ok(/data-payment-kind="\$\{r\.sale\?\.method === 'wallet' \? 'wallet'/.test(pagesPro) && /account_balance_wallet\.svg/.test(css), 'wallet transactions have a Material wallet icon on phone');
 ok(/class="tx-update-status" data-tx-refresh role="status"/.test(pagesPro) && /button\.dataset\.action='tx-refresh'/.test(pagesPro), 'current orders are status text and only changed orders create a refresh action');
 
+// #0124 · comparison captions come from the selected range, and MAD fits.
+ok(/kpiComparisonLabel: \(\) => KPI_DELTA_SUFFIX/.test(dateRange) && /selectedComparison = window\.KiwiDateRange\?\.kpiComparisonLabel/.test(read('assets/design-vexel-layout.js')), 'KPI captions use the selected range as their source of truth');
+ok(/kpi\(T\(L\.net\), money\(r\.net\), 'lead', 'MAD'/.test(read('assets/day-report-dash.js')) && /\.kdr-kpi\.is-lead \.kdr-kpi-v\{[^}]*white-space:nowrap!important/.test(css), 'day report keeps net amount and smaller MAD unit on one line');
+ok(/\.kdr-nav \.kdr-day span\{display:none!important/.test(css), 'day report does not repeat Today or Yesterday beside the selected date');
+
 console.log(`\nnative-pass5-test · ${checks} checks green`);
