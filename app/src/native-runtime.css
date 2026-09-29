@@ -955,3 +955,5 @@ html.kiwi-native:not(.kiwi-launch-ready){background:#0A1612}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .vexel-goal-foot{white-space:normal;flex-wrap:wrap}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .vexel-goal-compare:empty{display:none}
 }
+/* Pass 7: card / cash is a numeric pair, not two RTL words. */
+html.kiwi-native body.kiwi-native-owner:not(#kno) .kpi-m[data-kpi="ratio"] .v{direction:ltr!important;unicode-bidi:isolate;text-align:start}
