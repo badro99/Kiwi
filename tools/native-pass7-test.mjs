@@ -63,4 +63,5 @@ ok(read("assets/mobile-nav.js").includes("if (!sidebar.contains(e.target)) retur
 ok(read("assets/conformite.js").includes("window.KiwiNumber?.number(Math.round(n))") && read("assets/conformite.js").includes('<bdi dir="ltr">${n >= 0'), "cash-close display groups English figures and isolates signed RTL amounts without touching fiscal output");
 ok(read("assets/mobile-nav.js").includes("new MutationObserver(syncNavLabels)") && read("assets/mobile-nav.js").includes("Return to dashboard"), "navigation accessibility names follow the selected language");
 ok(read("assets/mobile-nav.js").includes("notifications.setAttribute('data-action', 'notifications')") && read("assets/z-reconciliation.js").includes('button[data-mobile-notifications]'), "translated notification labels retain a stable click action and alert badge selector");
+ok(css.includes('body.kiwi-native-owner:not(#kno) .fa-drawer .kiwi-drawer{background:#FBFAF7!important') && css.includes('.fa-drawer .kiwi-drawer{background:#131A17!important'), "AI sheets override the translucent skin with opaque light and dark surfaces");
 console.log(`native-pass7-test: ${checks} checks passed`);

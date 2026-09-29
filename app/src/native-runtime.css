@@ -957,3 +957,7 @@ html.kiwi-native:not(.kiwi-launch-ready){background:#0A1612}
 }
 /* Pass 7: card / cash is a numeric pair, not two RTL words. */
 html.kiwi-native body.kiwi-native-owner:not(#kno) .kpi-m[data-kpi="ratio"] .v{direction:ltr!important;unicode-bidi:isolate;text-align:start}
+
+/* Pass 7: the Relevé AI skin outranks the generic opaque-sheet rule. */
+html.kiwi-native body.kiwi-native-owner:not(#kno) .fa-drawer .kiwi-drawer{background:#FBFAF7!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) body.kiwi-native-owner:not(#kno) .fa-drawer .kiwi-drawer{background:#131A17!important}
