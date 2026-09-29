@@ -4,6 +4,7 @@ import SwiftUI
 import UIKit
 import WebKit
 
+private let kiwiLaunchGround = Color(red: 10 / 255, green: 22 / 255, blue: 18 / 255)
 private let kiwiInk = Color(red: 10 / 255, green: 15 / 255, blue: 13 / 255)
 private let kiwiMint = Color(red: 125 / 255, green: 242 / 255, blue: 176 / 255)
 private let kiwiPaper = Color(red: 247 / 255, green: 245 / 255, blue: 240 / 255)
@@ -295,9 +296,10 @@ private struct KiwiNativeSetupRoot: View {
 
     var body: some View {
         ZStack {
-            kiwiInk.ignoresSafeArea()
+            kiwiLaunchGround.ignoresSafeArea()
             if model.context.screen == "launch" {
-                KiwiMark()
+                VStack { KiwiMark(size: 88); Spacer(minLength: 0) }
+                    .frame(maxWidth: .infinity).padding(.top, 20)
             } else {
                 setup
             }
@@ -327,8 +329,8 @@ private struct KiwiNativeSetupRoot: View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    HStack(alignment: .center, spacing: 14) {
-                        KiwiMark(size: 44)
+                    VStack(spacing: 16) {
+                        KiwiMark(size: 88).frame(maxWidth: .infinity)
                         progress
                     }
                     .padding(.bottom, dynamicTypeSize.isAccessibilitySize ? 24 : 36)
@@ -354,18 +356,14 @@ private struct KiwiNativeSetupRoot: View {
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: geometry.size.height, alignment: .top)
                 .padding(.horizontal, 22)
-                .padding(.top, 12)
+                .padding(.top, 20)
                 .padding(.bottom, 12)
             }
             .scrollDismissesKeyboardIfAvailable()
             .id(model.context.kind)
         }
         .background(
-            ZStack {
-                kiwiInk
-                RadialGradient(colors: [kiwiAtlas.opacity(0.55), .clear], center: .topTrailing, startRadius: 10, endRadius: 520)
-                RadialGradient(colors: [kiwiMint.opacity(0.08), .clear], center: .bottomLeading, startRadius: 10, endRadius: 420)
-            }.ignoresSafeArea()
+            kiwiLaunchGround.ignoresSafeArea()
         )
     }
 

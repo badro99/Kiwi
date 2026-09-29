@@ -158,6 +158,8 @@ export function build(options) {
   }
   if (!assetFiles.includes('assets/api-base.js')) errors.push('assets/api-base.js manque — le bundle ne peut pas joindre l\'API');
 
+  fs.copyFileSync(path.join(ROOT, 'app/ios/App/App/Assets.xcassets/KiwiBrandIcon.imageset/kiwi-brand@2x.png'), path.join(out, 'native-brand.png'));
+
   // Runtime et fontes strictement natifs : aucune requête Google Fonts dans l'app.
   const shellDir = path.join(ROOT, 'app', 'src');
   for (const name of NATIVE_RUNTIME) {

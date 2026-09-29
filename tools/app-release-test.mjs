@@ -145,7 +145,7 @@ check('native shells render the approved sculpted icon asset instead of a recons
 check('all Android launch assets exist at their density-specific dimensions',
   androidSplash.every(([file, width, height]) => { const size = pngSize(file); return size && size.width === width && size.height === height; }));
 check('iOS launch canvas uses Kiwi ink instead of the retired light splash',
-  launchStoryboard.includes('red="0.03921568627450980"') && launchStoryboard.includes('green="0.05882352941176471"') && launchStoryboard.includes('blue="0.05098039215686274"'));
+  launchStoryboard.includes('red="0.03921568627450980"') && launchStoryboard.includes('green="0.08627450980392157"') && launchStoryboard.includes('blue="0.07058823529411765"'));
 check('Android launch theme still owns the branded splash drawable',
   androidStyles.includes('<item name="android:background">@drawable/splash</item>'));
 check('native setup uses the vendored Material visibility and direction icons',
@@ -169,8 +169,8 @@ check('the automatic launcher keeps the branded boot stage mounted through redir
   nativeShell.includes("localStorage.removeItem('kiwi:native:identity-revoked:v1')"));
 check('the system splash hands off to the native host while the web fallback remains bounded',
   appPackage.dependencies['@capacitor/splash-screen'] === '8.0.2' &&
-  capacitorConfig.includes('launchAutoHide: true') && capacitorConfig.includes('launchShowDuration: 350') &&
-  runtime.includes("call(splashScreen, 'hide')") &&
+  capacitorConfig.includes('launchAutoHide: false') && capacitorConfig.includes('launchShowDuration: 350') &&
+  runtime.includes("call(splashScreen, 'hide', { fadeOutDuration: 120 })") &&
   runtime.includes('setTimeout(hideLaunchSplash, 8000)') && nativeShell.includes("CustomEvent('kiwi:native-ready')"));
 check('iOS setup and navigation are native SwiftUI hosts above the Capacitor workspace',
   swiftNativeShell.includes('UIHostingController<KiwiNativeSetupRoot>') &&

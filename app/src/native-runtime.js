@@ -38,7 +38,9 @@
       return Promise.resolve(plugin[method](args || {})).catch(function () { return null; });
     } catch (_) { return Promise.resolve(null); }
   }
+  var launchReady = false, pendingHostPayload = null;
   function nativeHostPost(payload) {
+    if (payload.screen === 'workspace' && !launchReady) { pendingHostPayload = payload; return true; }
     try {
       var ios = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.kiwiShell;
       if (ios && typeof ios.postMessage === 'function') {
@@ -80,21 +82,32 @@
     if (splashHidden) return;
     splashHidden = true;
     clearTimeout(splashFallback);
-    var hide = function () { call(splashScreen, 'hide'); };
-    /* Two frames guarantee the parsed workspace has submitted one real paint
-       before the native launch layer fades. The bounded fallback above means
-       a broken page can never trap the merchant behind the splash forever. */
-    if (typeof window.requestAnimationFrame === 'function') {
-      window.requestAnimationFrame(function () { window.requestAnimationFrame(hide); });
-    } else setTimeout(hide, 0);
+    // Layout is final before either native layer is removed. Two animation
+    // frames let WebKit submit it to the compositor, including decoded imagery.
+    requestAnimationFrame(function () { requestAnimationFrame(function () {
+      launchReady = true;
+      root.classList.add('kiwi-launch-ready');
+      if (pendingHostPayload) nativeHostPost(pendingHostPayload);
+      call(splashScreen, 'hide', { fadeOutDuration: 120 });
+    }); });
+  }
+  function awaitLaunchPaint() {
+    var lock = document.querySelector('[data-kiwi-lock]');
+    if (lock && !root.classList.contains('kiwi-lock-ready')) {
+      var observer = new MutationObserver(function () {
+        if (root.classList.contains('kiwi-lock-ready')) { observer.disconnect(); awaitLaunchPaint(); }
+      });
+      observer.observe(root, { attributes:true, attributeFilter:['class'] });
+      return;
+    }
+    var fonts = document.fonts ? document.fonts.ready : Promise.resolve();
+    fonts.then(hideLaunchSplash);
   }
   function armLaunchHandoff() {
     var launcher = /(?:^|\/)index\.html$/.test(location.pathname) || location.pathname === '/';
-    if (launcher) {
-      window.addEventListener('kiwi:native-ready', hideLaunchSplash, { once: true });
-    } else if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', hideLaunchSplash, { once: true });
-    } else hideLaunchSplash();
+    if (launcher) window.addEventListener('kiwi:native-ready', awaitLaunchPaint, { once:true });
+    else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', awaitLaunchPaint, { once:true });
+    else awaitLaunchPaint();
   }
   armLaunchHandoff();
   function secureGet(key) { return call(socket, 'secureGet', { key: key }).then(function (r) { return r && typeof r.value === 'string' ? r.value : null; }); }
@@ -1187,13 +1200,16 @@
      ours mounts: for about a second an English phone read "Bienvenue" over
      four empty boxes. Keep its content hidden until both are in place. */
   function revealOwnerLockWhenReady() {
-    var reveal = function () { root.classList.add('kiwi-lock-ready'); };
-    var langDone = false, padDone = false;
-    var check = function () { if (langDone && padDone) reveal(); };
-    window.addEventListener('kiwi:langchange', function () { langDone = true; check(); });
-    if (String(root.lang || '').slice(0, 2) !== 'fr' || /^fr/i.test(navigator.language || '')) langDone = true;
-    setTimeout(reveal, 1200);
-    return function () { padDone = true; check(); };
+    return function () {
+      // i18n is loaded before this deferred runtime. Explicit font loads include
+      // the hidden lock so its Arabic metrics cannot arrive after it appears.
+      var fonts = document.fonts;
+      var ready = fonts ? Promise.all([
+        fonts.load('400 16px "Inter Tight"'), fonts.load('600 30px "Inter Tight"'),
+        fonts.load('400 16px "IBM Plex Sans Arabic"'), fonts.load('600 30px "IBM Plex Sans Arabic"')
+      ]) : Promise.resolve();
+      ready.catch(function () {}).then(function () { root.classList.add('kiwi-lock-ready'); });
+    };
   }
   function initNativeOwnerKeypad() {
     var padMounted = revealOwnerLockWhenReady();

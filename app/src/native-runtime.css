@@ -925,3 +925,24 @@ html.kiwi-native[data-theme="dark"] .kt-pd-add{color:#7DF2B0}
   html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table.sc-table tr>td:nth-child(3){grid-column:3;grid-row:2;justify-self:end;font:600 14px/1.2 "Inter Tight",sans-serif!important;color:var(--kno-ink)!important;font-variant-numeric:tabular-nums}
   html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table.sc-table tr.sc-hide{display:none!important}
 }
+
+/* Pass 7: one invariant launch canvas and mark, independent of workspace theme. */
+html.kiwi-native:not(.kiwi-launch-ready){background:#0A1612}
+@media(max-width:600px){
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock{background:#0A1612!important;color:#F7F5F0!important;padding:calc(var(--kiwi-safe-top) + 20px) 22px calc(var(--kiwi-safe-bottom) + 16px)!important;--kno-ink:#F7F5F0;--kno-ink-2:#ACB8B1;--kno-fill:rgba(247,245,240,.09)}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock::before,html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock::after{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-lock-inner{padding-top:0!important;transition:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock-brand{width:88px!important;height:88px!important;min-height:88px;flex:none;margin:0 auto 24px!important;background:url(native-brand.png) center/88px 88px no-repeat;border-radius:20.24px;overflow:hidden}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock-brand>*{display:none!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock-title{font-size:30px!important;line-height:40px!important;color:#F7F5F0!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock-sub{line-height:24px!important;margin-bottom:0!important}
+}
+@media(max-width:600px){
+  html.kiwi-native body:not(#kno) :is(.screen-pin,.pin-screen,#pair){background:#0A1612!important;color:#F7F5F0!important;--ink:#F7F5F0;--n-500:#ACB8B1;--n-600:#ACB8B1;--surface:#0A1612;justify-content:flex-start!important;padding-top:calc(var(--kiwi-safe-top) + 20px)!important}
+  html.kiwi-native body:not(#kno) .pin-screen .pin-card{margin-block:0;background:transparent!important;border:0;box-shadow:none;padding-top:0}
+  html.kiwi-native body:not(#kno) :is(.screen-pin,.pin-screen) .pin-brand{display:block!important;width:88px!important;height:88px!important;flex:none;margin:0 auto 16px!important;background:url(native-brand.png) center/88px 88px no-repeat;border-radius:20.24px;overflow:hidden}
+  html.kiwi-native body:not(#kno) :is(.screen-pin,.pin-screen) .pin-brand img{display:none!important}
+  html.kiwi-native body:not(#kno) #pair .kw{flex-direction:column;gap:16px;height:auto;flex:none;margin:0 auto 20px}
+  html.kiwi-native body:not(#kno) #pair .kw::before{content:"";display:block;width:88px;height:88px;background:url(native-brand.png) center/88px 88px no-repeat;border-radius:20.24px}
+  html.kiwi-native body:not(#kno) #pair .kw img{display:none}
+}

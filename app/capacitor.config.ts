@@ -22,6 +22,7 @@ const config: CapacitorConfig = {
   ios: {
     // La caisse gère elle-même les zones sûres (viewport-fit=cover déjà posé).
     contentInset: 'never',
+    backgroundColor: '#0A1612',
     // Pas de rebond élastique derrière une caisse : le contenu est une app.
     scrollEnabled: true,
   },
@@ -34,15 +35,13 @@ const config: CapacitorConfig = {
     // Resize the WKWebView when typing; keep the accessory Done control for
     // numeric fields, which have no Return key.
     Keyboard: { resize: 'native' },
-    // The OS launch screen now hands off to the native SwiftUI/Compose shell,
-    // which stays above the WebView until setup or the remembered workspace is
-    // ready. Auto-hide must remain enabled: otherwise the system splash masks
-    // that native shell and can strand the merchant on the launch artwork.
+    // Keep the matching launch canvas until the actual destination has painted.
+    // The web runtime waits for local fonts and the owner keypad before hiding it.
     SplashScreen: {
-      launchAutoHide: true,
+      launchAutoHide: false,
       launchShowDuration: 350,
       launchFadeOutDuration: 120,
-      backgroundColor: '#0A0F0D',
+      backgroundColor: '#0A1612',
       showSpinner: false,
     },
   },

@@ -5,6 +5,15 @@ final class KiwiBridgeViewController: CAPBridgeViewController {
     var safeAreaInsetsDidChange: ((UIEdgeInsets) -> Void)?
     private var publishedSafeAreaInsets = UIEdgeInsets.zero
 
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        let launchGround = UIColor(red: 10 / 255, green: 22 / 255, blue: 18 / 255, alpha: 1)
+        view.backgroundColor = launchGround
+        webView?.isOpaque = false
+        webView?.backgroundColor = launchGround
+        webView?.scrollView.backgroundColor = launchGround
+    }
+
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         let insets = view.safeAreaInsets
@@ -24,7 +33,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window = UIWindow(windowScene: windowScene)
         let bridgeViewController = KiwiBridgeViewController()
         window?.rootViewController = bridgeViewController
-        window?.makeKeyAndVisible()
+        window?.backgroundColor = UIColor(red: 10 / 255, green: 22 / 255, blue: 18 / 255, alpha: 1)
 
         // The embedded workspaces use real text fields (notes, customer search,
         // counts). Let a downward drag dismiss the keyboard progressively, like
@@ -37,6 +46,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         nativeShell.attach(to: bridgeViewController)
         nativeShell.updateSafeAreaInsets(bridgeViewController.view.safeAreaInsets)
         self.nativeShell = nativeShell
+        window?.makeKeyAndVisible()
 
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
     }
