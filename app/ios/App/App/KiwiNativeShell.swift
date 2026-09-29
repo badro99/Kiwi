@@ -260,7 +260,7 @@ private struct KiwiMark: View {
             .interpolation(.high)
             .aspectRatio(contentMode: .fit)
             .frame(width: size, height: size)
-            .clipShape(RoundedRectangle(cornerRadius: size * 0.23, style: .continuous))
+            .clipped() // Match the unmasked LaunchScreen asset, including its corners.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Kiwi Pro")
     }
