@@ -31,6 +31,9 @@ html.kiwi-native .rp-item,html.kiwi-native .rp-summary-row,html.kiwi-native .pay
 html.kiwi-native .team-trigger,html.kiwi-native .mode-pill,html.kiwi-native .cat-pill,html.kiwi-native .floor-pill,html.kiwi-native .vrap-back-btn,html.kiwi-native .mlibre-toggle,html.kiwi-native .meta-btn,html.kiwi-native .qty-btn{min-height:44px}
 html.kiwi-native .qty-btn{min-width:44px}
 html.kiwi-native :is(button,a,input,select,textarea,[tabindex]):focus-visible{outline:3px solid #0B6E4F;outline-offset:3px}
+/* Search fields whose rounded wrapper draws the ring (:focus-within) must not
+   also paint a square outline inside it. */
+html.kiwi-native :is(.rf-search,.jr-search) input:focus-visible{outline:none}
 html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) :is(button,a,input,select,textarea,[tabindex]):focus-visible{outline-color:#7DF2B0}
 html.kiwi-native :is(.pin-screen,.clockin-screen){box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;padding:calc(var(--kiwi-safe-top) + 20px) max(20px,var(--kiwi-safe-right)) calc(var(--kiwi-safe-bottom) + 20px) max(20px,var(--kiwi-safe-left))}
 html.kiwi-native .clockin-screen{justify-content:flex-start;gap:clamp(16px,3vh,28px)}
@@ -306,14 +309,14 @@ html.kiwi-native [data-dr-label]{display:none!important}
    shelf, and product tiles that read name first, price second. */
 @media (max-width:900px),(orientation:landscape) and (max-width:1024px) and (max-height:600px){
   html.kiwi-native body.kiwi-native-till:not(#kno):not(.ticket-open) .rightpanel{--rp-peek-h:68px;background:transparent!important;border-color:transparent!important;box-shadow:none!important;clip-path:inset(0 0 calc(100% - var(--rp-peek-h)) 0)!important}
-  html.kiwi-native body.kiwi-native-till:not(#kno):not(.ticket-open) .rp-peek{box-sizing:border-box;display:flex!important;align-items:center;gap:12px;height:56px;min-height:56px;margin:4px 12px 8px;padding:0 20px 0 8px;border:0;border-radius:999px;background:#0A0F0D;color:#F7F5F0;box-shadow:0 12px 28px -10px rgba(10,15,13,.55),0 2px 6px rgba(10,15,13,.18);font:600 calc(16px * var(--type-scale,1))/1 "Inter Tight",sans-serif;transition:transform .18s cubic-bezier(.34,1.45,.5,1)}
+  html.kiwi-native body.kiwi-native-till:not(#kno):not(.ticket-open) .rp-peek{box-sizing:border-box;display:flex!important;align-items:center;gap:12px;height:56px;min-height:56px;margin:4px 12px 8px;padding:0 20px 0 8px;border:0;border-radius:999px;background:#0B6E4F;color:#F7F5F0;box-shadow:0 12px 28px -10px rgba(5,59,44,.55),0 2px 6px rgba(10,15,13,.18);font:600 calc(16px * var(--type-scale,1))/1 "Inter Tight",sans-serif;transition:transform .18s cubic-bezier(.34,1.45,.5,1)}
   html.kiwi-native body.kiwi-native-till:not(#kno):not(.ticket-open) .rp-peek:active{transform:scale(.97)}
   html.kiwi-native body.kiwi-native-till:not(#kno) .rp-peek::after{content:none!important}
   html.kiwi-native body.kiwi-native-till:not(#kno) .rp-peek>span:first-child{display:inline-flex;align-items:center;gap:10px;flex:1;min-width:0;color:inherit}
-  html.kiwi-native body.kiwi-native-till:not(#kno) .rp-peek>span:first-child::before{content:attr(data-count);min-width:40px;height:40px;padding:0 6px;box-sizing:border-box;display:grid;place-items:center;border-radius:999px;background:#7DF2B0;color:#0A0F0D;font:700 15px/1 "Inter Tight",sans-serif;font-variant-numeric:tabular-nums}
+  html.kiwi-native body.kiwi-native-till:not(#kno) .rp-peek>span:first-child::before{content:attr(data-count);min-width:40px;height:40px;padding:0 6px;box-sizing:border-box;display:grid;place-items:center;border-radius:999px;background:#F7F5F0;color:#053B2C;font:700 15px/1 "Inter Tight",sans-serif;font-variant-numeric:tabular-nums}
   html.kiwi-native body.kiwi-native-till:not(#kno) #rp-peek-total{color:inherit;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
   html.kiwi-native[dir="rtl"] body.kiwi-native-till:not(#kno) .rp-peek{padding:0 8px 0 20px;font-family:"IBM Plex Sans Arabic","Inter Tight",sans-serif}
-  html.kiwi-native:is([data-caisse-theme="dark"]) body.kiwi-native-till:not(#kno):not(.ticket-open) .rp-peek{background:#F7F5F0;color:#0A0F0D}
+  html.kiwi-native:is([data-caisse-theme="dark"]) body.kiwi-native-till:not(#kno):not(.ticket-open) .rp-peek{background:#0B6E4F;color:#F7F5F0}
 
   html.kiwi-native body.kiwi-native-till:not(#kno) .main-head .main-title{font:600 calc(28px * var(--type-scale,1))/1.1 "Inter Tight",sans-serif!important;letter-spacing:-.02em}
   html.kiwi-native body.kiwi-native-till:not(#kno) .menu-grid{gap:8px!important;grid-auto-rows:max-content!important;align-content:start!important;padding:2px 2px 12px!important}
@@ -402,7 +405,7 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) :is(.p-hero,.cd-kpi,.kdr-strip)::before,html.kiwi-native body.kiwi-native-owner:not(#kno) :is(.p-hero,.cd-kpi,.kdr-strip)::after{display:none!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) :is(.p-hero,.cd-kpi) .l{font:500 13px/1.25 "Inter Tight",sans-serif!important;letter-spacing:0!important;text-transform:none!important;color:var(--kno-ink-2)!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) :is(.p-hero,.cd-kpi) .l::before{display:none!important}
-  html.kiwi-native body.kiwi-native-owner:not(#kno) .cd-new{background:var(--kno-ink)!important;color:var(--kno-bg)!important;box-shadow:none!important;border:0!important;border-radius:999px!important;font-weight:600!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .cd-new{background:#0B6E4F!important;color:#F7F5F0!important;box-shadow:none!important;border:0!important;border-radius:999px!important;font-weight:600!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .cd-exp:not(.cd-new){border-radius:50%!important;background:var(--kno-fill)!important;border:0!important;color:var(--kno-ink)!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .cd-search{border-radius:12px!important;border:0!important;background:var(--kno-fill)!important;min-height:44px}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .cd-segs{border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;overflow-x:auto;scrollbar-width:none}
@@ -415,7 +418,9 @@ html.kiwi-native [data-dr-label]{display:none!important}
 }
 @media (max-width:600px){
   /* The full menu drawer starts under the status bar, not behind the clock. */
-  html.kiwi-native body.kiwi-native-owner:not(#kno) #kw-sidebar{padding-top:calc(var(--kiwi-safe-top) + 6px)!important;padding-bottom:calc(var(--kiwi-safe-bottom) + 12px)!important;box-sizing:border-box}
+  /* The status-bar band is a border, outside the scrollport, so the drawer's
+     rows stop under the clock instead of scrolling behind it. */
+  html.kiwi-native body.kiwi-native-owner:not(#kno) #kw-sidebar{border-top:var(--kiwi-safe-top) solid #05090B!important;padding-top:6px!important;padding-bottom:calc(var(--kiwi-safe-bottom) + 12px)!important;box-sizing:border-box}
 }
 @media (max-width:600px){
   /* Inner pages clip main on the x axis; that made the sticky header park
@@ -453,7 +458,7 @@ html.kiwi-native [data-dr-label]{display:none!important}
 .kiwi-native-backspace{display:inline-block;width:26px;height:26px;vertical-align:middle;background:currentColor;mask:url(assets/icons/material/backspace.svg) center/contain no-repeat;-webkit-mask:url(assets/icons/material/backspace.svg) center/contain no-repeat}
 @media (max-width:600px){
   html.kiwi-native body.kiwi-native-owner:not(#kno) .kob-root{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scroll-padding-block:var(--kiwi-safe-top) var(--kiwi-safe-bottom)}
-  html.kiwi-native body.kiwi-native-owner:not(#kno) .kob-root::before{content:"";position:fixed;inset:0 0 auto;height:var(--kiwi-safe-top);background:var(--kno-bg);z-index:3;pointer-events:none}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kob-root::before{content:"";position:fixed;inset:0 0 auto;height:var(--kiwi-safe-top);background:transparent;-webkit-backdrop-filter:saturate(1.6) blur(18px);backdrop-filter:saturate(1.6) blur(18px);z-index:3;pointer-events:none}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .kob-card{flex-shrink:0;height:max-content;min-height:100%}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .kob-top{position:sticky;top:0;z-index:2;background:var(--kno-bg);padding-block:12px}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .kob-err{color:var(--kno-ink);font-size:14px}
@@ -479,6 +484,10 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .kno-lbl{white-space:normal;text-wrap:balance;overflow:visible;font-size:calc(12px * var(--type-scale,1))}
   html.kiwi-native[dir="rtl"] body.kiwi-native-owner:not(#kno) :is([data-rev-hero-val],[data-rev-hero-delta]>span:not(.lbl),[data-hero-delta-val],.kpi-m .d,.vexel-goal-cmp b){direction:ltr;unicode-bidi:isolate}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill{min-height:44px!important}
+  /* The Team screens paint their own gradient under the status bar: the body
+     must not add a second safe-area band above them (it showed as a flat
+     strip and a ~60 pt gap over the header). */
+  html.kiwi-native body.kiwi-native-team:not(#kno){padding-top:0!important}
   html.kiwi-native body.kiwi-native-team:not(#kno) .screen{padding-top:var(--kiwi-safe-top);padding-bottom:var(--kiwi-safe-bottom);box-sizing:border-box}
   html.kiwi-native body.kiwi-native-team:not(#kno) .topbar{height:auto;min-height:64px;padding:8px 20px;background:color-mix(in srgb,var(--surface) 85%,transparent)}
   html.kiwi-native body.kiwi-native-team:not(#kno).kiwi-native-team-tabs .bottom-tabs{display:none!important}
@@ -539,7 +548,7 @@ html.kiwi-native [data-action="upgrade-pro"],html.kiwi-native [data-action="upgr
 html.kiwi-native .kiwi-native-order-sheet{align-items:flex-end;padding:0}
 html.kiwi-native .kiwi-native-order-sheet .kiwi-modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;max-height:calc(100dvh - var(--kiwi-safe-top) - 12px);padding-bottom:calc(20px + var(--kiwi-safe-bottom));overflow-y:auto}
 
-html.kiwi-native .kiwi-native-order-sheet .kiwi-modal{transform:translateY(100%);transition:transform .42s var(--spring)}
+html.kiwi-native .kiwi-native-order-sheet .kiwi-modal{transform:translateY(100%);transition:transform 310ms var(--spring,cubic-bezier(0.34,1.45,0.5,1))}
 html.kiwi-native .kiwi-native-order-sheet.in .kiwi-modal{transform:translateY(0)}
 html.kiwi-native .tx-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:20px 0}
 html.kiwi-native .tx-detail-grid dt{color:var(--n-500)}
@@ -564,9 +573,10 @@ html.kiwi-native body.kiwi-native-till .main-head > .kiwi-native-burger{position
 html.kiwi-native body.kiwi-native-till .main-head:has(> .kiwi-native-burger) .main-title{padding-inline-start:54px!important}
 html.kiwi-native body.kiwi-native-kitchen header.top .brand{display:flex;align-items:center}
 .kiwi-native-menu-scrim{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.42);opacity:0;pointer-events:none;transition:opacity .28s ease}
-.kiwi-native-menu{position:fixed;top:0;bottom:0;inset-inline-start:0;z-index:2147483001;width:min(84vw,340px);display:flex;flex-direction:column;padding:calc(var(--kiwi-safe-top,0px) + 12px) 0 calc(var(--kiwi-safe-bottom,0px) + 16px);background:#05090B;color:#F7F5F0;box-shadow:24px 0 48px rgba(0,0,0,.35);transform:translateX(-104%);transition:transform .34s cubic-bezier(.2,.8,.2,1);overflow-y:auto;overscroll-behavior:contain}
-html[dir="rtl"] .kiwi-native-menu{transform:translateX(104%);box-shadow:-24px 0 48px rgba(0,0,0,.35)}
-body.kiwi-native-menu-open .kiwi-native-menu{transform:none}
+.kiwi-native-menu{position:fixed;top:0;bottom:0;inset-inline-start:0;z-index:2147483001;width:min(84vw,340px);display:flex;flex-direction:column;box-sizing:border-box;border-top:var(--kiwi-safe-top,0px) solid #05090B;padding:12px 0 calc(var(--kiwi-safe-bottom,0px) + 16px);background:#05090B;color:#F7F5F0;box-shadow:none;visibility:hidden;transform:translateX(-104%);transition:transform .34s cubic-bezier(.2,.8,.2,1),box-shadow .34s ease,visibility 0s linear .34s;overflow-y:auto;overscroll-behavior:contain}
+html[dir="rtl"] .kiwi-native-menu{transform:translateX(104%)}
+html[dir="rtl"] body.kiwi-native-menu-open .kiwi-native-menu{box-shadow:-24px 0 48px rgba(0,0,0,.35)}
+body.kiwi-native-menu-open .kiwi-native-menu{transform:none;visibility:visible;box-shadow:24px 0 48px rgba(0,0,0,.35);transition:transform .34s cubic-bezier(.2,.8,.2,1),box-shadow .34s ease,visibility 0s}
 body.kiwi-native-menu-open .kiwi-native-menu-scrim{opacity:1;pointer-events:auto}
 .kiwi-native-menu-head{display:flex;align-items:center;gap:10px;padding:0 12px 12px 24px}
 .kiwi-native-menu-head img{height:22px;width:auto}
@@ -576,3 +586,28 @@ body.kiwi-native-menu-open .kiwi-native-menu-scrim{opacity:1;pointer-events:auto
 @media (prefers-reduced-motion:reduce){.kiwi-native-menu,.kiwi-native-menu-scrim{transition:none}}
 /* Light and dark follow the phone: the per-surface switches are hidden. */
 html.kiwi-native #theme-toggle,html.kiwi-native body.kiwi-native-kitchen #theme,html.kiwi-native body.kiwi-native-team section.profil-language:has(.profil-theme-options){display:none!important}
+
+/* Primary actions are atlas, never ink (Team: Request leave, Request this shift). */
+html.kiwi-native .kep-btn.primary{background:#0B6E4F!important;border-color:#0B6E4F!important;color:#F7F5F0!important}
+
+/* Owner lock: content appears once the language and the native keypad are in place. */
+html.kiwi-native:not(.kiwi-lock-ready) [data-kiwi-lock] > *{visibility:hidden}
+/* Day report: the lead KPI (net for the day) keeps its riad ground. The glass
+   skins painted it white under its paper-coloured text, so it read as empty. */
+html.kiwi-native body:not(#kno) .kdr-kpi.is-lead{background:#053B2C!important;border-color:#053B2C!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html.kiwi-native body:not(#kno) .kdr-kpi.is-lead .kdr-kpi-l{color:rgba(247,245,240,.62)!important}
+html.kiwi-native body:not(#kno) .kdr-kpi.is-lead .kdr-kpi-v,html.kiwi-native body:not(#kno) .kdr-kpi.is-lead .kdr-kpi-v *{color:#F7F5F0!important}
+html.kiwi-native body:not(#kno) .kdr-kpi.is-lead .kdr-d{color:rgba(247,245,240,.62)!important}
+/* Delete my account: in the demo the only useful step is signing in. */
+html.kiwi-native .kiwi-native-account.is-demo .kiwi-native-account-card>p{display:none}
+html.kiwi-native .kiwi-native-account .kiwi-native-account-actions button.is-primary{background:#0B6E4F!important;border-color:#0B6E4F!important;color:#F7F5F0!important}
+/* Till menu cards: the category line is a quiet label, not a per-category
+   colour (terracotta and amber sit outside the palette). */
+html.kiwi-native body.kiwi-native-till:not(#kno) .menu-item-cat{color:var(--ink-4,#6B726E)!important}
+
+/* Motion: keypad dots fill with the brand spring (la lentille's curve), in
+   Kiwi Team as in the kitchen and owner lock. Reduce Motion drops it. */
+html.kiwi-native .pin-dot{transition:background .18s ease,border-color .18s ease,box-shadow .18s ease,transform 310ms cubic-bezier(0.34,1.45,0.5,1)!important}
+@media(prefers-reduced-motion:reduce){html.kiwi-native .pin-dot{transition:none!important}html.kiwi-native .pin-dot.is-filled{transform:none!important}}
+/* App Review 3.1.1: no plan upsell or subscription price inside the app. */
+html.kiwi-native .st-locked-cta{display:none!important}

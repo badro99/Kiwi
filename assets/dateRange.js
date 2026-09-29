@@ -216,9 +216,26 @@
     const total = sum(rows), count = rows.length;
     if (table === heroDataByVenue) return {...shape,amount:total,netAfterKiwi:total,deltaHier:null,deltaSemaine:null,deltaMois:null};
     if (table === goalByVenue) return {...shape,current:total};
-    if (table === kpiByVenue) return {...shape,
-      tx:shape.tx && {...shape.tx,value:count,delta:0},
-      panier:shape.panier && {...shape.panier,value:count ? total/count : 0,delta:0}};
+    if (table === kpiByVenue) {
+      // Same-length previous window: yesterday up to the same point of its
+      // business day for Today, the day before for Yesterday, the previous
+      // 7 or 30 days otherwise. Deltas come from the ledger, never a constant.
+      let prior;
+      if (days === 1) {
+        const before = dr.shiftDay(selected,-1), b = dr.dayBounds(selected), o = dr.dayBounds(before);
+        const cut = range === 'aujourdhui' ? o.from + (Date.now() - b.from) : o.to;
+        prior = clock.getDaySales(before).filter(r=>r.ts<=cut);
+      } else {
+        prior = [];
+        for (let i = days; i < days * 2; i++) prior = prior.concat(clock.getDaySales(dr.shiftDay(day,-i)));
+      }
+      const pct = (now, then) => then ? Math.round((now - then) / then * 1000) / 10 : 0;
+      const priorTotal = sum(prior), priorCount = prior.length;
+      return {...shape,
+        tx:shape.tx && {...shape.tx,value:count,delta:pct(count,priorCount)},
+        panier:shape.panier && {...shape.panier,value:count ? total/count : 0,
+          delta:pct(count ? total/count : 0, priorCount ? priorTotal/priorCount : 0)}};
+    }
     let rev, revPrev, xLabels, visibleXIdx, cursor = {};
     if (days > 1) {
       const keys = Array.from({length:days},(_,i)=>dr.shiftDay(day,i-days+1));

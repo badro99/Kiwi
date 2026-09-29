@@ -442,12 +442,14 @@ async function fromRole(page, role = 'caisse') {
       passFocused: active === pass,
     };
   });
-  errAria.emailInvalid === 'true' && errAria.emailDescribedBy === 'login-err' &&
+  // Wrong credentials outline only the password (pass 4, item 12): the e-mail
+  // was valid, so marking it too pointed the merchant at the wrong field.
+  errAria.emailInvalid === null && errAria.emailDescribedBy === null &&
   errAria.passInvalid === 'true' && errAria.passDescribedBy === 'login-err' && errAria.passFocused
-    ? ok('login failure sets aria-invalid/describedby on inputs and retains focus on password field')
+    ? ok('login failure flags only the password field and keeps focus there')
     : bad(`login failure accessibility state wrong: ${JSON.stringify(errAria)}`);
 
-  // Typing into email clears only email invalidity, leaving password invalid
+  // Typing into the unflagged email leaves the password flagged and the alert up
   await p.type('#login-email', 'x');
   const emailClearedOnly = await p.evaluate(() => {
     const email = document.querySelector('#login-email');
@@ -464,7 +466,7 @@ async function fromRole(page, role = 'caisse') {
   !emailClearedOnly.emailInvalid && !emailClearedOnly.emailDescribedBy &&
   emailClearedOnly.passInvalid === 'true' && emailClearedOnly.passDescribedBy === 'login-err' &&
   emailClearedOnly.errStillShown
-    ? ok('editing marked email clears only its own aria-invalid/describedby; password stays invalid and alert remains visible')
+    ? ok('editing the email leaves the password flagged and the alert visible')
     : bad(`per-field clearing state wrong: ${JSON.stringify(emailClearedOnly)}`);
 
   // typing into password clears password invalidity
@@ -474,6 +476,8 @@ async function fromRole(page, role = 'caisse') {
     return !pass.hasAttribute('aria-invalid') && !pass.hasAttribute('aria-describedby');
   });
   passCleared ? ok('typing into invalid password input clears its aria-invalid and aria-describedby') : bad('typing did not clear password aria-invalid');
+  const alertGone = await p.evaluate(() => document.querySelector('#login-err').hidden);
+  alertGone ? ok('the error clears once no field is flagged') : bad('error alert stayed after the flagged field was edited');
 
   await shot(p, 'flow-02-login-error');
   await p.closeCtx();
@@ -1128,7 +1132,12 @@ for (const locale of ['fr', 'ar']) {
       ? ok(`Enter key toggles password back to concealed state (${locale.toUpperCase()})`)
       : bad(`Enter activation failed on password toggle: ${JSON.stringify(pwdState)}`);
 
-    // Tab forward to login submit button
+    // Tab forward to Forgot password, then the submit button
+    await p.keyboard.press('Tab');
+    activeId = await p.evaluate(() => document.activeElement.id);
+    activeId === 'login-forgot'
+      ? ok(`Tab moves focus to Forgot password (${locale.toUpperCase()})`)
+      : bad(`Tab landed on ${activeId} instead of login-forgot`);
     await p.keyboard.press('Tab');
     activeId = await p.evaluate(() => document.activeElement.id);
     activeId === 'login-btn'
@@ -1143,7 +1152,7 @@ for (const locale of ['fr', 'ar']) {
       : bad(`Tab landed on ${activeId} instead of manual-mode`);
 
     // Shift+Tab backward sequence verification
-    const backwardSequence = ['login-btn', 'password-toggle', 'login-password', 'login-email'];
+    const backwardSequence = ['login-btn', 'login-forgot', 'password-toggle', 'login-password', 'login-email'];
     let backwardOk = true;
     for (const expectedId of backwardSequence) {
       await p.keyboard.down('Shift');
@@ -1157,7 +1166,7 @@ for (const locale of ['fr', 'ar']) {
       }
     }
     if (backwardOk) {
-      ok(`Shift+Tab moves backward monotonically: manual-mode → login-btn → password-toggle → login-password → login-email (${locale.toUpperCase()})`);
+      ok(`Shift+Tab moves backward monotonically: manual-mode → login-btn → login-forgot → password-toggle → login-password → login-email (${locale.toUpperCase()})`);
     }
 
     // Enter activation on manual-mode button: triggers step transition

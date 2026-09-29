@@ -618,6 +618,13 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     :root[data-theme="dark"] .pin-greeting {
       color: #F5FAF7;
     }
+    .pin-switch {
+      border: 0; background: none; padding: 6px 10px; margin-top: -2px;
+      font: 500 13px/1.3 var(--sans); color: var(--atlas, #0B6E4F);
+      text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+    }
+    .pin-switch[hidden] { display: none; }
+    :root[data-theme="dark"] .pin-switch { color: #7DF2B0; }
     .pin-hint {
       font-size: 13px;
       color: var(--ink-3, #777);
@@ -4063,8 +4070,9 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         </div>
 
         <div class="pin-mid">
-          <div class="pin-greeting">Bonjour Yassir</div>
+          <div class="pin-greeting" data-pin-who>Café Atlas</div>
           <div class="pin-hint">Entrez votre code</div>
+          <button type="button" class="pin-switch" data-pin-switch hidden>Pas vous ? Changer d'employé</button>
           <div class="pin-dots" id="pin-dots" aria-hidden="true">
             <span class="pin-dot"></span>
             <span class="pin-dot"></span>
@@ -4922,7 +4930,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       var sc = document.getElementById('kg-sc-meta'); if (sc) sc.textContent = nm || '';
       // Static demo staff-name nodes rendered before the role/clock-in JS runs.
       var g1 = document.getElementById('greet-line1'); if (g1) g1.textContent = 'Bonjour,';
-      document.querySelectorAll('.pin-greeting').forEach(function (el) { el.textContent = 'Bonjour'; });
+      var who = document.querySelector('[data-pin-who]'); if (who && !who.dataset.employee) who.textContent = nm || 'Kiwi';
       var cg = document.querySelector('.ci-greeting'); if (cg) cg.innerHTML = 'Bonjour <em>bon service</em>';
       var tb = document.querySelector('.tb-name'); if (tb) tb.textContent = 'Serveur';
       var pn = document.querySelector('.profil-name'); if (pn) pn.textContent = 'Serveur';
@@ -4944,6 +4952,26 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     const EMPLOYEE_LANGUAGE_KEY = 'kiwi-employee-language:' + (svMerchant() || 'demo');
     const EMPLOYEE_TRANSLATIONS = {
       en: {
+        "Annulation déjà en attente de la cuisine": "Cancellation already waiting for the kitchen",
+        "Annulation en cours · attendez la réponse du serveur": "Cancelling · waiting for the server",
+        "Article non vendable individuellement": "This item cannot be sold on its own",
+        "Choisissez les options obligatoires": "Choose the required options",
+        "Choix dupliqués pour toutes les portions": "Choices copied to every portion",
+        "Commande en attente envoyée · cuisine": "Held order sent · kitchen",
+        "Commande envoyée en cuisine": "Order sent to the kitchen",
+        "Commande introuvable": "Order not found",
+        "Complétez tous les choix obligatoires": "Complete every required choice",
+        "Copié": "Copied",
+        "Envoyé · SMS / WhatsApp": "Sent · SMS / WhatsApp",
+        "Plat déjà en cuisine · parlez au chef ou annulez": "Dish already in the kitchen · talk to the chef or cancel",
+        "Pointage non synchronisé · vérifiez la connexion": "Clock-in not synced · check the connection",
+        "Reprenez le service pour prendre une commande": "Resume your shift to take an order",
+        "Saisissez le code de la caisse pour pointer le départ": "Enter the till code to clock out",
+        "Session de service expirée · reconnectez-vous": "Service session expired · sign in again",
+        "Session fermée": "Signed out",
+        "Split annulé": "Split cancelled",
+        "Ticket en impression…": "Printing receipt…",
+        "Pas vous ? Changer d'employé": "Not you? Switch employee",
         "Cet établissement est suspendu": "This establishment is suspended",
         "Service momentanément indisponible": "Service temporarily unavailable",
         "Code de pointage incorrect ou expiré": "Clock-in code is incorrect or expired",
@@ -5089,6 +5117,26 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         ,'Annulée':'Cancelled'
       },
       ar: {
+        "Annulation déjà en attente de la cuisine": "الإلغاء بانتظار المطبخ",
+        "Annulation en cours · attendez la réponse du serveur": "جارٍ الإلغاء · بانتظار الخادم",
+        "Article non vendable individuellement": "لا يمكن بيع هذا الصنف منفرداً",
+        "Choisissez les options obligatoires": "اختر الخيارات الإلزامية",
+        "Choix dupliqués pour toutes les portions": "نُسخت الاختيارات لكل الحصص",
+        "Commande en attente envoyée · cuisine": "أُرسل الطلب المعلّق · المطبخ",
+        "Commande envoyée en cuisine": "أُرسل الطلب إلى المطبخ",
+        "Commande introuvable": "الطلب غير موجود",
+        "Complétez tous les choix obligatoires": "أكمل كل الاختيارات الإلزامية",
+        "Copié": "تم النسخ",
+        "Envoyé · SMS / WhatsApp": "أُرسل · SMS / واتساب",
+        "Plat déjà en cuisine · parlez au chef ou annulez": "الطبق في المطبخ · كلّم الشيف أو ألغِ",
+        "Pointage non synchronisé · vérifiez la connexion": "لم تتم مزامنة التسجيل · تحقّق من الاتصال",
+        "Reprenez le service pour prendre une commande": "استأنف ورديتك لأخذ طلب",
+        "Saisissez le code de la caisse pour pointer le départ": "أدخل رمز الصندوق لتسجيل الخروج",
+        "Session de service expirée · reconnectez-vous": "انتهت جلسة الخدمة · سجّل الدخول مجدداً",
+        "Session fermée": "تم تسجيل الخروج",
+        "Split annulé": "أُلغي التقسيم",
+        "Ticket en impression…": "جارٍ طباعة الإيصال…",
+        "Pas vous ? Changer d'employé": "لست أنت؟ غيّر الموظف",
         "Cet établissement est suspendu": "هذا الفرع موقوف",
         "Service momentanément indisponible": "الخدمة غير متاحة مؤقتاً",
         "Code de pointage incorrect ou expiré": "رمز بدء الوردية غير صحيح أو منتهي الصلاحية",
@@ -5252,8 +5300,29 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     const employeeI18nOriginal = new WeakMap();
     const employeeI18nLast = new WeakMap();
     const employeeI18nAttrs = new WeakMap();
+    const EMPLOYEE_PATTERNS = [
+      [/^Table (.+?) · réglée ✓$/, 'Table $1 · paid ✓', 'الطاولة $1 · مدفوعة ✓'],
+      [/^Table (.+?) déjà réglée$/, 'Table $1 already paid', 'الطاولة $1 مدفوعة مسبقاً'],
+      [/^Table (.+?) · rien de nouveau à envoyer$/, 'Table $1 · nothing new to send', 'الطاولة $1 · لا جديد للإرسال'],
+      [/^Table (.+?) · paiement impossible$/, 'Table $1 · payment failed', 'الطاولة $1 · تعذّر الدفع'],
+      [/^Table (.+?) · paiement non enregistré, réessayez$/, 'Table $1 · payment not saved, try again', 'الطاولة $1 · لم يُسجَّل الدفع، أعد المحاولة'],
+      [/^Table (.+?) · addition non transmise, réessayez$/, 'Table $1 · bill not sent, try again', 'الطاولة $1 · لم تُرسل الفاتورة، أعد المحاولة'],
+      [/^Table (.+?) déplacée vers Table (.+)$/, 'Table $1 moved to Table $2', 'نُقلت الطاولة $1 إلى الطاولة $2'],
+      [/^Table (.+?) fusionnée dans Table (.+)$/, 'Table $1 merged into Table $2', 'دُمجت الطاولة $1 في الطاولة $2'],
+      [/^Addition demandée pour (.+)$/, 'Bill requested for $1', 'طُلبت الفاتورة لـ $1'],
+      [/^\+1 (.+) ajouté$/, '+1 $1 added', '+1 $1 أُضيف'],
+      [/^(.+) ajouté$/, '$1 added', 'أُضيف $1'],
+      [/^(.+) annulé en cuisine$/, '$1 cancelled in the kitchen', 'أُلغي $1 في المطبخ'],
+      [/^(.+) · fidélité mise à jour$/, '$1 · loyalty updated', '$1 · تم تحديث الوفاء'],
+      [/^Erreur réseau : (.+)$/, 'Network error: $1', 'خطأ في الشبكة: $1'],
+    ];
     function employeeTranslation(value) {
       if (employeeLanguage === 'fr') return value;
+      const direct = (EMPLOYEE_TRANSLATIONS[employeeLanguage] || {})[value];
+      if (direct) return direct;
+      for (const [pattern, en, ar] of EMPLOYEE_PATTERNS) {
+        if (pattern.test(value)) return value.replace(pattern, employeeLanguage === 'ar' ? ar : en);
+      }
       if (/^Bonjour(?:\s|$)/.test(value)) return value.replace(/^Bonjour/, employeeLanguage === 'en' ? 'Hello' : 'مرحباً');
       return (EMPLOYEE_TRANSLATIONS[employeeLanguage] || {})[value] || value;
     }
@@ -6221,7 +6290,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     function toast(msg, ms = 1800) {
       const el = document.createElement('div');
       el.className = 'toast';
-      el.textContent = msg;
+      el.textContent = typeof employeeTranslation === 'function' ? employeeTranslation(String(msg)) : msg;
       $('#toast-stack').appendChild(el);
       setTimeout(() => el.classList.add('fade'), ms);
       setTimeout(() => el.remove(), ms + 280);
@@ -7418,9 +7487,30 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       tablesPaid = 0;
       pinInput = '';
       renderPinDots();
+      pinGreetLastEmployee();
       showScreen('screen-pin');
       if (message) toast(message);
     }
+    /* The lock names nobody until someone has signed in on this phone: on a
+       fresh install it greeted "Yassir", a stranger to whoever holds it. Once
+       an employee has used the device we greet them, with a way to hand over. */
+    function pinGreetLastEmployee() {
+      const who = document.querySelector('[data-pin-who]');
+      const sw = document.querySelector('[data-pin-switch]');
+      if (!who || !sw) return;
+      const first = String((document.querySelector('.tb-name') || {}).textContent || '').trim().split(/\s+/)[0];
+      if (!first || first === 'Serveur') return;
+      who.dataset.employee = first;
+      who.dataset.venue = who.dataset.venue || who.textContent;
+      who.textContent = employeeHello(first);
+      sw.hidden = false;
+    }
+    document.querySelector('[data-pin-switch]')?.addEventListener('click', function () {
+      const who = document.querySelector('[data-pin-who]');
+      if (who) { delete who.dataset.employee; who.textContent = who.dataset.venue || 'Kiwi'; }
+      this.hidden = true;
+      pinInput = ''; renderPinDots();
+    });
 
     function logoutEmployeeSession() {
       /* Clear synchronously, before the asynchronous cookie logout. A fast
@@ -9830,9 +9920,17 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         window.KiwiTeamDemoSchedule = () => svReal() ? null : schedule;
         document.dispatchEvent(new CustomEvent('kiwi-demo-schedule', {detail:{schedule}}));
       }
-      // "Prochain service" — the next non-rest day after today.
+      // "Prochain service": today's shift while it has not ended, else the
+      // next non-rest day. It skipped today, so at 01:00 the card said
+      // Thursday while the list below still showed tonight's shift.
       let nextIdx = -1, wrap = false;
-      for (let i = todayIdx + 1; i < 7; i++) {
+      const nowClock = new Date(), todayShift = sched.week[todayIdx];
+      if (todayShift) {
+        const [oh, om] = todayShift.out.split(':').map(Number), [ih, im] = todayShift.in.split(':').map(Number);
+        const endMin = (oh * 60 + om) <= (ih * 60 + im) ? oh * 60 + om + 1440 : oh * 60 + om;
+        if (nowClock.getHours() * 60 + nowClock.getMinutes() < endMin) nextIdx = todayIdx;
+      }
+      for (let i = todayIdx + 1; nextIdx === -1 && i < 7; i++) {
         if (sched.week[i]) { nextIdx = i; break; }
       }
       if (nextIdx === -1) {
@@ -9848,7 +9946,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           const day = new Date(2026, 7, 3 + i, 12);
           return day.toLocaleDateString(employeeLocale(), { weekday: 'long' });
         });
-        const prefix = wrap                          ? (employeeLanguage === 'en' ? 'Next week' : employeeLanguage === 'ar' ? 'الأسبوع القادم' : 'Semaine prochaine')
+        const prefix = nextIdx === todayIdx && !wrap ? (employeeLanguage === 'en' ? 'Today' : employeeLanguage === 'ar' ? 'اليوم' : "Aujourd'hui")
+                     : wrap                          ? (employeeLanguage === 'en' ? 'Next week' : employeeLanguage === 'ar' ? 'الأسبوع القادم' : 'Semaine prochaine')
                      : (nextIdx === todayIdx + 1)    ? (employeeLanguage === 'en' ? 'Tomorrow' : employeeLanguage === 'ar' ? 'غداً' : 'Demain')
                      : (nextIdx === todayIdx + 2)    ? (employeeLanguage === 'en' ? 'The day after tomorrow' : employeeLanguage === 'ar' ? 'بعد غدٍ' : 'Après-demain')
                      :                                  dafrFull[nextIdx];

@@ -22,7 +22,7 @@
   (function injectCss() {
     const css = `
       .acc-hero { display:flex; align-items:center; gap:16px; padding:20px; border-radius:16px; background:linear-gradient(150deg,#0c4a35,#08311f); color:#fff; margin-bottom:18px; }
-      .acc-avatar { width:60px; height:60px; border-radius:50%; background:var(--mint); color:#06371f; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:22px; flex-shrink:0; }
+      .acc-avatar { width:60px; height:60px; border-radius:50%; background:#F7F5F0; color:#053B2C; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:22px; flex-shrink:0; }
       .acc-hero-name { font-size:20px; font-weight:600; letter-spacing:-0.02em; }
       .acc-hero-role { font-size:12.5px; color:rgba(255,255,255,0.72); margin-top:3px; }
       .acc-hero .acc-cta { margin-inline-start:auto; }

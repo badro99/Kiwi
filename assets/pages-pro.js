@@ -339,7 +339,7 @@ handlers['nav-transactions'] = () => {
                   <td class="mono">${r.t}</td>
                   <td><b>${r.n}</b> <span style="color:var(--n-500);">${r.mask}</span></td>
                   <td style="color:var(--n-600);">${r.c}</td>
-                  <td class="mono right" style="${r.amt < 0 ? 'color:var(--danger);' : ''}">${r.amt < 0 ? '−' : ''}${fmt2(r.amt)}</td>
+                  <td class="mono right" style="${r.amt < 0 ? 'color:var(--danger);' : ''}">${r.amt < 0 ? '−' : ''}${fmt2(r.amt)} MAD</td>
                   <td class="mono right" style="color:${r.tip > 0 ? 'var(--success)' : 'var(--n-400)'};">${r.tip > 0 ? '+' + fmt2(r.tip) : '·'}</td>
                   <td><span class="chip ${r.status === 'ok' ? 'ok' : 'pend'}">${r.status === 'ok' ? T.paid : r.status === 'ref' ? T.refunded : T.pending}</span></td>
                 </tr>

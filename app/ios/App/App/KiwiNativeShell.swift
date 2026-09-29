@@ -1,4 +1,5 @@
 import Capacitor
+import SafariServices
 import SwiftUI
 import UIKit
 import WebKit
@@ -227,7 +228,25 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
         let origin = message.frameInfo.securityOrigin
         guard message.name == "kiwiShell", message.frameInfo.isMainFrame,
               origin.host == "localhost", origin.protocol == "capacitor" else { return }
+        if let body = message.body as? [String: Any], let raw = body["openURL"] as? String {
+            presentSafariSheet(raw)
+            return
+        }
         model.accept(message.body)
+    }
+
+    /// Kiwi's own help pages (forgot password, support) open in an in-app
+    /// Safari sheet. Only https kiwi-os.com links are accepted.
+    private func presentSafariSheet(_ raw: String) {
+        guard let url = URL(string: raw), url.scheme == "https",
+              let host = url.host, host == "kiwi-os.com" || host.hasSuffix(".kiwi-os.com") else { return }
+        DispatchQueue.main.async {
+            guard let presenter = self.model.bridge, presenter.presentedViewController == nil else { return }
+            let safari = SFSafariViewController(url: url)
+            safari.preferredControlTintColor = UIColor(red: 11 / 255, green: 110 / 255, blue: 79 / 255, alpha: 1)
+            safari.dismissButtonStyle = .close
+            presenter.present(safari, animated: true)
+        }
     }
 }
 
@@ -247,10 +266,6 @@ private struct KiwiMark: View {
 }
 
 private extension View {
-    @ViewBuilder func kiwiSheetDetents() -> some View {
-        if #available(iOS 16.0, *) { self.presentationDetents([.medium, .large]).presentationDragIndicator(.visible) } else { self }
-    }
-
     @ViewBuilder func scrollDismissesKeyboardIfAvailable() -> some View {
         if #available(iOS 16.0, *) { self.scrollDismissesKeyboard(.interactively) } else { self }
     }
@@ -528,14 +543,13 @@ private struct KiwiNativeSetupRoot: View {
     }
 
     private func symbol(_ id: String) -> String {
-        ["caisse":"creditcard", "equipe":"person.3", "cuisine":"fork.knife", "dashboard":"chart.bar", "80":"ticket", "58":"ticket", "salle":"table.furniture", "vrap":"takeoutbag.and.cup.and.straw", "waitlist":"person.2", "more":"ellipsis" ][id] ?? "building.2"
+        ["caisse":"creditcard", "equipe":"person.3", "cuisine":"fork.knife", "dashboard":"chart.bar", "80":"ticket", "58":"ticket", "salle":"table.furniture", "vrap":"takeoutbag.and.cup.and.straw", "waitlist":"person.2"][id] ?? "building.2"
     }
 }
 
 private struct KiwiNativeTabRoot: View {
     @ObservedObject var model: KiwiNativeShellModel
     @Namespace private var selectionLens
-    @State private var showingMore = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -543,62 +557,13 @@ private struct KiwiNativeTabRoot: View {
             .padding(.top, 4)
             .padding(.bottom, 4)
             .environment(\.layoutDirection, model.context.rtl ? .rightToLeft : .leftToRight)
-            .sheet(isPresented: $showingMore) {
-                NavigationView {
-                    List {
-                        if model.context.role == "dashboard" {
-                            Section {
-                                Button { showingMore = false; model.send("open-tools") } label: {
-                                    Label(copy("Tout le tableau de bord", "Full dashboard menu", "كل لوحة القيادة"), systemImage: "square.grid.2x2")
-                                }
-                            } footer: {
-                                Text(copy("Équipe, menu, stock, réservations, terminaux, marges.", "Team, menu, stock, bookings, terminals, margins.", "الفريق، القائمة، المخزون، الحجوزات، الأجهزة، الهوامش."))
-                            }
-                        }
-                        if model.context.role == "caisse" {
-                            Section {
-                                Button { showingMore = false; model.send("open-tools") } label: {
-                                    Label(copy("Outils de la caisse", "Till tools", "أدوات الصندوق"), systemImage: "wrench.and.screwdriver")
-                                }
-                            } footer: {
-                                Text(copy("Remboursement, tiroir, équipe, menu, fin de service.", "Refunds, drawer, team, menu, end of shift.", "الاسترداد، الدرج، الفريق، القائمة، نهاية الخدمة."))
-                            }
-                        }
-                        Section {
-                            Button { showingMore = false; model.send("change-role") } label: {
-                                Label(copy("Changer de rôle", "Change role", "تغيير الدور"), systemImage: "arrow.left.arrow.right")
-                            }
-                            Button { showingMore = false; model.send("sign-out") } label: {
-                                Label(copy("Se déconnecter", "Sign out", "تسجيل الخروج"), systemImage: "rectangle.portrait.and.arrow.right")
-                            }
-                        }
-                        Section {
-                            Button { showingMore = false; model.send("ai-privacy") } label: {
-                                Label(copy("Confidentialité Kiwi AI", "Kiwi AI privacy", "خصوصية Kiwi AI"), systemImage: "hand.raised")
-                            }
-                            Button(role: .destructive) { showingMore = false; model.send("delete-account") } label: {
-                                Label(copy("Supprimer mon compte", "Delete my account", "حذف حسابي"), systemImage: "trash")
-                            }
-                        }
-                    }
-                    .tint(kiwiAtlas)
-                    .navigationTitle(copy("Plus", "More", "المزيد"))
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button(copy("Fermer", "Close", "إغلاق")) { showingMore = false }.font(.body.weight(.semibold)) } }
-                }
-                .kiwiSheetDetents()
-            }
-    }
-
-    private func copy(_ fr: String, _ en: String, _ ar: String) -> String {
-        model.context.locale.hasPrefix("ar") ? ar : (model.context.locale.hasPrefix("en") ? en : fr)
     }
 
     private var tabs: some View {
         HStack(spacing: 2) {
             ForEach(model.context.tabs) { tab in
                 let active = model.context.selected == tab.id
-                Button { if tab.id == "more" { showingMore = true } else { model.send("navigate", id: tab.id) } } label: {
+                Button { model.send("navigate", id: tab.id) } label: {
                     ZStack {
                         if active {
                             Capsule()
@@ -643,7 +608,7 @@ private struct KiwiNativeTabRoot: View {
     }
 
     private func symbol(_ id: String) -> String {
-        ["salle":"table.furniture", "vrap":"takeoutbag.and.cup.and.straw", "waitlist":"person.2", "more":"square.grid.2x2",
+        ["salle":"table.furniture", "vrap":"takeoutbag.and.cup.and.straw", "waitlist":"person.2",
          "accueil":"house", "transactions":"list.bullet.rectangle.portrait", "rapport":"doc.text", "clients":"person.2",
          "tables":"table.furniture", "menu":"menucard", "notifications":"bell", "profil":"person.crop.circle"][id] ?? "circle"
     }

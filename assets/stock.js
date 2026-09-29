@@ -7364,7 +7364,12 @@
 
     // Forecast
     H['stock-program-shortfall'] = (el) => window.Kiwi.toast(`Commande programmée · ${el.dataset.itemName}`, { type: 'success' });
-    H['stock-upgrade-ultra'] = () => window.Kiwi.toast('Kiwi Ultra · 1 499 MAD/mois · multi-pays, AI procurement, account manager', { type: 'info', duration: 4500 });
+    /* No subscription price inside the iOS app (App Review 3.1.1): the CTA is
+       hidden there and the handler stays silent if anything still calls it. */
+    H['stock-upgrade-ultra'] = () => {
+      if (document.documentElement.classList.contains('kiwi-native')) return;
+      window.Kiwi.toast('Kiwi Ultra · 1 499 MAD/mois · multi-pays, AI procurement, account manager', { type: 'info', duration: 4500 });
+    };
 
     // Calendar
     H['stock-day-detail'] = (el) => openDayDetail(el.dataset.day, el.dataset.dayName);

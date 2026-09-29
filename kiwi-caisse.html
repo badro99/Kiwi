@@ -127,13 +127,13 @@
   <script src="assets/retail-scan.js?v=8" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
-  <script src="assets/caisse-lang.js?v=9" defer></script>
+  <script src="assets/caisse-lang.js?v=10" defer></script>
   <script src="assets/menu-i18n.js?v=5" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=58" defer></script>
+  <script src="assets/pos-dispatch.js?v=59" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=5" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=2" defer></script>
@@ -3336,6 +3336,9 @@
       font-family: inherit; font-size: 13px; color: var(--ink); outline: none;
     }
     .jr-search input::placeholder { color: var(--ink-4); }
+    .jr-search input, .rf-search input { -webkit-appearance: none; appearance: none; }
+    .jr-search input:focus, .jr-search input:focus-visible { outline: none; box-shadow: none; }
+    .jr-search input::-webkit-search-decoration, .jr-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
     .jr-filters { display: flex; gap: 6px; }
     .jr-chip {
       padding: 5px 13px; border-radius: 999px;
@@ -3628,6 +3631,12 @@
       font-size: 11px; font-weight: 800;
       padding: 2px 8px; border-radius: 999px;
       font-feature-settings: "tnum" 1;
+    }
+    /* A state word (Off, Ready) reads as a quiet outline, not a mint count. */
+    .team-trigger .count.is-state {
+      background: transparent; color: #8f9591;
+      border: 1px solid rgba(143, 149, 145, .45);
+      font-weight: 600; letter-spacing: .02em;
     }
 
     /* ===========================================================
@@ -4191,6 +4200,10 @@
       font-family: inherit; font-size: 13px; color: var(--ink); outline: none;
     }
     .rf-search input::placeholder { color: var(--ink-4); }
+    /* The rounded field is the focus target: no square ring inside it. */
+    .rf-search input:focus, .rf-search input:focus-visible { outline: none; box-shadow: none; }
+    .rf-search input::-webkit-search-decoration, .rf-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+    .rf-search:focus-within { box-shadow: 0 0 0 2px color-mix(in srgb, var(--atlas) 45%, transparent); }
     .rf-recovery {
       margin: 0 0 12px; padding: 12px;
       border: 1px solid rgba(184,82,69,0.22);
@@ -5638,7 +5651,7 @@
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
   <script src="assets/kitchen-relay.js?v=8" defer></script>
-  <script src="assets/kitchen-print-queue.js?v=14" defer></script>
+  <script src="assets/kitchen-print-queue.js?v=15" defer></script>
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
@@ -5709,7 +5722,7 @@
   <div class="clockin-screen" id="clockin-screen" aria-hidden="true">
     <div class="clockin-top">
       <div class="clockin-brand" aria-label="Kiwi"><img src="assets/kiwi-newlogo-inverse.svg" alt="" draggable="false"></div>
-      <div class="clockin-tagline">· version commerçant</div>
+      <div class="clockin-tagline">version commerçant</div>
     </div>
     <div class="clockin-mid">
       <div class="clockin-greet">Bonjour <em>Othmane</em></div>
@@ -6013,7 +6026,7 @@
         <button class="team-trigger" id="open-kitchen-print" data-action="printer-connect" aria-label="Impression cuisine">
           <i data-lucide="printer"></i>
           <span>Impression cuisine</span>
-          <span class="count" id="kitchen-print-count" aria-label="État de l’impression">·</span>
+          <span class="count is-state" id="kitchen-print-count" aria-label="État de l’impression">Inactif</span>
         </button>
 
         <!-- Stock : retiré par cd4273a comme « doublon », mais l'autre accès
@@ -6044,7 +6057,7 @@
           <span>Plein écran</span>
         </button>
         <button class="qa-btn ghost" data-action="fin-service">
-          <i data-lucide="log-out"></i>
+          <i data-lucide="clipboard-check"></i>
           <span>Fin d'service</span>
         </button>
         <!-- Sortie (déconnexion dure) · <a> simple, marche même si le JS casse ou
@@ -6875,7 +6888,7 @@
         <div class="jr-summary" id="jr-summary">· transactions</div>
         <div class="jr-search" id="rp-search">
           <i data-lucide="search"></i>
-          <input type="text" id="jr-search-input" placeholder="Rechercher, table, montant, réf" aria-label="Rechercher" />
+          <input type="search" id="jr-search-input" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="search" placeholder="Rechercher, table, montant, réf" aria-label="Rechercher" />
         </div>
         <div class="jr-filters" id="jr-filters">
           <button class="jr-chip is-active" data-jr-filter="all">Tout</button>
@@ -6985,7 +6998,7 @@
         <p class="modal-subtle">Khtar la transaction à rembourser, journal d'lyoum.</p>
         <div class="rf-search">
           <i data-lucide="search"></i>
-          <input type="text" id="rf-search-input" placeholder="Rechercher, table, montant, réf" aria-label="Rechercher une transaction" />
+          <input type="search" id="rf-search-input" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="search" placeholder="Rechercher, table, montant, réf" aria-label="Rechercher une transaction" />
         </div>
         <div class="rf-recovery" id="rf-recovery" hidden></div>
         <div class="rf-list" id="rf-list"></div>
@@ -17962,7 +17975,9 @@
       showRefundStep('pick');
       refundModal.classList.add('is-open');
       if (window.lucide) lucide.createIcons();
-      setTimeout(() => { const s = $('#rf-search-input'); if (s) s.focus(); }, 60);
+      // A hardware keyboard gets the search focused; a touch screen does not
+      // get its keyboard thrown over the list it came to scan.
+      if (!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches)) setTimeout(() => { const s = $('#rf-search-input'); if (s) s.focus(); }, 60);
     }
     function closeRefund() { refundModal.classList.remove('is-open'); }
 
@@ -18152,6 +18167,20 @@
       },
     });
     const terminalIdButton = document.getElementById('caisse-terminal-id');
+    /* The pill only means something once the till is paired: until then it
+       hid a dead control (tap → "must be paired first"). Once paired it shows
+       the id's tail so support can read it off the screen. */
+    function syncTerminalIdButton() {
+      if (!terminalIdButton) return;
+      const id = window.KiwiCaisseContext.current().terminalId;
+      terminalIdButton.hidden = !id;
+      if (id) terminalIdButton.textContent = 'ID · ' + id.slice(-6).toUpperCase();
+    }
+    try {
+      syncTerminalIdButton();
+      window.addEventListener('storage', syncTerminalIdButton);
+      window.addEventListener('focus', syncTerminalIdButton);
+    } catch (_) {}
     if (terminalIdButton) terminalIdButton.addEventListener('click', async () => {
       const id = window.KiwiCaisseContext.current().terminalId;
       if (!id) { toast('Cette caisse doit d’abord être appairée'); return; }

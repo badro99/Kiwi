@@ -613,7 +613,8 @@
     }).join('');
 
     var labels = timeline.map(function (h, i) {
-      return '<span>' + (i % every === 0 ? esc(hourLabel(h.h)) : '') + '</span>';
+      // The axis cell is narrow: "06:00" was clipped to "06:". Hours alone read cleanly.
+      return '<span>' + (i % every === 0 ? esc(LANG() === 'fr' ? hourLabel(h.h) : pad2(h.h)) : '') + '</span>';
     }).join('');
 
     var head = peak

@@ -289,3 +289,6 @@ html[dir="rtl"] .tile-name { line-height: 1.35; }
    embedded flow stays mounted as the state machine and rollback path. */
 body.kiwi-native-hosted-setup #boot,
 body.kiwi-native-hosted-setup #shell { opacity: 0; pointer-events: none; }
+
+/* Sign-in: the forgot-password link sits under the password, trailing edge. */
+.login .forgot { grid-column: 1 / -1; justify-self: end; min-height: 36px; margin-top: -4px; padding: 6px 2px; font-weight: 500; font-size: calc(13px * var(--type-scale, 1)); }

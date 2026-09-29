@@ -293,7 +293,7 @@
 
   function openNativeLayers() {
     return Array.prototype.slice.call(document.querySelectorAll(
-      '.modal-veil.is-open,.drawer-veil.is-open,.cloture-veil.is-open,.kds-screen.is-open,#stock-screen.is-open,#cp-pin-screen,.kiwi-native-account.is-open,.kiwi-backdrop,.kiwi-drawer-backdrop'
+      '.modal-veil.is-open,.drawer-veil.is-open,.cloture-veil.is-open,.kds-screen.is-open,#stock-screen.is-open,#cp-pin-screen,.kiwi-native-account.is-open,.kiwi-backdrop,.kiwi-drawer-backdrop,.kiwi-menu'
     )).filter(function (node) {
       try { return getComputedStyle(node).display !== 'none' && getComputedStyle(node).visibility !== 'hidden'; }
       catch (_) { return true; }
@@ -360,10 +360,10 @@
     if (document.querySelector('.kiwi-native-account')) return;
     var lang = String(root.lang || 'fr').slice(0, 2);
     var words = lang === 'en'
-      ? { title:'Delete my account', detail:'This requests deletion of your account and all its establishments. Export your data first. Kiwi handles requests within 30 days.', password:'Account password', submit:'Confirm request', close:'Close', checking:'Checking account…', signin:'Sign in with the owner account first.', failed:'The request could not be recorded.', received:'Request recorded', wrong:'Incorrect password.' }
+      ? { title:'Delete my account', detail:'This requests deletion of your account and all its establishments. Export your data first. Kiwi handles requests within 30 days.', password:'Account password', submit:'Confirm request', close:'Close', checking:'Checking account…', signin:'Sign in with the owner account to request deletion.', demo:'This is the demo, so there is no account to delete. Sign in with your Kiwi owner account to request deletion.', failed:'The request could not be recorded. Check your connection and try again. Nothing was deleted.', received:'Request recorded', wrong:'Incorrect password.' }
       : lang === 'ar'
-      ? { title:'حذف حسابي', detail:'يشمل الطلب حسابك وجميع مؤسساته. صدّر بياناتك أولاً. يعالج Kiwi الطلب خلال 30 يوماً.', password:'كلمة مرور الحساب', submit:'تأكيد الطلب', close:'إغلاق', checking:'جارٍ التحقق…', signin:'سجّل الدخول إلى حساب المالك أولاً.', failed:'تعذّر تسجيل الطلب.', received:'تم تسجيل الطلب', wrong:'كلمة المرور غير صحيحة.' }
-      : { title:'Supprimer mon compte', detail:'Cette demande concerne votre compte et tous ses établissements. Exportez vos données avant de confirmer. Kiwi traite la demande sous 30 jours.', password:'Mot de passe du compte', submit:'Confirmer la demande', close:'Fermer', checking:'Vérification du compte…', signin:'Connectez-vous au compte propriétaire.', failed:'La demande n’a pas pu être enregistrée.', received:'Demande enregistrée', wrong:'Mot de passe incorrect.' };
+      ? { title:'حذف حسابي', detail:'يشمل الطلب حسابك وجميع مؤسساته. صدّر بياناتك أولاً. يعالج Kiwi الطلب خلال 30 يوماً.', password:'كلمة مرور الحساب', submit:'تأكيد الطلب', close:'إغلاق', checking:'جارٍ التحقق…', signin:'سجّل الدخول إلى حساب المالك لطلب الحذف.', demo:'هذا هو العرض التجريبي، لا يوجد حساب لحذفه. سجّل الدخول بحساب المالك في Kiwi لطلب الحذف.', failed:'تعذّر تسجيل الطلب. تحقّق من الاتصال وحاول مجدداً. لم يُحذف أي شيء.', received:'تم تسجيل الطلب', wrong:'كلمة المرور غير صحيحة.' }
+      : { title:'Supprimer mon compte', detail:'Cette demande concerne votre compte et tous ses établissements. Exportez vos données avant de confirmer. Kiwi traite la demande sous 30 jours.', password:'Mot de passe du compte', submit:'Confirmer la demande', close:'Fermer', checking:'Vérification du compte…', signin:'Connectez-vous au compte propriétaire pour demander la suppression.', demo:'Vous êtes dans la démo : il n’y a aucun compte à supprimer. Connectez-vous avec votre compte propriétaire Kiwi pour en faire la demande.', failed:'La demande n’a pas pu être enregistrée. Vérifiez la connexion et réessayez. Rien n’a été supprimé.', received:'Demande enregistrée', wrong:'Mot de passe incorrect.' };
     var overlay = document.createElement('div');
     overlay.className = 'kiwi-native-account is-open';
     overlay.setAttribute('role', 'dialog');
@@ -389,10 +389,13 @@
       if (body.request) { status.textContent = words.received + ' · ' + body.request.reference; card.querySelector('label').hidden = true; submit.hidden = true; return; }
       status.textContent = ''; submit.disabled = false;
     }).catch(function (error) {
-      status.textContent = error.message === 'unauthenticated' ? words.signin : words.failed;
+      var env = window.KiwiEnv, demo = !!(env && env.isReal && !env.isReal());
+      var needsSignin = demo || error.message === 'unauthenticated';
+      status.textContent = demo ? words.demo : needsSignin ? words.signin : words.failed;
+      overlay.classList.toggle('is-demo', demo);
       card.querySelector('label').hidden = true; submit.hidden = true;
-      if (error.message === 'unauthenticated') {
-        var signin = document.createElement('button'); signin.type = 'button';
+      if (needsSignin) {
+        var signin = document.createElement('button'); signin.type = 'button'; signin.className = 'is-primary';
         signin.textContent = lang === 'ar' ? 'تسجيل الدخول' : lang === 'en' ? 'Sign in' : 'Se connecter';
         signin.onclick = function () { location.href = 'index.html?setup=1'; };
         card.querySelector('.kiwi-native-account-actions').appendChild(signin);
@@ -851,6 +854,17 @@
         if (pairingGate.classList.contains('err') && records.some(function (r) { return !(r.oldValue || '').split(' ').includes('err'); })) hapticNotice('danger');
       }).observe(pairingGate, { attributes:true, attributeFilter:['class'], attributeOldValue:true });
     }
+    if (role === 'equipe') {
+      /* Team code: an error notification on the shake, success when the dots pop. */
+      new MutationObserver(function (records) {
+        records.forEach(function (r) {
+          var el = r.target, was = (r.oldValue || '').split(' ');
+          if (!el.classList) return;
+          if (el.classList.contains('pin-dots') && el.classList.contains('shake') && was.indexOf('shake') < 0) hapticNotice('danger');
+          else if (el.classList.contains('pin-dot') && el.classList.contains('is-success') && was.indexOf('is-success') < 0 && !el.previousElementSibling) hapticNotice('success');
+        });
+      }).observe(document.getElementById('pin-dots') || document.body, { subtree:true, attributes:true, attributeFilter:['class'], attributeOldValue:true });
+    }
     document.body.classList.add('kiwi-native-' + (role === 'equipe' ? 'team' : role === 'cuisine' ? 'kitchen' : 'owner'));
     followSystemTheme(role);
     if (role === 'equipe' || role === 'cuisine') {
@@ -878,6 +892,12 @@
       nativeHostPost(payload);
     };
     window.KiwiNativeHostRequestState = function () { lastPushed = ''; push(); };
+    // Popovers (profile, venue switcher) are appended to body without a class
+    // change; without this the tab capsule stayed on top of their last rows.
+    new MutationObserver(function (records) {
+      if (records.some(function (r) { return Array.prototype.some.call(r.addedNodes || [], isMenu) || Array.prototype.some.call(r.removedNodes || [], isMenu); })) push();
+      function isMenu(node) { return node.nodeType === 1 && node.classList.contains('kiwi-menu'); }
+    }).observe(document.body, { childList:true });
     window.KiwiNativeHostAction = function (payload) {
       if (owner && payload && payload.action === 'open-tools') { owner.openMenu(); return; }
       if (!owner && payload && payload.action === 'open-tools') { var sideOpen = document.querySelector('.kiwi-native-burger'); if (sideOpen) sideOpen.click(); return; }
@@ -900,10 +920,23 @@
 
   /* Presentation only: keep the dashboard's original input event and server
      verification intact. Never copy, store or publish the code to the host. */
+  /* The lock is static French HTML until i18n runs, and the web keypad until
+     ours mounts: for about a second an English phone read "Bienvenue" over
+     four empty boxes. Keep its content hidden until both are in place. */
+  function revealOwnerLockWhenReady() {
+    var reveal = function () { root.classList.add('kiwi-lock-ready'); };
+    var langDone = false, padDone = false;
+    var check = function () { if (langDone && padDone) reveal(); };
+    window.addEventListener('kiwi:langchange', function () { langDone = true; check(); });
+    if (String(root.lang || '').slice(0, 2) !== 'fr' || /^fr/i.test(navigator.language || '')) langDone = true;
+    setTimeout(reveal, 1200);
+    return function () { padDone = true; check(); };
+  }
   function initNativeOwnerKeypad() {
+    var padMounted = revealOwnerLockWhenReady();
     var lock = document.querySelector('[data-kiwi-lock]');
     var input = document.querySelector('[data-kiwi-pin-input]');
-    if (!lock || !input || !window.matchMedia) return;
+    if (!lock || !input || !window.matchMedia) { padMounted(); return; }
     var media = window.matchMedia('(max-width:600px)');
     var pad = document.createElement('div');
     pad.className = 'kiwi-native-owner-keypad';
@@ -968,6 +1001,7 @@
     }, true);
     if (media.addEventListener) media.addEventListener('change', apply);
     apply();
+    padMounted();
   }
 
   /* Owner home on a phone. The dashboard is the desktop page; on an iPhone the
@@ -978,7 +1012,7 @@
   function nativeOwnerCopy() {
     var lang = String(root.lang || 'fr');
     if (lang.indexOf('ar') === 0) return { home:'الرئيسية', orders:'الطلبات', report:'التقرير', clients:'الزبناء', more:'المزيد', label:'التنقل', report2:'تقرير اليوم', invoice:'الفواتير', export:'تصدير', customize:'تخصيص' };
-    if (lang.indexOf('en') === 0) return { home:'Home', orders:'Orders', report:'Report', clients:'Clients', more:'More', label:'Navigation', report2:'Day report', invoice:'Invoicing', export:'Export', customize:'Customize' };
+    if (lang.indexOf('en') === 0) return { home:'Home', orders:'Orders', report:'Report', clients:'Customers', more:'More', label:'Navigation', report2:'Day report', invoice:'Invoicing', export:'Export', customize:'Customize' };
     return { home:'Accueil', orders:'Commandes', report:'Rapport', clients:'Clients', more:'Plus', label:'Navigation', report2:'Rapport du jour', invoice:'Facturation', export:'Exporter', customize:'Personnaliser' };
   }
   function initNativeOwnerUx() {
@@ -1205,10 +1239,27 @@
     try { localStorage.setItem('kiwi:caisse:terminal-id:v1', r.id); } catch (_) {}
   });
   window.addEventListener('kiwi:native-haptic', function (event) { if (!event.detail || event.detail.kind === 'light') hapticLight(); else hapticNotice(event.detail.kind); });
-  window.addEventListener('kiwi:toast', function (event) { if (event.detail && event.detail.type === 'danger') hapticNotice('danger'); });
+  window.addEventListener('kiwi:toast', function (event) {
+    var type = event.detail && event.detail.type;
+    if (type === 'danger' || type === 'error') hapticNotice('danger');
+    else if (type === 'success') hapticNotice('success');
+  });
   document.addEventListener('kiwi-paired', commitPairingFromSurface);
   window.addEventListener('kiwi:account-revoked', revokeIdentity);
   document.addEventListener('focusin', revealFocused, true);
+  /* The WKWebView accessory bar (up, down, Done) read as a web form on every
+     text field. Hide it app-wide; keep it only on numeric keypads, which have
+     no Return key and would otherwise leave the keyboard with no way out. */
+  var keyboardPlugin = plugins.Keyboard, accessoryShown = null;
+  function syncAccessoryBar(event) {
+    var el = event && event.target;
+    var numeric = !!(el && el.matches && el.matches('input[inputmode="numeric"],input[inputmode="decimal"],input[type="number"],input[type="tel"]'));
+    if (numeric === accessoryShown) return;
+    accessoryShown = numeric;
+    call(keyboardPlugin, 'setAccessoryBarVisible', { isVisible:numeric });
+  }
+  document.addEventListener('focusin', syncAccessoryBar, true);
+  call(keyboardPlugin, 'setAccessoryBarVisible', { isVisible:false }).then(function () { accessoryShown = false; });
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', keyboardInsets);
     window.visualViewport.addEventListener('scroll', keyboardInsets);

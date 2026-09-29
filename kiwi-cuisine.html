@@ -279,6 +279,7 @@
     .pad button.wide { grid-column: span 1; font-size: 14px; font-weight: 500; color: rgba(255,255,255,.6); }
     .pad button.wide.ok { background: var(--atlas); border-color: var(--atlas); color: var(--pair-ok-ink); font-weight: 600; }
     .pad button.wide.ok:active { background: var(--atlas-600); border-color: var(--atlas-600); }
+    .pad button.wide.ok:disabled { opacity: .38; cursor: default; }
     #pair-msg { min-height: 22px; margin-top: 22px; font-size: 13.5px; color: var(--pair-err); letter-spacing: -0.005em; }
     #pair.err { animation: shake .4s; }
     @keyframes shake { 10%,90%{transform:translateX(-2px)} 30%,70%{transform:translateX(5px)} 50%{transform:translateX(-8px)} }
@@ -817,6 +818,8 @@
       'act.served': 'Remise au serveur',
       'act.stationReady': 'Poste prêt',
       'void.title': 'ANNULATION',
+      'void.errServer': 'Annulation non confirmée par le serveur · vérifiez la connexion et réessayez.',
+      'void.errSync': 'Annulation non confirmée · réessayez après synchronisation.',
       'void.accept': 'Accepter arrêt',
       'void.reject': 'Déjà prêt',
       'void.rejectNote': '[DÉJÀ PRÊT]',
@@ -862,6 +865,8 @@
       'act.served': 'Handed over',
       'act.stationReady': 'Station done',
       'void.title': 'CANCELLED',
+      'void.errServer': 'Cancellation not confirmed by the server · check the connection and try again.',
+      'void.errSync': 'Cancellation not confirmed · try again after syncing.',
       'void.accept': 'Stop cooking',
       'void.reject': 'Already plated',
       'void.rejectNote': '[ALREADY PLATED]',
@@ -905,6 +910,8 @@
       'act.served': 'سُلّم للنادل',
       'act.stationReady': 'المركز جاهز',
       'void.title': 'إلغاء',
+      'void.errServer': 'لم يؤكد الخادم الإلغاء · تحقق من الاتصال وأعد المحاولة.',
+      'void.errSync': 'لم يتم تأكيد الإلغاء · أعد المحاولة بعد المزامنة.',
       'void.accept': 'أوقف التحضير',
       'void.reject': 'جاهز مسبقًا',
       'void.rejectNote': '[جاهز مسبقًا]',
@@ -986,6 +993,10 @@
       }).join('') + '<button class="wide" data-k="del">' + T('pair.clear') + '</button>'
         + '<button data-k="0">0</button><button class="wide ok" data-k="ok">' + T('pair.ok') + '</button>';
     }
+    /* Confirmer n'a de sens qu'avec six chiffres : avant, un appui trop tôt ne
+       faisait rien, sans un mot. */
+    var ok = $('pair-pad').querySelector('[data-k="ok"]');
+    if (ok) ok.disabled = buf.length !== 6;
   }
   function padFail(msg) {
     $('pair-msg').textContent = msg;
@@ -1405,7 +1416,7 @@
       voidAck.closest('.tk-void-acts').querySelectorAll('button').forEach(function (button) { button.disabled = true; });
       KiwiKitchenRelay.ackVoid(vOrderId, vAction).then(function (result) {
         if (!result || !result.ok || !Array.isArray(result.lines)) {
-          error.textContent = 'Annulation non confirmée par le serveur · vérifiez la connexion et réessayez.';
+          error.textContent = T('void.errServer');
           error.hidden = false;
           setLive(false);
           return;
@@ -1413,7 +1424,7 @@
         if (S.orders[vOrderId]) S.orders[vOrderId].lines = result.lines;
         paint();
       }).catch(function () {
-        error.textContent = 'Annulation non confirmée · réessayez après synchronisation.';
+        error.textContent = T('void.errSync');
         error.hidden = false;
         setLive(false);
       }).finally(function () {

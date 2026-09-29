@@ -8835,7 +8835,7 @@
     el.innerHTML = `
       <div class="clockin-top">
         <div class="clockin-brand" aria-label="Kiwi"><img src="assets/kiwi-newlogo-inverse.svg" alt="" draggable="false"></div>
-        <div class="clockin-tagline">·version commerçant</div>
+        <div class="clockin-tagline">version commerçant</div>
       </div>
       <div class="clockin-mid">
         <div class="clockin-greet">Bonjour <em>${esc(who)}</em></div>

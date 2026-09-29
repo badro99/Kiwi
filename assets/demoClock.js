@@ -66,16 +66,24 @@
     const { from, to } = context, target = TARGETS[venue];
     const key = venue + ':' + context.day + ':' + from + ':' + to;
     if (!ledgerCache.has(key)) {
-      const rows = [], cents = Math.round(target.revenue * 100);
+      // Each business day gets its own deterministic volume (about ±9 %), so
+      // "vs yesterday" reads like a real week instead of a flat 0 %.
+      let seed = Array.from(context.day).reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0, 2166136261);
+      seed = Math.imul(seed ^ (seed >>> 16), 0x45d9f3b) >>> 0; seed = (seed ^ (seed >>> 16)) >>> 0;
+      const swing = ((seed % 1000) / 1000 - 0.5) * 0.18, txSwing = (((seed >>> 10) % 1000) / 1000 - 0.5) * 0.12;
+      const count = Math.max(1, Math.round(target.tx * (1 + txSwing)));
+      const rows = [], cents = Math.round(target.revenue * (1 + swing) * 100);
       const names = ['Menu Atlas', 'Menu du jour', 'Menu dégustation'];
-      const weights = Array.from({length:target.tx}, (_, i) => 1 + (i * 37 % 9));
+      const weights = Array.from({length:count}, (_, i) => 1 + (i * 37 % 9));
       const weightTotal = weights.reduce((sum, value) => sum + value, 0);
       let used = 0;
-      for (let i = 0; i < target.tx; i++) {
+      for (let i = 0; i < count; i++) {
         const next = used + weights[i];
         const amount = (Math.floor(cents * next / weightTotal) - Math.floor(cents * used / weightTotal)) / 100;
         used = next;
-        const ts = from + Math.floor((to - from) * (i + 1) / (target.tx + 1));
+        // Service hours 07:00 to 01:00, busier at lunch and dinner, never at 4 am.
+        const x = (i + 0.5) / count, shaped = x + 0.06 * Math.sin(4 * Math.PI * x);
+        const ts = from + 2 * 3600000 + Math.floor((to - from - 6 * 3600000) * shaped);
         const method = i % 4 === 0 ? 'cash' : i % 4 === 1 ? 'wallet' : 'card';
         const line = { name: names[i % names.length], qty: 1, total: amount, price: amount, cat: 'demo' };
         rows.push({ id: 'DEMO-' + context.day + '-' + (i + 1), ref: 'D-' + (i + 1), ts,
