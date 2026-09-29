@@ -76,6 +76,8 @@
      * A dedicated action prevents interactive.js from routing the large home
      * CTA through its legacy demo exporter. */
     button.dataset.action = 'day-report-export';
+    /* The span is hidden on narrow screens; the name must survive it. */
+    button.setAttribute('aria-label', labels[lang()]);
     button.innerHTML =
       '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
         '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>' +
@@ -631,6 +633,8 @@
     state.goalSignature = signature;
     var reportLabel = { fr: 'Générer le rapport', en: 'Generate report', ar: 'إنشاء التقرير' };
     setText(document.querySelector('.vexel-report-btn span'), reportLabel[l]);
+    var reportBtn = document.querySelector('.vexel-report-btn');
+    if (reportBtn) reportBtn.setAttribute('aria-label', reportLabel[l]);
     setText(document.querySelector('[data-vexel-client-label]'), clientCopy.label);
     setText(document.querySelector('[data-vexel-client-period]'), period);
     setText(card.querySelector('h2'), copy.title);

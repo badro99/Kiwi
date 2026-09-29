@@ -5018,8 +5018,9 @@
               </div>
               <div class="fa-inputwrap">
                 <textarea class="fa-input" data-fa-input rows="1"
-                  placeholder="${escAttr(u.placeholder)}"></textarea>
-                <button class="fa-send" data-fa-send title="${escAttr(u.send)}">${ICON.send}</button>
+                  aria-label="${escAttr(u.placeholder)}"
+                  placeholder="${escAttr(window.matchMedia && window.matchMedia('(pointer: coarse)').matches ? u.placeholder.split(/[,،]/)[0] + '…' : u.placeholder)}"></textarea>
+                <button class="fa-send" data-fa-send type="button" title="${escAttr(u.send)}" aria-label="${escAttr(u.send)}">${ICON.send}</button>
               </div>
               <div class="fa-toolbar">
                 <button class="fa-tool" data-fa-keypad-toggle type="button">${ICON.keypad}<span>${u.calc}</span></button>
@@ -5628,7 +5629,10 @@
       toggle.classList.remove('on');
     });
 
-    setTimeout(() => input.focus(), 480);
+    /* Desk only: on a phone, focusing here opens the keyboard 480 ms after the
+       drawer and moves every control under the merchant's finger. */
+    const finePointer = !(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    if (finePointer) setTimeout(() => input.focus(), 480);
   }
 
   /* ─────────────── REGISTER ─────────────── */

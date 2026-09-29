@@ -92,4 +92,26 @@ ok(/H\['stock-upgrade-ultra'\] = \(\) => \{\s*if \(document\.documentElement\.cl
 ok(/'upgrade-pro': \(\) => \{\s*if \(document\.documentElement\.classList\.contains\('kiwi-native'\)\)/.test(interactive), 'the plans sheet stays closed in the app');
 ok(/subscriptionBlock = document\.documentElement\.classList\.contains\('kiwi-native'\)\s*\? `[^`]*`/.test(account) && !/subscriptionBlock = document\.documentElement\.classList\.contains\('kiwi-native'\)\s*\? `[^`]*MAD/.test(account), 'the profile subscription card carries no price in the app');
 
+// Accessibility and dictation pass (tester report, 2026-09-29)
+const voice = read('assets/agent-voice.js');
+const agent = read('assets/agent.js');
+const privacy = read('app/src/native-privacy.js');
+const mobileNav = read('assets/mobile-nav.js');
+const vexelLayout = read('assets/design-vexel-layout.js');
+const team = read('assets/team.js');
+ok(/r\.res\.status === 401 \? 'auth'/.test(voice), 'a 401 on dictation says "sign in", not a generic failure');
+ok(/audioBitsPerSecond: 32000/.test(voice), 'dictation records at speech bitrate, so a long question stays under the 2 MB cap');
+ok(/P\.allowed && P\.allowed\(\) \? Promise\.resolve\(true\) : P\.show\(\)/.test(voice) && /allowed:function \(\) \{ return choice\(\) === .allowed.; \}/.test(privacy), 'the mic starts recording right after AI consent is given');
+ok(/en: \{ dictate: 'Dictate your question'/.test(voice) && /ar: \{ dictate:/.test(voice) && /setAttribute\('aria-label', label\)/.test(voice), 'mic labels are localised, not French-only');
+ok(/type = type \|\| 'error';/.test(voice) && /Kiwi\.toast\(msg, \{ type: type, force: true \}\)/.test(voice), 'dictation errors use an error toast, not a success tick');
+ok(/finePointer/.test(agent) && /aria-label="\$\{escAttr\(u\.placeholder\)\}"/.test(agent), 'the copilot composer is labelled and does not autofocus on touch');
+ok(/html\.kiwi-native \.kiwi-drawer\{box-sizing:border-box;padding-top:var\(--kiwi-safe-top\)/.test(runtimeCss), 'drawer headers clear the Dynamic Island');
+ok(/html\.kiwi-native \.fa-toolbar \.fa-hint\{display:none\}/.test(runtimeCss), 'no "Enter to send" keyboard hint on a phone');
+ok(/sidebar\.inert = closed/.test(mobileNav), 'the closed phone menu is inert, not just aria-hidden');
+ok(/button\.setAttribute\('aria-label', labels\[lang\(\)\]\)/.test(vexelLayout), 'Generate report keeps a name when its label is hidden');
+ok(!/c: '#B26B0F'/.test(team), 'team avatar colours pass 4.5:1 against paper');
+ok(/\.acts \.approve,\.acts \.dismiss,\.cd-exp,\.eq-icon-btn\)\{min-height:44px/.test(runtimeCss), 'small drawer controls get 44 pt targets');
+ok(!/maximum-scale/.test(serveur) && !/maximum-scale/.test(cuisine), 'Team and Kitchen allow pinch zoom');
+ok(/class="mode-selector" role="group"/.test(caisse), 'till mode pills are a group of toggles, not a tablist');
+
 console.log(`\nnative-pass4-test · ${checks} checks green`);

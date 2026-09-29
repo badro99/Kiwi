@@ -615,7 +615,7 @@
   const CONTRACT_TYPES = ['CDI', 'CDD', 'Stage', 'Freelance', 'Intérim'];
   const LANGS = ['Français', 'Arabe', 'Anglais', 'Espagnol', 'Tamazight', 'Darija'];
   const AVATAR_TONES = ['a', 'b', 'c', 'd'];
-  const AVATAR_COLORS = { a: 'var(--atlas)', b: 'var(--riad)', c: '#B26B0F', d: '#2B5C68' };
+  const AVATAR_COLORS = { a: 'var(--atlas)', b: 'var(--riad)', c: '#9A5C0C', d: '#2B5C68' };
 
   /* The code under "Accès Kiwi Caisse" is what the cashier taps on the till, and
    * the till's pad takes FOUR DIGITS — nothing else can be entered on it. This

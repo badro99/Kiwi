@@ -79,7 +79,7 @@ var SHELL = [
   '/assets/agent-data.js?v=1',
   '/assets/agent-features.js?v=4',
   '/assets/agent-truth.js?v=6',
-  '/assets/agent-voice.js?v=8',
+  '/assets/agent-voice.js?v=9',
   '/assets/agent-vision.js?v=1',
   '/assets/i18n.js?v=9',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
@@ -138,7 +138,7 @@ var SHELL = [
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
   '/assets/dateRange.js?v=36',
-  '/assets/mobile-nav.js?v=2',
+  '/assets/mobile-nav.js?v=3',
   '/assets/liquid-lens.js?v=1',
   '/assets/pages.js?v=7',
   '/assets/help-centre.js?v=4',
@@ -249,7 +249,7 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=4',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=10',
-  '/assets/team.js?v=283',
+  '/assets/team.js?v=284',
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=70',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).

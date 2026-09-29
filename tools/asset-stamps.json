@@ -56,12 +56,12 @@
     "sha": "dc3ea68b7b50bc5a"
   },
   "assets/agent-voice.js": {
-    "v": "8",
-    "sha": "ff959b20a33063a8"
+    "v": "9",
+    "sha": "386089492099db84"
   },
   "assets/agent.js": {
-    "v": "24",
-    "sha": "cb484942437f2e28"
+    "v": "25",
+    "sha": "3c4fda7f5b309cc9"
   },
   "assets/ai-telemetry.js": {
     "v": "1",
@@ -252,8 +252,8 @@
     "sha": "2443568851cf6ee1"
   },
   "assets/design-vexel-layout.js": {
-    "v": "2083",
-    "sha": "6906f83e5f47a0d5"
+    "v": "2084",
+    "sha": "3fbc3600b5d1e27f"
   },
   "assets/design-vexel.css": {
     "v": "2107",
@@ -480,8 +480,8 @@
     "sha": "4a88372021c9dedd"
   },
   "assets/mobile-nav.js": {
-    "v": "2",
-    "sha": "bdf5a3ea22cc2931"
+    "v": "3",
+    "sha": "66c26deed9b25608"
   },
   "assets/mobile.css": {
     "v": "4",
@@ -888,8 +888,8 @@
     "sha": "4cfb2ff36ff53004"
   },
   "assets/team.js": {
-    "v": "283",
-    "sha": "acc937d45f9509a7"
+    "v": "284",
+    "sha": "873c4e94a909bfe1"
   },
   "assets/tenant-purge.js": {
     "v": "2",

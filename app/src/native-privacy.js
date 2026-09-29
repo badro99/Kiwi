@@ -9,9 +9,9 @@
   function save(value) { try { sessionStorage.setItem(KEY, value); } catch (_) {} }
   function copy() {
     var lang = document.documentElement.lang.slice(0, 2);
-    if (lang === 'ar') return {title:'خصوصية Kiwi AI', body:'عند استخدام ميزات الذكاء الاصطناعي، يرسل Kiwi رسائلك وبيانات النشاط المرتبطة بها، والصور والمستندات والتسجيلات الصوتية التي تختارها، إلى Cloudflare Workers AI لمعالجة طلبك. قد تتضمن هذه البيانات معلومات عن العملاء أو الموظفين. لا ترسل بيانات شخصية إلا إذا كان مسموحاً لك بمشاركتها. يمكنك استخدام الصندوق دون الذكاء الاصطناعي. يسري اختيارك على هذه الجلسة ويمكن تغييره من «المزيد».', allow:'السماح بالمعالجة', deny:'بدون ذكاء اصطناعي', policy:'سياسة الخصوصية'};
-    if (lang === 'en') return {title:'Kiwi AI privacy', body:'When you use AI features, Kiwi sends your messages and relevant business context, plus the photos, documents and audio you select, to Cloudflare Workers AI to process your request. This may include customer or employee information. Only send personal data you are permitted to share. You can use the till without AI. Your choice applies to this session and can be changed in More.', allow:'Allow processing', deny:'Continue without AI', policy:'Privacy policy'};
-    return {title:'Confidentialité Kiwi AI', body:'Lorsque vous utilisez les fonctions IA, Kiwi transmet vos messages et le contexte de votre activité, ainsi que les photos, documents et enregistrements choisis, à Cloudflare Workers AI pour traiter votre demande. Ces éléments peuvent contenir des informations sur vos clients ou employés. Ne transmettez que les données personnelles que vous êtes autorisé à partager. La caisse reste utilisable sans IA. Votre choix vaut pour cette session et peut être modifié dans Plus.', allow:'Autoriser le traitement', deny:'Continuer sans IA', policy:'Politique de confidentialité'};
+    if (lang === 'ar') return {title:'خصوصية Kiwi AI', body:'عند استخدام ميزات الذكاء الاصطناعي، يرسل Kiwi رسائلك وبيانات النشاط المرتبطة بها، والصور والمستندات والتسجيلات الصوتية التي تختارها، إلى Cloudflare Workers AI لمعالجة طلبك. قد تتضمن هذه البيانات معلومات عن العملاء أو الموظفين. لا ترسل بيانات شخصية إلا إذا كان مسموحاً لك بمشاركتها. يمكنك استخدام الصندوق دون الذكاء الاصطناعي. يسري اختيارك على هذه الجلسة ويمكن تغييره من القائمة ☰ › خصوصية Kiwi AI.', allow:'السماح بالمعالجة', deny:'بدون ذكاء اصطناعي', policy:'سياسة الخصوصية'};
+    if (lang === 'en') return {title:'Kiwi AI privacy', body:'When you use AI features, Kiwi sends your messages and relevant business context, plus the photos, documents and audio you select, to Cloudflare Workers AI to process your request. This may include customer or employee information. Only send personal data you are permitted to share. You can use the till without AI. Your choice applies to this session and can be changed in the ☰ menu › Kiwi AI privacy.', allow:'Allow processing', deny:'Continue without AI', policy:'Privacy policy'};
+    return {title:'Confidentialité Kiwi AI', body:'Lorsque vous utilisez les fonctions IA, Kiwi transmet vos messages et le contexte de votre activité, ainsi que les photos, documents et enregistrements choisis, à Cloudflare Workers AI pour traiter votre demande. Ces éléments peuvent contenir des informations sur vos clients ou employés. Ne transmettez que les données personnelles que vous êtes autorisé à partager. La caisse reste utilisable sans IA. Votre choix vaut pour cette session et peut être modifié dans le menu ☰ › Confidentialité Kiwi AI.', allow:'Autoriser le traitement', deny:'Continuer sans IA', policy:'Politique de confidentialité'};
   }
   function show() {
     if (pending) return pending;
@@ -20,6 +20,8 @@
     pending = new Promise(function (resolve) {
       function mount() {
         var words = copy(), previous = document.activeElement;
+        /* Close the keyboard first: an open keyboard hid the two buttons. */
+        try { if (previous && previous.blur && /^(INPUT|TEXTAREA)$/.test(previous.tagName)) previous.blur(); } catch (_) {}
         var overlay = document.createElement('div');
         overlay.className = 'kiwi-native-account kiwi-native-privacy is-open';
         overlay.setAttribute('role', 'dialog'); overlay.setAttribute('aria-modal', 'true');
@@ -32,7 +34,7 @@
         deny.textContent = words.deny; allow.textContent = words.allow;
         function finish(accepted) {
           save(accepted ? 'allowed' : 'denied'); overlay.remove(); pending = null;
-          if (previous && previous.isConnected && previous.focus) previous.focus();
+          if (previous && previous.isConnected && previous.focus && !/^(INPUT|TEXTAREA)$/.test(previous.tagName)) previous.focus();
           if (window.KiwiNativeHostRequestState) window.KiwiNativeHostRequestState();
           resolve(accepted);
         }
@@ -74,7 +76,7 @@
     if (decline) decline.click();
     try { sessionStorage.removeItem(KEY); } catch (_) {}
   }
-  function denied() { return new DOMException('Kiwi AI processing was not allowed. Change your choice in More.', 'NotAllowedError'); }
+  function denied() { return new DOMException('Kiwi AI processing was not allowed. Change your choice in the ☰ menu › Kiwi AI privacy.', 'NotAllowedError'); }
   var transport = window.fetch;
   window.fetch = function (input, init) {
     if (/^\/auth\/(?:login|logout)(?:\/|$)/.test(requestPath(input))) reset();
@@ -98,5 +100,5 @@
     var beacon = navigator.sendBeacon.bind(navigator);
     navigator.sendBeacon = function (url, data) { return aiURL(url) && choice() !== 'allowed' ? false : beacon(url, data); };
   }
-  window.KiwiNativePrivacy = { show:show, request:permission, reset:reset };
+  window.KiwiNativePrivacy = { show:show, request:permission, reset:reset, allowed:function () { return choice() === 'allowed'; } };
 })();

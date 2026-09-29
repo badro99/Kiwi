@@ -57,8 +57,16 @@
      * entire navigation from assistive tech. */
     function syncSidebarAria() {
       if (!sidebar) return;
-      if (phoneMq.matches) sidebar.setAttribute('aria-hidden', String(!isMenuOpen()));
-      else sidebar.removeAttribute('aria-hidden');
+      /* inert with it: aria-hidden alone leaves the closed drawer's links in
+       * the tab order, so VoiceOver and a keyboard land on invisible items. */
+      if (phoneMq.matches) {
+        const closed = !isMenuOpen();
+        sidebar.setAttribute('aria-hidden', String(closed));
+        sidebar.inert = closed;
+      } else {
+        sidebar.removeAttribute('aria-hidden');
+        sidebar.inert = false;
+      }
     }
     function placeSidebar() {
       if (!sidebar || !app) return;

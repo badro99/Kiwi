@@ -32,14 +32,50 @@
    * repayer l'aller-retour : les dictées suivantes de la session passent
    * directement par le navigateur. */
   var preferBrowser = false;
+  /* A 401 means no account session (the signed-out demo): say so at once on
+   * the next press instead of recording a question that cannot be sent. */
+  var needsSignIn = false;
 
   var active = null;              // { btn, recorder, stream, timer } — une seule dictée à la fois
 
-  function toast(msg) {
+  /* Copy in the merchant's language. The app and the dashboard both stamp
+   * <html lang>; kiwiLang is the web fallback. */
+  var WORDS = {
+    fr: { dictate: 'Dicter votre question', stop: 'Arrêter et envoyer', busy: 'Transcription…',
+          nothing: 'Rien entendu · réessayez plus près du micro', unavailable: 'Dictée indisponible sur cet appareil',
+          denied: 'Micro refusé · autorisez-le dans Réglages › Kiwi Pro', interrupted: 'Dictée interrompue · réessayez',
+          fallback: 'Transcription Kiwi indisponible · le micro passe par le navigateur, réessayez',
+          down: 'Transcription indisponible pour le moment', auth: 'La dictée demande un compte Kiwi connecté. La démo ne transcrit pas l’audio',
+          failed: 'Transcription en échec · réessayez', offline: 'Hors ligne · la dictée a besoin du réseau' },
+    en: { dictate: 'Dictate your question', stop: 'Stop and send', busy: 'Transcribing…',
+          nothing: 'Nothing heard · try again closer to the microphone', unavailable: 'Dictation is not available on this device',
+          denied: 'Microphone blocked · allow it in Settings › Kiwi Pro', interrupted: 'Dictation stopped · try again',
+          fallback: 'Kiwi transcription unavailable · using the browser microphone, try again',
+          down: 'Transcription is unavailable right now', auth: 'Dictation needs a signed-in Kiwi account. The demo does not transcribe audio',
+          failed: 'Transcription failed · try again', offline: 'Offline · dictation needs the network' },
+    ar: { dictate: 'أملِ سؤالك', stop: 'إيقاف وإرسال', busy: 'جارٍ التفريغ…',
+          nothing: 'لم يُسمع شيء · أعد المحاولة قرب الميكروفون', unavailable: 'الإملاء غير متاح على هذا الجهاز',
+          denied: 'الميكروفون محظور · اسمح به في الإعدادات › Kiwi Pro', interrupted: 'توقف الإملاء · أعد المحاولة',
+          fallback: 'تفريغ Kiwi غير متاح · يُستخدم ميكروفون المتصفح، أعد المحاولة',
+          down: 'التفريغ غير متاح حاليًا', auth: 'الإملاء يتطلب حساب Kiwi مسجّل الدخول. العرض التجريبي لا يفرّغ الصوت',
+          failed: 'فشل التفريغ · أعد المحاولة', offline: 'غير متصل · الإملاء يحتاج إلى الشبكة' },
+  };
+  function lang() {
+    var l = String(document.documentElement.lang || '').slice(0, 2);
+    if (!WORDS[l]) { try { l = String(localStorage.getItem('kiwiLang') || '').slice(0, 2); } catch (_) {} }
+    return WORDS[l] ? l : 'fr';
+  }
+  function w(key) { return WORDS[lang()][key] || WORDS.fr[key]; }
+
+  /* Every message here reports a problem, except none: say so to the toast,
+   * so it is not drawn with a success tick. */
+  function toast(msg, type) {
+    type = type || 'error';
     try {
-      if (window.Kiwi && window.Kiwi.toast) { window.Kiwi.toast(msg); return; }
+      if (window.Kiwi && window.Kiwi.toast) { window.Kiwi.toast(msg, { type: type, force: true }); return; }
       var el = document.createElement('div');
       el.textContent = msg;
+      el.setAttribute('role', 'alert');
       el.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#0A0F0D;color:#F7F5F0;padding:10px 18px;border-radius:10px;z-index:99999;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);';
       document.body.appendChild(el);
       setTimeout(function () { try { el.remove(); } catch (_) {} }, 4500);
@@ -65,16 +101,20 @@
 
   function setState(btn, state) {
     btn.classList.remove('rec', 'busy');
-    if (state === 'rec') { btn.classList.add('rec'); btn.innerHTML = SVG_STOP; btn.title = 'Arrêter et envoyer'; }
-    else if (state === 'busy') { btn.classList.add('busy'); btn.innerHTML = SVG_MIC; btn.title = 'Transcription…'; }
-    else { btn.innerHTML = SVG_MIC; btn.title = 'Dicter votre question'; }
+    var label = state === 'rec' ? w('stop') : state === 'busy' ? w('busy') : w('dictate');
+    btn.innerHTML = state === 'rec' ? SVG_STOP : SVG_MIC;
+    btn.title = label;
+    btn.setAttribute('aria-label', label);
+    btn.setAttribute('aria-pressed', state === 'rec' ? 'true' : 'false');
+    if (state === 'busy') btn.setAttribute('aria-busy', 'true'); else btn.removeAttribute('aria-busy');
+    if (state) btn.classList.add(state);
   }
 
   /* Le texte transcrit tombe dans le champ pour relecture par le commerçant :
    * il peut ainsi vérifier, ajuster un mot et appuyer sur Entrée pour envoyer. */
   function deliver(ctx, text) {
     var t = String(text || '').trim();
-    if (!t) { toast('Rien entendu · réessayez plus près du micro'); return; }
+    if (!t) { toast(w('nothing'), 'warn'); return; }
     var cur = (ctx.input.value || '').trim();
     ctx.input.value = cur ? cur + ' ' + t : t;
     try {
@@ -93,9 +133,9 @@
   /* ── Secours : la reconnaissance du navigateur ─────────────────────── */
   function browserDictate(ctx, btn) {
     var Ctor = speechCtor();
-    if (!Ctor) { toast('Dictée indisponible sur ce navigateur'); return; }
+    if (!Ctor) { toast(w('unavailable')); return; }
     var rec;
-    try { rec = new Ctor(); } catch (_) { toast('Dictée indisponible sur ce navigateur'); return; }
+    try { rec = new Ctor(); } catch (_) { toast(w('unavailable')); return; }
     var lang = { fr: 'fr-FR', ar: 'ar-MA', en: 'en-US', es: 'es-ES' }[localStorage.getItem('kiwiLang') || 'fr'] || 'fr-FR';
     rec.lang = lang;
     rec.interimResults = false;
@@ -107,8 +147,8 @@
       deliver(ctx, t);
     };
     rec.onerror = function (e) {
-      if (e && e.error === 'not-allowed') toast('Micro refusé · autorisez-le dans le navigateur');
-      else toast('Dictée interrompue · réessayez');
+      if (e && e.error === 'not-allowed') toast(w('denied'));
+      else toast(w('interrupted'));
     };
     rec.onend = function () { active = null; setState(btn, ''); };
     try { rec.start(); } catch (_) { active = null; setState(btn, ''); }
@@ -119,7 +159,11 @@
     navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
       var mime = pickMime();
       var recorder;
-      try { recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream); }
+      try { /* Speech needs ~32 kb/s. WebKit's default is several times that, which
+       * pushed a 30 s question past the endpoint's 2 MB cap. */
+      var opts = { audioBitsPerSecond: 32000 };
+      if (mime) opts.mimeType = mime;
+      recorder = new MediaRecorder(stream, opts); }
       catch (_) { stream.getTracks().forEach(function (t) { t.stop(); }); browserDictate(ctx, btn); return; }
       var chunks = [];
       recorder.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
@@ -136,7 +180,7 @@
       setState(btn, 'rec');
       recorder.start();
     }).catch(function () {
-      toast('Micro refusé · autorisez-le dans le navigateur');
+      toast(w('denied'));
     });
   }
 
@@ -145,7 +189,7 @@
     var reader = new FileReader();
     reader.onload = function () {
       var b64 = String(reader.result || '').split(',')[1] || '';
-      if (!b64) { setState(btn, ''); toast('Dictée interrompue · réessayez'); return; }
+      if (!b64) { setState(btn, ''); toast(w('interrupted')); return; }
       fetch('/api/ai/voice', {
         method: 'POST',
         credentials: 'same-origin',
@@ -156,24 +200,26 @@
       }).then(function (r) {
         setState(btn, '');
         if (r.j && r.j.ok) { deliver(ctx, r.j.text); return; }
-        var code = (r.j && r.j.error) || r.res.status;
+        var code = r.res.status === 401 ? 'auth' : ((r.j && r.j.error) || r.res.status);
+        try { console.warn('[kiwi-voice] transcription refused', r.res.status, code, blob.type, blob.size); } catch (_) {}
         /* L'endpoint nomme sa panne ; on choisit le secours en connaissance
          * de cause plutôt que de réessayer un mur toute la journée. */
         if (code === 'unbound' || code === 'quota') {
           preferBrowser = !!speechCtor();
-          toast(speechCtor() ? 'Transcription Kiwi indisponible · le micro passe par le navigateur, réessayez' : 'Transcription indisponible pour le moment');
+          toast(speechCtor() ? w('fallback') : w('down'), 'warn');
         } else if (code === 'auth') {
-          toast('Session expirée · reconnectez-vous');
+          needsSignIn = true;
+          toast(w('auth'), 'warn');
         } else {
-          toast('Transcription en échec · réessayez');
+          toast(w('failed'));
         }
       }).catch(function (error) {
         setState(btn, '');
         if (error && error.name === 'NotAllowedError') return;
-        toast('Hors ligne · la dictée a besoin du réseau');
+        toast(w('offline'));
       });
     };
-    reader.onerror = function () { setState(btn, ''); toast('Dictée interrompue · réessayez'); };
+    reader.onerror = function () { setState(btn, ''); toast(w('interrupted')); };
     reader.readAsDataURL(blob);
   }
 
@@ -185,9 +231,14 @@
       return;
     }
     if (btn.classList.contains('busy')) return;
+    if (needsSignIn) { toast(w('auth'), 'warn'); return; }
     if (window.KiwiNativePrivacy) {
-      if (!canRecord()) { browserDictate(ctx, btn); return; }
-      window.KiwiNativePrivacy.request().then(function (allowed) { if (allowed && !active) startRecording(ctx, btn); });
+      if (!canRecord()) { toast(w('unavailable')); return; }
+      /* The press is the explicit request: ask again rather than stay silent
+         when AI was refused earlier in the session. */
+      var P = window.KiwiNativePrivacy;
+      var ask = P.allowed && P.allowed() ? Promise.resolve(true) : P.show();
+      ask.then(function (allowed) { if (allowed && !active) startRecording(ctx, btn); });
       return;
     }
     if (preferBrowser || !canRecord()) { browserDictate(ctx, btn); return; }
@@ -199,8 +250,7 @@
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'kv-mic';
-    btn.setAttribute('aria-label', 'Dicter votre question');
-    setState(btn, '');
+        setState(btn, '');
     btn.addEventListener('click', function (e) { e.preventDefault(); onPress(ctx, btn); });
     return btn;
   }
