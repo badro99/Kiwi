@@ -31,3 +31,11 @@ body.design-vexel[data-vexel-mode] .kr-btn:not(.primary){border-color:var(--vx-c
 body.design-vexel[data-vexel-mode] :is(.kr-live,.kr-step){border-color:var(--vx-card-border)}
 body.design-vexel[data-vexel-mode] .kr-step i{background:color-mix(in srgb,var(--ink) 7%,transparent)}
 @media(prefers-reduced-motion:reduce){body.design-vexel[data-vexel-mode] .kr-stats article:hover{transform:none}}
+
+/* Keep the reservations introduction and setup steps readable at phone width. */
+@media(max-width:560px){
+  .kr-command{margin:0 0 12px;padding:18px 16px;border:1px solid var(--n-200);border-radius:18px;background:var(--surface)}
+  .kr-steps{flex-direction:column;flex-wrap:nowrap;align-items:stretch}
+  .kr-step{box-sizing:border-box;min-height:44px;width:100%;border-radius:12px;padding:0 12px;line-height:1.3}
+  .kr-step i{flex:none}
+}

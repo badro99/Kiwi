@@ -118,4 +118,10 @@ ok(/\.kdr-nav \.kdr-day span\{display:none!important/.test(css), 'day report doe
 // #0125 · New item should lead into New section when there are no sections.
 ok(/data-action="rmw-item-add">/.test(menu) && /if\(!d\.cats\.length\)\{openCategory\(null\);return;\}/.test(menu), 'New item opens section creation when no section exists');
 
+// #0126 · empty reservation counters do not announce a meaningless dot.
+const reservations = read('assets/reservations.js');
+const reservationsCss = read('assets/reservations.css');
+ok(/upcoming\.length \? '<small>' \+ esc\(dateLabel/.test(reservations) && /requested\.length \? '<small>' \+ esc\(requested\[0\]\.customer\.name\)/.test(reservations), 'empty reservation cards omit the subtitle element');
+ok(/@media\(max-width:560px\)[\s\S]*\.kr-command\{[^}]*border-radius:18px/.test(reservationsCss) && /\.kr-steps\{flex-direction:column;flex-wrap:nowrap/.test(reservationsCss), 'reservations hero is rounded and setup steps stack on phone');
+
 console.log(`\nnative-pass5-test · ${checks} checks green`);
