@@ -64,4 +64,5 @@ ok(read("assets/conformite.js").includes("window.KiwiNumber?.number(Math.round(n
 ok(read("assets/mobile-nav.js").includes("new MutationObserver(syncNavLabels)") && read("assets/mobile-nav.js").includes("Return to dashboard"), "navigation accessibility names follow the selected language");
 ok(read("assets/mobile-nav.js").includes("notifications.setAttribute('data-action', 'notifications')") && read("assets/z-reconciliation.js").includes('button[data-mobile-notifications]'), "translated notification labels retain a stable click action and alert badge selector");
 ok(css.includes('body.kiwi-native-owner:not(#kno) .fa-drawer .kiwi-drawer{background:#FBFAF7!important') && css.includes('.fa-drawer .kiwi-drawer{background:#131A17!important'), "AI sheets override the translucent skin with opaque light and dark surfaces");
+ok(css.includes('.kiwi-lock :is(.kiwi-lock-help,.kiwi-lock-help b,.kiwi-lock-switch,.kiwi-native-role-back){color:#ACB8B1!important}'), "secondary lock text does not inherit dark ink in light appearance");
 console.log(`native-pass7-test: ${checks} checks passed`);

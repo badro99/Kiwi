@@ -961,3 +961,5 @@ html.kiwi-native body.kiwi-native-owner:not(#kno) .kpi-m[data-kpi="ratio"] .v{di
 /* Pass 7: the Relevé AI skin outranks the generic opaque-sheet rule. */
 html.kiwi-native body.kiwi-native-owner:not(#kno) .fa-drawer .kiwi-drawer{background:#FBFAF7!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) body.kiwi-native-owner:not(#kno) .fa-drawer .kiwi-drawer{background:#131A17!important}
+/* Fixed ink launch ground needs readable secondary copy even in light appearance. */
+html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock :is(.kiwi-lock-help,.kiwi-lock-help b,.kiwi-lock-switch,.kiwi-native-role-back){color:#ACB8B1!important}
