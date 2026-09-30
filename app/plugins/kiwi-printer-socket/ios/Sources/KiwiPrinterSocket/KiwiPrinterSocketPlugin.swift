@@ -3,9 +3,15 @@ import Foundation
 import LocalAuthentication
 import Network
 import Security
+import UIKit
 #if canImport(Darwin)
 import Darwin
 #endif
+
+private final class InvoicePageRenderer: UIPrintPageRenderer {
+    override var paperRect: CGRect { CGRect(x: 0, y: 0, width: 595.28, height: 841.89) }
+    override var printableRect: CGRect { paperRect.insetBy(dx: 24, dy: 24) }
+}
 
 private struct SocketOutcome {
     let ok: Bool
@@ -84,6 +90,7 @@ public class KiwiPrinterSocketPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "KiwiPrinterSocketPlugin"
     public let jsName = "KiwiPrinterSocket"
     public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "exportInvoice", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "send", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "probe", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "scan", returnType: CAPPluginReturnPromise),
@@ -96,6 +103,50 @@ public class KiwiPrinterSocketPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "checkBiometrics", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "authenticateBiometric", returnType: CAPPluginReturnPromise)
     ]
+
+    // WKWebView has no browser print/save-PDF dialog. Render the numbered
+    // server document to a real multipage A4 PDF, then let the user choose
+    // Save to Files / Print / Share. Nothing is transmitted automatically.
+    @objc func exportInvoice(_ call: CAPPluginCall) {
+        guard let markup = call.getString("html"), !markup.isEmpty, markup.utf8.count <= 2_000_000 else {
+            call.reject("invalid-invoice"); return
+        }
+        let rawName = call.getString("name") ?? "Facture"
+        let name = String(rawName.filter { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }.prefix(80))
+        DispatchQueue.main.async {
+            guard var presenter = self.bridge?.viewController else { call.reject("no-presenter"); return }
+            while let presented = presenter.presentedViewController { presenter = presented }
+            guard !presenter.isBeingDismissed else { call.reject("presenter-busy"); return }
+            let renderer = InvoicePageRenderer()
+            renderer.addPrintFormatter(UIMarkupTextPrintFormatter(markupText: markup), startingAtPageAt: 0)
+            renderer.prepare(forDrawingPages: NSRange(location: 0, length: 1))
+            let pages = renderer.numberOfPages
+            guard pages > 0, pages <= 200 else { call.reject("invalid-page-count"); return }
+            let pdf = UIGraphicsPDFRenderer(bounds: renderer.paperRect).pdfData { context in
+                for page in 0..<pages {
+                    context.beginPage()
+                    renderer.drawPage(at: page, in: renderer.paperRect)
+                }
+            }
+            let folder = FileManager.default.temporaryDirectory.appendingPathComponent("KiwiInvoice-" + UUID().uuidString, isDirectory: true)
+            let file = folder.appendingPathComponent((name.isEmpty ? "Facture" : name) + ".pdf")
+            do {
+                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                try pdf.write(to: file, options: [.atomic, .completeFileProtection])
+            } catch { try? FileManager.default.removeItem(at: folder); call.reject("pdf-write-failed"); return }
+            let activity = UIActivityViewController(activityItems: [file], applicationActivities: nil)
+            if let popover = activity.popoverPresentationController {
+                popover.sourceView = presenter.view
+                popover.sourceRect = CGRect(x: presenter.view.bounds.midX, y: presenter.view.bounds.midY, width: 1, height: 1)
+                popover.permittedArrowDirections = []
+            }
+            activity.completionWithItemsHandler = { _, _, _, _ in try? FileManager.default.removeItem(at: folder) }
+            presenter.present(activity, animated: true) {
+                // Presented is not a claim that the user saved or printed it.
+                call.resolve(["ok": true, "presented": true, "pages": pages, "bytes": pdf.count])
+            }
+        }
+    }
 
     @objc func send(_ call: CAPPluginCall) {
         guard let args = endpointArgs(call), let encoded = call.getString("data"), let data = Data(base64Encoded: encoded) else {

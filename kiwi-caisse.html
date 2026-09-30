@@ -5576,7 +5576,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
   <script src="assets/caisse-pwa.js?v=564" defer></script>
-  <script src="assets/live-link.js?v=57" defer></script>
+  <script src="assets/live-link.js?v=59" defer></script>
   <script src="assets/retail-balances.js?v=4" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -5670,7 +5670,7 @@
        les seize métiers, pas seulement au restaurant. Ressort un ticket de la
        journée avec son numéro d'origine et la mention de duplicata, sans jamais
        réencaisser. Après receipt.js, dont il compose les documents. -->
-  <script src="assets/invoice.js?v=8" defer></script>
+  <script src="assets/invoice.js?v=12" defer></script>
   <script src="assets/pos-reprint.js?v=8" defer></script>
   <!-- Global operator access · long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js?v=1" defer></script>
@@ -14394,7 +14394,8 @@
       const sourceLabel = origin === 'employee' ? 'App employé'
         : (origin === 'orderpro' ? 'OrderPro' : 'Caisse');
       const entry = {
-        id: String(sale.id), time: new Date(Number(sale.ts) || Date.now()),
+        id: String(sale.id), serverSaleId: String(sale.id),
+        amountCents: sale.amountCents, time: new Date(Number(sale.ts) || Date.now()),
         label: String(sale.orderRef || sale.label || 'Vente'), amount: money(sale.amount),
         method: String(sale.method || 'cash'), ref: String(sale.receiptRef || sale.ref || sale.id),
         tip: 0, cashier: String(sale.server || sourceLabel),

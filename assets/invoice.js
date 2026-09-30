@@ -349,7 +349,7 @@
   /* ── 2. Gabarit HTML A4 Canonical ───────────────────────────────────────────
    * html(doc) -> String
    * Gabarit unique partagé par la surface Ventes, Facturation et les Caisses. */
-  function html(doc) {
+  function html(doc, options) {
     if (!doc) return '';
     const num = doc.number || 'Facture';
     const liveSeller = getSellerBusiness();
@@ -535,11 +535,11 @@
     </div>
   </div>
 
-  <script>
+  ${(options && options.autoPrint === false) ? '' : `<script>
     addEventListener('load', function() {
       setTimeout(function() { window.print(); }, 150);
     });
-  <\/script>
+  <\/script>`}
 </body>
 </html>`;
   }
@@ -547,28 +547,76 @@
   /* ── 3. Ouverture & Impression / PDF ─────────────────────────────────────────
    * open(doc, mode) -> void
    * mode : 'pdf' | 'print' */
-  function open(doc, mode) {
-    if (!doc) return;
+  function nativeInvoice() {
+    const p = window.Capacitor?.Plugins?.KiwiPrinterSocket;
+    return typeof p?.exportInvoice === 'function' ? p : null;
+  }
+
+  function reserveWindow() {
+    if (nativeInvoice()) return null;
+    try {
+      const win = window.open('', '_blank');
+      if (win) win.document.write('<!doctype html><title>Facture</title><p>Préparation de la facture…</p>');
+      return win;
+    } catch (_) { return null; }
+  }
+
+  function preview(doc) {
+    // Blocked popups / older native shells still get the actual document,
+    // never a silent no-op. No invoice number is invented by this viewer.
+    const overlay = document.createElement('div');
+    overlay.className = 'kiwi-invoice-preview';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Facture ' + (doc.number || ''));
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;background:#F7F5F0;color:#10251d;padding:16px;gap:12px;';
+    const bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;';
+    const title = document.createElement('strong'); title.textContent = doc.number || 'Facture';
+    const print = document.createElement('button'); print.type = 'button'; print.textContent = 'Imprimer / PDF';
+    const close = document.createElement('button'); close.type = 'button'; close.textContent = 'Fermer';
+    [print, close].forEach(b => { b.style.cssText = 'min-height:44px;padding:8px 14px;font:inherit;'; });
+    const frame = document.createElement('iframe');
+    frame.title = doc.number || 'Facture';
+    frame.style.cssText = 'flex:1;width:100%;border:0;min-height:0;';
+    frame.setAttribute('sandbox', 'allow-same-origin allow-modals');
+    frame.srcdoc = html(doc, { autoPrint: false });
+    print.onclick = () => { try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (_) { toast('Impression indisponible sur cet appareil.', 'warning'); } };
+    const previousFocus = document.activeElement;
+    const dismiss = () => { overlay.remove(); previousFocus?.focus?.(); };
+    close.onclick = dismiss;
+    overlay.onkeydown = e => { if (e.key === 'Escape') { e.stopPropagation(); dismiss(); } };
+    bar.appendChild(title); bar.appendChild(print); bar.appendChild(close);
+    overlay.appendChild(bar); overlay.appendChild(frame); document.body.appendChild(overlay); close.focus();
+    return true;
+  }
+
+  function open(doc, mode, reserved) {
+    if (!doc) return false;
     const num = doc.number || 'Facture';
-    const win = window.open('', '_blank');
-    if (!win) {
-      toast('Veuillez autoriser les fenêtres pop-up pour afficher la facture.', 'warning');
-      return;
+    const native = nativeInvoice();
+    if (native) {
+      return native.exportInvoice({ html: html(doc, { autoPrint: false }), name: num }).then(() => true).catch(() => {
+        toast('La facture est créée. Réessayez son export PDF.', 'warning');
+        return preview(doc);
+      });
     }
-
-    win.document.open();
-    win.document.write(html(doc));
-    win.document.close();
-    win.document.title = num; // Le navigateur nomme le PDF "F-2026-0001.pdf"
-
-    if (mode === 'pdf') {
-      toast('Choisissez « Enregistrer au format PDF » dans la fenêtre d’impression.');
-    }
+    let win = reserved;
+    if (!win || win.closed) { try { win = window.open('', '_blank'); } catch (_) {} }
+    if (!win) return preview(doc);
+    try {
+      win.document.open();
+      win.document.write(html(doc));
+      win.document.close();
+      win.document.title = num;
+      if (mode === 'pdf') toast('Choisissez « Enregistrer au format PDF » dans la fenêtre d’impression.');
+      return true;
+    } catch (_) { return preview(doc); }
   }
 
   /* ── 4. Sheet Client léger & Mémorisation ────────────────────────────────────
    * Demande Nom, ICE (15 chiffres), IF avant la première émission. */
-  function promptCustomer(saleRef) {
+  function promptCustomer(saleRef, beforeResolve) {
     return new Promise((resolve) => {
       const overlay = document.createElement('div');
       overlay.className = 'modal-veil is-open';
@@ -606,6 +654,7 @@
       const iceErr = overlay.querySelector('[data-inv-ice-error]');
 
       const finish = (cust) => {
+        if (beforeResolve) beforeResolve();
         overlay.remove();
         resolve(cust);
       };
@@ -635,9 +684,10 @@
 
   /* ── 5. Cache local & Récupération ─────────────────────────────────────────── */
   const INVOICE_CACHE_KEY = 'kiwi:sale_invoices:v1';
+  function cacheKey() { return INVOICE_CACHE_KEY + ':' + (window.KiwiLive?.merchant?.() || window.KiwiVenue?.getVenue?.() || localStorage.getItem('kiwiLiveMerchant') || 'local'); }
   function getCachedInvoices() {
     try {
-      const raw = localStorage.getItem(INVOICE_CACHE_KEY);
+      const raw = localStorage.getItem(cacheKey());
       return raw ? JSON.parse(raw) : {};
     } catch (_) { return {}; }
   }
@@ -646,8 +696,21 @@
     try {
       const cache = getCachedInvoices();
       cache[saleId] = inv;
-      localStorage.setItem(INVOICE_CACHE_KEY, JSON.stringify(cache));
+      localStorage.setItem(cacheKey(), JSON.stringify(cache));
     } catch (_) {}
+  }
+
+  function requestInvoice(body) {
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    let deadline;
+    const read = Promise.resolve().then(() => fetch('/api/invoice', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', signal: controller?.signal, body: JSON.stringify(body),
+    })).then(async res => ({ res, data: await res.json().catch(() => ({})) }));
+    const timeout = new Promise((_resolve, reject) => {
+      deadline = setTimeout(() => { reject(new Error('timeout')); controller?.abort(); }, 12000);
+    });
+    return Promise.race([read, timeout]).finally(() => clearTimeout(deadline));
   }
 
   /* ── 6. Génération complète (appel serveur + affichage) ──────────────────────
@@ -679,13 +742,22 @@
       return cached;
     }
 
+    // Reserve under the last real click (customer confirmation, or the
+    // original click when customer data exists), never after the D1 await.
+    // Do not switch tabs before the customer prompt has been answered.
+    let reserved = null;
+    const abandon = () => { try { if (reserved && !reserved.closed) reserved.close(); } catch (_) {} };
+
     // 2. Si non connue, demander les infos client (optionnel)
     let customer = null;
     if (!sale.customer) {
-      customer = await promptCustomer(saleRef);
+      customer = await promptCustomer(saleRef, () => { reserved = reserveWindow(); });
     } else {
       customer = sale.customer;
+      reserved = reserveWindow();
     }
+
+    if (cacheKey() !== INVOICE_CACHE_KEY + ':' + (m || 'local')) { abandon(); return null; }
 
     // 3. Préparer le snapshot client
     const docDraft = build(sale, { customer, saleId });
@@ -693,32 +765,26 @@
     // 4. Appel serveur obligatoire pour la numérotation séquentielle D1
     toast('Numérotation de la facture…');
     try {
-      const res = await fetch('/api/invoice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          merchant: m,
-          saleId,
-          customer,
-          snapshot: docDraft,
-        }),
-      });
+      const { res, data } = await requestInvoice({ merchant: m, saleId, customer, snapshot: docDraft });
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
+        const err = data;
         if (err?.error === 'invalid-ice') {
+          abandon();
           toast('ICE client invalide (15 chiffres requis).', 'error');
           return null;
         }
         if (err?.error === 'unknown-sale' || res.status === 404) {
+          abandon();
           toast('Facture disponible après synchronisation de la vente', 'warning');
           return null;
         }
         throw new Error(err?.detail || err?.error || 'server-refusal');
       }
 
-      const data = await res.json();
+      if (cacheKey() !== INVOICE_CACHE_KEY + ':' + (m || 'local')) { abandon(); return null; }
       const invRecord = data?.invoice;
+      if (!invRecord?.number || !Number.isInteger(invRecord.seq) || invRecord.seq < 1) throw new Error('invalid-invoice');
       const finalDoc = invRecord?.snapshot || docDraft;
       finalDoc.number = invRecord?.number || finalDoc.number;
       finalDoc.seq = invRecord?.seq || finalDoc.seq;
@@ -733,7 +799,7 @@
       finalDoc.missingICE = !sellerIce;
 
       setCachedInvoice(saleId, finalDoc);
-      open(finalDoc, mode);
+      await open(finalDoc, mode, reserved);
 
       try {
         document.dispatchEvent(new CustomEvent('kiwi-invoice-created', { detail: { saleId, invoice: finalDoc } }));
@@ -741,6 +807,7 @@
 
       return finalDoc;
     } catch (e) {
+      abandon();
       toast('Connexion requise pour numéroter la facture', 'warning');
       return null;
     }
@@ -748,11 +815,16 @@
 
   function makeSaleInvoice(entry, mode) {
     if (!entry) return null;
-    let saleId = entry.saleId || entry.id || '';
-    if (!saleId && window.KiwiLive && typeof window.KiwiLive.saleIdFor === 'function') {
-      saleId = window.KiwiLive.saleIdFor(entry);
-    }
-    const sale = Object.assign({}, entry, { saleId: saleId || entry.ref || entry.label });
+    // Local journal IDs are NOT D1 IDs: Live Link tenant-hashes them, and
+    // duplicate settlement may alias them to a canonical server receipt.
+    const live = window.KiwiLive;
+    const merchant = live?.merchant?.() || localStorage.getItem('kiwiLiveMerchant') || '';
+    let saleId = entry.serverSaleId || entry.saleId || (entry.cursor ? entry.id : '');
+    if (!saleId && typeof live?.saleIdFor === 'function') saleId = live.saleIdFor(entry, merchant);
+    if (!saleId) saleId = entry.id || '';
+    if (typeof live?.canonicalSaleId === 'function') saleId = live.canonicalSaleId(merchant, saleId);
+    const ts = entry.ts || (entry.time instanceof Date ? entry.time.getTime() : Date.parse(entry.time));
+    const sale = Object.assign({}, entry, { saleId, ts: Number.isFinite(ts) ? ts : entry.ts });
     return generate(sale, mode || 'print');
   }
 

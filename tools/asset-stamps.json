@@ -396,8 +396,8 @@
     "sha": "59945120582f82d0"
   },
   "assets/invoice.js": {
-    "v": "8",
-    "sha": "4c42267de7dba254"
+    "v": "12",
+    "sha": "4a586da26775fd98"
   },
   "assets/invoicing.css": {
     "v": "7",
@@ -440,8 +440,8 @@
     "sha": "c9d6036ca657c76e"
   },
   "assets/live-link.js": {
-    "v": "57",
-    "sha": "69d3a530d967035c"
+    "v": "59",
+    "sha": "76acaaf6df92377d"
   },
   "assets/live-socket.js": {
     "v": "4",

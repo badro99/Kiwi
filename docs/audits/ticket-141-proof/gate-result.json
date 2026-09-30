@@ -1,0 +1,18 @@
+{
+  "ticket": "0141",
+  "command": "node tools/check.js",
+  "exitCode": 0,
+  "summary": "all checks passed (1 warning)",
+  "completedAt": "2026-09-30T22:45:13.734786+00:00",
+  "checkLogSha256": "28ee4009b15b42607853570ff086588206e994a7b9b6b7140febbf6b949d3d6b",
+  "focusedChecks": 23,
+  "focusedLogSha256": "423ca8124d5f37c28f602b16039f5e1b8e4b86bf7350622de11839110d989456",
+  "sourceSha256": {
+    "assets/invoice.js": "4a586da26775fd9826fb7e08d5110de5974ff29324760663543ec40e9f9a0837",
+    "assets/live-link.js": "76acaaf6df92377d3dc10e59fdddeaffdfc9130153e2d3d9281bd78b4d74c95b",
+    "app/plugins/kiwi-printer-socket/ios/Sources/KiwiPrinterSocket/KiwiPrinterSocketPlugin.swift": "47f676da4fac8f9d9a565dec8885d7707d8608b23f48bfb31bff069ba4e419a0"
+  },
+  "nativeUIResult": "Invoice141Final.xcresult: TEST SUCCEEDED",
+  "productionFinancialWrites": false,
+  "appStorePublished": false
+}

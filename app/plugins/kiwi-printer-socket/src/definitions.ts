@@ -60,6 +60,8 @@ export interface LedgerWriteOptions extends LedgerOptions { value: string; }
 export interface LedgerReadResult { value: string | null; }
 
 export interface KiwiPrinterSocketPlugin {
+  /** Presents a local A4 PDF. Saving, printing and sharing remain user actions. */
+  exportInvoice(options: { html: string; name: string }): Promise<{ ok: true; presented: true; pages: number; bytes: number }>;
   send(options: SendOptions): Promise<SendResult | PrinterSocketError>;
   probe(options: ProbeOptions): Promise<ProbeResult | PrinterSocketError>;
   scan(options?: ScanOptions): Promise<ScanResult | PrinterSocketError>;

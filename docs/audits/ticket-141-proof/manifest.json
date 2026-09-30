@@ -1,0 +1,12 @@
+{
+  "ticket": "0141",
+  "evidence": "Synthetic local fixture only; not a production invoice",
+  "sha256": {
+    "browser-fallback.png": "a0cc9df9b59bd7cac6380d53e87b27735c7d5173535498fa5cbc8967ea47b8bb",
+    "gate-result.json": "da9920657768288fd8d463016c916eb8a131e7929c71268c4ee5980871d22bd0",
+    "native-invoice-fixture.pdf": "fbd50bf5ebbe1b63f4b5576d1fc62c399083fe448984a7b1b7a8333954968538",
+    "native-invoice-fixture.png": "0c3d54aa023d6c6186a986b5433f4d84ee99cbd3d4bb73dc9f906125537dd3aa",
+    "native-sheet.png": "ee3078d35bfc73dfbd8f1c6b96b5fb21b44958cfc7b233d548ab2415d09405d5",
+    "pristine-install.json": "e51cf24440bfd65fa3b50db90393ef3f5609d6dec237e382e2020cae1e93e404"
+  }
+}

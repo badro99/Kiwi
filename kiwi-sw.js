@@ -163,7 +163,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=12',
   '/assets/operations-ui.js?v=18',
-  '/assets/live-link.js?v=57',
+  '/assets/live-link.js?v=59',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -186,7 +186,7 @@ var SHELL = [
      et un client qui repart sans reçu ne revient pas le chercher. */
   '/assets/receipt.js?v=5',
   '/assets/receipt-ui.js?v=1',
-  '/assets/invoice.js?v=8',
+  '/assets/invoice.js?v=12',
   '/assets/merchant-config.js?v=276',
   '/assets/entitlements.css?v=5',
   '/assets/entitlements-v2.js?v=1',

@@ -171,7 +171,7 @@ window.document = document;
 const context = vm.createContext({ window, document, localStorage: window.localStorage, location: window.location,
   navigator: { onLine: false }, CustomEvent: function () {}, BroadcastChannel: undefined,
   fetch: async () => ({ ok: true, json: async () => ({ sales: [], cursor: 0, voided: [] }) }),
-  console, Date, Math, Number, String, Array, JSON,
+  console, Date, Math, Number, String, Array, JSON, URLSearchParams,
   setTimeout: () => 1, clearTimeout() {}, setInterval: () => 1, clearInterval() {} });
 vm.runInContext(source, context, { filename: 'assets/live-link.js' });
 const original = { id: 'local-sale-90', amount: 90, ref: '260904-0001', time: new Date(), label: 'À emporter #1' };
@@ -221,7 +221,7 @@ const bridgeContext = vm.createContext({ window: bridgeWindow, document: bridgeD
   fetch: async () => ({ ok: true, json: async () => ({ merchant, cursor: 2, voided: [], sales: [
     { cursor: 1, id: 'sale-positive', amount: 90, amountCents: 9000, method: 'cash', ts: Date.now() - 10 },
     { cursor: 2, id: 'sale-refund', amount: -35, amountCents: -3500, method: 'cash', ts: Date.now() },
-  ] }) }), console, Date, Math, Number, String, Array, JSON,
+  ] }) }), console, Date, Math, Number, String, Array, JSON, URLSearchParams,
   setTimeout: () => 1, clearTimeout() {}, setInterval: () => 1, clearInterval() {} });
 vm.runInContext(source, bridgeContext, { filename: 'assets/live-link.js' });
 await new Promise((resolve) => setImmediate(resolve));

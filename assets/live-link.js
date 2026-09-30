@@ -1007,6 +1007,29 @@
    *    same browser. Whatever happened while we were away lands immediately. */
   var FAST_MS = 2500, SLOW_MS = 20000;
   var operatorSnapshot = null;
+  var lastFeedError = '';
+  // A hung GET (including its JSON body) must not hold the live pump forever.
+  // Race the complete read, even on WebViews where abort alone is unreliable.
+  function readFeed(url) {
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var deadline;
+    var read = Promise.resolve().then(function () {
+      return fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store',
+        credentials: 'include', signal: controller ? controller.signal : undefined });
+    }).then(function (r) {
+      if (!r || !r.ok) throw new Error(r && (r.status === 401 || r.status === 403) ? 'auth' : 'http');
+      return r.json();
+    });
+    var timeout = new Promise(function (_resolve, reject) {
+      deadline = setTimeout(function () {
+        reject(new Error('timeout'));
+        if (controller) controller.abort();
+      }, 12000);
+    });
+    return Promise.race([read, timeout]).then(function (data) {
+      clearTimeout(deadline); return data;
+    }, function (error) { clearTimeout(deadline); throw error; });
+  }
   function publishSnapshot(state) {
     operatorSnapshot = Object.assign({}, state);
     paintSnapshot();
@@ -1066,18 +1089,19 @@
        * whole history — it starts again from the beginning of its own feed. */
       var tenant = merchant();
       if (tenant !== lastTenant) { lastTenant = tenant; since = 0; backfill = true; }
-      fetch('/api/feed?merchant=' + encodeURIComponent(tenant) + '&since=' + since, { headers: { Accept: 'application/json' } })
-        .then(function (r) {
-          if (oneShot && (!r || !r.ok)) throw new Error(r && (r.status === 401 || r.status === 403) ? 'auth' : 'http');
-          return (r && r.ok) ? r.json() : null;
-        })
+      if (!tenant) { busy = false; arm(); return; }
+      readFeed('/api/feed?merchant=' + encodeURIComponent(tenant) + '&since=' + since)
         .then(function (data) {
           if (stopped) return;
+          // A response started under the previous store cannot advance this
+          // store's cursor or be described as a fresh successful read.
+          if (merchant() !== tenant || (data && data.merchant && data.merchant !== tenant)) throw new Error('scope');
+          if (!data || data.error || !Array.isArray(data.sales)) throw new Error('invalid-feed');
+          lastFeedError = '';
           if (oneShot) {
             if (tenant !== state.merchant || merchant() !== tenant) throw new Error('scope');
             validateSnapshotPage(data, tenant, since);
           }
-          if (!data) return;                   // network/gate failure → still the first batch
           lastSync = Date.now();
           /* Les ventes RETIRÉES des livres, avant celles qui arrivent. Le flux
              ne repasse jamais sur un curseur déjà servi, donc c'est le seul
@@ -1108,10 +1132,8 @@
                notifications only after a short (or empty) page proves we have
                reached the live edge. This also handles histories containing an
                exact multiple of 50 rows, whose final proof is an empty page. */
-            if (backfill) {
-              drainBackfill = data.sales.length === 50;
-              if (!drainBackfill) backfill = false;
-            }
+            drainBackfill = data.sales.length === 50;
+            if (backfill && !drainBackfill) backfill = false;
             if (oneShot) {
               state.pages++; state.rows += data.sales.length; state.cursor = since;
               state.lastPageAt = Date.now();
@@ -1126,11 +1148,13 @@
           }
         })
         .catch(function (err) {
-          if (!oneShot || stopped) return;
+          if (stopped) return;
+          lastFeedError = String(err && err.message || 'network-json');
           drainBackfill = false;
+          if (!oneShot) return;
           feedComplete[tenant] = false;
           state.phase = state.pages ? 'incomplete' : 'error';
-          state.error = /^(auth|http|scope|invalid-feed|invalid-sales|cursor|ledger)$/.test(err && err.message) ? err.message : 'network-json';
+          state.error = /^(auth|http|scope|invalid-feed|invalid-sales|cursor|ledger|timeout)$/.test(err && err.message) ? err.message : 'network-json';
           report();
         })
         .then(function () {
@@ -1512,7 +1536,7 @@
     var errors = { auth: 'Session expirée ou accès refusé', scope: 'Portée du client non confirmée',
       http: 'Serveur indisponible', 'network-json': 'Réseau ou réponse JSON invalide',
       'invalid-feed': 'Réponse du journal invalide', 'invalid-sales': 'Ventes illisibles',
-      cursor: 'Pagination invalide', ledger: 'Journal local non vérifié', identity: 'Identité non confirmée',
+      timeout: 'Le serveur ne répond pas, réessayez', cursor: 'Pagination invalide', ledger: 'Journal local non vérifié', identity: 'Identité non confirmée',
       venue: 'Journal reçu · établissement en attente de résolution' };
     var progress = s.pages + ' page(s) · ' + s.rows + ' écriture(s) reçue(s)';
     var message = s.phase === 'complete'
@@ -1739,7 +1763,7 @@
     canonicalSaleId: canonicalSaleId,
     status: function () {
       return {
-        on: on(), merchant: merchant(), lastSync: lastSync,
+        on: on(), merchant: merchant(), lastSync: lastSync, feedError: lastFeedError,
         bridged: feedSales.length, backfillComplete: !!feedComplete[merchant()], queued: queueStatus().total,
         queue: queueStatus(),
         snapshot: operatorSnapshot ? Object.assign({}, operatorSnapshot) : null,

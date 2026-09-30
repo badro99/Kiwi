@@ -1,0 +1,20 @@
+[
+  {
+    "device": "D53BB4E4-F195-41EF-8DE2-9F74BAEADC62",
+    "installedSourceHashes": {
+      "assets/invoice.js": "4a586da26775fd9826fb7e08d5110de5974ff29324760663543ec40e9f9a0837",
+      "assets/live-link.js": "76acaaf6df92377d3dc10e59fdddeaffdfc9130153e2d3d9281bd78b4d74c95b"
+    },
+    "qaHooksAbsent": true,
+    "dataWiped": false
+  },
+  {
+    "device": "13A85612-BDD7-4BF0-98F2-736D76D44C57",
+    "installedSourceHashes": {
+      "assets/invoice.js": "4a586da26775fd9826fb7e08d5110de5974ff29324760663543ec40e9f9a0837",
+      "assets/live-link.js": "76acaaf6df92377d3dc10e59fdddeaffdfc9130153e2d3d9281bd78b4d74c95b"
+    },
+    "qaHooksAbsent": true,
+    "dataWiped": false
+  }
+]

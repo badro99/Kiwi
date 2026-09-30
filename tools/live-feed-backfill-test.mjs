@@ -4,6 +4,7 @@ import vm from 'node:vm';
 
 const source = fs.readFileSync(new URL('../assets/live-link.js', import.meta.url), 'utf8');
 const timers = [];
+let timerId = 0;
 const batches = [
   Array.from({ length: 50 }, (_, i) => ({ cursor: i + 1, amount: 10, method: 'cash' })),
   [{ cursor: 51, amount: 32, method: 'cash', label: 'ancienne vente' }],
@@ -39,8 +40,8 @@ const context = {
     const sales = batches[Math.min(fetches++, batches.length - 1)];
     return { ok: true, json: async () => ({ sales, cursor: sales.at(-1)?.cursor || 51, voided: [] }) };
   },
-  setTimeout: (fn, ms) => { timers.push({ fn, ms }); return timers.length; },
-  clearTimeout() {},
+  setTimeout: (fn, ms) => { const id = ++timerId; timers.push({ id, fn, ms }); return id; },
+  clearTimeout(id) { const i = timers.findIndex(t => t.id === id); if (i >= 0) timers.splice(i, 1); },
   console,
 };
 
