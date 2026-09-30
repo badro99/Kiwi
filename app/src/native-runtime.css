@@ -963,3 +963,28 @@ html.kiwi-native body.kiwi-native-owner:not(#kno) .fa-drawer .kiwi-drawer{backgr
 html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) body.kiwi-native-owner:not(#kno) .fa-drawer .kiwi-drawer{background:#131A17!important}
 /* Fixed ink launch ground needs readable secondary copy even in light appearance. */
 html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock :is(.kiwi-lock-help,.kiwi-lock-help b,.kiwi-lock-switch,.kiwi-native-role-back){color:#ACB8B1!important}
+
+/* #0135: short phones keep the entire entry flow in view. Preserve the launch
+   mark and real touch targets; overflow remains scrollable for larger text. */
+@media (max-width:600px) and (max-height:740px){
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock{padding-bottom:calc(var(--kiwi-safe-bottom) + 8px)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-lock-inner{padding:0!important;flex-shrink:0}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock-brand{margin-bottom:8px!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock-title{font-size:26px!important;line-height:32px!important;margin-bottom:0!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock-sub{font-size:14px!important;line-height:20px!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-keypad-lock .kiwi-lock-pin{margin:12px 0!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock-help{line-height:18px!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-owner-keypad{grid-template-columns:repeat(3,48px);gap:8px 36px;margin:12px auto 8px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-owner-keypad button{width:48px;height:48px;min-height:48px;font-size:26px}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-native-role-back{margin:0 auto;min-height:44px}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) #pair{padding-bottom:calc(var(--kiwi-safe-bottom) + 8px)}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) #pair>*{flex-shrink:0}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) #pair .kw{gap:8px;margin-bottom:8px}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) #pair .sub{margin:8px 0 16px;line-height:20px}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) #pair .dots{margin-bottom:16px}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) #pair .pad{grid-template-columns:repeat(3,56px);column-gap:28px;row-gap:8px}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) #pair .pad button{width:56px;height:56px;min-height:56px;font-size:28px}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) #pair .pad button.wide{font-size:14px}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) #pair-msg{margin-top:8px;min-height:20px}
+  html.kiwi-native body.kiwi-native-kitchen:not(#kno) #pair .kiwi-native-role-back{margin:0 auto;min-height:44px}
+}

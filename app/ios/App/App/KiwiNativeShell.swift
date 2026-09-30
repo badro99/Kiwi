@@ -327,37 +327,40 @@ private struct KiwiNativeSetupRoot: View {
 
     private var setup: some View {
         GeometryReader { geometry in
+            // Compact empty-field setup on short phones; accessibility text and
+            // the keyboard retain the scrollable layout, never clipped controls.
+            let compact = geometry.size.height < 720 && !dynamicTypeSize.isAccessibilitySize
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    VStack(spacing: 16) {
+                    VStack(spacing: compact ? 8 : 16) {
                         KiwiMark(size: 88).frame(maxWidth: .infinity)
                         progress
                     }
-                    .padding(.bottom, dynamicTypeSize.isAccessibilitySize ? 24 : 36)
-                    VStack(alignment: .leading, spacing: 12) {
+                    .padding(.bottom, compact ? 12 : (dynamicTypeSize.isAccessibilitySize ? 24 : 36))
+                    VStack(alignment: .leading, spacing: compact ? 8 : 12) {
                         if !model.context.eyebrow.isEmpty && model.context.kind != "account" {
                             Text(model.context.eyebrow).font(.subheadline.weight(.semibold)).foregroundStyle(kiwiMint.opacity(0.9))
                         }
-                        Text(model.context.title).font(.system(size: titleSize, weight: .semibold)).tracking(-0.4).foregroundStyle(kiwiPaper).fixedSize(horizontal: false, vertical: true)
+                        Text(model.context.title).font(.system(size: compact ? titleSize * 0.8125 : titleSize, weight: .semibold)).tracking(-0.4).foregroundStyle(kiwiPaper).fixedSize(horizontal: false, vertical: true)
                             .accessibilityAddTraits(.isHeader).accessibilityFocused($headingFocused)
                         if !model.context.message.isEmpty {
-                            Text(model.context.message).font(.body).foregroundStyle(kiwiPaper.opacity(0.62)).fixedSize(horizontal: false, vertical: true)
+                            Text(model.context.message).font(compact ? .subheadline : .body).foregroundStyle(kiwiPaper.opacity(0.62)).fixedSize(horizontal: false, vertical: true)
                         }
                     }
-                    .padding(.bottom, 28)
-                    VStack(alignment: .leading, spacing: 16) {
-                        content
+                    .padding(.bottom, compact ? 12 : 28)
+                    VStack(alignment: .leading, spacing: compact ? 12 : 16) {
+                        content(compact: compact)
                         status
                     }
-                    Spacer(minLength: 28)
+                    Spacer(minLength: compact ? 12 : 28)
                     actions
                 }
                 .frame(maxWidth: 560, alignment: .leading)
                 .frame(maxWidth: .infinity)
-                .frame(minHeight: geometry.size.height, alignment: .top)
                 .padding(.horizontal, 22)
                 .padding(.top, 20)
                 .padding(.bottom, 12)
+                .frame(minHeight: geometry.size.height, alignment: .top)
             }
             .scrollDismissesKeyboardIfAvailable()
             .id(model.context.kind)
@@ -383,10 +386,10 @@ private struct KiwiNativeSetupRoot: View {
         }
     }
 
-    @ViewBuilder private var content: some View {
+    @ViewBuilder private func content(compact: Bool) -> some View {
         if model.context.kind == "account", !model.context.fields.isEmpty {
-            nativeField(id: "email", label: field("email")?.label ?? "Email", text: $email, secure: false, keyboard: .emailAddress)
-            nativeField(id: "password", label: field("password")?.label ?? "Password", text: $password, secure: true, keyboard: .default)
+            nativeField(id: "email", label: field("email")?.label ?? "Email", text: $email, secure: false, keyboard: .emailAddress, compact: compact)
+            nativeField(id: "password", label: field("password")?.label ?? "Password", text: $password, secure: true, keyboard: .default, compact: compact)
         }
         if model.context.kind == "printer" {
             nativeField(id: "host", label: field("host")?.label ?? "IP", text: $host, secure: false, keyboard: .numbersAndPunctuation)
@@ -423,7 +426,7 @@ private struct KiwiNativeSetupRoot: View {
         model.context.locale.hasPrefix("ar") ? ar : (model.context.locale.hasPrefix("en") ? en : fr)
     }
 
-    private func nativeField(id: String, label: String, text: Binding<String>, secure: Bool, keyboard: UIKeyboardType) -> some View {
+    private func nativeField(id: String, label: String, text: Binding<String>, secure: Bool, keyboard: UIKeyboardType, compact: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             Text(label).font(.footnote.weight(.semibold)).foregroundStyle(kiwiPaper.opacity(0.58))
                 .accessibilityHidden(true)
@@ -459,7 +462,7 @@ private struct KiwiNativeSetupRoot: View {
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             .keyboardType(keyboard)
-            .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 56)
+            .padding(.horizontal, 16).padding(.vertical, compact ? 4 : 8).frame(minHeight: compact ? 52 : 56)
             .background(kiwiPaper.opacity(focusedField == id ? 0.11 : 0.07), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(model.context.statusKind == "error" ? Color(red: 1, green: 0.62, blue: 0.55) : focusedField == id ? kiwiMint.opacity(0.9) : kiwiPaper.opacity(0.06), lineWidth: focusedField == id || model.context.statusKind == "error" ? 1.5 : 1))
             .animation(.easeOut(duration: 0.15), value: focusedField)
