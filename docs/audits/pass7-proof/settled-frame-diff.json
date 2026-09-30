@@ -1,0 +1,26 @@
+{
+  "pro-signed-launch": {
+    "settledContentDifferenceBounds": null,
+    "meanChannelDelta": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "intervalSeconds": [
+      1.75,
+      5.75
+    ]
+  },
+  "pro-signed-light-launch": {
+    "settledContentDifferenceBounds": null,
+    "meanChannelDelta": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "intervalSeconds": [
+      1.75,
+      5.75
+    ]
+  }
+}

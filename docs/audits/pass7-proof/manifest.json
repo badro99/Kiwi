@@ -1,0 +1,235 @@
+{
+  "codeCommit": "56a1de7f63d369e1d6de9940f7602b202ddbd55f",
+  "files": [
+    {
+      "file": "125-empty-menu-new-section-en-dark.png",
+      "bytes": 536451,
+      "sha256": "a54f3c15833f9dc55636a4fe0b2cefaebfb2ce4b11f7d56ab5217bbbbc9876e7"
+    },
+    {
+      "file": "ai-before-after.jpg",
+      "bytes": 94208,
+      "sha256": "7bc5c245d1b434cfee5df7f77a93f399a2749453f934201bc9b382e054b450d7"
+    },
+    {
+      "file": "ai-opacity-final.json",
+      "bytes": 3167,
+      "sha256": "782ab326495f77638c6809a8823542e86bb6c805d297a114c3bb0d115ef22f15"
+    },
+    {
+      "file": "audit-pro.json",
+      "bytes": 102319,
+      "sha256": "befa9519073c2ba755a31d1f616100c905ba8abf03a4da75deb08b187e5c02d3"
+    },
+    {
+      "file": "audit-se.json",
+      "bytes": 92898,
+      "sha256": "a89576fae875850b01f60090d2d9466f9e77c60ef518affe9c5f0a46b4756f32"
+    },
+    {
+      "file": "first-setup-matrix.jpg",
+      "bytes": 219811,
+      "sha256": "e3fa7f81d0135e4346b132934642e6504dc28afc5a3c7f9b0df770a996b6796c"
+    },
+    {
+      "file": "gate-result.json",
+      "bytes": 474,
+      "sha256": "57696297888cb5f216b36f7a52adc2272ff274a5f5a241db708055f1ed60d7cd"
+    },
+    {
+      "file": "known-pro.json",
+      "bytes": 5850,
+      "sha256": "c5524d2f7bfefd56b4a0758631cdc7190d18394d63c5285069594c4c2a8281f9"
+    },
+    {
+      "file": "known-se.json",
+      "bytes": 5844,
+      "sha256": "2a47e976633e8820d69e712e82deae937963e26808d79166a089d66e5402f622"
+    },
+    {
+      "file": "launch-before-after.jpg",
+      "bytes": 171214,
+      "sha256": "08854c4762caa2a681d28a34fe22328086cbfa6b55867ca5889956b7e30567a2"
+    },
+    {
+      "file": "launch-layout.json",
+      "bytes": 3315,
+      "sha256": "cab1c948b9cb6890733e02b85aa1bc2a5be190361e40b9a8ea9e65087e98411e"
+    },
+    {
+      "file": "launch-matrix-pro.json",
+      "bytes": 1856,
+      "sha256": "1c63d5225449c71fa0a341d68824f5a538c953c00b6262382e25f66e1d18bbcc"
+    },
+    {
+      "file": "launch-matrix-se.json",
+      "bytes": 1850,
+      "sha256": "4337a99e44590af490c951a75c621faf780f4395057cce20a3b1fc05ac26cc13"
+    },
+    {
+      "file": "lock-light-after.png",
+      "bytes": 260955,
+      "sha256": "ec1f176e55033deca06a52087b4a7889db5e3db4da33ee82f1ecd2e15adeb26e"
+    },
+    {
+      "file": "lock-light-before.png",
+      "bytes": 253774,
+      "sha256": "ac19833df962d98bb77aee5a40dfa7036b80755c565f8fcee87f9b9ce0c703b8"
+    },
+    {
+      "file": "pristine-install.json",
+      "bytes": 549,
+      "sha256": "1852583cee4493fd5c314ea43b8105c5324ac382e6bd5295917073e8bb5659d8"
+    },
+    {
+      "file": "pristine-pro-lock.png",
+      "bytes": 252400,
+      "sha256": "1ed1f8b6dfea5a8da7675cab23a185abf4e048c2781791e99ddb5a293c918bc0"
+    },
+    {
+      "file": "pro-ar-dark-assistant.png",
+      "bytes": 290030,
+      "sha256": "ba50115bc891596bfe7652f3b6d6f19f749a04c689730891ddb2a800b1fe34f9"
+    },
+    {
+      "file": "pro-ar-dark-clients-sidebar-final.png",
+      "bytes": 473759,
+      "sha256": "f82be8723482dd7374084549e4abaf43a37924006f2841ed6b8c9f2320d55514"
+    },
+    {
+      "file": "pro-ar-dark-goal-regulars.png",
+      "bytes": 472441,
+      "sha256": "f3acba0ff8c4300ddb01f22cedb1c688b3a50d073604b05fbb6473ba8b54a203"
+    },
+    {
+      "file": "pro-ar-dark-ratio.png",
+      "bytes": 448536,
+      "sha256": "1552f73479a11ab7d3fa435f5f47d89bbae2288aa7e1ce9504be4e61662cf397"
+    },
+    {
+      "file": "pro-en-light-new-section.png",
+      "bytes": 524934,
+      "sha256": "31846fdd772215b66fa3e45cc063457c725fe1341cd0c23024cdda06a544c68c"
+    },
+    {
+      "file": "pro-en-light-reservations-before.png",
+      "bytes": 469336,
+      "sha256": "fea060d025e5b5a9b813a92bf05edfafce2df2d1c3914812be07cc6ffcd351ee"
+    },
+    {
+      "file": "pro-en-light-reservations-sidebar-final.png",
+      "bytes": 660454,
+      "sha256": "21d4f4fe576b81f3d7f2a6f1132a9d6ff16c603a0b37cd53e01791ce939347f2"
+    },
+    {
+      "file": "pro-frame-mark-check.json",
+      "bytes": 10061,
+      "sha256": "387aaac631afa713f3006f65c28cfd1e34525fea76ab24affd1dafd7a65ab41f"
+    },
+    {
+      "file": "pro-goals-matrix.jpg",
+      "bytes": 263139,
+      "sha256": "2c6b3f4429eb795c29b4387ea2cbd7047faf9f6d0d443f63170870e695db23ea"
+    },
+    {
+      "file": "pro-launch-six-combinations.jpg",
+      "bytes": 112708,
+      "sha256": "5a51e5fe448a78f94aa23a8ddc020e08cd3793f02724fb883ce64013f6ea2b93"
+    },
+    {
+      "file": "pro-signed-light-launch.jpg",
+      "bytes": 55107,
+      "sha256": "605f464135bee2e7eaa849683453d7702e974ed6d045a6f2e2cfecb53fbe1850"
+    },
+    {
+      "file": "roles-pro.json",
+      "bytes": 7370,
+      "sha256": "4634d45247812ae424f28391f8eb04d3b904e5483037bec47a2b2ac01c931886"
+    },
+    {
+      "file": "roles-se.json",
+      "bytes": 7322,
+      "sha256": "e0b7f628ca9f7cf9f85638a68b5b6fcdad1bd880af80d542bb0add1ce9c0645d"
+    },
+    {
+      "file": "se-ar-dark-assistant-after.png",
+      "bytes": 152090,
+      "sha256": "16885a3122640742e672b094d08d6b603dab61f6ebed3a9140a042a3257e821f"
+    },
+    {
+      "file": "se-ar-dark-assistant.png",
+      "bytes": 290942,
+      "sha256": "b4f9dc4908dcbad20d49a64ff07cb395667a516186461bea0937945f237e209a"
+    },
+    {
+      "file": "se-ar-dark-goal-regulars.png",
+      "bytes": 218534,
+      "sha256": "1be2f6095b48aaaa1d1aba3fa34e441feb9e19be3bda846b4ac9cfcef80bea71"
+    },
+    {
+      "file": "se-ar-dark-ratio.png",
+      "bytes": 222859,
+      "sha256": "14b4fbc6ae56295467df21d1939a8dccc8ea994909a2f618cc040b95ddbe3b74"
+    },
+    {
+      "file": "se-en-dark-first-setup-final.png",
+      "bytes": 130252,
+      "sha256": "95cfee97b05a5124b3e5b6397d6bf7e6a2b5fa2e9318baa2f75ed1b88f072461"
+    },
+    {
+      "file": "se-en-light-new-section.png",
+      "bytes": 256085,
+      "sha256": "5d4d193f4581a021c11814be206bb2447d5c8624ceadb2ebe17a6063f11e3f87"
+    },
+    {
+      "file": "se-en-light-reservations.png",
+      "bytes": 276226,
+      "sha256": "b4ef7af091c9b9d95a194cf6c247c25d7bbfc69f84cb9b53c70e3f3a18fced21"
+    },
+    {
+      "file": "se-goals-matrix.jpg",
+      "bytes": 253641,
+      "sha256": "b20b324db448c3046b62bcd77fb0fee9019240e83b01cae025c188aa475e5614"
+    },
+    {
+      "file": "se-launch-six-combinations.jpg",
+      "bytes": 123832,
+      "sha256": "68ddb59c0dd00e82ac9739d9a5609bf96bf3d48dca34edf5c50ecd9eaae6de9d"
+    },
+    {
+      "file": "se-role-gates.jpg",
+      "bytes": 59474,
+      "sha256": "3fcd20b7e621ad50a69e9c7e56f7629e77790b9a655e939b6811230f4efbfe7c"
+    },
+    {
+      "file": "se-sheets-matrix.jpg",
+      "bytes": 82595,
+      "sha256": "8fa6e67d7870398920e6c886fd8806cfd2518ae8f9b0c3278ca787132151e5af"
+    },
+    {
+      "file": "se-signed-launch.jpg",
+      "bytes": 46692,
+      "sha256": "82f1ed6b48c302a6ac1b3689549906f4762b9608087896172ec6f92d2e6b6a2d"
+    },
+    {
+      "file": "settled-frame-diff.json",
+      "bytes": 394,
+      "sha256": "b9b216870e91213d191c45b9c2ba360b56ed6ff0d6044d8103d51e5a7fd72e96"
+    },
+    {
+      "file": "sheets-pro.json",
+      "bytes": 57618,
+      "sha256": "b401973f7168e8a43e556c80a788b72880b9c9e92904e680eed535ac36160ab7"
+    },
+    {
+      "file": "sheets-se.json",
+      "bytes": 45452,
+      "sha256": "55361e843a350a4e0894601215db60986706a8250cd69aee8f04bafaf05a7366"
+    },
+    {
+      "file": "ticket-board.png",
+      "bytes": 124208,
+      "sha256": "1bc578f6a7043ad23075c29994883bae280214e333eeebcc91df2d9e869c6447"
+    }
+  ]
+}

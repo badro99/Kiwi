@@ -1,0 +1,266 @@
+[
+  {
+    "[data-vexel-client-value]": {
+      "text": "1 240",
+      "dir": "ltr",
+      "w": 61.28125,
+      "h": 27
+    },
+    "[data-vexel-client-delta]": {
+      "text": "+24 %",
+      "dir": "ltr",
+      "w": 49.5,
+      "h": 22
+    },
+    ".vexel-goal-values": {
+      "text": "942 319,55/ 840 000 MAD",
+      "dir": "ltr",
+      "w": 299,
+      "h": 27
+    },
+    "[data-vexel-goal-pct]": {
+      "text": "112 % atteint",
+      "dir": "ltr",
+      "w": 61.703125,
+      "h": 18,
+      "bdi": "112 %"
+    },
+    ".vexel-goal-card": null,
+    ".kpi-m[data-kpi=ratio] .v": {
+      "text": "68 / 32%",
+      "dir": "ltr",
+      "w": 94.171875,
+      "h": 27
+    },
+    ".topbar .ai-btn": {
+      "text": "\n        \n        Kiwi AI · Agent\n      ",
+      "dir": "ltr",
+      "w": 89.765625,
+      "h": 44
+    },
+    "lang": "fr",
+    "theme": "light",
+    "size": "se",
+    "emptyMenuDialog": "\nNouvelle section\nNom de la section\n\nAnnuler\nEnregistrer"
+  },
+  {
+    "[data-vexel-client-value]": {
+      "text": "1 240",
+      "dir": "ltr",
+      "w": 61.28125,
+      "h": 27
+    },
+    "[data-vexel-client-delta]": {
+      "text": "+24 %",
+      "dir": "ltr",
+      "w": 39.15625,
+      "h": 24
+    },
+    ".vexel-goal-values": {
+      "text": "942 319,55/ 840 000 MAD",
+      "dir": "ltr",
+      "w": 299,
+      "h": 27
+    },
+    "[data-vexel-goal-pct]": {
+      "text": "112 % atteint",
+      "dir": "ltr",
+      "w": 61.703125,
+      "h": 18,
+      "bdi": "112 %"
+    },
+    ".vexel-goal-card": null,
+    ".kpi-m[data-kpi=ratio] .v": {
+      "text": "68 / 32%",
+      "dir": "ltr",
+      "w": 94.171875,
+      "h": 27
+    },
+    ".topbar .ai-btn": {
+      "text": "\n        \n        Kiwi AI · Agent\n      ",
+      "dir": "ltr",
+      "w": 89.765625,
+      "h": 44
+    },
+    "lang": "fr",
+    "theme": "dark",
+    "size": "se",
+    "emptyMenuDialog": "\nNouvelle section\nNom de la section\n\nAnnuler\nEnregistrer"
+  },
+  {
+    "[data-vexel-client-value]": {
+      "text": "1,240",
+      "dir": "ltr",
+      "w": 66.234375,
+      "h": 27
+    },
+    "[data-vexel-client-delta]": {
+      "text": "+24 %",
+      "dir": "ltr",
+      "w": 49.5,
+      "h": 22
+    },
+    ".vexel-goal-values": {
+      "text": "942,319.55/ 840,000 MAD",
+      "dir": "ltr",
+      "w": 299,
+      "h": 27
+    },
+    "[data-vexel-goal-pct]": {
+      "text": "112 % reached",
+      "dir": "ltr",
+      "w": 71.171875,
+      "h": 18,
+      "bdi": "112 %"
+    },
+    ".vexel-goal-card": null,
+    ".kpi-m[data-kpi=ratio] .v": {
+      "text": "68 / 32%",
+      "dir": "ltr",
+      "w": 94.171875,
+      "h": 27
+    },
+    ".topbar .ai-btn": {
+      "text": "\n        \n        Kiwi AI · Agent\n      ",
+      "dir": "ltr",
+      "w": 89.765625,
+      "h": 44
+    },
+    "lang": "en",
+    "theme": "light",
+    "size": "se",
+    "emptyMenuDialog": "\nNew section\nSection name\n\nCancel\nSave"
+  },
+  {
+    "[data-vexel-client-value]": {
+      "text": "1,240",
+      "dir": "ltr",
+      "w": 66.234375,
+      "h": 27
+    },
+    "[data-vexel-client-delta]": {
+      "text": "+24 %",
+      "dir": "ltr",
+      "w": 39.15625,
+      "h": 24
+    },
+    ".vexel-goal-values": {
+      "text": "942,319.55/ 840,000 MAD",
+      "dir": "ltr",
+      "w": 299,
+      "h": 27
+    },
+    "[data-vexel-goal-pct]": {
+      "text": "112 % reached",
+      "dir": "ltr",
+      "w": 71.171875,
+      "h": 18,
+      "bdi": "112 %"
+    },
+    ".vexel-goal-card": null,
+    ".kpi-m[data-kpi=ratio] .v": {
+      "text": "68 / 32%",
+      "dir": "ltr",
+      "w": 94.171875,
+      "h": 27
+    },
+    ".topbar .ai-btn": {
+      "text": "\n        \n        Kiwi AI · Agent\n      ",
+      "dir": "ltr",
+      "w": 89.765625,
+      "h": 44
+    },
+    "lang": "en",
+    "theme": "dark",
+    "size": "se",
+    "emptyMenuDialog": "\nNew section\nSection name\n\nCancel\nSave"
+  },
+  {
+    "[data-vexel-client-value]": {
+      "text": "1 240",
+      "dir": "ltr",
+      "w": 67.796875,
+      "h": 27
+    },
+    "[data-vexel-client-delta]": {
+      "text": "+24 %",
+      "dir": "ltr",
+      "w": 49.90625,
+      "h": 22
+    },
+    ".vexel-goal-values": {
+      "text": "942 319,55/ 840 000 MAD",
+      "dir": "ltr",
+      "w": 299,
+      "h": 27
+    },
+    "[data-vexel-goal-pct]": {
+      "text": "112 % تم تحقيقه",
+      "dir": "rtl",
+      "w": 68.328125,
+      "h": 18,
+      "bdi": "112 %"
+    },
+    ".vexel-goal-card": null,
+    ".kpi-m[data-kpi=ratio] .v": {
+      "text": "68 / 32%",
+      "dir": "ltr",
+      "w": 94.171875,
+      "h": 27
+    },
+    ".topbar .ai-btn": {
+      "text": "\n        \n        كيوي AI · الوكيل\n      ",
+      "dir": "rtl",
+      "w": 89.765625,
+      "h": 44
+    },
+    "lang": "ar",
+    "theme": "light",
+    "size": "se",
+    "emptyMenuDialog": "\nقسم جديد\nاسم القسم\n\nإلغاء\nحفظ"
+  },
+  {
+    "[data-vexel-client-value]": {
+      "text": "1 240",
+      "dir": "ltr",
+      "w": 67.796875,
+      "h": 27
+    },
+    "[data-vexel-client-delta]": {
+      "text": "+24 %",
+      "dir": "ltr",
+      "w": 39.5625,
+      "h": 24
+    },
+    ".vexel-goal-values": {
+      "text": "942 319,55/ 840 000 MAD",
+      "dir": "ltr",
+      "w": 299,
+      "h": 27
+    },
+    "[data-vexel-goal-pct]": {
+      "text": "112 % تم تحقيقه",
+      "dir": "rtl",
+      "w": 68.328125,
+      "h": 18,
+      "bdi": "112 %"
+    },
+    ".vexel-goal-card": null,
+    ".kpi-m[data-kpi=ratio] .v": {
+      "text": "68 / 32%",
+      "dir": "ltr",
+      "w": 94.171875,
+      "h": 27
+    },
+    ".topbar .ai-btn": {
+      "text": "\n        \n        كيوي AI · الوكيل\n      ",
+      "dir": "rtl",
+      "w": 89.765625,
+      "h": 44
+    },
+    "lang": "ar",
+    "theme": "dark",
+    "size": "se",
+    "emptyMenuDialog": "\nقسم جديد\nاسم القسم\n\nإلغاء\nحفظ"
+  }
+]

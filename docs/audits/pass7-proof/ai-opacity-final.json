@@ -1,0 +1,114 @@
+{
+  "pro": [
+    {
+      "size": "pro",
+      "name": "pro-en-light-assistant",
+      "background": "rgb(251, 250, 247)",
+      "proof": "/tmp/kiwi-pass7-proof/pro-en-light-assistant.png"
+    },
+    {
+      "size": "pro",
+      "name": "pro-en-dark-assistant",
+      "background": "rgb(19, 26, 23)",
+      "proof": "/tmp/kiwi-pass7-proof/pro-en-dark-assistant.png"
+    },
+    {
+      "size": "pro",
+      "name": "pro-fr-light-assistant",
+      "background": "rgb(251, 250, 247)",
+      "proof": "/tmp/kiwi-pass7-proof/pro-fr-light-assistant.png"
+    },
+    {
+      "size": "pro",
+      "name": "pro-fr-dark-assistant",
+      "background": "rgb(19, 26, 23)",
+      "proof": "/tmp/kiwi-pass7-proof/pro-fr-dark-assistant.png"
+    },
+    {
+      "size": "pro",
+      "name": "pro-ar-light-assistant",
+      "background": "rgb(251, 250, 247)",
+      "proof": "/tmp/kiwi-pass7-proof/pro-ar-light-assistant.png"
+    },
+    {
+      "size": "pro",
+      "name": "pro-ar-dark-assistant",
+      "background": "rgb(19, 26, 23)",
+      "proof": "/tmp/kiwi-pass7-proof/pro-ar-dark-assistant.png"
+    }
+  ],
+  "se": [
+    {
+      "size": "se",
+      "lang": "en",
+      "theme": "light",
+      "background": "rgb(251, 250, 247)",
+      "labels": {
+        "menu": "Open menu",
+        "home": "Return to dashboard",
+        "notifications": "Notifications"
+      },
+      "proof": "/tmp/kiwi-pass7-proof/se-en-light-assistant-final.png"
+    },
+    {
+      "size": "se",
+      "lang": "en",
+      "theme": "dark",
+      "background": "rgb(19, 26, 23)",
+      "labels": {
+        "menu": "Open menu",
+        "home": "Return to dashboard",
+        "notifications": "Notifications"
+      },
+      "proof": "/tmp/kiwi-pass7-proof/se-en-dark-assistant-final.png"
+    },
+    {
+      "size": "se",
+      "lang": "fr",
+      "theme": "light",
+      "background": "rgb(251, 250, 247)",
+      "labels": {
+        "menu": "Ouvrir le menu",
+        "home": "Revenir en haut du tableau de bord",
+        "notifications": "Notifications"
+      },
+      "proof": "/tmp/kiwi-pass7-proof/se-fr-light-assistant-final.png"
+    },
+    {
+      "size": "se",
+      "lang": "fr",
+      "theme": "dark",
+      "background": "rgb(19, 26, 23)",
+      "labels": {
+        "menu": "Ouvrir le menu",
+        "home": "Revenir en haut du tableau de bord",
+        "notifications": "Notifications"
+      },
+      "proof": "/tmp/kiwi-pass7-proof/se-fr-dark-assistant-final.png"
+    },
+    {
+      "size": "se",
+      "lang": "ar",
+      "theme": "light",
+      "background": "rgb(251, 250, 247)",
+      "labels": {
+        "menu": "فتح القائمة",
+        "home": "العودة إلى لوحة التحكم",
+        "notifications": "الإشعارات"
+      },
+      "proof": "/tmp/kiwi-pass7-proof/se-ar-light-assistant-final.png"
+    },
+    {
+      "size": "se",
+      "lang": "ar",
+      "theme": "dark",
+      "background": "rgb(19, 26, 23)",
+      "labels": {
+        "menu": "فتح القائمة",
+        "home": "العودة إلى لوحة التحكم",
+        "notifications": "الإشعارات"
+      },
+      "proof": "/tmp/kiwi-pass7-proof/se-ar-dark-assistant-final.png"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "codeCommit": "56a1de7f63d369e1d6de9940f7602b202ddbd55f",
+  "simulators": [
+    "D53BB4E4-F195-41EF-8DE2-9F74BAEADC62",
+    "13A85612-BDD7-4BF0-98F2-736D76D44C57"
+  ],
+  "signatureVerification": "codesign --verify --deep --strict succeeded for both installed apps",
+  "qaBridge": "removed; no LOCAL QA ONLY or localhost:8788 hook remains",
+  "sha256": {
+    "native-runtime.js": "bc1b11c7f5a1987d4160b5f50134cc96d1f2cb0eee6d6eb40b870607bedeb353",
+    "native-runtime.css": "a2bb9e833c3bb1ce1cae945d969b7646a9748c0c6b4b0b2198770e00f8e0dc65"
+  }
+}

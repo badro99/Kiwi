@@ -1,0 +1,110 @@
+[
+  {
+    "lang": "fr",
+    "lock": true,
+    "ready": true,
+    "secondary": [
+      "rgb(172, 184, 177)",
+      "rgb(172, 184, 177)",
+      "rgb(172, 184, 177)"
+    ],
+    "keys": [
+      "fr",
+      "fr",
+      "fr",
+      "fr"
+    ],
+    "name": "se-fr-light-signed-launch-final",
+    "theme": "light"
+  },
+  {
+    "lang": "fr",
+    "lock": true,
+    "ready": true,
+    "secondary": [
+      "rgb(172, 184, 177)",
+      "rgb(172, 184, 177)",
+      "rgb(172, 184, 177)"
+    ],
+    "keys": [
+      "fr",
+      "fr",
+      "fr",
+      "fr"
+    ],
+    "name": "se-fr-dark-signed-launch-final",
+    "theme": "dark"
+  },
+  {
+    "lang": "en",
+    "lock": true,
+    "ready": true,
+    "secondary": [
+      "rgb(172, 184, 177)",
+      "rgb(172, 184, 177)",
+      "rgb(172, 184, 177)"
+    ],
+    "keys": [
+      "en",
+      "en",
+      "en",
+      "en"
+    ],
+    "name": "se-en-light-signed-launch-final",
+    "theme": "light"
+  },
+  {
+    "lang": "en",
+    "lock": true,
+    "ready": true,
+    "secondary": [
+      "rgb(172, 184, 177)",
+      "rgb(172, 184, 177)",
+      "rgb(172, 184, 177)"
+    ],
+    "keys": [
+      "en",
+      "en",
+      "en",
+      "en"
+    ],
+    "name": "se-en-dark-signed-launch-final",
+    "theme": "dark"
+  },
+  {
+    "lang": "ar",
+    "lock": true,
+    "ready": true,
+    "secondary": [
+      "rgb(172, 184, 177)",
+      "rgb(172, 184, 177)",
+      "rgb(172, 184, 177)"
+    ],
+    "keys": [
+      "ar",
+      "ar",
+      "ar",
+      "ar"
+    ],
+    "name": "se-ar-light-signed-launch-final",
+    "theme": "light"
+  },
+  {
+    "lang": "ar",
+    "lock": true,
+    "ready": true,
+    "secondary": [
+      "rgb(172, 184, 177)",
+      "rgb(172, 184, 177)",
+      "rgb(172, 184, 177)"
+    ],
+    "keys": [
+      "ar",
+      "ar",
+      "ar",
+      "ar"
+    ],
+    "name": "se-ar-dark-signed-launch-final",
+    "theme": "dark"
+  }
+]

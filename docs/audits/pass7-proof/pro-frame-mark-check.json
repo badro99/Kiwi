@@ -1,0 +1,614 @@
+[
+  {
+    "name": "pro-ar-dark-signed-launch-final",
+    "frames": [
+      {
+        "frame": 0,
+        "markPixels": 12246
+      },
+      {
+        "frame": 1,
+        "markPixels": 13589
+      },
+      {
+        "frame": 2,
+        "markPixels": 13263
+      },
+      {
+        "frame": 3,
+        "markPixels": 13327
+      },
+      {
+        "frame": 4,
+        "markPixels": 13282
+      },
+      {
+        "frame": 5,
+        "markPixels": 13404
+      },
+      {
+        "frame": 6,
+        "markPixels": 13404
+      },
+      {
+        "frame": 7,
+        "markPixels": 13404
+      },
+      {
+        "frame": 8,
+        "markPixels": 13404
+      },
+      {
+        "frame": 9,
+        "markPixels": 13404
+      },
+      {
+        "frame": 10,
+        "markPixels": 13404
+      },
+      {
+        "frame": 11,
+        "markPixels": 13404
+      },
+      {
+        "frame": 12,
+        "markPixels": 13404
+      },
+      {
+        "frame": 13,
+        "markPixels": 13404
+      },
+      {
+        "frame": 14,
+        "markPixels": 13404
+      },
+      {
+        "frame": 15,
+        "markPixels": 13404
+      },
+      {
+        "frame": 16,
+        "markPixels": 13404
+      },
+      {
+        "frame": 17,
+        "markPixels": 13404
+      },
+      {
+        "frame": 18,
+        "markPixels": 13404
+      },
+      {
+        "frame": 19,
+        "markPixels": 13404
+      },
+      {
+        "frame": 20,
+        "markPixels": 13404
+      },
+      {
+        "frame": 21,
+        "markPixels": 13404
+      },
+      {
+        "frame": 22,
+        "markPixels": 13404
+      },
+      {
+        "frame": 23,
+        "markPixels": 13404
+      }
+    ],
+    "allHaveMark": true
+  },
+  {
+    "name": "pro-ar-light-signed-launch-final",
+    "frames": [
+      {
+        "frame": 0,
+        "markPixels": 13346
+      },
+      {
+        "frame": 1,
+        "markPixels": 13564
+      },
+      {
+        "frame": 2,
+        "markPixels": 13263
+      },
+      {
+        "frame": 3,
+        "markPixels": 13327
+      },
+      {
+        "frame": 4,
+        "markPixels": 13327
+      },
+      {
+        "frame": 5,
+        "markPixels": 13404
+      },
+      {
+        "frame": 6,
+        "markPixels": 13404
+      },
+      {
+        "frame": 7,
+        "markPixels": 13404
+      },
+      {
+        "frame": 8,
+        "markPixels": 13404
+      },
+      {
+        "frame": 9,
+        "markPixels": 13404
+      },
+      {
+        "frame": 10,
+        "markPixels": 13404
+      },
+      {
+        "frame": 11,
+        "markPixels": 13404
+      },
+      {
+        "frame": 12,
+        "markPixels": 13404
+      },
+      {
+        "frame": 13,
+        "markPixels": 13404
+      },
+      {
+        "frame": 14,
+        "markPixels": 13404
+      },
+      {
+        "frame": 15,
+        "markPixels": 13404
+      },
+      {
+        "frame": 16,
+        "markPixels": 13404
+      },
+      {
+        "frame": 17,
+        "markPixels": 13404
+      },
+      {
+        "frame": 18,
+        "markPixels": 13404
+      },
+      {
+        "frame": 19,
+        "markPixels": 13404
+      },
+      {
+        "frame": 20,
+        "markPixels": 13404
+      },
+      {
+        "frame": 21,
+        "markPixels": 13404
+      },
+      {
+        "frame": 22,
+        "markPixels": 13404
+      },
+      {
+        "frame": 23,
+        "markPixels": 13404
+      }
+    ],
+    "allHaveMark": true
+  },
+  {
+    "name": "pro-en-dark-signed-launch-final",
+    "frames": [
+      {
+        "frame": 0,
+        "markPixels": 12702
+      },
+      {
+        "frame": 1,
+        "markPixels": 13580
+      },
+      {
+        "frame": 2,
+        "markPixels": 13263
+      },
+      {
+        "frame": 3,
+        "markPixels": 13327
+      },
+      {
+        "frame": 4,
+        "markPixels": 13327
+      },
+      {
+        "frame": 5,
+        "markPixels": 13404
+      },
+      {
+        "frame": 6,
+        "markPixels": 13404
+      },
+      {
+        "frame": 7,
+        "markPixels": 13404
+      },
+      {
+        "frame": 8,
+        "markPixels": 13404
+      },
+      {
+        "frame": 9,
+        "markPixels": 13404
+      },
+      {
+        "frame": 10,
+        "markPixels": 13404
+      },
+      {
+        "frame": 11,
+        "markPixels": 13404
+      },
+      {
+        "frame": 12,
+        "markPixels": 13404
+      },
+      {
+        "frame": 13,
+        "markPixels": 13404
+      },
+      {
+        "frame": 14,
+        "markPixels": 13404
+      },
+      {
+        "frame": 15,
+        "markPixels": 13404
+      },
+      {
+        "frame": 16,
+        "markPixels": 13404
+      },
+      {
+        "frame": 17,
+        "markPixels": 13404
+      },
+      {
+        "frame": 18,
+        "markPixels": 13404
+      },
+      {
+        "frame": 19,
+        "markPixels": 13404
+      },
+      {
+        "frame": 20,
+        "markPixels": 13404
+      },
+      {
+        "frame": 21,
+        "markPixels": 13404
+      },
+      {
+        "frame": 22,
+        "markPixels": 13404
+      },
+      {
+        "frame": 23,
+        "markPixels": 13404
+      }
+    ],
+    "allHaveMark": true
+  },
+  {
+    "name": "pro-en-light-signed-launch-final",
+    "frames": [
+      {
+        "frame": 0,
+        "markPixels": 13564
+      },
+      {
+        "frame": 1,
+        "markPixels": 13539
+      },
+      {
+        "frame": 2,
+        "markPixels": 13263
+      },
+      {
+        "frame": 3,
+        "markPixels": 13327
+      },
+      {
+        "frame": 4,
+        "markPixels": 13327
+      },
+      {
+        "frame": 5,
+        "markPixels": 13404
+      },
+      {
+        "frame": 6,
+        "markPixels": 13404
+      },
+      {
+        "frame": 7,
+        "markPixels": 13404
+      },
+      {
+        "frame": 8,
+        "markPixels": 13404
+      },
+      {
+        "frame": 9,
+        "markPixels": 13404
+      },
+      {
+        "frame": 10,
+        "markPixels": 13404
+      },
+      {
+        "frame": 11,
+        "markPixels": 13404
+      },
+      {
+        "frame": 12,
+        "markPixels": 13404
+      },
+      {
+        "frame": 13,
+        "markPixels": 13404
+      },
+      {
+        "frame": 14,
+        "markPixels": 13404
+      },
+      {
+        "frame": 15,
+        "markPixels": 13404
+      },
+      {
+        "frame": 16,
+        "markPixels": 13404
+      },
+      {
+        "frame": 17,
+        "markPixels": 13404
+      },
+      {
+        "frame": 18,
+        "markPixels": 13404
+      },
+      {
+        "frame": 19,
+        "markPixels": 13404
+      },
+      {
+        "frame": 20,
+        "markPixels": 13404
+      },
+      {
+        "frame": 21,
+        "markPixels": 13404
+      },
+      {
+        "frame": 22,
+        "markPixels": 13404
+      },
+      {
+        "frame": 23,
+        "markPixels": 13404
+      }
+    ],
+    "allHaveMark": true
+  },
+  {
+    "name": "pro-fr-dark-signed-launch-final",
+    "frames": [
+      {
+        "frame": 0,
+        "markPixels": 11776
+      },
+      {
+        "frame": 1,
+        "markPixels": 13263
+      },
+      {
+        "frame": 2,
+        "markPixels": 13327
+      },
+      {
+        "frame": 3,
+        "markPixels": 13404
+      },
+      {
+        "frame": 4,
+        "markPixels": 13404
+      },
+      {
+        "frame": 5,
+        "markPixels": 13404
+      },
+      {
+        "frame": 6,
+        "markPixels": 13404
+      },
+      {
+        "frame": 7,
+        "markPixels": 13404
+      },
+      {
+        "frame": 8,
+        "markPixels": 13404
+      },
+      {
+        "frame": 9,
+        "markPixels": 13404
+      },
+      {
+        "frame": 10,
+        "markPixels": 13404
+      },
+      {
+        "frame": 11,
+        "markPixels": 13404
+      },
+      {
+        "frame": 12,
+        "markPixels": 13404
+      },
+      {
+        "frame": 13,
+        "markPixels": 13404
+      },
+      {
+        "frame": 14,
+        "markPixels": 13404
+      },
+      {
+        "frame": 15,
+        "markPixels": 13404
+      },
+      {
+        "frame": 16,
+        "markPixels": 13404
+      },
+      {
+        "frame": 17,
+        "markPixels": 13404
+      },
+      {
+        "frame": 18,
+        "markPixels": 13404
+      },
+      {
+        "frame": 19,
+        "markPixels": 13404
+      },
+      {
+        "frame": 20,
+        "markPixels": 13404
+      },
+      {
+        "frame": 21,
+        "markPixels": 13404
+      },
+      {
+        "frame": 22,
+        "markPixels": 13404
+      },
+      {
+        "frame": 23,
+        "markPixels": 13404
+      }
+    ],
+    "allHaveMark": true
+  },
+  {
+    "name": "pro-fr-light-signed-launch-final",
+    "frames": [
+      {
+        "frame": 0,
+        "markPixels": 13587
+      },
+      {
+        "frame": 1,
+        "markPixels": 13263
+      },
+      {
+        "frame": 2,
+        "markPixels": 13327
+      },
+      {
+        "frame": 3,
+        "markPixels": 13327
+      },
+      {
+        "frame": 4,
+        "markPixels": 13404
+      },
+      {
+        "frame": 5,
+        "markPixels": 13404
+      },
+      {
+        "frame": 6,
+        "markPixels": 13404
+      },
+      {
+        "frame": 7,
+        "markPixels": 13404
+      },
+      {
+        "frame": 8,
+        "markPixels": 13404
+      },
+      {
+        "frame": 9,
+        "markPixels": 13404
+      },
+      {
+        "frame": 10,
+        "markPixels": 13404
+      },
+      {
+        "frame": 11,
+        "markPixels": 13404
+      },
+      {
+        "frame": 12,
+        "markPixels": 13404
+      },
+      {
+        "frame": 13,
+        "markPixels": 13404
+      },
+      {
+        "frame": 14,
+        "markPixels": 13404
+      },
+      {
+        "frame": 15,
+        "markPixels": 13404
+      },
+      {
+        "frame": 16,
+        "markPixels": 13404
+      },
+      {
+        "frame": 17,
+        "markPixels": 13404
+      },
+      {
+        "frame": 18,
+        "markPixels": 13404
+      },
+      {
+        "frame": 19,
+        "markPixels": 13404
+      },
+      {
+        "frame": 20,
+        "markPixels": 13404
+      },
+      {
+        "frame": 21,
+        "markPixels": 13404
+      },
+      {
+        "frame": 22,
+        "markPixels": 13404
+      },
+      {
+        "frame": 23,
+        "markPixels": 13404
+      }
+    ],
+    "allHaveMark": true
+  }
+]

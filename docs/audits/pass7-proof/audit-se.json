@@ -1,0 +1,4631 @@
+[
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "المبيعات حسب القناة"
+    ],
+    "smallTargets": [
+      {
+        "text": "مخصص",
+        "w": 40,
+        "h": 44
+      },
+      {
+        "text": "مقارنة",
+        "w": 55,
+        "h": 34
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter",
+    "name": "se-ar-dark-accueil",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-dark-accueil.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "الكل",
+        "w": 41,
+        "h": 29
+      },
+      {
+        "text": "البطاقات",
+        "w": 60,
+        "h": 29
+      },
+      {
+        "text": "الجوال",
+        "w": 51,
+        "h": 29
+      },
+      {
+        "text": "نقدًا",
+        "w": 40,
+        "h": 29
+      },
+      {
+        "text": "المبالغ المستردة",
+        "w": 83,
+        "h": 29
+      },
+      {
+        "text": "اليوم",
+        "w": 67,
+        "h": 36
+      },
+      {
+        "text": "الكل",
+        "w": 108,
+        "h": 37
+      },
+      {
+        "text": "التسوية",
+        "w": 108,
+        "h": 37
+      },
+      {
+        "text": "مكافحة الاحتيال",
+        "w": 108,
+        "h": 37
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-ar-dark-transactions",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-dark-transactions.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "تصدير",
+        "w": 60,
+        "h": 38
+      },
+      {
+        "text": "طباعة",
+        "w": 56,
+        "h": 38
+      },
+      {
+        "text": "16\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "17\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "18\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "19\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "20\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "21\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "22\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "23\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "24\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "25\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "26\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "27\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "28\n",
+        "w": 19,
+        "h": 56
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-ar-dark-rapport",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-dark-rapport.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "الكل8",
+        "w": 61,
+        "h": 34
+      },
+      {
+        "text": "دائمون3",
+        "w": 73,
+        "h": 34
+      },
+      {
+        "text": "كبار1",
+        "w": 61,
+        "h": 34
+      },
+      {
+        "text": "جدد2",
+        "w": 61,
+        "h": 34
+      },
+      {
+        "text": "خاملون2",
+        "w": 75,
+        "h": 34
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-ar-dark-clients",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-dark-clients.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "أسطول الأجهزة"
+    ],
+    "smallTargets": [],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-ar-dark-terminaux",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-dark-terminaux.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "إغلاق الصندوق (Z)",
+        "w": 129,
+        "h": 39
+      },
+      {
+        "text": "النظافة وHACCP",
+        "w": 120,
+        "h": 39
+      },
+      {
+        "text": "التجهيزات",
+        "w": 80,
+        "h": 39
+      },
+      {
+        "text": "الوثائق",
+        "w": 65,
+        "h": 39
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-conformite",
+    "name": "se-ar-dark-conformite",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-dark-conformite.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "الملفات",
+        "w": 67,
+        "h": 36
+      },
+      {
+        "text": "ساعات العمل",
+        "w": 95,
+        "h": 36
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-equipe",
+    "name": "se-ar-dark-equipe",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-dark-equipe.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "التخطيط"
+    ],
+    "smallTargets": [
+      {
+        "text": "الجدول",
+        "w": 66,
+        "h": 31
+      },
+      {
+        "text": "ساعات العمل",
+        "w": 95,
+        "h": 31
+      },
+      {
+        "text": "أسبوع",
+        "w": 60,
+        "h": 31
+      },
+      {
+        "text": "نصف شهر",
+        "w": 80,
+        "h": 31
+      },
+      {
+        "text": "شهر",
+        "w": 50,
+        "h": 31
+      },
+      {
+        "text": "‹",
+        "w": 34,
+        "h": 34
+      },
+      {
+        "text": "›",
+        "w": 34,
+        "h": 34
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-ar-dark-payroll",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-dark-payroll.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "الحجوزات"
+    ],
+    "smallTargets": [
+      {
+        "text": "رابط الحجز",
+        "w": 151,
+        "h": 42
+      },
+      {
+        "text": "الإعدادات",
+        "w": 151,
+        "h": 42
+      },
+      {
+        "text": "حجز جديد",
+        "w": 309,
+        "h": 42
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-ar-dark-reservations",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-dark-reservations.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "المبيعات حسب القناة",
+      "توزيع الطاولات\n            Café Atlas · 24 طاولة · 0 بدون نادل\n          \n          \n     "
+    ],
+    "smallTargets": [
+      {
+        "text": "مخصص",
+        "w": 40,
+        "h": 44
+      },
+      {
+        "text": "مقارنة",
+        "w": 55,
+        "h": 34
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter",
+    "name": "se-ar-dark-tables",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-dark-tables.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "القائمة والإضافات\n",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "text": "الترجمات\n",
+        "w": 91,
+        "h": 36
+      },
+      {
+        "text": "محطات التحضير\n",
+        "w": 126,
+        "h": 36
+      },
+      {
+        "text": "الوصفات\n",
+        "w": 91,
+        "h": 36
+      },
+      {
+        "text": "القيم الغذائية\n",
+        "w": 111,
+        "h": 36
+      },
+      {
+        "text": "الأداء\n",
+        "w": 72,
+        "h": 36
+      },
+      {
+        "text": "ساعات الذروة\n",
+        "w": 113,
+        "h": 36
+      },
+      {
+        "text": "تنبيهات 86\n",
+        "w": 101,
+        "h": 36
+      },
+      {
+        "text": "رموز NFC\n",
+        "w": 94,
+        "h": 36
+      },
+      {
+        "text": "الكل",
+        "w": 49,
+        "h": 36
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-menu",
+    "name": "se-ar-dark-menu",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-dark-menu.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "نظرة عامة\n",
+        "w": 100,
+        "h": 38
+      },
+      {
+        "text": "المنتجات والمخزون\n",
+        "w": 146,
+        "h": 38
+      },
+      {
+        "text": "الموردون\n",
+        "w": 96,
+        "h": 38
+      },
+      {
+        "text": "الطلبيات\n",
+        "w": 94,
+        "h": 38
+      },
+      {
+        "text": "توقعات الذكاء الاصطناعي\n✦ ULTRA\n",
+        "w": 233,
+        "h": 38
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-stock",
+    "name": "se-ar-dark-stock",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-dark-stock.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-finance",
+    "name": "se-ar-dark-finance",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-dark-finance.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "المبيعات حسب القناة"
+    ],
+    "smallTargets": [
+      {
+        "text": "مخصص",
+        "w": 40,
+        "h": 44
+      },
+      {
+        "text": "مقارنة",
+        "w": 55,
+        "h": 34
+      },
+      {
+        "text": "الرئيسية\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الطلبات\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التقرير اليومي\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "العملاء والتسويق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الأجهزة الطرفية\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الامتثال\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الفريق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التخطيط\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الحجوزات والمواعيد\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter",
+    "name": "se-ar-light-accueil",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-light-accueil.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "الكل",
+        "w": 41,
+        "h": 29
+      },
+      {
+        "text": "البطاقات",
+        "w": 60,
+        "h": 29
+      },
+      {
+        "text": "الجوال",
+        "w": 51,
+        "h": 29
+      },
+      {
+        "text": "نقدًا",
+        "w": 40,
+        "h": 29
+      },
+      {
+        "text": "المبالغ المستردة",
+        "w": 83,
+        "h": 29
+      },
+      {
+        "text": "اليوم",
+        "w": 67,
+        "h": 36
+      },
+      {
+        "text": "الكل",
+        "w": 108,
+        "h": 37
+      },
+      {
+        "text": "التسوية",
+        "w": 108,
+        "h": 37
+      },
+      {
+        "text": "مكافحة الاحتيال",
+        "w": 108,
+        "h": 37
+      },
+      {
+        "text": "الرئيسية\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الطلبات\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التقرير اليومي\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "العملاء والتسويق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الأجهزة الطرفية\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الامتثال\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-ar-light-transactions",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-light-transactions.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "تصدير",
+        "w": 60,
+        "h": 38
+      },
+      {
+        "text": "طباعة",
+        "w": 56,
+        "h": 38
+      },
+      {
+        "text": "16\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "17\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "18\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "19\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "20\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "21\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "22\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "23\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "24\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "25\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "26\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "27\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "28\n",
+        "w": 19,
+        "h": 56
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-ar-light-rapport",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-light-rapport.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "الكل8",
+        "w": 61,
+        "h": 34
+      },
+      {
+        "text": "دائمون3",
+        "w": 73,
+        "h": 34
+      },
+      {
+        "text": "كبار1",
+        "w": 61,
+        "h": 34
+      },
+      {
+        "text": "جدد2",
+        "w": 61,
+        "h": 34
+      },
+      {
+        "text": "خاملون2",
+        "w": 75,
+        "h": 34
+      },
+      {
+        "text": "الرئيسية\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الطلبات\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التقرير اليومي\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "العملاء والتسويق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الأجهزة الطرفية\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الامتثال\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الفريق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التخطيط\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الحجوزات والمواعيد\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-ar-light-clients",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-light-clients.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "أسطول الأجهزة"
+    ],
+    "smallTargets": [
+      {
+        "text": "الرئيسية\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الطلبات\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التقرير اليومي\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "العملاء والتسويق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الأجهزة الطرفية\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الامتثال\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الفريق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التخطيط\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الحجوزات والمواعيد\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "مخطط القاعة\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "القائمة والإضافات\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-ar-light-terminaux",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-light-terminaux.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "إغلاق الصندوق (Z)",
+        "w": 129,
+        "h": 39
+      },
+      {
+        "text": "النظافة وHACCP",
+        "w": 120,
+        "h": 39
+      },
+      {
+        "text": "التجهيزات",
+        "w": 80,
+        "h": 39
+      },
+      {
+        "text": "الوثائق",
+        "w": 65,
+        "h": 39
+      },
+      {
+        "text": "الرئيسية\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الطلبات\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التقرير اليومي\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "العملاء والتسويق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الأجهزة الطرفية\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الامتثال\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الفريق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التخطيط\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الحجوزات والمواعيد\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "مخطط القاعة\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "القائمة والإضافات\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-conformite",
+    "name": "se-ar-light-conformite",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-light-conformite.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "الملفات",
+        "w": 67,
+        "h": 36
+      },
+      {
+        "text": "ساعات العمل",
+        "w": 95,
+        "h": 36
+      },
+      {
+        "text": "الرئيسية\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الطلبات\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التقرير اليومي\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "العملاء والتسويق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الأجهزة الطرفية\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الامتثال\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الفريق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التخطيط\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الحجوزات والمواعيد\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "مخطط القاعة\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "القائمة والإضافات\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "المخزون والتموين\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الهوامش والميزانية\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-equipe",
+    "name": "se-ar-light-equipe",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-light-equipe.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "التخطيط"
+    ],
+    "smallTargets": [
+      {
+        "text": "الجدول",
+        "w": 66,
+        "h": 31
+      },
+      {
+        "text": "ساعات العمل",
+        "w": 95,
+        "h": 31
+      },
+      {
+        "text": "أسبوع",
+        "w": 60,
+        "h": 31
+      },
+      {
+        "text": "نصف شهر",
+        "w": 80,
+        "h": 31
+      },
+      {
+        "text": "شهر",
+        "w": 50,
+        "h": 31
+      },
+      {
+        "text": "‹",
+        "w": 34,
+        "h": 34
+      },
+      {
+        "text": "›",
+        "w": 34,
+        "h": 34
+      },
+      {
+        "text": "الرئيسية\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الطلبات\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التقرير اليومي\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "العملاء والتسويق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الأجهزة الطرفية\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الامتثال\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الفريق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التخطيط\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-ar-light-payroll",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-light-payroll.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "الحجوزات"
+    ],
+    "smallTargets": [
+      {
+        "text": "رابط الحجز",
+        "w": 151,
+        "h": 42
+      },
+      {
+        "text": "الإعدادات",
+        "w": 151,
+        "h": 42
+      },
+      {
+        "text": "حجز جديد",
+        "w": 309,
+        "h": 42
+      },
+      {
+        "text": "الطلبات\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التقرير اليومي\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "العملاء والتسويق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الأجهزة الطرفية\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الامتثال\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الفريق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التخطيط\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الحجوزات والمواعيد\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "مخطط القاعة\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "القائمة والإضافات\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "المخزون والتموين\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الهوامش والميزانية\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-ar-light-reservations",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-light-reservations.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "المبيعات حسب القناة",
+      "توزيع الطاولات\n            Café Atlas · 24 طاولة · 0 بدون نادل\n          \n          \n     "
+    ],
+    "smallTargets": [
+      {
+        "text": "مخصص",
+        "w": 40,
+        "h": 44
+      },
+      {
+        "text": "مقارنة",
+        "w": 55,
+        "h": 34
+      },
+      {
+        "text": "العملاء والتسويق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الأجهزة الطرفية\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الامتثال\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الفريق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التخطيط\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الحجوزات والمواعيد\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "مخطط القاعة\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "القائمة والإضافات\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "المخزون والتموين\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الهوامش والميزانية\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter",
+    "name": "se-ar-light-tables",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-light-tables.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "القائمة والإضافات\n",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "text": "الترجمات\n",
+        "w": 91,
+        "h": 36
+      },
+      {
+        "text": "محطات التحضير\n",
+        "w": 126,
+        "h": 36
+      },
+      {
+        "text": "الوصفات\n",
+        "w": 91,
+        "h": 36
+      },
+      {
+        "text": "القيم الغذائية\n",
+        "w": 111,
+        "h": 36
+      },
+      {
+        "text": "الأداء\n",
+        "w": 72,
+        "h": 36
+      },
+      {
+        "text": "ساعات الذروة\n",
+        "w": 113,
+        "h": 36
+      },
+      {
+        "text": "تنبيهات 86\n",
+        "w": 101,
+        "h": 36
+      },
+      {
+        "text": "رموز NFC\n",
+        "w": 94,
+        "h": 36
+      },
+      {
+        "text": "الكل",
+        "w": 49,
+        "h": 36
+      },
+      {
+        "text": "الأجهزة الطرفية\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الامتثال\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الفريق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التخطيط\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الحجوزات والمواعيد\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-menu",
+    "name": "se-ar-light-menu",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-light-menu.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "نظرة عامة\n",
+        "w": 100,
+        "h": 38
+      },
+      {
+        "text": "المنتجات والمخزون\n",
+        "w": 146,
+        "h": 38
+      },
+      {
+        "text": "الموردون\n",
+        "w": 96,
+        "h": 38
+      },
+      {
+        "text": "الطلبيات\n",
+        "w": 94,
+        "h": 38
+      },
+      {
+        "text": "توقعات الذكاء الاصطناعي\n✦ ULTRA\n",
+        "w": 233,
+        "h": 38
+      },
+      {
+        "text": "الامتثال\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الفريق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التخطيط\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الحجوزات والمواعيد\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "مخطط القاعة\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "القائمة والإضافات\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "المخزون والتموين\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الهوامش والميزانية\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-stock",
+    "name": "se-ar-light-stock",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-light-stock.png"
+  },
+  {
+    "real": false,
+    "lang": "ar",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "الفريق\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "التخطيط\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الحجوزات والمواعيد\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "مخطط القاعة\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "القائمة والإضافات\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "المخزون والتموين\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "الهوامش والميزانية\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-finance",
+    "name": "se-ar-light-finance",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-ar-light-finance.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Sales by channel"
+    ],
+    "smallTargets": [
+      {
+        "text": "Custom",
+        "w": 40,
+        "h": 44
+      },
+      {
+        "text": "Compare",
+        "w": 78,
+        "h": 34
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter",
+    "name": "se-en-dark-accueil",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-dark-accueil.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "All",
+        "w": 37,
+        "h": 27
+      },
+      {
+        "text": "Cards",
+        "w": 55,
+        "h": 27
+      },
+      {
+        "text": "Mobile",
+        "w": 59,
+        "h": 27
+      },
+      {
+        "text": "Cash",
+        "w": 51,
+        "h": 27
+      },
+      {
+        "text": "Refunds",
+        "w": 68,
+        "h": 27
+      },
+      {
+        "text": "Today",
+        "w": 76,
+        "h": 36
+      },
+      {
+        "text": "All",
+        "w": 108,
+        "h": 35
+      },
+      {
+        "text": "Reconciliation",
+        "w": 108,
+        "h": 35
+      },
+      {
+        "text": "Anti-fraud",
+        "w": 108,
+        "h": 35
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-en-dark-transactions",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-dark-transactions.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Export",
+        "w": 67,
+        "h": 38
+      },
+      {
+        "text": "Print",
+        "w": 55,
+        "h": 38
+      },
+      {
+        "text": "16\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "17\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "18\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "19\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "20\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "21\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "22\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "23\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "24\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "25\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "26\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "27\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "28\n",
+        "w": 19,
+        "h": 56
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-en-dark-rapport",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-dark-rapport.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "All8",
+        "w": 56,
+        "h": 34
+      },
+      {
+        "text": "Regulars3",
+        "w": 92,
+        "h": 34
+      },
+      {
+        "text": "VIP1",
+        "w": 61,
+        "h": 34
+      },
+      {
+        "text": "New2",
+        "w": 68,
+        "h": 34
+      },
+      {
+        "text": "Dormant2",
+        "w": 92,
+        "h": 34
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-en-dark-clients",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-dark-clients.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Terminal Fleet"
+    ],
+    "smallTargets": [],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-en-dark-terminaux",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-dark-terminaux.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Cash close (Z)",
+        "w": 116,
+        "h": 35
+      },
+      {
+        "text": "Hygiene & HACCP",
+        "w": 136,
+        "h": 35
+      },
+      {
+        "text": "Equipment",
+        "w": 94,
+        "h": 35
+      },
+      {
+        "text": "Documents",
+        "w": 98,
+        "h": 35
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-conformite",
+    "name": "se-en-dark-conformite",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-dark-conformite.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Profiles",
+        "w": 70,
+        "h": 33
+      },
+      {
+        "text": "Hours worked",
+        "w": 106,
+        "h": 33
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-equipe",
+    "name": "se-en-dark-equipe",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-dark-equipe.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Planning"
+    ],
+    "smallTargets": [
+      {
+        "text": "Schedule",
+        "w": 81,
+        "h": 31
+      },
+      {
+        "text": "Hours worked",
+        "w": 106,
+        "h": 31
+      },
+      {
+        "text": "Week",
+        "w": 61,
+        "h": 31
+      },
+      {
+        "text": "Fortnight",
+        "w": 79,
+        "h": 31
+      },
+      {
+        "text": "Month",
+        "w": 66,
+        "h": 31
+      },
+      {
+        "text": "‹",
+        "w": 34,
+        "h": 34
+      },
+      {
+        "text": "›",
+        "w": 34,
+        "h": 34
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-en-dark-payroll",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-dark-payroll.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Bookings"
+    ],
+    "smallTargets": [
+      {
+        "text": "Booking link",
+        "w": 151,
+        "h": 42
+      },
+      {
+        "text": "Configure",
+        "w": 151,
+        "h": 42
+      },
+      {
+        "text": "New booking",
+        "w": 309,
+        "h": 42
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-en-dark-reservations",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-dark-reservations.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Sales by channel",
+      "Table assignment\n            Café Atlas · 24 tables · 0 unassigned\n          \n          \n "
+    ],
+    "smallTargets": [
+      {
+        "text": "Custom",
+        "w": 40,
+        "h": 44
+      },
+      {
+        "text": "Compare",
+        "w": 78,
+        "h": 34
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter",
+    "name": "se-en-dark-tables",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-dark-tables.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Menu & modifiers\n",
+        "w": 143,
+        "h": 33
+      },
+      {
+        "text": "Translations\n",
+        "w": 114,
+        "h": 33
+      },
+      {
+        "text": "Kitchen stations\n",
+        "w": 136,
+        "h": 33
+      },
+      {
+        "text": "Recipes\n",
+        "w": 91,
+        "h": 33
+      },
+      {
+        "text": "Nutrition\n",
+        "w": 95,
+        "h": 33
+      },
+      {
+        "text": "Performance\n",
+        "w": 119,
+        "h": 33
+      },
+      {
+        "text": "Peak hours\n",
+        "w": 109,
+        "h": 33
+      },
+      {
+        "text": "86 Alerts\n",
+        "w": 97,
+        "h": 33
+      },
+      {
+        "text": "NFC Tags\n",
+        "w": 101,
+        "h": 33
+      },
+      {
+        "text": "All",
+        "w": 41,
+        "h": 33
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-menu",
+    "name": "se-en-dark-menu",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-dark-menu.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Overview\n",
+        "w": 105,
+        "h": 35
+      },
+      {
+        "text": "Items & stock\n",
+        "w": 126,
+        "h": 35
+      },
+      {
+        "text": "Suppliers\n",
+        "w": 104,
+        "h": 35
+      },
+      {
+        "text": "Orders\n",
+        "w": 90,
+        "h": 35
+      },
+      {
+        "text": "AI forecast\n✦ ULTRA\n",
+        "w": 176,
+        "h": 35
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-stock",
+    "name": "se-en-dark-stock",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-dark-stock.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-finance",
+    "name": "se-en-dark-finance",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-dark-finance.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Sales by channel"
+    ],
+    "smallTargets": [
+      {
+        "text": "Custom",
+        "w": 40,
+        "h": 44
+      },
+      {
+        "text": "Compare",
+        "w": 78,
+        "h": 34
+      },
+      {
+        "text": "Home\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Orders\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Daily report\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Customers & Marketing\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Terminals\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Compliance\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Team\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Reservations & appointments\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter",
+    "name": "se-en-light-accueil",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-light-accueil.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "All",
+        "w": 37,
+        "h": 27
+      },
+      {
+        "text": "Cards",
+        "w": 55,
+        "h": 27
+      },
+      {
+        "text": "Mobile",
+        "w": 59,
+        "h": 27
+      },
+      {
+        "text": "Cash",
+        "w": 51,
+        "h": 27
+      },
+      {
+        "text": "Refunds",
+        "w": 68,
+        "h": 27
+      },
+      {
+        "text": "Today",
+        "w": 76,
+        "h": 36
+      },
+      {
+        "text": "All",
+        "w": 108,
+        "h": 35
+      },
+      {
+        "text": "Reconciliation",
+        "w": 108,
+        "h": 35
+      },
+      {
+        "text": "Anti-fraud",
+        "w": 108,
+        "h": 35
+      },
+      {
+        "text": "Home\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Orders\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Daily report\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Customers & Marketing\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Terminals\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Compliance\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-en-light-transactions",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-light-transactions.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Export",
+        "w": 67,
+        "h": 38
+      },
+      {
+        "text": "Print",
+        "w": 55,
+        "h": 38
+      },
+      {
+        "text": "16\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "17\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "18\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "19\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "20\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "21\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "22\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "23\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "24\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "25\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "26\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "27\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "28\n",
+        "w": 19,
+        "h": 56
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-en-light-rapport",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-light-rapport.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "All8",
+        "w": 56,
+        "h": 34
+      },
+      {
+        "text": "Regulars3",
+        "w": 92,
+        "h": 34
+      },
+      {
+        "text": "VIP1",
+        "w": 61,
+        "h": 34
+      },
+      {
+        "text": "New2",
+        "w": 68,
+        "h": 34
+      },
+      {
+        "text": "Dormant2",
+        "w": 92,
+        "h": 34
+      },
+      {
+        "text": "Home\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Orders\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Daily report\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Customers & Marketing\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Terminals\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Compliance\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Team\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Reservations & appointments\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-en-light-clients",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-light-clients.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Terminal Fleet"
+    ],
+    "smallTargets": [
+      {
+        "text": "Home\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Orders\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Daily report\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Customers & Marketing\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Terminals\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Compliance\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Team\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Reservations & appointments\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Floor plan\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Menu & modifiers\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-en-light-terminaux",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-light-terminaux.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Cash close (Z)",
+        "w": 116,
+        "h": 35
+      },
+      {
+        "text": "Hygiene & HACCP",
+        "w": 136,
+        "h": 35
+      },
+      {
+        "text": "Equipment",
+        "w": 94,
+        "h": 35
+      },
+      {
+        "text": "Documents",
+        "w": 98,
+        "h": 35
+      },
+      {
+        "text": "Home\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Orders\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Daily report\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Customers & Marketing\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Terminals\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Compliance\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Team\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Reservations & appointments\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Floor plan\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Menu & modifiers\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-conformite",
+    "name": "se-en-light-conformite",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-light-conformite.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Profiles",
+        "w": 70,
+        "h": 33
+      },
+      {
+        "text": "Hours worked",
+        "w": 106,
+        "h": 33
+      },
+      {
+        "text": "Home\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Orders\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Daily report\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Customers & Marketing\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Terminals\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Compliance\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Team\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Reservations & appointments\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Floor plan\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Menu & modifiers\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Stock & procurement\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Margins & budget\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-equipe",
+    "name": "se-en-light-equipe",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-light-equipe.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Planning"
+    ],
+    "smallTargets": [
+      {
+        "text": "Schedule",
+        "w": 81,
+        "h": 31
+      },
+      {
+        "text": "Hours worked",
+        "w": 106,
+        "h": 31
+      },
+      {
+        "text": "Week",
+        "w": 61,
+        "h": 31
+      },
+      {
+        "text": "Fortnight",
+        "w": 79,
+        "h": 31
+      },
+      {
+        "text": "Month",
+        "w": 66,
+        "h": 31
+      },
+      {
+        "text": "‹",
+        "w": 34,
+        "h": 34
+      },
+      {
+        "text": "›",
+        "w": 34,
+        "h": 34
+      },
+      {
+        "text": "Home\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Orders\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Daily report\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Customers & Marketing\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Terminals\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Compliance\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Team\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-en-light-payroll",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-light-payroll.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Bookings"
+    ],
+    "smallTargets": [
+      {
+        "text": "Booking link",
+        "w": 151,
+        "h": 42
+      },
+      {
+        "text": "Configure",
+        "w": 151,
+        "h": 42
+      },
+      {
+        "text": "New booking",
+        "w": 309,
+        "h": 42
+      },
+      {
+        "text": "Orders\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Daily report\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Customers & Marketing\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Terminals\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Compliance\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Team\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Reservations & appointments\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Floor plan\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Menu & modifiers\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Stock & procurement\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Margins & budget\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-en-light-reservations",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-light-reservations.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Sales by channel",
+      "Table assignment\n            Café Atlas · 24 tables · 0 unassigned\n          \n          \n "
+    ],
+    "smallTargets": [
+      {
+        "text": "Custom",
+        "w": 40,
+        "h": 44
+      },
+      {
+        "text": "Compare",
+        "w": 78,
+        "h": 34
+      },
+      {
+        "text": "Customers & Marketing\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Terminals\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Compliance\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Team\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Reservations & appointments\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Floor plan\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Menu & modifiers\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Stock & procurement\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Margins & budget\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter",
+    "name": "se-en-light-tables",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-light-tables.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Menu & modifiers\n",
+        "w": 143,
+        "h": 33
+      },
+      {
+        "text": "Translations\n",
+        "w": 114,
+        "h": 33
+      },
+      {
+        "text": "Kitchen stations\n",
+        "w": 136,
+        "h": 33
+      },
+      {
+        "text": "Recipes\n",
+        "w": 91,
+        "h": 33
+      },
+      {
+        "text": "Nutrition\n",
+        "w": 95,
+        "h": 33
+      },
+      {
+        "text": "Performance\n",
+        "w": 119,
+        "h": 33
+      },
+      {
+        "text": "Peak hours\n",
+        "w": 109,
+        "h": 33
+      },
+      {
+        "text": "86 Alerts\n",
+        "w": 97,
+        "h": 33
+      },
+      {
+        "text": "NFC Tags\n",
+        "w": 101,
+        "h": 33
+      },
+      {
+        "text": "All",
+        "w": 41,
+        "h": 33
+      },
+      {
+        "text": "Terminals\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Compliance\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Team\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Reservations & appointments\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-menu",
+    "name": "se-en-light-menu",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-light-menu.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Overview\n",
+        "w": 105,
+        "h": 35
+      },
+      {
+        "text": "Items & stock\n",
+        "w": 126,
+        "h": 35
+      },
+      {
+        "text": "Suppliers\n",
+        "w": 104,
+        "h": 35
+      },
+      {
+        "text": "Orders\n",
+        "w": 90,
+        "h": 35
+      },
+      {
+        "text": "AI forecast\n✦ ULTRA\n",
+        "w": 176,
+        "h": 35
+      },
+      {
+        "text": "Compliance\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Team\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Reservations & appointments\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Floor plan\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Menu & modifiers\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Stock & procurement\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Margins & budget\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-stock",
+    "name": "se-en-light-stock",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-light-stock.png"
+  },
+  {
+    "real": false,
+    "lang": "en",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Team\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Reservations & appointments\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Floor plan\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Menu & modifiers\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Stock & procurement\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Margins & budget\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-finance",
+    "name": "se-en-light-finance",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-en-light-finance.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Ventes par canal"
+    ],
+    "smallTargets": [
+      {
+        "text": "Personnalisé",
+        "w": 40,
+        "h": 44
+      },
+      {
+        "text": "Comparer",
+        "w": 82,
+        "h": 34
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter",
+    "name": "se-fr-dark-accueil",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-dark-accueil.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Toutes",
+        "w": 60,
+        "h": 27
+      },
+      {
+        "text": "Cartes",
+        "w": 59,
+        "h": 27
+      },
+      {
+        "text": "Mobile",
+        "w": 59,
+        "h": 27
+      },
+      {
+        "text": "Espèces",
+        "w": 69,
+        "h": 27
+      },
+      {
+        "text": "Remboursements",
+        "w": 118,
+        "h": 27
+      },
+      {
+        "text": "Aujourd'hui",
+        "w": 104,
+        "h": 36
+      },
+      {
+        "text": "Toutes",
+        "w": 108,
+        "h": 35
+      },
+      {
+        "text": "Réconciliation",
+        "w": 108,
+        "h": 35
+      },
+      {
+        "text": "Anti-fraude",
+        "w": 108,
+        "h": 35
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-fr-dark-transactions",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-dark-transactions.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Exporter",
+        "w": 78,
+        "h": 38
+      },
+      {
+        "text": "Imprimer",
+        "w": 79,
+        "h": 38
+      },
+      {
+        "text": "16\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "17\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "18\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "19\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "20\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "21\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "22\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "23\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "24\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "25\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "26\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "27\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "28\n",
+        "w": 19,
+        "h": 56
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-fr-dark-rapport",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-dark-rapport.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Tous8",
+        "w": 70,
+        "h": 34
+      },
+      {
+        "text": "Réguliers3",
+        "w": 95,
+        "h": 34
+      },
+      {
+        "text": "VIP1",
+        "w": 61,
+        "h": 34
+      },
+      {
+        "text": "Nouveaux2",
+        "w": 100,
+        "h": 34
+      },
+      {
+        "text": "Dormants2",
+        "w": 98,
+        "h": 34
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-fr-dark-clients",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-dark-clients.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Parc terminaux"
+    ],
+    "smallTargets": [],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-fr-dark-terminaux",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-dark-terminaux.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Clôture (Z)",
+        "w": 94,
+        "h": 35
+      },
+      {
+        "text": "Hygiène & HACCP",
+        "w": 136,
+        "h": 35
+      },
+      {
+        "text": "Équipements",
+        "w": 107,
+        "h": 35
+      },
+      {
+        "text": "Documents",
+        "w": 98,
+        "h": 35
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-conformite",
+    "name": "se-fr-dark-conformite",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-dark-conformite.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Profils",
+        "w": 64,
+        "h": 33
+      },
+      {
+        "text": "Heures travaillées",
+        "w": 126,
+        "h": 33
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-equipe",
+    "name": "se-fr-dark-equipe",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-dark-equipe.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Planning"
+    ],
+    "smallTargets": [
+      {
+        "text": "Planning",
+        "w": 77,
+        "h": 31
+      },
+      {
+        "text": "Heures travaillées",
+        "w": 126,
+        "h": 31
+      },
+      {
+        "text": "Semaine",
+        "w": 77,
+        "h": 31
+      },
+      {
+        "text": "Quinzaine",
+        "w": 84,
+        "h": 31
+      },
+      {
+        "text": "Mois",
+        "w": 56,
+        "h": 31
+      },
+      {
+        "text": "‹",
+        "w": 34,
+        "h": 34
+      },
+      {
+        "text": "›",
+        "w": 34,
+        "h": 34
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-fr-dark-payroll",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-dark-payroll.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Réservations"
+    ],
+    "smallTargets": [
+      {
+        "text": "Lien de réservation",
+        "w": 151,
+        "h": 42
+      },
+      {
+        "text": "Configurer",
+        "w": 151,
+        "h": 42
+      },
+      {
+        "text": "Nouvelle réservation",
+        "w": 309,
+        "h": 42
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-fr-dark-reservations",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-dark-reservations.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Ventes par canal",
+      "Affectation des tables\n            Café Atlas · 24 tables · 0 sans serveur\n          \n    "
+    ],
+    "smallTargets": [
+      {
+        "text": "Personnalisé",
+        "w": 40,
+        "h": 44
+      },
+      {
+        "text": "Comparer",
+        "w": 82,
+        "h": 34
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter",
+    "name": "se-fr-dark-tables",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-dark-tables.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Menu & modificateurs\n",
+        "w": 167,
+        "h": 33
+      },
+      {
+        "text": "Traductions\n",
+        "w": 113,
+        "h": 33
+      },
+      {
+        "text": "Postes de préparation\n",
+        "w": 167,
+        "h": 33
+      },
+      {
+        "text": "Recettes\n",
+        "w": 96,
+        "h": 33
+      },
+      {
+        "text": "Nutrition\n",
+        "w": 95,
+        "h": 33
+      },
+      {
+        "text": "Performance\n",
+        "w": 119,
+        "h": 33
+      },
+      {
+        "text": "Heures de pointe\n",
+        "w": 141,
+        "h": 33
+      },
+      {
+        "text": "Alertes 86\n",
+        "w": 104,
+        "h": 33
+      },
+      {
+        "text": "Tags NFC\n",
+        "w": 101,
+        "h": 33
+      },
+      {
+        "text": "Tous",
+        "w": 54,
+        "h": 33
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-menu",
+    "name": "se-fr-dark-menu",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-dark-menu.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Vue d'ensemble\n",
+        "w": 141,
+        "h": 35
+      },
+      {
+        "text": "Articles & stock\n",
+        "w": 137,
+        "h": 35
+      },
+      {
+        "text": "Fournisseurs\n",
+        "w": 123,
+        "h": 35
+      },
+      {
+        "text": "Commandes\n",
+        "w": 123,
+        "h": 35
+      },
+      {
+        "text": "Prévisions IA\n✦ ULTRA\n",
+        "w": 187,
+        "h": 35
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-stock",
+    "name": "se-fr-dark-stock",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-dark-stock.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "dark",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-finance",
+    "name": "se-fr-dark-finance",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-dark-finance.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Ventes par canal"
+    ],
+    "smallTargets": [
+      {
+        "text": "Personnalisé",
+        "w": 40,
+        "h": 44
+      },
+      {
+        "text": "Comparer",
+        "w": 82,
+        "h": 34
+      },
+      {
+        "text": "Accueil\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Commandes\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Rapport journalier\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Clients & Marketing\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Terminaux\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Conformité\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Équipe\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Réservations & RDV\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter",
+    "name": "se-fr-light-accueil",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-light-accueil.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Toutes",
+        "w": 60,
+        "h": 27
+      },
+      {
+        "text": "Cartes",
+        "w": 59,
+        "h": 27
+      },
+      {
+        "text": "Mobile",
+        "w": 59,
+        "h": 27
+      },
+      {
+        "text": "Espèces",
+        "w": 69,
+        "h": 27
+      },
+      {
+        "text": "Remboursements",
+        "w": 118,
+        "h": 27
+      },
+      {
+        "text": "Aujourd'hui",
+        "w": 104,
+        "h": 36
+      },
+      {
+        "text": "Toutes",
+        "w": 108,
+        "h": 35
+      },
+      {
+        "text": "Réconciliation",
+        "w": 108,
+        "h": 35
+      },
+      {
+        "text": "Anti-fraude",
+        "w": 108,
+        "h": 35
+      },
+      {
+        "text": "Accueil\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Commandes\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Rapport journalier\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Clients & Marketing\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Terminaux\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Conformité\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-fr-light-transactions",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-light-transactions.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Exporter",
+        "w": 78,
+        "h": 38
+      },
+      {
+        "text": "Imprimer",
+        "w": 79,
+        "h": 38
+      },
+      {
+        "text": "16\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "17\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "18\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "19\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "20\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "21\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "22\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "23\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "24\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "25\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "26\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "27\n",
+        "w": 19,
+        "h": 56
+      },
+      {
+        "text": "28\n",
+        "w": 19,
+        "h": 56
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-fr-light-rapport",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-light-rapport.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Tous8",
+        "w": 70,
+        "h": 34
+      },
+      {
+        "text": "Réguliers3",
+        "w": 95,
+        "h": 34
+      },
+      {
+        "text": "VIP1",
+        "w": 61,
+        "h": 34
+      },
+      {
+        "text": "Nouveaux2",
+        "w": 100,
+        "h": 34
+      },
+      {
+        "text": "Dormants2",
+        "w": 98,
+        "h": 34
+      },
+      {
+        "text": "Accueil\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Commandes\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Rapport journalier\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Clients & Marketing\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Terminaux\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Conformité\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Équipe\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Réservations & RDV\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-fr-light-clients",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-light-clients.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Parc terminaux"
+    ],
+    "smallTargets": [
+      {
+        "text": "Accueil\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Commandes\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Rapport journalier\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Clients & Marketing\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Terminaux\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Conformité\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Équipe\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Réservations & RDV\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Plan de salle\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Menu & modificateurs\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-fr-light-terminaux",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-light-terminaux.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Clôture (Z)",
+        "w": 94,
+        "h": 35
+      },
+      {
+        "text": "Hygiène & HACCP",
+        "w": 136,
+        "h": 35
+      },
+      {
+        "text": "Équipements",
+        "w": 107,
+        "h": 35
+      },
+      {
+        "text": "Documents",
+        "w": 98,
+        "h": 35
+      },
+      {
+        "text": "Accueil\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Commandes\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Rapport journalier\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Clients & Marketing\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Terminaux\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Conformité\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Équipe\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Réservations & RDV\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Plan de salle\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Menu & modificateurs\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-conformite",
+    "name": "se-fr-light-conformite",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-light-conformite.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Profils",
+        "w": 64,
+        "h": 33
+      },
+      {
+        "text": "Heures travaillées",
+        "w": 126,
+        "h": 33
+      },
+      {
+        "text": "Accueil\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Commandes\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Rapport journalier\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Clients & Marketing\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Terminaux\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Conformité\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Équipe\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Réservations & RDV\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Plan de salle\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Menu & modificateurs\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Stock & approvisionnement\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Marges & budget\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-equipe",
+    "name": "se-fr-light-equipe",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-light-equipe.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Planning"
+    ],
+    "smallTargets": [
+      {
+        "text": "Planning",
+        "w": 77,
+        "h": 31
+      },
+      {
+        "text": "Heures travaillées",
+        "w": 126,
+        "h": 31
+      },
+      {
+        "text": "Semaine",
+        "w": 77,
+        "h": 31
+      },
+      {
+        "text": "Quinzaine",
+        "w": 84,
+        "h": 31
+      },
+      {
+        "text": "Mois",
+        "w": 56,
+        "h": 31
+      },
+      {
+        "text": "‹",
+        "w": 34,
+        "h": 34
+      },
+      {
+        "text": "›",
+        "w": 34,
+        "h": 34
+      },
+      {
+        "text": "Accueil\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Commandes\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Rapport journalier\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Clients & Marketing\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Terminaux\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Conformité\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Équipe\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-fr-light-payroll",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-light-payroll.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Réservations"
+    ],
+    "smallTargets": [
+      {
+        "text": "Lien de réservation",
+        "w": 151,
+        "h": 42
+      },
+      {
+        "text": "Configurer",
+        "w": 151,
+        "h": 42
+      },
+      {
+        "text": "Nouvelle réservation",
+        "w": 309,
+        "h": 42
+      },
+      {
+        "text": "Commandes\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Rapport journalier\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Clients & Marketing\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Terminaux\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Conformité\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Équipe\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Réservations & RDV\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Plan de salle\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Menu & modificateurs\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Stock & approvisionnement\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Marges & budget\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-genpage",
+    "name": "se-fr-light-reservations",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-light-reservations.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [
+      "Ventes par canal",
+      "Affectation des tables\n            Café Atlas · 24 tables · 0 sans serveur\n          \n    "
+    ],
+    "smallTargets": [
+      {
+        "text": "Personnalisé",
+        "w": 40,
+        "h": 44
+      },
+      {
+        "text": "Comparer",
+        "w": 82,
+        "h": 34
+      },
+      {
+        "text": "Clients & Marketing\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Terminaux\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Conformité\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Équipe\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Réservations & RDV\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Plan de salle\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Menu & modificateurs\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Stock & approvisionnement\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Marges & budget\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter",
+    "name": "se-fr-light-tables",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-light-tables.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Menu & modificateurs\n",
+        "w": 167,
+        "h": 33
+      },
+      {
+        "text": "Traductions\n",
+        "w": 113,
+        "h": 33
+      },
+      {
+        "text": "Postes de préparation\n",
+        "w": 167,
+        "h": 33
+      },
+      {
+        "text": "Recettes\n",
+        "w": 96,
+        "h": 33
+      },
+      {
+        "text": "Nutrition\n",
+        "w": 95,
+        "h": 33
+      },
+      {
+        "text": "Performance\n",
+        "w": 119,
+        "h": 33
+      },
+      {
+        "text": "Heures de pointe\n",
+        "w": 141,
+        "h": 33
+      },
+      {
+        "text": "Alertes 86\n",
+        "w": 104,
+        "h": 33
+      },
+      {
+        "text": "Tags NFC\n",
+        "w": 101,
+        "h": 33
+      },
+      {
+        "text": "Tous",
+        "w": 54,
+        "h": 33
+      },
+      {
+        "text": "Terminaux\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Conformité\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Équipe\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Réservations & RDV\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-menu",
+    "name": "se-fr-light-menu",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-light-menu.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Vue d'ensemble\n",
+        "w": 141,
+        "h": 35
+      },
+      {
+        "text": "Articles & stock\n",
+        "w": 137,
+        "h": 35
+      },
+      {
+        "text": "Fournisseurs\n",
+        "w": 123,
+        "h": 35
+      },
+      {
+        "text": "Commandes\n",
+        "w": 123,
+        "h": 35
+      },
+      {
+        "text": "Prévisions IA\n✦ ULTRA\n",
+        "w": 187,
+        "h": 35
+      },
+      {
+        "text": "Conformité\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Équipe\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Réservations & RDV\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Plan de salle\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Menu & modificateurs\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Stock & approvisionnement\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Marges & budget\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-stock",
+    "name": "se-fr-light-stock",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-light-stock.png"
+  },
+  {
+    "real": false,
+    "lang": "fr",
+    "theme": "light",
+    "width": 375,
+    "scrollWidth": 375,
+    "heading": [],
+    "smallTargets": [
+      {
+        "text": "Équipe\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Planning\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Réservations & RDV\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Plan de salle\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Menu & modificateurs\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Stock & approvisionnement\n",
+        "w": 286,
+        "h": 40
+      },
+      {
+        "text": "Marges & budget\n",
+        "w": 286,
+        "h": 40
+      }
+    ],
+    "menuOpen": "design-vexel role-owner kiwi-native-owner design-2026 design-ios27 glass-opaque kiwi-native-hosted cards-enter page-finance",
+    "name": "se-fr-light-finance",
+    "screenshot": "/tmp/kiwi-pass7-proof/se-fr-light-finance.png"
+  }
+]
