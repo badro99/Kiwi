@@ -161,6 +161,18 @@
       '.kcb-seg.new{background:#E4ECF8;color:#3E78C9;}.kcb-seg.win{background:#FBE3DD;color:#C0492F;}',
       '@media (max-width:900px){#kcb-root .kcb-page{padding:16px;}#kcb-root .kcb-top{align-items:flex-start;}#kcb-root .kcb-strip{grid-template-columns:repeat(2,minmax(0,1fr));}',
         '#kcb-root .kcb-cols{display:none;}.kcb-row{grid-template-columns:minmax(0,1fr) auto;padding:10px 14px;}.kcb-row .kcb-c-seg,.kcb-row .kcb-c-visits,.kcb-row .kcb-c-last,.kcb-row .kcb-c-spend{display:none;}}',
+      /* Phone : the carnet is a full page with its own way out. The desk page
+         leaves by touching the next rail entry; a phone's rail is a drawer the
+         carnet sits on top of, so it carries a close control (hidden on desk). */
+      '#kcb-root .kcb-back{display:none;}',
+      '@media (max-width:860px),(orientation:landscape) and (max-width:1024px) and (max-height:600px){',
+        '#kcb-root{border-inline-start:0;border-start-start-radius:0;box-shadow:none;}',
+        '#kcb-root .kcb-page{padding:calc(14px + var(--kiwi-safe-top,env(safe-area-inset-top,0px))) 16px calc(28px + var(--kiwi-safe-bottom,env(safe-area-inset-bottom,0px)));}',
+        '#kcb-root .kcb-top{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;}',
+        '#kcb-root .kcb-top > div:first-child{grid-column:1;grid-row:1;}',
+        '#kcb-root .kcb-back{display:grid;grid-column:2;grid-row:1;}',
+        '#kcb-root .kcb-add{grid-column:1 / -1;grid-row:2;justify-content:center;}',
+      '}',
       /* sheet (add/edit/detail) */
       '#kcb-sheet{position:fixed;inset:0;z-index:945;background:rgba(5,20,14,.42);display:flex;align-items:flex-end;justify-content:center;animation:kcb-fade .18s ease;}',
       '@media (min-width:640px){#kcb-sheet{align-items:center;}}',
@@ -392,9 +404,16 @@
     } catch (_) {}
     return res;
   }
+  /* The same phone test as assets/pos-mobile.css. On a phone the carnet takes
+   * the whole screen: the register's rail is an off-canvas drawer there, so
+   * measuring it only ever caught it mid-slide (a 212px gap beside a drawer
+   * that was closing) and, with the drawer shut, the carnet covered every
+   * control of the register with no way back (ticket #0137). */
+  var PHONE_Q = '(max-width: 860px), (orientation: landscape) and (max-width: 1024px) and (max-height: 600px)';
+  function isPhone() { try { return !!(window.matchMedia && window.matchMedia(PHONE_Q).matches); } catch (_) { return false; } }
   function positionRoot(root) {
     if (!root) return;
-    var b = panelInset();
+    var b = isPhone() ? { left: 0, top: 0, right: 0, bottom: 0 } : panelInset();
     root.style.left = b.left + 'px'; root.style.top = b.top + 'px';
     root.style.right = b.right + 'px'; root.style.bottom = b.bottom + 'px';
   }
@@ -415,6 +434,7 @@
       '<div class="kcb-scroll"><div class="kcb-page">' +
         '<div class="kcb-top"><div><h2>' + (hospitalityMode() ? 'Hospitality+' : 'Clients') + '</h2>' +
           '<span class="kcb-prog">' + esc(progLabel()) + '</span></div>' +
+          '<button class="kcb-x kcb-back" id="kcb-back" type="button" aria-label="Fermer le carnet clients">' + ICON.close + '</button>' +
           '<button class="kcb-add" id="kcb-add">' + ICON.userplus + '<span>Nouveau client</span></button></div>' +
         '<div class="kcb-strip" id="kcb-strip"></div>' +
         '<div class="kcb-tools"><div class="kcb-searchwrap">' + ICON.search +
@@ -425,9 +445,12 @@
     renderList();
     if (KC.pull) KC.pull(function (ch) { if (ch) { renderList(); ensureChip(); } }); // cross-device refresh
     root.querySelector('#kcb-add').onclick = function () { openForm(null); };
+    root.querySelector('#kcb-back').onclick = close;
     var q = root.querySelector('#kcb-q');
     q.oninput = function () { state.q = q.value; renderList(); };
-    q.focus();
+    // A phone keyboard that rises the moment the page opens hides the list
+    // the merchant came to read.
+    if (!isPhone()) q.focus();
   }
   function close() {
     // La fiche cliente part avec le carnet : ouverte par-dessus, elle restait

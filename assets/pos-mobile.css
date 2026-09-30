@@ -21,6 +21,16 @@
 /* Injected controls never show on the desk layout. */
 .vx-burger, .vx-scrim, .vx-peek { display: none; }
 
+/* The register is position:fixed, so it ignores the padding the native app puts
+ * on <body> for the status bar and the home indicator: the clock was painted
+ * over « Vente » (ticket #0137). The app publishes its insets as
+ * --kiwi-safe-top/-bottom (app/src/native-runtime.css); on the web they fall
+ * back to the platform's own env(). */
+.vx-root {
+  --vx-safe-top: var(--kiwi-safe-top, env(safe-area-inset-top, 0px));
+  --vx-safe-bottom: var(--kiwi-safe-bottom, env(safe-area-inset-bottom, 0px));
+}
+
 /* A width-only breakpoint misses Plus/Max iPhones in landscape (up to 932 CSS
  * pixels wide). A short viewport is still a handheld register even when its
  * long edge clears 860px, so keep the phone shell through 1024×600 landscape. */
@@ -57,8 +67,8 @@
     transform: translateX(-100%);
     transition: transform .28s cubic-bezier(0.32, 0.72, 0, 1);
     overflow-y: auto; overscroll-behavior: contain;
-    padding-top: calc(20px + env(safe-area-inset-top, 0px));
-    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    padding-top: calc(20px + var(--vx-safe-top));
+    padding-bottom: calc(14px + var(--vx-safe-bottom));
     padding-left: calc(14px + env(safe-area-inset-left, 0px));
     box-sizing: border-box;
   }
@@ -75,7 +85,7 @@
   .vx-root .vx-burger {
     display: grid; place-items: center;
     position: absolute; z-index: 62;
-    top: calc(10px + env(safe-area-inset-top, 0px));
+    top: calc(10px + var(--vx-safe-top));
     left: calc(12px + env(safe-area-inset-left, 0px));
     width: 44px; height: 44px;
     border: 0; border-radius: 12px;
@@ -101,8 +111,17 @@
   .vx-root.vx-nav-open .vx-scrim { opacity: 1; pointer-events: auto; }
 
   /* Every vertical's header starts at the top-left, where the trigger now is. */
+  /* !important: some headers carry an inline padding (the boutique inventory's
+   * `padding:22px 22px 0`) that otherwise wins and slides the title under the
+   * trigger. */
   .vx-view > * > [class*="-head"]:first-child,
-  .vx-main > [class*="-head"]:first-child { padding-inline-start: 56px; min-height: 44px; }
+  .vx-main > [class*="-head"]:first-child { padding-inline-start: 56px !important; min-height: 44px; }
+  /* …and starts below the status bar, not under it. The heads carry their own
+   * desk padding (22px), so add the inset on top of it. */
+  .vx-root .vx-view > * > [class*="-head"]:first-child,
+  .vx-root .vx-main > [class*="-head"]:first-child {
+    margin-top: var(--vx-safe-top);
+  }
   /* Header rows carry a title plus meta/actions side by side. Too short to be
    * caught by the panel stacker, too wide for 375px — let them wrap instead of
    * squeezing the hint text into a four-word-tall column. */
@@ -112,7 +131,7 @@
 
   /* ── Ticket → bottom sheet ─────────────────────────────────────────────── */
   .vx-root .vx-ticket {
-    --vx-peek-h: calc(60px + env(safe-area-inset-bottom, 0px));
+    --vx-peek-h: calc(60px + var(--vx-safe-bottom));
     position: fixed; left: 0; right: 0; bottom: 0; top: auto;
     width: 100%; max-width: 100%; flex: none;
     max-height: 82dvh;
@@ -134,7 +153,7 @@
     min-height: var(--vx-peek-h);
     padding:
       0 calc(18px + env(safe-area-inset-right, 0px))
-      env(safe-area-inset-bottom, 0px)
+      var(--vx-safe-bottom)
       calc(18px + env(safe-area-inset-left, 0px));
     border: 0; border-bottom: 1px solid rgba(10, 15, 13, .08);
     background: inherit;
@@ -143,13 +162,36 @@
     cursor: pointer;
   }
   .vx-peek-r { font-weight: 700; font-variant-numeric: tabular-nums; }
+  /* A chevron says the strip is a control: up to raise the sheet, down to fold it. */
+  .vx-peek-l { display: inline-flex; align-items: center; gap: 10px; }
+  .vx-peek-l::before {
+    content: ""; width: 9px; height: 9px; flex: none;
+    border-top: 2px solid currentColor; border-left: 2px solid currentColor;
+    transform: translateY(2px) rotate(45deg);
+    transition: transform .25s ease;
+  }
+  .vx-root.vx-ticket-open .vx-peek-l::before { transform: translateY(-2px) rotate(225deg); }
 
   /* Clear the resting sheet so the last product row is never trapped under it. */
   .vx-view [class*="-grid-scroll"],
   .vx-view [class*="-list-scroll"] {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-    scroll-padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(72px + var(--vx-safe-bottom));
+    scroll-padding-bottom: calc(80px + var(--vx-safe-bottom));
   }
+
+  /* ── Rows that only fit on a desk ──────────────────────────────────────
+   * A toolbar (scan field + two buttons + a note) or a KPI strip laid out as a
+   * single no-wrap flex row is wider than the phone: the whole view became a
+   * horizontal scroller with nothing to the right of the first screen (the
+   * boutique inventory measured 735px in a 402px viewport, ticket #0137). Let
+   * them wrap, and let the lead field take a full line. A view never scrolls
+   * sideways: anything genuinely wide (a table) scrolls inside its own box. */
+  .vx-root .vx-view [class$="-tools"],
+  .vx-root .vx-view [class$="-kpis"] { flex-wrap: wrap; }
+  .vx-root .vx-view [class$="-tools"] > * { min-width: 0; }
+  .vx-root .vx-view [class$="-tools"] > [class$="-scan"] { flex: 1 1 100%; }
+  .vx-root .vx-view [class$="-kpis"] > * { flex: 1 1 140px; min-width: 0; }
+  .bqi { overflow-x: hidden; }
 
   /* ── Nested two-panel rows ─────────────────────────────────────────────
    * Several verticals split the working area a second time, below the view:

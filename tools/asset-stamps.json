@@ -172,8 +172,8 @@
     "sha": "ec5fa6bd71818a12"
   },
   "assets/clients-book.js": {
-    "v": "18",
-    "sha": "f792401e737cb687"
+    "v": "19",
+    "sha": "c1ef8ff8a0abb77c"
   },
   "assets/clients-directory.js": {
     "v": "14",
@@ -688,12 +688,12 @@
     "sha": "a0d76ee9501e864b"
   },
   "assets/pos-mobile.css": {
-    "v": "3",
-    "sha": "476360c075a1c682"
+    "v": "6",
+    "sha": "d33888c34f5cfb4e"
   },
   "assets/pos-mobile.js": {
-    "v": "3",
-    "sha": "64722349ffceb013"
+    "v": "5",
+    "sha": "d5267121b64a11a3"
   },
   "assets/pos-pharmacie.css": {
     "v": "5",

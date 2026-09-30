@@ -153,7 +153,7 @@ var SHELL = [
   '/assets/dashboard-native.js?v=3',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
-  '/assets/pos-mobile.css?v=3',
+  '/assets/pos-mobile.css?v=6',
   '/assets/caisse-motion.js?v=1',
   '/assets/caisse-pwa.js?v=564',
   '/assets/vendor/dexie.min.js?v=1',
@@ -237,7 +237,7 @@ var SHELL = [
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=4',
   '/assets/clients-store.js?v=7',
-  '/assets/clients-book.js?v=18',
+  '/assets/clients-book.js?v=19',
   '/assets/clients-directory.js?v=14',
   '/assets/menu-catalog.js?v=25',
   '/assets/stock-identity.js?v=2',
@@ -279,7 +279,7 @@ var SHELL = [
   '/assets/retail-scan.js?v=8',
   '/assets/caisse-dna.css?v=5',
   '/assets/caisse-dna.js?v=2',
-  '/assets/pos-mobile.js?v=3',
+  '/assets/pos-mobile.js?v=5',
   '/assets/pos-workspaces.css?v=4',
   '/assets/pos-workspaces.js?v=5',
   /* La boutique est chargée après le code employé. La garder dans la coquille

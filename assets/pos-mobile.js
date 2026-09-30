@@ -91,10 +91,17 @@
       setNav(!screen.classList.contains('vx-nav-open'));
     });
     scrim.addEventListener('click', function () { setNav(false); });
-    /* Picking a destination should close the drawer, same as the cafe rail. */
-    rail.addEventListener('click', function (e) {
-      if (e.target.closest('[class*="-nav-it"]')) setNav(false);
-    });
+    /* Picking a destination should close the drawer, same as the cafe rail.
+     * Listened for on the SCREEN, in the capture phase, and not on the rail:
+     *   · a register re-renders its rail, and a listener bound to the old node
+     *     goes with it;
+     *   · the client carnet takes over the « Clientes » entry with a capture
+     *     listener and stopImmediatePropagation (assets/clients-book.js), so
+     *     a bubble-phase listener never saw that tap and the drawer stayed
+     *     open over the page it had just opened (ticket #0137). */
+    screen.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('.vx-rail [class*="-nav-it"], .vx-rail [data-kcb-navitem]')) setNav(false);
+    }, true);
 
     screen.appendChild(scrim);
     screen.appendChild(burger);
@@ -139,6 +146,20 @@
       peek.setAttribute('aria-expanded', open ? 'true' : 'false');
       peek.setAttribute('aria-label', open ? 'Réduire le ticket' : 'Afficher le ticket');
     });
+    /* An open sheet hides the menu trigger and has no scrim, so the only way
+     * back was to spot that the top row is a button: to a cashier the till
+     * looked jammed (ticket #0137). A tap anywhere outside the sheet now folds
+     * it, and is consumed so it cannot also add the product under the finger.
+     * Dialogs opened from the ticket (customer search, payment) are left alone. */
+    screen.addEventListener('click', function (e) {
+      if (!screen.classList.contains('vx-ticket-open')) return;
+      var t = e.target;
+      if (!t || !t.closest || t.closest('.vx-ticket') || t.closest('[class*="modal"], [class*="veil"], [role="dialog"]')) return;
+      e.preventDefault(); e.stopPropagation();
+      screen.classList.remove('vx-ticket-open');
+      peek.setAttribute('aria-expanded', 'false');
+      peek.setAttribute('aria-label', 'Afficher le ticket');
+    }, true);
     /* First child, not last: the sheet rests translated down by exactly the
      * peek's height, so the peek has to be the strip left on screen. */
     ticket.insertBefore(peek, ticket.firstChild);

@@ -146,6 +146,55 @@
     w.WebSocket = KWS;
   }
 
+  /* Médias <img> / <video> / <audio> / <source> -------------------------------
+   * Un produit, un plat, une chambre portent l'URL de leur photo telle que
+   * l'envoi l'a rendue : `/api/media/<boutique>/<fichier>`. Sur le web elle se
+   * résout contre kiwi-os.com ; dans l'app, contre capacitor://localhost, où
+   * elle tombe sur un 404 du bundle — la vignette affichait le petit carré « ? »
+   * alors que la même photo s'affichait dans le navigateur (ticket #0140). Ces
+   * éléments ne passent par aucune des portes ci-dessus : le navigateur les
+   * charge seul. On réécrit donc l'attribut, à l'insertion et à chaque
+   * changement (une caisse repeint ses cartes en innerHTML). L'URL réécrite est
+   * absolue, donc ne correspond plus au motif : pas de boucle. La route
+   * /api/media est publique en lecture, aucun cookie n'est nécessaire. */
+  var MEDIA_ATTRS = { IMG: ['src'], VIDEO: ['src', 'poster'], AUDIO: ['src'], SOURCE: ['src'] };
+  function fixMedia(el) {
+    var attrs = el && el.tagName && MEDIA_ATTRS[el.tagName];
+    if (!attrs) return;
+    for (var i = 0; i < attrs.length; i++) {
+      var v = el.getAttribute(attrs[i]);
+      if (!v) continue;
+      var nu = rewrite(v);
+      if (nu !== v) el.setAttribute(attrs[i], nu);
+    }
+  }
+  function fixMediaTree(node) {
+    if (!node || node.nodeType !== 1) return;
+    fixMedia(node);
+    if (node.querySelectorAll) {
+      var list = node.querySelectorAll('img,video,audio,source');
+      for (var i = 0; i < list.length; i++) fixMedia(list[i]);
+    }
+  }
+  if (w.document && typeof w.MutationObserver === 'function') {
+    var watchMedia = function () {
+      try {
+        fixMediaTree(w.document.documentElement);
+        new w.MutationObserver(function (records) {
+          for (var i = 0; i < records.length; i++) {
+            var r = records[i];
+            if (r.type === 'attributes') fixMedia(r.target);
+            else for (var j = 0; j < r.addedNodes.length; j++) fixMediaTree(r.addedNodes[j]);
+          }
+        }).observe(w.document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'poster'] });
+      } catch (_) {}
+    };
+    // api-base.js is the first script of <head>: documentElement exists, the body does not yet.
+    if (w.document.documentElement) watchMedia();
+    else w.document.addEventListener('DOMContentLoaded', watchMedia, { once: true });
+  }
+  w.KiwiApiBase.fixMedia = fixMediaTree;
+
   /* Liens <a href="/auth/logout"> : une navigation vers capacitor://localhost/auth/…
    * tomberait sur un 404 du bundle. On fait l'appel en arrière-plan puis on
    * revient à l'écran d'accueil de l'app. Les liens /api/… (exports) s'ouvrent

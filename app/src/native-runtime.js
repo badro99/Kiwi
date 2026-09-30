@@ -174,7 +174,14 @@
   // Every full-screen entry gate has its own escape route. The host capsule
   // is intentionally hidden here, so it must never be the only way out.
   function initNativeGateExits() {
-    var gates = '#pair,.screen-pin,.screen-clockin,.screen-table,#pin-screen,#clockin-screen,[data-kiwi-lock],[data-kiwi-greet]';
+    /* #cp-pin-screen / #cp-screen are the registers' own staff and pairing pads
+       (assets/caisse-pairing.js), and their class is .pin-screen, not the
+       .screen-pin the restaurant till uses: neither matched, so a boutique or
+       pressing cashier who locked the till, or whose shift ended, met a keypad
+       with no way to change role (ticket #0139). showPinPad() also rewrites the
+       pad with innerHTML, which is why this observer re-adds the link rather
+       than trusting a one-time insertion. */
+    var gates = '#pair,.screen-pin,.screen-clockin,.screen-table,#pin-screen,#clockin-screen,#cp-pin-screen,#cp-screen,[data-kiwi-lock],[data-kiwi-greet]';
     function sync() {
       document.querySelectorAll(gates).forEach(function (gate) {
         var exit = gate.querySelector('.kiwi-native-role-back');
@@ -197,6 +204,15 @@
     sync();
     new MutationObserver(sync).observe(document.body, {childList:true,subtree:true});
     new MutationObserver(sync).observe(root, {attributes:true,attributeFilter:['lang']});
+  }
+  /* A métier register (boutique, maison, pressing, pharmacy…) is painted over
+     the restaurant till, which stays mounted underneath with data-mode="salle".
+     The host capsule is built from that hidden till, so it kept offering Floor,
+     Takeaway and Waiting on top of a clothes shop and covered the register's
+     own bottom rows (tickets #0137, #0138). The register owns the whole screen;
+     its own menu is the way out. */
+  function nativeRegisterOpen() {
+    return !!(document.body && document.body.classList.contains('is-pos'));
   }
   function nativeBlockingLayer() {
     if (openNativeLayers().length) return true;
@@ -938,7 +954,7 @@
       });
       nativeHostPost({
         version:1, screen:'workspace', role:'caisse', locale:String(root.lang || 'fr'), rtl:root.dir === 'rtl', selected:selected,
-        tabs:nativeBlockingLayer() || window.innerWidth > 900 ? [] : tabItems.map(function (item) { return { id:item[0], label:item[1] }; })
+        tabs:nativeBlockingLayer() || nativeRegisterOpen() || window.innerWidth > 900 ? [] : tabItems.map(function (item) { return { id:item[0], label:item[1] }; })
       });
     }
     function activateNativeTab(mode) {
@@ -974,6 +990,22 @@
     var mountTillAccount = function () { mountNativeAccountGroup(tillSidebar); };
     mountTillAccount();
     new MutationObserver(mountTillAccount).observe(root, { attributes:true, attributeFilter:['lang'] });
+    /* A register has no restaurant sidebar, so the account actions (change role,
+       sign out…) the till drawer carries were nowhere on a boutique or pressing
+       till: the only way to another workspace was to kill the app (ticket
+       #0138). Mount the same group at the end of the register's own drawer. The
+       registers re-render their rail, so look again after each burst of changes. */
+    var registerAccountQueued = false;
+    var mountRegisterAccount = function () {
+      registerAccountQueued = false;
+      if (!nativeRegisterOpen()) return;
+      document.querySelectorAll('body.is-pos .vx-rail').forEach(function (rail) { mountNativeAccountGroup(rail); });
+    };
+    new MutationObserver(function () {
+      if (registerAccountQueued || !nativeRegisterOpen()) return;
+      registerAccountQueued = true;
+      requestAnimationFrame(mountRegisterAccount);
+    }).observe(document.body, { childList:true, subtree:true });
     followSystemTheme('caisse');
 
     var cart = document.querySelector('.rightpanel');
