@@ -39,12 +39,13 @@
  * the shared shelf templates (assets/store-templates.js) with sequential ids,
  * so two honest boutiques can publish identical products.
  *
- * `briefing` is exempt: its days are keyed per venue inside every store's
- * document (a known, non-sensitive cross-filing of empty days), and refusing
- * it would drop the merchant's dismissals.
+ * `briefing` used to be exempt while its days were cross-filed between
+ * stores. That is fixed at the source (assets/briefing.js keeps one venue's
+ * days per document) and at the route (store.js › ownBriefingDays drops a day
+ * naming another venue), so it is judged like every other document.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-export const GUARD_EXEMPT = new Set(['briefing']);
+export const GUARD_EXEMPT = new Set();
 
 const MIN_RECORD = 80;
 const MIN_DOC = 256;

@@ -12,6 +12,13 @@
   var MAX_DAYS = 45;
   var RULES = [salesDropRule, lowStockRule, marginErosionRule, planningGapRule, cancellationRateRule, discountShareRule, cashGapRule, lateOrdersRule];
   var doc = { days: [] };
+  /* The venue `doc` was loaded for. slug() follows the venue on screen the
+   * moment it changes, while `doc` stayed whatever was last loaded: a compute()
+   * fired between a venue switch and the subscriber's readLocal() prepended
+   * the new venue's day to the OLD venue's days and pushed the lot to the new
+   * store. An operator hopping between two stores filed each one's days in
+   * the other's document (maison-121 <-> la-maison-en-vogue, 2026-09-26). */
+  var docSlug = '';
   var cloud = null;
 
   var COPY = {
@@ -81,20 +88,34 @@
   function scopeKey(now) { return [accountId(), slug(), businessDay(now)].join(':'); }
   function localKey(now) { return PREFIX + scopeKey(now); }
   function clone(v) { try { return JSON.parse(JSON.stringify(v)); } catch (_) { return null; } }
-  function safeDoc(value) {
+  /* A store's briefing holds that store's days and nothing else: every path
+   * in (local read, server pull, merge, write) goes through here, so a day
+   * filed under another venue is dropped instead of carried. */
+  function safeDoc(value, venue) {
     value = value && typeof value === 'object' ? value : {};
-    var days = Array.isArray(value.days) ? value.days.filter(function (x) { return x && x.id && x.day; }) : [];
+    venue = venue == null ? slug() : String(venue);
+    var days = Array.isArray(value.days) ? value.days.filter(function (x) {
+      return x && x.id && x.day && venue && x.venue === venue;
+    }) : [];
     days.sort(function (a, b) { return (+b.updatedAt || 0) - (+a.updatedAt || 0); });
     return { days: days.slice(0, MAX_DAYS) };
   }
   function readLocal() {
-    if (!slug()) return { days: [] };
-    try { return safeDoc(JSON.parse(localStorage.getItem(localKey()) || 'null')); }
+    var venue = slug();
+    docSlug = venue;
+    if (!venue) return { days: [] };
+    try { return safeDoc(JSON.parse(localStorage.getItem(localKey()) || 'null'), venue); }
     catch (_) { return { days: [] }; }
   }
+  /* The in-memory doc, reloaded if the venue changed since it was read. */
+  function own() {
+    if (docSlug !== slug()) doc = readLocal();
+    return doc;
+  }
   function writeLocal(value) {
-    doc = safeDoc(value);
-    if (slug()) { try { localStorage.setItem(localKey(), JSON.stringify(doc)); } catch (_) {} }
+    var venue = slug();
+    doc = safeDoc(value, venue); docSlug = venue;
+    if (venue) { try { localStorage.setItem(localKey(), JSON.stringify(doc)); } catch (_) {} }
     render();
   }
   function mergeDocs(a, b) {
@@ -533,7 +554,7 @@
   }
   function current() {
     var id = scopeKey();
-    return doc.days.find(function (x) { return x.id === id; }) || null;
+    return own().days.find(function (x) { return x.id === id; }) || null;
   }
   function save() {
     writeLocal(doc);
@@ -556,7 +577,7 @@
       id: id, accountId: accountId(), venue: slug(), day: businessDay(now), generatedAt: now,
       updatedAt: now, lines: lines, dismissed: clone(old && old.dismissed) || {}, handled: clone(old && old.handled) || {}
     };
-    doc.days = [row].concat(doc.days.filter(function (x) { return x.id !== id; }));
+    doc.days = [row].concat(own().days.filter(function (x) { return x.id !== id; }));
     save();
     return row;
   }
@@ -706,7 +727,7 @@
     if (cloud || !isReal() || !slug() || !window.KiwiCloudDoc || !window.KiwiCloudDoc.attach) return;
     cloud = window.KiwiCloudDoc.attach({
       feature: FEATURE, slug: slug, localKey: localKey,
-      read: function () { return doc; }, write: writeLocal, merge: mergeDocs,
+      read: function () { return safeDoc(own()); }, write: writeLocal, merge: mergeDocs,
       isEmpty: function (x) { return !x || !Array.isArray(x.days) || !x.days.length; },
       onPulled: function () { compute(); }
     });
@@ -737,7 +758,7 @@
   window.KiwiBriefing = {
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
-    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, cashGapRule: cashGapRule, lateOrdersRule: lateOrdersRule, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, anchor: anchor, place: place, card: card, render: render, read: function () { return clone(doc); }, write: writeLocal }
+    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, cashGapRule: cashGapRule, lateOrdersRule: lateOrdersRule, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, anchor: anchor, place: place, card: card, render: render, read: function () { return clone(own()); }, write: writeLocal, mergeDocs: mergeDocs }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 }());

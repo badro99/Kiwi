@@ -474,6 +474,16 @@ function stripBriefing() { return { days: [] }; }
 
 /* Quelles fonctionnalités cachent un secret à qui ne l'écrit pas. */
 const REDACT = { team: stripTeamCodes, agentactions: stripAgentActions, briefing: stripBriefing };
+
+/* A store's briefing holds that store's days only. Each day names the venue it
+ * was computed for, and that venue is the slug the browser syncs under; a day
+ * naming another venue is another store's (maison-121 carried 26 of
+ * la-maison-en-vogue's, 2026-09-26). Dropped on the way in and on the way out,
+ * so a device still running the old briefing.js cannot file them back. */
+export function ownBriefingDays(doc, merchant) {
+  if (!doc || typeof doc !== 'object' || !Array.isArray(doc.days)) return doc;
+  return { ...doc, days: doc.days.filter((d) => d && typeof d === 'object' && d.venue === merchant) };
+}
 const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'discountpolicy']);
 
 /* Celui-ci tient-il la fiche, ou ne fait-il que la consulter ?
@@ -574,6 +584,7 @@ export async function onRequestGet(context) {
     if (!row) return json({ feature, merchant, data: null, rev: 0 });
     let data = null;
     try { data = JSON.parse(row.data); } catch (_) { data = null; }
+    if (feature === 'briefing') data = ownBriefingDays(data, merchant);
     const redact = REDACT[feature];
     const safe = (redact && !(await editsRoster(request, env, merchant))) ? redact(data) : data;
     return json({ feature, merchant, data: safe, rev: row.rev || 0, updated_ts: row.updated_ts || 0 });
@@ -752,6 +763,10 @@ export async function onRequestPost(context) {
     clean.value = checked.value;
     text = JSON.stringify(clean.value);
     if (text.length > FEATURES[feature].max) return json({ error: 'too-large', why: 'byte-size', max: FEATURES[feature].max }, 413);
+  }
+  if (feature === 'briefing') {
+    clean.value = ownBriefingDays(clean.value, merchant);
+    text = JSON.stringify(clean.value);
   }
   if (feature === PRINT_HUB_FEATURE) {
     const claim = validateHubClaim(mine, clean.value, now);

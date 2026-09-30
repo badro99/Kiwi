@@ -6,7 +6,7 @@
  * a first upload that was another store's document, a union merge that folded
  * another store's bookings into this one's — and the honest writes that must
  * keep working around them: seeded templates, a store's own new records, an
- * old leak already on the row, briefing.
+ * old leak already on the row, a briefing that drags a neighbour's days.
  *
  * Synthetic data only. `node tools/cross-store-copy-test.mjs`
  */
@@ -16,7 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { onRequestPost: storePost } = await import(path.join(ROOT, 'functions/api/store.js'));
+const { onRequestPost: storePost, onRequestGet: storeGet } = await import(path.join(ROOT, 'functions/api/store.js'));
 const { onRequestPost: menuPost } = await import(path.join(ROOT, 'functions/api/menu.js'));
 const G = await import(path.join(ROOT, 'functions/api/_tenant-guard.js'));
 const { makeSession, sessionCookie, DEMO_MERCHANTS } = await import(path.join(ROOT, 'functions/auth/_lib.js'));
@@ -82,6 +82,9 @@ const put = async (acc, merchant, feature, data) => {
   const res = await post(storePost, acc, { feature, merchant, baseRev: cur ? cur.rev : 0, data });
   return { status: res.status, body: await res.json() };
 };
+const get = async (acc, merchant, feature) => (await storeGet({ env, request: new Request(`https://kiwi.test/api/store?feature=${feature}&merchant=${merchant}`, {
+  headers: { Cookie: cookie[acc], 'CF-Connecting-IP': '10.0.0.9' },
+}) })).json();
 const events = () => db.prepare('SELECT * FROM tenant_guard_events ORDER BY ts').all();
 
 /* Realistic records: ids, names, and the millisecond timestamps a person's
@@ -161,12 +164,22 @@ ok('cafe-nord saves its reservations', (await put('acc-nord', 'cafe-nord', 'rese
   ok('a store whose row already carries an old copy can still add its own records', (await put('acc-est', 'shop-est', 'reservations', next)).status === 200);
 }
 
-/* ── 7. Briefing is exempt (cross-filed empty days, known) ─────────────── */
+/* ── 7. Briefing: one store's days only (maison-121 ← la-maison-en-vogue) ── */
 {
   const day = (v, d) => ({ id: `session:${v}:${d}`, accountId: 'session', venue: v, day: d, generatedAt: now - 1e8, updatedAt: now - 1e8, lines: [], dismissed: {}, handled: {} });
-  const B = { days: [day('cafe-nord', '2026-09-20'), day('cafe-nord', '2026-09-21')] };
-  await put('acc-nord', 'cafe-nord', 'briefing', B);
-  ok('briefing days are not judged', (await put('acc-sud', 'resto-sud', 'briefing', B)).status === 200);
+  const NORD_B = { days: [day('cafe-nord', '2026-09-20'), day('cafe-nord', '2026-09-21')] };
+  ok('briefing is no longer exempt from the guard', !G.GUARD_EXEMPT.has('briefing'));
+  ok('cafe-nord publishes its own briefing days', (await put('acc-nord', 'cafe-nord', 'briefing', NORD_B)).status === 200);
+  ok('…and keeps them', doc('cafe-nord', 'briefing').data.days.length === 2);
+  const SUD_B = { days: [day('resto-sud', '2026-09-21')].concat(NORD_B.days) };
+  ok('resto-sud may still save a document that drags cafe-nord\'s days along', (await put('acc-sud', 'resto-sud', 'briefing', SUD_B)).status === 200);
+  const kept = doc('resto-sud', 'briefing').data.days;
+  ok('…but only its own day reaches the row', kept.length === 1 && kept[0].venue === 'resto-sud', JSON.stringify(kept));
+  db.prepare("UPDATE store_docs SET data=? WHERE merchant='resto-sud' AND feature='briefing'").run(JSON.stringify(SUD_B));
+  const read = await get('acc-sud', 'resto-sud', 'briefing');
+  ok('a row already carrying a neighbour\'s days is served without them', read.data.days.length === 1 && read.data.days.every((d) => d.venue === 'resto-sud'), JSON.stringify(read.data));
+  const verdict = await G.foreignCopy(env, { table: 'store', merchant: 'resto-sud', feature: 'briefing', next: NORD_B, current: null, text: JSON.stringify(NORD_B) });
+  ok('foreignCopy names cafe-nord for a briefing that is cafe-nord\'s', verdict && verdict.from === 'cafe-nord', JSON.stringify(verdict));
 }
 
 /* ── 8. The carte (Pasta Corner ← Amira Café) ──────────────────────────── */
