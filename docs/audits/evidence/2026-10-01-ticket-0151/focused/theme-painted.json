@@ -1,0 +1,41 @@
+[
+  {
+    "file": "theme-legacy-dark.png",
+    "point": [
+      720,
+      400
+    ],
+    "rgb": [
+      17,
+      20,
+      19
+    ],
+    "luminance": 0.006665
+  },
+  {
+    "file": "theme-light.png",
+    "point": [
+      720,
+      400
+    ],
+    "rgb": [
+      255,
+      255,
+      255
+    ],
+    "luminance": 1.0
+  },
+  {
+    "file": "theme-vexel-dark.png",
+    "point": [
+      720,
+      400
+    ],
+    "rgb": [
+      9,
+      9,
+      9
+    ],
+    "luminance": 0.002732
+  }
+]
