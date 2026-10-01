@@ -56,8 +56,28 @@
    * tablette cuisine, du sien. Jamais d'un paramètre d'URL : le serveur le
    * re-dérive de toute façon du cookie de caisse, et le lire ici ne servirait
    * qu'à interroger la file d'un autre commerce et à se faire refuser. */
+  /* Le commerce auquel CET appareil est appairé. kiwiLiveMerchant ne répond
+   * pas à cette question : c'est une clé du navigateur entier, que la console
+   * opérateur (« Ouvrir dashboard ») et le tableau de bord réécrivent pour le
+   * commerce qu'ils affichent. Un onglet caisse ouvert à côté relevait alors la
+   * file de cet AUTRE commerce · ses commandes à emporter s'affichaient au
+   * comptoir, encaissables et annulables (ticket #0142 : une commande de Pasta
+   * Corner sur la caisse d'Amira Café). L'appairage, lui, ne change qu'en
+   * rachetant un code (assets/pairing-commit.js), sur la caisse comme sur la
+   * tablette cuisine. kiwiLiveMerchant ne reste qu'un repli pour un appairage
+   * ancien qui n'aurait pas écrit son commerce. */
+  function pairedMerchant() {
+    try {
+      var cp = window.KiwiCaissePairing;
+      var pv = (cp && cp.pairedVenue && cp.pairedVenue())
+        || JSON.parse(ls('kiwiPairedVenue') || 'null');
+      if (pv && pv.merchant) return String(pv.merchant);
+    } catch (_) {}
+    return '';
+  }
+
   function merchant() {
-    var m = ls('kiwiLiveMerchant') || '';
+    var m = pairedMerchant() || ls('kiwiLiveMerchant') || '';
     if (!m) return '';
     /* `kiwiPaired` lu directement, et pas seulement via KiwiCaissePairing : la
      * tablette cuisine (kiwi-cuisine.html) ne charge PAS le module d'appairage

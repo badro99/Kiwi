@@ -27,7 +27,32 @@
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
 
   function paired() { try { return !!(window.KiwiCaissePairing && KiwiCaissePairing.isPaired && KiwiCaissePairing.isPaired()); } catch (_) { return false; } }
-  function merchant() { return paired() ? (ls('kiwiLiveMerchant') || '') : ''; }
+  /* Le commerce de CET appareil, tel que l'appairage l'a fixé · le même que
+   * kitchen-relay.js, qui porte les requêtes. Jamais kiwiLiveMerchant d'abord :
+   * c'est la clé que la console opérateur réécrit pour le commerce qu'elle
+   * ouvre, et la caisse d'à côté se mettait à relever SA file (ticket #0142). */
+  function merchant() {
+    if (!paired()) return '';
+    try {
+      if (window.KiwiKitchenRelay && window.KiwiKitchenRelay.merchant) return window.KiwiKitchenRelay.merchant() || '';
+    } catch (_) {}
+    try {
+      var pv = JSON.parse(ls('kiwiPairedVenue') || 'null');
+      if (pv && pv.merchant) return String(pv.merchant);
+    } catch (_) {}
+    return ls('kiwiLiveMerchant') || '';
+  }
+  /* Ce que la boîte a relevé appartient au commerce qui l'a répondu. Si le
+   * commerce change (ré-appairage, même dans un autre onglet), rien de l'ancien
+   * ne doit rester · ni ses commandes, ni ses places, ni son curseur, sinon le
+   * pont les repasse à la caisse au tour suivant comme s'ils étaient d'ici. */
+  var stateMerchant = '';
+  function ownState(m) {
+    if (m === stateMerchant) return;
+    stateMerchant = m;
+    state.orders = {}; state.sessions = []; state.closedSessions = []; state.expired = [];
+    state.since = 0; state.seen = {}; state.expiryWarned = {}; state.updating = {};
+  }
 
   var ICON = {
     bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
@@ -110,6 +135,7 @@
   function pull() {
     var m = merchant();
     if (!m) return Promise.resolve(-1);
+    ownState(m);
     /* Module coupé ⇒ aucun CLIENT ne peut commander (functions/api/menu.js et
      * /api/order refusent déjà). Ce fut longtemps la preuve que la file était
      * vide par construction — elle ne l'est plus : depuis que la caisse pose
@@ -134,6 +160,7 @@
            garde l'état précédent et on rend le même -1 qu'une réponse
            illisible. */
         if (j.ordersAvailable === false) return -1;
+        if (merchant() !== m) return -1;   // le commerce a changé pendant la requête
         state.since = j.now || state.since;
         var fresh = 0;
         var delta = j.orders || [];

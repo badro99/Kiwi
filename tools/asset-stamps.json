@@ -412,8 +412,8 @@
     "sha": "5841554c64812da5"
   },
   "assets/kitchen-relay.js": {
-    "v": "8",
-    "sha": "94c874a5bc4b67ba"
+    "v": "9",
+    "sha": "98df9640942bdd2f"
   },
   "assets/kiwi-env.js": {
     "v": "1",
@@ -532,8 +532,8 @@
     "sha": "47b1d8a268c10551"
   },
   "assets/orderpro-inbox.js": {
-    "v": "29",
-    "sha": "b543a28b8fe98b94"
+    "v": "30",
+    "sha": "857eb1068b9f5316"
   },
   "assets/orderpro-panel.js": {
     "v": "1",

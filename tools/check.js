@@ -1305,6 +1305,7 @@ section('Whole-project regressions');
     'briefing-test.mjs',
     'briefing-tenant-test.mjs',
     'register-phone-tickets-test.mjs',
+    'order-queue-tenant-test.mjs',
     'briefing-sales-drop-test.mjs',
     'briefing-low-stock-test.mjs',
     'briefing-margin-test.mjs',
