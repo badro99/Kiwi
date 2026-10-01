@@ -66,7 +66,7 @@
   <!-- Client error reporter & observability (fail-soft telemetry) -->
   <script src="assets/err-reporter.js?v=1"></script>
   <!-- ENV first: separates the owner's local demo copy from the hosted app. -->
-  <script src="assets/kiwi-env.js?v=1"></script><!-- must run FIRST (before the inline app script), so KiwiEnv.isReal() is ready when demo data is seeded -->
+  <script src="assets/kiwi-env.js?v=2"></script><!-- must run FIRST (before the inline app script), so KiwiEnv.isReal() is ready when demo data is seeded -->
   <!-- Durable tenant-scoped command outbox. Dexie is vendored: the caisse can
        boot and bank transactions with no CDN and no build step. -->
   <script src="assets/vendor/dexie.min.js?v=1" defer></script>
@@ -5605,7 +5605,7 @@
        serveur · c'est ce qui fait qu'un Z clôturé sur l'iPad du comptoir
        s'ouvre le lendemain sur le téléphone du patron. -->
   <script src="assets/day-report.js?v=19" defer></script>
-  <script src="assets/z-reconciliation.js?v=21" defer></script>
+  <script src="assets/z-reconciliation.js?v=24" defer></script>
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js?v=4" defer></script>

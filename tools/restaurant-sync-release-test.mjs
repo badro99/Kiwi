@@ -81,7 +81,8 @@ test('closed day uses Z reference; open mismatch keeps live total but alerts',as
  let s=await summary(); assert.equal(s.source,'closed-z'); assert.equal(s.referenceCents,150700); assert.equal(s.missingCount,1); assert.equal(s.gapCents,150700-s.recordedCents);
  await post(z.onRequestPost,{merchant,terminalId:'release-till',day,closed:false,count:1,totalCents:150700,sales:[{id:'z-missing-001',amountCents:150700,method:'cash'}]});
  s=await summary(); assert.equal(s.source,'open-z'); assert.equal(s.referenceCents,s.recordedCents);
- assert.equal(s.gapCents,150700-s.recordedCents); assert.equal(s.waitingCount,1);
+ assert.equal(s.comparisonCents,0,'missing manifested receipt has no matching server sale');
+ assert.equal(s.gapCents,150700,'unrelated server sales cannot offset a missing till receipt'); assert.equal(s.waitingCount,1);
 });
 test('pre-comparison history uses only ledger even if a legacy Z exists',async()=>{
  const d='2026-01-12';

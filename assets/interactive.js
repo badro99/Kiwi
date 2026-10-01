@@ -876,15 +876,39 @@ ar: {
   }
 
   /* ─── Scroll-lock helpers (counter-tracked for nested drawers/modals) ─── */
+  let lockedBody = null;
   function lockPageScroll() {
     const n = (window.__kiwiScrollLocks || 0) + 1;
     window.__kiwiScrollLocks = n;
-    if (n === 1) document.documentElement.classList.add('kiwi-locked');
+    if (n !== 1) return;
+    const body = document.body;
+    const properties = ['position', 'top', 'left', 'right', 'width'];
+    lockedBody = { x: window.scrollX, y: window.scrollY,
+      styles: properties.map(key => [key, body.style.getPropertyValue(key), body.style.getPropertyPriority(key)]) };
+    document.documentElement.classList.add('kiwi-locked');
+    body.style.setProperty('position', 'fixed', 'important');
+    body.style.setProperty('top', -lockedBody.y + 'px', 'important');
+    body.style.setProperty('left', -lockedBody.x + 'px', 'important');
+    body.style.setProperty('right', '0', 'important');
+    body.style.setProperty('width', '100%', 'important');
   }
   function unlockPageScroll() {
     const n = Math.max(0, (window.__kiwiScrollLocks || 0) - 1);
     window.__kiwiScrollLocks = n;
-    if (n === 0) document.documentElement.classList.remove('kiwi-locked');
+    if (n !== 0) return;
+    document.documentElement.classList.remove('kiwi-locked');
+    if (!lockedBody) return;
+    const saved = lockedBody;
+    lockedBody = null;
+    saved.styles.forEach(([key, value, priority]) => value
+      ? document.body.style.setProperty(key, value, priority) : document.body.style.removeProperty(key));
+    // A smooth-scroll page must not animate restoration after a sheet closes.
+    const html = document.documentElement, before = html.style.getPropertyValue('scroll-behavior');
+    const priority = html.style.getPropertyPriority('scroll-behavior');
+    html.style.setProperty('scroll-behavior', 'auto', 'important');
+    window.scrollTo(saved.x, saved.y);
+    if (before) html.style.setProperty('scroll-behavior', before, priority);
+    else html.style.removeProperty('scroll-behavior');
   }
   /* Filet de sécurité. Une quinzaine d'appels retirent encore une couche par
    * `.remove()` au lieu de passer par son close() : le compteur restait > 0,
@@ -893,15 +917,15 @@ ar: {
    * couche qui verrouille quitte le DOM, la page est libérée. Les trois seuls
    * détenteurs du verrou sont listés ici (modal, drawer, fiche Conformité).
    * Le verrou du code PIN (style inline sur <html>) n'est jamais touché. */
-  const LOCKING_LAYERS = '.kiwi-backdrop, .kiwi-drawer-backdrop, .cf-eq-detail-bd';
+  const LOCKING_LAYERS = '.kiwi-backdrop, .kiwi-drawer-backdrop, .cf-eq-detail-bd, .dr-sheet-veil, .dr-sheet[aria-modal]';
   const isLayer = (n) => n.nodeType === 1
     && ((n.matches && n.matches(LOCKING_LAYERS)) || (n.querySelector && n.querySelector(LOCKING_LAYERS)));
   const watchLayers = () => new MutationObserver((records) => {
     if (!window.__kiwiScrollLocks && !document.documentElement.classList.contains('kiwi-locked')) return;
     if (!records.some((r) => Array.prototype.some.call(r.removedNodes, isLayer))) return;
     if (document.querySelector(LOCKING_LAYERS)) return;
-    window.__kiwiScrollLocks = 0;
-    document.documentElement.classList.remove('kiwi-locked');
+    window.__kiwiScrollLocks = 1;
+    unlockPageScroll();
   }).observe(document.body, { childList: true });
   if (document.body) watchLayers();
   else document.addEventListener('DOMContentLoaded', watchLayers, { once: true });
@@ -4742,6 +4766,11 @@ ar: {
   window.Kiwi = {
     toast, buttonFeedback, modal, drawer, fullpage, appPage, menu, commandPalette, confetti, handlers,
     setActivePage, syncSidebar, pageShell,
+    scrollLock: { acquire() {
+      lockPageScroll();
+      let held = true;
+      return () => { if (held) { held = false; unlockPageScroll(); } };
+    } },
     get activePage() { return activePage; },
   };
 

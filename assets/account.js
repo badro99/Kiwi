@@ -23,7 +23,7 @@
     const css = `
       .acc-hero { display:flex; align-items:center; gap:16px; padding:20px; border-radius:16px; background:linear-gradient(150deg,#0c4a35,#08311f); color:#fff; margin-bottom:18px; }
       .acc-avatar { width:60px; height:60px; border-radius:50%; background:#F7F5F0; color:#053B2C; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:22px; flex-shrink:0; }
-      .acc-hero-name { font-size:20px; font-weight:600; letter-spacing:-0.02em; }
+      .acc-hero-name { overflow-wrap:anywhere; font-size:20px; font-weight:600; letter-spacing:-0.02em; }
       .acc-hero-role { font-size:12.5px; color:rgba(255,255,255,0.72); margin-top:3px; }
       .acc-hero .acc-cta { margin-inline-start:auto; }
       .acc-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
@@ -229,14 +229,19 @@
       return pv?.merchant ? pv : null;
     } catch (_) { return null; }
   };
-  const isReal = () => !!(window.KiwiEnv?.isReal?.() || window.KiwiMe || window.KiwiVenue?.isCustom?.() || pairedVenue());
+  const isReal = () => !!(window.KiwiEnv?.isReal?.() || window.KiwiMe || window.KiwiVenue?.isCustom?.() || pairedVenue()
+    || (window.Capacitor?.isNativePlatform?.() && !window.KiwiIdentity?.state));
   const ownSetting = (k, demo) => {
     const v = getSet(k, '');
     return isReal() && v === demo ? '' : v;
   };
-  const ownerName = () => meVal('name') || ownSetting('ownerName', OWNER.name) || (isReal() ? '' : OWNER.name);
-  const ownerEmail = () => meVal('email') || ownSetting('ownerEmail', OWNER.email) || (isReal() ? '' : OWNER.email);
-  const ownerPhone = () => ownSetting('ownerPhone', OWNER.phone) || (isReal() ? '' : OWNER.phone);
+  const ownerName = () => isReal() ? meVal('name') : ownSetting('ownerName', OWNER.name) || OWNER.name;
+  const ownerEmail = () => isReal() ? meVal('email') : ownSetting('ownerEmail', OWNER.email) || OWNER.email;
+  const ownerPhone = () => {
+    if (!isReal()) return ownSetting('ownerPhone', OWNER.phone) || OWNER.phone;
+    const email = String(meVal('email')).toLowerCase();
+    return meVal('phone') || (email && getSet('ownerProfileAccount', '') === email ? ownSetting('ownerPhone', OWNER.phone) : '');
+  };
   const ownerLang = () => pick({ fr: 'Français', en: 'English', ar: 'العربية' });
   const fmtMAD = (n) => (window.KiwiNumber?.format(Number(n), {}) ?? Number(n).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}));
 
@@ -474,7 +479,10 @@
     }
     return base.map((b) => { const o = { ...b }; BIZ_FIELDS.forEach((f) => { o[f.k] = bizField(b, f.k); }); return o; });
   };
-  const initialsOf = (s) => (String(s).replace(/\s*·.*$/, '').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('') || 'K').toUpperCase();
+  const initialsOf = (s) => {
+    const parts = String(s).replace(/\s*·.*$/, '').trim().split(/\s+/).filter(Boolean);
+    return (parts.length ? parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '') : 'K').toUpperCase();
+  };
 
   /* ── Horaires d'ouverture, sur la fiche établissement ──
    * En lecture seule ici : la saisie a un seul écran (assets/hours-ui.js), et
@@ -1317,6 +1325,7 @@
     setTimeout(() => { const a = m.el.querySelector('.acc-f'); if (a) a.focus(); }, 320);
     m.el.addEventListener('click', (e) => {
       if (!e.target.closest('[data-save]')) return;
+      if (isReal() && meVal('email')) { try { localStorage.setItem('kiwiSet:ownerProfileAccount', String(meVal('email')).toLowerCase()); } catch (_) {} }
       fields.forEach((f) => { const v = (m.el.querySelector(`[data-f="${f.k}"]`).value || '').trim(); if (v) { try { localStorage.setItem('kiwiSet:' + f.k, v); } catch (_) {} } });
       m.close();
       setTimeout(() => openProfile(), 80);

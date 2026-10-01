@@ -416,7 +416,7 @@
     if (builder && !builder.hidden && builderBack) return { panel: builder, run: function () { builderBack.click(); } };
     return null;
   }
-  /* Swipe sideways across the period control or the Home chart to step
+  /* Swipe sideways across the Home chart to step
      Today → Yesterday → 7 days → 30 days (ticket #0107). Starts away from the
      screen edge so the edge swipe-back keeps working. */
   function initPeriodSwipe() {
@@ -427,7 +427,7 @@
       if (e.touches.length !== 1 || !document.body.classList.contains('kiwi-native-owner')) return;
       var t = e.touches[0];
       if (t.clientX < 28 || t.clientX > innerWidth - 28) return;
-      if (!e.target.closest || !e.target.closest('.dash-date-range .dr-pills,.hero-left-chart')) return;
+      if (!e.target.closest || !e.target.closest('.hero-left-chart')) return;
       if (openNativeLayers().length) return;
       sx = t.clientX; sy = t.clientY;
     }, { passive: true });

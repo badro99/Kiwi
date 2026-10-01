@@ -164,10 +164,17 @@ export async function onRequestGet(context) {
   if (scopedSlug && await isOperator(request, env)) {
     let acc = null;
     try {
+      // Every registered store belongs to an account, including its SECOND
+      // establishment. The operator gate above still guards this cross-account read.
+      acc = await env.DB.prepare(`SELECT a.name, a.business, a.email FROM accounts a
+        JOIN merchant_config m ON m.account_id = a.id WHERE m.merchant = ?`)
+        .bind(scopedSlug).first();
+    } catch (_) { /* Pre-registry database: retain the primary-store fallback. */ }
+    try {
       // Accounts are keyed by id/email; the roster maps them to merchants by
       // slugifying the business name (same convention as clients.js), so match
       // the requested slug the same way.
-      const rs = await env.DB.prepare('SELECT name, business, email FROM accounts').all();
+      const rs = acc ? { results: [] } : await env.DB.prepare('SELECT name, business, email FROM accounts').all();
       for (const a of (rs.results || [])) {
         if (slugMerchant(a.business || a.email) === scopedSlug) { acc = a; break; }
       }

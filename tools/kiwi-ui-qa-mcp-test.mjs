@@ -180,7 +180,7 @@ try {
   assert.ok(bellLine, `restaurant notifications button missing: ${restaurantScreen}`);
   const bell = await call('ui_click', { ref: bellLine.match(/^q\d+/)[0] });
   ok(!bell.isError, 'cash discrepancy reached through actual Notifications click');
-  const gap = await call('ui_assert', { selector: '#fixture-drawer', condition: 'text_contains', expected: 'écart : 5,00 MAD',
+  const gap = await call('ui_assert', { selector: '#fixture-drawer', condition: 'text_contains', expected: 'Différence: 5,00 MAD',
     description: 'Restaurant Z notification shows the five-dirham server gap' });
   ok(!gap.isError, 'restaurant Z gap is visible in rendered notification');
   const restaurantProof = await call('finish_ui_proof', { ticketId: 999096,

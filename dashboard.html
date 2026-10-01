@@ -384,6 +384,9 @@
   .sidebar .m-info .n { color: var(--paper); font-weight: 500; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sidebar .m-info .r { color: #8f9591; font-size: 11px; margin-top: 1px; }
   .sidebar .m-caret { color: #6a6e6c; }
+  .merchant-chevron { display:block;width:20px;height:20px;background:currentColor;-webkit-mask:url("assets/icons/material/chevron_right.svg") center/contain no-repeat;mask:url("assets/icons/material/chevron_right.svg") center/contain no-repeat; }
+  .merchant:focus-visible { outline:2px solid var(--atlas); outline-offset:2px; }
+  html[dir="rtl"] .merchant .m-caret { transform:scaleX(-1); }
 
   /* ─────────────── MAIN ─────────────── */
   /* min-width:0 · a grid item defaults to min-width:auto, which refuses to
@@ -1402,12 +1405,21 @@
   .dr-sheet-veil { position: fixed; inset: 0; z-index: 10000; background: rgba(5,10,8,0.42); opacity: 0; transition: opacity 220ms ease; }
   .dr-sheet-veil.in { opacity: 1; }
   .dr-popover.dr-sheet { position: fixed !important; inset: auto 0 0 0 !important; top: auto !important; width: auto; max-width: none;
-    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 20px); display: flex; flex-direction: column; z-index: 10001;
+    height: min(760px, calc(100dvh - var(--kiwi-host-tab-height, 0px) - env(safe-area-inset-top, 0px) - 20px)); max-height: calc(100dvh - var(--kiwi-host-tab-height, 0px) - env(safe-area-inset-top, 0px) - 20px); bottom: var(--kiwi-host-tab-height, 0px) !important; overflow: hidden; overscroll-behavior: contain; display: flex; flex-direction: column; z-index: 10001;
     border-radius: 22px 22px 0 0; border-bottom: 0; transform: translateY(28px); transform-origin: bottom center; }
   .dr-popover.dr-sheet.open { transform: none; }
+  .dr-popover.dr-sheet .drp-head { flex: 0 0 auto; }
+  .dr-popover.dr-sheet .drp-cal, .dr-popover.dr-sheet .drp-presets { flex-shrink: 0; }
   .dr-popover.dr-sheet .drp-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
-  .dr-popover.dr-sheet .drp-foot { flex: 0 0 auto; padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
-  .dr-popover.dr-sheet .drp-btn { min-height: 44px; }
+  .dr-popover.dr-sheet .drp-foot { flex: 0 0 auto; padding-bottom: calc(14px + max(env(safe-area-inset-bottom, 0px), var(--kiwi-host-safe-bottom, 0px))); }
+  .dr-popover.dr-sheet .drp-btn, .dr-popover.dr-sheet .drp-x, .dr-popover.dr-sheet .drp-nav { min-height: 44px; min-width: 44px; }
+  .dr-popover.dr-sheet .drp-mhead { height: 44px; }
+  .dr-popover.dr-sheet .drp-month { width: 100%; max-width: 308px; }
+  .dr-popover.dr-sheet .drp-grid, .dr-popover.dr-sheet .drp-wdrow { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .dr-popover.dr-sheet .drp-day { height: 44px; }
+  .dr-popover[dir="rtl"] .drp-eyebrow, .dr-popover[dir="rtl"] .drp-presets-lbl, .dr-popover[dir="rtl"] .drp-wd { letter-spacing: 0; }
+  .dr-popover[dir="rtl"] .dr-icon-prev, .dr-popover[dir="rtl"] .dr-icon-next { transform: scaleX(-1); }
+
   @media (prefers-reduced-motion: reduce) { .dr-popover.dr-sheet { transform: none; } }
 
   .drp-head { display: flex; align-items: flex-start; justify-content: space-between;
@@ -5207,7 +5219,7 @@
   html[data-theme="dark"] .pay-table tbody tr:hover,
   html[data-theme="dark"] .pay-cell.off { background: var(--paper-muted); }
 </style>
-<link rel="stylesheet" href="assets/mobile.css?v=4" />
+<link rel="stylesheet" href="assets/mobile.css?v=6" />
 <link rel="stylesheet" href="assets/dashboard-native.css" />
 <link rel="stylesheet" href="assets/kiwi-select.css?v=2" />
 <!-- Design 2026 · Liquid Glass preview · inert unless body.design-2026 (1111-gated, reversible) -->
@@ -5437,14 +5449,14 @@
          language switches. -->
     <div class="upsell" data-upsell></div>
 
-    <div class="merchant">
-      <div class="avatar">RB</div>
+    <div class="merchant" role="button" tabindex="0" data-action="account-profile" aria-label="Mon profil">
+      <div class="avatar" aria-hidden="true">·</div>
       <div class="m-info">
-        <div class="n">Rachid Benhima</div>
+        <div class="n" aria-live="polite">·</div>
         <div class="r" data-i18n="dash.sidebar.ownerAdmin">Propriétaire · admin</div>
       </div>
       <div class="m-caret">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <span class="merchant-chevron" aria-hidden="true"></span>
       </div>
     </div>
     <!-- Merchant escape hatch: plain <a> so it works even if the app JS
@@ -6154,8 +6166,8 @@
 <!-- Client error reporter & observability (fail-soft telemetry) -->
 <script src="assets/err-reporter.js?v=1" defer></script>
 <!-- Env gate (demos local-only) · must run before venues.js and the app. -->
-<script src="assets/kiwi-env.js?v=1" defer></script>
-<script src="assets/i18n.js?v=15" defer></script>
+<script src="assets/kiwi-env.js?v=2" defer></script>
+<script src="assets/i18n.js?v=16" defer></script>
 <!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
      « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" · le français et
@@ -6166,7 +6178,7 @@
      d'inscription construisent leur grille pareil. Aucun DOM, ~7 Ko. -->
 <script src="assets/trades.js?v=6" defer></script>
 <script src="assets/lucide.min.js?v=5" defer></script>
-<script src="assets/interactive.js?v=43" defer></script>
+<script src="assets/interactive.js?v=44" defer></script>
 <script src="assets/features.js?v=8" defer></script>
 <script src="assets/invoice.js?v=12" defer></script>
 <script src="assets/invoicing.js?v=9" defer></script>
@@ -6202,7 +6214,7 @@
 <script src="assets/pressing-catalog.js?v=7" defer></script>
 <script src="assets/pressing-dashboard.js?v=16" defer></script>
 <script src="assets/demoClock.js?v=4" defer></script>
-<script src="assets/dateRange.js?v=46" defer></script>
+<script src="assets/dateRange.js?v=50" defer></script>
 <script src="assets/mobile-nav.js?v=7" defer></script>
 <script defer src="assets/pwa-update.js?v=359"></script>
 <script defer src="assets/dashboard-pwa.js?v=553"></script>
@@ -6217,7 +6229,7 @@
      data module starts. God Mode must never infer authority from ?op=1, and
      its one-shot snapshot must not miss the identity promise at boot. -->
 <script defer src="assets/tenant-purge.js?v=2"></script>
-<script defer src="assets/identity.js?v=5"></script>
+<script defer src="assets/identity.js?v=7"></script>
 <script defer src="assets/live-link.js?v=59"></script>
 <script defer src="assets/channel-sales.js?v=3"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
@@ -6259,7 +6271,7 @@
 <script src="assets/agent-vision.js?v=3" defer fetchpriority="low"></script>
 <script src="assets/agent-skin.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/accounting.js?v=3" defer fetchpriority="low"></script>
-<script src="assets/pages.js?v=10" defer fetchpriority="low"></script>
+<script src="assets/pages.js?v=11" defer fetchpriority="low"></script>
 <!-- Boutique shared product database + real barcode engine (EAN-13 / Code 128).
      Same modules the caisse loads, so inventory stays in sync between the two. -->
 <script src="assets/barcode.js?v=1" defer fetchpriority="low"></script>
@@ -6340,7 +6352,7 @@
 <!-- Floor-plan vocabulary shared with the caisse. MUST load before pages-pro.js,
      which reads its top-level declarations as globals. -->
 <script src="assets/floorplan-core.js?v=2050" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2123" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2124" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js?v=1" defer fetchpriority="low"></script>
@@ -6355,7 +6367,7 @@
 <!-- Rapport journalier : le calcul (partagé avec la caisse) puis la page.
      Après pages-pro.js, dont il emprunte la coquille Kiwi.appPage. -->
 <script src="assets/day-report.js?v=19" defer fetchpriority="low"></script>
-<script src="assets/z-reconciliation.js?v=21" defer fetchpriority="low"></script>
+<script src="assets/z-reconciliation.js?v=24" defer fetchpriority="low"></script>
 <script src="assets/day-report-export.js?v=8" defer fetchpriority="low"></script>
 <script src="assets/day-report-dash.js?v=19" defer fetchpriority="low"></script>
 <script src="assets/stock.js?v=57" defer fetchpriority="low"></script>
@@ -6378,7 +6390,7 @@
 <script src="assets/staff-roles.js?v=1" defer></script>
 <link rel="stylesheet" href="assets/help-centre.css?v=4">
 <script src="assets/help-centre.js?v=5" defer fetchpriority="low"></script>
-<script src="assets/account.js?v=25" defer fetchpriority="low"></script>
+<script src="assets/account.js?v=28" defer fetchpriority="low"></script>
 <script src="assets/design-2026.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/design-ios27.js?v=1" defer fetchpriority="low"></script>
 <!-- Default home composition: critical before the PIN overlay reveals the app.

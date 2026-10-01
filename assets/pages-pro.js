@@ -16194,6 +16194,13 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   let cancelAuditLoadedAt = 0;
   let cancelAuditVoidSig = '';
   const salesDayByMerchant = Object.create(null);
+  if (window.Kiwi?.handlers) window.Kiwi.handlers['nav-transactions-day'] = (_el, day) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(day || ''))) return;
+    const slug = auditMerchant();
+    if (!slug) return;
+    salesDayByMerchant[slug] = day;
+    renderRealTransactions('transactions', STARTERS.transactions);
+  };
   const salesMethodsByMerchant = Object.create(null);
   const salesKindByMerchant = Object.create(null);
   function salesMethodKey(s) {

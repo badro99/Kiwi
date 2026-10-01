@@ -136,9 +136,11 @@ try {
   await page.waitForFunction(() => /maison/i.test(document.querySelector('[data-hai-input]')?.placeholder || ''));
   await page.waitForFunction(() => document.querySelector('[data-bench-card]')?.classList.contains('is-empty-state'));
   await page.waitForSelector('button[aria-label="Notifications"] [data-z-badge]');
-  // The one-off toast sits over the bell; its « Voir » opens the same drawer.
+  // The toast now opens this day's sales directly. Open the bell independently
+  // to inspect the persistent notification, rather than expecting a dead-end CTA.
   await page.waitForSelector('.kiwi-toast.warn .ta');
-  await page.click('.kiwi-toast.warn .ta');
+  await page.evaluate(() => document.querySelector('.kiwi-toast.warn').remove());
+  await page.click('button[aria-label="Notifications"]');
   await page.waitForFunction(() => /1.?193,00 MAD/.test(document.querySelector('#kiwi-z-reconciliation-alert')?.textContent || ''));
   ok(!!await page.$('#kiwi-z-reconciliation-alert'), 'Amira dashboard puts the synthetic closed-Z mismatch in the notifications drawer');
   await page.keyboard.press('Escape');

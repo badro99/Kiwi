@@ -272,15 +272,13 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range::before,html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range::after{display:none!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range>div:first-child:not(.dr-control),html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .vexel-report-btn{display:none!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-control{margin:0!important;width:100%}
-  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pills{display:grid!important;grid-auto-flow:column;grid-auto-columns:1fr;width:100%;padding:2px!important;border-radius:10px!important;background:var(--kno-fill)!important;border:0!important;box-shadow:none!important;gap:0!important}
-  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill{width:100%!important;min-width:0!important;display:flex!important;align-items:center;justify-content:center;text-align:center;min-height:32px!important;padding:0 4px!important;border-radius:8px!important;font:600 13px/1 "Inter Tight",sans-serif!important;color:var(--kno-ink)!important;background:transparent!important;border:0!important;box-shadow:none!important;white-space:nowrap}
-  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill.on{background:var(--kno-card)!important;box-shadow:0 3px 8px rgba(10,15,13,.12),0 1px 1px rgba(10,15,13,.04)!important}
-  /* The custom range is a fifth, icon-only segment: hiding it left no way to pick dates on a phone (ticket #0107). */
-  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pills{grid-template-columns:repeat(4,minmax(0,1fr)) 40px!important;grid-auto-columns:auto!important}
-  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill-custom{display:flex!important;padding:0!important}
-  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill-custom span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill-custom svg{width:17px;height:17px;display:block}
-  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pills [data-lens-pill],html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pills .kw-lens{display:none!important}
+  /* Use the shared momentum track on every page, including Home. Native
+     grid/100%-wide cells prevented dragging and hid the calendar icon. */
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pills{display:flex!important;flex-wrap:nowrap!important;width:100%;max-width:100%;padding:4px!important;border-radius:999px!important;background:var(--kno-fill)!important;border:0!important;box-shadow:none!important;gap:3px!important;overflow-x:auto!important;touch-action:pan-x pan-y}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill{width:auto!important;flex:0 0 auto!important;min-width:44px!important;display:flex!important;align-items:center;justify-content:center;text-align:center;min-height:44px!important;padding:0 14px!important;border-radius:999px!important;font:500 13px/1 "Inter Tight",sans-serif!important;color:var(--kno-ink)!important;background:transparent!important;border:0!important;box-shadow:none!important;white-space:nowrap}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill.on{color:var(--inverse-ink)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .dash-date-range .dr-pill-custom{display:flex!important}
+
 
   /* Quick actions */
   html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-native-owner-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:4px 0 2px}

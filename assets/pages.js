@@ -1208,10 +1208,10 @@
   };
 
   /* ═══════════════════ TRANSACTIONS ═══════════════════ */
-  handlers['nav-transactions'] = () => {
+  handlers['nav-transactions'] = (_el, requestedDay) => {
     const lang = trLang();
     const T = pageTranslations[lang] || pageTranslations.fr;
-    if (usesOwnData()) return renderRealTransactions(T);
+    if (usesOwnData()) return renderRealTransactions(T, requestedDay);
     const methods = [
       { m: 'visa', n: 'Visa', mask: '4291' },
       { m: 'mc', n: 'Mastercard', mask: '7820' },

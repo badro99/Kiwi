@@ -21,8 +21,9 @@ const team = read('assets/team.js');
 const stock = read('assets/stock.js');
 
 // #0107 · date range reachable and swipeable
-ok(/function initPeriodSwipe\(/.test(runtime) && /initPeriodSwipe\(\)/.test(runtime.replace(/function initPeriodSwipe\(/, '')), 'the period pills and hero chart step through ranges on a horizontal swipe');
-ok(/\.dr-pills\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\) 40px/.test(css), 'the custom-range pill stays on screen as an icon beside the four presets');
+ok(/function initPeriodSwipe\(/.test(runtime) && /initPeriodSwipe\(\)/.test(runtime.replace(/function initPeriodSwipe\(/, '')), 'the hero chart steps through ranges; horizontal pill swipes only scroll (#144)');
+ok(/\.dr-pills\{display:flex!important;flex-wrap:nowrap!important/.test(css) && /overflow-x:auto!important/.test(css), 'Home uses the shared scrollable track; custom date remains labelled and reachable (#144)');
+ok(!runtime.includes("e.target.closest('.dash-date-range .dr-pills,.hero-left-chart')"), 'a track swipe cannot accidentally select a period');
 ok(/function initChipRowFollow\(/.test(runtime), 'a tapped pill scrolls itself into view');
 
 // #0108 · the calendar is a bottom sheet with a reachable Apply

@@ -51,6 +51,7 @@ const partialNotice = renderNotice(partialState, {errors:'Errors',print:'Print'}
 check('mixed legacy and structured source failures render without throwing',
   partialNotice.includes('Verify schema') && partialNotice.includes('Print'));
 check('scoped identity does not trust another account business for first paint', identity.includes('accountStore') && identity.includes('var label = accountStore ? accountBusiness : prettifySlug(requestedStore)'));
-check('scoped identity replaces the header with the exact selected-store name', identity.includes('id.name = scopeExtra.name'));
+check('scoped identity sets the selected-store business without replacing its owner', identity.includes('id.business = scopeExtra.name') && !identity.includes('id.name = scopeExtra.name'));
+check('late scoped identity refresh cannot reinstate a previous merchant', identity.includes('if (window.KiwiMe !== id) return;'));
 
 console.log(`operating-day-operator-test: ${checks} controls passed`);

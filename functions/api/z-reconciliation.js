@@ -227,8 +227,25 @@ export async function onRequestGet({ request, env }) {
       : comparison.length === 1 ? Number(comparison[0].row.reported_cents) : null;
     const missingCount = exactUnion ? [...union.keys()].filter(id => !remote.has(id)).length + unqueuedCount
       : comparison.length === 1 ? (comparison[0].result.missing || []).filter(id => !remote.has(id)).length + unqueuedCount : null;
+    // An open/partial report describes this till's RECEIPTS, not the entire
+    // day's ledger. The ledger can grow hours after an empty snapshot and can
+    // contain another till's sales. Compare the same scope, as POST already does.
+    const wholeDayComparison = closed.length > 0 && closed.length === reports.length;
+    const comparisonCents = exactUnion && !wholeDayComparison
+      ? [...union.keys()].reduce((n,id) => {
+          const row = remote.get(id);
+          return n + (row ? Math.round(row.amount_cents == null ? Number(row.amount)*100 : row.amount_cents) : 0);
+        },0) : recordedCents;
+    const mismatchedCount = exactUnion ? [...union.values()].filter(item => {
+      const row = remote.get(item.id);
+      return row && (Math.round(row.amount_cents == null ? Number(row.amount)*100 : row.amount_cents) !== item.amountCents
+        || row.method !== item.method);
+    }).length : comparison.reduce((n,x) => n + (Number(x.row.mismatch_count) || 0),0);
+    // A legacy provisional without a manifest cannot make a trustworthy day
+    // total comparison. Its explicit rejected/missing receipts still matter.
     const openProblem = !closed.length && reportedCents != null &&
-      (reportedCents !== recordedCents || Number(missingCount) > 0 || unqueuedCount > 0 || blockedById.size > 0);
+      ((exactUnion && reportedCents !== comparisonCents) || mismatchedCount > 0
+        || Number(missingCount) > 0 || unqueuedCount > 0 || blockedById.size > 0);
     const source = cutoffConflict ? 'ambiguous-z'
       : closed.length && reportedCents != null ? 'closed-z'
       : openProblem ? 'open-z'
@@ -236,7 +253,7 @@ export async function onRequestGet({ request, env }) {
       : day === businessDate(Date.now(), configuredCutoff, zone) ? 'live-ledger' : 'ledger-only';
     const daySummary = { day, source, syncObserved, closedTerminals: closed.length, totalTerminals: reports.length, comparisonAvailable: reports.length > 0,
       referenceCents: closed.length && reportedCents != null && !cutoffConflict ? reportedCents : recordedCents, reportedCents, recordedCents,
-      recordedCount, gapCents: cutoffConflict ? null : reportedCents == null ? (blockedById.size ? blockedCents : null) : reportedCents - recordedCents,
+      recordedCount, comparisonCents, mismatchedCount, terminalIds: comparison.map(x => x.row.terminal_id), gapCents: cutoffConflict ? null : reportedCents == null ? (blockedById.size ? blockedCents : null) : reportedCents - comparisonCents,
       missingCount: cutoffConflict ? null : missingCount == null && blockedById.size ? blockedById.size : missingCount,
       unqueuedCount, unqueuedCents, cutoff,
       waitingCount: day === businessDate(Date.now(), configuredCutoff, zone) ? Math.max(waiting.size,pendingCount) : waiting.size, blocked: [...blockedById.values()],

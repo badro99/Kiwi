@@ -177,84 +177,82 @@
       && referenceMerchant === merchant() && dayReference && dayReference.day === selectedDay(range)
       ? dayReference : null;
   }
-  function amount(cents) { return (Number(cents)/100).toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' MAD'; }
-  // The merchant only hears about the Z when something needs a look: money
-  // the till counted that the server doesn't have, or a blocked receipt.
-  // A day that matches (or can't be compared yet) stays quiet.
+  function lang() { return window.KiwiI18n?.getLang?.() || document.documentElement.lang || 'fr'; }
+  const WORDS = {
+    title: {fr:'Des ventes de caisse sont à vérifier',en:'Till sales need checking',ar:'مبيعات الصندوق تحتاج إلى مراجعة'},
+    detail: {fr:'Vérifiez les ventes du jour dans les notifications.',en:'Check the day’s sales in notifications.',ar:'راجع مبيعات اليوم في الإشعارات.'},
+    view: {fr:'Voir les ventes du jour',en:'View the day’s sales',ar:'عرض مبيعات اليوم'},
+    resolved: {fr:'Ventes de caisse vérifiées',en:'Till sales checked',ar:'تمت مراجعة مبيعات الصندوق'},
+    resolvedDetail: {fr:'La différence signalée pour ce jour est résolue.',en:'The reported difference for this day is resolved.',ar:'تم حل الفرق المسجل لهذا اليوم.'},
+    till: {fr:'Caisse',en:'Till',ar:'الصندوق'},
+    totals: {fr:'Compté en caisse',en:'Counted at the till',ar:'المبلغ في الصندوق'},
+    recorded: {fr:'Ventes correspondantes enregistrées',en:'Matching sales recorded',ar:'المبيعات المقابلة المسجلة'},
+    gap: {fr:'Différence',en:'Difference',ar:'الفرق'},
+    pending: {fr:'ventes payées à synchroniser',en:'paid sales need syncing',ar:'مبيعات مدفوعة تحتاج إلى مزامنة'},
+    rejected: {fr:'ventes payées non enregistrées après un refus',en:'paid sales not recorded after a rejection',ar:'مبيعات مدفوعة لم تسجل بعد رفضها'},
+    unqueued: {fr:'ventes payées sans envoi enregistré',en:'paid sales with no recorded send',ar:'مبيعات مدفوعة لم يرسل سجلها'},
+    mismatch: {fr:'ventes dont le montant ou le paiement diffère',en:'sales with a different amount or payment method',ar:'مبيعات يختلف مبلغها أو طريقة دفعها'},
+    next: {fr:'Ouvrez les ventes de ce jour pour vérifier. Pour une vente absente, ouvrez la caisse concernée et synchronisez-la.',en:'Open this day’s sales to check. For a missing sale, open the affected till and sync it.',ar:'افتح مبيعات هذا اليوم للتحقق. إذا كانت عملية مفقودة، افتح الصندوق المعني وزامنه.'},
+    boundary: {fr:'Les caisses utilisent des heures de fin de journée différentes. Vérifiez leurs réglages avant de comparer les ventes.',en:'These tills use different day-end times. Check their settings before comparing sales.',ar:'تستخدم هذه الصناديق أوقاتا مختلفة لنهاية اليوم. تحقق من إعداداتها قبل مقارنة المبيعات.'},
+    legacy: {fr:'Le détail des ventes de certaines caisses est indisponible. Vérifiez le rapport dans la caisse concernée.',en:'Some tills have no receipt detail available. Check the report on the affected till.',ar:'تفاصيل مبيعات بعض الصناديق غير متوفرة. راجع التقرير في الصندوق المعني.'}
+  };
+  function word(key) { return window.KiwiI18n?.T?.[lang()]?.['z.'+key] || WORDS[key]?.[lang()] || WORDS[key]?.fr || ''; }
+  function amount(cents) {
+    return window.KiwiNumber?.money?.(Number(cents)/100,2)
+      || (Number(cents)/100).toLocaleString(lang()==='en'?'en-GB':'fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' MAD';
+  }
   function needsAttention(s) {
     if (!s) return false;
-    if (s.ambiguous) return true;
-    if (Array.isArray(s.blocked) && s.blocked.length) return true;
+    if (s.ambiguous || (Array.isArray(s.blocked) && s.blocked.length)) return true;
     return (s.source === 'closed-z' || s.source === 'open-z')
-      && (Number(s.gapCents) !== 0 || Number(s.missingCount) > 0 || Number(s.unqueuedCount) > 0);
+      && (Number(s.gapCents) !== 0 || Number(s.missingCount)>0 || Number(s.unqueuedCount)>0 || Number(s.mismatchedCount)>0);
   }
   function referenceText(s) {
     if (!needsAttention(s)) return '';
-    var text = s.source === 'ambiguous-z'
-      ? 'Rapports Z avec seuils de journée différents · rapprochement impossible sans vérification humaine'
-      : s.source === 'sync-gap'
-      ? 'Reçus refusés non enregistrés : ' + amount(s.gapCents) + ' · ' + s.missingCount
-        + ' reçu(s) bloqué(s) · Z indisponible tant que la caisse ne l’a pas transmis'
-      : s.source === 'closed-z' || s.source === 'open-z'
-      ? (s.source === 'closed-z' ? 'Rapport Z de la caisse : ' : 'Rapport provisoire de la caisse : ') + amount(s.reportedCents) + ' · enregistré : ' + amount(s.recordedCents)
-        + ' · écart : ' + amount(s.gapCents) + ' · ' + s.missingCount + ' reçu(s) manquant(s)'
-        + (s.unqueuedCount || s.unqueuedCents ? ' · ' + (s.unqueuedCount
-          ? s.unqueuedCount + ' reçu(s) hors file (' + amount(s.unqueuedCents) + ')'
-          : 'écart local non associé à un reçu (' + amount(s.unqueuedCents) + ')') : '')
-        + ' · ' + (Array.isArray(s.blocked) ? s.blocked.length : 0) + ' reçu(s) bloqué(s)'
-      : 'Enregistré : ' + amount(s.recordedCents) + (s.source === 'live-ledger'
-        ? (s.syncObserved === false ? ' · état de synchronisation de la caisse inconnu' : ' · synchronisation : ' + s.waitingCount + ' reçu(s) en attente (dernière déclaration)')
-        : s.comparisonAvailable ? ' · Z non clôturé : référence de caisse indisponible.'
-        : ' · Journée antérieure sans comparaison Z : impossible de vérifier avec la caisse.');
-    if (s.closedTerminals > 0 && s.closedTerminals < s.totalTerminals) text += ' · ' + s.closedTerminals + '/' + s.totalTerminals + ' caisses clôturées (Z partiel).';
-    if (s.ambiguous && s.ambiguousReason !== 'cutoff-conflict') text += ' · Plusieurs anciens Z sans détail : total Z non vérifiable.';
-    return text;
+    var lines = [s.day + (s.terminalIds?.length ? ' · '+word('till')+' '+s.terminalIds.map(id=>String(id).slice(-6)).join(', ') : '')];
+    if (s.ambiguous) lines.push(word(s.ambiguousReason==='cutoff-conflict'?'boundary':'legacy'));
+    else if (s.reportedCents != null) lines.push(word('totals')+': '+amount(s.reportedCents)+' · '+word('recorded')+': '+amount(s.comparisonCents ?? s.recordedCents)+' · '+word('gap')+': '+amount(s.gapCents));
+    [[s.missingCount,'pending'],[s.blocked?.length,'rejected'],[s.unqueuedCount,'unqueued'],[s.mismatchedCount,'mismatch']].forEach(([n,k])=>{if(Number(n)>0) lines.push(n+' '+word(k));});
+    lines.push(word('next'));
+    return lines.join(' · ');
   }
-  // A Z problem is a notification, not a banner: a badge on the bell, the
-  // detail in the notifications drawer, and one toast the first time a given
-  // problem shows up in this tab.
-  var toasted = '';
-  function currentAlert() {
-    var s = reference();
-    return needsAttention(s) ? { text: referenceText(s), blocked: s.blocked || [] } : null;
+  function fingerprint(s) {
+    return [s.day,s.source,s.gapCents,s.reportedCents,s.comparisonCents ?? s.recordedCents,s.missingCount,s.unqueuedCount,s.mismatchedCount,
+      (s.terminalIds||[]).slice().sort().join(','),(s.blocked||[]).map(b=>b.id+':'+b.amountCents+':'+b.reason).sort().join(',')].join('|');
   }
-  function esc(v) {
-    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
+  function storageKey() { return 'kiwi:z-alert:v1:'+merchant(); }
+  function history() { try { return JSON.parse(localStorage.getItem(storageKey())||'{}'); } catch (_) { return {}; } }
+  function saveHistory(value) { try { localStorage.setItem(storageKey(),JSON.stringify(value)); } catch (_) {} }
+  function currentAlert() { var s=reference(); return needsAttention(s) ? {summary:s,text:referenceText(s)} : null; }
+  function esc(v) { return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function notificationHtml() {
-    var a = currentAlert();
-    if (!a) return '';
-    var rows = a.blocked.map(function (b) {
-      return '<div class="n-desc">' + esc(b.id + ' · ' + amount(b.amountCents) + ' · ' + b.method
-        + ' · ' + new Date(b.ts).toLocaleString() + ' · ' + b.reason) + '</div>';
-    }).join('');
-    return '<div class="notif unread" id="kiwi-z-reconciliation-alert" role="status">'
-      + '<div class="n-ico" style="background:color-mix(in srgb, var(--warn-ink) 16%, var(--surface));color:var(--warn-ink);">'
-      + '<svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="m40-120 440-760 440 760H40Zm138-80h604L480-720 178-200Zm330.5-51.5Q520-263 520-280t-11.5-28.5Q497-320 480-320t-28.5 11.5Q440-297 440-280t11.5 28.5Q463-240 480-240t28.5-11.5ZM440-360h80v-200h-80v200Zm40-100Z"/></svg></div>'
-      + '<div class="n-body"><div class="n-title">Écart avec le rapport Z de la caisse</div>'
-      + '<div class="n-desc">' + esc(a.text) + '</div>'
-      + (a.blocked.length ? '<div class="n-desc">' + a.blocked.length + ' reçu(s) payé(s) non enregistré(s) · contacter le support</div>' + rows : '')
-      + '</div></div>';
+    var a=currentAlert(), past=history();
+    if (!a && !(past.resolved && reference()?.day===past.day)) return '';
+    var title=a?word('title'):word('resolved'), text=a?a.text:past.day+' · '+word('resolvedDetail');
+    return '<div class="notif '+(a?'unread':'resolved')+'" id="kiwi-z-reconciliation-alert" role="status">'
+      +'<div class="n-ico" style="background:var('+(a?'--warn-soft':'--mint-soft')+');color:var('+(a?'--warn-ink':'--atlas')+');"><span aria-hidden="true" style="display:block;width:20px;height:20px;background:currentColor;-webkit-mask:url(assets/icons/material/'+(a?'warning':'task_alt')+'.svg) center/contain no-repeat;mask:url(assets/icons/material/'+(a?'warning':'task_alt')+'.svg) center/contain no-repeat"></span></div>'
+      +'<div class="n-body"><div class="n-title" data-i18n="z.'+(a?'title':'resolved')+'">'+esc(title)+'</div><div class="n-desc">'+esc(text)+'</div>'
+      +'<button type="button" class="kb ghost" style="margin-top:10px;min-height:44px" data-action="z-view-sales" data-i18n="z.view">'+esc(word('view'))+'</button></div></div>';
   }
+  function viewSales() {
+    var day=reference()?.day;
+    if (!day) return;
+    var H=window.Kiwi?.handlers;
+    (H?.['nav-transactions-day'] || H?.['nav-transactions'])?.(null,day);
+  }
+  var toasted='';
   function updateBell() {
-    var bell = document.querySelector('button[data-mobile-notifications], button[aria-label="Notifications"]');
-    var a = currentAlert();
-    var badge = bell && bell.querySelector('[data-z-badge]');
-    if (bell && a && !badge) {
-      badge = document.createElement('span');
-      badge.className = 'badge'; badge.setAttribute('data-z-badge', '');
-      badge.textContent = '1';
-      bell.appendChild(badge);
-    }
+    if (window.Kiwi?.handlers) Kiwi.handlers['z-view-sales']=viewSales;
+    var bell=document.querySelector('button[data-mobile-notifications], button[aria-label="Notifications"]'), a=currentAlert();
+    var badge=bell?.querySelector('[data-z-badge]'), past=history(), s=reference();
+    if (bell && a && !badge) { badge=document.createElement('span');badge.className='badge';badge.setAttribute('data-z-badge','');badge.textContent='1';bell.appendChild(badge); }
     if (badge && !a) badge.remove();
-    if (!a) return;
-    var key = merchant() + '|' + a.text + '|' + a.blocked.length;
-    if (key !== toasted && window.Kiwi && Kiwi.toast) {
-      toasted = key;
-      Kiwi.toast('Écart avec le rapport Z', { type: 'warn', desc: 'Le détail est dans les notifications.',
-        action: { label: 'Voir', onClick: function () { if (Kiwi.handlers && Kiwi.handlers.notifications) Kiwi.handlers.notifications(); } } });
+    if (!a) { if (s && past.day===s.day && !past.resolved) { past.resolved=true;saveHistory(past); } return; }
+    var key=fingerprint(a.summary), seen=Array.isArray(past.seen)?past.seen:[];
+    saveHistory({day:a.summary.day,resolved:false,seen:seen.includes(key)?seen:seen.concat(key).slice(-20)});
+    if (key!==toasted && !seen.includes(key) && window.Kiwi?.toast) {
+      toasted=key;
+      Kiwi.toast(word('title'),{type:'warn',desc:word('detail'),action:{label:word('view'),onClick:viewSales}});
     }
   }
   function showDashboard() {

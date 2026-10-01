@@ -36,7 +36,15 @@
 
   /* Hosted is never a demo, whatever the flag says. Local is a demo by default,
    * and only an explicit kiwiDemos='0' can turn it off. */
+  // Capacitor's localhost is a transport origin, not permission to seed a
+  // pitching tenant. A real paired till is also real before /api/me resolves.
+  var native = false;
+  try { native = !!(window.KiwiApiBase?.native || window.Capacitor?.isNativePlatform?.()); } catch (_) {}
   var demosAllowed = local && (forced !== false);
+  function paired() {
+    try { return localStorage.getItem('kiwiPaired') === '1'
+      && !!JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null')?.merchant; } catch (_) { return false; }
+  }
 
   window.KiwiEnv = {
     local: local,
@@ -51,7 +59,8 @@
      * Every surface that renders identity/legal/named demo data should gate on
      * window.KiwiEnv.isReal() so the demo is preserved locally and never leaks. */
     isReal: function () {
-      try { return !demosAllowed || !!window.KiwiMe; } catch (_) { return !demosAllowed; }
+      try { return !demosAllowed || !!window.KiwiMe || paired()
+        || (native && !!localStorage.getItem('kiwiAccountKey')); } catch (_) { return !demosAllowed; }
     },
   };
 })();

@@ -1,7 +1,7 @@
 {
   "assets/account.js": {
-    "v": "25",
-    "sha": "a3c9860b79e9233d"
+    "v": "28",
+    "sha": "504187286c59cf26"
   },
   "assets/accounting.js": {
     "v": "3",
@@ -220,8 +220,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "46",
-    "sha": "f9d0bfe9123fd441"
+    "v": "50",
+    "sha": "d19255a451b74cd2"
   },
   "assets/day-report-dash.js": {
     "v": "19",
@@ -364,12 +364,12 @@
     "sha": "b45b0260ef0d82b2"
   },
   "assets/i18n.js": {
-    "v": "15",
-    "sha": "4a49ddebb5f74adc"
+    "v": "16",
+    "sha": "3560660a9954bcc2"
   },
   "assets/identity.js": {
-    "v": "5",
-    "sha": "4ae34b8744b169aa"
+    "v": "7",
+    "sha": "9d8c88cd83f8f78b"
   },
   "assets/idle-lock.js": {
     "v": "2",
@@ -384,8 +384,8 @@
     "sha": "5328fd29d491edb4"
   },
   "assets/interactive.js": {
-    "v": "43",
-    "sha": "aff6e7faa23765ef"
+    "v": "44",
+    "sha": "404e9f1297daeaaf"
   },
   "assets/inventory-consumption.js": {
     "v": "12",
@@ -416,8 +416,8 @@
     "sha": "98df9640942bdd2f"
   },
   "assets/kiwi-env.js": {
-    "v": "1",
-    "sha": "221e8f9a89dc1b4c"
+    "v": "2",
+    "sha": "43599f2ae6c79f74"
   },
   "assets/kiwi-select.css": {
     "v": "2",
@@ -484,8 +484,8 @@
     "sha": "f286a70c2a2dcf2d"
   },
   "assets/mobile.css": {
-    "v": "4",
-    "sha": "c78c1cbe33d08c4a"
+    "v": "6",
+    "sha": "955b9f4c29f59e14"
   },
   "assets/morocco-holidays.js": {
     "v": "1",
@@ -544,12 +544,12 @@
     "sha": "57b562b061dc24d0"
   },
   "assets/pages-pro.js": {
-    "v": "2123",
-    "sha": "3efc2449a446659f"
+    "v": "2124",
+    "sha": "9123ff476d49055a"
   },
   "assets/pages.js": {
-    "v": "10",
-    "sha": "4bebb08531213743"
+    "v": "11",
+    "sha": "7fc6c82bf2269a71"
   },
   "assets/pairing-commit.js": {
     "v": "2",
@@ -952,7 +952,7 @@
     "sha": "640ed8c4c8c5aec8"
   },
   "assets/z-reconciliation.js": {
-    "v": "21",
-    "sha": "bab068fe1b662824"
+    "v": "24",
+    "sha": "729d7e6f52d3bffb"
   }
 }

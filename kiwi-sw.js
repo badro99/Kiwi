@@ -39,7 +39,7 @@ var SHELL = [
   '/assets/booking.css?v=13',
   '/assets/phone.js?v=1',
   '/assets/err-reporter.js?v=1',
-  '/assets/kiwi-env.js?v=1',
+  '/assets/kiwi-env.js?v=2',
   '/dashboard.webmanifest',
   '/manifest.webmanifest',
   '/cuisine.webmanifest',
@@ -60,7 +60,7 @@ var SHELL = [
   '/assets/hotel.css?v=38',
   '/assets/hotel-economat.js?v=3',
   '/assets/genpage.css?v=3',
-  '/assets/mobile.css?v=4',
+  '/assets/mobile.css?v=6',
   '/assets/sold-insights.js?v=8',
   '/assets/design-2026.css',
   '/assets/design-ios27.css',
@@ -81,7 +81,7 @@ var SHELL = [
   '/assets/agent-truth.js?v=6',
   '/assets/agent-voice.js?v=9',
   '/assets/agent-vision.js?v=3',
-  '/assets/i18n.js?v=15',
+  '/assets/i18n.js?v=16',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -89,7 +89,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=43',
+  '/assets/interactive.js?v=44',
   '/assets/features.js?v=8',
   '/assets/invoicing.css?v=7',
   '/assets/invoicing.js?v=9',
@@ -137,12 +137,12 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/dateRange.js?v=46',
+  '/assets/dateRange.js?v=50',
   '/assets/mobile-nav.js?v=7',
   '/assets/liquid-lens.js?v=1',
-  '/assets/pages.js?v=10',
+  '/assets/pages.js?v=11',
   '/assets/help-centre.js?v=5',
-  '/assets/account.js?v=25',
+  '/assets/account.js?v=28',
   '/assets/production-action-guard.js?v=1',
   // Shared floor-plan vocabulary · the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
@@ -199,7 +199,7 @@ var SHELL = [
      caisse ET l'écran cuisine passent par lui : absent, l'un des deux lierait un
      nouveau commerçant par-dessus les données de l'ancien. */
   '/assets/pairing-commit.js?v=2',
-  '/assets/identity.js?v=5',
+  '/assets/identity.js?v=7',
   '/assets/caisse-link.js?v=10',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',

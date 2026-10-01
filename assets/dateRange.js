@@ -1679,6 +1679,16 @@
 
   /* ═══════════════ RENDER: SELECTOR ═══════════════ */
 
+  function revealDayPill(pill) {
+    const track = pill.parentElement;
+    if (!track) return;
+    const p = pill.getBoundingClientRect(), r = track.getBoundingClientRect();
+    const delta = p.left < r.left ? p.left - r.left : p.right > r.right ? p.right - r.right : 0;
+    // Only this horizontal track moves. scrollIntoView also pulled the entire
+    // page vertically on each live re-render, sometimes during a user's swipe.
+    if (delta) track.scrollBy({left: delta, behavior: 'instant'});
+  }
+
   function renderSelector() {
     const lang = getLang();
     const labelEl = document.querySelector('[data-dr-label]');
@@ -1699,6 +1709,7 @@
       const on = p.dataset.range === currentRange;
       p.classList.toggle('on', on);
       p.setAttribute('aria-pressed', String(on));
+      if (on) requestAnimationFrame(() => p.isConnected && revealDayPill(p));
     });
   }
 
@@ -5126,6 +5137,8 @@
     dpEl = null;
     pop.classList.remove('open');
     pop.removeAttribute('aria-modal');
+    if (pop.__releaseScroll) pop.__releaseScroll();
+    if (pop.__focusBefore?.isConnected) pop.__focusBefore.focus({ preventScroll: true });
     const veil = pop.__veil;
     if (veil) { veil.classList.remove('in'); setTimeout(() => veil.remove(), 260); }
     if (dpOutside) document.removeEventListener('mousedown', dpOutside);
@@ -5176,7 +5189,10 @@
       document.body.appendChild(veil);
       pop.__veil = veil;
       pop.classList.add('dr-sheet');
+      veil.addEventListener('click', closeCustomPicker);
       pop.setAttribute('aria-modal', 'true');
+      pop.__focusBefore = document.activeElement;
+      pop.__releaseScroll = window.Kiwi?.scrollLock?.acquire();
       document.body.appendChild(pop);
       requestAnimationFrame(() => veil.classList.add('in'));
     } else if (dayMode) document.body.appendChild(pop);
@@ -5234,10 +5250,10 @@
     function monthCard(y, m, side) {
       const canNext = monIdx(view.y, view.m) < maxLeft;
       const lBtn = side === 'left'
-        ? `<button type="button" class="drp-nav" data-nav="prev" aria-label="←">${chev('prev')}</button>`
+        ? `<button type="button" class="drp-nav" data-nav="prev" aria-label="${dpEsc({fr:'Mois précédent',en:'Previous month',ar:'الشهر السابق'}[lang])}">${chev('prev')}</button>`
         : '<span class="drp-nav-gap"></span>';
       const rBtn = side === 'right'
-        ? `<button type="button" class="drp-nav" data-nav="next" aria-label="→"${canNext ? '' : ' disabled'}>${chev('next')}</button>`
+        ? `<button type="button" class="drp-nav" data-nav="next" aria-label="${dpEsc({fr:'Mois suivant',en:'Next month',ar:'الشهر التالي'}[lang])}"${canNext ? '' : ' disabled'}>${chev('next')}</button>`
         : '<span class="drp-nav-gap"></span>';
       return `<div class="drp-month"><div class="drp-mhead">${lBtn}`
         + `<span class="drp-mname">${dpEsc(monthLabel(y, m, lang))}</span>${rBtn}</div>`
@@ -5291,6 +5307,7 @@
     }
 
     function render() {
+      const scrollTop = pop.querySelector('.drp-body')?.scrollTop || 0;
       const r = shiftMonth(view.y, view.m, 1);
       pop.innerHTML =
         `<div class="drp-head"><div><div class="drp-eyebrow">${dpEsc(dayMode ? ({ fr: 'Choisir une date', en: 'Pick a date', ar: 'اختر تاريخاً' }[lang] || 'Choisir une date') : S.title)}</div>`
@@ -5310,6 +5327,7 @@
         + `<button type="button" class="drp-btn drp-btn-go" data-drp-apply>${dpEsc(S.apply)}</button>`
         + `</div></div>`;
       decorate();
+      pop.querySelector('.drp-body').scrollTop = scrollTop;
     }
 
     function pickDay(iso) {
@@ -5400,7 +5418,17 @@
       if (control.contains(e.target)) return;   // the control's own click toggles
       closeCustomPicker();
     };
-    dpKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); closeCustomPicker(); } };
+    dpKey = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); closeCustomPicker(); return; }
+      if (!asSheet || e.key !== 'Tab') return;
+      const buttons = [...pop.querySelectorAll('button:not([disabled])')];
+      const first = buttons[0], last = buttons[buttons.length - 1];
+      if (e.shiftKey && (document.activeElement === first || !pop.contains(document.activeElement))) {
+        e.preventDefault(); last?.focus({preventScroll:true});
+      } else if (!e.shiftKey && (document.activeElement === last || !pop.contains(document.activeElement))) {
+        e.preventDefault(); first?.focus({preventScroll:true});
+      }
+    };
     setTimeout(() => {
       if (dpEl !== pop) return;
       document.addEventListener('mousedown', dpOutside);
@@ -5436,6 +5464,7 @@
       + `<button type="button" class="dr-pill dr-pill-custom${custom ? ' on' : ''}" data-dr-day-custom aria-pressed="${custom}" aria-haspopup="dialog" aria-expanded="false">`
       + `<span class="dr-icon dr-icon-calendar" aria-hidden="true"></span>${dpEsc(customLabel)}</button></div></div>`;
     const control = host.querySelector('.dr-control');
+    requestAnimationFrame(() => { const selected = control.querySelector('.dr-pill.on'); if (selected) revealDayPill(selected); });
     host.querySelectorAll('[data-dr-day-offset]').forEach(button => {
       button.addEventListener('click', () => options.onChange?.(shift(+button.dataset.drDayOffset)));
     });

@@ -49,10 +49,10 @@
     purgeTenantState: null,
   };
   function settle(state) {
-    if (gateSettled) return;
+    var firstDecision = !gateSettled;
     gateSettled = true;
     try { window.KiwiIdentity.state = state; } catch (_) {}
-    try { settleGate(state); } catch (_) {}
+    try { if (firstDecision) settleGate(state); } catch (_) {}
     /* A promise is enough for code that already knows about KiwiIdentity, but
        late/independently cached modules also need an observable hand-off. Keep
        the event payload identical to `ready`: one server-confirmed decision,
@@ -195,12 +195,16 @@
     var subs = document.querySelectorAll('[data-kiwi-greet-sub], .kiwi-greet-sub');
     for (var s = 0; s < subs.length; s++) subs[s].textContent = biz ? (biz + ' · service ouvert') : 'service ouvert';
     var nameEl = document.querySelector('.merchant .n');
-    if (nameEl) nameEl.textContent = biz || 'Mon établissement';
+    if (nameEl) nameEl.textContent = '·';
     var av = document.querySelector('.merchant .avatar');
-    if (av) av.textContent = initialsOf(biz) || '·';
+    if (av) av.textContent = '·';
   }
   function runNeutral() {
-    var go = function () { if (isRealSession()) neutralize(); };
+    var go = function () {
+      if (isRealSession() || (!gateSettled && window.Capacitor?.isNativePlatform?.())) { if (window.KiwiMe) apply(window.KiwiMe); else neutralize(); }
+      else { setText(document.querySelector('.merchant .n'), 'Rachid Benhima');
+        setText(document.querySelector('.merchant .avatar'), 'RB'); }
+    };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go);
     else go();
     setTimeout(go, 700);   // re-apply after the venue engine + entry-flash render
@@ -314,10 +318,11 @@
 
   function run(id, scoped, label, type, scopeSlug) {
     var go = function () {
+      if (window.KiwiMe !== id) return;
       // In a God-mode scoped view, take over the venue FIRST so the switcher and
       // header render the client; then patch identity on top.
       if (scoped) applyScopedVenue(label, type, scopeSlug);
-      apply(id);
+      if (window.KiwiMe === id) apply(id);
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go);
     else go();
@@ -328,8 +333,8 @@
     // lieu du slug embelli) et les magasins frères dans le sélecteur.
     if (scoped && scopeSlug) {
       loadScopeSiblings(scopeSlug, function () {
+        if (window.KiwiMe !== id) return;
         if (scopeExtra.name) {
-          id.name = scopeExtra.name;
           id.business = scopeExtra.name;
           label = scopeExtra.name;
           try { window.KiwiMe = id; } catch (_) {}
@@ -369,8 +374,17 @@
   // Idempotent: if a real account or operator scope resolves below, apply()
   // overwrites these with the real identity. Local demo → isReal false → no-op.
   runNeutral();
+  document.addEventListener('kiwi-paired', function () {
+    window.KiwiMe = null;
+    runNeutral();
+    // Re-read the signed session instead of inferring an owner from the venue.
+    loadIdentity();
+  });
 
-  fetch(meUrl, { headers: { Accept: 'application/json' } })
+  var identitySequence = 0;
+  function loadIdentity() {
+  var sequence = ++identitySequence;
+  fetch(meUrl, { cache: 'no-store', headers: { Accept: 'application/json' } })
     .then(function (r) {
       if (r && r.ok) return r.json();
       // 404 = this host simply has no API (a static mirror). Everything else —
@@ -381,6 +395,7 @@
       return { __httpFail: (r && r.status) || 0 };
     })
     .then(function (me) {
+      if (sequence !== identitySequence) return;
       if (!me || me.__httpFail != null) {
         settle(me && me.__httpFail === 404
           ? { authenticated: false, noBackend: true }
@@ -404,7 +419,7 @@
         var accountStore = accountBusiness && slugish(accountBusiness) === slugish(requestedStore);
         var label = accountStore ? accountBusiness : prettifySlug(requestedStore);
         var opId = {
-          name: label,
+          name: (me.name || '').trim(),
           business: label,
           email: (me.email || '').trim(),
           type: (me.type || '').trim(),
@@ -498,8 +513,11 @@
       applyOwnType(id.type);   // boutique renders as boutique, not restaurant (F3)
     })
     .catch(function () {
+      if (sequence !== identitySequence) return;
       /* offline / missing endpoint → keep the demo locally, but a real (hosted) session still gets neutralized */
       settle({ authenticated: false, unreachable: true });
       runNeutral();
     });
+  }
+  loadIdentity();
 })();

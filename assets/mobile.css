@@ -221,17 +221,21 @@
   .dash-date-range { gap: 14px; margin: 12px 0 26px; }
   .dash-date-range .dr-label { font-size: 27px; letter-spacing: -0.03em; }
   .dash-date-range .dr-sub { font-size: 12.5px; margin-top: 5px; }
+  .dr-control { width: 100%; max-width: 100%; min-width: 0; }
   .dr-pills {
+    box-sizing: border-box; max-width: 100%; min-width: 0;
     width: 100%;
     flex-wrap: nowrap; overflow-x: auto;
     scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y; overscroll-behavior-x: contain; scroll-snap-type: x proximity;
     /* Edge fades hint that the row scrolls (direction-safe: both ends). */
     -webkit-mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 24px), transparent 100%);
     mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 24px), transparent 100%);
     padding-inline-start: 2px;
   }
   .dr-pills::-webkit-scrollbar { display: none; }
-  .dr-pill { white-space: nowrap; flex-shrink: 0; }
+  .dr-pill:last-child { scroll-snap-align: end; }
+  .dr-pill { white-space: nowrap; flex: 0 0 auto; min-height: 44px; scroll-snap-align: start; }
 
   /* Hero LIVE chip — one line, never a stacked 3-row capsule */
   .hero-today .live-badge { white-space: nowrap; flex-shrink: 0; }

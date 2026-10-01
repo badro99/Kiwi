@@ -14,6 +14,10 @@
   /* ─── TRANSLATIONS ─── */
   const T = {
     en: {
+      'z.title': 'Till sales need checking',
+      'z.resolved': 'Till sales checked',
+      'z.view': 'View the day’s sales',
+
       /* A11y */
       'a11y.skip': 'Skip to content',
       /* Roles */
@@ -634,6 +638,10 @@
     },
 
     ar: {
+      'z.title': 'مبيعات الصندوق تحتاج إلى مراجعة',
+      'z.resolved': 'تمت مراجعة مبيعات الصندوق',
+      'z.view': 'عرض مبيعات اليوم',
+
       /* A11y */
       'a11y.skip': 'تخطي إلى المحتوى',
       /* Roles */
