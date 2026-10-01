@@ -1,0 +1,8 @@
+{
+  "ticket": "#0151",
+  "status": "Testing",
+  "verifiedUtc": "2026-10-01T16:35:09.096006+00:00",
+  "method": "Normal authenticated board Fixed transition; verified in Requiring testing with Testing selected",
+  "screenshot": "board-testing.png",
+  "otherTicketsChanged": false
+}
