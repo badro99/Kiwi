@@ -9,7 +9,7 @@ for(const lang of ['fr','en','ar']){
  let first=instance(lang,gap);await first.api.showDashboard();assert.equal(first.toasts.length,1);checks++;
  const text=first.api.referenceText(gap);assert.ok(text.includes('2026-09-30')&&text.includes('123456'));assert.ok(!text.includes('0 reçu')&&!text.includes('hors file'));checks+=2;
  assert.match(text,lang==='fr'?/Compté en caisse/:lang==='en'?/Counted at the till/:/المبلغ في الصندوق/);checks++;
- assert.ok(first.api.notificationHtml().includes('data-action="z-view-sales"'));first.toasts[0].o.action.onClick();assert.equal(first.window.openedDay,'2026-09-30');checks+=2;
+ assert.ok(first.api.notificationHtml().includes('data-action="z-view-sales"'));assert.ok(first.api.notificationHtml().includes('<bdi>32.00 MAD</bdi>')||first.api.notificationHtml().includes('<bdi>32,00 MAD</bdi>'),'amounts are isolated from RTL counts and labels');first.toasts[0].o.action.onClick();assert.equal(first.window.openedDay,'2026-09-30');checks+=3;
  await first.api.showDashboard();assert.equal(first.toasts.length,1);let reload=instance(lang,gap);await reload.api.showDashboard();assert.equal(reload.toasts.length,0,'re-entry does not nag even after a reload');checks+=2;
  const matched={...gap,source:'live-ledger',reportedCents:0,comparisonCents:0,gapCents:0,missingCount:0};let resolved=instance(lang,matched);await resolved.api.showDashboard();assert.equal(resolved.toasts.length,0);assert.ok(resolved.api.notificationHtml().includes('resolved'));assert.equal(resolved.api.referenceText(matched),'');checks+=3;
  // The same discrepancy stays acknowledged after resolution, while a new amount gets one toast.

@@ -1789,7 +1789,7 @@ ar: {
         body: `
           <div class="kf-group">
             <label class="kf-label">${s.email_label}</label>
-            <input class="kf-input" placeholder="rachid@cafeatlas.ma" />
+            <input class="kf-input" placeholder="you@yourbusiness.com" />
           </div>
           <div class="kf-group">
             <label class="kf-label">${s.password_label}</label>
@@ -3432,7 +3432,8 @@ ar: {
     ]),
 
     'profile-menu': (el) => menu(el, [
-      { head: ((window.KiwiMe && window.KiwiMe.name) || (window.KiwiEnv?.isReal?.() ? '' : 'Rachid Benhima')).toUpperCase() },
+      { head: ((window.KiwiMe && window.KiwiMe.name) || (window.KiwiEnv?.isReal?.()
+        || (window.Capacitor?.isNativePlatform?.() && !window.KiwiIdentity?.state) ? '' : 'Rachid Benhima')).toUpperCase() },
       { label: tr({fr:'Mon profil', en:'My profile', ar:'ملفي الشخصي'}), icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M4 21v-2a4 4 0 014-4h8a4 4 0 014 4v2"/></svg>', onClick: () => handlers['account-profile'] && handlers['account-profile']() },
       { label: tr({fr:'Paramètres', en:'Settings', ar:'الإعدادات'}), icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>', onClick: () => handlers.settings && handlers.settings() },
       { label: tr({fr:document.documentElement.classList.contains('kiwi-native') ? 'Mon Kiwi' : 'My Kiwi', en:'My Kiwi', ar:'Kiwi الخاص بي'}), icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>', onClick: () => handlers['account-billing'] && handlers['account-billing']() },

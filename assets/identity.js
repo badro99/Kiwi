@@ -167,9 +167,9 @@
 
     // Sidebar profile chip — the name the owner sees they're "connected as", + avatar.
     if (id.name) {
-      setText(document.querySelector('.merchant .n'), id.name);
-      var av = document.querySelector('.merchant .avatar');
-      if (av) av.textContent = initialsOf(id.name);
+      document.querySelectorAll('.merchant .n').forEach(el => setText(el, id.name));
+      document.querySelectorAll('.merchant .avatar').forEach(el => { el.textContent = initialsOf(id.name); });
+      document.querySelectorAll('.vexel-topbar-merchant').forEach(el => { el.setAttribute('aria-label', id.name); });
     }
   }
 
@@ -194,16 +194,14 @@
     for (var i = 0; i < greets.length; i++) { greets[i].textContent = 'Bonjour,'; if (greets[i].removeAttribute) greets[i].removeAttribute('data-i18n'); }
     var subs = document.querySelectorAll('[data-kiwi-greet-sub], .kiwi-greet-sub');
     for (var s = 0; s < subs.length; s++) subs[s].textContent = biz ? (biz + ' · service ouvert') : 'service ouvert';
-    var nameEl = document.querySelector('.merchant .n');
-    if (nameEl) nameEl.textContent = '·';
-    var av = document.querySelector('.merchant .avatar');
-    if (av) av.textContent = '·';
+    document.querySelectorAll('.merchant .n, .merchant .avatar').forEach(el => { el.textContent = '·'; });
+    document.querySelectorAll('.vexel-topbar-merchant').forEach(el => { el.setAttribute('aria-label', '·'); });
   }
   function runNeutral() {
     var go = function () {
       if (isRealSession() || (!gateSettled && window.Capacitor?.isNativePlatform?.())) { if (window.KiwiMe) apply(window.KiwiMe); else neutralize(); }
-      else { setText(document.querySelector('.merchant .n'), 'Rachid Benhima');
-        setText(document.querySelector('.merchant .avatar'), 'RB'); }
+      else { document.querySelectorAll('.merchant .n').forEach(el => setText(el, 'Rachid Benhima'));
+        document.querySelectorAll('.merchant .avatar').forEach(el => setText(el, 'RB')); }
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go);
     else go();

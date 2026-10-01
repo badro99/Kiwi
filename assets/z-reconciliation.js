@@ -225,13 +225,30 @@
   function saveHistory(value) { try { localStorage.setItem(storageKey(),JSON.stringify(value)); } catch (_) {} }
   function currentAlert() { var s=reference(); return needsAttention(s) ? {summary:s,text:referenceText(s)} : null; }
   function esc(v) { return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function notificationDetail(s) {
+    const bdi = value => '<bdi>'+esc(value)+'</bdi>';
+    const line = value => '<div style="margin-top:8px">'+value+'</div>';
+    let html = bdi(s.day) + (s.terminalIds?.length ? ' · '+esc(word('till'))+' '+s.terminalIds.map(id=>bdi(String(id).slice(-6))).join(', ') : '');
+    if (s.ambiguous) html += line(esc(word(s.ambiguousReason==='cutoff-conflict'?'boundary':'legacy')));
+    else if (s.reportedCents != null) {
+      html += '<div style="display:grid;gap:4px;margin-top:10px">';
+      [['totals',s.reportedCents],['recorded',s.comparisonCents ?? s.recordedCents],['gap',s.gapCents]].forEach(([key,cents])=>{
+        html += '<div>'+esc(word(key))+': <strong style="font-weight:600">'+bdi(amount(cents))+'</strong></div>';
+      });
+      html += '</div>';
+    }
+    [[s.missingCount,'pending'],[s.blocked?.length,'rejected'],[s.unqueuedCount,'unqueued'],[s.mismatchedCount,'mismatch']].forEach(([n,key])=>{
+      if (Number(n)>0) html += line(bdi(n)+' '+esc(word(key)));
+    });
+    return html + line(esc(word('next')));
+  }
   function notificationHtml() {
     var a=currentAlert(), past=history();
     if (!a && !(past.resolved && reference()?.day===past.day)) return '';
     var title=a?word('title'):word('resolved'), text=a?a.text:past.day+' · '+word('resolvedDetail');
     return '<div class="notif '+(a?'unread':'resolved')+'" id="kiwi-z-reconciliation-alert" role="status">'
       +'<div class="n-ico" style="background:var('+(a?'--warn-soft':'--mint-soft')+');color:var('+(a?'--warn-ink':'--atlas')+');"><span aria-hidden="true" style="display:block;width:20px;height:20px;background:currentColor;-webkit-mask:url(assets/icons/material/'+(a?'warning':'task_alt')+'.svg) center/contain no-repeat;mask:url(assets/icons/material/'+(a?'warning':'task_alt')+'.svg) center/contain no-repeat"></span></div>'
-      +'<div class="n-body"><div class="n-title" data-i18n="z.'+(a?'title':'resolved')+'">'+esc(title)+'</div><div class="n-desc">'+esc(text)+'</div>'
+      +'<div class="n-body"><div class="n-title" data-i18n="z.'+(a?'title':'resolved')+'">'+esc(title)+'</div><div class="n-desc">'+(a?notificationDetail(a.summary):esc(text))+'</div>'
       +'<button type="button" class="kb ghost" style="margin-top:10px;min-height:44px" data-action="z-view-sales" data-i18n="z.view">'+esc(word('view'))+'</button></div></div>';
   }
   function viewSales() {

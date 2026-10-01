@@ -89,7 +89,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=44',
+  '/assets/interactive.js?v=45',
   '/assets/features.js?v=8',
   '/assets/invoicing.css?v=7',
   '/assets/invoicing.js?v=9',
@@ -199,7 +199,7 @@ var SHELL = [
      caisse ET l'écran cuisine passent par lui : absent, l'un des deux lierait un
      nouveau commerçant par-dessus les données de l'ancien. */
   '/assets/pairing-commit.js?v=2',
-  '/assets/identity.js?v=7',
+  '/assets/identity.js?v=8',
   '/assets/caisse-link.js?v=10',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
