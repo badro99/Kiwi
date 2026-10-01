@@ -38,7 +38,7 @@
       newShort: 'Nouveau client', loyalty: 'Fidélité', emptyTitle: 'Votre carnet est encore vide', emptyText: 'Ajoutez une fiche ici, ou enregistrez un client sur la caisse : il apparaîtra automatiquement.', noMatch: 'Aucun client ne correspond', noMatchText: 'Essayez un autre nom, numéro ou segment.', clear: 'Tout afficher', noneYet: 'Aucun pour l’instant', ofBook: 'du carnet', shared: 'Partagé avec la caisse', currency: 'MAD',
       form: { title: 'Nouveau client', sub: 'La fiche rejoint le carnet partagé, avec ou sans caisse.', save: 'Ajouter', cancel: 'Annuler',
         needNameOrPhone: 'Renseignez au moins un nom ou un numéro.', badPhone: 'Numéro invalide · pour l’étranger, ajoutez + et l’indicatif pays.',
-        consentRequired: 'Le consentement est requis · cochez la case WhatsApp / SMS pour enregistrer.', alreadyExists: 'Client déjà enregistré', added: 'Client ajouté' } },
+        consentHint: 'Facultatif · cochez uniquement les canaux acceptés par le client pour les communications marketing.', alreadyExists: 'Client déjà enregistré', added: 'Client ajouté' } },
     en: { title: 'Customers', sub: 'The full book · contacts, loyalty and consent.',
       search: 'Search name, phone or email…', export: 'Export (CSV)', campaign: 'Campaign', program: 'Loyalty program', newClient: '+ New customer', total: 'customers', withEmail: 'with email', withPhone: 'with phone', consented: 'contactable',
       seg: { all: 'All', reg: 'Regulars', vip: 'VIP', new: 'New', win: 'Dormant' },
@@ -50,7 +50,7 @@
       newShort: 'New customer', loyalty: 'Loyalty', emptyTitle: 'Your book is still empty', emptyText: 'Add a record here, or save a customer on the till: it shows up here automatically.', noMatch: 'No customer matches', noMatchText: 'Try another name, number or segment.', clear: 'Show all', noneYet: 'None yet', ofBook: 'of the book', shared: 'Shared with the till', currency: 'MAD',
       form: { title: 'New customer', sub: 'The record joins the shared book, with or without a till.', save: 'Add', cancel: 'Cancel',
         needNameOrPhone: 'Enter at least a name or a phone number.', badPhone: 'Invalid number · abroad, add + and the country code.',
-        consentRequired: 'Consent is required · tick WhatsApp / SMS to save.', alreadyExists: 'Customer already on file', added: 'Customer added' } },
+        consentHint: 'Optional · select only the channels the customer has agreed to for marketing messages.', alreadyExists: 'Customer already on file', added: 'Customer added' } },
     ar: { title: 'العملاء', sub: 'الدفتر الكامل · جهات الاتصال والوفاء والموافقة.',
       search: 'ابحث بالاسم أو الهاتف أو البريد…', export: 'تصدير (CSV)', campaign: 'حملة', program: 'برنامج الوفاء', newClient: '+ عميل جديد', total: 'عميل', withEmail: 'ببريد', withPhone: 'بهاتف', consented: 'قابلون للتواصل',
       seg: { all: 'الكل', reg: 'دائمون', vip: 'كبار', new: 'جدد', win: 'خاملون' },
@@ -62,7 +62,7 @@
       newShort: 'عميل جديد', loyalty: 'الوفاء', emptyTitle: 'دفترك ما زال فارغاً', emptyText: 'أضف بطاقة هنا، أو سجّل عميلاً على الصندوق وسيظهر هنا تلقائياً.', noMatch: 'لا يوجد عميل مطابق', noMatchText: 'جرّب اسماً أو رقماً أو فئة أخرى.', clear: 'عرض الكل', noneYet: 'لا أحد بعد', ofBook: 'من الدفتر', shared: 'مشترك مع الصندوق', currency: 'درهم',
       form: { title: 'عميل جديد', sub: 'ينضم الملف إلى الدفتر المشترك، بالصندوق أو بدونه.', save: 'إضافة', cancel: 'إلغاء',
         needNameOrPhone: 'أدخل الاسم أو رقم الهاتف على الأقل.', badPhone: 'رقم غير صالح · للخارج أضف + ورمز البلد.',
-        consentRequired: 'الموافقة مطلوبة · حدّد واتساب / SMS للحفظ.', alreadyExists: 'العميل مسجل مسبقاً', added: 'تمت إضافة العميل' } },
+        consentHint: 'اختياري · حدّد فقط القنوات التي وافق العميل على استخدامها للرسائل التسويقية.', alreadyExists: 'العميل مسجل مسبقاً', added: 'تمت إضافة العميل' } },
   };
 
   function genderLabel(value) {
@@ -209,6 +209,7 @@
     '.cd-f{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--n-600);min-width:0;}',
     '.cd-f input,.cd-f select{padding:11px 12px;border:1px solid var(--n-200);border-radius:10px;font-size:14px;background:var(--surface);color:var(--ink);min-width:0;}',
     '.cd-f input:focus,.cd-f select:focus{outline:none;border-color:var(--atlas);box-shadow:0 0 0 3px rgba(11,110,79,.12);}',
+    '.cd-consent-hint{font-size:13px;line-height:1.5;color:var(--ink);margin:14px 0 0;}',
     '.cd-f-check{display:flex;align-items:center;gap:8px;font-size:13px;margin-top:12px;cursor:pointer;}',
     '.cd-f-check input{width:17px;height:17px;accent-color:var(--atlas);flex:none;}',
     '.cd-f-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}',
@@ -423,8 +424,9 @@
         '<label class="cd-f"><span>' + esc(T.gender) + '</span><select id="cdn-gender"><option value=""></option>' + ['Femme','Homme','Autre'].map(function (g) { return '<option value="' + g + '">' + esc(genderLabel(g)) + '</option>'; }).join('') + '</select></label>' +
         hotelBox +
         fld('cdn-notes', T.notes, inp('cdn-notes', '', '')) +
-        '</div><label class="cd-f-check"><input type="checkbox" id="cdn-consent"' + (hotel ? '' : ' checked') + '><span>' + esc(T.consentWa) + (hotel ? '' : ' · requis CNDP 09-08') + '</span></label>' +
-        '<label class="cd-f-check"><input type="checkbox" id="cdn-consent-email"><span>' + esc(T.consentEmail) + '</span></label>' +
+        '</div><p class="cd-consent-hint" id="cdn-consent-hint">' + esc(F.consentHint) + '</p>' +
+        '<label class="cd-f-check"><input type="checkbox" id="cdn-consent" aria-describedby="cdn-consent-hint"><span>' + esc(T.consentWa) + '</span></label>' +
+        '<label class="cd-f-check"><input type="checkbox" id="cdn-consent-email" aria-describedby="cdn-consent-hint"><span>' + esc(T.consentEmail) + '</span></label>' +
         '<div class="cd-f-actions"><button class="cd-exp" data-close>' + esc(F.cancel) + '</button><button class="cd-exp cd-new" data-save>' + esc(F.save) + '</button></div>' });
       var val = function (sel) { var n = m.el.querySelector(sel); return n ? String(n.value || '').trim() : ''; };
       m.el.addEventListener('click', function (e) {
@@ -434,7 +436,6 @@
         if (!name && !phone) { Kiwi.toast && Kiwi.toast(F.needNameOrPhone, { type: 'warn' }); return; }
         if (phone && window.KiwiPhone && !window.KiwiPhone.valid(phone)) { Kiwi.toast && Kiwi.toast(F.badPhone, { type: 'warn' }); return; }
         var consent = !!m.el.querySelector('#cdn-consent').checked;
-        if (!hotel && !consent) { Kiwi.toast && Kiwi.toast(F.consentRequired, { type: 'warn' }); return; }
         if (phone) {
           var dupe = KiwiClients.findByPhone(phone);
           if (dupe) { m.close(); openDetail(all.filter(function (c) { return c.id === dupe.id; })[0] || dupe, T); Kiwi.toast && Kiwi.toast(F.alreadyExists, { type: 'info' }); return; }
