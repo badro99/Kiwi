@@ -99,6 +99,17 @@
       }
     } catch (_) {}
   }
+  function pairedVenueData() {
+    try {
+      var pv = (window.KiwiCaissePairing && KiwiCaissePairing.pairedVenue && KiwiCaissePairing.pairedVenue())
+        || (window.KiwiPlatform && KiwiPlatform.pairedVenue && KiwiPlatform.pairedVenue());
+      if (!pv) {
+        var raw = ls('kiwiPairedVenue');
+        if (raw) pv = JSON.parse(raw);
+      }
+      return pv || null;
+    } catch (_) { return null; }
+  }
   function bookId() {
     // 1) DASHBOARD: the store currently being looked at. This outranks the pin
     //    below because kiwiLiveMerchant is a single global — on an account with
@@ -115,21 +126,37 @@
         if (cs) { adoptLegacyBook(cs); return cs; }
       }
     } catch (_) {}
-    // 2) the merchant slug, written on both sides at pairing — the reliable spine.
-    var m = ls('kiwiLiveMerchant'); if (m) return m;
-    // 3) caisse: the paired venue.
+    // 2) CAISSE: when running on a paired till (or in an active POS session), the
+    //    till's own pairing identity (kiwiPairedVenue) MUST outrank the browser-wide
+    //    kiwiLiveMerchant! Otherwise, an operator who previously inspected another
+    //    store (e.g. Amira Café) in the dashboard leaves kiwiLiveMerchant pointing
+    //    to that other store, which caused the boutique till to read the café's
+    //    clients instead of the boutique's clients (#0154).
     try {
-      var pv = window.KiwiCaissePairing && KiwiCaissePairing.pairedVenue && KiwiCaissePairing.pairedVenue();
-      if (pv && (pv.merchant || pv.venueId)) return pv.merchant || pv.venueId;
+      var isPaired = ls('kiwiPaired') === '1';
+      var pid = activePosId();
+      if (isPaired || pid) {
+        var pv = pairedVenueData();
+        if (pv && (pv.merchant || pv.venueId || pv.slug)) {
+          return pv.merchant || pv.venueId || pv.slug;
+        }
+      }
     } catch (_) {}
-    // 4) dashboard: the current venue id (pre-identity fallback).
+    // 3) the merchant slug, written on both sides at pairing — the reliable spine.
+    var m = ls('kiwiLiveMerchant'); if (m) return m;
+    // 4) caisse: paired venue fallback.
+    var pvFallback = pairedVenueData();
+    if (pvFallback && (pvFallback.merchant || pvFallback.venueId || pvFallback.slug)) {
+      return pvFallback.merchant || pvFallback.venueId || pvFallback.slug;
+    }
+    // 5) dashboard: the current venue id (pre-identity fallback).
     try { var v = KiwiStore.currentVenue && KiwiStore.currentVenue(); if (v) return v; } catch (_) {}
-    // 5) demo verticals (unpaired PIN 0002-0015). A boutique/spa/resto demo maps to
+    // 6) demo verticals (unpaired PIN 0002-0015). A boutique/spa/resto demo maps to
     //    the SAME dashboard venue id its catalogue already uses (maisonMansour…), so
     //    the caisse and the dashboard share ONE client book per store — one brain,
     //    exactly like the boutique inventory. Verticals with no dashboard twin get a
     //    local demo-<id> book.
-    var pid = activePosId(); if (pid) return DEMO_VENUE_BY_POS[pid] || ('demo-' + pid);
+    var pid2 = activePosId(); if (pid2) return DEMO_VENUE_BY_POS[pid2] || ('demo-' + pid2);
     return null;
   }
   // caisse vertical → the dashboard demo venue id (venues.js REAL_VENUES).
@@ -148,10 +175,8 @@
 
   /* ── the store's trade, for the default fidelity mechanic ──────────────── */
   function venueMeta() {
-    try {
-      var pv = window.KiwiCaissePairing && KiwiCaissePairing.pairedVenue && KiwiCaissePairing.pairedVenue();
-      if (pv) return { type: pv.type || '', subtype: pv.subtype || '' };
-    } catch (_) {}
+    var pv = pairedVenueData();
+    if (pv) return { type: pv.type || '', subtype: pv.subtype || '' };
     try {
       var d = window.KiwiVenue && KiwiVenue.getCurrentVenueData && KiwiVenue.getCurrentVenueData();
       if (d) return { type: d.type || d.kind || '', subtype: d.subtype || d.trade || '' };
@@ -478,7 +503,7 @@
    * Merge is last-write-wins on each record's `updated` clock. ─────────────────── */
   function realEnv() { try { return !!(window.KiwiEnv && KiwiEnv.isReal && KiwiEnv.isReal()); } catch (_) { return false; } }
   function syncable(book) {
-    return (ls('kiwiLive') === '1' || realEnv()) && !!book && !isDemoBook(book) && !SEED_VENUES[book];
+    return (ls('kiwiLive') === '1' || ls('kiwiPaired') === '1' || realEnv()) && !!book && !isDemoBook(book) && !SEED_VENUES[book];
   }
   function curKey(book) { return 'kiwi:clients-cur:v1:' + book; }
   function getCursor(book) { var n = Number(ls(curKey(book))); return n > 0 ? n : 0; }
@@ -740,6 +765,10 @@
    * Le garde-fou de profondeur évite qu'une réponse incohérente ne fasse
    * tourner la boucle sans fin. */
   function pull(book, cb, depth) {
+    // Tolerate pull(cb): the till modals call KiwiClients.pull(callback).
+    // Without this the callback (a function) becomes the merchant key and the
+    // till fetches /api/clients?merchant=function… instead of its own book.
+    if (typeof book === 'function') { depth = cb; cb = book; book = null; }
     book = book || bookId();
     if (!syncable(book)) { if (cb) cb(false); return; }
     var since = getCursor(book);
@@ -802,7 +831,7 @@
 
   // Kick the sync loop, and (re)start it the moment a device goes live / pairs.
   window.addEventListener('storage', function (e) {
-    if (e && (e.key === 'kiwiLive' || e.key === 'kiwiLiveMerchant' || e.key === 'kiwiPaired')) startSync();
+    if (e && (e.key === 'kiwiLive' || e.key === 'kiwiLiveMerchant' || e.key === 'kiwiPaired' || e.key === 'kiwiPairedVenue')) startSync();
   });
   startSync();
 })();

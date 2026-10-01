@@ -2786,14 +2786,28 @@
     $('#mz-app-no', el).onclick = () => toast(`${STAFF.conseil.name} n'est pas habilitée, seule la gérante approuve une remise`);
   }
 
-  /* ═══════════════════════ CLIENTE — phone-first (modal du ticket) ═══════ */
+  /* ═══════════════════════ CLIENTE — phone & name search (modal du ticket) ═══════ */
+  function foldClientText(s) {
+    return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  }
   function clienteHits(q) {
-    const digits = (q || '').replace(/\D/g, '');
-    const ql = (q || '').toLowerCase();
+    const raw = String(q || '').trim();
     const src = clientList();
-    return !q ? src : src.filter((c) =>
-      (digits && (c.phone || '').replace(/\D/g, '').includes(digits)) ||
-      (!digits && c.name.toLowerCase().includes(ql)));
+    if (!raw) return src;
+    const qFold = foldClientText(raw);
+    const digits = raw.replace(/\D/g, '');
+    return src.filter((c) => {
+      if (foldClientText(c.name).includes(qFold)) return true;
+      if (c.email && foldClientText(c.email).includes(qFold)) return true;
+      if (digits.length >= 2) {
+        const cDigits = (c.phone || '').replace(/\D/g, '');
+        if (cDigits.includes(digits)) return true;
+        const cLocal = cDigits.replace(/^212/, '0');
+        const qLocal = digits.replace(/^212/, '0');
+        if (cLocal && qLocal && (cLocal.includes(qLocal) || qLocal.includes(cLocal))) return true;
+      }
+      return false;
+    });
   }
   function clAvoirOf(c) {
     return activeAvoirs().find((a) => a.holderId === c.id) || null;
@@ -2802,14 +2816,30 @@
   function openClientModal() {
     const el = $('#mz-clientm', root);
     let mode = 'search';
+    if (window.KiwiClients && KiwiClients.pull) {
+      KiwiClients.pull((changed) => {
+        if (!changed || !root) return;
+        const i = $('#mz-cl-q', el);
+        if (i && $('#mz-client-veil.is-open', root)) {
+          const val = i.value;
+          render(val);
+          icons();
+          const next = $('#mz-cl-q', el);
+          if (next) { next.focus(); moveCaretEnd(next); }
+        }
+      });
+    }
     const render = (q) => {
       const hits = clienteHits(q);
+      const isDigits = (q || '').replace(/\D/g, '').length > (q || '').replace(/\d/g, '').trim().length;
+      const namePrefill = isDigits ? '' : (q || '').trim();
+      const phonePrefill = isDigits ? (q || '').trim() : '';
       el.innerHTML = `
         <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">Cliente</h3>
-        <p class="modal-subtle">En boutique on cherche par téléphone, la fiche porte les points et la taille.</p>
-        <div class="mz-phone-in"><i data-lucide="phone"></i>
-          <input id="mz-cl-q" inputmode="tel" placeholder="06… ou nom de la cliente" value="${esc(q || '')}" autocomplete="off" />
+        <p class="modal-subtle">Rechercher par nom ou par numéro de téléphone.</p>
+        <div class="mz-phone-in"><i data-lucide="search"></i>
+          <input id="mz-cl-q" type="text" enterkeyhint="search" autocorrect="off" autocapitalize="words" placeholder="Nom ou 06…" value="${esc(q || '')}" autocomplete="off" />
         </div>
         ${mode === 'search' ? `
           <div class="mz-cl-results">
@@ -2830,8 +2860,8 @@
             <button class="mz-btn ghost" id="mz-cl-guest">Cliente de passage, sans fiche</button>
           </div>` : `
           <div class="mz-cl-form">
-            <input class="mz-in" id="mz-cl-name" placeholder="Nom et prénom" value="${esc(/^[\d\s.+-]*$/.test(q || '') ? '' : (q || ''))}" />
-            <input class="mz-in" id="mz-cl-tel" inputmode="tel" autocomplete="tel" placeholder="06… / +33… (optionnel)" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
+            <input class="mz-in" id="mz-cl-name" placeholder="Nom et prénom" value="${esc(namePrefill)}" />
+            <input class="mz-in" id="mz-cl-tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="06… / +212… (optionnel)" value="${esc(phonePrefill)}" />
             <div class="mz-sheet-foot" style="margin-top:4px;">
               <button class="mz-btn secondary" id="mz-cl-back">Retour</button>
               <button class="mz-btn primary" id="mz-cl-create"><i data-lucide="check"></i>Créer la fiche</button>
@@ -2896,9 +2926,9 @@
     panel.innerHTML = `
       <div class="mz-clients mz-page">
         <header class="mz-head">
-          <div><h1>Clientes</h1><div class="mz-head-sub">Le téléphone d'abord, la fiche suit la cliente, pas le ticket</div></div>
+          <div><h1>Clientes</h1><div class="mz-head-sub">Rechercher par nom ou téléphone, la fiche suit la cliente</div></div>
           <div class="mz-search"><i data-lucide="search"></i>
-            <input id="mz-clv-q" inputmode="tel" placeholder="06… ou nom" value="${esc(q)}" /></div>
+            <input id="mz-clv-q" type="text" enterkeyhint="search" placeholder="Nom ou 06…" value="${esc(q)}" /></div>
         </header>
         <div class="mz-cl-scroll">
           <div class="mz-cl-grid">

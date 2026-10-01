@@ -238,8 +238,8 @@ var SHELL = [
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=4',
-  '/assets/clients-store.js?v=7',
-  '/assets/clients-book.js?v=19',
+  '/assets/clients-store.js?v=8',
+  '/assets/clients-book.js?v=20',
   '/assets/clients-directory.js?v=15',
   '/assets/menu-catalog.js?v=25',
   '/assets/stock-identity.js?v=2',
@@ -274,7 +274,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=15',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=9',
-  '/assets/pos-dispatch.js?v=60',
+  '/assets/pos-dispatch.js?v=61',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -287,8 +287,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=35',
-  '/assets/pos-boutique.js?v=35',
+  '/assets/pos-boutique.css?v=36',
+  '/assets/pos-boutique.js?v=36',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -320,8 +320,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=5',
   '/assets/pos-autre.css?v=5',
   '/assets/pos-autre.js?v=5',
-  '/assets/pos-maison.css?v=50',
-  '/assets/pos-maison.js?v=50',
+  '/assets/pos-maison.css?v=51',
+  '/assets/pos-maison.js?v=51',
   '/assets/caisse-pairing.js?v=25',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

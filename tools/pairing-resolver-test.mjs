@@ -891,8 +891,12 @@ function auditPairingKeyUsage() {
         if (ownerStart !== -1 && ownerEnd !== -1 && idx < ownerEnd) continue;
       }
 
-      // 4. All other production files: MUST be an allow-listed read
+      // 4. All other production files: MUST be an allow-listed read.
+      // Narrow exception: a storage-event key comparison (e.key === '…') routes
+      // cross-tab sync restarts; it never reads the key's VALUE, so it cannot
+      // leak or fork pairing identity (#0154 clients-store sync restart).
       const prefix = content.slice(0, idx);
+      if (/e\.key\s*===\s*$/.test(prefix)) continue;
       if (!READ_ALLOW_LIST.test(prefix)) {
         violations.push({ file: rel, line, snippet, reason: 'not an allow-listed read (getItem, ls, get, .has, parse, read)' });
       }
