@@ -318,6 +318,9 @@
    par minuteur, qui perdait la vente si l'écran carte était fermé trop tôt). */
 .mz-card-confirm { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
 .mz-card-confirm[hidden] { display: none; }
+/* #0155 · même groupe centré icône + libellé que la boutique (LTR et RTL). */
+.mz-card-confirm .cash-confirm { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-align: center; }
+.mz-card-confirm .cash-confirm svg { flex: none; }
 
 .mz-tk-lines { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 14px; display: flex; flex-direction: column; gap: 6px; }
 .mz-tk-empty {
@@ -1655,6 +1658,20 @@ body.is-pos .clockin-screen.mz-clockin { display: flex !important; }
 #pos-maison .mz-view:not([data-mz-panel="vente"]) {
   overflow: hidden;
   background: var(--paper-cream, #f7f5f0);
+}
+/* #0159 · même racine que la boutique : vendus et acomptes y injectent leur
+   contenu sans défileur propre et restaient figés. Le défilement vit sur la
+   vue elle-même (bloc, pas flex : sinon l'enfant unique s'étire et c'est lui
+   qui déborde). */
+#pos-maison .mz-view[data-mz-panel="vendus"].is-on,
+#pos-maison .mz-view[data-mz-panel="acomptes"].is-on {
+  display: block;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+@media (max-width: 420px) {
+  #pos-maison .mz-view[data-mz-panel="vendus"] .kx-kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 #pos-maison .mz-page {

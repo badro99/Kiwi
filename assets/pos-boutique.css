@@ -151,6 +151,17 @@
 .bq-offline-note[hidden] { display: none; }
 .bq-view { display: none; flex: 1; min-height: 0; }
 .bq-view.is-on { display: flex; }
+/* #0159 · la racine et .bq-main sont en overflow:hidden à hauteur du viewport :
+   chaque vue doit porter son propre défileur. Vente/scan/clientes/échanges/
+   inventaire en ont un ; vendus et acomptes n'en avaient pas, la page restait
+   figée sur téléphone comme sur le web. */
+.bq-view[data-bq-panel="vendus"].is-on,
+.bq-view[data-bq-panel="acomptes"].is-on { display: block; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+/* #0159 · sur téléphone la pile de 4 KPI reste lisible en 2 colonnes au lieu
+   d'une longue file d'une seule (ne touche pas au bureau). */
+@media (max-width: 420px) {
+  .bq-view[data-bq-panel="vendus"] .kx-kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 .bq-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; padding: 22px 22px 0; }
 .bq-head h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
@@ -327,6 +338,11 @@
    par minuteur, qui perdait la vente si l'écran carte était fermé trop tôt). */
 .bq-card-confirm { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
 .bq-card-confirm[hidden] { display: none; }
+/* #0155 · l'icône + le libellé restent un groupe centré (LTR comme RTL) : en
+   centrage texte seul, l'icône restait collée à gauche et le libellé, centré
+   sans elle, semblait décalé. */
+.bq-card-confirm .cash-confirm { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-align: center; }
+.bq-card-confirm .cash-confirm svg { flex: none; }
 
 .bq-tk-lines { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 14px; display: flex; flex-direction: column; gap: 6px; }
 .bq-tk-empty {

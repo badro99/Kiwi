@@ -2656,20 +2656,25 @@
 
   function renderScan() {
     const panel = $('[data-bq-panel="scan"]', root);
+    /* #0157 · dans l'application native il n'y a ni getUserMedia ni
+       BarcodeDetector : le message « ce navigateur… » y est faux. */
+    const inNativeApp = () => { try { return document.documentElement.classList.contains('kiwi-native'); } catch (_) { return false; } };
     panel.innerHTML = `
       <div class="bq-scan">
+        <header class="bq-head">
+          <div><h1>Scan produit</h1><div class="bq-head-sub">Scannez un article pour voir son prix, ses tailles et son stock. Rien n'est ajouté au ticket.</div></div>
+        </header>
         <div class="bq-scan-inner">
-          <header class="bq-head" style="padding:22px 0 0;">
-            <div><h1>Scan produit</h1><div class="bq-head-sub">Scannez un article pour voir son prix, ses tailles et son stock. Rien n'est ajouté au ticket.</div></div>
-          </header>
           <div class="bq-ean-in"><i data-lucide="scan-line"></i>
-            <input id="bq-ean" placeholder="Scannez ou tapez un code-barres…" autocomplete="off" />
+            <input id="bq-ean" placeholder="Scannez ou tapez un code-barres…" autocomplete="off" autocorrect="off" autocapitalize="off" enterkeyhint="go" />
           </div>
           <div class="bq-scan-or">ou</div>
           ${pvReal()
             ? (camSupported()
                 ? `<button class="bq-scan-mock" id="bq-scan-cam"><i data-lucide="camera"></i>Scanner avec la caméra</button>`
-                : `<div class="bq-scan-nocam">Ce navigateur ne sait pas lire un code-barres par la caméra. La douchette USB fonctionne, elle tape directement dans le champ ci-dessus.</div>`)
+                : (inNativeApp()
+                  ? `<div class="bq-scan-nocam">Caméra indisponible dans l'application : utilisez la douchette USB ou tapez le code ci-dessus.</div>`
+                  : `<div class="bq-scan-nocam">Ce navigateur ne sait pas lire un code-barres par la caméra. La douchette USB fonctionne, elle tape directement dans le champ ci-dessus.</div>`))
             : `<button class="bq-scan-mock" id="bq-scan-mock"><i data-lucide="scan-line"></i>Scanner un article (douchette démo)</button>`}
           <button class="bq-scan-diag" id="bq-scan-diag"><i data-lucide="activity"></i>Tester la douchette</button>
           <div class="bq-scan-stage" id="bq-scan-stage"><span id="bq-scan-stage-ean"></span><div class="bq-scan-laser"></div></div>
