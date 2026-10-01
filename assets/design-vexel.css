@@ -496,7 +496,11 @@ body.design-vexel .kiwi-ring-meta .slash {
  * literal rather than through --warning. */
 body.design-vexel .av.c,
 body.design-vexel .dot.warn,
-body.design-vexel [style*="D99A2B"] { background-color: var(--warning) !important; }
+/* Match painted backgrounds, not a card's --c staff accent or text color. */
+body.design-vexel [style*="background:#D99A2B"],
+body.design-vexel [style*="background: #D99A2B"],
+body.design-vexel [style*="background-color:#D99A2B"],
+body.design-vexel [style*="background-color: #D99A2B"] { background-color: var(--warning) !important; }
 
 /* The peer/benchmark bar sat at 58% white — brighter than the merchant's own
  * bar beside it, which inverted the comparison it exists to make. */

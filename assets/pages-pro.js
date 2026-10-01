@@ -4756,21 +4756,21 @@ function pdsEnsureCss() {
  * and the desktop plan see the change at once. The layout itself stays on a
  * computer or tablet. */
 const PDS_PHONE_STR = {
-  fr: { title: 'Affectation des tables', sub: (n, u) => `${n} tables · ${u} sans serveur`,
+  fr: { tables: 'tables', title: 'Affectation des tables', sub: (n, u) => `${n} tables · ${u} sans serveur`,
         note: 'Le plan de salle se dessine sur ordinateur ou tablette. Ici, touchez un serveur, puis ses tables.',
         noStaff: 'Aucun serveur dans l’équipe. Ajoutez-en un depuis Équipe, avec le rôle Serveur.',
         noTables: 'Aucune table sur le plan. Dessinez la salle depuis un ordinateur.',
         count: (n, c) => `${n} table${n > 1 ? 's' : ''} · ${c} couverts`, none: 'Aucune table',
         pick: 'Touchez les tables de ce serveur. Une table peut avoir jusqu’à 3 serveurs.',
         full: 'Cette table a déjà 3 serveurs', unassigned: 'Sans serveur', close: 'Fermer' },
-  en: { title: 'Table assignment', sub: (n, u) => `${n} tables · ${u} unassigned`,
+  en: { tables: 'tables', title: 'Table assignment', sub: (n, u) => `${n} tables · ${u} unassigned`,
         note: 'The floor plan is drawn on a computer or tablet. Here, tap a server, then their tables.',
         noStaff: 'No servers in the team yet. Add one from Team with the Server role.',
         noTables: 'No tables on the plan yet. Draw the room from a computer.',
         count: (n, c) => `${n} table${n === 1 ? '' : 's'} · ${c} covers`, none: 'No tables',
         pick: 'Tap this server’s tables. A table can have up to 3 servers.',
         full: 'This table already has 3 servers', unassigned: 'Unassigned', close: 'Close' },
-  ar: { title: 'توزيع الطاولات', sub: (n, u) => `${n} طاولة · ${u} بدون نادل`,
+  ar: { tables: 'طاولات', title: 'توزيع الطاولات', sub: (n, u) => `${n} طاولة · ${u} بدون نادل`,
         note: 'يُرسم مخطط القاعة من الحاسوب أو اللوحة. هنا اختر نادلاً ثم طاولاته.',
         noStaff: 'لا يوجد نُدُل في الفريق بعد. أضف واحداً من صفحة الفريق بدور نادل.',
         noTables: 'لا توجد طاولات في المخطط بعد. ارسم القاعة من الحاسوب.',
@@ -4791,7 +4791,7 @@ function pdsPhoneBody(state, P, openSid) {
   const staffById = new Map(state.staff.map(s => [String(s.id), s]));
   let html = `<div class="pdsp">
     <p class="pdsp-note">${pdsEsc(P.note)}</p>
-    <div class="pdsp-sum"><b>${state.tables.length}</b> tables<span>·</span><b>${free}</b> ${pdsEsc(P.unassigned.toLowerCase())}</div>`;
+    <div class="pdsp-sum"><b>${state.tables.length}</b> ${pdsEsc(P.tables)}<span>·</span><b>${free}</b> ${pdsEsc(P.unassigned.toLowerCase())}</div>`;
   if (!state.tables.length) return html + `<div class="pdsp-empty">${pdsEsc(P.noTables)}</div></div>`;
   if (!state.staff.length) return html + `<div class="pdsp-empty">${pdsEsc(P.noStaff)}</div></div>`;
   html += '<div class="pdsp-list">';

@@ -1255,6 +1255,7 @@ section('Whole-project regressions');
     'native-pass5-test.mjs',
     'native-pass7-test.mjs',
     'native-demo-ledger-test.mjs',
+    'native-qa-six-fixes-test.mjs',
     'native-store-readiness-test.mjs',
     'native-host-bridge-test.mjs',
     'account-deletion-test.mjs',
