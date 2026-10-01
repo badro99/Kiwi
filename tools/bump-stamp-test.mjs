@@ -74,7 +74,9 @@ const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
   ok(/CACHE = 'kiwi-app-v41'/.test(rd(dir, 'kiwi-sw.js')) && ['dashboard-pwa', 'caisse-pwa', 'employee-live'].every((b) => /\?v=41'/.test(rd(dir, `assets/${b}.js`))), 'bootstraps et CACHE portent la même génération (ce que pwa-shell-test vérifie sur le vrai dépôt)');
   const again = run(dir, ['--sw']);
   ok(again.status === 0 && /kiwi-app-v42/.test(rd(dir, 'kiwi-sw.js')) && /dashboard-pwa\.js\?v=4/.test(rd(dir, 'dashboard.html')), 'un second --sw avance encore d\'un cran (41 → 42, estampilles 3 → 4)');
-  fs.rmSync(dir, { recursive: true, force: true });
+  // Git maintenance and macOS file watchers may briefly race disposal. Retry
+  // cleanup only; every stamp/hook assertion above still runs exactly once.
+  fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
 
 /* B · le hook juge l'index, jamais l'arbre de travail */
@@ -157,7 +159,7 @@ const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
   git('add', 'assets/venues.js');
   const c5 = spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'skip'], { cwd: dir, encoding: 'utf8', env: { ...process.env, KIWI_SKIP_STAMP_HOOK: '1' } });
   ok(c5.status === 0, 'KIWI_SKIP_STAMP_HOOK=1 passe outre');
-  fs.rmSync(dir, { recursive: true, force: true });
+  fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
 
 console.log(`\n${failures.length ? '✗' : '✓'} ${passed} passed · ${failures.length} failed`);
