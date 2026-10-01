@@ -54,8 +54,8 @@ ok(/state\.tables\.find\(o => String\(o\.id\) === tid\)/.test(pagesPro), 'tappin
 ok(!/<section class="pdsp-srv/.test(pagesPro), 'server rows are not <section>, which global page styles inflate');
 
 // #0114 · menu rows and opaque editors
-ok(/u\('stepCount'/.test(menu) && /u\('availableOpt'\)/.test(menu), 'menu card footers are localised');
-ok(/\.mi-grid>\.mi-card\{[^}]*grid-template-areas/.test(css), 'menu items are compact rows on a phone');
+ok(/ui\('stepCount'/.test(menu) && /ui\('availableOpt'\)/.test(menu), 'menu card footers are localised');
+ok(fs.readFileSync('assets/catalog-workspace.css','utf8').includes('grid-template-columns:repeat(2,minmax(0,1fr))!important') && !/\.mi-grid\{grid-template-columns:minmax\(0,1fr\)/.test(css), 'ticket 0151 supersedes phone rows with shared two-column menu cards');
 ok(/\.kiwi-backdrop:not\(\.kiwi-native-order-sheet\) \.kiwi-modal\{[^}]*backdrop-filter:none/.test(css), 'create and edit sheets are opaque on a phone');
 
 // #0115 · the roster retains desktop detail but becomes a phone-first person list.

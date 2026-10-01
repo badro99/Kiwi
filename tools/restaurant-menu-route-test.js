@@ -15,7 +15,7 @@ assert.ok(!source.includes("if(!subs.length&&all.length<2)return ''"),
    directCardAction(). On n'épingle donc plus le NOM de l'attribut d'hier : on
    exige que le bouton visible et la branche qui l'exécute portent le même
    commandement — c'est l'accord entre les deux qui garde quelque chose. */
-assert.ok(source.includes('data-rmw-command="duplicate"') && source.includes("command==='duplicate'"),
+assert.ok(source.includes("id:'reuse'") && source.includes("run:()=>window.Kiwi.handlers['rmw-formula-duplicate'](null,x.id)"),
   'saved composed menus expose a wired reuse action');
 assert.ok(source.includes("handlers['rmw-formula-duplicate']"),
   'the legacy delegated handler stays for surfaces that still emit data-action');
@@ -27,10 +27,12 @@ assert.ok(source.includes("Aucune formule enregistrée") && source.includes('Cop
   'the reuse controls stay visible even before the first formula template exists');
 assert.ok(source.includes('template.formula.slots') && source.includes('JSON.parse(JSON.stringify'),
   'reusing a saved formula copies its stages instead of sharing mutable state');
-['rmw-cat-move','rmw-cat-edit','rmw-cat-delete','rmw-sub-rename','rmw-sub-delete'].forEach((action) => {
+['rmw-sub-rename','rmw-sub-delete'].forEach((action) => {
   assert.ok(source.includes(`data-action="${action}"`) && source.includes(`H['${action}']`),
     `${action} must have a visible control and a wired handler`);
 });
+
+assert.ok(source.includes('data-action="rmw-section-actions"') && source.includes("run:openSectionReorder") && source.includes('S().moveCategory(id,Math.sign(delta))') && source.includes('run:()=>openCategory(selected)') && source.includes("handlers['rmw-cat-delete'](null,selected.id)"), 'section sheet retains reorder, rename and delete without the ghost toolbar');
 
 /* Builds an isolated DOM/window stand-in and evaluates the workspace inside it.
  * `venueType` drives isRestaurant(); the returned handle exposes the body class

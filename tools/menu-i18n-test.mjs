@@ -187,9 +187,8 @@ for (const f of ['assets/kitchen-print-queue.js', 'assets/food-production-print.
   assert(!/:has\(\.rmw-formula-builder/.test(ws) && !/1120px/.test(ws) && /\.rmw-item-workspace \.kiwi-modal[^{]*\{max-height:calc\(100vh - 24px\);display:grid/.test(ws), 'éditeur d’article : une seule largeur (680 px) pour tout article, formules comprises ; le corps défile dans une grille plafonnée à l’écran');
 }
 
-// Pied de carte : la pastille nutrition compacte (point + mot, kcal si complet),
-// jamais la pastille longue « Nutrition incomplète » qui passait sous Disponible.
-assert(/u\('optGroupCount',\{n:\(x\.opts\|\|\[\]\)\.length\}\)\)\}\$\{nutritionCardPill\(x\)\}<\/span>/.test(ws) && /\.mi-card-foot>span:first-child\{[^}]*overflow:hidden;text-overflow:ellipsis/.test(ws) && !/· \$\{nutritionPill\(x\)\}<\/span><span class="mi-card-acts"/.test(ws), 'carte article : pastille nutrition compacte dans le pied, premier span tronqué au lieu de déborder sous le bouton Disponible');
+// Cards retain compact nutrition and option metadata without overlapping the action target.
+assert(ws.includes('${nutritionCardPill(x)}') && ws.includes('catalog-item-meta') && fs.readFileSync('assets/catalog-workspace.css','utf8').includes('.catalog-item-meta { display:block;max-width:'), 'card metadata remains compact and constrained beside a separate action button');
 
 console.log(failures ? `\nmenu-i18n-test : ${failures} échec(s)` : '\nmenu-i18n-test : tout passe');
 process.exit(failures ? 1 : 0);

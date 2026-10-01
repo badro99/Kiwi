@@ -108,7 +108,7 @@ ok(/sheetCounter/.test(sheetSrc) && /sheetSign/.test(sheetSrc) && /sheetFoot/.te
 const printSrc = extractFn('printCountSheet');
 ok(/frame\.contentWindow\.print\(\)/.test(printSrc) && /frame\.remove\(\)/.test(printSrc), 'print uses the hidden-iframe pattern and cleans up');
 ok(/H\['stock-count-sheet'\] = \(\) => openCountSheet\(\);/.test(src), 'stock-count-sheet handler registered in Kiwi.handlers');
-ok(/data-action="stock-count-sheet"/.test(src), 'header carries the Feuille d\'inventaire button');
+ok(src.includes("['stock-count-sheet',t('btnSheet')]") && /data-catalog-stock=/.test(src) && /H\[button\.dataset\.catalogStock\]/.test(src), 'inventory sheet is reachable through the single stock tools sheet');
 ok(/mCountLast/.test(extractFn('openPhysicalCount')), 'count modal surfaces the last inventory date + variance');
 
 // ── 6. i18n — every new key exists in FR + EN + AR ──────────────────────────

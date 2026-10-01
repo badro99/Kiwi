@@ -808,22 +808,7 @@ html.kiwi-native :is(.st-cat-pill,.mi-pill,.eq-pill,.st-tab,.sc-pill,.cf-tab,.ch
   html.kiwi-native[data-theme="dark"] .kiwi-backdrop .kiwi-modal :is(.kf-input,select,textarea){background:#1C2420!important}
 }
 
-/* Menu items: a two-line row on a phone (name and price, then section, badges, actions and
-   availability) instead of a 180 pt card, so a ten-item menu fits on about two screens (ticket #0114). */
-@media (max-width:640px){
-  html.kiwi-native .mi-grid{grid-template-columns:minmax(0,1fr)!important;gap:8px!important}
-  html.kiwi-native .mi-grid>.mi-card{display:grid!important;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name price" "top foot";align-items:center;gap:6px 12px;padding:12px 12px 10px 14px!important;border-radius:14px!important;min-height:0!important}
-  html.kiwi-native .mi-grid>.mi-card>.rmw-media{display:none!important}
-  html.kiwi-native .mi-grid>.mi-card>.mi-card-name{grid-area:name;margin:0!important;font-size:15px!important;line-height:1.25!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  html.kiwi-native .mi-grid>.mi-card>.mi-card-price-row{grid-area:price;margin:0!important;justify-self:end}
-  html.kiwi-native .mi-grid>.mi-card .mi-card-price{font-size:15px!important;line-height:1.25!important}
-  html.kiwi-native .mi-grid>.mi-card .mi-card-station{display:none!important}
-  html.kiwi-native .mi-grid>.mi-card>.mi-card-top{grid-area:top;min-width:0;align-items:center!important;justify-content:flex-start!important;gap:6px!important;flex-wrap:nowrap;overflow:hidden}
-  html.kiwi-native .mi-grid>.mi-card .mi-card-cat{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-  html.kiwi-native .mi-grid>.mi-card>.mi-card-foot{grid-area:foot;margin:0!important;padding:0!important;border:0!important;justify-content:flex-end}
-  html.kiwi-native .mi-grid>.mi-card>.mi-card-foot>span:first-child{display:none}
-  html.kiwi-native .mi-grid>.mi-card .rmw-card-menu{order:9;margin-inline-start:auto}
-}
+/* Menu cards now share the responsive catalog workspace, including the native shell. */
 
 /* Customers on a phone (ticket #0109): the tab bar and the top bar already name the page, so drop the
    desktop page head; four compact counters in one row instead of four half-screen cards; badge colours

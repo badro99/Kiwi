@@ -929,9 +929,10 @@ if (!rmwCardMatch) {
     const cash = (n) => n + ' MAD';
     const ic = () => '';
     const stateUi = (_key, fallback) => fallback;
-    /* ui() reste volontairement absente : card() porte son propre repli de
-       libelles et c'est LUI qu'on veut voir tourner ici. La pastille nutrition
-       vit ailleurs, elle ne dit rien sur les formules. */
+    const t = s => s;
+    const catalogIcon = () => '';
+    const catalogText = (_key, fallback) => fallback;
+    const ui = (k,p) => k==='formula'?'FORMULE':k==='stepCount'? (p?.n||0)+' étape(s)':k==='optGroupCount'? (p?.n||0)+' groupe(s) d’options':k;
     const nutritionCardPill = () => '';
     let openItemMenu = '';
     ${rmwCardMatch[0]}

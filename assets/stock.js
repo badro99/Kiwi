@@ -976,6 +976,10 @@
     return v != null ? v : k;
   };
 
+  const catalogText=(key,fr)=>window.KiwiCatalogUI?.text(key,fr)||fr;
+  const catalogLabel=(key,fr)=>window.KiwiCatalogUI?.label(key,fr)||esc(fr);
+  const catalogIcon=(name)=>`<img class="catalog-icon" draggable="false" src="assets/icons/material/${name}.svg" alt="" aria-hidden="true"/>`;
+
   /* ═══════════════════════════════════════════════════════════════════════
    * State (resets on page refresh)
    * ═══════════════════════════════════════════════════════════════════════ */
@@ -1851,12 +1855,13 @@
     if (!root) return;
     stEnsureOverlay();      // le stock saisi par le commerçant, relu avant d'afficher
     root.removeAttribute('hidden');
-    root.innerHTML = `
+    const html = `
       ${renderHeader()}
       ${isFusion() ? renderVenueFilter() : ''}
       ${renderTabs()}
       <div class="st-tab-body">${renderTabBody()}</div>
     `;
+    if(window.KiwiCatalogUI){if(!window.KiwiCatalogUI.replace(root,html))return;}else root.innerHTML=html;
     enhanceAfterRender();
   }
 
@@ -1869,6 +1874,8 @@
       });
     });
     // Wire up search input
+    const sorter=document.querySelector('[data-stock-mobile-sort]');
+    if(sorter)sorter.onchange=()=>{stSortBy=sorter.value;rerenderTabBody();};
     const sb = document.querySelector('[data-stock-search-input]');
     if (sb) sb.addEventListener('input', (e) => { stSearch = e.target.value.toLowerCase(); rerenderTabBody(); });
     const wsb = document.querySelector('[data-stock-waste-search]');
@@ -1879,7 +1886,7 @@
 
   function rerenderTabBody() {
     const body = document.querySelector('.st-tab-body');
-    if (body) body.innerHTML = renderTabBody();
+    if(body){const html=renderTabBody();if(window.KiwiCatalogUI){if(!window.KiwiCatalogUI.replace(body,html))return;}else body.innerHTML=html;}
     enhanceAfterRender();
   }
 
@@ -1909,10 +1916,8 @@
           <div class="st-sub">${esc(subText)}</div>
         </div>
         <div class="st-head-acts">
-          <button class="st-btn" type="button" data-action="stock-scan-invoice">${svg('camera', 13)}<span>${esc(t('btnScan'))}</span></button>
-          <button class="st-btn" type="button" data-action="stock-count-sheet">${svg('download', 13)}<span>${esc(t('btnSheet'))}</span></button>
-          <button class="st-btn" type="button" data-action="stock-physical-count">${svg('clipboardList', 13)}<span>${esc(t('btnCount'))}</span></button>
-          <button class="st-btn primary" type="button" data-action="stock-add-item">${svg('plus', 13)}<span>${esc(t('btnAdd'))}</span></button>
+          <button class="st-btn primary" type="button" data-action="stock-add-item">${svg('plus',13)}<span>${esc(t('btnAdd'))}</span></button>
+          <button class="catalog-more" type="button" data-action="stock-workspace-actions" aria-label="${esc(catalogText('stockActions','Outils du stock'))}">${catalogIcon('tune')}</button>
         </div>
       </div>
     `;
@@ -3244,9 +3249,9 @@
   function renderItems() {
     const subNav = `
       <div class="st-item-subtabs" style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--n-200);padding-bottom:10px;">
-        <button class="st-cat-pill${stItemSubView === 'catalog' ? ' on' : ''}" type="button" data-action="stock-subview" data-subview="catalog" style="font-weight:600;">Catalogue des articles</button>
-        <button class="st-cat-pill${stItemSubView === 'waste' ? ' on' : ''}" type="button" data-action="stock-subview" data-subview="waste" style="font-weight:600;">Journal des pertes</button>
-        <button class="st-cat-pill${stItemSubView === 'counts' ? ' on' : ''}" type="button" data-action="stock-subview" data-subview="counts" style="font-weight:600;">Historique des inventaires</button>
+        <button class="st-cat-pill${stItemSubView === 'catalog' ? ' on' : ''}" type="button" data-action="stock-subview" data-subview="catalog" style="font-weight:600;">${catalogLabel('inventoryCatalog','Catalogue des articles')}</button>
+        <button class="st-cat-pill${stItemSubView === 'waste' ? ' on' : ''}" type="button" data-action="stock-subview" data-subview="waste" style="font-weight:600;">${catalogLabel('wasteJournal','Journal des pertes')}</button>
+        <button class="st-cat-pill${stItemSubView === 'counts' ? ' on' : ''}" type="button" data-action="stock-subview" data-subview="counts" style="font-weight:600;">${catalogLabel('countHistory','Historique des inventaires')}</button>
       </div>
     `;
 
@@ -3288,7 +3293,7 @@
         <div class="st-search-row">
           <div class="st-search-wrap">
             ${svg('search', 16)}
-            <input class="st-search" type="text" placeholder="${esc(t('searchPlaceholder'))}" value="${esc(stSearch)}" data-stock-search-input aria-label="Search inventory" />
+            <input class="st-search" type="text" placeholder="${esc(t('searchPlaceholder'))}" value="${esc(stSearch)}" data-stock-search-input aria-label="${esc(t('searchPlaceholder'))}" />
           </div>
           <div class="st-view-toggle">
             ${viewBtn('list', t('viewList'))}
@@ -3354,9 +3359,10 @@
   }
 
   function renderItemTable(items) {
-    if (items.length === 0) return `<div style="padding:24px; text-align:center; color:var(--n-500); font-size:13px;">Aucun article ne correspond aux filtres.</div>`;
+    if (items.length === 0) return `<div style="padding:24px; text-align:center; color:var(--n-500); font-size:13px;">${catalogLabel('noMatch','Aucun article ne correspond aux filtres.')}</div>`;
     return `
-      <div class="st-tbl-wrap">
+      <div class="st-mobile-items"><label class="st-mobile-sort">${catalogLabel('sort','Trier')}<select data-stock-mobile-sort aria-label="${esc(catalogText('sort','Trier'))}">${[['name',t('colArticle')],['stock',t('colStock')],['value',t('colValue')],['status',t('colStatus')]].map(([id,label])=>`<option value="${id}"${stSortBy===id?' selected':''}>${esc(label)}</option>`).join('')}</select></label>${items.map(renderDenseItem).join('')}</div>
+      <div class="st-tbl-wrap st-desktop-items">
         <table class="st-tbl">
           <thead>
             <tr>
@@ -3378,6 +3384,11 @@
         </table>
       </div>
     `;
+  }
+
+  function renderDenseItem(it){
+    const cur=currentStockFor(it),state=statusOf(it),label=state==='ok'?t('stOk'):state==='low'?t('stLow'):t('stOut');
+    return `<button class="st-dense-item" type="button" data-action="stock-item-detail" data-item-id="${esc(it.id)}"><span><strong>${esc(it.name)}</strong><small>${esc(catLabel(it.category))} · ${esc(fmtMad(it.costPerUnit))} / ${esc(it.unit)}</small></span><span class="st-dense-stock"><b>${esc(fmtUnit(cur,it.unit))}</b><span class="st-catalog-status ${state}">${esc(label)}</span></span></button>`;
   }
 
   function renderItemRow(it) {
@@ -3436,7 +3447,7 @@
   }
 
   function renderItemCardGrid(items) {
-    if (items.length === 0) return `<div style="padding:24px; text-align:center; color:var(--n-500); font-size:13px;">Aucun article ne correspond aux filtres.</div>`;
+    if (items.length === 0) return `<div style="padding:24px; text-align:center; color:var(--n-500); font-size:13px;">${catalogLabel('noMatch','Aucun article ne correspond aux filtres.')}</div>`;
     return `<div class="st-card-grid">${items.map(renderItemCard).join('')}</div>`;
   }
 
@@ -3446,18 +3457,19 @@
     const st = statusOf(it);
     const barCls = parPct >= 50 ? 'ok' : parPct >= 20 ? 'warn' : 'bad';
     return `
-      <div class="st-card ${st}" data-action="stock-item-detail" data-item-id="${esc(it.id)}">
+      <button type="button" class="st-card ${st}" data-action="stock-item-detail" data-item-id="${esc(it.id)}">
         <div class="st-card-top">
           <div class="st-card-name">${esc(it.name)}</div>
           <span class="st-card-cat">${esc(catLabel(it.category))}</span>
         </div>
         <div class="st-card-stock">${esc(fmtNum(cur, Number.isInteger(cur) ? 0 : 1))}<span class="u">${esc(it.unit)}</span></div>
+        <span class="st-catalog-status ${st}">${esc(st==='ok'?t('stOk'):st==='low'?t('stLow'):t('stOut'))}</span>
         <div class="st-card-bar"><div class="st-card-bar-fill ${barCls}" data-stock-bar="${parPct}"></div></div>
         <div class="st-card-meta">
           <span>Par : <b>${esc(fmtUnit(it.parLevel, it.unit))}</b></span>
           <span>${esc(fmtMad(cur * it.costPerUnit))}</span>
         </div>
-      </div>
+      </button>
     `;
   }
 
@@ -3562,7 +3574,7 @@
   function renderSuppliers() {
     const sup = getSup();
     const totalSpend = sup.reduce((s, x) => s + x.monthlySpend, 0);
-    const weightedPrice = sup.reduce((s, x) => s + (x.priceChangeLast30d * x.monthlySpend), 0) / totalSpend;
+    const weightedPrice = sup.reduce((s, x) => s + (x.priceChangeLast30d * x.monthlySpend), 0) / (totalSpend || 1);
     const trendCls = weightedPrice > 1 ? 'up' : weightedPrice < -1 ? 'down' : '';
     return `
       <div class="st-section">
@@ -3578,7 +3590,8 @@
           <div class="st-sup-stat"><div class="l">${esc(t('supStatSpend'))}</div><div class="v">${esc(fmtMad(totalSpend))}</div></div>
           <div class="st-sup-stat"><div class="l">${esc(t('supStatPriceTrend'))}</div><div class="v ${trendCls}">${esc(fmtPct(weightedPrice, 1))}</div></div>
         </div>
-        <div class="st-tbl-wrap">
+        <div class="st-supplier-cards">${sup.map(renderSupplierCard).join('')||`<div class="rmw-empty">${catalogLabel('noSuppliers','Aucun fournisseur enregistré.')}</div>`}</div>
+        <div class="st-tbl-wrap st-supplier-table">
           <table class="st-sup-table">
             <thead>
               <tr>
@@ -3600,6 +3613,27 @@
 
       ${stShowReal() ? renderRealSupplierPriceChanges() : renderAiCard(t('aiPriceUpT'), t('aiPriceUpB'), t('aiPriceUpA'))}
     `;
+  }
+
+  function supplierDate(at){const n=typeof at==='string'&&/^\d+$/.test(at)?+at:at;const d=new Date(n);return Number.isFinite(d.getTime())?fmtDateShort(d.toISOString()):catalogText('notRecorded','Non enregistrée');}
+  function supplierHistory(s){
+    const receipts=(window.KiwiProcurement?.doc?.()?.receipts||[]).filter(r=>String(r.supplierId)===String(s.id)).map(r=>({at:r.receivedAt||r.createdAt,reference:r.number||r.id,total:(r.lines||[]).reduce((n,l)=>n+(+l.qty||0)*(+l.unitCost||0),0)}));
+    const stamp=at=>{const value=typeof at==='string'&&/^\d+$/.test(at)?+at:at;return new Date(value).getTime()||0;};
+    if(receipts.length)return receipts.sort((a,b)=>stamp(b.at)-stamp(a.at));
+    // A delivery can have multiple item movements. Count/group its receipt once.
+    const groups=new Map();
+    getInv().forEach(it=>itemHistory(it).filter(m=>m.reason==='receipt'&&(String(m.meta?.supplierId||'')===String(s.id)||(s.name&&m.meta?.supplierName===s.name))).forEach(m=>{
+      const key=m.refId||m.meta?.receiptRef||m.id,at=m.occurredTs||m.createdTs;
+      const row=groups.get(key)||{at,reference:m.meta?.externalRef||m.refId||it.name,total:0};
+      row.total+=Math.max(0,+m.qty||0)*(+m.unitCost||0);groups.set(key,row);
+    }));
+    return [...groups.values()].sort((a,b)=>stamp(b.at)-stamp(a.at));
+  }
+  function renderSupplierCard(s){
+    const last=supplierHistory(s)[0];
+    return `<article class="st-supplier-card"><div class="st-supplier-card-head"><div><div class="st-sup-name">${esc(s.name)}</div><small class="st-sup-loc">${esc(s.location)}</small></div><span class="st-sup-cat">${esc(catLabel(s.category))}</span></div>
+      <div class="st-supplier-card-meta"><div><span>${esc(t('colSupSpend'))}</span><b>${esc(fmtMad(s.monthlySpend))}</b></div><div><span>${catalogLabel('lastDelivery','Dernière livraison')}</span><b>${last?esc(supplierDate(last.at)):catalogLabel('notRecorded','Non enregistrée')}</b></div></div>
+      <div class="st-supplier-card-foot"><button class="st-btn" type="button" data-action="stock-supplier-detail" data-supplier-id="${esc(s.id)}">${esc(t('btnDetail'))}</button><button class="st-btn" type="button" data-action="stock-call-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}"${s.contact?'':' disabled'}>${svg('phone',14)}${esc(t('mSupCall'))}</button></div></article>`;
   }
 
   function renderSupRow(s) {
@@ -3679,7 +3713,7 @@
       ${history.length ? `
       <div class="st-section">
         <div class="st-section-head"><h3>${esc(t('ordHistory'))}</h3></div>
-        <div class="st-tbl-wrap"><table class="st-sup-table"><thead><tr><th>DATE</th><th>${esc(t('colSupplier'))}</th><th class="r">${esc(t('mScanTotal'))}</th><th>${esc(t('colStatus'))}</th></tr></thead><tbody>
+        <div class="st-tbl-wrap st-order-table"><table class="st-sup-table"><thead><tr><th>DATE</th><th>${esc(t('colSupplier'))}</th><th class="r">${esc(t('mScanTotal'))}</th><th>${esc(t('colStatus'))}</th></tr></thead><tbody>
           ${history.map((h) => `<tr><td>${esc(fmtDateShort(new Date(h.at || Date.now()).toISOString()))}</td><td><span class="st-sup-name">${esc(suppliers.get(String(h.supplierId))?.name || 'Fournisseur')}</span><div class="st-sup-deliv-sub">${esc(h.number || h.id)}</div></td><td class="r"><span class="st-sup-spend">${esc(fmtMad(h.total))}</span></td><td><span class="status-ok">${esc(h.status)}</span></td></tr>`).join('')}
         </tbody></table></div>
       </div>` : ''}`;
@@ -3780,7 +3814,7 @@
       { date: '2026-05-05', sup: 'Avicole Atlas', total: 480, status: t('stCancelled'), cls: 'bad' },
     ];
     return `
-      <div class="st-tbl-wrap">
+      <div class="st-tbl-wrap st-order-table">
         <table class="st-sup-table">
           <thead>
             <tr><th>DATE</th><th>${esc(t('colSupplier'))}</th><th class="r">${esc(t('mScanTotal'))}</th><th>${esc(t('colStatus'))}</th></tr>
@@ -5943,54 +5977,15 @@
    * MODAL · Supplier profile
    * ═══════════════════════════════════════════════════════════════════════ */
   function openSupplierProfile(supplierId) {
-    const s = getSup().find(x => x.id === supplierId);
-    if (!s) return;
-    const deliveriesCount = Math.round(s.monthlySpend / s.avgInvoice);
-    const pcl = s.priceChangeLast30d;
-    const rateStr = s.rating != null && !isNaN(s.rating) && s.rating !== '' ? ` · ★ ${Number(s.rating).toFixed(1)}` : '';
-    const m = window.Kiwi.modal({
-      title: s.name,
-      desc: `${esc(s.location)} · ${catLabel(s.category)}${rateStr}`,
-      width: 720,
-      body: `
-        <div class="st-md-stats">
-          <div class="st-md-stat"><div class="l">DÉPENSE / MOIS</div><div class="v">${esc(fmtMad(s.monthlySpend))}</div></div>
-          <div class="st-md-stat"><div class="l">LIVRAISONS / MOIS</div><div class="v">${deliveriesCount}</div></div>
-          <div class="st-md-stat"><div class="l">PRIX 30J</div><div class="v ${trendCls}">${esc(fmtPct(pcl, 1))}</div></div>
-        </div>
-        <div class="st-md-section">
-          <div class="st-md-section-t">${esc(t('mSupHistory'))}</div>
-          <div class="st-md-list">
-            ${[
-              { d: '2026-05-14', t: 'Livraison · 12 kg viande hachée · 4 kg merguez', v: 1452, status: 'ok' },
-              { d: '2026-05-10', t: 'Livraison · 18 kg agneau · 14 kg poulet', v: 3752, status: 'ok' },
-              { d: '2026-05-07', t: 'Livraison · 8 kg merguez · 14 kg viande', v: 1956, status: 'ok' },
-              { d: '2026-05-03', t: 'Livraison partielle · poulet manquant', v: 2240, status: 'warn' },
-              { d: '2026-04-30', t: 'Livraison · 16 kg agneau · 10 kg poulet', v: 3208, status: 'ok' },
-              { d: '2026-04-26', t: 'Livraison · ensemble standard', v: 3640, status: 'ok' },
-            ].map(h => `
-              <div class="st-md-list-row">
-                <div><span class="d">${esc(fmtDateShort(h.d))}</span> · <span class="n">${esc(h.t)}</span></div>
-                <div class="v">${esc(fmtMad(h.v))}</div>
-                <div class="status-${h.status === 'ok' ? 'ok' : 'warn'}">${esc(h.status === 'ok' ? t('stReceived') : t('stPartial'))}</div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-        <div class="st-md-section">
-          <div class="st-md-section-t">${esc(t('mSupPrices'))}</div>
-          ${renderMiniPriceChart(ph)}
-        </div>
-      `,
-      foot: `
-        <button class="st-btn" data-action="stock-call-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}">${svg('phone', 12)}<span>${esc(t('mSupCall'))}</span></button>
-        <button class="st-btn" data-action="stock-wa-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}">${svg('messageCircle', 12)}<span>${esc(t('mSupWa'))}</span></button>
-        <button class="st-btn primary" data-action="stock-new-po" data-supplier-id="${esc(s.id)}">${esc(t('mSupOrd'))}</button>
-      `,
-    });
-    requestAnimationFrame(() => {
-      wireDismiss(m?.el || topBackdrop());
-    });
+    const s=getSup().find(x=>x.id===supplierId);if(!s)return;
+    const history=supplierHistory(s),pcl=+s.priceChangeLast30d||0;
+    const m=window.Kiwi.modal({title:s.name,desc:`${esc(s.location)} · ${esc(catLabel(s.category))}`,width:720,
+      body:`<div class="st-md-stats"><div class="st-md-stat"><div class="l">${esc(t('colSupSpend'))}</div><div class="v">${esc(fmtMad(s.monthlySpend))}</div></div><div class="st-md-stat"><div class="l">${catalogLabel('recordedDeliveries','Livraisons enregistrées')}</div><div class="v">${history.length}</div></div><div class="st-md-stat"><div class="l">${esc(t('colSupPrice'))}</div><div class="v">${esc(fmtPct(pcl,1))}</div></div></div>
+      <div class="st-md-section"><div class="st-md-section-t">${esc(t('colSupDeliv'))}</div><p>${esc(s.deliverySchedule||'')} · ${esc(s.paymentTerms||'')}</p></div>
+      <div class="st-md-section"><div class="st-md-section-t">${esc(t('mSupHistory'))}</div><div class="st-md-list">${history.length?history.map(h=>`<div class="st-md-list-row"><div><span class="d">${esc(supplierDate(h.at))}</span><span class="n">${esc(h.reference)}</span></div><div class="v">${esc(fmtMad(h.total))}</div></div>`).join(''):`<div class="rmw-empty">${catalogLabel('noDeliveries','Aucune livraison enregistrée pour ce fournisseur.')}</div>`}</div></div>`,
+      foot:`<div class="catalog-supplier-actions"><button class="st-btn" data-catalog-profile="stock-call-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}">${svg('phone',14)}${esc(t('mSupCall'))}</button><button class="st-btn" data-catalog-profile="stock-wa-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}">${esc(t('mSupWa'))}</button><button class="st-btn" data-catalog-profile="stock-edit-supplier" data-supplier-id="${esc(s.id)}">${esc(t('titleEdit'))}</button><button class="st-btn primary" data-catalog-profile="stock-new-po" data-supplier-id="${esc(s.id)}">${esc(t('mSupOrd'))}</button></div>`});
+    m.el.querySelectorAll('[data-catalog-profile]').forEach(button=>button.onclick=()=>{m.close();window.Kiwi.handlers[button.dataset.catalogProfile]?.(button);});
+    requestAnimationFrame(()=>wireDismiss(m?.el||topBackdrop()));
   }
 
   function renderMiniPriceChart(values) {
@@ -7266,6 +7261,11 @@
     H['nav-accueil'] = function () { showDashboard(); return origAccueil?.call(this); };
 
     // Tabs / filters / view
+    H['stock-workspace-actions']=()=>{
+      const actions=[['stock-scan-invoice',t('btnScan')],['stock-count-sheet',t('btnSheet')],['stock-physical-count',t('btnCount')]];
+      const m=window.Kiwi.modal({title:catalogText('stockActions','Outils du stock'),width:480,body:`<div class="catalog-sheet">${actions.map(([action,label])=>`<button type="button" data-catalog-stock="${action}">${esc(label)}</button>`).join('')}</div>`});
+      m.el.querySelectorAll('[data-catalog-stock]').forEach(button=>button.onclick=()=>{m.close();H[button.dataset.catalogStock]?.(button);});
+    };
     H['stock-tab'] = (el) => { stCurrentTab = el.dataset.tab; render(); };
     H['stock-subview'] = (el) => { stItemSubView = el.dataset.subview; render(); };
     H['stock-waste-range'] = (el) => { stWasteDateRange = el.dataset.range; rerenderTabBody(); };
@@ -7384,7 +7384,7 @@
 
     // Re-render on venue/language changes
     window.KiwiVenue?.subscribe?.(() => { if (stPageActive) render(); });
-    window.KiwiI18n?.onLangChange?.(() => { if (stPageActive) render(); });
+    window.addEventListener('kiwi:langchange', () => { if (stPageActive) render(); });
     let stockSyncPaint = 0;
     const repaintFromSharedStock = () => {
       if (!stPageActive || stockSyncPaint) return;
