@@ -208,7 +208,7 @@
   function demoLedgerProjection(table, range, shape) {
     const clock = window.KiwiDemoClock, dr = window.KiwiDayReport;
     if (!shape || !dr || !['aujourdhui','hier','septJours','trenteJours'].includes(range)
-      || ![heroDataByVenue,goalByVenue,kpiByVenue,revChartByVenue].includes(table) || !clock?.getSimState?.()) return shape;
+      || ![heroDataByVenue,goalByVenue,kpiByVenue,revChartByVenue,mixByVenue].includes(table) || !clock?.getSimState?.()) return shape;
     const day = dr.today(), days = range === 'septJours' ? 7 : range === 'trenteJours' ? 30 : 1;
     const selected = range === 'hier' ? dr.shiftDay(day,-1) : day;
     const rows = days === 1 ? clock.getDaySales(selected) : clock.getSales(days);
@@ -216,6 +216,22 @@
     const total = sum(rows), count = rows.length;
     if (table === heroDataByVenue) return {...shape,amount:total,netAfterKiwi:total,deltaHier:null,deltaSemaine:null,deltaMois:null};
     if (table === goalByVenue) return {...shape,current:total};
+    // One ledger, one tender definition across the donut and card/cash KPI.
+    const tenders = entries => {
+      const by = {};
+      entries.forEach(entry => tenderAmounts(entry).forEach(part => {
+        if (part.key) by[part.key] = (by[part.key] || 0) + Math.round(part.amount * 100);
+      }));
+      return by;
+    };
+    const by = tenders(rows);
+    if (table === mixByVenue) {
+      const collectedCents = Object.values(by).reduce((s, value) => s + value, 0);
+      const lang = getLang();
+      return {...shape, _demoLedger:true, centerMad:collectedCents / 100,
+        mixRows:REAL_MIX.filter(m => by[m.key] > 0).map(m => ({
+          color:m.color, label:m[lang] || m.fr, pct:by[m.key] / collectedCents * 100}))};
+    }
     if (table === kpiByVenue) {
       // Same-length previous window: yesterday up to the same point of its
       // business day for Today, the day before for Yesterday, the previous
@@ -231,7 +247,16 @@
       }
       const pct = (now, then) => then ? Math.round((now - then) / then * 1000) / 10 : 0;
       const priorTotal = sum(prior), priorCount = prior.length;
+      const cardShare = tender => {
+        const card = (tender.card || 0) + (tender.tap || 0), cash = tender.cash || 0;
+        return card + cash ? card / (card + cash) * 100 : null;
+      };
+      const share = cardShare(by), oldShare = cardShare(tenders(prior));
+      const roundedShare = Math.round(share || 0);
       return {...shape,
+        ratio:shape.ratio && {...shape.ratio,
+          text:share == null ? '·' : `${roundedShare} / ${100 - roundedShare}`,
+          unit:share == null ? '' : '%', delta:share == null || oldShare == null ? null : pct(share, oldShare)},
         tx:shape.tx && {...shape.tx,value:count,delta:pct(count,priorCount)},
         panier:shape.panier && {...shape.panier,value:count ? total/count : 0,
           delta:pct(count ? total/count : 0, priorCount ? priorTotal/priorCount : 0)}};
@@ -2863,7 +2888,7 @@
     }
 
     // Live-demo override: tx/panier/regulars all scale with sim time.
-    // success and ratio stay near their static values (don't ramp from 0%).
+    // The ratio is already projected from ledger tenders above.
     if (isLiveDemo()) {
       const sim = getSim();
       if (sim) {
@@ -2872,7 +2897,7 @@
           tx:         data.tx       ? { ...data.tx,       value: sim.cumTx } : data.tx,
           panier:     data.panier   ? { ...data.panier,   value: sim.panierMoyen || data.panier.value } : data.panier,
           regulars:   data.regulars ? { ...data.regulars, value: sim.cumRegulars, unit: `/ ${Math.max(1, sim.cumTx)}` } : data.regulars,
-          // success / ratio / tauxRetour stay at their static daily values
+          // success / tauxRetour stay at their static daily values
         };
       }
     }
@@ -3906,13 +3931,12 @@
     if (!data) return;
     const lang = getLang();
 
-    /* Une venue réelle recompose ses tranches depuis ses ventes ; la démo garde
-     * exactement ses quatre rails carte. Tout ce qui suit (anneau + légende) lit
-     * `rows`, donc les deux chemins partagent le même rendu. */
+    // Real and active-demo venues both render tenders actually in their ledger.
+    // The static preview is only a fallback when no demo clock is running.
     const custom = !!(ownData() && window.KiwiSales);
     renderMixPlan(custom, lang);
     const real = custom ? realMixRows(lang, currentRange) : null;
-    const rows = custom ? real.rows : [
+    const rows = custom ? real.rows : data._demoLedger ? data.mixRows : [
       { color: '#0B6E4F', label: 'Visa',       pct: data.visa },
       { color: '#46A878', label: 'Mastercard', pct: data.mc   },
       { color: '#7DF2B0', label: 'Kiwi Tap',   pct: data.tap  },
@@ -4004,7 +4028,7 @@
     const centerUnit = center && center.parentElement
       ? center.parentElement.querySelector('.slash') : null;
     if (centerUnit) {
-      if (custom) {
+      if (custom || data._demoLedger) {
         centerUnit.removeAttribute('data-i18n');
         centerUnit.textContent = MIX_CENTER_ALL[lang] || MIX_CENTER_ALL.fr;
       } else {

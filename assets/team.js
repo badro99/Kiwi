@@ -48,6 +48,7 @@
       statTotalSub: (n, name) => `${n} actifs · ${name}`,
       statPresent: 'EN SERVICE AUJOURD\'HUI',
       statPresentSub: 'membres pointés (estimation)',
+      statPresentDemoSub: 'selon les heures de démo du jour',
       statPayroll: 'MASSE SALARIALE · MOIS',
       statPayrollSub: 'salaires de base cumulés',
       statHours: 'HEURES PÉRIODE EN COURS',
@@ -209,6 +210,7 @@
       statTotalSub: (n, name) => `${n} active · ${name}`,
       statPresent: 'ON SHIFT TODAY',
       statPresentSub: 'members clocked in (estimate)',
+      statPresentDemoSub: 'from today’s demo hours',
       statPayroll: 'PAYROLL · MONTH',
       statPayrollSub: 'cumulative base salaries',
       statHours: 'HOURS · CURRENT PERIOD',
@@ -367,6 +369,7 @@
       statTotalSub: (n, name) => `${n} نشط · ${name}`,
       statPresent: 'في الخدمة اليوم',
       statPresentSub: 'أعضاء مسجلون (تقدير)',
+      statPresentDemoSub: 'حسب ساعات العرض التجريبي لهذا اليوم',
       statPayroll: 'كتلة الأجور · الشهر',
       statPayrollSub: 'مجموع الرواتب الأساسية',
       statHours: 'ساعات · الفترة الحالية',
@@ -1224,6 +1227,12 @@
   function liveMember(memberId) {
     return (liveTeam.members || []).find((member) => String(member.id || '') === String(memberId || '')) || null;
   }
+  // Demo attendance is derived from the same hours grid as Payroll. Never
+  // infer a real employee's live clock-in from a recorded/planned hour.
+  function memberDutyStatus(member, hours, day) {
+    if (isCustomVenue()) return (liveMember(member.id) || {}).status || 'off-duty';
+    return (+((hours[member.id] || {})[day]) || 0) > 0 ? 'on-duty' : 'off-duty';
+  }
   /* Le sondage ci-dessous tourne toutes les secondes et `pointedHours` est un
    * temps écoulé : dès qu'un employé est pointé, la réponse du serveur change
    * toute seule (27,43 h → 27,44 h). Repeindre à ce moment-là arrachait
@@ -1445,7 +1454,7 @@
     const visible = members.filter(memberMatchesFilters);
     target.innerHTML = visible.length === 0
       ? `<div class="eq-section" style="text-align:center; color:var(--n-500); padding:36px 14px;">${esc(T.noMatch)}</div>`
-      : renderMembersTable(T, visible);
+      : renderMembersTable(T, visible, venueType);
     /* Also keep the badge count fresh */
     const badge = root.querySelector('[data-kt-count-badge]');
     if (badge) badge.textContent = T.secAllMembersBadge(visible.length);
@@ -1490,20 +1499,13 @@
     const monthlyPayroll = members.reduce((acc, m) => acc + (m.baseSalary || 0), 0);
     const period = buildPeriod(window.__kiwiTeamV2.periodKind || 'week');
     const hours = getHours(venueType);
-    /* « En service aujourd'hui » valait headcount × 0,75 arrondi : un nombre
-     * inventé, présenté au commerçant comme un pointage. Sur deux personnes il
-     * affichait donc toujours 2 — y compris quand personne n'avait saisi la
-     * moindre heure — pendant que Paie & planning comptait honnêtement 0 à
-     * partir des mêmes données. Deux pages, un seul effectif, deux réponses
-     * opposées, et c'est celle d'Équipe qui était fausse. Une vraie boutique
-     * compte les membres ayant des heures aujourd'hui, avec EXACTEMENT la
-     * définition de Paie (onDuty) ; la démo garde son estimation. */
+    // Summary and individual rows must describe the same demo roster.
     const todayKey = toISO(new Date());
     const present = isCustomVenue()
       ? (liveTeam.merchant === teamSlug()
         ? liveTeam.members.filter((member) => member.status === 'on-duty' || member.status === 'on-pause').length
         : members.filter((m) => (+((hours[m.id] || {})[todayKey]) || 0) > 0).length)
-      : Math.max(0, Math.round(totalMembers * 0.75));
+      : members.filter(m => memberDutyStatus(m, hours, todayKey) === 'on-duty').length;
     let totalHours = 0;
     members.forEach(m => {
       const row = hours[m.id] || {};
@@ -1518,7 +1520,7 @@
     const stats = `
       <div class="eq-stats">
         ${tile(T.statTotal,   String(totalMembers),                   T.statTotalSub(totalMembers, venue.name))}
-        ${tile(T.statPresent, String(present),                        T.statPresentSub)}
+        ${tile(T.statPresent, String(present),                        isCustomVenue() ? T.statPresentSub : T.statPresentDemoSub)}
         ${tile(T.statPayroll, fmtMad(monthlyPayroll),                 T.statPayrollSub)}
         ${tile(T.statHours,   fmtHours(totalHours), T.statHoursSub)}
       </div>
@@ -1560,13 +1562,14 @@
                 <div style="font-weight:600;font-size:14.5px;color:var(--ink);margin-bottom:4px;">${esc(T.noMatch)}</div>
                 <button class="kb atlas" type="button" data-action="nav-equipe" style="margin-top:10px;">${svgIcon(IC.plus, 13)}${esc(T.addMember)}</button>
               </div>`
-            : renderMembersTable(T, visible)}
+            : renderMembersTable(T, visible, venueType)}
         </div>
       </div>
     `;
   }
 
-  function renderMembersTable(T, list) {
+  function renderMembersTable(T, list, venueType) {
+    const hours = getHours(venueType), todayKey = toISO(new Date());
     const rows = list.map(m => {
       const ini = initials(m.firstName, m.lastName);
       const tone = m.avatarTone || 'a';
@@ -1575,11 +1578,11 @@
         : contractTone === 'pend' ? 'kt-tag kt-tag-pend'
         : 'kt-tag kt-tag-neutral';
       const langChips = (m.languages || []).slice(0, 3).map(l => `<span class="kt-langchip">${esc(l)}</span>`).join('') + ((m.languages || []).length > 3 ? `<span class="kt-langchip">+${(m.languages || []).length - 3}</span>` : '');
-      const live = liveMember(m.id);
-      const liveText = live && live.status === 'on-pause' ? T.livePaused
-        : live && live.status === 'on-duty' ? T.liveOnDuty : T.liveOffDuty;
-      const liveColor = live && live.status === 'on-pause' ? '#B26B0F'
-        : live && live.status === 'on-duty' ? 'var(--atlas)' : 'var(--n-500)';
+      const status = memberDutyStatus(m, hours, todayKey);
+      const liveText = status === 'on-pause' ? T.livePaused
+        : status === 'on-duty' ? T.liveOnDuty : T.liveOffDuty;
+      const liveColor = status === 'on-pause' ? '#B26B0F'
+        : status === 'on-duty' ? 'var(--atlas)' : 'var(--n-500)';
       return `
         <tr class="eq-row-in">
           <td>
@@ -3631,7 +3634,7 @@
         name: [m.firstName, m.lastName].filter(Boolean).join(' ').trim() || '·',
         role: m.function || m.department || '',
         avatar: String(m.firstName || '?').trim().charAt(0).toUpperCase() || '?',
-        status: (liveMember(m.id) || {}).status || 'off-duty',
+        status: memberDutyStatus(m, hours, todayKey),
         hoursToday: liveMember(m.id)
           && ['on-duty', 'on-pause'].includes(liveMember(m.id).status)
           ? Math.max(0.01, +((hours[m.id] || {})[todayKey]) || 0.01)

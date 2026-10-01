@@ -72,9 +72,20 @@ try {
       const shown=KiwiNumber.locale()==='en-GB'
         ? Number(text.replace(/,/g,''))
         : Number(text.replace(/[\s\u202f\u00a0]/g,'').replace(',','.'));
-      return {amount,shown};
+      const parse = e => Number(e.textContent.replace(/[\s\u202f\u00a0,%]/g,'').replace(/,/g,''));
+      const collected = parse(document.querySelector('[data-mix-center-amt]'));
+      const card = rows.filter(r=>['card','tap'].includes(r.method)).reduce((s,r)=>s+Math.round(r.amount*100),0);
+      const cash = rows.filter(r=>r.method==='cash').reduce((s,r)=>s+Math.round(r.amount*100),0);
+      const share = Math.round(card/(card+cash)*100);
+      const ratio = document.querySelector('[data-kpi="ratio"] [data-kpi-val]').textContent.replace(/\s+/g,'');
+      const labels = document.querySelector('[data-mix-legend]').textContent;
+      return {amount,shown,collected,ratio,expectedRatio:`${share}/${100-share}%`,labels,
+        unit:document.querySelector('[data-mix-center-amt]').parentElement.querySelector('.slash').textContent};
     },range);
     check(Math.round(Number(values.shown))===values.amount, 'visible home '+range+' total matches ledger');
+    check(Math.round(values.collected)===values.amount && values.unit==='MAD collected',range+': collected center and label match ledger');
+    check(values.ratio===values.expectedRatio,range+': card/cash ratio uses ledger, excluding wallet from denominator');
+    check(values.labels.includes('Cash') && values.labels.includes('Bank card') && values.labels.includes('QR / Wallet') && !/Visa|Mastercard/.test(values.labels),range+': only recorded tenders shown');
   }
   await page.click('.dr-pill[data-range="aujourdhui"]'); await sleep(1200);
   const stats = await page.evaluate(() => {
