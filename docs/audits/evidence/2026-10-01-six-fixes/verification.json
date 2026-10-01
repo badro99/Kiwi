@@ -1,0 +1,37 @@
+{
+  "base": "26c3865d12ac4459a66d0d0e68044cd780eb4520",
+  "simulator": "iPhone 17 Pro",
+  "udid": "D53BB4E4-F195-41EF-8DE2-9F74BAEADC62",
+  "nativeBundle": "a87bf4e3aaee",
+  "privateBundleId": "com.kiwios.pro.qafixes1",
+  "runtimeMatchesInstalledSimulatorClone": {
+    "assets/clients-directory.js": "0422abd19e7553893be3abe13bae271286bd9f54cf3be1b2fd7786bb9688bbbf",
+    "assets/dateRange.js": "c3c699a2e07fbfac12e62a4be9ed19d90d9528f6a4190c1cad05747d0258793b",
+    "assets/team.js": "7a031c52291bda7051ec8a3ec0c895300cdea46356ffebece49161df999e0ba8",
+    "assets/pages-pro.js": "01d47e5d648ed0dc738b25ef739ab9caa0c888fa28bc6805bc93668f9a5246c5",
+    "assets/design-vexel.css": "82202fb8e8aeb720b5f7aa278bea008a3f7cd85ae5d2070db9c0834b0713e148",
+    "app/src/native-runtime.css": "fdc45fc2d5d14a82671dd4bdc5a9ecb5591d16e40971bbd0baa9621188109398"
+  },
+  "focusedBrowserChecks": {
+    "sixFindings": 47,
+    "ledger": 37,
+    "nativePass5": 55,
+    "clientsPendingWrites": 7
+  },
+  "native": {
+    "localeThemeSnapshots": 18,
+    "localeThemeAssertions": "Completed; combined journey later stopped at date-control preparation",
+    "paymentFourRangeTest": "passed; xcodebuild exit 0; 51.337-second session",
+    "nativePaymentAssertions": "all four actual selections, totals, ratios and labels verified before cleanup",
+    "rawEvidence": "Externally removed during running full gate; result status and selected native screenshots had already been emitted in this chat",
+    "failedHarnessRuns": "Not relabelled green; sidebar theme-change tap, date prepared below sticky header, moving track coordinate. Final isolated range run used settled instant scroll and actual selection assertion."
+  },
+  "browserImageProvenance": "Recovered from the completed local bundled browser suite, not native screenshots",
+  "fullGate": {
+    "command": "node tools/check.js",
+    "exitCode": 0,
+    "verification": "exec session 58998 completed successfully after all suites",
+    "rawLog": "externally removed during run; process status retained",
+    "warningCount": "not recovered"
+  }
+}
