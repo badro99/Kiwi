@@ -203,13 +203,24 @@
     return Object.keys(item.sizes).reduce(function (s, k) { return s + (+item.sizes[k] || 0); }, 0);
   }
 
+  function toTs(v) {
+    if (!v) return 0;
+    if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+    var t = new Date(v).getTime();
+    return Number.isFinite(t) ? t : 0;
+  }
+
   function matches(p, item, stock) {
     if (!p || !item) return false;
     var sc = p.scope || {};
     if (sc.type === 'tout') return true;
     if (sc.type === 'rayon') return (sc.ids || []).indexOf(item.rayon) >= 0;
     if (sc.type === 'produits') return (sc.ids || []).indexOf(item.id) >= 0;
-    if (sc.type === 'avant') return !!sc.before && !!item.createdAt && item.createdAt < sc.before;
+    if (sc.type === 'avant') {
+      var bef = toTs(sc.before);
+      var itAt = toTs(item.createdAt);
+      return !!bef && !!itAt && itAt < bef;
+    }
     if (sc.type === 'stock') {
       var n = (stock == null) ? stockOf(item) : stock;
       /* Un article épuisé ne porte pas d'affiche « fin de série » : la pastille

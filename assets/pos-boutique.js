@@ -2849,11 +2849,11 @@
           <div class="bq-search"><i data-lucide="search"></i>
             <input id="bq-ret-q" placeholder="N° de ticket ou téléphone…" value="${esc(q)}" /></div>
         </header>
-        <div class="bq-ret-bar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 0;">
+        <div class="bq-ret-bar">
           <button class="bq-pill ${state.retDate === todayKey ? 'ok' : ''}" type="button" data-bq-ret-day="${todayKey}">Aujourd'hui</button>
           <button class="bq-pill ${state.retDate === yesterdayKey ? 'ok' : ''}" type="button" data-bq-ret-day="${yesterdayKey}">Hier</button>
-          <label class="bq-ret-bar-lbl" style="margin-left:4px;">Date
-            <input id="bq-ret-date" type="date" min="${oldestKey}" max="${todayKey}" value="${state.retDate}" style="margin-left:7px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);" />
+          <label class="bq-ret-bar-lbl">Date
+            <input id="bq-ret-date" type="date" min="${oldestKey}" max="${todayKey}" value="${state.retDate}" class="bq-ret-date-input" />
           </label>
         </div>
         <div class="bq-ret-scroll"><div class="bq-ret-inner">

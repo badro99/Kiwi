@@ -119,7 +119,7 @@
   <!-- Les promotions. Après le catalogue, dont elles lisent les articles pour
        savoir qui elles visent ; avant la caisse boutique, qui les interroge
        dès son premier rendu de grille. -->
-  <script src="assets/promos.js?v=1" defer></script>
+  <script src="assets/promos.js?v=2" defer></script>
   <link rel="stylesheet" href="assets/retail-scan.css?v=8" />
   <link rel="stylesheet" href="assets/retail-balances.css?v=2" />
   <link rel="stylesheet" href="assets/platform-ops.css?v=1" />
@@ -133,7 +133,7 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=66" defer></script>
+  <script src="assets/pos-dispatch.js?v=67" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=5" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=2" defer></script>
@@ -363,7 +363,7 @@
       color: #b5b9b6;
       display: flex;
       flex-direction: column;
-      padding: calc(16px + env(safe-area-inset-top, 0px)) 14px calc(14px + env(safe-area-inset-bottom, 0px));
+      padding: calc(14px + max(var(--kiwi-safe-top, 0px), env(safe-area-inset-top, 0px), 24px)) 14px calc(14px + max(var(--kiwi-safe-bottom, 0px), env(safe-area-inset-bottom, 0px)));
       gap: 12px;
       overflow-y: auto;
       overscroll-behavior: contain;
@@ -671,7 +671,7 @@
     @media only screen and (hover: none) and (pointer: coarse) and (max-width: 1194px) {
       .sidebar {
         width: 256px; flex: 0 0 256px;
-        padding: calc(10px + env(safe-area-inset-top, 0px)) 10px calc(10px + env(safe-area-inset-bottom, 0px));
+        padding: calc(10px + max(var(--kiwi-safe-top, 0px), env(safe-area-inset-top, 0px), 24px)) 10px calc(10px + max(var(--kiwi-safe-bottom, 0px), env(safe-area-inset-bottom, 0px)));
         gap: 5px;
       }
       .brand-mark img { height: 26px; }
@@ -3661,7 +3661,7 @@
     }
     .drawer-veil.is-open .drawer { transform: translateX(0); }
     .drawer-head {
-      padding: 22px 24px 14px;
+      padding: calc(14px + max(var(--kiwi-safe-top, 0px), env(safe-area-inset-top, 0px), 20px)) 24px 14px;
       display: flex; align-items: center;
       border-bottom: 1px solid var(--line-soft);
     }
@@ -5565,7 +5565,7 @@
       font-size: 12px;
     }
   </style>
-  <link rel="stylesheet" href="assets/pos-mobile.css?v=6" />
+  <link rel="stylesheet" href="assets/pos-mobile.css?v=7" />
   <link rel="stylesheet" href="assets/pos-workspaces.css?v=4" />
   <link rel="stylesheet" href="assets/kiwi-select.css?v=2" />
   <link rel="manifest" href="manifest.webmanifest" />
