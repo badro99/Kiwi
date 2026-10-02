@@ -743,7 +743,6 @@
       'Le nom est requis pour la fiche': ['A name is required for the profile', 'الاسم مطلوب للملف'],
       'Lecture caméra indisponible sur ce navigateur, utilisez la douchette ou tapez le code': ['Camera scanning is not available here, use the scanner or type the code', 'المسح بالكاميرا غير متاح هنا، استخدم الماسح أو اكتب الرمز'],
       'Caméra indisponible dans l’application : utilisez la douchette USB ou tapez le code ci-dessus.': ['Camera is not available in this app: use the USB scanner or type the code above.', 'الكاميرا غير متاحة في هذا التطبيق: استخدم الماسح USB أو اكتب الرمز أعلاه.'],
-      'Caméra indisponible dans l'application : utilisez la douchette USB ou tapez le code ci-dessus.': ['Camera is not available in this app: use the USB scanner or type the code above.', 'الكاميرا غير متاحة في هذا التطبيق: استخدم الماسح USB أو اكتب الرمز أعلاه.'],
       'Liste supprimée': ['List deleted', 'تم حذف القائمة'],
       'Indiquez le titre et les bénéficiaires': ['Enter the title and recipients', 'أدخل العنوان والمستفيدين'],
       'Liste créée': ['List created', 'تم إنشاء القائمة'],

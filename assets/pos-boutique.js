@@ -2673,7 +2673,7 @@
             ? (camSupported()
                 ? `<button class="bq-scan-mock" id="bq-scan-cam"><i data-lucide="camera"></i>Scanner avec la caméra</button>`
                 : (inNativeApp()
-                  ? `<div class="bq-scan-nocam">Caméra indisponible dans l'application : utilisez la douchette USB ou tapez le code ci-dessus.</div>`
+                  ? `<div class="bq-scan-nocam">Caméra indisponible dans l’application : utilisez la douchette USB ou tapez le code ci-dessus.</div>`
                   : `<div class="bq-scan-nocam">Ce navigateur ne sait pas lire un code-barres par la caméra. La douchette USB fonctionne, elle tape directement dans le champ ci-dessus.</div>`))
             : `<button class="bq-scan-mock" id="bq-scan-mock"><i data-lucide="scan-line"></i>Scanner un article (douchette démo)</button>`}
           <button class="bq-scan-diag" id="bq-scan-diag"><i data-lucide="activity"></i>Tester la douchette</button>
