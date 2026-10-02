@@ -24,6 +24,10 @@ const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 
+/* One run at a time, and no child test can hang the gate (tools/check-guard.js). */
+require('./check-guard').acquireLock();
+require('./check-guard').install();
+
 /* Les doubles de synchronisation. iCloud/Dropbox recopient un fichier modifié
  * des deux côtés sous « dashboard 2.html », « CLAUDE 2.md » — jamais suivis par
  * git, donc jamais déployés, mais posés à côté des vrais dans le même dossier.
@@ -1319,6 +1323,8 @@ section('Whole-project regressions');
     'scan-view-test.mjs',
     'till-scroll-test.mjs',
     'caisse-chip-gate-test.mjs',
+    'lock-caisse-link-test.mjs',
+    'check-guard-test.mjs',
     'day-report-inset-test.mjs',
     'menu-phone-test.mjs',
     'briefing-sales-drop-test.mjs',
