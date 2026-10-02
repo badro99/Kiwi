@@ -112,12 +112,12 @@
     "sha": "1014ed01ce090f7b"
   },
   "assets/caisse-lang.js": {
-    "v": "12",
+    "v": "13",
     "sha": "fd7b4ad96d741200"
   },
   "assets/caisse-link.js": {
-    "v": "10",
-    "sha": "722476147c908ce3"
+    "v": "11",
+    "sha": "c66db459f9bd26a5"
   },
   "assets/caisse-menu-availability.js": {
     "v": "6",
@@ -180,7 +180,7 @@
     "sha": "ec5fa6bd71818a12"
   },
   "assets/clients-book.js": {
-    "v": "20",
+    "v": "21",
     "sha": "0e932c357eba52f3"
   },
   "assets/clients-directory.js": {
@@ -188,7 +188,7 @@
     "sha": "0422abd19e755389"
   },
   "assets/clients-store.js": {
-    "v": "8",
+    "v": "9",
     "sha": "8db364b49f388e56"
   },
   "assets/cloud-doc.js": {
@@ -232,8 +232,8 @@
     "sha": "c3c699a2e07fbfac"
   },
   "assets/day-report-dash.js": {
-    "v": "19",
-    "sha": "7b3231fcbc5af500"
+    "v": "20",
+    "sha": "6708bb5a10e52dca"
   },
   "assets/day-report-export.js": {
     "v": "8",
@@ -444,8 +444,8 @@
     "sha": "e6199b1d6a79b435"
   },
   "assets/liquid-lens.js": {
-    "v": "1",
-    "sha": "c9d6036ca657c76e"
+    "v": "3",
+    "sha": "03104b4c4765d577"
   },
   "assets/live-link.js": {
     "v": "59",
@@ -492,8 +492,8 @@
     "sha": "f286a70c2a2dcf2d"
   },
   "assets/mobile.css": {
-    "v": "6",
-    "sha": "955b9f4c29f59e14"
+    "v": "7",
+    "sha": "83281a282e907a07"
   },
   "assets/morocco-holidays.js": {
     "v": "1",
@@ -608,12 +608,12 @@
     "sha": "530ff7c046c57b2c"
   },
   "assets/pos-boutique.css": {
-    "v": "38",
+    "v": "41",
     "sha": "274ee8fe03c03b8f"
   },
   "assets/pos-boutique.js": {
-    "v": "38",
-    "sha": "6abf14da7f69fe8f"
+    "v": "41",
+    "sha": "512ba4cd27367dbf"
   },
   "assets/pos-coiffure.css": {
     "v": "5",
@@ -624,8 +624,8 @@
     "sha": "3673be5ef49cb7de"
   },
   "assets/pos-dispatch.js": {
-    "v": "61",
-    "sha": "e0f965fc2676871a"
+    "v": "65",
+    "sha": "366580aed3a5fe0a"
   },
   "assets/pos-epicerie.css": {
     "v": "5",
@@ -688,11 +688,11 @@
     "sha": "782a2a019b86fc81"
   },
   "assets/pos-maison.css": {
-    "v": "52",
+    "v": "54",
     "sha": "2e4232d4d3b2833e"
   },
   "assets/pos-maison.js": {
-    "v": "52",
+    "v": "54",
     "sha": "0e4ae563bf3d30f7"
   },
   "assets/pos-mobile.css": {
@@ -832,8 +832,8 @@
     "sha": "7197f2e2295615a3"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "80",
-    "sha": "96c36891b65dddbd"
+    "v": "81",
+    "sha": "2b9af4eeef630c9b"
   },
   "assets/restaurant-recipes.js": {
     "v": "8",

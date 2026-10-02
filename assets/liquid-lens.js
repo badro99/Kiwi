@@ -46,6 +46,9 @@
       active: function (el) { return el.classList.contains('on'); } },
     { sel: '.kx-tabs', item: '.kx-tab', skin: 'surface',
       active: function (el) { return el.classList.contains('on'); } },
+    /* restaurant Menu & modifiers tab rows (+ category / hours pill rows) */
+    { sel: '.mi-pill-row', item: '.mi-pill', skin: 'surface',
+      active: function (el) { return el.classList.contains('on'); } },
     /* landing page audience switch — paper-glass lens on the dark section */
     { sel: '.audience-tabs', item: '.audience-tab', skin: 'paper',
       active: function (el) { return el.getAttribute('aria-selected') === 'true'; } },
@@ -83,6 +86,7 @@
     '.sc-pills[data-kw-lens] .sc-pill.on{background:transparent;box-shadow:none;}' +
     '.kw-menu-tabs[data-kw-lens] .kw-menu-tab.on{background:transparent;box-shadow:none;}' +
     '.kx-tabs[data-kw-lens] .kx-tab.on{background:transparent;box-shadow:none;}' +
+    '.mi-pill-row[data-kw-lens] .mi-pill.on{background:transparent;box-shadow:none;}' +
     /* the lens replaces the landing tabs\' old static ::after indicator */
     '.audience-tabs[data-kw-lens]::after{display:none !important;}' +
     '@media (prefers-reduced-motion:reduce){.kw-lens{transition:none;}}';

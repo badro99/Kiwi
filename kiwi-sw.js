@@ -62,7 +62,7 @@ var SHELL = [
   '/assets/hotel.css?v=38',
   '/assets/hotel-economat.js?v=3',
   '/assets/genpage.css?v=3',
-  '/assets/mobile.css?v=6',
+  '/assets/mobile.css?v=7',
   '/assets/sold-insights.js?v=8',
   '/assets/design-2026.css',
   '/assets/design-ios27.css',
@@ -141,7 +141,7 @@ var SHELL = [
   '/assets/demoClock.js?v=4',
   '/assets/dateRange.js?v=51',
   '/assets/mobile-nav.js?v=7',
-  '/assets/liquid-lens.js?v=1',
+  '/assets/liquid-lens.js?v=3',
   '/assets/pages.js?v=11',
   '/assets/help-centre.js?v=5',
   '/assets/account.js?v=28',
@@ -173,7 +173,7 @@ var SHELL = [
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=19',
   '/assets/report.js?v=5',
-  '/assets/day-report-dash.js?v=19',
+  '/assets/day-report-dash.js?v=20',
   '/assets/day-report-export.js?v=8',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.
@@ -202,7 +202,7 @@ var SHELL = [
      nouveau commerçant par-dessus les données de l'ancien. */
   '/assets/pairing-commit.js?v=2',
   '/assets/identity.js?v=8',
-  '/assets/caisse-link.js?v=10',
+  '/assets/caisse-link.js?v=11',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
   '/assets/idle-lock.js?v=2',
@@ -222,7 +222,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=5',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=12',
+  '/assets/caisse-lang.js?v=13',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/retail-balances.js?v=4',
@@ -238,8 +238,8 @@ var SHELL = [
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=4',
-  '/assets/clients-store.js?v=8',
-  '/assets/clients-book.js?v=20',
+  '/assets/clients-store.js?v=9',
+  '/assets/clients-book.js?v=21',
   '/assets/clients-directory.js?v=15',
   '/assets/menu-catalog.js?v=25',
   '/assets/stock-identity.js?v=2',
@@ -253,7 +253,7 @@ var SHELL = [
   '/assets/planning-ui.css?v=10',
   '/assets/team.js?v=291',
   '/assets/menu-i18n.js?v=5',
-  '/assets/restaurant-menu-workspace.js?v=80',
+  '/assets/restaurant-menu-workspace.js?v=81',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=7',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.
@@ -274,7 +274,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=15',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=9',
-  '/assets/pos-dispatch.js?v=61',
+  '/assets/pos-dispatch.js?v=65',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -287,8 +287,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=38',
-  '/assets/pos-boutique.js?v=38',
+  '/assets/pos-boutique.css?v=41',
+  '/assets/pos-boutique.js?v=41',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -320,8 +320,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=5',
   '/assets/pos-autre.css?v=5',
   '/assets/pos-autre.js?v=5',
-  '/assets/pos-maison.css?v=52',
-  '/assets/pos-maison.js?v=52',
+  '/assets/pos-maison.css?v=54',
+  '/assets/pos-maison.js?v=54',
   '/assets/caisse-pairing.js?v=25',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

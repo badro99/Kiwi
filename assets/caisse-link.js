@@ -416,8 +416,17 @@
       b.removeAttribute('data-docked');
     }
   }
-  function ensureChip() {
-    if (!realMerchant()) return;
+  function ensureChip(force) {
+    /* #0147 · the launcher must never sit on an entry, lock or pairing gate
+       ("Change role" already does that job there). A chip placed earlier is
+       actively removed — e.g. after an idle re-lock. `force` is only for the
+       explicit post-onboarding call below, which keeps its historical
+       always-surface behavior. */
+    var old = document.getElementById('kcl-chip');
+    if (!realMerchant() || (!force && !dashReady())) {
+      if (old && old.parentNode) old.parentNode.removeChild(old);
+      return;
+    }
     css();
     var b = document.getElementById('kcl-chip');
     if (!b) {
@@ -441,10 +450,21 @@
 
   function dismissed() { try { return sessionStorage.getItem(SS_DISMISS) === '1'; } catch (_) { return false; } }
   function markDismissed() { try { sessionStorage.setItem(SS_DISMISS, '1'); } catch (_) {} }
+  /* #0147 · offsetParent is ALWAYS null for position:fixed overlays, so the
+     old `lock.offsetParent !== null` test never saw the visible lock and the
+     launcher could sit on the PIN screen. Rects + computed style see it. */
+  function lockVisible() {
+    try {
+      var lock = document.querySelector('[data-kiwi-lock]');
+      if (!lock || !lock.isConnected) return false;
+      var cs = getComputedStyle(lock);
+      if (!cs || cs.display === 'none' || cs.visibility === 'hidden') return false;
+      return lock.getClientRects().length > 0;
+    } catch (_) { return false; }
+  }
   function dashReady() {
     if (document.querySelector('.kob-root')) return false;                 // onboarding wizard still open
-    var lock = document.querySelector('[data-kiwi-lock]');
-    if (lock && lock.offsetParent !== null) return false;                  // login lock still visible
+    if (lockVisible()) return false;                                       // login lock still visible
     return true;
   }
 
@@ -456,7 +476,7 @@
   }
   /* Brand-new business straight out of onboarding — always surface it. */
   function promptNewMerchant() {
-    ensureChip();
+    ensureChip(true);
   }
 
   window.KiwiCaisseLink = {
@@ -474,6 +494,17 @@
       });
     } catch (_) {}
     setTimeout(function () { try { maybePrompt(); } catch (_) {} }, 1400);
+    // The dashboard announces its unlock; a re-lock (idle, account switch)
+    // must take the launcher back down. A cheap attribute observer on the
+    // lock node beats polling: it only fires when the gate actually moves.
+    document.addEventListener('kiwi:dashboard-unlocked', function () { try { ensureChip(); } catch (_) {} });
+    try {
+      var lockNode = document.querySelector('[data-kiwi-lock]');
+      if (lockNode && window.MutationObserver) {
+        new MutationObserver(function () { try { ensureChip(); } catch (_) {} })
+          .observe(lockNode, { attributes: true, attributeFilter: ['style', 'class'] });
+      }
+    } catch (_) {}
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();

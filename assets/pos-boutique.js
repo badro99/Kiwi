@@ -4468,6 +4468,53 @@
       .bqx-choice[data-kw-lens] .bqx-opt.on span { color: rgba(255,255,255,.82); }
       .bqx-choice[data-kw-lens] .bqx-opt.on svg { color: var(--mint); }
       .bqx-choice .kw-lens { border-radius: 12px; }
+      /* #0152/#0158 · nuit : les encres claires codées en dur restaient
+         posées sur des fonds sombres (même famille que #0156 : la carte
+         .warn crème sur fond nuit). On ne change que la luminance, jamais
+         la teinte — pas de nouvelle couleur d'accent. */
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-kpi.warn { background: rgba(230,184,77,.13); border-color: #6b5320; }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-kpi.warn .l { color: #e6c878; }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-info span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-kpi .l,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-modh > div span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-vtable th,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-fg label,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-help,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-dashboard-only,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-first span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-head-t span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-tally span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-hint,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-chain span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-known-card span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-existing > span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-common span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-pricediff span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-linkhead span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-act p,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-opt span { color: #9cb1a6; }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-first em,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-nocode,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-log-row em,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-log-empty,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-pricediff > svg,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-code { color: #7e9489; }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-code em.gen { color: #7DF2B0; }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-code em.imp,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-hint.is-warn,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-sym.warn,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-log-row.is-recu svg,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-found.is-known svg { color: #e6c878; }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-stock.rupture,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-help.is-bad,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-hint.is-bad,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqsd-v.bad,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-log-row.is-erreur svg,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-found.is-fix svg,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-modfoot .bq-btn.danger { color: #e08d7f; }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqsd-v.warn { color: #e6c878; }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqsd-ok { color: #7DF2B0; }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-icon.on { background: rgba(125,242,176,.14); }
       @media (max-width: 620px) {
         .bqx-choice { grid-template-columns: 1fr; }
         .bqx-head { flex-direction: column; align-items: flex-start; gap: 10px; }

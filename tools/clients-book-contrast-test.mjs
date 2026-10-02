@@ -88,5 +88,28 @@ for (const [sel, fg] of seen) {
   });
 }
 
-console.log(`\n${failed ? '' : ''}clients-book-contrast: ${passed} passed, ${failed} failed`);
+/* ── tickets #0152/#0158 · the inventaire (bqi) injected stylesheet ── */
+const bqSrc = readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
+const bqiAnchor = bqSrc.indexOf("st.id = 'bqi-css'");
+assert.ok(bqiAnchor !== -1, 'bqi stylesheet anchor found');
+const bqiStart = bqSrc.indexOf('st.textContent = `', bqiAnchor);
+const bqiEnd = bqSrc.indexOf('`;', bqiStart + 20);
+const bqiCss = bqSrc.slice(bqiStart + 20, bqiEnd);
+
+ok('bqi warn card is not a hardcoded light wash in dark', () => {
+  assert.ok(/\.bqi-kpi\.warn\s*\{[^}]*#FBF3E2/.test(bqiCss), 'light warn baseline still present');
+  const darkWarn = bqiCss.match(/:is\([^{]*\)\s*\.bqi-kpi\.warn\s*\{([^}]*)\}/);
+  assert.ok(darkWarn, 'dark twin for .bqi-kpi.warn missing');
+  assert.ok(!/#FBF3E2/i.test(darkWarn[1]), 'dark twin must not reuse the cream wash');
+});
+
+const BQI_BG = '#101915'; // bqi cards sit on the dark strip surface
+for (const [fg, why] of [['#9cb1a6', 'secondary labels'], ['#7e9489', 'micro labels'], ['#e6c878', 'amber accents'], ['#e08d7f', 'danger accents'], ['#7DF2B0', 'mint accents']]) {
+  ok(`bqi ${fg} (${why}) clears 4.5:1 on ${BQI_BG}`, () => {
+    assert.ok(bqiCss.includes(fg), `${fg} not used in bqi dark rules`);
+    assert.ok(ratio(fg, BQI_BG) >= 4.5, `ratio ${ratio(fg, BQI_BG).toFixed(2)}:1`);
+  });
+}
+
+console.log(`\nclients-book-contrast: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

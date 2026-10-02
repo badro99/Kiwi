@@ -237,6 +237,20 @@
   .dr-pill:last-child { scroll-snap-align: end; }
   .dr-pill { white-space: nowrap; flex: 0 0 auto; min-height: 44px; scroll-snap-align: start; }
 
+  /* ── Menu & modifiers tab rows (#0149) — same scroll-row language as the
+     date pills: one swipeable row instead of a wrapped stack, so the selected
+     tab can stay in view. Desktop keeps wrapping. */
+  .mi-filters .mi-pill-row, .mi-cat-pills, .rmw-hours-pills {
+    display: flex; width: 100%; max-width: 100%;
+    flex-wrap: nowrap; overflow-x: auto;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y; overscroll-behavior-x: contain;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 24px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 24px), transparent 100%);
+  }
+  .mi-filters .mi-pill-row::-webkit-scrollbar, .mi-cat-pills::-webkit-scrollbar, .rmw-hours-pills::-webkit-scrollbar { display: none; }
+  .mi-pill-row .mi-pill { flex: 0 0 auto; }
+
   /* Hero LIVE chip — one line, never a stacked 3-row capsule */
   .hero-today .live-badge { white-space: nowrap; flex-shrink: 0; }
   /* Session caption drops to its own full-width line instead of cramming

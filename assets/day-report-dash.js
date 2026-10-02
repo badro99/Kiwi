@@ -180,6 +180,13 @@
     s.textContent = [
       /* ── la barre de navigation ── */
       '.kdr-nav{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}',
+      /* #0148 · la section était rognée sur les côtés (#0119 : inset
+         horizontal). Les enfants flex refusent de rétrécir par défaut et la
+         longue date poussait la page hors du viewport : on verrouille le
+         rétrécissement et on confine la colonne du rapport. */
+      '.kdr-nav > *{min-width:0}',
+      '.kdr-day{min-width:0;overflow-wrap:anywhere}',
+      '.dash-genpage [data-kdr]{min-width:0;max-width:100%}',
       /* `kdr-day` et non `kdr-date` : le sélecteur de plage de dates
          (assets/dashboard-extra.js, où kdr = Kiwi Date Range) possède déjà un
          `.kdr-date`, et son `width:100%` — écrit pour un champ de formulaire —
