@@ -495,9 +495,24 @@
     clearNav(); ensureChip();
   }
 
+  function foldText(s) {
+    return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  }
   function matches(c, q) {
-    q = q.trim().toLowerCase(); if (!q) return true;
-    return (c.name || '').toLowerCase().indexOf(q) >= 0 || KC.normPhone(c.phone).indexOf(KC.normPhone(q)) >= 0;
+    if (!q) return true;
+    var qFold = foldText(q);
+    if (!qFold) return true;
+    if (foldText(c.name).indexOf(qFold) >= 0) return true;
+    if (c.email && foldText(c.email).indexOf(qFold) >= 0) return true;
+    var digits = String(q).replace(/\D/g, '');
+    if (digits.length >= 2) {
+      var cDigits = String(c.phone || '').replace(/\D/g, '');
+      if (cDigits.indexOf(digits) >= 0) return true;
+      var cLocal = cDigits.replace(/^212/, '0');
+      var qLocal = digits.replace(/^212/, '0');
+      if (cLocal && qLocal && (cLocal.indexOf(qLocal) >= 0 || qLocal.indexOf(cLocal) >= 0)) return true;
+    }
+    return false;
   }
   var SEG_TABS = [['all', 'Tous'], ['reg', 'Réguliers'], ['vip', 'VIP'], ['new', 'Nouveaux'], ['win', 'Dormants']];
   function lastSeenTxt(c) {
@@ -558,9 +573,20 @@
     var seg = state.seg || 'all';
     var rows = all.filter(function (c) { return matches(c, state.q) && (seg === 'all' || KC.segment(c) === seg); });
     if (!rows.length) {
+      var qTrim = (state.q || '').trim();
+      var isDigits = qTrim.replace(/\D/g, '').length > qTrim.replace(/\d/g, '').trim().length;
+      var addBtn = qTrim
+        ? '<button type="button" class="kcb-add" id="kcb-empty-add" style="margin-top:16px;">' + ICON.userplus + '<span>Nouveau client · « ' + esc(qTrim) + ' »</span></button>'
+        : '';
       host.innerHTML = '<div class="kcb-empty"><span class="ico">' + ICON.users + '</span>' +
-        (all.length ? '<b>Aucun résultat</b><div>Essayez un autre nom, un autre numéro ou un autre segment.</div>'
+        (all.length ? '<b>Aucun résultat pour « ' + esc(qTrim) + ' »</b><div>Essayez un autre nom, un autre numéro ou un autre segment.</div>' + addBtn
                     : '<b>Aucun client pour l’instant</b><div>Ajoutez votre premier client · il apparaîtra aussitôt sur le tableau de bord.</div>') + '</div>';
+      var eb = document.getElementById('kcb-empty-add');
+      if (eb) {
+        eb.onclick = function () {
+          openForm({ name: isDigits ? '' : qTrim, phone: isDigits ? qTrim : '' });
+        };
+      }
       return;
     }
     var credits = localCreditsByHolder();

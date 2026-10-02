@@ -155,7 +155,7 @@ var SHELL = [
   '/assets/dashboard-native.js?v=3',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
-  '/assets/pos-mobile.css?v=7',
+  '/assets/pos-mobile.css?v=8',
   '/assets/caisse-motion.js?v=1',
   '/assets/caisse-pwa.js?v=564',
   '/assets/vendor/dexie.min.js?v=1',
@@ -239,7 +239,7 @@ var SHELL = [
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=4',
   '/assets/clients-store.js?v=9',
-  '/assets/clients-book.js?v=21',
+  '/assets/clients-book.js?v=22',
   '/assets/clients-directory.js?v=15',
   '/assets/menu-catalog.js?v=25',
   '/assets/stock-identity.js?v=2',
