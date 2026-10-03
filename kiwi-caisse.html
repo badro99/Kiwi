@@ -91,7 +91,7 @@
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
   <script src="assets/escpos.js?v=12" defer></script>
-  <script src="assets/printer-bridge.js?v=19" defer></script>
+  <script src="assets/printer-bridge.js?v=21" defer></script>
   <script src="assets/caisse-hardware.js?v=4" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
@@ -127,16 +127,16 @@
   <script src="assets/retail-scan.js?v=8" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
-  <script src="assets/caisse-lang.js?v=14" defer></script>
+  <script src="assets/caisse-lang.js?v=25" defer></script>
   <script src="assets/menu-i18n.js?v=5" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=67" defer></script>
-  <link rel="stylesheet" href="assets/caisse-dna.css?v=5" />
+  <script src="assets/pos-dispatch.js?v=70" defer></script>
+  <link rel="stylesheet" href="assets/caisse-dna.css?v=7" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
-  <script src="assets/caisse-dna.js?v=2" defer></script>
+  <script src="assets/caisse-dna.js?v=3" defer></script>
   <script src="assets/pos-mobile.js?v=5" defer></script>
 
   <!-- Shared material tokens (elevation, paper, spring). Linked BEFORE the
@@ -219,13 +219,15 @@
        prend le rôle de l'atlas comme couleur d'état. La barre latérale est déjà
        sombre en dur et traverse les deux thèmes sans y toucher. --paper-cream
        reste clair : c'est du texte sur fond sombre, pas une surface. */
-    html[data-caisse-theme="dark"] {
-      /* --forest sert à la fois de texte d'accent et de fond sous étiquette
-         blanche : #17B98A (l'accent profond du dashboard nuit) tient les deux
-         rôles · lisible sur charbon, assez sombre sous du blanc. Le vif
-         #00FFAE est réservé aux anneaux d'état du plan de salle. */
+    html:is([data-caisse-theme="dark"], [data-theme="dark"], [data-vexel-mode="dark"]) {
+      /* --forest est l'accent sur charbon, pas une surface sous texte blanc
+         (seulement 2,52:1). Les actions ont leur propre paire mint / ink afin
+         que les skins du dashboard ne puissent pas changer un seul côté. */
       --forest:        #17B98A;
       --forest-deep:   #0E8A63;
+      --atlas:         #17B98A;
+      --caisse-action-fill: #7DF2B0;
+      --caisse-action-ink:  #0A0F0D;
       --emerald:       #2ED598;
       --mint-tint:     rgba(0,255,174,0.08);
       --mint-edge:     rgba(0,255,174,0.28);
@@ -241,6 +243,8 @@
       --ink-2:         rgba(242,245,243,0.78);
       --ink-3:         rgba(242,245,243,0.55);
       --ink-4:         rgba(242,245,243,0.62);
+      --n-500:         var(--ink-3);
+      --n-600:         var(--ink-2);
 
       --danger-mute:   #E0685A;
 
@@ -260,8 +264,8 @@
       --shadow-1: 0 1px 2px rgba(0,0,0,.3), 0 4px 10px rgba(0,0,0,.35);
       --shadow-2: 0 8px 28px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
 
-      /* --gradient reste var(--atlas-600) : #0E805C porte une étiquette
-         blanche dans les deux thèmes et se détache nettement du charbon. */
+      /* Les confirmations utilisent la même paire d'action via caisse-skin,
+         pas --gradient : --atlas-600 est remappé par plusieurs skins. */
       color-scheme: dark;
     }
 
@@ -2373,13 +2377,11 @@
       position: relative; overflow: hidden;
       display: grid; grid-template-columns: 30px minmax(0,1fr); gap: 11px; align-items: center;
       width: 100%; box-sizing: border-box;
-      /* The toast is a light notification plate in both app themes. Its ink
-         must therefore be local, not inherited from dark-mode --ink. */
-      background: rgba(255,255,255,.96); color: #0A0F0D;
-      color-scheme: light;
-      -webkit-backdrop-filter: blur(18px) saturate(1.15); backdrop-filter: blur(18px) saturate(1.15);
+      /* Surface and ink are one semantic pair in either theme. A hardcoded
+         white toast was the last light rectangle over the dark register. */
+      background: var(--paper-elev); color: var(--ink);
       padding: 13px 15px;
-      border: 1px solid rgba(11,110,79,.18); border-radius: 16px;
+      border: 1px solid var(--line); border-radius: var(--r-xl);
       font-size: 13px; line-height: 1.35; font-weight: 650;
       box-shadow: 0 24px 55px -24px rgba(10,15,13,.46), 0 8px 18px -14px rgba(11,110,79,.30);
       animation: toast-in 240ms ease-out;
@@ -2388,16 +2390,17 @@
       pointer-events: none;
     }
     .toast::before {
-      content: '✓'; display: grid; place-items: center; width: 30px; height: 30px;
-      border-radius: 10px; background: rgba(11,110,79,.12); color: var(--emerald);
-      font-size: 15px; font-weight: 800;
+      content: ''; display: block; width: 30px; height: 30px;
+      background: var(--forest);
+      -webkit-mask: url(assets/icons/material/check.svg) center/22px 22px no-repeat;
+      mask: url(assets/icons/material/check.svg) center/22px 22px no-repeat;
     }
-    .toast.is-info::before { content: 'i'; background: rgba(39,102,184,.11); color: #2766B8; }
-    .toast.is-warn::before { content: '!'; background: rgba(188,113,0,.12); color: #9A5C00; }
-    .toast.is-danger::before { content: '×'; background: rgba(185,44,44,.11); color: #B92C2C; }
+    .toast.is-info::before { -webkit-mask-image:url(assets/icons/material/shield.svg); mask-image:url(assets/icons/material/shield.svg); }
+    .toast.is-warn::before { background:var(--toast-warn, #9A5C00); -webkit-mask-image:url(assets/icons/material/warning.svg); mask-image:url(assets/icons/material/warning.svg); }
+    .toast.is-danger::before { background:var(--danger-mute); -webkit-mask-image:url(assets/icons/material/close.svg); mask-image:url(assets/icons/material/close.svg); }
     .toast-copy { min-width: 0; }
-    .toast-title { display:block; color:#0A0F0D; }
-    .toast-desc { display:block; margin-top:2px; color:#59615D; font-size:12px; font-weight:450; }
+    .toast-title { display:block; color:var(--ink); }
+    .toast-desc { display:block; margin-top:2px; color:var(--ink-2); font-size:12px; font-weight:450; }
     @keyframes toast-in {
       from { opacity: 0; transform: translateY(8px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -5510,7 +5513,7 @@
        dashboard) : ses styles vivent dans la couche plan de base, plus haut.
        Aucune surcharge thème ici · la scène ne change pas avec le thème. */
 </style>
-  <link rel="stylesheet" href="assets/caisse-skin.css?v=3" />
+  <link rel="stylesheet" href="assets/caisse-skin.css?v=17" />
   <style>
     /* Restaurant menu: keep every category within reach without a sideways swipe.
        This picker is shared by table orders and takeaway orders. */
@@ -5567,7 +5570,7 @@
   </style>
   <link rel="stylesheet" href="assets/pos-mobile.css?v=8" />
   <link rel="stylesheet" href="assets/pos-workspaces.css?v=4" />
-  <link rel="stylesheet" href="assets/kiwi-select.css?v=2" />
+  <link rel="stylesheet" href="assets/kiwi-select.css?v=3" />
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#053B2C" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -5589,7 +5592,7 @@
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=2" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=25" defer></script>
+  <script src="assets/caisse-pairing.js?v=26" defer></script>
   <script src="assets/kiwi-select.js?v=2" defer></script>
   <script src="assets/cash-sessions.js?v=7" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
@@ -5643,7 +5646,7 @@
        server-confirmed or explicitly blocked, never presentation-only. -->
   <script src="assets/operations.js?v=12" defer></script>
   <script src="assets/clients-store.js?v=9" defer></script>
-  <script src="assets/clients-book.js?v=22" defer></script>
+  <script src="assets/clients-book.js?v=28" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
        de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
        et sans imprimante thermique il n'y avait aucun chemin du tout. Ce module

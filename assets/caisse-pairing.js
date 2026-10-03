@@ -43,6 +43,11 @@
 
   function env() { return window.KiwiEnv || { demosAllowed: true }; }
   function hosted() { return env().demosAllowed === false; }
+  function realEnvironment() {
+    if (hosted()) return true;
+    try { return typeof env().isReal === 'function' && !!env().isReal(); }
+    catch (_) { return true; }
+  }
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
   function del(k) { try { localStorage.removeItem(k); } catch (_) {} }
@@ -490,7 +495,7 @@
     /* Hébergé seulement. En local (démos autorisées) un pavé d'appairage
        n'est satisfaisable par personne : dépairer y rendait la main à
        l'application, et doit continuer de le faire. */
-    if (!pv && hosted()) { renderPairPad({}); return; }
+    if (!pv && realEnvironment()) { renderPairPad({}); return; }
     bootWithPin(pv);
   }
   function hidePad() { var s = document.getElementById('cp-screen'); if (s) s.style.display = 'none'; }
@@ -850,7 +855,10 @@
       return;
     }
 
-    bootWithPin(null);
+    // A fresh local demo keeps the original keypad so the user can select a
+    // trade. bootWithPin(null) instead opened the restaurant immediately and
+    // also skipped pairing on a fresh hosted or signed-in native account.
+    if (realEnvironment()) showPad();
   }
 
   /* Le code frappé, soumis au serveur, contre l'identité qu'il prouve — ou null.

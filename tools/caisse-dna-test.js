@@ -15,15 +15,16 @@ const failed = [];
 const ok = (label, condition) => condition ? passed++ : failed.push(label);
 
 const dispatchMatch = page.match(/assets\/pos-dispatch\.js\?v=(\d+)/);
+const dnaMatch = page.match(/assets\/caisse-dna\.js\?v=(\d+)/);
 ok('shared visual DNA is loaded after the dispatcher and before operator use',
   !!dispatchMatch &&
   sw.includes(`'/assets/pos-dispatch.js?v=${dispatchMatch[1]}'`) &&
   /assets\/caisse-dna\.css\?v=\d+/.test(page) &&
-  page.includes('assets/caisse-dna.js?v=2'));
+  !!dnaMatch);
 ok('shared visual DNA remains available offline',
   !!page.match(/assets\/caisse-dna\.css\?v=(\d+)/) &&
   sw.includes(`'/assets/caisse-dna.css?v=${page.match(/assets\/caisse-dna\.css\?v=(\d+)/)[1]}'`) &&
-  sw.includes("'/assets/caisse-dna.js?v=2'"));
+  !!dnaMatch && sw.includes(`'/assets/caisse-dna.js?v=${dnaMatch[1]}'`));
 ok('dispatcher enhances only after the vertical has mounted its own controls',
   dispatch.indexOf('spec.mount(root)') < dispatch.indexOf('KiwiCaisseDna.enhance(root, id)') &&
   dispatch.indexOf('KiwiPosWorkspaces.mount(root, id)') < dispatch.indexOf('KiwiCaisseDna.enhance(root, id)'));

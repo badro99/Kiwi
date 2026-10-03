@@ -1,4 +1,5 @@
 import Capacitor
+import CoreImage
 import SafariServices
 import SwiftUI
 import UIKit
@@ -254,8 +255,37 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
 private struct KiwiMark: View {
     var size: CGFloat = 132
 
+    // Same alpha-only colour key as the bundled web gate. The approved source
+    // is not edited or regenerated; its sculpted RGB artwork stays intact.
+    private static let transparentMark: UIImage? = {
+        guard let source = UIImage(named: "KiwiBrandIcon"), let input = CIImage(image: source),
+              let filter = CIFilter(name: "CIColorMatrix"),
+              let clamp = CIFilter(name: "CIColorClamp"),
+              let blend = CIFilter(name: "CIBlendWithMask") else { return nil }
+        // Core Image pixels are premultiplied. Replacing A while keeping its
+        // premultiplied RGB brightens the translucent edge into cyan. Build a
+        // separate coverage mask and composite the untouched source instead.
+        filter.setValue(input, forKey: kCIInputImageKey)
+        let coverage = CIVector(x: 0, y: 6.375, z: 0, w: 0)
+        filter.setValue(coverage, forKey: "inputRVector")
+        filter.setValue(coverage, forKey: "inputGVector")
+        filter.setValue(coverage, forKey: "inputBVector")
+        filter.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputAVector")
+        filter.setValue(CIVector(x: -0.8, y: -0.8, z: -0.8, w: 0), forKey: "inputBiasVector")
+        guard let mask = filter.outputImage else { return nil }
+        clamp.setValue(mask, forKey: kCIInputImageKey)
+        clamp.setValue(CIVector(x: 0, y: 0, z: 0, w: 0), forKey: "inputMinComponents")
+        clamp.setValue(CIVector(x: 1, y: 1, z: 1, w: 1), forKey: "inputMaxComponents")
+        blend.setValue(input, forKey: kCIInputImageKey)
+        blend.setValue(CIImage(color: .clear).cropped(to: input.extent), forKey: kCIInputBackgroundImageKey)
+        blend.setValue(clamp.outputImage, forKey: kCIInputMaskImageKey)
+        let context = CIContext(options: [.workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB) as Any])
+        guard let output = blend.outputImage, let image = context.createCGImage(output, from: input.extent) else { return nil }
+        return UIImage(cgImage: image, scale: source.scale, orientation: source.imageOrientation)
+    }()
+
     var body: some View {
-        Image("KiwiBrandIcon")
+        Image(uiImage: Self.transparentMark ?? UIImage(named: "KiwiBrandIcon") ?? UIImage())
             .resizable()
             .interpolation(.high)
             .aspectRatio(contentMode: .fit)

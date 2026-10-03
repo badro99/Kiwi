@@ -25,10 +25,10 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': TYPES['.html'], 'Cache-Control': 'no-store' });
     res.end(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
       <link rel="stylesheet" href="/assets/tokens.css"><link rel="stylesheet" href="/caisse-inline.css"><link rel="stylesheet" href="/assets/caisse-dna.css">
-      <link rel="stylesheet" href="/assets/pos-boutique.css">
+      <link rel="stylesheet" href="/assets/pos-boutique.css"><link rel="stylesheet" href="/assets/caisse-skin.css">
       <style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper,#f7f5f0)}button,input{font:inherit}.vx-screen{display:flex}</style>
       <script>window.KiwiEnv={isReal:()=>false,demosAllowed:true};window.KiwiPosDispatch={register:s=>window.__spec=s,lock:()=>{}};</script>
-      <script src="/assets/caisse-dna.js"></script><script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
+      <script src="/assets/caisse-dna.js"></script><script src="/assets/caisse-lang.js"></script><script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
       <script src="/assets/inventory-ledger.js"></script><script src="/assets/maison-stock-movements.js"></script><script src="/assets/procurement.js"></script>
       <script src="/assets/venue-store.js"></script><script src="/assets/clients-store.js"></script><script src="/assets/clients-book.js"></script>
       <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script src="/assets/pos-boutique.js"></script>
@@ -114,6 +114,65 @@ try {
   await page.waitForSelector('[data-bq-cl="c2"] .av', { visible: true });
   const chip = await page.$eval('[data-bq-cl="c2"] .av', (el) => ({ text: el.textContent, px: parseFloat(getComputedStyle(el).fontSize), bg: getComputedStyle(el).backgroundColor }));
   ok(/Avoir/.test(chip.text) && chip.px >= 12 && chip.bg !== 'rgba(0, 0, 0, 0)', '#105 the checkout picker shows the credit as a readable chip');
+  await page.click('#bq-clientm [data-bq-close]');
+  await page.waitForSelector('#bq-client-veil.is-open', { hidden: true });
+
+  // #0153: type into the real carnet. Language changes use its existing rail
+  // controls; query markup remains escaped before the text-node translation.
+  const query = "Aïcha d'atelier · Total <img src=x> $& {n}";
+  for (const [lang, expected] of [
+    ['en', 'No results for'], ['ar', 'لا توجد نتائج عن'], ['fr', 'Aucun résultat pour'],
+  ]) {
+    await page.waitForSelector('[data-kcl="' + lang + '"]', { visible: true });
+    await page.click('[data-kcl="' + lang + '"]');
+    await page.waitForFunction(selected => window.KiwiCaisseLang.get() === selected, {}, lang);
+    const locale = { en: 'en-GB', ar: 'ar-MA', fr: 'fr-FR' }[lang];
+    try {
+      await page.waitForFunction(locale => {
+        const expected = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+        return document.querySelector('.kiwi-dna-clock-date')?.textContent.replace(/[\u2066\u2069]/g, '') === expected;
+      }, { timeout: 5000 }, locale);
+    } catch (error) {
+      const actual = await page.evaluate(locale => ({ language: KiwiCaisseLang.get(),
+        actual: document.querySelector('.kiwi-dna-clock-date')?.textContent,
+        expected: new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()) }), locale);
+      throw new Error('Rail date did not localize: ' + JSON.stringify(actual), { cause: error });
+    }
+    ok(true, '#0152 ' + lang + ': rail date follows the language immediately');
+    await page.click('#bq-tk-client');
+    await page.waitForSelector('#bq-cl-q', { visible: true });
+    await page.evaluate(() => { window.__clientSearchInput = document.querySelector('#bq-cl-q'); });
+    await page.type('#bq-cl-q', query);
+    const clientPrefix = { en: 'No customer for', ar: 'لا يوجد عميل باسم', fr: 'Aucune fiche pour' }[lang];
+    await page.waitForFunction(prefix => document.querySelector('#bq-clientm .bq-empty')?.textContent.startsWith(prefix), {}, clientPrefix);
+    ok(await page.$eval('#bq-cl-q', el => el.type === 'text' && el.enterKeyHint === 'search'), '#0153 ' + lang + ': full text keyboard with Search action');
+    ok(await page.evaluate(() => window.__clientSearchInput === document.querySelector('#bq-cl-q') && document.activeElement === window.__clientSearchInput),
+      '#0153 ' + lang + ': rapid typing retains the live focused input');
+    await page.click('#bq-cl-new');
+    const createLabel = { en: 'Create profile', ar: 'إنشاء الملف', fr: 'Créer la fiche' }[lang];
+    await page.waitForFunction(label => document.querySelector('#bq-cl-create')?.textContent.includes(label), {}, createLabel);
+    ok(await page.$eval('#bq-clientm', (el, query) => !el.querySelector('img') && !el.querySelector('#bq-cl-q') && el.querySelector('#bq-cl-name').value === query, query),
+      '#0153 ' + lang + ': ticket query escaped and form localized');
+    ok(await page.$eval('#bq-clientm', el => ['bq-cl-name', 'bq-cl-tel'].every(id => el.querySelector('label').closest('.bq-cl-form').querySelector('#' + id)?.closest('label')?.querySelector('span')?.textContent.trim())),
+      '#0160 ' + lang + ': customer fields keep visible labels after typing');
+    await page.click('#bq-clientm [data-bq-close]');
+    await page.click('[data-bq-view="clientes"]');
+    await page.waitForSelector('#kcb-q', { visible: true });
+    await page.click('#kcb-q', { clickCount: 3 });
+    await page.type('#kcb-q', query);
+    try {
+      await page.waitForFunction(prefix => document.querySelector('#kcb-list .kcb-empty b')?.textContent.startsWith(prefix), {}, expected);
+    } catch (error) {
+      const actual = await page.evaluate(() => ({ language: window.KiwiCaisseLang.get(), query: document.querySelector('#kcb-q')?.value,
+        message: document.querySelector('#kcb-list')?.textContent, errors: window.KiwiErrors?.list() }));
+      throw new Error(lang + ' search did not localize: ' + JSON.stringify(actual), { cause: error });
+    }
+    const search = await page.$eval('#kcb-list', el => ({
+      text: el.textContent.replace(/[\u2066\u2069]/g, ''), images: el.querySelectorAll('img').length,
+    }));
+    ok(search.text.includes(query) && search.images === 0, '#0153 ' + lang + ': query is literal, escaped and localized');
+    await page.click('[data-bq-view="vente"]');
+  }
   ok(!errors.length, 'no page errors: ' + errors.join(' | '));
 } finally {
   await browser.close();

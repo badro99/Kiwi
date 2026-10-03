@@ -232,7 +232,8 @@ console.log('\n5 · la tablette peut se réappairer sans se vider');
   check('the pad it builds is the one the delegated handlers listen to',
     /id="cp-pad"/.test(src) && /#cp-pad \[data-cp\]/.test(src));
   check('an unpaired hosted till is shown the pad instead of being let through',
-    /if \(!pv && hosted\(\)\) \{ renderPairPad\(\{\}\); return; \}/.test(src));
+    /if \(!pv && realEnvironment\(\)\) \{ renderPairPad\(\{\}\); return; \}/.test(src)
+    && /if \(hosted\(\)\) return true;/.test(src));
   /* En local, dépairer doit continuer de rendre la main : un pavé d'appairage
    * n'y est satisfaisable par personne. */
   check('a local demo is never trapped behind a code it cannot obtain',

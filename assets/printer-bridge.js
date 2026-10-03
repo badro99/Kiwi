@@ -1358,12 +1358,13 @@
     if (document.getElementById('kpr-style')) return;
     var s = document.createElement('style'); s.id = 'kpr-style';
     s.textContent =
-      '#kpr-ov{position:fixed;inset:0;z-index:9998;display:grid;place-items:center;background:rgba(10,15,13,.5);padding:20px;}' +
+      '#kpr-ov{position:fixed;inset:0;z-index:9998;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);place-items:center;box-sizing:border-box;min-height:0;background:rgba(10,15,13,.5);padding:max(20px,calc(var(--kiwi-safe-top,env(safe-area-inset-top,0px)) + 12px)) max(20px,var(--kiwi-safe-right,env(safe-area-inset-right,0px))) max(20px,calc(var(--kiwi-safe-bottom,env(safe-area-inset-bottom,0px)) + 12px)) max(20px,var(--kiwi-safe-left,env(safe-area-inset-left,0px)));}' +
       '.kpr-code{margin:10px 0 4px;padding:14px 16px;border:1px dashed #0B6E4F;border-radius:12px;background:rgba(11,110,79,.06);}' +
       '.kpr-code-num{font:600 34px/1.1 "JetBrains Mono",ui-monospace,Menlo,monospace;letter-spacing:.18em;color:#0B6E4F;text-align:center;}' +
       '.kpr-relay-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(10,15,13,.08);}' +
       '.kpr-relay-row:first-child{border-top:0;} .kpr-relay-row small{color:#5b6660;flex:1;} .kpr-relay-row .kpr-d.on{background:#0B6E4F;}' +
-      '#kpr-card{background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);width:460px;max-width:94vw;max-height:92vh;overflow:auto;border-radius:18px;padding:24px;box-shadow:0 30px 70px -24px rgba(5,59,44,.5);}' +
+      '#kpr-card{box-sizing:border-box;position:relative;min-height:0;background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);width:460px;max-width:100%;max-height:100%;overflow:auto;overscroll-behavior:contain;border-radius:18px;padding:24px;box-shadow:0 30px 70px -24px rgba(5,59,44,.5);}' +
+      '#kpr-card h2{padding-inline-end:48px;min-height:44px;}' +
       '#kpr-card h2{font-size:1.16rem;letter-spacing:-.01em;margin:0 0 4px;display:flex;align-items:center;gap:8px;}' +
       '.kpr-sub{margin:0 0 16px;color:var(--ink,#0A0F0D);opacity:.65;font-size:.9rem;line-height:1.5;}' +
       '.kpr-status{display:flex;align-items:flex-start;gap:11px;padding:13px 15px;border-radius:12px;margin:0 0 18px;font-size:.88rem;line-height:1.45;}' +
@@ -1398,7 +1399,7 @@
       '.kpr-adv{margin-top:8px;border-top:1px solid rgba(0,0,0,.08);padding-top:12px;}' +
       '.kpr-adv>summary{cursor:pointer;font-size:.84rem;font-weight:700;color:var(--riad,#053B2C);opacity:.82;}' +
       '.kpr-adv[open]>summary{margin-bottom:14px;}' +
-      '.kpr-x{float:right;background:none;border:0;font-size:1.3rem;line-height:1;cursor:pointer;color:var(--ink,#0A0F0D);opacity:.5;}' +
+      '.kpr-x{position:absolute;inset-block-start:16px;inset-inline-end:16px;display:grid;place-items:center;width:44px;height:44px;background:none;border:0;border-radius:12px;cursor:pointer;color:var(--ink,#0A0F0D);}.kpr-x svg{width:20px;height:20px;}' +
       '.kpr-note{margin:14px 0 0;font-size:.78rem;opacity:.6;line-height:1.5;}' +
       '.kpr-note a{color:var(--atlas,#0B6E4F);font-weight:600;text-decoration:underline;}' +
       '.kpr-st-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;}' +
@@ -1440,7 +1441,7 @@
     var isLabel = (context.kind || 'label') === 'label';
     ov.innerHTML =
       '<div id="kpr-card">' +
-        '<button class="kpr-x" type="button" id="kpr-close" aria-label="Fermer">×</button>' +
+        '<button class="kpr-x" type="button" id="kpr-close" aria-label="Fermer"><svg data-lucide="x" aria-hidden="true"></svg></button>' +
         '<h2>' + (fromPrint ? (isLabel ? 'Imprimer l’étiquette' : 'Imprimer le reçu') : 'Connecter une imprimante') + '</h2>' +
         '<p class="kpr-sub">' + (fromPrint
           ? (isLabel
@@ -1558,6 +1559,7 @@
         '</details>' +
       '</div>';
     document.body.appendChild(ov);
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 
     var $ = function (id) { return ov.querySelector(id); };
     function readForm() {

@@ -91,7 +91,16 @@ try {
   const reception = await call('ui_click', { ref: refFor(body(desktop), 'Réception') });
   if (reception.isError || !body(reception).includes('hx-stay-new')) console.log('RECEPTION:', body(reception));
   ok(!reception.isError && body(reception).includes('Réception'), 'real sidebar click reaches reception');
-  const bookingClick = await call('ui_click', { ref: refFor(body(reception), '+ Réservation') });
+  // Reception can finish a cloud/fixture render after its navigation snapshot.
+  // A replaced node is not permission to bypass hit-testing. Refresh the
+  // visible snapshot and retry only that transient driver rejection, bounded.
+  let bookingClick;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const ready = await call('ui_snapshot');
+    bookingClick = await call('ui_click', { ref: refFor(body(ready), '+ Réservation') });
+    if (!bookingClick.isError || !body(bookingClick).includes('Control is hidden or covered; call ui_snapshot again.')) break;
+  }
+  if (bookingClick.isError) console.log('BOOKING CLICK ERROR:', body(bookingClick));
   ok(!bookingClick.isError, 'reservation control accepts the real click');
   // Opening this editor is asynchronous. A click snapshot can precede its
   // entrance frame on a busy release Mac; wait for the actual rendered form,

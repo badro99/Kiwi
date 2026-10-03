@@ -12,6 +12,24 @@
   var NATIVE_REVOKED_FLAG = 'kiwi:native:identity-revoked:v1';
   root.classList.add('kiwi-native');
 
+  // The approved mark includes a low-luminance green raster backdrop. WebKit
+  // isolates filtered/blended backgrounds, so screen blending leaves a tile.
+  // Remove only that backdrop in alpha; keep the RGB channels and asset intact.
+  function initNativeBrandAlpha() {
+    if (!document.body || typeof document.createElementNS !== 'function' || document.getElementById('kiwi-native-brand-alpha')) return;
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('width', '0'); svg.setAttribute('height', '0');
+    svg.style.position = 'absolute'; svg.style.pointerEvents = 'none';
+    svg.innerHTML = '<defs><filter id="kiwi-native-brand-alpha" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 6.375 0 0 -0.8"/></filter></defs>';
+    document.body.appendChild(svg);
+    var style = document.createElement('style');
+    style.textContent = 'html.kiwi-native :is(.kiwi-lock-brand,.pin-brand),html.kiwi-native #pair .kw::before{filter:url(#kiwi-native-brand-alpha);mix-blend-mode:normal}';
+    document.head.appendChild(style);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initNativeBrandAlpha, {once:true});
+  else initNativeBrandAlpha();
+
   /* Les rapports d'erreur (assets/err-reporter.js → POST /api/error) portent la
      version de l'app et la plateforme, pas seulement l'empreinte du bundle web :
      « pro/ios/1.0.0 (12) · b3c9e1 ». Lu au moment du rapport, donc l'écriture
@@ -214,7 +232,14 @@
   function nativeRegisterOpen() {
     return !!(document.body && document.body.classList.contains('is-pos'));
   }
+  function nativeRegisterDrawerOpen() {
+    var drawer = document.querySelector('body.is-pos .vx-screen.is-on.vx-nav-open');
+    if (!drawer || drawer.hidden) return false;
+    var style = getComputedStyle(drawer);
+    return style.display !== 'none' && style.visibility !== 'hidden';
+  }
   function nativeBlockingLayer() {
+    if (nativeRegisterDrawerOpen()) return true;
     if (openNativeLayers().length) return true;
     if (document.querySelector('#pair.on,.screen-pin.is-active,.screen-clockin.is-active,.screen-table.is-active')) return true;
     if (document.body && (document.body.classList.contains('nav-open') || document.body.classList.contains('kw-menu-open') || document.body.classList.contains('kiwi-native-menu-open'))) return true;
@@ -288,7 +313,7 @@
     // The invariant launch/lock canvas stays ink even in a light workspace.
     var lockCanvas = document.querySelector('[data-kiwi-lock],.screen-pin.is-active');
     var inkLock = !!(lockCanvas && !lockCanvas.hidden && getComputedStyle(lockCanvas).display !== 'none');
-    var dark = setup || inkLock || !!document.querySelector('#pair.on') || blocking || (till ? root.getAttribute('data-caisse-theme') === 'dark' : root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark');
+    var dark = setup || inkLock || nativeRegisterDrawerOpen() || !!document.querySelector('#pair.on') || blocking || (till ? root.getAttribute('data-caisse-theme') === 'dark' : root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark');
     var nextStyle = dark ? 'DARK' : 'LIGHT';
     if (nextStyle === lastStatusBarStyle) return;
     lastStatusBarStyle = nextStyle;
@@ -1589,6 +1614,9 @@
     if (window.KiwiNativeHostRequestState) window.KiwiNativeHostRequestState();
   }
   function isBlockingNode(node) {
+    // Retail drawers toggle their active screen, not body.nav-open. Watch
+    // both opening and closing so light-mode status text cannot stay stale.
+    if (node && node.matches && node.matches('.vx-screen')) return true;
     if (node && node.matches && node.matches('.kiwi-backdrop,.kiwi-drawer-backdrop')) return true;
     // Full-page dialogs (invoicing, compliance) declare themselves modal.
     if (node && node.matches && (node.matches('[aria-modal="true"]') || (node.querySelector && node.querySelector('[aria-modal="true"]')))) return true;

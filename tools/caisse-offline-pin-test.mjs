@@ -37,7 +37,20 @@ vm.runInNewContext(source, context, { filename: 'assets/caisse-pairing.js' });
 assert.equal(await context.KiwiCaissePairing.authorizeTill('2468'), true);
 const key = [...storage.keys()].find(value => value.startsWith('kiwi:caisse:offline-pins:v1:'));
 assert.ok(key, 'successful online verification creates a tenant-scoped offline verifier');
-assert.ok(!storage.get(key).includes('2468'), 'the raw PIN is never persisted');
+// A substring search in random hexadecimal data falsely reports disclosure
+// whenever a salted digest happens to contain the fixture's four digits.
+// Inspect the persisted shape and verify the hash instead of weakening the
+// raw-code protection or relying on a probabilistic string assertion.
+const rows = JSON.parse(storage.get(key));
+assert.equal(rows.length, 1);
+const verifier = rows[0];
+assert.deepEqual(Object.keys(verifier).sort(), ['digest', 'expiresAt', 'salt', 'staff']);
+assert.deepEqual(Object.keys(verifier.staff).sort(), ['id', 'name', 'role']);
+assert.match(verifier.salt, /^[a-f0-9]{32}$/);
+assert.match(verifier.digest, /^[a-f0-9]{64}$/);
+const expectedDigest = Buffer.from(await webcrypto.subtle.digest('SHA-256',
+  new TextEncoder().encode('offline-fixture:' + verifier.salt + ':' + ['24', '68'].join('')))).toString('hex');
+assert.equal(verifier.digest, expectedDigest, 'only the salted verifier is persisted');
 
 online = false;
 assert.equal(await context.KiwiCaissePairing.authorizeTill('2468'), true,

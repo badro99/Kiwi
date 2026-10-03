@@ -25,6 +25,14 @@
   scrollbar-color: rgba(255,255,255,.18) transparent;
 }
 
+/* A short landscape rail must scroll, not compress the venue card until its
+ * clock paints over the next section. Keep each header/footer fragment at its
+ * content height; the navigation already uses flex: 1 0 auto. Shared by every
+ * enhanced métier rail and harmless when a desktop rail has spare height. */
+.vx-screen.kiwi-dna .kiwi-dna-rail > :not(.kiwi-dna-nav) {
+  flex-shrink: 0;
+}
+
 .vx-screen.kiwi-dna .kiwi-dna-rail::-webkit-scrollbar { width: 8px; }
 .vx-screen.kiwi-dna .kiwi-dna-rail::-webkit-scrollbar-track { background: transparent; }
 .vx-screen.kiwi-dna .kiwi-dna-rail::-webkit-scrollbar-thumb {
@@ -131,7 +139,7 @@
 
 .vx-screen.kiwi-dna .kiwi-dna-nav-label {
   margin: 4px 5px 0;
-  color: rgba(247,245,240,.40);
+  color: color-mix(in srgb, var(--paper-cream, #F7F5F0) 60%, transparent);
   font-size: 9.5px;
   font-weight: 700;
   letter-spacing: .12em;

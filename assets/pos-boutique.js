@@ -2145,27 +2145,25 @@
       KiwiClients.pull((changed) => {
         if (!changed || !root) return;
         const i = $('#bq-cl-q', el);
-        if (i && $('#bq-client-veil.is-open', root)) {
+        if (i && mode === 'search' && $('#bq-client-veil.is-open', root)) {
           const val = i.value;
-          render(val);
+          render(val, true);
           icons();
-          const next = $('#bq-cl-q', el);
-          if (next) { next.focus(); moveCaretEnd(next); }
         }
       });
     }
-    const render = (q) => {
+    const render = (q, keepSearchInput = false) => {
       const hits = clienteHits(q);
       const isDigits = (q || '').replace(/\D/g, '').length > (q || '').replace(/\d/g, '').trim().length;
       const namePrefill = isDigits ? '' : (q || '').trim();
       const phonePrefill = isDigits ? (q || '').trim() : '';
-      el.innerHTML = `
+      const markup = `
         <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
-        <h3 class="modal-title">Cliente</h3>
-        <p class="modal-subtle">Rechercher par nom ou par numéro de téléphone.</p>
+        <h3 class="modal-title">${mode === 'search' ? 'Cliente' : 'Nouvelle cliente'}</h3>
+        ${mode === 'search' ? `<p class="modal-subtle">Rechercher par nom ou par numéro de téléphone.</p>
         <div class="bq-phone-in"><i data-lucide="search"></i>
           <input id="bq-cl-q" type="text" enterkeyhint="search" autocorrect="off" autocapitalize="words" placeholder="Nom ou 06…" value="${esc(q || '')}" autocomplete="off" />
-        </div>
+        </div>` : ''}
         ${mode === 'search' ? `
           <div class="bq-cl-results">
             ${hits.map((c) => {
@@ -2185,14 +2183,26 @@
             <button class="bq-btn ghost" id="bq-cl-guest">Cliente de passage, sans fiche</button>
           </div>` : `
           <div class="bq-cl-form">
-            <input class="bq-in" id="bq-cl-name" placeholder="Nom et prénom" value="${esc(namePrefill)}" />
-            <input class="bq-in" id="bq-cl-tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="06… / +212… (optionnel)" value="${esc(phonePrefill)}" />
+            <label class="bq-cl-field"><span>Nom et prénom</span>
+              <input class="bq-in" id="bq-cl-name" autocomplete="name" enterkeyhint="next" value="${esc(namePrefill)}" />
+            </label>
+            <label class="bq-cl-field"><span>Téléphone (optionnel)</span>
+              <input class="bq-in" id="bq-cl-tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="06… / +212… (optionnel)" value="${esc(phonePrefill)}" />
+            </label>
             <div class="bq-sheet-foot" style="margin-top:4px;">
               <button class="bq-btn secondary" id="bq-cl-back">Retour</button>
               <button class="bq-btn primary" id="bq-cl-create"><i data-lucide="check"></i>Créer la fiche</button>
             </div>
           </div>`}`;
-      $('#bq-cl-q', el).oninput = (e) => { render(e.target.value); icons(); const i = $('#bq-cl-q', el); i.focus(); moveCaretEnd(i); };
+      if (keepSearchInput && mode === 'search' && $('#bq-cl-q', el)) {
+        // Keep the live input in place: replacing it per character cancels
+        // WKWebView keyboard/composition state and drops rapid native typing.
+        const next = document.createElement('div'); next.innerHTML = markup;
+        $('.bq-cl-results', el).innerHTML = $('.bq-cl-results', next).innerHTML;
+        $('#bq-cl-new', el).innerHTML = $('#bq-cl-new', next).innerHTML;
+      } else el.innerHTML = markup;
+      const search = $('#bq-cl-q', el);
+      if (search) search.oninput = (e) => { render(e.currentTarget.value, true); icons(); };
       $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-client-veil'); });
       $$('[data-bq-cl]', el).forEach((b) => {
         b.onclick = () => {
@@ -2200,8 +2210,9 @@
           if (!c) return;
           state.ticket.client = c.id;
           closeVeil('#bq-client-veil');
-          const tt = [c.taille ? 'taille ' + c.taille : '', c.points + ' pts'].filter(Boolean).join(', ');
-          toast(`${c.name}${tt ? ' · ' + tt : ''}${clAvoirOf(c) ? ', un avoir actif' : ''}`);
+          const tt = [c.taille ? 'taille ' + c.taille : '', c.points + ' pts', clAvoirOf(c) ? 'un avoir actif' : ''].filter(Boolean).join(' · ');
+          // Separate interface phrases from customer data for caisse-lang.
+          toast(`${c.name}${tt ? ' · ' + tt : ''}`);
           renderTicket(); icons();
         };
       });
@@ -2687,7 +2698,7 @@
               <div class="bq-scan-log-row ${l.ok ? '' : 'is-err'}">
                 <i data-lucide="${l.ok ? 'check-circle-2' : 'x'}"></i>
                 <span class="when">${fmtHM(l.at)}</span>
-                <span>${esc(l.label)}</span>
+                <span>${esc(l.label)}${l.ok ? ', <span>vérifié</span>' : ''}</span>
                 <span class="ean">${esc(l.ean)}</span>
               </div>`).join('')}
           </div>` : (state.lookup ? '' : `<div class="bq-empty">Aucun article vérifié pour l'instant, la douchette USB tape ici toute seule.</div>`)}
@@ -2792,7 +2803,7 @@
        stock qu'on vient vérifier. À défaut de taille scannée, la 1re taille. */
     const size = (hit && hit.size && p.sizes[hit.size] != null) ? hit.size : (firstFreeFor(p, color) || sizesOf(p)[0] || '');
     state.lookup = { pid, size, color, ean: code, at: new Date() };
-    state.scanLog.unshift({ at: new Date(), ok: true, label: `${p.name}${size ? ' · ' + size : ''}, vérifié`, ean: code, pid, size });
+    state.scanLog.unshift({ at: new Date(), ok: true, label: `${p.name}${size ? ' · ' + size : ''}`, ean: code, pid, size });
     const tot = stockOf(p);
     toast(tot > 0 ? `${p.name} · ${tot} en stock` : `${p.name}, épuisé`);
     askCross(code, pid);
@@ -3864,12 +3875,12 @@
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
           <button class="bq-pay-opt" data-bq-m="virement">
-            <span class="ic"><img src="assets/icons/material/account_balance.svg" alt=""></span>
+            <span class="ic"><i data-lucide="account-balance"></i></span>
             <span class="l"><b>Virement / Versement</b><span>Confirmer uniquement après réception en banque</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
           <button class="bq-pay-opt" data-bq-m="cheque">
-            <span class="ic"><img src="assets/icons/material/receipt_long.svg" alt=""></span>
+            <span class="ic"><i data-lucide="receipt-text"></i></span>
             <span class="l"><b>Chèque</b><span>Confirmer après réception du chèque</span></span>
             <span class="amt">${fmtMAD(portion())}</span>
           </button>
@@ -4059,7 +4070,7 @@
           <div class="reader-method">Lecteur partenaire, V1 sans encaissement Kiwi</div>
         </div>
         <div class="bq-card-confirm" id="bq-card-confirm" hidden>
-          <button class="cash-confirm" id="bq-card-ok"><i data-lucide="check"></i> Encaissement confirmé sur le lecteur</button>
+          <button class="cash-confirm" id="bq-card-ok"><span class="bq-card-label"><i data-lucide="check"></i> Encaissement confirmé sur le lecteur</span></button>
           <button class="bq-btn ghost" id="bq-card-cancel">Paiement refusé · annuler</button>
         </div>`;
       icons(); closeBtns();
@@ -4098,14 +4109,14 @@
       const cheque = method === 'cheque';
       const label = cheque ? 'Chèque' : 'Virement / Versement';
       el.innerHTML = `
-        <button class="bq-modal-x" data-bq-close aria-label="Fermer">×</button>
+        <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">${label} · ${fmtMAD(amount)}</h3>
         <p class="modal-subtle">${cheque ? 'Le chèque a-t-il été remis au comptoir ?' : 'Les fonds sont-ils visibles sur le compte bancaire ?'} Aucun montant ne sera attendu dans le tiroir.</p>
         <div class="bq-sheet-foot">
           <button class="bq-btn secondary" id="bq-external-back">Retour</button>
           <button class="cash-confirm" id="bq-external-ok">${cheque ? 'Chèque reçu' : 'Versement reçu'} · confirmer</button>
         </div>`;
-      closeBtns();
+      icons(); closeBtns();
       $('#bq-external-back', el).onclick = stepMethods;
       $('#bq-external-ok', el).onclick = () => settle({ m: cheque ? 'chèque' : 'virement', amount });
     };
@@ -4281,7 +4292,7 @@
       .bqi-art svg { width: 40px; height: 40px; }
       .bqi-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
       .bqi-info b { font-size: 14.5px; }
-      .bqi-info span { font-size: 12px; color: #77807b; }
+      .bqi-info span { font-size: 12px; color: var(--ink-3); }
       .bqi-stock { font-family: var(--mono); font-size: 15px; font-weight: 600; min-width: 34px; text-align: right; }
       .bqi-stock.bas { color: #B8860B; } .bqi-stock.rupture { color: #9B2F22; }
       .bqi-price { font-family: var(--mono); font-size: 14px; min-width: 90px; text-align: right; }
@@ -4290,10 +4301,10 @@
       .bqi-mini.danger { color: #9B2F22; }
       .bq-invm { width: min(720px, 94vw); max-height: 88vh; overflow-y: auto; padding: 0; }
       .bqi-modh { display: flex; align-items: center; gap: 14px; padding: 22px 24px 14px; border-bottom: 1px solid rgba(10,15,13,.08); }
-      .bqi-modh h3 { margin: 0; font-size: 18px; } .bqi-modh > div { flex: 1; } .bqi-modh > div span { font-size: 12.5px; color: #77807b; }
+      .bqi-modh h3 { margin: 0; font-size: 18px; } .bqi-modh > div { flex: 1; } .bqi-modh > div span { font-size: 12.5px; color: var(--ink-3); }
       .bqi-vtable-wrap { padding: 8px 24px; }
       .bqi-vtable { width: 100%; border-collapse: collapse; font-size: 13px; }
-      .bqi-vtable th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: #77807b; padding: 8px 6px; }
+      .bqi-vtable th { text-align: left; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); padding: 8px 6px; }
       .bqi-vtable td { padding: 9px 6px; border-top: 1px solid rgba(10,15,13,.07); vertical-align: middle; }
       .bqi-dot { display: inline-block; width: 13px; height: 13px; border-radius: 50%; border: 1px solid rgba(0,0,0,.18); vertical-align: -1px; margin-right: 6px; }
       .bqi-stk { display: inline-flex; align-items: center; gap: 5px; }
@@ -4332,7 +4343,7 @@
       .bqsd-t th { text-align: left; font-weight: 500; color: var(--n-500, #7c8a80); padding: 4px 8px; border-bottom: 1px solid var(--n-200, #e7e3da); }
       .bqsd-t td { padding: 3px 8px; border-bottom: 1px solid rgba(0,0,0,.04); }
       .bqi-form { padding: 20px 24px 8px; }
-      .bqi-fg { margin-bottom: 14px; } .bqi-fg label { display: block; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #77807b; margin-bottom: 6px; }
+      .bqi-fg { margin-bottom: 14px; } .bqi-fg label { display: block; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
       .bqi-fg input, .bqi-fg select { width: 100%; padding: 11px 13px; border: 1px solid rgba(10,15,13,.16); border-radius: 10px; font: inherit; font-size: 14px; background: var(--paper); color: var(--ink); }
       .bqi-frow { display: flex; gap: 12px; } .bqi-frow .bqi-fg { flex: 1; }
       /* Le sélecteur de couleur vient de color-palette.js (.kc-*) · rien à
@@ -4340,7 +4351,7 @@
          ligne variante et le rappel discret de la nuance d'origine. */
       .bqi-cbtn { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 2px 4px; margin: -2px -4px; border-radius: 7px; font: inherit; color: inherit; cursor: pointer; }
       .bqi-cbtn:hover { background: rgba(125,242,176,.14); }
-      .bqi-dashboard-only { display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; border: 1px solid rgba(10,15,13,.12); border-radius: 9px; background: var(--paper-soft, #f3f1eb); color: #77807b; font: 600 11px var(--sans, sans-serif); white-space: nowrap; }
+      .bqi-dashboard-only { display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; border: 1px solid rgba(10,15,13,.12); border-radius: 9px; background: var(--paper-soft, #f3f1eb); color: var(--ink-3); font: 600 11px var(--sans, sans-serif); white-space: nowrap; }
       .bqi-cbtn.is-locked, .bqi-mini.is-locked { opacity: .72; cursor: not-allowed; }
       .bqi-csrc { font-style: normal; font-size: 11px; opacity: .6; margin-left: 5px; }
       .bqi-iconpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 8px; max-height: 168px; overflow-y: auto; padding: 8px; border: 1px solid rgba(10,15,13,.14); border-radius: 12px; background: var(--paper); }
@@ -4348,7 +4359,7 @@
       .bqi-icon:hover { border-color: rgba(11,110,79,.5); }
       .bqi-icon.on { border-color: var(--atlas); border-width: 2px; background: #EAF5EF; }
       .bqi-icon .bq-art { width: 100%; height: 100%; }
-      .bqi-help { font-size: 12px; color: #77807b; margin-top: -6px; margin-bottom: 12px; }
+      .bqi-help { font-size: 12px; color: var(--ink-3); margin-top: -6px; margin-bottom: 12px; }
       .bqi-help.is-good { color: var(--atlas); }
       .bqi-help.is-bad  { color: #9B2F22; }
       /* .bqi-help remonte de 6px pour se coller sous un <input> nu ; sous une
@@ -4365,10 +4376,10 @@
       .bqx-head { display: flex; align-items: center; gap: 16px; padding: 20px 24px 14px; border-bottom: 1px solid rgba(10,15,13,.08); }
       .bqx-head-t { flex: 1; min-width: 0; }
       .bqx-head-t h3 { margin: 0 0 2px; font-size: 18px; }
-      .bqx-head-t span { font-size: 12.5px; color: #77807b; line-height: 1.45; display: block; }
+      .bqx-head-t span { font-size: 12.5px; color: var(--ink-3); line-height: 1.45; display: block; }
       .bqx-tally { display: flex; align-items: baseline; gap: 6px; background: var(--paper); border: 1px solid rgba(10,15,13,.08); border-radius: 12px; padding: 8px 14px; flex: 0 0 auto; }
       .bqx-tally b { font-family: var(--mono); font-size: 19px; font-weight: 600; color: var(--atlas); }
-      .bqx-tally span { font-size: 11px; color: #77807b; }
+      .bqx-tally span { font-size: 11px; color: var(--ink-3); }
       .bqx-tally i { width: 1px; height: 18px; background: rgba(10,15,13,.12); margin: 0 4px; }
       .bqx-body { padding: 18px 24px 6px; }
       .bqx-scanbox { display: flex; align-items: center; gap: 12px; background: var(--paper); border: 2px solid var(--atlas); border-radius: 14px; padding: 15px 17px; }
@@ -4379,7 +4390,7 @@
       .bqx-scanbox.slim input { font-size: 15px; }
       .bqx-mini { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 9px; border: 0; background: var(--atlas); color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
       .bqx-mini svg { width: 17px; height: 17px; }
-      .bqx-hint { font-size: 12.5px; color: #77807b; margin: 9px 2px 0; line-height: 1.45; }
+      .bqx-hint { font-size: 12.5px; color: var(--ink-3); margin: 9px 2px 0; line-height: 1.45; }
       .bqx-hint.is-good { color: var(--atlas); }
       .bqx-hint.is-bad  { color: #9B2F22; font-weight: 500; }
       .bqx-hint.is-warn { color: #8A6210; }
@@ -4391,7 +4402,7 @@
       .bqx-log-row em { font-style: normal; font-family: var(--mono); font-size: 11px; color: #8d968f; }
       .bqx-log-row.is-erreur svg { color: #9B2F22; }
       .bqx-log-row.is-recu svg { color: #8A6210; }
-      .bqx-log-empty { margin: 16px 0 4px; padding: 16px; text-align: center; font-size: 12.5px; color: #8d968f; background: var(--paper); border-radius: 12px; line-height: 1.5; }
+      .bqx-log-empty { margin: 16px 0 4px; padding: 16px; text-align: center; font-size: 12.5px; color: var(--ink-3); background: var(--paper); border-radius: 12px; line-height: 1.5; }
       .bqx-found { display: flex; align-items: center; gap: 13px; padding: 15px 24px; }
       .bqx-found svg { width: 22px; height: 22px; flex: 0 0 22px; }
       .bqx-found b { display: block; font-size: 14.5px; }
@@ -4472,49 +4483,49 @@
          posées sur des fonds sombres (même famille que #0156 : la carte
          .warn crème sur fond nuit). On ne change que la luminance, jamais
          la teinte — pas de nouvelle couleur d'accent. */
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-kpi.warn { background: rgba(230,184,77,.13); border-color: #6b5320; }
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-kpi.warn .l { color: #e6c878; }
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-info span,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-kpi .l,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-modh > div span,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-vtable th,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-fg label,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-help,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-dashboard-only,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-first span,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-head-t span,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-tally span,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-hint,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-chain span,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-known-card span,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-existing > span,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-common span,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-pricediff span,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-linkhead span,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-act p,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-opt span { color: #9cb1a6; }
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-first em,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-nocode,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-log-row em,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-log-empty,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-pricediff > svg,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-code { color: #7e9489; }
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-code em.gen { color: #7DF2B0; }
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-code em.imp,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-hint.is-warn,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-sym.warn,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-log-row.is-recu svg,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-found.is-known svg { color: #e6c878; }
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-stock.rupture,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-help.is-bad,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-hint.is-bad,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqsd-v.bad,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-log-row.is-erreur svg,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqx-found.is-fix svg,
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-modfoot .bq-btn.danger { color: #e08d7f; }
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqsd-v.warn { color: #e6c878; }
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqsd-ok { color: #7DF2B0; }
-      :is(html[data-theme="dark"], html[data-caisse-theme="dark"]) .bqi-icon.on { background: rgba(125,242,176,.14); }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-kpi.warn { background: rgba(230,184,77,.13); border-color: #6b5320; }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-kpi.warn .l { color: #e6c878; }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-info span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-kpi .l,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-modh > div span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-vtable th,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-fg label,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-help,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-dashboard-only,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-first span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-head-t span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-tally span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-hint,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-chain span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-known-card span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-existing > span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-common span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-pricediff span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-linkhead span,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-act p,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-opt span { color: #9cb1a6; }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-first em,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-nocode,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-log-row em,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-log-empty,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-pricediff > svg,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-code { color: #7e9489; }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-code em.gen { color: #7DF2B0; }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-code em.imp,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-hint.is-warn,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-sym.warn,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-log-row.is-recu svg,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-found.is-known svg { color: #e6c878; }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-stock.rupture,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-help.is-bad,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-hint.is-bad,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqsd-v.bad,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-log-row.is-erreur svg,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqx-found.is-fix svg,
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-modfoot .bq-btn.danger { color: #e08d7f; }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqsd-v.warn { color: #e6c878; }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqsd-ok { color: #7DF2B0; }
+      :is(html[data-theme="dark"], html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .bqi-icon.on { background: rgba(125,242,176,.14); }
       @media (max-width: 620px) {
         .bqx-choice { grid-template-columns: 1fr; }
         .bqx-head { flex-direction: column; align-items: flex-start; gap: 10px; }

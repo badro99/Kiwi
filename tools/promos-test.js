@@ -76,6 +76,15 @@ PR.reset();
 PR.save({ id: 'a', kind: 'percent', value: 10, scope: { type: 'avant', before: now - 100 * DAY } });
 check(!!PR.priceFor(item(), { now }), 'le déstockage vise ce qui est entré avant la date');
 check(PR.priceFor(item({ createdAt: now - 10 * DAY }), { now }) === null, 'l\'arrivage récent n\'est pas déstocké');
+check(PR.priceFor(item({ createdAt: new Date(now - 200 * DAY).toISOString() }), { now }).price === 900,
+  'une date ISO du catalogue vise bien le stock ancien');
+check(PR.priceFor(item({ createdAt: new Date(now - 10 * DAY).toISOString() }), { now }) === null,
+  'une date ISO récente ne reçoit pas le déstockage');
+check(PR.priceFor(item({ createdAt: now - 100 * DAY }), { now }) === null,
+  'la limite avant reste exclusive, même à la milliseconde exacte');
+for (const createdAt of ['', null, 'date invalide', NaN]) {
+  check(PR.priceFor(item({ createdAt }), { now }) === null, 'une date de stock absente ou invalide ne déclenche pas de remise');
+}
 
 /* Une cible « avant » sans date visait TOUT le magasin dans une première
    version : une promotion à moitié saisie bradait la boutique entière. */

@@ -31,10 +31,12 @@
     const date = root.querySelector('.kiwi-dna-clock-date');
     if (!time || !date) return;
     const now = new Date();
-    time.textContent = new Intl.DateTimeFormat('fr-FR', {
+    const language = window.KiwiCaisseLang ? window.KiwiCaisseLang.get() : 'fr';
+    const locale = { fr: 'fr-FR', en: 'en-GB', ar: 'ar-MA' }[language] || 'fr-FR';
+    time.textContent = new Intl.DateTimeFormat(locale, {
       hour: '2-digit', minute: '2-digit', hour12: false
     }).format(now);
-    date.textContent = new Intl.DateTimeFormat('fr-FR', {
+    date.textContent = new Intl.DateTimeFormat(locale, {
       weekday: 'long', day: 'numeric', month: 'long'
     }).format(now);
   }
@@ -83,6 +85,9 @@
       venue.appendChild(clock);
       paintClock(root);
       clocks.set(root, window.setInterval(() => paintClock(root), 30000));
+      // This is presentation only: changing the till language must repaint the
+      // date immediately, without waiting for the next half-minute clock tick.
+      if (window.KiwiCaisseLang) window.KiwiCaisseLang.subscribe(() => paintClock(root));
     }
 
     if (nav) {

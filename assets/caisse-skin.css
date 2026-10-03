@@ -40,6 +40,63 @@
 /* ---- Stat cards in the light zone read as lit paper ---- */
 .stat-card { box-shadow: var(--elev-1); }
 
+/* One action pair across themes: Atlas/Paper by day, Mint/Ink by night.
+ * The mutable --atlas accent is not always dark enough under white labels.
+ * The dark tokens cover every theme authority, including contradictory flags. */
+  :is(.modal button.primary, .modal .cash-confirm,
+      .bq-btn:not(.secondary):not(.ghost):not(.danger),
+      .bq-btn.is-done, .bq-validate, .mz-btn.primary, .mz-validate,
+      .rp-btn.primary, .bq-split-c.is-on, .bq-seg-it.on, .bq-vip-chip,
+      .kcb-add, .kcb-btn.primary) {
+  /* Some inventory actions carry an inline fill. Both sides must change
+   * together, not just the inherited text colour. */
+  background: var(--caisse-action-fill, var(--forest)) !important;
+  color: var(--caisse-action-ink, var(--paper-cream)) !important;
+  border-color: var(--caisse-action-fill, var(--forest));
+}
+#pos-boutique .bq-seg-it.on small { color: var(--caisse-action-ink, var(--paper-cream)); }
+#pos-boutique .bq-cl-right .av { color: var(--ink); }
+/* The reader-ready message is normal-sized text, not a decorative success
+ * wash. Reuse the accessible theme action ink on both its label and icon. */
+.reader-status.is-success, .reader-disc.is-success svg {
+  color: var(--caisse-action-fill, var(--forest));
+}
+html:is([data-caisse-theme="dark"], [data-theme="dark"], [data-vexel-mode="dark"])
+  .bq-seg .kw-lens { background: var(--caisse-action-fill, #7DF2B0); }
+html:is([data-caisse-theme="dark"], [data-theme="dark"], [data-vexel-mode="dark"])
+  #pos-boutique { --bq-warn: #e6c878; --bq-warn-bg: rgba(230,200,120,.13); }
+html:is([data-caisse-theme="dark"], [data-theme="dark"], [data-vexel-mode="dark"])
+  .toast { --toast-warn: #e6c878; }
+/* A field must remain identifiable on warm paper as well as charcoal.
+ * Safari's default placeholder opacity otherwise makes customer examples
+ * disappear in light mode, even when the field's actual value is readable. */
+:is(.modal :is(.bq-phone-in, .bq-in, .bq-input, .bq-btn.secondary, .cash-input),
+    #kcb-sheet .kcb-field :is(input, select, .kiwi-select-trigger)) {
+  border-color: var(--ink-3);
+}
+#kcb-sheet .kcb-field :is(input, select, .kiwi-select-trigger) {
+  background: var(--paper-elev);
+  color: var(--ink);
+}
+#kcb-sheet .kcb-field .kiwi-select-trigger {
+  min-height: 48px;
+  padding: 13px 14px;
+  border-radius: 12px;
+  box-shadow: none;
+}
+#kcb-sheet .kiwi-select-chevron { color: var(--ink-3); }
+html body.is-pos .kiwi-select-popover { background: var(--paper-elev); color: var(--ink); }
+body.is-pos .kiwi-select-option[aria-selected="true"] {
+  background: var(--caisse-action-fill, var(--forest));
+  color: var(--caisse-action-ink, var(--paper-cream));
+}
+body.is-pos .kiwi-select-option[aria-selected="true"] .kiwi-select-check { color: inherit; }
+:is(.modal, #kcb-sheet, #kcb-root) :is(input, textarea)::placeholder {
+  color: var(--ink-3);
+  opacity: 1;
+}
+#kcb-sheet .kcb-card .kcb-sub { color: var(--ink-3); }
+
 /* ═══ Responsive register ═══════════════════════════════════════════════════ */
 
 /* Peek bar + mobile nav trigger + scrim — hidden on wide screens */

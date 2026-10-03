@@ -10,12 +10,12 @@ const toastRule = html.match(/\.toast\s*\{[\s\S]*?\n\s*\}/)?.[0] || '';
 const titleRule = html.match(/\.toast-title\s*\{[^}]*\}/)?.[0] || '';
 const descRule = html.match(/\.toast-desc\s*\{[^}]*\}/)?.[0] || '';
 
-assert.match(toastRule, /background:\s*rgba\(255,255,255,\.96\)/, 'toast stays a light plate');
-assert.match(toastRule, /color:\s*#0A0F0D/, 'toast has local dark ink');
-assert.match(toastRule, /color-scheme:\s*light/, 'toast form controls and UA paint stay light');
-assert.doesNotMatch(toastRule, /color:\s*var\(--ink\)/, 'toast must not inherit dark-mode ink');
-assert.match(titleRule, /color:\s*#0A0F0D/, 'toast title remains visible');
-assert.match(descRule, /color:\s*#59615D/, 'toast description remains visible');
+assert.match(toastRule, /background:\s*var\(--paper-elev\)/, 'toast uses the theme surface');
+assert.match(toastRule, /color:\s*var\(--ink\)/, 'toast changes ink with its surface');
+assert.doesNotMatch(toastRule, /color-scheme:\s*light/, 'toast cannot force a light plate over a dark register');
+assert.doesNotMatch(toastRule, /rgba\(255,255,255,\.96\)/, 'no fixed white notification rectangle');
+assert.match(titleRule, /color:\s*var\(--ink\)/, 'toast title follows the same ink pair');
+assert.match(descRule, /color:\s*var\(--ink-2\)/, 'toast description uses readable theme ink');
 const shellVersion = sw.match(/var CACHE = 'kiwi-app-v(\d+)'/)?.[1];
 assert.ok(shellVersion && Number(shellVersion) >= 340, 'offline shell generation advanced');
 assert.match(caissePwa, new RegExp(`kiwi-sw\\.js\\?v=${shellVersion}`), 'caisse requests the current worker');

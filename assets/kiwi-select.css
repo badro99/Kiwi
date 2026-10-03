@@ -306,6 +306,7 @@
   display: none;
   background: rgba(2, 9, 6, .42);
   opacity: 0;
+  pointer-events: none;
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   transition: opacity .16s ease;
@@ -326,6 +327,7 @@ body.design-vexel .kiwi-select-popover {
 
   .kiwi-select-backdrop.is-open {
     opacity: 1;
+    pointer-events: auto;
   }
 
   .kiwi-select-popover {

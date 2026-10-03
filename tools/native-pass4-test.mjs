@@ -38,7 +38,7 @@ ok(/is-demo/.test(runtime) && /KiwiEnv[^;]*isReal/.test(runtime), 'demo deletion
 ok(/setAccessoryBarVisible/.test(runtime), 'the WKWebView accessory bar is hidden except on numeric fields');
 ok(/id="rf-search-input"[^>]*autocapitalize="none"/.test(caisse), 'refund search does not autocapitalise');
 ok(/pointer: coarse/.test(caisse), 'refund search does not autofocus on a touch screen');
-ok(/:is\(\.rf-search,\.jr-search\) input:focus-visible\{outline:none\}/.test(runtimeCss), 'refund search draws one rounded ring, not a square one inside it');
+ok(runtimeCss.includes(':is(.rf-search,.jr-search,.bq-phone-in,.bq-ean-in,.kiwi-select-search) input:focus-visible{outline:none}') && runtimeCss.includes(':is(.bq-phone-in,.bq-ean-in,.kiwi-select-search):focus-within{outline:3px solid var(--forest,var(--atlas));outline-offset:2px;box-shadow:none}'), 'refund, journal, customer, scanner and chooser searches draw one rounded ring, not a square one inside it');
 
 // 9 · Header strips
 ok(/body\.kiwi-native-team:not\(#kno\)\{padding-top:0!important\}/.test(runtimeCss), 'no empty band above the Team header');

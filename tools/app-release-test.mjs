@@ -92,6 +92,10 @@ check('Info.plist declares Face ID usage for biometric idle unlock',
   plist.includes('<key>NSFaceIDUsageDescription</key>'));
 check('Info.plist lists the three store languages', /CFBundleLocalizations[\s\S]*<string>fr<\/string>[\s\S]*<string>en<\/string>[\s\S]*<string>ar<\/string>/.test(plist));
 check('Info.plist no longer requires armv7', !plist.includes('<string>armv7</string>') && plist.includes('<string>arm64</string>'));
+const phoneOrientations = plist.match(/<key>UISupportedInterfaceOrientations<\/key>\s*<array>([\s\S]*?)<\/array>/)?.[1] || '';
+check('iPhone supports real portrait and both landscape layouts, not only a rotated simulator frame',
+  ['Portrait', 'LandscapeLeft', 'LandscapeRight'].every(orientation =>
+    phoneOrientations.includes('<string>UIInterfaceOrientation' + orientation + '</string>')));
 check('ExportOptions.plist carries no Team ID and targets App Store Connect',
   exportOptions.includes('<string>KIWI_DEVELOPMENT_TEAM</string>') && exportOptions.includes('app-store-connect') && !/<string>[A-Z0-9]{10}<\/string>/.test(exportOptions));
 check('the archive script injects the Team ID from the environment only',
@@ -138,7 +142,8 @@ check('native shells render the approved sculpted icon asset instead of a recons
   return iosSize && iosSize.width === 512 && iosSize.height === 512 &&
     androidSize && androidSize.width === 512 && androidSize.height === 512 &&
     fs.readFileSync(ios).equals(fs.readFileSync(android)) &&
-    swiftNativeShell.includes('Image("KiwiBrandIcon")') &&
+    swiftNativeShell.includes('UIImage(named: "KiwiBrandIcon")') &&
+    swiftNativeShell.includes('Image(uiImage: Self.transparentMark') &&
     composeNativeShell.includes('painterResource(R.drawable.kiwi_brand_icon)') &&
     !swiftNativeShell.includes('Text("kiwi")') && !composeNativeShell.includes('Text("kiwi"');
 })());

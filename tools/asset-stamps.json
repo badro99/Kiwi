@@ -100,20 +100,20 @@
     "sha": "d079d527100e2c16"
   },
   "assets/caisse-dna.css": {
-    "v": "5",
-    "sha": "63791ade27bb5077"
+    "v": "7",
+    "sha": "8ac19f0c157a71b7"
   },
   "assets/caisse-dna.js": {
-    "v": "2",
-    "sha": "907c1ea564c48012"
+    "v": "3",
+    "sha": "d3dc7827655e8c77"
   },
   "assets/caisse-hardware.js": {
     "v": "4",
     "sha": "1014ed01ce090f7b"
   },
   "assets/caisse-lang.js": {
-    "v": "14",
-    "sha": "7dd46a91476521e2"
+    "v": "25",
+    "sha": "57f87ebeaf66ad44"
   },
   "assets/caisse-link.js": {
     "v": "11",
@@ -128,8 +128,8 @@
     "sha": "216d8525555e8c8b"
   },
   "assets/caisse-pairing.js": {
-    "v": "25",
-    "sha": "7cf2970ff143a8a9"
+    "v": "26",
+    "sha": "710adcd999762455"
   },
   "assets/caisse-pwa.js": {
     "v": "564",
@@ -140,8 +140,8 @@
     "sha": "046824221d7614a7"
   },
   "assets/caisse-skin.css": {
-    "v": "3",
-    "sha": "509b94e540471caf"
+    "v": "17",
+    "sha": "5415a9083abbf379"
   },
   "assets/caisse-stock-sync.js": {
     "v": "10",
@@ -180,8 +180,8 @@
     "sha": "ec5fa6bd71818a12"
   },
   "assets/clients-book.js": {
-    "v": "22",
-    "sha": "f4cda4bfb5d57c94"
+    "v": "28",
+    "sha": "8a698a9f96c4dd16"
   },
   "assets/clients-directory.js": {
     "v": "15",
@@ -428,8 +428,8 @@
     "sha": "43599f2ae6c79f74"
   },
   "assets/kiwi-select.css": {
-    "v": "2",
-    "sha": "35571c6a73eb331e"
+    "v": "3",
+    "sha": "065eeaded7169e58"
   },
   "assets/kiwi-select.js": {
     "v": "2",
@@ -608,12 +608,12 @@
     "sha": "530ff7c046c57b2c"
   },
   "assets/pos-boutique.css": {
-    "v": "44",
-    "sha": "3966a6796d909226"
+    "v": "56",
+    "sha": "b85fb4d705dbc47b"
   },
   "assets/pos-boutique.js": {
-    "v": "44",
-    "sha": "bf6005f5e562e6a3"
+    "v": "56",
+    "sha": "f0b8fe451e29e9f9"
   },
   "assets/pos-coiffure.css": {
     "v": "5",
@@ -624,8 +624,8 @@
     "sha": "3673be5ef49cb7de"
   },
   "assets/pos-dispatch.js": {
-    "v": "67",
-    "sha": "7eb1f3cf2943959a"
+    "v": "70",
+    "sha": "fb3de30a8835a8e6"
   },
   "assets/pos-epicerie.css": {
     "v": "5",
@@ -788,8 +788,8 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "19",
-    "sha": "81de47140b63bb8a"
+    "v": "21",
+    "sha": "0e120d65ddde1378"
   },
   "assets/procurement.js": {
     "v": "4",

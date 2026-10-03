@@ -154,7 +154,7 @@ var SHELL = [
   '/assets/dashboard-pwa.js?v=553',
   '/assets/dashboard-native.js?v=3',
   '/assets/pwa-update.js?v=359',
-  '/assets/caisse-skin.css?v=3',
+  '/assets/caisse-skin.css?v=17',
   '/assets/pos-mobile.css?v=8',
   '/assets/caisse-motion.js?v=1',
   '/assets/caisse-pwa.js?v=564',
@@ -210,7 +210,7 @@ var SHELL = [
   '/assets/caisse-viewport.js?v=1',
   '/assets/live-socket.js?v=4',
   '/assets/escpos.js?v=12',
-  '/assets/printer-bridge.js?v=19',
+  '/assets/printer-bridge.js?v=21',
   '/assets/barcode.js?v=1',
   '/assets/color-palette.js?v=5',
   '/assets/boutique-catalog.js?v=9',
@@ -222,7 +222,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=6',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=14',
+  '/assets/caisse-lang.js?v=25',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/retail-balances.js?v=4',
@@ -239,7 +239,7 @@ var SHELL = [
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=4',
   '/assets/clients-store.js?v=9',
-  '/assets/clients-book.js?v=22',
+  '/assets/clients-book.js?v=28',
   '/assets/clients-directory.js?v=15',
   '/assets/menu-catalog.js?v=25',
   '/assets/stock-identity.js?v=2',
@@ -274,21 +274,21 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=15',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=9',
-  '/assets/pos-dispatch.js?v=67',
+  '/assets/pos-dispatch.js?v=70',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=8',
-  '/assets/caisse-dna.css?v=5',
-  '/assets/caisse-dna.js?v=2',
+  '/assets/caisse-dna.css?v=7',
+  '/assets/caisse-dna.js?v=3',
   '/assets/pos-mobile.js?v=5',
   '/assets/pos-workspaces.css?v=4',
   '/assets/pos-workspaces.js?v=5',
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=44',
-  '/assets/pos-boutique.js?v=44',
+  '/assets/pos-boutique.css?v=56',
+  '/assets/pos-boutique.js?v=56',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -322,7 +322,7 @@ var SHELL = [
   '/assets/pos-autre.js?v=5',
   '/assets/pos-maison.css?v=54',
   '/assets/pos-maison.js?v=54',
-  '/assets/caisse-pairing.js?v=25',
+  '/assets/caisse-pairing.js?v=26',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du

@@ -74,6 +74,39 @@ check(L.tr('1 article') === '1 item', 'le singulier aussi');
    qui compte — le dictionnaire s'arrête net où commence la donnée. */
 check(L.tr('Ticket · MM-1208 · par Salma') === 'Sale · MM-1208 · by Salma', 'le mot « par » se traduit, le numéro de ticket et le prénom de la caissière non');
 check(L.tr('par Yasmine El Fassi') === 'by Yasmine El Fassi', 'un nom composé traverse entier');
+check(L.tr('Bonjour,') === 'Hello,', 'the native greeting translates its punctuation');
+check(L.tr('Acomptes') === 'Deposits', 'the boutique deposits navigation translates in English');
+check(L.tr('Boutique') === 'Shop', 'the shared boutique rail section label translates in English');
+check(L.tr('Imprimantes') === 'Printers', 'the boutique printers navigation translates in English');
+check(L.tr('Notes internes') === 'Internal notes', 'the full profile notes label translates in English');
+check(L.tr('Communication') === 'Contact preferences', 'the contact preferences heading translates in English');
+check(L.tr('Avoir 350 MAD') === 'Store credit 350 MAD', 'store credit translates without changing the balance');
+check(L.tr('Avoir 1 250,50 MAD') === 'Store credit 1 250,50 MAD', 'store credit keeps the exact money formatting');
+check(L.tr("CODE D'ACCÈS · 4 CHIFFRES") === 'ACCESS CODE · 4 DIGITS', 'the static native entry prompt translates');
+/* Real SE Arabic scan view stayed entirely French. Guard the actual rendered
+ * literals, including the placeholder and demo/unsupported-camera branches. */
+const scanCopy = [
+  ['Scan produit', 'Product scan', 'مسح المنتج'],
+  ["Scannez un article pour voir son prix, ses tailles et son stock. Rien n'est ajouté au ticket.", 'Scan an item to see its price, sizes and stock. Nothing is added to the receipt.', 'امسح منتجاً لعرض سعره ومقاساته ومخزونه. لا يُضاف شيء إلى التذكرة.'],
+  ['Scannez ou tapez un code-barres…', 'Scan or type a barcode…', 'امسح رمزاً شريطياً أو اكتبه…'],
+  ['ou', 'or', 'أو'],
+  ['Scanner avec la caméra', 'Scan with the camera', 'المسح بالكاميرا'],
+  ['Scanner un article (douchette démo)', 'Scan an item (demo scanner)', 'مسح منتج (ماسح تجريبي)'],
+  ['Tester la douchette', 'Test the scanner', 'اختبار الماسح'],
+  ['Derniers articles vérifiés', 'Recently checked items', 'آخر المنتجات التي تم التحقق منها'],
+  ["Aucun article vérifié pour l'instant, la douchette USB tape ici toute seule.", 'No items checked yet. The USB scanner enters the code here automatically.', 'لم يتم التحقق من أي منتج بعد. يُدخل الماسح USB الرمز هنا تلقائياً.'],
+  ['Ce navigateur ne sait pas lire un code-barres par la caméra. La douchette USB fonctionne, elle tape directement dans le champ ci-dessus.', 'This browser cannot scan barcodes with the camera. The USB scanner works and enters the code in the field above.', 'لا يدعم هذا المتصفح مسح الرموز الشريطية بالكاميرا. يعمل الماسح USB ويُدخل الرمز مباشرة في الحقل أعلاه.'],
+];
+const boutiqueSource = fs.readFileSync(path.join(__dirname, '..', 'assets', 'pos-boutique.js'), 'utf8');
+for (const [fr, en, ar] of scanCopy) {
+  check(boutiqueSource.includes(fr), 'scanner guard targets the actual source literal: ' + fr);
+  check(L.tr(fr) === en, 'English scanner copy: ' + fr);
+  L.set('ar');
+  check(L.tr(fr) === ar, 'Arabic scanner copy: ' + fr);
+  L.set('en');
+}
+check(L.tr('taille $& {x}') === 'size $& {x}', 'data in the size template cannot become replacement syntax');
+check(L.tr('Salma Bennis · taille S · 480 pts · un avoir actif') === 'Salma Bennis · size S · 480 pts · active store credit', 'customer attachment toast translates without changing the name or balance');
 /* Un segment inconnu ne doit pas empêcher les autres de passer, et surtout ne
    doit RIEN inventer. */
 check(L.tr('Mot inconnu · valeur inconnue') === 'Mot inconnu · valeur inconnue', 'une phrase dont aucun morceau n\'est connu reste intacte');
@@ -92,6 +125,42 @@ check(L.tr('4 785 MAD') === '4 785 MAD', 'un montant n\'est pas un gabarit : il 
 check(L.tr('1 pt / MAD · palier 100') === '1 pt per MAD · tier 100', 'le programme de fidélité du carnet se traduit des deux côtés du point');
 check(L.t('Régulier') === 'Regular', 'le segment d\'une fiche cliente se traduit');
 check(L.tr('Caftan Nouveau Souss') === 'Caftan Nouveau Souss', '… mais « Nouveau » dans un nom d\'article ne bouge pas');
+
+/* Search data is one template argument, never another segment to translate.
+ * Apostrophes, markup and replacement-string markers must remain literal. */
+const searchQueries = ["Aïcha d'El Jadida", '+212 645 64 77 33', 'R&D · Total <img src=x> $& {n}', '« atelier »'];
+for (const query of searchQueries) {
+  check(L.tr('Aucun résultat pour « ' + query + ' »') === 'No results for « ' + query + ' »',
+    'English empty search preserves the complete query: ' + query);
+  check(L.tr('Nouveau client · « ' + query + ' »') === 'New customer · « ' + query + ' »',
+    'English new-customer action preserves the complete query: ' + query);
+  check(L.tr('Aucune fiche pour « ' + query + ' »') === 'No customer for « ' + query + ' »',
+    'English ticket search preserves the complete query: ' + query);
+  check(L.tr('Nouvelle cliente · « ' + query + ' »') === 'New customer · « ' + query + ' »',
+    'English ticket create action preserves the complete query: ' + query);
+}
+L.set('ar');
+check(L.tr('Bonjour,') === 'مرحباً،', 'the Arabic native greeting uses Arabic punctuation');
+check(L.tr('Acomptes') === 'العربون', 'the boutique deposits navigation translates in Arabic');
+check(L.tr('Boutique') === 'متجر', 'the shared boutique rail section label translates in Arabic');
+check(L.tr('Imprimantes') === 'الطابعات', 'the boutique printers navigation translates in Arabic');
+check(L.tr('Notes internes') === 'ملاحظات داخلية', 'the full profile notes label translates in Arabic');
+check(L.tr('Communication') === 'تفضيلات التواصل', 'the contact preferences heading translates in Arabic');
+check(L.tr('Avoir 350 MAD') === 'رصيد متجر 350 MAD', 'Arabic store credit preserves the balance');
+check(L.tr("CODE D'ACCÈS · 4 CHIFFRES") === 'رمز الدخول · 4 أرقام', 'the Arabic entry prompt translates');
+for (const query of searchQueries) {
+  check(L.tr('Aucun résultat pour « ' + query + ' »') === 'لا توجد نتائج عن « ' + query + ' »',
+    'Arabic empty search preserves the complete query: ' + query);
+  check(L.tr('Nouveau client · « ' + query + ' »') === 'عميل جديد · « ' + query + ' »',
+    'Arabic new-customer action preserves the complete query: ' + query);
+  check(L.tr('Aucune fiche pour « ' + query + ' »') === 'لا يوجد عميل باسم « ' + query + ' »',
+    'Arabic ticket search preserves the complete query: ' + query);
+  check(L.tr('Nouvelle cliente · « ' + query + ' »') === 'عميلة جديدة · « ' + query + ' »',
+    'Arabic ticket create action preserves the complete query: ' + query);
+}
+L.set('fr');
+check(L.tr('Aucun résultat pour « Aïcha »') === 'Aucun résultat pour « Aïcha »', 'French search stays original');
+L.set('en');
 
 /* ── les dates ───────────────────────────────────────────────────────────── */
 check(L.tr('jeu. 30 juil.') === 'Thu 30 Jul', 'le jour et le mois se traduisent, le quantième reste');

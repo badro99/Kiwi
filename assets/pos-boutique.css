@@ -343,6 +343,11 @@
    sans elle, semblait décalé. */
 .bq-card-confirm .cash-confirm { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-align: center; }
 .bq-card-confirm .cash-confirm svg { flex: none; }
+/* Keep the icon inside the centered line flow when a long FR label wraps.
+ * A separate flex icon otherwise hugs the edge of the anonymous text box,
+ * even though its shorter painted lines appear off-center on the SE. */
+.bq-card-label { text-align: center; }
+.bq-card-label svg { display: inline-block; vertical-align: middle; margin-inline-end: 8px; }
 
 .bq-tk-lines { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 14px; display: flex; flex-direction: column; gap: 6px; }
 .bq-tk-empty {
@@ -608,6 +613,8 @@
 .bq-cl-new svg { width: 16px; height: 16px; }
 .bq-cl-new:hover { background: var(--mint-tint); }
 .bq-cl-form { display: flex; flex-direction: column; gap: 9px; margin-top: 10px; }
+.bq-cl-field { display: grid; gap: 6px; min-width: 0; }
+.bq-cl-field > span { font: 600 12px/1.4 var(--sans); color: var(--ink-2); }
 .bq-in {
   width: 100%;
   padding: 11px 13px;
@@ -696,6 +703,9 @@
 
 /* ═══════════════ SCAN ═══════════════ */
 .bq-scan { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+/* A phone keyboard reduces this scrollport. Keep the full title/help height:
+ * flex compression otherwise paints the barcode field over the help text. */
+.bq-scan > .bq-head { flex-shrink: 0; }
 .bq-scan-inner { width: min(640px, 100%); margin: 0 auto; padding: 0 22px 30px; }
 .bq-ean-in {
   display: flex; align-items: center; gap: 11px;
@@ -1123,8 +1133,8 @@ button.bq-pill.ok {
 
 /* ═══════════════ misc ═══════════════ */
 .bq-modal-x {
-  position: absolute; top: 14px; right: 14px;
-  width: 32px; height: 32px; border-radius: 9px;
+  position: absolute; top: 14px; inset-inline-end: 14px;
+  width: 44px; height: 44px; border-radius: var(--r-sm, 12px);
   display: flex; align-items: center; justify-content: center;
   color: var(--ink-3);
   transition: background 120ms, color 120ms;
@@ -1132,6 +1142,7 @@ button.bq-pill.ok {
 .bq-modal-x:hover { background: var(--paper-mute); color: var(--ink); }
 .bq-modal-x svg { width: 16px; height: 16px; }
 .modal.bq-rel { position: relative; }
+.modal.bq-rel > :is(.modal-title, .bq-sheet-head) { padding-inline-end: 40px; }
 .bq-foot-note { font-size: 11px; color: var(--ink-4); text-align: center; margin-top: 10px; }
 
 @media (max-width: 1240px) {

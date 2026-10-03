@@ -8,34 +8,42 @@ import path from 'node:path';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const stamps = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/asset-stamps.json'), 'utf8'));
+// The page's explanatory HTML comment contains the literal text "<style>".
+// It is not an element: treating it as an opener invalidated the light :root
+// rule, while the later dark rule still parsed, masking this fixture fault.
+const caisseInlineCss = [...fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8')
+  .replace(/<!--[\s\S]*?-->/g, '').matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)]
+  .map(match => match[1]).join('\n');
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2',
 };
 
-function maisonPage() {
+function maisonPage(actualCaisse = false) {
   return `<!doctype html><html lang="fr"><head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Kiwi Caisse · Amira (preuve synthétique)</title>
-    <link rel="stylesheet" href="/assets/tokens.css"><link rel="stylesheet" href="/assets/caisse-skin.css"><link rel="stylesheet" href="/assets/caisse-dna.css"><link rel="stylesheet" href="/assets/pos-maison.css?v=${stamps['assets/pos-maison.css'].v}"><link rel="stylesheet" href="/assets/retail-balances.css"><link rel="stylesheet" href="/assets/retail-scan.css">
+    <link rel="stylesheet" href="/assets/tokens.css">${actualCaisse ? '<link rel="stylesheet" href="/caisse-inline.css"><link rel="stylesheet" href="/assets/kiwi-select.css">' : ''}<link rel="stylesheet" href="/assets/caisse-skin.css"><link rel="stylesheet" href="/assets/caisse-dna.css"><link rel="stylesheet" href="/assets/pos-maison.css?v=${stamps['assets/pos-maison.css'].v}"><link rel="stylesheet" href="/assets/retail-balances.css"><link rel="stylesheet" href="/assets/retail-scan.css">
     <style>
-      html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper,#f7f5f0);font-family:Arial,sans-serif}button,input{font:inherit}button{border:0}.vx-screen{display:flex}
+      html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper,#f7f5f0);font-family:${actualCaisse ? 'var(--sans)' : 'Arial,sans-serif'}}button,input{font:inherit}button{border:0}.vx-screen{display:flex}
+      ${actualCaisse ? '' : `
       .modal-veil{position:fixed;inset:0;background:rgba(4,14,10,.62);backdrop-filter:blur(16px) saturate(1.2);display:none;align-items:center;justify-content:center;z-index:100;padding:12px}.modal-veil.is-open{display:flex}
       .modal{width:480px;max-width:calc(100vw - 48px);max-height:calc(100vh - 24px);overflow-y:auto;box-sizing:border-box;background:var(--surface,#fff);border:1px solid rgba(0,0,0,.08);border-radius:24px;box-shadow:0 24px 64px -12px rgba(0,0,0,.28);padding:28px 28px 24px}
+      `}
     </style>
     <script>localStorage.setItem('kiwiLiveMerchant','synthetic-retail-acompte');window.KiwiEnv={isReal:()=>false,demosAllowed:true};window.KiwiConfig={features:{caisseInventoryAdmin:true,depotvente:true,caisseInventoryValue:false}};window.KiwiPosDispatch={register:s=>window.__maisonSpec=s,lock:()=>{}};</script>
-    <script src="/assets/caisse-dna.js"></script><script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
+    <script src="/assets/caisse-dna.js"></script>${actualCaisse ? '<script src="/assets/caisse-lang.js"></script>' : ''}<script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
     <script src="/assets/inventory-ledger.js"></script><script src="/assets/maison-stock-movements.js"></script><script src="/assets/procurement.js"></script>
     <script src="/assets/venue-store.js"></script><script src="/assets/discount-policy.js"></script><script src="/assets/retail-balances.js"></script><script src="/assets/clients-store.js"></script><script src="/assets/clients-book.js"></script>
-    <script src="/assets/boutique-catalog.js"></script><script src="/assets/sold-insights.js"></script><script src="/assets/pos-maison.js?v=${stamps['assets/pos-maison.js'].v}"></script>
-  </head><body class="is-pos-maison"><div id="toast-stack"></div><div class="vx-screen is-on" id="pos-maison"></div>
+    <script src="/assets/boutique-catalog.js"></script>${actualCaisse ? '<script src="/assets/promos.js"></script><script src="/assets/pos-inventory-count.js"></script><script src="/assets/kiwi-select.js" defer></script>' : ''}<script src="/assets/sold-insights.js"></script><script src="/assets/pos-maison.js?v=${stamps['assets/pos-maison.js'].v}"></script>
+  </head><body class="${actualCaisse ? 'is-pos ' : ''}is-pos-maison"><div id="toast-stack"></div><div class="vx-screen is-on" id="pos-maison"></div>
     <script>window.__maisonSpec.mount(document.getElementById('pos-maison'));window.KiwiCaisseDna.enhance(document.getElementById('pos-maison'),'maison');</script>
   </body></html>`;
 }
 
 function boutiquePage() {
-  return maisonPage()
+  return maisonPage(true)
     .replaceAll('pos-maison', 'pos-boutique')
     .replaceAll('__maisonSpec', '__boutiqueSpec')
     .replaceAll("'maison'", "'boutique'")
@@ -132,6 +140,10 @@ function navigationPage() {
 
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+  if (pathname === '/caisse-inline.css') {
+    res.writeHead(200, { 'Content-Type': TYPES['.css'], 'Cache-Control': 'no-store' });
+    res.end(caisseInlineCss); return;
+  }
   if (pathname === '/maison.html' || pathname === '/boutique.html' || pathname === '/maison-stock.html' || pathname === '/boutique-stock.html' || pathname === '/clients.html' || pathname === '/dashboard.html' || pathname === '/employee-clock.html' || pathname === '/nav-stability.html') {
     res.writeHead(200, { 'Content-Type': TYPES['.html'], 'Cache-Control': 'no-store' });
     res.end(pathname === '/maison.html' ? maisonPage() : pathname === '/boutique.html' ? boutiquePage() : pathname === '/maison-stock.html' ? stockProofPage('maison') : pathname === '/boutique-stock.html' ? stockProofPage('boutique') : pathname === '/clients.html' ? clientsPage()
