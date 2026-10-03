@@ -31,6 +31,14 @@ const copy=[
  ['#kpr-save-stations-btn','Enregistrer le routage par poste','Save station routing','حفظ توجيه الطباعة حسب المحطة'],
  ['#kpr-relay h3','Imprimer depuis un iPad ou une tablette · relais Kiwi','Print from an iPad or tablet · Kiwi relay','الطباعة من iPad أو جهاز لوحي · وسيط كيوي'],
  ['#kpr-relay-pair','Associer un pont','Pair a bridge','إقران جسر'],
+ ['.kpr-st-top b','Caisse (comptoir)','Till (counter)','الصندوق (الكاونتر)'],
+ ['.kpr-st-badge.receipt','Reçus clients','Customer receipts','إيصالات العملاء'],
+ ['[data-station-id="caisse"] option[value=""]','· Imprimante par défaut (actuelle) ·','· Default printer (current) ·','· الطابعة الافتراضية (الحالية) ·'],
+ ['.kpr-st-card:first-child .kpr-st-test','Ticket test','Test receipt','إيصال تجريبي'],
+ ['#kpr-drawer-test','Tester le tiroir','Test the drawer','اختبار الدرج'],
+ ['.kpr-st-badge.production','Production','Production','الإنتاج'],
+ ['.kpr-st-card:nth-child(2) option[value=""]','· Même imprimante que la caisse ·','· Same printer as the till ·','· نفس طابعة الصندوق ·'],
+ ['#kpr-relay-status-t','Cet appareil n’est pas reconnu comme la caisse d’un commerce · appairez-le d’abord.','This device is not recognised as a merchant’s till · pair it first.','لم يُتعرّف على هذا الجهاز كصندوق متجر · أقرنه أولًا.'],
  ['.kpr-adv summary','Option avancée · imprimante réseau globale (Wi-Fi / Ethernet)','Advanced option · shared network printer (Wi-Fi / Ethernet)','خيار متقدم · طابعة شبكة مشتركة (Wi-Fi / Ethernet)'],
 ];
 try{
@@ -42,6 +50,7 @@ try{
   await page.setRequestInterception(true);
   page.on('request',request=>{
    if(!['GET','HEAD'].includes(request.method())){writes++;return request.abort();}
+   if(new URL(request.url()).pathname==='/api/print/bridges')return request.respond({status:401,contentType:'application/json',body:'{}'});
    if(/^https?:/.test(request.url()) && new URL(request.url()).origin!==base)return request.abort();
    return request.continue();
   });
@@ -62,6 +71,7 @@ try{
   await page.click('[data-action="printer-connect"]');
   await page.waitForSelector('#kpr-card',{visible:true});
   await page.waitForFunction(wanted=>document.querySelector('#kpr-card h2')?.textContent===wanted,{},copy[0][index+1]);
+  await page.waitForFunction(()=>!document.querySelector('#kpr-relay-status-t')?.textContent.includes('Vérification'));
   for(const [selector,...words] of copy){const actual=(await page.$eval(selector,el=>el.textContent)).trim();check(actual===words[index],`${lang} ${theme}: ${selector} copy, got ${actual}`);}
   const bounds=await page.evaluate(()=>{
    const box=el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height};};

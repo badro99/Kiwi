@@ -107,6 +107,76 @@ for (const [fr, en, ar] of scanCopy) {
 }
 check(L.tr('taille $& {x}') === 'size $& {x}', 'data in the size template cannot become replacement syntax');
 check(L.tr('Salma Bennis · taille S · 480 pts · un avoir actif') === 'Salma Bennis · size S · 480 pts · active store credit', 'customer attachment toast translates without changing the name or balance');
+/* Lower native drawer destinations must translate beyond their rail heading.
+ * These are rendered copies from balances, sold insights and printer routing;
+ * numeric examples exercise templates without changing merchant amounts. */
+const secondaryCopy = [
+  ['PAIEMENTS ÉCHELONNÉS', 'INSTALMENT PAYMENTS', 'دفعات على أقساط'],
+  ['Retrouvez une note ouverte et encaissez son solde. Chaque paiement compte le jour où il est reçu.', 'Find an open bill and collect its balance. Each payment counts on the day it is received.', 'ابحث عن فاتورة مفتوحة وحصّل رصيدها. يُحتسب كل دفع في يوم استلامه.'],
+  ['Cliente ou numéro de ticket', 'Customer or receipt number', 'العميلة أو رقم الإيصال'],
+  ['Chercher une cliente ou un ticket', 'Search for a customer or receipt', 'ابحث عن عميلة أو إيصال'],
+  ['Chercher une cliente ou un ticket…', 'Search for a customer or receipt…', 'ابحث عن عميلة أو إيصال…'],
+  ['Aucune note ouverte pour cette recherche.', 'No open bills for this search.', 'لا توجد فواتير مفتوحة لهذا البحث.'],
+  ['Reste 350.50 MAD', 'Remaining 350.50 MAD', 'المتبقي 350.50 MAD'],
+  ['Synchronisation en attente', 'Sync pending', 'المزامنة معلّقة'],
+  ['Stock vendu, catégories et détail des tickets', 'Sold stock, categories and receipt details', 'المخزون المباع والفئات وتفاصيل الإيصالات'],
+  ['Dates', 'Dates', 'التواريخ'],
+  ['Jour exact', 'Exact day', 'يوم محدد'],
+  ['Période', 'Period', 'الفترة'],
+  ['Du', 'From', 'من'],
+  ['Au', 'To', 'إلى'],
+  ['Appliquer', 'Apply', 'تطبيق'],
+  ['Choisissez la date.', 'Choose the date.', 'اختر التاريخ.'],
+  ['La fin doit venir après le début.', 'The end must come after the start.', 'يجب أن تأتي النهاية بعد البداية.'],
+  ['La période ne peut pas finir dans le futur.', 'The period cannot end in the future.', 'لا يمكن أن تنتهي الفترة في المستقبل.'],
+  ['Pièces vendues', 'Units sold', 'القطع المباعة'],
+  ['Produits actifs', 'Active products', 'المنتجات النشطة'],
+  ['Tickets analysés', 'Receipts analysed', 'الإيصالات المحللة'],
+  ['Chiffre produits', 'Product revenue', 'إيرادات المنتجات'],
+  ['Aucune vente détaillée aujourd’hui', 'No detailed sales today', 'لا توجد مبيعات مفصّلة اليوم'],
+  ['Aucune vente détaillée sur la période choisie', 'No detailed sales in the selected period', 'لا توجد مبيعات مفصّلة في الفترة المختارة'],
+  ['dernière vente', 'latest sale', 'آخر بيع'],
+  ['en stock', 'in stock', 'في المخزون'],
+  ['synchronisation…', 'syncing…', 'جارٍ المزامنة…'],
+  ['Aucune vente détaillée sur les 7 derniers jours', 'No detailed sales in the last 7 days', 'لا توجد مبيعات مفصّلة خلال آخر 7 أيام'],
+  ['Dès qu’un ticket est encaissé à la caisse avec ses produits, il apparaît ici : quantités, catégories, paniers associés et recommandations.', 'Once a receipt with its products is paid at the till, it appears here: quantities, categories, associated baskets and recommendations.', 'عند دفع إيصال بمنتجاته في الصندوق، يظهر هنا: الكميات والفئات والسلات المرتبطة والتوصيات.'],
+  ['Produits', 'Products', 'المنتجات'],
+  ['Catégories', 'Categories', 'الفئات'],
+  ['Produits vendus ensemble', 'Products sold together', 'منتجات بيعت معًا'],
+  ['Quantité, chiffre et dernière vente', 'Quantity, revenue and latest sale', 'الكمية والإيرادات وآخر بيع'],
+  ['Associations constatées sur les tickets', 'Combinations observed on receipts', 'توليفات لوحظت في الإيصالات'],
+  ['Contribution par rayon', 'Contribution by category', 'مساهمة كل فئة'],
+  ['Historique détaillé', 'Detailed history', 'السجل المفصّل'],
+  ['Quand et dans quel panier chaque produit a été vendu', 'When and in which basket each product was sold', 'متى وفي أي سلة بيع كل منتج'],
+  ['Même ticket', 'Same receipt', 'نفس الإيصال'],
+  ['Aucune association répétée pour l’instant.', 'No repeated combinations yet.', 'لا توجد توليفات متكررة بعد.'],
+  ['1 pce', '1 unit', '1 قطعة'],
+  ['2 pces', '2 units', '2 قطع'],
+  ['1 pièce', '1 unit', '1 قطعة'],
+  ['2 pièces', '2 units', '2 قطع'],
+  ['2 fois', '2 times', '2 مرات'],
+  ['Caisse (comptoir)', 'Till (counter)', 'الصندوق (الكاونتر)'],
+  ['Reçus clients', 'Customer receipts', 'إيصالات العملاء'],
+  ['· Imprimante par défaut (actuelle) ·', '· Default printer (current) ·', '· الطابعة الافتراضية (الحالية) ·'],
+  ['· Même imprimante que la caisse ·', '· Same printer as the till ·', '· نفس طابعة الصندوق ·'],
+  ['Imprimante de la caisse', 'Till printer', 'طابعة الصندوق'],
+  ['Ticket test', 'Test receipt', 'إيصال تجريبي'],
+  ['Tester le tiroir', 'Test the drawer', 'اختبار الدرج'],
+  ['Production', 'Production', 'الإنتاج'],
+  ['Cet appareil n’est pas reconnu comme la caisse d’un commerce · appairez-le d’abord.', 'This device is not recognised as a merchant’s till · pair it first.', 'لم يُتعرّف على هذا الجهاز كصندوق متجر · أقرنه أولًا.'],
+  ['Relais pas encore activé côté serveur.', 'Relay not yet enabled on the server.', 'الوسيط غير مفعّل على الخادم بعد.'],
+  ['Aucun pont associé à ce commerce.', 'No bridge paired with this merchant.', 'لا يوجد جسر مقترن بهذا المتجر.'],
+  ['Pont associé mais hors ligne · lancez Kiwi Printer Bridge sur l’ordinateur du comptoir.', 'Bridge paired but offline · start Kiwi Printer Bridge on the counter computer.', 'الجسر مقترن لكنه غير متصل · شغّل Kiwi Printer Bridge على حاسوب الكاونتر.'],
+];
+for (const [fr, en, ar] of secondaryCopy) {
+  L.set('en');
+  check(L.tr(fr) === en, 'English secondary-screen copy: ' + fr);
+  L.set('ar');
+  check(L.tr(fr) === ar, 'Arabic secondary-screen copy: ' + fr);
+  L.set('fr');
+  check(L.tr(fr) === fr, 'French secondary-screen copy stays original: ' + fr);
+}
+L.set('en');
 /* Un segment inconnu ne doit pas empêcher les autres de passer, et surtout ne
    doit RIEN inventer. */
 check(L.tr('Mot inconnu · valeur inconnue') === 'Mot inconnu · valeur inconnue', 'une phrase dont aucun morceau n\'est connu reste intacte');
@@ -234,7 +304,7 @@ check(enKeys.every((k) => k.trim() === k && k.length > 0), 'aucune clé ne traî
 /* Une clé qui se traduit par elle-même est du bruit : soit elle est inutile,
    soit quelqu'un a oublié de la traduire en croyant l'avoir fait. On tolère les
    mots identiques dans les deux langues (Scan, Promotions, Total). */
-const IDENTICAL_OK = new Set(['Scan', 'Promotions', 'Total', 'Divers', 'Nom', 'Fin', 'Ticket', 'Dormant', 'Email', 'Notes']);
+const IDENTICAL_OK = new Set(['Scan', 'Promotions', 'Total', 'Divers', 'Nom', 'Fin', 'Ticket', 'Dormant', 'Email', 'Notes', 'Dates', 'Production', 'Stock']);
 const lazy = enKeys.filter((k) => EN[k] === k && !IDENTICAL_OK.has(k));
 check(!lazy.length, `aucune traduction anglaise oubliée${lazy.length ? ' — ' + lazy.slice(0, 5).join(', ') : ''}`);
 const lazyAr = arKeys.filter((k) => AR[k] === k);

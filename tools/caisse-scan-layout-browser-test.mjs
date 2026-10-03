@@ -49,6 +49,7 @@ try {
       }, lang, theme);
       await page.addScriptTag({ path: path.join(root, 'assets/pos-mobile.js') });
       await page.click('.vx-burger');
+      await page.waitForFunction(() => document.querySelector('.vx-screen.is-on').classList.contains('vx-nav-open'));
       await page.waitForFunction(() => !document.querySelector('.kiwi-dna-rail').getAnimations().some(a => a.playState === 'running'));
       await page.click('button[data-bq-view="scan"]');
       await page.waitForSelector('#bq-ean');
@@ -57,13 +58,36 @@ try {
         const ring = await page.$eval(selector, input => {
           const inner = getComputedStyle(input), wrapper = getComputedStyle(input.parentElement);
           return { inner: inner.outlineStyle, width: parseFloat(wrapper.outlineWidth),
-            style: wrapper.outlineStyle, radius: parseFloat(wrapper.borderRadius) };
+            style: wrapper.outlineStyle, radius: parseFloat(wrapper.borderRadius),
+            border: wrapper.borderColor, outline: wrapper.outlineColor, shadow: wrapper.boxShadow };
         });
         check(ring.inner === 'none', label + ': no square inner focus outline ' + JSON.stringify(ring));
         check(ring.style === 'solid' && ring.width >= 3 && ring.radius >= 10,
           label + ': rounded wrapper retains a visible keyboard focus ring ' + JSON.stringify(ring));
+        check(ring.border !== ring.outline && ring.shadow === 'none',
+          label + ': only one accented focus effect ' + JSON.stringify(ring));
       };
       await focusRing('#bq-ean', `${device} ${lang} ${theme} scanner`);
+      const statusBacking = await page.$eval('.vx-screen.is-on', screen => {
+        const css = getComputedStyle(screen, '::before');
+        return { position: css.position, height: parseFloat(css.height), background: css.backgroundColor };
+      });
+      check(statusBacking.position === 'fixed' && statusBacking.height === 20 &&
+        !/rgba?\(0, 0, 0(?:, 0)?\)|transparent/.test(statusBacking.background),
+        `${device} ${lang} ${theme}: opaque status backing while the workspace scrolls ${JSON.stringify(statusBacking)}`);
+      await page.click('.vx-burger');
+      // The scanner's blur handler may reclaim focus after 120ms. An immediate
+      // assertion misses the real WKWebView keyboard reappearing over the rail.
+      await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 220)));
+      check(await page.evaluate(() => !document.activeElement?.matches('input,textarea,select,[contenteditable="true"]')),
+        `${device} ${lang} ${theme}: drawer dismisses text editing`);
+      // Tap the visible scrim, not the rail covering its centre (or its RTL side).
+      const scrimX = lang === 'ar' ? 20 : width - 20;
+      check(await page.evaluate(x => document.elementFromPoint(x, 200)?.classList.contains('vx-scrim'), scrimX),
+        `${device} ${lang} ${theme}: drawer scrim is touchable outside the rail`);
+      await page.mouse.click(scrimX, 200);
+      await page.waitForFunction(() => !document.querySelector('.vx-screen.is-on').classList.contains('vx-nav-open'));
+      await page.click('#bq-ean');
       for (const height of heights) {
         await page.setViewport({ width, height, isMobile: true, hasTouch: true });
         const layout = await page.evaluate(() => {

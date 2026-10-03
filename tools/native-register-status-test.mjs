@@ -53,5 +53,11 @@ decide({ hidden: false, style: { display: 'flex', visibility: 'hidden' } }, fals
 decide(visible, true, 'DARK', true);
 decide(null, true, 'DARK', false);
 assert.match(source, /node\.matches\('\.vx-screen'\)/, 'Observe both open and close screen-class changes');
-assert.match(css, /vx-screen\.is-on\.vx-nav-open::before\{[^}]*height:var\(--kiwi-safe-top\)[^}]*background:var\(--ink-bg/, 'The whole status area has one Ink backing, independent of direction');
+const workspaceBacking = css.match(/\.vx-screen\.is-on::before\{([^}]*)\}/);
+const drawerBacking = css.match(/\.vx-screen\.is-on\.vx-nav-open::before\{([^}]*)\}/);
+assert.ok(workspaceBacking && /position:fixed/.test(workspaceBacking[1]) &&
+  /inset:0 0 auto/.test(workspaceBacking[1]) && /height:var\(--kiwi-safe-top\)/.test(workspaceBacking[1]) &&
+  /background:var\(--paper/.test(workspaceBacking[1]), 'Every scrolling workspace backs the full safe-area strip');
+assert.ok(drawerBacking && /background:var\(--ink-bg/.test(drawerBacking[1]) &&
+  drawerBacking.index > workspaceBacking.index, 'The open drawer overrides that entire strip with Ink, independent of direction');
 console.log('Native retail status: 7 actual-code cases plus observer and safe-area backing guards passed.');

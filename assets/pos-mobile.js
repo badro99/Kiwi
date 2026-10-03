@@ -79,6 +79,9 @@
 
     var setNav = function (on) {
       if (on) {
+        // A WKWebView touch on the menu need not move keyboard focus itself.
+        var editing = document.activeElement;
+        if (editing && editing.matches('input,textarea,select,[contenteditable="true"]')) editing.blur();
         screen.classList.remove('vx-ticket-open');
         var ticketPeek = screen.querySelector('.vx-peek');
         if (ticketPeek) ticketPeek.setAttribute('aria-expanded', 'false');

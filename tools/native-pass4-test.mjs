@@ -11,6 +11,10 @@ const ok = (value, label) => { assert.ok(value, label); checks++; console.log(' 
 
 const runtime = read('app/src/native-runtime.js');
 const runtimeCss = read('app/src/native-runtime.css');
+const posMobile = read('assets/pos-mobile.js');
+ok(runtimeCss.includes(':is(.bq-phone-in,.bq-ean-in,.kiwi-select-search):focus-within{border-color:var(--ink-3)}'), 'wrapped searches have a neutral border under their single accented focus outline');
+ok(/\.vx-screen\.is-on::before\{[^}]*position:fixed[^}]*height:var\(--kiwi-safe-top\)[^}]*background:var\(--paper/.test(runtimeCss), 'the workspace backs the real status area while content scrolls');
+ok(/if \(on\) \{[\s\S]{0,400}document\.activeElement[\s\S]{0,200}editing\.blur\(\)/.test(posMobile), 'opening a retail drawer explicitly ends text editing on WKWebView');
 const shell = read('app/src/native-shell.js');
 const shellHtml = read('app/src/index.html');
 const swift = read('app/ios/App/App/KiwiNativeShell.swift');

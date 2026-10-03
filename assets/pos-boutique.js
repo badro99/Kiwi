@@ -2712,6 +2712,7 @@
     input.onblur = () => {
       setTimeout(() => {
         if (state.view !== 'scan') return;
+        if (root.classList.contains('vx-nav-open')) return;
         if ($$('.modal-veil.is-open', root).length) return;
         const i = $('#bq-ean', root);
         if (i) i.focus();
@@ -5429,6 +5430,14 @@
   }
 
   /* ─── the inventory panel ─── */
+  // Inventory combines UI words and merchant catalog values. Keep the latter
+  // outside the caisse DOM translator, even when a name matches a UI word.
+  function invText(fr) {
+    const language = window.KiwiCaisseLang;
+    return `<span data-caisse-copy="${esc(fr)}" style="display:contents">${esc(language && language.tr ? language.tr(fr) : fr)}</span>`;
+  }
+  function invAttr(fr) { return esc(fr); }
+  function invData(value) { return `<bdi data-nolang>${esc(value)}</bdi>`; }
   function catalogDashboardOnly() {
     const msg = 'Articles et prix se gèrent dans le tableau de bord.';
     if (typeof toast === 'function') toast(msg);
@@ -5440,7 +5449,7 @@
   function renderInventaire() {
     const cat = catDB();
     const panel = $('[data-bq-panel="inventaire"]', root);
-    if (!cat) { panel.innerHTML = '<div class="bq-empty" style="margin:40px;">Base d\'inventaire indisponible.</div>'; return; }
+    if (!cat) { panel.innerHTML = `<div class="bq-empty" style="margin:40px;">${invText("Base d'inventaire indisponible.")}</div>`; return; }
     const st = cat.stats();
     const cats = cat.listCategories();
     const filter = state.invFilter || 'all';
@@ -5448,31 +5457,31 @@
     panel.innerHTML = `
       <div class="bqi">
         <header class="bq-head" style="padding:22px 22px 0;">
-          <div><h1>Inventaire</h1><div class="bq-head-sub">Douchette + imprimante étiquettes · ${st.products} produits · ${st.variants} variantes, base partagée avec le dashboard</div></div>
+          <div><h1>${invText('Inventaire')}</h1><div class="bq-head-sub">${invText('Douchette + imprimante étiquettes')} · ${invData(st.products)} ${invText('produits')} · ${invData(st.variants)} ${invText('variantes')} · ${invText('base partagée avec le dashboard')}</div></div>
         </header>
         <div class="bqi-tools">
-          <div class="bqi-scan"><i data-lucide="scan-line"></i><input id="bqi-scan" placeholder="Scannez un article, ou tapez un code…" autocomplete="off" /></div>
+          <div class="bqi-scan"><i data-lucide="scan-line"></i><input id="bqi-scan" placeholder="${invAttr('Scannez un article, ou tapez un code…')}" aria-label="${invAttr('Scannez un article, ou tapez un code…')}" autocomplete="off" /></div>
           <button class="bq-btn primary" id="bqi-count" style="background:#059669;border-color:#047857;"><i data-lucide="clipboard-check"></i>Inventaire physique</button>
           <button class="bq-btn" id="bqi-intake"><i data-lucide="scan-barcode"></i>Reprendre le stock</button>
-          <span class="bqi-dashboard-only">Articles et prix se gèrent dans le tableau de bord</span>
+          <span class="bqi-dashboard-only">${invText('Articles et prix se gèrent dans le tableau de bord')}</span>
         </div>
         <div class="bqi-pills" id="bqi-pills">
-          <button class="bqi-pill ${filter === 'all' ? 'on' : ''}" data-f="all">Tous · ${st.products}</button>
-          ${cats.map((c) => `<button class="bqi-pill ${filter === c.id ? 'on' : ''}" data-f="${c.id}">${esc(c.name)} · ${cat.categoryCount(c.id)}</button>`).join('')}
+          <button class="bqi-pill ${filter === 'all' ? 'on' : ''}" data-f="all">${invText('Tous')} · ${invData(st.products)}</button>
+          ${cats.map((c) => `<button class="bqi-pill ${filter === c.id ? 'on' : ''}" data-f="${c.id}">${invData(c.name)} · ${invData(cat.categoryCount(c.id))}</button>`).join('')}
         </div>
         <div class="bqi-kpis">
           <!-- boutique réelle : ce que le stock a COÛTÉ (chiffre de compta / assurance).
                La démo garde sa valeur au prix de vente. Voir stats() dans boutique-catalog.js. -->
-          ${inventoryValueVisible() ? `<div class="bqi-kpi"><span class="l">Valeur de stock</span><span class="v">${fmtNum(IS_DEMO ? st.stockValue : st.stockCost)} MAD</span></div>` : ''}
-          <div class="bqi-kpi"><span class="l">Pièces en stock</span><span class="v">${st.totalStock}</span></div>
-          <div class="bqi-kpi ${st.low || st.ruptures ? 'warn' : ''}"><span class="l">Stock bas / rupture</span><span class="v">${st.low} + ${st.ruptures}</span></div>
+          ${inventoryValueVisible() ? `<div class="bqi-kpi"><span class="l">${invText('Valeur de stock')}</span><span class="v">${invData(fmtNum(IS_DEMO ? st.stockValue : st.stockCost)+' MAD')}</span></div>` : ''}
+          <div class="bqi-kpi"><span class="l">${invText('Pièces en stock')}</span><span class="v">${invData(st.totalStock)}</span></div>
+          <div class="bqi-kpi ${st.low || st.ruptures ? 'warn' : ''}"><span class="l">${invText('Stock bas / rupture')}</span><span class="v">${invData(st.low)} + ${invData(st.ruptures)}</span></div>
         </div>
         <div class="bqi-list">
           ${products.length ? products.map((p) => invRow(p)).join('') : `<div class="bq-empty bqi-first">
               <i data-lucide="scan-barcode"></i>
-              <b>Votre stock porte déjà des codes-barres ?</b>
-              <span>Touchez « Reprendre le stock » et scannez vos articles un par un : Kiwi garde le code du fournisseur tel quel. Aucune étiquette à réimprimer.</span>
-              <em>Pour créer un article ou modifier un prix, ouvrez le tableau de bord. Ici, vous pouvez reprendre le stock et les codes existants.</em>
+              <b>${invText('Votre stock porte déjà des codes-barres ?')}</b>
+              <span>${invText('Touchez « Reprendre le stock » et scannez vos articles un par un : Kiwi garde le code du fournisseur tel quel. Aucune étiquette à réimprimer.')}</span>
+              <em>${invText('Pour créer un article ou modifier un prix, ouvrez le tableau de bord. Ici, vous pouvez reprendre le stock et les codes existants.')}</em>
             </div>`}
         </div>
       </div>`;
@@ -5494,10 +5503,10 @@
     const cls = d.stock === 0 ? 'rupture' : (d.stock <= 5 ? 'bas' : '');
     return `<div class="bqi-row" data-inv-open="${p.id}">
       <span class="bqi-art">${artOf(p.art)}</span>
-      <span class="bqi-info"><b>${esc(p.name)}</b><span>${d.category ? esc(d.category.name) : 'Divers'} · ${d.colors.length} coul. · ${d.sizes.length} taille${d.sizes.length > 1 ? 's' : ''} · ${nBc}/${d.variants.length} codes-barres</span></span>
-      <span class="bqi-stock ${cls}">${d.stock}</span>
-      <span class="bqi-price">${fmtMAD(p.priceMAD)}</span>
-      <button class="bqi-mini" data-inv-print="${p.id}" title="Imprimer toutes les étiquettes"><i data-lucide="printer"></i></button>
+      <span class="bqi-info"><b>${invData(p.name)}</b><span>${d.category ? invData(d.category.name) : invText('Divers')} · ${invData(d.colors.length)} ${invText(d.colors.length>1?'couleurs':'couleur')} · ${invData(d.sizes.length)} ${invText(d.sizes.length>1?'tailles':'taille')} · ${invData(nBc+'/'+d.variants.length)} ${invText('codes-barres')}</span></span>
+      <span class="bqi-stock ${cls}">${invData(d.stock)}</span>
+      <span class="bqi-price">${invData(fmtMAD(p.priceMAD))}</span>
+      <button class="bqi-mini" data-inv-print="${p.id}" title="${invAttr('Imprimer toutes les étiquettes')}"><i data-lucide="printer"></i></button>
     </div>`;
   }
 
@@ -5528,27 +5537,27 @@
     const movements = window.KiwiMaisonStock?.productHistory?.(pid, 8) || [];
     const rows = d.variants.length
       ? d.variants.map((v) => invVarRow(v)).join('')
-      : '<tr><td colspan="4" style="text-align:center;padding:18px;color:#99a;">Aucune variante, ajoutez une couleur × taille.</td></tr>';
+      : `<tr><td colspan="4" style="text-align:center;padding:18px;color:#99a;">${invText('Aucune variante, ajoutez une couleur × taille.')}</td></tr>`;
     const html = `
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="bqi-modh">
         <span class="bqi-art">${artOf(p.art)}</span>
-        <div><h3>${esc(p.name)}</h3><span>${d.category ? esc(d.category.name) : 'Divers'} · ${fmtMAD(p.priceMAD)} · ${d.stock} en stock</span></div>
-        <span class="bqi-dashboard-only">Modifier dans le tableau de bord</span>
+        <div><h3>${invData(p.name)}</h3><span>${d.category ? invData(d.category.name) : invText('Divers')} · ${invData(fmtMAD(p.priceMAD))} · ${invData(d.stock)} ${invText('en stock')}</span></div>
+        <span class="bqi-dashboard-only">${invText('Modifier dans le tableau de bord')}</span>
       </div>
       <div class="bqi-vtable-wrap"><table class="bqi-vtable">
-        <thead><tr><th>Couleur · Taille</th><th>Stock</th><th>Code-barres</th><th></th></tr></thead>
+        <thead><tr><th>${invText('Couleur')} · ${invText('Taille')}</th><th>${invText('Stock')}</th><th>${invText('Code-barres')}</th><th></th></tr></thead>
         <tbody>${rows}</tbody></table></div>
       ${movements.length ? `<div class="bqi-movements" style="padding:12px 20px;">
-        <b>Mouvements de stock</b>
+        <b>${invText('Mouvements de stock')}</b>
         ${movements.map(m => `<div class="bqi-movement" style="display:flex;gap:10px;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--n-100);">
-          <span>${esc(m.typeLabel)} · ${esc(m.variant)}</span><span>Ticket ${esc(m.ref || '—')}</span><strong>${m.qty > 0 ? '+' : ''}${m.qty}</strong>
+          <span>${invText(m.typeLabel)} · ${invData(m.variant)}</span><span>${invText('Ticket')} ${invData(m.ref || '·')}</span><strong>${invData((m.qty > 0 ? '+' : '')+m.qty)}</strong>
         </div>`).join('')}
       </div>` : ''}
       <div class="bqi-modfoot">
-        <span class="bqi-dashboard-only">Variantes dans le tableau de bord</span>
-        <button class="bq-btn secondary" data-inv-printall><i data-lucide="printer"></i>Imprimer les étiquettes</button>
-        <span class="bqi-dashboard-only">Suppression dans le tableau de bord</span>
+        <span class="bqi-dashboard-only">${invText('Variantes dans le tableau de bord')}</span>
+        <button class="bq-btn secondary" data-inv-printall><i data-lucide="printer"></i>${invText('Imprimer les étiquettes')}</button>
+        <span class="bqi-dashboard-only">${invText('Suppression dans le tableau de bord')}</span>
       </div>`;
     invSetModal(html, (el) => {
       const cat2 = catDB();
@@ -5562,17 +5571,17 @@
   function invVarRow(v) {
     const primary = (v.barcodes || []).find((b) => b.primary) || (v.barcodes || [])[0];
     const bc = primary
-      ? `<div class="bqi-bc">${window.KiwiBarcode.svg(primary.code, { height: 26, module: 1.1, showText: false })}<span class="bqi-code">${esc(primary.code)}<em class="${primary.type === 'imported' ? 'imp' : 'gen'}">${primary.type === 'imported' ? 'importé' : 'généré'}</em></span></div>`
-      : '<span class="bqi-nocode">aucun code</span>';
+      ? `<div class="bqi-bc">${window.KiwiBarcode.svg(primary.code, { height: 26, module: 1.1, showText: false })}<span class="bqi-code">${invData(primary.code)}<em class="${primary.type === 'imported' ? 'imp' : 'gen'}">${invText(primary.type === 'imported' ? 'importé' : 'généré')}</em></span></div>`
+      : `<span class="bqi-nocode">${invText('aucun code')}</span>`;
     const genOrPrint = primary
-      ? `<button class="bqi-mini" data-vprint="${v.id}" title="Imprimer l'étiquette"><i data-lucide="printer"></i></button>`
-      : `<button class="bqi-mini" data-vgen="${v.id}" title="Générer un EAN-13"><i data-lucide="scan-line"></i></button>`;
+      ? `<button class="bqi-mini" data-vprint="${v.id}" title="${invAttr("Imprimer l'étiquette")}"><i data-lucide="printer"></i></button>`
+      : `<button class="bqi-mini" data-vgen="${v.id}" title="${invAttr('Générer un EAN-13')}"><i data-lucide="scan-line"></i></button>`;
     const shown = variantColor(v);
     return `<tr>
-      <td><span class="bqi-cbtn is-locked" aria-disabled="true" title="Modifier dans le tableau de bord">${colorDot(shown)} ${esc(shown.label)}</span>${variantSource(v) ? `<em class="bqi-csrc">${esc(variantSource(v))}</em>` : ''} · <b>${esc(v.size)}</b></td>
-      <td><span class="bqi-stk-val" style="font-weight:700;padding:4px 8px;border-radius:6px;background:var(--n-100);">${v.stock}</span></td>
+      <td><span class="bqi-cbtn is-locked" aria-disabled="true" title="${invAttr('Modifier dans le tableau de bord')}">${colorDot(shown)} ${invData(shown.label)}</span>${variantSource(v) ? `<em class="bqi-csrc">${invData(variantSource(v))}</em>` : ''} · <b>${invData(v.size)}</b></td>
+      <td><span class="bqi-stk-val" style="font-weight:700;padding:4px 8px;border-radius:6px;background:var(--n-100);">${invData(v.stock)}</span></td>
       <td>${bc}</td>
-      <td class="bqi-vact">${genOrPrint}<button class="bqi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i></button><span class="bqi-mini is-locked danger" aria-disabled="true" title="Supprimer dans le tableau de bord"><i data-lucide="trash-2"></i></span></td>
+      <td class="bqi-vact">${genOrPrint}<button class="bqi-mini" data-vreg="${v.id}" title="${invAttr('Enregistrer un code existant')}"><i data-lucide="link"></i></button><span class="bqi-mini is-locked danger" aria-disabled="true" title="${invAttr('Supprimer dans le tableau de bord')}"><i data-lucide="trash-2"></i></span></td>
     </tr>`;
   }
 

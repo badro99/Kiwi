@@ -13,10 +13,11 @@ html.kiwi-native[lang="ar"] *{letter-spacing:0!important}
 html.kiwi-native body:not(.native-shell-page){min-height:calc(100dvh - var(--kiwi-keyboard));padding-top:var(--kiwi-safe-top)!important;padding-right:var(--kiwi-safe-right)!important;padding-bottom:calc(var(--kiwi-safe-bottom) + var(--kiwi-keyboard))!important;padding-left:var(--kiwi-safe-left)!important;overscroll-behavior:none}
 html.kiwi-native body.native-shell-page{min-height:calc(100dvh - var(--kiwi-keyboard));padding:0!important;overscroll-behavior:none}
 html.kiwi-native button,html.kiwi-native [role="button"],html.kiwi-native nav,html.kiwi-native header,html.kiwi-native footer,html.kiwi-native .sidebar,html.kiwi-native .topbar{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
-/* A retail rail is always Ink, even above a light workspace. Back the entire
-   status area with the same Ink while it is open: the native status style is
-   shared by clock, carrier and battery, not chosen separately per half. */
-html.kiwi-native body.is-pos .vx-screen.is-on.vx-nav-open::before{content:"";position:fixed;inset:0 0 auto;height:var(--kiwi-safe-top);z-index:63;background:var(--ink-bg,#0A0F0D);pointer-events:none}
+/* Scrolling content must not paint through the real status area. The rail is
+   always Ink, even above a light workspace, so its open state backs the entire
+   strip with Ink for the shared native clock/carrier/battery style. */
+html.kiwi-native body.is-pos .vx-screen.is-on::before{content:"";position:fixed;inset:0 0 auto;height:var(--kiwi-safe-top);z-index:63;background:var(--paper,var(--paper-cream,#F7F5F0));pointer-events:none}
+html.kiwi-native body.is-pos .vx-screen.is-on.vx-nav-open::before{background:var(--ink-bg,#0A0F0D)}
 html.kiwi-native input,html.kiwi-native textarea,html.kiwi-native [contenteditable="true"]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 html.kiwi-native .kiwi-native-scroll{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .kiwi-native-offline{position:fixed;z-index:2147483645;top:calc(var(--kiwi-safe-top) + 8px);left:50%;transform:translate(-50%,-140%);max-width:calc(100vw - 32px);padding:9px 14px;border:1px solid rgba(247,245,240,.25);border-radius:999px;background:#053B2C;color:#F7F5F0;font:600 12px/1.2 "Inter Tight",sans-serif;box-shadow:0 10px 30px rgba(5,59,44,.24);opacity:0;pointer-events:none;transition:transform .28s cubic-bezier(.34,1.45,.5,1),opacity .18s ease}
@@ -41,6 +42,7 @@ html.kiwi-native :is(button,a,input,select,textarea,[tabindex]):focus-visible{ou
    also paint a square outline inside it. */
 html.kiwi-native :is(.rf-search,.jr-search,.bq-phone-in,.bq-ean-in,.kiwi-select-search) input:focus-visible{outline:none}
 html.kiwi-native :is(.bq-phone-in,.bq-ean-in,.kiwi-select-search):focus-within{outline:3px solid var(--forest,var(--atlas));outline-offset:2px;box-shadow:none}
+html.kiwi-native :is(.bq-phone-in,.bq-ean-in,.kiwi-select-search):focus-within{border-color:var(--ink-3)}
 html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"],[data-caisse-theme="dark"]) :is(.bq-phone-in,.bq-ean-in,.kiwi-select-search):focus-within{outline-color:var(--mint)}
 html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) :is(button,a,input,select,textarea,[tabindex]):focus-visible{outline-color:#7DF2B0}
 html.kiwi-native :is(.pin-screen,.clockin-screen){box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;padding:calc(var(--kiwi-safe-top) + 20px) max(20px,var(--kiwi-safe-right)) calc(var(--kiwi-safe-bottom) + 20px) max(20px,var(--kiwi-safe-left))}

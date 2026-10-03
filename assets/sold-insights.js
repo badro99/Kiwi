@@ -48,6 +48,29 @@
   }
 
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]; }); }
+  function lang() {
+    try {
+      var api = window.KiwiCaisseLang || window.KiwiI18n;
+      var value = api && (api.get ? api.get() : api.getLang && api.getLang());
+      return value === 'en' || value === 'ar' ? value : 'fr';
+    } catch (_) { return 'fr'; }
+  }
+  function locale() { return { fr:'fr-FR', en:'en-GB', ar:'ar-MA' }[lang()]; }
+  function copy(fr, en, ar) {
+    var api = window.KiwiCaisseLang;
+    if (api && api.tr) return api.tr(fr);
+    // Dashboard uses its own i18n. Only these dynamic fragments need explicit
+    // fallbacks here; merchant data never enters either translation system.
+    return lang() === 'en' ? (en || fr) : lang() === 'ar' ? (ar || fr) : fr;
+  }
+  function ui(fr, en, ar) {
+    return '<span data-caisse-copy="' + esc(fr) + '" style="display:contents">' + esc(copy(fr,en,ar)) + '</span>';
+  }
+  function data(v) { return '<bdi data-nolang>' + esc(v) + '</bdi>'; }
+  function saleDate(value, withTime) {
+    var options = withTime ? {weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'} : {day:'numeric',month:'short'};
+    return new Date(value).toLocaleString(locale(), options);
+  }
   function fmt(v) { try { return (window.KiwiNumber?.format(Math.round(Number(v) || 0), {}) ?? Math.round(Number(v) || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})); } catch (_) { return String(Math.round(Number(v) || 0)); } }
   function slug() {
     try {
@@ -160,18 +183,18 @@
     document.head.appendChild(s);
   }
   function rangeLabel(range) {
-    if (!range) return 'Dates';
+    if (!range) return copy('Dates', 'Dates', 'التواريخ');
     var from = parseDateKey(range.from), to = parseDateKey(range.to);
     var options = { day:'numeric', month:'short' };
-    if (range.from === range.to) return from.toLocaleDateString('fr-FR', options);
-    return from.toLocaleDateString('fr-FR', options) + ' – ' + to.toLocaleDateString('fr-FR', options);
+    if (range.from === range.to) return from.toLocaleDateString(locale(), options);
+    return from.toLocaleDateString(locale(), options) + ' – ' + to.toLocaleDateString(locale(), options);
   }
   function dayControls(days, till, custom) {
     var quick = [1,7,30,90].filter(function(d){ return !till || d <= 30; }).map(function (d) {
       var label = d === 1 ? "Aujourd'hui" : d + ' jours';
       return '<button type="button" class="' + (!custom && days === d ? 'on' : '') + '" data-ksold-days="' + d + '">' + label + '</button>';
     }).join('');
-    return quick + '<button type="button" class="' + (custom ? 'on' : '') + '" data-ksold-custom="1">' + esc(rangeLabel(custom)) + '</button>';
+    return quick + '<button type="button" class="' + (custom ? 'on' : '') + '" data-ksold-custom="1">' + (custom ? data(rangeLabel(custom)) : ui('Dates','Dates','التواريخ')) + '</button>';
   }
   function pickerMarkup(till) {
     var p = till ? tillPicker : dashboardPicker;
@@ -199,20 +222,24 @@
    * Icon is Material Symbols (Outlined 400, viewBox="0 -960 960 960"), per the
    * icon rule in CLAUDE.md §4 — currentColor fill, no hand-drawn paths. */
   function emptyState(a) {
-    var per = a.custom ? 'du ' + rangeLabel(a.custom) : (a.days === 1 ? "aujourd’hui" : 'sur les ' + a.days + ' derniers jours');
+    var heading = a.custom
+      ? ui('Aucune vente détaillée sur la période choisie', 'No detailed sales in the selected period', 'لا توجد مبيعات مفصّلة في الفترة المختارة') + ' · ' + data(rangeLabel(a.custom))
+      : ui(a.days === 1 ? 'Aucune vente détaillée aujourd’hui' : 'Aucune vente détaillée sur les ' + a.days + ' derniers jours',
+        a.days === 1 ? 'No detailed sales today' : 'No detailed sales in the last ' + a.days + ' days',
+        a.days === 1 ? 'لا توجد مبيعات مفصّلة اليوم' : 'لا توجد مبيعات مفصّلة خلال آخر ' + a.days + ' أيام');
     return '<div class="kx-empty">'
       + '<div class="ico"><svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M280-80q-33 0-56.5-23.5T200-160v-480q0-33 23.5-56.5T280-720h80q0-83 58.5-141.5T560-920q83 0 141.5 58.5T760-720h80q33 0 56.5 23.5T920-640v480q0 33-23.5 56.5T840-80H280Zm0-80h560v-480h-80v80q0 17-11.5 28.5T720-520q-17 0-28.5-11.5T680-560v-80H440v80q0 17-11.5 28.5T400-520q-17 0-28.5-11.5T360-560v-80h-80v480Zm160-560h240q0-50-35-85t-85-35q-50 0-85 35t-35 85ZM280-160v-480 480Z"/></svg></div>'
-      + '<h3>Aucune vente détaillée ' + esc(per) + '</h3>'
+      + '<h3>' + heading + '</h3>'
       + '<p>Dès qu’un ticket est encaissé à la caisse avec ses produits, il apparaît ici : quantités, catégories, paniers associés et recommandations.</p>'
       + '</div>';
   }
   function body(a, owner) {
     if (!a.sales.length) return '<div class="ksold-full">' + emptyState(a) + '</div>';
     var max = a.products[0] ? a.products[0].qty : 1;
-    var productRows = a.products.slice(0, owner ? 20 : 12).map(function (p) { return '<div class="ksold-row"><div><div class="ksold-name">'+esc(p.name)+'</div><div class="ksold-meta">'+esc(p.category)+' · dernière vente '+new Date(p.last).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})+(Number.isFinite(p.stock)?' · '+p.stock+' en stock':'')+'</div><div class="ksold-bar"><i style="width:'+Math.max(4,Math.round(p.qty/max*100))+'%"></i></div></div><div class="ksold-val">'+p.qty+' pce'+(p.qty>1?'s':'')+'<div class="ksold-meta">'+fmt(p.revenue)+' MAD</div></div></div>'; }).join('');
-    var catRows = a.categories.map(function(c){return '<div class="ksold-row"><div><div class="ksold-name">'+esc(c.name)+'</div><div class="ksold-meta">'+c.qty+' pièce'+(c.qty>1?'s':'')+'</div></div><div class="ksold-val">'+fmt(c.revenue)+' MAD</div></div>';}).join('');
-    var pairRows = a.pairs.slice(0,8).map(function(p){return '<div class="ksold-row"><div><div class="ksold-name">'+esc(p.a)+' + '+esc(p.b)+'</div><div class="ksold-meta">Même ticket</div></div><div class="ksold-val">'+p.count+' fois</div></div>';}).join('') || '<div class="ksold-note">Aucune association répétée pour l’instant.</div>';
-    var timeline = a.sales.slice(0,20).map(function(s){return '<div class="ksold-row"><div><div class="ksold-name">'+s.lines.map(function(l){return l.qty+'× '+esc(l.name);}).join(' · ')+'</div><div class="ksold-meta">'+esc(s.ref || 'Ticket')+'</div></div><div><div class="ksold-val">'+fmt(s.amount || s.lines.reduce(function(n,l){return n+l.total;},0))+' MAD</div><div class="ksold-time">'+new Date(s.ts).toLocaleString('fr-FR',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'</div></div></div>';}).join('');
+    var productRows = a.products.slice(0, owner ? 20 : 12).map(function (p) { return '<div class="ksold-row"><div><div class="ksold-name">'+data(p.name)+'</div><div class="ksold-meta">'+data(p.category)+' · '+ui('dernière vente','latest sale','آخر بيع')+' '+data(saleDate(p.last))+(Number.isFinite(p.stock)?' · '+data(p.stock)+' '+ui('en stock','in stock','في المخزون'):'')+'</div><div class="ksold-bar"><i style="width:'+Math.max(4,Math.round(p.qty/max*100))+'%"></i></div></div><div class="ksold-val">'+data(p.qty)+' '+ui(p.qty>1?'pces':'pce',p.qty>1?'units':'unit',p.qty>1?'قطع':'قطعة')+'<div class="ksold-meta">'+data(fmt(p.revenue)+' MAD')+'</div></div></div>'; }).join('');
+    var catRows = a.categories.map(function(c){return '<div class="ksold-row"><div><div class="ksold-name">'+data(c.name)+'</div><div class="ksold-meta">'+data(c.qty)+' '+ui(c.qty>1?'pièces':'pièce',c.qty>1?'units':'unit',c.qty>1?'قطع':'قطعة')+'</div></div><div class="ksold-val">'+data(fmt(c.revenue)+' MAD')+'</div></div>';}).join('');
+    var pairRows = a.pairs.slice(0,8).map(function(p){return '<div class="ksold-row"><div><div class="ksold-name">'+data(p.a)+' + '+data(p.b)+'</div><div class="ksold-meta">Même ticket</div></div><div class="ksold-val">'+data(p.count)+' '+ui('fois','times','مرات')+'</div></div>';}).join('') || '<div class="ksold-note">Aucune association répétée pour l’instant.</div>';
+    var timeline = a.sales.slice(0,20).map(function(s){return '<div class="ksold-row"><div><div class="ksold-name">'+s.lines.map(function(l){return data(l.qty)+'× '+data(l.name);}).join(' · ')+'</div><div class="ksold-meta">'+(s.ref?data(s.ref):ui('Ticket','Receipt','الإيصال'))+'</div></div><div><div class="ksold-val">'+data(fmt(s.amount || s.lines.reduce(function(n,l){return n+l.total;},0))+' MAD')+'</div><div class="ksold-time">'+data(saleDate(s.ts,true))+'</div></div></div>';}).join('');
     var ai = owner ? '<section class="ksold-card ksold-ai"><div class="ksold-ai-tag">✦ Kiwi AI · basé sur vos ventes</div>'+recommendations(a).map(function(r){return '<div class="ksold-rec"><b>'+esc(r.title)+'</b><p>'+esc(r.text)+'</p></div>';}).join('')+'</section>' : '<section class="ksold-card"><h2>Produits vendus ensemble</h2><div class="ksold-note">Associations constatées sur les tickets</div>'+pairRows+'</section>';
     return '<section class="ksold-card"><h2>Produits</h2><div class="ksold-note">Quantité, chiffre et dernière vente</div>'+productRows+'</section>'+ai+'<section class="ksold-card"><h2>Catégories</h2><div class="ksold-note">Contribution par rayon</div>'+catRows+'</section>'+(owner?'<section class="ksold-card"><h2>Produits vendus ensemble</h2><div class="ksold-note">Paniers réellement observés</div>'+pairRows+'</section>':'')+'<section class="ksold-card ksold-full"><h2>Historique détaillé</h2><div class="ksold-note">Quand et dans quel panier chaque produit a été vendu</div>'+timeline+'</section>';
   }
@@ -275,5 +302,12 @@
     H['nav-sold'] = renderDashboard;
   }
   window.KiwiSoldInsights = { analyze: analyze, renderTill: renderTill, renderDashboard: renderDashboard };
+  if (window.KiwiCaisseLang && window.KiwiCaisseLang.subscribe) window.KiwiCaisseLang.subscribe(function () {
+    // Protected dates are generated data, not translation tokens. Reformat
+    // them when the till language changes, without fetching or writing books.
+    var content = document.querySelector('.ksold');
+    var panel = content && content.closest && content.closest('[data-bq-panel="vendus"],[data-mz-panel="vendus"]');
+    if (panel) renderTillNoFetch(panel);
+  });
   window.addEventListener('load',function(){ installDashboard(); if(window.KiwiVenue&&KiwiVenue.subscribe)KiwiVenue.subscribe(installDashboard); if(window.KiwiSales&&KiwiSales.subscribe)KiwiSales.subscribe(function(){if(document.querySelector('.ksold')&&!document.querySelector('[data-bq-panel="vendus"].is-on'))renderDashboard();}); });
 })();
