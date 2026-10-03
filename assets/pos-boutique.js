@@ -2752,7 +2752,7 @@
     const hit = window.KiwiBoutiqueCatalog ? window.KiwiBoutiqueCatalog.resolveScan(code) : null;
     const pid = hit ? hit.pid : BY_EAN[code];
     if (!pid || !P[pid]) {
-      toast(`Code ${code} inconnu, enregistrez-le sur un article`);
+      toast(`Code ${code} inconnu, enregistrez-le sur un article`, undefined, 'warn');
       offerRegister(code);
       return;
     }
@@ -2787,7 +2787,7 @@
     if (!pid || !P[pid]) {
       state.lookup = null;
       state.scanLog.unshift({ at: new Date(), ok: false, label: 'Code inconnu, non référencé', ean: code, pid: null, size: '' });
-      toast(`Code ${code} inconnu, aucun article ne le porte`);
+      toast(`Code ${code} inconnu, aucun article ne le porte`, undefined, 'warn');
       /* Le cas où la question vaut le plus cher : l'article n'est pas d'ICI.
          Il est peut-être de l'autre boutique — et c'est la réponse que le
          vendeur cherchait avant même de savoir qu'il pouvait la demander. */
@@ -4797,7 +4797,7 @@
        de stock avec ce code, où il peut devenir un nouvel article OU une
        déclinaison du précédent — l'ancien sélecteur, lui, exigeait de choisir un
        produit déjà existant et ne savait pas en créer. */
-    toast(`Code ${code} inconnu, à enregistrer`);
+    toast(`Code ${code} inconnu, à enregistrer`, undefined, 'warn');
     intakeStartWith(code);
   }
 

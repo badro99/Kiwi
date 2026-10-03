@@ -40,10 +40,10 @@ html.kiwi-native .qty-btn{min-width:44px}
 html.kiwi-native :is(button,a,input,select,textarea,[tabindex]):focus-visible{outline:3px solid #0B6E4F;outline-offset:3px}
 /* Search fields whose rounded wrapper draws the ring (:focus-within) must not
    also paint a square outline inside it. */
-html.kiwi-native :is(.rf-search,.jr-search,.bq-phone-in,.bq-ean-in,.kiwi-select-search) input:focus-visible{outline:none}
-html.kiwi-native :is(.bq-phone-in,.bq-ean-in,.kiwi-select-search):focus-within{outline:3px solid var(--forest,var(--atlas));outline-offset:2px;box-shadow:none}
-html.kiwi-native :is(.bq-phone-in,.bq-ean-in,.kiwi-select-search):focus-within{border-color:var(--ink-3)}
-html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"],[data-caisse-theme="dark"]) :is(.bq-phone-in,.bq-ean-in,.kiwi-select-search):focus-within{outline-color:var(--mint)}
+html.kiwi-native :is(.rf-search,.jr-search,.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan) input:focus-visible{outline:none}
+html.kiwi-native :is(.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan):focus-within{outline:3px solid var(--forest,var(--atlas));outline-offset:2px;box-shadow:none}
+html.kiwi-native :is(.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan):focus-within{border-color:var(--ink-3)}
+html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"],[data-caisse-theme="dark"]) :is(.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan):focus-within{outline-color:var(--mint)}
 html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) :is(button,a,input,select,textarea,[tabindex]):focus-visible{outline-color:#7DF2B0}
 html.kiwi-native :is(.pin-screen,.clockin-screen){box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;padding:calc(var(--kiwi-safe-top) + 20px) max(20px,var(--kiwi-safe-right)) calc(var(--kiwi-safe-bottom) + 20px) max(20px,var(--kiwi-safe-left))}
 html.kiwi-native .clockin-screen{justify-content:flex-start;gap:clamp(16px,3vh,28px)}
@@ -992,3 +992,17 @@ html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock :is(.kiwi-lock-help
   html.kiwi-native body.kiwi-native-kitchen:not(#kno) #pair-msg{margin-top:8px;min-height:20px}
   html.kiwi-native body.kiwi-native-kitchen:not(#kno) #pair .kiwi-native-role-back{margin:0 auto;min-height:44px}
 }
+
+/* #0156: printer-bridge injects light-only status plates after this stylesheet.
+   Native sheets use the same semantic palette/action pair as the caisse, so
+   every dark-flag combination follows the resolved tokens, not light RGBs. */
+html.kiwi-native #kpr-card .kpr-status.off{background:var(--paper-elev,var(--surface));border-color:var(--danger-mute);color:var(--danger-mute)}
+html.kiwi-native #kpr-card .kpr-status.on{background:var(--paper-elev,var(--surface));border-color:var(--forest);color:var(--forest)}
+html.kiwi-native #kpr-card .kpr-status .kpr-d{background:currentColor;box-shadow:0 0 0 4px color-mix(in srgb,currentColor 14%,transparent)}
+html.kiwi-native #kpr-card :is(.kpr-btc,.kpr-save,.kpr-st-add-btn,.kpr-quick .kpr-browser){background:var(--caisse-action-fill,var(--forest));color:var(--caisse-action-ink,var(--paper-cream));border-color:var(--caisse-action-fill,var(--forest))}
+html.kiwi-native #kpr-card .kpr-test{color:var(--forest);border-color:var(--forest)}
+html.kiwi-native #kpr-card .kpr-adv summary{color:var(--forest);opacity:1}
+html.kiwi-native #kpr-card .kpr-field label{color:var(--ink-2)}
+html.kiwi-native #kpr-card :is(.kpr-field input,.kpr-field select,.kpr-st-sel,.kiwi-select-trigger){border-color:var(--ink-3)}
+html.kiwi-native #kpr-card .kpr-field input::placeholder{color:var(--ink-2);opacity:1}
+html.kiwi-native #kpr-card :is(.kpr-st-badge.receipt,.kpr-st-badge.production){background:var(--paper-soft);color:var(--ink-2)}

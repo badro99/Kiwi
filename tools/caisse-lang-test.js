@@ -94,6 +94,7 @@ const scanCopy = [
   ['Scanner un article (douchette démo)', 'Scan an item (demo scanner)', 'مسح منتج (ماسح تجريبي)'],
   ['Tester la douchette', 'Test the scanner', 'اختبار الماسح'],
   ['Derniers articles vérifiés', 'Recently checked items', 'آخر المنتجات التي تم التحقق منها'],
+  ['Code inconnu, non référencé', 'Unknown code, not registered', 'رمز غير معروف، غير مسجّل'],
   ["Aucun article vérifié pour l'instant, la douchette USB tape ici toute seule.", 'No items checked yet. The USB scanner enters the code here automatically.', 'لم يتم التحقق من أي منتج بعد. يُدخل الماسح USB الرمز هنا تلقائياً.'],
   ['Ce navigateur ne sait pas lire un code-barres par la caméra. La douchette USB fonctionne, elle tape directement dans le champ ci-dessus.', 'This browser cannot scan barcodes with the camera. The USB scanner works and enters the code in the field above.', 'لا يدعم هذا المتصفح مسح الرموز الشريطية بالكاميرا. يعمل الماسح USB ويُدخل الرمز مباشرة في الحقل أعلاه.'],
 ];
@@ -106,6 +107,30 @@ for (const [fr, en, ar] of scanCopy) {
   L.set('en');
 }
 check(L.tr('taille $& {x}') === 'size $& {x}', 'data in the size template cannot become replacement syntax');
+/* Only these three complete UI sentences may translate an unknown barcode.
+ * The entire code is data, including dots, numeric formatting and markup. */
+const unknownCodeCopy = [
+  ['inconnu, enregistrez-le sur un article', 'Unknown code {code}, register it on an item', 'الرمز {code} غير معروف، سجّله على منتج'],
+  ['inconnu, aucun article ne le porte', 'Unknown code {code}, no item uses it', 'الرمز {code} غير معروف، لا يحمله أي منتج'],
+  ['inconnu, à enregistrer', 'Unknown code {code}, register it', 'الرمز {code} غير معروف، يجب تسجيله'],
+];
+const unknownCodes = ['qqq', '0000123-045', 'R&D · Total <img src=x> $& {code} {n}', 'Produits inconnu, à enregistrer\npar Salma'];
+for (const [suffix, en, ar] of unknownCodeCopy) {
+  check(boutiqueSource.includes('toast(`Code ${code} ' + suffix + '`'), 'unknown-code guard targets the actual complete toast: ' + suffix);
+  check(boutiqueSource.includes('toast(`Code ${code} ' + suffix + '`, undefined, \'warn\')'), 'unknown-code feedback explicitly warns instead of reporting success: ' + suffix);
+  for (const code of unknownCodes) for (const [lang, expected] of [['fr', 'Code {code} ' + suffix], ['en', en], ['ar', ar]]) {
+    L.set(lang);
+    check(L.tr('Code ' + code + ' ' + suffix) === expected.replace('{code}', () => code),
+      lang + ' unknown-code toast preserves the complete code: ' + code + ' / ' + suffix);
+  }
+}
+for (const lang of ['en', 'ar']) {
+  L.set(lang);
+  for (const merchant of ['Code Produits', 'Code 0000123-045', 'Code robe inconnu, personnalisé']) {
+    check(L.tr(merchant) === merchant, lang + ' no generic Code prefix translation: ' + merchant);
+  }
+}
+L.set('en');
 check(L.tr('Salma Bennis · taille S · 480 pts · un avoir actif') === 'Salma Bennis · size S · 480 pts · active store credit', 'customer attachment toast translates without changing the name or balance');
 /* Lower native drawer destinations must translate beyond their rail heading.
  * These are rendered copies from balances, sold insights and printer routing;
@@ -167,6 +192,19 @@ const secondaryCopy = [
   ['Relais pas encore activé côté serveur.', 'Relay not yet enabled on the server.', 'الوسيط غير مفعّل على الخادم بعد.'],
   ['Aucun pont associé à ce commerce.', 'No bridge paired with this merchant.', 'لا يوجد جسر مقترن بهذا المتجر.'],
   ['Pont associé mais hors ligne · lancez Kiwi Printer Bridge sur l’ordinateur du comptoir.', 'Bridge paired but offline · start Kiwi Printer Bridge on the counter computer.', 'الجسر مقترن لكنه غير متصل · شغّل Kiwi Printer Bridge على حاسوب الكاونتر.'],
+  ['Connexion directe à l’imprimante depuis l’app Kiwi.', 'Direct connection to the printer from the Kiwi app.', 'اتصال مباشر بالطابعة من تطبيق كيوي.'],
+  ['Aucune cible réseau enregistrée.', 'No network target saved.', 'لا توجد وجهة شبكة محفوظة.'],
+  ['Adresse IP de l’imprimante', 'Printer IP address', 'عنوان IP للطابعة'],
+  ['Rechercher sur le réseau', 'Search the network', 'البحث في الشبكة'],
+  ['Exporter le diagnostic d’impression', 'Export printing diagnostics', 'تصدير تشخيص الطباعة'],
+  ['Port', 'Network port', 'منفذ الشبكة'],
+  ['Largeur papier', 'Paper width', 'عرض الورق'],
+  ["Format d'étiquette", 'Label format', 'تنسيق الملصق'],
+  ['Modèle', 'Model', 'الطراز'],
+  ['Tester', 'Test', 'اختبار'],
+  ['80 mm (standard)', '80 mm (standard)', '80 مم (قياسي)'],
+  ['Le pont tourne sur l’ordinateur de la caisse et ne communique qu’avec votre imprimante locale.', 'The bridge runs on the till computer and communicates only with your local printer.', 'يعمل الجسر على حاسوب الصندوق ولا يتواصل إلا مع طابعتك المحلية.'],
+  ['Télécharger le pont', 'Download the bridge', 'تنزيل الجسر'],
 ];
 for (const [fr, en, ar] of secondaryCopy) {
   L.set('en');
@@ -304,7 +342,7 @@ check(enKeys.every((k) => k.trim() === k && k.length > 0), 'aucune clé ne traî
 /* Une clé qui se traduit par elle-même est du bruit : soit elle est inutile,
    soit quelqu'un a oublié de la traduire en croyant l'avoir fait. On tolère les
    mots identiques dans les deux langues (Scan, Promotions, Total). */
-const IDENTICAL_OK = new Set(['Scan', 'Promotions', 'Total', 'Divers', 'Nom', 'Fin', 'Ticket', 'Dormant', 'Email', 'Notes', 'Dates', 'Production', 'Stock']);
+const IDENTICAL_OK = new Set(['Scan', 'Promotions', 'Total', 'Divers', 'Nom', 'Fin', 'Ticket', 'Dormant', 'Email', 'Notes', 'Dates', 'Production', 'Stock', '80 mm (standard)']);
 const lazy = enKeys.filter((k) => EN[k] === k && !IDENTICAL_OK.has(k));
 check(!lazy.length, `aucune traduction anglaise oubliée${lazy.length ? ' — ' + lazy.slice(0, 5).join(', ') : ''}`);
 const lazyAr = arKeys.filter((k) => AR[k] === k);

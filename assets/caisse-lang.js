@@ -745,11 +745,15 @@
       'Boutique': ['Shop', 'متجر'],
       "Scannez un article pour voir son prix, ses tailles et son stock. Rien n'est ajouté au ticket.": ['Scan an item to see its price, sizes and stock. Nothing is added to the receipt.', 'امسح منتجاً لعرض سعره ومقاساته ومخزونه. لا يُضاف شيء إلى التذكرة.'],
       'Scannez ou tapez un code-barres…': ['Scan or type a barcode…', 'امسح رمزاً شريطياً أو اكتبه…'],
+      'Code {code} inconnu, enregistrez-le sur un article': ['Unknown code {code}, register it on an item', 'الرمز {code} غير معروف، سجّله على منتج'],
+      'Code {code} inconnu, aucun article ne le porte': ['Unknown code {code}, no item uses it', 'الرمز {code} غير معروف، لا يحمله أي منتج'],
+      'Code {code} inconnu, à enregistrer': ['Unknown code {code}, register it', 'الرمز {code} غير معروف، يجب تسجيله'],
       'ou': ['or', 'أو'],
       'Scanner avec la caméra': ['Scan with the camera', 'المسح بالكاميرا'],
       'Scanner un article (douchette démo)': ['Scan an item (demo scanner)', 'مسح منتج (ماسح تجريبي)'],
       'Tester la douchette': ['Test the scanner', 'اختبار الماسح'],
       'Derniers articles vérifiés': ['Recently checked items', 'آخر المنتجات التي تم التحقق منها'],
+      'Code inconnu, non référencé': ['Unknown code, not registered', 'رمز غير معروف، غير مسجّل'],
       "Aucun article vérifié pour l'instant, la douchette USB tape ici toute seule.": ['No items checked yet. The USB scanner enters the code here automatically.', 'لم يتم التحقق من أي منتج بعد. يُدخل الماسح USB الرمز هنا تلقائياً.'],
       'Ce navigateur ne sait pas lire un code-barres par la caméra. La douchette USB fonctionne, elle tape directement dans le champ ci-dessus.': ['This browser cannot scan barcodes with the camera. The USB scanner works and enters the code in the field above.', 'لا يدعم هذا المتصفح مسح الرموز الشريطية بالكاميرا. يعمل الماسح USB ويُدخل الرمز مباشرة في الحقل أعلاه.'],
       'Lecture caméra indisponible sur ce navigateur, utilisez la douchette ou tapez le code': ['Camera scanning is not available here, use the scanner or type the code', 'المسح بالكاميرا غير متاح هنا، استخدم الماسح أو اكتب الرمز'],
@@ -985,6 +989,19 @@
       'Associer un pont': ['Pair a bridge', 'إقران جسر'],
       'Option avancée · imprimante réseau globale (Wi-Fi / Ethernet)': ['Advanced option · shared network printer (Wi-Fi / Ethernet)', 'خيار متقدم · طابعة شبكة مشتركة (Wi-Fi / Ethernet)'],
       'Impression directe disponible dans l’app Kiwi.': ['Direct printing is available in the Kiwi app.', 'الطباعة المباشرة متاحة في تطبيق كيوي.'],
+      'Connexion directe à l’imprimante depuis l’app Kiwi.': ['Direct connection to the printer from the Kiwi app.', 'اتصال مباشر بالطابعة من تطبيق كيوي.'],
+      'Aucune cible réseau enregistrée.': ['No network target saved.', 'لا توجد وجهة شبكة محفوظة.'],
+      'Adresse IP de l’imprimante': ['Printer IP address', 'عنوان IP للطابعة'],
+      'Rechercher sur le réseau': ['Search the network', 'البحث في الشبكة'],
+      'Exporter le diagnostic d’impression': ['Export printing diagnostics', 'تصدير تشخيص الطباعة'],
+      'Port': ['Network port', 'منفذ الشبكة'],
+      'Largeur papier': ['Paper width', 'عرض الورق'],
+      "Format d'étiquette": ['Label format', 'تنسيق الملصق'],
+      'Modèle': ['Model', 'الطراز'],
+      'Tester': ['Test', 'اختبار'],
+      '80 mm (standard)': ['80 mm (standard)', '80 مم (قياسي)'],
+      'Le pont tourne sur l’ordinateur de la caisse et ne communique qu’avec votre imprimante locale.': ['The bridge runs on the till computer and communicates only with your local printer.', 'يعمل الجسر على حاسوب الصندوق ولا يتواصل إلا مع طابعتك المحلية.'],
+      'Télécharger le pont': ['Download the bridge', 'تنزيل الجسر'],
       'Notes internes': ['Internal notes', 'ملاحظات داخلية'],
       'Informations utiles à l’équipe…': ['Useful information for the team…', 'معلومات مفيدة للفريق…'],
       'Communication': ['Contact preferences', 'تفضيلات التواصل'],
@@ -1166,6 +1183,15 @@
     if (query) {
       var queryTemplate = d[query[1] + ' « {query} »'];
       if (queryTemplate) return queryTemplate.replace('{query}', function () { return query[2]; });
+    }
+
+    // Only the three complete unknown-barcode UI messages are templates.
+    // Capture the code as one opaque value before dot/numeric/name handling;
+    // the callback keeps markup and replacement markers as literal text.
+    var unknownCode = /^Code ([\s\S]+) (inconnu, enregistrez-le sur un article|inconnu, aucun article ne le porte|inconnu, à enregistrer)$/.exec(core);
+    if (unknownCode) {
+      var codeTemplate = d['Code {code} ' + unknownCode[2]];
+      if (codeTemplate) return codeTemplate.replace('{code}', function () { return unknownCode[1]; });
     }
 
     // 1 · segments séparés par « · » — la ponctuation maison de la caisse.

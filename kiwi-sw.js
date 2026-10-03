@@ -222,7 +222,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=7',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=29',
+  '/assets/caisse-lang.js?v=30',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/retail-balances.js?v=4',
@@ -274,7 +274,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=15',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=9',
-  '/assets/pos-dispatch.js?v=73',
+  '/assets/pos-dispatch.js?v=74',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -287,8 +287,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=59',
-  '/assets/pos-boutique.js?v=59',
+  '/assets/pos-boutique.css?v=60',
+  '/assets/pos-boutique.js?v=60',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
