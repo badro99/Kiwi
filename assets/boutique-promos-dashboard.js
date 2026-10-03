@@ -276,12 +276,32 @@
     draw();
   }
 
+  // Date controls emit change while their native segments are still being
+  // edited (for example after the first valid year digit). Replacing the form
+  // here removes the focused control and drops the rest of the user's input.
+  // Reuse the same render contract for impact/validation, but keep every form
+  // control and its native editing/selection state in place.
+  function updateImpact(el, ctx) {
+    var next = document.createElement('template');
+    next.innerHTML = composerHtml(ctx);
+    ['.bpd-preview', '.bpd-problem'].forEach(function (selector) {
+      var current = el.querySelector(selector), fresh = next.content.querySelector(selector);
+      if (current && fresh) current.innerHTML = fresh.innerHTML;
+    });
+    var save = el.querySelector('#bpd-save'), nextSave = next.content.querySelector('#bpd-save');
+    if (save && nextSave) save.disabled = nextSave.disabled;
+    el.querySelectorAll('[data-prv]').forEach(function (b) { b.classList.toggle('on', +b.dataset.prv === composer.draft.value); });
+    el.querySelectorAll('[data-prm]').forEach(function (b) { b.classList.toggle('on', +b.dataset.prm === composer.draft.scope.max); });
+    icons();
+  }
+
   function wire(el, ctx, redraw) {
     var d = composer.draft;
     var name = el.querySelector('#bpd-name');
     if (name) name.oninput = function () { d.name = name.value; };
     el.querySelectorAll('[data-prk]').forEach(function (b) { b.onclick = function () { d.kind = b.dataset.prk; redraw(); }; });
-    var val = el.querySelector('#bpd-value'); if (val) val.onchange = function () { d.value = Math.max(0, Math.round(+val.value || 0)); redraw(); };
+    var val = el.querySelector('#bpd-value'); if (val) val.oninput = val.onchange = function () { d.value = Math.max(0, Math.round(+val.value || 0)); updateImpact(el, ctx); };
+    if (val) val.onblur = function () { val.value = d.value; };
     el.querySelectorAll('[data-prv]').forEach(function (b) { b.onclick = function () { d.value = +b.dataset.prv; redraw(); }; });
     el.querySelectorAll('[data-prs]').forEach(function (b) { b.onclick = function () { d.scope = PRM().normalize({ scope:{type:b.dataset.prs} }).scope; redraw(); }; });
     el.querySelectorAll('[data-prr]').forEach(function (b) { b.onclick = function () { var ids = d.scope.ids || (d.scope.ids=[]); var i=ids.indexOf(b.dataset.prr); if(i>=0) ids.splice(i,1); else ids.push(b.dataset.prr); redraw(); }; });
@@ -293,12 +313,13 @@
       q.oninput = paint; q.onkeydown = function(e){if(e.key==='Enter'){e.preventDefault();paint();}};
     }
     el.querySelectorAll('[data-pra]').forEach(function(b){b.onclick=function(){d.scope.before=startOfDay(new Date(Date.now()-(+b.dataset.pra)*30*DAY));redraw();};});
-    var before=el.querySelector('#bpd-before');if(before)before.onchange=function(){d.scope.before=before.value?startOfDay(new Date(before.value+'T12:00:00')):0;redraw();};
+    var before=el.querySelector('#bpd-before');if(before)before.onchange=function(){d.scope.before=before.value?startOfDay(new Date(before.value+'T12:00:00')):0;updateImpact(el,ctx);};
     el.querySelectorAll('[data-prm]').forEach(function(b){b.onclick=function(){d.scope.max=+b.dataset.prm;redraw();};});
-    var max=el.querySelector('#bpd-max');if(max)max.onchange=function(){d.scope.max=Math.max(0,Math.round(+max.value||0));redraw();};
+    var max=el.querySelector('#bpd-max');if(max)max.oninput=max.onchange=function(){d.scope.max=Math.max(0,Math.round(+max.value||0));updateImpact(el,ctx);};
+    if(max)max.onblur=function(){max.value=d.scope.max;};
     el.querySelectorAll('[data-prw]').forEach(function(b){b.onclick=function(){var key=b.dataset.prw,now=new Date();if(key==='none')d.to=0;else if(key==='today')d.to=endOfDay(now);else if(key==='we')d.to=endOfDay(new Date(now.getTime()+((7-now.getDay())%7)*DAY));else d.to=endOfDay(new Date(now.getTime()+(+key)*DAY));redraw();};});
-    var from=el.querySelector('#bpd-from');if(from)from.onchange=function(){d.from=from.value?startOfDay(new Date(from.value+'T12:00:00')):0;redraw();};
-    var to=el.querySelector('#bpd-to');if(to)to.onchange=function(){d.to=to.value?endOfDay(new Date(to.value+'T12:00:00')):0;redraw();};
+    var from=el.querySelector('#bpd-from');if(from)from.onchange=function(){d.from=from.value?startOfDay(new Date(from.value+'T12:00:00')):0;updateImpact(el,ctx);};
+    var to=el.querySelector('#bpd-to');if(to)to.onchange=function(){d.to=to.value?endOfDay(new Date(to.value+'T12:00:00')):0;updateImpact(el,ctx);};
     el.querySelector('[data-bpd-cancel]').onclick=function(){promoModal.close();};
     var save=el.querySelector('#bpd-save');if(save)save.onclick=function(){if(valid(d))return;if(!d.name.trim())d.name=autoName(ctx,d);if(composer.editing)d.id=composer.editing;PRM().save(d);promoModal.close();K.toast(composer.editing?d.name+' enregistrée':d.name+' lancée, la caisse est à jour',{type:'success'});renderPage();};
   }
