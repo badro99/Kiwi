@@ -8,23 +8,54 @@ import os from 'node:os';
 import http from 'node:http';
 import { createRequire } from 'node:module';
 import { build } from './build-app-www.mjs';
+import { releaseExitedBrowserStreams } from './browser-test-lifecycle.mjs';
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const require = createRequire(path.join(root, 'app/package.json'));
 const puppeteer = require('puppeteer-core');
 const bin = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome','/usr/bin/chromium','/usr/bin/google-chrome'].find(fs.existsSync);
 assert.ok(bin, 'Chromium required');
+// Optional phase-only diagnostics survive check.js's buffered child output.
+// Never include URLs, page contents, localStorage or network payloads here.
+const diagnostics = process.env.KIWI_LEDGER_DIAGNOSTICS;
+const started = performance.now();
+let phase = 'bundle-build';
+let connections = 0;
+let browserProcess;
+const mark = next => {
+  phase = next;
+  if (diagnostics) fs.appendFileSync(diagnostics, JSON.stringify({
+    phase, elapsedMs:Math.round(performance.now()-started), connections,
+    resources:process.getActiveResourcesInfo().sort(),
+    browserProcess:browserProcess ? {
+      exitCode:browserProcess.exitCode, signalCode:browserProcess.signalCode,
+      stdio:browserProcess.stdio.map(stream=>stream ? {destroyed:stream.destroyed,readable:stream.readable,writable:stream.writable}:null),
+    } : null,
+  })+'\n');
+};
+mark(phase);
+const pulse = diagnostics ? setInterval(()=>mark(phase),15000) : null;
+pulse?.unref();
+process.once('beforeExit',()=>{mark('node-before-exit'); if (pulse) clearInterval(pulse);});
 const work = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-pass3-locale-'));
 const www = path.join(work, 'www');
 build({ out:www, quiet:true });
+mark('bundle-built');
 const mime = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.svg':'image/svg+xml', '.woff2':'font/woff2' };
 const server = http.createServer((req, res) => {
   const p = path.resolve(www, '.' + new URL(req.url,'http://local').pathname);
   if (!p.startsWith(www + path.sep)) { res.writeHead(403); res.end(); return; }
   fs.readFile(p, (err, data) => { res.writeHead(err ? 404 : 200, {'Content-Type':mime[path.extname(p)] || 'application/octet-stream'}); res.end(err ? '' : data); });
 });
+server.on('connection',socket=>{ connections++; socket.once('close',()=>{connections--;}); });
 await new Promise(r => server.listen(0,'127.0.0.1',r));
+mark('server-listening');
 const base = `http://127.0.0.1:${server.address().port}`;
+mark('browser-launch');
 const browser = await puppeteer.launch({executablePath:bin,headless:true,args:['--no-sandbox']});
+browserProcess = browser.process();
+mark('browser-ready');
+browser.once('disconnected',()=>mark('browser-disconnected'));
+browser.process()?.once('exit',()=>mark('browser-process-exited'));
 const sleep = ms => new Promise(r => setTimeout(r,ms));
 let checks = 0;
 const check = (value,label) => { assert.ok(value,label); checks++; console.log('  ✓ ' + label); };
@@ -57,12 +88,16 @@ async function phone(lang, dark=false, signedOut=false) {
   return {page,context,verificationRequests:()=>verificationRequests,authRequests:()=>authRequests};
 }
 try {
+  mark('context-create');
   const {page,context}=await phone('en');
+  mark('dashboard-navigation');
   await page.goto(base+'/dashboard.html',{waitUntil:'networkidle2'});
+  mark('dashboard-ready');
   await page.waitForSelector('.kob-root [data-explore]');
   await page.click('.kob-root [data-explore]'); await sleep(1200);
   await page.click('[data-kiwi-skip]'); await sleep(2200);
   for (const range of ['aujourdhui','hier','septJours','trenteJours']) {
+    mark('ledger-range-'+range);
     await page.click('.dr-pill[data-range="'+range+'"]'); await sleep(1200);
     const values = await page.evaluate(range=>{
       const dr=KiwiDayReport, clock=KiwiDemoClock;
@@ -87,6 +122,7 @@ try {
     check(values.ratio===values.expectedRatio,range+': card/cash ratio uses ledger, excluding wallet from denominator');
     check(values.labels.includes('Cash') && values.labels.includes('Bank card') && values.labels.includes('QR / Wallet') && !/Visa|Mastercard/.test(values.labels),range+': only recorded tenders shown');
   }
+  mark('ledger-totals');
   await page.click('.dr-pill[data-range="aujourdhui"]'); await sleep(1200);
   const stats = await page.evaluate(() => {
     const clock=KiwiDemoClock, dr=KiwiDayReport, rows=clock.getDaySales(), sim=clock.getSimState();
@@ -103,6 +139,7 @@ try {
   check(stats.report.net===stats.total && stats.report.txns===stats.count, 'daily report matches the same ledger');
   check(stats.old.txns>0 && stats.old.net>0 && stats.days>=13, 'yesterday and 14-day report history seeded');
   await page.evaluate(()=>window.KiwiNativeHostAction({action:"navigate",id:"transactions"})); await sleep(500);
+  mark('orders');
   const orders=await page.$eval('[data-tx-host] .p-hero',e=>e.textContent);
   check(orders.includes(String(stats.count)), 'Orders renders ledger count');
   check(!/refresh|clock sync|horloge|ثوان/.test(orders), 'Orders never exposes a developer polling caption');
@@ -123,6 +160,7 @@ try {
   check(await page.$eval('[data-tx-refresh]',e=>!e.disabled), 'new orders are offered as an explicit refresh');
   check(await page.evaluate(()=>Math.abs(window.__orderRow.getBoundingClientRect().top-window.__orderTop)<1), 'refresh notice never moves a row under the finger');
   await page.click('[data-action="tx-detail"]'); await sleep(350);
+  mark('order-detail');
   const detail=await page.$eval('.kiwi-native-order-sheet',e=>e.textContent);
   check(['Items','Payment','Time','Table','Staff','Refund','Print'].every(t=>detail.includes(t)), 'order sheet contains transaction details and actions');
   check(await page.evaluate(()=>window.__host.tabs.length===0), 'native tabs hide behind the order sheet');
@@ -149,12 +187,29 @@ try {
   await page.evaluate(()=>{KiwiDemoClock.getDaySales=window.__daySales;});
 
   await page.evaluate(()=>window.KiwiNativeHostAction({action:"navigate",id:"clients"})); await sleep(500);
+  mark('clients');
   await page.click('[data-cd-id]'); await sleep(250);
   const history=await page.$$eval('.cd-history-row',els=>els.map(e=>e.textContent));
   check(history.length===31, 'VIP has 31 purchase records rather than empty history');
   await page.screenshot({path:path.join(work,'client.png')});
   const isolation=await page.evaluate(()=>{window.KiwiEnv={isReal:()=>true};return {sim:KiwiDemoClock.getSimState(),rows:KiwiDemoClock.getSales(30)}});
   check(isolation.sim===null && isolation.rows.length===0, 'real identity closes every demo ledger entry point');
+  mark('context-close');
   await context.close();
-  console.log(`native demo ledger: ${checks} checks passed; evidence ${work}`);
-} finally { await browser.close(); await new Promise(r=>server.close(r)); }
+  mark('context-closed');
+} finally {
+  try {
+    mark('browser-close');
+    await browser.close();
+    mark('browser-closed');
+    releaseExitedBrowserStreams(browserProcess);
+    mark('browser-streams-closed');
+  } finally {
+    mark('server-close');
+    await new Promise(r=>server.close(r));
+    mark('server-closed');
+  }
+}
+check(browserProcess.stdio.every(stream=>!stream || stream.destroyed),
+  'closed browser leaves no inherited output stream holding the test process open');
+console.log(`native demo ledger: ${checks} checks passed; evidence ${work}`);
