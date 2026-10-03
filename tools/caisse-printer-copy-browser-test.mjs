@@ -6,6 +6,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {spawn} from 'node:child_process';
 import {createRequire} from 'node:module';
+import {once} from 'node:events';
+import {releaseExitedBrowserStreams} from './browser-test-lifecycle.mjs';
 
 const root=path.resolve(import.meta.dirname,'..');
 const require=createRequire(import.meta.url);
@@ -14,6 +16,20 @@ const executablePath=process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chr
 assert.ok(executablePath,'Chromium required');
 const fixture=spawn(process.execPath,[path.join(root,'tools/retail-ui-fixture.mjs')],{cwd:root,stdio:['ignore','pipe','pipe']});
 const failures=[];let browser,checks=0;
+// Opt-in lifecycle evidence only: no URLs, page contents or network payloads.
+const diagnostics=process.env.KIWI_PRINTER_DIAGNOSTICS,started=performance.now();
+let phase='fixture-start';
+const mark=next=>{
+ phase=next;
+ if(diagnostics){const child=browser?.process();fs.appendFileSync(diagnostics,JSON.stringify({
+  phase,checks,elapsedMs:Math.round(performance.now()-started),resources:process.getActiveResourcesInfo().sort(),
+  browserProcess:child?{pid:child.pid,exitCode:child.exitCode,signalCode:child.signalCode,stdio:child.stdio.map(s=>s?{destroyed:s.destroyed,readable:s.readable,writable:s.writable}:null)}:null,
+  fixtureProcess:{pid:fixture.pid,exitCode:fixture.exitCode,signalCode:fixture.signalCode},
+ })+'\n');}
+};
+mark(phase);
+const pulse=diagnostics?setInterval(()=>mark(phase),15000):null;pulse?.unref();
+process.once('beforeExit',()=>{mark('node-before-exit');if(pulse)clearInterval(pulse);});
 const check=(ok,label)=>{checks++;if(!ok){failures.push(label);console.error('✗ '+label);}};
 const copy=[
  ['#kpr-card h2','Connecter une imprimante','Connect a printer','توصيل طابعة'],
@@ -43,8 +59,11 @@ const copy=[
 ];
 try{
  const base=await new Promise((resolve,reject)=>{let out='';const timer=setTimeout(()=>reject(new Error('Retail fixture timeout')),15000);fixture.stdout.on('data',chunk=>{out+=chunk;const m=out.match(/KIWI_RETAIL_UI_QA_READY (\{[^\n]+\})/);if(m){clearTimeout(timer);resolve(JSON.parse(m[1]).base);}});});
+ mark('fixture-ready');
  browser=await puppeteer.launch({executablePath,headless:true,args:['--no-sandbox']});
+ mark('browser-ready');browser.once('disconnected',()=>mark('browser-disconnected'));browser.process()?.once('exit',()=>mark('browser-process-exited'));
  for(const [width,height,safeTop,safeBottom] of [[375,667,20,0],[402,874,62,34]])for(const [index,lang] of ['fr','en','ar'].entries())for(const theme of ['light','dark']){
+  mark(`case-${width}-${lang}-${theme}`);
   const context=await browser.createBrowserContext(),page=await context.newPage();let writes=0;
   await page.setViewport({width,height,isMobile:true,hasTouch:true});
   await page.setRequestInterception(true);
@@ -87,7 +106,26 @@ try{
   check(writes===0,`${lang} ${theme}: opening settings does not write configuration or pair hardware`);
   await page.click('#kpr-close');await page.waitForSelector('#kpr-ov',{hidden:true});
   await context.close();
+  mark(`case-complete-${width}-${lang}-${theme}`);
  }
  if(failures.length)throw new Error(`${failures.length}/${checks} printer-copy checks failed`);
- console.log(`caisse-printer-copy-browser-test: ${checks} checks passed`);
-}finally{if(browser)await browser.close();fixture.kill('SIGTERM');}
+ mark('assertions-complete');
+}finally{
+ try{
+  mark('browser-close-start');
+  if(browser){
+   await browser.close();mark('browser-close-complete');
+   // Chrome's crashpad descendant can inherit stderr after Chrome exits.
+   // Release only this launch's streams, after the helper verifies its exit.
+   const child=browser.process();releaseExitedBrowserStreams(child);
+   assert.ok(child.stdio.every(stream=>!stream || stream.destroyed),'exited printer-test browser owns no open stdio');checks++;
+   mark('browser-streams-released');
+  }
+ }finally{
+  if(fixture.exitCode===null && fixture.signalCode===null){
+   const exited=once(fixture,'exit');fixture.kill('SIGTERM');mark('fixture-stop-sent');await exited;
+  }
+  mark('fixture-exited');
+ }
+}
+console.log(`caisse-printer-copy-browser-test: ${checks} checks passed (360 copy/layout/safety + owned browser lifecycle)`);
