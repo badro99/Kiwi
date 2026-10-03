@@ -51,7 +51,7 @@ async function reveal(page,selector){
  }
  throw new Error('Could not reveal printer control using wheel: '+selector);
 }
-async function inspect(page,selector,label,dark,{primary=false,control=false}={}){
+async function inspect(page,selector,label,dark,{primary=false,control=false,ancestorOpacity=false}={}){
  await reveal(page,selector);
  // Leave the target in its resting state: the wheel pointer can otherwise
  // hover a primary button, whose brightness filter changes its painted ink.
@@ -59,13 +59,20 @@ async function inspect(page,selector,label,dark,{primary=false,control=false}={}
  await page.mouse.move(card.x,card.y);
  await page.waitForFunction(selector=>!document.querySelector(selector).getAnimations().some(a=>a.playState==='running'),{},selector);
  const paint=await page.$eval(selector,el=>{
-  const s=getComputedStyle(el),layers=[];for(let p=el;p;p=p.parentElement)layers.push(getComputedStyle(p).backgroundColor);
+  const s=getComputedStyle(el),layers=[];let groupOpacity=1;for(let p=el;p;p=p.parentElement){const style=getComputedStyle(p);layers.push(style.backgroundColor);groupOpacity*=Number(style.opacity);}
   const placeholder=el.matches('input') && !el.value && el.placeholder?getComputedStyle(el,'::placeholder'):null;
-  const r=el.getBoundingClientRect();return {foreground:placeholder?placeholder.color:s.color,inkOpacity:placeholder?Number(placeholder.opacity):1,layers,border:s.borderTopColor,width:parseFloat(s.borderTopWidth),disabled:el.matches(':disabled'),opacity:Number(s.opacity),bounds:{x:r.left,y:r.top,width:r.width,height:r.height}};
+  const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+  return {foreground:placeholder?placeholder.color:s.color,inkOpacity:placeholder?Number(placeholder.opacity):1,layers,border:s.borderTopColor,width:parseFloat(s.borderTopWidth),disabled:el.matches(':disabled'),groupOpacity,opacity:Number(s.opacity),link:el.matches('a[href]') && s.textDecorationLine.includes('underline'),hit:hit===el || el.contains(hit),bounds:{x:r.left,y:r.top,width:r.width,height:r.height}};
  });
  check(!paint.disabled,label+': regression target is genuinely enabled');
  let bg=[247,245,240];for(const layer of [...paint.layers].reverse())bg=over(rgb(layer),bg);
- const fg=rgb(paint.foreground);fg[3]*=paint.inkOpacity;const ink=over(fg,bg),ratio=contrast(ink,bg);
+ const fg=rgb(paint.foreground);fg[3]*=paint.inkOpacity;
+ // This opt-in target is a transparent inline link in a transparent note.
+ // Its ancestor opacity attenuates the ink against the opaque card ground.
+ // Do not infer opaque-group blending for unrelated controls.
+ if(ancestorOpacity)fg[3]*=paint.groupOpacity;
+ if(ancestorOpacity)check(paint.link && paint.hit,label+': underlined real link is readable and hit-testable (no download opened)');
+ const ink=over(fg,bg),ratio=contrast(ink,bg);
  check(ratio>=4.5,label+': text contrast '+ratio.toFixed(2)+':1');
  if(!primary)check(dark?luminance(bg)<.12:luminance(bg)>.7,label+': '+(dark?'dark':'light')+' semantic surface');
  if(control)check(paint.width>0 && contrast(over(rgb(paint.border),bg),bg)>=3,label+': outlined control boundary >=3:1');
@@ -73,6 +80,34 @@ async function inspect(page,selector,label,dark,{primary=false,control=false}={}
  const colours=paintedActionColours(bytes,ink,paint.bounds),paintedRatio=contrast(colours.foreground,colours.background);
  check(paintedRatio>=4.5,label+': painted text contrast '+paintedRatio.toFixed(2)+':1');
  if(primary){let parent=[247,245,240];for(const layer of [...paint.layers].reverse().slice(0,-1))parent=over(rgb(layer),parent);check(contrast(colours.background,parent)>=3,label+': primary control boundary >=3:1');}
+}
+async function inspectPrinterPicker(page,id,label,index,{width,height,safeTop,safeBottom}){
+ const trigger='#'+id+'+.kiwi-select .kiwi-select-trigger';
+ await reveal(page,trigger);
+ const before=await page.$eval(trigger,(el,id)=>{
+  const value=el.querySelector('.kiwi-select-value-label'),select=document.getElementById(id),r=el.getBoundingClientRect();
+  return {text:value.textContent,textWidth:value.scrollWidth,available:value.clientWidth,aria:el.getAttribute('aria-label'),value:select.value,selected:select.selectedOptions[0].textContent.trim(),width:r.width,height:r.height};
+ },id);
+ const prefix=(id==='kpr-paper'?['Largeur papier','Paper width','عرض الورق']:["Format d'étiquette",'Label format','تنسيق الملصق'])[index];
+ check(before.textWidth<=before.available,label+': complete selected value has no ellipsis ('+before.textWidth+'/'+before.available+')');
+ check(before.width>=44 && before.height>=44,label+': closed picker has 44-point target');
+ check(before.aria===prefix+': '+before.selected,label+': accessible interface prefix localized, entire selected value preserved; got '+before.aria);
+ await page.click(trigger);
+ await page.waitForSelector('.kiwi-select-popover',{visible:true});
+ await page.waitForFunction(()=>!document.querySelector('.kiwi-select-popover').getAnimations().some(a=>a.playState==='running'));
+ const chooser=await page.$eval('.kiwi-select-popover',el=>{
+  const r=el.getBoundingClientRect(),close=el.querySelector('.kiwi-select-close').getBoundingClientRect(),row=el.querySelector('.kiwi-select-option[aria-selected="true"]'),value=row.querySelector('.kiwi-select-option-label'),b=row.getBoundingClientRect(),list=el.querySelector('.kiwi-select-options').getBoundingClientRect(),hit=document.elementFromPoint(b.left+b.width/2,b.top+b.height/2);
+  return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,closeWidth:close.width,closeHeight:close.height,title:el.querySelector('.kiwi-select-popover-title').textContent,text:value.textContent,textWidth:value.scrollWidth,available:value.clientWidth,visible:b.top>=list.top && b.bottom<=list.bottom && b.bottom<=innerHeight,hit:hit===row || row.contains(hit)};
+ });
+ check(chooser.left>=8 && chooser.right<=width-8 && chooser.top>=safeTop+8 && chooser.bottom<=height-safeBottom-8,label+': chooser stays inside native safe insets '+JSON.stringify(chooser));
+ check(chooser.closeWidth>=44 && chooser.closeHeight>=44,label+': chooser close has 44-point target');
+ check(chooser.title===prefix,label+': chooser title localized');
+ check(chooser.text===before.text && chooser.textWidth<=chooser.available && chooser.visible && chooser.hit,label+': selected option readable and hit-testable');
+ await page.screenshot({type:'png',path:path.join(shots,label+'-chooser.png'),captureBeyondViewport:false});
+ await page.keyboard.press('Escape');
+ await page.waitForSelector('.kiwi-select-popover',{hidden:true});
+ const after=await page.$eval(trigger,(el,id)=>({text:el.querySelector('.kiwi-select-value-label').textContent,value:document.getElementById(id).value,expanded:el.getAttribute('aria-expanded')}),id);
+ check(after.text===before.text && after.value===before.value && after.expanded==='false',label+': real Escape closes without changing selected data');
 }
 const copy=[
  ['#kpr-card h2','Connecter une imprimante','Connect a printer','توصيل طابعة'],
@@ -194,6 +229,8 @@ try{
   await inspect(page,'#kpr-port',label+'-port',dark,{control:true});
   await inspect(page,'#kpr-test',label+'-native-enabled-test',dark,{control:true});
   await inspect(page,'#kpr-save',label+'-save',dark,{primary:true});
+  await inspect(page,'.kpr-adv>.kpr-note:last-child a',label+'-bridge-footer-link',dark,{ancestorOpacity:true});
+  for(const id of ['kpr-paper','kpr-label'])await inspectPrinterPicker(page,id,label+'-'+id,index,{width,height,safeTop,safeBottom});
   check(await page.evaluate(()=>window.__printerHardwareCalls===0),label+': no native printing calls');
   check(writes===0,`${lang} ${theme}: opening settings does not write configuration or pair hardware`);
   await reveal(page,'#kpr-close');

@@ -19,6 +19,10 @@ html.kiwi-native button,html.kiwi-native [role="button"],html.kiwi-native nav,ht
 html.kiwi-native body.is-pos .vx-screen.is-on::before{content:"";position:fixed;inset:0 0 auto;height:var(--kiwi-safe-top);z-index:63;background:var(--paper,var(--paper-cream,#F7F5F0));pointer-events:none}
 html.kiwi-native body.is-pos .vx-screen.is-on.vx-nav-open::before{background:var(--ink-bg,#0A0F0D)}
 html.kiwi-native input,html.kiwi-native textarea,html.kiwi-native [contenteditable="true"]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+/* Native POS examples are readable interface copy, not faint disabled text. */
+html.kiwi-native body.is-pos :is(input,textarea)::placeholder{color:var(--ink-2);opacity:1}
+/* Intake help labels may wrap; keep their existing 16px icons uncompressed. */
+html.kiwi-native body.is-pos .bqx-alt .bq-btn svg{flex-shrink:0}
 html.kiwi-native .kiwi-native-scroll{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .kiwi-native-offline{position:fixed;z-index:2147483645;top:calc(var(--kiwi-safe-top) + 8px);left:50%;transform:translate(-50%,-140%);max-width:calc(100vw - 32px);padding:9px 14px;border:1px solid rgba(247,245,240,.25);border-radius:999px;background:#053B2C;color:#F7F5F0;font:600 12px/1.2 "Inter Tight",sans-serif;box-shadow:0 10px 30px rgba(5,59,44,.24);opacity:0;pointer-events:none;transition:transform .28s cubic-bezier(.34,1.45,.5,1),opacity .18s ease}
 .kiwi-native-offline.is-visible{transform:translate(-50%,0);opacity:1}
@@ -40,10 +44,10 @@ html.kiwi-native .qty-btn{min-width:44px}
 html.kiwi-native :is(button,a,input,select,textarea,[tabindex]):focus-visible{outline:3px solid #0B6E4F;outline-offset:3px}
 /* Search fields whose rounded wrapper draws the ring (:focus-within) must not
    also paint a square outline inside it. */
-html.kiwi-native :is(.rf-search,.jr-search,.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan) input:focus-visible{outline:none}
-html.kiwi-native :is(.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan):focus-within{outline:3px solid var(--forest,var(--atlas));outline-offset:2px;box-shadow:none}
-html.kiwi-native :is(.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan):focus-within{border-color:var(--ink-3)}
-html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"],[data-caisse-theme="dark"]) :is(.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan):focus-within{outline-color:var(--mint)}
+html.kiwi-native :is(.rf-search,.jr-search,.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan,.bqx-scanbox) input:focus-visible{outline:none}
+html.kiwi-native :is(.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan,.bqx-scanbox):focus-within{outline:3px solid var(--forest,var(--atlas));outline-offset:2px;box-shadow:none}
+html.kiwi-native :is(.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan,.bqx-scanbox):focus-within{border-color:var(--ink-3)}
+html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"],[data-caisse-theme="dark"]) :is(.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan,.bqx-scanbox):focus-within{outline-color:var(--mint)}
 html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) :is(button,a,input,select,textarea,[tabindex]):focus-visible{outline-color:#7DF2B0}
 html.kiwi-native :is(.pin-screen,.clockin-screen){box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;padding:calc(var(--kiwi-safe-top) + 20px) max(20px,var(--kiwi-safe-right)) calc(var(--kiwi-safe-bottom) + 20px) max(20px,var(--kiwi-safe-left))}
 html.kiwi-native .clockin-screen{justify-content:flex-start;gap:clamp(16px,3vh,28px)}
@@ -1006,3 +1010,19 @@ html.kiwi-native #kpr-card .kpr-field label{color:var(--ink-2)}
 html.kiwi-native #kpr-card :is(.kpr-field input,.kpr-field select,.kpr-st-sel,.kiwi-select-trigger){border-color:var(--ink-3)}
 html.kiwi-native #kpr-card .kpr-field input::placeholder{color:var(--ink-2);opacity:1}
 html.kiwi-native #kpr-card :is(.kpr-st-badge.receipt,.kpr-st-badge.production){background:var(--paper-soft);color:var(--ink-2)}
+/* Opacity on the whole footer muted its green link below 4.5:1 in both
+   appearances. Keep secondary prose in its token; do not attenuate the link. */
+html.kiwi-native #kpr-card .kpr-adv>.kpr-note:last-child{opacity:1;color:var(--ink-2)}
+html.kiwi-native #kpr-card .kpr-adv>.kpr-note:last-child a{color:var(--forest)}
+
+/* #0156: keep complete printer dimensions on phones. Picker portals belong
+   to this modal only; web/tablet and other native chooser layouts stay intact. */
+@media(max-width:640px){
+  html.kiwi-native #kpr-card .kpr-two{display:grid;grid-template-columns:minmax(0,1fr)}
+  html.kiwi-native #kpr-card .kpr-two>*{min-width:0}
+  html.kiwi-native body:has(#kpr-ov)>.kiwi-select-popover{inset:auto max(8px,var(--kiwi-safe-right)) calc(var(--kiwi-safe-bottom) + 8px) max(8px,var(--kiwi-safe-left))!important;display:flex;flex-direction:column;max-height:min(74dvh,620px,calc(100dvh - var(--kiwi-safe-top) - var(--kiwi-safe-bottom) - 16px))}
+  html.kiwi-native body:has(#kpr-ov)>.kiwi-select-popover :is(.kiwi-select-popover-titlebar,.kiwi-select-popover-head){flex:none}
+  html.kiwi-native body:has(#kpr-ov)>.kiwi-select-popover .kiwi-select-options{min-height:0;flex:1 1 auto}
+  html.kiwi-native body:has(#kpr-ov)>.kiwi-select-popover .kiwi-select-popover-titlebar{grid-template-columns:minmax(0,1fr) 44px}
+  html.kiwi-native body:has(#kpr-ov)>.kiwi-select-popover .kiwi-select-close{width:44px;height:44px}
+}

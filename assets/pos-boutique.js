@@ -6128,7 +6128,7 @@
     if (j.kind === 'invalide') {
       intakeNote('erreur', `Lecture refusée · ${INVALID_MSG[j.reason] ? j.reason : 'illisible'}`);
       intakeHint(INVALID_MSG[j.reason] || 'Code illisible, rescannez.', 'bad');
-      toast('Scan incomplet, rien n\'a été enregistré');
+      toast('Scan incomplet, rien n\'a été enregistré', undefined, 'warn');
       paintIntake();
       return;
     }

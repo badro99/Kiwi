@@ -754,6 +754,24 @@
       'Tester la douchette': ['Test the scanner', 'اختبار الماسح'],
       'Derniers articles vérifiés': ['Recently checked items', 'آخر المنتجات التي تم التحقق منها'],
       'Code inconnu, non référencé': ['Unknown code, not registered', 'رمز غير معروف، غير مسجّل'],
+      'Reprise de stock': ['Stock intake', 'إدخال المخزون'],
+      "Scannez le code déjà présent sur l'article. Kiwi le garde tel quel · aucune étiquette à réimprimer.": ['Scan the code already on the item. Kiwi keeps it unchanged · no labels to reprint.', 'امسح الرمز الموجود على المنتج. يحتفظ به كيوي كما هو · لا حاجة لإعادة طباعة الملصقات.'],
+      'Scannez un article…': ['Scan an item…', 'امسح منتجًا…'],
+      'Valider le code saisi': ['Validate the entered code', 'التحقق من الرمز المدخل'],
+      'Douchette prête. Pas de douchette ? Tapez le code puis Entrée.': ['Scanner ready. No scanner? Type the code, then press Enter.', 'الماسح جاهز. لا يوجد ماسح؟ اكتب الرمز ثم اضغط إدخال.'],
+      'La douchette ne répond pas ?': ['Scanner not responding?', 'الماسح لا يستجيب؟'],
+      'Terminer la reprise': ['Finish stock intake', 'إنهاء إدخال المخزون'],
+      'Rien encore. La douchette écrit directement dans le champ ci-dessus · pas besoin de cliquer.': ['Nothing yet. The scanner enters the code directly in the field above · no need to click.', 'لا شيء بعد. يُدخل الماسح الرمز مباشرة في الحقل أعلاه · لا حاجة إلى النقر.'],
+      'Tapez ou scannez un code.': ['Type or scan a code.', 'اكتب رمزًا أو امسحه.'],
+      "Rien n'a été lu. Rapprochez la douchette de l'étiquette, ou tapez le code.": ['Nothing was read. Move the scanner closer to the label, or type the code.', 'لم يُقرأ شيء. قرّب الماسح من الملصق أو اكتب الرمز.'],
+      'Lecture incomplète · la douchette a envoyé des caractères parasites. Rescannez, ou tapez le code à la main.': ['Incomplete scan · the scanner sent stray characters. Scan again, or type the code manually.', 'مسح غير مكتمل · أرسل الماسح أحرفًا غير مرغوبة. أعد المسح أو اكتب الرمز يدويًا.'],
+      'Lecture partielle : trop peu de caractères pour être un code-barres. Rescannez plus lentement, ou tapez-le.': ['Partial scan: too few characters for a barcode. Scan again more slowly, or type it.', 'مسح جزئي: عدد الأحرف غير كافٍ لرمز شريطي. أعد المسح ببطء أكبر أو اكتبه.'],
+      "Ce code est anormalement long. Vérifiez qu'un seul article est passé devant la douchette.": ['This code is unusually long. Check that only one item passed in front of the scanner.', 'هذا الرمز طويل بشكل غير معتاد. تأكد من مرور منتج واحد فقط أمام الماسح.'],
+      'Code illisible, rescannez.': ['Unreadable code, scan again.', 'رمز غير مقروء، أعد المسح.'],
+      'Lecture refusée · vide': ['Scan rejected · empty code', 'تم رفض المسح · الرمز فارغ'],
+      'Lecture refusée · illisible': ['Scan rejected · unreadable code', 'تم رفض المسح · الرمز غير مقروء'],
+      'Lecture refusée · trop-court': ['Scan rejected · code too short', 'تم رفض المسح · الرمز قصير جدًا'],
+      'Lecture refusée · trop-long': ['Scan rejected · code too long', 'تم رفض المسح · الرمز طويل جدًا'],
       "Aucun article vérifié pour l'instant, la douchette USB tape ici toute seule.": ['No items checked yet. The USB scanner enters the code here automatically.', 'لم يتم التحقق من أي منتج بعد. يُدخل الماسح USB الرمز هنا تلقائياً.'],
       'Ce navigateur ne sait pas lire un code-barres par la caméra. La douchette USB fonctionne, elle tape directement dans le champ ci-dessus.': ['This browser cannot scan barcodes with the camera. The USB scanner works and enters the code in the field above.', 'لا يدعم هذا المتصفح مسح الرموز الشريطية بالكاميرا. يعمل الماسح USB ويُدخل الرمز مباشرة في الحقل أعلاه.'],
       'Lecture caméra indisponible sur ce navigateur, utilisez la douchette ou tapez le code': ['Camera scanning is not available here, use the scanner or type the code', 'المسح بالكاميرا غير متاح هنا، استخدم الماسح أو اكتب الرمز'],
@@ -997,6 +1015,8 @@
       'Port': ['Network port', 'منفذ الشبكة'],
       'Largeur papier': ['Paper width', 'عرض الورق'],
       "Format d'étiquette": ['Label format', 'تنسيق الملصق'],
+      'Largeur papier: {value}': ['Paper width: {value}', 'عرض الورق: {value}'],
+      "Format d'étiquette: {value}": ['Label format: {value}', 'تنسيق الملصق: {value}'],
       'Modèle': ['Model', 'الطراز'],
       'Tester': ['Test', 'اختبار'],
       '80 mm (standard)': ['80 mm (standard)', '80 مم (قياسي)'],
@@ -1261,6 +1281,22 @@
     for (var i = 0; i < ATTRS.length; i++) {
       var a = ATTRS[i];
       if (!el.hasAttribute(a)) continue;
+      /* Only these printer-interface prefixes are templates. The selected
+         label is one opaque value: never split/retranslate its names, dots,
+         amounts or replacement markers. Read today's selected option, not
+         origAttr's first snapshot, so selection/locale changes cannot restore
+         a stale value into the accessible name. */
+      if (a === 'aria-label' && el.matches && el.matches('#kpr-card .kiwi-select-trigger')) {
+        var select = el.parentElement && el.parentElement.previousElementSibling;
+        var printerKey = select && ({ 'kpr-paper': 'Largeur papier', 'kpr-label': "Format d'étiquette" })[select.id];
+        var selected = select && select.selectedOptions && select.selectedOptions[0];
+        var current = el.getAttribute(a);
+        if (printerKey && selected && [printerKey, DICT.en[printerKey], DICT.ar[printerKey]].some(function (prefix) { return current.indexOf(prefix + ': ') === 0; })) {
+          var printerOut = t(printerKey + ': {value}').replace('{value}', function () { return String(selected.textContent || '').trim(); });
+          if (current !== printerOut) el.setAttribute(a, printerOut);
+          continue;
+        }
+      }
       var fr = (store && store[a] != null) ? store[a] : el.getAttribute(a);
       var d = dict();
       var out = (d && d[fr]) ? d[fr] : fr;

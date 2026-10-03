@@ -12,7 +12,7 @@ const ok = (value, label) => { assert.ok(value, label); checks++; console.log(' 
 const runtime = read('app/src/native-runtime.js');
 const runtimeCss = read('app/src/native-runtime.css');
 const posMobile = read('assets/pos-mobile.js');
-ok(runtimeCss.includes(':is(.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan):focus-within{border-color:var(--ink-3)}'), 'wrapped searches, including stock, have a neutral border under their single accented focus outline');
+ok(runtimeCss.includes(':is(.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan,.bqx-scanbox):focus-within{border-color:var(--ink-3)}'), 'wrapped searches, including stock and intake, have a neutral border under their single accented focus outline');
 ok(/\.vx-screen\.is-on::before\{[^}]*position:fixed[^}]*height:var\(--kiwi-safe-top\)[^}]*background:var\(--paper/.test(runtimeCss), 'the workspace backs the real status area while content scrolls');
 ok(/if \(on\) \{[\s\S]{0,400}document\.activeElement[\s\S]{0,200}editing\.blur\(\)/.test(posMobile), 'opening a retail drawer explicitly ends text editing on WKWebView');
 const shell = read('app/src/native-shell.js');
@@ -42,7 +42,7 @@ ok(/is-demo/.test(runtime) && /KiwiEnv[^;]*isReal/.test(runtime), 'demo deletion
 ok(/setAccessoryBarVisible/.test(runtime), 'the WKWebView accessory bar is hidden except on numeric fields');
 ok(/id="rf-search-input"[^>]*autocapitalize="none"/.test(caisse), 'refund search does not autocapitalise');
 ok(/pointer: coarse/.test(caisse), 'refund search does not autofocus on a touch screen');
-ok(runtimeCss.includes(':is(.rf-search,.jr-search,.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan) input:focus-visible{outline:none}') && runtimeCss.includes(':is(.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan):focus-within{outline:3px solid var(--forest,var(--atlas));outline-offset:2px;box-shadow:none}'), 'refund, journal, customer, scanner, stock and chooser searches draw one rounded ring, not a square one inside it');
+ok(runtimeCss.includes(':is(.rf-search,.jr-search,.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan,.bqx-scanbox) input:focus-visible{outline:none}') && runtimeCss.includes(':is(.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan,.bqx-scanbox):focus-within{outline:3px solid var(--forest,var(--atlas));outline-offset:2px;box-shadow:none}'), 'refund, journal, customer, scanner, stock, intake and chooser searches draw one rounded ring, not a square one inside it');
 
 // 9 · Header strips
 ok(/body\.kiwi-native-team:not\(#kno\)\{padding-top:0!important\}/.test(runtimeCss), 'no empty band above the Team header');

@@ -7,6 +7,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { decodeScreenshot, paintedActionColours } from './painted-png.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const require = createRequire(import.meta.url);
@@ -14,9 +15,40 @@ const puppeteer = require(require.resolve('puppeteer-core', { paths: [path.join(
 const executablePath = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/chromium', '/usr/bin/google-chrome'].find(fs.existsSync);
 assert.ok(executablePath, 'Chromium required');
 const fixture = spawn(process.execPath, [path.join(root, 'tools/retail-ui-fixture.mjs')], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
+// Existing component widths are the contract, not new icon-size guesses.
+assert.match(fs.readFileSync(path.join(root,'assets/pos-boutique.css'),'utf8'),/\.bq-btn svg\s*\{\s*width:\s*16px;\s*height:\s*16px;/);
+assert.match(fs.readFileSync(path.join(root,'assets/pos-boutique.js'),'utf8'),/\.bqx-mini svg\s*\{\s*width:\s*17px;\s*height:\s*17px;/);
 const shots = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-scan-layout-'));
 const failures = [];
 const depositComputedMeasurements = [];
+const stockPlaceholderPixelMeasurements = [];
+const luminance = colour => colour.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;})
+  .reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
+const pixelContrast = (a,b) => (Math.max(luminance(a),luminance(b))+.05)/(Math.min(luminance(a),luminance(b))+.05);
+const intakeExpected = {
+  fr: ['Reprise de stock', "Scannez le code déjà présent sur l'article. Kiwi le garde tel quel · aucune étiquette à réimprimer.", 'Scannez un article…', 'Lecture partielle : trop peu de caractères pour être un code-barres. Rescannez plus lentement, ou tapez-le.', 'Lecture refusée · trop-court', 'Terminer la reprise', 'La douchette ne répond pas ?', 'Valider le code saisi', "Scan incomplet, rien n'a été enregistré"],
+  en: ['Stock intake', 'Scan the code already on the item. Kiwi keeps it unchanged · no labels to reprint.', 'Scan an item…', 'Partial scan: too few characters for a barcode. Scan again more slowly, or type it.', 'Scan rejected · code too short', 'Finish stock intake', 'Scanner not responding?', 'Validate the entered code', 'Incomplete scan, nothing was saved'],
+  ar: ['إدخال المخزون', 'امسح الرمز الموجود على المنتج. يحتفظ به كيوي كما هو · لا حاجة لإعادة طباعة الملصقات.', 'امسح منتجًا…', 'مسح جزئي: عدد الأحرف غير كافٍ لرمز شريطي. أعد المسح ببطء أكبر أو اكتبه.', 'تم رفض المسح · الرمز قصير جدًا', 'إنهاء إدخال المخزون', 'الماسح لا يستجيب؟', 'التحقق من الرمز المدخل', 'مسح غير مكتمل، لم يُحفظ شيء'],
+};
+function paintedPlaceholderColours(bytes, placeholder) {
+  const {width,height,channels,pixels}=decodeScreenshot(bytes), bounds=placeholder.bounds;
+  const box={x:Math.floor(bounds.x),y:Math.floor(bounds.y),width:Math.floor(bounds.width),height:Math.floor(bounds.height)};
+  assert.ok(box.x>=0 && box.y>=0 && box.x+box.width<=width && box.y+box.height<=height,'Actual placeholder bounds must be inside the full frame');
+  const inset=Math.min(5,Math.floor(Math.min(box.width,box.height)/8)), counts=new Map();
+  for(let y=box.y+inset;y<box.y+box.height-inset;y++) for(let x=box.x+inset;x<box.x+box.width-inset;x++) {
+    const offset=(y*width+x)*channels;
+    if(channels===4 && pixels[offset+3]!==255) continue;
+    const colour=[...pixels.subarray(offset,offset+3)].join(','); counts.set(colour,(counts.get(colour)||0)+1);
+  }
+  const dominant=[...counts.entries()].sort((a,b)=>b[1]-a[1])[0];
+  assert.ok(dominant,'Opaque input surface pixels required');
+  const background=dominant[0].split(',').map(Number);
+  // CSS only locates the intended glyph colour, including alpha. The helper
+  // must find that ink in the actual decoded PNG; contrast uses PNG pixels.
+  const alpha=(placeholder.colour[3]??1)*placeholder.opacity;
+  const expected=placeholder.colour.slice(0,3).map((v,i)=>v*alpha+background[i]*(1-alpha));
+  return paintedActionColours(bytes,expected,bounds);
+}
 let browser, checks = 0;
 const check = (value, label) => { checks++; if (!value) { failures.push(label); console.error('✗ ' + label); } };
 try {
@@ -42,6 +74,10 @@ try {
       await page.goto(base + '/boutique.html', { waitUntil: 'networkidle0' });
       await page.addStyleTag({ path: path.join(root, 'assets/pos-mobile.css') });
       await page.addStyleTag({ path: path.join(root, 'app/src/native-runtime.css') });
+      // The small retail fixture does not include the production icon adapter.
+      // Load that exact runtime before controls mount, rather than accepting
+      // empty placeholder <i> nodes as an honest rendered surface.
+      await page.addScriptTag({ path: path.join(root, 'assets/lucide.min.js') });
       await page.evaluate((lang, theme) => {
         document.documentElement.classList.add('kiwi-native');
         document.documentElement.setAttribute('data-caisse-theme', theme);
@@ -171,6 +207,31 @@ try {
         await page.setViewport({width,height,isMobile:true,hasTouch:true});
         await page.click('#bqi-scan');
         await page.waitForFunction(() => document.activeElement?.id==='bqi-scan');
+        // Clear through the real editable control so the actual placeholder,
+        // not an input value or a recreated label, is captured in the PNG.
+        const selectAllModifier=process.platform==='darwin'?'Meta':'Control';
+        await page.keyboard.down(selectAllModifier);
+        await page.keyboard.press('KeyA');
+        await page.keyboard.up(selectAllModifier);
+        await page.keyboard.press('Backspace');
+        await page.evaluate(()=>document.fonts.ready);
+        const placeholder=await page.$eval('#bqi-scan',input=>{
+          const r=input.getBoundingClientRect(), css=getComputedStyle(input,'::placeholder');
+          return {empty:input.value==='' && input.matches(':placeholder-shown'),text:input.placeholder,
+            colour:(css.color.match(/[\d.]+/g)||[]).map(Number),opacity:Number(css.opacity),
+            bounds:{x:r.x,y:r.y,width:r.width,height:r.height}};
+        });
+        check(placeholder.empty,`${device} ${lang} ${theme} stock height=${height}: actual focused input displays its placeholder`);
+        const placeholderFrame=await page.screenshot({path:path.join(shots,`${device}-${lang}-${theme}-stock-placeholder-${height}.png`),captureBeyondViewport:false});
+        let measured;
+        try {
+          const colours=paintedPlaceholderColours(placeholderFrame,placeholder);
+          measured={...colours,contrast:pixelContrast(colours.foreground,colours.background),bounds:placeholder.bounds,text:placeholder.text};
+          check(measured.contrast>=4.5,`${device} ${lang} ${theme} stock height=${height}: PNG-decoded placeholder text contrast ≥4.5 ${JSON.stringify(measured)}`);
+        } catch(error) {
+          check(false,`${device} ${lang} ${theme} stock height=${height}: actual placeholder ink must be present in full-frame PNG: ${error.message} ${JSON.stringify(placeholder)}`);
+        }
+        stockPlaceholderPixelMeasurements.push({device,lang,theme,height,...measured});
         await page.keyboard.type('q');
         await focusRing('#bqi-scan', `${device} ${lang} ${theme} stock height=${height}`);
         const computed = await computedSurfaceContrast('#bqi-scan');
@@ -178,6 +239,69 @@ try {
           `${device} ${lang} ${theme} stock height=${height}: neutral border and sole focus ring contrast ≥3 against computed surface ${JSON.stringify(computed)}`);
         await page.screenshot({path:path.join(shots,`${device}-${lang}-${theme}-stock-${height}.png`),captureBeyondViewport:false});
       }
+      // Real Stock Enter follows invScanHandle→intakeTake, unlike scanner
+      // lookup's offerRegister. A one-character code must remain a no-save draft.
+      const catalogBefore=await page.evaluate(()=>{
+        window.__intakeCatalogWrites=[];
+        const set=Storage.prototype.setItem,remove=Storage.prototype.removeItem;
+        Storage.prototype.setItem=function(key,value){if(/^kiwi(?:BoutiqueCatalog|Catalog)/.test(key)) window.__intakeCatalogWrites.push(key);return set.call(this,key,value);};
+        Storage.prototype.removeItem=function(key){if(/^kiwi(?:BoutiqueCatalog|Catalog)/.test(key)) window.__intakeCatalogWrites.push(key);return remove.call(this,key);};
+        return Object.keys(localStorage).filter(key=>/^kiwi(?:BoutiqueCatalog|Catalog)/.test(key)).sort().map(key=>[key,localStorage.getItem(key)]);
+      });
+      await page.click('#bqi-scan');
+      await page.keyboard.down(process.platform==='darwin'?'Meta':'Control');
+      await page.keyboard.press('KeyA');
+      await page.keyboard.up(process.platform==='darwin'?'Meta':'Control');
+      await page.keyboard.type('Q');
+      await page.keyboard.press('Enter');
+      await page.waitForSelector('#bqx-code',{visible:true});
+      await page.waitForFunction(()=>document.activeElement?.id==='bqx-code');
+      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+      const intake=await page.evaluate(()=>{
+        const text=selector=>document.querySelector(selector)?.textContent.replace(/[\u2066\u2069]/g,'').trim();
+        const values=[text('.bqx-head-t h3'),text('.bqx-head-t > span'),document.querySelector('#bqx-code')?.placeholder,
+          text('#bqx-hint'),text('.bqx-log-row span'),text('#bqx-done'),text('#bqx-diag'),document.querySelector('#bqx-go')?.title];
+        const nonSave=Array.from(document.querySelectorAll('#toast-stack .toast-title')).find(el=>/Scan incomplet|Incomplete scan|مسح غير مكتمل/.test(el.textContent));
+        return {values,counts:Array.from(document.querySelectorAll('.bqx-tally b'),el=>el.textContent.replace(/[\u2066\u2069]/g,'')),
+          nonSave:nonSave?.textContent,severity:nonSave?.closest('.toast')?.className,
+          catalog:Object.keys(localStorage).filter(key=>/^kiwi(?:BoutiqueCatalog|Catalog)/.test(key)).sort().map(key=>[key,localStorage.getItem(key)]),
+          catalogWrites:window.__intakeCatalogWrites};
+      });
+      for(let i=0;i<8;i++) check(intake.values[i]===intakeExpected[lang][i],`${device} ${lang} ${theme}: real invalid Stock Enter copy[${i}] ${JSON.stringify(intake.values[i])}`);
+      check(intake.counts.join(',')==='0,0',`${device} ${lang} ${theme}: invalid stock intake retains 0 item / 0 unit`);
+      check(intake.nonSave===intakeExpected[lang][8] && intake.severity?.includes('is-warn') && !intake.severity?.includes('is-success'),
+        `${device} ${lang} ${theme}: invalid intake non-save toast translates and warns ${JSON.stringify({text:intake.nonSave,severity:intake.severity})}`);
+      check(JSON.stringify(intake.catalog)===JSON.stringify(catalogBefore) && intake.catalogWrites.length===0,
+        `${device} ${lang} ${theme}: invalid Stock Enter performs no catalog/stock persistence writes ${JSON.stringify(intake.catalogWrites)}`);
+      await focusRing('#bqx-code',`${device} ${lang} ${theme} invalid stock intake`);
+      // Severity was checked while the real feedback was visible. Let its
+      // ordinary timers expire and the modal settle before durable UI proof;
+      // do not hide, remove, recolour or edit anything for the screenshot.
+      await page.waitForFunction(()=>!document.querySelector('#toast-stack .toast'),{timeout:12000});
+      await page.waitForFunction(()=>!document.querySelector('#bq-invmm').getAnimations({subtree:true}).some(a=>a.playState==='running'));
+      for(const intakeHeight of heights) {
+        await page.setViewport({width,height:intakeHeight,isMobile:true,hasTouch:true});
+        await page.waitForFunction(()=>!document.querySelector('#bq-invmm').getAnimations({subtree:true}).some(a=>a.playState==='running'));
+        for(const [selector,symbol,optional,expectedWidth] of [['#bq-invmm [data-inv-x]','close',false,16],['#bqx-go','arrow_forward',false,17],['#bqx-diag','monitoring',false,16],['#bqx-cam','photo_camera',true,16]]) {
+          const icon=await page.evaluate((selector,symbol,optional)=>{
+            const control=document.querySelector(selector);
+            if(!control && optional) return {notApplicable:true};
+            const svg=control?.querySelector('svg[data-material-symbol]'),shape=svg?.querySelector('path');
+            if(!svg || !shape) return {present:false};
+            const r=svg.getBoundingClientRect(),css=getComputedStyle(svg),owner=getComputedStyle(control);
+            return {present:svg.getAttribute('data-material-symbol')===symbol && !!shape.getAttribute('d'),width:r.width,height:r.height,
+              visible:css.display!=='none' && css.visibility==='visible' && Number(css.opacity)>0 && Number(owner.opacity)>0 &&
+                r.left>=0 && r.right<=innerWidth && r.top>=0 && r.bottom<=innerHeight,
+              fill:css.fill,flexShrink:css.flexShrink,symbol:svg.getAttribute('data-material-symbol')};
+          },selector,symbol,optional);
+          check(icon.notApplicable || (icon.present && icon.visible && icon.width>=expectedWidth && icon.height>=expectedWidth && icon.fill!=='none'),
+            `${device} ${lang} ${theme} intake height=${intakeHeight}: actual ${symbol} icon retains declared ${expectedWidth}px size via the production adapter ${JSON.stringify(icon)}`);
+        }
+        await page.screenshot({path:path.join(shots,`${device}-${lang}-${theme}-stock-intake-invalid-${intakeHeight}.png`),captureBeyondViewport:false});
+      }
+      await page.screenshot({path:path.join(shots,`${device}-${lang}-${theme}-stock-intake-invalid.png`),captureBeyondViewport:false});
+      await page.click('#bqx-done');
+      await page.waitForFunction(()=>!document.querySelector('#bq-inv-veil')?.classList.contains('is-open'));
       await page.setViewport({width,height:heights[0],isMobile:true,hasTouch:true});
       await page.click('.vx-burger');
       await page.waitForFunction(() => document.querySelector('.vx-screen.is-on').classList.contains('vx-nav-open'));
@@ -199,6 +323,7 @@ try {
     }
   }
   console.log('deposit-focus-computed-measurements: '+JSON.stringify(depositComputedMeasurements));
+  console.log('stock-placeholder-pixel-measurements: '+JSON.stringify(stockPlaceholderPixelMeasurements));
   if (failures.length) throw new Error(`${failures.length}/${checks} scanner layout checks failed; screenshots: ${shots}`);
   console.log(`caisse-scan-layout-browser-test: ${checks} checks passed; screenshots: ${shots}`);
 } finally {

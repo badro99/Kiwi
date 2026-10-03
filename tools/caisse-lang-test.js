@@ -132,6 +132,32 @@ for (const lang of ['en', 'ar']) {
 }
 L.set('en');
 check(L.tr('Salma Bennis · taille S · 480 pts · un avoir actif') === 'Salma Bennis · size S · 480 pts · active store credit', 'customer attachment toast translates without changing the name or balance');
+const intakeCopy = [
+  ['Reprise de stock', 'Stock intake', 'إدخال المخزون'],
+  ["Scannez le code déjà présent sur l'article. Kiwi le garde tel quel · aucune étiquette à réimprimer.", 'Scan the code already on the item. Kiwi keeps it unchanged · no labels to reprint.', 'امسح الرمز الموجود على المنتج. يحتفظ به كيوي كما هو · لا حاجة لإعادة طباعة الملصقات.'],
+  ['Scannez un article…', 'Scan an item…', 'امسح منتجًا…'],
+  ['Valider le code saisi', 'Validate the entered code', 'التحقق من الرمز المدخل'],
+  ['Douchette prête. Pas de douchette ? Tapez le code puis Entrée.', 'Scanner ready. No scanner? Type the code, then press Enter.', 'الماسح جاهز. لا يوجد ماسح؟ اكتب الرمز ثم اضغط إدخال.'],
+  ['La douchette ne répond pas ?', 'Scanner not responding?', 'الماسح لا يستجيب؟'],
+  ['Terminer la reprise', 'Finish stock intake', 'إنهاء إدخال المخزون'],
+  ['Rien encore. La douchette écrit directement dans le champ ci-dessus · pas besoin de cliquer.', 'Nothing yet. The scanner enters the code directly in the field above · no need to click.', 'لا شيء بعد. يُدخل الماسح الرمز مباشرة في الحقل أعلاه · لا حاجة إلى النقر.'],
+  ['Tapez ou scannez un code.', 'Type or scan a code.', 'اكتب رمزًا أو امسحه.'],
+  ["Rien n'a été lu. Rapprochez la douchette de l'étiquette, ou tapez le code.", 'Nothing was read. Move the scanner closer to the label, or type the code.', 'لم يُقرأ شيء. قرّب الماسح من الملصق أو اكتب الرمز.'],
+  ['Lecture incomplète · la douchette a envoyé des caractères parasites. Rescannez, ou tapez le code à la main.', 'Incomplete scan · the scanner sent stray characters. Scan again, or type the code manually.', 'مسح غير مكتمل · أرسل الماسح أحرفًا غير مرغوبة. أعد المسح أو اكتب الرمز يدويًا.'],
+  ['Lecture partielle : trop peu de caractères pour être un code-barres. Rescannez plus lentement, ou tapez-le.', 'Partial scan: too few characters for a barcode. Scan again more slowly, or type it.', 'مسح جزئي: عدد الأحرف غير كافٍ لرمز شريطي. أعد المسح ببطء أكبر أو اكتبه.'],
+  ["Ce code est anormalement long. Vérifiez qu'un seul article est passé devant la douchette.", 'This code is unusually long. Check that only one item passed in front of the scanner.', 'هذا الرمز طويل بشكل غير معتاد. تأكد من مرور منتج واحد فقط أمام الماسح.'],
+  ['Code illisible, rescannez.', 'Unreadable code, scan again.', 'رمز غير مقروء، أعد المسح.'],
+  ['Lecture refusée · vide', 'Scan rejected · empty code', 'تم رفض المسح · الرمز فارغ'],
+  ['Lecture refusée · illisible', 'Scan rejected · unreadable code', 'تم رفض المسح · الرمز غير مقروء'],
+  ['Lecture refusée · trop-court', 'Scan rejected · code too short', 'تم رفض المسح · الرمز قصير جدًا'],
+  ['Lecture refusée · trop-long', 'Scan rejected · code too long', 'تم رفض المسح · الرمز طويل جدًا'],
+];
+for (const [fr,en,ar] of intakeCopy) for (const [lang,expected] of [['fr',fr],['en',en],['ar',ar]]) {
+  L.set(lang);
+  check(L.tr(fr)===expected,lang+' exact waiting/invalid stock-intake copy: '+fr);
+}
+check(boutiqueSource.includes("toast('Scan incomplet, rien n\\'a été enregistré', undefined, 'warn')"), 'invalid intake explicitly warns without reporting success or changing default lifetime');
+L.set('en');
 /* Lower native drawer destinations must translate beyond their rail heading.
  * These are rendered copies from balances, sold insights and printer routing;
  * numeric examples exercise templates without changing merchant amounts. */
