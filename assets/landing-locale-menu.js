@@ -2,6 +2,7 @@
   const locales = [
     ['fr', 'Français'],
     ['en', 'English'],
+    ['es', 'Español'],
     ['ar', 'العربية'],
     ['de', 'Deutsch'],
     ['it', 'Italiano'],
@@ -9,7 +10,7 @@
   ];
 
   const labels = {
-    fr: 'Choisir la langue', en: 'Choose language', ar: 'اختر اللغة',
+    fr: 'Choisir la langue', en: 'Choose language', es: 'Elegir idioma', ar: 'اختر اللغة',
     de: 'Sprache wählen', it: 'Scegli la lingua', nl: 'Kies een taal',
   };
 
