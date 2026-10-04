@@ -93,8 +93,9 @@
       });
     });
     if(missingCosts.length)warn('missing-costs',String(missingCosts.length),'Lignes sans coût historique exploitable. Les coûts actuels saisis après les ventes ne sont pas appliqués rétroactivement.');
-    var relevantInvoices=invoices.filter(function(r){return saleIds.has(String(r.sale_id))||inside(stamp(r.snapshot,['issuedTs','createdTs'])||N(r.created_ts),data);});
-    var relevantSeqs=relevantInvoices.map(function(r){return N(r.seq);}).filter(function(x){return x!=null;}),lo=Math.min.apply(null,relevantSeqs),hi=Math.max.apply(null,relevantSeqs);
+    var originInvoiceIds=new Set(Array.from(refundOrigin.values()));
+    var relevantInvoices=invoices.filter(function(r){return saleIds.has(String(r.sale_id))||originInvoiceIds.has(String(r.sale_id))||inside(stamp(r.snapshot,['issuedTs','createdTs'])||N(r.created_ts),data);});
+    var relevantSeqs=relevantInvoices.filter(function(r){return saleIds.has(String(r.sale_id))||inside(stamp(r.snapshot,['issuedTs','createdTs'])||N(r.created_ts),data);}).map(function(r){return N(r.seq);}).filter(function(x){return x!=null;}),lo=Math.min.apply(null,relevantSeqs),hi=Math.max.apply(null,relevantSeqs);
     var seqs=invoices.filter(function(r){return r.seq>=lo&&r.seq<=hi;}).map(function(r){return N(r.seq);}).filter(function(x){return x!=null;}).sort(function(a,b){return a-b;}),gaps=[];
     // Continuous server invoice sequence, not guessed sequence in free-form
     // restaurant ticket labels. Retain compact ranges rather than truncate.
