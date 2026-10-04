@@ -358,7 +358,7 @@
       var active = credits.reduce(function (sum, credit) {
         return sum + (credit.status === 'active' ? Number(credit.balanceCents || 0) : 0);
       }, 0) / 100;
-      host.innerHTML = '<div class="kcb-section">Avoirs · solde ' + fmt(active) + ' MAD</div>' + (credits.length
+      host.innerHTML = '<div class="kcb-section"><span>Avoirs · solde</span> <bdi data-nolang>' + esc(fmt(active)) + ' MAD</bdi></div>' + (credits.length
         ? '<div class="kcb-info">' + credits.map(function (credit) {
             var issued = (credit.events || []).filter(function (event) { return event.action === 'issue'; })[0] || {};
             var products = Array.isArray(issued.lines) && issued.lines.length
@@ -753,7 +753,7 @@
     var rewardReady = prog >= 1;
     var progTxt, recordBlock;
     if (cfg.model === 'amount') {
-      progTxt = pointsNumberMarkup(c.points) + ' / <bdi data-nolang>' + esc(cfg.amount.threshold || 100) + '</bdi> ' + pointsUnitMarkup() + ' · récompense ' + esc(cfg.amount.reward || '');
+      progTxt = pointsNumberMarkup(c.points) + ' / <bdi data-nolang>' + esc(cfg.amount.threshold || 100) + '</bdi> ' + pointsUnitMarkup() + ' · <span data-kcb-reward-label>récompense</span> <span data-nolang data-kcb-reward-value>' + esc(cfg.amount.reward || '') + '</span>';
       recordBlock = '<div class="kcb-record"><div class="rl">Enregistrer un achat</div><div class="kcb-recrow">' +
         '<input id="kcb-amt" inputmode="numeric" placeholder="Montant en MAD" >' +
         '<button class="kcb-big" id="kcb-rec">' + ICON.plus + 'Valider</button></div></div>';

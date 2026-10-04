@@ -40,7 +40,7 @@ try {
           {id:'points-98',name:'Safouane pts',phone:'+212698765432',points:98,stamps:0,visits:1,spend:98,lastSeen:1},
           {id:'literal-unit',name:'pts',phone:'+212611111111',points:98,stamps:0,visits:1,spend:98,lastSeen:0}
         ]}));
-        localStorage.setItem('kiwi:fidelity:v1:'+book,JSON.stringify({model:'amount',amount:{perMad:1,threshold:100.5,reward:'synthetic reward'},visit:{target:10},product:{target:10}}));
+        localStorage.setItem('kiwi:fidelity:v1:'+book,JSON.stringify({model:'amount',amount:{perMad:1,threshold:100.5,reward:'Récompense <merchant>'},visit:{target:10},product:{target:10}}));
       });
       const writes=[];
       await page.setRequestInterception(true);
@@ -86,6 +86,24 @@ try {
       const amount=await page.$('#kcb-amt');
       for(const next of ['fr','en','ar']) {
         await page.evaluate(next=>window.KiwiCaisseLang.set(next),next);
+        const copy=await page.$eval('#kcb-sheet .kcb-card',el=>({
+          historyHeading:el.querySelector(':scope > .kcb-section')?.textContent,
+          historyEmpty:el.querySelector(':scope > .kcb-empty > b')?.textContent,
+          historyHint:el.querySelector(':scope > .kcb-empty > div')?.textContent,
+          creditHeading:el.querySelector('#kcb-credit-history .kcb-section > span')?.textContent,
+          creditEmpty:el.querySelector('#kcb-credit-history .kcb-empty > b')?.textContent,
+          creditHint:el.querySelector('#kcb-credit-history .kcb-empty > div')?.textContent,
+          rewardLabel:el.querySelector('[data-kcb-reward-label]')?.textContent,
+          rewardData:el.querySelector('[data-kcb-reward-value][data-nolang]')?.textContent,
+          creditBalance:el.querySelector('#kcb-credit-history .kcb-section > bdi[data-nolang]')?.textContent
+        }));
+        const expected={
+          fr:['Historique des achats','Aucun détail d’achat enregistré','Les prochains tickets attachés à ce client apparaîtront ici.','Avoirs · solde','Aucun avoir','Les crédits boutique émis à ce client apparaîtront ici.','récompense'],
+          en:['Purchase history','No purchase details recorded','Future receipts linked to this customer will appear here.','Store credit · balance','No store credit','Store credits issued to this customer will appear here.','reward'],
+          ar:['سجل المشتريات','لا توجد تفاصيل شراء مسجّلة','ستظهر هنا التذاكر المقبلة المرتبطة بهذا الزبون.','أرصدة المتجر · الرصيد','لا يوجد رصيد متجر','ستظهر هنا أرصدة المتجر الصادرة لهذا الزبون.','مكافأة']
+        }[next];
+        ['historyHeading','historyEmpty','historyHint','creditHeading','creditEmpty','creditHint','rewardLabel'].forEach((key,index)=>check(copy[key]===expected[index],label+' detail → '+next+': exact '+key+' '+JSON.stringify(copy[key])));
+        check(copy.rewardData==='Récompense <merchant>' && copy.creditBalance==='0 MAD',label+' detail → '+next+': literal merchant reward and credit balance preserved '+JSON.stringify({rewardData:copy.rewardData,creditBalance:copy.creditBalance}));
         const detail=await page.$eval('.kcb-progtxt',el=>({unit:el.querySelector('[data-kcb-point-unit]')?.textContent,numbers:[...el.querySelectorAll('bdi[data-nolang]')].map(node=>node.textContent)}));
         check(detail.unit===(next==='ar'?'نقطة':'pts') && detail.numbers.join('/')==='98/100.5',label+' detail → '+next+': isolated balance/exact fractional threshold and localized unit '+JSON.stringify(detail));
         check(await amount.evaluate(el=>el.isConnected && el.value===''),label+' detail → '+next+': untouched purchase draft remains same node');
