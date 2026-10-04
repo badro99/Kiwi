@@ -6972,8 +6972,6 @@
     const pv = pvPaired() || {};
     const who = ((STAFF.caissiere && STAFF.caissiere.name) || '').trim().split(/\s+/)[0] || 'Caissier';
     const role = (STAFF.caissiere && STAFF.caissiere.role) || 'Caissier';
-    const DDAYS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-    const DMONTHS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
     const el = document.createElement('div');
     el.className = 'clockin-screen bq-clockin';
     el.id = 'bq-clockin';
@@ -6987,7 +6985,7 @@
         <div class="clockin-greet">Bonjour <em>${esc(who)}</em></div>
         <div class="clockin-role">${esc(role)} · ${esc(pv.name || 'Boutique')}</div>
         <div class="clockin-clock" id="bqci-time">--:--</div>
-        <div class="clockin-date" id="bqci-date"></div>
+        <div class="clockin-date" id="bqci-date" data-nolang></div>
         <div class="clockin-float">
           <span class="clockin-float-label">Fond d'ouverture</span>
           <div class="clockin-float-chips" id="bqci-chips">
@@ -7062,10 +7060,13 @@
       const n = new Date();
       const tEl = el.querySelector('#bqci-time'), dEl = el.querySelector('#bqci-date');
       if (tEl) tEl.textContent = pad2(n.getHours()) + ':' + pad2(n.getMinutes());
-      if (dEl) dEl.textContent = DDAYS[n.getDay()] + ' ' + n.getDate() + ' ' + DMONTHS[n.getMonth()];
+      const language = window.KiwiCaisseLang?.get?.();
+      const locale = { fr: 'fr-FR', en: 'en-GB', ar: 'ar-MA' }[language] || 'fr-FR';
+      if (dEl) dEl.textContent = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(n);
     };
     tick();
     const timer = setInterval(tick, 10000);
+    const stopDateLocale = window.KiwiCaisseLang?.subscribe?.(tick);
 
     el.querySelector('#bqci-btn').addEventListener('click', () => {
       el.querySelector('#bqci-btn').classList.add('is-confirmed');
@@ -7074,7 +7075,7 @@
       bqShiftPersist();
       bqSaveProvisional(true);
       setTimeout(() => el.classList.add('is-leaving'), 420);
-      setTimeout(() => { clearInterval(timer); el.remove(); }, 940);
+      setTimeout(() => { clearInterval(timer); if (stopDateLocale) stopDateLocale(); el.remove(); }, 940);
     });
 
     requestAnimationFrame(() => { el.classList.add('is-visible'); el.setAttribute('aria-hidden', 'false'); icons(); });

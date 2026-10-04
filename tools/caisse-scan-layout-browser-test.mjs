@@ -8,12 +8,16 @@ import os from 'node:os';
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { decodeScreenshot, paintedActionColours } from './painted-png.mjs';
+import { demoClockFixture, installDemoClock } from './native-demo-clock-fixture.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const require = createRequire(import.meta.url);
 const puppeteer = require(require.resolve('puppeteer-core', { paths: [path.join(root, 'app'), root] }));
 const executablePath = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/chromium', '/usr/bin/google-chrome'].find(fs.existsSync);
 assert.ok(executablePath, 'Chromium required');
+const args=process.argv.slice(2);
+assert.ok(args.length<=1 && (!args.length || args[0]==='--opening-float-only'),'Usage: caisse-scan-layout-browser-test.mjs [--opening-float-only]');
+const openingOnly=args[0]==='--opening-float-only';
 const fixture = spawn(process.execPath, [path.join(root, 'tools/retail-ui-fixture.mjs')], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
 // Existing component widths are the contract, not new icon-size guesses.
 assert.match(fs.readFileSync(path.join(root,'assets/pos-boutique.css'),'utf8'),/\.bq-btn svg\s*\{\s*width:\s*16px;\s*height:\s*16px;/);
@@ -22,6 +26,7 @@ const shots = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-scan-layout-'));
 const failures = [];
 const depositComputedMeasurements = [];
 const stockPlaceholderPixelMeasurements = [];
+const openingFloatPixelMeasurements = [];
 const luminance = colour => colour.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;})
   .reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
 const pixelContrast = (a,b) => (Math.max(luminance(a),luminance(b))+.05)/(Math.min(luminance(a),luminance(b))+.05);
@@ -49,6 +54,19 @@ function paintedPlaceholderColours(bytes, placeholder) {
   const expected=placeholder.colour.slice(0,3).map((v,i)=>v*alpha+background[i]*(1-alpha));
   return paintedActionColours(bytes,expected,bounds);
 }
+function paintedFocusRing(bytes, state) {
+  const png=decodeScreenshot(bytes),r=state.bounds,extent=state.offset+state.width;
+  assert.ok(r.x-extent-2>=0 && r.y-extent-2>=0 && r.x+r.width+extent+2<png.width && r.y+r.height+extent+2<png.height,'Whole actual opening-float ring must be inside the original frame');
+  const sample=(x,y)=>{const i=(Math.round(y)*png.width+Math.round(x))*png.channels;return [...png.pixels.subarray(i,i+3)];};
+  let count=0,foreground;
+  for(let y=Math.floor(r.y-extent);y<Math.ceil(r.y+r.height+extent);y++) for(let x=Math.floor(r.x-extent);x<Math.ceil(r.x+r.width+extent);x++) {
+    if(x>=r.x && x<=r.x+r.width && y>=r.y && y<=r.y+r.height)continue;
+    const colour=sample(x,y);
+    if(colour.reduce((sum,value,i)=>sum+(value-state.colour[i])**2,0)<=12){count++;foreground=colour;}
+  }
+  const background=sample(r.x+r.width/2,r.y-extent-2);
+  return {count,foreground,background,contrast:foreground?pixelContrast(foreground,background):0};
+}
 let browser, checks = 0;
 const check = (value, label) => { checks++; if (!value) { failures.push(label); console.error('✗ ' + label); } };
 try {
@@ -63,7 +81,7 @@ try {
     });
   });
   browser = await puppeteer.launch({ executablePath, headless: true, args: ['--no-sandbox'] });
-  for (const [device, width, heights] of [['se', 375, [667, 407]], ['pro', 402, [874, 520]]]) {
+  if(!openingOnly) for (const [device, width, heights] of [['se', 375, [667, 407]], ['pro', 402, [874, 520]]]) {
     for (const lang of ['fr', 'en', 'ar']) for (const theme of ['light', 'dark']) {
       const context = await browser.createBrowserContext();
       const page = await context.newPage();
@@ -322,8 +340,92 @@ try {
       await context.close();
     }
   }
+  // The normal retail demo deliberately skips opening float. Change only its
+  // loopback bootstrap before the real module executes; never copy its markup,
+  // invoke a private renderer, pair an account or press the shift-opening button.
+  const demoBootstrap='window.KiwiEnv={isReal:()=>false,demosAllowed:true}';
+  const openingHtml=await (await fetch(base+'/boutique.html')).text();
+  assert.equal(openingHtml.split(demoBootstrap).length,2,'Opening fixture must replace exactly the real/demo bootstrap');
+  const demoMerchant="localStorage.setItem('kiwiLiveMerchant','synthetic-retail-acompte');";
+  assert.equal(openingHtml.split(demoMerchant).length,2,'Opening fixture must remove only its synthetic merchant identity');
+  const openingSource=openingHtml.replace(demoBootstrap,'window.KiwiEnv={isReal:()=>true,demosAllowed:false}').replace(demoMerchant,'');
+  for(const [device,width,heights] of [['se',375,[667,407]],['pro',402,[874,520]]]) {
+    for(const lang of ['fr','en','ar']) for(const theme of ['light','dark']) {
+      const context=await browser.createBrowserContext(),page=await context.newPage(),errors=[],writes=[];
+      try {
+      page.on('pageerror',error=>errors.push(error.message));
+      await page.setViewport({width,height:heights[0],isMobile:true,hasTouch:true});
+      const clock=demoClockFixture();
+      await page.emulateTimezone(clock.timezone);
+      await page.evaluateOnNewDocument(installDemoClock,clock.midServiceMs);
+      await page.setRequestInterception(true);
+      page.on('request',request=>{
+        if(!['GET','HEAD','OPTIONS'].includes(request.method())){writes.push(request.method()+' '+new URL(request.url()).pathname);request.abort();return;}
+        if(request.url()===base+'/boutique.html?opening-focus') {request.respond({status:200,contentType:'text/html',body:openingSource});return;}
+        request.url().startsWith(base+'/') || request.url().startsWith('data:')?request.continue():request.abort();
+      });
+      await page.goto(base+'/boutique.html?opening-focus',{waitUntil:'networkidle0'});
+      await page.addStyleTag({path:path.join(root,'assets/pos-mobile.css')});
+      await page.addStyleTag({path:path.join(root,'app/src/native-runtime.css')});
+      await page.evaluate((lang,theme)=>{
+        document.documentElement.classList.add('kiwi-native');
+        document.documentElement.setAttribute('data-caisse-theme',theme);
+        document.documentElement.style.setProperty('--kiwi-host-safe-top','20px');
+        window.KiwiCaisseLang.set(lang);
+      },lang,theme);
+      await page.waitForSelector('#bq-clockin.is-visible',{visible:true});
+      await page.waitForFunction(()=>!document.querySelector('#bq-clockin').getAnimations({subtree:true}).some(a=>a.playState==='running'));
+      const dateState=locale=>page.evaluate(locale=>{
+        const now=new Date(),expected=new Intl.DateTimeFormat({fr:'fr-FR',en:'en-GB',ar:'ar-MA'}[locale],{weekday:'long',day:'numeric',month:'long'}).format(now);
+        return {actual:document.querySelector('#bqci-date').textContent,expected,clock:document.querySelector('#bqci-time').textContent,
+          expectedClock:String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')};
+      },locale);
+      const initialDate=await dateState(lang);
+      check(initialDate.actual===initialDate.expected,`${device} ${lang} ${theme}: actual opening date uses the active locale ${JSON.stringify(initialDate)}`);
+      for(const switched of ['fr','en','ar']) {
+        await page.evaluate(locale=>window.KiwiCaisseLang.set(locale),switched);
+        const changed=await dateState(switched);
+        console.log(`${device} ${lang} ${theme} opening date switch ${switched}: `+JSON.stringify(changed));
+        check(changed.actual===changed.expected,`${device} ${lang} ${theme}: public locale switch immediately reformats the actual opening date in ${switched} ${JSON.stringify(changed)}`);
+        check(changed.clock===changed.expectedClock || (switched==='ar' && changed.clock==='\u2066'+changed.expectedClock+'\u2069'),`${device} ${lang} ${theme}: date locale switch preserves the actual local-time clock, allowing only the existing AR LRI/PDI wrapper ${JSON.stringify(changed)}`);
+      }
+      await page.evaluate(locale=>window.KiwiCaisseLang.set(locale),lang);
+      const before=await page.evaluate(()=>({shift:localStorage.getItem('kiwi:bqShift'),float:localStorage.getItem('kiwi:openingFloat:v1:boutique')}));
+      await page.tap('#bqci-chips [data-float="custom"]');
+      await page.waitForFunction(()=>document.activeElement?.id==='bqci-input' && !document.querySelector('#bqci-custom').hidden);
+      for(const height of heights) {
+        await page.setViewport({width,height,isMobile:true,hasTouch:true});
+        await page.tap('#bqci-input');
+        await page.waitForFunction(()=>!document.querySelector('#bq-clockin').getAnimations({subtree:true}).some(a=>a.playState==='running'));
+        const state=await page.$eval('#bqci-input',input=>{
+          const inner=getComputedStyle(input),owner=input.parentElement,css=getComputedStyle(owner),r=owner.getBoundingClientRect();
+          return {focused:document.activeElement===input && input.matches(':focus-visible'),inner:inner.outlineStyle,
+            style:css.outlineStyle,width:parseFloat(css.outlineWidth),offset:parseFloat(css.outlineOffset),radius:parseFloat(css.borderRadius),
+            border:css.borderColor,outline:css.outlineColor,colour:(css.outlineColor.match(/[\d.]+/g)||[]).slice(0,3).map(Number),shadow:css.boxShadow,
+            bounds:{x:r.x,y:r.y,width:r.width,height:r.height},value:input.value,expanded:document.querySelector('[aria-controls="bqci-custom"]').getAttribute('aria-expanded')};
+        });
+        const label=`${device} ${lang} ${theme} opening float height=${height}`;
+        check(state.focused && state.expanded==='true',label+': real Other tap exposes the focused editable amount');
+        check(state.inner==='none',label+': no square inner outline '+JSON.stringify(state));
+        check(state.style==='solid' && state.width>=3 && state.radius>=10,label+': one rounded outer focus ring '+JSON.stringify(state));
+        check(state.border!==state.outline && state.shadow==='none',label+': neutral border and no duplicate accent');
+        const bytes=await page.screenshot({path:path.join(shots,`${device}-${lang}-${theme}-opening-float-${height}.png`),captureBeyondViewport:false});
+        let paint;
+        try {
+          paint=paintedFocusRing(bytes,state);
+          check(paint.count>=40 && paint.contrast>=3,label+': original PNG focus ring contrast ≥3 '+JSON.stringify(paint));
+        }catch(error){check(false,label+': actual rounded ring paint required: '+error.message);}
+        openingFloatPixelMeasurements.push({device,lang,theme,height,...paint});
+      }
+      const after=await page.evaluate(()=>({shift:localStorage.getItem('kiwi:bqShift'),float:localStorage.getItem('kiwi:openingFloat:v1:boutique'),confirmed:document.querySelector('#bqci-btn').classList.contains('is-confirmed')}));
+      check(after.shift===before.shift && after.float===before.float && !after.confirmed,`${device} ${lang} ${theme}: no shift or amount preference saved by focus checks`);
+      check(errors.length===0 && writes.length===0,`${device} ${lang} ${theme}: opening-focus renderer has no page errors or network writes ${JSON.stringify({errors,writes})}`);
+      } finally { await context.close(); }
+    }
+  }
   console.log('deposit-focus-computed-measurements: '+JSON.stringify(depositComputedMeasurements));
   console.log('stock-placeholder-pixel-measurements: '+JSON.stringify(stockPlaceholderPixelMeasurements));
+  console.log('opening-float-pixel-measurements: '+JSON.stringify(openingFloatPixelMeasurements));
   if (failures.length) throw new Error(`${failures.length}/${checks} scanner layout checks failed; screenshots: ${shots}`);
   console.log(`caisse-scan-layout-browser-test: ${checks} checks passed; screenshots: ${shots}`);
 } finally {
