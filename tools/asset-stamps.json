@@ -232,12 +232,12 @@
     "sha": "c3c699a2e07fbfac"
   },
   "assets/day-report-dash.js": {
-    "v": "20",
-    "sha": "6708bb5a10e52dca"
+    "v": "22",
+    "sha": "7f9e3ab9e86eef19"
   },
   "assets/day-report-export.js": {
-    "v": "8",
-    "sha": "b3d8317cac41a237"
+    "v": "10",
+    "sha": "4a94efe6c603aeab"
   },
   "assets/day-report.js": {
     "v": "19",
@@ -510,6 +510,18 @@
   "assets/mobile.css": {
     "v": "7",
     "sha": "83281a282e907a07"
+  },
+  "assets/month-report-pdf.js": {
+    "v": "4",
+    "sha": "01169a9e3072b72e"
+  },
+  "assets/month-report-ui.js": {
+    "v": "3",
+    "sha": "62326f041d4db0a6"
+  },
+  "assets/month-report.js": {
+    "v": "7",
+    "sha": "7be08fe9f0cd7f2d"
   },
   "assets/morocco-holidays.js": {
     "v": "1",

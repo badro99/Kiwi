@@ -173,8 +173,11 @@ var SHELL = [
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=19',
   '/assets/report.js?v=5',
-  '/assets/day-report-dash.js?v=20',
-  '/assets/day-report-export.js?v=8',
+  '/assets/day-report-dash.js?v=22',
+  '/assets/day-report-export.js?v=10',
+  '/assets/month-report.js?v=7',
+  '/assets/month-report-pdf.js?v=4',
+  '/assets/month-report-ui.js?v=3',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.
      Sans eux le contrôle « ouvre-t-on maintenant ? » ne peut pas se faire, et

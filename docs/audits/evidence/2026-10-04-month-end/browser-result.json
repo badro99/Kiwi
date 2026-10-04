@@ -1,0 +1,9 @@
+{
+  "fixture": "Synthetic only; no merchant records",
+  "checks": 1166,
+  "pages": 219,
+  "bytes": 590422,
+  "filename": "Rapport-fin-de-mois-2026-09-Synthetic-Cafe-QA-only.pdf",
+  "errors": [],
+  "requests": 104
+}

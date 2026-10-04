@@ -33,6 +33,7 @@
 // erreur base — 200 neutre en lecture, 503 en écriture. Le client garde sa copie
 // locale et retentera. Un serveur qui tousse ne doit jamais coûter une donnée.
 
+import { validateMonthReportPolicy } from './_month-report-policy.js';
 import { json, entitledMerchant } from '../auth/_lib.js';
 import { employeeAuthVersion, tenantFor } from './_private.js';
 import { foreignCopy, keepHistory } from './_tenant-guard.js';
@@ -121,6 +122,7 @@ const FEATURES = {
    * image string; the generic 4 kB string ceiling is appropriate for notes,
    * not for a deliberately compressed data URL. */
   verticalops:   { keys: ['verticals', 'commands', 'seq'],             max: 1500000, maxStr: 350000 },
+  monthreport:  { keys: ['taxPeriods'], max: 100000 },
   expenses:     { keys: ['list'],                                  max: 400000 },
   /* Assistant approvals and their version trail. Protected from paired tills
    * below because summaries can contain customer and operational identifiers. */
@@ -484,7 +486,7 @@ export function ownBriefingDays(doc, merchant) {
   if (!doc || typeof doc !== 'object' || !Array.isArray(doc.days)) return doc;
   return { ...doc, days: doc.days.filter((d) => d && typeof d === 'object' && d.venue === merchant) };
 }
-const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'discountpolicy']);
+const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE, 'discountpolicy', 'monthreport']);
 
 /* Celui-ci tient-il la fiche, ou ne fait-il que la consulter ?
  * `entitledMerchant` SANS `allowTill` répond exactement à ça : la session du
@@ -688,6 +690,11 @@ export async function onRequestPost(context) {
   const serverRev = (current && current.rev) || 0;
   let mine = null;
   try { mine = current ? JSON.parse(current.data) : null; } catch (_) { mine = null; }
+
+  if (feature === 'monthreport') {
+    const validation = validateMonthReportPolicy(clean.value, mine);
+    if (!validation.ok) return json({ error: validation.error, feature }, 400);
+  }
 
   if (feature === 'rooms' && current) {
     const currentCheck = validateRoomsDocument(mine, mine);

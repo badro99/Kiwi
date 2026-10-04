@@ -689,6 +689,7 @@
         + '<button type="button" class="kdr-btn" data-kdr="csv">' + esc(T(L.csv)) + '</button>'
         + '<button type="button" class="kdr-btn" data-kdr="print">' + esc(T(L.print)) + '</button>';
     }
+    nav += '<button type="button" class="kdr-btn kmr-month-btn" data-kdr="month"><img src="assets/icons/material/calendar_month.svg" alt=""><span>' + esc(T({fr:'Rapport de fin de mois',en:'End of Month Report',ar:'تقرير نهاية الشهر'})) + '</span></button>';
     nav += '</div>';
 
     var strip = stripHtml(current, todayD);
@@ -887,6 +888,7 @@
         if (t && t <= d.today()) render(t);
         return;
       }
+      if (a === 'month') { window.KiwiMonthReport?.open?.(); return; }
       if (a === 'print') { printReport(report); return; }
       if (a === 'csv') {
         if (window.KiwiDayReportExport && window.KiwiDayReportExport.open) window.KiwiDayReportExport.open(report);
