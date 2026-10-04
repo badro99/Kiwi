@@ -1254,7 +1254,14 @@
     var m = /^(\s*)([\s\S]*?)(\s*)$/.exec(fr);
     var core = m[2];
     if (!core) return;
-    var hit = translateCore(core);
+    // A product name can literally resemble Add feedback. Only the real
+    // plain-text toast title opts into that contextual interface template.
+    var copy = owner && owner.parentElement;
+    var toast = copy && copy.parentElement;
+    var isToastTitle = !!(owner && owner.matches && owner.matches('.toast-title')
+      && copy && copy.matches && copy.matches('.toast-copy')
+      && toast && toast.matches && toast.matches('.toast'));
+    var hit = translateCore(core, isToastTitle);
     var out = hit == null ? fr : (m[1] + hit + m[3]);
     /* L'isolement des montants s'applique APRÈS la traduction et sur TOUS les
        nœuds — y compris ceux que le dictionnaire ne connaît pas. Un prix
@@ -1272,7 +1279,10 @@
      Deux découpes, toutes deux prudentes : on ne réécrit QUE si un morceau a
      réellement été reconnu, et les morceaux inconnus (montants, numéros de
      ticket, noms) traversent intacts. */
-  function translateCore(core) {
+  // Deliberately outside the generic dictionary: a merchant may even name
+  // a product "{item}, sur le ticket". Only toast/public interface calls use it.
+  var ADD_TOAST = { en: '{item}, added to the receipt', ar: '{item}، أُضيف إلى التذكرة' };
+  function translateCore(core, isToastTitle) {
     var d = dict();
     if (!d) return null;
     if (d[core]) return d[core];
@@ -1292,6 +1302,14 @@
     if (unknownCode) {
       var codeTemplate = d['Code {code} ' + unknownCode[2]];
       if (codeTemplate) return codeTemplate.replace('{code}', function () { return unknownCode[1]; });
+    }
+
+    // Normal Add feedback contains a merchant name and size before its final
+    // interface clause. Preserve that whole prefix before generic dot splits;
+    // callback replacement also keeps markup and template markers literal.
+    var addedItem = isToastTitle && /^([\s\S]+), sur le ticket$/.exec(core);
+    if (addedItem && ADD_TOAST[cur]) {
+      return ADD_TOAST[cur].replace('{item}', function () { return addedItem[1]; });
     }
 
     // 1 · segments séparés par « · » — la ponctuation maison de la caisse.
@@ -1568,7 +1586,7 @@
     // Exposé pour tools/caisse-lang-test.js : c'est ICI que vit la découpe des
     // phrases interpolées, et une découpe qui se casse ne se voit pas à l'œil —
     // l'écran reste simplement en français.
-    tr: function (core) { var r = translateCore(String(core)); return r == null ? String(core) : r; },
+    tr: function (core) { var r = translateCore(String(core), true); return r == null ? String(core) : r; },
     /* Exposé pour la même raison que `tr` : un montant mal isolé s'affiche
        « MAD 4 785 » au lieu de « 4 785 MAD », et ça ne lève aucune erreur —
        c'est juste un prix que la cliente lit de travers au comptoir. */

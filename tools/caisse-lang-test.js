@@ -639,5 +639,120 @@ for(const selectedText of ['Générique (ESC/POS)','Epson (TM-T88)','Printer · 
     check(gate.raw.includes('Amira Boutique &lt;&amp;&gt; متجر'),(configured?'configured':'no-cashier')+': actual renderer escapes merchant markup');
   }
 }
+// #0156: execute the normal Add call and actual plain-text toast renderer.
+// Merchant name/size remain one opaque prefix before any generic dot split.
+// Public apply/set cover mounted roundtrips and late inserted toast text;
+// catalog/stock/render callbacks below are strictly local VM fixtures.
+{
+  const addStart=boutiqueSource.indexOf('  function addToTicket(pid, cfg, opts) {');
+  const addEnd=boutiqueSource.indexOf('  /* ═══════════════════════ VARIANT SHEET',addStart);
+  const caisseSource=fs.readFileSync(path.join(__dirname,'..','kiwi-caisse.html'),'utf8');
+  const toastStart=caisseSource.indexOf("    function toast(msg, ms = 3200, kind = '', desc = '') {");
+  const toastEnd=caisseSource.indexOf('    window.KiwiCaisseToast = toast;',toastStart);
+  const resetStart=boutiqueSource.indexOf('    if (reset) reset.onclick = () => {');
+  const resetEnd=boutiqueSource.indexOf("    $('#bq-tk-client', el).onclick",resetStart);
+  check(addStart>=0 && addEnd>addStart && toastStart>=0 && toastEnd>toastStart && resetStart>=0 && resetEnd>resetStart,
+    'Add/Reset toast regression targets actual bounded functions and handler');
+  const makeElement=()=>{
+    const attrs=new Map();
+    const node={nodeType:1,tagName:'SPAN',childNodes:[],children:[],parentElement:null,classList:{add(){}},
+      setAttribute:(k,v)=>attrs.set(k,String(v)),getAttribute:k=>attrs.get(k)??null,hasAttribute:k=>attrs.has(k),remove(){},
+      matches(selector){return selector[0]==='.' && String(this.className||attrs.get('class')||'').split(/\s+/).includes(selector.slice(1));},
+      appendChild(child){child.parentElement=this;this.childNodes.push(child);if(child.nodeType===1)this.children.push(child);}};
+    Object.defineProperty(node,'textContent',{get(){return this.childNodes.map(n=>n.nodeValue??n.textContent??'').join('');},
+      set(value){this.childNodes=[{nodeType:3,nodeValue:String(value),parentElement:this}];this.children=[];}});
+    return node;
+  };
+  const previousWalker=document.createTreeWalker;
+  document.createTreeWalker=root=>{
+    const nodes=[];const visit=node=>{for(const child of node.childNodes||[]){nodes.push(child);visit(child);}};
+    visit(root);let index=0;return{nextNode:()=>nodes[index++]||null};
+  };
+  try {
+    const data=[['Mdamma dorée','TU'],['Produits · Total','TU'],['0000123','05'],
+      ['R&D · <atelier> $& {item} {n}','TU'],['Remise, accord gérante\n','S · {item}'],['Robe, sur le ticket','TU']];
+    for(const [name,size] of data){
+      const stack=makeElement(),state={ticket:{lines:[]}},reset={};
+      const world={document:{createElement:makeElement},window:{dispatchEvent(){}},CustomEvent:function(){},setTimeout:()=>0,
+        $:()=>stack,P:{fixture:{name}},state,availableStock:()=>7,colorLabel:()=> 'opaque color',stockAdd(){},promoFor:()=>null,
+        renderTicket(){},renderGrid(){},renderBadges(){},icons(){},reset,t:state.ticket,
+        freshTicket(){state.ticket.lines=[];},cfg:{size,color:'white',qty:1,remise:0}};
+      vm.createContext(world);
+      vm.runInContext(caisseSource.slice(toastStart,toastEnd)+'\n'+boutiqueSource.slice(addStart,addEnd)+'\n'+boutiqueSource.slice(resetStart,resetEnd),world);
+      check(vm.runInContext("addToTicket('fixture',cfg)",world)===true && state.ticket.lines.length===1,
+        'actual normal Add fixture succeeds once and retains its unsold local line');
+      const title=stack.children[0].children[0].children[0];
+      const raw=name+' · '+size+', sur le ticket',prefix=name+' · '+size;
+      check(title.textContent===raw && title.childNodes.length===1 && title.children.length===0,
+        'actual toast title renders hostile merchant data as literal text, never markup');
+      const expected={fr:raw,en:prefix+', added to the receipt',ar:prefix+'، أُضيف إلى التذكرة'};
+      for(const lang of ['fr','en','ar','en','fr','ar']){
+        L.set(lang);
+        check(L.tr(raw)===expected[lang],lang+': complete Add toast translates only final interface clause, preserving opaque prefix');
+        L.apply(stack);
+        check(title.textContent===L.bidi(expected[lang]),lang+': actual public mounted sweep/roundtrip retains complete toast data and canonical numeric isolation');
+      }
+      vm.runInContext("addToTicket('fixture',cfg)",world);
+      const late=stack.children[1].children[0].children[0];
+      check(late.textContent===raw,'actual late Add mutation starts with original French source and opaque data');
+      L.apply(stack);
+      check(late.textContent===L.bidi(expected.ar),'actual late Add mutation translates through public apply in current Arabic');
+      L.set('fr');L.apply(stack);
+      check(title.textContent===raw && late.textContent===raw,'French restoration returns both original and late toast bytes exactly');
+    }
+    const stack=makeElement(),reset={},ticket={lines:[]};
+    const world={document:{createElement:makeElement},window:{dispatchEvent(){}},CustomEvent:function(){},setTimeout:()=>0,
+      $:()=>stack,reset,t:ticket,stockAdd(){},freshTicket(){},renderTicket(){},renderGrid(){},renderBadges(){},icons(){}};
+    vm.createContext(world);
+    vm.runInContext(caisseSource.slice(toastStart,toastEnd)+'\n'+boutiqueSource.slice(resetStart,resetEnd)+'\nreset.onclick();',world);
+    const title=stack.children[0].children[0].children[0],raw='Ticket vidé, articles remis en stock';
+    check(title.textContent===raw,'actual Reset handler emits the exact already-mapped complete toast');
+    const expected={fr:raw,en:'Receipt cleared, items back in stock',ar:'تم إفراغ التذكرة وإرجاع المنتجات للمخزون'};
+    for(const lang of ['en','ar','fr','ar']){
+      L.set(lang);check(L.tr(raw)===expected[lang],lang+': existing Reset translation remains exact');
+      L.apply(stack);check(title.textContent===expected[lang],lang+': actual mounted Reset toast locale roundtrip');
+    }
+    for(const lang of ['fr','en','ar']){
+      L.set(lang);
+      for(const near of ['sur le ticket','Mdamma dorée · TU, sur le ticket EXTRA','Bip, Mdamma dorée · TU sur le ticket (650 MAD)',
+        'Mdamma dorée · TU, stock insuffisant']){
+        check(L.tr(near)===near,lang+': Add template rejects unrelated or incomplete terminal messages');
+      }
+    }
+    const catalogTemplates=[
+      boutiqueSource.match(/<span class="bq-card-name">\$\{esc\(p\.name\)\}<\/span>/)?.[0],
+      boutiqueSource.match(/<span class="bq-line-name">\$\{esc\(p\.name\)\}<\/span>/)?.[0],
+      boutiqueSource.slice(variantStart,variantEnd).match(/<h3>\$\{esc\(p\.name\)\}<\/h3>/)?.[0],
+    ];
+    check(catalogTemplates.every(Boolean),'merchant lookalike guard extracts actual card/line/variant product name markup');
+    const decode=value=>value.replace(/&(amp|lt|gt|quot);/g,(_,key)=>({amp:'&',lt:'<',gt:'>',quot:'"'})[key]);
+    for(const template of catalogTemplates) for(const name of ['Robe · TU, sur le ticket','{item}, sur le ticket',
+      'Robe <atelier> $& {item} {n} · TU, sur le ticket','Robe, sur le ticket']){
+      const rendered=vm.runInNewContext('`'+template+'`',{p:{name},esc:escapeVariant});
+      const parts=/^<(span|h3)(?: class="([^"]*)")?>([\s\S]*)<\/(?:span|h3)>$/.exec(rendered);
+      const catalog=makeElement(),product=makeElement();product.tagName=parts[1].toUpperCase();product.className=parts[2]||'';
+      product.textContent=decode(parts[3]);catalog.appendChild(product);
+      for(const lang of ['en','ar','fr','ar']){
+        L.set(lang);L.apply(catalog);
+        check(product.textContent===name,lang+': actual mounted catalog/line/variant name resembling Add feedback remains exact merchant data');
+      }
+    }
+    for(const missing of ['copy','toast','all']){
+      const container=makeElement(),copy=makeElement(),title=makeElement();
+      container.className=missing==='toast'||missing==='all'?'catalog':'toast';
+      copy.className=missing==='copy'||missing==='all'?'product':'toast-copy';title.className='toast-title';
+      title.textContent='Robe · TU, sur le ticket';copy.appendChild(title);container.appendChild(copy);
+      for(const lang of ['en','ar','fr']){
+        L.set(lang);L.apply(container);
+        check(title.textContent==='Robe · TU, sur le ticket',lang+': toast-title lookalike requires both actual copy and toast ancestors');
+      }
+    }
+    const ordinary=makeElement(),label=makeElement();label.className='bq-card-name';ordinary.appendChild(label);
+    for(const lang of ['fr','en','ar']){
+      L.set(lang);label.textContent='Produits · TU, sur le ticket';L.apply(ordinary);
+      check(label.textContent===L.tr('Produits')+' · TU, sur le ticket',lang+': unrelated existing generic dot translation stays unchanged without Add-clause matching');
+    }
+  } finally { document.createTreeWalker=previousWalker;L.set('en'); }
+}
 if (failed) { console.error(`\n✗ ${failed} vérification(s) de langue en échec.`); process.exit(1); }
 console.log(`\n✓ ${ran} règles de langue vérifiées (${enKeys.length} phrases × 2 langues).`);
