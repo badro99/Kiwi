@@ -154,7 +154,7 @@
     cat.use(key);
     PRM().use(key);
     try {
-      if (window.KiwiCloudDoc) PRM().cloud(function () { return window.KiwiCloudDoc.slugFor(key); });
+      if (window.KiwiCloudDoc) PRM().cloud(function () { return window.KiwiCloudDoc.slugFor(PRM().currentVenue()); });
     } catch (_) {}
     var c = cat.compat();
     return { cat: cat, key: key, rayons: c.RAYONS || [], products: c.P || {}, byEan: c.BY_EAN || {} };

@@ -1940,7 +1940,7 @@
         <span class="bq-sheet-title"><h3>${esc(p.name)}</h3><span class="sub">${esc((RAYONS.find((r) => r.id === p.rayon) || { label: 'Divers' }).label)}${p.flag ? ` · ${esc(p.flag)}` : ''}${p.ean ? ` · ${esc(p.ean)}` : ''}</span></span>
         <span class="bq-sheet-price">
           <span class="val" id="bq-sheet-total">${fmtMAD(unit * sheet.qty)}</span>
-          <span class="per ${sheet.remise ? 'rem' : ''}" id="bq-sheet-per">${sheet.remise ? `−${sheet.remise} % · accord gérante` : `${unit} MAD × ${sheet.qty}`}</span>
+          <span class="per ${sheet.remise ? 'rem' : ''}" id="bq-sheet-per">${sheet.remise ? `−${sheet.remise} % · ${invText('accord gérante')}` : `${unit} MAD × ${sheet.qty}`}</span>
         </span>
       </div>
       ${shPromo ? `
@@ -1979,7 +1979,7 @@
           </div>
         </div>
         <div class="bq-f">
-          <div class="bq-f-lbl">Remise <span class="opt">· accord gérante</span></div>
+          <div class="bq-f-lbl">Remise <span class="opt">· ${invText('accord gérante')}</span></div>
           <div class="bq-chips" id="bq-remise">
             ${[0, ...(window.KiwiDiscountPolicy?.percentages(_bqKey) || [5, 10, 15, 20])].map((r) => `<button class="bq-chip ${sheet.remise === r ? 'on' : ''}" data-bq-rem="${r}">${r === 0 ? 'Sans' : `−${r} %`}${r > 0 && !state.ticket.remiseAuth ? ' <i data-lucide="lock"></i>' : ''}</button>`).join('')}
           </div>
@@ -1990,13 +1990,13 @@
         <button class="bq-btn secondary" data-bq-close>Annuler</button>
         ${sheet.exchange
           ? `<button class="bq-btn primary" id="bq-sheet-add" ${canAdd ? '' : 'disabled'}><i data-lucide="arrow-left-right"></i>Choisir cet article · ${fmtMAD(shBase)}</button>`
-          : `<button class="bq-btn primary" id="bq-sheet-add" ${canAdd ? '' : 'disabled'}><i data-lucide="plus"></i>Ajouter au ticket · <span id="bq-sheet-cta">${fmtMAD(unit * sheet.qty)}</span></button>`}
+          : `<button class="bq-btn primary" id="bq-sheet-add" ${canAdd ? '' : 'disabled'}><i data-lucide="plus"></i>${invText('Ajouter au ticket')} · <span id="bq-sheet-cta">${fmtMAD(unit * sheet.qty)}</span></button>`}
       </div>`;
 
     const refreshPrice = () => {
       const u = Math.round(shBase * (100 - sheet.remise) / 100);
       $('#bq-sheet-total', el).textContent = fmtMAD(u * sheet.qty);
-      $('#bq-sheet-per', el).textContent = sheet.remise ? `−${sheet.remise} % · accord gérante` : `${u} MAD × ${sheet.qty}`;
+      $('#bq-sheet-per', el).innerHTML = sheet.remise ? `−${sheet.remise} % · ${invText('accord gérante')}` : esc(`${u} MAD × ${sheet.qty}`);
       $('#bq-sheet-per', el).classList.toggle('rem', !!sheet.remise);
       const cta = $('#bq-sheet-cta', el);
       if (cta) cta.textContent = fmtMAD(u * sheet.qty);

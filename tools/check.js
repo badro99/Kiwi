@@ -1142,6 +1142,7 @@ section('Whole-project regressions');
     'maison-counter-truth-test.mjs',
     'stock-costing-migration-test.mjs',
     'stock-category-management-test.mjs',
+    'stock-counts-refresh-test.mjs',
     'pairing-resolver-test.mjs',
     /* pairing-resolver vérifie qui LIT l'appairage ; celui-ci vérifie qu'il n'y
        a qu'un seul ÉCRIVAIN. La cuisine s'appaire sur la même route que la
@@ -1286,6 +1287,7 @@ section('Whole-project regressions');
     'till-long-scroll-browser-test.mjs',
     'promotions-sale-z-browser-test.mjs',
     'promotions-store-contract-test.mjs',
+    'promotions-owner-venue-cloud-test.mjs',
     'boutique-promotions-locale-browser-test.mjs',
     'sold-insights-layout-test.mjs',
     'table-refresh-test.js',

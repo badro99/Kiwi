@@ -42,6 +42,8 @@ html.kiwi-native .rp-item,html.kiwi-native .rp-summary-row,html.kiwi-native .pay
 html.kiwi-native .team-trigger,html.kiwi-native .mode-pill,html.kiwi-native .cat-pill,html.kiwi-native .floor-pill,html.kiwi-native .vrap-back-btn,html.kiwi-native .mlibre-toggle,html.kiwi-native .meta-btn,html.kiwi-native .qty-btn{min-height:44px}
 html.kiwi-native .qty-btn{min-width:44px}
 html.kiwi-native :is(button,a,input,select,textarea,[tabindex]):focus-visible{outline:3px solid #0B6E4F;outline-offset:3px}
+/* A wrapped split amount must leave room for its outer focus rim below chips. */
+html.kiwi-native .bq-split{row-gap:12px}
 /* Search fields whose rounded wrapper draws the ring (:focus-within) must not
    also paint a square outline inside it. */
 html.kiwi-native :is(.rf-search,.jr-search,.bq-search,.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan,.bqx-scanbox,.clockin-float-custom) input:focus-visible{outline:none}

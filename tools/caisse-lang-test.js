@@ -483,6 +483,47 @@ for (const [pattern, fr, en, ar] of existingCodeCopy) {
     check(L.tr(actual || '') === expected, 'actual existing-code renderer copy: ' + language + ' · ' + fr);
   }
 }
+// #0156: actual variant markup and price refresh, with all write handlers
+// excluded at the first handler boundary. Numeric/catalog state is read only.
+const variantStart = boutiqueSource.indexOf('  function renderSheet() {');
+const variantEnd = boutiqueSource.indexOf("    $('#bq-size-seg', el).onclick", variantStart);
+const variantTextStart = boutiqueSource.indexOf('  function invText(fr) {');
+const variantTextEnd = boutiqueSource.indexOf('  function invAttr(fr)', variantTextStart);
+check(variantStart>=0 && variantEnd>variantStart && variantTextStart>=0 && variantTextEnd>variantTextStart,
+  'variant guard captures actual renderer, price refresh and source-provenance helper');
+const escapeVariant=value=>String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const variantData='Remise · <atelier> $& {n}';
+for(const [language,manager,add] of [['fr','accord gérante','Ajouter au ticket'],['en','manager approval','Add to the sale'],['ar','بموافقة المسؤولة','أضف إلى التذكرة']]) {
+  L.set(language);
+  const panel={innerHTML:''},elements=new Map(),sheet={pid:'fixture',size:'S',color:'white',qty:1,remise:5};
+  const fixtureProduct={id:'fixture',name:variantData,rayon:'fixture',price:90,kind:'taille',colors:['white'],ean:'00123456'};
+  const world={window:{KiwiCaisseLang:L,KiwiDiscountPolicy:{percentages:()=>[5]}},root:{},sheet,P:{fixture:fixtureProduct},RAYONS:[{id:'fixture',label:variantData}],
+    ticketClient:()=>null,promoFor:()=>null,availableStock:()=>7,sizesOf:()=>['S'],sizeWord:()=> 'Taille',KC:()=>null,
+    state:{ticket:{remiseAuth:true}},_bqKey:'synthetic-variant',esc:escapeVariant,fmtMAD:value=>value+' MAD',productVisual:()=>'',
+    $:selector=>{if(selector==='#bq-sheetm')return panel;if(!elements.has(selector))elements.set(selector,{innerHTML:'',textContent:'',classList:{toggle(){}}});return elements.get(selector);}};
+  vm.runInNewContext(boutiqueSource.slice(variantTextStart,variantTextEnd)+'\n'+boutiqueSource.slice(variantStart,variantEnd)+'\nreturn refreshPrice; }\nrefreshVariant=renderSheet();',world,{filename:'actual-variant-copy-renderer.js'});
+  const marked=[...panel.innerHTML.matchAll(/data-caisse-copy="([^"]+)"[^>]*>([^<]*)<\/span>/g)].map(m=>({source:m[1],text:m[2]}));
+  check(marked.filter(x=>x.source==='accord gérante' && x.text===manager).length===2,language+': initial variant manager fragments render immediately in current locale');
+  check(marked.some(x=>x.source==='Ajouter au ticket' && x.text===add),language+': Add fragment is separate from trailing dot and amount');
+  check(panel.innerHTML.includes(escapeVariant(variantData)) && panel.innerHTML.includes('00123456'),language+': hostile merchant name/category and original code remain escaped and unchanged');
+  check(panel.innerHTML.includes('86 MAD') && panel.innerHTML.includes('−5 %'),language+': original rounded discount arithmetic and amount remain unchanged');
+  sheet.qty=2;world.refreshVariant();
+  const refreshed=elements.get('#bq-sheet-per');
+  check(refreshed.innerHTML.includes('data-caisse-copy="accord gérante"') && refreshed.innerHTML.includes(manager),language+': actual price refresh retains localized source-provenance span');
+  check(elements.get('#bq-sheet-total').textContent==='172 MAD' && elements.get('#bq-sheet-cta').textContent==='172 MAD',language+': actual quantity price refresh preserves totals');
+  // Exercise actual applyText on declared UI provenance for mounted locale
+  // changes. No broad punctuation handling or merchant-data transformation.
+  const applyStart=source.indexOf('  function applyText(node) {'),applyEnd=source.indexOf('  /* Une phrase d’interface',applyStart);
+  const boundedEnd=applyEnd>=0?applyEnd:source.indexOf('  /* Une phrase d\'interface',applyStart);
+  check(applyStart>=0 && boundedEnd>applyStart,language+': actual bounded declared-source translator available');
+  const original=new WeakMap();
+  const node={nodeValue:manager,parentElement:{getAttribute:()=> 'accord gérante'}};
+  for(const [next,expected] of [['en','manager approval'],['ar','بموافقة المسؤولة'],['fr','accord gérante']]){
+    L.set(next);
+    vm.runInNewContext(source.slice(applyStart,boundedEnd)+'\napplyText(node);',{node,origText:original,translateCore:fr=>L.tr(fr),isRtl:()=>false,isolate:x=>x});
+    check(node.nodeValue===expected,language+'→'+next+': declared French source restores mounted manager copy');
+  }
+}
 // #0156: execute the actual empty Returns renderer; capture its handlers but
 // never invoke them. No return, credit, date or search state is persisted.
 const returnsStart = boutiqueSource.indexOf('  function renderEchanges() {');

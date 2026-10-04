@@ -21,7 +21,7 @@ assert.ok(executablePath, 'Chromium required');
 const fixture = spawn(process.execPath, [path.join(ROOT, 'tools/retail-ui-fixture.mjs')],
   { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
 const shots = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-dark-sheets-'));
-let browser, checks = 0, expectsDark = true, originalCases = 0;
+let browser, checks = 0, expectsDark = true, originalCases = 0, variantSplitCases = 0;
 const focusReadings = [];
 const failures = [];
 function check(value, label) {
@@ -134,7 +134,7 @@ async function inspect(page, selector, label, { action = false, painted = false,
   }
   return { bg, ratio, paint };
 }
-async function inspectNativeFocus(page, selector, label, wrapper = false) {
+async function inspectNativeFocus(page, selector, label, wrapper = false, allEdges = false) {
   await page.click(selector);
   await page.waitForFunction(selector => document.activeElement === document.querySelector(selector), {}, selector);
   await page.waitForFunction(selector => {
@@ -154,7 +154,9 @@ async function inspectNativeFocus(page, selector, label, wrapper = false) {
   check(validRing, label + ': one rounded outer ring ' + JSON.stringify(state));
   if (!validRing) return; // A missing old wrapper ring is a recorded failure, not invented pixels.
   const scale = page.viewport().deviceScaleFactor, r = Object.fromEntries(Object.entries(state.bounds).map(([k,v]) => [k,v*scale]));
-  const extent = (state.offset + state.width)*scale, radius = state.radius*scale;
+  // CSS clamps pill radii (999px) to half the actual box. Use that painted
+  // geometry, not the unbounded declared radius, for the new split field.
+  const extent = (state.offset + state.width)*scale, radius = Math.min(state.radius*scale,r.width/2,r.height/2);
   const insideFrame = r.x-extent-3>=0 && r.y-extent-3>=0 && r.x+r.width+extent+3<page.viewport().width*scale && r.y+r.height+extent+3<page.viewport().height*scale;
   check(insideFrame, label + ': whole visible ring fits the original frame');
   if (!insideFrame) return;
@@ -170,11 +172,11 @@ async function inspectNativeFocus(page, selector, label, wrapper = false) {
     if(point(x,y).every((value,i)=>Math.abs(value-expected[i])<=1))count++;
   }
   check(count>=40,label+': at least 40 actual opaque ring pixels, got '+count);
-  for(const edge of ['left','right','top']) {
+  for(const edge of (allEdges ? ['left','right','top','bottom'] : ['left','right','top'])) {
     const readings=[];
     for(const fraction of [.25,.5,.75]) {
-      const length=edge==='top'?r.width:r.height, along=radius+(length-2*radius)*fraction;
-      const at=outward=>edge==='left'?[r.x-outward,r.y+along]:edge==='right'?[r.x+r.width+outward,r.y+along]:[r.x+along,r.y-outward];
+      const length=edge==='top'||edge==='bottom'?r.width:r.height, along=radius+(length-2*radius)*fraction;
+      const at=outward=>edge==='left'?[r.x-outward,r.y+along]:edge==='right'?[r.x+r.width+outward,r.y+along]:edge==='bottom'?[r.x+along,r.y+r.height+outward]:[r.x+along,r.y-outward];
       let foreground;
       for(let outward=state.offset*scale+1;outward<extent;outward++) {
         const ink=point(...at(outward));
@@ -419,6 +421,65 @@ try {
       check(await page.$eval('#bq-ret-q',el=>el.placeholder)===expected,name+' '+lang+': real Returns search placeholder');
       await navigateNative(page,'clientes');
       await page.waitForSelector('#kcb-add',{visible:true});
+      // Additional six FR/EN/AR x light/caisse-dark contexts. Every original
+      // five-theme/15-locale assertion above remains unconditional and intact.
+      if(name==='light' || name==='caisse') {
+        await navigateNative(page,'vente');
+        await page.click('.vx-burger');
+        await page.waitForFunction(()=>document.querySelector('.vx-screen.is-on').classList.contains('vx-nav-open'));
+        await page.click('.vx-screen.is-on [data-kcl="'+lang+'"]');
+        await page.waitForFunction(lang=>document.documentElement.lang===lang,{},lang);
+        await page.click('button[data-bq-view="vente"]');
+        await page.waitForFunction(()=>!document.querySelector('.vx-screen.is-on').classList.contains('vx-nav-open'));
+        await page.click('[data-bq-item="prod_2"]');
+        const expectedVariant={fr:['accord gérante','Ajouter au ticket'],en:['manager approval','Add to the sale'],ar:['بموافقة المسؤولة','أضف إلى التذكرة']}[lang];
+        await page.waitForFunction(expected=>{
+          const nodes=[...document.querySelectorAll('#bq-sheetm [data-caisse-copy]')];
+          return expected.every(text=>nodes.some(el=>el.textContent===text));
+        },{},expectedVariant);
+        check(await page.$eval('#bq-sheetm .opt [data-caisse-copy]',el=>el.textContent)===expectedVariant[0],name+' '+lang+': actual variant manager label, not leading-dot French fallback');
+        check(await page.$eval('#bq-sheet-add [data-caisse-copy]',el=>el.textContent)===expectedVariant[1],name+' '+lang+': actual Add label immediately localized apart from amount');
+        const catalog=await page.$eval('#bq-sheetm',el=>({name:el.querySelector('.bq-sheet-title h3').textContent,code:el.querySelector('.bq-sheet-title .sub').textContent,price:el.querySelector('#bq-sheet-total').textContent}));
+        const quantity=await page.$eval('#bq-qty-val',el=>Number(el.textContent));
+        await page.click('#bq-qty-plus');
+        check(await page.$eval('#bq-qty-val',el=>Number(el.textContent))===quantity+1,name+' '+lang+': actual quantity plus invokes price refresh');
+        await page.click('#bq-qty-minus');
+        const after=await page.$eval('#bq-sheetm',el=>({name:el.querySelector('.bq-sheet-title h3').textContent,code:el.querySelector('.bq-sheet-title .sub').textContent,price:el.querySelector('#bq-sheet-total').textContent}));
+        check(JSON.stringify(catalog)===JSON.stringify(after),name+' '+lang+': actual quantity round-trip preserves catalog name/code/price');
+        // Reuse the original case's unsold line if it survived mobile reload;
+        // otherwise Add exactly one synthetic fixture line, never settle it.
+        const lines=await page.$$eval('#bq-tk-lines [data-bq-minus]',nodes=>nodes.length);
+        check(lines<=1,name+' '+lang+': at most the original unsold fixture line');
+        if(lines===0)await page.click('#bq-sheet-add');
+        else await page.click('#bq-sheetm [data-bq-close]');
+        await page.click('.vx-peek');
+        await page.waitForFunction(()=>document.querySelector('.vx-screen.is-on').classList.contains('vx-ticket-open'));
+        check(await page.$$eval('#bq-tk-lines [data-bq-minus]',nodes=>nodes.length)===1,name+' '+lang+': exactly one ordinary unsold fixture line');
+        await page.click('#bq-validate');
+        await page.waitForSelector('[data-bq-share="x"]',{visible:true});
+        await page.click('[data-bq-share="x"]');
+        await inspectNativeFocus(page,'#bq-split-in',name+' '+lang+' native split amount',false,true);
+        const splitPaint=await inspect(page,'#bq-split-in',name+' '+lang+' split input');
+        const splitPlaceholder=await page.$eval('#bq-split-in',input=>{
+          const css=getComputedStyle(input,'::placeholder');return{color:css.color,opacity:Number(css.opacity),text:input.placeholder};
+        });
+        const placeholderInk=rgb(splitPlaceholder.color);placeholderInk[3]*=splitPlaceholder.opacity;
+        check(splitPlaceholder.text==='MAD' && contrast(over(placeholderInk,splitPaint.bg),splitPaint.bg)>=4.5,name+' '+lang+': actual split placeholder remains MAD with >=4.5 contrast');
+        const gap=await page.$eval('#bq-split-in',input=>{
+          const box=input.getBoundingClientRect(),css=getComputedStyle(input),extent=parseFloat(css.outlineWidth)+parseFloat(css.outlineOffset);
+          const above=[...input.parentElement.querySelectorAll('button')].map(el=>el.getBoundingClientRect()).filter(r=>r.bottom<=box.top && r.left<box.right && r.right>box.left);
+          return {rowGap:getComputedStyle(input.parentElement).rowGap,clearance:above.length?Math.min(...above.map(r=>box.top-extent-r.bottom)):null};
+        });
+        check(gap.rowGap==='12px' && (gap.clearance===null || gap.clearance>=3),name+' '+lang+': wrapped field rim has real clearance from overlapping preceding chip '+JSON.stringify(gap));
+        // Browser viewport shrink only; this is not a native keyboard claim.
+        await page.setViewport({width:402,height:590,deviceScaleFactor:3,isMobile:true,hasTouch:true});
+        await inspectNativeFocus(page,'#bq-split-in',name+' '+lang+' keyboard-height split amount',false,true);
+        await page.click('#bq-paym [data-bq-close]');
+        await page.setViewport({width:402,height:874,deviceScaleFactor:3,isMobile:true,hasTouch:true});
+        await navigateNative(page,'clientes');
+        await page.waitForSelector('#kcb-add',{visible:true});
+        variantSplitCases++;
+      }
     }
     check(await page.evaluate(()=>localStorage.getItem('kiwi:clients:v1:synthetic-retail-acompte'))===untouchedBook,name+': focus/Confirm inspection/cancel never changes customer or purchase data');
     check(errors.length === 0, name + ': no page errors: ' + errors.join(' | '));
@@ -426,6 +487,7 @@ try {
     await context.close();
   }
   check(originalCases===5,'all five original sheet theme cases completed');
+  check(variantSplitCases===6,'all six variant/split FR/EN/AR light/dark contexts completed');
   console.log('native-form-focus-painted-readings: '+JSON.stringify(focusReadings));
   console.log('Screenshot checks: ' + shots);
   assert.equal(failures.length, 0, failures.length + ' rendered sheet contrast regressions');

@@ -2644,6 +2644,8 @@
    * HISTORIQUE DES INVENTAIRES PHYSIQUES & REVUE PROPRIÉTAIRE
    * ═══════════════════════════════════════════════════════════════════════ */
   async function fetchServerCounts() {
+    // A failed/offline attempt must not recursively refetch on its own repaint.
+    stCountsLastFetched = Date.now();
     try {
       const resp = await fetch('/api/inventory/counts');
       const data = await resp.json();
@@ -2739,7 +2741,7 @@
   function renderCountsHistory() {
     if (Date.now() - stCountsLastFetched > 30000) {
       fetchServerCounts().then(() => {
-        if (stPageActive && stItemSubView === 'counts') rerenderTabBody();
+        if (stPageActive && document.body.classList.contains('page-stock') && stCurrentTab === 'items' && stItemSubView === 'counts') rerenderTabBody();
       });
     }
 
