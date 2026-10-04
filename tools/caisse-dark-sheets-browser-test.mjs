@@ -431,7 +431,35 @@ try {
         await page.waitForFunction(lang=>document.documentElement.lang===lang,{},lang);
         await page.click('button[data-bq-view="vente"]');
         await page.waitForFunction(()=>!document.querySelector('.vx-screen.is-on').classList.contains('vx-nav-open'));
-        await page.click('[data-bq-item="prod_2"]');
+        // The real demo mount seeds TWO lines after mobile emulation reload.
+        // Remove only that isolated unsold draft through ordinary controls;
+        // never assume the original desktop one-line draft survived reload.
+        await page.click('.vx-peek');
+        await page.waitForFunction(()=>document.querySelector('.vx-screen.is-on').classList.contains('vx-ticket-open'));
+        const setupLines=await page.$$eval('#bq-tk-lines [data-bq-minus]',nodes=>nodes.length);
+        console.log('variant-split-fixture-draft: '+JSON.stringify({name,lang,setupLines}));
+        check(setupLines<=2,name+' '+lang+': only normal demo mount lines are present');
+        if(setupLines)await page.click('#bq-tk-reset');
+        check(await page.$$eval('#bq-tk-lines [data-bq-minus]',nodes=>nodes.length)===0,name+' '+lang+': ordinary fixture Reset leaves the unsold cart empty');
+        await page.click('.vx-peek');
+        await page.waitForFunction(()=>!document.querySelector('.vx-screen.is-on').classList.contains('vx-ticket-open'));
+        // prod_2's first-color variants legitimately hold only one each. Read
+        // public synthetic catalog projection, then choose an actually stocked
+        // default variant through the ordinary category/product buttons.
+        const stocked=await page.evaluate(()=>{
+          const catalog=window.KiwiBoutiqueCatalog,projection=catalog.compat();
+          for(const p of Object.values(projection.P)) {
+            const firstColor=p.colors[0],sizes=Object.keys(p.sizes);
+            const bySize=size=>p._variants.filter(v=>String(v.size)===size && (v.colorId===firstColor || catalog.colorFamily(v)===firstColor)).reduce((n,v)=>n+v.stock,0);
+            const defaultSize=sizes.find(size=>bySize(size)>0);
+            if(defaultSize && bySize(defaultSize)>=2)return{id:p.id,category:p.rayon,size:defaultSize,available:bySize(defaultSize)};
+          }
+          return null;
+        });
+        assert.ok(stocked,'ordinary seeded catalog has a default variant with at least two in stock');
+        check(stocked.available>=2,name+' '+lang+': quantity refresh fixture uses actual stock, not an invented availability');
+        await page.click('[data-bq-cat="'+stocked.category+'"]');
+        await page.click('[data-bq-item="'+stocked.id+'"]');
         const expectedVariant={fr:['accord gérante','Ajouter au ticket'],en:['manager approval','Add to the sale'],ar:['بموافقة المسؤولة','أضف إلى التذكرة']}[lang];
         await page.waitForFunction(expected=>{
           const nodes=[...document.querySelectorAll('#bq-sheetm [data-caisse-copy]')];
@@ -446,12 +474,10 @@ try {
         await page.click('#bq-qty-minus');
         const after=await page.$eval('#bq-sheetm',el=>({name:el.querySelector('.bq-sheet-title h3').textContent,code:el.querySelector('.bq-sheet-title .sub').textContent,price:el.querySelector('#bq-sheet-total').textContent}));
         check(JSON.stringify(catalog)===JSON.stringify(after),name+' '+lang+': actual quantity round-trip preserves catalog name/code/price');
-        // Reuse the original case's unsold line if it survived mobile reload;
-        // otherwise Add exactly one synthetic fixture line, never settle it.
-        const lines=await page.$$eval('#bq-tk-lines [data-bq-minus]',nodes=>nodes.length);
-        check(lines<=1,name+' '+lang+': at most the original unsold fixture line');
-        if(lines===0)await page.click('#bq-sheet-add');
-        else await page.click('#bq-sheetm [data-bq-close]');
+        await page.click('#bq-sheetm [data-bq-close]');
+        check(await page.$$eval('#bq-tk-lines [data-bq-minus]',nodes=>nodes.length)===0,name+' '+lang+': actual variant Cancel creates no line');
+        await page.click('[data-bq-item="'+stocked.id+'"]');
+        await page.click('#bq-sheet-add');
         await page.click('.vx-peek');
         await page.waitForFunction(()=>document.querySelector('.vx-screen.is-on').classList.contains('vx-ticket-open'));
         check(await page.$$eval('#bq-tk-lines [data-bq-minus]',nodes=>nodes.length)===1,name+' '+lang+': exactly one ordinary unsold fixture line');
@@ -476,6 +502,12 @@ try {
         await inspectNativeFocus(page,'#bq-split-in',name+' '+lang+' keyboard-height split amount',false,true);
         await page.click('#bq-paym [data-bq-close]');
         await page.setViewport({width:402,height:874,deviceScaleFactor:3,isMobile:true,hasTouch:true});
+        await page.click('#bq-tk-lines [data-bq-minus]');
+        check(await page.$$eval('#bq-tk-lines [data-bq-minus]',nodes=>nodes.length)===0,name+' '+lang+': SAME unsold fixture line removed before next context');
+        // The open ticket disables the burger by design. Collapse it with its
+        // actual peek before attempting the following normal drawer route.
+        await page.click('.vx-peek');
+        await page.waitForFunction(()=>!document.querySelector('.vx-screen.is-on').classList.contains('vx-ticket-open'));
         await navigateNative(page,'clientes');
         await page.waitForSelector('#kcb-add',{visible:true});
         variantSplitCases++;
