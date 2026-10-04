@@ -88,8 +88,8 @@
     "sha": "fc48d2896e10020c"
   },
   "assets/boutique-promos-dashboard.js": {
-    "v": "7",
-    "sha": "db0f48dc9d87bff9"
+    "v": "8",
+    "sha": "a3d0b19e8c8b1f72"
   },
   "assets/briefing.js": {
     "v": "20",
@@ -112,8 +112,8 @@
     "sha": "1014ed01ce090f7b"
   },
   "assets/caisse-lang.js": {
-    "v": "36",
-    "sha": "3f9b0ecd768beae2"
+    "v": "37",
+    "sha": "ea1bff0653ea2749"
   },
   "assets/caisse-link.js": {
     "v": "12",
@@ -140,8 +140,8 @@
     "sha": "046824221d7614a7"
   },
   "assets/caisse-skin.css": {
-    "v": "17",
-    "sha": "5415a9083abbf379"
+    "v": "18",
+    "sha": "7f692c25aa19a8cb"
   },
   "assets/caisse-stock-sync.js": {
     "v": "10",

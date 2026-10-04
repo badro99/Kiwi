@@ -6,8 +6,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { createRequire } from 'node:module';
-import { paintedActionColours } from './painted-png.mjs';
+import { decodeScreenshot, paintedActionColours } from './painted-png.mjs';
+import { releaseExitedBrowserStreams } from './browser-test-lifecycle.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const require = createRequire(import.meta.url);
@@ -19,7 +21,8 @@ assert.ok(executablePath, 'Chromium required');
 const fixture = spawn(process.execPath, [path.join(ROOT, 'tools/retail-ui-fixture.mjs')],
   { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
 const shots = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-dark-sheets-'));
-let browser, checks = 0, expectsDark = true;
+let browser, checks = 0, expectsDark = true, originalCases = 0;
+const focusReadings = [];
 const failures = [];
 function check(value, label) {
   checks++;
@@ -131,6 +134,104 @@ async function inspect(page, selector, label, { action = false, painted = false,
   }
   return { bg, ratio, paint };
 }
+async function inspectNativeFocus(page, selector, label, wrapper = false) {
+  await page.click(selector);
+  await page.waitForFunction(selector => document.activeElement === document.querySelector(selector), {}, selector);
+  await page.waitForFunction(selector => {
+    for(let el=document.querySelector(selector);el;el=el.parentElement)
+      if(el.getAnimations().some(a=>a.playState==='running' && Number.isFinite(a.effect.getTiming().iterations)))return false;
+    return true;
+  },{},selector);
+  const state = await page.$eval(selector, (input, wrapper) => {
+    const el = wrapper ? input.parentElement : input, css = getComputedStyle(el), rect = el.getBoundingClientRect();
+    return { focused: input.matches(':focus-visible'), empty: input.value === '', inner: getComputedStyle(input).outlineStyle,
+      outline: css.outlineStyle, width: parseFloat(css.outlineWidth), offset: parseFloat(css.outlineOffset), radius: parseFloat(css.borderRadius),
+      color: css.outlineColor, shadow: css.boxShadow, bounds: { x: rect.x, y: rect.y, width: rect.width, height: rect.height } };
+  }, wrapper);
+  check(state.focused && state.empty, label + ': actual empty editable input owns focus');
+  check(!wrapper || state.inner === 'none', label + ': wrapper has no square inner input outline');
+  const validRing = state.outline === 'solid' && state.width >= 3 && state.radius >= 10 && (!wrapper || state.shadow === 'none');
+  check(validRing, label + ': one rounded outer ring ' + JSON.stringify(state));
+  if (!validRing) return; // A missing old wrapper ring is a recorded failure, not invented pixels.
+  const scale = page.viewport().deviceScaleFactor, r = Object.fromEntries(Object.entries(state.bounds).map(([k,v]) => [k,v*scale]));
+  const extent = (state.offset + state.width)*scale, radius = state.radius*scale;
+  const insideFrame = r.x-extent-3>=0 && r.y-extent-3>=0 && r.x+r.width+extent+3<page.viewport().width*scale && r.y+r.height+extent+3<page.viewport().height*scale;
+  check(insideFrame, label + ': whole visible ring fits the original frame');
+  if (!insideFrame) return;
+  const bytes = await page.screenshot({ type:'png', path:path.join(shots,label.replace(/[^a-z0-9-]+/gi,'-')+'.png'), captureBeyondViewport:false });
+  const png = decodeScreenshot(bytes), expected = rgb(state.color).slice(0,3), point = (x,y) => {
+    const offset=(Math.round(y)*png.width+Math.round(x))*png.channels;
+    assert.ok(png.channels===3 || png.pixels[offset+3]===255,'Original opaque ring pixels required');
+    return [...png.pixels.subarray(offset,offset+3)];
+  };
+  let count=0;
+  for(let y=Math.floor(r.y-extent);y<Math.ceil(r.y+r.height+extent);y++) for(let x=Math.floor(r.x-extent);x<Math.ceil(r.x+r.width+extent);x++) {
+    if(x>=r.x && x<=r.x+r.width && y>=r.y && y<=r.y+r.height)continue;
+    if(point(x,y).every((value,i)=>Math.abs(value-expected[i])<=1))count++;
+  }
+  check(count>=40,label+': at least 40 actual opaque ring pixels, got '+count);
+  for(const edge of ['left','right','top']) {
+    const readings=[];
+    for(const fraction of [.25,.5,.75]) {
+      const length=edge==='top'?r.width:r.height, along=radius+(length-2*radius)*fraction;
+      const at=outward=>edge==='left'?[r.x-outward,r.y+along]:edge==='right'?[r.x+r.width+outward,r.y+along]:[r.x+along,r.y-outward];
+      let foreground;
+      for(let outward=state.offset*scale+1;outward<extent;outward++) {
+        const ink=point(...at(outward));
+        if(ink.every((value,i)=>Math.abs(value-expected[i])<=1)){foreground=ink;break;}
+      }
+      if(!foreground)continue;
+      // Three CSS pixels inside the field, beyond its one-CSS-pixel neutral
+      // border. Sampling three physical pixels at DPR3 would hit that border.
+      const background=point(...at(extent+2)), inner=point(...at(-3*scale));
+      readings.push({foreground,background,inner,outerRatio:contrast(foreground,background),innerRatio:contrast(foreground,inner)});
+    }
+    const worst=readings.reduce((a,b)=>!a || b.outerRatio<a.outerRatio?b:a,null);
+    check(readings.length===3,label+': '+edge+' full-coverage ring samples present');
+    check(worst && worst.outerRatio>=3 && readings.every(r=>r.innerRatio>=3),label+': PAINTED '+edge+' ring >=3 against immediate outside and inside '+JSON.stringify(worst));
+    focusReadings.push({label,edge,frame:{width:png.width,height:png.height},scale,count,...worst});
+  }
+}
+async function inspectManualRecord(page,label) {
+  await page.mouse.move(2,2);
+  await inspect(page,'#kcb-rec',label,{action:true,frameSample:true});
+  const glyph=await page.$eval('#kcb-rec',el=>{
+    const rect=el.getBoundingClientRect(),walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT),bounds=[];
+    let node;
+    while((node=walker.nextNode())) {
+      if(!node.textContent.trim() || node.parentElement.closest('svg,[aria-hidden="true"]'))continue;
+      const range=document.createRange();range.selectNodeContents(node);
+      bounds.push(...[...range.getClientRects()].map(r=>({x:r.x,y:r.y,width:r.width,height:r.height})));
+    }
+    return {color:getComputedStyle(el).color,button:{x:rect.x,y:rect.y,width:rect.width,height:rect.height},bounds};
+  });
+  const view=page.viewport(),inside=glyph.bounds.length>0 && [glyph.button,...glyph.bounds].every(r=>r.x>=0 && r.y>=0 && r.x+r.width<=view.width && r.y+r.height<=view.height);
+  check(inside,label+': complete visible button and text-node glyph bounds fit original viewport');
+  if(!inside)return;
+  const bytes=await page.screenshot({type:'png',captureBeyondViewport:false}),png=decodeScreenshot(bytes),expected=rgb(glyph.color).slice(0,3),scale=view.deviceScaleFactor;
+  let pixels=0;
+  for(const bounds of glyph.bounds)for(let y=Math.floor(bounds.y*scale);y<Math.ceil((bounds.y+bounds.height)*scale);y++)for(let x=Math.floor(bounds.x*scale);x<Math.ceil((bounds.x+bounds.width)*scale);x++) {
+    const offset=(y*png.width+x)*png.channels;
+    if((png.channels===3 || png.pixels[offset+3]===255) && [...png.pixels.subarray(offset,offset+3)].every((value,i)=>Math.abs(value-expected[i])<=1))pixels++;
+  }
+  check(pixels>=40,label+': actual full-coverage text glyph pixels >=40 (not SVG or one AA pixel), got '+pixels);
+}
+async function navigateNative(page,destination) {
+  await page.click('.vx-burger');
+  await page.waitForFunction(()=>document.querySelector('.vx-screen.is-on').classList.contains('vx-nav-open'));
+  const selector='button[data-bq-view="'+destination+'"]';
+  await page.waitForFunction(selector=>{
+    const el=document.querySelector(selector),rect=el.getBoundingClientRect(),hit=document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2);
+    for(let p=el;p;p=p.parentElement)if(p.getAnimations().some(a=>a.playState==='running' && Number.isFinite(a.effect.getTiming().iterations)))return false;
+    return rect.width>0 && rect.height>0 && rect.x>=0 && rect.y>=0 && rect.right<=innerWidth && rect.bottom<=innerHeight && (hit===el || el.contains(hit));
+  },{},selector);
+  await page.click(selector);
+  await page.waitForFunction(()=>!document.querySelector('.vx-screen.is-on').classList.contains('vx-nav-open'));
+  await page.waitForFunction(()=>{
+    const screen=document.querySelector('.vx-screen.is-on'),scrim=screen.querySelector('.vx-scrim'),style=getComputedStyle(scrim);
+    return style.opacity==='0' && style.pointerEvents==='none' && [scrim,screen.querySelector('.kiwi-dna-rail')].every(el=>!el.getAnimations().some(a=>a.playState==='running' && Number.isFinite(a.effect.getTiming().iterations)));
+  });
+}
 try {
   const base = await new Promise((resolve, reject) => {
     let output = '', errors = '';
@@ -151,6 +252,7 @@ try {
     ['vexel', { 'data-vexel-mode': 'dark' }],
     ['legacy-with-light-flags', { 'data-theme': 'dark', 'data-caisse-theme': 'light', 'data-vexel-mode': 'light' }],
   ]) {
+    originalCases++;
     expectsDark = Object.values(attrs).includes('dark');
     const context = await browser.createBrowserContext();
     const page = await context.newPage();
@@ -168,6 +270,10 @@ try {
         constructor(...args) { super(...(args.length ? args : [noon])); }
         static now() { return noon; }
       };
+      // Isolated pre-boot customer for the real manual-record renderer. No
+      // original five-sale seed or existing assertion changes; never save it.
+      localStorage.setItem('kiwi:clients:v1:synthetic-retail-acompte',JSON.stringify({seq:1,list:[{id:'form-paint',name:'Form paint fixture',phone:'+212600000001',points:0,visits:0,spend:0,history:[]}]}));
+      localStorage.setItem('kiwi:fidelity:v1:synthetic-retail-acompte',JSON.stringify({model:'amount',amount:{perMad:1,threshold:100,reward:'Fixture reward'},visit:{target:10,reward:'Fixture visit'},product:{target:10,item:'Fixture item',reward:'Fixture item reward'}}));
     });
     await page.evaluateOnNewDocument(flags => document.addEventListener('DOMContentLoaded', () => {
       for (const [key, value] of Object.entries(flags)) document.documentElement.setAttribute(key, value);
@@ -277,14 +383,57 @@ try {
     await page.click('#kcb-f-cancel');
     check(await page.$eval('#kcb-sheet', el => getComputedStyle(el).display === 'none'),
       name + ': a REAL Cancel tap must close the form after dropdown selection; an invisible backdrop cannot swallow it');
+    // Additional native-style stage, AFTER every original case assertion.
+    // Only the existing case's theme flags are present; caisse-only must never
+    // be accidentally rescued by data-theme/data-vexel-mode dark.
+    await page.setViewport({width:402,height:874,deviceScaleFactor:3,isMobile:true,hasTouch:true});
+    await page.addStyleTag({path:path.join(ROOT,'assets/pos-mobile.css')});
+    await page.addStyleTag({path:path.join(ROOT,'app/src/native-runtime.css')});
+    await page.addScriptTag({path:path.join(ROOT,'assets/lucide.min.js')});
+    await page.evaluate(attrs=>{
+      document.documentElement.classList.add('kiwi-native');
+      for(const key of ['data-theme','data-vexel-mode','data-caisse-theme'])document.documentElement.removeAttribute(key);
+      for(const [key,value] of Object.entries(attrs))document.documentElement.setAttribute(key,value);
+    },attrs);
+    await page.addScriptTag({path:path.join(ROOT,'assets/pos-mobile.js')});
+    const flags=await page.$eval('html',el=>Object.fromEntries(['data-theme','data-vexel-mode','data-caisse-theme'].map(key=>[key,el.getAttribute(key)])));
+    check(Object.entries(attrs).every(([key,value])=>flags[key]===value) && Object.entries(flags).every(([key,value])=>key in attrs || value===null),name+': exact native theme authority, no hidden extra dark flags '+JSON.stringify(flags));
+    // Switching real Chromium mobile emulation reloads the page; reopen the
+    // book through its actual navigation after that boundary, not DOM edits.
+    await navigateNative(page,'clientes');
+    await page.waitForSelector('#kcb-add',{visible:true});
+    const untouchedBook=await page.evaluate(()=>localStorage.getItem('kiwi:clients:v1:synthetic-retail-acompte'));
+    for(const lang of ['fr','en','ar']) {
+      await page.evaluate(lang=>window.KiwiCaisseLang.set(lang),lang);
+      await page.click('#kcb-add');
+      for(const field of ['name','phone','email'])await inspectNativeFocus(page,'#kcb-f-'+field,name+' '+lang+' native new-client '+field);
+      await page.click('#kcb-f-cancel');
+      await page.click('.kcb-row[data-id="form-paint"]');
+      await inspectManualRecord(page,name+' '+lang+' native manual-record Confirm');
+      await page.click('#kcb-d-close');
+      await page.click('#kcb-back');
+      await navigateNative(page,'echanges');
+      await page.waitForSelector('#bq-ret-q',{visible:true});
+      await inspectNativeFocus(page,'#bq-ret-q',name+' '+lang+' native Returns search',true);
+      const expected={fr:'N° de ticket ou téléphone…',en:'Receipt number or phone…',ar:'رقم الإيصال أو الهاتف…'}[lang];
+      check(await page.$eval('#bq-ret-q',el=>el.placeholder)===expected,name+' '+lang+': real Returns search placeholder');
+      await navigateNative(page,'clientes');
+      await page.waitForSelector('#kcb-add',{visible:true});
+    }
+    check(await page.evaluate(()=>localStorage.getItem('kiwi:clients:v1:synthetic-retail-acompte'))===untouchedBook,name+': focus/Confirm inspection/cancel never changes customer or purchase data');
     check(errors.length === 0, name + ': no page errors: ' + errors.join(' | '));
     check(writes.length === 0, name + ': read-only UI pass');
     await context.close();
   }
+  check(originalCases===5,'all five original sheet theme cases completed');
+  console.log('native-form-focus-painted-readings: '+JSON.stringify(focusReadings));
   console.log('Screenshot checks: ' + shots);
   assert.equal(failures.length, 0, failures.length + ' rendered sheet contrast regressions');
   console.log('✓ Caisse sheets · ' + checks + ' rendered checks in light and all three dark theme systems');
 } finally {
-  if (browser) await browser.close();
-  fixture.kill('SIGTERM');
+  try {
+    if (browser) { await browser.close();releaseExitedBrowserStreams(browser.process());assert.ok(browser.process().stdio.every(s=>!s || s.destroyed),'owned browser exited and all streams released'); }
+  } finally {
+    if(fixture.exitCode===null && fixture.signalCode===null){const exited=once(fixture,'exit');fixture.kill('SIGTERM');await exited;}
+  }
 }

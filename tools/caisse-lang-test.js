@@ -483,5 +483,63 @@ for (const [pattern, fr, en, ar] of existingCodeCopy) {
     check(L.tr(actual || '') === expected, 'actual existing-code renderer copy: ' + language + ' · ' + fr);
   }
 }
+// #0156: execute the actual empty Returns renderer; capture its handlers but
+// never invoke them. No return, credit, date or search state is persisted.
+const returnsStart = boutiqueSource.indexOf('  function renderEchanges() {');
+const returnsEnd = boutiqueSource.indexOf('  const MOTIFS =', returnsStart);
+check(returnsStart >= 0 && returnsEnd > returnsStart, 'Returns copy targets the actual bounded renderer');
+const returnsPanel = { innerHTML: '' }, returnsInput = {};
+vm.runInNewContext(boutiqueSource.slice(returnsStart, returnsEnd) + '\nrenderEchanges();', {
+  root: {}, state: { retQuery: '', retDate: '', ret: null }, SALES: [], RETAIN_DAYS: 7,
+  $: selector => selector.startsWith('[data-bq-panel=') ? returnsPanel : returnsInput,
+  activeAvoirs: () => [], icons() {}, esc: value => String(value),
+}, { filename: 'pos-boutique-empty-returns-renderer.js' });
+const returnsCopy = [
+  [/id="bq-ret-q" placeholder="([^"]+)"/, 'N° de ticket ou téléphone…', 'Receipt number or phone…', 'رقم الإيصال أو الهاتف…'],
+  [/font-weight:600; color:var\(--ink\);">([^<]+)<\/div>/, 'Retrouver une vente', 'Find a sale', 'البحث عن عملية بيع'],
+  [/margin-top:4px;">([^<]+)<\/div>/, 'Scannez le ticket de la cliente, ou tapez son numéro de téléphone.', "Scan the customer's receipt, or enter their phone number.", 'امسح إيصال الزبون، أو أدخل رقم هاتفه.'],
+];
+for (const [pattern, fr, en, ar] of returnsCopy) {
+  const actual = returnsPanel.innerHTML.match(pattern)?.[1];
+  check(actual === fr, 'Returns copy extracted from the real empty renderer: ' + fr);
+  for (const [language, expected] of [['fr', fr], ['en', en], ['ar', ar]]) {
+    L.set(language); check(L.tr(actual || '') === expected, 'actual Returns renderer copy: ' + language + ' · ' + fr);
+  }
+}
+const printerWidthsSource = fs.readFileSync(path.join(__dirname, '..', 'assets', 'escpos.js'), 'utf8');
+const printerModelsSource = fs.readFileSync(path.join(__dirname, '..', 'assets', 'printer-bridge.js'), 'utf8');
+const printerOptionCopy = [
+  [printerModelsSource, /id: 'escpos', label: '([^']+)'/, 'Générique (ESC/POS)', 'Generic (ESC/POS)', 'عام (ESC/POS)'],
+  [printerWidthsSource, /value: '76', label: '([^']+)'/, '76 mm (matricielle / cuisine)', '76 mm (dot matrix / kitchen)', '76 مم (نقطية / مطبخ)'],
+  [printerWidthsSource, /value: '44', label: '([^']+)'/, '44 mm (étiquettes)', '44 mm (labels)', '44 مم (ملصقات)'],
+];
+for (const [actualSource, pattern, fr, en, ar] of printerOptionCopy) {
+  const actual = actualSource.match(pattern)?.[1];
+  check(actual === fr, 'printer option copy extracted from the actual ID/value definition: ' + fr);
+  for (const [language, expected] of [['fr', fr], ['en', en], ['ar', ar]]) {
+    L.set(language); check(L.tr(actual || '') === expected, 'actual printer option copy: ' + language + ' · ' + fr);
+  }
+}
+// Exercise the actual bounded attribute translator, not a reimplementation.
+// Selected text is already localized by the DOM sweep and is one opaque
+// value, including merchant replacement markers; only the known field prefix
+// may change. No DOM input or option value is written by this pure guard.
+const attributeStart = source.indexOf('  function applyAttrs(el) {');
+const attributeEnd = source.indexOf('  function sweep(root) {', attributeStart);
+check(attributeStart>=0 && attributeEnd>attributeStart,'printer accessible-name guard captures the real attribute translator');
+const attributeList = vm.runInNewContext(source.match(/var ATTRS = (\[[^;]+\]);/)[1]);
+for(const selectedText of ['Générique (ESC/POS)','Epson (TM-T88)','Printer · Modèle $& {value} 80 mm']) {
+  for(const [language,prefix] of [['fr','Modèle'],['en','Model'],['ar','الطراز']]) {
+    L.set(language);
+    let aria='Modèle: '+selectedText;
+    const select={id:'kpr-model',selectedOptions:[{textContent:selectedText}]};
+    const trigger={parentElement:{previousElementSibling:select},matches:selector=>selector==='#kpr-card .kiwi-select-trigger',
+      hasAttribute:name=>name==='aria-label',getAttribute:()=>aria,setAttribute:(_name,value)=>{aria=value;}};
+    vm.runInNewContext(source.slice(attributeStart,attributeEnd)+'\napplyAttrs(trigger);',{
+      trigger,origAttr:new WeakMap(),ATTRS:attributeList,DICT:{en:EN,ar:AR},dict:()=>language==='fr'?null:L.dict(),t:value=>L.t(value),
+    },{filename:'caisse-lang-printer-model-aria.js'});
+    check(aria===prefix+': '+selectedText,language+' actual model aria translates only anchored prefix and preserves complete selected text: '+selectedText);
+  }
+}
 if (failed) { console.error(`\n✗ ${failed} vérification(s) de langue en échec.`); process.exit(1); }
 console.log(`\n✓ ${ran} règles de langue vérifiées (${enKeys.length} phrases × 2 langues).`);

@@ -47,7 +47,7 @@
       .bq-btn:not(.secondary):not(.ghost):not(.danger),
       .bq-btn.is-done, .bq-validate, .mz-btn.primary, .mz-validate,
       .rp-btn.primary, .bq-split-c.is-on, .bq-seg-it.on, .bq-vip-chip,
-      .kcb-add, .kcb-btn.primary) {
+      .kcb-add, .kcb-btn.primary, .kcb-big) {
   /* Some inventory actions carry an inline fill. Both sides must change
    * together, not just the inherited text colour. */
   background: var(--caisse-action-fill, var(--forest)) !important;

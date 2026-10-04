@@ -76,8 +76,20 @@ async function inspect(page,selector,label,dark,{primary=false,control=false,anc
  check(ratio>=4.5,label+': text contrast '+ratio.toFixed(2)+':1');
  if(!primary)check(dark?luminance(bg)<.12:luminance(bg)>.7,label+': '+(dark?'dark':'light')+' semantic surface');
  if(control)check(paint.width>0 && contrast(over(rgb(paint.border),bg),bg)>=3,label+': outlined control boundary >=3:1');
- const bytes=await page.screenshot({type:'png',path:path.join(shots,label.replace(/[^a-z0-9-]+/gi,'-')+'.png'),captureBeyondViewport:false});
- const colours=paintedActionColours(bytes,ink,paint.bounds),paintedRatio=contrast(colours.foreground,colours.background);
+ // The old full-frame PNG decoder reconstructed unrelated panel pixels for
+ // every label. Capture the identical target pixels directly in the browser,
+ // at integer viewport coordinates: no bitmap cropping, resizing or edits.
+ // Full panel and all three chooser originals remain separate evidence below.
+ const view=page.viewport(),bounds=paint.bounds;
+ assert.ok(bounds.width>0 && bounds.height>0 && bounds.x>=0 && bounds.y>=0 && bounds.x+bounds.width<=view.width && bounds.y+bounds.height<=view.height,label+': original target wholly visible before capture clip');
+ const clip={x:Math.floor(bounds.x),y:Math.floor(bounds.y),width:Math.ceil(bounds.x+bounds.width)-Math.floor(bounds.x),height:Math.ceil(bounds.y+bounds.height)-Math.floor(bounds.y)};
+ const local={...bounds,x:bounds.x-clip.x,y:bounds.y-clip.y};
+ const bytes=await page.screenshot({type:'png',path:path.join(shots,label.replace(/[^a-z0-9-]+/gi,'-')+'.png'),clip,captureBeyondViewport:false});
+ const frame=Buffer.from(bytes),frameWidth=frame.readUInt32BE(16),frameHeight=frame.readUInt32BE(20);
+ assert.equal(frameWidth,clip.width,label+': original capture has exact 1:1 horizontal pixel density');
+ assert.equal(frameHeight,clip.height,label+': original capture has exact 1:1 vertical pixel density');
+ assert.ok(local.x>=0 && local.y>=0 && local.x+local.width<=frameWidth && local.y+local.height<=frameHeight,label+': unchanged label/fill bounds map wholly inside original clip');
+ const colours=paintedActionColours(bytes,ink,local),paintedRatio=contrast(colours.foreground,colours.background);
  check(paintedRatio>=4.5,label+': painted text contrast '+paintedRatio.toFixed(2)+':1');
  if(primary){let parent=[247,245,240];for(const layer of [...paint.layers].reverse().slice(0,-1))parent=over(rgb(layer),parent);check(contrast(colours.background,parent)>=3,label+': primary control boundary >=3:1');}
 }
@@ -86,9 +98,9 @@ async function inspectPrinterPicker(page,id,label,index,{width,height,safeTop,sa
  await reveal(page,trigger);
  const before=await page.$eval(trigger,(el,id)=>{
   const value=el.querySelector('.kiwi-select-value-label'),select=document.getElementById(id),r=el.getBoundingClientRect();
-  return {text:value.textContent,textWidth:value.scrollWidth,available:value.clientWidth,aria:el.getAttribute('aria-label'),value:select.value,selected:select.selectedOptions[0].textContent.trim(),width:r.width,height:r.height};
+  return {text:value.textContent,textWidth:value.scrollWidth,available:value.clientWidth,aria:el.getAttribute('aria-label'),value:select.value,selected:select.selectedOptions[0].textContent.trim(),options:Array.from(select.options,option=>option.textContent),width:r.width,height:r.height};
  },id);
- const prefix=(id==='kpr-paper'?['Largeur papier','Paper width','عرض الورق']:["Format d'étiquette",'Label format','تنسيق الملصق'])[index];
+ const prefix=({'kpr-paper':['Largeur papier','Paper width','عرض الورق'],'kpr-label':["Format d'étiquette",'Label format','تنسيق الملصق'],'kpr-model':['Modèle','Model','الطراز']})[id][index];
  check(before.textWidth<=before.available,label+': complete selected value has no ellipsis ('+before.textWidth+'/'+before.available+')');
  check(before.width>=44 && before.height>=44,label+': closed picker has 44-point target');
  check(before.aria===prefix+': '+before.selected,label+': accessible interface prefix localized, entire selected value preserved; got '+before.aria);
@@ -97,12 +109,24 @@ async function inspectPrinterPicker(page,id,label,index,{width,height,safeTop,sa
  await page.waitForFunction(()=>!document.querySelector('.kiwi-select-popover').getAnimations().some(a=>a.playState==='running'));
  const chooser=await page.$eval('.kiwi-select-popover',el=>{
   const r=el.getBoundingClientRect(),close=el.querySelector('.kiwi-select-close').getBoundingClientRect(),row=el.querySelector('.kiwi-select-option[aria-selected="true"]'),value=row.querySelector('.kiwi-select-option-label'),b=row.getBoundingClientRect(),list=el.querySelector('.kiwi-select-options').getBoundingClientRect(),hit=document.elementFromPoint(b.left+b.width/2,b.top+b.height/2);
-  return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,closeWidth:close.width,closeHeight:close.height,title:el.querySelector('.kiwi-select-popover-title').textContent,text:value.textContent,textWidth:value.scrollWidth,available:value.clientWidth,visible:b.top>=list.top && b.bottom<=list.bottom && b.bottom<=innerHeight,hit:hit===row || row.contains(hit)};
+  return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,closeWidth:close.width,closeHeight:close.height,title:el.querySelector('.kiwi-select-popover-title').textContent,text:value.textContent,textWidth:value.scrollWidth,available:value.clientWidth,options:Array.from(el.querySelectorAll('.kiwi-select-option-label'),option=>option.textContent),visible:b.top>=list.top && b.bottom<=list.bottom && b.bottom<=innerHeight,hit:hit===row || row.contains(hit)};
  });
  check(chooser.left>=8 && chooser.right<=width-8 && chooser.top>=safeTop+8 && chooser.bottom<=height-safeBottom-8,label+': chooser stays inside native safe insets '+JSON.stringify(chooser));
  check(chooser.closeWidth>=44 && chooser.closeHeight>=44,label+': chooser close has 44-point target');
  check(chooser.title===prefix,label+': chooser title localized');
  check(chooser.text===before.text && chooser.textWidth<=chooser.available && chooser.visible && chooser.hit,label+': selected option readable and hit-testable');
+ if(id==='kpr-model'){
+  check(before.value==='escpos' && chooser.text===printerOptions.escpos[index],label+': actual generic model remains selected and localized in chooser');
+  check(JSON.stringify(chooser.options)===JSON.stringify(before.options),label+': entire source model-option labels preserved by chooser');
+  // Arabic adds the shipped numeric LTR isolates even to untranslated text.
+  // Assert their exact positions, never strip them or normalize model data.
+  const epson=index===2?'Epson (TM-T\u206620\u2069 / TM-T\u206688\u2069 / TM-U\u2066220\u2069)':'Epson (TM-T20 / TM-T88 / TM-U220)';
+  check(chooser.options[1]===epson,label+': opaque Epson model name remains exact with prescribed Arabic digit isolates in actual chooser, got '+JSON.stringify(chooser.options[1]));
+ }
+ if(id==='kpr-paper')for(const value of ['76','44']){
+  const actual=await page.$eval('.kiwi-select-option[data-option-index="'+(value==='76'?3:6)+'"] .kiwi-select-option-label',el=>el.textContent);
+  check(actual===printerOptions[value][index],label+': actual opened '+value+' mm chooser option localized, got '+actual);
+ }
  await page.screenshot({type:'png',path:path.join(shots,label+'-chooser.png'),captureBeyondViewport:false});
  await page.keyboard.press('Escape');
  await page.waitForSelector('.kiwi-select-popover',{hidden:true});
@@ -151,6 +175,20 @@ const nativeCopy=[
  ['#kpr-paper option:checked','80 mm (standard)','80 mm (standard)','\u206680\u2069 مم (قياسي)'],
  ['.kpr-adv>.kpr-note:last-child','Le pont tourne sur l’ordinateur de la caisse et ne communique qu’avec votre imprimante locale. Télécharger le pont','The bridge runs on the till computer and communicates only with your local printer. Download the bridge','يعمل الجسر على حاسوب الصندوق ولا يتواصل إلا مع طابعتك المحلية. تنزيل الجسر'],
 ];
+const printerOptions={
+ escpos:['Générique (ESC/POS)','Generic (ESC/POS)','عام (ESC/POS)'],
+ '76':['76 mm (matricielle / cuisine)','76 mm (dot matrix / kitchen)','\u206676\u2069 مم (نقطية / مطبخ)'],
+ '44':['44 mm (étiquettes)','44 mm (labels)','\u206644\u2069 مم (ملصقات)'],
+};
+async function inspectPrinterOptions(page,index,label){
+ for(const [value,words] of Object.entries(printerOptions)) {
+  const selector=value==='escpos'?'#kpr-model option[value="escpos"]':'#kpr-paper option[value="'+value+'"]';
+  check(await page.$eval(selector,el=>el.textContent)===words[index],label+': actual printer source option '+value+' localized');
+ }
+ check(await page.$eval('#kpr-model+.kiwi-select .kiwi-select-value-label',el=>el.textContent)===printerOptions.escpos[index],label+': copied selected generic model label localized');
+ check(await page.$eval('#kpr-model+.kiwi-select .kiwi-select-trigger',el=>el.getAttribute('aria-label'))===['Modèle','Model','الطراز'][index]+': '+printerOptions.escpos[index],label+': actual model trigger accessible prefix localized with unchanged selected label');
+ check(await page.$eval('#kpr-model',el=>el.value)==='escpos' && await page.$eval('#kpr-paper',el=>el.value)==='80',label+': model ID and numeric selected width unchanged');
+}
 try{
  const base=await new Promise((resolve,reject)=>{let out='';const timer=setTimeout(()=>reject(new Error('Retail fixture timeout')),15000);fixture.stdout.on('data',chunk=>{out+=chunk;const m=out.match(/KIWI_RETAIL_UI_QA_READY (\{[^\n]+\})/);if(m){clearTimeout(timer);resolve(JSON.parse(m[1]).base);}});});
  mark('fixture-ready');
@@ -175,6 +213,10 @@ try{
   await page.addStyleTag({path:path.join(root,'assets/pos-mobile.css')});
   await page.addStyleTag({path:path.join(root,'app/src/native-runtime.css')});
   await page.addScriptTag({path:path.join(root,'assets/pos-mobile.js')});
+  // Shipped paper-width options come from the actual encoder module; without
+  // it the printer UI falls back to only 80/58 mm and never renders 76/44 mm.
+  // Loading definitions performs no hardware operation or preference write.
+  await page.addScriptTag({path:path.join(root,'assets/escpos.js')});
   await page.addScriptTag({path:path.join(root,'assets/printer-bridge.js')});
   await page.addScriptTag({path:path.join(root,'assets/lucide.min.js')});
   await page.evaluate((lang,attrs,safeTop,safeBottom)=>{
@@ -205,6 +247,7 @@ try{
   check(lang==='ar'?bounds.heading.left>=bounds.close.right:bounds.heading.right<=bounds.close.left,`${width} ${lang} ${theme}: close does not cover heading`);
   check(bounds.scrollable,`${width} ${lang} ${theme}: long printer settings remain scrollable`);
   const label=`${width}-${lang}-${theme}`,dark=theme!=='light';
+  await page.screenshot({type:'png',path:path.join(shots,label+'-panel-original.png'),captureBeyondViewport:false});
   // The disconnected Bluetooth test is disabled, not an enabled-contrast
   // target. Station Test receipt and drawer buttons really are enabled.
   check(await page.$eval('#kpr-bt-test',el=>el.disabled),label+': disconnected Bluetooth test remains disabled');
@@ -230,7 +273,17 @@ try{
   await inspect(page,'#kpr-test',label+'-native-enabled-test',dark,{control:true});
   await inspect(page,'#kpr-save',label+'-save',dark,{primary:true});
   await inspect(page,'.kpr-adv>.kpr-note:last-child a',label+'-bridge-footer-link',dark,{ancestorOpacity:true});
-  for(const id of ['kpr-paper','kpr-label'])await inspectPrinterPicker(page,id,label+'-'+id,index,{width,height,safeTop,safeBottom});
+  await inspectPrinterOptions(page,index,label);
+  // Real language API round-trip; no rewritten option text/value or hardware.
+  // OPTION text and copied trigger text must both follow the current locale.
+  const next=(index+1)%3;
+  await page.evaluate(lang=>window.KiwiCaisseLang.set(lang),['fr','en','ar'][next]);
+  await page.waitForFunction(wanted=>document.querySelector('#kpr-card h2').textContent===wanted,{},copy[0][next+1]);
+  await inspectPrinterOptions(page,next,label+' round-trip');
+  await page.evaluate(lang=>window.KiwiCaisseLang.set(lang),lang);
+  await page.waitForFunction(wanted=>document.querySelector('#kpr-card h2').textContent===wanted,{},copy[0][index+1]);
+  await inspectPrinterOptions(page,index,label+' restored');
+  for(const id of ['kpr-paper','kpr-label','kpr-model'])await inspectPrinterPicker(page,id,label+'-'+id,index,{width,height,safeTop,safeBottom});
   check(await page.evaluate(()=>window.__printerHardwareCalls===0),label+': no native printing calls');
   check(writes===0,`${lang} ${theme}: opening settings does not write configuration or pair hardware`);
   await reveal(page,'#kpr-close');

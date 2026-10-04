@@ -1085,9 +1085,16 @@
       "Format d'étiquette": ['Label format', 'تنسيق الملصق'],
       'Largeur papier: {value}': ['Paper width: {value}', 'عرض الورق: {value}'],
       "Format d'étiquette: {value}": ['Label format: {value}', 'تنسيق الملصق: {value}'],
+      'Modèle: {value}': ['Model: {value}', 'الطراز: {value}'],
       'Modèle': ['Model', 'الطراز'],
       'Tester': ['Test', 'اختبار'],
       '80 mm (standard)': ['80 mm (standard)', '80 مم (قياسي)'],
+      'Générique (ESC/POS)': ['Generic (ESC/POS)', 'عام (ESC/POS)'],
+      '76 mm (matricielle / cuisine)': ['76 mm (dot matrix / kitchen)', '76 مم (نقطية / مطبخ)'],
+      '44 mm (étiquettes)': ['44 mm (labels)', '44 مم (ملصقات)'],
+      'N° de ticket ou téléphone…': ['Receipt number or phone…', 'رقم الإيصال أو الهاتف…'],
+      'Retrouver une vente': ['Find a sale', 'البحث عن عملية بيع'],
+      'Scannez le ticket de la cliente, ou tapez son numéro de téléphone.': ["Scan the customer's receipt, or enter their phone number.", 'امسح إيصال الزبون، أو أدخل رقم هاتفه.'],
       'Le pont tourne sur l’ordinateur de la caisse et ne communique qu’avec votre imprimante locale.': ['The bridge runs on the till computer and communicates only with your local printer.', 'يعمل الجسر على حاسوب الصندوق ولا يتواصل إلا مع طابعتك المحلية.'],
       'Télécharger le pont': ['Download the bridge', 'تنزيل الجسر'],
       'Notes internes': ['Internal notes', 'ملاحظات داخلية'],
@@ -1360,7 +1367,7 @@
          a stale value into the accessible name. */
       if (a === 'aria-label' && el.matches && el.matches('#kpr-card .kiwi-select-trigger')) {
         var select = el.parentElement && el.parentElement.previousElementSibling;
-        var printerKey = select && ({ 'kpr-paper': 'Largeur papier', 'kpr-label': "Format d'étiquette" })[select.id];
+        var printerKey = select && ({ 'kpr-paper': 'Largeur papier', 'kpr-label': "Format d'étiquette", 'kpr-model': 'Modèle' })[select.id];
         var selected = select && select.selectedOptions && select.selectedOptions[0];
         var current = el.getAttribute(a);
         if (printerKey && selected && [printerKey, DICT.en[printerKey], DICT.ar[printerKey]].some(function (prefix) { return current.indexOf(prefix + ': ') === 0; })) {

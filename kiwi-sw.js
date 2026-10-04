@@ -154,7 +154,7 @@ var SHELL = [
   '/assets/dashboard-pwa.js?v=553',
   '/assets/dashboard-native.js?v=3',
   '/assets/pwa-update.js?v=359',
-  '/assets/caisse-skin.css?v=17',
+  '/assets/caisse-skin.css?v=18',
   '/assets/pos-mobile.css?v=8',
   '/assets/caisse-motion.js?v=1',
   '/assets/caisse-pwa.js?v=564',
@@ -219,10 +219,10 @@ var SHELL = [
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
   '/assets/promos.js?v=2',
-  '/assets/boutique-promos-dashboard.js?v=7',
+  '/assets/boutique-promos-dashboard.js?v=8',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=36',
+  '/assets/caisse-lang.js?v=37',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/retail-balances.js?v=4',
