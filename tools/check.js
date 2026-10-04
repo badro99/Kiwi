@@ -1285,6 +1285,7 @@ section('Whole-project regressions');
     'caisse-stock-copy-test.mjs',
     'till-long-scroll-browser-test.mjs',
     'promotions-sale-z-browser-test.mjs',
+    'promotions-store-contract-test.mjs',
     'boutique-promotions-locale-browser-test.mjs',
     'sold-insights-layout-test.mjs',
     'table-refresh-test.js',

@@ -107,7 +107,7 @@ const FEATURES = {
   costs:        { keys: ['items', 'ingredients', 'recipes', 'charges', 'targets'], max: 600000 },
   reservations: { keys: ['list', 'bookings', 'slots'],             max: 600000 },
   services:     { keys: ['list', 'cats', 'items'],                 max: 400000 },
-  promotions:   { keys: ['list', 'rules'],                         max: 200000 },
+  promotions:   { keys: ['list', 'rules', 'promos'],               max: 200000 },
   retailcredit: { keys: ['entries', 'seq'],                        max: 600000 },
   returns:      { keys: ['list'],                                  max: 400000 },
   rooms:        { keys: ['list', 'rooms'],                         max: 400000 },
