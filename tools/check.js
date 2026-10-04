@@ -1286,6 +1286,7 @@ section('Whole-project regressions');
     'caisse-stock-copy-test.mjs',
     'till-long-scroll-browser-test.mjs',
     'promotions-sale-z-browser-test.mjs',
+    'promotions-receipt-z-contract-test.mjs',
     'promotions-store-contract-test.mjs',
     'promotions-owner-venue-cloud-test.mjs',
     'promotions-owner-initial-hydration-test.mjs',
