@@ -9,6 +9,8 @@ import http from 'node:http';
 import { createRequire } from 'node:module';
 import { build } from './build-app-www.mjs';
 import { releaseExitedBrowserStreams } from './browser-test-lifecycle.mjs';
+import { demoClockFixture, installDemoClock } from './native-demo-clock-fixture.mjs';
+const fixtureClock = demoClockFixture();
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const require = createRequire(path.join(root, 'app/package.json'));
 const puppeteer = require('puppeteer-core');
@@ -59,9 +61,11 @@ browser.process()?.once('exit',()=>mark('browser-process-exited'));
 const sleep = ms => new Promise(r => setTimeout(r,ms));
 let checks = 0;
 const check = (value,label) => { assert.ok(value,label); checks++; console.log('  ✓ ' + label); };
-async function phone(lang, dark=false, signedOut=false) {
+async function phone(lang, dark=false, signedOut=false, epochMs=fixtureClock.midServiceMs) {
   const context = await browser.createBrowserContext();
   const page = await context.newPage();
+  await page.emulateTimezone(fixtureClock.timezone);
+  await page.evaluateOnNewDocument(installDemoClock,epochMs);
   await page.setViewport({width:402,height:874,deviceScaleFactor:1,isMobile:true,hasTouch:true});
   await page.emulateMediaFeatures([{name:'prefers-color-scheme',value:dark?'dark':'light'},{name:'prefers-reduced-motion',value:'reduce'}]);
   await page.setRequestInterception(true);
@@ -135,6 +139,8 @@ try {
       days:new Set(clock.getSales(14).map(r=>dr.businessDay(r.ts))).size};
   });
   check(stats.valid && stats.stable, 'demo timestamps inside current business day, never future; rows stable');
+  check(await page.evaluate(({epochMs,timezone})=>Date.now()===epochMs && +new Date()===epochMs && KiwiDayReport.timezone()===timezone,
+    {epochMs:fixtureClock.midServiceMs,timezone:fixtureClock.timezone}), 'mid-service fixture boots with coherent date and explicit merchant timezone');
   check(stats.total===stats.sim.cumRevenue && stats.count===stats.sim.cumTx, 'home revenue and count sum the ledger');
   check(stats.report.net===stats.total && stats.report.txns===stats.count, 'daily report matches the same ledger');
   check(stats.old.txns>0 && stats.old.net>0 && stats.days>=13, 'yesterday and 14-day report history seeded');
@@ -197,6 +203,54 @@ try {
   mark('context-close');
   await context.close();
   mark('context-closed');
+
+  // A separate fresh early-day boot exercises the honest empty state rather
+  // than skipping any of the positive ledger/tender assertions above.
+  mark('empty-day-context');
+  const empty=await phone('en',false,false,fixtureClock.emptyDayMs);
+  await empty.page.goto(base+'/dashboard.html',{waitUntil:'networkidle2'});
+  async function emptyClick(selector) {
+    await empty.page.waitForFunction(selector=>{
+      const e=document.querySelector(selector);
+      if(!e) return false;
+      const r=e.getBoundingClientRect(), hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+      return r.width>0 && r.height>0 && !e.disabled && (hit===e || e.contains(hit));
+    },{},selector);
+    await empty.page.click(selector);
+  }
+  await emptyClick('.kob-root [data-explore]');
+  await emptyClick('[data-kiwi-skip]');
+  await emptyClick('.dr-pill[data-range="aujourdhui"]');
+  await empty.page.waitForFunction(epochMs=>{
+    const amount=selector=>{
+      const e=document.querySelector(selector);
+      return e && /\d/.test(e.textContent) && Number(e.textContent.replace(/[^0-9.]/g,''))===0;
+    };
+    return Date.now()===epochMs && window.KiwiDemoClock?.getDaySales().length===0
+      && document.querySelector('[data-kpi="ratio"] [data-kpi-val]')?.textContent.trim()==='·'
+      && amount('[data-rev-hero-val]') && amount('[data-mix-center-amt]');
+  },{},fixtureClock.emptyDayMs);
+  const zero=await empty.page.evaluate(()=>{
+    const dr=KiwiDayReport, rows=KiwiDemoClock.getDaySales();
+    const bounds=dr.dayBounds(dr.today()), previous=dr.dayBounds(dr.shiftDay(dr.today(),-1));
+    const aligned=previous.from+(Date.now()-bounds.from)/(bounds.to-bounds.from)*(previous.to-previous.from);
+    return {now:Date.now(),constructed:+new Date(),timezone:dr.timezone(),count:rows.length,
+      priorCount:KiwiDemoClock.getDaySales(dr.shiftDay(dr.today(),-1)).filter(r=>r.ts<=aligned).length,
+      sim:KiwiDemoClock.getSimState(),ratio:document.querySelector('[data-kpi="ratio"] [data-kpi-val]').textContent.trim(),
+      legend:document.querySelector('[data-mix-legend]').textContent,
+      collected:document.querySelector('[data-mix-center-amt]').textContent,
+      revenue:document.querySelector('[data-rev-hero-val]').textContent};
+  });
+  check(zero.now===fixtureClock.emptyDayMs && zero.constructed===zero.now && zero.timezone===fixtureClock.timezone,
+    'early empty fixture boots with coherent date and explicit merchant timezone');
+  check(zero.count===0 && zero.priorCount===0 && zero.sim.cumTx===0 && zero.sim.cumRevenue===0,
+    'before service today and the aligned previous day have no demo transactions');
+  check(zero.ratio==='·', 'empty day shows an honest ratio marker, never a fabricated percentage');
+  check(!/Cash|Bank card|QR \/ Wallet|Visa|Mastercard/.test(zero.legend), 'empty day does not invent recorded tender legend entries');
+  check(Number(zero.collected.replace(/[^0-9.]/g,''))===0 && Number(zero.revenue.replace(/[^0-9.]/g,''))===0,
+    'empty day visibly shows zero collected and zero revenue');
+  await empty.context.close();
+  mark('empty-day-context-closed');
 } finally {
   try {
     mark('browser-close');

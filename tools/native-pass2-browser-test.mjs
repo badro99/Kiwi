@@ -8,6 +8,7 @@ import os from 'node:os';
 import http from 'node:http';
 import { createRequire } from 'node:module';
 import { build } from './build-app-www.mjs';
+import { demoClockFixture, installDemoClock } from './native-demo-clock-fixture.mjs';
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const require = createRequire(path.join(root, 'app/package.json'));
 const puppeteer = require('puppeteer-core');
@@ -28,9 +29,14 @@ const browser = await puppeteer.launch({executablePath:bin,headless:true,args:['
 const sleep = ms => new Promise(r => setTimeout(r,ms));
 let checks = 0;
 const check = (value,label) => { assert.ok(value,label); checks++; console.log('  ✓ ' + label); };
-async function phone(lang, dark=false, signedOut=false) {
+const demoTime = demoClockFixture();
+async function phone(lang, dark=false, signedOut=false, epochMs=demoTime.midServiceMs) {
   const context = await browser.createBrowserContext();
   const page = await context.newPage();
+  await page.emulateTimezone(demoTime.timezone);
+  // Install a coherent clock before any application script starts. Never jump
+  // an already-running demo, which would exercise the unrelated idle lock.
+  await page.evaluateOnNewDocument(installDemoClock,epochMs);
   await page.setViewport({width:402,height:874,deviceScaleFactor:1,isMobile:true,hasTouch:true});
   await page.emulateMediaFeatures([{name:'prefers-color-scheme',value:dark?'dark':'light'},{name:'prefers-reduced-motion',value:'reduce'}]);
   await page.setRequestInterception(true);
@@ -54,6 +60,35 @@ async function phone(lang, dark=false, signedOut=false) {
     });
   },lang);
   return {page,context,verificationRequests:()=>verificationRequests,authRequests:()=>authRequests};
+}
+// Read the real production ledger and renderer, never substitute DOM figures.
+function demoState() {
+  const clock=window.KiwiDemoClock, dr=window.KiwiDayReport;
+  if (!clock?.isActive?.() || !dr || document.querySelector('[data-kiwi-lock]')) return null;
+  const sim=clock.getSimState();
+  if (!sim) return null;
+  const before=dr.shiftDay(dr.today(),-1), bounds=dr.dayBounds(before);
+  const cut=bounds.from+sim.fraction*(bounds.to-bounds.from);
+  const previous=clock.getDaySales(before).filter(row=>row.ts<=cut);
+  const chart=document.querySelector('[data-rev-hero-delta]');
+  const hero=document.querySelector('[data-hero-delta="hier"] [data-hero-delta-val]');
+  const pct=text=>Number((text.match(/([+−-]?[\d.,]+)\s*%/)||[])[1]?.replace('−','-').replace(',','.'));
+  return {timezone:dr.timezone(),now:Date.now(),date:new Date().getTime(),
+    rows:clock.getDaySales().length,priorRows:previous.length,
+    priorAmount:previous.reduce((sum,row)=>sum+Math.round(row.amount*100),0)/100,
+    chartExists:!!chart,chartText:chart?.textContent || '',heroExists:!!hero,
+    deltas:[pct(chart?.textContent || ''),pct(hero?.textContent || '')]};
+}
+function menuCloseState() {
+  return {viewport:[innerWidth,innerHeight],dir:document.documentElement.dir,
+    open:document.body.classList.contains('kiwi-native-menu-open'),
+    buttons:[...document.querySelectorAll('.kiwi-native-menu-close')].map(button=> {
+      const r=button.getBoundingClientRect(), s=getComputedStyle(button);
+      const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
+      return {rect:{x:r.x,y:r.y,width:r.width,height:r.height},visibility:s.visibility,
+        display:s.display,menuTransform:getComputedStyle(button.closest('.kiwi-native-menu')).transform,
+        hit:hit?.className || null,hitIsButton:button.contains(hit)};
+    })};
 }
 try {
   const privacyKeys=['NSMicrophoneUsageDescription','NSSpeechRecognitionUsageDescription','NSCameraUsageDescription','NSFaceIDUsageDescription','NSLocalNetworkUsageDescription'];
@@ -113,9 +148,10 @@ try {
   for (const lang of ['fr','en','ar']) for (const dark of [false,true]) {
     const {page,context,verificationRequests} = await phone(lang,dark);
     await page.goto(base+'/dashboard.html',{waitUntil:'networkidle2'});
-    await sleep(1600);
-    await page.evaluate(()=>document.querySelector('.kob-root [data-explore]')?.click());
-    await sleep(900);
+    await page.waitForSelector('.kob-root [data-explore]',{visible:true});
+    await page.click('.kob-root [data-explore]');
+    await page.waitForSelector('.kob-root',{hidden:true});
+    await page.waitForSelector('.kiwi-native-owner-keypad',{visible:true});
     const keypad = await page.evaluate(()=> {
       const input = document.querySelector('[data-kiwi-pin-input]');
       const pad = document.querySelector('.kiwi-native-owner-keypad');
@@ -144,8 +180,11 @@ try {
       document.documentElement.classList.remove('kiwi-hosted'); return hidden;
     });
     check(hidden,'native styles do not reveal the demo link on a hosted account');
-    await page.evaluate(()=>document.querySelector('[data-kiwi-skip]').click());
-    await sleep(1600);
+    await page.click('[data-kiwi-skip]');
+    await page.waitForFunction(`(() => { const state=(${demoState})(); return state?.rows > 0 && state.priorAmount > 0 && state.deltas.every(Number.isFinite); })()`,{timeout:10000});
+    const ready=await page.evaluate(demoState);
+    check(ready.timezone===demoTime.timezone && ready.now===demoTime.midServiceMs && ready.date===ready.now,
+      `${lang}/${dark?'dark':'light'}: mid-service clock is coherent before boot`);
     const deltas = await page.evaluate(()=> {
       const get=s=>document.querySelector(s)?.textContent || '';
       const pct=s=>Number((s.match(/([+−-]?[\d.,]+)\s*%/)||[])[1]?.replace('−','-').replace(',','.'));
@@ -177,6 +216,30 @@ try {
     await sleep(700);
     const rows = await page.evaluate(()=>[...document.querySelectorAll('[data-payment-kind]')].map(r=>({kind:r.dataset.paymentKind,image:getComputedStyle(r,'::after').backgroundImage})));
     check(rows.length>0 && rows.every(r=>r.image.includes(({card:'credit_card',wallet:'account_balance_wallet',cash:'payments',qr:'qr_code',other:'payments'})[r.kind]+'.svg')),'order rows use semantic payment glyphs');
+    await context.close();
+  }
+  // An actual pre-service ledger legitimately has no same-time comparator.
+  // Assert that honest absence separately; the finite numerical assertions
+  // above still run unconditionally for every mid-service locale and theme.
+  for (const lang of ['fr','en','ar']) {
+    const {page,context,verificationRequests,authRequests}=await phone(lang,false,false,demoTime.emptyDayMs);
+    await page.goto(base+'/dashboard.html',{waitUntil:'networkidle2'});
+    await page.waitForSelector('.kob-root [data-explore]',{visible:true});
+    await page.click('.kob-root [data-explore]');
+    await page.waitForSelector('.kob-root',{hidden:true});
+    await page.waitForSelector('[data-kiwi-skip]',{visible:true});
+    await page.click('[data-kiwi-skip]');
+    await page.waitForFunction(`(${demoState})()?.chartExists && document.querySelector('[data-rev-svg] path') && document.querySelector('.kiwi-native-owner-actions button')`,{timeout:10000});
+    const state=await page.evaluate(demoState);
+    check(state.timezone===demoTime.timezone && state.now===demoTime.emptyDayMs && state.date===state.now,
+      lang+': empty morning clock is coherent before boot');
+    check(state.rows===0 && state.priorRows===0 && state.priorAmount===0,
+      lang+': real pre-service ledger has no current or aligned prior sales');
+    check(state.chartText.trim()==='' && !state.heroExists,
+      lang+': empty morning omits chart and hero percentage comparisons');
+    check(verificationRequests()===0 && authRequests()===0,
+      lang+': empty demo entry never authenticates or verifies a code');
+    await page.screenshot({path:path.join(work,`owner-empty-morning-${lang}.png`)});
     await context.close();
   }
   // Real pairing/login screens, inspected without entering a code.
@@ -220,8 +283,32 @@ try {
       },{raw,screen,lang,dark,base});
       await page.addScriptTag({url:base+'/native-runtime.js'}); await sleep(500);
       check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${role} ${lang}: isolated phone fixture has no horizontal overflow`);
-      check(await page.evaluate(()=>{const b=document.querySelector('.kiwi-native-burger');if(!b)return false;b.click();return document.body.classList.contains('kiwi-native-menu-open')&&[...document.querySelectorAll('.kiwi-native-menu [data-kno-account]')].map(x=>x.dataset.knoAccount).join(',')==='change-role,sign-out,ai-privacy,delete-account';}),`${role} ${lang}: the header menu opens the account drawer`);
-      await page.evaluate(()=>document.querySelector('.kiwi-native-menu-close').click());
+      await page.click('.kiwi-native-burger');
+      check(await page.evaluate(()=>document.body.classList.contains('kiwi-native-menu-open')&&[...document.querySelectorAll('.kiwi-native-menu [data-kno-account]')].map(x=>x.dataset.knoAccount).join(',')==='change-role,sign-out,ai-privacy,delete-account'),`${role} ${lang}: the header menu opens the account drawer`);
+      // Opening changes the class synchronously, but does not guarantee that
+      // layout has painted a reachable close target. Wait for its real bounds
+      // and hit-test, not a synthetic click on a hidden/off-screen node.
+      console.log(`${role} ${lang}: pre-close target `+JSON.stringify(await page.evaluate(menuCloseState)));
+      try {
+        await page.waitForFunction(()=> {
+          const button=document.querySelector('.kiwi-native-menu-close');
+          if (!button) return false;
+          const rect=button.getBoundingClientRect(), style=getComputedStyle(button);
+          const hit=document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2);
+          return rect.width>=44 && rect.height>=44 && rect.left>=0 && rect.right<=innerWidth
+            && rect.top>=0 && rect.bottom<=innerHeight && style.visibility==='visible'
+            && style.display!=='none' && button.contains(hit);
+        },{timeout:10000});
+      } catch (error) {
+        console.log('role menu close readiness: '+JSON.stringify(await page.evaluate(menuCloseState)));
+        await page.screenshot({path:path.join(work,`${role.toLowerCase()}-fixture-${lang}-menu-not-clickable.png`)});
+        throw error;
+      }
+      check(true,`${role} ${lang}: menu close is a visible 44px browser hit target`);
+      await page.click('.kiwi-native-menu-close');
+      await page.waitForFunction(()=>!document.body.classList.contains('kiwi-native-menu-open'));
+      check(await page.evaluate(()=>!document.body.classList.contains('kiwi-native-menu-open')),
+        `${role} ${lang}: real close click closes the drawer`);
       if(role==='Team') {
         check(await page.evaluate(()=>window.__host.tabs.map(t=>t.id).join(',')==='tables,menu,notifications,profil'),'Team publishes its actual four routes, no More tab');
         for(const id of ['menu','notifications','profil','tables']) {

@@ -213,6 +213,16 @@ async function startRetailFixture(args) {
     browser = await puppeteer.launch({ executablePath: bin, headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--proxy-server=http://127.0.0.1:9', '--proxy-bypass-list=127.0.0.1;localhost'], defaultViewport: { width: 1440, height: 900 } });
     const context = await browser.createBrowserContext();
     const page = await context.newPage();
+    let retailClock = null;
+    if (['maison', 'boutique', 'maison-stock', 'boutique-stock'].includes(scenario)) {
+      // These rolling demo sales straddle the 05:00 business-day cutoff on an
+      // early-morning host. Set the isolated fixture clock before product boot,
+      // not after it has seeded records or started its idle-lock clock.
+      const { demoClockFixture, DEMO_TIMEZONE, installDemoClock } = await import('../native-demo-clock-fixture.mjs');
+      retailClock = demoClockFixture();
+      await page.emulateTimezone(DEMO_TIMEZONE);
+      await page.evaluateOnNewDocument(installDemoClock, retailClock.midServiceMs);
+    }
     if (scenario === 'nav-stability') await page.evaluateOnNewDocument(() => {
       const venue = { id: 'v-nav-stability', name: 'Restaurant fixture', slug: 'nav-stability', type: 'restaurant', custom: true, status: 'En service', txCount: 0, staffCount: 0 };
       localStorage.setItem('kiwiCustomVenues', JSON.stringify([venue]));
@@ -237,12 +247,30 @@ async function startRetailFixture(args) {
     }
     await page.waitForSelector(scenario.startsWith('maison') ? '#pos-maison.is-on .mz-view.is-on' : scenario.startsWith('boutique') ? '#pos-boutique.is-on .bq-view.is-on' : scenario === 'clients' ? '[data-open-clients]'
       : scenario === 'restaurant' ? '#kw-main [data-hero-amount]' : scenario === 'employee-clock' ? '#kep-card .kep-metric' : '.kiwi-lock-skip', { visible: true, timeout: 15000 });
+    if (retailClock) {
+      // Read only: verify the installed clock and its actual rendered till
+      // time. Never expose an arbitrary evaluation tool or call a handler.
+      const observed = await page.evaluate(selector => {
+        const date = new Date();
+        const time = String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
+        const header = document.querySelector(selector);
+        const bounds = header?.getBoundingClientRect();
+        return { now: Date.now(), dateMs: date.getTime(),
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          renderedTime: !!bounds && bounds.width > 0 && bounds.height > 0
+            && header.textContent.includes(' · ' + time + ' · ') };
+      }, scenario.startsWith('maison') ? '#mz-today' : '#bq-today');
+      if (observed.now !== retailClock.midServiceMs || observed.dateMs !== retailClock.midServiceMs
+          || observed.timezone !== retailClock.timezone || !observed.renderedTime) {
+        throw new Error('Retail fixture boot clock did not reach the rendered till');
+      }
+    }
     session = { ...fixture, merchant: scenario === 'restaurant' ? 'restaurant-fixture' : scenario === 'employee-clock' ? 'employee-clock-fixture' : scenario === 'nav-stability' ? 'nav-stability' : fixture.merchant,
       kind: scenario.startsWith('maison') ? 'retail-maison' : scenario.startsWith('boutique') ? 'retail-boutique' : scenario === 'clients' ? 'retail-clients'
         : scenario === 'restaurant' ? 'retail-restaurant' : scenario === 'employee-clock' ? 'retail-employee-clock' : 'retail-nav-stability',
       browser, context, page, actions: [], assertions: [], refs: new Set(), startedAt: Date.now() };
     return `Synthetic ${scenario.startsWith('maison') ? 'Maison caisse' : scenario.startsWith('boutique') ? 'Boutique caisse' : scenario === 'clients' ? 'Amira client directory'
-      : scenario === 'restaurant' ? 'restaurant dashboard' : scenario === 'employee-clock' ? 'employee store clock' : 'dashboard navigation'} ready at ${origin.origin}; no live merchant access.\n${await snapshot()}`;
+      : scenario === 'restaurant' ? 'restaurant dashboard' : scenario === 'employee-clock' ? 'employee store clock' : 'dashboard navigation'} ready at ${origin.origin}; no live merchant access.${retailClock ? ` Fixed synthetic clock: ${retailClock.day}, ${new Date(retailClock.midServiceMs).toISOString()}, timezone ${retailClock.timezone}.` : ''}\n${await snapshot()}`;
   } catch (e) {
     if (browser) await browser.close().catch(() => {});
     fixture.child.kill('SIGTERM');

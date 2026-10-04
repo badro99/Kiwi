@@ -1261,6 +1261,7 @@ section('Whole-project regressions');
     'native-pass7-test.mjs',
     'native-logo-blend-browser-test.mjs',
     'native-register-status-test.mjs',
+    'native-demo-clock-fixture-test.mjs',
     'native-demo-ledger-test.mjs',
     'native-demo-ledger-lifecycle-test.mjs',
     'native-qa-six-fixes-test.mjs',
