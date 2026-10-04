@@ -345,12 +345,27 @@
     return ((p[0] || '?')[0] + (p[1] ? p[1][0] : '')).toUpperCase();
   }
 
+  function validCreditMerchant(value) {
+    return typeof value === 'string' && /^[a-z0-9][a-z0-9_.:-]{0,63}$/i.test(value) ? value : '';
+  }
   function creditMerchant() {
+    // A cashier book belongs to its terminal, not the last owner dashboard.
+    var classes = document.body.className || '';
+    var till = !/\bkiwi-native-owner\b/.test(classes) && /\b(?:is-pos(?:-[a-z0-9]+)?|is-unlocked)\b/.test(classes);
+    if (till) {
+      try {
+        var pairing = window.KiwiCaissePairing;
+        var bound = pairing && pairing.isPaired ? pairing.isPaired() : localStorage.getItem('kiwiPaired') === '1';
+        if (!bound) return '';
+        var venue = pairing && pairing.pairedVenue ? pairing.pairedVenue() : JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+        return validCreditMerchant(venue && venue.merchant);
+      } catch (_) { return ''; }
+    }
     try {
-      var venue = window.KiwiVenue && KiwiVenue.getCurrentVenueData && KiwiVenue.getCurrentVenueData();
-      if (venue && (venue.slug || venue.merchant)) return venue.slug || venue.merchant;
+      var current = window.KiwiVenue && KiwiVenue.getCurrentVenueData && KiwiVenue.getCurrentVenueData();
+      if (current && (current.slug || current.merchant)) return validCreditMerchant(current.slug || current.merchant);
     } catch (_) {}
-    try { return localStorage.getItem('kiwiLiveMerchant') || ''; } catch (_) { return ''; }
+    try { return validCreditMerchant(localStorage.getItem('kiwiLiveMerchant')); } catch (_) { return ''; }
   }
 
   /* #105 · La boutique garde ses avoirs et son journal des retours sur la caisse
@@ -366,7 +381,7 @@
     try {
       var d = JSON.parse(localStorage.getItem('kiwi:bqReturns') || 'null');
       var m = creditMerchant();
-      if (!d || !Array.isArray(d.list) || (d.m && m && d.m !== m)) return [];
+      if (!m || !d || !Array.isArray(d.list) || d.m !== m) return [];
       return d.list.filter(Boolean);
     } catch (_) { return []; }
   }
@@ -387,6 +402,11 @@
   function loadClientCredits(clientId, host) {
     if (!host) return;
     var local = clientLocalCredits(clientId);
+    function creditCopy(text, tag) {
+      var language = window.KiwiCaisseLang;
+      tag = tag || 'span';
+      return '<' + tag + ' data-caisse-copy="' + esc(text) + '">' + esc(language && language.tr ? language.tr(text) : text) + '</' + tag + '>';
+    }
     function paint(remote) {
       if (!host.isConnected) return;
       var seen = {};
@@ -397,7 +417,7 @@
       var active = credits.reduce(function (sum, credit) {
         return sum + (credit.status === 'active' ? Number(credit.balanceCents || 0) : 0);
       }, 0) / 100;
-      host.innerHTML = '<div class="kcb-section"><span>Avoirs · solde</span> <bdi data-nolang>' + esc(fmt(active)) + ' MAD</bdi></div>' + (credits.length
+      host.innerHTML = '<div class="kcb-section">' + creditCopy('Avoirs · solde') + ' <bdi data-nolang>' + esc(fmt(active)) + ' MAD</bdi></div>' + (credits.length
         ? '<div class="kcb-info">' + credits.map(function (credit) {
             var issued = (credit.events || []).filter(function (event) { return event.action === 'issue'; })[0] || {};
             var products = Array.isArray(issued.lines) && issued.lines.length
@@ -413,7 +433,7 @@
               + '<span class="v"><b>' + dataMarkup(fmt(Number(credit.amountCents || 0) / 100) + ' MAD') + ' · ' + uiMarkup('reste') + ' ' + dataMarkup(fmt(Number(credit.balanceCents || 0) / 100) + ' MAD') + used + '</b>'
               + '<small style="display:block;margin-top:3px">' + uiMarkup('Vente') + ' ' + referenceMarkup(credit.originalRef || credit.originalSaleId || '·') + ' · ' + products + ' · ' + (issued.actor || credit.issuedBy ? dataMarkup(issued.actor || credit.issuedBy) : uiMarkup('Caisse du magasin')) + '</small>' + movements + '</span></div>';
           }).join('') + '</div>'
-        : '<div class="kcb-empty" style="min-height:70px"><b>Aucun avoir</b><div>Les crédits boutique émis à ce client apparaîtront ici.</div></div>');
+        : '<div class="kcb-empty" style="min-height:70px">' + creditCopy('Aucun avoir', 'b') + creditCopy('Les crédits boutique émis à ce client apparaîtront ici.', 'div') + '</div>');
     }
     paint([]);
     var merchant = creditMerchant();

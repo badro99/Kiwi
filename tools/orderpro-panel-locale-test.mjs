@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = fs.readFileSync(process.env.KIWI_PANEL_SOURCE || path.join(ROOT, 'assets/orderpro-panel.js'), 'utf8');
 let passed = 0, failed = 0;
-function check(value, label) { if (value) passed++; else { failed++; console.error(`✗ ${label}`); } }
+function check(value, label) { if (value) { passed++; console.log(`✓ ${label}`); } else { failed++; console.error(`✗ ${label}`); } }
 const EXPECT = {
   fr: { heading: 'Ce que voient vos clients', publish: 'Publier maintenant', checking: 'Vérification…', copy: 'Copier le lien', write: 'Écrire le tag', more: 'Afficher plus de tables', counter: 'Tag comptoir · à emporter', boutique: 'Tag boutique', table: 'Table 1', intro: 'Un seul lien par tag.', fallback: 'Pour écrire un tag', direct: 'Ce téléphone peut écrire les tags directement.', lock: 'Verrouillez le tag après écriture', offline: 'État inconnu (hors ligne ?)', empty: 'Rien de publié · vos clients voient une page vide.', drawer: 'Order Pro · tags NFC', subtitle: 'Commande depuis le téléphone du client', item: 'article', items: 'articles', product: 'produit', products: 'produits', online: 'en ligne' },
   en: { heading: 'What your customers see', publish: 'Publish now', checking: 'Checking…', copy: 'Copy link', write: 'Write tag', more: 'Show more tables', counter: 'Counter tag · takeaway', boutique: 'Shop tag', table: 'Table 1', intro: 'One link per tag.', fallback: 'To write a tag', direct: 'This phone can write tags directly.', lock: 'Lock the tag after writing', offline: 'Status unknown (offline?)', empty: 'Nothing published · your customers see an empty page.', drawer: 'Order Pro · NFC tags', subtitle: 'Ordering from the customer’s phone', item: 'item', items: 'items', product: 'product', products: 'products', online: 'online' },
@@ -85,5 +85,5 @@ for (const localeSource of ['dashboard', 'menu', 'storage']) {
   w.state.locale = 'en'; w.api.open(); await settle();
   check(w.el.innerHTML.includes(EXPECT.en.heading) && w.state.drawer?.title === EXPECT.en.drawer, `${localeSource}: current locale honored on normal drawer reopen`);
 }
-console.log(`orderpro-panel-locale: ${passed} passed, ${failed} failed (VM renderer only; no browser/native claim)`);
+console.log(`✓ orderpro-panel-locale: ${passed} passed, ${failed} failed (VM renderer only; no browser/native claim)`);
 process.exitCode = failed ? 1 : 0;

@@ -454,5 +454,34 @@ for (const [fr, en, ar] of closingCopy) {
     check(L.tr(fr) === expected, "Boutique opening/closing exact copy: " + language + " · " + fr);
   }
 }
+// #0156: capture the actual existing-code renderer, never its catalog-writing
+// wire callback. This pure copy test is not browser DOM or native acceptance.
+const existingCodeSource = fs.readFileSync(path.join(__dirname, '..', 'assets', 'pos-boutique.js'), 'utf8');
+const existingCodeStart = existingCodeSource.indexOf('  function openRegisterOnVariant(vid, pid) {');
+const existingCodeEnd = existingCodeSource.indexOf('  /* ─── register an unknown scanned code', existingCodeStart);
+check(existingCodeStart >= 0 && existingCodeEnd > existingCodeStart, 'existing-code guard captures the real bounded renderer');
+let existingCodeHtml = '', existingCodeWire;
+vm.runInNewContext(existingCodeSource.slice(existingCodeStart, existingCodeEnd) + '\nopenRegisterOnVariant("fixture-variant", "fixture-product");', {
+  invSetModal(html, wire) { existingCodeHtml = html; existingCodeWire = wire; },
+}, { filename: 'pos-boutique-existing-code-renderer.js' });
+check(typeof existingCodeWire === 'function' && !/\bvalue=/.test(existingCodeHtml), 'actual renderer retains an empty draft; catalog-writing callback is captured, never executed');
+const existingCodeCopy = [
+  [/<h3>([^<]+)<\/h3>/, 'Enregistrer un code existant', 'Register an existing code', 'تسجيل رمز موجود'],
+  [/<h3>[^<]+<\/h3><span>([^<]+)<\/span>/, "Scannez ou tapez le code déjà présent sur l'article, conservé tel quel.", 'Scan or type the code already on the item; it is kept unchanged.', 'امسح الرمز الموجود على المنتج أو اكتبه؛ يُحتفظ به كما هو.'],
+  [/<label>([^<]+)<\/label><input id="bqi-reg-code"/, 'Code-barres', 'Barcode', 'الرمز الشريطي'],
+  [/<input id="bqi-reg-code" placeholder="([^"]+)"/, 'Scannez ou tapez le code…', 'Scan or type the code…', 'امسح الرمز أو اكتبه…'],
+  [/<div class="bqi-help">([^<]+)<\/div>/, "EAN-13, UPC ou tout code de l'ancien système. Aucune réimpression, le code est rattaché à cette variante.", 'EAN-13, UPC, or any code from the old system. No reprinting; the code is linked to this variant.', 'EAN-13 أو UPC أو أي رمز من النظام السابق. لا حاجة لإعادة الطباعة؛ يُربط الرمز بهذا المتغير.'],
+  [/id="bqi-reg-save">([^<]+)<\/button>/, 'Enregistrer le code', 'Register the code', 'تسجيل الرمز'],
+  [/data-inv-back>([^<]+)<\/button>/, 'Retour', 'Back', 'رجوع'],
+  [/data-inv-x aria-label="([^"]+)"/, 'Fermer', 'Close', 'إغلاق'],
+];
+for (const [pattern, fr, en, ar] of existingCodeCopy) {
+  const actual = existingCodeHtml.match(pattern)?.[1];
+  check(actual === fr, 'existing-code copy is extracted from actual renderer markup: ' + fr);
+  for (const [language, expected] of [['fr', fr], ['en', en], ['ar', ar]]) {
+    L.set(language);
+    check(L.tr(actual || '') === expected, 'actual existing-code renderer copy: ' + language + ' · ' + fr);
+  }
+}
 if (failed) { console.error(`\n✗ ${failed} vérification(s) de langue en échec.`); process.exit(1); }
 console.log(`\n✓ ${ran} règles de langue vérifiées (${enKeys.length} phrases × 2 langues).`);

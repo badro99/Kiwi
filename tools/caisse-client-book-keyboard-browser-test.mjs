@@ -90,6 +90,8 @@ try {
       await page.setViewport({ width, height, isMobile:true, hasTouch:true });
       await page.evaluateOnNewDocument((stamp,dataName,dataRef,unknownMethod) => {
         const book='synthetic-retail-acompte';
+        // Paired client component identity; retain the original demo engine boot.
+        window.KiwiCaissePairing={isPaired:()=>true,pairedVenue:()=>({merchant:book,venueId:'fixture-boutique',type:'boutique'})};
         localStorage.setItem('kiwi:clients:v1:'+book,JSON.stringify({seq:4,list:[
           {id:'points-98',name:'Safouane pts',phone:'+212698765432',points:98,stamps:0,visits:1,spend:98,lastSeen:1},
           {id:'literal-unit',name:'pts',phone:'+212611111111',points:98,stamps:0,visits:1,spend:98,lastSeen:0},

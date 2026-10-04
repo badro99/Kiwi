@@ -28,6 +28,7 @@ const server = http.createServer((req, res) => {
       <link rel="stylesheet" href="/assets/pos-boutique.css"><link rel="stylesheet" href="/assets/caisse-skin.css">
       <style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper,#f7f5f0)}button,input{font:inherit}.vx-screen{display:flex}</style>
       <script>window.KiwiEnv={isReal:()=>false,demosAllowed:true};window.KiwiPosDispatch={register:s=>window.__spec=s,lock:()=>{}};</script>
+      <script>window.__fixtureClientPairing=JSON.parse(localStorage.getItem('kiwi:fixture:client-pairing')||'null');window.KiwiCaissePairing={isPaired:()=>!!window.__fixtureClientPairing,pairedVenue:()=>window.__fixtureClientPairing};</script>
       <script src="/assets/caisse-dna.js"></script><script src="/assets/caisse-lang.js"></script><script src="/assets/barcode.js"></script><script src="/assets/color-palette.js"></script>
       <script src="/assets/inventory-ledger.js"></script><script src="/assets/maison-stock-movements.js"></script><script src="/assets/procurement.js"></script>
       <script src="/assets/venue-store.js"></script><script src="/assets/clients-store.js"></script><script src="/assets/clients-book.js"></script>
@@ -57,8 +58,12 @@ try {
   await page.waitForFunction(() => window.KiwiClients && KiwiClients.list().length > 0);
   // A real return at this till: the shirt of ticket 11502 came back as credit AV-2032.
   await page.evaluate(() => {
-    const key = 'kiwi:clients:v1:' + KiwiClients.bookId();
+    const bookId = KiwiClients.bookId();
+    const key = 'kiwi:clients:v1:' + bookId;
     const book = JSON.parse(localStorage.getItem(key));
+    // Component identity only: keep the original demo till/catalogue boot.
+    window.__fixtureClientPairing = { merchant: bookId, venueId: 'fixture-boutique', type: 'boutique' };
+    localStorage.setItem('kiwi:fixture:client-pairing', JSON.stringify(window.__fixtureClientPairing));
     const client = book.list.find((c) => c.id === 'd2');
     client.history = [{ ref: '11502', ts: Date.now() - 3600e3, amount: 280, method: 'espèces',
       items: [{ name: 'Normal Shirt', qty: 1, total: 90 }, { name: 'Black jean', qty: 1, total: 190 }] }];
@@ -66,7 +71,7 @@ try {
     localStorage.setItem('kiwi:bqAvoirs', JSON.stringify([{ code: 'AV-2032', amount: 90, balance: 90, holderId: 'd2', holderName: client.name,
       motif: 'Changement d’avis, retour 11502', at: new Date().toISOString(), until: new Date(Date.now() + 90 * 864e5).toISOString(), from: '11502',
       lines: [{ name: 'Normal Shirt', qty: 1 }] }]));
-    localStorage.setItem('kiwi:bqReturns', JSON.stringify({ list: [{ id: 'RET-1', ts: Date.now(), saleRef: '11502', kind: 'avoir',
+    localStorage.setItem('kiwi:bqReturns', JSON.stringify({ m: bookId, list: [{ id: 'RET-1', ts: Date.now(), saleRef: '11502', kind: 'avoir',
       amount: 90, reference: 'AV-2032', items: [{ name: 'Normal Shirt', qty: 1, amount: 90 }] }] }));
   });
   await page.reload({ waitUntil: 'load' });
