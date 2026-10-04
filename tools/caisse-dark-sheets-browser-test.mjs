@@ -424,24 +424,64 @@ try {
       // Additional six FR/EN/AR x light/caisse-dark contexts. Every original
       // five-theme/15-locale assertion above remains unconditional and intact.
       if(name==='light' || name==='caisse') {
+        // Ticket redraws replace the peek; the real mobile observer re-grafts
+        // it on an animation frame. Wait for actual pointer-ready controls,
+        // never manufacture a graft or click a hidden/offscreen node.
+        const actualClick=async selector=>{
+          try {
+            await page.waitForFunction(selector=>{
+              const el=document.querySelector(selector);if(!el || el.matches(':disabled'))return false;
+              const rect=el.getBoundingClientRect(),hit=document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2);
+              for(let p=el;p;p=p.parentElement)if(p.getAnimations().some(a=>a.playState==='running' && Number.isFinite(a.effect.getTiming().iterations)))return false;
+              return rect.width>0 && rect.height>0 && rect.x>=0 && rect.y>=0 && rect.right<=innerWidth && rect.bottom<=innerHeight && (hit===el || el.contains(hit));
+            },{},selector);
+          } catch(error) {
+            if(error.name==='TimeoutError')console.error('variant-control-readiness: '+JSON.stringify({selector,...await page.evaluate(selector=>{
+              const el=document.querySelector(selector);if(!el)return{present:false};
+              const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
+              let animations=0;for(let p=el;p;p=p.parentElement)animations+=p.getAnimations().filter(a=>a.playState==='running' && Number.isFinite(a.effect.getTiming().iterations)).length;
+              return{present:true,disabled:el.matches(':disabled'),rect:{x:r.x,y:r.y,width:r.width,height:r.height},viewport:{width:innerWidth,height:innerHeight},centerHitOwn:hit===el || el.contains(hit),runningFiniteAnimations:animations};
+            },selector).catch(()=>({projectionUnavailable:true}))}));
+            throw error;
+          }
+          await page.click(selector);
+        };
+        const closedVeil=selector=>page.waitForFunction(selector=>{
+          const veil=document.querySelector(selector);
+          return veil && !veil.classList.contains('is-open') && getComputedStyle(veil).display==='none';
+        },{},selector);
+        const settledQuantity=value=>page.waitForFunction(value=>
+          document.querySelector('#bq-qty-val')?.textContent===window.KiwiCaisseLang.bidi(String(value)),{},value);
+        const quantityValue=()=>page.$eval('#bq-qty-val',el=>{
+          const text=el.textContent,wrapped=/^\u2066([0-9]+)\u2069$/.exec(text),plain=wrapped?wrapped[1]:text;
+          if(!/^[0-9]+$/.test(plain) || text!==window.KiwiCaisseLang.bidi(plain))throw new Error('Unexpected actual variant quantity format');
+          return Number(plain);
+        });
+        const logVariantValues=async stage=>console.log('variant-value-codepoints: '+JSON.stringify({name,lang,stage,...await page.$eval('#bq-sheetm',el=>{
+          const points=text=>[...text].map(c=>'U+'+c.codePointAt(0).toString(16).toUpperCase().padStart(4,'0'));
+          const size=el.querySelector('#bq-size-seg [data-bq-size].on');
+          return{quantity:points(el.querySelector('#bq-qty-val').textContent),price:points(el.querySelector('#bq-sheet-total').textContent),selectedSize:size?.dataset.bqSize || null,stockLabel:size?points(size.querySelector('small').textContent):null};
+        })}));
+        await actualClick('#kcb-back');
+        await page.waitForFunction(()=>getComputedStyle(document.querySelector('#kcb-root')).display==='none');
         await navigateNative(page,'vente');
-        await page.click('.vx-burger');
+        await actualClick('.vx-burger');
         await page.waitForFunction(()=>document.querySelector('.vx-screen.is-on').classList.contains('vx-nav-open'));
-        await page.click('.vx-screen.is-on [data-kcl="'+lang+'"]');
+        await actualClick('.vx-screen.is-on [data-kcl="'+lang+'"]');
         await page.waitForFunction(lang=>document.documentElement.lang===lang,{},lang);
-        await page.click('button[data-bq-view="vente"]');
+        await actualClick('button[data-bq-view="vente"]');
         await page.waitForFunction(()=>!document.querySelector('.vx-screen.is-on').classList.contains('vx-nav-open'));
         // The real demo mount seeds TWO lines after mobile emulation reload.
         // Remove only that isolated unsold draft through ordinary controls;
         // never assume the original desktop one-line draft survived reload.
-        await page.click('.vx-peek');
+        await actualClick('.vx-peek');
         await page.waitForFunction(()=>document.querySelector('.vx-screen.is-on').classList.contains('vx-ticket-open'));
         const setupLines=await page.$$eval('#bq-tk-lines [data-bq-minus]',nodes=>nodes.length);
         console.log('variant-split-fixture-draft: '+JSON.stringify({name,lang,setupLines}));
         check(setupLines<=2,name+' '+lang+': only normal demo mount lines are present');
-        if(setupLines)await page.click('#bq-tk-reset');
+        if(setupLines)await actualClick('#bq-tk-reset');
         check(await page.$$eval('#bq-tk-lines [data-bq-minus]',nodes=>nodes.length)===0,name+' '+lang+': ordinary fixture Reset leaves the unsold cart empty');
-        await page.click('.vx-peek');
+        await actualClick('.vx-peek');
         await page.waitForFunction(()=>!document.querySelector('.vx-screen.is-on').classList.contains('vx-ticket-open'));
         // prod_2's first-color variants legitimately hold only one each. Read
         // public synthetic catalog projection, then choose an actually stocked
@@ -458,8 +498,28 @@ try {
         });
         assert.ok(stocked,'ordinary seeded catalog has a default variant with at least two in stock');
         check(stocked.available>=2,name+' '+lang+': quantity refresh fixture uses actual stock, not an invented availability');
-        await page.click('[data-bq-cat="'+stocked.category+'"]');
-        await page.click('[data-bq-item="'+stocked.id+'"]');
+        console.log('variant-stock-selection: '+JSON.stringify({name,lang,...stocked}));
+        const categorySelector='[data-bq-cat="'+stocked.category+'"]';
+        const categoryGeometry=()=>page.$eval(categorySelector,el=>{
+          const r=el.getBoundingClientRect(),strip=el.closest('.bq-cats'),s=strip.getBoundingClientRect();
+          const left=Math.max(0,s.left),right=Math.min(innerWidth,s.right),top=Math.max(0,s.top),bottom=Math.min(innerHeight,s.bottom);
+          const x=(left+right)/2,y=(top+bottom)/2,hit=document.elementFromPoint(x,y);
+          return{rect:{x:r.x,y:r.y,width:r.width,height:r.height},port:{left,right,top,bottom},pointer:{x,y},pointerInside:hit===strip || strip.contains(hit),overflowX:getComputedStyle(strip).overflowX,scrollWidth:strip.scrollWidth,clientWidth:strip.clientWidth};
+        });
+        for(let step=0;step<3;step++) {
+          const geometry=await categoryGeometry();
+          console.log('variant-category-reveal: '+JSON.stringify({step,...geometry}));
+          const {rect,port,pointer}=geometry;
+          if(rect.x>=port.left && rect.x+rect.width<=port.right)break;
+          assert.ok(geometry.pointerInside && port.right>port.left && port.bottom>port.top && geometry.overflowX==='auto' && geometry.scrollWidth>geometry.clientWidth,'category reveal uses the actual visible horizontal strip');
+          const delta=rect.x<port.left?-Math.min(240,port.left-rect.x+24):Math.min(240,rect.x+rect.width-port.right+24);
+          await page.mouse.move(pointer.x,pointer.y);
+          await page.mouse.wheel({deltaX:delta,deltaY:0});
+          await page.waitForFunction(({selector,x})=>document.querySelector(selector).getBoundingClientRect().x!==x,{}, {selector:categorySelector,x:rect.x});
+        }
+        console.log('variant-category-reveal-final: '+JSON.stringify(await categoryGeometry()));
+        await actualClick(categorySelector);
+        await actualClick('[data-bq-item="'+stocked.id+'"]');
         const expectedVariant={fr:['accord gérante','Ajouter au ticket'],en:['manager approval','Add to the sale'],ar:['بموافقة المسؤولة','أضف إلى التذكرة']}[lang];
         await page.waitForFunction(expected=>{
           const nodes=[...document.querySelectorAll('#bq-sheetm [data-caisse-copy]')];
@@ -467,23 +527,33 @@ try {
         },{},expectedVariant);
         check(await page.$eval('#bq-sheetm .opt [data-caisse-copy]',el=>el.textContent)===expectedVariant[0],name+' '+lang+': actual variant manager label, not leading-dot French fallback');
         check(await page.$eval('#bq-sheet-add [data-caisse-copy]',el=>el.textContent)===expectedVariant[1],name+' '+lang+': actual Add label immediately localized apart from amount');
+        // The real AR sweep isolates numeric nodes after a mutation. Wait for
+        // its exact public formatter, never compare raw and isolated snapshots.
+        await settledQuantity(1);
+        await logVariantValues('before');
         const catalog=await page.$eval('#bq-sheetm',el=>({name:el.querySelector('.bq-sheet-title h3').textContent,code:el.querySelector('.bq-sheet-title .sub').textContent,price:el.querySelector('#bq-sheet-total').textContent}));
-        const quantity=await page.$eval('#bq-qty-val',el=>Number(el.textContent));
-        await page.click('#bq-qty-plus');
-        check(await page.$eval('#bq-qty-val',el=>Number(el.textContent))===quantity+1,name+' '+lang+': actual quantity plus invokes price refresh');
-        await page.click('#bq-qty-minus');
+        const quantity=await quantityValue();
+        await actualClick('#bq-qty-plus');
+        await settledQuantity(2);
+        await logVariantValues('plus');
+        check(await quantityValue()===quantity+1,name+' '+lang+': actual quantity plus invokes price refresh');
+        await actualClick('#bq-qty-minus');
+        await settledQuantity(1);
+        await logVariantValues('minus');
         const after=await page.$eval('#bq-sheetm',el=>({name:el.querySelector('.bq-sheet-title h3').textContent,code:el.querySelector('.bq-sheet-title .sub').textContent,price:el.querySelector('#bq-sheet-total').textContent}));
         check(JSON.stringify(catalog)===JSON.stringify(after),name+' '+lang+': actual quantity round-trip preserves catalog name/code/price');
-        await page.click('#bq-sheetm [data-bq-close]');
+        await actualClick('#bq-sheetm [data-bq-close]');
+        await closedVeil('#bq-sheet-veil');
         check(await page.$$eval('#bq-tk-lines [data-bq-minus]',nodes=>nodes.length)===0,name+' '+lang+': actual variant Cancel creates no line');
-        await page.click('[data-bq-item="'+stocked.id+'"]');
-        await page.click('#bq-sheet-add');
-        await page.click('.vx-peek');
+        await actualClick('[data-bq-item="'+stocked.id+'"]');
+        await actualClick('#bq-sheet-add');
+        await closedVeil('#bq-sheet-veil');
+        await actualClick('.vx-peek');
         await page.waitForFunction(()=>document.querySelector('.vx-screen.is-on').classList.contains('vx-ticket-open'));
         check(await page.$$eval('#bq-tk-lines [data-bq-minus]',nodes=>nodes.length)===1,name+' '+lang+': exactly one ordinary unsold fixture line');
-        await page.click('#bq-validate');
+        await actualClick('#bq-validate');
         await page.waitForSelector('[data-bq-share="x"]',{visible:true});
-        await page.click('[data-bq-share="x"]');
+        await actualClick('[data-bq-share="x"]');
         await inspectNativeFocus(page,'#bq-split-in',name+' '+lang+' native split amount',false,true);
         const splitPaint=await inspect(page,'#bq-split-in',name+' '+lang+' split input');
         const splitPlaceholder=await page.$eval('#bq-split-in',input=>{
@@ -500,13 +570,14 @@ try {
         // Browser viewport shrink only; this is not a native keyboard claim.
         await page.setViewport({width:402,height:590,deviceScaleFactor:3,isMobile:true,hasTouch:true});
         await inspectNativeFocus(page,'#bq-split-in',name+' '+lang+' keyboard-height split amount',false,true);
-        await page.click('#bq-paym [data-bq-close]');
+        await actualClick('#bq-paym [data-bq-close]');
+        await closedVeil('#bq-pay-veil');
         await page.setViewport({width:402,height:874,deviceScaleFactor:3,isMobile:true,hasTouch:true});
-        await page.click('#bq-tk-lines [data-bq-minus]');
+        await actualClick('#bq-tk-lines [data-bq-minus]');
         check(await page.$$eval('#bq-tk-lines [data-bq-minus]',nodes=>nodes.length)===0,name+' '+lang+': SAME unsold fixture line removed before next context');
         // The open ticket disables the burger by design. Collapse it with its
         // actual peek before attempting the following normal drawer route.
-        await page.click('.vx-peek');
+        await actualClick('.vx-peek');
         await page.waitForFunction(()=>!document.querySelector('.vx-screen.is-on').classList.contains('vx-ticket-open'));
         await navigateNative(page,'clientes');
         await page.waitForSelector('#kcb-add',{visible:true});
