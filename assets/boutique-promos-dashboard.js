@@ -10,6 +10,7 @@
   var DAY = 86400000;
   var filter = 'active';
   var subscribed = false;
+  var cloudBinding = Object.create(null);
   var promoModal = null;
   var composerContext = null;
   var composer = { draft: null, editing: null };
@@ -154,7 +155,15 @@
     cat.use(key);
     PRM().use(key);
     try {
-      if (window.KiwiCloudDoc) PRM().cloud(function () { return window.KiwiCloudDoc.slugFor(PRM().currentVenue()); });
+      if (window.KiwiCloudDoc) {
+        var cloud = PRM().cloud(function () { return window.KiwiCloudDoc.slugFor(PRM().currentVenue()); });
+        if (cloud && cloud.enabled() && !cloudBinding[key]) {
+          var pending = cloud.bind();
+          cloudBinding[key] = true;
+          var settled = function () { delete cloudBinding[key]; };
+          Promise.resolve(pending).then(settled, settled);
+        }
+      }
     } catch (_) {}
     var c = cat.compat();
     return { cat: cat, key: key, rayons: c.RAYONS || [], products: c.P || {}, byEan: c.BY_EAN || {} };

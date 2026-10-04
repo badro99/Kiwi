@@ -219,7 +219,7 @@ var SHELL = [
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
   '/assets/promos.js?v=2',
-  '/assets/boutique-promos-dashboard.js?v=10',
+  '/assets/boutique-promos-dashboard.js?v=11',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
   '/assets/caisse-lang.js?v=37',

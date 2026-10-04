@@ -41,6 +41,8 @@ export async function validateOwnerVenueCloud(ROOT, componentSource = fs.readFil
   vm.runInContext(componentSource.slice(0,at)+'window.__actualPromoContext=context;\n'+componentSource.slice(at),context);
   const PR=window.KiwiPromos;
   window.__actualPromoContext();
+  // Drain the immediate synthetic GET before the existing explicit bind/flush sequence.
+  await new Promise(resolve=>setImmediate(resolve));
   const handle=PR.cloud();
   check(handle.enabled(),'actual CloudDoc enabled with synthetic entitled venue metadata');
   check(handle.feature==='promotions','actual retained cloud handle uses promotions feature');
@@ -53,6 +55,7 @@ export async function validateOwnerVenueCloud(ROOT, componentSource = fs.readFil
   check(requests.filter(r=>r.method==='POST').at(-1).merchant==='fixture-shop-a','A payload posts only under A');
   const savedA=plain(remote.get('fixture-shop-a'));
   selected='fixture-boutique-b';window.__actualPromoContext();
+  await new Promise(resolve=>setImmediate(resolve));
   check(PR.currentVenue()==='fixture-boutique-b','normal component context switches engine local venue to B');
   check(PR.list().length===0,'B local document does not adopt A rules');
   check(handle.slug()==='fixture-shop-b','same retained cloud handle resolves B after owner venue switch');

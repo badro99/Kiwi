@@ -1288,6 +1288,7 @@ section('Whole-project regressions');
     'promotions-sale-z-browser-test.mjs',
     'promotions-store-contract-test.mjs',
     'promotions-owner-venue-cloud-test.mjs',
+    'promotions-owner-initial-hydration-test.mjs',
     'boutique-promotions-locale-browser-test.mjs',
     'sold-insights-layout-test.mjs',
     'table-refresh-test.js',
