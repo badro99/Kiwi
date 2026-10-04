@@ -9,10 +9,57 @@ const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8')
 let checks = 0;
 const ok = (value, label) => { assert.ok(value, label); checks++; console.log('  ✓ ' + label); };
 
+const focusWrappers = ['.bq-phone-in', '.bq-ean-in', '.kiwi-select-search', '.bqi-scan', '.bqx-scanbox', '.clockin-float-custom'];
+const focusInputs = ['.rf-search', '.jr-search', ...focusWrappers];
+const focusRing = { outline: '3px solid var(--forest,var(--atlas))', 'outline-offset': '2px', 'box-shadow': 'none' };
+
+// Accept reordered/additive selector lists while checking every original class.
+// Later matching base rules must not undo a declaration, including an extra
+// inner-input outline. Explicit theme/scoped overrides are separate contracts.
+function focusContract(source, classes, suffix, expected) {
+  const css = source.replace(/\/\*[\s\S]*?\*\//g, '');
+  const rules = [];
+  for (const [, rawSelector, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const selector = rawSelector.trim().replace(/\s+/g, ' ');
+    const grouped = /^html\.kiwi-native :is\(([^)]+)\)( input:focus-visible|:focus-within)$/.exec(selector);
+    const single = /^html\.kiwi-native (\.[\w-]+)( input:focus-visible|:focus-within)$/.exec(selector);
+    const match = grouped || single;
+    if (!match || match[2] !== suffix) continue;
+    const members = match[1].split(',').map(value => value.trim());
+    const declarations = {};
+    for (const declaration of body.split(';')) {
+      const colon = declaration.indexOf(':');
+      if (colon > 0) declarations[declaration.slice(0, colon).trim()] = declaration.slice(colon + 1).trim().replace(/\s+/g, ' ');
+    }
+    rules.push({ members, declarations });
+  }
+  return classes.every(member => {
+    const declarations = {};
+    for (const rule of rules) if (rule.members.includes(member)) Object.assign(declarations, rule.declarations);
+    return Object.entries(expected).every(([property, value]) => declarations[property] === value);
+  });
+}
+
+function verifyFocusMutations(css) {
+  for (const member of focusWrappers) {
+    const removed = css.replaceAll(member, '.kiwi-test-removed-focus');
+    ok(!focusContract(removed, focusWrappers, ':focus-within', { 'border-color': 'var(--ink-3)' }), 'neutral-border guard rejects missing ' + member);
+    ok(!focusContract(removed, focusWrappers, ':focus-within', focusRing), 'rounded-ring guard rejects missing ' + member);
+  }
+  for (const member of focusInputs) {
+    ok(!focusContract(css.replaceAll(member, '.kiwi-test-removed-focus'), focusInputs, ' input:focus-visible', { outline: 'none' }), 'inner-focus guard rejects missing ' + member);
+    ok(!focusContract(css + '\nhtml.kiwi-native ' + member + ' input:focus-visible{outline:3px solid var(--atlas)}', focusInputs, ' input:focus-visible', { outline: 'none' }), 'inner-focus guard rejects an added outline on ' + member);
+  }
+  ok(!focusContract(css.replaceAll('border-color:var(--ink-3)', 'border-color:var(--atlas)'), focusWrappers, ':focus-within', { 'border-color': 'var(--ink-3)' }), 'neutral-border guard rejects an accented second border');
+  for (const [property, value] of Object.entries(focusRing)) {
+    ok(!focusContract(css + '\nhtml.kiwi-native .bq-phone-in:focus-within{' + property + ':initial}', focusWrappers, ':focus-within', focusRing), 'rounded-ring guard rejects changed ' + property + ' (expected ' + value + ')');
+  }
+}
+
 const runtime = read('app/src/native-runtime.js');
 const runtimeCss = read('app/src/native-runtime.css');
 const posMobile = read('assets/pos-mobile.js');
-ok(runtimeCss.includes(':is(.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan,.bqx-scanbox):focus-within{border-color:var(--ink-3)}'), 'wrapped searches, including stock and intake, have a neutral border under their single accented focus outline');
+ok(focusContract(runtimeCss, focusWrappers, ':focus-within', { 'border-color': 'var(--ink-3)' }), 'wrapped searches, including stock and intake, have a neutral border under their single accented focus outline');
 ok(/\.vx-screen\.is-on::before\{[^}]*position:fixed[^}]*height:var\(--kiwi-safe-top\)[^}]*background:var\(--paper/.test(runtimeCss), 'the workspace backs the real status area while content scrolls');
 ok(/if \(on\) \{[\s\S]{0,400}document\.activeElement[\s\S]{0,200}editing\.blur\(\)/.test(posMobile), 'opening a retail drawer explicitly ends text editing on WKWebView');
 const shell = read('app/src/native-shell.js');
@@ -42,7 +89,8 @@ ok(/is-demo/.test(runtime) && /KiwiEnv[^;]*isReal/.test(runtime), 'demo deletion
 ok(/setAccessoryBarVisible/.test(runtime), 'the WKWebView accessory bar is hidden except on numeric fields');
 ok(/id="rf-search-input"[^>]*autocapitalize="none"/.test(caisse), 'refund search does not autocapitalise');
 ok(/pointer: coarse/.test(caisse), 'refund search does not autofocus on a touch screen');
-ok(runtimeCss.includes(':is(.rf-search,.jr-search,.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan,.bqx-scanbox) input:focus-visible{outline:none}') && runtimeCss.includes(':is(.bq-phone-in,.bq-ean-in,.kiwi-select-search,.bqi-scan,.bqx-scanbox):focus-within{outline:3px solid var(--forest,var(--atlas));outline-offset:2px;box-shadow:none}'), 'refund, journal, customer, scanner, stock, intake and chooser searches draw one rounded ring, not a square one inside it');
+ok(focusContract(runtimeCss, focusInputs, ' input:focus-visible', { outline: 'none' }) && focusContract(runtimeCss, focusWrappers, ':focus-within', focusRing), 'refund, journal, customer, scanner, stock, intake and chooser searches draw one rounded ring, not a square one inside it');
+verifyFocusMutations(runtimeCss);
 
 // 9 · Header strips
 ok(/body\.kiwi-native-team:not\(#kno\)\{padding-top:0!important\}/.test(runtimeCss), 'no empty band above the Team header');
