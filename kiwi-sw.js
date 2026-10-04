@@ -141,7 +141,7 @@ var SHELL = [
   '/assets/demoClock.js?v=4',
   '/assets/dateRange.js?v=51',
   '/assets/mobile-nav.js?v=7',
-  '/assets/liquid-lens.js?v=6',
+  '/assets/liquid-lens.js?v=7',
   '/assets/pages.js?v=11',
   '/assets/help-centre.js?v=5',
   '/assets/account.js?v=28',
@@ -202,7 +202,7 @@ var SHELL = [
      nouveau commerçant par-dessus les données de l'ancien. */
   '/assets/pairing-commit.js?v=2',
   '/assets/identity.js?v=8',
-  '/assets/caisse-link.js?v=11',
+  '/assets/caisse-link.js?v=12',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
   '/assets/idle-lock.js?v=2',
@@ -222,7 +222,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=7',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=33',
+  '/assets/caisse-lang.js?v=34',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/retail-balances.js?v=4',
@@ -239,7 +239,7 @@ var SHELL = [
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=4',
   '/assets/clients-store.js?v=9',
-  '/assets/clients-book.js?v=30',
+  '/assets/clients-book.js?v=31',
   '/assets/clients-directory.js?v=15',
   '/assets/menu-catalog.js?v=25',
   '/assets/stock-identity.js?v=2',

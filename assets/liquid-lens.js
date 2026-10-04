@@ -98,14 +98,14 @@
     /* Resolve aliases on the dark ROOT, before a stale body-light palette can
      * shadow them. Only the nine primary tabs consume these existing colours. */
     'html[data-theme="dark"]{--kw-menu-dark-mint:var(--mint);--kw-menu-dark-ink:var(--ink);' +
-      '--kw-menu-dark-muted:var(--n-500);--kw-menu-dark-surface:var(--surface);' +
+      '--kw-menu-dark-muted:var(--n-500);--kw-menu-dark-paper:var(--paper);--kw-menu-dark-surface:var(--surface);' +
       '--kw-menu-dark-paper-soft:var(--paper-soft);--kw-menu-dark-line:var(--line);}' +
     'html[data-theme="dark"] body.page-menu.design-vexel[data-vexel-mode="light"] [data-menu-root]>.mi-filters>.mi-pill-row{' +
       '--mint:var(--kw-menu-dark-mint);--ink:var(--kw-menu-dark-ink);--n-500:var(--kw-menu-dark-muted);' +
       '--surface:var(--kw-menu-dark-surface);--paper-soft:var(--kw-menu-dark-paper-soft);--line:var(--kw-menu-dark-line);' +
-      '--g-fill:var(--kw-menu-dark-paper-soft);background:var(--kw-menu-dark-paper-soft)!important;}' +
+      '--g-fill:var(--kw-menu-dark-paper);background:var(--kw-menu-dark-paper)!important;}' +
     'html[data-theme="dark"] body.page-menu.design-vexel[data-vexel-mode="light"] [data-menu-root]>.mi-filters>.mi-pill-row>.kw-lens{' +
-      'background:var(--kw-menu-dark-paper-soft)!important;}' +
+      'background:linear-gradient(var(--kw-menu-dark-surface),var(--kw-menu-dark-surface)),var(--kw-menu-dark-paper)!important;}' +
     'html[data-theme="dark"] body.page-menu.design-vexel[data-vexel-mode="light"] [data-menu-root]>.mi-filters>.mi-pill-row>.mi-pill.on{' +
       'color:var(--kw-menu-dark-ink)!important;}' +
     /* the lens replaces the landing tabs\' old static ::after indicator */

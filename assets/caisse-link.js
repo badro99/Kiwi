@@ -417,13 +417,13 @@
     }
   }
   function ensureChip(force) {
-    /* #0147 · the launcher must never sit on an entry, lock or pairing gate
-       ("Change role" already does that job there). A chip placed earlier is
-       actively removed — e.g. after an idle re-lock. `force` is only for the
-       explicit post-onboarding call below, which keeps its historical
-       always-surface behavior. */
+    /* #0147 · native role navigation replaces this launcher. Web force keeps
+       its post-onboarding behavior; ordinary blocked gates remove old chips. */
     var old = document.getElementById('kcl-chip');
-    if (!realMerchant() || (!force && !dashReady())) {
+    var native = document.documentElement.classList.contains('kiwi-native') ||
+      !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' &&
+        window.Capacitor.isNativePlatform());
+    if (native || !realMerchant() || (!force && !dashReady())) {
       if (old && old.parentNode) old.parentNode.removeChild(old);
       return;
     }

@@ -99,6 +99,16 @@ for (const [fr, en, ar] of pairedPinCopy) {
   check(L.tr(fr) === ar, 'Arabic paired staff PIN copy: ' + fr);
   L.set('en');
 }
+const lockToastCopy = 'Terminal verrouillé';
+for (const file of ['pos-dispatch.js', 'pressing-caisse.js']) {
+  const actualSource = fs.readFileSync(path.join(__dirname, '..', 'assets', file), 'utf8');
+  check(actualSource.includes("toast('" + lockToastCopy + "')"), 'lock toast guard targets the actual source call: ' + file);
+}
+for (const [language, expected] of [['fr', lockToastCopy], ['en', 'Terminal locked'], ['ar', 'تم قفل الجهاز']]) {
+  L.set(language);
+  check(L.tr(lockToastCopy) === expected, 'normal terminal lock feedback: ' + language);
+}
+L.set('en');
 /* Real SE Arabic scan view stayed entirely French. Guard the actual rendered
  * literals, including the placeholder and demo/unsupported-camera branches. */
 const scanCopy = [

@@ -29,6 +29,43 @@
   }
   function pointsUnitMarkup() { return '<small data-nolang data-kcb-point-unit>' + esc(pointsUnit()) + '</small>'; }
   function pointsNumberMarkup(n) { return '<bdi data-nolang>' + esc(fmt(n)) + '</bdi>'; }
+  // These values are merchant data, even when their words match the UI dictionary.
+  function dataMarkup(value) { return '<bdi data-nolang>' + esc(value) + '</bdi>'; }
+  function uiMarkup(value) { return '<span>' + esc(value) + '</span>'; }
+  function historyLocale() {
+    var lang;
+    try { lang = window.KiwiCaisseLang && KiwiCaisseLang.get && KiwiCaisseLang.get(); } catch (_) {}
+    lang = String(lang || document.documentElement.lang || 'fr').split('-')[0];
+    return lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR';
+  }
+  function historyDate(value, dateOnly) {
+    var date = new Date(Number(value));
+    if (!Number.isFinite(date.getTime())) return '';
+    return dateOnly ? date.toLocaleDateString(historyLocale())
+      : date.toLocaleString(historyLocale(), { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  }
+  function historyDateMarkup(value, dateOnly) {
+    var stamp = value ? new Date(value).getTime() : NaN;
+    if (!Number.isFinite(stamp)) return uiMarkup(dateOnly ? 'sans échéance' : 'Date inconnue');
+    return '<bdi data-nolang data-kcb-date="' + stamp + '"' + (dateOnly ? ' data-kcb-date-only' : '') + '>' + esc(historyDate(stamp, dateOnly)) + '</bdi>';
+  }
+  function refreshHistoryDates() {
+    Array.prototype.forEach.call(document.querySelectorAll('#kcb-sheet [data-kcb-date]'), function (label) {
+      label.textContent = historyDate(label.getAttribute('data-kcb-date'), label.hasAttribute('data-kcb-date-only'));
+    });
+  }
+  function historyPaymentMarkup(value) {
+    // Persisted till parts use FR keys joined by " + "; server history also
+    // supplies the canonical EN keys. An unrecognised value stays one opaque datum.
+    var labels = { cash:'Espèces', 'espèces':'Espèces', card:'Carte', carte:'Carte',
+      credit:'Avoir', avoir:'Avoir', transfer:'Virement / Versement', virement:'Virement / Versement',
+      cheque:'Chèque', 'chèque':'Chèque', wallet:'Portefeuille', delivery:'Livraison', livraison:'Livraison' };
+    if (!value) return uiMarkup('Mode non renseigné');
+    var parts = String(value).split(' + ');
+    return parts.every(function (part) { return Object.prototype.hasOwnProperty.call(labels, part.toLowerCase()); })
+      ? parts.map(function (part) { return uiMarkup(labels[part.toLowerCase()]); }).join(' + ')
+      : dataMarkup(value);
+  }
   function refreshPointsUnits() {
     Array.prototype.forEach.call(document.querySelectorAll('#kcb-root [data-kcb-point-unit], #kcb-sheet [data-kcb-point-unit]'), function (label) { label.textContent = pointsUnit(); });
   }
@@ -362,19 +399,17 @@
         ? '<div class="kcb-info">' + credits.map(function (credit) {
             var issued = (credit.events || []).filter(function (event) { return event.action === 'issue'; })[0] || {};
             var products = Array.isArray(issued.lines) && issued.lines.length
-              ? issued.lines.map(function (line) { return (line.qty || 1) + '× ' + (line.name || 'Article'); }).join(' · ')
-              : (credit.reason || 'Retour');
+              ? issued.lines.map(function (line) { return dataMarkup(line.qty || 1) + '× ' + (line.name ? dataMarkup(line.name) : uiMarkup('Article acheté')); }).join(' · ')
+              : (credit.reason ? dataMarkup(credit.reason) : uiMarkup('Retour produit'));
             var movements = (credit.events || []).filter(function (event) { return event.action !== 'issue'; }).map(function (event) {
-              return '<small style="display:block;margin-top:4px">' + esc(event.action === 'redeem' ? 'Utilisé' : event.action === 'cancel' ? 'Annulé' : event.action)
-                + ' · ' + fmt(Number(event.amountCents || 0) / 100) + ' MAD · ' + esc(event.actor || 'Caisse')
-                + ' · solde ' + fmt(Number(event.balanceAfterCents || 0) / 100) + ' MAD</small>';
+              return '<small data-kcb-credit-movement style="display:block;margin-top:4px">' + (event.action === 'redeem' ? uiMarkup('Utilisé') : event.action === 'cancel' ? uiMarkup('Annulé') : dataMarkup(event.action))
+                + ' · ' + dataMarkup(fmt(Number(event.amountCents || 0) / 100) + ' MAD') + ' · ' + (event.actor ? dataMarkup(event.actor) : uiMarkup('Caisse du magasin'))
+                + ' · ' + uiMarkup('solde') + ' ' + dataMarkup(fmt(Number(event.balanceAfterCents || 0) / 100) + ' MAD') + '</small>';
             }).join('');
-            var issuedAt = credit.createdAt ? new Date(credit.createdAt).toLocaleString('fr-FR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Date inconnue';
-            var expiry = credit.expiresAt ? new Date(credit.expiresAt).toLocaleDateString('fr-FR') : 'sans échéance';
-            var used = credit.status === 'active' ? '' : ' · ' + (credit.status === 'cancelled' ? 'annulé' : 'utilisé');
-            return '<div class="kcb-inforow"><span class="k">' + esc(credit.code) + '<small style="display:block;margin-top:3px">' + esc(issuedAt) + ' · expire ' + esc(expiry) + '</small></span>'
-              + '<span class="v"><b>' + fmt(Number(credit.amountCents || 0) / 100) + ' MAD · reste ' + fmt(Number(credit.balanceCents || 0) / 100) + ' MAD' + esc(used) + '</b>'
-              + '<small style="display:block;margin-top:3px">Vente ' + esc(credit.originalRef || credit.originalSaleId || '·') + ' · ' + esc(products) + ' · ' + esc(issued.actor || credit.issuedBy || 'Caisse') + '</small>' + movements + '</span></div>';
+            var used = credit.status === 'active' ? '' : ' · ' + uiMarkup(credit.status === 'cancelled' ? 'annulé' : 'utilisé');
+            return '<div class="kcb-inforow" data-kcb-credit-row><span class="k">' + dataMarkup(credit.code) + '<small style="display:block;margin-top:3px">' + historyDateMarkup(credit.createdAt) + ' · ' + uiMarkup('expire') + ' ' + historyDateMarkup(credit.expiresAt, true) + '</small></span>'
+              + '<span class="v"><b>' + dataMarkup(fmt(Number(credit.amountCents || 0) / 100) + ' MAD') + ' · ' + uiMarkup('reste') + ' ' + dataMarkup(fmt(Number(credit.balanceCents || 0) / 100) + ' MAD') + used + '</b>'
+              + '<small style="display:block;margin-top:3px">' + uiMarkup('Vente') + ' ' + dataMarkup(credit.originalRef || credit.originalSaleId || '·') + ' · ' + products + ' · ' + (issued.actor || credit.issuedBy ? dataMarkup(issued.actor || credit.issuedBy) : uiMarkup('Caisse du magasin')) + '</small>' + movements + '</span></div>';
           }).join('') + '</div>'
         : '<div class="kcb-empty" style="min-height:70px"><b>Aucun avoir</b><div>Les crédits boutique émis à ce client apparaîtront ici.</div></div>');
     }
@@ -617,7 +652,7 @@
         var ptsTxt = cfg.model === 'amount' ? (pointsNumberMarkup(c.points) + pointsUnitMarkup()) : ((c.stamps || 0) + '<small>/ ' + target + '</small>');
         return '<div class="kcb-row" data-id="' + esc(c.id) + '" tabindex="0" role="button">' +
           '<div class="kcb-who"><div class="kcb-av">' + esc(initials(c.name)) + '</div>' +
-            '<div style="min-width:0"><div class="kcb-nm">' + esc(c.name || 'Sans nom') +
+            '<div style="min-width:0"><div class="kcb-nm">' + (c.name ? dataMarkup(c.name) : uiMarkup('Sans nom')) +
               (credits[c.id] ? '<span class="kcb-credit">avoir ' + fmt(credits[c.id]) + ' MAD</span>' : '') + '</div>' +
             '<div class="kcb-ph">' + esc(c.phone || '·') + '</div></div></div>' +
           '<div class="kcb-c-seg"><span class="kcb-seg ' + s + '">' + SEG_LBL[s] + '</span></div>' +
@@ -681,7 +716,7 @@
       '<div class="kcb-field"><label>Besoins particuliers</label><input id="kcb-f-access" value="' + esc(h.accessibilityNeeds || '') + '" placeholder="Mobilité, lit bébé, accessibilité…" autocomplete="off"></div>' : '';
     sheet(
       '<h3>' + (editing ? (hotel ? 'Modifier le profil' : 'Modifier le client') : (hotel ? 'Nouveau profil client' : 'Nouveau client')) + '</h3>' +
-      '<div class="kcb-sub">' + (editing ? esc(c.name || '') : (hotel ? 'Identité, préférences et attentions utiles pour le prochain séjour.' : 'Renseignez un maximum d’informations · elles nourrissent la fidélité et le marketing.')) + '</div>' +
+      '<div class="kcb-sub">' + (editing ? dataMarkup(c.name || '') : (hotel ? 'Identité, préférences et attentions utiles pour le prochain séjour.' : 'Renseignez un maximum d’informations · elles nourrissent la fidélité et le marketing.')) + '</div>' +
       '<div class="kcb-field"><label>Nom complet</label><input id="kcb-f-name" value="' + esc(c.name || '') + '" placeholder="Prénom Nom" autocomplete="off"></div>' +
       '<div class="kcb-grid2">' +
         '<div class="kcb-field"><label>Téléphone</label><input id="kcb-f-phone" inputmode="tel" autocomplete="tel" value="' + esc(c.phone || '') + '" placeholder="06… / +33… / +49…"></div>' +
@@ -791,7 +826,7 @@
     var returns = localReturns();
     var historyBlock = '<div class="kcb-section">Historique des achats</div>' + (purchaseHistory.length
       ? '<div class="kcb-info">' + purchaseHistory.map(function (row) {
-          var when = row.ts ? new Date(row.ts).toLocaleString('fr-FR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Date inconnue';
+          var when = historyDateMarkup(row.ts);
           var rets = row.ref ? returns.filter(function (r) { return String(r.saleRef) === String(row.ref); }) : [];
           var back = {};
           rets.forEach(function (r) { (r.items || []).forEach(function (it) { back[it.name] = (back[it.name] || 0) + (Number(it.qty) || 1); }); });
@@ -799,23 +834,23 @@
             ? row.items.map(function (it) {
                 var qty = it.qty || 1, gone = Math.min(qty, back[it.name] || 0);
                 if (gone) back[it.name] -= gone;
-                var label = esc(qty + '× ' + (it.name || 'Article'));
+                var label = dataMarkup(qty) + '× ' + (it.name ? dataMarkup(it.name) : uiMarkup('Article acheté'));
                 return gone >= qty ? '<span class="kcb-struck">' + label + '</span>' : label;
               }).join(' · ')
-            : esc(row.ref || 'Achat enregistré');
+            : (row.ref ? dataMarkup(row.ref) : uiMarkup('Achat enregistré'));
           var retLine = rets.map(function (r) {
-            var what = (r.items || []).map(function (it) { return (it.qty || 1) + '× ' + (it.name || 'Article'); }).join(' · ');
+            var what = (r.items || []).map(function (it) { return dataMarkup(it.qty || 1) + '× ' + (it.name ? dataMarkup(it.name) : uiMarkup('Article acheté')); }).join(' · ');
             var kind = String(r.kind || '');
             var verb = kind === 'echange' ? 'Échangé' : 'Retourné';
-            var how = kind.indexOf('avoir') === 0 ? 'avoir ' + (r.reference || '') : (kind.indexOf('refund') === 0 ? 'remboursé' : '');
-            return '<span class="kcb-ret">' + verb + ' · ' + esc(what) + (how.trim() ? ' · ' + esc(how.trim()) : '') + ' · ' + fmt(r.amount || 0) + ' MAD</span>';
+            var how = kind.indexOf('avoir') === 0 ? uiMarkup('avoir') + (r.reference ? ' ' + dataMarkup(r.reference) : '') : (kind.indexOf('refund') === 0 ? uiMarkup('remboursé') : '');
+            return '<span class="kcb-ret">' + uiMarkup(verb) + ' · ' + what + (how ? ' · ' + how : '') + ' · ' + dataMarkup(fmt(r.amount || 0) + ' MAD') + '</span>';
           }).join('');
-          return '<div class="kcb-inforow"><span class="k">' + esc(when) + '<small style="display:block;margin-top:3px">' + esc(row.method || 'Mode non renseigné') + '</small></span><span class="v"><b>' + items + '</b><small style="display:block;margin-top:3px">' + esc(row.ref ? 'Ticket ' + row.ref + ' · ' : '') + fmt(row.amount || 0) + ' MAD</small>' + retLine + '</span></div>';
+          return '<div class="kcb-inforow" data-kcb-history-row><span class="k">' + when + '<small data-kcb-method style="display:block;margin-top:3px">' + historyPaymentMarkup(row.method) + '</small></span><span class="v"><b>' + items + '</b><small style="display:block;margin-top:3px">' + (row.ref ? uiMarkup('Ticket d’achat') + ' ' + dataMarkup(row.ref) + ' · ' : '') + dataMarkup(fmt(row.amount || 0) + ' MAD') + '</small>' + retLine + '</span></div>';
         }).join('') + '</div>'
       : '<div class="kcb-empty" style="min-height:90px"><b>Aucun détail d’achat enregistré</b><div>Les prochains tickets attachés à ce client apparaîtront ici.</div></div>');
     sheet(
       '<div class="kcb-dhead"><div class="kcb-av">' + esc(initials(c.name)) + '</div>' +
-        '<div style="flex:1"><h3 style="margin:0">' + esc(c.name || 'Sans nom') + '</h3>' +
+        '<div style="flex:1"><h3 style="margin:0">' + (c.name ? dataMarkup(c.name) : uiMarkup('Sans nom')) + '</h3>' +
         '<div class="kcb-sub" style="margin:2px 0 0">' + esc(c.phone || '·') + ' · <span class="kcb-seg ' + seg + '">' + SEG_LBL[seg] + '</span></div></div>' +
         '<button class="kcb-x" id="kcb-d-close" aria-label="Fermer">' + ICON.close + '</button></div>' +
       /* La phrase fixe dans son propre nœud : la récompense qui suit est le texte
@@ -992,7 +1027,7 @@
     });
     if (KC.subscribe) KC.subscribe(function () { ensureChip(); refreshOpen(); });
     if (KC.subscribeConfig) KC.subscribeConfig(function () { refreshOpen(); }); // same-tab programme edit
-    if (window.KiwiCaisseLang && KiwiCaisseLang.subscribe) KiwiCaisseLang.subscribe(refreshPointsUnits);
+    if (window.KiwiCaisseLang && KiwiCaisseLang.subscribe) KiwiCaisseLang.subscribe(function () { refreshPointsUnits(); refreshHistoryDates(); });
     // Verticals mount lazily on unlock → watch the DOM and (re)inject the entry.
     try { new MutationObserver(scheduleWire).observe(document.body, { childList: true, subtree: true }); } catch (_) {}
     scheduleWire();

@@ -112,12 +112,12 @@
     "sha": "1014ed01ce090f7b"
   },
   "assets/caisse-lang.js": {
-    "v": "33",
-    "sha": "094efd3924221098"
+    "v": "34",
+    "sha": "ba621323a5217bd1"
   },
   "assets/caisse-link.js": {
-    "v": "11",
-    "sha": "c66db459f9bd26a5"
+    "v": "12",
+    "sha": "331bab74bd1ec0f6"
   },
   "assets/caisse-menu-availability.js": {
     "v": "6",
@@ -180,8 +180,8 @@
     "sha": "ec5fa6bd71818a12"
   },
   "assets/clients-book.js": {
-    "v": "30",
-    "sha": "17a65121328941e4"
+    "v": "31",
+    "sha": "d9a5e25abed4a343"
   },
   "assets/clients-directory.js": {
     "v": "15",
@@ -444,8 +444,8 @@
     "sha": "e6199b1d6a79b435"
   },
   "assets/liquid-lens.js": {
-    "v": "6",
-    "sha": "7eb69dafd45a872b"
+    "v": "7",
+    "sha": "64aa6e94df3ea11b"
   },
   "assets/live-link.js": {
     "v": "59",
