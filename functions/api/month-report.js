@@ -37,15 +37,16 @@ export async function manifest(env, merchant, from, to, asOf) {
     const cols = (await env.DB.prepare(`PRAGMA table_info(${spec.table})`).all()).results || [];
     if (!cols.length) { sources[key] = { status: 'not-recorded', count: null }; continue; }
     const names = new Set(cols.map(c => c.name));
-    if (!names.has('merchant') || !names.has(spec.time)) throw new Error('source-schema-unavailable');
+    if (!names.has('merchant')) throw new Error('source-schema-unavailable');
     const selected = spec.columns.split(' ').filter(c => names.has(c));
-    const where = `merchant = ? AND (${spec.time} < ? OR ${spec.time} IS NULL)` + (spec.history ? '' : ` AND (${spec.time} >= ? OR ${spec.time} IS NULL)`);
-    const values = spec.history ? [merchant, (spec.allTime ? asOf + 1 : Math.min(to, asOf + 1))] : [merchant, (spec.allTime ? asOf + 1 : Math.min(to, asOf + 1)), from];
+    const timeKnown = names.has(spec.time);
+    const where = 'merchant = ?' + (timeKnown ? ` AND (${spec.time} < ? OR ${spec.time} IS NULL)` + (spec.history ? '' : ` AND (${spec.time} >= ? OR ${spec.time} IS NULL)`) : '');
+    const values = !timeKnown ? [merchant] : spec.history ? [merchant, (spec.allTime ? asOf + 1 : Math.min(to, asOf + 1))] : [merchant, (spec.allTime ? asOf + 1 : Math.min(to, asOf + 1)), from];
     // Detect concurrent changes at the end instead of claiming a frozen SQL
     // snapshot across paginated requests. rowid fences exclude later inserts.
     const sums = ['amount_cents', 'amount', 'void_ts', 'updated_ts', 'qty_milli', 'total_cents', 'counted_cents', 'expected_cents', 'gap_cents'].filter(c => names.has(c));
-    const stat = await env.DB.prepare(`SELECT COUNT(*) AS count, COALESCE(MAX(rowid),0) AS maxRowid, COALESCE(SUM(rowid),0) AS rowSum, MAX(${spec.time}) AS lastTs${sums.map(c => `, TOTAL(${c}) AS ${c}`).join('')} FROM ${spec.table} WHERE ${where}`).bind(...values).first();
-    sources[key] = { status: 'available', ...stat, columns: selected, missingColumns: spec.columns.split(' ').filter(c => !names.has(c)) };
+    const stat = await env.DB.prepare(`SELECT COUNT(*) AS count, COALESCE(MAX(rowid),0) AS maxRowid, COALESCE(SUM(rowid),0) AS rowSum, ${timeKnown ? `MAX(${spec.time})` : 'NULL'} AS lastTs${sums.map(c => `, TOTAL(${c}) AS ${c}`).join('')} FROM ${spec.table} WHERE ${where}`).bind(...values).first();
+    sources[key] = { status: 'available', ...stat, columns: selected, periodStatus: timeKnown ? 'dated' : 'unassignable', missingColumns: spec.columns.split(' ').filter(c => !names.has(c)) };
   }
   return sources;
 }
@@ -74,8 +75,9 @@ export async function onRequestGet({ request, env }) {
       if (!cols.length) return json({ error: 'source-not-recorded' }, 409);
       const names = new Set(cols.map(c => c.name));
       const selected = spec.columns.split(' ').filter(c => names.has(c));
-      const where = `merchant = ? AND (${spec.time} < ? OR ${spec.time} IS NULL)` + (spec.history ? '' : ` AND (${spec.time} >= ? OR ${spec.time} IS NULL)`);
-      const args = spec.history ? [merchant, (spec.allTime ? asOf + 1 : Math.min(to, asOf + 1))] : [merchant, (spec.allTime ? asOf + 1 : Math.min(to, asOf + 1)), from];
+      const timeKnown = names.has(spec.time);
+    const where = 'merchant = ?' + (timeKnown ? ` AND (${spec.time} < ? OR ${spec.time} IS NULL)` + (spec.history ? '' : ` AND (${spec.time} >= ? OR ${spec.time} IS NULL)`) : '');
+      const args = !timeKnown ? [merchant] : spec.history ? [merchant, (spec.allTime ? asOf + 1 : Math.min(to, asOf + 1))] : [merchant, (spec.allTime ? asOf + 1 : Math.min(to, asOf + 1)), from];
       const result = await env.DB.prepare(`SELECT rowid AS _rowid, ${selected.join(',')} FROM ${spec.table} WHERE ${where} AND rowid > ? AND rowid <= ? ORDER BY rowid LIMIT 501`).bind(...args, cursor, fence).all();
       const rows = result.results || [], more = rows.length > 500;
       if (more) rows.pop();

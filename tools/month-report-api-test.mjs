@@ -27,6 +27,7 @@ check((await get('&asOf=not-a-time')).status===400,'invalid snapshot rejected');
 response=await onRequestGet({request:new Request('https://synthetic.invalid/api/month-report?merchant='+d.merchant+'&month=9999-12',{headers:{Cookie:cookie}}),env});check(response.status===400,'future accounting month rejected');
 db.exec('DROP TABLE inventory_counts');data=await (await get()).json();check(data.sources.counts.status==='not-recorded'&&data.sources.counts.count===null,'missing ledger not represented as zero');
 db.prepare('INSERT INTO sales (id,merchant,ts) VALUES(?,?,NULL)').run('SYN-UNDATED',d.merchant);data=await (await get()).json();check(data.sources.sales.count===1108,'undated source preserved for unassignable annex');
+db.exec('ALTER TABLE sales DROP COLUMN ts');data=await (await get()).json();check(data.sources.sales.count===1108&&data.sources.sales.periodStatus==='unassignable'&&data.sources.sales.missingColumns.includes('ts'),'missing timestamp preserves source records for an unassignable annex, not zero or an aborted dossier');
 check(queries.every(q=>/^(SELECT|PRAGMA)/.test(q)),'generation only performed reads including auth');
 const src=fs.readFileSync(ROOT+'/functions/api/store.js','utf8');check(src.includes("'discountpolicy', 'monthreport'")&&src.includes('validateMonthReportPolicy(clean.value, mine'),'configuration separately owner-gated and historical periods validated');
 db.close();console.log(`✓ monthly owner-scoped read-only API (${checks} controls)`);
