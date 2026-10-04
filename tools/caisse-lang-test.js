@@ -582,5 +582,62 @@ for(const selectedText of ['Générique (ESC/POS)','Epson (TM-T88)','Printer · 
     check(aria===prefix+': '+selectedText,language+' actual model aria translates only anchored prefix and preserves complete selected text: '+selectedText);
   }
 }
+// #0147: actual paired staff renderer and full public locale apply/set path.
+// Both footer branches, roundtrip and late render; no feed/submit/auth callbacks.
+{
+  const ROOT=path.join(__dirname, '..');
+  const pairing=fs.readFileSync(ROOT+'/assets/caisse-pairing.js','utf8');
+  const fr='Aucun caissier configuré. Utilisez votre code Propriétaire ou Manager pour ouvrir la caisse.';
+  const en='No cashier configured. Use your Owner or Manager code to open the register.';
+  const ar='لم يتم إعداد أي أمين صندوق. استخدم رمز المالك أو المدير لفتح الصندوق.';
+  const bounded=(start,end)=>{const a=pairing.indexOf(start),b=pairing.indexOf(end,a);if(a<0||b<=a)throw Error('actual renderer bounds changed');return pairing.slice(a,b);};
+  const render=bounded('  function showPinPad(venue) {','  function showPinLoadError(venue) {');
+  const dots=bounded('  function pinDotsHtml() {','  function renderPinDots() {');
+  const key=pairing.split('\n').find(line=>line.startsWith('  function keyP(n)'));
+  const escape=pairing.split('\n').find(line=>line.startsWith('  function esc(x)'));
+  const decode=s=>s.replace(/&(amp|lt|gt|quot|#39);/g,(_,v)=>({amp:'&',lt:'<',gt:'>',quot:'"','#39':"'"})[v]);
+  for(const configured of [false,true]){
+    const stored=new Map(),ids=new Map();
+    const element=()=>{
+      const attrs=new Map();
+      const node={nodeType:1,tagName:'DIV',style:{},dataset:{},childNodes:[],children:[],attributes:[],parentElement:null,
+        classList:{add(){},remove(){},toggle(){},contains:()=>false},
+        setAttribute(k,v){attrs.set(k,String(v));this.attributes=[...attrs].map(([name,value])=>({name,value}));},
+        getAttribute:k=>attrs.get(k)??null,hasAttribute:k=>attrs.has(k),removeAttribute:k=>attrs.delete(k),
+        appendChild(n){n.parentElement=this;this.children.push(n);this.childNodes.push(n);if(n.id)ids.set(n.id,n);},
+        insertBefore(){},addEventListener(){},querySelector:()=>null,querySelectorAll:()=>[]};
+      Object.defineProperty(node,'innerHTML',{get(){return this.raw||'';},set(html){
+        this.raw=html;this.childNodes=[];this.children=[];
+        for(const m of html.matchAll(/<div class="(pin-greet|pin-prompt|pin-foot)">([^<]*)<\/div>/g)){
+          const leaf=element();leaf.className=m[1];leaf.parentElement=this;
+          const text={nodeType:3,nodeValue:decode(m[2]),parentElement:leaf};leaf.childNodes=[text];this.children.push(leaf);this.childNodes.push(leaf);
+        }
+      }});return node;
+    };
+    const body=element();
+    const document={readyState:'complete',documentElement:element(),body,head:element(),createElement:element,
+      getElementById:k=>ids.get(k)||null,querySelector:()=>null,querySelectorAll:()=>[],addEventListener(){},
+      createTreeWalker(root){const nodes=[];const visit=n=>{for(const c of n.childNodes||[]){nodes.push(c);visit(c);}};visit(root);let at=0;return{nextNode:()=>nodes[at++]||null};}};
+    const localStorage={getItem:k=>stored.get(k)??null,setItem:(k,v)=>stored.set(k,String(v)),removeItem:k=>stored.delete(k)};
+    const window={localStorage};
+    const context=vm.createContext({document,window,localStorage,console,NodeFilter:{SHOW_TEXT:4,SHOW_ELEMENT:1},
+      MutationObserver:function(){this.observe=()=>{};this.disconnect=()=>{};},setTimeout:()=>0,clearTimeout(){},requestAnimationFrame:()=>0});
+    vm.runInContext(source,context);
+    const L=window.KiwiCaisseLang,merchant='Amira Boutique <&> متجر';
+    vm.runInContext(escape+'\n'+key+'\n'+dots+'\n'+render+'\nshowPinPad(venue);',Object.assign(context,{venue:{name:merchant},pinList:configured?[{role:'cashier'}]:[],pinBuf:'',injectCss(){},hidePad(){},hideNativePin(){},renderPinDots(){}}));
+    const gate=ids.get('cp-pin-screen');
+    const leaf=klass=>gate.children.find(n=>n.className===klass).childNodes[0];
+    const texts={fr:configured?'Code personnel géré depuis votre tableau de bord Kiwi':fr,en:configured?'Personal code managed from your Kiwi dashboard':en,ar:configured?'يُدار الرمز الشخصي من لوحة التحكم في كيوي':ar};
+    for(const lang of ['fr','en','ar','fr','ar']){
+      L.set(lang);L.apply(gate);
+      check(leaf('pin-foot').nodeValue===texts[lang],(configured?'configured':'no-cashier')+': public set/apply exact '+lang+' footer');
+      check(leaf('pin-greet').nodeValue===merchant,(configured?'configured':'no-cashier')+': merchant markup/Arabic bytes survive '+lang);
+      check(gate.getAttribute('aria-label')==={fr:'Code personnel',en:'Personal code',ar:'الرمز الشخصي'}[lang],(configured?'configured':'no-cashier')+': actual gate aria translates '+lang);
+    }
+    vm.runInContext('showPinPad(venue);',context);L.apply(gate);
+    check(leaf('pin-foot').nodeValue===texts.ar,(configured?'configured':'no-cashier')+': late real gate re-render translates in selected Arabic');
+    check(gate.raw.includes('Amira Boutique &lt;&amp;&gt; متجر'),(configured?'configured':'no-cashier')+': actual renderer escapes merchant markup');
+  }
+}
 if (failed) { console.error(`\n✗ ${failed} vérification(s) de langue en échec.`); process.exit(1); }
 console.log(`\n✓ ${ran} règles de langue vérifiées (${enKeys.length} phrases × 2 langues).`);

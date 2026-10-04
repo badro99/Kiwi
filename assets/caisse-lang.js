@@ -1104,6 +1104,7 @@
       'Bonjour,': ['Hello,', 'مرحباً،'],
       "CODE D'ACCÈS · 4 CHIFFRES": ['ACCESS CODE · 4 DIGITS', 'رمز الدخول · 4 أرقام'],
       'CODE PERSONNEL · 4 CHIFFRES': ['PERSONAL CODE · 4 DIGITS', 'الرمز الشخصي · 4 أرقام'],
+      'Aucun caissier configuré. Utilisez votre code Propriétaire ou Manager pour ouvrir la caisse.': ['No cashier configured. Use your Owner or Manager code to open the register.', 'لم يتم إعداد أي أمين صندوق. استخدم رمز المالك أو المدير لفتح الصندوق.'],
       'Code personnel géré depuis votre tableau de bord Kiwi': ['Personal code managed from your Kiwi dashboard', 'يُدار الرمز الشخصي من لوحة التحكم في كيوي'],
       'Code personnel': ['Personal code', 'الرمز الشخصي'],
       'Terminal verrouillé': ['Terminal locked', 'تم قفل الجهاز'],
