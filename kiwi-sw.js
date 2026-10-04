@@ -175,8 +175,8 @@ var SHELL = [
   '/assets/report.js?v=5',
   '/assets/day-report-dash.js?v=22',
   '/assets/day-report-export.js?v=10',
-  '/assets/month-report.js?v=8',
-  '/assets/month-report-pdf.js?v=4',
+  '/assets/month-report.js?v=9',
+  '/assets/month-report-pdf.js?v=5',
   '/assets/month-report-ui.js?v=3',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.

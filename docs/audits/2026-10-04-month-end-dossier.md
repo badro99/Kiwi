@@ -22,7 +22,7 @@ Every coverage percentage states its denominator. Sales coverage means recorded 
 
 ## Verification
 
-- Pure engine: **47 controls**, including centime allocation, mixed dated VAT, frozen zero VAT, original refunds/voids, duplicate settlements, four-decimal costs, missing data, legacy cash archives, invoice gaps and Morocco/Ramadan business-day boundaries.
+- Pure engine: **48 controls**, including centime allocation, mixed dated VAT, frozen zero VAT, original refunds/voids, duplicate settlements, four-decimal costs, missing data, legacy cash archives, invoice gaps and Morocco/Ramadan business-day boundaries.
 - Actual signed-session API with an in-memory SQLite database: **21 controls**, unauthorized/till/cross-establishment denial, read-only queries, all 1,107 records across three pages, absent ledgers and unassignable timestamps.
 - Real Chrome rendering and actual downloaded PDF: **1,166 controls**; French/English/Arabic at 360, 390, 768 and 1,440 px; daily composer regression; all source pages reread; changed-row failure; source failure; merchant-change/cancel guard after rendering.
 - Downloaded synthetic dossier: **219 pages**, **1,107 original sales**, every original sale ID found in extracted text. Required notice, A4 pagination, running/table headers, final page number, known/missing values and canonical cutoff dates verified. Cover, interior Arabic text and last-page render inspected. Fixtures are synthetic only; no production financial records, owner credentials or PINs are committed.
