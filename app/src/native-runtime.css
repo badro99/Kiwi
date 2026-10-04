@@ -65,6 +65,9 @@ html.kiwi-native .clockin-float-chips button{min-height:44px;font-size:calc(14px
 html.kiwi-native .clockin-btn{min-height:56px;font-size:calc(18px * var(--type-scale,1))}
 html.kiwi-native :is(.clockin-role,.clockin-date,.clockin-tagline,.clockin-float-label,.clockin-foot){color:rgba(247,245,240,.76)}
 html.kiwi-native :is(.pin-screen,.clockin-screen) :focus-visible{outline-color:#7DF2B0}
+/* Opening keeps its dark gradient in both OS appearances. The rounded amount
+   wrapper owns focus-within, so the input's focus-visible gate rule misses it. */
+html.kiwi-native .clockin-screen .clockin-float-custom:focus-within{outline-color:var(--mint)}
 
 .kiwi-native-tabbar{display:none}
 html.kiwi-native body.kiwi-native-hosted .kiwi-native-tabbar{display:none!important}

@@ -58,14 +58,44 @@ function paintedFocusRing(bytes, state) {
   const png=decodeScreenshot(bytes),r=state.bounds,extent=state.offset+state.width;
   assert.ok(r.x-extent-2>=0 && r.y-extent-2>=0 && r.x+r.width+extent+2<png.width && r.y+r.height+extent+2<png.height,'Whole actual opening-float ring must be inside the original frame');
   const sample=(x,y)=>{const i=(Math.round(y)*png.width+Math.round(x))*png.channels;return [...png.pixels.subarray(i,i+3)];};
-  let count=0,foreground;
+  let count=0;
   for(let y=Math.floor(r.y-extent);y<Math.ceil(r.y+r.height+extent);y++) for(let x=Math.floor(r.x-extent);x<Math.ceil(r.x+r.width+extent);x++) {
     if(x>=r.x && x<=r.x+r.width && y>=r.y && y<=r.y+r.height)continue;
     const colour=sample(x,y);
-    if(colour.reduce((sum,value,i)=>sum+(value-state.colour[i])**2,0)<=12){count++;foreground=colour;}
+    if(colour.reduce((sum,value,i)=>sum+(value-state.colour[i])**2,0)<=12)count++;
   }
-  const background=sample(r.x+r.width/2,r.y-extent-2);
-  return {count,foreground,background,contrast:foreground?pixelContrast(foreground,background):0};
+  // Opening remains a dark, nonuniform gradient even with a light OS theme.
+  // Its darker top centre can pass while the brighter side neighbours fail.
+  // Read actual ring ink and its outside neighbour along every straight edge;
+  // exclude rounded corners and use the worst painted contrast, never an
+  // assumed theme surface or one convenient centre pixel.
+  const distance=colour=>colour.reduce((sum,value,i)=>sum+(value-state.colour[i])**2,0);
+  const edges={};
+  for(const edge of ['top','right','bottom','left']) {
+    const horizontal=edge==='top'||edge==='bottom';
+    const length=horizontal?r.width:r.height,inset=Math.min(state.radius+2,length/2);
+    const measurements=[];
+    for(const fraction of [0,.25,.5,.75,1]) {
+      const along=inset+(length-2*inset)*fraction;
+      const at=outward=>edge==='top'?[r.x+along,r.y-outward]
+        :edge==='right'?[r.x+r.width+outward,r.y+along]
+        :edge==='bottom'?[r.x+along,r.y+r.height+outward]
+        :[r.x-outward,r.y+along];
+      let ink,ringPoint;
+      for(let outward=state.offset+.5;outward<extent;outward+=.5) {
+        const point=at(outward),colour=sample(...point);
+        // Fractional bottom-edge rasterization can shift mint by a few RGB
+        // values. Still measure that decoded ink, not the declared CSS colour.
+        if(distance(colour)<=64){ink=colour;ringPoint=point.map(Math.round);break;}
+      }
+      assert.ok(ink,`Actual opening-float ${edge} ring ink required`);
+      const outsidePoint=at(extent+2).map(Math.round),background=sample(...outsidePoint);
+      measurements.push({foreground:ink,background,ringPoint,outsidePoint,contrast:pixelContrast(ink,background)});
+    }
+    edges[edge]=measurements.reduce((worst,measurement)=>measurement.contrast<worst.contrast?measurement:worst);
+  }
+  const worst=Object.values(edges).reduce((a,b)=>a.contrast<b.contrast?a:b);
+  return {count,foreground:worst.foreground,background:worst.background,contrast:worst.contrast,edges};
 }
 let browser, checks = 0;
 const check = (value, label) => { checks++; if (!value) { failures.push(label); console.error('✗ ' + label); } };
@@ -370,6 +400,8 @@ try {
       await page.evaluate((lang,theme)=>{
         document.documentElement.classList.add('kiwi-native');
         document.documentElement.setAttribute('data-caisse-theme',theme);
+        document.documentElement.setAttribute('data-theme',theme);
+        document.documentElement.setAttribute('data-vexel-mode',theme);
         document.documentElement.style.setProperty('--kiwi-host-safe-top','20px');
         window.KiwiCaisseLang.set(lang);
       },lang,theme);
@@ -400,6 +432,7 @@ try {
         const state=await page.$eval('#bqci-input',input=>{
           const inner=getComputedStyle(input),owner=input.parentElement,css=getComputedStyle(owner),r=owner.getBoundingClientRect();
           return {focused:document.activeElement===input && input.matches(':focus-visible'),inner:inner.outlineStyle,
+            gateBackground:getComputedStyle(input.closest('#bq-clockin')).backgroundImage,
             style:css.outlineStyle,width:parseFloat(css.outlineWidth),offset:parseFloat(css.outlineOffset),radius:parseFloat(css.borderRadius),
             border:css.borderColor,outline:css.outlineColor,colour:(css.outlineColor.match(/[\d.]+/g)||[]).slice(0,3).map(Number),shadow:css.boxShadow,
             bounds:{x:r.x,y:r.y,width:r.width,height:r.height},value:input.value,expanded:document.querySelector('[aria-controls="bqci-custom"]').getAttribute('aria-expanded')};
@@ -407,7 +440,7 @@ try {
         const label=`${device} ${lang} ${theme} opening float height=${height}`;
         check(state.focused && state.expanded==='true',label+': real Other tap exposes the focused editable amount');
         check(state.inner==='none',label+': no square inner outline '+JSON.stringify(state));
-        check(state.style==='solid' && state.width>=3 && state.radius>=10,label+': one rounded outer focus ring '+JSON.stringify(state));
+        check(state.style==='solid' && state.width>=3 && state.radius>=10 && state.gateBackground.includes('radial-gradient('),label+': one rounded outer focus ring on the actual forced-dark opening gradient '+JSON.stringify(state));
         check(state.border!==state.outline && state.shadow==='none',label+': neutral border and no duplicate accent');
         const bytes=await page.screenshot({path:path.join(shots,`${device}-${lang}-${theme}-opening-float-${height}.png`),captureBeyondViewport:false});
         let paint;
