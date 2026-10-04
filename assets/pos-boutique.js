@@ -1308,7 +1308,7 @@
           <button class="bq-nav-it" data-bq-view="inventaire"><i data-lucide="package"></i><span>Inventaire</span><b class="bq-nav-badge" id="bq-badge-inv"></b></button>
           <button class="bq-nav-it" data-bq-view="echanges"><i data-lucide="arrow-left-right"></i><span>Échanges &amp; avoirs</span><b class="bq-nav-badge" id="bq-badge-ret"></b></button>
           <button class="bq-nav-it" data-bq-view="vendus"><i data-lucide="chart-no-axes-column-increasing"></i><span>Vendus</span></button>
-          <button class="bq-nav-it" data-bq-view="clientes"><i data-lucide="users"></i><span>Clientes</span><b class="bq-nav-badge" id="bq-badge-cl"></b></button>
+          <button class="bq-nav-it" data-bq-view="clientes"><i data-lucide="users"></i><span>Clients</span><b class="bq-nav-badge" id="bq-badge-cl"></b></button>
           <button class="bq-nav-it" data-bq-view="acomptes"><i data-lucide="hand-coins"></i><span>Acomptes</span></button>
         </nav>
         <div class="bq-rail-foot">
@@ -2262,7 +2262,7 @@
     panel.innerHTML = `
       <div class="bq-clients">
         <header class="bq-head">
-          <div><h1>Clientes</h1><div class="bq-head-sub">Rechercher par nom ou téléphone, la fiche suit la cliente</div></div>
+          <div><h1>Clients</h1><div class="bq-head-sub">Rechercher par nom ou téléphone, la fiche suit la cliente</div></div>
           <div class="bq-search"><i data-lucide="search"></i>
             <input id="bq-clv-q" type="text" enterkeyhint="search" placeholder="Nom ou 06…" value="${esc(q)}" /></div>
         </header>

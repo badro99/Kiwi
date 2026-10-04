@@ -63,6 +63,8 @@ try {
       await page.click('button[data-bq-view="clientes"]');
       await page.waitForSelector('#kcb-q',{visible:true});
       const label = `${device} ${lang} ${theme}`;
+      const navLabel=await page.$eval('button[data-bq-view="clientes"] > span',el=>el.textContent);
+      check(navLabel===({fr:'Clients',en:'Customers',ar:'الزبناء'})[lang],label+': actual client navigation label '+JSON.stringify(navLabel));
       const input = await page.$eval('#kcb-q',el => ({type:el.type,mode:el.inputMode,hint:el.enterKeyHint,correct:el.getAttribute('autocorrect'),complete:el.autocomplete}));
       check(input.type==='text' && input.mode==='text' && input.hint==='search',label+': full text keyboard with explicit Search, got '+JSON.stringify(input));
       check(input.correct==='off' && input.complete==='off',label+': name/phone queries cannot be autocorrected');
