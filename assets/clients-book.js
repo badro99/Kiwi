@@ -22,6 +22,16 @@
 
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
   function fmt(n) { try { return (window.KiwiNumber?.format((Math.round(n) || 0), {}) ?? (Math.round(n) || 0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {})); } catch (_) { return String(Math.round(n) || 0); } }
+  function pointsUnit() {
+    var lang;
+    try { lang = window.KiwiCaisseLang && KiwiCaisseLang.get && KiwiCaisseLang.get(); } catch (_) {}
+    return /^ar(?:-|$)/i.test(lang || document.documentElement.lang) ? 'نقطة' : 'pts';
+  }
+  function pointsUnitMarkup() { return '<small data-nolang data-kcb-point-unit>' + esc(pointsUnit()) + '</small>'; }
+  function pointsNumberMarkup(n) { return '<bdi data-nolang>' + esc(fmt(n)) + '</bdi>'; }
+  function refreshPointsUnits() {
+    Array.prototype.forEach.call(document.querySelectorAll('#kcb-root [data-kcb-point-unit], #kcb-sheet [data-kcb-point-unit]'), function (label) { label.textContent = pointsUnit(); });
+  }
   function paired() { try { return !!(window.KiwiCaissePairing && KiwiCaissePairing.isPaired && KiwiCaissePairing.isPaired()); } catch (_) { return false; } }
   function hospitalityMode() {
     try {
@@ -604,7 +614,7 @@
       rows.map(function (c) {
         var s = KC.segment(c);
         var prog = KC.progress(c, cfg);
-        var ptsTxt = cfg.model === 'amount' ? (fmt(c.points) + '<small>pts</small>') : ((c.stamps || 0) + '<small>/ ' + target + '</small>');
+        var ptsTxt = cfg.model === 'amount' ? (pointsNumberMarkup(c.points) + pointsUnitMarkup()) : ((c.stamps || 0) + '<small>/ ' + target + '</small>');
         return '<div class="kcb-row" data-id="' + esc(c.id) + '" tabindex="0" role="button">' +
           '<div class="kcb-who"><div class="kcb-av">' + esc(initials(c.name)) + '</div>' +
             '<div style="min-width:0"><div class="kcb-nm">' + esc(c.name || 'Sans nom') +
@@ -743,7 +753,7 @@
     var rewardReady = prog >= 1;
     var progTxt, recordBlock;
     if (cfg.model === 'amount') {
-      progTxt = fmt(c.points) + ' / ' + (cfg.amount.threshold || 100) + ' pts · récompense ' + esc(cfg.amount.reward || '');
+      progTxt = pointsNumberMarkup(c.points) + ' / <bdi data-nolang>' + esc(cfg.amount.threshold || 100) + '</bdi> ' + pointsUnitMarkup() + ' · récompense ' + esc(cfg.amount.reward || '');
       recordBlock = '<div class="kcb-record"><div class="rl">Enregistrer un achat</div><div class="kcb-recrow">' +
         '<input id="kcb-amt" inputmode="numeric" placeholder="Montant en MAD" >' +
         '<button class="kcb-big" id="kcb-rec">' + ICON.plus + 'Valider</button></div></div>';
@@ -982,6 +992,7 @@
     });
     if (KC.subscribe) KC.subscribe(function () { ensureChip(); refreshOpen(); });
     if (KC.subscribeConfig) KC.subscribeConfig(function () { refreshOpen(); }); // same-tab programme edit
+    if (window.KiwiCaisseLang && KiwiCaisseLang.subscribe) KiwiCaisseLang.subscribe(refreshPointsUnits);
     // Verticals mount lazily on unlock → watch the DOM and (re)inject the entry.
     try { new MutationObserver(scheduleWire).observe(document.body, { childList: true, subtree: true }); } catch (_) {}
     scheduleWire();

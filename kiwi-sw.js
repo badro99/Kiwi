@@ -239,7 +239,7 @@ var SHELL = [
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=4',
   '/assets/clients-store.js?v=9',
-  '/assets/clients-book.js?v=28',
+  '/assets/clients-book.js?v=29',
   '/assets/clients-directory.js?v=15',
   '/assets/menu-catalog.js?v=25',
   '/assets/stock-identity.js?v=2',
