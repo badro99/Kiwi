@@ -583,6 +583,50 @@
       'Remboursement conservé · synchronisation impossible': 'تم الاحتفاظ بالاسترجاع · تعذرت المزامنة',
     },
   };
+  // Exact opening/closing interface copy; amounts and merchant names are data.
+  (function () {
+    var closingCopy = [
+      ["Service ouvert à","Shift opened at","بدأ العمل في"],
+      ["Durée du service","Shift duration","مدة العمل"],
+      ["Transactions","Transactions","المعاملات"],
+      ["Articles vendus","Items sold","المنتجات المباعة"],
+      ["Total encaissé","Total received","إجمالي المبالغ المحصلة"],
+      ["dont Carte","of which card","منها بالبطاقة"],
+      ["dont Espèces","of which cash","منها نقدًا"],
+      ["dont Autres","of which other payments","منها بطرق دفع أخرى"],
+      ["dont Virement / Versement","of which transfer / deposit","منها بتحويل أو إيداع"],
+      ["dont Chèque","of which cheque","منها بشيك"],
+      ["Acomptes reçus","Deposits received","العربون المحصل"],
+      ["Soldes restant à régler","Remaining balances due","الأرصدة المتبقية للدفع"],
+      ["Livraisons · à recevoir","Deliveries · receivable","التوصيلات · مبالغ مستحقة"],
+      ["Ticket moyen","Average receipt","متوسط التذكرة"],
+      ["Promotions du magasin","Store promotions","عروض المتجر"],
+      ["Réductions accordées","Discounts granted","التخفيضات الممنوحة"],
+      ["Avoirs émis","Store credits issued","أرصدة المتجر الصادرة"],
+      ["Réglé en avoir ({n})","Paid with store credit ({n})","مدفوع برصيد المتجر ({n})"],
+      ["Clôture de caisse","Close register","إغلاق الصندوق"],
+      ["Tiroir-caisse","Cash drawer","درج النقد"],
+      ["Espèces encaissées","Cash received","النقد المحصل"],
+      ["Attendu en caisse","Expected cash","النقد المتوقع"],
+      ["Espèces comptées","Counted cash","النقد المعدود"],
+      ["Écart","Difference","الفرق"],
+      ["Aucune vente sur ce service.","No sales on this shift.","لا توجد مبيعات خلال فترة العمل هذه."],
+      ["Imprimer le rapport Z","Print the Z report","طباعة تقرير Z"],
+      ["Fermer la caisse","Close register","إغلاق الصندوق"],
+      ["Continuer le service","Continue shift","متابعة العمل"],
+      ["Journée clôturée","Day closed","تم إغلاق اليوم"],
+      ["Rapport journalier","Daily report","التقرير اليومي"],
+      ["Imprimer le rapport","Print report","طباعة التقرير"],
+      ["Réimprimer","Reprint","إعادة الطباعة"],
+      ["Continuer sans imprimer","Continue without printing","المتابعة دون طباعة"],
+      ["Le rapport reste disponible dans le tableau de bord, section Rapport journalier · même après un rechargement ou depuis un autre appareil.","The report remains available in the dashboard’s Daily report section · even after reloading or from another device.","يبقى التقرير متاحًا في قسم التقرير اليومي بلوحة التحكم · حتى بعد إعادة التحميل أو من جهاز آخر."],
+      ["Caisse fermée · à bientôt","Register closed · see you soon","تم إغلاق الصندوق · إلى اللقاء"],
+      ["Propriétaire","Owner","المالك"],
+      ["Tickets","Receipts","التذاكر"],
+      ["Rayons","Departments","الأقسام"],
+    ];
+    closingCopy.forEach(function (row) { DICT.en[row[0]] = row[1]; DICT.ar[row[0]] = row[2]; });
+  })();
   /* Till toasts reachable on iPhone (pass 4 sweep, 2026-09-29). Toasts pass
      through the same text-node sweep, split on « · », so each segment is its
      own key. Dynamic prefixes (« Table « … », « Remise − … ») are left out:

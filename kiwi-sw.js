@@ -222,7 +222,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=7',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=34',
+  '/assets/caisse-lang.js?v=35',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/retail-balances.js?v=4',
@@ -239,7 +239,7 @@ var SHELL = [
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=4',
   '/assets/clients-store.js?v=9',
-  '/assets/clients-book.js?v=31',
+  '/assets/clients-book.js?v=32',
   '/assets/clients-directory.js?v=15',
   '/assets/menu-catalog.js?v=25',
   '/assets/stock-identity.js?v=2',
@@ -261,7 +261,7 @@ var SHELL = [
   '/assets/salle-scan.js?v=2',
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=6',
-  '/assets/orderpro-panel.js?v=1',
+  '/assets/orderpro-panel.js?v=2',
   '/assets/orderpro-inbox.js?v=30',
   '/assets/service-requests.js?v=1',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
@@ -274,7 +274,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=15',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=9',
-  '/assets/pos-dispatch.js?v=77',
+  '/assets/pos-dispatch.js?v=78',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -287,8 +287,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=64',
-  '/assets/pos-boutique.js?v=64',
+  '/assets/pos-boutique.css?v=65',
+  '/assets/pos-boutique.js?v=65',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */

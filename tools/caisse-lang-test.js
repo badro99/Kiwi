@@ -394,7 +394,7 @@ check(enKeys.every((k) => k.trim() === k && k.length > 0), 'aucune clé ne traî
 /* Une clé qui se traduit par elle-même est du bruit : soit elle est inutile,
    soit quelqu'un a oublié de la traduire en croyant l'avoir fait. On tolère les
    mots identiques dans les deux langues (Scan, Promotions, Total). */
-const IDENTICAL_OK = new Set(['Scan', 'Promotions', 'Total', 'Divers', 'Nom', 'Fin', 'Ticket', 'Dormant', 'Email', 'Notes', 'Dates', 'Production', 'Stock', '80 mm (standard)']);
+const IDENTICAL_OK = new Set(['Scan', 'Promotions', 'Total', 'Divers', 'Nom', 'Fin', 'Ticket', 'Dormant', 'Email', 'Notes', 'Dates', 'Production', 'Stock', '80 mm (standard)', 'Transactions']);
 const lazy = enKeys.filter((k) => EN[k] === k && !IDENTICAL_OK.has(k));
 check(!lazy.length, `aucune traduction anglaise oubliée${lazy.length ? ' — ' + lazy.slice(0, 5).join(', ') : ''}`);
 const lazyAr = arKeys.filter((k) => AR[k] === k);
@@ -407,5 +407,52 @@ for (const fr of ['À emporter', 'Tout', 'Plan de salle', 'Libre', 'Envoyer en c
   check(EN[fr] && EN[fr] !== fr && AR[fr], `caisse restaurant traduite : « ${fr} »`);
 }
 check(EN['En cours'] === 'In progress', '« En cours » se lit « In progress » (une table n\'est pas « Running »)');
+// #0160 exact interface tuples supplement the real-renderer guard.
+const closingCopy = [
+  ["Service ouvert à","Shift opened at","بدأ العمل في"],
+  ["Durée du service","Shift duration","مدة العمل"],
+  ["Transactions","Transactions","المعاملات"],
+  ["Articles vendus","Items sold","المنتجات المباعة"],
+  ["Total encaissé","Total received","إجمالي المبالغ المحصلة"],
+  ["dont Carte","of which card","منها بالبطاقة"],
+  ["dont Espèces","of which cash","منها نقدًا"],
+  ["dont Autres","of which other payments","منها بطرق دفع أخرى"],
+  ["dont Virement / Versement","of which transfer / deposit","منها بتحويل أو إيداع"],
+  ["dont Chèque","of which cheque","منها بشيك"],
+  ["Acomptes reçus","Deposits received","العربون المحصل"],
+  ["Soldes restant à régler","Remaining balances due","الأرصدة المتبقية للدفع"],
+  ["Livraisons · à recevoir","Deliveries · receivable","التوصيلات · مبالغ مستحقة"],
+  ["Ticket moyen","Average receipt","متوسط التذكرة"],
+  ["Promotions du magasin","Store promotions","عروض المتجر"],
+  ["Réductions accordées","Discounts granted","التخفيضات الممنوحة"],
+  ["Avoirs émis","Store credits issued","أرصدة المتجر الصادرة"],
+  ["Réglé en avoir ({n})","Paid with store credit ({n})","مدفوع برصيد المتجر ({n})"],
+  ["Clôture de caisse","Close register","إغلاق الصندوق"],
+  ["Tiroir-caisse","Cash drawer","درج النقد"],
+  ["Espèces encaissées","Cash received","النقد المحصل"],
+  ["Attendu en caisse","Expected cash","النقد المتوقع"],
+  ["Espèces comptées","Counted cash","النقد المعدود"],
+  ["Écart","Difference","الفرق"],
+  ["Aucune vente sur ce service.","No sales on this shift.","لا توجد مبيعات خلال فترة العمل هذه."],
+  ["Imprimer le rapport Z","Print the Z report","طباعة تقرير Z"],
+  ["Fermer la caisse","Close register","إغلاق الصندوق"],
+  ["Continuer le service","Continue shift","متابعة العمل"],
+  ["Journée clôturée","Day closed","تم إغلاق اليوم"],
+  ["Rapport journalier","Daily report","التقرير اليومي"],
+  ["Imprimer le rapport","Print report","طباعة التقرير"],
+  ["Réimprimer","Reprint","إعادة الطباعة"],
+  ["Continuer sans imprimer","Continue without printing","المتابعة دون طباعة"],
+  ["Le rapport reste disponible dans le tableau de bord, section Rapport journalier · même après un rechargement ou depuis un autre appareil.","The report remains available in the dashboard’s Daily report section · even after reloading or from another device.","يبقى التقرير متاحًا في قسم التقرير اليومي بلوحة التحكم · حتى بعد إعادة التحميل أو من جهاز آخر."],
+  ["Caisse fermée · à bientôt","Register closed · see you soon","تم إغلاق الصندوق · إلى اللقاء"],
+  ["Propriétaire","Owner","المالك"],
+  ["Tickets","Receipts","التذاكر"],
+  ["Rayons","Departments","الأقسام"],
+];
+for (const [fr, en, ar] of closingCopy) {
+  for (const [language, expected] of [['fr', fr], ['en', en], ['ar', ar]]) {
+    L.set(language);
+    check(L.tr(fr) === expected, "Boutique opening/closing exact copy: " + language + " · " + fr);
+  }
+}
 if (failed) { console.error(`\n✗ ${failed} vérification(s) de langue en échec.`); process.exit(1); }
 console.log(`\n✓ ${ran} règles de langue vérifiées (${enKeys.length} phrases × 2 langues).`);

@@ -6967,6 +6967,10 @@
     if (IS_DEMO || bqShift) return;
     bqShowOpenScreen();
   }
+  function bqOpeningRole(role) {
+    return ['Propriétaire', 'proprietaire', 'owner'].includes(role)
+      ? invText('Propriétaire') : invData(role);
+  }
   function bqShowOpenScreen() {
     if (document.getElementById('bq-clockin')) return;
     const pv = pvPaired() || {};
@@ -6982,8 +6986,8 @@
         <div class="clockin-tagline">version commerçant</div>
       </div>
       <div class="clockin-mid">
-        <div class="clockin-greet">Bonjour <em>${esc(who)}</em></div>
-        <div class="clockin-role">${esc(role)} · ${esc(pv.name || 'Boutique')}</div>
+        <div class="clockin-greet">Bonjour <em data-nolang>${esc(who)}</em></div>
+        <div class="clockin-role">${bqOpeningRole(role)} · ${invData(pv.name || 'Boutique')}</div>
         <div class="clockin-clock" id="bqci-time">--:--</div>
         <div class="clockin-date" id="bqci-date" data-nolang></div>
         <div class="clockin-float">
@@ -7008,7 +7012,7 @@
           <span class="clockin-btn-label">Ouvrir la caisse</span>
           <span class="clockin-btn-check" aria-hidden="true"><i data-lucide="check"></i></span>
         </button>
-        <div class="clockin-foot">${esc(pv.location || '')}</div>
+        <div class="clockin-foot" data-nolang>${esc(pv.location || '')}</div>
       </div>`;
     document.body.appendChild(el);
 
@@ -7170,28 +7174,28 @@
       return Object.keys(seen).length;
     })();
     const hlText = t.txns
-      ? `<em>${t.items}</em> ${V.items} vendus sur ${t.txns} ticket${t.txns > 1 ? 's' : ''}${nCats ? `, ${nCats} ${nCats > 1 ? V.cats : V.cat}` : ''}.`
-      : 'Aucune vente sur ce service.';
+      ? `${invText('Articles vendus')}: <em>${invData(t.items)}</em> · ${invText('Tickets')}: ${invData(t.txns)}${nCats ? ` · ${invText('Rayons')}: ${invData(nCats)}` : ''}`
+      : invText('Aucune vente sur ce service.');
 
     v.innerHTML = `
       <div class="cloture-card">
         <div class="clo-eyebrow">Fin de service</div>
-        <div class="clo-title">Clôture de caisse</div>
-        <div class="clo-meta">${esc(pv.name || 'Boutique')} · ${esc((STAFF.caissiere && STAFF.caissiere.name) || '')} · ${fmtDay(now)}</div>
+        <div class="clo-title">${invText("Clôture de caisse")}</div>
+        <div class="clo-meta">${invData(pv.name || 'Boutique')} · ${invData((STAFF.caissiere && STAFF.caissiere.name) || '')} · ${invText(fmtDay(now))}</div>
         <div class="clo-rows">${rows.map((r, i) => {
           const cls = 'clo-row' + (r[3] === 'total' ? ' is-total' : (r[3] === 'sub' ? ' is-sub' : ''));
           const vCls = 'clo-row-value' + (r[2] ? ' mono' : '');
-          return `<div class="${cls}" style="animation-delay:${i * 70}ms"><span class="clo-row-label">${r[0]}</span><span class="${vCls}">${r[1]}</span></div>`;
+          return `<div class="${cls}" style="animation-delay:${i * 70}ms"><span class="clo-row-label">${invText(r[0])}</span><span class="${vCls}">${invData(r[1])}</span></div>`;
         }).join('')}</div>
         <div class="clo-drawer-box">
-          <div class="clo-drawer-title">Tiroir-caisse</div>
-          ${dLines.map((l) => `<div class="clo-drawer-line ${l[2]}"><span>${l[0]}</span><span class="mono">${l[1]}</span></div>`).join('')}
+          <div class="clo-drawer-title">${invText("Tiroir-caisse")}</div>
+          ${dLines.map((l) => `<div class="clo-drawer-line ${l[2]}"><span>${invText(l[0])}</span><span class="mono">${invData(l[1])}</span></div>`).join('')}
           <div class="clo-count-row">
-            <label for="bqclo-count">Espèces comptées</label>
+            <label for="bqclo-count">${invText("Espèces comptées")}</label>
             <input class="clo-count-input" id="bqclo-count" type="number" inputmode="numeric" min="0" step="10" placeholder="·" />
           </div>
           <div class="clo-ecart-line" id="bqclo-ecart-line">
-            <span>Écart</span><span class="mono" id="bqclo-ecart">·</span>
+            <span>${invText("Écart")}</span><span class="mono" id="bqclo-ecart">·</span>
           </div>
         </div>
         <div class="clo-highlight">
@@ -7199,10 +7203,10 @@
           <div class="clo-highlight-text">${hlText}</div>
         </div>
         <div class="clo-actions">
-          <button class="clo-btn secondary" id="bqclo-print"><i data-lucide="printer"></i><span>Imprimer le rapport Z</span></button>
-          <button class="clo-btn primary" id="bqclo-close"><i data-lucide="lock"></i><span>Fermer la caisse</span></button>
+          <button class="clo-btn secondary" id="bqclo-print"><i data-lucide="printer"></i><span>${invText("Imprimer le rapport Z")}</span></button>
+          <button class="clo-btn primary" id="bqclo-close"><i data-lucide="lock"></i><span>${invText("Fermer la caisse")}</span></button>
         </div>
-        <div class="clo-foot"><button id="bqclo-continue">Continuer le service</button></div>
+        <div class="clo-foot"><button id="bqclo-continue">${invText("Continuer le service")}</button></div>
       </div>`;
     v.classList.add('is-open');
     icons();
@@ -7264,10 +7268,10 @@
     const V = DR ? DR.vocab() : { items: 'articles', cats: 'rayons', cat: 'rayon' };
     const nCat = (report.categories || []).length;
     const nItems = (report.categories || []).reduce((s, c) => s + (c.qty || 0), 0);
-    const bits = [`${report.txns} transaction${report.txns > 1 ? 's' : ''}`];
-    if (nCat) bits.push(`${nItems} ${V.items} · ${nCat} ${nCat > 1 ? V.cats : V.cat}`);
+    const bits = [`${invText('Transactions')}: ${invData(report.txns)}`];
+    if (nCat) bits.push(`${invText('Articles vendus')}: ${invData(nItems)} · ${invText('Rayons')}: ${invData(nCat)}`);
     if (report.cash && report.cash.ecart != null && Math.abs(report.cash.ecart) > 0.5) {
-      bits.push(`écart ${(report.cash.ecart > 0 ? '+ ' : '− ')}${fmtMAD(Math.abs(report.cash.ecart))}`);
+      bits.push(`${invText('Écart')}: ${invData((report.cash.ecart > 0 ? '+ ' : '− ') + fmtMAD(Math.abs(report.cash.ecart)))}`);
     }
     const z = document.createElement('div');
     z.className = 'cloture-veil is-open';
@@ -7276,16 +7280,16 @@
     z.setAttribute('aria-modal', 'true');
     z.innerHTML = `
       <div class="cloture-card zs-card">
-        <div class="clo-eyebrow">Journée clôturée</div>
-        <div class="clo-title">Rapport journalier</div>
-        <div class="zs-total mono">${fmtMAD(report.net)}</div>
+        <div class="clo-eyebrow">${invText("Journée clôturée")}</div>
+        <div class="clo-title">${invText("Rapport journalier")}</div>
+        <div class="zs-total mono">${invData(fmtMAD(report.net))}</div>
         <div class="clo-meta">${bits.join(' · ')}</div>
         <div class="clo-actions">
-          <button class="clo-btn primary" id="bqzs-print"><i data-lucide="printer"></i><span>Imprimer le rapport</span></button>
-          <button class="clo-btn secondary" id="bqzs-reprint" hidden><i data-lucide="copy"></i><span>Réimprimer</span></button>
+          <button class="clo-btn primary" id="bqzs-print"><i data-lucide="printer"></i><span>${invText("Imprimer le rapport")}</span></button>
+          <button class="clo-btn secondary" id="bqzs-reprint" hidden><i data-lucide="copy"></i><span>${invText("Réimprimer")}</span></button>
         </div>
-        <div class="clo-foot"><button id="bqzs-skip">Continuer sans imprimer</button></div>
-        <div class="zs-note">Le rapport reste disponible dans le tableau de bord, section Rapport journalier · même après un rechargement ou depuis un autre appareil.</div>
+        <div class="clo-foot"><button id="bqzs-skip">${invText("Continuer sans imprimer")}</button></div>
+        <div class="zs-note">${invText("Le rapport reste disponible dans le tableau de bord, section Rapport journalier · même après un rechargement ou depuis un autre appareil.")}</div>
       </div>`;
     document.body.appendChild(z);
     icons();

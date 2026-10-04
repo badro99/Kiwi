@@ -31,6 +31,7 @@
   function pointsNumberMarkup(n) { return '<bdi data-nolang>' + esc(fmt(n)) + '</bdi>'; }
   // These values are merchant data, even when their words match the UI dictionary.
   function dataMarkup(value) { return '<bdi data-nolang>' + esc(value) + '</bdi>'; }
+  function referenceMarkup(value) { return '<bdi data-nolang data-kcb-reference>' + esc(value) + '</bdi>'; }
   function uiMarkup(value) { return '<span>' + esc(value) + '</span>'; }
   function historyLocale() {
     var lang;
@@ -237,7 +238,8 @@
       '.kcb-x{width:44px;height:44px;min-width:44px;border-radius:12px;border:1px solid rgba(10,15,13,.1);background:var(--surface);cursor:pointer;display:grid;place-items:center;color:var(--ink,#0A0F0D);touch-action:manipulation;}',
       '.kcb-x svg{width:20px;height:20px;}',
       '.kcb-ret{display:block;margin-top:5px;font-size:.78rem;font-weight:600;color:#8A6210;}',
-      '.kcb-struck{text-decoration:line-through;text-decoration-thickness:1px;color:rgba(10,15,13,.45);}',
+      '.kcb-struck{text-decoration:line-through;text-decoration-thickness:1px;color:var(--ink-2,var(--ink,#0A0F0D));}',
+      '#kcb-sheet [data-kcb-reference]{display:inline-block;max-inline-size:100%;vertical-align:baseline;overflow-wrap:anywhere;word-break:normal;}',
       '.kcb-field{margin-bottom:14px;min-width:0;}',
       '.kcb-field label{display:block;font-size:.78rem;font-weight:600;color:rgba(10,15,13,.6);margin-bottom:6px;}',
       '.kcb-field input{display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box;padding:13px 14px;border:1px solid rgba(10,15,13,.14);border-radius:12px;font-size:1rem;background:var(--surface);color:var(--ink,#0A0F0D);}',
@@ -251,7 +253,7 @@
       '.kcb-info{background:var(--surface);border:1px solid rgba(10,15,13,.08);border-radius:16px;padding:4px 16px;margin-bottom:14px;}',
       '.kcb-inforow{display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-top:1px solid rgba(10,15,13,.06);font-size:.9rem;}',
       '.kcb-inforow:first-child{border-top:0;}',
-      '.kcb-inforow .k{color:rgba(10,15,13,.5);font-weight:500;}',
+      '.kcb-inforow .k{color:var(--ink-2,var(--ink,#0A0F0D));font-weight:500;}',
       '.kcb-inforow .v{color:var(--ink,#0A0F0D);font-weight:600;text-align:right;word-break:break-word;}',
       ':is(html[data-theme="dark"],html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .kcb-info{background:#141d19;border-color:#26302b;}',
       ':is(html[data-theme="dark"],html[data-caisse-theme="dark"],html[data-vexel-mode="dark"]) .kcb-inforow .v{color:#eafff3;}',
@@ -278,7 +280,7 @@
       '.kcb-reward svg{width:20px;height:20px;color:var(--atlas,#0B6E4F);flex:none;}',
       '.kcb-kpis{display:flex;gap:10px;margin-bottom:14px;}',
       '.kcb-kpi{flex:1;background:var(--surface);border:1px solid rgba(10,15,13,.08);border-radius:14px;padding:13px 14px;text-align:center;}',
-      '.kcb-kpi .v{font-size:1.25rem;font-weight:700;}.kcb-kpi .l{font-size:.72rem;color:rgba(10,15,13,.5);margin-top:2px;}',
+      '.kcb-kpi .v{font-size:1.25rem;font-weight:700;}.kcb-kpi .l{font-size:.72rem;color:var(--ink-2,var(--ink,#0A0F0D));margin-top:2px;}',
       '.kcb-record{background:var(--surface);border:1px solid rgba(10,15,13,.08);border-radius:16px;padding:16px 18px;margin-bottom:8px;}',
       '.kcb-record .rl{font-size:.78rem;font-weight:600;color:rgba(10,15,13,.6);margin-bottom:10px;}',
       '.kcb-recrow{display:flex;gap:10px;align-items:center;}',
@@ -407,9 +409,9 @@
                 + ' · ' + uiMarkup('solde') + ' ' + dataMarkup(fmt(Number(event.balanceAfterCents || 0) / 100) + ' MAD') + '</small>';
             }).join('');
             var used = credit.status === 'active' ? '' : ' · ' + uiMarkup(credit.status === 'cancelled' ? 'annulé' : 'utilisé');
-            return '<div class="kcb-inforow" data-kcb-credit-row><span class="k">' + dataMarkup(credit.code) + '<small style="display:block;margin-top:3px">' + historyDateMarkup(credit.createdAt) + ' · ' + uiMarkup('expire') + ' ' + historyDateMarkup(credit.expiresAt, true) + '</small></span>'
+            return '<div class="kcb-inforow" data-kcb-credit-row><span class="k">' + referenceMarkup(credit.code) + '<small style="display:block;margin-top:3px">' + historyDateMarkup(credit.createdAt) + ' · ' + uiMarkup('expire') + ' ' + historyDateMarkup(credit.expiresAt, true) + '</small></span>'
               + '<span class="v"><b>' + dataMarkup(fmt(Number(credit.amountCents || 0) / 100) + ' MAD') + ' · ' + uiMarkup('reste') + ' ' + dataMarkup(fmt(Number(credit.balanceCents || 0) / 100) + ' MAD') + used + '</b>'
-              + '<small style="display:block;margin-top:3px">' + uiMarkup('Vente') + ' ' + dataMarkup(credit.originalRef || credit.originalSaleId || '·') + ' · ' + products + ' · ' + (issued.actor || credit.issuedBy ? dataMarkup(issued.actor || credit.issuedBy) : uiMarkup('Caisse du magasin')) + '</small>' + movements + '</span></div>';
+              + '<small style="display:block;margin-top:3px">' + uiMarkup('Vente') + ' ' + referenceMarkup(credit.originalRef || credit.originalSaleId || '·') + ' · ' + products + ' · ' + (issued.actor || credit.issuedBy ? dataMarkup(issued.actor || credit.issuedBy) : uiMarkup('Caisse du magasin')) + '</small>' + movements + '</span></div>';
           }).join('') + '</div>'
         : '<div class="kcb-empty" style="min-height:70px"><b>Aucun avoir</b><div>Les crédits boutique émis à ce client apparaîtront ici.</div></div>');
     }
@@ -837,15 +839,15 @@
                 var label = dataMarkup(qty) + '× ' + (it.name ? dataMarkup(it.name) : uiMarkup('Article acheté'));
                 return gone >= qty ? '<span class="kcb-struck">' + label + '</span>' : label;
               }).join(' · ')
-            : (row.ref ? dataMarkup(row.ref) : uiMarkup('Achat enregistré'));
+            : (row.ref ? referenceMarkup(row.ref) : uiMarkup('Achat enregistré'));
           var retLine = rets.map(function (r) {
             var what = (r.items || []).map(function (it) { return dataMarkup(it.qty || 1) + '× ' + (it.name ? dataMarkup(it.name) : uiMarkup('Article acheté')); }).join(' · ');
             var kind = String(r.kind || '');
             var verb = kind === 'echange' ? 'Échangé' : 'Retourné';
-            var how = kind.indexOf('avoir') === 0 ? uiMarkup('avoir') + (r.reference ? ' ' + dataMarkup(r.reference) : '') : (kind.indexOf('refund') === 0 ? uiMarkup('remboursé') : '');
+            var how = kind.indexOf('avoir') === 0 ? uiMarkup('avoir') + (r.reference ? ' ' + referenceMarkup(r.reference) : '') : (kind.indexOf('refund') === 0 ? uiMarkup('remboursé') : '');
             return '<span class="kcb-ret">' + uiMarkup(verb) + ' · ' + what + (how ? ' · ' + how : '') + ' · ' + dataMarkup(fmt(r.amount || 0) + ' MAD') + '</span>';
           }).join('');
-          return '<div class="kcb-inforow" data-kcb-history-row><span class="k">' + when + '<small data-kcb-method style="display:block;margin-top:3px">' + historyPaymentMarkup(row.method) + '</small></span><span class="v"><b>' + items + '</b><small style="display:block;margin-top:3px">' + (row.ref ? uiMarkup('Ticket d’achat') + ' ' + dataMarkup(row.ref) + ' · ' : '') + dataMarkup(fmt(row.amount || 0) + ' MAD') + '</small>' + retLine + '</span></div>';
+          return '<div class="kcb-inforow" data-kcb-history-row><span class="k">' + when + '<small data-kcb-method style="display:block;margin-top:3px">' + historyPaymentMarkup(row.method) + '</small></span><span class="v"><b>' + items + '</b><small style="display:block;margin-top:3px">' + (row.ref ? uiMarkup('Ticket d’achat') + ' ' + referenceMarkup(row.ref) + ' · ' : '') + dataMarkup(fmt(row.amount || 0) + ' MAD') + '</small>' + retLine + '</span></div>';
         }).join('') + '</div>'
       : '<div class="kcb-empty" style="min-height:90px"><b>Aucun détail d’achat enregistré</b><div>Les prochains tickets attachés à ce client apparaîtront ici.</div></div>');
     sheet(
