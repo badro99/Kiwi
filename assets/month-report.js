@@ -35,6 +35,13 @@
     sales.filter(function(s){return s.voided&&s.void_ts>=data.to;}).forEach(function(s){warn('late-void',s.id,'Annulation enregistrée après le mois : statut à la date de génération, rapprochement requis avec le mois de l’annulation.');});
     var settlements=new Map();sales.forEach(function(s){if(s.voided||s.split_flow_id)return;var key=window.KiwiDayReport?.settlementKey?.(Object.assign({},s,{amount:s.cents==null?null:s.cents/100}));if(key&&settlements.has(key)){s.duplicateOf=settlements.get(key);warn('duplicate-settlement',s.id,'Même règlement que '+s.duplicateOf+' selon KiwiDayReport; original conservé en annexe, exclu des totaux.');}else if(key)settlements.set(key,s.id);});
     var active=sales.filter(function(s){return !s.voided&&!s.duplicateOf;}), positive=active.filter(function(s){return s.cents!=null&&s.cents>=0;}), refunds=active.filter(function(s){return s.cents!=null&&s.cents<0;});
+    // Equal restaurant parts retain the WHOLE physical quantity with a 1/n
+    // price in each original payment (kiwi-caisse / kiwi-serveur). Never
+    // multiply units or COGS by the number of tenders. Only the explicit
+    // producer marker plus a complete, identified flow proves the quantity.
+    var equalFlows=new Map();active.forEach(function(s){if(s.split_flow_id&&s.cents>=0){if(!equalFlows.has(s.split_flow_id))equalFlows.set(s.split_flow_id,[]);equalFlows.get(s.split_flow_id).push(s);}});
+    function equalShare(s,l){var m=String(l.name||l.n||'').match(/ · 1\/([2-9]|[1-4][0-9]|50)$/);return m&&(s.split_flow_id||/-split-/.test(String(s.id))||s.split)?+m[1]:null;}
+    function completeShare(s,n){var flow=equalFlows.get(s.split_flow_id)||[],shape=function(v){return JSON.stringify(v.lines.map(function(l){return [l.itemId||l.i||'',l.name||l.n,l.qty??l.q??l.quantity,l.cat||l.c||''];}));};return flow.length===n&&flow.every(function(v){return shape(v)===shape(s)&&v.lines.every(function(l){return equalShare(v,l)===n;});});}
     if(data.undated?.length)warn('undated-records',String(data.undated.length),'Écritures sans date attribuable conservées en annexe, exclues des totaux du mois.');
     var closureDays=object(docs.dayreports).days||{}, allDays=[];
     for(var d=data.month+'-01';d.slice(0,7)===data.month;d=new Date(Date.parse(d+'T00:00:00Z')+86400000).toISOString().slice(0,10))allDays.push(d);
@@ -52,6 +59,7 @@
     if(data.asOf<data.to)warn('partial-month',data.month,'Mois en cours : dossier arrêté à la date de génération.');
     var periods=list(object(docs.monthreport).taxPeriods);
     function taxFor(s) {
+      var receipt=receiptMap.get(String(s.id));if(receipt&&N(receipt.consigned_cents)>0&&N(receipt.gross_ticket_cents)!==s.cents)return null; // merchant receipts are not the client's full taxable basket
       var snap=object((invoiceMap.get(String(s.id))||invoiceMap.get(refundOrigin.get(String(s.id)))||{}).snapshot),t=object(snap.totals), rate=N(s.taxRate!=null?s.taxRate:s.vatRate);
       var ht=N(s.htCents),vat=N(s.vatCents);
       if(ht!=null&&vat!=null&&ht+vat===s.cents)return{ht:ht,vat:vat,rate:rate,basis:'snapshot de vente'};
@@ -78,8 +86,9 @@
       else{add(methods,s.method,s.cents);if(s.method==='split'||parts.length)warn('payment-split',s.id,'Ventilation des encaissements fractionnés absente ou non rapprochée; crédit et paiements différés ne sont pas du numéraire.');}
       if(!s.lines.length){if(s.cents<0)warn('refund-items',s.id,'Articles effectivement remboursés non enregistrés : ne pas supposer un retour physique du panier entier.');warn('missing-basket',s.id,'Détail produit non enregistré dans Kiwi.');return;}
       var totals=s.lines.map(function(l){return N(l.total!=null?l.total:l.t);}), basket=totals.reduce(function(a,v){return a+Math.abs(v||0);},0), allocated=allocate(s.cents,totals.map(function(v){return v==null?null:Math.abs(v);})), direction=s.cents<0?-1:1;
-      s.lines.forEach(function(l,i){var qty=N(l.qty!=null?l.qty:(l.q!=null?l.q:l.quantity)),id=String(l.itemId||l.item_id||l.i||l.id||l.name||l.n||''), name=String(l.name||l.n||id||'Non enregistré dans Kiwi'),cat=String(l.cat||l.category||l.c||'Non enregistré dans Kiwi');
+      s.lines.forEach(function(l,i){var share=equalShare(s,l),shareComplete=!share||completeShare(s,share),qty=N(l.qty!=null?l.qty:(l.q!=null?l.q:l.quantity)),name=String(l.name||l.n||l.itemId||l.i||'Non enregistré dans Kiwi');if(share)name=name.replace(/ · 1\/[0-9]+$/,'');var id=String(l.itemId||l.item_id||l.i||l.id||name),cat=String(l.cat||l.category||l.c||'Non enregistré dans Kiwi');
         var p=products.get(id+'|'+cat)||{id:id,name:name,category:cat,qty:0,qtyKnown:true,revenueCents:0,revenueKnown:true,costMad:0,costKnown:true};
+        if(share){qty=qty==null?null:qty/share;if(!shareComplete){p.qtyKnown=false;warn('split-quantity-incomplete',s.split_flow_id||s.id,'Parts égales sans flux intégral rapproché dans le mois : quantité physique et coût incomplets, sans doubler le panier.');}}
         if(qty==null){p.qtyKnown=false;warn('missing-quantity',s.id+' / '+name,'Quantité non enregistrée dans Kiwi.');}else p.qty+=direction*Math.abs(qty);
         var revenue=allocated?allocated[i]:(s.cents===0&&totals.every(function(t){return t!=null;})?0:null);
         if(revenue==null){p.revenueKnown=false;warn('line-reconciliation',s.id,'Impossible de ventiler le ticket sans montant de ligne.');}else{p.revenueCents+=revenue;add(categories,cat,revenue);}
@@ -87,7 +96,7 @@
         var costEntry=object(object(docs.costs).items)[id];
         if(unit==null&&costEntry&&N(costEntry.at)!=null&&+costEntry.at<=s.ts){unit=N(costEntry.cost);src='coût enregistré avant la vente, non certifié';}
         lineCount++;
-        if(unit!=null&&qty!=null){var value=unit*Math.abs(qty)*direction;p.costMad+=value;theoreticalCost+=value;costedLines++;costedRevenue+=Math.abs(revenue||0);}
+        if(unit!=null&&qty!=null&&shareComplete){var value=unit*Math.abs(qty)*direction;p.costMad+=value;theoreticalCost+=value;costedLines++;costedRevenue+=Math.abs(revenue||0);}
         else{p.costKnown=false;missingCosts.push({sale:s.id,item:id,name:name,recipe:l.recipeId||l.recipe||'',qty:qty});}
         products.set(id+'|'+cat,p);l.monthlyCostSource=unit==null?null:src;
       });
@@ -150,7 +159,7 @@
     var net=knownSum(active,function(s){return s.cents;}),discount=knownSum(positive,function(s){return N(s.discount_amount_cents!=null?s.discount_amount_cents:s.discountAmountCents);});
     var gross=knownSum(positive,function(s){var g=N(s.gross_amount_cents!=null?s.gross_amount_cents:s.grossAmountCents);if(g!=null)return g;var d=N(s.discount_amount_cents);return d==null?null:s.cents+d;});
     var assignedRevenue=Array.from(products.values()).reduce(function(a,p){return a+p.revenueCents;},0);if(net!=null&&assignedRevenue!==net)warn('product-reconciliation',data.month,'Recettes non attribuables aux lignes produit : '+((net-assignedRevenue)/100)+' MAD; ne pas assimiler la ventilation documentée à un total net complet.');
-    var theoreticalComplete=active.length>0&&lineCount>0&&costedLines===lineCount&&active.every(function(s){return s.lines.length;});
+    var theoreticalComplete=active.length>0&&lineCount>0&&costedLines===lineCount&&active.every(function(s){return s.lines.length&&s.cents!=null;})&&!list(rows.receiptValues).some(function(v){return saleIds.has(String(v.sale_id))&&N(v.consigned_cents)>0;});
     var cogs=theoreticalComplete?theoreticalCost:null,ht=taxed===active.length&&active.length?htTotal:null,margin=ht!=null&&cogs!=null?ht/100-cogs:null;
     var summary={grossCents:gross,netCents:net,sales:active.length?positive.length:null,averageCents:positive.length?knownSum(positive,function(s){return s.cents;})/positive.length:null,refundCents:refunds.length? -knownSum(refunds,function(s){return s.cents;}):(active.length?0:null),discountCents:discount,complimentaryCents:knownSum(positive.filter(function(s){return s.method==='complimentary';}),function(s){return N(s.gross_amount_cents);}),complimentaryCount:positive.filter(function(s){return s.method==='complimentary';}).length,cancellationCount:unique(audits.filter(function(a){return a.action==='void';}).concat(sales.filter(function(s){return s.voided;})),function(a){return a.sale_id||a.id;}).length,purchasesMad:receipts.some(function(r){return !purchaseInvoices.some(function(v){return v.receiptId===r.id;});})&&purchaseInvoices.some(function(r){return !r.receiptId;})?null:knownSum(purchaseRows.filter(function(p){return p.included;}),function(p){return p.amount;}),expensesMad:expensesSum,cogsMad:cogs,knownProductCostMad:lineCount?theoreticalCost:null,grossMarginMad:margin,estimatedManagementMad:margin!=null&&expensesSum!=null?margin-expensesSum:null,htCents:ht,vatCents:taxed===active.length&&active.length?vatTotal:null,actualFoodCostMad:actualCost,theoreticalFoodCostMad:cogs};
     var coverage={sales:{percent:pct(daily.filter(function(d){return d.documented;}).length,allDays.length),basis:'Journées avec écritures originales ou clôture / journées du mois, pas toutes les ventes hors Kiwi'},productCosts:{percent:pct(costedLines,lineCount),basis:'Lignes disposant d’un coût antérieur ou figé / lignes produit enregistrées'},expenses:{percent:pct(expenseRows.filter(function(r){return r.amount!=null&&r.reference;}).length,expenseRows.length),basis:'Dépenses enregistrées avec montant et référence / dépenses enregistrées, pas charges externes inconnues'},purchases:{percent:pct(purchaseRows.filter(function(r){return r.amount!=null&&r.reference;}).length,purchaseRows.length),basis:'Documents d’achat avec montant et justificatif / documents d’achat enregistrés'},inventory:{percent:pct(inventory.filter(function(b){return b.openingValue!=null&&b.closingValue!=null;}).length,inventory.length),basis:'Positions de stock avec solde et valorisation documentés / positions tracées'},tax:{percent:pct(taxed,active.length),basis:'Tickets avec ventilation TVA historique / tickets actifs enregistrés'}};
