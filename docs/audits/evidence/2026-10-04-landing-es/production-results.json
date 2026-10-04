@@ -1,0 +1,28 @@
+{
+  "observedAt": "2026-10-04T17:07:30.886Z",
+  "implementationCommit": "ba1619d1672300185cbe7013689fa14a40b26b6a",
+  "status": 200,
+  "state": {
+    "url": "https://kiwi-os.com/es/",
+    "lang": "es",
+    "title": "Kiwi · El sistema operativo para los comercios marroquíes",
+    "h1": "El sistema operativo\npara los comercios marroquíes.",
+    "canonical": "https://kiwi-os.com/es/",
+    "ogImage": "https://kiwi-os.com/es/opengraph-image?ad7df247e6f1d74c",
+    "esCss": "https://kiwi-os.com/assets/landing-es.css?v=7",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "loadedChunks": [
+      "https://kiwi-os.com/es/chunks/216g4fzfwrgwn-1c0287ab490137da.js",
+      "https://kiwi-os.com/es/chunks/2c2tj5hx4r2-w-1db2af998dbfa392.js"
+    ]
+  },
+  "errors": [],
+  "og": {
+    "status": 200,
+    "contentType": "image/png",
+    "sha256": "ad7df247e6f1d74c7e221d4276bb9f27ad9438effc529dd2a5604b4e60f41356",
+    "localSha256": "ad7df247e6f1d74c7e221d4276bb9f27ad9438effc529dd2a5604b4e60f41356"
+  },
+  "verified": true
+}

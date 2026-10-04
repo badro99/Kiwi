@@ -1,0 +1,17 @@
+{
+  "observedAt": "2026-10-04T17:07:50.914430+00:00",
+  "implementationCommit": "ba1619d1672300185cbe7013689fa14a40b26b6a",
+  "mirrors": [
+    {
+      "url": "https://github.com/zaka33333-hash/Kiwi.git",
+      "ref": "refs/heads/main",
+      "sha": "ba1619d1672300185cbe7013689fa14a40b26b6a"
+    },
+    {
+      "url": "https://github.com/badro99/Kiwi.git",
+      "ref": "refs/heads/main",
+      "sha": "ba1619d1672300185cbe7013689fa14a40b26b6a"
+    }
+  ],
+  "note": "Observed after implementation push. A documentation-only release-evidence commit follows; the final tip is confirmed in the final report."
+}

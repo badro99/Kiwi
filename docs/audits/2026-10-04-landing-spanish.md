@@ -82,7 +82,9 @@ NODE_OPTIONS="--require $PWD/docs/audits/evidence/2026-10-04-landing-es/dependen
 node tools/check.js
 ```
 
-No simultaneous full checker was run. Git diff whitespace checks pass; native-review verdicts remain blank in all 450 rows. Release mirror verification is recorded below after the implementation push.
+No simultaneous full checker was run. Git diff whitespace checks pass; native-review verdicts remain blank in all 450 rows. Implementation commit: `ba1619d1672300185cbe7013689fa14a40b26b6a` (`landing · complete Spanish copy and browser verification`, with Codex GPT-5 coauthor). Pushed without force by URL to both mirrors; both `refs/heads/main` were read back as this exact SHA ([mirror observations](evidence/2026-10-04-landing-es/release-results.json)). A documentation-only release-evidence commit follows; no product code changed after the successful full gate.
+
+The live Cloudflare page was checked after deployment at 2026-10-04T17:07:30Z in a cache-disabled real browser after clearing service workers/cache storage: HTTP 200, html lang=es, self-canonical /es/, expected two content-hashed Spanish client bundles, landing-es.css?v=7, 1440/1440 width, and zero console/page errors. The public sharing endpoint returned HTTP 200 and image/png with SHA-256 exactly equal to the committed Spanish PNG ([production observations](evidence/2026-10-04-landing-es/production-results.json)). This is a live 1440-pixel load/sharing check, not a claim that the full local interaction matrix or native-language approval was repeated in production.
 
 ## Full leftover-string audit, before and after
 
