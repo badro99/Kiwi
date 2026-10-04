@@ -1,0 +1,67 @@
+(node:80594) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/zaka/.codex/worktrees/spanish-base-proof/kiwi/functions/api/hotel/_billing-draft.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/zaka/.codex/worktrees/spanish-base-proof/kiwi/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓ commercial light 320px: layout, labels, touch and focus
+  ✓ production light 320px: layout, labels, touch and focus
+  ✓ billing light 320px: layout, labels, touch and focus
+  ✓ commercial light 390px: layout, labels, touch and focus
+  ✓ production light 390px: layout, labels, touch and focus
+  ✓ billing light 390px: layout, labels, touch and focus
+  ✓ commercial light 768px: layout, labels, touch and focus
+  ✓ production light 768px: layout, labels, touch and focus
+  ✓ billing light 768px: layout, labels, touch and focus
+  ✓ commercial light 1024px: layout, labels, touch and focus
+  ✓ production light 1024px: layout, labels, touch and focus
+  ✓ billing light 1024px: layout, labels, touch and focus
+  ✓ commercial light 1440px: layout, labels, touch and focus
+  ✓ production light 1440px: layout, labels, touch and focus
+  ✓ billing light 1440px: layout, labels, touch and focus
+  ✓ commercial dark 320px: layout, labels, touch and focus
+  ✓ production dark 320px: layout, labels, touch and focus
+  ✓ billing dark 320px: layout, labels, touch and focus
+  ✓ commercial dark 390px: layout, labels, touch and focus
+  ✓ production dark 390px: layout, labels, touch and focus
+  ✓ billing dark 390px: layout, labels, touch and focus
+  ✓ commercial dark 768px: layout, labels, touch and focus
+  ✓ production dark 768px: layout, labels, touch and focus
+  ✓ billing dark 768px: layout, labels, touch and focus
+  ✓ commercial dark 1024px: layout, labels, touch and focus
+  ✓ production dark 1024px: layout, labels, touch and focus
+  ✓ billing dark 1024px: layout, labels, touch and focus
+  ✓ commercial dark 1440px: layout, labels, touch and focus
+  ✓ production dark 1440px: layout, labels, touch and focus
+  ✓ billing dark 1440px: layout, labels, touch and focus
+  ✓ commercial vexel-light 320px: layout, labels, touch and focus
+  ✓ production vexel-light 320px: layout, labels, touch and focus
+  ✓ billing vexel-light 320px: layout, labels, touch and focus
+  ✓ commercial vexel-light 390px: layout, labels, touch and focus
+  ✓ production vexel-light 390px: layout, labels, touch and focus
+  ✓ billing vexel-light 390px: layout, labels, touch and focus
+  ✓ commercial vexel-light 768px: layout, labels, touch and focus
+  ✓ production vexel-light 768px: layout, labels, touch and focus
+  ✓ billing vexel-light 768px: layout, labels, touch and focus
+  ✓ commercial vexel-light 1024px: layout, labels, touch and focus
+  ✓ production vexel-light 1024px: layout, labels, touch and focus
+  ✓ billing vexel-light 1024px: layout, labels, touch and focus
+  ✓ commercial vexel-light 1440px: layout, labels, touch and focus
+  ✓ production vexel-light 1440px: layout, labels, touch and focus
+  ✓ billing vexel-light 1440px: layout, labels, touch and focus
+  ✓ commercial vexel-dark 320px: layout, labels, touch and focus
+  ✓ production vexel-dark 320px: layout, labels, touch and focus
+  ✓ billing vexel-dark 320px: layout, labels, touch and focus
+  ✓ commercial vexel-dark 390px: layout, labels, touch and focus
+  ✓ production vexel-dark 390px: layout, labels, touch and focus
+  ✓ billing vexel-dark 390px: layout, labels, touch and focus
+  ✓ commercial vexel-dark 768px: layout, labels, touch and focus
+  ✓ production vexel-dark 768px: layout, labels, touch and focus
+  ✓ billing vexel-dark 768px: layout, labels, touch and focus
+  ✓ commercial vexel-dark 1024px: layout, labels, touch and focus
+  ✓ production vexel-dark 1024px: layout, labels, touch and focus
+  ✓ billing vexel-dark 1024px: layout, labels, touch and focus
+  ✓ commercial vexel-dark 1440px: layout, labels, touch and focus
+  ✓ production vexel-dark 1440px: layout, labels, touch and focus
+  ✓ billing vexel-dark 1440px: layout, labels, touch and focus
+  ✓ dossier UI: partial split, extra, ambiguous retry and saved-only printing
+  ✓ day-use editor: date locking, exact cents, no nightly contract and conflict feedback
+Commercial component screenshots: /var/folders/0g/q6yc1cn92hzc7w4yt40kjzrw0000gn/T/kiwi-commercial-layout-9xi7aA

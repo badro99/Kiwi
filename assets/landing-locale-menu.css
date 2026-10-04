@@ -39,11 +39,13 @@
 .kw-locale-chevron {
   width: 12px;
   height: 12px;
+  filter: invert(1);
+  transform: rotate(90deg);
   transition: transform 180ms ease;
 }
 
 .kw-locale-dropdown[data-open="true"] .kw-locale-chevron {
-  transform: rotate(180deg);
+  transform: rotate(270deg);
 }
 
 .kw-locale-list {

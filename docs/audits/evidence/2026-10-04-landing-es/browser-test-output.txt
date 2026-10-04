@@ -1,0 +1,11 @@
+es 360: 360/360, clipped=0, overlap=0, errors=0
+es 390: 390/390, clipped=0, overlap=0, errors=0
+es 768: 768/768, clipped=0, overlap=0, errors=0
+es 1024: 1024/1024, clipped=0, overlap=0, errors=0
+es 1440: 1440/1440, clipped=0, overlap=0, errors=0
+es 1920: 1920/1920, clipped=0, overlap=0, errors=0
+en 390: 390/390, clipped=0, overlap=0, errors=0
+en 1440: 1440/1440, clipped=0, overlap=0, errors=0
+fr 390: 390/390, clipped=0, overlap=0, errors=0
+fr 1440: 1440/1440, clipped=0, overlap=0, errors=0
+Spanish browser QA: 207/207 checks passed

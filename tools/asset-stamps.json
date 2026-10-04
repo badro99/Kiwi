@@ -435,6 +435,22 @@
     "v": "2",
     "sha": "af05f19e306ca3d8"
   },
+  "assets/landing-es.css": {
+    "v": "7",
+    "sha": "1cb11ec873d59dd5"
+  },
+  "assets/landing-locale-menu.css": {
+    "v": "1",
+    "sha": "b34580061e2d7bd6"
+  },
+  "assets/landing-locale-menu.js": {
+    "v": "1",
+    "sha": "bea76e906f0af60b"
+  },
+  "assets/landing-runtime-translations.js": {
+    "v": "6",
+    "sha": "747d490ba72f21c8"
+  },
   "assets/landing/components.css": {
     "v": "2",
     "sha": "5829242ec789b552"

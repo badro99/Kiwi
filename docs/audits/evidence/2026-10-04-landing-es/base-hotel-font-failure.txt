@@ -1,0 +1,20 @@
+(node:79747) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/zaka/.codex/worktrees/spanish-base-proof/kiwi/functions/api/hotel/_billing-draft.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/zaka/.codex/worktrees/spanish-base-proof/kiwi/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:fs:561
+  return binding.open(
+                 ^
+
+Error: ENOENT: no such file or directory, open '/Users/zaka/.codex/worktrees/spanish-base-proof/kiwi/app/node_modules/@fontsource-variable/inter-tight/files/inter-tight-latin-wght-normal.woff2'
+    at Object.openSync (node:fs:561:18)
+    at Object.readFileSync (node:fs:445:35)
+    at file:///Users/zaka/.codex/worktrees/spanish-base-proof/kiwi/tools/hotel-commercial-layout-test.mjs:23:18
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/zaka/.codex/worktrees/spanish-base-proof/kiwi/app/node_modules/@fontsource-variable/inter-tight/files/inter-tight-latin-wght-normal.woff2'
+}
+
+Node.js v24.18.0

@@ -1,0 +1,6999 @@
+{
+  "counts": {
+    "source": 554,
+    "spanish": 554,
+    "beforeSourceIdentical": 250,
+    "afterSourceIdentical": 206,
+    "dictionary": 450
+  },
+  "nodes": [
+    {
+      "node": 1,
+      "kind": "text",
+      "tag": "title",
+      "text": "Kiwi · El sistema operativo para los comercios marroquíes",
+      "offset": 1122,
+      "english": "Kiwi · The operating system for Moroccan businesses",
+      "before": "Kiwi · El sistema operativo para los comercios marroquíes"
+    },
+    {
+      "node": 2,
+      "kind": "content",
+      "tag": "meta",
+      "text": "Su TPV, sala, cocina, inventario, equipo e informes en un solo sistema, en francés y árabe. Desde 249 MAD al mes, o 199 MAD al mes con un plan anual. 15 días gratis, sin compromiso.",
+      "offset": 1187,
+      "english": "Your till, floor, kitchen, stock, team, and reporting in one system, in French and Arabic. From 249 MAD a month, or 199 MAD a month on an annual plan. 15 days free, no commitment.",
+      "before": "Su TPV, sala, cocina, inventario, equipo e informes en un solo sistema, en francés y árabe. Desde 249 MAD al mes, o 199 MAD al mes con plan anual. 15 días gratis, sin compromiso."
+    },
+    {
+      "node": 3,
+      "kind": "content",
+      "tag": "meta",
+      "text": "Kiwi · El sistema operativo para los comercios marroquíes",
+      "offset": 2010,
+      "english": "Kiwi · The operating system for Moroccan businesses",
+      "before": "Kiwi · El sistema operativo para los comercios marroquíes"
+    },
+    {
+      "node": 4,
+      "kind": "content",
+      "tag": "meta",
+      "text": "Su TPV, sala, cocina, inventario, equipo e informes en un solo sistema, en francés y árabe. Desde 249 MAD al mes, o 199 MAD al mes con un plan anual. 15 días gratis, sin compromiso.",
+      "offset": 2105,
+      "english": "Your till, floor, kitchen, stock, team, and reporting in one system, in French and Arabic. From 249 MAD a month, or 199 MAD a month on an annual plan. 15 days free, no commitment.",
+      "before": "Su TPV, sala, cocina, inventario, equipo e informes en un solo sistema, en francés y árabe. Desde 249 MAD al mes, o 199 MAD al mes con plan anual. 15 días gratis, sin compromiso."
+    },
+    {
+      "node": 5,
+      "kind": "content",
+      "tag": "meta",
+      "text": "Kiwi · El sistema operativo para los comercios marroquíes",
+      "offset": 2821,
+      "english": "Kiwi · The operating system for Moroccan businesses",
+      "before": "Kiwi · El sistema operativo para los comercios marroquíes"
+    },
+    {
+      "node": 6,
+      "kind": "content",
+      "tag": "meta",
+      "text": "Su TPV, sala, cocina, inventario, equipo e informes en un solo sistema, en francés y árabe. Desde 249 MAD al mes, o 199 MAD al mes con un plan anual. 15 días gratis, sin compromiso.",
+      "offset": 2917,
+      "english": "Your till, floor, kitchen, stock, team, and reporting in one system, in French and Arabic. From 249 MAD a month, or 199 MAD a month on an annual plan. 15 days free, no commitment.",
+      "before": "Su TPV, sala, cocina, inventario, equipo e informes en un solo sistema, en francés y árabe. Desde 249 MAD al mes, o 199 MAD al mes con plan anual. 15 días gratis, sin compromiso."
+    },
+    {
+      "node": 7,
+      "kind": "text",
+      "tag": "a",
+      "text": "Saltar al contenido",
+      "offset": 5179,
+      "english": "Skip to content",
+      "before": "Saltar al contenido"
+    },
+    {
+      "node": 8,
+      "kind": "aria-label",
+      "tag": "a",
+      "text": "Kiwi · inicio",
+      "offset": 5533,
+      "english": "Kiwi · home",
+      "before": "Kiwi · inicio"
+    },
+    {
+      "node": 9,
+      "kind": "aria-label",
+      "tag": "nav",
+      "text": "Kiwi · inicio",
+      "offset": 5862,
+      "english": "Kiwi · home",
+      "before": "Kiwi · inicio"
+    },
+    {
+      "node": 10,
+      "kind": "text",
+      "tag": "a",
+      "text": "Funcionalidades",
+      "offset": 6355,
+      "english": "Features",
+      "before": "Funcionalidades"
+    },
+    {
+      "node": 11,
+      "kind": "text",
+      "tag": "a",
+      "text": "Seguridad",
+      "offset": 6596,
+      "english": "Security",
+      "before": "Seguridad"
+    },
+    {
+      "node": 12,
+      "kind": "text",
+      "tag": "a",
+      "text": "Precios",
+      "offset": 6830,
+      "english": "Pricing",
+      "before": "Precios"
+    },
+    {
+      "node": 13,
+      "kind": "text",
+      "tag": "a",
+      "text": "Guías",
+      "offset": 7065,
+      "english": "Guides",
+      "before": "Guías"
+    },
+    {
+      "node": 14,
+      "kind": "text",
+      "tag": "a",
+      "text": "Iniciar sesión",
+      "offset": 7342,
+      "english": "Sign in",
+      "before": "Iniciar sesión"
+    },
+    {
+      "node": 15,
+      "kind": "text",
+      "tag": "a",
+      "text": "Solicitar una demo",
+      "offset": 7821,
+      "english": "Book a demo",
+      "before": "Solicitar una demo"
+    },
+    {
+      "node": 16,
+      "kind": "aria-label",
+      "tag": "div",
+      "text": "Elegir idioma",
+      "offset": 8287,
+      "english": "Choose language",
+      "before": "Elegir idioma"
+    },
+    {
+      "node": 17,
+      "kind": "text",
+      "tag": "a",
+      "text": "FR",
+      "offset": 8787,
+      "english": "FR",
+      "before": "FR"
+    },
+    {
+      "node": 18,
+      "kind": "text",
+      "tag": "a",
+      "text": "EN",
+      "offset": 9033,
+      "english": "EN",
+      "before": "EN"
+    },
+    {
+      "node": 19,
+      "kind": "text",
+      "tag": "a",
+      "text": "AR",
+      "offset": 9283,
+      "english": "AR",
+      "before": "AR"
+    },
+    {
+      "node": 20,
+      "kind": "aria-label",
+      "tag": "button",
+      "text": "Abrir menú",
+      "offset": 9295,
+      "english": "Open menu",
+      "before": "Abrir menú"
+    },
+    {
+      "node": 21,
+      "kind": "text",
+      "tag": "span",
+      "text": "Software de gestión · cafeterías, restaurantes y comercios",
+      "offset": 10505,
+      "english": "Management software · cafés, restaurants & shops",
+      "before": "Software de gestión · cafeterías, restaurantes y comercios"
+    },
+    {
+      "node": 22,
+      "kind": "text",
+      "tag": "h1",
+      "text": "El sistema operativo",
+      "offset": 10847,
+      "english": "The operating system",
+      "before": "El sistema operativo"
+    },
+    {
+      "node": 23,
+      "kind": "text",
+      "tag": "h1",
+      "text": "para los comercios marroquíes.",
+      "offset": 10903,
+      "english": "for Moroccan businesses.",
+      "before": "para los comercios marroquíes."
+    },
+    {
+      "node": 24,
+      "kind": "text",
+      "tag": "p",
+      "text": "Su TPV, sala, cocina, inventario, equipo e informes en un solo sistema, en francés y árabe. Desde 249 MAD al mes, 15 días gratis, sin compromiso.",
+      "offset": 11069,
+      "english": "Your till, floor, kitchen, stock, team, and reporting in one system, in French and Arabic. From 249 MAD a month, 15 days free, no commitment.",
+      "before": "Su TPV, sala, cocina, inventario, equipo e informes en un solo sistema, en francés y árabe. Desde 249 MAD al mes, 15 días gratis, sin compromiso."
+    },
+    {
+      "node": 25,
+      "kind": "text",
+      "tag": "a",
+      "text": "Obtener Kiwi",
+      "offset": 11664,
+      "english": "Get Kiwi",
+      "before": "Obtener Kiwi"
+    },
+    {
+      "node": 26,
+      "kind": "text",
+      "tag": "a",
+      "text": "Ver cómo funciona",
+      "offset": 12403,
+      "english": "See what it does",
+      "before": "Ver cómo funciona"
+    },
+    {
+      "node": 27,
+      "kind": "aria-label",
+      "tag": "div",
+      "text": "El panel de control de Kiwi: facturación, pedidos, importe medio por venta y métodos de pago de Café Atlas.",
+      "offset": 13376,
+      "english": "The Kiwi dashboard: revenue, orders, average spend, and payment mix for Café Atlas.",
+      "before": "El panel de control de Kiwi: facturación, pedidos, ticket medio y métodos de pago de Café Atlas."
+    },
+    {
+      "node": 28,
+      "kind": "text",
+      "tag": "span",
+      "text": "Buscar un pedido, un cliente…",
+      "offset": 14371,
+      "english": "Search for an order or customer…",
+      "before": "Buscar un pedido, un cliente…"
+    },
+    {
+      "node": 29,
+      "kind": "text",
+      "tag": "span",
+      "text": "Kiwi AI",
+      "offset": 16437,
+      "english": "Kiwi AI",
+      "before": "Kiwi AI"
+    },
+    {
+      "node": 30,
+      "kind": "text",
+      "tag": "span",
+      "text": "·",
+      "offset": 16496,
+      "english": "·",
+      "before": "·"
+    },
+    {
+      "node": 31,
+      "kind": "text",
+      "tag": "span",
+      "text": "Agente",
+      "offset": 16513,
+      "english": "Agent",
+      "before": "Agente"
+    },
+    {
+      "node": 32,
+      "kind": "text",
+      "tag": "div",
+      "text": "YB",
+      "offset": 17192,
+      "english": "YB",
+      "before": "YB"
+    },
+    {
+      "node": 33,
+      "kind": "text",
+      "tag": "div",
+      "text": "Youssef Benali",
+      "offset": 17277,
+      "english": "Youssef Benali",
+      "before": "Youssef Benali"
+    },
+    {
+      "node": 34,
+      "kind": "text",
+      "tag": "div",
+      "text": "Propietario · admin",
+      "offset": 17359,
+      "english": "Owner · admin",
+      "before": "Propietario · admin"
+    },
+    {
+      "node": 35,
+      "kind": "text",
+      "tag": "div",
+      "text": "Principal",
+      "offset": 17890,
+      "english": "Main",
+      "before": "Principal"
+    },
+    {
+      "node": 36,
+      "kind": "text",
+      "tag": "span",
+      "text": "Inicio",
+      "offset": 18668,
+      "english": "Home",
+      "before": "Inicio"
+    },
+    {
+      "node": 37,
+      "kind": "text",
+      "tag": "span",
+      "text": "Pedidos",
+      "offset": 19194,
+      "english": "Orders",
+      "before": "Pedidos"
+    },
+    {
+      "node": 38,
+      "kind": "text",
+      "tag": "span",
+      "text": "Informe diario",
+      "offset": 19670,
+      "english": "Daily report",
+      "before": "Informe diario"
+    },
+    {
+      "node": 39,
+      "kind": "text",
+      "tag": "span",
+      "text": "Clientes",
+      "offset": 20250,
+      "english": "Customers",
+      "before": "Clientes y marketing"
+    },
+    {
+      "node": 40,
+      "kind": "text",
+      "tag": "span",
+      "text": "Terminales",
+      "offset": 20807,
+      "english": "Terminals",
+      "before": "Terminales"
+    },
+    {
+      "node": 41,
+      "kind": "text",
+      "tag": "span",
+      "text": "Reservas",
+      "offset": 21529,
+      "english": "Bookings",
+      "before": "Reservas y citas"
+    },
+    {
+      "node": 42,
+      "kind": "text",
+      "tag": "div",
+      "text": "Gestión",
+      "offset": 21686,
+      "english": "Management",
+      "before": "Gestión"
+    },
+    {
+      "node": 43,
+      "kind": "text",
+      "tag": "span",
+      "text": "Normativa",
+      "offset": 22219,
+      "english": "Compliance",
+      "before": "Normativa"
+    },
+    {
+      "node": 44,
+      "kind": "text",
+      "tag": "span",
+      "text": "3",
+      "offset": 22401,
+      "english": "3",
+      "before": "3"
+    },
+    {
+      "node": 45,
+      "kind": "text",
+      "tag": "span",
+      "text": "Equipo",
+      "offset": 22906,
+      "english": "Team",
+      "before": "Equipo"
+    },
+    {
+      "node": 46,
+      "kind": "text",
+      "tag": "span",
+      "text": "Nóminas y turnos",
+      "offset": 23458,
+      "english": "Pay & scheduling",
+      "before": "Nóminas y turnos"
+    },
+    {
+      "node": 47,
+      "kind": "text",
+      "tag": "span",
+      "text": "Gastos y tarjetas",
+      "offset": 23987,
+      "english": "Expenses & cards",
+      "before": "Gastos y tarjetas"
+    },
+    {
+      "node": 48,
+      "kind": "text",
+      "tag": "div",
+      "text": "Tienda",
+      "offset": 24153,
+      "english": "Shop",
+      "before": "Tienda"
+    },
+    {
+      "node": 49,
+      "kind": "text",
+      "tag": "span",
+      "text": "Inventario de productos",
+      "offset": 24666,
+      "english": "Product inventory",
+      "before": "Inventario de productos"
+    },
+    {
+      "node": 50,
+      "kind": "text",
+      "tag": "span",
+      "text": "Categorías",
+      "offset": 25232,
+      "english": "Categories",
+      "before": "Categorías"
+    },
+    {
+      "node": 51,
+      "kind": "text",
+      "tag": "span",
+      "text": "Promociones y ofertas",
+      "offset": 25854,
+      "english": "Promotions & offers",
+      "before": "Promociones y ofertas"
+    },
+    {
+      "node": 52,
+      "kind": "text",
+      "tag": "span",
+      "text": "Devoluciones y cambios",
+      "offset": 26365,
+      "english": "Returns & exchanges",
+      "before": "Devoluciones y cambios"
+    },
+    {
+      "node": 53,
+      "kind": "text",
+      "tag": "div",
+      "text": "APP KIWI",
+      "offset": 28081,
+      "english": "KIWI APP",
+      "before": "APP KIWI"
+    },
+    {
+      "node": 54,
+      "kind": "text",
+      "tag": "div",
+      "text": "Kiwi, siempre a su alcance.",
+      "offset": 28198,
+      "english": "Kiwi, always within reach.",
+      "before": "Kiwi, siempre a su alcance."
+    },
+    {
+      "node": 55,
+      "kind": "text",
+      "tag": "p",
+      "text": "Instale su panel de control para un acceso rápido, incluso con una conexión inestable.",
+      "offset": 28326,
+      "english": "Install your dashboard for faster access, even when your connection is unreliable.",
+      "before": "Instale su panel de control para un acceso rápido, incluso con una conexión inestable."
+    },
+    {
+      "node": 56,
+      "kind": "text",
+      "tag": "span",
+      "text": "Acceso rápido",
+      "offset": 28727,
+      "english": "Quick access",
+      "before": "Acceso rápido"
+    },
+    {
+      "node": 57,
+      "kind": "text",
+      "tag": "span",
+      "text": "Listo sin conexión",
+      "offset": 28937,
+      "english": "Offline ready",
+      "before": "Listo sin conexión"
+    },
+    {
+      "node": 58,
+      "kind": "text",
+      "tag": "div",
+      "text": "Instalar Kiwi",
+      "offset": 29362,
+      "english": "Install Kiwi",
+      "before": "Instalar Kiwi"
+    },
+    {
+      "node": 59,
+      "kind": "text",
+      "tag": "h2",
+      "text": "Hoy",
+      "offset": 29574,
+      "english": "Today",
+      "before": "Hoy"
+    },
+    {
+      "node": 60,
+      "kind": "text",
+      "tag": "span",
+      "text": "Establecimiento:",
+      "offset": 29688,
+      "english": "Location:",
+      "before": "Establecimiento:"
+    },
+    {
+      "node": 61,
+      "kind": "text",
+      "tag": "span",
+      "text": "Café Atlas",
+      "offset": 29748,
+      "english": "Café Atlas",
+      "before": "Café Atlas"
+    },
+    {
+      "node": 62,
+      "kind": "text",
+      "tag": "button",
+      "text": "Generar informe",
+      "offset": 30454,
+      "english": "Generate report",
+      "before": "Generar informe"
+    },
+    {
+      "node": 63,
+      "kind": "text",
+      "tag": "div",
+      "text": "Facturación",
+      "offset": 30734,
+      "english": "Revenue",
+      "before": "Facturación"
+    },
+    {
+      "node": 64,
+      "kind": "text",
+      "tag": "span",
+      "text": "27 632",
+      "offset": 30951,
+      "english": "27,632",
+      "before": "27 632"
+    },
+    {
+      "node": 65,
+      "kind": "text",
+      "tag": "span",
+      "text": "MAD",
+      "offset": 31057,
+      "english": "MAD",
+      "before": "MAD"
+    },
+    {
+      "node": 66,
+      "kind": "text",
+      "tag": "span",
+      "text": "+2,5 %",
+      "offset": 31225,
+      "english": "+2.5%",
+      "before": "+2,5 %"
+    },
+    {
+      "node": 67,
+      "kind": "text",
+      "tag": "div",
+      "text": "frente a",
+      "offset": 31534,
+      "english": "vs",
+      "before": "vs"
+    },
+    {
+      "node": 68,
+      "kind": "text",
+      "tag": "div",
+      "text": "26 958 MAD",
+      "offset": 31559,
+      "english": "26,958 MAD",
+      "before": "26 958 MAD"
+    },
+    {
+      "node": 69,
+      "kind": "text",
+      "tag": "div",
+      "text": "ayer",
+      "offset": 31586,
+      "english": "yesterday",
+      "before": "ayer"
+    },
+    {
+      "node": 70,
+      "kind": "text",
+      "tag": "div",
+      "text": "Pedidos",
+      "offset": 31801,
+      "english": "Orders",
+      "before": "Pedidos"
+    },
+    {
+      "node": 71,
+      "kind": "text",
+      "tag": "span",
+      "text": "412",
+      "offset": 32014,
+      "english": "412",
+      "before": "412"
+    },
+    {
+      "node": 72,
+      "kind": "text",
+      "tag": "span",
+      "text": "+0,5 %",
+      "offset": 32182,
+      "english": "+0.5%",
+      "before": "+0,5 %"
+    },
+    {
+      "node": 73,
+      "kind": "text",
+      "tag": "div",
+      "text": "frente a",
+      "offset": 32491,
+      "english": "vs",
+      "before": "vs"
+    },
+    {
+      "node": 74,
+      "kind": "text",
+      "tag": "div",
+      "text": "410",
+      "offset": 32516,
+      "english": "410",
+      "before": "410"
+    },
+    {
+      "node": 75,
+      "kind": "text",
+      "tag": "div",
+      "text": "ayer",
+      "offset": 32536,
+      "english": "yesterday",
+      "before": "ayer"
+    },
+    {
+      "node": 76,
+      "kind": "text",
+      "tag": "div",
+      "text": "Ticket medio",
+      "offset": 32751,
+      "english": "Average spend",
+      "before": "Ticket medio"
+    },
+    {
+      "node": 77,
+      "kind": "text",
+      "tag": "span",
+      "text": "67",
+      "offset": 32969,
+      "english": "67",
+      "before": "67"
+    },
+    {
+      "node": 78,
+      "kind": "text",
+      "tag": "span",
+      "text": "MAD",
+      "offset": 33071,
+      "english": "MAD",
+      "before": "MAD"
+    },
+    {
+      "node": 79,
+      "kind": "text",
+      "tag": "span",
+      "text": "−1,5 %",
+      "offset": 33227,
+      "english": "−1.5%",
+      "before": "−1,5 %"
+    },
+    {
+      "node": 80,
+      "kind": "text",
+      "tag": "div",
+      "text": "frente a",
+      "offset": 33536,
+      "english": "vs",
+      "before": "vs"
+    },
+    {
+      "node": 81,
+      "kind": "text",
+      "tag": "div",
+      "text": "68 MAD",
+      "offset": 33561,
+      "english": "68 MAD",
+      "before": "68 MAD"
+    },
+    {
+      "node": 82,
+      "kind": "text",
+      "tag": "div",
+      "text": "ayer",
+      "offset": 33584,
+      "english": "yesterday",
+      "before": "ayer"
+    },
+    {
+      "node": 83,
+      "kind": "text",
+      "tag": "div",
+      "text": "Beneficio bruto",
+      "offset": 33799,
+      "english": "Gross profit",
+      "before": "Beneficio bruto"
+    },
+    {
+      "node": 84,
+      "kind": "text",
+      "tag": "span",
+      "text": "12 632",
+      "offset": 34020,
+      "english": "12,632",
+      "before": "12 632"
+    },
+    {
+      "node": 85,
+      "kind": "text",
+      "tag": "span",
+      "text": "MAD",
+      "offset": 34126,
+      "english": "MAD",
+      "before": "MAD"
+    },
+    {
+      "node": 86,
+      "kind": "text",
+      "tag": "span",
+      "text": "+2,5 %",
+      "offset": 34294,
+      "english": "+2.5%",
+      "before": "+2,5 %"
+    },
+    {
+      "node": 87,
+      "kind": "text",
+      "tag": "div",
+      "text": "frente a",
+      "offset": 34603,
+      "english": "vs",
+      "before": "vs"
+    },
+    {
+      "node": 88,
+      "kind": "text",
+      "tag": "div",
+      "text": "12 324 MAD",
+      "offset": 34628,
+      "english": "12,324 MAD",
+      "before": "12 324 MAD"
+    },
+    {
+      "node": 89,
+      "kind": "text",
+      "tag": "div",
+      "text": "ayer",
+      "offset": 34655,
+      "english": "yesterday",
+      "before": "ayer"
+    },
+    {
+      "node": 90,
+      "kind": "text",
+      "tag": "span",
+      "text": "Facturación · 12 meses",
+      "offset": 34922,
+      "english": "Revenue · 12 months",
+      "before": "Facturación · 12 meses"
+    },
+    {
+      "node": 91,
+      "kind": "text",
+      "tag": "span",
+      "text": "En sala",
+      "offset": 35181,
+      "english": "On premises",
+      "before": "En sala"
+    },
+    {
+      "node": 92,
+      "kind": "text",
+      "tag": "span",
+      "text": "Para llevar",
+      "offset": 35314,
+      "english": "Takeaway",
+      "before": "Para llevar"
+    },
+    {
+      "node": 93,
+      "kind": "text",
+      "tag": "span",
+      "text": "1M",
+      "offset": 35523,
+      "english": "1M",
+      "before": "1M"
+    },
+    {
+      "node": 94,
+      "kind": "text",
+      "tag": "span",
+      "text": "800k",
+      "offset": 35538,
+      "english": "800k",
+      "before": "800k"
+    },
+    {
+      "node": 95,
+      "kind": "text",
+      "tag": "span",
+      "text": "600k",
+      "offset": 35555,
+      "english": "600k",
+      "before": "600k"
+    },
+    {
+      "node": 96,
+      "kind": "text",
+      "tag": "span",
+      "text": "400k",
+      "offset": 35572,
+      "english": "400k",
+      "before": "400k"
+    },
+    {
+      "node": 97,
+      "kind": "text",
+      "tag": "span",
+      "text": "200k",
+      "offset": 35589,
+      "english": "200k",
+      "before": "200k"
+    },
+    {
+      "node": 98,
+      "kind": "text",
+      "tag": "span",
+      "text": "0",
+      "offset": 35606,
+      "english": "0",
+      "before": "0"
+    },
+    {
+      "node": 99,
+      "kind": "text",
+      "tag": "div",
+      "text": "612 400 MAD",
+      "offset": 39698,
+      "english": "612,400 MAD",
+      "before": "612 400 MAD"
+    },
+    {
+      "node": 100,
+      "kind": "text",
+      "tag": "div",
+      "text": "agosto",
+      "offset": 39777,
+      "english": "August",
+      "before": "Agosto"
+    },
+    {
+      "node": 101,
+      "kind": "text",
+      "tag": "span",
+      "text": "ene",
+      "offset": 39916,
+      "english": "Jan",
+      "before": "Ene"
+    },
+    {
+      "node": 102,
+      "kind": "text",
+      "tag": "span",
+      "text": "feb",
+      "offset": 39932,
+      "english": "Feb",
+      "before": "Feb"
+    },
+    {
+      "node": 103,
+      "kind": "text",
+      "tag": "span",
+      "text": "mar",
+      "offset": 39948,
+      "english": "Mar",
+      "before": "Mar"
+    },
+    {
+      "node": 104,
+      "kind": "text",
+      "tag": "span",
+      "text": "abr",
+      "offset": 39964,
+      "english": "Apr",
+      "before": "Abr"
+    },
+    {
+      "node": 105,
+      "kind": "text",
+      "tag": "span",
+      "text": "may",
+      "offset": 39980,
+      "english": "May",
+      "before": "May"
+    },
+    {
+      "node": 106,
+      "kind": "text",
+      "tag": "span",
+      "text": "jun",
+      "offset": 39996,
+      "english": "Jun",
+      "before": "Jun"
+    },
+    {
+      "node": 107,
+      "kind": "text",
+      "tag": "span",
+      "text": "jul",
+      "offset": 40012,
+      "english": "Jul",
+      "before": "Jul"
+    },
+    {
+      "node": 108,
+      "kind": "text",
+      "tag": "span",
+      "text": "ago",
+      "offset": 40028,
+      "english": "Aug",
+      "before": "Ago"
+    },
+    {
+      "node": 109,
+      "kind": "text",
+      "tag": "span",
+      "text": "sep",
+      "offset": 40044,
+      "english": "Sep",
+      "before": "Sep"
+    },
+    {
+      "node": 110,
+      "kind": "text",
+      "tag": "span",
+      "text": "oct",
+      "offset": 40060,
+      "english": "Oct",
+      "before": "Oct"
+    },
+    {
+      "node": 111,
+      "kind": "text",
+      "tag": "span",
+      "text": "nov",
+      "offset": 40076,
+      "english": "Nov",
+      "before": "Nov"
+    },
+    {
+      "node": 112,
+      "kind": "text",
+      "tag": "span",
+      "text": "dic",
+      "offset": 40092,
+      "english": "Dec",
+      "before": "Dic"
+    },
+    {
+      "node": 113,
+      "kind": "text",
+      "tag": "div",
+      "text": "Objetivo del día",
+      "offset": 40362,
+      "english": "Today’s goal",
+      "before": "Objetivo del día"
+    },
+    {
+      "node": 114,
+      "kind": "text",
+      "tag": "span",
+      "text": "21 060",
+      "offset": 40553,
+      "english": "21,060",
+      "before": "21 060"
+    },
+    {
+      "node": 115,
+      "kind": "text",
+      "tag": "span",
+      "text": "/ 27 000 MAD",
+      "offset": 40629,
+      "english": "/ 27,000 MAD",
+      "before": "/ 27 000 MAD"
+    },
+    {
+      "node": 116,
+      "kind": "text",
+      "tag": "span",
+      "text": "78 % alcanzado",
+      "offset": 40966,
+      "english": "78% reached",
+      "before": "78 % alcanzado"
+    },
+    {
+      "node": 117,
+      "kind": "text",
+      "tag": "span",
+      "text": "Faltan 5 940 MAD",
+      "offset": 40993,
+      "english": "5,940 MAD left",
+      "before": "Faltan 5 940 MAD"
+    },
+    {
+      "node": 118,
+      "kind": "text",
+      "tag": "div",
+      "text": "1 284",
+      "offset": 42726,
+      "english": "1,284",
+      "before": "1 284"
+    },
+    {
+      "node": 119,
+      "kind": "text",
+      "tag": "div",
+      "text": "Clientes este mes",
+      "offset": 42808,
+      "english": "Customers this month",
+      "before": "Clientes este mes"
+    },
+    {
+      "node": 120,
+      "kind": "text",
+      "tag": "span",
+      "text": "+3,2 %",
+      "offset": 42995,
+      "english": "+3.2%",
+      "before": "+3,2 %"
+    },
+    {
+      "node": 121,
+      "kind": "text",
+      "tag": "div",
+      "text": "Objetivos por servicio",
+      "offset": 43449,
+      "english": "Goals by service",
+      "before": "Objetivos por servicio"
+    },
+    {
+      "node": 122,
+      "kind": "text",
+      "tag": "div",
+      "text": "Parte del objetivo mensual alcanzada · 30 días",
+      "offset": 43548,
+      "english": "Share of monthly goal reached · 30 days",
+      "before": "Parte del objetivo mensual alcanzada · 30 días"
+    },
+    {
+      "node": 123,
+      "kind": "text",
+      "tag": "text",
+      "text": "74",
+      "offset": 44195,
+      "english": "74",
+      "before": "74"
+    },
+    {
+      "node": 124,
+      "kind": "text",
+      "tag": "text",
+      "text": "%",
+      "offset": 44205,
+      "english": "%",
+      "before": "%"
+    },
+    {
+      "node": 125,
+      "kind": "text",
+      "tag": "div",
+      "text": "92 980",
+      "offset": 44362,
+      "english": "92,980",
+      "before": "92 980"
+    },
+    {
+      "node": 126,
+      "kind": "text",
+      "tag": "div",
+      "text": "Sala",
+      "offset": 44463,
+      "english": "Dining room",
+      "before": "Sala"
+    },
+    {
+      "node": 127,
+      "kind": "text",
+      "tag": "div",
+      "text": "MAD este mes",
+      "offset": 44562,
+      "english": "MAD this month",
+      "before": "MAD este mes"
+    },
+    {
+      "node": 128,
+      "kind": "text",
+      "tag": "text",
+      "text": "46",
+      "offset": 45115,
+      "english": "46",
+      "before": "46"
+    },
+    {
+      "node": 129,
+      "kind": "text",
+      "tag": "text",
+      "text": "%",
+      "offset": 45125,
+      "english": "%",
+      "before": "%"
+    },
+    {
+      "node": 130,
+      "kind": "text",
+      "tag": "div",
+      "text": "28 546",
+      "offset": 45282,
+      "english": "28,546",
+      "before": "28 546"
+    },
+    {
+      "node": 131,
+      "kind": "text",
+      "tag": "div",
+      "text": "Terraza",
+      "offset": 45383,
+      "english": "Terrace",
+      "before": "Terraza"
+    },
+    {
+      "node": 132,
+      "kind": "text",
+      "tag": "div",
+      "text": "MAD este mes",
+      "offset": 45485,
+      "english": "MAD this month",
+      "before": "MAD este mes"
+    },
+    {
+      "node": 133,
+      "kind": "text",
+      "tag": "text",
+      "text": "14",
+      "offset": 46037,
+      "english": "14",
+      "before": "14"
+    },
+    {
+      "node": 134,
+      "kind": "text",
+      "tag": "text",
+      "text": "%",
+      "offset": 46047,
+      "english": "%",
+      "before": "%"
+    },
+    {
+      "node": 135,
+      "kind": "text",
+      "tag": "div",
+      "text": "14 008",
+      "offset": 46204,
+      "english": "14,008",
+      "before": "14 008"
+    },
+    {
+      "node": 136,
+      "kind": "text",
+      "tag": "div",
+      "text": "A domicilio",
+      "offset": 46305,
+      "english": "Delivery",
+      "before": "A domicilio"
+    },
+    {
+      "node": 137,
+      "kind": "text",
+      "tag": "div",
+      "text": "MAD este mes",
+      "offset": 46411,
+      "english": "MAD this month",
+      "before": "MAD este mes"
+    },
+    {
+      "node": 138,
+      "kind": "text",
+      "tag": "span",
+      "text": "Métodos de pago",
+      "offset": 46643,
+      "english": "Payment mix",
+      "before": "Métodos de pago"
+    },
+    {
+      "node": 139,
+      "kind": "text",
+      "tag": "span",
+      "text": "Tarjetas",
+      "offset": 46895,
+      "english": "Cards",
+      "before": "Tarjetas"
+    },
+    {
+      "node": 140,
+      "kind": "text",
+      "tag": "span",
+      "text": "Efectivo",
+      "offset": 47029,
+      "english": "Cash",
+      "before": "Efectivo"
+    },
+    {
+      "node": 141,
+      "kind": "text",
+      "tag": "span",
+      "text": "800k",
+      "offset": 47235,
+      "english": "800k",
+      "before": "800k"
+    },
+    {
+      "node": 142,
+      "kind": "text",
+      "tag": "span",
+      "text": "600k",
+      "offset": 47252,
+      "english": "600k",
+      "before": "600k"
+    },
+    {
+      "node": 143,
+      "kind": "text",
+      "tag": "span",
+      "text": "400k",
+      "offset": 47269,
+      "english": "400k",
+      "before": "400k"
+    },
+    {
+      "node": 144,
+      "kind": "text",
+      "tag": "span",
+      "text": "200k",
+      "offset": 47286,
+      "english": "200k",
+      "before": "200k"
+    },
+    {
+      "node": 145,
+      "kind": "text",
+      "tag": "span",
+      "text": "0",
+      "offset": 47303,
+      "english": "0",
+      "before": "0"
+    },
+    {
+      "node": 146,
+      "kind": "text",
+      "tag": "div",
+      "text": "marzo de 2026",
+      "offset": 50388,
+      "english": "March 2026",
+      "before": "Marzo de 2026"
+    },
+    {
+      "node": 147,
+      "kind": "text",
+      "tag": "div",
+      "text": "398 000 MAD Tarjetas",
+      "offset": 50613,
+      "english": "398,000 MAD Cards",
+      "before": "398 000 MAD Tarjetas"
+    },
+    {
+      "node": 148,
+      "kind": "text",
+      "tag": "div",
+      "text": "214 000 MAD Efectivo",
+      "offset": 50833,
+      "english": "214,000 MAD Cash",
+      "before": "214 000 MAD Efectivo"
+    },
+    {
+      "node": 149,
+      "kind": "text",
+      "tag": "span",
+      "text": "ene",
+      "offset": 50986,
+      "english": "Jan",
+      "before": "Ene"
+    },
+    {
+      "node": 150,
+      "kind": "text",
+      "tag": "span",
+      "text": "feb",
+      "offset": 51002,
+      "english": "Feb",
+      "before": "Feb"
+    },
+    {
+      "node": 151,
+      "kind": "text",
+      "tag": "span",
+      "text": "mar",
+      "offset": 51018,
+      "english": "Mar",
+      "before": "Mar"
+    },
+    {
+      "node": 152,
+      "kind": "text",
+      "tag": "span",
+      "text": "abr",
+      "offset": 51034,
+      "english": "Apr",
+      "before": "Abr"
+    },
+    {
+      "node": 153,
+      "kind": "text",
+      "tag": "span",
+      "text": "may",
+      "offset": 51050,
+      "english": "May",
+      "before": "May"
+    },
+    {
+      "node": 154,
+      "kind": "text",
+      "tag": "span",
+      "text": "jun",
+      "offset": 51066,
+      "english": "Jun",
+      "before": "Jun"
+    },
+    {
+      "node": 155,
+      "kind": "text",
+      "tag": "span",
+      "text": "jul",
+      "offset": 51082,
+      "english": "Jul",
+      "before": "Jul"
+    },
+    {
+      "node": 156,
+      "kind": "text",
+      "tag": "span",
+      "text": "ago",
+      "offset": 51098,
+      "english": "Aug",
+      "before": "Ago"
+    },
+    {
+      "node": 157,
+      "kind": "text",
+      "tag": "span",
+      "text": "sep",
+      "offset": 51114,
+      "english": "Sep",
+      "before": "Sep"
+    },
+    {
+      "node": 158,
+      "kind": "text",
+      "tag": "h2",
+      "text": "Todo lo que un comercio necesita, en una sola herramienta.",
+      "offset": 51647,
+      "english": "Everything a business owner needs, in one tool.",
+      "before": "Todo lo que un comercio necesita, en una sola herramienta."
+    },
+    {
+      "node": 159,
+      "kind": "text",
+      "tag": "p",
+      "text": "TPV, inventario, equipo e informes · más la pantalla adaptada a su actividad. Un solo sistema, no seis suscripciones.",
+      "offset": 51839,
+      "english": "Till, stock, team, and reporting · plus the screen your trade needs. One system, not six subscriptions.",
+      "before": "TPV, inventario, equipo e informes · más la pantalla adaptada a su actividad. Un solo sistema, no seis suscripciones."
+    },
+    {
+      "node": 160,
+      "kind": "text",
+      "tag": "h3",
+      "text": "Un TPV rápido",
+      "offset": 53412,
+      "english": "A fast till",
+      "before": "Un TPV rápido"
+    },
+    {
+      "node": 161,
+      "kind": "text",
+      "tag": "p",
+      "text": "Registre cada venta en unos toques, ya sea en efectivo, con tarjeta o con el móvil. En el mostrador, en el sillón o en la mesa.",
+      "offset": 53536,
+      "english": "Enter every sale in a few taps, whether paid in cash, by card, or on mobile. At the counter, the chair, or the table.",
+      "before": "Registre cada venta en unos toques, ya sea en efectivo, con tarjeta o con el móvil. En el mostrador, en el sillón o en la mesa."
+    },
+    {
+      "node": 162,
+      "kind": "text",
+      "tag": "h3",
+      "text": "Sin conexión, sin interrupciones",
+      "offset": 54943,
+      "english": "Offline, without a pause",
+      "before": "Sin conexión, sin interrupciones"
+    },
+    {
+      "node": 163,
+      "kind": "text",
+      "tag": "p",
+      "text": "Si se corta la conexión, la caja sigue funcionando: las ventas se registran, los tickets se imprimen y todo se sincroniza en cuanto vuelve la red.",
+      "offset": 55086,
+      "english": "When the connection drops, the till keeps going: sales are recorded, tickets print, and everything syncs the moment the network is back.",
+      "before": "Si se corta la conexión, la caja sigue funcionando: las ventas se registran, los tickets se imprimen y todo se sincroniza en cuanto vuelve la red."
+    },
+    {
+      "node": 164,
+      "kind": "text",
+      "tag": "h3",
+      "text": "Dieciocho sectores",
+      "offset": 56732,
+      "english": "Eighteen trades",
+      "before": "Dieciocho sectores"
+    },
+    {
+      "node": 165,
+      "kind": "text",
+      "tag": "p",
+      "text": "La libreta de fiado del almacén, las notas de crédito de la tienda, los pagos de terceros de la farmacia y la sala y cocina del restaurante.",
+      "offset": 56861,
+      "english": "The grocer’s credit book, the shop’s credit notes, the pharmacy’s third-party payments, and the restaurant’s floor and kitchen.",
+      "before": "La libreta de fiado del colmado, los vales de la tienda, los convenios de la farmacia, la sala y la cocina del restaurante."
+    },
+    {
+      "node": 166,
+      "kind": "text",
+      "tag": "span",
+      "text": "Dieciocho sectores, un solo TPV",
+      "offset": 57421,
+      "english": "Eighteen trades, one till",
+      "before": "Dieciocho sectores, un solo TPV"
+    },
+    {
+      "node": 167,
+      "kind": "text",
+      "tag": "h2",
+      "text": "Su sector ya tiene su pantalla.",
+      "offset": 57580,
+      "english": "Your trade already has its screen.",
+      "before": "Su sector ya tiene su pantalla."
+    },
+    {
+      "node": 168,
+      "kind": "text",
+      "tag": "p",
+      "text": "Cada negocio tiene una operación clave. Kiwi la sitúa en el centro de la pantalla para que no tenga que buscarla en un menú pensado para otro sector.",
+      "offset": 57733,
+      "english": "Every business has one decisive gesture. Kiwi puts it in the middle of the screen instead of routing you through someone else’s menu.",
+      "before": "Cada negocio tiene un gesto decisivo. Kiwi lo sitúa en el centro de la pantalla en lugar de obligarle a pasar por el menú de otro."
+    },
+    {
+      "node": 169,
+      "kind": "text",
+      "tag": "span",
+      "text": "TPV Kiwi",
+      "offset": 58591,
+      "english": "Kiwi till",
+      "before": "TPV Kiwi"
+    },
+    {
+      "node": 170,
+      "kind": "text",
+      "tag": "span",
+      "text": "01",
+      "offset": 58631,
+      "english": "01",
+      "before": "01"
+    },
+    {
+      "node": 171,
+      "kind": "text",
+      "tag": "span",
+      "text": "/",
+      "offset": 58641,
+      "english": "/",
+      "before": "/"
+    },
+    {
+      "node": 172,
+      "kind": "text",
+      "tag": "span",
+      "text": "18",
+      "offset": 58652,
+      "english": "18",
+      "before": "18"
+    },
+    {
+      "node": 173,
+      "kind": "text",
+      "tag": "span",
+      "text": "T1",
+      "offset": 59459,
+      "english": "T1",
+      "before": "T1"
+    },
+    {
+      "node": 174,
+      "kind": "text",
+      "tag": "span",
+      "text": "T2",
+      "offset": 59978,
+      "english": "T2",
+      "before": "T2"
+    },
+    {
+      "node": 175,
+      "kind": "text",
+      "tag": "span",
+      "text": "T3",
+      "offset": 60373,
+      "english": "T3",
+      "before": "T3"
+    },
+    {
+      "node": 176,
+      "kind": "text",
+      "tag": "span",
+      "text": "T4",
+      "offset": 60836,
+      "english": "T4",
+      "before": "T4"
+    },
+    {
+      "node": 177,
+      "kind": "text",
+      "tag": "span",
+      "text": "T5",
+      "offset": 61765,
+      "english": "T5",
+      "before": "T5"
+    },
+    {
+      "node": 178,
+      "kind": "text",
+      "tag": "span",
+      "text": "T6",
+      "offset": 62284,
+      "english": "T6",
+      "before": "T6"
+    },
+    {
+      "node": 179,
+      "kind": "text",
+      "tag": "div",
+      "text": "Mesa 4 · 2 comensales",
+      "offset": 62438,
+      "english": "Table 4 · 2 covers",
+      "before": "Mesa 4 · 2 comensales"
+    },
+    {
+      "node": 180,
+      "kind": "text",
+      "tag": "span",
+      "text": "En cocina",
+      "offset": 63062,
+      "english": "In the kitchen",
+      "before": "En cocina"
+    },
+    {
+      "node": 181,
+      "kind": "text",
+      "tag": "span",
+      "text": "Ticket",
+      "offset": 63889,
+      "english": "Ticket",
+      "before": "Ticket"
+    },
+    {
+      "node": 182,
+      "kind": "text",
+      "tag": "span",
+      "text": "T4",
+      "offset": 63908,
+      "english": "T4",
+      "before": "T4"
+    },
+    {
+      "node": 183,
+      "kind": "text",
+      "tag": "span",
+      "text": "Tagine de pollo",
+      "offset": 64118,
+      "english": "Chicken tagine",
+      "before": "Tagine de pollo"
+    },
+    {
+      "node": 184,
+      "kind": "text",
+      "tag": "span",
+      "text": "85",
+      "offset": 64267,
+      "english": "85",
+      "before": "85"
+    },
+    {
+      "node": 185,
+      "kind": "text",
+      "tag": "span",
+      "text": "Té con hierbabuena",
+      "offset": 64443,
+      "english": "Mint tea",
+      "before": "Té con hierbabuena"
+    },
+    {
+      "node": 186,
+      "kind": "text",
+      "tag": "span",
+      "text": "18",
+      "offset": 64595,
+      "english": "18",
+      "before": "18"
+    },
+    {
+      "node": 187,
+      "kind": "text",
+      "tag": "span",
+      "text": "Listo",
+      "offset": 65116,
+      "english": "Ready",
+      "before": "Listo"
+    },
+    {
+      "node": 188,
+      "kind": "text",
+      "tag": "span",
+      "text": "Total",
+      "offset": 65277,
+      "english": "Total",
+      "before": "Total"
+    },
+    {
+      "node": 189,
+      "kind": "text",
+      "tag": "span",
+      "text": "103",
+      "offset": 65509,
+      "english": "103",
+      "before": "103"
+    },
+    {
+      "node": 190,
+      "kind": "text",
+      "tag": "span",
+      "text": "0",
+      "offset": 65652,
+      "english": "0",
+      "before": "0"
+    },
+    {
+      "node": 191,
+      "kind": "text",
+      "tag": "span",
+      "text": "85",
+      "offset": 65712,
+      "english": "85",
+      "before": "85"
+    },
+    {
+      "node": 192,
+      "kind": "text",
+      "tag": "span",
+      "text": "103",
+      "offset": 65773,
+      "english": "103",
+      "before": "103"
+    },
+    {
+      "node": 193,
+      "kind": "text",
+      "tag": "span",
+      "text": "MAD",
+      "offset": 65847,
+      "english": "MAD",
+      "before": "MAD"
+    },
+    {
+      "node": 194,
+      "kind": "text",
+      "tag": "span",
+      "text": "Cuenta",
+      "offset": 66033,
+      "english": "Bill",
+      "before": "Cuenta"
+    },
+    {
+      "node": 195,
+      "kind": "text",
+      "tag": "h3",
+      "text": "Restaurante",
+      "offset": 67027,
+      "english": "Restaurant",
+      "before": "Restaurante"
+    },
+    {
+      "node": 196,
+      "kind": "text",
+      "tag": "p",
+      "text": "Plano de sala, cocina, carta QR",
+      "offset": 67149,
+      "english": "Floor plan, kitchen, QR menu",
+      "before": "Plano de sala, cocina, menú QR"
+    },
+    {
+      "node": 197,
+      "kind": "aria-label",
+      "tag": "div",
+      "text": "Elegir un sector",
+      "offset": 67208,
+      "english": "Choose a trade",
+      "before": "Elegir un sector"
+    },
+    {
+      "node": 198,
+      "kind": "text",
+      "tag": "button",
+      "text": "Restaurante",
+      "offset": 67969,
+      "english": "Restaurant",
+      "before": "Restaurante"
+    },
+    {
+      "node": 199,
+      "kind": "text",
+      "tag": "button",
+      "text": "Cafetería y salón de té",
+      "offset": 68738,
+      "english": "Café & tea room",
+      "before": "Cafetería y salón de té"
+    },
+    {
+      "node": 200,
+      "kind": "text",
+      "tag": "button",
+      "text": "Comida rápida",
+      "offset": 69737,
+      "english": "Fast food",
+      "before": "Comida rápida"
+    },
+    {
+      "node": 201,
+      "kind": "text",
+      "tag": "button",
+      "text": "Panadería",
+      "offset": 70864,
+      "english": "Bakery",
+      "before": "Panadería y pastelería"
+    },
+    {
+      "node": 202,
+      "kind": "text",
+      "tag": "button",
+      "text": "Pizzería",
+      "offset": 71757,
+      "english": "Pizzeria",
+      "before": "Pizzería"
+    },
+    {
+      "node": 203,
+      "kind": "text",
+      "tag": "button",
+      "text": "Catering",
+      "offset": 72467,
+      "english": "Caterer",
+      "before": "Catering"
+    },
+    {
+      "node": 204,
+      "kind": "text",
+      "tag": "button",
+      "text": "Camión de comida",
+      "offset": 73464,
+      "english": "Food truck",
+      "before": "Food truck"
+    },
+    {
+      "node": 205,
+      "kind": "text",
+      "tag": "button",
+      "text": "Tienda de ropa",
+      "offset": 74621,
+      "english": "Boutique",
+      "before": "Boutique"
+    },
+    {
+      "node": 206,
+      "kind": "text",
+      "tag": "button",
+      "text": "Alimentación y minimercado",
+      "offset": 75548,
+      "english": "Grocery & minimarket",
+      "before": "Alimentación y supermercado"
+    },
+    {
+      "node": 207,
+      "kind": "text",
+      "tag": "button",
+      "text": "Farmacia",
+      "offset": 76268,
+      "english": "Pharmacy",
+      "before": "Farmacia"
+    },
+    {
+      "node": 208,
+      "kind": "text",
+      "tag": "button",
+      "text": "Librería",
+      "offset": 77545,
+      "english": "Bookshop",
+      "before": "Librería"
+    },
+    {
+      "node": 209,
+      "kind": "text",
+      "tag": "button",
+      "text": "Floristería",
+      "offset": 79538,
+      "english": "Florist",
+      "before": "Floristería"
+    },
+    {
+      "node": 210,
+      "kind": "text",
+      "tag": "button",
+      "text": "Hogar y decoración",
+      "offset": 80671,
+      "english": "Home & decor",
+      "before": "Hogar y decoración"
+    },
+    {
+      "node": 211,
+      "kind": "text",
+      "tag": "button",
+      "text": "Tintorería",
+      "offset": 81774,
+      "english": "Dry cleaner",
+      "before": "Tintorería"
+    },
+    {
+      "node": 212,
+      "kind": "text",
+      "tag": "button",
+      "text": "Spa y bienestar",
+      "offset": 82788,
+      "english": "Spa & wellness",
+      "before": "Spa y bienestar"
+    },
+    {
+      "node": 213,
+      "kind": "text",
+      "tag": "button",
+      "text": "Peluquería",
+      "offset": 83881,
+      "english": "Hair salon",
+      "before": "Peluquería"
+    },
+    {
+      "node": 214,
+      "kind": "text",
+      "tag": "button",
+      "text": "Gimnasio",
+      "offset": 84577,
+      "english": "Gym",
+      "before": "Gimnasio"
+    },
+    {
+      "node": 215,
+      "kind": "text",
+      "tag": "button",
+      "text": "Hotel y riad",
+      "offset": 85436,
+      "english": "Hotel & riad",
+      "before": "Hotel y riad"
+    },
+    {
+      "node": 216,
+      "kind": "text",
+      "tag": "h2",
+      "text": "Ya funcionan con Kiwi.",
+      "offset": 85853,
+      "english": "They already run on Kiwi.",
+      "before": "Ya funcionan con Kiwi."
+    },
+    {
+      "node": 217,
+      "kind": "text",
+      "tag": "p",
+      "text": "Hostelería y comercio. Dos sectores, un mismo TPV.",
+      "offset": 86003,
+      "english": "Hospitality and retail. Two trades, one till.",
+      "before": "Hostelería y comercio. Dos sectores, un mismo TPV."
+    },
+    {
+      "node": 218,
+      "kind": "alt",
+      "tag": "img",
+      "text": "MIX Restaurant",
+      "offset": 86368,
+      "english": "MIX Restaurant",
+      "before": "MIX Restaurant"
+    },
+    {
+      "node": 219,
+      "kind": "alt",
+      "tag": "img",
+      "text": "Pasta Corner",
+      "offset": 86815,
+      "english": "Pasta Corner",
+      "before": "Pasta Corner"
+    },
+    {
+      "node": 220,
+      "kind": "alt",
+      "tag": "img",
+      "text": "Claro",
+      "offset": 87258,
+      "english": "Claro",
+      "before": "Claro"
+    },
+    {
+      "node": 221,
+      "kind": "alt",
+      "tag": "img",
+      "text": "Startoner",
+      "offset": 87700,
+      "english": "Startoner",
+      "before": "Startoner"
+    },
+    {
+      "node": 222,
+      "kind": "text",
+      "tag": "h2",
+      "text": "El plano de sala, en un solo movimiento",
+      "offset": 88481,
+      "english": "Your floor plan in one move",
+      "before": "El plano de sala, en un solo movimiento"
+    },
+    {
+      "node": 223,
+      "kind": "text",
+      "tag": "p",
+      "text": "Abra, fusione o traslade mesas con un solo gesto. El equipo de sala ve quién espera, quién come y quién pide la cuenta, sin cruzar el salón para saberlo.",
+      "offset": 88631,
+      "english": "Open, merge, or move tables in one gesture. Staff can see who is waiting, eating, or ready for the bill without crossing the room to find out.",
+      "before": "Abra, fusione o traslade mesas con un solo gesto. El equipo de sala ve quién espera, quién come y quién pide la cuenta, sin cruzar el salón para saberlo."
+    },
+    {
+      "node": 224,
+      "kind": "text",
+      "tag": "a",
+      "text": "Ver demo",
+      "offset": 89128,
+      "english": "See a demo",
+      "before": "Ver demo"
+    },
+    {
+      "node": 225,
+      "kind": "aria-label",
+      "tag": "svg",
+      "text": "El plano de una sala: una bancada y tres mesas de dos a la izquierda, una mesa redonda de seis y una mesa de cuatro en el centro, dos mesas de dos fusionadas a la derecha bajo el cursor, una barra y una puerta. Cada mesa muestra su estado · libre, esperando, comiendo o pidiendo la cuenta.",
+      "offset": 89584,
+      "english": "A restaurant floor plan: a banquette and three tables for two on the left, a round table for six and a table for four in the centre, two tables for two merged under the cursor on the right, a bar, and a door. Each table shows its status · free, waiting, eating, or ready for the bill.",
+      "before": "El plano de una sala: una bancada y tres mesas de dos a la izquierda, una mesa redonda de seis y una mesa de cuatro en el centro, dos mesas de dos fusionadas a la derecha bajo el cursor, una barra y una puerta. Cada mesa muestra su estado · libre, esperando, comiendo o pidiendo la cuenta."
+    },
+    {
+      "node": 226,
+      "kind": "text",
+      "tag": "text",
+      "text": "BARRA",
+      "offset": 92830,
+      "english": "BAR",
+      "before": "BAR"
+    },
+    {
+      "node": 227,
+      "kind": "text",
+      "tag": "text",
+      "text": "TPV",
+      "offset": 93126,
+      "english": "TILL",
+      "before": "TILL"
+    },
+    {
+      "node": 228,
+      "kind": "text",
+      "tag": "text",
+      "text": "01",
+      "offset": 94165,
+      "english": "01",
+      "before": "01"
+    },
+    {
+      "node": 229,
+      "kind": "text",
+      "tag": "text",
+      "text": "02",
+      "offset": 94752,
+      "english": "02",
+      "before": "02"
+    },
+    {
+      "node": 230,
+      "kind": "text",
+      "tag": "text",
+      "text": "6 min",
+      "offset": 95063,
+      "english": "6 min",
+      "before": "6 min"
+    },
+    {
+      "node": 231,
+      "kind": "text",
+      "tag": "text",
+      "text": "02",
+      "offset": 95652,
+      "english": "02",
+      "before": "02"
+    },
+    {
+      "node": 232,
+      "kind": "text",
+      "tag": "text",
+      "text": "03",
+      "offset": 96443,
+      "english": "03",
+      "before": "03"
+    },
+    {
+      "node": 233,
+      "kind": "text",
+      "tag": "text",
+      "text": "03",
+      "offset": 97029,
+      "english": "03",
+      "before": "03"
+    },
+    {
+      "node": 234,
+      "kind": "text",
+      "tag": "text",
+      "text": "04",
+      "offset": 98421,
+      "english": "04",
+      "before": "04"
+    },
+    {
+      "node": 235,
+      "kind": "text",
+      "tag": "text",
+      "text": "05",
+      "offset": 99395,
+      "english": "05",
+      "before": "05"
+    },
+    {
+      "node": 236,
+      "kind": "text",
+      "tag": "text",
+      "text": "05",
+      "offset": 100562,
+      "english": "05",
+      "before": "05"
+    },
+    {
+      "node": 237,
+      "kind": "text",
+      "tag": "text",
+      "text": "06",
+      "offset": 101449,
+      "english": "06",
+      "before": "06"
+    },
+    {
+      "node": 238,
+      "kind": "text",
+      "tag": "text",
+      "text": "07",
+      "offset": 102159,
+      "english": "07",
+      "before": "07"
+    },
+    {
+      "node": 239,
+      "kind": "text",
+      "tag": "text",
+      "text": "08",
+      "offset": 103116,
+      "english": "08",
+      "before": "08"
+    },
+    {
+      "node": 240,
+      "kind": "text",
+      "tag": "text",
+      "text": "06 + 07",
+      "offset": 103850,
+      "english": "06 + 07",
+      "before": "06 + 07"
+    },
+    {
+      "node": 241,
+      "kind": "text",
+      "tag": "text",
+      "text": "Libre",
+      "offset": 104384,
+      "english": "Free",
+      "before": "Libre"
+    },
+    {
+      "node": 242,
+      "kind": "text",
+      "tag": "text",
+      "text": "Esperando",
+      "offset": 104682,
+      "english": "Waiting",
+      "before": "Esperando"
+    },
+    {
+      "node": 243,
+      "kind": "text",
+      "tag": "text",
+      "text": "Comiendo",
+      "offset": 104984,
+      "english": "Eating",
+      "before": "Comiendo"
+    },
+    {
+      "node": 244,
+      "kind": "text",
+      "tag": "text",
+      "text": "Cuenta",
+      "offset": 105279,
+      "english": "Bill",
+      "before": "Cuenta"
+    },
+    {
+      "node": 245,
+      "kind": "text",
+      "tag": "h2",
+      "text": "Haga la pregunta, obtenga la respuesta.",
+      "offset": 105708,
+      "english": "Ask the question. Get the answer.",
+      "before": "Haga la pregunta, obtenga la respuesta."
+    },
+    {
+      "node": 246,
+      "kind": "text",
+      "tag": "p",
+      "text": "«¿Cuáles fueron las ventas de ayer?» Kiwi IQ analiza las cifras, responde al gerente en su idioma, detecta anomalías y sugiere qué hacer a continuación.",
+      "offset": 105858,
+      "english": "“What were yesterday’s sales?” Kiwi IQ reads the figures, answers the manager in their language, flags what is wrong, and suggests what to do next.",
+      "before": "«¿Cuáles fueron las ventas de ayer?» Kiwi IQ analiza las cifras, responde al gerente en su idioma, detecta anomalías y sugiere qué hacer a continuación."
+    },
+    {
+      "node": 247,
+      "kind": "text",
+      "tag": "a",
+      "text": "Probar Kiwi IQ",
+      "offset": 106354,
+      "english": "Try Kiwi IQ",
+      "before": "Probar Kiwi IQ"
+    },
+    {
+      "node": 248,
+      "kind": "aria-label",
+      "tag": "svg",
+      "text": "Una consulta planteada a Kiwi IQ · cuáles fueron las ventas de ayer · y la respuesta: 12 480 MAD, un 18 % más en la semana, gráfico de barras semanal, aviso de margen a la baja en jugos y acción sugerida.",
+      "offset": 106816,
+      "english": "A question for Kiwi IQ · what were yesterday’s sales · and the answer: 12,480 MAD, up 18% on the week, a seven-day bar chart, a warning about falling juice margins, and a suggested action.",
+      "before": "Una consulta planteada a Kiwi IQ · cuáles fueron las ventas de ayer · y la respuesta: 12 480 MAD, un 18 % más en la semana, gráfico de barras semanal, aviso de margen a la baja en zumos y acción sugerida."
+    },
+    {
+      "node": 249,
+      "kind": "text",
+      "tag": "text",
+      "text": "¿Cuáles fueron las ventas de ayer?",
+      "offset": 109845,
+      "english": "What were yesterday’s sales?",
+      "before": "What were yesterday’s sales?"
+    },
+    {
+      "node": 250,
+      "kind": "text",
+      "tag": "text",
+      "text": "¿Cuáles fueron las ventas de ayer?",
+      "offset": 110211,
+      "english": "« Quelles ont été les ventes d’hier ? »",
+      "before": "« Quelles ont été les ventes d’hier ? »"
+    },
+    {
+      "node": 251,
+      "kind": "text",
+      "tag": "text",
+      "text": "كم بلغت مبيعات الأمس؟",
+      "offset": 110638,
+      "english": "كم بلغت مبيعات الأمس؟",
+      "before": "كم بلغت مبيعات الأمس؟"
+    },
+    {
+      "node": 252,
+      "kind": "text",
+      "tag": "text",
+      "text": "KIWI IQ",
+      "offset": 111835,
+      "english": "KIWI IQ",
+      "before": "KIWI IQ"
+    },
+    {
+      "node": 253,
+      "kind": "text",
+      "tag": "text",
+      "text": "FR",
+      "offset": 112394,
+      "english": "FR",
+      "before": "FR"
+    },
+    {
+      "node": 254,
+      "kind": "text",
+      "tag": "text",
+      "text": "FR",
+      "offset": 112583,
+      "english": "FR",
+      "before": "FR"
+    },
+    {
+      "node": 255,
+      "kind": "text",
+      "tag": "text",
+      "text": "AR",
+      "offset": 112892,
+      "english": "AR",
+      "before": "AR"
+    },
+    {
+      "node": 256,
+      "kind": "text",
+      "tag": "text",
+      "text": "AR",
+      "offset": 113081,
+      "english": "AR",
+      "before": "AR"
+    },
+    {
+      "node": 257,
+      "kind": "text",
+      "tag": "text",
+      "text": "EN",
+      "offset": 113390,
+      "english": "EN",
+      "before": "EN"
+    },
+    {
+      "node": 258,
+      "kind": "text",
+      "tag": "text",
+      "text": "EN",
+      "offset": 113579,
+      "english": "EN",
+      "before": "EN"
+    },
+    {
+      "node": 259,
+      "kind": "text",
+      "tag": "text",
+      "text": "12 480 MAD",
+      "offset": 113854,
+      "english": "12,480 MAD",
+      "before": "12 480 MAD"
+    },
+    {
+      "node": 260,
+      "kind": "text",
+      "tag": "text",
+      "text": "+18 %",
+      "offset": 114178,
+      "english": "+18%",
+      "before": "+18 %"
+    },
+    {
+      "node": 261,
+      "kind": "text",
+      "tag": "text",
+      "text": "12 480 MAD",
+      "offset": 114328,
+      "english": "12 480 MAD",
+      "before": "12 480 MAD"
+    },
+    {
+      "node": 262,
+      "kind": "text",
+      "tag": "text",
+      "text": "+18 %",
+      "offset": 114652,
+      "english": "+18 %",
+      "before": "+18 %"
+    },
+    {
+      "node": 263,
+      "kind": "text",
+      "tag": "text",
+      "text": "12‎ ‎480 درهم",
+      "offset": 114883,
+      "english": "12‎ ‎480 درهم",
+      "before": "12‎ ‎480 درهم"
+    },
+    {
+      "node": 264,
+      "kind": "text",
+      "tag": "text",
+      "text": "+18 %",
+      "offset": 115208,
+      "english": "+18%",
+      "before": "+18 %"
+    },
+    {
+      "node": 265,
+      "kind": "text",
+      "tag": "text",
+      "text": "frente al mismo día de la semana pasada",
+      "offset": 115380,
+      "english": "vs the same day last week",
+      "before": "vs el mismo día de la semana pasada"
+    },
+    {
+      "node": 266,
+      "kind": "text",
+      "tag": "text",
+      "text": "frente al mismo día de la semana pasada",
+      "offset": 115547,
+      "english": "vs le même jour la semaine passée",
+      "before": "vs le même jour la semaine passée"
+    },
+    {
+      "node": 267,
+      "kind": "text",
+      "tag": "text",
+      "text": "مقارنة باليوم نفسه من الأسبوع الماضي",
+      "offset": 115801,
+      "english": "مقارنة باليوم نفسه من الأسبوع الماضي",
+      "before": "مقارنة باليوم نفسه من الأسبوع الماضي"
+    },
+    {
+      "node": 268,
+      "kind": "text",
+      "tag": "text",
+      "text": "ÚLTIMOS 7 DÍAS",
+      "offset": 123458,
+      "english": "LAST 7 DAYS",
+      "before": "ÚLTIMOS 7 DÍAS"
+    },
+    {
+      "node": 269,
+      "kind": "text",
+      "tag": "text",
+      "text": "AYER",
+      "offset": 123606,
+      "english": "YESTERDAY",
+      "before": "AYER"
+    },
+    {
+      "node": 270,
+      "kind": "text",
+      "tag": "text",
+      "text": "ÚLTIMOS 7 DÍAS",
+      "offset": 123769,
+      "english": "7 DERNIERS JOURS",
+      "before": "7 DERNIERS JOURS"
+    },
+    {
+      "node": 271,
+      "kind": "text",
+      "tag": "text",
+      "text": "AYER",
+      "offset": 123917,
+      "english": "HIER",
+      "before": "HIER"
+    },
+    {
+      "node": 272,
+      "kind": "text",
+      "tag": "text",
+      "text": "آخر 7 أيام",
+      "offset": 124162,
+      "english": "آخر 7 أيام",
+      "before": "آخر 7 أيام"
+    },
+    {
+      "node": 273,
+      "kind": "text",
+      "tag": "text",
+      "text": "الأمس",
+      "offset": 124386,
+      "english": "الأمس",
+      "before": "الأمس"
+    },
+    {
+      "node": 274,
+      "kind": "text",
+      "tag": "text",
+      "text": "QUÉ OCURRE",
+      "offset": 124681,
+      "english": "WHAT’S WRONG",
+      "before": "QUÉ OCURRE"
+    },
+    {
+      "node": 275,
+      "kind": "text",
+      "tag": "text",
+      "text": "El margen de los jugos naturales ha bajado.",
+      "offset": 124819,
+      "english": "Margins are down on fresh juice.",
+      "before": "Margen a la baja en zumos naturales."
+    },
+    {
+      "node": 276,
+      "kind": "text",
+      "tag": "text",
+      "text": "QUÉ OCURRE",
+      "offset": 125020,
+      "english": "CE QUI CLOCHE",
+      "before": "CE QUI CLOCHE"
+    },
+    {
+      "node": 277,
+      "kind": "text",
+      "tag": "text",
+      "text": "El margen de los jugos naturales ha bajado.",
+      "offset": 125158,
+      "english": "Marge en baisse sur les jus pressés.",
+      "before": "Marge en baisse sur les jus pressés."
+    },
+    {
+      "node": 278,
+      "kind": "text",
+      "tag": "text",
+      "text": "موضع الخلل",
+      "offset": 125423,
+      "english": "موضع الخلل",
+      "before": "موضع الخلل"
+    },
+    {
+      "node": 279,
+      "kind": "text",
+      "tag": "text",
+      "text": "هامش ربح العصائر الطازجة يتراجع.",
+      "offset": 125648,
+      "english": "هامش ربح العصائر الطازجة يتراجع.",
+      "before": "هامش ربح العصائر الطازجة يتراجع."
+    },
+    {
+      "node": 280,
+      "kind": "text",
+      "tag": "text",
+      "text": "SIGUIENTE PASO",
+      "offset": 125871,
+      "english": "NEXT STEP",
+      "before": "QUÉ HACER"
+    },
+    {
+      "node": 281,
+      "kind": "text",
+      "tag": "text",
+      "text": "Subir el precio del jugo de naranja en 2 MAD.",
+      "offset": 126013,
+      "english": "Raise orange juice by 2 MAD.",
+      "before": "Subir el zumo de naranja 2 MAD."
+    },
+    {
+      "node": 282,
+      "kind": "text",
+      "tag": "text",
+      "text": "SIGUIENTE PASO",
+      "offset": 126214,
+      "english": "À FAIRE",
+      "before": "À FAIRE"
+    },
+    {
+      "node": 283,
+      "kind": "text",
+      "tag": "text",
+      "text": "Subir el precio del jugo de naranja en 2 MAD.",
+      "offset": 126356,
+      "english": "Remonter le jus d’orange de 2 MAD.",
+      "before": "Remonter le jus d’orange de 2 MAD."
+    },
+    {
+      "node": 284,
+      "kind": "text",
+      "tag": "text",
+      "text": "الخطوة التالية",
+      "offset": 126621,
+      "english": "الخطوة التالية",
+      "before": "الخطوة التالية"
+    },
+    {
+      "node": 285,
+      "kind": "text",
+      "tag": "text",
+      "text": "ارفع سعر عصير البرتقال بدرهمين.",
+      "offset": 126850,
+      "english": "ارفع سعر عصير البرتقال بدرهمين.",
+      "before": "ارفع سعر عصير البرتقال بدرهمين."
+    },
+    {
+      "node": 286,
+      "kind": "text",
+      "tag": "h2",
+      "text": "Un solo hilo, de la mesa al ticket",
+      "offset": 127289,
+      "english": "One thread, from table to receipt",
+      "before": "Un solo hilo, de la mesa al ticket"
+    },
+    {
+      "node": 287,
+      "kind": "text",
+      "tag": "p",
+      "text": "El pedido se toma en sala, llega a la cocina, se cobra en caja y se archiva en el panel de control. Nadie vuelve a teclear nada, nada se pierde entre libretas.",
+      "offset": 127434,
+      "english": "An order is taken at the table, sent to the kitchen, paid at the till, and filed in the dashboard. Nobody enters it twice, and nothing gets lost between notebooks.",
+      "before": "El pedido se toma en sala, llega a la cocina, se cobra en caja y se archiva en el panel de control. Nadie vuelve a teclear nada, nada se pierde entre libretas."
+    },
+    {
+      "node": 288,
+      "kind": "text",
+      "tag": "a",
+      "text": "Solicitar una demo",
+      "offset": 127937,
+      "english": "Book a demo",
+      "before": "Solicitar una demo"
+    },
+    {
+      "node": 289,
+      "kind": "aria-label",
+      "tag": "svg",
+      "text": "Un solo hilo conecta cuatro fases: el pedido se toma en sala, aparece en la pantalla de cocina, se cobra en caja y se archiva en el panel de control. El mismo ticket, número 248, recorre todo el circuito de principio a fin.",
+      "offset": 128403,
+      "english": "One thread links four stages: the order is taken on the floor, appears on the kitchen screen, is paid at the till, and is filed in the dashboard. The same ticket, number 248, travels from one end to the other.",
+      "before": "Un solo hilo conecta cuatro fases: el pedido se toma en sala, aparece en la pantalla de cocina, se cobra en caja y se archiva en el panel de control. El mismo ticket, número 248, recorre todo el circuito de principio a fin."
+    },
+    {
+      "node": 290,
+      "kind": "text",
+      "tag": "text",
+      "text": "Sala",
+      "offset": 133244,
+      "english": "Floor",
+      "before": "Sala"
+    },
+    {
+      "node": 291,
+      "kind": "text",
+      "tag": "text",
+      "text": "pedido tomado",
+      "offset": 133359,
+      "english": "order taken",
+      "before": "pedido tomado"
+    },
+    {
+      "node": 292,
+      "kind": "text",
+      "tag": "text",
+      "text": "pedido tomado",
+      "offset": 133530,
+      "english": "order taken",
+      "before": "pedido tomado"
+    },
+    {
+      "node": 293,
+      "kind": "text",
+      "tag": "text",
+      "text": "Cocina",
+      "offset": 135639,
+      "english": "Kitchen",
+      "before": "Cocina"
+    },
+    {
+      "node": 294,
+      "kind": "text",
+      "tag": "text",
+      "text": "enviado a la pantalla",
+      "offset": 135755,
+      "english": "sent to the screen",
+      "before": "enviado a la pantalla"
+    },
+    {
+      "node": 295,
+      "kind": "text",
+      "tag": "text",
+      "text": "enviado a la pantalla",
+      "offset": 135933,
+      "english": "sent to the screen",
+      "before": "enviado a la pantalla"
+    },
+    {
+      "node": 296,
+      "kind": "text",
+      "tag": "text",
+      "text": "TPV",
+      "offset": 138434,
+      "english": "Till",
+      "before": "Caja"
+    },
+    {
+      "node": 297,
+      "kind": "text",
+      "tag": "text",
+      "text": "cobro realizado",
+      "offset": 138549,
+      "english": "payment taken",
+      "before": "cobro realizado"
+    },
+    {
+      "node": 298,
+      "kind": "text",
+      "tag": "text",
+      "text": "cobro realizado",
+      "offset": 138723,
+      "english": "payment taken",
+      "before": "cobro realizado"
+    },
+    {
+      "node": 299,
+      "kind": "text",
+      "tag": "text",
+      "text": "Panel de control",
+      "offset": 140876,
+      "english": "Dashboard",
+      "before": "Panel de control"
+    },
+    {
+      "node": 300,
+      "kind": "text",
+      "tag": "text",
+      "text": "archivado automáticamente",
+      "offset": 141002,
+      "english": "filed automatically",
+      "before": "archivado automáticamente"
+    },
+    {
+      "node": 301,
+      "kind": "text",
+      "tag": "text",
+      "text": "archivado automáticamente",
+      "offset": 141184,
+      "english": "filed automatically",
+      "before": "archivado automáticamente"
+    },
+    {
+      "node": 302,
+      "kind": "text",
+      "tag": "text",
+      "text": "#248",
+      "offset": 141854,
+      "english": "#248",
+      "before": "#248"
+    },
+    {
+      "node": 303,
+      "kind": "text",
+      "tag": "span",
+      "text": "Novedades de esta temporada",
+      "offset": 142305,
+      "english": "New this season",
+      "before": "Novedades de esta temporada"
+    },
+    {
+      "node": 304,
+      "kind": "text",
+      "tag": "h2",
+      "text": "Las novedades de Kiwi desde el verano.",
+      "offset": 142449,
+      "english": "What landed on Kiwi since the summer.",
+      "before": "Lo que ha llegado a Kiwi desde el verano."
+    },
+    {
+      "node": 305,
+      "kind": "text",
+      "tag": "p",
+      "text": "Cuatro mejoras solicitadas por los primeros clientes, lanzadas y ya en funcionamiento.",
+      "offset": 142611,
+      "english": "Four things the first customers asked for, shipped and already in use.",
+      "before": "Cuatro mejoras solicitadas por los primeros clientes, lanzadas y ya en funcionamiento."
+    },
+    {
+      "node": 306,
+      "kind": "text",
+      "tag": "span",
+      "text": "01",
+      "offset": 143619,
+      "english": "01",
+      "before": "01"
+    },
+    {
+      "node": 307,
+      "kind": "text",
+      "tag": "h3",
+      "text": "Una carta QR que se traduce sola",
+      "offset": 143738,
+      "english": "A QR menu that translates itself",
+      "before": "Una carta QR que se traduce sola"
+    },
+    {
+      "node": 308,
+      "kind": "text",
+      "tag": "p",
+      "text": "Su carta conserva sus palabras. Kiwi la traduce una vez al francés, árabe e inglés; usted corrige lo que desee y el cliente la lee en su idioma en el teléfono.",
+      "offset": 143875,
+      "english": "Your menu stays in your words. Kiwi translates it once into French, Arabic and English, you correct whatever you like, and the guest reads it in their language on their phone.",
+      "before": "Su carta mantiene sus propias palabras. Kiwi la traduce al instante al francés, árabe e inglés; usted ajusta lo que desee y el cliente la lee en su idioma en su móvil."
+    },
+    {
+      "node": 309,
+      "kind": "text",
+      "tag": "span",
+      "text": "02",
+      "offset": 144925,
+      "english": "02",
+      "before": "02"
+    },
+    {
+      "node": 310,
+      "kind": "text",
+      "tag": "h3",
+      "text": "Un inventario fiable y exacto",
+      "offset": 145044,
+      "english": "Stock that tells the truth",
+      "before": "Un inventario fiable y exacto"
+    },
+    {
+      "node": 311,
+      "kind": "text",
+      "tag": "p",
+      "text": "Varios proveedores por artículo, inventario físico guiado, mermas registradas en caja y descuadres recurrentes detectados. Sus márgenes se calculan sobre el costo real.",
+      "offset": 145178,
+      "english": "Several suppliers per item, guided physical counts, losses recorded at the till and recurring gaps flagged. Your margins are computed on the real cost.",
+      "before": "Varios proveedores por artículo, inventario físico guiado, mermas registradas en caja y descuadres recurrentes detectados. Sus márgenes se calculan sobre el coste real."
+    },
+    {
+      "node": 312,
+      "kind": "text",
+      "tag": "span",
+      "text": "03",
+      "offset": 146656,
+      "english": "03",
+      "before": "03"
+    },
+    {
+      "node": 313,
+      "kind": "text",
+      "tag": "h3",
+      "text": "El equipo, del fichaje a la nómina",
+      "offset": 146775,
+      "english": "The team, from clock-in to payroll",
+      "before": "El equipo, del fichaje a la nómina"
+    },
+    {
+      "node": 314,
+      "kind": "text",
+      "tag": "p",
+      "text": "Cada empleado ficha con su código, el calendario de turnos se actualiza solo y las horas pasan a nómina. Y una app para que consulten sus turnos sin tener que llamar.",
+      "offset": 146914,
+      "english": "Each employee clocks in with their code, the schedule fills itself, hours flow into payroll. And an app so they can see their shifts without calling.",
+      "before": "Cada empleado ficha con su código, el cuadrante se actualiza solo y las horas pasan a nómina. Y una app para que consulten sus turnos sin tener que llamar."
+    },
+    {
+      "node": 315,
+      "kind": "text",
+      "tag": "span",
+      "text": "04",
+      "offset": 148054,
+      "english": "04",
+      "before": "04"
+    },
+    {
+      "node": 316,
+      "kind": "text",
+      "tag": "h3",
+      "text": "El TPV en un iPad, los tickets en el mostrador",
+      "offset": 148173,
+      "english": "The till on an iPad, tickets at the counter",
+      "before": "El TPV en un iPad, los tickets en el mostrador"
+    },
+    {
+      "node": 317,
+      "kind": "text",
+      "tag": "p",
+      "text": "El TPV funciona en el iPad o tableta que ya tiene, y el ticket sale por la impresora del mostrador. El panel de control refleja cada venta en directo, esté donde esté el propietario.",
+      "offset": 148324,
+      "english": "The till runs on the iPad or tablet you already own and the ticket comes out of the counter printer. The dashboard sees every sale live, wherever the owner is.",
+      "before": "El TPV funciona en el iPad o tableta que ya tiene, y el ticket sale por la impresora del mostrador. El panel de control refleja cada venta en directo, esté donde esté el propietario."
+    },
+    {
+      "node": 318,
+      "kind": "text",
+      "tag": "h2",
+      "text": "Sus cifras son solo suyas.",
+      "offset": 148971,
+      "english": "Your numbers stay yours.",
+      "before": "Sus cifras son solo suyas."
+    },
+    {
+      "node": 319,
+      "kind": "text",
+      "tag": "p",
+      "text": "Cifrado de extremo a extremo, sin reventa de datos y compatible con el equipo que ya tiene.",
+      "offset": 149120,
+      "english": "End-to-end encryption, no data resale, and software that works with the hardware you already own.",
+      "before": "Cifrado de extremo a extremo, sin reventa de datos y compatible con el equipo que ya tiene."
+    },
+    {
+      "node": 320,
+      "kind": "text",
+      "tag": "h3",
+      "text": "Cifrado en tránsito y en reposo",
+      "offset": 149912,
+      "english": "Encrypted in transit and at rest",
+      "before": "Cifrado en tránsito y en reposo"
+    },
+    {
+      "node": 321,
+      "kind": "text",
+      "tag": "p",
+      "text": "Cada ticket, ficha de cliente y apunte contable está cifrado en red y en disco. Incluso si la conexión cae y la caja sigue cobrando.",
+      "offset": 150054,
+      "english": "Every receipt, customer record, and entry is encrypted over the network and on disk. Even when the connection drops and the till keeps running.",
+      "before": "Cada ticket, ficha de cliente y apunte contable está cifrado en red y en disco. Incluso si la conexión cae y la caja sigue cobrando."
+    },
+    {
+      "node": 322,
+      "kind": "aria-label",
+      "tag": "svg",
+      "text": "Un ticket legible en el mostrador, y el mismo contenido cifrado en bloques ilegibles en la conexión de red y en el disco protegido. Una cola sin conexión mantiene los tickets cifrados en espera si se interrumpe la red.",
+      "offset": 150196,
+      "english": "A readable receipt at the counter, then the same content encrypted into unreadable blocks in the network link and on the locked disk. An offline branch keeps receipts encrypted and waiting when the connection drops.",
+      "before": "Un ticket legible en el mostrador, y el mismo contenido cifrado en bloques ilegibles en la conexión de red y en el disco protegido. Una cola sin conexión mantiene los tickets cifrados en espera si se interrumpe la red."
+    },
+    {
+      "node": 323,
+      "kind": "text",
+      "tag": "text",
+      "text": "EN EL MOSTRADOR",
+      "offset": 153217,
+      "english": "AT THE COUNTER",
+      "before": "AT THE COUNTER"
+    },
+    {
+      "node": 324,
+      "kind": "text",
+      "tag": "text",
+      "text": "EN TRÁNSITO",
+      "offset": 154558,
+      "english": "IN TRANSIT",
+      "before": "EN TRÁNSITO"
+    },
+    {
+      "node": 325,
+      "kind": "text",
+      "tag": "text",
+      "text": "EN REPOSO",
+      "offset": 155895,
+      "english": "AT REST",
+      "before": "EN REPOSO"
+    },
+    {
+      "node": 326,
+      "kind": "text",
+      "tag": "text",
+      "text": "SIN CONEXIÓN, EN ESPERA",
+      "offset": 165100,
+      "english": "OFFLINE, WAITING",
+      "before": "SIN CONEXIÓN, EN ESPERA"
+    },
+    {
+      "node": 327,
+      "kind": "text",
+      "tag": "text",
+      "text": "SIN CONEXIÓN, EN ESPERA",
+      "offset": 165276,
+      "english": "OFFLINE, WAITING",
+      "before": "SIN CONEXIÓN, EN ESPERA"
+    },
+    {
+      "node": 328,
+      "kind": "text",
+      "tag": "h3",
+      "text": "Compatible con su equipo",
+      "offset": 169055,
+      "english": "Works with your hardware",
+      "before": "Compatible con su equipamiento"
+    },
+    {
+      "node": 329,
+      "kind": "text",
+      "tag": "p",
+      "text": "Impresoras, terminales de pago, cajones portamonedas, lectores de código de barras, tabletas y pantallas de cocina: Kiwi se adapta a lo que ya tiene en su mostrador.",
+      "offset": 169190,
+      "english": "Printers, terminals, cash drawers, scanners, tablets, and kitchen displays: Kiwi works with what is already on your counter.",
+      "before": "Impresoras, datáfonos, cajones portamonedas, lectores de código de barras, tabletas y pantallas de cocina: Kiwi se adapta a lo que ya tiene en su mostrador."
+    },
+    {
+      "node": 330,
+      "kind": "aria-label",
+      "tag": "svg",
+      "text": "Un TPV Kiwi conectado a una impresora térmica, terminal de pago, lector de código de barras, tableta de sala, pantalla de cocina y cajón portamonedas.",
+      "offset": 169365,
+      "english": "A Kiwi till connected to a thermal printer, payment terminal, barcode scanner, floor tablet, kitchen display, and cash drawer.",
+      "before": "Un TPV Kiwi conectado a una impresora térmica, datáfono, lector de código de barras, tableta de sala, pantalla de cocina y cajón portamonedas."
+    },
+    {
+      "node": 331,
+      "kind": "text",
+      "tag": "title",
+      "text": "Impresora térmica",
+      "offset": 175030,
+      "english": "Thermal printer",
+      "before": "Thermal printer"
+    },
+    {
+      "node": 332,
+      "kind": "text",
+      "tag": "text",
+      "text": "ESC/POS",
+      "offset": 176762,
+      "english": "ESC/POS",
+      "before": "ESC/POS"
+    },
+    {
+      "node": 333,
+      "kind": "text",
+      "tag": "title",
+      "text": "Terminal de pago",
+      "offset": 176794,
+      "english": "Payment terminal",
+      "before": "Datáfono"
+    },
+    {
+      "node": 334,
+      "kind": "text",
+      "tag": "text",
+      "text": "TPE",
+      "offset": 178323,
+      "english": "TPE",
+      "before": "TPE"
+    },
+    {
+      "node": 335,
+      "kind": "text",
+      "tag": "title",
+      "text": "Lector de código de barras",
+      "offset": 178351,
+      "english": "Barcode scanner",
+      "before": "Lector de código de barras"
+    },
+    {
+      "node": 336,
+      "kind": "text",
+      "tag": "text",
+      "text": "HID",
+      "offset": 180156,
+      "english": "HID",
+      "before": "HID"
+    },
+    {
+      "node": 337,
+      "kind": "text",
+      "tag": "title",
+      "text": "Tableta de sala",
+      "offset": 180184,
+      "english": "Floor tablet",
+      "before": "Tableta de sala"
+    },
+    {
+      "node": 338,
+      "kind": "text",
+      "tag": "text",
+      "text": "PWA",
+      "offset": 181732,
+      "english": "PWA",
+      "before": "PWA"
+    },
+    {
+      "node": 339,
+      "kind": "text",
+      "tag": "title",
+      "text": "Pantalla de cocina",
+      "offset": 181760,
+      "english": "Kitchen display",
+      "before": "Pantalla de cocina"
+    },
+    {
+      "node": 340,
+      "kind": "text",
+      "tag": "text",
+      "text": "KDS",
+      "offset": 183501,
+      "english": "KDS",
+      "before": "KDS"
+    },
+    {
+      "node": 341,
+      "kind": "text",
+      "tag": "title",
+      "text": "Cajón portamonedas",
+      "offset": 183529,
+      "english": "Cash drawer",
+      "before": "Cajón portamonedas"
+    },
+    {
+      "node": 342,
+      "kind": "text",
+      "tag": "text",
+      "text": "RJ11",
+      "offset": 185088,
+      "english": "RJ11",
+      "before": "RJ11"
+    },
+    {
+      "node": 343,
+      "kind": "text",
+      "tag": "h3",
+      "text": "Nunca revendidos",
+      "offset": 187261,
+      "english": "Never resold",
+      "before": "Nunca revendidos"
+    },
+    {
+      "node": 344,
+      "kind": "text",
+      "tag": "p",
+      "text": "Sus ventas, clientes y cifras se almacenan de forma segura, cifradas, y nunca se venden, alquilan ni comparten. Solo se utilizan para usted.",
+      "offset": 187388,
+      "english": "Your sales, customers, and figures are stored securely, encrypted, and never sold, rented, or shared. They are used only for you.",
+      "before": "Sus ventas, clientes y cifras se almacenan de forma segura, cifradas, y nunca se venden, alquilan ni comparten. Solo se utilizan para usted."
+    },
+    {
+      "node": 345,
+      "kind": "aria-label",
+      "tag": "svg",
+      "text": "Sus datos en el centro. Una única vía sale hacia usted y permanece abierta. Otras tres · vendidos, alquilados, compartidos · quedan bloqueadas en el acceso.",
+      "offset": 187538,
+      "english": "Your data sits at the centre. One route leaves it, towards you, and keeps moving. Three others · sold, rented, shared · are blocked at the gate.",
+      "before": "Sus datos en el centro. Una única vía sale hacia usted y permanece abierta. Otras tres · vendidos, alquilados, compartidos · quedan bloqueadas en el acceso."
+    },
+    {
+      "node": 346,
+      "kind": "text",
+      "tag": "text",
+      "text": "Vendidos",
+      "offset": 190928,
+      "english": "Sold",
+      "before": "Sold"
+    },
+    {
+      "node": 347,
+      "kind": "text",
+      "tag": "text",
+      "text": "Alquilados",
+      "offset": 192239,
+      "english": "Rented",
+      "before": "Rented"
+    },
+    {
+      "node": 348,
+      "kind": "text",
+      "tag": "text",
+      "text": "Compartidos",
+      "offset": 193553,
+      "english": "Shared",
+      "before": "Shared"
+    },
+    {
+      "node": 349,
+      "kind": "text",
+      "tag": "text",
+      "text": "SUS DATOS",
+      "offset": 194999,
+      "english": "YOUR DATA",
+      "before": "YOUR DATA"
+    },
+    {
+      "node": 350,
+      "kind": "text",
+      "tag": "text",
+      "text": "Usted",
+      "offset": 196121,
+      "english": "You",
+      "before": "Usted"
+    },
+    {
+      "node": 351,
+      "kind": "text",
+      "tag": "h3",
+      "text": "Diseñado en Colonia, creado para Marruecos",
+      "offset": 196670,
+      "english": "Built in Cologne, made for Morocco",
+      "before": "Diseñado en Colonia, creado para Marruecos"
+    },
+    {
+      "node": 352,
+      "kind": "text",
+      "tag": "p",
+      "text": "Kiwi se desarrolla en Alemania y está pensado para Marruecos: los idiomas, el dírham y el ritmo del mostrador marroquí. No es un software extranjero traducido deprisa.",
+      "offset": 196823,
+      "english": "Kiwi is developed in Germany and designed for Morocco: the language, the dirham, and the pace of a Moroccan counter. It is not foreign software translated in a rush.",
+      "before": "Kiwi se desarrolla en Alemania y está pensado para Marruecos: los idiomas, el dírham y el ritmo del mostrador marroquí. No es un software extranjero traducido deprisa."
+    },
+    {
+      "node": 353,
+      "kind": "aria-label",
+      "tag": "svg",
+      "text": "Un globo terráqueo centrado en Europa y África: Kiwi se desarrolla en Colonia, Alemania, y está creado para Marruecos.",
+      "offset": 197000,
+      "english": "A globe centred on Europe and Africa: Kiwi is developed in Cologne, Germany, and made for Morocco.",
+      "before": "Un globo terráqueo centrado en Europa y África: Kiwi se desarrolla en Colonia, Alemania, y está creado para Marruecos."
+    },
+    {
+      "node": 354,
+      "kind": "text",
+      "tag": "text",
+      "text": "Diseñado aquí",
+      "offset": 221465,
+      "english": "Built here",
+      "before": "Diseñado aquí"
+    },
+    {
+      "node": 355,
+      "kind": "text",
+      "tag": "text",
+      "text": "Creado para aquí",
+      "offset": 222448,
+      "english": "Made for here",
+      "before": "Creado para aquí"
+    },
+    {
+      "node": 356,
+      "kind": "text",
+      "tag": "h2",
+      "text": "En palabras de un responsable.",
+      "offset": 222987,
+      "english": "In a manager’s words.",
+      "before": "En palabras de un responsable."
+    },
+    {
+      "node": 357,
+      "kind": "text",
+      "tag": "p",
+      "text": "Kiwi está diseñado para funcionar en el idioma con el que ya gestiona su negocio.",
+      "offset": 223142,
+      "english": "Kiwi is designed to work in the language people already use to run their business.",
+      "before": "Kiwi está diseñado para funcionar en el idioma con el que ya gestiona su negocio."
+    },
+    {
+      "node": 358,
+      "kind": "text",
+      "tag": "p",
+      "text": "«Antes trabajaba con una libreta y WhatsApp. Ahora con Kiwi, los pedidos, el inventario y el servicio están a la vista, salvo lo que decidimos no mostrar».",
+      "offset": 223726,
+      "english": "“I used to work with a notebook and WhatsApp. Now with Kiwi, the orders, stock, and service are all visible · except what we choose not to show.”",
+      "before": "«Antes trabajaba con libreta y WhatsApp. Ahora con Kiwi, los pedidos, el inventario y la sala están a la vista de todos, salvo lo que preferimos no mostrar.»"
+    },
+    {
+      "node": 359,
+      "kind": "text",
+      "tag": "span",
+      "text": "Yassine",
+      "offset": 223986,
+      "english": "Yassine",
+      "before": "Yassine"
+    },
+    {
+      "node": 360,
+      "kind": "text",
+      "tag": "span",
+      "text": "Riad en la medina · Tánger",
+      "offset": 224088,
+      "english": "Riad in the medina · Tangier",
+      "before": "Riad en la medina · Tánger"
+    },
+    {
+      "node": 361,
+      "kind": "text",
+      "tag": "span",
+      "text": "FR",
+      "offset": 225131,
+      "english": "FR",
+      "before": "FR"
+    },
+    {
+      "node": 362,
+      "kind": "text",
+      "tag": "span",
+      "text": "EN",
+      "offset": 225310,
+      "english": "EN",
+      "before": "EN"
+    },
+    {
+      "node": 363,
+      "kind": "text",
+      "tag": "span",
+      "text": "AR",
+      "offset": 225489,
+      "english": "AR",
+      "before": "AR"
+    },
+    {
+      "node": 364,
+      "kind": "text",
+      "tag": "span",
+      "text": "ES",
+      "offset": 225668,
+      "english": "ES",
+      "before": "ES"
+    },
+    {
+      "node": 365,
+      "kind": "text",
+      "tag": "span",
+      "text": "ZH",
+      "offset": 225847,
+      "english": "ZH",
+      "before": "ZH"
+    },
+    {
+      "node": 366,
+      "kind": "text",
+      "tag": "span",
+      "text": "DE",
+      "offset": 226026,
+      "english": "DE",
+      "before": "DE"
+    },
+    {
+      "node": 367,
+      "kind": "text",
+      "tag": "span",
+      "text": "RU",
+      "offset": 226205,
+      "english": "RU",
+      "before": "RU"
+    },
+    {
+      "node": 368,
+      "kind": "text",
+      "tag": "span",
+      "text": "IT",
+      "offset": 226384,
+      "english": "IT",
+      "before": "IT"
+    },
+    {
+      "node": 369,
+      "kind": "text",
+      "tag": "span",
+      "text": "JA",
+      "offset": 226563,
+      "english": "JA",
+      "before": "JA"
+    },
+    {
+      "node": 370,
+      "kind": "text",
+      "tag": "span",
+      "text": "PT",
+      "offset": 226742,
+      "english": "PT",
+      "before": "PT"
+    },
+    {
+      "node": 371,
+      "kind": "text",
+      "tag": "span",
+      "text": "HE",
+      "offset": 226921,
+      "english": "HE",
+      "before": "HE"
+    },
+    {
+      "node": 372,
+      "kind": "text",
+      "tag": "span",
+      "text": "NL",
+      "offset": 227100,
+      "english": "NL",
+      "before": "NL"
+    },
+    {
+      "node": 373,
+      "kind": "text",
+      "tag": "span",
+      "text": "KO",
+      "offset": 227279,
+      "english": "KO",
+      "before": "KO"
+    },
+    {
+      "node": 374,
+      "kind": "text",
+      "tag": "span",
+      "text": "TR",
+      "offset": 227458,
+      "english": "TR",
+      "before": "TR"
+    },
+    {
+      "node": 375,
+      "kind": "text",
+      "tag": "span",
+      "text": "HI",
+      "offset": 227637,
+      "english": "HI",
+      "before": "HI"
+    },
+    {
+      "node": 376,
+      "kind": "text",
+      "tag": "span",
+      "text": "PL",
+      "offset": 227816,
+      "english": "PL",
+      "before": "PL"
+    },
+    {
+      "node": 377,
+      "kind": "text",
+      "tag": "span",
+      "text": "EL",
+      "offset": 227995,
+      "english": "EL",
+      "before": "EL"
+    },
+    {
+      "node": 378,
+      "kind": "text",
+      "tag": "span",
+      "text": "SV",
+      "offset": 228174,
+      "english": "SV",
+      "before": "SV"
+    },
+    {
+      "node": 379,
+      "kind": "text",
+      "tag": "span",
+      "text": "ID",
+      "offset": 228353,
+      "english": "ID",
+      "before": "ID"
+    },
+    {
+      "node": 380,
+      "kind": "text",
+      "tag": "span",
+      "text": "UK",
+      "offset": 228532,
+      "english": "UK",
+      "before": "UK"
+    },
+    {
+      "node": 381,
+      "kind": "text",
+      "tag": "span",
+      "text": "DA",
+      "offset": 228711,
+      "english": "DA",
+      "before": "DA"
+    },
+    {
+      "node": 382,
+      "kind": "text",
+      "tag": "span",
+      "text": "NO",
+      "offset": 228890,
+      "english": "NO",
+      "before": "NO"
+    },
+    {
+      "node": 383,
+      "kind": "text",
+      "tag": "span",
+      "text": "Thé",
+      "offset": 229096,
+      "english": "Thé",
+      "before": "Thé"
+    },
+    {
+      "node": 384,
+      "kind": "text",
+      "tag": "span",
+      "text": "à",
+      "offset": 229147,
+      "english": "à",
+      "before": "à"
+    },
+    {
+      "node": 385,
+      "kind": "text",
+      "tag": "span",
+      "text": "la",
+      "offset": 229196,
+      "english": "la",
+      "before": "la"
+    },
+    {
+      "node": 386,
+      "kind": "text",
+      "tag": "span",
+      "text": "menthe",
+      "offset": 229246,
+      "english": "menthe",
+      "before": "menthe"
+    },
+    {
+      "node": 387,
+      "kind": "text",
+      "tag": "span",
+      "text": "18 MAD",
+      "offset": 229436,
+      "english": "18 MAD",
+      "before": "18 MAD"
+    },
+    {
+      "node": 388,
+      "kind": "text",
+      "tag": "span",
+      "text": "23 idiomas",
+      "offset": 229591,
+      "english": "23 languages",
+      "before": "23 idiomas"
+    },
+    {
+      "node": 389,
+      "kind": "text",
+      "tag": "span",
+      "text": "La carta en el idioma del cliente",
+      "offset": 229717,
+      "english": "The menu in the customer’s language",
+      "before": "La carta en el idioma del cliente"
+    },
+    {
+      "node": 390,
+      "kind": "text",
+      "tag": "span",
+      "text": "Francés, inglés, árabe y veinte idiomas más, traducidos desde la misma cuenta. El cliente lee la carta en su idioma y el equipo conserva su pantalla.",
+      "offset": 229847,
+      "english": "French, English, Arabic and twenty more, translated from the same account. The customer reads the menu in their language, the team keeps its screen.",
+      "before": "Francés, inglés, árabe y veinte más, traducidas desde la misma cuenta. El cliente consulta la carta en su idioma, el equipo conserva su pantalla."
+    },
+    {
+      "node": 391,
+      "kind": "text",
+      "tag": "span",
+      "text": "ESC/POS",
+      "offset": 231415,
+      "english": "ESC/POS",
+      "before": "ESC/POS"
+    },
+    {
+      "node": 392,
+      "kind": "text",
+      "tag": "span",
+      "text": "Su impresora de siempre",
+      "offset": 231538,
+      "english": "Your printer, as it is",
+      "before": "Su impresora de siempre"
+    },
+    {
+      "node": 393,
+      "kind": "text",
+      "tag": "span",
+      "text": "Bluetooth, USB, el puente Kiwi en el mostrador o directamente desde el iPad: los tickets salen por la impresora térmica que ya tiene.",
+      "offset": 231658,
+      "english": "Bluetooth, USB, the Kiwi bridge at the counter or straight from the iPad: receipts come out of the thermal printer you already own.",
+      "before": "Bluetooth, USB, puente Kiwi en el mostrador o directo desde el iPad: los tickets salen por la impresora térmica que ya tiene, sin cambiarla."
+    },
+    {
+      "node": 394,
+      "kind": "text",
+      "tag": "span",
+      "text": "8",
+      "offset": 233699,
+      "english": "8",
+      "before": "8"
+    },
+    {
+      "node": 395,
+      "kind": "text",
+      "tag": "span",
+      "text": "2",
+      "offset": 233919,
+      "english": "2",
+      "before": "2"
+    },
+    {
+      "node": 396,
+      "kind": "text",
+      "tag": "span",
+      "text": "0",
+      "offset": 234139,
+      "english": "0",
+      "before": "0"
+    },
+    {
+      "node": 397,
+      "kind": "text",
+      "tag": "span",
+      "text": "4",
+      "offset": 234359,
+      "english": "4",
+      "before": "4"
+    },
+    {
+      "node": 398,
+      "kind": "text",
+      "tag": "span",
+      "text": "1",
+      "offset": 234579,
+      "english": "1",
+      "before": "1"
+    },
+    {
+      "node": 399,
+      "kind": "text",
+      "tag": "span",
+      "text": "6",
+      "offset": 234799,
+      "english": "6",
+      "before": "6"
+    },
+    {
+      "node": 400,
+      "kind": "text",
+      "tag": "span",
+      "text": "Conectada",
+      "offset": 235608,
+      "english": "Linked",
+      "before": "Conectada"
+    },
+    {
+      "node": 401,
+      "kind": "text",
+      "tag": "span",
+      "text": "1 código",
+      "offset": 235760,
+      "english": "1 code",
+      "before": "1 código"
+    },
+    {
+      "node": 402,
+      "kind": "text",
+      "tag": "span",
+      "text": "El TPV vinculado en seis dígitos",
+      "offset": 235884,
+      "english": "The till linked in six digits",
+      "before": "El TPV vinculado en seis dígitos"
+    },
+    {
+      "node": 403,
+      "kind": "text",
+      "tag": "span",
+      "text": "Un código de seis dígitos vincula el mostrador con el panel de control y la impresora. Sin necesidad de crear cuentas en la tableta.",
+      "offset": 236013,
+      "english": "A six-digit code pairs the counter with the dashboard and the printer. No account to create on the tablet.",
+      "before": "Un código de seis dígitos vincula el mostrador con el panel de control y la impresora. Sin necesidad de crear cuentas en la tableta."
+    },
+    {
+      "node": 404,
+      "kind": "text",
+      "tag": "span",
+      "text": "Seis funciones más, en directo",
+      "offset": 236545,
+      "english": "Six more, live",
+      "before": "Seis funciones más, en directo"
+    },
+    {
+      "node": 405,
+      "kind": "text",
+      "tag": "span",
+      "text": "En directo",
+      "offset": 237839,
+      "english": "Live",
+      "before": "En directo"
+    },
+    {
+      "node": 406,
+      "kind": "text",
+      "tag": "span",
+      "text": "+48",
+      "offset": 239261,
+      "english": "+48",
+      "before": "+48"
+    },
+    {
+      "node": 407,
+      "kind": "text",
+      "tag": "span",
+      "text": "+120",
+      "offset": 240689,
+      "english": "+120",
+      "before": "+120"
+    },
+    {
+      "node": 408,
+      "kind": "text",
+      "tag": "span",
+      "text": "27 632",
+      "offset": 241731,
+      "english": "27 632",
+      "before": "27 632"
+    },
+    {
+      "node": 409,
+      "kind": "text",
+      "tag": "span",
+      "text": "27 680",
+      "offset": 241785,
+      "english": "27 680",
+      "before": "27 680"
+    },
+    {
+      "node": 410,
+      "kind": "text",
+      "tag": "span",
+      "text": "27 800",
+      "offset": 241839,
+      "english": "27 800",
+      "before": "27 800"
+    },
+    {
+      "node": 411,
+      "kind": "text",
+      "tag": "span",
+      "text": "Tiempo real",
+      "offset": 242014,
+      "english": "Real time",
+      "before": "Tiempo real"
+    },
+    {
+      "node": 412,
+      "kind": "text",
+      "tag": "span",
+      "text": "La venta en caja, vista desde el despacho",
+      "offset": 242141,
+      "english": "The sale at the counter, seen from the office",
+      "before": "La venta en caja, vista desde el despacho"
+    },
+    {
+      "node": 413,
+      "kind": "text",
+      "tag": "span",
+      "text": "Cada cobro llega al panel de control al instante, desde cada punto de cobro, tanto en su móvil como en su computadora.",
+      "offset": 242279,
+      "english": "Every payment reaches the dashboard the moment it happens, from every till, on your phone as on your computer.",
+      "before": "Cada cobro llega al panel de control al instante, desde cada punto de cobro, tanto en su móvil como en su ordenador."
+    },
+    {
+      "node": 414,
+      "kind": "text",
+      "tag": "span",
+      "text": "Leche",
+      "offset": 243006,
+      "english": "Lait",
+      "before": "Lait"
+    },
+    {
+      "node": 415,
+      "kind": "text",
+      "tag": "span",
+      "text": "−1",
+      "offset": 243399,
+      "english": "−1",
+      "before": "−1"
+    },
+    {
+      "node": 416,
+      "kind": "text",
+      "tag": "span",
+      "text": "Café",
+      "offset": 243638,
+      "english": "Café",
+      "before": "Café"
+    },
+    {
+      "node": 417,
+      "kind": "text",
+      "tag": "span",
+      "text": "−1",
+      "offset": 244030,
+      "english": "−1",
+      "before": "−1"
+    },
+    {
+      "node": 418,
+      "kind": "text",
+      "tag": "span",
+      "text": "Azúcar",
+      "offset": 244269,
+      "english": "Sucre",
+      "before": "Sucre"
+    },
+    {
+      "node": 419,
+      "kind": "text",
+      "tag": "span",
+      "text": "−1",
+      "offset": 244675,
+      "english": "−1",
+      "before": "−1"
+    },
+    {
+      "node": 420,
+      "kind": "text",
+      "tag": "span",
+      "text": "Reposición",
+      "offset": 245122,
+      "english": "Restock",
+      "before": "Reposición"
+    },
+    {
+      "node": 421,
+      "kind": "text",
+      "tag": "span",
+      "text": "Inventario",
+      "offset": 245943,
+      "english": "Stock",
+      "before": "Inventario"
+    },
+    {
+      "node": 422,
+      "kind": "text",
+      "tag": "span",
+      "text": "Exacto y al día",
+      "offset": 246069,
+      "english": "That tells the truth",
+      "before": "Exacto y al día"
+    },
+    {
+      "node": 423,
+      "kind": "text",
+      "tag": "span",
+      "text": "Cada venta descuenta existencias y cada entrega las repone. La alerta llega antes de que se agoten, no después.",
+      "offset": 246181,
+      "english": "Every sale decrements, every delivery credits back. The alert goes out before the shortage, not after.",
+      "before": "Cada venta descuenta existencias, cada entrega las repone. La alerta salta antes de la rotura de stock, no después."
+    },
+    {
+      "node": 424,
+      "kind": "text",
+      "tag": "span",
+      "text": "21:30",
+      "offset": 248576,
+      "english": "21 h 30",
+      "before": "21:30"
+    },
+    {
+      "node": 425,
+      "kind": "text",
+      "tag": "span",
+      "text": "· 3",
+      "offset": 248588,
+      "english": "· 3",
+      "before": "· 3"
+    },
+    {
+      "node": 426,
+      "kind": "text",
+      "tag": "span",
+      "text": "Nóminas",
+      "offset": 248934,
+      "english": "Payroll",
+      "before": "Nóminas"
+    },
+    {
+      "node": 427,
+      "kind": "text",
+      "tag": "span",
+      "text": "SA",
+      "offset": 249919,
+      "english": "SA",
+      "before": "SA"
+    },
+    {
+      "node": 428,
+      "kind": "text",
+      "tag": "span",
+      "text": "08:02",
+      "offset": 250008,
+      "english": "08:02",
+      "before": "08:02"
+    },
+    {
+      "node": 429,
+      "kind": "text",
+      "tag": "span",
+      "text": "YB",
+      "offset": 250437,
+      "english": "YB",
+      "before": "YB"
+    },
+    {
+      "node": 430,
+      "kind": "text",
+      "tag": "span",
+      "text": "08:15",
+      "offset": 250526,
+      "english": "08:15",
+      "before": "08:15"
+    },
+    {
+      "node": 431,
+      "kind": "text",
+      "tag": "span",
+      "text": "RM",
+      "offset": 250956,
+      "english": "RM",
+      "before": "RM"
+    },
+    {
+      "node": 432,
+      "kind": "text",
+      "tag": "span",
+      "text": "12:30",
+      "offset": 251045,
+      "english": "12:30",
+      "before": "12:30"
+    },
+    {
+      "node": 433,
+      "kind": "text",
+      "tag": "span",
+      "text": "Fichaje",
+      "offset": 251212,
+      "english": "Clock-in",
+      "before": "Fichaje"
+    },
+    {
+      "node": 434,
+      "kind": "text",
+      "tag": "span",
+      "text": "Del fichaje a la nómina",
+      "offset": 251335,
+      "english": "From badge to payroll",
+      "before": "Del fichaje a la nómina"
+    },
+    {
+      "node": 435,
+      "kind": "text",
+      "tag": "span",
+      "text": "El personal ficha con un código en la caja; las horas pasan directamente a la nómina sin volver a teclear nada.",
+      "offset": 251455,
+      "english": "Staff clock in with a code on the till; the hours land in payroll with nothing retyped.",
+      "before": "El personal ficha con un código en la caja; las horas pasan directamente a la nómina sin volver a teclear nada."
+    },
+    {
+      "node": 436,
+      "kind": "text",
+      "tag": "span",
+      "text": "Confirmada",
+      "offset": 254219,
+      "english": "Confirmed",
+      "before": "Confirmada"
+    },
+    {
+      "node": 437,
+      "kind": "text",
+      "tag": "span",
+      "text": "19:00",
+      "offset": 254427,
+      "english": "19:00",
+      "before": "19:00"
+    },
+    {
+      "node": 438,
+      "kind": "text",
+      "tag": "span",
+      "text": "20:00",
+      "offset": 254586,
+      "english": "20:00",
+      "before": "20:00"
+    },
+    {
+      "node": 439,
+      "kind": "text",
+      "tag": "span",
+      "text": "21:00",
+      "offset": 254745,
+      "english": "21:00",
+      "before": "21:00"
+    },
+    {
+      "node": 440,
+      "kind": "text",
+      "tag": "span",
+      "text": "22:00",
+      "offset": 254891,
+      "english": "22:00",
+      "before": "22:00"
+    },
+    {
+      "node": 441,
+      "kind": "text",
+      "tag": "span",
+      "text": "19:30",
+      "offset": 255444,
+      "english": "19:30",
+      "before": "19:30"
+    },
+    {
+      "node": 442,
+      "kind": "text",
+      "tag": "span",
+      "text": "T4 · 2",
+      "offset": 255484,
+      "english": "T4 · 2",
+      "before": "T4 · 2"
+    },
+    {
+      "node": 443,
+      "kind": "text",
+      "tag": "span",
+      "text": "21:00",
+      "offset": 255971,
+      "english": "21:00",
+      "before": "21:00"
+    },
+    {
+      "node": 444,
+      "kind": "text",
+      "tag": "span",
+      "text": "T2 · 6",
+      "offset": 256011,
+      "english": "T2 · 6",
+      "before": "T2 · 6"
+    },
+    {
+      "node": 445,
+      "kind": "text",
+      "tag": "span",
+      "text": "Reservas",
+      "offset": 256366,
+      "english": "Bookings",
+      "before": "Reservas y citas"
+    },
+    {
+      "node": 446,
+      "kind": "text",
+      "tag": "span",
+      "text": "Mesas, turnos, confirmaciones",
+      "offset": 256490,
+      "english": "Tables, slots, confirmations",
+      "before": "Mesas, turnos, confirmaciones"
+    },
+    {
+      "node": 447,
+      "kind": "text",
+      "tag": "span",
+      "text": "La reserva aparece en el plano de sala, la franja se bloquea y la mesa está lista a su hora. Desde su página pública o por teléfono.",
+      "offset": 256616,
+      "english": "The booking lands on the floor plan, the slot is held, the table is ready on time. From your public page or over the phone.",
+      "before": "La reserva aparece en el plano de sala, la franja se bloquea y la mesa está lista a su hora. Desde su página pública o por teléfono."
+    },
+    {
+      "node": 448,
+      "kind": "text",
+      "tag": "span",
+      "text": "1 240 MAD",
+      "offset": 257479,
+      "english": "1 240 MAD",
+      "before": "1 240 MAD"
+    },
+    {
+      "node": 449,
+      "kind": "text",
+      "tag": "span",
+      "text": "FACTURA",
+      "offset": 257843,
+      "english": "FACTURE",
+      "before": "FACTURE"
+    },
+    {
+      "node": 450,
+      "kind": "text",
+      "tag": "span",
+      "text": "2026-0142",
+      "offset": 257912,
+      "english": "2026-0142",
+      "before": "2026-0142"
+    },
+    {
+      "node": 451,
+      "kind": "text",
+      "tag": "span",
+      "text": "ICE 00156··· · Cliente",
+      "offset": 258040,
+      "english": "ICE 00156··· · Client",
+      "before": "ICE 00156··· · Client"
+    },
+    {
+      "node": 452,
+      "kind": "text",
+      "tag": "span",
+      "text": "TOTAL",
+      "offset": 258968,
+      "english": "TOTAL",
+      "before": "TOTAL"
+    },
+    {
+      "node": 453,
+      "kind": "text",
+      "tag": "span",
+      "text": "1 240 MAD",
+      "offset": 258986,
+      "english": "1 240 MAD",
+      "before": "1 240 MAD"
+    },
+    {
+      "node": 454,
+      "kind": "text",
+      "tag": "span",
+      "text": "Pagada",
+      "offset": 259205,
+      "english": "Paid",
+      "before": "Pagada"
+    },
+    {
+      "node": 455,
+      "kind": "text",
+      "tag": "span",
+      "text": "PDF",
+      "offset": 260055,
+      "english": "PDF",
+      "before": "PDF"
+    },
+    {
+      "node": 456,
+      "kind": "text",
+      "tag": "span",
+      "text": "Facturación",
+      "offset": 260697,
+      "english": "Invoicing",
+      "before": "Facturación"
+    },
+    {
+      "node": 457,
+      "kind": "text",
+      "tag": "span",
+      "text": "De la venta a la factura",
+      "offset": 260824,
+      "english": "From the sale to the invoice",
+      "before": "De la venta a la factura"
+    },
+    {
+      "node": 458,
+      "kind": "text",
+      "tag": "span",
+      "text": "Una factura numerada en PDF con el ICE del cliente a partir de cualquier venta. Presupuesto, anticipo, saldo: todo queda asociado al cliente.",
+      "offset": 260945,
+      "english": "A numbered PDF invoice, with the customer’s ICE, from any sale. Quote, deposit, balance: everything stays attached to the customer.",
+      "before": "Una factura numerada en PDF con el ICE del cliente a partir de cualquier venta. Presupuesto, anticipo, saldo: todo queda asociado al cliente."
+    },
+    {
+      "node": 459,
+      "kind": "text",
+      "tag": "span",
+      "text": "Pollo",
+      "offset": 261790,
+      "english": "Poulet",
+      "before": "Pollo"
+    },
+    {
+      "node": 460,
+      "kind": "text",
+      "tag": "span",
+      "text": "180 g",
+      "offset": 261910,
+      "english": "180 g",
+      "before": "180 g"
+    },
+    {
+      "node": 461,
+      "kind": "text",
+      "tag": "span",
+      "text": "Arroz",
+      "offset": 262045,
+      "english": "Riz",
+      "before": "Arroz"
+    },
+    {
+      "node": 462,
+      "kind": "text",
+      "tag": "span",
+      "text": "60 g",
+      "offset": 262165,
+      "english": "60 g",
+      "before": "60 g"
+    },
+    {
+      "node": 463,
+      "kind": "text",
+      "tag": "span",
+      "text": "Aguacate",
+      "offset": 262299,
+      "english": "Avocat",
+      "before": "Aguacate"
+    },
+    {
+      "node": 464,
+      "kind": "text",
+      "tag": "span",
+      "text": "40 g",
+      "offset": 262422,
+      "english": "40 g",
+      "before": "40 g"
+    },
+    {
+      "node": 465,
+      "kind": "text",
+      "tag": "span",
+      "text": "0",
+      "offset": 263417,
+      "english": "0",
+      "before": "0"
+    },
+    {
+      "node": 466,
+      "kind": "text",
+      "tag": "span",
+      "text": "320",
+      "offset": 263459,
+      "english": "320",
+      "before": "320"
+    },
+    {
+      "node": 467,
+      "kind": "text",
+      "tag": "span",
+      "text": "540",
+      "offset": 263503,
+      "english": "540",
+      "before": "540"
+    },
+    {
+      "node": 468,
+      "kind": "text",
+      "tag": "span",
+      "text": "kcal",
+      "offset": 263607,
+      "english": "kcal",
+      "before": "kcal"
+    },
+    {
+      "node": 469,
+      "kind": "text",
+      "tag": "span",
+      "text": "P",
+      "offset": 264291,
+      "english": "P",
+      "before": "P"
+    },
+    {
+      "node": 470,
+      "kind": "text",
+      "tag": "span",
+      "text": "32",
+      "offset": 264309,
+      "english": "32",
+      "before": "32"
+    },
+    {
+      "node": 471,
+      "kind": "text",
+      "tag": "span",
+      "text": "g",
+      "offset": 264319,
+      "english": "g",
+      "before": "g"
+    },
+    {
+      "node": 472,
+      "kind": "text",
+      "tag": "span",
+      "text": "C",
+      "offset": 264453,
+      "english": "G",
+      "before": "G"
+    },
+    {
+      "node": 473,
+      "kind": "text",
+      "tag": "span",
+      "text": "48",
+      "offset": 264471,
+      "english": "48",
+      "before": "48"
+    },
+    {
+      "node": 474,
+      "kind": "text",
+      "tag": "span",
+      "text": "g",
+      "offset": 264481,
+      "english": "g",
+      "before": "g"
+    },
+    {
+      "node": 475,
+      "kind": "text",
+      "tag": "span",
+      "text": "G",
+      "offset": 264615,
+      "english": "L",
+      "before": "L"
+    },
+    {
+      "node": 476,
+      "kind": "text",
+      "tag": "span",
+      "text": "21",
+      "offset": 264633,
+      "english": "21",
+      "before": "21"
+    },
+    {
+      "node": 477,
+      "kind": "text",
+      "tag": "span",
+      "text": "g",
+      "offset": 264643,
+      "english": "g",
+      "before": "g"
+    },
+    {
+      "node": 478,
+      "kind": "text",
+      "tag": "span",
+      "text": "Gluten",
+      "offset": 265614,
+      "english": "Gluten",
+      "before": "Gluten"
+    },
+    {
+      "node": 479,
+      "kind": "text",
+      "tag": "span",
+      "text": "Leche",
+      "offset": 266544,
+      "english": "Milk",
+      "before": "Leche"
+    },
+    {
+      "node": 480,
+      "kind": "text",
+      "tag": "span",
+      "text": "Nutrición",
+      "offset": 266704,
+      "english": "Nutrition",
+      "before": "Nutrición"
+    },
+    {
+      "node": 481,
+      "kind": "text",
+      "tag": "span",
+      "text": "De la receta a la carta del cliente",
+      "offset": 266829,
+      "english": "From the recipe to the customer’s menu",
+      "before": "De la receta a la carta del cliente"
+    },
+    {
+      "node": 482,
+      "kind": "text",
+      "tag": "span",
+      "text": "Calorías, proteínas, carbohidratos, grasas y los 14 alérgenos, calculados a partir de la receta que ya registra para conocer el costo de los platos. Se muestran en la carta QR y se pueden ocultar por plato con un clic.",
+      "offset": 266961,
+      "english": "Calories, protein, carbs, fat and the 14 allergens, computed from the recipe you already enter for food cost. Shown on the QR menu, hidden per dish in one click.",
+      "before": "Calorías, proteínas, hidratos de carbono, grasas y los 14 alérgenos, calculados a partir de los escandallos ya introducidos. Visibles en la carta QR u ocultables plato por plato con un clic."
+    },
+    {
+      "node": 483,
+      "kind": "text",
+      "tag": "h2",
+      "text": "Una suscripción. Sin comisiones.",
+      "offset": 267521,
+      "english": "A subscription. Not a commission.",
+      "before": "Una suscripción. Sin comisiones."
+    },
+    {
+      "node": 484,
+      "kind": "text",
+      "tag": "p",
+      "text": "Kiwi factura su software y nunca se queda con un porcentaje de sus ventas. 15 días gratis, sin compromiso.",
+      "offset": 267645,
+      "english": "Kiwi charges for its software and never takes a share of your sales. 15 days free, no commitment.",
+      "before": "Kiwi factura su software y nunca se queda con un porcentaje de sus ventas. 15 días gratis, sin compromiso."
+    },
+    {
+      "node": 485,
+      "kind": "aria-label",
+      "tag": "div",
+      "text": "Periodicidad de facturación",
+      "offset": 267815,
+      "english": "Billing period",
+      "before": "Periodicidad de facturación"
+    },
+    {
+      "node": 486,
+      "kind": "text",
+      "tag": "button",
+      "text": "Mensual",
+      "offset": 268366,
+      "english": "Monthly",
+      "before": "Mensual"
+    },
+    {
+      "node": 487,
+      "kind": "text",
+      "tag": "button",
+      "text": "Anual",
+      "offset": 268700,
+      "english": "Yearly",
+      "before": "Anual"
+    },
+    {
+      "node": 488,
+      "kind": "text",
+      "tag": "h3",
+      "text": "Basic",
+      "offset": 269296,
+      "english": "Basic",
+      "before": "Basic"
+    },
+    {
+      "node": 489,
+      "kind": "text",
+      "tag": "p",
+      "text": "El software, en su propio equipo.",
+      "offset": 269411,
+      "english": "The software, on your hardware.",
+      "before": "El software, en su propio equipamiento."
+    },
+    {
+      "node": 490,
+      "kind": "text",
+      "tag": "p",
+      "text": "249",
+      "offset": 269669,
+      "english": "249",
+      "before": "249"
+    },
+    {
+      "node": 491,
+      "kind": "text",
+      "tag": "p",
+      "text": "MAD",
+      "offset": 269689,
+      "english": "MAD",
+      "before": "MAD"
+    },
+    {
+      "node": 492,
+      "kind": "text",
+      "tag": "span",
+      "text": "/mes",
+      "offset": 269774,
+      "english": "/month",
+      "before": "/mes"
+    },
+    {
+      "node": 493,
+      "kind": "text",
+      "tag": "p",
+      "text": "15 días gratis, después facturación mensual.",
+      "offset": 269875,
+      "english": "15 days free, then billed monthly.",
+      "before": "15 días gratis, después facturación mensual."
+    },
+    {
+      "node": 494,
+      "kind": "text",
+      "tag": "span",
+      "text": "Un establecimiento",
+      "offset": 270968,
+      "english": "One location",
+      "before": "Un establecimiento"
+    },
+    {
+      "node": 495,
+      "kind": "text",
+      "tag": "span",
+      "text": "Dispositivos ilimitados",
+      "offset": 271996,
+      "english": "Unlimited devices",
+      "before": "Dispositivos ilimitados"
+    },
+    {
+      "node": 496,
+      "kind": "text",
+      "tag": "span",
+      "text": "TPV, sala, cocina, inventario y equipo",
+      "offset": 273029,
+      "english": "Till, floor, kitchen, stock, and team",
+      "before": "TPV, sala, cocina, inventario y equipo"
+    },
+    {
+      "node": 497,
+      "kind": "text",
+      "tag": "span",
+      "text": "Instalación y formación presencial",
+      "offset": 274077,
+      "english": "On-site setup and training",
+      "before": "Instalación y formación presencial"
+    },
+    {
+      "node": 498,
+      "kind": "text",
+      "tag": "span",
+      "text": "Sin comisiones sobre las ventas",
+      "offset": 275121,
+      "english": "No commission on sales",
+      "before": "Sin comisiones sobre las ventas"
+    },
+    {
+      "node": 499,
+      "kind": "text",
+      "tag": "a",
+      "text": "Obtener Kiwi",
+      "offset": 275505,
+      "english": "Get Kiwi",
+      "before": "Obtener Kiwi"
+    },
+    {
+      "node": 500,
+      "kind": "text",
+      "tag": "h3",
+      "text": "Pro",
+      "offset": 276562,
+      "english": "Pro",
+      "before": "Pro"
+    },
+    {
+      "node": 501,
+      "kind": "text",
+      "tag": "p",
+      "text": "Soporte prioritario y Kiwi IQ avanzado. El plan más elegido.",
+      "offset": 276675,
+      "english": "Priority support and advanced Kiwi IQ. Our most popular plan.",
+      "before": "Soporte prioritario y Kiwi IQ avanzado. El plan más elegido."
+    },
+    {
+      "node": 502,
+      "kind": "text",
+      "tag": "p",
+      "text": "399",
+      "offset": 276960,
+      "english": "399",
+      "before": "399"
+    },
+    {
+      "node": 503,
+      "kind": "text",
+      "tag": "p",
+      "text": "MAD",
+      "offset": 276980,
+      "english": "MAD",
+      "before": "MAD"
+    },
+    {
+      "node": 504,
+      "kind": "text",
+      "tag": "span",
+      "text": "/mes",
+      "offset": 277065,
+      "english": "/month",
+      "before": "/mes"
+    },
+    {
+      "node": 505,
+      "kind": "text",
+      "tag": "p",
+      "text": "15 días gratis, después facturación mensual.",
+      "offset": 277166,
+      "english": "15 days free, then billed monthly.",
+      "before": "15 días gratis, después facturación mensual."
+    },
+    {
+      "node": 506,
+      "kind": "text",
+      "tag": "span",
+      "text": "Todo lo incluido en Kiwi Basic",
+      "offset": 278259,
+      "english": "Everything in Kiwi Basic",
+      "before": "Todo lo incluido en Kiwi Basic"
+    },
+    {
+      "node": 507,
+      "kind": "text",
+      "tag": "span",
+      "text": "Soporte prioritario",
+      "offset": 279299,
+      "english": "Priority support",
+      "before": "Soporte prioritario"
+    },
+    {
+      "node": 508,
+      "kind": "text",
+      "tag": "span",
+      "text": "Respuestas más rápidas por WhatsApp",
+      "offset": 280328,
+      "english": "Faster replies, on WhatsApp",
+      "before": "Respuestas más rápidas por WhatsApp"
+    },
+    {
+      "node": 509,
+      "kind": "text",
+      "tag": "span",
+      "text": "Kiwi IQ avanzado, la IA que analiza sus cifras",
+      "offset": 281373,
+      "english": "Advanced Kiwi IQ, the AI that reads your numbers",
+      "before": "Kiwi IQ avanzado, la IA que analiza sus cifras"
+    },
+    {
+      "node": 510,
+      "kind": "text",
+      "tag": "span",
+      "text": "Sin costo de instalación",
+      "offset": 282429,
+      "english": "No setup fee",
+      "before": "Sin cuota de alta ni instalación"
+    },
+    {
+      "node": 511,
+      "kind": "text",
+      "tag": "a",
+      "text": "Obtener Kiwi",
+      "offset": 282806,
+      "english": "Get Kiwi",
+      "before": "Obtener Kiwi"
+    },
+    {
+      "node": 512,
+      "kind": "text",
+      "tag": "h3",
+      "text": "A medida",
+      "offset": 283726,
+      "english": "Custom",
+      "before": "A medida"
+    },
+    {
+      "node": 513,
+      "kind": "text",
+      "tag": "p",
+      "text": "Varios establecimientos o necesidades específicas fuera de los planes estándar.",
+      "offset": 283844,
+      "english": "Several locations, or a need that does not fit a standard plan.",
+      "before": "Varios establecimientos o necesidades específicas fuera de los planes estándar."
+    },
+    {
+      "node": 514,
+      "kind": "text",
+      "tag": "span",
+      "text": "Presupuesto personalizado",
+      "offset": 284186,
+      "english": "Custom quote",
+      "before": "Presupuesto personalizado"
+    },
+    {
+      "node": 515,
+      "kind": "text",
+      "tag": "p",
+      "text": "Definimos la tarifa juntos.",
+      "offset": 284308,
+      "english": "We set the price together.",
+      "before": "Definimos la tarifa juntos."
+    },
+    {
+      "node": 516,
+      "kind": "text",
+      "tag": "span",
+      "text": "Todo lo incluido en Kiwi Pro",
+      "offset": 285384,
+      "english": "Everything in Kiwi Pro",
+      "before": "Todo lo incluido en Kiwi Pro"
+    },
+    {
+      "node": 517,
+      "kind": "text",
+      "tag": "span",
+      "text": "Establecimientos ilimitados en varios países",
+      "offset": 286422,
+      "english": "Unlimited locations across countries",
+      "before": "Establecimientos ilimitados, internacional"
+    },
+    {
+      "node": 518,
+      "kind": "text",
+      "tag": "span",
+      "text": "API empresarial sin límites",
+      "offset": 287476,
+      "english": "Unlimited enterprise API",
+      "before": "API empresarial sin límites"
+    },
+    {
+      "node": 519,
+      "kind": "text",
+      "tag": "span",
+      "text": "Desarrollo de funciones a medida",
+      "offset": 288513,
+      "english": "Features developed for you",
+      "before": "Desarrollo de funciones a medida"
+    },
+    {
+      "node": 520,
+      "kind": "text",
+      "tag": "span",
+      "text": "Gestor de cuenta exclusivo 24/7",
+      "offset": 289555,
+      "english": "Dedicated account manager, 24/7",
+      "before": "Gestor de cuenta exclusivo 24/7"
+    },
+    {
+      "node": 521,
+      "kind": "text",
+      "tag": "a",
+      "text": "Contactar",
+      "offset": 289939,
+      "english": "Contact us",
+      "before": "Contactar"
+    },
+    {
+      "node": 522,
+      "kind": "text",
+      "tag": "h2",
+      "text": "15 días gratis.",
+      "offset": 290857,
+      "english": "15 days free.",
+      "before": "15 días gratis."
+    },
+    {
+      "node": 523,
+      "kind": "text",
+      "tag": "p",
+      "text": "Todo Kiwi en sus propios dispositivos, sin compromiso. Puede cancelar cuando lo desee.",
+      "offset": 291020,
+      "english": "All of Kiwi, on your own hardware, no commitment. Stop whenever you like.",
+      "before": "Todo Kiwi en sus propios dispositivos, sin compromiso. Puede cancelar cuando lo desee."
+    },
+    {
+      "node": 524,
+      "kind": "text",
+      "tag": "a",
+      "text": "Comenzar mis 15 días",
+      "offset": 291556,
+      "english": "Start my 15 days",
+      "before": "Comenzar mis 15 días"
+    },
+    {
+      "node": 525,
+      "kind": "text",
+      "tag": "a",
+      "text": "Ver cómo funciona",
+      "offset": 292300,
+      "english": "See what it does",
+      "before": "Ver cómo funciona"
+    },
+    {
+      "node": 526,
+      "kind": "text",
+      "tag": "a",
+      "text": "Escribirnos por WhatsApp",
+      "offset": 293088,
+      "english": "Message us on WhatsApp",
+      "before": "Escribirnos por WhatsApp"
+    },
+    {
+      "node": 527,
+      "kind": "text",
+      "tag": "p",
+      "text": "El software de gestión para cafeterías, restaurantes y comercios marroquíes. TPV, sala, cocina e informes en una sola herramienta, en francés y árabe.",
+      "offset": 295043,
+      "english": "Management software for Moroccan cafés, restaurants, and shops. Till, floor, kitchen, and reporting in one tool, in French and Arabic.",
+      "before": "El software de gestión para cafeterías, restaurantes y comercios marroquíes. TPV, sala, cocina e informes en una sola herramienta, en francés y árabe."
+    },
+    {
+      "node": 528,
+      "kind": "text",
+      "tag": "p",
+      "text": "Diseñado en Colonia.",
+      "offset": 295264,
+      "english": "Designed in Cologne.",
+      "before": "Diseñado en Colonia."
+    },
+    {
+      "node": 529,
+      "kind": "aria-label",
+      "tag": "nav",
+      "text": "Producto",
+      "offset": 295294,
+      "english": "Product",
+      "before": "Producto"
+    },
+    {
+      "node": 530,
+      "kind": "text",
+      "tag": "h2",
+      "text": "Producto",
+      "offset": 295424,
+      "english": "Product",
+      "before": "Producto"
+    },
+    {
+      "node": 531,
+      "kind": "text",
+      "tag": "a",
+      "text": "Funcionalidades",
+      "offset": 295726,
+      "english": "Features",
+      "before": "Funcionalidades"
+    },
+    {
+      "node": 532,
+      "kind": "text",
+      "tag": "a",
+      "text": "Seguridad",
+      "offset": 295977,
+      "english": "Security",
+      "before": "Seguridad"
+    },
+    {
+      "node": 533,
+      "kind": "text",
+      "tag": "a",
+      "text": "Precios",
+      "offset": 296221,
+      "english": "Pricing",
+      "before": "Precios"
+    },
+    {
+      "node": 534,
+      "kind": "aria-label",
+      "tag": "nav",
+      "text": "Demostración",
+      "offset": 296248,
+      "english": "Proof",
+      "before": "Demostración"
+    },
+    {
+      "node": 535,
+      "kind": "text",
+      "tag": "h2",
+      "text": "Demostración",
+      "offset": 296382,
+      "english": "Proof",
+      "before": "Demostración"
+    },
+    {
+      "node": 536,
+      "kind": "text",
+      "tag": "a",
+      "text": "Clientes",
+      "offset": 296687,
+      "english": "Customers",
+      "before": "Clientes y marketing"
+    },
+    {
+      "node": 537,
+      "kind": "text",
+      "tag": "a",
+      "text": "Testimonios",
+      "offset": 296935,
+      "english": "Testimonials",
+      "before": "Testimonios"
+    },
+    {
+      "node": 538,
+      "kind": "text",
+      "tag": "a",
+      "text": "El TPV en directo",
+      "offset": 297179,
+      "english": "The till, live",
+      "before": "El TPV en directo"
+    },
+    {
+      "node": 539,
+      "kind": "aria-label",
+      "tag": "nav",
+      "text": "Aviso legal",
+      "offset": 297216,
+      "english": "Legal",
+      "before": "Aviso legal"
+    },
+    {
+      "node": 540,
+      "kind": "text",
+      "tag": "h2",
+      "text": "Aviso legal",
+      "offset": 297349,
+      "english": "Legal",
+      "before": "Aviso legal"
+    },
+    {
+      "node": 541,
+      "kind": "text",
+      "tag": "a",
+      "text": "Aviso legal",
+      "offset": 297667,
+      "english": "Legal notice",
+      "before": "Aviso legal"
+    },
+    {
+      "node": 542,
+      "kind": "text",
+      "tag": "a",
+      "text": "Privacidad",
+      "offset": 297918,
+      "english": "Privacy",
+      "before": "Privacidad"
+    },
+    {
+      "node": 543,
+      "kind": "text",
+      "tag": "a",
+      "text": "Términos y condiciones",
+      "offset": 298166,
+      "english": "Terms",
+      "before": "Términos y condiciones"
+    },
+    {
+      "node": 544,
+      "kind": "text",
+      "tag": "a",
+      "text": "Política de cookies",
+      "offset": 298428,
+      "english": "Cookies",
+      "before": "Cookies"
+    },
+    {
+      "node": 545,
+      "kind": "text",
+      "tag": "h2",
+      "text": "Hable con nosotros",
+      "offset": 298575,
+      "english": "Talk to someone",
+      "before": "Hable con nosotros"
+    },
+    {
+      "node": 546,
+      "kind": "text",
+      "tag": "p",
+      "text": "Una demostración, sin compromiso.",
+      "offset": 298667,
+      "english": "A demo, with no commitment.",
+      "before": "Una demostración, sin compromiso."
+    },
+    {
+      "node": 547,
+      "kind": "text",
+      "tag": "a",
+      "text": "+212 624 495 159",
+      "offset": 298968,
+      "english": "+212 624 495 159",
+      "before": "+212 624 495 159"
+    },
+    {
+      "node": 548,
+      "kind": "text",
+      "tag": "a",
+      "text": "contact@kiwi-os.com",
+      "offset": 299176,
+      "english": "contact@kiwi-os.com",
+      "before": "contact@kiwi-os.com"
+    },
+    {
+      "node": 549,
+      "kind": "text",
+      "tag": "a",
+      "text": "Solicitar una demo",
+      "offset": 299576,
+      "english": "Book a demo",
+      "before": "Solicitar una demo"
+    },
+    {
+      "node": 550,
+      "kind": "text",
+      "tag": "p",
+      "text": "© 2026 · Kiwi. Todos los derechos reservados.",
+      "offset": 300309,
+      "english": "© 2026 · Kiwi. All rights reserved.",
+      "before": "© 2026 · Kiwi. Todos los derechos reservados."
+    },
+    {
+      "node": 551,
+      "kind": "text",
+      "tag": "span",
+      "text": "Desarrollado con",
+      "offset": 301809,
+      "english": "Powered by",
+      "before": "Desarrollado con"
+    },
+    {
+      "node": 552,
+      "kind": "text",
+      "tag": "span",
+      "text": "Kiwi",
+      "offset": 301869,
+      "english": "Kiwi",
+      "before": "Kiwi"
+    },
+    {
+      "node": 553,
+      "kind": "text",
+      "tag": "p",
+      "text": "Modelo 3D",
+      "offset": 301952,
+      "english": "3D model",
+      "before": "Modelo 3D"
+    },
+    {
+      "node": 554,
+      "kind": "text",
+      "tag": "a",
+      "text": "Tamminen",
+      "offset": 302130,
+      "english": "Tamminen",
+      "before": "Tamminen"
+    }
+  ],
+  "leftovers": [
+    {
+      "node": 17,
+      "kind": "text",
+      "source": "FR",
+      "before": "FR",
+      "after": "FR",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 18,
+      "kind": "text",
+      "source": "EN",
+      "before": "EN",
+      "after": "EN",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 19,
+      "kind": "text",
+      "source": "AR",
+      "before": "AR",
+      "after": "AR",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 29,
+      "kind": "text",
+      "source": "Kiwi AI",
+      "before": "Kiwi AI",
+      "after": "Kiwi AI",
+      "verdict": "Brand, named demo merchant/person, plan name or model credit."
+    },
+    {
+      "node": 30,
+      "kind": "text",
+      "source": "·",
+      "before": "·",
+      "after": "·",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 32,
+      "kind": "text",
+      "source": "YB",
+      "before": "YB",
+      "after": "YB",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 33,
+      "kind": "text",
+      "source": "Youssef Benali",
+      "before": "Youssef Benali",
+      "after": "Youssef Benali",
+      "verdict": "Brand, named demo merchant/person, plan name or model credit."
+    },
+    {
+      "node": 35,
+      "kind": "text",
+      "source": "Main",
+      "before": "Principal",
+      "after": "Principal",
+      "verdict": "Correct Spanish spelling shared with the source."
+    },
+    {
+      "node": 44,
+      "kind": "text",
+      "source": "3",
+      "before": "3",
+      "after": "3",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 61,
+      "kind": "text",
+      "source": "Café Atlas",
+      "before": "Café Atlas",
+      "after": "Café Atlas",
+      "verdict": "Brand, named demo merchant/person, plan name or model credit."
+    },
+    {
+      "node": 64,
+      "kind": "text",
+      "source": "27,632",
+      "before": "27 632",
+      "after": "27 632",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 65,
+      "kind": "text",
+      "source": "MAD",
+      "before": "MAD",
+      "after": "MAD",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 66,
+      "kind": "text",
+      "source": "+2.5%",
+      "before": "+2,5 %",
+      "after": "+2,5 %",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 67,
+      "kind": "text",
+      "source": "vs",
+      "before": "vs",
+      "after": "frente a",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 68,
+      "kind": "text",
+      "source": "26,958 MAD",
+      "before": "26 958 MAD",
+      "after": "26 958 MAD",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 71,
+      "kind": "text",
+      "source": "412",
+      "before": "412",
+      "after": "412",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 72,
+      "kind": "text",
+      "source": "+0.5%",
+      "before": "+0,5 %",
+      "after": "+0,5 %",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 73,
+      "kind": "text",
+      "source": "vs",
+      "before": "vs",
+      "after": "frente a",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 74,
+      "kind": "text",
+      "source": "410",
+      "before": "410",
+      "after": "410",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 77,
+      "kind": "text",
+      "source": "67",
+      "before": "67",
+      "after": "67",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 78,
+      "kind": "text",
+      "source": "MAD",
+      "before": "MAD",
+      "after": "MAD",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 79,
+      "kind": "text",
+      "source": "−1.5%",
+      "before": "−1,5 %",
+      "after": "−1,5 %",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 80,
+      "kind": "text",
+      "source": "vs",
+      "before": "vs",
+      "after": "frente a",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 81,
+      "kind": "text",
+      "source": "68 MAD",
+      "before": "68 MAD",
+      "after": "68 MAD",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 84,
+      "kind": "text",
+      "source": "12,632",
+      "before": "12 632",
+      "after": "12 632",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 85,
+      "kind": "text",
+      "source": "MAD",
+      "before": "MAD",
+      "after": "MAD",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 86,
+      "kind": "text",
+      "source": "+2.5%",
+      "before": "+2,5 %",
+      "after": "+2,5 %",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 87,
+      "kind": "text",
+      "source": "vs",
+      "before": "vs",
+      "after": "frente a",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 88,
+      "kind": "text",
+      "source": "12,324 MAD",
+      "before": "12 324 MAD",
+      "after": "12 324 MAD",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 93,
+      "kind": "text",
+      "source": "1M",
+      "before": "1M",
+      "after": "1M",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 94,
+      "kind": "text",
+      "source": "800k",
+      "before": "800k",
+      "after": "800k",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 95,
+      "kind": "text",
+      "source": "600k",
+      "before": "600k",
+      "after": "600k",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 96,
+      "kind": "text",
+      "source": "400k",
+      "before": "400k",
+      "after": "400k",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 97,
+      "kind": "text",
+      "source": "200k",
+      "before": "200k",
+      "after": "200k",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 98,
+      "kind": "text",
+      "source": "0",
+      "before": "0",
+      "after": "0",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 99,
+      "kind": "text",
+      "source": "612,400 MAD",
+      "before": "612 400 MAD",
+      "after": "612 400 MAD",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 102,
+      "kind": "text",
+      "source": "Feb",
+      "before": "Feb",
+      "after": "feb",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 103,
+      "kind": "text",
+      "source": "Mar",
+      "before": "Mar",
+      "after": "mar",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 105,
+      "kind": "text",
+      "source": "May",
+      "before": "May",
+      "after": "may",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 106,
+      "kind": "text",
+      "source": "Jun",
+      "before": "Jun",
+      "after": "jun",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 107,
+      "kind": "text",
+      "source": "Jul",
+      "before": "Jul",
+      "after": "jul",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 109,
+      "kind": "text",
+      "source": "Sep",
+      "before": "Sep",
+      "after": "sep",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 110,
+      "kind": "text",
+      "source": "Oct",
+      "before": "Oct",
+      "after": "oct",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 111,
+      "kind": "text",
+      "source": "Nov",
+      "before": "Nov",
+      "after": "nov",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 114,
+      "kind": "text",
+      "source": "21,060",
+      "before": "21 060",
+      "after": "21 060",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 115,
+      "kind": "text",
+      "source": "/ 27,000 MAD",
+      "before": "/ 27 000 MAD",
+      "after": "/ 27 000 MAD",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 118,
+      "kind": "text",
+      "source": "1,284",
+      "before": "1 284",
+      "after": "1 284",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 120,
+      "kind": "text",
+      "source": "+3.2%",
+      "before": "+3,2 %",
+      "after": "+3,2 %",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 123,
+      "kind": "text",
+      "source": "74",
+      "before": "74",
+      "after": "74",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 124,
+      "kind": "text",
+      "source": "%",
+      "before": "%",
+      "after": "%",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 125,
+      "kind": "text",
+      "source": "92,980",
+      "before": "92 980",
+      "after": "92 980",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 128,
+      "kind": "text",
+      "source": "46",
+      "before": "46",
+      "after": "46",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 129,
+      "kind": "text",
+      "source": "%",
+      "before": "%",
+      "after": "%",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 130,
+      "kind": "text",
+      "source": "28,546",
+      "before": "28 546",
+      "after": "28 546",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 133,
+      "kind": "text",
+      "source": "14",
+      "before": "14",
+      "after": "14",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 134,
+      "kind": "text",
+      "source": "%",
+      "before": "%",
+      "after": "%",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 135,
+      "kind": "text",
+      "source": "14,008",
+      "before": "14 008",
+      "after": "14 008",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 141,
+      "kind": "text",
+      "source": "800k",
+      "before": "800k",
+      "after": "800k",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 142,
+      "kind": "text",
+      "source": "600k",
+      "before": "600k",
+      "after": "600k",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 143,
+      "kind": "text",
+      "source": "400k",
+      "before": "400k",
+      "after": "400k",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 144,
+      "kind": "text",
+      "source": "200k",
+      "before": "200k",
+      "after": "200k",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 145,
+      "kind": "text",
+      "source": "0",
+      "before": "0",
+      "after": "0",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 150,
+      "kind": "text",
+      "source": "Feb",
+      "before": "Feb",
+      "after": "feb",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 151,
+      "kind": "text",
+      "source": "Mar",
+      "before": "Mar",
+      "after": "mar",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 153,
+      "kind": "text",
+      "source": "May",
+      "before": "May",
+      "after": "may",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 154,
+      "kind": "text",
+      "source": "Jun",
+      "before": "Jun",
+      "after": "jun",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 155,
+      "kind": "text",
+      "source": "Jul",
+      "before": "Jul",
+      "after": "jul",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 157,
+      "kind": "text",
+      "source": "Sep",
+      "before": "Sep",
+      "after": "sep",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 170,
+      "kind": "text",
+      "source": "01",
+      "before": "01",
+      "after": "01",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 171,
+      "kind": "text",
+      "source": "/",
+      "before": "/",
+      "after": "/",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 172,
+      "kind": "text",
+      "source": "18",
+      "before": "18",
+      "after": "18",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 173,
+      "kind": "text",
+      "source": "T1",
+      "before": "T1",
+      "after": "T1",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 174,
+      "kind": "text",
+      "source": "T2",
+      "before": "T2",
+      "after": "T2",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 175,
+      "kind": "text",
+      "source": "T3",
+      "before": "T3",
+      "after": "T3",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 176,
+      "kind": "text",
+      "source": "T4",
+      "before": "T4",
+      "after": "T4",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 177,
+      "kind": "text",
+      "source": "T5",
+      "before": "T5",
+      "after": "T5",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 178,
+      "kind": "text",
+      "source": "T6",
+      "before": "T6",
+      "after": "T6",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 181,
+      "kind": "text",
+      "source": "Ticket",
+      "before": "Ticket",
+      "after": "Ticket",
+      "verdict": "Correct Spanish spelling shared with the source."
+    },
+    {
+      "node": 182,
+      "kind": "text",
+      "source": "T4",
+      "before": "T4",
+      "after": "T4",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 184,
+      "kind": "text",
+      "source": "85",
+      "before": "85",
+      "after": "85",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 186,
+      "kind": "text",
+      "source": "18",
+      "before": "18",
+      "after": "18",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 188,
+      "kind": "text",
+      "source": "Total",
+      "before": "Total",
+      "after": "Total",
+      "verdict": "Correct Spanish spelling shared with the source."
+    },
+    {
+      "node": 189,
+      "kind": "text",
+      "source": "103",
+      "before": "103",
+      "after": "103",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 190,
+      "kind": "text",
+      "source": "0",
+      "before": "0",
+      "after": "0",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 191,
+      "kind": "text",
+      "source": "85",
+      "before": "85",
+      "after": "85",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 192,
+      "kind": "text",
+      "source": "103",
+      "before": "103",
+      "after": "103",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 193,
+      "kind": "text",
+      "source": "MAD",
+      "before": "MAD",
+      "after": "MAD",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 204,
+      "kind": "text",
+      "source": "Food truck",
+      "before": "Food truck",
+      "after": "Camión de comida",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 205,
+      "kind": "text",
+      "source": "Boutique",
+      "before": "Boutique",
+      "after": "Tienda de ropa",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 218,
+      "kind": "alt",
+      "source": "MIX Restaurant",
+      "before": "MIX Restaurant",
+      "after": "MIX Restaurant",
+      "verdict": "Brand, named demo merchant/person, plan name or model credit."
+    },
+    {
+      "node": 219,
+      "kind": "alt",
+      "source": "Pasta Corner",
+      "before": "Pasta Corner",
+      "after": "Pasta Corner",
+      "verdict": "Brand, named demo merchant/person, plan name or model credit."
+    },
+    {
+      "node": 220,
+      "kind": "alt",
+      "source": "Claro",
+      "before": "Claro",
+      "after": "Claro",
+      "verdict": "Brand, named demo merchant/person, plan name or model credit."
+    },
+    {
+      "node": 221,
+      "kind": "alt",
+      "source": "Startoner",
+      "before": "Startoner",
+      "after": "Startoner",
+      "verdict": "Brand, named demo merchant/person, plan name or model credit."
+    },
+    {
+      "node": 226,
+      "kind": "text",
+      "source": "BAR",
+      "before": "BAR",
+      "after": "BARRA",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 227,
+      "kind": "text",
+      "source": "TILL",
+      "before": "TILL",
+      "after": "TPV",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 228,
+      "kind": "text",
+      "source": "01",
+      "before": "01",
+      "after": "01",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 229,
+      "kind": "text",
+      "source": "02",
+      "before": "02",
+      "after": "02",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 230,
+      "kind": "text",
+      "source": "6 min",
+      "before": "6 min",
+      "after": "6 min",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 231,
+      "kind": "text",
+      "source": "02",
+      "before": "02",
+      "after": "02",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 232,
+      "kind": "text",
+      "source": "03",
+      "before": "03",
+      "after": "03",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 233,
+      "kind": "text",
+      "source": "03",
+      "before": "03",
+      "after": "03",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 234,
+      "kind": "text",
+      "source": "04",
+      "before": "04",
+      "after": "04",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 235,
+      "kind": "text",
+      "source": "05",
+      "before": "05",
+      "after": "05",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 236,
+      "kind": "text",
+      "source": "05",
+      "before": "05",
+      "after": "05",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 237,
+      "kind": "text",
+      "source": "06",
+      "before": "06",
+      "after": "06",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 238,
+      "kind": "text",
+      "source": "07",
+      "before": "07",
+      "after": "07",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 239,
+      "kind": "text",
+      "source": "08",
+      "before": "08",
+      "after": "08",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 240,
+      "kind": "text",
+      "source": "06 + 07",
+      "before": "06 + 07",
+      "after": "06 + 07",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 241,
+      "kind": "text",
+      "source": "Free",
+      "before": "Libre",
+      "after": "Libre",
+      "verdict": "Correct Spanish spelling shared with the source."
+    },
+    {
+      "node": 249,
+      "kind": "text",
+      "source": "What were yesterday’s sales?",
+      "before": "What were yesterday’s sales?",
+      "after": "¿Cuáles fueron las ventas de ayer?",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 250,
+      "kind": "text",
+      "source": "« Quelles ont été les ventes d’hier ? »",
+      "before": "« Quelles ont été les ventes d’hier ? »",
+      "after": "¿Cuáles fueron las ventas de ayer?",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 251,
+      "kind": "text",
+      "source": "كم بلغت مبيعات الأمس؟",
+      "before": "كم بلغت مبيعات الأمس؟",
+      "after": "كم بلغت مبيعات الأمس؟",
+      "verdict": "Intentional Arabic-language Kiwi IQ demonstration; preserves the actual supported language, not Spanish product support."
+    },
+    {
+      "node": 252,
+      "kind": "text",
+      "source": "KIWI IQ",
+      "before": "KIWI IQ",
+      "after": "KIWI IQ",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 253,
+      "kind": "text",
+      "source": "FR",
+      "before": "FR",
+      "after": "FR",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 254,
+      "kind": "text",
+      "source": "FR",
+      "before": "FR",
+      "after": "FR",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 255,
+      "kind": "text",
+      "source": "AR",
+      "before": "AR",
+      "after": "AR",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 256,
+      "kind": "text",
+      "source": "AR",
+      "before": "AR",
+      "after": "AR",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 257,
+      "kind": "text",
+      "source": "EN",
+      "before": "EN",
+      "after": "EN",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 258,
+      "kind": "text",
+      "source": "EN",
+      "before": "EN",
+      "after": "EN",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 259,
+      "kind": "text",
+      "source": "12,480 MAD",
+      "before": "12 480 MAD",
+      "after": "12 480 MAD",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 261,
+      "kind": "text",
+      "source": "12 480 MAD",
+      "before": "12 480 MAD",
+      "after": "12 480 MAD",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 262,
+      "kind": "text",
+      "source": "+18 %",
+      "before": "+18 %",
+      "after": "+18 %",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 263,
+      "kind": "text",
+      "source": "12‎ ‎480 درهم",
+      "before": "12‎ ‎480 درهم",
+      "after": "12‎ ‎480 درهم",
+      "verdict": "Intentional Arabic-language Kiwi IQ demonstration; preserves the actual supported language, not Spanish product support."
+    },
+    {
+      "node": 266,
+      "kind": "text",
+      "source": "vs le même jour la semaine passée",
+      "before": "vs le même jour la semaine passée",
+      "after": "frente al mismo día de la semana pasada",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 267,
+      "kind": "text",
+      "source": "مقارنة باليوم نفسه من الأسبوع الماضي",
+      "before": "مقارنة باليوم نفسه من الأسبوع الماضي",
+      "after": "مقارنة باليوم نفسه من الأسبوع الماضي",
+      "verdict": "Intentional Arabic-language Kiwi IQ demonstration; preserves the actual supported language, not Spanish product support."
+    },
+    {
+      "node": 270,
+      "kind": "text",
+      "source": "7 DERNIERS JOURS",
+      "before": "7 DERNIERS JOURS",
+      "after": "ÚLTIMOS 7 DÍAS",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 271,
+      "kind": "text",
+      "source": "HIER",
+      "before": "HIER",
+      "after": "AYER",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 272,
+      "kind": "text",
+      "source": "آخر 7 أيام",
+      "before": "آخر 7 أيام",
+      "after": "آخر 7 أيام",
+      "verdict": "Intentional Arabic-language Kiwi IQ demonstration; preserves the actual supported language, not Spanish product support."
+    },
+    {
+      "node": 273,
+      "kind": "text",
+      "source": "الأمس",
+      "before": "الأمس",
+      "after": "الأمس",
+      "verdict": "Intentional Arabic-language Kiwi IQ demonstration; preserves the actual supported language, not Spanish product support."
+    },
+    {
+      "node": 276,
+      "kind": "text",
+      "source": "CE QUI CLOCHE",
+      "before": "CE QUI CLOCHE",
+      "after": "QUÉ OCURRE",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 277,
+      "kind": "text",
+      "source": "Marge en baisse sur les jus pressés.",
+      "before": "Marge en baisse sur les jus pressés.",
+      "after": "El margen de los jugos naturales ha bajado.",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 278,
+      "kind": "text",
+      "source": "موضع الخلل",
+      "before": "موضع الخلل",
+      "after": "موضع الخلل",
+      "verdict": "Intentional Arabic-language Kiwi IQ demonstration; preserves the actual supported language, not Spanish product support."
+    },
+    {
+      "node": 279,
+      "kind": "text",
+      "source": "هامش ربح العصائر الطازجة يتراجع.",
+      "before": "هامش ربح العصائر الطازجة يتراجع.",
+      "after": "هامش ربح العصائر الطازجة يتراجع.",
+      "verdict": "Intentional Arabic-language Kiwi IQ demonstration; preserves the actual supported language, not Spanish product support."
+    },
+    {
+      "node": 282,
+      "kind": "text",
+      "source": "À FAIRE",
+      "before": "À FAIRE",
+      "after": "SIGUIENTE PASO",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 283,
+      "kind": "text",
+      "source": "Remonter le jus d’orange de 2 MAD.",
+      "before": "Remonter le jus d’orange de 2 MAD.",
+      "after": "Subir el precio del jugo de naranja en 2 MAD.",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 284,
+      "kind": "text",
+      "source": "الخطوة التالية",
+      "before": "الخطوة التالية",
+      "after": "الخطوة التالية",
+      "verdict": "Intentional Arabic-language Kiwi IQ demonstration; preserves the actual supported language, not Spanish product support."
+    },
+    {
+      "node": 285,
+      "kind": "text",
+      "source": "ارفع سعر عصير البرتقال بدرهمين.",
+      "before": "ارفع سعر عصير البرتقال بدرهمين.",
+      "after": "ارفع سعر عصير البرتقال بدرهمين.",
+      "verdict": "Intentional Arabic-language Kiwi IQ demonstration; preserves the actual supported language, not Spanish product support."
+    },
+    {
+      "node": 302,
+      "kind": "text",
+      "source": "#248",
+      "before": "#248",
+      "after": "#248",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 306,
+      "kind": "text",
+      "source": "01",
+      "before": "01",
+      "after": "01",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 309,
+      "kind": "text",
+      "source": "02",
+      "before": "02",
+      "after": "02",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 312,
+      "kind": "text",
+      "source": "03",
+      "before": "03",
+      "after": "03",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 315,
+      "kind": "text",
+      "source": "04",
+      "before": "04",
+      "after": "04",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 323,
+      "kind": "text",
+      "source": "AT THE COUNTER",
+      "before": "AT THE COUNTER",
+      "after": "EN EL MOSTRADOR",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 331,
+      "kind": "text",
+      "source": "Thermal printer",
+      "before": "Thermal printer",
+      "after": "Impresora térmica",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 332,
+      "kind": "text",
+      "source": "ESC/POS",
+      "before": "ESC/POS",
+      "after": "ESC/POS",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 334,
+      "kind": "text",
+      "source": "TPE",
+      "before": "TPE",
+      "after": "TPE",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 336,
+      "kind": "text",
+      "source": "HID",
+      "before": "HID",
+      "after": "HID",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 338,
+      "kind": "text",
+      "source": "PWA",
+      "before": "PWA",
+      "after": "PWA",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 340,
+      "kind": "text",
+      "source": "KDS",
+      "before": "KDS",
+      "after": "KDS",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 342,
+      "kind": "text",
+      "source": "RJ11",
+      "before": "RJ11",
+      "after": "RJ11",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 346,
+      "kind": "text",
+      "source": "Sold",
+      "before": "Sold",
+      "after": "Vendidos",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 347,
+      "kind": "text",
+      "source": "Rented",
+      "before": "Rented",
+      "after": "Alquilados",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 348,
+      "kind": "text",
+      "source": "Shared",
+      "before": "Shared",
+      "after": "Compartidos",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 349,
+      "kind": "text",
+      "source": "YOUR DATA",
+      "before": "YOUR DATA",
+      "after": "SUS DATOS",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 359,
+      "kind": "text",
+      "source": "Yassine",
+      "before": "Yassine",
+      "after": "Yassine",
+      "verdict": "Brand, named demo merchant/person, plan name or model credit."
+    },
+    {
+      "node": 361,
+      "kind": "text",
+      "source": "FR",
+      "before": "FR",
+      "after": "FR",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 362,
+      "kind": "text",
+      "source": "EN",
+      "before": "EN",
+      "after": "EN",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 363,
+      "kind": "text",
+      "source": "AR",
+      "before": "AR",
+      "after": "AR",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 364,
+      "kind": "text",
+      "source": "ES",
+      "before": "ES",
+      "after": "ES",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 365,
+      "kind": "text",
+      "source": "ZH",
+      "before": "ZH",
+      "after": "ZH",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 366,
+      "kind": "text",
+      "source": "DE",
+      "before": "DE",
+      "after": "DE",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 367,
+      "kind": "text",
+      "source": "RU",
+      "before": "RU",
+      "after": "RU",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 368,
+      "kind": "text",
+      "source": "IT",
+      "before": "IT",
+      "after": "IT",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 369,
+      "kind": "text",
+      "source": "JA",
+      "before": "JA",
+      "after": "JA",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 370,
+      "kind": "text",
+      "source": "PT",
+      "before": "PT",
+      "after": "PT",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 371,
+      "kind": "text",
+      "source": "HE",
+      "before": "HE",
+      "after": "HE",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 372,
+      "kind": "text",
+      "source": "NL",
+      "before": "NL",
+      "after": "NL",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 373,
+      "kind": "text",
+      "source": "KO",
+      "before": "KO",
+      "after": "KO",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 374,
+      "kind": "text",
+      "source": "TR",
+      "before": "TR",
+      "after": "TR",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 375,
+      "kind": "text",
+      "source": "HI",
+      "before": "HI",
+      "after": "HI",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 376,
+      "kind": "text",
+      "source": "PL",
+      "before": "PL",
+      "after": "PL",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 377,
+      "kind": "text",
+      "source": "EL",
+      "before": "EL",
+      "after": "EL",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 378,
+      "kind": "text",
+      "source": "SV",
+      "before": "SV",
+      "after": "SV",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 379,
+      "kind": "text",
+      "source": "ID",
+      "before": "ID",
+      "after": "ID",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 380,
+      "kind": "text",
+      "source": "UK",
+      "before": "UK",
+      "after": "UK",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 381,
+      "kind": "text",
+      "source": "DA",
+      "before": "DA",
+      "after": "DA",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 382,
+      "kind": "text",
+      "source": "NO",
+      "before": "NO",
+      "after": "NO",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 383,
+      "kind": "text",
+      "source": "Thé",
+      "before": "Thé",
+      "after": "Thé",
+      "verdict": "French product-name sample in the 23-language QR-menu demonstration."
+    },
+    {
+      "node": 384,
+      "kind": "text",
+      "source": "à",
+      "before": "à",
+      "after": "à",
+      "verdict": "French product-name sample in the 23-language QR-menu demonstration."
+    },
+    {
+      "node": 385,
+      "kind": "text",
+      "source": "la",
+      "before": "la",
+      "after": "la",
+      "verdict": "French product-name sample in the 23-language QR-menu demonstration."
+    },
+    {
+      "node": 386,
+      "kind": "text",
+      "source": "menthe",
+      "before": "menthe",
+      "after": "menthe",
+      "verdict": "French product-name sample in the 23-language QR-menu demonstration."
+    },
+    {
+      "node": 387,
+      "kind": "text",
+      "source": "18 MAD",
+      "before": "18 MAD",
+      "after": "18 MAD",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 391,
+      "kind": "text",
+      "source": "ESC/POS",
+      "before": "ESC/POS",
+      "after": "ESC/POS",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 394,
+      "kind": "text",
+      "source": "8",
+      "before": "8",
+      "after": "8",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 395,
+      "kind": "text",
+      "source": "2",
+      "before": "2",
+      "after": "2",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 396,
+      "kind": "text",
+      "source": "0",
+      "before": "0",
+      "after": "0",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 397,
+      "kind": "text",
+      "source": "4",
+      "before": "4",
+      "after": "4",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 398,
+      "kind": "text",
+      "source": "1",
+      "before": "1",
+      "after": "1",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 399,
+      "kind": "text",
+      "source": "6",
+      "before": "6",
+      "after": "6",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 406,
+      "kind": "text",
+      "source": "+48",
+      "before": "+48",
+      "after": "+48",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 407,
+      "kind": "text",
+      "source": "+120",
+      "before": "+120",
+      "after": "+120",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 408,
+      "kind": "text",
+      "source": "27 632",
+      "before": "27 632",
+      "after": "27 632",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 409,
+      "kind": "text",
+      "source": "27 680",
+      "before": "27 680",
+      "after": "27 680",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 410,
+      "kind": "text",
+      "source": "27 800",
+      "before": "27 800",
+      "after": "27 800",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 414,
+      "kind": "text",
+      "source": "Lait",
+      "before": "Lait",
+      "after": "Leche",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 415,
+      "kind": "text",
+      "source": "−1",
+      "before": "−1",
+      "after": "−1",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 416,
+      "kind": "text",
+      "source": "Café",
+      "before": "Café",
+      "after": "Café",
+      "verdict": "Correct Spanish spelling shared with the source."
+    },
+    {
+      "node": 417,
+      "kind": "text",
+      "source": "−1",
+      "before": "−1",
+      "after": "−1",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 418,
+      "kind": "text",
+      "source": "Sucre",
+      "before": "Sucre",
+      "after": "Azúcar",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 419,
+      "kind": "text",
+      "source": "−1",
+      "before": "−1",
+      "after": "−1",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 425,
+      "kind": "text",
+      "source": "· 3",
+      "before": "· 3",
+      "after": "· 3",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 427,
+      "kind": "text",
+      "source": "SA",
+      "before": "SA",
+      "after": "SA",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 428,
+      "kind": "text",
+      "source": "08:02",
+      "before": "08:02",
+      "after": "08:02",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 429,
+      "kind": "text",
+      "source": "YB",
+      "before": "YB",
+      "after": "YB",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 430,
+      "kind": "text",
+      "source": "08:15",
+      "before": "08:15",
+      "after": "08:15",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 431,
+      "kind": "text",
+      "source": "RM",
+      "before": "RM",
+      "after": "RM",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 432,
+      "kind": "text",
+      "source": "12:30",
+      "before": "12:30",
+      "after": "12:30",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 437,
+      "kind": "text",
+      "source": "19:00",
+      "before": "19:00",
+      "after": "19:00",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 438,
+      "kind": "text",
+      "source": "20:00",
+      "before": "20:00",
+      "after": "20:00",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 439,
+      "kind": "text",
+      "source": "21:00",
+      "before": "21:00",
+      "after": "21:00",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 440,
+      "kind": "text",
+      "source": "22:00",
+      "before": "22:00",
+      "after": "22:00",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 441,
+      "kind": "text",
+      "source": "19:30",
+      "before": "19:30",
+      "after": "19:30",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 442,
+      "kind": "text",
+      "source": "T4 · 2",
+      "before": "T4 · 2",
+      "after": "T4 · 2",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 443,
+      "kind": "text",
+      "source": "21:00",
+      "before": "21:00",
+      "after": "21:00",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 444,
+      "kind": "text",
+      "source": "T2 · 6",
+      "before": "T2 · 6",
+      "after": "T2 · 6",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 448,
+      "kind": "text",
+      "source": "1 240 MAD",
+      "before": "1 240 MAD",
+      "after": "1 240 MAD",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 449,
+      "kind": "text",
+      "source": "FACTURE",
+      "before": "FACTURE",
+      "after": "FACTURA",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 450,
+      "kind": "text",
+      "source": "2026-0142",
+      "before": "2026-0142",
+      "after": "2026-0142",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 451,
+      "kind": "text",
+      "source": "ICE 00156··· · Client",
+      "before": "ICE 00156··· · Client",
+      "after": "ICE 00156··· · Cliente",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 452,
+      "kind": "text",
+      "source": "TOTAL",
+      "before": "TOTAL",
+      "after": "TOTAL",
+      "verdict": "Correct Spanish spelling shared with the source."
+    },
+    {
+      "node": 453,
+      "kind": "text",
+      "source": "1 240 MAD",
+      "before": "1 240 MAD",
+      "after": "1 240 MAD",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 455,
+      "kind": "text",
+      "source": "PDF",
+      "before": "PDF",
+      "after": "PDF",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 460,
+      "kind": "text",
+      "source": "180 g",
+      "before": "180 g",
+      "after": "180 g",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 462,
+      "kind": "text",
+      "source": "60 g",
+      "before": "60 g",
+      "after": "60 g",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 464,
+      "kind": "text",
+      "source": "40 g",
+      "before": "40 g",
+      "after": "40 g",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 465,
+      "kind": "text",
+      "source": "0",
+      "before": "0",
+      "after": "0",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 466,
+      "kind": "text",
+      "source": "320",
+      "before": "320",
+      "after": "320",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 467,
+      "kind": "text",
+      "source": "540",
+      "before": "540",
+      "after": "540",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 468,
+      "kind": "text",
+      "source": "kcal",
+      "before": "kcal",
+      "after": "kcal",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 469,
+      "kind": "text",
+      "source": "P",
+      "before": "P",
+      "after": "P",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 470,
+      "kind": "text",
+      "source": "32",
+      "before": "32",
+      "after": "32",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 471,
+      "kind": "text",
+      "source": "g",
+      "before": "g",
+      "after": "g",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 472,
+      "kind": "text",
+      "source": "G",
+      "before": "G",
+      "after": "C",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 473,
+      "kind": "text",
+      "source": "48",
+      "before": "48",
+      "after": "48",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 474,
+      "kind": "text",
+      "source": "g",
+      "before": "g",
+      "after": "g",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 475,
+      "kind": "text",
+      "source": "L",
+      "before": "L",
+      "after": "G",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 476,
+      "kind": "text",
+      "source": "21",
+      "before": "21",
+      "after": "21",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 477,
+      "kind": "text",
+      "source": "g",
+      "before": "g",
+      "after": "g",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 478,
+      "kind": "text",
+      "source": "Gluten",
+      "before": "Gluten",
+      "after": "Gluten",
+      "verdict": "Correct Spanish spelling shared with the source."
+    },
+    {
+      "node": 488,
+      "kind": "text",
+      "source": "Basic",
+      "before": "Basic",
+      "after": "Basic",
+      "verdict": "Brand, named demo merchant/person, plan name or model credit."
+    },
+    {
+      "node": 490,
+      "kind": "text",
+      "source": "249",
+      "before": "249",
+      "after": "249",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 491,
+      "kind": "text",
+      "source": "MAD",
+      "before": "MAD",
+      "after": "MAD",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 500,
+      "kind": "text",
+      "source": "Pro",
+      "before": "Pro",
+      "after": "Pro",
+      "verdict": "Brand, named demo merchant/person, plan name or model credit."
+    },
+    {
+      "node": 502,
+      "kind": "text",
+      "source": "399",
+      "before": "399",
+      "after": "399",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 503,
+      "kind": "text",
+      "source": "MAD",
+      "before": "MAD",
+      "after": "MAD",
+      "verdict": "Currency, hardware/nutrition unit, language code or sample staff initials."
+    },
+    {
+      "node": 544,
+      "kind": "text",
+      "source": "Cookies",
+      "before": "Cookies",
+      "after": "Política de cookies",
+      "verdict": "Translated from source."
+    },
+    {
+      "node": 547,
+      "kind": "text",
+      "source": "+212 624 495 159",
+      "before": "+212 624 495 159",
+      "after": "+212 624 495 159",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 548,
+      "kind": "text",
+      "source": "contact@kiwi-os.com",
+      "before": "contact@kiwi-os.com",
+      "after": "contact@kiwi-os.com",
+      "verdict": "Unchanged numeric fixture, date, time, invoice/table identifier, punctuation or contact detail."
+    },
+    {
+      "node": 552,
+      "kind": "text",
+      "source": "Kiwi",
+      "before": "Kiwi",
+      "after": "Kiwi",
+      "verdict": "Brand, named demo merchant/person, plan name or model credit."
+    },
+    {
+      "node": 554,
+      "kind": "text",
+      "source": "Tamminen",
+      "before": "Tamminen",
+      "after": "Tamminen",
+      "verdict": "Brand, named demo merchant/person, plan name or model credit."
+    }
+  ]
+}

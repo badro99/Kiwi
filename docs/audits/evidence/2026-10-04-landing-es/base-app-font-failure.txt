@@ -1,0 +1,88 @@
+app-bundle-test
+  ✗ build sans erreur — node_modules/@fontsource-variable/inter-tight/files/inter-tight-latin-wght-normal.woff2 introuvable ; lance npm install dans app/ ; node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff2 introuvable ; lance npm install dans app/ ; node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-500-normal.woff2 introuvable ; lance npm install dans app/ ; node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-600-normal.woff2 introuvable ; lance npm install dans app/
+  ✓ les 4 pages sont embarquées
+  ✓ deux builds → même empreinte (déterministe)
+  ✓ assets/api-base.js est dans le bundle
+  ✓ la coquille native (index.html) est dans le bundle
+  ✓ le runtime natif partagé est dans le bundle
+  ✗ Inter Tight et IBM Plex Sans Arabic sont embarquées localement
+  ✓ aucune copie de conflit iCloud « fichier 2.js » dans le bundle
+  ✓ seules les six photos de terminaux utilisées sont embarquées
+  ✓ kiwi-caisse.html : api-base.js est le PREMIER <script>
+  ✓ kiwi-caisse.html : charge le runtime natif partagé
+  ✓ kiwi-caisse.html : aucun <link rel="manifest">
+  ✓ kiwi-caisse.html : aucune police réseau
+  ✓ kiwi-serveur.html : api-base.js est le PREMIER <script>
+  ✓ kiwi-serveur.html : charge le runtime natif partagé
+  ✓ kiwi-serveur.html : aucun <link rel="manifest">
+  ✓ kiwi-serveur.html : aucune police réseau
+  ✓ kiwi-cuisine.html : api-base.js est le PREMIER <script>
+  ✓ kiwi-cuisine.html : charge le runtime natif partagé
+  ✓ kiwi-cuisine.html : aucun <link rel="manifest">
+  ✓ kiwi-cuisine.html : aucune police réseau
+  ✓ dashboard.html : api-base.js est le PREMIER <script>
+  ✓ dashboard.html : charge le runtime natif partagé
+  ✓ dashboard.html : aucun <link rel="manifest">
+  ✓ dashboard.html : aucune police réseau
+  ✓ index.html : api-base.js est le PREMIER <script>
+  ✓ index.html : charge le runtime natif partagé
+  ✓ index.html : aucun <link rel="manifest">
+  ✓ index.html : aucune police réseau
+  ✓ caisse : reprendre un service avant le runtime d’icônes reste non bloquant
+  ✓ kiwi-caisse.html : charge assets/err-reporter.js
+  ✓ kiwi-serveur.html : charge assets/err-reporter.js
+  ✓ kiwi-cuisine.html : charge assets/err-reporter.js
+  ✓ dashboard.html : charge assets/err-reporter.js
+  ✓ index.html : charge assets/err-reporter.js
+  ✓ native-runtime : les rapports d’erreur portent plateforme et version de l’app (App.getInfo)
+  ✓ index.html porte l’empreinte du bundle
+  ✓ assistant : ?setup relance le parcours et ?choose conserve le lanceur manuel
+  ✓ assistant : caisse, cuisine et dashboard exigent la session marchande; Équipe garde son code employé
+  ✓ assistant : la session crée une liaison pour son magasin, la consomme, puis utilise le commit locataire partagé avec identité terminal
+  ✓ assistant : choisit un établissement autorisé de /api/me au lieu de demander un code supprimé du dashboard
+  ✓ assistant : changer la sélection bloque Continuer tant que le nouvel établissement n’est pas réellement relié
+  ✓ assistant : les étapes non requises restent sautées et le rail de marque suit le contexte
+  ✓ assistant : le récapitulatif distingue une étape sautée d’une étape réellement validée
+  ✓ assistant : le test sonde, imprime un ticket ESC/POS et enregistre le format déjà lu par la caisse
+  ✓ assistant : le parcours de test ne crée aucune vente ni aucun paiement
+  ✓ assistant : le shell autorise le zoom (pas de user-scalable=no)
+  ✓ assistant : les tuiles annoncent leur état avant tout choix (aria-pressed initial)
+  ✓ assistant : la plateforme et l’envoi du login sont traduits en fr/en/ar
+  ✓ assistant : résultats de scan et statut imprimante vivent dans la carte, pas sous elle
+  ✓ assistant : les largeurs papier restent ordonnées en arabe (80 mm, pas mm 80)
+  ✓ assistant : relié au bon établissement, le bouton d’appairage s’efface au lieu d’occuper le créneau principal
+  ✓ assistant : la sélection se voit aussi sans la couleur (pastille ✓) et le clavier voit le focus
+  ✓ --api-base force window.KIWI_API_BASE avant le shim
+  ✓ localRefs ne retient que les assets locaux
+  ✓ aucun asset n’appelle https://kiwi-os.com/api en dur
+  ✓ api-base.js : l’origine par défaut en natif est https://kiwi-os.com
+  ✓ assets/caisse-pwa.js : retourne immédiatement en natif
+  ✓ assets/dashboard-pwa.js : retourne immédiatement en natif
+  ✓ assets/employee-pwa.js : retourne immédiatement en natif
+  ✓ assets/employee-live.js : pas de service worker en natif
+  ✓ natif : KiwiApiBase.base = https://kiwi-os.com
+  ✓ fetch("/api/me") → https://kiwi-os.com/api/me, credentials include, init conservé
+  ✓ fetch("/auth/login") préfixé
+  ✓ fetch d’un asset relatif : intact
+  ✓ "/apiary" n’est pas "/api/"
+  ✓ fetch(Request("/api/sale")) → Request réécrite
+  ✓ XHR.open("/api/media?…") préfixé, withCredentials
+  ✓ EventSource("/api/…") préfixé, withCredentials
+  ✓ WebSocket ws://localhost/api/… (live-socket.js) → wss://kiwi-os.com/api/…
+  ✓ WebSocket avec port et protocoles : réécrit, protocoles conservés
+  ✓ sendBeacon("/api/error") préfixé
+  ✓ URL absolue capacitor://localhost/auth/… réécrite
+  ✓ URL déjà absolue vers l’API : intacte
+  ✓ web (non natif, pas de KIWI_API_BASE) : no-op absolu
+  ✓ KIWI_API_BASE forcé (bundle testé au bureau) : préfixe sans double slash
+  ✓ _middleware.js : APP_ORIGIN ne reflète que capacitor://, ionic:// et localhost
+  ✓ _middleware.js : /app/ (projet Capacitor) répond 404
+  ✓ préflight OPTIONS /api/me depuis capacitor://localhost → 204 + CORS avec identifiants
+  ✓ GET /api/me depuis https://localhost (Android) → CORS réfléchi + Vary: Origin
+  ✓ POST /auth/login depuis l’app → CORS réfléchi
+  ✓ origine tierce : aucun en-tête CORS
+  ✓ préflight d’une origine tierce : pas de 204 CORS
+  ✓ une page HTML depuis l’app : pas de CORS (seuls /api et /auth)
+  ✓ GET /app/… → 404
+
+app-bundle-test : 2 échec(s)

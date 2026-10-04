@@ -1,0 +1,68 @@
+/* Spanish copy needs room in the same exported landing design. */
+html[lang="es"] .kiwi-dash .truncate {
+  font-size: 17px;
+  white-space: normal;
+  text-overflow: clip;
+  overflow: visible;
+}
+html[lang="es"] #pricing {
+  padding-inline: 2.5rem;
+}
+html[lang="es"] #pricing a {
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+  height: auto;
+  min-height: 3rem;
+}
+html[lang="es"] #pricing [class*="text-[36px]"],
+html[lang="es"] #pricing [class*="text-[48px]"] {
+  max-width: 100%;
+  overflow-wrap: normal;
+}
+@media (max-width: 1199px) {
+  html[lang="es"] footer .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  html[lang="es"] footer .grid > div:first-child {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 1199px) {
+  html[lang="es"] #pricing > .grid {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 40rem;
+  }
+  html[lang="es"] #stats .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 767px) {
+  html[lang="es"] #pricing { padding-inline: 1.25rem; }
+}
+@media (max-width: 1023px) {
+  html[lang="es"] #features .grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+}
+@media (max-width: 639px) {
+  html[lang="es"] footer .grid { grid-template-columns: minmax(0, 1fr); }
+}
+/* Demo product tiles keep their full translated names on small screens. */
+html[lang="es"] #trades .truncate {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.3;
+}
+@media (max-width: 639px) {
+  html[lang="es"] #trades .grid-cols-3,
+  html[lang="es"] #trades .grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* The sharing diagram reserves 62 viewBox units before its blocked route. */
+html[lang="es"] #security svg text[x="62"][text-anchor="end"] {
+  font-size: 11px;
+}

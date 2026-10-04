@@ -13,7 +13,8 @@ const guideClusters = [
   Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, `/${locale}/guides/`])),
   ...TOPICS.map((topic) => topic.routes),
 ];
-const landingRoutes = Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, `/${locale}/`]));
+const LANDING_LOCALES = ['fr', 'en', 'ar', 'de', 'it', 'nl', 'es'];
+const landingRoutes = Object.fromEntries(LANDING_LOCALES.map((locale) => [locale, `/${locale}/`]));
 const articleRoutesByLocale = Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [
   locale, TOPICS.map((topic) => topic.routes[locale]),
 ]));
@@ -198,13 +199,13 @@ const sitemapRows = sitemap.match(/<url>[\s\S]*?<\/url>/g) || [];
 const sitemapLocs = sitemapRows.map((row) => row.match(/<loc>([^<]+)<\/loc>/)?.[1]).filter(Boolean);
 ok(new Set(sitemapLocs).size === sitemapLocs.length, 'sitemap has no duplicate canonical URL');
 ok(sitemapLocs.every((url) => url.startsWith(`${SITE}/`) && !url.includes('://www.')), 'sitemap contains only apex-origin URLs');
-for (const locale of PUBLISHED_LOCALES) {
-  const expected = [...PUBLISHED_LOCALES.map((code) => [code, SITE + landingRoutes[code]]), ['x-default', SITE + landingRoutes.fr]];
+for (const locale of LANDING_LOCALES) {
+  const expected = [...LANDING_LOCALES.map((code) => [code, SITE + landingRoutes[code]]), ['x-default', SITE + landingRoutes.fr]];
   const row = sitemapRows.find((entry) => entry.includes(`<loc>${SITE + landingRoutes[locale]}</loc>`)) || '';
   const actual = [...row.matchAll(/<xhtml:link rel="alternate" hreflang="([^"]+)" href="([^"]+)"/g)].map((match) => [match[1], match[2]]);
   ok(JSON.stringify(actual) === JSON.stringify(expected), `${locale.toUpperCase()} landing sitemap row is slash-final and matches the exact locale cluster`);
 }
-ok(sitemapRows.length === published.length + PUBLISHED_LOCALES.length, 'sitemap contains only the manifested landings, hubs and localized articles');
+ok(sitemapRows.length === published.length + LANDING_LOCALES.length, 'sitemap contains only the manifested landings, hubs and localized articles');
 ok(!/<loc>https:\/\/kiwi-os\.com\/(?:fr|en|ar)<\/loc>/.test(sitemap), 'sitemap contains no redirecting slashless locale URL');
 
 try {
