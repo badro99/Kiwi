@@ -228,6 +228,7 @@
       @media(prefers-reduced-motion:reduce){.bpd-btn,.bpd-card,.bpd-starter{transition:none!important}}`;
     s.textContent += '\nbody.design-vexel .kiwi-modal .bpd-preview :is(b,strong),.bpd-preview .bpd-srow s{color:var(--inverse-ink)}';
     s.textContent += '\n[data-bpd-dialog] .kiwi-modal-close{left:auto;right:auto;inset-inline-start:auto;inset-inline-end:18px;width:44px;height:44px;min-width:44px;min-height:44px}[data-bpd-dialog] .kiwi-modal-head{padding-inline-end:80px}[data-bpd-dialog] .kiwi-modal-head>div{min-width:0}[data-bpd-dialog] .kiwi-modal-head h3{overflow-wrap:anywhere}.bpd-preview [data-bpd-money]{direction:ltr;unicode-bidi:isolate}.bpd-preview .bpd-srow .prices{display:inline-flex;direction:ltr;gap:6px;align-items:center}.bpd-preview .bpd-srow s{margin:0}';
+    s.textContent += '\n.bpd-swap:dir(rtl)>svg{transform:scaleX(-1)}';
     document.head.appendChild(s);
   }
 

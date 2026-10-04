@@ -146,6 +146,12 @@ if(process.argv.includes('--pure')){
         }
         await page.$eval('.kiwi-modal-head h3',el=>el.scrollIntoView({block:'nearest'}));
         const geometry=await page.evaluate(()=>{
+          const swap=document.querySelector('.bpd-swap'),arrow=swap.querySelector(':scope>svg');
+          const full=swap.querySelector(':scope>div:first-child').getBoundingClientRect(),promo=swap.querySelector(':scope>.next').getBoundingClientRect(),ar=arrow.getBoundingClientRect();
+          const fullX=full.x+full.width/2,promoX=promo.x+promo.width/2,arrowX=ar.x+ar.width/2;
+          const rtl=getComputedStyle(swap).direction==='rtl',transform=getComputedStyle(arrow).transform;
+          const matrix=transform==='none'?new DOMMatrix():new DOMMatrix(transform);
+          const swapGeometry={rtl,fullX,promoX,arrowX,transform,axisX:matrix.a,axisY:matrix.d,skewX:matrix.c,skewY:matrix.b};
           const heading=document.querySelector('[data-bpd-dialog] .kiwi-modal-head h3');
           const close=document.querySelector('[data-bpd-dialog] .kiwi-modal-close');
           const modal=heading.closest('.kiwi-modal');
@@ -164,7 +170,7 @@ if(process.argv.includes('--pure')){
             currency.setStart(text,at);currency.setEnd(text,at+3);
             return number.getBoundingClientRect().right<=currency.getBoundingClientRect().left+1;
           });
-          return{title,rects:{heading:r.toJSON(),close:c.toJSON(),modal:m.toJSON(),old:a.toJSON(),next:b.toJSON()},closeSize:c.width>=44&&c.height>=44,closeHit:hit===close||!!hit?.closest('.kiwi-modal-close'),
+          return{title,swapGeometry,rects:{heading:r.toJSON(),close:c.toJSON(),modal:m.toJSON(),old:a.toJSON(),next:b.toJSON()},closeSize:c.width>=44&&c.height>=44,closeHit:hit===close||!!hit?.closest('.kiwi-modal-close'),
             titleFits:r.width>0&&r.left>=m.left&&r.right<=m.right,
             separated:a.right+5<=b.left,isolated,
             values:[document.querySelector('.bpd-swap>div:first-child b').textContent,document.querySelector('.bpd-swap .next b').textContent,old.textContent,next.textContent],
@@ -177,6 +183,9 @@ if(process.argv.includes('--pure')){
         check(geometry.separated,`${locale}/${theme}: actual old/new price boxes have >=5px separation in source order`);
         check(geometry.isolated,`${locale}/${theme}: every preview amount/currency has rendered LTR order in an opaque isolated data node`);
         check(geometry.values.every((value,i)=>value===geometry.expected[i]),`${locale}/${theme}: exact model amounts and public formatter bytes preserved`);
+        const sg=geometry.swapGeometry;
+        check(sg.rtl===(locale==='ar')&&(sg.rtl?sg.fullX>sg.arrowX&&sg.arrowX>sg.promoX:sg.fullX<sg.arrowX&&sg.arrowX<sg.promoX),`${locale}/${theme}: actual full-price to promotional-price row follows locale direction`);
+        check(sg.axisX===(locale==='ar'?-1:1)&&sg.axisY===1&&sg.skewX===0&&sg.skewY===0,`${locale}/${theme}: actual reduction SVG points from full price toward promotional price without flipping amounts`);
         await page.click('#bpd-name');
         const targets=['.bpd-preview-head b','.bpd-swap>div:first-child b','.bpd-swap .next b','.bpd-srow s','.bpd-srow b','#bpd-save'];
         for(const selector of targets){
