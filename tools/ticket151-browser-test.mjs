@@ -8,28 +8,42 @@ import os from 'node:os';
 import http from 'node:http';
 import { createRequire } from 'node:module';
 import { build } from './build-app-www.mjs';
+import { releaseExitedBrowserStreams } from './browser-test-lifecycle.mjs';
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const require = createRequire(path.join(root, 'app/package.json'));
 const puppeteer = require('puppeteer-core');
 const bin = process.env.KIWI_CHROMIUM_BIN || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome','/usr/bin/chromium','/usr/bin/google-chrome'].find(fs.existsSync);
 assert.ok(bin, 'Chromium required');
+const diagnostics=process.env.KIWI_151_DIAGNOSTICS;
+const started=performance.now();
+let diagnosticPhase='bootstrap',checks=0,caseNow=null,connections=0,browserProcess;
+function mark(next){
+  diagnosticPhase=next;
+  if(diagnostics)fs.appendFileSync(diagnostics,JSON.stringify({phase:diagnosticPhase,checks,case:caseNow,elapsedMs:Math.round(performance.now()-started),
+    connections,resources:process.getActiveResourcesInfo().sort(),browserProcess:browserProcess?{
+      pid:browserProcess.pid,exitCode:browserProcess.exitCode,signalCode:browserProcess.signalCode,
+      stdio:browserProcess.stdio.map(s=>s?{destroyed:s.destroyed,readable:s.readable,writable:s.writable}:null)}:null})+'\n');
+}
+mark(diagnosticPhase);const pulse=diagnostics?setInterval(()=>mark(diagnosticPhase),15000):null;pulse?.unref();
+process.once('beforeExit',()=>{mark('node-before-exit');if(pulse)clearInterval(pulse);});
 const work = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-ticket151-'));
 const phase=process.env.KIWI_151_PHASE||'after';
 const evidence=process.env.KIWI_151_MATRIX==='1'||phase==='before'?path.join(root,'docs/audits/evidence/2026-10-01-ticket-0151',phase):path.join(work,'evidence');
 fs.mkdirSync(evidence,{recursive:true});
 const www = path.join(work, 'www');
-build({ out:www, quiet:true });
+mark('bundle-build');build({ out:www, quiet:true });mark('bundle-built');
 const mime = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.svg':'image/svg+xml', '.woff2':'font/woff2' };
 const server = http.createServer((req, res) => {
   const p = path.resolve(www, '.' + new URL(req.url,'http://local').pathname);
   if (!p.startsWith(www + path.sep)) { res.writeHead(403); res.end(); return; }
   fs.readFile(p, (err, data) => { res.writeHead(err ? 404 : 200, {'Content-Type':mime[path.extname(p)] || 'application/octet-stream'}); res.end(err ? '' : data); });
 });
+server.on('connection',socket=>{connections++;socket.once('close',()=>{connections--;});});
 await new Promise(r => server.listen(0,'127.0.0.1',r));
 const base = `http://127.0.0.1:${server.address().port}`;
 const browser = await puppeteer.launch({executablePath:bin,headless:true,args:['--no-sandbox']});
+browserProcess=browser.process();browserProcess?.once('exit',()=>mark('browser-process-exited'));mark('browser-ready');
 const sleep = ms => new Promise(r => setTimeout(r,ms));
-let checks = 0;
 const check = (value,label) => { assert.ok(value,label); checks++; console.log('  ✓ ' + label); };
 async function phone(lang, dark=false, signedOut=false) {
   const context = await browser.createBrowserContext();
@@ -65,6 +79,7 @@ try {
   const matrix=phase==='before'||process.env.KIWI_151_MATRIX==='1';
   const cases=matrix?[375,402].flatMap(width=>['fr','en','ar'].filter(lang=>!process.env.KIWI_151_LANGS||process.env.KIWI_151_LANGS.split(',').includes(lang)).flatMap(lang=>['light','dark'].map(theme=>({width,lang,theme})))):[{width:375,lang:'ar',theme:'dark'},{width:402,lang:'en',theme:'light'}];
   for(const {width,lang,theme} of cases) {
+    caseNow={width,lang,theme};mark('case-start');
     const {page,context}=await phone(lang,theme==='dark');
     const errors=[];page.on('pageerror',e=>errors.push(e.message));
     await page.setViewport({width,height:874,deviceScaleFactor:1,isMobile:true,hasTouch:true});
@@ -75,12 +90,12 @@ try {
       assert.ok(hit.ok,'actual tap hit test: '+selector+' '+JSON.stringify(hit));
       await page.click(selector,options);await sleep(180);
     };
-    await page.goto(base+'/dashboard.html',{waitUntil:'networkidle2'});
+    mark('navigation');await page.goto(base+'/dashboard.html',{waitUntil:'networkidle2'});mark('explore-ready-wait');
     await page.waitForSelector('.kob-root [data-explore]');await click('.kob-root [data-explore]');await sleep(600);
-    await page.waitForSelector('[data-kiwi-skip]');await click('[data-kiwi-skip]');await sleep(1200);
+    mark('skip-ready-wait');await page.waitForSelector('[data-kiwi-skip]');await click('[data-kiwi-skip]');await sleep(1200);mark('demo-ready');
     await page.evaluate(({lang,theme})=>{KiwiI18n.setLang(lang);KiwiI18n.setTheme(theme);},{lang,theme});await sleep(200);
     // Seed the PUBLIC model in an isolated demo. Not a production merchant or mocked DOM.
-    await page.evaluate((lang)=>{
+    mark('fixture-seed');await page.evaluate((lang)=>{
       const fixtureName={fr:'TEST KIWI Tajine traditionnel aux légumes de saison et citron confit',en:'TEST KIWI Traditional tajine with seasonal vegetables and preserved lemon',ar:'TEST KIWI طاجين مغربي تقليدي بالخضروات الموسمية والليمون المصير والزيتون الأخضر'}[lang];
       const s=KiwiMenuStore;
       for(const name of ['TEST KIWI Mains','TEST KIWI Drinks','TEST KIWI Desserts','TEST KIWI Empty']) s.addCategory(name);
@@ -89,17 +104,20 @@ try {
       const subs=s.categories().find(c=>c.id===cid).sub;
       for(let i=0;i<200;i++) s.addItem({name:i===0?fixtureName:'TEST KIWI Item '+String(i+1).padStart(3,'0'),price:85+i%20,catId:cid,subId:subs[i%2].id,avail:i%7!==0});
     },lang);
+    mark('fixture-seeded');
     // Actual sidebar destinations, never synthetic click events.
     const go=async nav=>{
+      mark('navigate-'+nav);
       const close=await page.$('.kiwi-drawer-backdrop .kiwi-drawer-close');if(close){await close.click();await sleep(450);}
       const hamburger=await page.$('.kw-hamburger');
       if(hamburger&&await hamburger.isVisible())await hamburger.click();
       const link=await page.$('.sidebar [data-nav="'+nav+'"]');
       if(link){await link.evaluate(e=>e.scrollIntoView({block:'center',behavior:'instant'}));await link.click();}
       else throw Error('Missing sidebar '+nav);
-      await page.waitForFunction(route=>document.body.classList.contains('page-'+route),{},nav);await sleep(500);
+      mark('navigate-wait-'+nav);await page.waitForFunction(route=>document.body.classList.contains('page-'+route),{},nav);await sleep(500);mark('navigate-ready-'+nav);
     };
     const snap=async surface=>{
+      mark('capture-'+surface);
       const m=await page.evaluate(()=>{
         const scope=document.querySelector('body.page-menu [data-menu-root],body.page-stock [data-stock-root]');
         const r=scope.getBoundingClientRect();
@@ -108,6 +126,7 @@ try {
       measurements.push({surface,width:m.pageWidth,lang,theme,...m});
       await page.screenshot({path:path.join(evidence,`${width}-${lang}-${theme}-${surface}.png`)});
       if(phase==='after'){check(m.targets.every(t=>t.width>=43.9&&t.height>=43.9),`${width} ${lang} ${theme} ${surface}: 44px targets`);check(m.scrollWidth<=m.pageWidth+1,`${width} ${lang} ${theme} ${surface}: no page overflow`);}
+      mark('captured-'+surface);
     };
     await go('menu');await snap('menu-all');
     await click('[data-action="rmw-cat-filter"][data-cat]:not([data-cat="all"])');await sleep(200);await snap('menu-section');
@@ -202,8 +221,11 @@ try {
       }
       check(errors.length===0,'no runtime errors: '+errors.join('; '));
     }
-    await context.close();
+    mark('context-close');await context.close();mark('case-complete');
   }
   fs.writeFileSync(path.join(evidence,'measurements.json'),JSON.stringify(measurements,null,2));
   console.log(`${phase}: ${measurements.length} screenshots at ${evidence}`);
-} finally {await browser.close();await new Promise(r=>server.close(r));fs.rmSync(www,{recursive:true,force:true});}
+} finally {
+  try{mark('browser-close');await browser.close();mark('browser-closed');releaseExitedBrowserStreams(browserProcess);mark('browser-streams-closed');}
+  finally{mark('server-close');await new Promise(r=>server.close(r));mark('server-closed');fs.rmSync(www,{recursive:true,force:true});mark('fixture-cleaned');}
+}

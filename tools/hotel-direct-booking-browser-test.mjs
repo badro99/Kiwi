@@ -32,6 +32,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
+import { releaseExitedBrowserStreams } from './browser-test-lifecycle.mjs';
 import { makeSession } from '../functions/auth/_lib.js';
 import { onRequestGet as meGet } from '../functions/api/me.js';
 import { onRequestPost as pinVerify } from '../functions/api/pin/verify.js';
@@ -52,6 +53,20 @@ const MERCHANT = 'hotel-direct-ux';
 const VENUE = 'v-hotel-direct';
 
 let controls = 0;
+const diagnostics=process.env.KIWI_HOTEL_DIRECT_DIAGNOSTICS;
+const started=performance.now();
+let phase='bootstrap',caseNumber=0,connections=0,browserProcess;
+function mark(next) {
+  phase=next;
+  if(diagnostics) fs.appendFileSync(diagnostics,JSON.stringify({phase,caseNumber,controls,
+    elapsedMs:Math.round(performance.now()-started),connections,resources:process.getActiveResourcesInfo().sort(),
+    browserProcess:browserProcess?{pid:browserProcess.pid,exitCode:browserProcess.exitCode,signalCode:browserProcess.signalCode,
+      stdio:browserProcess.stdio.map(s=>s?{destroyed:s.destroyed,readable:s.readable,writable:s.writable}:null)}:null})+'\n');
+}
+mark(phase);
+const pulse=diagnostics?setInterval(()=>mark(phase),15000):null;
+pulse?.unref();
+process.once('beforeExit',()=>{mark('node-before-exit');if(pulse)clearInterval(pulse);});
 const ok = (value, label) => { assert.ok(value, label); controls++; console.log(`  ✓ ${label}`); };
 const step = (m) => console.log(`  ▸ ${m}`);
 const NAV_PATHS = [];
@@ -208,18 +223,26 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
 
 /* ── per-test context ──────────────────────────────────────────────── */
 let browser = null;
+try {
 
 async function withCtx(options, fn) {
+  caseNumber++;mark('case-start');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hx-direct-'));
   const made = makeEnv(path.join(dir, 'test.db'));
   seedMerchant(made, !!options.withLunch);
   const sessionValue = await makeSession(ACC, SECRET);
   const hooks = options.hooks || {};
   const { server, log, base } = await startOrigin(made.env, hooks);
-  const context = await browser.createBrowserContext();
+  mark('case-server-ready');
+  let context;
+  try {
+  mark('case-context-create');
+  context = await browser.createBrowserContext();
   const page = await context.newPage();
   await page.setCookie({ name: SESS_COOKIE, value: sessionValue, url: base });
+  mark('case-navigation');
   await page.goto(`${base}/dashboard.html`, { waitUntil: 'load', timeout: 60000 });
+  mark('case-navigation-ready');
   const venue = await page.evaluate(() => window.KiwiVenue?.getVenue?.() || 'hx-venue');
   await page.evaluate(
     ({ key, doc }) => localStorage.setItem(key, JSON.stringify(doc)),
@@ -245,12 +268,18 @@ async function withCtx(options, fn) {
       return (r.json.stays || [])[0] || null;
     },
   };
-  try {
+    mark('case-driver');
     await fn(ctx);
+    mark('case-driver-complete');
   } finally {
-    try { await context.close(); } catch (_) {}
+    mark('case-context-close');
+    try { await context?.close(); } catch (_) {}
+    mark('case-context-closed');
+    mark('case-server-close');
     await new Promise((r) => server.close(r));
+    mark('case-server-closed');
     try { made.sql.close(); } catch (_) {}
+    mark('case-database-closed');
   }
 }
 
@@ -469,6 +498,9 @@ browser = await puppeteer.launch({
   executablePath: CHROME_BIN,
   args: ['--no-sandbox', '--disable-dev-shm-usage'],
 });
+browserProcess=browser.process();
+browserProcess?.once('exit',()=>mark('browser-process-exited'));
+mark('browser-ready');
 console.log('  (browser ready)');
 
 /* ── T0 · missing lunch rate → message, configure via UI, book ─────── */
@@ -622,6 +654,7 @@ async function startOrigin(env, hooks = {}) {
       try { res.writeHead(500); res.end('adapter fault'); } catch (_) {}
     }
   });
+  server.on('connection',socket=>{connections++;socket.once('close',()=>{connections--;});});
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   return { server, log, base: `http://127.0.0.1:${server.address().port}` };
 }
@@ -1446,4 +1479,9 @@ await withCtx({}, async (ctx) => {
 /* ── summary ───────────────────────────────────────────────────────── */
 console.log(`\n✓ All ${controls} direct-booking browser controls passed.`);
 console.log(`  navigation paths used: ${NAV_PATHS.join(' | ')}`);
-if (browser) { try { await browser.close(); } catch (_) {} }
+} finally {
+  if (browser) {
+    mark('browser-close');await browser.close();mark('browser-closed');
+    releaseExitedBrowserStreams(browserProcess);mark('browser-streams-closed');
+  }
+}

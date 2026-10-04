@@ -8,11 +8,24 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { draftSource,buildDraft } from '../functions/api/hotel/_billing-draft.js';
+import { releaseExitedBrowserStreams } from './browser-test-lifecycle.mjs';
 const root = path.resolve(import.meta.dirname, '..');
 const require = createRequire(path.join(root, 'app/package.json'));
 const { default: puppeteer } = await import(require.resolve('puppeteer-core'));
 const bin = [process.env.KIWI_CHROMIUM_BIN, process.env.CHROME_BIN, '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'].find(p => p && fs.existsSync(p));
 assert.ok(bin, 'Chromium is required for hotel commercial layout verification');
+const diagnostics=process.env.KIWI_HOTEL_COMMERCIAL_DIAGNOSTICS;
+const started=performance.now();
+let phase='bootstrap',layoutCases=0,layoutCase=null,connections=0,browserProcess;
+function mark(next){
+  phase=next;
+  if(diagnostics)fs.appendFileSync(diagnostics,JSON.stringify({phase,layoutCases,layoutCase,elapsedMs:Math.round(performance.now()-started),
+    connections,resources:process.getActiveResourcesInfo().sort(),browserProcess:browserProcess?{
+      pid:browserProcess.pid,exitCode:browserProcess.exitCode,signalCode:browserProcess.signalCode,
+      stdio:browserProcess.stdio.map(s=>s?{destroyed:s.destroyed,readable:s.readable,writable:s.writable}:null)}:null})+'\n');
+}
+mark(phase);const pulse=diagnostics?setInterval(()=>mark(phase),15000):null;pulse?.unref();
+process.once('beforeExit',()=>{mark('node-before-exit');if(pulse)clearInterval(pulse);});
 const shots = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-commercial-layout-'));
 const source = fs.readFileSync(path.join(root, 'assets/hotel.js'), 'utf8').replace(/\}\)\(\);\s*$/, `window.__commercialLayout = { cuCommercialState, cuCommercialBody, cuProductionState, cuProductionBody,cuBillingBody,cuDraftInput,cuOpenDossier,cuStayEditor,cuState };})();`);
 const booking={id:'booking-synthetic',code:'H-TEST',status:'confirmed',resourceId:'room:101',partySize:2,customer:{name:'Voyageur de démonstration'},hotel:{checkIn:'2027-07-01',checkOut:'2027-07-03',total:1600.25,roomTypeName:'Chambre supérieure'}};
@@ -28,13 +41,15 @@ const server = http.createServer((req, res) => {
   res.setHeader('Content-Type', 'text/html');
   res.end(`<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hotel commercial component tests</title><style>${fonts}${css}</style><style>body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans),'IBM Plex Sans Arabic'}main{max-width:1240px;padding:20px;margin:auto}*{box-sizing:border-box}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}@media(max-width:600px){main{padding:12px}}</style><main></main></html>`);
 });
+server.on('connection',socket=>{connections++;socket.once('close',()=>{connections--;});});
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const browser = await puppeteer.launch({ executablePath: bin, headless: true });
+browserProcess=browser.process();browserProcess?.once('exit',()=>mark('browser-process-exited'));mark('browser-ready');
 try {
   const page = await browser.newPage();
   await page.setRequestInterception(true);
   page.on('request', req => req.url().startsWith(`http://127.0.0.1:${server.address().port}/`) ? req.continue() : req.abort());
-  await page.goto(`http://127.0.0.1:${server.address().port}/`);
+  mark('navigation');await page.goto(`http://127.0.0.1:${server.address().port}/`);mark('navigation-ready');
   await page.evaluate(() => {
     window.Kiwi = { handlers: {}, toast() {} };
     window.KiwiVenue = { getVenue: () => 'synthetic', getVenueType: () => 'hotel', isCustom: () => true, getCurrentVenueData: () => ({ id:'synthetic',slug:'synthetic',type:'hotel',custom:true }), subscribe() {} };
@@ -53,6 +68,7 @@ try {
     api.cuProductionState().report = { month:'2027-07',nights:31,reservations:1,unassigned:0,totals:Array(31).fill(1),groups:[{name:'Agence des horizons · Démonstration',kind:'agency',days:Array(31).fill(1),nights:31}] };
   });
   for (const mode of ['light', 'dark', 'vexel-light', 'vexel-dark']) for (const width of [320,390,768,1024,1440]) for (const view of ['commercial','production','billing']) {
+    layoutCase={mode,width,view};mark('layout-case');
     await page.setViewport({ width, height: 1000, deviceScaleFactor: 1 });
     await page.evaluate(({ mode, view }) => {
       document.documentElement.dataset.theme = mode.endsWith('dark') ? 'dark' : 'light';
@@ -95,8 +111,11 @@ try {
     assert.ok(await page.$eval(focusTarget, el => getComputedStyle(el).outlineStyle !== 'none'),'visible keyboard focus');
     if (width === 390 || width === 1440) await page.screenshot({path:path.join(shots,`${view}-${mode}-${width}.png`),fullPage:true});
     console.log(`  ✓ ${view} ${mode} ${width}px: layout, labels, touch and focus`);
+    layoutCases++;mark('layout-case-complete');
   }
+  mark('layout-matrix-complete');
   // Exercise real dossier handlers with synthetic API responses, not production data.
+  mark('dossier-open');
   await page.evaluate(async booking=>{
     const a=window.__commercialLayout;window.__draftCalls=[];
     window.Kiwi.modal=options=>{const el=document.createElement('section');el.innerHTML=options.body;document.querySelector('main').replaceChildren(el);return {el,close(){el.remove();}};};
@@ -111,6 +130,7 @@ try {
     };
     await a.cuOpenDossier(booking);
   },booking);
+  mark('dossier-opened');
   await page.select('[data-hx-payer]','account:company-synthetic');
   await page.select('[data-hx-second]','guest:booking-synthetic');
   await page.$eval('[data-hx-part]',el=>{el.value='200,01';el.dispatchEvent(new Event('input',{bubbles:true}));});
@@ -120,9 +140,9 @@ try {
   await page.click('[data-hx-add-extra]');
   assert.equal(await page.$$eval('[data-hx-billing-line]',els=>els.length),4);
   await page.evaluate(()=>{window.__failDraftOnce=true;});
-  await page.click('[data-hx-billing-form] [type="submit"]');
+  mark('dossier-first-save');await page.click('[data-hx-billing-form] [type="submit"]');mark('dossier-first-save-wait');
   await page.waitForFunction(()=>!document.querySelector('[data-hx-billing-form]').__saving);
-  await page.click('[data-hx-billing-form] [type="submit"]');
+  mark('dossier-retry');await page.click('[data-hx-billing-form] [type="submit"]');mark('dossier-retry-wait');
   await page.waitForFunction(()=>window.__draftCalls.length===2&&!document.querySelector('[data-hx-billing-form]').__saving);
   const calls=await page.evaluate(()=>window.__draftCalls);
   assert.deepEqual(calls[0],calls[1],'ambiguous save retry preserves the same command and allocations');
@@ -132,6 +152,7 @@ try {
   await page.$eval('[name="billingNote"]',el=>{el.value='New note';el.dispatchEvent(new Event('input',{bubbles:true}));});
   assert.equal(await page.$eval('[data-hx-print-draft]',el=>el.disabled),true,'unsaved changes disable printing');
   console.log('  ✓ dossier UI: partial split, extra, ambiguous retry and saved-only printing');
+  mark('dossier-complete');
   await page.evaluate(()=>{
     const a=window.__commercialLayout,st=a.cuState();
     st.roomTypes={standard:{id:'standard',name:'Standard',maxGuests:3,rate:600}};
@@ -143,18 +164,22 @@ try {
     };
     a.cuStayEditor(null);
   });
-  await page.waitForSelector('[name="priceMode"]');
+  mark('day-use-editor-wait');await page.waitForSelector('[name="priceMode"]');mark('day-use-input');
   await page.select('[name="stayMode"]','day_use');
   assert.equal(await page.$eval('[name="checkOut"]',el=>el.readOnly),true);
   assert.equal(await page.$eval('[name="priceMode"]',el=>el.disabled),true);
   await page.type('[name="name"]','Synthetic day-use guest');
   await page.type('[name="dayUsePrice"]','300,25');
-  await page.click('[data-hx-stay-form] [type="submit"]');
+  await page.click('[data-hx-stay-form] [type="submit"]');mark('day-use-payload-wait');
   await page.waitForFunction(()=>window.__stayPayload!==null);
   const stayPayload=await page.evaluate(()=>window.__stayPayload);
   assert.equal(stayPayload.dayUse,true);assert.equal(stayPayload.dayUseAmountCents,30025);
   assert.equal(stayPayload.checkIn,stayPayload.checkOut);assert.equal(stayPayload.commercial.quoted,false);
   assert.equal(await page.$eval('[data-hx-stay-error]',el=>el.textContent.includes('prise')),true,'unavailable room keeps the form with an actionable error');
   console.log('  ✓ day-use editor: date locking, exact cents, no nightly contract and conflict feedback');
+  mark('day-use-complete');
   console.log('Commercial component screenshots: ' + shots);
-} finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
+} finally {
+  try{mark('browser-close');await browser.close();mark('browser-closed');releaseExitedBrowserStreams(browserProcess);mark('browser-streams-closed');}
+  finally{mark('server-close');await new Promise(resolve => server.close(resolve));mark('server-closed');}
+}
