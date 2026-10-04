@@ -83,6 +83,22 @@ check(L.tr('Communication') === 'Contact preferences', 'the contact preferences 
 check(L.tr('Avoir 350 MAD') === 'Store credit 350 MAD', 'store credit translates without changing the balance');
 check(L.tr('Avoir 1 250,50 MAD') === 'Store credit 1 250,50 MAD', 'store credit keeps the exact money formatting');
 check(L.tr("CODE D'ACCÈS · 4 CHIFFRES") === 'ACCESS CODE · 4 DIGITS', 'the static native entry prompt translates');
+const pairedPinSource = fs.readFileSync(path.join(__dirname, '..', 'assets', 'caisse-pairing.js'), 'utf8');
+const pairedPinCopy = [
+  ['CODE PERSONNEL · 4 CHIFFRES', 'PERSONAL CODE · 4 DIGITS', 'الرمز الشخصي · 4 أرقام'],
+  ['Code personnel géré depuis votre tableau de bord Kiwi', 'Personal code managed from your Kiwi dashboard', 'يُدار الرمز الشخصي من لوحة التحكم في كيوي'],
+  ['Code personnel', 'Personal code', 'الرمز الشخصي'],
+];
+for (const [fr, en, ar] of pairedPinCopy) {
+  check(pairedPinSource.includes(fr), 'paired staff PIN guard targets the actual source literal: ' + fr);
+  L.set('fr');
+  check(L.tr(fr) === fr, 'French paired staff PIN copy remains unchanged: ' + fr);
+  L.set('en');
+  check(L.tr(fr) === en, 'English paired staff PIN copy: ' + fr);
+  L.set('ar');
+  check(L.tr(fr) === ar, 'Arabic paired staff PIN copy: ' + fr);
+  L.set('en');
+}
 /* Real SE Arabic scan view stayed entirely French. Guard the actual rendered
  * literals, including the placeholder and demo/unsupported-camera branches. */
 const scanCopy = [
