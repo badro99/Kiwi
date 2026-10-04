@@ -1088,7 +1088,8 @@
     const root=$('[data-menu-root]');if(!root)return;
     /* #0149 · a full innerHTML swap resets every pill row to scrollLeft 0, so
        tapping a tab visually "jumped back to the first tab". Keep each row
-       where the thumb left it, then bring the active tab into view. */
+       where the thumb left it. Reveal the active tab only when clipped; a
+       fully visible tap must not recenter the strip or move the whole page. */
     const pillRows = (root.querySelectorAll ? Array.from(root.querySelectorAll('.mi-pill-row')) : []);
     const scrolls = pillRows.map(r => r.scrollLeft || 0);
     const d=D(),v=window.KiwiVenue?.getCurrentVenueData?.()||{};
@@ -1097,15 +1098,26 @@
     const catCountStr = d.cats.length === 1 ? `1 ${ui('section')}` : `${d.cats.length} ${ui('sections')}`;
     const html=`<div class="mi-head"><div><div class="mi-title">${esc(ui('title'))}</div><div class="mi-sub">${itemCountStr} · ${catCountStr} · ${esc(v.name||'')}</div></div><div class="mi-head-acts"><button class="btn-slim" data-action="rmw-menu-scan">${esc(ui('scanMenu'))}</button><button class="btn-slim" data-action="mx-import">${esc(ui('importExcel'))}</button></div></div><div class="mi-filters"><div class="mi-pill-row">${tabs()}</div></div><div class="mi-panel" data-rmw-panel>${panel()}</div>`;
     if(window.KiwiCatalogUI)window.KiwiCatalogUI.replace(root,html);else root.innerHTML=html;
+    // Own this mount synchronously: an unrelated queued lens-observer batch
+    // must not leave a newly replaced primary strip without its highlight.
+    window.KiwiLens?.rescan?.(root);
     /* Fresh nodes: the pre-swap rows captured above are detached by the
        replacement, so re-query after painting. */
     (root.querySelectorAll ? Array.from(root.querySelectorAll('.mi-pill-row')) : []).forEach((row, i) => {
-      if (scrolls[i]) row.scrollLeft = scrolls[i];
+      const primary = row.parentElement.classList.contains('mi-filters');
+      if (primary) row.scrollLeft = scrolls[i] || 0;
+      else if (scrolls[i]) row.scrollLeft = scrolls[i];
       /* The selected tab stays in view with its outline, even when it lives
          past the right edge. Only scrolls rows that actually overflow. */
       if (row.scrollWidth > row.clientWidth + 1) {
         const on = row.querySelector('.mi-pill.on');
-        if (on) { try { on.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (_) {} }
+        if (on && primary) {
+          const r = row.getBoundingClientRect(), a = on.getBoundingClientRect();
+          const left = r.left + row.clientLeft, right = left + row.clientWidth;
+          if (a.left < left || a.right > right) {
+            try { on.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (_) {}
+          }
+        } else if (on) { try { on.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (_) {} }
       }
     });
     if(tab==='nfc')window.KiwiOrderProPanel?.mount?.($('[data-rmw-nfc]',root));

@@ -87,6 +87,27 @@
     '.kw-menu-tabs[data-kw-lens] .kw-menu-tab.on{background:transparent;box-shadow:none;}' +
     '.kx-tabs[data-kw-lens] .kx-tab.on{background:transparent;box-shadow:none;}' +
     '.mi-pill-row[data-kw-lens] .mi-pill.on{background:transparent;box-shadow:none;}' +
+    /* #0149: the nine primary Menu tabs need a persistent selected rim. The
+     * glass-card fallback can tag a freshly mounted surface lens and gives it
+     * important card borders/radii. Override only that rim, not its fill or
+     * spring motion, and leave category, hours and other lens rows alone. */
+    'body.page-menu [data-menu-root]>.mi-filters>.mi-pill-row[data-kw-lens]>.kw-lens{' +
+      'box-sizing:border-box;border:2px solid var(--atlas)!important;border-radius:999px!important;}' +
+    'html[data-theme="dark"] body.page-menu [data-menu-root]>.mi-filters>.mi-pill-row[data-kw-lens]>.kw-lens,' +
+    'body.page-menu.design-vexel[data-vexel-mode="dark"] [data-menu-root]>.mi-filters>.mi-pill-row[data-kw-lens]>.kw-lens{border-color:var(--mint)!important;}' +
+    /* Resolve aliases on the dark ROOT, before a stale body-light palette can
+     * shadow them. Only the nine primary tabs consume these existing colours. */
+    'html[data-theme="dark"]{--kw-menu-dark-mint:var(--mint);--kw-menu-dark-ink:var(--ink);' +
+      '--kw-menu-dark-muted:var(--n-500);--kw-menu-dark-surface:var(--surface);' +
+      '--kw-menu-dark-paper-soft:var(--paper-soft);--kw-menu-dark-line:var(--line);}' +
+    'html[data-theme="dark"] body.page-menu.design-vexel[data-vexel-mode="light"] [data-menu-root]>.mi-filters>.mi-pill-row{' +
+      '--mint:var(--kw-menu-dark-mint);--ink:var(--kw-menu-dark-ink);--n-500:var(--kw-menu-dark-muted);' +
+      '--surface:var(--kw-menu-dark-surface);--paper-soft:var(--kw-menu-dark-paper-soft);--line:var(--kw-menu-dark-line);' +
+      '--g-fill:var(--kw-menu-dark-paper-soft);background:var(--kw-menu-dark-paper-soft)!important;}' +
+    'html[data-theme="dark"] body.page-menu.design-vexel[data-vexel-mode="light"] [data-menu-root]>.mi-filters>.mi-pill-row>.kw-lens{' +
+      'background:var(--kw-menu-dark-paper-soft)!important;}' +
+    'html[data-theme="dark"] body.page-menu.design-vexel[data-vexel-mode="light"] [data-menu-root]>.mi-filters>.mi-pill-row>.mi-pill.on{' +
+      'color:var(--kw-menu-dark-ink)!important;}' +
     /* the lens replaces the landing tabs\' old static ::after indicator */
     '.audience-tabs[data-kw-lens]::after{display:none !important;}' +
     '@media (prefers-reduced-motion:reduce){.kw-lens{transition:none;}}';
@@ -190,5 +211,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 
-  window.KiwiLens = { rescan: function () { scan(document); }, refresh: function () { placeAll(true); } };
+  window.KiwiLens = { rescan: function (root) { scan(root || document); }, refresh: function () { placeAll(true); } };
 })();

@@ -141,7 +141,7 @@ var SHELL = [
   '/assets/demoClock.js?v=4',
   '/assets/dateRange.js?v=51',
   '/assets/mobile-nav.js?v=7',
-  '/assets/liquid-lens.js?v=3',
+  '/assets/liquid-lens.js?v=6',
   '/assets/pages.js?v=11',
   '/assets/help-centre.js?v=5',
   '/assets/account.js?v=28',
@@ -253,7 +253,7 @@ var SHELL = [
   '/assets/planning-ui.css?v=10',
   '/assets/team.js?v=291',
   '/assets/menu-i18n.js?v=5',
-  '/assets/restaurant-menu-workspace.js?v=81',
+  '/assets/restaurant-menu-workspace.js?v=83',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=7',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.

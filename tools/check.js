@@ -1342,6 +1342,7 @@ section('Whole-project regressions');
     'check-guard-test.mjs',
     'day-report-inset-test.mjs',
     'menu-phone-test.mjs',
+    'menu-tabs-outline-browser-test.mjs',
     'briefing-sales-drop-test.mjs',
     'briefing-low-stock-test.mjs',
     'briefing-margin-test.mjs',

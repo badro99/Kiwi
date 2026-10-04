@@ -32,13 +32,20 @@ ok('render() preserves pill-row scroll across re-render', () => {
   assert.ok(/re-query after painting/.test(rmw), 'must restore onto post-swap nodes');
 });
 
-ok('active tab is scrolled into view (inline center)', () => {
-  assert.ok(/scrollIntoView\(\{\s*block:\s*'nearest',\s*inline:\s*'center'\s*\}\)/.test(rmw), 'must scrollIntoView the .on pill');
+ok('clipped active tab is revealed without recentering a visible tap', () => {
+  assert.ok(/const primary = row\.parentElement\.classList\.contains\('mi-filters'\)/.test(rmw), 'must scope exact preservation to the primary nine-tab row');
+  assert.ok(/if \(primary\) row\.scrollLeft = scrolls\[i\] \|\| 0/.test(rmw), 'must restore even a zero primary scroll position');
+  assert.ok(/else if \(scrolls\[i\]\) row\.scrollLeft = scrolls\[i\]/.test(rmw), 'must retain secondary nonzero restoration');
+  assert.ok(/if \(a\.left < left \|\| a\.right > right\)/.test(rmw), 'must reveal only a clipped .on pill');
+  assert.ok(/scrollIntoView\(\{\s*block:\s*'nearest',\s*inline:\s*'nearest'\s*\}\)/.test(rmw), 'must reveal the .on pill by the nearest edge');
+  assert.ok(/else if \(on\) \{ try \{ on\.scrollIntoView\(\{ block: 'nearest', inline: 'center' \}\)/.test(rmw), 'must retain existing secondary centering');
 });
 
 ok('pill rows registered with liquid-lens (surface skin)', () => {
   assert.ok(/sel:\s*'\.mi-pill-row',\s*item:\s*'\.mi-pill',\s*skin:\s*'surface'/.test(lens), 'GROUPS entry missing');
   assert.ok(/\.mi-pill-row\[data-kw-lens\] \.mi-pill\.on\{background:transparent/.test(lens), 'transparency rule missing');
+  assert.ok(/rescan: function \(root\) \{ scan\(root \|\| document\); \}/.test(lens), 'rescan must retain document default and accept a mount scope');
+  assert.ok(/replace\(root,html\);else root\.innerHTML=html;[\s\S]{0,250}window\.KiwiLens\?\.rescan\?\.\(root\)/.test(rmw), 'workspace must synchronously rescan its actual replaced root despite a queued unrelated mutation');
 });
 
 ok('phone turns pill rows into swipeable rows', () => {
