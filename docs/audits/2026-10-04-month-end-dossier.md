@@ -29,3 +29,9 @@ Every coverage percentage states its denominator. Sales coverage means recorded 
 - Existing daily export: **26 controls**. Stamp and offline-shell focused checks passed. Full-project gate and deployment verification are recorded below when completed; focused checks alone are not a release claim.
 
 Evidence: `evidence/2026-10-04-month-end/`. The synthetic PDF is a QA sample, not an Amira report. Physical iOS acceptance is a separate boundary, not asserted by desktop browser checks.
+
+## Full-project gate
+
+Frozen implementation `5bf76111e28621897b34ed775382198b92b79654`: `node tools/check.js` completed with **exit 0**, all checks passed, **2026-10-04 20:14:40–20:47:38 UTC** (32m 58s). One existing `background:var(--ink)` styling-debt warning remains; no browser suite was skipped. The three monthly suites ran within this complete gate. Source files remained unchanged throughout the gate. Existing installed Chrome/dependencies and the previously documented read-only four-font path alias were used. See `full-check.log` and `full-check-result.json`.
+
+Production publishing and the signed-in Amira Cafe download are the remaining verification boundary; they are not asserted by the synthetic PDF or completed local gate.
