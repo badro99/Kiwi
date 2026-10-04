@@ -26,12 +26,24 @@ Every coverage percentage states its denominator. Sales coverage means recorded 
 - Actual signed-session API with an in-memory SQLite database: **22 controls**, unauthorized/till/cross-establishment denial, read-only queries, all 1,107 records across three pages, absent ledgers and unassignable timestamps.
 - Real Chrome rendering and actual downloaded PDF: **1,166 controls**; French/English/Arabic at 360, 390, 768 and 1,440 px; daily composer regression; all source pages reread; changed-row failure; source failure; merchant-change/cancel guard after rendering.
 - Downloaded synthetic dossier: **219 pages**, **1,107 original sales**, every original sale ID found in extracted text. Required notice, A4 pagination, running/table headers, final page number, known/missing values and canonical cutoff dates verified. Cover, interior Arabic text and last-page render inspected. Fixtures are synthetic only; no production financial records, owner credentials or PINs are committed.
-- Existing daily export: **26 controls**. Stamp and offline-shell focused checks passed. Full-project gate and deployment verification are recorded below when completed; focused checks alone are not a release claim.
+- Existing daily export: **26 controls**. Stamp and offline-shell focused checks passed. The completed full-project gate and real production download verification are recorded below; focused checks alone are not a release claim.
 
 Evidence: `evidence/2026-10-04-month-end/`. The synthetic PDF is a QA sample, not an Amira report. Physical iOS acceptance is a separate boundary, not asserted by desktop browser checks.
 
 ## Full-project gate
 
-Frozen implementation `5bf76111e28621897b34ed775382198b92b79654`: `node tools/check.js` completed with **exit 0**, all checks passed, **2026-10-04 20:14:40–20:47:38 UTC** (32m 58s). One existing `background:var(--ink)` styling-debt warning remains; no browser suite was skipped. The three monthly suites ran within this complete gate. Source files remained unchanged throughout the gate. Existing installed Chrome/dependencies and the previously documented read-only four-font path alias were used. See `full-check.log` and `full-check-result.json`.
+Frozen implementation `5bf76111e28621897b34ed775382198b92b79654`: `node tools/check.js` completed with **exit 0**, all checks passed, **2026-10-04 20:14:40–20:47:38 UTC** (32m 58s). One existing `background:var(--ink)` styling-debt warning remains; no browser suite was skipped. The three monthly suites ran within this complete gate. Source files remained unchanged throughout the gate. Existing installed Chrome/dependencies and the previously documented read-only four-font path alias were used. See `full-check.txt` and `full-check-result.json`.
 
-Production publishing and the signed-in Amira Cafe download are the remaining verification boundary; they are not asserted by the synthetic PDF or completed local gate.
+Production publishing and the signed-in Amira Cafe download were verified independently as described below.
+
+## Production and real merchant verification
+
+Release `2fc7b702dd980403f09f51da8b20ee2b59109f0d` was pushed normally to both configured GitHub mirrors. Cloudflare Pages reported successful deployment `8243778e-275c-42c1-adf8-cde0699f8aed`. The three public monthly modules matched the validated source byte-for-byte; the deployed offline manifest references core `v10`, PDF `v6`, UI `v3`.
+
+In a separate real Chrome tab, the existing signed-in **Amira Cafe operator view** was cold-reloaded. Rapport Journalier displayed the new button even on an empty daily page. Opening it selected **September 2026**, the last completed business month. Pressing **Générer le PDF** completed successfully, with Chrome reporting the exact named PDF as **Done**. The interface showed **52 pages** and **71 points to review**. No tax configuration, transaction or cash-closing control was used.
+
+The actual downloaded PDF was inspected locally, not committed or uploaded: all 52 page footers, the exact English notice, readable cover/last-page layout, original-ledger annexes and explicit missing/incomplete labels were verified. Its 19 original sale records include 11 active and 8 voided originals; an independent recomputation from the original integer-centime fields in the downloaded annex reconciled to its monthly net summary. The dossier preserves voided originals rather than silently removing them. See the redacted `live-verification.json`; no financial totals, tax IDs, address, financial PDF or private rendered pages are stored in repository evidence.
+
+Amira Cafe’s existing configured timezone is **Europe/Berlin**, with cutoff **05:00**. The owner explicitly chose to **leave it unchanged and display the configured timezone** after this was identified in the real export. No timezone setting was changed. Morocco/Africa-Casablanca/Ramadan boundaries remain covered by the engine/API fixtures; the real report follows the authoritative establishment configuration rather than the browser’s local timezone.
+
+Desktop production download acceptance is verified. Physical iOS device acceptance is not claimed. The original daily composer’s PDF/CSV controls and monthly shortcut were separately covered by the real-browser regression suite.
