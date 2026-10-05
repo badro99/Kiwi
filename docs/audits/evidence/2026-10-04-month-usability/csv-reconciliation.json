@@ -1,0 +1,20 @@
+{
+  "fixture": "Synthetic only",
+  "rows": 1107,
+  "net": 11126457,
+  "summaryNet": 11126457,
+  "BOM": true,
+  "warnings": 39,
+  "validCRC": true,
+  "taxHT": 9751563,
+  "taxVAT": 1374894,
+  "summaryPages": 2,
+  "fullPages": 218,
+  "resources": [
+    "/assets/month-report.js?v=10",
+    "/assets/month-report-tools.js?v=5",
+    "/assets/month-report-csv.js?v=4",
+    "/assets/month-report-pdf.js?v=12",
+    "/assets/month-report-ui.js?v=7"
+  ]
+}

@@ -511,13 +511,21 @@
     "v": "7",
     "sha": "83281a282e907a07"
   },
+  "assets/month-report-csv.js": {
+    "v": "4",
+    "sha": "87b49ae78b04a480"
+  },
   "assets/month-report-pdf.js": {
-    "v": "6",
-    "sha": "4b37e0e65786b561"
+    "v": "12",
+    "sha": "6d4b137684ce299e"
+  },
+  "assets/month-report-tools.js": {
+    "v": "5",
+    "sha": "3dce9b319e3cacaa"
   },
   "assets/month-report-ui.js": {
-    "v": "3",
-    "sha": "62326f041d4db0a6"
+    "v": "7",
+    "sha": "dde7a14402d659c6"
   },
   "assets/month-report.js": {
     "v": "10",

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { engine,fixture,ROOT } from './month-report-fixtures.mjs';
+import { engine,fixture,ROOT,runtime } from './month-report-fixtures.mjs';
 import { validateMonthReportPolicy } from '../functions/api/_month-report-policy.js';
 import { businessBoundary,businessDate } from '../functions/api/_business-day.js';
 const M=engine();let checks=0;function check(v,msg){assert.ok(v,msg);checks++;}
@@ -46,4 +46,35 @@ for(const date of ['2026-02-31','2026-99-01','invalid'])check(validateMonthRepor
 const p={id:'a',effectiveFrom:'2026-01-01',rate:10,category:'*',recordedAt:1};check(validateMonthReportPolicy({taxPeriods:[p]},{}).ok,'dated configuration accepted');check(!validateMonthReportPolicy({taxPeriods:[{...p,rate:11}]},{taxPeriods:[p]}).ok,'historical rate immutable');check(!validateMonthReportPolicy({taxPeriods:[]},{taxPeriods:[p]}).ok,'historical rate cannot be deleted');check(validateMonthReportPolicy({taxPeriods:[p,{...p,id:'b',effectiveFrom:'2027-01-01',rate:12}]},{taxPeriods:[p]}).ok,'new legal period appended without changing past');
 check(r.notice.includes('not a certified set of accounts'),'required non-certification notice');
 const ui=fs.readFileSync(ROOT+'/assets/month-report-ui.js','utf8');check(ui.includes('تقرير نهاية الشهر')&&ui.includes('End of Month Report')&&ui.includes('Rapport de fin de mois'),'all three button labels');
+const W=runtime(),T=W.KiwiMonthReportTools,C=W.KiwiMonthReportCSV;
+r=M.build(fixture());const grouped=T.warnings(r.warnings,'fr');
+check(grouped.reduce((a,g)=>a+g.count,0)===r.warnings.length,'group counts equal every raw diagnostic');
+check(JSON.stringify(grouped.flatMap(g=>g.warnings).sort((a,b)=>a.code.localeCompare(b.code)))===JSON.stringify(r.warnings.slice().sort((a,b)=>a.code.localeCompare(b.code))),'grouping retains every individual warning unchanged');
+const codes=[...fs.readFileSync(ROOT+'/assets/month-report.js','utf8').matchAll(/warn\('([^']+)'/g)].map(m=>m[1]);
+for(const code of new Set(codes))check(!!T.codeGroup[code],'explicit warning-code cause mapping '+code);
+check(T.warnings([{ref:'X',detail:'Uncoded'},{code:'future-code',ref:'Y',detail:'Future'}],'fr')[0].count===2,'uncoded and future warning retained in fallback, not hidden');
+check(T.warnings([{detail:'Uncoded'}],'fr')[0].warnings[0].code==='uncoded-warning','missing warning code receives stable tested code');
+for(const lang of ['fr','en','ar']){for(const [key,value] of Object.entries(W.KiwiMonthReport.ui.fr))check(typeof W.KiwiMonthReport.ui[lang][key]==='string'&&W.KiwiMonthReport.ui[lang][key].length>0,'translated UI key '+lang+' '+key);for(const [key,g] of Object.entries(T.groups))check(g[lang].length===2&&g[lang].every(Boolean),'translated warning cause and screen remedy '+lang+' '+key);check(T.mailto('accountant@example.invalid',lang).startsWith('mailto:accountant%40example.invalid?subject='),'neutral mailto template '+lang);}
+check(W.KiwiMonthReportPDF.filename(r,'summary').startsWith('Resume-fin-de-mois-'),'summary filename');
+d=fixture(2);d.rows.sales[0].void_ts=d.asOf-1;r=M.build(d);check(T.overview(r).voidCents===10051&&r.summary.cancellationCount===1,'void count perimeter and original centimes unchanged');
+r.cashSessions[0].countedCents=null;check(T.overview(r).cash.counted===null,'missing cash count is not zero or a known partial sum');
+check(T.overview(M.build(fixture())).inventoryVariance===null,'absent inventory count is not zero variance');
+for(const email of ['bad','a@b','a@b.test\nBcc:x@y.test',null,123,'a?x@b.test','a\u0000@b.test','a@b.test,'+'x@b.test'])check(!validateMonthReportPolicy({taxPeriods:[],accountantEmail:email},{}).ok,'unsafe or invalid email rejected '+String(email));
+check(validateMonthReportPolicy({taxPeriods:[p],accountantEmail:'qa@example.invalid'},{taxPeriods:[p]}).ok,'optional email allowed with immutable historical tax config');
+check(validateMonthReportPolicy({taxPeriods:[p],accountantEmail:''},{taxPeriods:[p],accountantEmail:'qa@example.invalid'}).ok,'email may be explicitly cleared without removing tax history');
+r=M.build(fixture());const files=C.files(r);check(files.filter(f=>f.name.endsWith('.csv')).every(f=>f.text.startsWith('\uFEFF')),'every CSV has UTF8 BOM');
+check(files.find(f=>f.name==='ventes.csv').text.includes('"30153"')===false,'each original sale is a row, not a rounded monthly aggregate');
+check(files.find(f=>f.name==='achats-depenses.csv').text.includes('10,009'),'sub-centime purchase cost MAD preserved');
+check(files.find(f=>f.name==='achats-depenses.csv').text.includes('précision inférieure au centime'),'no rounded invented purchase centime ledger');
+check(C.csv(['s','n'],[['=SUM(A1)',{numeric:'-501'}]]).includes('"\'=SUM(A1)";"-501"'),'formula-safe merchant text retains genuine negative numbers');
+const readable=T.readable({day:'2026-09-12',record:{v:1,store:{slug:'synthetic-month',name:'SYNTHETIC-CAFE'},openedAt:fixture().from,terminalId:'term_aaaaaaaaaaaa',cash:{opening:500,counted:null},amount_cents:10051,unit_cost_rate:45}},M.build(fixture())).join(' ');
+check(!readable.includes('record.')&&!readable.includes('terminalId')&&!readable.includes('term_')&&!readable.includes('synthetic-month'),'readable facts omit raw paths and opaque device metadata');
+check(readable.includes('Ouvert le')&&!readable.includes(String(fixture().from))&&readable.includes('Montant (MAD) : 100,51')&&readable.includes('Coût unitaire (MAD) : 0,0045'),'readable dates, original centimes and sub-centime cost units');
+check(readable.includes('Caisse comptée (MAD) : Non enregistré dans Kiwi'),'readable missing amounts are never fabricated');
+const numericDate=T.readable({date:fixture().from},r).join(' ');
+check(numericDate.includes('Date : ')&&!numericDate.includes(String(fixture().from))&&T.readable({date:'2026-09-12'},r).join(' ').includes('2026-09-12'),'numeric source dates are readable; ISO calendar dates remain intact');
+let saved=0;check(await T.share({filename:'synthetic.pdf'}, {available:false}, {},()=>saved++)==='fallback'&&saved===1,'unsupported file share triggers local download only');
+check(await T.share({}, {available:true,file:{}}, {share:async()=>{throw Object.assign(new Error(),{name:'AbortError'});}},()=>saved++)==='cancelled'&&saved===1,'user share cancellation does not trigger fallback or sending');
+check(await T.share({}, {available:true,file:{}}, {share:async()=>{throw new Error('unsupported');}},()=>saved++)==='fallback'&&saved===2,'failed share gives download fallback without auto mailto');
+let shared;check(await T.share({}, {available:true,file:'synthetic-file'}, {share:async v=>{shared=v;}},()=>saved++)==='shared'&&shared.files[0]==='synthetic-file'&&saved===2,'explicit file-share action passes file without uploading through Kiwi');
 console.log(`✓ monthly original-ledger engine (${checks} controls)`);

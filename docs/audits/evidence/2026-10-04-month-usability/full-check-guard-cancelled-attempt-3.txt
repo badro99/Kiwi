@@ -1,0 +1,7 @@
+  … another check.js run (PID 96109) is using this machine, waiting so both don't time out under load
+  ! check.js: still locked by PID 96109 after 20 min, running anyway
+
+■ Syntax (vm.Script compile)
+  ✓ 202 JS files parse clean
+
+■ Syntax · Pages Functions (node --check, ESM)

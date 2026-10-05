@@ -2,6 +2,12 @@
 // Existing entries are immutable; legal changes append a new dated period.
 const validDate = value => { const date = new Date(value + 'T00:00:00Z'); return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value; };
 export function validateMonthReportPolicy(next, previous) {
+  const email = next?.accountantEmail;
+  if (Object.prototype.hasOwnProperty.call(next || {}, 'accountantEmail') && (typeof email !== 'string' || email.length > 254 || /[\u0000-\u001f\u007f]/.test(email)
+    || (email !== '' && !/^[^\s@<>;,?&#]+@[^\s@<>;,?&#]+\.[^\s@<>;,?&#]+$/.test(email)))) {
+    return { ok: false, error: 'invalid-accountant-email' };
+  }
+  if (previous?.accountantEmail && !Object.prototype.hasOwnProperty.call(next || {}, 'accountantEmail')) return { ok: false, error: 'accountant-email-required' };
   const periods = next && next.taxPeriods;
   if (!Array.isArray(periods)) return { ok: false, error: 'invalid-tax-periods' };
   const ids = new Set(), dates = new Set();

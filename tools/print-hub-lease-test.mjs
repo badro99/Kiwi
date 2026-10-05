@@ -102,7 +102,9 @@ const held = (deviceId, expiresAt, claimedAt) => ({ hub: { deviceId, name: 'Comp
 {
   ok(/import \{ validateHubClaim \} from '\.\/print\/_hub-lease\.js'/.test(STORE), 'store.js utilise cet arbitrage');
   ok(/const PRINT_HUB_FEATURE = 'printhub'/.test(STORE), 'le bail a sa propre fonctionnalité');
-  ok(/CAS_FEATURES = new Set\(\['reservations', PRINT_HUB_FEATURE\]\)/.test(STORE),
+  const casArray = STORE.match(/const CAS_FEATURES = new Set\((\[[^;]+\])\);/);
+  const casMembers = casArray ? vm.runInNewContext(casArray[1], { PRINT_HUB_FEATURE: 'printhub' }) : [];
+  ok(casMembers.includes('reservations') && casMembers.includes('printhub'),
     'et rejoint les documents à écriture CONDITIONNELLE : c\'est la primitive qui arbitre');
   const write = STORE.slice(STORE.indexOf('const writeDoc = CAS_FEATURES.has(feature)'), STORE.indexOf('if (feature === \'team\')'));
   ok(/WHERE merchant=\? AND feature=\? AND rev=\?/.test(write),
