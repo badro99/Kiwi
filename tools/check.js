@@ -1230,6 +1230,7 @@ section('Whole-project regressions');
   'economat-custody-contract-test.mjs',
   'economat-rd-invariants-test.mjs',
     'formula-protocol-test.mjs',
+    'formula-child-options-test.mjs',
     'formula-kitchen-paper-test.mjs',
     'orderpro-formula-explicit-choice-test.mjs',
     'orderpro-formula-choice-images-test.mjs',
