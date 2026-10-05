@@ -106,16 +106,26 @@
   }
 
   /* ── La file de secours ─────────────────────────────────────────────────── */
+  /* #0163 · a full localStorage made the fallback queue a silent bin: the
+   * write threw, was swallowed, and the order existed nowhere. When the disk
+   * refuses, the queue lives in memory for this page and says so. */
+  var memQ = null;
   function readQ() {
+    if (memQ) return memQ.slice();
     try { var q = JSON.parse(ls(QKEY) || '[]'); return Array.isArray(q) ? q : []; }
     catch (_) { return []; }
   }
-  function writeQ(q) { put(QKEY, JSON.stringify(q.slice(-MAX_QUEUED))); }
+  function writeQ(q) {
+    var rows = q.slice(-MAX_QUEUED);
+    try { localStorage.setItem(QKEY, JSON.stringify(rows)); memQ = null; return true; }
+    catch (_) { memQ = rows; return false; }
+  }
   function enqueue(body) {
     var q = readQ().filter(function (x) { return x && x.create && x.create.id !== body.create.id; });
     q.push({ merchant: body.merchant, create: body.create, at: Date.now() });
-    writeQ(q);
+    var durable = writeQ(q);
     schedule();
+    return durable;
   }
   function dequeue(id) {
     writeQ(readQ().filter(function (x) { return !(x && x.create && x.create.id === id); }));
@@ -139,26 +149,47 @@
   }
 
   /* ── L'envoi ────────────────────────────────────────────────────────────── */
+  /* A send that hangs is worse than one that fails: the caller waits, and the
+   * order is neither delivered nor queued. Past this, it joins the retry queue
+   * (the server is idempotent on the id, so a late first copy is harmless). */
+  var SEND_TIMEOUT_MS = 12000;
   function post(body, isRetry) {
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = controller ? setTimeout(function () { controller.abort(); }, SEND_TIMEOUT_MS) : null;
+    function later(extra) {
+      var queued = isRetry ? true : enqueue(body);
+      var out = { ok: false, retryLater: true, queued: queued };
+      if (extra) for (var k in extra) out[k] = extra[k];
+      return out;
+    }
     return fetch('/api/order/queue', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ merchant: body.merchant, create: body.create }),
       cache: 'no-store',
+      signal: controller ? controller.signal : undefined,
     }).then(function (r) {
       if (r.status === 404 || r.status === 405 || r.status === 503) {
         backendAbsent = true;
-        if (!isRetry) enqueue(body);
-        return { ok: false, offline: true };
+        return later({ offline: true });
       }
-      /* Un refus de FOND (bon vide, identifiant malformé, magasin interdit) ne
+      /* Un refus de FOND (bon vide, identifiant malformé, trop de lignes) ne
          se répare pas en réessayant. Le garder en file ferait cogner la caisse
-         contre le même mur toutes les quinze secondes jusqu'à la fermeture. */
+         contre le même mur toutes les quinze secondes jusqu'à la fermeture.
+         #0163 · but an auth/tenant answer (401/403: a till check that failed
+         on a busy database) or a refusal the server itself marks `retry: true`
+         (stale-table-visit, table-operation-conflict) is NOT final: dropping
+         it lost a Pasta Corner order after its paper ticket had printed. */
       if (r.status >= 400 && r.status < 500 && r.status !== 408 && r.status !== 429) {
-        dequeue(body.create.id);
-        return r.json().catch(function () { return { ok: false }; });
+        return r.json().catch(function () { return { ok: false }; }).then(function (j) {
+          if (r.status === 401 || r.status === 403 || (j && j.retry === true)) {
+            return later({ error: j && j.error, status: r.status });
+          }
+          dequeue(body.create.id);
+          return j || { ok: false };
+        });
       }
-      if (!r.ok) { if (!isRetry) enqueue(body); return { ok: false, retryLater: true }; }
+      if (!r.ok) return later();
       backendAbsent = false;
       dequeue(body.create.id);
       return r.json().catch(function () { return { ok: true }; }).then(function (j) {
@@ -180,9 +211,8 @@
         return j;
       });
     }).catch(function () {
-      if (!isRetry) enqueue(body);
-      return { ok: false, offline: true };
-    });
+      return later({ offline: true });
+    }).finally(function () { if (timer) clearTimeout(timer); });
   }
 
   /* Poser un bon. `ticket` = { id, mode, table, server, lines }.

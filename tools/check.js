@@ -1092,6 +1092,7 @@ section('Whole-project regressions');
     'takeaway-stale-archive-test.mjs',
     'floorplan-sync-test.js',
     'kitchen-relay-test.js',
+    'kitchen-relay-retry-test.mjs',
     'takeout-kds-ready-test.mjs',
     'caisse-godmode-toggles-test.mjs',
     'kitchen-print-queue-test.mjs',

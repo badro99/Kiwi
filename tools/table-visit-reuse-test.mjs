@@ -190,6 +190,25 @@ console.log('■ table 6 · a poll read before "Envoyer en cuisine" lands after 
   check('the in-flight poll does not clear the bill being sent', crossed.lines === 3 && h.bill().lines === 3, { crossed, after: h.bill() });
 }
 
+console.log('■ table 9 · the first relay of the new party stalls past two minutes (Pasta Corner #0163)');
+{
+  const h = await setup();
+  await h.partyA({ closeReachesServer: true });
+  h.c.tableClosedAt['6'] = Date.now() - 5 * 60000;
+  const realFetch = h.c.fetch;
+  h.c.fetch = (url, init = {}) => (init.method === 'POST' && String(init.body || '').includes('"create"'))
+    ? Promise.reject(new TypeError('network stalled')) : realFetch(url, init);
+  const b = h.partyB();
+  const relayed = await b.canonicalNumberPromise;
+  check('the stalled send joins the retry queue instead of vanishing',
+    relayed && relayed.queued === true && String(h.c.localStorage.getItem('kiwiKitchenQueue') || '').includes(b.opId), relayed);
+  b.sentAt = new Date(Date.now() - 3 * 60000);   // the old guard expired after two minutes
+  h.c.fetch = realFetch;
+  await h.poll(); await h.poll();
+  check('the earlier visit\'s closure does not erase a bill the server has not seen yet',
+    h.bill().lines === 3 && h.bill().status === 'ka-yaklo', h.bill());
+}
+
 console.log('■ controls');
 {
   const h = await setup();
