@@ -1,0 +1,14 @@
+{
+  "fixture": "Synthetic hotel only; no merchant data",
+  "base": "11fb9626366bf05d37b79fed60795bc9d61f4de1",
+  "started": "2026-10-04T23:42:06.029Z",
+  "finished": "2026-10-04T23:46:37.599Z",
+  "exitCode": 0,
+  "signal": null,
+  "error": null,
+  "timeoutMs": 420000,
+  "controls": 177,
+  "unchangedTestBytes": true,
+  "testSha256": "27cf5ac79bfb657cd6fb5fa7178f4c0b8999c5912b355c6a11a244ee07080844",
+  "worktreeClean": true
+}

@@ -46,7 +46,9 @@ const json = (value) => JSON.stringify(value, null, 2)
 const absolute = (route) => SITE + route;
 const outputPath = (route) => path.join(ROOT, route.replace(/^\//, ''), 'index.html');
 const contentPath = (id, locale) => path.join(ROOT, 'content', 'guides', 'pages', id, `${locale}.html`);
-const landingRoutes = Object.freeze(Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, `/${locale}/`])));
+// Landing languages are independent of the three published guide languages.
+const LANDING_LOCALES = Object.freeze(['fr', 'en', 'ar', 'de', 'it', 'nl', 'es']);
+const landingRoutes = Object.freeze(Object.fromEntries(LANDING_LOCALES.map((locale) => [locale, `/${locale}/`])));
 const hubRoutes = Object.freeze(Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, `/${locale}/guides/`])));
 
 const clusters = [
@@ -242,9 +244,9 @@ ${alternateLinks(cluster.routes)}
 `;
 }
 
-function sitemapRow(route, routes, lastmod) {
+function sitemapRow(route, routes, lastmod, locales = PUBLISHED_LOCALES) {
   const links = [
-    ...PUBLISHED_LOCALES.map((locale) => `<xhtml:link rel="alternate" hreflang="${locale}" href="${esc(absolute(routes[locale]))}" />`),
+    ...locales.map((locale) => `<xhtml:link rel="alternate" hreflang="${locale}" href="${esc(absolute(routes[locale]))}" />`),
     `<xhtml:link rel="alternate" hreflang="x-default" href="${esc(absolute(routes.fr))}" />`,
   ].join('');
   const modified = lastmod ? `<lastmod>${lastmod}</lastmod>` : '';
@@ -253,7 +255,7 @@ function sitemapRow(route, routes, lastmod) {
 
 function renderSitemap() {
   const newest = TOPICS.map((topic) => topic.pages.fr.dateModified.slice(0, 10)).sort().at(-1);
-  const landingRows = PUBLISHED_LOCALES.map((locale) => sitemapRow(landingRoutes[locale], landingRoutes));
+  const landingRows = LANDING_LOCALES.map((locale) => sitemapRow(landingRoutes[locale], landingRoutes, undefined, LANDING_LOCALES));
   const guideRows = clusters.flatMap((cluster) => {
     const lastmod = cluster.type === 'hub' ? newest : cluster.pages.fr.dateModified.slice(0, 10);
     return PUBLISHED_LOCALES.map((locale) => sitemapRow(cluster.routes[locale], cluster.routes, lastmod));

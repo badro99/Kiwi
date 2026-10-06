@@ -1,0 +1,44 @@
+{
+  "head": {
+    "lang": "es",
+    "canonical": "https://kiwi-os.com/es/",
+    "hreflang": [
+      {
+        "locale": "fr",
+        "href": "https://kiwi-os.com/fr/"
+      },
+      {
+        "locale": "en",
+        "href": "https://kiwi-os.com/en/"
+      },
+      {
+        "locale": "ar",
+        "href": "https://kiwi-os.com/ar/"
+      },
+      {
+        "locale": "de",
+        "href": "https://kiwi-os.com/de/"
+      },
+      {
+        "locale": "it",
+        "href": "https://kiwi-os.com/it/"
+      },
+      {
+        "locale": "nl",
+        "href": "https://kiwi-os.com/nl/"
+      },
+      {
+        "locale": "es",
+        "href": "https://kiwi-os.com/es/"
+      },
+      {
+        "locale": "x-default",
+        "href": "https://kiwi-os.com/fr/"
+      }
+    ],
+    "ogLocale": "es_ES",
+    "ogImage": "https://kiwi-os.com/es/opengraph-image?ad7df247e6f1d74c",
+    "twitterImage": "https://kiwi-os.com/es/opengraph-image?ad7df247e6f1d74c"
+  },
+  "errors": []
+}

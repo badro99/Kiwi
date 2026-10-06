@@ -1,0 +1,49 @@
+<!doctype html><meta charset="utf-8"><title>og card</title>
+<!-- Headless Chrome template adapted from the FR/EN/AR card source in commit 27826d13. Render at 1200x630 after document.fonts.ready. -->
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Inter+Tight:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0A0F0D;--mint:#7DF2B0;--paper:#F7F5F0;}
+  html,body{margin:0;background:var(--ink);width:1200px;height:630px;overflow:hidden}
+  .card{position:relative;width:1200px;height:630px;overflow:hidden;background:var(--ink);font-family:"Inter Tight",system-ui,sans-serif;color:var(--paper)}
+  .card[dir=rtl]{font-family:"IBM Plex Sans Arabic","Inter Tight",system-ui,sans-serif}
+  .ring{position:absolute;inset:0;width:1200px;height:630px;object-fit:cover}
+  .card[dir=rtl] .ring{transform:scaleX(-1)}
+  /* voile pour garder le texte lisible là où l'anneau déborde */
+  .veil{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.55) 0,rgba(0,0,0,.35) 38%,rgba(0,0,0,0) 62%)}
+  .card[dir=rtl] .veil{transform:scaleX(-1)}
+  .logo{position:absolute;top:56px;inset-inline-start:64px;height:64px;width:auto}
+  .copy{position:absolute;inset-inline-start:64px;bottom:118px;max-width:760px}
+  .eyebrow{display:inline-flex;align-items:center;gap:10px;padding:10px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);font-size:18px;font-weight:400;letter-spacing:-.005em;color:rgba(255,255,255,.82);backdrop-filter:blur(8px);margin-bottom:24px}
+  .eyebrow i{width:8px;height:8px;border-radius:50%;background:var(--mint);box-shadow:0 0 14px var(--mint)}
+  h1{margin:0;font-size:60px;line-height:1.04;font-weight:500;letter-spacing:-.045em;font-style:normal}
+  .card[dir=rtl] h1{font-size:58px;line-height:1.22;letter-spacing:0;font-weight:600}
+  h1 .dot{color:var(--mint)}
+  .meta{position:absolute;inset-inline-start:64px;bottom:58px;display:flex;align-items:center;gap:14px;font-size:20px;font-weight:400;letter-spacing:-.01em;color:rgba(255,255,255,.55)}
+  .meta b{font-weight:500;color:rgba(255,255,255,.9)}
+  .meta i{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.45)}
+  </style>
+<body>
+<div class="card" id="card">
+  <img class="ring" src="/assets/landing/og-ring.png" alt="">
+  <div class="veil"></div>
+  <img class="logo" src="/images/kiwi-logo.svg" alt="">
+  <div class="copy">
+    <div class="eyebrow"><i></i><span id="eyebrow"></span></div>
+    <h1 id="h1"></h1>
+  </div>
+  <div class="meta"><b>kiwi-os.com</b><i></i><span id="langs">FR · EN · AR · DE · IT · NL · ES</span></div>
+</div>
+<script>
+  const q=new URLSearchParams(location.search), lang=q.get('lang')||'es';
+  const T={
+    es:{dir:'ltr',eyebrow:'Software de gestión · cafeterías, restaurantes y comercios',h1:'El sistema operativo<br>para los comercios marroquíes<span class="dot">.</span>'},
+    fr:{dir:'ltr',eyebrow:'Logiciel de gestion · cafés, restaurants & commerces',h1:'Le système d’exploitation<br>du commerçant marocain<span class="dot">.</span>'},
+    en:{dir:'ltr',eyebrow:'Management software · cafés, restaurants & shops',h1:'The operating system<br>for Moroccan businesses<span class="dot">.</span>'},
+    ar:{dir:'rtl',eyebrow:'برنامج إدارة · المقاهي والمطاعم والمتاجر',h1:'نظام التشغيل<br>للتاجر المغربي<span class="dot">.</span>'},
+  }[lang];
+  const card=document.getElementById('card');card.dir=T.dir;card.lang=lang;
+  document.getElementById('eyebrow').textContent=T.eyebrow;
+  document.getElementById('h1').innerHTML=T.h1;
+  document.fonts.ready.then(()=>{document.title='done'});
+</script>

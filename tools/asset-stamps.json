@@ -232,12 +232,12 @@
     "sha": "c3c699a2e07fbfac"
   },
   "assets/day-report-dash.js": {
-    "v": "20",
-    "sha": "6708bb5a10e52dca"
+    "v": "22",
+    "sha": "7f9e3ab9e86eef19"
   },
   "assets/day-report-export.js": {
-    "v": "8",
-    "sha": "b3d8317cac41a237"
+    "v": "10",
+    "sha": "4a94efe6c603aeab"
   },
   "assets/day-report.js": {
     "v": "19",
@@ -416,12 +416,12 @@
     "sha": "2e7825d34ed865d9"
   },
   "assets/kitchen-print-queue.js": {
-    "v": "15",
-    "sha": "5841554c64812da5"
+    "v": "16",
+    "sha": "a21f5a52bbda6fe6"
   },
   "assets/kitchen-relay.js": {
-    "v": "9",
-    "sha": "98df9640942bdd2f"
+    "v": "10",
+    "sha": "e01e762fe1837484"
   },
   "assets/kiwi-env.js": {
     "v": "2",
@@ -434,6 +434,22 @@
   "assets/kiwi-select.js": {
     "v": "2",
     "sha": "af05f19e306ca3d8"
+  },
+  "assets/landing-es.css": {
+    "v": "7",
+    "sha": "1cb11ec873d59dd5"
+  },
+  "assets/landing-locale-menu.css": {
+    "v": "1",
+    "sha": "b34580061e2d7bd6"
+  },
+  "assets/landing-locale-menu.js": {
+    "v": "1",
+    "sha": "bea76e906f0af60b"
+  },
+  "assets/landing-runtime-translations.js": {
+    "v": "6",
+    "sha": "747d490ba72f21c8"
   },
   "assets/landing/components.css": {
     "v": "2",
@@ -494,6 +510,26 @@
   "assets/mobile.css": {
     "v": "7",
     "sha": "83281a282e907a07"
+  },
+  "assets/month-report-csv.js": {
+    "v": "4",
+    "sha": "87b49ae78b04a480"
+  },
+  "assets/month-report-pdf.js": {
+    "v": "12",
+    "sha": "6d4b137684ce299e"
+  },
+  "assets/month-report-tools.js": {
+    "v": "5",
+    "sha": "3dce9b319e3cacaa"
+  },
+  "assets/month-report-ui.js": {
+    "v": "7",
+    "sha": "dde7a14402d659c6"
+  },
+  "assets/month-report.js": {
+    "v": "10",
+    "sha": "c5df9c7afd620c30"
   },
   "assets/morocco-holidays.js": {
     "v": "1",

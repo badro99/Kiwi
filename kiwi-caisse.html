@@ -5653,8 +5653,8 @@
        pose le bon sur le serveur (file de secours hors ligne comprise) pour que
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
-  <script src="assets/kitchen-relay.js?v=9" defer></script>
-  <script src="assets/kitchen-print-queue.js?v=15" defer></script>
+  <script src="assets/kitchen-relay.js?v=10" defer></script>
+  <script src="assets/kitchen-print-queue.js?v=16" defer></script>
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
@@ -8099,9 +8099,13 @@
     function billBelongsToOtherVisit(id, closedId) {
       const own = String(tables[id]?.timerSession || '');
       if (own && own !== String(closedId || '')) return true;
+      /* A ticket the server never acknowledged belongs to a visit the server
+         has not seen, so no server closure can be about it. This guard used to
+         expire after two minutes: at Pasta Corner (#0163) the first relay of a
+         new table 9 visit stalled past that, and the earlier, already-paid
+         table 9 visit (closedSessions spans twelve hours) erased the new bill. */
       return kdsOrders.some(o => o && o.type === 'dineIn' && String(o.table) === String(id)
-        && !o.paid && o.opId && !o.session && o.opNum == null
-        && Date.now() - new Date(o.sentAt || 0).getTime() < 120000);
+        && !o.paid && o.opId && !o.session && o.opNum == null);
     }
     function locallySettledOrder(id, number) {
       if (number == null || String(number).trim() === '') return false;
@@ -12499,6 +12503,8 @@
         }).then((r) => {
           /* #0064 · voir tooLongForKitchen. */
           if (r && r.error === 'too-many-lines') tooLongForKitchen(r);
+          // #0163 · queue only in memory (disk full): a reload would lose it.
+          if (r && r.queued === false) toast('Bon en attente du réseau · ne rechargez pas la caisse', 'danger');
           /* Le numéro du serveur devient le numéro affiché. C'est le SEUL que
              les deux écrans puissent connaître : la cuisine ne voit pas le
              compteur local de ce comptoir. Sans ça, un cuisinier annonçant
@@ -15483,6 +15489,8 @@
       }
     }
     function openCloture() {
+      /* #0164 · a recorded close never reopens its own count sheet. */
+      if (registerClosed) { finishClose(); return; }
       renderCloture(false);
       $('#cloture-modal').classList.add('is-open');
       if (window.lucide) lucide.createIcons();
@@ -15874,8 +15882,34 @@
       setTimeout(() => location.reload(), 640);
     }
 
+    /* #0164 · Pasta Corner, 2026-10-05. The close was recorded at 01:16 (cash
+       event, Z, day report), but the page never finished: four minutes later
+       the same service was still on screen, and every new « Fermer la caisse »
+       returned silently on `registerClosing`. A close must therefore (1) say
+       when it is already running, (2) never wait forever on storage, and (3)
+       once durably recorded, always end in finishClose(), even if the paper
+       sheet fails to render. */
+    let registerClosed = false;
+    const CLOSE_STEP_TIMEOUT_MS = 15000;
+    function closeStepWithin(promise, fallback) {
+      let timer = null;
+      return Promise.race([
+        Promise.resolve(promise).catch(() => fallback),
+        new Promise((resolve) => { timer = setTimeout(() => resolve(fallback), CLOSE_STEP_TIMEOUT_MS); }),
+      ]).finally(() => clearTimeout(timer));
+    }
+    function setCloseBusy(on) {
+      try {
+        const btn = $('#clo-close');
+        if (!btn) return;
+        btn.disabled = !!on;
+        const label = btn.querySelector && btn.querySelector('span');
+        if (label) label.textContent = on ? 'Clôture en cours…' : 'Fermer la caisse';
+      } catch (_) {}
+    }
     async function closeRegister() {
-      if (registerClosing) return;
+      if (registerClosed) { finishClose(); return; }
+      if (registerClosing) { toast('Clôture en cours · patientez quelques secondes'); return; }
       const countInput = $('#clo-count');
       const countedRaw = countInput ? countInput.value.trim() : '';
       const counted = countedRaw === '' ? NaN : Number(countedRaw);
@@ -15896,8 +15930,22 @@
       }
       terminalCardTotal = money(cardZ);
       try { persistShift(); } catch (_) {}
-      $('#cloture-modal').classList.remove('is-open');
       registerClosing = true;
+      /* The sheet stays open with a busy button while the close works: hiding
+         it first left a bare till on screen for up to 8 s, and the cashier
+         reopened Clôture and tapped again into the silent guard. */
+      setCloseBusy(true);
+      try {
+        await closeRegisterSteps(counted);
+      } catch (err) {
+        if (registerClosed) { finishClose(); return; }
+        registerClosing = false;
+        setCloseBusy(false);
+        $('#cloture-modal').classList.add('is-open');
+        toast('Clôture interrompue · poste conservé. Réessayez.');
+      }
+    }
+    async function closeRegisterSteps(counted) {
 
       /* L'ORDRE COMPTE. On écrit le rapport AVANT d'effacer le poste : la
          version d'avant effaçait le poste puis rechargeait la page, et le
@@ -15910,7 +15958,8 @@
         /* Reconcile BEFORE freezing the Z. The synchronous write-ahead copy in
            Live Link survives the reload below, while flush starts delivery now. */
         reconcileJournalSales();
-        reconciliation = await syncSettledBusinessDay({ timeoutMs: 8000 });
+        reconciliation = await closeStepWithin(syncSettledBusinessDay({ timeoutMs: 8000 }),
+          { ok: false, complete: false, count: 0, reason: 'feed-timeout' });
       } catch (_) {}
       try {
         report = buildDayReport(counted, Date.now());
@@ -15935,15 +15984,19 @@
       } catch (_) {}
       if (!report || !reportSaved) {
         registerClosing = false;
+        setCloseBusy(false);
         $('#cloture-modal').classList.add('is-open');
         toast('Clôture non enregistrée · poste conservé. Vérifiez le stockage puis réessayez.');
         return;
       }
-      const zQueued = !storeIsReal() ? { ok: true, demo: true } : await (window.KiwiZReconciliation
+      /* IndexedDB can stall on iPad after the app was backgrounded. A stalled
+         Z write is a failed close (the shift stays), never an endless wait. */
+      const zQueued = !storeIsReal() ? { ok: true, demo: true } : await closeStepWithin(window.KiwiZReconciliation
         ? window.KiwiZReconciliation.queueClose(report, journal)
-        : Promise.resolve({ ok: false, reason: 'module-unavailable' }));
+        : Promise.resolve({ ok: false, reason: 'module-unavailable' }), { ok: false, reason: 'timeout' });
       if (!zQueued || !zQueued.ok) {
         registerClosing = false;
+        setCloseBusy(false);
         $('#cloture-modal').classList.add('is-open');
         toast('Rapprochement Z non protégé · poste conservé. Vérifiez le stockage puis réessayez.');
         return;
@@ -15965,8 +16018,13 @@
         actorId: cashActorId(), openedAt: shiftOpenedAt.getTime(), occurredAt: closedAt
       });
 
+      /* From here the close is recorded. Whatever happens next, the only way
+         out is finishClose(): no path may leave this service on screen. */
+      registerClosed = true;
       clearPersistedShift();
-      if (report) showPostClose(report); else finishClose();
+      $('#cloture-modal').classList.remove('is-open');
+      setCloseBusy(false);
+      try { showPostClose(report); } catch (_) { finishClose(); }
     }
 
     const clockinBtn = document.getElementById('clockin-btn');

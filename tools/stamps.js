@@ -32,13 +32,13 @@ const MANIFEST = 'tools/asset-stamps.json';
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 const exists = (rel) => fs.existsSync(path.join(ROOT, rel));
 
-/* Les coquilles applicatives : tout .html à la racine. On ne code pas en dur
+/* Les coquilles applicatives : tout .html à la racine et les landings localisées. On ne code pas en dur
    la liste des quatre PWA — un cinquième shell arriverait sinon sans garde. */
 function shellDocs() {
-  return fs.readdirSync(ROOT)
-    .filter((f) => f.endsWith('.html'))
-    .filter((f) => read(f).includes('?v='))
-    .sort();
+  const roots = fs.readdirSync(ROOT).filter(f => f.endsWith('.html'));
+  const landings = ['fr', 'en', 'ar', 'de', 'it', 'nl', 'es']
+    .map(locale => `${locale}/index.html`).filter(exists);
+  return [...roots, ...landings].sort();
 }
 
 /* Le sha du contenu, tronqué : on compare des égalités, pas de la crypto. */

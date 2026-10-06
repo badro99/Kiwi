@@ -1,0 +1,32 @@
+{
+  "monthly": {
+    "lens": {
+      "x": 623.96875,
+      "y": 177,
+      "width": 106,
+      "height": 44
+    },
+    "selected": {
+      "x": 623.96875,
+      "y": 177,
+      "width": 105.609375,
+      "height": 44
+    }
+  },
+  "yearly": {
+    "lens": {
+      "x": 729.96875,
+      "y": 177,
+      "width": 86,
+      "height": 44
+    },
+    "selected": {
+      "x": 729.578125,
+      "y": 177,
+      "width": 86.4375,
+      "height": 44
+    }
+  },
+  "moved": true,
+  "aligned": true
+}

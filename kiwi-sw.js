@@ -173,8 +173,13 @@ var SHELL = [
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=19',
   '/assets/report.js?v=5',
-  '/assets/day-report-dash.js?v=20',
-  '/assets/day-report-export.js?v=8',
+  '/assets/day-report-dash.js?v=22',
+  '/assets/day-report-export.js?v=10',
+  '/assets/month-report.js?v=10',
+  '/assets/month-report-tools.js?v=5',
+  '/assets/month-report-csv.js?v=4',
+  '/assets/month-report-pdf.js?v=12',
+  '/assets/month-report-ui.js?v=7',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.
      Sans eux le contrôle « ouvre-t-on maintenant ? » ne peut pas se faire, et
@@ -267,11 +272,11 @@ var SHELL = [
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */
-  '/assets/kitchen-relay.js?v=9',
+  '/assets/kitchen-relay.js?v=10',
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
-  '/assets/kitchen-print-queue.js?v=15',
+  '/assets/kitchen-print-queue.js?v=16',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=9',
   '/assets/pos-dispatch.js?v=79',

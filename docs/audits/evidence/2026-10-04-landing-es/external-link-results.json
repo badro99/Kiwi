@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-04T15:50:12.399Z",
+  "noMessageSent": true,
+  "links": [
+    {
+      "href": "https://wa.me/212624495159",
+      "status": 200,
+      "resolvedUrl": "https://api.whatsapp.com/send/?phone=212624495159&text&type=phone_number&app_absent=0"
+    },
+    {
+      "href": "https://sketchfab.com/tamminen",
+      "status": 200,
+      "resolvedUrl": "https://sketchfab.com/tamminen"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "identical": true,
+  "files": {
+    "es/index.html": "2418fc7cd7aaf7a038a6adae6d0749265f82560782b8e8c4499cd82c99f7b142",
+    "de/index.html": "2034d72365fbf153b3780e3030e5ab610cdc86e3fd492d62946fb38b71c3f495",
+    "it/index.html": "8a9cd4609cbee99717358be7782f3fe78c864b972b1f8b53b2bb7776d9cb3215",
+    "nl/index.html": "f0fa9c624f4dd043f6d37565256bac7a8cd44f854c517cbbff6c71bc39289fec",
+    "assets/landing-runtime-translations.js": "747d490ba72f21c8d2e46df2c0498e18ff500950ad7ce7513ac33d536eac80f9"
+  }
+}

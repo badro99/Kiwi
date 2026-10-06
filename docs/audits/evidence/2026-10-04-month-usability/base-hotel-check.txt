@@ -1,0 +1,253 @@
+
+■ launch · one browser, real dashboard for all scenarios
+  (browser ready)
+
+■ T0 · missing meal rate is actionable, then configured in Types
+  ✓ missing rate names the fix, not an account
+  ✓ agreed-price box appears exactly when the rate is missing
+  ✓ submit blocked without a rate
+  ✓ block message is actionable
+  ✓ block never demands a commercial account
+  ▸ configure the lunch supplement through the real type editor
+  ✓ lunch supplement reached the server rooms document
+  ▸ book lunch with the configured rate
+  ✓ lunch total displayed (900×2 + 220×2)
+  ✓ lunch booking confirms
+  ✓ server total matches the configured rate
+
+■ T1 · ordinary B&B books, reload preserves reservation and price
+  ✓ B&B total displayed before confirmation (900×2 + 150×2)
+  ✓ B&B confirms with no commercial account anywhere
+  ✓ server total correct
+  ✓ accepted pricing snapshot persisted
+  ✓ snapshot carries per-night rows
+  ✓ no fake account created
+  ▸ reload: reservation and price remain
+  ✓ reload keeps reservation and accepted price
+  ✓ reopened editor shows the same guest and formula
+
+■ T2 · every meal plan prices from configuration
+  ✓ room_only: 1800.00 MAD displayed
+  ✓ room_only: confirms
+  ✓ room_only: server total and snapshot match
+  ✓ room_only: snapshot carries the formula
+  ✓ bb: 2100.00 MAD displayed
+  ✓ bb: confirms
+  ✓ bb: server total and snapshot match
+  ✓ bb: snapshot carries the formula
+  ✓ hb_dinner: 2360.00 MAD displayed
+  ✓ hb_dinner: confirms
+  ✓ hb_dinner: server total and snapshot match
+  ✓ hb_dinner: snapshot carries the formula
+  ✓ full_board: 2700.00 MAD displayed
+  ✓ full_board: confirms
+  ✓ full_board: server total and snapshot match
+  ✓ full_board: snapshot carries the formula
+
+■ T3 · missing rate offers an agreed price, audited
+  ✓ agreed price confirms with no account
+  ✓ total follows the agreed amount
+  ✓ agreed snapshot persisted
+  ✓ reason persisted verbatim
+  ✓ authorizing identity stamped
+
+■ T4 · hold a room, then confirm it
+  ✓ hold blocks the room
+  ✓ stay held as requested
+  ✓ hold carries the accepted pricing
+  ▸ reopened via handler
+  ✓ hold confirms
+  ✓ confirmed with the same price
+  ✓ snapshot intact across the transition
+
+■ T5 · family of four books breakfast at configured rates
+  ✓ family total displayed (1800×2 + 150×4×2)
+  ✓ family confirms despite exceeding three persons
+  ✓ server total scales meals per person
+  ✓ snapshot records the family occupancy
+
+■ T6 · direct group books dinners, reload keeps the dossier
+  ✓ two traveler rows ready
+  ✓ group direct total displayed (2 × 2360)
+  ✓ dossier reference shown
+  ✓ direct group confirms with no account
+  ✓ both rooms booked under one dossier
+  ✓ each room priced from configuration
+  ✓ no account attached
+  ✓ each room priced from configuration
+  ✓ no account attached
+  ▸ reload: dossier intact
+  ✓ reload keeps the dossier and its prices
+
+■ T7 · agency/company contract booking unchanged
+  ✓ contract booking confirms
+  ✓ contract total applied (850×2)
+  ✓ accepted contract snapshot persisted
+  ✓ account preserved
+
+■ T8 · network failure and retry never duplicate
+  ✓ lost response surfaces as an error, not a silent success
+  ✓ retry completes
+  ✓ retry reuses the same idempotency reference
+  ✓ exactly one booking with the right total
+  ✓ two attempts, one booking: idempotency absorbs the retry
+
+■ E1 · saved snapshot survives catalogue moves and contact edits
+  ✓ B&B books at 2100
+  ✓ snapshot accepted with timestamp
+  ▸ breakfast supplement rises 150 → 300 in Types
+  ▸ reopen: the display still shows the accepted 2100
+  ✓ reopened editor shows the saved snapshot, not new catalogue math
+  ▸ phone, note and traveler edits preserve it
+  ✓ contact edit saves
+  ✓ total untouched by non-pricing edits
+  ✓ snapshot and original timestamp intact
+  ✓ edits applied
+  ✓ renamed traveler kept
+
+■ E2 · date moves need a confirmed reprice, then apply it
+  ✓ B&B books
+  ✓ reprice confirmation appears with the new total
+  ✓ reprice total reflects the moved catalogue (900+300)×2
+  ✓ unconfirmed reprice is blocked
+  ✓ block message demands review
+  ✓ confirmed reprice saves
+  ✓ fresh snapshot and total applied
+  ✓ new dates with new acceptance
+
+■ E3 · direct to contract keeps a single payable total
+  ✓ direct dinner books at 2360
+  ✓ contract total displayed before acceptance (1700)
+  ✓ contract transition saves
+  ✓ persisted total is the contract total, not the stale 2360
+  ✓ accepted quote stored
+  ✓ stale direct snapshot cleared, not competing
+  ✓ superseded direct snapshot preserved in history
+  ▸ reload: single source still agrees
+  ✓ reload keeps one total plus history
+
+■ E4 · contract back to direct clears the quote
+  ✓ contract books at 1700
+  ✓ direct total recomputed on account removal
+  ✓ direct transition saves
+  ✓ direct total wins back
+  ✓ stale contract quote cleared
+  ✓ fresh direct snapshot stored
+  ✓ contract snapshot archived
+
+■ E5+E6 · agreed price reopens intact, deliberate changes re-authorize
+  ✓ agreed booking saves
+  ✓ agreed snapshot with owner stamp
+  ▸ reopen: amount, reason and authorizer loaded, confirm unset
+  ✓ stored agreement displayed with amount and reason
+  ✓ no pre-checked acceptance that would re-stamp
+  ▸ phone-only edit preserves authorization verbatim
+  ✓ ordinary edit saves
+  ✓ total untouched
+  ✓ original authorization timestamp and reason intact
+  ▸ deliberate amount change re-authorizes and archives the old one
+  ✓ re-authorized change saves
+  ✓ new agreed total applied
+  ✓ new authorization timestamped
+  ✓ old authorization archived
+
+■ E7 · catalogue gains do not touch agreed bookings
+  ✓ agreed booking saves
+  ▸ hotel now configures a bb rate for that category
+  ✓ edit saves
+  ✓ agreed total stands, catalogue 2100 math ignored
+  ✓ original authorization intact
+
+■ T9 · no phantom rows, birth dates in JJ/MM/AAAA
+  ✓ no contract simulation offered without an account
+  ✓ no empty reprice row rendered
+  ✓ no agreed-price box while configured rates cover the stay
+  ▸ birth date types French, persists ISO
+  ✓ booking with a typed birth date confirms
+  ✓ birth date stored ISO
+  ✓ reopened editor shows JJ/MM/AAAA, never mm/dd/yyyy
+  ▸ invalid birth blocks the save with guidance, creates nothing
+  ✓ invalid birth date refused with guidance
+  ▸ agreed checkbox keeps control size on the fallback path
+  ✓ missing meal rate offers the agreed-price path
+  ✓ agreed checkbox stays a control (20px, not full width)
+
+■ T10 · switching account modes keeps the visible UI honest
+  ✓ no-account mode hides contract simulation
+  ✓ no-account mode shows the direct price
+  ✓ no-account mode offers the normal reservation action
+  ▸ attach an account: simulation appears with account guidance
+  ✓ account mode shows contract simulation
+  ✓ guidance switches to the account path
+  ▸ simulate the matching contract, then detach: stale output clears
+  ✓ contract simulation prices the stay
+  ✓ detaching hides simulation again
+  ✓ stale contract output cleared on detach
+  ✓ direct price back after detach
+  ✓ ordinary booking completes after the switching dance
+  ✓ booked direct, no account attached
+
+■ T11 · moved dates surface an explicit reprice confirmation
+  ✓ baseline booking confirms
+  ✓ pristine edit shows no reprice row
+  ▸ extend by a night: confirmation appears with the new total
+  ✓ reprice row becomes visible on moved dates
+  ✓ reprice confirmation names the new total
+  ✓ unchecked reprice blocks the save with guidance
+  ✓ confirmed reprice saves
+  ✓ extension repriced to three nights
+
+■ T12 · sidebar Points de vente names a bar and maps its till
+  ▸ sidebar exposes the entry
+  ✓ Points de vente entry present in the hotel sidebar
+  ✓ entry visible, not a dead link
+  ✓ empty registry states itself honestly
+  ▸ name a bar, type it, map its physical till
+  ✓ new outlet row appears with its own id
+  ✓ registry saved to the server document
+  ✓ still exactly one economat, no duplicate establishments
+  ✓ bar named and typed on the shared registry
+  ✓ physical till assigned to the bar
+  ▸ outlet card reaches the menu and its selling prices
+  ✓ menu shows the selling price
+  ✓ second article priced too
+  ✓ menu explains that selling prices are shared hotel-wide
+  ✓ catalogue action closes the outlet modal
+  ✓ catalogue action reaches the authorized shared inventory editor
+  ▸ reload keeps the outlet, the mapping and the name
+  ✓ bar survives reload on the same registry
+
+■ T13 · Configurer ce tarif keeps the reservation draft
+  ✓ configure link sits beside the missing-rate warning
+  ✓ type editor stacks above the stay editor
+  ✓ reservation draft untouched underneath
+  ✓ missing supplement field focused for the right category
+  ✓ rooms-document acknowledgment is genuinely still in flight
+  ✓ reservation submit is disabled while tariff acknowledgment is pending
+  ✓ defense-in-depth sends no booking request while the tariff is pending
+  ✓ type editor closes back onto the same draft
+  ✓ server acknowledgment reprices in place and re-enables the same draft
+  ✓ booking completes without reopening or refilling (got closed)
+  ✓ server total matches the configured rate
+
+■ T14 · failed tariff acknowledgment blocks booking and manual retry recovers
+  ✓ failed save keeps reservation submission disabled
+  ✓ failed save offers an emergency retry action
+  ✓ failed tariff cannot leak into a booking request
+  ✓ manual retry receives acknowledgment and re-enables the draft
+  ✓ recovered tariff books normally
+  ✓ recovered booking uses the server-confirmed total
+
+■ T15 · offline tariff save auto-retries when connectivity returns
+  ✓ offline save cannot be booked prematurely
+  ✓ offline state keeps an emergency retry button available
+  ✓ browser online event automatically synchronizes and unlocks the draft
+  ✓ auto-recovered offline tariff books normally
+  ✓ offline recovery books the acknowledged total
+
+✓ All 176 direct-booking browser controls passed.
+  navigation paths used: nav-reception:handler | hx-stay-new:click | nav-tarifs:handler | hx-stay-edit:handler | hx-group-new:click
+(node:21320) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///private/tmp/kiwi-month-base-check/functions/auth/_lib.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /private/tmp/kiwi-month-base-check/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)

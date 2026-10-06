@@ -2,6 +2,7 @@
   const locales = [
     ['fr', 'Français'],
     ['en', 'English'],
+    ['es', 'Español'],
     ['ar', 'العربية'],
     ['de', 'Deutsch'],
     ['it', 'Italiano'],
@@ -9,7 +10,7 @@
   ];
 
   const labels = {
-    fr: 'Choisir la langue', en: 'Choose language', ar: 'اختر اللغة',
+    fr: 'Choisir la langue', en: 'Choose language', es: 'Elegir idioma', ar: 'اختر اللغة',
     de: 'Sprache wählen', it: 'Scegli la lingua', nl: 'Kies een taal',
   };
 
@@ -18,6 +19,12 @@
   const mount = () => {
     const control = document.querySelector('header [role="group"][aria-label]');
     if (!control || control.dataset.localeReady === 'true' || mounting) return;
+    // React owns this exported header. Mount only after it has hydrated the
+    // control; replacing its children earlier causes a hydration mismatch.
+    if (!Object.keys(control).some(key => key.startsWith('__reactFiber$'))) {
+      requestAnimationFrame(mount);
+      return;
+    }
     mounting = true;
     control.dataset.localeReady = 'true';
     control.dataset.open = 'false';
@@ -26,7 +33,7 @@
     control.innerHTML = `
       <button class="kw-locale-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
         <span>${current.toUpperCase()}</span>
-        <svg class="kw-locale-chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="m2.5 4.5 3.5 3 3.5-3" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <img class="kw-locale-chevron" src="/assets/icons/material/chevron_right.svg" alt=""/>
       </button>
       <div class="kw-locale-list" role="listbox">
         ${locales.map(([code, name]) => `
@@ -62,7 +69,7 @@
     mount();
     // Next.js can replace the server-rendered header while hydrating. Re-apply
     // the locale control whenever that happens so every locale keeps the same
-    // six-language dropdown instead of falling back to FR / EN / AR.
+    // seven-language dropdown instead of falling back to FR / EN / AR.
     new MutationObserver(mount).observe(document.body, { childList: true, subtree: true });
   };
 

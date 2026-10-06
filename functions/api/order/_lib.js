@@ -456,7 +456,15 @@ export async function priceOrder(env, merchant, rawLines) {
      * array. Enforcing the regular group here would reject existing published
      * formulas before their slot children are priced. Explicit optionChoices on
      * a formula parent still go through the normal identity/count validation. */
-    const hasRequiredOption = kind !== 'formula' && !!(ref.opts && Array.from(ref.opts).some((groupId) => {
+    /* An included component (formula-part) is the same contract seen from the
+     * other side: its choices belong to the formula's slots, and no formula
+     * sheet collects the article's own groups. Browse, 2026-10-05: Espresso's
+     * required "Hot or Ice" refused every brunch formula from the waiter app
+     * as « carte modifiée », while the till (which never applied this rule)
+     * sent the same formula. Explicit choices on a component are still
+     * validated by identity; only the missing-required count is waived. */
+    const includedPart = kind === 'formula-part';
+    const hasRequiredOption = kind !== 'formula' && !includedPart && !!(ref.opts && Array.from(ref.opts).some((groupId) => {
       const group = optionIndex.get(groupId);
       return group && group.min > 0;
     }));
@@ -501,7 +509,7 @@ export async function priceOrder(env, merchant, rawLines) {
           const group = optionIndex.get(groupId);
           if (!group) { valid = false; break; }
           const count = groupCounts.get(groupId) || 0;
-          if (count < group.min || count > group.max) {
+          if ((count < group.min && !includedPart) || count > group.max) {
             valid = false;
             break;
           }

@@ -1,0 +1,10 @@
+Testing Spanish (es) landing page integration...
+
+Results: 145/146 checks passed.
+(node:81550) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/zaka/.codex/worktrees/landing-spanish-finish/kiwi/functions/_middleware.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/zaka/.codex/worktrees/landing-spanish-finish/kiwi/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Failures:
+  - Spanish OG card differs from English bytes

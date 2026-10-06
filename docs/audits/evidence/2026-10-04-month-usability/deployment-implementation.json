@@ -1,0 +1,59 @@
+{
+  "commit": "72c22e6ba4f89d08946a23ce48432a04e7427009",
+  "checked": "2026-10-05T00:14:12.591Z",
+  "resources": [
+    {
+      "path": "assets/month-report.js?v=10",
+      "httpStatus": 200,
+      "sourceSha256": "c5df9c7afd620c307fbd93036b6c989858c475f4befdd742b2944db7f2085fb0",
+      "liveSha256": "c5df9c7afd620c307fbd93036b6c989858c475f4befdd742b2944db7f2085fb0",
+      "sourceBytesMatch": true
+    },
+    {
+      "path": "assets/month-report-tools.js?v=5",
+      "httpStatus": 200,
+      "sourceSha256": "3dce9b319e3cacaa85dda566149bd4a8d1951a6d5b4ef27cbade4ef4b78e91f8",
+      "liveSha256": "3dce9b319e3cacaa85dda566149bd4a8d1951a6d5b4ef27cbade4ef4b78e91f8",
+      "sourceBytesMatch": true
+    },
+    {
+      "path": "assets/month-report-csv.js?v=4",
+      "httpStatus": 200,
+      "sourceSha256": "87b49ae78b04a480d95a519300e8e3cab81f5ec8cadcff383d64bb81a9e24920",
+      "liveSha256": "87b49ae78b04a480d95a519300e8e3cab81f5ec8cadcff383d64bb81a9e24920",
+      "sourceBytesMatch": true
+    },
+    {
+      "path": "assets/month-report-pdf.js?v=12",
+      "httpStatus": 200,
+      "sourceSha256": "6d4b137684ce299e09c840aa76400e00a19ee159938eb85a4b57a132aa5bb58b",
+      "liveSha256": "6d4b137684ce299e09c840aa76400e00a19ee159938eb85a4b57a132aa5bb58b",
+      "sourceBytesMatch": true
+    },
+    {
+      "path": "assets/month-report-ui.js?v=7",
+      "httpStatus": 200,
+      "sourceSha256": "dde7a14402d659c674f475bcd7ae5f3896f43bac77713d2b86f7526ec5486f37",
+      "liveSha256": "dde7a14402d659c674f475bcd7ae5f3896f43bac77713d2b86f7526ec5486f37",
+      "sourceBytesMatch": true
+    },
+    {
+      "path": "dashboard.html",
+      "httpStatus": 401,
+      "sourceSha256": "114072520246b2298d9771ca847c541a0bb4327f41c753e9c4741e3c7c2074a2",
+      "liveSha256": "a8d2fb087e49d59c92d61cd337ecba38e23963b972812577f63949b62e6a8274",
+      "expectedAuthenticatedShell": true,
+      "expectedPublicHttpStatus": 401
+    },
+    {
+      "path": "kiwi-sw.js",
+      "httpStatus": 200,
+      "sourceSha256": "0c3bc5e7f3ce3d352570b2dafbb7745eb181356d79fc83e6aba96a652b0de0aa",
+      "liveSha256": "0c3bc5e7f3ce3d352570b2dafbb7745eb181356d79fc83e6aba96a652b0de0aa",
+      "sourceBytesMatch": true
+    }
+  ],
+  "cloudflarePagesConclusion": "success",
+  "cloudflareDeployment": "cde76936-4ad4-4620-a74d-94c76f56f80e",
+  "bothMirrorsPushed": true
+}

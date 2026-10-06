@@ -31,6 +31,8 @@
   var RELAY_VERDICT_MS = 20000;
   var HUB_LEASE_MS = 45000;
   var HUB_RENEW_MS = 15000;
+  var RESUME_WAIT_MS = 4000;
+  var resuming = null;
   var MAX_RECORDS = 120;
   var running = false;
   var timer = null;
@@ -86,10 +88,37 @@
     var h = remote.holder;
     return !!(h && h.deviceId && h.deviceId !== deviceId() && Number(h.expiresAt || 0) > Date.now());
   }
-  function isHub() {
+  function chosenHere() {
     var c = hubConfig(), m = merchant();
-    if (remoteDenies()) return false;
-    return !!(m && c.enabled === true && c.merchant === m && c.deviceId === deviceId() && Number(c.expiresAt || 0) > Date.now());
+    return !!(m && c.enabled === true && c.merchant === m && c.deviceId === deviceId());
+  }
+  /* ── UNE TABLETTE QUI DORT N'A PAS DÉMISSIONNÉ ─────────────────────────
+   * Browse, 2026-10-05 : le comptoir était le hub à 11 h 04, ne l'était plus à
+   * 11 h 09, de nouveau à 11 h 44 (réactivé à la main), puis plus du tout dès
+   * 12 h 08, alors que la caisse servait encore à 16 h. Les bons du téléphone
+   * serveur n'avaient plus aucun appareil pour les imprimer. Cause : le bail
+   * local expirait pendant qu'Android gelait l'onglet (écran éteint, appli du
+   * pont au premier plan), et `renewHub` ne renouvelait qu'un bail VIVANT. Une
+   * pause de 45 s éteignait donc le hub pour toujours, sans un mot.
+   * Le choix « cette caisse imprime » est celui de l'opérateur ; seul le
+   * serveur peut le contredire (une autre caisse a pris la main entre-temps).
+   * Un bail échu ici est donc repris, et redemandé au serveur. */
+  function resumeHub() {
+    var c = hubConfig(), now = Date.now();
+    if (!c.activatedAt) c.activatedAt = Number(c.updatedAt || 0) || now;
+    c.updatedAt = now; c.expiresAt = now + HUB_LEASE_MS;
+    put(HUB_KEY, JSON.stringify(c)); persistNative();
+    record('hub-resumed', null);
+    /* Les bons distants attendent la réponse du serveur, mais jamais plus de
+       quatre secondes : un réseau muet ne doit pas bloquer la cuisine. */
+    var settle = function () { resuming = null; };
+    var cap = new Promise(function (resolve) { setTimeout(resolve, RESUME_WAIT_MS); });
+    resuming = Promise.race([claimRemote(true), cap]).then(settle, settle);
+  }
+  function isHub() {
+    if (remoteDenies() || !chosenHere()) return false;
+    if (Number(hubConfig().expiresAt || 0) <= Date.now()) resumeHub();
+    return !remoteDenies();
   }
   function hubQS() { var m = merchant(); return '?feature=' + HUB_FEATURE + (m ? '&merchant=' + encodeURIComponent(m) : ''); }
   function claimRemote(enabled) {
@@ -144,7 +173,7 @@
     var m = merchant(), now = Date.now(), current = hubConfig(), id = deviceId();
     if (enabled && current.enabled && current.merchant === m && current.deviceId !== id && Number(current.expiresAt || 0) > now) return false;
     var takeover = !!(enabled && current.deviceId && current.deviceId !== id && Number(current.expiresAt || 0) <= now);
-    put(HUB_KEY, JSON.stringify({ enabled: !!enabled, merchant: m, deviceId: id, updatedAt: now, expiresAt: enabled ? now + HUB_LEASE_MS : 0 }));
+    put(HUB_KEY, JSON.stringify({ enabled: !!enabled, merchant: m, deviceId: id, updatedAt: now, activatedAt: enabled ? now : 0, expiresAt: enabled ? now + HUB_LEASE_MS : 0 }));
     persistNative();
     if (takeover) try { if (window.KiwiCaisseToast) window.KiwiCaisseToast('Cette caisse imprime maintenant', 4200, 'success'); } catch (_) {}
     /* L'arbitrage réel est distant et asynchrone : on rend la main tout de
@@ -170,7 +199,9 @@
   }
   function renewHub() {
     if (!isHub()) return;
-    var c = hubConfig(); c.updatedAt = Date.now(); c.expiresAt = c.updatedAt + HUB_LEASE_MS;
+    var c = hubConfig();
+    if (!c.activatedAt) c.activatedAt = Number(c.updatedAt || 0) || Date.now();
+    c.updatedAt = Date.now(); c.expiresAt = c.updatedAt + HUB_LEASE_MS;
     put(HUB_KEY, JSON.stringify(c)); persistNative();
     /* Renouveler, c'est aussi redemander : une caisse rallumée pendant le
        service doit apprendre qu'elle n'est plus le hub, sans attendre qu'un
@@ -421,9 +452,20 @@
     if (running) return Promise.resolve(status());
     sweepStaleAwaits();
     var q = readQueue();
+    /* Une autre caisse a pris l'impression pendant notre sommeil : ses bons
+       sont les siens, les sortir ici les doublerait en cuisine. */
+    if (remoteDenies() && q.some(function (x) { return x && x.remote; })) {
+      q.filter(function (x) { return x && x.remote; }).forEach(function (x) { record('handed-to-hub', x); });
+      q = q.filter(function (x) { return x && !x.remote; });
+      writeQueue(q);
+    }
     if (!q.length) { emit(); return Promise.resolve(status()); }
     var now = Date.now();
+    var arbitrating = !!resuming;
     var job = q.find(function (x) {
+      /* Le serveur n'a pas encore dit qui imprime (reprise après un sommeil) :
+         un bon distant attend sa réponse, quelques centaines de millisecondes. */
+      if (x.remote && arbitrating) return false;
       /* Un travail incertain attend une décision humaine · le réimprimer
          d'office est exactement le doublon qu'on refuse. */
       if (x.uncertain) return false;
@@ -431,7 +473,11 @@
       if (x.relayId && Number(x.awaitingUntil || 0) > now) return false;
       return !x.nextAt || Number(x.nextAt) <= now;
     });
-    if (!job) { schedule(); return Promise.resolve(status()); }
+    if (!job) {
+      if (arbitrating) resuming.then(function () { flush(); });
+      else schedule();
+      return Promise.resolve(status());
+    }
     running = true; emit();
     record('printing', job);
     var station = job.station || (job.payload && job.payload.station) || '';
@@ -487,7 +533,11 @@
        hour of the server queue onto paper.  The polling API intentionally
        replays recent rows after a refresh; the done ledger handles refreshes,
        while this activation boundary handles the very first opt-in. */
-    var activatedAt = options.remote === true ? Number(hubConfig().updatedAt || 0) : 0;
+    /* `updatedAt` avance à chaque renouvellement (15 s) : s'en servir comme
+       frontière jetait une commande OrderPro relevée plus de 5 s après le
+       dernier renouvellement. La frontière est l'activation, pas le bail. */
+    var hubNow = hubConfig();
+    var activatedAt = options.remote === true ? Number(hubNow.activatedAt || hubNow.updatedAt || 0) : 0;
     /* ── RÉIMPRIMER, C'EST UN GESTE HUMAIN ────────────────────────────────
      * L'identifiant stable et le registre `done` sont ce qui empêche un même
      * bon de sortir deux fois · c'est la garde qui protège la cuisine. Mais
@@ -591,6 +641,12 @@
     if (e.key === HUB_KEY || (e.key && e.key.indexOf(QUEUE_PREFIX) === 0)) { emit(); flush(); }
   });
   setInterval(renewHub, HUB_RENEW_MS);
+  /* Au réveil, reprendre le bail AVANT que le prochain sondage des commandes
+     ne livre les bons arrivés pendant le sommeil. */
+  function onWake() { try { if (!document.hidden) { renewHub(); emit(); flush(); } } catch (_) {} }
+  try { document.addEventListener('visibilitychange', onWake); } catch (_) {}
+  window.addEventListener('pageshow', onWake);
+  window.addEventListener('focus', onWake);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { emit(); if (readQueue().length) { schedule(); flush(); } });
   else { emit(); if (readQueue().length) { schedule(); flush(); } }
 

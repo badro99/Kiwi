@@ -1,0 +1,24 @@
+{
+  "fixture": "Synthetic test runs only",
+  "started": "2026-10-04T21:45:49Z",
+  "finished": "2026-10-04T22:05:10.390Z",
+  "exitCode": 130,
+  "frozenSourceUnchanged": true,
+  "sourceHashes": {
+    "assets/month-report.js": "c5df9c7afd620c307fbd93036b6c989858c475f4befdd742b2944db7f2085fb0",
+    "assets/month-report-tools.js": "48c98095780c0faff1b14db2704b41f66d212b8c93dacc62b78fefb308a5c730",
+    "assets/month-report-csv.js": "87b49ae78b04a480d95a519300e8e3cab81f5ec8cadcff383d64bb81a9e24920",
+    "assets/month-report-pdf.js": "6d4b137684ce299e09c840aa76400e00a19ee159938eb85a4b57a132aa5bb58b",
+    "assets/month-report-ui.js": "dde7a14402d659c674f475bcd7ae5f3896f43bac77713d2b86f7526ec5486f37",
+    "dashboard.html": "1772bf3288b039cc3a1bf274b909d74e1ee48c9c362e3c6c3fd4a0c324d5dfce",
+    "kiwi-sw.js": "78b6ad8bcdf120689e33d64df26fcbc1518026659162ab29b2e0b12e85939a02",
+    "functions/api/store.js": "cb3e5c3dd617f896a5ef12667488e1afb79cd7fae0d26221caa1ef9492e7ed07",
+    "functions/api/_month-report-policy.js": "3bd47824ffed6a2e14dbee10366257b0d51de81d0f751572b5d0e5cde8d08c42",
+    "tools/month-report-test.mjs": "0120a21ad72db3477ace6d9a12fe00cf024e64fb3a83392567194da1598f3b0d",
+    "tools/month-report-api-test.mjs": "a76e0dc36a3777b9d5f2c449c748a113f640b10f16ef3c162a27a51e388eddf8",
+    "tools/month-report-browser-test.mjs": "89bd388cd4dc274ce148c57a998d5ea29004fc2c82b77bbcaa38e07233861a6a",
+    "tools/month-report-fixtures.mjs": "10e6b99e2cac91e2dda727a54aa067fa91b1ef3e97554f14efd89353654d05a5",
+    "tools/asset-stamps.json": "766bc994dd13d9ae518ecbe7806d3dc2ff7c12d7e31dd05ea6eb83c2e697b20f",
+    "tools/print-hub-lease-test.mjs": "7d265db65bc22145374d414e21adebed9035de9c4bc54e65011e084302367b8d"
+  }
+}

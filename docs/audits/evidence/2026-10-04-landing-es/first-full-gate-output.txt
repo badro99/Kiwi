@@ -1,0 +1,589 @@
+
+■ Syntax (vm.Script compile)
+  ✓ 197 JS files parse clean
+
+■ Syntax · Pages Functions (node --check, ESM)
+  ✓ 170 Pages Functions parse clean
+
+■ data-action ↔ handler coverage
+  ✓ 617 unique data-action values all known to JS
+
+■ i18n key parity (data-i18n → i18n.js EN/AR)
+  ✓ 144 data-i18n keys covered in EN + AR
+
+■ Balanced <script> tags
+  ✓ 29 HTML files have balanced script tags
+
+■ Forbidden patterns
+  ⚠ background:var(--ink) debt (runtime-patched today, do not add more) — assets/pages-pro.css: 8 · assets/polish.css: 1 · assets/simple.css: 4 · assets/theme.css: 1 · assets/tokens.css: 3 · assets/ux.css: 1 · assets/agent.js: 1 · assets/features.js: 1 · assets/interactive.js: 3 · assets/pages-pro.js: 5 · dashboard.html: 15
+  ✓ no secret-shaped strings or unredacted credentials across 814 files
+
+■ Catalogue import (tools/import-test.js)
+  ✓ import gate green (101 checks: CSV, encodages, idempotence, conflits)
+
+■ Hardware honesty (tools/hardware-test.js)
+  ✓ hardware gate green (27 real/demo checks)
+
+■ Auth input bounds (tools/auth-input-test.mjs)
+  ✓ hashPassword refuses oversized input before PBKDF2
+
+■ Live sale resilience (tools/live-link-test.js)
+  ✓ live-link gate green (15 queue/idempotency checks)
+
+■ Live sale write-ahead durability
+  ✓ live sale write-ahead green (2 crash-window checks)
+
+■ Refund reporting ledger
+  ✓ refund reporting green (28 route/queue/reporting checks)
+
+■ Caisse service ledger scope
+  ✓ caisse service scope green (4 close/reopen checks)
+
+■ Financial ledger invariant
+  ✓ financial surfaces use the central ledger
+
+■ Caisse handover & closure accounting
+  ✓ caisse handover & closure accounting green (78 controls)
+
+■ MixMax reconciliation, Gap A & Gap B repair
+  ✓ mixmax reconciliation repair green (72 controls)
+
+■ Production split payment, authoritative void & menu resolution
+  ✓ production split, void & menu resolution green (119 controls)
+
+■ Settlement recovery and durable pending commands
+  ✓ settlement-recovery-test.mjs green
+  ✓ live-link-settlement-test.mjs green
+  ✓ live-link-outbox-browser-test.mjs green
+
+■ Offline transaction foundation (tools/offline-foundation-test.mjs)
+  ✓ offline foundation green (15 wiring and durability checks)
+
+■ Shared platform kernel and adapters
+  ✓ platform-kernel-test.mjs green (11 controls)
+  ✓ platform-ops-test.mjs green (45 controls)
+  ✓ media-upload-test.mjs green (-1 controls)
+  ✓ hotel-media-cleanup-test.mjs green (3 controls)
+  ✓ operations-system-test.mjs green (286 controls)
+  ✓ vertical-feature-parity-test.mjs green (0 controls)
+  ✓ pos-sale-cloud-sync-test.mjs green (0 controls)
+  ✓ store-credits-test.mjs green (20 controls)
+  ✓ caisse-opening-gate-test.mjs green (4 controls)
+  ✓ hotel-rooms-test.mjs green (23 controls)
+  ✓ hotel-room-plan-test.mjs green (89 controls)
+  ✓ hotel-room-bulk-api-test.mjs green (13 controls)
+  ✓ hotel-cloud-save-test.mjs green (0 controls)
+  ✓ hotel-room-plan-ui-test.mjs green (44 controls)
+  ✓ hotel-stays-test.mjs green (-1 controls)
+  ✓ hotel-stays-group-test.mjs green (0 controls)
+  ✓ hotel-stays-group-guards-test.mjs green (0 controls)
+  ✓ hotel-direct-pricing-test.mjs green (0 controls)
+  ✓ hotel-reservations-d1-test.mjs green (8 controls)
+  ✓ hotel-channel-sync-test.mjs green (21 controls)
+  ✓ hotel-sync-worker-test.mjs green (2 controls)
+  ✓ hotel-caisse-catalog-test.mjs green (4 controls)
+  ✓ sw-immutable-revalidation-test.mjs green (1 controls)
+  ✓ load-test-suite-test.mjs green (14 controls)
+
+■ Groupe hôtel · workflow navigateur (tools/hotel-stays-group-browser-test.mjs)
+  ✓ group browser workflow green (146 controls)
+
+■ Hôtel voyageur ordinaire · workflow navigateur (tools/hotel-direct-booking-browser-test.mjs)
+  … hotel-direct-booking-browser-test.mjs took 126s
+  ✓ direct booking workflow green (177 controls)
+
+■ Réservations, planning, livraison, encaissement, schéma
+  ✓ booking-api-test.mjs green (0 controls)
+  ✓ booking-manage-test.mjs green (0 controls)
+  ✓ hotel-dossier-safety-test.mjs green (0 controls)
+  ✓ cloud-doc-quota-test.mjs green (0 controls)
+  ✓ reservation-overlap-test.mjs green (0 controls)
+  ✓ store-credit-sale-test.mjs green (0 controls)
+  ✓ d1-schema-test.mjs green (33 controls)
+  ✓ order-delivery-test.mjs green (34 controls)
+  ✓ order-queue-pagination-test.mjs green (0 controls)
+  ✓ planning-core-test.mjs green (0 controls)
+  ✓ planning-layout-test.mjs green (0 controls)
+  ✓ reservations-test.mjs green (0 controls)
+  ✓ serveur-menu-live-test.mjs green (0 controls)
+  ✓ menu-availability-test.mjs green (0 controls)
+  ✓ service-settlement-test.mjs green (61 controls)
+  ✓ restaurant-payment-identity-test.mjs green (0 controls)
+  ✓ restaurant-reopen-test.mjs green (0 controls)
+  ✓ restaurant-reopen-ui-test.mjs green (0 controls)
+  ✓ restaurant-reopen-browser-test.mjs green (0 controls)
+  ✓ restaurant-reopen-resume-test.mjs green (0 controls)
+  ✓ table-split-lifecycle-test.mjs green (0 controls)
+  ✓ refund-split-identity-test.mjs green (0 controls)
+  ✓ restaurant-visit-close-reload-test.mjs green (0 controls)
+  ✓ restaurant-sync-release-test.mjs green (0 controls)
+  ✓ z-reconciliation-test.mjs green (0 controls)
+  ✓ z-alert-truth-test.mjs green (1 controls)
+  ✓ owner-identity-browser-test.mjs green (0 controls)
+  ✓ z-alert-copy-test.mjs green (0 controls)
+  ✓ z-reconciliation-client-test.mjs green (0 controls)
+  ✓ z-reconciliation-browser-test.mjs green (0 controls)
+  ✓ caisse-winter-clock-test.mjs green (0 controls)
+  ✓ device-timezone-test.mjs green (0 controls)
+  ✓ employee-timezone-test.mjs green (0 controls)
+  ✓ employee-timezone-browser-test.mjs green (0 controls)
+  ✓ table-visit-reuse-test.mjs green (9 controls)
+  ✓ recipe-heal-test.js green (0 controls)
+  ✓ sale-line-v2-test.mjs green (0 controls)
+  ✓ sales-centime-precision-test.mjs green (30 controls)
+  ✓ pin-hardening-test.mjs green (29 controls)
+  ✓ config-pin-projection-test.mjs green (25 controls)
+  ✓ team-doc-redaction-test.mjs green (14 controls)
+  ✓ tenant-guard-test.mjs green (46 controls)
+  ✓ pressing-workspace-test.js green (104 controls)
+  ✓ pressing-auto-ready-test.mjs green (40 controls)
+  ✓ inventory-waste-test.mjs green (24 controls)
+  ✓ inventory-universal-count-test.mjs green (26 controls)
+  ✓ inventory-expiry-test.mjs green (17 controls)
+  ✓ hotel-exceptions-test.mjs green (0 controls)
+  ✓ hotel-reception-journal-test.mjs green (0 controls)
+  ✓ hotel-stay-editing-test.mjs green (0 controls)
+  ✓ hotel-commercial-test.mjs green (0 controls)
+  ✗ hotel-commercial-layout-test.mjs exited 1 — } |  | Node.js v24.18.0
+  ✓ hotel-pos-billing-safety-test.mjs green (0 controls)
+  ✓ hotel-declarations-closing-test.mjs green (0 controls)
+
+■ Numérotation multi-caisse (tools/ticket-sequence-test.mjs)
+  ✓ deux caisses reçoivent deux plages
+  ✓ la migration repart au-dessus du dernier ticket numérique
+  ✓ les plages concurrentes ne se chevauchent pas
+  ✓ une ancienne référence mixte ne pousse pas le compteur à 9001
+  ✓ une ancienne référence à six chiffres ne bloque pas la nouvelle séquence
+  ✓ le plancher local protège les reçus absents du grand livre
+  ✓ une plage réservée ne redevient jamais disponible, même sans vente serveur
+  ✓ chaque commerce possède sa propre séquence
+  ✓ une caisse ne peut pas accaparer une plage sans borne
+  ✓ le dernier ticket possible tient sur cinq chiffres
+  ✓ le compteur refuse de produire un sixième chiffre
+  ✓ la séquence repart à quatre chiffres pour la nouvelle année
+  ✓ GET ne peut pas consommer de numéro
+  ✓ la caisse réserve une plage dédiée
+  ✓ le ticket attend son numéro avant encaissement
+  ✓ la vente envoie un UUID distinct de sa référence
+  ✓ la nouvelle caisse ne demande plus un maximum au flux de ventes
+  ✓ la compatibilité de déploiement réserve elle aussi une vraie plage
+  ✓ le compteur fait partie du schéma durable
+  ✓ la limite visible de cinq chiffres est gardée des deux côtés
+  ✓ un numéro n’est jamais consommé si son successeur ne peut pas être persisté
+
+✓ 21 contrôles de numérotation multi-caisse.
+(node:78567) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/zaka/.codex/worktrees/landing-spanish-finish/kiwi/functions/api/ticket-sequence.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/zaka/.codex/worktrees/landing-spanish-finish/kiwi/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+■ Réconciliation numéro commande (tools/order-number-reconciliation-test.mjs)
+  ✓ numéro permanent partagé entre caisse et tickets
+
+■ Règles de promotions (tools/promos-test.js)
+  ✓ promotions gate green (33 règles de prix vérifiées)
+
+■ Langue du comptoir (tools/caisse-lang-test.js)
+  ✓ langue gate green (68 contrôles : découpe, dates, montants en arabe, intégrité fr/en/ar)
+
+■ Production action honesty (tools/action-honesty-test.js)
+  ✓ production action gate green (9 real/demo checks)
+
+■ Assistant behaviour (tools/agent-test.js)
+  ✓ assistant gate green (130 checks: routing ×3 langs, arithmetic, redaction, isolation, permissions)
+
+■ Assistant feature truth + 40 operational simulations
+  ✓ agent-features-test.mjs green (52 checks)
+  ✓ agent-ops-simulations.mjs green (40 checks)
+
+■ Assistant 10/10 scorecard
+  ✓ all 10 assistant categories earned 10/10
+
+■ Stock inter-établissements (tools/stock-lookup-test.js)
+  ✓ stock inter-établissements (44 contrôles : identité, frontière, recherche, silence)
+
+■ Canaux extérieurs (tools/channel-order-test.js)
+  ✓ canaux extérieurs (38 contrôles : clé, tenancy, idempotence, bornes, décision humaine)
+
+■ Relais OrderPro (tools/orderpro-relay-test.js)
+  ✓ relais OrderPro (187 contrôles : prix canonique, catalogue boutique, refus sans carte, présence du comptoir, session de table, transitions, corps malformé, tenancy, idempotence, plafond par table, addition, salle)
+
+■ Carte par établissement (tools/menu-carte-store-test.js)
+  ✓ carte par établissement (33 contrôles : relecture au changement, isolation des magasins, cible de publication, route menu v2)
+
+■ Réception Shopify (tools/shopify-webhook-test.js)
+  ✓ réception Shopify native (61 contrôles : signature, corps brut, config, tenancy, idempotence, devise, traduction)
+
+■ Connecteur inventaire Shopify (tools/shopify-connector-test.mjs)
+
+Shopify connector · 134 checks
+✓ OAuth, encryption, exact mapping, CAS outbox and webhook loop guards
+(node:78591) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/zaka/.codex/worktrees/landing-spanish-finish/kiwi/functions/api/shopify/_lib.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/zaka/.codex/worktrees/landing-spanish-finish/kiwi/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+■ Rafraîchir la caisse (tools/caisse-refresh-test.js)
+  ✓ rafraîchir caisse (49 contrôles : honnêteté du message, calcul de « joint », modules absents)
+
+■ Documents caisse appairée (tools/cloud-doc-paired-test.js)
+  ✓ documents caisse appairée (4 contrôles : horaires partagés, démo isolée)
+
+■ Liquid Glass par défaut (tools/glass-default-test.js)
+  ✓ Liquid Glass defaults to opaque and preserves all saved owner choices
+
+■ Détail des ventes (tools/ventes-detail-test.js)
+  ✓ Ventes detail gate green (17 checks: products, payment filters, filtered total, shared days)
+
+■ Réimprimer un ticket (tools/pos-reprint-test.js)
+  ✓ réimprimer un ticket (31 contrôles : pas de double encaissement, numéro et heure d'origine, mention du duplicata, démo intacte)
+
+■ Échanges & avoirs (tools/returns-sales-sync-test.js)
+  ✓ échanges & avoirs (24 contrôles : 7 jours, dates, retours partagés, dashboard réel)
+
+■ Fusion du catalogue boutique (tools/catalog-merge-test.js)
+  ✓ fusion du catalogue boutique (51 contrôles : la vente remonte, la suppression tient, ce que l'autre ajoute arrive)
+
+■ Documents métier hors ligne (tools/cloud-doc-offline-test.js)
+  ✓ 9 cloud-document offline checks passed
+
+■ CA au grand livre (tools/kpi-ledger-test.js)
+  ✓ CA au grand livre (50 contrôles : total additionné, arrondi neutralisé, démo intacte, pas de comparaison inventée, plomberie, aucune tuile ne recompose, journée commerciale, tiret plutôt que zéro, heures de pointe, comptoir et assistant sur la même journée)
+
+■ Marges & coûts (tools/cost-margin-test.js)
+  ✓ marges & coûts (97 contrôles : quantité, lignes et non libellé, aucune constante de métier, non chiffré ≠ 0 ni 100 %, couverture annoncée, TVA hors taxe, remise répartie, coût gelé, fuites de démo fermées, TVA fabriquée retirée)
+
+■ Milliers en arabe (tools/rtl-numbers-test.js)
+  ✓ milliers en arabe (22 contrôles : réparation, non-régression des codes/dates/téléphones, démo intacte)
+
+■ Pages publiques (tools/public-assets-test.js)
+  ✓ pages publiques (300 contrôles : scripts joignables, porte étroite, aucun secret ouvert)
+
+■ Import Supabase (tools/supabase-migration-test.mjs)
+  ✓ transformations de l'import Supabase vérifiées (JSON, curseur, appartenance)
+
+■ Whole-project regressions
+  ✓ audit-remediation-peripheral-test.mjs green
+  ✓ audit-remediation-ai-channel-surfaces-test.mjs green
+  ✓ audit-remediation-connectors-test.mjs green
+  ✓ audit-remediation-refund-recovery-test.mjs green
+  ✓ audit-remediation-caisse-integration-test.mjs green
+  ✓ audit-remediation-orders-test.mjs green
+  ✓ audit-remediation-serveur-test.mjs green
+  ✓ audit-remediation-pressing-test.mjs green
+  ✓ audit-remediation-auth-test.mjs green
+  ✓ caisse-pairing-recovery-test.mjs green
+  ✓ caisse-terminal-recovery-test.mjs green
+  ✓ caisse-offline-pin-test.mjs green
+  ✓ audit-remediation-money-test.mjs green
+  ✓ audit-remediation-inventory-loyalty-test.mjs green
+  ✓ audit-remediation-dashboard-test.mjs green
+  ✓ audit-remediation-devices-test.mjs green
+  ✓ dashboard-analytics-toggle-test.mjs green
+  ✓ vexel-startup-test.mjs green
+  ✓ channel-percentage-test.mjs green
+  ✓ sales-day-contrast-test.mjs green
+  ✓ sales-ledger-cutoff-test.mjs green
+  ✓ day-report-export-test.mjs green
+  ✓ day-report-paired-scope-test.mjs green
+  ✓ day-report-multi-service-test.mjs green
+  ✓ card-z-reconciliation-test.mjs green
+  ✓ sale-replay-visit-binding-test.mjs green
+  ✓ operating-day-drawers-test.mjs green
+  ✓ operating-day-stock-test.mjs green
+  ✓ operating-day-ai-context-test.mjs green
+  ✓ operating-day-split-ui-test.mjs green
+  ✓ operating-day-operator-test.mjs green
+  ✓ operating-day-orders-integration-test.mjs green
+  ✓ operating-day-admin-test.mjs green
+  ✓ operating-day-handover-test.mjs green
+  ✓ counter-sale-flow-test.mjs green
+  ✓ operating-day-inventory-cycle-test.mjs green
+  ✓ operating-day-split-session-test.mjs green
+  ✓ cash-sessions-auth-test.mjs green
+  ✓ operating-day-sync-status-test.mjs green
+  ✓ live-feed-backfill-test.mjs green
+  ✓ ticket-141-test.mjs green
+  ✓ kpi-card-layout-test.mjs green
+  ✓ dashboard-card-truth-test.mjs green
+  ✓ install-card-icon-test.mjs green
+  ✓ caisse-menu-add-contrast-test.mjs green
+  ✓ caisse-product-art-test.mjs green
+  ✓ check-godmode.mjs green
+  ✓ operator-workspace-test.mjs green
+  ✓ scoped-tab-isolation-test.mjs green
+  ✓ cross-store-copy-test.mjs green
+  ✓ admin-crm-layout-test.mjs green
+  ✓ maison-client-history-test.mjs green
+  ✓ client-history-browser-test.mjs green
+  ✓ clients-campaign-flag-test.mjs green
+  ✓ dashboard-unoffered-actions-test.mjs green
+  ✓ support-system-test.mjs green
+  ✓ operator-snapshot-test.mjs green
+  ✓ caisse-support-entry-test.mjs green
+  ✓ caisse-payment-upload-test.mjs green
+  ✓ caisse-auto-receipt-test.mjs green
+  ✓ dashboard-activity-test.mjs green
+  ✓ caisse-reconnect-test.mjs green
+  ✓ caisse-pairing-repair-test.mjs green
+  ✓ takeaway-history-timestamps-test.mjs green
+  ✓ takeaway-stale-archive-test.mjs green
+  ✓ floorplan-sync-test.js green
+  ✓ kitchen-relay-test.js green
+  ✓ takeout-kds-ready-test.mjs green
+  ✓ caisse-godmode-toggles-test.mjs green
+  ✓ kitchen-print-queue-test.mjs green
+  ✓ print-relay-idempotency-test.mjs green
+  ✓ print-hub-lease-test.mjs green
+  ✓ service-draft-durability-test.mjs green
+  ✓ hotel-group-draft-escape-test.mjs green
+  ✓ payment-kitchen-dispatch-test.mjs green
+  ✓ food-production-print-test.mjs green
+  ✓ order-mode-exit-test.js green
+  ✓ table-takeaway-routing-test.js green
+  ✓ orderpro-inbox-display-test.js green
+  ✓ caisse-discount-and-phantom-table-test.js green
+  ✓ caisse-offline-sync-test.mjs green
+  ✓ resto-carte-test.js green
+  ✓ restaurant-menu-route-test.js green
+  ✓ menu-pull-route-test.js green
+  ✓ restaurant-menu-performance-test.js green
+  ✓ restaurant-menu-ledger-reconciliation-test.js green
+  ✓ restaurant-menu-nutrition-tab-test.js green
+  ✗ build-guides-check.mjs exited 1 — generated guide files are stale: |   sitemap.xml | run: node tools/build-guides.mjs
+  ✓ article-template-test.mjs green
+  ✓ content-freshness-test.mjs green
+  ✓ restaurant-menu-peak-hours-test.js green
+  ✓ restaurant-units-test.js green
+  ✓ menu-nutrition-test.mjs green
+  ✓ employee-live-test.mjs green
+  ✓ employee-trade-shell-test.mjs green
+  ✓ locale-handoff-test.mjs green
+  ✓ canonical-origin-test.mjs green
+  ✓ landing-es-test.mjs green
+  … landing-es-browser-test.mjs took 78s
+  ✗ landing-es-browser-test.mjs exited 1 — fr 1440: 1440/1440, clipped=0, overlap=0, errors=0 | Spanish browser QA: 200/201 checks passed | expanded feature text fits {"scrollWidth":1440,"clientWidth":1440,"clipped":[{"text":"08:02","tag":"SPAN","cls":"font-mono text-[9px] whitespace-nowrap text-white/85 tabular-nums","container":"kw-team-bar kw-team-bar-0 absolute top-0 flex h-full items-center gap-1.5 overflow-hidden rounded-full border border-[var(--color-accent)]/35 bg-[var(--color-accent)]/12 pl-[3px]","left":1046.2802734375,"right":1073.36181640625,"bounds":[1019.854736328125,1057.8375244140625]}],"outside":[],"overlaps":[],"svgOverflow":[]}
+  ✓ void-stock-test.js green
+  ✓ caisse-stock-test.mjs green
+  ✓ boutique-variant-stock-test.mjs green
+  ✓ boutique-existing-barcode-test.mjs green
+  ✓ boutique-custom-color-test.js green
+  ✓ catalog-stock-transaction-test.mjs green
+  ✓ inventory-ledger-test.mjs green
+  ✓ maison-stock-movements-test.mjs green
+  ✓ maison-till-stock-journal-test.mjs green
+  ✓ maison-ticket-offline-test.mjs green
+  ✓ maison-counter-truth-test.mjs green
+  ✓ stock-costing-migration-test.mjs green
+  ✓ stock-category-management-test.mjs green
+  ✓ pairing-resolver-test.mjs green
+  ✓ pairing-parity-test.mjs green
+  ✓ split-bill-tender-test.mjs green
+  ✓ business-day-timezone-test.mjs green
+  ✓ takeaway-cancel-authorization-test.mjs green
+  ✓ surface-parity-test.mjs green
+  ✓ caisse-stock-sync-test.mjs green
+  ✓ phone-test.mjs green
+  ✓ clients-sync-test.mjs green
+  ✓ pwa-shell-test.js green
+  ✓ asset-stamp-coverage-test.mjs green
+  ✓ stamp-drift-test.js green
+  ✓ bump-stamp-test.mjs green
+  ✓ pos-registry-sync-test.mjs green
+  ✓ pos-maison-test.mjs green
+  ✓ maison-caisse-browser-test.mjs green
+  ✓ maison-dashboard-browser-test.mjs green
+  ✓ maison-movement-kpis-browser-test.mjs green
+  ✓ retail-return-stock-browser-test.mjs green
+  ✓ shared-day-selector-test.mjs green
+  ✓ avoir-customer-scope-browser-test.mjs green
+  ✓ clients-book-page-browser-test.mjs green
+  ✓ transactions-nav-stability-browser-test.mjs green
+  ✓ shared-day-selector-browser-test.mjs green
+  ✓ date-controls-browser-test.mjs green
+  ✓ discount-policy-test.mjs green
+  ✓ discount-policy-api-test.mjs green
+  ✓ discount-policy-browser-test.mjs green
+  ✓ discount-policy-cloud-test.mjs green
+  ✓ discount-policy-live-browser-test.mjs green
+  ✓ caisse-viewport-guard-test.mjs green
+  ✓ boutique-printer-settings-test.mjs green
+  ✓ entitlements-test.mjs green
+  ✓ store-templates-test.mjs green
+  ✓ pos-inventory-count-test.mjs green
+  ✓ hotel-seed-test.mjs green
+  ✓ hotel-units-test.mjs green
+  ✓ economat-unit-deactivation-test.mjs green
+  ✓ hotel-unit-scope-test.mjs green
+  ✓ hotel-location-attribution-test.mjs green
+  ✓ economat-catalogue-test.mjs green
+  ✓ department-catalogue-test.mjs green
+  ✓ internal-request-test.mjs green
+  ✓ economat-substitution-test.mjs green
+  ✓ economat-review-revision-test.mjs green
+  ✓ economat-v1-resolution-test.mjs green
+  ✓ economat-request-fields-test.mjs green
+  ✓ economat-review-test.mjs green
+  ✓ economat-handover-test.mjs green
+  ✓ hotel-transfer-test.mjs green
+  ✓ economat-real-d1-transfer-test.mjs green
+  ✓ room-charge-test.mjs green
+  ✓ hotel-reports-test.mjs green
+  ✓ hotel-economat-ui-test.mjs green
+  ✓ economat-transfer-provenance-test.mjs green
+  ✓ economat-procurement-location-test.mjs green
+  ✓ economat-custody-contract-test.mjs green
+  ✓ economat-rd-invariants-test.mjs green
+  ✓ formula-protocol-test.mjs green
+  ✓ formula-kitchen-paper-test.mjs green
+  ✓ orderpro-formula-explicit-choice-test.mjs green
+  ✓ orderpro-formula-choice-images-test.mjs green
+  ✓ orderpro-invalid-options-test.mjs green
+  ✓ orderpro-session-reorder-test.mjs green
+  ✓ orderpro-shared-table-test.mjs green
+  ✓ orderpro-cancellation-lifecycle-test.mjs green
+  ✓ orderpro-inbox-confirmation-test.mjs green
+  ✓ orderpro-floorplan-race-test.mjs green
+  ✓ field-whole-item-split-test.mjs green
+  ✓ field-orderpro-acceptance-test.mjs green
+  ✓ field-table-transfer-test.mjs green
+  ✓ caisse-table-actions-test.mjs green
+  ✓ caisse-item-cancel-browser-test.mjs green
+  ✓ trade-copy-test.mjs green
+  ✓ floor-accept-test.mjs green
+  ✓ onboarding-gate-test.mjs green
+  ✓ store-creation-ack-test.mjs green
+  ✓ store-creation-api-test.mjs green
+  ✓ api-boundaries-test.mjs green
+  ✗ app-bundle-test.mjs — ✗ build sans erreur — node_modules/@fontsource-variable/inter-tight/files/inter-tight-latin-wght-normal.woff2 introuvable ; lance npm install dans app/ ; node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff2 introuvable ; lance npm install dans app/ ; node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-500-normal.woff2 introuvable ; lance npm install dans app/ ; node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-600-normal.woff2 introuvable ; lance npm install dans app/
+  ✗ app-bundle-test.mjs — ✗ Inter Tight et IBM Plex Sans Arabic sont embarquées localement
+  ✓ app-release-test.mjs green
+  ✓ biometric-unlock-test.mjs green
+  ✓ native-workspace-ux-test.mjs green
+  ✓ native-device-layout-test.mjs green
+  … native-pass2-browser-test.mjs took 74s
+  ✓ native-pass2-browser-test.mjs green
+  ✓ native-pass3-gates-test.mjs green
+  ✓ native-pass3-locale-test.mjs green
+  ✓ native-pass4-test.mjs green
+  ✓ native-pass5-test.mjs green
+  ✓ native-pass7-test.mjs green
+  ✓ native-demo-ledger-test.mjs green
+  ✓ native-qa-six-fixes-test.mjs green
+  … ticket151-browser-test.mjs took 97s
+  ✓ ticket151-browser-test.mjs green
+  ✓ catalog-workspace-test.mjs green
+  ✓ native-store-readiness-test.mjs green
+  ✓ native-host-bridge-test.mjs green
+  ✓ account-deletion-test.mjs green
+  ✓ account-deletion-ui-test.mjs green
+  ✓ push-registration-test.mjs green
+  ✓ security-regression-test.js green
+  ✓ kiwi-agent-access-test.mjs green
+  ✓ kiwi-ui-qa-mcp-test.mjs green
+  ✓ sold-insights-test.js green
+  ✓ sold-insights-layout-test.mjs green
+  ✓ table-refresh-test.js green
+  ✓ table-transfer-merge-test.mjs green
+  ✓ kitchen-void-protocol-test.mjs green
+  ✓ multi-device-collision-test.mjs green
+  ✓ kitchen-modifiers-and-seating-test.mjs green
+  ✓ amira-integration-test.mjs green
+  ✓ security-and-channel-hardening-test.mjs green
+  ✓ password-policy-test.mjs green
+  ✓ plan-tier-test.mjs green
+  ✓ error-reporter-test.mjs green
+  ✓ tickets-retest-test.mjs green
+  ✓ tickets-taxonomy-test.mjs green
+  ✓ tickets-storage-purge-test.mjs green
+  ✓ error-redaction-test.mjs green
+  ✓ supplier-actions-test.mjs green
+  ✓ print-paper-test.mjs green
+  ✓ day-report-print-format-test.mjs green
+  ✓ retail-tender-methods-test.mjs green
+  ✓ retail-tender-browser-test.mjs green
+  ✓ retail-acompte-api-test.mjs green
+  ✓ retail-acompte-browser-test.mjs green
+  ✓ z-refund-total-coherence-test.mjs green
+  ✓ caisse-boot-restore-guard-test.mjs green
+  ✓ close-register-durability-test.mjs green
+  ✓ kitchen-ticket-wrap-test.mjs green
+  ✓ settled-table-reopen-test.mjs green
+  ✓ order-line-cap-test.mjs green
+  ✓ kitchen-reprint-test.mjs green
+  ✓ kitchen-blind-outage-test.mjs green
+  ✓ relay-print-verdict-test.mjs green
+  ✓ station-printer-routing-test.mjs green
+  ✓ print-socket-test.mjs green
+  ✓ print-relay-test.mjs green
+  ✓ android-print-bridge-test.mjs green
+  ✓ bridge-win7-test.mjs green
+  ✓ agent-voice-test.mjs green
+  ✓ agent-vision-test.mjs green
+  ✓ briefing-test.mjs green
+  ✓ briefing-tenant-test.mjs green
+  ✓ register-phone-tickets-test.mjs green
+  ✓ order-queue-tenant-test.mjs green
+  ✓ clients-sync-tenant-test.mjs green
+  ✓ clients-book-contrast-test.mjs green
+  ✓ card-confirm-center-test.mjs green
+  ✓ scan-view-test.mjs green
+  ✓ till-scroll-test.mjs green
+  ✓ caisse-chip-gate-test.mjs green
+  ✓ lock-caisse-link-test.mjs green
+  ✓ check-guard-test.mjs green
+  ✓ day-report-inset-test.mjs green
+  ✓ menu-phone-test.mjs green
+  ✓ briefing-sales-drop-test.mjs green
+  ✓ briefing-low-stock-test.mjs green
+  ✓ briefing-margin-test.mjs green
+  ✓ briefing-planning-test.mjs green
+  ✓ briefing-cancellations-test.mjs green
+  ✓ briefing-discounts-test.mjs green
+  ✓ briefing-cash-sessions-test.mjs green
+  ✓ briefing-late-orders-test.mjs green
+  ✓ briefing-card-placement-test.mjs green
+  ✓ dark-fixes-gradient-test.mjs green
+  ✓ action-center-loop-test.mjs green
+  ✓ err-reporter-silence-test.mjs green
+  ✓ depenses-demo-gate-test.mjs green
+  ✓ invoice-receipt-test.mjs green
+  ✓ receipt-logo-print-test.mjs green
+  ✓ formula-receipt-pricing-test.mjs green
+  ✓ sale-invoice-test.mjs green
+  ✓ ai-routes-test.mjs green
+  ✓ inventory-count-test.mjs green
+  ✓ inventory-count-review-test.mjs green
+  ✓ menu-scan-test.mjs green
+  ✓ intake-slice1-test.mjs green
+  ✓ intake-posting-test.mjs green
+  ✓ intake-conflict-test.mjs green
+  ✓ intake-archive-test.mjs green
+  ✓ media-owner-test.mjs green
+  ✓ admin-delete-r2-test.mjs green
+  ✓ legacy-scan-test.mjs green
+  ✓ menu-translate-test.mjs green
+  ✓ menu-i18n-test.mjs green
+  ✓ order-langs-test.mjs green
+  ✓ salle-scan-test.mjs green
+  ✓ pin-dashboard-test.mjs green
+  ✓ idle-lock-test.mjs green
+
+■ Native setup shell interaction (tools/app-interaction-test.mjs)
+  ✗ bundle build failed: node_modules/@fontsource-variable/inter-tight/files/inter-tight-latin-wght-normal.woff2 introuvable ; lance npm install dans app/ ; node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff2 introuvable ; lance npm install dans app/ ; node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-500-normal.woff2 introuvable ; lance npm install dans app/ ; node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-600-normal.woff2 introuvable ; lance npm install dans app/
+
+■ Native owner home and till on a phone (tools/native-owner-home-browser-test.mjs)
+  ✗ bundle build failed: node_modules/@fontsource-variable/inter-tight/files/inter-tight-latin-wght-normal.woff2 introuvable ; lance npm install dans app/ ; node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff2 introuvable ; lance npm install dans app/ ; node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-500-normal.woff2 introuvable ; lance npm install dans app/ ; node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-600-normal.woff2 introuvable ; lance npm install dans app/
+
+■ Text contrast (tools/text-contrast-test.js)
+  ✓ operational labels use readable neutrals
+
+■ Politique typographique (tools/type-policy-test.js)
+  ✓ Instrument Serif absent from 642 shipped files
+  ✓ Google Fonts imports exclude Instrument Serif
+  ✓ 12 serif/editorial/display aliases resolve to upright Inter Tight
+  ✓ visible HTML, SVG, CSS and generated chunks contain no U+2014 em dash
+  ✓ i18n.js, caisse-lang.js and menu-i18n.js contain no U+2014 string
+
+────────────────────────────────────────────────────────────
+✗ 7 failure(s), 1 warning(s)

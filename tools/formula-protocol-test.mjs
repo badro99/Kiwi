@@ -293,11 +293,15 @@ const isFmlDraftSatisfiedMatch = serveurSource.match(/function isFmlDraftSatisfi
 const computeFmlUnitExtraMatch = serveurSource.match(/function computeFmlUnitExtra\([\s\S]*?\n    \}/);
 const openFormulaSheetMatch = serveurSource.match(/function openFormulaSheet\([\s\S]*?\n    \}/);
 const confirmFormulaMatch = serveurSource.match(/function confirmFormula\([\s\S]*?\n    \}/);
+const childHelpersMatch = serveurSource.match(/function fmlChildGroups\([\s\S]*?\n    function fmlChildOptsHTML/);
+const isReqMatch = serveurSource.match(/const isReq = def => [^\n]*/);
+const optsSigMatch = serveurSource.match(/const optsSig = opts => [^\n]*/);
 
 let serveurHarness = null;
 if (
   !itemHasFormulaMatch || !isFmlSlotSatisfiedMatch || !isFmlUnitSatisfiedMatch ||
   !isFmlDraftSatisfiedMatch || !computeFmlUnitExtraMatch || !openFormulaSheetMatch || !confirmFormulaMatch
+  || !childHelpersMatch || !isReqMatch || !optsSigMatch
 ) {
   ok(false, 'one or more formula functions missing from kiwi-serveur.html');
 } else {
@@ -317,6 +321,11 @@ if (
       let idSeq = 0;
       const newLineUid = () => 'uid-' + (++idSeq);
       const $ = () => ({ classList: { add: () => {}, remove: () => {} }, innerHTML: '' });
+      let optionGroups = {};
+      let itemOptions = {};
+      ${isReqMatch[0]}
+      ${optsSigMatch[0]}
+      ${childHelpersMatch[0].replace(/\n    function fmlChildOptsHTML$/, '')}
 
       ${itemHasFormulaMatch[0]}
       ${isFmlSlotSatisfiedMatch[0]}
@@ -328,6 +337,7 @@ if (
 
       return {
         setMenuItems: (items) => { menuItems = items; },
+        setOptionGroups: (g) => { optionGroups = g; },
         setTableOrders: (to) => { tableOrders = to; },
         getTableOrders: () => tableOrders,
         getDraft: () => fmlDraft,
@@ -465,6 +475,33 @@ if (!serveurHarness) {
   ok(parent1.formulaUid !== parent2.formulaUid, 'distinct formulaUid minted per portion');
   ok(multiOrders[1].formulaUid === parent1.formulaUid && multiOrders[2].formulaUid === parent1.formulaUid, 'portion 1 children share parent1 formulaUid');
   ok(multiOrders[4].formulaUid === parent2.formulaUid && multiOrders[5].formulaUid === parent2.formulaUid, 'portion 2 children share parent2 formulaUid');
+
+  /* Browse, 2026-10-05: the included Espresso carries a required "Hot or
+     Ice". The sheet asks it, blocks until answered, and sends the answer on
+     the included line so the bar knows. */
+  serveurHarness.setOptionGroups({
+    og_temp: { name: 'Hot or Ice', kind: 'radio', required: true, vals: [{ n: 'Hot', p: 0 }, { n: 'Ice', p: 0 }] },
+  });
+  serveurHarness.setMenuItems(sampleMenuItems.map((it) => (it.id === 'm-b1' ? { ...it, name: 'Espresso', opts: ['og_temp'] } : it)));
+  serveurHarness.setTableOrders({ T1: [] });
+  serveurHarness.openFormulaSheet('m-brunch', 2);
+  const hotIce = serveurHarness.getDraft();
+  hotIce.units.forEach((u) => { u.sl_pain = new Set(['m-p1']); u.sl_boisson = new Set(['m-b1']); });
+  ok(serveurHarness.isFmlDraftSatisfied() === false, 'an included Espresso without Hot or Ice keeps the formula incomplete');
+  serveurHarness.confirmFormula();
+  ok(serveurHarness.getTableOrders().T1.length === 0, 'and the formula cannot be added yet');
+  hotIce.childSel[0]['sl_boisson|m-b1'] = { og_temp: 'Ice' };
+  ok(serveurHarness.isFmlDraftSatisfied() === false, 'each portion answers for its own coffee');
+  hotIce.childSel[1]['sl_boisson|m-b1'] = { og_temp: 'Hot' };
+  ok(serveurHarness.isFmlDraftSatisfied() === true, 'answered for both portions, the formula is complete');
+  serveurHarness.confirmFormula();
+  const hiLines = serveurHarness.getTableOrders().T1.filter((l) => l.id === 'm-b1');
+  ok(hiLines.length === 2, 'two included Espressos', hiLines.length);
+  ok(JSON.stringify(hiLines.map((l) => l.opts)) === JSON.stringify([[{ group: 'og_temp', label: 'Ice', price: 0 }], [{ group: 'og_temp', label: 'Hot', price: 0 }]]),
+    'each carries its answer, free of charge, as the server expects', JSON.stringify(hiLines.map((l) => l.opts)));
+  ok(hiLines.every((l) => l.price === 0), 'the included coffee still costs nothing');
+  const bread = serveurHarness.getTableOrders().T1.find((l) => l.id === 'm-p1');
+  ok(Array.isArray(bread.opts) && bread.opts.length === 0, 'an included item without options sends none');
 }
 
 // ── 5. KDS / Kitchen Screen & Ticket Extraction ─────────────────────────────
@@ -1145,7 +1182,7 @@ if (!renderSlotsMatch) {
 }
 
 // ── 10. Hard Count Pinning ──────────────────────────────────────────────────
-const EXPECTED_COUNT = 123;
+const EXPECTED_COUNT = 131;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);

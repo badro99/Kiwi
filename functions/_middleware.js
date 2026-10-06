@@ -252,6 +252,7 @@ async function routeRequest(context) {
     || path === '/de' || path.startsWith('/de/')
     || path === '/it' || path.startsWith('/it/')
     || path === '/nl' || path.startsWith('/nl/')
+    || path === '/es' || path.startsWith('/es/')
     || path.startsWith('/_next/') || path.startsWith('/images/')
     || path.startsWith('/model/') || path.startsWith('/draco/')
     // La favicone du site vitrine vit a la racine, pas sous /assets : Next la
