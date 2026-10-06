@@ -49,7 +49,8 @@ const nativeFixture = `<!doctype html><html class="kiwi-native kiwi-native-ios">
   <link rel="stylesheet" href="/assets/tokens.css"><link rel="stylesheet" href="/assets/theme.css">
   <link rel="stylesheet" href="/assets/design-vexel.css"><link rel="stylesheet" href="/app/src/native-runtime.css">
   <script src="/assets/i18n.js" defer></script><script src="/assets/interactive.js" defer></script>
-  <script src="/assets/clients-store.js" defer></script><script src="/assets/clients-directory.js" defer></script>
+  <script src="/assets/venue-store.js" defer></script><script src="/assets/clients-store.js" defer></script>
+  <script src="/assets/clients-directory.js" defer></script>
 </head><body class="design-vexel kiwi-native-owner"><button type="button" data-action="clients-directory">Customers fixture</button><main class="container"></main></body></html>`;
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
@@ -134,6 +135,9 @@ try {
       localStorage.setItem(bookKey, JSON.stringify({ list: clients, seq: 1 }));
       window.KiwiEnv = { isReal: () => false, demosAllowed: true };
       document.addEventListener('DOMContentLoaded', () => {
+        document.documentElement.lang = lang;
+        document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+        document.documentElement.dataset.theme = theme;
         document.documentElement.style.setProperty('--kiwi-host-safe-top', '62px');
         document.documentElement.style.setProperty('--kiwi-host-safe-bottom', '34px');
       }, { once: true });
