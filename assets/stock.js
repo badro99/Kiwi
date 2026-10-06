@@ -275,7 +275,7 @@
       dayFri: 'Vendredi', daySat: 'Samedi', daySun: 'Dimanche',
       // Misc
       ramOrder: 'Commande #', ramItems: 'articles',
-      ramTomorrow: 'Demain', ramFriday: 'Vendredi', ramNextThu: 'Jeudi prochain', ramTodayLate: "Aujourd'hui 14h",
+      noDeliveryPlanned: 'Aucune livraison prévue', noDeliveryHint: 'Ajoutez un jour de livraison à un fournisseur', ramTomorrow: 'Demain', ramFriday: 'Vendredi', ramNextThu: 'Jeudi prochain', ramTodayLate: "Aujourd'hui 14h",
       addItemTitle: 'Nouvel article',
       addItemName: 'Nom', addItemCat: 'Catégorie', addItemUnit: 'Unité',
       addItemSupplier: 'Fournisseur principal', addItemPar: 'Par level', addItemReorder: 'Niveau de réappro',
@@ -582,7 +582,7 @@
       dayMon: 'Monday', dayTue: 'Tuesday', dayWed: 'Wednesday', dayThu: 'Thursday',
       dayFri: 'Friday', daySat: 'Saturday', daySun: 'Sunday',
       ramOrder: 'Order #', ramItems: 'items',
-      ramTomorrow: 'Tomorrow', ramFriday: 'Friday', ramNextThu: 'Next Thursday', ramTodayLate: 'Today 2pm',
+      noDeliveryPlanned: 'No delivery planned', noDeliveryHint: 'Add a delivery day to a supplier', ramTomorrow: 'Tomorrow', ramFriday: 'Friday', ramNextThu: 'Next Thursday', ramTodayLate: 'Today 2pm',
       addItemTitle: 'New item',
       addItemName: 'Name', addItemCat: 'Category', addItemUnit: 'Unit',
       addItemSupplier: 'Primary supplier', addItemPar: 'Par level', addItemReorder: 'Reorder level',
@@ -879,7 +879,7 @@
       dayMon: 'الاثنين', dayTue: 'الثلاثاء', dayWed: 'الأربعاء', dayThu: 'الخميس',
       dayFri: 'الجمعة', daySat: 'السبت', daySun: 'الأحد',
       ramOrder: 'الطلبية #', ramItems: 'منتجًا',
-      ramTomorrow: 'غدًا', ramFriday: 'الجمعة', ramNextThu: 'الخميس القادم', ramTodayLate: 'اليوم 14س',
+      noDeliveryPlanned: 'لا توجد توصيلات مجدولة', noDeliveryHint: 'أضف يوم توصيل لأحد الموردين', ramTomorrow: 'غدًا', ramFriday: 'الجمعة', ramNextThu: 'الخميس القادم', ramTodayLate: 'اليوم 14س',
       addItemTitle: 'منتج جديد',
       addItemName: 'الاسم', addItemCat: 'الفئة', addItemUnit: 'الوحدة',
       addItemSupplier: 'المورد الرئيسي', addItemPar: 'الحد', addItemReorder: 'حد إعادة التموين',
@@ -2154,7 +2154,7 @@
         <div class="st-kpi">
           <div class="st-kpi-l">${esc(t('kpiDelivL'))}<span class="st-kpi-ico">${svg('truck', 14)}</span></div>
           <div class="st-kpi-v" style="font-size:22px;">${esc(nextDelivery.when)}</div>
-          <div class="st-kpi-sub">${esc(nextDelivery.supplier)} · ${esc(fmtMad(nextDelivery.cost))}</div>
+          <div class="st-kpi-sub">${esc(nextDelivery.supplier)}${nextDelivery.cost == null ? '' : ' · ' + esc(fmtMad(nextDelivery.cost))}</div>
         </div>
       </div>
     `;
@@ -2300,7 +2300,7 @@
         };
       }
     }
-    return { when: '·', supplier: '·', cost: 0 };
+    return { when: t('noDeliveryPlanned'), supplier: t('noDeliveryHint'), cost: null };
   }
 
   function tickFoodCost() {

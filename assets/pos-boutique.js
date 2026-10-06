@@ -2698,14 +2698,17 @@
     const input = $('#bq-ean', panel);
     input.onkeydown = (e) => { if (e.key === 'Enter') { const v = input.value; input.value = ''; lookupScan(v); } };
     input.oninput = () => { if (input.value.replace(/\D/g, '').length >= 13) { const v = input.value; input.value = ''; lookupScan(v); } };
-    input.onblur = () => {
+    const refocusScan = () => {
       setTimeout(() => {
         if (state.view !== 'scan') return;
         if ($$('.modal-veil.is-open', root).length) return;
+        // Le menu ouvert ne rappelle pas le clavier ; la douchette retrouve le champ dès qu'il se referme.
+        if (document.body.classList.contains('nav-open')) { refocusScan(); return; }
         const i = $('#bq-ean', root);
         if (i) i.focus();
       }, 120);
     };
+    input.onblur = refocusScan;
     /* Un seul des deux existe selon le contexte (vraie boutique vs démo). */
     const mk = $('#bq-scan-mock', panel);
     if (mk) mk.onclick = mockScan;

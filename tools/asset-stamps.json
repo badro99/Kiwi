@@ -644,12 +644,12 @@
     "sha": "530ff7c046c57b2c"
   },
   "assets/pos-boutique.css": {
-    "v": "44",
+    "v": "46",
     "sha": "3966a6796d909226"
   },
   "assets/pos-boutique.js": {
-    "v": "44",
-    "sha": "bf6005f5e562e6a3"
+    "v": "46",
+    "sha": "859b62f43f5a92e3"
   },
   "assets/pos-coiffure.css": {
     "v": "5",
@@ -660,8 +660,8 @@
     "sha": "3673be5ef49cb7de"
   },
   "assets/pos-dispatch.js": {
-    "v": "67",
-    "sha": "7eb1f3cf2943959a"
+    "v": "68",
+    "sha": "ab154c608540e168"
   },
   "assets/pos-epicerie.css": {
     "v": "5",
@@ -912,8 +912,8 @@
     "sha": "80ea6310593d10ec"
   },
   "assets/sold-insights.js": {
-    "v": "8",
-    "sha": "e7aba4ab82b306dc"
+    "v": "9",
+    "sha": "de2940ac6fd209f6"
   },
   "assets/staff-roles.js": {
     "v": "1",
@@ -924,8 +924,8 @@
     "sha": "d49ee85d276e22d4"
   },
   "assets/stock.js": {
-    "v": "62",
-    "sha": "86d5270256fd0e55"
+    "v": "63",
+    "sha": "f92aaf489e04de93"
   },
   "assets/store-templates.js": {
     "v": "2",
