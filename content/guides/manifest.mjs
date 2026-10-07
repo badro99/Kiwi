@@ -13,27 +13,27 @@ const collection = (title, description, ogTitle, ogDescription, image, imageAlt)
 export const HUBS = Object.freeze({
   fr: collection(
     'Guides de gestion pour restaurants au Maroc · Kiwi',
-    'Des guides pour ouvrir un restaurant au Maroc, choisir sa caisse, calculer le food cost, gérer le stock, analyser la carte et trouver le seuil de rentabilité.',
+    'Guides pour restaurants au Maroc : caisse, food cost, stock, carte, seuil de rentabilité et fidélisation client, avec des méthodes et exemples en MAD.',
     'Kiwi Guides · Gérer un restaurant au Maroc avec de meilleurs chiffres',
     'Méthodes, formules et protocoles concrets pour décider, mesurer et agir.',
     'assets/articles/guides-restaurant-maroc.png',
-    'Six méthodes Kiwi pour préparer, choisir, mesurer, expliquer, arbitrer et planifier dans un restaurant.',
+    'Sept méthodes Kiwi pour préparer, choisir, mesurer, expliquer, arbitrer et planifier dans un restaurant.',
   ),
   en: collection(
     'Restaurant management guides for Morocco · Kiwi',
-    'Practical guides for opening a restaurant in Morocco, choosing POS, calculating food cost, controlling inventory, engineering the menu and finding break-even.',
+    'Restaurant guides for Morocco: opening, POS, food cost, inventory, menu engineering, break-even and customer loyalty, with practical MAD examples.',
     'Kiwi Guides · Better restaurant decisions in Morocco',
     'Testable protocols, explicit formulas and worked MAD examples for restaurant operators.',
     'assets/articles/guides-restaurant-morocco-en.png',
-    'Six Kiwi methods for preparing, choosing, measuring, explaining, prioritising and planning in a restaurant.',
+    'Seven Kiwi methods for preparing, choosing, measuring, explaining, prioritising and planning in a restaurant.',
   ),
   ar: collection(
     'أدلة إدارة المطاعم في المغرب · Kiwi',
-    'أدلة عملية لفتح مطعم في المغرب واختيار برنامج الكاشير وحساب تكلفة الطعام وإدارة المخزون وهندسة القائمة ونقطة التعادل بأمثلة قابلة للتطبيق بالدرهم.',
+    'أدلة عملية لفتح مطعم في المغرب واختيار برنامج الكاشير وحساب تكلفة الطعام وإدارة المخزون وهندسة القائمة ونقطة التعادل وولاء العملاء بأمثلة قابلة للتطبيق بالدرهم.',
     'أدلة Kiwi · قرارات أفضل لإدارة المطعم',
     'بروتوكولات قابلة للاختبار وصيغ واضحة وأمثلة مفصلة بالدرهم.',
     'assets/articles/guides-restaurant-morocco-ar.png',
-    'ست طرق من Kiwi للتحضير والاختيار والقياس والتفسير والمفاضلة والتخطيط في المطعم.',
+    'سبع طرق من Kiwi للتحضير والاختيار والقياس والتفسير والمفاضلة والتخطيط في المطعم.',
   ),
 });
 
@@ -232,6 +232,7 @@ export const TOPICS = Object.freeze([
         'assets/articles/seuil-rentabilite-restaurant-fr.png',
         'Calcul du seuil de rentabilité d’un restaurant : 100 000 MAD divisés par 58 pour cent donnent 172 414 MAD.',
         'Pilotage financier restaurant', '2026-08-23T21:00:00+02:00',
+        { dateModified: '2026-10-07T20:30:00+02:00' },
       ),
       en: article(
         'Restaurant break-even point: formula and MAD calculator · Kiwi',
@@ -241,6 +242,7 @@ export const TOPICS = Object.freeze([
         'assets/articles/restaurant-break-even-en.png',
         'Restaurant break-even calculation: 100,000 MAD divided by 58 percent equals 172,414 MAD.',
         'Restaurant financial planning', '2026-08-23T21:00:00+02:00',
+        { dateModified: '2026-10-07T20:30:00+02:00' },
       ),
       ar: article(
         'نقطة التعادل للمطعم: الصيغة والحساب بالدرهم · Kiwi',
@@ -250,6 +252,7 @@ export const TOPICS = Object.freeze([
         'assets/articles/restaurant-break-even-ar.png',
         'حساب نقطة تعادل مطعم: مئة ألف درهم مقسومة على 58 في المئة تساوي 172414 درهما.',
         'التخطيط المالي للمطعم', '2026-08-23T21:00:00+02:00',
+        { dateModified: '2026-10-07T20:30:00+02:00' },
       ),
     },
   },
@@ -292,6 +295,15 @@ export const TOPICS = Object.freeze([
         'فتح مطعم', '2026-08-24T00:30:00+02:00',
         { legalReviewDate: '2026-08-24' },
       ),
+    },
+  },
+  {
+    id: 'loyalty',
+    routes: {"fr": "/fr/guides/fidelisation-client-remises-restaurant/", "en": "/en/guides/restaurant-customer-loyalty-discounts/", "ar": "/ar/guides/ولاء-عملاء-المطعم-والخصومات/"},
+    pages: {
+      fr: article("Fidélisation restaurant : tous les clients n’ont pas besoin de la même remise · Kiwi", "Fidélisez les clients de votre restaurant : adaptez vos offres aux visites, calculez le coût des remises en MAD et mesurez les retours.", "Fidélisation restaurant : tous les clients n’ont pas besoin de la même remise", "Adaptez vos offres aux visites enregistrées, calculez leur coût en MAD et mesurez les retours pour construire une relation qui dure.", "assets/articles/fidelisation-client-remises-restaurant-fr.png", "Trois situations client et trois réponses : reconnaître, comprendre et inviter à revenir.", "Fidélisation restaurant", "2026-10-07T20:30:00+02:00"),
+      en: article("Restaurant loyalty: not every customer needs the same discount · Kiwi", "Build restaurant customer loyalty: match offers to recorded visits, calculate discount costs in MAD and measure returns with a practical checklist.", "Restaurant loyalty: not every customer needs the same discount", "Match offers to recorded visits, calculate their cost in MAD and measure returns to build a lasting customer relationship.", "assets/articles/restaurant-customer-loyalty-discounts-en.png", "Three customer situations and responses: recognise, understand and invite back.", "Restaurant customer loyalty", "2026-10-07T20:30:00+02:00"),
+      ar: article("ولاء عملاء المطعم: ليس كل زبون بحاجة إلى الخصم نفسه · Kiwi", "عزز ولاء عملاء مطعمك: اربط العروض بالزيارات المسجلة، واحسب تكلفة الخصومات بالدرهم، وقس العودة والهامش بخطوات عملية تناسب نشاطك.", "ولاء عملاء المطعم: ليس كل زبون بحاجة إلى الخصم نفسه", "اربط العرض بالزيارات المسجلة واحسب تكلفته بالدرهم وقس العودة لبناء علاقة مستمرة مع زبائن مطعمك.", "assets/articles/restaurant-customer-loyalty-discounts-ar.png", "ثلاث حالات للعملاء وثلاث استجابات: التقدير والفهم والدعوة إلى العودة.", "ولاء عملاء المطعم", "2026-10-07T20:30:00+02:00"),
     },
   },
 ]);
