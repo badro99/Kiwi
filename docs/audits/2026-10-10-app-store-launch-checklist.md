@@ -124,3 +124,8 @@ Each closed line gets its evidence here: commit, test, query, or screenshot.
   tier and first name, never a code. `tools/native-face-entry-test.mjs`
   (27 checks) wired into `check.js`; all native suites green.
 
+- **A3, tests green, device pass open.** `sale-invoice-test.mjs` (72),
+  `ticket-141-test.mjs` (23, native A4 PDF export through
+  `KiwiPrinterSocket.exportInvoice`), `invoice-receipt-test.mjs` (64). The
+  simulator was too loaded to drive by hand; one real till invoice on the
+  TestFlight build closes it (fold into E2).
