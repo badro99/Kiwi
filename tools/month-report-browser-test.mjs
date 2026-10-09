@@ -2,7 +2,14 @@ import fs from 'node:fs';import path from 'node:path';import os from 'node:os';i
 import { ROOT,fixture } from './month-report-fixtures.mjs';
 const require=createRequire(import.meta.url);let puppeteer;try{puppeteer=require(require.resolve('puppeteer-core',{paths:[ROOT+'/app',ROOT,...(process.env.NODE_PATH||'').split(path.delimiter)]}));}catch{throw Error('Monthly UI/PDF QA requires puppeteer-core; not verified');}
 const chrome=process.env.KIWI_CHROMIUM_BIN||['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome','/usr/bin/chromium','/usr/bin/google-chrome'].find(fs.existsSync);assert.ok(chrome,'Monthly UI/PDF QA requires Chrome');
-const bundledPython=path.join(os.homedir(),'.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3'),python=process.env.KIWI_PYTHON_BIN||(fs.existsSync(bundledPython)?bundledPython:'python3');
+/* The PDF link check needs pypdf. Use the first interpreter that can import it
+   rather than one fixed path: the Codex runtime this used to name was removed
+   from the machine, and the fallback python3 had no pypdf, so the suite failed
+   for a reason unrelated to the report. */
+const bundledPython=path.join(os.homedir(),'.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3');
+const hasPypdf=(bin)=>{try{execFileSync(bin,['-c','import pypdf'],{stdio:'ignore'});return true;}catch{return false;}};
+const python=[process.env.KIWI_PYTHON_BIN,bundledPython,'python3','/usr/bin/python3','/opt/homebrew/bin/python3'].filter(Boolean).find((bin)=>(!bin.includes('/')||fs.existsSync(bin))&&hasPypdf(bin));
+assert.ok(python,'Monthly PDF QA needs a Python with pypdf (pip install pypdf, or set KIWI_PYTHON_BIN)');
 const evidence=process.argv.includes('--evidence'),out=ROOT+'/docs/audits/evidence/2026-10-04-month-usability',temp=fs.mkdtempSync(path.join(os.tmpdir(),'kiwi-month-pdf-'));if(evidence)fs.mkdirSync(out,{recursive:true});
 const d=fixture(1107),sources={};d.docs.payroll={periods:[{id:'SYN-PAYROLL',month:d.month,salary:9000}]};d.docs.recipes={recipes:[{id:'SYN-RECIPE',name:'SYNTHETIC-RECIPE-NUTRITION',calories:100}]};for(const key of Object.keys(d.rows)){d.rows[key]=d.rows[key].map((r,i)=>({...r,_rowid:i+1}));sources[key]={status:'available',count:d.rows[key].length,maxRowid:d.rows[key].length,missingColumns:[]};}d.sources=sources;
 const stamp=d.rows.sales[0].ts;d.docs.dayreports.days={'2026-09-01':{v:1,day:'2026-09-01',cutoff:5,store:{slug:d.merchant,name:d.establishment.name,type:'restaurant'},sessionId:'SYN-SESSION',terminalId:'SYN-TILL',openedAt:stamp,closedAt:0,closed:false,txns:1107,gross:1107*10051/100,net:1107*10051/100,cash:{opening:200,expected:500,counted:495,ecart:-5},categories:[{name:'Synthetic category',qty:1107,products:[{name:'Synthetic item',qty:1107,total:1107*10051/100}]}]}};
