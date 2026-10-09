@@ -3702,6 +3702,8 @@
         freshTicket();
         $('#bq-today', root).textContent = headSubVente();
         renderTicket(); renderGrid(); renderBadges(); icons();
+        // #0166 · on a phone the ticket sheet folds back to the sale grid.
+        try { root.dispatchEvent(new CustomEvent('vx-ticket-done', { bubbles: true })); } catch (_) {}
         const delivery = parts.some((x) => x.m === 'livraison');
         return { ref: sale.id, sale, delivery, line: delivery
           ? `Vente ${sale.id} en livraison, ${fmtMAD(total)} à recevoir${ptsLine}`

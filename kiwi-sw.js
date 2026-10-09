@@ -83,7 +83,7 @@ var SHELL = [
   '/assets/agent-truth.js?v=6',
   '/assets/agent-voice.js?v=9',
   '/assets/agent-vision.js?v=3',
-  '/assets/i18n.js?v=18',
+  '/assets/i18n.js?v=19',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js?v=1',
@@ -227,7 +227,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=6',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=14',
+  '/assets/caisse-lang.js?v=15',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/retail-balances.js?v=4',
@@ -244,8 +244,9 @@ var SHELL = [
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=4',
   '/assets/clients-store.js?v=9',
-  '/assets/clients-book.js?v=22',
-  '/assets/clients-directory.js?v=15',
+  '/assets/clients-book.js?v=23',
+  '/assets/clients-directory.js?v=16',
+  '/assets/customer-retention.js?v=2',
   '/assets/menu-catalog.js?v=25',
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',
@@ -278,22 +279,22 @@ var SHELL = [
      cuisine à l'écran sans jamais sortir sur la thermique. */
   '/assets/kitchen-print-queue.js?v=16',
   '/assets/food-production-print.js?v=2',
-  '/assets/pos-sale.js?v=9',
-  '/assets/pos-dispatch.js?v=68',
+  '/assets/pos-sale.js?v=10',
+  '/assets/pos-dispatch.js?v=69',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=8',
   '/assets/caisse-dna.css?v=5',
   '/assets/caisse-dna.js?v=2',
-  '/assets/pos-mobile.js?v=5',
+  '/assets/pos-mobile.js?v=6',
   '/assets/pos-workspaces.css?v=4',
   '/assets/pos-workspaces.js?v=5',
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=46',
-  '/assets/pos-boutique.js?v=46',
+  '/assets/pos-boutique.css?v=47',
+  '/assets/pos-boutique.js?v=47',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */

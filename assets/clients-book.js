@@ -226,8 +226,8 @@
       '.kcb-record{background:var(--surface);border:1px solid rgba(10,15,13,.08);border-radius:16px;padding:16px 18px;margin-bottom:8px;}',
       '.kcb-record .rl{font-size:.78rem;font-weight:600;color:rgba(10,15,13,.6);margin-bottom:10px;}',
       '.kcb-recrow{display:flex;gap:10px;align-items:center;}',
-      '.kcb-recrow input{flex:1;box-sizing:border-box;padding:13px 14px;border:1px solid rgba(10,15,13,.14);border-radius:12px;font-size:1.05rem;background:var(--surface);font-variant-numeric:tabular-nums;}',
-      '.kcb-big{background:var(--atlas,#0B6E4F);color:#fff;border:0;border-radius:12px;padding:14px 20px;font-family:inherit;font-size:1rem;font-weight:600;line-height:1;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;}',
+      '.kcb-recrow input{flex:1;min-width:0;box-sizing:border-box;padding:13px 14px;border:1px solid rgba(10,15,13,.14);border-radius:12px;font-size:1.05rem;background:var(--surface);font-variant-numeric:tabular-nums;}',
+      '.kcb-big{flex:none;background:var(--atlas,#0B6E4F);color:#fff;border:0;border-radius:12px;padding:14px 20px;font-family:inherit;font-size:1rem;font-weight:600;line-height:1;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;}',
       '.kcb-big svg{width:18px;height:18px;}',
       /* dark */
       ':is(html[data-theme="dark"],html[data-caisse-theme="dark"]) #kcb-root{background:#0d1512;color:#eafff3;border-color:rgba(255,255,255,.07);}',
@@ -623,6 +623,33 @@
     renderList();
   }
 
+  /* ── the client of the sale in progress (#0168) ─────────────────────────
+     The till types that take money through KiwiPosSale.record() had this page
+     but no way to put a sale on it. Attaching here hands the client to
+     assets/pos-sale.js, which credits the next paid sale (amount, items,
+     ticket, method) and lets go. The restaurant, boutique, maison and hotel
+     tills attach from their own ticket and are left out. */
+  var POS_ATTACH = /(^|\s)is-pos-(boulangerie|foodtruck|epicerie|librairie|coiffure|gym|fastfood|pharmacie|fleuriste|spa|traiteur|pizzeria)(\s|$)/;
+  function posAttachOn() {
+    try { return !!(window.KiwiPosSale && KiwiPosSale.attachClient && KiwiPosSale.isReal() && POS_ATTACH.test(document.body.className)); }
+    catch (_) { return false; }
+  }
+  function renderSalePill(c) {
+    var pill = document.getElementById('kcb-salepill');
+    if (!c || !POS_ATTACH.test(document.body.className)) { if (pill) pill.remove(); return; }
+    if (!pill) {
+      pill = document.createElement('div'); pill.id = 'kcb-salepill';
+      pill.style.cssText = 'position:fixed;z-index:9000;top:calc(env(safe-area-inset-top,0px) + 10px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;max-width:calc(100vw - 32px);padding:7px 8px 7px 14px;border-radius:999px;background:var(--riad,#053B2C);color:var(--paper,#F7F5F0);font-weight:600;font-size:.82rem;line-height:1.2;box-shadow:0 6px 18px -8px rgba(5,59,44,.55);';
+      document.body.appendChild(pill);
+    }
+    pill.innerHTML = '<span style="color:var(--mint,#7DF2B0);display:inline-flex">' + ICON.users + '</span>' +
+      '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span>Client de la vente</span> · ' + esc(c.name || '') + '</span>' +
+      '<button type="button" aria-label="Détacher" style="border:0;background:rgba(247,245,240,.14);color:inherit;width:26px;height:26px;border-radius:999px;display:grid;place-items:center;cursor:pointer;flex:none">' + ICON.close + '</button>';
+    var svgs = pill.querySelectorAll('svg'); for (var i = 0; i < svgs.length; i++) { svgs[i].style.width = '16px'; svgs[i].style.height = '16px'; }
+    pill.querySelector('button').onclick = function () { try { KiwiPosSale.attachClient(null); } catch (_) {} };
+  }
+  window.addEventListener('kiwi:pos-sale-client', function (e) { renderSalePill(e.detail); });
+
   /* ── sheet (add / edit / detail) ───────────────────────────────────────── */
   function sheet(html) {
     var sh = document.getElementById('kcb-sheet');
@@ -768,6 +795,13 @@
     var infoBlock = '<div class="kcb-info">' + infoRows.map(function (r) {
       return '<div class="kcb-inforow"><span class="k">' + esc(r[0]) + '</span><span class="v">' + esc(r[1]) + '</span></div>';
     }).join('') + '</div>';
+    var attachOn = posAttachOn();
+    var attachedNow = attachOn && KiwiPosSale.attachedClient && KiwiPosSale.attachedClient();
+    var isAttached = !!(attachedNow && attachedNow.id === c.id);
+    var attachBlock = attachOn
+      ? '<button class="kcb-btn ' + (isAttached ? 'ghost' : 'primary') + '" id="kcb-attach" style="display:block;width:100%;margin:14px 0 10px">' +
+          (isAttached ? 'Détacher de la vente' : 'Attacher à la vente en cours') + '</button>'
+      : '';
     var purchaseHistory = (Array.isArray(c.history) ? c.history : []).slice(0, 50);
     var returns = localReturns();
     var historyBlock = '<div class="kcb-section">Historique des achats</div>' + (purchaseHistory.length
@@ -813,8 +847,9 @@
       infoBlock +
       historyBlock +
       '<div id="kcb-credit-history"><div class="kcb-section">Avoirs</div><div class="kcb-empty" style="min-height:70px">Chargement du registre…</div></div>' +
+      attachBlock +
       recordBlock +
-      (rewardReady ? '<button class="kcb-btn primary" id="kcb-redeem" style="margin-top:8px">Offrir la récompense · réinitialiser</button>' : '') +
+      (rewardReady ? '<button class="kcb-btn primary" id="kcb-redeem" style="display:block;width:100%;margin-top:8px">Offrir la récompense · réinitialiser</button>' : '') +
       '<div class="kcb-actions"><button class="kcb-btn ghost" id="kcb-edit">Modifier</button>' +
         '<button class="kcb-btn ghost" id="kcb-d-back">Retour</button></div>'
     );
@@ -823,6 +858,13 @@
     sh.querySelector('#kcb-d-close').onclick = closeSheet;
     sh.querySelector('#kcb-d-back').onclick = closeSheet;
     sh.querySelector('#kcb-edit').onclick = function () { openForm(c); };
+    var attachBtn = sh.querySelector('#kcb-attach');
+    if (attachBtn) attachBtn.onclick = function () {
+      if (isAttached) { KiwiPosSale.attachClient(null); openDetail(c.id); toast('Client détaché de la vente'); return; }
+      KiwiPosSale.attachClient(c);
+      closeSheet(); close();
+      toast('Client attaché', 'Sa prochaine vente s’enregistre sur sa fiche.');
+    };
     sh.querySelector('#kcb-rec').onclick = function () {
       var amt = 0;
       if (cfg.model === 'amount') {

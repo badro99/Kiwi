@@ -131,6 +131,10 @@ const FEATURES = {
    * figures. Treat the cache as books from day one: non-editing surfaces see
    * an empty projection and, critically, cannot write that projection back. */
   briefing:      { keys: ['days'],                                   max: 250000 },
+  /* Customer retention (#0165): the owner's group thresholds, the offer for
+   * each group and the log of messages the owner approved. The log names
+   * customers, so it is redacted for paired tills and only the owner writes. */
+  retention:     { keys: ['settings', 'offers', 'sends'],             max: 400000 },
   /* Les trois destinations « starter » qui n'avaient pas encore de case ici.
    * Le starter (pages-pro.js) range une simple LISTE de lignes saisies à la
    * main, d'où la forme `{ list: [...] }` — la même que `suppliers` ou
@@ -473,9 +477,10 @@ function stripTeamCodes(doc) {
 
 function stripAgentActions() { return { items: [], versions: [] }; }
 function stripBriefing() { return { days: [] }; }
+function stripRetention() { return { settings: null, offers: null, sends: [] }; }
 
 /* Quelles fonctionnalités cachent un secret à qui ne l'écrit pas. */
-const REDACT = { team: stripTeamCodes, agentactions: stripAgentActions, briefing: stripBriefing };
+const REDACT = { team: stripTeamCodes, agentactions: stripAgentActions, briefing: stripBriefing, retention: stripRetention };
 
 /* A store's briefing holds that store's days only. Each day names the venue it
  * was computed for, and that venue is the slug the browser syncs under; a day

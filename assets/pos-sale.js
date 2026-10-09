@@ -245,6 +245,40 @@
     } catch (_) { /* The paid sale remains in the local ledger for reprinting. */ }
   }
 
+  /* ── le client de la vente en cours (#0168) ───────────────────────────
+     Les métiers qui encaissent par record() n'avaient aucun moyen de dire À
+     QUI ils vendaient : la fiche client existait (assets/clients-book.js),
+     mais ne recevait jamais un achat de ces comptoirs. Le carnet attache une
+     fiche ici ; la prochaine vente encaissée la crédite (montant, articles,
+     ticket, moyen), puis la fiche se détache · une vente = un passage. */
+  var saleClient = null;
+  function announceClient() {
+    try { window.dispatchEvent(new CustomEvent('kiwi:pos-sale-client', { detail: saleClient })); } catch (_) {}
+  }
+  function attachClient(c) {
+    saleClient = c && c.id ? { id: String(c.id).slice(0, 80), name: String(c.name || c.phone || '').slice(0, 80) } : null;
+    announceClient();
+    return saleClient;
+  }
+  function attachedClient() { return saleClient; }
+  function creditClient(entry) {
+    var c = saleClient;
+    if (!c) return;
+    saleClient = null;
+    announceClient();
+    var KC = window.KiwiClients;
+    if (!entry || !KC || typeof KC.recordPurchase !== 'function') return;
+    try {
+      var res = KC.recordPurchase(c.id, {
+        amount: entry.total, method: entry.raw || entry.method,
+        saleRef: entry.ref, saleId: entry.saleId || '', eventRef: entry.saleId || entry.ref,
+        createdAt: entry.ts,
+        items: (entry.lines || []).map(function (l) { return { name: l.name, qty: l.qty, total: l.total }; }),
+      });
+      if (res && !res.replayed) entry.clientId = c.id;
+    } catch (_) {}
+  }
+
   /* ─────────────────────────── l'API ─────────────────────────── */
 
   /* record(vertical, sale) → l'entrée journalisée, ou null si rien n'a été pris.
@@ -322,6 +356,8 @@
        movement IDs derive from the ticket reference, so a reload/replay can
        never consume the same item twice. Services are ignored by the engine. */
     try { window.KiwiInventoryConsumption?.record?.(entry); } catch (_) {}
+
+    creditClient(entry);
 
     printCustomerReceipt(vertical, entry, sale, rows);
 
@@ -639,6 +675,7 @@
     record: record, today: today, totals: totals, nextSeq: nextSeq,
     isReal: isReal, deviceTag: deviceTag, stamp: stamp, dropRefs: dropRefs,
     refMatcher: matcher, cleanLine: cleanLine,
+    attachClient: attachClient, attachedClient: attachedClient,
     ingest: ingest, sync: sync, activate: activate, deactivate: deactivate,
   };
 })();

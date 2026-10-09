@@ -27,7 +27,7 @@
 
   var STR = {
     fr: { title: 'Clients', sub: 'Le carnet complet · coordonnées, fidélité et consentement.',
-      search: 'Rechercher un nom, téléphone ou email…', export: 'Exporter (CSV)', campaign: 'Campagne', program: 'Programme de fidélité', newClient: '+ Nouveau client',
+      search: 'Rechercher un nom, téléphone ou email…', export: 'Exporter (CSV)', campaign: 'Campagne', program: 'Programme de fidélité', retention: 'Fidélisation', newClient: '+ Nouveau client',
       total: 'clients', withEmail: 'avec email', withPhone: 'avec téléphone', consented: 'contactables',
       seg: { all: 'Tous', reg: 'Réguliers', vip: 'VIP', new: 'Nouveaux', win: 'Dormants' },
       th: { name: 'Client', phone: 'Téléphone', email: 'Email', city: 'Ville', visits: 'Visites', spend: 'Dépensé', points: 'Points', seg: 'Segment', last: 'Dernière visite' },
@@ -40,7 +40,7 @@
         needNameOrPhone: 'Renseignez au moins un nom ou un numéro.', badPhone: 'Numéro invalide · pour l’étranger, ajoutez + et l’indicatif pays.',
         consentHint: 'Facultatif · cochez uniquement les canaux acceptés par le client pour les communications marketing.', alreadyExists: 'Client déjà enregistré', added: 'Client ajouté' } },
     en: { title: 'Customers', sub: 'The full book · contacts, loyalty and consent.',
-      search: 'Search name, phone or email…', export: 'Export (CSV)', campaign: 'Campaign', program: 'Loyalty program', newClient: '+ New customer', total: 'customers', withEmail: 'with email', withPhone: 'with phone', consented: 'contactable',
+      search: 'Search name, phone or email…', export: 'Export (CSV)', campaign: 'Campaign', program: 'Loyalty program', retention: 'Retention', newClient: '+ New customer', total: 'customers', withEmail: 'with email', withPhone: 'with phone', consented: 'contactable',
       seg: { all: 'All', reg: 'Regulars', vip: 'VIP', new: 'New', win: 'Dormant' },
       th: { name: 'Customer', phone: 'Phone', email: 'Email', city: 'City', visits: 'Visits', spend: 'Spent', points: 'Points', seg: 'Segment', last: 'Last visit' },
       tag: { reg: 'Regular', vip: 'VIP', new: 'New', win: 'Dormant' }, none: '·', empty: 'No customers yet · create the first record with “New customer”.',
@@ -52,7 +52,7 @@
         needNameOrPhone: 'Enter at least a name or a phone number.', badPhone: 'Invalid number · abroad, add + and the country code.',
         consentHint: 'Optional · select only the channels the customer has agreed to for marketing messages.', alreadyExists: 'Customer already on file', added: 'Customer added' } },
     ar: { title: 'العملاء', sub: 'الدفتر الكامل · جهات الاتصال والوفاء والموافقة.',
-      search: 'ابحث بالاسم أو الهاتف أو البريد…', export: 'تصدير (CSV)', campaign: 'حملة', program: 'برنامج الوفاء', newClient: '+ عميل جديد', total: 'عميل', withEmail: 'ببريد', withPhone: 'بهاتف', consented: 'قابلون للتواصل',
+      search: 'ابحث بالاسم أو الهاتف أو البريد…', export: 'تصدير (CSV)', campaign: 'حملة', program: 'برنامج الوفاء', retention: 'الاحتفاظ', newClient: '+ عميل جديد', total: 'عميل', withEmail: 'ببريد', withPhone: 'بهاتف', consented: 'قابلون للتواصل',
       seg: { all: 'الكل', reg: 'دائمون', vip: 'كبار', new: 'جدد', win: 'خاملون' },
       th: { name: 'العميل', phone: 'الهاتف', email: 'البريد', city: 'المدينة', visits: 'الزيارات', spend: 'الإنفاق', points: 'النقاط', seg: 'الفئة', last: 'آخر زيارة' },
       tag: { reg: 'دائم', vip: 'كبير', new: 'جديد', win: 'خامل' }, none: '·', empty: 'لا يوجد عملاء بعد · أنشئ أول بطاقة بزر «عميل جديد».',
@@ -129,7 +129,7 @@
       var rows = KCl.list().map(function (c) {
         return { id: c.id, name: c.name, phone: c.phone, email: c.email, city: c.city, address: c.address,
           birthday: c.birthday, gender: c.gender, notes: c.notes, hospitality: c.hospitality || {}, visits: c.visits, spend: c.spend,
-          points: c.points, consent: c.consent, consentEmail: c.consentEmail, seg: KCl.segment(c),
+          points: c.points, stamps: c.stamps || 0, lastSeen: c.lastSeen || 0, consent: c.consent, consentEmail: c.consentEmail, seg: KCl.segment(c),
           history: Array.isArray(c.history) ? c.history.slice(0, 50) : [],
           last: daysSince(c.lastSeen) === Infinity ? 0 : daysSince(c.lastSeen), firstSeen: daysSince(c.firstSeen) };
       });
@@ -256,6 +256,10 @@
     } catch (_) {}
   }
 
+  /* Customer retention (assets/customer-retention.js) reads the same rows,
+     with the same real-or-demo rule, rather than a second guess of its own. */
+  window.KiwiClientsDirectory = { load: load };
+
   window.Kiwi.handlers['clients-directory'] = function () {
     var T = STR[lang()] || STR.fr;
     var hotel = hospitalityMode();
@@ -354,6 +358,7 @@
           '<label class="cd-field">' + ico('search') + '<input class="cd-search" id="cd-q" type="search" placeholder="' + esc(T.search) + '" aria-label="' + esc(T.search) + '"></label>' +
           '<button type="button" class="cd-exp" id="cd-exp" title="' + esc(T.export) + '">' + ico('download') + '<span>' + T.export + '</span></button>' +
           '<button type="button" class="cd-exp" id="cd-loyalty" data-feature="loyalty" title="' + esc(T.program) + '">' + ico('redeem') + '<span>' + T.loyalty + '</span></button>' +
+          (Kiwi.handlers['customer-retention'] ? '<button type="button" class="cd-exp" id="cd-retention" data-feature="crm">' + ico('group') + '<span>' + esc(T.retention) + '</span></button>' : '') +
           (campaignsEnabled() ? '<button type="button" class="cd-exp cd-camp" id="cd-campaign">' + ico('campaign') + '<span>' + T.campaign + '</span></button>' : '') +
           '<button type="button" class="cd-exp cd-new" id="cd-new">' + ico('personAdd') + '<span>' + esc(T.newShort) + '</span></button>' +
         '</div>' +
@@ -390,6 +395,7 @@
       if (e.target.closest('#cd-new,[data-cd-new]')) { openNewClient(); return; }
       if (e.target.closest('[data-cd-clear]')) { state.seg = 'all'; state.q = ''; q.value = ''; rerenderSegs(); rerenderTable(); return; }
       if (e.target.closest('#cd-exp')) { csvExport(filtered(), T); Kiwi.toast && Kiwi.toast(T.export, { type: 'success', desc: fmt(filtered().length) + ' ' + T.total }); return; }
+      if (e.target.closest('#cd-retention')) { if (Kiwi.handlers['customer-retention']) Kiwi.handlers['customer-retention'](); return; }
       if (e.target.closest('#cd-loyalty')) { if (window.Kiwi.handlers && Kiwi.handlers['loyalty']) Kiwi.handlers['loyalty'](); return; }
       // In-flow: growth-crm's appPage replaces this page's host, so no close() needed
       // (calling it would flash the home page in between).

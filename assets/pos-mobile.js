@@ -226,6 +226,17 @@
      * childList observer never sees it — and a newly shown view still needs
      * measuring. A click on the register covers nav and tab changes. */
     screen.addEventListener('click', schedule, true);
+    /* #0166 · a paid sale leaves an empty ticket, and the open sheet kept the
+     * cashier staring at « The sale is empty ». A register announces the end
+     * of a sale with `vx-ticket-done`; the sheet folds back to the sale grid. */
+    screen.addEventListener('vx-ticket-done', function () {
+      screen.classList.remove('vx-ticket-open');
+      var peek = screen.querySelector('.vx-peek');
+      if (peek) {
+        peek.setAttribute('aria-expanded', 'false');
+        peek.setAttribute('aria-label', 'Afficher le ticket');
+      }
+    });
     screen.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
       screen.classList.remove('vx-nav-open', 'vx-ticket-open');

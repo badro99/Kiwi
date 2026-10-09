@@ -5417,6 +5417,12 @@
         <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M0-240v-63q0-43 44-70t116-27q13 0 25 .5t23 2.5q-14 21-21 44t-7 48v65H0Zm240 0v-65q0-32 17.5-58.5T307-410q32-20 76.5-30t96.5-10q53 0 97.5 10t76.5 30q32 20 49 46.5t17 58.5v65H240Zm540 0v-65q0-26-6.5-49T754-397q11-2 22.5-2.5t23.5-.5q72 0 116 26.5t44 70.5v63H780Zm-455-80h311q-10-20-55.5-35T480-370q-55 0-100.5 15T325-320ZM160-440q-33 0-56.5-23.5T80-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T160-440Zm640 0q-33 0-56.5-23.5T720-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T800-440Zm-320-40q-50 0-85-35t-35-85q0-51 35-85.5t85-34.5q51 0 85.5 34.5T600-600q0 50-34.5 85T480-480Z"/></svg>
         <span data-i18n="dash.sidebar.crm">Clients &amp; Marketing</span>
       </a>
+      <!-- #0165 · Fidélisation clients: groups, offers, approved messages and
+           their results (assets/customer-retention.js). Sold with the CRM. -->
+      <a href="#" data-action="customer-retention" data-feature="crm">
+        <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M640-440 474-602q-31-30-52.5-66.5T400-748q0-55 38.5-93.5T532-880q32 0 60 13.5t48 36.5q20-23 48-36.5t60-13.5q55 0 93.5 38.5T880-748q0 43-21 79.5T807-602L640-440Zm0-112 109-107q19-19 35-40.5t16-48.5q0-22-15-37t-37-15q-14 0-26.5 5.5T700-778l-60 72-60-72q-9-11-21.5-16.5T532-800q-22 0-37 15t-15 37q0 27 16 48.5t35 40.5l109 107ZM280-220l278 76 238-74q-5-9-14.5-15.5T760-240H558q-27 0-43-2t-33-8l-93-31 22-78 81 27q17 5 40 8t68 4q0-11-6.5-21T578-354l-234-86h-64v220ZM40-80v-440h304q7 0 14 1.5t13 3.5l235 87q33 12 53.5 42t20.5 66h80q50 0 85 33t35 87v40L560-60l-280-78v58H40Zm80-80h80v-280h-80v280Zm520-546Z"/></svg>
+        <span data-i18n="dash.sidebar.retention">Fidélisation clients</span>
+      </a>
       <a href="#" data-nav="terminaux" data-feature="terminaux">
         <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M80-160v-80h400v80H80Zm120-120q-33 0-56.5-23.5T120-360v-360q0-33 23.5-56.5T200-800h560q33 0 56.5 23.5T840-720H200v360h280v80H200Zm600 40v-320H640v320h160Zm-180 80q-25 0-42.5-17.5T560-220v-360q0-25 17.5-42.5T620-640h200q25 0 42.5 17.5T880-580v360q0 25-17.5 42.5T820-160H620Z"/></svg>
         <span data-i18n="dash.sidebar.terminals">Terminaux</span>
@@ -6185,7 +6191,7 @@
 <script src="assets/err-reporter.js?v=1" defer></script>
 <!-- Env gate (demos local-only) · must run before venues.js and the app. -->
 <script src="assets/kiwi-env.js?v=2" defer></script>
-<script src="assets/i18n.js?v=18" defer></script>
+<script src="assets/i18n.js?v=19" defer></script>
 <!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
      « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" · le français et
@@ -6355,7 +6361,8 @@
 <!-- Fidélité · client book read live into the Clients & Marketing surface (growth-crm.js). -->
 <script src="assets/clients-store.js?v=9" defer fetchpriority="low"></script>
 <!-- Clients · the owner's directory (contacts, fidélité, consent) · sidebar « Clients ». -->
-<script src="assets/clients-directory.js?v=15" defer fetchpriority="low"></script>
+<script src="assets/clients-directory.js?v=16" defer fetchpriority="low"></script>
+<script src="assets/customer-retention.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/menu-catalog.js?v=25" defer fetchpriority="low"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc

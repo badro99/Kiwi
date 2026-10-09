@@ -741,7 +741,7 @@ ok(/creditSaleToClient\(entry\);/.test(caisse),
   'recordSale crédite la fidélité du client attaché — le carnet n\'était jamais appelé ici');
 ok(/saleClient = null;\s+\/\/ une note = un passage/.test(caisse),
   'une addition partagée en quatre ne donne pas quatre tampons');
-ok(/KiwiClients\.recordPurchase\(cid, \{ amount: entry\.amount \}\)/.test(caisse),
+ok(/KiwiClients\.recordPurchase\(cid, \{\s*amount: entry\.amount, method: entry\.method, saleRef: entry\.ref,/.test(caisse),
   'et c\'est bien KiwiClients qui applique SES règles de fidélité');
 ok(/if \(saleClient && saleClient\.ctx && saleClient\.ctx !== saleContextKey\(\)\) saleClient = null;/.test(caisse),
   'changer de note détache la fiche — sinon la mesa 7 créditerait le client de la mesa 3');
