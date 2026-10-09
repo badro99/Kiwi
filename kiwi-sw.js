@@ -51,7 +51,7 @@ var SHELL = [
   '/assets/simple.css',
   '/assets/ux.css',
   '/assets/pages-pro.css',
-  '/assets/catalog-workspace.css?v=5',
+  '/assets/catalog-workspace.css?v=18',
   '/assets/catalog-workspace.js?v=5',
   '/assets/help-centre.css?v=4',
   '/assets/polish-dashboard.css',
@@ -91,7 +91,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=45',
+  '/assets/interactive.js?v=47',
   '/assets/features.js?v=8',
   '/assets/invoicing.css?v=7',
   '/assets/invoicing.js?v=9',
@@ -237,7 +237,7 @@ var SHELL = [
   '/assets/maison-stock-movements.js?v=4',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=8',
-  '/assets/stock.js?v=63',
+  '/assets/stock.js?v=66',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
@@ -259,7 +259,7 @@ var SHELL = [
   '/assets/planning-ui.css?v=10',
   '/assets/team.js?v=291',
   '/assets/menu-i18n.js?v=5',
-  '/assets/restaurant-menu-workspace.js?v=82',
+  '/assets/restaurant-menu-workspace.js?v=88',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=7',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.

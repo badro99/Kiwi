@@ -834,7 +834,7 @@ ar: {
     let closed = false;
     const close = () => {
       if (closed) return; closed = true;
-      back.classList.remove('in');
+      back.classList.remove('in'); back.style.pointerEvents = 'none'; // a fading sheet must not swallow the next tap
       setTimeout(() => back.remove(), 280);
       document.removeEventListener('keydown', esc);
       releaseFocus();
@@ -971,7 +971,7 @@ ar: {
     let closed = false;
     const close = () => {
       if (closed) return; closed = true;
-      back.classList.remove('in');
+      back.classList.remove('in'); back.style.pointerEvents = 'none';
       setTimeout(() => back.remove(), 280);
       document.removeEventListener('keydown', esc);
       releaseFocus();

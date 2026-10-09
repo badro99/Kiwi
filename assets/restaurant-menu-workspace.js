@@ -8,7 +8,8 @@
   const venue=()=>window.KiwiVenue?.getCurrentVenueData?.()?.id||window.KiwiVenue?.getVenue?.()||null;
   const isRestaurant=()=>{const KV=window.KiwiVenue,v=KV?.getCurrentVenueData?.()||{},t=String(KV?.getVenueType?.()||v.type||v.subtype||'').toLowerCase();return ['restaurant','cafe','café','restauration'].includes(t);};
   const S=()=>window.KiwiMenuStore;
-  const D=()=>S()?.data(venue())||{cats:[],items:[],stations:[],opts:[]};
+  // An older or example document can miss a list; the page must still open.
+  const D=()=>{const d=S()?.data(venue())||{};for(const k of ['cats','items','stations','opts'])if(!Array.isArray(d[k]))d[k]=[];return d;};
   const find=(key,id)=>(D()[key]||[]).find(x=>x.id===id);
   const cat=(id)=>find('cats',id), item=(id)=>find('items',id), station=(id)=>find('stations',id), group=(id)=>find('opts',id);
   const UI_I18N = {
@@ -1055,6 +1056,24 @@
   const pickerSearchIcon='<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>';
   const pickerChevronIcon='<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M480-360 280-560l56-56 144 144 144-144 56 56-200 200Z"/></svg>';
   const toast=(t,d,type='success')=>window.Kiwi?.toast?.(t,{desc:d||'',type});
+  const TAB_ICONS={menu:'restaurant',i18n:'translate',stations:'soup_kitchen',recipes:'menu_book',nutrition:'eco',performance:'bar_chart',hours:'schedule',alerts:'warning',nfc:'nfc'};
+  function tabList(){
+    return [['menu',ui('tabMenu')],['i18n',ui('tabI18n')],['stations',ui('tabStations')],['recipes',ui('tabRecipes')],['nutrition',ui('tabNutrition')],['performance',ui('tabPerformance')],['hours',ui('tabHours')],['alerts',ui('tabAlerts')],['nfc',ui('tabNfc')]];
+  }
+  /* #0149 · Nine tabs do not fit a phone. A sideways strip hides most of them
+     and moves under the thumb, so on a phone one button names the open tab
+     and lists every tab on tap. Wider screens keep the strip. */
+  function tabPicker(){
+    const n=D().items.filter(x=>x.avail===false).length,cur=tabList().find(([id])=>id===tab)||tabList()[0];
+    return `<button type="button" class="rmw-tabpick" data-action="rmw-tab-pick" aria-haspopup="dialog">${catalogIcon(TAB_ICONS[cur[0]])}<span class="rmw-tabpick-label">${esc(cur[1])}</span>${n&&cur[0]!=='alerts'?`<span class="mi-tab-badge" aria-label="${esc(ui('tabAlerts'))}">${n}</span>`:''}${catalogIcon('expand_more')}</button>`;
+  }
+  function openTabPicker(){
+    const n=D().items.filter(x=>x.avail===false).length;
+    const rows=tabList().map(([id,l])=>`<button type="button" class="rmw-tabpick-row${tab===id?' on':''}" data-pick="${id}"${tab===id?' aria-current="page"':''}>${catalogIcon(TAB_ICONS[id])}<span>${esc(l)}</span>${id==='alerts'&&n?`<span class="mi-tab-badge">${n}</span>`:''}${tab===id?catalogIcon('check'):''}</button>`).join('');
+    const m=modal({tag:ui("title"),body:`<div class="rmw-tabpick-list">${rows}</div>`,width:420});
+    if(!m?.el)return;
+    m.el.addEventListener('click',e=>{const b=e.target.closest('[data-pick]');if(!b)return;tab=b.dataset.pick;m.close();render();$('[data-menu-root]')?.scrollIntoView({block:'start'});});
+  }
   function tabs(){
     const n=D().items.filter(x=>x.avail===false).length;
     return [
@@ -1095,7 +1114,7 @@
     root.hidden=false;
     const itemCountStr = d.items.length === 1 ? `1 ${ui('article')}` : `${d.items.length} ${ui('articles')}`;
     const catCountStr = d.cats.length === 1 ? `1 ${ui('section')}` : `${d.cats.length} ${ui('sections')}`;
-    const html=`<div class="mi-head"><div><div class="mi-title">${esc(ui('title'))}</div><div class="mi-sub">${itemCountStr} · ${catCountStr} · ${esc(v.name||'')}</div></div><div class="mi-head-acts"><button class="btn-slim" data-action="rmw-menu-scan">${esc(ui('scanMenu'))}</button><button class="btn-slim" data-action="mx-import">${esc(ui('importExcel'))}</button></div></div><div class="mi-filters"><div class="mi-pill-row">${tabs()}</div></div><div class="mi-panel" data-rmw-panel>${panel()}</div>`;
+    const html=`<div class="mi-head"><div><div class="mi-title">${esc(ui('title'))}</div><div class="mi-sub">${itemCountStr} · ${catCountStr} · ${esc(v.name||'')}</div></div><div class="mi-head-acts"><button class="btn-slim" data-action="rmw-menu-scan">${esc(ui('scanMenu'))}</button><button class="btn-slim" data-action="mx-import">${esc(ui('importExcel'))}</button></div></div><div class="mi-filters"><div class="mi-pill-row">${tabs()}</div>${tabPicker()}</div><div class="mi-panel" data-rmw-panel>${panel()}</div>`;
     if(window.KiwiCatalogUI)window.KiwiCatalogUI.replace(root,html);else root.innerHTML=html;
     /* Fresh nodes: the pre-swap rows captured above are detached by the
        replacement, so re-query after painting. */
@@ -1127,16 +1146,27 @@
     }
     return `<div class="mi-subchips">${h}</div>`;
   }
+  const countLabel=(n)=>`${n} ${n>1?ui('articles'):ui('article')}`;
   function gridHtml(list){
     const flat=()=>`<div class="mi-grid">${list.map(card).join('')}</div>`;
-    if(filter==='all'||subFilter||query.trim())return flat();
+    if(query.trim()||subFilter)return flat();
+    /* #0151 · "All" reads as the printed menu: each section under its own
+       heading, which opens that section. */
+    if(filter==='all'){
+      const d=D(),known=new Set(d.cats.map(c=>c.id));
+      const groups=d.cats.map(c=>({id:c.id,label:t(c.name),items:list.filter(x=>x.catId===c.id)})).filter(g=>g.items.length);
+      const loose=list.filter(x=>!known.has(x.catId));
+      if(loose.length)groups.push({id:'',label:ui('withoutSubcat'),items:loose});
+      if(groups.length<2)return flat();
+      return groups.map(g=>`<div class="rmw-sec">${g.id?`<button type="button" class="rmw-sec-head" data-action="rmw-cat-filter" data-cat="${esc(g.id)}">`:'<div class="rmw-sec-head">'}<span>${esc(g.label)}</span><small>${countLabel(g.items.length)}</small>${g.id?`${catalogIcon('chevron_right')}</button>`:'</div>'}<div class="mi-grid">${g.items.map(card).join('')}</div></div>`).join('');
+    }
     const subs=subsOf(filter);
     if(!subs.length)return flat();
     const groups=subs.map(s=>({id:s.id,label:t(s.name),items:list.filter(x=>x.subId===s.id)})).filter(g=>g.items.length);
     const rest=list.filter(x=>!x.subId||!subs.some(s=>s.id===x.subId));
     if(rest.length)groups.push({id:'__none',label:ui('withoutSubcat'),items:rest,muted:true});
     if(groups.length<2)return flat();
-    return groups.map(g=>`<button type="button" class="mi-sub-head${g.muted?' muted':''}" data-action="rmw-sub-filter" data-sub="${g.id}"><span>${esc(g.label)}</span><small>${g.items.length} ${esc(g.items.length>1?ui('articles'):ui('article'))}</small></button><div class="mi-grid">${g.items.map(card).join('')}</div>`).join('');
+    return groups.map(g=>`<div class="rmw-sec rmw-sec-sub"><button type="button" class="rmw-sec-head${g.muted?' muted':''}" data-action="rmw-sub-filter" data-sub="${g.id}"><span>${esc(g.label)}</span><small>${countLabel(g.items.length)}</small>${catalogIcon('chevron_right')}</button><div class="mi-grid">${g.items.map(card).join('')}</div></div>`).join('');
   }
   function openClassify(cid){
     const subs=subsOf(cid);
@@ -1149,16 +1179,25 @@
     m.el.addEventListener('change',e=>{const sel=e.target.closest('[data-rmw-classify-sub]');if(!sel||!sel.value)return;S().updateItem(sel.dataset.rmwClassifySub,{subId:sel.value});sel.closest('[data-mcr]')?.classList.add('done');});
     $('[data-done]',m.el).onclick=()=>{m.close();render();};
   }
+  /* #0151 · A card is the dish, not a picture frame: a photo only when the
+     owner added one, the name and description first, then price and the one
+     actions button. Option counts appear only when there are options. */
   function card(x){
-    const name=t(x.name);
-    const media=x.video?`<video class="rmw-media" src="${esc(x.video)}" muted playsinline preload="none"></video>`:x.photo?`<img class="rmw-media" src="${esc(x.photo)}" alt="" loading="lazy"/>`:catalogIcon('restaurant');
-    const state=x.archived?ui('archived'):x.avail===false?ui('unavailableBadge'):ui('availableOpt');
-    return `<article class="mi-card${x.avail===false?' rmw-off':''}${x.archived?' rmw-archived':''}">
+    const name=t(x.name),desc=x.desc?t(x.desc):'';
+    const media=x.video?`<video class="rmw-media" src="${esc(x.video)}" muted playsinline preload="none"></video>`:x.photo?`<img class="rmw-media" src="${esc(x.photo)}" alt="" loading="lazy"/>`:'';
+    const off=x.avail===false,meta=[];
+    if(x.formula)meta.push(`${esc(ui('formula'))} · ${esc(ui('stepCount',{n:(x.formula.slots||[]).length}))}`);
+    if(x.formulaOnly)meta.push(esc(ui('formulaOnlyBadge')));
+    if(!x.formula&&(x.opts||[]).length)meta.push(esc(ui('optGroupCount',{n:x.opts.length})));
+    const nutri=nutritionCardPill(x).replace(/^ · /,'');if(nutri)meta.push(nutri);
+    const state=x.archived?ui('archived'):off?ui('unavailableBadge'):'';
+    return `<article class="mi-card rmw-card${media?' has-media':''}${off?' rmw-off':''}${x.archived?' rmw-archived':''}">
       <button class="catalog-item-edit" type="button" data-rmw-command="edit" data-arg="${esc(x.id)}" aria-label="${esc(ui('editItemTitle',{name}))}">
-        <span class="catalog-item-media">${media}</span><span class="mi-card-name" title="${esc(name)}">${esc(name)}</span><span class="mi-card-price">${cash(x.price)}</span><span class="catalog-item-meta">${x.formula?esc(ui('formula'))+' · ':''}${x.formulaOnly?esc(ui('formulaOnlyBadge'))+' · ':''}${esc(x.formula?ui('stepCount',{n:(x.formula.slots||[]).length}):ui('optGroupCount',{n:(x.opts||[]).length}))}${nutritionCardPill(x)}</span>
+        ${media?`<span class="catalog-item-media">${media}</span>`:''}<span class="rmw-card-body"><span class="mi-card-name" title="${esc(name)}">${esc(name)}</span>${desc?`<span class="rmw-card-desc">${esc(desc)}</span>`:''}${meta.length?`<span class="catalog-item-meta">${meta.join(' · ')}</span>`:''}</span>
       </button>
-      <div class="catalog-item-footer"><span class="catalog-state">${catalogIcon(x.avail===false?'visibility_off':'check')}${esc(state)}</span>
-        <button class="catalog-more" type="button" data-rmw-command="actions" data-arg="${esc(x.id)}" aria-label="${esc(catalogText('itemActions','Actions de l’article'))}: ${esc(name)}">${catalogIcon('tune')}</button></div>
+      ${state?`<span class="rmw-card-flag">${catalogIcon('visibility_off')}${esc(state)}</span>`:''}
+      <div class="catalog-item-footer"><span class="mi-card-price">${cash(x.price)}</span>
+        <button class="catalog-more" type="button" data-rmw-command="actions" data-arg="${esc(x.id)}" aria-label="${esc(catalogText('itemActions','Actions de l’article'))}: ${esc(name)}">${catalogIcon('more_vert')}</button></div>
     </article>`;
   }
   function groupCard(g){
@@ -1384,6 +1423,12 @@
     if(L.refunds)notes.push(`<p>${esc(ui('ledgerRefundLines'))}</p>`);
     return `<div class="rmw-perf-ledger" data-ledger-gross="${L.gross.toFixed(2)}" data-ledger-net="${L.net.toFixed(2)}"><div><span>${esc(ui('ledgerGross'))}</span><b>${cash(L.gross)}</b><small>${esc(ui('ledgerTickets',{n:L.grossN}))}</small></div><div><span>${esc(ui('ledgerRefunds'))}</span><b>${L.refunds?'− '+cash(L.refunds):cash(0)}</b><small>${esc(ui('ledgerRefundCount',{n:L.refundN}))}</small></div><div><span>${esc(ui('ledgerNet'))}</span><b>${cash(L.net)}</b><small>${esc(ui('ledgerNetSub'))}</small></div><div><span>${esc(ui('ledgerEligible'))}</span><b>${cash(L.attributed)}</b><small>${esc(ui('ledgerEligibleSub',{share:share(L.attributed)}))}</small></div></div>${notes.length?`<div class="rmw-perf-notes">${notes.join('')}</div>`:''}`;
   }
+  /* #0150 · On a phone each table row becomes a card. The column names ride
+     on the table as CSS strings so every cell stays labelled once the header
+     is hidden, without touching the cells themselves. */
+  function perfLabels(){
+    return ['colItem','colSold','colRevenue','colUnitCost','colProfit','colMargin','colReadout'].map((k,i)=>`--l${i+1}:${JSON.stringify(ui(k))}`).join(';');
+  }
   function performancePanel(){
     const p=performanceData(30),costed=p.measured.length,buckets={star:[],plow:[],puzzle:[],dog:[]};
     p.measured.forEach(x=>buckets[x.quadrant].push(x));
@@ -1393,7 +1438,7 @@
     const offRows=p.offMenu.map(o=>`<tr class="rmw-perf-off"><td><b>${esc(o.name)}</b><small>${esc(o.free?ui('freeAmountSection'):ui('offMenuSection'))}</small></td><td>${(window.KiwiNumber?.format(o.qty, {}) ?? o.qty.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))}</td><td>${cash(o.revenue)}</td><td>·</td><td>·</td><td>·</td><td>${esc(o.free?ui('freeAmountReadout'):ui('offMenuReadout'))}</td></tr>`).join('');
     if(!p.items.length)return `<section class="mi-section"><div class="rmw-empty"><h3>${esc(ui('noItemsToAnalyze'))}</h3><p>${esc(ui('noItemsToAnalyzeDesc'))}</p></div></section>`;
     const emptySales=!p.items.some(x=>x.qty>0)&&!p.offMenu.length&&!p.ledger.grossN;
-    return `<div class="rmw-performance"><section class="mi-section"><div class="mi-recettes-head"><div><div class="mi-title">${esc(ui('perfTitle'))}</div><div class="mi-sub">${esc(ui('perfSub'))}</div></div><div class="rmw-perf-period" title="${esc(p.window.zone||'')}">${esc(rangeLabel(p.window))}</div></div>${emptySales?`<div class="rmw-empty"><h3>${esc(ui('noSalesYet'))}</h3><p>${esc(ui('noSalesYetDesc'))}</p></div>`:costed?performanceMatrix(p):`<div class="rmw-empty"><h3>${esc(ui('completeRecipesForProfit'))}</h3><p>${esc(ui('completeRecipesForProfitDesc'))}</p></div>`}</section>${perfLedger(p)}<div class="rmw-perf-kpis"><div><span>${esc(ui('analyzedRevenue'))}</span><b>${cash(p.totalRevenue)}</b><small>${(window.KiwiNumber?.format(p.items.reduce((n,x)=>n+x.qty,0), {}) ?? p.items.reduce((n,x)=>n+x.qty,0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} ${esc(ui('itemsSold'))} · ${esc(ui('menuItemsOnly'))}</small></div><div><span>${esc(ui('grossProfitCalc'))}</span><b>${costed?cash(p.grossProfit):'·'}</b><small>${esc(ui('recipesSoldAndCosted', { n: costed }))}</small></div><div><span>${esc(ui('costCoverage'))}</span><b>${p.totalRevenue?p.coverage.toFixed(0)+' %':'·'}</b><small>${esc(ui('costCoverageSub'))}</small></div></div>${costed?`<div class="rmw-perf-quads">${cards}</div>`:''}<section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('colItem'))}</h3></div><div class="mi-list-wrap"><table class="mi-list rmw-perf-table"><thead><tr><th>${esc(ui('colItem'))}</th><th>${esc(ui('colSold'))}</th><th>${esc(ui('colRevenue'))}</th><th>${esc(ui('colUnitCost'))}</th><th>${esc(ui('colProfit'))}</th><th>${esc(ui('colMargin'))}</th><th>${esc(ui('colReadout'))}</th></tr></thead><tbody>${rows}${offRows}</tbody></table></div></section></div>`;
+    return `<div class="rmw-performance"><section class="mi-section"><div class="mi-recettes-head"><div><div class="mi-title">${esc(ui('perfTitle'))}</div><div class="mi-sub">${esc(ui('perfSub'))}</div></div><div class="rmw-perf-period" title="${esc(p.window.zone||'')}">${esc(rangeLabel(p.window))}</div></div>${emptySales?`<div class="rmw-empty"><h3>${esc(ui('noSalesYet'))}</h3><p>${esc(ui('noSalesYetDesc'))}</p></div>`:costed?performanceMatrix(p):`<div class="rmw-empty"><h3>${esc(ui('completeRecipesForProfit'))}</h3><p>${esc(ui('completeRecipesForProfitDesc'))}</p></div>`}</section>${perfLedger(p)}<div class="rmw-perf-kpis"><div><span>${esc(ui('analyzedRevenue'))}</span><b>${cash(p.totalRevenue)}</b><small>${(window.KiwiNumber?.format(p.items.reduce((n,x)=>n+x.qty,0), {}) ?? p.items.reduce((n,x)=>n+x.qty,0).toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))} ${esc(ui('itemsSold'))} · ${esc(ui('menuItemsOnly'))}</small></div><div><span>${esc(ui('grossProfitCalc'))}</span><b>${costed?cash(p.grossProfit):'·'}</b><small>${esc(ui('recipesSoldAndCosted', { n: costed }))}</small></div><div><span>${esc(ui('costCoverage'))}</span><b>${p.totalRevenue?p.coverage.toFixed(0)+' %':'·'}</b><small>${esc(ui('costCoverageSub'))}</small></div></div>${costed?`<div class="rmw-perf-quads">${cards}</div>`:''}<section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('colItem'))}</h3></div><div class="mi-list-wrap"><table class="mi-list rmw-perf-table" style="${esc(perfLabels())}"><thead><tr><th>${esc(ui('colItem'))}</th><th>${esc(ui('colSold'))}</th><th>${esc(ui('colRevenue'))}</th><th>${esc(ui('colUnitCost'))}</th><th>${esc(ui('colProfit'))}</th><th>${esc(ui('colMargin'))}</th><th>${esc(ui('colReadout'))}</th></tr></thead><tbody>${rows}${offRows}</tbody></table></div></section></div>`;
   }
   const SERVICE_WINDOWS=[
     {id:'matin',name:'Matin',from:5*60,to:11*60},
@@ -1697,6 +1742,7 @@ table.rmw-i18n td.st-manual input{border-inline-start:3px solid var(--atlas)}
     const H=window.Kiwi?.handlers;if(!H)return false;
     H['rmw-section-actions']=()=>openSectionActions();
     H['rmw-tab']=e=>{tab=e.dataset.tab;render();};
+    H['rmw-tab-pick']=()=>openTabPicker();
     H['rmw-hours-period']=e=>{hoursPeriod=e.dataset.period;render();};
     H['rmw-cat-filter']=e=>{filter=e.dataset.cat;subFilter=null;render();};
     H['rmw-cat-move']=(_e,arg)=>{const[id,delta]=String(arg||'').split('::');S().moveCategory(id,+delta);};
@@ -1792,7 +1838,7 @@ const pos=e.target.selectionStart;const html=menuPanel();if(window.KiwiCatalogUI
 @media(max-width:900px){.rmw-perf-legend{overflow:auto}.rmw-perf-chart{padding-left:48px}.rmw-perf-plot{height:310px}.rmw-perf-caption{align-items:flex-start;flex-direction:column;gap:6px}}
 `;document.head.appendChild(s);}
   function hoursStyle(){if($('#rmw-hours-css'))return;const s=document.createElement('style');s.id='rmw-hours-css';s.textContent=`
-.rmw-hours-page{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}.rmw-hours-page>*{min-width:0}.rmw-hours-pills{margin-top:16px}.rmw-hours-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.rmw-hours-kpis>div{display:grid;gap:7px;padding:17px 18px;background:#fff;border:1px solid var(--n-200);border-radius:13px}.rmw-hours-kpis span{font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--n-500)}.rmw-hours-kpis b{font-size:24px;line-height:1.1;letter-spacing:-.03em}.rmw-hours-kpis>div:last-child b{font-size:18px}.rmw-hours-kpis small{color:var(--n-500)}.rmw-hours-list-title{margin:22px 0 12px;color:var(--n-500);font-size:11px}.rmw-hours-bars{display:grid;gap:9px}.rmw-hours-row{display:grid;grid-template-columns:minmax(120px,190px) minmax(180px,1fr) 55px;align-items:center;gap:14px}.rmw-hours-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.rmw-hours-track{height:12px;border-radius:4px;background:var(--n-100);overflow:hidden}.rmw-hours-track i{display:block;height:100%;min-width:3px;border-radius:4px;background:var(--atlas)}.rmw-hours-row>b{text-align:right;font:600 11px var(--mono)}.rmw-hours-insight{padding:22px 24px;border-radius:16px;background:#08100c;color:#fff;box-shadow:0 16px 38px rgba(4,9,6,.10)}.rmw-hours-insight>span{color:#73f0b2;font:600 9px var(--mono);letter-spacing:.12em}.rmw-hours-insight h3{margin:10px 0 7px;font-size:20px}.rmw-hours-insight p{max-width:780px;margin:0;color:rgba(255,255,255,.62);font-size:12px;line-height:1.6}.rmw-hours-notables{display:grid;gap:8px}.rmw-hours-notable{display:flex;gap:11px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--n-200)}.rmw-hours-notable:last-child{border-bottom:0}.rmw-hours-notable>i{width:8px;height:8px;margin-top:5px;border-radius:50%;background:var(--atlas);flex:0 0 auto}.rmw-hours-notable b,.rmw-hours-notable span{display:block}.rmw-hours-notable b{font-size:12.5px}.rmw-hours-notable span{margin-top:4px;color:var(--n-500);font-size:11.5px}@media(max-width:800px){.rmw-hours-kpis{grid-template-columns:1fr}.rmw-hours-row{grid-template-columns:110px minmax(120px,1fr) 42px}.rmw-hours-insight{padding:19px}}
+.rmw-hours-page{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}.rmw-hours-page>*{min-width:0}.rmw-hours-pills{margin-top:16px}.rmw-hours-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.rmw-hours-kpis>div{display:grid;gap:7px;padding:17px 18px;background:var(--surface);border:1px solid var(--n-200);border-radius:13px}.rmw-hours-kpis span{font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--n-500)}.rmw-hours-kpis b{font-size:24px;line-height:1.1;letter-spacing:-.03em}.rmw-hours-kpis>div:last-child b{font-size:18px}.rmw-hours-kpis small{color:var(--n-500)}.rmw-hours-list-title{margin:22px 0 12px;color:var(--n-500);font-size:11px}.rmw-hours-bars{display:grid;gap:9px}.rmw-hours-row{display:grid;grid-template-columns:minmax(120px,190px) minmax(180px,1fr) 55px;align-items:center;gap:14px}.rmw-hours-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.rmw-hours-track{height:12px;border-radius:4px;background:var(--n-100);overflow:hidden}.rmw-hours-track i{display:block;height:100%;min-width:3px;border-radius:4px;background:var(--atlas)}.rmw-hours-row>b{text-align:right;font:600 11px var(--mono)}.rmw-hours-insight{padding:22px 24px;border-radius:16px;background:#08100c;color:#fff;box-shadow:0 16px 38px rgba(4,9,6,.10)}.rmw-hours-insight>span{color:#73f0b2;font:600 9px var(--mono);letter-spacing:.12em}.rmw-hours-insight h3{margin:10px 0 7px;font-size:20px}.rmw-hours-insight p{max-width:780px;margin:0;color:rgba(255,255,255,.62);font-size:12px;line-height:1.6}.rmw-hours-notables{display:grid;gap:8px}.rmw-hours-notable{display:flex;gap:11px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--n-200)}.rmw-hours-notable:last-child{border-bottom:0}.rmw-hours-notable>i{width:8px;height:8px;margin-top:5px;border-radius:50%;background:var(--atlas);flex:0 0 auto}.rmw-hours-notable b,.rmw-hours-notable span{display:block}.rmw-hours-notable b{font-size:12.5px}.rmw-hours-notable span{margin-top:4px;color:var(--n-500);font-size:11.5px}@media(max-width:800px){.rmw-hours-kpis{grid-template-columns:1fr}.rmw-hours-row{grid-template-columns:110px minmax(120px,1fr) 42px}.rmw-hours-insight{padding:19px}}
 `;document.head.appendChild(s);}
   function catalogSheet(title, actions){
     const m=modal({title,width:480,body:`<div class="catalog-sheet">${actions.map(a=>`<button type="button" class="${a.danger?'danger':''}" data-catalog-action="${esc(a.id)}">${catalogIcon(a.icon||'menu')}<span${a.key?` data-i18n="catalog.${esc(a.key)}"`:''}>${esc(a.label)}</span></button>`).join('')}</div>`});

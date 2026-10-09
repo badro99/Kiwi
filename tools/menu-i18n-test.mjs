@@ -188,7 +188,7 @@ for (const f of ['assets/kitchen-print-queue.js', 'assets/food-production-print.
 }
 
 // Cards retain compact nutrition and option metadata without overlapping the action target.
-assert(ws.includes('${nutritionCardPill(x)}') && ws.includes('catalog-item-meta') && fs.readFileSync('assets/catalog-workspace.css','utf8').includes('.catalog-item-meta { display:block;max-width:'), 'card metadata remains compact and constrained beside a separate action button');
+assert(ws.includes('nutritionCardPill(x)') && ws.includes('catalog-item-meta') && /\.catalog-item-meta \{ display:block;[^}]*text-overflow:ellipsis;white-space:nowrap;/.test(fs.readFileSync('assets/catalog-workspace.css','utf8')) && ws.includes('data-rmw-command="actions"'), 'card metadata remains compact and constrained beside a separate action button');
 
 console.log(failures ? `\nmenu-i18n-test : ${failures} échec(s)` : '\nmenu-i18n-test : tout passe');
 process.exit(failures ? 1 : 0);

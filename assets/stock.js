@@ -255,6 +255,8 @@
       mQoToast: (sup, when) => `Commande envoyée à ${sup} · WhatsApp confirmé · livraison prévue ${when}`,
       mSupHistory: 'Historique des livraisons',
       mSupPrices: 'Évolution des prix · 6 derniers mois',
+      titleEdit: 'Modifier', titleDelete: 'Supprimer',
+      supRating: 'Note (1-5)', supSpend: 'Dépense mensuelle estimée (MAD)',
       mSupCall: 'Appeler', mSupWa: 'WhatsApp', mSupOrd: 'Nouvelle commande',
       mItStockActual: 'Stock actuel', mItParR: 'Par level', mItReorderR: 'Niveau de réappro',
       mItValue: 'Valeur stock', mItCost: 'Coût unitaire', mItVarW: 'Variance semaine',
@@ -984,7 +986,8 @@
    * State (resets on page refresh)
    * ═══════════════════════════════════════════════════════════════════════ */
   let stCurrentTab = 'overview';
-  let stItemView = 'list';
+  /* #0151 · A phone opens on the two-column cards; a wide screen on the table. */
+  let stItemView = (typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches) ? 'cards' : 'list';
   let stCatFilter = 'all';
   let stStatusFilter = 'all';
   let stSearch = '';
@@ -3462,8 +3465,8 @@
           <div class="st-card-name">${esc(it.name)}</div>
           <span class="st-card-cat">${esc(catLabel(it.category))}</span>
         </div>
-        <div class="st-card-stock">${esc(fmtNum(cur, Number.isInteger(cur) ? 0 : 1))}<span class="u">${esc(it.unit)}</span></div>
-        <span class="st-catalog-status ${st}">${esc(st==='ok'?t('stOk'):st==='low'?t('stLow'):t('stOut'))}</span>
+        <div class="st-card-level"><div class="st-card-stock">${esc(fmtNum(cur, Number.isInteger(cur) ? 0 : 1))}<span class="u">${esc(it.unit)}</span></div>
+        <span class="st-catalog-status ${st}">${esc(st==='ok'?t('stOk'):st==='low'?t('stLow'):t('stOut'))}</span></div>
         <div class="st-card-bar"><div class="st-card-bar-fill ${barCls}" data-stock-bar="${parPct}"></div></div>
         <div class="st-card-meta">
           <span>Par : <b>${esc(fmtUnit(it.parLevel, it.unit))}</b></span>
@@ -3629,11 +3632,15 @@
     }));
     return [...groups.values()].sort((a,b)=>stamp(b.at)-stamp(a.at));
   }
+  /* #0151 · One tap target per supplier: the card opens the supplier, the
+     round button calls them. Category and area share one quiet line. */
   function renderSupplierCard(s){
     const last=supplierHistory(s)[0];
-    return `<article class="st-supplier-card"><div class="st-supplier-card-head"><div><div class="st-sup-name">${esc(s.name)}</div><small class="st-sup-loc">${esc(s.location)}</small></div><span class="st-sup-cat">${esc(catLabel(s.category))}</span></div>
-      <div class="st-supplier-card-meta"><div><span>${esc(t('colSupSpend'))}</span><b>${esc(fmtMad(s.monthlySpend))}</b></div><div><span>${catalogLabel('lastDelivery','Dernière livraison')}</span><b>${last?esc(supplierDate(last.at)):catalogLabel('notRecorded','Non enregistrée')}</b></div></div>
-      <div class="st-supplier-card-foot"><button class="st-btn" type="button" data-action="stock-supplier-detail" data-supplier-id="${esc(s.id)}">${esc(t('btnDetail'))}</button><button class="st-btn" type="button" data-action="stock-call-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}"${s.contact?'':' disabled'}>${svg('phone',14)}${esc(t('mSupCall'))}</button></div></article>`;
+    const sub=[catLabel(s.category),s.location].filter(Boolean).map(esc).join(' · ');
+    return `<article class="st-supplier-card"><button class="st-supplier-open" type="button" data-action="stock-supplier-detail" data-supplier-id="${esc(s.id)}" aria-label="${esc(t('btnDetail'))} · ${esc(s.name)}">
+      <span class="st-supplier-card-head"><span class="st-sup-name">${esc(s.name)}</span><small class="st-sup-loc">${sub}</small></span>
+      <span class="st-supplier-card-meta"><span><span>${esc(t('colSupSpend'))}</span><b>${esc(fmtMad(s.monthlySpend))}</b></span><span><span>${catalogLabel('lastDelivery','Dernière livraison')}</span><b>${last?esc(supplierDate(last.at)):catalogLabel('notRecorded','Non enregistrée')}</b></span></span></button>
+      <button class="st-supplier-call" type="button" data-action="stock-call-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}"${s.contact?'':' disabled'} aria-label="${esc(t('mSupCall'))} · ${esc(s.name)}">${svg('phone',16)}</button></article>`;
   }
 
   function renderSupRow(s) {

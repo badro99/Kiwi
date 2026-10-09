@@ -164,8 +164,8 @@
     "sha": "0a056cb884ddab9b"
   },
   "assets/catalog-workspace.css": {
-    "v": "5",
-    "sha": "e63a128e1677622d"
+    "v": "18",
+    "sha": "56a8fd71539d546d"
   },
   "assets/catalog-workspace.js": {
     "v": "5",
@@ -396,8 +396,8 @@
     "sha": "5328fd29d491edb4"
   },
   "assets/interactive.js": {
-    "v": "45",
-    "sha": "b49f93e737c5a0df"
+    "v": "47",
+    "sha": "b7d07e2691fe00c3"
   },
   "assets/inventory-consumption.js": {
     "v": "12",
@@ -872,8 +872,8 @@
     "sha": "7197f2e2295615a3"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "82",
-    "sha": "00f5c5c2062711c9"
+    "v": "88",
+    "sha": "d0b14781d9de77f1"
   },
   "assets/restaurant-recipes.js": {
     "v": "8",
@@ -928,8 +928,8 @@
     "sha": "d49ee85d276e22d4"
   },
   "assets/stock.js": {
-    "v": "63",
-    "sha": "f92aaf489e04de93"
+    "v": "66",
+    "sha": "4442b2653d53874a"
   },
   "assets/store-templates.js": {
     "v": "2",
