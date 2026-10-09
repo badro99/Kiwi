@@ -130,6 +130,7 @@
     try { window.__kiwiAccountRevoked = true; } catch (_) {}
     try { localStorage.setItem(NATIVE_REVOKED_FLAG, '1'); } catch (_) {}
     clearLocalPairingIdentity();
+    secureSet('face-unlock-v1', null);
     /* This is intentionally only the secure pairing blob. Sales, queues and
      * other offline evidence stay on-device for later recovery/export. */
     return secureSet('pairing-v1', null);
@@ -1149,7 +1150,7 @@
     var role = /kiwi-serveur\.html$/i.test(location.pathname) ? 'equipe' : /kiwi-cuisine\.html$/i.test(location.pathname) ? 'cuisine' : /dashboard\.html$/i.test(location.pathname) ? 'dashboard' : '';
     if (!role) return;
     var owner = role === 'dashboard' ? initNativeOwnerUx() : null;
-    if (role === 'dashboard') initNativeOwnerKeypad();
+    if (role === 'dashboard') { initNativeOwnerKeypad(); initNativeEntry(); }
     if (role === 'cuisine') {
       var pairingPad = document.getElementById('pair-pad');
       if (pairingPad) pairingPad.addEventListener('click', function (event) { if (event.target.closest('button')) hapticLight(); });
@@ -1316,6 +1317,222 @@
     if (media.addEventListener) media.addEventListener('change', apply);
     apply();
     padMounted();
+  }
+
+  /* ── Opening screen and Face ID · owner dashboard ─────────────────────────
+     The lock is the first thing an owner sees every morning, so it reads like
+     the best banking apps: a personal greeting, quiet passcode dots, a
+     borderless keypad, and Face ID that asks by itself. Presentation and
+     convenience only. A code is still verified by the dashboard and the
+     server; Face ID never sees, stores or replays it. What Face ID restores
+     is the access tier a real code granted on this device, for this account,
+     and nothing else. Signing out forgets it. */
+  var FACE_KEY = 'face-unlock-v1', FACE_DECLINED = 'kiwi:native:face-declined';
+  var FACE_ICON = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q134 0 227 93t93 227q0 134-93 227t-227 93Zm0-80q100 0 170-70t70-170q0-17-2.5-33.5T710-546q-15 3-30 4.5t-30 1.5q-63 0-120-24t-102-70q-28 57-77 99t-111 61q3 98 72.5 166T480-240ZM256-566q44-23 67-53.5t45-72.5q-38 20-67 52.5T256-566Zm95.5 154.5Q340-423 340-440t11.5-28.5Q363-480 380-480t28.5 11.5Q420-457 420-440t-11.5 28.5Q397-400 380-400t-28.5-11.5ZM650-620h12q6 0 12-1-33-45-83.5-72T480-720h-12q-6 0-11 1 39 45 82.5 72T650-620Zm-98.5 208.5Q540-423 540-440t11.5-28.5Q563-480 580-480t28.5 11.5Q620-457 620-440t-11.5 28.5Q597-400 580-400t-28.5-11.5ZM40-720v-120q0-33 23.5-56.5T120-920h120v80H120v120H40ZM240-40H120q-33 0-56.5-23.5T40-120v-120h80v120h120v80Zm480 0v-80h120v-120h80v120q0 33-23.5 56.5T840-40H720Zm120-680v-120H720v-80h120q33 0 56.5 23.5T920-840v120h-80Zm-383 1Zm-89 27Z"/></svg>';
+  function entryCopy(kind) {
+    var lang = String(root.lang || 'fr'), ar = lang.indexOf('ar') === 0, en = lang.indexOf('en') === 0;
+    var bio = kind === 'touchId' ? 'Touch ID' : 'Face ID';
+    var h = new Date().getHours();
+    var greet = ar ? (h >= 5 && h < 12 ? 'صباح الخير' : 'مساء الخير')
+      : en ? (h >= 5 && h < 12 ? 'Good morning' : h < 18 && h >= 12 ? 'Good afternoon' : 'Good evening')
+      : (h >= 5 && h < 12 ? 'Bonjour' : h < 18 && h >= 12 ? 'Bon après-midi' : 'Bonsoir');
+    return {
+      greet: greet,
+      back: ar ? 'مرحبا بعودتك' : en ? 'Welcome back' : 'Bon retour',
+      bio: bio,
+      key: ar ? 'الفتح بـ ' + bio : en ? 'Unlock with ' + bio : 'Ouvrir avec ' + bio,
+      reason: ar ? 'فتح Kiwi Pro' : en ? 'Unlock Kiwi Pro' : 'Ouvrir Kiwi Pro',
+      offerTitle: ar ? 'فتح Kiwi بـ ' + bio + '؟' : en ? 'Open Kiwi with ' + bio + '?' : 'Ouvrir Kiwi avec ' + bio + ' ?',
+      offerBody: ar ? 'في المرة القادمة تكفي نظرة واحدة، ويبقى رمزك صالحا دائما.'
+        : en ? 'Next time, a glance is enough. Your code always works too.'
+        : 'La prochaine fois, un regard suffit. Votre code reste toujours valable.',
+      enable: ar ? 'تفعيل ' + bio : en ? 'Turn on ' + bio : 'Activer ' + bio,
+      later: ar ? 'لاحقا' : en ? 'Not now' : 'Plus tard',
+      done: ar ? 'تم تفعيل ' + bio : en ? bio + ' is on' : bio + ' activé',
+    };
+  }
+  function entryAccount() { try { return localStorage.getItem('kiwiAccountKey') || ''; } catch (_) { return ''; } }
+  function readFaceUnlock() {
+    var account = entryAccount();
+    if (!account) return Promise.resolve(null);
+    return secureGet(FACE_KEY).then(function (raw) {
+      try {
+        var r = JSON.parse(raw || 'null');
+        return r && r.account === account && /^(owner|manager|staff)$/.test(r.access) ? r : null;
+      } catch (_) { return null; }
+    }, function () { return null; });
+  }
+  function forgetFaceUnlock() { return secureSet(FACE_KEY, null); }
+  /* identity.js may load after this file; wait for its gate to exist and
+     settle, never longer than four seconds. */
+  function identitySettled() {
+    return new Promise(function (resolve) {
+      var started = Date.now();
+      (function wait() {
+        var gate = null;
+        try { gate = window.KiwiIdentity && window.KiwiIdentity.ready; } catch (_) {}
+        if (gate && typeof gate.then === 'function') { gate.then(function () { setTimeout(resolve, 0); }, resolve); return; }
+        if (Date.now() - started > 4000) { resolve(); return; }
+        setTimeout(wait, 100);
+      })();
+    });
+  }
+  function initNativeEntry() {
+    var lock = document.querySelector('[data-kiwi-lock]');
+    if (!lock || !window.matchMedia) return;
+    var media = window.matchMedia('(max-width:600px)');
+    root.classList.add('kiwi-entry-v2');
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var inner = lock.querySelector('.kiwi-lock-inner');
+    var brand = lock.querySelector('.kiwi-lock-brand');
+    var title = lock.querySelector('.kiwi-lock-title');
+    var sub = lock.querySelector('.kiwi-lock-sub');
+    var biometry = 'none', faceRecord = null, prompting = false;
+
+    function personalise() {
+      var c = entryCopy(biometry), me = window.KiwiMe || {};
+      var name = '', biz = '';
+      try { name = String(me.name || localStorage.getItem('kiwiOwnerName') || '').trim().split(/\s+/)[0] || ''; } catch (_) {}
+      try { biz = String(me.business || localStorage.getItem('kiwiBizName') || '').trim(); } catch (_) {}
+      if (faceRecord && faceRecord.name) name = String(faceRecord.name).trim().split(/\s+/)[0];
+      if (title) { title.removeAttribute('data-i18n'); title.textContent = name ? c.greet + ', ' + name : c.back; }
+      if (sub && biz) { sub.removeAttribute('data-i18n'); sub.textContent = biz; }
+    }
+    personalise();
+    [600, 1600, 3500].forEach(function (ms) { setTimeout(personalise, ms); });
+    document.addEventListener('kiwi-account-pins-ready', personalise);
+
+    /* The launch screen shows the mark centred. The lock starts with its mark
+       in that same place and lets it glide up as the rest fades in, so the
+       hand-off from launch to lock is one continuous movement. */
+    function enter() {
+      if (!media.matches || !inner) return;
+      if (reduce || !brand) { lock.classList.add('kiwi-entry-in'); return; }
+      var rect = brand.getBoundingClientRect();
+      var dy = Math.round(window.innerHeight / 2 - (rect.top + rect.height / 2));
+      brand.style.transition = 'none';
+      brand.style.transform = 'translateY(' + dy + 'px) scale(' + (88 / Math.max(1, rect.width)).toFixed(3) + ')';
+      void brand.offsetHeight;
+      requestAnimationFrame(function () {
+        brand.style.transition = 'transform 640ms cubic-bezier(.22,.9,.24,1)';
+        brand.style.transform = '';
+        lock.classList.add('kiwi-entry-in');
+        setTimeout(function () { brand.style.transition = ''; }, 700);
+      });
+    }
+    if (root.classList.contains('kiwi-lock-ready')) enter();
+    else new MutationObserver(function (_, obs) {
+      if (!root.classList.contains('kiwi-lock-ready')) return;
+      obs.disconnect(); enter();
+    }).observe(root, { attributes: true, attributeFilter: ['class'] });
+
+    /* Shown and on top: the onboarding can sit over a lock that is already
+       rendered underneath, and Face ID must not ask from behind it. */
+    function lockVisible() {
+      if (!lock.isConnected || getComputedStyle(lock).display === 'none' || lock.classList.contains('is-unlocking')) return false;
+      var top = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
+      return !top || lock.contains(top);
+    }
+    function tryFace() {
+      if (!faceRecord || prompting || !lockVisible()) return;
+      /* The idle relock asks on its own (maybePromptBiometricUnlock). */
+      try { if (sessionStorage.getItem('kiwi:native:biometric-pending') === '1') return; } catch (_) {}
+      prompting = true;
+      authenticateBiometric(entryCopy(biometry).reason).then(function (res) {
+        prompting = false;
+        if (!res || !res.authenticated || !lockVisible()) return;
+        hapticNotice('success');
+        if (window.__kiwiLock && typeof window.__kiwiLock.unlockAs === 'function') window.__kiwiLock.unlockAs(faceRecord);
+      }, function () { prompting = false; });
+    }
+    function mountFaceKey() {
+      var pad = lock.querySelector('.kiwi-native-owner-keypad');
+      if (!pad || pad.querySelector('[data-face-unlock]')) return;
+      var slot = pad.querySelector('span[aria-hidden="true"]');
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'kiwi-face-key';
+      button.setAttribute('data-face-unlock', '');
+      button.setAttribute('aria-label', entryCopy(biometry).key);
+      button.innerHTML = FACE_ICON;
+      button.addEventListener('click', function (event) { event.stopPropagation(); hapticLight(); tryFace(); });
+      if (slot) slot.replaceWith(button); else pad.insertBefore(button, pad.firstChild);
+    }
+    checkBiometrics().then(function (info) {
+      if (!info || !info.isAvailable) return null;
+      biometry = info.biometryType || 'faceId';
+      return readFaceUnlock();
+    }).then(function (record) {
+      if (!record) return;
+      faceRecord = record;
+      personalise();
+      mountFaceKey();
+      /* Ask after the identity gate has settled, so the onboarding, when it
+         opens, is already over the lock and lockVisible() sees it. */
+      identitySettled().then(function () { setTimeout(tryFace, reduce ? 300 : 700); });
+    }).catch(function () {});
+
+    /* Signing out, or switching account, forgets Face ID for this device. */
+    lock.addEventListener('click', function (event) {
+      if (event.target.closest('a[href="/auth/logout"]')) forgetFaceUnlock();
+    }, true);
+
+    /* A real code just opened the dashboard: offer Face ID once, after the
+       greeting, never in the demo and never twice for the same account. */
+    window.addEventListener('kiwi:code-unlocked', function (event) {
+      var who = event && event.detail;
+      var env = window.KiwiEnv, account = entryAccount();
+      if (!who || !account || !(env && env.isReal && env.isReal())) return;
+      try { if (localStorage.getItem(FACE_DECLINED) === account) return; } catch (_) {}
+      checkBiometrics().then(function (info) {
+        if (!info || !info.isAvailable) return;
+        biometry = info.biometryType || 'faceId';
+        return readFaceUnlock().then(function (record) {
+          if (record && record.access === who.access) return;
+          setTimeout(function () { offerFaceUnlock(who, account, biometry); }, 1900);
+        });
+      }).catch(function () {});
+    });
+  }
+  function offerFaceUnlock(who, account, kind) {
+    if (document.querySelector('.kiwi-face-offer')) return;
+    var c = entryCopy(kind);
+    var sheet = document.createElement('div');
+    sheet.className = 'kiwi-face-offer';
+    sheet.setAttribute('role', 'dialog');
+    sheet.setAttribute('aria-modal', 'true');
+    sheet.setAttribute('aria-labelledby', 'kiwi-face-offer-title');
+    sheet.innerHTML = '<div class="kiwi-face-offer-panel">'
+      + '<span class="kiwi-face-offer-icon">' + FACE_ICON + '</span>'
+      + '<h2 id="kiwi-face-offer-title"></h2><p></p>'
+      + '<button type="button" class="kiwi-face-offer-yes"></button>'
+      + '<button type="button" class="kiwi-face-offer-no"></button></div>';
+    sheet.querySelector('h2').textContent = c.offerTitle;
+    sheet.querySelector('p').textContent = c.offerBody;
+    sheet.querySelector('.kiwi-face-offer-yes').textContent = c.enable;
+    sheet.querySelector('.kiwi-face-offer-no').textContent = c.later;
+    function close() {
+      sheet.classList.remove('is-open');
+      setTimeout(function () { sheet.remove(); }, 320);
+    }
+    sheet.querySelector('.kiwi-face-offer-no').addEventListener('click', function () {
+      try { localStorage.setItem(FACE_DECLINED, account); } catch (_) {}
+      close();
+    });
+    sheet.querySelector('.kiwi-face-offer-yes').addEventListener('click', function () {
+      authenticateBiometric(c.reason).then(function (res) {
+        if (!res || !res.authenticated) return;
+        return secureSet(FACE_KEY, JSON.stringify({ account: account, access: who.access, name: who.name || '', at: Date.now() })).then(function () {
+          hapticNotice('success');
+          try { localStorage.removeItem(FACE_DECLINED); } catch (_) {}
+          try { if (window.Kiwi && window.Kiwi.toast) window.Kiwi.toast(c.done, { type: 'success', duration: 1800 }); } catch (_) {}
+          close();
+        });
+      }).catch(function () {});
+    });
+    document.body.appendChild(sheet);
+    requestAnimationFrame(function () { sheet.classList.add('is-open'); });
+    setTimeout(function () { try { sheet.querySelector('.kiwi-face-offer-yes').focus(); } catch (_) {} }, 340);
   }
 
   /* Owner home on a phone. The dashboard is the desktop page; on an iPhone the

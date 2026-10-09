@@ -17,7 +17,7 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <imageView contentMode="scaleAspectFit" image="KiwiBrandIcon" translatesAutoresizingMaskIntoConstraints="NO" id="kiwi-launch-mark">
-                                <rect key="frame" x="143.5" y="40" width="88" height="88"/>
+                                <rect key="frame" x="143.5" y="289.5" width="88" height="88"/>
                                 <constraints>
                                     <constraint firstAttribute="width" constant="88" id="mark-width"/>
                                     <constraint firstAttribute="height" constant="88" id="mark-height"/>
@@ -28,7 +28,7 @@
                         <color key="backgroundColor" red="0.03921568627450980" green="0.08627450980392157" blue="0.07058823529411765" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
                             <constraint firstItem="kiwi-launch-mark" firstAttribute="centerX" secondItem="snD-IY-ifK" secondAttribute="centerX" id="mark-center"/>
-                            <constraint firstItem="kiwi-launch-mark" firstAttribute="top" secondItem="launch-safe" secondAttribute="top" constant="20" id="mark-top"/>
+                            <constraint firstItem="kiwi-launch-mark" firstAttribute="centerY" secondItem="snD-IY-ifK" secondAttribute="centerY" id="mark-middle"/>
                         </constraints>
                     </view>
                 </viewController>

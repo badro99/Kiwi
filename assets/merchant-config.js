@@ -521,6 +521,25 @@
     } catch (_) {}
   }
 
+  /* #0096 · The till closes the day, so its business-day cutoff is the one
+     the dashboard must use. Each device used to keep its own: the till
+     published its value, but a dashboard holding an older local setting put a
+     1–3 am sale on another day than the Z report. Off the till, the cutoff the
+     till published wins. The till itself keeps deriving it (reportTillZone). */
+  function adoptTillCutoff(serverCutoff) {
+    try {
+      if (/caisse/i.test(location.pathname) || !Number.isInteger(serverCutoff)) return;
+      var R = window.KiwiDayReport, slug = merchant();
+      if (!R || !R.cutoff || !R.setCutoff) {
+        /* day-report.js loads later, at low priority: try again once it has. */
+        if (document.readyState !== 'complete') window.addEventListener('load', function () { adoptTillCutoff(serverCutoff); }, { once: true });
+        return;
+      }
+      if (!slug) return;
+      if (R.cutoff(slug) !== serverCutoff) R.setCutoff(serverCutoff, slug);
+    } catch (_) {}
+  }
+
   function fetchConfig() {
     lastSlug = storeSlug();
     lastMerchant = merchant();
@@ -535,6 +554,7 @@
         cfg.timezone = typeof data.timezone === 'string' ? data.timezone : '';
         cfg.businessCutoff = Number.isInteger(data.businessCutoff) ? data.businessCutoff : null;
         reportTillZone(data.timezone, data.businessCutoff);
+        adoptTillCutoff(cfg.businessCutoff);
         /* Server-authoritative entitlement. Empty means unresolved/offline and
            must never be interpreted as a paid tier. planExplicit mirrors the
            row: only an explicitly stored tier counts for venue-count gates

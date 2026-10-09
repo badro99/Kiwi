@@ -976,3 +976,54 @@ html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock :is(.kiwi-lock-help
   html.kiwi-native body.kiwi-native-kitchen:not(#kno) #pair-msg{margin-top:8px;min-height:20px}
   html.kiwi-native body.kiwi-native-kitchen:not(#kno) #pair .kiwi-native-role-back{margin:0 auto;min-height:44px}
 }
+
+/* ── Opening screen v2 · owner lock on a phone (initNativeEntry) ─────────────
+   Modelled on the calm of the best banking apps: one ground colour, the mark,
+   a personal greeting, dots, a borderless keypad with Face ID in its corner.
+   One extra class (.kiwi-entry-v2) so these rules win over the older lock
+   rules above without editing them. */
+@media(max-width:600px){
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-lock-inner{display:flex!important;flex-direction:column;align-items:center;min-height:calc(100dvh - var(--kiwi-safe-top) - var(--kiwi-safe-bottom) - 40px);padding-top:clamp(12px,6vh,56px)!important}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock-brand{width:64px!important;height:64px!important;min-height:64px;background-size:64px 64px!important;margin:0 auto 22px!important;will-change:transform}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock-title{font-size:28px!important;line-height:34px!important;font-weight:600!important;letter-spacing:-.02em;text-align:center;margin:0!important}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock-sub{font-size:15px!important;line-height:22px!important;margin-top:6px!important;color:var(--kno-ink-2)!important;text-align:center}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-native-keypad-lock .kiwi-lock-pin{margin:clamp(22px,5vh,40px) 0 4px!important;gap:20px}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-native-keypad-lock .kiwi-pin-cell{width:11px;height:11px;min-width:11px;min-height:11px;border-color:color-mix(in srgb,var(--kno-ink) 45%,transparent)}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-native-keypad-lock .kiwi-pin-cell.is-filled{background:var(--mint,#7DF2B0);border-color:var(--mint,#7DF2B0)}
+  /* The instruction is said once by VoiceOver (the keypad's live status);
+     on screen it only appears when there is something to correct. */
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock-help:not(.is-error){position:absolute!important;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock-help.is-error{min-height:20px;margin-top:10px!important;font-size:14px;color:#F2A7A0!important}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-native-owner-keypad{grid-template-columns:repeat(3,76px)!important;gap:clamp(6px,1.6vh,14px) clamp(20px,8vw,34px)!important;margin:clamp(18px,4vh,36px) auto clamp(8px,2vh,20px)!important}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-native-owner-keypad :is(button,span){width:76px!important;height:clamp(56px,8.4vh,72px)!important;min-height:56px!important}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-native-owner-keypad button{background:transparent!important;border-radius:999px;font:400 30px/1 var(--sans,"Inter Tight",sans-serif)!important;color:var(--kno-ink)!important;transition:background 160ms ease,transform 310ms cubic-bezier(.34,1.45,.5,1)}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-native-owner-keypad button:active{background:var(--kno-fill)!important;transform:scale(.94)}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-native-owner-keypad .kiwi-face-key{display:grid;place-items:center;color:var(--kno-ink)!important}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-face-key svg{width:30px;height:30px}
+  /* Demo and account links: quiet text, not buttons competing with the keypad. */
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-lock-skip{margin-top:auto!important;width:auto!important;background:transparent!important;color:var(--mint,#7DF2B0)!important;font:600 15px/44px var(--sans,"Inter Tight",sans-serif)!important;padding:0 12px!important}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-lock-switch{font-size:14px!important;color:var(--kno-ink-2)!important}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-lock-switch svg{width:16px;height:16px}
+  /* Entrance: everything but the mark rises and fades in once the launch
+     screen hands over; the mark glides up from the centre (initNativeEntry). */
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-lock-inner>:not(.kiwi-lock-brand){opacity:0;transform:translateY(12px);transition:opacity 420ms ease 180ms,transform 560ms cubic-bezier(.22,.9,.24,1) 180ms}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-lock-inner>.kiwi-native-owner-keypad{transition-delay:260ms}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock.kiwi-entry-in .kiwi-lock-inner>:not(.kiwi-lock-brand){opacity:1;transform:none}
+}
+@media(max-width:600px) and (prefers-reduced-motion:reduce){
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-lock-inner>:not(.kiwi-lock-brand){transition:none!important}
+}
+
+/* Face ID offer, after a real code opened the dashboard. */
+.kiwi-face-offer{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:flex-end;justify-content:center;background:rgba(10,15,13,0);transition:background 280ms ease}
+.kiwi-face-offer.is-open{background:rgba(10,15,13,.48)}
+.kiwi-face-offer-panel{box-sizing:border-box;width:100%;max-width:480px;padding:28px 24px calc(20px + var(--kiwi-safe-bottom,0px));border-radius:26px 26px 0 0;background:var(--surface,#F7F5F0);color:var(--ink,#0A0F0D);text-align:center;transform:translateY(100%);transition:transform 420ms cubic-bezier(.22,.9,.24,1)}
+.kiwi-face-offer.is-open .kiwi-face-offer-panel{transform:none}
+.kiwi-face-offer-icon{display:inline-grid;place-items:center;width:64px;height:64px;border-radius:20px;background:color-mix(in srgb,var(--atlas,#0B6E4F) 12%,transparent);color:var(--atlas,#0B6E4F)}
+.kiwi-face-offer-icon svg{width:34px;height:34px}
+.kiwi-face-offer h2{margin:16px 0 6px;font:600 21px/1.25 var(--sans,"Inter Tight",sans-serif);letter-spacing:-.01em}
+.kiwi-face-offer p{margin:0 auto 22px;max-width:320px;font:400 15px/1.45 var(--sans,"Inter Tight",sans-serif);color:var(--n-600,#5A6560)}
+.kiwi-face-offer button{display:block;width:100%;min-height:50px;border:0;border-radius:999px;font:600 16px/1 var(--sans,"Inter Tight",sans-serif)}
+.kiwi-face-offer-yes{background:var(--atlas,#0B6E4F);color:var(--paper,#F7F5F0)}
+.kiwi-face-offer-no{margin-top:6px;background:transparent;color:var(--n-600,#5A6560)}
+@media(prefers-reduced-motion:reduce){.kiwi-face-offer,.kiwi-face-offer-panel{transition:none}}

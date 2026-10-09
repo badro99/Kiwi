@@ -6258,7 +6258,7 @@
 <script defer src="assets/channel-sales.js?v=3"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
-<script defer src="assets/merchant-config.js?v=276"></script>
+<script defer src="assets/merchant-config.js?v=277"></script>
 <!-- Real logged-in identity · swaps the demo owner/business (Rachid · Café Atlas)
      for the account's own via /api/me. No-op for the local demo / staff / operator. -->
   <link rel="stylesheet" href="assets/entitlements.css?v=5">
@@ -6660,6 +6660,8 @@
      caissière qui a choisi 1111 se retrouve en vue patron. */
   function isPreviewCode(code, matched) {
     if (!demosOn() || matched) return false;
+    /* App Store 2.3.1: no hidden features behind secret codes in the native app. */
+    if (document.documentElement.classList.contains('kiwi-native')) return false;
     try { if (allPins().some((p) => p.code === code)) return false; } catch (_) {}
     return true;
   }
@@ -6772,6 +6774,14 @@
     hide() { resetToDashboard(); lock.style.display = 'none'; announceDashboardReady(); },
     show() { resetToDashboard(); lock.style.display = ''; document.documentElement.style.overflow = 'hidden'; setTimeout(() => { try { pinInput.focus(); } catch (_) {} }, 60); },
     reveal() { skipToApp(); },
+    /* Face ID on the native app: opens with the access tier a real code gave
+       on this device, exactly as that code would. */
+    unlockAs(identity) {
+      const access = identity && identity.access;
+      if (unlocked || !/^(owner|manager|staff)$/.test(String(access || ''))) return false;
+      finishUnlock('', { access, name: String(identity.name || '') }, true);
+      return true;
+    },
     setGreetName,
   };
 
@@ -6923,6 +6933,12 @@
      * (no on-screen toggle · KiwiDesign2026.disable() reverts; persists). */
     if (window.KiwiDesign2026) window.KiwiDesign2026.enable();
     else { try { localStorage.setItem('kiwiDesign2026', '1'); } catch (e) {} }
+    /* A real code just proved who is here: the native app may offer Face ID
+       for next time (app/src/native-runtime.js). Only the access tier and the
+       name travel, never the code. */
+    if (!reserved && hit && matched && val) {
+      try { window.dispatchEvent(new CustomEvent('kiwi:code-unlocked', { detail: { access: role, name: hit.name || '' } })); } catch (_) {}
+    }
     /* Slight delay so the user sees the 4th cell fill before the celebration. */
     setTimeout(unlock, 140);
   }

@@ -33,6 +33,11 @@ the account still needs (owner code, menu, staff).
 > browse sample data. Home, Orders, Report and Customers are the tabs at the
 > bottom.
 >
+> Face ID is optional. After the owner code opens the Dashboard once, the app
+> offers "Open Kiwi with Face ID?". If accepted, the next launch opens with a
+> glance; the face key on the keypad asks again, and the code always works.
+> Face ID is never offered in the sample-data demo. Signing out forgets it.
+>
 > Till: opens on the float screen; enter an opening amount and tap Open till.
 > Tap items to build a bill, then View bill to take payment. Refunds, cash
 > movements and End of shift are in the ☰ menu.
@@ -66,6 +71,7 @@ the account still needs (owner code, menu, staff).
 | Kitchen | Pairing keypad, Confirm enabled at six digits | Keypad only; pairing needs a live code |
 | Delete my account (demo) | ☰ › Delete my account | Yes, explains and offers Sign in |
 | Delete my account (signed in) | ☰ › Delete my account | **Not verified.** Needs the owner's password on a real test account (Amira Cafe). The owner runs this before submitting. |
+| Face ID | Lock › face key, or the offer after a real owner code | Browser with stubbed LocalAuthentication (`tools/native-face-entry-test.mjs`); needs one real device pass (E1) |
 | Forgot password | Sign-in › Forgot password? | Opens kiwi-os.com/support.html#mot-de-passe-oublie in an in-app Safari sheet |
 
 ## Guideline 3.1.1: no price in the build

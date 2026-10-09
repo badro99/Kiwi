@@ -24,7 +24,7 @@ body { overscroll-behavior: none; }
 /* Boot stage. Same ink as the page background so first paint is never a
  * flash: the logo fades in on the brand stage the shell already uses. */
 .boot { position: fixed; inset: 0; z-index: 60; background: #0A1612; }
-.boot-inner { display: flex; justify-content: center; padding-top: calc(var(--kiwi-safe-top, env(safe-area-inset-top, 0px)) + 20px); }
+.boot-inner { display: flex; justify-content: center; align-items: center; height: 100%; } /* same centred mark as the launch screen */
 .boot-logo { display: block; width: 88px; height: 88px; border-radius: 0; }
 html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", sans-serif; }
 button, nav, header, footer, .tile, .account { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
