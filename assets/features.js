@@ -117,7 +117,12 @@
   .ramadan-banner .left-s { display: flex; align-items: center; gap: 12px; }
   .ramadan-banner .moon { width: 20px; height: 20px; background: #FFF4DD; border-radius: 50%; box-shadow: -6px 0 0 1px rgba(0,0,0,0.3) inset; }
   .ramadan-banner .countdown { font-family: var(--mono); font-weight: 500; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 6px; }
-  .ramadan-banner .close { background: none; border: 0; color: #FFF4DD; cursor: pointer; font-size: 14px; opacity: 0.8; }
+  .ramadan-banner .close { background: none; border: 0; color: #FFF4DD; cursor: pointer; font-size: 18px; opacity: 0.8; min-width: 44px; min-height: 44px; margin: -10px -12px -10px 0; }
+  /* The iftar countdown was a fixed « 04h 12m » nothing ever updated; it is
+     gone until it can come from the venue's real Maghrib time. */
+  @media (max-width: 560px) {
+    .ramadan-banner { padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top, 0px)); gap: 8px; }
+  }
   @keyframes rb-glow { 0%, 100% { box-shadow: 0 0 20px rgba(217,154,43,0.3) inset; } 50% { box-shadow: 0 0 40px rgba(217,154,43,0.45) inset; } }
 
   /* Capital */
@@ -820,8 +825,7 @@
           </div>
         </div>
         <div style="display:flex; align-items:center; gap:12px;">
-          <div class="countdown" data-iftar>${T.countdown('04h 12m')}</div>
-          <button class="close" data-close-ramadan>×</button>
+          <button class="close" type="button" data-close-ramadan aria-label="×">×</button>
         </div>
       `;
       if (!b.parentElement) document.body.appendChild(b);

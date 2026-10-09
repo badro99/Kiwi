@@ -19,7 +19,7 @@ ok(css.includes('height: 100dvh') && css.includes('max-height: 100dvh'), 'shell 
 ok(css.includes('.vx-root .vx-ticket') && css.includes('position: fixed'), 'ticket becomes a bottom sheet');
 ok(css.includes('.vx-root.vx-ticket-open .vx-ticket'), 'ticket has an explicit open state');
 ok(css.includes('env(safe-area-inset-bottom'), 'bottom sheet respects device safe areas');
-ok(css.includes('min-width: 36px; min-height: 36px'), 'ticket quantity controls are thumb-sized');
+ok(css.includes('[class*="-qty"] button {\n    min-width: 44px; min-height: 44px'), 'ticket quantity controls are thumb-sized');
 ok(css.includes('font-size: 16px !important'), 'form controls avoid iOS focus zoom');
 ok(css.includes('max-height: calc(100dvh - 24px)'), 'modals remain inside the visible viewport');
 ok(css.includes('grid-template-columns: repeat(2'), 'product grids use two phone columns');

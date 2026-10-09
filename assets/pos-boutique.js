@@ -2278,10 +2278,18 @@
           </div>
         </div>
       </div>`;
+    $('#bq-clv-q', panel).oncompositionend = (e) => e.target.dispatchEvent(new Event('input'));
     $('#bq-clv-q', panel).oninput = (e) => {
-      state.clQuery = e.target.value;
+      /* The panel re-renders, but the field the cashier is typing in survives:
+         swapping a fresh <input> in on every key dropped the iOS keyboard and
+         broke accent long-press and Arabic composition mid-word. */
+      if (e.isComposing) return;
+      const typed = e.target;
+      state.clQuery = typed.value;
       renderClientes(); icons();
-      const i = $('#bq-clv-q', panel); i.focus(); moveCaretEnd(i);
+      const fresh = $('#bq-clv-q', panel);
+      if (fresh && fresh !== typed) fresh.replaceWith(typed);
+      if (document.activeElement !== typed) { typed.focus(); moveCaretEnd(typed); }
     };
     panel.onclick = (e) => {
       const b = e.target.closest('[data-bq-fiche]');
@@ -2875,10 +2883,18 @@
             : `<div class="bq-empty" style="display:flex; flex-direction:column; align-items:center; padding:36px 16px;"><div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:10px;"><svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600; color:var(--ink);">Retrouver une vente</div><div style="font-size:12.5px; color:var(--n-500); margin-top:4px;">Scannez le ticket de la cliente, ou tapez son numéro de téléphone.</div></div>`)}
         </div></div>
       </div>`;
+    $('#bq-ret-q', panel).oncompositionend = (e) => e.target.dispatchEvent(new Event('input'));
     $('#bq-ret-q', panel).oninput = (e) => {
-      state.retQuery = e.target.value;
+      /* The panel re-renders, but the field the cashier is typing in survives:
+         swapping a fresh <input> in on every key dropped the iOS keyboard and
+         broke accent long-press and Arabic composition mid-word. */
+      if (e.isComposing) return;
+      const typed = e.target;
+      state.retQuery = typed.value;
       renderEchanges(); icons();
-      const i = $('#bq-ret-q', panel); i.focus(); moveCaretEnd(i);
+      const fresh = $('#bq-ret-q', panel);
+      if (fresh && fresh !== typed) fresh.replaceWith(typed);
+      if (document.activeElement !== typed) { typed.focus(); moveCaretEnd(typed); }
     };
     $('#bq-ret-date', panel).onchange = (e) => {
       state.retDate = String(e.target.value || todayKey);
@@ -5536,7 +5552,7 @@
       ${movements.length ? `<div class="bqi-movements" style="padding:12px 20px;">
         <b>Mouvements de stock</b>
         ${movements.map(m => `<div class="bqi-movement" style="display:flex;gap:10px;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--n-100);">
-          <span>${esc(m.typeLabel)} · ${esc(m.variant)}</span><span>Ticket ${esc(m.ref || '—')}</span><strong>${m.qty > 0 ? '+' : ''}${m.qty}</strong>
+          <span>${esc(m.typeLabel)} · ${esc(m.variant)}</span><span>Ticket ${esc(m.ref || '·')}</span><strong>${m.qty > 0 ? '+' : ''}${m.qty}</strong>
         </div>`).join('')}
       </div>` : ''}
       <div class="bqi-modfoot">

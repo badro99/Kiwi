@@ -281,6 +281,16 @@
 
   /* ─────────────────────────── l'API ─────────────────────────── */
 
+  /* #0166 · a paid sale ends the ticket. On a phone the ticket sheet folds
+     back to the sale grid (pos-mobile.js listens). Every register reaches
+     record(), so announcing it here covers all of them, demo included. */
+  function ticketDone() {
+    try {
+      var roots = document.querySelectorAll('.vx-root');
+      for (var i = 0; i < roots.length; i++) roots[i].dispatchEvent(new CustomEvent('vx-ticket-done', { bubbles: false }));
+    } catch (_) {}
+  }
+
   /* record(vertical, sale) → l'entrée journalisée, ou null si rien n'a été pris.
      Ne jette jamais : un encaissement réussi ne doit pas échouer parce que le
      stockage est plein ou que le miroir tombe. */
@@ -290,6 +300,7 @@
     /* Montant nul ou négatif ⇒ ce n'est pas une recette. Les différés
        ('payer plus tard') et les avoirs passent par là et sont ignorés. */
     if (!(total > 0)) return null;
+    ticketDone();
     if (!isReal()) return null;                 /* la démo reste en mémoire */
 
     var at = sale.at instanceof Date ? sale.at : new Date();
@@ -358,6 +369,10 @@
     try { window.KiwiInventoryConsumption?.record?.(entry); } catch (_) {}
 
     creditClient(entry);
+    /* saleId and clientId are only known after the first write; without this
+       one the local row could never be matched to its server twin (reprint,
+       dedupe) unless a receipt happened to print. */
+    if (entry.saleId || entry.clientId) write(vertical, rows);
 
     printCustomerReceipt(vertical, entry, sale, rows);
 

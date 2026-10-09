@@ -324,9 +324,10 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
   ok('le poste porté par la ligne prime sur une re-déduction par le nom',
     /l\.station && kdsStations\(\)\.some/.test(CAISSE));
   ok('la tablette envoie le poste actif avec son geste prête',
-    /KiwiKitchenRelay\.bump\(id, 'ready', station\)/.test(CUISINE));
+    /sendBump\(id, 'ready', station\)/.test(CUISINE)
+      && /return KiwiKitchenRelay\.bump\(id, status, station\)/.test(CUISINE));
   ok('la tablette envoie aussi le poste actif avec son geste accepter',
-    /KiwiKitchenRelay\.bump\(takeId, 'cooking', takeStation\)/.test(CUISINE));
+    /sendBump\(takeId, 'cooking', takeStation\)/.test(CUISINE));
   ok('le filtre Toutes garde le geste de commande entière',
     /var station = S\.station === 'all' \? '' : S\.station/.test(CUISINE));
   ok('la caisse conserve aussi la progression prête par poste',

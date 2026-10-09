@@ -3420,7 +3420,7 @@
     .kt-shpop-times input:focus { border-color: var(--atlas); box-shadow: 0 0 0 3px rgba(11,110,79,0.10); }
     .kt-shpop-sum { min-height: 17px; margin: 9px 0 2px; font-size: 11.5px; color: var(--n-600); line-height: 1.5; }
     .kt-shpop-sum b { color: var(--ink); font-size: 12.5px; }
-    .kt-shpop-sum.warn { color: #946100; }
+    .kt-shpop-sum.warn { color: var(--warn-ink); }
     .kt-shpop-week { display: flex; align-items: center; gap: 7px; margin: 9px 0 12px; font-size: 11.5px; color: var(--n-600); cursor: pointer; }
     .kt-shpop-week input { width: 14px; height: 14px; accent-color: var(--atlas); cursor: pointer; }
     .kt-shpop-foot { display: flex; gap: 6px; }
@@ -3442,7 +3442,7 @@
     /* Tag chips (contract type) */
     .dash-equipe .kt-tag { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 600; font-family: var(--mono); letter-spacing: 0.04em; }
     .dash-equipe .kt-tag-ok      { background: var(--mint-soft); color: var(--atlas); border: 1px solid rgba(11,110,79,0.18); }
-    .dash-equipe .kt-tag-pend    { background: #FFF4E3; color: #946100; border: 1px solid #F4D6A3; }
+    .dash-equipe .kt-tag-pend    { background: var(--warn-soft); color: var(--warn-ink); border: 1px solid color-mix(in srgb, var(--warn-ink) 25%, transparent); }
     .dash-equipe .kt-tag-neutral { background: var(--paper-soft); color: var(--n-600); border: 1px solid var(--n-200); }
     .dash-equipe .kt-langchip { background: var(--paper-soft); border: 1px solid var(--n-200); padding: 2px 7px; border-radius: 5px; font-size: 10.5px; color: var(--n-700); }
     .dash-equipe .kt-chips { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -3499,6 +3499,15 @@
     body.fusion-mode .dash-equipe .kt-h-table .kt-day-cell.locked input { background: rgba(255,255,255,0.06) !important; color: var(--n-500); }
     body.fusion-mode .dash-equipe .kt-tag-neutral { background: rgba(255,255,255,0.05); color: var(--n-300); border-color: rgba(125,242,176,0.12); }
     body.fusion-mode .dash-equipe .kt-langchip { background: rgba(255,255,255,0.05); color: var(--n-300); border-color: rgba(125,242,176,0.12); }
+    /* Phone: thumb-sized week arrows, readable day captions, no focus zoom. */
+    @media (max-width: 820px) {
+      .dash-equipe .kt-plan-arrow { min-width: 44px; min-height: 44px; }
+      .dash-equipe .kt-searchbar input { font-size: 16px; }
+    }
+    @media (max-width: 900px) {
+      .dash-equipe .kt-h-table .kt-day-head .kt-day-hours { font-size: 10px; }
+      .dash-equipe .kt-h-table .kt-day-head .kt-day-special { font-size: 10px; }
+    }
   `;
 
   /* Inject scoped page CSS once on first import */
@@ -3558,9 +3567,17 @@
     .kt-pf-v { font-size: 13px; color: var(--ink); word-break: break-word; }
     .kt-tag { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 600; font-family: var(--mono); letter-spacing: 0.04em; }
     .kt-tag-ok      { background: var(--mint-soft); color: var(--atlas); border: 1px solid rgba(11,110,79,0.18); }
-    .kt-tag-pend    { background: #FFF4E3; color: #946100; border: 1px solid #F4D6A3; }
+    .kt-tag-pend    { background: var(--warn-soft); color: var(--warn-ink); border: 1px solid color-mix(in srgb, var(--warn-ink) 25%, transparent); }
     .kt-tag-neutral { background: var(--paper-soft); color: var(--n-600); border: 1px solid var(--n-200); }
     .kt-langchip { background: var(--paper-soft); border: 1px solid var(--n-200); padding: 2px 7px; border-radius: 5px; font-size: 10.5px; color: var(--n-700); }
+    /* Phone: the contract row put a select and two date inputs in three
+       100 px columns, and iOS date fields overflowed them. Fields stack, and
+       16 px text keeps Safari from zooming the page on focus. */
+    @media (max-width: 560px) {
+      [data-kt-form] .kt-fgrid-2, [data-kt-form] .kt-fgrid-3, .kt-qe-form .kt-fgrid-2 { grid-template-columns: 1fr; }
+      [data-kt-form] .kt-frow, .kt-pf-row { grid-template-columns: 1fr; gap: 6px; }
+      [data-kt-form] input, [data-kt-form] select, [data-kt-form] textarea, .kt-qe-form input, .kt-qe-form select { min-width: 0; font-size: 16px; }
+    }
   `;
 
   /* ═══════════════ PUBLIC · seed the roster from onboarding ═══════════════

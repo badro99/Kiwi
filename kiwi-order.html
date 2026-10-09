@@ -828,6 +828,11 @@ em, i, cite, dfn, var { font-style: normal; }
       display: flex; align-items: center; justify-content: center;
     }
     .cart-row .qty button:active { transform: scale(0.92); }
+    /* Same size to the eye, 44 px under the thumb. */
+    .video-add, .item-add, .cart-row .qty button { position: relative; }
+    .video-add::after { content: ""; position: absolute; inset: -9px; }
+    .item-add::after { content: ""; position: absolute; inset: -5px; }
+    .cart-row .qty button::after { content: ""; position: absolute; inset: -7px; }
     .cart-row .qty span {
       font-family: var(--mono);
       font-size: 12.5px;
@@ -889,6 +894,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .send-btn:active { transform: scale(0.98); }
     .send-btn:disabled { opacity: 0.45; pointer-events: none; }
     .send-btn svg { width: 16px; height: 16px; }
+    .send-btn.is-loading { pointer-events: none; }
     .send-btn.is-loading .label { opacity: 0; }
     .send-btn.is-loading svg.send-icon { opacity: 0; }
     .send-btn.is-loading::after {
@@ -3185,6 +3191,7 @@ em, i, cite, dfn, var { font-style: normal; }
         prep_title_pre: "En préparation",
         prep_title_em: "en cuisine.",
         prep_ready_in: "Prêt dans",
+        prep_rejected: "La caisse n'a pas pu accepter votre commande. Passez au comptoir.",
         prep_now: "maintenant",
         prep_perm_default: "Recevez une notification quand c'est prêt, gardez votre téléphone à côté.",
         prep_perm_granted_html: "<strong>Notifications activées.</strong> On vous prévient même si vous quittez la page.",
@@ -3361,6 +3368,7 @@ em, i, cite, dfn, var { font-style: normal; }
         prep_title_pre: "Preparing",
         prep_title_em: "in the kitchen.",
         prep_ready_in: "Ready in",
+        prep_rejected: "The counter could not accept your order. Please come to the counter.",
         prep_now: "now",
         prep_perm_default: "Get notified when it's ready, keep your phone nearby.",
         prep_perm_granted_html: "<strong>Notifications on.</strong> We'll alert you even if you leave this page.",
@@ -3537,6 +3545,7 @@ em, i, cite, dfn, var { font-style: normal; }
         prep_title_pre: "فالتحضير",
         prep_title_em: "فالمطبخ.",
         prep_ready_in: "واجد ف",
+        prep_rejected: "ما تقبلش الطلب ديالك. تفضل للكونطوار.",
         prep_now: "دابا",
         prep_perm_default: "خد إشعار ملي يكون واجد، خلي تلفونك معاك.",
         prep_perm_granted_html: "<strong>الإشعارات مفعلة.</strong> غادي نخبروك حتى إلا خرجتي من الصفحة.",
@@ -4729,6 +4738,8 @@ em, i, cite, dfn, var { font-style: normal; }
        * personne ne prépare. On explique plutôt que de refuser en silence. */
       if (shopClosed()) { refreshHoursGate(); return; }
       const btn = $('#send-btn');
+      /* A second tap while the first order is in flight sent it twice. */
+      if (btn.classList.contains('is-loading')) return;
       btn.classList.add('is-loading');
       const summary = [...cart.entries()]
         .map(([, line]) => `${line.qty}× ${nameOf(line.id)}`)
@@ -4744,7 +4755,9 @@ em, i, cite, dfn, var { font-style: normal; }
              le personnel appellera. Le numéro inventé à partir de performance.now()
              ne correspondait à rien — deux clients pouvaient recevoir le même, et
              aucun ne figurait sur l'écran de la caisse. */
-          orderNumber = String(40 + Math.floor((performance.now() % 60))).padStart(3, '0');
+          /* Invented only for the demo. A live order without a number shows
+             a dot, and the cashier screen says to go to the counter. */
+          orderNumber = sent && sent.demo ? String(40 + Math.floor((performance.now() % 60))).padStart(3, '0') : '·';
           if (sent && sent.number) {
             orderNumber = String(sent.number).padStart(3, '0');
             $('#cashier-number-digits').textContent = orderNumber;
@@ -4859,7 +4872,7 @@ em, i, cite, dfn, var { font-style: normal; }
           .then((d) => {
             if (!d || !d.ok) return;
             if (d.status === 'ready') { clearInterval(readyPollId); readyPollId = null; triggerReady(); }
-            else if (d.status === 'rejected') { clearInterval(readyPollId); readyPollId = null; }
+            else if (d.status === 'rejected') { clearInterval(readyPollId); readyPollId = null; triggerRejected(); }
           })
           .catch(() => {});
       }, 5000);
@@ -4905,6 +4918,15 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     /* ============ takeout: ready (vibrate + chime + system notif) ============ */
+    /* The till refused the order. The customer used to stay on « En
+       préparation » forever, waiting for food nobody was making. */
+    function triggerRejected() {
+      const eta = $('#prep-eta');
+      if (eta && eta.parentNode) eta.parentNode.textContent = t('prep_rejected');
+      showToast(t('prep_rejected'));
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    }
+
     function triggerReady() {
       gotoScreen('screen-ready');
       // Vibrate — Android only; iOS Safari ignores it silently.

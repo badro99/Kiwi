@@ -10655,7 +10655,7 @@ function _mzCss() {
 }
 
 const _mzDate = (ts) => new Date(ts).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
-const _mzSource = (s) => (s === 'caisse' ? 'Caisse' : s === 'dashboard' ? 'Tableau de bord' : s === 'import' ? 'Import' : (s || '—'));
+const _mzSource = (s) => (s === 'caisse' ? 'Caisse' : s === 'dashboard' ? 'Tableau de bord' : s === 'import' ? 'Import' : (s || '·'));
 
 function _mzRows() {
   const M = MZS();
@@ -10674,14 +10674,14 @@ function _mzTableHtml(rows, opts) {
   const body = rows.map((m) => `
     <tr>
       <td class="mzs-ba">${_esc(_mzDate(m.at))}${m.pending ? '<div class="mzs-pend">en attente de synchro</div>' : ''}</td>
-      ${opts.hideProduct ? '' : `<td><strong>${_esc(m.product || '—')}</strong>${m.variant ? `<div class="mzs-sub">${_esc(m.variant)}</div>` : ''}</td>`}
-      ${opts.hideProduct ? `<td>${_esc(m.variant || '—')}</td>` : ''}
+      ${opts.hideProduct ? '' : `<td><strong>${_esc(m.product || '·')}</strong>${m.variant ? `<div class="mzs-sub">${_esc(m.variant)}</div>` : ''}</td>`}
+      ${opts.hideProduct ? `<td>${_esc(m.variant || '·')}</td>` : ''}
       <td><span class="mzs-chip ${m.dir > 0 ? 'in' : 'out'}">${_esc(m.typeLabel)}</span></td>
       <td class="mzs-qty ${m.dir > 0 ? 'mzs-in' : 'mzs-out'}">${m.dir > 0 ? '+' : '−'}${Math.abs(m.qty)}</td>
-      <td class="mzs-ba">${m.before == null ? '—' : `${m.before} → ${m.after}`}</td>
-      <td class="mzs-hide-s">${_esc(m.actor || '—')}</td>
+      <td class="mzs-ba">${m.before == null ? '·' : `${m.before} → ${m.after}`}</td>
+      <td class="mzs-hide-s">${_esc(m.actor || '·')}</td>
       <td class="mzs-hide-s mzs-sub">${_esc(_mzSource(m.source))}${m.supplier ? ` · ${_esc(m.supplier)}` : ''}</td>
-      <td class="mzs-hide-s mzs-sub">${_esc(m.ref || '—')}${m.note ? `<div>${_esc(m.note)}</div>` : ''}</td>
+      <td class="mzs-hide-s mzs-sub">${_esc(m.ref || '·')}${m.note ? `<div>${_esc(m.note)}</div>` : ''}</td>
     </tr>`).join('');
   return `
     <table class="mzs-table">
@@ -10824,7 +10824,7 @@ function _mzManualModal(preset) {
   const fillVariants = () => {
     const pid = q('product').value;
     const vs = cat.listVariants(pid) || [];
-    q('variant').innerHTML = vs.map((v) => `<option value="${_esc(v.id)}">${_esc([v.size, v.colorLabel].filter(Boolean).join(' · '))} — ${v.stock} en stock</option>`).join('')
+    q('variant').innerHTML = vs.map((v) => `<option value="${_esc(v.id)}">${_esc([v.size, v.colorLabel].filter(Boolean).join(' · '))} · ${v.stock} en stock</option>`).join('')
       || '<option value="">Aucune variante</option>';
     if (preset.variantId) q('variant').value = preset.variantId;
   };
@@ -12098,7 +12098,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
                 <div class="b-ret-id">${esc(credit.code)}<br><span style="opacity:.7;font-size:10px;">${new Date(Number(credit.createdAt) || Date.now()).toLocaleDateString('fr-FR')}</span></div>
                 <div class="b-ret-thumb">${SVG.voucher}</div>
                 <div class="b-ret-body"><div class="n">${esc(credit.customerName || 'Porteur du bon')}</div>
-                  <div class="reason">Vente ${esc(credit.originalRef || credit.originalSaleId || '—')} · ${esc(products)}</div>
+                  <div class="reason">Vente ${esc(credit.originalRef || credit.originalSaleId || '·')} · ${esc(products)}</div>
                   <div class="who">${esc(issued.actor || credit.issuedBy || 'Caisse')} · expire ${new Date(Number(credit.expiresAt) || Date.now()).toLocaleDateString('fr-FR')}</div></div>
                 <div class="b-ret-amt">${fmtMAD(Number(credit.balanceCents || 0) / 100, 2)} MAD<br><small style="font-weight:400;color:var(--n-500);">sur ${fmtMAD(Number(credit.amountCents || 0) / 100, 2)}</small></div>
                 <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
@@ -13282,9 +13282,9 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     .pr-cert .n { font-weight: 500; }
     .pr-cert .m { font-size: 11px; color: var(--n-500); margin-top: 2px; font-family: var(--mono); letter-spacing: 0.04em; }
     .pr-cert-stat { font-size: 10.5px; padding: 3px 9px; border-radius: 999px; font-family: var(--mono); font-weight: 600; letter-spacing: 0.04em; }
-    .pr-cert-stat.ok { background: #E3F7EC; color: var(--atlas-700, #054C36); }
+    .pr-cert-stat.ok { background: color-mix(in srgb, var(--atlas) 14%, var(--surface)); color: var(--atlas); }
     .pr-cert-stat.warn { background: var(--warn-soft); color: var(--warn-ink); }
-    .pr-cert-stat.exp { background: #FDE8E4; color: #9B2F22; }
+    .pr-cert-stat.exp { background: color-mix(in srgb, var(--danger) 14%, var(--surface)); color: var(--danger); }
     .pr-calc-out { background: linear-gradient(135deg, var(--atlas), var(--brand-deep)); color: var(--inverse-ink); border-radius: 14px; padding: 18px; margin-top: 14px; }
     .pr-calc-out .l { font-size: 10.5px; font-family: var(--mono); letter-spacing: 0.1em; color: var(--mint); text-transform: uppercase; }
     .pr-calc-out .v { font-size: 32px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px; font-feature-settings: "tnum" 1; }
@@ -13498,7 +13498,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       desc: 'Le profil sera retiré du planning public mais conservé pour l\'historique paie et CNSS. Les RDV à venir seront réassignés.',
       width: 460,
       body: `
-        <div style="background: #FDE8E4; color: #9B2F22; padding: 12px 14px; border-radius: 10px; font-size: 12.5px; line-height: 1.5;">
+        <div style="background: color-mix(in srgb, var(--danger) 14%, var(--surface)); color: var(--danger); padding: 12px 14px; border-radius: 10px; font-size: 12.5px; line-height: 1.5;">
           ${p.rdv > 0 ? `<b>${p.rdv} RDV ce mois</b> et 12 RDV à venir devront être réattribués manuellement.` : 'Aucun RDV en cours.'}
         </div>
       `,

@@ -312,7 +312,7 @@
       'html[data-theme="dark"] .kdr-id,html[data-theme="dark"] .kdr-strip,html[data-theme="dark"] .kdr-cat,html[data-theme="dark"] .kdr-top-c{background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.08)}',
       'html[data-theme="dark"] .kdr-kpi:not(.is-lead){background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.08)}',
       '@media (max-width:820px){.kdr-two{grid-template-columns:1fr;gap:0}}',
-      '@media (max-width:640px){.kdr-day{font-size:13.5px}.kdr-kpi-v{font-size:21px}.kdr-sd-t{height:40px}.kdr-hrs{height:76px}}',
+      '@media (max-width:640px){.kdr-day{font-size:13.5px}.kdr-kpi-v{font-size:21px}.kdr-sd-t{height:40px}.kdr-hrs{height:76px}.kdr-btn{min-height:44px}}',
     ].join('');
     document.head.appendChild(s);
   }

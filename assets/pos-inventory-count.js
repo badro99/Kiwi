@@ -406,7 +406,7 @@
       window.openSkModal(modalHtml);
     } else {
       const modal = document.getElementById('sk-modal');
-      const inner = document.getElementById('sk-modal-inner');
+      const inner = document.getElementById('sk-modal-box');
       if (modal && inner) {
         inner.innerHTML = modalHtml;
         modal.classList.add('is-open');

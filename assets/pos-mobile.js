@@ -206,16 +206,23 @@
     tagRoles(screen);
     ensureRail(screen);
     ensureTicket(screen);
-    restack(screen);
   }
 
   function wire(screen) {
     pass(screen);
+    restack(screen);
     if (screen.dataset.vxWatched) return;
     screen.dataset.vxWatched = '1';
 
+    /* restack() reads the computed style of every node in the visible view.
+     * Registers re-render on each tap, so running it per frame made every
+     * tap pay for a full-tree style read on an iPhone. It only needs to run
+     * once the screen has settled, so it trails the burst by 250 ms. */
+    var restackTimer = 0;
     var pending = false;
     var schedule = function () {
+      clearTimeout(restackTimer);
+      restackTimer = setTimeout(function () { restack(screen); }, 250);
       if (pending) return;            /* coalesce a render's worth of mutations */
       pending = true;
       requestAnimationFrame(function () { pending = false; pass(screen); });

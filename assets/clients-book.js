@@ -639,7 +639,7 @@
     if (!c || !POS_ATTACH.test(document.body.className)) { if (pill) pill.remove(); return; }
     if (!pill) {
       pill = document.createElement('div'); pill.id = 'kcb-salepill';
-      pill.style.cssText = 'position:fixed;z-index:9000;top:calc(env(safe-area-inset-top,0px) + 10px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;max-width:calc(100vw - 32px);padding:7px 8px 7px 14px;border-radius:999px;background:var(--riad,#053B2C);color:var(--paper,#F7F5F0);font-weight:600;font-size:.82rem;line-height:1.2;box-shadow:0 6px 18px -8px rgba(5,59,44,.55);';
+      pill.style.cssText = 'position:fixed;z-index:9000;top:calc(env(safe-area-inset-top,0px) + 10px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;max-width:calc(100vw - 136px);padding:7px 8px 7px 14px;border-radius:999px;background:var(--riad,#053B2C);color:var(--paper,#F7F5F0);font-weight:600;font-size:.82rem;line-height:1.2;box-shadow:0 6px 18px -8px rgba(5,59,44,.55);';
       document.body.appendChild(pill);
     }
     pill.innerHTML = '<span style="color:var(--mint,#7DF2B0);display:inline-flex">' + ICON.users + '</span>' +

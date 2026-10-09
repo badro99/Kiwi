@@ -55,6 +55,7 @@ function pass(reply) {
     T: (k) => k,
     $: (id) => (id === 'link' ? linkEl : txtEl),
     KiwiKitchenRelay: { pullAll: () => Promise.resolve(reply) },
+    flushBumps: () => Promise.resolve([]),   /* pull() resends queued gestures first */
     paint() {}, announce() {}, announceVoid() {}, saveCooking() {}, saveSeen() {},
     setTimeout, Date, Object, Array, Promise, JSON, Math, String, Number,
     navigator: {}, window: {}, console: { log() {}, warn() {}, error() {} },

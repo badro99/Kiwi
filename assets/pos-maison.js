@@ -2976,7 +2976,7 @@
       ).join('');
       return `<div class="mz-fhist-row" style="align-items:flex-start;">
         <span class="when">${whenLabel(credit.at)}<small style="display:block;">expire ${fmtDayY(credit.until)}</small></span>
-        <span class="what"><b>${esc(credit.code)}</b> · vente ${esc(credit.from || '—')}<small style="display:block;">${lines.length ? esc(lines.map((line) => `${line.qty || 1}× ${line.name || 'Article'}`).join(' + ')) : esc(credit.motif || 'Retour')} · ${esc(issued.actor || 'Caisse')}</small>${eventRows}</span>
+        <span class="what"><b>${esc(credit.code)}</b> · vente ${esc(credit.from || '·')}<small style="display:block;">${lines.length ? esc(lines.map((line) => `${line.qty || 1}× ${line.name || 'Article'}`).join(' + ')) : esc(credit.motif || 'Retour')} · ${esc(issued.actor || 'Caisse')}</small>${eventRows}</span>
         <span class="amt">${fmtMAD(credit.amount)}<small style="display:block;color:var(--ink-3);">reste ${fmtMAD(credit.balance)}</small></span>
       </div>`;
     }).join('');
@@ -7074,7 +7074,7 @@
     if (source === 'caisse') return 'Caisse';
     if (source === 'dashboard') return 'Tableau de bord';
     if (source === 'import') return 'Import';
-    return source || '—';
+    return source || '·';
   }
 
   function movementTable(rows) {
@@ -7086,13 +7086,13 @@
       <thead><tr><th>Date</th><th>Produit</th><th>Type</th><th>Qté</th><th>Avant → après</th><th>Employé</th><th>Source</th><th>Référence · note</th></tr></thead>
       <tbody>${rows.map((m) => `<tr>
         <td class="mzm-muted">${esc(new Date(m.at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }))}${m.pending ? '<small>En attente de synchro</small>' : ''}</td>
-        <td><b>${esc(m.product || '—')}</b>${m.variant ? `<small>${esc(m.variant)}</small>` : ''}</td>
+        <td><b>${esc(m.product || '·')}</b>${m.variant ? `<small>${esc(m.variant)}</small>` : ''}</td>
         <td><span class="mzm-chip ${m.dir > 0 ? 'in' : 'out'}">${esc(m.typeLabel || 'Mouvement')}</span></td>
         <td class="mzm-qty ${m.dir > 0 ? 'in' : 'out'}">${m.dir > 0 ? '+' : '−'}${Math.abs(m.qty)}</td>
-        <td class="mzm-muted">${m.before == null ? '—' : `${m.before} → ${m.after}`}</td>
-        <td class="mzm-optional">${esc(m.actor || '—')}</td>
+        <td class="mzm-muted">${m.before == null ? '·' : `${m.before} → ${m.after}`}</td>
+        <td class="mzm-optional">${esc(m.actor || '·')}</td>
         <td class="mzm-optional mzm-muted">${esc(movementSource(m.source))}${m.supplier ? `<small>${esc(m.supplier)}</small>` : ''}</td>
-        <td class="mzm-optional mzm-muted">${esc(m.ref || '—')}${m.note ? `<small>${esc(m.note)}</small>` : ''}</td>
+        <td class="mzm-optional mzm-muted">${esc(m.ref || '·')}${m.note ? `<small>${esc(m.note)}</small>` : ''}</td>
       </tr>`).join('')}</tbody>
     </table></div>`;
   }
@@ -7318,7 +7318,7 @@
         <tbody>${rows}</tbody></table></div>
       <div class="mzi-form" style="padding-top:0;">
         <div class="mzi-fg"><label>Historique des mouvements</label>
-          ${movements.length ? `<div class="mzi-vtable-wrap"><table class="mzi-vtable"><thead><tr><th>Date</th><th>Mouvement</th><th>Qté</th><th>Référence</th></tr></thead><tbody>${movements.map((m) => `<tr><td>${esc(whenLabel(m.at))}</td><td>${esc(m.typeLabel || m.reason || 'Mouvement')}${m.note ? `<div class="mzi-csrc">${esc(m.note)}</div>` : ''}</td><td><b>${m.qty > 0 ? '+' : ''}${m.qty}</b></td><td>${esc(m.ref || '—')}</td></tr>`).join('')}</tbody></table></div>` : '<div class="mzi-dashboard-only">Aucun mouvement enregistré pour cet article.</div>'}
+          ${movements.length ? `<div class="mzi-vtable-wrap"><table class="mzi-vtable"><thead><tr><th>Date</th><th>Mouvement</th><th>Qté</th><th>Référence</th></tr></thead><tbody>${movements.map((m) => `<tr><td>${esc(whenLabel(m.at))}</td><td>${esc(m.typeLabel || m.reason || 'Mouvement')}${m.note ? `<div class="mzi-csrc">${esc(m.note)}</div>` : ''}</td><td><b>${m.qty > 0 ? '+' : ''}${m.qty}</b></td><td>${esc(m.ref || '·')}</td></tr>`).join('')}</tbody></table></div>` : '<div class="mzi-dashboard-only">Aucun mouvement enregistré pour cet article.</div>'}
         </div>
       </div>
       <div class="mzi-modfoot">

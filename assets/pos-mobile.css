@@ -232,9 +232,8 @@
 
   /* Quantity steppers were 21px desktop controls in several tickets. A till
    * on a phone needs targets that remain hittable with a thumb during a rush. */
-  .vx-root [class*="-line-qty"] button,
-  .vx-root [class*="-qty-step"] button {
-    min-width: 36px; min-height: 36px;
+  .vx-root [class*="-qty"] button {
+    min-width: 44px; min-height: 44px;
   }
 
   /* Modals ship as centred desk cards; give them the viewport on a phone. */

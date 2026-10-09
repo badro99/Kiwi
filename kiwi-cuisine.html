@@ -535,16 +535,28 @@
     .empty svg { width: 34px; height: 34px; opacity: .5; }
 
     /* Tablette portrait / petit écran : les trois colonnes ne tiennent plus. */
+    /* Une colonne à la fois, choisie par les onglets. Avant, « Au passe »
+       (et sous 620 px « En préparation ») était masqué sans aucun moyen d'y
+       aller : un cuisinier qui tapait « Prendre » voyait le bon disparaître. */
+    .coltabs { display: none; }
     @media (max-width: 900px) {
-      .cols { grid-template-columns: 1fr 1fr; }
-      .col--pass { display: none; }
-      .cols.show-pass { grid-template-columns: 1fr; }
-      .cols.show-pass .col--new, .cols.show-pass .col--cook { display: none; }
-      .cols.show-pass .col--pass { display: flex; }
+      .coltabs {
+        display: flex; gap: 9px; padding: 10px 20px; background: var(--surface);
+        border-bottom: 1px solid var(--line); flex-shrink: 0;
+      }
+      .coltabs .st { flex: 1 1 0; justify-content: center; min-width: 0; }
+      .coltabs .st span:first-child { overflow: hidden; text-overflow: ellipsis; }
+      .cols { grid-template-columns: 1fr; }
+      .cols .col { display: none; }
+      .cols[data-col="new"] .col--new,
+      .cols[data-col="cook"] .col--cook,
+      .cols[data-col="pass"] .col--pass { display: flex; }
+      .cols .col-head { display: none; }
+      .cols .stack { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); align-content: start; padding-top: 14px; }
     }
     @media (max-width: 620px) {
-      .cols { grid-template-columns: 1fr; }
-      .col--cook { display: none; }
+      .coltabs { padding: 8px 12px; gap: 6px; }
+      .coltabs .st { padding: 0 8px; gap: 6px; white-space: normal; line-height: 1.15; text-align: center; font-size: 13.5px; }
       .brand .store { display: none; }
       .top { gap: 8px; padding: 10px 12px; }
       .brand b { font-size: 21px; }
@@ -682,7 +694,12 @@
 
   <nav class="bar" id="bar" data-i18n-attr="aria-label:bar.aria"></nav>
 
-  <div class="cols" id="cols" tabindex="0" role="region" data-i18n-attr="aria-label:cols.aria">
+  <div class="coltabs" id="coltabs" role="tablist" data-i18n-attr="aria-label:cols.aria">
+    <button class="st on" type="button" role="tab" aria-selected="true" data-col="new"><span data-i18n="col.new">Nouvelles</span><span class="ct" id="t-new">0</span></button>
+    <button class="st" type="button" role="tab" aria-selected="false" data-col="cook"><span data-i18n="col.cook">En préparation</span><span class="ct" id="t-cook">0</span></button>
+    <button class="st" type="button" role="tab" aria-selected="false" data-col="pass"><span data-i18n="col.pass">Au passe</span><span class="ct" id="t-pass">0</span></button>
+  </div>
+  <div class="cols" id="cols" data-col="new" tabindex="0" role="region" data-i18n-attr="aria-label:cols.aria">
     <section class="col col--new">
       <div class="col-head"><span data-i18n="col.new">Nouvelles</span><span class="n" id="n-new">0</span></div>
       <div class="stack" id="s-new"></div>
@@ -1093,10 +1110,40 @@
       .catch(function () {});
   }
 
+  /* ── Les gestes qui doivent atteindre le serveur ─────────────────────────
+     « Prendre », « Prêt » et « Servi » changent l'écran tout de suite, la
+     brigade n'attend pas le réseau. Mais un appel perdu l'était pour de bon :
+     le sondage ne relit que ce qui a CHANGÉ côté serveur, donc rien ne venait
+     corriger l'écran, et la caisse n'apprenait jamais que le plat était prêt.
+     Un geste qui échoue reste en file et repart avant chaque sondage. */
+  var BUMP_TRIES = 40;
+  S.pendingBumps = {};
+  function sendBump(id, status, station) {
+    var key = id + '|' + status + '|' + (station || '');
+    var job = S.pendingBumps[key] || { id: id, status: status, station: station || '', tries: 0 };
+    job.tries++;
+    S.pendingBumps[key] = job;
+    return KiwiKitchenRelay.bump(id, status, station).then(function (r) {
+      if (r && r.ok !== false) { delete S.pendingBumps[key]; return true; }
+      if (job.tries >= BUMP_TRIES) delete S.pendingBumps[key];
+      setLive(false);
+      return false;
+    });
+  }
+  function flushBumps() {
+    var jobs = Object.keys(S.pendingBumps).map(function (k) { return S.pendingBumps[k]; });
+    return Promise.all(jobs.map(function (j) { return sendBump(j.id, j.status, j.station); }));
+  }
+
   /* ── La file ─────────────────────────────────────────────────────────────── */
+  /* Un seul relevé à la fois : sur un réseau lent les sondages de 5 s
+     s'empilaient et leurs réponses pouvaient s'appliquer dans le désordre. */
   function pull() {
-    if (!window.KiwiKitchenRelay) return;
-    KiwiKitchenRelay.pullAll(S.since, 'kitchen').then(function (j) {
+    if (!window.KiwiKitchenRelay || S.pulling) return;
+    S.pulling = true;
+    flushBumps().then(function () {
+      return KiwiKitchenRelay.pullAll(S.since, 'kitchen');
+    }).then(function (j) {
       if (!j || !j.ok) { setLive(false); return; }
       /* ── UNE BASE MUETTE N'EST PAS UNE CUISINE VIDE ─────────────────────
        * Quand toutes les lectures de la table `orders` échouent, l'API répond
@@ -1157,7 +1204,7 @@
       else if (fresh) announce(fresh);
       saveCooking();
       paint();
-    });
+    }).catch(function () { setLive(false); }).then(function () { S.pulling = false; });
   }
 
   function setLive(up) {
@@ -1309,7 +1356,7 @@
       var formulaTag = l.kind === 'formula-part'
         ? '<span class="tk-formula-tag">' + esc((l.formulaName ? l.formulaName + (l.slotLabel ? ' · ' + l.slotLabel : '') : (l.slotLabel || 'Formule'))) + '</span>'
         : '';
-      return '<li class="' + (off ? 'off' : '') + '"><span class="tk-q">' + (l.qty || 1) + '×</span>'
+      return '<li class="' + (off ? 'off' : '') + '"><span class="tk-q">' + esc(String(Number(l.qty) || 1)) + '×</span>'
         + '<span class="tk-n">' + formulaTag + esc(l.name) + kdsTr(l.name) + visualHtml + (note ? '<span class="tk-note">' + esc(note) + '</span>' : '') + '</span></li>';
     }).join('');
     var act = kind === 'new'
@@ -1343,7 +1390,7 @@
 
     return '<article class="tk ' + (kind === 'new' ? 'is-new' : kind === 'pass' ? 'pass' : '')
       + (u === 'over' && kind !== 'pass' ? ' is-late' : '') + '" data-tk="' + esc(o.id) + '">'
-      + '<div class="tk-top"><span class="tk-no">' + ticketNo(o) + '</span>' + right + '</div>'
+      + '<div class="tk-top"><span class="tk-no">' + esc(ticketNo(o)) + '</span>' + right + '</div>'
       + '<div class="tk-meta">' + whereChip(o)
       + (o.server ? '<span class="chip who">' + esc(o.server) + '</span>' : '') + '</div>'
       + '<ul class="tk-items">' + items + '</ul>' + voidBanner + act + '</article>';
@@ -1371,8 +1418,20 @@
     };
     /* Un seul poste ne se filtre pas : « Tous » et « Cuisine » montreraient
        exactement la même chose. On garde la barre pour le compteur. */
-    return (list.length > 1 ? btn('all', '#0A0F0D', T('bar.all')) : '')
+    return (list.length > 1 ? btn('all', 'var(--ink)', T('bar.all')) : '')
       + list.map(function (s) { return btn(s.id, s.color, s.name); }).join('');
+  }
+
+  /* Petit écran : la colonne affichée. Un bon pris ou envoyé au passe ne
+     quitte plus l'écran sans laisser de trace, le compteur de l'onglet bouge. */
+  function showCol(col) {
+    $('cols').dataset.col = col;
+    var tabs = document.querySelectorAll('#coltabs [data-col]');
+    for (var i = 0; i < tabs.length; i++) {
+      var on = tabs[i].dataset.col === col;
+      tabs[i].classList.toggle('on', on);
+      tabs[i].setAttribute('aria-selected', on ? 'true' : 'false');
+    }
   }
 
   function paint() {
@@ -1381,6 +1440,9 @@
     $('n-new').textContent = n.length;
     $('n-cook').textContent = c.length;
     $('n-pass').textContent = p.length;
+    $('t-new').textContent = n.length;
+    $('t-cook').textContent = c.length;
+    $('t-pass').textContent = p.length;
     $('s-new').innerHTML = n.length ? n.map(function (o) { return card(o, 'new'); }).join('')
       : emptyBox(T('empty.new'));
     $('s-cook').innerHTML = c.length ? c.map(function (o) { return card(o, 'cook'); }).join('')
@@ -1441,6 +1503,9 @@
     var st = e.target.closest('[data-st]');
     if (st) { S.station = st.dataset.st; paint(); return; }
 
+    var colTab = e.target.closest('[data-col]');
+    if (colTab && colTab.parentNode && colTab.parentNode.id === 'coltabs') { showCol(colTab.dataset.col); return; }
+
     var take = e.target.closest('[data-take]');
     if (take) {
       var takeId = take.dataset.take, takeOrder = S.orders[takeId];
@@ -1451,7 +1516,7 @@
       });
       delete S.cooking[takeId];
       saveCooking(); paint();
-      KiwiKitchenRelay.bump(takeId, 'cooking', takeStation);
+      sendBump(takeId, 'cooking', takeStation);
       return;
     }
     var rdy = e.target.closest('[data-ready]');
@@ -1459,8 +1524,8 @@
       var id = rdy.dataset.ready, o = S.orders[id];
       if (!o) return;
       /* Optimiste : la brigade ne doit jamais attendre le réseau, elle a les
-         mains dans une poêle. Le prochain sondage tranchera avec la vérité du
-         serveur si l'appel a échoué. */
+         mains dans une poêle. Si l'appel échoue, sendBump le garde en file et
+         le renvoie avant le prochain sondage. */
       var station = S.station === 'all' ? '' : S.station;
       if (station) {
         (o.lines || []).forEach(function (line) {
@@ -1477,7 +1542,7 @@
       }
       o.updated_ts = Date.now();
       saveCooking(); paint();
-      KiwiKitchenRelay.bump(id, 'ready', station);
+      sendBump(id, 'ready', station);
       return;
     }
     var srv = e.target.closest('[data-served]');
@@ -1485,7 +1550,7 @@
       var sid = srv.dataset.served;
       delete S.orders[sid];
       paint();
-      KiwiKitchenRelay.bump(sid, 'served');
+      sendBump(sid, 'served');
       return;
     }
   });

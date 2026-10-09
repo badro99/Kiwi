@@ -58,7 +58,7 @@ var SHELL = [
   '/assets/pressing-catalog.css?v=4',
   '/assets/pressing-dashboard.css?v=10',
   '/assets/trade-workspaces.css?v=3',
-  '/assets/reservations.css?v=6',
+  '/assets/reservations.css?v=7',
   '/assets/hotel.css?v=38',
   '/assets/hotel-economat.js?v=3',
   '/assets/genpage.css?v=3',
@@ -92,7 +92,7 @@ var SHELL = [
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
   '/assets/interactive.js?v=47',
-  '/assets/features.js?v=8',
+  '/assets/features.js?v=9',
   '/assets/invoicing.css?v=7',
   '/assets/invoicing.js?v=9',
   '/assets/order-qr.js?v=3',
@@ -155,7 +155,7 @@ var SHELL = [
   '/assets/dashboard-native.js?v=3',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
-  '/assets/pos-mobile.css?v=8',
+  '/assets/pos-mobile.css?v=9',
   '/assets/caisse-motion.js?v=1',
   '/assets/caisse-pwa.js?v=564',
   '/assets/vendor/dexie.min.js?v=1',
@@ -173,7 +173,7 @@ var SHELL = [
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=19',
   '/assets/report.js?v=5',
-  '/assets/day-report-dash.js?v=22',
+  '/assets/day-report-dash.js?v=23',
   '/assets/day-report-export.js?v=10',
   '/assets/month-report.js?v=10',
   '/assets/month-report-tools.js?v=5',
@@ -236,7 +236,7 @@ var SHELL = [
   '/assets/inventory-ledger.js?v=12',
   '/assets/maison-stock-movements.js?v=4',
   '/assets/caisse-stock-sync.js?v=10',
-  '/assets/pos-inventory-count.js?v=8',
+  '/assets/pos-inventory-count.js?v=9',
   '/assets/stock.js?v=66',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
@@ -244,9 +244,9 @@ var SHELL = [
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=4',
   '/assets/clients-store.js?v=9',
-  '/assets/clients-book.js?v=23',
-  '/assets/clients-directory.js?v=16',
-  '/assets/customer-retention.js?v=2',
+  '/assets/clients-book.js?v=24',
+  '/assets/clients-directory.js?v=17',
+  '/assets/customer-retention.js?v=3',
   '/assets/menu-catalog.js?v=25',
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',
@@ -257,7 +257,7 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=4',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=10',
-  '/assets/team.js?v=291',
+  '/assets/team.js?v=292',
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=88',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
@@ -279,22 +279,22 @@ var SHELL = [
      cuisine à l'écran sans jamais sortir sur la thermique. */
   '/assets/kitchen-print-queue.js?v=16',
   '/assets/food-production-print.js?v=2',
-  '/assets/pos-sale.js?v=10',
-  '/assets/pos-dispatch.js?v=69',
+  '/assets/pos-sale.js?v=11',
+  '/assets/pos-dispatch.js?v=70',
   '/assets/retail-scan.css?v=8',
   '/assets/retail-balances.css?v=2',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=8',
   '/assets/caisse-dna.css?v=5',
   '/assets/caisse-dna.js?v=2',
-  '/assets/pos-mobile.js?v=6',
+  '/assets/pos-mobile.js?v=7',
   '/assets/pos-workspaces.css?v=4',
   '/assets/pos-workspaces.js?v=5',
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=47',
-  '/assets/pos-boutique.js?v=47',
+  '/assets/pos-boutique.css?v=48',
+  '/assets/pos-boutique.js?v=48',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -326,8 +326,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=5',
   '/assets/pos-autre.css?v=5',
   '/assets/pos-autre.js?v=5',
-  '/assets/pos-maison.css?v=54',
-  '/assets/pos-maison.js?v=54',
+  '/assets/pos-maison.css?v=55',
+  '/assets/pos-maison.js?v=55',
   '/assets/caisse-pairing.js?v=25',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

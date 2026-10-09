@@ -1897,6 +1897,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       transition: background 150ms, color 150ms;
       flex: 0 0 26px;
     }
+    /* 26 px to the eye, 44 px under the thumb: the stepper is the most
+       pressed control in service and a miss adds the wrong dish. */
+    .step-btn, .split-convive-pick { position: relative; }
+    .step-btn::after { content: ""; position: absolute; inset: -9px; }
+    .split-convive-pick::after { content: ""; position: absolute; inset: -6px; }
     .step-btn.step-minus { background: rgba(184,82,69,0.12); color: var(--danger-mute); }
     .step-btn.step-plus  { background: var(--emerald); color: var(--on-accent); }
     .step-num {
@@ -6246,6 +6251,44 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     let lineSeq = 0;
     const newLineUid = () => 'ln' + (++lineSeq);
     /* Escape user-typed text before it goes into innerHTML. */
+    /* A refusal reads as a sentence, never as the API's code
+       (« Modification refusée : floor-table-required »). */
+    const SV_ERR = {
+      'floor-table-required': 'cette table n\u2019est pas dans votre coupure',
+      'stale-table-visit': 'la table a été réglée ou rouverte, rechargez-la',
+      'concurrent-update': 'un collègue vient de la modifier, réessayez',
+      'table-operation-conflict': 'un collègue vient de la modifier, réessayez',
+      'session-closed': 'la table est déjà fermée',
+      'service-closed': 'le service est fermé',
+      'order-not-found': 'commande introuvable, elle a peut-être été réglée',
+      'not-found': 'commande introuvable, elle a peut-être été réglée',
+      'line-not-on-order': 'ce plat n\u2019est plus sur la commande',
+      'bad-transition': 'la commande a déjà changé d\u2019état',
+      'too-many-lines': 'trop de lignes sur une seule commande',
+      'empty-order': 'la commande est vide',
+      'write-failed': 'le serveur n\u2019a pas pu enregistrer, réessayez',
+    };
+    /* Background refreshes wait for the waiter's hand. A poll or the minute
+       tick rebuilt the menu or the table sheet mid-tap: the button under the
+       finger vanished before its click, and a kitchen note lost focus and
+       closed the keyboard. A rebuild now waits until no finger is down, no
+       field is focused and the last touch is 900 ms old. */
+    let svTouching = false, svLastTouch = 0;
+    ['pointerdown', 'pointerup', 'pointercancel'].forEach((type) => {
+      document.addEventListener(type, () => { svTouching = type === 'pointerdown'; svLastTouch = Date.now(); }, true);
+    });
+    function svUserBusy() {
+      const a = document.activeElement;
+      if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return true;
+      return svTouching || Date.now() - svLastTouch < 900;
+    }
+    const svDeferred = {};
+    function svWhenIdle(key, fn) {
+      if (!svUserBusy()) { clearTimeout(svDeferred[key]); delete svDeferred[key]; fn(); return; }
+      if (svDeferred[key]) return;
+      svDeferred[key] = setTimeout(() => { delete svDeferred[key]; svWhenIdle(key, fn); }, 700);
+    }
+    const svErrLabel = code => SV_ERR[String(code || '')] || 'opération impossible, réessayez';
     const esc = s => String(s == null ? '' : s)
       .replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -7057,7 +7100,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           applyEmployeeLive(data);
           activeRole = resolveRole('');
           applyRoleToMain();
-          try { renderAll(); } catch (_) {}
+          svWhenIdle('all', () => { try { renderAll(); } catch (_) {} });
         }).catch(() => {});
       }
       if (activeRole.restricted) return;
@@ -8596,6 +8639,14 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     });
 
     async function changeOrderQty(tableId, uid, delta) {
+      /* One change per line at a time. Two quick taps computed the same target
+         from the same line.qty before the first request returned, so one tap
+         was lost, and two « − » could open two void requests. */
+      const inFlight = changeOrderQty.inFlight || (changeOrderQty.inFlight = new Set());
+      const flightKey = tableId + '|' + uid;
+      if (inFlight.has(flightKey)) return;
+      inFlight.add(flightKey);
+      try {
       const order = tableOrders[tableId];
       if (!order) return;
       const line = order.find(l => l.uid === uid);
@@ -8643,7 +8694,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
             });
             const data = await res.json().catch(() => null);
             if (!res.ok || (data && !data.ok)) {
-              toast(`Modification refusée : ${(data && data.error) || 'erreur'}`);
+              toast(`Modification refusée · ${svErrLabel(data && data.error)}`);
               return;
             }
             if (data.alertSent || data.tier === 2) {
@@ -8684,7 +8735,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
             });
             const data = await res.json().catch(() => null);
             if (!res.ok || (data && !data.ok)) {
-              toast(`Ajout refusé : ${(data && data.error) || 'erreur'}`);
+              toast(`Ajout refusé · ${svErrLabel(data && data.error)}`);
               return;
             }
             if (data.action === 'appended' && data.appendedLine) {
@@ -8712,6 +8763,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         renderTableDetail();
         return;
       }
+      } finally { inFlight.delete(flightKey); }
     }
 
     /* ---------- New Table modal ---------- */
@@ -9111,9 +9163,9 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         const qty = activeOrder.filter(c => c.id === m.id).reduce((s, c) => s + c.qty, 0);
         const control = qty > 0
           ? `<span class="menu-item-stepper">
-               <button class="step-btn step-minus" data-step="dec">−</button>
+               <button class="step-btn step-minus" type="button" data-step="dec" aria-label="${esc(m.name)} −1">−</button>
                <span class="step-num">${qty}</span>
-               <button class="step-btn step-plus" data-step="inc">+</button>
+               <button class="step-btn step-plus" type="button" data-step="inc" aria-label="${esc(m.name)} +1">+</button>
              </span>`
           : `<span class="menu-item-add">+</span>`;
         const tag = itemHasFormula(m.id)
@@ -10164,8 +10216,10 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           t.elapsed += 1;
         }
       });
-      if (currentTab === 'tables') renderTables();
-      if (activeTableId && $('#screen-table').classList.contains('is-active')) renderTableDetail();
+      if (currentTab === 'tables') svWhenIdle('tables', () => { if (currentTab === 'tables') renderTables(); });
+      svWhenIdle('detail', () => {
+        if (activeTableId && $('#screen-table').classList.contains('is-active')) renderTableDetail();
+      });
     }, 60000);
 
     /* ---------- Payment Choice modal ---------- */

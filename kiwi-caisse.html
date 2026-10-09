@@ -100,7 +100,7 @@
   <!-- Journal de vente partagé · DOIT précéder les modules métier (pressing +
        tout ce que pos-dispatch charge à la volée) : c'est lui qui persiste la
        recette du jour et la renvoie au tableau de bord. -->
-  <script src="assets/pos-sale.js?v=10" defer></script>
+  <script src="assets/pos-sale.js?v=11" defer></script>
   <!-- Garment workflow snapshot shared with the pressing owner dashboard. -->
   <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
   <script src="assets/pressing-ops.js?v=8" defer></script>
@@ -133,11 +133,11 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=69" defer></script>
+  <script src="assets/pos-dispatch.js?v=70" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=5" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=2" defer></script>
-  <script src="assets/pos-mobile.js?v=6" defer></script>
+  <script src="assets/pos-mobile.js?v=7" defer></script>
 
   <!-- Shared material tokens (elevation, paper, spring). Linked BEFORE the
        inline <style> so the caisse's own palette still wins; only the tokens
@@ -5565,7 +5565,7 @@
       font-size: 12px;
     }
   </style>
-  <link rel="stylesheet" href="assets/pos-mobile.css?v=8" />
+  <link rel="stylesheet" href="assets/pos-mobile.css?v=9" />
   <link rel="stylesheet" href="assets/pos-workspaces.css?v=4" />
   <link rel="stylesheet" href="assets/kiwi-select.css?v=2" />
   <link rel="manifest" href="manifest.webmanifest" />
@@ -5619,7 +5619,7 @@
        tableau de bord. Les quantités passent par le registre append-only ; ce
        pont ne maintient jamais un second snapshot propre à la caisse. -->
   <script src="assets/caisse-stock-sync.js?v=10" defer></script>
-  <script src="assets/pos-inventory-count.js?v=8" defer></script>
+  <script src="assets/pos-inventory-count.js?v=9" defer></script>
   <!-- Les horaires de l'établissement, réglés une seule fois côté tableau de
        bord. La caisse les LIT : ouvrir un service hors horaires demande une
        dérogation nommée, et la journée commerciale du Z suit l'heure de
@@ -5643,7 +5643,7 @@
        server-confirmed or explicitly blocked, never presentation-only. -->
   <script src="assets/operations.js?v=12" defer></script>
   <script src="assets/clients-store.js?v=9" defer></script>
-  <script src="assets/clients-book.js?v=23" defer></script>
+  <script src="assets/clients-book.js?v=24" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
        de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
        et sans imprimante thermique il n'y avait aucun chemin du tout. Ce module
@@ -11190,11 +11190,13 @@
     }
     function updateRendu() {
       // The customer pays base + pourboire; rendu is computed off that.
-      const total = currentTotal() + payTipAmount();
-      const got = parseFloat(cashInput.value) || 0;
-      const diff = got - total;
+      /* In cents: a percentage remise leaves 44.700000000000003 as the due,
+         and a cashier typing 44.7 was told « manque 0 MAD » and blocked. */
+      const total = Math.round((currentTotal() + payTipAmount()) * 100) / 100;
+      const got = Math.round((parseFloat(String(cashInput.value).replace(',', '.')) || 0) * 100) / 100;
+      const diff = Math.round((got - total) * 100) / 100;
       cashRendu.classList.remove('is-positive', 'is-short');
-      if (got >= total) {
+      if (diff >= 0) {
         cashRendu.classList.toggle('is-positive', diff > 0);
         cashRenduVal.textContent = fmtMADcents(diff);
         cashConfirm.disabled = false;
@@ -11273,10 +11275,10 @@
     });
     cashConfirm.addEventListener('click', async () => {
       // Customer owes base + pourboire; rendu is the change off that.
-      const total = currentTotal() + payTipAmount();
-      const got = parseFloat(cashInput.value) || 0;
+      const total = Math.round((currentTotal() + payTipAmount()) * 100) / 100;
+      const got = Math.round((parseFloat(String(cashInput.value).replace(',', '.')) || 0) * 100) / 100;
       if (cashPaymentCommitted || got < total) return;
-      const change = got - total;
+      const change = Math.round((got - total) * 100) / 100;
       cashPaymentCommitted = true;
       cashConfirm.disabled = true;
       tenderInFlight = true;
@@ -15134,7 +15136,7 @@
           const qty = l.qty || 1;
           return `<div class="rct-line">`
                +   `<span class="rct-line-qty">${qty}×</span>`
-               +   `<span class="rct-line-name">${l.name}</span>`
+               +   `<span class="rct-line-name">${escTeam(l.name)}</span>`
                +   `<span class="rct-line-dots" aria-hidden="true"></span>`
                +   `<span class="rct-line-total">${sign}${fmtMAD(Math.abs(l.total))}</span>`
                + `</div>`;
@@ -15176,8 +15178,8 @@
 
       body.innerHTML =
           `<div class="rct-head">`
-        +   `<div class="rct-logo">${storeName()}<i aria-hidden="true"></i></div>`
-        +   (storeCity() ? `<div class="rct-sub">${storeCity()}</div>` : '')
+        +   `<div class="rct-logo">${escTeam(storeName())}<i aria-hidden="true"></i></div>`
+        +   (storeCity() ? `<div class="rct-sub">${escTeam(storeCity())}</div>` : '')
         +   (storeIsReal() ? '' : `<div class="rct-sub rct-tiny">ICE ${RECEIPT_ICE}</div>`)
         +   (storeIsReal() ? '' : `<div class="rct-sub rct-tiny">${RECEIPT_PHONE}</div>`)
         + `</div>`
@@ -15188,11 +15190,11 @@
         + `<div class="rct-row"><span class="rct-k">Heure</span>`
         +   `<span class="rct-v">${hh}:${mi}</span></div>`
         + `<div class="rct-row"><span class="rct-k">N° ticket</span>`
-        +   `<span class="rct-v">${entry.ref}</span></div>`
+        +   `<span class="rct-v">${escTeam(entry.ref)}</span></div>`
         + `<div class="rct-row"><span class="rct-k">${isRefund ? 'Origine' : 'Service'}</span>`
-        +   `<span class="rct-v">${entry.label}</span></div>`
+        +   `<span class="rct-v">${escTeam(entry.label)}</span></div>`
         + `<div class="rct-row"><span class="rct-k">Caissier</span>`
-        +   `<span class="rct-v">${entry.cashier || currentCashier.name}</span></div>`
+        +   `<span class="rct-v">${escTeam(entry.cashier || currentCashier.name)}</span></div>`
         + `<div class="rct-dash" aria-hidden="true">${'· '.repeat(28)}</div>`
         + itemsHTML
         + `<hr class="rct-rule" />`
@@ -17287,9 +17289,9 @@
             .filter(([_, tt]) => tt.server === s.id && tt.status !== 'khawya' && tt.status !== 'khlass').length;
           return `
             <button class="reassign-opt ${isCurrent ? 'is-current' : ''}" data-reassign="${s.id}" type="button">
-              <span class="team-avatar" style="background:${s.color};">${initials}</span>
+              <span class="team-avatar" style="background:${escTeam(s.color)};">${escTeam(initials)}</span>
               <div class="reassign-opt-info">
-                <div class="reassign-opt-name">${s.name}${isCurrent ? ' · actuel' : ''}</div>
+                <div class="reassign-opt-name">${escTeam(s.name)}${isCurrent ? ' · actuel' : ''}</div>
                 <div class="reassign-opt-meta">${myTables} table${myTables !== 1 ? 's' : ''} actives</div>
               </div>
               ${badge}
@@ -17977,10 +17979,10 @@
         return `<button class="rf-entry" data-rf-id="${escTeam(e.id || '')}"${done || !e.id ? ' disabled' : ''}>`
              + `<span class="rf-entry-ic rf-entry-ic--${e.method}"><i data-lucide="${icon}"></i></span>`
              + `<span class="rf-entry-main">`
-             +   `<span class="rf-entry-label">${e.label}`
+             +   `<span class="rf-entry-label">${escTeam(e.label)}`
              +     (done ? `<span class="rf-done-tag">remboursé</span>` : '')
              +   `</span>`
-             +   `<span class="rf-entry-meta">${hh}:${mm} · ${mLabel} · ${e.ref}</span>`
+             +   `<span class="rf-entry-meta">${hh}:${mm} · ${mLabel} · ${escTeam(e.ref)}</span>`
              + `</span>`
              + `<span class="rf-entry-amount">${fmtMAD(e.amount)}</span>`
              + `</button>`;
@@ -18325,10 +18327,10 @@
          indique où ajouter un poste, plutôt que de laisser une liste vide. */
       $('#ho-cashiers').innerHTML = list.length ? list.map(c =>
         `<button class="ho-cashier" data-ho-cashier="${c.id}">`
-        + `<span class="ho-cashier-av">${cashierInitials(c.name)}</span>`
+        + `<span class="ho-cashier-av">${escTeam(cashierInitials(c.name))}</span>`
         + `<span class="ho-cashier-main">`
-        +   `<span class="ho-cashier-name">${c.name}</span>`
-        +   `<span class="ho-cashier-role">${c.role}</span>`
+        +   `<span class="ho-cashier-name">${escTeam(c.name)}</span>`
+        +   `<span class="ho-cashier-role">${escTeam(c.role)}</span>`
         + `</span>`
         + `<span class="ho-cashier-tick"><i data-lucide="check-circle-2"></i></span>`
         + `</button>`
@@ -18355,7 +18357,7 @@
         msg = 'Choisis le caissier entrant.';
       } else if (raw === '' || raw == null) {
         cls = 'is-idle'; icon = 'calculator';
-        msg = `<b>${handoverState.incoming.name}</b> recompte le tiroir pour vérifier.`;
+        msg = `<b>${escTeam(handoverState.incoming.name)}</b> recompte le tiroir pour vérifier.`;
       } else {
         handoverState.verifyCount = money(parseFloat(raw) || 0);
         if (minor(handoverState.verifyCount) === minor(handoverState.counted)) {
@@ -20468,7 +20470,7 @@
        (nouveau numéro, nouveau bon) — jamais une résurrection, le serveur ne
        saurait pas la rouvrir. */
     function expiredRow(e) {
-      const items = (e.lines || []).map(l => `${l.qty}× ${l.name}`).join(', ') || '—';
+      const items = (e.lines || []).map(l => `${l.qty}× ${l.name}`).join(', ') || '·';
       const when = (() => { try {
         const mins = Math.max(0, Math.round((Date.now() - Number(e.updated_ts || 0)) / 60000));
         return mins < 1 ? "à l'instant" : `il y a ${mins} min`;
