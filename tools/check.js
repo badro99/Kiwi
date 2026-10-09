@@ -1338,6 +1338,7 @@ section('Whole-project regressions');
     'menu-phone-test.mjs',
     'caisse-client-sale-test.mjs',
     'customer-retention-test.mjs',
+    'landing-demo-funnel-test.mjs',
     'briefing-sales-drop-test.mjs',
     'briefing-low-stock-test.mjs',
     'briefing-margin-test.mjs',

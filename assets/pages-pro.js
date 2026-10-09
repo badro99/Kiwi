@@ -10370,7 +10370,7 @@ function _renderInventory() {
         <div class="kx-kpi"><div class="l">CATÉGORIES</div><div class="v">${st.categories}</div><div class="d">Créer / supprimer côté Catégories</div></div>
       </div>
 
-      <div class="p-toolbar" style="margin-top: 4px;">
+      <div class="p-toolbar bqx-toolbar" style="margin-top: 4px;">
         <div class="p-search" style="flex:1;"><span style="display:inline-flex;align-items:center;">${_ICN.search}</span>
           <input data-bqx-search placeholder="Rechercher produit, catégorie, code-barres…" value="${_esc(_bqxQuery)}" style="border:none;background:transparent;outline:none;margin-left:6px;font:inherit;color:inherit;flex:1;min-width:120px;" /></div>
         <button class="kb ghost" data-action="bqx-import">${_ICN.download}Importer CSV</button>
@@ -10501,6 +10501,22 @@ function _bqxHistoryHtml(pid) {
     </div>`;
 }
 
+/* #0170 · What the owner asks of a product before touching its stock: what
+ * it cost, what the shelf is worth, and which sizes are already gone. Only
+ * figures the catalog actually holds; a missing purchase price says so. */
+function _bqxFactsHtml(p, data, cost) {
+  const out = data.variants.filter((v) => !(+v.stock > 0));
+  const coded = data.variants.filter((v) => (v.barcodes || []).length).length;
+  const row = (l, v) => `<div><span>${l}</span><b>${v}</b></div>`;
+  return `<div class="bqx-facts">
+    ${row('Prix d’achat', cost == null ? 'Non renseigné' : `${_mad(cost)} MAD`)}
+    ${row('Valeur au prix de vente', `${_mad((+p.priceMAD || 0) * (+data.stock || 0))} MAD`)}
+    ${row('Valeur au prix d’achat', cost == null ? '·' : `${_mad(cost * (+data.stock || 0))} MAD`)}
+    ${row('Variantes épuisées', out.length ? `${out.length} · ${out.map((v) => _esc([_bqxShownColor(v).label, v.size].filter(Boolean).join(" "))).slice(0, 3).join(', ')}${out.length > 3 ? '…' : ''}` : 'Aucune')}
+    ${row('Codes-barres', `${coded} / ${data.variants.length}`)}
+  </div>`;
+}
+
 function _bqxProductBody(pid) {
   const data = CAT().getProduct(pid);
   if (!data) return '<p>Produit introuvable.</p>';
@@ -10523,6 +10539,7 @@ function _bqxProductBody(pid) {
       <div class="stat"><div class="l">EN STOCK</div><div class="v">${data.stock}</div><div class="sub">${_bqxN(data.variants.length, 'variante')}</div></div>
       <div class="stat"><div class="l">CATÉGORIE</div><div class="v" style="font-size:16px;">${data.category ? _esc(data.category.name) : 'Divers'}</div><div class="sub">${data.colors.length} couleurs</div></div>
     </div>
+    ${_bqxFactsHtml(p, data, cost)}
     <div class="bqx-vwrap">
       <table class="bqx-vtable">
         <thead><tr><th>Couleur</th><th>${_esc(copy.sizeColHeader(p.kind))}</th><th>Stock</th><th>Code-barres</th><th style="text-align:right;">Actions</th></tr></thead>

@@ -164,8 +164,8 @@
     "sha": "0a056cb884ddab9b"
   },
   "assets/catalog-workspace.css": {
-    "v": "18",
-    "sha": "56a8fd71539d546d"
+    "v": "20",
+    "sha": "632cdcdf307fa280"
   },
   "assets/catalog-workspace.js": {
     "v": "5",
@@ -439,6 +439,14 @@
     "v": "2",
     "sha": "af05f19e306ca3d8"
   },
+  "assets/landing-demo-funnel.css": {
+    "v": "2",
+    "sha": "6fb64b157ca51273"
+  },
+  "assets/landing-demo-funnel.js": {
+    "v": "2",
+    "sha": "18e5a16ed2d4c6d6"
+  },
   "assets/landing-es.css": {
     "v": "7",
     "sha": "1cb11ec873d59dd5"
@@ -592,8 +600,8 @@
     "sha": "57b562b061dc24d0"
   },
   "assets/pages-pro.js": {
-    "v": "2125",
-    "sha": "01d47e5d648ed0dc"
+    "v": "2126",
+    "sha": "1d7c1a6f95be9ed3"
   },
   "assets/pages.js": {
     "v": "11",

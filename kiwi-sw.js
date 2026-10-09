@@ -51,7 +51,7 @@ var SHELL = [
   '/assets/simple.css',
   '/assets/ux.css',
   '/assets/pages-pro.css',
-  '/assets/catalog-workspace.css?v=18',
+  '/assets/catalog-workspace.css?v=20',
   '/assets/catalog-workspace.js?v=5',
   '/assets/help-centre.css?v=4',
   '/assets/polish-dashboard.css',
