@@ -88,7 +88,7 @@
       launchReady = true;
       root.classList.add('kiwi-launch-ready');
       if (pendingHostPayload) nativeHostPost(pendingHostPayload);
-      call(splashScreen, 'hide', { fadeOutDuration: 120 });
+      call(splashScreen, 'hide', { fadeOutDuration: 240 });
     }); });
   }
   function awaitLaunchPaint() {
@@ -1380,11 +1380,8 @@
   function initNativeEntry() {
     var lock = document.querySelector('[data-kiwi-lock]');
     if (!lock || !window.matchMedia) return;
-    var media = window.matchMedia('(max-width:600px)');
     root.classList.add('kiwi-entry-v2');
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var inner = lock.querySelector('.kiwi-lock-inner');
-    var brand = lock.querySelector('.kiwi-lock-brand');
     var title = lock.querySelector('.kiwi-lock-title');
     var sub = lock.querySelector('.kiwi-lock-sub');
     var biometry = 'none', faceRecord = null, prompting = false;
@@ -1402,32 +1399,24 @@
     [600, 1600, 3500].forEach(function (ms) { setTimeout(personalise, ms); });
     document.addEventListener('kiwi-account-pins-ready', personalise);
 
-    /* The launch screen shows the mark centred. The lock starts with its mark
-       in that same place and lets it glide up as the rest fades in, so the
-       hand-off from launch to lock is one continuous movement. */
+    /* The launch splash shows the mark centred and cross-fades away; the lock
+       then settles in (CSS, .kiwi-entry-in). It waits for the splash to be
+       gone so the motion is seen, and never measures layout to do it. */
     function enter() {
-      if (!media.matches || !inner) return;
-      if (reduce || !brand) { lock.classList.add('kiwi-entry-in'); return; }
-      var rect = brand.getBoundingClientRect();
-      var dy = Math.round(window.innerHeight / 2 - (rect.top + rect.height / 2));
-      brand.style.transition = 'none';
-      brand.style.transform = 'translateY(' + dy + 'px) scale(' + (88 / Math.max(1, rect.width)).toFixed(3) + ')';
-      void brand.offsetHeight;
-      requestAnimationFrame(function () {
-        brand.style.transition = 'transform 640ms cubic-bezier(.22,.9,.24,1)';
-        brand.style.transform = '';
-        lock.classList.add('kiwi-entry-in');
-        setTimeout(function () { brand.style.transition = ''; }, 700);
-      });
+      if (lock.classList.contains('kiwi-entry-in')) return;
+      requestAnimationFrame(function () { lock.classList.add('kiwi-entry-in'); });
     }
-    if (root.classList.contains('kiwi-lock-ready')) enter();
-    else new MutationObserver(function (_, obs) {
-      if (!root.classList.contains('kiwi-lock-ready')) return;
-      obs.disconnect(); enter();
-    }).observe(root, { attributes: true, attributeFilter: ['class'] });
+    function whenLaunched() {
+      if (root.classList.contains('kiwi-launch-ready')) return enter();
+      var obs = new MutationObserver(function () {
+        if (!root.classList.contains('kiwi-launch-ready')) return;
+        obs.disconnect(); enter();
+      });
+      obs.observe(root, { attributes: true, attributeFilter: ['class'] });
+      setTimeout(function () { obs.disconnect(); enter(); }, 9000);
+    }
+    whenLaunched();
 
-    /* Shown and on top: the onboarding can sit over a lock that is already
-       rendered underneath, and Face ID must not ask from behind it. */
     function lockVisible() {
       if (!lock.isConnected || getComputedStyle(lock).display === 'none' || lock.classList.contains('is-unlocking')) return false;
       var top = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);

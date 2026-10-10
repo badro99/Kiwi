@@ -117,6 +117,27 @@ try {
     check(verificationRequests() === 0, 'nothing is verified on load');
     await context.close();
   }
+  // 1b · Real motion: the mark settles in place, it never travels across the screen.
+  {
+    const {page,context} = await phone({motion:'no-preference'});
+    await page.goto(base+'/dashboard.html',{waitUntil:'networkidle2'});
+    await sleep(1600);
+    await page.evaluate(()=>document.querySelector('.kob-root [data-explore]')?.click());
+    const frames = await page.evaluate(()=>new Promise(resolve=>{
+      const brand=document.querySelector('[data-kiwi-lock] .kiwi-lock-brand'), out=[], t0=performance.now();
+      (function tick(){
+        const r=brand.getBoundingClientRect();
+        out.push({t:Math.round(performance.now()-t0), cy:r.top+r.height/2, o:Number(getComputedStyle(brand).opacity)});
+        if (performance.now()-t0<1600) requestAnimationFrame(tick); else resolve(out);
+      })();
+    }));
+    const shown = frames.filter(f=>f.o>0.05);
+    const travel = Math.max(...shown.map(f=>f.cy)) - Math.min(...shown.map(f=>f.cy));
+    check(shown.length > 0 && frames[frames.length-1].o === 1, 'the mark fades in and ends fully shown');
+    check(travel <= 1, 'the mark settles in place, no travel: ' + travel.toFixed(1) + ' px');
+    check(await page.$eval('[data-kiwi-lock] .kiwi-lock-brand', el => !el.getAttribute('style')), 'no inline transform is written to the mark');
+    await context.close();
+  }
   // 2 · A stored record for this account: Face ID prompts once and opens the dashboard.
   {
     const record = {account:'face.fixture@kiwi.test', access:'owner', name:'Salma Fixture', at:1};
@@ -190,6 +211,9 @@ try {
     });
     await page.screenshot({path:path.join(shots,'entry-offer.png')});
     check(sheet && sheet.open && sheet.title === 'Open Kiwi with Face ID?' && sheet.yes === 'Turn on Face ID', 'a real code offers Face ID once');
+    const bg = await page.$eval('.kiwi-face-offer-panel', el => getComputedStyle(el).backgroundColor);
+    const alpha = /rgba\(/.test(bg) ? Number(bg.split(',')[3].replace(')','')) : 1;
+    check(alpha === 1, 'the offer sheet is solid, never the glass --surface: ' + bg);
     await page.click('.kiwi-face-offer-yes');
     await sleep(500);
     const stored = JSON.parse(await page.evaluate(()=>window.__native.stored) || 'null');

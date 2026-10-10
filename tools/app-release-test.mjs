@@ -170,7 +170,7 @@ check('the automatic launcher keeps the branded boot stage mounted through redir
 check('the system splash hands off to the native host while the web fallback remains bounded',
   appPackage.dependencies['@capacitor/splash-screen'] === '8.0.2' &&
   capacitorConfig.includes('launchAutoHide: false') && capacitorConfig.includes('launchShowDuration: 350') &&
-  runtime.includes("call(splashScreen, 'hide', { fadeOutDuration: 120 })") &&
+  runtime.includes("call(splashScreen, 'hide', { fadeOutDuration: 240 })") &&
   runtime.includes('setTimeout(hideLaunchSplash, 8000)') && nativeShell.includes("CustomEvent('kiwi:native-ready')"));
 check('iOS setup and navigation are native SwiftUI hosts above the Capacitor workspace',
   swiftNativeShell.includes('UIHostingController<KiwiNativeSetupRoot>') &&
