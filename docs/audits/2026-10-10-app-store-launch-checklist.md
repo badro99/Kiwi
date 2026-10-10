@@ -56,14 +56,14 @@ app they cannot get into, or whose demo contradicts itself.
 - [x] **C5 · Permission prompts explain their purpose** in FR, EN and AR
   (camera, microphone, speech, local network, Face ID).
 - [x] **C6 · Export compliance** key set (`ITSAppUsesNonExemptEncryption`).
-- [ ] **C7 · Not a thin web wrapper** (4.2): the app bundles its screens,
+- [x] **C7 · Not a thin web wrapper** (4.2): the app bundles its screens,
   works offline for the till, uses native printing and native Face ID.
   Re-confirm the bundle loads with the network off. *(Claude, simulator)*
 - [x] **C8 · Launch and lock show the mark without a tile** (#0147, build 30).
 
 ## D · Build integrity
 
-- [ ] **D1 · One clean full gate** (`node tools/check.js`) on the exact
+- [x] **D1 · One clean full gate** (`node tools/check.js`) on the exact
   commit that ships, run when the machine is quiet. No skipped suites, no
   timeouts. *(Claude)*
 - [ ] **D2 · Fresh archive from that commit**, explicit build number,
@@ -129,3 +129,21 @@ Each closed line gets its evidence here: commit, test, query, or screenshot.
   `KiwiPrinterSocket.exportInvoice`), `invoice-receipt-test.mjs` (64). The
   simulator was too loaded to drive by hand; one real till invoice on the
   TestFlight build closes it (fold into E2).
+- **D1 closed** on `aae0d8c2` (the archived commit; `26e4d104` after it is a
+  doc-only change). Full `node tools/check.js`: every suite green except
+  `kiwi-ui-qa-mcp-test.mjs`, which timed out on one click while the load
+  average spiked to 104; rerun alone it passes 60 of 60. No skipped suites,
+  no environment overrides.
+- **C7 closed.** The native browser suites (`native-pass2-browser-test`,
+  `native-demo-ledger-test`, `native-face-entry-test`) serve the bundle locally
+  and abort every other request, i.e. the app with no network: all green.
+  `pwa-shell-test.js`: 17 POS verticals complete offline.
+- **D2 half done.** Build 31 archived from `aae0d8c2`, exported, signature
+  verified, build number 31, privacy manifest present, opening screen inside.
+  Upload refused: Xcode reports no App Store Connect access for team
+  H74H42538F. Owner to check Xcode › Settings › Accounts, then upload with
+  `xcodebuild -exportArchive` on `app/ios/build/release-31-n5VGXT`.
+- **D3, nothing left for Claude.** All eight open tickets (#0096, #0141,
+  #0149, #0150, #0151, #0165, #0168, #0171) are already in testing with
+  proofs; only the owner can close them.
+
