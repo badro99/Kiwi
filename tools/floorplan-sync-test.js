@@ -224,8 +224,15 @@ function run(opts) {
   ok("l'API employé résout les identifiants du plan vers les vrais comptes Équipe",
     /function normalizedFloorStaff\(raw, members\)/.test(
       fs.readFileSync(path.join(ROOT, 'functions', 'api', 'employee.js'), 'utf8')));
-  ok('l’inspecteur expose exactement trois emplacements de serveur',
-    /\$\{\[0,1,2\]\.map\(slot =>/.test(PAGES));
+  /* Trois emplacements au plus, mais plus jamais trois menus « Aucun · · »
+     sur une équipe vide : un emplacement libre après les remplis, et un
+     serveur déjà posé n'est pas proposé une seconde fois. */
+  ok('l’inspecteur plafonne les emplacements de serveur à PDS_MAX_TABLE_SERVERS',
+    /Math\.min\(PDS_MAX_TABLE_SERVERS, Math\.max\(1, assigned\.length \+ spare\)\)/.test(PAGES));
+  ok('une équipe sans serveur le dit au lieu d’afficher des menus vides',
+    /if \(!state\.staff\.length\) return `<p class="pds-field-hint">\$\{pdsEsc\(T\.inspectorNoStaff\)\}<\/p>`/.test(PAGES));
+  ok('un serveur déjà affecté n’est pas reproposé dans un autre emplacement',
+    /state\.staff\.filter\(s => s\.id === assigned\[slot\] \|\| !assigned\.includes\(s\.id\)\)/.test(PAGES));
   ok('glisser un serveur ajoute une affectation sans écraser les précédentes',
     /pdsSetServerIds\(t, current\.concat\(sid\)\)/.test(PAGES));
   ok('le plan ne propose que les rôles capables de prendre une section',

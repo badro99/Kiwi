@@ -129,6 +129,26 @@
       return h;
     } catch (_) { return null; }
   }
+  /* The register freezes "demo or real" when it mounts (kiwi-caisse.html
+   * IS_DEMO, pos-boutique.js likewise) — on purpose, so a pairing mid-service
+   * never rewrites a half-served menu. But the same-device hand-off pairs
+   * DURING boot, after that freeze: a real café's till opened on the 35-dish
+   * demo menu at invented prices, and would ring them up. Nothing has been
+   * served yet at this point, so put the hand-off back and reload once; the
+   * second boot mounts as the real store and runs the hand-off normally
+   * (operator mode and the till-cookie repair included). The session flag
+   * makes a loop impossible even if pairing somehow failed to stick. */
+  var HANDOFF_RELOAD = 'kiwiHandoffReload';
+  function reloadAsPaired(h) {
+    if (window.__kiwiCaisseBootedAsDemo !== true || !isPaired()) return false;
+    try {
+      if (sessionStorage.getItem(HANDOFF_RELOAD) === '1') return false;
+      sessionStorage.setItem(HANDOFF_RELOAD, '1');
+    } catch (_) { return false; }
+    set(HANDOFF, JSON.stringify(Object.assign({}, h, { ts: Date.now() })));
+    try { location.reload(); } catch (_) { return false; }
+    return true;
+  }
   function newestPending() {
     var m = readMap(), now = Date.now(), best = null, bestT = -1;
     for (var c in m) { var e = m[c]; if (e && e.status === 'pending' && (!e.exp || e.exp > now)) { var t = e.createdAt || 0; if (t >= bestT) { bestT = t; best = c; } } }
@@ -812,10 +832,15 @@
       if (window.KiwiReportError) window.KiwiReportError(err, 'tenant:sale_lock_wrapper_failed');
     }
 
+    if (window.__kiwiCaisseBootedAsDemo === false) {
+      try { sessionStorage.removeItem(HANDOFF_RELOAD); } catch (_) {}
+    }
+
     if (wantsPair()) {
       var h = takeHandoff();
       if (h) {
         var handed = applyPairing('', h).venue;
+        if (reloadAsPaired(h)) return;
         if (h.operator === true) bootForOperator(handed);
         else {
           /* Boot immediately so a slow network never blocks the register. The
@@ -842,6 +867,7 @@
     var h2 = takeHandoff();
     if (h2) {
       var handed2 = applyPairing('', h2).venue;
+      if (reloadAsPaired(h2)) return;
       if (h2.operator === true) bootForOperator(handed2);
       else {
         bootWithPin(handed2);

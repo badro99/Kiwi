@@ -497,7 +497,18 @@
     // The dashboard announces its unlock; a re-lock (idle, account switch)
     // must take the launcher back down. A cheap attribute observer on the
     // lock node beats polling: it only fires when the gate actually moves.
-    document.addEventListener('kiwi:dashboard-unlocked', function () { try { ensureChip(); } catch (_) {} });
+    /* dashboard.html dispatches the unlock on WINDOW. This listened on
+       document, so it never fired: after the first code unlock (and every
+       idle re-lock, which reloads the page) the chip was gone for good — and
+       for a new store, where Terminaux starts switched off, it is the only
+       way to pair the till. The lock also fades for ~280 ms before it is
+       removed, so check again once it is really gone. */
+    var onUnlock = function () {
+      try { ensureChip(); } catch (_) {}
+      setTimeout(function () { try { ensureChip(); } catch (_) {} }, 400);
+    };
+    window.addEventListener('kiwi:dashboard-unlocked', onUnlock);
+    document.addEventListener('kiwi:dashboard-unlocked', onUnlock);
     try {
       var lockNode = document.querySelector('[data-kiwi-lock]');
       if (lockNode && window.MutationObserver) {

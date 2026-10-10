@@ -43,5 +43,18 @@ ok('chip re-evaluates on unlock and on lock moves', () => {
   assert.ok(/MutationObserver/.test(src), 'must watch the lock node for re-locks');
 });
 
+/* 2026-10 · The listener sat on `document` while dashboard.html dispatches the
+ * unlock on `window`, so it never fired: after any code unlock the launcher was
+ * gone, and on a new store (Terminaux off) it is the only way to pair a till.
+ * Naming the event is not enough — the target is what matters. */
+ok('unlock listener is attached where dashboard.html dispatches it (window)', () => {
+  const dash = readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8');
+  assert.ok(/window\.dispatchEvent\(new Event\('kiwi:dashboard-unlocked'\)\)/.test(dash),
+    'dashboard.html still dispatches the unlock on window');
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  assert.ok(/window\.addEventListener\('kiwi:dashboard-unlocked'/.test(code),
+    'caisse-link.js must listen on window');
+});
+
 console.log(`\ncaisse-chip-gate: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

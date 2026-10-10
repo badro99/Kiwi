@@ -2381,8 +2381,10 @@
       contract: 'CDI',
       startDate: toISO(new Date()),
       endDate: '',
-      baseSalary: 4500,
-      hourlyRate: 50,
+      /* Empty, not 4 500 / 50: a member saved without touching these fields
+         was booked at an invented salary, and Masse salariale summed it. */
+      baseSalary: '',
+      hourlyRate: '',
       languages: ['Français', 'Arabe'],
       address: '',
       cin: '',
@@ -2487,8 +2489,8 @@
           <div class="kt-fsec">
             <div class="kt-fseclabel">${esc(T.secComp)}</div>
             <div class="kt-fgrid-2">
-              <label><span class="l">${esc(T.baseSalary)}</span><input type="number" name="baseSalary" min="0" step="50" value="${esc(m.baseSalary)}" /></label>
-              <label><span class="l">${esc(T.hourlyRate)}</span><input type="number" name="hourlyRate" min="0" step="0.5" value="${esc(m.hourlyRate)}" /></label>
+              <label><span class="l">${esc(T.baseSalary)}</span><input type="number" name="baseSalary" min="0" step="50" value="${esc(m.baseSalary)}" placeholder="0" /></label>
+              <label><span class="l">${esc(T.hourlyRate)}</span><input type="number" name="hourlyRate" min="0" step="0.5" value="${esc(m.hourlyRate)}" placeholder="0" /></label>
             </div>
           </div>
 

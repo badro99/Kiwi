@@ -3381,7 +3381,7 @@ function pdsRoomShellJour(zone) {
 const PDS_STR = {
   fr: {
     title: 'Plan de salle',
-    subtitle: (name, n, occ) => `${name} · ${n} tables · ${occ} occupées en service`,
+    subtitle: (name, n, occ) => `${name} · ${n} table${n > 1 ? 's' : ''} · ${occ} occupée${occ > 1 ? 's' : ''} en service`,
     tagPdS: 'PLAN DE SALLE',
     /* Modes */
     modeLayout: 'Aménagement',
@@ -3474,6 +3474,8 @@ const PDS_STR = {
     inspectorDelete: 'Supprimer',
     inspectorDone: 'Modifications enregistrées',
     inspectorUnassigned: 'Aucun',
+    inspectorAddServer: '+ Un autre serveur',
+    inspectorNoStaff: 'Aucun serveur dans votre équipe. Ajoutez-en depuis Équipe pour les affecter aux tables.',
     statusFree: 'Libre',
     statusOccupied: 'Occupée',
     statusReserved: 'Réservée',
@@ -3534,7 +3536,7 @@ const PDS_STR = {
     rosterHint: 'Glissez une pastille vers une table ou une zone',
     rosterShift: 'Shift soir',
     rosterUnassigned: 'Non affecté',
-    rosterTables: (n) => `${n} tables`,
+    rosterTables: (n) => `${n} table${n > 1 ? 's' : ''}`,
     rosterCovers: (n) => `${n} couverts`,
     rosterEmpty: 'Personne en service. Ajoutez un serveur ici, ou renseignez votre équipe depuis la page Équipe · elle apparaîtra automatiquement.',
     rosterAdd: '+ Ajouter un serveur',
@@ -3611,11 +3613,11 @@ const PDS_STR = {
     /* Room labels */
     roomLabel: (zone) => `${zone} · vue propriétaire`,
     viewOwner: 'vue propriétaire',
-    floorCount: (occ, total) => `${total} tables · ${occ} occupées`,
+    floorCount: (occ, total) => `${total} table${total > 1 ? 's' : ''} · ${occ} occupée${occ > 1 ? 's' : ''}`,
   },
   en: {
     title: 'Floor Plan',
-    subtitle: (name, n, occ) => `${name} · ${n} tables · ${occ} in service`,
+    subtitle: (name, n, occ) => `${name} · ${n} table${n === 1 ? '' : 's'} · ${occ} in service`,
     tagPdS: 'FLOOR PLAN',
     modeLayout: 'Layout',
     modeAssign: 'Assignment',
@@ -3699,6 +3701,8 @@ const PDS_STR = {
     inspectorDelete: 'Delete',
     inspectorDone: 'Changes saved',
     inspectorUnassigned: 'None',
+    inspectorAddServer: '+ Another server',
+    inspectorNoStaff: 'No servers on your team yet. Add them in Team to assign them to tables.',
     statusFree: 'Free',
     statusOccupied: 'Occupied',
     statusReserved: 'Reserved',
@@ -3754,7 +3758,7 @@ const PDS_STR = {
     rosterHint: 'Drag a chip onto a table or a zone',
     rosterShift: 'Evening shift',
     rosterUnassigned: 'Unassigned',
-    rosterTables: (n) => `${n} tables`,
+    rosterTables: (n) => `${n} table${n === 1 ? '' : 's'}`,
     rosterCovers: (n) => `${n} covers`,
     rosterEmpty: 'Nobody on shift. Add a server here, or fill in your team on the Team page · it shows up automatically.',
     rosterAdd: '+ Add a server',
@@ -3825,7 +3829,7 @@ const PDS_STR = {
     floorEtage: 'Upper floor',
     roomLabel: (zone) => `${zone} · owner view`,
     viewOwner: 'owner view',
-    floorCount: (occ, total) => `${total} tables · ${occ} occupied`,
+    floorCount: (occ, total) => `${total} table${total === 1 ? '' : 's'} · ${occ} occupied`,
   },
   ar: {
     title: 'مخطط القاعة',
@@ -3913,6 +3917,8 @@ const PDS_STR = {
     inspectorDelete: 'حذف',
     inspectorDone: 'تم حفظ التعديلات',
     inspectorUnassigned: 'لا أحد',
+    inspectorAddServer: '+ نادل آخر',
+    inspectorNoStaff: 'لا يوجد نادل في فريقك بعد. أضفهم من الفريق لتعيينهم على الطاولات.',
     statusFree: 'متاحة',
     statusOccupied: 'مشغولة',
     statusReserved: 'محجوزة',
@@ -4220,22 +4226,23 @@ Object.assign(PDS_STR.fr, {
   snapOn: 'Grille', snapOff: 'Libre', snapHint: 'Aligner les objets sur une grille de 16 cm',
   statusFree: 'Libre', statusOrdering: 'À commander', statusOccupied: 'En cours', statusBill: 'Addition',
   statusPaid: 'Réglée', statusReserved: 'Réservée', statusOut: 'Hors service', statusCleaning: 'Réglée',
-  kpiTablesD: (free, n) => `${free} libres sur ${n}`,
+  kpiTablesD: (free, n) => `${free} libre${free > 1 ? 's' : ''} sur ${n}`,
   kpiCoversLive: 'COUVERTS EN SALLE', kpiCoversD: (cap) => `capacité ${cap}`,
-  kpiCoversPlan: 'CAPACITÉ', kpiCoversPlanD: (n) => `${n} tables`,
+  kpiCoversPlan: 'CAPACITÉ', kpiCoversPlanD: (n) => `${n} table${n > 1 ? 's' : ''}`,
   kpiBills: 'ADDITIONS OUVERTES', kpiBillsD: (n) => n ? `${n} addition${n > 1 ? 's' : ''} demandée${n > 1 ? 's' : ''}` : 'aucune demandée',
   kpiZonesD: (n) => n > 1 ? `${n} zones` : '1 zone',
   kpiServersD: (on, n) => on == null ? `${n} dans le plan` : `${on} en service sur ${n}`,
   mad: (v) => `${Math.round(v).toLocaleString('fr-FR')} MAD`,
   liveOn: 'Caisse en direct', liveStale: (t) => `Hors ligne · vu à ${t}`, liveDemo: 'Démo · statuts saisis à la main',
   liveOffline: 'Caisse injoignable · statuts du plan', liveNone: 'Statuts saisis à la main',
+  liveNoTill: 'Aucune caisse connectée', liveTillAway: (t) => `Caisse hors ligne · vue à ${t}`,
   liveTitle: 'En ce moment', liveBills: 'Additions demandées', liveCheck: 'Ouvertes depuis plus de 4 h',
   liveCheckHint: 'Probablement oubliées sur la caisse. Vérifiez puis libérez-les depuis la caisse.',
   liveUpcoming: 'Réservations du jour', liveUnplaced: 'Sans table', livePlace: 'Placer',
   livePlaced: (n, t) => `${n} placé·e à la table ${t}`, liveNoFit: 'Aucune table libre ne convient',
   liveNoBookings: 'Aucune réservation aujourd’hui.', liveToday: 'Aujourd’hui',
   liveTurns: (n) => `${n} tour${n > 1 ? 's' : ''}`, liveAvg: (m) => `${m} min en moyenne`,
-  liveRevSeat: (v) => `${v} par couvert`, liveNoStats: 'Les tours et le chiffre par table apparaissent dès la première addition encaissée.',
+  liveRevSeat: (v) => `${v} par place`, liveNoStats: 'Les tours et le chiffre par table apparaissent dès la première addition encaissée.',
   checkTable: 'à vérifier', since: (l) => `depuis ${l}`, nextAt: (t, n) => `${t} · ${n}`,
   tillStatus: 'Statut de la caisse', tillStatusHint: 'Ce statut vient de la caisse. Il change quand l’équipe encaisse ou ouvre la table.',
   holdLabel: 'Réservation ou blocage', holdNone: 'Aucun', holdReserved: 'Réservée', holdOut: 'Hors service',
@@ -4263,7 +4270,7 @@ Object.assign(PDS_STR.fr, {
   assignDoneDesc: 'L’app serveur affiche ses tables à sa prochaine synchronisation.',
   onShift: 'En service', offShift: 'Absent', onPause: 'En pause',
   rosterShiftNow: (n) => `${n} en service maintenant`,
-  footMeta: (t, z, c) => `${t} tables · ${z} zone${z > 1 ? 's' : ''} · ${c} couverts`,
+  footMeta: (t, z, c) => `${t} table${t > 1 ? 's' : ''} · ${z} zone${z > 1 ? 's' : ''} · ${c} couvert${c > 1 ? 's' : ''}`,
   autosaved: 'Enregistré automatiquement',
   export: 'Exporter', exportTitle: 'Exporter le plan', exportDesc: 'Imprimez le plan pour le briefing ou envoyez l’image sur WhatsApp.',
   exportPrint: 'Imprimer ou PDF', exportPrintDesc: 'Une page A3 paysage par zone, avec les serveurs.',
@@ -4276,7 +4283,7 @@ Object.assign(PDS_STR.fr, {
   versionSaved: (n) => `Version « ${n} » enregistrée`, versionApply: 'Utiliser', versionDelete: 'Supprimer',
   versionApplied: (n) => `Version « ${n} » chargée`, versionAppliedDesc: 'Votre plan précédent est gardé dans Versions.',
   versionEmpty: 'Aucune version enregistrée.', versionAuto: (d) => `Avant réinitialisation · ${d}`,
-  versionBefore: (n) => `Avant « ${n} »`, versionMeta: (t, c) => `${t} tables · ${c} couverts`,
+  versionBefore: (n) => `Avant « ${n} »`, versionMeta: (t, c) => `${t} table${t > 1 ? 's' : ''} · ${c} couvert${c > 1 ? 's' : ''}`,
   resetTitle: 'Réinitialiser le plan ?',
   resetDesc: (t, z) => `Le plan est remplacé par ${t ? `le modèle de départ (${t} tables, ${z} zone${z > 1 ? 's' : ''})` : 'une salle vide'}. Une copie du plan actuel est gardée dans Versions.`,
   resetDoneDesc: 'Une copie de l’ancien plan est dans Versions.',
@@ -4306,13 +4313,14 @@ Object.assign(PDS_STR.en, {
   statusPaid: 'Paid', statusReserved: 'Reserved', statusOut: 'Out of service', statusCleaning: 'Paid',
   kpiTablesD: (free, n) => `${free} free of ${n}`,
   kpiCoversLive: 'COVERS SEATED', kpiCoversD: (cap) => `capacity ${cap}`,
-  kpiCoversPlan: 'CAPACITY', kpiCoversPlanD: (n) => `${n} tables`,
+  kpiCoversPlan: 'CAPACITY', kpiCoversPlanD: (n) => `${n} table${n === 1 ? '' : 's'}`,
   kpiBills: 'OPEN BILLS', kpiBillsD: (n) => n ? `${n} bill${n > 1 ? 's' : ''} requested` : 'none requested',
   kpiZonesD: (n) => n > 1 ? `${n} zones` : '1 zone',
   kpiServersD: (on, n) => on == null ? `${n} on the plan` : `${on} on shift of ${n}`,
   mad: (v) => `${Math.round(v).toLocaleString('en-GB')} MAD`,
   liveOn: 'Till live', liveStale: (t) => `Offline · seen at ${t}`, liveDemo: 'Demo · statuses set by hand',
   liveOffline: 'Till unreachable · plan statuses', liveNone: 'Statuses set by hand',
+  liveNoTill: 'No till connected', liveTillAway: (t) => `Till offline · seen at ${t}`,
   liveTitle: 'Right now', liveBills: 'Bills requested', liveCheck: 'Open for more than 4 h',
   liveCheckHint: 'Probably left open on the till. Check, then free them from the till.',
   liveUpcoming: 'Today’s bookings', liveUnplaced: 'No table', livePlace: 'Seat',
@@ -4347,7 +4355,7 @@ Object.assign(PDS_STR.en, {
   assignDoneDesc: 'The server app shows their tables at its next sync.',
   onShift: 'On shift', offShift: 'Off', onPause: 'On break',
   rosterShiftNow: (n) => `${n} on shift now`,
-  footMeta: (t, z, c) => `${t} tables · ${z} zone${z > 1 ? 's' : ''} · ${c} covers`,
+  footMeta: (t, z, c) => `${t} table${t === 1 ? '' : 's'} · ${z} zone${z === 1 ? '' : 's'} · ${c} cover${c === 1 ? '' : 's'}`,
   autosaved: 'Saved automatically',
   export: 'Export', exportTitle: 'Export the plan', exportDesc: 'Print the plan for the briefing or send the image on WhatsApp.',
   exportPrint: 'Print or PDF', exportPrintDesc: 'One A3 landscape page per zone, with servers.',
@@ -4360,7 +4368,7 @@ Object.assign(PDS_STR.en, {
   versionSaved: (n) => `Version “${n}” saved`, versionApply: 'Use', versionDelete: 'Delete',
   versionApplied: (n) => `Version “${n}” loaded`, versionAppliedDesc: 'Your previous plan is kept in Versions.',
   versionEmpty: 'No saved versions.', versionAuto: (d) => `Before reset · ${d}`,
-  versionBefore: (n) => `Before “${n}”`, versionMeta: (t, c) => `${t} tables · ${c} covers`,
+  versionBefore: (n) => `Before “${n}”`, versionMeta: (t, c) => `${t} table${t === 1 ? '' : 's'} · ${c} cover${c === 1 ? '' : 's'}`,
   resetTitle: 'Reset the plan?',
   resetDesc: (t, z) => `The plan is replaced by ${t ? `the starter layout (${t} tables, ${z} zone${z > 1 ? 's' : ''})` : 'an empty room'}. A copy of the current plan is kept in Versions.`,
   resetDoneDesc: 'A copy of the old plan is in Versions.',
@@ -4397,6 +4405,7 @@ Object.assign(PDS_STR.ar, {
   mad: (v) => `${Math.round(v).toLocaleString('ar-MA')} درهم`,
   liveOn: 'الصندوق مباشر', liveStale: (t) => `غير متصل · آخر ظهور ${t}`, liveDemo: 'عرض تجريبي · حالات يدوية',
   liveOffline: 'تعذّر الوصول إلى الصندوق · حالات المخطط', liveNone: 'حالات يدوية',
+  liveNoTill: 'لا يوجد صندوق متصل', liveTillAway: (t) => `الصندوق غير متصل · آخر ظهور ${t}`,
   liveTitle: 'الآن', liveBills: 'طلبات الحساب', liveCheck: 'مفتوحة منذ أكثر من 4 ساعات',
   liveCheckHint: 'على الأرجح نُسيت في الصندوق. تحقّق ثم حرّرها من الصندوق.',
   liveUpcoming: 'حجوزات اليوم', liveUnplaced: 'بدون طاولة', livePlace: 'إجلاس',
@@ -4716,10 +4725,17 @@ function pdsLoad() {
   }
   return pdsNormalize(pdsDefaultState());
 }
+/* The live state carries the editor's own wiring (_selection, _openInspector,
+   _rebind …). Functions vanish in JSON but a Set survived as `_selection: {}`
+   on every saved plan, local and server. Persist the plan, not the editor. */
+function pdsSerialize(state) {
+  return JSON.stringify(state, function (k, v) { return this === state && k.charAt(0) === '_' ? undefined : v; });
+}
 function pdsWriteLocal(state) {
   const key = pdsKey();
+  const json = pdsSerialize(state);
   if (key) {
-    try { localStorage.setItem(key, JSON.stringify(state)); } catch (e) {}
+    try { localStorage.setItem(key, json); } catch (e) {}
   }
   /* Mirror the layout under the merchant SLUG. The caisse has no KiwiVenue to
    * resolve pdsKey(), so it reads the plan by slug (storePaired().merchant) —
@@ -4733,7 +4749,7 @@ function pdsWriteLocal(state) {
       var transients = (window.KiwiVenue && window.KiwiVenue.TRANSIENT_IDS) || PDS_TRANSIENT_IDS;
       if (transients.indexOf(vid) >= 0 && !key) return;
       var slug = vd.slug || (window.KiwiVenue && window.KiwiVenue.slugOf && window.KiwiVenue.slugOf(vid)) || _bqxSlug(vd.name);
-      if (slug) localStorage.setItem(PDS_LS_KEY + ':slug:' + slug, JSON.stringify(state));
+      if (slug) localStorage.setItem(PDS_LS_KEY + ':slug:' + slug, json);
     }
   } catch (e) {}
 }
@@ -4932,7 +4948,11 @@ function pdsDefaultState() {
 function pdsTemplate(key) {
   const mk = (id, zone, type, x, y, num) => ({ id, zone, type, x, y, num, status: 'free', server: null, notes: '', rot: 0 });
   const blank = {
-    zones: [{ id: 'z1', name: 'Salle', scene: 'salle' }],
+    /* scene 'blank', not 'salle': pdsNormalize() expands a 'salle' scene into
+       a counter, a kitchen, a door and a plant (the v1 migration). A new
+       store's empty room arrived furnished with things its owner never
+       placed, and the till drew them as COMPTOIR and CUISINE. */
+    zones: [{ id: 'z1', name: 'Salle', scene: 'blank' }],
     activeZone: 'z1', tables: [], elements: [],
     /* A real store fills its own roster; only pre-seeded stores get sample servers. */
     staff: (window.KiwiVenue && window.KiwiVenue.isCustom && window.KiwiVenue.isCustom()) ? [] : PDS_DEFAULT_STAFF.slice(),
@@ -5075,14 +5095,14 @@ Object.assign(PDS_STR.ar, {
 });
 
 const PDS_PHONE_STR = {
-  fr: { tables: 'tables', title: 'Affectation des tables', sub: (n, u) => `${n} tables · ${u} sans serveur`,
+  fr: { tables: 'tables', title: 'Affectation des tables', sub: (n, u) => `${n} table${n > 1 ? 's' : ''} · ${u} sans serveur`,
         note: 'Le plan de salle se dessine sur ordinateur ou tablette. Ici, touchez un serveur, puis ses tables.',
         noStaff: 'Aucun serveur dans l’équipe. Ajoutez-en un depuis Équipe, avec le rôle Serveur.',
         noTables: 'Aucune table sur le plan. Dessinez la salle depuis un ordinateur.',
         count: (n, c) => `${n} table${n > 1 ? 's' : ''} · ${c} couverts`, none: 'Aucune table',
         pick: 'Touchez les tables de ce serveur. Une table peut avoir jusqu’à 3 serveurs.',
         full: 'Cette table a déjà 3 serveurs', unassigned: 'Sans serveur', close: 'Fermer' },
-  en: { tables: 'tables', title: 'Table assignment', sub: (n, u) => `${n} tables · ${u} unassigned`,
+  en: { tables: 'tables', title: 'Table assignment', sub: (n, u) => `${n} table${n === 1 ? '' : 's'} · ${u} unassigned`,
         note: 'The floor plan is drawn on a computer or tablet. Here, tap a server, then their tables.',
         noStaff: 'No servers in the team yet. Add one from Team with the Server role.',
         noTables: 'No tables on the plan yet. Draw the room from a computer.',
@@ -5388,10 +5408,22 @@ function pdsKpis(state, T) {
     </div>`;
 }
 
+/* A till polls its queue every ~6 s; a backgrounded tab can stretch that to a
+   minute. Past this, saying "en direct" would be a guess. */
+const PDS_TILL_FRESH_MS = 90 * 1000;
 function pdsLiveBadge(T) {
   const L = PDS_LIVE;
   let cls = 'is-demo', txt = pdsIsRealStore() ? T.liveNone : T.liveDemo;
-  if (L && L.live && !L.stale) { cls = 'is-live'; txt = T.liveOn; }
+  /* `live` only means /api/floor/live answered. "Caisse en direct" is a claim
+     about the till, so it needs the till's own heartbeat (order_desk, stamped
+     by its authenticated queue poll every few seconds). */
+  if (L && L.live && !L.stale) {
+    const serverNow = (L.at || Date.now()) + (L.skew || 0);
+    const seen = Number(L.tillSeen) || 0;
+    if (seen && serverNow - seen < PDS_TILL_FRESH_MS) { cls = 'is-live'; txt = T.liveOn; }
+    else if (seen) { cls = 'is-stale'; txt = T.liveTillAway(pdsClock(seen - (L.skew || 0)).replace('h', ':')); }
+    else { cls = 'is-demo'; txt = T.liveNoTill; }
+  }
   else if (L && L.live && L.stale) { cls = 'is-stale'; txt = T.liveStale(pdsClock(L.at).replace('h', ':')); }
   else if (L && L.reason === 'offline') { cls = 'is-stale'; txt = T.liveOffline; }
   return `<span class="pds-live-badge ${cls}" data-pds-live-badge><i aria-hidden="true"></i>${pdsEsc(txt)}</span>`;
@@ -5535,7 +5567,10 @@ function pdsFreeSpot(state, w, h, plane) {
     return sum + (ox > 0 && oy > 0 ? ox * oy : 0);
   }, 0);
   const step = PDS_GRID * 2;
-  const top = 48;   /* clear of the room's own name plate */
+  /* Clear of the room's own name plate INCLUDING the chair band: chairs
+     stick PDS_PAD above a table, so a table at y=48 put its top chairs
+     across the "SALLE" label. 64 stays on the grid and leaves 45px. */
+  const top = 64;
   let best = null, bestArea = Infinity;
   for (let y = top; y + h <= plane.h - PDS_GRID; y += step) {
     for (let x = PDS_GRID * 2; x + w <= plane.w - PDS_GRID; x += step) {
@@ -5995,6 +6030,13 @@ function pdsRenderEmpty(state, T) {
    table that lands is the one a merchant would have chosen from the grid. */
 let PDS_PAL_SEATS = 4;
 const PDS_SHAPES = ['round', 'square', 'rect', 'bar', 'high'];
+/* What each palette shape can actually seat. The palette's "Places" stepper
+   applied to every shape, so a counter stool (56×56) and a mange-debout came
+   out with 4 seats, a square with 8: chairs the till then counted as covers. */
+const PDS_SHAPE_MAX_SEATS = { round: 8, square: 4, rect: 10, bar: 1, high: 4 };
+function pdsPalSeats(shape) {
+  return Math.max(1, Math.min(PDS_PAL_SEATS, PDS_SHAPE_MAX_SEATS[shape] || PDS_PAL_SEATS));
+}
 function pdsTypeFor(shape, seats) {
   seats = Math.max(1, +seats || 4);
   if (shape === 'round') return seats <= 2 ? 'round2' : seats <= 4 ? 'round4' : seats <= 6 ? 'round6' : 'round8';
@@ -6059,7 +6101,7 @@ function pdsRenderLayoutRail(state, T) {
           const t = PDS_TABLE_TYPES[pdsTypeFor(sh, PDS_PAL_SEATS)];
           const label = T['shape' + sh.charAt(0).toUpperCase() + sh.slice(1)];
           return `
-            <button class="pds-pal-item" data-pds-action="add-shape" data-pds-shape="${sh}" title="${pdsEsc(label)} · ${PDS_PAL_SEATS} ${pdsEsc(T.seats)}">
+            <button class="pds-pal-item" data-pds-action="add-shape" data-pds-shape="${sh}" title="${pdsEsc(label)} · ${pdsPalSeats(sh)} ${pdsEsc(T.seats)}">
               <span class="pds-pal-shape pds-pal-${t.shape}" style="width:${Math.min(t.w/2, 30)}px; height:${Math.min(t.h/2, 26)}px;"></span>
               <span class="pds-pal-label">${pdsEsc(label)}</span>
             </button>`;
@@ -6455,13 +6497,20 @@ function pdsRenderInspector(state, T, obj) {
         </div>` : ''}
         <div class="pds-form-row">
           <label>${T.inspectorServer} · ${PDS_MAX_TABLE_SERVERS} max.</label>
-          ${[0,1,2].map(slot => {
+          ${(() => {
+            /* An empty roster used to render three selects reading
+               "Aucun", "·", "·" — a picker with nothing to pick. Say so,
+               and otherwise offer one empty slot after the filled ones. */
+            if (!state.staff.length) return `<p class="pds-field-hint">${pdsEsc(T.inspectorNoStaff)}</p>`;
             const assigned = pdsServerIds(obj);
-            return `<select class="kf-input pds-input pds-server-slot" data-pds-server-slot="${slot}">
-              <option value="">${slot === 0 ? T.inspectorUnassigned : '·'}</option>
-              ${state.staff.map(s => `<option value="${s.id}" ${s.id===assigned[slot]?'selected':''}>${pdsEsc(s.name)}</option>`).join('')}
-            </select>`;
-          }).join('')}
+            const spare = state.staff.length > assigned.length ? 1 : 0;
+            const shown = Math.min(PDS_MAX_TABLE_SERVERS, Math.max(1, assigned.length + spare));
+            return Array.from({ length: shown }, (_, slot) => `<select class="kf-input pds-input pds-server-slot" data-pds-server-slot="${slot}">
+              <option value="">${slot === 0 ? T.inspectorUnassigned : pdsEsc(T.inspectorAddServer)}</option>
+              ${state.staff.filter(s => s.id === assigned[slot] || !assigned.includes(s.id))
+                .map(s => `<option value="${s.id}" ${s.id===assigned[slot]?'selected':''}>${pdsEsc(s.name)}</option>`).join('')}
+            </select>`).join('');
+          })()}
         </div>
         <div class="pds-form-row">
           <label>${T.inspectorNotes}</label>
@@ -7725,7 +7774,7 @@ function pdsAttach(root, state, T, dr) {
   };
 
   /* Open inspector for any object id — table or fixture. */
-  const openInspector = (id) => {
+  const openInspector = (id, opts) => {
     const f = pdsFind(state, id);
     const inspector = root.querySelector('[data-pds-inspector]');
     if (!inspector) return;
@@ -7740,6 +7789,7 @@ function pdsAttach(root, state, T, dr) {
        Sur la page pleine, la colonne de droite dépasse l'écran : 'nearest'
        défilait alors de 300 px pour en montrer le bas. On ne bouge que si
        le haut de l'inspecteur est hors de vue. */
+    if (opts && opts.reveal === false) return;
     try {
       const r = inspector.getBoundingClientRect();
       if (r.top > window.innerHeight - 120 || r.bottom < 0) {
@@ -8831,7 +8881,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       break;
     }
     case 'pal-seats': {
-      PDS_PAL_SEATS = Math.max(1, Math.min(20, PDS_PAL_SEATS + (+btn.getAttribute('data-pds-delta') || 0)));
+      PDS_PAL_SEATS = Math.max(1, Math.min(10, PDS_PAL_SEATS + (+btn.getAttribute('data-pds-delta') || 0)));
       /* Repaint the rail alone: the stepper must not rebuild the room. */
       const rail = root.querySelector('[data-pds-rail]');
       if (rail) rail.innerHTML = pdsRenderLayoutRail(state, T);
@@ -8840,7 +8890,8 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
     }
     case 'add-shape': {
       const shape = btn.getAttribute('data-pds-shape');
-      const type = pdsTypeFor(shape, PDS_PAL_SEATS);
+      const seats = pdsPalSeats(shape);
+      const type = pdsTypeFor(shape, seats);
       const cfg = PDS_TABLE_TYPES[type] || PDS_TABLE_TYPES.round4;
       pdsPush(state);
       const plane = pdsPlaneOf(state);
@@ -8848,14 +8899,16 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       const num = pdsNextNum(state);
       const newT = {
         id: newTableId(), zone: state.activeZone, type, x: spot.x, y: spot.y,
-        w: cfg.w, h: cfg.h, seats: PDS_PAL_SEATS,
+        w: cfg.w, h: cfg.h, seats,
         shape: cfg.shape, color: null, num, status: 'free', server: null, notes: '', rot: 0, locked: false,
       };
       state.tables.push(newT);
       selection.clear(); selection.add(newT.id);
       refresh();
       toast(T.addedTableToast(num), { type: 'success', desc: T.addedTableDesc(newT.seats, state.zones.find(z => z.id === state.activeZone)?.name || '') });
-      setTimeout(() => { if (state._openInspector) state._openInspector(newT.id); }, 0);
+      /* Stay on the plan: below 1100px the inspector sits under it, and
+         revealing it scrolled ~1000px away from the table just placed. */
+      setTimeout(() => { if (state._openInspector) state._openInspector(newT.id, { reveal: false }); }, 0);
       break;
     }
     case 'zone-move': {

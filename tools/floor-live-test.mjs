@@ -101,6 +101,10 @@ ok(S['9'] && S['9'].turns === 1 && S['9'].avgMinutes === 40, 'table 9 · one tur
 ok(S['9'] && S['9'].revenueCents === 21000, 'table 9 · today\'s revenue counts the live sale and skips the voided one');
 ok(!/tsx-/.test(JSON.stringify(r.body)), 'no visit id ever leaves the route');
 ok(writes === 0, 'reading the room writes nothing');
+ok(r.body.tillSeen === 0, 'no till has ever polled · tillSeen is 0, not "live"');
+put('INSERT INTO order_desk (merchant, seen_ts) VALUES (?, ?)', merchant, now - 4000);
+r = await get(owner);
+ok(r.body.tillSeen === now - 4000, 'the till heartbeat (order_desk) reaches the plan');
 
 /* entitledMerchant snaps an unowned slug back to the caller's own store, so a
    stranger asking for this room gets THEIR room, never this one. */
@@ -187,6 +191,23 @@ const dupCtx = vm.createContext({ pdsIsRealStore: () => true });
 vm.runInContext(grab('pdsNumKey') + '\n' + grab('pdsDuplicateNums') + '\nthis.dups = pdsDuplicateNums;', dupCtx);
 ok(dupCtx.dups({ tables: [{ num: '1' }, { num: 'T1' }, { num: '2' }] }).join() === '1 = T1', 'duplicates · « 1 » and « T1 » are one table for the till');
 ok(!/Lettre par zone|pdsZoneLetter/.test(PRO), 'renumber · no letter prefixes that the till would fold into another table');
+
+/* "Caisse en direct" is a claim about the till, not about this endpoint.
+   It used to light whenever /api/floor/live answered, paired till or not. */
+{
+  const T = { liveOn: 'ON', liveNone: 'NONE', liveDemo: 'DEMO', liveOffline: 'OFF',
+    liveNoTill: 'NOTILL', liveStale: (t) => 'STALE ' + t, liveTillAway: (t) => 'AWAY ' + t };
+  const badge = (L) => {
+    const c = vm.createContext({ PDS_LIVE: L, pdsIsRealStore: () => true, pdsEsc: (x) => String(x) });
+    vm.runInContext('const PDS_TILL_FRESH_MS = 90 * 1000;\n' + grab('pdsClock') + '\n' + grab('pdsLiveBadge') + '\nthis.b = pdsLiveBadge;', c);
+    return c.b(T);
+  };
+  const at = Date.now();
+  ok(/NOTILL/.test(badge({ live: true, stale: false, at, skew: 0, tillSeen: 0 })), 'badge · server answers, no till ever seen → "Aucune caisse connectée"');
+  ok(/is-live[^>]*>[\s\S]*ON/.test(badge({ live: true, stale: false, at, skew: 0, tillSeen: at - 5000 })), 'badge · till polled 5 s ago → "Caisse en direct"');
+  ok(/AWAY/.test(badge({ live: true, stale: false, at, skew: 0, tillSeen: at - 10 * min })), 'badge · till silent for 10 min → "Caisse hors ligne"');
+  ok(/is-live/.test(badge({ live: true, stale: false, at, skew: 60000, tillSeen: at + 60000 - 5000 })), 'badge · clock skew is taken from the server, not the browser');
+}
 
 if (fails.length) {
   console.error(`\x1b[31m✗ floor-live: ${fails.length} échec(s)\x1b[0m`);

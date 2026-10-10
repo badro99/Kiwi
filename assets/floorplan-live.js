@@ -82,6 +82,10 @@
         if (s !== slug()) return;
         last = { ok: true, live: true, stale: false, tables: d.tables || {}, stats: d.stats || {},
                  dayStart: Number(d.dayStart) || 0, partial: d.partial || {},
+                 /* Last authenticated poll from a paired till (server clock).
+                    `live` only says the server answered; this says a till
+                    is actually switched on. 0 = never seen. */
+                 tillSeen: Number(d.tillSeen) || 0,
                  at: Date.now(), skew: (Number(d.now) || Date.now()) - Date.now() };
         emit();
       })

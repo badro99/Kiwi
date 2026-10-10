@@ -166,11 +166,18 @@ export async function onRequestGet({ request, env }) {
       WHERE x.merchant = ? AND x.ts >= ? AND x.void_ts IS NULL
       GROUP BY s.table_no`, [merchant, dayStart]);
 
+  /* Whether a till is actually on: the register polls /api/order/queue every
+     few seconds with its pairing proof and that poll stamps order_desk. The
+     plan used to say "Caisse en direct" whenever THIS endpoint answered, even
+     with no till ever paired. 0 = never seen (or a base without the table). */
+  const desk = await all(env, 'SELECT seen_ts FROM order_desk WHERE merchant = ?', [merchant]);
+  const tillSeen = Math.max(0, Number(desk && desk[0] && desk[0].seen_ts) || 0);
+
   const body = assemble({
     states: doc.states && typeof doc.states === 'object' ? doc.states : {},
     requests: Array.isArray(doc.requests) ? doc.requests : [],
     sessions, bills: bills || [], turns: turns || [], sales: sales || [], now,
   });
-  return json({ ok: true, merchant, dayStart, ...body,
+  return json({ ok: true, merchant, dayStart, tillSeen, ...body,
     partial: { bills: sessions.length > 0 && !bills, stats: !turns, revenue: !sales } });
 }

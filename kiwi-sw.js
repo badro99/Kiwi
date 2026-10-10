@@ -151,7 +151,7 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
   // The Plan de salle's live-room poller (fail-soft without network).
-  '/assets/floorplan-live.js?v=3',
+  '/assets/floorplan-live.js?v=4',
   '/assets/oppo-cards.js?v=4',
   '/assets/dashboard-pwa.js?v=553',
   '/assets/dashboard-native.js?v=3',
@@ -209,7 +209,7 @@ var SHELL = [
      nouveau commerçant par-dessus les données de l'ancien. */
   '/assets/pairing-commit.js?v=2',
   '/assets/identity.js?v=8',
-  '/assets/caisse-link.js?v=11',
+  '/assets/caisse-link.js?v=12',
   '/assets/operator-access.js?v=1',
   '/assets/auth-guard.js?v=2',
   '/assets/idle-lock.js?v=2',
@@ -229,7 +229,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=13',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=15',
+  '/assets/caisse-lang.js?v=16',
   '/assets/venue-store.js?v=4',
   '/assets/discount-policy.js?v=4',
   '/assets/retail-balances.js?v=4',
@@ -259,7 +259,7 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=4',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=11',
-  '/assets/team.js?v=294',
+  '/assets/team.js?v=295',
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=89',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
@@ -330,7 +330,7 @@ var SHELL = [
   '/assets/pos-autre.js?v=5',
   '/assets/pos-maison.css?v=56',
   '/assets/pos-maison.js?v=56',
-  '/assets/caisse-pairing.js?v=25',
+  '/assets/caisse-pairing.js?v=26',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du

@@ -91,7 +91,16 @@ try {
   const reception = await call('ui_click', { ref: refFor(body(desktop), 'Réception') });
   if (reception.isError || !body(reception).includes('hx-stay-new')) console.log('RECEPTION:', body(reception));
   ok(!reception.isError && body(reception).includes('Réception'), 'real sidebar click reaches reception');
-  const bookingClick = await call('ui_click', { ref: refFor(body(reception), '+ Réservation') });
+  let bookingClick = await call('ui_click', { ref: refFor(body(reception), '+ Réservation') });
+  /* Réception loads its day asynchronously ("Actualisation…"); on a loaded
+     machine the snapshot can land before that render and the control is then
+     replaced under its q-ref. The tool says so ("call ui_snapshot again"):
+     do exactly that, once, as any agent would, and still require a real click. */
+  if (bookingClick.isError && /ui_snapshot again/.test(body(bookingClick))) {
+    const fresh = await call('ui_snapshot');
+    bookingClick = await call('ui_click', { ref: refFor(body(fresh), '+ Réservation') });
+  }
+  if (bookingClick.isError) console.log('BOOKING CLICK:', body(bookingClick), '\n--- reception snapshot ---\n', body(reception));
   ok(!bookingClick.isError, 'reservation control accepts the real click');
   // Opening this editor is asynchronous. A click snapshot can precede its
   // entrance frame on a busy release Mac; wait for the actual rendered form,
