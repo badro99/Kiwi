@@ -9893,6 +9893,13 @@ let _bqxQuery = '';
 let _bqxDrawerPid = null;
 let _bqxModal = null;
 let _bqxSubbed = false;
+/* Sélection multiple (« Sélectionner ») : un mode, pas une case à cocher
+   permanente. Hors du mode, toucher une carte ouvre le produit comme avant ;
+   dans le mode, elle se coche. L'ensemble vit ici et non dans le DOM, parce
+   que la page entière se redessine à chaque synchronisation avec la caisse. */
+let _bqxSelecting = false;
+const _bqxSel = new Set();
+const _BQX_ARCHIVED = '__archived';
 
 /* one-time styles for the variant matrix, barcode chips and category rows */
 function _bqxCss() {
@@ -9987,6 +9994,48 @@ function _bqxCss() {
       .bqx-color-selected { max-width: 100%; width: fit-content; }
       .bqx-color-picker .kc-custom-wrap { position: static; }
       .bqx-color-picker .kc-custom-pop { inset-inline: 0; width: 100%; }
+    }
+    /* Sélection multiple. La case est dessinée en CSS (pas d'icône) et se
+       pose sur la vignette, là où l'œil va chercher la carte. */
+    .kx-sku.bqx-selectable:hover { transform: none; }
+    .kx-sku.bqx-selectable:focus-visible { outline: 2px solid var(--atlas, #0B6E4F); outline-offset: 2px; }
+    .kx-sku.is-sel { border-color: var(--atlas, #0B6E4F); box-shadow: inset 0 0 0 1px var(--atlas, #0B6E4F); }
+    .bqx-check { position: absolute; top: 22px; left: 22px; z-index: 2; width: 22px; height: 22px; border-radius: 7px;
+      border: 2px solid rgba(247, 245, 240, .95); background: rgba(5, 59, 44, .22); box-shadow: 0 1px 3px rgba(0, 0, 0, .18); pointer-events: none; }
+    .kx-sku.is-sel .bqx-check { background: var(--atlas, #0B6E4F); border-color: var(--atlas, #0B6E4F); }
+    .kx-sku.is-sel .bqx-check::after { content: ''; position: absolute; left: 5px; top: 1px; width: 6px; height: 11px;
+      border: solid #F7F5F0; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+    .bqx-selbar { position: sticky; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 30; margin-top: 14px;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px;
+      background: var(--riad, #053B2C); color: #EAFFF4; box-shadow: 0 18px 40px -18px rgba(5, 59, 44, .65); }
+    .bqx-selbar[hidden] { display: none; }
+    .bqx-selbar .n { margin-right: auto; font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; }
+    .bqx-selbar button { display: inline-flex; align-items: center; gap: 6px; font-family: inherit; font-size: 13px; font-weight: 600;
+      border: 0; border-radius: 10px; padding: 9px 12px; min-height: 36px; cursor: pointer; background: rgba(255, 255, 255, .14); color: #EAFFF4; }
+    .bqx-selbar button:hover:not(:disabled) { background: rgba(255, 255, 255, .24); }
+    .bqx-selbar button.danger { background: rgba(240, 179, 164, .16); color: #FFD3C8; }
+    .bqx-selbar button.danger:hover:not(:disabled) { background: rgba(240, 179, 164, .28); }
+    .bqx-selbar button.ghost { background: transparent; box-shadow: inset 0 0 0 1px rgba(234, 255, 244, .3); }
+    .bqx-selbar button:disabled { opacity: .45; cursor: not-allowed; }
+    .bqx-selbar button svg { width: 15px; height: 15px; }
+    .bqx-selbar .sh { display: none; }
+    /* Sous 860 px le tableau de bord pose sa propre barre d'onglets fixe en
+       bas (mobile.css, .kw-tabbar) : la barre de sélection se fixe juste
+       au-dessus, et la grille garde de quoi faire défiler sa dernière rangée. */
+    @media (max-width: 860px) {
+      .bqx-selbar { position: fixed; left: 12px; right: 12px; margin: 0; z-index: 1201;
+        bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+      #bqx-grid:has(+ .bqx-selbar:not([hidden])) { padding-bottom: 150px; }
+    }
+    /* Téléphone : deux rangées. Le compte et « Terminer » en haut, les quatre
+       gestes en libellés courts en dessous. */
+    @media (max-width: 600px) {
+      .bqx-selbar { gap: 6px; padding: 8px 10px; }
+      .bqx-selbar .n { flex: 1 1 60%; font-size: 13px; }
+      .bqx-selbar button.ghost { order: 1; }
+      .bqx-selbar button:not(.ghost) { order: 2; flex: 1 1 0; justify-content: center; padding: 9px 6px; font-size: 12.5px; }
+      .bqx-selbar .lg { display: none; }
+      .bqx-selbar .sh { display: inline; }
     }
   `;
   document.head.appendChild(st);
@@ -10121,13 +10170,25 @@ function _kindOptions(sel, trade) {
 /* ═══════════════════════════════════════════════════════════════════════════
  * 1. INVENTAIRE PRODUITS
  * ─────────────────────────────────────────────────────────────────────────── */
-function _bqxGridHtml() {
-  let products = CAT().listProducts({ categoryId: _bqxFilter, q: _bqxQuery });
+/* Ce que la grille montre en ce moment : filtre de rayon (ou « Archivés »),
+   recherche et couleur. « Tout sélectionner » s'appuie dessus, pour ne jamais
+   cocher ce que l'écran ne montre pas. */
+function _bqxVisibleProducts() {
+  let products = _bqxFilter === _BQX_ARCHIVED
+    ? CAT().listProducts({ includeArchived: true, q: _bqxQuery }).filter((p) => p.archived)
+    : CAT().listProducts({ categoryId: _bqxFilter, q: _bqxQuery });
   // Filtrer par couleur, c'est filtrer par FAMILLE : on cherche « du bleu », pas
   // « du bleu nuit ». Une variante marine et une variante turquoise répondent
   // toutes les deux, et restent malgré tout deux articles distincts.
   if (_bqxColorFilter) products = products.filter((p) => (CAT().getProduct(p.id).families || []).includes(_bqxColorFilter));
+  return products;
+}
+
+function _bqxGridHtml() {
+  const products = _bqxVisibleProducts();
   if (!products.length) {
+    if (_bqxFilter === _BQX_ARCHIVED) return `<div class="kx-foot-hint"><div class="lh">Aucun produit archivé</div><div class="rh">${
+      _bqxQuery ? 'Aucun résultat pour cette recherche.' : 'Un produit archivé quitte la caisse sans perdre son historique. Il réapparaît ici.'}</div></div>`;
     /* Catalogue entièrement vide et métier pourvu de modèles : on ouvre la porte
        plutôt que de constater le vide. Un filtre ou une recherche sans résultat
        reste un simple constat — le magasin, lui, n'est pas vide. */
@@ -10154,13 +10215,18 @@ function _bqxGridHtml() {
     const stockClass = isOut ? 'out' : isLow ? 'low' : '';
     const chip = isOut ? '<span class="chip ref">Rupture</span>' : isLow ? '<span class="chip pend">Stock bas</span>' : '';
     const nBc = data.variants.reduce((s, v) => s + ((v.barcodes && v.barcodes.length) ? 1 : 0), 0);
-    return `<div class="kx-sku" data-action="bqx-open" data-arg="${p.id}" style="cursor:pointer;">
+    const sel = _bqxSel.has(p.id);
+    const open = _bqxSelecting
+      ? `class="kx-sku bqx-selectable${sel ? ' is-sel' : ''}" data-action="bqx-sel-toggle" data-arg="${p.id}" role="checkbox" aria-checked="${sel}" tabindex="0" aria-label="${_esc(p.name)}"`
+      : `class="kx-sku" data-action="bqx-open" data-arg="${p.id}"`;
+    return `<div ${open} style="cursor:pointer;">
+      ${_bqxSelecting ? '<span class="bqx-check" aria-hidden="true"></span>' : ''}
       <div class="kx-sku-img" style="background: linear-gradient(135deg, ${barHex}, ${barHex}22);">
         <div class="kx-sku-img-tag">${cat ? _esc(cat.name.charAt(0).toUpperCase()) : '·'}</div>
       </div>
       <div class="kx-sku-body">
         <div class="kx-sku-head"><div class="n">${_esc(p.name)}${_bqxAbOn() && p.ownership === 'consignment'
-          ? '<span class="bqx-ab-b" title="Catégorie B">B</span>' : ''}</div><span class="chip neutral">${cat ? _esc(cat.name) : 'Divers'}</span></div>
+          ? '<span class="bqx-ab-b" title="Catégorie B">B</span>' : ''}</div><span class="chip neutral">${p.archived ? 'Archivé' : cat ? _esc(cat.name) : 'Divers'}</span></div>
         <div class="bqx-card-cols">${(data.colors || []).slice(0, 8).map((c) => (window.KiwiColors ? window.KiwiColors.swatch(c) : '')).join('')}${data.colors.length > 8 ? `<em>+${data.colors.length - 8}</em>` : ''}</div>
         <div class="kx-sku-sku mono">${data.sizes.length} taille${data.sizes.length > 1 ? 's' : ''} · ${_bqxN(data.variants.length, 'variante')}</div>
         <div class="kx-sku-row">
@@ -10359,6 +10425,11 @@ function _renderInventory() {
   cat.use(_bqxVenue());
   const st = cat.stats();
   const cats = cat.listCategories();
+  const archivedN = cat.listProducts({ includeArchived: true }).filter((p) => p.archived).length;
+  if (_bqxFilter === _BQX_ARCHIVED && !archivedN) _bqxFilter = 'all';
+  /* Une synchronisation a pu supprimer un produit coché ailleurs : il sort de
+     la sélection plutôt que d'y rester invisible et compté. */
+  _bqxSel.forEach((id) => { if (!cat.getProduct(id)) _bqxSel.delete(id); });
   window.Kiwi.appPage('inventory', {
     title: 'Inventaire produits',
     subtitle: `${((window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {}).fullDisplay || 'Boutique'} · ${_bqxN(st.products, 'produit')} · ${_bqxN(st.variants, 'variante')} · base partagée avec la caisse`,
@@ -10378,17 +10449,20 @@ function _renderInventory() {
         ${_bqxTemplatesOn() ? `<button class="kb ghost" data-action="bqx-templates">${window.KiwiStoreTemplates.mark(14)}Modèles de rayons</button>` : ''}
         ${_orderProOn() ? `<button class="kb ghost" data-action="orderpro-tags">Tags NFC</button>` : ''}
         ${(window.KiwiMaisonStock && window.KiwiMaisonStock.isMaison()) ? `<button class="kb ghost" data-action="nav-stock-movements">Mouvements de stock</button>` : ''}
+        <button class="kb ${_bqxSelecting ? 'atlas' : 'ghost'}" data-action="bqx-sel-mode" aria-pressed="${_bqxSelecting}">${_bqxSelecting ? 'Terminer' : 'Sélectionner'}</button>
         <button class="kb primary" data-action="bqx-new">${_ICN.plus}Nouveau produit</button>
       </div>
 
       <div class="kx-pills" data-pill-group="bqx-cat">
         <button class="kx-pill ${_bqxFilter === 'all' ? 'on' : ''}" data-action="bqx-filter" data-arg="all">Tous <span class="ct">${st.products}</span></button>
         ${cats.map((c) => `<button class="kx-pill ${_bqxFilter === c.id ? 'on' : ''}" data-action="bqx-filter" data-arg="${c.id}">${_esc(c.name)} <span class="ct">${cat.categoryCount(c.id)}</span></button>`).join('')}
+        ${archivedN || _bqxFilter === _BQX_ARCHIVED ? `<button class="kx-pill ${_bqxFilter === _BQX_ARCHIVED ? 'on' : ''}" data-action="bqx-filter" data-arg="${_BQX_ARCHIVED}">Archivés <span class="ct">${archivedN}</span></button>` : ''}
       </div>
 
       ${_bqxColorBar(cat)}
 
       <div id="bqx-grid">${_bqxGridHtml()}</div>
+      <div class="bqx-selbar" id="bqx-selbar" role="toolbar" aria-label="Actions sur la sélection"${_bqxSelecting ? '' : ' hidden'}>${_bqxSelecting ? _bqxSelBarHtml() : ''}</div>
 
       <div class="kx-foot-hint">
         <div class="lh">Astuce</div>
@@ -10398,6 +10472,16 @@ function _renderInventory() {
   });
   /* live search — re-render only the grid so the field keeps focus */
   setTimeout(() => {
+    // En mode sélection, une carte est une case à cocher : Espace ou Entrée la
+    // coche au clavier, comme un clic.
+    const grid = document.getElementById('bqx-grid');
+    if (grid && !grid.__bqxKeys) {
+      grid.__bqxKeys = true;
+      grid.addEventListener('keydown', (ev) => {
+        const card = ev.target.closest && ev.target.closest('.bqx-selectable');
+        if (card && (ev.key === ' ' || ev.key === 'Enter')) { ev.preventDefault(); card.click(); }
+      });
+    }
     const s = document.querySelector('.dash-genpage [data-bqx-search]');
     if (s) s.addEventListener('input', () => {
       _bqxQuery = s.value.trim();
@@ -10412,7 +10496,121 @@ handlers['nav-inventory'] = () => {
   _bqxCss(); _bqxSubscribe(); _renderInventory();
 };
 
-handlers['bqx-filter'] = (_el, arg) => { _bqxFilter = arg || 'all'; _renderInventory(); };
+handlers['bqx-filter'] = (_el, arg) => {
+  const next = arg || 'all';
+  // Changer de vue entre le catalogue et les archives vide la sélection : les
+  // actions n'y sont pas les mêmes (archiver d'un côté, restaurer de l'autre).
+  if ((next === _BQX_ARCHIVED) !== (_bqxFilter === _BQX_ARCHIVED)) _bqxSel.clear();
+  _bqxFilter = next; _renderInventory();
+};
+
+/* ── Sélection multiple ─────────────────────────────────────────────────────
+   Chaque geste groupé passe par CAT().batch() : une seule écriture du
+   catalogue et une seule synchronisation vers la caisse, quel que soit le
+   nombre de produits. */
+function _bqxBatch(fn) { const c = CAT(); return c.batch ? c.batch(fn) : fn(); }
+function _bqxSelBarHtml() {
+  const n = _bqxSel.size, none = n ? '' : ' disabled';
+  const visible = _bqxVisibleProducts();
+  const allOn = visible.length > 0 && visible.every((p) => _bqxSel.has(p.id));
+  const archived = _bqxFilter === _BQX_ARCHIVED;
+  return `<span class="n" aria-live="polite">${n ? _bqxN(n, 'produit') + ' sélectionné' + (n > 1 ? 's' : '') : 'Touchez les produits à sélectionner'}</span>
+    <button type="button" data-action="bqx-sel-all"${visible.length ? '' : ' disabled'}><span class="lg">${allOn ? 'Tout désélectionner' : 'Tout sélectionner'}</span><span class="sh">${allOn ? 'Aucun' : 'Tout'}</span></button>
+    ${archived
+      ? `<button type="button" data-action="bqx-sel-restore"${none}>Restaurer</button>`
+      : `<button type="button" data-action="bqx-sel-archive"${none}>Archiver</button>
+         <button type="button" data-action="bqx-sel-move"${none}><span class="lg">Changer de catégorie</span><span class="sh">Catégorie</span></button>`}
+    <button type="button" class="danger" data-action="bqx-sel-del"${none}>${_ICN.trash}Supprimer</button>
+    <button type="button" class="ghost" data-action="bqx-sel-mode">Terminer</button>`;
+}
+function _bqxSelBarRefresh() {
+  const bar = document.getElementById('bqx-selbar');
+  if (bar && _bqxSelecting) bar.innerHTML = _bqxSelBarHtml();
+}
+function _bqxSelDone(msg, desc, type) {
+  _bqxSel.clear();
+  _bqxSelecting = false;
+  if (_bqxModal) { _bqxModal.close(); _bqxModal = null; }
+  toast(msg, { desc, type: type || 'success', duration: 2600 });
+  _renderInventory();
+}
+handlers['bqx-sel-mode'] = () => {
+  _bqxSelecting = !_bqxSelecting;
+  _bqxSel.clear();
+  _renderInventory();
+};
+handlers['bqx-sel-toggle'] = (el, arg) => {
+  if (!arg) return;
+  if (_bqxSel.has(arg)) _bqxSel.delete(arg); else _bqxSel.add(arg);
+  const card = el && el.closest ? el.closest('.kx-sku') : null;
+  if (card) { card.classList.toggle('is-sel', _bqxSel.has(arg)); card.setAttribute('aria-checked', String(_bqxSel.has(arg))); }
+  _bqxSelBarRefresh();
+};
+handlers['bqx-sel-all'] = () => {
+  const visible = _bqxVisibleProducts();
+  const allOn = visible.length > 0 && visible.every((p) => _bqxSel.has(p.id));
+  visible.forEach((p) => { if (allOn) _bqxSel.delete(p.id); else _bqxSel.add(p.id); });
+  const g = document.getElementById('bqx-grid');
+  if (g) g.innerHTML = _bqxGridHtml();
+  _bqxSelBarRefresh();
+};
+handlers['bqx-sel-archive'] = () => {
+  const ids = [..._bqxSel];
+  if (!ids.length) return;
+  _bqxBatch(() => ids.forEach((id) => CAT().archiveProduct(id, true)));
+  _bqxSelDone(_bqxN(ids.length, 'produit') + ' archivé' + (ids.length > 1 ? 's' : ''),
+    'Retirés de la caisse, historique conservé. Retrouvez-les dans « Archivés ».');
+};
+handlers['bqx-sel-restore'] = () => {
+  const ids = [..._bqxSel];
+  if (!ids.length) return;
+  _bqxBatch(() => ids.forEach((id) => CAT().archiveProduct(id, false)));
+  _bqxFilter = 'all';
+  _bqxSelDone(_bqxN(ids.length, 'produit') + ' restauré' + (ids.length > 1 ? 's' : ''), 'De nouveau en vente à la caisse.');
+};
+handlers['bqx-sel-move'] = () => {
+  const ids = [..._bqxSel];
+  if (!ids.length) return;
+  const cats = CAT().listCategories();
+  _bqxModal = modal({
+    title: 'Changer de catégorie', width: 440,
+    desc: `${_bqxN(ids.length, 'produit')} sélectionné${ids.length > 1 ? 's' : ''}. Prix, stock et codes-barres ne changent pas.`,
+    body: `<label class="kf-label" for="bqx-sel-cat">Nouvelle catégorie</label>
+      <select id="bqx-sel-cat" class="kf-input" style="width:100%;">
+        ${cats.map((c) => `<option value="${_esc(c.id)}">${_esc(c.name)}</option>`).join('')}
+        <option value="">Divers (sans catégorie)</option>
+      </select>`,
+    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-sel-move-ok">Déplacer</button>`,
+  });
+};
+handlers['bqx-sel-move-ok'] = () => {
+  const ids = [..._bqxSel];
+  const sel = document.getElementById('bqx-sel-cat');
+  if (!ids.length || !sel) return;
+  const target = sel.value;
+  const c = CAT().listCategories().find((x) => x.id === target);
+  _bqxBatch(() => ids.forEach((id) => CAT().updateProduct(id, { categoryId: target })));
+  _bqxSelDone(_bqxN(ids.length, 'produit') + ' déplacé' + (ids.length > 1 ? 's' : ''), 'Vers « ' + (c ? c.name : 'Divers') + ' ».');
+};
+handlers['bqx-sel-del'] = () => {
+  const ids = [..._bqxSel];
+  if (!ids.length) return;
+  const names = ids.slice(0, 5).map((id) => { const d = CAT().getProduct(id); return d ? d.product.name : ''; }).filter(Boolean);
+  const nVar = ids.reduce((sum, id) => { const d = CAT().getProduct(id); return sum + (d ? d.variants.length : 0); }, 0);
+  const archivedView = _bqxFilter === _BQX_ARCHIVED;
+  _bqxModal = modal({
+    title: `Supprimer ${_bqxN(ids.length, 'produit')} ?`, width: 480,
+    desc: `${names.map((x) => '« ' + _esc(x) + ' »').join(', ')}${ids.length > 5 ? ` et ${ids.length - 5} autre${ids.length - 5 > 1 ? 's' : ''}` : ''} · ${_bqxN(nVar, 'variante')} (codes-barres inclus) seront supprimés définitivement.`,
+    body: `<div class="kx-warn-box danger"><div class="hd">Action irréversible</div><ul><li>Les produits disparaissent de la caisse et du dashboard.</li><li>Les codes-barres associés sont libérés.</li>${archivedView ? '' : '<li>Pour simplement les retirer de la vente en gardant l’historique, archivez-les.</li>'}</ul></div>`,
+    foot: `<button class="kb ghost" data-dismiss>Annuler</button>${archivedView ? '' : '<button class="kb ghost" data-action="bqx-sel-archive">Archiver plutôt</button>'}<button class="kb danger" data-action="bqx-sel-del-ok">${_ICN.trash}Supprimer définitivement</button>`,
+  });
+};
+handlers['bqx-sel-del-ok'] = () => {
+  const ids = [..._bqxSel];
+  if (!ids.length) return;
+  _bqxBatch(() => ids.forEach((id) => CAT().deleteProduct(id)));
+  _bqxSelDone(_bqxN(ids.length, 'produit') + ' supprimé' + (ids.length > 1 ? 's' : ''), '', 'warn');
+};
 /* Une pastille déjà active se désactive : c'est le geste attendu d'un filtre à
    choix unique, et ça évite d'ajouter un bouton « tout » de plus. */
 handlers['bqx-cfilter'] = (_el, arg) => {
