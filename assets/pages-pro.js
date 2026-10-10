@@ -3049,22 +3049,21 @@ const PDS_CANVAS_H = 540;
 /* ─── Vue nuit / vue jour ─────────────────────────────────────────────────
  * Le plan est celui que promet la page d'accueil : une salle charbon, des
  * tables au trait, le statut porté par la lumière, la menthe pour la seule
- * addition demandée. C'est le défaut (le propriétaire, 2026-10-10), quel que
- * soit le thème du dashboard : la page peint son propre fond sombre
- * (body.pds-dark-page). La vue jour, son miroir à l'encre, reste à un clic
- * et se mémorise par appareil. L'état du plan lui-même reste partagé avec
- * la caisse ; ceci n'est qu'un choix d'affichage, d'où sa clé séparée (v2 :
- * l'ancienne clé suivait le thème et figerait en jour qui l'avait). */
-const PDS_VIEW_KEY = 'kiwiPdsView2';
+ * addition demandée. La vue jour en est le miroir à l'encre.
+ *
+ * Le plan suit le thème du dashboard (le propriétaire, 2026-10-10 : « il
+ * faut aussi un mode clair »). Une préférence propre au plan, comme
+ * l'ancienne clé kiwiPdsView2, laissait la page noire sous un dashboard
+ * clair : deux interrupteurs qui se contredisent. On lit donc ce que <html>
+ * affiche (data-theme, que le mode fusion peint aussi), et le bouton soleil
+ * du plan bascule le thème du dashboard lui-même. En nuit, la page peint
+ * son fond (body.pds-dark-page) pour que la salle soit posée sur du noir. */
 function pdsNoir() {
-  try {
-    const saved = localStorage.getItem(PDS_VIEW_KEY) || '';
-    if (saved === 'jour') return false;
-  } catch (_) {}
-  return true;
+  return document.documentElement.getAttribute('data-theme') === 'dark';
 }
 function pdsSetNoir(on) {
-  try { localStorage.setItem(PDS_VIEW_KEY, on ? 'nuit' : 'jour'); } catch (_) {}
+  if (window.KiwiDashTheme && window.KiwiDashTheme.set) window.KiwiDashTheme.set(on ? 'dark' : 'light');
+  else document.documentElement.setAttribute('data-theme', on ? 'dark' : 'light');
 }
 /* Une matière sur la scène nuit : rabattue vers le charbon en gardant `keep`
  * de sa teinte — le noyer reste chaud, le sauge reste vert, mais tout devient
@@ -7969,6 +7968,7 @@ function pdsAttach(root, state, T, dr) {
     clearInterval(tick);
     if (unwatch) unwatch();
     mo.disconnect();
+    themeMo.disconnect();
     document.body.classList.remove('pds-dark-page');
     try { pdsSave(state); } catch (_) {}
     if (pdsLive === state) pdsLive = null;
@@ -7985,6 +7985,18 @@ function pdsAttach(root, state, T, dr) {
   const onResize = () => pdsMeasureChrome(root);
   window.addEventListener('resize', onResize);
   document.body.classList.toggle('pds-dark-page', pdsNoir());
+  /* Night or day follows <html data-theme>, whoever writes it: the topbar
+     switch, the plan's own sun button, or fusion mode. */
+  let wasNoir = pdsNoir();
+  const themeMo = new MutationObserver(() => {
+    const noir = pdsNoir();
+    if (noir === wasNoir || !alive) return;
+    wasNoir = noir;
+    root.classList.toggle('pds-noir', noir);
+    document.body.classList.toggle('pds-dark-page', noir);
+    refresh();
+  });
+  themeMo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
   bind();
   pdsMeasureChrome(root);
@@ -8719,10 +8731,8 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
 
   switch (action) {
     case 'toggle-view': {
+      /* Flips the dashboard's theme; the observer in pdsAttach repaints. */
       pdsSetNoir(!pdsNoir());
-      root.classList.toggle('pds-noir', pdsNoir());
-      document.body.classList.toggle('pds-dark-page', pdsNoir());
-      refresh();
       break;
     }
     case 'reset': {
