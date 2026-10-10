@@ -155,3 +155,9 @@ Each closed line gets its evidence here: commit, test, query, or screenshot.
   selection haptics, chart reading with a tick per point, 120 Hz key. Full
   `node tools/check.js` green on that commit. This is the TestFlight build
   for E1 to E7.
+- **Build 35 uploaded** (`7ea71290`): native iOS sheets (Face ID offer,
+  sign-out question), the paid moment on every register, a till sync pill
+  (the web till's sync line never ran in the app). Full gate green except two
+  browser suites that timed out at load average 90+; both pass alone
+  (`native-qa-six-fixes-test` 47, `ticket151-browser-test` 23). Debug sheet
+  demo confirmed absent from the release binary.
