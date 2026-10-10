@@ -9900,6 +9900,11 @@ let _bqxSubbed = false;
 let _bqxSelecting = false;
 const _bqxSel = new Set();
 const _BQX_ARCHIVED = '__archived';
+/* Grille ou liste : une préférence de lecture, gardée sur cet appareil. */
+let _bqxView = (() => { try { return localStorage.getItem('kiwiInvView') === 'list' ? 'list' : 'grid'; } catch (_) { return 'grid'; } })();
+/* « À réassortir » : ne montrer que ce qui est à 5 pièces ou moins. */
+let _bqxLowOnly = false;
+const _BQX_MORE = '<svg viewBox="0 -960 960 960" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M480-160q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm0-240q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm0-240q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Z"/></svg>';
 
 /* one-time styles for the variant matrix, barcode chips and category rows */
 function _bqxCss() {
@@ -9997,13 +10002,14 @@ function _bqxCss() {
     }
     /* Sélection multiple. La case est dessinée en CSS (pas d'icône) et se
        pose sur la vignette, là où l'œil va chercher la carte. */
-    .kx-sku.bqx-selectable:hover { transform: none; }
-    .kx-sku.bqx-selectable:focus-visible { outline: 2px solid var(--atlas, #0B6E4F); outline-offset: 2px; }
-    .kx-sku.is-sel { border-color: var(--atlas, #0B6E4F); box-shadow: inset 0 0 0 1px var(--atlas, #0B6E4F); }
-    .bqx-check { position: absolute; top: 22px; left: 22px; z-index: 2; width: 22px; height: 22px; border-radius: 7px;
+    .bqx-card.is-sel { border-color: var(--atlas, #0B6E4F); box-shadow: inset 0 0 0 1px var(--atlas, #0B6E4F); }
+    .bqx-row.is-sel { background: color-mix(in srgb, var(--atlas, #0B6E4F) 8%, transparent); }
+    .bqx-check { position: absolute; top: 10px; left: 10px; z-index: 2; width: 22px; height: 22px; border-radius: 7px;
       border: 2px solid rgba(247, 245, 240, .95); background: rgba(5, 59, 44, .22); box-shadow: 0 1px 3px rgba(0, 0, 0, .18); pointer-events: none; }
-    .kx-sku.is-sel .bqx-check { background: var(--atlas, #0B6E4F); border-color: var(--atlas, #0B6E4F); }
-    .kx-sku.is-sel .bqx-check::after { content: ''; position: absolute; left: 5px; top: 1px; width: 6px; height: 11px;
+    .bqx-row .bqx-check { position: relative; top: auto; left: auto; border-color: var(--n-300, #c9c5bb); background: var(--surface, #fff); box-shadow: none; }
+    .bqx-grid.is-compact .bqx-check { border-color: var(--n-300, #c9c5bb); background: var(--surface, #fff); box-shadow: none; }
+    .is-sel .bqx-check { background: var(--atlas, #0B6E4F); border-color: var(--atlas, #0B6E4F); }
+    .is-sel .bqx-check::after { content: ''; position: absolute; left: 5px; top: 1px; width: 6px; height: 11px;
       border: solid #F7F5F0; border-width: 0 2px 2px 0; transform: rotate(45deg); }
     .bqx-selbar { position: sticky; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 30; margin-top: 14px;
       display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px;
@@ -10019,6 +10025,129 @@ function _bqxCss() {
     .bqx-selbar button:disabled { opacity: .45; cursor: not-allowed; }
     .bqx-selbar button svg { width: 15px; height: 15px; }
     .bqx-selbar .sh { display: none; }
+    /* ── Inventaire · mise en page ───────────────────────────────────────
+       La page prend la largeur de l'écran : un catalogue se parcourt, il
+       ne se lit pas comme un formulaire. */
+    .dash-genpage:has(.bqx-inv) .genpage-body { max-width: 1440px; }
+    .bqx-kpis .kx-kpi .l { text-transform: none; letter-spacing: 0; font-family: var(--sans); font-size: 12.5px; font-weight: 500; }
+    .bqx-kpis .kx-kpi .v { font-family: var(--num, var(--sans)); }
+    .bqx-kpi-btn { display: block; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; transition: background-color 160ms; }
+    .bqx-kpi-btn:disabled { cursor: default; }
+    .bqx-kpi-btn:not(:disabled):hover { background: color-mix(in srgb, #D99A2B 13%, var(--surface)); }
+    .bqx-kpi-btn.is-on { box-shadow: inset 0 0 0 2px #D99A2B; }
+    .bqx-kpi-btn:focus-visible { outline: 2px solid var(--atlas, #0B6E4F); outline-offset: -2px; }
+    .p-toolbar.bqx-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; }
+    .bqx-toolbar > .p-search { flex: 1 1 260px; min-width: 0; }
+    .bqx-view.kx-tabs { margin: 0; padding: 3px; flex: none; }
+    .bqx-view .kx-tab { flex: none; padding: 6px 13px; font-size: 13px; }
+    .bqx-more { position: relative; }
+    .bqx-more > summary { list-style: none; cursor: pointer; }
+    .bqx-more > summary::-webkit-details-marker { display: none; }
+    .bqx-more > summary svg { width: 16px; height: 16px; }
+    .bqx-more[open] > summary { border-color: var(--ink, #0A0F0D); }
+    .bqx-more-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; min-width: 220px; padding: 6px;
+      display: grid; gap: 2px; border: 1px solid var(--n-200, #e7e3da); border-radius: 14px; background: var(--surface, #fff);
+      box-shadow: 0 18px 40px -16px rgba(10, 15, 13, .28); }
+    .bqx-more-pop button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 0; border-radius: 9px;
+      background: transparent; color: var(--ink, #0A0F0D); font: 500 13.5px/1.2 var(--sans); text-align: left; cursor: pointer; }
+    .bqx-more-pop button:hover { background: var(--paper-soft, #f3f1ea); }
+    .bqx-more-pop button svg { width: 15px; height: 15px; flex: none; color: var(--n-500, #77807b); }
+    .bqx-filters { display: flex; align-items: center; gap: 10px 18px; flex-wrap: wrap; margin-bottom: 14px; }
+    .bqx-filters .kx-pills { flex: 0 1 auto; max-width: 100%; min-width: 0; margin: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+    .bqx-filters .kx-pills::-webkit-scrollbar { display: none; }
+    .bqx-filters .kx-pill { flex: none; }
+    .bqx-filters .bqx-cfilter { margin: 0; }
+    .bqx-hint { margin: 18px 2px 0; font-size: 12.5px; line-height: 1.5; color: var(--n-500, #77807b); max-width: 72ch; }
+
+    /* ── Cartes ─────────────────────────────────────────────────────────── */
+    .bqx-grid { display: grid; gap: 12px; }
+    .bqx-grid.is-media { grid-template-columns: repeat(auto-fill, minmax(214px, 1fr)); }
+    .bqx-grid.is-compact { grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); }
+    .bqx-card { position: relative; display: flex; flex-direction: column; min-width: 0; cursor: pointer;
+      background: var(--surface, #fff); border: 1px solid var(--n-200, #e7e3da); border-radius: 16px; overflow: hidden;
+      transition: border-color 160ms, box-shadow 160ms; }
+    html[data-theme="dark"] .bqx-card, html[data-theme="dark"] .bqx-list { background: var(--paper-soft); }
+    .bqx-card:hover { border-color: color-mix(in srgb, var(--atlas, #0B6E4F) 55%, var(--n-200, #e7e3da)); box-shadow: 0 12px 26px -20px rgba(10, 15, 13, .35); }
+    .bqx-card:focus-visible, .bqx-row:focus-visible { outline: 2px solid var(--atlas, #0B6E4F); outline-offset: 2px; }
+    .bqx-thumb { position: relative; display: grid; place-items: center; overflow: hidden; flex: none;
+      background: color-mix(in srgb, var(--tint, #9AA09D) 13%, var(--surface, #fff)); }
+    .bqx-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .bqx-ini { font: 600 15px/1 var(--sans); letter-spacing: -.01em; color: color-mix(in srgb, var(--tint, #9AA09D) 78%, var(--ink, #0A0F0D)); }
+    html[data-theme="dark"] .bqx-ini { color: color-mix(in srgb, var(--tint, #9AA09D) 60%, #F7F5F0); }
+    .bqx-grid.is-media .bqx-thumb { aspect-ratio: 4 / 3; }
+    .bqx-grid.is-media .bqx-ini { font-size: 26px; }
+    .bqx-grid.is-compact .bqx-card { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 14px; }
+    .bqx-grid.is-compact .bqx-thumb { width: 52px; height: 52px; border-radius: 12px; }
+    .bqx-cbody { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
+    .bqx-grid.is-media .bqx-cbody { padding: 12px 14px 14px; }
+    .bqx-card .kx-sku-head { display: block; }
+    .bqx-card .kx-sku-head .n { font-weight: 600; font-size: 14px; line-height: 1.3; letter-spacing: -.01em; color: var(--ink, #0A0F0D);
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .bqx-cmeta { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; color: var(--n-500, #77807b); white-space: nowrap; }
+    .bqx-cmeta > span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; }
+    .bqx-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--tint, #9AA09D); }
+    .bqx-card-cols:empty { display: none; }
+    .bqx-cfoot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 4px; }
+    .bqx-price { font: 600 16px/1 var(--sans); font-variant-numeric: tabular-nums; letter-spacing: -.015em; color: var(--ink, #0A0F0D); white-space: nowrap; }
+    .bqx-price small { font-size: 11px; font-weight: 500; color: var(--n-500, #77807b); margin-left: 4px; letter-spacing: 0; }
+    .bqx-stag { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 999px; white-space: nowrap;
+      font: 500 11.5px/1 var(--sans); font-variant-numeric: tabular-nums; color: var(--n-600, #555); background: var(--paper-soft, #f3f1ea); }
+    .bqx-stag.low { color: #8A6210; background: rgba(217, 154, 43, .16); }
+    .bqx-stag.out { color: #9B2F22; background: rgba(155, 47, 34, .10); font-weight: 600; }
+    html[data-theme="dark"] .bqx-stag { background: var(--paper-muted); color: var(--n-400, #aab); }
+    html[data-theme="dark"] .bqx-stag.low { color: #E8B85C; background: rgba(217, 154, 43, .18); }
+    html[data-theme="dark"] .bqx-stag.out { color: #F0B3A4; background: rgba(240, 179, 164, .14); }
+    .bqx-card.is-arch .bqx-thumb, .bqx-row.is-arch .bqx-thumb { filter: grayscale(1); opacity: .6; }
+
+    /* ── Liste ──────────────────────────────────────────────────────────── */
+    .bqx-list { border: 1px solid var(--n-200, #e7e3da); border-radius: 16px; overflow: hidden; background: var(--surface, #fff); }
+    .bqx-lhead, .bqx-row { display: grid; align-items: center; gap: 14px; padding: 0 16px;
+      grid-template-columns: 40px minmax(180px, 2.4fr) minmax(96px, 1fr) 76px 112px 112px 112px; }
+    .bqx-lhead { min-height: 38px; font-size: 12px; font-weight: 500; color: var(--n-500, #77807b); background: var(--paper-soft, #f3f1ea); }
+    html[data-theme="dark"] .bqx-lhead { background: var(--paper-muted); }
+    .bqx-lhead .r, .bqx-rnum, .bqx-rstock { text-align: right; justify-self: end; }
+    .bqx-row { min-height: 60px; border-top: 1px solid var(--n-100, #efece5); cursor: pointer; transition: background-color 140ms; }
+    .bqx-row:hover { background: color-mix(in srgb, var(--atlas, #0B6E4F) 4%, transparent); }
+    .bqx-row .bqx-thumb { width: 40px; height: 40px; border-radius: 10px; }
+    .bqx-row .bqx-ini { font-size: 13px; }
+    .bqx-rlead { display: grid; place-items: center; width: 40px; height: 40px; }
+    .bqx-rname { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .bqx-rname b { font-weight: 600; font-size: 14px; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bqx-rname small { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--n-500, #77807b); }
+    .bqx-rcols { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; }
+    .bqx-rcols em { font-style: normal; font-size: 11px; color: var(--n-500, #77807b); }
+    .bqx-rnum { font-size: 13.5px; font-variant-numeric: tabular-nums; }
+    .bqx-rprice { font-weight: 600; white-space: nowrap; }
+    .bqx-rbc { font-size: 12.5px; color: var(--n-500, #77807b); }
+    .bqx-rbc.miss { color: #8A6210; }
+    html[data-theme="dark"] .bqx-rbc.miss { color: #E8B85C; }
+    .nil { font-style: normal; color: var(--n-300, #c9c5bb); }
+    @media (max-width: 980px) {
+      .bqx-lhead, .bqx-row { grid-template-columns: 40px minmax(0, 1fr) 96px 104px; }
+      .bqx-lhead > :nth-child(3), .bqx-lhead > :nth-child(4), .bqx-lhead > :nth-child(5),
+      .bqx-rcols, .bqx-row > .bqx-rnum:not(.bqx-rprice), .bqx-rbc { display: none; }
+    }
+    @media (max-width: 560px) {
+      .bqx-lhead { display: none; }
+      .bqx-row { grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-rows: auto auto; gap: 2px 12px; padding: 10px 14px; }
+      .bqx-row .bqx-rlead { grid-row: 1 / 3; }
+      .bqx-row .bqx-rname { grid-row: 1 / 3; }
+      .bqx-row .bqx-rprice { grid-column: 3; grid-row: 1; }
+      .bqx-row .bqx-rstock { grid-column: 3; grid-row: 2; }
+      .bqx-grid.is-compact, .bqx-grid.is-media { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .bqx-grid.is-compact .bqx-card { grid-template-columns: minmax(0, 1fr); padding: 12px; gap: 10px; }
+      .bqx-grid.is-compact .bqx-thumb { width: 40px; height: 40px; border-radius: 10px; }
+      .bqx-cfoot { flex-wrap: wrap; }
+      .bqx-cmeta { flex-wrap: wrap; row-gap: 2px; }
+    }
+    /* Téléphone : catalog-workspace.css (#0169) répartit les boutons de la
+       barre deux par deux ; ici « Sélectionner » partage sa rangée avec
+       l'affichage et « Plus », qui se réduit à son icône. */
+    @media (max-width: 700px) {
+      html body:not(#kno) .bqx-toolbar > .kb[data-action="bqx-sel-mode"] { flex: 1 1 0 !important; }
+      .bqx-more > summary span { display: none; }
+      .bqx-more > summary { min-height: 44px; min-width: 44px; justify-content: center; }
+    }
     /* Sous 860 px le tableau de bord pose sa propre barre d'onglets fixe en
        bas (mobile.css, .kw-tabbar) : la barre de sélection se fixe juste
        au-dessus, et la grille garde de quoi faire défiler sa dernière rangée. */
@@ -10181,6 +10310,7 @@ function _bqxVisibleProducts() {
   // « du bleu nuit ». Une variante marine et une variante turquoise répondent
   // toutes les deux, et restent malgré tout deux articles distincts.
   if (_bqxColorFilter) products = products.filter((p) => (CAT().getProduct(p.id).families || []).includes(_bqxColorFilter));
+  if (_bqxLowOnly) products = products.filter((p) => CAT().getProduct(p.id).stock <= 5);
   return products;
 }
 
@@ -10192,7 +10322,7 @@ function _bqxGridHtml() {
     /* Catalogue entièrement vide et métier pourvu de modèles : on ouvre la porte
        plutôt que de constater le vide. Un filtre ou une recherche sans résultat
        reste un simple constat — le magasin, lui, n'est pas vide. */
-    const virgin = !_bqxColorFilter && !_bqxQuery && _bqxFilter === 'all' && !CAT().listProducts({ includeArchived: true }).length;
+    const virgin = !_bqxColorFilter && !_bqxQuery && !_bqxLowOnly && _bqxFilter === 'all' && !CAT().listProducts({ includeArchived: true }).length;
     if (virgin && _bqxTemplatesOn()) {
       return `<div class="kx-foot-hint" style="align-items:center;">
         <div class="lh">Catalogue vide</div>
@@ -10202,41 +10332,91 @@ function _bqxGridHtml() {
       </div>`;
     }
     return `<div class="kx-foot-hint"><div class="lh">Aucun produit</div><div class="rh">${
-      _bqxColorFilter ? 'Aucun article de cette couleur. Touchez la pastille à nouveau pour tout revoir.'
+      _bqxLowOnly ? 'Rien à réassortir dans cette sélection.'
+        : _bqxColorFilter ? 'Aucun article de cette couleur. Touchez la pastille à nouveau pour tout revoir.'
         : _bqxQuery ? 'Aucun résultat pour cette recherche.'
         : 'Créez un produit ici, ou depuis la caisse' + _bqxTillHint() + ' avec la douchette.'}</div></div>`;
   }
-  return `<div class="kx-sku-grid">${products.map((p) => {
-    const data = CAT().getProduct(p.id);
-    const stock = data.stock;
-    const cat = data.category;
-    const barHex = cat ? (_TAGHEX[cat.color] || '#0B6E4F') : '#9AA09D';
-    const isOut = stock === 0, isLow = !isOut && stock <= 5;
-    const stockClass = isOut ? 'out' : isLow ? 'low' : '';
-    const chip = isOut ? '<span class="chip ref">Rupture</span>' : isLow ? '<span class="chip pend">Stock bas</span>' : '';
-    const nBc = data.variants.reduce((s, v) => s + ((v.barcodes && v.barcodes.length) ? 1 : 0), 0);
+  if (_bqxView === 'list') {
+    return `<div class="bqx-list">
+      <div class="bqx-lhead" aria-hidden="true"><span></span><span>Produit</span><span>Couleurs</span><span class="r">Variantes</span><span>Codes-barres</span><span class="r">Prix</span><span class="r">Stock</span></div>
+      ${products.map(_bqxRowHtml).join('')}
+    </div>`;
+  }
+  // Dès qu'un seul produit a sa photo, la grille passe en vignettes : les
+  // autres gardent leurs initiales sur la teinte de leur rayon. Sans aucune
+  // photo, la carte reste compacte plutôt que d'aligner des aplats vides.
+  const media = products.some((p) => _bqxPhotoSrc(p));
+  return `<div class="bqx-grid ${media ? 'is-media' : 'is-compact'}">${products.map(_bqxCardHtml).join('')}</div>`;
+}
+
+/* Une carte, ou une ligne, qui s'ouvre au toucher, ou se coche en mode
+   sélection. Les deux vues partagent ces attributs. */
+function _bqxOpenAttrs(p, cls) {
+  const id = _esc(p.id);
+  const arch = p.archived ? ' is-arch' : '';
+  if (_bqxSelecting) {
     const sel = _bqxSel.has(p.id);
-    const open = _bqxSelecting
-      ? `class="kx-sku bqx-selectable${sel ? ' is-sel' : ''}" data-action="bqx-sel-toggle" data-arg="${p.id}" role="checkbox" aria-checked="${sel}" tabindex="0" aria-label="${_esc(p.name)}"`
-      : `class="kx-sku" data-action="bqx-open" data-arg="${p.id}"`;
-    return `<div ${open} style="cursor:pointer;">
+    return `class="${cls} bqx-selectable${sel ? ' is-sel' : ''}${arch}" data-action="bqx-sel-toggle" data-arg="${id}" role="checkbox" aria-checked="${sel}" tabindex="0" aria-label="${_esc(p.name)}"`;
+  }
+  return `class="${cls}${arch}" data-action="bqx-open" data-arg="${id}" role="button" tabindex="0" aria-label="${_esc(p.name)}"`;
+}
+/* Seule une adresse d'image servie (R2, https) passe dans un src. */
+function _bqxPhotoSrc(p) {
+  const src = String((p && p.photo) || '');
+  return /^(https?:\/\/|\/)/.test(src) ? src : '';
+}
+function _bqxThumb(p) {
+  const src = _bqxPhotoSrc(p);
+  if (src) return `<img src="${_esc(src)}" alt="" loading="lazy" decoding="async" />`;
+  const words = String(p.name || '').trim().split(/\s+/).filter(Boolean);
+  const ini = ((words[0] || '·').charAt(0) + (words[1] ? words[1].charAt(0) : '')).toUpperCase();
+  return `<span class="bqx-ini" aria-hidden="true">${_esc(ini)}</span>`;
+}
+function _bqxStockTag(stock) {
+  if (stock <= 0) return '<span class="bqx-stag out">Rupture</span>';
+  if (stock <= 5) return `<span class="bqx-stag low">${stock} restant${stock > 1 ? 's' : ''}</span>`;
+  return `<span class="bqx-stag">${stock} en stock</span>`;
+}
+function _bqxSwatches(colors, max) {
+  const kc = window.KiwiColors;
+  if (!kc || !colors || !colors.length) return '';
+  return colors.slice(0, max).map((c) => kc.swatch(c)).join('') + (colors.length > max ? `<em>+${colors.length - max}</em>` : '');
+}
+function _bqxTint(cat) { return cat ? (_TAGHEX[cat.color] || '#0B6E4F') : '#9AA09D'; }
+
+function _bqxCardHtml(p) {
+  const data = CAT().getProduct(p.id);
+  const cat = data.category;
+  return `<div ${_bqxOpenAttrs(p, 'bqx-card')} style="--tint:${_bqxTint(cat)};">
       ${_bqxSelecting ? '<span class="bqx-check" aria-hidden="true"></span>' : ''}
-      <div class="kx-sku-img" style="background: linear-gradient(135deg, ${barHex}, ${barHex}22);">
-        <div class="kx-sku-img-tag">${cat ? _esc(cat.name.charAt(0).toUpperCase()) : '·'}</div>
-      </div>
-      <div class="kx-sku-body">
+      <div class="bqx-thumb">${_bqxThumb(p)}</div>
+      <div class="bqx-cbody">
         <div class="kx-sku-head"><div class="n">${_esc(p.name)}${_bqxAbOn() && p.ownership === 'consignment'
-          ? '<span class="bqx-ab-b" title="Catégorie B">B</span>' : ''}</div><span class="chip neutral">${p.archived ? 'Archivé' : cat ? _esc(cat.name) : 'Divers'}</span></div>
-        <div class="bqx-card-cols">${(data.colors || []).slice(0, 8).map((c) => (window.KiwiColors ? window.KiwiColors.swatch(c) : '')).join('')}${data.colors.length > 8 ? `<em>+${data.colors.length - 8}</em>` : ''}</div>
-        <div class="kx-sku-sku mono">${data.sizes.length} taille${data.sizes.length > 1 ? 's' : ''} · ${_bqxN(data.variants.length, 'variante')}</div>
-        <div class="kx-sku-row">
-          <div class="kx-sku-price mono">${_mad(p.priceMAD)} MAD</div>
-          <div class="kx-sku-stock ${stockClass} mono">${stock} en stock</div>
-        </div>
-        <div class="kx-sku-meta"><span>${nBc}/${data.variants.length} codes-barres</span>${chip ? '<span class="dot"></span>' + chip : ''}</div>
+          ? '<span class="bqx-ab-b" title="Catégorie B">B</span>' : ''}</div></div>
+        <div class="bqx-cmeta"><span class="bqx-dot"></span><span>${p.archived ? 'Archivé' : cat ? _esc(cat.name) : 'Divers'}</span><span aria-hidden="true">·</span><span>${_bqxN(data.variants.length, 'variante')}</span></div>
+        <div class="bqx-card-cols">${_bqxSwatches(data.colors, 8)}</div>
+        <div class="bqx-cfoot"><span class="bqx-price">${_mad(p.priceMAD)}<small>MAD</small></span>${_bqxStockTag(data.stock)}</div>
       </div>
     </div>`;
-  }).join('')}</div>`;
+}
+
+function _bqxRowHtml(p) {
+  const data = CAT().getProduct(p.id);
+  const cat = data.category;
+  const nVar = data.variants.length;
+  const nBc = data.variants.reduce((s, v) => s + ((v.barcodes && v.barcodes.length) ? 1 : 0), 0);
+  const miss = nVar - nBc;
+  return `<div ${_bqxOpenAttrs(p, 'bqx-row')} style="--tint:${_bqxTint(cat)};">
+      <span class="bqx-rlead">${_bqxSelecting ? '<span class="bqx-check" aria-hidden="true"></span>' : `<span class="bqx-thumb">${_bqxThumb(p)}</span>`}</span>
+      <span class="bqx-rname"><b>${_esc(p.name)}${_bqxAbOn() && p.ownership === 'consignment'
+        ? '<span class="bqx-ab-b" title="Catégorie B">B</span>' : ''}</b><small><span class="bqx-dot"></span>${p.archived ? 'Archivé' : cat ? _esc(cat.name) : 'Divers'}</small></span>
+      <span class="bqx-rcols">${_bqxSwatches(data.colors, 6) || '<i class="nil">·</i>'}</span>
+      <span class="bqx-rnum">${nVar}</span>
+      <span class="bqx-rbc${miss > 0 ? ' miss' : ''}">${!nVar ? '<i class="nil">·</i>' : miss > 0 ? `${miss} manquant${miss > 1 ? 's' : ''}` : 'Complets'}</span>
+      <span class="bqx-rnum bqx-rprice">${_mad(p.priceMAD)} MAD</span>
+      <span class="bqx-rstock">${_bqxStockTag(data.stock)}</span>
+    </div>`;
 }
 
 /* Filtre couleur : uniquement les familles que ce magasin a réellement en rayon.
@@ -10427,61 +10607,83 @@ function _renderInventory() {
   const cats = cat.listCategories();
   const archivedN = cat.listProducts({ includeArchived: true }).filter((p) => p.archived).length;
   if (_bqxFilter === _BQX_ARCHIVED && !archivedN) _bqxFilter = 'all';
+  const need = st.low + st.ruptures;
+  if (!need) _bqxLowOnly = false;
   /* Une synchronisation a pu supprimer un produit coché ailleurs : il sort de
      la sélection plutôt que d'y rester invisible et compté. */
   _bqxSel.forEach((id) => { if (!cat.getProduct(id)) _bqxSel.delete(id); });
+  const k = _bqxStockKPI(st);
+  const more = [
+    `<button type="button" data-action="bqx-import">${_ICN.download}Importer un CSV</button>`,
+    `<button type="button" data-action="bqx-export">${_ICN.upload}Exporter en CSV</button>`,
+    _bqxTemplatesOn() ? `<button type="button" data-action="bqx-templates">${window.KiwiStoreTemplates.mark(14)}Modèles de rayons</button>` : '',
+    _orderProOn() ? `<button type="button" data-action="orderpro-tags">Tags NFC</button>` : '',
+    (window.KiwiMaisonStock && window.KiwiMaisonStock.isMaison()) ? `<button type="button" data-action="nav-stock-movements">Mouvements de stock</button>` : '',
+  ].join('');
   window.Kiwi.appPage('inventory', {
     title: 'Inventaire produits',
-    subtitle: `${((window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {}).fullDisplay || 'Boutique'} · ${_bqxN(st.products, 'produit')} · ${_bqxN(st.variants, 'variante')} · base partagée avec la caisse`,
-    body: `
-      <div class="kx-kpi-strip">
-        <div class="kx-kpi"><div class="l">PRODUITS</div><div class="v">${st.products}<span class="u">/ ${st.variants} var.</span></div><div class="d">${st.ruptures} en rupture</div></div>
-        <div class="kx-kpi"><div class="l">VALEUR DE STOCK</div><div class="v">${_mad(_bqxStockKPI(st).amount)}<span class="u">MAD</span></div><div class="d">${st.totalStock} pièces${_bqxStockKPI(st).note}</div></div>
-        <div class="kx-kpi ${st.low ? 'warn' : ''}"><div class="l">STOCK BAS / RUPTURES</div><div class="v">${st.low}<span class="u">+ ${st.ruptures}</span></div><div class="d">Seuil ≤ 5 unités</div></div>
-        <div class="kx-kpi"><div class="l">CATÉGORIES</div><div class="v">${st.categories}</div><div class="d">Créer / supprimer côté Catégories</div></div>
+    subtitle: `${((window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {}).fullDisplay || 'Boutique'} · base partagée avec la caisse`,
+    body: `<div class="bqx-inv">
+      <div class="kx-kpi-strip bqx-kpis">
+        <div class="kx-kpi"><div class="l">Produits</div><div class="v">${st.products}</div><div class="d">${_bqxN(st.variants, 'variante')}</div></div>
+        <div class="kx-kpi"><div class="l">Valeur du stock</div><div class="v">${_mad(k.amount)}<span class="u">MAD</span></div><div class="d">${_bqxN(st.totalStock, 'pièce')}${k.note}</div></div>
+        <button type="button" class="kx-kpi bqx-kpi-btn${need ? ' warn' : ''}${_bqxLowOnly ? ' is-on' : ''}" data-action="bqx-low" aria-pressed="${_bqxLowOnly}"${need ? '' : ' disabled'}>
+          <div class="l">À réassortir</div><div class="v">${need}</div>
+          <div class="d">${need ? (_bqxLowOnly ? 'Filtre actif · toucher pour tout revoir' : `${st.low} stock bas · ${st.ruptures} en rupture`) : 'Rien sous 5 pièces'}</div></button>
+        <div class="kx-kpi"><div class="l">Rayons</div><div class="v">${st.categories}</div><div class="d">Gérés dans Catégories</div></div>
       </div>
 
-      <div class="p-toolbar bqx-toolbar" style="margin-top: 4px;">
-        <div class="p-search" style="flex:1;"><span style="display:inline-flex;align-items:center;">${_ICN.search}</span>
-          <input data-bqx-search placeholder="Rechercher produit, catégorie, code-barres…" value="${_esc(_bqxQuery)}" style="border:none;background:transparent;outline:none;margin-left:6px;font:inherit;color:inherit;flex:1;min-width:120px;" /></div>
-        <button class="kb ghost" data-action="bqx-import">${_ICN.download}Importer CSV</button>
-        <button class="kb ghost" data-action="bqx-export">${_ICN.upload}Exporter CSV</button>
-        ${_bqxTemplatesOn() ? `<button class="kb ghost" data-action="bqx-templates">${window.KiwiStoreTemplates.mark(14)}Modèles de rayons</button>` : ''}
-        ${_orderProOn() ? `<button class="kb ghost" data-action="orderpro-tags">Tags NFC</button>` : ''}
-        ${(window.KiwiMaisonStock && window.KiwiMaisonStock.isMaison()) ? `<button class="kb ghost" data-action="nav-stock-movements">Mouvements de stock</button>` : ''}
+      <div class="p-toolbar bqx-toolbar">
+        <div class="p-search"><span style="display:inline-flex;align-items:center;">${_ICN.search}</span>
+          <input data-bqx-search placeholder="Rechercher un produit, un rayon, un code-barres" value="${_esc(_bqxQuery)}" aria-label="Rechercher dans l'inventaire" style="border:none;background:transparent;outline:none;margin-left:6px;font:inherit;color:inherit;flex:1;min-width:120px;" /></div>
+        <div class="kx-tabs bqx-view" role="group" aria-label="Affichage">
+          <button type="button" class="kx-tab${_bqxView === 'grid' ? ' on' : ''}" data-action="bqx-view" data-arg="grid" aria-pressed="${_bqxView === 'grid'}">Grille</button>
+          <button type="button" class="kx-tab${_bqxView === 'list' ? ' on' : ''}" data-action="bqx-view" data-arg="list" aria-pressed="${_bqxView === 'list'}">Liste</button>
+        </div>
         <button class="kb ${_bqxSelecting ? 'atlas' : 'ghost'}" data-action="bqx-sel-mode" aria-pressed="${_bqxSelecting}">${_bqxSelecting ? 'Terminer' : 'Sélectionner'}</button>
+        <details class="bqx-more"><summary class="kb ghost" aria-label="Plus d'actions">${_BQX_MORE}<span>Plus</span></summary>
+          <div class="bqx-more-pop">${more}</div></details>
         <button class="kb primary" data-action="bqx-new">${_ICN.plus}Nouveau produit</button>
       </div>
 
-      <div class="kx-pills" data-pill-group="bqx-cat">
-        <button class="kx-pill ${_bqxFilter === 'all' ? 'on' : ''}" data-action="bqx-filter" data-arg="all">Tous <span class="ct">${st.products}</span></button>
-        ${cats.map((c) => `<button class="kx-pill ${_bqxFilter === c.id ? 'on' : ''}" data-action="bqx-filter" data-arg="${c.id}">${_esc(c.name)} <span class="ct">${cat.categoryCount(c.id)}</span></button>`).join('')}
-        ${archivedN || _bqxFilter === _BQX_ARCHIVED ? `<button class="kx-pill ${_bqxFilter === _BQX_ARCHIVED ? 'on' : ''}" data-action="bqx-filter" data-arg="${_BQX_ARCHIVED}">Archivés <span class="ct">${archivedN}</span></button>` : ''}
+      <div class="bqx-filters">
+        <div class="kx-pills" data-pill-group="bqx-cat">
+          <button class="kx-pill ${_bqxFilter === 'all' ? 'on' : ''}" data-action="bqx-filter" data-arg="all">Tous <span class="ct">${st.products}</span></button>
+          ${cats.map((c) => `<button class="kx-pill ${_bqxFilter === c.id ? 'on' : ''}" data-action="bqx-filter" data-arg="${c.id}">${_esc(c.name)} <span class="ct">${cat.categoryCount(c.id)}</span></button>`).join('')}
+          ${archivedN || _bqxFilter === _BQX_ARCHIVED ? `<button class="kx-pill ${_bqxFilter === _BQX_ARCHIVED ? 'on' : ''}" data-action="bqx-filter" data-arg="${_BQX_ARCHIVED}">Archivés <span class="ct">${archivedN}</span></button>` : ''}
+        </div>
+        ${_bqxColorBar(cat)}
       </div>
-
-      ${_bqxColorBar(cat)}
 
       <div id="bqx-grid">${_bqxGridHtml()}</div>
       <div class="bqx-selbar" id="bqx-selbar" role="toolbar" aria-label="Actions sur la sélection"${_bqxSelecting ? '' : ' hidden'}>${_bqxSelecting ? _bqxSelBarHtml() : ''}</div>
 
-      <div class="kx-foot-hint">
-        <div class="lh">Astuce</div>
-        <div class="rh">${_esc(_bqxCopy().gridHint)}</div>
-      </div>
-    `,
+      <p class="bqx-hint">${_esc(_bqxCopy().gridHint)}</p>
+    </div>`,
   });
-  /* live search — re-render only the grid so the field keeps focus */
   setTimeout(() => {
-    // En mode sélection, une carte est une case à cocher : Espace ou Entrée la
-    // coche au clavier, comme un clic.
+    // Une carte s'ouvre (ou se coche, en mode sélection) au clavier comme au
+    // clic : Espace ou Entrée.
     const grid = document.getElementById('bqx-grid');
     if (grid && !grid.__bqxKeys) {
       grid.__bqxKeys = true;
       grid.addEventListener('keydown', (ev) => {
-        const card = ev.target.closest && ev.target.closest('.bqx-selectable');
-        if (card && (ev.key === ' ' || ev.key === 'Enter')) { ev.preventDefault(); card.click(); }
+        const card = ev.target.closest && ev.target.closest('.bqx-card, .bqx-row');
+        if (card && card === ev.target && (ev.key === ' ' || ev.key === 'Enter')) { ev.preventDefault(); card.click(); }
       });
     }
+    // Le menu « Plus » se referme dès qu'on choisit, ou qu'on touche ailleurs.
+    const menu = document.querySelector('.dash-genpage .bqx-more');
+    if (menu && !menu.__bqxWired) {
+      menu.__bqxWired = true;
+      menu.querySelector('.bqx-more-pop').addEventListener('click', () => { menu.open = false; });
+      const away = (ev) => {
+        if (!menu.isConnected) { document.removeEventListener('pointerdown', away, true); return; }
+        if (menu.open && !menu.contains(ev.target)) menu.open = false;
+      };
+      document.addEventListener('pointerdown', away, true);
+    }
+    /* live search — re-render only the grid so the field keeps focus */
     const s = document.querySelector('.dash-genpage [data-bqx-search]');
     if (s) s.addEventListener('input', () => {
       _bqxQuery = s.value.trim();
@@ -10495,6 +10697,23 @@ handlers['nav-inventory'] = () => {
   if (!_bqxReady()) { toast('Module inventaire indisponible', { desc: 'Les moteurs catalogue/code-barres ne sont pas chargés.', type: 'warn' }); return; }
   _bqxCss(); _bqxSubscribe(); _renderInventory();
 };
+
+/* Grille ↔ liste sans redessiner la page : la lentille glisse d'un onglet à
+   l'autre, seule la zone des produits est remplacée. */
+handlers['bqx-view'] = (el, arg) => {
+  const next = arg === 'list' ? 'list' : 'grid';
+  if (next === _bqxView) return;
+  _bqxView = next;
+  try { localStorage.setItem('kiwiInvView', next); } catch (_) {}
+  const group = el && el.closest ? el.closest('.bqx-view') : null;
+  if (group) group.querySelectorAll('.kx-tab').forEach((b) => {
+    const on = b.getAttribute('data-arg') === next;
+    b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+  });
+  const g = document.getElementById('bqx-grid');
+  if (g) g.innerHTML = _bqxGridHtml(); else _renderInventory();
+};
+handlers['bqx-low'] = () => { _bqxLowOnly = !_bqxLowOnly; _renderInventory(); };
 
 handlers['bqx-filter'] = (_el, arg) => {
   const next = arg || 'all';
@@ -10542,7 +10761,7 @@ handlers['bqx-sel-mode'] = () => {
 handlers['bqx-sel-toggle'] = (el, arg) => {
   if (!arg) return;
   if (_bqxSel.has(arg)) _bqxSel.delete(arg); else _bqxSel.add(arg);
-  const card = el && el.closest ? el.closest('.kx-sku') : null;
+  const card = el && el.closest ? el.closest('.bqx-selectable') : null;
   if (card) { card.classList.toggle('is-sel', _bqxSel.has(arg)); card.setAttribute('aria-checked', String(_bqxSel.has(arg))); }
   _bqxSelBarRefresh();
 };
