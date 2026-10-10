@@ -9900,8 +9900,9 @@ let _bqxSubbed = false;
 let _bqxSelecting = false;
 const _bqxSel = new Set();
 const _BQX_ARCHIVED = '__archived';
-/* Grille ou liste : une préférence de lecture, gardée sur cet appareil. */
-let _bqxView = (() => { try { return localStorage.getItem('kiwiInvView') === 'list' ? 'list' : 'grid'; } catch (_) { return 'grid'; } })();
+/* Liste ou grille : la liste par défaut (décision de la patronne, 2026-10-10),
+   la grille reste un choix gardé sur cet appareil. */
+let _bqxView = (() => { try { return localStorage.getItem('kiwiInvView') === 'grid' ? 'grid' : 'list'; } catch (_) { return 'list'; } })();
 /* « À réassortir » : ne montrer que ce qui est à 5 pièces ou moins. */
 let _bqxLowOnly = false;
 const _BQX_MORE = '<svg viewBox="0 -960 960 960" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M480-160q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm0-240q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm0-240q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Z"/></svg>';
