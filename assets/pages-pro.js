@@ -10058,7 +10058,6 @@ function _bqxCss() {
     .bqx-filters .kx-pills::-webkit-scrollbar { display: none; }
     .bqx-filters .kx-pill { flex: none; }
     .bqx-filters .bqx-cfilter { margin: 0; }
-    .bqx-hint { margin: 18px 2px 0; font-size: 12.5px; line-height: 1.5; color: var(--n-500, #77807b); max-width: 72ch; }
 
     /* ── Cartes ─────────────────────────────────────────────────────────── */
     .bqx-grid { display: grid; gap: 12px; }
@@ -10672,8 +10671,6 @@ function _renderInventory() {
 
       <div id="bqx-grid">${_bqxGridHtml()}</div>
       <div class="bqx-selbar" id="bqx-selbar" role="toolbar" aria-label="Actions sur la sélection"${_bqxSelecting ? '' : ' hidden'}>${_bqxSelecting ? _bqxSelBarHtml() : ''}</div>
-
-      <p class="bqx-hint">${_esc(_bqxCopy().gridHint)}</p>
     </div>`,
   });
   setTimeout(() => {
