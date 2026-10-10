@@ -150,3 +150,8 @@ Each closed line gets its evidence here: commit, test, query, or screenshot.
   Xcode account was restored: "Upload succeeded", now processing. TestFlight
   build for E1 to E7.
 
+- **Build 34 uploaded** (`3783e6bb`): "Upload succeeded", processing. Dark
+  screens no longer paint white first (Orders cards), touch-down response,
+  selection haptics, chart reading with a tick per point, 120 Hz key. Full
+  `node tools/check.js` green on that commit. This is the TestFlight build
+  for E1 to E7.
