@@ -1046,3 +1046,25 @@ html.kiwi-native :is([data-rev-hero-val],[data-kpi-val],[data-mix-center-amt],.k
 html.kiwi-native :is(svg[data-rev-svg],svg[data-rev-svg] .rev-hit){touch-action:pan-y}
 html.kiwi-native :is(img,svg,a[href]){-webkit-touch-callout:none}
 html.kiwi-native img{-webkit-user-drag:none}
+
+/* The paid moment (native-runtime.js › kiwi:sale-paid). Never takes a tap. */
+.kiwi-paid{position:fixed;left:50%;top:42%;z-index:2147483002;display:flex;flex-direction:column;align-items:center;gap:10px;min-width:180px;padding:22px 30px 20px;box-sizing:border-box;border-radius:28px;background:#053B2C;color:#F7F5F0;box-shadow:0 18px 50px rgba(5,59,44,.35);pointer-events:none;opacity:0;transform:translate(-50%,-50%) scale(.92);transition:opacity .18s ease,transform .32s cubic-bezier(.34,1.45,.5,1)}
+.kiwi-paid.is-in{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.kiwi-paid.is-out{opacity:0;transform:translate(-50%,-50%) scale(.98);transition:opacity .22s ease,transform .22s ease}
+.kiwi-paid-check{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#7DF2B0}
+.kiwi-paid-check i{display:block;width:34px;height:34px;background:#053B2C;-webkit-mask:url("assets/icons/material/check.svg") center/contain no-repeat;mask:url("assets/icons/material/check.svg") center/contain no-repeat}
+.kiwi-paid.is-in .kiwi-paid-check i{animation:kiwi-paid-tick .36s cubic-bezier(.34,1.45,.5,1) .06s both}
+@keyframes kiwi-paid-tick{from{opacity:0;transform:scale(.3)}}
+.kiwi-paid-amount{font:600 28px/1 "Inter Tight",sans-serif;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.kiwi-paid-label{font:500 14px/1.2 "Inter Tight",sans-serif;color:rgba(247,245,240,.72)}
+html[dir="rtl"] .kiwi-paid-label{font-family:"IBM Plex Sans Arabic","Inter Tight",sans-serif}
+@media(prefers-reduced-motion:reduce){.kiwi-paid,.kiwi-paid.is-in,.kiwi-paid.is-out{transform:translate(-50%,-50%);transition:opacity .2s ease}.kiwi-paid.is-in .kiwi-paid-check i{animation:none}}
+
+/* Honest sync on the till (native-runtime.js › kiwi-sync-pill). It takes the
+   place of the plain offline pill, whose news it already carries. */
+.kiwi-sync-pill{position:fixed;z-index:2147483644;top:calc(var(--kiwi-safe-top,0px) + 8px);left:50%;display:inline-flex;align-items:center;gap:8px;max-width:calc(100vw - 32px);min-height:36px;padding:8px 14px;box-sizing:border-box;border:1px solid rgba(247,245,240,.18);border-radius:999px;background:#0A0F0D;color:#F7F5F0;font:600 12px/1.2 "Inter Tight",sans-serif;box-shadow:0 10px 30px rgba(10,15,13,.28);opacity:0;pointer-events:none;transform:translate(-50%,-140%);transition:transform .28s cubic-bezier(.34,1.45,.5,1),opacity .18s ease;-webkit-tap-highlight-color:transparent}
+.kiwi-sync-pill.is-visible{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+.kiwi-sync-pill i{flex:0 0 8px;width:8px;height:8px;border-radius:50%}
+.kiwi-sync-pill span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html.kiwi-sync-pill-on .kiwi-native-offline{display:none}
+@media(prefers-reduced-motion:reduce){.kiwi-sync-pill{transition:opacity .2s ease}}

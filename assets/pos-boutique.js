@@ -3721,6 +3721,8 @@
         // #0166 · on a phone the ticket sheet folds back to the sale grid.
         try { root.dispatchEvent(new CustomEvent('vx-ticket-done', { bubbles: true })); } catch (_) {}
         const delivery = parts.some((x) => x.m === 'livraison');
+        // The paid moment in the native app. A delivery is still to be collected.
+        if (!delivery) { try { window.dispatchEvent(new CustomEvent('kiwi:sale-paid', { detail: { total: total, method: 'boutique' } })); } catch (_) {} }
         return { ref: sale.id, sale, delivery, line: delivery
           ? `Vente ${sale.id} en livraison, ${fmtMAD(total)} à recevoir${ptsLine}`
           : `Vente ${sale.id} encaissée, ${fmtMAD(total)}${ptsLine}` };

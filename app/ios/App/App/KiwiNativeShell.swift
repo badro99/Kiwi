@@ -189,6 +189,17 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
         model.didChangeLayout = { [weak self] context in self?.apply(context) }
         apply(model.context)
         requestState()
+        #if DEBUG
+        // Simulator check of the native sheet without signing in:
+        // xcrun simctl launch <device> com.kiwios.pro -KiwiSheetDemo dark|light
+        if let mode = UserDefaults.standard.string(forKey: "KiwiSheetDemo") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+                self?.presentNativeSheet(["id": "demo", "title": "Open Kiwi with Face ID?", "message": "Next time, a glance is enough. Your code always works too.",
+                                          "icon": "faceid", "dark": mode == "dark",
+                                          "actions": [["id": "enable", "label": "Use Face ID", "style": "primary"], ["id": "later", "label": "Later", "style": "plain"]]])
+            }
+        }
+        #endif
     }
 
     func updateSafeAreaInsets(_ insets: UIEdgeInsets) {
@@ -233,7 +244,64 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
             presentSafariSheet(raw)
             return
         }
+        if let body = message.body as? [String: Any], let sheet = body["sheet"] {
+            presentNativeSheet(sheet)
+            return
+        }
         model.accept(message.body)
+    }
+
+    private var sheetDelegate: KiwiSheetDelegate?
+
+    /// A system sheet for a short choice (Face ID offer, account menu): real
+    /// detent, grabber, dimming and swipe to dismiss, Liquid Glass on iOS 26.
+    /// The page gets one answer back through window.KiwiNativeSheetResult:
+    /// the chosen action id, or "dismiss" when the sheet is swiped away.
+    private func presentNativeSheet(_ raw: Any) {
+        guard JSONSerialization.isValidJSONObject(raw),
+              let data = try? JSONSerialization.data(withJSONObject: raw),
+              let spec = try? JSONDecoder().decode(KiwiSheetSpec.self, from: data) else { return }
+        DispatchQueue.main.async {
+            guard let presenter = self.model.bridge else { return }
+            guard presenter.presentedViewController == nil else { self.answerSheet(spec.id, "dismiss"); return }
+            var host: UIHostingController<KiwiSheetView>?
+            let view = KiwiSheetView(spec: spec) { [weak self] action in
+                guard let self else { return }
+                self.sheetDelegate?.answered = true
+                host?.dismiss(animated: true)
+                host = nil
+                self.answerSheet(spec.id, action)
+            }
+            let controller = UIHostingController(rootView: view)
+            host = controller
+            controller.view.backgroundColor = .clear
+            controller.overrideUserInterfaceStyle = spec.dark ? .dark : .light
+            controller.view.semanticContentAttribute = spec.rtl ? .forceRightToLeft : .forceLeftToRight
+            let width = presenter.view.bounds.width
+            let fitted = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude)).height
+            if let sheet = controller.sheetPresentationController {
+                if #available(iOS 16.0, *) {
+                    sheet.detents = [.custom(identifier: .init("kiwi-fit")) { context in min(fitted, context.maximumDetentValue) }]
+                } else {
+                    sheet.detents = [.medium()]
+                }
+                sheet.prefersGrabberVisible = true
+                sheet.prefersEdgeAttachedInCompactHeight = true
+            }
+            let delegate = KiwiSheetDelegate { [weak self] in self?.answerSheet(spec.id, "dismiss") }
+            self.sheetDelegate = delegate
+            controller.presentationController?.delegate = delegate
+            if spec.actions.contains(where: { $0.style == "destructive" }) {
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            }
+            presenter.present(controller, animated: true)
+        }
+    }
+
+    private func answerSheet(_ id: String, _ action: String) {
+        guard let data = try? JSONSerialization.data(withJSONObject: ["id": id, "action": action]),
+              let json = String(data: data, encoding: .utf8) else { return }
+        bridgeEvaluate("window.KiwiNativeSheetResult&&window.KiwiNativeSheetResult(\(json))")
     }
 
     /// Kiwi's own help pages (forgot password, support) open in an in-app
@@ -248,6 +316,101 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
             safari.dismissButtonStyle = .close
             presenter.present(safari, animated: true)
         }
+    }
+}
+
+private struct KiwiSheetAction: Codable, Identifiable {
+    let id: String
+    let label: String
+    /// "primary" (filled), "destructive" (red), anything else plain.
+    let style: String
+}
+
+private struct KiwiSheetSpec: Codable {
+    var id = ""
+    var title = ""
+    var message = ""
+    /// An SF Symbol name for the icon above the title, or empty.
+    var icon = ""
+    var dark = false
+    var rtl = false
+    var actions: [KiwiSheetAction] = []
+
+    private enum CodingKeys: String, CodingKey { case id, title, message, icon, dark, rtl, actions }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decodeIfPresent(String.self, forKey: .id) ?? ""
+        title = try values.decodeIfPresent(String.self, forKey: .title) ?? ""
+        message = try values.decodeIfPresent(String.self, forKey: .message) ?? ""
+        icon = try values.decodeIfPresent(String.self, forKey: .icon) ?? ""
+        dark = try values.decodeIfPresent(Bool.self, forKey: .dark) ?? false
+        rtl = try values.decodeIfPresent(Bool.self, forKey: .rtl) ?? false
+        actions = try values.decodeIfPresent([KiwiSheetAction].self, forKey: .actions) ?? []
+    }
+}
+
+private final class KiwiSheetDelegate: NSObject, UIAdaptivePresentationControllerDelegate {
+    var answered = false
+    private let onDismiss: () -> Void
+    init(onDismiss: @escaping () -> Void) { self.onDismiss = onDismiss }
+    func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+        if !answered { onDismiss() }
+    }
+}
+
+private struct KiwiSheetView: View {
+    let spec: KiwiSheetSpec
+    let onAction: (String) -> Void
+    @Environment(\.colorScheme) private var scheme
+
+    private var accent: Color { scheme == .dark ? kiwiMint : kiwiAtlas }
+    private var danger: Color { scheme == .dark ? Color(red: 1, green: 0.55, blue: 0.48) : Color(red: 0.62, green: 0.19, blue: 0.16) }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if !spec.icon.isEmpty {
+                Image(systemName: spec.icon)
+                    .font(.system(size: 30, weight: .regular))
+                    .foregroundStyle(accent)
+                    .frame(width: 64, height: 64)
+                    .background(accent.opacity(0.12), in: Circle())
+                    .padding(.bottom, 16)
+                    .accessibilityHidden(true)
+            }
+            if !spec.title.isEmpty {
+                Text(spec.title).font(.title3.weight(.semibold)).multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+            }
+            if !spec.message.isEmpty {
+                Text(spec.message).font(.body).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 8)
+            }
+            VStack(spacing: 8) {
+                ForEach(spec.actions) { action in
+                    Button { onAction(action.id) } label: {
+                        Text(action.label).font(.headline).multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 18).padding(.vertical, 12)
+                            .frame(maxWidth: .infinity).frame(minHeight: action.style == "primary" ? 54 : 48)
+                            .foregroundStyle(action.style == "primary" ? (scheme == .dark ? kiwiInk : kiwiPaper) : (action.style == "destructive" ? danger : Color.primary))
+                            .background(action.style == "primary" ? accent : Color.primary.opacity(0.06), in: Capsule())
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(KiwiPressStyle())
+                    .accessibilityIdentifier("kiwi-sheet-\(action.id)")
+                }
+            }
+            .padding(.top, spec.title.isEmpty && spec.message.isEmpty ? 0 : 24)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 28)
+        .padding(.bottom, 12)
+        .frame(maxWidth: 520)
+        .frame(maxWidth: .infinity)
+        .environment(\.layoutDirection, spec.rtl ? .rightToLeft : .leftToRight)
     }
 }
 

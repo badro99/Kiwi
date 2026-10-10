@@ -284,11 +284,13 @@
   /* #0166 · a paid sale ends the ticket. On a phone the ticket sheet folds
      back to the sale grid (pos-mobile.js listens). Every register reaches
      record(), so announcing it here covers all of them, demo included. */
-  function ticketDone() {
+  function ticketDone(total, method) {
     try {
       var roots = document.querySelectorAll('.vx-root');
       for (var i = 0; i < roots.length; i++) roots[i].dispatchEvent(new CustomEvent('vx-ticket-done', { bubbles: false }));
     } catch (_) {}
+    /* The paid moment and its success haptic in the native app (native-runtime.js). */
+    try { window.dispatchEvent(new CustomEvent('kiwi:sale-paid', { detail: { total: total, method: method || '' } })); } catch (_) {}
   }
 
   /* record(vertical, sale) → l'entrée journalisée, ou null si rien n'a été pris.
@@ -300,7 +302,7 @@
     /* Montant nul ou négatif ⇒ ce n'est pas une recette. Les différés
        ('payer plus tard') et les avoirs passent par là et sont ignorés. */
     if (!(total > 0)) return null;
-    ticketDone();
+    ticketDone(total, sale.method);
     if (!isReal()) return null;                 /* la démo reste en mémoire */
 
     var at = sale.at instanceof Date ? sale.at : new Date();

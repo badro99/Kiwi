@@ -87,6 +87,55 @@ and a quick flick still steps the period.
 
 ## 2 · Tier 2: high impact, medium effort
 
+Status (build 35):
+
+- **7 done.** `KiwiNativeShell.swift › presentNativeSheet`: a system sheet
+  (fitted detent, grabber, dimming, swipe to dismiss, Liquid Glass on iOS 26)
+  driven from the page with `{sheet:{…}}` on the `kiwiShell` handler; the
+  answer comes back through `window.KiwiNativeSheetResult`. The host announces
+  it with `window.__kiwiHostCaps` before any page script. Used for the Face ID
+  offer and a new sign-out question (one stray tap used to sign a device out
+  mid-service). Payment stays a web sheet: its content is the till itself.
+  Confirmations were already native (`window.confirm` is a UIAlert in the app).
+  Simulator check: `xcrun simctl launch <device> com.kiwios.pro -KiwiSheetDemo dark`
+  (Debug builds only).
+- **8 already in place.** The revenue line redraws from the left on every
+  period change (`dashboard.html › rev-draw`), the hero figure counts to the
+  new total.
+- **9 done** in build 34 (reading with a tick per point).
+- **10 done.** Every register announces a paid sale (`kiwi:sale-paid`:
+  restaurant till, boutique, and the shared `pos-sale.js` for the other
+  trades). The app shows a check, the amount and "Paid" for about a second,
+  with the success haptic, without taking a tap. A delivery still to be
+  collected gets none. Receipt choices stay where they were.
+- **11 done for the till.** Finding: the till's sync line (`caisse-pwa.js`)
+  stops on a native platform, so in the app nothing ever said sales were
+  waiting. A pill under the status bar now reads the same queue
+  (`KiwiLive.queueStatus`) and shows only when operations are waiting or held;
+  a tap retries now. Printer status stays on the print result (each failed
+  print already says so); a live printer heartbeat needs the bridge to report
+  one.
+- **12 not shippable without the owner** (see below).
+- **13 partly in place.** `KiwiDynamicType` already feeds the system text size
+  into `--type-scale`, capped at 135 %, and the till's text follows it.
+  Reaching Apple's 200 % means re-laying out each screen; not done.
+
+### 12 · Morning summary push: what it needs
+
+`functions/api/push/` registers tokens, but `_dispatch.js` never sends and
+the app has no push plugin. To ship it:
+
+1. Owner: create an APNs key (Apple Developer › Keys), and add the Push
+   Notifications capability to `com.kiwios.pro`.
+2. Owner: store `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY` as Cloudflare
+   secrets.
+3. Code: `@capacitor/push-notifications` in the app, token sent to
+   `/api/push/register` with role `dashboard`; ES256 JWT and HTTP/2 send in
+   `_dispatch.js`.
+4. Code: a scheduled Worker (Pages Functions have no cron) that at business
+   open, Casablanca time, on the 5 h business day, sends yesterday's Z total
+   to each owner who opted in.
+
 | # | What | Why | Source |
 |---|------|-----|--------|
 | 7 | Native sheets (`UISheetPresentationController` with detents) for payment, confirmations and the Face ID offer | CSS sheets cannot match system rubber-banding, dimming and detent haptics. No Capacitor plugin exists; a small Swift plugin does | research (libraries pass) |
@@ -98,6 +147,13 @@ and a quick flick still steps the period.
 | 13 | Dynamic Type for web screens: size from `font: -apple-system-body` (family kept Inter Tight) or the Text Zoom plugin | WebKit ignores Larger Text in WKWebView; Apple asks for 200 % | [WebKit 187013](https://bugs.webkit.org/show_bug.cgi?id=187013), [HIG Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility) |
 
 ## 3 · Tier 3: larger moves
+
+Status: **Liquid Glass done** (native tab capsule uses `glassEffect` on
+iOS 26, native sheets get it from the system). **Swipe-back** already runs
+in `native-runtime.js › initNativeSwipeBack`. **Pre-warming a second web view
+does not apply**: the owner tabs are one page, switched in place, so there is
+no next page to warm. A native navigation bar around web pages is a rewrite
+of every screen's header and stays out of scope until a screen needs it.
 
 - **Native navigation bar and swipe-back** around the web content, the
   Hotwire Native / Shopify model. Snapshot the web view before a push so

@@ -1,9 +1,19 @@
 import UIKit
 import Capacitor
+import WebKit
 
 final class KiwiBridgeViewController: CAPBridgeViewController {
     var safeAreaInsetsDidChange: ((UIEdgeInsets) -> Void)?
     private var publishedSafeAreaInsets = UIEdgeInsets.zero
+
+    /// Tells every page, from the very first one, what the host can draw
+    /// natively. Pages built for an older host simply never see the flag.
+    override func webViewConfiguration(for instanceConfiguration: InstanceConfiguration) -> WKWebViewConfiguration {
+        let configuration = super.webViewConfiguration(for: instanceConfiguration)
+        let caps = WKUserScript(source: "window.__kiwiHostCaps=Object.freeze({sheet:1});", injectionTime: .atDocumentStart, forMainFrameOnly: true)
+        configuration.userContentController.addUserScript(caps)
+        return configuration
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()

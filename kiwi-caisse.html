@@ -100,7 +100,7 @@
   <!-- Journal de vente partagé · DOIT précéder les modules métier (pressing +
        tout ce que pos-dispatch charge à la volée) : c'est lui qui persiste la
        recette du jour et la renvoie au tableau de bord. -->
-  <script src="assets/pos-sale.js?v=11" defer></script>
+  <script src="assets/pos-sale.js?v=12" defer></script>
   <!-- Garment workflow snapshot shared with the pressing owner dashboard. -->
   <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
   <script src="assets/pressing-ops.js?v=8" defer></script>
@@ -133,7 +133,7 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=70" defer></script>
+  <script src="assets/pos-dispatch.js?v=71" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=5" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=2" defer></script>
@@ -11186,6 +11186,9 @@
       if (mode === 'vrap') settleVrapPayment();
       else if (selectedId) { markPaid(selectedId); closeRightPanel(); }
       nativeHapticSuccess();
+      /* The paid moment in the native app (native-runtime.js). The haptic
+         above already played, so the app only draws. */
+      try { window.dispatchEvent(new CustomEvent('kiwi:sale-paid', { detail: { total: tenderBase + tenderTip, method: method, haptic: false } })); } catch (_) {}
       return 'complete';
     }
     function updateRendu() {

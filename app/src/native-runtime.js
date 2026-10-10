@@ -170,6 +170,34 @@
       return true;
     });
   }
+  /* Native sheet (KiwiNativeShell.swift › presentNativeSheet). The host
+     announces it with window.__kiwiHostCaps before any page script runs; a
+     page without it, or a browser test, keeps its web sheet. One promise per
+     sheet, resolved with the chosen action id or "dismiss". */
+  var sheetSeq = 0, sheetWaiters = {};
+  function nativeSheetAvailable() {
+    return !!(window.__kiwiHostCaps && window.__kiwiHostCaps.sheet && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.kiwiShell);
+  }
+  window.KiwiNativeSheetResult = function (result) {
+    var done = result && sheetWaiters[result.id];
+    if (!done) return;
+    delete sheetWaiters[result.id];
+    done(String(result.action || 'dismiss'));
+  };
+  function nativeSheet(spec) {
+    return new Promise(function (resolve) {
+      var id = 'sheet-' + (++sheetSeq);
+      sheetWaiters[id] = resolve;
+      var dark = root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark' || root.getAttribute('data-caisse-theme') === 'dark';
+      try {
+        window.webkit.messageHandlers.kiwiShell.postMessage({ sheet: {
+          id: id, title: String(spec.title || ''), message: String(spec.message || ''), icon: String(spec.icon || ''),
+          dark: dark, rtl: root.getAttribute('dir') === 'rtl',
+          actions: (spec.actions || []).map(function (a) { return { id: String(a.id), label: String(a.label), style: String(a.style || 'plain') }; })
+        } });
+      } catch (_) { delete sheetWaiters[id]; resolve('dismiss'); }
+    });
+  }
   function hapticLight() { return call(haptics, 'impact', { style: 'LIGHT' }); }
   function hapticNotice(kind) { return call(haptics, 'notification', { type: kind === 'danger' ? 'ERROR' : 'SUCCESS' }); }
   // Every full-screen entry gate has its own escape route. The host capsule
@@ -738,6 +766,12 @@
     if (lang.indexOf('en') === 0) return { open:'Open menu', close:'Close menu', label:'Account', role:'Change role', out:'Sign out', ai:'Kiwi AI privacy', del:'Delete my account', team:'Kiwi Team', kitchen:'Kitchen' };
     return { open:'Ouvrir le menu', close:'Fermer le menu', label:'Compte', role:'Changer de rôle', out:'Se déconnecter', ai:'Confidentialité Kiwi AI', del:'Supprimer mon compte', team:'Kiwi Équipe', kitchen:'Cuisine' };
   }
+  function signOutCopy() {
+    var lang = String(root.lang || 'fr');
+    if (lang.indexOf('ar') === 0) return { title:'تسجيل الخروج من Kiwi Pro؟', message:'ستحتاج إلى بريدك الإلكتروني وكلمة المرور للعودة.', confirm:'تسجيل الخروج', cancel:'إلغاء' };
+    if (lang.indexOf('en') === 0) return { title:'Sign out of Kiwi Pro?', message:'You will need your email and password to sign back in.', confirm:'Sign out', cancel:'Cancel' };
+    return { title:'Se déconnecter de Kiwi Pro ?', message:'Il faudra votre e-mail et votre mot de passe pour revenir.', confirm:'Se déconnecter', cancel:'Annuler' };
+  }
   function closeNativeMenus() {
     var burger = document.querySelector('.kw-hamburger');
     if (document.body.classList.contains('kw-menu-open') && burger) burger.click();
@@ -762,7 +796,16 @@
       if (!button) return;
       hapticLight();
       closeNativeMenus();
-      nativeWorkspaceAction({ action:button.getAttribute('data-kno-account') });
+      var action = button.getAttribute('data-kno-account');
+      /* One stray tap used to sign the device out mid-service. With the native
+         sheet, signing out asks first, the way iOS does. */
+      if (action === 'sign-out' && nativeSheetAvailable()) {
+        var ask = signOutCopy();
+        nativeSheet({ title:ask.title, message:ask.message, actions:[{ id:'sign-out', label:ask.confirm, style:'destructive' }, { id:'cancel', label:ask.cancel }] })
+          .then(function (choice) { if (choice === 'sign-out') nativeWorkspaceAction({ action:'sign-out' }); });
+        return;
+      }
+      nativeWorkspaceAction({ action:action });
     });
     if (before && before.parentNode === container) container.insertBefore(box, before);
     else container.appendChild(box);
@@ -1490,6 +1533,25 @@
   function offerFaceUnlock(who, account, kind) {
     if (document.querySelector('.kiwi-face-offer')) return;
     var c = entryCopy(kind);
+    function decline() { try { localStorage.setItem(FACE_DECLINED, account); } catch (_) {} }
+    function enable() {
+      return authenticateBiometric(c.reason).then(function (res) {
+        if (!res || !res.authenticated) return false;
+        return secureSet(FACE_KEY, JSON.stringify({ account: account, access: who.access, name: who.name || '', at: Date.now() })).then(function () {
+          hapticNotice('success');
+          try { localStorage.removeItem(FACE_DECLINED); } catch (_) {}
+          try { if (window.Kiwi && window.Kiwi.toast) window.Kiwi.toast(c.done, { type: 'success', duration: 1800 }); } catch (_) {}
+          return true;
+        });
+      }).catch(function () { return false; });
+    }
+    /* Swiping the native sheet away counts as "Later": asking again at every
+       sign-in would nag. */
+    if (nativeSheetAvailable()) {
+      nativeSheet({ title: c.offerTitle, message: c.offerBody, icon: 'faceid', actions: [{ id: 'enable', label: c.enable, style: 'primary' }, { id: 'later', label: c.later }] })
+        .then(function (choice) { if (choice === 'enable') enable(); else decline(); });
+      return;
+    }
     var sheet = document.createElement('div');
     sheet.className = 'kiwi-face-offer';
     sheet.setAttribute('role', 'dialog');
@@ -1509,19 +1571,11 @@
       setTimeout(function () { sheet.remove(); }, 320);
     }
     sheet.querySelector('.kiwi-face-offer-no').addEventListener('click', function () {
-      try { localStorage.setItem(FACE_DECLINED, account); } catch (_) {}
+      decline();
       close();
     });
     sheet.querySelector('.kiwi-face-offer-yes').addEventListener('click', function () {
-      authenticateBiometric(c.reason).then(function (res) {
-        if (!res || !res.authenticated) return;
-        return secureSet(FACE_KEY, JSON.stringify({ account: account, access: who.access, name: who.name || '', at: Date.now() })).then(function () {
-          hapticNotice('success');
-          try { localStorage.removeItem(FACE_DECLINED); } catch (_) {}
-          try { if (window.Kiwi && window.Kiwi.toast) window.Kiwi.toast(c.done, { type: 'success', duration: 1800 }); } catch (_) {}
-          close();
-        });
-      }).catch(function () {});
+      enable().then(function (ok) { if (ok) close(); });
     });
     document.body.appendChild(sheet);
     requestAnimationFrame(function () { sheet.classList.add('is-open'); });
@@ -1858,7 +1912,9 @@
  *      finger reads the revenue chart. Key presses, success and errors keep
  *      their existing light, success and error haptics.
  *   4. The chart reads under a slow finger (touch-action pan-y), a quick
- *      flick still steps the period (initPeriodSwipe). */
+ *      flick still steps the period (initPeriodSwipe).
+ *   5. A paid sale gets its moment: check, amount, success haptic.
+ *   6. The till always says when sales are waiting to be sent. */
 (function () {
   'use strict';
   var cap = window.Capacitor;
@@ -1868,10 +1924,10 @@
   var touchOnly = !!(window.matchMedia && window.matchMedia('(hover: none)').matches);
   var EASE = 'cubic-bezier(.2,.8,.2,1)';
 
-  function hcall(method) {
+  function hcall(method, arg) {
     try {
       if (!haptics || typeof haptics[method] !== 'function') return;
-      var r = haptics[method]();
+      var r = arg ? haptics[method](arg) : haptics[method]();
       if (r && typeof r.catch === 'function') r.catch(function () {});
     } catch (_) {}
   }
@@ -1964,6 +2020,105 @@
   function endScrub() { if (!scrub) return; scrub = null; hcall('selectionEnd'); }
   document.addEventListener('pointerup', endScrub, { passive: true });
   document.addEventListener('pointercancel', endScrub, { passive: true });
+
+  /* 5 · The paid moment. Every register announces a paid sale with
+     kiwi:sale-paid (kiwi-caisse.html › finalizeTender, assets/pos-sale.js ›
+     ticketDone). A check, the amount and "Paid" settle in the middle of the
+     screen for about a second, with the success haptic. It never takes a tap:
+     the next order can start under it. */
+  var paidTimer = null;
+  function paidLabel() {
+    var lang = String(document.documentElement.lang || 'fr');
+    return lang.indexOf('ar') === 0 ? 'تم الدفع' : lang.indexOf('en') === 0 ? 'Paid' : 'Encaissé';
+  }
+  window.addEventListener('kiwi:sale-paid', function (event) {
+    var detail = event && event.detail || {};
+    var total = Number(detail.total);
+    if (!(total > 0) || !document.body) return;
+    if (detail.haptic !== false) hcall('notification', { type: 'SUCCESS' });
+    var box = document.querySelector('.kiwi-paid');
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'kiwi-paid';
+      box.setAttribute('role', 'status');
+      box.setAttribute('aria-live', 'polite');
+      box.innerHTML = '<span class="kiwi-paid-check" aria-hidden="true"><i></i></span><b class="kiwi-paid-amount"></b><span class="kiwi-paid-label"></span>';
+      document.body.appendChild(box);
+    }
+    var amount;
+    try { amount = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(total); }
+    catch (_) { amount = total.toFixed(2); }
+    box.querySelector('.kiwi-paid-amount').textContent = amount + ' MAD';
+    box.querySelector('.kiwi-paid-label').textContent = paidLabel();
+    box.classList.remove('is-in', 'is-out');
+    void box.offsetWidth;
+    box.classList.add('is-in');
+    clearTimeout(paidTimer);
+    paidTimer = setTimeout(function () { box.classList.remove('is-in'); box.classList.add('is-out'); }, 1100);
+  });
+
+  /* 6 · Honest sync on the till. The web till's sync line (#kiwi-net,
+     assets/caisse-pwa.js) is not built in the app at all: that script stops
+     on a native platform, so sales could wait to be sent with nothing on
+     screen saying so. This pill reads the same sale queue (KiwiLive) and
+     shows only when something is waiting or held; a tap retries now. */
+  if (/kiwi-caisse\.html$/i.test(location.pathname)) {
+    var syncPill = null, lastRefresh = 0, syncing = false;
+    var syncWords = function (q) {
+      var lang = String(document.documentElement.lang || 'fr');
+      var ar = lang.indexOf('ar') === 0, en = lang.indexOf('en') === 0;
+      var n = q.blocked || q.pending;
+      if (q.storageError) return { tone: '#9F3028', text: ar ? 'الحفظ المحلي يحتاج إلى تحقق' : en ? 'Local storage needs checking' : 'Protection locale à vérifier' };
+      if (q.blocked) return { tone: '#9F3028', text: ar ? n + ' عملية محفوظة، تحتاج إلى مراجعة' : en ? n + (n > 1 ? ' operations held' : ' operation held') + ', nothing is lost' : n + (n > 1 ? ' opérations conservées' : ' opération conservée') + ', rien n’est perdu' };
+      if (!q.pending) return null;
+      if (navigator.onLine === false) return { tone: '#B85245', text: ar ? 'غير متصل · ' + n + ' في الانتظار' : en ? 'Offline · ' + n + ' waiting to send' : 'Hors ligne · ' + n + ' en attente d’envoi' };
+      if (q.sending || syncing) return { tone: '#A56A16', text: ar ? 'جارٍ إرسال ' + n + ' عملية' : en ? 'Sending ' + n + (n > 1 ? ' operations' : ' operation') : 'Envoi de ' + n + (n > 1 ? ' opérations' : ' opération') };
+      return { tone: '#A56A16', text: ar ? n + ' عملية في انتظار الإرسال' : en ? n + (n > 1 ? ' operations' : ' operation') + ' waiting to send' : n + (n > 1 ? ' opérations' : ' opération') + ' à synchroniser' };
+    };
+    var syncPaint = function () {
+      var live = window.KiwiLive;
+      var q = null;
+      try { q = live && typeof live.queueStatus === 'function' ? live.queueStatus() : null; } catch (_) {}
+      if (live && typeof live.refreshQueue === 'function' && Date.now() - lastRefresh > 5000) {
+        lastRefresh = Date.now();
+        try { Promise.resolve(live.refreshQueue()).then(function () { setTimeout(syncPaint, 0); }, function () {}); } catch (_) {}
+      }
+      var words = q ? syncWords(q) : null;
+      var staffPad = document.getElementById('cp-pin-screen');
+      var gate = !!document.querySelector('.screen-pin.is-active,.screen-clockin.is-active,#pair.on') || !!(staffPad && staffPad.style.display !== 'none');
+      var menuOpen = !!(document.body && (document.body.classList.contains('nav-open') || document.body.classList.contains('kiwi-native-menu-open')));
+      var show = !!words && !gate && !menuOpen;
+      if (show && !syncPill) {
+        syncPill = document.createElement('button');
+        syncPill.type = 'button';
+        syncPill.className = 'kiwi-sync-pill';
+        syncPill.setAttribute('aria-live', 'polite');
+        syncPill.innerHTML = '<i aria-hidden="true"></i><span></span>';
+        syncPill.addEventListener('click', function () {
+          var l = window.KiwiLive;
+          if (!l || syncing) return;
+          syncing = true;
+          syncPaint();
+          var cur = {};
+          try { cur = l.queueStatus() || {}; } catch (_) {}
+          var run = cur.blocked && typeof l.retryBlockedSales === 'function'
+            ? Promise.resolve(l.retryBlockedSales()).then(function () { return l.flush && l.flush(true); })
+            : Promise.resolve(l.flush && l.flush(true));
+          run.catch(function () {}).then(function () { syncing = false; syncPaint(); });
+        });
+        document.body.appendChild(syncPill);
+      }
+      if (!syncPill) return;
+      if (show) {
+        syncPill.querySelector('span').textContent = words.text;
+        syncPill.querySelector('i').style.background = words.tone;
+      }
+      syncPill.classList.toggle('is-visible', show);
+      document.documentElement.classList.toggle('kiwi-sync-pill-on', show);
+    };
+    ['online', 'offline', 'kiwi:outbox', 'kiwi:sale-queue'].forEach(function (kind) { window.addEventListener(kind, function () { setTimeout(syncPaint, 60); }); });
+    setInterval(syncPaint, 2000);
+  }
 
   /* 2 · Sticky hover. */
   if (!touchOnly) return;
