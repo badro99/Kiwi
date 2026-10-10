@@ -289,14 +289,16 @@
     const lang = trLang();
     const str = MARGINS_STR[lang] || MARGINS_STR.fr;
 
-    /* A merchant-created venue has no sales yet — show what this drawer
-     * WILL compute instead of leaking Café Atlas's product margins. */
+    /* A real or merchant-created venue must not see Café Atlas's product
+     * margins. The real margin lives in the dashboard's Marge brute tile
+     * (dateRange.js › realGrossProfit, via KiwiCost); say so, and say plainly
+     * that the per-product table below is not built for real data yet. */
     if (window.KiwiVenue?.isCustom?.() || window.KiwiEnv?.isReal?.()) {
       const T = ({
-        fr: { s: 'Compte en démarrage', h: 'Vos marges se calculent toutes seules', d: 'Dès vos premières ventes, Kiwi croise prix et coûts pour afficher la marge réelle de chaque produit, et signaler ceux dont le prix ou le coût est à revoir.' },
-        en: { s: 'Account starting up', h: 'Your margins compute themselves', d: 'From your first sales, Kiwi crosses prices and costs to show each product\'s real margin, and flags the ones whose price or cost needs a second look.' },
-        ar: { s: 'حساب في بدايته', h: 'هوامشك تُحسب تلقائيًا', d: 'منذ أول مبيعاتك، يقاطع Kiwi الأسعار والتكاليف ليعرض الهامش الحقيقي لكل منتج، وينبّهك إلى ما يستحق مراجعة سعره أو تكلفته.' },
-      })[lang] || { s: 'Compte en démarrage', h: 'Vos marges se calculent toutes seules', d: '' };
+        fr: { s: 'Marge réelle', h: 'Votre marge se lit dans la tuile Marge brute', d: 'Kiwi calcule la marge sur les produits dont le coût d\'achat est renseigné dans votre carte, et indique la part de vos ventes qu\'elle couvre. Le détail produit par produit n\'est pas encore disponible ici.' },
+        en: { s: 'Real margin', h: 'Your margin shows in the Gross margin tile', d: 'Kiwi computes margin on the products whose purchase cost is set in your menu, and shows how much of your sales it covers. A product-by-product breakdown is not available here yet.' },
+        ar: { s: 'الهامش الحقيقي', h: 'يظهر هامشك في خانة الهامش الإجمالي', d: 'يحسب Kiwi الهامش على المنتجات التي أُدخلت تكلفة شرائها في قائمتك، ويبيّن نسبة المبيعات التي يغطيها. التفصيل منتجاً بمنتج غير متاح هنا بعد.' },
+      })[lang] || { s: 'Marge réelle', h: 'Votre marge se lit dans la tuile Marge brute', d: '' };
       drawer({
         title: str.title,
         subtitle: T.s,

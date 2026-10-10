@@ -4492,11 +4492,11 @@
   };
   const STOCK_EMPTY = {
     fr: { title: 'Stock à recommander', head: 'Aucune alerte de stock',
-          msg: 'Dès que vous suivez vos ingrédients, Kiwi AI estime les quantités à recommander.' },
+          msg: 'Dès que vous suivez vos ingrédients, Kiwi vous signale ce qui passe sous votre seuil d\'alerte.' },
     en: { title: 'Stock to reorder', head: 'No stock alerts',
-          msg: 'Once you track your ingredients, Kiwi AI estimates the quantities to reorder.' },
+          msg: 'Once you track your ingredients, Kiwi flags what drops below your alert level.' },
     ar: { title: 'مخزون للطلب', head: 'لا توجد تنبيهات مخزون',
-          msg: 'بمجرد تتبّع مكوّناتك، يقدّر Kiwi AI الكميات الواجب طلبها.' },
+          msg: 'بمجرد تتبّع مكوّناتك، ينبّهك Kiwi إلى ما ينزل تحت حدّ التنبيه.' },
   };
 
   const HEALTH_EMPTY = {

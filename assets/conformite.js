@@ -27,7 +27,7 @@
     fr: {
       breadcrumb: 'Conformité & registres',
       pageTitle: 'Conformité & registres',
-      pageSub: (n) => `${n} · journal d'audit complet`,
+      pageSub: (n) => `${n} · registres`,
       tabZ:  'Clôture (Z)',
       tabHyg: 'Hygiène & HACCP',
       tabEq: 'Équipements',
@@ -114,7 +114,7 @@
     en: {
       breadcrumb: 'Compliance & records',
       pageTitle: 'Compliance & records',
-      pageSub: (n) => `${n} · full audit trail`,
+      pageSub: (n) => `${n} · records`,
       tabZ:  'Cash close (Z)',
       tabHyg: 'Hygiene & HACCP',
       tabEq: 'Equipment',
@@ -182,7 +182,7 @@
     ar: {
       breadcrumb: 'الامتثال والسجلات',
       pageTitle: 'الامتثال والسجلات',
-      pageSub: (n) => `${n} · مسار تدقيق كامل`,
+      pageSub: (n) => `${n} · السجلات`,
       tabZ: 'إغلاق الصندوق (Z)',
       tabHyg: 'النظافة وHACCP',
       tabEq: 'التجهيزات',
@@ -884,15 +884,24 @@
     } catch (_) {}
     return false;
   }
+  /* Un vrai compte n'a ni registre HACCP, ni registre d'équipements, ni coffre
+   * à documents : ces trois onglets ne sont construits que sur les données de
+   * démo, et rien ne viendra jamais les remplir. Le vide d'avant promettait le
+   * contraire (« apparaîtront ici au fil de votre activité »). On dit où vivent
+   * réellement les clôtures, et ce qui n'existe pas encore. */
   function cfEmpty() {
     const c = ({
-      fr: { h: 'Rien à afficher pour l’instant', p: 'Vos clôtures de caisse, votre registre HACCP et vos équipements apparaîtront ici au fil de votre activité.' },
-      en: { h: 'Nothing to show yet', p: 'Your Z-reports, HACCP log and equipment register will appear here as you operate.' },
-      ar: { h: 'لا شيء لعرضه بعد', p: 'ستظهر هنا إغلاقات الصندوق وسجل HACCP والمعدّات مع نشاطك.' },
-    })[lang()] || { h: 'Nothing to show yet', p: '' };
+      fr: { h: 'Vos clôtures de caisse', p: 'La clôture se fait sur la caisse, en fin de journée. Le détail de chaque journée refermée (totaux, moyens de paiement, tiroir-caisse) est dans Rapport journalier, dans le menu.',
+            n: 'Pas encore disponible dans Kiwi : registre HACCP, registre des équipements, classement des documents.' },
+      en: { h: 'Your register closures', p: 'You close the day on the register. Each closed day (totals, payment methods, cash drawer) is in Daily report, in the menu.',
+            n: 'Not available in Kiwi yet: HACCP log, equipment register, document filing.' },
+      ar: { h: 'إغلاقات الصندوق', p: 'يتم الإغلاق على الصندوق في نهاية اليوم. تفاصيل كل يوم مغلق (المجاميع، وسائل الدفع، درج النقد) موجودة في التقرير اليومي ضمن القائمة.',
+            n: 'غير متاح بعد في Kiwi: سجل HACCP، سجل المعدّات، أرشفة الوثائق.' },
+    })[lang()] || { h: 'Your register closures', p: '', n: '' };
     return `<div class="cf-empty" style="padding:48px 24px;text-align:center;max-width:520px;margin:0 auto;">
       <div style="font-size:16px;font-weight:640;letter-spacing:-.01em;margin-bottom:8px;">${esc(c.h)}</div>
       <div style="font-size:13.5px;color:var(--n-500);line-height:1.6;">${esc(c.p)}</div>
+      <div style="font-size:12.5px;color:var(--n-500);line-height:1.6;margin-top:14px;">${esc(c.n)}</div>
     </div>`;
   }
 
@@ -907,14 +916,16 @@
       { k: 'eq',  label: t('tabEq') },
       { k: 'doc', label: t('tabDoc') },
     ];
-    const tabRow = tabs.map((tb) =>
+    /* Sur un vrai compte, un seul contenu honnête : pas d'onglets vers des
+     * registres qui n'existent pas. */
+    const tabRow = real ? '' : tabs.map((tb) =>
       `<button class="cf-tab${currentTab === tb.k ? ' on' : ''}" data-action="cf-tab" data-tab="${tb.k}">${esc(tb.label)}</button>`
     ).join('');
-    const tabBody =
-      currentTab === 'z'   ? (real ? cfEmpty() : zHtml()) :
-      currentTab === 'hyg' ? (real ? cfEmpty() : hygHtml()) :
-      currentTab === 'eq'  ? (real ? cfEmpty() : eqHtml()) :
-      currentTab === 'doc' ? (real ? cfEmpty() : docHtml()) : '';
+    const tabBody = real ? cfEmpty() :
+      currentTab === 'z'   ? zHtml() :
+      currentTab === 'hyg' ? hygHtml() :
+      currentTab === 'eq'  ? eqHtml() :
+      currentTab === 'doc' ? docHtml() : '';
     root.innerHTML = `
       <div class="cf-page">
         <div class="cf-head">
@@ -923,7 +934,7 @@
             <div class="cf-sub">${esc(t('pageSub', venueName(v)))}</div>
           </div>
         </div>
-        <div class="cf-tabs">${tabRow}</div>
+        ${tabRow ? `<div class="cf-tabs">${tabRow}</div>` : ''}
         <div class="cf-body">${tabBody}</div>
       </div>`;
   }

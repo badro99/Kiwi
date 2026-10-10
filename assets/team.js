@@ -185,8 +185,8 @@
       tExportDesc:'Fichier prêt à être envoyé à votre comptable.',
       tImport:    'Import CSV',
       tImportDesc:'Glissez votre fichier · vérification automatique des en-têtes.',
-      tValidated: (start, end) => `Période verrouillée · du ${start} au ${end}`,
-      tValidatedDesc: 'Heures envoyées au planning · masse salariale recalculée.',
+      tValidated: (start, end) => `Période validée · du ${start} au ${end}`,
+      tValidatedDesc: 'Heures et planning figés sur tous vos appareils. Les pointages faits à la caisse sur ces dates continuent de s’ajouter.',
       tUnlocked:  (start, end) => `Période déverrouillée · du ${start} au ${end}`,
       tUnlockedDesc: 'Les heures et le planning peuvent à nouveau être modifiés.',
       placeholderPwd: '····',
@@ -344,8 +344,8 @@
       tExportDesc:'File ready to send to your accountant.',
       tImport:    'CSV import',
       tImportDesc:'Drop your file · headers checked automatically.',
-      tValidated: (start, end) => `Period locked · from ${start} to ${end}`,
-      tValidatedDesc: 'Hours sent to Planning · wage cost recomputed.',
+      tValidated: (start, end) => `Period validated · from ${start} to ${end}`,
+      tValidatedDesc: 'Hours and planning are frozen on all your devices. Clock-outs made at the till on these dates still add up.',
       tUnlocked:  (start, end) => `Period unlocked · from ${start} to ${end}`,
       tUnlockedDesc: 'Hours and planning can be edited again.',
       placeholderPwd: '····',
@@ -504,7 +504,7 @@
       tImport:    'استيراد CSV',
       tImportDesc:'أفلت ملفك · يتم التحقق من الرؤوس تلقائيًا.',
       tValidated: (start, end) => `الفترة مقفلة · من ${start} إلى ${end}`,
-      tValidatedDesc: 'تم إرسال الساعات إلى التخطيط · أعيد حساب كتلة الأجور.',
+      tValidatedDesc: 'الساعات والتخطيط مجمّدة على كل أجهزتك. تسجيلات الخروج في الصندوق لهذه التواريخ تستمر في الإضافة.',
       tUnlocked:  (start, end) => `تم فتح الفترة · من ${start} إلى ${end}`,
       tUnlockedDesc: 'يمكن تعديل الساعات والتخطيط من جديد.',
       placeholderPwd: '····',
@@ -803,7 +803,13 @@
   /* Period navigation is intentionally UI state: it never changes or copies
    * the saved shifts until the manager edits the newly displayed dates. */
   const periodOffsets = { week:0, fortnight:0, month:0 };
-  const periodLocks = {};
+  /* Validated periods, per venue: { 'week:2026-10-05:2026-10-11': { locked, at } }.
+   * They used to live in a plain object in this closure. « Période verrouillée ·
+   * heures envoyées au planning » was announced, and the lock vanished on reload
+   * or simply did not exist on the counter's iPad. They now travel with the
+   * team document (locks), and `at` decides between two devices: the later
+   * validate or unlock wins, so an unlock is never undone by a merge. */
+  if (!window.__kiwiTeamV2.locksByVenue) window.__kiwiTeamV2.locksByVenue = {};
 
   /* ── PLANNING ────────────────────────────────────────────────────────────
    * La page s'appelle « Paie & planning » et ne savait que constater : une
@@ -922,9 +928,26 @@
           root.hoursByVenue[k] = (raw.hoursByVenue || {})[k] || {};
           root.shiftsByVenue[k] = (raw.shiftsByVenue || {})[k] || {};
           root.planningByVenue[k] = window.KiwiPlanningCore?.normalize?.((raw.planningByVenue || {})[k], root.byVenue[k]) || (raw.planningByVenue || {})[k] || {};
+          root.locksByVenue[k] = cleanLocks((raw.locksByVenue || {})[k]);
         }
       });
     } catch (_) {}
+  }
+  const LOCK_KEY_RE = /^(week|fortnight|month):\d{4}-\d{2}-\d{2}:\d{4}-\d{2}-\d{2}$/;
+  function cleanLocks(src) {
+    const out = {};
+    Object.keys(src || {}).forEach((key) => {
+      const v = src[key];
+      if (!LOCK_KEY_RE.test(key) || !v || typeof v !== 'object') return;
+      out[key] = { locked: !!v.locked, at: Number(v.at) || 0 };
+    });
+    return out;
+  }
+  function mergeLocks(mine, theirs) {
+    const out = cleanLocks(theirs);
+    const own = cleanLocks(mine);
+    Object.keys(own).forEach((key) => { if (!out[key] || own[key].at >= out[key].at) out[key] = own[key]; });
+    return out;
   }
   /* L'écriture locale, et rien d'autre. Séparée de saveCustomTeams() parce que
    * la copie serveur, en redescendant, doit pouvoir se poser sans redéclencher
@@ -932,13 +955,14 @@
   function persistTeams() {
     try {
       const root = window.__kiwiTeamV2;
-      const out = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, planningByVenue: {} };
+      const out = { byVenue: {}, hoursByVenue: {}, shiftsByVenue: {}, planningByVenue: {}, locksByVenue: {} };
       Object.keys(root.byVenue).forEach((k) => {
         if (persistableTeamKey(k)) {
           out.byVenue[k] = root.byVenue[k];
           out.hoursByVenue[k] = root.hoursByVenue[k] || {};
           out.shiftsByVenue[k] = root.shiftsByVenue[k] || {};
           out.planningByVenue[k] = root.planningByVenue[k] || {};
+          out.locksByVenue[k] = root.locksByVenue[k] || {};
         }
       });
       localStorage.setItem(LS_TEAM, JSON.stringify(out));
@@ -1030,6 +1054,7 @@
       hours: mergeByDay(src.hours, null, alive),
       shifts: mergeByDay(src.shifts, null, alive),
       planning: window.KiwiPlanningCore?.normalize?.(src.planning, members) || src.planning || {},
+      locks: cleanLocks(src.locks),
     };
   }
 
@@ -1066,6 +1091,7 @@
       hours: mergeByDay(mine && mine.hours, theirs && theirs.hours, seen),
       shifts: mergeByDay(mine && mine.shifts, theirs && theirs.shifts, seen),
       planning: window.KiwiPlanningCore?.merge?.(mine && mine.planning, theirs && theirs.planning, members) || mine.planning || theirs.planning || {},
+      locks: mergeLocks(mine && mine.locks, theirs && theirs.locks),
     };
   }
 
@@ -1078,12 +1104,13 @@
       read: () => {
         const k = teamVenueKey();
         const root = window.__kiwiTeamV2;
-        if (!k) return { members: [], hours: {}, shifts: {}, planning: {} };
+        if (!k) return { members: [], hours: {}, shifts: {}, planning: {}, locks: {} };
         return scopeTeamDoc({
           members: root.byVenue[k] || [],
           hours: root.hoursByVenue[k] || {},
           shifts: root.shiftsByVenue[k] || {},
           planning: root.planningByVenue[k] || {},
+          locks: root.locksByVenue[k] || {},
         }, teamSlug());
       },
       write: (doc) => {
@@ -1095,6 +1122,8 @@
         root.hoursByVenue[k] = clean.hours;
         root.shiftsByVenue[k] = clean.shifts;
         root.planningByVenue[k] = clean.planning;
+        root.locksByVenue[k] = clean.locks;
+        restorePeriodLock(root, root.periodKind, buildPeriod(root.periodKind));
         persistTeams();          // surtout PAS saveCustomTeams : pas de re-remontée
         afterTeamChange();       // le till et la carte d'accueil apprennent l'équipe
       },
@@ -1190,11 +1219,23 @@
     </nav>`;
   }
 
-  function rememberPeriodLock(root, kind, period) {
-    periodLocks[`${kind}:${period.start}:${period.end}`] = !!root.periodLocked;
+  /* The lock bucket of the venue on screen. A demo venue keeps its bucket in
+   * memory only (persistTeams skips it), like the rest of its seeded team. */
+  function lockBucket(root) {
+    let k = 'restaurant';
+    try { k = teamKey(window.KiwiVenue?.getCurrentVenueData?.()); } catch (_) {}
+    if (!root.locksByVenue[k]) root.locksByVenue[k] = {};
+    return root.locksByVenue[k];
+  }
+  const lockKeyOf = (kind, period) => `${kind}:${period.start}:${period.end}`;
+  function setPeriodLock(root, kind, period, locked) {
+    lockBucket(root)[lockKeyOf(kind, period)] = { locked: !!locked, at: Date.now() };
+    root.periodLocked = !!locked;
+    saveCustomTeams();
   }
   function restorePeriodLock(root, kind, period) {
-    root.periodLocked = !!periodLocks[`${kind}:${period.start}:${period.end}`];
+    const entry = lockBucket(root)[lockKeyOf(kind, period)];
+    root.periodLocked = !!(entry && entry.locked);
   }
 
   function todayLongLabel() {
@@ -1409,6 +1450,9 @@
   function render() {
     // L'editeur de service est ancre sur une case : la case disparait, lui aussi.
     closeShiftPop();
+    /* The validated-period lock is stored, not remembered: re-read it for the
+       venue and period on screen (first open, store switch, cloud pull). */
+    { const root = window.__kiwiTeamV2; restorePeriodLock(root, root.periodKind || 'week', buildPeriod(root.periodKind || 'week')); }
     if (pageMode === 'payroll') {
       const payrollNav = document.querySelector('.sidebar nav a[data-nav="payroll"]');
       if (!payrollNav?.classList.contains('active') && document.body.classList.contains('page-genpage')) {
@@ -2017,7 +2061,6 @@
     const root = window.__kiwiTeamV2;
     const kind = root.periodKind || 'week';
     if (!Object.prototype.hasOwnProperty.call(periodOffsets, kind)) return;
-    rememberPeriodLock(root, kind, buildPeriod(kind));
     if (dir === 'current') periodOffsets[kind] = 0;
     else periodOffsets[kind] += dir === 'next' ? 1 : -1;
     const period = buildPeriod(kind);
@@ -2384,7 +2427,6 @@
             <div class="kt-frow">
               <div class="kt-photo">
                 <div class="av-disp" data-kt-avdisp style="background:${AVATAR_COLORS[m.avatarTone] || AVATAR_COLORS.a}">${esc(initials(m.firstName, m.lastName)) || '?'}</div>
-                <button type="button" class="kt-photo-btn" data-action="kt-upload-photo">${esc(T.uploadPhoto)}</button>
               </div>
               <div class="kt-fgrow">
                 <div class="kt-fgrid-2">
@@ -2502,9 +2544,8 @@
     openMemberModal(id);
   };
 
-  handlers['kt-upload-photo'] = () => {
-    Kiwi.toast(t().uploadPhoto, { type: 'info', desc: trLang() === 'ar' ? 'محاكاة · يتم استخدام الأحرف الأولى الملونة بدلاً من ذلك.' : trLang() === 'en' ? 'Mocked · colored initials are used instead.' : 'Mocké · les initiales colorées sont utilisées à la place.' });
-  };
+  /* No photo button: every avatar in Kiwi (roster, planning, the till) is the
+   * coloured initials. The old button answered « Mocké » to a real merchant. */
   handlers['kt-pwd-gen'] = () => {
     const mdl = window.__kiwiTeamModal; if (!mdl || !mdl.el) return;
     const input = mdl.el.querySelector('[data-kt-pwd]');
@@ -2773,7 +2814,6 @@
     if (!['week', 'fortnight', 'month'].includes(kind)) return;
     const root = window.__kiwiTeamV2;
     const previousKind = root.periodKind || 'week';
-    rememberPeriodLock(root, previousKind, buildPeriod(previousKind));
     root.periodKind = kind;
     periodOffsets[kind] = 0;
     const targetPeriod = buildPeriod(kind);
@@ -2900,16 +2940,158 @@
       teamCount: members.length, rowCount: rows.length - 1, totalHours,
     }).catch(() => {});
   };
+  /* ── CSV import: the export, read back ─────────────────────────────────────
+   * The button used to answer « Glissez votre fichier · vérification
+   * automatique des en-têtes » with no file picker behind it. It now reads the
+   * file kt-export-csv writes (or a sheet with the same columns): one row per
+   * employee × day, matched on « ID membre » first, then on the full name. The
+   * merchant sees what will change before anything is written, and a validated
+   * period refuses the import like it refuses a hand edit. */
+  const IMPORT_COPY = {
+    fr: {
+      title: 'Importer des heures', locked: 'Période validée', lockedDesc: 'Rouvrez la période avant d’importer des heures.',
+      bad: 'Fichier non reconnu', badDesc: 'Il faut les colonnes « Date » et « Heures », et « ID membre » ou « Employé ». Le fichier exporté par Kiwi convient.',
+      empty: 'Aucune heure à importer', emptyDesc: 'Aucune ligne ne correspond à un membre de cette équipe.',
+      summary: (n, m, d) => `${n} saisie${n > 1 ? 's' : ''} d’heures pour ${m} membre${m > 1 ? 's' : ''}, sur ${d} jour${d > 1 ? 's' : ''}.`,
+      replace: 'Les heures déjà saisies pour ces jours sont remplacées par celles du fichier.',
+      skipped: (n) => `${n} ligne${n > 1 ? 's' : ''} ignorée${n > 1 ? 's' : ''} : membre inconnu, date ou heures invalides.`,
+      lockedDays: (n) => `${n} jour${n > 1 ? 's' : ''} dans une période validée, laissé${n > 1 ? 's' : ''} tel${n > 1 ? 's' : ''} quel${n > 1 ? 's' : ''}.`,
+      cancel: 'Annuler', apply: 'Importer', done: (n) => `${n} saisie${n > 1 ? 's' : ''} importée${n > 1 ? 's' : ''}`, doneDesc: 'Heures enregistrées et synchronisées sur vos appareils.',
+    },
+    en: {
+      title: 'Import hours', locked: 'Period validated', lockedDesc: 'Reopen the period before importing hours.',
+      bad: 'File not recognised', badDesc: 'It needs « Date » and « Heures » columns, plus « ID membre » or « Employé ». The file Kiwi exports works.',
+      empty: 'No hours to import', emptyDesc: 'No row matches a member of this team.',
+      summary: (n, m, d) => `${n} hour entr${n > 1 ? 'ies' : 'y'} for ${m} member${m > 1 ? 's' : ''}, over ${d} day${d > 1 ? 's' : ''}.`,
+      replace: 'Hours already entered for these days are replaced by the file’s.',
+      skipped: (n) => `${n} row${n > 1 ? 's' : ''} skipped: unknown member, invalid date or hours.`,
+      lockedDays: (n) => `${n} day${n > 1 ? 's' : ''} in a validated period, left as is.`,
+      cancel: 'Cancel', apply: 'Import', done: (n) => `${n} entr${n > 1 ? 'ies' : 'y'} imported`, doneDesc: 'Hours saved and synced to your devices.',
+    },
+    ar: {
+      title: 'استيراد الساعات', locked: 'الفترة مصادق عليها', lockedDesc: 'أعد فتح الفترة قبل استيراد الساعات.',
+      bad: 'ملف غير معروف', badDesc: 'يلزم عمودا « Date » و« Heures »، مع « ID membre » أو « Employé ». الملف الذي يصدّره Kiwi مناسب.',
+      empty: 'لا ساعات للاستيراد', emptyDesc: 'لا يطابق أي سطر عضوًا في هذا الفريق.',
+      summary: (n, m, d) => `${n} إدخال ساعات لـ ${m} عضو، على ${d} يوم.`,
+      replace: 'تُستبدل الساعات المدخلة لهذه الأيام بساعات الملف.',
+      skipped: (n) => `${n} سطر متجاهل: عضو غير معروف أو تاريخ أو ساعات غير صالحة.`,
+      lockedDays: (n) => `${n} يوم ضمن فترة مصادق عليها، بقي كما هو.`,
+      cancel: 'إلغاء', apply: 'استيراد', done: (n) => `تم استيراد ${n} إدخال`, doneDesc: 'حُفظت الساعات وتمت مزامنتها على أجهزتك.',
+    },
+  };
+  const importCopy = () => IMPORT_COPY[trLang()] || IMPORT_COPY.fr;
+  /* RFC-4180-ish: quoted cells, doubled quotes, ; or , separators, CRLF. */
+  function parseCsv(text) {
+    const src = String(text || '').replace(/^﻿/, '');
+    const firstLine = src.split(/\r?\n/, 1)[0] || '';
+    const sep = (firstLine.match(/;/g) || []).length >= (firstLine.match(/,/g) || []).length ? ';' : ',';
+    const rows = []; let row = [], cell = '', quoted = false;
+    for (let i = 0; i < src.length; i++) {
+      const c = src[i];
+      if (quoted) {
+        if (c === '"' && src[i + 1] === '"') { cell += '"'; i++; }
+        else if (c === '"') quoted = false;
+        else cell += c;
+      } else if (c === '"') quoted = true;
+      else if (c === sep) { row.push(cell); cell = ''; }
+      else if (c === '\n' || c === '\r') {
+        if (c === '\r' && src[i + 1] === '\n') i++;
+        row.push(cell); cell = '';
+        if (row.some((v) => v.trim() !== '')) rows.push(row);
+        row = [];
+      } else cell += c;
+    }
+    row.push(cell);
+    if (row.some((v) => v.trim() !== '')) rows.push(row);
+    /* The export prefixes formula-looking cells with ' : read them back literal. */
+    return rows.map((r) => r.map((v) => v.trim().replace(/^'(?=[=+\-@])/, '')));
+  }
+  const normHead = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]/g, '');
+  function dayIsLocked(root, day) {
+    const bucket = lockBucket(root);
+    return Object.keys(bucket).some((key) => {
+      if (!bucket[key].locked) return false;
+      const [, start, end] = key.split(':');
+      return day >= start && day <= end;
+    });
+  }
+  function planHoursImport(text, members, root) {
+    const rows = parseCsv(text);
+    if (rows.length < 2) return null;
+    const head = rows[0].map(normHead);
+    const col = (...names) => head.findIndex((h) => names.includes(h));
+    const iId = col('idmembre', 'memberid', 'id'), iName = col('employe', 'employee', 'nom', 'name');
+    const iDate = col('date', 'jour', 'day'), iHours = col('heures', 'hours');
+    if (iDate < 0 || iHours < 0 || (iId < 0 && iName < 0)) return null;
+    const byId = new Map(members.map((m) => [String(m.id), m]));
+    const byName = new Map(members.map((m) => [memberFullName(m).toLowerCase().replace(/\s+/g, ' ').trim(), m]));
+    const changes = []; let skipped = 0; const lockedDays = new Set();
+    rows.slice(1).forEach((r) => {
+      const m = (iId >= 0 && byId.get(r[iId])) || (iName >= 0 && byName.get(String(r[iName] || '').toLowerCase().replace(/\s+/g, ' ').trim()));
+      let day = String(r[iDate] || '');
+      const fr = day.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (fr) day = `${fr[3]}-${pad(fr[2])}-${pad(fr[1])}`;
+      const rawHours = String(r[iHours] || '').trim();
+      const hours = rawHours ? Number(rawHours.replace(',', '.')) : NaN;
+      /* La forme ne suffit pas : « 2026-13-40 » passe l'expression et
+       * deviendrait une journée fantôme dans le registre. On relit la date. */
+      const parsed = /^\d{4}-\d{2}-\d{2}$/.test(day) ? new Date(day + 'T00:00:00Z') : null;
+      const realDay = !!parsed && !isNaN(parsed) && parsed.toISOString().slice(0, 10) === day;
+      if (!m || !realDay || !Number.isFinite(hours) || hours < 0 || hours > 24) { skipped++; return; }
+      if (dayIsLocked(root, day)) { lockedDays.add(day); return; }
+      changes.push({ id: m.id, day, hours: Math.round(hours * 100) / 100 });
+    });
+    return { changes, skipped, lockedDays: lockedDays.size };
+  }
+  let pendingImport = null;
   handlers['kt-import-csv'] = () => {
-    const T = t();
-    Kiwi.toast(T.tImport, { type: 'info', desc: T.tImportDesc });
+    const C = importCopy();
+    const root = window.__kiwiTeamV2;
+    if (root.periodLocked) { Kiwi.toast(C.locked, { type: 'info', desc: C.lockedDesc }); return; }
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = '.csv,text/csv'; input.hidden = true;
+    document.body.appendChild(input);
+    input.addEventListener('change', () => {
+      const file = input.files && input.files[0];
+      input.remove();
+      if (!file) return;
+      file.text().then((text) => {
+        const venue = window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' };
+        const key = teamKey(venue);
+        const plan = planHoursImport(text, getMembers(key), root);
+        if (!plan) { Kiwi.toast(C.bad, { type: 'warning', desc: C.badDesc }); return; }
+        if (!plan.changes.length) { Kiwi.toast(C.empty, { type: 'info', desc: C.emptyDesc }); return; }
+        const membersTouched = new Set(plan.changes.map((c) => c.id)).size;
+        const daysTouched = new Set(plan.changes.map((c) => c.day)).size;
+        pendingImport = { key, changes: plan.changes };
+        modal({
+          title: C.title, width: 480,
+          body: `<div class="kt-opt-summary"><strong>${esc(C.summary(plan.changes.length, membersTouched, daysTouched))}</strong><p>${esc(C.replace)}</p>
+            ${plan.skipped ? `<p>${esc(C.skipped(plan.skipped))}</p>` : ''}${plan.lockedDays ? `<p>${esc(C.lockedDays(plan.lockedDays))}</p>` : ''}</div>`,
+          foot: `<button class="kb ghost" data-dismiss>${esc(C.cancel)}</button><button class="kb atlas" data-action="kt-import-csv-apply">${esc(C.apply)}</button>`,
+        });
+      }).catch(() => Kiwi.toast(C.bad, { type: 'warning', desc: C.badDesc }));
+    });
+    input.click();
+  };
+  handlers['kt-import-csv-apply'] = (el) => {
+    const C = importCopy();
+    const job = pendingImport; pendingImport = null;
+    el?.closest('.kiwi-modal, [role=dialog]')?.querySelector('[data-dismiss]')?.click();
+    if (!job) return;
+    const root = window.__kiwiTeamV2;
+    const hours = root.hoursByVenue[job.key] || (root.hoursByVenue[job.key] = {});
+    job.changes.forEach((c) => { (hours[c.id] || (hours[c.id] = {}))[c.day] = c.hours; });
+    saveCustomTeams();
+    if (pageActive) render();
+    Kiwi.toast(C.done(job.changes.length), { type: 'success', desc: C.doneDesc });
   };
   handlers['kt-validate-period'] = () => {
     const T = t();
     const root = window.__kiwiTeamV2;
     if (root.periodLocked) return;
-    root.periodLocked = true;
     const period = buildPeriod(root.periodKind);
+    setPeriodLock(root, root.periodKind, period, true);
     if (pageActive) render();
     Kiwi.toast(T.tValidated(period.startFr, period.endFr), { type: 'success', desc: T.tValidatedDesc });
   };
@@ -2917,8 +3099,8 @@
     const T = t();
     const root = window.__kiwiTeamV2;
     if (!root.periodLocked) return;
-    root.periodLocked = false;
     const period = buildPeriod(root.periodKind);
+    setPeriodLock(root, root.periodKind, period, false);
     if (pageActive) render();
     Kiwi.toast(T.tUnlocked(period.startFr, period.endFr), { type: 'success', desc: T.tUnlockedDesc });
   };
@@ -3268,6 +3450,7 @@
     ensureVenueData(venue);
     const venueType = teamKey(venue);
     const members = getMembers(venueType);
+    { const root = window.__kiwiTeamV2; restorePeriodLock(root, root.periodKind || 'week', buildPeriod(root.periodKind || 'week')); }
     pageActive = true;
     scheduleLiveTeam();          // la paie lit le pointage : cadence rapide
     pageMode = 'payroll';

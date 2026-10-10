@@ -1488,8 +1488,20 @@
         // Persist the FULL programme (model + targets + rewards) to the store's
         // fidelity config (clients-store.js), so the caisse Carnet + the CRM segments
         // use it live. No-op without a real book (unpaired demo).
-        try { if (window.KiwiClients && KiwiClients.hasBook && KiwiClients.hasBook()) KiwiClients.setConfig(readCfg()); } catch (_) {}
-        m.close(); toast(C.saved || T.toastTitle, { type: 'success', desc: C.savedDesc || T.toastDesc });
+        /* The success toast (« la caisse et le carnet clients l'appliquent
+           aussitôt ») used to fire even when nothing was saved. */
+        let saved = false;
+        try { if (window.KiwiClients && KiwiClients.hasBook && KiwiClients.hasBook()) { KiwiClients.setConfig(readCfg()); saved = true; } } catch (_) {}
+        m.close();
+        if (saved) toast(C.saved || T.toastTitle, { type: 'success', desc: C.savedDesc || T.toastDesc });
+        else {
+          const nb = ({
+            fr: ['Programme non enregistré', 'Aucun carnet clients n’est relié à ce compte : rien n’a été appliqué en caisse.'],
+            en: ['Programme not saved', 'No customer book is linked to this account: nothing was applied at the till.'],
+            ar: ['لم يُحفظ البرنامج', 'لا يوجد سجل عملاء مرتبط بهذا الحساب: لم يُطبّق أي شيء في الصندوق.'],
+          })[trLang()] || ['Programme non enregistré', 'Rien n’a été appliqué en caisse.'];
+          toast(nb[0], { type: 'warning', desc: nb[1] });
+        }
       }
     });
   };

@@ -14114,7 +14114,10 @@ handlers['bqx-cat-new-save'] = () => {
   const tone = b.querySelector('[data-bqx-cnewsw] button.on')?.getAttribute('data-tone') || 'atlas';
   CAT().addCategory(name, tone);
   if (_bqxModal) _bqxModal.close();
-  toast('Catégorie créée', { desc: `« ${name} » est disponible en caisse et au dashboard.`, type: 'success' });
+  /* Only the boutique and maison tills read this catalogue; the épicerie till
+     keeps its own (pos-epicerie.js). Say « en caisse » only where it is true. */
+  const catTill = ['boutique', 'maison'].includes(String(window.KiwiVenue?.getVenueType?.() || window.KiwiConfig?.type || '').toLowerCase());
+  toast('Catégorie créée', { desc: catTill ? `« ${name} » est disponible en caisse et au dashboard.` : `« ${name} » est disponible au dashboard.`, type: 'success' });
 };
 handlers['bqx-cat-color'] = (_el, arg) => {
   const [cid, tone] = String(arg || '').split('::');
@@ -18610,29 +18613,29 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   /* What each destination will become — phrased to fit any trade. */
   const STARTERS = {
     transactions:  { t: 'Ventes',             d: 'L\'historique complet de vos encaissements, en temps réel.',
-                     b: ['Chaque vente apparaît ici à la seconde où elle est encaissée', 'Filtres par moyen de paiement, remboursements inclus', 'Rapprochement bancaire et exports comptables'] },
-    reglements:    { t: 'Règlements',          d: 'Vos virements et rapprochements bancaires, au même endroit.',
-                     b: ['Chaque encaissement rapproché de votre compte', 'Virements Kiwi suivis jusqu\'au crédit', 'Historique de règlements prêt pour votre comptable'] },
-    terminaux:     { t: 'Terminaux',          d: 'Vos appareils d\'encaissement, leur état et leurs affectations.',
-                     b: ['Statut, batterie et version de chaque appareil', 'Kiwi fonctionne aussi sur votre matériel existant', 'Affectation par employé et par zone'] },
-    conformite:    { t: 'Conformité',         d: 'Vos registres et obligations, tenus à jour automatiquement.',
-                     b: ['Registres générés à partir de votre activité réelle', 'Alertes avant chaque échéance', 'Dossier prêt en cas de contrôle'] },
+                     b: ['Chaque vente apparaît ici à la seconde où elle est encaissée', 'Filtres par moyen de paiement, remboursements inclus', 'Annulations et remboursements tracés, avec leur auteur'] },
+    reglements:    { t: 'Règlements',          d: 'Kiwi ne détient pas votre argent : vos paiements carte arrivent par votre banque ou votre TPE.',
+                     b: ['Vos encaissements par moyen de paiement sont dans Ventes', 'Le Rapport journalier donne vos totaux espèces et carte, jour par jour', 'Le suivi des virements viendra avec Kiwi Pay, pas encore disponible'] },
+    terminaux:     { t: 'Terminaux',          d: 'Les appareils connectés à votre compte Kiwi.',
+                     b: ['Votre caisse appairée apparaît ici d\'elle-même', 'Kiwi fonctionne aussi sur votre matériel existant', 'Notez vos autres appareils pour garder la liste à jour'] },
+    conformite:    { t: 'Conformité',         d: 'Vos clôtures de caisse et vos registres.',
+                     b: ['Registres générés à partir de votre activité réelle', 'Clôtures de caisse conservées jour par jour', 'Exports à remettre à votre comptable'] },
     equipe:        { t: 'Équipe',             d: 'Vos employés, leurs rôles et leurs codes PIN.',
                      b: ['Un code PIN par personne sur la caisse', 'Rôles et permissions par poste', 'Performance individuelle dès les premières ventes'] },
     payroll:       { t: 'Planning',           d: 'Plannings, pointage et préparation de la paie.',
                      b: ['Plannings hebdomadaires par personne', 'Pointage directement sur la caisse', 'Heures cumulées prêtes pour la paie'] },
     reservations:  { t: 'Réservations & RDV', d: 'Votre agenda client, connecté à la caisse.',
-                     b: ['Réservations et rendez-vous au même endroit', 'Rappels automatiques WhatsApp', 'No-shows suivis et acomptes possibles'] },
+                     b: ['Réservations et rendez-vous au même endroit', 'Réservations en ligne ou saisies par l\'équipe', 'Statut de chaque réservation : confirmée, arrivée, absente'] },
     finance:       { t: 'Marges & budget',    d: 'Vos marges réelles, calculées depuis vos ventes.',
-                     b: ['Marge brute par produit et par famille', 'Budget mensuel et alertes de dérive', 'Tendances dès vos premières semaines'] },
+                     b: ['Marge brute par produit et par famille', 'Coût d\'achat renseigné par article', 'Tendances dès vos premières semaines'] },
     tables:        { t: 'Plan de salle',      d: 'Votre salle, vue de la caisse.',
                      b: ['Dessinez vos zones et vos tables', 'État en direct pendant le service', 'Encaissement directement depuis la table'] },
     menu:          { t: 'Menu',               d: 'Votre carte, vos prix et vos options.',
                      b: ['Produits, variantes et options', 'Prix modifiables en deux gestes', 'Disponibilité par créneau ou par jour'] },
-    kds:           { t: 'Écran cuisine',      d: 'Les commandes envoyées en préparation, en direct.',
-                     b: ['Chaque commande part en cuisine à l\'encaissement', 'Files par poste de préparation', 'Temps de préparation mesurés'] },
+    kds:           { t: 'Écran cuisine',      d: 'L\'écran cuisine s\'ouvre sur sa propre page, Kiwi Cuisine, sur la tablette de la cuisine.',
+                     b: ['Ouvrez Kiwi Cuisine sur l\'écran de la cuisine et appairez-le avec un code', 'Les commandes envoyées depuis la caisse y arrivent en direct', 'Le tableau de bord n\'affiche pas les tickets en cours'] },
     stock:         { t: 'Stock',              d: 'Vos quantités, suivies à chaque vente.',
-                     b: ['Le stock décompte automatiquement à la vente', 'Seuils d\'alerte avant rupture', 'Kiwi AI estime les quantités à recommander'] },
+                     b: ['Le stock décompte automatiquement à la vente', 'Seuils d\'alerte avant rupture', 'Commande fournisseur préparée en un geste'] },
     inventory:     { t: 'Inventaire',         d: 'Vos références, leurs prix et leurs quantités.',
                      b: ['Ajoutez vos références une à une ou par import', 'Stock décompté automatiquement à la vente', 'Alertes avant rupture'] },
     categories:    { t: 'Catégories',         d: 'Vos familles d\'articles, telles que vous organisez votre activité.',
@@ -18642,13 +18645,13 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     returns:       { t: 'Retours',            d: 'Vos retours et échanges, tracés proprement.',
                      b: ['Chaque retour relié à sa vente d\'origine', 'Remboursement, avoir ou échange', 'Politique de retour configurable'] },
     appointments:  { t: 'Agenda',             d: 'Votre planning, rempli par vos vraies réservations.',
-                     b: ['Vue semaine par membre de l\'équipe', 'Rappels automatiques aux clients', 'Liste d\'attente avec promotion automatique'] },
+                     b: ['Vue semaine par membre de l\'équipe', 'Chaque rendez-vous relié à sa prestation', 'Rendez-vous encaissés directement à la caisse'] },
     services:      { t: 'Prestations',        d: 'Votre catalogue de prestations et de formules.',
-                     b: ['Créez vos prestations, durées et prix', 'Formules et abonnements possibles', 'Les plus demandées remontent automatiquement'] },
+                     b: ['Créez vos prestations, durées et prix', 'Prix et durée repris à la caisse', 'Les plus vendues apparaissent dans vos ventes'] },
     practitioners: { t: 'Équipe',             d: 'Les personnes qui réalisent vos prestations.',
-                     b: ['Profils, spécialités et plannings', 'Performance par personne dès les premières ventes', 'Commissions configurables'] },
+                     b: ['Profils, spécialités et plannings', 'Performance par personne dès les premières ventes', 'Ventes attribuées à la personne qui encaisse'] },
     clients:       { t: 'Fiches clients',     d: 'Votre fichier client, construit vente après vente.',
-                     b: ['Une fiche créée automatiquement par client', 'Historique, préférences et notes', 'Campagnes anniversaires et fidélité'] },
+                     b: ['Une fiche créée automatiquement par client', 'Historique, préférences et notes', 'Fidélité par visites ou par tampons'] },
   };
 
   /* Destinations that now have a REAL per-venue, persistent UI — they render
@@ -18674,8 +18677,13 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
 
   /* Data-conditional destinations: a module that builds a real per-venue page but
      has NO empty state of its own belongs here rather than in the set above, so
-     the starter still answers until there is something to show. Empty for now —
-     payroll was the candidate until team.js gave it a proper empty state. */
+     the starter still answers until there is something to show (payroll was
+     here until team.js gave it a proper empty state). */
+  /* Terminaux n'est PAS ici, volontairement : operations-ui.js porte une vraie
+     page de parc (battements de cœur), mais elle se ferme sur « Droit
+     d'exploitation requis » tant que le tableau de bord ne connaît pas le rôle
+     du propriétaire (KiwiPlatform.access.role lit kiwiStaffRole, que personne
+     n'écrit). L'y envoyer remplacerait un starter honnête par une impasse. */
   const REAL_WHEN = {};
 
   /* ── Actionable layer: let the client add their OWN data right here ──────
@@ -18701,6 +18709,12 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     footAdd:   { fr: 'Ajoutez vos éléments maintenant, ou laissez-les se créer tout seuls dès la première vente.', en: 'Add your items now, or let them create themselves on the first sale.', ar: 'أضف عناصرك الآن، أو دعها تُنشأ تلقائياً عند أول عملية بيع.' },
     seeSales:  { fr: 'Voir mes ventes', en: 'View my sales', ar: 'عرض مبيعاتي' },
     footBuilt: { fr: 'Cette page se remplit automatiquement à mesure que vous encaissez.', en: 'This page fills itself as you keep taking payments.', ar: 'تمتلئ هذه الصفحة تلقائياً كلما واصلت البيع.' },
+    openKds:   { fr: 'Ouvrir Kiwi Cuisine', en: 'Open Kiwi Cuisine', ar: 'فتح Kiwi Cuisine' },
+  };
+  const FOOT = {
+    reglements: { fr: 'Kiwi ne fait pas transiter vos paiements : il n\'y a rien à rapprocher ici pour l\'instant.', en: 'Kiwi does not move your money, so there is nothing to reconcile here yet.', ar: 'لا يمرّ مالك عبر Kiwi، لذا لا يوجد ما يُطابَق هنا حالياً.' },
+    terminaux:  { fr: 'Votre caisse s\'ajoute d\'elle-même une fois appairée. Les autres appareils, notez-les ici.', en: 'Your register adds itself once paired. Note your other devices here.', ar: 'يُضاف صندوقك تلقائياً بعد الربط. سجّل أجهزتك الأخرى هنا.' },
+    kds:        { fr: 'Les tickets en cours s\'affichent sur Kiwi Cuisine, pas sur cette page.', en: 'Open tickets show on Kiwi Cuisine, not on this page.', ar: 'تظهر الطلبات الجارية على Kiwi Cuisine، لا في هذه الصفحة.' },
   };
 
   /* The one device Kiwi is CERTAIN about is the caisse the merchant paired: the
@@ -19331,10 +19345,15 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
            <button class="kb atlas" type="button" data-action="starter-add" data-arg="${nav}">${escS(T(cfg.title))}</button>
            ${saleBtn}
          </div>`
-      : `<div class="gp-starter-actions">${saleBtn}</div>`;
+      : nav === 'kds'
+        ? `<div class="gp-starter-actions"><a class="kb atlas" href="kiwi-cuisine.html" target="_blank" rel="noopener">${escS(T(UI.openKds))}</a>${saleBtn.replace('kb atlas', 'kb ghost')}</div>`
+        : `<div class="gp-starter-actions">${saleBtn}</div>`;
 
     const h3 = escS(hasItems ? T(UI.started) : T(UI.normal));
-    const foot = cfg ? T(UI.footAdd) : (hasSales ? T(UI.footBuilt) : T(UI.footSale));
+    /* Règlements et écran cuisine ne se remplissent PAS avec les ventes : Kiwi
+     * ne fait pas transiter l'argent, et les tickets vivent sur Kiwi Cuisine.
+     * Le pied générique leur promettait une page qui n'arrivera pas. */
+    const foot = FOOT[nav] ? T(FOOT[nav]) : cfg ? T(UI.footAdd) : (hasSales ? T(UI.footBuilt) : T(UI.footSale));
     const startingUp = T({ fr: 'compte en démarrage', en: 'account getting started', ar: 'حساب قيد الإعداد' });
 
     window.Kiwi.appPage(nav, {

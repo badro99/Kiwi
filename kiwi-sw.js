@@ -91,8 +91,8 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=48',
-  '/assets/features.js?v=10',
+  '/assets/interactive.js?v=49',
+  '/assets/features.js?v=11',
   '/assets/invoicing.css?v=8',
   '/assets/invoicing.js?v=9',
   '/assets/order-qr.js?v=3',
@@ -101,7 +101,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=39',
+  '/assets/venues.js?v=40',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=4',
   '/assets/trade-workspaces.js?v=4',
@@ -139,13 +139,13 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=4',
-  '/assets/dateRange.js?v=53',
+  '/assets/dateRange.js?v=54',
   '/assets/mobile-nav.js?v=7',
   '/assets/liquid-lens.js?v=3',
   '/assets/pages.js?v=12',
   '/assets/help-centre.js?v=5',
   '/assets/account.js?v=29',
-  '/assets/production-action-guard.js?v=1',
+  '/assets/production-action-guard.js?v=2',
   // Shared floor-plan vocabulary · the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
   // offline with no table geometry at all.
@@ -226,7 +226,7 @@ var SHELL = [
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
   '/assets/promos.js?v=2',
-  '/assets/boutique-promos-dashboard.js?v=12',
+  '/assets/boutique-promos-dashboard.js?v=13',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
   '/assets/caisse-lang.js?v=15',
@@ -239,7 +239,7 @@ var SHELL = [
   '/assets/maison-stock-movements.js?v=4',
   '/assets/caisse-stock-sync.js?v=10',
   '/assets/pos-inventory-count.js?v=9',
-  '/assets/stock.js?v=67',
+  '/assets/stock.js?v=68',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
@@ -248,7 +248,7 @@ var SHELL = [
   '/assets/clients-store.js?v=9',
   '/assets/clients-book.js?v=24',
   '/assets/clients-directory.js?v=17',
-  '/assets/customer-retention.js?v=3',
+  '/assets/customer-retention.js?v=4',
   '/assets/menu-catalog.js?v=26',
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',
@@ -259,7 +259,7 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=4',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=11',
-  '/assets/team.js?v=293',
+  '/assets/team.js?v=294',
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=89',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).

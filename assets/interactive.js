@@ -1831,11 +1831,11 @@ ar: {
       const featOff = (k) => { try { return !!window.KiwiConfig?.off?.(k); } catch (_) { return false; } };
       const NOTIF_EMPTY = {
         fr: { head: 'Aucune notification', tail: 'apparaîtront ici.', and: ' et ',
-              src: [[null, 'Les alertes de règlement'], ['terminaux', 'de terminaux'], [null, 'les suggestions Kiwi AI']] },
+              src: [[null, 'Les écarts entre vos clôtures de caisse et le serveur']] },
         en: { head: 'No notifications', tail: 'will appear here.', and: ' and ',
-              src: [[null, 'Settlement alerts'], ['terminaux', 'terminal alerts'], [null, 'Kiwi AI suggestions']] },
+              src: [[null, 'Mismatches between your till closures and the server']] },
         ar: { head: 'لا إشعارات', tail: 'ستظهر هنا.', and: ' و',
-              src: [[null, 'تنبيهات التسوية'], ['terminaux', 'تنبيهات الأجهزة'], [null, 'اقتراحات Kiwi AI']] },
+              src: [[null, 'الفروق بين إغلاقات الصندوق والخادم']] },
       };
       // Real notifications first: a Z report that doesn't match the server.
       const zNotif = (() => { try { return window.KiwiZReconciliation?.notificationHtml?.() || ''; } catch (_) { return ''; } })();
@@ -3066,7 +3066,7 @@ ar: {
       /* Static demo transaction (Café Atlas customer/staff/card, Bank of Africa
          ••3291 batch). No real per-transaction backend yet, so a real merchant
          gets a neutral state rather than the demo record. Local demo unchanged. */
-      if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) {
+      if ((window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || window.KiwiVenue?.isCustom?.()) {
         toast(tr({ fr: 'Détail de transaction indisponible', en: 'Transaction detail unavailable', ar: 'تفاصيل المعاملة غير متوفرة' }), { type: 'info' });
         return;
       }
@@ -3142,9 +3142,9 @@ ar: {
 
       const lang = kiwiLang();
       const T = {
-        fr: { tag: 'COMMANDE', status: 'Encaissée · règlement T+1', table: 'Table', server: 'Serveur', covers: 'Couverts', duration: 'Durée service', cover: 'couvert', covers_pl: 'couverts', minutes: 'min', items: 'Articles', payment: 'Paiement', subtotal: 'Sous-total', tva: 'TVA', total: 'Total encaissé', timeline: 'Chronologie', opened: 'Table ouverte', sent: 'Envoyé en cuisine', ready: 'Prêt', paid: 'Payé', closed: 'Table fermée', sendReceipt: 'Envoyer le reçu', refund: 'Rembourser', cancel: 'Annuler la vente', cancelConfirm: 'Annuler cette vente ? Cette action sera journalisée.', cancelled: 'Vente annulée', cancelFailed: 'Annulation impossible. Vérifiez vos droits et réessayez.', close: 'Fermer', receiptSent: 'Reçu envoyé par WhatsApp', refundPrompt: 'Choisir le montant à rembourser' },
-        en: { tag: 'ORDER', status: 'Captured · T+1 settlement', table: 'Table', server: 'Server', covers: 'Covers', duration: 'Service time', cover: 'cover', covers_pl: 'covers', minutes: 'min', items: 'Items', payment: 'Payment', subtotal: 'Subtotal', tva: 'VAT', total: 'Total paid', timeline: 'Timeline', opened: 'Table opened', sent: 'Sent to kitchen', ready: 'Ready', paid: 'Paid', closed: 'Table closed', sendReceipt: 'Send receipt', refund: 'Refund', cancel: 'Cancel sale', cancelConfirm: 'Cancel this sale? This action will be logged.', cancelled: 'Sale cancelled', cancelFailed: 'Could not cancel the sale. Check your permissions and try again.', close: 'Close', receiptSent: 'Receipt sent on WhatsApp', refundPrompt: 'Choose refund amount' },
-        ar: { tag: 'طلب', status: 'تمّ الدفع · تسوية T+1', table: 'الطاولة', server: 'النادل', covers: 'الضيوف', duration: 'مدة الخدمة', cover: 'ضيف', covers_pl: 'ضيوف', minutes: 'د', items: 'الأصناف', payment: 'الدفع', subtotal: 'الإجمالي', tva: 'الضريبة', total: 'المبلغ المدفوع', timeline: 'الجدول الزمني', opened: 'فُتحت الطاولة', sent: 'أُرسل للمطبخ', ready: 'جاهز', paid: 'مدفوع', closed: 'أُغلقت الطاولة', sendReceipt: 'إرسال الإيصال', refund: 'استرداد', cancel: 'إلغاء البيع', cancelConfirm: 'إلغاء هذا البيع؟ سيتم تسجيل العملية.', cancelled: 'تم إلغاء البيع', cancelFailed: 'تعذر إلغاء البيع. تحقق من الصلاحيات وحاول مرة أخرى.', close: 'إغلاق', receiptSent: 'تمّ إرسال الإيصال عبر واتساب', refundPrompt: 'اختر مبلغ الاسترداد' },
+        fr: { tag: 'COMMANDE', status: 'Encaissée', table: 'Table', server: 'Serveur', covers: 'Couverts', duration: 'Durée service', cover: 'couvert', covers_pl: 'couverts', minutes: 'min', items: 'Articles', payment: 'Paiement', subtotal: 'Sous-total', tva: 'TVA', total: 'Total encaissé', timeline: 'Chronologie', opened: 'Table ouverte', sent: 'Envoyé en cuisine', ready: 'Prêt', paid: 'Payé', closed: 'Table fermée', sendReceipt: 'Envoyer le reçu', refund: 'Rembourser', cancel: 'Annuler la vente', cancelConfirm: 'Annuler cette vente ? Cette action sera journalisée.', cancelled: 'Vente annulée', cancelFailed: 'Annulation impossible. Vérifiez vos droits et réessayez.', close: 'Fermer', receiptSent: 'WhatsApp ouvert avec le reçu', receiptSentDesc: 'Choisissez le client dans WhatsApp, puis envoyez.', refundPrompt: 'Choisir le montant à rembourser' },
+        en: { tag: 'ORDER', status: 'Paid', table: 'Table', server: 'Server', covers: 'Covers', duration: 'Service time', cover: 'cover', covers_pl: 'covers', minutes: 'min', items: 'Items', payment: 'Payment', subtotal: 'Subtotal', tva: 'VAT', total: 'Total paid', timeline: 'Timeline', opened: 'Table opened', sent: 'Sent to kitchen', ready: 'Ready', paid: 'Paid', closed: 'Table closed', sendReceipt: 'Send receipt', refund: 'Refund', cancel: 'Cancel sale', cancelConfirm: 'Cancel this sale? This action will be logged.', cancelled: 'Sale cancelled', cancelFailed: 'Could not cancel the sale. Check your permissions and try again.', close: 'Close', receiptSent: 'WhatsApp opened with the receipt', receiptSentDesc: 'Pick the customer in WhatsApp, then send.', refundPrompt: 'Choose refund amount' },
+        ar: { tag: 'طلب', status: 'تمّ الدفع', table: 'الطاولة', server: 'النادل', covers: 'الضيوف', duration: 'مدة الخدمة', cover: 'ضيف', covers_pl: 'ضيوف', minutes: 'د', items: 'الأصناف', payment: 'الدفع', subtotal: 'الإجمالي', tva: 'الضريبة', total: 'المبلغ المدفوع', timeline: 'الجدول الزمني', opened: 'فُتحت الطاولة', sent: 'أُرسل للمطبخ', ready: 'جاهز', paid: 'مدفوع', closed: 'أُغلقت الطاولة', sendReceipt: 'إرسال الإيصال', refund: 'استرداد', cancel: 'إلغاء البيع', cancelConfirm: 'إلغاء هذا البيع؟ سيتم تسجيل العملية.', cancelled: 'تم إلغاء البيع', cancelFailed: 'تعذر إلغاء البيع. تحقق من الصلاحيات وحاول مرة أخرى.', close: 'إغلاق', receiptSent: 'تم فتح واتساب مع الإيصال', receiptSentDesc: 'اختر العميل في واتساب ثم أرسل.', refundPrompt: 'اختر مبلغ الاسترداد' },
       };
       const L = T[lang] || T.fr;
 
@@ -3166,7 +3166,12 @@ ar: {
       /* Timeline — back-derive 3 prep moments from the paid time so the
        * sequence reads naturally. Service was X min; assume kitchen
        * handoff at 30% and ready at 70%. */
-      const dur = Math.max(8, o.serviceMinutes || 20);
+      /* A real sale only knows when it was paid. The kitchen and ready times
+         were derived from a guessed 20-minute service; on a real sale the
+         timeline shows what was recorded, nothing else. */
+      const realSale = !!o.saleId;
+      const knownDur = +o.serviceMinutes > 0;
+      const dur = knownDur ? Math.max(1, Math.round(+o.serviceMinutes)) : (realSale ? 0 : 20);
       const [hh, mm] = (o.t || '12:00').split(':').map(Number);
       const minus = (back) => {
         let m = hh * 60 + mm - back;
@@ -3221,7 +3226,7 @@ ar: {
             </div>
             <div class="ord-stat">
               <div class="lbl">${L.duration}</div>
-              <div class="val">${dur}<span style="font-size:11px;color:var(--n-500);font-weight:500;margin-left:3px;">${L.minutes}</span></div>
+              <div class="val">${dur ? `${dur}<span style="font-size:11px;color:var(--n-500);font-weight:500;margin-left:3px;">${L.minutes}</span>` : '·'}</div>
             </div>
           </div>
 
@@ -3246,16 +3251,17 @@ ar: {
 
           <div class="ord-section-lbl">${L.timeline}</div>
           <div class="tx-timeline">
+            ${realSale && !knownDur ? `<div class="tx-timeline-item last"><div class="t">${tPaid}</div><div class="n">${L.paid}</div><div class="d">${o.primary} · ${o.sub || ''}</div></div>` : `
             <div class="tx-timeline-item"><div class="t">${tOpened}</div><div class="n">${L.opened}</div><div class="d">T${o.table != null ? o.table : '·'} · ${o.covers || 1} ${coversLbl} · ${o.server || '·'}</div></div>
             <div class="tx-timeline-item"><div class="t">${tSent}</div><div class="n">${L.sent}</div><div class="d">${(o.items || []).map(i => `×${i.qty} ${i.name}`).join(' · ') || '·'}</div></div>
             <div class="tx-timeline-item"><div class="t">${tReady}</div><div class="n">${L.ready}</div><div class="d">${L.server === 'Server' ? 'Picked up by' : (L.server === 'النادل' ? 'استلمه' : 'Récupéré par')} ${o.server || '·'}</div></div>
-            <div class="tx-timeline-item last"><div class="t">${tPaid}</div><div class="n">${L.paid} · ${L.closed}</div><div class="d">${o.primary} · ${o.sub || ''}</div></div>
+            <div class="tx-timeline-item last"><div class="t">${tPaid}</div><div class="n">${L.paid} · ${L.closed}</div><div class="d">${o.primary} · ${o.sub || ''}</div></div>`}
           </div>
         `,
         foot: `
           ${cancelFoot}
           <button class="kb ghost" data-ord-receipt>${L.sendReceipt}</button>
-          <button class="kb ghost" data-ord-refund>${L.refund}</button>
+          ${realSale ? '' : `<button class="kb ghost" data-ord-refund>${L.refund}</button>`}
           <button class="kb primary" data-dismiss>${L.close}</button>
         `,
       });
@@ -3288,7 +3294,14 @@ ar: {
           }).finally(() => document.body.removeEventListener('click', once));
           return;
         }
-        if (e.target.closest('[data-ord-receipt]')) { toast(L.receiptSent + (o.customer ? ' · ' + o.customer : ''), { type: 'success' }); }
+        if (e.target.closest('[data-ord-receipt]')) {
+          /* Kiwi has no WhatsApp sender. The receipt is written out and WhatsApp
+             opens on it; the merchant picks the customer and sends. */
+          const lines = (o.items || []).map((i) => `${i.qty} × ${i.name} · ${fmtNum(i.qty * i.price)} MAD`);
+          const text = [`${L.tag} ${o.receiptNo || ''} · ${o.t || ''}`, ...lines, `${L.total} : ${o.total} MAD`].join('\n');
+          window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener');
+          toast(L.receiptSent, { type: 'info', desc: L.receiptSentDesc });
+        }
         if (e.target.closest('[data-ord-refund]'))  { document.querySelector('.kiwi-drawer-backdrop .kiwi-drawer-close')?.click(); setTimeout(() => toast(L.refundPrompt, { type: 'info' }), 220); }
         if (e.target.closest('[data-dismiss]'))     { document.querySelector('.kiwi-drawer-backdrop .kiwi-drawer-close')?.click(); }
         document.body.removeEventListener('click', once);
@@ -3303,8 +3316,13 @@ ar: {
       /* Four-tier model. The recommended tier is contextual to the account: a
        * multi-établissement account needs Ultra (Basic/Pro are mono-site); the
        * exact palier is confirmed in a short discovery chat (so it's not fixed). */
-      const reco = 'ultra';
-      const current = 'pro';
+      /* The merchant's real plan, never a constant. It used to say « Pro ·
+         plan actuel » to every account and recommend Ultra to everyone. */
+      const realAcct = !!(window.KiwiEnv?.isReal?.() || window.KiwiVenue?.isCustom?.());
+      const planRaw = String(window.KiwiVenue?.getPlan?.() || window.KiwiConfig?.plan || '').toLowerCase();
+      const known = ['basic', 'pro', 'ultra', 'ultimate'].find((id) => planRaw.includes(id)) || '';
+      const current = realAcct ? known : 'pro';
+      const reco = realAcct ? '' : 'ultra';
       const PLANS = [
         { id: 'basic', name: 'KIWI BASIC', price: '199 MAD', unit: '/mois', tagline: `Logiciel seul · sur votre matériel`, cta: 'Choisir Basic', feats: [
           `Logiciel Kiwi complet · tous les modules`,
@@ -3312,22 +3330,16 @@ ar: {
           `S'intègre à votre caisse / TPE existant`,
           `Formation sur site + guides inclus`,
           `Demandes de support suivies` ] },
-        { id: 'pro', name: 'KIWI PRO', price: '399 MAD', unit: '/mois', tagline: `Tout Basic + support prioritaire + Kiwi IQ avancé`, cta: 'Plan actuel', feats: [
+        { id: 'pro', name: 'KIWI PRO', price: '399 MAD', unit: '/mois', tagline: `Tout Basic + support prioritaire + Kiwi IQ avancé`, cta: current === 'pro' ? 'Plan actuel' : 'Choisir Pro', feats: [
           `Tout Kiwi Basic inclus`,
-          `Règlement T+1 garanti`,
-          `Jusqu'à 8 membres d'équipe`,
           `Support prioritaire · réponse plus rapide`,
           `Kiwi IQ avancé` ] },
         { id: 'ultra', name: 'KIWI ULTRA', price: '1 499 MAD', unit: '/mois', tagline: `Sur-mesure · multi-pays · 24/7`, cta: 'Passer à Ultra →', feats: [
           `Tout Kiwi Pro inclus`,
-          `Vue Portefeuille consolidée + IA cross-sites actionnable`,
-          `Établissements illimités · équipe illimitée`,
-          `API enterprise illimitée · SLA 99,99 %`,
-          `Multi-pays · corridor diaspora France ↔ Maroc`,
-          `Account manager dédié 24/7 (réponse < 30 min)`,
-          `Conseil stratégique trimestriel`,
-          `Onboarding white-glove sur place`,
-          `≈ 0,1 % du CA d'un portefeuille de 3 établissements` ] },
+          `Établissements illimités`,
+          `Multi-pays`,
+          `API enterprise`,
+          `Account manager dédié 24/7` ] },
         { id: 'ultimate', name: 'KIWI ULTIMATE', price: 'Sur devis', unit: '', tagline: `Sur-mesure total · on en parle`, cta: 'Demander un devis →', feats: [
           `Tout Kiwi Ultra inclus`,
           `Fonctionnalités développées pour vous`,
@@ -3347,7 +3359,7 @@ ar: {
       return modal({
         tag: 'ABONNEMENTS KIWI',
         title: 'Quatre paliers. Le vôtre évolue avec votre activité.',
-        desc: `Du logiciel seul, intégré à votre caisse, avec formation, à l'entreprise sur-mesure. Le matériel et l'accompagnement s'ajoutent palier par palier.`,
+        desc: `Du logiciel seul, intégré à votre caisse, avec formation, à l'entreprise sur-mesure. Le support et l'accompagnement s'étoffent palier par palier.`,
         width: 1040,
         body: `
           <style>
@@ -3380,8 +3392,8 @@ ar: {
           <div class="kup-grid">${PLANS.map(card).join('')}</div>
           <div class="kup-tip">
             <div style="color:var(--atlas); flex-shrink:0; margin-top:1px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7zM9 21h6"/></svg></div>
-            <div style="flex:1;">${(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal())
-              ? `<b>Votre recommandation :</b> <b>Ultra</b> ouvre les établissements illimités, le multi-pays et l'account manager dédié, au-delà du mono-site de Basic et Pro. Le palier exact se précise lors d'un court échange sur vos besoins.`
+            <div style="flex:1;">${realAcct
+              ? `Choisir un palier envoie une demande à l'équipe Kiwi, avec une référence. Elle vous répond par e-mail ; rien ne change ni n'est facturé avant votre accord. Basic et Pro couvrent un établissement, Ultra en ouvre autant que vous voulez.`
               : `<b>Votre recommandation :</b> ce compte gère 3 établissements (Café Atlas · Maison Mansour · Spa Bahia), au-delà du mono-site de Basic et Pro. <b>Ultra</b> ouvre les établissements illimités, le multi-pays et l'account manager dédié. Le palier exact se précise lors d'un court échange sur vos besoins.`}</div>
           </div>
         `,
@@ -3391,14 +3403,41 @@ ar: {
 
     'upgrade-plan': (el, plan) => {
       if (document.documentElement.classList.contains('kiwi-native')) return;
-      const MSG = {
-        basic: { fr: 'Kiwi Basic sélectionné · notre équipe vous contacte pour l\'intégration à votre caisse et la formation.', en: 'Kiwi Basic selected · our team will reach out to integrate it into your till and train you.', ar: 'تم اختيار Kiwi Basic · سيتواصل فريقنا لدمجه في صندوقك وتقديم التدريب.' },
-        ultra: { fr: 'Demande Ultra envoyée · votre account manager vous appelle sous 24 h.', en: 'Ultra request sent · your account manager will call within 24h.', ar: 'تم إرسال طلب Ultra · سيتصل بك مدير حسابك خلال 24 ساعة.' },
-        ultimate: { fr: 'Demande de devis Ultimate envoyée · on définit ensemble le périmètre et le tarif.', en: 'Ultimate quote request sent · we\'ll define scope and price together.', ar: 'تم إرسال طلب عرض Ultimate · سنحدّد النطاق والسعر معًا.' },
-      };
-      const m = MSG[plan] || MSG.ultra;
+      /* « Demande Ultra envoyée · votre account manager vous appelle sous 24 h »
+       * was a toast: nothing was sent, no one was told. A plan request is now a
+       * support ticket (/api/support/tickets), the same queue the help centre
+       * writes to, with a reference the merchant can quote. */
+      const names = { basic: 'Kiwi Basic', pro: 'Kiwi Pro', ultra: 'Kiwi Ultra', ultimate: 'Kiwi Ultimate' };
+      const name = names[plan] || 'Kiwi Ultra';
       document.querySelectorAll('.kiwi-backdrop').forEach((b) => { const c = b.querySelector('.kiwi-modal-close'); if (c) c.click(); });
-      toast(tr(m), { type: 'success', force: true });
+      const realAcct = !!(window.KiwiEnv?.isReal?.() || window.KiwiVenue?.isCustom?.());
+      if (!realAcct) {
+        toast(tr({ fr: 'Démo : aucune demande envoyée', en: 'Demo: no request sent', ar: 'عرض تجريبي: لم يُرسل أي طلب' }), { type: 'info', force: true });
+        return;
+      }
+      let merchant = '', email = '';
+      try { merchant = window.KiwiCloudDoc?.currentSlug?.() || ''; } catch (_) {}
+      try { email = String(window.KiwiMe?.email || localStorage.getItem('kiwiAccountKey') || '').trim(); } catch (_) {}
+      const fallback = () => toast(tr({ fr: 'Demande non envoyée', en: 'Request not sent', ar: 'لم يُرسل الطلب' }), {
+        type: 'warning', force: true,
+        desc: tr({ fr: `Écrivez-nous depuis le Centre d’aide en précisant « ${name} ».`, en: `Write to us from the Help centre and mention « ${name} ».`, ar: `راسلنا من مركز المساعدة واذكر « ${name} ».` }),
+      });
+      if (!merchant || !/^\S+@\S+\.\S+$/.test(email)) { fallback(); return; }
+      fetch('/api/support/tickets', {
+        method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          merchant, channel: 'email', contact: email,
+          summary: `Demande de changement de formule : ${name}. Demande faite depuis le tableau de bord, à confirmer avec le commerçant avant toute facturation.`,
+          client: { page: 'dashboard/upgrade', language: kiwiLang(), online: navigator.onLine },
+        }),
+      }).then((r) => r.json().then((j) => ({ ok: r.ok && j && j.ok, j })))
+        .then(({ ok, j }) => {
+          if (!ok) { fallback(); return; }
+          toast(tr({ fr: `Demande ${name} enregistrée · ${j.ticket.reference}`, en: `${name} request recorded · ${j.ticket.reference}`, ar: `تم تسجيل طلب ${name} · ${j.ticket.reference}` }), {
+            type: 'success', force: true,
+            desc: tr({ fr: `L’équipe Kiwi vous répond à ${email}. Rien ne change ni n’est facturé avant votre accord.`, en: `The Kiwi team will reply to ${email}. Nothing changes or is billed before you agree.`, ar: `سيرد فريق Kiwi على ${email}. لا شيء يتغير أو يُفوتر قبل موافقتك.` }),
+          });
+        }).catch(fallback);
     },
 
     'add-integration': () => drawer({

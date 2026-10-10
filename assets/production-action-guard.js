@@ -30,7 +30,25 @@
      * n'a plus rien à garder. Une clé gardée orpheline n'est pas inoffensive :
      * elle laisse croire que quelque chose est tenu. */
     'audit-export', 'cal-export', 'cf-hyg-export', 'hx-taxe-export',
-    'mi-export', 'resv-sms'
+    'mi-export', 'resv-sms',
+    /* Audit du 2026-10-10 : des toasts de réussite sans effet. Une page réelle
+     * ne montre plus ces boutons (Conformité, Dépenses, Terminaux et Équipe
+     * ont leur propre état vide honnête), mais un chemin de démo qui change
+     * ne doit pas suffire à les rendre de nouveau mensongers.
+     *  · Conformité : clôture Z, réimpression, équipement, document « simulés ».
+     *  · Dépenses : cartes Kiwi, paiement et approbation, sans Kiwi Pay.
+     *  · Équipe/paie de démo : code réinitialisé, diffusion, pointage IA,
+     *    départ pointé, pourboires distribués, sans rien écrire.
+     *  · Terminaux de démo : transaction de test « envoyée », commande de
+     *    matériel ; réservations : tampon entre deux tables.
+     *  · Ultra : virement et appel au gestionnaire de compte.
+     *  · Sans bouton aujourd'hui (palette, agent) : deck, appli, Ramadan. */
+    'cf-z-close', 'cf-z-history', 'cf-eq-add', 'cf-doc-upload', 'cf-doc-detail',
+    'dep-new-card', 'dep-pay', 'dep-approve',
+    'member-reset-pin', 'eq-send-broadcast', 'ai-pointage', 'clock-out',
+    'distribute-tips', 'term-test', 'catalog-order', 'resv-buffer',
+    'fs-ultra-transfer', 'fs-ultra-call',
+    'download-deck', 'download-app', 'ramadan-toggle'
   ]);
 
   function realMerchant() {

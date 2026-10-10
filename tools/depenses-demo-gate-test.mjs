@@ -96,14 +96,16 @@ function main() {
     assert('Real session does not leak Hamid Jelloul', !body.includes('Hamid Jelloul'));
     assert('Real session does not leak Rachid Benhima', !body.includes('Rachid Benhima'));
     assert('Real session does not leak Métro Cash', !body.includes('Métro Cash'));
-    assert('Real session displays starter title', body.includes('Vos dépenses, sous contrôle'));
+    assert('Real session displays starter title', body.includes('Dépenses · prévu avec Kiwi Pay'));
+    /* Le starter décrit des cartes qui n'existent pas encore : il doit le dire. */
+    assert('Real session says Kiwi Pay is not available', body.includes('pas encore disponible'));
   }
 
   // 2. Custom Venue on Real Session -> Starter view ONLY
   {
     const page = runDepensesScenario({ isReal: true, isCustom: true, venue: 'v_custom_1' });
     const body = page?.config?.body || '';
-    assert('Custom venue displays starter', body.includes('Vos dépenses, sous contrôle'));
+    assert('Custom venue displays starter', body.includes('Dépenses · prévu avec Kiwi Pay'));
     assert('Custom venue does not leak demo cards', !body.includes('Fatima Khalki'));
   }
 

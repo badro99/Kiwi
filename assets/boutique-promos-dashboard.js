@@ -25,6 +25,14 @@
 
   function CAT() { return window.KiwiBoutiqueCatalog; }
   function PRM() { return window.KiwiPromos; }
+  /* Only the boutique and maison tills read KiwiPromos at checkout. The page is
+   * also offered to épicerie, pharmacie, librairie, fleuriste and autre, where
+   * « Synchronisé avec la caisse » and « la caisse est à jour » were false. */
+  function tillApplies() {
+    var t = '';
+    try { t = String((window.KiwiVenue && window.KiwiVenue.getVenueType && window.KiwiVenue.getVenueType()) || (window.KiwiConfig && window.KiwiConfig.type) || '').toLowerCase(); } catch (_) {}
+    return t === 'boutique' || t === 'maison';
+  }
   function venueKey() { return window.KiwiBoutiqueVenueKey ? window.KiwiBoutiqueVenueKey() : 'maisonMansour'; }
   function ready() { return !!(CAT() && PRM()); }
 
@@ -210,7 +218,7 @@
 
   function emptyHtml() {
     return '<section class="bpd-intro"><div class="bpd-intro-copy"><h2>Aucune promotion pour l’instant</h2>' +
-      '<p>Choisissez la remise, les articles et la durée. La caisse applique le bon prix automatiquement, sans manipulation au comptoir.</p>' +
+      '<p>Choisissez la remise, les articles et la durée. ' + (tillApplies() ? 'La caisse applique le bon prix automatiquement, sans manipulation au comptoir.' : 'Votre caisse n’applique pas encore ces promotions toute seule : la remise se saisit au comptoir.') + '</p>' +
       '<button class="bpd-btn primary" data-action="bpd-new"><i data-lucide="plus"></i>Créer une promotion</button></div>' +
       '<ul class="bpd-intro-sync" aria-label="Ce que Kiwi synchronise"><li><i data-lucide="scan-barcode"></i><span><b>Prix caisse</b><small>Mis à jour instantanément</small></span></li>' +
       '<li><i data-lucide="receipt-text"></i><span><b>Tickets & reçus</b><small>Remise clairement affichée</small></span></li>' +
@@ -243,7 +251,7 @@
           '<div class="kx-kpi"><div class="l">À venir et en pause</div><div class="v">' + groups.soon.length + '</div><div class="d">Ne modifient aucun prix</div></div>' +
           '<div class="kx-kpi"><div class="l">Terminées</div><div class="v">' + groups.ended.length + '</div><div class="d">Gardées pour l’historique</div></div></div>' +
           '<div class="bpd-bar"><div class="kx-tabs" role="group" aria-label="État des promotions">' + tab('active', 'En cours') + tab('soon', 'À venir et en pause') + tab('ended', 'Terminées') + '</div>' +
-          '<div class="bpd-bar-r"><span class="bpd-sync-note"><i data-lucide="refresh-cw"></i>Synchronisé avec la caisse</span><button class="bpd-btn primary" data-action="bpd-new"><i data-lucide="plus"></i>Nouvelle promotion</button></div></div>' +
+          '<div class="bpd-bar-r">' + (tillApplies() ? '<span class="bpd-sync-note"><i data-lucide="refresh-cw"></i>Synchronisé avec la caisse</span>' : '<span class="bpd-sync-note">Remise à saisir au comptoir</span>') + '<button class="bpd-btn primary" data-action="bpd-new"><i data-lucide="plus"></i>Nouvelle promotion</button></div></div>' +
           listHtml + startersHtml('Partir d’un modèle')
         : emptyHtml()) + '</div>' });
     icons();
@@ -363,7 +371,7 @@
     var from=el.querySelector('#bpd-from');if(from)from.onchange=function(){d.from=from.value?startOfDay(new Date(from.value+'T12:00:00')):0;redraw();};
     var to=el.querySelector('#bpd-to');if(to)to.onchange=function(){d.to=to.value?endOfDay(new Date(to.value+'T12:00:00')):0;redraw();};
     el.querySelector('[data-bpd-cancel]').onclick=function(){promoModal.close();};
-    var save=el.querySelector('#bpd-save');if(save)save.onclick=function(){if(valid(d))return;if(!d.name.trim())d.name=autoName(ctx,d);if(composer.editing)d.id=composer.editing;PRM().save(d);promoModal.close();K.toast(composer.editing?d.name+' enregistrée':d.name+' lancée, la caisse est à jour',{type:'success'});renderPage();};
+    var save=el.querySelector('#bpd-save');if(save)save.onclick=function(){if(valid(d))return;if(!d.name.trim())d.name=autoName(ctx,d);if(composer.editing)d.id=composer.editing;PRM().save(d);promoModal.close();K.toast(composer.editing?d.name+' enregistrée':d.name+(tillApplies()?' lancée, la caisse est à jour':' enregistrée · la remise se saisit au comptoir'),{type:'success'});renderPage();};
   }
 
   function labelFor(ctx, pid, variant) {

@@ -25,7 +25,12 @@ assert.match(team, /data-action="kt-period-nav" data-arg="prev"/, 'every plannin
 assert.match(team, /data-action="kt-period-nav" data-arg="next"/, 'every planning period exposes next navigation');
 assert.match(team, /handlers\['kt-period-nav'\]/, 'period navigation changes the actual planning range');
 assert.match(team, /periodOffsets\[kind\] = 0/, 'switching view returns to the current week, fortnight or month');
-assert.match(team, /rememberPeriodLock\(root, kind, buildPeriod\(kind\)\)[\s\S]{0,260}restorePeriodLock\(root, kind, period\)/, 'moving between periods preserves each period lock independently');
+/* Le verrou d'une période est écrit au moment où on la valide (setPeriodLock,
+ * persisté et synchronisé dans le document équipe), puis relu à chaque
+ * navigation : plus de mémoire vive à « se rappeler » en partant. */
+assert.match(team, /handlers\['kt-validate-period'\][\s\S]{0,600}setPeriodLock\(root, [^)]*true\)/, 'validating a period persists its lock');
+assert.match(team, /handlers\['kt-period-nav'\][\s\S]{0,400}restorePeriodLock\(root, kind, period\)/, 'moving between periods preserves each period lock independently');
+assert.match(team, /locks: cleanLocks\(src\.locks\)/, 'period locks travel in the synced team document');
 assert.match(css, /\.kt-period-nav\{[^}]*display:flex/, 'period navigation is a compact, visible control');
 assert.match(team, /suggestedShifts=Math\.max\(1,Math\.min\(2,suggested\)\)/, 'fair scheduling never starts with more shifts than available people');
 assert.match(team, /coverageSummary\?\.\(\{planning,shifts,days:period\.days,members,periodsByDay:hoursConfigured\?periodsByDay:null\}\)/, 'coverage intelligence ignores closed hours and days');

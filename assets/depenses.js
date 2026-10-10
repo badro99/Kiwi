@@ -97,14 +97,14 @@
     uShare:   { fr: 'des sorties', en: 'of outflow', ar: 'من المصاريف' },
     cardsWord:{ fr: 'cartes', en: 'cards', ar: 'بطاقات' },
     // starter (custom venue)
-    stTitle:  { fr: 'Vos dépenses, sous contrôle', en: 'Your spending, under control', ar: 'مصاريفك تحت السيطرة' },
-    stMsg:    { fr: 'Donnez à votre équipe des cartes Kiwi avec un plafond par catégorie, approuvez avant que l\'argent ne bouge, et voyez chaque dirham qui sort, net de ce qui rentre.',
-                en: 'Give your team Kiwi cards with a per-category limit, approve before money moves, and see every dirham going out, net of what comes in.',
-                ar: 'امنح فريقك بطاقات Kiwi بحدّ لكل فئة، ووافق قبل تحرّك المال، وشاهد كل درهم يخرج، مقابل ما يدخل.' },
+    stTitle:  { fr: 'Dépenses · prévu avec Kiwi Pay', en: 'Spending · planned with Kiwi Pay', ar: 'المصاريف · مخطّط مع Kiwi Pay' },
+    stMsg:    { fr: 'Kiwi Pay n\'est pas encore disponible : aucune carte n\'est émise et aucune dépense ne passe par Kiwi aujourd\'hui. Voici ce que cette page fera quand il le sera.',
+                en: 'Kiwi Pay is not available yet: no cards are issued and no spending goes through Kiwi today. Here is what this page will do once it is.',
+                ar: 'Kiwi Pay غير متاح بعد: لا تُصدر أي بطاقة ولا يمرّ أي مصروف عبر Kiwi اليوم. هذا ما ستقوم به هذه الصفحة عند إطلاقه.' },
     stB1:     { fr: 'Cartes équipe avec plafond et catégorie', en: 'Team cards with a limit and category', ar: 'بطاقات للفريق بحدّ وفئة' },
     stB2:     { fr: 'Approbation avant chaque dépense', en: 'Approval before each expense', ar: 'موافقة قبل كل مصروف' },
     stB3:     { fr: 'Factures fournisseurs et export comptable', en: 'Supplier bills and accounting export', ar: 'فواتير المورّدين والتصدير المحاسبي' },
-    stFoot:   { fr: 'Disponible avec Kiwi Pay, la sortie d\'argent, aussi simple que l\'encaissement.', en: 'Available with Kiwi Pay, money out, as simple as money in.', ar: 'متاح مع Kiwi Pay، إخراج المال بسهولة تحصيله.' },
+    stFoot:   { fr: 'Pas encore disponible. Rien n\'est à configurer ici pour l\'instant.', en: 'Not available yet. Nothing to set up here for now.', ar: 'غير متاح بعد. لا شيء لإعداده هنا حالياً.' },
   };
 
   const CAT = {
@@ -536,8 +536,9 @@
       </div>`;
   }
 
+  /* Un point, pas une coche : ces lignes décrivent ce qui n'existe pas encore. */
   function starterHtml() {
-    const rows = [T.stB1, T.stB2, T.stB3].map((b) => `<div class="dep-starter-row">${I.check}<span>${pick(b)}</span></div>`).join('');
+    const rows = [T.stB1, T.stB2, T.stB3].map((b) => `<div class="dep-starter-row"><span aria-hidden="true">·</span><span>${pick(b)}</span></div>`).join('');
     return `<div class="dep-starter">
       <div class="dep-starter-ic">${I.spark}</div>
       <h3>${pick(T.stTitle)}</h3>

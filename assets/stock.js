@@ -249,10 +249,8 @@
       reasonExtra: 'Réception non saisie ou retour non enregistré · vérifier les bons de livraison.',
       mQoTitle: 'Commande rapide',
       mQoArticle: 'Article', mQoQty: 'Quantité à commander', mQoSup: 'Fournisseur',
-      mQoMode: 'Mode de livraison', mQoModeStd: 'Standard · 24-48h', mQoModeExp: 'Express · 6h · +120 MAD',
       mQoNote: 'Note pour le fournisseur', mQoTotal: 'TOTAL ESTIMÉ',
       mQoSend: 'Envoyer la commande',
-      mQoToast: (sup, when) => `Commande envoyée à ${sup} · WhatsApp confirmé · livraison prévue ${when}`,
       mSupHistory: 'Historique des livraisons',
       mSupPrices: 'Évolution des prix · 6 derniers mois',
       titleEdit: 'Modifier', titleDelete: 'Supprimer',
@@ -561,10 +559,8 @@
       reasonExtra: 'Unrecorded delivery or return · check the delivery notes.',
       mQoTitle: 'Quick order',
       mQoArticle: 'Item', mQoQty: 'Quantity to order', mQoSup: 'Supplier',
-      mQoMode: 'Delivery mode', mQoModeStd: 'Standard · 24-48h', mQoModeExp: 'Express · 6h · +120 MAD',
       mQoNote: 'Note for the supplier', mQoTotal: 'ESTIMATED TOTAL',
       mQoSend: 'Send order',
-      mQoToast: (sup, when) => `Order sent to ${sup} · WhatsApp confirmed · delivery scheduled ${when}`,
       mSupHistory: 'Delivery history',
       mSupPrices: 'Price trend · last 6 months',
       mSupCall: 'Call', mSupWa: 'WhatsApp', mSupOrd: 'New order',
@@ -859,10 +855,8 @@
       reasonExtra: 'استلام غير مسجل أو إرجاع غير مسجل · تحقق من سندات التسليم.',
       mQoTitle: 'طلبية سريعة',
       mQoArticle: 'المنتج', mQoQty: 'الكمية للطلب', mQoSup: 'المورد',
-      mQoMode: 'وضع التسليم', mQoModeStd: 'عادي · 24-48س', mQoModeExp: 'سريع · 6س · +120 درهم',
       mQoNote: 'ملاحظة للمورد', mQoTotal: 'المجموع المقدر',
       mQoSend: 'إرسال الطلبية',
-      mQoToast: (sup, when) => `تم إرسال الطلبية إلى ${sup} · واتساب مؤكد · التسليم المتوقع ${when}`,
       mSupHistory: 'سجل التسليمات', mSupPrices: 'تطور الأسعار · 6 أشهر',
       mSupCall: 'اتصال', mSupWa: 'واتساب', mSupOrd: 'طلبية جديدة',
       mItStockActual: 'المخزون الحالي', mItParR: 'الحد', mItReorderR: 'حد إعادة التموين',
@@ -2014,7 +2008,7 @@
     const tierLow = computeTier1LowAlerts(rows);
     const alerts = [
       ...out,
-      ...low.sort((a, b) => (daysOfStock(a) ?? Number.MAX_SAFE_INTEGER) - (daysOfStock(b) ?? Number.MAX_SAFE_INTEGER)),
+      ...low.filter(it => !isAlertIgnored(it.name)).sort((a, b) => (daysOfStock(a) ?? Number.MAX_SAFE_INTEGER) - (daysOfStock(b) ?? Number.MAX_SAFE_INTEGER)),
       ...tierLow,
     ].slice(0, 12);
     return { out, low, tierLow, alerts, totalAlertCount: out.length + low.length + tierLow.length };
@@ -2168,6 +2162,114 @@
     en: { status: (q) => `Main supplier running low · ${q} left`, main: 'Main lot', next: 'Next lot', buffer: 'Buffer threshold', basis: 'based on 3 days of use', trans: 'Switching to the secondary price soon.', order: 'Order from main supplier' },
     ar: { status: (q) => `المورّد الرئيسي منخفض · ${q} متبقٍ`, main: 'الدفعة الرئيسية', next: 'الدفعة التالية', buffer: 'حد الأمان', basis: 'محسوب على 3 أيام استهلاك', trans: 'الانتقال قريبًا إلى السعر الثانوي.', order: 'اطلب من المورّد الرئيسي' }
   };
+  /* « Ignorer 24h » answered « Alerte ignorée pour 24h » and the alert was
+   * back on the next render. Snoozes are now kept per store for 24 hours, on
+   * this device: a low-stock warning is a reminder, not shared data. An item
+   * that is OUT is never silenced. */
+  const IGNORE_KEY = () => `kiwiStockIgnore:${currentVenueId()}`;
+  function ignoredAlerts() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(IGNORE_KEY()) || '{}');
+      const now = Date.now(), live = {};
+      Object.keys(raw).forEach((k) => { if (+raw[k] > now) live[k] = +raw[k]; });
+      return live;
+    } catch (_) { return {}; }
+  }
+  function isAlertIgnored(name) { return !!ignoredAlerts()[String(name || '')]; }
+  function ignoreAlert(name) {
+    const live = ignoredAlerts();
+    live[String(name || '')] = Date.now() + 24 * 3600000;
+    try { localStorage.setItem(IGNORE_KEY(), JSON.stringify(live)); } catch (_) {}
+  }
+
+  /* « Marquer 86 » said « marqué 86 sur 6 terminaux » (six, always) and put the
+   * name in a Set nothing read. A stock item is an ingredient; what the till
+   * hides is a dish. So the merchant picks the dishes (those whose recipe uses
+   * the ingredient are pre-ticked) and each one is hidden through the same
+   * server route the till's own Menu switch uses: /api/menu/availability. */
+  const M86_COPY = {
+    fr: {
+      title: (n) => `Plus de ${n} : masquer des plats`, intro: 'Les plats cochés disparaissent de la caisse, d’OrderPro et de l’app équipe jusqu’à ce que vous les remettiez.',
+      fromRecipe: 'utilise cet ingrédient', none: 'Aucun plat publié sur votre carte.', noneDesc: 'Publiez votre carte dans Menu & modificateurs pour pouvoir masquer un plat.',
+      cancel: 'Annuler', apply: 'Masquer les plats cochés', pick: 'Cochez au moins un plat.',
+      done: (n) => `${n} plat${n > 1 ? 's' : ''} masqué${n > 1 ? 's' : ''} en caisse`, doneDesc: 'Remettez-les depuis Menu & modificateurs ou le bouton Menu de la caisse.',
+      partial: (ok, ko) => `${ok} masqué${ok > 1 ? 's' : ''}, ${ko} non enregistré${ko > 1 ? 's' : ''}`, fail: 'Rien n’a été masqué', failDesc: 'Le serveur n’a pas répondu. Vérifiez la connexion et réessayez.',
+      demo: 'Démo : rien n’est envoyé à une caisse.',
+    },
+    en: {
+      title: (n) => `Out of ${n}: hide dishes`, intro: 'Ticked dishes disappear from the till, OrderPro and the team app until you bring them back.',
+      fromRecipe: 'uses this ingredient', none: 'No dish published on your menu.', noneDesc: 'Publish your menu in Menu & modifiers to be able to hide a dish.',
+      cancel: 'Cancel', apply: 'Hide ticked dishes', pick: 'Tick at least one dish.',
+      done: (n) => `${n} dish${n > 1 ? 'es' : ''} hidden at the till`, doneDesc: 'Bring them back from Menu & modifiers or the till’s Menu button.',
+      partial: (ok, ko) => `${ok} hidden, ${ko} not saved`, fail: 'Nothing was hidden', failDesc: 'The server did not answer. Check the connection and try again.',
+      demo: 'Demo: nothing is sent to a till.',
+    },
+    ar: {
+      title: (n) => `نفد ${n}: إخفاء أطباق`, intro: 'تختفي الأطباق المحددة من الصندوق وOrderPro وتطبيق الفريق حتى تعيدها.',
+      fromRecipe: 'يستعمل هذا المكوّن', none: 'لا توجد أطباق منشورة في قائمتك.', noneDesc: 'انشر قائمتك في القائمة والإضافات لتتمكن من إخفاء طبق.',
+      cancel: 'إلغاء', apply: 'إخفاء الأطباق المحددة', pick: 'حدد طبقًا واحدًا على الأقل.',
+      done: (n) => `تم إخفاء ${n} طبق في الصندوق`, doneDesc: 'أعدها من القائمة والإضافات أو من زر القائمة في الصندوق.',
+      partial: (ok, ko) => `تم إخفاء ${ok}، ولم يُحفظ ${ko}`, fail: 'لم يُخفَ أي شيء', failDesc: 'لم يرد الخادم. تحقق من الاتصال وأعد المحاولة.',
+      demo: 'عرض تجريبي: لا يُرسل أي شيء إلى صندوق.',
+    },
+  };
+  const IGNORE_TOAST = {
+    fr: (n) => `Alerte ${n} masquée 24 h sur cet appareil`,
+    en: (n) => `${n} alert hidden for 24 h on this device`,
+    ar: (n) => `تم إخفاء تنبيه ${n} لمدة 24 ساعة على هذا الجهاز`,
+  };
+  function openMark86(ingredientName) {
+    const L = M86_COPY[lang()] || M86_COPY.fr;
+    const vid = currentVenueId();
+    const inv = getInv().find((x) => x.name === ingredientName);
+    const dishes = (window.KiwiMenuStore?.items?.(vid) || []).filter((d) => d && d.id && !d.archived && !d.formulaOnly && d.avail !== false);
+    if (!dishes.length) { window.Kiwi.toast(L.none, { type: 'info', desc: L.noneDesc }); return; }
+    const norm = (v) => String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    const target = norm(ingredientName);
+    const uses = new Set();
+    (window.KiwiRestaurantRecipes?.all?.(vid) || []).forEach((r) => {
+      if ((r.ingredients || []).some((ing) => (inv && ing.stockId && String(ing.stockId) === String(inv.id)) || (target && norm(ing.name) === target))) uses.add(String(r.itemId));
+    });
+    const sorted = dishes.slice().sort((a, b) => (uses.has(String(b.id)) - uses.has(String(a.id))) || String(a.name).localeCompare(String(b.name)));
+    const m = window.Kiwi.modal({
+      title: L.title(ingredientName), width: 520,
+      body: `<p style="margin:0 0 12px; font-size:13px; color:var(--n-500); line-height:1.5;">${esc(L.intro)}</p>
+        <div style="display:grid; gap:6px; max-height:52vh; overflow:auto;">${sorted.map((d) => `
+          <label style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid var(--n-200); border-radius:10px; cursor:pointer;">
+            <input type="checkbox" data-m86-dish="${esc(d.id)}" ${uses.has(String(d.id)) ? 'checked' : ''} />
+            <span style="flex:1; font-size:13.5px;">${esc(d.name || d.id)}</span>
+            ${uses.has(String(d.id)) ? `<span style="font-size:11px; color:var(--n-500);">${esc(L.fromRecipe)}</span>` : ''}
+          </label>`).join('')}</div>`,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(L.cancel)}</button><button class="st-btn primary" data-m86-apply>${esc(L.apply)}</button>`,
+    });
+    requestAnimationFrame(() => {
+      const scope = m?.el || topBackdrop();
+      wireDismiss(scope);
+      scope?.querySelector('[data-m86-apply]')?.addEventListener('click', async (e) => {
+        const ids = [...scope.querySelectorAll('[data-m86-dish]:checked')].map((x) => x.dataset.m86Dish);
+        if (!ids.length) { window.Kiwi.toast(L.pick, { type: 'info' }); return; }
+        let slug = '';
+        try { slug = window.KiwiCloudDoc?.currentSlug?.() || ''; } catch (_) {}
+        const real = !!(window.KiwiEnv?.isReal?.() || window.KiwiVenue?.isCustom?.());
+        if (!slug || !real) { stMarked86.add(ingredientName); closeTopModal(); window.Kiwi.toast(L.done(ids.length), { type: 'info', desc: L.demo }); return; }
+        e.currentTarget.disabled = true;
+        const results = await Promise.all(ids.map((itemId) => fetch('/api/menu/availability', {
+          method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ merchant: slug, itemId, available: false }),
+        }).then((r) => r.json().then((j) => !!(r.ok && j && j.ok)), () => false).catch(() => false)));
+        const ok = results.filter(Boolean).length, ko = results.length - ok;
+        closeTopModal();
+        if (ok) {
+          stMarked86.add(ingredientName);
+          try { document.dispatchEvent(new CustomEvent('kiwi-menu-availability', { detail: { itemIds: ids, available: false } })); } catch (_) {}
+        }
+        if (!ok) window.Kiwi.toast(L.fail, { type: 'warning', desc: L.failDesc });
+        else if (ko) window.Kiwi.toast(L.partial(ok, ko), { type: 'warning', desc: L.failDesc });
+        else window.Kiwi.toast(L.done(ok), { type: 'success', desc: L.doneDesc });
+      });
+    });
+  }
+
   function renderAlertCard(it) {
     if (it.alertKind === 'tierLow') {
       const priceDiff = it.p2Cost != null ? (it.p2Cost - it.p1Cost) : null;
@@ -3916,9 +4018,11 @@
     // all Café Atlas data; show an honest empty state instead.
     if (stShowReal()) {
       const c = ({
-        fr: { h: 'Vos prévisions apparaîtront ici', p: 'Dès que Kiwi AI dispose de votre historique de ventes, il anticipe vos ruptures de stock, la saisonnalité et les pics d’événements.' },
-        en: { h: 'Your forecasts will show here', p: 'Once Kiwi AI has your sales history, it anticipates stockouts, seasonality and event peaks.' },
-        ar: { h: 'ستظهر توقعاتك هنا', p: 'بمجرد توفّر سجل مبيعاتك، يتوقّع Kiwi AI نفاد المخزون والموسمية وذروات المناسبات.' },
+        /* No forecast is built for a real store yet. The old copy promised that
+           « Kiwi AI anticipe vos ruptures » as soon as there was history. */
+        fr: { h: 'Pas encore de prévisions', p: 'Kiwi ne calcule pas encore de prévisions de stock. Les alertes de stock bas, elles, fonctionnent déjà : elles sont sur la vue d’ensemble, calculées sur vos niveaux de réappro.' },
+        en: { h: 'No forecasts yet', p: 'Kiwi does not compute stock forecasts yet. Low-stock alerts already work: they are on the overview, based on your reorder levels.' },
+        ar: { h: 'لا توجد توقعات بعد', p: 'لا يحسب Kiwi توقعات المخزون بعد. تنبيهات انخفاض المخزون تعمل بالفعل: تجدها في النظرة العامة، محسوبة على مستويات إعادة الطلب.' },
       })[(window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr'] || { h: 'Your forecasts will show here', p: '' };
       return `<div class="st-section"><div style="padding:44px 24px;text-align:center;max-width:520px;margin:0 auto;">
         <div style="font-size:16px;font-weight:640;letter-spacing:-.01em;margin-bottom:8px;">${c.h}</div>
@@ -4011,29 +4115,29 @@
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Quick Order
    * ═══════════════════════════════════════════════════════════════════════ */
+  /* « Commande envoyée à X · WhatsApp confirmé · livraison prévue demain 08h »
+   * was a toast and nothing else: no message left, nothing was recorded, and
+   * the modal offered an « Express · 6h · +120 MAD » fee no supplier had ever
+   * quoted. Kiwi does not deliver orders to suppliers. It prepares the message
+   * and opens WhatsApp on the supplier's own number; the merchant sends it.
+   * With no number on file, the order is copied for any other channel. */
   function openQuickOrder(itemId, opts = {}) {
     const it = getInv().find(x => x.id === itemId);
     if (!it) return;
+    const L = QO_COPY[lang()] || QO_COPY.fr;
     const suggested = Math.max(1, Math.round((it.parLevel * 1.2 - currentStockFor(it)) * 10) / 10);
-    const sup = it.supplier.split(' · ')[0];
-    const supOptions = getSup().map(s => `<option value="${esc(s.name)}" ${s.name === sup ? 'selected' : ''}>${esc(s.name)} · ${esc(s.location)}</option>`).join('');
-    const exp = opts.urgent === true;
-    const totalEst = () => {
-      const q = +document.querySelector('[data-stock-qo-qty]')?.value || suggested;
-      const exp = document.querySelector('[data-stock-qo-mode][value="express"]')?.checked;
-      const base = q * it.costPerUnit;
-      return base + (exp ? 120 : 0);
-    };
+    const sups = getSup();
+    const sup = sups.find(s => it.supplierId && s.id === it.supplierId) || sups.find(s => s.name === String(it.supplier || '').split(' · ')[0]) || sups[0] || null;
+    const supOptions = sups.map(s => `<option value="${esc(s.id || s.name)}" ${sup && s === sup ? 'selected' : ''}>${esc(s.name)}${s.location ? ' · ' + esc(s.location) : ''}</option>`).join('');
+    const phoneOk = (v) => /^\+?[\d\s.-]{8,}$/.test(String(v || '').trim());
+    const waNum = (v) => { let d = String(v || '').replace(/\D/g, ''); if (d.startsWith('00')) d = d.slice(2); if (d.startsWith('0')) d = '212' + d.slice(1); return d; };
+    const costLine = (q) => it.costPerUnit > 0 ? fmtMad(q * it.costPerUnit) : L.noCost;
     const m = window.Kiwi.modal({
       title: t('mQoTitle'),
-      tag: exp ? 'URGENT' : '',
+      tag: opts.urgent === true ? 'URGENT' : '',
       desc: `${esc(it.name)} · ${esc(catLabel(it.category))}`,
       width: 560,
       body: `
-        <div class="st-mb-field" style="margin-bottom:14px;">
-          <label class="st-mb-label">${esc(t('mQoArticle'))}</label>
-          <input class="st-mb-input" type="text" value="${esc(it.name)}" disabled />
-        </div>
         <div class="st-mb-row">
           <div class="st-mb-field">
             <label class="st-mb-label">${esc(t('mQoQty'))}</label>
@@ -4046,65 +4150,141 @@
           </div>
           <div class="st-mb-field">
             <label class="st-mb-label">${esc(t('mQoSup'))}</label>
-            <select class="st-mb-input" data-stock-qo-sup>${supOptions}</select>
-          </div>
-        </div>
-        <div class="st-mb-field" style="margin-bottom:14px;">
-          <label class="st-mb-label">${esc(t('mQoMode'))}</label>
-          <div class="st-qo-radio-group">
-            <label class="st-qo-radio ${exp ? '' : 'on'}">
-              <input type="radio" name="qo-mode" value="standard" ${exp ? '' : 'checked'} data-stock-qo-mode />
-              <span class="l">${esc(t('mQoModeStd'))}</span>
-              <span class="s">+0 MAD</span>
-            </label>
-            <label class="st-qo-radio ${exp ? 'on' : ''}">
-              <input type="radio" name="qo-mode" value="express" ${exp ? 'checked' : ''} data-stock-qo-mode />
-              <span class="l">${esc(t('mQoModeExp'))}</span>
-              <span class="s">+120 MAD</span>
-            </label>
+            ${sups.length ? `<select class="st-mb-input" data-stock-qo-sup>${supOptions}</select>` : `<input class="st-mb-input" type="text" value="${esc(L.noSupplier)}" disabled />`}
           </div>
         </div>
         <div class="st-mb-field" style="margin-bottom:14px;">
           <label class="st-mb-label">${esc(t('mQoNote'))}</label>
-          <textarea class="st-mb-textarea" placeholder="Ex. livraison avant 11h, entrée arrière" data-stock-qo-note></textarea>
+          <textarea class="st-mb-textarea" placeholder="${esc(L.notePh)}" data-stock-qo-note></textarea>
         </div>
         <div class="st-qo-summary">
-          <span class="l">${esc(t('mQoTotal'))}</span>
-          <span class="v" data-stock-qo-total>${esc(fmtMad(suggested * it.costPerUnit + (exp ? 120 : 0)))}</span>
+          <span class="l">${esc(L.costLabel)}</span>
+          <span class="v" data-stock-qo-total>${esc(costLine(suggested))}</span>
         </div>
+        <p class="st-qo-how" data-stock-qo-how style="margin:12px 0 0; font-size:12px; color:var(--n-500); line-height:1.5;"></p>
       `,
-      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button class="st-btn primary" data-stock-qo-send>${esc(t('mQoSend'))}</button>`,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button class="st-btn primary" data-stock-qo-send></button>`,
     });
-    // Wire up the modal
     requestAnimationFrame(() => {
       wireDismiss(m?.el || topBackdrop());
-      const dec = document.querySelector('[data-stock-qo-dec]');
-      const inc = document.querySelector('[data-stock-qo-inc]');
       const qty = document.querySelector('[data-stock-qo-qty]');
       const totalEl = document.querySelector('[data-stock-qo-total]');
       const supSel = document.querySelector('[data-stock-qo-sup]');
-      const modes = document.querySelectorAll('[data-stock-qo-mode]');
-      const recompute = () => {
-        const q = parseFloat(qty.value) || 0;
-        const expChecked = document.querySelector('[data-stock-qo-mode][value="express"]')?.checked;
-        totalEl.textContent = fmtMad(q * it.costPerUnit + (expChecked ? 120 : 0));
+      const how = document.querySelector('[data-stock-qo-how]');
+      const sendBtn = document.querySelector('[data-stock-qo-send]');
+      const chosen = () => sups.find(s => (s.id || s.name) === supSel?.value) || sup;
+      const sync = () => {
+        const s = chosen();
+        const wa = !!(s && phoneOk(s.contact));
+        if (sendBtn) sendBtn.textContent = wa ? L.sendWa : L.copy;
+        if (how) how.textContent = wa ? L.howWa(s.name) : s ? L.howNoPhone(s.name) : L.howNoSupplier;
       };
-      dec?.addEventListener('click', () => { qty.value = Math.max(0.5, (parseFloat(qty.value) || 1) - 0.5); recompute(); });
-      inc?.addEventListener('click', () => { qty.value = (parseFloat(qty.value) || 1) + 0.5; recompute(); });
+      const recompute = () => { if (totalEl) totalEl.textContent = costLine(parseFloat(qty.value) || 0); };
+      document.querySelector('[data-stock-qo-dec]')?.addEventListener('click', () => { qty.value = Math.max(0.5, (parseFloat(qty.value) || 1) - 0.5); recompute(); });
+      document.querySelector('[data-stock-qo-inc]')?.addEventListener('click', () => { qty.value = (parseFloat(qty.value) || 1) + 0.5; recompute(); });
       qty?.addEventListener('input', recompute);
-      modes.forEach(r => r.addEventListener('change', () => {
-        document.querySelectorAll('.st-qo-radio').forEach(el => el.classList.remove('on'));
-        r.closest('.st-qo-radio')?.classList.add('on');
-        recompute();
-      }));
-      document.querySelector('[data-stock-qo-send]')?.addEventListener('click', () => {
-        const expChecked = document.querySelector('[data-stock-qo-mode][value="express"]')?.checked;
-        const supName = supSel?.value || sup;
-        const when = expChecked ? `aujourd'hui 18h` : t('ramTomorrow') + ' 08h';
+      supSel?.addEventListener('change', sync);
+      sync();
+      sendBtn?.addEventListener('click', () => {
+        const s = chosen();
+        const q = Math.max(0, parseFloat(qty.value) || 0);
+        if (!q) return;
+        const note = (document.querySelector('[data-stock-qo-note]')?.value || '').trim();
+        /* « 16,8 kg » pour un fournisseur francophone, pas « 16.8 ». Chiffres
+         * latins dans les trois langues, comme partout ailleurs dans Kiwi. */
+        const qTxt = Number(q).toLocaleString(lang() === 'en' ? 'en-US' : 'fr-FR', { maximumFractionDigits: 2 });
+        const text = L.message(s ? s.name : '', qTxt, it.unit, it.name, note);
+        const po = recordQuickOrder(it, s, q, note);
         closeTopModal();
-        window.Kiwi.toast(t('mQoToast', supName, when), { type: 'success', duration: 4200 });
+        if (po) { try { rerenderTabBody(); } catch (_) {} }
+        if (s && phoneOk(s.contact)) {
+          window.open(`https://wa.me/${waNum(s.contact)}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+          window.Kiwi.toast(L.toastWa(s.name), { type: 'info', desc: po ? `${L.toastWaDesc} ${L.poSaved(po.number)}` : L.toastWaDesc, duration: 5200 });
+        } else {
+          Promise.resolve(navigator.clipboard?.writeText?.(text)).then(
+            () => window.Kiwi.toast(L.toastCopied, { type: 'info', desc: s ? L.howNoPhone(s.name) : L.howNoSupplier, duration: 4200 }),
+            () => window.Kiwi.toast(L.toastCopyFail, { type: 'warning', desc: text, duration: 6000 }),
+          );
+        }
       });
     });
+  }
+  const QO_COPY = {
+    fr: {
+      noSupplier: 'Aucun fournisseur enregistré', notePh: 'Ex. livraison avant 11h, entrée arrière',
+      costLabel: 'COÛT ESTIMÉ (prix d’achat × quantité)', noCost: 'prix d’achat non renseigné',
+      sendWa: 'Ouvrir WhatsApp', copy: 'Copier la commande',
+      howWa: (n) => `Kiwi prépare le message et ouvre WhatsApp sur le numéro de ${n}. C’est vous qui l’envoyez.`,
+      howNoPhone: (n) => `${n} n’a pas de numéro enregistré : la commande est copiée, collez-la où vous voulez. Ajoutez son numéro pour passer par WhatsApp.`,
+      howNoSupplier: 'Aucun fournisseur : la commande est copiée. Ajoutez vos fournisseurs dans l’onglet Fournisseurs.',
+      message: (sup, q, unit, name, note) => `Bonjour${sup ? ' ' + sup : ''}, je voudrais commander ${q} ${unit} de ${name}.${note ? ' ' + note : ''} Merci.`,
+      toastWa: (n) => `WhatsApp ouvert pour ${n}`, toastWaDesc: 'Le message est prêt. Il part quand vous l’envoyez dans WhatsApp.',
+      toastCopied: 'Commande copiée', toastCopyFail: 'Copie impossible, voici la commande',
+      poSaved: (n) => `Bon ${n} enregistré en brouillon dans Commandes.`,
+    },
+    en: {
+      noSupplier: 'No supplier on file', notePh: 'E.g. deliver before 11am, back entrance',
+      costLabel: 'ESTIMATED COST (purchase price × quantity)', noCost: 'purchase price not set',
+      sendWa: 'Open WhatsApp', copy: 'Copy the order',
+      howWa: (n) => `Kiwi drafts the message and opens WhatsApp on ${n}’s number. You send it.`,
+      howNoPhone: (n) => `${n} has no number on file: the order is copied, paste it anywhere. Add their number to use WhatsApp.`,
+      howNoSupplier: 'No supplier: the order is copied. Add your suppliers in the Suppliers tab.',
+      message: (sup, q, unit, name, note) => `Hello${sup ? ' ' + sup : ''}, I would like to order ${q} ${unit} of ${name}.${note ? ' ' + note : ''} Thank you.`,
+      toastWa: (n) => `WhatsApp opened for ${n}`, toastWaDesc: 'The message is ready. It goes when you send it in WhatsApp.',
+      toastCopied: 'Order copied', toastCopyFail: 'Could not copy, here is the order',
+      poSaved: (n) => `Order ${n} saved as a draft in Orders.`,
+    },
+    ar: {
+      noSupplier: 'لا يوجد مورد مسجل', notePh: 'مثال: التسليم قبل 11 صباحًا، الباب الخلفي',
+      costLabel: 'التكلفة التقديرية (سعر الشراء × الكمية)', noCost: 'سعر الشراء غير محدد',
+      sendWa: 'فتح واتساب', copy: 'نسخ الطلبية',
+      howWa: (n) => `يحضّر Kiwi الرسالة ويفتح واتساب على رقم ${n}. أنت من يرسلها.`,
+      howNoPhone: (n) => `لا يوجد رقم لـ ${n}: تم نسخ الطلبية، الصقها حيث تشاء. أضف رقمه لاستعمال واتساب.`,
+      howNoSupplier: 'لا يوجد مورد: تم نسخ الطلبية. أضف مورديك في تبويب الموردين.',
+      message: (sup, q, unit, name, note) => `مرحبًا${sup ? ' ' + sup : ''}، أود طلب ${q} ${unit} من ${name}.${note ? ' ' + note : ''} شكرًا.`,
+      toastWa: (n) => `تم فتح واتساب لـ ${n}`, toastWaDesc: 'الرسالة جاهزة. تُرسل عندما ترسلها في واتساب.',
+      toastCopied: 'تم نسخ الطلبية', toastCopyFail: 'تعذر النسخ، هذه هي الطلبية',
+      poSaved: (n) => `حُفظ الطلب ${n} كمسودة في الطلبيات.`,
+    },
+  };
+
+  const PICK_COPY = {
+    fr: { title: 'Nouvelle commande', intro: 'Choisissez l’article à commander. Les plus bas en stock sont en premier.', empty: 'Aucun article en stock pour l’instant.', stock: 'en stock' },
+    en: { title: 'New order', intro: 'Pick the item to order. Lowest stock first.', empty: 'No stock items yet.', stock: 'in stock' },
+    ar: { title: 'طلبية جديدة', intro: 'اختر المادة المراد طلبها. الأقل مخزونًا أولًا.', empty: 'لا توجد مواد في المخزون بعد.', stock: 'في المخزون' },
+  };
+  function openOrderPicker() {
+    const L = PICK_COPY[lang()] || PICK_COPY.fr;
+    const items = getInv().slice().sort((a, b) => {
+      const ra = a.parLevel > 0 ? currentStockFor(a) / a.parLevel : 9, rb = b.parLevel > 0 ? currentStockFor(b) / b.parLevel : 9;
+      return ra - rb || String(a.name).localeCompare(String(b.name));
+    });
+    if (!items.length) { window.Kiwi.toast(L.empty, { type: 'info' }); return; }
+    const m = window.Kiwi.modal({
+      title: L.title, width: 480,
+      body: `<p style="margin:0 0 12px; font-size:13px; color:var(--n-500);">${esc(L.intro)}</p>
+        <div style="display:grid; gap:6px; max-height:56vh; overflow:auto;">${items.slice(0, 200).map((it) => `
+          <button type="button" class="st-btn" data-pick-item="${esc(it.id)}" style="display:flex; justify-content:space-between; width:100%; text-align:start;">
+            <span>${esc(it.name)}</span><span style="color:var(--n-500); font-size:12px;">${esc(fmtUnit(currentStockFor(it), it.unit))} ${esc(L.stock)}</span>
+          </button>`).join('')}</div>`,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>`,
+    });
+    requestAnimationFrame(() => {
+      const scope = m?.el || topBackdrop();
+      wireDismiss(scope);
+      scope?.querySelectorAll('[data-pick-item]').forEach((b) => b.addEventListener('click', () => {
+        const id = b.dataset.pickItem; closeTopModal(); openQuickOrder(id);
+      }));
+    });
+  }
+  /* Where the store keeps purchase orders (retail, Ultra), the quick order is
+   * recorded as a draft BC: it shows in « Commandes » and is received against
+   * later. It stays a draft: Kiwi cannot know the WhatsApp message left. */
+  function recordQuickOrder(it, supplier, qty, note) {
+    const P = window.KiwiProcurement;
+    if (!P?.createOrder || !it.retail || !supplier?.id || !(P.isUltra?.())) return null;
+    const row = P.createOrder({ supplierId: supplier.id, note, lines: [{ itemId: it.id, name: it.name, qty, unit: it.unit, unitCost: it.costPerUnit }] });
+    return row && !row.error ? row : null;
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
@@ -6439,7 +6619,9 @@
     });
     const scope = m?.el || topBackdrop();
     scope?.querySelector('[data-stock-mark-86]')?.addEventListener('click', (e) => {
-      window.Kiwi.toast(`${e.currentTarget.dataset.itemName} marqué 86 sur 6 terminaux`, { type: 'info' });
+      const name = e.currentTarget.dataset.itemName;
+      closeTopModal();
+      openMark86(name);
     });
     scope?.querySelector('[data-stock-reorder]')?.addEventListener('click', (e) => {
       closeTopModal();
@@ -7312,8 +7494,12 @@
     H['stock-item-more'] = (el) => openItemDetail(el.dataset.itemId);
     H['stock-reorder'] = (el) => openQuickOrder(el.dataset.itemId);
     H['stock-urgent-order'] = (el) => openQuickOrder(el.dataset.itemId, { urgent: true });
-    H['stock-mark-86'] = (el) => { stMarked86.add(el.dataset.itemName); window.Kiwi.toast(`${el.dataset.itemName} marqué 86 sur 6 terminaux`, { type: 'info' }); };
-    H['stock-ignore-24h'] = (el) => window.Kiwi.toast(`Alerte ${el.dataset.itemName} ignorée pour 24h`, { type: 'info' });
+    H['stock-mark-86'] = (el) => openMark86(el.dataset.itemName);
+    H['stock-ignore-24h'] = (el) => {
+      ignoreAlert(el.dataset.itemName);
+      window.Kiwi.toast(IGNORE_TOAST[lang()]?.(el.dataset.itemName) || IGNORE_TOAST.fr(el.dataset.itemName), { type: 'info' });
+      rerenderTabBody();
+    };
     // Category pill add
     H['stock-add-cat'] = () => openAddCategory();
     H['stock-manage-cat'] = (el) => openManageCategory(el.dataset.cat);
@@ -7362,7 +7548,9 @@
     H['stock-delete-supplier'] = (el) => confirmDeleteSupplier(el.dataset.supplierId);
 
     // Orders
-    H['stock-new-order'] = () => window.Kiwi.toast(t('ordNewToast'), { type: 'info' });
+    /* « + Nouvelle commande » answered an info toast. It now asks which item,
+       then opens the same quick order as the alert cards. */
+    H['stock-new-order'] = () => openOrderPicker();
     H['stock-ord-detail'] = (el) => window.Kiwi.toast(t('ordDetailToast', el.dataset.orderId), { type: 'info', desc: t('ordDetailDesc') });
     H['stock-ord-edit'] = (el) => window.Kiwi.toast(t('ordEditToast', el.dataset.orderId), { type: 'info' });
     H['stock-ord-cancel'] = (el) => window.Kiwi.toast(t('ordCancelToast', el.dataset.orderId), { type: 'warn' });

@@ -3992,11 +3992,11 @@
   const ACTION_NAME_RX = /^(stock-adjust|order-status|reprint|customer-message-draft|create-po)$/;
   const TOOL_RESULT_MAX = 2000;
   const ACTION_COPY = {
-    fr: { confirm: 'Confirmer', cancel: 'Annuler', done: 'Fait.', refused: 'Action refusée', expired: 'Proposition expirée · redemandez.', cancelled: 'Annulé, rien n’a été modifié.', autoOn: 'Exécution directe : activée · l’assistant modifie stock, commandes et réimpressions sans confirmation.', autoOff: 'Exécution directe : désactivée · chaque action attend votre confirmation.', autoToggleOn: 'Désactiver l’exécution directe', autoToggleOff: 'Activer l’exécution directe' },
-    en: { confirm: 'Confirm', cancel: 'Cancel', done: 'Done.', refused: 'Action refused', expired: 'Proposal expired · ask again.', cancelled: 'Cancelled, nothing changed.', autoOn: 'Direct execution: on · the assistant changes stock, orders and reprints without confirmation.', autoOff: 'Direct execution: off · every action waits for your confirmation.', autoToggleOn: 'Turn off direct execution', autoToggleOff: 'Turn on direct execution' },
-    ar: { confirm: 'تأكيد', cancel: 'إلغاء', done: 'تم.', refused: 'رُفض الإجراء', expired: 'انتهت صلاحية الاقتراح · أعد الطلب.', cancelled: 'أُلغي، لم يتغيّر شيء.', autoOn: 'التنفيذ المباشر: مفعّل · يغيّر المساعد المخزون والطلبات وإعادة الطباعة دون تأكيد.', autoOff: 'التنفيذ المباشر: معطّل · كل إجراء ينتظر تأكيدك.', autoToggleOn: 'إيقاف التنفيذ المباشر', autoToggleOff: 'تفعيل التنفيذ المباشر' },
+    fr: { confirm: 'Confirmer', cancel: 'Annuler', done: 'Fait.', draft: 'Brouillon ouvert dans WhatsApp. Il part quand vous appuyez sur Envoyer.', refused: 'Action refusée', expired: 'Proposition expirée · redemandez.', cancelled: 'Annulé, rien n’a été modifié.', autoOn: 'Exécution directe : activée · l’assistant modifie stock, commandes et réimpressions sans confirmation.', autoOff: 'Exécution directe : désactivée · chaque action attend votre confirmation.', autoToggleOn: 'Désactiver l’exécution directe', autoToggleOff: 'Activer l’exécution directe' },
+    en: { confirm: 'Confirm', cancel: 'Cancel', done: 'Done.', draft: 'Draft opened in WhatsApp. It goes when you press Send.', refused: 'Action refused', expired: 'Proposal expired · ask again.', cancelled: 'Cancelled, nothing changed.', autoOn: 'Direct execution: on · the assistant changes stock, orders and reprints without confirmation.', autoOff: 'Direct execution: off · every action waits for your confirmation.', autoToggleOn: 'Turn off direct execution', autoToggleOff: 'Turn on direct execution' },
+    ar: { confirm: 'تأكيد', cancel: 'إلغاء', done: 'تم.', draft: 'تم فتح المسودة في واتساب. تُرسل عندما تضغط إرسال.', refused: 'رُفض الإجراء', expired: 'انتهت صلاحية الاقتراح · أعد الطلب.', cancelled: 'أُلغي، لم يتغيّر شيء.', autoOn: 'التنفيذ المباشر: مفعّل · يغيّر المساعد المخزون والطلبات وإعادة الطباعة دون تأكيد.', autoOff: 'التنفيذ المباشر: معطّل · كل إجراء ينتظر تأكيدك.', autoToggleOn: 'إيقاف التنفيذ المباشر', autoToggleOff: 'تفعيل التنفيذ المباشر' },
   };
-  const TOOLS_RULE = "OUTILS · les chiffres viennent des outils ou du bloc FAITS, jamais de toi. Pour agir (retirer ou ajouter du stock, changer le statut d'une commande, réimprimer, rédiger un message client) appelle propose_action après avoir résolu l'identifiant exact par stock_level ou orders_open ; quantité négative = retrait. Ne devine jamais un id : si tu ne trouves pas l'article ou la commande, dis-le. Le résultat de propose_action dit si c'est fait (executed) ou en attente de confirmation (awaiting_confirmation) : annonce exactement cela, en une phrase.";
+  const TOOLS_RULE = "OUTILS · les chiffres viennent des outils ou du bloc FAITS, jamais de toi. Pour agir (retirer ou ajouter du stock, changer le statut d'une commande, réimprimer, rédiger un message client) appelle propose_action après avoir résolu l'identifiant exact par stock_level ou orders_open ; quantité négative = retrait. Ne devine jamais un id : si tu ne trouves pas l'article ou la commande, dis-le. Le résultat de propose_action dit si c'est fait (executed), en attente de confirmation (awaiting_confirmation) ou si un brouillon WhatsApp a seulement été ouvert (draft_opened, sent:false) : annonce exactement cela, en une phrase. Un brouillon ouvert n'est PAS un message envoyé : Kiwi n'envoie aucun message, c'est le commerçant qui appuie sur Envoyer dans WhatsApp.";
   const FACTS_LEAD = "FAITS · calculés par Kiwi pour cette question, à partir des données réelles du commerce. Ils font autorité : reformule-les clairement dans la langue de la question, garde le fil de la conversation, ne modifie AUCUN chiffre et n'en invente aucun. Si la question demande une donnée absente des faits, appelle un outil. Pas de markdown.\n";
   const TOOL_DATE_RX = /^\d{4}-\d{2}-\d{2}$/;
   function toolDayBounds(day) {
@@ -4067,11 +4067,17 @@
         args.commandId = 'llm-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
         const req = A.request(act, args);
         if (!req || !req.ok) return { proposed: false, action: act, reason: (req && req.reason) || 'refused' };
-        if (req.replayed) return { executed: true, replayed: true, action: act, result: req.result };
+        if (req.replayed) return (req.result && req.result.outcome === 'draft-opened')
+          ? { executed: false, draft_opened: true, sent: false, replayed: true, action: act }
+          : { executed: true, replayed: true, action: act, result: req.result };
         if (autoActOn()) {
           let res;
           try { res = A.confirm(req.token); } catch (_) { return { executed: false, action: act, summary, reason: 'failed' }; }
-          const shape = (r) => ({ executed: !!(r && r.ok), action: act, summary, result: r });
+          /* A WhatsApp draft is opened, never sent: reporting it as executed let
+             the model say « message envoyé ». Its own state goes back as is. */
+          const shape = (r) => (r && r.outcome === 'draft-opened')
+            ? { executed: false, draft_opened: true, sent: false, action: act, summary, note: 'Brouillon ouvert dans WhatsApp, non envoyé par Kiwi.' }
+            : { executed: !!(r && r.ok), action: act, summary, result: r };
           if (res && typeof res.then === 'function') return res.then(shape, () => ({ executed: false, action: act, summary, reason: 'failed' }));
           return shape(res);
         }
@@ -5579,8 +5585,9 @@
         const A = window.KiwiAgentActions;
         Promise.resolve().then(() => A && A.confirm ? A.confirm(token) : { ok: false, reason: 'unavailable' }).then((res) => {
           const okRes = !!(res && res.ok);
-          row.textContent = okRes ? ac.done : (res && res.reason === 'expired' ? ac.expired : ac.refused + (res && res.reason ? ' (' + res.reason + ')' : ''));
-          logAi({ route: 'action', provenance: okRes ? 'executed' : 'refused', ms: 0, qLength: 0 });
+          const draft = okRes && res.outcome === 'draft-opened';
+          row.textContent = draft ? ac.draft : okRes ? ac.done : (res && res.reason === 'expired' ? ac.expired : ac.refused + (res && res.reason ? ' (' + res.reason + ')' : ''));
+          logAi({ route: 'action', provenance: draft ? 'draft-opened' : okRes ? 'executed' : 'refused', ms: 0, qLength: 0 });
         }, () => { row.textContent = ac.refused; });
         return;
       }

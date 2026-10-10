@@ -186,6 +186,15 @@
     const T = STR[lang()] || STR.fr;
     const KIT = window.KiwiKit;
     const RD = realData();
+    /* Real stores: Kiwi sends nothing. The button exports the audience as a
+       CSV for WhatsApp Business; it used to read « Programmer le message » and
+       offer SMS and Email chips that changed nothing. */
+    const RDC_ALL = {
+      fr: { send: 'Exporter la liste (CSV)', chan: 'Kiwi n’envoie pas de messages. Exportez la liste, puis envoyez depuis WhatsApp Business ou votre outil habituel.', lift: 'Si chacun revient une fois' },
+      en: { send: 'Export the list (CSV)', chan: 'Kiwi does not send messages. Export the list, then send from WhatsApp Business or your usual tool.', lift: 'If each comes back once' },
+      ar: { send: 'تصدير القائمة (CSV)', chan: 'لا يرسل Kiwi الرسائل. صدّر القائمة ثم أرسل من واتساب للأعمال أو أداتك المعتادة.', lift: 'إذا عاد كل واحد مرة' },
+    };
+    const RDC = RDC_ALL[lang()] || RDC_ALL.fr;
     const SEG_ = RD ? RD.SEG : SEG;
     const GUESTS_ = RD ? RD.GUESTS : GUESTS;
     let sel = (SEG_.find((s) => s.reach > 0) || SEG_[0] || { id: 'win' }).id;
@@ -206,15 +215,15 @@
         <div class="crm-comp">
           <h4>${T.composer}</h4>
           <div class="crm-f"><div class="fl">${T.cTo}</div><div class="crm-chips"><span class="crm-chip on" data-crm-target>${T.segLabel[sel]} · <b data-crm-reach>${fmt(segData(sel).reach)}</b></span></div></div>
-          <div class="crm-f"><div class="fl">${T.cChan}</div><div class="crm-chips">
-            <button class="crm-chip on" data-crm-chan>WhatsApp</button><button class="crm-chip" data-crm-chan>SMS</button><button class="crm-chip" data-crm-chan>Email</button></div></div>
+          ${RD ? `<div class="crm-f"><div class="fl">${T.cChan}</div><div style="font-size:12.5px; color:var(--n-500); line-height:1.5;">${RDC.chan}</div></div>` : `<div class="crm-f"><div class="fl">${T.cChan}</div><div class="crm-chips">
+            <button class="crm-chip on" data-crm-chan>WhatsApp</button><button class="crm-chip" data-crm-chan>SMS</button><button class="crm-chip" data-crm-chan>Email</button></div></div>`}
           <div class="crm-f"><div class="fl">${T.cTpl}</div><select class="crm-sel">${T.tpls.map(t => `<option>${t}</option>`).join('')}</select></div>
           <div class="crm-f"><div class="crm-wa"><i></i>${T.preview} · WhatsApp</div><div class="crm-bubble">${crmMsg(T, sel)}</div></div>
           <div class="crm-kpis">
             <div class="crm-kpi"><div class="v" data-crm-reach2>${fmt(segData(sel).reach)}</div><div class="l">${T.reach}</div></div>
-            <div class="crm-kpi"><div class="v" data-crm-lift>≈ ${fmt(segData(sel).lift)}</div><div class="l">${T.lift} (MAD)</div></div>
+            <div class="crm-kpi"><div class="v" data-crm-lift>≈ ${fmt(segData(sel).lift)}</div><div class="l">${RD ? RDC.lift : T.lift} (MAD)</div></div>
           </div>
-          <button class="kb atlas crm-send" data-crm-send>${T.send}</button>
+          <button class="kb atlas crm-send" data-crm-send>${RD ? RDC.send : T.send}</button>
         </div>
       </div>
       <div class="crm-foot"><button class="kb ghost" data-crm-loyalty data-feature="loyalty">${T.program}</button><button class="kb ghost" data-dismiss>${T.close}</button></div>
