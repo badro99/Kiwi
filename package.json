@@ -8,6 +8,7 @@
     "check": "node tools/check.js",
     "stamp": "node tools/bump-stamp.js",
     "dev": "npx wrangler pages dev .",
+    "stack": "node tools/kiwi-local-stack.mjs --seed",
     "load:validate": "node tools/load-test-suite-test.mjs",
     "load:prod:smoke": "KIWI_PROFILE=smoke k6 run tests/load/k6/production-readonly.js",
     "load:prod:baseline": "KIWI_PROFILE=baseline k6 run tests/load/k6/production-readonly.js",
