@@ -10070,10 +10070,11 @@ function _bqxCss() {
     .bqx-card:hover { border-color: color-mix(in srgb, var(--atlas, #0B6E4F) 55%, var(--n-200, #e7e3da)); box-shadow: 0 12px 26px -20px rgba(10, 15, 13, .35); }
     .bqx-card:focus-visible, .bqx-row:focus-visible { outline: 2px solid var(--atlas, #0B6E4F); outline-offset: 2px; }
     .bqx-thumb { position: relative; display: grid; place-items: center; overflow: hidden; flex: none;
-      background: color-mix(in srgb, var(--tint, #9AA09D) 13%, var(--surface, #fff)); }
+      background: color-mix(in srgb, var(--tint, #9AA09D) 14%, var(--surface, #fff)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint, #9AA09D) 10%, var(--n-200, #e7e3da)); }
     .bqx-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .bqx-ini { font: 600 15px/1 var(--sans); letter-spacing: -.01em; color: color-mix(in srgb, var(--tint, #9AA09D) 78%, var(--ink, #0A0F0D)); }
-    html[data-theme="dark"] .bqx-ini { color: color-mix(in srgb, var(--tint, #9AA09D) 60%, #F7F5F0); }
+    .bqx-ini { font: 600 15px/1 var(--sans); letter-spacing: -.01em; color: var(--ini, color-mix(in srgb, var(--tint, #9AA09D) 78%, var(--ink, #0A0F0D))); }
+    html[data-theme="dark"] .bqx-ini { color: color-mix(in srgb, var(--tint, #9AA09D) 55%, #F7F5F0); }
+    .bqx-thumb:has(img) { box-shadow: none; }
     .bqx-grid.is-media .bqx-thumb { aspect-ratio: 4 / 3; }
     .bqx-grid.is-media .bqx-ini { font-size: 26px; }
     .bqx-grid.is-compact .bqx-card { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 14px; }
@@ -10085,7 +10086,7 @@ function _bqxCss() {
       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .bqx-cmeta { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; color: var(--n-500, #77807b); white-space: nowrap; }
     .bqx-cmeta > span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; }
-    .bqx-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--tint, #9AA09D); }
+    .bqx-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--cat, var(--tint, #9AA09D)); }
     .bqx-card-cols:empty { display: none; }
     .bqx-cfoot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 4px; }
     .bqx-price { font: 600 16px/1 var(--sans); font-variant-numeric: tabular-nums; letter-spacing: -.015em; color: var(--ink, #0A0F0D); white-space: nowrap; }
@@ -10384,11 +10385,24 @@ function _bqxSwatches(colors, max) {
   return colors.slice(0, max).map((c) => kc.swatch(c)).join('') + (colors.length > max ? `<em>+${colors.length - max}</em>` : '');
 }
 function _bqxTint(cat) { return cat ? (_TAGHEX[cat.color] || '#0B6E4F') : '#9AA09D'; }
+/* La vignette sans photo prend la couleur du PRODUIT (sa première teinte),
+   pas celle de son rayon : un costume noir ne doit pas s'afficher vert parce
+   que le rayon « Costumes » porte l'étiquette Atlas. Le point devant le nom
+   du rayon, lui, garde la couleur du rayon. */
+function _bqxSwatchVars(cat, data) {
+  const catHex = _bqxTint(cat);
+  const kc = window.KiwiColors;
+  const c = data && data.colors && data.colors[0];
+  const f = c && kc ? (typeof c === 'object' ? c : kc.display(c)) : null;
+  const hex = f && /^#[0-9a-f]{6}$/i.test(String(f.hex || '')) ? f.hex : '';
+  if (!hex) return `--tint:${catHex};--cat:${catHex};`;
+  return `--tint:${hex};--cat:${catHex};${f.light ? '--ini:var(--n-500, #77807b);' : ''}`;
+}
 
 function _bqxCardHtml(p) {
   const data = CAT().getProduct(p.id);
   const cat = data.category;
-  return `<div ${_bqxOpenAttrs(p, 'bqx-card')} style="--tint:${_bqxTint(cat)};">
+  return `<div ${_bqxOpenAttrs(p, 'bqx-card')} style="${_bqxSwatchVars(cat, data)}">
       ${_bqxSelecting ? '<span class="bqx-check" aria-hidden="true"></span>' : ''}
       <div class="bqx-thumb">${_bqxThumb(p)}</div>
       <div class="bqx-cbody">
@@ -10407,7 +10421,7 @@ function _bqxRowHtml(p) {
   const nVar = data.variants.length;
   const nBc = data.variants.reduce((s, v) => s + ((v.barcodes && v.barcodes.length) ? 1 : 0), 0);
   const miss = nVar - nBc;
-  return `<div ${_bqxOpenAttrs(p, 'bqx-row')} style="--tint:${_bqxTint(cat)};">
+  return `<div ${_bqxOpenAttrs(p, 'bqx-row')} style="${_bqxSwatchVars(cat, data)}">
       <span class="bqx-rlead">${_bqxSelecting ? '<span class="bqx-check" aria-hidden="true"></span>' : `<span class="bqx-thumb">${_bqxThumb(p)}</span>`}</span>
       <span class="bqx-rname"><b>${_esc(p.name)}${_bqxAbOn() && p.ownership === 'consignment'
         ? '<span class="bqx-ab-b" title="Catégorie B">B</span>' : ''}</b><small><span class="bqx-dot"></span>${p.archived ? 'Archivé' : cat ? _esc(cat.name) : 'Divers'}</small></span>
