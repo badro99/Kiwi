@@ -76,7 +76,7 @@ body.design-2026 .sidebar nav a.active {
 body.design-2026 :is(
   .acc-card, .acc-biz, .acc-contact-card, .acc-topic, .integ-card, .kpi-m, .kpi-band,
   .kpi-customize, .cf-card, .fin-card, .p-card, .sh-section, .dkfix-card, .venue-dropdown,
-  .st-card, .pay-card, .mi-card, .tile, .glass-card, .kdr-id, .kdr-kpi, .kdr-strip,
+  .st-card, .pay-card, .mi-card, .tile, .glass-card, .kdr-id, .kdr-kpi:not(.is-lead), .kdr-strip,
   .kdr-top-c, .kdr-cat, .dep-card, .dep-site, .bk-choice, .bk-summary
 ) {
   background: var(--g-fill) !important;

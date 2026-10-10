@@ -1279,9 +1279,15 @@ body.design-vexel :is(.p-hero, .zk-hero, .s-ai-banner, .menu-ai) {
   box-shadow: none;
 }
 
+/* Ink for headings and bold text on the modal's paper. A dark panel inside a
+ * modal (data-surface="inverse", e.g. the promotion composer's live preview)
+ * keeps its own light text: painting ink there put near-black figures on
+ * --riad, which is exactly how the promo prices went unreadable. Bold text
+ * inside a button takes the button's colour, or a selected (filled) choice
+ * reads ink on --atlas. */
 body.design-vexel :is(
   .kiwi-drawer, .kiwi-modal, .ai-drawer
-) :is(h1, h2, h3, h4, h5, h6, b, strong) {
+) :is(h1, h2, h3, h4, h5, h6, b, strong):not([data-surface="inverse"] *, button *, [role="button"] *) {
   color: var(--ink);
 }
 
@@ -2700,7 +2706,7 @@ body.design-vexel[data-vexel-mode] .search-big {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.038);
   box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.22);
-  color: rgba(236, 247, 242, 0.46);
+  color: rgba(236, 247, 242, 0.6);
   font-size: 13px;
   transition: border-color 190ms ease, background 190ms ease, color 190ms ease,
               box-shadow 190ms ease;
@@ -2921,7 +2927,7 @@ body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant .n {
 
 body.design-vexel[data-vexel-mode] .topbar .vexel-topbar-merchant .r {
   margin-top: 1px;
-  color: rgba(220, 238, 230, 0.46);
+  color: rgba(220, 238, 230, 0.6);
   font-size: 11px;
   white-space: nowrap;
 }
@@ -3542,7 +3548,7 @@ body.design-vexel[data-vexel-mode] :is(
   .eq-stat, .eq-section,
   .pay-stat, .pay-section,
   .cf-card, .cf-z-history,
-  .kdr-strip, .kdr-id, .kdr-kpi, .kdr-top-c, .kdr-cat,
+  .kdr-strip, .kdr-id, .kdr-kpi:not(.is-lead), .kdr-top-c, .kdr-cat,
   .resv-section, .resv-builder,
   .sh-section, .sh-tip-cfg, .sh-lvs, .wk,
   .dep-ledger, .dep-card,
@@ -3626,7 +3632,7 @@ body.design-vexel[data-vexel-mode] :is(
   .eq-stat, .eq-section,
   .pay-stat, .pay-section,
   .cf-card, .cf-z-history,
-  .kdr-strip, .kdr-id, .kdr-kpi, .kdr-top-c, .kdr-cat,
+  .kdr-strip, .kdr-id, .kdr-kpi:not(.is-lead), .kdr-top-c, .kdr-cat,
   .resv-section, .resv-builder,
   .sh-section, .sh-tip-cfg, .sh-lvs, .wk,
   .dep-ledger, .dep-card,
@@ -3660,7 +3666,7 @@ body.design-vexel[data-vexel-mode] :is(
   .eq-stat, .eq-section,
   .pay-stat, .pay-section,
   .cf-card, .cf-z-history,
-  .kdr-strip, .kdr-id, .kdr-kpi, .kdr-top-c, .kdr-cat,
+  .kdr-strip, .kdr-id, .kdr-kpi:not(.is-lead), .kdr-top-c, .kdr-cat,
   .resv-section, .resv-builder,
   .sh-section, .sh-tip-cfg, .sh-lvs, .wk,
   .dep-ledger, .dep-card,
@@ -3800,7 +3806,7 @@ body.design-vexel[data-vexel-mode] .kit-order:hover {
     .eq-stat, .eq-section,
     .pay-stat, .pay-section,
     .cf-card, .cf-z-history,
-    .kdr-strip, .kdr-id, .kdr-kpi, .kdr-top-c, .kdr-cat,
+    .kdr-strip, .kdr-id, .kdr-kpi:not(.is-lead), .kdr-top-c, .kdr-cat,
     .resv-section, .resv-builder,
     .sh-section, .sh-tip-cfg, .sh-lvs, .wk,
     .dep-ledger, .dep-card,
@@ -3820,7 +3826,7 @@ body.design-vexel[data-vexel-mode] .kit-order:hover {
     .eq-stat, .eq-section,
     .pay-stat, .pay-section,
     .cf-card, .cf-z-history,
-    .kdr-strip, .kdr-id, .kdr-kpi, .kdr-top-c, .kdr-cat,
+    .kdr-strip, .kdr-id, .kdr-kpi:not(.is-lead), .kdr-top-c, .kdr-cat,
     .resv-section, .resv-builder,
     .sh-section, .sh-tip-cfg, .sh-lvs, .wk,
     .dep-ledger, .dep-card,
@@ -4260,7 +4266,7 @@ body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-hero-delta svg {
 
 body.design-vexel[data-vexel-mode] .vexel-revenue-row .rev-hero-delta .lbl {
   color: currentColor;
-  opacity: 0.62;
+  opacity: 0.86;
 }
 
 body.design-vexel[data-vexel-mode] .vexel-revenue-row [data-rev-sub] {

@@ -1916,7 +1916,8 @@ html[data-theme="dark"] .kx-pill { background: var(--paper-soft); }
   border-radius: 999px;
   font-weight: 500;
 }
-.kx-pill.on .ct { background: rgba(255,255,255,0.16); color: var(--mint); }
+/* The count rides the pill's own ink: --mint is remapped to atlas in the light skin, which put green digits on the dark pill. */
+.kx-pill.on .ct { background: color-mix(in srgb, currentColor 18%, transparent); color: inherit; }
 
 /* SKU grid */
 .kx-sku-grid {

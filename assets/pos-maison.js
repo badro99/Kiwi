@@ -6766,10 +6766,26 @@
      qu'on vient de faire. L'aperçu se recalcule à chaque frappe. */
   const composer = { draft: null, editing: null };
 
+  /* Les pourcentages autorisés dans les réglages, ou null quand rien n'est
+     restreint. Un brouillon ne s'ouvre jamais sur une remise que la boutique
+     refuse : sinon « Lancer » est grisé avant le premier geste. On prend le
+     pourcentage autorisé le plus proche. */
+  function allowedPercents() {
+    const pol = window.KiwiDiscountPolicy;
+    return pol && pol.configured(_bqKey) ? pol.percentages(_bqKey).slice().sort((a, b) => a - b) : null;
+  }
+  function fitPolicy(d) {
+    const ok = allowedPercents();
+    if (!ok || !ok.length || d.kind !== 'percent' || ok.includes(d.value)) return d;
+    d.value = ok.reduce((best, v) => (Math.abs(v - d.value) < Math.abs(best - d.value) ? v : best), ok[0]);
+    return d;
+  }
+
   function openPromoComposer(seed) {
     const pr = PRM(); if (!pr) return;
     composer.editing = (seed && seed.id) ? seed.id : null;
     composer.draft = pr.normalize(seed || { name: '', kind: 'percent', value: 20, scope: { type: 'tout' } });
+    if (!composer.editing) fitPolicy(composer.draft);
     if (!seed) composer.draft.name = '';
     renderPromoComposer();
     openVeil('#mz-promo-veil');
@@ -6787,7 +6803,7 @@
   function promoDraftValid(d) {
     if (!d.value) return 'Choisissez de combien vous baissez le prix';
     if (d.kind === 'percent' && window.KiwiDiscountPolicy?.configured(_bqKey)
-        && !window.KiwiDiscountPolicy.allowed(d.value, _bqKey)) return 'Pourcentage non autorisé dans les réglages';
+        && !window.KiwiDiscountPolicy.allowed(d.value, _bqKey)) return 'Vos réglages autorisent seulement ' + (allowedPercents() || []).map((v) => '−' + v + ' %').join(', ');
     const sc = d.scope || {};
     if ((sc.type === 'rayon' || sc.type === 'produits') && !(sc.ids || []).length) return 'Choisissez au moins un élément à viser';
     if (sc.type === 'avant' && !sc.before) return 'Choisissez la date avant laquelle les articles sont visés';
@@ -6964,7 +6980,7 @@
     const nameEl = $('#mz-prc-name', el);
     if (nameEl) nameEl.oninput = () => { d.name = nameEl.value; const b = $('#mz-prc-save', el); if (b) b.disabled = !!promoDraftValid(d) || !pr.preview(d, promoItems(), { stockOf: (it) => stockOf(it) }).count; };
 
-    $$('[data-prk]', el).forEach((b) => b.onclick = () => { d.kind = b.dataset.prk; redraw(); });
+    $$('[data-prk]', el).forEach((b) => b.onclick = () => { d.kind = b.dataset.prk; fitPolicy(d); redraw(); });
     const val = $('#mz-prc-value', el);
     if (val) val.oninput = () => { d.value = Math.max(0, Math.round(+val.value || 0)); redraw(); };
     $$('[data-prv]', el).forEach((b) => b.onclick = () => { d.value = +b.dataset.prv; redraw(); });

@@ -10095,7 +10095,7 @@ function _bqxCss() {
       font: 500 11.5px/1 var(--sans); font-variant-numeric: tabular-nums; color: var(--n-600, #555); background: var(--paper-soft, #f3f1ea); }
     .bqx-stag.low { color: #8A6210; background: rgba(217, 154, 43, .16); }
     .bqx-stag.out { color: #9B2F22; background: rgba(155, 47, 34, .10); font-weight: 600; }
-    html[data-theme="dark"] .bqx-stag { background: var(--paper-muted); color: var(--n-400, #aab); }
+    html[data-theme="dark"] .bqx-stag { background: var(--paper-muted); color: rgba(247, 245, 240, .72); }
     html[data-theme="dark"] .bqx-stag.low { color: #E8B85C; background: rgba(217, 154, 43, .18); }
     html[data-theme="dark"] .bqx-stag.out { color: #F0B3A4; background: rgba(240, 179, 164, .14); }
     .bqx-card.is-arch .bqx-thumb, .bqx-row.is-arch .bqx-thumb { filter: grayscale(1); opacity: .6; }
@@ -11839,8 +11839,8 @@ function _renderCategories() {
             <div class="bqx-cat-info"><div class="n">${_esc(c.name)}</div><div class="m">${count} produit${count > 1 ? 's' : ''}</div></div>
             <div class="bqx-cat-sw">${_TAGS.map((t) => `<button class="${t.id === c.color ? 'on' : ''}" style="background:${t.hex};" title="${t.name}" data-action="bqx-cat-color" data-arg="${c.id}::${t.id}"></button>`).join('')}</div>
             <div class="kx-tree-actions">
-              <button class="kb ghost xs" data-action="bqx-cat-rename" data-arg="${c.id}">${_ICN.edit}</button>
-              <button class="kb ghost xs danger-text" data-action="bqx-cat-del" data-arg="${c.id}">${_ICN.trash}</button>
+              <button class="kb ghost xs" data-action="bqx-cat-rename" data-arg="${c.id}" aria-label="Renommer ${_esc(c.name)}" title="Renommer">${_ICN.edit}</button>
+              <button class="kb ghost xs danger-text" data-action="bqx-cat-del" data-arg="${c.id}" aria-label="Supprimer ${_esc(c.name)}" title="Supprimer">${_ICN.trash}</button>
             </div>
           </div>`;
         }).join('') : '<div class="kx-foot-hint"><div class="lh">Aucune catégorie</div><div class="rh">Ajoutez votre premier rayon.</div></div>'}

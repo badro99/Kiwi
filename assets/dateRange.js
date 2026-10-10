@@ -4757,26 +4757,26 @@
         el['inner' + 'HTML'] = `<div class="lbl">${L.lbl}</div>` +
           `<div class="big">${covers} <span style="font-size:.42em;opacity:.72;">${L.unit}</span></div>` +
           `<div class="sub">${L.sub(active.length)}</div>` +
-          `<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--inverse-line);display:flex;flex-direction:column;gap:9px;">` +
+          `<div style="margin-top:16px;padding-top:12px;border-top:1px solid color-mix(in srgb,currentColor 14%,transparent);display:flex;flex-direction:column;gap:9px;">` +
           active.slice(0, 3).map((b) => {
             const status = b.status === 'requested' ? L.pending : (L[b.status] || L.confirmed);
             const at = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(+b.startAt));
             const place = resource.get(String(b.resourceId));
             return `<div style="display:grid;grid-template-columns:48px 1fr auto;gap:9px;align-items:center;font-size:12px;">` +
               `<span style="font-family:var(--mono);color:var(--mint);font-weight:600;">${escTxt(at)}</span>` +
-              `<div style="min-width:0;"><div style="font-weight:600;color:var(--inverse-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escTxt(b.customer?.name)}</div>` +
-              `<div style="color:var(--n-300);margin-top:1px;">${Math.max(1, +b.partySize || 1)} ${L.unit}${place ? ` · ${escTxt(place)}` : ''}</div></div>` +
-              `<span style="font-size:10px;color:var(--n-300);">${status}</span></div>`;
+              `<div style="min-width:0;"><div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escTxt(b.customer?.name)}</div>` +
+              `<div style="opacity:.7;margin-top:1px;">${Math.max(1, +b.partySize || 1)} ${L.unit}${place ? ` · ${escTxt(place)}` : ''}</div></div>` +
+              `<span style="font-size:11px;opacity:.7;">${status}</span></div>`;
           }).join('') + `</div>` +
-          `<div class="instant" data-action="nav-reservations"><div class="ico"><img src="assets/icons/material/schedule.svg" alt="" aria-hidden="true" style="width:16px;height:16px;filter:brightness(0) invert(1);"></div>` +
+          `<div class="instant" data-action="nav-reservations"><div class="ico"><svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="m612-292 56-56-148-148v-184h-80v216l172 172ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-400Zm0 320q133 0 226.5-93.5T800-480q0-133-93.5-226.5T480-800q-133 0-226.5 93.5T160-480q0 133 93.5 226.5T480-160Z"/></svg></div>` +
           `<div style="font-weight:500;">${L.open}</div><div class="cost">${active.length > 3 ? L.more(active.length - 3) : ''}</div></div>`;
       } else {
         const configured = !!(doc && doc.settings && doc.services?.length && doc.resources?.length);
         const head = configured ? t.head : ({ fr: 'Réservations non configurées', en: 'Bookings not configured', ar: 'الحجوزات غير مهيأة' }[lang]);
         const msg = configured ? t.msg : ({ fr: 'Ajoutez vos tables et vos horaires pour recevoir des réservations.', en: 'Add tables and opening hours to accept bookings.', ar: 'أضف الطاولات وساعات العمل لاستقبال الحجوزات.' }[lang]);
         el['inner' + 'HTML'] = `<div class="lbl">${t.lbl}</div><div style="padding:28px 4px 8px;text-align:center;">` +
-          `<div style="font-size:14px;font-weight:600;color:var(--inverse-ink);">${head}</div>` +
-          `<div style="font-size:12px;color:var(--n-300);margin-top:6px;line-height:1.5;">${msg}</div></div>` +
+          `<div style="font-size:14px;font-weight:600;">${head}</div>` +
+          `<div style="font-size:12px;opacity:.7;margin-top:6px;line-height:1.5;">${msg}</div></div>` +
           `<div class="instant" data-action="nav-reservations"><div style="font-weight:500;">${lang === 'en' ? 'Open Reservations' : lang === 'ar' ? 'فتح الحجوزات' : 'Ouvrir Réservations'}</div></div>`;
       }
     } else if (el['inner' + 'HTML'] !== _eveningOrig) {

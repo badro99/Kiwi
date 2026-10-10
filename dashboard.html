@@ -66,7 +66,7 @@
 <link rel="stylesheet" href="assets/polish.css" />
 <link rel="stylesheet" href="assets/simple.css" />
 <link rel="stylesheet" href="assets/ux.css" />
-<link rel="stylesheet" href="assets/pages-pro.css" />
+<link rel="stylesheet" href="assets/pages-pro.css?v=1" />
 <link rel="stylesheet" href="assets/catalog-workspace.css?v=20" />
 <link rel="stylesheet" href="assets/polish-dashboard.css" />
 <link rel="stylesheet" href="assets/hotel.css?v=38" />
@@ -5237,14 +5237,14 @@
 <link rel="stylesheet" href="assets/dashboard-native.css" />
 <link rel="stylesheet" href="assets/kiwi-select.css?v=2" />
 <!-- Design 2026 · Liquid Glass preview · inert unless body.design-2026 (1111-gated, reversible) -->
-<link rel="stylesheet" href="assets/design-2026.css" />
+<link rel="stylesheet" href="assets/design-2026.css?v=1" />
 <!-- iOS-27 tier · WWDC-2026 Liquid Glass refinements · inert unless body.design-ios27 (PIN 1111 only, reversible) -->
 <link rel="stylesheet" href="assets/design-ios27.css" />
 <!-- Vexel skin · the landing page's dashboard mockup, applied to the real one.
      Inert unless body.design-vexel. ON by default for every merchant since the
      v2 design migration · ?skin=off or KiwiDesignVexel.disable() opts out.
      Loads LAST of the three skins so it wins where they overlap. -->
-<link rel="stylesheet" href="assets/design-vexel.css?v=2109" />
+<link rel="stylesheet" href="assets/design-vexel.css?v=2112" />
 <!-- Pressing owner workspace · exact-trade layer, inert for every other venue. -->
 <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
 <link rel="stylesheet" href="assets/pressing-dashboard.css?v=10" />
@@ -5814,12 +5814,12 @@
             <div class="lbl" data-i18n="dash.evening.title">SERVICE DU SOIR · CE SOIR</div>
             <div class="big">47 <span style="font-size:0.42em; opacity: 0.7;" data-i18n="dash.evening.covers">couverts</span></div>
             <div class="sub" data-i18n="dash.evening.summary">8 réservations confirmées · ~12 walk-ins attendus selon l'historique des vendredis.</div>
-            <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.15); display: flex; flex-direction: column; gap: 10px;">
+            <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent); display: flex; flex-direction: column; gap: 10px;">
               <div style="display: grid; grid-template-columns: 52px 1fr auto; gap: 10px; align-items: center; font-size: 12.5px;">
                 <span style="font-family: var(--mono); color: var(--mint); font-weight: 600;">19h30</span>
                 <div>
                   <div style="font-weight: 500;">Khalid Berrada · T7</div>
-                  <div style="font-size: 11.5px; color: #A8B0C8; margin-top: 1px;" data-i18n="dash.evening.guest1.note">4 couverts · habitué</div>
+                  <div style="font-size: 11.5px; opacity: 0.7; margin-top: 1px;" data-i18n="dash.evening.guest1.note">4 couverts · habitué</div>
                 </div>
                 <span style="font-size: 10.5px; background: rgba(125,242,176,0.18); color: var(--mint); padding: 3px 8px; border-radius: 999px; font-family: var(--mono); letter-spacing: 0.05em;" data-i18n="dash.evening.vip">VIP</span>
               </div>
@@ -5827,7 +5827,7 @@
                 <span style="font-family: var(--mono); color: var(--mint); font-weight: 600;">20h00</span>
                 <div>
                   <div style="font-weight: 500;">Sara M. · T12</div>
-                  <div style="font-size: 11.5px; color: #A8B0C8; margin-top: 1px;" data-i18n="dash.evening.guest2.note">6 couverts · anniversaire (gâteau prévu)</div>
+                  <div style="font-size: 11.5px; opacity: 0.7; margin-top: 1px;" data-i18n="dash.evening.guest2.note">6 couverts · anniversaire (gâteau prévu)</div>
                 </div>
                 <span style="font-size: 10.5px; background: rgba(125,242,176,0.18); color: var(--mint); padding: 3px 8px; border-radius: 999px; font-family: var(--mono); letter-spacing: 0.05em;" data-i18n="dash.evening.guest2.tag">ANNIV.</span>
               </div>
@@ -5835,9 +5835,9 @@
                 <span style="font-family: var(--mono); color: var(--mint); font-weight: 600;">20h30</span>
                 <div>
                   <div style="font-weight: 500;">M. Tazi · T3</div>
-                  <div style="font-size: 11.5px; color: #A8B0C8; margin-top: 1px;" data-i18n="dash.evening.guest3.note">2 couverts · 1ʳᵉ visite</div>
+                  <div style="font-size: 11.5px; opacity: 0.7; margin-top: 1px;" data-i18n="dash.evening.guest3.note">2 couverts · 1ʳᵉ visite</div>
                 </div>
-                <span style="font-size: 10.5px; background: rgba(255,255,255,0.10); color: #c6ead4; padding: 3px 8px; border-radius: 999px; font-family: var(--mono); letter-spacing: 0.05em;" data-i18n="dash.evening.new">NOUVEAU</span>
+                <span style="font-size: 10.5px; background: color-mix(in srgb, currentColor 9%, transparent); color: inherit; padding: 3px 8px; border-radius: 999px; font-family: var(--mono); letter-spacing: 0.05em;" data-i18n="dash.evening.new">NOUVEAU</span>
               </div>
             </div>
             <div class="instant" data-action="nav-reservations" data-feature="reservations">
@@ -6238,7 +6238,7 @@
 <script src="assets/pressing-catalog.js?v=7" defer></script>
 <script src="assets/pressing-dashboard.js?v=16" defer></script>
 <script src="assets/demoClock.js?v=4" defer></script>
-<script src="assets/dateRange.js?v=51" defer></script>
+<script src="assets/dateRange.js?v=52" defer></script>
 <script src="assets/mobile-nav.js?v=7" defer></script>
 <script defer src="assets/pwa-update.js?v=359"></script>
 <script defer src="assets/dashboard-pwa.js?v=553"></script>
@@ -6377,7 +6377,7 @@
 <!-- Floor-plan vocabulary shared with the caisse. MUST load before pages-pro.js,
      which reads its top-level declarations as globals. -->
 <script src="assets/floorplan-core.js?v=2050" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2134" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2135" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js?v=1" defer fetchpriority="low"></script>
@@ -6388,7 +6388,7 @@
 <script src="assets/kiwi-select.js?v=2" defer></script>
 <script src="assets/restaurant-menu-workspace.js?v=88" defer fetchpriority="low"></script>
 <script src="assets/sold-insights.js?v=9" defer fetchpriority="low"></script>
-<script src="assets/boutique-promos-dashboard.js?v=7" defer fetchpriority="low"></script>
+<script src="assets/boutique-promos-dashboard.js?v=9" defer fetchpriority="low"></script>
 <!-- Rapport journalier : le calcul (partagé avec la caisse) puis la page.
      Après pages-pro.js, dont il emprunte la coquille Kiwi.appPage. -->
 <script src="assets/day-report.js?v=19" defer fetchpriority="low"></script>
@@ -6399,7 +6399,7 @@
 <script src="assets/month-report-pdf.js?v=12" defer fetchpriority="low"></script>
 <script src="assets/month-report-ui.js?v=7" defer fetchpriority="low"></script>
 <script src="assets/day-report-export.js?v=10" defer fetchpriority="low"></script>
-<script src="assets/day-report-dash.js?v=23" defer fetchpriority="low"></script>
+<script src="assets/day-report-dash.js?v=24" defer fetchpriority="low"></script>
 <script src="assets/stock.js?v=66" defer fetchpriority="low"></script>
 <script src="assets/catalog-workspace.js?v=5" defer></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
@@ -6440,7 +6440,7 @@
 <script src="assets/trade-workspaces.js?v=4" defer fetchpriority="low"></script>
 <!-- Unified reservation truth: real availability, conflict-safe bookings and
      the public booking link. Loaded last so it replaces legacy demo drawers. -->
-<script src="assets/reservations.js?v=19" defer fetchpriority="low"></script>
+<script src="assets/reservations.js?v=20" defer fetchpriority="low"></script>
 <!-- Durable operational workflows. Loaded after every feature module and the
      production honesty guard so its real handlers win over legacy demo toasts. -->
 <script src="assets/operations.js?v=12" defer fetchpriority="low"></script>

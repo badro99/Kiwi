@@ -243,8 +243,8 @@
       '.kdr-d b{font-family:var(--mono);font-weight:600}',
       '.kdr-d.up b{color:var(--atlas)}',
       '.kdr-d.down b{color:#B4472F}',
-      '.kdr-kpi.is-lead .kdr-d{color:rgba(247,245,240,.5)}',
-      '.kdr-kpi.is-lead .kdr-d.up b{color:var(--mint)}',
+      '.kdr-kpi.is-lead .kdr-d{color:rgba(247,245,240,.76)}',
+      '.kdr-kpi.is-lead .kdr-d.up b{color:#7DF2B0}',
       '.kdr-kpi.is-lead .kdr-d.down b{color:#F2A48F}',
       /* ── blocs ── */
       '.kdr-sec{margin-bottom:22px}',
@@ -281,6 +281,7 @@
       'html[data-theme="dark"] .kdr-kpi.is-lead{background:rgba(63,182,122,0.15);border-color:rgba(63,182,122,0.35)}',
       'html[data-theme="dark"] .kdr-kpi.is-lead .kdr-kpi-v{color:var(--mint)}',
       'html[data-theme="dark"] .kdr-kpi.is-lead .kdr-kpi-l{color:rgba(247,245,240,0.7)}',
+      'html[data-theme="dark"] .kdr-d.down b{color:#F2A48F}',
       'html[data-theme="dark"] .kdr-h em{color:var(--mint)}',
       'html[data-theme="dark"] .kdr-cat-h{background:rgba(63,182,122,0.08)}',
       'html[data-theme="dark"] .kdr-cat-v,html[data-theme="dark"] .kdr-top-r,html[data-theme="dark"] .kdr-p-q{color:var(--mint)}',
