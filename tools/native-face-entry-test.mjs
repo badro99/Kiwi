@@ -85,6 +85,11 @@ const read = p => fs.readFileSync(path.join(root, p), 'utf8');
   check(/adoptTillCutoff\(cfg\.businessCutoff\);/.test(mc) && /if \(R\.cutoff\(slug\) !== serverCutoff\) R\.setCutoff\(serverCutoff, slug\);/.test(mc) && /\/caisse\/i\.test\(location\.pathname\)/.test(mc), 'the dashboard adopts the cutoff the till published, the till keeps its own');
   check(/revokeIdentity[\s\S]{0,600}secureSet\('face-unlock-v1', null\)/.test(rt) && /a\[href="\/auth\/logout"\][\s\S]{0,80}forgetFaceUnlock\(\)/.test(rt), 'signing out or revoking forgets Face ID on this device');
   check(!/—/.test(rt.slice(rt.indexOf('function entryCopy'), rt.indexOf('function entryAccount'))), 'opening screen copy has no em dash');
+  const story = read('app/ios/App/App/Base.lproj/LaunchScreen.storyboard'), shellCss = read('app/src/native-shell.css'), swift = read('app/ios/App/App/KiwiNativeShell.swift');
+  check(/firstItem="kiwi-launch-mark" firstAttribute="top" secondItem="launch-safe" secondAttribute="top" constant="20"/.test(story) && !/mark-middle/.test(story), 'launch screen: the mark sits 20 pt under the safe area, never centred');
+  check(/\.boot-inner \{[^}]*padding-top: calc\(var\(--kiwi-safe-top[^)]*\)\) \+ 20px\)/.test(shellCss), 'web boot stage: same place as the launch screen');
+  check(/VStack \{ KiwiMark\(size: 88\); Spacer\(minLength: 0\) \}\s*\.frame\(maxWidth: \.infinity\)\.padding\(\.top, 20\)/.test(swift), 'native host launch state: same place as the launch screen');
+  check(/KiwiMark\(size: 88\)\.frame\(maxWidth: \.infinity\)\n\s*progress\.modifier\(KiwiArrive/.test(swift) && (swift.match(/\.modifier\(KiwiArrive\(/g) || []).length === 4 && !/setup\.transition\(/.test(swift), 'native setup: text and controls fade in, the mark is never faded');
 }
 
 try {
@@ -100,6 +105,7 @@ try {
         v2: document.documentElement.classList.contains('kiwi-entry-v2'),
         entered: q('[data-kiwi-lock]').classList.contains('kiwi-entry-in'),
         brand: brand && {w:brand.width, top:brand.top},
+        safeTop: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--kiwi-host-safe-top')),
         title: title.textContent.trim(), titleSize: parseFloat(getComputedStyle(title).fontSize),
         italic: getComputedStyle(title).fontStyle,
         keys: keys.length, minKey: Math.min(...keys.map(k=>Math.min(k.width,k.height))),
@@ -109,7 +115,7 @@ try {
     });
     await page.screenshot({path:path.join(shots,'entry-plain.png')});
     check(s.v2 && s.entered, 'opening screen v2 is on and the lock has entered');
-    check(s.brand && s.brand.w >= 56 && s.brand.top >= 62, 'the mark sits below the safe area at its lock size '+JSON.stringify(s.brand));
+    check(s.brand && s.brand.w === 88 && Math.abs(s.brand.top - (s.safeTop + 20)) <= 1, 'the mark is exactly where the launch screen draws it: 88 pt, safe area + 20 '+JSON.stringify(s.brand));
     check(s.title.length > 0 && s.titleSize >= 24 && s.italic === 'normal', 'large upright greeting: '+s.title);
     check(s.keys === 11 && s.minKey >= 60, 'eleven borderless keys, each at least 60 pt');
     check(!s.face, 'no Face ID key without a stored Face ID record');
@@ -131,10 +137,9 @@ try {
         if (performance.now()-t0<1600) requestAnimationFrame(tick); else resolve(out);
       })();
     }));
-    const shown = frames.filter(f=>f.o>0.05);
-    const travel = Math.max(...shown.map(f=>f.cy)) - Math.min(...shown.map(f=>f.cy));
-    check(shown.length > 0 && frames[frames.length-1].o === 1, 'the mark fades in and ends fully shown');
-    check(travel <= 1, 'the mark settles in place, no travel: ' + travel.toFixed(1) + ' px');
+    const travel = Math.max(...frames.map(f=>f.cy)) - Math.min(...frames.map(f=>f.cy));
+    check(frames.every(f => f.o === 1), 'the mark is fully shown from the first frame, like the launch screen');
+    check(travel <= 1, 'the mark never moves: ' + travel.toFixed(1) + ' px');
     check(await page.$eval('[data-kiwi-lock] .kiwi-lock-brand', el => !el.getAttribute('style')), 'no inline transform is written to the mark');
     await context.close();
   }

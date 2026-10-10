@@ -272,6 +272,16 @@ private extension View {
     }
 }
 
+/// Fades a block in (with an 8 pt rise unless Reduce Motion is on). The mark
+/// never uses it: it is already where the launch screen drew it.
+private struct KiwiArrive: ViewModifier {
+    let shown: Bool
+    let rise: Bool
+    func body(content: Content) -> some View {
+        content.opacity(shown ? 1 : 0).offset(y: shown || !rise ? 0 : 8)
+    }
+}
+
 private struct KiwiPressStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -293,10 +303,14 @@ private struct KiwiNativeSetupRoot: View {
     @AccessibilityFocusState private var headingFocused: Bool
     @ScaledMetric(relativeTo: .largeTitle) private var titleSize = 32
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var contentShown = false
 
     var body: some View {
         ZStack {
             kiwiLaunchGround.ignoresSafeArea()
+            // Both branches draw the mark where LaunchScreen.storyboard does, so
+            // the swap is invisible; only the text and controls fade in (setup).
             if model.context.screen == "launch" {
                 VStack { KiwiMark(size: 88); Spacer(minLength: 0) }
                     .frame(maxWidth: .infinity).padding(.top, 20)
@@ -334,7 +348,7 @@ private struct KiwiNativeSetupRoot: View {
                 VStack(alignment: .leading, spacing: 0) {
                     VStack(spacing: compact ? 8 : 16) {
                         KiwiMark(size: 88).frame(maxWidth: .infinity)
-                        progress
+                        progress.modifier(KiwiArrive(shown: contentShown, rise: !reduceMotion))
                     }
                     .padding(.bottom, compact ? 12 : (dynamicTypeSize.isAccessibilitySize ? 24 : 36))
                     VStack(alignment: .leading, spacing: compact ? 8 : 12) {
@@ -348,12 +362,14 @@ private struct KiwiNativeSetupRoot: View {
                         }
                     }
                     .padding(.bottom, compact ? 12 : 28)
+                    .modifier(KiwiArrive(shown: contentShown, rise: !reduceMotion))
                     VStack(alignment: .leading, spacing: compact ? 12 : 16) {
                         content(compact: compact)
                         status
                     }
+                    .modifier(KiwiArrive(shown: contentShown, rise: !reduceMotion))
                     Spacer(minLength: compact ? 12 : 28)
-                    actions
+                    actions.modifier(KiwiArrive(shown: contentShown, rise: !reduceMotion))
                 }
                 .frame(maxWidth: 560, alignment: .leading)
                 .frame(maxWidth: .infinity)
@@ -364,6 +380,10 @@ private struct KiwiNativeSetupRoot: View {
             }
             .scrollDismissesKeyboardIfAvailable()
             .id(model.context.kind)
+        }
+        .onAppear {
+            // The mark is already on screen from the launch; the rest arrives.
+            withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .timingCurve(0.22, 0.9, 0.24, 1, duration: 0.42)) { contentShown = true }
         }
         .background(
             kiwiLaunchGround.ignoresSafeArea()

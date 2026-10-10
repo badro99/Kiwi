@@ -983,8 +983,10 @@ html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock :is(.kiwi-lock-help
    One extra class (.kiwi-entry-v2) so these rules win over the older lock
    rules above without editing them. */
 @media(max-width:600px){
-  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-lock-inner{display:flex!important;flex-direction:column;align-items:center;min-height:calc(100dvh - var(--kiwi-safe-top) - var(--kiwi-safe-bottom) - 40px);padding-top:clamp(12px,6vh,56px)!important}
-  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock-brand{width:64px!important;height:64px!important;min-height:64px;background-size:64px 64px!important;margin:0 auto 22px!important}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-lock-inner{display:flex!important;flex-direction:column;align-items:center;min-height:calc(100dvh - var(--kiwi-safe-top) - var(--kiwi-safe-bottom) - 40px);padding-top:0!important}
+  /* The mark keeps the launch screen's exact place and size (88 pt, safe area
+     + 20, LaunchScreen.storyboard and KiwiNativeShell.swift): it never moves. */
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock-brand{width:88px!important;height:88px!important;min-height:88px;background-size:88px 88px!important;margin:0 auto 18px!important}
   html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock-title{font-size:28px!important;line-height:34px!important;font-weight:600!important;letter-spacing:-.02em;text-align:center;margin:0!important}
   html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock-sub{font-size:15px!important;line-height:22px!important;margin-top:6px!important;color:var(--kno-ink-2)!important;text-align:center}
   html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-native-keypad-lock .kiwi-lock-pin{margin:clamp(22px,5vh,40px) 0 4px!important;gap:20px}
@@ -1004,17 +1006,15 @@ html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock :is(.kiwi-lock-help
   html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-lock-skip{margin-top:auto!important;width:auto!important;background:transparent!important;color:var(--mint,#7DF2B0)!important;font:600 15px/44px var(--sans,"Inter Tight",sans-serif)!important;padding:0 12px!important}
   html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-lock-switch{font-size:14px!important;color:var(--kno-ink-2)!important}
   html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-lock-switch svg{width:16px;height:16px}
-  /* Entrance, after the launch splash has gone: the mark settles in place
-     (no travel), then the greeting and keypad rise 8 px. Opacity and
-     transform only, so the compositor runs it while the page is still busy. */
-  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-lock-brand{opacity:0;transform:scale(.9);transition:opacity 320ms ease-out,transform 520ms cubic-bezier(.22,.9,.24,1)}
+  /* Entrance: the mark is the launch screen's, already in place, and stays
+     perfectly still. Around it the greeting, then the dots and keypad, fade
+     up 8 px once the splash has gone. Opacity and transform only. */
   html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-lock-inner>:not(.kiwi-lock-brand){opacity:0;transform:translateY(8px);transition:opacity 360ms ease-out 110ms,transform 480ms cubic-bezier(.22,.9,.24,1) 110ms}
   html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-lock-inner>.kiwi-native-owner-keypad{transition-delay:170ms}
-  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock.kiwi-entry-in .kiwi-lock-brand,
   html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock.kiwi-entry-in .kiwi-lock-inner>:not(.kiwi-lock-brand){opacity:1;transform:none}
 }
 @media(max-width:600px) and (prefers-reduced-motion:reduce){
-  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock :is(.kiwi-lock-brand,.kiwi-lock-inner>*){transition:none!important}
+  html.kiwi-native.kiwi-entry-v2 body.kiwi-native-owner:not(#kno) .kiwi-lock .kiwi-lock-inner>:not(.kiwi-lock-brand){transition:none!important}
 }
 
 /* Face ID offer, after a real code opened the dashboard. */
