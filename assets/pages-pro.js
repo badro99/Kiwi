@@ -3046,39 +3046,25 @@ const PDS_CANVAS_H = 540;
    just before this file. They are shared verbatim with the caisse so the
    till can render the owner's actual plan instead of its own guess at it. */
 
-/* ─── Vue nuit / vue jour — la console de service ─────────────────────────
- * Le plan que la page d'accueil promet est sombre : une salle charbon, des
- * tables au trait, le statut porté par la lumière. Mais c'est LE CLIMAT DU
- * DASHBOARD qui décide : ouvrir le plan depuis un dashboard clair et tomber
- * sur une salle noire, c'est changer de produit en passant une porte. La vue
- * nuit suit donc `data-theme` — la seule vérité de ce qui est peint, celle
- * que design-vexel.js recopie sur `data-vexel-mode`.
- *
- * La bascule reste : elle permet de regarder les matières en plein jour sans
- * quitter le climat sombre. Mais elle est mémorisée AVEC le climat où elle a
- * été choisie (`nuit@dark`), et une préférence prise sous l'autre climat est
- * ignorée — sinon un « jour » cliqué une fois en clair suivrait l'utilisateur
- * jusque dans le noir. Les anciennes valeurs nues (`nuit` / `jour`) n'ont pas
- * de climat : elles retombent sur le thème, ce qui efface d'un coup les
- * `nuit` hérités de l'époque où la nuit était le défaut.
- * L'état du plan lui-même reste partagé avec la caisse ; ceci n'est qu'un
- * choix d'affichage du dashboard, d'où sa clé séparée. */
-const PDS_VIEW_KEY = 'kiwiPdsView';
-function pdsClimat() {
-  try { return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
-  catch (_) { return 'light'; }
-}
+/* ─── Vue nuit / vue jour ─────────────────────────────────────────────────
+ * Le plan est celui que promet la page d'accueil : une salle charbon, des
+ * tables au trait, le statut porté par la lumière, la menthe pour la seule
+ * addition demandée. C'est le défaut (le propriétaire, 2026-10-10), quel que
+ * soit le thème du dashboard : la page peint son propre fond sombre
+ * (body.pds-dark-page). La vue jour, son miroir à l'encre, reste à un clic
+ * et se mémorise par appareil. L'état du plan lui-même reste partagé avec
+ * la caisse ; ceci n'est qu'un choix d'affichage, d'où sa clé séparée (v2 :
+ * l'ancienne clé suivait le thème et figerait en jour qui l'avait). */
+const PDS_VIEW_KEY = 'kiwiPdsView2';
 function pdsNoir() {
-  const climat = pdsClimat();
   try {
     const saved = localStorage.getItem(PDS_VIEW_KEY) || '';
-    const at = saved.indexOf('@');
-    if (at > 0 && saved.slice(at + 1) === climat) return saved.slice(0, at) === 'nuit';
+    if (saved === 'jour') return false;
   } catch (_) {}
-  return climat === 'dark';
+  return true;
 }
 function pdsSetNoir(on) {
-  try { localStorage.setItem(PDS_VIEW_KEY, (on ? 'nuit' : 'jour') + '@' + pdsClimat()); } catch (_) {}
+  try { localStorage.setItem(PDS_VIEW_KEY, on ? 'nuit' : 'jour'); } catch (_) {}
 }
 /* Une matière sur la scène nuit : rabattue vers le charbon en gardant `keep`
  * de sa teinte — le noyer reste chaud, le sauge reste vert, mais tout devient
@@ -3152,6 +3138,31 @@ const PDS_STATUS_RING_JOUR = {
   out:      { s: 'rgba(10,15,13,0.22)', w: 1,    dash: '2 4',     fill: 'rgba(10,15,13,0.00)',  chair: 'rgba(10,15,13,0.10)' },
 };
 PDS_STATUS_RING_JOUR.reserved = { s: '#053B2C', w: 1.25, dash: '6 3', fill: 'rgba(5,59,44,0.06)', chair: 'rgba(5,59,44,0.45)' };
+/* v4 · l'échelle de l'accueil, telle quelle (SVG « Le plan de salle, en un
+ * geste »). Le statut est porté par la LUMIÈRE, pas par la couleur : libre
+ * 0.19, attend 0.40, mange 0.60, et une seule couleur, la menthe, pour
+ * l'addition demandée, avec son halo et son anneau. Réglée en pointillé,
+ * réservée en tiret long, hors service à peine tracée. Le jour en est le
+ * miroir exact à l'encre, l'atlas de la marque tenant le rôle de la menthe.
+ * `t` est l'encre du numéro, la même échelle. */
+Object.assign(PDS_STATUS_RING_NOIR, {
+  free:     { s: 'rgba(255,255,255,0.19)', w: 1.25, dash: '',        fill: 'rgba(255,255,255,0.012)', chair: 'rgba(255,255,255,0.12)', t: 'rgba(255,255,255,0.30)' },
+  ordering: { s: 'rgba(255,255,255,0.40)', w: 1.25, dash: '',        fill: 'rgba(255,255,255,0.035)', chair: 'rgba(255,255,255,0.30)', t: 'rgba(255,255,255,0.45)' },
+  occupied: { s: 'rgba(255,255,255,0.60)', w: 1.25, dash: '',        fill: 'rgba(255,255,255,0.075)', chair: 'rgba(255,255,255,0.44)', t: 'rgba(255,255,255,0.62)' },
+  bill:     { s: '#00FFAE',                w: 1.25, dash: '',        fill: 'rgba(0,255,174,0.11)',    chair: 'rgba(0,255,174,0.55)',    t: 'rgba(0,255,174,0.90)' },
+  paid:     { s: 'rgba(255,255,255,0.40)', w: 1.25, dash: '1.5 3.5', fill: 'rgba(255,255,255,0.02)',  chair: 'rgba(255,255,255,0.20)', t: 'rgba(255,255,255,0.40)' },
+  reserved: { s: 'rgba(255,255,255,0.45)', w: 1.25, dash: '6 3',     fill: 'rgba(255,255,255,0.03)',  chair: 'rgba(255,255,255,0.24)', t: 'rgba(255,255,255,0.50)' },
+  out:      { s: 'rgba(255,255,255,0.12)', w: 1,    dash: '2 4',     fill: 'rgba(255,255,255,0.00)',  chair: 'rgba(255,255,255,0.06)', t: 'rgba(255,255,255,0.18)' },
+});
+Object.assign(PDS_STATUS_RING_JOUR, {
+  free:     { s: 'rgba(10,15,13,0.24)', w: 1.25, dash: '',        fill: 'rgba(10,15,13,0.012)', chair: 'rgba(10,15,13,0.16)', t: 'rgba(10,15,13,0.40)' },
+  ordering: { s: 'rgba(10,15,13,0.48)', w: 1.25, dash: '',        fill: 'rgba(10,15,13,0.035)', chair: 'rgba(10,15,13,0.34)', t: 'rgba(10,15,13,0.62)' },
+  occupied: { s: 'rgba(10,15,13,0.78)', w: 1.25, dash: '',        fill: 'rgba(10,15,13,0.07)',  chair: 'rgba(10,15,13,0.55)', t: 'rgba(10,15,13,0.86)' },
+  bill:     { s: '#0B6E4F',             w: 1.5,  dash: '',        fill: 'rgba(11,110,79,0.12)', chair: 'rgba(11,110,79,0.65)', t: '#0B6E4F' },
+  paid:     { s: 'rgba(10,15,13,0.45)', w: 1.25, dash: '1.5 3.5', fill: 'rgba(10,15,13,0.02)',  chair: 'rgba(10,15,13,0.22)', t: 'rgba(10,15,13,0.55)' },
+  reserved: { s: 'rgba(10,15,13,0.55)', w: 1.25, dash: '6 3',     fill: 'rgba(10,15,13,0.03)',  chair: 'rgba(10,15,13,0.28)', t: 'rgba(10,15,13,0.66)' },
+  out:      { s: 'rgba(10,15,13,0.16)', w: 1,    dash: '2 4',     fill: 'rgba(10,15,13,0.00)',  chair: 'rgba(10,15,13,0.08)', t: 'rgba(10,15,13,0.30)' },
+});
 
 /* ─── Rendu nuit : le trait, pas la matière ───────────────────────────────
  * La scène de l'accueil est un dessin au trait — contours en filet, chaises
@@ -3207,13 +3218,12 @@ function pdsNoirTableBody(g, ring, status, tint) {
   const fill = ring.fill || 'rgba(255,255,255,0.012)';
   const bodyFill = jour ? tint : 'url(#pdsNoirBody)';
   const lift = jour ? 'url(#pdsJourLift)' : 'url(#pdsNoirLift)';
-  const callId = status === 'bill'
-    ? (jour ? 'url(#pdsJourBill)' : 'url(#pdsNoirBill)')
-    : (jour ? 'url(#pdsJourCall)' : 'url(#pdsNoirCall)');
+  const callId = jour ? 'url(#pdsJourCall)' : 'url(#pdsNoirCall)';
   const cx = g.w / 2, cy = g.h / 2;
   /* Le disque d'appel aux valeurs du mockup — le sol quasi noir encaisse
    * la somme des halos sans se noyer, l'adoucissement n'est plus utile. */
-  const glow = status === 'occupied' || status === 'bill';
+  /* Comme sur l'accueil : seule l'addition demandée rayonne. */
+  const glow = status === 'bill';
   const call = glow ? `<circle cx="${cx}" cy="${cy}" r="${(Math.max(g.w, g.h) * 1.45).toFixed(0)}" fill="${callId}"/>` : '';
   if (g.shape === 'round') {
     return `${call}
@@ -5051,6 +5061,20 @@ function pdsEnsureCss() {
  * Same state, same pdsSetServerIds / pdsSave as the full editor, so the till
  * and the desktop plan see the change at once. The layout itself stays on a
  * computer or tablet. */
+/* v4 · la page dans le cadre du dashboard (2026-10-10). */
+Object.assign(PDS_STR.fr, {
+  more: 'Plus', dupShort: (n) => `${n} en double`, furnitureTitle: 'Mobilier',
+  renameShort: 'Renommer', duplicateShort: 'Dupliquer', roomTitle: 'Style de la salle',
+});
+Object.assign(PDS_STR.en, {
+  more: 'More', dupShort: (n) => `${n} duplicated`, furnitureTitle: 'Furniture',
+  renameShort: 'Rename', duplicateShort: 'Duplicate', roomTitle: 'Room style',
+});
+Object.assign(PDS_STR.ar, {
+  more: 'المزيد', dupShort: (n) => `${n} مكرّرة`, furnitureTitle: 'الأثاث',
+  renameShort: 'إعادة تسمية', duplicateShort: 'نسخ', roomTitle: 'طابع القاعة',
+});
+
 const PDS_PHONE_STR = {
   fr: { tables: 'tables', title: 'Affectation des tables', sub: (n, u) => `${n} tables · ${u} sans serveur`,
         note: 'Le plan de salle se dessine sur ordinateur ou tablette. Ici, touchez un serveur, puis ses tables.',
@@ -5294,31 +5318,18 @@ handlers['nav-tables'] = () => {
 
   if (pdsPhoneWanted()) { pdsOpenPhoneAssign(state, v); return; }
 
-  const dr = fullpage({
+  /* A page in the dashboard frame like every 3.0 destination (Inventaire,
+     Promotions…): sidebar kept, the room under a real h1, no overlay, no
+     close button, no footer bar. Leaving the page is navigating away. */
+  const dr = window.Kiwi.appPage('tables', {
     title: T.title,
     subtitle: pdsSubtitle(state, T, v),
-    /* Le cadre de page commun (--page-max, genpage.css) et non plus 1240 :
-       la salle est l'objet de la page, elle prend la largeur. */
-    width: 1600,
-    body: pdsRenderBody(state, T),
-    foot: pdsRenderFoot(state, T),
+    body: `<div class="pds-page" data-pds-body>${pdsRenderBody(state, T)}</div>`,
   });
-  wireDismiss(dr);
   if (!dr || !dr.el) return;
+  dr.el.classList.add('pds-host');
+  pdsSetSubtitle(dr.el, pdsSubtitle(state, T, v));
 
-  /* Sidebar pin: highlight "Plan de salle" while this page is open,
-   * snap back to Accueil when the drawer closes (matches Équipe/Stock). */
-  window.Kiwi?.setActivePage?.('tables');
-  const prevClose = dr.close;
-  dr.close = () => {
-    try { pdsSave(state); } catch (_) {} /* auto-save the floor so a design is never lost on close */
-    if (pdsLive === state) pdsLive = null;   /* plus rien à repeindre à l'écran */
-    window.Kiwi?.setActivePage?.('accueil');
-    prevClose();
-  };
-
-  /* Bootstrap mode + interactivity. Re-rendering goes through pdsRefresh()
-   * which preserves the same drawer.el. */
   pdsAttach(dr.el, state, T, dr);
 };
 
@@ -5397,11 +5408,6 @@ function pdsRenderBody(state, T) {
         <button class="pds-mode ${state.mode==='assign'?'active':''}" role="tab" aria-selected="${state.mode==='assign'}" data-pds-mode="assign">${T.modeAssign}</button>
         <button class="pds-mode ${state.mode==='rotate'?'active':''}" role="tab" aria-selected="${state.mode==='rotate'}" data-pds-mode="rotate">${T.modeRotate}</button>
       </div>
-      <div class="pds-mode-desc" data-pds-mode-desc>${
-        state.mode === 'layout' ? T.modeLayoutDesc :
-        state.mode === 'assign' ? T.modeAssignDesc : T.modeRotateDesc
-      }</div>
-      ${pdsLiveBadge(T)}
       <div class="pds-zone-tabs" data-pds-zones>
         ${state.zones.map(z => `
           <button class="pds-zone ${z.id===state.activeZone?'active':''}" data-pds-zone="${pdsEsc(z.id)}"${z.color ? ` style="--zone:${pdsEsc(z.color)};"` : ''}>
@@ -5412,6 +5418,9 @@ function pdsRenderBody(state, T) {
         `).join('')}
         <button class="pds-zone pds-zone-add" data-pds-action="add-zone" title="${pdsEsc(T.addZone)}" aria-label="${pdsEsc(T.addZone)}">+</button>
       </div>
+      <span class="pds-toolbar-gap" aria-hidden="true"></span>
+      ${pdsLiveBadge(T)}
+      ${pdsRenderActions(state, T)}
     </div>
 
     <div class="pds-stage" data-pds-stage>
@@ -5840,9 +5849,8 @@ function pdsRenderStage(state, T) {
       </div>
       <div class="pds-canvas-wrap">
         <div class="pds-canvas-bar">
-          ${pdsRenderLegend(state, T)}
+          ${pdsRenderHeatSwitch(T)}
           <div class="pds-bar-tools">
-            ${pdsRenderHeatSwitch(T)}
             <span class="pds-zoom" role="group" aria-label="Zoom">
               <button class="pds-tool" data-pds-action="zoom-out" title="${pdsEsc(T.zoomOut)}" aria-label="${pdsEsc(T.zoomOut)}">${pdsIcon('remove')}</button>
               <button class="pds-tool pds-zoom-val" data-pds-action="zoom-fit" title="${pdsEsc(T.zoomFitHint)}">${PDS_ZOOM ? Math.round(PDS_ZOOM * 100) + ' %' : pdsEsc(T.zoomFit)}</button>
@@ -5890,9 +5898,11 @@ function pdsRenderStage(state, T) {
           </div>
         </div>
         <div class="pds-plan-footer">
-          <span class="pds-plan-floor-count" data-pds-floor-count>${pdsEsc(pdsFloorCount(tablesInZone, T))}</span>
-          ${state.mode === 'layout' ? `<span class="pds-kbd-hint">${pdsEsc(T.kbdHint)}</span>` : ''}
-          <span class="pds-plan-dims">${P.w} × ${P.h} ${T.unitCm}</span>
+          ${pdsRenderLegend(state, T)}
+          <span class="pds-plan-meta">
+            <span class="pds-plan-floor-count" data-pds-floor-count>${pdsEsc(pdsFloorCount(tablesInZone, T))}</span>
+            <span class="pds-plan-dims" title="${state.mode === 'layout' ? pdsEsc(T.kbdHint) : ''}">${P.w} × ${P.h} ${T.unitCm}</span>
+          </span>
         </div>
       </div>
       <div class="pds-inspector" data-pds-inspector>
@@ -6020,16 +6030,23 @@ function pdsDuplicateNums(state) {
   return out;
 }
 const PDS_ZONE_COLORS = ['#0B6E4F', '#053B2C', '#C89235', '#B5653A', '#7A8B6F', '#5A6CDB', '#C0306E', '#2C2520'];
+/* Folded sections (« Style de la salle ») keep their state across the
+   re-renders that every edit triggers. */
+const PDS_FOLD = {};
 function pdsRenderLayoutRail(state, T) {
   const groups = {};
   Object.entries(PDS_FIX).forEach(([k, v]) => { (groups[v.grp] = groups[v.grp] || []).push([k, v]); });
   const zone = state.zones.find(z => z.id === state.activeZone) || state.zones[0];
   const zi = state.zones.indexOf(zone);
   const dups = pdsDuplicateNums(state);
+  const grpName = (grp) => T['grp' + grp.charAt(0).toUpperCase() + grp.slice(1)] || PDS_FIX_GRP[grp];
   return `
-    <div class="pds-rail-card">
-      <div class="pds-rail-title">${T.paletteTitle}</div>
-      <div class="pds-rail-hint">${pdsEsc(T.paletteHint)}</div>
+    ${dups.length ? `<div class="pds-rail-warn" role="status">
+      <span>${pdsEsc(T.dupNums(dups.join(', ')))}</span>
+      <button class="pds-link" data-pds-action="renumber">${pdsEsc(T.renumber)}</button>
+    </div>` : ''}
+    <section class="pds-rail-card">
+      <h3 class="pds-rail-title">${T.paletteTitle}</h3>
       <div class="pds-pal-seats">
         <span>${pdsEsc(T.paletteSeats)}</span>
         <div class="pds-step">
@@ -6049,44 +6066,45 @@ function pdsRenderLayoutRail(state, T) {
             </button>`;
         }).join('')}
       </div>
-      <div class="pds-rail-hint pds-rail-hint-sm">${pdsEsc(T.editHint)}</div>
-    </div>
-    ${Object.entries(groups).map(([grp, items]) => `
-      <div class="pds-rail-card">
-        <div class="pds-rail-title">${T['grp' + grp.charAt(0).toUpperCase() + grp.slice(1)] || PDS_FIX_GRP[grp]}</div>
-        <div class="pds-palette pds-palette-el">
-          ${items.map(([k, v]) => `
-            <button class="pds-pal-item pds-pal-el" data-pds-action="add-el" data-pds-eltype="${k}"
-                    title="${T['fix' + k] || k}">
-              <span class="pds-pal-mini">${pdsFixMini(k, v)}</span>
-              <span class="pds-pal-label">${T['fix' + k] || k}</span>
-            </button>
-          `).join('')}
-        </div>
+    </section>
+    <section class="pds-rail-card">
+      <h3 class="pds-rail-title">${pdsEsc(T.furnitureTitle)}</h3>
+      ${Object.entries(groups).map(([grp, items], gi) => {
+        const key = 'grp-' + grp;
+        const open = PDS_FOLD[key] == null ? gi === 0 : PDS_FOLD[key];
+        return `
+        <details class="pds-fold pds-fold-sub" data-pds-fold="${key}"${open ? ' open' : ''}>
+          <summary class="pds-rail-sub">${pdsEsc(grpName(grp))}<em>${items.length}</em></summary>
+          <div class="pds-palette pds-palette-el">
+            ${items.map(([k, v]) => `
+              <button class="pds-pal-item pds-pal-el" data-pds-action="add-el" data-pds-eltype="${k}" title="${T['fix' + k] || k}">
+                <span class="pds-pal-mini">${pdsFixMini(k, v)}</span>
+                <span class="pds-pal-label">${T['fix' + k] || k}</span>
+              </button>`).join('')}
+          </div>
+        </details>`;
+      }).join('')}
+    </section>
+    <section class="pds-rail-card">
+      <div class="pds-rail-head">
+        <h3 class="pds-rail-title">${pdsEsc(zone ? zone.name : '')}</h3>
+        <span class="pds-rail-head-tools">
+          <button class="pds-tool" data-pds-action="zone-move" data-pds-delta="-1" title="${pdsEsc(T.zoneMoveL)}" aria-label="${pdsEsc(T.zoneMoveL)}"${zi <= 0 ? ' disabled' : ''}>${pdsIcon('chevron_left')}</button>
+          <button class="pds-tool" data-pds-action="zone-move" data-pds-delta="1" title="${pdsEsc(T.zoneMoveR)}" aria-label="${pdsEsc(T.zoneMoveR)}"${zi >= state.zones.length - 1 ? ' disabled' : ''}>${pdsIcon('chevron_right')}</button>
+        </span>
       </div>
-    `).join('')}
-    ${pdsRenderRoomCard(state, T)}
-    <div class="pds-rail-card">
-      <div class="pds-rail-title">${pdsEsc(T.zoneTools)} · ${pdsEsc(zone ? zone.name : '')}</div>
       <div class="pds-zone-tools">
-        <button class="pds-tool" data-pds-action="zone-move" data-pds-delta="-1" title="${pdsEsc(T.zoneMoveL)}" aria-label="${pdsEsc(T.zoneMoveL)}"${zi <= 0 ? ' disabled' : ''}>${pdsIcon('chevron_left')}</button>
-        <button class="pds-tool" data-pds-action="zone-move" data-pds-delta="1" title="${pdsEsc(T.zoneMoveR)}" aria-label="${pdsEsc(T.zoneMoveR)}"${zi >= state.zones.length - 1 ? ' disabled' : ''}>${pdsIcon('chevron_right')}</button>
-        <button class="kb ghost" data-pds-action="rename-zone">${T.renameZone}</button>
-        <button class="kb ghost" data-pds-action="zone-duplicate">${pdsEsc(T.zoneDuplicate)}</button>
+        <button class="kb ghost" data-pds-action="rename-zone">${pdsEsc(T.renameShort)}</button>
+        <button class="kb ghost" data-pds-action="zone-duplicate">${pdsEsc(T.duplicateShort)}</button>
       </div>
-      <label class="pds-mini-label">${pdsEsc(T.zoneColor)}</label>
+      <div class="pds-rail-sub">${pdsEsc(T.zoneColor)}</div>
       <div class="pds-sw-row">
         <button class="pds-sw pds-sw-none ${zone && zone.color ? '' : 'active'}" data-pds-action="zone-color" data-pds-val="" title="${pdsEsc(T.backdropNone)}" aria-label="${pdsEsc(T.backdropNone)}"></button>
         ${PDS_ZONE_COLORS.map(c => `<button class="pds-sw ${zone && zone.color === c ? 'active' : ''}" data-pds-action="zone-color" data-pds-val="${c}" style="background:${c};" aria-label="${c}"></button>`).join('')}
       </div>
-      <button class="kb ghost pds-rail-cta pds-rail-danger" data-pds-action="delete-zone">${T.deleteZone}</button>
-    </div>
-    <div class="pds-rail-card">
-      ${dups.length ? `<div class="pds-rail-warn" role="status">${pdsEsc(T.dupNums(dups.join(', ')))}</div>` : ''}
-      <button class="kb ${dups.length ? 'atlas' : 'ghost'} pds-rail-cta" data-pds-action="renumber">${pdsEsc(T.renumber)}</button>
-      <button class="kb ghost pds-rail-cta" data-pds-action="open-wizard">${T.wizTitle}</button>
-      <button class="kb ghost pds-rail-cta" data-pds-action="scan-salle">${T.scanSalle}</button>
-    </div>
+      <button class="pds-link pds-link-danger" data-pds-action="delete-zone">${T.deleteZone}</button>
+    </section>
+    ${pdsRenderRoomCard(state, T)}
   `;
 }
 
@@ -6159,8 +6177,8 @@ function pdsRenderRoomCard(state, T) {
      murs et finition ont suivi le même sort que la nuit. */
   const noir = pdsNoir();
   return `
-    <div class="pds-rail-card">
-      <div class="pds-rail-title">${T.roomTitle}</div>
+    <details class="pds-rail-card pds-fold" data-pds-fold="room"${PDS_FOLD.room ? ' open' : ''}>
+      <summary class="pds-rail-title">${T.roomTitle}</summary>
       <div class="pds-rail-hint">${noir ? T.roomHintNuit : T.roomHint}</div>
       ${noir ? '' : `
       <label class="pds-mini-label">${T.ambianceLabel}</label>
@@ -6191,7 +6209,7 @@ function pdsRenderRoomCard(state, T) {
         <label>${T.roomH}<input class="kf-input pds-input" type="number" min="200" max="2000" step="20" data-pds-room-field="h" value="${P.h}"/></label>
         <label>${T.roomWallW}<input class="kf-input pds-input" type="number" min="0" max="14" step="1" data-pds-room-field="wallW" value="${r.wallW}"/></label>
       </div>
-    </div>
+    </details>
   `;
 }
 
@@ -6242,6 +6260,7 @@ function pdsRenderInspectorEmpty(state, T) {
     : `<div class="pds-rail-card pds-inspect-empty pds-inspect-hint">
         <div class="pds-rail-title">${T.selection}</div>
         <div class="pds-rail-hint">${pdsEsc(T.bulkHintNone)}</div>
+        ${state.mode === 'layout' ? `<p class="pds-kbd-hint">${pdsEsc(T.kbdHint)}</p>` : ''}
       </div>`;
   return pdsRenderLivePanel(state, T) + head;
 }
@@ -6856,8 +6875,7 @@ function pdsRenderTable(t, state, T) {
   const eff = pdsEff(t);
   const st = eff.status;
   const ring = R[st] || R.free;
-  const ink = noir ? 'rgba(255,255,255,0.5)'
-    : (st === 'occupied' ? '#0B6E4F' : st === 'bill' ? '#C2456F' : 'rgba(10,15,13,0.60)');
+  const ink = ring.t || (noir ? 'rgba(255,255,255,0.5)' : 'rgba(10,15,13,0.60)');
   const body = noir
     ? pdsNoirTableBody(g, ring, st)
     : pdsNoirTableBody(g, ring, st, pdsJourC(c, 0.30));
@@ -7230,25 +7248,38 @@ function pdsRenderRotateStage(state, T) {
   `;
 }
 
-function pdsRenderFoot(state, T) {
-  /* No « Enregistrer » (every change already saves, and closing saves) and
-     no « Fermer » (the header × and Escape both close). What is left is what
-     only this footer can do. */
-  const covers = state.tables.reduce((s, t) => s + pdsGeom(t).seats, 0);
-  const nv = (state.versions || []).length;
+/* What the old footer bar carried, in the page's own toolbar: Versions and
+   Exporter in reach, the rarer tools (renuméroter, assistant, scan, réinitia-
+   liser) behind Plus. Autosave needs no button and no banner. */
+function pdsRenderActions(state, T) {
+  const nv = pdsVersions(state).length;
+  const dups = pdsDuplicateNums(state).length;
   return `
-    <div class="pds-foot">
-      <div class="pds-foot-meta">
-        <span>${pdsEsc(T.footMeta(state.tables.length, state.zones.length, covers))}</span>
-        <span class="pds-foot-saved">${pdsEsc(T.autosaved)}</span>
+    <button class="kb ghost pds-act" data-pds-action="versions">${pdsEsc(T.versions)}${nv ? ` <span class="pds-count">${nv}</span>` : ''}</button>
+    <details class="pds-more" data-pds-more>
+      <summary class="kb ghost pds-act" aria-label="${pdsEsc(T.more)}">${pdsEsc(T.more)}${dups ? '<i class="pds-more-dot" aria-hidden="true"></i>' : ''}</summary>
+      <div class="pds-more-pop" role="menu">
+        <button role="menuitem" data-pds-action="renumber">${pdsEsc(T.renumber)}${dups ? `<em>${pdsEsc(T.dupShort(dups))}</em>` : ''}</button>
+        <button role="menuitem" data-pds-action="open-wizard">${pdsEsc(T.wizTitle)}</button>
+        <button role="menuitem" data-pds-action="scan-salle">${pdsEsc(T.scanSalle)}</button>
+        <button role="menuitem" class="is-danger" data-pds-action="reset">${pdsEsc(T.reset)}</button>
       </div>
-      <div class="pds-foot-actions">
-        <button class="kb ghost pds-rail-danger" data-pds-action="reset">${T.reset}</button>
-        <button class="kb ghost" data-pds-action="versions">${T.versions}${nv ? ` <span class="pds-count">${nv}</span>` : ''}</button>
-        <button class="kb ghost" data-pds-action="export">${T.export}</button>
-      </div>
-    </div>
-  `;
+    </details>
+    <button class="kb primary pds-act" data-pds-action="export">${pdsEsc(T.export)}</button>`;
+}
+
+/* The page head's context line, split on « · » into the same dotted spans
+   appPage() draws, and only rewritten when the words change (the live room
+   repaints every eight seconds). */
+function pdsSetSubtitle(root, text) {
+  const p = root.querySelector('.genpage-head p');
+  if (!p || p.getAttribute('data-pds-sub') === text) return;
+  p.setAttribute('data-pds-sub', text);
+  p.textContent = '';
+  String(text).split(' · ').forEach((seg, i) => {
+    if (i) { const d = document.createElement('i'); d.className = 'dot'; d.setAttribute('aria-hidden', 'true'); p.appendChild(d); }
+    const sp = document.createElement('span'); sp.className = 'seg'; sp.textContent = seg; p.appendChild(sp);
+  });
 }
 
 /* ═══ INTERACTIVITY ═════════════════════════════════════════════════ */
@@ -7260,18 +7291,15 @@ function pdsAttach(root, state, T, dr) {
    * every state mutation. */
   const refresh = () => {
     pdsExpireReservations(state);
-    const body = root.querySelector('.kiwi-drawer-body');
-    const foot = root.querySelector('.kiwi-drawer-foot');
+    const body = root.querySelector('[data-pds-body]');
     /* A full re-render keeps the merchant where they were in the page and
        in a zoomed room, instead of snapping both back to the top. */
-    const keepY = body ? body.scrollTop : 0;
+    const keepY = window.scrollY;
     const cv = root.querySelector('[data-pds-backdrop]');
     const keepX = cv ? [cv.scrollLeft, cv.scrollTop] : null;
     if (body) body.innerHTML = pdsRenderBody(state, T);
-    if (foot) foot.innerHTML = pdsRenderFoot(state, T);
-    const sub = root.querySelector('.kiwi-drawer-head p');
-    if (sub) sub.textContent = pdsSubtitle(state, T);
-    if (body) body.scrollTop = keepY;
+    pdsSetSubtitle(root, pdsSubtitle(state, T));
+    if (Math.abs(window.scrollY - keepY) > 1) window.scrollTo({ top: keepY });
     const cv2 = root.querySelector('[data-pds-backdrop]');
     if (cv2 && keepX) { cv2.scrollLeft = keepX[0]; cv2.scrollTop = keepX[1]; }
     /* The inspector lives in the body, so a full render empties it while the
@@ -7301,6 +7329,9 @@ function pdsAttach(root, state, T, dr) {
 
   /* ── Event bindings ───────────────────────────────────────────── */
   const bind = () => {
+    root.querySelectorAll('details[data-pds-fold]').forEach(d => {
+      d.ontoggle = () => { PDS_FOLD[d.getAttribute('data-pds-fold')] = d.open; };
+    });
     /* Mode switcher */
     root.querySelectorAll('[data-pds-mode]').forEach(btn => {
       btn.onclick = () => {
@@ -7333,6 +7364,7 @@ function pdsAttach(root, state, T, dr) {
         ev.preventDefault();
         ev.stopPropagation();
         const action = btn.getAttribute('data-pds-action');
+        btn.closest('details[data-pds-more]')?.removeAttribute('open');
         pdsHandleAction(action, btn, state, T, root, dr, refresh, selection);
       };
     });
@@ -7705,8 +7737,17 @@ function pdsAttach(root, state, T, dr) {
        ouvrait alors un panneau qu'on ne voyait pas. 'nearest' ne bouge rien
        quand il est déjà à l'écran, donc la colonne large ne saute pas.
        Sans 'smooth' : mesuré dans ce tiroir, l'animation ne défile pas d'un
-       pixel là où le saut direct parcourt ses 561. */
-    try { inspector.scrollIntoView({ block: 'nearest' }); } catch (_) {}
+       pixel là où le saut direct parcourt ses 561.
+       Sur la page pleine, la colonne de droite dépasse l'écran : 'nearest'
+       défilait alors de 300 px pour en montrer le bas. On ne bouge que si
+       le haut de l'inspecteur est hors de vue. */
+    try {
+      const r = inspector.getBoundingClientRect();
+      if (r.top > window.innerHeight - 120 || r.bottom < 0) {
+        const top = parseFloat(getComputedStyle(root).getPropertyValue('--pds-top')) || 64;
+        window.scrollBy(0, r.top - top - 12);
+      }
+    } catch (_) {}
   };
   /* Open bulk inspector */
   const openBulkInspector = () => {
@@ -7891,7 +7932,7 @@ function pdsAttach(root, state, T, dr) {
     if (lp && !root.querySelector('[data-pds-inspect-id]') && !root.querySelector('.pds-inspector .pds-inspect')) lp.outerHTML = pdsRenderLivePanel(state, T);
     const fc = root.querySelector('[data-pds-floor-count]');
     if (fc) fc.textContent = pdsFloorCount(state.tables.filter(t => t.zone === state.activeZone), T);
-    const sub = root.querySelector('.kiwi-drawer-head p'); if (sub) sub.textContent = pdsSubtitle(state, T);
+    pdsSetSubtitle(root, pdsSubtitle(state, T));
     bind();
   };
   state._repaintLive = repaintLive;
@@ -7911,20 +7952,39 @@ function pdsAttach(root, state, T, dr) {
     setTimeout(() => Kiwi.toast(T.rotAutoDone, { type: 'success', desc: T.rotAppliedDesc }), 300);
   }
 
-  /* Clean up every listener when the drawer is dismissed. */
-  if (dr && typeof dr.close === 'function') {
-    const prev = dr.close;
-    dr.close = function() {
-      document.removeEventListener('keydown', onKey, true);
-      document.removeEventListener('keyup', onKeyUp, true);
-      document.removeEventListener('pointerup', release, true);
-      document.removeEventListener('pointercancel', release, true);
-      window.removeEventListener('kiwi-reservations-changed', onBookings);
-      clearInterval(tick);
-      if (unwatch) unwatch();
-      return prev.apply(this, arguments);
-    };
-  }
+  /* Tear everything down when the page goes: another destination replaces
+     the host (appPage removes it) or the dashboard leaves the genpage shell.
+     The plan is saved on the way out, as the old drawer did on close. */
+  let alive = true;
+  const teardown = () => {
+    if (!alive) return;
+    alive = false;
+    document.removeEventListener('keydown', onKey, true);
+    document.removeEventListener('keyup', onKeyUp, true);
+    document.removeEventListener('pointerup', release, true);
+    document.removeEventListener('pointercancel', release, true);
+    document.removeEventListener('pointerdown', closeMenus, true);
+    window.removeEventListener('kiwi-reservations-changed', onBookings);
+    window.removeEventListener('resize', onResize);
+    clearInterval(tick);
+    if (unwatch) unwatch();
+    mo.disconnect();
+    document.body.classList.remove('pds-dark-page');
+    try { pdsSave(state); } catch (_) {}
+    if (pdsLive === state) pdsLive = null;
+  };
+  const gone = () => !root.isConnected || (root.classList.contains('dash-genpage') && !document.body.classList.contains('page-genpage'));
+  const mo = new MutationObserver(() => { if (gone()) teardown(); });
+  mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  if (root.parentElement) mo.observe(root.parentElement, { childList: true });
+  /* The Plus menu closes on any press outside it. */
+  const closeMenus = (ev) => {
+    root.querySelectorAll('details[data-pds-more][open]').forEach(d => { if (!d.contains(ev.target)) d.removeAttribute('open'); });
+  };
+  document.addEventListener('pointerdown', closeMenus, true);
+  const onResize = () => pdsMeasureChrome(root);
+  window.addEventListener('resize', onResize);
+  document.body.classList.toggle('pds-dark-page', pdsNoir());
 
   bind();
   pdsMeasureChrome(root);
@@ -7935,8 +7995,13 @@ function pdsAttach(root, state, T, dr) {
    on screen without scrolling the page. */
 function pdsMeasureChrome(root) {
   const h = (sel) => { const n = root.querySelector(sel); return n ? n.getBoundingClientRect().height : 0; };
-  const chrome = h('.kiwi-drawer-head') + h('.kiwi-drawer-foot') + h('.pds-canvas-bar') + h('.pds-plan-footer') + 64;
+  /* In the dashboard frame the page scrolls under the top bar: the room fits
+     between that bar and the window's foot once the KPIs have scrolled by. */
+  const bar = document.querySelector('.topbar, .main > header, .dash-topbar');
+  const top = bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 64;
+  const chrome = top + h('.pds-canvas-bar') + h('.pds-plan-footer') + 48;
   root.style.setProperty('--pds-chrome', Math.round(chrome) + 'px');
+  root.style.setProperty('--pds-top', Math.round(top) + 'px');
 }
 function pdsZoomBy(root, state, factor) {
   const zone = state.zones.find(z => z.id === state.activeZone) || state.zones[0];
@@ -8656,6 +8721,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
     case 'toggle-view': {
       pdsSetNoir(!pdsNoir());
       root.classList.toggle('pds-noir', pdsNoir());
+      document.body.classList.toggle('pds-dark-page', pdsNoir());
       refresh();
       break;
     }
@@ -10623,12 +10689,17 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .pds-chip-x { color:rgba(242,239,230,0.62); }
   .pds-noir.pds-noir.pds-noir .pds-chip-x:hover { background:rgba(242,239,230,0.10); color:#EDEAE0; }
   .pds-noir.pds-noir.pds-noir .pds-asum-name { color:rgba(242,239,230,0.80); }
+  .pds-noir.pds-noir.pds-noir .pds-asum-n { color:rgba(242,239,230,0.62); }
+  .pds-noir.pds-noir.pds-noir .pds-chip-body em { color:rgba(242,239,230,0.55); }
   .pds-noir.pds-noir.pds-noir .pds-rot-meta > div, .pds-noir.pds-noir.pds-noir .pds-rot-step {
     background:#141813; border-color:rgba(242,239,230,0.10);
   }
   .pds-noir.pds-noir.pds-noir .pds-rot-val, .pds-noir.pds-noir.pds-noir .pds-fair-name, .pds-noir.pds-noir.pds-noir .pds-hist-name,
   .pds-noir.pds-noir.pds-noir .pds-strat-card b { color:#EDEAE0; }
   .pds-noir.pds-noir.pds-noir .pds-strat-card em { color:rgba(242,239,230,0.55); }
+  .pds-noir.pds-noir.pds-noir .pds-rot-line b { color:#EDEAE0; }
+  .pds-noir.pds-noir.pds-noir .pds-rot-line em { color:rgba(242,239,230,0.55); }
+  .pds-noir.pds-noir.pds-noir .pds-rot-step-h { color:rgba(242,239,230,0.55); }
   .pds-noir.pds-noir.pds-noir .pds-fair-bar { background:rgba(242,239,230,0.10); }
 
   /* Champs · color-scheme:dark règle les natifs, le reste suit. */
@@ -11091,6 +11162,230 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .pds-live-stat em { color:#7DF2B0; }
   .pds-noir.pds-noir.pds-noir .pds-rot-auto { color:rgba(242,239,230,0.55); }
   .pds-noir.pds-noir.pds-noir .pds-rot-auto.on { color:#7DF2B0; }
+  /* ═════ v4 · la page dans le cadre, l'esthétique de l'accueil ═══════════
+     Plan de salle is a 3.0 page now (Kiwi.appPage): the dashboard's sidebar
+     and top bar stay, the room sits under a real h1. The night view, the
+     default, is the landing's « Le plan de salle, en un geste »: a black
+     page, hairline cards at 0.10, white type on an opacity scale, mint for
+     the one thing that needs attention. Day mirrors it in ink and atlas. */
+
+  /* Page shell. The host paints nothing; in night view main does. */
+  .dash-genpage.pds-host { background:transparent; }
+  .pds-page { display:flex; flex-direction:column; gap:14px; }
+  body.pds-dark-page main.main,
+  body.pds-dark-page .main { background:#000 !important; }
+  body.pds-dark-page .dash-genpage .genpage-head h1 { color:#F2EFE6; }
+  body.pds-dark-page .dash-genpage .genpage-head p { color:rgba(255,255,255,0.50); }
+  body.pds-dark-page .dash-genpage .genpage-head p .seg:first-child { color:rgba(255,255,255,0.78); }
+  body.pds-dark-page .dash-genpage .genpage-head p .dot { background:rgba(255,255,255,0.28); }
+  body.pds-dark-page .dash-genpage .genpage-head::after { background:rgba(255,255,255,0.10); }
+  /* Listes déroulantes (kiwi-select) : le déclencheur peignait du blanc à
+     68 % sur le noir, et le menu est monté sur <body>, hors de .pds-noir. */
+  .pds-noir.pds-noir.pds-noir .kiwi-select-trigger {
+    background:#0b0d0c; border-color:rgba(255,255,255,0.12); color:#EDEAE0; box-shadow:none;
+  }
+  .pds-noir.pds-noir.pds-noir .kiwi-select-trigger:hover { background:#101312; border-color:rgba(255,255,255,0.22); }
+  .pds-noir.pds-noir.pds-noir .kiwi-select-value-meta,
+  .pds-noir.pds-noir.pds-noir .kiwi-select-chevron { color:rgba(255,255,255,0.45); }
+  body.pds-dark-page .kiwi-select-popover {
+    background:rgba(10,12,11,0.96); border-color:rgba(255,255,255,0.12); color:#EDEAE0;
+  }
+  body.pds-dark-page .kiwi-select-option[aria-selected="true"] { background:rgba(255,255,255,0.08); color:#F2EFE6; }
+  body.pds-dark-page .kiwi-select-option:hover,
+  body.pds-dark-page .kiwi-select-option.is-active { background:rgba(255,255,255,0.06); }
+
+  /* KPI strip: the shared four cells, set like the landing's cards. */
+  .pds-page .pds-kpis { margin:0; }
+  .pds-page .pds-kpis .kx-kpi .l { text-transform:none; letter-spacing:0; font-size:12.5px; font-weight:500; }
+  .pds-noir.pds-noir.pds-noir .pds-kpis { background:rgba(255,255,255,0.10); border-color:rgba(255,255,255,0.10); box-shadow:none; border-radius:16px; }
+  .pds-noir.pds-noir.pds-noir .pds-kpis .kx-kpi { background:#050605; }
+  .pds-noir.pds-noir.pds-noir .pds-kpis .kx-kpi .v { color:#F2EFE6; }
+  .pds-noir.pds-noir.pds-noir .pds-kpis .kx-kpi .l { color:rgba(255,255,255,0.50); }
+  .pds-noir.pds-noir.pds-noir .pds-kpis .kx-kpi .d { color:rgba(255,255,255,0.38); }
+  .pds-noir.pds-noir.pds-noir .pds-kpis .kx-kpi.warn .v,
+  .pds-noir.pds-noir.pds-noir .pds-kpis .kx-kpi.warn .l { color:#00FFAE; }
+  .pds-page .pds-kpis .kx-kpi.warn .v, .pds-page .pds-kpis .kx-kpi.warn .l { color:var(--atlas); }
+
+  /* One toolbar: modes, zones, then live state and the page's actions. */
+  .pds-page .pds-toolbar { margin:0; gap:8px; }
+  .pds-toolbar-gap { flex:1 1 auto; }
+  .pds-page .pds-modes, .pds-page .pds-zone-tabs {
+    padding:3px; gap:2px; border-radius:12px; background:var(--paper-soft); border:1px solid var(--n-200);
+  }
+  .pds-page .pds-mode, .pds-page .pds-zone {
+    height:32px; padding:0 14px; border-radius:9px; font:500 13px/1 var(--sans, 'Inter Tight'), system-ui;
+    color:var(--n-600); letter-spacing:-0.005em; display:inline-flex; align-items:center; gap:7px;
+  }
+  .pds-page .pds-mode.active, .pds-page .pds-zone.active {
+    background:var(--surface); color:var(--ink); font-weight:600; box-shadow:0 1px 2px rgba(10,15,13,0.10), 0 0 0 1px var(--n-200);
+  }
+  .pds-page .pds-zone em { font:500 11.5px/1 var(--sans, 'Inter Tight'), system-ui; color:var(--n-500); font-variant-numeric:tabular-nums; }
+  .pds-page .pds-zone-add { width:32px; padding:0; justify-content:center; font-size:16px; }
+  .pds-act.kb { height:36px; }
+  .pds-act.kb.primary { padding-inline:16px; }
+  .pds-more { position:relative; }
+  .pds-more > summary { list-style:none; cursor:pointer; position:relative; }
+  .pds-more > summary::-webkit-details-marker { display:none; }
+  .pds-more-dot { position:absolute; top:6px; right:6px; width:7px; height:7px; border-radius:50%; background:var(--danger, #B4362A); }
+  .pds-more-pop {
+    position:absolute; right:0; top:calc(100% + 6px); z-index:40; min-width:240px; padding:6px;
+    display:grid; gap:2px; border:1px solid var(--n-200); border-radius:14px; background:var(--surface);
+    box-shadow:0 18px 40px -16px rgba(10,15,13,0.28);
+  }
+  .pds-more-pop button {
+    display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; padding:10px 12px;
+    border:0; border-radius:9px; background:transparent; color:var(--ink); font:500 13.5px/1.2 var(--sans, 'Inter Tight'), system-ui;
+    text-align:left; cursor:pointer;
+  }
+  .pds-more-pop button:hover { background:var(--paper-soft); }
+  .pds-more-pop button em { font-style:normal; font-size:11.5px; color:var(--danger, #B4362A); }
+  .pds-more-pop button.is-danger { color:var(--danger, #B4362A); }
+
+  /* Stage: two quiet columns around the room. */
+  .pds-page .pds-stage-grid { grid-template-columns:232px minmax(0, 1fr) 272px; gap:16px; }
+  @media (max-width: 1280px) { .pds-page .pds-stage-grid { grid-template-columns:228px minmax(0, 1fr) 260px; } }
+  @media (max-width: 1100px) { .pds-page .pds-stage-grid { grid-template-columns:220px minmax(0, 1fr); } }
+  .pds-page .pds-rail, .pds-page .pds-inspector {
+    top:calc(var(--pds-top, 72px) + 12px); max-height:calc(100dvh - var(--pds-top, 72px) - 24px); gap:12px; padding-right:2px;
+  }
+  .pds-page .pds-rail-card { background:var(--surface); border:1px solid var(--n-200); border-radius:16px; padding:16px; box-shadow:none; }
+  .pds-page .pds-rail-title {
+    margin:0 0 12px; font:600 13.5px/1.3 var(--sans, 'Inter Tight'), system-ui; letter-spacing:-0.01em;
+    text-transform:none; color:var(--ink);
+  }
+  .pds-page .pds-rail-hint { font-size:12px; line-height:1.5; color:var(--n-600); }
+  .pds-rail-sub { margin:14px 0 8px; font:500 11.5px/1.2 var(--sans, 'Inter Tight'), system-ui; color:var(--n-500); }
+  .pds-rail-sub:first-of-type { margin-top:0; }
+  .pds-rail-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px; }
+  .pds-rail-head .pds-rail-title { margin:0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pds-rail-head-tools { display:inline-flex; gap:4px; flex:none; }
+  .pds-page .pds-zone-tools { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:4px; }
+  .pds-page .pds-zone-tools .kb { height:34px; justify-content:center; font-size:12.5px; padding:0 8px; min-width:0; }
+  .pds-link { display:inline-block; margin-top:14px; padding:0; border:0; background:none; cursor:pointer;
+    font:500 12.5px/1.2 var(--sans, 'Inter Tight'), system-ui; color:var(--atlas); }
+  .pds-link:hover { text-decoration:underline; text-underline-offset:3px; }
+  .pds-link-danger { color:var(--danger, #B4362A); }
+  .pds-page .pds-rail-warn { display:flex; flex-direction:column; gap:2px; margin:0; border-radius:14px; padding:12px 14px; }
+  .pds-page .pds-rail-warn .pds-link { margin-top:6px; color:inherit; text-decoration:underline; text-underline-offset:3px; }
+  .pds-fold > summary { list-style:none; cursor:pointer; display:flex; align-items:center; justify-content:space-between; margin:0; }
+  .pds-fold > summary::-webkit-details-marker { display:none; }
+  .pds-fold > summary::after { content:""; width:7px; height:7px; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor;
+    transform:rotate(45deg) translateY(-2px); opacity:0.5; transition:transform .2s; }
+  .pds-fold[open] > summary { margin-bottom:12px; }
+  .pds-fold[open] > summary::after { transform:rotate(-135deg) translateY(-2px); }
+  .pds-page .pds-palette { gap:6px; }
+  .pds-page .pds-palette-el { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+  .pds-page .pds-pal-item { border-radius:12px; border:1px solid var(--n-200); background:var(--paper-soft); padding:10px 4px 8px; transition:border-color .16s, background-color .16s; }
+  .pds-page .pds-pal-item:hover { border-color:var(--atlas); background:var(--surface); transform:none; box-shadow:none; }
+  .pds-page .pds-pal-label { font-size:11px; color:var(--n-600); }
+  .pds-fold-sub { border-top:1px solid var(--n-200); padding-top:10px; margin-top:10px; }
+  .pds-fold-sub:first-of-type { border-top:0; padding-top:0; margin-top:0; }
+  .pds-fold-sub > summary.pds-rail-sub { margin:0; }
+  .pds-fold-sub[open] > summary.pds-rail-sub { margin-bottom:10px; }
+  .pds-fold-sub > summary em { margin-left:auto; margin-right:10px; font-style:normal; font-variant-numeric:tabular-nums; opacity:0.7; }
+  .pds-noir.pds-noir.pds-noir .pds-fold-sub { border-color:rgba(255,255,255,0.08); }
+  .pds-page .pds-live-sub { text-transform:none; letter-spacing:0; font-size:12px; font-weight:500; }
+  .pds-page .pds-kbd-hint { margin:10px 0 0; text-align:left; white-space:normal; font-size:11.5px; line-height:1.5; color:var(--n-500); }
+
+  /* Canvas: tools on one quiet line, the room as the subject, the legend
+     under it like the landing's figure. */
+  .pds-page .pds-canvas-wrap { gap:10px; }
+  .pds-page .pds-canvas-bar { background:transparent; border:0; padding:0; border-radius:0; justify-content:space-between; }
+  .pds-page .pds-bar-tools { gap:6px; }
+  .pds-page .pds-tool { width:32px; height:32px; border-radius:9px; }
+  .pds-page .pds-tool.pds-zoom-val { width:auto; }
+  .pds-page .pds-heat { border-radius:10px; }
+  .pds-page .pds-heat-opt { height:26px; padding:0 10px; font-size:12px; }
+  .pds-page .pds-plan-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:2px 4px 0; }
+  .pds-page .pds-plan-footer .pds-legend { gap:4px 6px; }
+  .pds-plan-meta { display:inline-flex; align-items:center; gap:14px; }
+  .pds-page .pds-plan-canvas { background:transparent !important; border:0; padding:0; box-shadow:none; }
+
+  /* ── Night: the landing, applied to the whole page ── */
+  .pds-noir.pds-noir.pds-noir.pds-host { background:transparent; }
+  .pds-noir.pds-noir.pds-noir .pds-modes,
+  .pds-noir.pds-noir.pds-noir .pds-zone-tabs,
+  .pds-noir.pds-noir.pds-noir .pds-heat { background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.10); }
+  .pds-noir.pds-noir.pds-noir .pds-mode, .pds-noir.pds-noir.pds-noir .pds-zone { color:rgba(255,255,255,0.55); }
+  .pds-noir.pds-noir.pds-noir .pds-mode:hover, .pds-noir.pds-noir.pds-noir .pds-zone:hover { color:rgba(255,255,255,0.85); }
+  .pds-noir.pds-noir.pds-noir .pds-mode.active,
+  .pds-noir.pds-noir.pds-noir .pds-zone.active { background:rgba(255,255,255,0.10); color:#F2EFE6; box-shadow:none; }
+  .pds-noir.pds-noir.pds-noir .pds-zone em { color:rgba(255,255,255,0.40); }
+  .pds-noir.pds-noir.pds-noir .pds-act.kb.ghost,
+  .pds-noir.pds-noir.pds-noir .pds-zone-tools .kb.ghost { background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.12); color:rgba(255,255,255,0.85); }
+  .pds-noir.pds-noir.pds-noir .pds-act.kb.ghost:hover,
+  .pds-noir.pds-noir.pds-noir .pds-zone-tools .kb.ghost:hover { border-color:rgba(255,255,255,0.30); color:#fff; }
+  .pds-noir.pds-noir.pds-noir .pds-more-pop { background:#0B0D0C; border-color:rgba(255,255,255,0.12); box-shadow:0 18px 40px -12px rgba(0,0,0,0.8); }
+  .pds-noir.pds-noir.pds-noir .pds-more-pop button { color:rgba(255,255,255,0.85); }
+  .pds-noir.pds-noir.pds-noir .pds-more-pop button:hover { background:rgba(255,255,255,0.06); }
+  .pds-noir.pds-noir.pds-noir .pds-more-pop button.is-danger,
+  .pds-noir.pds-noir.pds-noir .pds-more-pop button em { color:#F29A8C; }
+  .pds-noir.pds-noir.pds-noir .pds-rail-card { background:rgba(255,255,255,0.025); border-color:rgba(255,255,255,0.10); }
+  .pds-noir.pds-noir.pds-noir .pds-rail-title { color:#F2EFE6; }
+  .pds-noir.pds-noir.pds-noir .pds-rail-hint,
+  .pds-noir.pds-noir.pds-noir .pds-kbd-hint { color:rgba(255,255,255,0.45); }
+  .pds-noir.pds-noir.pds-noir .pds-rail-sub { color:rgba(255,255,255,0.40); }
+  .pds-noir.pds-noir.pds-noir .pds-link { color:#7DF2B0; }
+  .pds-noir.pds-noir.pds-noir .pds-link-danger { color:#F29A8C; }
+  .pds-noir.pds-noir.pds-noir .pds-pal-item { background:rgba(255,255,255,0.03); border-color:rgba(255,255,255,0.10); }
+  .pds-noir.pds-noir.pds-noir .pds-pal-item:hover { border-color:rgba(0,255,174,0.55); background:rgba(0,255,174,0.04); }
+  .pds-noir.pds-noir.pds-noir .pds-pal-label { color:rgba(255,255,255,0.55); }
+  .pds-noir.pds-noir.pds-noir .pds-tool { background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.10); color:rgba(255,255,255,0.70); }
+  .pds-noir.pds-noir.pds-noir .pds-tool:hover { border-color:rgba(255,255,255,0.30); color:#fff; background:rgba(255,255,255,0.06); }
+  .pds-noir.pds-noir.pds-noir .pds-canvas-bar { background:transparent; border:0; }
+  .pds-noir.pds-noir.pds-noir .pds-plan-canvas { background:transparent; border:0; padding:0; }
+  .pds-noir.pds-noir.pds-noir .pds-snap { color:rgba(255,255,255,0.60); }
+
+  /* Legend = the landing's: 17 × 13 swatches, 11 px, white at 0.5. */
+  .pds-noir.pds-noir.pds-noir .pds-sw-free     { border-color:rgba(255,255,255,0.19); background:rgba(255,255,255,0.012); border-style:solid; }
+  .pds-noir.pds-noir.pds-noir .pds-sw-ordering { border-color:rgba(255,255,255,0.40); background:rgba(255,255,255,0.035); border-style:solid; }
+  .pds-noir.pds-noir.pds-noir .pds-sw-occupied { border-color:rgba(255,255,255,0.60); background:rgba(255,255,255,0.075); border-style:solid; }
+  .pds-noir.pds-noir.pds-noir .pds-sw-bill     { border-color:#00FFAE; background:rgba(0,255,174,0.11); border-width:1.25px; border-style:solid; }
+  .pds-noir.pds-noir.pds-noir .pds-sw-paid     { border-color:rgba(255,255,255,0.40); background:rgba(255,255,255,0.02); border-style:dotted; }
+  .pds-noir.pds-noir.pds-noir .pds-sw-reserved { border-color:rgba(255,255,255,0.45); background:rgba(255,255,255,0.03); border-style:dashed; }
+  .pds-noir.pds-noir.pds-noir .pds-sw-out      { border-color:rgba(255,255,255,0.14); background:none; border-style:dashed; }
+  .pds-noir.pds-noir.pds-noir .pds-pill-ordering { background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.70); border:1px solid rgba(255,255,255,0.30); }
+  .pds-noir.pds-noir.pds-noir .pds-pill-occupied { background:rgba(255,255,255,0.08); color:#F2EFE6; border:1px solid rgba(255,255,255,0.45); }
+  .pds-noir.pds-noir.pds-noir .pds-pill-bill { background:rgba(0,255,174,0.10); color:#00FFAE; border:1px solid rgba(0,255,174,0.50); }
+  .pds-noir.pds-noir.pds-noir .pds-pill-reserved { background:rgba(255,255,255,0.03); color:rgba(255,255,255,0.75); border:1px dashed rgba(255,255,255,0.45); }
+
+  /* Chips on the room: the landing's « 6 min » pill; mint only for money
+     waiting to be paid. */
+  .pds-noir.pds-noir.pds-noir .pds-bill-chip { background:rgba(10,10,10,0.92); border-color:rgba(255,255,255,0.18); color:rgba(255,255,255,0.72); }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="bill"] .pds-bill-chip { background:rgba(4,26,20,0.92); border-color:rgba(0,255,174,0.55); color:#00FFAE; }
+  .pds-noir.pds-noir.pds-noir .pds-tbl-since.is-check { border-color:rgba(255,255,255,0.35); color:rgba(255,255,255,0.85); background:rgba(10,10,10,0.92); }
+  .pds-noir.pds-noir.pds-noir .pds-resv-chip { background:rgba(10,10,10,0.92); border-color:rgba(255,255,255,0.30); color:rgba(255,255,255,0.80); box-shadow:none; }
+  .pds-noir.pds-noir.pds-noir .pds-kpis .kx-kpi.warn .d { color:rgba(0,255,174,0.70); }
+  .pds-noir.pds-noir.pds-noir .pds-live-sec.is-urgent .pds-live-sub { color:#00FFAE; }
+  .pds-noir.pds-noir.pds-noir .pds-live-sec.is-urgent .pds-live-row { background:rgba(0,255,174,0.06); }
+  .pds-noir.pds-noir.pds-noir .pds-live-sec.is-urgent .pds-live-row em { color:#00FFAE; }
+  .pds-noir.pds-noir.pds-noir .pds-live-sec.is-check .pds-live-sub { color:rgba(255,255,255,0.75); }
+  .pds-noir.pds-noir.pds-noir .pds-till-bill { border-color:rgba(0,255,174,0.45); background:rgba(0,255,174,0.05); }
+  .pds-noir.pds-noir.pds-noir .pds-till-bill b { color:#00FFAE; }
+
+  /* ── Day: the same scale in ink, atlas for the bill ── */
+  .pds-page .pds-sw-free     { border-color:rgba(10,15,13,0.24); background:rgba(10,15,13,0.012); border-style:solid; }
+  .pds-page .pds-sw-ordering { border-color:rgba(10,15,13,0.48); background:rgba(10,15,13,0.035); border-style:solid; }
+  .pds-page .pds-sw-occupied { border-color:rgba(10,15,13,0.78); background:rgba(10,15,13,0.07); border-style:solid; }
+  .pds-page .pds-sw-bill     { border-color:#0B6E4F; background:rgba(11,110,79,0.12); border-style:solid; }
+  .pds-page .pds-sw-paid     { border-color:rgba(10,15,13,0.45); background:rgba(10,15,13,0.02); border-style:dotted; }
+  .pds-page .pds-sw-reserved { border-color:rgba(10,15,13,0.55); background:rgba(10,15,13,0.03); border-style:dashed; }
+  .pds-page .pds-sw-out      { border-color:rgba(10,15,13,0.16); background:none; border-style:dashed; }
+  .pds-page .pds-tbl-cell[data-status="bill"] .pds-bill-chip { background:#0B6E4F; border-color:#0B6E4F; color:#F7F5F0; }
+  .pds-page .pds-bill-chip { border-color:rgba(10,15,13,0.18); color:rgba(10,15,13,0.72); }
+  .pds-page .pds-live-sec.is-urgent .pds-live-sub,
+  .pds-page .pds-live-sec.is-urgent .pds-live-row em { color:var(--atlas); }
+  .pds-page .pds-live-sec.is-urgent .pds-live-row { background:rgba(11,110,79,0.06); }
+  .pds-page .pds-till-bill { border-color:rgba(11,110,79,0.40); background:rgba(11,110,79,0.05); }
+  .pds-page .pds-till-bill b { color:var(--atlas); }
+  .pds-page .pds-tbl-since.is-check { border-color:rgba(10,15,13,0.30); color:rgba(10,15,13,0.80); background:rgba(247,245,240,0.96); }
+  .pds-page .pds-pill-ordering { background:rgba(10,15,13,0.05); color:var(--n-700); }
+  .pds-page .pds-pill-bill { background:rgba(11,110,79,0.12); color:var(--atlas); }
+
+  @media (max-width: 760px) {
+    .pds-toolbar-gap { display:none; }
+    .pds-page .pds-toolbar { gap:6px; }
+  }
 `;
 
 /* ═══════════════════════════════════════════════════════════════════════════

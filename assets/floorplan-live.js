@@ -214,7 +214,13 @@
     if (!ts || ts > now + 60000) return null;
     var ms = Math.max(0, now - ts);
     var min = Math.round(ms / 60000);
-    var label = min < 60 ? min + ' min' : Math.floor(min / 60) + ' h ' + String(min % 60).padStart(2, '0');
+    /* Past a day, hours stop meaning anything: « 40 j », not « 967 h 11 ». */
+    var lang = 'fr';
+    try { lang = localStorage.getItem('kiwiLang') || 'fr'; } catch (_) {}
+    var day = lang === 'en' ? ' d' : lang === 'ar' ? ' ي' : ' j';
+    var label = min < 60 ? min + ' min'
+      : min < 1440 ? Math.floor(min / 60) + ' h ' + String(min % 60).padStart(2, '0')
+      : Math.floor(min / 1440) + day;
     return { minutes: min, label: label, check: ms >= CHECK_AFTER };
   }
 

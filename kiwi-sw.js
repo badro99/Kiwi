@@ -151,7 +151,7 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
   // The Plan de salle's live-room poller (fail-soft without network).
-  '/assets/floorplan-live.js?v=2',
+  '/assets/floorplan-live.js?v=3',
   '/assets/oppo-cards.js?v=4',
   '/assets/dashboard-pwa.js?v=553',
   '/assets/dashboard-native.js?v=3',
