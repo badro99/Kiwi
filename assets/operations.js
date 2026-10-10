@@ -17,8 +17,47 @@
     try { return (prefix || 'op') + ':' + crypto.randomUUID(); }
     catch (_) { return (prefix || 'op') + ':' + Date.now().toString(36) + Math.random().toString(36).slice(2); }
   }
+  /* LE RÔLE, DEMANDÉ AU SERVEUR.  K.access.role({}) ne lit que kiwiStaffRole,
+     que rien n'écrit : le propriétaire lui-même était donc « employee » ici, et
+     allowed() refusait bons de commande, paie, messages, actions de l'assistant
+     et alarmes de parc avant tout appel.  Le serveur sait déjà qui appelle
+     (session propriétaire, opérateur, employé, caisse) : on le lui demande une
+     fois par établissement et on lit sa réponse.  Ce n'est qu'un confort
+     d'affichage — chaque commande est rejugée côté Worker par mayCommand. */
+  var actor = null;            /* { merchant, kind, role } confirmé par le serveur */
+  var actorPending = null;
+  var actorMiss = { merchant: '', at: 0 };   /* échec récent : pas de rafale sur une démo sans serveur */
+  function actorFresh() { return !!(actor && actor.merchant === K.tenant()); }
+  function whoami(force) {
+    var merchant = K.tenant();
+    if (!force && actorFresh()) return Promise.resolve(actor);
+    if (!force && actorPending && actorPending.merchant === merchant) return actorPending.promise;
+    if (!force && actorMiss.merchant === merchant && Date.now() - actorMiss.at < 60000) return Promise.resolve(null);
+    var promise = fetch('/api/operations?view=whoami&merchant=' + encodeURIComponent(merchant), {
+      credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
+    }).then(responseJson).then(function (data) {
+      /* La réponse doit concerner l'établissement encore ouvert : une vue
+         opérateur qui a changé de client entre-temps relancera sa question. */
+      if (K.tenant() !== merchant) return null;
+      /* Le serveur répond pour le magasin que la session lui prouve, pas
+         forcément celui demandé : une réponse sur un autre magasin ne confère
+         aucun rôle sur celui-ci (repli sur le rôle local, comme avant). */
+      var same = clean(data.merchant, 120) === merchant;
+      actor = { merchant: merchant, kind: same ? clean(data.kind, 20) : '', role: same ? clean(data.role, 40).toLowerCase() : '' };
+      signal({ type: 'actor', actor: actor });
+      return actor;
+    }).catch(function () { actorMiss = { merchant: merchant, at: Date.now() }; return null; }).then(function (value) {
+      if (actorPending && actorPending.promise === promise) actorPending = null;
+      return value;
+    });
+    actorPending = { merchant: merchant, promise: promise };
+    return promise;
+  }
   function subject() {
-    var role = K.access.role({});
+    /* Magasin changé (vue opérateur, appairage) : on relance la question en
+       arrière-plan ; d'ici là, l'ancien rôle ne vaut pas pour ce magasin-ci. */
+    if (!actorFresh()) setTimeout(function () { whoami().catch(function () {}); }, 0);
+    var role = actorFresh() && actor.role ? actor.role : K.access.role({});
     return { role: role, id: clean(window.__kiwiStaffId || '', 80) };
   }
   /* L'identité de l'appareil.  Sans jeton stable, un parc de six caisses
@@ -90,6 +129,7 @@
        aucun rôle, et le laisser en défaut cachait le bouton à tout le monde
        sauf au propriétaire. */
     if (domain === 'ai' && action === 'reprint') return ['action', 'reprint'];
+    if (domain === 'ai' && action === 'stock-adjust') return ['write', 'inventory'];
     if (domain === 'ai' && action === 'message-customer') return ['action', 'message'];
     if (domain === 'ai' && action === 'create-po') return ['write', 'inventory'];
     if (domain === 'ai' && action === 'update-order-status') return ['write', 'orders'];
@@ -300,6 +340,11 @@
   });
 
   window.addEventListener('online', flush);
+  /* Le rôle se demande dès le chargement (le premier clic le trouve donc
+     connu), puis à chaque changement de magasin : appairage d'une caisse,
+     client ouvert en vue opérateur. */
+  setTimeout(function () { whoami().catch(function () {}); }, 0);
+  try { document.addEventListener('kiwi-paired', function () { whoami(true); }); } catch (_) {}
   setInterval(function () { if (navigator.onLine !== false) flush(); }, 60000);
   setTimeout(function () {
     flush();
@@ -316,6 +361,6 @@
     devices: devices, testPrint: testPrint, ackAlert: ackAlert, deviceId: deviceId, heartbeat: beat,
     notifications: notifications, notify: notify, setNotifyPreferences: setNotifyPreferences,
     orders: orders, agentAllowed: agentAllowed, agentRun: agentRun,
-    allowed: allowed, subscribe: function (fn) { listeners.add(fn); return function () { listeners.delete(fn); }; },
+    allowed: allowed, whoami: whoami, actor: function () { return actorFresh() ? Object.assign({}, actor) : null; }, subscribe: function (fn) { listeners.add(fn); return function () { listeners.delete(fn); }; },
   };
 })();

@@ -6247,7 +6247,7 @@
      real device sync state instead of inferring it from navigator.onLine. -->
 <script defer src="assets/vendor/dexie.min.js?v=1"></script>
 <script defer src="assets/offline-db.js?v=9"></script>
-<script defer src="assets/platform-kernel.js?v=5"></script>
+<script defer src="assets/platform-kernel.js?v=6"></script>
 <script defer src="assets/platform-ops.js?v=5"></script>
 <!-- Establish the signed account/operator identity before any tenant-scoped
      data module starts. God Mode must never infer authority from ?op=1, and
@@ -6380,7 +6380,7 @@
 <!-- The till's live room for the Plan de salle (KiwiFloorLive). Read-only
      poller of /api/floor/live; pages-pro.js reads it at open time. -->
 <script src="assets/floorplan-live.js?v=3" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2144" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2145" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js?v=1" defer fetchpriority="low"></script>
@@ -6446,8 +6446,8 @@
 <script src="assets/reservations.js?v=20" defer fetchpriority="low"></script>
 <!-- Durable operational workflows. Loaded after every feature module and the
      production honesty guard so its real handlers win over legacy demo toasts. -->
-<script src="assets/operations.js?v=12" defer fetchpriority="low"></script>
-<script src="assets/operations-ui.js?v=19" defer fetchpriority="low"></script>
+<script src="assets/operations.js?v=13" defer fetchpriority="low"></script>
+<script src="assets/operations-ui.js?v=20" defer fetchpriority="low"></script>
 
 <!-- ═══════════════════════════════════════════════════════════════════
  *  ROLE GUARD · salary figures remain owner-only, while a manager may open

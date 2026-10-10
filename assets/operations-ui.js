@@ -181,6 +181,7 @@
             'not-found':'Cette commande n’existe plus.',
             'reason-required':'Un motif est nécessaire pour consigner un échec.',
             unauthorized:'Session expirée · reconnectez-vous.',
+            'operation-failed':'L’opération n’a pas abouti · réessayez dans un instant.',
           },
         },
         en: {
@@ -350,6 +351,7 @@
             'not-found':'This command no longer exists.',
             'reason-required':'A reason is needed to record a failure.',
             unauthorized:'Session expired · sign in again.',
+            'operation-failed':'That did not go through · try again in a moment.',
           },
         },
         ar: {
@@ -519,6 +521,7 @@
             'not-found':'لم يعد هذا الأمر موجودًا.',
             'reason-required':'يلزم سبب لتدوين الإخفاق.',
             unauthorized:'انتهت الجلسة · أعد تسجيل الدخول.',
+            'operation-failed':'لم تكتمل العملية · أعد المحاولة بعد قليل.',
           },
         },
       })[lang()];
@@ -630,7 +633,9 @@
         var base = key.slice(0, i);
         if (c.errs[base]) return c.errs[base] + ' (' + key.slice(i + 1) + ')';
       }
-      return c.errs[key] || key || 'operation-failed';
+      /* Un code brut (« operation-failed ») n'est pas une phrase : faute de
+         traduction, on dit ce qui s'est passé, et le code reste en note. */
+      return c.errs[key] || (key ? c.errs['operation-failed'] + ' (' + key + ')' : c.errs['operation-failed']);
     }
     /* A server-side domain refusal comes back HTTP 200 with status:'failed' —
        only permissions and confirmation throw.  Both have to be read. */
@@ -2165,6 +2170,24 @@
       if (!real() && legacyTerminals) return legacyTerminals.apply(this, arguments);
       openDevices();
     };
+
+    /* Chaque écran ci-dessous décide « droit ou pas » au moment où il s'ouvre.
+       Le rôle vient du serveur (KiwiOperations.whoami) : sans cette attente, un
+       clic arrivé avant la réponse affichait « Droit d'exploitation requis »
+       au propriétaire lui-même.  Une fois connu, le rôle est en cache et
+       l'ouverture redevient immédiate ; sans serveur (démo), on ouvre quand
+       même, avec le rôle local, comme avant. */
+    function afterRole(fn) {
+      return function () {
+        var self = this, args = arguments;
+        if (!O.whoami || (O.actor && O.actor())) return fn.apply(self, args);
+        var run = function () { return fn.apply(self, args); };
+        return O.whoami().then(run, run);
+      };
+    }
+    openLedger = afterRole(openLedger); openProcurement = afterRole(openProcurement);
+    openPayroll = afterRole(openPayroll); openPayments = afterRole(openPayments);
+    openDevices = afterRole(openDevices); openCommands = afterRole(openCommands);
 
     window.KiwiOperationsUI = { toastResult:toastResult, openHistory:H['operations-history'], openCommands:openCommands, openLedger:openLedger, openProcurement:openProcurement, openPayroll:openPayroll, openPayments:openPayments, openDevices:openDevices };
   }

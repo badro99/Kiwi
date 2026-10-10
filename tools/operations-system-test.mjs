@@ -128,6 +128,27 @@ ok(tillMessage.status === 403 && tillMessage.data.error === 'permission-denied',
 const tillHistory = await get(tillCookie, '?merchant=' + MERCHANT);
 ok(tillHistory.status === 403 && tillHistory.data.error === 'owner-session-required', 'a paired till cannot enumerate the operational ledger');
 
+/* « Qui suis-je ici ? »  Le navigateur ne peut pas deviner son rôle : rien ne
+   l'écrit côté client, et le tableau de bord refusait au propriétaire chaque
+   bouton d'exploitation.  Le serveur rend le rôle qu'il a lui-même établi,
+   et rien d'autre : pas le grand livre, pas une autorisation. */
+const whoOwner = await get(ownerCookie, '?merchant=' + MERCHANT + '&view=whoami');
+ok(whoOwner.status === 200 && whoOwner.data.kind === 'owner' && whoOwner.data.role === 'owner' && whoOwner.data.merchant === MERCHANT,
+  'whoami tells the owner session it is the owner of this store');
+ok(!('commands' in whoOwner.data) && !('providers' in whoOwner.data),
+  'whoami answers with the role only, never with the operational ledger');
+const whoTill = await get(tillCookie, '?merchant=' + MERCHANT + '&view=whoami');
+ok(whoTill.status === 200 && whoTill.data.kind === 'till' && whoTill.data.role === 'till',
+  'a paired till learns it is a device, not a person');
+const whoManager = await get(managerCookie + '; ' + tillCookie, '?merchant=' + MERCHANT + '&view=whoami');
+ok(whoManager.status === 200 && whoManager.data.kind === 'employee' && whoManager.data.role === 'manager',
+  'a manager signed in at the till gets the role from the live roster');
+const whoAnon = await get('', '?merchant=' + MERCHANT + '&view=whoami');
+ok(whoAnon.status === 401, 'an unsigned caller is not told anything about the store');
+const whoElsewhere = await get(ownerCookie, '?merchant=' + OTHER + '&view=whoami');
+ok(whoElsewhere.status === 401 || whoElsewhere.data.merchant !== OTHER || whoElsewhere.data.role !== 'owner',
+  'an owner session is never named owner of somebody else\'s store');
+
 /* A signed-in cashier at a paired register: `resolveTenant` has no employee
    branch, so the roster role is reachable only alongside the till pairing —
    which is exactly the real deployment shape. */
@@ -1316,5 +1337,53 @@ ok(!uiSource.includes('color:#B4381F') && !uiSource.includes('color:#8A6A12'),
    gate must assert the script is wired, never which generation it is on. */
 pages.forEach((page, i) => ok(/assets\/operations\.js\?v=\d+/.test(page), `operational shell ${i + 1} loads the command client`));
 ok(/\/assets\/operations\.js\?v=\d+/.test(sw) && /\/assets\/operations-ui\.js\?v=\d+/.test(sw), 'operations assets are present in the offline shell');
+
+/* Côté navigateur : le rôle confirmé par le serveur l'emporte sur le stockage
+   local, qui ne contient rien — sans quoi le propriétaire restait « employee ». */
+{
+  const timers = [];
+  let whoCalls = 0;
+  let tenant = 'amira-boutique';
+  const ctx = {
+    window: { KiwiPlatform: {
+      tenant: () => tenant, register() {},
+      access: { role: () => 'employee', can: (subject, action, resource) => subject.role === 'owner' || (subject.role === 'employee' && action === 'read' && resource === 'planning') },
+      telemetry: { start: () => ({ end() {} }) },
+    }, KiwiOffline: offline, addEventListener() {}, dispatchEvent() {} },
+    navigator: { onLine: true }, location: { pathname: '/dashboard.html' }, document: { body: { classList: { contains: () => false } } },
+    fetch: async (url) => {
+      if (String(url).includes('view=whoami')) {
+        whoCalls++;
+        const m = new URL('https://x' + url).searchParams.get('merchant');
+        return { ok: true, status: 200, json: async () => ({ ok: true, merchant: m, kind: m === 'amira-boutique' ? 'owner' : 'employee', role: m === 'amira-boutique' ? 'owner' : 'caisse' }) };
+      }
+      return { ok: true, status: 200, json: async () => ({ ok: true, command: { status: 'draft' } }) };
+    },
+    crypto: { randomUUID: () => '00000000-0000-4000-8000-000000000999' },
+    URLSearchParams, CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init && init.detail; } },
+    setInterval() {}, setTimeout(fn) { timers.push(fn); }, console, Date, Math, Promise, Set, Error, Object, String, Number, JSON,
+  };
+  ctx.window.window = ctx.window; ctx.window.navigator = ctx.navigator; ctx.window.location = ctx.location;
+  vm.createContext(ctx);
+  vm.runInContext(browserSource, ctx, { filename: 'operations.js' });
+  const O = ctx.window.KiwiOperations;
+  ok(O.allowed('device', 'ack-alert') === false, 'before the server answers, the local role still decides');
+  const who = await O.whoami();
+  ok(who && who.role === 'owner' && O.allowed('device', 'ack-alert') === true && O.allowed('procurement', 'create-po') === true,
+    'once the server names the owner, the dashboard stops refusing the owner');
+  await O.whoami();
+  ok(whoCalls === 1, 'the role is asked once per store, then read from memory');
+  tenant = 'other-store';
+  ok(O.allowed('device', 'ack-alert') === false, 'a role confirmed for one store never carries over to another');
+  timers.splice(0).forEach((fn) => fn());
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
+  ok(whoCalls === 2 && O.actor() && O.actor().role === 'caisse', 'switching store asks the server again in the background');
+  /* Une réponse qui parle d'un autre magasin que celui demandé ne vaut rien ici. */
+  ctx.fetch = async () => ({ ok: true, status: 200, json: async () => ({ ok: true, merchant: 'amira-boutique', kind: 'owner', role: 'owner' }) });
+  tenant = 'third-store';
+  const stray = await O.whoami(true);
+  ok(stray && stray.role === '' && O.allowed('device', 'ack-alert') === false, 'an answer about a different store grants nothing on this one');
+}
 
 console.log(`\n✓ Kiwi Operations — ${n} controls`);

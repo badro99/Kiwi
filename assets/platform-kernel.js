@@ -105,13 +105,16 @@
   var ROLE = {
     owner: ['*'], proprietaire: ['*'], operator: ['*'],
     manager: ['read:*','write:catalog','write:inventory','write:planning','write:customers','write:orders','write:reservations','write:reports','write:device','action:refund','action:reprint','action:message'],
-    caisse: ['read:catalog','read:inventory','read:customers','read:orders','write:orders','write:customers','action:checkout','action:reprint'],
-    cashier: ['read:catalog','read:inventory','read:customers','read:orders','write:orders','write:customers','action:checkout','action:reprint'],
+    caisse: ['read:catalog','read:inventory','read:customers','read:orders','read:device','write:orders','write:customers','action:checkout','action:reprint'],
+    cashier: ['read:catalog','read:inventory','read:customers','read:orders','read:device','write:orders','write:customers','action:checkout','action:reprint'],
     serveur: ['read:tables','read:orders','read:planning','write:orders','action:request-bill'],
     server: ['read:tables','read:orders','read:planning','write:orders','action:request-bill'],
     kitchen: ['read:orders','write:order-status'], cuisinier: ['read:orders','write:order-status'],
     stock: ['read:catalog','read:inventory','write:inventory'], magasinier: ['read:catalog','read:inventory','write:inventory'],
-    employee: ['read:planning'], employe: ['read:planning']
+    employee: ['read:planning'], employe: ['read:planning'],
+    /* Un appareil appairé, pas une personne : il rapporte sa santé et teste sa
+       propre imprimante. Miroir de functions/api/operations.js. */
+    till: ['read:device','action:reprint']
   };
   function accessKey() { return 'kiwiAccess:v1:' + tenant(); }
   function accessDoc() {

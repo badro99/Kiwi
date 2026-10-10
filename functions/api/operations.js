@@ -2102,6 +2102,16 @@ export async function onRequestGet({ request, env }) {
      manager, who is kept out of salary figures everywhere else in the product.
      Deliberately narrower than the per-command permissions below. */
   const reader = await actorFor(request, env, merchant);
+  /* « Qui suis-je ici ? »  Le navigateur n'a aucun moyen sûr de connaître son
+     propre rôle : rien ne l'écrit côté client, et le tableau de bord se croyait
+     donc « employee » pour tout le monde, propriétaire compris — chaque bouton
+     d'exploitation se refusait avant même de partir.  Le serveur, lui, le sait
+     déjà (actorFor).  On le lui rend, avant la porte réservée au propriétaire,
+     parce que la réponse ne dit rien d'autre que le rôle de l'appelant
+     lui-même.  Elle n'autorise rien : chaque commande repasse par mayCommand. */
+  if (clean(url.searchParams.get('view'), 24) === 'whoami') {
+    return json({ ok: true, merchant, kind: reader ? reader.kind : '', role: reader ? normRole(reader.role) : '' });
+  }
   if (!reader || (reader.kind !== 'owner' && reader.kind !== 'operator')) {
     return json({ error: 'owner-session-required' }, 403);
   }

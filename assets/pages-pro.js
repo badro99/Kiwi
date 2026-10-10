@@ -18679,12 +18679,15 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
      has NO empty state of its own belongs here rather than in the set above, so
      the starter still answers until there is something to show (payroll was
      here until team.js gave it a proper empty state). */
-  /* Terminaux n'est PAS ici, volontairement : operations-ui.js porte une vraie
-     page de parc (battements de cœur), mais elle se ferme sur « Droit
-     d'exploitation requis » tant que le tableau de bord ne connaît pas le rôle
-     du propriétaire (KiwiPlatform.access.role lit kiwiStaffRole, que personne
-     n'écrit). L'y envoyer remplacerait un starter honnête par une impasse. */
-  const REAL_WHEN = {};
+  const REAL_WHEN = {
+    /* Terminaux : operations-ui.js porte la vraie page du parc (battements de
+       cœur relus côté serveur, alarmes, ticket d'essai). Elle demande une
+       session, donc un vrai compte ; un établissement créé localement, sans
+       serveur derrière, garde le starter. Le rôle du propriétaire vient de
+       GET /api/operations?view=whoami : sans lui, la page se fermait sur
+       « Droit d'exploitation requis » pour tout le monde, propriétaire compris. */
+    terminaux: () => !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()),
+  };
 
   /* ── Actionable layer: let the client add their OWN data right here ──────
    * Config-type destinations (menu, team, devices…) get an "Add {noun}" button
