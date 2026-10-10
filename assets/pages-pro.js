@@ -11977,6 +11977,9 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
      * recopiées depuis assets/icons/material/ (nom du fichier en commentaire). */
     voucher:  msym(D_REDEEM, 18),
     voucherSm: msym(D_REDEEM, 13),  /* pied de modale : la rangée est en 13 */
+    /* search.svg, download.svg */
+    search:   msym('M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z', 16),
+    download: msym('M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z', 15),
     bundle:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
     tax:      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
     bell:     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>',
@@ -12340,6 +12343,82 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
    * watch, refund issuance row.
    * ─────────────────────────────────────────────────────────────────────────── */
   let liveReturns = [];
+  /* Les lignes que la page affiche : « Exporter » écrit exactement celles-là. */
+  let _rxRows = [];
+  /* Retours & échanges · même grammaire que l'inventaire : la page prend la
+     largeur, les chiffres en tête, puis des tableaux à lignes fines. */
+  function _rxCss() {
+    if (document.getElementById('rx-css')) return;
+    const st = document.createElement('style');
+    st.id = 'rx-css';
+    st.textContent = `
+      .dash-genpage:has(.rx-page) .genpage-body { max-width: 1440px; }
+      .rx-kpis .kx-kpi .l { text-transform: none; letter-spacing: 0; font-family: var(--sans); font-size: 12.5px; font-weight: 500; }
+      .rx-panel { margin-bottom: 18px; border: 1px solid var(--n-200, #e7e3da); border-radius: 16px; background: var(--surface, #fff); overflow: hidden; }
+      html[data-theme="dark"] .rx-panel { background: var(--paper-soft); }
+      .rx-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; padding: 16px 18px 14px; }
+      .rx-head h3 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+      .rx-head p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--n-500, #77807b); }
+      .rx-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .rx-search { display: flex; align-items: center; gap: 8px; min-width: 240px; height: 38px; padding: 0 12px; border: 1px solid var(--n-200, #e7e3da);
+        border-radius: 11px; background: var(--paper-soft, #f3f1ea); color: var(--n-500, #77807b); }
+      .rx-search input { flex: 1; min-width: 0; height: auto; padding: 0; border: 0 !important; outline: 0; box-shadow: none !important; background: transparent !important; font: inherit; font-size: 13px; color: var(--ink, #0A0F0D); }
+      .rx-search:focus-within { border-color: var(--atlas, #0B6E4F); }
+      .rx-row { display: grid; align-items: center; gap: 16px; padding: 12px 18px; border-top: 1px solid var(--n-100, #efece5);
+        grid-template-columns: 150px minmax(200px, 2fr) minmax(140px, 1.2fr) 130px 210px; }
+      .rx-row[hidden] { display: none; }
+      .rx-row[data-action] { cursor: pointer; }
+      .rx-row[data-action]:hover { background: color-mix(in srgb, var(--atlas, #0B6E4F) 4%, transparent); }
+      .rx-th { padding-top: 9px; padding-bottom: 9px; font-size: 12px; font-weight: 500; color: var(--n-500, #77807b); background: var(--paper-soft, #f3f1ea); }
+      html[data-theme="dark"] .rx-th { background: var(--paper-muted); }
+      .rx-th .r { text-align: right; }
+      .rx-row > span { min-width: 0; }
+      .rx-row b { display: block; font-weight: 600; font-size: 13.5px; letter-spacing: -.005em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .rx-row small { display: block; margin-top: 3px; font-size: 12px; line-height: 1.35; color: var(--n-500, #77807b); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .rx-when b { font-variant-numeric: tabular-nums; }
+      .rx-when small { font-family: var(--mono); font-size: 11px; }
+      .rx-who { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .rx-amt { text-align: right; font-weight: 600; font-size: 13.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+      .rx-amt small { font-weight: 400; }
+      .rx-state { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+      .rx-tag { display: inline-flex; align-items: center; padding: 4px 9px; border-radius: 999px; font: 500 11.5px/1 var(--sans); white-space: nowrap;
+        color: var(--atlas, #0B6E4F); background: color-mix(in srgb, var(--atlas, #0B6E4F) 10%, transparent); }
+      .rx-tag.exch { color: #3D6B8C; background: rgba(61, 107, 140, .12); }
+      .rx-tag.pend { color: #8A6210; background: rgba(217, 154, 43, .16); }
+      .rx-tag.out { color: #9B2F22; background: rgba(155, 47, 34, .10); }
+      .rx-tag.muted { color: var(--n-500, #77807b); background: var(--paper-soft, #f3f1ea); }
+      html[data-theme="dark"] .rx-tag { color: #7DF2B0; background: rgba(125, 242, 176, .12); }
+      html[data-theme="dark"] .rx-tag.out { color: #F0B3A4; background: rgba(240, 179, 164, .14); }
+      .rx-mini { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; padding: 0 8px; border: 1px solid var(--n-200, #e7e3da);
+        border-radius: 9px; background: var(--surface, #fff); color: var(--ink, #0A0F0D); font: 500 12px/1 var(--sans); cursor: pointer; }
+      .rx-mini:hover { border-color: var(--n-400, #a9aea9); }
+      .rx-mini.danger { color: #9B2F22; }
+      html[data-theme="dark"] .rx-mini { background: transparent; color: var(--paper, #F7F5F0); }
+      .rx-empty { padding: 26px 18px 30px; border-top: 1px solid var(--n-100, #efece5); font-size: 13px; color: var(--n-500, #77807b); }
+      .rx-page .p-grid-2 { margin-top: 0 !important; }
+      @media (max-width: 900px) {
+        .rx-th { display: none; }
+        .rx-row { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 16px; }
+        .rx-row .rx-what { grid-column: 1; grid-row: 1; }
+        .rx-row .rx-amt { grid-column: 2; grid-row: 1; }
+        .rx-row .rx-when { grid-column: 1 / -1; grid-row: 2; display: flex; gap: 8px; align-items: baseline; }
+        .rx-row .rx-when b { font-weight: 500; font-size: 12px; color: var(--n-500, #77807b); }
+        .rx-row .rx-when small { margin: 0; }
+        .rx-row .rx-who { grid-column: 1 / -1; grid-row: 3; font-size: 12px; color: var(--n-500, #77807b); }
+        .rx-row .rx-state { grid-column: 1 / -1; grid-row: 4; justify-content: flex-start; margin-top: 6px; }
+        .rx-row .rx-state:empty { display: none; }
+        .rx-row .rx-who small { display: inline; margin-left: 6px; }
+        .rx-search { min-width: 0; flex: 1 1 220px; }
+        .rx-tools { width: 100%; }
+      }
+      @media (max-width: 520px) {
+        .rx-kpis.kx-kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .rx-kpis .kx-kpi { padding: 14px; }
+        .rx-kpis .kx-kpi .v { font-size: clamp(20px, 6vw, 26px); }
+      }
+    `;
+    document.head.appendChild(st);
+  }
   let liveReturnsCloud = null;
   let liveReturnsSlug = '';
   let liveCredits = [];
@@ -12466,80 +12545,91 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     ];
     const creditRows = real ? liveCredits : [];
 
+    _rxCss();
+    _rxRows = pending;
+    const sumAmt = pending.reduce((t, r) => t + (Number(r.amt) || 0), 0);
+    const nExch = pending.filter((r) => r.kind === 'echange' || r.status === 'neutral').length;
+    const activeCredits = creditRows.filter((c) => c.status === 'active');
+    const creditBalance = activeCredits.reduce((t, c) => t + (Number(c.balanceCents) || 0), 0) / 100;
+    const nPend = pending.filter((r) => r.status === 'pend').length;
+    const plural = (n, one, many) => `${n} ${n > 1 ? (many || one + 's') : one}`;
+    const statusChip = (r) => {
+      if (real) return r.kind === 'echange' ? '<span class="rx-tag exch">Échangé</span>' : '<span class="rx-tag">Retourné</span>';
+      return r.status === 'pend' ? '<span class="rx-tag pend">En attente</span>' : r.status === 'ok' ? '<span class="rx-tag">Approuvé</span>'
+        : r.status === 'ref' ? '<span class="rx-tag out">Refusé</span>' : '<span class="rx-tag exch">Échangé</span>';
+    };
+    const retRow = (r) => `
+      <div class="rx-row" data-ret-row data-ret-search="${esc([r.id, r.name, r.reason, r.client, r.actor].join(' ').toLowerCase())}" ${real ? '' : `data-action="ret-detail" data-arg="${esc(r.id)}"`}>
+        <span class="rx-when"><b>${esc(r.d)}</b><small title="${esc(r.id)}">${esc(r.id)}</small></span>
+        <span class="rx-what"><b>${esc(r.name)}</b><small>${esc(r.reason)}</small></span>
+        <span class="rx-who">${esc(r.client)}${real ? `<small>${esc(r.actor)}</small>` : ''}</span>
+        <span class="rx-amt">${fmtMAD(r.amt, 0)} MAD</span>
+        <span class="rx-state">${statusChip(r)}${r.status === 'pend' ? `
+          <button class="rx-mini" data-action="ret-approve" data-arg="${esc(r.id)}" data-bubble="stop" title="Approuver" aria-label="Approuver">${SVG.check}</button>
+          <button class="rx-mini danger" data-action="ret-refuse" data-arg="${esc(r.id)}" data-bubble="stop" title="Refuser" aria-label="Refuser">${SVG.x}</button>
+          <button class="rx-mini" data-action="ret-exchange" data-arg="${esc(r.id)}" data-bubble="stop" title="Échanger" aria-label="Échanger">${SVG.swap}</button>` : ''}</span>
+      </div>`;
+    const creditRow = (credit) => {
+      const issued = (credit.events || []).find((event) => event.action === 'issue') || {};
+      const products = Array.isArray(issued.lines) && issued.lines.length
+        ? issued.lines.map((line) => `${line.qty || 1}× ${line.name || 'Article'}`).join(' · ') : (credit.reason || 'Retour');
+      const search = [credit.code, credit.customerName, credit.originalRef, credit.originalSaleId, products].join(' ').toLowerCase();
+      const tag = credit.status === 'active' ? '<span class="rx-tag">Actif</span>' : credit.status === 'consumed' ? '<span class="rx-tag muted">Utilisé</span>'
+        : credit.status === 'cancelled' ? '<span class="rx-tag out">Annulé</span>' : `<span class="rx-tag muted">${esc(credit.status)}</span>`;
+      return `<div class="rx-row rx-credit" data-credit-row data-credit-search="${esc(search)}">
+        <span class="rx-when"><b>${esc(credit.code)}</b><small>${new Date(Number(credit.createdAt) || Date.now()).toLocaleDateString('fr-FR')}</small></span>
+        <span class="rx-what"><b>${esc(credit.customerName || 'Porteur du bon')}</b><small>Vente ${esc(credit.originalRef || credit.originalSaleId || '·')} · ${esc(products)}</small></span>
+        <span class="rx-who">${esc(issued.actor || credit.issuedBy || 'Caisse')}<small>expire le ${new Date(Number(credit.expiresAt) || Date.now()).toLocaleDateString('fr-FR')}</small></span>
+        <span class="rx-amt">${fmtMAD(Number(credit.balanceCents || 0) / 100, 2)} MAD<small>sur ${fmtMAD(Number(credit.amountCents || 0) / 100, 2)}</small></span>
+        <span class="rx-state">${tag}
+          ${credit.status !== 'cancelled' ? `<button class="rx-mini txt" data-action="credit-adjust" data-code="${esc(credit.code)}">Corriger</button>` : ''}
+          ${credit.status === 'active' ? `<button class="rx-mini txt danger" data-action="credit-cancel" data-code="${esc(credit.code)}">Annuler</button>` : ''}</span>
+      </div>`;
+    };
+
     window.Kiwi.appPage('returns', {
       title: 'Retours & échanges',
-      subtitle: real ? `${pending.length} article${pending.length > 1 ? 's' : ''} retourné${pending.length > 1 ? 's' : ''}` : 'Maison Mansour · Gueliz · 5 demandes en attente · 2 clients flaggés',
-      body: `
-        <div class="p-hero" data-live-returns style="background: linear-gradient(135deg, var(--atlas), var(--riad));">
-          <div class="l">FENÊTRE DE RETOUR · ${real ? '7' : '14'} JOURS</div>
-          <div class="big">${real ? pending.length : pending.filter(p => p.status === 'pend').length} <span style="font-size:18px; opacity:0.7;">${real ? 'articles retournés' : 'en attente'}</span></div>
-          <div class="sub">${real ? 'Retours et échanges enregistrés depuis la caisse de cette boutique.' : "Taux de retour 30 j : 4,8 % · taux d'échange 30 j : 12,1 % · politique modifiable plus bas"}</div>
+      subtitle: real ? `${(window.KiwiVenue?.getCurrentVenueData?.() || {}).fullDisplay || 'Boutique'} · enregistrés depuis la caisse` : 'Maison Mansour · Gueliz · 5 demandes en attente · 2 clients flaggés',
+      body: `<div class="rx-page" data-live-returns>
+        <div class="kx-kpi-strip rx-kpis">
+          ${real ? `
+          <div class="kx-kpi"><div class="l">Articles retournés</div><div class="v">${pending.length}</div><div class="d">${plural(pending.length - nExch, 'retour')} · ${plural(nExch, 'échange')}</div></div>
+          <div class="kx-kpi"><div class="l">Montant retourné</div><div class="v">${fmtMAD(sumAmt, 0)}<span class="u">MAD</span></div><div class="d">Valeur des articles rendus</div></div>
+          <div class="kx-kpi"><div class="l">Avoirs actifs</div><div class="v">${activeCredits.length}</div><div class="d">${plural(creditRows.length, 'bon')} émis au total</div></div>
+          <div class="kx-kpi"><div class="l">Solde des avoirs</div><div class="v">${fmtMAD(creditBalance, 0)}<span class="u">MAD</span></div><div class="d">Encore utilisable en caisse</div></div>` : `
+          <div class="kx-kpi warn"><div class="l">En attente</div><div class="v">${nPend}</div><div class="d">Fenêtre de retour 14 jours</div></div>
+          <div class="kx-kpi"><div class="l">Montant concerné</div><div class="v">${fmtMAD(sumAmt, 0)}<span class="u">MAD</span></div><div class="d">${plural(pending.length, 'demande')}</div></div>
+          <div class="kx-kpi"><div class="l">Taux de retour 30 j</div><div class="v">4,8 %</div><div class="d">Taux d'échange 12,1 %</div></div>
+          <div class="kx-kpi"><div class="l">Clients signalés</div><div class="v">${flagged.length}</div><div class="d">3 retours ou plus en 30 jours</div></div>`}
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px; flex-wrap: wrap;">
-          <div>
-            <div style="font-size: 11px; color: var(--n-500); letter-spacing: 0.1em; font-family: var(--mono); text-transform: uppercase;">${real ? 'ARTICLES RETOURNÉS' : 'DEMANDES EN ATTENTE'}</div>
-            <div style="font-size: 12px; color: var(--n-500); margin-top: 4px;">${real ? 'Article, montant, motif, client et employé enregistrés à la caisse.' : 'Approuvez, refusez ou échangez. Cliquez "Détail" pour voir l\'historique client complet.'}</div>
-          </div>
-          <div style="display: flex; gap: 8px;">
-            <button class="kb ghost" data-action="ret-export"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M5 10l7 7 7-7M5 21h14"/></svg>Exporter</button>
-            <button class="kb ghost" data-action="ret-policy-jump">${SVG.edit} Politique</button>
-          </div>
-        </div>
-
-        <div class="p-card" style="padding: 8px 18px 12px;">
-          ${pending.map(r => `
-            <div class="b-ret-row" ${real ? '' : `data-action="ret-detail" data-arg="${r.id}"`}>
-              <div class="b-ret-id">${r.id}<br><span style="opacity:0.7; font-size: 10px;">${r.d}</span></div>
-              <div class="b-ret-thumb">${SVG.box}</div>
-              <div class="b-ret-body">
-                <div class="n">${r.name}</div>
-                <div class="reason">Raison : ${r.reason}</div>
-                <div class="who">${r.client}${real ? ' · ' + r.actor : ''}</div>
-              </div>
-              <div class="b-ret-amt">${fmtMAD(r.amt, 0)} MAD</div>
-              <div style="display: flex; gap: 6px; align-items: center;">
-                <span class="chip ${r.status}" style="font-size: 10.5px;">${real ? (r.kind === 'echange' ? 'Échangé' : 'Retourné') : r.status === 'pend' ? 'En attente' : r.status === 'ok' ? 'Approuvé' : r.status === 'ref' ? 'Refusé' : 'Échangé'}</span>
-                ${r.status === 'pend' ? `
-                  <button class="kb ghost" style="padding: 5px 10px; font-size: 11px;" data-action="ret-approve" data-arg="${r.id}" data-bubble="stop" title="Approuver">${SVG.check}</button>
-                  <button class="kb ghost" style="padding: 5px 10px; font-size: 11px; color: var(--danger);" data-action="ret-refuse" data-arg="${r.id}" data-bubble="stop" title="Refuser">${SVG.x}</button>
-                  <button class="kb ghost" style="padding: 5px 10px; font-size: 11px;" data-action="ret-exchange" data-arg="${r.id}" data-bubble="stop" title="Échanger">${SVG.swap}</button>
-                ` : ''}
-              </div>
+        <div class="rx-panel">
+          <header class="rx-head">
+            <div><h3>${real ? 'Articles retournés' : 'Demandes de retour'}</h3><p>${real ? 'Article, motif, client et employé, tels qu’enregistrés à la caisse.' : 'Approuvez, refusez ou échangez. Touchez une ligne pour l’historique client.'}</p></div>
+            <div class="rx-tools">
+              ${pending.length ? '<label class="rx-search"><span aria-hidden="true">' + SVG.search + '</span><input id="ret-search" placeholder="Article, client, motif…" aria-label="Rechercher un retour" /></label>' : ''}
+              ${pending.length ? `<button class="kb ghost" data-action="ret-export">${SVG.download || ''}Exporter</button>` : ''}
+              ${real ? '' : `<button class="kb ghost" data-action="ret-policy-jump">${SVG.edit} Politique</button>`}
             </div>
-          `).join('')}
-          ${real && !pending.length ? '<div style="padding:24px 4px;color:var(--n-500);">Aucun retour enregistré pour cette boutique.</div>' : ''}
+          </header>
+          ${pending.length ? `<div class="rx-table">
+            <div class="rx-row rx-th" aria-hidden="true"><span>Date</span><span>Article</span><span>Client</span><span class="r">Montant</span><span class="r">Statut</span></div>
+            ${pending.map(retRow).join('')}
+          </div>` : '<div class="rx-empty">Aucun retour enregistré pour cette boutique. Les retours faits à la caisse apparaissent ici.</div>'}
         </div>
 
-        ${real ? `<div class="p-card" style="margin-top:18px;" data-credit-register>
-          <div class="head" style="gap:12px;flex-wrap:wrap;">
-            <div><h4>Registre des avoirs</h4><span class="meta">${creditRows.length} BON${creditRows.length > 1 ? 'S' : ''}</span></div>
-            <input id="ret-credit-search" class="kf-input" style="max-width:340px;" placeholder="Code, cliente ou vente d’origine…" />
-          </div>
-          <div style="font-size:12.5px;color:var(--n-500);margin-bottom:10px;">Émission, utilisation, solde restant, échéance et employé sont conservés dans le registre serveur.</div>
+        ${real ? `<div class="rx-panel" data-credit-register>
+          <header class="rx-head">
+            <div><h3>Registre des avoirs</h3><p>Émission, utilisation, solde, échéance et employé, conservés dans le registre serveur.</p></div>
+            <div class="rx-tools">${creditRows.length ? '<label class="rx-search"><span aria-hidden="true">' + SVG.search + '</span><input id="ret-credit-search" placeholder="Code, cliente ou vente d’origine…" aria-label="Rechercher un avoir" /></label>' : ''}</div>
+          </header>
           <div id="ret-credit-rows">
-            ${creditRows.map((credit) => {
-              const issued = (credit.events || []).find((event) => event.action === 'issue') || {};
-              const products = Array.isArray(issued.lines) && issued.lines.length
-                ? issued.lines.map((line) => `${line.qty || 1}× ${line.name || 'Article'}`).join(' · ') : (credit.reason || 'Retour');
-              const search = [credit.code, credit.customerName, credit.originalRef, credit.originalSaleId, products].join(' ').toLowerCase();
-              return `<div class="b-ret-row" data-credit-row data-credit-search="${esc(search)}">
-                <div class="b-ret-id">${esc(credit.code)}<br><span style="opacity:.7;font-size:10px;">${new Date(Number(credit.createdAt) || Date.now()).toLocaleDateString('fr-FR')}</span></div>
-                <div class="b-ret-thumb">${SVG.voucher}</div>
-                <div class="b-ret-body"><div class="n">${esc(credit.customerName || 'Porteur du bon')}</div>
-                  <div class="reason">Vente ${esc(credit.originalRef || credit.originalSaleId || '·')} · ${esc(products)}</div>
-                  <div class="who">${esc(issued.actor || credit.issuedBy || 'Caisse')} · expire ${new Date(Number(credit.expiresAt) || Date.now()).toLocaleDateString('fr-FR')}</div></div>
-                <div class="b-ret-amt">${fmtMAD(Number(credit.balanceCents || 0) / 100, 2)} MAD<br><small style="font-weight:400;color:var(--n-500);">sur ${fmtMAD(Number(credit.amountCents || 0) / 100, 2)}</small></div>
-                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
-                  <span class="chip ${credit.status === 'active' ? 'ok' : credit.status === 'cancelled' ? 'ref' : 'neutral'}">${credit.status === 'active' ? 'Actif' : credit.status === 'consumed' ? 'Utilisé' : credit.status === 'cancelled' ? 'Annulé' : esc(credit.status)}</span>
-                  ${credit.status !== 'cancelled' ? `<button class="kb ghost" style="padding:5px 9px;font-size:11px;" data-action="credit-adjust" data-code="${esc(credit.code)}">Corriger</button>` : ''}
-                  ${credit.status === 'active' ? `<button class="kb ghost" style="padding:5px 9px;font-size:11px;color:var(--danger);" data-action="credit-cancel" data-code="${esc(credit.code)}">Annuler</button>` : ''}
-                </div>
-              </div>`;
-            }).join('') || (liveCreditsLoading ? '<div style="padding:20px 4px;color:var(--n-500);">Chargement du registre…</div>' : '<div style="padding:20px 4px;color:var(--n-500);">Aucun avoir émis pour cette boutique.</div>')}
+            ${creditRows.length ? `<div class="rx-table"><div class="rx-row rx-th" aria-hidden="true"><span>Bon</span><span>Client</span><span>Émis par</span><span class="r">Solde</span><span class="r">Statut</span></div>${creditRows.map(creditRow).join('')}</div>`
+              : `<div class="rx-empty">${liveCreditsLoading ? 'Chargement du registre…' : 'Aucun avoir émis pour cette boutique.'}</div>`}
           </div>
         </div>` : ''}
 
+        ${real ? '' : `
         <div class="p-grid-2" style="margin-top: 18px;">
           <div class="p-card" style="margin-bottom: 0;">
             <div class="head">
@@ -12628,15 +12718,21 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
             </button>
           </div>
         </div>
-      `,
+`}
+      </div>`,
     });
     setTimeout(() => {
+      const rs = document.querySelector('#ret-search');
+      if (rs) rs.addEventListener('input', () => {
+        const q = rs.value.trim().toLowerCase();
+        document.querySelectorAll('[data-ret-row]').forEach((row) => { row.hidden = !!q && !String(row.dataset.retSearch || '').includes(q); });
+      });
       const search = document.querySelector('#ret-credit-search');
       if (!search) return;
       search.addEventListener('input', () => {
         const q = search.value.trim().toLowerCase();
         document.querySelectorAll('[data-credit-row]').forEach((row) => {
-          row.style.display = !q || String(row.dataset.creditSearch || '').includes(q) ? '' : 'none';
+          row.hidden = !!q && !String(row.dataset.creditSearch || '').includes(q);
         });
       });
     }, 0);
@@ -12841,7 +12937,22 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     toast('Politique de retour', { type: 'info', desc: 'Modifiez la fenêtre ou les frais de restocking ci-dessous.', duration: 2400 });
   };
 
-  handlers['ret-export'] = () => toast('Export retours · CSV en cours', { type: 'info', desc: '6 demandes · ouvert dans Excel ou Numbers.', duration: 2600 });
+  handlers['ret-export'] = () => {
+    if (!realReturnsStore()) { toast('Export retours · CSV en cours', { type: 'info', desc: '6 demandes · ouvert dans Excel ou Numbers.', duration: 2600 }); return; }
+    const rows = _rxRows || [];
+    if (!rows.length) { toast('Aucun retour à exporter', { type: 'info' }); return; }
+    const cell = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const csv = [['Date', 'Référence', 'Article', 'Motif', 'Type', 'Client', 'Employé', 'Montant MAD'].map(cell).join(';')]
+      .concat(rows.map((r) => [r.d, r.id, r.name, r.reason, r.kind === 'echange' ? 'Échange' : 'Retour', r.client, r.actor, String(Number(r.amt) || 0).replace('.', ',')].map(cell).join(';')))
+      .join('\r\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'retours-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast('Retours exportés', { type: 'success', desc: rows.length + ' ligne' + (rows.length > 1 ? 's' : '') + ' · séparateur point-virgule, ouvrable dans Excel.', duration: 2600 });
+  };
 
   handlers['ret-refund-original'] = () => toast('Remboursement carte d\'origine', { type: 'success', desc: 'Crédité en 1-3 jours ouvrés. Confirmation par SMS au client.', duration: 3000 });
   handlers['ret-refund-credit'] = () => toast('Crédit boutique émis', { type: 'success', desc: 'Bon valable 12 mois · +10 % offerts en bonus de fidélité.', duration: 3000 });

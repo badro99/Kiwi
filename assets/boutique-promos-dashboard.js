@@ -105,6 +105,37 @@
       html[data-theme="dark"] .bpd-starter strong { color:#7DF2B0; }
       html[data-theme="dark"] .bpd-starter .bpd-starter-arrow { color:rgba(247,245,240,0.45); }
       html[data-theme="dark"] .bpd-starter:hover .bpd-starter-arrow { color:#7DF2B0; }
+
+      /* Promotions v3 · même grammaire que l'inventaire : pleine largeur,
+         chiffres en tête, lignes fines. Aucun bloc ne bouge au survol. */
+      .dash-genpage:has(.bpd-page) .genpage-body{max-width:1440px}.bpd-page{max-width:none;margin:0}
+      .bpd-btn:hover:not(:disabled),.bpd-starter:hover,.bpd-card:hover{transform:none}
+      .bpd-kpis .kx-kpi .l{text-transform:none;letter-spacing:0;font-family:var(--sans);font-size:12.5px;font-weight:500}
+      .bpd-intro{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,400px);gap:20px 36px;align-items:center;padding:24px 26px;border:1px solid var(--n-200);border-radius:18px;background:var(--surface)}
+      .bpd-intro h2{margin:0 0 6px;font-size:20px;font-weight:600;letter-spacing:-.02em;color:var(--ink)}.bpd-intro p{max-width:560px;margin:0;font-size:13.5px;line-height:1.55;color:var(--n-500)}.bpd-intro .bpd-btn{margin-top:16px}
+      .bpd-intro-sync{list-style:none;margin:0;padding:4px 0;display:flex;flex-direction:column;border-left:1px solid var(--n-200)}
+      .bpd-intro-sync li{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:center;padding:9px 0 9px 20px}.bpd-intro-sync li svg{width:18px;height:18px;color:var(--atlas)}
+      .bpd-intro-sync b{display:block;font-size:13px;font-weight:600;color:var(--ink)}.bpd-intro-sync small{display:block;margin-top:2px;font-size:12px;color:var(--n-500)}
+      .bpd-template-block{margin-top:22px}.bpd-section-head{align-items:flex-end;margin-bottom:12px}.bpd-section-head h3{margin:0;font-size:16px;font-weight:600;letter-spacing:-.01em}.bpd-section-head p{max-width:none;font-size:12.5px}
+      .bpd-starters{grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}.bpd-starter{min-height:0;padding:16px;border-radius:16px;box-shadow:none}.bpd-starter:hover{border-color:color-mix(in srgb,var(--atlas) 55%,var(--n-200));box-shadow:0 12px 26px -20px rgba(10,15,13,.35)}
+      .bpd-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:4px 0 12px}.bpd-bar .kx-tabs{margin:0;padding:3px;flex:none}.bpd-bar .kx-tab{flex:none;padding:7px 13px;font-size:13px}.bpd-bar .kx-tab small{margin-left:6px;font-family:var(--sans);font-size:11.5px;color:var(--n-500);font-variant-numeric:tabular-nums}
+      .bpd-sync-note{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--n-500)}.bpd-sync-note svg{width:14px;height:14px;color:var(--atlas)}.bpd-bar-r{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+      .bpd-rows{border:1px solid var(--n-200);border-radius:16px;overflow:hidden;background:var(--surface)}
+      .bpd-row{display:grid;grid-template-columns:96px minmax(180px,1.6fr) minmax(150px,1.2fr) minmax(170px,1.3fr) 96px 156px;gap:16px;align-items:center;padding:13px 18px;border-top:1px solid var(--n-100)}
+      .bpd-row.th{border-top:0;padding-top:9px;padding-bottom:9px;font-size:12px;font-weight:500;color:var(--n-500);background:var(--paper-soft)}.bpd-row.th .r{text-align:right}
+      .bpd-row.ended{opacity:.62}.bpd-row>span{min-width:0}
+      .bpd-off{display:inline-flex;align-items:center;justify-content:center;min-width:72px;padding:7px 10px;border-radius:10px;background:color-mix(in srgb,var(--atlas) 10%,transparent);color:var(--atlas);font:700 14px/1 var(--sans);font-variant-numeric:tabular-nums;white-space:nowrap}
+      .bpd-row.ended .bpd-off,.bpd-row.soon .bpd-off{background:var(--paper-soft);color:var(--ink)}
+      .bpd-rname .bpd-state{text-transform:none;letter-spacing:0;font-size:11.5px;font-weight:500}.bpd-rname b{display:block;font-size:14px;font-weight:600;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}.bpd-rname .bpd-state{display:inline-block;margin-top:5px}
+      .bpd-rtxt{font-size:12.5px;line-height:1.4;color:var(--n-600)}.bpd-rnum{text-align:right;font-size:13px;font-variant-numeric:tabular-nums;color:var(--n-600)}
+      .bpd-row .bpd-actions{justify-content:flex-end}
+      html[data-theme="dark"] .bpd-intro,html[data-theme="dark"] .bpd-rows{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08)}
+      html[data-theme="dark"] .bpd-row.th{background:rgba(255,255,255,0.04)}
+      html[data-theme="dark"] .bpd-intro h2,html[data-theme="dark"] .bpd-intro-sync b,html[data-theme="dark"] .bpd-rname b{color:#F7F5F0}
+      html[data-theme="dark"] .bpd-off{color:#7DF2B0;background:rgba(125,242,176,.12)}
+      @media(max-width:520px){.bpd-kpis.kx-kpi-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.bpd-kpis .kx-kpi{padding:14px}}
+      @media(max-width:900px){.bpd-intro{grid-template-columns:1fr}.bpd-intro-sync{border-left:0;border-top:1px solid var(--n-200);padding-top:8px}.bpd-intro-sync li{padding-left:0}
+        .bpd-row.th{display:none}.bpd-row{grid-template-columns:auto minmax(0,1fr);gap:6px 14px}.bpd-row .bpd-off{grid-row:1/3}.bpd-rname{grid-column:2}.bpd-row .bpd-rtxt{grid-column:2}.bpd-row .bpd-rnum{grid-column:2;text-align:left}.bpd-row .bpd-actions{grid-column:1/-1;justify-content:flex-start}}
       @media(prefers-reduced-motion:reduce){.bpd-btn,.bpd-card,.bpd-starter{transition:none!important}}`;
     document.head.appendChild(s);
   }
@@ -153,31 +184,36 @@
     return p;
   }
 
-  function card(ctx, p, now) {
+  /* Une promotion = une ligne : la remise, le nom et son état, la cible,
+     la période, le nombre d'articles, puis les gestes. */
+  function row(ctx, p, now) {
     var status = PRM().status(p, now);
     var n = preview(ctx, p).count;
     var tone = status === 'active' ? 'active' : status === 'ended' ? 'ended' : 'soon';
     var label = status === 'active' ? 'En cours' : status === 'scheduled' ? 'Programmée' : status === 'paused' ? 'En pause' : 'Terminée';
-    return '<article class="bpd-card ' + tone + '"><div class="bpd-ribbon"><span>' + (p.kind === 'fixed' ? 'prix' : 'offre') + '</span><b>' + esc(PRM().badgeOf(p)) + '</b></div>' +
-      '<div class="bpd-body"><div class="bpd-top"><div><span class="bpd-state ' + tone + '">' + label + '</span><h3>' + esc(p.name) + '</h3></div></div>' +
-      '<div class="bpd-meta"><span><i data-lucide="target"></i>' + esc(scopeText(ctx, p)) + '</span><span><i data-lucide="clock"></i>' + esc(whenText(p, now)) + '</span></div>' +
-      '<div class="bpd-foot"><span class="bpd-count">' + n + ' article' + (n > 1 ? 's' : '') + ' concerné' + (n > 1 ? 's' : '') + '</span><span class="bpd-actions">' +
-      (n ? '<button class="bpd-icon" data-action="bpd-print" data-arg="' + esc(p.id) + '" title="Imprimer les étiquettes"><i data-lucide="printer"></i></button>' : '') +
-      (status !== 'ended' ? '<button class="bpd-icon" data-action="bpd-toggle" data-arg="' + esc(p.id) + '" title="' + (p.paused ? 'Reprendre' : 'Mettre en pause') + '"><i data-lucide="' + (p.paused ? 'play' : 'pause') + '"></i></button>' : '') +
-      '<button class="bpd-icon" data-action="bpd-edit" data-arg="' + esc(p.id) + '" title="Modifier"><i data-lucide="pencil"></i></button>' +
-      '<button class="bpd-icon danger" data-action="bpd-delete" data-arg="' + esc(p.id) + '" title="Supprimer"><i data-lucide="trash-2"></i></button>' +
-      '</span></div></div></article>';
+    return '<div class="bpd-row ' + tone + '"><span><span class="bpd-off">' + esc(PRM().badgeOf(p)) + '</span></span>' +
+      '<span class="bpd-rname"><b>' + esc(p.name) + '</b><span class="bpd-state ' + tone + '">' + label + '</span></span>' +
+      '<span class="bpd-rtxt">' + esc(scopeText(ctx, p)) + '</span><span class="bpd-rtxt">' + esc(whenText(p, now)) + '</span>' +
+      '<span class="bpd-rnum">' + n + ' article' + (n > 1 ? 's' : '') + '</span><span class="bpd-actions">' +
+      (n ? '<button class="bpd-icon" data-action="bpd-print" data-arg="' + esc(p.id) + '" title="Imprimer les étiquettes" aria-label="Imprimer les étiquettes"><i data-lucide="printer"></i></button>' : '') +
+      (status !== 'ended' ? '<button class="bpd-icon" data-action="bpd-toggle" data-arg="' + esc(p.id) + '" title="' + (p.paused ? 'Reprendre' : 'Mettre en pause') + '" aria-label="' + (p.paused ? 'Reprendre' : 'Mettre en pause') + '"><i data-lucide="' + (p.paused ? 'play' : 'pause') + '"></i></button>' : '') +
+      '<button class="bpd-icon" data-action="bpd-edit" data-arg="' + esc(p.id) + '" title="Modifier" aria-label="Modifier"><i data-lucide="pencil"></i></button>' +
+      '<button class="bpd-icon danger" data-action="bpd-delete" data-arg="' + esc(p.id) + '" title="Supprimer" aria-label="Supprimer"><i data-lucide="trash-2"></i></button></span></div>';
+  }
+
+  function startersHtml(title) {
+    return '<section class="bpd-template-block"><div class="bpd-section-head"><div><h3>' + title + '</h3></div><p>Chaque modèle ouvre un brouillon : rien ne change avant votre validation.</p></div>' +
+      '<div class="bpd-starters">' + Object.keys(STARTERS).map(function (key) { var s = STARTERS[key]; return '<button class="bpd-starter" data-action="bpd-starter" data-arg="' + key + '"><span class="bpd-starter-icon"><i data-lucide="' + s.icon + '"></i></span><span class="bpd-starter-copy"><small>' + esc(s.kicker) + '</small><b>' + esc(s.title) + '</b><span>' + esc(s.desc) + '</span></span><strong>' + esc(s.badge) + '</strong><i class="bpd-starter-arrow" data-lucide="arrow-up-right"></i></button>'; }).join('') + '</div></section>';
   }
 
   function emptyHtml() {
-    return '<section class="bpd-onboard"><div class="bpd-onboard-copy"><span class="bpd-eyebrow"><i data-lucide="badge-percent"></i>Prix synchronisés</span>' +
-      '<h2>Une offre à créer.<br>Kiwi s’occupe du reste.</h2><p>Choisissez la remise, les articles et la durée. La caisse applique le bon prix automatiquement, sans manipulation au comptoir.</p>' +
-      '<button class="bpd-btn primary bpd-main-cta" data-action="bpd-new"><i data-lucide="plus"></i>Créer une promotion</button></div>' +
-      '<div class="bpd-automation" aria-label="Ce que Kiwi synchronise"><div><i data-lucide="scan-barcode"></i><span><b>Prix caisse</b><small>Mis à jour instantanément</small></span><i data-lucide="check"></i></div>' +
-      '<div><i data-lucide="receipt-text"></i><span><b>Tickets & reçus</b><small>Remise clairement affichée</small></span><i data-lucide="check"></i></div>' +
-      '<div><i data-lucide="printer"></i><span><b>Étiquettes</b><small>Prêtes à imprimer</small></span><i data-lucide="check"></i></div></div></section>' +
-      '<section class="bpd-template-block"><div class="bpd-section-head"><div><span class="bpd-eyebrow">Démarrer rapidement</span><h3>Trois modèles prêts à adapter</h3></div><p>Chaque modèle ouvre un brouillon : rien ne change avant votre validation.</p></div>' +
-      '<div class="bpd-starters">' + Object.keys(STARTERS).map(function (key) { var s = STARTERS[key]; return '<button class="bpd-starter" data-action="bpd-starter" data-arg="' + key + '"><span class="bpd-starter-icon"><i data-lucide="' + s.icon + '"></i></span><span class="bpd-starter-copy"><small>' + esc(s.kicker) + '</small><b>' + esc(s.title) + '</b><span>' + esc(s.desc) + '</span></span><strong>' + esc(s.badge) + '</strong><i class="bpd-starter-arrow" data-lucide="arrow-up-right"></i></button>'; }).join('') + '</div></section>';
+    return '<section class="bpd-intro"><div class="bpd-intro-copy"><h2>Aucune promotion pour l’instant</h2>' +
+      '<p>Choisissez la remise, les articles et la durée. La caisse applique le bon prix automatiquement, sans manipulation au comptoir.</p>' +
+      '<button class="bpd-btn primary" data-action="bpd-new"><i data-lucide="plus"></i>Créer une promotion</button></div>' +
+      '<ul class="bpd-intro-sync" aria-label="Ce que Kiwi synchronise"><li><i data-lucide="scan-barcode"></i><span><b>Prix caisse</b><small>Mis à jour instantanément</small></span></li>' +
+      '<li><i data-lucide="receipt-text"></i><span><b>Tickets & reçus</b><small>Remise clairement affichée</small></span></li>' +
+      '<li><i data-lucide="printer"></i><span><b>Étiquettes</b><small>Prêtes à imprimer</small></span></li></ul></section>' +
+      startersHtml('Partir d’un modèle');
   }
 
   function renderPage() {
@@ -195,10 +231,19 @@
     var seen = new Set();
     groups.active.forEach(function (p) { items(ctx).forEach(function (it) { if (PRM().matches(p, it, stockOf(it))) seen.add(it.id); }); });
     var sub = groups.active.length + ' promotion' + (groups.active.length > 1 ? 's' : '') + ' en cours' + (seen.size ? ' · ' + seen.size + ' article' + (seen.size > 1 ? 's' : '') + ' remisé' + (seen.size > 1 ? 's' : '') : '');
+    var tab = function (key, lbl) { return '<button class="kx-tab' + (filter === key ? ' on' : '') + '" aria-pressed="' + (filter === key) + '" data-action="bpd-filter" data-arg="' + key + '">' + lbl + '<small>' + groups[key].length + '</small></button>'; };
+    var listHtml = shown.length
+      ? '<div class="bpd-rows"><div class="bpd-row th" aria-hidden="true"><span>Remise</span><span>Promotion</span><span>Articles visés</span><span>Période</span><span class="r">Concernés</span><span></span></div>' + shown.map(function (p) { return row(ctx, p, now); }).join('') + '</div>'
+      : '<div class="bpd-empty bpd-section-empty"><span class="bpd-empty-icon"><i data-lucide="inbox"></i></span><h2>Aucune promotion ici</h2><p>Changez de section ou créez une nouvelle offre.</p><button class="bpd-btn" data-action="bpd-new"><i data-lucide="plus"></i>Créer une promotion</button></div>';
     K.appPage('promos', { title: 'Promotions', subtitle: sub, body:
-      '<div class="bpd-page">' + (all.length ? '<div class="bpd-toolbar"><div class="bpd-sync"><span><i data-lucide="refresh-cw"></i>Synchronisé avec la caisse</span><small>Les prix actifs sont appliqués automatiquement.</small></div><button class="bpd-btn primary" data-action="bpd-new"><i data-lucide="plus"></i>Nouvelle promotion</button></div>' : '') +
-      (all.length ? '<div class="bpd-seg" role="tablist" aria-label="État des promotions"><button aria-pressed="' + (filter === 'active') + '" class="' + (filter === 'active' ? 'on' : '') + '" data-action="bpd-filter" data-arg="active">En cours <small>' + groups.active.length + '</small></button><button aria-pressed="' + (filter === 'soon') + '" class="' + (filter === 'soon' ? 'on' : '') + '" data-action="bpd-filter" data-arg="soon">À venir & en pause <small>' + groups.soon.length + '</small></button><button aria-pressed="' + (filter === 'ended') + '" class="' + (filter === 'ended' ? 'on' : '') + '" data-action="bpd-filter" data-arg="ended">Terminées <small>' + groups.ended.length + '</small></button></div>' : '') +
-      (all.length ? (shown.length ? '<div class="bpd-list">' + shown.map(function (p) { return card(ctx, p, now); }).join('') + '</div>' : '<div class="bpd-empty bpd-section-empty"><span class="bpd-empty-icon"><i data-lucide="inbox"></i></span><h2>Aucune promotion ici</h2><p>Changez de section ou créez une nouvelle offre.</p><button class="bpd-btn" data-action="bpd-new"><i data-lucide="plus"></i>Créer une promotion</button></div>') : emptyHtml()) + '</div>' });
+      '<div class="bpd-page">' + (all.length
+        ? '<div class="kx-kpi-strip cols-3 bpd-kpis"><div class="kx-kpi' + (groups.active.length ? ' good' : '') + '"><div class="l">En cours</div><div class="v">' + groups.active.length + '</div><div class="d">' + (seen.size ? seen.size + ' article' + (seen.size > 1 ? 's' : '') + ' remisé' + (seen.size > 1 ? 's' : '') + ' en caisse' : 'Aucun article remisé') + '</div></div>' +
+          '<div class="kx-kpi"><div class="l">À venir et en pause</div><div class="v">' + groups.soon.length + '</div><div class="d">Ne modifient aucun prix</div></div>' +
+          '<div class="kx-kpi"><div class="l">Terminées</div><div class="v">' + groups.ended.length + '</div><div class="d">Gardées pour l’historique</div></div></div>' +
+          '<div class="bpd-bar"><div class="kx-tabs" role="group" aria-label="État des promotions">' + tab('active', 'En cours') + tab('soon', 'À venir et en pause') + tab('ended', 'Terminées') + '</div>' +
+          '<div class="bpd-bar-r"><span class="bpd-sync-note"><i data-lucide="refresh-cw"></i>Synchronisé avec la caisse</span><button class="bpd-btn primary" data-action="bpd-new"><i data-lucide="plus"></i>Nouvelle promotion</button></div></div>' +
+          listHtml + startersHtml('Partir d’un modèle')
+        : emptyHtml()) + '</div>' });
     icons();
     if (!subscribed) {
       subscribed = true;
