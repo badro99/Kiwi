@@ -19,7 +19,8 @@
   const CSS = `
   html[data-theme="dark"] .dkfix-card { background: var(--paper-soft) !important; }
   html[data-theme="dark"] .dkfix-bd   { border-color: var(--n-200) !important; }
-  html[data-theme="dark"] .dkfix-text  { color: var(--ink) !important; }`;
+  html[data-theme="dark"] .dkfix-text  { color: var(--ink) !important; }
+  html.dkfix-instant .dkfix-card, html.dkfix-instant .dkfix-bd, html.dkfix-instant .dkfix-text { transition: none !important; }`;
   const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
 
   const parse = (s) => { const m = (s || '').match(/[\d.]+/g) || []; return [+m[0] || 0, +m[1] || 0, +m[2] || 0, m[3] === undefined ? 1 : +m[3]]; };
@@ -70,7 +71,8 @@
 
   function fix(root) {
     if (!root || document.documentElement.getAttribute('data-theme') !== 'dark') return;
-    const els = root.querySelectorAll('*');
+    /* The added node itself counts: a card appended on its own is the root. */
+    const els = root === document.body ? root.querySelectorAll('*') : [root, ...root.querySelectorAll('*')];
     // Pass 1 — darken near-white card/panel/input backgrounds (and their light borders).
     els.forEach((el) => {
       if (el.closest(SKIP)) return;              // QR tiles + already-themed controls
@@ -102,9 +104,21 @@
 
   // Start from untagged computed styles on every theme transition. Run the dark
   // pass twice because inner content can render one frame after its surface.
+  /* The pass runs inside the MutationObserver callback, i.e. before the browser
+   * paints the new surface. It used to wait 30 to 150 ms, and every drawer,
+   * page and card painted white first, then flipped to dark (Orders summary
+   * cards, 2026-10-10). Transitions are off for the frame the tags land in,
+   * or a card with `transition: all` would fade from white instead. */
+  function instant() {
+    const html = document.documentElement;
+    if (!html || !html.classList) return;
+    html.classList.add('dkfix-instant');
+    requestAnimationFrame(() => requestAnimationFrame(() => html.classList.remove('dkfix-instant')));
+  }
   function run(root) {
     clear(root);
     if (document.documentElement.getAttribute('data-theme') !== 'dark') return;
+    instant();
     fix(root);
     requestAnimationFrame(() => fix(root));
   }
@@ -114,7 +128,7 @@
   const SURFACE = '.kiwi-drawer-backdrop, .kiwi-backdrop';
   new MutationObserver((muts) => {
     muts.forEach((m) => m.addedNodes.forEach((n) => {
-      if (n.nodeType === 1 && n.matches && n.matches(SURFACE)) setTimeout(() => run(n), 30);
+      if (n.nodeType === 1 && n.matches && n.matches(SURFACE)) run(n);
     }));
   }).observe(document.body, { childList: true });
 
@@ -128,22 +142,24 @@
   // mount inside .container — NOT as direct .app children — so this watches the
   // whole app subtree. To keep it cheap it re-themes ONLY the subtrees that were
   // actually added (deduped, debounced), never a full-app rescan per mutation.
-  const app = document.querySelector('.app');
+  /* The native app mounts .app after this script runs, and a null here meant
+   * no live pass at all: new screens waited for the next theme change to be
+   * fixed. The body is always there and covers .app and every overlay. */
+  const app = document.body;
   if (app) {
-    let t; const pending = new Set();
+    /* One callback per task already batches every node that task added, so
+     * no debounce: deduped against ancestors, then themed before paint. */
     new MutationObserver((muts) => {
       if (document.documentElement.getAttribute('data-theme') !== 'dark') return;
+      const pending = new Set();
       muts.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType === 1) pending.add(n); }));
       if (!pending.size) return;
-      clearTimeout(t);
-      t = setTimeout(() => {
-        const roots = Array.from(pending); pending.clear();
-        roots.forEach((n) => {
-          if (!document.contains(n)) return;
-          if (roots.some((r) => r !== n && r.contains(n))) return; // covered by an ancestor root
-          run(n);
-        });
-      }, 120);
+      const roots = Array.from(pending);
+      roots.forEach((n) => {
+        if (!document.contains(n)) return;
+        if (roots.some((r) => r !== n && r.contains(n))) return; // covered by an ancestor root
+        run(n);
+      });
     }).observe(app, { childList: true, subtree: true });
   }
 

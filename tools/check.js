@@ -1264,6 +1264,7 @@ section('Whole-project regressions');
     'native-device-layout-test.mjs',
     'native-pass2-browser-test.mjs',
     'native-face-entry-test.mjs',
+    'native-premium-feel-test.mjs',
     'native-pass3-gates-test.mjs',
     'native-pass3-locale-test.mjs',
     'native-pass4-test.mjs',

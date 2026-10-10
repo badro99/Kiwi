@@ -44,7 +44,37 @@ Still to verify on a device: no white frame between splash and web view
 
 ---
 
+## 0b · Screens that painted white, then dark (done, build 34)
+
+Reported on the Orders summary cards: they opened white, then turned dark.
+Two causes, both fixed:
+
+- The cards used `var(--n-0, #fff)`, a token defined nowhere, so they were
+  always white. They now use `--surface` (web) and `--kno-card` (native).
+- The dark-mode completion pass (`assets/dark-fixes.js`) that repaints such
+  surfaces waited 30 to 150 ms, watched an `.app` element the native app
+  mounts after the script runs (so in the app it never ran on new screens),
+  and skipped the added element itself. It now runs inside the mutation
+  callback, before paint, on the whole body, root included, with transitions
+  off for that frame.
+
+Pinned by `tools/native-premium-feel-test.mjs`: a white card added in dark
+mode is dark in its first painted frame, and Orders opens with no white
+surface in its first frame.
+
 ## 1 · Tier 1: high impact, low effort
+
+Status (build 34): **1 done** (plus `:hover` removed on touch-only devices,
+so nothing stays lit after a tap, and no long-press preview on images and
+links) · **2 done** (touch-down `scale` via the Web Animations API, every
+button, tab, link and `data-action`) · **3 done** for selection (period,
+tabs, pills under a real finger; chart reading ticks once per data point;
+key presses, payment success and errors already had theirs) · **4 done**
+(tabular figures on live amounts; the dashboard already counts numbers up)
+· **5 not taken**: the app's spinners sit inside buttons, and delaying them
+would show an empty button · **6 done**.
+Also: the revenue chart now reads under a slow finger with a tick per point,
+and a quick flick still steps the period.
 
 | # | What | Why | Source |
 |---|------|-----|--------|

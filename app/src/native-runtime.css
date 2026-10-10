@@ -413,6 +413,12 @@ html.kiwi-native [data-dr-label]{display:none!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr>td:nth-child(2) b{font-weight:600}
   html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr>td:nth-child(3){grid-column:2;grid-row:2;font-size:13px!important;color:var(--kno-ink-2)!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr>td:nth-child(4){grid-column:3;grid-row:1;justify-self:end;font:600 15px/1.2 "Inter Tight",sans-serif!important;color:var(--kno-ink)!important;font-variant-numeric:tabular-nums}
+  /* Orders summary: solid native cards from the first frame, both themes. */
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .rtx-summary>div{background:var(--kno-card)!important;border-color:var(--kno-line)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .rtx-summary span{color:var(--kno-ink-2)!important}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .rtx-summary strong{color:var(--kno-accent)!important;font-variant-numeric:tabular-nums}
+  html.kiwi-native body.kiwi-native-owner:not(#kno) .rtx-summary .is-refund strong{color:#B44338!important}
+  html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) body.kiwi-native-owner:not(#kno) .rtx-summary .is-refund strong{color:#FCA597!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr>td:nth-child(1){grid-column:3;grid-row:2;justify-self:end;font:400 13px/1.2 "Inter Tight",sans-serif!important;color:var(--kno-ink-2)!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr>td:nth-child(5){display:none!important}
   html.kiwi-native body.kiwi-native-owner:not(#kno) table.p-table tr>td:nth-child(6){grid-column:2;grid-row:1;justify-self:end;overflow:visible}
@@ -1030,3 +1036,13 @@ html.kiwi-native body.kiwi-native-owner:not(#kno) .kiwi-lock :is(.kiwi-lock-help
 .kiwi-face-offer-yes{background:var(--atlas,#0B6E4F);color:var(--paper,#F7F5F0)}
 .kiwi-face-offer-no{margin-top:6px;background:transparent;color:var(--kno-ink-2,#59615D)}
 @media(prefers-reduced-motion:reduce){.kiwi-face-offer,.kiwi-face-offer-panel{transition:none}}
+
+/* Premium feel layer (docs/roadmaps/2026-10-10-premium-feel.md, Tier 1).
+   Live amounts keep every digit the same width, so a count-up or a new sale
+   never makes a total wobble. The revenue chart reads under a slow finger:
+   horizontal drags stay with the chart, vertical ones still scroll. Images
+   and links never raise the long-press preview a browser would. */
+html.kiwi-native :is([data-rev-hero-val],[data-kpi-val],[data-mix-center-amt],.kpi-m .v,.rtx-summary strong,.rtx-a,.rtx-activity-value,.p-table td,.cd-tbl td,.pay-charge-total,#rp-peek-total,.rp-summary-row,.menu-item-price,.clock,time){font-variant-numeric:tabular-nums}
+html.kiwi-native :is(svg[data-rev-svg],svg[data-rev-svg] .rev-hit){touch-action:pan-y}
+html.kiwi-native :is(img,svg,a[href]){-webkit-touch-callout:none}
+html.kiwi-native img{-webkit-user-drag:none}

@@ -419,10 +419,13 @@
   }
   /* Swipe sideways across the Home chart to step
      Today → Yesterday → 7 days → 30 days (ticket #0107). Starts away from the
-     screen edge so the edge swipe-back keeps working. */
+     screen edge so the edge swipe-back keeps working. Only a quick flick
+     counts: a slow drag is the finger reading values off the chart, and
+     letting go of it must not change the period. */
   function initPeriodSwipe() {
     var ORDER = ['aujourdhui', 'hier', 'septJours', 'trenteJours'];
-    var sx = null, sy = 0;
+    var FLICK_MS = 320;
+    var sx = null, sy = 0, st = 0;
     document.addEventListener('touchstart', function (e) {
       sx = null;
       if (e.touches.length !== 1 || !document.body.classList.contains('kiwi-native-owner')) return;
@@ -430,12 +433,13 @@
       if (t.clientX < 28 || t.clientX > innerWidth - 28) return;
       if (!e.target.closest || !e.target.closest('.hero-left-chart')) return;
       if (openNativeLayers().length) return;
-      sx = t.clientX; sy = t.clientY;
+      sx = t.clientX; sy = t.clientY; st = Date.now();
     }, { passive: true });
     document.addEventListener('touchend', function (e) {
       if (sx == null) return;
       var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
       sx = null;
+      if (Date.now() - st > FLICK_MS) return;
       if (Math.abs(dx) < 56 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
       var cur = document.querySelector('.dash-date-range .dr-pill.on[data-range]');
       var i = ORDER.indexOf(cur ? cur.getAttribute('data-range') : 'aujourdhui');
@@ -1837,6 +1841,196 @@
     polishNativeWorkspaceCopy();
     maybePromptBiometricUnlock();
   }
+})();
+
+/* Premium feel layer (docs/roadmaps/2026-10-10-premium-feel.md, Tier 1).
+ * Four things a web view gives away and a native app never does:
+ *   1. Touch-down response. Every control answers the instant a finger lands
+ *      (scale .97, .985 on large surfaces) and springs back on release. The
+ *      Web Animations API animates the `scale` property, so no element's own
+ *      `transform` or `transition` is touched.
+ *   2. Sticky hover. iOS keeps :hover on whatever was tapped last, so a
+ *      button stays lit after the finger has gone. On a touch-only device the
+ *      :hover selectors are removed from every stylesheet, including the ones
+ *      surfaces inject later.
+ *   3. One haptic per meaning: a selection tick when a segmented control or
+ *      tab changes under a real finger, and one per data point while the
+ *      finger reads the revenue chart. Key presses, success and errors keep
+ *      their existing light, success and error haptics.
+ *   4. The chart reads under a slow finger (touch-action pan-y), a quick
+ *      flick still steps the period (initPeriodSwipe). */
+(function () {
+  'use strict';
+  var cap = window.Capacitor;
+  if (!cap || typeof cap.isNativePlatform !== 'function' || !cap.isNativePlatform()) return;
+  var haptics = (cap.Plugins || {}).Haptics;
+  var reduce = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  var touchOnly = !!(window.matchMedia && window.matchMedia('(hover: none)').matches);
+  var EASE = 'cubic-bezier(.2,.8,.2,1)';
+
+  function hcall(method) {
+    try {
+      if (!haptics || typeof haptics[method] !== 'function') return;
+      var r = haptics[method]();
+      if (r && typeof r.catch === 'function') r.catch(function () {});
+    } catch (_) {}
+  }
+  var lastTick = 0;
+  function tick() {
+    var now = Date.now();
+    if (now - lastTick < 40) return;
+    lastTick = now;
+    hcall('selectionChanged');
+  }
+  function selectionTap() { hcall('selectionStart'); tick(); hcall('selectionEnd'); }
+
+  /* 1 · Touch-down response. */
+  var PRESSABLE = 'button,[role="button"],[role="tab"],[data-action],a[href],summary,label[for]';
+  /* Controls with their own :active shrink in native-runtime.css or native-shell.css. */
+  var OWN_PRESS = '.menu-item,.kiwi-native-owner-keypad button,#pair .pad button,.kiwi-native-burger,.rp-peek,.kiwi-native-owner-actions button,.cta,.secondary,.tile,.store-choice,.printer-choice';
+  var held = null, px = 0, py = 0;
+  function pressable(target) {
+    var el = target && target.closest ? target.closest(PRESSABLE) : null;
+    if (!el || typeof el.animate !== 'function') return null;
+    if (el.disabled || el.getAttribute('aria-disabled') === 'true' || el.matches(OWN_PRESS)) return null;
+    if (el.closest('input,textarea,select,[contenteditable="true"]')) return null;
+    return el;
+  }
+  function pressIn(el) {
+    var r = el.getBoundingClientRect(), area = r.width * r.height;
+    if (!area || area > window.innerWidth * window.innerHeight * 0.4) return;
+    var s = r.height > 96 || r.width > window.innerWidth * 0.7 ? 0.985 : 0.97;
+    held = { el: el, s: s, anim: el.animate([{ scale: '1' }, { scale: String(s) }], { duration: 90, easing: EASE, fill: 'forwards' }) };
+  }
+  function pressOut() {
+    if (!held) return;
+    var h = held, from = h.s;
+    held = null;
+    try { var now = parseFloat(getComputedStyle(h.el).scale); if (now > 0) from = now; } catch (_) {}
+    h.anim.cancel();
+    if (from < 1) h.el.animate([{ scale: String(from) }, { scale: '1' }], { duration: reduce && reduce.matches ? 120 : 220, easing: EASE });
+  }
+
+  /* 3 · Selection haptic, only when a real finger changes the choice. */
+  var SEGMENT = '[data-kw-lens]>:not(.kw-lens),[role="tab"],.dr-pill,.cat-pill,.floor-pill,.mode-pill,.rtx-method,.mi-pill,.kx-tab,.sc-pill,.resv-tab';
+  var NO_TICK = '[data-floor-view]';
+  function isOn(el) {
+    return el.classList.contains('on') || el.classList.contains('active') || el.classList.contains('is-active') ||
+      el.getAttribute('aria-selected') === 'true' || el.getAttribute('aria-pressed') === 'true' || el.getAttribute('aria-current') === 'page';
+  }
+  var downSegment = null, downWasOn = false;
+
+  document.addEventListener('pointerdown', function (event) {
+    if (event.pointerType === 'mouse' || event.isPrimary === false) return;
+    pressOut();
+    px = event.clientX; py = event.clientY;
+    var el = pressable(event.target);
+    if (el) pressIn(el);
+    var seg = event.target && event.target.closest ? event.target.closest(SEGMENT) : null;
+    downSegment = seg && !seg.matches(NO_TICK) ? seg : null;
+    downWasOn = !!(downSegment && isOn(downSegment));
+  }, { passive: true, capture: true });
+  document.addEventListener('pointermove', function (event) {
+    if (held && (Math.abs(event.clientX - px) > 10 || Math.abs(event.clientY - py) > 10)) pressOut();
+  }, { passive: true, capture: true });
+  ['pointerup', 'pointercancel'].forEach(function (kind) { document.addEventListener(kind, pressOut, { passive: true, capture: true }); });
+  document.addEventListener('click', function (event) {
+    var seg = downSegment;
+    downSegment = null;
+    if (!seg || downWasOn || seg.disabled) return;
+    if (!event.target || !event.target.closest || event.target.closest(SEGMENT) !== seg) return;
+    selectionTap();
+  }, true);
+
+  /* 3 · One tick per data point while the finger reads the chart. The tooltip
+     interpolates between points, so the tick follows the point, not the text. */
+  var scrub = null;
+  document.addEventListener('pointerdown', function (event) {
+    if (event.pointerType === 'mouse' || !event.target || !event.target.closest || !event.target.closest('.rev-hit')) return;
+    scrub = { svg: event.target.closest('svg'), bucket: null };
+    hcall('selectionStart');
+  }, { passive: true });
+  document.addEventListener('pointermove', function (event) {
+    if (!scrub || !scrub.svg || !scrub.svg.classList.contains('is-hover')) return;
+    var label = scrub.svg.querySelector('.rev-tip-label');
+    var text = label ? String(label.textContent || '').trim() : '';
+    if (!text) return;
+    /* Day chart "14h35" ticks per hour; multi-day "Mar 23 · 14h" per day. */
+    var hour = /^(\d{1,2})[:h]\d{2}/i.exec(text);
+    var bucket = hour ? hour[1] : text.split(' · ')[0];
+    if (scrub.bucket !== null && bucket !== scrub.bucket) tick();
+    scrub.bucket = bucket;
+  }, { passive: true });
+  function endScrub() { if (!scrub) return; scrub = null; hcall('selectionEnd'); }
+  document.addEventListener('pointerup', endScrub, { passive: true });
+  document.addEventListener('pointercancel', endScrub, { passive: true });
+
+  /* 2 · Sticky hover. */
+  if (!touchOnly) return;
+  var done = typeof WeakSet === 'function' ? new WeakSet() : null;
+  function splitSelectors(text) {
+    var out = [], depth = 0, start = 0;
+    for (var i = 0; i < text.length; i++) {
+      var c = text.charAt(i);
+      if (c === '(' || c === '[') depth++;
+      else if (c === ')' || c === ']') depth--;
+      else if (c === ',' && depth === 0) { out.push(text.slice(start, i)); start = i + 1; }
+    }
+    out.push(text.slice(start));
+    return out;
+  }
+  function stripRules(list) {
+    var rules;
+    try { rules = list.cssRules; } catch (_) { return; }
+    if (!rules) return;
+    for (var i = rules.length - 1; i >= 0; i--) {
+      var rule = rules[i];
+      if (rule.media && /hover\s*:\s*hover|pointer\s*:\s*fine/.test(rule.media.mediaText || '')) continue;
+      if (typeof rule.selectorText === 'string' && rule.selectorText.indexOf(':hover') >= 0) {
+        /* `:not(:hover)` is true of everything once nothing is hovered. */
+        var keep = splitSelectors(rule.selectorText.replace(/:not\(\s*:hover\s*\)/g, ''))
+          .filter(function (sel) { return sel.indexOf(':hover') < 0 && sel.trim(); });
+        try {
+          if (!keep.length) { list.deleteRule(i); continue; }
+          rule.selectorText = keep.join(',');
+        } catch (_) {}
+      }
+      if (rule.cssRules && rule.cssRules.length) stripRules(rule);
+    }
+  }
+  function stripAll() {
+    var sheets = document.styleSheets;
+    for (var i = 0; i < sheets.length; i++) {
+      var sheet = sheets[i];
+      if (done) { if (done.has(sheet)) continue; done.add(sheet); }
+      stripRules(sheet);
+    }
+  }
+  var queued = false;
+  function queue() {
+    if (queued) return;
+    queued = true;
+    (window.requestAnimationFrame || setTimeout)(function () { queued = false; stripAll(); });
+  }
+  function isSheetNode(node) { return node && (node.nodeName === 'STYLE' || (node.nodeName === 'LINK' && /stylesheet/i.test(node.rel || ''))); }
+  /* A new sheet anywhere (a surface's injected <style>, even deep inside a
+     rendered subtree) changes the sheet count; rewriting a <style>'s text
+     replaces its sheet. Either one queues a pass over the unseen sheets. */
+  var seenCount = -1;
+  new MutationObserver(function (records) {
+    if (document.styleSheets.length !== seenCount) { seenCount = document.styleSheets.length; queue(); return; }
+    for (var i = 0; i < records.length; i++) if (isSheetNode(records[i].target)) { queue(); return; }
+  }).observe(document.documentElement, { childList: true, subtree: true });
+  /* A <link> can be counted before its rules arrive: look at it again once loaded. */
+  document.addEventListener('load', function (event) {
+    if (!isSheetNode(event.target)) return;
+    if (done && event.target.sheet) done.delete(event.target.sheet);
+    queue();
+  }, true);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', stripAll);
+  else stripAll();
+  window.addEventListener('load', stripAll);
+  window.__kiwiFeel = { stripAll: stripAll };
 })();
 
 /* Native lifecycle telemetry. The shared err-reporter owns redaction, rate
