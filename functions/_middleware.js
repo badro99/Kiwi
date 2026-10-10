@@ -27,6 +27,7 @@ import {
   findEmployeeCredential, employeeToken, employeeCookie, activeServiceEmployee,
   limitCheck, limitFail, limitClear, rateLimitUnavailable,
 } from './auth/_lib.js';
+import { metadataResponse, protectedResourceMetadata, authorizationServerMetadata } from './api/agent/_oauth.js';
 
 const GATE_COOKIE = 'kiwi_gate';
 const UNLOCK_PATH = '/__unlock';
@@ -296,6 +297,25 @@ async function routeRequest(context) {
   // Private agent bearer endpoints authenticate and authorize their own
   // merchant-bound keys. Never grant these keys access to other /api routes.
   if ((path === '/api/agent/query' || path === '/api/agent/action') && method === 'POST') return next();
+  /* The REMOTE Kiwi connector (functions/api/agent/mcp.js) and its OAuth
+   * flow (functions/api/agent/_oauth.js). claude.ai reaches these with no
+   * Kiwi cookie, by design:
+   *   - /api/agent/mcp authenticates the same `kwa.` bearer itself and only
+   *     forwards to query.js / action.js;
+   *   - register hands out a client id that grants nothing on its own;
+   *   - token only swaps a one-time, PKCE-bound code the OWNER approved;
+   *   - agent-connect.html is a static consent page with no data in it — it
+   *     asks /api/agent/oauth/authorize, which requires the owner's session.
+   * The two discovery documents are answered right here: they are the same
+   * for everyone and a Pages Function under a dot-directory is not something
+   * to rely on. Exact paths and methods only. */
+  if (path === '/api/agent/mcp' && (method === 'POST' || method === 'GET' || method === 'OPTIONS' || method === 'DELETE')) return next();
+  if ((path === '/api/agent/oauth/register' || path === '/api/agent/oauth/token') && (method === 'POST' || method === 'OPTIONS')) return next();
+  if (isRead && (path === '/agent-connect.html' || path === '/agent-connect')) return next();
+  if (isRead && (path === '/.well-known/oauth-protected-resource' || path === '/.well-known/oauth-protected-resource/api/agent/mcp'))
+    return metadataResponse(protectedResourceMetadata(request));
+  if (isRead && path === '/.well-known/oauth-authorization-server')
+    return metadataResponse(authorizationServerMetadata(request));
 
   /* Même raisonnement, pour les quatre fichiers que le navigateur va chercher
    * TOUT SEUL et qui, eux, ne peuvent pas vivre sous /assets.

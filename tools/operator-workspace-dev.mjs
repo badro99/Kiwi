@@ -32,9 +32,16 @@ db.prepare('INSERT INTO tenant_guard_events VALUES(?,?,?,?,?,?,?)').run(now-9000
 db.prepare("INSERT INTO kiwi_tickets(body,status,kind,money_at_risk,created_ts,updated_ts) VALUES(?,?,?,?,?,?)").run('Le tableau de bord du restaurant ne concorde pas avec le Z de la caisse.','problem','bug',1,now,now);
 db.prepare("INSERT INTO kiwi_tickets(body,status,kind,money_at_risk,created_ts,updated_ts) VALUES(?,?,?,?,?,?)").run('Masquer le bouton Campagne dans Clients pour tous les métiers.','problem','improvement',0,now,now);
 db.prepare("INSERT INTO kiwi_tickets(body,status,kind,money_at_risk,created_ts,updated_ts) VALUES(?,?,?,?,?,?)").run('Un article retourné revient en stock.','testing','unsorted',0,now,now);
+// Two months of synthetic café tickets with line detail, for the monthly
+// report (kiwi-report.html) and the 30-day curve of Santé de Kiwi.
+{const menu=[['Café noir',12],['Thé à la menthe',15],['Msemen',8],['Jus d’orange',20],['Croissant',9],['Tajine poulet',65]];
+let seq=0;for(let d=1;d<62;d++)for(let k=0;k<3+(d*7)%5;k++){const a=menu[(d+k)%menu.length],b=menu[(d*3+k)%menu.length],q=1+(k%2);
+const ts=now-d*86400000+(8+((k*3)%12))*3600000-6*3600000,total=a[1]*q+b[1];
+db.prepare('INSERT INTO sales(id,merchant,amount,amount_cents,method,ts,lines) VALUES(?,?,?,?,?,?,?)').run('fixture-month-'+(seq++),'cafe-test',total,total*100,k%3?'card':'cash',ts,JSON.stringify([{n:a[0],q,t:a[1]*q},{n:b[0],q:1,t:b[1]}]));}}
 const cookie=`kiwi_op=${await auth.operatorToken(env.AUTH_SECRET)}; kiwi_op_id=${await auth.operatorIdToken(env.AUTH_SECRET,'fixture-operator')}`;
-const allowed=new Set(['workspace','clients','overview','operators','tasks','notes','health','config','pins','attendance-link','audit','sales','account','support','support-articles']);
+const allowed=new Set(['workspace','clients','overview','operators','tasks','notes','health','config','pins','attendance-link','audit','sales','account','support','support-articles','report']);
 const mutable=new Set(['tasks','notes','config']);
+db.prepare('INSERT INTO agent_oauth_clients(client_id,name,redirect_uris,created_ts) VALUES(?,?,?,?)').run('kwc_fixtureclient000000000000000','Claude',JSON.stringify(['https://claude.ai/api/mcp/auth_callback']),now);
 http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,'http://127.0.0.1:8767');
@@ -48,8 +55,16 @@ http.createServer(async(req,res)=>{
       const request=new Request(url,{method:req.method,headers:{'Content-Type':'application/json',Cookie:cookie,...(req.headers.origin?{Origin:req.headers.origin}:{})},...(req.method==='GET'?{}:{body:Buffer.concat(chunks)})});
       const result=await handler({request,env});res.writeHead(result.status,{'Content-Type':'application/json','Cache-Control':'no-store'});return res.end(await result.text());
     }
+    // Connector consent screen (agent-connect.html) as the café owner. Only
+    // the read-only GET is wired: approving would mint a code for nothing.
+    if(url.pathname==='/api/agent/oauth/authorize'&&req.method==='GET'){
+      const {onRequestGet}=await import('../functions/api/agent/oauth/authorize.js');
+      const owner=auth.sessionCookie(await auth.makeSession('cafe-test',env.AUTH_SECRET)).split(';')[0];
+      const result=await onRequestGet({request:new Request(url,{headers:{Cookie:owner}}),env});
+      res.writeHead(result.status,{'Content-Type':'application/json','Cache-Control':'no-store'});return res.end(await result.text());
+    }
     const relative=url.pathname==='/'?'kiwi-admin.html':decodeURIComponent(url.pathname).slice(1),file=path.resolve(root,relative);
-    if(!file.startsWith(root+path.sep)||!(relative==='kiwi-admin.html'||relative.startsWith('assets/'))){res.writeHead(404);return res.end();}
+    if(!file.startsWith(root+path.sep)||!(['kiwi-admin.html','kiwi-health.html','kiwi-report.html','agent-connect.html'].includes(relative)||relative.startsWith('assets/'))){res.writeHead(404);return res.end();}
     let body=fs.readFileSync(file);
     if(relative==='kiwi-admin.html')body=body.toString().replace('<main class="wrap">','<main class="wrap"><p class="op-notice">TEST LOCAL · données entièrement fictives · SQLite en mémoire, aucun accès à la production.</p>');
     const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.woff2':'font/woff2','.png':'image/png'};

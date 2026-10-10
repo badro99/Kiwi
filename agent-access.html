@@ -20,6 +20,10 @@ button:disabled{opacity:.55;cursor:not-allowed}.row{display:flex;gap:10px;align-
 <a href="/dashboard">← Tableau de bord</a>
 <h1>Accès agents</h1>
 <p>Créez des clés privées et limitées pour les agents qui travaillent sur Kiwi. Elles ne remplacent ni un compte propriétaire, ni une caisse, ni un code PIN.</p>
+<section><h2>Connecter Claude</h2>
+<p>Dans claude.ai : Réglages → Connecteurs → <strong>Ajouter un connecteur personnalisé</strong>, puis collez cette adresse. Claude vous renverra ici pour choisir l’établissement et autoriser l’accès, sans clé à copier.</p>
+<div class="row"><input id="mcpUrl" readonly value="https://kiwi-os.com/api/agent/mcp" aria-label="Adresse du connecteur Kiwi" style="flex:1;min-width:220px"><button id="copyMcp" type="button" class="secondary">Copier l’adresse</button></div>
+<p class="muted">La connexion apparaît ci-dessous sous le nom « Claude · connecteur ». Elle dure 30 jours ; révoquez-la ici pour la couper.</p></section>
 <section><h2>Établissement</h2><label for="merchant">Choisir l’établissement</label><select id="merchant"></select>
 <p class="muted" id="who">Le propriétaire connecté ou un opérateur God Mode nommé peut créer ces clés. Une clé opérateur dure 7 jours au plus et reste visible et révocable par le propriétaire.</p></section>
 <section><h2>Nouvelle clé</h2>
@@ -58,6 +62,11 @@ button:disabled{opacity:.55;cursor:not-allowed}.row{display:flex;gap:10px;align-
     l.append(c, document.createTextNode(title)); $('scopes').append(l);
   }
   const status = s => { $('status').textContent = s; };
+  $('mcpUrl').value = location.origin + '/api/agent/mcp';
+  $('copyMcp').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('mcpUrl').value); status('Adresse copiée.'); }
+    catch (_) { $('mcpUrl').select(); status('Sélectionnez l’adresse et copiez-la.'); }
+  });
   let clearTokenTimer;
   async function api(url, options) {
     const r = await fetch(url, { credentials:'same-origin', cache:'no-store', ...options });

@@ -64,3 +64,20 @@
 /tickets.html
   Cache-Control: private, no-store
   X-Robots-Tag: noindex, nofollow, noarchive
+
+# 5. The connector consent screen (agent-connect.html).
+#
+# An owner approves an AI assistant's access to their books on this page. It
+# must never render inside someone else's frame (a transparent overlay over
+# « Autoriser » is the classic attack on consent screens), and it should not
+# leak its query string (client id, PKCE challenge) to the next page.
+/agent-connect
+  Cache-Control: private, no-store
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'
+  Referrer-Policy: no-referrer
+/agent-connect.html
+  Cache-Control: private, no-store
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'
+  Referrer-Policy: no-referrer

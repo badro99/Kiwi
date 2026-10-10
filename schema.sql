@@ -1814,6 +1814,32 @@ CREATE TABLE IF NOT EXISTS agent_audit (
 );
 CREATE INDEX IF NOT EXISTS idx_agent_audit_merchant ON agent_audit (merchant, created_ts);
 
+-- The remote Kiwi connector (functions/api/agent/_oauth.js). A registered
+-- client grants nothing on its own; a code is single-use, five minutes,
+-- PKCE-bound, and approved by the store's OWNER account. The access token it
+-- yields is an ordinary row of agent_keys. Both tables are also created on
+-- first use (ensureOAuthTables), so an unmigrated D1 does not fail closed.
+CREATE TABLE IF NOT EXISTS agent_oauth_clients (
+  client_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  redirect_uris TEXT NOT NULL,      -- JSON array, https or loopback http only
+  created_ts INTEGER NOT NULL,
+  last_used_ts INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS agent_oauth_codes (
+  code_hash TEXT PRIMARY KEY,       -- sha-256 of the code; the code itself is never stored
+  client_id TEXT NOT NULL,
+  redirect_uri TEXT NOT NULL,
+  merchant TEXT NOT NULL,
+  account_id TEXT NOT NULL,
+  account_epoch INTEGER NOT NULL,
+  scopes TEXT NOT NULL,
+  challenge TEXT NOT NULL,          -- PKCE S256 challenge
+  created_ts INTEGER NOT NULL,
+  expires_ts INTEGER NOT NULL,
+  used_ts INTEGER
+);
+
 -- Closed-register comparison only. It never creates sales or reconstructs receipts.
 CREATE TABLE IF NOT EXISTS z_reconciliations (
   merchant TEXT NOT NULL,

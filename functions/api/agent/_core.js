@@ -97,7 +97,11 @@ function equalHash(a, b) {
   for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
 }
-export async function authorize(request, env, scope) {
+/* The key itself, before any scope: active, unexpired, still held by the
+ * owner (or named operator) who issued it, hash-verified. `authorize` adds the
+ * per-tool scope on top; the remote MCP endpoint uses this alone to answer
+ * initialize and tools/list for exactly the scopes the key carries. */
+export async function keyGrant(request, env) {
   if (!env?.DB || !env?.AUTH_SECRET) return null;
   const match = /^Bearer (kwa\.[0-9a-f-]{36}\.[A-Za-z0-9_-]{43})$/i.exec(request.headers.get('Authorization') || '');
   if (!match) return null;
@@ -118,10 +122,15 @@ export async function authorize(request, env, scope) {
   } else if (row.account_status == null || row.account_status === 'suspended' ||
       row.current_owner !== row.account_id ||
       Number(row.account_epoch) !== Number(row.current_epoch)) return null;
-  if ((scope.endsWith(':create') || scope.endsWith(':write')) && row.merchant_status !== 'active') return null;
   if (!equalHash(await hash(match[1]), row.token_hash)) return null;
   let scopes;
   try { scopes = JSON.parse(row.scopes); } catch (_) { return null; }
-  if (!Array.isArray(scopes) || !scopes.includes(scope)) return null;
-  return { id: row.id, merchant: row.merchant, scopes };
+  if (!Array.isArray(scopes)) return null;
+  return { id: row.id, merchant: row.merchant, scopes, merchantStatus: row.merchant_status, expires: Number(row.expires_ts) };
+}
+export async function authorize(request, env, scope) {
+  const grant = await keyGrant(request, env);
+  if (!grant || !grant.scopes.includes(scope)) return null;
+  if ((scope.endsWith(':create') || scope.endsWith(':write')) && grant.merchantStatus !== 'active') return null;
+  return { id: grant.id, merchant: grant.merchant, scopes: grant.scopes };
 }

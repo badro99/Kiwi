@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="referrer" content="no-referrer" />
+<title>Kiwi · Connecter un assistant</title>
+<link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<!-- L'écran d'autorisation du connecteur Kiwi (functions/api/agent/_oauth.js).
+     Un assistant comme Claude y envoie le commerçant ; le PROPRIÉTAIRE se
+     connecte, choisit un établissement et ce que l'assistant pourra lire, puis
+     autorise. La page ne contient aucune donnée : tout passe par
+     /api/agent/oauth/authorize, qui exige la session du propriétaire. -->
+<style>
+:root{
+  --atlas:#0B6E4F; --riad:#053B2C; --mint:#7DF2B0;
+  --paper:#F7F5F0; --ink:#0A0F0D; --surface:#FFFDFA;
+  --line:#E4E0D7; --muted:#5D6B63; --wash:#F1EFE9;
+  --ochre:#7A5200; --ochre-bg:#FDF6E6; --ochre-line:#E8D9B0;
+  --warn:#B0402F; --warn-bg:#FBEEEB;
+  --sans:"Inter Tight",Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --r:10px; --r-lg:14px;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --paper:#0B100E; --ink:#E9F0EA; --surface:#121815; --line:#242E29; --muted:#93A89C; --wash:#1A221E;
+    --ochre:#F0CF8A; --ochre-bg:#211D10; --ochre-line:#3A3320; --warn:#F0B3A4; --warn-bg:#241412; }
+}
+em,i,cite,dfn,var{font-style:normal}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper); color:var(--ink); font:400 15px/1.55 var(--sans); -webkit-font-smoothing:antialiased}
+main{max-width:520px; margin:0 auto; padding:40px 16px 60px}
+.brand{display:flex; align-items:center; gap:10px; margin-bottom:22px}
+.brand img{height:26px}
+.card{background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:22px}
+h1{font-size:20px; font-weight:600; letter-spacing:-.015em; margin:0 0 6px}
+p{margin:0 0 12px; color:var(--muted)}
+.who{font-weight:600; color:var(--ink)}
+label.f{display:block; font-size:13px; font-weight:600; margin:14px 0 6px}
+input[type=email],input[type=password],select{font:inherit; width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:var(--r); background:var(--paper); color:var(--ink)}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--atlas); outline-offset:2px}
+fieldset{border:0; padding:0; margin:16px 0 0}
+legend{font-size:13px; font-weight:600; margin-bottom:6px; padding:0}
+.scope{display:flex; gap:10px; align-items:flex-start; padding:9px 0; border-top:1px solid var(--line); font-size:14px; cursor:pointer}
+.scope:first-of-type{border-top:0}
+.scope input{margin-top:4px; accent-color:var(--atlas)}
+.scope small{display:block; color:var(--muted); font-size:12px}
+.tag{display:inline-block; font:600 11px/1 var(--sans); padding:3px 6px; border-radius:999px; margin-left:6px; vertical-align:1px}
+.tag.pii{background:var(--ochre-bg); color:var(--ochre)}
+.tag.write{background:var(--warn-bg); color:var(--warn)}
+.note{font-size:13px; background:var(--wash); border-radius:var(--r); padding:10px 12px; margin:16px 0 0; color:var(--muted)}
+.row{display:flex; gap:10px; margin-top:18px}
+button{font:600 15px/1 var(--sans); border:0; border-radius:var(--r); padding:13px 16px; cursor:pointer; flex:1}
+button.go{background:var(--atlas); color:#EAFFF4}
+button.no{background:var(--wash); color:var(--ink)}
+button:disabled{opacity:.55; cursor:wait}
+.err{color:var(--warn); font-size:14px; min-height:20px; margin:10px 0 0}
+.foot{font-size:12px; color:var(--muted); text-align:center; margin-top:16px}
+.foot a{color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+  <div class="brand"><picture><source srcset="assets/kiwi-newlogo-inverse.svg" media="(prefers-color-scheme: dark)" /><img src="assets/kiwi-newlogo.svg" alt="Kiwi" /></picture></div>
+  <div class="card" id="card" aria-live="polite"><p>Vérification de la demande…</p></div>
+  <p class="foot">Vous pourrez couper l’accès à tout moment depuis la page Accès agents de votre tableau de bord.</p>
+</main>
+<script>
+(function () {
+  'use strict';
+  var card = document.getElementById('card');
+  var q = new URLSearchParams(location.search);
+  var req = {
+    response_type: q.get('response_type'), client_id: q.get('client_id') || '', redirect_uri: q.get('redirect_uri') || '',
+    state: q.get('state') || '', code_challenge: q.get('code_challenge') || '', code_challenge_method: q.get('code_challenge_method') || '',
+    scope: q.get('scope') || ''
+  };
+  var LABELS = {
+    'overview:read': ['Profil de l’établissement', 'Nom, métier, abonnement'],
+    'sales:read': ['Chiffre d’affaires par jour', 'Totaux par moyen de paiement, annulations exclues'],
+    'payments:read': ['Paiements et remboursements', 'Chaque encaissement, y compris les annulations'],
+    'orders:read': ['Commandes', 'Articles et statut, sans coordonnées client'],
+    'catalog:read': ['Catalogue', 'Recherche de produits et prix'],
+    'cash:read': ['Tiroir-caisse', 'Ouvertures, mouvements et clôtures'],
+    'tables:read': ['Tables', 'Sessions de table, sans jeton client'],
+    'hotel:read': ['Séjours hôtel', 'Inclut le nom des clients', 'pii'],
+    'clients:read': ['Fiches clients', 'Nom, téléphone, e-mail', 'pii'],
+    'operations:read': ['Notes et tâches d’équipe', 'Lecture des notes opérationnelles'],
+    'clients:create': ['Créer des fiches clients', 'Écriture, journalisée', 'write'],
+    'operations:write': ['Ajouter des notes et tâches', 'Écriture, journalisée, sans toucher aux ventes', 'write']
+  };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function stop(title, text) { card.innerHTML = '<h1>' + esc(title) + '</h1><p>' + esc(text) + '</p>'; }
+
+  if (req.response_type !== 'code' || !req.client_id || !req.redirect_uri)
+    return stop('Demande incomplète', 'Ce lien d’autorisation n’est pas valide. Relancez la connexion depuis votre assistant.');
+  if (req.code_challenge_method !== 'S256' || !/^[A-Za-z0-9_-]{43}$/.test(req.code_challenge))
+    return stop('Demande refusée', 'Votre assistant doit utiliser une connexion sécurisée (PKCE). Relancez la connexion depuis l’assistant.');
+
+  var info = null;
+  function back(params) {
+    var u = new URL(req.redirect_uri);
+    Object.keys(params).forEach(function (k) { u.searchParams.set(k, params[k]); });
+    if (req.state) u.searchParams.set('state', req.state);
+    location.replace(u.toString());
+  }
+
+  async function load() {
+    var r, data = null;
+    try {
+      r = await fetch('/api/agent/oauth/authorize?client_id=' + encodeURIComponent(req.client_id) + '&redirect_uri=' + encodeURIComponent(req.redirect_uri),
+        { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
+      data = await r.json().catch(function () { return null; });
+    } catch (_) { return stop('Kiwi ne répond pas', 'Vérifiez votre connexion, puis rechargez cette page.'); }
+    if (r.status === 400) return stop('Demande refusée', 'Cet assistant ou son adresse de retour n’est pas reconnu par Kiwi. Relancez la connexion depuis l’assistant.');
+    if (r.status === 401) return signIn(data && data.client && data.client.name);
+    if (!r.ok || !data) return stop('Kiwi ne répond pas', 'Réessayez dans un instant.');
+    info = data;
+    consent();
+  }
+
+  function signIn(name) {
+    card.innerHTML = '<h1>Connectez-vous à Kiwi</h1><p><span class="who">' + esc(name || 'Un assistant') +
+      '</span> demande l’accès à votre établissement. Connectez-vous avec le compte propriétaire.</p>' +
+      '<form id="li"><label class="f" for="li-email">E-mail</label><input id="li-email" type="email" autocomplete="username" required />' +
+      '<label class="f" for="li-pass">Mot de passe</label><input id="li-pass" type="password" autocomplete="current-password" required />' +
+      '<p class="err" id="li-err" role="alert"></p><div class="row"><button class="go" type="submit">Se connecter</button></div></form>';
+    document.getElementById('li').addEventListener('submit', async function (ev) {
+      ev.preventDefault();
+      var btn = ev.target.querySelector('button'), err = document.getElementById('li-err');
+      btn.disabled = true; err.textContent = '';
+      try {
+        var r = await fetch('/auth/login', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: document.getElementById('li-email').value, password: document.getElementById('li-pass').value }) });
+        if (r.ok) return load();
+        err.textContent = r.status === 429 ? 'Trop d’essais. Patientez quelques minutes.' : 'E-mail ou mot de passe incorrect.';
+      } catch (_) { err.textContent = 'Kiwi ne répond pas. Réessayez.'; }
+      btn.disabled = false;
+    });
+  }
+
+  function consent() {
+    var stores = info.stores || [];
+    if (!stores.length) return stop('Aucun établissement', 'Ce compte ne possède aucun établissement actif. Seul le compte propriétaire d’un établissement peut le connecter.');
+    var asked = req.scope.split(/[\s,]+/).filter(function (s) { return info.scopes.indexOf(s) >= 0; });
+    var checked = asked.length ? asked : info.defaults;
+    var html = '<h1>Autoriser <span class="who">' + esc(info.client.name) + '</span></h1>' +
+      '<p>' + esc(info.client.name) + ' (' + esc(info.client.host) + ') pourra lire les données choisies ci-dessous, pour un seul établissement, pendant 30 jours.</p>';
+    html += stores.length > 1
+      ? '<label class="f" for="store">Établissement</label><select id="store">' + stores.map(function (s) {
+          return '<option value="' + esc(s.merchant) + '">' + esc(s.name || s.merchant) + (s.city ? ' · ' + esc(s.city) : '') + '</option>'; }).join('') + '</select>'
+      : '<p>Établissement : <span class="who">' + esc(stores[0].name || stores[0].merchant) + '</span></p><input type="hidden" id="store" value="' + esc(stores[0].merchant) + '" />';
+    // Lectures simples d'abord, puis données personnelles, puis écritures :
+    // ce qui demande réflexion se lit en dernier, à côté du bouton.
+    var rank = function (s) { var k = (LABELS[s] || [])[2]; return k === 'write' ? 2 : k === 'pii' ? 1 : 0; };
+    var ordered = info.scopes.slice().sort(function (a, b) { return rank(a) - rank(b); });
+    html += '<fieldset><legend>Ce que l’assistant pourra faire</legend>' + ordered.map(function (s) {
+      var l = LABELS[s] || [s, ''];
+      var tag = l[2] === 'pii' ? '<span class="tag pii">données personnelles</span>' : l[2] === 'write' ? '<span class="tag write">écriture</span>' : '';
+      return '<label class="scope"><input type="checkbox" value="' + esc(s) + '"' + (checked.indexOf(s) >= 0 ? ' checked' : '') + ' /><span>' +
+        esc(l[0]) + tag + '<small>' + esc(l[1]) + '</small></span></label>';
+    }).join('') + '</fieldset>';
+    html += '<p class="note">L’assistant ne voit jamais les codes du personnel, ne peut ni encaisser, ni rembourser, ni modifier le stock ou les commandes. Chaque lecture est journalisée.</p>' +
+      '<p class="err" id="c-err" role="alert"></p><div class="row"><button class="no" type="button" id="deny">Refuser</button><button class="go" type="button" id="allow">Autoriser</button></div>';
+    card.innerHTML = html;
+    document.getElementById('deny').addEventListener('click', function () { back({ error: 'access_denied', error_description: 'L’utilisateur a refusé.' }); });
+    document.getElementById('allow').addEventListener('click', approve);
+  }
+
+  async function approve() {
+    var btn = document.getElementById('allow'), err = document.getElementById('c-err');
+    var scopes = Array.prototype.map.call(card.querySelectorAll('.scope input:checked'), function (c) { return c.value; });
+    if (!scopes.length) { err.textContent = 'Choisissez au moins une autorisation.'; return; }
+    btn.disabled = true; err.textContent = '';
+    try {
+      var r = await fetch('/api/agent/oauth/authorize', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id: req.client_id, redirect_uri: req.redirect_uri, state: req.state, code_challenge: req.code_challenge,
+          code_challenge_method: req.code_challenge_method, merchant: document.getElementById('store').value, scopes: scopes }) });
+      var data = await r.json().catch(function () { return null; });
+      if (r.ok && data && data.redirect) { location.replace(data.redirect); return; }
+      err.textContent = data && data.error === 'not-owner' ? 'Seul le compte propriétaire de cet établissement peut l’autoriser.' : 'L’autorisation a échoué. Réessayez.';
+    } catch (_) { err.textContent = 'Kiwi ne répond pas. Réessayez.'; }
+    btn.disabled = false;
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>

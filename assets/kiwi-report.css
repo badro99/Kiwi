@@ -1,0 +1,92 @@
+/* Rapport mensuel Kiwi — une page A4 à remettre au commerçant.
+ * Jetons de marque verrouillés (assets/tokens.css). Le papier imprimé reste en
+ * clair : un PDF envoyé à un client ne suit pas le thème de l'écran qui l'a
+ * produit. Seule la barre d'outils, qui ne s'imprime pas, suit le thème. */
+:root{
+  --atlas:#0B6E4F; --riad:#053B2C; --mint:#7DF2B0;
+  --paper:#F7F5F0; --ink:#0A0F0D; --surface:#FFFDFA;
+  --line:#E4E0D7; --muted:#5D6B63; --wash:#F1EFE9; --grid:#E9E5DC;
+  --up:#0B6E4F; --down:#B0402F;
+  --sans:"Inter Tight",Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --r:10px;
+}
+em,i,cite,dfn,var{font-style:normal}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:#E9E6DF; color:var(--ink); font:400 14px/1.5 var(--sans); -webkit-font-smoothing:antialiased}
+@media (prefers-color-scheme:dark){ body{background:#0B100E} }
+.n{font-variant-numeric:tabular-nums lining-nums}
+
+.kr-bar{position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:10px 16px;
+  background:var(--riad); color:#EAFFF4; font-size:13px}
+.kr-bar label{font-weight:600}
+.kr-bar input{font:500 13px var(--sans); padding:7px 9px; border-radius:8px; border:0; background:#FFFFFF1F; color:#EAFFF4; color-scheme:dark}
+.kr-bar button{font:600 13px/1 var(--sans); border:0; border-radius:var(--r); padding:9px 13px; cursor:pointer; background:var(--mint); color:var(--riad)}
+.kr-bar-note{opacity:.8}
+
+.kr-page{width:210mm; max-width:calc(100% - 32px); min-height:297mm; margin:20px auto 40px; background:var(--surface);
+  border-radius:4px; box-shadow:0 10px 40px -18px rgba(0,0,0,.35); padding:18mm 16mm}
+.kr-loading,.kr-error{color:var(--muted)}
+.kr-error h1{color:var(--ink); font-size:20px; font-weight:600}
+
+.kr-head{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; border-bottom:2px solid var(--atlas); padding-bottom:12px; margin-bottom:18px}
+.kr-head img{height:26px}
+.kr-head h1{font-size:26px; font-weight:600; letter-spacing:-.02em; margin:10px 0 2px}
+.kr-head p{margin:0; color:var(--muted); font-size:13px}
+.kr-head .kr-meta{text-align:right; font-size:12px; color:var(--muted)}
+.kr-head .kr-meta b{display:block; color:var(--ink); font-size:15px; font-weight:600}
+
+.kr-hero{display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:10px; margin-bottom:18px}
+.kr-k{border:1px solid var(--line); border-radius:var(--r); padding:10px 12px; background:var(--paper)}
+.kr-k p{margin:0; font-size:12px; color:var(--muted); font-weight:600}
+.kr-k .v{font-size:22px; font-weight:600; letter-spacing:-.02em; color:var(--ink); margin:2px 0 0}
+.kr-k.main .v{font-size:30px; color:var(--riad)}
+.kr-k .s{font-weight:500; font-size:12px; margin-top:2px}
+.kr-k .s.up{color:var(--up)} .kr-k .s.down{color:var(--down)}
+
+.kr-sec{margin:0 0 18px; break-inside:avoid}
+.kr-sec h2{font-size:15px; font-weight:600; margin:0 0 8px; letter-spacing:-.01em}
+.kr-sec .sub{font-size:12px; color:var(--muted); margin:-4px 0 8px}
+.kr-two{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+
+.kr-chart svg{display:block; width:100%; height:180px; overflow:visible}
+.kr-chart .ax{font:11px var(--sans); fill:var(--muted)}
+.kr-chart .grid{stroke:var(--grid); stroke-width:1}
+.kr-chart .bar{fill:var(--atlas)}
+.kr-chart .bar.best{fill:var(--riad)}
+.kr-chart .bar:hover{fill:var(--riad)}
+
+.kr-table{width:100%; border-collapse:collapse; font-size:13px}
+.kr-table th{text-align:left; font-weight:600; color:var(--muted); font-size:12px; padding:5px 6px; border-bottom:1px solid var(--line)}
+.kr-table td{padding:6px; border-bottom:1px solid var(--line)}
+.kr-table td.n,.kr-table th.n{text-align:right}
+.kr-table tr:last-child td{border-bottom:0}
+.kr-share{display:inline-block; height:8px; border-radius:0 4px 4px 0; background:var(--atlas); vertical-align:middle; margin-right:6px; min-width:2px}
+
+.kr-hours{display:grid; grid-template-columns:repeat(24,1fr); gap:2px; align-items:end; height:90px}
+.kr-hours span{background:var(--atlas); border-radius:3px 3px 0 0; min-height:2px; opacity:.9}
+.kr-hours span.zero{background:var(--wash)}
+.kr-hours-ax{display:grid; grid-template-columns:repeat(24,1fr); gap:2px; font-size:10px; color:var(--muted); margin-top:3px}
+.kr-hours-ax i{text-align:center}
+
+.kr-note{font-size:12px; color:var(--muted); margin:6px 0 0}
+.kr-foot{border-top:1px solid var(--line); padding-top:10px; margin-top:22px; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; gap:12px}
+
+.kr-tip{position:fixed; z-index:20; pointer-events:none; background:var(--riad); color:#EAFFF4; font:500 12px/1.4 var(--sans);
+  padding:7px 9px; border-radius:8px; font-variant-numeric:tabular-nums}
+
+@media (max-width:720px){
+  .kr-page{padding:20px 16px; min-height:0}
+  .kr-hero{grid-template-columns:1fr 1fr}
+  .kr-two{grid-template-columns:1fr}
+  .kr-head{flex-direction:column}
+  .kr-head .kr-meta{text-align:left}
+}
+@page{size:A4; margin:12mm}
+@media print{
+  body{background:#fff}
+  .kr-bar,.kr-tip{display:none!important}
+  .kr-page{width:auto; max-width:none; min-height:0; margin:0; padding:0; box-shadow:none; border-radius:0; background:#fff}
+  .kr-k{background:#fff}
+  *{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+}

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Kiwi · Rapport mensuel</title>
+<link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<!-- Le rapport du mois qu'un opérateur remet à un commerçant : ouvert depuis
+     le dossier de la console, imprimé ou enregistré en PDF, puis envoyé.
+     Lecture seule (GET /api/admin/report). Il ne contient aucun nom de client,
+     aucun code, aucun identifiant de personnel. -->
+<link rel="stylesheet" href="assets/kiwi-report.css?v=2" />
+<script src="assets/kiwi-report.js?v=1" defer></script>
+</head>
+<body>
+  <div class="kr-bar" id="kr-bar">
+    <label for="kr-month">Mois</label>
+    <input type="month" id="kr-month" />
+    <button type="button" id="kr-print">Imprimer · PDF</button>
+    <span class="kr-bar-note" id="kr-bar-note"></span>
+  </div>
+  <main class="kr-page" id="kr-page" aria-busy="true">
+    <p class="kr-loading">Préparation du rapport…</p>
+  </main>
+  <div class="kr-tip" id="kr-tip" role="tooltip" hidden></div>
+</body>
+</html>

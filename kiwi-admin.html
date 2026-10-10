@@ -710,6 +710,9 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       <a href="#fleet" data-op-route="fleet"><img src="assets/icons/material/monitor.svg" alt="" />Parc &amp; incidents</a>
       <a href="#revenue" data-op-route="revenue"><img src="assets/icons/material/bar_chart.svg" alt="" />Revenus &amp; activité</a>
       <a href="#onboarding" data-op-route="onboarding"><img src="assets/icons/material/menu_book.svg" alt="" />Accompagnement</a>
+      <!-- Une fenêtre à part, pas une vue : on la garde ouverte sur un second
+           écran pendant qu'on travaille un dossier ici. -->
+      <a href="kiwi-health.html" target="kiwi-health" data-op-window><img src="assets/icons/material/trending_up.svg" alt="" />Santé de Kiwi<span>↗</span></a>
     </nav>
     <div class="op-sidebar-bottom"><p>Un problème. Un responsable.<br />Une prochaine étape.</p><a href="#operators" data-op-route="operators">Équipe opérateur <span>↗</span></a></div>
   </aside>
@@ -2070,7 +2073,11 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       // owner sees it on the same page (functions/api/agent/keys.js).
       h('button', { class:'mini', disabled: SENIOR === false,
         title:'Clé privée et limitée pour un agent (Claude, Codex) · 7 jours au plus',
-        onClick:function(e){ e.stopPropagation(); window.open('/agent-access.html?merchant=' + encodeURIComponent(c.merchant), '_blank'); } }, 'Clé agent')
+        onClick:function(e){ e.stopPropagation(); window.open('/agent-access.html?merchant=' + encodeURIComponent(c.merchant), '_blank'); } }, 'Clé agent'),
+      // Lecture seule : le dernier mois clos, à imprimer en PDF et envoyer.
+      h('button', { class:'mini',
+        title:'Le rapport du dernier mois clos, à imprimer ou enregistrer en PDF pour le client',
+        onClick:function(e){ e.stopPropagation(); window.open('/kiwi-report.html?merchant=' + encodeURIComponent(c.merchant), 'kiwi-report-' + c.merchant); } }, 'Rapport mensuel')
     ];
     /* Le bouton de la LIGNE ferme la boutique de la ligne. Celui du compte est
        remonté sur la bande du propriétaire, où il désigne ce qu'il fait. */
@@ -3741,6 +3748,16 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   };
   boot(false);
 })();
+/* Santé de Kiwi s'ouvre dans sa propre fenêtre, réutilisée si elle l'est déjà.
+   Sans JavaScript ou si le navigateur refuse la fenêtre, le lien garde son
+   target nommé et ouvre un onglet. */
+document.querySelectorAll('a[data-op-window]').forEach(function(a){
+  a.addEventListener('click', function(ev){
+    if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button) return;
+    var w = window.open(a.href, a.target, 'popup,width=1280,height=900');
+    if (w) { ev.preventDefault(); try { w.focus(); } catch(_){} }
+  });
+});
 </script>
 </body>
 </html>

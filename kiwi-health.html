@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Kiwi · Santé de Kiwi</title>
+<link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<!-- Fenêtre God mode : la santé de Kiwi en un écran. Elle ne lit que deux
+     routes déjà réservées à l'opérateur (/api/admin/overview et
+     /api/admin/workspace) et n'écrit rien. Chaque chiffre dit d'où il vient ;
+     une source absente s'affiche « indisponible », jamais zéro. -->
+<link rel="stylesheet" href="assets/kiwi-health.css?v=2" />
+<script src="assets/kiwi-health.js?v=1" defer></script>
+</head>
+<body>
+  <header class="kh-top">
+    <img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi" />
+    <div class="kh-title"><h1>Santé de Kiwi</h1><small>Console opérateur · fenêtre de pilotage</small></div>
+    <p class="kh-fresh" id="kh-fresh" role="status">Connexion aux données…</p>
+    <div class="kh-actions">
+      <button type="button" id="kh-refresh">Rafraîchir</button>
+      <a href="kiwi-admin.html" id="kh-console">Console</a>
+    </div>
+  </header>
+
+  <main class="kh-wrap" id="kh-main" aria-busy="true">
+    <section class="kh-block" aria-labelledby="kh-h-business">
+      <div class="kh-head"><h2 id="kh-h-business">L’entreprise</h2><p>Ce que Kiwi encaisse, et ce que nos clients encaissent avec Kiwi.</p></div>
+      <div class="kh-tiles" id="kh-business"></div>
+    </section>
+
+    <section class="kh-block" aria-labelledby="kh-h-gmv">
+      <div class="kh-head"><h2 id="kh-h-gmv">Volume encaissé par nos clients · 30 jours</h2>
+        <p>Ventes non annulées des établissements réels, par journée commerciale (coupure 5 h). Démos exclues.</p></div>
+      <div class="kh-chart" id="kh-gmv"></div>
+      <details class="kh-table-toggle"><summary>Voir les données</summary><div id="kh-gmv-table"></div></details>
+      <p class="kh-src">Source · <code>/api/admin/overview</code> · <code>sales</code>, <code>merchant_config</code>, <code>accounts</code></p>
+    </section>
+
+    <div class="kh-split">
+      <section class="kh-block" aria-labelledby="kh-h-mrr">
+        <div class="kh-head"><h2 id="kh-h-mrr">MRR par palier</h2><p>Abonnements payés en cours. Essais, contrats futurs, expirés et suspendus exclus.</p></div>
+        <div id="kh-mrr"></div>
+        <p class="kh-src">Source · <code>/api/admin/overview</code> · <code>merchant_config.plan</code>, <code>merchant_config.mrr</code></p>
+      </section>
+      <section class="kh-block" aria-labelledby="kh-h-cities">
+        <div class="kh-head"><h2 id="kh-h-cities">Où sont nos clients</h2><p>Établissements réels par ville saisie.</p></div>
+        <div id="kh-cities"></div>
+        <p class="kh-src">Source · <code>/api/admin/overview</code> · <code>merchant_config.city</code></p>
+      </section>
+    </div>
+
+    <section class="kh-block" aria-labelledby="kh-h-fleet">
+      <div class="kh-head"><h2 id="kh-h-fleet">Le parc · état technique</h2>
+        <p>Caisses, relais d’impression, synchronisation et erreurs. Un voyant rouge veut dire de l’argent ou un service bloqué.</p></div>
+      <div class="kh-status" id="kh-fleet"></div>
+      <p class="kh-src">Source · <code>/api/admin/workspace</code> · heartbeats caisse 14 j, <code>print_bridges</code>, <code>print_jobs</code> 24 h, <code>client_errors</code> 7 j, <code>z_reconciliations</code> 14 j</p>
+    </section>
+
+    <div class="kh-split">
+      <section class="kh-block" aria-labelledby="kh-h-silent">
+        <div class="kh-head"><h2 id="kh-h-silent">Clients devenus silencieux</h2><p>Établissements réels, actifs commercialement, sans vente depuis 48 h. Premier signe d’un départ.</p></div>
+        <div id="kh-silent"></div>
+        <p class="kh-src">Source · <code>/api/admin/overview</code> (contrats) × <code>/api/admin/workspace</code> (ventes 7 j)</p>
+      </section>
+      <section class="kh-block" aria-labelledby="kh-h-board">
+        <div class="kh-head"><h2 id="kh-h-board">Tableau produit</h2><p>Tickets ouverts sur kiwi-os.com/tickets, l’argent en jeu d’abord.</p></div>
+        <div id="kh-board"></div>
+        <p class="kh-src">Source · <code>/api/admin/workspace</code> · <code>kiwi_tickets</code></p>
+      </section>
+    </div>
+
+    <p class="kh-foot">Lecture seule. Rafraîchie toutes les 60 s quand la fenêtre est visible. Une source absente ou tronquée est signalée comme telle : rien ici n’est estimé.</p>
+  </main>
+
+  <div class="kh-tip" id="kh-tip" role="tooltip" hidden></div>
+</body>
+</html>
