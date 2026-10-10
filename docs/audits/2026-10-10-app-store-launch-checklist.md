@@ -66,7 +66,7 @@ app they cannot get into, or whose demo contradicts itself.
 - [x] **D1 · One clean full gate** (`node tools/check.js`) on the exact
   commit that ships, run when the machine is quiet. No skipped suites, no
   timeouts. *(Claude)*
-- [ ] **D2 · Fresh archive from that commit**, explicit build number,
+- [x] **D2 · Fresh archive from that commit**, explicit build number,
   signed export verified, uploaded. *(Claude)*
 - [ ] **D3 · Tickets in testing proven** with kiwi-ui-qa runs: #0149–#0151,
   #0165–#0171. *(Claude runs · Owner closes)*
@@ -146,4 +146,7 @@ Each closed line gets its evidence here: commit, test, query, or screenshot.
 - **D3, nothing left for Claude.** All eight open tickets (#0096, #0141,
   #0149, #0150, #0151, #0165, #0168, #0171) are already in testing with
   proofs; only the owner can close them.
+- **D2 closed.** Build 31 (`aae0d8c2`) uploaded to App Store Connect once the
+  Xcode account was restored: "Upload succeeded", now processing. TestFlight
+  build for E1 to E7.
 
