@@ -1365,6 +1365,7 @@ section('Whole-project regressions');
     'support-triage-test.mjs',
     'menu-analysis-test.mjs',
     'ai-vision-models-test.mjs',
+    'menu-ledger-test.mjs',
     'lock-caisse-link-test.mjs',
     'check-guard-test.mjs',
     'day-report-inset-test.mjs',

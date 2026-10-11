@@ -655,6 +655,10 @@
       noDetail: (p) => `${p} des ventes n’ont pas de détail article (montant libre, lien de paiement) : elles comptent dans les ventes, jamais dans la marge.`,
       full: 'Marge calculée sur toutes vos ventes de la période.',
       excl: 'Avant loyer, salaires et charges : Kiwi ne les connaît pas.',
+      refundsNote: (a) => `${a} de remboursements sur la période : ils réduisent vos ventes, mais ne disent pas quel plat ils annulent, donc la marge par plat ne les répartit pas.`,
+      discountsNote: (a) => `${a} de remises au ticket, réparties au prorata sur les lignes de leur ticket.`,
+      todayCost: 'Coûts actuels appliqués aux ventes passées : un changement de prix d’achat modifiera ces marges.',
+      dups: (n, a) => `${n} règlement(s) reçu(s) en double, exclu(s) (${a}).`,
       missingT: 'À chiffrer en priorité',
       missingS: 'Classés par chiffre d’affaires sur la période',
       missingRow: (u, r) => `${u} vendu${u > 1 ? 's' : ''} · ${r}`,
@@ -662,7 +666,7 @@
       productsT: 'Marge par produit',
       productsS: (n) => `${n} produit${n > 1 ? 's' : ''} à la carte`,
       cols: ['Produit', 'Prix', 'Coût', 'Marge', 'Marge %', 'Vendus'],
-      src: { recipe: 'fiche technique', flat: 'saisi', variant: 'catalogue' },
+      src: { recipe: 'fiche technique', flat: 'saisi', variant: 'catalogue', frozen: 'gelé à la vente' },
       toCost: 'à chiffrer',
       cta: 'Ouvrir ma carte',
       none: 'Créez d’abord votre carte : c’est elle qui porte vos produits.',
@@ -684,6 +688,10 @@
       noDetail: (p) => `${p} of sales carry no item detail (free amount, payment link): they count in sales, never in the margin.`,
       full: 'Margin computed on all of this period’s sales.',
       excl: 'Before rent, wages and overheads: Kiwi does not know them.',
+      refundsNote: (a) => `${a} of refunds in the period: they reduce your sales, but do not say which dish they reverse, so the margin per dish does not split them.`,
+      discountsNote: (a) => `${a} of ticket discounts, spread pro rata over the lines of their ticket.`,
+      todayCost: 'Current costs applied to past sales: a change in purchase price will change these margins.',
+      dups: (n, a) => `${n} settlement(s) received twice, excluded (${a}).`,
       missingT: 'Cost these first',
       missingS: 'Ranked by revenue over the period',
       missingRow: (u, r) => `${u} sold · ${r}`,
@@ -691,7 +699,7 @@
       productsT: 'Margin by product',
       productsS: (n) => `${n} product${n === 1 ? '' : 's'} on the menu`,
       cols: ['Product', 'Price', 'Cost', 'Margin', 'Margin %', 'Sold'],
-      src: { recipe: 'recipe', flat: 'entered', variant: 'catalogue' },
+      src: { recipe: 'recipe', flat: 'entered', variant: 'catalogue', frozen: 'frozen at sale' },
       toCost: 'needs a cost',
       cta: 'Open my menu',
       none: 'Start with your menu: that is what carries your products.',
@@ -713,6 +721,10 @@
       noDetail: (p) => `${p} من المبيعات بدون تفاصيل المنتجات (مبلغ حر، رابط دفع): تُحتسب في المبيعات، لا في الهامش.`,
       full: 'الهامش محسوب على كل مبيعات الفترة.',
       excl: 'قبل الإيجار والأجور والمصاريف: Kiwi لا يعرفها.',
+      refundsNote: (a) => `${a} مبالغ مستردة خلال الفترة: تُنقص مبيعاتك، لكنها لا تحدد الطبق الذي تلغيه، لذلك لا يوزعها الهامش حسب الطبق.`,
+      discountsNote: (a) => `${a} تخفيضات على التذكرة، موزعة بالتناسب على سطور تذكرتها.`,
+      todayCost: 'التكاليف الحالية مطبقة على المبيعات السابقة: أي تغيير في سعر الشراء سيغيّر هذه الهوامش.',
+      dups: (n, a) => `${n} عملية دفع وصلت مرتين، مستبعدة (${a}).`,
       missingT: 'احسب تكلفتها أولًا',
       missingS: 'مرتبة حسب رقم المعاملات في الفترة',
       missingRow: (u, r) => `${u} مبيع · ${r}`,
@@ -720,7 +732,7 @@
       productsT: 'الهامش لكل منتج',
       productsS: (n) => `${n} منتج في القائمة`,
       cols: ['المنتج', 'السعر', 'التكلفة', 'الهامش', 'الهامش %', 'المبيعات'],
-      src: { recipe: 'بطاقة تقنية', flat: 'مُدخلة', variant: 'الكتالوج' },
+      src: { recipe: 'بطاقة تقنية', flat: 'مُدخلة', variant: 'الكتالوج', frozen: 'مثبتة عند البيع' },
       toCost: 'بدون تكلفة',
       cta: 'افتح القائمة',
       none: 'ابدأ بقائمتك: هي التي تحمل منتجاتك.',
@@ -761,20 +773,16 @@
   }
   /* Unités vendues par produit sur la période : par identifiant, et par nom
      seulement pour une ligne qui n'en porte pas. */
-  function finUnits(sales, from, to) {
+  /* Les quantités vendues, lues dans le registre (KiwiCost.ledger) : une
+     vente annulée ou un règlement reçu deux fois n'y comptent pas. */
+  function finUnits(L) {
     const byId = new Map(); const byName = new Map();
     const norm = (x) => String(x == null ? '' : x).trim().toLowerCase();
-    sales.forEach((e) => {
-      const ts = +(e && e.ts) || 0;
-      if (ts < from || ts >= to || !Array.isArray(e.lines)) return;
-      e.lines.forEach((l) => {
-        if (!l) return;
-        const q = Math.max(0, +l.qty || 0);
-        if (!q) return;
-        const id = l.itemId || l.id;
-        if (id) byId.set(String(id), (byId.get(String(id)) || 0) + q);
-        else { const k = norm(l.baseName || l.name); byName.set(k, (byName.get(k) || 0) + q); }
-      });
+    ((L && L.lines) || []).forEach((x) => {
+      const q = +x.qty || 0;
+      if (!q) return;
+      if (x.itemId) byId.set(String(x.itemId), (byId.get(String(x.itemId)) || 0) + q);
+      else { const k = norm((x.line && x.line.baseName) || x.name); byName.set(k, (byName.get(k) || 0) + q); }
     });
     return (it) => (byId.get(String(it.id)) || 0) + (byName.get(norm(it.name)) || 0);
   }
@@ -851,8 +859,16 @@
     const [from, to] = finBounds(finPeriod);
     const sales = finSales(v);
     let cov = null;
-    try { cov = C && C.coverage ? C.coverage(sales, from, to) : null; } catch (_) { cov = null; }
-    const units = finUnits(sales, from, to);
+    /* Restaurant : le registre d'« Analyse du menu » (KiwiCost.ledger avec le
+       coût des fiches techniques), le même que lit la Performance des plats.
+       Les deux onglets ne peuvent plus afficher deux marges différentes. */
+    const A = menuAnalysis();
+    let L = null;
+    try {
+      L = A && A.ledger ? A.ledger({ from, to }) : (C && C.ledger ? C.ledger(sales, { from, to }) : null);
+      cov = L && C.summarize ? C.summarize(L) : null;
+    } catch (_) { L = null; cov = null; }
+    const units = finUnits(L);
     const vat = !!(cov && cov.basis && cov.basis.mode === 'rate' && cov.basis.included);
 
     const seg = `<div class="fin-seg" data-lens-demo role="group" aria-label="${esc(c.periodAria)}">` +
@@ -869,6 +885,10 @@
       if (cov.pctCosted != null && cov.pctCosted < 100) notes.push(c.partial(pct(cov.pctCosted)));
       else if (cov.revenueCosted > 0) notes.push(c.full);
       if (cov.pctDetailed != null && cov.pctDetailed < 100) notes.push(c.noDetail(pct(100 - cov.pctDetailed)));
+      if (cov.discounts >= 0.01) notes.push(c.discountsNote(cash(cov.discounts)));
+      if (cov.refunds >= 0.01) notes.push(c.refundsNote(cash(cov.refunds)));
+      if (cov.dupN) notes.push(c.dups(cov.dupN, cash(cov.dupAmt)));
+      if (cov.todayCostQty > 0) notes.push(c.todayCost);
       notes.push(c.excl);
       pnl = `<div class="fin-pnl fin-card">
         <div class="fin-eyebrow"><span>${esc(c.pnl)}</span><span class="fin-eyebrow-sub">${esc(c.periods[finPeriod])}</span></div>
@@ -894,7 +914,7 @@
 
     const rows = items.map((it) => {
       let hit = null;
-      try { hit = C && C.of ? C.of({ kind: 'menu', id: it.id, name: it.name }) : null; } catch (_) { hit = null; }
+      try { hit = A && A.costOf ? A.costOf(it) : (C && C.of ? C.of({ kind: 'menu', id: it.id, name: it.name }) : null); } catch (_) { hit = null; }
       const costMad = hit && hit.mad != null && hit.mad > 0 ? hit.mad : null;
       let m = null;
       try { m = C && C.marginOf ? C.marginOf(it.price, costMad) : null; } catch (_) { m = null; }

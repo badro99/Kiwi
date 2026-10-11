@@ -317,86 +317,141 @@
     return y > 0 ? sum / y : null;
   }
 
-  /* ═══════════════════════════ coverage() ═══════════════════════════
-   * « Sur quelle part de mon chiffre d'affaires cette marge est-elle calculée ? »
+  /* ═══════════════════════════ ledger() ═══════════════════════════
+   * LE registre des ventes d'une période, ligne par ligne, avec son coût.
+   * Un seul moteur pour toutes les pages qui parlent de marge : la vue
+   * d'ensemble (coverage) et la Performance des plats lisent les mêmes
+   * lignes, avec les mêmes règles, donc ne peuvent plus se contredire.
    *
-   * C'est LA donnée qui rend le reste croyable. Un chiffre partiel que le
-   * commerçant sait partiel se lit et se corrige ; un chiffre complet en
-   * apparence qui s'avère partiel détruit la confiance dans tout l'écran. Les
-   * grandes plateformes échouent exactement là : elles écartent les articles non
-   * chiffrés sans le dire, et le patron découvre le trou en constatant que deux
-   * rapports se contredisent.
-   *
-   * Trois montants, jamais un seul :
-   *   revenue        — tout ce qui est entré en caisse sur la période
-   *   revenueDetailed— la part dont on connaît le détail article
-   *   revenueCosted  — la part dont on connaît AUSSI le coût
-   * La marge ne se calcule que sur la troisième. */
-  function coverage(sales, from, to) {
+   * Les règles, une fois pour toutes :
+   *   · une vente annulée (void) n'entre pas dans les livres ;
+   *   · un même règlement reçu deux fois (même id, ou même ticket, même
+   *     milliseconde, même montant, même panier : KiwiDayReport.settlementKey)
+   *     compte une fois, et le doublon écarté est déclaré ;
+   *   · un remboursement est un montant négatif, ou une ligne du registre
+   *     KiwiRefunds : il réduit le net de la période. Il ne porte pas de
+   *     lignes, il n'est donc PAS réparti par plat : on le dit ;
+   *   · une remise au ticket (lignes 50, encaissé 45) est répartie au prorata
+   *     sur les lignes de CE ticket, comme le fait la base de TVA, et son
+   *     montant est déclaré ; un ticket encaissé au-dessus de ses lignes
+   *     (frais, pourboire) n'augmente jamais une ligne ;
+   *   · le coût d'une ligne : coût gelé sur la ligne à la vente, sinon la
+   *     fiche technique (opts.lineCost, puis of()), sinon le coût forfaitaire,
+   *     sinon null. Jamais zéro. Un coût qui n'était pas gelé est le coût
+   *     d'aujourd'hui appliqué au passé : compté à part (`todayCostQty`) ;
+   *   · une ligne à 0 MAD (un choix dans une formule) garde sa quantité, sans
+   *     chiffre d'affaires ni coût : la formule porte les deux. */
+  const saleAmount = (s) => {
+    const cents = s && (s.amountCents != null ? s.amountCents : s.amount_cents);
+    if (cents != null && Number.isFinite(Number(cents))) return Number(cents) / 100;
+    const a = Number(s && (s.amount != null ? s.amount : s.total));
+    return Number.isFinite(a) ? a : 0;
+  };
+  const lineQtyOf = (l) => Math.max(0, +(l && (l.qty != null ? l.qty : l.q)) || 0);
+  const lineIdOf = (l) => String((l && (l.itemId != null ? l.itemId : l.id != null ? l.id : l.i)) || '');
+  const lineNameOf = (l) => String((l && (l.name || l.n || l.baseName || l.bn)) || '');
+  function ledger(sales, opts) {
+    const o = opts || {};
+    const from = o.from, to = o.to;
+    const inWindow = (ts) => !((from != null && ts < from) || (to != null && ts >= to));
     const doc = store.get();
     const ctx = { doc, shop: shopIndex(), menu: menuIndex() };
-    const b = basis();
-    let revenue = 0, revenueDetailed = 0, revenueCosted = 0, cost = 0;
-    const missing = new Map();
-
+    const b = o.basis || basis();
+    let keyOf = typeof o.settlementKey === 'function' ? o.settlementKey : null;
+    if (!keyOf) { try { keyOf = window.KiwiDayReport && window.KiwiDayReport.settlementKey; } catch (_) { keyOf = null; } }
+    const out = {
+      basis: b, from: from == null ? null : from, to: to == null ? null : to,
+      grossN: 0, gross: 0, voidN: 0, dupN: 0, dupAmt: 0, refundN: 0, refunds: 0, net: 0,
+      unitemisedN: 0, unitemisedAmt: 0, listed: 0, collected: 0, discounts: 0, lines: [],
+    };
+    const seenId = new Set(), seenKey = new Set(), seenRefund = new Set();
+    const refund = (e) => {
+      const id = String(e.saleId || e.id || e.cursor || '');
+      if (id) { if (seenRefund.has(id)) return; seenRefund.add(id); }
+      out.refundN++; out.refunds += Math.abs(saleAmount(e));
+    };
     (sales || []).forEach((e) => {
       if (!e) return;
       const ts = +e.ts || 0;
-      if (from != null && ts < from) return;
-      if (to != null && ts >= to) return;
-      const amt = Math.max(0, +e.amount || 0);
-      if (!amt) return;
-      revenue += amt;
-
-      const lines = Array.isArray(e.lines) ? e.lines : null;
-      if (!lines || !lines.length) return;          // panier inconnu : compté au CA, pas à la marge
-
-      /* Le total du panier peut différer du montant encaissé : une remise de
-       * table baisse le montant sans toucher les lignes. On répartit l'écart au
-       * prorata plutôt que d'ignorer la remise — sinon la marge d'une journée
-       * de promotions serait systématiquement surévaluée. */
-      let gross = 0;
-      lines.forEach((l) => { gross += Math.max(0, +(l && l.total) || 0); });
-      const ratio = gross > 0 ? Math.min(1, amt / gross) : 1;
-
-      lines.forEach((l) => {
-        if (!l) return;
-        const qty = Math.max(0, +l.qty || 0);
-        const tot = Math.max(0, +l.total || 0) * ratio;
-        if (!qty || !tot) return;
-        revenueDetailed += tot;
-
-        /* Sale-line v2 revient du serveur sous `itemId`; `id` reste le nom
-         * historique du champ local. Ne jamais retomber par libellé lorsque
-         * l'identité stable existe : deux produits peuvent porter le même nom,
-         * et un renommage ne doit pas réécrire la marge passée. */
-        const itemId = l.itemId || l.id || '';
-
-        /* Le coût GELÉ sur la ligne au moment de la vente gagne toujours sur le
-         * résolveur : c'est ce qui empêche une correction de prix d'achat de
-         * réécrire le bénéfice de mars. Absent (toutes les ventes d'avant la
-         * phase 5), on retombe sur le coût d'aujourd'hui. */
-        const frozen = num(l.unitCost);
-        const hit = frozen != null && frozen > 0
-          ? { mad: frozen, src: 'frozen' }
-          : of({ kind: l.kind || '', id: itemId, variantId: l.variantId || '', name: l.name || '' }, ctx);
-
-        if (hit.mad == null) {
-          const key = norm(l.name) || '?';
-          const m = missing.get(key) || { name: l.name || '', revenue: 0, units: 0, id: itemId };
-          m.revenue += tot; m.units += qty;
-          missing.set(key, m);
-          return;
+      if (!inWindow(ts)) return;
+      if (e.void_ts || e.voided) { out.voidN++; return; }
+      /* Sans montant du tout, les lignes SONT le montant ; un 0 explicite (un
+       * ticket offert) compte ses quantités, sans chiffre d'affaires. */
+      const hasAmt = e.amountCents != null || e.amount_cents != null || e.amount != null || e.total != null;
+      const lines = Array.isArray(e.lines) ? e.lines : [];
+      const rows = lines.map((l) => {
+        const qty = lineQtyOf(l);
+        const t = Number(l && (l.total != null ? l.total : l.t));
+        const u = Number(l && (l.unitPrice != null ? l.unitPrice : l.unit != null ? l.unit : l.u != null ? l.u : l.price));
+        let listed = Number.isFinite(t) && t >= 0 ? t : (Number.isFinite(u) && u >= 0 ? u * qty : null);
+        if (listed == null) { const f = o.fallbackPrice ? num(o.fallbackPrice(l)) : null; listed = (f || 0) * qty; }
+        return { l, qty, listed };
+      }).filter((r) => r.qty > 0);
+      const sum = rows.reduce((n, r) => n + r.listed, 0);
+      const amt = hasAmt ? saleAmount(e) : sum;
+      if (e.kind === 'refund' || amt < 0) { refund(e); return; }
+      if (!(amt > 0) && !rows.length) return;
+      const id = String(e.saleId || e.id || (e.cursor ? 'c' + e.cursor : ''));
+      if (id) { if (seenId.has(id)) return; seenId.add(id); }
+      let k = '';
+      try { k = keyOf ? keyOf({ id, ref: e.receiptRef || e.ref, ts, amount: amt, lines: e.lines }) : ''; } catch (_) { k = ''; }
+      if (k && seenKey.has(k)) { out.dupN++; out.dupAmt += amt; return; }
+      if (k) seenKey.add(k);
+      out.grossN++; out.gross += amt;
+      if (!rows.length) { out.unitemisedN++; out.unitemisedAmt += amt; return; }
+      const ratio = sum > 0 ? Math.min(1, amt / sum) : 1;
+      if (sum > amt) out.discounts += sum - amt;
+      else out.unitemisedAmt += amt - sum;       // frais, service : encaissé, pas dans une ligne
+      rows.forEach(({ l, qty, listed }) => {
+        const collected = listed * ratio;
+        const itemId = lineIdOf(l), name = lineNameOf(l);
+        out.listed += listed; out.collected += collected;
+        const row = { ts, saleId: id, line: l, itemId, name, kind: (l && l.kind) || '', qty, listed, collected,
+          net: netOf(collected, b), unit: null, src: null, frozen: false, cost: null };
+        if (collected > 0) {
+          const frozen = num(l && (l.unitCost != null ? l.unitCost : l.k));
+          let hit = null;
+          if (frozen != null && frozen > 0) hit = { mad: frozen, src: 'frozen' };
+          if (!hit && o.lineCost) { try { hit = o.lineCost(l, itemId); } catch (_) { hit = null; } }
+          if (!hit || hit.mad == null) hit = of({ kind: row.kind, id: itemId, variantId: (l && l.variantId) || '', name }, ctx);
+          if (hit && hit.mad != null && hit.mad > 0) {
+            row.unit = hit.mad; row.src = hit.src || null; row.frozen = hit.src === 'frozen';
+            row.cost = hit.mad * qty;
+          }
         }
-        revenueCosted += tot;
-        cost += hit.mad * qty;
+        out.lines.push(row);
       });
     });
-
+    (o.refunds || []).forEach((e) => {
+      if (!e) return;
+      if (!inWindow(+e.ts || 0) || e.void_ts || e.voided) return;
+      refund(e);
+    });
+    out.net = out.gross - out.refunds;
+    return out;
+  }
+  /* Le résumé d'un registre : ce que la vue d'ensemble affiche. */
+  function summarize(L) {
+    const b = L.basis;
+    let revenueCosted = 0, cost = 0, todayCostQty = 0, costedQty = 0;
+    const missing = new Map();
+    L.lines.forEach((r) => {
+      if (!(r.collected > 0)) return;
+      if (r.cost == null) {
+        const key = norm(r.name) || '?';
+        const m = missing.get(key) || { name: r.name || '', revenue: 0, units: 0, id: r.itemId };
+        m.revenue += r.collected; m.units += r.qty;
+        missing.set(key, m);
+        return;
+      }
+      revenueCosted += r.collected; cost += r.cost; costedQty += r.qty;
+      if (!r.frozen) todayCostQty += r.qty;
+    });
+    const revenue = L.gross;
     const netCosted = netOf(revenueCosted, b);
     return {
       revenue: r2(revenue),
-      revenueDetailed: r2(revenueDetailed),
+      revenueDetailed: r2(L.collected),
       revenueCosted: r2(revenueCosted),
       /* La marge se dit toujours sur une base HORS TAXE quand la TVA est
        * activée en TTC — sinon elle est surévaluée d'environ le taux. */
@@ -404,14 +459,37 @@
       cost: r2(cost),
       profit: r2(netCosted - cost),
       marginPct: netCosted > 0 ? r2(((netCosted - cost) / netCosted) * 100) : null,
-      pctDetailed: revenue > 0 ? r2((revenueDetailed / revenue) * 100) : null,
+      pctDetailed: revenue > 0 ? r2((L.collected / revenue) * 100) : null,
       pctCosted: revenue > 0 ? r2((revenueCosted / revenue) * 100) : null,
       basis: b,
+      refunds: r2(L.refunds), refundN: L.refundN, net: r2(L.net),
+      discounts: r2(L.discounts), dupN: L.dupN, dupAmt: r2(L.dupAmt), voidN: L.voidN,
+      /* Coût d'aujourd'hui appliqué à une vente passée (rien de gelé sur la
+       * ligne) : un changement de prix d'achat réécrirait ce passé-là. */
+      todayCostQty, costedQty,
       /* Trié par ce que ça coûte de ne pas le savoir : le patron chiffre ses
        * gros vendeurs d'abord et la couverture bouge tout de suite. Une liste
        * alphabétique le ferait commencer par « Amlou » et abandonner. */
       missing: Array.from(missing.values()).sort((a, c) => c.revenue - a.revenue),
     };
+  }
+
+  /* ═══════════════════════════ coverage() ═══════════════════════════
+   * « Sur quelle part de mon chiffre d'affaires cette marge est-elle calculée ? »
+   *
+   * C'est LA donnée qui rend le reste croyable. Un chiffre partiel que le
+   * commerçant sait partiel se lit et se corrige ; un chiffre complet en
+   * apparence qui s'avère partiel détruit la confiance dans tout l'écran.
+   *
+   * Trois montants, jamais un seul :
+   *   revenue        — tout ce qui est entré en caisse sur la période
+   *   revenueDetailed— la part dont on connaît le détail article
+   *   revenueCosted  — la part dont on connaît AUSSI le coût
+   * La marge ne se calcule que sur la troisième. Calculé par ledger() :
+   * annulations, doublons et remboursements y suivent les mêmes règles que la
+   * Performance des plats. */
+  function coverage(sales, from, to, opts) {
+    return summarize(ledger(sales, Object.assign({}, opts || {}, { from, to })));
   }
 
   /* ───────────────────────────── écriture ───────────────────────────── */
@@ -453,7 +531,7 @@
   }
 
   window.KiwiCost = {
-    of, coverage, marginOf, basis, netOf,
+    of, coverage, ledger, summarize, marginOf, basis, netOf,
     setItemCost, itemCost, listMissing,
     doc: () => store.get(),
     store,

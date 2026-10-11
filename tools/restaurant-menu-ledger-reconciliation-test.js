@@ -45,7 +45,7 @@ const window = {
   localStorage,
   Kiwi: { handlers: {}, pageShell() {}, setActivePage() {} },
   KiwiVenue: { getCurrentVenueData: () => ({ id: 'resto', name: 'Restaurant test', type: 'restaurant' }), getVenueType: () => 'restaurant', subscribe() {} },
-  KiwiMenuStore: { data: () => data, subscribe() {}, kitchenId: () => '' },
+  KiwiMenuStore: { data: () => data, items: () => data.items, subscribe() {}, kitchenId: () => '' },
   KiwiSales: { list: () => salesRows },
   KiwiRefunds: { list: () => refundRows },
   KiwiLive: { status: () => liveStatus },
@@ -60,6 +60,8 @@ window.window = window;
 window.document = document;
 vm.createContext(context);
 new vm.Script(fs.readFileSync('assets/day-report.js', 'utf8')).runInContext(context);
+/* Le vrai moteur de coûts : Performance et Heures lisent KiwiCost.ledger. */
+require('./kiwi-cost-harness').loadCost(context);
 new vm.Script(fs.readFileSync('assets/restaurant-menu-workspace.js', 'utf8')).runInContext(context);
 
 const DR = window.KiwiDayReport;
@@ -115,8 +117,12 @@ has(html, '2 règlement(s) en double exclu(s) (' + money(170) + ')', 'duplicate 
 has(html, 'Article libre', 'free-amount items stay visible');
 has(html, 'Pizza Fruits de Mer', 'a deleted product keeps its historical sales');
 has(html, 'Hors de la carte actuelle', 'the deleted product is labelled as off-menu');
-/* itemised = 145 + 85 + 85 + 20 + 50 = 385 ; unitemised = 410 − 385 = 25 (discount −5, ticket without detail +30) */
-has(html, money(25) + ' de ventes ne sont pas expliqués', 'the gap between sales and item lines is named, never spread');
+/* Lines listed 145 + 85 + 85 + 20 + 50 = 385. The 5 MAD ticket discount (lines
+   50, paid 45) is spread over that ticket's own line, as the VAT base is, and
+   DECLARED; the 30 MAD ticket without detail is the only unexplained amount. */
+has(html, money(30) + ' de ventes ne sont pas expliqués', 'the gap between sales and item lines is named, never spread');
+has(html, money(5) + ' de remises au ticket, réparties au prorata', 'ticket discounts are spread over their own lines and declared');
+assert.match(html, /<b>Pizza Fruits de Mer<\/b><small>[^<]+<\/small><\/td><td>1<\/td><td>45 MAD/, 'the discounted line carries what was actually collected');
 /* recipe-eligible = menu lines only = (60+60) + 85 + 85 + 20 = 310 */
 has(html, 'CA analysable en recettes', 'recipe-eligible revenue has its own label');
 assert.match(html, /CA analysable en recettes<\/span><b>310 MAD<\/b>/, 'recipe-eligible revenue excludes free-amount and off-menu lines');

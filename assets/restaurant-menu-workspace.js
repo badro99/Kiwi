@@ -194,7 +194,15 @@
       ledgerUnknown: 'This device cannot confirm the sales history is complete. Treat these figures as partial.',
       ledgerDuplicates: '{n} duplicate settlement(s) excluded ({amount}): the same ticket arrived more than once with the same time, amount and items.',
       ledgerOffMenu: '{amount} of item lines are outside the current menu, including {free} in free-amount items. They count in sales but cannot have a recipe.',
-      ledgerUnitemised: '{amount} of sales is not explained by item lines (ticket discounts, service charges, or {n} tickets without detail).',
+      ledgerUnitemised: '{amount} of sales is not explained by item lines (service charges, or {n} tickets without detail).',
+    ledgerDiscounts: '{amount} of ticket discounts, spread pro rata over the lines of their ticket, as the VAT base is.',
+    ledgerVatBasis: 'Profit and margin exclude VAT ({rate} % included in prices).',
+    ledgerTodayCost: 'These sales did not freeze their cost: each dish\'s current cost is applied to the past. A change in purchase price will change these margins.',
+    costSrcRecipe: 'Recipe',
+    costSrcFrozen: 'Cost frozen at sale',
+    costSrcFlat: 'Entered cost',
+    costSrcVariant: 'Purchase price',
+    costObserved: 'observed {amount}',
       ledgerRefundLines: 'Refunds reduce net revenue. They are not removed item by item from the table below.',
       noItemsToAnalyze: 'No items to analyze',
       noItemsToAnalyzeDesc: 'Add your dishes in Menu & modifiers. Performance will appear after the first sales.',
@@ -537,7 +545,15 @@
       ledgerUnknown: 'لا يمكن لهذا الجهاز تأكيد اكتمال سجل المبيعات. اعتبر هذه الأرقام جزئية.',
       ledgerDuplicates: 'تم استبعاد {n} تسوية مكررة ({amount}): نفس التذكرة وصلت أكثر من مرة بنفس الوقت والمبلغ والمنتجات.',
       ledgerOffMenu: '{amount} من سطور المنتجات خارج القائمة الحالية، منها {free} بمبلغ حر. تحتسب في المبيعات لكن لا يمكن ربطها بوصفة.',
-      ledgerUnitemised: '{amount} من المبيعات غير مفسرة بسطور المنتجات (تخفيضات على التذكرة، رسوم خدمة، أو {n} تذكرة بدون تفاصيل).',
+      ledgerUnitemised: '{amount} من المبيعات غير مفسرة بسطور المنتجات (رسوم خدمة، أو {n} تذكرة بدون تفاصيل).',
+    ledgerDiscounts: '{amount} تخفيضات على التذكرة، موزعة بالتناسب على سطور تذكرتها، كما في وعاء الضريبة على القيمة المضافة.',
+    ledgerVatBasis: 'الربح والهامش محسوبان دون الضريبة على القيمة المضافة ({rate} % مدرجة في الأسعار).',
+    ledgerTodayCost: 'هذه المبيعات لم تثبّت تكلفتها: تُطبَّق التكلفة الحالية لكل طبق على الماضي. أي تغيير في سعر الشراء سيغيّر هذه الهوامش.',
+    costSrcRecipe: 'وصفة',
+    costSrcFrozen: 'تكلفة مثبتة عند البيع',
+    costSrcFlat: 'تكلفة مُدخلة',
+    costSrcVariant: 'سعر الشراء',
+    costObserved: 'ملاحَظة {amount}',
       ledgerRefundLines: 'المستردات تنقص صافي المداخيل ولا تحذف منتجاً بمنتج من الجدول أدناه.',
       noItemsToAnalyze: 'لا توجد منتجات للتحليل',
       noItemsToAnalyzeDesc: 'أضف أطباقك في القائمة والإضافات. سيظهر الأداء بعد أولى المبيعات.',
@@ -881,7 +897,15 @@
       ledgerUnknown: 'Cet appareil ne peut pas confirmer que l’historique des ventes est complet. Considérez ces chiffres comme partiels.',
       ledgerDuplicates: '{n} règlement(s) en double exclu(s) ({amount}) : le même ticket est arrivé plusieurs fois, à la même milliseconde, avec le même montant et les mêmes articles.',
       ledgerOffMenu: '{amount} de lignes sont hors de la carte actuelle, dont {free} en articles libres. Elles comptent dans les ventes mais ne peuvent pas avoir de recette.',
-      ledgerUnitemised: '{amount} de ventes ne sont pas expliqués par les lignes d’articles (remises au ticket, frais de service, ou {n} tickets sans détail).',
+      ledgerUnitemised: '{amount} de ventes ne sont pas expliqués par les lignes d’articles (frais de service, ou {n} tickets sans détail).',
+    ledgerDiscounts: '{amount} de remises au ticket, réparties au prorata sur les lignes de leur ticket, comme la base de TVA.',
+    ledgerVatBasis: 'Profit et marge calculés hors TVA ({rate} % incluse dans les prix).',
+    ledgerTodayCost: 'Ces ventes n’ont pas gelé leur coût : le coût actuel de chaque plat est appliqué au passé. Un changement de prix d’achat modifiera ces marges.',
+    costSrcRecipe: 'Recette',
+    costSrcFrozen: 'Coût gelé à la vente',
+    costSrcFlat: 'Coût saisi',
+    costSrcVariant: 'Prix d’achat',
+    costObserved: 'observé {amount}',
       ledgerRefundLines: 'Les remboursements réduisent le chiffre net. Ils ne sont pas retirés plat par plat du tableau ci-dessous.',
       noItemsToAnalyze: 'Aucun article à analyser',
       noItemsToAnalyzeDesc: 'Ajoutez vos plats dans Menu & modificateurs. Les performances apparaîtront après les premières ventes.',
@@ -1343,75 +1367,59 @@
   function feedCompleteness(){
     try{const st=window.KiwiLive?.status?.();if(!st)return 'unknown';return st.backfillComplete?'complete':'loading';}catch(_){return 'unknown';}
   }
-  const saleAmount=(s)=>{const cents=s?.amountCents??s?.amount_cents;if(cents!=null&&Number.isFinite(Number(cents)))return Number(cents)/100;const a=Number(s?.amount!=null?s.amount:s?.total);return Number.isFinite(a)?a:0;};
-  const lineQty=(l)=>Math.max(0,+(l?.qty??l?.q)||0);
-  function lineTotal(line,qty,fallbackPrice){const total=Number(line?.total??line?.t),unit=Number(line?.unitPrice??line?.unit??line?.u??line?.price);return Number.isFinite(total)&&total>=0?total:(Number.isFinite(unit)&&unit>=0?unit*qty:(+fallbackPrice||0)*qty);}
-  /* Les ventes de la période, une fois chacune.
-   * · annulées (void) : hors des livres, jamais comptées ;
-   * · même règlement arrivé sous plusieurs ids (même ticket, même
-   *   milliseconde, même montant, même panier) : compté une fois, et le
-   *   doublon écarté est déclaré — voir KiwiDayReport.settlementKey. */
-  function windowSales(w){
-    const key=window.KiwiDayReport?.settlementKey,seenId=new Set(),seenKey=new Set(),out=[];let dupN=0,dupAmt=0;
-    sales().forEach(s=>{
-      const ts=+s?.ts||0;if(!s||ts<w.from||ts>=w.to||s.void_ts||s.voided)return;
-      /* Le tableau de bord range l'id serveur dans `saleId` ; la caisse et les
-         tests dans `id`. Le curseur ne suffit pas : un même règlement peut
-         occuper deux lignes du registre. */
-      const id=String(s.saleId||s.id||(s.cursor?'c'+s.cursor:''));if(id){if(seenId.has(id))return;seenId.add(id);}
-      const k=key?key({id,ref:s.receiptRef||s.ref,ts,amount:saleAmount(s),lines:s.lines}):'';
-      if(k&&seenKey.has(k)){dupN++;dupAmt+=saleAmount(s);return;}
-      if(k)seenKey.add(k);out.push(s);
-    });
-    return{rows:out,dupN,dupAmt};
+
+  /* Le coût d'un plat de la carte selon sa fiche technique (coût théorique).
+     Le coût observé (consommation réelle du stock) reste à part : il ne
+     remplace jamais le théorique dans le profit, il s'affiche à côté. */
+  function recipeCostResolver(rows){
+    const match=saleLineMatcher(rows),api=window.KiwiRestaurantRecipes,cache=new Map();
+    const of=(row)=>{const id=String(row.item.id);if(cache.has(id))return cache.get(id);let hit=null;try{const recipe=api?.get?.(row.item.id,row.item.name,venue());const m=recipe?api?.metrics?.(row.item,recipe,venue()):null;if(m?.costComplete&&+m.theoreticalCost>0)hit={mad:+m.theoreticalCost,src:'recipe',observed:m.actualCost==null?null:+m.actualCost};}catch(_){hit=null;}cache.set(id,hit);return hit;};
+    return {match,of,line:(l)=>{const row=match(l);return row?of(row):null;}};
   }
-  /* Les remboursements vivent dans leur propre registre (KiwiRefunds) : le
-     pont du flux y range toute ligne serveur de montant négatif. */
-  function windowRefunds(w){
-    let list=[];try{list=window.KiwiRefunds?.list?.(venue())||[];}catch(_){list=[];}
-    const seen=new Set();let n=0,amount=0;
-    list.forEach(r=>{const ts=+r?.ts||0;if(!r||ts<w.from||ts>=w.to||r.void_ts||r.voided)return;const id=String(r.saleId||r.id||r.cursor||'');if(id){if(seen.has(id))return;seen.add(id);}n++;amount+=Math.abs(saleAmount(r));});
-    return{n,amount};
+  /* Le registre de la période : KiwiCost.ledger, le même moteur que la vue
+     d'ensemble d'« Analyse du menu ». Annulations, doublons, remboursements,
+     remises et TVA y suivent les mêmes règles ; aucune copie ici. */
+  function menuLedger(w,rows){
+    const C=window.KiwiCost;if(!C?.ledger)return null;
+    rows=rows||D().items.map(x=>({item:x}));
+    const R=recipeCostResolver(rows);
+    let refunds=[];try{refunds=window.KiwiRefunds?.list?.(venue())||[];}catch(_){refunds=[];}
+    return C.ledger(sales(),{from:w.from,to:w.to,refunds,lineCost:R.line,fallbackPrice:(l)=>R.match(l)?.item.price});
   }
+  const COST_SRC={recipe:'costSrcRecipe',frozen:'costSrcFrozen',flat:'costSrcFlat',variant:'costSrcVariant'};
   function performanceData(days=30){
-    const w=analysisWindow(days),items=D().items.map(x=>({item:x,qty:0,revenue:0,unitCost:null,unitProfit:null,profit:null,marginPct:null,quadrant:null,costSource:null}));
-    const match=saleLineMatcher(items),ws=windowSales(w),offMenu=new Map();
-    const ledger={grossN:0,gross:0,refundN:0,refunds:0,net:0,itemised:0,attributed:0,offMenu:0,freeAmount:0,unitemisedN:0,dupN:ws.dupN,dupAmt:ws.dupAmt,completeness:feedCompleteness()};
-    ws.rows.forEach(s=>{
-      const amount=saleAmount(s),refund=s.kind==='refund'||amount<0;
-      if(refund){ledger.refundN++;ledger.refunds+=Math.abs(amount);return;}
-      ledger.grossN++;ledger.gross+=amount;
-      const lines=Array.isArray(s.lines)?s.lines:[];
-      if(!lines.length){ledger.unitemisedN++;return;}
-      lines.forEach(line=>{
-        const qty=lineQty(line);if(!qty)return;
-        const row=match(line);
-        if(row){const v=lineTotal(line,qty,row.item.price);row.qty+=qty;row.revenue+=v;ledger.itemised+=v;ledger.attributed+=v;return;}
-        /* Hors de la carte actuelle : article libre, plat retiré ou renommé,
-           nom ambigu sans id. Jamais jeté, jamais rattaché au hasard. */
-        const id=String(line?.itemId??line?.i??line?.id??''),name=String(line?.baseName||line?.bn||line?.name||line?.n||'').trim();
-        const free=id==='libre'||/^article libre$/i.test(name);
-        const k=free?'libre':(id?'id:'+id:'name:'+norm(name));
-        const o=offMenu.get(k)||{key:k,id,name:free?ui('freeAmountItem'):(name||ui('article')),free,qty:0,revenue:0};
-        const v=lineTotal(line,qty,0);o.qty+=qty;o.revenue+=v;offMenu.set(k,o);ledger.itemised+=v;ledger.offMenu+=v;if(free)ledger.freeAmount+=v;
-      });
-    });
-    const rf=windowRefunds(w);ledger.refundN+=rf.n;ledger.refunds+=rf.amount;
-    ledger.net=ledger.gross-ledger.refunds;
-    /* Remises au ticket, frais de service, ventes sans détail : ce qui sépare
-       le total encaissé de la somme des lignes. Affiché, jamais réparti. */
-    ledger.unitemised=ledger.gross-ledger.itemised;
-    const api=window.KiwiRestaurantRecipes;
-    items.forEach(row=>{
-      const recipe=api?.get?.(row.item.id,row.item.name,venue());
-      const metrics=recipe?api?.metrics?.(row.item,recipe,venue()):null;
-      if(metrics?.costComplete){
-        row.unitCost=metrics.actualCost==null?+metrics.theoreticalCost:+metrics.actualCost;
-        row.costSource=metrics.actualCost==null?'Recette':'Coût observé';
-        row.unitProfit=(row.qty?row.revenue/row.qty:(+row.item.price||0))-row.unitCost;
-        row.profit=row.revenue-row.unitCost*row.qty;
-        row.marginPct=row.revenue>0?row.profit/row.revenue*100:null;
+    const w=analysisWindow(days),items=D().items.map(x=>({item:x,qty:0,pricedQty:0,costedQty:0,revenue:0,net:0,cost:0,todayCostQty:0,srcs:{},unitCost:null,unitProfit:null,profit:null,marginPct:null,quadrant:null,costSource:null,observedCost:null}));
+    const R=recipeCostResolver(items),offMenu=new Map();
+    const L=menuLedger(w,items)||{grossN:0,gross:0,refundN:0,refunds:0,net:0,dupN:0,dupAmt:0,unitemisedN:0,unitemisedAmt:0,collected:0,discounts:0,lines:[],basis:{mode:'none'}};
+    const ledger={grossN:L.grossN,gross:L.gross,refundN:L.refundN,refunds:L.refunds,net:L.net,itemised:L.collected,attributed:0,offMenu:0,freeAmount:0,unitemisedN:L.unitemisedN,unitemised:L.unitemisedAmt,discounts:L.discounts,dupN:L.dupN,dupAmt:L.dupAmt,todayCostQty:0,basis:L.basis,completeness:feedCompleteness()};
+    L.lines.forEach(x=>{
+      const line=x.line,qty=x.qty,row=R.match(line);
+      if(row){
+        row.qty+=qty;row.revenue+=x.collected;row.net+=x.net;ledger.attributed+=x.collected;
+        if(x.collected>0){row.pricedQty+=qty;if(x.cost!=null){row.costedQty+=qty;row.cost+=x.cost;row.srcs[x.src]=(row.srcs[x.src]||0)+qty;if(!x.frozen){row.todayCostQty+=qty;ledger.todayCostQty+=qty;}}}
+        return;
       }
+      /* Hors de la carte actuelle : article libre, plat retiré ou renommé,
+         nom ambigu sans id. Jamais jeté, jamais rattaché au hasard. */
+      const id=String(line?.itemId??line?.i??line?.id??''),name=String(line?.baseName||line?.bn||line?.name||line?.n||'').trim();
+      const free=id==='libre'||/^article libre$/i.test(name);
+      const k=free?'libre':(id?'id:'+id:'name:'+norm(name));
+      const o=offMenu.get(k)||{key:k,id,name:free?ui('freeAmountItem'):(name||ui('article')),free,qty:0,revenue:0};
+      o.qty+=qty;o.revenue+=x.collected;offMenu.set(k,o);ledger.offMenu+=x.collected;if(free)ledger.freeAmount+=x.collected;
+    });
+    items.forEach(row=>{
+      /* Un plat n'a un profit que si CHAQUE unité vendue à un prix a un coût :
+         un coût partiel donnerait un profit inventé. HT quand la TVA est
+         incluse dans les prix (KiwiCost.basis). */
+      if(row.pricedQty>0&&row.costedQty===row.pricedQty){
+        row.unitCost=row.cost/row.costedQty;
+        const top=Object.entries(row.srcs).sort((a,b)=>b[1]-a[1])[0];
+        row.costSource=top&&COST_SRC[top[0]]?ui(COST_SRC[top[0]]):'';
+        row.unitProfit=row.net/row.pricedQty-row.unitCost;
+        row.profit=row.net-row.cost;
+        row.marginPct=row.net>0?row.profit/row.net*100:null;
+      }
+      const rc=R.of(row);if(rc&&rc.observed!=null)row.observedCost=rc.observed;
     });
     const measured=items.filter(x=>x.qty>0&&x.unitProfit!=null&&Number.isFinite(x.unitProfit));
     const medQty=median(measured.map(x=>x.qty)),medProfit=median(measured.map(x=>x.unitProfit));
@@ -1450,6 +1458,9 @@
     if(L.dupN)notes.push(`<p>${esc(ui('ledgerDuplicates',{n:L.dupN,amount:cash(L.dupAmt)}))}</p>`);
     if(L.offMenu)notes.push(`<p>${esc(ui('ledgerOffMenu',{amount:cash(L.offMenu),free:cash(L.freeAmount)}))}</p>`);
     if(Math.abs(L.unitemised)>=0.01)notes.push(`<p>${esc(ui('ledgerUnitemised',{amount:cash(L.unitemised),n:L.unitemisedN}))}</p>`);
+    if(L.discounts>=0.01)notes.push(`<p>${esc(ui('ledgerDiscounts',{amount:cash(L.discounts)}))}</p>`);
+    if(L.basis&&L.basis.mode==='rate'&&L.basis.included)notes.push(`<p>${esc(ui('ledgerVatBasis',{rate:L.basis.rate}))}</p>`);
+    if(L.todayCostQty>0)notes.push(`<p>${esc(ui('ledgerTodayCost'))}</p>`);
     if(L.refunds)notes.push(`<p>${esc(ui('ledgerRefundLines'))}</p>`);
     return `<div class="rmw-perf-ledger" data-ledger-gross="${L.gross.toFixed(2)}" data-ledger-net="${L.net.toFixed(2)}"><div><span>${esc(ui('ledgerGross'))}</span><b>${cash(L.gross)}</b><small>${esc(ui('ledgerTickets',{n:L.grossN}))}</small></div><div><span>${esc(ui('ledgerRefunds'))}</span><b>${L.refunds?'− '+cash(L.refunds):cash(0)}</b><small>${esc(ui('ledgerRefundCount',{n:L.refundN}))}</small></div><div><span>${esc(ui('ledgerNet'))}</span><b>${cash(L.net)}</b><small>${esc(ui('ledgerNetSub'))}</small></div><div><span>${esc(ui('ledgerEligible'))}</span><b>${cash(L.attributed)}</b><small>${esc(ui('ledgerEligibleSub',{share:share(L.attributed)}))}</small></div></div>${notes.length?`<div class="rmw-perf-notes">${notes.join('')}</div>`:''}`;
   }
@@ -1464,7 +1475,7 @@
     p.measured.forEach(x=>buckets[x.quadrant].push(x));
     const quads = perfQuads();
     const cards=Object.entries(quads).map(([key,q])=>{const list=buckets[key].sort((a,b)=>b.profit-a.profit),names=list.slice(0,3).map(x=>esc(t(x.item.name))).join(' · ')||'·',profit=list.reduce((n,x)=>n+x.profit,0);const countStr = list.length === 1 ? `1 ${ui('article')}` : `${list.length} ${ui('articles')}`;return `<div class="rmw-perf-q ${key}"><h4>${esc(q.title.toUpperCase())}</h4><strong>${countStr}</strong><p>${esc(q.hint)}</p><div><span>Top</span>${names}</div><footer><b>${cash(profit)}</b> ${esc(ui('colProfit').toLowerCase())} <small>${esc(q.action)}</small></footer></div>`;}).join('');
-    const rows=[...p.items].sort((a,b)=>b.profit-a.profit||b.revenue-a.revenue).map(r=>{const itName=t(r.item.name),catName=cat(r.item.catId)?.name?t(cat(r.item.catId).name):ui('noSection');return `<tr><td><b>${esc(itName)}</b><small>${esc(catName)}</small></td><td>${(window.KiwiNumber?.format(r.qty, {}) ?? r.qty.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))}</td><td>${cash(r.revenue)}</td><td>${r.unitCost==null?'<button class="rmw-perf-link" data-action="rmw-recipe-edit" data-arg="'+esc(r.item.id)+'">'+esc(ui('completeRecipeLink'))+'</button>':`${cash(r.unitCost)}<small>${r.costSource}</small>`}</td><td>${r.profit==null?'·':cash(r.profit)}</td><td>${r.marginPct==null?'·':`<span class="rmw-perf-margin ${r.marginPct>=65?'hi':r.marginPct>=50?'mid':'lo'}">${r.marginPct.toFixed(1)} %</span>`}</td><td>${r.quadrant?quads[r.quadrant].title:(r.qty?ui('marginMissing'):ui('noSaleRecorded'))}</td></tr>`;}).join('');
+    const rows=[...p.items].sort((a,b)=>b.profit-a.profit||b.revenue-a.revenue).map(r=>{const itName=t(r.item.name),catName=cat(r.item.catId)?.name?t(cat(r.item.catId).name):ui('noSection');return `<tr><td><b>${esc(itName)}</b><small>${esc(catName)}</small></td><td>${(window.KiwiNumber?.format(r.qty, {}) ?? r.qty.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))}</td><td>${cash(r.revenue)}</td><td>${r.unitCost==null?'<button class="rmw-perf-link" data-action="rmw-recipe-edit" data-arg="'+esc(r.item.id)+'">'+esc(ui('completeRecipeLink'))+'</button>':`${cash(r.unitCost)}<small>${esc(r.costSource)}${r.observedCost!=null?' · '+esc(ui('costObserved',{amount:cash(r.observedCost)})):''}</small>`}</td><td>${r.profit==null?'·':cash(r.profit)}</td><td>${r.marginPct==null?'·':`<span class="rmw-perf-margin ${r.marginPct>=65?'hi':r.marginPct>=50?'mid':'lo'}">${r.marginPct.toFixed(1)} %</span>`}</td><td>${r.quadrant?quads[r.quadrant].title:(r.qty?ui('marginMissing'):ui('noSaleRecorded'))}</td></tr>`;}).join('');
     const offRows=p.offMenu.map(o=>`<tr class="rmw-perf-off"><td><b>${esc(o.name)}</b><small>${esc(o.free?ui('freeAmountSection'):ui('offMenuSection'))}</small></td><td>${(window.KiwiNumber?.format(o.qty, {}) ?? o.qty.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))}</td><td>${cash(o.revenue)}</td><td>·</td><td>·</td><td>·</td><td>${esc(o.free?ui('freeAmountReadout'):ui('offMenuReadout'))}</td></tr>`).join('');
     if(!p.items.length)return `<section class="mi-section"><div class="rmw-empty"><h3>${esc(ui('noItemsToAnalyze'))}</h3><p>${esc(ui('noItemsToAnalyzeDesc'))}</p></div></section>`;
     const emptySales=!p.items.some(x=>x.qty>0)&&!p.offMenu.length&&!p.ledger.grossN;
@@ -1515,18 +1526,16 @@
     const parts=zoneClock.formatToParts(new Date(ts));let h=0,m=0;parts.forEach(x=>{if(x.type==='hour')h=+x.value;if(x.type==='minute')m=+x.value;});return (h%24)*60+m;
   }
   function minuteInService(ts,service){const plain=merchantMinute(ts),m=service.to>1440&&plain<service.to-1440?plain+1440:plain;return m>=service.from&&m<service.to;}
-  function lineRevenue(line,menuItem,qty){const total=Number(line?.total),unit=Number(line?.unitPrice??line?.unit??line?.price);return Number.isFinite(total)&&total>=0?total:(Number.isFinite(unit)&&unit>=0?unit*qty:(+menuItem.price||0)*qty);}
-  function hoursData(periods,selected,days=30){
+  /* Les lignes du même registre que la Performance (KiwiCost.ledger) :
+     annulations, doublons et remises y suivent les mêmes règles. */
+  function hoursData(periods,selected,days=30,L=null){
     const rows=D().items.map(x=>({item:x,qty:0,revenue:0,byPeriod:{}})),match=saleLineMatcher(rows),w=analysisWindow(days);
-    windowSales(w).rows.forEach(s=>{
-      const ts=+s.ts||0;if(s.kind==='refund'||saleAmount(s)<0)return;
-      const service=periods.find(p=>minuteInService(ts,p));if(!service)return;
-      (Array.isArray(s.lines)?s.lines:[]).forEach(line=>{
-        const row=match(line),qty=lineQty(line);
-        if(!row||!qty)return;
-        row.byPeriod[service.id]=(row.byPeriod[service.id]||0)+qty;
-        if(service.id===selected.id){row.qty+=qty;row.revenue+=lineTotal(line,qty,row.item.price);}
-      });
+    L=L||menuLedger(w);
+    (L?L.lines:[]).forEach(x=>{
+      const service=periods.find(p=>minuteInService(x.ts,p));if(!service)return;
+      const row=match(x.line);if(!row||!x.qty)return;
+      row.byPeriod[service.id]=(row.byPeriod[service.id]||0)+x.qty;
+      if(service.id===selected.id){row.qty+=x.qty;row.revenue+=x.collected;}
     });
     const ranked=rows.filter(x=>x.qty>0).sort((a,b)=>b.qty-a.qty||b.revenue-a.revenue),totalQty=ranked.reduce((n,x)=>n+x.qty,0),totalRevenue=ranked.reduce((n,x)=>n+x.revenue,0);
     const notable=rows.map(row=>{const total=Object.values(row.byPeriod).reduce((n,x)=>n+x,0),best=periods.slice().sort((a,b)=>(row.byPeriod[b.id]||0)-(row.byPeriod[a.id]||0))[0],qty=best?(row.byPeriod[best.id]||0):0;return{row,total,best,qty,share:total?qty/total*100:0};}).filter(x=>x.total>=2&&x.share>=Math.max(55,100/periods.length+15)).sort((a,b)=>b.share-a.share||b.total-a.total).slice(0,5);
@@ -1537,11 +1546,11 @@
     /* Missing configuration must not hide recorded sales. Hourly buckets
      * describe timestamps, not assumed opening hours. */
     const configured=api?.isConfigured?.(venue());
-    const recent=configured?[]:windowSales(analysisWindow(30)).rows.filter(s=>s.lines?.length);
+    const L=menuLedger(analysisWindow(30)),recent=configured?[]:(L?L.lines:[]);
     const periods=configured?servicePeriods():Array.from({length:24},(_,h)=>({id:'hour-'+h,name:minuteLabel(h*60),from:h*60,to:(h+1)*60,label:`${minuteLabel(h*60)}-${minuteLabel((h+1)*60)}`})).filter(p=>recent.some(s=>minuteInService(+s.ts,p)));
     if(!periods.length)return `<section class="mi-section"><div class="rmw-empty"><h3>${esc(ui(configured?'noServiceToAnalyze':'noSalesYet'))}</h3><p>${esc(ui(configured?'noServiceToAnalyzeDesc':'noSalesYetDesc'))}</p></div></section>`;
-    if(!periods.some(x=>x.id===hoursPeriod))hoursPeriod=configured?periods[0].id:periods.map(p=>({id:p.id,qty:hoursData(periods,p).totalQty})).sort((a,b)=>b.qty-a.qty)[0].id;
-    const selected=periods.find(x=>x.id===hoursPeriod)||periods[0],data=hoursData(periods,selected),max=Math.max(1,...data.ranked.slice(0,10).map(x=>x.qty));
+    if(!periods.some(x=>x.id===hoursPeriod))hoursPeriod=configured?periods[0].id:periods.map(p=>({id:p.id,qty:hoursData(periods,p,30,L).totalQty})).sort((a,b)=>b.qty-a.qty)[0].id;
+    const selected=periods.find(x=>x.id===hoursPeriod)||periods[0],data=hoursData(periods,selected,30,L),max=Math.max(1,...data.ranked.slice(0,10).map(x=>x.qty));
     const pills=periods.map(p=>`<button class="mi-pill${p.id===selected.id?' on':''}" data-action="rmw-hours-period" data-period="${p.id}">${esc(p.label)}</button>`).join('');
     const bars=data.ranked.slice(0,10).map(row=>`<div class="rmw-hours-row"><div class="rmw-hours-name" title="${esc(t(row.item.name))}">${esc(t(row.item.name))}</div><div class="rmw-hours-track"><i style="width:${(row.qty/max*100).toFixed(1)}%"></i></div><b>${(window.KiwiNumber?.format(row.qty, {}) ?? row.qty.toLocaleString(document.documentElement?.lang === 'en' ? 'en-GB' : 'fr-FR', {}))}</b></div>`).join('');
     const totalForTop=data.top?Object.values(data.top.byPeriod).reduce((n,x)=>n+x,0):0,topShare=data.top&&totalForTop?data.top.qty/totalForTop*100:0;
@@ -1936,7 +1945,12 @@ const pos=e.target.selectionStart;const html=menuPanel();if(window.KiwiCatalogUI
     window.Kiwi.handlers['rmw-formula-duplicate']=(_e,id)=>{const before=new Set(D().items.map(it=>it.id));S().duplicateItem(id);const copy=D().items.find(it=>!before.has(it.id));if(copy)openItem(copy);};
     window.KiwiRestaurantMenuWorkspace={show,render,isRestaurant,analysis:{
       performance(){style();performanceStyle();hoursStyle();return `<div class="rmw-analysis-panel">${performancePanel()}</div>`;},
-      hours(){style();performanceStyle();hoursStyle();return `<div class="rmw-analysis-panel">${hoursPanel()}</div>`;}
+      hours(){style();performanceStyle();hoursStyle();return `<div class="rmw-analysis-panel">${hoursPanel()}</div>`;},
+      /* Le registre et le coût par plat que lit la Performance : la vue
+         d'ensemble d'« Analyse du menu » les lit aussi, pour ne jamais
+         afficher une autre marge que celle de l'onglet d'à côté. */
+      ledger(w){return menuLedger(w);},
+      costOf(item){const hit=recipeCostResolver([{item}]).of({item});if(hit)return hit;try{return window.KiwiCost?.of?.({kind:'menu',id:item.id,name:item.name})||null;}catch(_){return null;}}
     }};
     if(!S()){setTimeout(boot,50);return;}
     if(!storeBound){storeBound=true;const refresh=()=>{if(document.body.classList.contains('page-menu')&&isRestaurant())render();};S().subscribe(refresh);S().subscribe(scheduleAutoTranslate);window.KiwiSales?.subscribe?.(refresh);window.KiwiRestaurantRecipes?.subscribe?.(refresh);window.KiwiHours?.subscribe?.(refresh);window.KiwiVenue?.subscribe?.(()=>{hoursPeriod=null;if(document.body.classList.contains('page-menu')&&isRestaurant())show();});try{window.addEventListener('kiwi:langchange',()=>{if(document.body.classList.contains('page-menu')&&isRestaurant())render();});}catch(_){}}

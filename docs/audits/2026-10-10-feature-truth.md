@@ -476,6 +476,24 @@ Next phases: one margin engine with refunds and frozen line costs, revenue by
 category and item over the six period presets, then Simple Food Cost as an
 owner-only opt-in with its own storage (no stock, no movements).
 
+## Analyse du menu, phase 0: one margin engine: done
+
+Once the overview and Performance sat side by side, their two engines would
+have shown two different margins for the same days.
+
+| ID | Finding | Status |
+|---|---|---|
+| ME1 | The overview (`KiwiCost.coverage`) counted voided sales and settlements received twice, and never subtracted refunds (they live in `KiwiRefunds`). So did the morning briefing, the KPI margin and customer retention, which call it too. | **Fixed.** `KiwiCost.ledger()` is the one register: void out, duplicates out and declared, refunds subtracted from net and declared as not split by dish. `coverage()` is its summary. |
+| ME2 | Performance ignored VAT: profit and margin were computed on prices including VAT, overstated by about the rate. | **Fixed.** Excluding VAT when the receipt includes it, and said on screen. |
+| ME3 | Performance ignored costs typed by hand (flat) and ticket discounts. | **Fixed.** Same chain as everywhere: frozen line cost, recipe, flat, else unknown. Ticket discounts spread pro rata over their own ticket's lines, like the VAT base, and declared. |
+| ME4 | Performance used the observed cost (7 days of stock usage) in place of the recipe cost when present. | **Fixed.** Theoretical (recipe) cost drives profit; the observed cost is shown beside it, never mixed in. |
+| ME5 | Peak hours kept its own copy of the sales filter. | **Fixed.** Reads the same ledger lines. |
+| ME6 | The cost source label was French only. | **Fixed.** FR / EN / AR. |
+| ME7 | Today's cost applied to past sales was silent. | **Said.** The restaurant till does not freeze a cost on the line yet; both tabs say current costs are applied to past sales. Freezing at sale time is logged below. |
+
+Covered by `menu-ledger-test.mjs` (26 checks: the ledger rules, then one
+fixture rendered by both tabs, same 221 MAD).
+
 ## Open, logged for their own pass
 
 
@@ -512,6 +530,9 @@ owner-only opt-in with its own storage (no stock, no movements).
 - **Removed employee clocked in**: the open attendance entry stays.
 - **Per-device unpair** is impossible: the till token carries no device id.
 - **Pharmacie** has no UI to enter stock or lots.
+- **The restaurant till does not freeze a cost on its sale lines** (`k`).
+  Until it does, a purchase price change rewrites past margins; both
+  analysis tabs say so. Needs the till to read the recipe cost at sale time.
 - **A paired till can read `costs` and `recipes`.** Stock consumption on the
   till needs the recipes, so the read cannot simply be removed; Simple Food
   Cost gets its own owner-only storage instead of extending these documents.

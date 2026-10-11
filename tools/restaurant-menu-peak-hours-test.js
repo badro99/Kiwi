@@ -29,7 +29,7 @@ const span = (p) => { const from = toMin(p.from), to = toMin(p.to); return to > 
 const window = {
   Kiwi: { handlers: {}, pageShell() {}, setActivePage() {} },
   KiwiVenue: { getCurrentVenueData: () => ({ id: 'resto', name: 'Restaurant de nuit', type: 'restaurant' }), getVenueType: () => 'restaurant', subscribe() {} },
-  KiwiMenuStore: { data: () => data, subscribe() {}, kitchenId: () => '' },
+  KiwiMenuStore: { data: () => data, items: () => data.items, subscribe() {}, kitchenId: () => '' },
   KiwiHours: { DAYS: Object.keys(week), get: () => ({ week }), isConfigured: () => true, toMin, span, subscribe() {} },
   KiwiSales: { subscribe() {}, list: () => [
     { ts: at(13), lines: [{ id: 'shawarma', qty: 3, total: 90 }, { id: 'tajine', qty: 2, total: 100 }] },
@@ -44,6 +44,8 @@ const context = { window, document, console, setTimeout, clearTimeout, requestAn
 window.window = window;
 window.document = document;
 vm.createContext(context);
+/* Le vrai moteur de coûts : Performance et Heures lisent KiwiCost.ledger. */
+require('./kiwi-cost-harness').loadCost(context);
 new vm.Script(fs.readFileSync('assets/restaurant-menu-workspace.js', 'utf8')).runInContext(context);
 root.innerHTML = window.KiwiRestaurantMenuWorkspace.analysis.hours();
 

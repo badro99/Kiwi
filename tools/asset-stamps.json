@@ -204,8 +204,8 @@
     "sha": "93ab4cd1208d631b"
   },
   "assets/cost.js": {
-    "v": "4",
-    "sha": "71b2ab3cbbcb0e16"
+    "v": "5",
+    "sha": "c342a95d71829601"
   },
   "assets/customer-retention.js": {
     "v": "6",
@@ -328,8 +328,8 @@
     "sha": "4ab84021a239bd81"
   },
   "assets/finance.js": {
-    "v": "5",
-    "sha": "f842641459e46beb"
+    "v": "6",
+    "sha": "85e970b523764425"
   },
   "assets/floorplan-core.js": {
     "v": "2050",
@@ -908,8 +908,8 @@
     "sha": "564289e55caa6564"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "94",
-    "sha": "e60140a028323fc9"
+    "v": "95",
+    "sha": "d4cb621b51558e70"
   },
   "assets/restaurant-recipes.js": {
     "v": "9",

@@ -146,7 +146,8 @@ ok('private costs and targets are accepted by one server vault declaration',
   && /costs:\s*\{ keys: \['items', 'ingredients', 'recipes', 'charges', 'targets'\]/.test(storeApi));
 ok('pressing allocates deposits without duplicating full order value', /function saleLines\(o, received\)/.test(pressing) && /factor = full > 0/.test(pressing));
 ok('margin engine consumes server-expanded stable identity',
-  /const itemId = l\.itemId \|\| l\.id \|\| ''/.test(costs) && /id: itemId, variantId: l\.variantId/.test(costs));
+  /const lineIdOf = \(l\) => String\(\(l && \(l\.itemId != null \? l\.itemId : l\.id != null \? l\.id : l\.i\)\)/.test(costs)
+  && /const itemId = lineIdOf\(l\)/.test(costs) && /id: itemId, variantId: \(l && l\.variantId\)/.test(costs));
 ok('dashboard sales cache preserves v2 identity and fractional quantities',
   /if \(itemId\) o\.itemId = itemId/.test(venues) && /Math\.round\(Math\.max\(0, \+\(l && \(l\.qty/.test(venues));
 ok('dashboard sales cache keeps the base menu name snapshot', /if \(baseName\) o\.baseName = baseName/.test(venues));

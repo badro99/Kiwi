@@ -244,7 +244,7 @@ var SHELL = [
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
-  '/assets/cost.js?v=4',
+  '/assets/cost.js?v=5',
   '/assets/clients-store.js?v=10',
   '/assets/clients-book.js?v=24',
   '/assets/clients-directory.js?v=18',
@@ -261,7 +261,7 @@ var SHELL = [
   '/assets/planning-ui.css?v=11',
   '/assets/team.js?v=297',
   '/assets/menu-i18n.js?v=5',
-  '/assets/restaurant-menu-workspace.js?v=94',
+  '/assets/restaurant-menu-workspace.js?v=95',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=8',
   // Scanner un menu · photo / PDF / lien → Kiwi AI → revue d'import.
